@@ -95,3 +95,12 @@
 
 Aside CLI로 로그인 탭을 이어받아 원문을 확인했다.
 **배포본에서 이 도구를 요구하지 않는다.**
+
+
+
+### 기상청 지역 기후 조사 단일 경로 (전공 공통 헌법)
+- 기상 항목은 기상자료개방포털 조건조회나 한국기후표 PDF 파싱을 시도하지 않고, `weather.go.kr` 지역별 통계 단일 페이지에서 직접 curl로 수집한다. (예: 경남 area=7, 충남 area=3)
+  - 엔드포인트: `https://www.weather.go.kr/w/climate/statistics/region.do?area={area_code}`
+- 30년 평년값은 ASOS(종관관측소) 기준이므로 대상 시·군에 AWS(방재관측)만 있는 경우 인근 관할 ASOS를 참조한다.
+- 극값과 연평균 최고/최저기온을 혼동하지 않으며, 미확인 항목은 행을 삭제하거나 N/A로 바꾸지 않고 '미확인' 상태로 행을 유지한다. (상세는 `references/lessons-learned.md` L18 참조)
+

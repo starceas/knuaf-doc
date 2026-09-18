@@ -1,0 +1,210 @@
+{
+  "schema": "gg-builtin-sources/v1",
+  "updated": "2026-09-18",
+  "policy": {
+    "skip_requires_sha256": true,
+    "filename_is_label_only": true,
+    "never_skip_q1a_current_draft": true,
+    "copy_originals_into_workspace": false,
+    "absolute_paths_forbidden_in_runtime": true,
+    "unmapped_guideline_policy": "identity_check_then_excerpt_if_new_edition",
+    "primary_finance_template_id": "seo-minseo-finance-xlsx"
+  },
+  "guideline_keywords": {
+    "always": [
+      "작성요령",
+      "작성지침",
+      "논문지침",
+      "논문양식",
+      "작성기준"
+    ],
+    "form_requires_companion": {
+      "keyword": "서식",
+      "must_also_match_any": [
+        "논문",
+        "창업",
+        "작성",
+        "학교",
+        "요령",
+        "양식",
+        "지침",
+        "별지"
+      ]
+    }
+  },
+  "document_suffixes": [
+    ".pdf",
+    ".hwp",
+    ".hwpx",
+    ".xlsx",
+    ".xls",
+    ".docx",
+    ".doc"
+  ],
+  "entries": [
+    {
+      "id": "rda.income.national.2024",
+      "class": "common_public_book",
+      "role": "rda_income_national",
+      "filename_needles": [
+        "2024_농산물소득자료집",
+        "농산물소득자료집"
+      ],
+      "sha256": [
+        "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab"
+      ],
+      "runtime": "references/benchmark-packs/common/rda-income-national-2024/",
+      "parse": "omit",
+      "status_ko": "내장 정본 매핑 완료 - 본문 열람 생략"
+    },
+    {
+      "id": "rda.income.regional.2024",
+      "class": "common_public_book",
+      "role": "rda_income_regional",
+      "filename_needles": [
+        "2024_지역별_농산물소득자료",
+        "지역별_농산물소득자료",
+        "지역별 농산물 소득"
+      ],
+      "sha256": [
+        "b229ca4f83e9152656945090c15ac7f8780c578042854200b9e11b77bf8d3813"
+      ],
+      "runtime": "references/benchmark-packs/common/rda-income-regional-2024/",
+      "parse": "omit",
+      "status_ko": "내장 정본 매핑 완료 - 본문 열람 생략"
+    },
+    {
+      "id": "rda.econ.2025",
+      "class": "common_public_book",
+      "role": "rda_econ",
+      "filename_needles": [
+        "2025 경제성분석 기준자료집",
+        "경제성분석 기준자료집"
+      ],
+      "sha256": [
+        "38e38ffb8b478584b9f76a8b9d98d56c7cdeb8eb18a2200aef26639a72935a83"
+      ],
+      "runtime": "references/benchmark-packs/common/rda-econ-2025/",
+      "parse": "omit",
+      "status_ko": "내장 정본 매핑 완료 - 본문 열람 생략"
+    },
+    {
+      "id": "mafra.specialty.production.2024",
+      "class": "specialty_public_book",
+      "role": "mafra_specialty_production",
+      "filename_needles": [
+        "특용작물+생산실적",
+        "특용작물 생산실적",
+        "특용작물생산실적"
+      ],
+      "sha256": [
+        "0974c3d30aa5c1abd795be0af453f4de3bd4e569285c250537897b820d2aa1d5"
+      ],
+      "runtime": "references/benchmark-packs/majors/specialty_crops/mafra-specialty-production-2024/",
+      "parse": "omit",
+      "status_ko": "내장 정본 매핑 완료 - 본문 열람 생략"
+    },
+    {
+      "id": "official-writing-guide-pdf",
+      "class": "school_guideline",
+      "role": "official_instruction",
+      "filename_needles": [
+        "창업논문 작성 요령",
+        "창업논문 작성요령",
+        "한국농수산대학 창업논문"
+      ],
+      "sha256": [
+        "f60b58b7dcde86eab9f273dd50114ac296d009bd60abb940aaa866a54e866de2"
+      ],
+      "runtime": "references/official-toc.md",
+      "parse": "omit",
+      "page_split_applies": true,
+      "status_ko": "내장 정본 매핑 완료 - 본문 열람 생략"
+    },
+    {
+      "id": "official-writing-guide-hwp",
+      "class": "school_guideline",
+      "role": "official_instruction_companion",
+      "filename_needles": [
+        "창업논문 작성 요령",
+        "창업논문 작성요령"
+      ],
+      "sha256": [
+        "efcbbc7fe261477ebd8628883733aacd4214fa365974617dced1304d99f6c631"
+      ],
+      "runtime": "references/official-toc.md",
+      "parse": "omit",
+      "page_split_applies": false,
+      "status_ko": "내장 정본 매핑 완료 - 본문 열람 생략"
+    },
+    {
+      "id": "kim-wonseop-exemplar-pdf",
+      "class": "specialty_exemplar",
+      "role": "narrative_benchmark",
+      "filename_needles": [
+        "김원섭-지황 논문",
+        "김원섭"
+      ],
+      "sha256": [
+        "67c1eb5192f445d914d329748f1e3275bcb3ce5d4757c9d1ca9a6c3caccb4720"
+      ],
+      "runtime": "references/exemplar-quality.md",
+      "parse": "omit",
+      "status_ko": "내장 정본 매핑 완료 - 본문 열람 생략"
+    },
+    {
+      "id": "kim-wonseop-exemplar-hwp",
+      "class": "specialty_exemplar",
+      "role": "narrative_benchmark_companion",
+      "filename_needles": [
+        "김원섭-지황 논문",
+        "김원섭"
+      ],
+      "sha256": [
+        "906ad6ff04760f30feefad938e1b40a8dcbf7d9f62704784cdfe6cfe5504e13e"
+      ],
+      "runtime": "references/exemplar-quality.md",
+      "parse": "omit",
+      "status_ko": "내장 정본 매핑 완료 - 본문 열람 생략"
+    },
+    {
+      "id": "seo-minseo-finance-xlsx",
+      "class": "specialty_finance_template",
+      "role": "primary_finance_template",
+      "filename_needles": [
+        "서민서 완성본",
+        "서민서"
+      ],
+      "sha256": [
+        "457249255929275b3ee55383bdc36897274f08933af3536866a652b29346cd3a"
+      ],
+      "runtime": "references/excel-template.md",
+      "parse": "omit",
+      "status_ko": "내장 정본 매핑 완료 - 본문 열람 생략"
+    },
+    {
+      "id": "specialty-22160117-finance-xlsx",
+      "class": "specialty_finance_exemplar",
+      "role": "secondary_finance_exemplar",
+      "filename_needles": [
+        "22160117"
+      ],
+      "sha256": [
+        "029f8107ec2fee318544799524f7f4317946666d323d30174c931d3469d02129"
+      ],
+      "runtime": null,
+      "parse": "omit",
+      "status_ko": "내장 정본 매핑 완료 - 본문 열람 생략",
+      "notes": "시트 맵 미작성. 템플릿 복제 정본은 seo-minseo-finance-xlsx. 값·학번 정보를 현재 계획으로 쓰지 않는다."
+    }
+  ],
+  "not_builtin": [
+    {
+      "reason": "owner_list_excludes",
+      "filename_needles": [
+        "강동현"
+      ],
+      "action": "excerpt_new_if_needed"
+    }
+  ]
+}

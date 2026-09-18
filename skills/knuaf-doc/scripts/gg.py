@@ -26,9 +26,11 @@ def main(argv=None):
             "bundle",
             "paper",
             "observe",
+            "rda-lookup",
+            "catalog-sources",
         ],
     )
-    ap.add_argument("folder")
+    ap.add_argument("folder", nargs="?")
     ap.add_argument("--out")
     ap.add_argument("--change")
     ap.add_argument("--expected-revision", type=int)
@@ -39,8 +41,19 @@ def main(argv=None):
     ap.add_argument("--field")
     ap.add_argument("--input")
     ap.add_argument("--observer")
+    ap.add_argument("--crop")
+    ap.add_argument("--region")
+    ap.add_argument("--major")
+    ap.add_argument("--rda-kind")
+    ap.add_argument("--year", type=int)
+    ap.add_argument("--form")
+    ap.add_argument("--allow-web", action="store_true")
+    ap.add_argument("--from", dest="from_folder")
+    ap.add_argument("--current", action="append", default=[])
     a = ap.parse_args(argv)
     try:
+        if a.command != "rda-lookup" and a.folder is None:
+            raise ValueError("folder 필요")
         if a.command == "init":
             value = core.init(a.folder)
         elif a.command == "import":
@@ -89,6 +102,40 @@ def main(argv=None):
             spec.setdefault("school_profile", {"mode": "school", "layout": "forms_1_to_4"})
             dest.write_text(school_paper(spec))
             value = {"path": str(dest), "status": "generated"}
+        elif a.command == "rda-lookup":
+            if not a.crop or not a.region:
+                raise ValueError("--crop과 --region 필요")
+            import gg_rda_lookup
+
+            value = gg_rda_lookup.lookup_rda_data(
+                a.crop,
+                a.region,
+                major=a.major,
+                kind=a.rda_kind,
+                year=a.year,
+                form=a.form,
+                allow_web=a.allow_web,
+            )
+        elif a.command == "catalog-sources":
+            if not a.from_folder:
+                raise ValueError("--from 참고폴더 필요")
+            if not Path(a.from_folder).is_dir():
+                raise ValueError("참고폴더를 찾을 수 없음: " + a.from_folder)
+            import gg_source_intake
+
+            catalog = gg_source_intake.catalog_reference_folder(
+                a.from_folder, current_draft_paths=a.current
+            )
+            paths = gg_source_intake.write_intake_index(a.folder, catalog)
+            value = {
+                "folder_fingerprint": catalog["folder_fingerprint"],
+                "item_count": len(catalog["items"]),
+                "index_path": paths["index_path"],
+                "markdown_path": paths["markdown_path"],
+                "project_json": "project.json 없음 - 인덱스만 기록"
+                if not (Path(a.folder) / "project.json").exists()
+                else "project.json 존재 - apply 미수행, 인덱스만 기록",
+            }
         else:
             p = core.load(a.folder)
             if a.command == "apply":

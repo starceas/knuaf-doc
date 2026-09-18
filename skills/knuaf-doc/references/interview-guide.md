@@ -458,7 +458,7 @@ Q1a에서 지정한 후보만 필요한 범위로 읽고 다음처럼 짧게 요
 
 1. Q1a에서 현재 작성물로 지정된 개별 경로·첨부는 필요한 범위로 실제 확인하고, 파일명·작목·주제·작성 진행도만 짧게 요약한다. Q1b에서 받은 참고 폴더는 목록·메타데이터와 자료 유형만 등록하며, 모든 내용을 요약하거나 현재 계획으로 해석하지 않는다. 후보 내용과 사용자 확인 계획을 구분한다
 2. 사용자가 현재 원고로 확인한 경우에만 원본을 보존하고 내용을 처리한다. 기존 작업폴더에 `project.json`이 없으면 `scripts/gg.py import <기존폴더> --out <새폴더>`로 옮긴 뒤 `migration-review`에서 원답변·미분류 내용부터 대조한다. 개별 DOCX·HWP·PDF의 읽기와 한계 기록은 [parser-setup.md](parser-setup.md), 출처·절 등록은 [source-contract.md](source-contract.md)와 [section-ledger.md](section-ledger.md)를 따른다.
-3. 참고 자료는 `03_sources.md`에 후보로 등록하고 실제로 읽은 것은 `sources/extracts/`에 발췌본을 남긴다
+3. 참고 자료는 `03_sources.md`에 후보로 등록한다. 내장 정본 히트는 본문을 열지 않고 매핑만 하며, 실제로 읽은 제3 자료만 `sources/extracts/`에 발췌본을 남긴다
 4. 열리지 않으면 그 사실과 대안을 알린다. 추측하거나 가장 최근 파일을 현재 기준으로 승격하지 않는다
 
 ### Q1에서 "없음"이라고 답했다면
@@ -472,7 +472,7 @@ Q1a에서 지정한 후보만 필요한 범위로 읽고 다음처럼 짧게 요
 | 선배 논문 | Q4 예문 스타일로 진행. 문체 확정에 파일이 필요하지 않다 |
 | 학교 작성요령 | `rules/` 아래 파일은 보조 대조로만 사용한다. 공식 원문이 없으면 목차·서식 확정이 필요한 판정만 보류한다 |
 | 재무 엑셀 예시 | [excel-template.md](excel-template.md)에 따라 예시 유무와 현재 입력을 구분한다. 예시가 없으면 수집한 입력으로 검토용 계산을 진행하고, 학교 양식 일치 판정은 별도로 남긴다 |
-| 농업 자료 | 조사 경로(`research-sources.md`)로 수집한다 |
+| 농업 자료 | 소득·가격은 `gg_rda_lookup.py`([rda-benchmark.md](rda-benchmark.md)) 내장 조회를 먼저 거치고, 부재 시 조사 경로(`research-sources.md`)로 수집한다 |
 
 학교 작성요령 원본(`rules_hwp`)은 목차·서식의 근거다. 사용자가 해당 역할을 ‘없음’이라고
 명시하면 그 답을 기록하고 다시 요구하지 않는다. 프로젝트 출처 원장에 이미 등록된 경로가 있으면
@@ -520,6 +520,27 @@ Q1a에서 지정한 후보만 필요한 범위로 읽고 다음처럼 짧게 요
     번호별로 나눠 적으셔도 되고 한 줄로 이어 적으셔도 됩니다.
     예: 특용작물전공 / 도라지 / 경남 김해 / 자기자본 1억, 융자 3억
     예: 특용작물전공 / 미정 / 미정 / 자기자본 1억
+
+### Q2.1 전공 식별자와 내장 자료 연동
+
+전공은 아래 8개 `major_id` 중 하나로 확정한다. 학과명이 표와 다르게 들어오면 별칭 표로
+접어 매칭하되, 매칭 실패는 추측하지 않고 한 번만 다시 확인한다(근거: `references/benchmark-packs/aliases/major-aliases.json`).
+
+| major_id | 전공명 |
+|---|---|
+| `food_crops` | 식량작물전공 |
+| `specialty_crops` | 특용작물전공 |
+| `forestry` | 산림전공 |
+| `landscape` | 조경전공 |
+| `vegetables` | 채소전공 |
+| `hort_env_systems` | 원예환경시스템전공 |
+| `fruit_trees` | 과수전공 |
+| `industrial_insects` | 산업곤충전공 |
+
+인터뷰 중 작목 후보·1차검산에 내장 RDA 팩을 자동 주입하는 것은 `major_id == "specialty_crops"`
+(특용작물전공)일 때만이다. 나머지 7개 전공은 팩이 `empty_slot`이라 조회해도 `status=miss`이며,
+그 결과로 웹검색을 자동으로 트리거하지 않고 기존 `research-sources.md` 흐름으로 넘어간다.
+자세한 조회 계약은 [rda-benchmark.md](rda-benchmark.md) 참고.
 
 ### 왜 자금을 나눠 받는가
 

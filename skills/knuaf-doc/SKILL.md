@@ -51,7 +51,10 @@ description: 한국농수산대학교 창업논문·영농계획서와 동반 �
 - 정본·절·저장: [section-ledger](references/section-ledger.md)
 - 출처 ID·해시·물리 페이지·절/표 작업 기록: [source-contract](references/source-contract.md)
 - 자료 투입·발췌·재검토: [source-intake](references/source-intake.md)
+- 참고자료 폴더의 내장 정본 재파싱 생략: [builtin-sources.json](references/builtin-sources.json) — Q1b 폴더는 SHA-256으로 분류한다. 히트는 인덱스에만 매핑하고 본문을 열지 않는다. 미등록 제3 자료만 발췌한다.
 - 특용·약용작물·생허브 가격 조사: [price-research-routes](references/price-research-routes.md) — 가격 조사 전 읽고, 위임 시 작목·상품 형태·거래 단계·기간과 해당 경로를 함께 전달한다. 경로 안내의 예전 관측을 현재 시세로 쓰지 않는다.
+- RDA·농식품부 소득·가격 통계 내장 조회: [rda-benchmark](references/rda-benchmark.md) — 재무 근거값을 웹 조사하기 전 `scripts/gg_rda_lookup.py`로 승격된 내장 팩을 1차 조회한다. 결과는 `scripts/gg_rda_research.py`로 `status=research` 입력 후보만 제안하며 사용자 확정 값을 덮어쓰지 않는다.
+- Ⅳ장 경영성과·투자타당성 서술 판정 잣대: [kim-finance-bible](references/kim-finance-bible.md) — 학교 엑셀 재계산 값을 해석할 때만 참고하고 강의 예시 숫자는 옮기지 않는다.
 - 질문과 변경: [mid-work-questions](references/mid-work-questions.md)
 - 장별 논증·실행성·수치 품질: [exemplar-quality](references/exemplar-quality.md) — 절 작성 전 해당 장 기준, 검토 때 같은 기준을 다시 읽는다. 분량이나 키워드만으로 충족시키지 않는다.
 - 서술 설계·문단 확장: [narrative-expansion](references/narrative-expansion.md) — 절 작성 전 원답변과 승인된 입력으로 서술 설계를 만들고, 완성 후 사실 검토와 설명 충분성을 각각 점검한다. 길이·문단 수 목표를 두지 않는다.

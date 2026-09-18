@@ -1,0 +1,13 @@
+{
+  "pack_id": "rda.income.national.2024",
+  "source_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+  "page_count": 287,
+  "schema_version": "1.0.0",
+  "record_count": 102,
+  "promoted_date": "2026-09-18",
+  "status": "promoted_pending_opus_verify",
+  "notes": [
+    "Opus 정확도 대조 이전 승격 — 브리프 §2-4의 Opus PASS 게이트를 20260918 세션 직접지시로 앞당김.",
+    "구조·해시·schema_version은 SWE 단계에서 확인했으나 추출값 정확도는 Opus 검증 전."
+  ]
+}
