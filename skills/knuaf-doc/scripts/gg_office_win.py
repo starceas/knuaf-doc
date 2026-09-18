@@ -26,6 +26,8 @@ doctor" and one real word/excel run on a Windows machine before relying on
 this path for a live submission.
 """
 
+from __future__ import annotations
+
 import sys
 
 

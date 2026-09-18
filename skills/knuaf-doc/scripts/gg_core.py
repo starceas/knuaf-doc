@@ -138,7 +138,7 @@ def atomic(path, data):
 
 
 def load(root):
-    p = json.loads((Path(root) / "project.json").read_text())
+    p = json.loads((Path(root) / "project.json").read_text(encoding="utf-8"))
     validate(p)
     return p
 
@@ -182,7 +182,10 @@ class Lock:
         directory = None
         owner_identity = None
         try:
-            directory = os.open(self.path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+            directory = os.open(
+                self.path,
+                os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | os.O_NOFOLLOW,
+            )
             stat = os.fstat(directory)
             if (stat.st_dev, stat.st_ino) != self.identity:
                 raise OSError("잠금 디렉터리 교체: 획득 중단")
@@ -190,7 +193,7 @@ class Lock:
                 "owner.json", os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
                 0o600, dir_fd=directory,
             )
-            with os.fdopen(owner_fd, "w") as owner_file:
+            with os.fdopen(owner_fd, "w", encoding="utf-8") as owner_file:
                 stat = os.fstat(owner_file.fileno())
                 owner_identity = (stat.st_dev, stat.st_ino)
                 owner_file.write(json.dumps(self.owner))
@@ -199,7 +202,7 @@ class Lock:
             stat = self.path.stat()
             if (stat.st_dev, stat.st_ino) != self.identity:
                 raise OSError("잠금 디렉터리 교체: 획득 중단")
-        except OSError:
+        except Exception:
             try:
                 if directory is not None and owner_identity is not None:
                     stat = os.stat("owner.json", dir_fd=directory, follow_symlinks=False)
@@ -208,7 +211,7 @@ class Lock:
                 stat = self.path.stat()
                 if (stat.st_dev, stat.st_ino) == self.identity:
                     self.path.rmdir()
-            except OSError:
+            except Exception:
                 self.identity = None
             raise
         finally:
@@ -220,7 +223,7 @@ class Lock:
         directory = None
         try:
             directory = os.open(
-                self.path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+                self.path, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | os.O_NOFOLLOW
             )
             stat = os.fstat(directory)
             if (stat.st_dev, stat.st_ino) != self.identity:
@@ -236,7 +239,7 @@ class Lock:
             except FileNotFoundError:
                 owner_fd = None
             else:
-                with os.fdopen(owner_fd) as owner_file:
+                with os.fdopen(owner_fd, encoding="utf-8") as owner_file:
                     stat = os.fstat(owner_file.fileno())
                     owner_identity = (stat.st_dev, stat.st_ino)
                     data = owner_file.read()
@@ -273,7 +276,7 @@ class Lock:
                 except FileNotFoundError:
                     owner_state = "missing"
                 else:
-                    with os.fdopen(recheck_fd) as recheck_file:
+                    with os.fdopen(recheck_fd, encoding="utf-8") as recheck_file:
                         stat = os.fstat(recheck_file.fileno())
                         if (stat.st_dev, stat.st_ino) != owner_identity:
                             owner_state = "replacement_owner"
@@ -650,6 +653,8 @@ def apply(root, change, expected_revision):
             if col not in COLLECTIONS:
                 raise ValueError("허용되지 않은 변경 컬렉션")
             key = value["id"]
+            if not isinstance(key, str):
+                raise ValueError("변경 ID는 문자열이어야 함")
             prev = p[col].get(key)
             value["revision"] = prev["revision"] + 1 if prev else 1
             if (
@@ -676,7 +681,7 @@ def apply(root, change, expected_revision):
                 raise ValueError("동일 결정의 질문 횟수를 초기화할 수 없음")
             if col == "sections":
                 value["draft_hash"] = digest(
-                    draft(local(root, value["path"]).read_text())
+                    draft(local(root, value["path"]).read_text(encoding="utf-8"))
                 )
             if col == "sources":
                 value["hash"] = digest(local(root, value["path"]).read_bytes())
@@ -755,7 +760,7 @@ def apply(root, change, expected_revision):
 def question(p, field_id):
     facts = [f for f in p["facts"].values() if f["field_id"] == field_id]
     if any(
-        f["answer_state"] in {"provided", "explicit_none", "not_applicable", "withheld", "unknown"}
+        f["answer_state"] in {"provided", "explicit_none", "not_applicable", "withheld"}
         for f in facts
     ):
         return "reuse"
@@ -857,7 +862,7 @@ VISUAL_FAIL = {
 
 def visual_review_blocks(path):
     try:
-        data = json.loads(Path(path).read_text())
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
     except (OSError, ValueError, TypeError):
         return set()
     if not isinstance(data, dict) or not isinstance(data.get("findings"), list):
@@ -1078,6 +1083,10 @@ def _finance_check_items(p):
     carries an explicit claims list; a mixed or unregistered project falls
     back to checking all facts so nothing is dropped silently.  An
     all-empty claims set cannot switch the check off — it blocks instead.
+    A claimed fact that is provided with a value but not denominated in
+    ``천원`` cannot be silently dropped from the check either — it blocks
+    with an explicit reason so the unsupported unit surfaces instead of
+    passing unnoticed.
     ``sources[].claims`` are source claims, not body claims, and are never
     consulted here.  Returns (items, blocked_reason).
     """
@@ -1087,6 +1096,14 @@ def _finance_check_items(p):
             f.get("answer_state") == "provided"
             and f.get("unit") == "천원"
             and f.get("value") is not None
+        )
+
+    def unsupported_unit(fid):
+        f = p["facts"][fid]
+        return (
+            f.get("answer_state") == "provided"
+            and f.get("value") is not None
+            and f.get("unit") != "천원"
         )
 
     def item(fid):
@@ -1119,6 +1136,12 @@ def _finance_check_items(p):
         if eligible_ids:
             return [], "모든 절의 본문 주장(claims)이 빈 목록: 재무 본문 대조 불가"
         return [], None
+    unsupported = [fid for fid in claimed if unsupported_unit(fid)]
+    if unsupported:
+        return [], (
+            "본문 주장(claims)에 포함된 재무 사실의 단위가 '천원'이 아님 (%s): "
+            "재무 본문 대조 불가" % ", ".join(sorted(unsupported))
+        )
     return [item(fid) for fid in claimed if eligible(fid)], None
 
 
@@ -1227,7 +1250,7 @@ def checks(root, p):
                 add("calculation", fid, str(e))
     for sid, s in p["sections"].items():
         try:
-            raw = local(root, s["path"]).read_text()
+            raw = local(root, s["path"]).read_text(encoding="utf-8")
             text = draft(raw)
             extra = draft_marker_extra(raw)
             if extra:
@@ -1307,7 +1330,7 @@ def checks(root, p):
                     body = draft(
                         local(
                             root, p["sections"][location["section_id"]]["path"]
-                        ).read_text()
+                        ).read_text(encoding="utf-8")
                     )
                     if not location.get("quote") or location["quote"] not in body:
                         raise ValueError("적용 근거 본문 인용 없음")
@@ -1859,7 +1882,7 @@ def completion(root, p, report=None):
 def merged(root, p):
     parts = []
     for s in sorted(p["sections"].values(), key=lambda x: x["order"]):
-        body = draft(local(root, s["path"]).read_text())
+        body = draft(local(root, s["path"]).read_text(encoding="utf-8"))
         title = s["title"]
         parts.append(
             body
@@ -1875,7 +1898,9 @@ def export(root, kind):
 
 
 def publish_export(staging, folder, manifest):
-    directory = os.open(folder, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    directory = os.open(
+        folder, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | os.O_NOFOLLOW
+    )
     try:
         owner = os.stat(".publication.json", dir_fd=directory, follow_symlinks=False)
         prepared_owner = (staging / ".publication.json").stat()
@@ -1920,7 +1945,7 @@ def export_locked(root, kind):
     owner_path = folder / ".publication.json"
     if owner_path.is_file():
         try:
-            owner = json.loads(owner_path.read_text())
+            owner = json.loads(owner_path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             owner = None
         refs = _export_refs(p)
@@ -1980,7 +2005,7 @@ def export_locked(root, kind):
             and owner.get("input_fingerprint") == current_fingerprint
             and export_complete(staging, kind, p["revision"])
         ):
-            manifest = json.loads((staging / "manifest.json").read_text())
+            manifest = json.loads((staging / "manifest.json").read_text(encoding="utf-8"))
             publish_export(staging, folder, manifest)
             shutil.rmtree(staging)
             return str(folder / (label + ".md"))
@@ -2087,7 +2112,7 @@ def export_complete(folder, kind, revision):
     if not manifest.is_file():
         return False
     try:
-        data = json.loads(manifest.read_text())
+        data = json.loads(manifest.read_text(encoding="utf-8"))
         files = data["files"]
     except (OSError, ValueError, KeyError, TypeError):
         return False
@@ -2297,7 +2322,7 @@ def migrate_staged(dest, inventory):
         sorted((dest / "sections").glob("*.md"), key=lambda p: section_order(p.name))
     ):
         path = local(dest, path.relative_to(dest))
-        text = path.read_text()
+        text = path.read_text(encoding="utf-8")
         blocks = re.findall(
             r"^##\s+(INPUT|RESEARCH|FACTS|DRAFT|OPEN|STATUS)\b", text, re.M
         )

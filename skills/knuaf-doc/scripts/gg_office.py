@@ -11,6 +11,8 @@ directories with overwrite protection. Only macOS and Windows are
 implemented; other platforms fail closed with a clear error.
 """
 
+from __future__ import annotations
+
 import argparse
 import hashlib
 import importlib.util
@@ -400,7 +402,7 @@ def run_osascript(script: str, args: list[str], timeout: int = 90) -> subprocess
             capture_output=True,
             text=True,
             timeout=timeout,
-            check=False,
+            check=False, encoding="utf-8",
         )
         return res
     except subprocess.TimeoutExpired as exc:
@@ -465,7 +467,7 @@ def run_windows_com(kind: str, args: list[str], timeout: int = 90) -> subprocess
             capture_output=True,
             text=True,
             timeout=timeout,
-            check=False,
+            check=False, encoding="utf-8",
         )
         return res
     except subprocess.TimeoutExpired as exc:
@@ -594,13 +596,19 @@ def validate_pdf_file(path: Path) -> dict:
 
 
 def workbook_worksheet_count(path: Path) -> int:
-    """Counts XLSX worksheet declarations without reinterpreting cell data."""
+    """Counts XLSX worksheet declarations without reinterpreting cell data.
+
+    Hidden and veryHidden sheets are excluded: native Office PDF export does
+    not emit a page for a hidden sheet, so counting them here would demand
+    more PDF pages than a correct conversion can ever produce.
+    """
     with zipfile.ZipFile(path, "r") as zf:
         root = ET.fromstring(zf.read("xl/workbook.xml"))
     ns = {"x": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
-    count = len(root.findall("x:sheets/x:sheet", ns))
+    sheets = root.findall("x:sheets/x:sheet", ns)
+    count = len([s for s in sheets if s.get("state", "visible") == "visible"])
     if count < 1:
-        raise ValueError("Excel workbook contains no worksheets")
+        raise ValueError("Excel workbook contains no visible worksheets")
     return count
 
 
@@ -1171,7 +1179,7 @@ def process_excel(
             is_school_spec = False
             if spec_file:
                 try:
-                    spec_preview = json.loads(Path(spec_file).read_text())
+                    spec_preview = json.loads(Path(spec_file).read_text(encoding="utf-8"))
                     if spec_preview.get("profile") == "school_17_sheet_v1":
                         is_school_spec = True
                 except Exception:
@@ -1207,7 +1215,7 @@ def process_excel(
     if spec_file:
         spec_p = Path(spec_file).resolve()
         try:
-            spec_data = json.loads(spec_p.read_text())
+            spec_data = json.loads(spec_p.read_text(encoding="utf-8"))
             profile = spec_data.get("profile", "")
             if profile == "school_17_sheet_v1":
                 from gg_school_verify import verify_school_recalculated
@@ -1349,7 +1357,7 @@ def doctor(workspace: str | Path | None = None) -> dict:
     try:
         ws_root.mkdir(parents=True, exist_ok=True)
         test_file = ws_root / f".write_test_{uuid.uuid4().hex[:6]}"
-        test_file.write_text("ok")
+        test_file.write_text("ok", encoding="utf-8")
         test_file.unlink(missing_ok=True)
         ws_writable = True
     except Exception:

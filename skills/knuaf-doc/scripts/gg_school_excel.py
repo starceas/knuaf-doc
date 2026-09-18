@@ -1071,7 +1071,8 @@ def school_workbook(spec, path):
             },
             ensure_ascii=False,
             indent=2,
-        )
+        ),
+        encoding="utf-8",
     )
     return {
         "status": "generated",
@@ -2086,6 +2087,14 @@ def inspect_outputs(root, p, lineage=None):
                 continue
             for item in inspect_school_workbook(path):
                 issues.append(("school_excel_17", item["reason"]))
-        except (OSError, ValueError, KeyError, TypeError) as e:
+        except (
+            OSError,
+            ValueError,
+            KeyError,
+            TypeError,
+            UnicodeError,
+            zipfile.BadZipFile,
+            json.JSONDecodeError,
+        ) as e:
             issues.append(("school_excel_17", str(e)))
     return issues
