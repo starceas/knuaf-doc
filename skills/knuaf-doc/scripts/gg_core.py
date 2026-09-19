@@ -9,6 +9,7 @@ import os
 import re
 import shutil
 import socket
+import stat
 import tempfile
 import time
 import uuid
@@ -146,7 +147,7 @@ def load(root):
 def init(root):
     root = Path(root)
     root.mkdir(parents=True, exist_ok=True)
-    with Lock(root):
+    with lock(root):
         if (root / "project.json").exists():
             raise ValueError("기존 정본을 덮어쓰지 않음")
         p = dict(
@@ -318,6 +319,229 @@ class Lock:
         finally:
             if directory is not None:
                 os.close(directory)
+
+
+class _NativeWindowsPort:
+    """Windows(NT) 시스템 콜의 유일한 접점. dir_fd/O_NOFOLLOW/O_DIRECTORY는 여기서도 쓰지 않는다."""
+
+    def mkdir(self, path):
+        Path(path).mkdir()
+
+    def identity(self, path):
+        st = os.stat(path, follow_symlinks=False)
+        return (st.st_dev, st.st_ino)
+
+    def is_reparse_point(self, path):
+        st = os.stat(path, follow_symlinks=False)
+        return bool(st.st_file_attributes & stat.FILE_ATTRIBUTE_REPARSE_POINT)
+
+    def create_exclusive(self, path, mode):
+        return os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, mode)
+
+    def open_read(self, path):
+        return os.open(path, os.O_RDONLY)
+
+    def identity_of(self, handle):
+        st = os.fstat(handle)
+        return (st.st_dev, st.st_ino)
+
+    def write_all(self, handle, text):
+        os.lseek(handle, 0, os.SEEK_SET)
+        os.write(handle, text.encode("utf-8"))
+        os.fsync(handle)
+
+    def read_all(self, handle):
+        os.lseek(handle, 0, os.SEEK_SET)
+        chunks = []
+        while True:
+            chunk = os.read(handle, 65536)
+            if not chunk:
+                break
+            chunks.append(chunk)
+        return b"".join(chunks).decode("utf-8")
+
+    def try_lock(self, handle):
+        import msvcrt
+        os.lseek(handle, 0, os.SEEK_SET)
+        msvcrt.locking(handle, msvcrt.LK_NBLCK, 1)
+
+    def release_lock(self, handle):
+        import msvcrt
+        os.lseek(handle, 0, os.SEEK_SET)
+        msvcrt.locking(handle, msvcrt.LK_UNLCK, 1)
+
+    def close(self, handle):
+        os.close(handle)
+
+    def unlink(self, path):
+        os.unlink(path)
+
+    def rename(self, src, dst):
+        os.rename(src, dst)
+
+    def rmdir(self, path):
+        os.rmdir(path)
+
+
+class WindowsLock:
+    """Windows(NT) 전용 배타 잠금. POSIX ``Lock`` 과 코드를 공유하지 않는다.
+    설계 정본: docs/WINDOWS-LOCK-ARCHITECTURE.md §5~§7.
+    """
+
+    def __init__(self, root, *, port=None):
+        self.path = Path(root) / ".gg-lock"
+        self.token = uuid.uuid4().hex
+        self.identity = None
+        self.owner = None
+        self.owner_identity = None
+        self._port = port if port is not None else _NativeWindowsPort()
+        self._owner_handle = None
+
+    def __enter__(self):
+        port = self._port
+        try:
+            port.mkdir(self.path)
+        except FileExistsError:
+            raise ValueError(
+                "쓰기 잠금 존재: 실행 중인 작성자를 확인 후 doctor로 복구 판단"
+            )
+        owner_path = self.path / "owner.json"
+        try:
+            if port.is_reparse_point(self.path):
+                raise ValueError(
+                    "쓰기 잠금 존재: 실행 중인 작성자를 확인 후 doctor로 복구 판단"
+                )
+            self.identity = port.identity(self.path)
+            self.owner = {
+                "pid": os.getpid(),
+                "host": socket.gethostname(),
+                "token": self.token,
+            }
+            self._owner_handle = port.create_exclusive(owner_path, 0o600)
+            if port.is_reparse_point(owner_path):
+                raise ValueError(
+                    "쓰기 잠금 존재: 실행 중인 작성자를 확인 후 doctor로 복구 판단"
+                )
+            self.owner_identity = port.identity_of(self._owner_handle)
+            port.try_lock(self._owner_handle)
+            port.write_all(self._owner_handle, json.dumps(self.owner))
+            if port.identity(self.path) != self.identity:
+                raise OSError("잠금 디렉터리 교체: 획득 중단")
+        except Exception:
+            try:
+                if self._owner_handle is not None:
+                    port.close(self._owner_handle)
+                    self._owner_handle = None
+                if self.owner_identity is not None:
+                    if port.identity(owner_path) == self.owner_identity:
+                        port.unlink(owner_path)
+                if port.identity(self.path) == self.identity:
+                    port.rmdir(self.path)
+            except Exception:
+                self.identity = None
+            raise
+        return self
+
+    def __exit__(self, *args):
+        port = self._port
+        owner_path = self.path / "owner.json"
+        try:
+            current_identity = port.identity(self.path)
+            if current_identity != self.identity:
+                raise ValueError(
+                    "쓰기 잠금 디렉터리 교체: 자기 잠금이 아니므로 정리하지 않음: "
+                    + str(self.path)
+                )
+            owner_state = "missing"
+            owner_identity = None
+            read_handle = None
+            try:
+                try:
+                    read_handle = port.open_read(owner_path)
+                except FileNotFoundError:
+                    read_handle = None
+                if read_handle is not None:
+                    owner_identity = port.identity_of(read_handle)
+                    data = port.read_all(read_handle)
+                    data_again = port.read_all(read_handle)
+                    if data_again != data:
+                        owner_state = "replacement_owner"
+                    else:
+                        try:
+                            owner = json.loads(data)
+                        except json.JSONDecodeError as error:
+                            owner_state = "corrupt_owner_record: " + str(error)
+                        else:
+                            if owner != self.owner:
+                                owner_state = "replacement_owner"
+                            else:
+                                path_identity = port.identity(owner_path)
+                                owner_state = (
+                                    "ours"
+                                    if path_identity == owner_identity
+                                    else "replacement_owner"
+                                )
+            finally:
+                if read_handle is not None:
+                    port.close(read_handle)
+            if owner_state == "ours":
+                # 같은 inode 재기록(truncate+write) 대응 — json.loads 이후,
+                # 삭제 이전에 재확인한다. inode만으로는 이 경우를 못 잡는다.
+                try:
+                    recheck_handle = port.open_read(owner_path)
+                except FileNotFoundError:
+                    owner_state = "missing"
+                else:
+                    try:
+                        recheck_identity = port.identity_of(recheck_handle)
+                        if recheck_identity != owner_identity:
+                            owner_state = "replacement_owner"
+                        else:
+                            try:
+                                current = json.loads(port.read_all(recheck_handle))
+                            except json.JSONDecodeError:
+                                owner_state = "corrupt_owner_record: re-read"
+                            else:
+                                if current != self.owner:
+                                    owner_state = "replacement_owner"
+                    finally:
+                        port.close(recheck_handle)
+            if owner_state == "replacement_owner":
+                return
+            # missing / corrupt / ours: 자기 기록을 단 1회만 unlink.
+            if self._owner_handle is not None:
+                try:
+                    port.release_lock(self._owner_handle)
+                except OSError:
+                    pass
+                port.close(self._owner_handle)
+                self._owner_handle = None
+            try:
+                port.unlink(owner_path)
+            except FileNotFoundError:
+                pass
+            after_identity = port.identity(self.path)
+            if after_identity != self.identity:
+                return
+            released = self.path.with_name(".gg-tmp-lock-" + self.token)
+            port.rename(self.path, released)
+            released_identity = port.identity(released)
+            if released_identity != self.identity:
+                if not self.path.exists():
+                    try:
+                        port.rename(released, self.path)
+                    except FileExistsError:
+                        return
+                return
+            port.rmdir(released)
+        finally:
+            if self._owner_handle is not None:
+                port.close(self._owner_handle)
+                self._owner_handle = None
+
+
+def lock(root):
+    return WindowsLock(root) if os.name == "nt" else Lock(root)
 
 
 def validate(p):
@@ -557,7 +781,7 @@ def upgrade_schema(root):
     the legacy Markdown-folder ``migrate`` import path.
     """
     root = Path(root)
-    with Lock(root):
+    with lock(root):
         p = load(root)
         if p["schema_version"] == 2:
             return p
@@ -572,7 +796,7 @@ def upgrade_schema(root):
 
 def apply(root, change, expected_revision):
     root = Path(root)
-    with Lock(root):
+    with lock(root):
         p = load(root)
         if p["schema_version"] == 1:
             # Route schema-1 projects through the fingerprint upgrade before
@@ -1893,11 +2117,45 @@ def merged(root, p):
 
 
 def export(root, kind):
-    with Lock(root):
+    with lock(root):
         return export_locked(root, kind)
 
 
 def publish_export(staging, folder, manifest):
+    if os.name == "nt":
+        # Windows(NT) 전용 발행 경로. dir_fd/O_NOFOLLOW/O_DIRECTORY 계열을 전혀 쓰지
+        # 않고, 폴더를 여는 대신 경로 기반 stat 재검증으로 TOCTOU 창을 좁힌다.
+        # 설계서 §10 참고.
+        folder_identity_stat = os.stat(folder, follow_symlinks=False)
+        folder_identity = (folder_identity_stat.st_dev, folder_identity_stat.st_ino)
+        owner = os.stat(folder / ".publication.json", follow_symlinks=False)
+        folder_identity_recheck = os.stat(folder, follow_symlinks=False)
+        if (folder_identity_recheck.st_dev, folder_identity_recheck.st_ino) != folder_identity:
+            raise ValueError("발행 중 목적지 교체: 성공으로 등록하지 않음")
+        folder_identity = (folder_identity_recheck.st_dev, folder_identity_recheck.st_ino)
+        prepared_owner = (staging / ".publication.json").stat()
+        if (owner.st_dev, owner.st_ino) != (prepared_owner.st_dev, prepared_owner.st_ino):
+            raise ValueError("발행 목적지 소유권 변경")
+        for name in [*manifest["files"], "manifest.json"]:
+            source = local(staging, name)
+            destination = local(folder, name)
+            if destination.exists():
+                if not source.samefile(destination):
+                    raise ValueError("부분 산출물 소유권/파일 변경: 복구 중단")
+                continue
+            try:
+                os.link(source, destination)
+            except OSError as error:
+                raise ValueError(
+                    "Windows: 볼륨이 달라 하드링크를 만들 수 없음 (source="
+                    + str(source) + ", dest=" + str(destination) + "): " + str(error)
+                ) from error
+        # Windows: 디렉터리 자체의 fsync는 지원되지 않아 생략. 디렉터리 메타데이터
+        # 내구성이 POSIX 대비 낮음 — 설계서 §10, 종료 보고서 참고.
+        current = os.stat(folder, follow_symlinks=False)
+        if (current.st_dev, current.st_ino) != folder_identity:
+            raise ValueError("발행 중 목적지 교체: 성공으로 등록하지 않음")
+        return
     directory = os.open(
         folder, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | os.O_NOFOLLOW
     )

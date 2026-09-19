@@ -4,6 +4,7 @@
 import argparse
 import importlib.util
 import json
+import os
 from pathlib import Path
 import sys
 import gg_core as core
@@ -77,6 +78,7 @@ def main(argv=None):
             owner_path = lock_dir / "owner.json"
             lock_owner = None
             lock_owner_created = None
+            lock_holder_alive = None
             if owner_path.exists():
                 try:
                     lock_owner = json.loads(owner_path.read_text(encoding="utf-8"))
@@ -86,6 +88,24 @@ def main(argv=None):
                     lock_owner_created = owner_path.stat().st_mtime
                 except OSError:
                     lock_owner_created = None
+                if os.name == "nt":
+                    import msvcrt
+
+                    fd = None
+                    try:
+                        fd = os.open(str(owner_path), os.O_RDWR)
+                        try:
+                            msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)
+                        except OSError:
+                            lock_holder_alive = True
+                        else:
+                            msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
+                            lock_holder_alive = False
+                    except OSError:
+                        lock_holder_alive = "판정 불가"
+                    finally:
+                        if fd is not None:
+                            os.close(fd)
             value = {
                 "python": sys.version,
                 "dependencies": {
@@ -106,6 +126,8 @@ def main(argv=None):
                 ],
                 "notice": "설치 탐지는 실행 검증이 아님. 채팅만 가능하면 초안과 원답변 인계, 제출 후보 불가.",
             }
+            if os.name == "nt" and owner_path.exists():
+                value["lock_holder_alive"] = lock_holder_alive
         elif a.command == "unlock":
             lock_dir = Path(a.folder) / ".gg-lock"
             if not lock_dir.is_dir():
@@ -117,7 +139,16 @@ def main(argv=None):
                     owner_record = json.loads(owner_path.read_text(encoding="utf-8"))
                 except (OSError, ValueError):
                     owner_record = "판독 불가"
-                owner_path.unlink()
+                if os.name == "nt":
+                    try:
+                        owner_path.unlink()
+                    except PermissionError:
+                        raise ValueError(
+                            "쓰기 잠금 사용 중: 다른 작성자가 이 폴더를 열고 있어 해제할 수 없음.\n"
+                            "해당 작성자를 먼저 종료한 뒤 다시 시도. (doctor의 lock_holder_alive 확인)"
+                        )
+                else:
+                    owner_path.unlink()
             lock_dir.rmdir()
             value = {"status": "released", "path": str(lock_dir), "owner": owner_record}
         elif a.command == "observe":
