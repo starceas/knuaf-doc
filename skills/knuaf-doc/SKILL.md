@@ -20,6 +20,7 @@ description: 한국농수산대학교 창업논문·영농계획서와 동반 �
 
 - “시작하기”: 사용자가 지정한 폴더를 우선한다. 새 빈 작업폴더에 `scripts/gg.py init <폴더>`를 실행한다. 원본 학교 지침·학생 답변은 읽기 전용으로 보존한다.
 - “참고자료 폴더 등록”: [source-intake](references/source-intake.md)의 `source-scan`→`source-resolve`→`source-register`→`source-view` 흐름으로만 진행한다. 스캔은 증거만 만들고 명시적 선택만 등록되며, 생성 뷰는 `sources/generated/<view_id>/source-index.json`에만 발행된다. `03_sources.md`는 어떤 경로에서도 덮어쓰지 않는다.
+- “전공 선택·계약”: 새 작성 경로는 확인된 `common.major_id` 사실과 해당 모듈의 `module_version`을 원답변 출처와 함께 기존 `gg.py apply`로 정본에 기록한다. `gg.py major-plan <폴더>`가 전공별 질문·문서 계획·근거·재무 능력을 읽기 전용으로 보여 준다. `gg.py rda-candidates <폴더> --crop <품목> --region <지역> --year <연도> --unit <단위> --use-scope <용도>`는 정본의 전공을 사용하고, 기존 `rda-lookup`은 물리 행 감사용 조회로 유지한다. 전공이 없거나 검증되지 않으면 전공 의존 작성을 보류한다. 산업곤충은 현재 질문·선택형 문서 계획만 제공하며 종별 계산·본문 생성·작물 17시트 출력은 지원하지 않는다.
 - “이어서 하기”: `scripts/gg.py status <폴더>`와 `next <폴더>`를 실행하고 현재 정본 및 대상 절을 읽는다. 현재 작성 대상으로 확인한 폴더에 `project.json`이 없으면 원본을 그대로 둔 채 `import <기존폴더> --out <새폴더>`를 사용한다. import는 인터뷰·가정표·증거·절 원본의 바이트와 본문을 보존하고 수치·미결·중복·충돌을 `migration/inputs.json`에 기록한다. `migration-review`에서 보존된 원답변부터 대조해 사실을 등록하며 재인터뷰하거나 기존 검증을 자동 승격하지 않는다.
 - “고칠 부분 보기”: `check <폴더>`의 위치별 결과와 내용검토 결과를 구분해 설명한다.
 - “검토본 받기”: `export <폴더> --kind review`. 생성된 실제 경로와 미검증 항목을 알려준다. 교수 승인으로 표시하지 않는다.

@@ -119,12 +119,9 @@ class RealTreeTests(ContractCase):
                              f"errors: {report['errors']!r}")
             rc = report["runtime_changes"]
             self.assertEqual(rc["declared_count"], rc["verified"])
-            # P5 candidate: P4's 66 declared changes + 12 new P5 paths +
-            # 2 baseline guidance files first changed at P5 (source-intake.md,
-            # source-contract.md, owner D).
-            self.assertEqual(80, rc["verified"])
-            # P4's 45 approved-new + 12 new P5 paths.
-            self.assertEqual(57, rc["new_count"])
+            # P6 adds four declared common-contract runtime files to P5.
+            self.assertEqual(84, rc["verified"])
+            self.assertEqual(61, rc["new_count"])
         else:
             self.assertNotEqual("ok", report["status"])
             self.assertIn("declared_missing", _codes(report))
@@ -140,20 +137,18 @@ class RealTreeTests(ContractCase):
         self.assertEqual(
             _sha(REPO_ROOT / "tools" / "runtime-changes.json"),
             link["spec_sha256"])
-        self.assertEqual("P5", link["stage"])
+        self.assertEqual("P6", link["stage"])
         self.assertEqual("29abec0ec95369de7ae9e22207349d574f1f46b7",
                          link["baseline_main"])
-        # P5 delta on P4's 66/45: 12 new P5 paths + 2 baseline guidance
-        # paths first changed at P5.
-        self.assertEqual(80, link["change_count"])
-        self.assertEqual(57, link["new_count"])
-        self.assertEqual(57, link["approved_new_files"])
-        # Pinned P4 parent: accepted export, 124 files, tree digest
-        # independently rehashed by root.
-        self.assertEqual("P4", link["parent_candidate"]["stage"])
-        self.assertEqual(124, link["parent_candidate"]["file_count"])
+        # P6 adds four new runtime files; the parent is the checked P5
+        # worktree before implementation began.
+        self.assertEqual(84, link["change_count"])
+        self.assertEqual(61, link["new_count"])
+        self.assertEqual(61, link["approved_new_files"])
+        self.assertEqual("P5", link["parent_candidate"]["stage"])
+        self.assertEqual(136, link["parent_candidate"]["file_count"])
         self.assertEqual(
-            "c76885dd312ee5e9c74da62abb0192bd71b8b4b85d8b9aa99af92ef5b33734f5",
+            "6ce8fc2bd332d71d982a450d23a19f2bafe244b2a60daf217115b9fa200d30f4",
             link["parent_candidate"]["tree_sha256"])
 
     def test_change_entries_carry_before_after(self):
@@ -173,13 +168,13 @@ class RealTreeTests(ContractCase):
                 # P5 first-changed baseline files: the two D-owned
                 # guidance corrections; earlier stage labels retained.
                 self.assertIn(meta["first_changed"], {"P1", "P2", "P3", "P5"})
-                self.assertIn(meta["owner"], {"A", "B", "C", "P4", "D"})
+                self.assertIn(meta["owner"], {"A", "B", "C", "P4", "D", "P6"})
             else:
-                # P2/P3/P4/P5 new files: pre-declared allowlist only.
+                # P2 through P6 new files: pre-declared allowlist only.
                 self.assertIn(name, approved)
                 self.assertIsNone(meta["before_sha256"])
-                self.assertIn(meta["first_changed"], {"P2", "P3", "P4", "P5"})
-                self.assertIn(meta["owner"], {"A", "B", "C", "S", "P4", "P5"})
+                self.assertIn(meta["first_changed"], {"P2", "P3", "P4", "P5", "P6"})
+                self.assertIn(meta["owner"], {"A", "B", "C", "S", "P4", "P5", "P6"})
 
 
 class SyntheticLineageTests(ContractCase):

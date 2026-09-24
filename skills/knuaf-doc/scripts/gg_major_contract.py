@@ -1,0 +1,1177 @@
+"""Common major contract for knuaf-doc (DECISION-20260924).
+
+The common layer owns major selection and result validation.  Each major
+module is a *peer*: it declares what to ask, narrate, and treat as
+evidence or finance candidates, and the router binds exactly one
+explicit ``major_id``, hands the module a read-only canonical view, and
+returns its proposal to the common validation/output path.
+
+Hard rules carried by this module:
+
+- A missing ``major_id`` fails closed.  It is never defaulted to
+  specialty_crops; only common source organization may proceed.
+- Major modules are peers.  ``imports`` must be empty and a module may
+  not declare or reference a pack owned by another major.
+- Modules never write the canonical project record.  They return
+  proposals; revision compare, lock, write, and approval invalidation
+  stay on the existing common transaction path.
+- Answer states are the existing six ``gg_core`` states, reused — never
+  redefined, and ``0`` is never inferred for a missing answer.
+- industrial_insects keeps ``empty_slot`` data, performs no calculation,
+  emits no specialty-crop paper wording, and claims no crop workbook.
+"""
+
+import json
+from dataclasses import dataclass, fields
+from pathlib import Path
+from types import MappingProxyType
+
+import gg_core
+
+CONTRACT_VERSION = "knuaf-major-contract/1"
+
+# The six answer states are the gg_core contract — reused, not redefined.
+ANSWER_STATES = gg_core.STATES
+
+CAPABILITY_KINDS = ("question", "document", "evidence", "finance")
+
+# Evidence contract axes (DECISION §3): kept on separate axes, never
+# merged into one status string.  ``link_only`` and ``source_conflict``
+# are NOT CatalogStatus values; they live on the acquisition and
+# conflict axes respectively.
+ACQUISITION_STATES = ("link_only", "bytes_held")
+OBSERVATION_STATES = ("verified_observation", "exploratory", "quarantined")
+RIGHTS_STATES = ("internal_view", "redistribution_confirmed", "unconfirmed")
+CONFLICT_STATES = ("none", "unresolved", "corrected")
+APPLICABILITY_STATES = ("applicable", "inapplicable", "unverified")
+APPROVAL_STATES = ("unapproved", "approval_candidate", "promotable")
+CONFLICT_ALIASES = {"source_conflict": "unresolved"}
+
+EVIDENCE_AXES = (
+    "acquisition",
+    "observation",
+    "rights",
+    "conflict",
+    "applicability",
+    "approval",
+)
+
+# Promotion order: source -> parse -> cell/render compare ->
+# verification/rights/conflict/applicability -> approval candidate.
+PROMOTION_ORDER = (
+    "source_acquired",
+    "parsed_receipt",
+    "cell_render_compared",
+    "axes_checked",
+    "approval_candidate",
+)
+
+# Common finance envelope: these stay distinct fields — a calculation
+# flag never doubles as evidence-satisfied, recalculated, or submitted.
+FINANCE_ENVELOPE_FIELDS = (
+    "inputs",
+    "formula",
+    "source_refs",
+    "unit",
+    "period",
+    "revision_hash",
+    "calculation_performed",
+    "evidence_satisfied",
+    "recalculated",
+    "submission_verified",
+)
+
+
+class MajorContractError(Exception):
+    """Fail-closed base error.  ``reason`` is the machine-checkable id."""
+
+    reason = "major_contract_error"
+
+    def __init__(self, message=None, **detail):
+        super().__init__(message or self.reason)
+        self.detail = detail
+
+
+class MissingMajorError(MajorContractError):
+    reason = "major_required"
+
+
+class UnknownMajorError(MajorContractError):
+    reason = "unknown_major"
+
+
+class BindingInvalidError(MajorContractError):
+    reason = "binding_invalid"
+
+
+class UnsupportedOutputError(MajorContractError):
+    reason = "unsupported_output"
+
+
+class CrossMajorDependencyError(MajorContractError):
+    reason = "cross_major_dependency"
+
+
+class DeclarationInvalidError(MajorContractError):
+    reason = "declaration_invalid"
+
+
+class ProposalInvalidError(MajorContractError):
+    reason = "proposal_invalid"
+
+
+@dataclass(frozen=True)
+class QuestionSpec:
+    """A major-owned question field (DECISION §3 field_id namespace)."""
+
+    field_id: str
+    meaning: str
+    unit: str = None
+    period: str = None
+    target: str = None
+    source: str = None
+
+
+@dataclass(frozen=True)
+class PrecedentSpec:
+    """One precedent in the module's roster.
+
+    All entries share the same ``kind`` — ``example_observed`` — so no
+    single exemplar outranks its peers (F0 and E1–E4 are equal).
+    """
+
+    ref: str
+    kind: str = "example_observed"
+
+
+@dataclass(frozen=True)
+class DocumentNodeSpec:
+    """A document node: role plus *why* it was selected/transformed.
+
+    ``required=False`` marks a proposed-but-optional node — the plan
+    never mandates a section count.  ``precedent_refs`` may cite a
+    subset of the module's declared precedent roster where the role
+    was actually observed; empty means informed by the roster pool
+    without a per-exemplar claim.  ``rationale`` records why the node
+    is proposed, ``transform_reason`` why it deviates from precedent.
+    """
+
+    section_id: str
+    role: str
+    selectable: bool = True
+    required: bool = False
+    rationale: str = None
+    precedent_refs: tuple = ()
+    transform_reason: str = None
+    evidence_ids: tuple = ()
+
+
+@dataclass(frozen=True)
+class FinanceCapability:
+    """One named finance profile and whether the module may compute it."""
+
+    profile: str
+    status: str  # "supported" | "unsupported"
+    reason: str = ""
+
+
+@dataclass(frozen=True)
+class MajorModule:
+    """A peer major module declaration (DECISION §3 interface)."""
+
+    major_id: str
+    module_version: str
+    field_namespace: str
+    capabilities: object  # MappingProxyType {kind: "supported"|"unsupported"}
+    question_schema: tuple
+    document_plan: tuple
+    evidence_applicability: object  # MappingProxyType
+    finance_capabilities: tuple
+    validation_rules: tuple
+    supported_outputs: tuple
+    precedents: tuple = ()  # equal-rank PrecedentSpec roster
+    packs: tuple = ()
+    pack_refs: tuple = ()
+    imports: tuple = ()
+    forbidden_terms: tuple = ()
+    contract_version: str = CONTRACT_VERSION
+
+
+# Binding basis is a closed set.  ``legacy_record`` bindings (existing
+# projects handled through the compatibility adapter) require a confirmed
+# binding-evidence pointer; ``explicit_selection`` does not.
+BINDING_BASES = ("explicit_selection", "legacy_record")
+
+# The common layer's own binding fact — a ``field_id`` outside every
+# major namespace, written to a project's facts only through the
+# existing gg_core transaction path, never by this module.
+COMMON_MAJOR_FIELD = "common.major_id"
+
+# A legacy binding requires a confirmed fact: only claim_supported
+# verification counts.  Unreviewed or merely source-located answers
+# cannot activate a major adapter.
+_BINDING_REQUIRED_VERIFY = "claim_supported"
+
+
+@dataclass(frozen=True)
+class MajorBinding:
+    """An explicit major binding — never inferred, never defaulted."""
+
+    major_id: str
+    basis: str
+    module_version: str
+    contract_version: str
+    binding_evidence: str = None
+
+
+@dataclass(frozen=True)
+class ModuleProposal:
+    """What a module hands back to the common layer.
+
+    ``canonical_write`` is always False: proposals are data for common
+    validation/commit, never direct writes to the canonical record.
+    ``canonical`` is the deep read-only view the module was shown
+    (``canonical_view`` output), or None when no record was handed over.
+    It is intentionally excluded from ``to_dict`` — the canonical record
+    is input context, not proposal content.
+    """
+
+    major_id: str
+    module_version: str
+    contract_version: str
+    capability: str
+    status: str  # "supported" | "unsupported"
+    proposal: object  # frozen MappingProxyType payload
+    canonical: object = None  # MappingProxyType view or None
+    canonical_write: bool = False
+
+    def to_dict(self):
+        return {
+            "major_id": self.major_id,
+            "module_version": self.module_version,
+            "contract_version": self.contract_version,
+            "capability": self.capability,
+            "status": self.status,
+            "proposal": _thaw(self.proposal),
+            "canonical_present": self.canonical is not None,
+            "canonical_write": self.canonical_write,
+        }
+
+
+def _freeze(value):
+    """Deep-read-only view: dict -> MappingProxyType, list -> tuple."""
+    if isinstance(value, MappingProxyType):
+        return value
+    if isinstance(value, dict):
+        return MappingProxyType({k: _freeze(v) for k, v in value.items()})
+    if isinstance(value, (list, tuple)):
+        return tuple(_freeze(v) for v in value)
+    if isinstance(value, set):
+        return frozenset(_freeze(v) for v in value)
+    return value
+
+
+def _thaw(value):
+    """Inverse of _freeze for serialization/scanning."""
+    if isinstance(value, MappingProxyType):
+        return {k: _thaw(v) for k, v in value.items()}
+    if isinstance(value, (tuple, frozenset)):
+        return [_thaw(v) for v in value]
+    return value
+
+
+def canonical_view(canonical):
+    """The read-only canonical record handed to a module."""
+    return _freeze(canonical)
+
+
+def normalize_answer_state(state):
+    """Validate an answer state against the six gg_core states.
+
+    Missing answers stay ``not_provided``; ``0`` is never inferred.
+    """
+    if not isinstance(state, str) or state not in ANSWER_STATES:
+        raise ValueError("unknown answer state: %r" % (state,))
+    return state
+
+
+def check_dependencies(module, pack_owner=None):
+    """Peer rule: no cross-major import, no foreign pack reference.
+
+    ``pack_owner`` maps every *known* pack_id to its owning major_id,
+    with None marking a common pack.  When the map is provided, a pack
+    id absent from it is unknown and fails closed — unknown ids are
+    never treated as common.  With ``pack_owner=None`` (declare time)
+    only the imports rule is checked; pack resolution happens when the
+    module is registered against a real catalog.
+    """
+    if module.imports:
+        raise CrossMajorDependencyError(
+            "major modules may not import other modules",
+            major_id=module.major_id,
+            imports=tuple(module.imports),
+        )
+    if pack_owner is None:
+        return
+    for ref in module.packs:
+        if ref not in pack_owner:
+            raise DeclarationInvalidError(
+                "unknown pack %r" % ref, major_id=module.major_id,
+                pack=ref,
+            )
+        if pack_owner[ref] != module.major_id:
+            raise CrossMajorDependencyError(
+                "pack %r is owned by major %r" % (ref, pack_owner[ref]),
+                major_id=module.major_id,
+                pack=ref,
+                owner=pack_owner[ref],
+            )
+    for ref in module.pack_refs:
+        if ref not in pack_owner:
+            raise DeclarationInvalidError(
+                "unknown pack %r" % ref, major_id=module.major_id,
+                pack=ref,
+            )
+        if pack_owner[ref] not in (None, module.major_id):
+            raise CrossMajorDependencyError(
+                "pack %r is owned by major %r" % (ref, pack_owner[ref]),
+                major_id=module.major_id,
+                pack=ref,
+                owner=pack_owner[ref],
+            )
+
+
+def validate_declaration(module, pack_owner=None):
+    """Structural contract checks applied at declaration/register time."""
+    if not isinstance(module, MajorModule):
+        raise DeclarationInvalidError("not a MajorModule", got=type(module))
+    if module.contract_version != CONTRACT_VERSION:
+        raise DeclarationInvalidError(
+            "contract_version mismatch",
+            major_id=module.major_id,
+            got=module.contract_version,
+        )
+    if not module.major_id or not isinstance(module.major_id, str):
+        raise DeclarationInvalidError("major_id required")
+    if module.field_namespace != module.major_id:
+        raise DeclarationInvalidError(
+            "field_namespace must equal major_id",
+            major_id=module.major_id,
+            field_namespace=module.field_namespace,
+        )
+    unknown_caps = set(module.capabilities) - set(CAPABILITY_KINDS)
+    if unknown_caps:
+        raise DeclarationInvalidError(
+            "unknown capability kinds", unknown=sorted(unknown_caps)
+        )
+    prefix = module.field_namespace + "."
+    for q in module.question_schema:
+        if not q.field_id.startswith(prefix):
+            raise DeclarationInvalidError(
+                "field_id outside major namespace",
+                major_id=module.major_id,
+                field_id=q.field_id,
+            )
+    refs = [p.ref for p in module.precedents]
+    if len(set(refs)) != len(refs):
+        raise DeclarationInvalidError(
+            "duplicate precedent refs", major_id=module.major_id
+        )
+    if len({p.kind for p in module.precedents}) > 1:
+        raise DeclarationInvalidError(
+            "precedents must share one kind (equal rank)",
+            major_id=module.major_id,
+        )
+    for n in module.document_plan:
+        unknown = set(n.precedent_refs) - set(refs)
+        if unknown:
+            raise DeclarationInvalidError(
+                "node cites undeclared precedent",
+                major_id=module.major_id,
+                section_id=n.section_id,
+                refs=sorted(unknown),
+            )
+    check_dependencies(module, pack_owner)
+
+
+def declare_module(
+    *,
+    major_id,
+    module_version,
+    capabilities,
+    question_schema=(),
+    document_plan=(),
+    precedents=(),
+    evidence_applicability=None,
+    finance_capabilities=(),
+    validation_rules=(),
+    supported_outputs=(),
+    packs=(),
+    pack_refs=(),
+    imports=(),
+    forbidden_terms=(),
+    contract_version=CONTRACT_VERSION,
+    field_namespace=None,
+):
+    """Build a structurally-validated, immutable module declaration."""
+    module = MajorModule(
+        major_id=major_id,
+        module_version=module_version,
+        field_namespace=field_namespace or major_id,
+        capabilities=MappingProxyType(dict(capabilities)),
+        question_schema=tuple(question_schema),
+        document_plan=tuple(document_plan),
+        precedents=tuple(precedents),
+        evidence_applicability=MappingProxyType(
+            dict(evidence_applicability or {})
+        ),
+        finance_capabilities=tuple(finance_capabilities),
+        validation_rules=tuple(validation_rules),
+        supported_outputs=tuple(supported_outputs),
+        packs=tuple(packs),
+        pack_refs=tuple(pack_refs),
+        imports=tuple(imports),
+        forbidden_terms=tuple(forbidden_terms),
+        contract_version=contract_version,
+    )
+    validate_declaration(module, pack_owner=None)
+    return module
+
+
+class ModuleRegistry:
+    """The peer registry.  ``pack_owner`` maps pack_id -> major_id, with
+    None marking common packs (common is never a major default)."""
+
+    def __init__(self, modules=(), pack_owner=None):
+        self._pack_owner = dict(pack_owner or {})
+        self._modules = {}
+        for m in modules:
+            self.register(m)
+
+    def register(self, module):
+        validate_declaration(module, self._pack_owner)
+        if module.major_id in self._modules:
+            raise DeclarationInvalidError(
+                "duplicate major_id", major_id=module.major_id
+            )
+        self._modules[module.major_id] = module
+        return module
+
+    def resolve(self, major_id):
+        """Explicit-only resolution — fail closed, never default."""
+        if not major_id or not isinstance(major_id, str):
+            raise MissingMajorError("explicit major_id required")
+        module = self._modules.get(major_id)
+        if module is None:
+            raise UnknownMajorError(
+                "major %r not registered" % major_id, major_id=major_id
+            )
+        check_dependencies(module, self._pack_owner)
+        return module
+
+    @property
+    def major_ids(self):
+        return tuple(self._modules)
+
+
+def bind_major(
+    registry, major_id, *, basis="explicit_selection", evidence=None
+):
+    """Bind one explicit major.  Missing/unknown fails closed; there is
+    no global default — specialty_crops is bound only when named.
+
+    ``basis`` must be one of ``BINDING_BASES``.  A ``legacy_record``
+    binding (an existing project without a stored major) is accepted
+    only with a confirmed binding-evidence pointer — never guessed.
+    """
+    if basis not in BINDING_BASES:
+        raise BindingInvalidError(
+            "basis %r not in %r" % (basis, BINDING_BASES), basis=basis
+        )
+    if basis == "legacy_record" and (
+        not isinstance(evidence, str) or not evidence
+    ):
+        raise BindingInvalidError(
+            "legacy_record binding requires confirmed evidence",
+            major_id=major_id,
+        )
+    module = registry.resolve(major_id)
+    return MajorBinding(
+        major_id=module.major_id,
+        basis=basis,
+        module_version=module.module_version,
+        contract_version=CONTRACT_VERSION,
+        binding_evidence=evidence,
+    )
+
+
+def binding_from_project(registry, project):
+    """Read a confirmed ``common.major_id`` fact from a loaded project.
+
+    ``project`` is a ``gg_core.load(root)`` result (or an equivalent
+    read-only mapping).  This helper is strictly read-only — it never
+    writes canonical state; a new project records the fact through the
+    existing ``gg_core.apply`` path.
+
+    A fact binds only when it is ``provided`` with a major_id ``value``,
+    carries ``claim_supported`` verification and ``source_refs`` that
+    resolve in ``project["sources"]``, and records a ``module_version``
+    equal to the registered module's version.  No provided fact ->
+    ``MissingMajorError`` (a missing major is never inferred and never
+    defaulted to specialty_crops); duplicate or conflicting provided
+    facts, verification short of ``claim_supported``, unresolved
+    source_refs, or a missing/mismatched module_version ->
+    ``BindingInvalidError``.
+    """
+    facts = project.get("facts") or {}
+    provided = [
+        (fid, f)
+        for fid, f in facts.items()
+        if isinstance(f, dict)
+        and f.get("field_id") == COMMON_MAJOR_FIELD
+        and f.get("answer_state") == "provided"
+    ]
+    if not provided:
+        raise MissingMajorError(
+            "no provided %s fact" % COMMON_MAJOR_FIELD
+        )
+    if len(provided) > 1:
+        values = {f.get("value") for _, f in provided}
+        raise BindingInvalidError(
+            "conflicting_major_facts"
+            if len(values) > 1
+            else "duplicate_major_facts",
+            count=len(provided),
+        )
+    fact_id, fact = provided[0]
+    if fact.get("verification") != _BINDING_REQUIRED_VERIFY:
+        raise BindingInvalidError(
+            "major fact verification %r is not claim_supported"
+            % fact.get("verification")
+        )
+    major_id = fact.get("value")
+    if not isinstance(major_id, str) or not major_id:
+        raise BindingInvalidError("provided major fact has no major_id")
+    module = registry.resolve(major_id)
+    sources = project.get("sources") or {}
+    refs = fact.get("source_refs") or []
+    if not refs:
+        raise BindingInvalidError("major fact has no source_refs")
+    missing = [r.get("id") for r in refs if r.get("id") not in sources]
+    if missing:
+        raise BindingInvalidError(
+            "source_refs unresolved", missing=missing
+        )
+    recorded = fact.get("module_version")
+    if not isinstance(recorded, str) or not recorded:
+        raise BindingInvalidError("module_version not recorded")
+    if recorded != module.module_version:
+        raise BindingInvalidError(
+            "module_version mismatch",
+            recorded=recorded,
+            registered=module.module_version,
+        )
+    return bind_major(
+        registry,
+        major_id,
+        basis="legacy_record",
+        evidence="facts:%s" % fact_id,
+    )
+
+
+def common_only_plan(reason="major_required"):
+    """Missing major: hold major-dependent work; common source org only."""
+    return {
+        "status": "held",
+        "reason": reason,
+        "common_only": True,
+        "allowed": ("source_organization", "answer_state_recording"),
+        "held": CAPABILITY_KINDS,
+    }
+
+
+def _build_proposal(module, capability):
+    if capability == "question":
+        return {
+            "fields": [
+                {f.name: getattr(q, f.name) for f in fields(q)}
+                for q in module.question_schema
+            ],
+            "answer_states": sorted(ANSWER_STATES),
+        }
+    if capability == "document":
+        return {
+            "sections": [
+                {f.name: getattr(n, f.name) for f in fields(n)}
+                for n in module.document_plan
+            ],
+            "precedents": [
+                {"ref": p.ref, "kind": p.kind} for p in module.precedents
+            ],
+            "mandated_sections": [
+                n.section_id
+                for n in module.document_plan
+                if n.required and not n.selectable
+            ],
+            "claims": (),
+        }
+    if capability == "evidence":
+        return {
+            "axes": {
+                "acquisition": ACQUISITION_STATES,
+                "observation": OBSERVATION_STATES,
+                "rights": RIGHTS_STATES,
+                "conflict": CONFLICT_STATES,
+                "applicability": APPLICABILITY_STATES,
+                "approval": APPROVAL_STATES,
+            },
+            "applicability": dict(module.evidence_applicability),
+            "promotion_order": PROMOTION_ORDER,
+        }
+    if capability == "finance":
+        return {
+            "capabilities": [
+                {f.name: getattr(c, f.name) for f in fields(c)}
+                for c in module.finance_capabilities
+            ],
+            "envelope_fields": FINANCE_ENVELOPE_FIELDS,
+            "blocks_document": False,
+        }
+    raise UnsupportedOutputError(
+        "unknown capability %r" % capability, capability=capability
+    )
+
+
+def _computed_keys(value, hits):
+    if isinstance(value, MappingProxyType) or isinstance(value, dict):
+        items = value.items()
+    elif isinstance(value, (tuple, list)):
+        items = enumerate(value)
+    else:
+        return
+    for k, v in items:
+        if isinstance(k, str) and k in ("calculated", "computed", "result"):
+            if v:
+                hits.append(k)
+        _computed_keys(v, hits)
+
+
+def validate_proposal(module, proposal):
+    """Common-side validation of a module proposal — fail closed."""
+    if not isinstance(proposal, ModuleProposal):
+        raise ProposalInvalidError("not a ModuleProposal")
+    if proposal.canonical_write:
+        raise ProposalInvalidError(
+            "modules may not write the canonical record",
+            major_id=proposal.major_id,
+        )
+    if proposal.major_id != module.major_id:
+        raise ProposalInvalidError(
+            "proposal/major mismatch",
+            major_id=proposal.major_id,
+            module=module.major_id,
+        )
+    if proposal.canonical is not None and not isinstance(
+        proposal.canonical, MappingProxyType
+    ):
+        raise ProposalInvalidError(
+            "canonical handoff must be a read-only view",
+            major_id=proposal.major_id,
+        )
+    blob = json.dumps(_thaw(proposal.proposal), ensure_ascii=False)
+    for term in module.forbidden_terms:
+        if term in blob:
+            raise ProposalInvalidError(
+                "cross-major term %r in %s proposal"
+                % (term, proposal.capability),
+                major_id=module.major_id,
+                term=term,
+            )
+    if proposal.capability == "document":
+        payload = _thaw(proposal.proposal)
+        if (
+            "workbook" in payload or "sheets" in payload
+        ) and "school_excel_workbook" not in module.supported_outputs:
+            raise ProposalInvalidError(
+                "workbook claim unsupported for this major",
+                major_id=module.major_id,
+            )
+    if proposal.capability == "finance":
+        if all(c.status == "unsupported" for c in
+               module.finance_capabilities):
+            hits = []
+            _computed_keys(proposal.proposal, hits)
+            if hits:
+                raise ProposalInvalidError(
+                    "unsupported finance emitted computed values",
+                    major_id=module.major_id,
+                    keys=hits,
+                )
+    return proposal
+
+
+def route(registry, major_id, capability, *, output=None, canonical=None):
+    """Select one explicit major and return its capability proposal.
+
+    Fails closed on missing major, unknown major, unknown capability,
+    or an output the module does not support.  When ``canonical`` is
+    given, the module-facing handoff is a deep read-only view
+    (``canonical_view``) carried on the proposal — modules return
+    proposals, never writes.
+    """
+    module = registry.resolve(major_id)
+    if capability not in CAPABILITY_KINDS:
+        raise UnsupportedOutputError(
+            "unknown capability %r" % capability, capability=capability
+        )
+    if output is not None and output not in module.supported_outputs:
+        raise UnsupportedOutputError(
+            "output %r unsupported for major %r" % (output, major_id),
+            major_id=major_id,
+            output=output,
+        )
+    view = None if canonical is None else canonical_view(canonical)
+    status = module.capabilities.get(capability, "unsupported")
+    proposal = ModuleProposal(
+        major_id=module.major_id,
+        module_version=module.module_version,
+        contract_version=CONTRACT_VERSION,
+        capability=capability,
+        status=status,
+        proposal=_freeze(_build_proposal(module, capability)),
+        canonical=view,
+    )
+    return validate_proposal(module, proposal)
+
+
+def capability_proposals(registry, major_id):
+    """All four capability proposals for one bound major."""
+    return {
+        kind: route(registry, major_id, kind)
+        for kind in CAPABILITY_KINDS
+    }
+
+
+def evidence_axes(
+    *,
+    acquisition,
+    observation,
+    rights,
+    conflict,
+    applicability,
+    approval="unapproved",
+):
+    """Build a validated evidence-axes record (separate axes, no merge)."""
+    conflict = CONFLICT_ALIASES.get(conflict, conflict)
+    axes = {
+        "acquisition": acquisition,
+        "observation": observation,
+        "rights": rights,
+        "conflict": conflict,
+        "applicability": applicability,
+        "approval": approval,
+    }
+    valid = {
+        "acquisition": ACQUISITION_STATES,
+        "observation": OBSERVATION_STATES,
+        "rights": RIGHTS_STATES,
+        "conflict": CONFLICT_STATES,
+        "applicability": APPLICABILITY_STATES,
+        "approval": APPROVAL_STATES,
+    }
+    for axis, value in axes.items():
+        if value not in valid[axis]:
+            raise ValueError(
+                "axis %s: %r not in %r" % (axis, value, valid[axis])
+            )
+    return MappingProxyType(axes)
+
+
+def promotion_blockers(axes, audit_key=None):
+    """Axes that block approval candidacy.
+
+    An explicit ``audit_key`` is a physical-row identifier only — it
+    confers no bypass over any axis.
+    """
+    blockers = []
+    if axes["acquisition"] != "bytes_held":
+        blockers.append("acquisition")
+    if axes["observation"] != "verified_observation":
+        blockers.append("observation")
+    if axes["rights"] != "redistribution_confirmed":
+        blockers.append("rights")
+    if axes["conflict"] != "none":
+        blockers.append("conflict")
+    if axes["applicability"] != "applicable":
+        blockers.append("applicability")
+    return tuple(blockers)
+
+
+def approval_candidate(axes, audit_key=None):
+    return not promotion_blockers(axes, audit_key=audit_key)
+
+
+def evaluate_applicability(module, candidate):
+    """Whether a candidate observation applies to this major.
+
+    A null-major (common pack) candidate is never auto-applicable — it
+    stays ``unverified`` (a citation candidate, not a calculation
+    input).  Another major's candidate is ``inapplicable``.
+    """
+    cand_major = candidate.get("major_id")
+    if cand_major is not None and cand_major != module.major_id:
+        return "inapplicable"
+    rules = module.evidence_applicability
+    if cand_major is None:
+        return rules.get("common_pack_policy", "unverified")
+    scopes = rules.get("use_scopes", ())
+    if scopes and candidate.get("use_scope") not in scopes:
+        return "unverified"
+    return "applicable"
+
+
+# ---------------------------------------------------------------------------
+# Peer module declarations.  Neither imports nor references the other;
+# pack ownership is verified against the shipped catalog at register.
+# ---------------------------------------------------------------------------
+
+_SPECIALTY_FORBIDDEN = (
+    "곤충",
+    "사육",
+    "종충",
+    "동애등에",
+    "귀뚜라미",
+    "분변토",
+)
+
+_INSECT_FORBIDDEN = (
+    "특용작물",
+    "본포",
+    "토양관리",
+    "재배기술",
+    "재배 환경",
+    "관수",
+    "잡초방제",
+    "농산물 가공",
+    "수확 및 저장법",
+)
+
+SPECIALTY_CROPS_MODULE = declare_module(
+    major_id="specialty_crops",
+    module_version="1.0.0",
+    capabilities={
+        "question": "supported",
+        "document": "supported",
+        "evidence": "supported",
+        "finance": "supported",
+    },
+    question_schema=(
+        QuestionSpec(
+            field_id="specialty_crops.crop_item",
+            meaning="대상 작목(품목)",
+            target="crop",
+        ),
+        QuestionSpec(
+            field_id="specialty_crops.cultivation_area",
+            meaning="재배 면적",
+            unit="10a",
+            target="crop",
+        ),
+        QuestionSpec(
+            field_id="specialty_crops.region",
+            meaning="재배 지역",
+            target="crop",
+        ),
+        QuestionSpec(
+            field_id="specialty_crops.cultivation_technique",
+            meaning="재배 기술·관리 방법",
+            target="crop",
+        ),
+        QuestionSpec(
+            field_id="specialty_crops.processing_plan",
+            meaning="가공·판매 계획",
+            target="product",
+        ),
+    ),
+    document_plan=(
+        DocumentNodeSpec(
+            "summary", "summary", selectable=False, required=True
+        ),
+        DocumentNodeSpec(
+            "farm_status", "farm_status", selectable=False, required=True
+        ),
+        DocumentNodeSpec(
+            "environment", "environment_analysis",
+            selectable=False, required=True
+        ),
+        DocumentNodeSpec(
+            "cultivation", "cultivation_technique",
+            selectable=False, required=True
+        ),
+        DocumentNodeSpec(
+            "processing_sales", "processing_sales",
+            selectable=False, required=True
+        ),
+        DocumentNodeSpec(
+            "finance", "finance_plan", selectable=False, required=True
+        ),
+        DocumentNodeSpec(
+            "references", "references", selectable=False, required=True
+        ),
+    ),
+    evidence_applicability=MappingProxyType(
+        {
+            "use_scopes": ("production_stat", "income", "econ_indicator"),
+            "common_pack_policy": "unverified",
+            "required_axes": (
+                "acquisition",
+                "observation",
+                "rights",
+                "conflict",
+                "applicability",
+            ),
+        }
+    ),
+    finance_capabilities=(
+        FinanceCapability(
+            profile="single_annual_cash_v1",
+            status="supported",
+            reason="기존 단일 작목 연간 현금 산식 (gg_finance.calculate)",
+        ),
+        FinanceCapability(
+            profile="composite_multi_crop",
+            status="unsupported",
+            reason="복합·가공·보조금 산식은 기존 계약상 미지원",
+        ),
+    ),
+    validation_rules=(
+        "namespace_fields",
+        "no_foreign_pack_refs",
+        "forbidden_terms_absent",
+        "finance_status_literal",
+    ),
+    supported_outputs=(
+        "question_list",
+        "document_plan",
+        "evidence_review",
+        "school_paper",
+        "school_excel_workbook",
+        "finance_single_annual_cash_v1",
+    ),
+    packs=("mafra.specialty.production.2024",),
+    forbidden_terms=_SPECIALTY_FORBIDDEN,
+)
+
+INDUSTRIAL_INSECTS_MODULE = declare_module(
+    major_id="industrial_insects",
+    module_version="0.1.0",
+    capabilities={
+        "question": "supported",
+        "document": "supported",
+        "evidence": "supported",
+        "finance": "unsupported",
+    },
+    question_schema=(
+        QuestionSpec(
+            field_id="industrial_insects.species",
+            meaning="대상 곤충 종",
+            target="species",
+        ),
+        QuestionSpec(
+            field_id="industrial_insects.purpose",
+            meaning="용도(식용/사료/애완·학습/기타)",
+            target="species",
+        ),
+        QuestionSpec(
+            field_id="industrial_insects.product_form",
+            meaning="제품 형태(알·종충·생충·건조·가공·부산물·서비스)",
+            target="product",
+        ),
+        QuestionSpec(
+            field_id="industrial_insects.cohort_or_batch",
+            meaning="회차·배치 단위",
+            target="species",
+        ),
+        QuestionSpec(
+            field_id="industrial_insects.cycle_days",
+            meaning="사육 주기",
+            unit="일",
+            target="species",
+        ),
+        QuestionSpec(
+            field_id="industrial_insects.stocking_input",
+            meaning="종충·알 등 입식 투입",
+            target="species",
+        ),
+        QuestionSpec(
+            field_id="industrial_insects.survival_or_loss",
+            meaning="생존율·폐사율",
+            target="species",
+        ),
+        QuestionSpec(
+            field_id="industrial_insects.saleable_yield",
+            meaning="판매 가능 수량",
+            target="product",
+        ),
+        QuestionSpec(
+            field_id="industrial_insects.unit",
+            meaning="계량 단위(kg·마리·g 난괴 등)",
+            target="product",
+        ),
+        QuestionSpec(
+            field_id="industrial_insects.facility_area",
+            meaning="사육 시설 면적",
+            unit="㎡",
+            target="facility",
+        ),
+        QuestionSpec(
+            field_id="industrial_insects.operating_days",
+            meaning="연·월 가동일수",
+            unit="일",
+            target="facility",
+        ),
+        QuestionSpec(
+            field_id="industrial_insects.feed_or_substrate",
+            meaning="먹이·배지",
+            target="input",
+        ),
+        QuestionSpec(
+            field_id="industrial_insects.labor",
+            meaning="노동 투입",
+            target="input",
+        ),
+        QuestionSpec(
+            field_id="industrial_insects.channel",
+            meaning="판로·판매 행위",
+            target="market",
+        ),
+        QuestionSpec(
+            field_id="industrial_insects.price_date",
+            meaning="가격 기준 시점",
+            period="date",
+            target="market",
+        ),
+        QuestionSpec(
+            field_id="industrial_insects.regulation_check",
+            meaning="종·용도·판매 행위별 법적 요건 확인",
+            target="regulation",
+        ),
+    ),
+    # F0 and E1–E4 are equal-rank example_observed precedents — the
+    # roster lives at module level; nodes cite no per-exemplar claim and
+    # are all selectable/optional (no mandated section count).
+    precedents=(
+        PrecedentSpec("F0"),
+        PrecedentSpec("E1"),
+        PrecedentSpec("E2"),
+        PrecedentSpec("E3"),
+        PrecedentSpec("E4"),
+    ),
+    document_plan=(
+        DocumentNodeSpec(
+            "preface", "preface",
+            rationale="종 선택 이유·사업 목적·근거 인용 서술 슬롯",
+        ),
+        DocumentNodeSpec(
+            "farm_status", "farm_status",
+            rationale="종 학명·제품 형태·생활사·사육 조건의 종별 슬롯",
+        ),
+        DocumentNodeSpec(
+            "environment_analysis", "environment_analysis",
+            rationale="내부 역량·외부 환경·모델 농장·전략 분리",
+        ),
+        DocumentNodeSpec(
+            "vision_goals", "vision_goals",
+            rationale="목표 연도와 생산/판매/투자 모델 일치 대조 지점",
+        ),
+        DocumentNodeSpec(
+            "detailed_plan", "detailed_plan",
+            rationale="자산·투자·생산·마케팅·재무 계획의 연결 슬롯",
+        ),
+        DocumentNodeSpec(
+            "closing", "closing",
+            rationale="계획·근거 요약 서술 슬롯",
+        ),
+        DocumentNodeSpec(
+            "sources_appendix", "sources_appendix",
+            rationale="인용 누락 검사·부록 선택 대상",
+        ),
+    ),
+    evidence_applicability=MappingProxyType(
+        {
+            "use_scopes": (
+                "industry_context",
+                "technical_reference",
+                "regulation_check",
+            ),
+            "common_pack_policy": "unverified",
+            "required_axes": (
+                "acquisition",
+                "observation",
+                "rights",
+                "conflict",
+                "applicability",
+            ),
+        }
+    ),
+    finance_capabilities=(
+        FinanceCapability(
+            profile="species_product_cycle_cash",
+            status="unsupported",
+            reason="종·제품·서비스·사육주기 산식 미검증 — "
+            "시장 총액을 kg당 가격·농가 수율·학생 매출로 변환하지 않음",
+        ),
+    ),
+    validation_rules=(
+        "namespace_fields",
+        "no_foreign_pack_refs",
+        "forbidden_terms_absent",
+        "no_workbook_output",
+        "no_insect_calculation",
+    ),
+    # No rendered-paper claim: there is no insect document generator —
+    # the document capability exposes the selectable plan only.
+    supported_outputs=(
+        "question_list",
+        "document_plan",
+        "evidence_review",
+    ),
+    packs=(),  # empty_slot preserved — no fabricated insect data
+    forbidden_terms=_INSECT_FORBIDDEN,
+)
+
+MODULES = (SPECIALTY_CROPS_MODULE, INDUSTRIAL_INSECTS_MODULE)
+
+
+def _default_packs_dir():
+    return (
+        Path(__file__).resolve().parents[1]
+        / "references"
+        / "benchmark-packs"
+    )
+
+
+def load_pack_owner(catalog_path=None):
+    """pack_id -> major_id map from the shipped catalog (None=common)."""
+    path = (
+        Path(catalog_path)
+        if catalog_path
+        else _default_packs_dir() / "catalog.json"
+    )
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    return {p["pack_id"]: p.get("major_id") for p in doc.get("packs", [])}
+
+
+_DEFAULT_REGISTRY = None
+
+
+def default_registry(catalog_path=None):
+    """Registry of the peer modules bound to the shipped pack catalog."""
+    global _DEFAULT_REGISTRY
+    if catalog_path is None:
+        if _DEFAULT_REGISTRY is None:
+            _DEFAULT_REGISTRY = ModuleRegistry(
+                MODULES, pack_owner=load_pack_owner()
+            )
+        return _DEFAULT_REGISTRY
+    return ModuleRegistry(MODULES, pack_owner=load_pack_owner(catalog_path))
