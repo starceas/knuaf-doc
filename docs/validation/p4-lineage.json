@@ -1,0 +1,328 @@
+{
+ "schema": "knuaf-doc/p4-lineage@1",
+ "stage": "P4",
+ "recorded_utc": "2026-09-21T11:41:33Z",
+ "purpose": "Independent P4 lineage anchor — tools/runtime-changes.json is a mechanical change declaration consumed by the bundle contract; passing its checks cannot by itself prove this candidate descends from the accepted G004/P3 parent. This record pins that parent digest, the admission evidence, and the exact authorized added/changed paths for this lane.",
+ "accepted_parent": {
+  "stage": "P3",
+  "candidate": "p3-c1",
+  "root": "/Users/nara/.codex/skills/ginseng-goat/.work/astra-rebuild-20260919/p0/iterations/p3-c1/public",
+  "file_count": 97,
+  "tree_sha256": "1261521709fbb02eb48396fcade8b66bbe4bc0012d09e680916922552dd8735c",
+  "digest_method": "sorted 'path<TAB>sha256' lines, LF-joined + trailing LF, sha256 over UTF-8 (tools/check_bundle.py tree_digest over regular files, IGNORED_NAMES excluded, no-follow)",
+  "admission_record": "implementation/20260919-astra/orchestration-20260921/coordinator-evidence/G004-POST-D-INDEPENDENT-VERDICT-AND-RELEASE-20260921/PARENT-ADMISSION.json",
+  "admission_record_fields": {
+   "public_tree_sha256": "1261521709fbb02eb48396fcade8b66bbe4bc0012d09e680916922552dd8735c",
+   "public_file_count": 97
+  },
+  "recomputed_in_this_lane": true,
+  "recompute_result": "1261521709fbb02eb48396fcade8b66bbe4bc0012d09e680916922552dd8735c (97 files) — identical to the admission record"
+ },
+ "prior_stage_lineage": [
+  {
+   "stage": "P0",
+   "file_count": 75,
+   "tree_sha256": "e2abcb7ced750ecfe21a7dcbdcdfea456853a6e8af72873de041ca8e8b6de052",
+   "note": "P0 clean export — P1의 출발점 (historical, preserved verbatim)"
+  },
+  {
+   "stage": "P1",
+   "file_count": 79,
+   "tree_sha256": "5c4dcabaa04175bbabb188a7f410028da85e3585fd6faffe8a566afaf2a30466",
+   "note": "수용 P1 E3 — P2의 직전 부모 (historical, preserved verbatim)"
+  },
+  {
+   "stage": "P2",
+   "file_count": 89,
+   "tree_sha256": "ff291477ae91592afd4080670b5522719b194a1c24ff9c297c087a77f7067ec1",
+   "note": "수용 P2-r8 — P3의 직전 부모 (historical, preserved verbatim)"
+  },
+  {
+   "stage": "P3",
+   "file_count": 97,
+   "tree_sha256": "1261521709fbb02eb48396fcade8b66bbe4bc0012d09e680916922552dd8735c",
+   "note": "수용 P3-c1 (G004-PARENT-ADMISSION) — P4의 직전 부모; digest recomputed in this lane and identical to the admission record"
+  }
+ ],
+ "authorized_added_paths": [
+  "docs/validation/p4-lineage.json",
+  "skills/knuaf-doc/references/benchmark-packs/aliases/crop-aliases.specialty_crops.json",
+  "skills/knuaf-doc/references/benchmark-packs/aliases/major-aliases.json",
+  "skills/knuaf-doc/references/benchmark-packs/catalog.json",
+  "skills/knuaf-doc/references/benchmark-packs/common/rda-econ-2025/manifest.json",
+  "skills/knuaf-doc/references/benchmark-packs/common/rda-econ-2025/records.jsonl",
+  "skills/knuaf-doc/references/benchmark-packs/common/rda-income-national-2024/manifest.json",
+  "skills/knuaf-doc/references/benchmark-packs/common/rda-income-national-2024/records.jsonl",
+  "skills/knuaf-doc/references/benchmark-packs/common/rda-income-regional-2024/manifest.json",
+  "skills/knuaf-doc/references/benchmark-packs/common/rda-income-regional-2024/records.jsonl",
+  "skills/knuaf-doc/references/benchmark-packs/majors/food_crops/manifest.json",
+  "skills/knuaf-doc/references/benchmark-packs/majors/forestry/manifest.json",
+  "skills/knuaf-doc/references/benchmark-packs/majors/fruit_trees/manifest.json",
+  "skills/knuaf-doc/references/benchmark-packs/majors/hort_env_systems/manifest.json",
+  "skills/knuaf-doc/references/benchmark-packs/majors/industrial_insects/manifest.json",
+  "skills/knuaf-doc/references/benchmark-packs/majors/landscape/manifest.json",
+  "skills/knuaf-doc/references/benchmark-packs/majors/specialty_crops/mafra-specialty-production-2024/manifest.json",
+  "skills/knuaf-doc/references/benchmark-packs/majors/specialty_crops/mafra-specialty-production-2024/records.jsonl",
+  "skills/knuaf-doc/references/benchmark-packs/majors/vegetables/manifest.json",
+  "skills/knuaf-doc/references/benchmark-packs/schema/pack.schema.json",
+  "skills/knuaf-doc/references/benchmark-packs/schema/record.schema.json",
+  "skills/knuaf-doc/scripts/gg_rda_lookup.py",
+  "skills/knuaf-doc/scripts/gg_rda_provenance.py",
+  "skills/knuaf-doc/scripts/gg_rda_research.py",
+  "skills/knuaf-doc/tests/test_gg_rda_lookup_audit_key.py",
+  "skills/knuaf-doc/tests/test_gg_rda_provenance.py",
+  "skills/knuaf-doc/tests/test_gg_rda_research_integration.py"
+ ],
+ "authorized_changed_paths": [
+  "skills/knuaf-doc/scripts/gg.py",
+  "skills/knuaf-doc/scripts/gg_core.py",
+  "skills/knuaf-doc/scripts/gg_finance.py",
+  "skills/knuaf-doc/scripts/gg_school_excel.py",
+  "tests/test_bundle_lineage.py",
+  "tools/runtime-changes.json",
+  "tools/validation-bundle.json"
+ ],
+ "authorized_change_notes": {
+  "skills/knuaf-doc/scripts/gg.py": "task-authorized path — rda-lookup/propose/apply CLI routes + apply packs_dir wiring",
+  "skills/knuaf-doc/scripts/gg_core.py": "task-authorized path — P4 statistical-ref hook; corrections-1 passes the fact claim into the verifier and requires accepted catalog + receipt for claim_supported",
+  "skills/knuaf-doc/scripts/gg_finance.py": "task-authorized path — P4 adapter + claim verification hooks in require_classified_workbook_inputs and validate_economic_inputs",
+  "skills/knuaf-doc/scripts/gg_school_excel.py": "task-authorized path — unchanged in corrections-1 (P4 validate hook from attempt-1 retained)",
+  "tests/test_bundle_lineage.py": "mechanically required — real-tree pin/expected-value updates only (P2-7); adversarial suite preserved verbatim",
+  "tools/runtime-changes.json": "mechanically required — tree contract declaration",
+  "tools/validation-bundle.json": "mechanically required — generated manifest artifact"
+ },
+ "explicitly_not_authorized": {
+  "tools/validation-provenance.json": "restored to parent bytes — annotations were optional, not mechanically required (P2-6)",
+  "_p4_declare.py": "dropped — one-shot helper, not consumed by any bundle gate, and broken in the delivered layout (P2-6)"
+ },
+ "recorded_utc_evidence": "measured at write in the corrections-3 lane (cross-check: on-disk mtime agrees to second precision)",
+ "accepted_catalog": {
+  "lane": "g005-p4-source-catalog-transform-corrections-1",
+  "root": "work/g005-p4-source-catalog-transform-corrections-1/",
+  "consumed": "READ-ONLY — no catalog byte modified",
+  "acceptance": {
+   "reviewer": "3-P4CatalogFinalReview",
+   "verdict": "CLEAR / APPROVE",
+   "record": "stage-g005/P4-SOURCE-CATALOG-TRANSFORM-CORRECTIONS-1-ACCEPTANCE.json",
+   "record_sha256": "0a4027d29091442b4764e3b7cc6941f05ccb0b25c5534ab891936cb71b9de74d",
+   "coordinator_ack": "coordinator-acks/G005-CATALOG-ACCEPTANCE-20260921T105853Z.json",
+   "coordinator_ack_sha256": "5494aa2d77fbfabb0a31e5abe87de619ebf3ba1cdb0ead183b805f9d64e77270"
+  },
+  "bundle_manifest_sha256": "1778fd02fc2286ac40ed86890d3d0dbc2e10acf344afeacb5fcb2bee0a6698f4",
+  "supplementary_pins": {
+   "round1_execution_manifest_sha256": "43cc734bed04da5bed35ee8026fdaffc290990c570721b2516315e7c6abea0a0",
+   "round2_execution_manifest_sha256": "0bd178620044073ddcc2c923650e0a90dcc749e27473e9d9b04f4a94bf6d6af8",
+   "amended_contract_sha256": "b4f057be66fd72262ab498d3ff2dc2d514a85d16176e10f96c8ab5021b52162d",
+   "round2_intake_sha256": "f8ce3310b86303702d9c2c5c7400af5f9e47f4ea440cd01738b4c453b0d64975"
+  },
+  "facts": {
+   "total_rows": 6055,
+   "verified_observation": 3073,
+   "exploratory": 32,
+   "quarantined": 2950,
+   "audit_key_bijection": "6055/6055",
+   "records_files_match_pins": true,
+   "source_pdf_sha256_match": "all 6055 match p4/official-source-binding.json"
+  },
+  "caveat": "accepted catalog ships NO per-observation observation-catalog.json — the P2-8 gap. The real-pack positive tests bind to it as a receipt-anchored source; they exercise the accepted input and do not assert an end-to-end production lifecycle.",
+  "bound_in_tests": "skills/knuaf-doc/tests/test_gg_rda_research_integration.py :: AcceptedCatalogRealPackTests (verifies bundle pin + declared manifest hash before use)"
+ },
+ "added_path_provenance": {
+  "skills/knuaf-doc/references/benchmark-packs/aliases/crop-aliases.specialty_crops.json": {
+   "origin": "imported",
+   "authoritative_source": "work/g005-p4-provenance-standalone-corrections-3/skills/knuaf-doc/references/benchmark-packs/aliases/crop-aliases.specialty_crops.json",
+   "sha256": "8e7abffc7b4244727b4732f558b722934dd8ea229c0057312d1ee7ea92c2df22",
+   "byte_identical_to_source": true,
+   "note": "pinned pack bytes consumed by gg_rda_provenance.PINNED_PACKS"
+  },
+  "skills/knuaf-doc/references/benchmark-packs/aliases/major-aliases.json": {
+   "origin": "imported",
+   "authoritative_source": "work/g005-p4-provenance-standalone-corrections-3/skills/knuaf-doc/references/benchmark-packs/aliases/major-aliases.json",
+   "sha256": "ad1e1e6c2296f93ef27beab8494e840b1578e0d61c6c9bd8e238c640e653c81b",
+   "byte_identical_to_source": true,
+   "note": "pinned pack bytes consumed by gg_rda_provenance.PINNED_PACKS"
+  },
+  "skills/knuaf-doc/references/benchmark-packs/catalog.json": {
+   "origin": "imported",
+   "authoritative_source": "work/g005-p4-provenance-standalone-corrections-3/skills/knuaf-doc/references/benchmark-packs/catalog.json",
+   "sha256": "8dcad598073ce3efcce6698dafd2fa81bd24453deeb90216648ff68d1e8f8e68",
+   "byte_identical_to_source": true,
+   "note": "pinned pack bytes consumed by gg_rda_provenance.PINNED_PACKS"
+  },
+  "skills/knuaf-doc/references/benchmark-packs/common/rda-econ-2025/manifest.json": {
+   "origin": "imported",
+   "authoritative_source": "work/g005-p4-provenance-standalone-corrections-3/skills/knuaf-doc/references/benchmark-packs/common/rda-econ-2025/manifest.json",
+   "sha256": "844eb7db78500a9c211707b0e64c1b49f597a0d26aa5ab6c3ef94baf9251db11",
+   "byte_identical_to_source": true,
+   "note": "pinned pack bytes consumed by gg_rda_provenance.PINNED_PACKS"
+  },
+  "skills/knuaf-doc/references/benchmark-packs/common/rda-econ-2025/records.jsonl": {
+   "origin": "imported",
+   "authoritative_source": "work/g005-p4-provenance-standalone-corrections-3/skills/knuaf-doc/references/benchmark-packs/common/rda-econ-2025/records.jsonl",
+   "sha256": "a1cbfb2fa1825f2f0b7594cebe915b26f81cf1c48aee3cafae6c18ceb9267d54",
+   "byte_identical_to_source": true,
+   "note": "pinned pack bytes consumed by gg_rda_provenance.PINNED_PACKS"
+  },
+  "skills/knuaf-doc/references/benchmark-packs/common/rda-income-national-2024/manifest.json": {
+   "origin": "imported",
+   "authoritative_source": "work/g005-p4-provenance-standalone-corrections-3/skills/knuaf-doc/references/benchmark-packs/common/rda-income-national-2024/manifest.json",
+   "sha256": "3673ab3bcbf78705975a18a6107ba0d3686157f649bd118d7a626f4581216cb3",
+   "byte_identical_to_source": true,
+   "note": "pinned pack bytes consumed by gg_rda_provenance.PINNED_PACKS"
+  },
+  "skills/knuaf-doc/references/benchmark-packs/common/rda-income-national-2024/records.jsonl": {
+   "origin": "imported",
+   "authoritative_source": "work/g005-p4-provenance-standalone-corrections-3/skills/knuaf-doc/references/benchmark-packs/common/rda-income-national-2024/records.jsonl",
+   "sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+   "byte_identical_to_source": true,
+   "note": "pinned pack bytes consumed by gg_rda_provenance.PINNED_PACKS"
+  },
+  "skills/knuaf-doc/references/benchmark-packs/common/rda-income-regional-2024/manifest.json": {
+   "origin": "imported",
+   "authoritative_source": "work/g005-p4-provenance-standalone-corrections-3/skills/knuaf-doc/references/benchmark-packs/common/rda-income-regional-2024/manifest.json",
+   "sha256": "27380f56b6eaab2dcda45b99fa42b5f55efac5d8a3ea780db2cd45849676d668",
+   "byte_identical_to_source": true,
+   "note": "pinned pack bytes consumed by gg_rda_provenance.PINNED_PACKS"
+  },
+  "skills/knuaf-doc/references/benchmark-packs/common/rda-income-regional-2024/records.jsonl": {
+   "origin": "imported",
+   "authoritative_source": "work/g005-p4-provenance-standalone-corrections-3/skills/knuaf-doc/references/benchmark-packs/common/rda-income-regional-2024/records.jsonl",
+   "sha256": "c7e38281ccfaaaf40c63ab0880ca5f3ddb1ae18aaa89438ffb7f6da43c87c6df",
+   "byte_identical_to_source": true,
+   "note": "pinned pack bytes consumed by gg_rda_provenance.PINNED_PACKS"
+  },
+  "skills/knuaf-doc/references/benchmark-packs/majors/food_crops/manifest.json": {
+   "origin": "imported",
+   "authoritative_source": "work/g005-p4-provenance-standalone-corrections-3/skills/knuaf-doc/references/benchmark-packs/majors/food_crops/manifest.json",
+   "sha256": "f32813aae8bc6b262af5fd83eead9ff8b736fdff88824e9fa6d8d004bb6983cb",
+   "byte_identical_to_source": true,
+   "note": "pinned pack bytes consumed by gg_rda_provenance.PINNED_PACKS"
+  },
+  "skills/knuaf-doc/references/benchmark-packs/majors/forestry/manifest.json": {
+   "origin": "imported",
+   "authoritative_source": "work/g005-p4-provenance-standalone-corrections-3/skills/knuaf-doc/references/benchmark-packs/majors/forestry/manifest.json",
+   "sha256": "caba994b7de4e537c037b4681cb4885e1b6f10a6c585c0815bb920102713549b",
+   "byte_identical_to_source": true,
+   "note": "pinned pack bytes consumed by gg_rda_provenance.PINNED_PACKS"
+  },
+  "skills/knuaf-doc/references/benchmark-packs/majors/fruit_trees/manifest.json": {
+   "origin": "imported",
+   "authoritative_source": "work/g005-p4-provenance-standalone-corrections-3/skills/knuaf-doc/references/benchmark-packs/majors/fruit_trees/manifest.json",
+   "sha256": "90c73236df5c0c403d3684fe7342b692d4504ecd57ccdd114889c427d8e5a12d",
+   "byte_identical_to_source": true,
+   "note": "pinned pack bytes consumed by gg_rda_provenance.PINNED_PACKS"
+  },
+  "skills/knuaf-doc/references/benchmark-packs/majors/hort_env_systems/manifest.json": {
+   "origin": "imported",
+   "authoritative_source": "work/g005-p4-provenance-standalone-corrections-3/skills/knuaf-doc/references/benchmark-packs/majors/hort_env_systems/manifest.json",
+   "sha256": "1a669ee8565ef2cf06cd7de70695ec16324f012cdd221082041f3736ed225793",
+   "byte_identical_to_source": true,
+   "note": "pinned pack bytes consumed by gg_rda_provenance.PINNED_PACKS"
+  },
+  "skills/knuaf-doc/references/benchmark-packs/majors/industrial_insects/manifest.json": {
+   "origin": "imported",
+   "authoritative_source": "work/g005-p4-provenance-standalone-corrections-3/skills/knuaf-doc/references/benchmark-packs/majors/industrial_insects/manifest.json",
+   "sha256": "fd09a661403bdbda3a3967d89f98546ff29ff50176d2ab8cdfa90e51f87ee5b1",
+   "byte_identical_to_source": true,
+   "note": "pinned pack bytes consumed by gg_rda_provenance.PINNED_PACKS"
+  },
+  "skills/knuaf-doc/references/benchmark-packs/majors/landscape/manifest.json": {
+   "origin": "imported",
+   "authoritative_source": "work/g005-p4-provenance-standalone-corrections-3/skills/knuaf-doc/references/benchmark-packs/majors/landscape/manifest.json",
+   "sha256": "281538d6cef1e1eb8c9788328a86188ccf171b10d6cf58fbeec36ef37cd3e998",
+   "byte_identical_to_source": true,
+   "note": "pinned pack bytes consumed by gg_rda_provenance.PINNED_PACKS"
+  },
+  "skills/knuaf-doc/references/benchmark-packs/majors/specialty_crops/mafra-specialty-production-2024/manifest.json": {
+   "origin": "imported",
+   "authoritative_source": "work/g005-p4-provenance-standalone-corrections-3/skills/knuaf-doc/references/benchmark-packs/majors/specialty_crops/mafra-specialty-production-2024/manifest.json",
+   "sha256": "722c57fd3bbc22a791eb2442956a7ee5a92c4ca4f568b1a6e1bc5c140d32bb7e",
+   "byte_identical_to_source": true,
+   "note": "pinned pack bytes consumed by gg_rda_provenance.PINNED_PACKS"
+  },
+  "skills/knuaf-doc/references/benchmark-packs/majors/specialty_crops/mafra-specialty-production-2024/records.jsonl": {
+   "origin": "imported",
+   "authoritative_source": "work/g005-p4-provenance-standalone-corrections-3/skills/knuaf-doc/references/benchmark-packs/majors/specialty_crops/mafra-specialty-production-2024/records.jsonl",
+   "sha256": "fc1c0b35d63a67dc5a794128f873272d72f0850e6d6470e7d9501270eafdd4be",
+   "byte_identical_to_source": true,
+   "note": "pinned pack bytes consumed by gg_rda_provenance.PINNED_PACKS"
+  },
+  "skills/knuaf-doc/references/benchmark-packs/majors/vegetables/manifest.json": {
+   "origin": "imported",
+   "authoritative_source": "work/g005-p4-provenance-standalone-corrections-3/skills/knuaf-doc/references/benchmark-packs/majors/vegetables/manifest.json",
+   "sha256": "fb6524e808afd88c6e669dfae7c0942ade97e98513c556cff51aa6ab78de36ae",
+   "byte_identical_to_source": true,
+   "note": "pinned pack bytes consumed by gg_rda_provenance.PINNED_PACKS"
+  },
+  "skills/knuaf-doc/references/benchmark-packs/schema/pack.schema.json": {
+   "origin": "imported",
+   "authoritative_source": "work/g005-p4-provenance-standalone-corrections-3/skills/knuaf-doc/references/benchmark-packs/schema/pack.schema.json",
+   "sha256": "c9c375f7fa91e6d266c639dfc2843aa9979178693dcef796aa3294d9ab27ec77",
+   "byte_identical_to_source": true,
+   "note": "pinned pack bytes consumed by gg_rda_provenance.PINNED_PACKS"
+  },
+  "skills/knuaf-doc/references/benchmark-packs/schema/record.schema.json": {
+   "origin": "imported",
+   "authoritative_source": "work/g005-p4-provenance-standalone-corrections-3/skills/knuaf-doc/references/benchmark-packs/schema/record.schema.json",
+   "sha256": "07b00c66649ef14c67ca8f308fc1680b49f3cd17a447067754a25f68e8b874a6",
+   "byte_identical_to_source": true,
+   "note": "pinned pack bytes consumed by gg_rda_provenance.PINNED_PACKS"
+  },
+  "skills/knuaf-doc/scripts/gg_rda_lookup.py": {
+   "origin": "imported",
+   "authoritative_source": "work/g005-p4-provenance-standalone-corrections-3/skills/knuaf-doc/scripts/gg_rda_lookup.py",
+   "sha256": "9e2a8c178d4526f042f879473f1b9655aaec3d25600845c124528bd48ee08f1a",
+   "byte_identical_to_source": true,
+   "note": "lookup contract not_found/ambiguous/unique/series"
+  },
+  "skills/knuaf-doc/tests/test_gg_rda_lookup_audit_key.py": {
+   "origin": "imported",
+   "authoritative_source": "work/g005-p4-provenance-standalone-corrections-3/skills/knuaf-doc/tests/test_gg_rda_lookup_audit_key.py",
+   "sha256": "732258593fc89559c3680b3244310532e092ae4436314f83febdc3eb5b025843",
+   "byte_identical_to_source": true,
+   "note": "provenance-lane test — imported, NOT lane-authored"
+  },
+  "skills/knuaf-doc/tests/test_gg_rda_provenance.py": {
+   "origin": "imported",
+   "authoritative_source": "work/g005-p4-provenance-standalone-corrections-3/skills/knuaf-doc/tests/test_gg_rda_provenance.py",
+   "sha256": "5164527cb4488a17e1dd69d3fa305967ee625f401585fffbf3c94e91bad2e214",
+   "byte_identical_to_source": true,
+   "note": "provenance-lane test — imported, NOT lane-authored"
+  },
+  "skills/knuaf-doc/tests/test_gg_rda_research_integration.py": {
+   "origin": "lane-authored",
+   "authority": "stage-g005/P4-SHARED-CORE-INTEGRATION-CORRECTIONS-1-TASK.md (dedicated integration test) + corrections-2/3 packets (SCC counterexamples, B-TEST-1)",
+   "note": "synthetic fixtures + bounded real-pack tests vs the accepted catalog"
+  },
+  "docs/validation/p4-lineage.json": {
+   "origin": "lane-authored",
+   "authority": "stage-g005/P4-SHARED-CORE-INTEGRATION-CORRECTIONS-1-EXTRA-PATH-ADDENDUM.md (authorized NEW declared file) + stage-g005/P4-SHARED-CORE-INTEGRATION-CORRECTIONS-1-ADDENDUM-B.md item 2 (exact path resolved)"
+  },
+  "skills/knuaf-doc/scripts/gg_rda_research.py": {
+   "origin": "ported + lane-corrected",
+   "baseline_source": "/Users/nara/.codex/skills/ginseng-goat/.work/astra-rebuild-20260919/p0/parallel-prep/p5/exec-copies/knuaf-doc/scripts/gg_rda_research.py",
+   "baseline_sha256": "78d45a6ccd96419ceecf0a5b7b0ad60bda80de3d2b703cdb34918110db761ff4",
+   "authority": "stage-g005/P4-SHARED-CORE-INTEGRATION-CORRECTIONS-1-TASK.md",
+   "note": "PR3 baseline adapted to the P4 propose/apply contract, then corrected in-lane (P1-1..P1-4, SCC1/SCC3/SCC4/SCC6)"
+  },
+  "skills/knuaf-doc/scripts/gg_rda_provenance.py": {
+   "origin": "provenance-lane module + raw_line/raw_line_b64 snapshot support",
+   "authority": "stage-g005/P4-PROVENANCE-PATH-SEQUENTIAL-TRANSFER-1.md — sequential ownership transfer (recorded departure: first written in corrections-1 WITHOUT a transfer)",
+   "sha256": "b23142c7f22776c94c52340eb28f9ef0130bc81407e39c8005cf14b8950ecc45",
+   "note": "see provenance_transfer record"
+  }
+ },
+ "provenance_transfer": {
+  "record": "stage-g005/P4-PROVENANCE-PATH-SEQUENTIAL-TRANSFER-1.md",
+  "path": "skills/knuaf-doc/scripts/gg_rda_provenance.py",
+  "releasing_lane": "P4-provenance-standalone (frozen accepted output work/g005-p4-provenance-standalone-corrections-3/)",
+  "receiving_lane": "P4-shared-core-integration (this lane)",
+  "scope": "raw_line / raw_line_b64 snapshot-receipt support binding D08 ONLY — no restructure, rename, or unrelated extension",
+  "transferred_baseline_sha256": "b23142c7f22776c94c52340eb28f9ef0130bc81407e39c8005cf14b8950ecc45",
+  "provenance_lane_version_sha256": "4982c1fca04909644597e68bcf905203638c9c93d34467e260cb8236b1a10f7a",
+  "divergence_from_provenance_lane": "17 insertions / 1 deletion (reviewer-measured, foreman-confirmed)",
+  "corrections2_state": "file remains byte-identical to the transferred baseline — no further writes needed in this round",
+  "history_note": "the corrections-1 write predates the transfer and remains a recorded departure for the final review to adjudicate; this record does not retroactively authorize it",
+  "packaging_consequence": "packaging must consume this module from THIS lane's frozen output once accepted — not from the provenance lane's older frozen copy"
+ }
+}

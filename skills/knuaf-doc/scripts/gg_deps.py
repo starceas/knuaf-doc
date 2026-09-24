@@ -47,7 +47,7 @@ def load_manifest(path=DEPS_JSON):
     path = Path(path)
     if not path.is_file():
         raise ValueError("runtime-deps.json 선언 없음: " + str(path))
-    data = json.loads(path.read_text())
+    data = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(data, dict):
         raise ValueError("runtime-deps.json 최상위는 객체여야 함")
     return validate_dependencies(data.get("dependencies"))
@@ -190,6 +190,7 @@ def _import_and_version(python, module, dist):
         [str(python), "-c", _PROBE, module, dist],
         capture_output=True,
         text=True,
+        encoding="utf-8",
         timeout=60,
     )
     if proc.returncode != 0:
@@ -295,7 +296,7 @@ def ensure(project, find_links=None, no_index=False):
         cmd.append("--no-index")
     if find_links:
         cmd += ["--find-links", str(find_links)]
-    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+    proc = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", timeout=600)
     verified = {}
     versions = {}
     if proc.returncode == 0:

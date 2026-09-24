@@ -82,6 +82,12 @@ DOCX 필수 검사는 structure/font/render, XLSX는 structure/recalculation/cro
 차단한다. 합성 관측 기록은 인터페이스 시험일 뿐 실제 독립 검토의 증거가
 아니다. 같은 OS 쓰기권한을 가진 사용자의 위조를 막는 인증 경계는 아니다.
 
+경제 범위(`finance_role`·`meaning_id`·`measure`를 가진 사실)를 대상으로
+하는 신규 계산 검토·그 관측 기록·신규 출력 등록은 각 쓰기 경로에서 바인딩된
+`gg-finance-semantics-report/1` 보고서의 존재·해시·스키마를 추가로
+요구한다. 상태 판정·해소 방법은 [finance-semantics.md](finance-semantics.md)에
+정리한다.
+
 ## 교수 승인 기록과 발행 충돌
 
 S6 후보의 교수 승인 범위는 `scope=project_outputs`와 유효한 `superseded_by`

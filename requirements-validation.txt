@@ -1,0 +1,11 @@
+# Validation-layer dependencies.
+#
+# The validation suite imports the real shipped runtime, so it needs exactly
+# the runtime's declared dependencies and nothing more. Keeping this as an
+# include (rather than a copied list) preserves the runtime manifest as the
+# single source of truth.
+#
+#   python3 -m pip install -r requirements-validation.txt
+#
+# Requires Python 3.10+ (same floor as the runtime entry points).
+-r skills/knuaf-doc/scripts/requirements-runtime.txt

@@ -529,6 +529,7 @@ def blank_copy(source: Path, map_path: Path, out: Path) -> dict:
             }
             anchors, nonanchors = merged_cells(root)
             wanted = by_sheet.get(name, set())
+            seen_wanted: set[str] = set()
             for c in root.findall(f".//{local('c')}"):
                 ref = c.attrib.get("r")
                 if not ref:
@@ -536,6 +537,8 @@ def blank_copy(source: Path, map_path: Path, out: Path) -> dict:
                 dom_cell = dom_cells.get(ref)
                 if dom_cell is None:
                     raise ValueError(f"worksheet cell missing from namespace-preserving DOM: {target}!{ref}")
+                if ref in wanted:
+                    seen_wanted.add(ref)
                 formula = c.find(local("f"))
                 if formula is not None:
                     # Invalidate every formula cache in a blank template; keep f text.
@@ -560,6 +563,17 @@ def blank_copy(source: Path, map_path: Path, out: Path) -> dict:
                 old = text_value(c, shared)
                 _dom_clear_cell_value(dom_cell)
                 receipt["cleared"].append({"sheet": name, "cell": ref, "oldValue": old})
+            missing_wanted = wanted - seen_wanted
+            if missing_wanted:
+                # A map entry names a cell that has no <c> element in this
+                # source worksheet at all, so the loop above never inspected
+                # it. Silently accepting this risks masking a map generated
+                # against a different/stale copy of the source. Fail closed
+                # instead of treating "never seen" as "nothing to clear".
+                raise ValueError(
+                    "map references cell missing from source worksheet: "
+                    f"{name}!{sorted(missing_wanted)[0]}"
+                )
             modified[target] = sheet_dom.toxml(encoding="utf-8")
         targeted = {(r["sheet"], r["cell"]) for r in receipt["cleared"]}
         preserved = {(r["sheet"], r["cell"]) for r in receipt["preserved"]}

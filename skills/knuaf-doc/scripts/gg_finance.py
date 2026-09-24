@@ -100,8 +100,14 @@ def investment(flows, benefits, costs, rate):
     }
 
 
-def require_classified_workbook_inputs(workbook):
-    """Every clear numeric/formula cell must be classified. Coordinates only."""
+def require_classified_workbook_inputs(workbook, *, context=None):
+    """Every clear numeric/formula cell must be classified. Coordinates only.
+
+    ``context=None`` (draft calls, e.g. from composite_contract) keeps the
+    legacy behavior exactly.  An admission call passes a context dict; the
+    workbook must first satisfy the legacy classification contract, then
+    every classified cell's ``source_ref`` must appear in
+    ``context["resolved_source_refs"]`` (a list)."""
     if not isinstance(workbook, dict):
         raise ValueError("미분류 경제 입력")
     if workbook.get("economic_classification") != "complete":
@@ -140,6 +146,331 @@ def require_classified_workbook_inputs(workbook):
             or not record["reason"].strip()
         ):
             raise ValueError("미분류 경제 입력")
+    if context is not None:
+        if not context or not isinstance(context, dict):
+            raise ValueError("CONTEXT_REQUIRED")
+        resolved = context.get("resolved_source_refs")
+        if not isinstance(resolved, list):
+            raise ValueError("MAP_SLOT_UNRESOLVED")
+        for cell in cells:
+            if cell.get("map_action") != "clear" or cell.get("kind") not in {"number", "formula"}:
+                continue
+            if cell["economic"]["source_ref"] not in resolved:
+                raise ValueError("MAP_SLOT_UNRESOLVED")
+            # P4 hook (stage-g005 D07): a statistical source_ref claims
+            # audited provenance — the cell's economic claim (value/unit/
+            # locator/pdf binding) must verify against the bound receipt,
+            # not merely appear in resolved_source_refs.
+            if _p4_is_statistical(cell["economic"]["source_ref"]):
+                verdict = _p4_verify_economic(
+                    cell["economic"], cell["economic"]["source_ref"],
+                    context)
+                if verdict is None:
+                    raise ValueError("MAP_SLOT_UNRESOLVED")
+                if verdict["status"] != "resolved":
+                    raise ValueError("STATISTICAL_CLAIM_UNVERIFIED")
+
+
+def validate_economic_inputs(spec, *, context=None, purpose="draft"):
+    """External validation pass over the same spec shape calculate()
+    accepts (design-r2 §5/§9, C-lane adapter).
+
+    Never raises for ``purpose="draft"``/``"admission"`` — it returns a
+    list of ``check_id="finance_review"`` Issue dicts, and an empty list
+    always means "checked, nothing found".  Native-slot/value/declaration
+    conflicts are ``status="fail"``; provenance that cannot be connected
+    to the supplied context (a declared ``source_ref`` absent from
+    ``context["resolved_source_refs"]``, or no usable context at all) is
+    ``status="blocked"`` so existing draft calculations are preserved.
+    Draft tolerates a well-formed ``"unresolved"`` economic.status;
+    admission reports it as a blocking issue and itself requires a real
+    context dict.  A workbook cell's slot identity is its
+    ``economic.meaning_id``: two clear cells claiming the same slot with
+    contradictory ``unit``/``period`` declarations are a fail conflict.
+    """
+
+    def issue(code, *, status="fail", fact_id=None, consumer_id=None,
+              location=None, reason="", remedy=""):
+        return {
+            "code": code,
+            "check_id": "finance_review",
+            "status": status,
+            "severity": "error",
+            "fact_id": fact_id,
+            "consumer_id": consumer_id,
+            "location": location or {
+                "path": None, "section_id": None, "line": None,
+                "column": None, "table": None, "row": None, "cell": None,
+            },
+            "reason": reason,
+            "required_for": ["submission_candidate"],
+            "remedy": remedy,
+        }
+
+    def loc(*, cell=None, row=None):
+        return {
+            "path": None, "section_id": None, "line": None,
+            "column": None, "table": None, "row": row, "cell": cell,
+        }
+
+    if purpose not in {"draft", "admission"}:
+        raise ValueError("지원하지 않는 purpose")
+    issues = []
+    if not isinstance(spec, dict):
+        return [issue(
+            "ECONOMIC_SPEC_SHAPE",
+            reason="경제 입력 spec이 dict가 아니어서 검사 불가",
+            remedy="calculate()와 동일한 spec dict로 전달")]
+    if purpose == "admission" and (
+        not context or not isinstance(context, dict)
+    ):
+        issues.append(issue(
+            "CONTEXT_REQUIRED", status="blocked",
+            reason="admission 검증에는 실제 context dict가 필요",
+            remedy="resolved_source_refs를 포함한 context를 전달"))
+    resolved = (
+        context.get("resolved_source_refs")
+        if isinstance(context, dict) else None
+    )
+
+    def ref_connected(ref):
+        return isinstance(resolved, list) and ref in resolved
+
+    periods = spec.get("periods")
+    if isinstance(periods, list):
+        start = spec.get("start_year")
+        for t, row in enumerate(periods, 1):
+            if not isinstance(row, dict):
+                issues.append(issue(
+                    "PERIOD_ROW_SHAPE", location=loc(row=t),
+                    reason="%d번째 기간 행이 dict가 아님" % t))
+                continue
+            vals = {}
+            for k in FIELDS:
+                try:
+                    vals[k] = num(row[k])
+                except (KeyError, ValueError):
+                    issues.append(issue(
+                        "PERIOD_VALUE_INVALID", location=loc(row=t),
+                        reason="%d년차 행의 %s 값이 유한 십진 문자열이 아님"
+                               % (t, k)))
+            if len(vals) == len(FIELDS):
+                if any(v < 0 for v in vals.values()):
+                    issues.append(issue(
+                        "PERIOD_VALUE_NEGATIVE", location=loc(row=t),
+                        reason="%d년차 행에 음수 입력" % t))
+                elif vals["quantity"] != vals["sold"] + vals["loss"]:
+                    issues.append(issue(
+                        "PERIOD_VALUE_CONFLICT", location=loc(row=t),
+                        reason="%d년차 행 생산량≠판매+손실 — 재고 불일치 선언" % t))
+            if (
+                type(start) is int
+                and row.get("year") != start + t - 1
+            ):
+                issues.append(issue(
+                    "PERIOD_YEAR_CONFLICT", location=loc(row=t),
+                    reason="%d번째 행의 선언 연도가 start_year 순서와 불일치" % t))
+
+    inventory = spec.get("input_inventory")
+    if isinstance(inventory, dict):
+        fields = []
+        for field in inventory:
+            if isinstance(field, str):
+                fields.append(field)
+            else:
+                issues.append(issue(
+                    "ECONOMIC_FIELD_DECLARATION",
+                    reason="input_inventory의 키가 문자열이 아님: %r"
+                           % (field,)))
+        for field in sorted(fields):
+            record = inventory[field]
+            if (
+                not isinstance(record, dict)
+                or record.get("status") not in INPUT_STATUSES
+                or not isinstance(record.get("source_ref"), str)
+                or not record["source_ref"].strip()
+            ):
+                issues.append(issue(
+                    "ECONOMIC_FIELD_DECLARATION", fact_id=field,
+                    reason="input_inventory['%s']의 상태/출처 선언 불완전"
+                           % field))
+                continue
+            status = record["status"]
+            if (
+                status in {"user_answer", "research"}
+                and record.get("value") is None
+            ):
+                issues.append(issue(
+                    "ECONOMIC_VALUE_MISSING", fact_id=field,
+                    reason="input_inventory['%s']에 값이 없음" % field))
+            elif status == "explicit_assumption" and (
+                record.get("value") is None
+                or record.get("assumption_approved") is not True
+            ):
+                issues.append(issue(
+                    "ECONOMIC_ASSUMPTION_UNAPPROVED", fact_id=field,
+                    reason="input_inventory['%s'] 명시 가정이 승인되지 않음"
+                           % field))
+            elif status == "not_applicable" and (
+                record.get("value") is not None
+                or not isinstance(record.get("reason"), str)
+                or not record["reason"].strip()
+            ):
+                issues.append(issue(
+                    "ECONOMIC_NA_DECLARATION", fact_id=field,
+                    reason="input_inventory['%s'] not_applicable 선언 불완전"
+                           % field))
+            elif status == "unresolved" and purpose == "admission":
+                issues.append(issue(
+                    "ECONOMIC_STATUS_UNRESOLVED", status="blocked",
+                    fact_id=field,
+                    reason="input_inventory['%s']이 unresolved — admission은 해소된 입력만 허용"
+                           % field))
+            if not ref_connected(record["source_ref"]):
+                issues.append(issue(
+                    "PROVENANCE_UNCONNECTED", status="blocked",
+                    fact_id=field,
+                    reason="input_inventory['%s']의 source_ref가 context.resolved_source_refs에 없음 — 출처 미연결"
+                           % field))
+            elif _p4_is_statistical(record["source_ref"]):
+                # P4 hook (D07): statistical refs verify the claim itself
+                _v = _p4_verify_economic(
+                    record, record["source_ref"], context)
+                if _v is None:
+                    issues.append(issue(
+                        "PROVENANCE_UNCONNECTED", status="blocked",
+                        fact_id=field,
+                        reason="input_inventory['%s']의 통계 출처 해석 "
+                               "context(p4_resolver) 없음" % field))
+                elif _v["status"] != "resolved":
+                    issues.append(issue(
+                        "STATISTICAL_CLAIM_UNVERIFIED", status="blocked",
+                        fact_id=field,
+                        reason="input_inventory['%s']의 통계 주장 불일치: %s"
+                               % (field, _v.get("reason"))))
+
+    wb = spec.get("workbook_inputs")
+    if wb is not None:
+        if (
+            not isinstance(wb, dict)
+            or wb.get("economic_classification") != "complete"
+            or not isinstance(wb.get("cells"), list)
+            or not wb["cells"]
+        ):
+            issues.append(issue(
+                "WORKBOOK_UNCLASSIFIED",
+                reason="workbook_inputs가 완전 분류된 경제 입력이 아님",
+                remedy="require_classified_workbook_inputs의 분류 계약 충족"))
+        else:
+            slot_decls = {}
+            for idx, cell in enumerate(wb["cells"]):
+                if isinstance(cell, dict) and isinstance(
+                    cell.get("cell"), str
+                ):
+                    cell_loc = loc(cell=cell["cell"])
+                else:
+                    cell_loc = loc(cell="cells[%d]" % idx)
+                if not isinstance(cell, dict):
+                    issues.append(issue(
+                        "WORKBOOK_CELL_SHAPE", location=cell_loc,
+                        reason="cells[%d]가 dict가 아님" % idx))
+                    continue
+                if (
+                    cell.get("map_action") != "clear"
+                    or cell.get("kind") not in {"number", "formula"}
+                ):
+                    continue
+                record = cell.get("economic")
+                if not isinstance(record, dict):
+                    issues.append(issue(
+                        "WORKBOOK_ECONOMIC_MISSING", location=cell_loc,
+                        reason="분류 셀에 economic 레코드가 없음"))
+                    continue
+                for f in ("unit", "period", "meaning_id"):
+                    if (
+                        not isinstance(record.get(f), str)
+                        or not record[f].strip()
+                    ):
+                        issues.append(issue(
+                            "ECONOMIC_FIELD_DECLARATION", location=cell_loc,
+                            reason="분류 셀의 %s 선언 불완전" % f))
+                ref = record.get("source_ref")
+                if not isinstance(ref, str) or not ref.strip():
+                    issues.append(issue(
+                        "ECONOMIC_FIELD_DECLARATION", location=cell_loc,
+                        reason="분류 셀의 source_ref 선언 불완전"))
+                elif not ref_connected(ref):
+                    issues.append(issue(
+                        "PROVENANCE_UNCONNECTED", status="blocked",
+                        location=cell_loc,
+                        reason="source_ref '%s'가 context.resolved_source_refs에 없음 — 출처 미연결"
+                               % ref))
+                elif _p4_is_statistical(ref):
+                    # P4 hook (D07): statistical refs verify the claim
+                    _v = _p4_verify_economic(record, ref, context)
+                    if _v is None:
+                        issues.append(issue(
+                            "PROVENANCE_UNCONNECTED", status="blocked",
+                            location=cell_loc,
+                            reason="통계 출처 해석 context(p4_resolver) 없음"))
+                    elif _v["status"] != "resolved":
+                        issues.append(issue(
+                            "STATISTICAL_CLAIM_UNVERIFIED", status="blocked",
+                            location=cell_loc,
+                            reason="통계 주장 불일치: %s"
+                                   % _v.get("reason")))
+                status = record.get("status")
+                if status not in INPUT_STATUSES:
+                    issues.append(issue(
+                        "ECONOMIC_FIELD_DECLARATION", location=cell_loc,
+                        reason="분류 셀의 status 선언이 무효"))
+                elif (
+                    status in {"user_answer", "research", "explicit_assumption"}
+                    and record.get("value") is None
+                ):
+                    issues.append(issue(
+                        "ECONOMIC_VALUE_MISSING", location=cell_loc,
+                        reason="분류 셀에 값이 없음"))
+                elif (
+                    status == "explicit_assumption"
+                    and record.get("assumption_approved") is not True
+                ):
+                    issues.append(issue(
+                        "ECONOMIC_ASSUMPTION_UNAPPROVED", location=cell_loc,
+                        reason="명시 가정이 승인되지 않음"))
+                elif status == "unresolved":
+                    if record.get("value") is not None:
+                        issues.append(issue(
+                            "ECONOMIC_VALUE_CONFLICT", location=cell_loc,
+                            reason="unresolved 셀에 잔존 값이 남아 있음"))
+                    elif purpose == "admission":
+                        issues.append(issue(
+                            "ECONOMIC_STATUS_UNRESOLVED", status="blocked",
+                            location=cell_loc,
+                            reason="unresolved 경제 입력은 admission에서 차단"))
+                elif status == "not_applicable" and (
+                    record.get("value") is not None
+                    or not isinstance(record.get("reason"), str)
+                    or not record["reason"].strip()
+                ):
+                    issues.append(issue(
+                        "ECONOMIC_NA_DECLARATION", location=cell_loc,
+                        reason="not_applicable 선언 불완전"))
+                mid = record.get("meaning_id")
+                if isinstance(mid, str) and mid.strip():
+                    slot_decls.setdefault(mid, []).append(
+                        (record.get("unit"), record.get("period")))
+            for mid, decls in slot_decls.items():
+                units = {u for u, _ in decls}
+                spans = {p for _, p in decls}
+                if len(units) > 1 or len(spans) > 1:
+                    issues.append(issue(
+                        "ECONOMIC_SLOT_CONFLICT",
+                        reason="동일 meaning_id '%s' 슬롯에 상충 선언: unit=%s period=%s"
+                               % (mid,
+                                  sorted(str(u) for u in units),
+                                  sorted(str(p) for p in spans))))
+    return issues
 
 
 def composite_contract(spec):
@@ -760,7 +1091,8 @@ def workbook(spec, path):
             dict(result, file_hash=digest(path.read_bytes())),
             ensure_ascii=False,
             indent=2,
-        )
+        ),
+        encoding="utf-8",
     )
     return result
 
@@ -855,3 +1187,61 @@ def verify_recalculated(spec, path):
                     }
                 )
     return issues
+
+
+# ---------------------------------------------------------------------------
+# P4 verification adapter (stage-g005 D07/D09): audited statistical
+# source_refs resolve through the provenance chain in gg_rda_research.
+# Produces the ``resolved_source_refs`` list that ``context`` consumers
+# (require_classified_workbook_inputs / validate_economic_inputs) already
+# membership-check — statistical refs that cannot be anchored are reported
+# as conflicts and never reach the resolved list.  No calculation or
+# formula path is touched by this section.
+
+
+def resolve_economic_source_refs(source_refs, *, resolver=None):
+    """P4 adapter: resolve audited statistical source_refs.
+
+    ``resolver`` is an optional ``gg_rda_research.resolver_context()`` dict;
+    omitted -> the deployed packs context is built lazily.  Returns
+    ``{"resolved_source_refs": [...], "conflicts": [...]}`` for callers to
+    splice into the admission ``context`` — a declared statistical ref that
+    fails resolution is absent from ``resolved_source_refs``, so the
+    existing ``MAP_SLOT_UNRESOLVED``/``ref_connected`` checks fail closed.
+    """
+    import gg_rda_research
+
+    if not isinstance(source_refs, list):
+        raise ValueError("source_refs 목록 필요")
+    return gg_rda_research.resolve_statistical_refs(
+        source_refs, context=resolver)
+
+
+def _p4_is_statistical(ref):
+    """True when a source_ref claims audited statistical provenance."""
+    try:
+        import gg_rda_research
+    except ImportError:
+        return False
+    return gg_rda_research.is_statistical_ref(ref)
+
+
+def _p4_verify_economic(record, ref, context):
+    """P4 claim verifier for the finance lane (D07): cross-checks the
+    cell/record's economic claim (value/unit/locator/pdf binding) against
+    the audited observation its source_ref resolves to.
+
+    ``context["p4_resolver"]`` supplies the verified resolver context —
+    a statistical ref with no resolver cannot be verified and returns
+    ``None`` (fail closed upstream)."""
+    import gg_rda_research
+
+    resolver = (context or {}).get("p4_resolver")
+    if not isinstance(resolver, dict):
+        return None
+    try:
+        return gg_rda_research.verify_economic_claim(
+            record, ref, context=resolver)
+    except Exception as exc:  # verification never crashes admission
+        return {"status": "invalid",
+                "reason": "통계 주장 검증 실패: %s" % exc}

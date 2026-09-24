@@ -212,7 +212,7 @@ def convert(md_text, font=FONT, base=".", table_reports=None):
                     - sec.right_margin.mm
                 )
                 rep = gg_docx_table_layout.fit_table(
-                    t, text_area_mm=text_area_mm
+                    t, text_area_mm=text_area_mm, allow_landscape=False
                 )
                 rep["n_cols"] = len(n["rows"][0])
                 if table_reports is not None:
@@ -429,11 +429,41 @@ def convert(md_text, font=FONT, base=".", table_reports=None):
         prelim=[]
         candidates=nodes[i_toc+1:i_body]
         summary_start=next((i for i,n in enumerate(candidates) if n.get('text','').strip()=='요약'),None)
+
+        def _toc_body_boundary_label(text):
+            return text in {'표 목차','그림 목차','감사의 글'} or bool(re.match(r'^[ⅠI]\s*[.．].*머리말',text))
+
         if summary_start is not None:
             for n in candidates[summary_start+1:]:
-                text=n.get('text','').strip()
-                if text in {'표 목차','그림 목차','감사의 글'} or re.match(r'^[ⅠI]\s*[.．].*머리말',text): break
+                if _toc_body_boundary_label(n.get('text','').strip()): break
                 prelim.append(n)
+        _prelim_ids={id(n) for n in prelim}
+        _body_heading_texts={n.get('text','').strip() for n in body_nodes if n.get('kind')=='heading'}
+
+        def _toc_body_excusable_leftover(n):
+            text=n.get('text','').strip()
+            if _toc_body_boundary_label(text):
+                return True
+            # Leftover duplicate chapter-heading skeleton emitted by the
+            # legacy paper() splice (body slice starts at the first, not the
+            # second, occurrence of the real Chapter I heading). These are
+            # exact duplicates of real headings that appear again in
+            # body_nodes, so they carry no unrendered content and are safe
+            # to skip rather than flag as lost.
+            if n.get('kind')=='heading' and text in _body_heading_texts:
+                return True
+            return False
+
+        _unrendered=[
+            n for idx,n in enumerate(candidates)
+            if idx!=summary_start and id(n) not in _prelim_ids
+            and not _toc_body_excusable_leftover(n)
+        ]
+        if _unrendered:
+            raise ValueError(
+                "목차와 본문 사이에 렌더되지 않는 항목이 있습니다: "
+                + _unrendered[0].get('text','').strip()[:80]
+            )
         table_entries=[(n['text'],n['_bookmark'],2) for n in body_nodes if n['kind']=='caption' and n.get('label')=='표']
         figure_entries=[(n['text'],n['_bookmark'],2) for n in body_nodes if n['kind']=='caption' and n.get('label')=='그림']
         entries=[]
@@ -492,7 +522,7 @@ def main():
         out.parent.mkdir(parents=True, exist_ok=True)
         if out.exists():
             raise ValueError("기존 산출물을 덮어쓰지 않음: 새 경로 지정")
-        source_text = src.read_text()
+        source_text = src.read_text(encoding="utf-8")
         table_reports = []
         convert(source_text, a.font, Path(a.base),
                 table_reports=table_reports).save(out)
@@ -530,7 +560,8 @@ def main():
             "notice": "저수준 미검증 출력. 목차 필드 갱신·전체 페이지·학교 원문·학명·그림·표·머리행 검토 필요. 한글에서 글꼴 신명조·여백(위20/아래15/머리15/꼬리15/좌30/우30/제본0 mm)·페이지 번호를 확인한다. 이 세 가지는 스킬 작성 완료를 막지 않으며 자동 통과하지 않는다.",
         }
         out.with_suffix(".manifest.json").write_text(
-            json.dumps(manifest, ensure_ascii=False, indent=2)
+            json.dumps(manifest, ensure_ascii=False, indent=2),
+            encoding="utf-8",
         )
         print(str(out))
         return 0

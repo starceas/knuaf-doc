@@ -1,0 +1,387 @@
+{
+ "schema": "p1-regression-inventory/v1",
+ "baseline_main": "29abec0ec95369de7ae9e22207349d574f1f46b7",
+ "review": "knuaf-doc-astra-pr-review/review/20260919-astra (ASTRA-REVIEW.md, probes.py, probe-results.json)",
+ "note": "P1 transitions: fixed defects keep their baseline signature as evidence and gain real regression tests that must pass. open defects still reproduce their exact baseline signature; unexpected success there is still XPASS/failure. A green suite is not a product PASS.",
+ "status_rules": {
+  "fixed": "defect fixed in this candidate; every listed regression test must pass",
+  "open": "baseline defect still reproduces its exact signature",
+  "not_applicable": "defect lives on a code path absent from main",
+  "deferred": "applies to main but reproduction needs assets/environments outside this suite"
+ },
+ "defects": [
+  {
+   "id": "C2",
+   "title": "Locale-dependent text I/O (implicit encoding)",
+   "applies_to_main": true,
+   "status": "fixed",
+   "gate": "P1",
+   "fixed_in": "P1",
+   "evidence_type": "static_source_check+runtime",
+   "baseline_signature": "deployed scripts contain read_text()/write_text() calls without encoding= (e.g. gg_core.py canonical load, gg_finance.py manifest write)",
+   "fix": "explicit encoding=\"utf-8\" on all text file I/O (read_text/write_text/open/fdopen) across deployed scripts; subprocess text pipes pinned to utf-8",
+   "test": "tests.test_canonical_flow.TextIoTests.test_locale_independent_text_io",
+   "tests": [
+    "tests.test_canonical_flow.TextIoTests.test_locale_independent_text_io",
+    "tests.test_p1_core.Utf8IoTests.test_korean_flow_under_ascii_locale",
+    "tests.test_p1_core.Utf8IoTests.test_a_owned_scripts_declare_encoding"
+   ]
+  },
+  {
+   "id": "C3",
+   "title": "Non-string record id corrupts canonical",
+   "applies_to_main": true,
+   "status": "fixed",
+   "gate": "P1",
+   "fixed_in": "P1",
+   "evidence_type": "runtime",
+   "baseline_signature": "apply() accepts {'id': 7}, writes canonical, reload raises ValueError 'ID/개정번호 오류: 7'; canonical bytes changed",
+   "fix": "gg_core._check_record_id rejects non-string, blank, edge-whitespace and control-character IDs before any store; covers create and modify paths (all ops funnel through apply)",
+   "test": "tests.test_canonical_flow.CanonicalFlowTests.test_integer_id_rejected_before_store",
+   "tests": [
+    "tests.test_canonical_flow.CanonicalFlowTests.test_integer_id_rejected_before_store",
+    "tests.test_p1_core.RecordIdTests.test_bad_ids_rejected_in_every_collection",
+    "tests.test_p1_core.RecordIdTests.test_modify_path_rejects_bad_id",
+    "tests.test_p1_core.RecordIdTests.test_valid_ids_still_apply_and_roundtrip"
+   ]
+  },
+  {
+   "id": "C4",
+   "title": "Stale .gg-lock blocks all writes; no recovery command",
+   "applies_to_main": true,
+   "status": "fixed",
+   "gate": "P2",
+   "evidence_type": "runtime+static",
+   "fixed_in": "P2",
+   "baseline_signature": "pre-existing .gg-lock dir makes apply() raise '쓰기 잠금 존재' and gg.py exposes no unlock/recovery command",
+   "fix": "v2 guard/capability lock protocol (.gg-lock persistent dir); stale owner record cleanup via gg.py unlock (gg_lock.cleanup_owner); explicit offline upgrade via lock-upgrade (upgrade_offline); live guard still excludes a second writer",
+   "tests": [
+    "tests.test_canonical_flow.LockTests.test_stale_lock_has_no_recovery_path"
+   ]
+  },
+  {
+   "id": "C5",
+   "title": "No Python >=3.10 entry guard",
+   "applies_to_main": true,
+   "status": "fixed",
+   "gate": "P1",
+   "fixed_in": "P1",
+   "evidence_type": "runtime_band+static_source_check",
+   "baseline_signature": "gg.py contains no sys.version_info floor; on 3.9 commands run instead of a clean pre-reject",
+   "fix": "gg.py main() rejects Python<3.10 with a blocked JSON message and exit 2 before argparse, side effects, and the gg_core import (core import moved inside main); module import alone stays side-effect free. No installed 3.9 on this machine — verified via version_info shim + poisoned-import band; real 3.9 not run",
+   "test": "tests.test_canonical_flow.EntryContractTests.test_python_floor_guard_declared",
+   "tests": [
+    "tests.test_canonical_flow.EntryContractTests.test_python_floor_guard_declared",
+    "tests.test_p1_core.PythonFloorTests.test_version_shim_rejects_before_core_import",
+    "tests.test_p1_core.PythonFloorTests.test_module_import_is_side_effect_free",
+    "tests.test_p1_core.PythonFloorTests.test_supported_python_still_runs_commands"
+   ]
+  },
+  {
+   "id": "C6",
+   "title": "Windows Office automation quits user's existing instance",
+   "applies_to_main": true,
+   "status": "fixed",
+   "gate": "P1",
+   "evidence_type": "static_source_check",
+   "test": "tests.test_canonical_flow.EntryContractTests.test_office_automation_quit_blocked",
+   "baseline_signature": "gg_office_win.py calls gencache.EnsureDispatch then unconditional Quit(); no pre-dispatch block",
+   "fixed_in": "P1",
+   "fix": "gg_office_win.WINDOWS_COM_BLOCKED + run_word/run_excel _fail(code=2) before import pythoncom; gg_office.run_windows_com returns rc=2 without spawning; dormant EnsureDispatch/Quit retained below the guard pending native verification",
+   "tests": [
+    "tests.test_canonical_flow.EntryContractTests.test_office_automation_quit_blocked",
+    "tests.test_p1_outputs.WindowsComBlockTests.test_helper_run_word_blocks_before_com",
+    "tests.test_p1_outputs.WindowsComBlockTests.test_helper_run_excel_blocks_before_com",
+    "tests.test_p1_outputs.WindowsComBlockTests.test_wrapper_returns_block_without_spawning",
+    "tests.test_p1_outputs.WindowsComBlockTests.test_engine_dispatch_on_win32_returns_block",
+    "tests.test_p1_outputs.WindowsComBlockTests.test_macos_path_not_touched"
+   ]
+  },
+  {
+   "id": "H1",
+   "title": "Merged-cell markers '<'/'^' counted as filled",
+   "applies_to_main": true,
+   "status": "fixed",
+   "gate": "P1",
+   "evidence_type": "runtime",
+   "test": "tests.test_xlsx_structure.MergeMarkerTests.test_merge_markers_are_empty",
+   "baseline_signature": "gg_document._filled_cell('<') and ('^') return True",
+   "fixed_in": "P1",
+   "fix": "gg_document._filled_cell treats '<'/'^' merge markers as empty; valid values preserved",
+   "tests": [
+    "tests.test_xlsx_structure.MergeMarkerTests.test_merge_markers_are_empty"
+   ]
+  },
+  {
+   "id": "H2",
+   "title": "Wide tables may rotate whole section to landscape",
+   "applies_to_main": true,
+   "status": "fixed",
+   "gate": "P1",
+   "evidence_type": "static_source_check",
+   "test": "tests.test_canonical_flow.EntryContractTests.test_landscape_rotation_suppressed",
+   "baseline_signature": "build_docx.py calls the table-layout helper without allow_landscape=False",
+   "fixed_in": "P1",
+   "fix": "build_docx.py calls fit_table with allow_landscape=False on the official path",
+   "tests": [
+    "tests.test_canonical_flow.EntryContractTests.test_landscape_rotation_suppressed",
+    "tests.test_p1_outputs.WideTableOrientationTests.test_wide_table_keeps_portrait_and_content",
+    "tests.test_p1_outputs.WideTableOrientationTests.test_narrow_table_still_renders_normally"
+   ]
+  },
+  {
+   "id": "H3",
+   "title": "Unrendered nodes between TOC and body accepted silently",
+   "applies_to_main": true,
+   "status": "fixed",
+   "gate": "P1",
+   "evidence_type": "static_source_check",
+   "test": "tests.test_canonical_flow.EntryContractTests.test_unrendered_nodes_rejected",
+   "baseline_signature": "build_docx.py has no unrendered-node rejection (_unrendered raise)",
+   "fixed_in": "P1",
+   "fix": "build_docx.py raises ValueError on unrendered leftover nodes (official path)",
+   "tests": [
+    "tests.test_canonical_flow.EntryContractTests.test_unrendered_nodes_rejected",
+    "tests.test_p1_outputs.UnrenderedNodeTests.test_stray_node_between_toc_and_body_rejected",
+    "tests.test_p1_outputs.UnrenderedNodeTests.test_recognized_gap_nodes_still_render"
+   ]
+  },
+  {
+   "id": "H5",
+   "title": "Missing wanted cells skipped silently in template blank-copy",
+   "applies_to_main": true,
+   "status": "fixed",
+   "gate": "P1",
+   "evidence_type": "static_source_check",
+   "test": "tests.test_canonical_flow.EntryContractTests.test_missing_wanted_cells_rejected",
+   "baseline_signature": "gg_excel_template.py has no missing_wanted rejection",
+   "fixed_in": "P1",
+   "fix": "gg_excel_template.py rejects absent wanted cells via missing_wanted before output",
+   "tests": [
+    "tests.test_canonical_flow.EntryContractTests.test_missing_wanted_cells_rejected",
+    "tests.test_p1_outputs.MissingTemplateCellTests.test_missing_cell_rejected_before_output",
+    "tests.test_p1_outputs.MissingTemplateCellTests.test_missing_sheet_still_rejected",
+    "tests.test_p1_outputs.MissingTemplateCellTests.test_existing_cells_cleared_and_preserved"
+   ]
+  },
+  {
+   "id": "H6",
+   "title": "print_titles emits bare definedName without definedNames container",
+   "applies_to_main": true,
+   "status": "fixed",
+   "gate": "P1",
+   "evidence_type": "runtime_synthetic_xlsx",
+   "test": "tests.test_xlsx_structure.PrintTitleTests.test_titles_container_created_when_missing",
+   "baseline_signature": "workbook.xml gains bare <definedName>; openpyxl print_title_rows stays None",
+   "fixed_in": "P1",
+   "fix": "gg_excel_print.py emits a proper definedNames container with namespace/localSheetId",
+   "tests": [
+    "tests.test_xlsx_structure.PrintTitleTests.test_titles_container_created_when_missing",
+    "tests.test_xlsx_structure.PrintTitleTests.test_titles_apply_is_idempotent",
+    "tests.test_xlsx_structure.PrintTitleTests.test_titles_with_existing_defined_names"
+   ]
+  },
+  {
+   "id": "H7",
+   "title": "Corrupt XLSX crashes output inspection",
+   "applies_to_main": true,
+   "status": "fixed",
+   "gate": "P1",
+   "evidence_type": "runtime_synthetic_xlsx",
+   "test": "tests.test_xlsx_structure.XlsxInspectTests.test_corrupt_xlsx_returns_issue",
+   "baseline_signature": "inspect_outputs propagates zipfile.BadZipFile instead of returning a structured issue",
+   "fixed_in": "P1",
+   "fix": "gg_school_excel.inspect_outputs returns a structured issue for corrupt XLSX",
+   "tests": [
+    "tests.test_xlsx_structure.XlsxInspectTests.test_corrupt_xlsx_returns_issue"
+   ]
+  },
+  {
+   "id": "H8",
+   "title": "unknown first answer reused instead of help step",
+   "applies_to_main": true,
+   "status": "fixed",
+   "gate": "P1",
+   "fixed_in": "P1",
+   "evidence_type": "runtime",
+   "baseline_signature": "question() returns 'reuse' for answer_state=unknown at attempts=1; contract is ask-once-then-help",
+   "fix": "question() reuse set no longer includes 'unknown'; provided/explicit_none/not_applicable/withheld still reuse",
+   "test": "tests.test_question_gate.QuestionGateTests.test_unknown_answer_reaches_help",
+   "tests": [
+    "tests.test_question_gate.QuestionGateTests.test_unknown_answer_reaches_help",
+    "tests.test_p1_core.QuestionLadderP1Tests.test_unknown_full_ladder",
+    "tests.test_p1_core.QuestionLadderP1Tests.test_terminal_states_still_reuse",
+    "tests.test_p1_core.QuestionLadderP1Tests.test_unknown_does_not_mark_not_provided_reuse"
+   ]
+  },
+  {
+   "id": "H9",
+   "title": "Only '천원' facts are body-crosschecked; '원' silently skipped",
+   "applies_to_main": true,
+   "status": "fixed",
+   "gate": "P3",
+   "fixed_in": "P3-C1",
+   "evidence_type": "runtime",
+   "baseline_signature": "_finance_check_items returns ([], None) for provided '원' monetary fact even with no claims fallback; also tracked as R6 under-check half",
+   "fix": "gg_core._finance_check_items's eligible() now checks unit membership in gg_finance_body._MONETARY_UNITS ('원','천원') instead of a single '천원' string comparison; non-monetary units (ratio, kg, etc.) stay correctly excluded per R6-overblock's positive control",
+   "test": "tests.test_finance_scope.FinanceScopeTests.test_won_unit_fact_is_checked",
+   "tests": [
+    "tests.test_finance_scope.FinanceScopeTests.test_won_unit_fact_is_checked",
+    "tests.test_finance_scope.FinanceScopeTests.test_ratio_unit_fact_still_out_of_scope"
+   ]
+  },
+  {
+   "id": "H15-count",
+   "title": "Hidden/veryHidden sheets counted toward page lower bound",
+   "applies_to_main": true,
+   "status": "fixed",
+   "gate": "P1",
+   "evidence_type": "runtime_synthetic_xlsx",
+   "test": "tests.test_xlsx_structure.XlsxInspectTests.test_visible_sheet_count",
+   "baseline_signature": "workbook_worksheet_count returns 2 for visible+hidden workbook; contract counts visible only",
+   "fixed_in": "P1",
+   "fix": "gg_office.workbook_worksheet_count counts visible sheets only; all-hidden raises",
+   "tests": [
+    "tests.test_xlsx_structure.XlsxInspectTests.test_visible_sheet_count",
+    "tests.test_xlsx_structure.XlsxInspectTests.test_all_hidden_workbook_rejected"
+   ]
+  },
+  {
+   "id": "R1",
+   "title": "PR1 record_id collisions in benchmark packs",
+   "applies_to_main": false,
+   "status": "not_applicable",
+   "gate": "P4",
+   "reason": "not_applicable_to_main; gate=P4 — gg_rda_lookup/gg_rda_research and benchmark-packs exist only in PR1"
+  },
+  {
+   "id": "R2",
+   "title": "PR1 ambiguous price picks first row",
+   "applies_to_main": false,
+   "status": "not_applicable",
+   "gate": "P4",
+   "reason": "not_applicable_to_main; gate=P4 — lookup/propose exist only in PR1"
+  },
+  {
+   "id": "R3",
+   "title": "PR1 builtin source skip without runtime artifact",
+   "applies_to_main": false,
+   "status": "not_applicable",
+   "gate": "P5",
+   "reason": "not_applicable_to_main; gate=P5 — builtin-sources.json/gg_source_intake exist only in PR1"
+  },
+  {
+   "id": "R4",
+   "title": "PR1 intake index overwrites existing source evidence",
+   "applies_to_main": false,
+   "status": "not_applicable",
+   "gate": "P5",
+   "reason": "not_applicable_to_main; gate=P5 — gg_source_intake.write_intake_index exists only in PR1"
+  },
+  {
+   "id": "R5",
+   "title": "PR2/PR3 unlock removes a live writer's lock",
+   "applies_to_main": false,
+   "status": "not_applicable",
+   "gate": "P2",
+   "reason": "not_applicable_to_main; gate=P2 — main gg.py has no unlock command; the mkdir-lock model differs. The stale-lock part of the same defect family is C4 on main."
+  },
+  {
+   "id": "R6-overblock",
+   "title": "PR2/PR3 block non-financial facts as finance errors",
+   "applies_to_main": false,
+   "status": "not_applicable",
+   "gate": "P3",
+   "reason": "not_applicable_to_main; gate=P3 — the unsupported_unit over-block exists only in PR2/3. Positive control test_nonfinancial_fact_no_finance_block asserts main lacks the regression.",
+   "positive_control": "tests.test_finance_scope.FinanceScopeTests.test_nonfinancial_fact_no_finance_block"
+  },
+  {
+   "id": "R6-undercheck",
+   "title": "Non-천원 monetary units unchecked when claims missing",
+   "applies_to_main": true,
+   "status": "fixed",
+   "gate": "P3",
+   "fixed_in": "P3-C1",
+   "reason": "same defect family as H9; main dropped '원' facts silently",
+   "fix": "same fix as H9 — gg_finance_body._MONETARY_UNITS widens gg_core._finance_check_items eligibility to both currency units",
+   "test": "tests.test_finance_scope.FinanceScopeTests.test_won_unit_fact_is_checked",
+   "tests": [
+    "tests.test_finance_scope.FinanceScopeTests.test_won_unit_fact_is_checked",
+    "tests.test_finance_scope.FinanceScopeTests.test_ratio_unit_fact_still_out_of_scope"
+   ]
+  },
+  {
+   "id": "R7",
+   "title": "PR3 WindowsLock reads own locked byte via second handle",
+   "applies_to_main": false,
+   "status": "not_applicable",
+   "gate": "P2",
+   "reason": "not_applicable_to_main; gate=P2 — WindowsLock/_NativeWindowsPort exist only in PR3; main has no Windows lock path at all"
+  },
+  {
+   "id": "C1",
+   "title": "Windows lock semantics unverified",
+   "applies_to_main": false,
+   "status": "not_applicable",
+   "gate": "P2",
+   "reason": "not_applicable_to_main; gate=P2 — main Lock is POSIX mkdir-only; no Windows code path to reproduce; native Windows remains unrun"
+  },
+  {
+   "id": "H4",
+   "title": "Fixed Excel input map constraint",
+   "applies_to_main": true,
+   "status": "deferred",
+   "gate": "deferred",
+   "reason": "applies_to_main but outside P1 scope — deferred per design §8; requires real template verification"
+  },
+  {
+   "id": "H10",
+   "title": "Branched canonical / sync-folder divergence",
+   "applies_to_main": true,
+   "status": "deferred",
+   "gate": "deferred",
+   "reason": "applies_to_main but outside P1 scope — separate design required per review"
+  },
+  {
+   "id": "H11",
+   "title": "Model fallback docs vs explicit user model pin",
+   "applies_to_main": true,
+   "status": "deferred",
+   "gate": "deferred",
+   "reason": "documentation-level contract; P1 corrects the guidance text (SKILL.md/model-routing.md) — user-pinned models never fall back implicitly. Kept deferred: no runtime assertion exists",
+   "note": "P1 doc fix applied: model-routing.md and SKILL.md now state user-specified models are not arbitrarily substituted; doc contract, no runtime test"
+  },
+  {
+   "id": "H12",
+   "title": "Kordoc figure placement",
+   "applies_to_main": true,
+   "status": "deferred",
+   "gate": "deferred",
+   "reason": "applies_to_main but outside P1 scope — needs real Kordoc install; unverified"
+  },
+  {
+   "id": "H13",
+   "title": "Word attachedTemplate external relationship",
+   "applies_to_main": true,
+   "status": "deferred",
+   "gate": "deferred",
+   "reason": "applies_to_main but outside P1 scope — needs real Word save roundtrip; unverified"
+  },
+  {
+   "id": "H14",
+   "title": "Single-sheet school-name intersection misjudgment",
+   "applies_to_main": true,
+   "status": "deferred",
+   "gate": "deferred",
+   "reason": "applies_to_main but outside P1 scope — sheetnames∩SCHOOL_SHEETS heuristic kept; deferred scope"
+  },
+  {
+   "id": "H15-coverage",
+   "title": "Per-sheet content coverage in PDF pages",
+   "applies_to_main": true,
+   "status": "deferred",
+   "gate": "deferred",
+   "reason": "applies_to_main but outside P1 scope — needs real PDF render inspection; only the count half (H15-count) is reproduced"
+  }
+ ]
+}

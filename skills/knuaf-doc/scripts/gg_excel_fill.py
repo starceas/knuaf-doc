@@ -37,6 +37,13 @@ from gg_core import STATES
 MAP_SCHEMA = "gg-xlsx-fill-map/v1"
 VALUES_SCHEMA = "gg-xlsx-fill-values/v1"
 ORIGINS = {"factual", "assumption", "synthetic"}
+# Economic unit vocabulary a semanticField cell may declare, mirrored from
+# the semantic/finance layers (gg_fact_semantics._NONFINANCIAL_UNIT_RE +
+# gg_finance_body._UNIT_SCALES).  A semanticField entry claims economics a
+# downstream consumer can interpret, so an unrecognized unit must refuse
+# the write instead of passing silently.
+SEMANTIC_UNITS = frozenset(
+    {"원", "천원", "kg", "g", "㎡", "m2", "년", "개월", "%", "ratio"})
 VALUE_TYPES = {"string", "integer", "number", "boolean", "blank"}
 XML_NS = "http://www.w3.org/XML/1998/namespace"
 CELL_REF_RE = re.compile(r"^([A-Z]+)([1-9]\d*)$")
@@ -247,6 +254,9 @@ def fill_copy(template: Path, map_path: Path, values_path: Path, out: Path) -> d
                     for field in ("semanticField", "unit")
                 ) or entry["period"] is None:
                     raise ValueError("semantic map requires meaning, unit and period")
+                if entry["unit"] not in SEMANTIC_UNITS:
+                    raise ValueError(
+                        f"semantic unit outside economic vocabulary: {entry['unit']!r}")
             if not isinstance(entry.get("source_note"), str) or not entry["source_note"].strip():
                 raise ValueError("map entry source_note must be non-empty")
             if "editable" not in entry or entry["editable"] is not True:

@@ -1,0 +1,80 @@
+{
+  "schema_version": "1.0.0",
+  "updated": "2026-09-18",
+  "mvp_major": "specialty_crops",
+  "majors": [
+    "food_crops",
+    "specialty_crops",
+    "forestry",
+    "landscape",
+    "vegetables",
+    "hort_env_systems",
+    "fruit_trees",
+    "industrial_insects"
+  ],
+  "packs": [
+    {
+      "pack_id": "rda.income.national.2024",
+      "kind": "common",
+      "major_id": null,
+      "rank": 1,
+      "relpath": "common/rda-income-national-2024/records.jsonl",
+      "source_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab"
+    },
+    {
+      "pack_id": "rda.income.regional.2024",
+      "kind": "common",
+      "major_id": null,
+      "rank": 1,
+      "relpath": "common/rda-income-regional-2024/records.jsonl",
+      "source_sha256": "b229ca4f83e9152656945090c15ac7f8780c578042854200b9e11b77bf8d3813"
+    },
+    {
+      "pack_id": "rda.econ.2025",
+      "kind": "common",
+      "major_id": null,
+      "rank": 1,
+      "relpath": "common/rda-econ-2025/records.jsonl",
+      "source_sha256": "38e38ffb8b478584b9f76a8b9d98d56c7cdeb8eb18a2200aef26639a72935a83"
+    },
+    {
+      "pack_id": "mafra.specialty.production.2024",
+      "kind": "specialty_crops",
+      "major_id": "specialty_crops",
+      "rank": 2,
+      "relpath": "majors/specialty_crops/mafra-specialty-production-2024/records.jsonl",
+      "source_sha256": "0974c3d30aa5c1abd795be0af453f4de3bd4e569285c250537897b820d2aa1d5"
+    }
+  ],
+  "gaps": [
+    {
+      "gap_id": "excluded_from_mafra_specialty_survey",
+      "pack_id": "mafra.specialty.production.2024",
+      "pdf_page": 1,
+      "reason": "인삼은 농림축산식품부 특용작물 생산실적 조사대상에서 제외 (별도 인삼통계집 관리)",
+      "action": "leave_empty"
+    },
+    {
+      "gap_id": "econ_facility_capex_table_absent",
+      "pack_id": "rda.econ.2025",
+      "pdf_page": null,
+      "reason": "2025 경제성분석 기준자료집 원본에 온실·하우스·저온저장고 신축 표준단가(평당/㎡당) 독립 표 미수록. 지침서에 따라 소득자료집 상각비를 승격하지 않고 공란 유지.",
+      "action": "leave_empty"
+    },
+    {
+      "gap_id": "econ_maintenance_rate_table_absent",
+      "pack_id": "rda.econ.2025",
+      "pdf_page": null,
+      "reason": "2025 경제성분석 기준자료집 원본에 시설/장비 수리유지비율(%) 독립 표 미수록.",
+      "action": "leave_empty"
+    },
+    {
+      "gap_id": "econ_machinery_price_table_absent",
+      "pack_id": "rda.econ.2025",
+      "pdf_page": 117,
+      "reason": "2016.7.1 농업기계 가격표시제 도입으로 2017년부터 농기계 신품 가격표 미수록 고지됨(P.117). 농기계 임차료(P.107~110)로 대체 수록됨.",
+      "action": "leave_empty"
+    }
+  ],
+  "license_note": "추출 JSON은 농진청·농식품부 공개 자료집의 기계 가독 사본이다. 원본 PDF는 패키지에 포함하지 않는다."
+}

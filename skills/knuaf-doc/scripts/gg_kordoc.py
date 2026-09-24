@@ -195,7 +195,7 @@ def _run(cmd: list[str], *, cwd: Path | None = None, env=None, timeout=DEFAULT_T
             capture_output=True,
             text=True,
             timeout=timeout,
-            check=False,
+            check=False, encoding="utf-8",
         )
     except FileNotFoundError as exc:
         return {"ok": False, "kind": "missing_executable", "error": str(exc)}

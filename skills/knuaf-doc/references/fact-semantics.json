@@ -1,0 +1,25 @@
+{
+  "schema": "gg-fact-semantics-registry/1",
+  "version": "1",
+  "sha256": null,
+  "note": "Design-time reference data per design-r2 DESIGN.md section 2. Deployed as references/fact-semantics.json at implementation adoption time; not installed into the current runtime by this design/implementation packet itself (sha256 is filled by the packaging tool once bytes are final).",
+  "meanings": {
+    "sales.revenue": {"measure": {"kind": "monetary_total", "currency": "KRW"}},
+    "sales.net_profit": {"measure": {"kind": "monetary_total", "currency": "KRW"}},
+    "sales.unit_price_purchase": {"measure": {"kind": "unit_price", "currency": "KRW", "denominator": "kg"}},
+    "sales.unit_price_direct": {"measure": {"kind": "unit_price", "currency": "KRW", "denominator": "kg"}},
+    "sales.history_years": {"measure": {"kind": "text"}},
+    "sales.quantity": {"measure": {"kind": "quantity"}},
+    "farm.area": {"measure": {"kind": "area"}}
+  },
+  "consumer_bindings": [],
+  "output_consumers": [
+    "annual:/rows/i/revenue", "annual:/rows/i/profit",
+    "school:/expected_years/i/revenue", "school:/expected_years/i/net_profit"
+  ],
+  "derived_contract": {},
+  "economic_profiles": [
+    "single_annual_cash_v1", "school_17_sheet_v1", "school_paper_v1",
+    "workbook_map_v1"
+  ]
+}

@@ -1,0 +1,191 @@
+{
+  "baseline": {
+    "file_count": 55,
+    "main": "29abec0ec95369de7ae9e22207349d574f1f46b7",
+    "spec": "tools/baseline-files.json",
+    "spec_sha256": "094a062217f563cb62f79721c2eb6f1eac15574fe691ac4a6b72595a413f0392",
+    "tree_sha256": "41f26c2823491edb8248822e0f50084c57b075b20e300daad6b3d65c262902f4"
+  },
+  "files": {
+    ".github/workflows/validation.yml": {
+      "note": "Per-PR CI running the same integrity check and validation runner. repair-n1/N2: receipt path read via os.environ['RUNNER_TEMP'] inside the quoted heredoc. P2-R2: strict report consumer step enforces the ok_platform_scoped/default-scope contract (sole P2-L09-native pending gate, full=false, platform=true, no unexpected/unapproved skips). P2-R3: consumer hardened to independently recompute the report — strict JSON (duplicate keys/nonfinite rejected), present+typed fields, non-bool nonnegative integer counts, framework reconciliation (was_successful/outcomes/testsRun==tests_run==len(entries)/skipped==1), per-entry unique-id + category tally equal to counters with zero failed, declared H9-only known_baseline_defect pairs, fixture_events empty/failure_events 0, only parent-matched subtest_success events, and the exact approved-skip rule string — no trust in accounting.errors or top-level summaries. P2-R4: three consumer consistency holes closed — known_baseline_defect requires the exact (test, defect=H9, gate=P3) triple per regression_inventory (arbitrary nonempty gate rejected); subtest ids must match the complete emitted parent + ' (' + nonempty + ')' shape (unclosed/empty/wrong-prefix rejected, no repr parsing); the exact native withheld skip parent may carry no subtest events at all. All prior strict JSON/type/framework/entries/fixture/gate checks preserved. P2-R5: H9 required-presence invariant enforced independently of supplied totals — exact test id must occur exactly once carrying category known_baseline_defect + defect H9 + gate P3; runtime.known_baseline_defects pinned to integer 1; relabel/ missing/substitute/duplicate with favorable counters all reject.",
+      "origin": "new",
+      "sha256": "4cc4eab402eb0cb795da5cfccceeda0ba899428c89ab2e1de4091276b853af1c"
+    },
+    "docs/validation/BUNDLE.md": {
+      "note": "Bundle/manifest/CI 계약 문서 — @3 manifest·@2 change list·신규 파일 allowlist 계약 포함.",
+      "origin": "new",
+      "sha256": "d11b5e0df3c5775f2fdb0a2b99044a5183ff651ee96d87142404050587fd592d"
+    },
+    "docs/validation/REGRESSIONS.md": {
+      "note": "P0-A: human-readable regression inventory (R1–R7 + adopted C/H items); machine source of truth is tests/regression_inventory.json. repair-n1/N1: dependency-gate and allowed nested-skip list documented. P2-R2: verdict precedence, completion flags, external-gate rule and outcome-accounting semantics documented. P2-R3: exact-10 nested allowlist closure documented (tamper control folded into host method).",
+      "origin": "new",
+      "sha256": "d97c8e959ae5a9d8ea9355c9044ec8079dbf523a786c90665f48a6b7bd8bfb36"
+    },
+    "requirements-validation.txt": {
+      "note": "Validation install entry point; resolves to the shipped runtime requirements only.",
+      "origin": "new",
+      "sha256": "3e1761e995173713362a2847127360e591cf933aa00ed3f2afa27bf239fa4535"
+    },
+    "tests/__init__.py": {
+      "note": "P0-A: suite package marker.",
+      "origin": "new",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "tests/_harness.py": {
+      "note": "P0-A: shared harness pinning imports to <repo>/skills/knuaf-doc/scripts and evicting foreign gg_* modules; no dev-tree fallback. repair-n1/N1: synthetic module stubs for dependency-gate tests.",
+      "origin": "new",
+      "sha256": "3857a39d37f0ab9e456bf0a59919f91bbebd9a1e99ff4bb6960a56926a3be6b0"
+    },
+    "tests/regression_inventory.json": {
+      "note": "P0-A: machine source of truth mapping each known defect to its test and owning gate (P1–P5/deferred).",
+      "origin": "new",
+      "sha256": "fc502b0c902536f89fea092cc49f6a84db17f2432e3c8c2dae95565956a1c6a6"
+    },
+    "tests/test_bundle_lineage.py": {
+      "note": "P1+P2 PACKAGE 계보 시험 — 실제 후보 정상 검증, 신규 파일 계약(allowlist·before=null·위장 거부) 포함 적대 합성 트리.",
+      "origin": "new",
+      "sha256": "ca16832a2a6f52f11a916d93a661f9215e16458823c1d418c922ae1f5e5e0d25"
+    },
+    "tests/test_canonical_flow.py": {
+      "note": "P0-A: init/apply/check/export positive controls + C2–C6/H2/H3/H5 defect signatures; synthetic only.",
+      "origin": "new",
+      "sha256": "1b08ebf162a42b22ed5b0715907b67e613443bd82ee89a3719a9c140463b24e7"
+    },
+    "tests/test_finance_scope.py": {
+      "note": "P0-A: finance crosscheck scope — non-financial positive control + H9/R6 under-check defect.",
+      "origin": "new",
+      "sha256": "57e6aa4b539f524a7721584c22e436b8cc5dfacb4f241274ea9bc3375faf3b8e"
+    },
+    "tests/test_import_isolation.py": {
+      "note": "P0-A: B01 import-isolation contract under polluted PYTHONPATH.",
+      "origin": "new",
+      "sha256": "8affd4a22b26c6bb602efa6b188f5fae8a4710c0abd9e025ed432589f0f8ec6d"
+    },
+    "tests/test_p1_core.py": {
+      "note": "P1 core/CLI behavioral tests (A-owned): C3 record-id, C5 floor, C6 COM, H8 ladder, UTF-8 band.",
+      "origin": "new",
+      "sha256": "fb3982fe9eccedd9231618112316f432883126b6906854cfb5a670700dca5267"
+    },
+    "tests/test_p1_outputs.py": {
+      "note": "P1 document/excel/Office behavioral tests (B-owned): fake-COM block, orientation, unrendered-node rejection, missing-cell rejection, forced-ASCII UTF-8 band.",
+      "origin": "new",
+      "sha256": "7e6a5d87f63b487722499dc023207a356515a703040d192dce7f7d3f02aefa21"
+    },
+    "tests/test_question_gate.py": {
+      "note": "P0-A: question/help-step ladder + H8 defect reproduction.",
+      "origin": "new",
+      "sha256": "b80a9cbbcd9fdc1b8da7dcb441a801bed5af2a2759241ce9514a0dda7e19145f"
+    },
+    "tests/test_runner_contract.py": {
+      "note": "repair-n1/N1 (new file): meta-tests asserting the N1 contract — dependency preflight semantics, verdict priority, JSON fields. P2-R2: extended subprocess controls (scoped verdict, external gate, tamper) and pure non-recursing accounting/classification tests for subtests, fixtures, expectedFailure/XPASS and gate mutations. P2-R3: bundle-tamper assertion folded into the pre-existing nested test_unexpected_failure_beats_incomplete — standalone method removed, no new nested exemption.",
+      "origin": "new",
+      "sha256": "6402b58bac0a25467ebf659da5023c80edda65766d81fcd4e7ebf7324bdecc08"
+    },
+    "tests/test_runner_negative_controls.py": {
+      "note": "P0-A: runner-level negative controls on disposable copies (missing/tampered runtime, PYTHONPATH pollution, foreign module cache). repair-n1/N1: nested-flag, injected-skip, XPASS, missing-dependency, stub-version cases.",
+      "origin": "new",
+      "sha256": "2284641938cbf63d390289e9c7416d40696dc0c3b791a06f3e418c51582bf533"
+    },
+    "tests/test_xlsx_structure.py": {
+      "note": "P0-A: synthetic XLSX contracts — merge markers, print_titles container, corrupt ZIP handling, visible-sheet count. repair-n1/N1: dependency skip removed so import/fixture errors surface as failure/error.",
+      "origin": "new",
+      "sha256": "bbefd109fe2a808c96a2516446d09ce075fa41ba146e4a2a268dbba65a159fe1"
+    },
+    "tools/baseline-files.json": {
+      "note": "Pinned main 29abec0ec95369de7ae9e22207349d574f1f46b7 file-hash list; input contract for check_bundle.py.",
+      "origin": "pinned-input",
+      "sha256": "094a062217f563cb62f79721c2eb6f1eac15574fe691ac4a6b72595a413f0392",
+      "source_path": "evidence:baseline-files.json",
+      "source_sha256": "094a062217f563cb62f79721c2eb6f1eac15574fe691ac4a6b72595a413f0392",
+      "transform": "verbatim-copy"
+    },
+    "tools/build_validation_bundle.py": {
+      "note": "Manifest generator (schema @3): links runtime-changes@2, fail-closed on undeclared baseline drift; 신규 runtime 변경 파일은 manifest files[]가 아니라 change list가 선언; deterministic clean export.",
+      "origin": "new",
+      "sha256": "c480802f79e5ad1109525298de2b6fbfa0251c8fbc4f050f42ab3801cc74a8fb"
+    },
+    "tools/check_bundle.py": {
+      "note": "Integrity checker: baseline + declared-file verification + runtime-change linkage. @2 change list: declared_change (baseline 수정)과 declared_new (approved_new_files의 신규 파일, before_sha256=null) + adversarial rejections.",
+      "origin": "new",
+      "sha256": "f95fecebbc165d88ad2ff15bec82c77c5cc5723768e1b08c8d44483c5b6e2793"
+    },
+    "tools/run_validation.py": {
+      "note": "P0-A: single-command validation runner; default mode runs check_bundle.py --root first, then the suite. --runtime-only is a dev-mode flag, unused by CI/final validation. repair-n1/N1: current-interpreter dependency preflight, verdict priority, full_validation_completed. P2-R2: complete unittest outcome accounting (one terminal entry per started parent, subtest events, fixture_events, framework reconciliation, wasSuccessful false never exit0), fail-closed P2-L09-native external gate, ok_platform_scoped verdict, and validation_scope/platform_validation_completed/pending_external_checks/approved_external_skips report fields. P2-R3: ALLOWED_NESTED_SKIP_IDS restored to the exact pinned 10 — the R2-added nested exemption for test_tampered_bundle_fails_run removed.",
+      "origin": "new",
+      "sha256": "246711b72d92c32f0904f9eac4b90a9590c9420c75af60917d1bbd05b996e6ab"
+    },
+    "tools/runtime-changes.json": {
+      "note": "누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지.",
+      "origin": "new",
+      "sha256": "b018acef2dd7cc66d2b3c1d87e32a778fe4e4c5b6563128c5d99ecd48a842d95"
+    },
+    "tools/validation-provenance.json": {
+      "note": "This file; declares origins for the validation layer.",
+      "origin": "new",
+      "sha256": "20eff7015c659915f3aa50f853b86438e6932a169b534819dc7dab938377575b"
+    }
+  },
+  "generated_by": "tools/build_validation_bundle.py@3",
+  "readme_policy": {
+    "allow_modified": true,
+    "path": "README.md",
+    "reason": "README may gain a validation-guide section over the frozen main baseline; the title and the validation entry points must survive any such edit.",
+    "required_markers_if_modified": [
+      "# knuaf-doc",
+      "run_validation.py",
+      "check_bundle.py"
+    ]
+  },
+  "runtime_changes": {
+    "approved_new_files": 57,
+    "baseline_main": "29abec0ec95369de7ae9e22207349d574f1f46b7",
+    "change_count": 80,
+    "changes_sha256": "13737ce09116d444f9953bccb081404f5a4681795f73ec89aaef795c777b987a",
+    "new_count": 57,
+    "parent_candidate": {
+      "file_count": 124,
+      "stage": "P4",
+      "tree_sha256": "c76885dd312ee5e9c74da62abb0192bd71b8b4b85d8b9aa99af92ef5b33734f5"
+    },
+    "schema": "knuaf-doc/runtime-changes@2",
+    "spec": "tools/runtime-changes.json",
+    "spec_sha256": "b018acef2dd7cc66d2b3c1d87e32a778fe4e4c5b6563128c5d99ecd48a842d95",
+    "stage": "P5",
+    "stage_lineage": [
+      {
+        "file_count": 75,
+        "note": "P0 clean export — P1의 출발점",
+        "stage": "P0",
+        "tree_sha256": "e2abcb7ced750ecfe21a7dcbdcdfea456853a6e8af72873de041ca8e8b6de052"
+      },
+      {
+        "file_count": 79,
+        "note": "수용 P1 E3 — P2의 직전 부모",
+        "stage": "P1",
+        "tree_sha256": "5c4dcabaa04175bbabb188a7f410028da85e3585fd6faffe8a566afaf2a30466"
+      },
+      {
+        "file_count": 89,
+        "note": "수용 P2-r8 — P3의 직전 부모 (독립 검토 수정 반영 후 최종, P2-PARENT-DELIVERY-R1.json)",
+        "stage": "P2",
+        "tree_sha256": "ff291477ae91592afd4080670b5522719b194a1c24ff9c297c087a77f7067ec1"
+      },
+      {
+        "file_count": 97,
+        "note": "수용 P3-c1 (G004-PARENT-ADMISSION) — P4의 직전 부모; p4-lineage.json에서 재계산 일치 확인",
+        "stage": "P3",
+        "tree_sha256": "1261521709fbb02eb48396fcade8b66bbe4bc0012d09e680916922552dd8735c"
+      },
+      {
+        "file_count": 124,
+        "note": "수용 P4 패키징 후보 — P5의 직전 부모 (g005-p4-packaging-1/public, check_bundle.tree_digest)",
+        "stage": "P4",
+        "tree_sha256": "c76885dd312ee5e9c74da62abb0192bd71b8b4b85d8b9aa99af92ef5b33734f5"
+      }
+    ],
+    "verified_count": 80
+  },
+  "schema": "knuaf-doc/validation-bundle@3",
+  "validation_tree_sha256": "2a06d958733894fd6c7729ebfd4bd7520178ccac4782638f5b42a42ff0a2902c"
+}

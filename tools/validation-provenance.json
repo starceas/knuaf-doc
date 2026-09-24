@@ -1,0 +1,114 @@
+{
+  "comment": "Per-file origin declarations for the public validation layer. Every non-baseline file under this repository must be listed in tools/validation-bundle.json; entries here attach provenance to those files. origin values: new | reused | transformed | pinned-input | generated.",
+  "defaults": {
+    "origin": "new"
+  },
+  "files": {
+    ".github/workflows/validation.yml": {
+      "note": "Per-PR CI running the same integrity check and validation runner. repair-n1/N2: receipt path read via os.environ['RUNNER_TEMP'] inside the quoted heredoc. P2-R2: strict report consumer step enforces the ok_platform_scoped/default-scope contract (sole P2-L09-native pending gate, full=false, platform=true, no unexpected/unapproved skips). P2-R3: consumer hardened to independently recompute the report — strict JSON (duplicate keys/nonfinite rejected), present+typed fields, non-bool nonnegative integer counts, framework reconciliation (was_successful/outcomes/testsRun==tests_run==len(entries)/skipped==1), per-entry unique-id + category tally equal to counters with zero failed, declared H9-only known_baseline_defect pairs, fixture_events empty/failure_events 0, only parent-matched subtest_success events, and the exact approved-skip rule string — no trust in accounting.errors or top-level summaries. P2-R4: three consumer consistency holes closed — known_baseline_defect requires the exact (test, defect=H9, gate=P3) triple per regression_inventory (arbitrary nonempty gate rejected); subtest ids must match the complete emitted parent + ' (' + nonempty + ')' shape (unclosed/empty/wrong-prefix rejected, no repr parsing); the exact native withheld skip parent may carry no subtest events at all. All prior strict JSON/type/framework/entries/fixture/gate checks preserved. P2-R5: H9 required-presence invariant enforced independently of supplied totals — exact test id must occur exactly once carrying category known_baseline_defect + defect H9 + gate P3; runtime.known_baseline_defects pinned to integer 1; relabel/ missing/substitute/duplicate with favorable counters all reject.",
+      "origin": "new"
+    },
+    "docs/validation/BUNDLE.md": {
+      "note": "Bundle/manifest/CI 계약 문서 — @3 manifest·@2 change list·신규 파일 allowlist 계약 포함.",
+      "origin": "new"
+    },
+    "docs/validation/REGRESSIONS.md": {
+      "note": "P0-A: human-readable regression inventory (R1–R7 + adopted C/H items); machine source of truth is tests/regression_inventory.json. repair-n1/N1: dependency-gate and allowed nested-skip list documented. P2-R2: verdict precedence, completion flags, external-gate rule and outcome-accounting semantics documented. P2-R3: exact-10 nested allowlist closure documented (tamper control folded into host method).",
+      "origin": "new"
+    },
+    "requirements-validation.txt": {
+      "note": "Validation install entry point; resolves to the shipped runtime requirements only.",
+      "origin": "new"
+    },
+    "tests/__init__.py": {
+      "note": "P0-A: suite package marker.",
+      "origin": "new"
+    },
+    "tests/_harness.py": {
+      "note": "P0-A: shared harness pinning imports to <repo>/skills/knuaf-doc/scripts and evicting foreign gg_* modules; no dev-tree fallback. repair-n1/N1: synthetic module stubs for dependency-gate tests.",
+      "origin": "new"
+    },
+    "tests/regression_inventory.json": {
+      "note": "P0-A: machine source of truth mapping each known defect to its test and owning gate (P1–P5/deferred).",
+      "origin": "new"
+    },
+    "tests/test_bundle_lineage.py": {
+      "note": "P1+P2 PACKAGE 계보 시험 — 실제 후보 정상 검증, 신규 파일 계약(allowlist·before=null·위장 거부) 포함 적대 합성 트리.",
+      "origin": "new"
+    },
+    "tests/test_canonical_flow.py": {
+      "note": "P0-A: init/apply/check/export positive controls + C2–C6/H2/H3/H5 defect signatures; synthetic only.",
+      "origin": "new"
+    },
+    "tests/test_finance_scope.py": {
+      "note": "P0-A: finance crosscheck scope — non-financial positive control + H9/R6 under-check defect.",
+      "origin": "new"
+    },
+    "tests/test_import_isolation.py": {
+      "note": "P0-A: B01 import-isolation contract under polluted PYTHONPATH.",
+      "origin": "new"
+    },
+    "tests/test_p1_core.py": {
+      "note": "P1 core/CLI behavioral tests (A-owned): C3 record-id, C5 floor, C6 COM, H8 ladder, UTF-8 band.",
+      "origin": "new"
+    },
+    "tests/test_p1_outputs.py": {
+      "note": "P1 document/excel/Office behavioral tests (B-owned): fake-COM block, orientation, unrendered-node rejection, missing-cell rejection, forced-ASCII UTF-8 band.",
+      "origin": "new"
+    },
+    "tests/test_question_gate.py": {
+      "note": "P0-A: question/help-step ladder + H8 defect reproduction.",
+      "origin": "new"
+    },
+    "tests/test_runner_contract.py": {
+      "note": "repair-n1/N1 (new file): meta-tests asserting the N1 contract — dependency preflight semantics, verdict priority, JSON fields. P2-R2: extended subprocess controls (scoped verdict, external gate, tamper) and pure non-recursing accounting/classification tests for subtests, fixtures, expectedFailure/XPASS and gate mutations. P2-R3: bundle-tamper assertion folded into the pre-existing nested test_unexpected_failure_beats_incomplete — standalone method removed, no new nested exemption.",
+      "origin": "new"
+    },
+    "tests/test_runner_negative_controls.py": {
+      "note": "P0-A: runner-level negative controls on disposable copies (missing/tampered runtime, PYTHONPATH pollution, foreign module cache). repair-n1/N1: nested-flag, injected-skip, XPASS, missing-dependency, stub-version cases.",
+      "origin": "new"
+    },
+    "tests/test_xlsx_structure.py": {
+      "note": "P0-A: synthetic XLSX contracts — merge markers, print_titles container, corrupt ZIP handling, visible-sheet count. repair-n1/N1: dependency skip removed so import/fixture errors surface as failure/error.",
+      "origin": "new"
+    },
+    "tools/baseline-files.json": {
+      "note": "Pinned main 29abec0ec95369de7ae9e22207349d574f1f46b7 file-hash list; input contract for check_bundle.py.",
+      "origin": "pinned-input",
+      "source_path": "evidence:baseline-files.json",
+      "source_sha256": "094a062217f563cb62f79721c2eb6f1eac15574fe691ac4a6b72595a413f0392",
+      "transform": "verbatim-copy"
+    },
+    "tools/build_validation_bundle.py": {
+      "note": "Manifest generator (schema @3): links runtime-changes@2, fail-closed on undeclared baseline drift; 신규 runtime 변경 파일은 manifest files[]가 아니라 change list가 선언; deterministic clean export.",
+      "origin": "new"
+    },
+    "tools/check_bundle.py": {
+      "note": "Integrity checker: baseline + declared-file verification + runtime-change linkage. @2 change list: declared_change (baseline 수정)과 declared_new (approved_new_files의 신규 파일, before_sha256=null) + adversarial rejections.",
+      "origin": "new"
+    },
+    "tools/run_validation.py": {
+      "note": "P0-A: single-command validation runner; default mode runs check_bundle.py --root first, then the suite. --runtime-only is a dev-mode flag, unused by CI/final validation. repair-n1/N1: current-interpreter dependency preflight, verdict priority, full_validation_completed. P2-R2: complete unittest outcome accounting (one terminal entry per started parent, subtest events, fixture_events, framework reconciliation, wasSuccessful false never exit0), fail-closed P2-L09-native external gate, ok_platform_scoped verdict, and validation_scope/platform_validation_completed/pending_external_checks/approved_external_skips report fields. P2-R3: ALLOWED_NESTED_SKIP_IDS restored to the exact pinned 10 — the R2-added nested exemption for test_tampered_bundle_fails_run removed.",
+      "origin": "new"
+    },
+    "tools/runtime-changes.json": {
+      "note": "누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지.",
+      "origin": "new"
+    },
+    "tools/validation-provenance.json": {
+      "note": "This file; declares origins for the validation layer.",
+      "origin": "new"
+    }
+  },
+  "readme_policy": {
+    "allow_modified": true,
+    "path": "README.md",
+    "reason": "README may gain a validation-guide section over the frozen main baseline; the title and the validation entry points must survive any such edit.",
+    "required_markers_if_modified": [
+      "# knuaf-doc",
+      "run_validation.py",
+      "check_bundle.py"
+    ]
+  },
+  "schema": "knuaf-doc/validation-provenance@1"
+}
