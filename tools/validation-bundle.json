@@ -43,14 +43,19 @@
       "sha256": "fc502b0c902536f89fea092cc49f6a84db17f2432e3c8c2dae95565956a1c6a6"
     },
     "tests/test_bundle_lineage.py": {
-      "note": "P1+P2 PACKAGE 계보 시험 — 실제 후보 정상 검증, 신규 파일 계약(allowlist·before=null·위장 거부) 포함 적대 합성 트리.",
+      "note": "P1+P2 PACKAGE 계보 시험 — 실제 후보 정상 검증, 신규 파일 계약(allowlist·before=null·위장 거부) 포함 적대 합성 트리. P6: pin four new common-contract runtime files and the P5 parent tree.",
       "origin": "new",
-      "sha256": "ca16832a2a6f52f11a916d93a661f9215e16458823c1d418c922ae1f5e5e0d25"
+      "sha256": "a8cd58f6504e78c64fe859215c98afc2e67367c2a862fbed7096d14ace5e67fb"
     },
     "tests/test_canonical_flow.py": {
       "note": "P0-A: init/apply/check/export positive controls + C2–C6/H2/H3/H5 defect signatures; synthetic only.",
       "origin": "new",
       "sha256": "1b08ebf162a42b22ed5b0715907b67e613443bd82ee89a3719a9c140463b24e7"
+    },
+    "tests/test_common_contract_flow.py": {
+      "note": "P6 synthetic guarded project binding, major-plan and approved-candidate CLI, raw lookup compatibility, and insect paper refusal. Direct core and generator refusal of explicit insect paper, binding and school-profile guard. Empty profile and insect department negatives. Spaced insect department and insect-only major cover regression.",
+      "origin": "new",
+      "sha256": "2d7092df0164ed3cc530492488c2c4092f1f79871f916290714ab26adbf7e68d"
     },
     "tests/test_finance_scope.py": {
       "note": "P0-A: finance crosscheck scope — non-financial positive control + H9/R6 under-check defect.",
@@ -116,14 +121,14 @@
       "sha256": "246711b72d92c32f0904f9eac4b90a9590c9420c75af60917d1bbd05b996e6ab"
     },
     "tools/runtime-changes.json": {
-      "note": "누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지.",
+      "note": "누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates.",
       "origin": "new",
-      "sha256": "69f7dd6756b1ebc66f969360309d1d46224c36b675cd3814b0a052b6868d84cb"
+      "sha256": "749bb0724c0a874471278c42ea89f26bbeeecf2d7b982cecb7dd19df4e9d44b2"
     },
     "tools/validation-provenance.json": {
       "note": "This file; declares origins for the validation layer.",
       "origin": "new",
-      "sha256": "20eff7015c659915f3aa50f853b86438e6932a169b534819dc7dab938377575b"
+      "sha256": "ba95f2c506d8d7751b8bbc45ab095db34c88317b31b9c8777cefe8c0071fe580"
     }
   },
   "generated_by": "tools/build_validation_bundle.py@3",
@@ -138,20 +143,20 @@
     ]
   },
   "runtime_changes": {
-    "approved_new_files": 57,
+    "approved_new_files": 61,
     "baseline_main": "29abec0ec95369de7ae9e22207349d574f1f46b7",
-    "change_count": 80,
-    "changes_sha256": "02bf663a2715584b01a1464ae5da5092752009d8eb023463c2818509ce520032",
-    "new_count": 57,
+    "change_count": 84,
+    "changes_sha256": "d73f93c8606abc13f208f9e8fcd432c65319cfbd62017e169d8bff7d2df664ae",
+    "new_count": 61,
     "parent_candidate": {
-      "file_count": 124,
-      "stage": "P4",
-      "tree_sha256": "c76885dd312ee5e9c74da62abb0192bd71b8b4b85d8b9aa99af92ef5b33734f5"
+      "file_count": 136,
+      "stage": "P5",
+      "tree_sha256": "6ce8fc2bd332d71d982a450d23a19f2bafe244b2a60daf217115b9fa200d30f4"
     },
     "schema": "knuaf-doc/runtime-changes@2",
     "spec": "tools/runtime-changes.json",
-    "spec_sha256": "69f7dd6756b1ebc66f969360309d1d46224c36b675cd3814b0a052b6868d84cb",
-    "stage": "P5",
+    "spec_sha256": "749bb0724c0a874471278c42ea89f26bbeeecf2d7b982cecb7dd19df4e9d44b2",
+    "stage": "P6",
     "stage_lineage": [
       {
         "file_count": 75,
@@ -182,10 +187,16 @@
         "note": "수용 P4 패키징 후보 — P5의 직전 부모 (g005-p4-packaging-1/public, check_bundle.tree_digest)",
         "stage": "P4",
         "tree_sha256": "c76885dd312ee5e9c74da62abb0192bd71b8b4b85d8b9aa99af92ef5b33734f5"
+      },
+      {
+        "file_count": 136,
+        "note": "P5 기준 worktree b797ea6의 변경 전 전체 파일 트리 해시",
+        "stage": "P5",
+        "tree_sha256": "6ce8fc2bd332d71d982a450d23a19f2bafe244b2a60daf217115b9fa200d30f4"
       }
     ],
-    "verified_count": 80
+    "verified_count": 84
   },
   "schema": "knuaf-doc/validation-bundle@3",
-  "validation_tree_sha256": "45a16698ea482440b87e5dd6d9e05eb46b3b90570864d64a1dca8d9bc54d61df"
+  "validation_tree_sha256": "a0fc0d222730bb734079ad9a631ce7c77a608b9e37b0294497777b6924e9363b"
 }

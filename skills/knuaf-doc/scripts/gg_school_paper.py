@@ -589,6 +589,29 @@ def _legacy_paper(spec):
     return "\n".join(sections)
 
 
+def validate_crop_paper_major(spec):
+    """Reject an explicit non-crop major before the legacy crop renderer.
+
+    ``major`` is a historical free-text cover field, so an explicit insect
+    major or department is refused without guessing from the paper title.
+    The new ``major_id`` field is an explicit contract marker and must name
+    specialty_crops.
+    Unmarked historical crop specs keep their original behavior.
+    """
+    profile = spec.get("school_profile")
+    profile = profile if isinstance(profile, dict) else {}
+    for value in (spec.get("major_id"), profile.get("major_id")):
+        if value is not None and value != "specialty_crops":
+            raise ValueError("선택 전공의 본문 생성기는 아직 지원되지 않음")
+    for cover_major in (spec.get("major"), profile.get("major"),
+                        profile.get("department")):
+        if isinstance(cover_major, str) and (
+            "곤충" in "".join(cover_major.split())
+            or "insect" in cover_major.lower()
+        ):
+            raise ValueError("선택 전공의 본문 생성기는 아직 지원되지 않음")
+
+
 def paper(spec):
     """Generate the school paper, with an opt-in normalized frontmatter mode.
 
@@ -599,6 +622,7 @@ def paper(spec):
     through a detached legacy-key overlay.
     """
 
+    validate_crop_paper_major(spec)
     profile = normalize_school_profile(spec)
     if not profile.get("enabled"):
         return _legacy_paper(spec)

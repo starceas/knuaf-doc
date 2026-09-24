@@ -4222,6 +4222,26 @@ def paper(root, spec_path, spec_bytes, requested_path):
     if not isinstance(spec, dict):
         raise _op("paper", "requested_output", "not_committed",
                   "invalid_spec", detail="spec은 JSON 객체여야 함")
+    supplied_profile = spec.get("school_profile")
+    profile_is_dict = isinstance(supplied_profile, dict)
+    has_school_profile = profile_is_dict and all(
+        isinstance(supplied_profile.get(key), str)
+        and supplied_profile[key].strip()
+        for key in ("school", "department")
+    )
+    explicit_major_id = spec.get("major_id")
+    if explicit_major_id is None and profile_is_dict:
+        explicit_major_id = supplied_profile.get("major_id")
+    new_major_marker = ("major_id" in spec or
+                        (profile_is_dict and "major_id" in supplied_profile))
+    # The legacy body is crop-specific.  An explicit non-crop input must
+    # fail before the historical school_profile default or publication path.
+    from gg_school_paper import validate_crop_paper_major
+    try:
+        validate_crop_paper_major(spec)
+    except ValueError as error:
+        raise _op("paper", "requested_output", "not_committed",
+                  "unsupported_major", detail=str(error)) from error
     spec.setdefault(
         "school_profile",
         {"school": "경기대학교", "department": "일반대학원 한국어교육학과"},
@@ -4244,6 +4264,34 @@ def paper(root, spec_path, spec_bytes, requested_path):
     def body(capability):
         _lock_mod().assert_held(capability, root)
         p = load(root)
+        # Recheck the canonical binding under the publication lock.  A
+        # direct gg_core.paper caller must not bypass the CLI's major guard.
+        bound_contract = any(
+            isinstance(f, dict) and f.get("field_id") == "common.major_id"
+            for f in p["facts"].values())
+        if new_major_marker and not bound_contract:
+            raise _op("paper", "requested_output", "not_committed",
+                      "major_binding_required")
+        if bound_contract:
+            from gg_major_contract import (
+                MajorContractError, binding_from_project, default_registry,
+            )
+            try:
+                binding = binding_from_project(default_registry(), p)
+            except MajorContractError as error:
+                raise _op("paper", "requested_output", "not_committed",
+                          "major_binding_invalid", detail=error.reason) from error
+            if binding.major_id != "specialty_crops":
+                raise _op("paper", "requested_output", "not_committed",
+                          "unsupported_major",
+                          detail="선택 전공의 본문 생성기는 아직 지원되지 않음")
+            if new_major_marker and explicit_major_id != binding.major_id:
+                raise _op("paper", "requested_output", "not_committed",
+                          "major_binding_mismatch")
+            if not has_school_profile:
+                raise _op("paper", "requested_output", "not_committed",
+                          "school_profile_required",
+                          detail="새 전공 계약은 비어 있지 않은 학교·학과가 필요함")
         refs = sort_target_refs(_export_refs(p))
         fp = fingerprint(root, p, refs)
         try:

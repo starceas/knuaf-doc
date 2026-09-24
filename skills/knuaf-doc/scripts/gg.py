@@ -50,6 +50,8 @@ def main(argv=None):
             "rda-lookup",
             "rda-propose",
             "rda-apply",
+            "major-plan",
+            "rda-candidates",
             "source-scan",
             "source-resolve",
             "source-register",
@@ -79,6 +81,8 @@ def main(argv=None):
     ap.add_argument("--rda-kind")
     ap.add_argument("--year", type=int)
     ap.add_argument("--form")
+    ap.add_argument("--unit")
+    ap.add_argument("--use-scope")
     ap.add_argument("--allow-web", action="store_true")
     ap.add_argument("--audit-key")
     ap.add_argument("--packs-dir")
@@ -183,6 +187,44 @@ def main(argv=None):
             if not isinstance(payload, dict):
                 raise ValueError("관측 기록은 객체여야 함")
             value = core.ingest_review_observation(a.folder, payload, a.observer)
+        elif a.command in {"major-plan", "rda-candidates"}:
+            # New writing contract: the major comes from a confirmed fact in
+            # the canonical project.  The raw rda-lookup contract below stays
+            # independent and retains its optional major filter.
+            import gg_major_contract as major_contract
+
+            registry = major_contract.default_registry()
+            project = core.load(a.folder)
+            try:
+                binding = major_contract.binding_from_project(registry, project)
+            except major_contract.MajorContractError as error:
+                value = major_contract.common_only_plan(error.reason)
+                code = 2
+            else:
+                if a.major is not None and a.major != binding.major_id:
+                    raise ValueError("--major와 정본의 전공 바인딩이 다름")
+                if a.command == "major-plan":
+                    value = {
+                        "binding": vars(binding),
+                        "project_revision": project["revision"],
+                        "proposals": {
+                            kind: proposal.to_dict()
+                            for kind, proposal in major_contract.capability_proposals(
+                                registry, binding.major_id).items()
+                        },
+                    }
+                else:
+                    if not a.crop or not a.region:
+                        raise ValueError("--crop과 --region 필요")
+                    import gg_rda_candidates
+
+                    value = gg_rda_candidates.lookup_approved_candidates(
+                        a.crop, a.region, binding.major_id,
+                        kind=a.rda_kind, year=a.year, form=a.form,
+                        unit=a.unit, use_scope=a.use_scope,
+                        audit_key=(json.loads(a.audit_key)
+                                   if a.audit_key else None),
+                    )
         elif a.command in p4_commands:
             # P4 research/lookup routes (stage-g005): proposal/lookup only —
             # canonical state is written exclusively through `apply` above.
@@ -486,6 +528,22 @@ def main(argv=None):
         elif a.command == "paper":
             if not a.input:
                 raise ValueError("--input 논문 입력 JSON 필요")
+            # A project that has entered the new major contract must not
+            # flow through the crop-specific legacy paper generator for an
+            # unrelated major.  Unbound historical direct calls retain their
+            # existing behavior until their major is confirmed.
+            project = core.load(a.folder)
+            if any(f.get("field_id") == "common.major_id"
+                   for f in project["facts"].values()):
+                import gg_major_contract as major_contract
+
+                try:
+                    binding = major_contract.binding_from_project(
+                        major_contract.default_registry(), project)
+                except major_contract.MajorContractError as error:
+                    raise ValueError(error.reason) from error
+                if binding.major_id != "specialty_crops":
+                    raise ValueError("선택 전공의 본문 생성기는 아직 지원되지 않음")
             src = core.local(a.folder, a.input)
             spec_bytes = src.read_bytes()
             requested_rel = a.out or "build/검토전_본문.md"

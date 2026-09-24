@@ -33,11 +33,15 @@
       "origin": "new"
     },
     "tests/test_bundle_lineage.py": {
-      "note": "P1+P2 PACKAGE 계보 시험 — 실제 후보 정상 검증, 신규 파일 계약(allowlist·before=null·위장 거부) 포함 적대 합성 트리.",
+      "note": "P1+P2 PACKAGE 계보 시험 — 실제 후보 정상 검증, 신규 파일 계약(allowlist·before=null·위장 거부) 포함 적대 합성 트리. P6: pin four new common-contract runtime files and the P5 parent tree.",
       "origin": "new"
     },
     "tests/test_canonical_flow.py": {
       "note": "P0-A: init/apply/check/export positive controls + C2–C6/H2/H3/H5 defect signatures; synthetic only.",
+      "origin": "new"
+    },
+    "tests/test_common_contract_flow.py": {
+      "note": "P6 synthetic guarded project binding, major-plan and approved-candidate CLI, raw lookup compatibility, and insect paper refusal. Direct core and generator refusal of explicit insect paper, binding and school-profile guard. Empty profile and insect department negatives. Spaced insect department and insect-only major cover regression.",
       "origin": "new"
     },
     "tests/test_finance_scope.py": {
@@ -92,7 +96,7 @@
       "origin": "new"
     },
     "tools/runtime-changes.json": {
-      "note": "누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지.",
+      "note": "누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates.",
       "origin": "new"
     },
     "tools/validation-provenance.json": {
