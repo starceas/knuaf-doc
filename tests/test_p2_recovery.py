@@ -62,6 +62,20 @@ class RecoveryCase(ContractCase):
         (self.root / "project.json").write_text(payload)
         return payload.encode()
 
+    def _replace_guard(self):
+        guard = self.root / ".gg-lock" / "guard"
+        old_guard_id = gg_fs.identity(guard, kind="file")
+        replacement = guard.with_name("guard-replacement")
+        # Keep the old inode allocated until its replacement exists.
+        # Unlink + recreate can reuse the inode, leaving a ready lock.
+        replacement.write_bytes(b"X")
+        os.replace(replacement, guard)
+        self.assertFalse(gg_fs.same_identity(
+            old_guard_id, gg_fs.identity(guard, kind="file")))
+        status = gg_lock.inspect_lock(self.root)
+        self.assertEqual(status["structure"], "damaged")
+        self.assertEqual(status["reason"], "guard_replaced")
+
     def _rdir(self, rid):
         return self.root / ".gg-recovery" / rid
 
@@ -154,8 +168,7 @@ class RecoveryCase(ContractCase):
                                     kind="directory")
         self._project()
         # Damage: replace the guard.
-        os.unlink(self.root / ".gg-lock" / "guard")
-        (self.root / ".gg-lock" / "guard").write_bytes(b"X")
+        self._replace_guard()
         result = gg_lock.upgrade_offline(self.root, offline_confirmed=True)
         self.assertEqual(result["status"], "completed")
         rid = result["recovery_id"]
@@ -246,8 +259,7 @@ class RecoveryCase(ContractCase):
         gg_lock.install_new(self.root)
         self._project()
         # Damaged guard: recovery is needed and quarantine applies.
-        os.unlink(self.root / ".gg-lock" / "guard")
-        (self.root / ".gg-lock" / "guard").write_bytes(b"X")
+        self._replace_guard()
         gg_lock._FAULT = _boom("after_quarantine")
         with self.assertRaises(RuntimeError):
             gg_lock.upgrade_offline(self.root, offline_confirmed=True)
@@ -427,9 +439,9 @@ class RecoveryCase(ContractCase):
         proto = gg_lock.install_new(self.root)
         ws = proto["workspace_id"]
         self._project()
-        os.unlink(self.root / ".gg-lock" / "guard")
-        (self.root / ".gg-lock" / "guard").write_bytes(b"X")
+        self._replace_guard()
         result = gg_lock.upgrade_offline(self.root, offline_confirmed=True)
+        self.assertEqual(result["status"], "completed", result)
         rid = result["recovery_id"]
         res = gg_lock.verify_recovery_lineage(
             self.root, previous_workspace_id="bogus",

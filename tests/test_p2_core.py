@@ -959,13 +959,22 @@ class ObservationContractTests(ContractCase):
         receipt = core.ingest_review_observation(
             root, self._bound_observation(core, root, "report.md"),
             "observer-1")
-        # Force an offline recovery that installs a NEW protocol/workspace
+        # Force an offline recovery that installs a NEW protocol
         # while preserving same_workspace_repair lineage back to the old
         # endpoint the receipt above was minted under. Damage the guard
         # (same trigger as test_p2_recovery.py) so the control is
         # actually eligible for repair rather than already_installed.
-        os.unlink(root / ".gg-lock" / "guard")
-        (root / ".gg-lock" / "guard").write_bytes(b"X")
+        gg_fs = runtime("gg_fs")
+        guard = root / ".gg-lock" / "guard"
+        old_guard_id = gg_fs.identity(guard, kind="file")
+        replacement = guard.with_name("guard-replacement")
+        # Allocate before replacing so the old inode cannot be reused.
+        replacement.write_bytes(b"X")
+        os.replace(replacement, guard)
+        self.assertFalse(gg_fs.same_identity(
+            old_guard_id, gg_fs.identity(guard, kind="file")))
+        self.assertEqual("guard_replaced",
+                         gg_lock.inspect_lock(root)["reason"])
         result = gg_lock.upgrade_offline(root, offline_confirmed=True)
         self.assertEqual("completed", result["status"])
         R = core.load(root)["revision"]

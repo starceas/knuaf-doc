@@ -635,22 +635,22 @@
       "source": "new"
     },
     "tests/test_p2_core.py": {
-      "after_sha256": "283b2ac89f07334250addaeceafcd0aef28df090a948626dd6fce0f347b09c60",
-      "amended_in": "P2-R7,P2-R8",
+      "after_sha256": "ca90c4173f957a6e02d373fe1d9dad2d366e9ee06742fd1c2abdce5dd52107f7",
+      "amended_in": "P2-R7,P2-R8,CI-4fbed55",
       "before_sha256": null,
       "first_changed": "P2",
       "owner": "A",
-      "reason": "P2 신규 core 계약 시험. R7: ObservationContractTests — observe-at-R→apply→검증 정상 흐름, revision/path 결합 거부, replay·schema1·후속 revision 보존 R8: cross_workspace_receipt_rejected_at_apply(적색→apply-time 거부 확인), same_workspace_receipt_still_applies/trusted_recovery_lineage_receipt_still_applies(정상 경로 양성대조). 독립 검토 지적 반영: cross_workspace_receipt_rejected_at_apply가 project.json뿐 아니라 migration/history 스냅샷 전체(tree_before) byte-불변까지 확인하도록 보강(_tree_bytes 헬퍼는 harness의 ContractCase로 이동)",
+      "reason": "P2 신규 core 계약 시험. R7: ObservationContractTests — observe-at-R→apply→검증 정상 흐름, revision/path 결합 거부, replay·schema1·후속 revision 보존 R8: cross_workspace_receipt_rejected_at_apply(적색→apply-time 거부 확인), same_workspace_receipt_still_applies/trusted_recovery_lineage_receipt_still_applies(정상 경로 양성대조). 독립 검토 지적 반영: cross_workspace_receipt_rejected_at_apply가 project.json뿐 아니라 migration/history 스냅샷 전체(tree_before) byte-불변까지 확인하도록 보강(_tree_bytes 헬퍼는 harness의 ContractCase로 이동) | CI-4fbed55: make guard replacement fixture allocate the new inode before replacing the old guard; assert identity mismatch and retain all recovery outcomes.",
       "source": "new"
     },
     "tests/test_p2_lock.py": {
-      "after_sha256": "eb378cd4cfc436351ad3600253b04209026a76c1592d06ddc081d25e18118f52",
+      "after_sha256": "902caf33f86bf58c22e07f6cc91d22b6578203fe229c1161dbb4fc26f7479222",
       "amend_reason": "bare _harness import -> tests._harness (Sol P2_FINAL_BLOCK 필수 지적; B COPY+FIX, 세 import 문장만)",
-      "amended_in": "P2-R1",
+      "amended_in": "P2-R1,CI-4fbed55",
       "before_sha256": null,
       "first_changed": "P2",
       "owner": "B",
-      "reason": "P2 신규 잠금 시험",
+      "reason": "P2 신규 잠금 시험 | CI-4fbed55: make guard replacement fixture allocate the new inode before replacing the old guard; assert identity mismatch and retain all recovery outcomes.",
       "source": "new"
     },
     "tests/test_p2_mutators.py": {
@@ -670,13 +670,13 @@
       "source": "new"
     },
     "tests/test_p2_recovery.py": {
-      "after_sha256": "aadf5bd67001452ad17ba8c1f94fbb26e0efd8201c35e8b071575b66cffc7120",
+      "after_sha256": "6c8d56234cdfe4549306da39a9ad29be5762c9053ef7d6fb07ca264820129621",
       "amend_reason": "bare _harness import -> tests._harness (Sol P2_FINAL_BLOCK 필수 지적; B COPY+FIX, 세 import 문장만)",
-      "amended_in": "P2-R1",
+      "amended_in": "P2-R1,CI-4fbed55",
       "before_sha256": null,
       "first_changed": "P2",
       "owner": "B",
-      "reason": "P2 신규 복구 fault-matrix 시험",
+      "reason": "P2 신규 복구 fault-matrix 시험 | CI-4fbed55: make guard replacement fixture allocate the new inode before replacing the old guard; assert identity mismatch and retain all recovery outcomes.",
       "source": "new"
     },
     "tests/test_p2_windows.py": {

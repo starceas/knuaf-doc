@@ -302,8 +302,9 @@ class MissingTemplateCellTests(ContractCase):
 
 class Utf8IoTests(ContractCase):
     """C2 (fixed in P1): text I/O pins UTF-8 instead of the locale default.
-    The subprocess forces a non-UTF-8 default (LC_ALL=C + -X utf8=0 →
-    US-ASCII on this host) and runs the real inspect_source (UTF-8 write)
+    The subprocess starts with UTF-8 filenames, then sets LC_CTYPE=C
+    with -X utf8=0 to force ASCII text I/O independently of filenames.
+    It runs the real inspect_source (UTF-8 write)
     and blank_copy (UTF-8 read) on Korean content. Baseline red: default
     encoding was used on main 29abec0."""
 
@@ -311,17 +312,33 @@ class Utf8IoTests(ContractCase):
         tpl = runtime("gg_excel_template")
         scripts = str(Path(tpl.__file__).resolve().parent)
         snippet = r"""
-import json, locale, sys, tempfile
+import json, locale, sys
 from pathlib import Path
 sys.path.insert(0, sys.argv[1])
+assert sys.flags.utf8_mode == 0
+assert sys.getfilesystemencoding().lower().replace("-", "") == "utf8"
+locale.setlocale(locale.LC_CTYPE, "C")
 enc = locale.getpreferredencoding(False)
 print("preferred:", enc)
-if enc.upper().replace("-", "").replace("_", "") == "UTF8":
-    print("FORCED-ENV-INEFFECTIVE")
-    sys.exit(3)
+assert any(t in enc.lower() for t in ("ascii", "ansi")), \
+    "band not active: " + enc
+root = Path(sys.argv[2])
+probe = root / "implicit.txt"
+try:
+    probe.write_text("한글")
+except UnicodeEncodeError:
+    pass
+else:
+    raise AssertionError("implicit Korean text write must fail")
+probe.write_text("한글", encoding="utf-8")
+try:
+    probe.read_text()
+except UnicodeDecodeError:
+    pass
+else:
+    raise AssertionError("implicit Korean text read must fail")
 import gg_excel_template as tpl
 from openpyxl import Workbook
-root = Path(tempfile.mkdtemp(prefix="knuaf-c2-"))
 src = root / "원본.xlsx"
 wb = Workbook()
 ws = wb.active
@@ -342,14 +359,14 @@ out = root / "out.xlsx"
 tpl.blank_copy(src, custom, out)
 print("PASS")
 """
-        env = dict(os.environ, LC_ALL="C", PYTHONUTF8="0")
+        env = dict(os.environ, LC_ALL="C.UTF-8", PYTHONUTF8="0")
         env.pop("PYTHONIOENCODING", None)
         with tempfile.TemporaryDirectory(prefix="knuaf-c2-") as tmp:
+            driver = Path(tmp) / "driver.py"
+            driver.write_text(snippet, encoding="utf-8")
             res = subprocess.run(
-                [sys.executable, "-X", "utf8=0", "-c", snippet, scripts],
+                [sys.executable, "-X", "utf8=0", str(driver), scripts, tmp],
                 capture_output=True, text=True, env=env, cwd=tmp)
-        self.assertNotIn("FORCED-ENV-INEFFECTIVE", res.stdout,
-                         "locale forcing was ineffective on this host")
         self.assertEqual(0, res.returncode,
                          f"stdout={res.stdout}\nstderr={res.stderr}")
         self.assertIn("PASS", res.stdout)

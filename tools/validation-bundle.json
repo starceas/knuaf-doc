@@ -65,12 +65,12 @@
     "tests/test_p1_core.py": {
       "note": "P1 core/CLI behavioral tests (A-owned): C3 record-id, C5 floor, C6 COM, H8 ladder, UTF-8 band.",
       "origin": "new",
-      "sha256": "fb3982fe9eccedd9231618112316f432883126b6906854cfb5a670700dca5267"
+      "sha256": "b15515f43cba78d7861f6e1650d1543775895ba0f96da0955e206bf770e899ed"
     },
     "tests/test_p1_outputs.py": {
       "note": "P1 document/excel/Office behavioral tests (B-owned): fake-COM block, orientation, unrendered-node rejection, missing-cell rejection, forced-ASCII UTF-8 band.",
       "origin": "new",
-      "sha256": "7e6a5d87f63b487722499dc023207a356515a703040d192dce7f7d3f02aefa21"
+      "sha256": "306b4bc406181e6ec88ecaef1610b0db28ff7cb05c9a1fdbf714c5eb5d807ee7"
     },
     "tests/test_question_gate.py": {
       "note": "P0-A: question/help-step ladder + H8 defect reproduction.",
@@ -118,7 +118,7 @@
     "tools/runtime-changes.json": {
       "note": "누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지.",
       "origin": "new",
-      "sha256": "b018acef2dd7cc66d2b3c1d87e32a778fe4e4c5b6563128c5d99ecd48a842d95"
+      "sha256": "69f7dd6756b1ebc66f969360309d1d46224c36b675cd3814b0a052b6868d84cb"
     },
     "tools/validation-provenance.json": {
       "note": "This file; declares origins for the validation layer.",
@@ -141,7 +141,7 @@
     "approved_new_files": 57,
     "baseline_main": "29abec0ec95369de7ae9e22207349d574f1f46b7",
     "change_count": 80,
-    "changes_sha256": "13737ce09116d444f9953bccb081404f5a4681795f73ec89aaef795c777b987a",
+    "changes_sha256": "02bf663a2715584b01a1464ae5da5092752009d8eb023463c2818509ce520032",
     "new_count": 57,
     "parent_candidate": {
       "file_count": 124,
@@ -150,7 +150,7 @@
     },
     "schema": "knuaf-doc/runtime-changes@2",
     "spec": "tools/runtime-changes.json",
-    "spec_sha256": "b018acef2dd7cc66d2b3c1d87e32a778fe4e4c5b6563128c5d99ecd48a842d95",
+    "spec_sha256": "69f7dd6756b1ebc66f969360309d1d46224c36b675cd3814b0a052b6868d84cb",
     "stage": "P5",
     "stage_lineage": [
       {
@@ -187,5 +187,5 @@
     "verified_count": 80
   },
   "schema": "knuaf-doc/validation-bundle@3",
-  "validation_tree_sha256": "91c39d281f215086ef1739ab0fedd32d77f90326b6a69e1546f296c0042cb987"
+  "validation_tree_sha256": "45a16698ea482440b87e5dd6d9e05eb46b3b90570864d64a1dca8d9bc54d61df"
 }

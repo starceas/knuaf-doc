@@ -290,8 +290,15 @@ class LockStructureCase(ContractCase):
         shutil.rmtree(lockdir)
         self._make_ready()
         # damaged: replaced guard
-        os.unlink(lockdir / "guard")
-        (lockdir / "guard").write_bytes(b"Z")
+        guard = lockdir / "guard"
+        old_guard_id = gg_fs.identity(guard, kind="file")
+        replacement = lockdir / "guard-replacement"
+        # Allocate while the old guard still exists: unlink + recreate
+        # may reuse its inode and leave the recorded identity unchanged.
+        replacement.write_bytes(b"Z")
+        os.replace(replacement, guard)
+        self.assertFalse(gg_fs.same_identity(
+            old_guard_id, gg_fs.identity(guard, kind="file")))
         st = gg_lock.inspect_lock(self.root)
         self.assertEqual(st["structure"], "damaged")
         self.assertEqual(st["reason"], "guard_replaced")
