@@ -31,14 +31,19 @@ jobs:
       matrix:
         python: ['3.10', '3.14']
     steps:
+      - name: Preserve published bytes before checkout
+        shell: bash
+        run: git config --global core.autocrlf false
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
       - name: Install dependencies
         run: python -m pip install -r requirements-validation.txt
       - name: Bundle integrity
-        run: python tools/check_bundle.py --root . --json check-bundle-report.json
+        run: python tools/check_bundle.py --root . --json "$RUNNER_TEMP/check-bundle-report.json"
       - name: Manifest is current and deterministic
         run: |
           python tools/build_validation_bundle.py --root . --check
@@ -54,12 +59,12 @@ jobs:
           print('deterministic export:', a['tree_sha256'])
           PY
       - name: Validation suite
-        run: python tools/run_validation.py --json validation-report.json
+        run: python tools/run_validation.py --json "$RUNNER_TEMP/validation-report.json"
       - name: Validation report contract
         if: always()
         run: |
           python - <<'PY'
-          import json, sys
+          import json, os, sys
           from pathlib import Path
 
           GATE = "P2-L09-native"
@@ -133,7 +138,8 @@ jobs:
 
           try:
               report = strict_load(
-                  Path("validation-report.json").read_text(encoding="utf-8"))
+                  (Path(os.environ["RUNNER_TEMP"]) / "validation-report.json")
+                  .read_text(encoding="utf-8"))
           except Exception as exc:
               die("report missing, malformed, duplicate-key or nonfinite: "
                   "%r" % exc)
@@ -322,14 +328,19 @@ jobs:
         with:
           name: validation-reports-py${{ matrix.python }}
           path: |
-            check-bundle-report.json
-            validation-report.json
+            ${{ runner.temp }}/check-bundle-report.json
+            ${{ runner.temp }}/validation-report.json
 
   windows-structural:
     name: structural only (windows)
     runs-on: windows-latest
     steps:
+      - name: Preserve published bytes before checkout
+        shell: bash
+        run: git config --global core.autocrlf false
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.14'
