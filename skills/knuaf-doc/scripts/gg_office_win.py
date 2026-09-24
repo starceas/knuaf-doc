@@ -26,7 +26,20 @@ doctor" and one real word/excel run on a Windows machine before relying on
 this path for a live submission.
 """
 
+from __future__ import annotations
+
 import sys
+
+# C6: the Windows COM automation path is blocked until it is verified on a
+# real Windows+Office install. EnsureDispatch attaches to (or creates) a
+# Word/Excel application object and the unconditional Quit() below would
+# terminate a user's already-running instance, so run_word/run_excel refuse
+# before any COM call is made. Set to None only after native verification.
+WINDOWS_COM_BLOCKED = (
+    "Windows Office 자동화가 차단돼 있습니다: 네이티브 Windows+Office 실기 "
+    "검증 전이라 COM 생성/접속을 수행하지 않습니다(실행 중인 사용자 "
+    "Word/Excel 인스턴스를 보호하기 위함). macOS 경로를 사용하세요."
+)
 
 
 def _fail(message: str, code: int = 1) -> None:
@@ -35,6 +48,8 @@ def _fail(message: str, code: int = 1) -> None:
 
 
 def run_word(input_path: str, pdf_path: str) -> None:
+    if WINDOWS_COM_BLOCKED:
+        _fail(WINDOWS_COM_BLOCKED, code=2)
     import pythoncom
     import win32com.client as win32
 
@@ -87,6 +102,8 @@ def run_word(input_path: str, pdf_path: str) -> None:
 
 
 def run_excel(input_path: str, pdf_path: str) -> None:
+    if WINDOWS_COM_BLOCKED:
+        _fail(WINDOWS_COM_BLOCKED, code=2)
     import pythoncom
     import win32com.client as win32
 

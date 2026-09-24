@@ -29,6 +29,12 @@
 
 네트워크도 로컬 wheel도 없으면 `ensure`는 실패를 보고하고, 그 사유를 작업폴더 감사 기록에 남긴다. 설치가 불가능한 의존성이 필요한 산출물(XLSX·DOCX·PDF 검증)은 만들지 않거나 "의존성 미설치로 보류"로 기록한다.
 
+## Windows 네이티브 Office 경로
+
+`pywin32`는 Windows COM 자동화에만 쓰이며 `runtime-deps.json`의 필수 목록에 없다. 설치돼 있어도 Windows 네이티브 경로는 아직 실사용 승인 대상이 아니다 — Office 자동화 호출은 COM 생성·접속 전에 차단돼야 하며, 사용자의 기존 Word/Excel 인스턴스에 붙거나 종료하는 경로는 배포하지 않는다. macOS 핵심 경로와 이 차단 없는 Windows 자동화를 같은 검증 등급으로 기록하지 않는다.
+
+수정 단계별(P1, P2 …)로 `docs/validation/REGRESSIONS.md`에 `open`으로 남은 항목이 있는 동안 그 기능은 승인된 동작이 아니며, 후속 단계와 함께 운영할 때만 배포가 완결된다.
+
 ## 제외 대상
 
-학교 원문 추출물·예시본·개발 도구는 이 의존성 선언에 포함하지 않는다. 문서 읽기 파서(Kordoc 등)는 Python 패키지가 아니라 [parser-setup.md](parser-setup.md)의 기존 도구 우선 절차를 따른다.
+학교 원문 추출물·예시본·개발 도구는 이 의존성 선언에 포함하지 않는다. 문서 읽기 파서(Kordoc 등)는 Python 패키지가 아니라 [parser-setup.md](parser-setup.md)의 기존 도구 우선 절차를 따른다. 잠금·발행 계층(`gg_lock.py`·`gg_publication.py`·`gg_fs.py`)은 표준 라이브러리만 사용하며 `requirements-runtime.txt`에 추가하지 않는다.

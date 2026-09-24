@@ -1,0 +1,776 @@
+{
+  "approved_new_files": [
+    "docs/validation/p4-lineage.json",
+    "skills/knuaf-doc/references/benchmark-packs/aliases/crop-aliases.specialty_crops.json",
+    "skills/knuaf-doc/references/benchmark-packs/aliases/major-aliases.json",
+    "skills/knuaf-doc/references/benchmark-packs/catalog.json",
+    "skills/knuaf-doc/references/benchmark-packs/common/rda-econ-2025/manifest.json",
+    "skills/knuaf-doc/references/benchmark-packs/common/rda-econ-2025/records.jsonl",
+    "skills/knuaf-doc/references/benchmark-packs/common/rda-income-national-2024/manifest.json",
+    "skills/knuaf-doc/references/benchmark-packs/common/rda-income-national-2024/records.jsonl",
+    "skills/knuaf-doc/references/benchmark-packs/common/rda-income-regional-2024/manifest.json",
+    "skills/knuaf-doc/references/benchmark-packs/common/rda-income-regional-2024/records.jsonl",
+    "skills/knuaf-doc/references/benchmark-packs/majors/food_crops/manifest.json",
+    "skills/knuaf-doc/references/benchmark-packs/majors/forestry/manifest.json",
+    "skills/knuaf-doc/references/benchmark-packs/majors/fruit_trees/manifest.json",
+    "skills/knuaf-doc/references/benchmark-packs/majors/hort_env_systems/manifest.json",
+    "skills/knuaf-doc/references/benchmark-packs/majors/industrial_insects/manifest.json",
+    "skills/knuaf-doc/references/benchmark-packs/majors/landscape/manifest.json",
+    "skills/knuaf-doc/references/benchmark-packs/majors/specialty_crops/mafra-specialty-production-2024/manifest.json",
+    "skills/knuaf-doc/references/benchmark-packs/majors/specialty_crops/mafra-specialty-production-2024/records.jsonl",
+    "skills/knuaf-doc/references/benchmark-packs/majors/vegetables/manifest.json",
+    "skills/knuaf-doc/references/benchmark-packs/schema/pack.schema.json",
+    "skills/knuaf-doc/references/benchmark-packs/schema/record.schema.json",
+    "skills/knuaf-doc/references/builtin-sources.json",
+    "skills/knuaf-doc/references/fact-semantics.json",
+    "skills/knuaf-doc/references/finance-semantics.md",
+    "skills/knuaf-doc/references/locking.md",
+    "skills/knuaf-doc/references/reuse-registry-schema.md",
+    "skills/knuaf-doc/scripts/gg_fact_semantics.py",
+    "skills/knuaf-doc/scripts/gg_finance_body.py",
+    "skills/knuaf-doc/scripts/gg_fs.py",
+    "skills/knuaf-doc/scripts/gg_lock.py",
+    "skills/knuaf-doc/scripts/gg_publication.py",
+    "skills/knuaf-doc/scripts/gg_rda_lookup.py",
+    "skills/knuaf-doc/scripts/gg_rda_provenance.py",
+    "skills/knuaf-doc/scripts/gg_rda_research.py",
+    "skills/knuaf-doc/scripts/gg_reuse.py",
+    "skills/knuaf-doc/scripts/gg_source_intake.py",
+    "skills/knuaf-doc/tests/test_gg_rda_lookup_audit_key.py",
+    "skills/knuaf-doc/tests/test_gg_rda_provenance.py",
+    "skills/knuaf-doc/tests/test_gg_rda_research_integration.py",
+    "skills/knuaf-doc/tests/test_gg_reuse.py",
+    "skills/knuaf-doc/tests/test_gg_reuse_auditkey.py",
+    "skills/knuaf-doc/tests/test_gg_reuse_reasons.py",
+    "skills/knuaf-doc/tests/test_gg_source_i05_multiprocess.py",
+    "skills/knuaf-doc/tests/test_gg_source_i06_flow.py",
+    "skills/knuaf-doc/tests/test_gg_source_intake_receipt.py",
+    "skills/knuaf-doc/tests/test_gg_source_intake_scan.py",
+    "skills/knuaf-doc/tests/test_gg_source_register.py",
+    "tests/test_p2_core.py",
+    "tests/test_p2_lock.py",
+    "tests/test_p2_mutators.py",
+    "tests/test_p2_publication.py",
+    "tests/test_p2_recovery.py",
+    "tests/test_p2_windows.py",
+    "tests/test_p3_body.py",
+    "tests/test_p3_flow.py",
+    "tests/test_p3_oracles.py",
+    "tests/test_p3_semantics.py"
+  ],
+  "baseline_main": "29abec0ec95369de7ae9e22207349d574f1f46b7",
+  "baseline_spec": "tools/baseline-files.json",
+  "baseline_spec_sha256": "094a062217f563cb62f79721c2eb6f1eac15574fe691ac4a6b72595a413f0392",
+  "changes": {
+    "skills/knuaf-doc/SKILL.md": {
+      "after_sha256": "11b058675f98ca83c2edf882bb27b3d5d0ea8a7bd6d8f1bafae8d689a41e233a",
+      "before_sha256": "c0008fa5239cc16411fd4ef24b5bf901c7a8b9b50c6b621e2bdee3acf734ddc0",
+      "first_changed": "P1",
+      "last_changed": "P5",
+      "owner": "A",
+      "reason": "H11 문서 정정: 사용자 명시 모델도 임의 폴백·대체 금지 규칙 추가 | P5-D1 guidance sync: new '참고자료 폴더 등록' bullet documents the frozen source-scan→source-resolve→source-register→source-view lifecycle and 03_sources.md preservation",
+      "source": "new"
+    },
+    "skills/knuaf-doc/references/benchmark-packs/aliases/crop-aliases.specialty_crops.json": {
+      "after_sha256": "8e7abffc7b4244727b4732f558b722934dd8ea229c0057312d1ee7ea92c2df22",
+      "before_sha256": null,
+      "first_changed": "P4",
+      "owner": "P4",
+      "reason": "accepted P4 benchmark-packs data (catalog/records/manifest/schema) from g005-p4-provenance-standalone-corrections-3",
+      "source": "new"
+    },
+    "skills/knuaf-doc/references/benchmark-packs/aliases/major-aliases.json": {
+      "after_sha256": "ad1e1e6c2296f93ef27beab8494e840b1578e0d61c6c9bd8e238c640e653c81b",
+      "before_sha256": null,
+      "first_changed": "P4",
+      "owner": "P4",
+      "reason": "accepted P4 benchmark-packs data (catalog/records/manifest/schema) from g005-p4-provenance-standalone-corrections-3",
+      "source": "new"
+    },
+    "skills/knuaf-doc/references/benchmark-packs/catalog.json": {
+      "after_sha256": "8dcad598073ce3efcce6698dafd2fa81bd24453deeb90216648ff68d1e8f8e68",
+      "before_sha256": null,
+      "first_changed": "P4",
+      "owner": "P4",
+      "reason": "accepted P4 benchmark-packs data (catalog/records/manifest/schema) from g005-p4-provenance-standalone-corrections-3",
+      "source": "new"
+    },
+    "skills/knuaf-doc/references/benchmark-packs/common/rda-econ-2025/manifest.json": {
+      "after_sha256": "0e3615a59388d092539ad3ca8d4ccfcf9b50271e2f5f54d3af5faed065c669c4",
+      "before_sha256": null,
+      "first_changed": "P4",
+      "owner": "P4",
+      "reason": "accepted P4 benchmark-packs data (catalog/records/manifest/schema) from g005-p4-provenance-standalone-corrections-3 | P4-packaging: after_sha256 rebound to ACCEPTED catalog-transform corrections-1 manifest (g005-p4-source-catalog-transform-corrections-1, manifest 1778fd02fc2286ac...) — replaces the pre-review placeholder bytes.",
+      "source": "new"
+    },
+    "skills/knuaf-doc/references/benchmark-packs/common/rda-econ-2025/records.jsonl": {
+      "after_sha256": "a1cbfb2fa1825f2f0b7594cebe915b26f81cf1c48aee3cafae6c18ceb9267d54",
+      "before_sha256": null,
+      "first_changed": "P4",
+      "owner": "P4",
+      "reason": "accepted P4 benchmark-packs data (catalog/records/manifest/schema) from g005-p4-provenance-standalone-corrections-3",
+      "source": "new"
+    },
+    "skills/knuaf-doc/references/benchmark-packs/common/rda-income-national-2024/manifest.json": {
+      "after_sha256": "b1ec5b7d59b8813175d2ccbb75272fb3a23062774379708921d16bdd75fe380b",
+      "before_sha256": null,
+      "first_changed": "P4",
+      "owner": "P4",
+      "reason": "accepted P4 benchmark-packs data (catalog/records/manifest/schema) from g005-p4-provenance-standalone-corrections-3 | P4-packaging: after_sha256 rebound to ACCEPTED catalog-transform corrections-1 manifest (g005-p4-source-catalog-transform-corrections-1, manifest 1778fd02fc2286ac...) — replaces the pre-review placeholder bytes.",
+      "source": "new"
+    },
+    "skills/knuaf-doc/references/benchmark-packs/common/rda-income-national-2024/records.jsonl": {
+      "after_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+      "before_sha256": null,
+      "first_changed": "P4",
+      "owner": "P4",
+      "reason": "accepted P4 benchmark-packs data (catalog/records/manifest/schema) from g005-p4-provenance-standalone-corrections-3",
+      "source": "new"
+    },
+    "skills/knuaf-doc/references/benchmark-packs/common/rda-income-regional-2024/manifest.json": {
+      "after_sha256": "3ff92cc170b80a80e4f2f3d4f4076a02b95cbdd2d992f06a7b81dcee27e80267",
+      "before_sha256": null,
+      "first_changed": "P4",
+      "owner": "P4",
+      "reason": "accepted P4 benchmark-packs data (catalog/records/manifest/schema) from g005-p4-provenance-standalone-corrections-3 | P4-packaging: after_sha256 rebound to ACCEPTED catalog-transform corrections-1 manifest (g005-p4-source-catalog-transform-corrections-1, manifest 1778fd02fc2286ac...) — replaces the pre-review placeholder bytes.",
+      "source": "new"
+    },
+    "skills/knuaf-doc/references/benchmark-packs/common/rda-income-regional-2024/records.jsonl": {
+      "after_sha256": "c7e38281ccfaaaf40c63ab0880ca5f3ddb1ae18aaa89438ffb7f6da43c87c6df",
+      "before_sha256": null,
+      "first_changed": "P4",
+      "owner": "P4",
+      "reason": "accepted P4 benchmark-packs data (catalog/records/manifest/schema) from g005-p4-provenance-standalone-corrections-3",
+      "source": "new"
+    },
+    "skills/knuaf-doc/references/benchmark-packs/majors/food_crops/manifest.json": {
+      "after_sha256": "f32813aae8bc6b262af5fd83eead9ff8b736fdff88824e9fa6d8d004bb6983cb",
+      "before_sha256": null,
+      "first_changed": "P4",
+      "owner": "P4",
+      "reason": "accepted P4 benchmark-packs data (catalog/records/manifest/schema) from g005-p4-provenance-standalone-corrections-3",
+      "source": "new"
+    },
+    "skills/knuaf-doc/references/benchmark-packs/majors/forestry/manifest.json": {
+      "after_sha256": "caba994b7de4e537c037b4681cb4885e1b6f10a6c585c0815bb920102713549b",
+      "before_sha256": null,
+      "first_changed": "P4",
+      "owner": "P4",
+      "reason": "accepted P4 benchmark-packs data (catalog/records/manifest/schema) from g005-p4-provenance-standalone-corrections-3",
+      "source": "new"
+    },
+    "skills/knuaf-doc/references/benchmark-packs/majors/fruit_trees/manifest.json": {
+      "after_sha256": "90c73236df5c0c403d3684fe7342b692d4504ecd57ccdd114889c427d8e5a12d",
+      "before_sha256": null,
+      "first_changed": "P4",
+      "owner": "P4",
+      "reason": "accepted P4 benchmark-packs data (catalog/records/manifest/schema) from g005-p4-provenance-standalone-corrections-3",
+      "source": "new"
+    },
+    "skills/knuaf-doc/references/benchmark-packs/majors/hort_env_systems/manifest.json": {
+      "after_sha256": "1a669ee8565ef2cf06cd7de70695ec16324f012cdd221082041f3736ed225793",
+      "before_sha256": null,
+      "first_changed": "P4",
+      "owner": "P4",
+      "reason": "accepted P4 benchmark-packs data (catalog/records/manifest/schema) from g005-p4-provenance-standalone-corrections-3",
+      "source": "new"
+    },
+    "skills/knuaf-doc/references/benchmark-packs/majors/industrial_insects/manifest.json": {
+      "after_sha256": "fd09a661403bdbda3a3967d89f98546ff29ff50176d2ab8cdfa90e51f87ee5b1",
+      "before_sha256": null,
+      "first_changed": "P4",
+      "owner": "P4",
+      "reason": "accepted P4 benchmark-packs data (catalog/records/manifest/schema) from g005-p4-provenance-standalone-corrections-3",
+      "source": "new"
+    },
+    "skills/knuaf-doc/references/benchmark-packs/majors/landscape/manifest.json": {
+      "after_sha256": "281538d6cef1e1eb8c9788328a86188ccf171b10d6cf58fbeec36ef37cd3e998",
+      "before_sha256": null,
+      "first_changed": "P4",
+      "owner": "P4",
+      "reason": "accepted P4 benchmark-packs data (catalog/records/manifest/schema) from g005-p4-provenance-standalone-corrections-3",
+      "source": "new"
+    },
+    "skills/knuaf-doc/references/benchmark-packs/majors/specialty_crops/mafra-specialty-production-2024/manifest.json": {
+      "after_sha256": "21149f0790dd9381b07f5941ebd82e0db27ff48645e1d18d97f81577625f95cf",
+      "before_sha256": null,
+      "first_changed": "P4",
+      "owner": "P4",
+      "reason": "accepted P4 benchmark-packs data (catalog/records/manifest/schema) from g005-p4-provenance-standalone-corrections-3 | P4-packaging: after_sha256 rebound to ACCEPTED catalog-transform corrections-1 manifest (g005-p4-source-catalog-transform-corrections-1, manifest 1778fd02fc2286ac...) — replaces the pre-review placeholder bytes.",
+      "source": "new"
+    },
+    "skills/knuaf-doc/references/benchmark-packs/majors/specialty_crops/mafra-specialty-production-2024/records.jsonl": {
+      "after_sha256": "fc1c0b35d63a67dc5a794128f873272d72f0850e6d6470e7d9501270eafdd4be",
+      "before_sha256": null,
+      "first_changed": "P4",
+      "owner": "P4",
+      "reason": "accepted P4 benchmark-packs data (catalog/records/manifest/schema) from g005-p4-provenance-standalone-corrections-3",
+      "source": "new"
+    },
+    "skills/knuaf-doc/references/benchmark-packs/majors/vegetables/manifest.json": {
+      "after_sha256": "fb6524e808afd88c6e669dfae7c0942ade97e98513c556cff51aa6ab78de36ae",
+      "before_sha256": null,
+      "first_changed": "P4",
+      "owner": "P4",
+      "reason": "accepted P4 benchmark-packs data (catalog/records/manifest/schema) from g005-p4-provenance-standalone-corrections-3",
+      "source": "new"
+    },
+    "skills/knuaf-doc/references/benchmark-packs/schema/pack.schema.json": {
+      "after_sha256": "c9c375f7fa91e6d266c639dfc2843aa9979178693dcef796aa3294d9ab27ec77",
+      "before_sha256": null,
+      "first_changed": "P4",
+      "owner": "P4",
+      "reason": "accepted P4 benchmark-packs data (catalog/records/manifest/schema) from g005-p4-provenance-standalone-corrections-3",
+      "source": "new"
+    },
+    "skills/knuaf-doc/references/benchmark-packs/schema/record.schema.json": {
+      "after_sha256": "07b00c66649ef14c67ca8f308fc1680b49f3cd17a447067754a25f68e8b874a6",
+      "before_sha256": null,
+      "first_changed": "P4",
+      "owner": "P4",
+      "reason": "accepted P4 benchmark-packs data (catalog/records/manifest/schema) from g005-p4-provenance-standalone-corrections-3",
+      "source": "new"
+    },
+    "skills/knuaf-doc/references/builtin-sources.json": {
+      "after_sha256": "cef1717548bb990d0f806e6a95f97077c1d942a3c56969244e8f614c56a32638",
+      "before_sha256": null,
+      "first_changed": "P5",
+      "owner": "P5",
+      "reason": "accepted P5 reuse-registry@3 builtin source registry (frozen corrected A+B+C union)",
+      "source": "new"
+    },
+    "skills/knuaf-doc/references/fact-semantics.json": {
+      "after_sha256": "84034b46107a29c75bd630ab1f8afce88f2e6aa2a0fad4cfd5d7056b66af5569",
+      "before_sha256": null,
+      "first_changed": "P3",
+      "owner": "S",
+      "reason": "P3 신규 S-lane registry 설계 데이터 스텀(meaning_id/measure/finance_role/consumer_bindings) — DESIGN.md §2's explicit design-time-not-deployed-runtime note applies",
+      "source": "new"
+    },
+    "skills/knuaf-doc/references/finance-semantics.md": {
+      "after_sha256": "76cf4468e61c0c193e7e72b3d9b5b40f212880db6b0b23985d533ba80d8622f1",
+      "before_sha256": null,
+      "first_changed": "P3",
+      "last_changed": "P3",
+      "owner": "C",
+      "reason": "P3-C1 lane10 (devin/swe-2-max, herdr-supervised): new reference doc per DESIGN.md §9's C-lane file-ownership table, documenting for a REVIEWER (not a developer) the economic/finance-semantics review contract as implemented across Lanes 1-9 -- what counts as economic-scoped (is-not-None finance_role/meaning_id/measure), what check_id=fact_semantics/finance_review mean and their 5 states (not_applicable/unresolved/invalid/stale/fresh) per _finance_review_state's DESIGN.md §7 contract, and the write-time-fixed-integrity vs read-time-freshness distinction across apply/ingest_review_observation/adopt_output vs _finance_review_state. | Lane29 (devin/swe-2-max, herdr-supervised, per independent critic sweep 40-40CriticLane28Sweep finding C7-40CRITIC-001, LOW, docs-only): rewrote three stale sentences that still described the pre-S-lane/pre-Lane-28 model -- (1) the registry is now correctly described as deployed with the skill and resolved deployment-relative (not 'not installed at runtime, registry=None'); (2) check_id=finance_review is now correctly described as covering the content/logic/calculation three-kind scope (Lane 27), not calculation-only; (3) the write-time paths sharing _validate_new_economic_review_binding are now correctly described as re-deriving current registry/scope/bindings/fingerprint via _fresh_semantics_issues at write time (Lane 25) IN ADDITION to read-time _finance_review_state re-verification, not 'never re-computing current state'. Verified against actual gg_core.py source before rewriting, not just negated. No behavior change; reviewer-facing prose only.",
+      "source": "new"
+    },
+    "skills/knuaf-doc/references/locking.md": {
+      "after_sha256": "2cc59a7404f9a3f7d58fcacf5fa62e0f41d08e14a0fea43aa31cb3916257728a",
+      "before_sha256": null,
+      "first_changed": "P2",
+      "owner": "A",
+      "reason": "P2 신규 잠금/복구 사용자 문서",
+      "source": "new"
+    },
+    "skills/knuaf-doc/references/model-routing.md": {
+      "after_sha256": "4ca054174f1cdc4397f7dec40ff0e25fed21149e450a124fd69311c06bc47f86",
+      "before_sha256": "bda89a6d4cc6886fbf5feec441cfb0f10968e6ea90c1eb018a9205041d0a786b",
+      "first_changed": "P1",
+      "owner": "A",
+      "reason": "H11 문서 정정: 명시 모델 임의 폴백·대체 금지 명시",
+      "source": "new"
+    },
+    "skills/knuaf-doc/references/package-install.md": {
+      "after_sha256": "f9fbb26948eb2486248b9b72749530e0977ca2b5bb91ab4c19b0c028e9facab4",
+      "before_sha256": "095e2c115365e1729cc899c6a4766212167ac9d3a44bb2c885f91f8ebacb29e8",
+      "first_changed": "P1",
+      "last_changed": "P2",
+      "owner": "A",
+      "reason": "C6 문서 접점: Windows COM 경로 차단 상태·검증 등급 기록",
+      "source": "new"
+    },
+    "skills/knuaf-doc/references/reuse-registry-schema.md": {
+      "after_sha256": "5942baa34cd705df43d4fe1325d903cf29021392cd4bfc69bcd7c5b393f010e0",
+      "before_sha256": null,
+      "first_changed": "P5",
+      "owner": "P5",
+      "reason": "accepted P5 reuse-registry@3 schema reference (frozen corrected A+B+C union)",
+      "source": "new"
+    },
+    "skills/knuaf-doc/references/section-ledger.md": {
+      "after_sha256": "643a01bf79d3198ac95a5d30064fb4c415ae60a182a4fa6d1a54d613dce3442c",
+      "before_sha256": "a6dab5f426090069f6b82d7bc716feebfca01d750ba1bee484ff686e54551072",
+      "first_changed": "P3",
+      "last_changed": "P3",
+      "owner": "C",
+      "reason": "P3-C1 lane10 (devin/swe-2-max, herdr-supervised): added a short cross-reference paragraph after the observation-provenance section, before '## 교수 승인 기록과 발행 충돌', pointing readers to the new finance-semantics.md for the write-time economic-review-binding requirement added across Lanes 7/8/9 (apply/ingest_review_observation/adopt_output). No other content changed; reconstruction verified byte-exact against the prior pin.",
+      "source": "new"
+    },
+    "skills/knuaf-doc/references/source-contract.md": {
+      "after_sha256": "89939aba95bccff793176e43280de578b4fe8fa1adf872dedddfb95ce9b6c20a",
+      "before_sha256": "a089fa83d8b56739b4216bb7889eba70e778c10cc833b8f948d481e545b35910",
+      "first_changed": "P5",
+      "last_changed": "P5",
+      "owner": "D",
+      "reason": "P5-D1 sync: added preservation/layout boundary — scan/register outputs live only under sources/intake, sources/registered, sources/generated; 03_sources.md byte-preserved on all paths; source index published only via source-register commit to sources/generated/<view_id>/source-index.json (SPEC 3.7)",
+      "source": "modified"
+    },
+    "skills/knuaf-doc/references/source-intake.md": {
+      "after_sha256": "4944003501ab72ab554e5d68359e26a9c66682ff85a3dfabd698cc87a1bc65d4",
+      "before_sha256": "ebfcfe7e23ad5ed3bbc153db239f5f6b5e624d68a8087be255d57909bf18e5c6",
+      "first_changed": "P5",
+      "last_changed": "P5",
+      "owner": "D",
+      "reason": "P5-D1 guidance conflict fix (OWNERSHIP 1.1): removed the stale 'scan folder -> build 03_sources.md index' instruction at line 28 and documents the frozen source-scan→source-resolve→source-register→source-view lifecycle — sealed scan receipt under sources/intake/, read-only resolve, explicit-selection register, registration-bound generated view under sources/generated/<view_id>/source-index.json; 03_sources.md byte-preserved on all paths incl. failure (SPEC 3.7)",
+      "source": "modified"
+    },
+    "skills/knuaf-doc/scripts/build_docx.py": {
+      "after_sha256": "2a824409e5f1da4c61c986571ba20a9eeceae57c2a896e9ef112e46ea170c65e",
+      "before_sha256": "b0ce58afc3f24b792843877bb6dc996d634dc12235bade53c34ecb5cdfad9912",
+      "first_changed": "P1",
+      "owner": "B",
+      "reason": "H2: fit_table allow_landscape=False(official 경로). H3: 목차↔본문 미렌더 node ValueError+진단. C2: UTF-8",
+      "source": "adopted:PR2"
+    },
+    "skills/knuaf-doc/scripts/build_excel_finance_template.py": {
+      "after_sha256": "01d26b52d877e32211eb870bf562083193c171d0bd26a65e2f9d09431ce9d2b8",
+      "before_sha256": "9630799cf6d9472039a71e93389df77e4aa4ebbec6d39e16d950c146494d9fa1",
+      "first_changed": "P1",
+      "last_changed": "P3",
+      "owner": "C",
+      "reason": "C2: UTF-8 명시 I/O(입력 JSON read_text) | P3-C1 lane4 (devin/swe-2-max, herdr-supervised): extracted build() helper calling gg_finance.validate_economic_inputs(spec, purpose='draft') before workbook() write; hard fail issues refuse the build (status=blocked, no file written), soft blocked provenance issues ride along as economic_validation_issues in the success result. CLI --input/--out interface unchanged.",
+      "source": "new"
+    },
+    "skills/knuaf-doc/scripts/gg.py": {
+      "after_sha256": "420fcbcb9e0514b886421fa67936876d90eee609a644d864fc616800aa8b3f98",
+      "before_sha256": "1e200103489c827c0b0ac60a7959045c02ecdae8bd8ae77e9b9a3d255554a0d7",
+      "first_changed": "P1",
+      "last_changed": "P5",
+      "owner": "A",
+      "reason": "C5: Python 3.10 미만 사전 차단(core import 전). C2: UTF-8 명시 I/O | P4 CLI routes: rda-lookup/rda-propose/rda-apply | P5 C-union: source-scan/source-resolve/source-register/source-view CLI routes (gg_source_intake/gg_reuse wiring; --packs-dir rejected on source-scan)",
+      "source": "new",
+      "note": "corrections-1: apply() wiring now requires packs_dir for live-byte freshness (P1-2)."
+    },
+    "skills/knuaf-doc/scripts/gg_commands.py": {
+      "after_sha256": "318e584d4f5175f7532cad3ee88ff047cc84d0197aea7ae6d37ee44b08499c5c",
+      "before_sha256": "22e5664255aa36de870909e7263a8828ec42d9dcb181f74839d86be29dbb0702",
+      "first_changed": "P1",
+      "last_changed": "P2",
+      "owner": "A",
+      "reason": "H8: answer_state=unknown이 reuse로 흐르던 경로 제거(ask→help 계약). C2: UTF-8",
+      "source": "new"
+    },
+    "skills/knuaf-doc/scripts/gg_core.py": {
+      "after_sha256": "f97dbfb564ab0467432055b403aba4fe446d69993c9fbf4a77667d065650a85b",
+      "amended_in": "P1-S01,P2-R7,P2-R8,P3-C1,Lanes15-28",
+      "before_sha256": "b3491a931add687328bf561e7e7cd2aed3edd7a7fee374a28092e771d9124cc5",
+      "first_changed": "P1",
+      "last_changed": "P5",
+      "owner": "C",
+      "reason": "C3: 비문자열 record id를 저장 전 거부(_check_record_id). C2: UTF-8 명시 I/O. S01: schema1 입력에서 ID 거부가 schema_version 영구 저장보다 앞서도록 프리플라이트 추가. R7: schema2-bound review에 공급 input_revision R·observation.report_path==review.path 결합 강제(_bound_observation, _apply_locked, _review_observation_state_v2) — API110/146/148/159 기존 계약 구현 R8: apply-time workspace_id/protocol_sha256 바인딩 검증 추가(_observation_workspace_trusted 신설, _apply_locked의 schema2 분기와 _review_observation_state_v2 사후검증 모두에서 공유 호출) — 사후검증에서만 확인되던 workspace/protocol 결합을 canonical/history/ledger 기록 이전으로 이동. verify_recovery_lineage 호출부의 인자명을 실제 시그니쳐(previous_workspace_id/previous_protocol_sha256/current_workspace_id/current_protocol_sha256)와 일치시켜, 이전에는 항상 예외로 삼켜지던 신뢰 복구 lineage 판정을 실질적으로 동작하게 함. P3-C1: H9/R6-undercheck 고정 — _finance_check_items의 eligible()이 unit=='천원' 단일 비교를 새 _finance_body_mod()._MONETARY_UNITS 집합 멤버십 검사로 교체(gg_finance_body.py 지연 import 추가, 시그니처 보존). '원' 단위 제공 사실이 더 이상 묵음으로 누락되지 않고 재무 본문 대조에 진입함(test_finance_scope.py의 test_won_unit_fact_is_checked를 XPASS에서 정상 통과로 전환, ratio 등 비경제 단위는 여전히 범위 밖으로 유지하는 새 양성대조 test_ratio_unit_fact_still_out_of_scope 추가). | P3-C1 lane2 (devin/swe-2-max, herdr-supervised): added _fact_semantics_mod()/_semantic_context() helpers and wired classify_fact() into checks() as check_id=fact_semantics (additive, structural-only per design-r2 §5/§7; registry=None/bindings=[] until registry lane lands). | lane5 (devin/swe-2-max, herdr-supervised): added _finance_review_state(root,p,review,*,context)->(state,issues) per DESIGN.md §7 (state=not_applicable|unresolved|invalid|stale|fresh, economic freshness re-derived from a fresh re-interpretation of current facts via gg_fact_semantics.classify_fact/resolve_consumers/validate_report_binding rather than trusting the stored report's pass string), plus additive read-path finance_review_freshness(root,p,review_id). One-way call only into review_observation_state (never the reverse), avoiding the recursion §7 warns against. Not yet wired into checks()/gate()/apply/ingest_review_observation/adopt_output/export_locked/paper — those 6 remaining §7 call points are later lanes. | lane5b (devin/swe-2-max, herdr-supervised, per critic checkpoint 18-CriticLane5FinanceReviewState CORRECTIONS_REQUIRED): fixed fail-open economic-scope detection predicate in _finance_review_state — was truthy (or) on finance_role/meaning_id + isinstance(measure,dict), now explicit is-not-None on all three, so a present-but-malformed economic marker (e.g. finance_role=\"\") stays economic-scoped instead of silently exempting the review as not_applicable. | lane6 (devin/swe-2-max, herdr-supervised): wired _finance_review_state into checks() -- new additive loop over p['reviews'] surfacing each review's economic freshness issues under check_id='finance_review' (status pass-through, blocked stays blocked not flattened to fail), using one shared _semantic_context(root,p) per checks() call. gate() untouched (Lane 7 scope). | lane7 (devin/swe-2-max, herdr-supervised): wired _apply_locked's reviews-registration path per DESIGN.md §7 'apply' row -- a NEW calculation-kind review over an economic-scoped fact (shared _review_targets_economic_fact predicate, extracted from Lane 5's inline logic so read/write scopes can't drift) must bind a readable, hash-matched gg-finance-semantics-report/1 report via _validate_new_economic_review_binding before commit (fixed-integrity admission only, not full freshness re-derivation -- that stays checks()/gate()'s read-time job); review UPDATES (prev is not None) are not re-admitted. gate() confirmed untouched. | lane8 (devin/swe-2-max, herdr-supervised): wired ingest_review_observation's economic-report admission per DESIGN.md §7 'ingest_review_observation' row -- after the existing revision/hash/fingerprint checks, before publish_observation(), an observation declaring review_kinds containing \"calculation\" over an economic-scoped target (via the Lane-7 shared _review_targets_economic_fact predicate, registry taken from _semantic_context) must bind a schema-valid gg-finance-semantics-report/1 report, reusing Lane-7's _validate_new_economic_review_binding via a thin path/report_hash field adapter (fixed-integrity only, no freshness re-derivation). New error code economic_report_schema_invalid. 4 new tests in tests/test_p3_flow.py. | lane9 (devin/swe-2-max, herdr-supervised): wired adopt_output's economic-output admission per DESIGN.md §7 'adopt_output' row -- after the existing input_fingerprint_mismatch check, before actual_refs derivation, a NEW output over an economic-scoped target (via the shared _review_targets_economic_fact predicate) must carry at least one meta[\"checks\"] entry whose evidence_path/evidence_hash resolve, via a thin adapter to the existing _validate_new_economic_review_binding helper (evidence_path→path, evidence_hash→report_hash), to a byte-matched, schema-valid gg-finance-semantics-report/1 report. checks was confirmed already an accepted caller key on output_value (only publication_ref/revision/stale are rejected as server keys) so no schema extension was needed; shape-checking lives entirely inside the new gate so a garbage checks list on a non-economic output still flows through as inert metadata (packet test 3 requirement). New error code economic_evidence_missing (distinct from Lane 8's economic_report_schema_invalid -- this is an aggregate 'no entry qualified' failure vs Lane 8's single-report schema failure). 3 new tests in tests/test_p3_flow.py. | lane13: correction lane per critic checkpoint 25 finding L12-A-001 -- added a native numeric-format pre-save refusal in paper()'s entry path, calling gg_school_paper.validate_paper_native_fields(spec) immediately after spec is confirmed to be a JSON object and before any lock/receipt/staging work; any status=fail issue (malformed native economic field, e.g. a unit-suffixed string in a 시작년도 매출액/순이익 필드) raises the existing not_committed _op pattern with a new native_field_invalid reason code, refusing generation before any file is staged or published. | lane14: correction lane per critic checkpoint 25 finding L12-B-001 -- split review_observation_state into an internal P2-only _p2_review_observation_state helper (byte-identical prior 3-state logic) and a new public review_observation_state(root, review, *, p=None, context=None) that composes _finance_review_state's economic freshness on top when a project is supplied: any non-'valid' P2 state returns unchanged (P2 diagnostics never masked), a P2-valid review additionally checked via _finance_review_state overrides to 'stale'/'invalid' on those economic states (ACCEPTANCE.md test_all_public_paths's 'state stale; valid false' contract), 'unresolved' does not override (orthogonal to observation validity, already surfaced via checks()'s finance_review check_id), 'not_applicable'/'fresh' return the original valid unchanged, and p=None preserves byte-identical legacy two-argument behavior for every existing call site (test_p2_core.py's 59 tests unchanged). _finance_review_state's own call site switched to _p2_review_observation_state directly to keep the composition non-recursive. review_observation_valid forwards the new p=/context= kwargs. gate()'s per-review-kind loop now calls review_observation_state with p=p and excludes state in (invalid, stale) from eligibility (previously only invalid), so a stale economic review no longer satisfies review_calculation. | lane15 (devin/swe-2-max, herdr-supervised, per architect sweep 29-ArchC7Sweep finding: DESIGN.md §9 file-ownership violation): relocated _NATIVE_FIELD_ALIASES/_is_native_number/validate_paper_native_fields OUT of gg_school_paper.py (restoring it to its exact pre-Lane-13 baseline, before_sha256=dd5c1934b784e71e0a93128abaea8f1363fd2661546f20fa8a86d0f394c8c67f) and INTO gg_core.py verbatim (Lane-13b-fixed comma-grammar preserved), per DESIGN.md §9's \"paper의 값/alias 검증은 core.paper의 외부 adapter로 수행한다\" requirement; paper()'s call site updated to call the local gg_core-owned function directly (no import). Pure relocation, zero behavior change -- confirmed via 43/43 tests.test_p3_flow unchanged. | lane16 (devin/swe-2-max, herdr-supervised, per architect sweep 29-ArchC7Sweep finding: DESIGN.md §7 apply row partially unwired): wired gg_finance_body.validate_claim_shape into _apply_locked's col==\"sections\" branch (~line 1072) via the existing _finance_body_mod() lazy-import pattern -- a NEW section claims list is now checked at write time, deferring ONLY the two named reason patterns (\"지원하지 않는 claim key:\", \"claim 필수 필드 누락:\") and rejecting every other validate_claim_shape failure before commit (fail-closed deny-list, narrowed from the packet's original 5-reason scope, independently verified via a mixed-issue claim test); legacy/absent claims keep flowing to the existing read-time body_finance_crosscheck path unchanged. | L16-001 correction (Lane 20, per critic checkpoint 31 finding): the fail-open reason-string prefix match at _apply_locked's sections branch was tightened to an exact-prefix allow-list so only the two named deferred reasons are ever let through; every other reason now rejects at write time. | lane17 (devin/swe-2-max, herdr-supervised, per architect sweep 29-ArchC7Sweep finding): shared _semantic_context(root, p) registry now also passed to the sections-claim validate_claim_shape call path so registry-aware issues (when applicable) surface consistently with the fact_semantics/finance_review check_ids' registry usage -- forward-looking wiring, no observable behavior change at time of landing (no registry-dependent validate_claim_shape rule existed yet). | lane18 (devin/swe-2-max, herdr-supervised, per architect sweep 29-ArchC7Sweep finding): widened the content/logic/calculation-kind review composition (Lane 6/14's checks()/review_observation_state gate$ paths) to treat all three gated kinds as equal-weight for freshness purposes, per DESIGN.md §7's kind-agnostic economic-freshness contract -- _review_targets_economic_fact and _finance_review_state's kind check are no longer calculation-only. | lane19 (devin/swe-2-max, herdr-supervised, per architect sweep 29-ArchC7Sweep finding L19-001, correction to Lane 9's adopt_output economic-evidence gate): fixed an error-ordering regression where adopt_output read adopted_digest/evaluated economic-evidence sufficiency BEFORE the canonical source-read conjuncts (invalid_output_metadata/output_source_missing/output_hash_mismatch), so a broken source path on an economic output was misclassified as economic_evidence_missing instead of surfacing the real source-path error. Reordered so source-path errors surface identically for economic and non-economic outputs, before any economic-evidence evaluation -- confirmed via direct source read and dedicated regression test. | Lanes 21-24 (devin/swe-2-max, herdr-supervised, per architect re-sweep 32 findings C7-FINAL-1..4, all independently confirmed): lane21/C7-FINAL-1 -- checks() now additionally calls gg_finance_body.crosscheck_sections for complete-mode projects (new check_id body_finance_crosscheck_v2, gated on all(isinstance(s.get(\"claims\"), list)) reusing crosscheck_sections's own internal complete_mode litmus) without double-reporting the same issue under two check_ids; the legacy body_finance_crosscheck path (dict/absent claims) is unchanged. lane22/C7-FINAL-2 -- the shared _semantic_context(root, p) registry is now passed into classify_fact's fact-classification loop (registry=_finance_ctx[\"registry\"]) instead of a hardcoded registry=None/bindings=[] -- forward-looking plumbing, no observable behavior change (no registry-dependent classification rule existed yet). lane23/C7-FINAL-3 -- validate(p) now gates NEW fact metadata (col==\"facts\" and prev is None) through gg_fact_semantics.validate_metadata(value, registry=..., mode=\"new\") before commit, raising \"신규 사실 메타데이터 오류: ...\" on failure per DESIGN.md §2's new-metadata unknown-key/invalid-enum rejection contract; fact UPDATES (prev is not None) are not re-admitted (mirrors the reviews-gate update-not-readmitted rule). lane24/C7-FINAL-4 -- new shared helper _economic_output_fresh(root, p, output) composes _finance_review_state: a non-economic output is unaffected (predicate returns True immediately); an economic-scoped output requires a currently-fresh content/logic/calculation-kind review over EXACTLY its own target_refs. Wired into both gate()'s output-eligibility loop (an economic output whose bound evidence has gone stale is excluded even if every Lane-19 write-time/legacy conjunct still holds) and _lineage_terminal_verify (raises \"계보 끝단의 경제 근거가 최신이 아님\") -- one freshness mechanism serves reviews, gate() eligibility, and lineage-terminal verification alike; non-economic outputs/terminals byte-identical in behavior. All four independently verified via direct source read, sha256 recomputation, and personal test execution (P3 83/83, P2 59/59, broader regression 312/312 with 1 pre-existing skip) before acceptance. Lane25 (C7-FINAL-5): _validate_new_economic_review_binding 신규 registry/target_refs/input_fingerprint 현재상태 비교 단계 추가(공유 헬퍼 _fresh_semantics_issues 추출, _finance_review_state와 공용); apply/ingest_review_observation/adopt_output 3개 콜사이트에 p=,target_refs= 전달. Lane26 (C7-FINAL-4-REOPEN): _economic_output_fresh가 output['checks']의 (evidence_path,evidence_hash)와 review의 (path,report_hash) 신원 일치 및 bound_report.semantics.output_file_hash==output['file_hash'] 재검증을 요구하도록 강화 -- 무관한 신선 리뷰가 정체된 바인딩 증거를 대체하지 못하도록 함. Lane27 (C7-L26-001, critic 35-CriticLanes2526Sweep): _apply_locked/ingest_review_observation의 신규 경제 review 쓰기시점 admission을 calculation 전용에서 content/logic/calculation 3종으로 확장 -- 읽기시점(_finance_review_state/_economic_output_fresh)과 동일 kind 집합으로 일치. | Lane28 (devin/swe-2-max, herdr-supervised, per architect re-sweep 39-ArchLane27Sweep finding C7-39ARCH-001, HIGH): fixed _semantic_context's registry deployment-path -- the fact-semantics registry was being resolved via local(root, \"skills/knuaf-doc/references/fact-semantics.json\"), i.e. relative to the user's project workspace root, which SKILL.md/DESIGN.md never populate with a copy of the skill's own references/ directory; in real deployment this made registry always resolve to None, silently disabling the entire economic-freshness mechanism built across Lanes 17-27 outside test fixtures that artificially installed the file into the fake project root. Changed the lookup to Path(__file__).resolve().parent.parent / \"references\" / \"fact-semantics.json\", matching the test harness's own _installed_bytes deployment-relative resolution; missing/unreadable/unparseable/wrong-schema fallback to registry=None is unchanged. Also corrected two stale comments left over from Lanes 25/27: adopt_output's docstring now names the Lane-25 write-time current-state re-derivation (previously said 'freshness stays read-side'), and checks()'s comment now names the Lanes 18/27 content/logic/calculation three-kind scope (previously said 'every calculation-kind review's'). | P4 verification hook: audited statistical source_refs resolve via gg_rda_research (D07/D09) | P5 C-union: register_source_snapshot + generated views under sources/generated/<view_id>/source-index.json; per-request records under sources/registered/; 03_sources.md byte-preserved on all paths (SPEC 3.7)",
+      "source": "new",
+      "note": "corrections-1: fact claim + accepted-catalog receipt passed into verifier (P1-1/P1-4)."
+    },
+    "skills/knuaf-doc/scripts/gg_deps.py": {
+      "after_sha256": "758fab9b7a6a3591808f615a53c5f53b007b8ed149b69c8df47a0942b7bc1a24",
+      "before_sha256": "f3a4d3d1c2b45d67366e6f6f41ca64a8a89540f06e438862527e1efb41b9eb4e",
+      "first_changed": "P1",
+      "owner": "A",
+      "reason": "C2: UTF-8 명시 I/O(read_text/subprocess ×2)",
+      "source": "new"
+    },
+    "skills/knuaf-doc/scripts/gg_document.py": {
+      "after_sha256": "cc066f64210558fbf5eb5d0c2e15f318af94a197e1f02fd75ba3ccdf727ec40e",
+      "before_sha256": "e83eee6a94393e407a727979c6e5f6e5545f17ca7291e745c68d66dcb835a8b3",
+      "first_changed": "P1",
+      "owner": "B",
+      "reason": "H1: '<'·'^' 병합 계속 표식을 빈칸으로 분류(_filled_cell)",
+      "source": "adopted:PR2"
+    },
+    "skills/knuaf-doc/scripts/gg_excel_fill.py": {
+      "after_sha256": "f03698e745cbd51e5918f8f43963e52bbf4fcd61657c0518a20c8da33f57b0b3",
+      "before_sha256": "8fd2271ecf225e65a93db9a49400d0fc8b74926a213ca728ed9d7132d5ada7b9",
+      "first_changed": "P3",
+      "owner": "C",
+      "reason": "P3-C1 lane4 (devin/swe-2-max, herdr-supervised): added SEMANTIC_UNITS vocabulary constant and a pre-save check rejecting a semanticField map entry whose unit is outside the recognized economic unit vocabulary (mirrored from gg_fact_semantics._NONFINANCIAL_UNIT_RE + gg_finance_body._UNIT_SCALES, kept as a local frozenset to avoid importing the semantic layer into this module). All pre-existing map/values schema, evidence, value-type, and workbook-consistency validation unchanged.",
+      "source": "modified"
+    },
+    "skills/knuaf-doc/scripts/gg_excel_print.py": {
+      "after_sha256": "66fd3b0c1a88d52ed631fb25c139899798ac27c0706e1b0f105f704e7a869a32",
+      "before_sha256": "4332896806b8b4d44e8d76106d41221536edee470f6b56e7ddb88797bc55f2aa",
+      "first_changed": "P1",
+      "owner": "B",
+      "reason": "H6: definedNames 컨테이너 재사용/생성(스키마 순서·localSheetId 유지). C2: UTF-8",
+      "source": "adopted:PR2"
+    },
+    "skills/knuaf-doc/scripts/gg_excel_template.py": {
+      "after_sha256": "78e7f6895b68607d2fd4652e7025ac0c58420d1b186d6e9901801213bb8fa0fc",
+      "before_sha256": "70933a7abfc4bb9b86f20b05487c785c2abd77be60426089cb70b40741ca508f",
+      "first_changed": "P1",
+      "owner": "B",
+      "reason": "H5: map이 참조하는 미존재 셀을 발행 전 ValueError로 거부(seen_wanted)",
+      "source": "adopted:PR2"
+    },
+    "skills/knuaf-doc/scripts/gg_fact_semantics.py": {
+      "after_sha256": "ba2f2aee005013a9f015e9094e34614ea7854d2bea71a6564cd5249b3ac7fb28",
+      "before_sha256": null,
+      "first_changed": "P3",
+      "owner": "S",
+      "reason": "P3 신규 재무 의미 모듈(design-r2 §2-5): validate_metadata, classify_fact, price_history_channel_state/projection, lookup_input_state, resolve_consumers, build_check_set, make_semantics_report, validate_report_binding, validate_result_shape. 순수 모듈(core import/파일 I/O 없음)",
+      "source": "new"
+    },
+    "skills/knuaf-doc/scripts/gg_finance.py": {
+      "after_sha256": "22060f2cbc9e9385bd8c3d4424d8c13f2b150ae7635c1adbbebe0356bfcabb4a",
+      "before_sha256": "49a3258c8d23151c42245d375a96849dbd0c3f57533186ac5b50e87ef1f35f8b",
+      "first_changed": "P1",
+      "last_changed": "P4",
+      "owner": "C",
+      "reason": "C2: UTF-8 명시 I/O(manifest write_text). 계산 함수·수식 미변경 | P3-C1 lane3 (devin/swe-2-max, herdr-supervised): added context= kwarg to require_classified_workbook_inputs (admission-mode CONTEXT_REQUIRED/MAP_SLOT_UNRESOLVED checks, context=None preserves legacy draft behavior unchanged) and new validate_economic_inputs(spec, *, context=None, purpose='draft') pure validation adapter per design-r2 §5 (never raises for draft/admission; returns Issue-shaped dict list; ECONOMIC_SLOT_CONFLICT/PROVENANCE_UNCONNECTED/ECONOMIC_STATUS_UNRESOLVED/CONTEXT_REQUIRED codes). No change to num/investment/composite_contract/calculate/workbook/verify_recalculated bodies. | P3-C1 lane3c (devin/swe-2-max, herdr-supervised, per critic checkpoint 14-CriticLane3FinanceValidation CORRECTIONS_REQUIRED): fixed admission context={} silently accepted (now correctly falsy-checked, parity with require_classified_workbook_inputs's not-context-or-not-isinstance-dict pattern) and TypeError on heterogeneous input_inventory key types in sorted() (now separates non-string keys into their own ECONOMIC_FIELD_DECLARATION fail issue before sorting only the string-keyed subset, preserving Issue.fact_id's null|str contract); 2 new regression tests added. | P4 adapter: resolve_economic_source_refs (D07)",
+      "source": "new",
+      "note": "corrections-1: economic-claim verification hooks in admission paths (P1-1)."
+    },
+    "skills/knuaf-doc/scripts/gg_finance_body.py": {
+      "after_sha256": "3fdae56b16f362600b03f705b01d79a9ddebb5f7e27260dc4f4b7a16e21eba9a",
+      "before_sha256": null,
+      "first_changed": "P3",
+      "owner": "B",
+      "reason": "P3 신규 재무 본문 claims/parser 계약(design-r2 §6): crosscheck_sections, validate_claim_shape, parse_number/normalize_monetary/unit_price_matches, detect_contradictions, 기존 gg_school_excel.crosscheck_body 재수출(수정 없음). _MONETARY_UNITS는 gg_core._finance_check_items가 직접 참조(H9/R6-undercheck 고정)",
+      "source": "new"
+    },
+    "skills/knuaf-doc/scripts/gg_fs.py": {
+      "after_sha256": "03ceb9014db237dfdf5b727813522a9ba0ac5b3ca48425365a04fe21b176b5a1",
+      "before_sha256": null,
+      "first_changed": "P2",
+      "owner": "B",
+      "reason": "P2 신규 파일 primitive: canonical JSON bytes/no-replace rename/identity",
+      "source": "new"
+    },
+    "skills/knuaf-doc/scripts/gg_guidelines.py": {
+      "after_sha256": "c761caea755f60c94b2e90f498ac388c1047dd95cc6c51643b68a1a4642a7682",
+      "before_sha256": "9c41baf67c0a03ccf6d4f5dc4ddd0d7f0914e97d297e642dbd715a47bd888d91",
+      "first_changed": "P1",
+      "owner": "A",
+      "reason": "C2: UTF-8 명시 I/O(read_text ×2)",
+      "source": "new"
+    },
+    "skills/knuaf-doc/scripts/gg_kordoc.py": {
+      "after_sha256": "cf84b12ddc3170beee32bef9f70720a203d2cb8063ca33dda47d6bdf67564db1",
+      "before_sha256": "887df34c5a108abf016ae3fe79ace91990cfc572bdf5a748c4a4815506a47ae4",
+      "first_changed": "P1",
+      "owner": "B",
+      "reason": "C2: subprocess.run UTF-8",
+      "source": "new"
+    },
+    "skills/knuaf-doc/scripts/gg_lock.py": {
+      "after_sha256": "6efa40eee88ba7d7a30cbba7ef98ab9c8ae787e1af21fdaec20d96532da408a7",
+      "before_sha256": null,
+      "first_changed": "P2",
+      "owner": "B",
+      "reason": "P2 신규 잠금 모듈: OS guard 설치/획득/해제/복구·owner 기록",
+      "source": "new"
+    },
+    "skills/knuaf-doc/scripts/gg_office.py": {
+      "after_sha256": "9427c3aba356532ae991941f311602eac9dd2bf66e53a7f077980f957e448e64",
+      "before_sha256": "64b4f8790da95e583cfb06ba4e216999a932e4d570953ad2a681bca19d270a0a",
+      "first_changed": "P1",
+      "owner": "B",
+      "reason": "C6: run_windows_com이 helper 생성 전 WINDOWS_COM_BLOCKED 반환. H15: visible 시트만 계수. C2: UTF-8",
+      "source": "new"
+    },
+    "skills/knuaf-doc/scripts/gg_office_win.py": {
+      "after_sha256": "2d2b51c580f3f8d425e87f4bf1b0721fdc0fdd7c1efe4b4d90023c0ccabe5348",
+      "before_sha256": "1433829b252248c387777be7150e6586894a795b08ad0e1e563717beca4e4cf4",
+      "first_changed": "P1",
+      "owner": "B",
+      "reason": "C6: WINDOWS_COM_BLOCKED — run_word/run_excel이 pythoncom import 전 차단(exit 2). from __future__ annotations(3.9 호환)",
+      "source": "new"
+    },
+    "skills/knuaf-doc/scripts/gg_publication.py": {
+      "after_sha256": "c18a371e43d416d4ce7d1a7b0e69392e87fad450d2798c5250932edd379b09a3",
+      "before_sha256": null,
+      "first_changed": "P2",
+      "owner": "C",
+      "reason": "P2 신규 발행 모듈: immutable output/observation/workspace 발행·verify",
+      "source": "new"
+    },
+    "skills/knuaf-doc/scripts/gg_rda_lookup.py": {
+      "after_sha256": "9e2a8c178d4526f042f879473f1b9655aaec3d25600845c124528bd48ee08f1a",
+      "before_sha256": null,
+      "first_changed": "P4",
+      "owner": "P4",
+      "reason": "accepted P4 lookup candidate module (g005-p4-provenance-standalone-corrections-3)",
+      "source": "new"
+    },
+    "skills/knuaf-doc/scripts/gg_rda_provenance.py": {
+      "after_sha256": "b23142c7f22776c94c52340eb28f9ef0130bc81407e39c8005cf14b8950ecc45",
+      "before_sha256": null,
+      "first_changed": "P4",
+      "owner": "P4",
+      "reason": "accepted P4 provenance candidate module (g005-p4-provenance-standalone-corrections-3)",
+      "source": "new",
+      "note": "corrections-1: register_snapshot freezes raw line bytes for post-deletion verification (P1-3)."
+    },
+    "skills/knuaf-doc/scripts/gg_rda_research.py": {
+      "after_sha256": "ad93561fadbd3998e4b56f26ef445954a78faaef444676516793df3f81ca0f44",
+      "before_sha256": null,
+      "first_changed": "P4",
+      "owner": "P4",
+      "reason": "PR3 baseline adapted to P4 propose/apply contract (task P4-SHARED-CORE-INTEGRATION) corrections-3: SCC1 content-bound acceptance / SCC5 exact provenance map / B-TEST-1 snapshot-payload negatives",
+      "source": "new",
+      "note": "corrections-2: SCC1 pinned-authority catalog acceptance, SCC3 target-id requirement, SCC4 unconditional snapshot verification, SCC6 numeric finiteness."
+    },
+    "skills/knuaf-doc/scripts/gg_reuse.py": {
+      "after_sha256": "724466d1d917cfc5218fd75672674dc46021db5c0e0b2bc7e698a1a919397241",
+      "before_sha256": null,
+      "first_changed": "P5",
+      "owner": "P5",
+      "reason": "accepted P5 reuse-resolution module (frozen corrected A+B+C union)",
+      "source": "new"
+    },
+    "skills/knuaf-doc/scripts/gg_school_excel.py": {
+      "after_sha256": "15608c49c411d0a5031a07bdb9030cb715ed3be73fe2b64db5dd9e043d8fab4e",
+      "before_sha256": "4bee13020358819f168c13a91c4895d1e50d3def7f9ea72d557423182d2b483a",
+      "first_changed": "P1",
+      "last_changed": "P4",
+      "owner": "B",
+      "reason": "H7: inspect_outputs가 BadZipFile 등을 구조화 issue로 변환. C2: UTF-8 | P4 reference-fill: statistical refs resolve + line labels (D09)",
+      "source": "adopted:PR2"
+    },
+    "skills/knuaf-doc/scripts/gg_school_paper.py": {
+      "after_sha256": "de6d7fd8b8b5297ee2950cf1e600b2c0804c2121c825f39c1510e142eec275cc",
+      "amended_in": "P1-lane13,P1-lane13b,P3-C1-lane15",
+      "before_sha256": "dd5c1934b784e71e0a93128abaea8f1363fd2661546f20fa8a86d0f394c8c67f",
+      "first_changed": "P1",
+      "owner": "B",
+      "reason": "C2: UTF-8 명시 I/O(입력 read_text·출력 write_text) | lane13: added _NATIVE_FIELD_ALIASES/_is_native_number/validate_paper_native_fields -- a pure, never-raising pre-save check on the six docstring-declared str|int economic fields (생산규모 ㎡, 매출액/순이익 천원), using the same key-alias resolution order growth_target_table/_legacy_paper already use so a value shadowed by a higher-priority alias is never spuriously checked; accepts int/digit-string/comma-thousands string, rejects any unit-suffixed or currency-symbol string (e.g. \"99999달러\", \"₩12000\", \"약 5000\"); issue dict shape mirrors gg_finance.validate_economic_inputs's literal Issue shape under check_id=finance_review. | lane13b: correction per critic checkpoint 26 finding L13-N-001 -- _is_native_number's comma-containing branch previously deleted every comma unconditionally before checking digits, incorrectly accepting malformed groupings like '1,,2'/'12,34'/'1,23,456'; replaced with a strict grammar requiring the leading group to be 1-3 digits and every subsequent comma-separated group to be exactly 3 digits, while preserving prior behavior for comma-free strings (including an optional single '.' fraction for potentially-fractional 제곱 ㎡ area fields) and prior bool/non-str-int rejection. | lane15 (devin/swe-2-max, herdr-supervised, per architect sweep 29-ArchC7Sweep DESIGN.md §9 ownership-violation finding): DELETED _NATIVE_FIELD_ALIASES/_is_native_number/validate_paper_native_fields (added by lane13/13b) entirely, restoring this file to byte-exact its pre-Lane-13 baseline (after_sha256 now equals the original before_sha256 dd5c1934...) -- the validators moved to gg_core.py per DESIGN.md §9's external-adapter requirement; paper()'s control flow (refusal before lock/receipt/staging work) is completely unchanged.",
+      "source": "new"
+    },
+    "skills/knuaf-doc/scripts/gg_source_intake.py": {
+      "after_sha256": "7e8dfa43ec3bc46991507bab025b3a22fc072010a407b67ce2c6d827dc86e615",
+      "before_sha256": null,
+      "first_changed": "P5",
+      "owner": "P5",
+      "reason": "accepted P5 source-intake scanner module — sealed receipts under sources/intake/, never writes 03_sources.md (frozen corrected A+B+C union)",
+      "source": "new"
+    },
+    "skills/knuaf-doc/tests/test_gg_rda_lookup_audit_key.py": {
+      "after_sha256": "732258593fc89559c3680b3244310532e092ae4436314f83febdc3eb5b025843",
+      "before_sha256": null,
+      "first_changed": "P4",
+      "owner": "P4",
+      "reason": "accepted lookup lane test (carried over verbatim)",
+      "source": "new"
+    },
+    "skills/knuaf-doc/tests/test_gg_rda_provenance.py": {
+      "after_sha256": "5164527cb4488a17e1dd69d3fa305967ee625f401585fffbf3c94e91bad2e214",
+      "before_sha256": null,
+      "first_changed": "P4",
+      "owner": "P4",
+      "reason": "accepted provenance lane test (carried over verbatim)",
+      "source": "new"
+    },
+    "skills/knuaf-doc/tests/test_gg_rda_research_integration.py": {
+      "after_sha256": "e4ff44b187eacca3477cf404a7f6a2c74354afaa719b820ada4bff6365d4ec7f",
+      "before_sha256": null,
+      "first_changed": "P4",
+      "owner": "P4",
+      "reason": "new D05-D09 integration test (task P4-SHARED-CORE-INTEGRATION) corrections-3: SCC1 content-bound acceptance / SCC5 exact provenance map / B-TEST-1 snapshot-payload negatives",
+      "source": "new",
+      "note": "corrections-2: SCC1/SCC3/SCC4/SCC6 counterexample tests."
+    },
+    "skills/knuaf-doc/tests/test_gg_reuse.py": {
+      "after_sha256": "08d2cc9bbbd24aedc37f2a0dbef8167f93d24448d10394cebe40696d3e91616b",
+      "before_sha256": null,
+      "first_changed": "P5",
+      "owner": "P5",
+      "reason": "accepted P5 reuse-resolver contract test (frozen corrected A+B+C union)",
+      "source": "new"
+    },
+    "skills/knuaf-doc/tests/test_gg_reuse_auditkey.py": {
+      "after_sha256": "4671a5527b6d17c6b1628b11d7bad5effbfaf0c91bfdd463dea729e403a2fb83",
+      "before_sha256": null,
+      "first_changed": "P5",
+      "owner": "P5",
+      "reason": "accepted P5 audit-key contract test (frozen corrected A+B+C union)",
+      "source": "new"
+    },
+    "skills/knuaf-doc/tests/test_gg_reuse_reasons.py": {
+      "after_sha256": "5dbba63524cc51214fe0231711bcfd022173655749b1458e202917598eb1d4f8",
+      "before_sha256": null,
+      "first_changed": "P5",
+      "owner": "P5",
+      "reason": "accepted P5 resolver reason-vocabulary contract test (frozen corrected A+B+C union)",
+      "source": "new"
+    },
+    "skills/knuaf-doc/tests/test_gg_source_i05_multiprocess.py": {
+      "after_sha256": "f07c40b3653041308220bc9249f35529f2fb2af0783cfc2e32e479faa99d3809",
+      "before_sha256": null,
+      "first_changed": "P5",
+      "owner": "P5",
+      "reason": "accepted P5 I05.5-I05.7 separate-process registration contract test (frozen corrected A+B+C union)",
+      "source": "new"
+    },
+    "skills/knuaf-doc/tests/test_gg_source_i06_flow.py": {
+      "after_sha256": "2ac1748ce5bc879bf6442b71521fc8c1eddf0808b7fc03e2d7944fdd721a982c",
+      "before_sha256": null,
+      "first_changed": "P5",
+      "owner": "P5",
+      "reason": "accepted P5 I06 source lifecycle flow contract test (frozen corrected A+B+C union)",
+      "source": "new"
+    },
+    "skills/knuaf-doc/tests/test_gg_source_intake_receipt.py": {
+      "after_sha256": "b7a5b13a9a860ff272ee7d7f7a154c0b9ba1b7d683e6fcee05b82c056a27dc82",
+      "before_sha256": null,
+      "first_changed": "P5",
+      "owner": "P5",
+      "reason": "accepted P5 sealed scan-receipt contract test (frozen corrected A+B+C union)",
+      "source": "new"
+    },
+    "skills/knuaf-doc/tests/test_gg_source_intake_scan.py": {
+      "after_sha256": "3b3a01e0292cb7df89b677259c3c41f8ec5407525cc46b5ab5aae49aee24e249",
+      "before_sha256": null,
+      "first_changed": "P5",
+      "owner": "P5",
+      "reason": "accepted P5 source-scan contract test (frozen corrected A+B+C union)",
+      "source": "new"
+    },
+    "skills/knuaf-doc/tests/test_gg_source_register.py": {
+      "after_sha256": "4c7947c4e8786fffffbb7e23579faa54932a2ca4099e7a21f9000e36a10c0457",
+      "before_sha256": null,
+      "first_changed": "P5",
+      "owner": "P5",
+      "reason": "accepted P5 source-register contract test (frozen corrected A+B+C union)",
+      "source": "new"
+    },
+    "tests/test_p2_core.py": {
+      "after_sha256": "ca90c4173f957a6e02d373fe1d9dad2d366e9ee06742fd1c2abdce5dd52107f7",
+      "amended_in": "P2-R7,P2-R8,CI-4fbed55",
+      "before_sha256": null,
+      "first_changed": "P2",
+      "owner": "A",
+      "reason": "P2 신규 core 계약 시험. R7: ObservationContractTests — observe-at-R→apply→검증 정상 흐름, revision/path 결합 거부, replay·schema1·후속 revision 보존 R8: cross_workspace_receipt_rejected_at_apply(적색→apply-time 거부 확인), same_workspace_receipt_still_applies/trusted_recovery_lineage_receipt_still_applies(정상 경로 양성대조). 독립 검토 지적 반영: cross_workspace_receipt_rejected_at_apply가 project.json뿐 아니라 migration/history 스냅샷 전체(tree_before) byte-불변까지 확인하도록 보강(_tree_bytes 헬퍼는 harness의 ContractCase로 이동) | CI-4fbed55: make guard replacement fixture allocate the new inode before replacing the old guard; assert identity mismatch and retain all recovery outcomes.",
+      "source": "new"
+    },
+    "tests/test_p2_lock.py": {
+      "after_sha256": "902caf33f86bf58c22e07f6cc91d22b6578203fe229c1161dbb4fc26f7479222",
+      "amend_reason": "bare _harness import -> tests._harness (Sol P2_FINAL_BLOCK 필수 지적; B COPY+FIX, 세 import 문장만)",
+      "amended_in": "P2-R1,CI-4fbed55",
+      "before_sha256": null,
+      "first_changed": "P2",
+      "owner": "B",
+      "reason": "P2 신규 잠금 시험 | CI-4fbed55: make guard replacement fixture allocate the new inode before replacing the old guard; assert identity mismatch and retain all recovery outcomes.",
+      "source": "new"
+    },
+    "tests/test_p2_mutators.py": {
+      "after_sha256": "f9e47f6ec525e2571ff6f1c39d00fa51041fc52803862c4e8e9a44e0044de8f5",
+      "before_sha256": null,
+      "first_changed": "P2",
+      "owner": "A",
+      "reason": "P2 신규 mutator guard 시험",
+      "source": "new"
+    },
+    "tests/test_p2_publication.py": {
+      "after_sha256": "8d8d9a7705b8111e644402e3797843bcc23d8722c3a20d44abf5ae6e0d4aa74e",
+      "before_sha256": null,
+      "first_changed": "P2",
+      "owner": "C",
+      "reason": "P2 신규 발행 시험",
+      "source": "new"
+    },
+    "tests/test_p2_recovery.py": {
+      "after_sha256": "6c8d56234cdfe4549306da39a9ad29be5762c9053ef7d6fb07ca264820129621",
+      "amend_reason": "bare _harness import -> tests._harness (Sol P2_FINAL_BLOCK 필수 지적; B COPY+FIX, 세 import 문장만)",
+      "amended_in": "P2-R1,CI-4fbed55",
+      "before_sha256": null,
+      "first_changed": "P2",
+      "owner": "B",
+      "reason": "P2 신규 복구 fault-matrix 시험 | CI-4fbed55: make guard replacement fixture allocate the new inode before replacing the old guard; assert identity mismatch and retain all recovery outcomes.",
+      "source": "new"
+    },
+    "tests/test_p2_windows.py": {
+      "after_sha256": "64b209dc6d6551cc72afbaa922417e1d6166a8969f86f09321866e72b4581c34",
+      "amend_reason": "bare _harness import -> tests._harness (Sol P2_FINAL_BLOCK 필수 지적; B COPY+FIX, 세 import 문장만)",
+      "amended_in": "P2-R1",
+      "before_sha256": null,
+      "first_changed": "P2",
+      "owner": "B",
+      "reason": "P2 신규 Windows 대역 시험",
+      "source": "new"
+    },
+    "tests/test_p3_body.py": {
+      "after_sha256": "d1201fdc87ef89c040aa7f72b790f72443856b55d62aeb3890acb5067fac5eb9",
+      "before_sha256": null,
+      "first_changed": "P3",
+      "owner": "B",
+      "reason": "P3 신규 B-lane 계약 시험 (crosscheck_sections/claim shape/contradiction/parse_number/unit)",
+      "source": "new"
+    },
+    "tests/test_p3_flow.py": {
+      "after_sha256": "b3f2850e5442065bfe1f806606950e3a539a686d2069d3f38abb6e3709f4af67",
+      "amended_in": "P3-C1,Lanes15-29",
+      "before_sha256": null,
+      "first_changed": "P3",
+      "owner": "C",
+      "reason": "P3-C1 lane2 (devin/swe-2-max, herdr-supervised): new contract test covering gg_core.checks() fact_semantics wiring (legacy-silent, invalid-measure-surfaces, context-shape, additive-coexistence). | lane2b (devin/swe-2-max, herdr-supervised, per critic checkpoint 12-CriticLane2FactSemantics CORRECTIONS_REQUIRED): added test_unmetadata_legacy_fact_with_none_unit_blocks_submission asserting unit=None legacy fact produces blocked fact_semantics entry with severity=error and blocks_skill_candidate()=True; test_bundle_lineage.py 35/16/16 literals independently re-verified correct by worker, left unchanged (no edit needed). | lane4 (devin/swe-2-max, herdr-supervised): added ExcelTemplatePresaveTests (5 tests) covering build_excel_finance_template.build()'s new pre-save validation and gg_excel_fill.py's new semantic-unit-vocabulary check. | lane5 (devin/swe-2-max, herdr-supervised): added FinanceReviewFreshnessTests (5 tests) covering not_applicable/unresolved/invalid/stale/fresh states of _finance_review_state. | lane5b: added test_malformed_economic_metadata_still_economic_scoped regression proving the is-not-None fix (finance_role=\"\" + no measure -> economic-scoped, unresolved with SEMANTIC_REPORT_REQUIRED, never not_applicable). | lane6: added ChecksFinanceReviewWiringTests (4 tests) covering unresolved-surfaces-blocked, fresh-adds-nothing, non-calculation-adds-nothing, and fact_semantics+finance_review coexistence in one checks() call. | lane7: added ApplyEconomicReviewBindingTests (5 tests) covering missing-binding-rejected, hash-mismatch-rejected (white-box, since apply derives report_hash from live bytes making it unreachable via the public API), valid-report-succeeds, non-calculation-needs-no-report, and existing-review-update-not-readmitted. | lane8: added IngestEconomicObservationTests (4 tests) covering bad-report-rejected, valid-report-accepted, non-economic-targets-not-gated, non-calculation-kind-not-gated. | lane9: added AdoptEconomicOutputTests (3 tests) covering without-valid-checks-rejected, valid-checks-entry-accepted, non-economic-output-ignores-garbage-checks. | lane10: added ExportGateOrderingTests (test_submission_blocked_on_invalid_finance_review) proving export_locked's gate(root,p) call runs fresh and unconditionally BEFORE its receipt/existing-cache lookup, so a submission_candidate export can never ride a cached bundle past a newly-invalid finance_review state; a bound economic review whose report bytes are corrupted after binding blocks submission_candidate export with the finance_review check's own reason string in the detail, while the same project's draft export still succeeds (kind-scoped gating, blocked content preserved per design). Investigation (no code change needed) confirmed export_locked already satisfies DESIGN.md §7's export_locked row -- gate() executes unconditionally at function entry, the submission_candidate blocking check runs against that fresh report before any cache/receipt lookup, and a second gate() re-check exists inside the publish block itself (input_changed_during_export) as a bonus double-gate. | lane12: investigation-only lane concluding DESIGN.md §7's paper row and review_observation_state/valid row are both already fully satisfied with no gg_core.py change needed -- paper's spec fields are opaque narrative strings interpolated into an unapproved draft with zero canonical-fact weight (DESIGN.md §6.1: no direct output claim, no result-to-fact adoption), so Lane 4's SEMANTIC_UNITS vocabulary gate -- scoped to typed excel semanticField map entries -- correctly does not apply to this path; and review_observation_state's 3-state (valid/legacy_unobserved/invalid) contract intentionally stays separate from _finance_review_state's 5-state contract because _finance_review_state already calls review_observation_state one-way as a freshness conjunct, so the reverse direction would be literal infinite recursion -- confirming Lane 6's separate-check_id design in checks() is the row's intended reading of '재귀호출 방지'. Added PaperDraftBoundaryTests.test_paper_spec_values_bypass_semantic_unit_gate documenting/locking in this intentional boundary: a paper spec value that would fail gg_excel_fill's SEMANTIC_UNITS check if it were an excel map entry is interpolated verbatim into the generated draft with no rejection, proving values are absent-by-design-gated, not silently ignored. | lane13: removed PaperDraftBoundaryTests (critic finding L12-T-001 -- that test proved a design violation, not an intentional boundary) and replaced with PaperNativeFieldValidationTests (4 tests): malformed native field refused before save with no file written, a second distinct field also checked (not hardcoded to one key), well-formed native values (int/digit-string/comma-thousands) generate successfully, and absent optional fields never raise spuriously. | lane14: added ReviewObservationEconomicCompositionTests (5 tests): the decisive stale-economic-review-composes acceptance case (direct review_observation_state(root,review,p=p) call returns ('stale', reason) and review_observation_valid returns False), p2-invalid-never-masked, non-economic-review-unaffected-by-p, two-arg-call-keeps-prior-behavior (backward compat), and gate-excludes-stale-review. | lane13b: test_malformed_native_field_refused_before_save now also asserts result['operation']=='paper' (critic finding L13-T-001); added test_malformed_comma_grouping_refused covering '1,,2'/'12,34'/'1,23,456' all refused pre-save with no output written. | lane14b: correction per critic checkpoint 27 finding L14-001 -- test_gate_excludes_stale_review's prior fixture mutated a fact's finance_role, which fingerprint() also hashes, so the pre-existing input_fingerprint eligibility conjunct in gate() would have excluded the review independent of the new stale-state exclusion; replaced with an isolated _born_stale_fixture whose report is AUTHORED claiming input_revision=R+99 before binding (obs/review/report bytes stay mutually consistent, so P2 observation validity, coverage, findings, disposition, status, and input_fingerprint all independently hold), triggering _finance_review_state's stale via validate_report_binding's obs_rev==review_rev==report_rev conjunct alone; the test asserts the fingerprint equality directly as an isolation proof and adds a negative control (a consistent-input_revision fixture stays gate-eligible). | Lanes 15-24 (devin/swe-2-max, herdr-supervised): lane15 -- no test changes needed (relocation covered by existing PaperNativeFieldValidationTests via core.paper()'s public API only). lane16 -- ApplyClaimShapeAdmissionTests covering write-time rejection of malformed section claims and the fail-closed deny-list (mixed-issue claim test proves only the 2 named reasons defer). lane16 L19-001/L16-001 corrections (Lane 20) -- reordered adopt_output source-error tests + deny-list exactness tests (test_fail_closed_filter_rejects_mixed_claim). lane17/18/19 -- registry-passthrough and kind-widening regression tests plus the decisive adopt_output reorder isolation test. lane21 -- BodyCrosscheckSectionsWiringTests (4 tests) covering complete-mode wiring without double-reporting and the legacy CLAIM_PLAN_MISSING subset-shrink regression. lane22 -- FactSemanticsRegistryWiringTests (2 tests) covering registry passthrough into classify_fact. lane23 -- ApplyNewFactMetadataAdmissionTests (7 tests) covering new-fact metadata write-time rejection, update-not-readmitted, and a read-time _seed_bad_measure fixture writing directly to project.json to bypass apply. lane24 -- EconomicOutputFreshnessGateTests (5 tests): without-fresh-review-excluded (negative), fresh-review-restores-eligibility (positive control), noneconomic-unaffected (scope boundary), stale-terminal-rejected (isolation proof via fingerprint equality assertion), fresh-and-noneconomic-terminals-verify (regression). All corrections independently re-verified via sha256 + personal test execution before acceptance. Lane25: StaleRegistryWriteAdmissionTests(6) 추가 -- apply/observe/adopt 3개 경계에서 stale-registry 거부 + positive-control 수용 검증; _semantics_report에 registry= kwarg 추가. Lane26: EconomicOutputFreshnessGateTests에 test_unrelated_fresh_review_does_not_substitute(exploit 재현)와 test_coexisting_unrelated_fresh_review_still_eligible(positive control) 추가(총 91개). Lane27: StaleRegistryWriteAdmissionTests에 content/logic apply/observe stale-거부+positive-control 6개 추가(총 12개); EconomicOutputFreshnessGateTests에 F06-COVERAGE-001 public apply() 경유 metadata-only superseded_by stale-거부+positive-control 2개 추가(총 9개); test_non_calculation_review_needs_no_report/test_non_calculation_observation_not_gated을 _seed_plain으로 재조정(기존 bypass가 폐지되어 scope-based exemption으로 의미 수정); test_gate_excludes_content_review_bound_to_non_report를 pre-Lane27 legacy 커밋 형태로 주입 방식 수정(총 99개). | Lane28: reworked SemanticContextRegistryTests and every fixture/test that previously staged a project-root registry copy (via a since-removed _install helper) or passed registry=None expecting a None result, since the deployed registry now resolves unconditionally regardless of project root contents. _semantics_report(registry=None) now defaults to the live deployment-relative registry (previously literal None), so all 'current-registry' fixtures need no per-test change. Added new _drifted_context(core) context manager that patches core._semantic_context to return a registry with version='drifted'/sha256='0'*64, replacing the old late-file-install technique for simulating post-authoring registry drift across all StaleRegistryWriteAdmissionTests, EconomicOutputFreshnessGateTests's test_unrelated_fresh_review_does_not_substitute, and test_apply_rejects_stale_metadata_only_terminal_link -- no assertion loosened, only the staleness-simulation mechanism changed. Missing/corrupt/wrong-schema fallback tests now patch core.__file__ to point at a fake deployment tree so the real deployed registry file is never touched. Added new test_registry_resolves_from_deployment_not_project_root (decisive Lane-28 regression: a decoy file planted at the old project-root path is ignored; the real deployed registry -- sha256-matched via the harness's own _installed_bytes -- resolves regardless). Net +1 test (100 total, up from 99). | Lane29 (devin/swe-2-max, herdr-supervised, per independent critic sweep 40-40CriticLane28Sweep finding C7-40CRITIC-001, LOW, docs-only): merged the module docstring's self-contradiction (an original pre-S-lane sentence claiming 'no registry deployed, registry=None' sitting directly above Lane 28's accurate addition) into one consistent statement, and rewrote SemanticContextRegistryTests' class docstring to say the registry resolves deployment-relative (not 'inside the project root') and that a bare make_project fixture gets the REAL deployed registry, with registry=None reserved for a genuinely missing/corrupt/wrong-schema DEPLOYED file (simulated via __file__ patching, never real-file edits). No assertion or fixture logic changed; docs/comments only. gg_core.py hash and tests.test_p3_flow's 100/100 result confirmed unchanged.",
+      "source": "new"
+    },
+    "tests/test_p3_oracles.py": {
+      "after_sha256": "3786047f769fb53531806fcc61d8722ad77cc6c06d283c5686aa9c7a8525dd1b",
+      "before_sha256": null,
+      "first_changed": "P3",
+      "owner": "C",
+      "reason": "P3-C1 lane3 (devin/swe-2-max, herdr-supervised): new contract test covering gg_finance.py's require_classified_workbook_inputs context= admission checks and validate_economic_inputs draft/admission behavior (9 tests). | P3-C1 lane3c (devin/swe-2-max, herdr-supervised, per critic checkpoint 14-CriticLane3FinanceValidation CORRECTIONS_REQUIRED): fixed admission context={} silently accepted (now correctly falsy-checked, parity with require_classified_workbook_inputs's not-context-or-not-isinstance-dict pattern) and TypeError on heterogeneous input_inventory key types in sorted() (now separates non-string keys into their own ECONOMIC_FIELD_DECLARATION fail issue before sorting only the string-keyed subset, preserving Issue.fact_id's null|str contract); 2 new regression tests added.",
+      "source": "new"
+    },
+    "tests/test_p3_semantics.py": {
+      "after_sha256": "ce684c945ab7a94fb41a5ba729f1aa82e9bee4daaa5e89cc48c81ed01f2c9a68",
+      "before_sha256": null,
+      "first_changed": "P3",
+      "owner": "S",
+      "reason": "P3 신규 S-lane 계약 시험 (50 tests: metadata/classify/price-history/lookup_input_state/consumers/report/result-shape, 독립 검토 반영 review-identity freshness 확장 4건 포함)",
+      "source": "new"
+    },
+    "docs/validation/p4-lineage.json": {
+      "before_sha256": null,
+      "after_sha256": "311239d8df6d61ead49db1094c04715ac82ddc850c6bb6d90ec8619a778a2613",
+      "first_changed": "P4",
+      "owner": "P4",
+      "reason": "independent P4 lineage anchor — accepted P3 parent digest + authorized path inventory (P2-7) corrections-3: SCC1 content-bound acceptance / SCC5 exact provenance map / B-TEST-1 snapshot-payload negatives",
+      "source": "new",
+      "note": "corrections-2: SCC5 exact added-path inventory + provenance transfer record."
+    }
+  },
+  "cumulative": true,
+  "note": "선언된 runtime 변경만 — 이 목록 밖의 baseline 변화는 미승인. README.md는 readme_policy로 별도 관리. baseline 파일의 삭제는 허용하지 않으며, 신규 파일은 approved_new_files에 사전 명시된 경로만 before_sha256=null로 선언 가능.",
+  "parent_candidate": {
+    "stage": "P4",
+    "file_count": 124,
+    "tree_sha256": "c76885dd312ee5e9c74da62abb0192bd71b8b4b85d8b9aa99af92ef5b33734f5"
+  },
+  "schema": "knuaf-doc/runtime-changes@2",
+  "stage": "P5",
+  "stage_lineage": [
+    {
+      "file_count": 75,
+      "note": "P0 clean export — P1의 출발점",
+      "stage": "P0",
+      "tree_sha256": "e2abcb7ced750ecfe21a7dcbdcdfea456853a6e8af72873de041ca8e8b6de052"
+    },
+    {
+      "file_count": 79,
+      "note": "수용 P1 E3 — P2의 직전 부모",
+      "stage": "P1",
+      "tree_sha256": "5c4dcabaa04175bbabb188a7f410028da85e3585fd6faffe8a566afaf2a30466"
+    },
+    {
+      "file_count": 89,
+      "note": "수용 P2-r8 — P3의 직전 부모 (독립 검토 수정 반영 후 최종, P2-PARENT-DELIVERY-R1.json)",
+      "stage": "P2",
+      "tree_sha256": "ff291477ae91592afd4080670b5522719b194a1c24ff9c297c087a77f7067ec1"
+    },
+    {
+      "stage": "P3",
+      "file_count": 97,
+      "tree_sha256": "1261521709fbb02eb48396fcade8b66bbe4bc0012d09e680916922552dd8735c",
+      "note": "수용 P3-c1 (G004-PARENT-ADMISSION) — P4의 직전 부모; p4-lineage.json에서 재계산 일치 확인"
+    },
+    {
+      "file_count": 124,
+      "note": "수용 P4 패키징 후보 — P5의 직전 부모 (g005-p4-packaging-1/public, check_bundle.tree_digest)",
+      "stage": "P4",
+      "tree_sha256": "c76885dd312ee5e9c74da62abb0192bd71b8b4b85d8b9aa99af92ef5b33734f5"
+    }
+  ]
+}

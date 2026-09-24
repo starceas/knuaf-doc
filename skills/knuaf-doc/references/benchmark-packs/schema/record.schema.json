@@ -1,0 +1,114 @@
+{
+  "schema_version": "1.0.0",
+  "description": "records.jsonl 한 줄(레코드) 하나의 필드 계약. jsonschema 라이브러리로 검증하지 않는다 — gg_rda_lookup.py가 읽을 때 참고하는 손으로 쓴 문서다. 아키텍처 설계 문서 §6.3은 8개 kind만 예시로 들지만, Gemini 실추출 결과에는 13개 kind가 실존한다. 이 문서는 그 13개 전부를 근거 기반(PDF 표 대응)으로 기술한다.",
+  "common_envelope": {
+    "record_id": "문자열. pack_id + kind + 식별 요소로 구성한 고유 ID.",
+    "pack_id": "문자열. catalog.json의 pack_id와 일치.",
+    "kind": "문자열. 아래 kinds 목록 중 하나.",
+    "schema_version": "문자열. 이 문서의 schema_version과 일치.",
+    "crop": "객체 또는 null. 아래 crop_object 참고. 작목 무관 참고표(예: useful_life, fertilizer_composition, input_price 일부)는 null일 수 있다.",
+    "region": "객체. {level, name, sido}. level은 national | provincial | market.",
+    "basis": "객체. kind별로 형태가 다르다(다형성). 아래 basis_by_kind_family 참고.",
+    "metrics": "객체. kind별 핵심 수치. 값은 원본 표의 문자열 그대로 저장하며(십진 문자열), 빈 칸은 null. 단위·범위(~)·비수치 텍스트가 섞여 있을 수 있으므로 gg_finance.num()으로 강제 변환하지 말고 레코드마다 확인한다.",
+    "cost_items": "객체 또는 null. crop_income_cost_breakdown, crop_income_regional에서만 채워진다. 아래 cost_items_warning 참고.",
+    "price_character": "문자열 또는 null. 가격의 성격 표기 (예: gross_receipts_includes_farmgate_and_byproduct).",
+    "locator": "객체. {pdf_page, printed_page, section, table, row_label}. 원본 PDF 페이지 추적용.",
+    "caveats": "문자열 배열. 지역별 자료는 '통계적 유의성 없음' 같은 주의문이 필수로 들어간다.",
+    "extraction": "객체. {status, confidence, notes}. Gemini 추출 메타데이터."
+  },
+  "crop_object": {
+    "name": "문자열. 한글 정식 작목명. NFKC 정규화 + 공백 트림 후 비교한다.",
+    "aliases": "문자열 배열. 원문에 병기된 이명.",
+    "form": "문자열 또는 null. 인삼(4년근,4년1기작) vs 인삼(6년근)처럼 동일 작목의 형태 구분. 자동 치환 금지 — form이 다르면 다른 레코드로 취급.",
+    "cycle": "문자열 또는 null. 예: 년 1기작.",
+    "category": "문자열. 원문 표의 분류명 (예: 식량작물, 유지작물, 부산물 비율 — kind에 따라 표 이름을 그대로 담기도 한다).",
+    "major_ids": "문자열 배열. 이 작목이 속하는 전공 ID 목록. 비어 있을 수 있다."
+  },
+  "cost_items_warning": "national 소득자료집(crop_income_cost_breakdown)과 regional 지역별자료(crop_income_regional)는 개념이 같은 항목도 키 이름이 다르다 (예: fertilizer_inorganic vs fertilizer_mineral, hired_labor vs labor_hired). gg_rda_lookup.py는 cost_items를 불투명 통과(passthrough) 딕셔너리로만 다루고 키 이름을 하드코딩해 두 팩을 섞지 않는다.",
+  "basis_by_kind_family": {
+    "income_family_and_production_stat": "crop_income, crop_income_cost_breakdown, crop_income_regional, production_stat: {year, area_unit, quantity_unit, currency, crops_per_year}",
+    "official_market_price": "위와 같은 모양이지만 대부분 null: {year, area_unit:null, quantity_unit, currency, crops_per_year:null}",
+    "econ_reference_tables": "useful_life, byproduct_ratio, drying_ratio, seed_requirement, fertilizer_composition, input_price, wholesale_price_series: {year, category?, item_name?, specification?, unit?, currency?, area_unit?} — 가변/희소 형태, crops_per_year 없음.",
+    "yield_series": "{year, area_unit, quantity_unit, currency}"
+  },
+  "kinds": {
+    "crop_income": {
+      "출처": "소득자료집 총괄·작목표",
+      "metrics": "quantity, gross_receipts, operating_cost, income, income_rate_pct, farmgate_price(표에 있으면 null 아님)",
+      "crop": "populated",
+      "비고": "10a 기준. metrics 값은 십진 문자열."
+    },
+    "crop_income_cost_breakdown": {
+      "출처": "소득자료집 작목별 경영비 상세",
+      "metrics": "main_product_value, byproduct_value, value_added, value_added_rate_pct, farmgate_price 등",
+      "cost_items": "약 20개 키: seed_seedling, fertilizer_inorganic, fertilizer_organic, pesticide, utilities_power, other_materials, small_tools, large_machinery_depreciation, farming_facility_depreciation, repair_maintenance, other_costs, intermediate_cost_total, machinery_facility_rent, land_rent, consigned_farming, hired_labor, unpaid_family_labor, working_capital_interest, fixed_capital_interest, land_capital_interest, production_cost_total"
+    },
+    "crop_income_regional": {
+      "출처": "지역별 소득자료",
+      "region.level": "provincial, sido 필수",
+      "metrics": "crop_income_cost_breakdown과 유사하나 quantity_unit이 metrics 안에도 중복 기재될 수 있음",
+      "cost_items": "약 18개 키, national과 이름 다름: main_product_value, byproduct_value, seed_and_seedling, fertilizer_mineral, fertilizer_organic, pesticide, utilities_fuel, other_materials, small_tools, depreciation_large_tools, depreciation_facilities, repair_maintenance, other_costs, rent_machinery_facility, rent_land, consigned_farming, labor_hired, labor_own",
+      "caveats_필수": "통계적 유의성 없음 계열 문구 포함"
+    },
+    "wholesale_price_series": {
+      "출처": "경제성분석 중도매인가격",
+      "데이터_품질_주의": "일부 레코드는 crop.name이 빈 문자열이고 실제 작목명이 crop.form에 들어있다(예: 쌀 레코드에서 name='', form='쌀', aliases=['']). Opus 대조 시 별도 고지 대상.",
+      "basis": "{year, category, item_name, specification, currency} — area_unit/quantity_unit 없음",
+      "metrics": "m01..m12 월별 + annual_avg",
+      "가격_성격": "도매가, 농가수취가 아님 — crop_income의 farmgate_price와 혼동 금지"
+    },
+    "useful_life": {
+      "출처": "경제성분석 내구연수표",
+      "crop": "null (작목 무관 참고표)",
+      "basis": "{year, category, item_name, specification} — currency/area_unit 없음",
+      "metrics": "useful_life_years, maintenance_rate_pct(대부분 null), salvage_value_rate_pct(대부분 null)",
+      "비고": "아키텍처 문서는 이 kind를 '슬롯만'이라 적었지만 실제로는 139건 존재. facility_capex(신축 표준단가 독립표)와 econ_maintenance_rate(유지보수율 독립표)만 원본에 없어 진짜 슬롯이며, GAP-LOG.jsonl에 사유가 기록돼 있다."
+    },
+    "input_price": {
+      "출처": "경제성분석 투입재 가격표",
+      "crop": "null 가능",
+      "basis": "{year, item_name, specification, unit, currency}",
+      "metrics": "price_2021..price_2024, latest_price",
+      "데이터_품질_주의": "일부 레코드의 unit 필드에 '1,510' 같은 숫자 문자열이 들어있다 — 표 파싱 잔재로 추정, 실제 단위 문자열이 아닐 수 있음. Opus 대조 시 고지 대상."
+    },
+    "byproduct_ratio": {
+      "출처": "경제성분석 부산물 비율표",
+      "metrics": "byproduct_ratio_desc — 예: '짚 151.3%, 왕겨 37.7%, 미강 9.4%'",
+      "주의": "서술형 문자열이며 gg_finance.num()으로 파싱되지 않는다. 소비자(gg_rda_research.propose 등)가 직접 다루지 않는다."
+    },
+    "drying_ratio": {
+      "출처": "경제성분석 주요 작목 건조비율표",
+      "metrics": "drying_rate_pct — 깨끗한 십진 문자열 (예: '27.0')"
+    },
+    "seed_requirement": {
+      "출처": "경제성분석 종자 소요량표",
+      "metrics": "volume_seed, seedling_plants, seed_count, weight_seed — 단위가 값에 섞여 있고(예: '9㎗'), 범위(~)나 '-'(값 없음)가 포함될 수 있다.",
+      "주의": "이 kind의 metrics 값은 gg_finance.num()에 그대로 넣으면 실패할 수 있다 — 원문 그대로 통과(passthrough)만 하고 강제 변환하지 않는다."
+    },
+    "fertilizer_composition": {
+      "출처": "경제성분석 비료 성분표",
+      "crop": "null",
+      "metrics": "nitrogen_pct, phosphate_pct, potassium_pct, lime_pct — 표에 없으면 null"
+    },
+    "yield_series": {
+      "출처": "경제성분석 단위당 생산량표",
+      "metrics": "yield_2020..yield_2024, yield_5yr_avg"
+    },
+    "production_stat": {
+      "출처": "특용작물 생산실적 (majors/specialty_crops 전용)",
+      "basis": "{year, area_unit:'ha', quantity_unit:'M/T', currency:null, crops_per_year}",
+      "metrics": "farms, area_ha, harvest_area_ha, yield_per_10a_kg(null 가능), production_mt",
+      "주의": "수량 단위(ha, M/T)이며 crop_income의 10a당 소득(원)과 절대 하나의 metrics로 합치지 않는다 — kind가 다르면 별도 레코드 배열로 반환."
+    },
+    "official_market_price": {
+      "출처": "특용작물 생산실적 가격동향 (KAMIS)",
+      "region": "{level:'market', name:'KAMIS 전국도매', sido:null}",
+      "metrics": "monthly_prices(1~12 키를 가진 중첩 딕셔너리), annual_average — 평면(flat) 구조가 아님에 주의",
+      "가격_성격": "시장 도매가, 농가수취가 아님"
+    }
+  },
+  "가짜_슬롯_kinds": {
+    "facility_capex": "신축 표준단가(평당/㎡당) 독립표. 원본에 없음 (GAP-LOG econ_facility_capex_table_absent). 스키마 슬롯만 존재, records.jsonl에 없음.",
+    "econ_maintenance_rate_table": "유지보수율(%) 독립표. 원본에 없음 (GAP-LOG econ_maintenance_rate_table_absent). useful_life.metrics.maintenance_rate_pct는 있으나 대부분 null이며 독립 표는 아니다."
+  }
+}

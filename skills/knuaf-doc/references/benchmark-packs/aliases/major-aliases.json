@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "description": "전공 식별 별칭 -> major_id 매핑. 매칭 실패 시 절대 추측하지 않고 blocked로 반환하며 사용자에게 한 번 물어본다.",
+  "majors": {
+    "food_crops": {"label": "식량작물전공", "aliases": ["식량작물", "식량작물학과", "식량작물전공"], "status": "empty_slot"},
+    "specialty_crops": {"label": "특용작물전공", "aliases": ["특용작물", "특용작물학과", "특용작물전공"], "status": "완성"},
+    "forestry": {"label": "산림전공", "aliases": ["산림", "산림학과", "산림전공"], "status": "empty_slot"},
+    "landscape": {"label": "조경전공", "aliases": ["조경", "조경학과", "조경전공"], "status": "empty_slot"},
+    "vegetables": {"label": "채소전공", "aliases": ["채소", "채소학과", "채소전공"], "status": "empty_slot"},
+    "hort_env_systems": {"label": "원예환경시스템전공", "aliases": ["원예환경시스템", "원예환경", "원예환경시스템전공"], "status": "empty_slot"},
+    "fruit_trees": {"label": "과수전공", "aliases": ["과수", "과수학과", "과수전공"], "status": "empty_slot"},
+    "industrial_insects": {"label": "산업곤충전공", "aliases": ["산업곤충", "곤충", "산업곤충학과", "산업곤충전공"], "status": "empty_slot"}
+  }
+}

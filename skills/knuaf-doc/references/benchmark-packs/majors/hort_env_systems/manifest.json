@@ -1,0 +1,6 @@
+{
+  "status": "empty_slot",
+  "major_id": "hort_env_systems",
+  "major_label": "원예환경시스템전공",
+  "reason": "실데이터 미수집, 특용작물전공(specialty_crops) MVP 슬라이스 범위 밖. 가짜 통계를 채우지 않는다."
+}

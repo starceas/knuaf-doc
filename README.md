@@ -36,11 +36,29 @@ Windows에서 네이티브 Office 자동화를 쓰려면 `pywin32`가 추가로 
 | macOS | AppleScript(osascript) | 완료 — 실제 Word/Excel로 반복 검증됨 |
 | Windows | COM 자동화(pywin32) | 코드 구현 및 자동 테스트 통과, **실제 Windows + Office 환경 실사용 검증은 아직 없음** |
 
-Windows에서 실제로 써보고 문제를 발견하시면 이슈나 PR로 알려주세요. 실사용 피드백을 기다리고 있습니다.
+Windows 네이티브 경로는 아직 실사용 승인 대상이 아닙니다. Office 자동화 호출은 COM 연결 전에 차단되도록 설계되어 사용자의 기존 Word/Excel 인스턴스에 붙거나 종료하지 않습니다. Windows에서 실제로 써보고 문제를 발견하시면 이슈나 PR로 알려주세요. 실사용 피드백을 기다리고 있습니다.
+
+로컬·오프라인 작업과 클라우드 공유 폴더(OneDrive/iCloud 등)에서의 동시 작성은 지원하지 않습니다. 한 작업 폴더를 여러 환경이 동시에 쓰는 구성은 정본 잠금·리비전 계약 밖입니다.
 
 ## 학교 공식 지침 원문
 
 저작권이 불확실한 학교 공식 PDF/발췌본은 이 저장소에 포함되어 있지 않습니다. 사용자가 자신의 학교 공식 원문을 직접 준비해서 등록해야 합니다.
+
+## 검증
+
+이 저장소는 회귀 시험과 묶음 무결성 검사를 소스에 포함합니다. Python 3.10 이상이 필요합니다.
+
+```
+python3 -m pip install -r requirements-validation.txt   # 런타임 의존성과 동일, 추가 검증 의존성 없음
+python3 tools/check_bundle.py --root .                  # baseline·검증 묶음 무결성
+python3 tools/run_validation.py                         # 회귀 시험 한 명령
+```
+
+- 시험은 `skills/knuaf-doc/scripts`의 실제 배포 파일을 import합니다. 개발 트리 경로에 의존하지 않습니다.
+- 알려진 baseline 결함은 개별 expected-failure로 표시됩니다. runner가 녹색이어도 제품 PASS를 의미하지 않습니다. 결함 목록은 `docs/validation/REGRESSIONS.md`를 참고하세요.
+- 배포 단계별 수정 묶음(P1, P2 …)은 함께 운영될 때만 완결됩니다. `REGRESSIONS.md`에 `open`으로 남은 항목(예: 재무 대조 항목)은 각 단계의 후속 수정이 붙기 전까지 해당 기능을 승인된 동작으로 간주하지 않습니다. P2에서 잠금 프로토콜 v2(stale 잠금 복구 포함)와 발행 수령증 계층이 착륙했습니다. 잠금 구조·`unlock`/`lock-upgrade` 복구 명령은 `skills/knuaf-doc/references/locking.md`를 참고하세요.
+- CI(`.github/workflows/validation.yml`)는 PR마다 같은 명령을 실행합니다. Windows 잡은 구조 검사만 수행하며, 네이티브 Windows/Office 검증은 아직 수행되지 않았습니다.
+- 묶음·manifest 계약의 상세는 `docs/validation/BUNDLE.md`를 참고하세요.
 
 ## 라이선스
 

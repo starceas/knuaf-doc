@@ -1,0 +1,413 @@
+{
+ "schema_version": "p5-reuse-registry/3",
+ "classifier_version": "p5-classifier/1",
+ "artifact_base": {
+  "kind": "installed_runtime",
+  "declaration": {
+   "relative_root": "..",
+   "marker": "SKILL.md"
+  }
+ },
+ "entries": [
+  {
+   "source_id": "rda.income.national.2024",
+   "class": "common_public_book",
+   "role": "statistical_pack",
+   "source_sha256": [
+    "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab"
+   ],
+   "runtime": "references/benchmark-packs/common/rda-income-national-2024/",
+   "runtime_present": true,
+   "artifacts": [
+    {
+     "relative_path": "common/rda-income-national-2024/manifest.json",
+     "sha256": "b1ec5b7d59b8813175d2ccbb75272fb3a23062774379708921d16bdd75fe380b",
+     "bytes": 103741
+    },
+    {
+     "relative_path": "common/rda-income-national-2024/records.jsonl",
+     "sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+     "bytes": 151561
+    }
+   ],
+   "coverage": {
+    "statistical_observation": {
+     "keys": [
+      {
+       "key_ref": {
+        "kind": "audit_key",
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 1,
+        "raw_line_sha256": "298fba9503617abd2809e777f795d2008f88cc0aba287f4a90639caa6d89b344"
+       },
+       "authority": "verified",
+       "catalog_digest": "555719cf2565b21b5d4321eeaba7433d60807c280e995e7ed319064fb103adb4",
+       "receipt_sha256": null
+      },
+      {
+       "key_ref": {
+        "kind": "audit_key",
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 52,
+        "raw_line_sha256": "b14793e18c7e6fe8bd34b8102dfc14f6e4f2376b640e21069d863f74ce98de07"
+       },
+       "authority": "unverified",
+       "catalog_digest": null,
+       "receipt_sha256": null
+      }
+     ]
+    }
+   },
+   "lineage": [],
+   "build_allowlist_ref": null
+  },
+  {
+   "source_id": "rda.income.regional.2024",
+   "class": "common_public_book",
+   "role": "statistical_pack",
+   "source_sha256": [
+    "b229ca4f83e9152656945090c15ac7f8780c578042854200b9e11b77bf8d3813"
+   ],
+   "runtime": "references/benchmark-packs/common/rda-income-regional-2024/",
+   "runtime_present": true,
+   "artifacts": [
+    {
+     "relative_path": "common/rda-income-regional-2024/manifest.json",
+     "sha256": "3ff92cc170b80a80e4f2f3d4f4076a02b95cbdd2d992f06a7b81dcee27e80267",
+     "bytes": 434713
+    },
+    {
+     "relative_path": "common/rda-income-regional-2024/records.jsonl",
+     "sha256": "c7e38281ccfaaaf40c63ab0880ca5f3ddb1ae18aaa89438ffb7f6da43c87c6df",
+     "bytes": 569359
+    }
+   ],
+   "coverage": {
+    "statistical_observation": {
+     "keys": [
+      {
+       "key_ref": {
+        "kind": "audit_key",
+        "pack_id": "rda.income.regional.2024",
+        "records_file_sha256": "c7e38281ccfaaaf40c63ab0880ca5f3ddb1ae18aaa89438ffb7f6da43c87c6df",
+        "physical_jsonl_line_1based": 1,
+        "raw_line_sha256": "2dfbe78b665a85f3f7339297ec01db40dd11fc2b9f2e30b41b26c10fe2665c4e"
+       },
+       "authority": "unverified",
+       "catalog_digest": null,
+       "receipt_sha256": null
+      }
+     ]
+    }
+   },
+   "lineage": [],
+   "build_allowlist_ref": null
+  },
+  {
+   "source_id": "rda.econ.2025",
+   "class": "common_public_book",
+   "role": "statistical_pack",
+   "source_sha256": [
+    "38e38ffb8b478584b9f76a8b9d98d56c7cdeb8eb18a2200aef26639a72935a83"
+   ],
+   "runtime": "references/benchmark-packs/common/rda-econ-2025/",
+   "runtime_present": true,
+   "artifacts": [
+    {
+     "relative_path": "common/rda-econ-2025/manifest.json",
+     "sha256": "0e3615a59388d092539ad3ca8d4ccfcf9b50271e2f5f54d3af5faed065c669c4",
+     "bytes": 2711315
+    },
+    {
+     "relative_path": "common/rda-econ-2025/records.jsonl",
+     "sha256": "a1cbfb2fa1825f2f0b7594cebe915b26f81cf1c48aee3cafae6c18ceb9267d54",
+     "bytes": 2450976
+    }
+   ],
+   "coverage": {
+    "statistical_observation": {
+     "keys": [
+      {
+       "key_ref": {
+        "kind": "audit_key",
+        "pack_id": "rda.econ.2025",
+        "records_file_sha256": "a1cbfb2fa1825f2f0b7594cebe915b26f81cf1c48aee3cafae6c18ceb9267d54",
+        "physical_jsonl_line_1based": 19,
+        "raw_line_sha256": "dba92f4e6d434dd9d1e3056c7e09e2da6c364bb7fadbe06605996a6793aeb142"
+       },
+       "authority": "verified",
+       "catalog_digest": "0317280900419472ecaf91e01123c9a90edc93ea0b0c45f9a8c3bda2851257a4",
+       "receipt_sha256": null
+      },
+      {
+       "key_ref": {
+        "kind": "audit_key",
+        "pack_id": "rda.econ.2025",
+        "records_file_sha256": "a1cbfb2fa1825f2f0b7594cebe915b26f81cf1c48aee3cafae6c18ceb9267d54",
+        "physical_jsonl_line_1based": 1,
+        "raw_line_sha256": "c37a9e25b4e1c4e9a2b99b6c4ff128c45ffda4e6025ada9ea2ac754fa78b7dcc"
+       },
+       "authority": "unverified",
+       "catalog_digest": null,
+       "receipt_sha256": null
+      }
+     ]
+    }
+   },
+   "lineage": [],
+   "build_allowlist_ref": null
+  },
+  {
+   "source_id": "mafra.specialty.production.2024",
+   "class": "specialty_public_book",
+   "role": "statistical_pack",
+   "source_sha256": [
+    "0974c3d30aa5c1abd795be0af453f4de3bd4e569285c250537897b820d2aa1d5"
+   ],
+   "runtime": "references/benchmark-packs/majors/specialty_crops/mafra-specialty-production-2024/",
+   "runtime_present": true,
+   "artifacts": [
+    {
+     "relative_path": "majors/specialty_crops/mafra-specialty-production-2024/manifest.json",
+     "sha256": "21149f0790dd9381b07f5941ebd82e0db27ff48645e1d18d97f81577625f95cf",
+     "bytes": 2724206
+    },
+    {
+     "relative_path": "majors/specialty_crops/mafra-specialty-production-2024/records.jsonl",
+     "sha256": "fc1c0b35d63a67dc5a794128f873272d72f0850e6d6470e7d9501270eafdd4be",
+     "bytes": 3022476
+    }
+   ],
+   "coverage": {
+    "statistical_observation": {
+     "keys": [
+      {
+       "key_ref": {
+        "kind": "audit_key",
+        "pack_id": "mafra.specialty.production.2024",
+        "records_file_sha256": "fc1c0b35d63a67dc5a794128f873272d72f0850e6d6470e7d9501270eafdd4be",
+        "physical_jsonl_line_1based": 1,
+        "raw_line_sha256": "6eb3ca74d44c8b48e96f0a92903b94ef9aa3417ca897fc91adf5611a55b13155"
+       },
+       "authority": "verified",
+       "catalog_digest": "0550d458a0747be9929b3205c1ff8ff27f15c6f4cff5d9f3cc12372e336c71c8",
+       "receipt_sha256": null
+      },
+      {
+       "key_ref": {
+        "kind": "audit_key",
+        "pack_id": "mafra.specialty.production.2024",
+        "records_file_sha256": "fc1c0b35d63a67dc5a794128f873272d72f0850e6d6470e7d9501270eafdd4be",
+        "physical_jsonl_line_1based": 1441,
+        "raw_line_sha256": "6cbfad35ad6a70cc2850f8583a25e17e4206a6c0a1e73a5b786494a6bc5741cc"
+       },
+       "authority": "unverified",
+       "catalog_digest": null,
+       "receipt_sha256": null
+      }
+     ]
+    }
+   },
+   "lineage": [],
+   "build_allowlist_ref": null
+  },
+  {
+   "source_id": "official-writing-guide-pdf",
+   "class": "school_guideline",
+   "role": "official_guideline",
+   "source_sha256": [
+    "f60b58b7dcde86eab9f273dd50114ac296d009bd60abb940aaa866a54e866de2"
+   ],
+   "runtime": "references/official-toc.md",
+   "runtime_present": true,
+   "artifacts": [
+    {
+     "relative_path": "references/official-toc.md",
+     "sha256": "9c8285baf5be8887c8e9b3dc6322279e0997afb7ceb9ebd522e6f8a141bddac0",
+     "bytes": 5221
+    }
+   ],
+   "coverage": {
+    "writing_rule": {
+     "keys": [
+      {
+       "key_ref": {
+        "kind": "delimited",
+        "value": "official-writing-guide:toc-rules"
+       },
+       "authority": "verified",
+       "catalog_digest": null,
+       "receipt_sha256": null
+      }
+     ]
+    }
+   },
+   "lineage": [],
+   "build_allowlist_ref": null
+  },
+  {
+   "source_id": "official-writing-guide-hwp",
+   "class": "school_guideline",
+   "role": "official_guideline",
+   "source_sha256": [
+    "efcbbc7fe261477ebd8628883733aacd4214fa365974617dced1304d99f6c631"
+   ],
+   "runtime": "references/official-toc.md",
+   "runtime_present": true,
+   "artifacts": [
+    {
+     "relative_path": "references/official-toc.md",
+     "sha256": "9c8285baf5be8887c8e9b3dc6322279e0997afb7ceb9ebd522e6f8a141bddac0",
+     "bytes": 5221
+    }
+   ],
+   "coverage": {},
+   "lineage": [],
+   "build_allowlist_ref": null
+  },
+  {
+   "source_id": "kim-wonseop-exemplar-pdf",
+   "class": "specialty_exemplar",
+   "role": "narrative_exemplar",
+   "source_sha256": [
+    "67c1eb5192f445d914d329748f1e3275bcb3ce5d4757c9d1ca9a6c3caccb4720"
+   ],
+   "runtime": "references/exemplar-quality.md",
+   "runtime_present": true,
+   "artifacts": [
+    {
+     "relative_path": "references/exemplar-quality.md",
+     "sha256": "3d1dbb9d2c605d651f09c6e1656de2d73bcd4ce3b1056b5e593292d05ed4dab0",
+     "bytes": 7432
+    }
+   ],
+   "coverage": {
+    "narrative_reference": {
+     "keys": [
+      {
+       "key_ref": {
+        "kind": "delimited",
+        "value": "kim-wonseop-exemplar:opening-narrative"
+       },
+       "authority": "verified",
+       "catalog_digest": null,
+       "receipt_sha256": null
+      }
+     ]
+    }
+   },
+   "lineage": [
+    {
+     "to": "references/exemplar-quality.md",
+     "relationship": "derived_excerpt",
+     "verification": "verified",
+     "verifier": "p5-r4-reuse-inventory",
+     "receipt_sha256": null
+    }
+   ],
+   "build_allowlist_ref": null
+  },
+  {
+   "source_id": "kim-wonseop-exemplar-hwp",
+   "class": "specialty_exemplar",
+   "role": "narrative_exemplar",
+   "source_sha256": [
+    "906ad6ff04760f30feefad938e1b40a8dcbf7d9f62704784cdfe6cfe5504e13e"
+   ],
+   "runtime": "references/exemplar-quality.md",
+   "runtime_present": true,
+   "artifacts": [
+    {
+     "relative_path": "references/exemplar-quality.md",
+     "sha256": "3d1dbb9d2c605d651f09c6e1656de2d73bcd4ce3b1056b5e593292d05ed4dab0",
+     "bytes": 7432
+    }
+   ],
+   "coverage": {},
+   "lineage": [],
+   "build_allowlist_ref": null
+  },
+  {
+   "source_id": "seo-minseo-finance-xlsx",
+   "class": "specialty_finance_template",
+   "role": "primary_finance_template",
+   "source_sha256": [
+    "457249255929275b3ee55383bdc36897274f08933af3536866a652b29346cd3a"
+   ],
+   "runtime": "references/excel-template.md",
+   "runtime_present": true,
+   "artifacts": [
+    {
+     "relative_path": "references/excel-template.md",
+     "sha256": "4513094e1754191edd810947789f2228fb3b15bfbe1a2531e1b18f6b144739e8",
+     "bytes": 19351
+    }
+   ],
+   "coverage": {
+    "template_structure": {
+     "keys": [
+      {
+       "key_ref": {
+        "kind": "delimited",
+        "value": "seo-minseo-finance:workbook-structure"
+       },
+       "authority": "verified",
+       "catalog_digest": null,
+       "receipt_sha256": null
+      }
+     ]
+    }
+   },
+   "lineage": [
+    {
+     "to": "references/excel-template.md",
+     "relationship": "derived_snapshot",
+     "verification": "verified",
+     "verifier": "p5-r4-reuse-inventory",
+     "receipt_sha256": null
+    }
+   ],
+   "build_allowlist_ref": null
+  },
+  {
+   "source_id": "specialty-22160117-finance-xlsx",
+   "class": "specialty_finance_exemplar",
+   "role": "secondary_finance_exemplar",
+   "source_sha256": [
+    "029f8107ec2fee318544799524f7f4317946666d323d30174c931d3469d02129"
+   ],
+   "runtime": null,
+   "runtime_present": false,
+   "artifacts": [],
+   "coverage": {},
+   "lineage": [],
+   "build_allowlist_ref": null
+  }
+ ],
+ "p4_trust": {
+  "packs_dir": {
+   "relative_root": "benchmark-packs",
+   "marker": "catalog.json"
+  },
+  "packs": {
+   "rda.income.national.2024": {
+    "records_relpath": "common/rda-income-national-2024/records.jsonl",
+    "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0"
+   },
+   "rda.income.regional.2024": {
+    "records_relpath": "common/rda-income-regional-2024/records.jsonl",
+    "records_file_sha256": "c7e38281ccfaaaf40c63ab0880ca5f3ddb1ae18aaa89438ffb7f6da43c87c6df"
+   },
+   "rda.econ.2025": {
+    "records_relpath": "common/rda-econ-2025/records.jsonl",
+    "records_file_sha256": "a1cbfb2fa1825f2f0b7594cebe915b26f81cf1c48aee3cafae6c18ceb9267d54"
+   },
+   "mafra.specialty.production.2024": {
+    "records_relpath": "majors/specialty_crops/mafra-specialty-production-2024/records.jsonl",
+    "records_file_sha256": "fc1c0b35d63a67dc5a794128f873272d72f0850e6d6470e7d9501270eafdd4be"
+   }
+  }
+ }
+}

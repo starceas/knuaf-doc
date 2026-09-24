@@ -190,7 +190,7 @@ def apply(source, map_path, out, receipt_path):
     paths = [p.resolve() for p in (source, map_path, out, receipt_path)]
     if len(set(paths)) != 4: raise ValueError('source, map, output, and receipt must be different')
     if out.exists() or receipt_path.exists(): raise FileExistsError('refusing overwrite')
-    data = json.loads(map_path.read_text())
+    data = json.loads(map_path.read_text(encoding="utf-8"))
     if data.get('schema') != SCHEMA or data.get('source', {}).get('sha256') != sha256(source):
         raise ValueError('print map schema/source hash mismatch')
     plans = data.get('sheets')
@@ -244,18 +244,25 @@ def apply(source, map_path, out, receipt_path):
                         dn.removeChild(dn.firstChild)
                     dn.appendChild(book.createTextNode(ref_str))
                 else:
-                    dn_list = _dom_elements(book, NS_MAIN, 'definedName')
-                    dn = qualified(book, book.documentElement, 'definedName')
+                    broot = book.documentElement
+                    dn = qualified(book, broot, 'definedName')
                     dn.setAttribute('name', '_xlnm.Print_Titles')
                     dn.setAttribute('localSheetId', str(order.index(name)))
                     dn.appendChild(book.createTextNode(ref_str))
-                    if dn_list:
-                        dn_list[-1].parentNode.insertBefore(dn, dn_list[-1].nextSibling)
+                    # OOXML requires <definedName> to live inside a
+                    # <definedNames> container, not as a bare sibling of
+                    # <sheets>. Reuse the container if one already exists
+                    # (e.g. from an existing print_area); otherwise create
+                    # it in schema order, right after <sheets>.
+                    dnc_list = _dom_elements(broot, NS_MAIN, 'definedNames')
+                    if dnc_list:
+                        dnc_list[0].appendChild(dn)
                     else:
-                        broot = book.documentElement
+                        dnc = qualified(book, broot, 'definedNames')
+                        dnc.appendChild(dn)
                         sheets_el = _dom_elements(broot, NS_MAIN, 'sheets')
                         anchor = sheets_el[0] if sheets_el else broot.firstChild
-                        anchor.parentNode.insertBefore(dn, anchor.nextSibling)
+                        anchor.parentNode.insertBefore(dnc, anchor.nextSibling)
             row_heights = _row_heights(plan)
 
             wrap_cells = _wrap_cells(plan)
@@ -354,7 +361,7 @@ def apply(source, map_path, out, receipt_path):
             with zipfile.ZipFile(tmp, 'x', compression=zipfile.ZIP_DEFLATED) as dest:
                 for info in z.infolist(): dest.writestr(info, modifications.get(info.filename, z.read(info.filename)))
             receipt = {'schema':'gg-xlsx-print-receipt/v1', 'source': {'path':str(source.resolve()),'sha256':sha256(source)}, 'map':{'path':str(map_path.resolve()),'sha256':sha256(map_path)}, 'output':{'path':str(out.resolve()),'sha256':sha256(tmp)}, 'changes':changes, 'scope':'explicitly listed sheets only', 'cell_changes':0, 'style_changes':style_changes, 'visual_validation':'required'}
-            rtmp.write_text(json.dumps(receipt, ensure_ascii=False, indent=2))
+            rtmp.write_text(json.dumps(receipt, ensure_ascii=False, indent=2), encoding="utf-8")
             os.replace(tmp, out); published = True
             os.replace(rtmp, receipt_path)
         except Exception:

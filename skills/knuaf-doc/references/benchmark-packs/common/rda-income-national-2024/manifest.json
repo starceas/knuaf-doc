@@ -1,0 +1,2751 @@
+{
+  "schema": "knuaf-doc-benchmark-pack-manifest/1",
+  "pack_id": "rda.income.national.2024",
+  "pack_revision": "1.0.0",
+  "records_file": "records.jsonl",
+  "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+  "total_physical_rows": 102,
+  "status_summary": {
+    "verified_observation_count": 50,
+    "exploratory_count": 1,
+    "quarantined_count": 51
+  },
+  "rows": [
+    {
+      "physical_line": 1,
+      "raw_line_sha256": "298fba9503617abd2809e777f795d2008f88cc0aba287f4a90639caa6d89b344",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 1,
+        "raw_line_sha256": "298fba9503617abd2809e777f795d2008f88cc0aba287f4a90639caa6d89b344"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L1"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 2,
+      "raw_line_sha256": "bc36eb4683d0b4aa30c33218a21d85a78f71d059f3e63eca013533877f280629",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 2,
+        "raw_line_sha256": "bc36eb4683d0b4aa30c33218a21d85a78f71d059f3e63eca013533877f280629"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L2"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 3,
+      "raw_line_sha256": "d9c810a074a31faf14479402ff13ef8ac03cb672c092911951253fbbc3e8dac7",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 3,
+        "raw_line_sha256": "d9c810a074a31faf14479402ff13ef8ac03cb672c092911951253fbbc3e8dac7"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L3"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 4,
+      "raw_line_sha256": "64da411cfa70e23931f69bb59f1cd7ce36263d315fcca762fd8ddb7124f8be1c",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 4,
+        "raw_line_sha256": "64da411cfa70e23931f69bb59f1cd7ce36263d315fcca762fd8ddb7124f8be1c"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L4"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 5,
+      "raw_line_sha256": "79a890d23fdedd3806ee6f70eb380b8e1bb41643d2ed93507b7485eb89453e54",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 5,
+        "raw_line_sha256": "79a890d23fdedd3806ee6f70eb380b8e1bb41643d2ed93507b7485eb89453e54"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L5"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 6,
+      "raw_line_sha256": "1316e2065f3a99cfa25aa183437b6f5b2322316522c26b3c886013b523d3cdb5",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 6,
+        "raw_line_sha256": "1316e2065f3a99cfa25aa183437b6f5b2322316522c26b3c886013b523d3cdb5"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L6"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 7,
+      "raw_line_sha256": "0c88ba691c723c4ae06ab440cffc37a7210ca7e94474d0bdea8898c7730f8be7",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 7,
+        "raw_line_sha256": "0c88ba691c723c4ae06ab440cffc37a7210ca7e94474d0bdea8898c7730f8be7"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L7"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 8,
+      "raw_line_sha256": "ffe84749dafd5681045cf222eacada8c18aa7b869a5ccff88c52f98903253c7d",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 8,
+        "raw_line_sha256": "ffe84749dafd5681045cf222eacada8c18aa7b869a5ccff88c52f98903253c7d"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L8"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 9,
+      "raw_line_sha256": "8251c2b9185e21f938248005137a6326e22898d74d0beedb0c2f8411c8027e14",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 9,
+        "raw_line_sha256": "8251c2b9185e21f938248005137a6326e22898d74d0beedb0c2f8411c8027e14"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L9"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 10,
+      "raw_line_sha256": "75cf2a01f5e286d6a01cf40285058415d42eba626c2d09b718b7729431e5844e",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 10,
+        "raw_line_sha256": "75cf2a01f5e286d6a01cf40285058415d42eba626c2d09b718b7729431e5844e"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L10"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 11,
+      "raw_line_sha256": "ff1935ad01c3157c43c408ec72960b24ec2af36dc1580adae98c76ce0cfb2a0f",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 11,
+        "raw_line_sha256": "ff1935ad01c3157c43c408ec72960b24ec2af36dc1580adae98c76ce0cfb2a0f"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L11"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 12,
+      "raw_line_sha256": "55cc7a851dbd777111af86466da1887fc4059b676533527539ffe9740742cd72",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 12,
+        "raw_line_sha256": "55cc7a851dbd777111af86466da1887fc4059b676533527539ffe9740742cd72"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L12"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 13,
+      "raw_line_sha256": "0597a47a13cc1520d498b618344a4b3c3797e67a21d8fb0e53da2b528caf839c",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 13,
+        "raw_line_sha256": "0597a47a13cc1520d498b618344a4b3c3797e67a21d8fb0e53da2b528caf839c"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L13"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 14,
+      "raw_line_sha256": "74530ae9339195f3d68809ab25f23a977f066ef12bd7ee8935156dbab4123e34",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 14,
+        "raw_line_sha256": "74530ae9339195f3d68809ab25f23a977f066ef12bd7ee8935156dbab4123e34"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L14"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 15,
+      "raw_line_sha256": "b594557971ec78d47783d8fdebfc37bda7ac3eda4ee868a87a2d6c9f3da0f643",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 15,
+        "raw_line_sha256": "b594557971ec78d47783d8fdebfc37bda7ac3eda4ee868a87a2d6c9f3da0f643"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L15"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 16,
+      "raw_line_sha256": "7a37a06cf7ca1f84e5a43496fa8b7c8410f783431f8c067b6eaa8ed6319efd38",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 16,
+        "raw_line_sha256": "7a37a06cf7ca1f84e5a43496fa8b7c8410f783431f8c067b6eaa8ed6319efd38"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L16"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 17,
+      "raw_line_sha256": "f275298fb37b2722fa13b214e2d9232ec40b4762db8f3083b0cc6374209e3fe1",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 17,
+        "raw_line_sha256": "f275298fb37b2722fa13b214e2d9232ec40b4762db8f3083b0cc6374209e3fe1"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L17"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 18,
+      "raw_line_sha256": "c9165055e3b860dc39f572e2cb6cf857afb00dbafadf19da64b124444ecaa7f0",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 18,
+        "raw_line_sha256": "c9165055e3b860dc39f572e2cb6cf857afb00dbafadf19da64b124444ecaa7f0"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L18"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 19,
+      "raw_line_sha256": "afa4a59c93c21377635d916432a9bc1727c7eba5449e05ca02efa606218b4812",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 19,
+        "raw_line_sha256": "afa4a59c93c21377635d916432a9bc1727c7eba5449e05ca02efa606218b4812"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L19"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 20,
+      "raw_line_sha256": "9a7da838a2945c878ac449e44a533c720bcd1c0e9242f080cb0e81fd988dff77",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 20,
+        "raw_line_sha256": "9a7da838a2945c878ac449e44a533c720bcd1c0e9242f080cb0e81fd988dff77"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L20"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 21,
+      "raw_line_sha256": "7b851439fda599a1949e830512773d2f901cd62a034fda47e552ce99fcfb4964",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 21,
+        "raw_line_sha256": "7b851439fda599a1949e830512773d2f901cd62a034fda47e552ce99fcfb4964"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L21"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 22,
+      "raw_line_sha256": "c50ef04ab7244a5a539555b969f8da18fab98f58a0b4198c21b9fdc1140226d9",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 22,
+        "raw_line_sha256": "c50ef04ab7244a5a539555b969f8da18fab98f58a0b4198c21b9fdc1140226d9"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L22"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 23,
+      "raw_line_sha256": "378b50c47e96db40c230ba2caaf8873f764baf31b95b66833c1fe875724f0577",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 23,
+        "raw_line_sha256": "378b50c47e96db40c230ba2caaf8873f764baf31b95b66833c1fe875724f0577"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L23"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 24,
+      "raw_line_sha256": "8c05bdc55e3b6f1d6ec4a674f1e37325fd380007d049bbcf2c8f4fd02343af85",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 24,
+        "raw_line_sha256": "8c05bdc55e3b6f1d6ec4a674f1e37325fd380007d049bbcf2c8f4fd02343af85"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L24"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 25,
+      "raw_line_sha256": "dd0f037243476f15fb40bcd0df91758a1d1d2b356173dd4cc40e453e6ba98e25",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 25,
+        "raw_line_sha256": "dd0f037243476f15fb40bcd0df91758a1d1d2b356173dd4cc40e453e6ba98e25"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L25"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 26,
+      "raw_line_sha256": "b205d3c08a2b28d25e548b8cf3d97bc0e1cc78f8606759271354b8f5fee2cd54",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 26,
+        "raw_line_sha256": "b205d3c08a2b28d25e548b8cf3d97bc0e1cc78f8606759271354b8f5fee2cd54"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L26"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 27,
+      "raw_line_sha256": "2c2d3ba6d919cbe87d317bee3a08160e4d5497d7a72dad218bdfb5be1cc280d4",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 27,
+        "raw_line_sha256": "2c2d3ba6d919cbe87d317bee3a08160e4d5497d7a72dad218bdfb5be1cc280d4"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L27"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 28,
+      "raw_line_sha256": "42ce22cc3eed79e9742f604c91b5129cfb1aa8ca665ce38dc670866df90cc605",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 28,
+        "raw_line_sha256": "42ce22cc3eed79e9742f604c91b5129cfb1aa8ca665ce38dc670866df90cc605"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L28"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 29,
+      "raw_line_sha256": "02c8948b29a1214660a3d9f41bf04e438728abe79d0fd9a01725f429bffa1fe4",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 29,
+        "raw_line_sha256": "02c8948b29a1214660a3d9f41bf04e438728abe79d0fd9a01725f429bffa1fe4"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L29"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 30,
+      "raw_line_sha256": "cc0674d0c2b774a203f858a134794dd183f5ac5451a1e72928ae64c89d7a7329",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 30,
+        "raw_line_sha256": "cc0674d0c2b774a203f858a134794dd183f5ac5451a1e72928ae64c89d7a7329"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L30"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 31,
+      "raw_line_sha256": "db6fb7d74c1987f3e90b4b09f3b545b360a670349e4d6bef52144081b29c17bd",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 31,
+        "raw_line_sha256": "db6fb7d74c1987f3e90b4b09f3b545b360a670349e4d6bef52144081b29c17bd"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L31"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 32,
+      "raw_line_sha256": "d2fe72c99430ad943f8a7481048c6561e2df411628081a6d572fabd8b3877773",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 32,
+        "raw_line_sha256": "d2fe72c99430ad943f8a7481048c6561e2df411628081a6d572fabd8b3877773"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L32"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 33,
+      "raw_line_sha256": "f6de90d235d1848b59c84b555fa3583d70d82d5b522dba13a3d12085fac08c48",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 33,
+        "raw_line_sha256": "f6de90d235d1848b59c84b555fa3583d70d82d5b522dba13a3d12085fac08c48"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L33"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 34,
+      "raw_line_sha256": "8769d5e6e2f22214f6dc72d9d51b3906ca7ebcb5b4310806527dc483e77cce90",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 34,
+        "raw_line_sha256": "8769d5e6e2f22214f6dc72d9d51b3906ca7ebcb5b4310806527dc483e77cce90"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L34"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 35,
+      "raw_line_sha256": "33153d9c7420a09b4e35c8cb46f2dacd860867c88cdd44e0383e69d2eba0df7e",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 35,
+        "raw_line_sha256": "33153d9c7420a09b4e35c8cb46f2dacd860867c88cdd44e0383e69d2eba0df7e"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L35"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 36,
+      "raw_line_sha256": "1d40a23f23898b258ddc7093899782f777e1d68d4605db48eb708de1cf27fe9a",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 36,
+        "raw_line_sha256": "1d40a23f23898b258ddc7093899782f777e1d68d4605db48eb708de1cf27fe9a"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L36"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 37,
+      "raw_line_sha256": "441f24702796f6f70bc90f392d09b2da5e730c19f83df65f6fc2044bf886171a",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 37,
+        "raw_line_sha256": "441f24702796f6f70bc90f392d09b2da5e730c19f83df65f6fc2044bf886171a"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L37"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 38,
+      "raw_line_sha256": "63326abc54783ef620d9b1d56cbd76dbd56c379b2f4d89dbee99331266e94700",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 38,
+        "raw_line_sha256": "63326abc54783ef620d9b1d56cbd76dbd56c379b2f4d89dbee99331266e94700"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L38"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 39,
+      "raw_line_sha256": "b60a6da4a3a156814df8ea7ee902425a826101f2ed12964b3946394eb5279e1c",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 39,
+        "raw_line_sha256": "b60a6da4a3a156814df8ea7ee902425a826101f2ed12964b3946394eb5279e1c"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L39"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 40,
+      "raw_line_sha256": "eecbd07e2151aa56aab5d0559c2515aa24b2436d2972ae7eed0d51fcd9695b66",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 40,
+        "raw_line_sha256": "eecbd07e2151aa56aab5d0559c2515aa24b2436d2972ae7eed0d51fcd9695b66"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L40"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 41,
+      "raw_line_sha256": "eac735cfef4e58a54a46593df4fe27c9dcd9006ecbea53b0de55c4f458e8508d",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 41,
+        "raw_line_sha256": "eac735cfef4e58a54a46593df4fe27c9dcd9006ecbea53b0de55c4f458e8508d"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L41"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 42,
+      "raw_line_sha256": "8e23150aae330499a427fe9f1c0c5f723934a278506fa22c2ffe540207f0a571",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 42,
+        "raw_line_sha256": "8e23150aae330499a427fe9f1c0c5f723934a278506fa22c2ffe540207f0a571"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L42"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 43,
+      "raw_line_sha256": "93dc77583f11523e85bb0b736b524b850760effa850dde9b8098071137d6ac75",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 43,
+        "raw_line_sha256": "93dc77583f11523e85bb0b736b524b850760effa850dde9b8098071137d6ac75"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L43"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 44,
+      "raw_line_sha256": "f849c5faf62ed7eb3bbc63629d1ae74fdea101ccf00c9e7c54e5b31240c7c91f",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 44,
+        "raw_line_sha256": "f849c5faf62ed7eb3bbc63629d1ae74fdea101ccf00c9e7c54e5b31240c7c91f"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L44"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 45,
+      "raw_line_sha256": "c501a3ad7248c5ef2a12d1e54d4de585981a14f1c7ca28845cb888bb19f331b7",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 45,
+        "raw_line_sha256": "c501a3ad7248c5ef2a12d1e54d4de585981a14f1c7ca28845cb888bb19f331b7"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L45"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 46,
+      "raw_line_sha256": "e960c66358618c4c4f3ac9764e3131646688255fb495c2815a875ee1ac90db68",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 46,
+        "raw_line_sha256": "e960c66358618c4c4f3ac9764e3131646688255fb495c2815a875ee1ac90db68"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L46"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 47,
+      "raw_line_sha256": "0e3e41abbcd71914a9472e394dcebd80e0d586fc6ac98258afdd0068e54c09b2",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 47,
+        "raw_line_sha256": "0e3e41abbcd71914a9472e394dcebd80e0d586fc6ac98258afdd0068e54c09b2"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L47"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 48,
+      "raw_line_sha256": "844c5d10d1e9723c1e1018811defea74d5431a79ef9cd4960bff01bcd5739c0f",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 48,
+        "raw_line_sha256": "844c5d10d1e9723c1e1018811defea74d5431a79ef9cd4960bff01bcd5739c0f"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L48"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 49,
+      "raw_line_sha256": "12d7b8737838b570e2c1e96a819d2782f482aa5abf0fd9b2db0d913102362dc7",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 49,
+        "raw_line_sha256": "12d7b8737838b570e2c1e96a819d2782f482aa5abf0fd9b2db0d913102362dc7"
+      },
+      "catalog_status": "exploratory",
+      "source_observation": {
+        "observation_status": "correction_proposed",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L49"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 50,
+      "raw_line_sha256": "90d4cf14e2ce9e73c07bb254d910d77a10d37d4adaf686a191b4a8d55d4400a6",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 50,
+        "raw_line_sha256": "90d4cf14e2ce9e73c07bb254d910d77a10d37d4adaf686a191b4a8d55d4400a6"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L50"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 51,
+      "raw_line_sha256": "5d570a0d76123fc74c740c00033939c625fa2b264c1fb719f6646c3ff81ca8cc",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 51,
+        "raw_line_sha256": "5d570a0d76123fc74c740c00033939c625fa2b264c1fb719f6646c3ff81ca8cc"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "matched",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L51"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 52,
+      "raw_line_sha256": "b14793e18c7e6fe8bd34b8102dfc14f6e4f2376b640e21069d863f74ce98de07",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 52,
+        "raw_line_sha256": "b14793e18c7e6fe8bd34b8102dfc14f6e4f2376b640e21069d863f74ce98de07"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L52"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L052.G01",
+          "L052.G02",
+          "L052.G03",
+          "L052.G04",
+          "L052.G05",
+          "L052.G06"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 53,
+      "raw_line_sha256": "cc494869f86f2abed04ac78a36423685dc4b71cfec3e15c24f6b56aa8b823a77",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 53,
+        "raw_line_sha256": "cc494869f86f2abed04ac78a36423685dc4b71cfec3e15c24f6b56aa8b823a77"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L53"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L053.G01",
+          "L053.G02",
+          "L053.G03",
+          "L053.G04",
+          "L053.G05",
+          "L053.G06"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 54,
+      "raw_line_sha256": "0a2edc4eb5fd17b88adcb4719cdd655b8bfdca5b2a0d59f431f2b8fdd685a6af",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 54,
+        "raw_line_sha256": "0a2edc4eb5fd17b88adcb4719cdd655b8bfdca5b2a0d59f431f2b8fdd685a6af"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L54"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L054.G01",
+          "L054.G02",
+          "L054.G03",
+          "L054.G04",
+          "L054.G05",
+          "L054.G06"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 55,
+      "raw_line_sha256": "8e4e72ea9841bcd32cc887541f6df44b1e964d30b1b0824534aa610589c37f13",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 55,
+        "raw_line_sha256": "8e4e72ea9841bcd32cc887541f6df44b1e964d30b1b0824534aa610589c37f13"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L55"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L055.G01",
+          "L055.G02",
+          "L055.G03",
+          "L055.G04",
+          "L055.G05",
+          "L055.G06",
+          "L055.G07"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 56,
+      "raw_line_sha256": "64a7a1d1016a400188d6e9945cc82f5d0889763fef2ccacf3b0b15726c4f6dbc",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 56,
+        "raw_line_sha256": "64a7a1d1016a400188d6e9945cc82f5d0889763fef2ccacf3b0b15726c4f6dbc"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L56"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L056.G01",
+          "L056.G02",
+          "L056.G03",
+          "L056.G04",
+          "L056.G05",
+          "L056.G06",
+          "L056.G07"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 57,
+      "raw_line_sha256": "b26e2d68e130c099f7fa5fe219cdd70c4023b26cce36ef394d6ca972bbf8e92c",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 57,
+        "raw_line_sha256": "b26e2d68e130c099f7fa5fe219cdd70c4023b26cce36ef394d6ca972bbf8e92c"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L57"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L057.G01",
+          "L057.G02",
+          "L057.G03",
+          "L057.G04",
+          "L057.G05",
+          "L057.G06"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 58,
+      "raw_line_sha256": "00ff915a6b65e244807c89f8e5aeda56ca73704f4b9089d4bfb1b110cf9c9839",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 58,
+        "raw_line_sha256": "00ff915a6b65e244807c89f8e5aeda56ca73704f4b9089d4bfb1b110cf9c9839"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L58"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L058.G01",
+          "L058.G02",
+          "L058.G03",
+          "L058.G04",
+          "L058.G05",
+          "L058.G06"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 59,
+      "raw_line_sha256": "f1290afceef46dccff9d9cbb332f9a3cfcd7c8aa2dea3745630a67216ea79649",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 59,
+        "raw_line_sha256": "f1290afceef46dccff9d9cbb332f9a3cfcd7c8aa2dea3745630a67216ea79649"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L59"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L059.G01",
+          "L059.G02",
+          "L059.G03",
+          "L059.G04",
+          "L059.G05",
+          "L059.G06"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 60,
+      "raw_line_sha256": "66cf4b4edeb26a565151ce0528bc5010c05d03cab410d833cc68406608f37e93",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 60,
+        "raw_line_sha256": "66cf4b4edeb26a565151ce0528bc5010c05d03cab410d833cc68406608f37e93"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L60"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L060.G01",
+          "L060.G02",
+          "L060.G03",
+          "L060.G04",
+          "L060.G05",
+          "L060.G06"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 61,
+      "raw_line_sha256": "47aa30da42f730822cef386dfa18f958d3107b1513cf257ebebfd3543687fe09",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 61,
+        "raw_line_sha256": "47aa30da42f730822cef386dfa18f958d3107b1513cf257ebebfd3543687fe09"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L61"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L061.G01",
+          "L061.G02",
+          "L061.G03",
+          "L061.G04",
+          "L061.G05",
+          "L061.G06"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 62,
+      "raw_line_sha256": "59b0f4532e48969fbd9f9338ce951f57ce1d7ae75fc08e586093921b342f7c16",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 62,
+        "raw_line_sha256": "59b0f4532e48969fbd9f9338ce951f57ce1d7ae75fc08e586093921b342f7c16"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L62"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L062.G01",
+          "L062.G02",
+          "L062.G03",
+          "L062.G04",
+          "L062.G05",
+          "L062.G06"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 63,
+      "raw_line_sha256": "2ed3b1f4d4d52399bc08065260d8243ffd0cdd24025990f7be1fe54d812af114",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 63,
+        "raw_line_sha256": "2ed3b1f4d4d52399bc08065260d8243ffd0cdd24025990f7be1fe54d812af114"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L63"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L063.G01",
+          "L063.G02",
+          "L063.G03",
+          "L063.G04",
+          "L063.G05",
+          "L063.G06",
+          "L063.G07"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 64,
+      "raw_line_sha256": "bbd50ecd177e0de23f316b447dcdc8c6c37cad9343ad264decfa30e3fa63f486",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 64,
+        "raw_line_sha256": "bbd50ecd177e0de23f316b447dcdc8c6c37cad9343ad264decfa30e3fa63f486"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L64"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L064.G01",
+          "L064.G02",
+          "L064.G03",
+          "L064.G04",
+          "L064.G05",
+          "L064.G06",
+          "L064.G07"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 65,
+      "raw_line_sha256": "add677df4156c5b9ea097ac5cd8f547111584f56fee6df88339f082f38c1a2cb",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 65,
+        "raw_line_sha256": "add677df4156c5b9ea097ac5cd8f547111584f56fee6df88339f082f38c1a2cb"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L65"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L065.G01",
+          "L065.G02",
+          "L065.G03",
+          "L065.G04",
+          "L065.G05",
+          "L065.G06",
+          "L065.G07"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 66,
+      "raw_line_sha256": "e6ac95a5e7b967c9b1a3e7afff038e0a65c0583b6ac8b734612f800b2da6daea",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 66,
+        "raw_line_sha256": "e6ac95a5e7b967c9b1a3e7afff038e0a65c0583b6ac8b734612f800b2da6daea"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L66"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L066.G01",
+          "L066.G02",
+          "L066.G03",
+          "L066.G04",
+          "L066.G05",
+          "L066.G06"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 67,
+      "raw_line_sha256": "b63ca856f05372951d2c63a345d53ebac68f3a9e6bf75d89f55b94d8d3289b9c",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 67,
+        "raw_line_sha256": "b63ca856f05372951d2c63a345d53ebac68f3a9e6bf75d89f55b94d8d3289b9c"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L67"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L067.G01",
+          "L067.G02",
+          "L067.G03",
+          "L067.G04",
+          "L067.G05",
+          "L067.G06",
+          "L067.G07"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 68,
+      "raw_line_sha256": "4b8324d3f04085024c6e36881bf270537a0636dedbd93da4c9656cc8e7d57741",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 68,
+        "raw_line_sha256": "4b8324d3f04085024c6e36881bf270537a0636dedbd93da4c9656cc8e7d57741"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L68"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L068.G01",
+          "L068.G02",
+          "L068.G03",
+          "L068.G04",
+          "L068.G05",
+          "L068.G06",
+          "L068.G07"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 69,
+      "raw_line_sha256": "902c179111b7a4f00a3a81cf60c5dbab2e5f9499076e4e3bb3e3736156fae8a0",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 69,
+        "raw_line_sha256": "902c179111b7a4f00a3a81cf60c5dbab2e5f9499076e4e3bb3e3736156fae8a0"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L69"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L069.G01",
+          "L069.G02",
+          "L069.G03",
+          "L069.G04",
+          "L069.G05",
+          "L069.G06"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 70,
+      "raw_line_sha256": "7c13258a639c89fb700119c5c72d97c6e6b6f07e47474edb96e6cecaff6b7162",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 70,
+        "raw_line_sha256": "7c13258a639c89fb700119c5c72d97c6e6b6f07e47474edb96e6cecaff6b7162"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L70"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L070.G01",
+          "L070.G02",
+          "L070.G03",
+          "L070.G04",
+          "L070.G05",
+          "L070.G06"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 71,
+      "raw_line_sha256": "46a351ec7765588a6456730fb1c6e8c907dd629e7f858ea61f2e95d08c7b6e5e",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 71,
+        "raw_line_sha256": "46a351ec7765588a6456730fb1c6e8c907dd629e7f858ea61f2e95d08c7b6e5e"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L71"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L071.G01",
+          "L071.G02",
+          "L071.G03",
+          "L071.G04",
+          "L071.G05",
+          "L071.G06",
+          "L071.G07"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 72,
+      "raw_line_sha256": "830714d365c0ef729f444858a8e047327726d6a97db1aa1b393b940c320d89f2",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 72,
+        "raw_line_sha256": "830714d365c0ef729f444858a8e047327726d6a97db1aa1b393b940c320d89f2"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L72"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L072.G01",
+          "L072.G02",
+          "L072.G03",
+          "L072.G04",
+          "L072.G05",
+          "L072.G06",
+          "L072.G07"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 73,
+      "raw_line_sha256": "22e6433acd0cea619f5bb25ef333e269167d442e2aeaad1a2bee6008df249ca7",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 73,
+        "raw_line_sha256": "22e6433acd0cea619f5bb25ef333e269167d442e2aeaad1a2bee6008df249ca7"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L73"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L073.G01",
+          "L073.G02",
+          "L073.G03",
+          "L073.G04",
+          "L073.G05",
+          "L073.G06"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 74,
+      "raw_line_sha256": "a1d88fb8b13d6281457a1cef1f926a91a680c7acc09555d1b1933ee1327a1a62",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 74,
+        "raw_line_sha256": "a1d88fb8b13d6281457a1cef1f926a91a680c7acc09555d1b1933ee1327a1a62"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L74"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L074.G01",
+          "L074.G02",
+          "L074.G03",
+          "L074.G04",
+          "L074.G05",
+          "L074.G06",
+          "L074.G07"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 75,
+      "raw_line_sha256": "fcbbc6508e675e9da259a4080c87698ae8d3845fc114857b9c121145b4d7b9a7",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 75,
+        "raw_line_sha256": "fcbbc6508e675e9da259a4080c87698ae8d3845fc114857b9c121145b4d7b9a7"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L75"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L075.G01",
+          "L075.G02",
+          "L075.G03",
+          "L075.G04",
+          "L075.G05",
+          "L075.G06",
+          "L075.G07"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 76,
+      "raw_line_sha256": "f38d05a315df25a5618c9385b2a07a613e4fd97d5a55f7fe22f1b526234434eb",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 76,
+        "raw_line_sha256": "f38d05a315df25a5618c9385b2a07a613e4fd97d5a55f7fe22f1b526234434eb"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L76"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L076.G01",
+          "L076.G02",
+          "L076.G03",
+          "L076.G04",
+          "L076.G05",
+          "L076.G06",
+          "L076.G07"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 77,
+      "raw_line_sha256": "906a8a24b26c9a72ca4573487eec9bb3a646c9b97f7a4447d0d42d6221ec9b68",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 77,
+        "raw_line_sha256": "906a8a24b26c9a72ca4573487eec9bb3a646c9b97f7a4447d0d42d6221ec9b68"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L77"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L077.G01",
+          "L077.G02",
+          "L077.G03",
+          "L077.G04",
+          "L077.G05",
+          "L077.G06",
+          "L077.G07"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 78,
+      "raw_line_sha256": "8d8a62d972bd3eafa3b6d06772ce89d34cf76b45359ebb7a191f3a28a7f05493",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 78,
+        "raw_line_sha256": "8d8a62d972bd3eafa3b6d06772ce89d34cf76b45359ebb7a191f3a28a7f05493"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L78"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L078.G01",
+          "L078.G02",
+          "L078.G03",
+          "L078.G04",
+          "L078.G05",
+          "L078.G06",
+          "L078.G07"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 79,
+      "raw_line_sha256": "d01ee020440605eac3d924d5fbd9878f68a11a9abc60a4cab88c0c421727eced",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 79,
+        "raw_line_sha256": "d01ee020440605eac3d924d5fbd9878f68a11a9abc60a4cab88c0c421727eced"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L79"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L079.G01",
+          "L079.G02",
+          "L079.G03",
+          "L079.G04",
+          "L079.G05",
+          "L079.G06"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 80,
+      "raw_line_sha256": "a2045c84707c7cecb9ab5dd9452e7e45ca378c146ce782efb72c2713e1bc8159",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 80,
+        "raw_line_sha256": "a2045c84707c7cecb9ab5dd9452e7e45ca378c146ce782efb72c2713e1bc8159"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L80"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L080.G01",
+          "L080.G02",
+          "L080.G03",
+          "L080.G04",
+          "L080.G05",
+          "L080.G06"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 81,
+      "raw_line_sha256": "ff6affa1af2e7a022ff4e215b31d35476b03e1740133bf86a3a529c7dbe8abd3",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 81,
+        "raw_line_sha256": "ff6affa1af2e7a022ff4e215b31d35476b03e1740133bf86a3a529c7dbe8abd3"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L81"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L081.G01",
+          "L081.G02",
+          "L081.G03",
+          "L081.G04",
+          "L081.G05",
+          "L081.G06"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 82,
+      "raw_line_sha256": "4fd44377668677b95ff95621bd6f6120eb32530d1c45391a536d62ee73e586f2",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 82,
+        "raw_line_sha256": "4fd44377668677b95ff95621bd6f6120eb32530d1c45391a536d62ee73e586f2"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L82"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L082.G01",
+          "L082.G02",
+          "L082.G03",
+          "L082.G04",
+          "L082.G05",
+          "L082.G06",
+          "L082.G07"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 83,
+      "raw_line_sha256": "af3551e1f380549364fcbeb90ee12acfc87236711d3ba137f7a8b74e2ce5a744",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 83,
+        "raw_line_sha256": "af3551e1f380549364fcbeb90ee12acfc87236711d3ba137f7a8b74e2ce5a744"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L83"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L083.G01",
+          "L083.G02",
+          "L083.G03",
+          "L083.G04",
+          "L083.G05",
+          "L083.G06"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 84,
+      "raw_line_sha256": "74e1fae4ee94aa2494c78756b4e49883f35414577cc963628b6980e739f5259e",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 84,
+        "raw_line_sha256": "74e1fae4ee94aa2494c78756b4e49883f35414577cc963628b6980e739f5259e"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L84"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L084.G01",
+          "L084.G02",
+          "L084.G03",
+          "L084.G04",
+          "L084.G05",
+          "L084.G06",
+          "L084.G07"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 85,
+      "raw_line_sha256": "a8e17c8e60e1a618cbdebbf59fd19e225d3b90dd3af66f1b19f694ef24b5bf46",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 85,
+        "raw_line_sha256": "a8e17c8e60e1a618cbdebbf59fd19e225d3b90dd3af66f1b19f694ef24b5bf46"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L85"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L085.G01",
+          "L085.G02",
+          "L085.G03",
+          "L085.G04",
+          "L085.G05",
+          "L085.G06",
+          "L085.G07"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 86,
+      "raw_line_sha256": "51afeb11e3735ac7976faf37994c33eea43f02dbf2e4f71d6c2a09ce13e77c96",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 86,
+        "raw_line_sha256": "51afeb11e3735ac7976faf37994c33eea43f02dbf2e4f71d6c2a09ce13e77c96"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L86"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L086.G01",
+          "L086.G02",
+          "L086.G03",
+          "L086.G04",
+          "L086.G05",
+          "L086.G06",
+          "L086.G07"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 87,
+      "raw_line_sha256": "4d9ec9552249c25aeb8ca7042b0f85f3e24c173f7ef98e7ca48037aca209ca0a",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 87,
+        "raw_line_sha256": "4d9ec9552249c25aeb8ca7042b0f85f3e24c173f7ef98e7ca48037aca209ca0a"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L87"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L087.G01",
+          "L087.G02",
+          "L087.G03",
+          "L087.G04",
+          "L087.G05",
+          "L087.G06",
+          "L087.G07"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 88,
+      "raw_line_sha256": "a79d3abaf9645a1829f0f4b47a5f7129c861f6c0060e6f7cc9c42de78489beaa",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 88,
+        "raw_line_sha256": "a79d3abaf9645a1829f0f4b47a5f7129c861f6c0060e6f7cc9c42de78489beaa"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L88"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L088.G01",
+          "L088.G02",
+          "L088.G03",
+          "L088.G04",
+          "L088.G05",
+          "L088.G06",
+          "L088.G07"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 89,
+      "raw_line_sha256": "5b40b079b6aa942977f02aea577e25b510586ff2bf899757c4c05a3c6e3e856a",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 89,
+        "raw_line_sha256": "5b40b079b6aa942977f02aea577e25b510586ff2bf899757c4c05a3c6e3e856a"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L89"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L089.G01",
+          "L089.G02",
+          "L089.G03",
+          "L089.G04",
+          "L089.G05",
+          "L089.G06",
+          "L089.G07"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 90,
+      "raw_line_sha256": "dc0d0d7692df3d556da08e39164079824e91b4c948849451308c8fafd6d86763",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 90,
+        "raw_line_sha256": "dc0d0d7692df3d556da08e39164079824e91b4c948849451308c8fafd6d86763"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L90"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L090.G01",
+          "L090.G02",
+          "L090.G03",
+          "L090.G04",
+          "L090.G05",
+          "L090.G06",
+          "L090.G07"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 91,
+      "raw_line_sha256": "7d3494479d2effa01c439602fa210b001b8316e1aa0436f0765951299dcbb4cd",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 91,
+        "raw_line_sha256": "7d3494479d2effa01c439602fa210b001b8316e1aa0436f0765951299dcbb4cd"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L91"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L091.G01",
+          "L091.G02",
+          "L091.G03",
+          "L091.G04",
+          "L091.G05",
+          "L091.G06",
+          "L091.G07"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 92,
+      "raw_line_sha256": "bb02aae0cd42e46b3491f0b59ab615f060f153fa1c34d884e41eace853d4d1e5",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 92,
+        "raw_line_sha256": "bb02aae0cd42e46b3491f0b59ab615f060f153fa1c34d884e41eace853d4d1e5"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L92"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L092.G01",
+          "L092.G02",
+          "L092.G03",
+          "L092.G04",
+          "L092.G05",
+          "L092.G06",
+          "L092.G07"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 93,
+      "raw_line_sha256": "b68104f708b83cca06638013fa3daac388c43f3e034a1b1214cd6e917c3c2d66",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 93,
+        "raw_line_sha256": "b68104f708b83cca06638013fa3daac388c43f3e034a1b1214cd6e917c3c2d66"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L93"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L093.G01",
+          "L093.G02",
+          "L093.G03",
+          "L093.G04",
+          "L093.G05",
+          "L093.G06",
+          "L093.G07"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 94,
+      "raw_line_sha256": "98e97711e45bec72a522baddf1f471957e969e418fbb5abbafac082969fa6bf3",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 94,
+        "raw_line_sha256": "98e97711e45bec72a522baddf1f471957e969e418fbb5abbafac082969fa6bf3"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L94"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L094.G01",
+          "L094.G02",
+          "L094.G03",
+          "L094.G04",
+          "L094.G05",
+          "L094.G06",
+          "L094.G07"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 95,
+      "raw_line_sha256": "5fc783fccc5cfd5fdd876d3cb3592629b0e3f62c1ef1924a9e8c270f6843999c",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 95,
+        "raw_line_sha256": "5fc783fccc5cfd5fdd876d3cb3592629b0e3f62c1ef1924a9e8c270f6843999c"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L95"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L095.G01",
+          "L095.G02",
+          "L095.G03",
+          "L095.G04",
+          "L095.G05",
+          "L095.G06",
+          "L095.G07"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 96,
+      "raw_line_sha256": "356bfc5b8a035429b7d847f4a81aabd70cbebedaacacc5f5e05490e7ba23355d",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 96,
+        "raw_line_sha256": "356bfc5b8a035429b7d847f4a81aabd70cbebedaacacc5f5e05490e7ba23355d"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L96"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L096.G01",
+          "L096.G02",
+          "L096.G03",
+          "L096.G04",
+          "L096.G05",
+          "L096.G06",
+          "L096.G07"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 97,
+      "raw_line_sha256": "52df1d23d67ae861755877bb6f2d12d1146815202b607913cabf8bf45e4f79f5",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 97,
+        "raw_line_sha256": "52df1d23d67ae861755877bb6f2d12d1146815202b607913cabf8bf45e4f79f5"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L97"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L097.G01",
+          "L097.G02",
+          "L097.G03",
+          "L097.G04",
+          "L097.G05",
+          "L097.G06",
+          "L097.G07"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 98,
+      "raw_line_sha256": "21427a94326b158ec824c9cf332140dde6ef1c1d05c95499ed32156fc7324afc",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 98,
+        "raw_line_sha256": "21427a94326b158ec824c9cf332140dde6ef1c1d05c95499ed32156fc7324afc"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L98"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L098.G01",
+          "L098.G02",
+          "L098.G03",
+          "L098.G04",
+          "L098.G05",
+          "L098.G06"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 99,
+      "raw_line_sha256": "5af1698fb8f176cadf269dbd166182a8fbbfec2262c2589e9e88d1d0dcc06fc8",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 99,
+        "raw_line_sha256": "5af1698fb8f176cadf269dbd166182a8fbbfec2262c2589e9e88d1d0dcc06fc8"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L99"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L099.G01",
+          "L099.G02",
+          "L099.G03",
+          "L099.G04",
+          "L099.G05",
+          "L099.G06",
+          "L099.G07"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 100,
+      "raw_line_sha256": "d829c5ea2eac39c7bef20712ef37281ee3fcbb962c07e8d26b95cb5a899c8c83",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 100,
+        "raw_line_sha256": "d829c5ea2eac39c7bef20712ef37281ee3fcbb962c07e8d26b95cb5a899c8c83"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L100"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L100.G01",
+          "L100.G02",
+          "L100.G03",
+          "L100.G04",
+          "L100.G05",
+          "L100.G06",
+          "L100.G07"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 101,
+      "raw_line_sha256": "5bc427e9f19e131a22d264860376ed42e082615644a4a60380eb86c9ee5ad731",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 101,
+        "raw_line_sha256": "5bc427e9f19e131a22d264860376ed42e082615644a4a60380eb86c9ee5ad731"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L101"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L101.G01",
+          "L101.G02",
+          "L101.G03",
+          "L101.G04",
+          "L101.G05",
+          "L101.G06",
+          "L101.G07"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    },
+    {
+      "physical_line": 102,
+      "raw_line_sha256": "478e4173d644fe20761953631770a1cad592f387e17b851338ddc9238a7fe347",
+      "audit_key": {
+        "pack_id": "rda.income.national.2024",
+        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+        "physical_jsonl_line_1based": 102,
+        "raw_line_sha256": "478e4173d644fe20761953631770a1cad592f387e17b851338ddc9238a7fe347"
+      },
+      "catalog_status": "quarantined",
+      "source_observation": {
+        "observation_status": "unresolved",
+        "source_pdf_sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+        "prep_receipt_ref": "work/p4-identity-corrections-1/runs/03-audit-clean/AUDIT-JOIN.jsonl#L102"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": {
+        "gaps": [
+          "L102.G01",
+          "L102.G02",
+          "L102.G03",
+          "L102.G04",
+          "L102.G05",
+          "L102.G06",
+          "L102.G07"
+        ],
+        "conflict_groups": [],
+        "unmapped_fields": []
+      }
+    }
+  ]
+}

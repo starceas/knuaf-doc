@@ -1,0 +1,352 @@
+name: validation
+
+# Runs the repository's own integrity check and regression suite on every
+# pull request and every push to main — no PR is skipped. The suite entry
+# point is a single command: tools/run_validation.py.
+#
+# Scope notes:
+# - Python 3.10 is the declared minimum; the matrix also covers the newest
+#   stable interpreter so both ends of the supported range run.
+# - Dependencies are limited to the runtime requirements resolved through
+#   requirements-validation.txt. The validation layer adds no third-party
+#   packages.
+# - The ubuntu job runs the real suite. The windows job is STRUCTURAL ONLY:
+#   it verifies bundle integrity and manifest determinism on Windows, and
+#   does not claim native Windows runtime or Office automation coverage.
+# - This workflow definition has not itself been executed on a hosted
+#   runner yet; that is recorded in docs/validation/BUNDLE.md.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  validate:
+    name: suite (ubuntu, py${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.10', '3.14']
+    steps:
+      - name: Preserve published bytes before checkout
+        shell: bash
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install dependencies
+        run: python -m pip install -r requirements-validation.txt
+      - name: Bundle integrity
+        run: python tools/check_bundle.py --root . --json "$RUNNER_TEMP/check-bundle-report.json"
+      - name: Manifest is current and deterministic
+        run: |
+          python tools/build_validation_bundle.py --root . --check
+          python tools/build_validation_bundle.py --root . --out "$RUNNER_TEMP/export-a" --receipt "$RUNNER_TEMP/receipt-a.json"
+          python tools/build_validation_bundle.py --root . --out "$RUNNER_TEMP/export-b" --receipt "$RUNNER_TEMP/receipt-b.json"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          tmp = Path(os.environ['RUNNER_TEMP'])
+          a = json.loads((tmp / 'receipt-a.json').read_text())
+          b = json.loads((tmp / 'receipt-b.json').read_text())
+          assert a['tree_sha256'] == b['tree_sha256'], 'export not deterministic'
+          print('deterministic export:', a['tree_sha256'])
+          PY
+      - name: Validation suite
+        run: python tools/run_validation.py --json "$RUNNER_TEMP/validation-report.json"
+      - name: Validation report contract
+        if: always()
+        run: |
+          python - <<'PY'
+          import json, os, sys
+          from pathlib import Path
+
+          GATE = "P2-L09-native"
+          GATE_RULE = "P2-L09-native accepted external placeholder"
+          GATE_TEST = ("tests.test_p2_windows.WindowsBandCase."
+                       "test_native_windows_two_process_contention")
+          GATE_REASON = "native Windows+NTFS required \u2014 withheld"
+          GATE_ENV = "native Windows+NTFS"
+          GATE_PLATFORMS = ("darwin", "linux")
+          BASELINE_MAIN = "29abec0ec95369de7ae9e22207349d574f1f46b7"
+          # H9 is fixed in this candidate. Its regression test must be
+          # present and pass; no known-baseline category is accepted.
+          H9_TEST = ("tests.test_finance_scope.FinanceScopeTests."
+                     "test_won_unit_fact_is_checked")
+          CATEGORIES = ("passed", "failed", "skipped",
+                        "known_baseline_defect")
+          SUCCESS_EVENTS = ("subtest_success",)
+
+          def die(msg):
+              print("validation-report contract: REJECTED:", msg)
+              sys.exit(1)
+
+          def strict_load(raw):
+              seen_msg = []
+              def no_dupes(pairs):
+                  obj = {}
+                  for k, v in pairs:
+                      if k in obj:
+                          raise ValueError("duplicate key %r" % k)
+                      obj[k] = v
+                  return obj
+              def no_const(x):
+                  raise ValueError("nonfinite literal %s" % x)
+              return json.loads(raw, object_pairs_hook=no_dupes,
+                                parse_constant=no_const)
+
+          def need(cond, msg):
+              if not cond:
+                  die(msg)
+
+          def is_count(x):
+              return isinstance(x, int) and not isinstance(x, bool)
+
+          def need_int(x, name, lo=None, eq=None):
+              need(is_count(x), "%s must be an integer count, got %r"
+                   % (name, x))
+              if lo is not None:
+                  need(x >= lo, "%s must be >= %d, got %d" % (name, lo, x))
+              if eq is not None:
+                  need(x == eq, "%s must be %d, got %d" % (name, eq, x))
+              return x
+
+          def need_str(x, name):
+              need(isinstance(x, str) and x != "",
+                   "%s must be a nonempty string, got %r" % (name, x))
+              return x
+
+          def need_list(x, name):
+              need(isinstance(x, list),
+                   "%s must be a present list, got %r" % (name, x))
+              return x
+
+          def need_dict(x, name):
+              need(isinstance(x, dict),
+                   "%s must be a present object, got %r" % (name, x))
+              return x
+
+          def need_empty_list(x, name):
+              need(need_list(x, name) == [],
+                   "%s must be an empty list, got %r" % (name, x))
+
+          try:
+              report = strict_load(
+                  (Path(os.environ["RUNNER_TEMP"]) / "validation-report.json")
+                  .read_text(encoding="utf-8"))
+          except Exception as exc:
+              die("report missing, malformed, duplicate-key or nonfinite: "
+                  "%r" % exc)
+          need_dict(report, "report")
+
+          # -- top-level identity: only the default platform-scoped
+          # verdict is acceptable in this workflow. ---------------------
+          for key, want in (("tool", "tools/run_validation.py"),
+                            ("verdict", "ok_platform_scoped"),
+                            ("mode", "default"),
+                            ("validation_scope", "current_platform"),
+                            ("baseline_main", BASELINE_MAIN)):
+              need(isinstance(report.get(key), str)
+                   and report.get(key) == want,
+                   "%s must be %r, got %r" % (key, want, report.get(key)))
+          need_int(report.get("exit_code"), "exit_code", eq=0)
+          need(report.get("platform_validation_completed") is True,
+               "platform_validation_completed must be true")
+          need(report.get("full_validation_completed") is False,
+               "full_validation_completed must be false — "
+               "native gate not run")
+
+          # -- exactly the declared pending external gate ---------------
+          pend = need_list(report.get("pending_external_checks"),
+                           "pending_external_checks")
+          need(len(pend) == 1,
+               "pending_external_checks must list exactly one gate, "
+               "got %d" % len(pend))
+          p = need_dict(pend[0], "pending_external_checks[0]")
+          for key, want in (("gate_id", GATE), ("status", "not_run"),
+                            ("support", "withheld"),
+                            ("implementation", "placeholder_only"),
+                            ("test_id", GATE_TEST),
+                            ("required_environment", GATE_ENV),
+                            ("reason", GATE_REASON)):
+              need(isinstance(p.get(key), str) and p.get(key) == want,
+                   "pending gate %s must be %r, got %r"
+                   % (key, want, p.get(key)))
+          need(p.get("observed_platform") in GATE_PLATFORMS,
+               "pending gate observed_platform %r invalid"
+               % p.get("observed_platform"))
+
+          # -- exactly one approved external skip, exact rule string ----
+          appr = need_list(report.get("approved_external_skips"),
+                           "approved_external_skips")
+          need(len(appr) == 1,
+               "approved_external_skips must list exactly one record, "
+               "got %d" % len(appr))
+          a = need_dict(appr[0], "approved_external_skips[0]")
+          for key, want in (("test", GATE_TEST), ("reason", GATE_REASON),
+                            ("gate_id", GATE), ("rule", GATE_RULE)):
+              need(isinstance(a.get(key), str) and a.get(key) == want,
+                   "approved skip %s must be exactly %r, got %r"
+                   % (key, want, a.get(key)))
+
+          # -- required empty containers must be present lists ----------
+          causes = need_dict(report.get("causes"), "causes")
+          for key in ("unexpected", "incomplete"):
+              need_empty_list(causes.get(key), "causes.%s" % key)
+          for key in ("unapproved_skips", "defect_tests_skipped",
+                      "inventory_warnings"):
+              need_empty_list(report.get(key), key)
+          for key in ("fixed", "deferred", "not_applicable"):
+              need_list(report.get(key), key)
+
+          # -- runtime section: framework and counters reconcile --------
+          rt = need_dict(report.get("runtime"), "runtime")
+          need(rt.get("status") == "completed",
+               "runtime.status must be 'completed', got %r"
+               % rt.get("status"))
+          tests_run = need_int(rt.get("tests_run"), "runtime.tests_run",
+                               lo=1)
+          passed_n = need_int(rt.get("passed"), "runtime.passed", lo=0)
+          known_n = need_int(rt.get("known_baseline_defects"),
+                             "runtime.known_baseline_defects", eq=0)
+          skipped_n = need_int(rt.get("skipped"), "runtime.skipped", eq=1)
+          need_int(rt.get("unexpected_failed"), "runtime.unexpected_failed",
+                   eq=0)
+          need_int(rt.get("failure_events"), "runtime.failure_events",
+                   eq=0)
+          need_empty_list(rt.get("fixture_events"), "runtime.fixture_events")
+
+          acct = need_dict(rt.get("accounting"), "runtime.accounting")
+          need_empty_list(acct.get("errors"), "runtime.accounting.errors")
+          fw = need_dict(acct.get("framework"),
+                         "runtime.accounting.framework")
+          need(fw.get("was_successful") is True,
+               "framework.was_successful must be true")
+          for key in ("failures", "errors", "expectedFailures",
+                      "unexpectedSuccesses"):
+              need_int(fw.get(key), "framework.%s" % key, eq=0)
+          need_int(fw.get("testsRun"), "framework.testsRun", eq=tests_run)
+          need_int(fw.get("skipped"), "framework.skipped", eq=skipped_n)
+
+          # -- entries: one per started parent, independently tallied ---
+          entries = need_list(rt.get("entries"), "runtime.entries")
+          need(len(entries) == tests_run,
+               "entries must equal tests_run: %d != %d"
+               % (len(entries), tests_run))
+          seen = set()
+          tally = {c: 0 for c in CATEGORIES}
+          gate_seen = 0
+          h9_seen = 0
+          for i, raw_e in enumerate(entries):
+              e = need_dict(raw_e, "entries[%d]" % i)
+              t = need_str(e.get("test"), "entries[%d].test" % i)
+              need(t not in seen, "duplicate test id %r" % t)
+              seen.add(t)
+              cat = e.get("category")
+              need(isinstance(cat, str) and cat in CATEGORIES,
+                   "entries[%d] %s: unknown category %r" % (i, t, cat))
+              tally[cat] += 1
+              if t == H9_TEST:
+                  h9_seen += 1
+                  need(cat == "passed", "fixed H9 test must pass: %s" % t)
+              if cat == "known_baseline_defect":
+                  die("known_baseline_defect not allowed for fixed candidate: %s" % t)
+              if t == GATE_TEST:
+                  gate_seen += 1
+                  need(cat == "skipped" and e.get("detail") == GATE_REASON,
+                       "gate id %s must be the exact withheld skip, "
+                       "got category=%r detail=%r"
+                       % (t, cat, e.get("detail")))
+                  need(not e.get("events"),
+                       "native withheld skip parent ran no subtests "
+                       "and must carry no subtest events")
+              elif cat == "skipped":
+                  die("non-gate skipped entry on success report: %s" % t)
+              ev = e.get("events")
+              if ev is not None:
+                  need_list(ev, "entries[%d].events" % i)
+                  for j, raw_x in enumerate(ev):
+                      x = need_dict(raw_x,
+                                    "entries[%d].events[%d]" % (i, j))
+                      xt = x.get("type")
+                      need(isinstance(xt, str) and xt in SUCCESS_EVENTS,
+                           "entries[%d] %s: non-success event type %r "
+                           "cannot appear on an accepted report"
+                           % (i, t, xt))
+                      sub = x.get("subtest")
+                      # The emitted shape is parent + " (" + nonempty
+                      # description + ")" (unittest _SubTest.id()).
+                      need(isinstance(sub, str)
+                           and sub.startswith(t + " (")
+                           and sub.endswith(")")
+                           and len(sub) > len(t) + 3,
+                           "entries[%d] %s: subtest identity %r is not "
+                           "the complete parent (description) shape"
+                           % (i, t, sub))
+          need(gate_seen == 1,
+               "gate test id must appear exactly once in entries, "
+               "got %d" % gate_seen)
+          need(h9_seen == 1,
+               "fixed H9 test id must occur exactly once and pass, "
+               "got %d" % h9_seen)
+          need(tally["passed"] == passed_n,
+               "passed tally %d != runtime.passed %d"
+               % (tally["passed"], passed_n))
+          need(tally["known_baseline_defect"] == known_n,
+               "known tally %d != runtime.known_baseline_defects %d"
+               % (tally["known_baseline_defect"], known_n))
+          need(tally["skipped"] == skipped_n,
+               "skipped tally %d != runtime.skipped %d"
+               % (tally["skipped"], skipped_n))
+          need(tally["failed"] == 0,
+               "failed entries present on success report: %d"
+               % tally["failed"])
+          need(sum(tally.values()) == tests_run,
+               "category tally %d != tests_run %d"
+               % (sum(tally.values()), tests_run))
+
+          # -- readiness ------------------------------------------------
+          need((need_dict(report.get("bundle"), "bundle")
+                .get("status")) == "pass", "bundle status must be pass")
+          need((need_dict(report.get("dependency"), "dependency")
+                .get("ok")) is True, "dependency readiness must be true")
+
+          print("report contract OK: ok_platform_scoped/0, platform "
+                "complete, full=false, sole pending gate P2-L09-native "
+                "(not_run/withheld/placeholder_only); framework, "
+                "entries and events independently reconciled")
+          PY
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-reports-py${{ matrix.python }}
+          path: |
+            ${{ runner.temp }}/check-bundle-report.json
+            ${{ runner.temp }}/validation-report.json
+
+  windows-structural:
+    name: structural only (windows)
+    runs-on: windows-latest
+    steps:
+      - name: Preserve published bytes before checkout
+        shell: bash
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Bundle integrity (stdlib only)
+        run: python tools/check_bundle.py --root .
+      - name: Manifest determinism (stdlib only)
+        run: python tools/build_validation_bundle.py --root . --check
+      # Deliberately no tools/run_validation.py here: Windows runtime,
+      # byte-lock semantics, and Office automation remain unverified.

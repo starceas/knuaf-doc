@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0.0",
+  "description": "references/benchmark-packs/catalog.json의 packs[] 항목과 각 팩 디렉터리의 manifest.json 형태를 설명하는 문서용 스키마다. jsonschema 라이브러리로 검증하지 않는다 — 손으로 읽는 계약서다.",
+  "catalog_pack_entry": {
+    "pack_id": "문자열. 점(.) 구분 (예: rda.income.national.2024). 디렉터리명은 하이픈(-) 구분이므로 혼동 금지.",
+    "kind": "문자열. common | specialty_crops | food_crops | forestry | landscape | vegetables | hort_env_systems | fruit_trees | industrial_insects. common은 전공 무관, 그 외는 major_id와 동일.",
+    "major_id": "문자열 또는 null. common 팩은 null. 전공 팩은 해당 major_id.",
+    "rank": "정수. 1=공통 RDA JSON, 2=활성 전공 팩. 웹(3순위)은 catalog에 없다.",
+    "relpath": "문자열. references/benchmark-packs/ 기준 상대경로 (예: common/rda-income-national-2024/records.jsonl).",
+    "source_sha256": "문자열. 원본 PDF의 SHA-256. 원본 파일 경로는 catalog.json에 절대 포함하지 않는다."
+  },
+  "manifest_json": {
+    "pack_id": "문자열. 상위 catalog 항목과 동일한 pack_id.",
+    "source_sha256": "문자열. SOURCE-META.json에서 그대로 가져온 원본 PDF SHA-256.",
+    "page_count": "정수. 원본 PDF 총 페이지 수 (SOURCE-META.json 그대로).",
+    "schema_version": "문자열. record.schema.json 버전과 동일 (예: 1.0.0).",
+    "record_count": "정수. 해당 records.jsonl의 줄 수.",
+    "promoted_date": "문자열 (YYYY-MM-DD). 이 팩을 references/benchmark-packs/로 승격한 날짜.",
+    "status": "문자열. promoted_pending_opus_verify | verified | empty_slot 중 하나. empty_slot 팩에는 records.jsonl이 없다.",
+    "notes": "문자열 배열, 선택. 승격 시점의 특이사항 (예: Opus 게이트 우회 고지)."
+  },
+  "empty_slot_manifest_json": {
+    "status": "고정값 empty_slot.",
+    "major_id": "문자열. 7개 미완성 전공 중 하나.",
+    "major_label": "문자열. 한글 전공명 (예: 산업곤충전공).",
+    "reason": "문자열. 실데이터 미수집 사유. 가짜 통계를 절대 채우지 않는다."
+  }
+}

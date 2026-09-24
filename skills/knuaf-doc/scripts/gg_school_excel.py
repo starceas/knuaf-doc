@@ -80,7 +80,7 @@ def check_unsupported(spec):
     return None
 
 
-def validate(spec):
+def validate(spec, *, resolver=None):
     if spec.get("profile") != "school_17_sheet_v1":
         raise ValueError("school_17_sheet_v1 만 지원")
     if not spec.get("source_refs"):
@@ -89,6 +89,19 @@ def validate(spec):
         isinstance(r, str) and r.strip() for r in spec["source_refs"]
     ):
         raise ValueError("근거 참조 목록 필요")
+    # P4 reference-fill hook (stage-g005 D09): refs claiming audited
+    # statistical provenance (pack@rev#record / audit_key) must resolve
+    # through the provenance chain — fabricated refs fail closed.
+    stat_result = resolve_statistical_source_refs(
+        spec["source_refs"], resolver=resolver)
+    if stat_result["conflicts"]:
+        raise ValueError(
+            "통계 근거 참조 해석 실패: "
+            + "; ".join(
+                "%s (%s)" % (c["ref"], c["reason"])
+                for c in stat_result["conflicts"]
+            )
+        )
     if spec.get("unit") != "천원" or spec.get("quantity_unit") != "kg":
         raise ValueError("학교 제출 엑셀 단위는 천원, 수량은 kg")
 
@@ -361,7 +374,7 @@ def school_workbook(spec, path):
     sales["O11"] = "[해당 없음: 상품만 판매]"
     sales["C12"] = "하 품"
     sales["O12"] = "[해당 없음: 상품만 판매]"
-    sales["B14"] = f"출처: {', '.join(spec['source_refs'])}"
+    sales["B14"] = f"출처: {', '.join(source_ref_labels(spec['source_refs']))}"
 
     # F9: 나. 유통채널별 판매계획 (5 year pairs across columns D..M)
     sales["B19"] = "나. 유통채널별 판매계획"
@@ -1071,7 +1084,8 @@ def school_workbook(spec, path):
             },
             ensure_ascii=False,
             indent=2,
-        )
+        ),
+        encoding="utf-8",
     )
     return {
         "status": "generated",
@@ -2086,6 +2100,56 @@ def inspect_outputs(root, p, lineage=None):
                 continue
             for item in inspect_school_workbook(path):
                 issues.append(("school_excel_17", item["reason"]))
-        except (OSError, ValueError, KeyError, TypeError) as e:
+        except (
+            OSError,
+            ValueError,
+            KeyError,
+            TypeError,
+            UnicodeError,
+            zipfile.BadZipFile,
+            json.JSONDecodeError,
+        ) as e:
             issues.append(("school_excel_17", str(e)))
     return issues
+
+
+# ---------------------------------------------------------------------------
+# P4 reference-fill section (stage-g005 D07/D09): audited statistical
+# source_refs resolve through the provenance chain in gg_rda_research
+# before any workbook cell is filled.  No P3 workbook formula or
+# calculation path is touched by this section.
+
+
+def resolve_statistical_source_refs(source_refs, *, resolver=None):
+    """P4 adapter: resolve audited statistical refs for reference fill.
+
+    ``resolver`` is an optional ``gg_rda_research.resolver_context()`` dict;
+    omitted -> the deployed packs context is built lazily.  Returns
+    ``{"resolved_source_refs": [...], "conflicts": [...]}`` — conflicts are
+    reported, never silently filled."""
+    import gg_rda_research
+
+    return gg_rda_research.resolve_statistical_refs(
+        source_refs, context=resolver)
+
+
+def source_ref_labels(source_refs, *, resolver=None):
+    """Display labels for the ``출처:`` fill: statistical refs that
+    resolved through the provenance chain carry their physical-line
+    binding ``(line N)``; plain refs render verbatim.  Callers must run
+    ``validate`` (which fails closed on conflicts) before filling."""
+    import gg_rda_research
+
+    labels = []
+    for ref in source_refs:
+        if gg_rda_research.is_statistical_ref(ref):
+            verdict = gg_rda_research.resolve_pack_ref(
+                ref, context=resolver) if isinstance(ref, str) else (
+                gg_rda_research.audit_source_ref(None, ref,
+                                                 context=resolver))
+            if verdict["status"] == "resolved":
+                line = verdict["audit_key"]["physical_jsonl_line_1based"]
+                labels.append("%s (물리행 %d)" % (verdict["source_ref"], line))
+                continue
+        labels.append(ref if isinstance(ref, str) else str(ref))
+    return labels
