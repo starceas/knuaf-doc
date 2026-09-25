@@ -65,6 +65,23 @@ SOURCE_SHA = {
         "5d19b6a2e5dcddccb70c68e39abee8f423bba005c008db7b64076326a17b9c80",
     "kang-finance-workbook-x02":
         "54d4e55cd57bcb1db0fbfaafe2ed42422767f1561959b8a4f3c673daf77d7e78",
+    # hort_env_systems reference entries (identification-only except hx1)
+    "hort-env-ht1-exemplar-pdf":
+        "f700bc9728b6131b89b3f11a97645cfee1bd2c5a3960e53c9c78814dbb4f45a4",
+    "hort-env-ht2-exemplar-pdf":
+        "e5ca9ff33daa1fe8b3e7d56fbd1fff5a6bbba8c3d1e0368bbea1a36a0b3f8e4c",
+    "hort-env-hx1-teaching-xlsx":
+        "e3c9defe376fa74413641408900f6bb656017a389fb9745d9dac221a10951c1c",
+    "hort-env-disaster-rule-pdf":
+        "c8b401cd49103a2d4432153ab45736d6989813864fd5775a70a2974b121099fa",
+    "hort-env-disaster-annex1-pdf":
+        "c50e4d3f4ec3a1911ecd92ff8725738a8472c6bd330afc458305172a39f9d757",
+    "hort-env-facility-spec-xlsx":
+        "be0f9fadd328f134d0350b5e75b69d98c155263e5c7181621fffa07d0d06fa09",
+    "hort-env-ncs-install-pdf":
+        "cb196629e029c7ea0999957f673cc2d40edaf020cf8edf9deaefad0582f5fdd1",
+    "hort-env-ncs-manage-pdf":
+        "08e143bdcf1ca4d49f8e7bbfb01d56bc3c0696169229b79e459a0b1d3813c79b",
 }
 BASELINE_IDS = [
     "rda.income.national.2024", "rda.income.regional.2024",
@@ -772,7 +789,9 @@ class TestI01Matrix(unittest.TestCase):
                     "narrative_exemplar": "narrative_reference",
                     "primary_finance_template": "template_structure",
                     "secondary_finance_exemplar": "template_structure",
-                    "reference_only": "template_structure"}
+                    # reference_only admits no use: any requested kind is
+                    # a role mismatch, so the probe still exercises it.
+                    "reference_only": "narrative_reference"}
         wrong_kind = {"statistical_pack": "writing_rule",
                       "official_guideline": "narrative_reference",
                       "narrative_exemplar": "writing_rule",
@@ -988,8 +1007,7 @@ class TestCommonWorkbooks(unittest.TestCase):
     def test_no_sha256_in_more_than_one_registry_entry(self):
         # F2 (P9-D3): one source hash may never back two entries — the
         # same bytes could resolve through either owner otherwise.  On
-        # this branch no entry carries the H01 hash at all; after the
-        # hort module's registration lands exactly its own entry does.
+        # the hort module owns the H01 hash in exactly one entry.
         owners = {}
         for e in self.reg.document["entries"]:
             for sha in e.get("source_sha256") or []:
