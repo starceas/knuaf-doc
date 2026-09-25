@@ -8,6 +8,7 @@ parent's accept_catalog route on real accepted-catalog bytes.
 Run: python3 -B tests/test_gg_reuse.py
 """
 import json
+import re
 import shutil
 import sys
 import tempfile
@@ -58,8 +59,12 @@ SOURCE_SHA = {
         "906ad6ff04760f30feefad938e1b40a8dcbf7d9f62704784cdfe6cfe5504e13e",
     "seo-minseo-finance-xlsx":
         "457249255929275b3ee55383bdc36897274f08933af3536866a652b29346cd3a",
-    "specialty-22160117-finance-xlsx":
+    "specialty-grad-thesis-finance-xlsx":
         "029f8107ec2fee318544799524f7f4317946666d323d30174c931d3469d02129",
+    "kang-finance-workbook-x01":
+        "5d19b6a2e5dcddccb70c68e39abee8f423bba005c008db7b64076326a17b9c80",
+    "kang-finance-workbook-x02":
+        "54d4e55cd57bcb1db0fbfaafe2ed42422767f1561959b8a4f3c673daf77d7e78",
     # hort_env_systems reference entries (identification-only except hx1)
     "hort-env-ht1-exemplar-pdf":
         "f700bc9728b6131b89b3f11a97645cfee1bd2c5a3960e53c9c78814dbb4f45a4",
@@ -83,7 +88,8 @@ BASELINE_IDS = [
     "rda.econ.2025", "mafra.specialty.production.2024",
     "official-writing-guide-pdf", "official-writing-guide-hwp",
     "kim-wonseop-exemplar-pdf", "kim-wonseop-exemplar-hwp",
-    "seo-minseo-finance-xlsx", "specialty-22160117-finance-xlsx",
+    "seo-minseo-finance-xlsx", "specialty-grad-thesis-finance-xlsx",
+    "kang-finance-workbook-x01", "kang-finance-workbook-x02",
 ]
 
 KIM_KEY = {"kind": "delimited",
@@ -769,7 +775,7 @@ class TestCU7(unittest.TestCase):
 
 class TestI01Matrix(unittest.TestCase):
     """I01.11 — entry x criterion negative matrix over the shipped
-    registry's final bytes (mandatory ten-entry baseline)."""
+    registry's final bytes (mandatory baseline entry set)."""
 
     def test_i01_11_matrix(self):
         reg = registry()
@@ -903,5 +909,113 @@ class TestI01Matrix(unittest.TestCase):
         print(json.dumps(matrix, ensure_ascii=False, indent=1))
 
 
+class TestCommonWorkbooks(unittest.TestCase):
+    """P9: common Kang X01/X02 registration.  P9-D3: the duplicated
+    hort-raw registry entry was removed; the H01 base identity lives in
+    the reference set's known_workbooks, and a hort module registers its
+    own workbook (F2 one-hash-one-entry invariant below)."""
+
+    def setUp(self):
+        self.reg = registry()
+
+    @staticmethod
+    def _keys(*values):
+        return {"template_structure": {
+            v: {"authority": "verified", "catalog_digest": None,
+                "receipt_sha256": None} for v in values}}
+
+    def test_registry_entries(self):
+        entries = {e["source_id"]: e
+                   for e in self.reg.document["entries"]}
+        for sid, sha, key in (
+                ("kang-finance-workbook-x01",
+                 "5d19b6a2e5dcddccb70c68e39abee8f423bba005c008db7b64076326a17b9c80",
+                 "kang-finance-workbook:x01-structure"),
+                ("kang-finance-workbook-x02",
+                 "54d4e55cd57bcb1db0fbfaafe2ed42422767f1561959b8a4f3c673daf77d7e78",
+                 "kang-finance-workbook:x02-structure")):
+            e = entries[sid]
+            self.assertEqual(e["source_sha256"], [sha])
+            self.assertEqual(e["role"], "primary_finance_template")
+            self.assertTrue(e["runtime_present"])
+            claimed = {c["key_ref"]["value"]
+                       for c in e["coverage"]["template_structure"]["keys"]}
+            self.assertEqual(claimed, {key})
+            self.assertEqual(
+                e["lineage"][0]["to"],
+                "references/common-workbooks/"
+                "kang-finance-workbook.json")
+            self.assertEqual(e["lineage"][0]["verification"], "verified")
+        # E1 (P9-D3): the hort module owns registering its own workbook —
+        # the duplicated reference_only entry is gone
+        self.assertNotIn("hort-env-kang-raw-workbook", entries)
+        # D-C rename: no student number in any id
+        self.assertIn("specialty-grad-thesis-finance-xlsx", entries)
+
+    def test_ids_and_labels_carry_no_digit_runs(self):
+        # Hygiene: a 6+ digit run in a public identifier is the shape of
+        # a student number — none may appear in registry source_ids or
+        # in reference-set / extract ref_ids and labels.
+        digit_run = re.compile(r"\d{6,}")
+        names = [e["source_id"]
+                 for e in self.reg.document["entries"]]
+        refset = json.loads((KNUAF_DOC / "references" /
+                             "workbook-reference-set.json").read_text(
+                                 encoding="utf-8"))
+        for block in ("members", "known_workbooks"):
+            for e in refset.get(block, []):
+                names.extend([e["ref_id"], e["label"]])
+        extract = json.loads(
+            (KNUAF_DOC / "references" / "common-workbooks" /
+             "kang-finance-workbook.json").read_text(encoding="utf-8"))
+        for e in extract["members"].values():
+            names.extend([e["ref_id"], *e["labels"].values()])
+        offenders = [n for n in names if digit_run.search(n)]
+        self.assertEqual(offenders, [])
+
+    def test_kang_x01_and_x02_reuse_ready(self):
+        for sid, sha, key in (
+                ("kang-finance-workbook-x01",
+                 "5d19b6a2e5dcddccb70c68e39abee8f423bba005c008db7b64076326a17b9c80",
+                 "kang-finance-workbook:x01-structure"),
+                ("kang-finance-workbook-x02",
+                 "54d4e55cd57bcb1db0fbfaafe2ed42422767f1561959b8a4f3c673daf77d7e78",
+                 "kang-finance-workbook:x02-structure")):
+            kc = self._keys(key)
+            v = gg_reuse.resolve_reuse(
+                sha,
+                {"kind": "template_structure",
+                 "keys": [{"kind": "delimited", "value": key}]},
+                context=ctx(self.reg, key_catalog=kc))
+            self.assertEqual(v["status"], "reuse_ready", v)
+            self.assertEqual(v["selected_entry"], sid)
+            self.assertEqual(
+                v["evidence"]["lineage"]["to"],
+                "references/common-workbooks/"
+                "kang-finance-workbook.json")
+
+    def test_kang_key_without_catalog_claim_conflicts(self):
+        key = {"kind": "delimited",
+               "value": "kang-finance-workbook:x01-structure"}
+        v = gg_reuse.resolve_reuse(
+            "5d19b6a2e5dcddccb70c68e39abee8f423bba005c008db7b64076326a17b9c80",
+            {"kind": "template_structure", "keys": [key]},
+            context=ctx(self.reg))
+        self.assertEqual(v["status"], "blocked")
+        self.assertIn("authority_conflict", v["reasons"])
+
+    def test_no_sha256_in_more_than_one_registry_entry(self):
+        # F2 (P9-D3): one source hash may never back two entries — the
+        # same bytes could resolve through either owner otherwise.  On
+        # the hort module owns the H01 hash in exactly one entry.
+        owners = {}
+        for e in self.reg.document["entries"]:
+            for sha in e.get("source_sha256") or []:
+                owners.setdefault(sha, []).append(e["source_id"])
+        dup = {s: ids for s, ids in owners.items() if len(ids) > 1}
+        self.assertEqual(dup, {})
+
+
 if __name__ == "__main__":
+
     unittest.main(verbosity=2)

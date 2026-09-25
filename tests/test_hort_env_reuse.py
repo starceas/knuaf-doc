@@ -39,10 +39,9 @@ import gg_reuse  # noqa: E402
 # ---------------------------------------------------------------------------
 # Pinned constants -- fixed at IMPL-C writing time against commit a96a5bf
 # (the test never shells out to git).  BASELINE_ENTRY_DIGEST pins
-# sha256(_canonical_json(entry)) for each of the ten a96a5bf entries so the
-# hort additions are proven not to have mutated them.  Re-pin only by
-# recomputing against a DIFFERENT agreed baseline commit -- never from the
-# live file.
+# sha256(_canonical_json(entry)) for nine unchanged a96a5bf entries plus the D3-approved renamed
+# specialty entry (ddccacc), so the hort additions are proven not to have
+# mutated them. Re-pin only against an agreed commit, never the live file.
 
 BASELINE_ENTRY_DIGEST = {
     "rda.income.national.2024":
@@ -63,8 +62,8 @@ BASELINE_ENTRY_DIGEST = {
         "438903e009b0708854f61ca010c14fb8a34f360345b49655e9fc2648d04a3af0",
     "seo-minseo-finance-xlsx":
         "92251ee46930f468b3aa3328cfb289863d8af23bbafdcd8fd9b20bdd6e21c991",
-    "specialty-22160117-finance-xlsx":
-        "c4f9ec778476b771a338841e7cda0994b95412e0e3f6c025578cc185f4534d80",
+    "specialty-grad-thesis-finance-xlsx":
+        "c50902c5513fd5fb0d085983e1a9e001742cfa5e91100517d709d55123fda991",
 }
 
 HORT_IDS = [
@@ -252,7 +251,7 @@ class TestRegistryIntegrity(unittest.TestCase):
                 .encode("utf-8")).hexdigest()
             self.assertEqual(
                 observed, digest,
-                "baseline entry %s mutated by the hort addition" % sid)
+                "pinned entry %s mutated by the hort addition" % sid)
 
 
 class TestHortEntries(unittest.TestCase):

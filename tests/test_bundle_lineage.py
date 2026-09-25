@@ -119,10 +119,9 @@ class RealTreeTests(ContractCase):
                              f"errors: {report['errors']!r}")
             rc = report["runtime_changes"]
             self.assertEqual(rc["declared_count"], rc["verified"])
-            # P9 (hort_env_systems first bundle) declares four new runtime
-            # files on top of P8's 90 (five from the fruit_trees bundle).
-            self.assertEqual(94, rc["verified"])
-            self.assertEqual(70, rc["new_count"])
+            # P10 adds the common XLSX extract to P9's hort module bundle.
+            self.assertEqual(95, rc["verified"])
+            self.assertEqual(71, rc["new_count"])
         else:
             self.assertNotEqual("ok", report["status"])
             self.assertIn("declared_missing", _codes(report))
@@ -138,18 +137,17 @@ class RealTreeTests(ContractCase):
         self.assertEqual(
             _sha(REPO_ROOT / "tools" / "runtime-changes.json"),
             link["spec_sha256"])
-        self.assertEqual("P9", link["stage"])
+        self.assertEqual("P10", link["stage"])
         self.assertEqual("29abec0ec95369de7ae9e22207349d574f1f46b7",
                          link["baseline_main"])
-        # P9's parent is the accepted P8 tree (main a96a5bf, PR #7
-        # fruit_trees first bundle) before the hort_env_systems bundle.
-        self.assertEqual(94, link["change_count"])
-        self.assertEqual(70, link["new_count"])
-        self.assertEqual(70, link["approved_new_files"])
-        self.assertEqual("P8", link["parent_candidate"]["stage"])
-        self.assertEqual(154, link["parent_candidate"]["file_count"])
+        # P10's parent is accepted P9 main (3c83f0c, PR #8).
+        self.assertEqual(95, link["change_count"])
+        self.assertEqual(71, link["new_count"])
+        self.assertEqual(71, link["approved_new_files"])
+        self.assertEqual("P9", link["parent_candidate"]["stage"])
+        self.assertEqual(161, link["parent_candidate"]["file_count"])
         self.assertEqual(
-            "e65a7dd0718004f9aa9068c61dda26096690709aff6c6d425f0eef368ef8d255",
+            "02aed4ea1eb79d4cb1a85bf7fc36b531e5f394f4174c7e9f966e6cf6e1658872",
             link["parent_candidate"]["tree_sha256"])
 
     def test_change_entries_carry_before_after(self):
@@ -172,16 +170,16 @@ class RealTreeTests(ContractCase):
                               {"P1", "P2", "P3", "P5", "P7"})
                 self.assertIn(meta["owner"],
                               {"A", "B", "C", "P4", "D", "P6", "P7", "P8",
-                               "P9"})
+                               "P9", "P10"})
             else:
-                # P2 through P9 new files: pre-declared allowlist only.
+                # P2 through P10 new files: pre-declared allowlist only.
                 self.assertIn(name, approved)
                 self.assertIsNone(meta["before_sha256"])
                 self.assertIn(meta["first_changed"],
-                              {"P2", "P3", "P4", "P5", "P6", "P8", "P9"})
+                              {"P2", "P3", "P4", "P5", "P6", "P8", "P9", "P10"})
                 self.assertIn(meta["owner"],
                               {"A", "B", "C", "S", "P4", "P5", "P6", "P7",
-                               "P8", "P9"})
+                               "P8", "P9", "P10"})
 
 
 class SyntheticLineageTests(ContractCase):

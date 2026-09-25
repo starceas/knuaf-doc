@@ -1,0 +1,452 @@
+{
+  "schema": "knuaf-common-workbook-extract/v1",
+  "members": {
+    "X01": {
+      "ref_id": "X01",
+      "sha256": "5d19b6a2e5dcddccb70c68e39abee8f423bba005c008db7b64076326a17b9c80",
+      "bytes": 115840,
+      "sheets": [
+        "목록",
+        "1. 기초재무상태조사",
+        "2. 중장기영농목표",
+        "3.투자계획",
+        "4. 원리금상환계획",
+        " 5. 판매계획",
+        "6. 생산계획",
+        "7. 영농자재소요계획",
+        "8. 노무비계획",
+        "9 .경비계획",
+        "10. 감가상각비계획 ",
+        "11. 생산원가계획",
+        "12 손익계획",
+        "13. 추정대차대조표",
+        "14. 현금흐름계획",
+        "15.추정소득분석",
+        "참고1. 모델농장분석"
+      ],
+      "labels": {
+        "목록!B2": "작 성 양 식",
+        "1. 기초재무상태조사!B2": "1. 기초 재무상태 조사(2026년 12월 31일 기준)"
+      },
+      "formula_counts": {
+        "목록": 0,
+        "1. 기초재무상태조사": 1,
+        "2. 중장기영농목표": 15,
+        "3.투자계획": 51,
+        "4. 원리금상환계획": 247,
+        " 5. 판매계획": 141,
+        "6. 생산계획": 9,
+        "7. 영농자재소요계획": 45,
+        "8. 노무비계획": 237,
+        "9 .경비계획": 65,
+        "10. 감가상각비계획 ": 217,
+        "11. 생산원가계획": 151,
+        "12 손익계획": 101,
+        "13. 추정대차대조표": 143,
+        "14. 현금흐름계획": 83,
+        "15.추정소득분석": 137,
+        "참고1. 모델농장분석": 0
+      },
+      "sheet_meta": [
+        {
+          "name": "목록",
+          "state": "visible",
+          "tab_color": null,
+          "role": "index",
+          "cell_count": 220,
+          "formula_count": 0
+        },
+        {
+          "name": "1. 기초재무상태조사",
+          "state": "visible",
+          "tab_color": "FFFF0000",
+          "role": "input",
+          "cell_count": 390,
+          "formula_count": 1
+        },
+        {
+          "name": "2. 중장기영농목표",
+          "state": "visible",
+          "tab_color": "FFFFFF00",
+          "role": "linked_calculation",
+          "cell_count": 149,
+          "formula_count": 15
+        },
+        {
+          "name": "3.투자계획",
+          "state": "visible",
+          "tab_color": "FFFF0000",
+          "role": "input",
+          "cell_count": 221,
+          "formula_count": 51
+        },
+        {
+          "name": "4. 원리금상환계획",
+          "state": "visible",
+          "tab_color": "FFFF0000",
+          "role": "input",
+          "cell_count": 362,
+          "formula_count": 247
+        },
+        {
+          "name": " 5. 판매계획",
+          "state": "visible",
+          "tab_color": "FFFF0000",
+          "role": "input",
+          "cell_count": 660,
+          "formula_count": 141
+        },
+        {
+          "name": "6. 생산계획",
+          "state": "visible",
+          "tab_color": "FFFF0000",
+          "role": "input",
+          "cell_count": 569,
+          "formula_count": 9
+        },
+        {
+          "name": "7. 영농자재소요계획",
+          "state": "visible",
+          "tab_color": "FFFF0000",
+          "role": "input",
+          "cell_count": 306,
+          "formula_count": 45
+        },
+        {
+          "name": "8. 노무비계획",
+          "state": "visible",
+          "tab_color": "FFFF0000",
+          "role": "input",
+          "cell_count": 1035,
+          "formula_count": 237
+        },
+        {
+          "name": "9 .경비계획",
+          "state": "visible",
+          "tab_color": "FFFF0000",
+          "role": "input",
+          "cell_count": 408,
+          "formula_count": 65
+        },
+        {
+          "name": "10. 감가상각비계획 ",
+          "state": "visible",
+          "tab_color": "FFFF0000",
+          "role": "input",
+          "cell_count": 566,
+          "formula_count": 217
+        },
+        {
+          "name": "11. 생산원가계획",
+          "state": "visible",
+          "tab_color": "FFFFFF00",
+          "role": "linked_calculation",
+          "cell_count": 296,
+          "formula_count": 151
+        },
+        {
+          "name": "12 손익계획",
+          "state": "visible",
+          "tab_color": "FFFFFF00",
+          "role": "linked_calculation",
+          "cell_count": 523,
+          "formula_count": 101
+        },
+        {
+          "name": "13. 추정대차대조표",
+          "state": "visible",
+          "tab_color": "FF92D050",
+          "role": "linked_calculation",
+          "cell_count": 215,
+          "formula_count": 143
+        },
+        {
+          "name": "14. 현금흐름계획",
+          "state": "visible",
+          "tab_color": "FFFFFF00",
+          "role": "linked_calculation",
+          "cell_count": 166,
+          "formula_count": 83
+        },
+        {
+          "name": "15.추정소득분석",
+          "state": "visible",
+          "tab_color": "FFFFFF00",
+          "role": "linked_calculation",
+          "cell_count": 252,
+          "formula_count": 137
+        },
+        {
+          "name": "참고1. 모델농장분석",
+          "state": "hidden",
+          "tab_color": "FF92D050",
+          "role": "example_only",
+          "cell_count": 42,
+          "formula_count": 0
+        }
+      ],
+      "model_farm_sheet": {
+        "name": "참고1. 모델농장분석",
+        "role": "example_only",
+        "preserved": true,
+        "present": true
+      }
+    },
+    "X02": {
+      "ref_id": "X02",
+      "sha256": "54d4e55cd57bcb1db0fbfaafe2ed42422767f1561959b8a4f3c673daf77d7e78",
+      "bytes": 115760,
+      "sheets": [
+        "목록",
+        "1. 기초재무상태조사",
+        "2. 중장기영농목표",
+        "3.투자계획",
+        "4. 원리금상환계획",
+        " 5. 판매계획",
+        "6. 생산계획",
+        "7. 영농자재소요계획",
+        "8. 노무비계획",
+        "9 .경비계획",
+        "10. 감가상각비계획 ",
+        "11. 생산원가계획",
+        "12 손익계획",
+        "13. 추정대차대조표",
+        "14. 현금흐름계획",
+        "15.추정소득분석",
+        "참고1. 모델농장분석"
+      ],
+      "labels": {
+        "목록!B2": "작 성 양 식",
+        "1. 기초재무상태조사!B2": "1. 기초 재무상태 조사(2025년 12월 31일 기준)"
+      },
+      "formula_counts": {
+        "목록": 0,
+        "1. 기초재무상태조사": 1,
+        "2. 중장기영농목표": 14,
+        "3.투자계획": 52,
+        "4. 원리금상환계획": 247,
+        " 5. 판매계획": 141,
+        "6. 생산계획": 9,
+        "7. 영농자재소요계획": 45,
+        "8. 노무비계획": 237,
+        "9 .경비계획": 65,
+        "10. 감가상각비계획 ": 285,
+        "11. 생산원가계획": 151,
+        "12 손익계획": 101,
+        "13. 추정대차대조표": 143,
+        "14. 현금흐름계획": 84,
+        "15.추정소득분석": 138,
+        "참고1. 모델농장분석": 0
+      },
+      "sheet_meta": [
+        {
+          "name": "목록",
+          "state": "visible",
+          "tab_color": null,
+          "role": "index",
+          "cell_count": 220,
+          "formula_count": 0
+        },
+        {
+          "name": "1. 기초재무상태조사",
+          "state": "visible",
+          "tab_color": "FFFF0000",
+          "role": "input",
+          "cell_count": 390,
+          "formula_count": 1
+        },
+        {
+          "name": "2. 중장기영농목표",
+          "state": "visible",
+          "tab_color": "FFFFFF00",
+          "role": "linked_calculation",
+          "cell_count": 149,
+          "formula_count": 14
+        },
+        {
+          "name": "3.투자계획",
+          "state": "visible",
+          "tab_color": "FFFF0000",
+          "role": "input",
+          "cell_count": 229,
+          "formula_count": 52
+        },
+        {
+          "name": "4. 원리금상환계획",
+          "state": "visible",
+          "tab_color": "FFFF0000",
+          "role": "input",
+          "cell_count": 362,
+          "formula_count": 247
+        },
+        {
+          "name": " 5. 판매계획",
+          "state": "visible",
+          "tab_color": "FFFF0000",
+          "role": "input",
+          "cell_count": 660,
+          "formula_count": 141
+        },
+        {
+          "name": "6. 생산계획",
+          "state": "visible",
+          "tab_color": "FFFF0000",
+          "role": "input",
+          "cell_count": 569,
+          "formula_count": 9
+        },
+        {
+          "name": "7. 영농자재소요계획",
+          "state": "visible",
+          "tab_color": "FFFF0000",
+          "role": "input",
+          "cell_count": 306,
+          "formula_count": 45
+        },
+        {
+          "name": "8. 노무비계획",
+          "state": "visible",
+          "tab_color": "FFFF0000",
+          "role": "input",
+          "cell_count": 1035,
+          "formula_count": 237
+        },
+        {
+          "name": "9 .경비계획",
+          "state": "visible",
+          "tab_color": "FFFF0000",
+          "role": "input",
+          "cell_count": 408,
+          "formula_count": 65
+        },
+        {
+          "name": "10. 감가상각비계획 ",
+          "state": "visible",
+          "tab_color": "FFFF0000",
+          "role": "input",
+          "cell_count": 566,
+          "formula_count": 285
+        },
+        {
+          "name": "11. 생산원가계획",
+          "state": "visible",
+          "tab_color": "FFFFFF00",
+          "role": "linked_calculation",
+          "cell_count": 296,
+          "formula_count": 151
+        },
+        {
+          "name": "12 손익계획",
+          "state": "visible",
+          "tab_color": "FFFFFF00",
+          "role": "linked_calculation",
+          "cell_count": 523,
+          "formula_count": 101
+        },
+        {
+          "name": "13. 추정대차대조표",
+          "state": "visible",
+          "tab_color": "FF92D050",
+          "role": "linked_calculation",
+          "cell_count": 215,
+          "formula_count": 143
+        },
+        {
+          "name": "14. 현금흐름계획",
+          "state": "visible",
+          "tab_color": "FFFFFF00",
+          "role": "linked_calculation",
+          "cell_count": 174,
+          "formula_count": 84
+        },
+        {
+          "name": "15.추정소득분석",
+          "state": "visible",
+          "tab_color": "FFFFFF00",
+          "role": "linked_calculation",
+          "cell_count": 252,
+          "formula_count": 138
+        },
+        {
+          "name": "참고1. 모델농장분석",
+          "state": "hidden",
+          "tab_color": "FF92D050",
+          "role": "example_only",
+          "cell_count": 42,
+          "formula_count": 0
+        }
+      ],
+      "model_farm_sheet": {
+        "name": "참고1. 모델농장분석",
+        "role": "example_only",
+        "preserved": true,
+        "present": true
+      }
+    }
+  },
+  "layout_anchors": {
+    "x01": [
+      {
+        "sheet": "3.투자계획",
+        "cell": "C24",
+        "expect": {
+          "equals": "계"
+        }
+      },
+      {
+        "sheet": "10. 감가상각비계획 ",
+        "cell": "J7",
+        "expect": {
+          "empty": true
+        }
+      }
+    ],
+    "x02": [
+      {
+        "sheet": "3.투자계획",
+        "cell": "C25",
+        "expect": {
+          "equals": "계"
+        }
+      },
+      {
+        "sheet": "10. 감가상각비계획 ",
+        "cell": "J7",
+        "expect": {
+          "present": true
+        }
+      }
+    ]
+  },
+  "variant_delta": {
+    "base": "X01",
+    "variant": "X02",
+    "cell_diffs_total": 215,
+    "cell_diffs_by_sheet": {
+      "1. 기초재무상태조사": 2,
+      "2. 중장기영농목표": 1,
+      "3.투자계획": 45,
+      "7. 영농자재소요계획": 1,
+      "8. 노무비계획": 18,
+      "10. 감가상각비계획 ": 73,
+      "13. 추정대차대조표": 5,
+      "14. 현금흐름계획": 51,
+      "15.추정소득분석": 19
+    },
+    "notes": [
+      {
+        "kind": "inserted_row",
+        "sheet": "3.투자계획",
+        "row": 20,
+        "inserted_label": "복분자 모종",
+        "detail": "X02 inserts one investment row; the input detail block shifts down one row (19–23 to 20–24) and the total row moves C24 to C25"
+      },
+      {
+        "kind": "added_column_block",
+        "sheet": "10. 감가상각비계획 ",
+        "column": "J",
+        "detail": "X02 adds the perennial-asset depreciation column block populated from 3.투자계획!E20; X01 leaves the J cells empty"
+      }
+    ]
+  }
+}
