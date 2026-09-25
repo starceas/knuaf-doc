@@ -11,6 +11,7 @@ import unittest
 
 from tests._harness import (
     ContractCase,
+    bind_major,
     claim_of,
     fact_op,
     runtime,
@@ -40,7 +41,8 @@ def _spec(root):
     spec = root / "paper-spec.json"
     spec.write_text(json.dumps(
         {"author": "합성", "writing_year": 2026, "years": 5,
-         "school_profile": {"mode": "school"}},
+         "school_profile": {"mode": "school", "school": "합성대학교",
+                            "department": "특용작물학과"}},
         ensure_ascii=False), encoding="utf-8")
     return spec
 
@@ -128,16 +130,18 @@ class StagingCleanupTests(ContractCase):
         core = runtime("gg_core")
         root = self.make_project()
         _seed(root)
-        core.export(root, "review")
+        bind_major(root)
+        core.export(root, "review", major_id="specialty_crops")
         self.assertEqual([], _residue(root))
 
     def test_paper_leaves_no_staging_residue(self):
         core = runtime("gg_core")
         root = self.make_project()
         _seed(root)
+        bind_major(root)
         spec = _spec(root)
         core.paper(root, "paper-spec.json", spec.read_bytes(),
-                   "build/paper-out.md")
+                   "build/paper-out.md", major_id="specialty_crops")
         self.assertEqual([], _residue(root))
 
     def test_failed_mutator_leaves_no_residue(self):
@@ -183,13 +187,14 @@ class ManagedPreservedTests(ContractCase):
         core = runtime("gg_core")
         root = self.make_project()
         _seed(root)
+        bind_major(root)
         spec = _spec(root)
         (root / "build").mkdir(exist_ok=True)
         (root / "build" / "blocked").write_text("foreign file")
         with self.assertRaises(core.OperationError) as cm:
             core.paper(
                 root, "paper-spec.json", spec.read_bytes(),
-                "build/blocked/paper.md")
+                "build/blocked/paper.md", major_id="specialty_crops")
         result = cm.exception.result
         self.assertEqual("committed_cleanup_pending",
                          result["commit_state"])
@@ -207,7 +212,7 @@ class ManagedPreservedTests(ContractCase):
         (root / "build" / "blocked").mkdir()
         resumed = core.paper(
             root, "paper-spec.json", spec.read_bytes(),
-            "build/blocked/paper.md")
+            "build/blocked/paper.md", major_id="specialty_crops")
         self.assertEqual("generated", resumed["status"])
         self.assertTrue((root / "build" / "blocked" / "paper.md").is_file())
 

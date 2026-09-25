@@ -86,6 +86,7 @@ import argparse
 import json
 from pathlib import Path
 
+import gg_major_contract as mc
 from gg_core import local
 from gg_frontmatter import frontmatter_lines, normalize_school_profile
 
@@ -595,8 +596,10 @@ def validate_crop_paper_major(spec):
     ``major`` is a historical free-text cover field, so an explicit insect
     major or department is refused without guessing from the paper title.
     The new ``major_id`` field is an explicit contract marker and must name
-    specialty_crops.
-    Unmarked historical crop specs keep their original behavior.
+    specialty_crops.  This is a renderer limit, not the output guard:
+    under policy B (G-B, 2026-09-25) ``paper()`` first requires an explicit
+    major_id via ``mc.authorize_output`` — unmarked specs are held, never
+    rendered.
     """
     profile = spec.get("school_profile")
     profile = profile if isinstance(profile, dict) else {}
@@ -612,8 +615,16 @@ def validate_crop_paper_major(spec):
             raise ValueError("선택 전공의 본문 생성기는 아직 지원되지 않음")
 
 
-def paper(spec):
+def paper(spec, *, context=None):
     """Generate the school paper, with an opt-in normalized frontmatter mode.
+
+    Policy B (G-B, 2026-09-25): every call must carry an explicit output
+    ``context`` (``mc.OutputContext`` or ``{"project_root", "major_id"}``)
+    naming the project root and the explicit major.  ``authorize_output``
+    recomputes the decision from the canonical record — a missing context,
+    a missing/invalid/conflicting major_id, or a binding mismatch is held
+    with ``mc.OutputHeldError`` before any rendering.  There is no unmarked
+    legacy path.
 
     Flat metadata continues to use the historical output byte-for-byte.  When
     ``school_profile`` is supplied, only the logical frontmatter is replaced by
@@ -622,6 +633,7 @@ def paper(spec):
     through a detached legacy-key overlay.
     """
 
+    mc.authorize_output(mc.OUTPUT_SCHOOL_PAPER, context, spec=spec)
     validate_crop_paper_major(spec)
     profile = normalize_school_profile(spec)
     if not profile.get("enabled"):
@@ -656,21 +668,34 @@ def main():
     ap.add_argument("base")
     ap.add_argument("--input", required=True)
     ap.add_argument("--out", default="build/검토전_본문.md")
+    ap.add_argument("--major")
     a = ap.parse_args()
     try:
         src = local(a.base, a.input)
         out = local(a.base, a.out)
         if out.exists():
             raise ValueError("기존 산출물을 덮어쓰지 않음: 새 경로 지정")
-        out.parent.mkdir(parents=True, exist_ok=True)
         spec = json.loads(src.read_text(encoding="utf-8"))
         if not isinstance(spec, dict):
             raise ValueError("논문 입력은 객체여야 함")
         spec.setdefault("school_profile", {"mode": "school", "layout": "forms_1_to_4"})
-        text = paper(spec)
+        # Policy B guard: authorize before mkdir/render; reconfirm just
+        # before the final write (the canonical record may have moved).
+        ctx = mc.output_context(a.base, a.major)
+        auth = mc.authorize_output(
+            mc.OUTPUT_SCHOOL_PAPER, ctx, spec=spec)
+        text = paper(spec, context=ctx)
+        mc.reconfirm_output(auth, ctx)
+        out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(text, encoding="utf-8")
         print(str(out))
         return 0
+    except mc.OutputHeldError as e:
+        print(json.dumps(
+            {"status": "held", "reason": e.reason,
+             "detail": str(e), "guidance": e.detail.get("guidance")},
+            ensure_ascii=False))
+        return 2
     except (ValueError, OSError, KeyError, TypeError) as e:
         print(str(e))
         return 2

@@ -8,7 +8,7 @@ import json
 import subprocess
 import sys
 
-from tests._harness import ContractCase, SCRIPTS, fact_op, runtime, source_op, write_text
+from tests._harness import ContractCase, SCRIPTS, bind_major, fact_op, runtime, source_op, write_text
 
 
 class CommonContractFlowTests(ContractCase):
@@ -98,17 +98,29 @@ class CommonContractFlowTests(ContractCase):
         self.assertEqual(candidates["status"], "not_found")
         self.assertEqual(candidates["observation"]["reason"], "major_pack_empty")
 
+        spec = {"writing_year": 2026,
+                "school_profile": {"school": "한국농수산대학교",
+                                   "department": "곤충학과"}}
+        write_text(root, "insect.json", json.dumps(spec, ensure_ascii=False))
         before = self._tree_bytes(root)
-        paper = self._run(root, "paper", "--input", "unused.json")
+        paper = self._run(root, "paper", "--input", "insect.json",
+                          "--major", "industrial_insects")
         self.assertEqual(paper.returncode, 2)
-        self.assertEqual(json.loads(paper.stdout)["status"], "blocked")
+        self.assertEqual(json.loads(paper.stdout)["reason"],
+                         "unsupported_output")
+        unmarked = self._run(root, "paper", "--input", "insect.json")
+        self.assertEqual(unmarked.returncode, 2)
+        self.assertEqual(json.loads(unmarked.stdout)["reason"],
+                         "major_id_required")
         self.assertEqual(self._tree_bytes(root), before)
 
         core = runtime("gg_core")
         with self.assertRaises(core.OperationError) as caught:
-            core.paper(root, "unused.json", b'{"writing_year":2026}',
-                       "build/insect.md")
-        self.assertEqual(caught.exception.result["reason"], "unsupported_major")
+            core.paper(root, "insect.json",
+                       json.dumps(spec, ensure_ascii=False).encode(),
+                       "build/insect.md", major_id="industrial_insects")
+        self.assertEqual(caught.exception.result["reason"],
+                         "unsupported_output")
         self.assertEqual(self._tree_bytes(root), before)
 
     def test_explicit_insect_spec_is_blocked_even_without_project_binding(self):
@@ -121,28 +133,47 @@ class CommonContractFlowTests(ContractCase):
 
         cli = self._run(root, "paper", "--input", "spec.json")
         self.assertNotEqual(cli.returncode, 0)
-        self.assertEqual(json.loads(cli.stdout)["reason"], "unsupported_major")
+        self.assertEqual(json.loads(cli.stdout)["reason"],
+                         "major_binding_required")
         self.assertEqual(self._tree_bytes(root), before)
 
         core = runtime("gg_core")
         with self.assertRaises(core.OperationError) as caught:
             core.paper(root, "spec.json", spec_bytes, "build/insect.md")
-        self.assertEqual(caught.exception.result["reason"], "unsupported_major")
+        self.assertEqual(caught.exception.result["reason"],
+                         "major_binding_required")
         self.assertEqual(self._tree_bytes(root), before)
 
         school_paper = runtime("gg_school_paper")
-        with self.assertRaises(ValueError):
+        mc = runtime("gg_major_contract")
+        with self.assertRaises(mc.OutputHeldError) as held:
             school_paper.paper(spec)
-        with self.assertRaises(ValueError):
-            school_paper.paper({"writing_year": 2026, "major": "산업곤충"})
-        with self.assertRaises(ValueError):
-            school_paper.paper({"writing_year": 2026, "major": "곤충"})
-        with self.assertRaises(ValueError):
-            school_paper.paper({"writing_year": 2026,
-                                "school_profile": {
-                                    "department": "산업곤충학과"}})
-        self.assertIn("Ⅰ. 머리말", school_paper.paper(
-            {"writing_year": 2026, "title": "합성 특용작물"}))
+        self.assertEqual(held.exception.reason, "output_context_required")
+        # Insect cover labels under a valid specialty ID + binding: the
+        # common guard refuses the label conflict, and the crop renderer's
+        # own limit still rejects the same labels (incl. spaced forms).
+        bound = self.make_project()
+        bind_major(bound)
+        ctx = mc.output_context(bound, "specialty_crops")
+        for insect_cover in ({"major": "산업곤충"}, {"major": "곤충"},
+                             {"major": "산 업 곤 충"},
+                             {"school_profile": {
+                                 "department": "산업곤충학과"}},
+                             {"school_profile": {
+                                 "department": "산업 곤충학과"}}):
+            labelled = dict({"writing_year": 2026}, **insect_cover)
+            with self.subTest(cover=insect_cover):
+                with self.assertRaises(mc.OutputHeldError) as held:
+                    school_paper.paper(labelled, context=ctx)
+                self.assertEqual(held.exception.reason,
+                                 "major_marker_conflict")
+                with self.assertRaises(ValueError):
+                    school_paper.validate_crop_paper_major(labelled)
+        with self.assertRaises(mc.OutputHeldError) as held:
+            school_paper.paper(
+                {"writing_year": 2026, "title": "합성 특용작물"},
+                context=mc.output_context(root))
+        self.assertEqual(held.exception.reason, "major_id_required")
 
     def test_unbound_insect_department_does_not_render_crop_body(self):
         root = self.make_project()
@@ -154,7 +185,7 @@ class CommonContractFlowTests(ContractCase):
         result = self._run(root, "paper", "--input", "insect-dept.json")
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(json.loads(result.stdout)["reason"],
-                         "unsupported_major")
+                         "major_id_required")
         self.assertEqual(self._tree_bytes(root), before)
 
     def test_new_major_marker_requires_binding_and_school_profile(self):

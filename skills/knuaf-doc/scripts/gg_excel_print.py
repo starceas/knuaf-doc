@@ -185,7 +185,12 @@ def _style_wrap_cells(styles_doc, sheet_doc, cells, note_color=None, number_form
     return changes
 
 
-def apply(source, map_path, out, receipt_path):
+def apply(source, map_path, out, receipt_path, *, context=None):
+    """Write a print-layout copy and its receipt.  Policy B: the explicit
+    major is authorized against the canonical binding before anything is
+    read or staged, and reconfirmed just before publication."""
+    import gg_major_contract as mc
+    authorization = mc.authorize_output(mc.OUTPUT_SCHOOL_WORKBOOK, context)
     source, map_path, out, receipt_path = map(Path, (source, map_path, out, receipt_path))
     paths = [p.resolve() for p in (source, map_path, out, receipt_path)]
     if len(set(paths)) != 4: raise ValueError('source, map, output, and receipt must be different')
@@ -360,8 +365,9 @@ def apply(source, map_path, out, receipt_path):
         try:
             with zipfile.ZipFile(tmp, 'x', compression=zipfile.ZIP_DEFLATED) as dest:
                 for info in z.infolist(): dest.writestr(info, modifications.get(info.filename, z.read(info.filename)))
-            receipt = {'schema':'gg-xlsx-print-receipt/v1', 'source': {'path':str(source.resolve()),'sha256':sha256(source)}, 'map':{'path':str(map_path.resolve()),'sha256':sha256(map_path)}, 'output':{'path':str(out.resolve()),'sha256':sha256(tmp)}, 'changes':changes, 'scope':'explicitly listed sheets only', 'cell_changes':0, 'style_changes':style_changes, 'visual_validation':'required'}
+            receipt = {'schema':'gg-xlsx-print-receipt/v1', 'source': {'path':str(source.resolve()),'sha256':sha256(source)}, 'map':{'path':str(map_path.resolve()),'sha256':sha256(map_path)}, 'output':{'path':str(out.resolve()),'sha256':sha256(tmp)}, 'changes':changes, 'scope':'explicitly listed sheets only', 'cell_changes':0, 'style_changes':style_changes, 'visual_validation':'required', 'majorAuthorization': authorization.to_dict()}
             rtmp.write_text(json.dumps(receipt, ensure_ascii=False, indent=2), encoding="utf-8")
+            mc.reconfirm_output(authorization, context)
             os.replace(tmp, out); published = True
             os.replace(rtmp, receipt_path)
         except Exception:
@@ -370,14 +376,22 @@ def apply(source, map_path, out, receipt_path):
             raise
     return receipt
 
-def main():
+def main(argv=None):
+    import gg_major_contract as mc
     p = argparse.ArgumentParser(description=__doc__)
     for name in ('source','map','out','receipt'): p.add_argument('--'+name, required=True, type=Path)
-    a = p.parse_args()
+    p.add_argument('--project', default=None, type=Path, help='프로젝트 정본 폴더')
+    p.add_argument('--major', default=None, help='명시 전공 ID')
+    a = p.parse_args(argv)
+    context = mc.output_context(a.project, a.major) if a.project is not None else None
     try:
-        r = apply(a.source, a.map, a.out, a.receipt)
+        r = apply(a.source, a.map, a.out, a.receipt, context=context)
         print(json.dumps({'status':'layout_copy_created','output':r['output'],'sheets':len(r['changes'])}))
         return 0
+    except mc.OutputHeldError as e:
+        print(json.dumps({'status': 'held', 'reason': e.reason, 'detail': str(e),
+                          'guidance': e.detail.get('guidance')}, ensure_ascii=False))
+        return 2
     except (ValueError, OSError, KeyError, zipfile.BadZipFile) as e:
         print('BLOCK: ' + str(e), file=sys.stderr); return 2
 if __name__ == '__main__': raise SystemExit(main())

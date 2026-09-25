@@ -16,6 +16,7 @@ import unittest
 from tests._harness import (
     ContractCase,
     SCRIPTS,
+    bind_major,
     claim_of,
     fact_op,
     runtime,
@@ -183,7 +184,8 @@ class LedgerContractTests(ContractCase):
         core = runtime("gg_core")
         root = self.make_project()
         _seed(root)
-        value = core.export(root, "draft")
+        bind_major(root)
+        value = core.export(root, "draft", major_id="specialty_crops")
         rid = value["request_id"]
         with self.assertRaises(core.OperationError) as cm:
             core.apply(
@@ -196,8 +198,8 @@ class LedgerContractTests(ContractCase):
 
 
 class AdoptOutputContractTests(ContractCase):
-    def _adopt(self, core, root, *, name="out.xlsx", data=b"BYTES",
-               fmt="xlsx", request_id="adopt-1", companions=None,
+    def _adopt(self, core, root, *, name="out.md", data=b"BYTES",
+               fmt="md", request_id="adopt-1", companions=None,
                mutate=None):
         (root / name).write_bytes(data)
         p = core.load(root)
@@ -207,12 +209,13 @@ class AdoptOutputContractTests(ContractCase):
             mutate(ov)
         return core.adopt_output(
             root, ov, p["revision"], request_id,
-            companion_files=companions or [])
+            companion_files=companions or [], major_id="specialty_crops")
 
     def test_adopt_publishes_managed_copy_and_ledger_kind(self):
         core = runtime("gg_core")
         root = self.make_project()
         _seed(root)
+        bind_major(root)
         value = self._adopt(core, root)
         self.assertEqual("adopted", value["status"])
         managed = Path(value["path"])
@@ -227,29 +230,31 @@ class AdoptOutputContractTests(ContractCase):
         self.assertEqual(managed.name, Path(rec["path"]).name)
         self.assertEqual(value["publication_ref"], rec["publication_ref"])
         # Original bytes are never touched by adoption.
-        self.assertEqual(b"BYTES", (root / "out.xlsx").read_bytes())
+        self.assertEqual(b"BYTES", (root / "out.md").read_bytes())
 
     def test_adopt_dedup_returns_existing(self):
         core = runtime("gg_core")
         root = self.make_project()
         _seed(root)
-        (root / "out.xlsx").write_bytes(b"BYTES")
+        bind_major(root)
+        (root / "out.md").write_bytes(b"BYTES")
         p = core.load(root)
-        ov = _output_value(core, root, "out.xlsx", "xlsx", b"BYTES", p=p)
+        ov = _output_value(core, root, "out.md", "md", b"BYTES", p=p)
         ov["id"] = "wb1"
         # A retry is the identical request — same output_value AND the
         # same expected_revision; anything else is a conflict by design.
         first = core.adopt_output(
-            root, ov, p["revision"], "adopt-1")
+            root, ov, p["revision"], "adopt-1", major_id="specialty_crops")
         second = core.adopt_output(
-            root, ov, p["revision"], "adopt-1")
+            root, ov, p["revision"], "adopt-1", major_id="specialty_crops")
         self.assertEqual("adopted", first["status"])
         self.assertEqual("existing", second["status"])
         self.assertEqual(first["publication_ref"],
                          second["publication_ref"])
         with self.assertRaises(core.OperationError) as cm:
             core.adopt_output(
-                root, dict(ov, format="docx"), p["revision"], "adopt-1")
+                root, dict(ov, format="docx"), p["revision"], "adopt-1",
+                major_id="specialty_crops")
         self.assertEqual("request_id_conflict",
                          cm.exception.result["reason"])
 
@@ -257,6 +262,7 @@ class AdoptOutputContractTests(ContractCase):
         core = runtime("gg_core")
         root = self.make_project()
         _seed(root)
+        bind_major(root)
         for key in ("publication_ref", "revision", "stale"):
             with self.subTest(key=key):
                 with self.assertRaises(core.OperationError) as cm:
@@ -270,6 +276,7 @@ class AdoptOutputContractTests(ContractCase):
         core = runtime("gg_core")
         root = self.make_project()
         _seed(root)
+        bind_major(root)
         with self.assertRaises(core.OperationError) as cm:
             self._adopt(core, root, request_id="bad-h",
                     mutate=lambda ov: ov.__setitem__("file_hash", "0" * 64))
@@ -287,6 +294,7 @@ class AdoptOutputContractTests(ContractCase):
         core = runtime("gg_core")
         root = self.make_project()
         _seed(root)
+        bind_major(root)
         (root / "side.md").write_text("side", encoding="utf-8")
         with self.assertRaises(core.OperationError) as cm:
             self._adopt(
@@ -323,6 +331,7 @@ class AdoptOutputContractTests(ContractCase):
         core = runtime("gg_core")
         root = self.make_project()
         _seed(root)
+        bind_major(root)
 
         def ov_for(path, data, oid):
             # Claims over direct inputs only — an output whose refs
@@ -342,12 +351,12 @@ class AdoptOutputContractTests(ContractCase):
         p = core.load(root)
         core.adopt_output(
             root, ov_for("old.md", b"OLD", "wb0"), p["revision"],
-            "adopt-old")
+            "adopt-old", major_id="specialty_crops")
         (root / "new.md").write_bytes(b"NEW")
         p = core.load(root)
         core.adopt_output(
             root, ov_for("new.md", b"NEW", "wb1"), p["revision"],
-            "adopt-new")
+            "adopt-new", major_id="specialty_crops")
         p = core.load(root)
         old_rec = dict(p["outputs"]["wb0"])
         old_rec["superseded_by"] = "wb1"
@@ -367,8 +376,9 @@ class ExportContractTests(ContractCase):
         core = runtime("gg_core")
         root = self.make_project()
         _seed(root)
+        bind_major(root)
         rev = core.load(root)["revision"]
-        value = core.export(root, "review")
+        value = core.export(root, "review", major_id="specialty_crops")
         self.assertEqual("generated", value["status"])
         requested = Path(value["path"])
         self.assertTrue(requested.is_file())
@@ -378,7 +388,7 @@ class ExportContractTests(ContractCase):
                                   json.loads((bundle / ".publication.json")
                                              .read_bytes())["files"]})
         # dedup: same inputs replay the publication, no second bundle.
-        again = core.export(root, "review")
+        again = core.export(root, "review", major_id="specialty_crops")
         self.assertEqual("existing", again["status"])
         self.assertEqual(value["path"], again["path"])
 
@@ -386,12 +396,13 @@ class ExportContractTests(ContractCase):
         core = runtime("gg_core")
         root = self.make_project()
         _seed(root)
+        bind_major(root)
         rev = core.load(root)["revision"]
         foreign = root / "build" / str(rev) / "review"
         foreign.mkdir(parents=True)
         (foreign / "user-file.txt").write_text("keep me")
         with self.assertRaises(core.OperationError) as cm:
-            core.export(root, "review")
+            core.export(root, "review", major_id="specialty_crops")
         result = cm.exception.result
         self.assertIn(result["commit_state"],
                       ("not_committed", "indeterminate"))
@@ -404,8 +415,10 @@ class ExportContractTests(ContractCase):
         core = runtime("gg_core")
         root = self.make_project()
         _seed(root)
+        bind_major(root)
         with self.assertRaises(core.OperationError) as cm:
-            core.export(root, "submission_candidate")
+            core.export(
+                root, "submission_candidate", major_id="specialty_crops")
         self.assertEqual("not_committed",
                          cm.exception.result["commit_state"])
 
@@ -415,7 +428,8 @@ class PaperContractTests(ContractCase):
         spec = root / "paper-spec.json"
         spec.write_text(json.dumps(
             {"author": "합성", "writing_year": 2026, "years": 5,
-             "school_profile": {"mode": "school"}},
+             "school_profile": {"mode": "school", "school": "합성대학교",
+                                "department": "특용작물학과"}},
             ensure_ascii=False), encoding="utf-8")
         return spec
 
@@ -423,10 +437,11 @@ class PaperContractTests(ContractCase):
         core = runtime("gg_core")
         root = self.make_project()
         _seed(root)
+        bind_major(root)
         spec = self._spec(root)
         value = core.paper(
             root, "paper-spec.json", spec.read_bytes(),
-            "build/paper-out.md")
+            "build/paper-out.md", major_id="specialty_crops")
         self.assertEqual("generated", value["status"])
         self.assertTrue((root / "build/paper-out.md").is_file())
         rev = core.load(root)["revision"]
@@ -435,21 +450,22 @@ class PaperContractTests(ContractCase):
         # identical request replays: no second bundle, same status path.
         again = core.paper(
             root, "paper-spec.json", spec.read_bytes(),
-            "build/paper-out.md")
+            "build/paper-out.md", major_id="specialty_crops")
         self.assertEqual("existing", again["status"])
 
     def test_paper_resume_republishes_only_requested(self):
         core = runtime("gg_core")
         root = self.make_project()
         _seed(root)
+        bind_major(root)
         spec = self._spec(root)
         value = core.paper(
             root, "paper-spec.json", spec.read_bytes(),
-            "build/paper-out.md")
+            "build/paper-out.md", major_id="specialty_crops")
         (root / "build/paper-out.md").unlink()
         resumed = core.paper(
             root, "paper-spec.json", spec.read_bytes(),
-            "build/paper-out.md")
+            "build/paper-out.md", major_id="specialty_crops")
         # The managed bundle is replayed, never republished; the missing
         # requested file is regenerated from it in this call.
         self.assertEqual("generated", resumed["status"])
@@ -1046,12 +1062,14 @@ class CrossKindCollisionTests(ContractCase):
         core = runtime("gg_core")
         root = self.make_project()
         _seed(root)
+        bind_major(root)
         (root / "out.md").write_bytes(b"OUT")
         p = core.load(root)
         ov = _output_value(core, root, "out.md", "md", b"OUT", p=p)
         with self.assertRaises(core.OperationError) as cm:
             core.adopt_output(
-                root, ov, p["revision"], "seed")
+                root, ov, p["revision"], "seed",
+                major_id="specialty_crops")
         self.assertEqual("request_id_conflict",
                          cm.exception.result["reason"])
 
@@ -1059,10 +1077,13 @@ class CrossKindCollisionTests(ContractCase):
         core = runtime("gg_core")
         root = self.make_project()
         _seed(root)
+        bind_major(root)
         (root / "out.md").write_bytes(b"OUT")
         p = core.load(root)
         ov = _output_value(core, root, "out.md", "md", b"OUT", p=p)
-        core.adopt_output(root, ov, p["revision"], "took-this-id")
+        core.adopt_output(
+            root, ov, p["revision"], "took-this-id",
+            major_id="specialty_crops")
         with self.assertRaises(core.OperationError) as cm:
             core.apply(
                 root,
@@ -1079,12 +1100,16 @@ class CrossKindCollisionTests(ContractCase):
         core = runtime("gg_core")
         root = self.make_project()
         _seed(root)
-        export_id = core.export(root, "draft")["request_id"]
+        bind_major(root)
+        export_id = core.export(
+            root, "draft", major_id="specialty_crops")["request_id"]
         (root / "out.md").write_bytes(b"OUT")
         p = core.load(root)
         ov = _output_value(core, root, "out.md", "md", b"OUT", p=p)
         with self.assertRaises(core.OperationError) as cm:
-            core.adopt_output(root, ov, p["revision"], export_id)
+            core.adopt_output(
+                root, ov, p["revision"], export_id,
+                major_id="specialty_crops")
         self.assertEqual("request_id_conflict",
                          cm.exception.result["reason"])
 
@@ -1094,10 +1119,12 @@ class CrossKindCollisionTests(ContractCase):
         core = runtime("gg_core")
         root = self.make_project()
         _seed(root)
+        bind_major(root)
         (root / "out.md").write_bytes(b"OUT")
         p = core.load(root)
         ov = _output_value(core, root, "out.md", "md", b"OUT", p=p)
-        core.adopt_output(root, ov, p["revision"], "adopt-x")
+        core.adopt_output(
+            root, ov, p["revision"], "adopt-x", major_id="specialty_crops")
         p2 = core.load(root)
         self.assertEqual({"hash", "revision"}, set(p2["requests"]["seed"]))
         self.assertEqual(
@@ -1486,10 +1513,13 @@ class OutputPublicationGateTests(ContractCase):
         core = runtime("gg_core")
         root = self.make_project()
         _seed(root)
+        bind_major(root)
         (root / "ok.md").write_bytes(b"OK")
         p = core.load(root)
         ov = _output_value(core, root, "ok.md", "md", b"OK", p=p)
-        core.adopt_output(root, ov, p["revision"], "adopt-gate")
+        core.adopt_output(
+            root, ov, p["revision"], "adopt-gate",
+            major_id="specialty_crops")
         rows = [
             r for r in core.checks(root, core.load(root))
             if r["check_id"] == "output_publication"]

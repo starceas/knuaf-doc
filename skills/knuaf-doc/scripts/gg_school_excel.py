@@ -234,7 +234,13 @@ def validate(spec, *, resolver=None):
     return years, values
 
 
-def school_workbook(spec, path):
+def school_workbook(spec, path, *, context=None):
+    """Guarded school workbook build: authorize before any output,
+    reconfirm just before the file is saved (policy B)."""
+    import gg_major_contract as mc
+
+    authorization = mc.authorize_output(
+        mc.OUTPUT_SCHOOL_WORKBOOK, context, spec=spec)
     from openpyxl import Workbook
     from openpyxl.styles import Alignment, Font
     from openpyxl.utils import get_column_letter
@@ -1068,6 +1074,7 @@ def school_workbook(spec, path):
     path = Path(path)
     if path.exists():
         raise ValueError("기존 XLSX 덮어쓰기 금지")
+    mc.reconfirm_output(authorization, context)
     path.parent.mkdir(parents=True, exist_ok=True)
     wb.save(path)
     path.with_suffix(".manifest.json").write_text(
@@ -1080,6 +1087,7 @@ def school_workbook(spec, path):
                 "input_hash": digest(spec),
                 "recalculation": "not_run",
                 "rendering": "not_run",
+                "major_authorization": authorization.to_dict(),
                 "notice": "학교 17시트 구조·수식 생성. 재계산·인쇄·본문 교차는 별도 검사.",
             },
             ensure_ascii=False,

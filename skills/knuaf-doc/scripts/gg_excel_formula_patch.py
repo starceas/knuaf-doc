@@ -175,7 +175,18 @@ def _expand_targeted_shared(root, dom, dom_cells, patches, sheet):
     return expanded
 
 
-def _patch_copy(source: Path, map_path: Path, out: Path) -> dict:
+def patch_copy(source: Path, map_path: Path, out: Path, *, context=None) -> dict:
+    """Guarded public entry: authorize before any write, then run the
+    existing patch engine (policy B)."""
+    import gg_major_contract as mc
+
+    authorization = mc.authorize_output(mc.OUTPUT_SCHOOL_WORKBOOK, context)
+    return _patch_copy(source, map_path, out,
+                       _authorization=authorization, _context=context)
+
+
+def _patch_copy(source: Path, map_path: Path, out: Path, *,
+                _authorization=None, _context=None) -> dict:
     if out.exists():
         raise FileExistsError(f"refusing to overwrite output: {out}")
     data = _json(map_path)
@@ -321,9 +332,14 @@ def _patch_copy(source: Path, map_path: Path, out: Path) -> dict:
         except KeyError:
             raise ValueError("workbook.xml missing; cannot set recalculation flags")
 
+        if _authorization is not None:
+            import gg_major_contract as mc
+            mc.reconfirm_output(_authorization, _context)
         with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as zout:
             for info in zin.infolist():
                 zout.writestr(info, modified.get(info.filename, zin.read(info.filename)))
+    if _authorization is not None:
+        receipt["majorAuthorization"] = _authorization.to_dict()
     receipt["output"].update({"path": str(out.resolve()), "sha256": sha256(out), "size": out.stat().st_size, "status": "patched"})
     return receipt
 
@@ -334,6 +350,9 @@ def cli(argv: list[str]) -> int:
     parser.add_argument("--map", required=True, type=Path)
     parser.add_argument("--out", required=True, type=Path)
     parser.add_argument("--receipt", required=True, type=Path)
+    parser.add_argument("--project", default=None, type=Path,
+                        help="프로젝트 정본 폴더")
+    parser.add_argument("--major", default=None, help="명시 전공 ID")
     args = parser.parse_args(argv)
     source, out, receipt_path = args.source.resolve(), args.out.resolve(), args.receipt.resolve()
     if len({source, out, receipt_path}) != 3:
@@ -344,11 +363,21 @@ def cli(argv: list[str]) -> int:
     try:
         if out.exists() or receipt_path.exists() or staged_out.exists() or staged_receipt.exists():
             raise FileExistsError("refusing to overwrite output, receipt, or staging path")
+        import gg_major_contract as mc
+        context = (mc.output_context(args.project, args.major)
+                   if args.project is not None else None)
+        # Policy B pre-check before any directory/staging is created.
+        mc.authorize_output(mc.OUTPUT_SCHOOL_WORKBOOK, context)
         out.parent.mkdir(parents=True, exist_ok=True)
-        result = _patch_copy(source, args.map.resolve(), staged_out)
+        result = patch_copy(source, args.map.resolve(), staged_out,
+                            context=context)
         result["output"]["path"] = str(out)
         staged_receipt.parent.mkdir(parents=True, exist_ok=True)
         staged_receipt.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+        # Reconfirm after the receipt is staged, right before the first
+        # final replace (policy B).
+        mc.reconfirm_output(
+            mc.OutputAuthorization(**result["majorAuthorization"]), context)
         published = False
         try:
             os.replace(staged_out, out); published = True
@@ -359,11 +388,21 @@ def cli(argv: list[str]) -> int:
         print(json.dumps({"status": "patched", "out": result["output"], "patched": len(result["patched"]),
                           "formulaCachesInvalidated": result["formulaCachesInvalidated"]}, ensure_ascii=False))
         return 0
-    except (OSError, ValueError, RuntimeError, zipfile.BadZipFile, ET.ParseError) as exc:
+    except Exception as exc:
         for p in (staged_out, staged_receipt):
             if p.exists(): p.unlink()
-        print(f"BLOCK: {exc}", file=sys.stderr)
-        return 2
+        import gg_major_contract as mc
+        if isinstance(exc, mc.OutputHeldError):
+            print(json.dumps({"status": "held", "reason": exc.reason,
+                              "detail": str(exc),
+                              "guidance": exc.detail.get("guidance")},
+                             ensure_ascii=False))
+            return 2
+        if isinstance(exc, (OSError, ValueError, RuntimeError,
+                            zipfile.BadZipFile, ET.ParseError)):
+            print(f"BLOCK: {exc}", file=sys.stderr)
+            return 2
+        raise
 
 
 if __name__ == "__main__":

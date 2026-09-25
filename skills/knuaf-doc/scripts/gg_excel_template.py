@@ -474,7 +474,10 @@ def _serialize_dom(xml_bytes: bytes, source_name: str) -> minidom.Document:
     return document
 
 
-def blank_copy(source: Path, map_path: Path, out: Path) -> dict:
+def blank_copy(source: Path, map_path: Path, out: Path, *, context=None) -> dict:
+    import gg_major_contract as mc
+
+    authorization = mc.authorize_output(mc.OUTPUT_SCHOOL_WORKBOOK, context)
     if out.exists():
         raise FileExistsError(f"refusing to overwrite output: {out}")
     map_data = json.loads(map_path.read_text(encoding="utf-8"))
@@ -620,10 +623,12 @@ def blank_copy(source: Path, map_path: Path, out: Path) -> dict:
             modified["xl/workbook.xml"] = wb_dom.toxml(encoding="utf-8")
         except KeyError:
             receipt["errors"].append("workbook.xml missing; calculation mode not updated")
+        mc.reconfirm_output(authorization, context)
         with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as zout:
             for info in zin.infolist():
                 data = modified.get(info.filename, zin.read(info.filename))
                 zout.writestr(info, data)
+    receipt["majorAuthorization"] = authorization.to_dict()
     receipt["output"]["sha256"] = sha256(out)
     receipt["output"]["size"] = out.stat().st_size
     # Any retained text outside the map (labels, notes, or legacy sample prose)
@@ -647,6 +652,9 @@ def cli(argv: list[str]) -> int:
     c.add_argument("--map", required=True, type=Path)
     c.add_argument("--out", required=True, type=Path)
     c.add_argument("--receipt", type=Path)
+    c.add_argument("--project", default=None, type=Path,
+                   help="프로젝트 정본 폴더")
+    c.add_argument("--major", default=None, help="명시 전공 ID")
     args = p.parse_args(argv)
     try:
         if args.cmd == "inspect":
@@ -668,11 +676,19 @@ def cli(argv: list[str]) -> int:
                 raise FileExistsError("staging path already exists")
             published_out = False
             try:
-                r = blank_copy(resolve_source(args.source).resolve(), args.map.resolve(), staged_out.resolve())
+                import gg_major_contract as mc
+                context = (mc.output_context(args.project, args.major)
+                           if args.project is not None else None)
+                r = blank_copy(resolve_source(args.source).resolve(), args.map.resolve(), staged_out.resolve(),
+                               context=context)
                 r["output"]["path"] = str(args.out.resolve())
                 if staged_receipt:
                     staged_receipt.parent.mkdir(parents=True, exist_ok=True)
                     staged_receipt.write_text(json.dumps(r, ensure_ascii=False, indent=2), encoding="utf-8")
+                # Reconfirm after the receipt is staged, right before the
+                # first final replace (policy B).
+                mc.reconfirm_output(
+                    mc.OutputAuthorization(**r["majorAuthorization"]), context)
                 os.replace(staged_out, args.out)
                 published_out = True
                 if staged_receipt:
@@ -688,9 +704,19 @@ def cli(argv: list[str]) -> int:
                               "cleared": len(r["cleared"]), "formulaProtected": r["formulaCellsProtected"],
                               "formulaCachesInvalidated": r["formulaCachesInvalidated"]}, ensure_ascii=False))
         return 0
-    except (OSError, ValueError, RuntimeError, zipfile.BadZipFile) as exc:
-        print(f"BLOCK: {exc}", file=sys.stderr)
-        return 2
+    except Exception as exc:
+        import gg_major_contract as mc
+        if isinstance(exc, mc.OutputHeldError):
+            print(json.dumps({"status": "held", "reason": exc.reason,
+                              "detail": str(exc),
+                              "guidance": exc.detail.get("guidance")},
+                             ensure_ascii=False))
+            return 2
+        if isinstance(exc, (OSError, ValueError, RuntimeError,
+                            zipfile.BadZipFile)):
+            print(f"BLOCK: {exc}", file=sys.stderr)
+            return 2
+        raise
 
 
 if __name__ == "__main__":

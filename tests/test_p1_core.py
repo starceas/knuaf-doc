@@ -344,7 +344,28 @@ ops = [
 p = core.apply(root, {"request_id": "utf8", "ops": ops}, 0)
 p = core.load(root)  # reload under ASCII default — implicit read would die
 assert p["facts"]["farm_name"]["value"] == "행복농장"
-out = Path(core.export(root, "draft")["path"])
+# Policy B: outputs need an explicit major binding + request major_id.
+import gg_major_contract as mc
+module = mc.default_registry().resolve("specialty_crops")
+(root / "major-answer.txt").write_text(
+    "전공 선택: specialty_crops\n", encoding="utf-8")
+mfact = {"id": "selected_major", "field_id": "common.major_id",
+         "kind": "reported_fact", "value": "specialty_crops", "unit": "",
+         "value_type": "text", "period": None, "scope": "project",
+         "answer_state": "provided", "verification": "claim_supported",
+         "module_version": module.module_version,
+         "source_refs": [{"id": "major-answer", "locator": "line 1",
+                          "revision": 1, "claim_id": "major"}]}
+mclaim = {"major": {k: mfact[k] for k in
+                    ("field_id", "value", "unit", "period", "scope",
+                     "answer_state", "kind")}}
+core.apply(root, {"request_id": "bind-major",
+                  "ops": [{"collection": "sources", "value": {
+                      "id": "major-answer", "path": "major-answer.txt",
+                      "claims": mclaim, "claim_review": "synthetic"}},
+                      {"collection": "facts", "value": mfact}]},
+           core.load(root)["revision"])
+out = Path(core.export(root, "draft", major_id="specialty_crops")["path"])
 assert "행복농장" in out.read_text(encoding="utf-8")
 
 # finance manifest roundtrip (gg_finance workbook + .manifest.json)
@@ -363,7 +384,8 @@ spec = dict(
                   household="50") for i in range(3)],
 )
 xlsx = Path(sys.argv[2]) / "finance.xlsx"
-gg_finance.workbook(spec, xlsx)
+gg_finance.workbook(
+    spec, xlsx, context=mc.output_context(root, "specialty_crops"))
 manifest = json.loads(xlsx.with_suffix(".manifest.json")
                       .read_text(encoding="utf-8"))
 assert manifest["file_hash"]
@@ -374,14 +396,17 @@ import gg
 spec_json = root / "paper-spec.json"
 spec_json.write_text(json.dumps(
     {"author": "합성", "writing_year": 2026, "years": 5,
-     "school_profile": {"mode": "school"}},
+     "major_id": "specialty_crops",
+     "school_profile": {"mode": "school", "school": "합성대학교",
+                        "department": "특용작물학과"}},
     ensure_ascii=False), encoding="utf-8")
 # UTF-8 filename startup also initialized stdout as UTF-8. Restore the
 # original ASCII stdout band so gg.main must still configure UTF-8 output.
 sys.stdout.reconfigure(encoding="ascii", errors="strict")
 assert sys.stdout.encoding == "ascii"
 code = gg.main(["paper", str(root), "--input", "paper-spec.json",
-                "--out", "build/검토전_본문.md"])
+                "--out", "build/검토전_본문.md",
+                "--major", "specialty_crops"])
 assert code == 0
 assert "확인 필요" in (root / "build/검토전_본문.md").read_text(
     encoding="utf-8")

@@ -16,7 +16,16 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from tests._harness import ContractCase, runtime
+from tests._harness import ContractCase, bind_major, runtime
+
+
+def _bound_context(case):
+    """Policy B: a bound specialty project and the explicit major for a
+    guarded output call (inputs stay synthetic)."""
+    project = case.make_project()
+    bind_major(project)
+    return runtime("gg_major_contract").output_context(
+        project, "specialty_crops")
 
 
 class WindowsComBlockTests(ContractCase):
@@ -91,8 +100,8 @@ class WindowsComBlockTests(ContractCase):
         runtime("gg_office_win")
         with mock.patch.object(sys, "platform", "win32"), \
                 mock.patch.object(subprocess, "run") as run_mock:
-            res_w = office.run_word_engine(Path("a.docx"), Path("b.pdf"))
-            res_x = office.run_excel_engine(Path("a.xlsx"), Path("b.pdf"))
+            res_w = office._run_word_engine(Path("a.docx"), Path("b.pdf"))
+            res_x = office._run_excel_engine(Path("a.xlsx"), Path("b.pdf"))
         run_mock.assert_not_called()
         self.assertEqual(2, res_w.returncode)
         self.assertEqual(2, res_x.returncode)
@@ -105,7 +114,7 @@ class WindowsComBlockTests(ContractCase):
                 mock.patch.object(office, "run_osascript",
                                   return_value=subprocess.CompletedProcess(
                                       ["osascript"], 0, "", "")) as osh:
-            res = office.run_word_engine(Path("a.docx"), Path("b.pdf"))
+            res = office._run_word_engine(Path("a.docx"), Path("b.pdf"))
         osh.assert_called_once()
         self.assertEqual(0, res.returncode)
 
@@ -130,7 +139,8 @@ class WideTableOrientationTests(ContractCase):
     def test_wide_table_keeps_portrait_and_content(self):
         build = runtime("build_docx")
         reports = []
-        doc = build.convert(WIDE_TABLE_MD, table_reports=reports)
+        doc = build.convert(WIDE_TABLE_MD, table_reports=reports,
+                            context=_bound_context(self))
         self.assertTrue(doc.tables, "expected a rendered table")
         table = doc.tables[0]
         self.assertEqual(12, len(table.columns))
@@ -146,7 +156,8 @@ class WideTableOrientationTests(ContractCase):
     def test_narrow_table_still_renders_normally(self):
         build = runtime("build_docx")
         doc = build.convert(
-            "문단.\n\n| A | B |\n|---|---|\n| 1 | 2 |\n\n끝.\n")
+            "문단.\n\n| A | B |\n|---|---|\n| 1 | 2 |\n\n끝.\n",
+            context=_bound_context(self))
         self.assertEqual(1, len(doc.tables))
         self.assertEqual("1", doc.tables[0].rows[1].cells[0].text)
         for sec in doc.sections:
@@ -199,14 +210,14 @@ class UnrenderedNodeTests(ContractCase):
         stray = SCHOOL_MD.replace(
             "목차\n요약", "목차\n채택되지 않은 삽입 단락\n요약")
         with self.assertRaises(ValueError) as cm:
-            build.convert(stray)
+            build.convert(stray, context=_bound_context(self))
         msg = str(cm.exception)
         self.assertIn("렌더되지 않는", msg)
         self.assertIn("채택되지 않은 삽입 단락", msg)
 
     def test_recognized_gap_nodes_still_render(self):
         build = runtime("build_docx")
-        doc = build.convert(SCHOOL_MD)
+        doc = build.convert(SCHOOL_MD, context=_bound_context(self))
         texts = [p.text for p in doc.paragraphs]
         self.assertTrue(
             any("합성 요약 본문이다" in t for t in texts),
@@ -254,7 +265,7 @@ class MissingTemplateCellTests(ContractCase):
             ])
             out = Path(tmp) / "out.xlsx"
             with self.assertRaisesRegex(ValueError, "Z99"):
-                tpl.blank_copy(src, m, out)
+                tpl.blank_copy(src, m, out, context=_bound_context(self))
             self.assertFalse(
                 out.exists(), "partial output must not be published")
 
@@ -270,7 +281,7 @@ class MissingTemplateCellTests(ContractCase):
             ])
             out = Path(tmp) / "out.xlsx"
             with self.assertRaisesRegex(ValueError, "없는시트"):
-                tpl.blank_copy(src, m, out)
+                tpl.blank_copy(src, m, out, context=_bound_context(self))
             self.assertFalse(out.exists())
 
     def test_existing_cells_cleared_and_preserved(self):
@@ -288,7 +299,7 @@ class MissingTemplateCellTests(ContractCase):
                  "explicit": True},
             ])
             out = Path(tmp) / "out.xlsx"
-            receipt = tpl.blank_copy(src, m, out)
+            receipt = tpl.blank_copy(src, m, out, context=_bound_context(self))
             opened = load_workbook(out)
             ws = opened["시트1"]
             self.assertIsNone(ws["A1"].value)
@@ -356,16 +367,23 @@ custom.write_text(json.dumps({
                  "explicit": True}],
 }, ensure_ascii=False), encoding="utf-8")
 out = root / "out.xlsx"
-tpl.blank_copy(src, custom, out)
+import gg_major_contract as mc
+tpl.blank_copy(src, custom, out,
+               context=mc.output_context(sys.argv[3], "specialty_crops"))
 print("PASS")
 """
         env = dict(os.environ, LC_ALL="C.UTF-8", PYTHONUTF8="0")
         env.pop("PYTHONIOENCODING", None)
+        # Policy B: the bound project is prepared in this (UTF-8) process;
+        # the ASCII-locale driver only names it as the output context.
+        project = self.make_project()
+        bind_major(project)
         with tempfile.TemporaryDirectory(prefix="knuaf-c2-") as tmp:
             driver = Path(tmp) / "driver.py"
             driver.write_text(snippet, encoding="utf-8")
             res = subprocess.run(
-                [sys.executable, "-X", "utf8=0", str(driver), scripts, tmp],
+                [sys.executable, "-X", "utf8=0", str(driver), scripts, tmp,
+                 str(project)],
                 capture_output=True, text=True, env=env, cwd=tmp)
         self.assertEqual(0, res.returncode,
                          f"stdout={res.stdout}\nstderr={res.stderr}")
