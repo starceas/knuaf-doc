@@ -17,8 +17,10 @@ Path x case matrix (every cell is a subTest in the named test):
 | gg_office word/excel/batch (+CLI)    | x  | x  | x  |    | x  | x   |
 
 T1: insect binding (declared without the output) -> unsupported_output;
-    unregistered fruit_trees -> unknown_major; a registered synthetic
-    fruit module without the output -> unsupported_output.  No output,
+    an unregistered ID -> unknown_major; the registered fruit_trees module
+    (no deliverable output declared) -> unsupported_output, directly and
+    through every CLI; a fruit ID against a specialty binding ->
+    major_binding_mismatch.  No output,
     receipt or staging file; inputs and canonical bytes unchanged.
 T2: no ID -> major_id_required; unbound -> major_binding_required; explicit
     null -> major_id_invalid; spec vs context/--major -> major_id_conflict
@@ -46,11 +48,14 @@ from pathlib import Path
 from unittest import mock
 
 from tests._harness import (
-    SCRIPTS, ContractCase, bind_major, fact_op, runtime, source_op, write_text,
+    SCRIPTS, ContractCase, bind_major, runtime, write_text,
 )
 
 SPECIALTY = "specialty_crops"
 INSECTS = "industrial_insects"
+FRUIT = "fruit_trees"
+# Registered majors are specialty_crops, industrial_insects, fruit_trees.
+UNREGISTERED = "hort_env_systems"
 
 
 def _cli(script, *args):
@@ -113,37 +118,14 @@ class _Base(ContractCase):
         return self.mc.output_context(root, major)
 
     def _fruit_project(self):
-        mc = self.mc
-        fruit = mc.declare_module(
-            major_id="fruit_trees", module_version="0.0.1",
-            capabilities={"question": "supported", "document": "supported",
-                          "evidence": "unsupported",
-                          "finance": "unsupported"},
-            question_schema=(), document_plan=(),
-            evidence_applicability={}, finance_capabilities=(),
-            validation_rules=(),
-            supported_outputs=("question_list", "document_plan"))
-        self.fruit_registry = mc.ModuleRegistry(
-            mc.MODULES + (fruit,), pack_owner=mc.load_pack_owner())
-        root = self.make_project()
-        write_text(root, "major-answer.txt", "전공 선택: fruit_trees\n")
-        fact = fact_op("selected_major", "common.major_id", "fruit_trees",
-                       "", scope="project", verification="claim_supported",
-                       source_id="major-answer")
-        fact["value"]["module_version"] = "0.0.1"
-        src = source_op("major-answer.txt")
-        src["value"]["id"] = "major-answer"
-        self.core.apply(root, {"request_id": "fruit", "ops": [src, fact]}, 0)
-        return root
+        """A project bound to the real registered fruit_trees module."""
+        return self._project(FRUIT)
 
     def _registry_for(self, label):
-        """Only the registered-fruit case sees the synthetic registry."""
-        if label != "t1-fruit-registered":
-            return mock.patch.object(self.mc, "default_registry",
-                                     self.mc.default_registry)
-        registry = self.fruit_registry
+        """Every case uses the shipped default registry (fruit_trees is a
+        registered peer, so CLI and in-process paths see the same module)."""
         return mock.patch.object(self.mc, "default_registry",
-                                 lambda catalog_path=None: registry)
+                                 self.mc.default_registry)
 
     def _swap_to_insects(self, root):
         fact = dict(self.core.load(root)["facts"]["selected_major"])
@@ -278,9 +260,9 @@ class WorkbookWriterCase(_Base):
         fruit = self._fruit_project()
         cases = (
             ("t1-insect", insect, INSECTS, "unsupported_output"),
-            ("t1-fruit-unknown", bound, "fruit_trees", "unknown_major"),
-            ("t1-fruit-registered", fruit, "fruit_trees",
-             "unsupported_output"),
+            ("t1-unregistered", bound, UNREGISTERED, "unknown_major"),
+            ("t1-fruit-mismatch", bound, FRUIT, "major_binding_mismatch"),
+            ("t1-fruit-registered", fruit, FRUIT, "unsupported_output"),
             ("t2-no-id", bound, None, "major_id_required"),
             ("t2-unbound", unbound, SPECIALTY, "major_binding_required"),
         )
@@ -295,8 +277,6 @@ class WorkbookWriterCase(_Base):
                     self._held(reason, writer["run"], self._ctx(root, major),
                                out)
                     self._no_outputs(work, out)
-                if label == "t1-fruit-registered":
-                    continue  # the synthetic registry lives in-process only
                 with self.subTest(writer=name, case=label, via="cli"):
                     out = work / ("%s-%s-cli.xlsx" % (name, label))
                     extra = ["--project", root]
@@ -462,9 +442,10 @@ class FinanceAndDocxGuardTests(_Base):
         fruit = self._fruit_project()
         cases = (
             ("t1-insect", insect, INSECTS, {}, "unsupported_output"),
-            ("t1-fruit-unknown", bound, "fruit_trees", {}, "unknown_major"),
-            ("t1-fruit-registered", fruit, "fruit_trees", {},
-             "unsupported_output"),
+            ("t1-unregistered", bound, UNREGISTERED, {}, "unknown_major"),
+            ("t1-fruit-mismatch", bound, FRUIT, {},
+             "major_binding_mismatch"),
+            ("t1-fruit-registered", fruit, FRUIT, {}, "unsupported_output"),
             ("t2-no-id", bound, None, {}, "major_id_required"),
             ("t2-unbound", unbound, SPECIALTY, {}, "major_binding_required"),
             ("t2-null", bound, None, {"major_id": None}, "major_id_invalid"),
@@ -491,10 +472,9 @@ class FinanceAndDocxGuardTests(_Base):
                     before = self._tree_bytes(root)
                     self._held(reason, build.build, root, "spec.json",
                                "out.xlsx", major_id=major)
-                    if label != "t1-fruit-registered":
-                        extra_args = ["--major", major] if major else []
-                        self._cli_held(self._build_cli(root, *extra_args),
-                                       reason)
+                    extra_args = ["--major", major] if major else []
+                    self._cli_held(self._build_cli(root, *extra_args),
+                                   reason)
                 self.assertEqual(self._tree_bytes(root), before)
         with self.subTest(case="t5-forged"):
             self._held("major_binding_required", finance.calculate,
@@ -582,7 +562,10 @@ class FinanceAndDocxGuardTests(_Base):
         insect, bound = self._project(INSECTS), self._project()
         for label, root, major, reason in (
                 ("t1-insect", insect, INSECTS, "unsupported_output"),
-                ("t1-fruit", bound, "fruit_trees", "unknown_major"),
+                ("t1-unregistered", bound, UNREGISTERED, "unknown_major"),
+                ("t1-fruit-mismatch", bound, FRUIT, "major_binding_mismatch"),
+                ("t1-fruit-registered", self._fruit_project(), FRUIT,
+                 "unsupported_output"),
                 ("t2-no-id", bound, None, "major_id_required"),
                 ("t2-unbound", self._project(None), SPECIALTY,
                  "major_binding_required")):
@@ -650,7 +633,10 @@ class OfficeGuardTests(_Base):
         Document().save(docx_in)
         xlsx_in = self._xlsx(work / "재무.xlsx")
         cases = (("t1-insect", insect, INSECTS, "unsupported_output"),
-                 ("t1-fruit", bound, "fruit_trees", "unknown_major"),
+                 ("t1-unregistered", bound, UNREGISTERED, "unknown_major"),
+                 ("t1-fruit-mismatch", bound, FRUIT, "major_binding_mismatch"),
+                 ("t1-fruit-registered", self._fruit_project(), FRUIT,
+                  "unsupported_output"),
                  ("t2-no-id", bound, None, "major_id_required"),
                  ("t2-unbound", unbound, SPECIALTY,
                   "major_binding_required"))
