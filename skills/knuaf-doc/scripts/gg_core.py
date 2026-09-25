@@ -1415,10 +1415,15 @@ def _publication_ref_for(root, receipt, receipt_rel):
 
 
 def adopt_output(root, output_value, expected_revision, request_id,
-                 companion_files=None):
+                 companion_files=None, *, major_id=None):
     """Register an existing output file through a managed publication
     (API §5).  Only this path may create new outputs records; the managed
-    copy under .gg-artifacts/<id> is what the canonical path records."""
+    copy under .gg-artifacts/<id> is what the canonical path records.
+
+    Policy B (G-B): the main file's kinds come from its real bytes via
+    ``output_kinds_for_file`` (a PDF of unknown origin needs both kinds);
+    each companion is judged by ``companion_kinds``.  Authorization runs
+    before the lock and is rechecked inside it."""
     root = Path(root)
     meta = _check_adopt_output_value(output_value)
     companions = _check_companions(companion_files)
@@ -1435,6 +1440,84 @@ def adopt_output(root, output_value, expected_revision, request_id,
         "companion_files": companions,
     }
     request_sha = _request_sha256(request)
+    mc = _major_contract_mod()
+    guard_ctx = mc.output_context(root, major_id)
+
+    def adopt_kinds():
+        """Kinds this adoption publishes, or None when the main source
+        path is already invalid/missing — the in-lock source checks keep
+        their original reason (invalid_output_metadata /
+        output_source_missing) instead of being masked by a kind error."""
+        try:
+            main_kinds = mc.output_kinds_for_file(local(root, meta["path"]))
+        except mc.OutputHeldError as error:
+            if error.reason == "unknown_output":
+                try:
+                    source = local(root, meta["path"])
+                except ValueError:
+                    return None
+                if not source.is_file():
+                    return None
+            raise
+        kinds = set(main_kinds)
+        for companion in companions:
+            try:
+                cpath = local(root, companion["path"])
+            except ValueError:
+                return None
+            if not cpath.is_file():
+                return None
+            kinds.update(mc.companion_kinds(cpath, main_kinds))
+        return kinds
+
+    # When the kinds cannot be read (missing/invalid source), the guard
+    # still runs — fail closed on both kinds — so an unmarked request never
+    # reaches the in-lock source checks or a stored result.
+    unknown_kinds = (mc.OUTPUT_SCHOOL_PAPER, mc.OUTPUT_SCHOOL_WORKBOOK)
+
+    adopt_auth = {}
+
+    def adopt_guard(kinds, project=None):
+        try:
+            adopt_auth["value"] = mc.authorize_outputs(
+                sorted(kinds) if kinds else unknown_kinds, guard_ctx,
+                project=project)
+        except mc.OutputHeldError as error:
+            raise _op("adopt_output", "canonical", "not_committed",
+                      error.reason, detail=str(error)) from error
+
+    def stored_kinds(stored):
+        """Kinds of an already-registered adoption, read from its managed
+        copies (main + this request's companions under ``companions/``);
+        None when they cannot be read."""
+        try:
+            managed = local(root, stored.get("path", ""))
+            main_kinds = mc.output_kinds_for_file(managed)
+            kinds = set(main_kinds)
+            for companion in companions:
+                kinds.update(mc.companion_kinds(
+                    managed.parent / "companions"
+                    / Path(companion["path"]).name, main_kinds))
+            return kinds
+        except (mc.OutputHeldError, ValueError, OSError):
+            return None
+
+    try:
+        pre_kinds = adopt_kinds()
+    except mc.OutputHeldError as error:
+        raise _op("adopt_output", "canonical", "not_committed",
+                  error.reason, detail=str(error)) from error
+    if pre_kinds is None:
+        # A retried, already-registered request whose source is gone is
+        # judged on its managed copies, not on both kinds.
+        try:
+            p0 = load(root)
+        except (OSError, ValueError):
+            p0 = {}
+        if request_id in (p0.get("requests") or {}):
+            pre_kinds = stored_kinds(
+                (p0.get("outputs") or {}).get(meta["id"], {}))
+    adopt_guard(pre_kinds)
 
     def body(capability):
         p = load(root)
@@ -1458,6 +1541,18 @@ def adopt_output(root, output_value, expected_revision, request_id,
                 root, entry["publication_ref"], operation="adopt_output"
             )
             stored = p["outputs"].get(meta["id"], {})
+            # Policy B: returning the stored result is an output too —
+            # judged on the managed copy under the current binding, and
+            # only when the adoption carries its persisted authorization.
+            adopt_guard(stored_kinds(stored), project=p)
+            persisted = stored.get("major_authorization")
+            if not isinstance(persisted, list) or not persisted or any(
+                    not isinstance(a, dict) or a.get("major_id")
+                    != adopt_auth["value"][0].major_id for a in persisted):
+                raise _op("adopt_output", "canonical", "not_committed",
+                          "major_authorization_missing",
+                          request_id=request_id)
+            adopt_auth["stored"] = persisted
             return {
                 "path": str(local(root, stored.get("path", ""))),
                 "publication_ref": entry["publication_ref"],
@@ -1571,6 +1666,18 @@ def adopt_output(root, output_value, expected_revision, request_id,
             if companion["sha256"] != digest(companion_bytes):
                 raise _op("adopt_output", "canonical", "not_committed",
                           "companion_mismatch", detail=companion["path"])
+        # Policy B in-lock recheck: the canonical record loaded under the
+        # guard is the authority — a binding change since the pre-lock
+        # check holds the adoption before any publish/registration.
+        try:
+            kinds = adopt_kinds()
+        except mc.OutputHeldError as error:
+            raise _op("adopt_output", "canonical", "not_committed",
+                      error.reason, detail=str(error)) from error
+        if kinds is None:
+            raise _op("adopt_output", "canonical", "not_committed",
+                      "output_source_missing", detail=meta["path"])
+        adopt_guard(kinds, project=p)
         # Resume check: same request_id already published but unregistered.
         publication_ref = None
         managed_path = None
@@ -1643,12 +1750,16 @@ def adopt_output(root, output_value, expected_revision, request_id,
             managed_path = "%s/%s" % (
                 result["destination"], primary_dest
             )
-        # Register the output under the same guard acquisition.
+        # Register the output under the same guard acquisition.  Policy B
+        # record: the passed authorization rides on the canonical outputs
+        # record as an optional server-written field.
+        registered = dict(meta, major_authorization=[
+            a.to_dict() for a in adopt_auth["value"]])
         ctx = _register_adoption(
             capability=capability,
             root=root,
             request_sha256=request_sha,
-            output_value=meta,
+            output_value=registered,
             publication_ref=publication_ref,
             managed_path=managed_path,
         )
@@ -1658,7 +1769,7 @@ def adopt_output(root, output_value, expected_revision, request_id,
                 {
                     "request_id": request_id,
                     "ops": [{"collection": "outputs",
-                             "value": dict(meta)}],
+                             "value": dict(registered)}],
                 },
                 expected_revision,
                 capability=capability,
@@ -1672,10 +1783,19 @@ def adopt_output(root, output_value, expected_revision, request_id,
             "status": "adopted",
         }
 
-    return _guarded(
+    value = _guarded(
         root, "adopt_output", "canonical", body,
         lambda: _recheck_canonical(root, expected_revision + 1, request_id),
     )
+    if isinstance(value, dict) and "value" in adopt_auth:
+        # Policy B record: the persisted authorization on the canonical
+        # outputs record (written now, or read back on a retry); the check
+        # that passed for this call is reported alongside.
+        current = [a.to_dict() for a in adopt_auth["value"]]
+        value = dict(value,
+                     major_authorization=adopt_auth.get("stored", current),
+                     major_authorization_current=current)
+    return value
 
 def question(p, field_id):
     facts = [f for f in p["facts"].values() if f["field_id"] == field_id]
@@ -3860,12 +3980,63 @@ def _requested_publish_or_preserve(root, capability, *, operation,
         ) from error
 
 
-def export(root, kind):
+def _export_output_kinds(root, p, kind, report):
+    """Output kinds an export publishes: the merged body is a school_paper
+    deliverable, and a submission_candidate additionally copies each
+    adopted output whose gate check passed — each judged on its real
+    bytes via ``output_kinds_for_file``."""
+    mc = _major_contract_mod()
+    kinds = {mc.OUTPUT_SCHOOL_PAPER}
+    if kind == "submission_candidate":
+        for check in report:
+            if (
+                check["check_id"].startswith("output_")
+                and check["status"] == "pass"
+            ):
+                output = p["outputs"][check["target"]]
+                kinds.update(
+                    mc.output_kinds_for_file(local(root, output["path"])))
+    return kinds
+
+
+def _export_authorize(root, kinds, ctx, *, project=None):
+    """Policy B authorization for export; hold codes become the pinned
+    not_committed result."""
+    mc = _major_contract_mod()
+    try:
+        return mc.authorize_outputs(sorted(kinds), ctx, project=project)
+    except mc.OutputHeldError as error:
+        raise _op("export", "export", "not_committed",
+                  error.reason, detail=str(error)) from error
+
+
+def _major_contract_mod():
+    """Common major contract module (policy B output guard).  Lazily
+    imported — it already imports this module's namespace."""
+    import gg_major_contract
+
+    return gg_major_contract
+
+
+def export(root, kind, *, major_id=None):
     root = Path(root)
+    mc = _major_contract_mod()
+    ctx = mc.output_context(root, major_id)
+    try:
+        p0 = load(root)
+        _export_authorize(
+            root, _export_output_kinds(root, p0, kind, gate(root, p0)),
+            ctx)
+    except (OSError, ValueError) as error:
+        if isinstance(error, OperationError):
+            raise
+        raise _op("export", "export", "not_committed",
+                  "project_unreadable", detail=str(error)) from error
     box = {}
 
     def body(capability):
-        value = export_locked(root, kind, capability=capability)
+        value = export_locked(
+            root, kind, capability=capability, major_id=major_id)
         box["request_id"] = value.get("request_id")
         return value
 
@@ -3886,7 +4057,7 @@ def export(root, kind):
     return _guarded(root, "export", "export", body, confirm)
 
 
-def export_locked(root, kind, *, capability):
+def export_locked(root, kind, *, capability, major_id=None):
     """Export through an immutable managed publication (API §3, SPEC §5).
 
     Deterministic request_id from the canonical request preimage gives
@@ -3898,6 +4069,11 @@ def export_locked(root, kind, *, capability):
     _lock_mod().assert_held(capability, root)
     p = load(root)
     report = gate(root, p)
+    # Policy B: re-authorize against the canonical record read under the
+    # lock — every exported file's kinds are covered.
+    export_auths = _export_authorize(
+        root, _export_output_kinds(root, p, kind, report),
+        _major_contract_mod().output_context(root, major_id), project=p)
     if kind == "submission_candidate":
         blocking = [x for x in report if blocks_skill_candidate(x)]
         if blocking:
@@ -4003,6 +4179,9 @@ def export_locked(root, kind, *, capability):
         "request_id": request_id,
         "request_sha256": request_sha,
         "notice": state["notice"],
+        # Policy B: the authorization this export passed, bound to the
+        # revision it was checked against.
+        "major_authorization": [a.to_dict() for a in export_auths],
     }
     staging_rel = ".gg-export-staging-" + request_sha[:16]
     staging = local(root, staging_rel)
@@ -4209,10 +4388,14 @@ def validate_paper_native_fields(spec):
     return issues
 
 
-def paper(root, spec_path, spec_bytes, requested_path):
+def paper(root, spec_path, spec_bytes, requested_path, *, major_id=None):
     """Generate the markdown review body through a managed publication
     (API §6).  The spec file bytes are read once by the caller and never
-    re-read — a swapped file cannot ride into the request."""
+    re-read — a swapped file cannot ride into the request.
+
+    Policy B (G-B): the common major output guard runs before the lock
+    and is rechecked inside it; a held output raises ``_op(...)`` with
+    ``not_committed`` and the guard's hold code."""
     root = Path(root)
     try:
         spec = json.loads(spec_bytes)
@@ -4229,11 +4412,15 @@ def paper(root, spec_path, spec_bytes, requested_path):
         and supplied_profile[key].strip()
         for key in ("school", "department")
     )
-    explicit_major_id = spec.get("major_id")
-    if explicit_major_id is None and profile_is_dict:
-        explicit_major_id = supplied_profile.get("major_id")
-    new_major_marker = ("major_id" in spec or
-                        (profile_is_dict and "major_id" in supplied_profile))
+    # Policy B pre-lock authorization — every paper request names an
+    # explicit major and matches the canonical binding.
+    import gg_major_contract as mc
+    ctx = mc.output_context(root, major_id)
+    try:
+        mc.authorize_output(mc.OUTPUT_SCHOOL_PAPER, ctx, spec=spec)
+    except mc.OutputHeldError as error:
+        raise _op("paper", "requested_output", "not_committed",
+                  error.reason, detail=str(error)) from error
     # The legacy body is crop-specific.  An explicit non-crop input must
     # fail before the historical school_profile default or publication path.
     from gg_school_paper import validate_crop_paper_major
@@ -4261,37 +4448,24 @@ def paper(root, spec_path, spec_bytes, requested_path):
                   issues=native_issues)
     spec_rel = str(spec_path)
 
+    paper_auth = {}
+
     def body(capability):
         _lock_mod().assert_held(capability, root)
         p = load(root)
-        # Recheck the canonical binding under the publication lock.  A
-        # direct gg_core.paper caller must not bypass the CLI's major guard.
-        bound_contract = any(
-            isinstance(f, dict) and f.get("field_id") == "common.major_id"
-            for f in p["facts"].values())
-        if new_major_marker and not bound_contract:
+        # Recheck the output authorization against the canonical record
+        # already loaded under the publication lock — a binding change
+        # between the pre-lock check and here holds the publish.
+        try:
+            paper_auth["value"] = mc.authorize_output(
+                mc.OUTPUT_SCHOOL_PAPER, ctx, spec=spec, project=p)
+        except mc.OutputHeldError as error:
             raise _op("paper", "requested_output", "not_committed",
-                      "major_binding_required")
-        if bound_contract:
-            from gg_major_contract import (
-                MajorContractError, binding_from_project, default_registry,
-            )
-            try:
-                binding = binding_from_project(default_registry(), p)
-            except MajorContractError as error:
-                raise _op("paper", "requested_output", "not_committed",
-                          "major_binding_invalid", detail=error.reason) from error
-            if binding.major_id != "specialty_crops":
-                raise _op("paper", "requested_output", "not_committed",
-                          "unsupported_major",
-                          detail="선택 전공의 본문 생성기는 아직 지원되지 않음")
-            if new_major_marker and explicit_major_id != binding.major_id:
-                raise _op("paper", "requested_output", "not_committed",
-                          "major_binding_mismatch")
-            if not has_school_profile:
-                raise _op("paper", "requested_output", "not_committed",
-                          "school_profile_required",
-                          detail="새 전공 계약은 비어 있지 않은 학교·학과가 필요함")
+                      error.reason, detail=str(error)) from error
+        if not has_school_profile:
+            raise _op("paper", "requested_output", "not_committed",
+                      "school_profile_required",
+                      detail="새 전공 계약은 비어 있지 않은 학교·학과가 필요함")
         refs = sort_target_refs(_export_refs(p))
         fp = fingerprint(root, p, refs)
         try:
@@ -4345,6 +4519,26 @@ def paper(root, spec_path, spec_bytes, requested_path):
                 raise _op("paper", "requested_output", "indeterminate",
                           "committed_publication_missing",
                           request_id=request_id)
+            # Policy B: a recovered bundle is republished only with its own
+            # persisted authorization for the currently authorized major —
+            # a bundle without one (made before the guard) is not output.
+            auth_rel = bundle_rel + "/major_authorization.json"
+            try:
+                stored_auth = json.loads(
+                    local(root, auth_rel).read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                stored_auth = None
+            auth_listed = any(
+                isinstance(f, dict)
+                and f.get("path") == "major_authorization.json"
+                for f in receipt.get("files", []))
+            if (not auth_listed or not isinstance(stored_auth, dict)
+                    or stored_auth.get("major_id")
+                    != paper_auth["value"].major_id):
+                raise _op("paper", "requested_output", "not_committed",
+                          "major_authorization_missing",
+                          request_id=request_id)
+            paper_auth["stored"] = stored_auth
             if requested.is_file():
                 try:
                     actual = digest(requested.read_bytes())
@@ -4382,7 +4576,7 @@ def paper(root, spec_path, spec_bytes, requested_path):
                       detail="기존 산출물을 덮어쓰지 않음")
         from gg_school_paper import paper as school_paper
 
-        body_text = school_paper(spec)
+        body_text = school_paper(spec, context=ctx)
         body_bytes = body_text.encode()
         body_sha = digest(body_bytes)
         staging_rel = ".gg-paper-staging-" + request_sha[:16]
@@ -4392,12 +4586,23 @@ def paper(root, spec_path, spec_bytes, requested_path):
                 shutil.rmtree(staging)
             staging.mkdir(parents=True)
             atomic(staging / "paper.md", body_bytes)
-            files = [
+            # Policy B record: the passed authorization is published in
+            # the same managed bundle (the intent schema is unchanged).
+            auth_bytes = json.dumps(
+                paper_auth["value"].to_dict(), ensure_ascii=False,
+                indent=2, sort_keys=True).encode()
+            atomic(staging / "major_authorization.json", auth_bytes)
+            files = [  # canonical (byte) order
+                {
+                    "path": "major_authorization.json",
+                    "sha256": digest(auth_bytes),
+                    "size": len(auth_bytes),
+                },
                 {
                     "path": "paper.md",
                     "sha256": body_sha,
                     "size": len(body_bytes),
-                }
+                },
             ]
             publication = _publication_mod()
             try:
@@ -4467,7 +4672,17 @@ def paper(root, spec_path, spec_bytes, requested_path):
             return ("committed_cleanup_pending", {"request_id": rid})
         return ("not_committed", {"request_id": rid})
 
-    return _guarded(root, "paper", "requested_output", tracked_body, confirm)
+    value = _guarded(root, "paper", "requested_output", tracked_body, confirm)
+    if isinstance(value, dict) and "value" in paper_auth:
+        # Policy B record: the persisted authorization of the managed
+        # bundle (published with it, or recovered from it); the check that
+        # passed for this call is reported alongside.
+        value = dict(value,
+                     major_authorization=paper_auth.get(
+                         "stored", paper_auth["value"].to_dict()),
+                     major_authorization_current=paper_auth["value"]
+                     .to_dict())
+    return value
 
 def export_complete(folder, kind, revision):
     manifest = Path(folder) / "manifest.json"

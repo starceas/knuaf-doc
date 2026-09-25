@@ -16,6 +16,7 @@ def main(mode):
     ap.add_argument("--out")
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--skip-doi", action="store_true")
+    ap.add_argument("--major")
     a = ap.parse_args()
     path = Path(a.target)
     try:
@@ -44,7 +45,9 @@ def main(mode):
                 raise ValueError("기존 작업을 먼저 gg.py import로 검증하여 가져오세요")
             print(
                 json.dumps(
-                    c.export(root, "review"), ensure_ascii=False, indent=2
+                    c.export(root, "review", major_id=a.major),
+                    ensure_ascii=False,
+                    indent=2,
                 )
             )
             return 0

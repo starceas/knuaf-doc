@@ -226,7 +226,10 @@ def _prepare(template: Path, map_path: Path, values_path: Path):
     return map_data, values_data, entries, values, actual
 
 
-def fill_copy(template: Path, map_path: Path, values_path: Path, out: Path) -> dict:
+def fill_copy(template: Path, map_path: Path, values_path: Path, out: Path, *, context=None) -> dict:
+    import gg_major_contract as mc
+
+    authorization = mc.authorize_output(mc.OUTPUT_SCHOOL_WORKBOOK, context)
     if out.exists():
         raise FileExistsError(f"refusing to overwrite output: {out}")
     map_data, values_data, entries, values, template_digest = _prepare(template, map_path, values_path)
@@ -390,6 +393,7 @@ def fill_copy(template: Path, map_path: Path, values_path: Path, out: Path) -> d
         except KeyError:
             receipt["errors"].append("workbook.xml missing; calculation mode not updated")
         try:
+            mc.reconfirm_output(authorization, context)
             with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as zout:
                 for info in zin.infolist():
                     zout.writestr(info, modified.get(info.filename, zin.read(info.filename)))
@@ -397,6 +401,7 @@ def fill_copy(template: Path, map_path: Path, values_path: Path, out: Path) -> d
             if out.exists():
                 out.unlink()
             raise
+    receipt["majorAuthorization"] = authorization.to_dict()
     receipt["output"].update({"sha256": sha256(out), "size": out.stat().st_size, "status": "filled"})
     return receipt
 
@@ -408,6 +413,9 @@ def cli(argv: list[str]) -> int:
     parser.add_argument("--values", required=True, type=Path)
     parser.add_argument("--out", required=True, type=Path)
     parser.add_argument("--receipt", type=Path)
+    parser.add_argument("--project", default=None, type=Path,
+                        help="프로젝트 정본 폴더")
+    parser.add_argument("--major", default=None, help="명시 전공 ID")
     args = parser.parse_args(argv)
     if args.receipt is not None and args.out.resolve() == args.receipt.resolve():
         print("BLOCK: --out and --receipt must be different paths", file=sys.stderr)
@@ -419,11 +427,19 @@ def cli(argv: list[str]) -> int:
             raise FileExistsError("refusing to overwrite output or receipt")
         if staged_out.exists() or (staged_receipt and staged_receipt.exists()):
             raise FileExistsError("staging path already exists")
-        receipt = fill_copy(args.template.resolve(), args.map.resolve(), args.values.resolve(), staged_out)
+        import gg_major_contract as mc
+        context = (mc.output_context(args.project, args.major)
+                   if args.project is not None else None)
+        receipt = fill_copy(args.template.resolve(), args.map.resolve(), args.values.resolve(), staged_out,
+                            context=context)
         receipt["output"]["path"] = str(args.out.resolve())
         if staged_receipt:
             staged_receipt.parent.mkdir(parents=True, exist_ok=True)
             staged_receipt.write_text(json.dumps(receipt, ensure_ascii=False, indent=2), encoding="utf-8")
+        # Reconfirm after the receipt is staged, right before the first
+        # final replace (policy B).
+        mc.reconfirm_output(
+            mc.OutputAuthorization(**receipt["majorAuthorization"]), context)
         published = False
         try:
             os.replace(staged_out, args.out)
@@ -437,12 +453,22 @@ def cli(argv: list[str]) -> int:
         print(json.dumps({"status": "filled", "out": receipt["output"], "written": len(receipt["written"]),
                           "formulaCachesInvalidated": receipt["formulaCachesInvalidated"]}, ensure_ascii=False))
         return 0
-    except (OSError, ValueError, RuntimeError, zipfile.BadZipFile, ET.ParseError) as exc:
+    except Exception as exc:
         for pending in (staged_out, staged_receipt):
             if pending and pending.exists():
                 pending.unlink()
-        print(f"BLOCK: {exc}", file=sys.stderr)
-        return 2
+        import gg_major_contract as mc
+        if isinstance(exc, mc.OutputHeldError):
+            print(json.dumps({"status": "held", "reason": exc.reason,
+                              "detail": str(exc),
+                              "guidance": exc.detail.get("guidance")},
+                             ensure_ascii=False))
+            return 2
+        if isinstance(exc, (OSError, ValueError, RuntimeError,
+                            zipfile.BadZipFile, ET.ParseError)):
+            print(f"BLOCK: {exc}", file=sys.stderr)
+            return 2
+        raise
 
 
 if __name__ == "__main__":

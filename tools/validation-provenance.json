@@ -41,7 +41,7 @@
       "origin": "new"
     },
     "tests/test_common_contract_flow.py": {
-      "note": "P6 synthetic guarded project binding, major-plan and approved-candidate CLI, raw lookup compatibility, and insect paper refusal. Direct core and generator refusal of explicit insect paper, binding and school-profile guard. Empty profile and insect department negatives. Spaced insect department and insect-only major cover regression.",
+      "note": "P6 synthetic guarded project binding, major-plan and approved-candidate CLI, raw lookup compatibility, and insect paper refusal. Direct core and generator refusal of explicit insect paper, binding and school-profile guard. Empty profile and insect department negatives. Spaced insect department and insect-only major cover regression. P7: refusal expectations moved to policy B hold codes (major_id_required, unsupported_output, major_marker_conflict).",
       "origin": "new"
     },
     "tests/test_finance_scope.py": {
@@ -96,11 +96,23 @@
       "origin": "new"
     },
     "tools/runtime-changes.json": {
-      "note": "누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates.",
+      "note": "누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py.",
       "origin": "new"
     },
     "tools/validation-provenance.json": {
       "note": "This file; declares origins for the validation layer.",
+      "origin": "new"
+    },
+    "tests/test_major_guard_contract.py": {
+      "note": "P7 policy B common output guard unit contract (A32-L1–L6, explicit null, label conflict, forged context, registered unsupported module, file-kind sniffing, reconfirm).",
+      "origin": "new"
+    },
+    "tests/test_major_guard_paper.py": {
+      "note": "P7 policy B guard on paper/export/adopt/merge paths (A32-L1–L7 path matrix, lock-path binding race).",
+      "origin": "new"
+    },
+    "tests/test_major_guard_outputs.py": {
+      "note": "P7 policy B guard on finance/XLSX/DOCX/Office writers (A46-T1–T5 path matrix, publish-time reconfirm).",
       "origin": "new"
     }
   },

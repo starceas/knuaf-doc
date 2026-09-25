@@ -528,27 +528,13 @@ def main(argv=None):
         elif a.command == "paper":
             if not a.input:
                 raise ValueError("--input 논문 입력 JSON 필요")
-            # A project that has entered the new major contract must not
-            # flow through the crop-specific legacy paper generator for an
-            # unrelated major.  Unbound historical direct calls retain their
-            # existing behavior until their major is confirmed.
-            project = core.load(a.folder)
-            if any(f.get("field_id") == "common.major_id"
-                   for f in project["facts"].values()):
-                import gg_major_contract as major_contract
-
-                try:
-                    binding = major_contract.binding_from_project(
-                        major_contract.default_registry(), project)
-                except major_contract.MajorContractError as error:
-                    raise ValueError(error.reason) from error
-                if binding.major_id != "specialty_crops":
-                    raise ValueError("선택 전공의 본문 생성기는 아직 지원되지 않음")
             src = core.local(a.folder, a.input)
             spec_bytes = src.read_bytes()
             requested_rel = a.out or "build/검토전_본문.md"
             core.local(a.folder, requested_rel)
-            value = core.paper(a.folder, rel(src), spec_bytes, requested_rel)
+            value = core.paper(
+                a.folder, rel(src), spec_bytes, requested_rel,
+                major_id=a.major)
         elif a.command == "adopt-output":
             # SPEC: caller supplies {output, companion_files?} metadata —
             # core validates every claim against actual bytes and the
@@ -580,6 +566,7 @@ def main(argv=None):
                 a.expected_revision,
                 request_id,
                 companion_files=companions,
+                major_id=a.major,
             )
         else:
             p = core.load(a.folder)
@@ -681,7 +668,7 @@ def main(argv=None):
                     raise ValueError(
                         "--kind는 draft·review·submission_candidate 중 하나"
                     )
-                value = core.export(a.folder, a.kind)
+                value = core.export(a.folder, a.kind, major_id=a.major)
         print(json.dumps(value, ensure_ascii=False, indent=2))
         if a.command == "check" and any(
             core.blocks_skill_candidate(r)

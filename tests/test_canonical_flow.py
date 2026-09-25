@@ -14,6 +14,7 @@ import unittest
 from tests._harness import (
     ContractCase,
     SCRIPTS,
+    bind_major,
     claim_of,
     fact_op,
     runtime,
@@ -127,7 +128,8 @@ class CanonicalFlowTests(ContractCase):
             r for r in report
             if r["check_id"] == "body_finance_crosscheck"
         ])
-        value = core.export(root, "draft")
+        bind_major(root)
+        value = core.export(root, "draft", major_id="specialty_crops")
         self.assertTrue(Path(value["path"]).exists())
         _assert_v2_lock_released(self, root)
 

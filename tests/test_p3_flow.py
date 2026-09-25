@@ -22,6 +22,7 @@ from pathlib import Path
 
 from tests._harness import (
     ContractCase,
+    bind_major,
     claim_of,
     fact_op,
     runtime,
@@ -203,6 +204,13 @@ class FactSemanticsWiringTests(ContractCase):
         self.assertTrue(core.blocks_skill_candidate(entry))
 
 
+def _specialty(root):
+    """Policy B output context: explicit specialty major for a project
+    bound with ``bind_major``."""
+    return runtime("gg_major_contract").output_context(
+        root, "specialty_crops")
+
+
 def _finance_spec(**over):
     """Minimal calculable single_annual_cash_v1 spec — the same shape the
     P1 harness feeds gg_finance.workbook (test_p1_core.py)."""
@@ -239,10 +247,11 @@ class ExcelTemplatePresaveTests(ContractCase):
         status="blocked" JSON and no output file."""
         mod = runtime("build_excel_finance_template")
         root = self.make_project()
+        bind_major(root)
         spec = _finance_spec()
         spec["periods"][0]["loss"] = "9"  # 100 ≠ 90 + 9
         spec_path, out = self._write_spec(root, spec)
-        result = mod.build(root, spec_path, out)
+        result = mod.build(root, spec_path, out, major_id="specialty_crops")
         self.assertEqual("blocked", result["status"])
         self.assertTrue(result["issues"])
         self.assertTrue(
@@ -254,8 +263,9 @@ class ExcelTemplatePresaveTests(ContractCase):
         present on success (empty when nothing was found)."""
         mod = runtime("build_excel_finance_template")
         root = self.make_project()
+        bind_major(root)
         spec_path, out = self._write_spec(root, _finance_spec())
-        result = mod.build(root, spec_path, out)
+        result = mod.build(root, spec_path, out, major_id="specialty_crops")
         self.assertEqual("calculated", result["status"])
         self.assertTrue((Path(root) / out).exists())
         self.assertEqual([], result["economic_validation_issues"])
@@ -266,13 +276,14 @@ class ExcelTemplatePresaveTests(ContractCase):
         CLI) never refuse the draft build but surface on the result."""
         mod = runtime("build_excel_finance_template")
         root = self.make_project()
+        bind_major(root)
         spec = _finance_spec()
         spec["input_inventory"] = {
             "site_area": {"status": "user_answer",
                           "source_ref": "src:unlinked", "value": "1"},
         }
         spec_path, out = self._write_spec(root, spec)
-        result = mod.build(root, spec_path, out)
+        result = mod.build(root, spec_path, out, major_id="specialty_crops")
         self.assertEqual("calculated", result["status"])
         self.assertTrue((Path(root) / out).exists())
         issues = result["economic_validation_issues"]
@@ -286,6 +297,7 @@ class ExcelTemplatePresaveTests(ContractCase):
         fill = runtime("gg_excel_fill")
         tpl = runtime("gg_excel_template")
         root = self.make_project()
+        bind_major(root)
         from openpyxl import Workbook
         wb = Workbook()
         wb.active.title = "시트1"
@@ -308,7 +320,7 @@ class ExcelTemplatePresaveTests(ContractCase):
             ensure_ascii=False), encoding="utf-8")
         out = Path(root) / "filled.xlsx"
         with self.assertRaises(ValueError) as cm:
-            fill.fill_copy(src, m, v, out)
+            fill.fill_copy(src, m, v, out, context=_specialty(root))
         self.assertIn("vocabulary", str(cm.exception))
         self.assertFalse(out.exists())
 
@@ -319,6 +331,7 @@ class ExcelTemplatePresaveTests(ContractCase):
         fill = runtime("gg_excel_fill")
         tpl = runtime("gg_excel_template")
         root = self.make_project()
+        bind_major(root)
         from openpyxl import Workbook
         wb = Workbook()
         wb.active.title = "시트1"
@@ -340,7 +353,7 @@ class ExcelTemplatePresaveTests(ContractCase):
             {"schema": "gg-xlsx-fill-values/v1", "values": []},
             ensure_ascii=False), encoding="utf-8")
         out = Path(root) / "filled.xlsx"
-        receipt = fill.fill_copy(src, m, v, out)
+        receipt = fill.fill_copy(src, m, v, out, context=_specialty(root))
         self.assertEqual("filled", receipt["output"]["status"])
         self.assertTrue(out.exists())
 
@@ -986,7 +999,34 @@ class IngestEconomicObservationTests(ContractCase):
         self.assertTrue(receipt["path"])
 
 
-def _output_value_for(core, root, p, *, path="out.xlsx", data=b"BYTES",
+def _xlsx_bytes(label):
+    """A real (synthetic) workbook's bytes: policy B judges an adopted
+    output by its content, so an ``.xlsx`` fixture must be a workbook."""
+    import io
+    from openpyxl import Workbook
+    wb = Workbook()
+    wb.active["A1"] = label
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
+BYTES = _xlsx_bytes("BYTES")
+BYTES2 = _xlsx_bytes("BYTES2")
+
+
+def _write_xlsx(root, name, data):
+    (Path(root) / name).write_bytes(data)
+
+
+def _bind_specialty(root):
+    """Explicit specialty binding (policy B) on a seeded project; returns
+    the reloaded canonical record."""
+    bind_major(root)
+    return runtime("gg_core").load(root)
+
+
+def _output_value_for(core, root, p, *, path="out.xlsx", data=BYTES,
                       checks=None):
     """An adopt_output output_value over every current ref, mirroring
     test_p2_core's _output_value shape; ``checks`` is attached only when
@@ -1021,10 +1061,11 @@ class AdoptEconomicOutputTests(ContractCase):
         core = runtime("gg_core")
         root = self.make_project()
         p = _seed_econ(root)
-        write_text(root, "out.xlsx", "BYTES")
+        p = _bind_specialty(root)
+        _write_xlsx(root, "out.xlsx", BYTES)
         ov = _output_value_for(core, root, p)
         with self.assertRaises(core.OperationError) as cm:
-            core.adopt_output(root, ov, p["revision"], "adopt-none")
+            core.adopt_output(root, ov, p["revision"], "adopt-none", major_id="specialty_crops")
         self.assertEqual(
             "economic_evidence_missing", cm.exception.result["reason"])
         self.assertEqual(
@@ -1036,7 +1077,7 @@ class AdoptEconomicOutputTests(ContractCase):
                      "evidence_hash": core.digest(
                          (Path(root) / "report.md").read_bytes())}])
         with self.assertRaises(core.OperationError) as cm:
-            core.adopt_output(root, ov, p["revision"], "adopt-bad")
+            core.adopt_output(root, ov, p["revision"], "adopt-bad", major_id="specialty_crops")
         self.assertEqual(
             "economic_evidence_missing", cm.exception.result["reason"])
         self.assertNotIn("out", core.load(root).get("outputs", {}))
@@ -1052,10 +1093,11 @@ class AdoptEconomicOutputTests(ContractCase):
         sem = runtime("gg_fact_semantics")
         root = self.make_project()
         p = _seed_econ(root)
-        write_text(root, "out.xlsx", "BYTES")
+        p = _bind_specialty(root)
+        _write_xlsx(root, "out.xlsx", BYTES)
         refs = core.sort_target_refs(core._export_refs(p))
         report = _semantics_report(sem, core, root, p, refs)
-        report["semantics"]["output_file_hash"] = core.digest(b"BYTES")
+        report["semantics"]["output_file_hash"] = core.digest(BYTES)
         write_text(root, "report.json",
                    json.dumps(report, ensure_ascii=False))
         ov = _output_value_for(
@@ -1063,7 +1105,7 @@ class AdoptEconomicOutputTests(ContractCase):
             checks=[{"evidence_path": "report.json",
                      "evidence_hash": core.digest(
                          (Path(root) / "report.json").read_bytes())}])
-        result = core.adopt_output(root, ov, p["revision"], "adopt-ok")
+        result = core.adopt_output(root, ov, p["revision"], "adopt-ok", major_id="specialty_crops")
         self.assertEqual("adopted", result["status"])
         self.assertIn("out", core.load(root)["outputs"])
 
@@ -1076,7 +1118,8 @@ class AdoptEconomicOutputTests(ContractCase):
         sem = runtime("gg_fact_semantics")
         root = self.make_project()
         p = _seed_econ(root)
-        write_text(root, "out.xlsx", "BYTES")
+        p = _bind_specialty(root)
+        _write_xlsx(root, "out.xlsx", BYTES)
         refs = core.sort_target_refs(core._export_refs(p))
         report = _semantics_report(sem, core, root, p, refs)
         report["semantics"]["output_file_hash"] = core.digest(
@@ -1089,7 +1132,7 @@ class AdoptEconomicOutputTests(ContractCase):
                      "evidence_hash": core.digest(
                          (Path(root) / "report.json").read_bytes())}])
         with self.assertRaises(core.OperationError) as cm:
-            core.adopt_output(root, ov, p["revision"], "adopt-foreign")
+            core.adopt_output(root, ov, p["revision"], "adopt-foreign", major_id="specialty_crops")
         self.assertEqual(
             "economic_evidence_missing", cm.exception.result["reason"])
         self.assertEqual(
@@ -1104,7 +1147,8 @@ class AdoptEconomicOutputTests(ContractCase):
         sem = runtime("gg_fact_semantics")
         root = self.make_project()
         p = _seed_econ(root)
-        write_text(root, "out.xlsx", "BYTES")
+        p = _bind_specialty(root)
+        _write_xlsx(root, "out.xlsx", BYTES)
         refs = core.sort_target_refs(core._export_refs(p))
         report = _semantics_report(sem, core, root, p, refs)
         self.assertIsNone(report["semantics"]["output_file_hash"])
@@ -1116,7 +1160,7 @@ class AdoptEconomicOutputTests(ContractCase):
                      "evidence_hash": core.digest(
                          (Path(root) / "report.json").read_bytes())}])
         with self.assertRaises(core.OperationError) as cm:
-            core.adopt_output(root, ov, p["revision"], "adopt-null")
+            core.adopt_output(root, ov, p["revision"], "adopt-null", major_id="specialty_crops")
         self.assertEqual(
             "economic_evidence_missing", cm.exception.result["reason"])
         self.assertNotIn("out", core.load(root).get("outputs", {}))
@@ -1133,9 +1177,10 @@ class AdoptEconomicOutputTests(ContractCase):
         sem = runtime("gg_fact_semantics")
         root = self.make_project()
         p = _seed_econ(root)
+        p = _bind_specialty(root)
         refs = core.sort_target_refs(core._export_refs(p))
         report = _semantics_report(sem, core, root, p, refs)
-        report["semantics"]["output_file_hash"] = core.digest(b"BYTES")
+        report["semantics"]["output_file_hash"] = core.digest(BYTES)
         write_text(root, "report.json",
                    json.dumps(report, ensure_ascii=False))
         # meta["path"]="missing.xlsx" is deliberately never written.
@@ -1145,7 +1190,7 @@ class AdoptEconomicOutputTests(ContractCase):
                      "evidence_hash": core.digest(
                          (Path(root) / "report.json").read_bytes())}])
         with self.assertRaises(core.OperationError) as cm:
-            core.adopt_output(root, ov, p["revision"], "adopt-missing")
+            core.adopt_output(root, ov, p["revision"], "adopt-missing", major_id="specialty_crops")
         self.assertEqual(
             "output_source_missing", cm.exception.result["reason"])
         self.assertNotIn(
@@ -1160,6 +1205,7 @@ class AdoptEconomicOutputTests(ContractCase):
         sem = runtime("gg_fact_semantics")
         root = self.make_project()
         p = _seed_econ(root)
+        p = _bind_specialty(root)
         refs = core.sort_target_refs(core._export_refs(p))
         report = _semantics_report(sem, core, root, p, refs)
         write_text(root, "report.json",
@@ -1170,7 +1216,7 @@ class AdoptEconomicOutputTests(ContractCase):
                      "evidence_hash": core.digest(
                          (Path(root) / "report.json").read_bytes())}])
         with self.assertRaises(core.OperationError) as cm:
-            core.adopt_output(root, ov, p["revision"], "adopt-managed")
+            core.adopt_output(root, ov, p["revision"], "adopt-managed", major_id="specialty_crops")
         self.assertEqual(
             "invalid_output_metadata", cm.exception.result["reason"])
 
@@ -1180,10 +1226,11 @@ class AdoptEconomicOutputTests(ContractCase):
         core = runtime("gg_core")
         root = self.make_project()
         p = _seed_plain(root)
-        write_text(root, "out.xlsx", "BYTES")
+        p = _bind_specialty(root)
+        _write_xlsx(root, "out.xlsx", BYTES)
         ov = _output_value_for(
             core, root, p, checks=["garbage", {"unrelated": 1}])
-        result = core.adopt_output(root, ov, p["revision"], "adopt-ne")
+        result = core.adopt_output(root, ov, p["revision"], "adopt-ne", major_id="specialty_crops")
         self.assertEqual("adopted", result["status"])
 
 
@@ -1204,9 +1251,10 @@ class ExportGateOrderingTests(ContractCase):
         core = runtime("gg_core")
         root = self.make_project()
         _bind_economic_review(core, root)
+        bind_major(root)
         write_text(root, "report.json", '{"schema":"tampered"}')
         with self.assertRaises(core.OperationError) as cm:
-            core.export(root, "submission_candidate")
+            core.export(root, "submission_candidate", major_id="specialty_crops")
         self.assertEqual(
             "submission_candidate_blocked", cm.exception.result["reason"])
         self.assertEqual(
@@ -1216,7 +1264,7 @@ class ExportGateOrderingTests(ContractCase):
         # review_calculation entry carries a different reason string).
         self.assertIn("보고서 파일 해시 불일치", str(cm.exception))
         self.assertEqual(
-            "generated", core.export(root, "draft")["status"])
+            "generated", core.export(root, "draft", major_id="specialty_crops")["status"])
 
 
 class PaperNativeFieldValidationTests(ContractCase):
@@ -1228,7 +1276,8 @@ class PaperNativeFieldValidationTests(ContractCase):
 
     def _spec(self, root, **extra):
         data = {"author": "합성", "writing_year": 2026,
-                "school_profile": {"mode": "school"}}
+                "school_profile": {"mode": "school", "school": "합성대학교",
+                                   "department": "특용작물학과"}}
         data.update(extra)
         write_text(root, "paper-spec.json",
                    json.dumps(data, ensure_ascii=False))
@@ -1238,10 +1287,11 @@ class PaperNativeFieldValidationTests(ContractCase):
         core = runtime("gg_core")
         root = self.make_project()
         _seed_econ(root)
+        bind_major(root)
         spec = self._spec(root, start_sales_thousand="99999달러")
         with self.assertRaises(core.OperationError) as cm:
             core.paper(root, "paper-spec.json", spec.read_bytes(),
-                       "build/paper-out.md")
+                       "build/paper-out.md", major_id="specialty_crops")
         result = cm.exception.result
         self.assertEqual("paper", result["operation"])
         self.assertEqual("native_field_invalid", result["reason"])
@@ -1262,10 +1312,11 @@ class PaperNativeFieldValidationTests(ContractCase):
                 core = runtime("gg_core")
                 root = self.make_project()
                 _seed_econ(root)
+                bind_major(root)
                 spec = self._spec(root, start_sales_thousand=bad)
                 with self.assertRaises(core.OperationError) as cm:
                     core.paper(root, "paper-spec.json",
-                               spec.read_bytes(), "build/paper-out.md")
+                               spec.read_bytes(), "build/paper-out.md", major_id="specialty_crops")
                 result = cm.exception.result
                 self.assertEqual("paper", result["operation"])
                 self.assertEqual("native_field_invalid",
@@ -1283,10 +1334,11 @@ class PaperNativeFieldValidationTests(ContractCase):
         core = runtime("gg_core")
         root = self.make_project()
         _seed_econ(root)
+        bind_major(root)
         spec = self._spec(root, start_profit_thousand="약 5000")
         with self.assertRaises(core.OperationError) as cm:
             core.paper(root, "paper-spec.json", spec.read_bytes(),
-                       "build/paper-out.md")
+                       "build/paper-out.md", major_id="specialty_crops")
         self.assertEqual("native_field_invalid",
                          cm.exception.result["reason"])
         self.assertIn("start_profit_thousand", str(cm.exception))
@@ -1297,6 +1349,7 @@ class PaperNativeFieldValidationTests(ContractCase):
         core = runtime("gg_core")
         root = self.make_project()
         _seed_econ(root)
+        bind_major(root)
         spec = self._spec(
             root,
             start_sales_thousand=12000,
@@ -1304,7 +1357,7 @@ class PaperNativeFieldValidationTests(ContractCase):
             start_profit_thousand="3,000")
         value = core.paper(
             root, "paper-spec.json", spec.read_bytes(),
-            "build/paper-out.md")
+            "build/paper-out.md", major_id="specialty_crops")
         self.assertEqual("generated", value["status"])
         out = (Path(root) / "build/paper-out.md").read_text(
             encoding="utf-8")
@@ -1316,10 +1369,11 @@ class PaperNativeFieldValidationTests(ContractCase):
         core = runtime("gg_core")
         root = self.make_project()
         _seed_econ(root)
+        bind_major(root)
         spec = self._spec(root, start_sales_thousand=12000)
         value = core.paper(
             root, "paper-spec.json", spec.read_bytes(),
-            "build/paper-out.md")
+            "build/paper-out.md", major_id="specialty_crops")
         self.assertEqual("generated", value["status"])
 
 
@@ -2165,13 +2219,14 @@ def _gate_econ_output_project(core, root, *, with_review):
     include the output only after adoption)."""
     sem = runtime("gg_fact_semantics")
     p = _seed_econ(root)
+    p = _bind_specialty(root)
     p = core.apply(
         root, {"request_id": "fmt", "ops": [_output_formats_op()]},
         p["revision"])
     refs = core.sort_target_refs(core._export_refs(p))
-    write_text(root, "out.xlsx", "BYTES")
+    _write_xlsx(root, "out.xlsx", BYTES)
     report = _semantics_report(sem, core, root, p, refs)
-    report["semantics"]["output_file_hash"] = core.digest(b"BYTES")
+    report["semantics"]["output_file_hash"] = core.digest(BYTES)
     write_text(root, "report.json",
                json.dumps(report, ensure_ascii=False))
     if with_review:
@@ -2190,14 +2245,14 @@ def _gate_econ_output_project(core, root, *, with_review):
     fp = core.fingerprint(root, p, refs)
     checks = [
         {"check_id": cid, "status": "pass",
-         "file_hash": core.digest(b"BYTES"),
+         "file_hash": core.digest(BYTES),
          "input_fingerprint": fp,
          "evidence_path": "report.json",
          "evidence_hash": ev_hash}
         for cid in ("structure", "recalculation", "crosscheck", "render")]
     core.adopt_output(
         root, _output_value_for(core, root, p, checks=checks),
-        p["revision"], "adopt-x")
+        p["revision"], "adopt-x", major_id="specialty_crops")
     return core.load(root)
 
 
@@ -2206,23 +2261,24 @@ def _gate_plain_output_project(core, root):
     adopted xlsx output with all four xlsx checks byte-matched — zero
     reviews of any kind."""
     p = _seed_plain(root)
+    p = _bind_specialty(root)
     p = core.apply(
         root, {"request_id": "fmt", "ops": [_output_formats_op()]},
         p["revision"])
-    write_text(root, "out.xlsx", "BYTES")
+    _write_xlsx(root, "out.xlsx", BYTES)
     write_text(root, "ev.txt", "EVIDENCE")
     refs = core.sort_target_refs(core._export_refs(p))
     fp = core.fingerprint(root, p, refs)
     checks = [
         {"check_id": cid, "status": "pass",
-         "file_hash": core.digest(b"BYTES"),
+         "file_hash": core.digest(BYTES),
          "input_fingerprint": fp,
          "evidence_path": "ev.txt",
          "evidence_hash": core.digest(b"EVIDENCE")}
         for cid in ("structure", "recalculation", "crosscheck", "render")]
     core.adopt_output(
         root, _output_value_for(core, root, p, checks=checks),
-        p["revision"], "adopt-x")
+        p["revision"], "adopt-x", major_id="specialty_crops")
     return core.load(root)
 
 
@@ -2419,15 +2475,15 @@ class EconomicOutputFreshnessGateTests(ContractCase):
         legal metadata-only superseded_by target/sibling for the public
         apply() link path."""
         refs2 = core.sort_target_refs(core._export_refs(p))
-        write_text(root, "out2.xlsx", "BYTES2")
+        _write_xlsx(root, "out2.xlsx", BYTES2)
         report2 = _semantics_report(sem, core, root, p, refs2)
-        report2["semantics"]["output_file_hash"] = core.digest(b"BYTES2")
+        report2["semantics"]["output_file_hash"] = core.digest(BYTES2)
         write_text(root, "report2.json",
                    json.dumps(report2, ensure_ascii=False))
         fp2 = core.fingerprint(root, p, refs2)
         checks2 = [
             {"check_id": cid, "status": "pass",
-             "file_hash": core.digest(b"BYTES2"),
+             "file_hash": core.digest(BYTES2),
              "input_fingerprint": fp2,
              "evidence_path": "report2.json",
              "evidence_hash": core.digest(
@@ -2437,9 +2493,9 @@ class EconomicOutputFreshnessGateTests(ContractCase):
         core.adopt_output(
             root,
             _output_value_for(
-                core, root, p, path="out2.xlsx", data=b"BYTES2",
+                core, root, p, path="out2.xlsx", data=BYTES2,
                 checks=checks2),
-            p["revision"], "adopt-y")
+            p["revision"], "adopt-y", major_id="specialty_crops")
         return core.load(root)
 
     def test_apply_rejects_stale_metadata_only_terminal_link(self):
@@ -2806,11 +2862,12 @@ class StaleRegistryWriteAdmissionTests(ContractCase):
         sem = runtime("gg_fact_semantics")
         root = self.make_project()
         p = _seed_econ(root)
+        p = _bind_specialty(root)
         self._write_econ_report(core, sem, root, p)
-        write_text(root, "out.xlsx", "BYTES")
+        _write_xlsx(root, "out.xlsx", BYTES)
         report = json.loads(
             (Path(root) / "report.json").read_text(encoding="utf-8"))
-        report["semantics"]["output_file_hash"] = core.digest(b"BYTES")
+        report["semantics"]["output_file_hash"] = core.digest(BYTES)
         write_text(root, "report.json",
                    json.dumps(report, ensure_ascii=False))
         before = (Path(root) / "project.json").read_bytes()
@@ -2821,7 +2878,7 @@ class StaleRegistryWriteAdmissionTests(ContractCase):
                          (Path(root) / "report.json").read_bytes())}])
         with _drifted_context(core):
             with self.assertRaises(core.OperationError) as cm:
-                core.adopt_output(root, ov, p["revision"], "adopt-stale")
+                core.adopt_output(root, ov, p["revision"], "adopt-stale", major_id="specialty_crops")
         self.assertEqual(
             "economic_evidence_missing", cm.exception.result["reason"])
         self.assertEqual(
@@ -2838,11 +2895,12 @@ class StaleRegistryWriteAdmissionTests(ContractCase):
         sem = runtime("gg_fact_semantics")
         root = self.make_project()
         p = _seed_econ(root)
+        p = _bind_specialty(root)
         self._write_econ_report(core, sem, root, p)
-        write_text(root, "out.xlsx", "BYTES")
+        _write_xlsx(root, "out.xlsx", BYTES)
         report = json.loads(
             (Path(root) / "report.json").read_text(encoding="utf-8"))
-        report["semantics"]["output_file_hash"] = core.digest(b"BYTES")
+        report["semantics"]["output_file_hash"] = core.digest(BYTES)
         write_text(root, "report.json",
                    json.dumps(report, ensure_ascii=False))
         ov = _output_value_for(
@@ -2851,7 +2909,7 @@ class StaleRegistryWriteAdmissionTests(ContractCase):
                      "evidence_hash": core.digest(
                          (Path(root) / "report.json").read_bytes())}])
         result = core.adopt_output(
-            root, ov, p["revision"], "adopt-ok")
+            root, ov, p["revision"], "adopt-ok", major_id="specialty_crops")
         self.assertEqual("adopted", result["status"])
         self.assertIn("out", core.load(root)["outputs"])
 

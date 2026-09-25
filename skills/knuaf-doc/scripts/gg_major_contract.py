@@ -22,6 +22,8 @@ Hard rules carried by this module:
 """
 
 import json
+import re
+import zipfile
 from dataclasses import dataclass, fields
 from pathlib import Path
 from types import MappingProxyType
@@ -588,6 +590,500 @@ def common_only_plan(reason="major_required"):
         "allowed": ("source_organization", "answer_state_recording"),
         "held": CAPABILITY_KINDS,
     }
+
+
+# ---------------------------------------------------------------------
+# Output guard — policy B (owner decision 2026-09-25)
+# ---------------------------------------------------------------------
+#
+# Every path that returns a paper body or finance calculation, or writes
+# a deliverable file or its receipt, calls ``authorize_output`` before any
+# return value, staging file, or receipt exists.  An output is allowed only
+# when the request names an explicit ``major_id`` AND the current canonical
+# revision holds a valid ``common.major_id`` binding for that same major AND
+# the bound module declares the requested output.  There is no specialty
+# inference and no legacy compatibility path: crop names, cover labels, file
+# age, template hashes, or X01/X02 selection never stand in for a major.
+# Refusing never writes the canonical record.
+
+OUTPUT_SCHOOL_PAPER = "school_paper"
+OUTPUT_SCHOOL_WORKBOOK = "school_excel_workbook"
+OUTPUT_FINANCE_CALCULATION = "finance_calculation"
+
+# output kind -> ("output", supported_outputs entry) or
+# ("capability", CAPABILITY_KINDS entry that must be "supported").
+OUTPUT_REQUIREMENTS = MappingProxyType({
+    OUTPUT_SCHOOL_PAPER: ("output", "school_paper"),
+    OUTPUT_SCHOOL_WORKBOOK: ("output", "school_excel_workbook"),
+    OUTPUT_FINANCE_CALCULATION: ("capability", "finance"),
+})
+
+OUTPUT_GUIDANCE = (
+    "전공 표시 필요: 출력 요청에 major_id를 명시하고, 원답변 출처가 있는 "
+    "common.major_id 사실을 gg.py apply로 정본에 등록한 뒤 다시 실행한다. "
+    "작목명·표지·옛 출력으로 전공을 추정하지 않는다."
+)
+
+
+class OutputHeldError(MajorContractError):
+    """Output refused before any return/staging/receipt (policy B).
+
+    ``reason`` is the machine-checkable hold code for this instance.
+    """
+
+    reason = "output_held"
+
+    def __init__(self, reason, message=None, **detail):
+        self.reason = reason
+        detail.setdefault("guidance", OUTPUT_GUIDANCE)
+        super().__init__(message or reason, **detail)
+
+
+class _Absent:
+    """Marker for "no major named here" — distinct from an explicit null,
+    which is an invalid ID (policy B treats a present null as invalid)."""
+
+    def __repr__(self):
+        return "ABSENT"
+
+
+ABSENT = _Absent()
+
+
+@dataclass(frozen=True)
+class OutputContext:
+    """What an output call hands the guard: a project root and, for tools
+    without a spec, the explicit major.  It carries no permission — the
+    guard recomputes every decision from the canonical record on disk, so
+    extra caller-written flags (``allowed=True`` etc.) are never read.
+
+    ``major_id`` defaults to ``ABSENT``; an explicit ``None`` is invalid."""
+
+    project_root: object
+    major_id: object = ABSENT
+
+
+def output_context(project_root, major_id=None):
+    """Context for an optional keyword/CLI argument: ``None`` there means
+    the caller did not name a major (``ABSENT``), not an explicit null."""
+    return OutputContext(
+        project_root, ABSENT if major_id is None else major_id
+    )
+
+
+@dataclass(frozen=True)
+class OutputAuthorization:
+    """Result of a passed guard; recorded into receipts for lineage."""
+
+    output: str
+    major_id: str
+    module_version: str
+    contract_version: str
+    project_revision: int
+    binding_evidence: str
+
+    def to_dict(self):
+        return {
+            "output": self.output,
+            "major_id": self.major_id,
+            "module_version": self.module_version,
+            "contract_version": self.contract_version,
+            "project_revision": self.project_revision,
+            "binding_evidence": self.binding_evidence,
+        }
+
+
+def explicit_major_ids(spec):
+    """Explicit major ids named by a spec: top-level ``major_id`` and
+    ``school_profile.major_id``.  Returns ``[(where, value), ...]`` for
+    every key that is present (a present null is kept — it is invalid,
+    not missing)."""
+    found = []
+    if not isinstance(spec, dict):
+        return found
+    if "major_id" in spec:
+        found.append(("spec.major_id", spec["major_id"]))
+    profile = spec.get("school_profile")
+    if isinstance(profile, dict) and "major_id" in profile:
+        found.append(("school_profile.major_id", profile["major_id"]))
+    return found
+
+
+# Known cover/profile labels per major.  A label is never used to infer a
+# major; it is only compared with the explicit ID so a request that names
+# one major while its cover says another is refused (A32-L4).  Majors not
+# yet registered (fruit_trees) are listed so their labels still conflict.
+# A new major module adds its labels here.
+KNOWN_MAJOR_MARKERS = MappingProxyType({
+    "specialty_crops": ("특용",),
+    "industrial_insects": ("곤충", "insect"),
+    "fruit_trees": ("과수", "fruit"),
+})
+
+_MARKER_FIELDS = (
+    ("spec.major", lambda spec, profile: spec.get("major")),
+    ("spec.department", lambda spec, profile: spec.get("department")),
+    ("school_profile.major", lambda spec, profile: profile.get("major")),
+    ("school_profile.department",
+     lambda spec, profile: profile.get("department")),
+)
+
+
+# Label matching.  Korean labels are compared after removing spaces and
+# punctuation ("과 수전공" -> "과수전공"), with a seam after department /
+# major suffixes so "...학과|수료" does not read as "과수".  Latin labels
+# are whole words ("Fruit." -> "fruit", never "grapefruit").  A residual
+# false positive (e.g. "원예과 수료") only refuses the output with a clear
+# reason; the user fixes the label.  Labels never infer a major.
+_NON_WORD = re.compile(r"[^0-9a-z\uac00-\ud7a3]+")
+_SUFFIX_SPLIT = re.compile(r"(?<=학과)|(?<=학부)|(?<=전공)|(?<=계열)")
+
+
+def _label_in(label, text):
+    folded = text.lower()
+    if label.isascii():
+        words = [w for w in _NON_WORD.split(folded) if w]
+        return label in words or label + "s" in words
+    compact = _NON_WORD.sub("", folded)
+    return any(label in part for part in _SUFFIX_SPLIT.split(compact))
+
+
+def marker_conflicts(spec, major_id):
+    """Cover/profile labels in ``spec`` that name a known major other than
+    ``major_id``.  Returns ``[(field, other_major), ...]``.  It never
+    infers a major on its own."""
+    if not isinstance(spec, dict):
+        return []
+    profile = spec.get("school_profile")
+    profile = profile if isinstance(profile, dict) else {}
+    hits = []
+    for field, read in _MARKER_FIELDS:
+        text = read(spec, profile)
+        if not isinstance(text, str):
+            continue
+        for other, labels in KNOWN_MAJOR_MARKERS.items():
+            if other != major_id and any(
+                _label_in(label.lower(), text) for label in labels
+            ):
+                hits.append((field, other))
+    return hits
+
+
+_SUFFIX_KINDS = MappingProxyType({
+    ".xlsx": ("workbook", (OUTPUT_SCHOOL_WORKBOOK,)),
+    ".xlsm": ("workbook", (OUTPUT_SCHOOL_WORKBOOK,)),
+    ".xls": ("workbook", (OUTPUT_SCHOOL_WORKBOOK,)),
+    ".docx": ("paper", (OUTPUT_SCHOOL_PAPER,)),
+    ".hwpx": ("paper", (OUTPUT_SCHOOL_PAPER,)),
+    ".hwp": ("paper", (OUTPUT_SCHOOL_PAPER,)),
+    ".md": ("text", (OUTPUT_SCHOOL_PAPER,)),
+    ".txt": ("text", (OUTPUT_SCHOOL_PAPER,)),
+})
+# Before an engine runs, a planned PDF takes PDF_ORIGINS[origin]; after it
+# runs, output_kinds_for_file(pdf, pdf_origin=origin) checks the bytes.
+PDF_ORIGINS = MappingProxyType({
+    "paper": (OUTPUT_SCHOOL_PAPER,),
+    "workbook": (OUTPUT_SCHOOL_WORKBOOK,),
+    None: (OUTPUT_SCHOOL_PAPER, OUTPUT_SCHOOL_WORKBOOK),
+})
+
+
+_SNIFF_LIMIT = 64 * 1024 * 1024
+_OLE_MAGIC = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"
+
+
+def _ole_names(data):
+    # Compound-file directory entries store stream names in UTF-16LE.
+    return {
+        name for name in ("FileHeader", "BodyText", "Workbook", "Book")
+        if name.encode("utf-16-le") in data
+    }
+
+
+def _sniff_kind(path):
+    """Document kind named by the file's own bytes: "pdf", "workbook",
+    "paper", "text", or None when the bytes name no kind we can confirm
+    (broken archives, unknown containers, ambiguous compound files)."""
+    try:
+        with open(path, "rb") as handle:
+            data = handle.read(_SNIFF_LIMIT + 1)
+    except OSError:
+        return None
+    if len(data) > _SNIFF_LIMIT:
+        return None
+    if data.startswith(b"%PDF"):
+        return "pdf"
+    if data.startswith(b"PK"):
+        # Every format marker inside the archive must agree; an archive
+        # that claims two kinds (e.g. a workbook with an HWPX mimetype)
+        # is refused rather than resolved by marker priority.
+        try:
+            with zipfile.ZipFile(path) as archive:
+                names = set(archive.namelist())
+                mimetype = (archive.read("mimetype").strip()
+                            if "mimetype" in names else b"")
+                types = (archive.read("[Content_Types].xml").decode(
+                    "utf-8", "replace")
+                    if "[Content_Types].xml" in names else "")
+        except (OSError, KeyError, zipfile.BadZipFile, ValueError):
+            return None
+        claims = set()
+        if mimetype == b"application/hwp+zip" or any(
+                n.startswith("Contents/section") for n in names):
+            claims.add("paper-hwpx")
+        if "spreadsheetml" in types or "xl/workbook.xml" in names:
+            claims.add("workbook")
+        if "wordprocessingml" in types or "word/document.xml" in names:
+            claims.add("paper-docx")
+        if len(claims) != 1:
+            return None
+        return "workbook" if claims == {"workbook"} else "paper"
+    if data.startswith(_OLE_MAGIC):
+        names = _ole_names(data)
+        hwp = bool(names & {"FileHeader", "BodyText"}) and \
+            b"HWP Document File" in data
+        xls = bool(names & {"Workbook", "Book"})
+        if hwp and not xls:
+            return "paper"
+        if xls and not hwp:
+            return "workbook"
+        return None
+    try:
+        data.decode("utf-8")
+    except UnicodeDecodeError:
+        return None
+    return "text"
+
+
+def output_kinds_for_file(path, *, pdf_origin=None):
+    """Output kinds a deliverable file needs, from its suffix AND bytes.
+
+    Workbooks need the workbook output, paper files the paper output.  A
+    PDF needs the kind of its known generator (``pdf_origin`` "paper" or
+    "workbook"); a PDF of unknown origin needs both.  An unknown suffix,
+    or bytes that contradict the suffix (e.g. workbook bytes renamed
+    ``.docx``/``.dat``), are refused rather than defaulted."""
+    suffix = Path(str(path)).suffix.lower()
+    if pdf_origin not in PDF_ORIGINS:
+        raise OutputHeldError(
+            "unknown_output", "알 수 없는 PDF 출처 %r" % (pdf_origin,))
+    if suffix == ".pdf":
+        expected, kinds = "pdf", PDF_ORIGINS[pdf_origin]
+    elif suffix in _SUFFIX_KINDS:
+        expected, kinds = _SUFFIX_KINDS[suffix]
+    else:
+        raise OutputHeldError(
+            "unknown_output", "출력 파일 형식을 판정할 수 없음",
+            suffix=suffix)
+    sniffed = _sniff_kind(path)
+    if sniffed != expected:
+        raise OutputHeldError(
+            "unknown_output", "파일 내용과 확장자가 맞지 않거나 판별할 수 없음",
+            suffix=suffix, sniffed=sniffed)
+    return kinds
+
+
+def companion_kinds(path, main_kinds):
+    """Kinds a companion file needs when published with a main output.
+    A ``.json`` receipt/manifest that parses as a JSON object is metadata
+    about the main output and carries the main output's kinds (anything
+    else named ``.json`` is refused); any other companion is a deliverable
+    of its own and is judged by ``output_kinds_for_file``."""
+    if Path(str(path)).suffix.lower() == ".json":
+        try:
+            with open(path, "rb") as handle:
+                data = handle.read(_SNIFF_LIMIT + 1)
+            record = (json.loads(data.decode("utf-8"))
+                      if len(data) <= _SNIFF_LIMIT else None)
+        except (OSError, UnicodeDecodeError, ValueError):
+            record = None
+        if not isinstance(record, dict):
+            raise OutputHeldError(
+                "unknown_output",
+                "영수증·manifest companion이 JSON 객체가 아님",
+                path=Path(str(path)).name)
+        return tuple(main_kinds)
+    return output_kinds_for_file(path)
+
+
+def _normalize_context(context):
+    if isinstance(context, OutputContext):
+        return context
+    if isinstance(context, dict) and "project_root" in context:
+        return OutputContext(
+            project_root=context["project_root"],
+            major_id=context.get("major_id", ABSENT),
+        )
+    raise OutputHeldError(
+        "output_context_required",
+        "출력에는 프로젝트 정본 위치(context)가 필요함",
+    )
+
+
+def _requested_major(context, spec):
+    named = explicit_major_ids(spec)
+    if context.major_id is not ABSENT:
+        named.append(("context.major_id", context.major_id))
+    if not named:
+        raise OutputHeldError(
+            "major_id_required", "출력 요청에 명시 major_id가 없음"
+        )
+    for where, value in named:
+        if not isinstance(value, str) or not value.strip() \
+                or value != value.strip():
+            raise OutputHeldError(
+                "major_id_invalid",
+                "%s 값이 유효한 전공 ID가 아님" % where,
+                where=where,
+            )
+    values = {value for _, value in named}
+    if len(values) > 1:
+        raise OutputHeldError(
+            "major_id_conflict",
+            "명시 major_id가 서로 다름",
+            named=[where for where, _ in named],
+        )
+    return values.pop()
+
+
+def _load_for_output(context):
+    try:
+        return gg_core.load(context.project_root)
+    except (OSError, ValueError, TypeError) as error:
+        raise OutputHeldError(
+            "project_unreadable",
+            "프로젝트 정본(project.json)을 읽을 수 없음",
+        ) from error
+
+
+def authorize_output(output, context, *, spec=None, registry=None,
+                     project=None):
+    """Policy B guard.  Returns an ``OutputAuthorization`` or raises
+    ``OutputHeldError`` (a ``MajorContractError``).
+
+    ``context`` is an ``OutputContext`` (or ``{"project_root", "major_id"}``
+    mapping).  ``spec`` is the request spec for spec-taking outputs; its
+    ``major_id`` / ``school_profile.major_id`` and ``context.major_id`` must
+    all agree and at least one must be present.  ``project`` is only for
+    callers that already loaded the canonical record under the publication
+    lock; everyone else lets the guard read ``project.json`` itself.
+    """
+    if output not in OUTPUT_REQUIREMENTS:
+        raise OutputHeldError(
+            "unknown_output", "알 수 없는 출력 종류 %r" % (output,),
+            output=output,
+        )
+    context = _normalize_context(context)
+    requested = _requested_major(context, spec)
+    conflicts = marker_conflicts(spec, requested)
+    if conflicts:
+        raise OutputHeldError(
+            "major_marker_conflict",
+            "명시 major_id와 표지·프로필의 전공 표기가 다름",
+            requested=requested,
+            conflicts=[field for field, _ in conflicts],
+        )
+    registry = registry or default_registry()
+    try:
+        module = registry.resolve(requested)
+    except MajorContractError as error:
+        raise OutputHeldError(
+            "unknown_major", "등록되지 않은 전공 %r" % requested,
+            major_id=requested,
+        ) from error
+    if project is None:
+        project = _load_for_output(context)
+    try:
+        binding = binding_from_project(registry, project)
+    except MissingMajorError as error:
+        raise OutputHeldError(
+            "major_binding_required",
+            "정본에 common.major_id 바인딩이 없음",
+        ) from error
+    except MajorContractError as error:
+        raise OutputHeldError(
+            "major_binding_invalid",
+            "정본의 전공 바인딩이 유효하지 않음",
+            binding_reason=error.reason,
+            binding_detail=str(error),
+        ) from error
+    if binding.major_id != requested:
+        raise OutputHeldError(
+            "major_binding_mismatch",
+            "명시 major_id와 정본 바인딩이 다름",
+            requested=requested,
+            bound=binding.major_id,
+        )
+    kind, name = OUTPUT_REQUIREMENTS[output]
+    supported = (
+        name in module.supported_outputs
+        if kind == "output"
+        else module.capabilities.get(name) == "supported"
+    )
+    if not supported:
+        raise OutputHeldError(
+            "unsupported_output",
+            "전공 %r은 출력 %r을 지원하지 않음" % (module.major_id, output),
+            major_id=module.major_id,
+            output=output,
+        )
+    return OutputAuthorization(
+        output=output,
+        major_id=module.major_id,
+        module_version=module.module_version,
+        contract_version=CONTRACT_VERSION,
+        project_revision=project["revision"],
+        binding_evidence=binding.binding_evidence,
+    )
+
+
+def authorize_outputs(outputs, context, *, spec=None, registry=None,
+                      project=None):
+    """``authorize_output`` for every kind in ``outputs`` (deduplicated,
+    order kept) — used when one request publishes several files."""
+    seen = []
+    for output in outputs:
+        if output not in seen:
+            seen.append(output)
+    if not seen:
+        raise OutputHeldError("unknown_output", "출력 종류가 없음")
+    if project is None:
+        # Read the canonical once so every authorization in the bundle is
+        # issued against the same revision.
+        project = _load_for_output(_normalize_context(context))
+    return tuple(
+        authorize_output(output, context, spec=spec, registry=registry,
+                         project=project)
+        for output in seen
+    )
+
+
+def reconfirm_output(authorization, context):
+    """Re-read the canonical record just before a staged output is made
+    visible.  Any change since ``authorize_output`` — a new revision, a
+    removed or replaced binding — refuses with ``project_revision_changed``
+    (the underlying hold code is kept in ``detail["cause"]``)."""
+    context = _normalize_context(context)
+    try:
+        again = authorize_output(
+            authorization.output,
+            OutputContext(context.project_root, authorization.major_id),
+        )
+    except OutputHeldError as error:
+        raise OutputHeldError(
+            "project_revision_changed",
+            "출력 준비 중 정본 개정 또는 바인딩이 바뀜",
+            before=authorization.project_revision,
+            cause=error.reason,
+        ) from error
+    if again != authorization:
+        raise OutputHeldError(
+            "project_revision_changed",
+            "출력 준비 중 정본 개정 또는 바인딩이 바뀜",
+            before=authorization.project_revision,
+            after=again.project_revision,
+        )
+    return again
 
 
 def _build_proposal(module, capability):

@@ -10,7 +10,7 @@ import unittest
 import zipfile
 import xml.etree.ElementTree as ET
 
-from tests._harness import ContractCase, runtime
+from tests._harness import ContractCase, bind_major, runtime
 
 NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
 
@@ -114,6 +114,14 @@ class XlsxInspectTests(ContractCase):
 
 
 class PrintTitleTests(ContractCase):
+    def _ctx(self):
+        """Policy B: a bound specialty project and explicit major for the
+        print-layout copy (the workbooks stay synthetic)."""
+        project = self.make_project()
+        bind_major(project)
+        return runtime("gg_major_contract").output_context(
+            project, "specialty_crops")
+
     def test_titles_container_created_when_missing(self):
         """H6 (fixed in P1): print_titles on a workbook with no definedNames
         element must create the container, not a bare definedName.
@@ -129,7 +137,8 @@ class PrintTitleTests(ContractCase):
             _strip_defined_names(src, stripped)
             mapping = _map_file(root, printing, stripped)
             out = root / "out.xlsx"
-            printing.apply(stripped, mapping, out, root / "receipt.json")
+            printing.apply(stripped, mapping, out, root / "receipt.json",
+                           context=self._ctx())
             with zipfile.ZipFile(out) as z:
                 tree = ET.fromstring(z.read("xl/workbook.xml"))
             self.assertEqual(1, len(tree.findall(
@@ -155,10 +164,12 @@ class PrintTitleTests(ContractCase):
             _strip_defined_names(src, stripped)
             mapping = _map_file(root, printing, stripped)
             out1 = root / "out1.xlsx"
-            printing.apply(stripped, mapping, out1, root / "receipt1.json")
+            printing.apply(stripped, mapping, out1, root / "receipt1.json",
+                           context=self._ctx())
             mapping2 = _map_file(root, printing, out1)
             out2 = root / "out2.xlsx"
-            printing.apply(out1, mapping2, out2, root / "receipt2.json")
+            printing.apply(out1, mapping2, out2, root / "receipt2.json",
+                           context=self._ctx())
             with zipfile.ZipFile(out2) as z:
                 tree = ET.fromstring(z.read("xl/workbook.xml"))
             self.assertEqual(1, len(tree.findall(
@@ -178,7 +189,8 @@ class PrintTitleTests(ContractCase):
             _workbook(src, print_area=True)
             mapping = _map_file(root, printing, src)
             out = root / "out.xlsx"
-            printing.apply(src, mapping, out, root / "receipt.json")
+            printing.apply(src, mapping, out, root / "receipt.json",
+                           context=self._ctx())
             opened = load_workbook(out)
             self.assertEqual("$1:$1", opened["Visible"].print_title_rows)
             opened.close()

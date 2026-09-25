@@ -514,7 +514,7 @@ def format_engine_error(res: subprocess.CompletedProcess, app_name: str) -> str:
     return format_osascript_error(res, app_name)
 
 
-def run_word_engine(
+def _run_word_engine(
     staged_work: Path, staged_pdf: Path, timeout: int = 90
 ) -> subprocess.CompletedProcess:
     """Dispatches Word field-update/repagination/PDF-export to the platform engine."""
@@ -530,7 +530,7 @@ def run_word_engine(
     raise ValueError(f"미지원 플랫폼: {sys.platform} (Word 자동화는 macOS/Windows만 지원)")
 
 
-def run_excel_engine(
+def _run_excel_engine(
     staged_work: Path, staged_pdf: Path, timeout: int = 90
 ) -> subprocess.CompletedProcess:
     """Dispatches Excel recalculation/PDF-export to the platform engine."""
@@ -622,7 +622,7 @@ def workbook_worksheet_count(path: Path) -> int:
     return count
 
 
-def publish_outputs(
+def _publish_outputs(
     staged_working_file: Path,
     staged_pdf_file: Path,
     out_dir: Path,
@@ -634,6 +634,7 @@ def publish_outputs(
     expected_kind: str = "word",
     engine_stderr: str = "",
     extra_validation: dict | None = None,
+    major_authorization: list | None = None,
 ) -> dict:
     """Publishes validated staged files to new destination directory without overwriting."""
     # Validate staged files BEFORE creating output directory
@@ -697,6 +698,8 @@ def publish_outputs(
             "timestamp_iso": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             "validation": val_data,
         }
+        if major_authorization is not None:
+            receipt["major_authorization"] = major_authorization
 
         manifest_bytes = json.dumps(receipt, ensure_ascii=False, indent=2).encode("utf-8")
         with open(dest_manifest, "xb") as f:
@@ -719,15 +722,60 @@ def publish_outputs(
 
 
 
+def _authorize_office(input_path: Path, pdf_origin: str, context, *,
+                      spec=None):
+    """Policy B: authorize the input's own kind and the PDF this engine
+    will produce before any staging or Office automation starts.  A
+    ``spec`` (excel ``--spec``) contributes its explicit major IDs."""
+    import gg_major_contract as mc
+
+    kinds = mc.output_kinds_for_file(input_path) + mc.PDF_ORIGINS[pdf_origin]
+    return mc.authorize_outputs(kinds, context, spec=spec)
+
+
+def _hold_if_moved(auths, context, job_dir: Path):
+    """Before any receipt (success or failure) is written after staging:
+    if the canonical binding/revision moved, remove this call's own job
+    staging and hold (policy B)."""
+    import gg_major_contract as mc
+
+    try:
+        for auth in auths:
+            mc.reconfirm_output(auth, context)
+    except mc.OutputHeldError:
+        shutil.rmtree(job_dir, ignore_errors=True)
+        raise
+
+
+def _reconfirm_office(auths, context, staged_pdf: Path, pdf_origin: str,
+                      job_dir: Path):
+    """Just before publication: the canonical binding/revision is still
+    the authorized one, and an existing staged PDF really is a PDF (a
+    missing PDF keeps the engine's own fail-closed receipt path)."""
+    import gg_major_contract as mc
+
+    _hold_if_moved(auths, context, job_dir)
+    if Path(staged_pdf).exists():
+        try:
+            mc.output_kinds_for_file(staged_pdf, pdf_origin=pdf_origin)
+        except mc.OutputHeldError:
+            shutil.rmtree(job_dir, ignore_errors=True)
+            raise
+    return [auth.to_dict() for auth in auths]
+
+
 def process_word(
     input_file: str | Path,
     out_dir: str | Path,
     resources: list[str | Path] | None = None,
     timeout: int = 90,
     workspace: str | Path | None = None,
+    *,
+    context=None,
 ) -> dict:
     """Processes Word document: repaginates, updates indexed fields, saves DOCX and exports PDF."""
     input_path = Path(input_file).absolute()
+    auths = _authorize_office(input_path, "paper", context)
     out_path = Path(out_dir).absolute()
     ws_root = Path(workspace).resolve() if workspace else DEFAULT_GROUP_CONTAINER_DIR
 
@@ -736,7 +784,7 @@ def process_word(
     )
 
     try:
-        res = run_word_engine(staged_work, staged_pdf, timeout=timeout)
+        res = _run_word_engine(staged_work, staged_pdf, timeout=timeout)
     except TimeoutError as exc:
         fail_receipt = {
             "status": "fail",
@@ -749,6 +797,7 @@ def process_word(
             "engine_stderr": str(exc),
             "returncode": -1712,
         }
+        _hold_if_moved(auths, context, job_dir)
         (job_dir / "failure_receipt.json").write_text(
             json.dumps(fail_receipt, ensure_ascii=False, indent=2),
             encoding="utf-8",
@@ -768,14 +817,17 @@ def process_word(
             "engine_stderr": (res.stderr or "").strip(),
             "returncode": res.returncode,
         }
+        _hold_if_moved(auths, context, job_dir)
         (job_dir / "failure_receipt.json").write_text(
             json.dumps(fail_receipt, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
         return fail_receipt
 
+    recorded = _reconfirm_office(auths, context, staged_pdf, "paper", job_dir)
     try:
-        return publish_outputs(
+        return _publish_outputs(
+            major_authorization=recorded,
             staged_working_file=staged_work,
             staged_pdf_file=staged_pdf,
             out_dir=out_path,
@@ -803,6 +855,7 @@ def process_word(
             "engine_stderr": (res.stderr or "").strip(),
             "returncode": res.returncode,
         }
+        _hold_if_moved(auths, context, job_dir)
         (job_dir / "failure_receipt.json").write_text(
             json.dumps(fail_receipt, ensure_ascii=False, indent=2),
             encoding="utf-8",
@@ -1079,9 +1132,20 @@ def process_excel(
     timeout: int = 90,
     workspace: str | Path | None = None,
     template_receipt: str | Path | None = None,
+    *,
+    context=None,
 ) -> dict:
     """Processes Excel workbook: calculates all used ranges, saves XLSX and exports PDF in same session."""
     input_path = Path(input_file).absolute()
+    spec_for_guard = None
+    if spec_file and Path(spec_file).is_file():
+        try:
+            loaded = json.loads(Path(spec_file).read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            loaded = None
+        spec_for_guard = loaded if isinstance(loaded, dict) else None
+    auths = _authorize_office(input_path, "workbook", context,
+                              spec=spec_for_guard)
     out_path = Path(out_dir).absolute()
     ws_root = Path(workspace).resolve() if workspace else DEFAULT_GROUP_CONTAINER_DIR
 
@@ -1101,7 +1165,7 @@ def process_excel(
     )
 
     try:
-        res = run_excel_engine(staged_work, staged_pdf, timeout=timeout)
+        res = _run_excel_engine(staged_work, staged_pdf, timeout=timeout)
     except TimeoutError as exc:
         fail_receipt = {
             "status": "fail",
@@ -1114,6 +1178,7 @@ def process_excel(
             "engine_stderr": str(exc),
             "returncode": -1712,
         }
+        _hold_if_moved(auths, context, job_dir)
         (job_dir / "failure_receipt.json").write_text(
             json.dumps(fail_receipt, ensure_ascii=False, indent=2),
             encoding="utf-8",
@@ -1133,6 +1198,7 @@ def process_excel(
             "engine_stderr": (res.stderr or "").strip(),
             "returncode": res.returncode,
         }
+        _hold_if_moved(auths, context, job_dir)
         (job_dir / "failure_receipt.json").write_text(
             json.dumps(fail_receipt, ensure_ascii=False, indent=2),
             encoding="utf-8",
@@ -1159,6 +1225,7 @@ def process_excel(
             "engine_stderr": (res.stderr or "").strip(),
             "returncode": res.returncode,
         }
+        _hold_if_moved(auths, context, job_dir)
         (job_dir / "failure_receipt.json").write_text(
             json.dumps(fail_receipt, ensure_ascii=False, indent=2),
             encoding="utf-8",
@@ -1215,6 +1282,7 @@ def process_excel(
             "structure_issues": structure_issues,
             "school_validation": school_validation_status,
         }
+        _hold_if_moved(auths, context, job_dir)
         (job_dir / "failure_receipt.json").write_text(
             json.dumps(fail_receipt, ensure_ascii=False, indent=2),
             encoding="utf-8",
@@ -1249,6 +1317,7 @@ def process_excel(
             "school_issues": school_issues,
             "school_validation": school_validation_status,
         }
+        _hold_if_moved(auths, context, job_dir)
         (job_dir / "failure_receipt.json").write_text(
             json.dumps(fail_receipt, ensure_ascii=False, indent=2),
             encoding="utf-8",
@@ -1271,7 +1340,10 @@ def process_excel(
             "status": "page_count_floor_met",
         },
     }
-    receipt = publish_outputs(
+    recorded = _reconfirm_office(auths, context, staged_pdf, "workbook",
+                                 job_dir)
+    receipt = _publish_outputs(
+        major_authorization=recorded,
         staged_working_file=staged_work,
         staged_pdf_file=staged_pdf,
         out_dir=out_path,
@@ -1292,8 +1364,19 @@ def process_batch(
     out_dir: str | Path,
     timeout: int = 90,
     workspace: str | Path | None = None,
+    *,
+    context=None,
 ) -> dict:
     """Processes multiple Word/Excel files consecutively without UI clicks, stopping at first permission/timeout per app."""
+    # Policy B: every file of the batch is authorized before the first
+    # one is staged — a held file stops the whole batch, not just itself.
+    for f in files:
+        p = Path(f).absolute()
+        ext = p.suffix.lower()
+        if ext == ".docx":
+            _authorize_office(p, "paper", context)
+        elif ext == ".xlsx":
+            _authorize_office(p, "workbook", context)
     results = []
     failed_apps = set()
     permission_instructions = []
@@ -1314,10 +1397,12 @@ def process_batch(
         try:
             if ext == ".docx":
                 sub_out = Path(out_dir) / f"{p.stem}_{ext.lstrip('.')}"
-                res = process_word(p, sub_out, timeout=timeout, workspace=workspace)
+                res = process_word(p, sub_out, timeout=timeout, workspace=workspace,
+                                   context=context)
             elif ext == ".xlsx":
                 sub_out = Path(out_dir) / f"{p.stem}_{ext.lstrip('.')}"
-                res = process_excel(p, sub_out, timeout=timeout, workspace=workspace)
+                res = process_excel(p, sub_out, timeout=timeout, workspace=workspace,
+                                    context=context)
             else:
                 res = {"file": str(p), "status": "unsupported", "reason": f"지원하지 않는 확장자: {ext}"}
         except TimeoutError as exc:
@@ -1328,6 +1413,10 @@ def process_batch(
                 "error": f"[{app} 시간 초과: -1712] {exc}",
             }
         except Exception as exc:
+            import gg_major_contract as mc
+
+            if isinstance(exc, mc.OutputHeldError):
+                raise  # a policy B hold stops the batch, never a per-file fail
             res = {
                 "file": str(p),
                 "status": "fail",
@@ -1417,6 +1506,8 @@ def main(argv=None):
     sp_w.add_argument("--resources", nargs="*", default=[], help="동반 리소스 파일 목록")
     sp_w.add_argument("--timeout", type=int, default=90, help="AppleScript 타임아웃(초)")
     sp_w.add_argument("--workspace", default=None, help="커스텀 Group Container 작업영역 경로")
+    sp_w.add_argument("--project", default=None, help="프로젝트 정본 폴더")
+    sp_w.add_argument("--major", default=None, help="명시 전공 ID")
     sp_w.add_argument("--json", action="store_true", help="JSON 출력")
 
     # excel subcommand
@@ -1428,6 +1519,8 @@ def main(argv=None):
     sp_e.add_argument("--spec", default=None, help="학교 17시트 검증용 입력 명세 JSON 경로")
     sp_e.add_argument("--timeout", type=int, default=90, help="AppleScript 타임아웃(초)")
     sp_e.add_argument("--workspace", default=None, help="커스텀 Group Container 작업영역 경로")
+    sp_e.add_argument("--project", default=None, help="프로젝트 정본 폴더")
+    sp_e.add_argument("--major", default=None, help="명시 전공 ID")
     sp_e.add_argument("--json", action="store_true", help="JSON 출력")
 
     sp_l = sub.add_parser("verify-template-lineage", help="원본 입력부터 현재 XLSX까지 영수증 연결 검사; 내용 승인 아님")
@@ -1441,6 +1534,8 @@ def main(argv=None):
     sp_b.add_argument("--out-dir", "--out", dest="out_dir", required=True, help="새 대상 출력 기본 디렉터리")
     sp_b.add_argument("--timeout", type=int, default=90, help="AppleScript 타임아웃(초)")
     sp_b.add_argument("--workspace", default=None, help="커스텀 Group Container 작업영역 경로")
+    sp_b.add_argument("--project", default=None, help="프로젝트 정본 폴더")
+    sp_b.add_argument("--major", default=None, help="명시 전공 ID")
     sp_b.add_argument("--json", action="store_true", help="JSON 출력")
 
     # doctor subcommand
@@ -1449,6 +1544,10 @@ def main(argv=None):
     sp_doc.add_argument("--json", action="store_true", help="JSON 출력")
 
     a = ap.parse_args(argv)
+    import gg_major_contract as mc
+
+    context = (mc.output_context(a.project, a.major)
+               if getattr(a, "project", None) is not None else None)
 
     try:
         if a.command == "word":
@@ -1458,6 +1557,7 @@ def main(argv=None):
                 resources=a.resources,
                 timeout=a.timeout,
                 workspace=a.workspace,
+                context=context,
             )
         elif a.command == "excel":
             res = process_excel(
@@ -1468,6 +1568,7 @@ def main(argv=None):
                 template_receipt=a.template_receipt,
                 timeout=a.timeout,
                 workspace=a.workspace,
+                context=context,
             )
         elif a.command == "verify-template-lineage":
             res = verify_template_lineage(a.input, a.receipts)
@@ -1477,6 +1578,7 @@ def main(argv=None):
                 out_dir=a.out_dir,
                 timeout=a.timeout,
                 workspace=a.workspace,
+                context=context,
             )
         elif a.command == "doctor":
             res = doctor(workspace=a.workspace)
@@ -1486,6 +1588,12 @@ def main(argv=None):
         print(json.dumps(res, ensure_ascii=False, indent=2))
         return 0 if res.get("status") in ("converted", "pass", "generated") or a.command == "doctor" else 1
 
+    except mc.OutputHeldError as e:
+        print(json.dumps({"status": "held", "reason": e.reason,
+                          "detail": str(e),
+                          "guidance": e.detail.get("guidance")},
+                         ensure_ascii=False, indent=2))
+        return 2
     except Exception as e:
         err_res = {"status": "blocked", "reason": str(e)}
         print(json.dumps(err_res, ensure_ascii=False, indent=2))

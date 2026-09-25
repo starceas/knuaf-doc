@@ -185,7 +185,14 @@ def add_table(doc, rows, font):
 WIDE_TABLE_MIN_COLS = 10
 
 
-def convert(md_text, font=FONT, base=".", table_reports=None):
+def convert(md_text, font=FONT, base=".", table_reports=None, *,
+            context=None):
+    """Render the paper markdown into a DOCX document.  Policy B: the
+    explicit major must be authorized against the canonical binding
+    (``context``) before anything is rendered."""
+    import gg_major_contract as mc
+
+    mc.authorize_output(mc.OUTPUT_SCHOOL_PAPER, context)
     doc = Document()
     setup_document(doc, font)
     nodes = parse(md_text)
@@ -509,23 +516,29 @@ def convert(md_text, font=FONT, base=".", table_reports=None):
     return doc
 
 
-def main():
+def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("base")
     ap.add_argument("--in", dest="inp", default="build/본문_통합.md")
     ap.add_argument("--out", default="build/검토전_논문.docx")
     ap.add_argument("--font", default=FONT)
-    a = ap.parse_args()
+    ap.add_argument("--major", default=None, help="명시 전공 ID")
+    a = ap.parse_args(argv)
+    import gg_major_contract as mc
     try:
+        context = mc.output_context(a.base, a.major)
+        authorization = mc.authorize_output(mc.OUTPUT_SCHOOL_PAPER, context)
         src = local(a.base, a.inp)
         out = local(a.base, a.out)
-        out.parent.mkdir(parents=True, exist_ok=True)
         if out.exists():
             raise ValueError("기존 산출물을 덮어쓰지 않음: 새 경로 지정")
         source_text = src.read_text(encoding="utf-8")
         table_reports = []
-        convert(source_text, a.font, Path(a.base),
-                table_reports=table_reports).save(out)
+        doc = convert(source_text, a.font, Path(a.base),
+                      table_reports=table_reports, context=context)
+        mc.reconfirm_output(authorization, context)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        doc.save(out)
         parsed_plan = school_frontmatter_plan(parse(source_text))
         infeasible = [r for r in table_reports
                       if r.get("applied") and r.get("feasible") is False]
@@ -557,6 +570,7 @@ def main():
                 if parsed_plan
                 else None
             ),
+            "major_authorization": authorization.to_dict(),
             "notice": "저수준 미검증 출력. 목차 필드 갱신·전체 페이지·학교 원문·학명·그림·표·머리행 검토 필요. 한글에서 글꼴 신명조·여백(위20/아래15/머리15/꼬리15/좌30/우30/제본0 mm)·페이지 번호를 확인한다. 이 세 가지는 스킬 작성 완료를 막지 않으며 자동 통과하지 않는다.",
         }
         out.with_suffix(".manifest.json").write_text(
@@ -565,6 +579,12 @@ def main():
         )
         print(str(out))
         return 0
+    except mc.OutputHeldError as e:
+        print(json.dumps({"status": "held", "reason": e.reason,
+                          "detail": str(e),
+                          "guidance": e.detail.get("guidance")},
+                         ensure_ascii=False))
+        return 2
     except (ValueError, OSError) as e:
         print(str(e))
         return 2

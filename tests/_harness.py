@@ -152,6 +152,29 @@ def section_op(sid, title, path, order=1, claims=None, **extra):
     return {"collection": "sections", "value": value}
 
 
+def bind_major(root, major_id="specialty_crops", *, request_id=None):
+    """Record an explicit, claim-backed ``common.major_id`` binding through
+    the ordinary ``gg_core.apply`` transaction (policy B output guard).
+
+    Uses its own source (``major-answer``) so a test's ``answer`` source
+    stays untouched; the fact is text-typed with a unit string and a claim,
+    so it adds no semantic/claim blocker to the submission gate.  Returns
+    the new canonical revision."""
+    core = runtime("gg_core")
+    module = runtime("gg_major_contract").default_registry().resolve(major_id)
+    write_text(root, "major-answer.txt", "전공 선택: " + major_id + "\n")
+    fact = fact_op("selected_major", "common.major_id", major_id, "",
+                   scope="project", verification="claim_supported",
+                   source_id="major-answer", claim_id="major")
+    fact["value"]["module_version"] = module.module_version
+    source = source_op("major-answer.txt", claims=claim_of(fact["value"], "major"))
+    source["value"]["id"] = "major-answer"
+    revision = core.load(root)["revision"]
+    core.apply(root, {"request_id": request_id or "bind-major:" + major_id,
+                      "ops": [source, fact]}, revision)
+    return core.load(root)["revision"]
+
+
 def script_source(name):
     return (SCRIPTS / name).read_text(encoding="utf-8")
 

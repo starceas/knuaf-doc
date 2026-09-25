@@ -35,7 +35,7 @@
     "tests/_harness.py": {
       "note": "P0-A: shared harness pinning imports to <repo>/skills/knuaf-doc/scripts and evicting foreign gg_* modules; no dev-tree fallback. repair-n1/N1: synthetic module stubs for dependency-gate tests.",
       "origin": "new",
-      "sha256": "3857a39d37f0ab9e456bf0a59919f91bbebd9a1e99ff4bb6960a56926a3be6b0"
+      "sha256": "9a5fec8bfe2cafb915e58b84c26b5878bfa41db19b98b964da0f9c2383d2e6b4"
     },
     "tests/regression_inventory.json": {
       "note": "P0-A: machine source of truth mapping each known defect to its test and owning gate (P1–P5/deferred).",
@@ -45,17 +45,17 @@
     "tests/test_bundle_lineage.py": {
       "note": "P1+P2 PACKAGE 계보 시험 — 실제 후보 정상 검증, 신규 파일 계약(allowlist·before=null·위장 거부) 포함 적대 합성 트리. P6: pin four new common-contract runtime files and the P5 parent tree.",
       "origin": "new",
-      "sha256": "a8cd58f6504e78c64fe859215c98afc2e67367c2a862fbed7096d14ace5e67fb"
+      "sha256": "3c8d42279609e3e4318488601553ffd88794c156f1d4dbf78bd84d5286bc53b1"
     },
     "tests/test_canonical_flow.py": {
       "note": "P0-A: init/apply/check/export positive controls + C2–C6/H2/H3/H5 defect signatures; synthetic only.",
       "origin": "new",
-      "sha256": "1b08ebf162a42b22ed5b0715907b67e613443bd82ee89a3719a9c140463b24e7"
+      "sha256": "4d660623ada38285bd7ffe5864468997f55a458f0213dbfe5adb93a830882caf"
     },
     "tests/test_common_contract_flow.py": {
-      "note": "P6 synthetic guarded project binding, major-plan and approved-candidate CLI, raw lookup compatibility, and insect paper refusal. Direct core and generator refusal of explicit insect paper, binding and school-profile guard. Empty profile and insect department negatives. Spaced insect department and insect-only major cover regression.",
+      "note": "P6 synthetic guarded project binding, major-plan and approved-candidate CLI, raw lookup compatibility, and insect paper refusal. Direct core and generator refusal of explicit insect paper, binding and school-profile guard. Empty profile and insect department negatives. Spaced insect department and insect-only major cover regression. P7: refusal expectations moved to policy B hold codes (major_id_required, unsupported_output, major_marker_conflict).",
       "origin": "new",
-      "sha256": "2d7092df0164ed3cc530492488c2c4092f1f79871f916290714ab26adbf7e68d"
+      "sha256": "9a6ecb538603cce20450d75d0025045f8d1d6829c8756d238feb936572c39e12"
     },
     "tests/test_finance_scope.py": {
       "note": "P0-A: finance crosscheck scope — non-financial positive control + H9/R6 under-check defect.",
@@ -67,15 +67,30 @@
       "origin": "new",
       "sha256": "8affd4a22b26c6bb602efa6b188f5fae8a4710c0abd9e025ed432589f0f8ec6d"
     },
+    "tests/test_major_guard_contract.py": {
+      "note": "P7 policy B common output guard unit contract (A32-L1–L6, explicit null, label conflict, forged context, registered unsupported module, file-kind sniffing, reconfirm).",
+      "origin": "new",
+      "sha256": "15f62394a11bec555a9a22d7eab7e85a84d409ecb6db3e2ce8e699aea8eb00de"
+    },
+    "tests/test_major_guard_outputs.py": {
+      "note": "P7 policy B guard on finance/XLSX/DOCX/Office writers (A46-T1–T5 path matrix, publish-time reconfirm).",
+      "origin": "new",
+      "sha256": "0a28842fc62e23cb68d1d3f10293914d16818d2e98b0989e330409e1480c947a"
+    },
+    "tests/test_major_guard_paper.py": {
+      "note": "P7 policy B guard on paper/export/adopt/merge paths (A32-L1–L7 path matrix, lock-path binding race).",
+      "origin": "new",
+      "sha256": "20492e1c6b5cd7415cb9c422ec7dfb7e1fb3fbe413e34cf857fe584541613635"
+    },
     "tests/test_p1_core.py": {
       "note": "P1 core/CLI behavioral tests (A-owned): C3 record-id, C5 floor, C6 COM, H8 ladder, UTF-8 band.",
       "origin": "new",
-      "sha256": "b15515f43cba78d7861f6e1650d1543775895ba0f96da0955e206bf770e899ed"
+      "sha256": "7ebb00525e86f2e2291cfb0a29478672b2fa77d95d23aad2a14ea6810cb7800e"
     },
     "tests/test_p1_outputs.py": {
       "note": "P1 document/excel/Office behavioral tests (B-owned): fake-COM block, orientation, unrendered-node rejection, missing-cell rejection, forced-ASCII UTF-8 band.",
       "origin": "new",
-      "sha256": "306b4bc406181e6ec88ecaef1610b0db28ff7cb05c9a1fdbf714c5eb5d807ee7"
+      "sha256": "9d2e48b7c994b3d0a019b0891ea302c8219b8513ea71c99375c2ab9de453cc61"
     },
     "tests/test_question_gate.py": {
       "note": "P0-A: question/help-step ladder + H8 defect reproduction.",
@@ -95,7 +110,7 @@
     "tests/test_xlsx_structure.py": {
       "note": "P0-A: synthetic XLSX contracts — merge markers, print_titles container, corrupt ZIP handling, visible-sheet count. repair-n1/N1: dependency skip removed so import/fixture errors surface as failure/error.",
       "origin": "new",
-      "sha256": "bbefd109fe2a808c96a2516446d09ce075fa41ba146e4a2a268dbba65a159fe1"
+      "sha256": "ffc81c2bcafb954d80389d0bc21e0bce814d909b384ada056c7dedcd39cfa8c0"
     },
     "tools/baseline-files.json": {
       "note": "Pinned main 29abec0ec95369de7ae9e22207349d574f1f46b7 file-hash list; input contract for check_bundle.py.",
@@ -121,14 +136,14 @@
       "sha256": "246711b72d92c32f0904f9eac4b90a9590c9420c75af60917d1bbd05b996e6ab"
     },
     "tools/runtime-changes.json": {
-      "note": "누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates.",
+      "note": "누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py.",
       "origin": "new",
-      "sha256": "749bb0724c0a874471278c42ea89f26bbeeecf2d7b982cecb7dd19df4e9d44b2"
+      "sha256": "8cc1900a9f2de4dfb2cb298f635d9981f95b8021eac53ec624d752388fdebfcf"
     },
     "tools/validation-provenance.json": {
       "note": "This file; declares origins for the validation layer.",
       "origin": "new",
-      "sha256": "ba95f2c506d8d7751b8bbc45ab095db34c88317b31b9c8777cefe8c0071fe580"
+      "sha256": "efc53ac09e484181fe14f68674dc621d3719328b3360c603a2ec3d4c9c752eaf"
     }
   },
   "generated_by": "tools/build_validation_bundle.py@3",
@@ -145,18 +160,18 @@
   "runtime_changes": {
     "approved_new_files": 61,
     "baseline_main": "29abec0ec95369de7ae9e22207349d574f1f46b7",
-    "change_count": 84,
-    "changes_sha256": "d73f93c8606abc13f208f9e8fcd432c65319cfbd62017e169d8bff7d2df664ae",
+    "change_count": 85,
+    "changes_sha256": "6b6408330a8a40e1ead40d1a52a0ba25c0da99bdbc008713e573082d4ca57741",
     "new_count": 61,
     "parent_candidate": {
-      "file_count": 136,
-      "stage": "P5",
-      "tree_sha256": "6ce8fc2bd332d71d982a450d23a19f2bafe244b2a60daf217115b9fa200d30f4"
+      "file_count": 141,
+      "stage": "P6",
+      "tree_sha256": "3f9101f44627a1f59b256cb77b7614428bd86a18c4154ff976db1ed18bde631e"
     },
     "schema": "knuaf-doc/runtime-changes@2",
     "spec": "tools/runtime-changes.json",
-    "spec_sha256": "749bb0724c0a874471278c42ea89f26bbeeecf2d7b982cecb7dd19df4e9d44b2",
-    "stage": "P6",
+    "spec_sha256": "8cc1900a9f2de4dfb2cb298f635d9981f95b8021eac53ec624d752388fdebfcf",
+    "stage": "P7",
     "stage_lineage": [
       {
         "file_count": 75,
@@ -193,10 +208,16 @@
         "note": "P5 기준 worktree b797ea6의 변경 전 전체 파일 트리 해시",
         "stage": "P5",
         "tree_sha256": "6ce8fc2bd332d71d982a450d23a19f2bafe244b2a60daf217115b9fa200d30f4"
+      },
+      {
+        "file_count": 141,
+        "note": "P6 기준 main bf012b0(PR #5 병합)의 변경 전 전체 파일 트리 해시",
+        "stage": "P6",
+        "tree_sha256": "3f9101f44627a1f59b256cb77b7614428bd86a18c4154ff976db1ed18bde631e"
       }
     ],
-    "verified_count": 84
+    "verified_count": 85
   },
   "schema": "knuaf-doc/validation-bundle@3",
-  "validation_tree_sha256": "a0fc0d222730bb734079ad9a631ce7c77a608b9e37b0294497777b6924e9363b"
+  "validation_tree_sha256": "ba6635a44e36d2dce744045624283c7ea0eb8e0e605de476f66f3bc1911544eb"
 }

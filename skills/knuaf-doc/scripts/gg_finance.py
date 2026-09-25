@@ -56,7 +56,7 @@ def num(v):
     return n
 
 
-def investment(flows, benefits, costs, rate):
+def _investment(flows, benefits, costs, rate):
     if rate <= -1:
         raise ValueError("할인율 범위 오류")
     npv = sum(v / (1 + rate) ** t for t, v in enumerate(flows))
@@ -599,7 +599,7 @@ def composite_contract(spec):
     return dict(base, status="calculable", missing=[])
 
 
-def calculate(spec):
+def _calculate(spec):
     if (
         isinstance(spec.get("crops"), list)
         and len(spec["crops"]) > 1
@@ -742,7 +742,7 @@ def calculate(spec):
         benefits.append(b)
         costs.append(c)
         flows.append(b - c)
-    inv = investment(flows, benefits, costs, initial["discount_rate"])
+    inv = _investment(flows, benefits, costs, initial["discount_rate"])
     inv["repayment_horizon"] = grace + term
     inv["repayment_comparison"] = (
         "not_recovered"
@@ -776,6 +776,15 @@ def calculate(spec):
         "business_approval": "not_assessed",
         "recalculation": "not_run",
     }
+
+
+def calculate(spec, *, context=None):
+    """Guarded public entry: returning a finance calculation needs an
+    explicit major authorized against the canonical binding (policy B)."""
+    import gg_major_contract as mc
+
+    mc.authorize_output(mc.OUTPUT_FINANCE_CALCULATION, context, spec=spec)
+    return _calculate(spec)
 
 
 def crosscheck(result, claims):
@@ -813,16 +822,22 @@ INVESTMENT_DISPLAY = {
 }
 
 
-def workbook(spec, path):
+def workbook(spec, path, *, context=None):
+    """Guarded workbook build: authorize before any output, reconfirm
+    just before the file is saved (policy B)."""
+    import gg_major_contract as mc
+
     if spec.get("profile") == "school_17_sheet_v1":
         from gg_school_excel import school_workbook
 
-        return school_workbook(spec, path)
+        return school_workbook(spec, path, context=context)
+    authorization = mc.authorize_output(
+        mc.OUTPUT_SCHOOL_WORKBOOK, context, spec=spec)
     from openpyxl import Workbook
     from openpyxl.styles import Alignment, Font
     from openpyxl.utils import get_column_letter
 
-    result = calculate(spec)
+    result = _calculate(spec)
     if result["status"] != "calculated":
         raise ValueError(result["reason"])
     wb = Workbook()
@@ -1084,11 +1099,16 @@ def workbook(spec, path):
     path = Path(path)
     if path.exists():
         raise ValueError("기존 XLSX 덮어쓰기 금지")
+    mc.reconfirm_output(authorization, context)
     path.parent.mkdir(parents=True, exist_ok=True)
     wb.save(path)
     path.with_suffix(".manifest.json").write_text(
         json.dumps(
-            dict(result, file_hash=digest(path.read_bytes())),
+            dict(
+                result,
+                file_hash=digest(path.read_bytes()),
+                major_authorization=authorization.to_dict(),
+            ),
             ensure_ascii=False,
             indent=2,
         ),
@@ -1104,7 +1124,7 @@ def verify_recalculated(spec, path):
         return verify_school_recalculated(spec, path)
     from openpyxl import load_workbook
 
-    result = calculate(spec)
+    result = _calculate(spec)
     if result["status"] != "calculated":
         return [{"status": "unsupported", "reason": result["reason"]}]
     wb = load_workbook(path, data_only=True)
