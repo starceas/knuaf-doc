@@ -163,7 +163,7 @@
     "tools/runtime-changes.json": {
       "note": "누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py. P8 declares the fruit_trees first bundle (module registration, two common helper modules, fruit plan, reference-set data and guidance).",
       "origin": "new",
-      "sha256": "d89d90178fed6c5500b42fee4f57ca4eae7d526c2fa7d7bf9d75ec0949230771"
+      "sha256": "6cb2f73374e3e3272c133101f342da5dec7edb1cf85f55f24ed5e1bfaf9eccc6"
     },
     "tools/validation-provenance.json": {
       "note": "This file; declares origins for the validation layer.",
@@ -186,7 +186,7 @@
     "approved_new_files": 67,
     "baseline_main": "29abec0ec95369de7ae9e22207349d574f1f46b7",
     "change_count": 94,
-    "changes_sha256": "0f049e04de1371b62447d7ada9d776de7bfa164534cb5de262251166400048fc",
+    "changes_sha256": "b83613f321acab434ced1d87011131e27ba2cf2bb54058db6ecc42427e038d4d",
     "new_count": 67,
     "parent_candidate": {
       "file_count": 154,
@@ -195,7 +195,7 @@
     },
     "schema": "knuaf-doc/runtime-changes@2",
     "spec": "tools/runtime-changes.json",
-    "spec_sha256": "d89d90178fed6c5500b42fee4f57ca4eae7d526c2fa7d7bf9d75ec0949230771",
+    "spec_sha256": "6cb2f73374e3e3272c133101f342da5dec7edb1cf85f55f24ed5e1bfaf9eccc6",
     "stage": "P9",
     "stage_lineage": [
       {
@@ -256,5 +256,5 @@
     "verified_count": 94
   },
   "schema": "knuaf-doc/validation-bundle@3",
-  "validation_tree_sha256": "89dfe589a42b497b40909ac6c82d74cf9484bbb2aa25a9ef46d1be62644422b2"
+  "validation_tree_sha256": "796212b97608e518d75fd0f3d7ed8ec196bedeb89633381624674a54a609a99c"
 }
