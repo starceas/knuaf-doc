@@ -810,8 +810,11 @@ class TestShippedCatalog(unittest.TestCase):
         self.assertIn(SPECIALTY_PACK, sc.packs)
         ii = reg.resolve("industrial_insects")
         self.assertEqual(ii.packs, ())
+        fr = reg.resolve("fruit_trees")
+        self.assertEqual(fr.packs, ())
         self.assertEqual(reg.major_ids,
-                         ("specialty_crops", "industrial_insects"))
+                         ("specialty_crops", "industrial_insects",
+                          "fruit_trees"))
 
 
 if __name__ == "__main__":

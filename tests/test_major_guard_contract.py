@@ -14,6 +14,10 @@ from tests._harness import ContractCase, bind_major, fact_op, runtime, source_op
 
 SPECIALTY = "specialty_crops"
 INSECTS = "industrial_insects"
+# Registered majors are specialty_crops, industrial_insects, fruit_trees.
+# UNREGISTERED keeps the unknown-major path; PROBE is a synthetic peer.
+UNREGISTERED = "hort_env_systems"
+PROBE = "probe_major"
 
 
 class OutputGuardContractTests(ContractCase):
@@ -84,15 +88,20 @@ class OutputGuardContractTests(ContractCase):
                     })
 
     def test_l4_unregistered_conflicting_or_mismatched_major_is_refused(self):
-        """A32-L4: an unregistered fruit ID, a spec/profile/context conflict,
-        and an ID that differs from the binding are all refused; nothing is
-        converted to specialty."""
+        """A32-L4: an unregistered ID, a spec/profile/context conflict, and
+        an ID that differs from the binding (registered fruit_trees against
+        a specialty binding) are all refused; nothing is converted to
+        specialty."""
         root = self.make_project()
         bind_major(root)
         paper = self.mc.OUTPUT_SCHOOL_PAPER
         self._held("unknown_major", paper, self._ctx(root),
+                   spec={"major_id": UNREGISTERED})
+        self._held("unknown_major", paper, self._ctx(root, UNREGISTERED))
+        self._held("major_binding_mismatch", paper, self._ctx(root),
                    spec={"major_id": "fruit_trees"})
-        self._held("unknown_major", paper, self._ctx(root, "fruit_trees"))
+        self._held("major_binding_mismatch", paper,
+                   self._ctx(root, "fruit_trees"))
         self._held("major_id_conflict", paper, self._ctx(root), spec={
             "major_id": SPECIALTY, "school_profile": {"major_id": INSECTS}})
         self._held("major_id_conflict", paper, self._ctx(root, INSECTS),
@@ -170,7 +179,7 @@ class OutputGuardContractTests(ContractCase):
                 source_refs=[dict(f["source_refs"][0], id="gone")]),
             "version_mismatch": lambda p, f: f.update(module_version="0.9.0"),
             "no_version": lambda p, f: f.pop("module_version"),
-            "unregistered_binding": lambda p, f: f.update(value="fruit_trees"),
+            "unregistered_binding": lambda p, f: f.update(value=UNREGISTERED),
         }
         self.assertEqual(fact["answer_state"], "provided")
         for name, mutate in invalid.items():
@@ -284,12 +293,13 @@ class OutputGuardContractTests(ContractCase):
         self.assertEqual(auth.major_id, SPECIALTY)
 
     def test_registered_major_without_outputs_is_refused(self):
-        """A registered peer module (synthetic fruit_trees) that declares no
-        paper/workbook/finance output is refused by capability — the guard
-        reads the module declaration, not a specialty-only rule."""
+        """A registered peer module (synthetic ``probe_major``) that declares
+        no paper/workbook/finance output is refused by capability — the
+        guard reads the module declaration, not a specialty-only rule.  The
+        real fruit_trees module is checked in tests/test_fruit_module.py."""
         mc = self.mc
         fruit = mc.declare_module(
-            major_id="fruit_trees", module_version="0.0.1",
+            major_id=PROBE, module_version="0.0.1",
             capabilities={"question": "supported", "document": "supported",
                           "evidence": "unsupported",
                           "finance": "unsupported"},
@@ -301,8 +311,8 @@ class OutputGuardContractTests(ContractCase):
         registry = mc.ModuleRegistry(
             mc.MODULES + (fruit,), pack_owner=mc.load_pack_owner())
         root = self.make_project()
-        write_text(root, "major-answer.txt", "전공 선택: fruit_trees\n")
-        fact = fact_op("selected_major", "common.major_id", "fruit_trees", "",
+        write_text(root, "major-answer.txt", "전공 선택: " + PROBE + "\n")
+        fact = fact_op("selected_major", "common.major_id", PROBE, "",
                        scope="project", verification="claim_supported",
                        source_id="major-answer")
         fact["value"]["module_version"] = "0.0.1"
@@ -313,10 +323,10 @@ class OutputGuardContractTests(ContractCase):
         for output in mc.OUTPUT_REQUIREMENTS:
             with self.subTest(output=output):
                 self._held("unsupported_output", output,
-                           self._ctx(root, "fruit_trees"), registry=registry)
+                           self._ctx(root, PROBE), registry=registry)
         # Without the synthetic registration the same ID is unknown.
         self._held("unknown_major", mc.OUTPUT_SCHOOL_PAPER,
-                   self._ctx(root, "fruit_trees"))
+                   self._ctx(root, PROBE))
         self.assertEqual(self._tree_bytes(root), before)
 
     def _files(self):

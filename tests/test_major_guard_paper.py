@@ -31,6 +31,11 @@ from tests._harness import (
 
 SPECIALTY = "specialty_crops"
 INSECTS = "industrial_insects"
+# Registered majors are specialty_crops, industrial_insects, fruit_trees.
+# UNREGISTERED keeps the unknown-major path; PROBE is a synthetic peer that
+# declares only the outputs a test needs.
+UNREGISTERED = "hort_env_systems"
+PROBE = "probe_major"
 
 
 def _spec(**extra):
@@ -84,10 +89,10 @@ class _Base(ContractCase):
                                "ops": [{"collection": "facts",
                                         "value": fact}]}, revision)
 
-    def _fruit_registry(self, outputs=("question_list", "document_plan")):
+    def _probe_registry(self, outputs=("question_list", "document_plan")):
         mc = self.mc
         fruit = mc.declare_module(
-            major_id="fruit_trees", module_version="0.0.1",
+            major_id=PROBE, module_version="0.0.1",
             capabilities={"question": "supported",
                           "document": "supported",
                           "evidence": "unsupported",
@@ -98,14 +103,14 @@ class _Base(ContractCase):
         return mc.ModuleRegistry(mc.MODULES + (fruit,),
                                  pack_owner=mc.load_pack_owner())
 
-    def _bind_fruit(self, root, registry):
-        """Bind the synthetic fruit module and make it the default
+    def _bind_probe(self, root, registry):
+        """Bind the synthetic probe module and make it the default
         registry for this test (restored by addCleanup)."""
         self.addCleanup(setattr, self.mc, "default_registry",
                         self.mc.default_registry)
         self.mc.default_registry = lambda catalog_path=None: registry
-        write_text(root, "major-answer.txt", "전공 선택: fruit_trees\n")
-        fact = fact_op("selected_major", "common.major_id", "fruit_trees",
+        write_text(root, "major-answer.txt", "전공 선택: " + PROBE + "\n")
+        fact = fact_op("selected_major", "common.major_id", PROBE,
                        "", scope="project", verification="claim_supported",
                        source_id="major-answer")
         fact["value"]["module_version"] = "0.0.1"
@@ -243,13 +248,17 @@ class PaperGeneratorGuardTests(_Base):
         self.assertFalse((Path(root) / "build/r.md").exists())
 
     def test_l4_unregistered_conflicting_and_unsupported(self):
-        """A32-L4: unregistered fruit ID, fruit/insect labels against a
-        specialty ID, spec vs --major conflict, and an insect binding."""
+        """A32-L4: an unregistered ID, the registered fruit ID against a
+        specialty binding, fruit/insect labels against a specialty ID,
+        spec vs --major conflict, and an insect binding."""
         root = self.make_project()
         bind_major(root)
+        unknown = _spec(major_id=UNREGISTERED)
+        unknown["school_profile"]["department"] = "합성학과"
+        self._all_held(root, unknown, "unknown_major")
         fruit = _spec(major_id="fruit_trees")
         fruit["school_profile"]["department"] = "과수학과"
-        self._all_held(root, fruit, "unknown_major")
+        self._all_held(root, fruit, "major_binding_mismatch")
         fruit_label = _spec(major_id=SPECIALTY)
         fruit_label["school_profile"]["department"] = "과수학과"
         self._all_held(root, fruit_label, "major_marker_conflict")
@@ -262,8 +271,9 @@ class PaperGeneratorGuardTests(_Base):
         self._all_held(insect_root, insect, "unsupported_output")
 
     def test_l4_registered_module_without_paper_is_refused(self):
+        """The real registered fruit_trees module declares no paper."""
         root = self.make_project()
-        self._bind_fruit(root, self._fruit_registry())
+        bind_major(root, "fruit_trees")
         spec = _spec(major_id="fruit_trees")
         spec["school_profile"]["department"] = "과수학과"
         name = self._write_spec(root, spec)
@@ -512,7 +522,9 @@ class ExportAdoptGuardTests(_Base):
         self._export_held(root, "major_binding_required", SPECIALTY)  # L6
         bind_major(root)
         self._export_held(root, "major_id_required")                  # L2
-        self._export_held(root, "unknown_major", "fruit_trees")       # L4
+        self._export_held(root, "unknown_major", UNREGISTERED)        # L4
+        self._export_held(root, "major_binding_mismatch",
+                          "fruit_trees")                              # L4
         self._export_held(root, "major_binding_mismatch", INSECTS)    # L4
         value = self.core.export(root, "draft", major_id=SPECIALTY)   # L3
         self.assertEqual(value["status"], "generated")
@@ -574,7 +586,9 @@ class ExportAdoptGuardTests(_Base):
         self._core_held("major_id_required", self._adopt, root, "o.md",
                         body)                                         # L2
         self._core_held("unknown_major", self._adopt, root, "o.md", body,
-                        major_id="fruit_trees")                       # L4
+                        major_id=UNREGISTERED)                        # L4
+        self._core_held("major_binding_mismatch", self._adopt, root,
+                        "o.md", body, major_id="fruit_trees")         # L4
         self._core_held("major_binding_mismatch", self._adopt, root,
                         "o.md", body, major_id=INSECTS)               # L4
         self._core_held("unknown_output", self._adopt, root, "o.dat",
@@ -662,7 +676,7 @@ class ExportAdoptGuardTests(_Base):
         from openpyxl import Workbook
         import io
         root = self.make_project()
-        self._bind_fruit(root, self._fruit_registry(
+        self._bind_probe(root, self._probe_registry(
             outputs=("question_list", "document_plan", "school_paper")))
         buf = io.BytesIO()
         Workbook().save(buf)
@@ -670,13 +684,13 @@ class ExportAdoptGuardTests(_Base):
         companion = [{"path": "재무.xlsx",
                       "sha256": self.core.digest(buf.getvalue())}]
         self._core_held("unsupported_output", self._adopt, root, "o.md",
-                        "# 본문\n".encode(), major_id="fruit_trees",
+                        "# 본문\n".encode(), major_id=PROBE,
                         companions=companion)
         self._core_held("unsupported_output", self._adopt, root, "o.pdf",
-                        b"%PDF-1.7\n%%EOF\n", major_id="fruit_trees",
+                        b"%PDF-1.7\n%%EOF\n", major_id=PROBE,
                         request_id="adopt-pdf")
         value = self._adopt(root, "o.md", "# 본문\n".encode(),
-                            major_id="fruit_trees", request_id="adopt-md")
+                            major_id=PROBE, request_id="adopt-md")
         self.assertEqual(value["status"], "adopted")
         # Retrying the registered request after its source is removed is
         # judged on the managed copy (paper only) — not on both kinds.
@@ -687,5 +701,5 @@ class ExportAdoptGuardTests(_Base):
         registered["path"] = "o.md"
         (Path(root) / "o.md").unlink()
         again = self.core.adopt_output(root, registered, p["revision"] - 1,
-                                       "adopt-md", major_id="fruit_trees")
+                                       "adopt-md", major_id=PROBE)
         self.assertEqual(again["status"], "existing")

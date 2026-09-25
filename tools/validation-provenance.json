@@ -96,7 +96,7 @@
       "origin": "new"
     },
     "tools/runtime-changes.json": {
-      "note": "누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py.",
+      "note": "누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py. P8 declares the fruit_trees first bundle (module registration, two common helper modules, fruit plan, reference-set data and guidance).",
       "origin": "new"
     },
     "tools/validation-provenance.json": {
@@ -104,15 +104,35 @@
       "origin": "new"
     },
     "tests/test_major_guard_contract.py": {
-      "note": "P7 policy B common output guard unit contract (A32-L1–L6, explicit null, label conflict, forged context, registered unsupported module, file-kind sniffing, reconfirm).",
+      "note": "P7 policy B common output guard unit contract (A32-L1–L6, explicit null, label conflict, forged context, registered unsupported module, file-kind sniffing, reconfirm). P8: fruit_trees is registered — unknown-major coverage moved to an unregistered ID, the synthetic peer renamed probe_major, real fruit_trees checked on every writer and CLI (unsupported_output) and against a specialty binding (major_binding_mismatch).",
       "origin": "new"
     },
     "tests/test_major_guard_paper.py": {
-      "note": "P7 policy B guard on paper/export/adopt/merge paths (A32-L1–L7 path matrix, lock-path binding race).",
+      "note": "P7 policy B guard on paper/export/adopt/merge paths (A32-L1–L7 path matrix, lock-path binding race). P8: fruit_trees is registered — unknown-major coverage moved to an unregistered ID, the synthetic peer renamed probe_major, real fruit_trees checked on every writer and CLI (unsupported_output) and against a specialty binding (major_binding_mismatch).",
       "origin": "new"
     },
     "tests/test_major_guard_outputs.py": {
-      "note": "P7 policy B guard on finance/XLSX/DOCX/Office writers (A46-T1–T5 path matrix, publish-time reconfirm).",
+      "note": "P7 policy B guard on finance/XLSX/DOCX/Office writers (A46-T1–T5 path matrix, publish-time reconfirm). P8: fruit_trees is registered — unknown-major coverage moved to an unregistered ID, the synthetic peer renamed probe_major, real fruit_trees checked on every writer and CLI (unsupported_output) and against a specialty binding (major_binding_mismatch).",
+      "origin": "new"
+    },
+    "tests/_fruit_fixtures.py": {
+      "note": "P8 synthetic fruit_trees fixtures: synthetic X01/X02 workbooks, minimal HWPX, handoff builder, registered-source project helpers (no real originals).",
+      "origin": "new"
+    },
+    "tests/test_fruit_module.py": {
+      "note": "P8 fruit_trees declaration (S01 plan, no example precedents, finance unsupported) and real-module link to policy B (unsupported_output, binding mismatch, paper CLI held, major-plan open).",
+      "origin": "new"
+    },
+    "tests/test_fruit_plan.py": {
+      "note": "P8 read-only fruit plan: handoff/original identity, locator verification, conflict holds, per-instance questions and inheritance, canonical workbook selection, scan-receipt survey evidence, plan review validity on three axes, return contract.",
+      "origin": "new"
+    },
+    "tests/test_research_handoff.py": {
+      "note": "P8 knuaf-research-handoff/v1 strict parsing: duplicate keys, NaN, closed keys, IDs, self-hash, hold scope, decision refs, reference gaps, xr_refs.",
+      "origin": "new"
+    },
+    "tests/test_workbook_registry.py": {
+      "note": "P8 common reference-workbook decision table, X01/X02 identity with exact sheet names, read-only scan, no shipped originals or local paths.",
       "origin": "new"
     }
   },

@@ -711,9 +711,9 @@ def explicit_major_ids(spec):
 
 # Known cover/profile labels per major.  A label is never used to infer a
 # major; it is only compared with the explicit ID so a request that names
-# one major while its cover says another is refused (A32-L4).  Majors not
-# yet registered (fruit_trees) are listed so their labels still conflict.
-# A new major module adds its labels here.
+# one major while its cover says another is refused (A32-L4).  Every
+# registered peer (specialty_crops, industrial_insects, fruit_trees) is
+# listed.  A new major module adds its labels here.
 KNOWN_MAJOR_MARKERS = MappingProxyType({
     "specialty_crops": ("특용",),
     "industrial_insects": ("곤충", "insect"),
@@ -1636,7 +1636,240 @@ INDUSTRIAL_INSECTS_MODULE = declare_module(
     forbidden_terms=_INSECT_FORBIDDEN,
 )
 
-MODULES = (SPECIALTY_CROPS_MODULE, INDUSTRIAL_INSECTS_MODULE)
+_FRUIT_FORBIDDEN = (
+    "곤충",
+    "사육",
+    "종충",
+    "특용작물",
+)
+
+# Repeated groups (orchard blocks, planting cohorts) carry the instance in
+# the field ID itself: ``fruit_trees.<group>.<stable_id>.<field>``.  The
+# ``{id}`` entries below are templates — the fruit plan expands them per
+# declared instance, so the common question/attempt contract works per
+# instance without a new grammar.
+_FRUIT_BLOCK_FIELDS = (
+    ("label", "구역 표시 이름(선언)", None),
+    ("area_m2", "구역 면적", "㎡"),
+    ("ownership", "소유·임차·매입 구분", None),
+    ("cultivation_form", "작형(노지/시설)", None),
+    ("heating", "가온 여부(가온/무가온/해당없음)", None),
+    ("protected_structure", "시설 구조", None),
+)
+_FRUIT_COHORT_FIELDS = (
+    ("label", "식재집단 표시 이름(선언)", None),
+    ("block_ref", "소속 구역 ID", None),
+    ("origin", "신규식재/승계/갱신·보식", None),
+    ("crop_species", "과종", None),
+    ("cultivar", "품종", None),
+    ("rootstock", "대목", None),
+    ("planting_year", "식재 연도", "년"),
+    ("age_basis_year", "수령 기준 연도", "년"),
+    ("age_at_basis", "기준 연도의 수령", "년"),
+    ("tree_count", "주수", "주"),
+    ("spacing_m", "재식 거리(열간×주간)", "m"),
+    ("bearing_status", "미성목/성목/갱신중", None),
+)
+
+_FRUIT_APPENDIX_ROLES = (
+    "기초 자산", "중장기 목표", "투자", "원리금 상환", "판매",
+    "생산·기반", "영농자재", "노동", "경비", "감가상각",
+    "생산원가", "손익", "추정대차대조표", "현금흐름", "추정소득",
+)
+
+FRUIT_TREES_MODULE = declare_module(
+    major_id="fruit_trees",
+    module_version="0.1.0",
+    capabilities={
+        "question": "supported",
+        "document": "supported",
+        "evidence": "supported",
+        "finance": "unsupported",
+    },
+    question_schema=(
+        QuestionSpec("fruit_trees.business_start_year", "사업 시작 연도",
+                     unit="년", period="year", target="plan"),
+        QuestionSpec("fruit_trees.school_template_edition",
+                     "학교 양식 판본", target="plan"),
+        QuestionSpec("fruit_trees.region", "과원 지역", target="site"),
+        QuestionSpec("fruit_trees.site_note", "필지·입지 메모", target="site"),
+        QuestionSpec("fruit_trees.crop_species", "과종(농장 기본값)",
+                     target="farm_default"),
+        QuestionSpec("fruit_trees.cultivar", "품종(농장 기본값)",
+                     target="farm_default"),
+        QuestionSpec("fruit_trees.rootstock", "대목(농장 기본값)",
+                     target="farm_default"),
+        QuestionSpec("fruit_trees.cultivation_form",
+                     "작형(노지/시설, 농장 기본값)", target="farm_default"),
+        QuestionSpec("fruit_trees.heating",
+                     "가온 여부(농장 기본값)", target="farm_default"),
+        QuestionSpec("fruit_trees.pollinizer", "수분수 계획", target="farm"),
+        QuestionSpec("fruit_trees.sales_grade_scheme", "판매 등급 체계",
+                     target="market"),
+        QuestionSpec("fruit_trees.sales_channels", "판로", target="market"),
+        QuestionSpec("fruit_trees.pest_control_registration_check",
+                     "방제 약제의 최신 등록·안전사용 확인 상태",
+                     target="regulation"),
+        QuestionSpec("fruit_trees.climate_station_period",
+                     "기상 관측소·분석 기간", target="site"),
+        QuestionSpec("fruit_trees.research_handoff",
+                     "등록된 연구 전달물 source ID", target="source"),
+        QuestionSpec("fruit_trees.workbook.selection",
+                     "현재 작업 XLSX 선택(inventory file_id 또는 none)",
+                     target="source"),
+    ) + tuple(
+        QuestionSpec("fruit_trees.block.{id}." + name, meaning,
+                     unit=unit, target="block")
+        for name, meaning, unit in _FRUIT_BLOCK_FIELDS
+    ) + tuple(
+        QuestionSpec("fruit_trees.cohort.{id}." + name, meaning,
+                     unit=unit, target="cohort")
+        for name, meaning, unit in _FRUIT_COHORT_FIELDS
+    ),
+    document_plan=(
+        DocumentNodeSpec(
+            "front", "front_matter", selectable=False, required=True,
+            rationale="표지·제출·인준·요약·목차·표목차·그림목차. "
+            "제출일과 졸업일은 별도 확인",
+            evidence_ids=("FRT-S01",)),
+        DocumentNodeSpec(
+            "ch1_intro", "crop_selection", selectable=False, required=True,
+            rationale="Ⅰ 선택 과종의 현황·선택 이유·기반조성·목표",
+            evidence_ids=("FRT-S02",)),
+        DocumentNodeSpec(
+            "ch2_location", "site_conditions", selectable=False,
+            required=True, rationale="Ⅱ-1 입지·교통·인구·출하 여건",
+            evidence_ids=("FRT-S03",)),
+        DocumentNodeSpec(
+            "ch2_climate", "climate", selectable=False, required=True,
+            rationale="최근 10년 월별 기후·서리. 미세먼지·자연재해는 "
+            "원문상 연수 미지정 — 관측소·기간·결측을 기록",
+            evidence_ids=("FRT-S04",)),
+        DocumentNodeSpec(
+            "ch2_soil", "soil", selectable=False, required=True,
+            rationale="토양도 정보와 필지 토양검정을 구분",
+            evidence_ids=("FRT-S05",)),
+        DocumentNodeSpec(
+            "ch2_industry", "industry_status", selectable=False,
+            required=True,
+            rationale="Ⅱ-2 국내외 면적·생산·수출입·가격. 단위·거래단계·"
+            "기준기간 유지", evidence_ids=("FRT-S06",)),
+        DocumentNodeSpec(
+            "ch2_model_farm", "model_farm", selectable=False, required=True,
+            rationale="Ⅱ-3 모델농장. 예시 농장 성과를 본인 사실로 쓰지 않음",
+            evidence_ids=("FRT-S07",)),
+        DocumentNodeSpec(
+            "ch2_swot", "swot", selectable=False, required=True,
+            rationale="Ⅱ-4 당면과제와 SWOT 대응",
+            evidence_ids=("FRT-S08",)),
+        DocumentNodeSpec(
+            "ch2_policy", "policy", selectable=False, required=True,
+            rationale="Ⅱ-5 지원정책. 공고 존재를 선정·대출 승인으로 쓰지 않음",
+            evidence_ids=("FRT-S09",)),
+        DocumentNodeSpec(
+            "ch3_manager", "manager_profile", selectable=False,
+            required=True,
+            rationale="Ⅲ-1 경영주·실습·가족 역할. 인적 사항은 로컬 비공개",
+            evidence_ids=("FRT-S10",)),
+        DocumentNodeSpec(
+            "ch3_cultivar", "cultivar", selectable=False, required=True,
+            rationale="Ⅲ-2 품종·대목·수분 연계", evidence_ids=("FRT-S11",)),
+        DocumentNodeSpec(
+            "ch3_cultivation", "cultivation_plan", selectable=False,
+            required=True,
+            rationale="Ⅲ-3 작형·수형·재식·관수/시비·월별 재배력. 도면 주수와 "
+            "이론 주수를 구분", evidence_ids=("FRT-S12",)),
+        DocumentNodeSpec(
+            "ch3_pest", "pest_control", selectable=False, required=True,
+            rationale="Ⅲ-4 병해충·방제력. 옛 양식 약제 예시를 자동 채택하지 "
+            "않고 최신 등록 확인 전 방제표 보류", evidence_ids=("FRT-S13",)),
+        DocumentNodeSpec(
+            "ch3_production", "production_plan", selectable=False,
+            required=True,
+            rationale="Ⅲ-5 연도별 생산량·단가·주/부산물 수입. 수령별 수량을 "
+            "창작하지 않음", evidence_ids=("FRT-S14",)),
+        DocumentNodeSpec(
+            "ch3_marketing", "marketing", selectable=False, required=True,
+            rationale="Ⅲ-6 등급×판로×시기 판매 전략",
+            evidence_ids=("FRT-S15",)),
+        DocumentNodeSpec(
+            "ch3_investment", "investment", selectable=False, required=True,
+            rationale="Ⅲ-7 과원·시설·농기계 투자와 재원·차입",
+            evidence_ids=("FRT-S16",)),
+        DocumentNodeSpec(
+            "ch4_closing", "closing", selectable=False, required=True,
+            rationale="Ⅳ 맺음말·참고문헌", evidence_ids=("FRT-S17",)),
+        DocumentNodeSpec(
+            "back_parent_consent", "parent_consent", selectable=False,
+            required=True,
+            rationale="학부모 동의서 — 합의·서명을 작성자가 만들지 않음",
+            evidence_ids=("FRT-S17",)),
+        DocumentNodeSpec(
+            "back_ack", "acknowledgement", selectable=False, required=True,
+            rationale="감사의 글", evidence_ids=("FRT-S17",)),
+    ) + tuple(
+        DocumentNodeSpec(
+            "appendix_%02d" % (i + 1), "finance_appendix_role",
+            selectable=False, required=True,
+            rationale="재무 부록 역할 %d: %s (학교 10년 창, 계산 미지원)"
+            % (i + 1, name), evidence_ids=("FRT-S17",))
+        for i, name in enumerate(_FRUIT_APPENDIX_ROLES)
+    ),
+    evidence_applicability=MappingProxyType(
+        {
+            "use_scopes": (
+                "industry_context",
+                "technical_reference",
+                "price_reference",
+                "climate_soil",
+                "policy_reference",
+            ),
+            "common_pack_policy": "unverified",
+            "required_axes": (
+                "acquisition",
+                "observation",
+                "rights",
+                "conflict",
+                "applicability",
+            ),
+        }
+    ),
+    finance_capabilities=(
+        FinanceCapability(
+            profile="perennial_orchard_cash",
+            status="unsupported",
+            reason="식재집단·수령·성목 전환·생물자산·10년 창 산식 미구현",
+        ),
+        FinanceCapability(
+            profile="single_annual_cash_v1",
+            status="unsupported",
+            reason="다년생 과원을 연간 단작 산식으로 계산하지 않음",
+        ),
+        FinanceCapability(
+            profile="school_17_sheet_v1",
+            status="unsupported",
+            reason="5년·annual 전용 생성기 — 과수 10년 부록과 다름",
+        ),
+    ),
+    validation_rules=(
+        "namespace_fields",
+        "no_foreign_pack_refs",
+        "forbidden_terms_absent",
+        "no_workbook_output",
+        "instance_field_ids",
+    ),
+    # Plan only: no paper generator, no workbook, no finance output yet.
+    supported_outputs=(
+        "question_list",
+        "document_plan",
+        "evidence_review",
+    ),
+    packs=(),  # empty_slot preserved — no fabricated orchard data
+    forbidden_terms=_FRUIT_FORBIDDEN,
+)
+
+MODULES = (SPECIALTY_CROPS_MODULE, INDUSTRIAL_INSECTS_MODULE,
+           FRUIT_TREES_MODULE)
 
 
 def _default_packs_dir():
