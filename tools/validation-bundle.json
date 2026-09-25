@@ -133,9 +133,9 @@
       "sha256": "2284641938cbf63d390289e9c7416d40696dc0c3b791a06f3e418c51582bf533"
     },
     "tests/test_workbook_registry.py": {
-      "note": "P8 common reference-workbook decision table, X01/X02 identity with exact sheet names, read-only scan, no shipped originals or local paths. P9: v2 reference-set load, extract/--check determinism, registry-extract identity path parser-call counts, resolver template_status keys.",
+      "note": "P8 common reference-workbook decision table, X01/X02 identity with exact sheet names, read-only scan, no shipped originals or local paths. P9: v2 reference-set load, extract/--check determinism, registry-extract identity path parser-call counts, resolver template_status keys. P9-D3: major_base_policy decision tests incl. shipped-catalog default path, explicit-selection precedence, unusable-base and duplicate-copy negatives.",
       "origin": "new",
-      "sha256": "a78513bc9ce87fac21cc5007ad804cd9ad3421c6bd510d35c0dde073ae83802d"
+      "sha256": "b001961a2934678e0255c5de1a5cfdd5a145264c7ba628a15e2d182b69a9a202"
     },
     "tests/test_xlsx_structure.py": {
       "note": "P0-A: synthetic XLSX contracts — merge markers, print_titles container, corrupt ZIP handling, visible-sheet count. repair-n1/N1: dependency skip removed so import/fixture errors surface as failure/error.",
@@ -166,14 +166,14 @@
       "sha256": "246711b72d92c32f0904f9eac4b90a9590c9420c75af60917d1bbd05b996e6ab"
     },
     "tools/runtime-changes.json": {
-      "note": "누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py. P8 declares the fruit_trees first bundle (module registration, two common helper modules, fruit plan, reference-set data and guidance). P9 declares the common XLSX reuse bundle (one new runtime extract file + declared edits to registration, resolver, template guard, and reuse tests).",
+      "note": "누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py. P8 declares the fruit_trees first bundle (module registration, two common helper modules, fruit plan, reference-set data and guidance). P9 declares the common XLSX reuse bundle (one new runtime extract file + declared edits to registration, resolver, template guard, and reuse tests). P9-D3 declares the major-specific-precedence edits (registry dedupe, catalog base_for_major, resolver base policy, docs, tests) in the same stage.",
       "origin": "new",
-      "sha256": "9b3ae46b74e95586cd2cc723d9c48b3b5401182ab81838603e60f87cd9842842"
+      "sha256": "70981a2eeed4e6663b276f95b0cf96841edac33d3639536d30a4cdd7587ef630"
     },
     "tools/validation-provenance.json": {
       "note": "This file; declares origins for the validation layer.",
       "origin": "new",
-      "sha256": "a0c9348581062c610544abace99691da9f005e4e0071d8c91cbb91eb0c849dad"
+      "sha256": "0e90a59ce20ff134686b8fb21d66df13accc7f73789684896e459fc8cea65aaf"
     }
   },
   "generated_by": "tools/build_validation_bundle.py@3",
@@ -191,7 +191,7 @@
     "approved_new_files": 67,
     "baseline_main": "29abec0ec95369de7ae9e22207349d574f1f46b7",
     "change_count": 91,
-    "changes_sha256": "cd91b5066f04949359973e44822b606d308e79d01efbc0a2dfbfb7f504650dcf",
+    "changes_sha256": "00a04e456c341106f5cc9dd5c132d3b953cf505fc4cff5711bc306855662a7a2",
     "new_count": 67,
     "parent_candidate": {
       "file_count": 154,
@@ -200,7 +200,7 @@
     },
     "schema": "knuaf-doc/runtime-changes@2",
     "spec": "tools/runtime-changes.json",
-    "spec_sha256": "9b3ae46b74e95586cd2cc723d9c48b3b5401182ab81838603e60f87cd9842842",
+    "spec_sha256": "70981a2eeed4e6663b276f95b0cf96841edac33d3639536d30a4cdd7587ef630",
     "stage": "P9",
     "stage_lineage": [
       {
@@ -261,5 +261,5 @@
     "verified_count": 91
   },
   "schema": "knuaf-doc/validation-bundle@3",
-  "validation_tree_sha256": "aebba8f1ffc589e134ea9c9997888cd61277e2f448a8c146b7aca276cd450cba"
+  "validation_tree_sha256": "77d84339527c888cca8e5294ad17647810feb4b4e47c51526811302da2513a57"
 }

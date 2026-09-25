@@ -105,7 +105,7 @@
       "origin": "new"
     },
     "tests/test_workbook_registry.py": {
-      "note": "P8 common reference-workbook decision table, X01/X02 identity with exact sheet names, read-only scan, no shipped originals or local paths. P9: v2 reference-set load, extract/--check determinism, registry-extract identity path parser-call counts, resolver template_status keys.",
+      "note": "P8 common reference-workbook decision table, X01/X02 identity with exact sheet names, read-only scan, no shipped originals or local paths. P9: v2 reference-set load, extract/--check determinism, registry-extract identity path parser-call counts, resolver template_status keys. P9-D3: major_base_policy decision tests incl. shipped-catalog default path, explicit-selection precedence, unusable-base and duplicate-copy negatives.",
       "origin": "new"
     },
     "tests/test_xlsx_structure.py": {
@@ -132,7 +132,7 @@
       "origin": "new"
     },
     "tools/runtime-changes.json": {
-      "note": "누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py. P8 declares the fruit_trees first bundle (module registration, two common helper modules, fruit plan, reference-set data and guidance). P9 declares the common XLSX reuse bundle (one new runtime extract file + declared edits to registration, resolver, template guard, and reuse tests).",
+      "note": "누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py. P8 declares the fruit_trees first bundle (module registration, two common helper modules, fruit plan, reference-set data and guidance). P9 declares the common XLSX reuse bundle (one new runtime extract file + declared edits to registration, resolver, template guard, and reuse tests). P9-D3 declares the major-specific-precedence edits (registry dedupe, catalog base_for_major, resolver base policy, docs, tests) in the same stage.",
       "origin": "new"
     },
     "tools/validation-provenance.json": {

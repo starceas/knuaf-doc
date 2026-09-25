@@ -7,11 +7,13 @@ when the major folder survey is complete and shows no major XLSX, the
 common set X01+X02 (``references/workbook-reference-set.json``) is both
 the reference set and the fill template — X01 for the general form, X02
 when a perennial-plant asset account is needed; the user picks at fill
-time.  When a major XLSX exists it is used and X01/X02 stay
-comparison-only.  An incomplete survey, an unreadable or damaged file, or
-a missing user selection is never turned into "absent".  Roles come only
-from the declared role; file names, author names or formula counts never
-assign one.
+time.  A major-specific workbook takes precedence over the common set:
+for ``hort_env_systems`` the shipped H01 identity is that major's base
+workbook and X01/X02 stay reference-only there; an explicit user
+selection always wins.  An incomplete survey, an unreadable or damaged
+file, or a missing user selection is never turned into "absent".
+Roles come only from the declared role; file names, author names or
+formula counts never assign one.
 
 The caller verifies every file against the canonical source record
 before calling ``resolve_workbook_references`` and passes the result in
@@ -90,8 +92,10 @@ def load_reference_catalog(path=None):
     """Full v2 catalogue: ``{"members": {...}, "known_workbooks": {...}}``.
 
     ``known_workbooks`` entries are identification-only (same shipped
-    ``sha256``/exact ``sheets`` fields); a missing block loads as empty.
-    The shipped v2 document is the only accepted schema — fail closed."""
+    ``sha256``/exact ``sheets`` fields) that also preserve ``major``,
+    ``role``, ``authority`` and ``base_for_major`` when declared; a
+    missing block loads as empty.  The shipped v2 document is the only
+    accepted schema — fail closed."""
     data = json.loads(Path(path or REFERENCE_SET_PATH).read_text(
         encoding="utf-8"))
     if data.get("schema") != REFERENCE_SET_SCHEMA:
@@ -100,7 +104,9 @@ def load_reference_catalog(path=None):
     known = {}
     for k in data.get("known_workbooks") or []:
         entry = {"sha256": k["sha256"], "sheets": list(k["sheets"]),
-                 "label": k["label"]}
+                 "label": k["label"], "major": k.get("major"),
+                 "role": k.get("role"), "authority": k.get("authority"),
+                 "base_for_major": k.get("base_for_major")}
         known[k["ref_id"]] = entry
     return {"members": members, "known_workbooks": known}
 
@@ -176,7 +182,23 @@ def _identity(f, members):
     return "common_mismatch"
 
 
-def _file_view(f, members):
+def _known_ref(f, known):
+    """Shipped ``known_workbooks`` ref_id (e.g. ``"H01"``) when a
+    major_folder file's sha256 AND exact sheet list equal the entry,
+    else ``None``.  Hint + identity only — never grants ``usable``."""
+    if f["origin"] != "major_folder":
+        return None
+    sha = f.get("sha256")
+    if not _is_hex64(sha):
+        return None
+    for ref_id, entry in (known or {}).items():
+        if sha == entry.get("sha256") and f.get("sheets") == entry.get(
+                "sheets"):
+            return ref_id
+    return None
+
+
+def _file_view(f, members, known=None):
     readable = f.get("readable") is True
     link_state = f.get("link_state", "unlinked")
     identity = _identity(f, members)
@@ -195,6 +217,7 @@ def _file_view(f, members):
         "identity_state": identity,
         "link_state": link_state,
         "usable": usable,
+        "known_ref": _known_ref(f, known),
         # Hint only: a sheet list equal to the X01 layout means the file
         # may carry the same map coordinates.  It never makes a file
         # usable, never grants identity, never enables extract reuse
@@ -238,11 +261,19 @@ def resolve_workbook_references(major_id, inventory, selection,
     if not isinstance(major_id, str) or not major_id:
         raise InventoryError("explicit major_id required")
     _check_inventory(inventory, selection)
-    members = (reference_set.get("members")
-               if isinstance(reference_set, dict)
-               and "members" in reference_set else reference_set)
+    # No injection -> the full shipped catalog (members + known_workbooks).
+    # An injected bare members map means no known_workbooks; an injected
+    # catalog dict is normalized by _catalog_entries.
+    catalog = reference_set if reference_set is not None else \
+        load_reference_catalog()
+    if isinstance(catalog, dict) and ("members" in catalog
+                                      or "known_workbooks" in catalog):
+        members = catalog.get("members")
+        known = catalog.get("known_workbooks") or {}
+    else:
+        members, known = catalog, {}
     members = members or load_reference_set()
-    views = [_file_view(f, members) for f in inventory["files"]]
+    views = [_file_view(f, members, known) for f in inventory["files"]]
     by_id = {v["file_id"]: v for v in views}
     common_status = _common_set_status(views)
     comparison = [v["file_id"] for v in views
@@ -278,8 +309,29 @@ def resolve_workbook_references(major_id, inventory, selection,
         state = selection["state"]
         chosen = by_id.get(selection.get("file_id"))
         if state in ("none", "absent"):
-            selection_status = "selection_required"
-            reason = "전공 XLSX 후보가 있으나 정본 선택이 없음"
+            # 전공 전용 통합문서 우선 (D-F): 정본 선택이 없을 때 usable
+            # 전공 폴더 파일이 자기 전공의 base_for_major 등록과 정확히
+            # 하나 맞으면 그 파일이 기본이다. 복사본이 둘 이상이면 사람이
+            # 고른다. 명시 선택은 언제나 이 정책보다 앞선다.
+            bases = [v for v in major_files
+                     if v["usable"] and v["known_ref"]
+                     and (known.get(v["known_ref"]) or {}).get(
+                         "base_for_major") == major_id]
+            if len(bases) == 1:
+                selection_status = "major_base_policy"
+                reference = [bases[0]["file_id"]]
+                completeness = "complete"
+                authority = "policy"
+                reason = ("전공 전용 통합문서 우선 — 등록 전공 통합문서가 "
+                          "기본 선택됨")
+            elif len(bases) > 1:
+                selection_status = "selection_required"
+                reason = ("전공 기본 통합문서 복사본이 둘 이상임 — 정본 선택 "
+                          "필요: " + ", ".join(v["file_id"]
+                                              for v in bases))
+            else:
+                selection_status = "selection_required"
+                reason = "전공 XLSX 후보가 있으나 정본 선택이 없음"
         elif state == "conflict":
             selection_status = "selection_conflict"
             reason = "정본 선택 사실이 둘 이상임"

@@ -414,20 +414,6 @@
    "build_allowlist_ref": null
   },
   {
-   "source_id": "hort-env-kang-raw-workbook",
-   "class": "major_professor_workbook",
-   "role": "reference_only",
-   "source_sha256": [
-    "e3c9defe376fa74413641408900f6bb656017a389fb9745d9dac221a10951c1c"
-   ],
-   "runtime": null,
-   "runtime_present": false,
-   "artifacts": [],
-   "coverage": {},
-   "lineage": [],
-   "build_allowlist_ref": null
-  },
-  {
    "source_id": "seo-minseo-finance-xlsx",
    "class": "specialty_finance_template",
    "role": "primary_finance_template",

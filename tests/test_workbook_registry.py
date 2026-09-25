@@ -18,6 +18,16 @@ X01 = "a" * 64
 X02 = "b" * 64
 MEMBERS = {"X01": {"sha256": X01, "sheets": ["s1", "s2 "], "label": "x01"},
            "X02": {"sha256": X02, "sheets": ["s1", "s2 "], "label": "x02"}}
+H01_SHA = "e" * 64
+H01_SHEETS = ["h1", "h2", "h3"]
+CATALOG = {"members": MEMBERS,
+           "known_workbooks": {
+               "H01": {"sha256": H01_SHA, "sheets": H01_SHEETS,
+                       "label": "synthetic H01",
+                       "major": "hort_env_systems",
+                       "role": "professor_reference",
+                       "authority": "user_statement",
+                       "base_for_major": "hort_env_systems"}}}
 
 
 def common(fid, sha, sheets=("s1", "s2 "), **over):
@@ -55,12 +65,24 @@ class DecisionTableTests(ContractCase):
     def setUp(self):
         self.wr = runtime("gg_workbook_registry")
 
-    def resolve(self, files, selection=SEL_NONE, **kw):
+    def resolve(self, files, selection=SEL_NONE, major_id="fruit_trees",
+                reference_set=MEMBERS, **kw):
         out = self.wr.resolve_workbook_references(
-            "fruit_trees", inv(files, **kw), selection,
-            reference_set=MEMBERS)
+            major_id, inv(files, **kw), selection,
+            reference_set=reference_set)
         self.assertEqual(set(out), KEYS)
         return out
+
+    def hort(self, files, selection=SEL_NONE, **kw):
+        return self.resolve(files, selection,
+                            major_id="hort_env_systems",
+                            reference_set=CATALOG, **kw)
+
+    def h01(self, fid="h01.xlsx", **over):
+        base = {"sha256": H01_SHA, "sheets": list(H01_SHEETS),
+                "declared_role": "professor_reference"}
+        base.update(over)
+        return major(fid, **base)
 
     def test_unsurveyed_or_unverified_is_not_absent(self):
         both = [common("x01", X01), common("x02", X02)]
@@ -191,6 +213,95 @@ class DecisionTableTests(ContractCase):
             self.wr.resolve_workbook_references(
                 "", inv([]), SEL_NONE, reference_set=MEMBERS)
 
+    # -- D-F major-specific workbook precedence (P9-D3) ---------------
+
+    def test_major_base_policy_selects_registered_base(self):
+        # hort + verified survey + H01 present + no selection -> the
+        # registered base wins without an explicit pick
+        for sel in (SEL_NONE, {"state": "none", "file_id": None}):
+            out = self.hort([self.h01(), major("other")], sel)
+            self.assertEqual(out["selection_status"], "major_base_policy")
+            self.assertEqual(out["reference_set"], ["h01.xlsx"])
+            self.assertEqual(out["completeness"], "complete")
+            self.assertEqual(out["authority_status"], "policy")
+            self.assertEqual(out["inventory_status"], "present")
+            self.assertEqual(out["template_candidates"], [])
+            self.assertEqual(out["template_status"], "not_applicable")
+            view = {v["file_id"]: v for v in out["candidate_roles"]}
+            self.assertEqual(view["h01.xlsx"]["known_ref"], "H01")
+            self.assertIsNone(view["other"]["known_ref"])
+
+    def test_major_base_explicit_selection_wins(self):
+        # a user pick of a different usable major file beats the policy
+        out = self.hort([self.h01(), major("picked")],
+                        {"state": "selected", "file_id": "picked"})
+        self.assertEqual(out["selection_status"], "user_selected")
+        self.assertEqual(out["reference_set"], ["picked"])
+
+    def test_major_base_sheet_mismatch_needs_selection(self):
+        # same sha but a different sheet list is not the shipped H01
+        out = self.hort([self.h01(sheets=["h1", "h2", "CHANGED"])])
+        self.assertEqual(out["selection_status"], "selection_required")
+        self.assertEqual(out["reference_set"], [])
+        self.assertIsNone(out["candidate_roles"][0]["known_ref"])
+
+    def test_major_base_never_crosses_majors(self):
+        # the same H01 bytes in a fruit_trees folder get no policy —
+        # base_for_major must equal the requested major_id
+        out = self.resolve([self.h01()], reference_set=CATALOG)
+        self.assertEqual(out["candidate_roles"][0]["known_ref"], "H01")
+        self.assertEqual(out["selection_status"], "selection_required")
+        self.assertEqual(out["reference_set"], [])
+
+    def test_major_base_duplicate_copies_need_selection(self):
+        out = self.hort([self.h01("copy-a"), self.h01("copy-b")])
+        self.assertEqual(out["selection_status"], "selection_required")
+        self.assertEqual(out["reference_set"], [])
+        self.assertIn("copy-a", out["selection_reason"])
+        self.assertIn("copy-b", out["selection_reason"])
+
+    def test_major_base_requires_usable_base(self):
+        for over in ({"readable": False}, {"link_state": "stale_source"},
+                     {"sha256": "not-hex"}, {"sha256": None}):
+            with self.subTest(**over):
+                out = self.hort([self.h01(**over)])
+                self.assertEqual(out["selection_status"],
+                                 "selection_required")
+                self.assertEqual(out["reference_set"], [])
+
+    def test_major_base_no_fallback_on_selected(self):
+        # explicit selection keeps every existing branch — never a
+        # fallback to the registered base
+        files = [self.h01(), major("bad", readable=False)]
+        out = self.hort(files, {"state": "selected", "file_id": "bad"})
+        self.assertEqual(out["selection_status"], "selected_unusable")
+        out = self.hort(files, {"state": "selected", "file_id": "gone"})
+        self.assertEqual(out["selection_status"], "selection_invalid")
+        out = self.hort(files, {"state": "conflict", "file_id": None})
+        self.assertEqual(out["selection_status"], "selection_conflict")
+        out = self.hort(files, {"state": "invalid", "file_id": None})
+        self.assertEqual(out["selection_status"], "selection_invalid")
+
+    def test_major_base_unsurveyed_unchanged(self):
+        out = self.hort([self.h01()], status="partial")
+        self.assertEqual(out["inventory_status"], "not_surveyed")
+        self.assertEqual(out["selection_status"], "survey_required")
+        self.assertEqual(out["reference_set"], [])
+
+    def test_shipped_catalog_default_path_applies_base(self):
+        # no injection -> the shipped catalog loads: H01's real identity
+        # in a hort inventory resolves to the base policy
+        wr = runtime("gg_workbook_registry")
+        shipped = wr.load_reference_catalog()["known_workbooks"]["H01"]
+        f = major("h01-real.xlsx", sha256=shipped["sha256"],
+                  sheets=list(shipped["sheets"]),
+                  declared_role="professor_reference")
+        out = wr.resolve_workbook_references(
+            "hort_env_systems", inv([f]), SEL_NONE)
+        self.assertEqual(out["selection_status"], "major_base_policy")
+        self.assertEqual(out["reference_set"], ["h01-real.xlsx"])
+        self.assertEqual(out["candidate_roles"][0]["known_ref"], "H01")
+
 
 class ReferenceIdentityTests(ContractCase):
     """A20-P — shipped X01/X02 identity keeps the exact sheet names."""
@@ -215,6 +326,10 @@ class ReferenceIdentityTests(ContractCase):
         h01 = catalog["known_workbooks"]["H01"]
         self.assertEqual(len(h01["sha256"]), 64)
         self.assertEqual(len(h01["sheets"]), 18)
+        self.assertEqual(h01["major"], "hort_env_systems")
+        self.assertEqual(h01["role"], "professor_reference")
+        self.assertEqual(h01["authority"], "user_statement")
+        self.assertEqual(h01["base_for_major"], "hort_env_systems")
         raw = json.loads(
             Path(wr.REFERENCE_SET_PATH).read_text(encoding="utf-8"))
         self.assertEqual(raw["schema"], wr.REFERENCE_SET_SCHEMA)

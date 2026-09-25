@@ -65,8 +65,6 @@ SOURCE_SHA = {
         "5d19b6a2e5dcddccb70c68e39abee8f423bba005c008db7b64076326a17b9c80",
     "kang-finance-workbook-x02":
         "54d4e55cd57bcb1db0fbfaafe2ed42422767f1561959b8a4f3c673daf77d7e78",
-    "hort-env-kang-raw-workbook":
-        "e3c9defe376fa74413641408900f6bb656017a389fb9745d9dac221a10951c1c",
 }
 BASELINE_IDS = [
     "rda.income.national.2024", "rda.income.regional.2024",
@@ -75,7 +73,6 @@ BASELINE_IDS = [
     "kim-wonseop-exemplar-pdf", "kim-wonseop-exemplar-hwp",
     "seo-minseo-finance-xlsx", "specialty-grad-thesis-finance-xlsx",
     "kang-finance-workbook-x01", "kang-finance-workbook-x02",
-    "hort-env-kang-raw-workbook",
 ]
 
 KIM_KEY = {"kind": "delimited",
@@ -761,7 +758,7 @@ class TestCU7(unittest.TestCase):
 
 class TestI01Matrix(unittest.TestCase):
     """I01.11 — entry x criterion negative matrix over the shipped
-    registry's final bytes (mandatory ten-entry baseline)."""
+    registry's final bytes (mandatory baseline entry set)."""
 
     def test_i01_11_matrix(self):
         reg = registry()
@@ -894,7 +891,10 @@ class TestI01Matrix(unittest.TestCase):
 
 
 class TestCommonWorkbooks(unittest.TestCase):
-    """P9: common Kang X01/X02 registration + H-raw identification-only."""
+    """P9: common Kang X01/X02 registration.  P9-D3: the duplicated
+    hort-raw registry entry was removed; the H01 base identity lives in
+    the reference set's known_workbooks, and a hort module registers its
+    own workbook (F2 one-hash-one-entry invariant below)."""
 
     def setUp(self):
         self.reg = registry()
@@ -927,11 +927,9 @@ class TestCommonWorkbooks(unittest.TestCase):
                 "references/common-workbooks/"
                 "kang-finance-workbook.json")
             self.assertEqual(e["lineage"][0]["verification"], "verified")
-        raw = entries["hort-env-kang-raw-workbook"]
-        self.assertEqual(raw["role"], "reference_only")
-        self.assertFalse(raw["runtime_present"])
-        self.assertEqual(raw["coverage"], {})
-        self.assertEqual(raw["lineage"], [])
+        # E1 (P9-D3): the hort module owns registering its own workbook —
+        # the duplicated reference_only entry is gone
+        self.assertNotIn("hort-env-kang-raw-workbook", entries)
         # D-C rename: no student number in any id
         self.assertIn("specialty-grad-thesis-finance-xlsx", entries)
 
@@ -987,17 +985,17 @@ class TestCommonWorkbooks(unittest.TestCase):
         self.assertEqual(v["status"], "blocked")
         self.assertIn("authority_conflict", v["reasons"])
 
-    def test_hort_env_raw_identified_not_usable(self):
-        key = {"kind": "delimited",
-               "value": "hort-env-kang:raw-structure"}
-        v = gg_reuse.resolve_reuse(
-            "e3c9defe376fa74413641408900f6bb656017a389fb9745d9dac221a10951c1c",
-            {"kind": "template_structure", "keys": [key]},
-            context=ctx(self.reg))
-        self.assertEqual(v["status"], "blocked")
-        self.assertIn("role_mismatch", v["reasons"])
-        self.assertEqual(v["selected_entry"],
-                         "hort-env-kang-raw-workbook")
+    def test_no_sha256_in_more_than_one_registry_entry(self):
+        # F2 (P9-D3): one source hash may never back two entries — the
+        # same bytes could resolve through either owner otherwise.  On
+        # this branch no entry carries the H01 hash at all; after the
+        # hort module's registration lands exactly its own entry does.
+        owners = {}
+        for e in self.reg.document["entries"]:
+            for sha in e.get("source_sha256") or []:
+                owners.setdefault(sha, []).append(e["source_id"])
+        dup = {s: ids for s, ids in owners.items() if len(ids) > 1}
+        self.assertEqual(dup, {})
 
 
 if __name__ == "__main__":
