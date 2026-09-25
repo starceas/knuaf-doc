@@ -34,7 +34,7 @@ S01 구조를 따른다: 앞부분(표지·제출·인준·요약·목차류), �
 
 ## 참조 XLSX 결정 (모든 전공 공용)
 
-`scripts/gg_workbook_registry.py`와 `references/workbook-reference-set.json`. 전공 폴더 조사가 근거와 함께 완료되고 전공 XLSX가 없을 때만 X01·X02를 함께 참조한다. 미조사·손상·미선택은 부재가 아니며, 역할은 사용자가 밝힌 것만 쓴다. 참조는 비교 근거일 뿐 제출 양식·계산 기준·출력 사본 선택이 아니다.
+`scripts/gg_workbook_registry.py`와 `references/workbook-reference-set.json`. 전공 폴더 조사가 근거와 함께 완료되고 전공 XLSX가 없다고 확인되면 X01·X02가 채워 쓸 양식이다(대식물 계정이 필요하면 X02). 전공 XLSX가 있으면 그쪽을 쓰고 X01·X02는 비교 근거로만 둔다. 미조사·손상·미선택은 부재가 아니며, 역할은 사용자가 밝힌 것만 쓴다. 과수 모듈은 계획 출력을 지원하지 않아 양식 적용은 과수 범위 밖이다.
 
 ## 계획 검토
 

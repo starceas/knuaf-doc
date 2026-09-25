@@ -249,6 +249,8 @@ class MissingTemplateCellTests(ContractCase):
         m.write_text(json.dumps({
             "schema": "gg-xlsx-template-map/v1",
             "source": {"sha256": tpl.sha256(source)},
+            "layout": {"variant": "unknown",
+                       "mapOrigin": "reviewed_custom"},
             "entries": entries,
         }, ensure_ascii=False), encoding="utf-8")
         return m
@@ -362,6 +364,7 @@ custom = root / "custom.json"
 custom.write_text(json.dumps({
     "schema": "gg-xlsx-template-map/v1",
     "source": {"sha256": tpl.sha256(src)},
+    "layout": {"variant": "unknown", "mapOrigin": "reviewed_custom"},
     "entries": [{"sheet": "시트1", "cell": "A1", "action": "clear",
                  "semanticField": "한국어 필드", "reason": "비ASCII 사유",
                  "explicit": True}],
