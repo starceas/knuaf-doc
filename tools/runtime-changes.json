@@ -25,6 +25,9 @@
     "skills/knuaf-doc/references/fact-semantics.json",
     "skills/knuaf-doc/references/finance-semantics.md",
     "skills/knuaf-doc/references/fruit-trees/README.md",
+    "skills/knuaf-doc/references/hort-env-systems/README.md",
+    "skills/knuaf-doc/references/hort-env-systems/premise-probes.md",
+    "skills/knuaf-doc/references/hort-env-systems/profile.json",
     "skills/knuaf-doc/references/locking.md",
     "skills/knuaf-doc/references/reuse-registry-schema.md",
     "skills/knuaf-doc/references/workbook-reference-set.json",
@@ -32,6 +35,7 @@
     "skills/knuaf-doc/scripts/gg_finance_body.py",
     "skills/knuaf-doc/scripts/gg_fruit_plan.py",
     "skills/knuaf-doc/scripts/gg_fs.py",
+    "skills/knuaf-doc/scripts/gg_hort_plan.py",
     "skills/knuaf-doc/scripts/gg_lock.py",
     "skills/knuaf-doc/scripts/gg_major_contract.py",
     "skills/knuaf-doc/scripts/gg_publication.py",
@@ -81,12 +85,12 @@
       "note": "corrections-2: SCC5 exact added-path inventory + provenance transfer record."
     },
     "skills/knuaf-doc/SKILL.md": {
-      "after_sha256": "0d48bce40d898433038c931df1a20ab647bbcd7e744f064cd767cba204d39e50",
+      "after_sha256": "a1b3e387895b0d2fbbe53a9c8062034f847e706c71c37cd6da19fc1e52fde314",
       "before_sha256": "c0008fa5239cc16411fd4ef24b5bf901c7a8b9b50c6b621e2bdee3acf734ddc0",
       "first_changed": "P1",
-      "last_changed": "P8",
-      "owner": "P8",
-      "reason": "H11 문서 정정: 사용자 명시 모델도 임의 폴백·대체 금지 규칙 추가 | P5-D1 guidance sync: new '참고자료 폴더 등록' bullet documents the frozen source-scan→source-resolve→source-register→source-view lifecycle and 03_sources.md preservation | P6: document explicit major binding and current industrial insect capability boundary | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P8: fruit_trees plan-only capability and guidance link",
+      "last_changed": "P9",
+      "owner": "P9",
+      "reason": "H11 문서 정정: 사용자 명시 모델도 임의 폴백·대체 금지 규칙 추가 | P5-D1 guidance sync: new '참고자료 폴더 등록' bullet documents the frozen source-scan→source-resolve→source-register→source-view lifecycle and 03_sources.md preservation | P6: document explicit major binding and current industrial insect capability boundary | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P8: fruit_trees plan-only capability and guidance link | P9: hort_env_systems plan-only capability and guidance link",
       "source": "new"
     },
     "skills/knuaf-doc/references/benchmark-packs/aliases/crop-aliases.specialty_crops.json": {
@@ -250,12 +254,13 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/builtin-sources.json": {
-      "after_sha256": "cef1717548bb990d0f806e6a95f97077c1d942a3c56969244e8f614c56a32638",
+      "after_sha256": "da44459b5eb14a7702017d8fd9a9c31d9676246cc7f5853ff8a86474bc9bd29d",
       "before_sha256": null,
       "first_changed": "P5",
-      "owner": "P5",
-      "reason": "accepted P5 reuse-registry@3 builtin source registry (frozen corrected A+B+C union)",
-      "source": "new"
+      "owner": "P9",
+      "reason": "accepted P5 reuse-registry@3 builtin source registry (frozen corrected A+B+C union) | P9: eight hort_env_systems entries appended (teaching workbook structure extract; exemplars and official sources identification-only); existing entries unchanged",
+      "source": "new",
+      "last_changed": "P9"
     },
     "skills/knuaf-doc/references/fact-semantics.json": {
       "after_sha256": "84034b46107a29c75bd630ab1f8afce88f2e6aa2a0fad4cfd5d7056b66af5569",
@@ -484,13 +489,13 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_major_contract.py": {
-      "after_sha256": "12cb49ae59667df1fe59f1943905e88f56e69802a67394d7d20c61ac538caf53",
+      "after_sha256": "fd30b465f19f1affe8aeddf870b39bae543e4e8b8dba22c6347849663da058b1",
       "before_sha256": null,
       "first_changed": "P6",
-      "owner": "P8",
-      "reason": "Peer major declarations, explicit evidenced binding, and read-only proposal router | P6 review: equal-rank F0/E1-E4 example_observed roster and optional document nodes | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P8: fruit_trees peer module declaration and registration (guard algorithm unchanged)",
+      "owner": "P9",
+      "reason": "Peer major declarations, explicit evidenced binding, and read-only proposal router | P6 review: equal-rank F0/E1-E4 example_observed roster and optional document nodes | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P8: fruit_trees peer module declaration and registration (guard algorithm unchanged) | P9: hort_env_systems peer module declaration, registration and cover marker (guard algorithm unchanged)",
       "source": "new",
-      "last_changed": "P8"
+      "last_changed": "P9"
     },
     "skills/knuaf-doc/scripts/gg_office.py": {
       "after_sha256": "fb8b01385bbc603ad1ed47f16d5c09d91ba14428dde13f61820d5e4df6bf9b73",
@@ -588,13 +593,13 @@
       "source": "new"
     },
     "skills/knuaf-doc/tests/test_gg_major_contract.py": {
-      "after_sha256": "bebc08f0d8ea065b9937d28732589606e24850ded42d6ee3d7bde3e520152023",
+      "after_sha256": "2446597a6373c20f4e84676bc9e28b99df49349062ba4f0f9c838a6796eae1dc",
       "before_sha256": null,
       "first_changed": "P6",
-      "owner": "P8",
-      "reason": "Synthetic major binding, peer isolation, and unsupported-output tests | P6 review: precedent parity and optional-node regressions | P8: registered majors now include fruit_trees",
+      "owner": "P9",
+      "reason": "Synthetic major binding, peer isolation, and unsupported-output tests | P6 review: precedent parity and optional-node regressions | P8: registered majors now include fruit_trees | P9: registered majors now include hort_env_systems",
       "source": "new",
-      "last_changed": "P8"
+      "last_changed": "P9"
     },
     "skills/knuaf-doc/tests/test_gg_rda_candidates.py": {
       "after_sha256": "a76350ab121b31d690bfdb02696f819ed857a05350cd9bf7ba915c5f013d788d",
@@ -631,12 +636,13 @@
       "note": "corrections-2: SCC1/SCC3/SCC4/SCC6 counterexample tests."
     },
     "skills/knuaf-doc/tests/test_gg_reuse.py": {
-      "after_sha256": "08d2cc9bbbd24aedc37f2a0dbef8167f93d24448d10394cebe40696d3e91616b",
+      "after_sha256": "55a574c71b84ce13580534ceef5b3e55c6a684459cbe95caffd35af891a954b4",
       "before_sha256": null,
       "first_changed": "P5",
-      "owner": "P5",
-      "reason": "accepted P5 reuse-resolver contract test (frozen corrected A+B+C union)",
-      "source": "new"
+      "owner": "P9",
+      "reason": "accepted P5 reuse-resolver contract test (frozen corrected A+B+C union) | P9: I01.11 matrix covers the hort_env_systems entries (source hashes, reference_only role mapping)",
+      "source": "new",
+      "last_changed": "P9"
     },
     "skills/knuaf-doc/tests/test_gg_reuse_auditkey.py": {
       "after_sha256": "4671a5527b6d17c6b1628b11d7bad5effbfaf0c91bfdd463dea729e403a2fb83",
@@ -838,17 +844,53 @@
       "reason": "P8 fruit_trees first-bundle guidance: plan-only support boundary and registration order",
       "source": "new",
       "last_changed": "P8"
+    },
+    "skills/knuaf-doc/scripts/gg_hort_plan.py": {
+      "after_sha256": "8b24fdfa52d0048560c8358d1fe6853d44e9ee8f6773c54d90eb963c15836ad5",
+      "before_sha256": null,
+      "first_changed": "P9",
+      "owner": "P9",
+      "reason": "P9 hort_env_systems first bundle: read-only writing plan (answer states without values, precedent locations, teaching-workbook cautions on rehash match, evidence rules)",
+      "source": "new",
+      "last_changed": "P9"
+    },
+    "skills/knuaf-doc/references/hort-env-systems/profile.json": {
+      "after_sha256": "1b8a731eed64cc9e2062fedcb96434bddc4f6110525f1799c4d09293e1877ef4",
+      "before_sha256": null,
+      "first_changed": "P9",
+      "owner": "P9",
+      "reason": "P9 hort_env_systems profile: precedent identity and page locations, teaching-workbook sheet names and caution cell locations, official source bibliography; no cell values, original text or student numbers",
+      "source": "new",
+      "last_changed": "P9"
+    },
+    "skills/knuaf-doc/references/hort-env-systems/README.md": {
+      "after_sha256": "2c52cd8600c6de0eb0b8abd8e36907690fc4e5f406882568b6d6a1c6d21cca10",
+      "before_sha256": null,
+      "first_changed": "P9",
+      "owner": "P9",
+      "reason": "P9 hort_env_systems guidance: plan-only support boundary, teaching workbook role, source rights boundary",
+      "source": "new",
+      "last_changed": "P9"
+    },
+    "skills/knuaf-doc/references/hort-env-systems/premise-probes.md": {
+      "after_sha256": "ff8c2d2051202350f54013115bd5b55c621d44b0e83161e3f3274c525d83753b",
+      "before_sha256": null,
+      "first_changed": "P9",
+      "owner": "P9",
+      "reason": "P9 hort_env_systems premise probes in the common interview format (C안): each probe links to declared hort field_ids or is marked as a field proposal",
+      "source": "new",
+      "last_changed": "P9"
     }
   },
   "cumulative": true,
-  "note": "선언된 runtime 변경만 — 이 목록 밖의 baseline 변화는 미승인. README.md는 readme_policy로 별도 관리. baseline 파일의 삭제는 허용하지 않으며, 신규 파일은 approved_new_files에 사전 명시된 경로만 before_sha256=null로 선언 가능. P6 공용 작성 계약은 새 런타임 파일을 별도 승인 목록으로 선언한다. P7 공용 전공 출력 가드(정책 B)는 기존 런타임 파일 변경과 기준선 파일 1개(gg_excel_formula_patch.py) 첫 변경을 선언한다. P8 과수 첫 묶음은 과수 모듈 선언·등록과 공용 보조 모듈 2개(참조 XLSX 결정·연구 전달물 검증), 과수 작성계획, 참조집합 데이터·안내 문서를 새 파일로 선언한다.",
+  "note": "선언된 runtime 변경만 — 이 목록 밖의 baseline 변화는 미승인. README.md는 readme_policy로 별도 관리. baseline 파일의 삭제는 허용하지 않으며, 신규 파일은 approved_new_files에 사전 명시된 경로만 before_sha256=null로 선언 가능. P6 공용 작성 계약은 새 런타임 파일을 별도 승인 목록으로 선언한다. P7 공용 전공 출력 가드(정책 B)는 기존 런타임 파일 변경과 기준선 파일 1개(gg_excel_formula_patch.py) 첫 변경을 선언한다. P8 과수 첫 묶음은 과수 모듈 선언·등록과 공용 보조 모듈 2개(참조 XLSX 결정·연구 전달물 검증), 과수 작성계획, 참조집합 데이터·안내 문서를 새 파일로 선언한다. P9 원예환경시스템 첫 묶음은 원예 모듈 선언·등록·표지, 원예 작성계획, 원예 profile·안내 문서를 새 파일로 선언하고 재사용 등록부에 원예 참조 항목을 추가한다.",
   "parent_candidate": {
-    "stage": "P7",
-    "file_count": 144,
-    "tree_sha256": "7dae9a12e55316e76b03f1cea6868b5bd76370e5fe0fbd0a335115dfda52d7df"
+    "stage": "P8",
+    "file_count": 154,
+    "tree_sha256": "e65a7dd0718004f9aa9068c61dda26096690709aff6c6d425f0eef368ef8d255"
   },
   "schema": "knuaf-doc/runtime-changes@2",
-  "stage": "P8",
+  "stage": "P9",
   "stage_lineage": [
     {
       "file_count": 75,
@@ -897,6 +939,12 @@
       "file_count": 144,
       "tree_sha256": "7dae9a12e55316e76b03f1cea6868b5bd76370e5fe0fbd0a335115dfda52d7df",
       "note": "P7 기준 main 3dcd7c3(PR #6 공용 가드 B 병합)의 변경 전 전체 파일 트리 해시"
+    },
+    {
+      "stage": "P8",
+      "file_count": 154,
+      "tree_sha256": "e65a7dd0718004f9aa9068c61dda26096690709aff6c6d425f0eef368ef8d255",
+      "note": "P8 기준 main a96a5bf(PR #7 과수 첫 묶음 병합)의 변경 전 전체 파일 트리 해시"
     }
   ]
 }
