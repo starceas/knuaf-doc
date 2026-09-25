@@ -19,6 +19,9 @@ Hard rules carried by this module:
   redefined, and ``0`` is never inferred for a missing answer.
 - industrial_insects keeps ``empty_slot`` data, performs no calculation,
   emits no specialty-crop paper wording, and claims no crop workbook.
+- hort_env_systems collects question/document/evidence plans only — it
+  performs no finance calculation and claims no paper or workbook
+  output, so other majors' wording may not appear in its proposals.
 """
 
 import json
@@ -717,6 +720,7 @@ def explicit_major_ids(spec):
 KNOWN_MAJOR_MARKERS = MappingProxyType({
     "specialty_crops": ("특용",),
     "industrial_insects": ("곤충", "insect"),
+    "hort_env_systems": ("원예환경",),
     "fruit_trees": ("과수", "fruit"),
 })
 
@@ -1352,6 +1356,15 @@ _INSECT_FORBIDDEN = (
     "수확 및 저장법",
 )
 
+_HORT_ENV_FORBIDDEN = (
+    "곤충",
+    "사육",
+    "종충",
+    "동애등에",
+    "귀뚜라미",
+    "특용작물",
+)
+
 SPECIALTY_CROPS_MODULE = declare_module(
     major_id="specialty_crops",
     module_version="1.0.0",
@@ -1868,8 +1881,297 @@ FRUIT_TREES_MODULE = declare_module(
     forbidden_terms=_FRUIT_FORBIDDEN,
 )
 
+HORT_ENV_SYSTEMS_MODULE = declare_module(
+    major_id="hort_env_systems",
+    module_version="0.1.0",
+    capabilities={
+        "question": "supported",
+        "document": "supported",
+        "evidence": "supported",
+        "finance": "unsupported",
+    },
+    question_schema=(
+        QuestionSpec(
+            field_id="hort_env_systems.business_type",
+            meaning="사업 형태(생산·육묘·체험·가공 병행 여부)",
+            target="business",
+        ),
+        QuestionSpec(
+            field_id="hort_env_systems.startup_type",
+            meaning="창업 유형(신규 창업·승계)",
+            target="business",
+        ),
+        QuestionSpec(
+            field_id="hort_env_systems.crop_item",
+            meaning="대상 작목(품목)",
+            target="crop",
+        ),
+        QuestionSpec(
+            field_id="hort_env_systems.cultivar",
+            meaning="품종",
+            target="crop",
+        ),
+        QuestionSpec(
+            field_id="hort_env_systems.product_unit",
+            meaning="판매 계량 단위와 단위 규격(kg·판·본·상자 등)",
+            target="product",
+        ),
+        QuestionSpec(
+            field_id="hort_env_systems.region",
+            meaning="사업지 시·군",
+            target="site",
+        ),
+        QuestionSpec(
+            field_id="hort_env_systems.site_area",
+            meaning="부지 면적",
+            unit="㎡",
+            target="site",
+        ),
+        QuestionSpec(
+            field_id="hort_env_systems.facility_type",
+            meaning="시설 형식(단동·연동·광폭·유리/PET/PC·식물공장 등)과 "
+            "내재해형 등록 규격명",
+            target="facility",
+        ),
+        QuestionSpec(
+            field_id="hort_env_systems.facility_area",
+            meaning="시설(온실) 면적",
+            unit="㎡",
+            target="facility",
+        ),
+        QuestionSpec(
+            field_id="hort_env_systems.cultivation_area",
+            meaning="실제 재배 면적",
+            unit="㎡",
+            target="facility",
+        ),
+        QuestionSpec(
+            field_id="hort_env_systems.disaster_design_basis",
+            meaning="사업지 적설심·풍속 기준 확인 여부와 출처",
+            period="date",
+            target="facility",
+        ),
+        QuestionSpec(
+            field_id="hort_env_systems.cultivation_system",
+            meaning="재배 방식(토경·고형배지 수경·NFT·담액·분무경·고설 등)",
+            target="cultivation",
+        ),
+        QuestionSpec(
+            field_id="hort_env_systems.environment_control",
+            meaning="환경제어·에너지 설비 범위(난방·냉방·커튼·CO2·양액 등)",
+            target="facility",
+        ),
+        QuestionSpec(
+            field_id="hort_env_systems.water_energy_source",
+            meaning="용수 수원과 에너지원",
+            target="facility",
+        ),
+        QuestionSpec(
+            field_id="hort_env_systems.crop_cycle",
+            meaning="작기(정식~종료 월)와 연간 작기 수",
+            target="cultivation",
+        ),
+        QuestionSpec(
+            field_id="hort_env_systems.fiscal_year_mapping",
+            meaning="작기와 회계연도(표 기준 축) 대응·첫해 부분년 처리",
+            target="cultivation",
+        ),
+        QuestionSpec(
+            field_id="hort_env_systems.yield_basis",
+            meaning="단위면적당 생산량과 그 근거(조사값·견적·실측)",
+            target="production",
+        ),
+        QuestionSpec(
+            field_id="hort_env_systems.marketable_rate",
+            meaning="상품화율",
+            unit="%",
+            target="production",
+        ),
+        QuestionSpec(
+            field_id="hort_env_systems.growth_assumption",
+            meaning="연도별 생산·가격 변화 가정과 근거",
+            unit="%",
+            target="production",
+        ),
+        QuestionSpec(
+            field_id="hort_env_systems.channel",
+            meaning="판로·거래 단계",
+            target="market",
+        ),
+        QuestionSpec(
+            field_id="hort_env_systems.price_basis",
+            meaning="가격 근거(거래 단계·단위·조사 시점)",
+            period="date",
+            target="market",
+        ),
+        QuestionSpec(
+            field_id="hort_env_systems.facility_quote",
+            meaning="시설·설비 견적 근거",
+            period="date",
+            target="finance",
+        ),
+        QuestionSpec(
+            field_id="hort_env_systems.funding_plan",
+            meaning="자기자본·융자·보조 구성과 조건",
+            target="finance",
+        ),
+        QuestionSpec(
+            field_id="hort_env_systems.labor_plan",
+            meaning="자가·고용 노동 계획",
+            target="finance",
+        ),
+        QuestionSpec(
+            field_id="hort_env_systems.workbook_selection",
+            meaning="재무 참조 엑셀 선택(전공 교재 18시트 / 공용 17시트 / 기타)",
+            target="finance",
+        ),
+    ),
+    # HT1·HT2 are equal-rank example_observed precedents; the 3학년 발표
+    # material is secondary observation and stays off the roster.  H-X1 is
+    # a professor reference, not a precedent.
+    precedents=(
+        PrecedentSpec("HT1"),
+        PrecedentSpec("HT2"),
+    ),
+    document_plan=(
+        DocumentNodeSpec(
+            "preface", "preface",
+            rationale="지원 동기·사업 목적·계획 개요 서술 슬롯",
+            precedent_refs=("HT1", "HT2"),
+        ),
+        DocumentNodeSpec(
+            "farm_status", "farm_status",
+            rationale="농장 개요·생산 품목·재배 기술·생육장해/병해충 정리 슬롯",
+            precedent_refs=("HT1", "HT2"),
+        ),
+        DocumentNodeSpec(
+            "environment_analysis", "environment_analysis",
+            rationale="내부 역량·외부 환경·모델 농장·SWOT 분석 슬롯",
+            precedent_refs=("HT1", "HT2"),
+        ),
+        DocumentNodeSpec(
+            "vision_goals", "vision_goals",
+            rationale="비전·영농 목표·경영 전략 제시 슬롯",
+            precedent_refs=("HT1", "HT2"),
+        ),
+        DocumentNodeSpec(
+            "investment_repayment", "investment_repayment",
+            rationale="투자 계획과 원리금 상환 계획 연결 슬롯",
+            precedent_refs=("HT1", "HT2"),
+        ),
+        DocumentNodeSpec(
+            "facility_plan", "facility_plan",
+            rationale="입지·기반·구조·내재해 기준·설비·환경제어·에너지 "
+            "계획 슬롯(NCS 0803/0804 체계)",
+            precedent_refs=("HT1", "HT2"),
+        ),
+        DocumentNodeSpec(
+            "production_plan", "production_plan",
+            rationale="작기·연도 축을 명시한 생산 계획 슬롯",
+            precedent_refs=("HT1", "HT2"),
+        ),
+        DocumentNodeSpec(
+            "sales_marketing", "sales_marketing",
+            rationale="판로·판매 방법·홍보 전략 정리 슬롯",
+            precedent_refs=("HT1", "HT2"),
+        ),
+        DocumentNodeSpec(
+            "cost_plan", "cost_plan",
+            rationale="생산원가 산출 근거 정리 슬롯(HT2 본문 절)",
+            precedent_refs=("HT2",),
+        ),
+        DocumentNodeSpec(
+            "education_service", "education_service",
+            rationale="교육 이수·봉사 활동 계획 슬롯(HT1·HT2 본문 절)",
+            precedent_refs=("HT1", "HT2"),
+        ),
+        DocumentNodeSpec(
+            "experience_processing", "experience_processing",
+            rationale="체험 프로그램·가공 병행 사업일 때만 여는 슬롯",
+            transform_reason="선배 전체논문에는 없는 절 — 3학년 발표"
+            "(2차 관찰)의 체험·가공·승계 사례에서 도출, 해당 사업일 때만 선택",
+        ),
+        DocumentNodeSpec(
+            "succession", "succession",
+            rationale="승계 시 기존 자산·일정 인수 계획 슬롯",
+            transform_reason="선배 전체논문에는 없는 절 — 3학년 발표"
+            "(2차 관찰)의 체험·가공·승계 사례에서 도출, 해당 사업일 때만 선택",
+        ),
+        DocumentNodeSpec(
+            "closing", "closing",
+            rationale="계획 요약과 다짐 서술 슬롯",
+            precedent_refs=("HT1", "HT2"),
+        ),
+        DocumentNodeSpec(
+            "references", "references",
+            rationale="인용 근거 목록 정리 슬롯",
+            precedent_refs=("HT1", "HT2"),
+        ),
+        DocumentNodeSpec(
+            "appendix_workbook_tables", "appendix_workbook_tables",
+            rationale="부록 18개 재무표 첨부 슬롯(H-X1 시트 대응, 선택형)",
+            precedent_refs=("HT1", "HT2"),
+        ),
+    ),
+    evidence_applicability=MappingProxyType(
+        {
+            "use_scopes": (
+                "disaster_design_standard",
+                "facility_spec_registry",
+                "technical_reference",
+                "income_comparison",
+                "useful_life_reference",
+                "industry_context",
+            ),
+            "common_pack_policy": "unverified",
+            "required_axes": (
+                "acquisition",
+                "observation",
+                "rights",
+                "conflict",
+                "applicability",
+            ),
+        }
+    ),
+    finance_capabilities=(
+        FinanceCapability(
+            profile="hort_18_sheet_workbook_v1",
+            status="unsupported",
+            reason="전공 교재 18시트의 입력칸 지도·수식 모순 처분·"
+            "네이티브 재계산 미검증",
+        ),
+        FinanceCapability(
+            profile="single_annual_cash_v1",
+            status="unsupported",
+            reason="연 1작기·단일 작목 산식은 다작기 회전·육묘(판)·"
+            "화훼(본) 단위를 표현 못 함",
+        ),
+        FinanceCapability(
+            profile="multi_cycle_facility_cash",
+            status="unsupported",
+            reason="작기×회계연도 이중 축 산식 미설계",
+        ),
+    ),
+    validation_rules=(
+        "namespace_fields",
+        "no_foreign_pack_refs",
+        "forbidden_terms_absent",
+        "no_workbook_output",
+        "no_hort_calculation",
+    ),
+    # No rendered-paper or workbook claim: the document capability
+    # exposes the selectable plan only.
+    supported_outputs=(
+        "question_list",
+        "document_plan",
+        "evidence_review",
+    ),
+    packs=(),  # empty_slot preserved — no fabricated horticulture data
+    forbidden_terms=_HORT_ENV_FORBIDDEN,
+)
+
 MODULES = (SPECIALTY_CROPS_MODULE, INDUSTRIAL_INSECTS_MODULE,
-           FRUIT_TREES_MODULE)
+           FRUIT_TREES_MODULE, HORT_ENV_SYSTEMS_MODULE)
 
 
 def _default_packs_dir():

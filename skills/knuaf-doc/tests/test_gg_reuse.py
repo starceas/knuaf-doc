@@ -60,6 +60,23 @@ SOURCE_SHA = {
         "457249255929275b3ee55383bdc36897274f08933af3536866a652b29346cd3a",
     "specialty-22160117-finance-xlsx":
         "029f8107ec2fee318544799524f7f4317946666d323d30174c931d3469d02129",
+    # hort_env_systems reference entries (identification-only except hx1)
+    "hort-env-ht1-exemplar-pdf":
+        "f700bc9728b6131b89b3f11a97645cfee1bd2c5a3960e53c9c78814dbb4f45a4",
+    "hort-env-ht2-exemplar-pdf":
+        "e5ca9ff33daa1fe8b3e7d56fbd1fff5a6bbba8c3d1e0368bbea1a36a0b3f8e4c",
+    "hort-env-hx1-teaching-xlsx":
+        "e3c9defe376fa74413641408900f6bb656017a389fb9745d9dac221a10951c1c",
+    "hort-env-disaster-rule-pdf":
+        "c8b401cd49103a2d4432153ab45736d6989813864fd5775a70a2974b121099fa",
+    "hort-env-disaster-annex1-pdf":
+        "c50e4d3f4ec3a1911ecd92ff8725738a8472c6bd330afc458305172a39f9d757",
+    "hort-env-facility-spec-xlsx":
+        "be0f9fadd328f134d0350b5e75b69d98c155263e5c7181621fffa07d0d06fa09",
+    "hort-env-ncs-install-pdf":
+        "cb196629e029c7ea0999957f673cc2d40edaf020cf8edf9deaefad0582f5fdd1",
+    "hort-env-ncs-manage-pdf":
+        "08e143bdcf1ca4d49f8e7bbfb01d56bc3c0696169229b79e459a0b1d3813c79b",
 }
 BASELINE_IDS = [
     "rda.income.national.2024", "rda.income.regional.2024",
@@ -765,12 +782,16 @@ class TestI01Matrix(unittest.TestCase):
                     "official_guideline": "writing_rule",
                     "narrative_exemplar": "narrative_reference",
                     "primary_finance_template": "template_structure",
-                    "secondary_finance_exemplar": "template_structure"}
+                    "secondary_finance_exemplar": "template_structure",
+                    # reference_only admits no use: any requested kind is
+                    # a role mismatch, so the probe still exercises it.
+                    "reference_only": "narrative_reference"}
         wrong_kind = {"statistical_pack": "writing_rule",
                       "official_guideline": "narrative_reference",
                       "narrative_exemplar": "writing_rule",
                       "primary_finance_template": "narrative_reference",
-                      "secondary_finance_exemplar": "writing_rule"}
+                      "secondary_finance_exemplar": "writing_rule",
+                      "reference_only": "writing_rule"}
         delimited_probe = {"kind": "delimited",
                            "value": "matrix-probe:uncovered"}
         # well-formed but NOT coverage-claimed -> coverage_incomplete

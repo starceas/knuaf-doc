@@ -16,7 +16,9 @@ SPECIALTY = "specialty_crops"
 INSECTS = "industrial_insects"
 # Registered majors are specialty_crops, industrial_insects, fruit_trees.
 # UNREGISTERED keeps the unknown-major path; PROBE is a synthetic peer.
-UNREGISTERED = "hort_env_systems"
+# A synthetic ID no real major will ever register (a real peer ID
+# breaks this sample the day that major is added).
+UNREGISTERED = "unregistered_probe_major"
 PROBE = "probe_major"
 
 

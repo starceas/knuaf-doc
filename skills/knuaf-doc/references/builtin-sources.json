@@ -384,6 +384,139 @@
    "coverage": {},
    "lineage": [],
    "build_allowlist_ref": null
+  },
+  {
+   "source_id": "hort-env-ht1-exemplar-pdf",
+   "class": "hort_env_exemplar",
+   "role": "narrative_exemplar",
+   "source_sha256": [
+    "f700bc9728b6131b89b3f11a97645cfee1bd2c5a3960e53c9c78814dbb4f45a4"
+   ],
+   "runtime": null,
+   "runtime_present": false,
+   "artifacts": [],
+   "lineage": [],
+   "build_allowlist_ref": null
+  },
+  {
+   "source_id": "hort-env-ht2-exemplar-pdf",
+   "class": "hort_env_exemplar",
+   "role": "narrative_exemplar",
+   "source_sha256": [
+    "e5ca9ff33daa1fe8b3e7d56fbd1fff5a6bbba8c3d1e0368bbea1a36a0b3f8e4c"
+   ],
+   "runtime": null,
+   "runtime_present": false,
+   "artifacts": [],
+   "lineage": [],
+   "build_allowlist_ref": null
+  },
+  {
+   "source_id": "hort-env-hx1-teaching-xlsx",
+   "class": "hort_env_teaching_workbook",
+   "role": "secondary_finance_exemplar",
+   "source_sha256": [
+    "e3c9defe376fa74413641408900f6bb656017a389fb9745d9dac221a10951c1c"
+   ],
+   "runtime": "references/hort-env-systems/profile.json",
+   "runtime_present": true,
+   "artifacts": [
+    {
+     "relative_path": "references/hort-env-systems/profile.json",
+     "sha256": "1b8a731eed64cc9e2062fedcb96434bddc4f6110525f1799c4d09293e1877ef4",
+     "bytes": 40378
+    }
+   ],
+   "coverage": {
+    "template_structure": {
+     "keys": [
+      {
+       "key_ref": {
+        "kind": "delimited",
+        "value": "hort-env-hx1:workbook-structure"
+       },
+       "authority": "verified",
+       "catalog_digest": null,
+       "receipt_sha256": null
+      }
+     ]
+    }
+   },
+   "lineage": [
+    {
+     "to": "references/hort-env-systems/profile.json",
+     "relationship": "derived_snapshot",
+     "verification": "verified",
+     "verifier": "hort-env-lead-and-astra",
+     "receipt_sha256": null
+    }
+   ],
+   "build_allowlist_ref": null
+  },
+  {
+   "source_id": "hort-env-disaster-rule-pdf",
+   "class": "hort_env_official_reference",
+   "role": "reference_only",
+   "source_sha256": [
+    "c8b401cd49103a2d4432153ab45736d6989813864fd5775a70a2974b121099fa"
+   ],
+   "runtime": null,
+   "runtime_present": false,
+   "artifacts": [],
+   "lineage": [],
+   "build_allowlist_ref": null
+  },
+  {
+   "source_id": "hort-env-disaster-annex1-pdf",
+   "class": "hort_env_official_reference",
+   "role": "reference_only",
+   "source_sha256": [
+    "c50e4d3f4ec3a1911ecd92ff8725738a8472c6bd330afc458305172a39f9d757"
+   ],
+   "runtime": null,
+   "runtime_present": false,
+   "artifacts": [],
+   "lineage": [],
+   "build_allowlist_ref": null
+  },
+  {
+   "source_id": "hort-env-facility-spec-xlsx",
+   "class": "hort_env_official_reference",
+   "role": "reference_only",
+   "source_sha256": [
+    "be0f9fadd328f134d0350b5e75b69d98c155263e5c7181621fffa07d0d06fa09"
+   ],
+   "runtime": null,
+   "runtime_present": false,
+   "artifacts": [],
+   "lineage": [],
+   "build_allowlist_ref": null
+  },
+  {
+   "source_id": "hort-env-ncs-install-pdf",
+   "class": "hort_env_official_reference",
+   "role": "reference_only",
+   "source_sha256": [
+    "cb196629e029c7ea0999957f673cc2d40edaf020cf8edf9deaefad0582f5fdd1"
+   ],
+   "runtime": null,
+   "runtime_present": false,
+   "artifacts": [],
+   "lineage": [],
+   "build_allowlist_ref": null
+  },
+  {
+   "source_id": "hort-env-ncs-manage-pdf",
+   "class": "hort_env_official_reference",
+   "role": "reference_only",
+   "source_sha256": [
+    "08e143bdcf1ca4d49f8e7bbfb01d56bc3c0696169229b79e459a0b1d3813c79b"
+   ],
+   "runtime": null,
+   "runtime_present": false,
+   "artifacts": [],
+   "lineage": [],
+   "build_allowlist_ref": null
   }
  ],
  "p4_trust": {
