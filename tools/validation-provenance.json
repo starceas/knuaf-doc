@@ -134,6 +134,10 @@
     "tests/test_workbook_registry.py": {
       "note": "P8 common reference-workbook decision table, X01/X02 identity with exact sheet names, read-only scan, no shipped originals or local paths.",
       "origin": "new"
+    },
+    "skills/knuaf-doc/references/specialty-crops/premise-probes.md": {
+      "note": "P9 특용작물 핵심 전제 목록(premise probes): 전작·연작 이력, 다년생 무매출·상환, 건조 수율, 판로 약속 확정(신설 field 제안), 용도 구분 — 공용 형식과 field 연결.",
+      "origin": "new"
     }
   },
   "readme_policy": {

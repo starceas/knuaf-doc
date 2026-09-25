@@ -65,7 +65,8 @@
     "tests/test_p3_body.py",
     "tests/test_p3_flow.py",
     "tests/test_p3_oracles.py",
-    "tests/test_p3_semantics.py"
+    "tests/test_p3_semantics.py",
+    "skills/knuaf-doc/references/specialty-crops/premise-probes.md"
   ],
   "baseline_main": "29abec0ec95369de7ae9e22207349d574f1f46b7",
   "baseline_spec": "tools/baseline-files.json",
@@ -81,12 +82,12 @@
       "note": "corrections-2: SCC5 exact added-path inventory + provenance transfer record."
     },
     "skills/knuaf-doc/SKILL.md": {
-      "after_sha256": "0d48bce40d898433038c931df1a20ab647bbcd7e744f064cd767cba204d39e50",
+      "after_sha256": "d1e36af116cfb71fa77388dd6cfb4b91b530f26cb95dad1a54e873d965ac7d7f",
       "before_sha256": "c0008fa5239cc16411fd4ef24b5bf901c7a8b9b50c6b621e2bdee3acf734ddc0",
       "first_changed": "P1",
-      "last_changed": "P8",
-      "owner": "P8",
-      "reason": "H11 문서 정정: 사용자 명시 모델도 임의 폴백·대체 금지 규칙 추가 | P5-D1 guidance sync: new '참고자료 폴더 등록' bullet documents the frozen source-scan→source-resolve→source-register→source-view lifecycle and 03_sources.md preservation | P6: document explicit major binding and current industrial insect capability boundary | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P8: fruit_trees plan-only capability and guidance link",
+      "last_changed": "P9",
+      "owner": "P9",
+      "reason": "H11 문서 정정: 사용자 명시 모델도 임의 폴백·대체 금지 규칙 추가 | P5-D1 guidance sync: new '참고자료 폴더 등록' bullet documents the frozen source-scan→source-resolve→source-register→source-view lifecycle and 03_sources.md preservation | P6: document explicit major binding and current industrial insect capability boundary | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P8: fruit_trees plan-only capability and guidance link | P9 공용 인터뷰 규칙: 전공별 핵심 전제 목록(C1), 동적 영향 순위(C2), '모르겠다' 도움(C3), 충돌 정리(C5), 미준비 전공 안내, 특용작물 probe 문서",
       "source": "new"
     },
     "skills/knuaf-doc/references/benchmark-packs/aliases/crop-aliases.specialty_crops.json": {
@@ -838,17 +839,53 @@
       "reason": "P8 fruit_trees first-bundle guidance: plan-only support boundary and registration order",
       "source": "new",
       "last_changed": "P8"
+    },
+    "skills/knuaf-doc/references/interview-guide.md": {
+      "before_sha256": "8f00e8a2d4c5f530eb7aad4a82e2e1957547e14b54941c8f49bb338035b63f87",
+      "after_sha256": "58642a059f57f7201db97e9548fa01588eda07154ff994e4d296b7381786a1dd",
+      "first_changed": "P9",
+      "last_changed": "P9",
+      "owner": "P9",
+      "reason": "P9 공용 인터뷰 규칙: 전공별 핵심 전제 목록(C1), 동적 영향 순위(C2), '모르겠다' 도움(C3), 충돌 정리(C5), 미준비 전공 안내, 특용작물 probe 문서",
+      "source": "new"
+    },
+    "skills/knuaf-doc/references/workflow-order.md": {
+      "before_sha256": "8915cb0b75aa5abbf547a49afc08beae5a6e7ff58b7c8aa22f0c07444ad8a511",
+      "after_sha256": "57d3d2943e4880a45ef033c518642d8807a4936d45759c2d38b4ae9ca6e50d66",
+      "first_changed": "P9",
+      "last_changed": "P9",
+      "owner": "P9",
+      "reason": "P9 공용 인터뷰 규칙: 전공별 핵심 전제 목록(C1), 동적 영향 순위(C2), '모르겠다' 도움(C3), 충돌 정리(C5), 미준비 전공 안내, 특용작물 probe 문서",
+      "source": "new"
+    },
+    "skills/knuaf-doc/references/mid-work-questions.md": {
+      "before_sha256": "bfe7d61143b9fdfeadf00e84bc2dc3082ac962dabd4ab72d6b6efeba7db21ee8",
+      "after_sha256": "1797a4f4dd6f9788e0e50606ccd6c3a9ba17687dee7ba4eb7e4e4e1148d70477",
+      "first_changed": "P9",
+      "last_changed": "P9",
+      "owner": "P9",
+      "reason": "P9 공용 인터뷰 규칙: 전공별 핵심 전제 목록(C1), 동적 영향 순위(C2), '모르겠다' 도움(C3), 충돌 정리(C5), 미준비 전공 안내, 특용작물 probe 문서",
+      "source": "new"
+    },
+    "skills/knuaf-doc/references/specialty-crops/premise-probes.md": {
+      "before_sha256": null,
+      "after_sha256": "2e720727f4969024527d9be857625f316ad12ad79962087a4cd13af688c92309",
+      "first_changed": "P9",
+      "last_changed": "P9",
+      "owner": "P9",
+      "reason": "P9 공용 인터뷰 규칙: 전공별 핵심 전제 목록(C1), 동적 영향 순위(C2), '모르겠다' 도움(C3), 충돌 정리(C5), 미준비 전공 안내, 특용작물 probe 문서 — 특용작물 핵심 전제 목록 신규",
+      "source": "new"
     }
   },
   "cumulative": true,
-  "note": "선언된 runtime 변경만 — 이 목록 밖의 baseline 변화는 미승인. README.md는 readme_policy로 별도 관리. baseline 파일의 삭제는 허용하지 않으며, 신규 파일은 approved_new_files에 사전 명시된 경로만 before_sha256=null로 선언 가능. P6 공용 작성 계약은 새 런타임 파일을 별도 승인 목록으로 선언한다. P7 공용 전공 출력 가드(정책 B)는 기존 런타임 파일 변경과 기준선 파일 1개(gg_excel_formula_patch.py) 첫 변경을 선언한다. P8 과수 첫 묶음은 과수 모듈 선언·등록과 공용 보조 모듈 2개(참조 XLSX 결정·연구 전달물 검증), 과수 작성계획, 참조집합 데이터·안내 문서를 새 파일로 선언한다.",
+  "note": "선언된 runtime 변경만 — 이 목록 밖의 baseline 변화는 미승인. README.md는 readme_policy로 별도 관리. baseline 파일의 삭제는 허용하지 않으며, 신규 파일은 approved_new_files에 사전 명시된 경로만 before_sha256=null로 선언 가능. P6 공용 작성 계약은 새 런타임 파일을 별도 승인 목록으로 선언한다. P7 공용 전공 출력 가드(정책 B)는 기존 런타임 파일 변경과 기준선 파일 1개(gg_excel_formula_patch.py) 첫 변경을 선언한다. P8 과수 첫 묶음은 과수 모듈 선언·등록과 공용 보조 모듈 2개(참조 XLSX 결정·연구 전달물 검증), 과수 작성계획, 참조집합 데이터·안내 문서를 새 파일로 선언한다. P9 공용 인터뷰 규칙은 기준선 문서 4건(SKILL.md·interview-guide·workflow-order·mid-work-questions) 변경과 특용작물 premise-probes.md 신규 1건을 선언한다.",
   "parent_candidate": {
-    "stage": "P7",
-    "file_count": 144,
-    "tree_sha256": "7dae9a12e55316e76b03f1cea6868b5bd76370e5fe0fbd0a335115dfda52d7df"
+    "stage": "P8",
+    "file_count": 154,
+    "tree_sha256": "e65a7dd0718004f9aa9068c61dda26096690709aff6c6d425f0eef368ef8d255"
   },
   "schema": "knuaf-doc/runtime-changes@2",
-  "stage": "P8",
+  "stage": "P9",
   "stage_lineage": [
     {
       "file_count": 75,
@@ -897,6 +934,12 @@
       "file_count": 144,
       "tree_sha256": "7dae9a12e55316e76b03f1cea6868b5bd76370e5fe0fbd0a335115dfda52d7df",
       "note": "P7 기준 main 3dcd7c3(PR #6 공용 가드 B 병합)의 변경 전 전체 파일 트리 해시"
+    },
+    {
+      "stage": "P8",
+      "file_count": 154,
+      "tree_sha256": "e65a7dd0718004f9aa9068c61dda26096690709aff6c6d425f0eef368ef8d255",
+      "note": "P8 기준 main a96a5bf(PR #7 과수 모듈 병합)의 변경 전 전체 파일 트리 해시"
     }
   ]
 }
