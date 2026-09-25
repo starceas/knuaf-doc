@@ -22,6 +22,7 @@
     "skills/knuaf-doc/references/benchmark-packs/schema/pack.schema.json",
     "skills/knuaf-doc/references/benchmark-packs/schema/record.schema.json",
     "skills/knuaf-doc/references/builtin-sources.json",
+    "skills/knuaf-doc/references/common-workbooks/kang-finance-workbook.json",
     "skills/knuaf-doc/references/fact-semantics.json",
     "skills/knuaf-doc/references/finance-semantics.md",
     "skills/knuaf-doc/references/fruit-trees/README.md",
@@ -81,12 +82,12 @@
       "note": "corrections-2: SCC5 exact added-path inventory + provenance transfer record."
     },
     "skills/knuaf-doc/SKILL.md": {
-      "after_sha256": "0d48bce40d898433038c931df1a20ab647bbcd7e744f064cd767cba204d39e50",
+      "after_sha256": "5ec343205f1e3b31a30c17dc6e0f043533f63c86937e101fcc83d79bfcb3bc3f",
       "before_sha256": "c0008fa5239cc16411fd4ef24b5bf901c7a8b9b50c6b621e2bdee3acf734ddc0",
       "first_changed": "P1",
-      "last_changed": "P8",
-      "owner": "P8",
-      "reason": "H11 문서 정정: 사용자 명시 모델도 임의 폴백·대체 금지 규칙 추가 | P5-D1 guidance sync: new '참고자료 폴더 등록' bullet documents the frozen source-scan→source-resolve→source-register→source-view lifecycle and 03_sources.md preservation | P6: document explicit major binding and current industrial insect capability boundary | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P8: fruit_trees plan-only capability and guidance link",
+      "last_changed": "P9",
+      "owner": "P9",
+      "reason": "H11 문서 정정: 사용자 명시 모델도 임의 폴백·대체 금지 규칙 추가 | P5-D1 guidance sync: new '참고자료 폴더 등록' bullet documents the frozen source-scan→source-resolve→source-register→source-view lifecycle and 03_sources.md preservation | P6: document explicit major binding and current industrial insect capability boundary | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P8: fruit_trees plan-only capability and guidance link | P9: common XLSX template rule + X02 layout guard sentence",
       "source": "new"
     },
     "skills/knuaf-doc/references/benchmark-packs/aliases/crop-aliases.specialty_crops.json": {
@@ -250,12 +251,13 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/builtin-sources.json": {
-      "after_sha256": "cef1717548bb990d0f806e6a95f97077c1d942a3c56969244e8f614c56a32638",
+      "after_sha256": "b997950160fda2057f83c0320f5296c1893cec685a6994e3343bca5ba5a792e8",
       "before_sha256": null,
       "first_changed": "P5",
-      "owner": "P5",
-      "reason": "accepted P5 reuse-registry@3 builtin source registry (frozen corrected A+B+C union)",
-      "source": "new"
+      "owner": "P9",
+      "reason": "accepted P5 reuse-registry@3 builtin source registry (frozen corrected A+B+C union) | P9: register kang-finance-workbook x01/x02 (primary_finance_template) and hort-env raw workbook (reference_only); rename the student-numbered specialty exemplar id to specialty-grad-thesis-finance-xlsx (D-C)",
+      "source": "new",
+      "last_changed": "P9"
     },
     "skills/knuaf-doc/references/fact-semantics.json": {
       "after_sha256": "84034b46107a29c75bd630ab1f8afce88f2e6aa2a0fad4cfd5d7056b66af5569",
@@ -326,12 +328,12 @@
       "source": "modified"
     },
     "skills/knuaf-doc/references/source-intake.md": {
-      "after_sha256": "4944003501ab72ab554e5d68359e26a9c66682ff85a3dfabd698cc87a1bc65d4",
+      "after_sha256": "550fac0a14266f189b93fa551ca941b478b0e26a2d0a15eb99c00014794bfde4",
       "before_sha256": "ebfcfe7e23ad5ed3bbc153db239f5f6b5e624d68a8087be255d57909bf18e5c6",
       "first_changed": "P5",
-      "last_changed": "P5",
-      "owner": "D",
-      "reason": "P5-D1 guidance conflict fix (OWNERSHIP 1.1): removed the stale 'scan folder -> build 03_sources.md index' instruction at line 28 and documents the frozen source-scan→source-resolve→source-register→source-view lifecycle — sealed scan receipt under sources/intake/, read-only resolve, explicit-selection register, registration-bound generated view under sources/generated/<view_id>/source-index.json; 03_sources.md byte-preserved on all paths incl. failure (SPEC 3.7)",
+      "last_changed": "P9",
+      "owner": "P9",
+      "reason": "P5-D1 guidance conflict fix (OWNERSHIP 1.1): removed the stale 'scan folder -> build 03_sources.md index' instruction at line 28 and documents the frozen source-scan→source-resolve→source-register→source-view lifecycle — sealed scan receipt under sources/intake/, read-only resolve, explicit-selection register, registration-bound generated view under sources/generated/<view_id>/source-index.json; 03_sources.md byte-preserved on all paths incl. failure (SPEC 3.7) | P9: common XLSX dedup rule — exact sha uses registry extract; different sha re-parses even with identical 17 sheet names; layout_family is a hint",
       "source": "modified"
     },
     "skills/knuaf-doc/scripts/build_docx.py": {
@@ -417,13 +419,13 @@
       "last_changed": "P7"
     },
     "skills/knuaf-doc/scripts/gg_excel_template.py": {
-      "after_sha256": "1139ec89d416fdce0cff73e7551337e62ece6c1561bdf6b5c0ba2240bd7c89fa",
+      "after_sha256": "985841bdd97bc0f362bebd1891aba9543d420984093ddac24a18c4cda9af9907",
       "before_sha256": "70933a7abfc4bb9b86f20b05487c785c2abd77be60426089cb70b40741ca508f",
       "first_changed": "P1",
-      "owner": "P7",
-      "reason": "H5: map이 참조하는 미존재 셀을 발행 전 ValueError로 거부(seen_wanted) | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output",
+      "owner": "P9",
+      "reason": "H5: map이 참조하는 미존재 셀을 발행 전 ValueError로 거부(seen_wanted) | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P9: C6 layout guard — detect_layout from extract anchors, source-bytes re-detection at clear; X02 variant refused (layout_variant_unsupported)",
       "source": "adopted:PR2",
-      "last_changed": "P7"
+      "last_changed": "P9"
     },
     "skills/knuaf-doc/scripts/gg_fact_semantics.py": {
       "after_sha256": "ba2f2aee005013a9f015e9094e34614ea7854d2bea71a6564cd5249b3ac7fb28",
@@ -631,12 +633,13 @@
       "note": "corrections-2: SCC1/SCC3/SCC4/SCC6 counterexample tests."
     },
     "skills/knuaf-doc/tests/test_gg_reuse.py": {
-      "after_sha256": "08d2cc9bbbd24aedc37f2a0dbef8167f93d24448d10394cebe40696d3e91616b",
+      "after_sha256": "5a7953dad2b6541b97e6365c780dea7b46dd3dd7083bc211a56f01cf179eb6bd",
       "before_sha256": null,
       "first_changed": "P5",
-      "owner": "P5",
-      "reason": "accepted P5 reuse-resolver contract test (frozen corrected A+B+C union)",
-      "source": "new"
+      "owner": "P9",
+      "reason": "accepted P5 reuse-resolver contract test (frozen corrected A+B+C union) | P9: renamed id, reference_only handling, common-workbook extract validation tests",
+      "source": "new",
+      "last_changed": "P9"
     },
     "skills/knuaf-doc/tests/test_gg_reuse_auditkey.py": {
       "after_sha256": "4671a5527b6d17c6b1628b11d7bad5effbfaf0c91bfdd463dea729e403a2fb83",
@@ -813,42 +816,50 @@
       "last_changed": "P8"
     },
     "skills/knuaf-doc/scripts/gg_workbook_registry.py": {
-      "after_sha256": "25fd9a0bccf8046e1bbaae5064b70ba60581b0cdef7d1334dfea28760589351c",
+      "after_sha256": "7f14bc50d2b0d797c9a4af8716e54b06e0d76976ebb37d3b841d7fe95264105e",
       "before_sha256": null,
       "first_changed": "P8",
-      "owner": "P8",
-      "reason": "P8 common D3a reference-workbook decision (all majors; X01+X02 on confirmed absence) and read-only identity scan",
+      "owner": "P9",
+      "reason": "P8 common D3a reference-workbook decision (all majors; X01+X02 on confirmed absence) and read-only identity scan | P9: extract/--check subcommand, template_candidates+template_status+layout_family resolver keys, registry-extract identity path (0 parser calls on exact sha)",
       "source": "new",
-      "last_changed": "P8"
+      "last_changed": "P9"
     },
     "skills/knuaf-doc/references/workbook-reference-set.json": {
-      "after_sha256": "61205cb592b25aeff31c53111477d4cfa0519c53428cd93cf269609934c241ad",
+      "after_sha256": "0ee856b7bc9db5ffc4603334f5ee69d0f413773416cb3ca36d9f344c44169a28",
       "before_sha256": null,
       "first_changed": "P8",
-      "owner": "P8",
-      "reason": "P8 common X01/X02 identity (SHA-256, exact sheet names); no paths or original bytes",
+      "owner": "P9",
+      "reason": "P8 common X01/X02 identity (SHA-256, exact sheet names); no paths or original bytes | P9: v2 — template_rule (D-A/D-B) replaces not-a-submission-template policy; known_workbooks H01 identity; loader accepts v2 only",
       "source": "new",
-      "last_changed": "P8"
+      "last_changed": "P9"
     },
     "skills/knuaf-doc/references/fruit-trees/README.md": {
-      "after_sha256": "4053d3de5cb3e1a13b64ce9839b2ee7ea7869b6bbc1d3e86c95af2fcac58c31c",
+      "after_sha256": "1575fca025b95a86fa51b205c53bbbe078f66caf3310672021206b59f14741e6",
       "before_sha256": null,
       "first_changed": "P8",
-      "owner": "P8",
-      "reason": "P8 fruit_trees first-bundle guidance: plan-only support boundary and registration order",
+      "owner": "P9",
+      "reason": "P8 fruit_trees first-bundle guidance: plan-only support boundary and registration order | P9: D-A wording — common workbook is the fill template only when the major survey proves no major XLSX",
       "source": "new",
-      "last_changed": "P8"
+      "last_changed": "P9"
+    },
+    "skills/knuaf-doc/references/common-workbooks/kang-finance-workbook.json": {
+      "before_sha256": null,
+      "after_sha256": "750dbe4c7b0361811ed8291fde275ed3ae088eaaa82511eff1c5fbda25ebcece",
+      "first_changed": "P9",
+      "owner": "P9",
+      "reason": "P9 C1 common-workbook extract (labels/structure/tab roles/formula counts/variant_delta/layout_anchors only; no example values) generated by gg_workbook_registry extract from X01/X02",
+      "source": "new"
     }
   },
   "cumulative": true,
-  "note": "선언된 runtime 변경만 — 이 목록 밖의 baseline 변화는 미승인. README.md는 readme_policy로 별도 관리. baseline 파일의 삭제는 허용하지 않으며, 신규 파일은 approved_new_files에 사전 명시된 경로만 before_sha256=null로 선언 가능. P6 공용 작성 계약은 새 런타임 파일을 별도 승인 목록으로 선언한다. P7 공용 전공 출력 가드(정책 B)는 기존 런타임 파일 변경과 기준선 파일 1개(gg_excel_formula_patch.py) 첫 변경을 선언한다. P8 과수 첫 묶음은 과수 모듈 선언·등록과 공용 보조 모듈 2개(참조 XLSX 결정·연구 전달물 검증), 과수 작성계획, 참조집합 데이터·안내 문서를 새 파일로 선언한다.",
+  "note": "선언된 runtime 변경만 — 이 목록 밖의 baseline 변화는 미승인. README.md는 readme_policy로 별도 관리. baseline 파일의 삭제는 허용하지 않으며, 신규 파일은 approved_new_files에 사전 명시된 경로만 before_sha256=null로 선언 가능. P6 공용 작성 계약은 새 런타임 파일을 별도 승인 목록으로 선언한다. P7 공용 전공 출력 가드(정책 B)는 기존 런타임 파일 변경과 기준선 파일 1개(gg_excel_formula_patch.py) 첫 변경을 선언한다. P8 과수 첫 묶음은 과수 모듈 선언·등록과 공용 보조 모듈 2개(참조 XLSX 결정·연구 전달물 검증), 과수 작성계획, 참조집합 데이터·안내 문서를 새 파일로 선언한다. P9 공용 XLSX 재사용 묶음은 공용 교수 통합문서 추출(kang-finance-workbook)을 새 runtime 파일로, 등록·판정·템플릿 가드·테스트의 기존 파일 변경을 선언한다.",
   "parent_candidate": {
-    "stage": "P7",
-    "file_count": 144,
-    "tree_sha256": "7dae9a12e55316e76b03f1cea6868b5bd76370e5fe0fbd0a335115dfda52d7df"
+    "stage": "P8",
+    "file_count": 154,
+    "tree_sha256": "e65a7dd0718004f9aa9068c61dda26096690709aff6c6d425f0eef368ef8d255"
   },
   "schema": "knuaf-doc/runtime-changes@2",
-  "stage": "P8",
+  "stage": "P9",
   "stage_lineage": [
     {
       "file_count": 75,
@@ -897,6 +908,12 @@
       "file_count": 144,
       "tree_sha256": "7dae9a12e55316e76b03f1cea6868b5bd76370e5fe0fbd0a335115dfda52d7df",
       "note": "P7 기준 main 3dcd7c3(PR #6 공용 가드 B 병합)의 변경 전 전체 파일 트리 해시"
+    },
+    {
+      "stage": "P8",
+      "file_count": 154,
+      "tree_sha256": "e65a7dd0718004f9aa9068c61dda26096690709aff6c6d425f0eef368ef8d255",
+      "note": "P8 기준 main a96a5bf(PR #7 fruit_trees 첫 묶음 병합)의 변경 전 전체 파일 트리 해시"
     }
   ]
 }

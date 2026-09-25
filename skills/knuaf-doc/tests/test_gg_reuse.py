@@ -8,6 +8,7 @@ parent's accept_catalog route on real accepted-catalog bytes.
 Run: python3 -B tests/test_gg_reuse.py
 """
 import json
+import re
 import shutil
 import sys
 import tempfile
@@ -58,15 +59,23 @@ SOURCE_SHA = {
         "906ad6ff04760f30feefad938e1b40a8dcbf7d9f62704784cdfe6cfe5504e13e",
     "seo-minseo-finance-xlsx":
         "457249255929275b3ee55383bdc36897274f08933af3536866a652b29346cd3a",
-    "specialty-22160117-finance-xlsx":
+    "specialty-grad-thesis-finance-xlsx":
         "029f8107ec2fee318544799524f7f4317946666d323d30174c931d3469d02129",
+    "kang-finance-workbook-x01":
+        "5d19b6a2e5dcddccb70c68e39abee8f423bba005c008db7b64076326a17b9c80",
+    "kang-finance-workbook-x02":
+        "54d4e55cd57bcb1db0fbfaafe2ed42422767f1561959b8a4f3c673daf77d7e78",
+    "hort-env-kang-raw-workbook":
+        "e3c9defe376fa74413641408900f6bb656017a389fb9745d9dac221a10951c1c",
 }
 BASELINE_IDS = [
     "rda.income.national.2024", "rda.income.regional.2024",
     "rda.econ.2025", "mafra.specialty.production.2024",
     "official-writing-guide-pdf", "official-writing-guide-hwp",
     "kim-wonseop-exemplar-pdf", "kim-wonseop-exemplar-hwp",
-    "seo-minseo-finance-xlsx", "specialty-22160117-finance-xlsx",
+    "seo-minseo-finance-xlsx", "specialty-grad-thesis-finance-xlsx",
+    "kang-finance-workbook-x01", "kang-finance-workbook-x02",
+    "hort-env-kang-raw-workbook",
 ]
 
 KIM_KEY = {"kind": "delimited",
@@ -765,12 +774,14 @@ class TestI01Matrix(unittest.TestCase):
                     "official_guideline": "writing_rule",
                     "narrative_exemplar": "narrative_reference",
                     "primary_finance_template": "template_structure",
-                    "secondary_finance_exemplar": "template_structure"}
+                    "secondary_finance_exemplar": "template_structure",
+                    "reference_only": "template_structure"}
         wrong_kind = {"statistical_pack": "writing_rule",
                       "official_guideline": "narrative_reference",
                       "narrative_exemplar": "writing_rule",
                       "primary_finance_template": "narrative_reference",
-                      "secondary_finance_exemplar": "writing_rule"}
+                      "secondary_finance_exemplar": "writing_rule",
+                      "reference_only": "writing_rule"}
         delimited_probe = {"kind": "delimited",
                            "value": "matrix-probe:uncovered"}
         # well-formed but NOT coverage-claimed -> coverage_incomplete
@@ -882,5 +893,113 @@ class TestI01Matrix(unittest.TestCase):
         print(json.dumps(matrix, ensure_ascii=False, indent=1))
 
 
+class TestCommonWorkbooks(unittest.TestCase):
+    """P9: common Kang X01/X02 registration + H-raw identification-only."""
+
+    def setUp(self):
+        self.reg = registry()
+
+    @staticmethod
+    def _keys(*values):
+        return {"template_structure": {
+            v: {"authority": "verified", "catalog_digest": None,
+                "receipt_sha256": None} for v in values}}
+
+    def test_registry_entries(self):
+        entries = {e["source_id"]: e
+                   for e in self.reg.document["entries"]}
+        for sid, sha, key in (
+                ("kang-finance-workbook-x01",
+                 "5d19b6a2e5dcddccb70c68e39abee8f423bba005c008db7b64076326a17b9c80",
+                 "kang-finance-workbook:x01-structure"),
+                ("kang-finance-workbook-x02",
+                 "54d4e55cd57bcb1db0fbfaafe2ed42422767f1561959b8a4f3c673daf77d7e78",
+                 "kang-finance-workbook:x02-structure")):
+            e = entries[sid]
+            self.assertEqual(e["source_sha256"], [sha])
+            self.assertEqual(e["role"], "primary_finance_template")
+            self.assertTrue(e["runtime_present"])
+            claimed = {c["key_ref"]["value"]
+                       for c in e["coverage"]["template_structure"]["keys"]}
+            self.assertEqual(claimed, {key})
+            self.assertEqual(
+                e["lineage"][0]["to"],
+                "references/common-workbooks/"
+                "kang-finance-workbook.json")
+            self.assertEqual(e["lineage"][0]["verification"], "verified")
+        raw = entries["hort-env-kang-raw-workbook"]
+        self.assertEqual(raw["role"], "reference_only")
+        self.assertFalse(raw["runtime_present"])
+        self.assertEqual(raw["coverage"], {})
+        self.assertEqual(raw["lineage"], [])
+        # D-C rename: no student number in any id
+        self.assertIn("specialty-grad-thesis-finance-xlsx", entries)
+
+    def test_ids_and_labels_carry_no_digit_runs(self):
+        # Hygiene: a 6+ digit run in a public identifier is the shape of
+        # a student number — none may appear in registry source_ids or
+        # in reference-set / extract ref_ids and labels.
+        digit_run = re.compile(r"\d{6,}")
+        names = [e["source_id"]
+                 for e in self.reg.document["entries"]]
+        refset = json.loads((KNUAF_DOC / "references" /
+                             "workbook-reference-set.json").read_text(
+                                 encoding="utf-8"))
+        for block in ("members", "known_workbooks"):
+            for e in refset.get(block, []):
+                names.extend([e["ref_id"], e["label"]])
+        extract = json.loads(
+            (KNUAF_DOC / "references" / "common-workbooks" /
+             "kang-finance-workbook.json").read_text(encoding="utf-8"))
+        for e in extract["members"].values():
+            names.extend([e["ref_id"], *e["labels"].values()])
+        offenders = [n for n in names if digit_run.search(n)]
+        self.assertEqual(offenders, [])
+
+    def test_kang_x01_and_x02_reuse_ready(self):
+        for sid, sha, key in (
+                ("kang-finance-workbook-x01",
+                 "5d19b6a2e5dcddccb70c68e39abee8f423bba005c008db7b64076326a17b9c80",
+                 "kang-finance-workbook:x01-structure"),
+                ("kang-finance-workbook-x02",
+                 "54d4e55cd57bcb1db0fbfaafe2ed42422767f1561959b8a4f3c673daf77d7e78",
+                 "kang-finance-workbook:x02-structure")):
+            kc = self._keys(key)
+            v = gg_reuse.resolve_reuse(
+                sha,
+                {"kind": "template_structure",
+                 "keys": [{"kind": "delimited", "value": key}]},
+                context=ctx(self.reg, key_catalog=kc))
+            self.assertEqual(v["status"], "reuse_ready", v)
+            self.assertEqual(v["selected_entry"], sid)
+            self.assertEqual(
+                v["evidence"]["lineage"]["to"],
+                "references/common-workbooks/"
+                "kang-finance-workbook.json")
+
+    def test_kang_key_without_catalog_claim_conflicts(self):
+        key = {"kind": "delimited",
+               "value": "kang-finance-workbook:x01-structure"}
+        v = gg_reuse.resolve_reuse(
+            "5d19b6a2e5dcddccb70c68e39abee8f423bba005c008db7b64076326a17b9c80",
+            {"kind": "template_structure", "keys": [key]},
+            context=ctx(self.reg))
+        self.assertEqual(v["status"], "blocked")
+        self.assertIn("authority_conflict", v["reasons"])
+
+    def test_hort_env_raw_identified_not_usable(self):
+        key = {"kind": "delimited",
+               "value": "hort-env-kang:raw-structure"}
+        v = gg_reuse.resolve_reuse(
+            "e3c9defe376fa74413641408900f6bb656017a389fb9745d9dac221a10951c1c",
+            {"kind": "template_structure", "keys": [key]},
+            context=ctx(self.reg))
+        self.assertEqual(v["status"], "blocked")
+        self.assertIn("role_mismatch", v["reasons"])
+        self.assertEqual(v["selected_entry"],
+                         "hort-env-kang-raw-workbook")
+
+
 if __name__ == "__main__":
+
     unittest.main(verbosity=2)

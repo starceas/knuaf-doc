@@ -32,6 +32,11 @@ ET.register_namespace("", NS_MAIN)
 CELL_RE = re.compile(r"^([A-Z]+)([1-9][0-9]*)$")
 RANGE_RE = re.compile(r"^([A-Z]+)([1-9][0-9]*)(?::([A-Z]+)([1-9][0-9]*))?$")
 
+LAYOUT_EXTRACT_PATH = (
+    Path(__file__).resolve().parents[1] / "references"
+    / "common-workbooks" / "kang-finance-workbook.json"
+)
+
 
 def sha256(path: Path) -> str:
     h = hashlib.sha256()
@@ -166,6 +171,144 @@ def merged_cells(root: ET.Element) -> tuple[set[str], set[str]]:
     return anchors, nonanchors
 
 
+def _load_layout_anchors() -> dict:
+    """Shipped layout anchors keyed by variant ("x01"/"x02"); {} on any
+    problem — a missing or unreadable extract is "unknown", never a
+    guessed layout."""
+    try:
+        doc = json.loads(LAYOUT_EXTRACT_PATH.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(doc, dict) \
+            or doc.get("schema") != "knuaf-common-workbook-extract/v1":
+        return {}
+    anchors = doc.get("layout_anchors")
+    return anchors if isinstance(anchors, dict) else {}
+
+
+def _anchor_well_formed(anchor) -> bool:
+    """An anchor is {sheet: str, cell: CELL_RE, expect: exactly one of
+    equals|empty|present}.  An empty or malformed anchor list never
+    classifies a variant."""
+    if not isinstance(anchor, dict):
+        return False
+    if not isinstance(anchor.get("sheet"), str):
+        return False
+    if not (isinstance(anchor.get("cell"), str)
+            and CELL_RE.match(anchor["cell"])):
+        return False
+    expect = anchor.get("expect")
+    if not isinstance(expect, dict):
+        return False
+    if sorted(expect) not in (["empty"], ["equals"], ["present"]):
+        return False
+    if "empty" in expect and expect["empty"] is not True:
+        return False
+    if "present" in expect and expect["present"] is not True:
+        return False
+    return True
+
+
+def _anchor_holds(expect, cell_state) -> bool:
+    if not isinstance(expect, dict) or not isinstance(cell_state, dict):
+        return False
+    value = cell_state.get("value")
+    # A formula whose cached value was invalidated (or never stored)
+    # is still content: "present" holds and "empty" does not.
+    has_formula = cell_state.get("formula") is True
+    if "equals" in expect:
+        return value == expect["equals"]
+    if "empty" in expect:
+        return not has_formula and value in (None, "")
+    if "present" in expect:
+        return has_formula or value not in (None, "")
+    return False
+
+
+def detect_layout(source: Path) -> str:
+    """Classify the source as ``x01`` | ``x02`` | ``unknown`` by checking
+    the shipped C1 ``layout_anchors`` against the source bytes.
+
+    A variant is named only when every one of its anchors holds.  The
+    column-J predicate is exclusive, so both variants can never hold
+    together.  Every variant must carry a non-empty list of
+    well-formed anchors (sheet str, cell matching ``CELL_RE``,
+    ``expect`` with exactly one known predicate) — an empty or
+    malformed anchor list can never satisfy ``all()`` silently.
+    Any malformed anchor or unreadable workbook returns ``unknown``
+    — fail closed."""
+    anchors = _load_layout_anchors()
+    if not anchors:
+        return "unknown"
+    if any(not isinstance(variant_anchors, list) or not variant_anchors
+           or not all(_anchor_well_formed(a) for a in variant_anchors)
+           for variant_anchors in anchors.values()):
+        return "unknown"
+    try:
+        with zipfile.ZipFile(resolve_source(source)) as z:
+            shared = load_shared(z)
+            sheets = dict(workbook_sheets(z))
+            needed = {a["sheet"]
+                      for variant_anchors in anchors.values()
+                      for a in variant_anchors}
+            cells = {}
+            for name in needed:
+                target = sheets.get(name)
+                if target is None:
+                    continue
+                root = ET.fromstring(z.read(target))
+                cells[name] = {
+                    c.attrib["r"]: {
+                        "value": text_value(c, shared),
+                        "formula": c.find(local("f")) is not None,
+                    }
+                    for c in root.findall(f".//{local('c')}")
+                    if c.attrib.get("r")
+                }
+    except (OSError, KeyError, ValueError, zipfile.BadZipFile,
+            FileNotFoundError):
+        return "unknown"
+    for variant, variant_anchors in anchors.items():
+        try:
+            if all(_anchor_holds(
+                    a["expect"],
+                    cells.get(a["sheet"], {}).get(a["cell"], {}))
+                    for a in variant_anchors):
+                return variant
+        except (KeyError, TypeError):
+            continue
+    return "unknown"
+
+
+def _check_map_layout(map_data: dict, source: Path) -> None:
+    """Refuse a map whose declared layout cannot cover this source.
+
+    Detection re-reads the source bytes on every call — a map status is
+    never trusted.  Missing ``layout`` (a legacy map) is treated as
+    ``default_x01``; ``reviewed_custom`` is accepted only when its
+    variant equals the detected one.  Every other origin or status is
+    ``map_layout_invalid``."""
+    detected = detect_layout(source)
+    layout = map_data.get("layout")
+    if layout is None:
+        layout = {"mapOrigin": "default_x01"}
+    if not isinstance(layout, dict):
+        raise ValueError("map_layout_invalid")
+    origin = layout.get("mapOrigin")
+    status = map_data.get("mapStatus", "ok")
+    if origin == "default_x01":
+        if detected != "x01":
+            raise ValueError("layout_variant_unsupported")
+        if status != "ok":
+            raise ValueError("map_layout_invalid")
+        return
+    if origin == "reviewed_custom":
+        if layout.get("variant") != detected or status != "ok":
+            raise ValueError("map_layout_invalid")
+        return
+    raise ValueError("map_layout_invalid")
+
+
 def inspect_source(source: Path, out_map: Path | None, report: Path | None) -> dict:
     source = resolve_source(source).resolve()
     if out_map and out_map.exists():
@@ -196,6 +339,7 @@ def inspect_source(source: Path, out_map: Path | None, report: Path | None) -> d
                                     "cellCount": len(cells), "formulaCount": formulas})
             inventory.extend({"sheet": name, **c} for c in cells)
     entries = default_entries(inventory)
+    detected = detect_layout(source)
     result = {
         "schema": "gg-xlsx-template-map/v1",
         "source": {"path": str(source), "sha256": digest, "size": source.stat().st_size},
@@ -203,6 +347,11 @@ def inspect_source(source: Path, out_map: Path | None, report: Path | None) -> d
         "sheets": sheet_summaries,
         "entries": entries,
         "inventory": inventory,
+        "layout": {"variant": detected, "mapOrigin": "default_x01"},
+        "mapStatus": ("ok" if detected == "x01"
+                     else "manual_map_required"),
+        "mapReason": (None if detected == "x01"
+                      else "layout_variant_unsupported"),
         "policy": {
             "clearOnlyListed": True,
             "protectFormulas": True,
@@ -482,6 +631,7 @@ def blank_copy(source: Path, map_path: Path, out: Path, *, context=None) -> dict
         raise FileExistsError(f"refusing to overwrite output: {out}")
     map_data = json.loads(map_path.read_text(encoding="utf-8"))
     entries, _ = map_entries_for_source(map_data, source)
+    _check_map_layout(map_data, source)
     out.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(source, "r") as zin:
         sheets = dict(workbook_sheets(zin))
@@ -660,7 +810,9 @@ def cli(argv: list[str]) -> int:
         if args.cmd == "inspect":
             r = inspect_source(args.source, args.out_map, args.report)
             print(json.dumps({"status": "inspected", "source": r["source"], "entries": len(r["entries"]),
-                              "sheets": len(r["sheets"]), "map": str(args.out_map)}, ensure_ascii=False))
+                              "sheets": len(r["sheets"]), "map": str(args.out_map),
+                              "layout": r["layout"]["variant"],
+                              "mapStatus": r["mapStatus"]}, ensure_ascii=False))
         else:
             if args.out.exists():
                 raise FileExistsError(f"refusing to overwrite output: {args.out}")

@@ -330,6 +330,104 @@
    "build_allowlist_ref": null
   },
   {
+   "source_id": "kang-finance-workbook-x01",
+   "class": "common_professor_workbook",
+   "role": "primary_finance_template",
+   "source_sha256": [
+    "5d19b6a2e5dcddccb70c68e39abee8f423bba005c008db7b64076326a17b9c80"
+   ],
+   "runtime": "references/common-workbooks/kang-finance-workbook.json",
+   "runtime_present": true,
+   "artifacts": [
+    {
+     "relative_path": "references/common-workbooks/kang-finance-workbook.json",
+     "sha256": "750dbe4c7b0361811ed8291fde275ed3ae088eaaa82511eff1c5fbda25ebcece",
+     "bytes": 12653
+    }
+   ],
+   "coverage": {
+    "template_structure": {
+     "keys": [
+      {
+       "key_ref": {
+        "kind": "delimited",
+        "value": "kang-finance-workbook:x01-structure"
+       },
+       "authority": "verified",
+       "catalog_digest": null,
+       "receipt_sha256": null
+      }
+     ]
+    }
+   },
+   "lineage": [
+    {
+     "to": "references/common-workbooks/kang-finance-workbook.json",
+     "relationship": "derived_excerpt",
+     "verification": "verified",
+     "verifier": "common-xlsx-reuse-20260925",
+     "receipt_sha256": null
+    }
+   ],
+   "build_allowlist_ref": null
+  },
+  {
+   "source_id": "kang-finance-workbook-x02",
+   "class": "common_professor_workbook",
+   "role": "primary_finance_template",
+   "source_sha256": [
+    "54d4e55cd57bcb1db0fbfaafe2ed42422767f1561959b8a4f3c673daf77d7e78"
+   ],
+   "runtime": "references/common-workbooks/kang-finance-workbook.json",
+   "runtime_present": true,
+   "artifacts": [
+    {
+     "relative_path": "references/common-workbooks/kang-finance-workbook.json",
+     "sha256": "750dbe4c7b0361811ed8291fde275ed3ae088eaaa82511eff1c5fbda25ebcece",
+     "bytes": 12653
+    }
+   ],
+   "coverage": {
+    "template_structure": {
+     "keys": [
+      {
+       "key_ref": {
+        "kind": "delimited",
+        "value": "kang-finance-workbook:x02-structure"
+       },
+       "authority": "verified",
+       "catalog_digest": null,
+       "receipt_sha256": null
+      }
+     ]
+    }
+   },
+   "lineage": [
+    {
+     "to": "references/common-workbooks/kang-finance-workbook.json",
+     "relationship": "derived_excerpt",
+     "verification": "verified",
+     "verifier": "common-xlsx-reuse-20260925",
+     "receipt_sha256": null
+    }
+   ],
+   "build_allowlist_ref": null
+  },
+  {
+   "source_id": "hort-env-kang-raw-workbook",
+   "class": "major_professor_workbook",
+   "role": "reference_only",
+   "source_sha256": [
+    "e3c9defe376fa74413641408900f6bb656017a389fb9745d9dac221a10951c1c"
+   ],
+   "runtime": null,
+   "runtime_present": false,
+   "artifacts": [],
+   "coverage": {},
+   "lineage": [],
+   "build_allowlist_ref": null
+  },
+  {
    "source_id": "seo-minseo-finance-xlsx",
    "class": "specialty_finance_template",
    "role": "primary_finance_template",
@@ -372,7 +470,7 @@
    "build_allowlist_ref": null
   },
   {
-   "source_id": "specialty-22160117-finance-xlsx",
+   "source_id": "specialty-grad-thesis-finance-xlsx",
    "class": "specialty_finance_exemplar",
    "role": "secondary_finance_exemplar",
    "source_sha256": [

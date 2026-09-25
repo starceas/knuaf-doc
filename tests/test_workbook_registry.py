@@ -12,7 +12,8 @@ from tests._harness import REPO_ROOT, ContractCase, runtime
 KEYS = {"major_id", "inventory_status", "reference_set", "comparison_refs",
         "common_set_status", "selection_status", "selection_reason",
         "authority_status", "candidate_roles", "source_revisions",
-        "completeness", "survey_basis"}
+        "completeness", "survey_basis", "template_candidates",
+        "template_status"}
 X01 = "a" * 64
 X02 = "b" * 64
 MEMBERS = {"X01": {"sha256": X01, "sheets": ["s1", "s2 "], "label": "x01"},
@@ -76,6 +77,60 @@ class DecisionTableTests(ContractCase):
         self.assertEqual(out["reference_set"], ["x01", "x02"])
         self.assertEqual(out["completeness"], "complete")
         self.assertEqual(out["authority_status"], "policy")
+        self.assertEqual(out["template_candidates"], ["x01", "x02"])
+        self.assertEqual(out["template_status"],
+                         "variant_selection_required")
+
+    def test_template_status_per_branch(self):
+        # confirmed absent with one usable member -> single_candidate;
+        # none usable -> unavailable; surveyed/present -> not_applicable
+        out = self.resolve([common("x01", X01)])
+        self.assertEqual(out["inventory_status"], "confirmed_absent")
+        self.assertEqual(out["template_candidates"], ["x01"])
+        self.assertEqual(out["template_status"], "single_candidate")
+        out = self.resolve([])
+        self.assertEqual(out["inventory_status"], "confirmed_absent")
+        self.assertEqual(out["template_candidates"], [])
+        self.assertEqual(out["template_status"], "unavailable")
+        out = self.resolve([common("x01", X01), major("a")])
+        self.assertEqual(out["inventory_status"], "present")
+        self.assertEqual(out["template_candidates"], [])
+        self.assertEqual(out["template_status"], "not_applicable")
+        out = self.resolve([common("x01", X01)], status="partial")
+        self.assertEqual(out["inventory_status"], "not_surveyed")
+        self.assertEqual(out["template_status"], "not_applicable")
+
+    def test_template_status_counts_distinct_variants(self):
+        # two verified copies of the SAME variant still offer a single
+        # variant — status is not driven by file count
+        out = self.resolve([common("x01", X01), common("x01b", X01)])
+        self.assertEqual(out["inventory_status"], "confirmed_absent")
+        self.assertEqual(out["template_candidates"], ["x01", "x01b"])
+        self.assertEqual(out["template_status"], "single_candidate")
+        # one of each variant keeps the two-variant requirement
+        out = self.resolve([common("x01", X01), common("x01b", X01),
+                            common("x02", X02)])
+        self.assertEqual(out["template_status"],
+                         "variant_selection_required")
+
+    def test_layout_family_is_hint_never_usable(self):
+        # a student copy shares the 17-name list: layout_family is set,
+        # usable still comes from hash/link only
+        out = self.resolve([common("copy", "d" * 64),
+                            common("x02", X02)])
+        view = {v["file_id"]: v for v in out["candidate_roles"]}
+        self.assertEqual(view["copy"]["layout_family"],
+                         "kang_finance_17")
+        self.assertFalse(view["copy"]["usable"])
+        self.assertEqual(view["copy"]["identity_state"],
+                         "common_mismatch")
+        view2 = {v["file_id"]: v for v in
+                 self.resolve([major("m", sheets=["s1", "s2 "])])
+                 ["candidate_roles"]}
+        self.assertEqual(view2["m"]["layout_family"],
+                         "kang_finance_17")
+        self.assertIsNone(self.resolve([major("m")])
+                          ["candidate_roles"][0]["layout_family"])
 
     def test_one_common_missing_or_mismatched(self):
         out = self.resolve([common("x01", X01)])
@@ -152,6 +207,73 @@ class ReferenceIdentityTests(ContractCase):
         self.assertNotIn("/Users/", text)
         self.assertNotIn(":\\\\", text)
 
+    def test_shipped_catalog_v2_only(self):
+        wr = runtime("gg_workbook_registry")
+        catalog = wr.load_reference_catalog()
+        self.assertEqual(set(catalog), {"members", "known_workbooks"})
+        self.assertEqual(set(catalog["members"]), {"X01", "X02"})
+        h01 = catalog["known_workbooks"]["H01"]
+        self.assertEqual(len(h01["sha256"]), 64)
+        self.assertEqual(len(h01["sheets"]), 18)
+        raw = json.loads(
+            Path(wr.REFERENCE_SET_PATH).read_text(encoding="utf-8"))
+        self.assertEqual(raw["schema"], wr.REFERENCE_SET_SCHEMA)
+        self.assertIn("template_rule", raw)
+        # v1 documents are refused — the shipped loader is v2-only
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            v1 = Path(tmp) / "v1.json"
+            v1.write_text(json.dumps({**raw, "schema":
+                                    "knuaf-workbook-reference-set/v1"}),
+                          encoding="utf-8")
+            with self.assertRaises(wr.InventoryError):
+                wr.load_reference_set(v1)
+            with self.assertRaises(wr.InventoryError):
+                wr.load_reference_catalog(v1)
+
+    def test_read_workbook_identity_registry_extract(self):
+        # C4b: an exact shipped hash answers from the registry extract
+        # with zero parser calls; any other hash parses once
+        import tempfile
+        from unittest import mock
+        import hashlib
+        import openpyxl
+        wr = runtime("gg_workbook_registry")
+        with tempfile.TemporaryDirectory() as tmp:
+            x01 = Path(tmp) / "x01.bin"
+            x01.write_bytes(b"not-a-workbook-but-hash-matched")
+            h01 = Path(tmp) / "h01.bin"
+            h01.write_bytes(b"also-hash-matched")
+            other = Path(tmp) / "other.xlsx"
+            other.write_bytes(ff.workbook_bytes("o"))
+            injected = {
+                "members": {
+                    "X01": {"sha256": hashlib.sha256(
+                        x01.read_bytes()).hexdigest(),
+                            "sheets": ["s1", "s2 "], "label": "x01"},
+                    "X02": {"sha256": X02, "sheets": ["s1", "s2 "],
+                            "label": "x02"},
+                },
+                "known_workbooks": {
+                    "H01": {"sha256": hashlib.sha256(
+                        h01.read_bytes()).hexdigest(),
+                            "sheets": ["h1", "h2"], "label": "h"},
+                },
+            }
+            with mock.patch.object(openpyxl, "load_workbook") as lw:
+                for pth, want in ((x01, ["s1", "s2 "]),
+                                  (h01, ["h1", "h2"])):
+                    out = wr.read_workbook_identity(
+                        pth, reference_set=injected)
+                    self.assertEqual(out["identity_source"],
+                                     "registry_extract")
+                    self.assertTrue(out["readable"])
+                    self.assertEqual(out["sheets"], want)
+                self.assertEqual(lw.call_count, 0)
+                out = wr.read_workbook_identity(
+                    other, reference_set=injected)
+                self.assertEqual(out["identity_source"], "parsed")
+                self.assertEqual(lw.call_count, 1)
     def test_trailing_space_is_identity(self):
         wr = runtime("gg_workbook_registry")
         out = wr.resolve_workbook_references(

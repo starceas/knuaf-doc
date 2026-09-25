@@ -172,6 +172,8 @@ class WorkbookWriterCase(_Base):
         clear_map.write_text(json.dumps({
             "schema": "gg-xlsx-template-map/v1",
             "source": {"sha256": tpl.sha256(src)},
+            "layout": {"variant": "unknown",
+                       "mapOrigin": "reviewed_custom"},
             "entries": [{"sheet": "Visible", "cell": "B2", "action": "clear",
                          "semanticField": "합성", "reason": "합성",
                          "explicit": True}]}, ensure_ascii=False),
