@@ -1,0 +1,1389 @@
+{
+  "schema": "knuaf-hort-env-profile/v1",
+  "major_id": "hort_env_systems",
+  "module_version": "0.1.0",
+  "notice": "이 파일은 비공개 원천의 해시·쪽·셀 위치와 일반 안내만 담는다. 선배 전체논문은 식별값으로 제목과 작성자 이름만 싣고 학번·연락처 등 다른 개인 정보는 싣지 않는다. 해시·위치 공개는 원문 재배포 권리 확인이 아니며 원문·셀 값은 싣지 않는다. 교재 주의 항목은 학생 계획의 검토 목록이지 교재 수정안이 아니다.",
+  "precedents": [
+    {
+      "ref": "HT1",
+      "title": "고품질 완숙토마토 시설재배",
+      "author": "석록윤",
+      "sha256": "f700bc9728b6131b89b3f11a97645cfee1bd2c5a3960e53c9c78814dbb4f45a4",
+      "physical_pages": 211,
+      "file_stage": "draft_1_by_filename",
+      "sections": [
+        {
+          "item": "ch1",
+          "title": "Ⅰ. 머리말",
+          "toc_page": 1,
+          "physical_page": 18,
+          "printed_page": 1,
+          "note": null
+        },
+        {
+          "item": "ch2",
+          "title": "Ⅱ. 농장현황",
+          "toc_page": 3,
+          "physical_page": 20,
+          "printed_page": 3,
+          "note": null
+        },
+        {
+          "item": "ch3",
+          "title": "Ⅲ. 영농환경분석",
+          "toc_page": 58,
+          "physical_page": 75,
+          "printed_page": 58,
+          "note": null
+        },
+        {
+          "item": "ch4",
+          "title": "Ⅳ. 농장 비전 및 영농 목표",
+          "toc_page": 114,
+          "physical_page": 131,
+          "printed_page": 114,
+          "note": null
+        },
+        {
+          "item": "ch5",
+          "title": "Ⅴ. 영농계획수립",
+          "toc_page": 119,
+          "physical_page": 136,
+          "printed_page": 119,
+          "note": null
+        },
+        {
+          "item": "ch6",
+          "title": "Ⅴ. 맺음말",
+          "toc_page": 156,
+          "physical_page": 173,
+          "printed_page": 156,
+          "note": "원문 장 번호가 Ⅴ로 중복 표기되어 있다"
+        },
+        {
+          "item": "ch7",
+          "title": "Ⅵ. 참고문헌",
+          "toc_page": 158,
+          "physical_page": 175,
+          "printed_page": 158,
+          "note": null
+        },
+        {
+          "item": "ch2_sec1",
+          "title": "1. 농장개요",
+          "toc_page": 3,
+          "physical_page": 20,
+          "printed_page": 3,
+          "note": null
+        },
+        {
+          "item": "ch2_sec2",
+          "title": "2. 생산품목",
+          "toc_page": 5,
+          "physical_page": 22,
+          "printed_page": 5,
+          "note": null
+        },
+        {
+          "item": "ch2_sec3",
+          "title": "3. 재배기술",
+          "toc_page": 9,
+          "physical_page": 26,
+          "printed_page": 9,
+          "note": null
+        },
+        {
+          "item": "ch2_sec4",
+          "title": "4. 주요 생육장해 및 병충해",
+          "toc_page": 29,
+          "physical_page": 46,
+          "printed_page": 29,
+          "note": null
+        },
+        {
+          "item": "ch3_sec1",
+          "title": "1. 내부역량 분석",
+          "toc_page": 58,
+          "physical_page": 75,
+          "printed_page": 58,
+          "note": null
+        },
+        {
+          "item": "ch3_sec2",
+          "title": "2. 외부환경 분석",
+          "toc_page": 59,
+          "physical_page": 76,
+          "printed_page": 59,
+          "note": null
+        },
+        {
+          "item": "ch3_sec3",
+          "title": "3. 모델농장 벤치마킹",
+          "toc_page": 106,
+          "physical_page": 123,
+          "printed_page": 106,
+          "note": null
+        },
+        {
+          "item": "ch3_sec4",
+          "title": "4. SWOT 분석",
+          "toc_page": 109,
+          "physical_page": 126,
+          "printed_page": 109,
+          "note": null
+        },
+        {
+          "item": "ch4_sec1",
+          "title": "1. 농장 비전",
+          "toc_page": 114,
+          "physical_page": 131,
+          "printed_page": 114,
+          "note": null
+        },
+        {
+          "item": "ch4_sec2",
+          "title": "2. 영농 목표",
+          "toc_page": 114,
+          "physical_page": 131,
+          "printed_page": 114,
+          "note": null
+        },
+        {
+          "item": "ch4_sec3",
+          "title": "3. 농장 경영 전략",
+          "toc_page": 116,
+          "physical_page": 133,
+          "printed_page": 116,
+          "note": null
+        },
+        {
+          "item": "ch5_sec1",
+          "title": "1. 투자 및 원리금 상환계획",
+          "toc_page": 119,
+          "physical_page": 136,
+          "printed_page": 119,
+          "note": null
+        },
+        {
+          "item": "ch5_sec2",
+          "title": "2. 시설계획",
+          "toc_page": 121,
+          "physical_page": 138,
+          "printed_page": 121,
+          "note": null
+        },
+        {
+          "item": "ch5_sec3",
+          "title": "3. 생산계획",
+          "toc_page": 145,
+          "physical_page": 162,
+          "printed_page": 145,
+          "note": null
+        },
+        {
+          "item": "ch5_sec4",
+          "title": "4. 판매계획",
+          "toc_page": 148,
+          "physical_page": 165,
+          "printed_page": 148,
+          "note": null
+        },
+        {
+          "item": "ch5_sec5",
+          "title": "5. 교육 및 봉사계획",
+          "toc_page": 154,
+          "physical_page": 171,
+          "printed_page": 154,
+          "note": null
+        },
+        {
+          "item": "back_ack",
+          "title": "감사의 글",
+          "toc_page": 159,
+          "physical_page": 176,
+          "printed_page": 159,
+          "note": null
+        },
+        {
+          "item": "back_consent",
+          "title": "부모님 동의서",
+          "toc_page": 161,
+          "physical_page": 178,
+          "printed_page": 161,
+          "note": null
+        }
+      ],
+      "appendices": [
+        {
+          "no": 1,
+          "title": "부록 1. 자산조사",
+          "toc_page": 156,
+          "physical_start": 180,
+          "physical_end": 180,
+          "printed_start": 163,
+          "note": "목차 기재 쪽과 본문 인쇄 쪽이 다르다"
+        },
+        {
+          "no": 2,
+          "title": "부록 2. 중장기영농목표",
+          "toc_page": 157,
+          "physical_start": 181,
+          "physical_end": 181,
+          "printed_start": 164,
+          "note": "목차 기재 쪽과 본문 인쇄 쪽이 다르다"
+        },
+        {
+          "no": 3,
+          "title": "부록 3. 모델눙장분석",
+          "toc_page": 158,
+          "physical_start": 182,
+          "physical_end": 182,
+          "printed_start": 165,
+          "note": "제목 오기('눙')가 원문 그대로다; 목차 기재 쪽과 본문 인쇄 쪽이 다르다"
+        },
+        {
+          "no": 4,
+          "title": "부록 4. 투자계획",
+          "toc_page": 159,
+          "physical_start": 183,
+          "physical_end": 184,
+          "printed_start": 166,
+          "note": "목차 기재 쪽과 본문 인쇄 쪽이 다르다"
+        },
+        {
+          "no": 5,
+          "title": "부록 5. 원리금상환계획",
+          "toc_page": 161,
+          "physical_start": 185,
+          "physical_end": 185,
+          "printed_start": 168,
+          "note": "목차 기재 쪽과 본문 인쇄 쪽이 다르다"
+        },
+        {
+          "no": 6,
+          "title": "부록 6. 시설계획",
+          "toc_page": 162,
+          "physical_start": 186,
+          "physical_end": 190,
+          "printed_start": 169,
+          "note": "목차 기재 쪽과 본문 인쇄 쪽이 다르다"
+        },
+        {
+          "no": 7,
+          "title": "부록 7. 판매계획",
+          "toc_page": 167,
+          "physical_start": 191,
+          "physical_end": 194,
+          "printed_start": 174,
+          "note": "목차 기재 쪽과 본문 인쇄 쪽이 다르다"
+        },
+        {
+          "no": 8,
+          "title": "부록 8. 생산계획",
+          "toc_page": 171,
+          "physical_start": 195,
+          "physical_end": 195,
+          "printed_start": 178,
+          "note": "목차 기재 쪽과 본문 인쇄 쪽이 다르다"
+        },
+        {
+          "no": 9,
+          "title": "부록 9. 영농자재구매계획",
+          "toc_page": 172,
+          "physical_start": 196,
+          "physical_end": 197,
+          "printed_start": 179,
+          "note": "목차 기재 쪽과 본문 인쇄 쪽이 다르다"
+        },
+        {
+          "no": 10,
+          "title": "부록 10. 작부체계",
+          "toc_page": 174,
+          "physical_start": 198,
+          "physical_end": 198,
+          "printed_start": 181,
+          "note": "목차 기재 쪽과 본문 인쇄 쪽이 다르다"
+        },
+        {
+          "no": 11,
+          "title": "부록 11. 인건비계획",
+          "toc_page": 175,
+          "physical_start": 199,
+          "physical_end": 199,
+          "printed_start": 182,
+          "note": "목차 기재 쪽과 본문 인쇄 쪽이 다르다"
+        },
+        {
+          "no": 12,
+          "title": "부록 12. 경비계획",
+          "toc_page": 176,
+          "physical_start": 200,
+          "physical_end": 204,
+          "printed_start": 183,
+          "note": "목차 기재 쪽과 본문 인쇄 쪽이 다르다"
+        },
+        {
+          "no": 13,
+          "title": "부록 13. 감가상각비계획",
+          "toc_page": 181,
+          "physical_start": 205,
+          "physical_end": 206,
+          "printed_start": 188,
+          "note": "목차 기재 쪽과 본문 인쇄 쪽이 다르다"
+        },
+        {
+          "no": 14,
+          "title": "부록 14. 생산원가계획",
+          "toc_page": 183,
+          "physical_start": 207,
+          "physical_end": 207,
+          "printed_start": 190,
+          "note": "목차 기재 쪽과 본문 인쇄 쪽이 다르다"
+        },
+        {
+          "no": 15,
+          "title": "부록 15. 손익계획",
+          "toc_page": 184,
+          "physical_start": 208,
+          "physical_end": 208,
+          "printed_start": 191,
+          "note": "목차 기재 쪽과 본문 인쇄 쪽이 다르다"
+        },
+        {
+          "no": 16,
+          "title": "부록 16. 수익성분석",
+          "toc_page": 185,
+          "physical_start": 209,
+          "physical_end": 209,
+          "printed_start": 192,
+          "note": "목차 기재 쪽과 본문 인쇄 쪽이 다르다"
+        },
+        {
+          "no": 17,
+          "title": "부록 17. 추정대차대조표",
+          "toc_page": 186,
+          "physical_start": 210,
+          "physical_end": 210,
+          "printed_start": 193,
+          "note": "목차 기재 쪽과 본문 인쇄 쪽이 다르다"
+        },
+        {
+          "no": 18,
+          "title": "부록 18. 현금흐름계획",
+          "toc_page": 187,
+          "physical_start": 211,
+          "physical_end": 211,
+          "printed_start": 194,
+          "note": "목차 기재 쪽과 본문 인쇄 쪽이 다르다"
+        }
+      ],
+      "appendix8_axes": [
+        "crop_cycle",
+        "fiscal_year"
+      ]
+    },
+    {
+      "ref": "HT2",
+      "title": "고품질 유럽상추 시설재배",
+      "author": "전영석",
+      "sha256": "e5ca9ff33daa1fe8b3e7d56fbd1fff5a6bbba8c3d1e0368bbea1a36a0b3f8e4c",
+      "physical_pages": 178,
+      "file_stage": "unknown",
+      "sections": [
+        {
+          "item": "ch1",
+          "title": "Ⅰ. 머리말",
+          "toc_page": 1,
+          "physical_page": 15,
+          "printed_page": 1,
+          "note": null
+        },
+        {
+          "item": "ch2",
+          "title": "Ⅱ. 농장현황",
+          "toc_page": 3,
+          "physical_page": 17,
+          "printed_page": 3,
+          "note": null
+        },
+        {
+          "item": "ch3",
+          "title": "Ⅲ. 영농환경 분석",
+          "toc_page": 55,
+          "physical_page": 69,
+          "printed_page": 55,
+          "note": null
+        },
+        {
+          "item": "ch4",
+          "title": "Ⅳ. 농장비전 및 영농목표",
+          "toc_page": 98,
+          "physical_page": 112,
+          "printed_page": 98,
+          "note": null
+        },
+        {
+          "item": "ch5",
+          "title": "Ⅴ. 영농계획수립",
+          "toc_page": 102,
+          "physical_page": 116,
+          "printed_page": 102,
+          "note": null
+        },
+        {
+          "item": "ch6",
+          "title": "Ⅵ. 맺음말",
+          "toc_page": 128,
+          "physical_page": 142,
+          "printed_page": 128,
+          "note": null
+        },
+        {
+          "item": "ch2_sec1",
+          "title": "1. 농장개요",
+          "toc_page": 3,
+          "physical_page": 17,
+          "printed_page": 3,
+          "note": null
+        },
+        {
+          "item": "ch2_sec2",
+          "title": "2. 생산품목",
+          "toc_page": 6,
+          "physical_page": 20,
+          "printed_page": 6,
+          "note": null
+        },
+        {
+          "item": "ch2_sec3",
+          "title": "3. 생산기술 및 재배방법",
+          "toc_page": 9,
+          "physical_page": 23,
+          "printed_page": 9,
+          "note": null
+        },
+        {
+          "item": "ch3_sec1",
+          "title": "1. 내부역량 분석",
+          "toc_page": 55,
+          "physical_page": 69,
+          "printed_page": 55,
+          "note": null
+        },
+        {
+          "item": "ch3_sec2",
+          "title": "2. 외부환경 분석",
+          "toc_page": 56,
+          "physical_page": 70,
+          "printed_page": 56,
+          "note": null
+        },
+        {
+          "item": "ch3_sec3",
+          "title": "3. 모델농장 벤치마킹 분석",
+          "toc_page": 91,
+          "physical_page": 105,
+          "printed_page": 91,
+          "note": null
+        },
+        {
+          "item": "ch3_sec4",
+          "title": "4. SWOT 분석",
+          "toc_page": 94,
+          "physical_page": 108,
+          "printed_page": 94,
+          "note": null
+        },
+        {
+          "item": "ch4_sec1",
+          "title": "1. 농장비전",
+          "toc_page": 98,
+          "physical_page": 112,
+          "printed_page": 98,
+          "note": null
+        },
+        {
+          "item": "ch4_sec2",
+          "title": "2. 영농 목표",
+          "toc_page": 99,
+          "physical_page": 113,
+          "printed_page": 99,
+          "note": null
+        },
+        {
+          "item": "ch4_sec3",
+          "title": "3. 농장 경영전략",
+          "toc_page": 100,
+          "physical_page": 114,
+          "printed_page": 100,
+          "note": null
+        },
+        {
+          "item": "ch5_sec1",
+          "title": "1. 투자계획 및 원리금 상환계획",
+          "toc_page": 102,
+          "physical_page": 116,
+          "printed_page": 102,
+          "note": null
+        },
+        {
+          "item": "ch5_sec2",
+          "title": "2. 시설계획",
+          "toc_page": 104,
+          "physical_page": 118,
+          "printed_page": 104,
+          "note": null
+        },
+        {
+          "item": "ch5_sec3",
+          "title": "3. 생산계획",
+          "toc_page": 119,
+          "physical_page": 133,
+          "printed_page": 119,
+          "note": null
+        },
+        {
+          "item": "ch5_sec4",
+          "title": "4. 생산원가계획",
+          "toc_page": 120,
+          "physical_page": 134,
+          "printed_page": 120,
+          "note": null
+        },
+        {
+          "item": "ch5_sec5",
+          "title": "5. 마케팅계획",
+          "toc_page": 123,
+          "physical_page": 137,
+          "printed_page": 123,
+          "note": null
+        },
+        {
+          "item": "ch5_sec6",
+          "title": "6. 교육 및 봉사계획",
+          "toc_page": 127,
+          "physical_page": 141,
+          "printed_page": 127,
+          "note": null
+        },
+        {
+          "item": "back_references",
+          "title": "참고문헌",
+          "toc_page": 130,
+          "physical_page": 144,
+          "printed_page": 130,
+          "note": null
+        },
+        {
+          "item": "back_ack",
+          "title": "감사의 글",
+          "toc_page": 131,
+          "physical_page": 145,
+          "printed_page": 131,
+          "note": null
+        },
+        {
+          "item": "back_consent",
+          "title": "부모님 동의서",
+          "toc_page": 133,
+          "physical_page": 147,
+          "printed_page": 133,
+          "note": null
+        }
+      ],
+      "appendices": [
+        {
+          "no": 1,
+          "title": "부록 1. 자산조사",
+          "toc_page": null,
+          "physical_start": 149,
+          "physical_end": 149,
+          "printed_start": 135,
+          "note": "부록 목차에 쪽번호가 없다"
+        },
+        {
+          "no": 2,
+          "title": "부록 2. 중장기 영농목표",
+          "toc_page": null,
+          "physical_start": 150,
+          "physical_end": 150,
+          "printed_start": 136,
+          "note": "부록 목차에 쪽번호가 없다"
+        },
+        {
+          "no": 3,
+          "title": "부록 3. 모델농장분석",
+          "toc_page": null,
+          "physical_start": 151,
+          "physical_end": 151,
+          "printed_start": 137,
+          "note": "부록 목차에 쪽번호가 없다"
+        },
+        {
+          "no": 4,
+          "title": "부록 4. 투자계획",
+          "toc_page": null,
+          "physical_start": 152,
+          "physical_end": 152,
+          "printed_start": 138,
+          "note": "부록 목차에 쪽번호가 없다"
+        },
+        {
+          "no": 5,
+          "title": "부록 5. 원리금 상환계획",
+          "toc_page": null,
+          "physical_start": 153,
+          "physical_end": 154,
+          "printed_start": 139,
+          "note": "부록 목차에 쪽번호가 없다"
+        },
+        {
+          "no": 6,
+          "title": "부록 6. 시설계획",
+          "toc_page": null,
+          "physical_start": 155,
+          "physical_end": 156,
+          "printed_start": 141,
+          "note": "부록 목차에 쪽번호가 없다"
+        },
+        {
+          "no": 7,
+          "title": "부록 7. 판매계획",
+          "toc_page": null,
+          "physical_start": 157,
+          "physical_end": 160,
+          "printed_start": 143,
+          "note": "부록 목차에 쪽번호가 없다"
+        },
+        {
+          "no": 8,
+          "title": "부록 8. 생산계획",
+          "toc_page": null,
+          "physical_start": 161,
+          "physical_end": 161,
+          "printed_start": 147,
+          "note": "부록 목차에 쪽번호가 없다"
+        },
+        {
+          "no": 9,
+          "title": "부록 9. 영농자재 구매계획",
+          "toc_page": null,
+          "physical_start": 162,
+          "physical_end": 163,
+          "printed_start": 148,
+          "note": "부록 목차에 쪽번호가 없다"
+        },
+        {
+          "no": 10,
+          "title": "부록 10. 작부체계",
+          "toc_page": null,
+          "physical_start": 164,
+          "physical_end": 165,
+          "printed_start": 150,
+          "note": "부록 목차에 쪽번호가 없다"
+        },
+        {
+          "no": 11,
+          "title": "부록 11. 인건비 계획",
+          "toc_page": null,
+          "physical_start": 166,
+          "physical_end": 166,
+          "printed_start": 152,
+          "note": "부록 목차에 쪽번호가 없다"
+        },
+        {
+          "no": 12,
+          "title": "부록 12. 경비계획",
+          "toc_page": null,
+          "physical_start": 167,
+          "physical_end": 171,
+          "printed_start": 153,
+          "note": "부록 목차에 쪽번호가 없다"
+        },
+        {
+          "no": 13,
+          "title": "부록 13. 감가상각비 계획",
+          "toc_page": null,
+          "physical_start": 172,
+          "physical_end": 173,
+          "printed_start": 158,
+          "note": "부록 목차에 쪽번호가 없다"
+        },
+        {
+          "no": 14,
+          "title": "부록 14. 생산원가계획",
+          "toc_page": null,
+          "physical_start": 174,
+          "physical_end": 174,
+          "printed_start": 160,
+          "note": "부록 목차에 쪽번호가 없다"
+        },
+        {
+          "no": 15,
+          "title": "부록 15. 손익계획",
+          "toc_page": null,
+          "physical_start": 175,
+          "physical_end": 175,
+          "printed_start": 161,
+          "note": "부록 목차에 쪽번호가 없다"
+        },
+        {
+          "no": 16,
+          "title": "부록 16. 수익성 분석",
+          "toc_page": null,
+          "physical_start": 176,
+          "physical_end": 176,
+          "printed_start": 162,
+          "note": "부록 목차에 쪽번호가 없다"
+        },
+        {
+          "no": 17,
+          "title": "부록 17. 추정대차대조표",
+          "toc_page": null,
+          "physical_start": 177,
+          "physical_end": 177,
+          "printed_start": 163,
+          "note": "부록 목차에 쪽번호가 없다"
+        },
+        {
+          "no": 18,
+          "title": "부록 18. 현금흐름계획",
+          "toc_page": null,
+          "physical_start": 178,
+          "physical_end": 178,
+          "printed_start": 164,
+          "note": "부록 목차에 쪽번호가 없다"
+        }
+      ],
+      "appendix8_axes": [
+        "fiscal_year"
+      ]
+    }
+  ],
+  "workbook_reference": {
+    "ref": "H-X1",
+    "sha256": "e3c9defe376fa74413641408900f6bb656017a389fb9745d9dac221a10951c1c",
+    "role": "professor_reference",
+    "authority": "user_statement",
+    "statement_date": "2026-09-25",
+    "finance_status": "unsupported",
+    "sheets": [
+      "1. 자산조사",
+      "2. 중장기영농목표",
+      "3.모델농장분석",
+      "4.투자계획",
+      "5. 원리금상환계획",
+      "6.시설계획",
+      " 7. 판매계획",
+      "8. 생산계획",
+      "9. 영농자재구매계획",
+      "10. 작부체계",
+      "11. 인건비계획",
+      "12 .경비계획",
+      "13. 감가상각비계획 ",
+      "14. 생산원가계획",
+      "15. 손익계획",
+      "16. 수익성분석",
+      "17. 추정대차대조표",
+      "18. 현금흐름계획"
+    ],
+    "appendix_map": [
+      {
+        "no": 1,
+        "sheet": "1. 자산조사"
+      },
+      {
+        "no": 2,
+        "sheet": "2. 중장기영농목표"
+      },
+      {
+        "no": 3,
+        "sheet": "3.모델농장분석"
+      },
+      {
+        "no": 4,
+        "sheet": "4.투자계획"
+      },
+      {
+        "no": 5,
+        "sheet": "5. 원리금상환계획"
+      },
+      {
+        "no": 6,
+        "sheet": "6.시설계획"
+      },
+      {
+        "no": 7,
+        "sheet": " 7. 판매계획"
+      },
+      {
+        "no": 8,
+        "sheet": "8. 생산계획"
+      },
+      {
+        "no": 9,
+        "sheet": "9. 영농자재구매계획"
+      },
+      {
+        "no": 10,
+        "sheet": "10. 작부체계"
+      },
+      {
+        "no": 11,
+        "sheet": "11. 인건비계획"
+      },
+      {
+        "no": 12,
+        "sheet": "12 .경비계획"
+      },
+      {
+        "no": 13,
+        "sheet": "13. 감가상각비계획 "
+      },
+      {
+        "no": 14,
+        "sheet": "14. 생산원가계획"
+      },
+      {
+        "no": 15,
+        "sheet": "15. 손익계획"
+      },
+      {
+        "no": 16,
+        "sheet": "16. 수익성분석"
+      },
+      {
+        "no": 17,
+        "sheet": "17. 추정대차대조표"
+      },
+      {
+        "no": 18,
+        "sheet": "18. 현금흐름계획"
+      }
+    ],
+    "cautions": [
+      {
+        "id": "X-C1",
+        "status": "confirmed_inconsistency",
+        "kind": "year_label_offset",
+        "locations": [
+          {
+            "sheet": "8. 생산계획",
+            "cells": [
+              "C9",
+              "C12",
+              "C15",
+              "G9",
+              "G12"
+            ]
+          },
+          {
+            "sheet": " 7. 판매계획",
+            "cells": [
+              "B19",
+              "B28"
+            ]
+          }
+        ],
+        "guidance": "생산계획 열의 연도 라벨이 참조하는 판매계획 블록의 연도와 한 해 어긋난다. 자기 계획의 첫 해와 열·블록 연도를 먼저 맞춘다."
+      },
+      {
+        "id": "X-C2",
+        "status": "confirmed_inconsistency",
+        "kind": "note_formula_mismatch",
+        "locations": [
+          {
+            "sheet": " 7. 판매계획",
+            "cells": [
+              "B18",
+              "F30",
+              "F39",
+              "F48",
+              "F57"
+            ]
+          },
+          {
+            "sheet": "8. 생산계획",
+            "cells": [
+              "B17"
+            ]
+          }
+        ],
+        "guidance": "주석에 적힌 연도별 증가율과 실제 수식의 승수가 다르다. 교재 값을 쓰지 말고 자기 근거로 증가율을 정한 뒤 주석과 식을 함께 맞춘다."
+      },
+      {
+        "id": "X-C3",
+        "status": "confirmed_inconsistency",
+        "kind": "note_formula_mismatch",
+        "locations": [
+          {
+            "sheet": " 7. 판매계획",
+            "cells": [
+              "B18",
+              "O26",
+              "F22"
+            ]
+          },
+          {
+            "sheet": "8. 생산계획",
+            "cells": [
+              "B18"
+            ]
+          }
+        ],
+        "guidance": "주석의 상품화율과 판매량 식이 참조하는 셀 값이 다르다. 상품화율은 자기 근거로 정하고 주석·입력 셀을 일치시킨다."
+      },
+      {
+        "id": "X-C4",
+        "status": "needs_confirmation",
+        "kind": "unit_mismatch",
+        "locations": [
+          {
+            "sheet": " 7. 판매계획",
+            "cells": [
+              "B5",
+              "M6"
+            ]
+          },
+          {
+            "sheet": "8. 생산계획",
+            "cells": [
+              "B10",
+              "B12",
+              "B14"
+            ]
+          }
+        ],
+        "guidance": "품목·단수·생산량·가격의 계량 단위가 서로 다르게 표기되어 있고 환산 근거 셀이 없다. 판매 단위와 단위 간 환산 근거를 먼저 정한다."
+      },
+      {
+        "id": "X-C5",
+        "status": "needs_confirmation",
+        "kind": "crop_basis_mismatch",
+        "locations": [
+          {
+            "sheet": "2. 중장기영농목표",
+            "cells": [
+              "C12"
+            ]
+          },
+          {
+            "sheet": " 7. 판매계획",
+            "cells": [
+              "B5"
+            ]
+          },
+          {
+            "sheet": "10. 작부체계",
+            "cells": [
+              "B8:B13"
+            ]
+          }
+        ],
+        "guidance": "매출 근거 문구의 작목과 판매 품목·작부체계 작목이 다르다. 근거 문구는 자기 작목과 사업 형태에 맞게 새로 쓴다."
+      },
+      {
+        "id": "X-C6",
+        "status": "needs_confirmation",
+        "kind": "area_arithmetic_mismatch",
+        "locations": [
+          {
+            "sheet": "6.시설계획",
+            "cells": [
+              "B10:F11"
+            ]
+          }
+        ],
+        "guidance": "시설 폭·길이와 면적 셀이 단순 곱과 맞지 않는다. 면적의 정의(연동 수·처마·부대시설 포함 여부)를 도면·견적으로 확인한다."
+      },
+      {
+        "id": "X-N1",
+        "status": "confirmed_inconsistency",
+        "kind": "year_label_offset",
+        "locations": [
+          {
+            "sheet": "15. 손익계획",
+            "cells": [
+              "B38",
+              "B43",
+              "C39",
+              "C44"
+            ]
+          }
+        ],
+        "guidance": "손익계획 보조표의 연도 라벨이 참조하는 판매 데이터의 연도와 다르다."
+      },
+      {
+        "id": "X-N2",
+        "status": "confirmed_inconsistency",
+        "kind": "year_label_offset",
+        "locations": [
+          {
+            "sheet": "5. 원리금상환계획",
+            "cells": [
+              "B9:B10",
+              "C9:C12",
+              "B70",
+              "B93",
+              "B116",
+              "B139"
+            ]
+          }
+        ],
+        "guidance": "상환 상세 블록의 연도 라벨과 이를 집계하는 요약 행의 연도가 다르다. 융자 시점을 자기 계획 연도로 다시 매긴다."
+      },
+      {
+        "id": "X-N3",
+        "status": "needs_confirmation",
+        "kind": "area_definition_conflict",
+        "locations": [
+          {
+            "sheet": "8. 생산계획",
+            "cells": [
+              "B11:C11"
+            ]
+          },
+          {
+            "sheet": "4.투자계획",
+            "cells": [
+              "C19:D19",
+              "C36"
+            ]
+          },
+          {
+            "sheet": "11. 인건비계획",
+            "cells": [
+              "D19"
+            ]
+          },
+          {
+            "sheet": "12 .경비계획",
+            "cells": [
+              "B4"
+            ]
+          },
+          {
+            "sheet": "6.시설계획",
+            "cells": [
+              "F11"
+            ]
+          },
+          {
+            "sheet": "9. 영농자재구매계획",
+            "cells": [
+              "D9"
+            ]
+          }
+        ],
+        "guidance": "시트마다 면적 값이 다르다. 부지·시설·재배 면적 중 무엇인지 정의를 정하고 같은 정의를 쓰는 셀끼리 값을 맞춘다."
+      },
+      {
+        "id": "X-N4",
+        "status": "needs_confirmation",
+        "kind": "reference_pattern_deviation",
+        "locations": [
+          {
+            "sheet": "17. 추정대차대조표",
+            "cells": [
+              "D27:H27"
+            ]
+          }
+        ],
+        "guidance": "한 열만 다른 열을 참조한다. 현재 결과는 같지만 입력이 바뀌면 달라질 수 있다."
+      },
+      {
+        "id": "X-N5",
+        "status": "confirmed_inconsistency",
+        "kind": "label_reference_mismatch",
+        "locations": [
+          {
+            "sheet": "18. 현금흐름계획",
+            "cells": [
+              "C15:D15"
+            ]
+          },
+          {
+            "sheet": "4.투자계획",
+            "cells": [
+              "C20",
+              "E20"
+            ]
+          }
+        ],
+        "guidance": "현금흐름의 항목 라벨과 참조하는 투자계획 행의 항목이 다르다."
+      },
+      {
+        "id": "X-N5R",
+        "status": "needs_confirmation",
+        "kind": "reference_pattern_deviation",
+        "locations": [
+          {
+            "sheet": "18. 현금흐름계획",
+            "cells": [
+              "D21:E21",
+              "G21:H21"
+            ]
+          }
+        ],
+        "guidance": "연도별 상환 참조가 이자만/원금과 이자로 섞여 있다. 상환 방식에 맞게 확인한다."
+      },
+      {
+        "id": "X-N6",
+        "status": "needs_confirmation",
+        "kind": "example_data_provenance",
+        "locations": [
+          {
+            "sheet": " 7. 판매계획",
+            "cells": [
+              "B8:N12",
+              "B14"
+            ]
+          }
+        ],
+        "guidance": "가격표가 교재 예시다. 연도·거래 단계·단위가 있는 자기 가격 근거로 바꾼다."
+      },
+      {
+        "id": "X-N7",
+        "status": "needs_confirmation",
+        "kind": "stray_formula",
+        "locations": [
+          {
+            "sheet": "4.투자계획",
+            "cells": [
+              "K16"
+            ]
+          }
+        ],
+        "guidance": "비고 칸 옆에 의미가 불분명한 수식이 남아 있다."
+      },
+      {
+        "id": "X-N8",
+        "status": "needs_confirmation",
+        "kind": "reference_pattern_deviation",
+        "locations": [
+          {
+            "sheet": "15. 손익계획",
+            "cells": [
+              "B21",
+              "B23",
+              "C23"
+            ]
+          },
+          {
+            "sheet": "18. 현금흐름계획",
+            "cells": [
+              "C9",
+              "E9:G9"
+            ]
+          }
+        ],
+        "guidance": "현금흐름의 영업외 수입이 연도마다 다른 손익 행(소계/보조금)을 참조한다. 현재 결과는 같지만 보조금의 손익·현금 처리를 정하고 참조를 통일한다."
+      },
+      {
+        "id": "X-N9",
+        "status": "needs_confirmation",
+        "kind": "placeholder_zero",
+        "locations": [
+          {
+            "sheet": "12 .경비계획",
+            "cells": [
+              "B17:C18",
+              "C4"
+            ]
+          }
+        ],
+        "guidance": "임차·위탁 비용이 0을 곱한 예시 형태이고 빈 셀을 참조한다. 해당 여부를 답변으로 정한다."
+      },
+      {
+        "id": "X-N10",
+        "status": "needs_confirmation",
+        "kind": "unit_interpretation",
+        "locations": [
+          {
+            "sheet": "11. 인건비계획",
+            "cells": [
+              "D8:D10",
+              "E9",
+              "P34:P35"
+            ]
+          }
+        ],
+        "guidance": "노동 투입 입력의 단위(시간·일)와 단가 환산 방식을 확인한다."
+      },
+      {
+        "id": "X-N12",
+        "status": "needs_confirmation",
+        "kind": "scratch_cells",
+        "locations": [
+          {
+            "sheet": " 7. 판매계획",
+            "cells": [
+              "B13",
+              "O13",
+              "S13",
+              "S19:S20"
+            ]
+          }
+        ],
+        "guidance": "인쇄 영역 밖에 다른 기준의 보조 계산이 남아 있다. 본문·표에 옮기지 않는다."
+      },
+      {
+        "id": "X-N13",
+        "status": "needs_confirmation",
+        "kind": "unit_interpretation",
+        "locations": [
+          {
+            "sheet": "14. 생산원가계획",
+            "cells": [
+              "B27:C28",
+              "G3"
+            ]
+          }
+        ],
+        "guidance": "단위당 생산원가 값이 시트 표시 단위(천원) 기준이다. 원 단위로 옮길 때 환산한다."
+      },
+      {
+        "id": "X-N14",
+        "status": "needs_confirmation",
+        "kind": "reference_pattern_deviation",
+        "locations": [
+          {
+            "sheet": "5. 원리금상환계획",
+            "cells": [
+              "D8:D11"
+            ]
+          }
+        ],
+        "guidance": "요약 행 한 칸만 상수이고 이웃 칸은 수식이다."
+      }
+    ]
+  },
+  "evidence_sources": [
+    {
+      "id": "OF-G1",
+      "title": "원예·특작시설 내재해 설계기준 및 내재해형 시설규격 등록 등에 관한 규정",
+      "publisher": "농림축산식품부",
+      "edition": "농림축산식품부고시 제2025-108호",
+      "effective": "2025-10-31",
+      "sha256": "c8b401cd49103a2d4432153ab45736d6989813864fd5775a70a2974b121099fa",
+      "acquisition": "bytes_held",
+      "use_scope": "disaster_design_standard",
+      "caveats": [
+        "설계기준은 별표 1의 지역별 적설심·풍속이며 사업지 시·군으로 조회한다.",
+        "시설 치수·구조계산은 설계자·학생 입력이며 이 모듈이 산정하지 않는다.",
+        "사용 시점에 국가법령정보센터에서 현행 여부를 다시 확인한다."
+      ]
+    },
+    {
+      "id": "OF-G2",
+      "title": "[별표 1] 지역별 내재해 설계기준 적설심 및 풍속",
+      "publisher": "농림축산식품부",
+      "edition": "농림축산식품부고시 제2025-108호 별표 1",
+      "effective": "2025-10-31",
+      "sha256": "c50e4d3f4ec3a1911ecd92ff8725738a8472c6bd330afc458305172a39f9d757",
+      "acquisition": "bytes_held",
+      "use_scope": "disaster_design_standard",
+      "caveats": [
+        "사업지 시·군을 먼저 정한 뒤 원문 표에서 직접 조회한다.",
+        "이 파일은 원문 값을 싣지 않는다. 사용 시점에 현행 고시의 별표인지 확인한다."
+      ]
+    },
+    {
+      "id": "OF-D3",
+      "title": "원예특작 내재해형 비닐하우스 규격 운영 현황",
+      "publisher": "농촌진흥청",
+      "edition": "2026년 3월 기준",
+      "effective": null,
+      "sha256": "be0f9fadd328f134d0350b5e75b69d98c155263e5c7181621fffa07d0d06fa09",
+      "acquisition": "bytes_held",
+      "use_scope": "facility_spec_registry",
+      "caveats": [
+        "등록 규격 목록의 참조본이며 정본은 고시 별표와 농사로 공시다.",
+        "선택한 규격의 현재 유효 여부는 사용 시점에 확인한다."
+      ]
+    },
+    {
+      "id": "OF-N1",
+      "title": "NCS 학습모듈 시설원예 시설설치",
+      "publisher": "NCS 국가직무능력표준",
+      "edition": "LM2401010803_17v1",
+      "effective": null,
+      "sha256": "cb196629e029c7ea0999957f673cc2d40edaf020cf8edf9deaefad0582f5fdd1",
+      "acquisition": "bytes_held",
+      "use_scope": "technical_reference",
+      "caveats": [
+        "질문·문서 절 구성의 참고이며 학생별 시설 설계 승인 기준이 아니다.",
+        "2026-09-25 웹 확인 시 현행 능력단위 코드와 같은 판본이다. 사용 시점에 다시 확인한다."
+      ]
+    },
+    {
+      "id": "OF-N2",
+      "title": "NCS 학습모듈 시설원예 시설관리",
+      "publisher": "NCS 국가직무능력표준",
+      "edition": "LM2401010804_17v1",
+      "effective": null,
+      "sha256": "08e143bdcf1ca4d49f8e7bbfb01d56bc3c0696169229b79e459a0b1d3813c79b",
+      "acquisition": "bytes_held",
+      "use_scope": "technical_reference",
+      "caveats": [
+        "질문·문서 절 구성의 참고이며 운영비 산정 근거가 아니다.",
+        "2026-09-25 웹 확인 시 현행 능력단위 코드는 23v2로, 이 학습모듈(17v1)은 구판이다."
+      ]
+    },
+    {
+      "id": "OF-I1",
+      "title": "2024 농산물소득자료집",
+      "publisher": "농촌진흥청",
+      "edition": "2024년 조사",
+      "effective": null,
+      "sha256": "0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257fb3dff6ab",
+      "acquisition": "bytes_held",
+      "use_scope": "income_comparison",
+      "caveats": [
+        "조사 집단의 10a당 연 1기작 비교값이며 학생의 수량·가격·매출이 아니다.",
+        "수경·토경은 별도 행으로 구분한다.",
+        "화훼는 수량 단위가 본이므로 kg 기반 식과 섞지 않는다."
+      ]
+    },
+    {
+      "id": "OF-I2",
+      "title": "2024 지역별 농산물소득자료",
+      "publisher": "농촌진흥청",
+      "edition": "2024년 조사",
+      "effective": null,
+      "sha256": "b229ca4f83e9152656945090c15ac7f8780c578042854200b9e11b77bf8d3813",
+      "acquisition": "bytes_held",
+      "use_scope": "income_comparison",
+      "caveats": [
+        "도 단위 조사 사례로 자료집이 통계적 유의성이 없다고 밝힌다.",
+        "비교값으로만 쓰고 학생 계획값으로 옮기지 않는다."
+      ]
+    },
+    {
+      "id": "OF-E1",
+      "title": "2025 농업과학기술 경제성 분석 기준자료집",
+      "publisher": "농촌진흥청",
+      "edition": "2025년 판",
+      "effective": null,
+      "sha256": "38e38ffb8b478584b9f76a8b9d98d56c7cdeb8eb18a2200aef26639a72935a83",
+      "acquisition": "bytes_held",
+      "use_scope": "useful_life_reference",
+      "caveats": [
+        "원예시설 내용연수는 공사·부속 항목별 표로 제시된다.",
+        "수선비율과 온실 신축 표준단가 표는 없으므로 견적·답변으로 받는다."
+      ]
+    }
+  ],
+  "prohibited_rows": [
+    {
+      "pack_id": "rda.econ.2025",
+      "kind": "useful_life",
+      "locator_pdf_pages": [
+        133,
+        134,
+        135
+      ],
+      "reason": "원문 표에 없는 행 라벨로 추출된 원예시설 내용연수 행 — 원예 근거로 사용 금지(공용 팩 결함 후보)"
+    }
+  ]
+}

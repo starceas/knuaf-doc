@@ -55,7 +55,9 @@ SPECIALTY = "specialty_crops"
 INSECTS = "industrial_insects"
 FRUIT = "fruit_trees"
 # Registered majors are specialty_crops, industrial_insects, fruit_trees.
-UNREGISTERED = "hort_env_systems"
+# A synthetic ID no real major will ever register (a real peer ID
+# breaks this sample the day that major is added).
+UNREGISTERED = "unregistered_probe_major"
 
 
 def _cli(script, *args):

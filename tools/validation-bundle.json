@@ -48,9 +48,9 @@
       "sha256": "fc502b0c902536f89fea092cc49f6a84db17f2432e3c8c2dae95565956a1c6a6"
     },
     "tests/test_bundle_lineage.py": {
-      "note": "P1+P2 PACKAGE 계보 시험 — 실제 후보 정상 검증, 신규 파일 계약(allowlist·before=null·위장 거부) 포함 적대 합성 트리. P6: pin four new common-contract runtime files and the P5 parent tree.",
+      "note": "P1+P2 PACKAGE 계보 시험 — 실제 후보 정상 검증, 신규 파일 계약(allowlist·before=null·위장 거부) 포함 적대 합성 트리. P6: pin four new common-contract runtime files and the P5 parent tree. P9: hort_env_systems first bundle counts and parent P8 tree.",
       "origin": "new",
-      "sha256": "e4ffb1d99a0ff8630461159b4146aaee92ff6daf3a7319eb3a834fdf7217d956"
+      "sha256": "a98a6e23cbeb1d26692ff51ac0772921aa24c2caf62f4cc4163d6991d9f32a7f"
     },
     "tests/test_canonical_flow.py": {
       "note": "P0-A: init/apply/check/export positive controls + C2–C6/H2/H3/H5 defect signatures; synthetic only.",
@@ -77,25 +77,40 @@
       "origin": "new",
       "sha256": "ea7dba736f9f797de7782cd3e88f7a16aa3f523f996ec5e0d93f81dff6427b11"
     },
+    "tests/test_hort_env_module.py": {
+      "note": "P9 hort_env_systems declaration, proposal validation, output-guard refusals, cover-marker cases and premise-probe field links.",
+      "origin": "new",
+      "sha256": "a65dc824cc46d70cf84257c979efd302b9e74056f61522c8148984f5960941f0"
+    },
+    "tests/test_hort_env_plan.py": {
+      "note": "P9 hort_env_systems read-only plan: binding holds, six answer states without values, workbook rehash decision table, strict profile validation, privacy scan with synthetic negatives.",
+      "origin": "new",
+      "sha256": "350aca1f2af7446954789fd579cf99c70dcd061d54f1e22b2222b4e47fa29efc"
+    },
+    "tests/test_hort_env_reuse.py": {
+      "note": "P9 hort_env_systems reuse-registry entries: baseline entries unchanged, identification-only entries, authority-following readiness, synthetic verified success and tamper rejection.",
+      "origin": "new",
+      "sha256": "bcdabe92517593606d268f85db91e3a6fefd5061bf2487736388a9434441d8d7"
+    },
     "tests/test_import_isolation.py": {
       "note": "P0-A: B01 import-isolation contract under polluted PYTHONPATH.",
       "origin": "new",
       "sha256": "8affd4a22b26c6bb602efa6b188f5fae8a4710c0abd9e025ed432589f0f8ec6d"
     },
     "tests/test_major_guard_contract.py": {
-      "note": "P7 policy B common output guard unit contract (A32-L1–L6, explicit null, label conflict, forged context, registered unsupported module, file-kind sniffing, reconfirm). P8: fruit_trees is registered — unknown-major coverage moved to an unregistered ID, the synthetic peer renamed probe_major, real fruit_trees checked on every writer and CLI (unsupported_output) and against a specialty binding (major_binding_mismatch).",
+      "note": "P7 policy B common output guard unit contract (A32-L1–L6, explicit null, label conflict, forged context, registered unsupported module, file-kind sniffing, reconfirm). P8: fruit_trees is registered — unknown-major coverage moved to an unregistered ID, the synthetic peer renamed probe_major, real fruit_trees checked on every writer and CLI (unsupported_output) and against a specialty binding (major_binding_mismatch). P9: hort_env_systems is registered — the unregistered sample moved to a synthetic ID that no real major will register.",
       "origin": "new",
-      "sha256": "b1d6aa1d31811c9fc80fcec2e626bd80befe75fa790e376bfbb2f4f43e4ad31a"
+      "sha256": "423e3d628e2d63fd5451cb9ba3b5daea876554ea9336ae0c244c0082ce8fae04"
     },
     "tests/test_major_guard_outputs.py": {
-      "note": "P7 policy B guard on finance/XLSX/DOCX/Office writers (A46-T1–T5 path matrix, publish-time reconfirm). P8: fruit_trees is registered — unknown-major coverage moved to an unregistered ID, the synthetic peer renamed probe_major, real fruit_trees checked on every writer and CLI (unsupported_output) and against a specialty binding (major_binding_mismatch).",
+      "note": "P7 policy B guard on finance/XLSX/DOCX/Office writers (A46-T1–T5 path matrix, publish-time reconfirm). P8: fruit_trees is registered — unknown-major coverage moved to an unregistered ID, the synthetic peer renamed probe_major, real fruit_trees checked on every writer and CLI (unsupported_output) and against a specialty binding (major_binding_mismatch). P9: hort_env_systems is registered — the unregistered sample moved to a synthetic ID that no real major will register.",
       "origin": "new",
-      "sha256": "d9c8c4f5dea26d3c41251aca4df95de5a875bfebdd793e59498a21d5245d5566"
+      "sha256": "c931765bdda126f0e0b51a74cedf926b495b5f648b15a97630b65e82b28dffe4"
     },
     "tests/test_major_guard_paper.py": {
-      "note": "P7 policy B guard on paper/export/adopt/merge paths (A32-L1–L7 path matrix, lock-path binding race). P8: fruit_trees is registered — unknown-major coverage moved to an unregistered ID, the synthetic peer renamed probe_major, real fruit_trees checked on every writer and CLI (unsupported_output) and against a specialty binding (major_binding_mismatch).",
+      "note": "P7 policy B guard on paper/export/adopt/merge paths (A32-L1–L7 path matrix, lock-path binding race). P8: fruit_trees is registered — unknown-major coverage moved to an unregistered ID, the synthetic peer renamed probe_major, real fruit_trees checked on every writer and CLI (unsupported_output) and against a specialty binding (major_binding_mismatch). P9: hort_env_systems is registered — the unregistered sample moved to a synthetic ID that no real major will register.",
       "origin": "new",
-      "sha256": "6bf77f544f54739e3fa3fa501e73351d636dde182b24b9fa26174cc3cbb84101"
+      "sha256": "cd880afea78c9a6913be48102a747c856d45cbd093ea1fde5b879abb17a4c492"
     },
     "tests/test_p1_core.py": {
       "note": "P1 core/CLI behavioral tests (A-owned): C3 record-id, C5 floor, C6 COM, H8 ladder, UTF-8 band.",
@@ -161,14 +176,14 @@
       "sha256": "246711b72d92c32f0904f9eac4b90a9590c9420c75af60917d1bbd05b996e6ab"
     },
     "tools/runtime-changes.json": {
-      "note": "누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py. P8 declares the fruit_trees first bundle (module registration, two common helper modules, fruit plan, reference-set data and guidance).",
+      "note": "누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py. P8 declares the fruit_trees first bundle (module registration, two common helper modules, fruit plan, reference-set data and guidance). P9 declares the hort_env_systems first bundle (module registration, hort plan, profile and guidance, reuse-registry entries).",
       "origin": "new",
-      "sha256": "3b59e4ed62ae7037bf547429f29d6c2c4c020a2a723040d8484563dc8f3a57ff"
+      "sha256": "2123cfb6dc0623f63c809e3044c74bba10d2e0f733f4b319cf8ac22e7415bcae"
     },
     "tools/validation-provenance.json": {
       "note": "This file; declares origins for the validation layer.",
       "origin": "new",
-      "sha256": "c03028f09373e9567d3ec3fce71453b8209e4b8f06d3e50abac868850c4e00d5"
+      "sha256": "38d7d0f6dd0bee7b686abb9d9a4386b153e1b11ebfe612a80154d1ccd854a888"
     }
   },
   "generated_by": "tools/build_validation_bundle.py@3",
@@ -183,20 +198,20 @@
     ]
   },
   "runtime_changes": {
-    "approved_new_files": 66,
+    "approved_new_files": 70,
     "baseline_main": "29abec0ec95369de7ae9e22207349d574f1f46b7",
-    "change_count": 90,
-    "changes_sha256": "06b4f1fd50f7de69cd48c576b89d107524740bddeff12267fd3d6c74fa395d96",
-    "new_count": 66,
+    "change_count": 94,
+    "changes_sha256": "0d5cfc0874ceadfee6012ce8efbcd15a00ba573505762d74bde98501ac93b364",
+    "new_count": 70,
     "parent_candidate": {
-      "file_count": 144,
-      "stage": "P7",
-      "tree_sha256": "7dae9a12e55316e76b03f1cea6868b5bd76370e5fe0fbd0a335115dfda52d7df"
+      "file_count": 154,
+      "stage": "P8",
+      "tree_sha256": "e65a7dd0718004f9aa9068c61dda26096690709aff6c6d425f0eef368ef8d255"
     },
     "schema": "knuaf-doc/runtime-changes@2",
     "spec": "tools/runtime-changes.json",
-    "spec_sha256": "3b59e4ed62ae7037bf547429f29d6c2c4c020a2a723040d8484563dc8f3a57ff",
-    "stage": "P8",
+    "spec_sha256": "2123cfb6dc0623f63c809e3044c74bba10d2e0f733f4b319cf8ac22e7415bcae",
+    "stage": "P9",
     "stage_lineage": [
       {
         "file_count": 75,
@@ -245,10 +260,16 @@
         "note": "P7 기준 main 3dcd7c3(PR #6 공용 가드 B 병합)의 변경 전 전체 파일 트리 해시",
         "stage": "P7",
         "tree_sha256": "7dae9a12e55316e76b03f1cea6868b5bd76370e5fe0fbd0a335115dfda52d7df"
+      },
+      {
+        "file_count": 154,
+        "note": "P8 기준 main a96a5bf(PR #7 과수 첫 묶음 병합)의 변경 전 전체 파일 트리 해시",
+        "stage": "P8",
+        "tree_sha256": "e65a7dd0718004f9aa9068c61dda26096690709aff6c6d425f0eef368ef8d255"
       }
     ],
-    "verified_count": 90
+    "verified_count": 94
   },
   "schema": "knuaf-doc/validation-bundle@3",
-  "validation_tree_sha256": "3bd5e00c7986cf5e3118a9fad17eae1bc8d0ed1f0e05e896933c28de2f29a567"
+  "validation_tree_sha256": "a4e2afed084fbc45ec11f92575a9a360fec704b591d81eb4640babfa2a8970e8"
 }
