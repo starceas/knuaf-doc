@@ -2,5 +2,5 @@
   "status": "empty_slot",
   "major_id": "industrial_insects",
   "major_label": "산업곤충전공",
-  "reason": "실데이터 미수집, 특용작물전공(specialty_crops) MVP 슬라이스 범위 밖. 가짜 통계를 채우지 않는다."
+  "reason": "2024 곤충산업 원자료 R0/R1은 비공개로 일부 파싱했으나 농가수 상충과 R1 재배포 권리 미확정으로 조회 팩에 승격하지 않음. 종별 수율·가격 통계를 만들지 않는다."
 }

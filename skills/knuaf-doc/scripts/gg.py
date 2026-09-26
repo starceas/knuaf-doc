@@ -51,6 +51,8 @@ def main(argv=None):
             "rda-propose",
             "rda-apply",
             "major-plan",
+            "insect-plan",
+            "insect-evidence",
             "rda-candidates",
             "source-scan",
             "source-resolve",
@@ -67,6 +69,8 @@ def main(argv=None):
     ap.add_argument("--kind", default="review")
     ap.add_argument("--field")
     ap.add_argument("--input")
+    ap.add_argument("--pdf")
+    ap.add_argument("--xlsx")
     ap.add_argument("--observer")
     ap.add_argument("--name")
     ap.add_argument("--companion", action="append")
@@ -110,6 +114,28 @@ def main(argv=None):
 
     def rel(path):
         return str(Path(path).resolve().relative_to(root_resolved))
+
+    def insect_selection():
+        # The common CLI's generic error path prints exception text.  New
+        # private-project inputs must never disclose an absolute path there.
+        import gg_insect_document
+
+        try:
+            text = core.local(a.folder, a.input).read_text(encoding="utf-8")
+        except (OSError, ValueError, TypeError, UnicodeError):
+            raise ValueError("insect_input_invalid_or_unreadable") from None
+        return insect_call(gg_insect_document.parse_selection, text)
+
+    def insect_call(fn, *args):
+        # Insect modules raise ValueError with fixed reason codes only; any
+        # other exception text could carry input data, so it is reduced to
+        # one stable code before the common error path prints it.
+        try:
+            return fn(*args)
+        except ValueError:
+            raise
+        except Exception:
+            raise ValueError("insect_internal_error") from None
 
     try:
         code = 0
@@ -187,14 +213,19 @@ def main(argv=None):
             if not isinstance(payload, dict):
                 raise ValueError("관측 기록은 객체여야 함")
             value = core.ingest_review_observation(a.folder, payload, a.observer)
-        elif a.command in {"major-plan", "rda-candidates"}:
+        elif a.command in {"major-plan", "insect-plan", "insect-evidence", "rda-candidates"}:
             # New writing contract: the major comes from a confirmed fact in
             # the canonical project.  The raw rda-lookup contract below stays
             # independent and retains its optional major filter.
             import gg_major_contract as major_contract
 
             registry = major_contract.default_registry()
-            project = core.load(a.folder)
+            try:
+                project = core.load(a.folder)
+            except (OSError, ValueError) as error:
+                if a.command in {"insect-plan", "insect-evidence"}:
+                    raise ValueError("insect_project_unreadable") from None
+                raise
             try:
                 binding = major_contract.binding_from_project(registry, project)
             except major_contract.MajorContractError as error:
@@ -213,6 +244,25 @@ def main(argv=None):
                                 registry, binding.major_id).items()
                         },
                     }
+                elif a.command == "insect-plan":
+                    if not a.input:
+                        raise ValueError("--input 선택 JSON 필요")
+                    import gg_insect_document
+
+                    selection = insect_selection()
+                    value = insect_call(
+                        gg_insect_document.build_plan,
+                        registry, project, selection,
+                    )
+                elif a.command == "insect-evidence":
+                    if not a.pdf or not a.xlsx:
+                        raise ValueError("--pdf R0와 --xlsx R1 원본 경로 필요")
+                    import gg_insect_evidence
+
+                    value = insect_call(
+                        gg_insect_evidence.review_sources,
+                        registry, project, a.pdf, a.xlsx,
+                    )
                 else:
                     if not a.crop or not a.region:
                         raise ValueError("--crop과 --region 필요")

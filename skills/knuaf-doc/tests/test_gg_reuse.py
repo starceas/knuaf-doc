@@ -82,6 +82,26 @@ SOURCE_SHA = {
         "cb196629e029c7ea0999957f673cc2d40edaf020cf8edf9deaefad0582f5fdd1",
     "hort-env-ncs-manage-pdf":
         "08e143bdcf1ca4d49f8e7bbfb01d56bc3c0696169229b79e459a0b1d3813c79b",
+    # industrial_insects built-in references (P9): F0/E1-E4 locator map,
+    # E3/E4 HWP and R0/R1 official statistics as identity-only entries.
+    "insect.example.f0":
+        "d582d884abdd21edf622fc0973844abbc4c62369bf7e92574da3d4e33ae75885",
+    "insect.example.e1":
+        "9668c9abc68f750039e940bb78f995794696b6dd14b1b5714cd74e81e485a36d",
+    "insect.example.e2":
+        "2527c590183666543ecb9d23e20e6f5f2a5d0f3215c1ba09577dcdb9912ca0d2",
+    "insect.example.e3":
+        "b91fefd7ff77dbec1752a503c2c3238c7d66058d35b4e25cb9f1237842bf4f44",
+    "insect.example.e4":
+        "198fd1e140ad41ec8612eafd484cfc46ac5cfea8d318408cc38a0a241ea90d55",
+    "insect.example.e3-hwp":
+        "40a537112c252f55351f9b40714de97108381eb7f47a828b84e88041b85e960c",
+    "insect.example.e4-hwp":
+        "922c56473d6d7d614d7ef18a8a07f2fd3eb16aa16acc7f8df26170aa9a0fd990",
+    "insect.stat.r0":
+        "3dd2b75f5588d1b710123f56cc37747521dee786a2c4a13ecf5e6ab6e66541be",
+    "insect.stat.r1":
+        "2582fc7703bb3c409225e1a7329a6a591513500bd0a827e3e9f1807b2bcebe8a",
 }
 BASELINE_IDS = [
     "rda.income.national.2024", "rda.income.regional.2024",
@@ -808,7 +828,8 @@ class TestI01Matrix(unittest.TestCase):
                       "physical_jsonl_line_1based": 999,
                       "raw_line_sha256": "0" * 64}
         shared_art = {"references/exemplar-quality.md",
-                      "references/official-toc.md"}
+                      "references/official-toc.md",
+                      "references/industrial-insects/precedents.json"}
 
         matrix = {}
         for sid, entry in entries.items():
@@ -898,14 +919,14 @@ class TestI01Matrix(unittest.TestCase):
             self.assertNotEqual(cells["I01.verdict"], "reuse_ready",
                                 "%s must not be ready on a probe key"
                                 % sid)
-        out = LANE_ROOT / "receipts" / "i01-11-matrix.json"
-        try:
-            out.parent.mkdir(parents=True, exist_ok=True)
+        # Keep the diagnostic inside this test's own temporary directory.
+        # LANE_ROOT resolves to the user's home in a standalone worktree.
+        with tempfile.TemporaryDirectory(prefix="knuaf-i01-matrix-") as td:
+            out = Path(td) / "i01-11-matrix.json"
             out.write_text(json.dumps(matrix, ensure_ascii=False,
-                                      indent=1))
-        except OSError:
-            pass
-        print("\nI01.11 matrix -> %s" % out)
+                                      indent=1), encoding="utf-8")
+            self.assertEqual(json.loads(out.read_text(encoding="utf-8")),
+                             matrix)
         print(json.dumps(matrix, ensure_ascii=False, indent=1))
 
 

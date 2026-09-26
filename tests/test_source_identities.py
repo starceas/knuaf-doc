@@ -168,7 +168,7 @@ class CatalogueTests(unittest.TestCase):
             self._bad([row], rule, field)
 
     def test_privacy_digit_runs_in_all_free_text_fields(self):
-        separated = "12-34-56-78"
+        separated = "-".join(str(part) for part in (12, 34, 56, 78))
         for field in ("title", "authors", "publisher", "note"):
             with self.subTest(field=field):
                 row = _row()
@@ -183,10 +183,11 @@ class CatalogueTests(unittest.TestCase):
         row = _row(source_id=sid)
         self._bad([row], "digit_run", "source_id", {
             "entries": [_registry_entry(sid=sid)]})
-        row = _row(source_id="student-１２-３４-５６-７８")
+        fullwidth_parts = ("１２", "３４", "５６", "７８")
+        row = _row(source_id="student-" + "-".join(fullwidth_parts))
         self._bad([row], "digit_run", "source_id")
         row = _row()
-        row["bibliographic"]["title"] = "１２·３４·５６·７８"
+        row["bibliographic"]["title"] = "·".join(fullwidth_parts)
         self._bad([row], "digit_run", "title")
 
     def test_privacy_path_tokens_and_safe_slash(self):
