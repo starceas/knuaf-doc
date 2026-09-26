@@ -1014,11 +1014,11 @@
       "last_changed": "P15"
     },
     "tests/test_source_identities.py": {
-      "after_sha256": "c5bcb0e56515414b8dd94b6494aa368e63915fa555194742e42351ca48f6f3c6",
+      "after_sha256": "c4e7ae7e17c60024de2b8b2c383c006dbb9c63465446ff2a7c684a0708ec01d3",
       "before_sha256": null,
       "first_changed": "P13",
       "owner": "P15",
-      "reason": "D4 positive and adversarial catalogue, privacy, duplicate-key and registry-binding controls | Astra D4 round 1: sanitized dependency failures and bounded/deep JSON rejection with CLI negatives | P13: rebased D4 identity-only declaration onto accepted P12 | P13: privacy negatives assemble synthetic digit groups at test time without a shipped student-number literal | P15: empty-catalogue contract kept on a synthetic empty list now that fruit rows ship",
+      "reason": "D4 positive and adversarial catalogue, privacy, duplicate-key and registry-binding controls | Astra D4 round 1: sanitized dependency failures and bounded/deep JSON rejection with CLI negatives | P13: rebased D4 identity-only declaration onto accepted P12 | P13: privacy negatives assemble synthetic digit groups at test time without a shipped student-number literal | P15: empty-catalogue contract kept on a synthetic empty list now that fruit rows ship; the shipped catalogue must load and pass the CLI check with its real row count",
       "source": "new",
       "last_changed": "P15"
     },

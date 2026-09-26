@@ -233,12 +233,12 @@
     "tools/runtime-changes.json": {
       "note": "누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py. P8 declares the fruit_trees first bundle (module registration, two common helper modules, fruit plan, reference-set data and guidance). P9 declares the hort_env_systems first bundle (module registration, hort plan, profile and guidance, reuse-registry entries). | P10: 누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py. P8 declares the fruit_trees first bundle (module registration, two common helper modules, fruit plan, reference-set data and guidance). P9 declares the common XLSX reuse bundle (one new runtime extract file + declared edits to registration, resolver, template guard, and reuse tests). P9-D3 declares the major-specific-precedence edits (registry dedupe, catalog base_for_major, resolver base policy, docs, tests) in the same stage. | P11: 누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py. P8 declares the fruit_trees first bundle (module registration, two common helper modules, fruit plan, reference-set data and guidance). P9 declares the hort_env_systems first bundle (module registration, hort plan, profile and guidance, reuse-registry entries). P10 declares the common interview rules bundle (SKILL.md re-touch, three baseline doc first-changes, specialty-crops premise-probes) re-based onto the P9 parent. P12 declares the industrial_insects first bundle (four read-only insect scripts, locator map, guide and premise probes as new files; nine reuse-registry entries and SKILL/gg.py updates). P13: D4 source identity catalogue, validator, tests and related guidance rebased on accepted P12.",
       "origin": "new",
-      "sha256": "b8cb48f20b9e61c14053daed4fcbb99f25cc89d97b177daef73c4ff9c78f34e1"
+      "sha256": "8c63bde8dec44f0fb02cb59c70212cd9e62fc482b0dbfbf362bc0598a45e094a"
     },
     "tools/validation-provenance.json": {
       "note": "This file; declares origins for the validation layer.",
       "origin": "new",
-      "sha256": "e63c9f4147299efd0744c7086273c3b1acabd73c66c2cde1a181954356258b73"
+      "sha256": "a5b0a6cd37a32f85739d4d0791a2a076c91bf175ea4c47d6e406d8848e32460b"
     }
   },
   "generated_by": "tools/build_validation_bundle.py@3",
@@ -256,7 +256,7 @@
     "approved_new_files": 84,
     "baseline_main": "29abec0ec95369de7ae9e22207349d574f1f46b7",
     "change_count": 111,
-    "changes_sha256": "99bca76ff61fb6d5d979f1978ff49b035ad1d52380e66a3d010bd0ba8e0c6b5e",
+    "changes_sha256": "7d51dbe71325fc1c9f178014f49bc5d0eb8add32781dd66a7376f2e249eeef18",
     "new_count": 84,
     "parent_candidate": {
       "file_count": 185,
@@ -265,7 +265,7 @@
     },
     "schema": "knuaf-doc/runtime-changes@2",
     "spec": "tools/runtime-changes.json",
-    "spec_sha256": "b8cb48f20b9e61c14053daed4fcbb99f25cc89d97b177daef73c4ff9c78f34e1",
+    "spec_sha256": "8c63bde8dec44f0fb02cb59c70212cd9e62fc482b0dbfbf362bc0598a45e094a",
     "stage": "P15",
     "stage_lineage": [
       {
@@ -362,5 +362,5 @@
     "verified_count": 111
   },
   "schema": "knuaf-doc/validation-bundle@3",
-  "validation_tree_sha256": "f3690cfb354d14300d05a0922b1fd4588e3bd10a02f4f87ba24b0be3c71e23ed"
+  "validation_tree_sha256": "66cfcccbb39fcf6aadcda33263d68f835f84c4aea34a2d86f933e6ba091cef59"
 }

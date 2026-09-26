@@ -184,7 +184,7 @@
       "origin": "new"
     },
     "tests/test_source_identities.py": {
-      "note": "D4 P12 synthetic catalogue privacy, schema, duplicate-key and registry-bound identity tests. P13: privacy negative inputs are assembled during the test, with no student-number literal shipped. P15: empty-catalogue assertion moved to a synthetic empty list; shipped rows are checked per major.",
+      "note": "D4 P12 synthetic catalogue privacy, schema, duplicate-key and registry-bound identity tests. P13: privacy negative inputs are assembled during the test, with no student-number literal shipped. P15: empty-catalogue assertion moved to a synthetic empty list; shipped rows are checked per major, and the whole shipped catalogue must load and pass the CLI check.",
       "origin": "new"
     },
     "tests/test_orchard_production.py": {
