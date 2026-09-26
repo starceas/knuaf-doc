@@ -119,9 +119,8 @@ class RealTreeTests(ContractCase):
                              f"errors: {report['errors']!r}")
             rc = report["runtime_changes"]
             self.assertEqual(rc["declared_count"], rc["verified"])
-            # P17 (rda-lookup verification status, rebased onto accepted
-            # P16) declares one new test file on top of P16's 113
-            # declared changes.
+            # P18 (industrial_insects second bundle) updates declared
+            # runtime files on top of P17.
             self.assertEqual(114, rc["verified"])
             self.assertEqual(87, rc["new_count"])
         else:
@@ -139,26 +138,18 @@ class RealTreeTests(ContractCase):
         self.assertEqual(
             _sha(REPO_ROOT / "tools" / "runtime-changes.json"),
             link["spec_sha256"])
-        self.assertEqual("P17", link["stage"])
+        self.assertEqual("P18", link["stage"])
         self.assertEqual("29abec0ec95369de7ae9e22207349d574f1f46b7",
                          link["baseline_main"])
-        # P17's parent is the accepted P16 tree (189 files, main
-        # 0acd0cac — PR #17 fruit identity rows merge).
+        # P18's parent is the accepted P17 tree (190 files).
         self.assertEqual(114, link["change_count"])
         self.assertEqual(87, link["new_count"])
         self.assertEqual(87, link["approved_new_files"])
-        self.assertEqual("P16", link["parent_candidate"]["stage"])
-        self.assertEqual(189, link["parent_candidate"]["file_count"])
+        self.assertEqual("P17", link["parent_candidate"]["stage"])
+        self.assertEqual(190, link["parent_candidate"]["file_count"])
         self.assertEqual(
-            "d66ad61442448f858e73a60b640174d17eca470c8849409181c0d2dfa4ee2cab",
+            "6ff3733b6011ced080a0c9f8909cd4e899744eece75df0dfeae342b1434ae9ac",
             link["parent_candidate"]["tree_sha256"])
-        # D5 (P15) pinned its own parent, the P14 tree; keep that pin on
-        # the P14 ancestor row now that P15 is itself an ancestor.
-        d5 = json.loads((REPO_ROOT / "docs/validation/d5-rda-useful-life.json")
-                        .read_text(encoding="utf-8"))
-        p14 = [row for row in link["stage_lineage"] if row["stage"] == "P14"]
-        self.assertEqual([d5["parent_tree_sha256"]],
-                         [row["tree_sha256"] for row in p14])
         # The ancestor list ends at the parent; the current stage is not
         # one of its own ancestors.
         lineage = link["stage_lineage"]
@@ -166,7 +157,14 @@ class RealTreeTests(ContractCase):
             {k: link["parent_candidate"][k]
              for k in ("stage", "file_count", "tree_sha256")},
             {k: lineage[-1][k] for k in ("stage", "file_count", "tree_sha256")})
-        self.assertNotIn("P17", [row["stage"] for row in lineage])
+        self.assertNotIn("P18", [row["stage"] for row in lineage])
+        # D5 (P15) pinned its own parent, the P14 tree; keep that pin on
+        # the P14 ancestor row now that P15 is itself an ancestor.
+        d5 = json.loads((REPO_ROOT / "docs/validation/d5-rda-useful-life.json")
+                        .read_text(encoding="utf-8"))
+        p14 = [row for row in link["stage_lineage"] if row["stage"] == "P14"]
+        self.assertEqual([d5["parent_tree_sha256"]],
+                         [row["tree_sha256"] for row in p14])
 
     def test_change_entries_carry_before_after(self):
         rc = json.loads(
@@ -189,19 +187,19 @@ class RealTreeTests(ContractCase):
                 self.assertIn(meta["owner"],
                               {"A", "B", "C", "P4", "D", "P6", "P7", "P8",
                                "P9", "P10", "P11", "P12", "P13", "P14", "P15",
-                               "P16", "P17"})
+                               "P16", "P17", "P18"})
             else:
-                # P2 through P17 new files: pre-declared allowlist only.
+                # P2 through P18 new files: pre-declared allowlist only.
                 self.assertIn(name, approved)
                 self.assertIsNone(meta["before_sha256"])
                 self.assertIn(meta["first_changed"],
                               {"P2", "P3", "P4", "P5", "P6", "P8", "P9",
                                "P10", "P11", "P12", "P13", "P14", "P15",
-                               "P17"})
+                               "P17", "P18"})
                 self.assertIn(meta["owner"],
                               {"A", "B", "C", "S", "P4", "P5", "P6", "P7",
                                "P8", "P9", "P10", "P11", "P12", "P13",
-                               "P14", "P15", "P16", "P17"})
+                               "P14", "P15", "P16", "P17", "P18"})
 
 
 class SyntheticLineageTests(ContractCase):
