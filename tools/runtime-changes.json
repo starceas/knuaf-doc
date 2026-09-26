@@ -31,6 +31,7 @@
     "skills/knuaf-doc/references/hort-env-systems/profile.json",
     "skills/knuaf-doc/references/locking.md",
     "skills/knuaf-doc/references/reuse-registry-schema.md",
+    "skills/knuaf-doc/references/specialty-crops/premise-probes.md",
     "skills/knuaf-doc/references/workbook-reference-set.json",
     "skills/knuaf-doc/scripts/gg_fact_semantics.py",
     "skills/knuaf-doc/scripts/gg_finance_body.py",
@@ -86,12 +87,12 @@
       "note": "corrections-2: SCC5 exact added-path inventory + provenance transfer record."
     },
     "skills/knuaf-doc/SKILL.md": {
-      "after_sha256": "4cafa13eeec59d88edec43b028c9c2506aafadfb4c4780846e3edefa55641af3",
+      "after_sha256": "4421d21e8c252d132e3a94261de1b766fda8c77e30d957c7ab70f7083d20b59b",
       "before_sha256": "c0008fa5239cc16411fd4ef24b5bf901c7a8b9b50c6b621e2bdee3acf734ddc0",
       "first_changed": "P1",
-      "last_changed": "P10",
-      "owner": "P10",
-      "reason": "H11 문서 정정: 사용자 명시 모델도 임의 폴백·대체 금지 규칙 추가 | P5-D1 guidance sync: new '참고자료 폴더 등록' bullet documents the frozen source-scan→source-resolve→source-register→source-view lifecycle and 03_sources.md preservation | P6: document explicit major binding and current industrial insect capability boundary | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P8: fruit_trees plan-only capability and guidance link | P9: hort_env_systems plan-only capability and guidance link | P10: P9: common XLSX template rule + X02 layout guard sentence | P9-D3: major-specific workbook precedence sentence (hort_env_systems base = registered H01)",
+      "last_changed": "P11",
+      "owner": "P11",
+      "reason": "H11 문서 정정: 사용자 명시 모델도 임의 폴백·대체 금지 규칙 추가 | P5-D1 guidance sync: new '참고자료 폴더 등록' bullet documents the frozen source-scan→source-resolve→source-register→source-view lifecycle and 03_sources.md preservation | P6: document explicit major binding and current industrial insect capability boundary | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P8: fruit_trees plan-only capability and guidance link | P9: hort_env_systems plan-only capability and guidance link | P10: P9: common XLSX template rule + X02 layout guard sentence | P9-D3: major-specific workbook precedence sentence (hort_env_systems base = registered H01) | P11 공용 인터뷰 규칙: 전공별 핵심 전제 목록(C1), 동적 영향 순위(C2), '모르겠다' 도움(C3), 충돌 정리(C5), 미준비 전공 안내, 특용작물 probe 문서",
       "source": "new"
     },
     "skills/knuaf-doc/references/benchmark-packs/aliases/crop-aliases.specialty_crops.json": {
@@ -325,12 +326,30 @@
       "source": "new",
       "last_changed": "P9"
     },
+    "skills/knuaf-doc/references/interview-guide.md": {
+      "before_sha256": "8f00e8a2d4c5f530eb7aad4a82e2e1957547e14b54941c8f49bb338035b63f87",
+      "after_sha256": "347800db616800494fb3b6c16cab87bba6e687da9c3e82ee513c22d2524a41d3",
+      "first_changed": "P11",
+      "last_changed": "P11",
+      "owner": "P11",
+      "reason": "P11 공용 인터뷰 규칙: 전공별 핵심 전제 목록(C1), 동적 영향 순위(C2), '모르겠다' 도움(C3), 충돌 정리(C5), 미준비 전공 안내, 특용작물 probe 문서",
+      "source": "new"
+    },
     "skills/knuaf-doc/references/locking.md": {
       "after_sha256": "2cc59a7404f9a3f7d58fcacf5fa62e0f41d08e14a0fea43aa31cb3916257728a",
       "before_sha256": null,
       "first_changed": "P2",
       "owner": "A",
       "reason": "P2 신규 잠금/복구 사용자 문서",
+      "source": "new"
+    },
+    "skills/knuaf-doc/references/mid-work-questions.md": {
+      "before_sha256": "bfe7d61143b9fdfeadf00e84bc2dc3082ac962dabd4ab72d6b6efeba7db21ee8",
+      "after_sha256": "1797a4f4dd6f9788e0e50606ccd6c3a9ba17687dee7ba4eb7e4e4e1148d70477",
+      "first_changed": "P11",
+      "last_changed": "P11",
+      "owner": "P11",
+      "reason": "P11 공용 인터뷰 규칙: 전공별 핵심 전제 목록(C1), 동적 영향 순위(C2), '모르겠다' 도움(C3), 충돌 정리(C5), 미준비 전공 안내, 특용작물 probe 문서",
       "source": "new"
     },
     "skills/knuaf-doc/references/model-routing.md": {
@@ -385,6 +404,15 @@
       "reason": "P5-D1 guidance conflict fix (OWNERSHIP 1.1): removed the stale 'scan folder -> build 03_sources.md index' instruction at line 28 and documents the frozen source-scan→source-resolve→source-register→source-view lifecycle — sealed scan receipt under sources/intake/, read-only resolve, explicit-selection register, registration-bound generated view under sources/generated/<view_id>/source-index.json; 03_sources.md byte-preserved on all paths incl. failure (SPEC 3.7) | P10: P9: common XLSX dedup rule — exact sha uses registry extract; different sha re-parses even with identical 17 sheet names; layout_family is a hint | P9-D3: major-specific workbook precedence note (base_for_major/H01; explicit selection wins)",
       "source": "modified"
     },
+    "skills/knuaf-doc/references/specialty-crops/premise-probes.md": {
+      "before_sha256": null,
+      "after_sha256": "2e720727f4969024527d9be857625f316ad12ad79962087a4cd13af688c92309",
+      "first_changed": "P11",
+      "last_changed": "P11",
+      "owner": "P11",
+      "reason": "P11 공용 인터뷰 규칙: 전공별 핵심 전제 목록(C1), 동적 영향 순위(C2), '모르겠다' 도움(C3), 충돌 정리(C5), 미준비 전공 안내, 특용작물 probe 문서 — 특용작물 핵심 전제 목록 신규",
+      "source": "new"
+    },
     "skills/knuaf-doc/references/workbook-reference-set.json": {
       "after_sha256": "de33d81896651dff4e6cf35330a476cf196998d2fdae28d09cfa8c99cdf775a6",
       "before_sha256": null,
@@ -393,6 +421,15 @@
       "reason": "P8 common X01/X02 identity (SHA-256, exact sheet names); no paths or original bytes | P10: P9: v2 — template_rule (D-A/D-B) replaces not-a-submission-template policy; known_workbooks H01 identity; loader accepts v2 only | P9-D3: H01 gains base_for_major=hort_env_systems; template_rule states major-specific precedence (D-F)",
       "source": "new",
       "last_changed": "P10"
+    },
+    "skills/knuaf-doc/references/workflow-order.md": {
+      "before_sha256": "8915cb0b75aa5abbf547a49afc08beae5a6e7ff58b7c8aa22f0c07444ad8a511",
+      "after_sha256": "57d3d2943e4880a45ef033c518642d8807a4936d45759c2d38b4ae9ca6e50d66",
+      "first_changed": "P11",
+      "last_changed": "P11",
+      "owner": "P11",
+      "reason": "P11 공용 인터뷰 규칙: 전공별 핵심 전제 목록(C1), 동적 영향 순위(C2), '모르겠다' 도움(C3), 충돌 정리(C5), 미준비 전공 안내, 특용작물 probe 문서",
+      "source": "new"
     },
     "skills/knuaf-doc/scripts/build_docx.py": {
       "after_sha256": "1faa6dc634a36b656386239fd37bd43ab2a6fde578c8621db610c273bd0d6ac6",
@@ -893,14 +930,14 @@
     }
   },
   "cumulative": true,
-  "note": "선언된 runtime 변경만 — 이 목록 밖의 baseline 변화는 미승인. README.md는 readme_policy로 별도 관리. baseline 파일의 삭제는 허용하지 않으며, 신규 파일은 approved_new_files에 사전 명시된 경로만 before_sha256=null로 선언 가능. P6 공용 작성 계약은 새 런타임 파일을 별도 승인 목록으로 선언한다. P7 공용 전공 출력 가드(정책 B)는 기존 런타임 파일 변경과 기준선 파일 1개(gg_excel_formula_patch.py) 첫 변경을 선언한다. P8 과수 첫 묶음은 과수 모듈 선언·등록과 공용 보조 모듈 2개(참조 XLSX 결정·연구 전달물 검증), 과수 작성계획, 참조집합 데이터·안내 문서를 새 파일로 선언한다. P9 원예환경시스템 첫 묶음은 원예 모듈 선언·등록·표지, 원예 작성계획, 원예 profile·안내 문서를 새 파일로 선언하고 재사용 등록부에 원예 참조 항목을 추가한다. P10: 공용 Kang XLSX 재사용과 템플릿 규칙, D3 전공별 기본 통합문서 우선순위를 P9 원예 모듈과 함께 선언한다.",
+  "note": "선언된 runtime 변경만 — 이 목록 밖의 baseline 변화는 미승인. README.md는 readme_policy로 별도 관리. baseline 파일의 삭제는 허용하지 않으며, 신규 파일은 approved_new_files에 사전 명시된 경로만 before_sha256=null로 선언 가능. P6 공용 작성 계약은 새 런타임 파일을 별도 승인 목록으로 선언한다. P7 공용 전공 출력 가드(정책 B)는 기존 런타임 파일 변경과 기준선 파일 1개(gg_excel_formula_patch.py) 첫 변경을 선언한다. P8 과수 첫 묶음은 과수 모듈 선언·등록과 공용 보조 모듈 2개(참조 XLSX 결정·연구 전달물 검증), 과수 작성계획, 참조집합 데이터·안내 문서를 새 파일로 선언한다. P9 원예환경시스템 첫 묶음은 원예 모듈 선언·등록·표지, 원예 작성계획, 원예 profile·안내 문서를 새 파일로 선언하고 재사용 등록부에 원예 참조 항목을 추가한다. P10: 공용 Kang XLSX 재사용과 템플릿 규칙, D3 전공별 기본 통합문서 우선순위를 P9 원예 모듈과 함께 선언한다. P11 공용 인터뷰 규칙은 기준선 문서 4건(SKILL.md·interview-guide·workflow-order·mid-work-questions) 변경과 특용작물 premise-probes.md 신규 1건을 선언한다.",
   "parent_candidate": {
-    "stage": "P9",
-    "file_count": 161,
-    "tree_sha256": "02aed4ea1eb79d4cb1a85bf7fc36b531e5f394f4174c7e9f966e6cf6e1658872"
+    "stage": "P10",
+    "file_count": 163,
+    "tree_sha256": "53565dec532270d6978de741120c6a2cc0bc9e62a472704adacace4831d50d3e"
   },
   "schema": "knuaf-doc/runtime-changes@2",
-  "stage": "P10",
+  "stage": "P11",
   "stage_lineage": [
     {
       "file_count": 75,
@@ -961,6 +998,12 @@
       "file_count": 161,
       "tree_sha256": "02aed4ea1eb79d4cb1a85bf7fc36b531e5f394f4174c7e9f966e6cf6e1658872",
       "note": "P9 기준 main 3c83f0c (PR #8 hort_env_systems 병합)의 변경 전 전체 파일 트리 해시"
+    },
+    {
+      "stage": "P10",
+      "file_count": 163,
+      "tree_sha256": "53565dec532270d6978de741120c6a2cc0bc9e62a472704adacace4831d50d3e",
+      "note": "P10 기준 main ec8a2e8 (PR #9 공용 XLSX 재사용 병합)의 변경 전 전체 파일 트리 해시"
     }
   ]
 }

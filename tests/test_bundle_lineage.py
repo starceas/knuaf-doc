@@ -119,9 +119,12 @@ class RealTreeTests(ContractCase):
                              f"errors: {report['errors']!r}")
             rc = report["runtime_changes"]
             self.assertEqual(rc["declared_count"], rc["verified"])
-            # P10 adds the common XLSX extract to P9's hort module bundle.
-            self.assertEqual(95, rc["verified"])
-            self.assertEqual(71, rc["new_count"])
+            # P11 (common interview rules) declares three baseline docs
+            # first changed at P11 plus a SKILL.md re-touch and one new
+            # premise-probes file on top of P10's 95 (the common XLSX
+            # extract bundle on the P9 hort module tree).
+            self.assertEqual(99, rc["verified"])
+            self.assertEqual(72, rc["new_count"])
         else:
             self.assertNotEqual("ok", report["status"])
             self.assertIn("declared_missing", _codes(report))
@@ -137,17 +140,18 @@ class RealTreeTests(ContractCase):
         self.assertEqual(
             _sha(REPO_ROOT / "tools" / "runtime-changes.json"),
             link["spec_sha256"])
-        self.assertEqual("P10", link["stage"])
+        self.assertEqual("P11", link["stage"])
         self.assertEqual("29abec0ec95369de7ae9e22207349d574f1f46b7",
                          link["baseline_main"])
-        # P10's parent is accepted P9 main (3c83f0c, PR #8).
-        self.assertEqual(95, link["change_count"])
-        self.assertEqual(71, link["new_count"])
-        self.assertEqual(71, link["approved_new_files"])
-        self.assertEqual("P9", link["parent_candidate"]["stage"])
-        self.assertEqual(161, link["parent_candidate"]["file_count"])
+        # P11's parent is the accepted P10 tree (main ec8a2e8, PR #9
+        # common XLSX reuse) before the common interview rules.
+        self.assertEqual(99, link["change_count"])
+        self.assertEqual(72, link["new_count"])
+        self.assertEqual(72, link["approved_new_files"])
+        self.assertEqual("P10", link["parent_candidate"]["stage"])
+        self.assertEqual(163, link["parent_candidate"]["file_count"])
         self.assertEqual(
-            "02aed4ea1eb79d4cb1a85bf7fc36b531e5f394f4174c7e9f966e6cf6e1658872",
+            "53565dec532270d6978de741120c6a2cc0bc9e62a472704adacace4831d50d3e",
             link["parent_candidate"]["tree_sha256"])
 
     def test_change_entries_carry_before_after(self):
@@ -164,22 +168,23 @@ class RealTreeTests(ContractCase):
             self.assertTrue(meta["source"])
             if name in baseline:
                 self.assertEqual(baseline[name], meta["before_sha256"])
-                # Earlier stage labels retained; P7 first-changes the
-                # formula-patch CLI (policy B guard).
+                # Earlier stage labels retained; P11 first-changes the
+                # common interview-guide docs.
                 self.assertIn(meta["first_changed"],
-                              {"P1", "P2", "P3", "P5", "P7"})
+                              {"P1", "P2", "P3", "P5", "P7", "P9", "P10", "P11"})
                 self.assertIn(meta["owner"],
                               {"A", "B", "C", "P4", "D", "P6", "P7", "P8",
-                               "P9", "P10"})
+                               "P9", "P10", "P11"})
             else:
-                # P2 through P10 new files: pre-declared allowlist only.
+                # P2 through P11 new files: pre-declared allowlist only.
                 self.assertIn(name, approved)
                 self.assertIsNone(meta["before_sha256"])
                 self.assertIn(meta["first_changed"],
-                              {"P2", "P3", "P4", "P5", "P6", "P8", "P9", "P10"})
+                              {"P2", "P3", "P4", "P5", "P6", "P8", "P9",
+                               "P10", "P11"})
                 self.assertIn(meta["owner"],
                               {"A", "B", "C", "S", "P4", "P5", "P6", "P7",
-                               "P8", "P9", "P10"})
+                               "P8", "P9", "P10", "P11"})
 
 
 class SyntheticLineageTests(ContractCase):

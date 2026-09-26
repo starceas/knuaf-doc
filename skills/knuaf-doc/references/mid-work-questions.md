@@ -20,6 +20,8 @@
 
 질문은 문제와 영향, 선택지 2~3개, 모를 때 제공할 도움을 짧게 제시한다. 도움이 실제로 제공되지 않았는데 제공했다고 기록하지 않는다. 이미 답한 경험 유무나 규모를 다시 인터뷰하지 않는다. 경험 미제공은 경험 없음이 아니다.
 
+도움은 도움 단계에서 한 번 제공한다. 무엇을 모르는지 좁히기(새로운 값 요청이면 횟수에 포함), 선택지 2~3개나 조사 경로, 추천과 이유다. 도움 뒤 보류는 재선택을 요구하지 않고 "무엇을 확인하면 정해지는지"·보류 상태·검토용 가정 표시만 안내한다.
+
 원답변은 파일로 먼저 보존한다. 사실에는 field_id, kind, value, value_type, unit, period, scope, answer_state, verification, source_refs를 기록한다. 상태는 not_provided/unknown/explicit_none/not_applicable/withheld/provided. 비제공 상태의 value는 null이며 없음·거부·N/A에는 사유와 원답변이 필요하다.
 
 수치 변경은 새 원답변을 등록하고 `apply --expected-revision`으로 반영한다. 변경 전 값은 개정 이력에 남는다. 사용자 목표·가정은 사실로 승격하지 않는다. 관련 계산과 검토가 stale이어도 무관한 소개·자료 정리는 계속한다.

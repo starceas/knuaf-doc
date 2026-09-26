@@ -48,9 +48,9 @@
       "sha256": "fc502b0c902536f89fea092cc49f6a84db17f2432e3c8c2dae95565956a1c6a6"
     },
     "tests/test_bundle_lineage.py": {
-      "note": "P1+P2 PACKAGE 계보 시험 — 실제 후보 정상 검증, 신규 파일 계약(allowlist·before=null·위장 거부) 포함 적대 합성 트리. P6: pin four new common-contract runtime files and the P5 parent tree. P9: hort_env_systems first bundle counts and parent P8 tree. | P10: P1+P2 PACKAGE 계보 시험 — 실제 후보 정상 검증, 신규 파일 계약(allowlist·before=null·위장 거부) 포함 적대 합성 트리. P6: pin four new common-contract runtime files and the P5 parent tree. P9: pins the P8 parent tree (a96a5bf, 154 files) and the common-workbook extract declared-new file. P10: parent P9 main 3c83f0c (161 files), combined 95 changes and 71 new files.",
+      "note": "P1+P2 PACKAGE 계보 시험 — 실제 후보 정상 검증, 신규 파일 계약(allowlist·before=null·위장 거부) 포함 적대 합성 트리. P6: pin four new common-contract runtime files and the P5 parent tree. P9: hort_env_systems first bundle counts and parent P8 tree. | P10: P1+P2 PACKAGE 계보 시험 — 실제 후보 정상 검증, 신규 파일 계약(allowlist·before=null·위장 거부) 포함 적대 합성 트리. P6: pin four new common-contract runtime files and the P5 parent tree. P9: pins the P8 parent tree (a96a5bf, 154 files) and the common-workbook extract declared-new file. P10: parent P9 main 3c83f0c (161 files), combined 95 changes and 71 new files. | P11: P1+P2 PACKAGE 계보 시험 — 실제 후보 정상 검증, 신규 파일 계약(allowlist·before=null·위장 거부) 포함 적대 합성 트리. P6: pin four new common-contract runtime files and the P5 parent tree. P9: hort_env_systems first bundle counts and parent P8 tree. P10: 공용 인터뷰 규칙 묶음 재기준 counts and parent P9 tree. P11: parent P10 main ec8a2e8 (163 files), combined 99 changes and 72 new files.",
       "origin": "new",
-      "sha256": "fd35fcfc776acc2ce7465b97abd236b713ce7b0bbe6254bd2c37fec8cdfc1a6d"
+      "sha256": "727ae0b119d17e7dea9733a60bf0a68909ee2da98a88b6acc0dbe5ea809e796d"
     },
     "tests/test_canonical_flow.py": {
       "note": "P0-A: init/apply/check/export positive controls + C2–C6/H2/H3/H5 defect signatures; synthetic only.",
@@ -181,14 +181,14 @@
       "sha256": "246711b72d92c32f0904f9eac4b90a9590c9420c75af60917d1bbd05b996e6ab"
     },
     "tools/runtime-changes.json": {
-      "note": "누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py. P8 declares the fruit_trees first bundle (module registration, two common helper modules, fruit plan, reference-set data and guidance). P9 declares the hort_env_systems first bundle (module registration, hort plan, profile and guidance, reuse-registry entries). | P10: 누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py. P8 declares the fruit_trees first bundle (module registration, two common helper modules, fruit plan, reference-set data and guidance). P9 declares the common XLSX reuse bundle (one new runtime extract file + declared edits to registration, resolver, template guard, and reuse tests). P9-D3 declares the major-specific-precedence edits (registry dedupe, catalog base_for_major, resolver base policy, docs, tests) in the same stage.",
+      "note": "누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py. P8 declares the fruit_trees first bundle (module registration, two common helper modules, fruit plan, reference-set data and guidance). P9 declares the hort_env_systems first bundle (module registration, hort plan, profile and guidance, reuse-registry entries). | P10: 누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py. P8 declares the fruit_trees first bundle (module registration, two common helper modules, fruit plan, reference-set data and guidance). P9 declares the common XLSX reuse bundle (one new runtime extract file + declared edits to registration, resolver, template guard, and reuse tests). P9-D3 declares the major-specific-precedence edits (registry dedupe, catalog base_for_major, resolver base policy, docs, tests) in the same stage. | P11: 누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py. P8 declares the fruit_trees first bundle (module registration, two common helper modules, fruit plan, reference-set data and guidance). P9 declares the hort_env_systems first bundle (module registration, hort plan, profile and guidance, reuse-registry entries). P10 declares the common interview rules bundle (SKILL.md re-touch, three baseline doc first-changes, specialty-crops premise-probes) re-based onto the P9 parent.",
       "origin": "new",
-      "sha256": "3b6e4cac48938836d2fa187900f654994a2db9677ba220577e4d178cddbfb521"
+      "sha256": "563948c8d9f95b5013a7bd168050135eb7d24b9c8fc977331610021d05a2644a"
     },
     "tools/validation-provenance.json": {
       "note": "This file; declares origins for the validation layer.",
       "origin": "new",
-      "sha256": "93498f9fa3d19fbdc42b2ac35cdf684020f2c4f4ad8c50a6748dc17a55225a78"
+      "sha256": "806f7499f5e52f24f4a70516c7f0d1874954e937214369129251f2d5a23d7e99"
     }
   },
   "generated_by": "tools/build_validation_bundle.py@3",
@@ -203,20 +203,20 @@
     ]
   },
   "runtime_changes": {
-    "approved_new_files": 71,
+    "approved_new_files": 72,
     "baseline_main": "29abec0ec95369de7ae9e22207349d574f1f46b7",
-    "change_count": 95,
-    "changes_sha256": "0778f724a6e77b9296ac20cbaf6045c21c93886abc9cb168812a33c0b2612497",
-    "new_count": 71,
+    "change_count": 99,
+    "changes_sha256": "56bd40fa1f6ec846d2abb4fd437a0c5697b547af070c575f17ea9e9fcdc64409",
+    "new_count": 72,
     "parent_candidate": {
-      "file_count": 161,
-      "stage": "P9",
-      "tree_sha256": "02aed4ea1eb79d4cb1a85bf7fc36b531e5f394f4174c7e9f966e6cf6e1658872"
+      "file_count": 163,
+      "stage": "P10",
+      "tree_sha256": "53565dec532270d6978de741120c6a2cc0bc9e62a472704adacace4831d50d3e"
     },
     "schema": "knuaf-doc/runtime-changes@2",
     "spec": "tools/runtime-changes.json",
-    "spec_sha256": "3b6e4cac48938836d2fa187900f654994a2db9677ba220577e4d178cddbfb521",
-    "stage": "P10",
+    "spec_sha256": "563948c8d9f95b5013a7bd168050135eb7d24b9c8fc977331610021d05a2644a",
+    "stage": "P11",
     "stage_lineage": [
       {
         "file_count": 75,
@@ -277,10 +277,16 @@
         "note": "P9 기준 main 3c83f0c (PR #8 hort_env_systems 병합)의 변경 전 전체 파일 트리 해시",
         "stage": "P9",
         "tree_sha256": "02aed4ea1eb79d4cb1a85bf7fc36b531e5f394f4174c7e9f966e6cf6e1658872"
+      },
+      {
+        "file_count": 163,
+        "note": "P10 기준 main ec8a2e8 (PR #9 공용 XLSX 재사용 병합)의 변경 전 전체 파일 트리 해시",
+        "stage": "P10",
+        "tree_sha256": "53565dec532270d6978de741120c6a2cc0bc9e62a472704adacace4831d50d3e"
       }
     ],
-    "verified_count": 95
+    "verified_count": 99
   },
   "schema": "knuaf-doc/validation-bundle@3",
-  "validation_tree_sha256": "5d4093b263ede6d5ab3139da067c0b2402e0deac72b49a2343202c4b68e01d6e"
+  "validation_tree_sha256": "380aefc9dbc4eb01a0e7f98e964d8d14afefffe177df56775c67a3211ce07b2a"
 }
