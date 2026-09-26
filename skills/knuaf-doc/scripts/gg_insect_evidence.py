@@ -17,6 +17,11 @@ _SALES_RELATIONS = (
 )
 _COUNT_RELATIONS = ("exact_numeric_match", "source_conflict")
 
+# Owner decision 2026-09-26 (4): the farm_count row cites the published R0
+# figure, and this fixed note is the only place the differing R1 figure may
+# appear in the package (DESIGN-B2 §4, D-6).  The conflict stays unresolved.
+FARM_COUNT_CITATION_NOTE = "원자료 엑셀 2,394, 원인 미확인"
+
 
 def review_sources(registry, project, pdf_path, xlsx_path):
     """Reverify pinned source bytes, then classify selected observations.
@@ -181,7 +186,9 @@ def _review_verified_receipt(module, project, receipt):
             "axes": dict(axes),
             "promotion_blockers": list(contract.promotion_blockers(axes)),
             "approval_candidate": contract.approval_candidate(axes),
-            **({"conflict_locus": conflict_locus}
+            **({"conflict_locus": conflict_locus,
+                "citation": {"value": "2393", "source_id": "R0",
+                             "note": FARM_COUNT_CITATION_NOTE}}
                if key == "farm_count" else {}),
             "source_refs": [
                 {"id": "R0", "physical_page": row["R0"]["physical_page"],

@@ -317,8 +317,9 @@ class PaperGeneratorGuardTests(_Base):
             result = real(*args, **kw)
             if not calls:
                 calls.append(1)
-                self._swap_binding(root, value=INSECTS,
-                                   module_version="0.1.0")
+                self._swap_binding(
+                    root, value=INSECTS,
+                    module_version=self.mc.INDUSTRIAL_INSECTS_MODULE.module_version)
             return result
 
         with mock.patch.object(self.mc, "authorize_output", pass_then_swap):
@@ -646,7 +647,8 @@ class ExportAdoptGuardTests(_Base):
         self._core_held("major_authorization_missing",
                         self.core.adopt_output, root, ov, p["revision"],
                         "adopt-r", major_id=SPECIALTY)
-        self._swap_binding(root, value=INSECTS, module_version="0.1.0")
+        self._swap_binding(root, value=INSECTS,
+                           module_version=self.mc.INDUSTRIAL_INSECTS_MODULE.module_version)
         self._core_held("major_binding_mismatch", self.core.adopt_output,
                         root, ov, p["revision"], "adopt-r",
                         major_id=SPECIALTY)

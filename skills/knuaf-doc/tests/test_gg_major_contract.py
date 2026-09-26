@@ -115,7 +115,7 @@ class TestBindingAndRouting(unittest.TestCase):
     def test_explicit_binding(self):
         b = mc.bind_major(self.reg, "industrial_insects")
         self.assertEqual(b.major_id, "industrial_insects")
-        self.assertEqual(b.module_version, "0.1.0")
+        self.assertEqual(b.module_version, "0.2.0")
         self.assertEqual(b.contract_version, mc.CONTRACT_VERSION)
         self.assertEqual(b.basis, "explicit_selection")
         self.assertIsNone(b.binding_evidence)

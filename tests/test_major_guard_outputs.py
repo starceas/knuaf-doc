@@ -131,7 +131,8 @@ class _Base(ContractCase):
 
     def _swap_to_insects(self, root):
         fact = dict(self.core.load(root)["facts"]["selected_major"])
-        fact.update(value=INSECTS, module_version="0.1.0")
+        fact.update(value=INSECTS,
+                    module_version=self.mc.INDUSTRIAL_INSECTS_MODULE.module_version)
         self.core.apply(root, {"request_id": "swap", "ops": [
             {"collection": "facts", "value": fact}]},
             self.core.load(root)["revision"])

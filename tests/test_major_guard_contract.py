@@ -451,7 +451,8 @@ class OutputGuardContractTests(ContractCase):
                     fact["value"] = None
                 else:
                     fact["value"] = INSECTS
-                    fact["module_version"] = "0.1.0"
+                    fact["module_version"] = (
+                        mc.INDUSTRIAL_INSECTS_MODULE.module_version)
                 try:
                     self.core.apply(root, {"request_id": "swap:" + change,
                                            "ops": [{"collection": "facts",
