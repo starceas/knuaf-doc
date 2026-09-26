@@ -1,0 +1,1238 @@
+{
+  "schema": "insect-precedents/v2",
+  "verification_codes": {
+    "text_layer_page_checked": {
+      "usable": true,
+      "meaning": "쪽 본문 텍스트층 추출값을 대조함"
+    },
+    "text_layer_contents_checked": {
+      "usable": true,
+      "meaning": "목차 페이지 텍스트층 추출값을 대조함"
+    },
+    "caption_text_checked": {
+      "usable": true,
+      "meaning": "표 캡션 텍스트를 해당 쪽에서 확인함"
+    },
+    "caption_and_table_index_text_checked": {
+      "usable": true,
+      "meaning": "표 캡션 쪽과 표 목차 기재가 일치함"
+    },
+    "page_text_checked_and_w21_continuation_map": {
+      "usable": true,
+      "meaning": "쪽 텍스트 확인 및 이전 작업의 연속 쪽 매핑 참고"
+    },
+    "under_20_extracted_chars; render_or_ocr_pending": {
+      "usable": false,
+      "meaning": "추출 문자 20자 미만 — 렌더·OCR 대조 전이라 근거 연결 불가"
+    }
+  },
+  "sources": [
+    {
+      "id": "F0",
+      "sha256": "d582d884abdd21edf622fc0973844abbc4c62369bf7e92574da3d4e33ae75885",
+      "physical_pages": 70,
+      "authority": "example_observed",
+      "title": "영농창업계획 사료용 아메리카동애등에(Hermetia illucens) 생충 대량생산 및 분변토 활용 기반 창업계획",
+      "author": null,
+      "title_basis": "first_text_page"
+    },
+    {
+      "id": "E1",
+      "sha256": "9668c9abc68f750039e940bb78f995794696b6dd14b1b5714cd74e81e485a36d",
+      "physical_pages": 57,
+      "authority": "example_observed",
+      "title": "계약판매를 통한 쌍별귀뚜라미(Gryllus bimaculatus) 종충 생산 및 시스템 구축",
+      "author": "박진희",
+      "title_basis": "page_1_render"
+    },
+    {
+      "id": "E2",
+      "sha256": "2527c590183666543ecb9d23e20e6f5f2a5d0f3215c1ba09577dcdb9912ca0d2",
+      "physical_pages": 60,
+      "authority": "example_observed",
+      "title": "우량종 쌍별귀뚜라미(Gryllus bimaculatus) 대량사육방법",
+      "author": "민장욱",
+      "title_basis": "first_text_page"
+    },
+    {
+      "id": "E3",
+      "sha256": "b91fefd7ff77dbec1752a503c2c3238c7d66058d35b4e25cb9f1237842bf4f44",
+      "physical_pages": 65,
+      "authority": "example_observed",
+      "title": "저온처리를 통한 여치(Gampsocleis sedakovii obscura) 연중 대량사육 및 판매",
+      "author": "이현승",
+      "title_basis": "first_text_page"
+    },
+    {
+      "id": "E4",
+      "sha256": "198fd1e140ad41ec8612eafd484cfc46ac5cfea8d318408cc38a0a241ea90d55",
+      "physical_pages": 59,
+      "authority": "example_observed",
+      "title": null,
+      "author": "민경도",
+      "title_basis": "not_present_in_source"
+    }
+  ],
+  "observations": [
+    {
+      "source_id": "F0",
+      "physical_page": 1,
+      "object_label": "page",
+      "role": "front_matter_and_summary",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 2,
+      "object_label": "page",
+      "role": "front_matter_and_summary",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 3,
+      "object_label": "page",
+      "role": "front_matter_and_summary",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 4,
+      "object_label": "page",
+      "role": "contents",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 5,
+      "object_label": "page",
+      "role": "table_index",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 6,
+      "object_label": "page",
+      "role": "figure_index",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 7,
+      "object_label": "page",
+      "role": "introduction",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 8,
+      "object_label": "page",
+      "role": "introduction",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 9,
+      "object_label": "page",
+      "role": "farm_and_production_context",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 10,
+      "object_label": "page",
+      "role": "farm_and_production_context",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 11,
+      "object_label": "page",
+      "role": "farm_and_production_context",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 12,
+      "object_label": "page",
+      "role": "farm_and_production_context",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 13,
+      "object_label": "page",
+      "role": "environment_and_strategy",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 13,
+      "object_label": "table_01",
+      "role": "human_resources",
+      "status": "example_observed",
+      "verification": "caption_and_table_index_text_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 14,
+      "object_label": "page",
+      "role": "environment_and_strategy",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 14,
+      "object_label": "table_02",
+      "role": "noncurrent_assets",
+      "status": "example_observed",
+      "verification": "caption_and_table_index_text_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 15,
+      "object_label": "page",
+      "role": "environment_and_strategy",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 15,
+      "object_label": "table_03",
+      "role": "profitability_summary",
+      "status": "example_observed",
+      "verification": "caption_and_table_index_text_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 16,
+      "object_label": "page",
+      "role": "environment_and_strategy",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 17,
+      "object_label": "page",
+      "role": "environment_and_strategy",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 17,
+      "object_label": "table_04",
+      "role": "climate_context",
+      "status": "example_observed",
+      "verification": "caption_and_table_index_text_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 18,
+      "object_label": "page",
+      "role": "environment_and_strategy",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 19,
+      "object_label": "page",
+      "role": "environment_and_strategy",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 20,
+      "object_label": "page",
+      "role": "environment_and_strategy",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 21,
+      "object_label": "page",
+      "role": "environment_and_strategy",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 21,
+      "object_label": "table_05",
+      "role": "regional_agriculture_context",
+      "status": "example_observed",
+      "verification": "caption_and_table_index_text_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 22,
+      "object_label": "page",
+      "role": "environment_and_strategy",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 23,
+      "object_label": "page",
+      "role": "environment_and_strategy",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 24,
+      "object_label": "page",
+      "role": "environment_and_strategy",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 24,
+      "object_label": "table_06",
+      "role": "industry_survey_context",
+      "status": "example_observed",
+      "verification": "caption_and_table_index_text_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 25,
+      "object_label": "page",
+      "role": "environment_and_strategy",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 26,
+      "object_label": "page",
+      "role": "environment_and_strategy",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 27,
+      "object_label": "page",
+      "role": "environment_and_strategy",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 28,
+      "object_label": "page",
+      "role": "environment_and_strategy",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 29,
+      "object_label": "page",
+      "role": "environment_and_strategy",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 29,
+      "object_label": "table_07",
+      "role": "swot_analysis",
+      "status": "example_observed",
+      "verification": "caption_and_table_index_text_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 30,
+      "object_label": "page",
+      "role": "environment_and_strategy",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 30,
+      "object_label": "table_08",
+      "role": "swot_strategy",
+      "status": "example_observed",
+      "verification": "caption_and_table_index_text_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 31,
+      "object_label": "page",
+      "role": "vision_and_goals",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 32,
+      "object_label": "page",
+      "role": "vision_and_goals",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 33,
+      "object_label": "page",
+      "role": "assets_investment_production_and_marketing",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 33,
+      "object_label": "table_09",
+      "role": "land_and_asset_basis",
+      "status": "example_observed",
+      "verification": "caption_and_table_index_text_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 34,
+      "object_label": "page",
+      "role": "assets_investment_production_and_marketing",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 34,
+      "object_label": "table_10",
+      "role": "annual_investment",
+      "status": "example_observed",
+      "verification": "caption_and_table_index_text_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 34,
+      "object_label": "table_11",
+      "role": "itemized_investment_and_funding",
+      "status": "example_observed",
+      "verification": "caption_and_table_index_text_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 35,
+      "object_label": "page",
+      "role": "assets_investment_production_and_marketing",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 35,
+      "object_label": "table_12",
+      "role": "loan_repayment",
+      "status": "example_observed",
+      "verification": "caption_and_table_index_text_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 36,
+      "object_label": "page",
+      "role": "assets_investment_production_and_marketing",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 36,
+      "object_label": "table_13",
+      "role": "repayment_summary",
+      "status": "example_observed",
+      "verification": "caption_and_table_index_text_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 37,
+      "object_label": "page",
+      "role": "assets_investment_production_and_marketing",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 37,
+      "object_label": "table_14",
+      "role": "production_and_sales",
+      "status": "example_observed",
+      "verification": "caption_and_table_index_text_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 38,
+      "object_label": "page",
+      "role": "assets_investment_production_and_marketing",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 38,
+      "object_label": "table_15",
+      "role": "input_purchases",
+      "status": "example_observed",
+      "verification": "caption_and_table_index_text_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 39,
+      "object_label": "page",
+      "role": "assets_investment_production_and_marketing",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 39,
+      "object_label": "table_15",
+      "role": "input_purchases",
+      "status": "example_observed",
+      "verification": "page_text_checked_and_w21_continuation_map"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 40,
+      "object_label": "page",
+      "role": "assets_investment_production_and_marketing",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 40,
+      "object_label": "table_16",
+      "role": "labor_cost",
+      "status": "example_observed",
+      "verification": "caption_and_table_index_text_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 40,
+      "object_label": "table_17",
+      "role": "monthly_labor",
+      "status": "example_observed",
+      "verification": "caption_and_table_index_text_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 41,
+      "object_label": "page",
+      "role": "assets_investment_production_and_marketing",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 41,
+      "object_label": "table_18",
+      "role": "operating_expenses",
+      "status": "example_observed",
+      "verification": "caption_and_table_index_text_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 42,
+      "object_label": "page",
+      "role": "assets_investment_production_and_marketing",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 42,
+      "object_label": "table_18",
+      "role": "operating_expenses",
+      "status": "example_observed",
+      "verification": "page_text_checked_and_w21_continuation_map"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 43,
+      "object_label": "page",
+      "role": "assets_investment_production_and_marketing",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 43,
+      "object_label": "table_18",
+      "role": "operating_expenses",
+      "status": "example_observed",
+      "verification": "page_text_checked_and_w21_continuation_map"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 44,
+      "object_label": "page",
+      "role": "assets_investment_production_and_marketing",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 44,
+      "object_label": "table_18",
+      "role": "operating_expenses",
+      "status": "example_observed",
+      "verification": "page_text_checked_and_w21_continuation_map"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 45,
+      "object_label": "page",
+      "role": "assets_investment_production_and_marketing",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 45,
+      "object_label": "table_18",
+      "role": "operating_expenses",
+      "status": "example_observed",
+      "verification": "page_text_checked_and_w21_continuation_map"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 46,
+      "object_label": "page",
+      "role": "assets_investment_production_and_marketing",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 47,
+      "object_label": "page",
+      "role": "assets_investment_production_and_marketing",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 48,
+      "object_label": "page",
+      "role": "assets_investment_production_and_marketing",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 49,
+      "object_label": "page",
+      "role": "financial_plan",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 49,
+      "object_label": "table_19",
+      "role": "depreciation",
+      "status": "example_observed",
+      "verification": "caption_and_table_index_text_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 50,
+      "object_label": "page",
+      "role": "financial_plan",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 50,
+      "object_label": "table_19",
+      "role": "depreciation",
+      "status": "example_observed",
+      "verification": "page_text_checked_and_w21_continuation_map"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 51,
+      "object_label": "page",
+      "role": "financial_plan",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 51,
+      "object_label": "table_19",
+      "role": "depreciation",
+      "status": "example_observed",
+      "verification": "page_text_checked_and_w21_continuation_map"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 52,
+      "object_label": "page",
+      "role": "financial_plan",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 53,
+      "object_label": "page",
+      "role": "financial_plan",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 53,
+      "object_label": "table_20",
+      "role": "production_cost",
+      "status": "example_observed",
+      "verification": "caption_and_table_index_text_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 54,
+      "object_label": "page",
+      "role": "financial_plan",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 55,
+      "object_label": "page",
+      "role": "financial_plan",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 55,
+      "object_label": "table_21",
+      "role": "profit_and_loss",
+      "status": "example_observed",
+      "verification": "caption_and_table_index_text_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 56,
+      "object_label": "page",
+      "role": "financial_plan",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 56,
+      "object_label": "table_21",
+      "role": "profit_and_loss",
+      "status": "example_observed",
+      "verification": "page_text_checked_and_w21_continuation_map"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 57,
+      "object_label": "page",
+      "role": "financial_plan",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 57,
+      "object_label": "table_22",
+      "role": "profitability_analysis",
+      "status": "example_observed",
+      "verification": "caption_and_table_index_text_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 58,
+      "object_label": "page",
+      "role": "financial_plan",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 58,
+      "object_label": "table_22",
+      "role": "profitability_analysis",
+      "status": "example_observed",
+      "verification": "page_text_checked_and_w21_continuation_map"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 59,
+      "object_label": "page",
+      "role": "financial_plan",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 59,
+      "object_label": "table_23",
+      "role": "financial_position",
+      "status": "example_observed",
+      "verification": "caption_and_table_index_text_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 60,
+      "object_label": "page",
+      "role": "financial_plan",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 60,
+      "object_label": "table_23",
+      "role": "financial_position",
+      "status": "example_observed",
+      "verification": "page_text_checked_and_w21_continuation_map"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 61,
+      "object_label": "page",
+      "role": "financial_plan",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 61,
+      "object_label": "table_24",
+      "role": "cash_flow",
+      "status": "example_observed",
+      "verification": "caption_and_table_index_text_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 62,
+      "object_label": "page",
+      "role": "financial_plan",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 62,
+      "object_label": "table_24",
+      "role": "cash_flow",
+      "status": "example_observed",
+      "verification": "page_text_checked_and_w21_continuation_map"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 63,
+      "object_label": "page",
+      "role": "closing_plan_and_conclusion",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 64,
+      "object_label": "page",
+      "role": "closing_plan_and_conclusion",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 65,
+      "object_label": "page",
+      "role": "references_and_back_matter",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 66,
+      "object_label": "page",
+      "role": "references_and_back_matter",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 67,
+      "object_label": "page",
+      "role": "references_and_back_matter",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 68,
+      "object_label": "page",
+      "role": "references_and_back_matter",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 69,
+      "object_label": "page",
+      "role": "references_and_back_matter",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "F0",
+      "physical_page": 70,
+      "object_label": "page",
+      "role": "references_and_back_matter",
+      "status": "example_observed",
+      "verification": "text_layer_page_checked"
+    },
+    {
+      "source_id": "E1",
+      "physical_page": 1,
+      "object_label": "text_layer_gap",
+      "role": "content_unresolved",
+      "status": "example_observed",
+      "verification": "under_20_extracted_chars; render_or_ocr_pending"
+    },
+    {
+      "source_id": "E1",
+      "physical_page": 2,
+      "object_label": "text_layer_gap",
+      "role": "content_unresolved",
+      "status": "example_observed",
+      "verification": "under_20_extracted_chars; render_or_ocr_pending"
+    },
+    {
+      "source_id": "E1",
+      "physical_page": 3,
+      "object_label": "text_layer_gap",
+      "role": "content_unresolved",
+      "status": "example_observed",
+      "verification": "under_20_extracted_chars; render_or_ocr_pending"
+    },
+    {
+      "source_id": "E1",
+      "physical_page": 4,
+      "object_label": "text_layer_gap",
+      "role": "content_unresolved",
+      "status": "example_observed",
+      "verification": "under_20_extracted_chars; render_or_ocr_pending"
+    },
+    {
+      "source_id": "E1",
+      "physical_page": 5,
+      "object_label": "text_layer_gap",
+      "role": "content_unresolved",
+      "status": "example_observed",
+      "verification": "under_20_extracted_chars; render_or_ocr_pending"
+    },
+    {
+      "source_id": "E1",
+      "physical_page": 6,
+      "object_label": "text_layer_gap",
+      "role": "content_unresolved",
+      "status": "example_observed",
+      "verification": "under_20_extracted_chars; render_or_ocr_pending"
+    },
+    {
+      "source_id": "E1",
+      "physical_page": 8,
+      "object_label": "contents",
+      "role": "alternative_eight_chapter_flow",
+      "status": "example_observed",
+      "verification": "text_layer_contents_checked"
+    },
+    {
+      "source_id": "E1",
+      "physical_page": 41,
+      "object_label": "table_15",
+      "role": "production_plan",
+      "status": "example_observed",
+      "verification": "caption_text_checked"
+    },
+    {
+      "source_id": "E1",
+      "physical_page": 44,
+      "object_label": "table_23",
+      "role": "investment_plan",
+      "status": "example_observed",
+      "verification": "caption_text_checked"
+    },
+    {
+      "source_id": "E1",
+      "physical_page": 50,
+      "object_label": "table_36",
+      "role": "production_cost",
+      "status": "example_observed",
+      "verification": "caption_text_checked"
+    },
+    {
+      "source_id": "E1",
+      "physical_page": 54,
+      "object_label": "table_40",
+      "role": "cash_flow",
+      "status": "example_observed",
+      "verification": "caption_text_checked"
+    },
+    {
+      "source_id": "E1",
+      "physical_page": 57,
+      "object_label": "text_layer_gap",
+      "role": "content_unresolved",
+      "status": "example_observed",
+      "verification": "under_20_extracted_chars; render_or_ocr_pending"
+    },
+    {
+      "source_id": "E2",
+      "physical_page": 3,
+      "object_label": "text_layer_gap",
+      "role": "content_unresolved",
+      "status": "example_observed",
+      "verification": "under_20_extracted_chars; render_or_ocr_pending"
+    },
+    {
+      "source_id": "E2",
+      "physical_page": 4,
+      "object_label": "contents",
+      "role": "contents",
+      "status": "example_observed",
+      "verification": "text_layer_contents_checked"
+    },
+    {
+      "source_id": "E2",
+      "physical_page": 29,
+      "object_label": "text_layer_gap",
+      "role": "content_unresolved",
+      "status": "example_observed",
+      "verification": "under_20_extracted_chars; render_or_ocr_pending"
+    },
+    {
+      "source_id": "E2",
+      "physical_page": 30,
+      "object_label": "text_layer_gap",
+      "role": "content_unresolved",
+      "status": "example_observed",
+      "verification": "under_20_extracted_chars; render_or_ocr_pending"
+    },
+    {
+      "source_id": "E2",
+      "physical_page": 40,
+      "object_label": "table_21",
+      "role": "investment_plan",
+      "status": "example_observed",
+      "verification": "caption_text_checked"
+    },
+    {
+      "source_id": "E2",
+      "physical_page": 42,
+      "object_label": "table_23",
+      "role": "production_plan",
+      "status": "example_observed",
+      "verification": "caption_text_checked"
+    },
+    {
+      "source_id": "E2",
+      "physical_page": 51,
+      "object_label": "table_41",
+      "role": "production_cost",
+      "status": "example_observed",
+      "verification": "caption_text_checked"
+    },
+    {
+      "source_id": "E2",
+      "physical_page": 55,
+      "object_label": "table_45",
+      "role": "cash_flow",
+      "status": "example_observed",
+      "verification": "caption_text_checked"
+    },
+    {
+      "source_id": "E2",
+      "physical_page": 60,
+      "object_label": "text_layer_gap",
+      "role": "content_unresolved",
+      "status": "example_observed",
+      "verification": "under_20_extracted_chars; render_or_ocr_pending"
+    },
+    {
+      "source_id": "E3",
+      "physical_page": 1,
+      "object_label": "text_layer_gap",
+      "role": "content_unresolved",
+      "status": "example_observed",
+      "verification": "under_20_extracted_chars; render_or_ocr_pending"
+    },
+    {
+      "source_id": "E3",
+      "physical_page": 2,
+      "object_label": "text_layer_gap",
+      "role": "content_unresolved",
+      "status": "example_observed",
+      "verification": "under_20_extracted_chars; render_or_ocr_pending"
+    },
+    {
+      "source_id": "E3",
+      "physical_page": 3,
+      "object_label": "text_layer_gap",
+      "role": "content_unresolved",
+      "status": "example_observed",
+      "verification": "under_20_extracted_chars; render_or_ocr_pending"
+    },
+    {
+      "source_id": "E3",
+      "physical_page": 7,
+      "object_label": "text_layer_gap",
+      "role": "content_unresolved",
+      "status": "example_observed",
+      "verification": "under_20_extracted_chars; render_or_ocr_pending"
+    },
+    {
+      "source_id": "E3",
+      "physical_page": 8,
+      "object_label": "text_layer_gap",
+      "role": "content_unresolved",
+      "status": "example_observed",
+      "verification": "under_20_extracted_chars; render_or_ocr_pending"
+    },
+    {
+      "source_id": "E3",
+      "physical_page": 11,
+      "object_label": "contents",
+      "role": "contents",
+      "status": "example_observed",
+      "verification": "text_layer_contents_checked"
+    },
+    {
+      "source_id": "E3",
+      "physical_page": 37,
+      "object_label": "table_13",
+      "role": "investment_plan",
+      "status": "example_observed",
+      "verification": "caption_text_checked"
+    },
+    {
+      "source_id": "E3",
+      "physical_page": 39,
+      "object_label": "table_16",
+      "role": "production_plan",
+      "status": "example_observed",
+      "verification": "caption_text_checked"
+    },
+    {
+      "source_id": "E3",
+      "physical_page": 40,
+      "object_label": "text_layer_gap",
+      "role": "content_unresolved",
+      "status": "example_observed",
+      "verification": "under_20_extracted_chars; render_or_ocr_pending"
+    },
+    {
+      "source_id": "E3",
+      "physical_page": 43,
+      "object_label": "text_layer_gap",
+      "role": "content_unresolved",
+      "status": "example_observed",
+      "verification": "under_20_extracted_chars; render_or_ocr_pending"
+    },
+    {
+      "source_id": "E3",
+      "physical_page": 45,
+      "object_label": "text_layer_gap",
+      "role": "content_unresolved",
+      "status": "example_observed",
+      "verification": "under_20_extracted_chars; render_or_ocr_pending"
+    },
+    {
+      "source_id": "E3",
+      "physical_page": 51,
+      "object_label": "text_layer_gap",
+      "role": "content_unresolved",
+      "status": "example_observed",
+      "verification": "under_20_extracted_chars; render_or_ocr_pending"
+    },
+    {
+      "source_id": "E3",
+      "physical_page": 54,
+      "object_label": "table_33",
+      "role": "production_cost",
+      "status": "example_observed",
+      "verification": "caption_text_checked"
+    },
+    {
+      "source_id": "E3",
+      "physical_page": 58,
+      "object_label": "table_37",
+      "role": "cash_flow",
+      "status": "example_observed",
+      "verification": "caption_text_checked"
+    },
+    {
+      "source_id": "E4",
+      "physical_page": 3,
+      "object_label": "contents",
+      "role": "contents",
+      "status": "example_observed",
+      "verification": "text_layer_contents_checked"
+    },
+    {
+      "source_id": "E4",
+      "physical_page": 32,
+      "object_label": "table_11",
+      "role": "investment_plan",
+      "status": "example_observed",
+      "verification": "caption_text_checked"
+    },
+    {
+      "source_id": "E4",
+      "physical_page": 34,
+      "object_label": "table_13",
+      "role": "production_plan",
+      "status": "example_observed",
+      "verification": "caption_text_checked"
+    },
+    {
+      "source_id": "E4",
+      "physical_page": 50,
+      "object_label": "table_30",
+      "role": "production_cost",
+      "status": "example_observed",
+      "verification": "caption_text_checked"
+    },
+    {
+      "source_id": "E4",
+      "physical_page": 54,
+      "object_label": "table_34",
+      "role": "cash_flow",
+      "status": "example_observed",
+      "verification": "caption_text_checked"
+    }
+  ]
+}

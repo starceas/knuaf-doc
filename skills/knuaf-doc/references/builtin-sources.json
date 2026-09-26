@@ -601,6 +601,272 @@
    "artifacts": [],
    "lineage": [],
    "build_allowlist_ref": null
+  },
+  {
+   "source_id": "insect.example.f0",
+   "class": "industrial_insects_example",
+   "role": "narrative_exemplar",
+   "source_sha256": [
+    "d582d884abdd21edf622fc0973844abbc4c62369bf7e92574da3d4e33ae75885"
+   ],
+   "runtime": "references/industrial-insects/precedents.json",
+   "runtime_present": true,
+   "artifacts": [
+    {
+     "relative_path": "references/industrial-insects/precedents.json",
+     "sha256": "8663b186ee13cd92489de2c7a82149e7ac70b24f1b5a051df35559baa630e544",
+     "bytes": 35660
+    }
+   ],
+   "coverage": {
+    "narrative_reference": {
+     "keys": [
+      {
+       "key_ref": {
+        "kind": "delimited",
+        "value": "insect-precedents:f0-locator-map"
+       },
+       "authority": "verified",
+       "catalog_digest": null,
+       "receipt_sha256": "4d263a04e2b749e621d8ca6f7f7b2fe064348b4e26a6a3e5e9348cec04a1818e"
+      }
+     ]
+    }
+   },
+   "lineage": [
+    {
+     "to": "references/industrial-insects/precedents.json",
+     "relationship": "derived_excerpt",
+     "verification": "verified",
+     "verifier": "independent-verify-precedents-8663b186ee13",
+     "receipt_sha256": "4d263a04e2b749e621d8ca6f7f7b2fe064348b4e26a6a3e5e9348cec04a1818e"
+    }
+   ],
+   "build_allowlist_ref": null
+  },
+  {
+   "source_id": "insect.example.e1",
+   "class": "industrial_insects_student_example",
+   "role": "narrative_exemplar",
+   "source_sha256": [
+    "9668c9abc68f750039e940bb78f995794696b6dd14b1b5714cd74e81e485a36d"
+   ],
+   "runtime": "references/industrial-insects/precedents.json",
+   "runtime_present": true,
+   "artifacts": [
+    {
+     "relative_path": "references/industrial-insects/precedents.json",
+     "sha256": "8663b186ee13cd92489de2c7a82149e7ac70b24f1b5a051df35559baa630e544",
+     "bytes": 35660
+    }
+   ],
+   "coverage": {
+    "narrative_reference": {
+     "keys": [
+      {
+       "key_ref": {
+        "kind": "delimited",
+        "value": "insect-precedents:e1-locator-map"
+       },
+       "authority": "verified",
+       "catalog_digest": null,
+       "receipt_sha256": "4d263a04e2b749e621d8ca6f7f7b2fe064348b4e26a6a3e5e9348cec04a1818e"
+      }
+     ]
+    }
+   },
+   "lineage": [
+    {
+     "to": "references/industrial-insects/precedents.json",
+     "relationship": "derived_excerpt",
+     "verification": "verified",
+     "verifier": "independent-verify-precedents-8663b186ee13",
+     "receipt_sha256": "4d263a04e2b749e621d8ca6f7f7b2fe064348b4e26a6a3e5e9348cec04a1818e"
+    }
+   ],
+   "build_allowlist_ref": null
+  },
+  {
+   "source_id": "insect.example.e2",
+   "class": "industrial_insects_student_example",
+   "role": "narrative_exemplar",
+   "source_sha256": [
+    "2527c590183666543ecb9d23e20e6f5f2a5d0f3215c1ba09577dcdb9912ca0d2"
+   ],
+   "runtime": "references/industrial-insects/precedents.json",
+   "runtime_present": true,
+   "artifacts": [
+    {
+     "relative_path": "references/industrial-insects/precedents.json",
+     "sha256": "8663b186ee13cd92489de2c7a82149e7ac70b24f1b5a051df35559baa630e544",
+     "bytes": 35660
+    }
+   ],
+   "coverage": {
+    "narrative_reference": {
+     "keys": [
+      {
+       "key_ref": {
+        "kind": "delimited",
+        "value": "insect-precedents:e2-locator-map"
+       },
+       "authority": "verified",
+       "catalog_digest": null,
+       "receipt_sha256": "4d263a04e2b749e621d8ca6f7f7b2fe064348b4e26a6a3e5e9348cec04a1818e"
+      }
+     ]
+    }
+   },
+   "lineage": [
+    {
+     "to": "references/industrial-insects/precedents.json",
+     "relationship": "derived_excerpt",
+     "verification": "verified",
+     "verifier": "independent-verify-precedents-8663b186ee13",
+     "receipt_sha256": "4d263a04e2b749e621d8ca6f7f7b2fe064348b4e26a6a3e5e9348cec04a1818e"
+    }
+   ],
+   "build_allowlist_ref": null
+  },
+  {
+   "source_id": "insect.example.e3",
+   "class": "industrial_insects_student_example",
+   "role": "narrative_exemplar",
+   "source_sha256": [
+    "b91fefd7ff77dbec1752a503c2c3238c7d66058d35b4e25cb9f1237842bf4f44"
+   ],
+   "runtime": "references/industrial-insects/precedents.json",
+   "runtime_present": true,
+   "artifacts": [
+    {
+     "relative_path": "references/industrial-insects/precedents.json",
+     "sha256": "8663b186ee13cd92489de2c7a82149e7ac70b24f1b5a051df35559baa630e544",
+     "bytes": 35660
+    }
+   ],
+   "coverage": {
+    "narrative_reference": {
+     "keys": [
+      {
+       "key_ref": {
+        "kind": "delimited",
+        "value": "insect-precedents:e3-locator-map"
+       },
+       "authority": "verified",
+       "catalog_digest": null,
+       "receipt_sha256": "4d263a04e2b749e621d8ca6f7f7b2fe064348b4e26a6a3e5e9348cec04a1818e"
+      }
+     ]
+    }
+   },
+   "lineage": [
+    {
+     "to": "references/industrial-insects/precedents.json",
+     "relationship": "derived_excerpt",
+     "verification": "verified",
+     "verifier": "independent-verify-precedents-8663b186ee13",
+     "receipt_sha256": "4d263a04e2b749e621d8ca6f7f7b2fe064348b4e26a6a3e5e9348cec04a1818e"
+    }
+   ],
+   "build_allowlist_ref": null
+  },
+  {
+   "source_id": "insect.example.e4",
+   "class": "industrial_insects_student_example",
+   "role": "narrative_exemplar",
+   "source_sha256": [
+    "198fd1e140ad41ec8612eafd484cfc46ac5cfea8d318408cc38a0a241ea90d55"
+   ],
+   "runtime": "references/industrial-insects/precedents.json",
+   "runtime_present": true,
+   "artifacts": [
+    {
+     "relative_path": "references/industrial-insects/precedents.json",
+     "sha256": "8663b186ee13cd92489de2c7a82149e7ac70b24f1b5a051df35559baa630e544",
+     "bytes": 35660
+    }
+   ],
+   "coverage": {
+    "narrative_reference": {
+     "keys": [
+      {
+       "key_ref": {
+        "kind": "delimited",
+        "value": "insect-precedents:e4-locator-map"
+       },
+       "authority": "verified",
+       "catalog_digest": null,
+       "receipt_sha256": "4d263a04e2b749e621d8ca6f7f7b2fe064348b4e26a6a3e5e9348cec04a1818e"
+      }
+     ]
+    }
+   },
+   "lineage": [
+    {
+     "to": "references/industrial-insects/precedents.json",
+     "relationship": "derived_excerpt",
+     "verification": "verified",
+     "verifier": "independent-verify-precedents-8663b186ee13",
+     "receipt_sha256": "4d263a04e2b749e621d8ca6f7f7b2fe064348b4e26a6a3e5e9348cec04a1818e"
+    }
+   ],
+   "build_allowlist_ref": null
+  },
+  {
+   "source_id": "insect.example.e3-hwp",
+   "class": "industrial_insects_student_example",
+   "role": "narrative_exemplar",
+   "source_sha256": [
+    "40a537112c252f55351f9b40714de97108381eb7f47a828b84e88041b85e960c"
+   ],
+   "runtime": null,
+   "runtime_present": false,
+   "artifacts": [],
+   "coverage": {},
+   "lineage": [],
+   "build_allowlist_ref": null
+  },
+  {
+   "source_id": "insect.example.e4-hwp",
+   "class": "industrial_insects_student_example",
+   "role": "narrative_exemplar",
+   "source_sha256": [
+    "922c56473d6d7d614d7ef18a8a07f2fd3eb16aa16acc7f8df26170aa9a0fd990"
+   ],
+   "runtime": null,
+   "runtime_present": false,
+   "artifacts": [],
+   "coverage": {},
+   "lineage": [],
+   "build_allowlist_ref": null
+  },
+  {
+   "source_id": "insect.stat.r0",
+   "class": "official_statistics",
+   "role": "reference_only",
+   "source_sha256": [
+    "3dd2b75f5588d1b710123f56cc37747521dee786a2c4a13ecf5e6ab6e66541be"
+   ],
+   "runtime": null,
+   "runtime_present": false,
+   "artifacts": [],
+   "coverage": {},
+   "lineage": [],
+   "build_allowlist_ref": null
+  },
+  {
+   "source_id": "insect.stat.r1",
+   "class": "official_statistics",
+   "role": "reference_only",
+   "source_sha256": [
+    "2582fc7703bb3c409225e1a7329a6a591513500bd0a827e3e9f1807b2bcebe8a"
+   ],
+   "runtime": null,
+   "runtime_present": false,
+   "artifacts": [],
+   "coverage": {},
+   "lineage": [],
+   "build_allowlist_ref": null
   }
  ],
  "p4_trust": {

@@ -2,6 +2,8 @@
 
 이 문서는 자료를 읽고 본문·표·재무 산출물에 연결하는 공통 계약이다. 파일별 파싱법은 [source-intake.md](source-intake.md), 절 상태와 저장은 [section-ledger.md](section-ledger.md), 제출 템플릿 CLI는 [excel-template.md](excel-template.md)에 둔다. 같은 규칙·사실·진행 상태를 별도 원장에 복제하지 않는다.
 
+아래 `official-writing-guide-pdf`/선배논문/17시트 예시는 기존 특용작물 작성 경로에서 확인한 **특정 물리 원본**이다. 2020 PDF의 1–5쪽 지침 분할과 작물 재무 템플릿을 산업곤충에 자동 적용하지 않는다. 산업곤충 프로젝트는 현재 교수 지시·학교 원문을 별도 출처로 등록하고 [산업곤충 선례·근거 계약](industrial-insects/README.md)의 동급 예시 위치를 선택해 연결한다.
+
 ## 출처 우선순위와 역할
 
 `project.json.sources[*].id`가 출처의 기계 식별자다. 아래 표의 ID는 현재
