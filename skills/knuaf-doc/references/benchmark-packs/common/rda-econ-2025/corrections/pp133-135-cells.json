@@ -1,0 +1,2235 @@
+{
+  "schema": "rda-econ-2025/pp133-135-cells@1",
+  "source_pdf_sha256": "38e38ffb8b478584b9f76a8b9d98d56c7cdeb8eb18a2200aef26639a72935a83",
+  "physical_pages": [
+    133,
+    134,
+    135
+  ],
+  "transliteration": "Hangul syllable decomposition with the committed cho/jung/jong table; ASCII lower case; punctuation to underscore",
+  "slug_table": {
+    "다 원예시설 및 부속 농기구 내용연수 > (1) 유리, PET, PC시설": "da_wonyesiseol_mich_busok_nonggigu_naeyongyeonsu_1_yuri_pet_pcsiseol",
+    "가. 기본시설": "ga_gibonsiseol",
+    "기초공사(토목)": "gichogongsa_tomok",
+    "내용연수": "naeyongyeonsu",
+    "철골공사": "cheolgolgongsa",
+    "가. 기본시설 > 외피복": "ga_gibonsiseol_oepibok",
+    "유 리": "yu_ri",
+    "PC": "pc",
+    "PET": "pet",
+    "가. 기본시설 > 내피복": "ga_gibonsiseol_naepibok",
+    "섬피, 타이": "seompi_tai",
+    "천측창개폐장치": "cheoncheukchanggaepyejangchi",
+    "수평커텐개폐장치": "supyeongkeotengaepyejangchi",
+    "강제환기장치": "gangjehwangijangchi",
+    "관수장치": "gwansujangchi",
+    "관정": "gwanjeong",
+    "양액재배(육묘)베드": "yangaekjaebae_yukmyo_bedeu",
+    "하이미스트": "haimiseuteu",
+    "수막시설": "sumaksiseol",
+    "전기공사": "jeongigongsa",
+    "전기인입": "jeongiinip",
+    "관리사(써비스빌딩)": "gwanrisa_sseobiseubilding",
+    "저수조": "jeosujo",
+    "나. 난방시설 및 CO₂발생기 > 난방시설": "na_nanbangsiseol_mich_co_balsaenggi_nanbangsiseol",
+    "온풍기": "onpunggi",
+    "온수보일러": "onsuboilreo",
+    "기타": "gita",
+    "나. 난방시설 및 CO₂발생기 > CO₂발생기": "na_nanbangsiseol_mich_co_balsaenggi_co_balsaenggi",
+    "액화식": "aekhwasik",
+    "연소식": "yeonsosik",
+    "다. 농기계 및 기타 장비 > 운반차": "da_nonggigye_mich_gita_jangbi_unbancha",
+    "전동운반": "jeondongunban",
+    "수동운반": "sudongunban",
+    "다. 농기계 및 기타 장비": "da_nonggigye_mich_gita_jangbi",
+    "파종기(육묘상자)": "pajonggi_yukmyosangja",
+    "다. 농기계 및 기타 장비 > 기타": "da_nonggigye_mich_gita_jangbi_gita",
+    "지게차": "jigecha",
+    "스키로다": "seukiroda",
+    "결속기": "gyeolsokgi",
+    "선별기": "seonbyeolgi",
+    "유리세척": "yurisecheok",
+    "(2) 파이프, 비닐시설": "2_paipeu_binilsiseol",
+    "천측창 개폐장치": "cheoncheukchang_gaepyejangchi",
+    "수평커텐 개폐장치": "supyeongkeoten_gaepyejangchi",
+    "온수보일": "onsuboil",
+    "연조식": "yeonjosik",
+    "파종기(육묘농장)": "pajonggi_yukmyonongjang",
+    "라 영농시설물 내용연수": "ra_yeongnongsiseolmul_naeyongyeonsu",
+    "건물": "geonmul",
+    "주택": "jutaek",
+    "목조 > 와가 > 단층": "mokjo_waga_dancheung",
+    "목조 > 와가 > 2층": "mokjo_waga_2cheung",
+    "목조 > 초가 > 단층": "mokjo_choga_dancheung",
+    "목조 > 초가 > 2층": "mokjo_choga_2cheung",
+    "목조 > 함석 > 단층": "mokjo_hamseok_dancheung",
+    "목조 > 함석 > 2층": "mokjo_hamseok_2cheung",
+    "철근콘크리트 건물": "cheolgeunkonkeuriteu_geonmul",
+    "벽돌 또는 석조 건물": "byeokdol_ttoneun_seokjo_geonmul",
+    "헛간": "heosgan",
+    "창고": "changgo",
+    "축사": "chuksa",
+    "퇴비사": "toebisa",
+    "원예 시설": "wonye_siseol",
+    "철재(파이프)": "cheoljae_paipeu",
+    "목재": "mokjae",
+    "죽재": "jukjae",
+    "PVC": "pvc",
+    "마 대동물 내용연수": "ma_daedongmul_naeyongyeonsu",
+    "root": "root",
+    "젖소 > 젖짜는용": "jeojso_jeojjjaneunyong",
+    "돼지 > 번식돈": "dwaeji_beonsikdon"
+  },
+  "dash_meaning": "Printed dash; applicability unresolved. It is not zero or a number.",
+  "cells": [
+    {
+      "cell_id": "p133-r01-c01",
+      "row_id": "p133-r01",
+      "physical_page": 133,
+      "printed_page": "127",
+      "table_title": "다 원예시설 및 부속 농기구 내용연수",
+      "subtable": "(1) 유리, PET, PC시설",
+      "parent_labels": [
+        "가. 기본시설"
+      ],
+      "row_label": "기초공사(토목)",
+      "specification": null,
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "20",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p133.da_wonyesiseol_mich_busok_nonggigu_naeyongyeonsu_1_yuri_pet_pcsiseol.ga_gibonsiseol.gichogongsa_tomok.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p133-r02-c01",
+      "row_id": "p133-r02",
+      "physical_page": 133,
+      "printed_page": "127",
+      "table_title": "다 원예시설 및 부속 농기구 내용연수",
+      "subtable": "(1) 유리, PET, PC시설",
+      "parent_labels": [
+        "가. 기본시설"
+      ],
+      "row_label": "철골공사",
+      "specification": null,
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "20",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p133.da_wonyesiseol_mich_busok_nonggigu_naeyongyeonsu_1_yuri_pet_pcsiseol.ga_gibonsiseol.cheolgolgongsa.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p133-r03-c01",
+      "row_id": "p133-r03",
+      "physical_page": 133,
+      "printed_page": "127",
+      "table_title": "다 원예시설 및 부속 농기구 내용연수",
+      "subtable": "(1) 유리, PET, PC시설",
+      "parent_labels": [
+        "가. 기본시설",
+        "외피복"
+      ],
+      "row_label": "유 리",
+      "specification": "유 리",
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "20",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p133.da_wonyesiseol_mich_busok_nonggigu_naeyongyeonsu_1_yuri_pet_pcsiseol.ga_gibonsiseol_oepibok.yu_ri.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p133-r04-c01",
+      "row_id": "p133-r04",
+      "physical_page": 133,
+      "printed_page": "127",
+      "table_title": "다 원예시설 및 부속 농기구 내용연수",
+      "subtable": "(1) 유리, PET, PC시설",
+      "parent_labels": [
+        "가. 기본시설",
+        "외피복"
+      ],
+      "row_label": "PC",
+      "specification": "PC",
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "10",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p133.da_wonyesiseol_mich_busok_nonggigu_naeyongyeonsu_1_yuri_pet_pcsiseol.ga_gibonsiseol_oepibok.pc.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p133-r05-c01",
+      "row_id": "p133-r05",
+      "physical_page": 133,
+      "printed_page": "127",
+      "table_title": "다 원예시설 및 부속 농기구 내용연수",
+      "subtable": "(1) 유리, PET, PC시설",
+      "parent_labels": [
+        "가. 기본시설",
+        "외피복"
+      ],
+      "row_label": "PET",
+      "specification": "PET",
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "7",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p133.da_wonyesiseol_mich_busok_nonggigu_naeyongyeonsu_1_yuri_pet_pcsiseol.ga_gibonsiseol_oepibok.pet.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p133-r06-c01",
+      "row_id": "p133-r06",
+      "physical_page": 133,
+      "printed_page": "127",
+      "table_title": "다 원예시설 및 부속 농기구 내용연수",
+      "subtable": "(1) 유리, PET, PC시설",
+      "parent_labels": [
+        "가. 기본시설",
+        "내피복"
+      ],
+      "row_label": "섬피, 타이",
+      "specification": "섬피, 타이",
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "3",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p133.da_wonyesiseol_mich_busok_nonggigu_naeyongyeonsu_1_yuri_pet_pcsiseol.ga_gibonsiseol_naepibok.seompi_tai.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p133-r07-c01",
+      "row_id": "p133-r07",
+      "physical_page": 133,
+      "printed_page": "127",
+      "table_title": "다 원예시설 및 부속 농기구 내용연수",
+      "subtable": "(1) 유리, PET, PC시설",
+      "parent_labels": [
+        "가. 기본시설"
+      ],
+      "row_label": "천측창개폐장치",
+      "specification": null,
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "20",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p133.da_wonyesiseol_mich_busok_nonggigu_naeyongyeonsu_1_yuri_pet_pcsiseol.ga_gibonsiseol.cheoncheukchanggaepyejangchi.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p133-r08-c01",
+      "row_id": "p133-r08",
+      "physical_page": 133,
+      "printed_page": "127",
+      "table_title": "다 원예시설 및 부속 농기구 내용연수",
+      "subtable": "(1) 유리, PET, PC시설",
+      "parent_labels": [
+        "가. 기본시설"
+      ],
+      "row_label": "수평커텐개폐장치",
+      "specification": null,
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "10",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p133.da_wonyesiseol_mich_busok_nonggigu_naeyongyeonsu_1_yuri_pet_pcsiseol.ga_gibonsiseol.supyeongkeotengaepyejangchi.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p133-r09-c01",
+      "row_id": "p133-r09",
+      "physical_page": 133,
+      "printed_page": "127",
+      "table_title": "다 원예시설 및 부속 농기구 내용연수",
+      "subtable": "(1) 유리, PET, PC시설",
+      "parent_labels": [
+        "가. 기본시설"
+      ],
+      "row_label": "강제환기장치",
+      "specification": null,
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "5",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p133.da_wonyesiseol_mich_busok_nonggigu_naeyongyeonsu_1_yuri_pet_pcsiseol.ga_gibonsiseol.gangjehwangijangchi.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p133-r10-c01",
+      "row_id": "p133-r10",
+      "physical_page": 133,
+      "printed_page": "127",
+      "table_title": "다 원예시설 및 부속 농기구 내용연수",
+      "subtable": "(1) 유리, PET, PC시설",
+      "parent_labels": [
+        "가. 기본시설"
+      ],
+      "row_label": "관수장치",
+      "specification": null,
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "8",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p133.da_wonyesiseol_mich_busok_nonggigu_naeyongyeonsu_1_yuri_pet_pcsiseol.ga_gibonsiseol.gwansujangchi.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p133-r11-c01",
+      "row_id": "p133-r11",
+      "physical_page": 133,
+      "printed_page": "127",
+      "table_title": "다 원예시설 및 부속 농기구 내용연수",
+      "subtable": "(1) 유리, PET, PC시설",
+      "parent_labels": [
+        "가. 기본시설"
+      ],
+      "row_label": "관정",
+      "specification": null,
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "20",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p133.da_wonyesiseol_mich_busok_nonggigu_naeyongyeonsu_1_yuri_pet_pcsiseol.ga_gibonsiseol.gwanjeong.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p133-r12-c01",
+      "row_id": "p133-r12",
+      "physical_page": 133,
+      "printed_page": "127",
+      "table_title": "다 원예시설 및 부속 농기구 내용연수",
+      "subtable": "(1) 유리, PET, PC시설",
+      "parent_labels": [
+        "가. 기본시설"
+      ],
+      "row_label": "양액재배(육묘)베드",
+      "specification": null,
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "10",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p133.da_wonyesiseol_mich_busok_nonggigu_naeyongyeonsu_1_yuri_pet_pcsiseol.ga_gibonsiseol.yangaekjaebae_yukmyo_bedeu.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p133-r13-c01",
+      "row_id": "p133-r13",
+      "physical_page": 133,
+      "printed_page": "127",
+      "table_title": "다 원예시설 및 부속 농기구 내용연수",
+      "subtable": "(1) 유리, PET, PC시설",
+      "parent_labels": [
+        "가. 기본시설"
+      ],
+      "row_label": "하이미스트",
+      "specification": null,
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "10",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p133.da_wonyesiseol_mich_busok_nonggigu_naeyongyeonsu_1_yuri_pet_pcsiseol.ga_gibonsiseol.haimiseuteu.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p133-r14-c01",
+      "row_id": "p133-r14",
+      "physical_page": 133,
+      "printed_page": "127",
+      "table_title": "다 원예시설 및 부속 농기구 내용연수",
+      "subtable": "(1) 유리, PET, PC시설",
+      "parent_labels": [
+        "가. 기본시설"
+      ],
+      "row_label": "수막시설",
+      "specification": null,
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "10",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p133.da_wonyesiseol_mich_busok_nonggigu_naeyongyeonsu_1_yuri_pet_pcsiseol.ga_gibonsiseol.sumaksiseol.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p133-r15-c01",
+      "row_id": "p133-r15",
+      "physical_page": 133,
+      "printed_page": "127",
+      "table_title": "다 원예시설 및 부속 농기구 내용연수",
+      "subtable": "(1) 유리, PET, PC시설",
+      "parent_labels": [
+        "가. 기본시설"
+      ],
+      "row_label": "전기공사",
+      "specification": null,
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "10",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p133.da_wonyesiseol_mich_busok_nonggigu_naeyongyeonsu_1_yuri_pet_pcsiseol.ga_gibonsiseol.jeongigongsa.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p133-r16-c01",
+      "row_id": "p133-r16",
+      "physical_page": 133,
+      "printed_page": "127",
+      "table_title": "다 원예시설 및 부속 농기구 내용연수",
+      "subtable": "(1) 유리, PET, PC시설",
+      "parent_labels": [
+        "가. 기본시설"
+      ],
+      "row_label": "전기인입",
+      "specification": null,
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "20",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p133.da_wonyesiseol_mich_busok_nonggigu_naeyongyeonsu_1_yuri_pet_pcsiseol.ga_gibonsiseol.jeongiinip.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p133-r17-c01",
+      "row_id": "p133-r17",
+      "physical_page": 133,
+      "printed_page": "127",
+      "table_title": "다 원예시설 및 부속 농기구 내용연수",
+      "subtable": "(1) 유리, PET, PC시설",
+      "parent_labels": [
+        "가. 기본시설"
+      ],
+      "row_label": "관리사(써비스빌딩)",
+      "specification": null,
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "20",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p133.da_wonyesiseol_mich_busok_nonggigu_naeyongyeonsu_1_yuri_pet_pcsiseol.ga_gibonsiseol.gwanrisa_sseobiseubilding.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p133-r18-c01",
+      "row_id": "p133-r18",
+      "physical_page": 133,
+      "printed_page": "127",
+      "table_title": "다 원예시설 및 부속 농기구 내용연수",
+      "subtable": "(1) 유리, PET, PC시설",
+      "parent_labels": [
+        "가. 기본시설"
+      ],
+      "row_label": "저수조",
+      "specification": null,
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "20",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p133.da_wonyesiseol_mich_busok_nonggigu_naeyongyeonsu_1_yuri_pet_pcsiseol.ga_gibonsiseol.jeosujo.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p133-r19-c01",
+      "row_id": "p133-r19",
+      "physical_page": 133,
+      "printed_page": "127",
+      "table_title": "다 원예시설 및 부속 농기구 내용연수",
+      "subtable": "(1) 유리, PET, PC시설",
+      "parent_labels": [
+        "나. 난방시설 및 CO₂발생기",
+        "난방시설"
+      ],
+      "row_label": "온풍기",
+      "specification": "온풍기",
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "7",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p133.da_wonyesiseol_mich_busok_nonggigu_naeyongyeonsu_1_yuri_pet_pcsiseol.na_nanbangsiseol_mich_co_balsaenggi_nanbangsiseol.onpunggi.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p133-r20-c01",
+      "row_id": "p133-r20",
+      "physical_page": 133,
+      "printed_page": "127",
+      "table_title": "다 원예시설 및 부속 농기구 내용연수",
+      "subtable": "(1) 유리, PET, PC시설",
+      "parent_labels": [
+        "나. 난방시설 및 CO₂발생기",
+        "난방시설"
+      ],
+      "row_label": "온수보일러",
+      "specification": "온수보일러",
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "10",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p133.da_wonyesiseol_mich_busok_nonggigu_naeyongyeonsu_1_yuri_pet_pcsiseol.na_nanbangsiseol_mich_co_balsaenggi_nanbangsiseol.onsuboilreo.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p133-r21-c01",
+      "row_id": "p133-r21",
+      "physical_page": 133,
+      "printed_page": "127",
+      "table_title": "다 원예시설 및 부속 농기구 내용연수",
+      "subtable": "(1) 유리, PET, PC시설",
+      "parent_labels": [
+        "나. 난방시설 및 CO₂발생기",
+        "난방시설"
+      ],
+      "row_label": "기타",
+      "specification": "기타",
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "10",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p133.da_wonyesiseol_mich_busok_nonggigu_naeyongyeonsu_1_yuri_pet_pcsiseol.na_nanbangsiseol_mich_co_balsaenggi_nanbangsiseol.gita.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p133-r22-c01",
+      "row_id": "p133-r22",
+      "physical_page": 133,
+      "printed_page": "127",
+      "table_title": "다 원예시설 및 부속 농기구 내용연수",
+      "subtable": "(1) 유리, PET, PC시설",
+      "parent_labels": [
+        "나. 난방시설 및 CO₂발생기",
+        "CO₂발생기"
+      ],
+      "row_label": "액화식",
+      "specification": "액화식",
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "10",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p133.da_wonyesiseol_mich_busok_nonggigu_naeyongyeonsu_1_yuri_pet_pcsiseol.na_nanbangsiseol_mich_co_balsaenggi_co_balsaenggi.aekhwasik.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p133-r23-c01",
+      "row_id": "p133-r23",
+      "physical_page": 133,
+      "printed_page": "127",
+      "table_title": "다 원예시설 및 부속 농기구 내용연수",
+      "subtable": "(1) 유리, PET, PC시설",
+      "parent_labels": [
+        "나. 난방시설 및 CO₂발생기",
+        "CO₂발생기"
+      ],
+      "row_label": "연소식",
+      "specification": "연소식",
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "10",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p133.da_wonyesiseol_mich_busok_nonggigu_naeyongyeonsu_1_yuri_pet_pcsiseol.na_nanbangsiseol_mich_co_balsaenggi_co_balsaenggi.yeonsosik.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p133-r24-c01",
+      "row_id": "p133-r24",
+      "physical_page": 133,
+      "printed_page": "127",
+      "table_title": "다 원예시설 및 부속 농기구 내용연수",
+      "subtable": "(1) 유리, PET, PC시설",
+      "parent_labels": [
+        "다. 농기계 및 기타 장비",
+        "운반차"
+      ],
+      "row_label": "전동운반",
+      "specification": "전동운반",
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "10",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p133.da_wonyesiseol_mich_busok_nonggigu_naeyongyeonsu_1_yuri_pet_pcsiseol.da_nonggigye_mich_gita_jangbi_unbancha.jeondongunban.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p133-r25-c01",
+      "row_id": "p133-r25",
+      "physical_page": 133,
+      "printed_page": "127",
+      "table_title": "다 원예시설 및 부속 농기구 내용연수",
+      "subtable": "(1) 유리, PET, PC시설",
+      "parent_labels": [
+        "다. 농기계 및 기타 장비",
+        "운반차"
+      ],
+      "row_label": "수동운반",
+      "specification": "수동운반",
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "10",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p133.da_wonyesiseol_mich_busok_nonggigu_naeyongyeonsu_1_yuri_pet_pcsiseol.da_nonggigye_mich_gita_jangbi_unbancha.sudongunban.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p133-r26-c01",
+      "row_id": "p133-r26",
+      "physical_page": 133,
+      "printed_page": "127",
+      "table_title": "다 원예시설 및 부속 농기구 내용연수",
+      "subtable": "(1) 유리, PET, PC시설",
+      "parent_labels": [
+        "다. 농기계 및 기타 장비"
+      ],
+      "row_label": "파종기(육묘상자)",
+      "specification": null,
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "10",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p133.da_wonyesiseol_mich_busok_nonggigu_naeyongyeonsu_1_yuri_pet_pcsiseol.da_nonggigye_mich_gita_jangbi.pajonggi_yukmyosangja.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p133-r27-c01",
+      "row_id": "p133-r27",
+      "physical_page": 133,
+      "printed_page": "127",
+      "table_title": "다 원예시설 및 부속 농기구 내용연수",
+      "subtable": "(1) 유리, PET, PC시설",
+      "parent_labels": [
+        "다. 농기계 및 기타 장비",
+        "기타"
+      ],
+      "row_label": "지게차",
+      "specification": "지게차",
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "8",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p133.da_wonyesiseol_mich_busok_nonggigu_naeyongyeonsu_1_yuri_pet_pcsiseol.da_nonggigye_mich_gita_jangbi_gita.jigecha.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p133-r28-c01",
+      "row_id": "p133-r28",
+      "physical_page": 133,
+      "printed_page": "127",
+      "table_title": "다 원예시설 및 부속 농기구 내용연수",
+      "subtable": "(1) 유리, PET, PC시설",
+      "parent_labels": [
+        "다. 농기계 및 기타 장비",
+        "기타"
+      ],
+      "row_label": "스키로다",
+      "specification": "스키로다",
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "10",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p133.da_wonyesiseol_mich_busok_nonggigu_naeyongyeonsu_1_yuri_pet_pcsiseol.da_nonggigye_mich_gita_jangbi_gita.seukiroda.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p133-r29-c01",
+      "row_id": "p133-r29",
+      "physical_page": 133,
+      "printed_page": "127",
+      "table_title": "다 원예시설 및 부속 농기구 내용연수",
+      "subtable": "(1) 유리, PET, PC시설",
+      "parent_labels": [
+        "다. 농기계 및 기타 장비",
+        "기타"
+      ],
+      "row_label": "결속기",
+      "specification": "결속기",
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "10",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p133.da_wonyesiseol_mich_busok_nonggigu_naeyongyeonsu_1_yuri_pet_pcsiseol.da_nonggigye_mich_gita_jangbi_gita.gyeolsokgi.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p133-r30-c01",
+      "row_id": "p133-r30",
+      "physical_page": 133,
+      "printed_page": "127",
+      "table_title": "다 원예시설 및 부속 농기구 내용연수",
+      "subtable": "(1) 유리, PET, PC시설",
+      "parent_labels": [
+        "다. 농기계 및 기타 장비",
+        "기타"
+      ],
+      "row_label": "선별기",
+      "specification": "선별기",
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "9",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p133.da_wonyesiseol_mich_busok_nonggigu_naeyongyeonsu_1_yuri_pet_pcsiseol.da_nonggigye_mich_gita_jangbi_gita.seonbyeolgi.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p133-r31-c01",
+      "row_id": "p133-r31",
+      "physical_page": 133,
+      "printed_page": "127",
+      "table_title": "다 원예시설 및 부속 농기구 내용연수",
+      "subtable": "(1) 유리, PET, PC시설",
+      "parent_labels": [
+        "다. 농기계 및 기타 장비",
+        "기타"
+      ],
+      "row_label": "유리세척",
+      "specification": "유리세척",
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "10",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p133.da_wonyesiseol_mich_busok_nonggigu_naeyongyeonsu_1_yuri_pet_pcsiseol.da_nonggigye_mich_gita_jangbi_gita.yurisecheok.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p134-r01-c01",
+      "row_id": "p134-r01",
+      "physical_page": 134,
+      "printed_page": "128",
+      "table_title": "(2) 파이프, 비닐시설",
+      "subtable": null,
+      "parent_labels": [
+        "가. 기본시설"
+      ],
+      "row_label": "기초공사(토목)",
+      "specification": null,
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "10",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p134.2_paipeu_binilsiseol.ga_gibonsiseol.gichogongsa_tomok.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p134-r02-c01",
+      "row_id": "p134-r02",
+      "physical_page": 134,
+      "printed_page": "128",
+      "table_title": "(2) 파이프, 비닐시설",
+      "subtable": null,
+      "parent_labels": [
+        "가. 기본시설"
+      ],
+      "row_label": "철골공사",
+      "specification": null,
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "10",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p134.2_paipeu_binilsiseol.ga_gibonsiseol.cheolgolgongsa.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p134-r03-c01",
+      "row_id": "p134-r03",
+      "physical_page": 134,
+      "printed_page": "128",
+      "table_title": "(2) 파이프, 비닐시설",
+      "subtable": null,
+      "parent_labels": [
+        "가. 기본시설",
+        "내피복"
+      ],
+      "row_label": "섬피, 타이",
+      "specification": "섬피, 타이",
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "3",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p134.2_paipeu_binilsiseol.ga_gibonsiseol_naepibok.seompi_tai.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p134-r04-c01",
+      "row_id": "p134-r04",
+      "physical_page": 134,
+      "printed_page": "128",
+      "table_title": "(2) 파이프, 비닐시설",
+      "subtable": null,
+      "parent_labels": [
+        "가. 기본시설"
+      ],
+      "row_label": "천측창 개폐장치",
+      "specification": null,
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "10",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p134.2_paipeu_binilsiseol.ga_gibonsiseol.cheoncheukchang_gaepyejangchi.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p134-r05-c01",
+      "row_id": "p134-r05",
+      "physical_page": 134,
+      "printed_page": "128",
+      "table_title": "(2) 파이프, 비닐시설",
+      "subtable": null,
+      "parent_labels": [
+        "가. 기본시설"
+      ],
+      "row_label": "수평커텐 개폐장치",
+      "specification": null,
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "10",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p134.2_paipeu_binilsiseol.ga_gibonsiseol.supyeongkeoten_gaepyejangchi.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p134-r06-c01",
+      "row_id": "p134-r06",
+      "physical_page": 134,
+      "printed_page": "128",
+      "table_title": "(2) 파이프, 비닐시설",
+      "subtable": null,
+      "parent_labels": [
+        "가. 기본시설"
+      ],
+      "row_label": "강제환기장치",
+      "specification": null,
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "5",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p134.2_paipeu_binilsiseol.ga_gibonsiseol.gangjehwangijangchi.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p134-r07-c01",
+      "row_id": "p134-r07",
+      "physical_page": 134,
+      "printed_page": "128",
+      "table_title": "(2) 파이프, 비닐시설",
+      "subtable": null,
+      "parent_labels": [
+        "가. 기본시설"
+      ],
+      "row_label": "관수장치",
+      "specification": null,
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "8",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p134.2_paipeu_binilsiseol.ga_gibonsiseol.gwansujangchi.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p134-r08-c01",
+      "row_id": "p134-r08",
+      "physical_page": 134,
+      "printed_page": "128",
+      "table_title": "(2) 파이프, 비닐시설",
+      "subtable": null,
+      "parent_labels": [
+        "가. 기본시설"
+      ],
+      "row_label": "관정",
+      "specification": null,
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "20",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p134.2_paipeu_binilsiseol.ga_gibonsiseol.gwanjeong.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p134-r09-c01",
+      "row_id": "p134-r09",
+      "physical_page": 134,
+      "printed_page": "128",
+      "table_title": "(2) 파이프, 비닐시설",
+      "subtable": null,
+      "parent_labels": [
+        "가. 기본시설"
+      ],
+      "row_label": "양액재배(육묘)베드",
+      "specification": null,
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "10",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p134.2_paipeu_binilsiseol.ga_gibonsiseol.yangaekjaebae_yukmyo_bedeu.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p134-r10-c01",
+      "row_id": "p134-r10",
+      "physical_page": 134,
+      "printed_page": "128",
+      "table_title": "(2) 파이프, 비닐시설",
+      "subtable": null,
+      "parent_labels": [
+        "가. 기본시설"
+      ],
+      "row_label": "하이미스트",
+      "specification": null,
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "10",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p134.2_paipeu_binilsiseol.ga_gibonsiseol.haimiseuteu.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p134-r11-c01",
+      "row_id": "p134-r11",
+      "physical_page": 134,
+      "printed_page": "128",
+      "table_title": "(2) 파이프, 비닐시설",
+      "subtable": null,
+      "parent_labels": [
+        "가. 기본시설"
+      ],
+      "row_label": "수막시설",
+      "specification": null,
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "10",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p134.2_paipeu_binilsiseol.ga_gibonsiseol.sumaksiseol.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p134-r12-c01",
+      "row_id": "p134-r12",
+      "physical_page": 134,
+      "printed_page": "128",
+      "table_title": "(2) 파이프, 비닐시설",
+      "subtable": null,
+      "parent_labels": [
+        "가. 기본시설"
+      ],
+      "row_label": "전기공사",
+      "specification": null,
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "10",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p134.2_paipeu_binilsiseol.ga_gibonsiseol.jeongigongsa.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p134-r13-c01",
+      "row_id": "p134-r13",
+      "physical_page": 134,
+      "printed_page": "128",
+      "table_title": "(2) 파이프, 비닐시설",
+      "subtable": null,
+      "parent_labels": [
+        "가. 기본시설"
+      ],
+      "row_label": "전기인입",
+      "specification": null,
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "20",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p134.2_paipeu_binilsiseol.ga_gibonsiseol.jeongiinip.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p134-r14-c01",
+      "row_id": "p134-r14",
+      "physical_page": 134,
+      "printed_page": "128",
+      "table_title": "(2) 파이프, 비닐시설",
+      "subtable": null,
+      "parent_labels": [
+        "가. 기본시설"
+      ],
+      "row_label": "관리사(써비스빌딩)",
+      "specification": null,
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "20",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p134.2_paipeu_binilsiseol.ga_gibonsiseol.gwanrisa_sseobiseubilding.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p134-r15-c01",
+      "row_id": "p134-r15",
+      "physical_page": 134,
+      "printed_page": "128",
+      "table_title": "(2) 파이프, 비닐시설",
+      "subtable": null,
+      "parent_labels": [
+        "가. 기본시설"
+      ],
+      "row_label": "저수조",
+      "specification": null,
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "10",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p134.2_paipeu_binilsiseol.ga_gibonsiseol.jeosujo.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p134-r16-c01",
+      "row_id": "p134-r16",
+      "physical_page": 134,
+      "printed_page": "128",
+      "table_title": "(2) 파이프, 비닐시설",
+      "subtable": null,
+      "parent_labels": [
+        "나. 난방시설 및 CO₂발생기",
+        "난방시설"
+      ],
+      "row_label": "온풍기",
+      "specification": "온풍기",
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "7",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p134.2_paipeu_binilsiseol.na_nanbangsiseol_mich_co_balsaenggi_nanbangsiseol.onpunggi.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p134-r17-c01",
+      "row_id": "p134-r17",
+      "physical_page": 134,
+      "printed_page": "128",
+      "table_title": "(2) 파이프, 비닐시설",
+      "subtable": null,
+      "parent_labels": [
+        "나. 난방시설 및 CO₂발생기",
+        "난방시설"
+      ],
+      "row_label": "온수보일",
+      "specification": "온수보일",
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "10",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p134.2_paipeu_binilsiseol.na_nanbangsiseol_mich_co_balsaenggi_nanbangsiseol.onsuboil.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p134-r18-c01",
+      "row_id": "p134-r18",
+      "physical_page": 134,
+      "printed_page": "128",
+      "table_title": "(2) 파이프, 비닐시설",
+      "subtable": null,
+      "parent_labels": [
+        "나. 난방시설 및 CO₂발생기",
+        "난방시설"
+      ],
+      "row_label": "기타",
+      "specification": "기타",
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "10",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p134.2_paipeu_binilsiseol.na_nanbangsiseol_mich_co_balsaenggi_nanbangsiseol.gita.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p134-r19-c01",
+      "row_id": "p134-r19",
+      "physical_page": 134,
+      "printed_page": "128",
+      "table_title": "(2) 파이프, 비닐시설",
+      "subtable": null,
+      "parent_labels": [
+        "나. 난방시설 및 CO₂발생기",
+        "CO₂발생기"
+      ],
+      "row_label": "액화식",
+      "specification": "액화식",
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "10",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p134.2_paipeu_binilsiseol.na_nanbangsiseol_mich_co_balsaenggi_co_balsaenggi.aekhwasik.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p134-r20-c01",
+      "row_id": "p134-r20",
+      "physical_page": 134,
+      "printed_page": "128",
+      "table_title": "(2) 파이프, 비닐시설",
+      "subtable": null,
+      "parent_labels": [
+        "나. 난방시설 및 CO₂발생기",
+        "CO₂발생기"
+      ],
+      "row_label": "연조식",
+      "specification": "연조식",
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "10",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p134.2_paipeu_binilsiseol.na_nanbangsiseol_mich_co_balsaenggi_co_balsaenggi.yeonjosik.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p134-r21-c01",
+      "row_id": "p134-r21",
+      "physical_page": 134,
+      "printed_page": "128",
+      "table_title": "(2) 파이프, 비닐시설",
+      "subtable": null,
+      "parent_labels": [
+        "나. 난방시설 및 CO₂발생기",
+        "CO₂발생기"
+      ],
+      "row_label": "기타",
+      "specification": "기타",
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "10",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p134.2_paipeu_binilsiseol.na_nanbangsiseol_mich_co_balsaenggi_co_balsaenggi.gita.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p134-r22-c01",
+      "row_id": "p134-r22",
+      "physical_page": 134,
+      "printed_page": "128",
+      "table_title": "(2) 파이프, 비닐시설",
+      "subtable": null,
+      "parent_labels": [
+        "다. 농기계 및 기타 장비",
+        "운반차"
+      ],
+      "row_label": "전동운반",
+      "specification": "전동운반",
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "10",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p134.2_paipeu_binilsiseol.da_nonggigye_mich_gita_jangbi_unbancha.jeondongunban.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p134-r23-c01",
+      "row_id": "p134-r23",
+      "physical_page": 134,
+      "printed_page": "128",
+      "table_title": "(2) 파이프, 비닐시설",
+      "subtable": null,
+      "parent_labels": [
+        "다. 농기계 및 기타 장비",
+        "운반차"
+      ],
+      "row_label": "수동운반",
+      "specification": "수동운반",
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "10",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p134.2_paipeu_binilsiseol.da_nonggigye_mich_gita_jangbi_unbancha.sudongunban.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p134-r24-c01",
+      "row_id": "p134-r24",
+      "physical_page": 134,
+      "printed_page": "128",
+      "table_title": "(2) 파이프, 비닐시설",
+      "subtable": null,
+      "parent_labels": [
+        "다. 농기계 및 기타 장비",
+        "운반차"
+      ],
+      "row_label": "기타",
+      "specification": "기타",
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "10",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p134.2_paipeu_binilsiseol.da_nonggigye_mich_gita_jangbi_unbancha.gita.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p134-r25-c01",
+      "row_id": "p134-r25",
+      "physical_page": 134,
+      "printed_page": "128",
+      "table_title": "(2) 파이프, 비닐시설",
+      "subtable": null,
+      "parent_labels": [
+        "다. 농기계 및 기타 장비"
+      ],
+      "row_label": "파종기(육묘농장)",
+      "specification": null,
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "10",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p134.2_paipeu_binilsiseol.da_nonggigye_mich_gita_jangbi.pajonggi_yukmyonongjang.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p135-r01-c01",
+      "row_id": "p135-r01",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "주택",
+      "specification": "목조 > 와가 > 단층",
+      "column_label": "목조 > 와가 > 단층",
+      "cell_ordinal": 1,
+      "printed_value": "60",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.jutaek.mokjo_waga_dancheung.c1"
+    },
+    {
+      "cell_id": "p135-r01-c02",
+      "row_id": "p135-r01",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "주택",
+      "specification": "목조 > 와가 > 2층",
+      "column_label": "목조 > 와가 > 2층",
+      "cell_ordinal": 2,
+      "printed_value": "60",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.jutaek.mokjo_waga_2cheung.c2"
+    },
+    {
+      "cell_id": "p135-r01-c03",
+      "row_id": "p135-r01",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "주택",
+      "specification": "목조 > 초가 > 단층",
+      "column_label": "목조 > 초가 > 단층",
+      "cell_ordinal": 3,
+      "printed_value": "50",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.jutaek.mokjo_choga_dancheung.c3"
+    },
+    {
+      "cell_id": "p135-r01-c04",
+      "row_id": "p135-r01",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "주택",
+      "specification": "목조 > 초가 > 2층",
+      "column_label": "목조 > 초가 > 2층",
+      "cell_ordinal": 4,
+      "printed_value": "50",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.jutaek.mokjo_choga_2cheung.c4"
+    },
+    {
+      "cell_id": "p135-r01-c05",
+      "row_id": "p135-r01",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "주택",
+      "specification": "목조 > 함석 > 단층",
+      "column_label": "목조 > 함석 > 단층",
+      "cell_ordinal": 5,
+      "printed_value": "40",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.jutaek.mokjo_hamseok_dancheung.c5"
+    },
+    {
+      "cell_id": "p135-r01-c06",
+      "row_id": "p135-r01",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "주택",
+      "specification": "목조 > 함석 > 2층",
+      "column_label": "목조 > 함석 > 2층",
+      "cell_ordinal": 6,
+      "printed_value": "40",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.jutaek.mokjo_hamseok_2cheung.c6"
+    },
+    {
+      "cell_id": "p135-r01-c07",
+      "row_id": "p135-r01",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "주택",
+      "specification": "철근콘크리트 건물",
+      "column_label": "철근콘크리트 건물",
+      "cell_ordinal": 7,
+      "printed_value": "80",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.jutaek.cheolgeunkonkeuriteu_geonmul.c7"
+    },
+    {
+      "cell_id": "p135-r01-c08",
+      "row_id": "p135-r01",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "주택",
+      "specification": "벽돌 또는 석조 건물",
+      "column_label": "벽돌 또는 석조 건물",
+      "cell_ordinal": 8,
+      "printed_value": "70",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.jutaek.byeokdol_ttoneun_seokjo_geonmul.c8"
+    },
+    {
+      "cell_id": "p135-r01-c09",
+      "row_id": "p135-r01",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "주택",
+      "specification": "기타",
+      "column_label": "기타",
+      "cell_ordinal": 9,
+      "printed_value": "30",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.jutaek.gita.c9"
+    },
+    {
+      "cell_id": "p135-r02-c01",
+      "row_id": "p135-r02",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "헛간",
+      "specification": "목조 > 와가 > 단층",
+      "column_label": "목조 > 와가 > 단층",
+      "cell_ordinal": 1,
+      "printed_value": "50",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.heosgan.mokjo_waga_dancheung.c1"
+    },
+    {
+      "cell_id": "p135-r02-c02",
+      "row_id": "p135-r02",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "헛간",
+      "specification": "목조 > 와가 > 2층",
+      "column_label": "목조 > 와가 > 2층",
+      "cell_ordinal": 2,
+      "printed_value": "50",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.heosgan.mokjo_waga_2cheung.c2"
+    },
+    {
+      "cell_id": "p135-r02-c03",
+      "row_id": "p135-r02",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "헛간",
+      "specification": "목조 > 초가 > 단층",
+      "column_label": "목조 > 초가 > 단층",
+      "cell_ordinal": 3,
+      "printed_value": "40",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.heosgan.mokjo_choga_dancheung.c3"
+    },
+    {
+      "cell_id": "p135-r02-c04",
+      "row_id": "p135-r02",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "헛간",
+      "specification": "목조 > 초가 > 2층",
+      "column_label": "목조 > 초가 > 2층",
+      "cell_ordinal": 4,
+      "printed_value": "40",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.heosgan.mokjo_choga_2cheung.c4"
+    },
+    {
+      "cell_id": "p135-r02-c05",
+      "row_id": "p135-r02",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "헛간",
+      "specification": "목조 > 함석 > 단층",
+      "column_label": "목조 > 함석 > 단층",
+      "cell_ordinal": 5,
+      "printed_value": "30",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.heosgan.mokjo_hamseok_dancheung.c5"
+    },
+    {
+      "cell_id": "p135-r02-c06",
+      "row_id": "p135-r02",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "헛간",
+      "specification": "목조 > 함석 > 2층",
+      "column_label": "목조 > 함석 > 2층",
+      "cell_ordinal": 6,
+      "printed_value": "30",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.heosgan.mokjo_hamseok_2cheung.c6"
+    },
+    {
+      "cell_id": "p135-r02-c07",
+      "row_id": "p135-r02",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "헛간",
+      "specification": "철근콘크리트 건물",
+      "column_label": "철근콘크리트 건물",
+      "cell_ordinal": 7,
+      "printed_value": "70",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.heosgan.cheolgeunkonkeuriteu_geonmul.c7"
+    },
+    {
+      "cell_id": "p135-r02-c08",
+      "row_id": "p135-r02",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "헛간",
+      "specification": "벽돌 또는 석조 건물",
+      "column_label": "벽돌 또는 석조 건물",
+      "cell_ordinal": 8,
+      "printed_value": "60",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.heosgan.byeokdol_ttoneun_seokjo_geonmul.c8"
+    },
+    {
+      "cell_id": "p135-r02-c09",
+      "row_id": "p135-r02",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "헛간",
+      "specification": "기타",
+      "column_label": "기타",
+      "cell_ordinal": 9,
+      "printed_value": "20",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.heosgan.gita.c9"
+    },
+    {
+      "cell_id": "p135-r03-c01",
+      "row_id": "p135-r03",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "창고",
+      "specification": "목조 > 와가 > 단층",
+      "column_label": "목조 > 와가 > 단층",
+      "cell_ordinal": 1,
+      "printed_value": "60",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.changgo.mokjo_waga_dancheung.c1"
+    },
+    {
+      "cell_id": "p135-r03-c02",
+      "row_id": "p135-r03",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "창고",
+      "specification": "목조 > 와가 > 2층",
+      "column_label": "목조 > 와가 > 2층",
+      "cell_ordinal": 2,
+      "printed_value": "60",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.changgo.mokjo_waga_2cheung.c2"
+    },
+    {
+      "cell_id": "p135-r03-c03",
+      "row_id": "p135-r03",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "창고",
+      "specification": "목조 > 초가 > 단층",
+      "column_label": "목조 > 초가 > 단층",
+      "cell_ordinal": 3,
+      "printed_value": "50",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.changgo.mokjo_choga_dancheung.c3"
+    },
+    {
+      "cell_id": "p135-r03-c04",
+      "row_id": "p135-r03",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "창고",
+      "specification": "목조 > 초가 > 2층",
+      "column_label": "목조 > 초가 > 2층",
+      "cell_ordinal": 4,
+      "printed_value": "50",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.changgo.mokjo_choga_2cheung.c4"
+    },
+    {
+      "cell_id": "p135-r03-c05",
+      "row_id": "p135-r03",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "창고",
+      "specification": "목조 > 함석 > 단층",
+      "column_label": "목조 > 함석 > 단층",
+      "cell_ordinal": 5,
+      "printed_value": "30",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.changgo.mokjo_hamseok_dancheung.c5"
+    },
+    {
+      "cell_id": "p135-r03-c06",
+      "row_id": "p135-r03",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "창고",
+      "specification": "목조 > 함석 > 2층",
+      "column_label": "목조 > 함석 > 2층",
+      "cell_ordinal": 6,
+      "printed_value": "30",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.changgo.mokjo_hamseok_2cheung.c6"
+    },
+    {
+      "cell_id": "p135-r03-c07",
+      "row_id": "p135-r03",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "창고",
+      "specification": "철근콘크리트 건물",
+      "column_label": "철근콘크리트 건물",
+      "cell_ordinal": 7,
+      "printed_value": "80",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.changgo.cheolgeunkonkeuriteu_geonmul.c7"
+    },
+    {
+      "cell_id": "p135-r03-c08",
+      "row_id": "p135-r03",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "창고",
+      "specification": "벽돌 또는 석조 건물",
+      "column_label": "벽돌 또는 석조 건물",
+      "cell_ordinal": 8,
+      "printed_value": "70",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.changgo.byeokdol_ttoneun_seokjo_geonmul.c8"
+    },
+    {
+      "cell_id": "p135-r03-c09",
+      "row_id": "p135-r03",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "창고",
+      "specification": "기타",
+      "column_label": "기타",
+      "cell_ordinal": 9,
+      "printed_value": "20",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.changgo.gita.c9"
+    },
+    {
+      "cell_id": "p135-r04-c01",
+      "row_id": "p135-r04",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "축사",
+      "specification": "목조 > 와가 > 단층",
+      "column_label": "목조 > 와가 > 단층",
+      "cell_ordinal": 1,
+      "printed_value": "40",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.chuksa.mokjo_waga_dancheung.c1"
+    },
+    {
+      "cell_id": "p135-r04-c02",
+      "row_id": "p135-r04",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "축사",
+      "specification": "목조 > 와가 > 2층",
+      "column_label": "목조 > 와가 > 2층",
+      "cell_ordinal": 2,
+      "printed_value": "-",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.chuksa.mokjo_waga_2cheung.c2"
+    },
+    {
+      "cell_id": "p135-r04-c03",
+      "row_id": "p135-r04",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "축사",
+      "specification": "목조 > 초가 > 단층",
+      "column_label": "목조 > 초가 > 단층",
+      "cell_ordinal": 3,
+      "printed_value": "35",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.chuksa.mokjo_choga_dancheung.c3"
+    },
+    {
+      "cell_id": "p135-r04-c04",
+      "row_id": "p135-r04",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "축사",
+      "specification": "목조 > 초가 > 2층",
+      "column_label": "목조 > 초가 > 2층",
+      "cell_ordinal": 4,
+      "printed_value": "-",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.chuksa.mokjo_choga_2cheung.c4"
+    },
+    {
+      "cell_id": "p135-r04-c05",
+      "row_id": "p135-r04",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "축사",
+      "specification": "목조 > 함석 > 단층",
+      "column_label": "목조 > 함석 > 단층",
+      "cell_ordinal": 5,
+      "printed_value": "-",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.chuksa.mokjo_hamseok_dancheung.c5"
+    },
+    {
+      "cell_id": "p135-r04-c06",
+      "row_id": "p135-r04",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "축사",
+      "specification": "목조 > 함석 > 2층",
+      "column_label": "목조 > 함석 > 2층",
+      "cell_ordinal": 6,
+      "printed_value": "-",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.chuksa.mokjo_hamseok_2cheung.c6"
+    },
+    {
+      "cell_id": "p135-r04-c07",
+      "row_id": "p135-r04",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "축사",
+      "specification": "철근콘크리트 건물",
+      "column_label": "철근콘크리트 건물",
+      "cell_ordinal": 7,
+      "printed_value": "60",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.chuksa.cheolgeunkonkeuriteu_geonmul.c7"
+    },
+    {
+      "cell_id": "p135-r04-c08",
+      "row_id": "p135-r04",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "축사",
+      "specification": "벽돌 또는 석조 건물",
+      "column_label": "벽돌 또는 석조 건물",
+      "cell_ordinal": 8,
+      "printed_value": "50",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.chuksa.byeokdol_ttoneun_seokjo_geonmul.c8"
+    },
+    {
+      "cell_id": "p135-r04-c09",
+      "row_id": "p135-r04",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "축사",
+      "specification": "기타",
+      "column_label": "기타",
+      "cell_ordinal": 9,
+      "printed_value": "30",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.chuksa.gita.c9"
+    },
+    {
+      "cell_id": "p135-r05-c01",
+      "row_id": "p135-r05",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "퇴비사",
+      "specification": "목조 > 와가 > 단층",
+      "column_label": "목조 > 와가 > 단층",
+      "cell_ordinal": 1,
+      "printed_value": "30",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.toebisa.mokjo_waga_dancheung.c1"
+    },
+    {
+      "cell_id": "p135-r05-c02",
+      "row_id": "p135-r05",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "퇴비사",
+      "specification": "목조 > 와가 > 2층",
+      "column_label": "목조 > 와가 > 2층",
+      "cell_ordinal": 2,
+      "printed_value": "-",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.toebisa.mokjo_waga_2cheung.c2"
+    },
+    {
+      "cell_id": "p135-r05-c03",
+      "row_id": "p135-r05",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "퇴비사",
+      "specification": "목조 > 초가 > 단층",
+      "column_label": "목조 > 초가 > 단층",
+      "cell_ordinal": 3,
+      "printed_value": "25",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.toebisa.mokjo_choga_dancheung.c3"
+    },
+    {
+      "cell_id": "p135-r05-c04",
+      "row_id": "p135-r05",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "퇴비사",
+      "specification": "목조 > 초가 > 2층",
+      "column_label": "목조 > 초가 > 2층",
+      "cell_ordinal": 4,
+      "printed_value": "-",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.toebisa.mokjo_choga_2cheung.c4"
+    },
+    {
+      "cell_id": "p135-r05-c05",
+      "row_id": "p135-r05",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "퇴비사",
+      "specification": "목조 > 함석 > 단층",
+      "column_label": "목조 > 함석 > 단층",
+      "cell_ordinal": 5,
+      "printed_value": "-",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.toebisa.mokjo_hamseok_dancheung.c5"
+    },
+    {
+      "cell_id": "p135-r05-c06",
+      "row_id": "p135-r05",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "퇴비사",
+      "specification": "목조 > 함석 > 2층",
+      "column_label": "목조 > 함석 > 2층",
+      "cell_ordinal": 6,
+      "printed_value": "-",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.toebisa.mokjo_hamseok_2cheung.c6"
+    },
+    {
+      "cell_id": "p135-r05-c07",
+      "row_id": "p135-r05",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "퇴비사",
+      "specification": "철근콘크리트 건물",
+      "column_label": "철근콘크리트 건물",
+      "cell_ordinal": 7,
+      "printed_value": "60",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.toebisa.cheolgeunkonkeuriteu_geonmul.c7"
+    },
+    {
+      "cell_id": "p135-r05-c08",
+      "row_id": "p135-r05",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "퇴비사",
+      "specification": "벽돌 또는 석조 건물",
+      "column_label": "벽돌 또는 석조 건물",
+      "cell_ordinal": 8,
+      "printed_value": "50",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.toebisa.byeokdol_ttoneun_seokjo_geonmul.c8"
+    },
+    {
+      "cell_id": "p135-r05-c09",
+      "row_id": "p135-r05",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "건물"
+      ],
+      "row_label": "퇴비사",
+      "specification": "기타",
+      "column_label": "기타",
+      "cell_ordinal": 9,
+      "printed_value": "20",
+      "adult_age_printed": null,
+      "footnotes": [
+        "※ 목조스레트는 목조 초가와 같은 기준으로 조사한다."
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.geonmul.toebisa.gita.c9"
+    },
+    {
+      "cell_id": "p135-r06-c01",
+      "row_id": "p135-r06",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "기타"
+      ],
+      "row_label": "원예 시설",
+      "specification": "철재(파이프)",
+      "column_label": "철재(파이프)",
+      "cell_ordinal": 1,
+      "printed_value": "10",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.gita.wonye_siseol.cheoljae_paipeu.c1"
+    },
+    {
+      "cell_id": "p135-r06-c02",
+      "row_id": "p135-r06",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "기타"
+      ],
+      "row_label": "원예 시설",
+      "specification": "목재",
+      "column_label": "목재",
+      "cell_ordinal": 2,
+      "printed_value": "7",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.gita.wonye_siseol.mokjae.c2"
+    },
+    {
+      "cell_id": "p135-r06-c03",
+      "row_id": "p135-r06",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "기타"
+      ],
+      "row_label": "원예 시설",
+      "specification": "죽재",
+      "column_label": "죽재",
+      "cell_ordinal": 3,
+      "printed_value": "3",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.gita.wonye_siseol.jukjae.c3"
+    },
+    {
+      "cell_id": "p135-r06-c04",
+      "row_id": "p135-r06",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "라 영농시설물 내용연수",
+      "subtable": null,
+      "parent_labels": [
+        "기타"
+      ],
+      "row_label": "원예 시설",
+      "specification": "PVC",
+      "column_label": "PVC",
+      "cell_ordinal": 4,
+      "printed_value": "7",
+      "adult_age_printed": null,
+      "footnotes": [],
+      "record_id": "rda.econ.2025.useful_life.p135.ra_yeongnongsiseolmul_naeyongyeonsu.gita.wonye_siseol.pvc.c4"
+    },
+    {
+      "cell_id": "p135-r07-c01",
+      "row_id": "p135-r07",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "마 대동물 내용연수",
+      "subtable": null,
+      "parent_labels": [],
+      "row_label": "젖소",
+      "specification": "젖짜는용",
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "4",
+      "adult_age_printed": "2",
+      "footnotes": [
+        "자료: 국립축산과학원, 「2020 축산기술 경제성 분석 방법 및 사례」"
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ma_daedongmul_naeyongyeonsu.root.jeojso_jeojjjaneunyong.naeyongyeonsu.c1"
+    },
+    {
+      "cell_id": "p135-r08-c01",
+      "row_id": "p135-r08",
+      "physical_page": 135,
+      "printed_page": "129",
+      "table_title": "마 대동물 내용연수",
+      "subtable": null,
+      "parent_labels": [],
+      "row_label": "돼지",
+      "specification": "번식돈",
+      "column_label": "내용연수",
+      "cell_ordinal": 1,
+      "printed_value": "2.5",
+      "adult_age_printed": "8개월",
+      "footnotes": [
+        "자료: 국립축산과학원, 「2020 축산기술 경제성 분석 방법 및 사례」"
+      ],
+      "record_id": "rda.econ.2025.useful_life.p135.ma_daedongmul_naeyongyeonsu.root.dwaeji_beonsikdon.naeyongyeonsu.c1"
+    }
+  ]
+}

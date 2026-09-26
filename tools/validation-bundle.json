@@ -22,6 +22,11 @@
       "origin": "new",
       "sha256": "d97c8e959ae5a9d8ea9355c9044ec8079dbf523a786c90665f48a6b7bd8bfb36"
     },
+    "docs/validation/d5-rda-useful-life.json": {
+      "note": "D5 successor receipt for changed RDA useful-life bytes; historical P4 receipt retained.",
+      "origin": "new",
+      "sha256": "97bb5dd244a00a8c45959f387b0cdda26bf242e309896ff8e07304e67c2394b2"
+    },
     "requirements-validation.txt": {
       "note": "Validation install entry point; resolves to the shipped runtime requirements only.",
       "origin": "new",
@@ -48,9 +53,9 @@
       "sha256": "fc502b0c902536f89fea092cc49f6a84db17f2432e3c8c2dae95565956a1c6a6"
     },
     "tests/test_bundle_lineage.py": {
-      "note": "P1+P2 PACKAGE 계보 시험 — 실제 후보 정상 검증, 신규 파일 계약(allowlist·before=null·위장 거부) 포함 적대 합성 트리. P6: pin four new common-contract runtime files and the P5 parent tree. P9: hort_env_systems first bundle counts and parent P8 tree. | P10: P1+P2 PACKAGE 계보 시험 — 실제 후보 정상 검증, 신규 파일 계약(allowlist·before=null·위장 거부) 포함 적대 합성 트리. P6: pin four new common-contract runtime files and the P5 parent tree. P9: pins the P8 parent tree (a96a5bf, 154 files) and the common-workbook extract declared-new file. P10: parent P9 main 3c83f0c (161 files), combined 95 changes and 71 new files. | P11: P1+P2 PACKAGE 계보 시험 — 실제 후보 정상 검증, 신규 파일 계약(allowlist·before=null·위장 거부) 포함 적대 합성 트리. P6: pin four new common-contract runtime files and the P5 parent tree. P9: hort_env_systems first bundle counts and parent P8 tree. P10: 공용 인터뷰 규칙 묶음 재기준 counts and parent P9 tree. P11: parent P10 main ec8a2e8 (163 files), combined 99 changes and 72 new files. P12: pin the P11 parent tree (164 files) and check the ancestor list ends at the parent.",
+      "note": "P1+P2 PACKAGE 계보 시험 — 실제 후보 정상 검증, 신규 파일 계약(allowlist·before=null·위장 거부) 포함 적대 합성 트리. P6: pin four new common-contract runtime files and the P5 parent tree. P9: hort_env_systems first bundle counts and parent P8 tree. | P10: P1+P2 PACKAGE 계보 시험 — 실제 후보 정상 검증, 신규 파일 계약(allowlist·before=null·위장 거부) 포함 적대 합성 트리. P6: pin four new common-contract runtime files and the P5 parent tree. P9: pins the P8 parent tree (a96a5bf, 154 files) and the common-workbook extract declared-new file. P10: parent P9 main 3c83f0c (161 files), combined 95 changes and 71 new files. | P11: P1+P2 PACKAGE 계보 시험 — 실제 후보 정상 검증, 신규 파일 계약(allowlist·before=null·위장 거부) 포함 적대 합성 트리. P6: pin four new common-contract runtime files and the P5 parent tree. P9: hort_env_systems first bundle counts and parent P8 tree. P10: 공용 인터뷰 규칙 묶음 재기준 counts and parent P9 tree. P11: parent P10 main ec8a2e8 (163 files), combined 99 changes and 72 new files. P12: pin the P11 parent tree (164 files) and check the ancestor list ends at the parent. P13: provisional P12 parent pin and D5 runtime counts.",
       "origin": "new",
-      "sha256": "824aae91fb8883ebf039bdf889ff53e91c775bdc16ad1d43598a0b15f64265d8"
+      "sha256": "741a4836eca2add64de6ed3704d059e8037cf5d446597743262a11c9aeafd1e9"
     },
     "tests/test_canonical_flow.py": {
       "note": "P0-A: init/apply/check/export positive controls + C2–C6/H2/H3/H5 defect signatures; synthetic only.",
@@ -95,7 +100,7 @@
     "tests/test_hort_env_reuse.py": {
       "note": "P9 hort_env_systems reuse-registry entries: baseline entries unchanged, identification-only entries, authority-following readiness, synthetic verified success and tamper rejection. P10: pin the approved D3 renamed specialty entry while retaining nine unchanged P8 entry pins.",
       "origin": "new",
-      "sha256": "b0b5b7ff1e382f8049c53f2eb77133df87aa640066878d16e702923f114c4928"
+      "sha256": "605bbc0c4d3434b533f1a3d81c4233f07beaefd5b851fdad2be194559596d227"
     },
     "tests/test_import_isolation.py": {
       "note": "P0-A: B01 import-isolation contract under polluted PYTHONPATH.",
@@ -218,12 +223,12 @@
     "tools/runtime-changes.json": {
       "note": "누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py. P8 declares the fruit_trees first bundle (module registration, two common helper modules, fruit plan, reference-set data and guidance). P9 declares the hort_env_systems first bundle (module registration, hort plan, profile and guidance, reuse-registry entries). | P10: 누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py. P8 declares the fruit_trees first bundle (module registration, two common helper modules, fruit plan, reference-set data and guidance). P9 declares the common XLSX reuse bundle (one new runtime extract file + declared edits to registration, resolver, template guard, and reuse tests). P9-D3 declares the major-specific-precedence edits (registry dedupe, catalog base_for_major, resolver base policy, docs, tests) in the same stage. | P11: 누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py. P8 declares the fruit_trees first bundle (module registration, two common helper modules, fruit plan, reference-set data and guidance). P9 declares the hort_env_systems first bundle (module registration, hort plan, profile and guidance, reuse-registry entries). P10 declares the common interview rules bundle (SKILL.md re-touch, three baseline doc first-changes, specialty-crops premise-probes) re-based onto the P9 parent. P12 declares the industrial_insects first bundle (four read-only insect scripts, locator map, guide and premise probes as new files; nine reuse-registry entries and SKILL/gg.py updates).",
       "origin": "new",
-      "sha256": "82cf85f74b02bbf2d60b1fa28c5219eb07c0a4adabb510ad6a7d77edfbcbfdfe"
+      "sha256": "06e1fe6d6a3ffa1f16da3fa5816cc073cf0575670fe833b84e11354ab27c21bc"
     },
     "tools/validation-provenance.json": {
       "note": "This file; declares origins for the validation layer.",
       "origin": "new",
-      "sha256": "9af71ab54c20551086f14a11248f93a94ef7fccb83310ab6226ed754b3a34b4c"
+      "sha256": "1d1edae75e365cc5c0516710d89333ef487880db519bdc6f32556c7bf715e1d6"
     }
   },
   "generated_by": "tools/build_validation_bundle.py@3",
@@ -238,20 +243,20 @@
     ]
   },
   "runtime_changes": {
-    "approved_new_files": 79,
+    "approved_new_files": 81,
     "baseline_main": "29abec0ec95369de7ae9e22207349d574f1f46b7",
-    "change_count": 106,
-    "changes_sha256": "05d38fc259b04a2c31384e08be8bd7c6a7d261907aa12c8f9485b09414cc3c79",
-    "new_count": 79,
+    "change_count": 108,
+    "changes_sha256": "da4112996bc91095dfd5517e1330cc5a378aba26fdae3870c27059f6254a4cdb",
+    "new_count": 81,
     "parent_candidate": {
-      "file_count": 164,
-      "stage": "P11",
-      "tree_sha256": "2ada8256a47e5e37fa26ba2c9e6aa90bb609f4da1ef60ccfe33dcee03fdba4ce"
+      "file_count": 178,
+      "stage": "P12",
+      "tree_sha256": "79b9bc0c6479b7d79b17c9923a4133ff1bdd4fbb7ec142081c414172ccdfae61"
     },
     "schema": "knuaf-doc/runtime-changes@2",
     "spec": "tools/runtime-changes.json",
-    "spec_sha256": "82cf85f74b02bbf2d60b1fa28c5219eb07c0a4adabb510ad6a7d77edfbcbfdfe",
-    "stage": "P12",
+    "spec_sha256": "06e1fe6d6a3ffa1f16da3fa5816cc073cf0575670fe833b84e11354ab27c21bc",
+    "stage": "P13",
     "stage_lineage": [
       {
         "file_count": 75,
@@ -324,10 +329,16 @@
         "note": "P11 기준 main deeac74(PR #10 공용 인터뷰 개편 병합)의 변경 전 전체 파일 트리 해시",
         "stage": "P11",
         "tree_sha256": "2ada8256a47e5e37fa26ba2c9e6aa90bb609f4da1ef60ccfe33dcee03fdba4ce"
+      },
+      {
+        "file_count": 178,
+        "note": "D5 직전 main 955e880 clean export; provisional P13 parent",
+        "stage": "P12",
+        "tree_sha256": "79b9bc0c6479b7d79b17c9923a4133ff1bdd4fbb7ec142081c414172ccdfae61"
       }
     ],
-    "verified_count": 106
+    "verified_count": 108
   },
   "schema": "knuaf-doc/validation-bundle@3",
-  "validation_tree_sha256": "66d16c8b61a745fbd9b8d545502c238a54afb139c14475a98d7cc787d3270d97"
+  "validation_tree_sha256": "5758dfceffbfe99cc68c3abd6e3977d31957c3aca1a91d99008c3b08e6e54ede"
 }

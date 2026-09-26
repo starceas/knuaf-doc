@@ -41,7 +41,7 @@
       "origin": "new"
     },
     "tests/test_bundle_lineage.py": {
-      "note": "P1+P2 PACKAGE 계보 시험 — 실제 후보 정상 검증, 신규 파일 계약(allowlist·before=null·위장 거부) 포함 적대 합성 트리. P6: pin four new common-contract runtime files and the P5 parent tree. P9: hort_env_systems first bundle counts and parent P8 tree. | P10: P1+P2 PACKAGE 계보 시험 — 실제 후보 정상 검증, 신규 파일 계약(allowlist·before=null·위장 거부) 포함 적대 합성 트리. P6: pin four new common-contract runtime files and the P5 parent tree. P9: pins the P8 parent tree (a96a5bf, 154 files) and the common-workbook extract declared-new file. P10: parent P9 main 3c83f0c (161 files), combined 95 changes and 71 new files. | P11: P1+P2 PACKAGE 계보 시험 — 실제 후보 정상 검증, 신규 파일 계약(allowlist·before=null·위장 거부) 포함 적대 합성 트리. P6: pin four new common-contract runtime files and the P5 parent tree. P9: hort_env_systems first bundle counts and parent P8 tree. P10: 공용 인터뷰 규칙 묶음 재기준 counts and parent P9 tree. P11: parent P10 main ec8a2e8 (163 files), combined 99 changes and 72 new files. P12: pin the P11 parent tree (164 files) and check the ancestor list ends at the parent.",
+      "note": "P1+P2 PACKAGE 계보 시험 — 실제 후보 정상 검증, 신규 파일 계약(allowlist·before=null·위장 거부) 포함 적대 합성 트리. P6: pin four new common-contract runtime files and the P5 parent tree. P9: hort_env_systems first bundle counts and parent P8 tree. | P10: P1+P2 PACKAGE 계보 시험 — 실제 후보 정상 검증, 신규 파일 계약(allowlist·before=null·위장 거부) 포함 적대 합성 트리. P6: pin four new common-contract runtime files and the P5 parent tree. P9: pins the P8 parent tree (a96a5bf, 154 files) and the common-workbook extract declared-new file. P10: parent P9 main 3c83f0c (161 files), combined 95 changes and 71 new files. | P11: P1+P2 PACKAGE 계보 시험 — 실제 후보 정상 검증, 신규 파일 계약(allowlist·before=null·위장 거부) 포함 적대 합성 트리. P6: pin four new common-contract runtime files and the P5 parent tree. P9: hort_env_systems first bundle counts and parent P8 tree. P10: 공용 인터뷰 규칙 묶음 재기준 counts and parent P9 tree. P11: parent P10 main ec8a2e8 (163 files), combined 99 changes and 72 new files. P12: pin the P11 parent tree (164 files) and check the ancestor list ends at the parent. P13: provisional P12 parent pin and D5 runtime counts.",
       "origin": "new"
     },
     "tests/test_canonical_flow.py": {
@@ -181,6 +181,10 @@
     },
     "tests/test_insect_premise_probes.py": {
       "note": "P12 insect premise-probes document follows the common interview format and links same-decision existing field_ids only; distinct decisions stay proposals.",
+      "origin": "new"
+    },
+    "docs/validation/d5-rda-useful-life.json": {
+      "note": "D5 successor receipt for changed RDA useful-life bytes; historical P4 receipt retained.",
       "origin": "new"
     }
   },

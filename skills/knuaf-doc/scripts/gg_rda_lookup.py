@@ -98,11 +98,27 @@ def _pack_records(pack):
             _CACHE[key] = []
         else:
             rows = _prov.load_pack_records(path, pack["pack_id"])
-            _CACHE[key] = [
-                dict(row.record,
-                     audit_key=_prov.audit_key_dict(row.audit_key))
-                for row in rows if row.record is not None
-            ]
+            manifest_path = path.with_name("manifest.json")
+            status_by_line = {}
+            if manifest_path.is_file():
+                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                if rows and manifest.get("records_file_sha256") == rows[0].audit_key[1]:
+                    status_by_line = {
+                        row["physical_line"]: row["catalog_status"]
+                        for row in manifest.get("rows", [])
+                    }
+            annotated = []
+            for row in rows:
+                if row.record is None:
+                    continue
+                verification = dict(row.record.get("verification") or {})
+                verification["catalog_status"] = status_by_line.get(
+                    row.physical_jsonl_line_1based)
+                annotated.append(dict(
+                    row.record,
+                    audit_key=_prov.audit_key_dict(row.audit_key),
+                    verification=verification))
+            _CACHE[key] = annotated
     return _CACHE[key]
 
 
@@ -213,9 +229,15 @@ def _tag_regional_caveat(record):
     return tagged
 
 
+def _is_rejected(record):
+    return (record.get("extraction") or {}).get("status") == "rejected"
+
+
 def _filter_records(records, *, crop_key, kind, year, form):
     matched = []
     for rec in records:
+        if _is_rejected(rec):
+            continue
         if crop_key:
             if not (_crop_matches(crop_key, rec.get("crop")) or _record_identity(rec) == crop_key):
                 continue
