@@ -935,7 +935,10 @@ def audit_public_documents(docs, source, expected_sha=SOURCE_SHA):
             or not isinstance(x.get("cell"), str) or not CELL.fullmatch(x["cell"])
             for x in tec) or len({(x["sheet"], x["cell"]) for x in tec}) != len(tec)):
         add("teacher_example_coords", FILES[2] + ".teacher_example_coords")
-    _TREE_FIELDS = ("required_if", "forbidden_if", "allowed_values")
+    # These are contract-defined control words, not copied teaching text.
+    # The exception is path-specific: arbitrary values nested under these
+    # fields still pass through the source-string/numeric/digest audit.
+    condition_literals = {"부지", "시설", "재배", "해당 없음"}
     for name, doc in docs.items():
         for path, field, value in _walk(doc):
             loc = name + "." + ".".join(str(x) for x in path)
@@ -946,7 +949,18 @@ def audit_public_documents(docs, source, expected_sha=SOURCE_SHA):
                                                or "hash" in field.lower() and field != "source_sha256"):
                     add("forbidden_key", loc + "." + field)
                 continue
-            if any(x in _TREE_FIELDS for x in path if isinstance(x, str)):
+            approved_control = False
+            if name == FILES[1] and len(path) >= 3 and path[0] == "parameters":
+                key = path[1]
+                if path[-1] == "allowed_values" and isinstance(field, int):
+                    approved = ({"hired", "self"} if key.endswith(".labor_kind")
+                                else {"confirmed_absent"} if key.startswith("category_absence.")
+                                else set())
+                    approved_control = value in approved
+                elif (path[-1] == "key_equals" and field == 1
+                      and ("required_if" in path or "forbidden_if" in path)):
+                    approved_control = value in condition_literals
+            if approved_control:
                 continue
             if isinstance(value, (int, float)) and not isinstance(value, bool):
                 if field not in {"entry_count", "param_count", "removed_keys_count",
@@ -1214,9 +1228,16 @@ def _fact_snapshot(project):
     facts = project.get("facts", {})
     selected = {fid: fact for fid, fact in facts.items()
                 if isinstance(fact, dict) and str(fact.get("field_id", "")).startswith("hort_env_systems.fin.")}
-    rows = [{"id": fid, "field_id": f.get("field_id"), "answer_state": f.get("answer_state"),
-             "revision": f.get("revision"), "value": f.get("value"), "unit": f.get("unit"),
-             "period": f.get("period")} for fid, f in sorted(selected.items())]
+    rows = []
+    for fid, f in sorted(selected.items()):
+        row = {"id": fid, "field_id": f.get("field_id"),
+               "answer_state": f.get("answer_state"), "revision": f.get("revision"),
+               "value": f.get("value"), "unit": f.get("unit"),
+               "period": f.get("period")}
+        for semantic in ("per_unit", "specification", "conversion_evidence"):
+            if semantic in f:
+                row[semantic] = f[semantic]
+        rows.append(row)
     return selected, digest(json.dumps(rows, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode())
 
 
@@ -1258,6 +1279,81 @@ def _check_value(key, spec, fact):
         _serial(value)
         return value
     raise Held("fact_type_invalid")
+
+
+def _check_fact_unit(key, spec, fact):
+    """A declared semantic override must agree with the public parameter contract.
+
+    Legacy canonical facts leave these fields null; in that case the namespaced
+    field ID supplies the unit and basis defined by the parameter registry.
+    A caller cannot attach a conflicting unit or an unapproved conversion.
+    """
+    unit = fact.get("unit")
+    if unit is not None and unit != spec.get("unit_code"):
+        raise Held("fact_unit_mismatch", key)
+    basis = fact.get("per_unit")
+    if basis is not None and basis != spec.get("per_unit"):
+        raise Held("fact_per_unit_mismatch", key)
+    for field in ("specification", "conversion_evidence"):
+        declared = fact.get(field)
+        if declared is not None and declared != spec.get(field):
+            raise Held("fact_" + field + "_mismatch", key)
+
+
+def _check_fact_period(key, spec, fact, start_year, values):
+    """Bind an explicit fact period to its relative finance axis."""
+    period = fact.get("period")
+    if period is None:
+        return
+    axis = spec.get("period_axis")
+    if isinstance(period, dict):
+        year, month = period.get("year"), period.get("month")
+        if set(period) - {"year", "month", "day"}:
+            raise Held("fact_period_invalid", key)
+    elif isinstance(period, int) and not isinstance(period, bool):
+        year, month = period, None
+    elif isinstance(period, str):
+        match = re.fullmatch(r"([0-9]{4})(?:-([0-9]{2})(?:-[0-9]{2})?)?", period)
+        if not match:
+            raise Held("fact_period_invalid", key)
+        year = int(match.group(1))
+        month = int(match.group(2)) if match.group(2) else None
+    else:
+        raise Held("fact_period_invalid", key)
+    if (not isinstance(year, int) or isinstance(year, bool)
+            or month is not None and (not isinstance(month, int) or not 1 <= month <= 12)):
+        raise Held("fact_period_invalid", key)
+    y_match = re.search(r"(?:^|\.)y([1-5])(?:\.|$)", key)
+    m_match = re.search(r"(?:^|\.)m(1[0-2]|[1-9])(?:\.|$)", key)
+    plan_year = start_year + int(y_match.group(1)) - 1 if y_match else None
+    if axis == "base_date_start_year_minus_1_end":
+        allowed_year = start_year - 1
+    elif axis == "loan_contract_year":
+        slot = re.match(r"loan\.slot([1-5])\.", key)
+        draw = values.get(f"loan.slot{slot.group(1)}.execution_year") if slot else None
+        allowed_year = draw if draw is not None else start_year
+    elif axis == "investment_acquisition_or_service_year":
+        slot = re.match(r"invest\.slot([1-9])\.", key)
+        service = values.get(f"invest.slot{slot.group(1)}.service_start_year") if slot else None
+        allowed_year = service if service is not None else plan_year
+    elif axis in ("plan_year", "plan_year_month"):
+        allowed_year = plan_year
+    elif axis in ("observation_year", "observation_year_month"):
+        if not 1900 <= year <= start_year:
+            raise Held("fact_period_axis_mismatch", key)
+        allowed_year = None
+    elif axis in ("one_time_or_observation", "all_plan_years"):
+        if not 1900 <= year <= start_year + 4:
+            raise Held("fact_period_axis_mismatch", key)
+        allowed_year = None
+    else:
+        raise Held("fact_period_axis_unclassified", key)
+    if allowed_year is not None and year != allowed_year:
+        raise Held("fact_period_axis_mismatch", key)
+    if m_match and month is not None and month != int(m_match.group(1)):
+        raise Held("fact_period_axis_mismatch", key)
+    if axis in ("plan_year", "loan_contract_year", "observation_year") and month is not None:
+        raise Held("fact_period_axis_mismatch", key)
 
 
 def _has_evidence(fact):
@@ -1325,6 +1421,7 @@ def _facts(project, params):
         if not rows:
             continue
         fact = rows[0]
+        _check_fact_unit(key, spec, fact)
         state = fact.get("answer_state")
         if state == "explicit_none":
             if fact.get("value") is not None or not _has_evidence(fact):
@@ -1419,12 +1516,17 @@ def _facts(project, params):
         if "plan.base_date" in params \
                 and values.get("plan.base_date") != f"{start_year - 1}-12-31":
             raise Held("base_date_unsupported")
+    for key, fact in present.items():
+        _check_fact_period(key, params[key], fact, start_year, values)
     for key, value in values.items():
         if "stock_qty" in key and isinstance(value, (int, Decimal)) and value > 0:
             raise Held("positive_inventory_unsupported")
     for year in range(1, 6):
         produced = [values.get(f"sales.y{year}.m{m}.production_qty") for m in range(1, 13)]
-        if all(v is not None for v in produced) and all(v == 0 for v in produced):
+        marketability = values.get(f"sales.y{year}.marketability_rate")
+        if (all(v is not None for v in produced)
+                and marketability is not None
+                and sum(Decimal(str(v)) for v in produced) * Decimal(str(marketability)) == 0):
             raise Held("zero_sales_year_unsupported")
     for slot in range(1, 6):
         members = {k: v for k, v in values.items()
@@ -1484,7 +1586,7 @@ def compare_raw_cache(expected, actual, unit_code):
         raise Held("cache_unit_unclassified")
     if unit_code == "KRW_1000" or unit_code.startswith("KRW_PER_"):
         tolerance = Decimal("0.001")
-    elif unit_code == "RATIO":
+    elif unit_code in {"RATIO", "SCALAR"}:
         tolerance = Decimal("0.000000001")
     elif unit_code in {"COUNT", "YEAR", "YEARS", "MONTH", "SALES_UNIT", "ITEM_UNIT",
                        "DATE", "HOUR", "M2", "M", "KM", "M_PER_S", "HOUR_PER_DAY",
@@ -1576,6 +1678,14 @@ def check_transform_receipt(path):
                   "params_sha256", "canonical_facts_sha256", "major_authorization"):
         if prior.get(field) != rec.get(field):
             raise Held("transform_receipt_stale")
+    plan_inputs = prior.get("input_artifacts")
+    transform_inputs = rec.get("input_artifacts")
+    if (not isinstance(plan_inputs, list) or len(plan_inputs) != 1
+            or not isinstance(transform_inputs, list) or len(transform_inputs) != 1
+            or not isinstance(plan_inputs[0], dict)
+            or plan_inputs != transform_inputs
+            or plan_inputs[0].get("sha256") != SOURCE_SHA):
+        raise Held("transform_receipt_invalid")
     import gg_core
     project = gg_core.load(project_root)
     if project["revision"] != rec.get("project_revision"):
@@ -1584,11 +1694,20 @@ def check_transform_receipt(path):
         raise Held("transform_receipt_stale")
     if _authorize(project_root).to_dict() != rec.get("major_authorization"):
         raise Held("transform_receipt_stale")
-    for entry in rec.get("input_artifacts", []) + rec.get("output_artifacts", []):
-        if (not isinstance(entry, dict) or file_digest(entry["path"]) != entry.get("sha256")
-                or Path(entry["path"]).stat().st_size != entry.get("size")):
-            raise Held("transform_receipt_stale")
-    if len(rec.get("output_artifacts", [])) != 1 or not re.fullmatch(r"[a-f0-9]{64}", rec.get("previous_receipt_sha256") or ""):
+    outputs = rec.get("output_artifacts")
+    if (not isinstance(outputs, list) or len(outputs) != 1
+            or not re.fullmatch(r"[a-f0-9]{64}", rec.get("previous_receipt_sha256") or "")):
+        raise Held("transform_receipt_invalid")
+    for entry in transform_inputs + outputs:
+        if not isinstance(entry, dict) or not isinstance(entry.get("path"), str):
+            raise Held("transform_receipt_invalid")
+        try:
+            if (file_digest(entry["path"]) != entry.get("sha256")
+                    or Path(entry["path"]).stat().st_size != entry.get("size")):
+                raise Held("transform_receipt_stale")
+        except OSError as exc:
+            raise Held("transform_receipt_stale") from exc
+    if Path(outputs[0]["path"]).resolve() == Path(transform_inputs[0]["path"]).resolve():
         raise Held("transform_receipt_invalid")
     return rec
 
@@ -1904,39 +2023,193 @@ def _label_ref(term, caches, sheet):
 
 
 def _check_native_receipt(path, trec, trec_path, project, fact_sha, auth):
-    """Native-stage receipt: chain, freshness and output artifact binding."""
+    """Validate the manifest published by the guarded gg_office Excel path.
+
+    The Office manifest itself is the native receipt.  It binds the actual
+    engine invocation, transformed input, native workbook and exported PDF;
+    a lane-written substitute is not an accepted production proof.
+    """
     rec = _json(path)
-    if (rec.get("schema") != SCHEMA or rec.get("status") != "pass"
-            or rec.get("stage") != "native" or rec.get("profile") != PROFILE
-            or rec.get("major_id") != "hort_env_systems" or rec.get("module_version") != "0.2.0"
-            or rec.get("source_sha256") != SOURCE_SHA):
+    val = rec.get("validation")
+    if (rec.get("status") != "converted" or rec.get("engine") != "Microsoft Excel"
+            or not isinstance(rec.get("engine_result"), str)
+            or not rec["engine_result"].strip() or not isinstance(val, dict)
+            or val.get("finance_profile") != PROFILE
+            or trec.get("canonical_facts_sha256") != fact_sha
+            or trec.get("project_revision") != project["revision"]
+            or rec.get("major_authorization") != [auth.to_dict()]):
         raise Held("native_receipt_invalid")
-    if (rec.get("transform_map_sha256") != file_digest(REF / FILES[0])
-            or rec.get("param_registry_sha256") != file_digest(REF / FILES[1])):
-        raise Held("native_receipt_stale")
-    prior_path = rec.get("previous_receipt_path")
-    if (not isinstance(prior_path, str)
-            or Path(prior_path).resolve() != Path(trec_path).resolve()
-            or rec.get("previous_receipt_sha256") != file_digest(trec_path)):
-        raise Held("native_receipt_stale")
-    inputs = rec.get("input_artifacts") or []
-    outputs = rec.get("output_artifacts") or []
+    binding = val.get("template_receipt")
     expected_input = (trec.get("output_artifacts") or [{}])[0]
-    if len(inputs) != 1 or len(outputs) != 1 or \
-            inputs[0].get("sha256") != expected_input.get("sha256"):
+    trec_sha = file_digest(trec_path)
+    if (not isinstance(binding, dict)
+            or binding.get("authority") != "hort_transform_receipt"
+            or binding.get("sha256") != trec_sha
+            or binding.get("input_sha256") != expected_input.get("sha256")
+            or not isinstance(binding.get("path"), str)
+            or Path(binding["path"]).resolve() != Path(trec_path).resolve()
+            or val.get("previous_receipt_sha256") != trec_sha):
+        raise Held("native_receipt_stale")
+    input_path = rec.get("input_file")
+    if (not isinstance(input_path, str)
+            or Path(input_path).resolve() != Path(expected_input.get("path", "")).resolve()
+            or rec.get("input_sha256") != expected_input.get("sha256")):
+        raise Held("native_receipt_stale")
+    native_path, pdf_path = rec.get("published_office"), rec.get("published_pdf")
+    if (not isinstance(native_path, str) or not isinstance(pdf_path, str)
+            or Path(native_path).resolve().parent != Path(path).resolve().parent
+            or Path(pdf_path).resolve().parent != Path(path).resolve().parent):
         raise Held("native_receipt_invalid")
-    native_path = outputs[0].get("path")
-    if (not isinstance(native_path, str)
-            or file_digest(native_path) != outputs[0].get("sha256")
-            or Path(native_path).stat().st_size != outputs[0].get("size")):
+    try:
+        if (file_digest(input_path) != rec["input_sha256"]
+                or file_digest(native_path) != rec.get("published_office_sha256")
+                or file_digest(pdf_path) != rec.get("published_pdf_sha256")):
+            raise Held("native_receipt_stale")
+    except OSError as exc:
+        raise Held("native_receipt_stale") from exc
+    meta_xlsx, meta_pdf = val.get("excel"), val.get("pdf")
+    coverage = val.get("native_pdf_coverage")
+    if (not isinstance(meta_xlsx, dict) or not isinstance(meta_pdf, dict)
+            or not isinstance(coverage, dict)
+            or meta_xlsx.get("valid") is not True or meta_pdf.get("valid") is not True
+            or meta_xlsx.get("sha256") != rec["published_office_sha256"]
+            or meta_pdf.get("sha256") != rec["published_pdf_sha256"]
+            or meta_xlsx.get("size_bytes") != Path(native_path).stat().st_size
+            or meta_pdf.get("size_bytes") != Path(pdf_path).stat().st_size
+            or not isinstance(meta_pdf.get("pages"), int)
+            or meta_pdf["pages"] < 18
+            or coverage.get("worksheet_count") != 18
+            or coverage.get("pdf_pages") != meta_pdf["pages"]
+            or coverage.get("status") != "page_count_floor_met"
+            or val.get("structure_issues") != []
+            or val.get("school_issues") != []):
+        raise Held("native_receipt_invalid")
+    # Re-read both published formats, rather than trusting a copied manifest.
+    import gg_office
+    try:
+        checked_xlsx = gg_office.validate_office_file(Path(native_path), "excel")
+        checked_pdf = gg_office.validate_pdf_file(Path(pdf_path))
+    except (OSError, RuntimeError, ValueError) as exc:
+        raise Held("native_artifact_invalid") from exc
+    if checked_xlsx != meta_xlsx or checked_pdf != meta_pdf:
         raise Held("native_receipt_stale")
-    if (rec.get("project_root") != trec.get("project_root")
-            or rec.get("project_revision") != project["revision"]
-            or rec.get("canonical_facts_sha256") != fact_sha
-            or rec.get("params_sha256") != trec.get("params_sha256")
-            or rec.get("major_authorization") != auth.to_dict()):
-        raise Held("native_receipt_stale")
-    return rec, native_path
+    return rec, native_path, pdf_path
+
+
+def _independent_model(source, transform, params, values):
+    """Build expected formulas from H01 and the public map, never native caches."""
+    from gg_hort_formula_eval import Evaluator, Parser, normalize_ref
+    formulas, defaults, inputs = {}, {}, {}
+    original_cells = {}
+    with zipfile.ZipFile(source) as z:
+        shared = load_shared(z)
+        for sheet, spath in workbook_sheets(z):
+            dom, cells, _, _ = _sheet_structure(z.read(spath), spath)
+            _expand_shared(dom)
+            original_cells[sheet] = cells
+            for ref, cell in cells.items():
+                coord = (sheet, ref)
+                f = _direct(cell, "f")
+                if f is not None:
+                    formula = "=" + _text(f)
+                    if f.getAttribute("t") == "array" and f.getAttribute("ref"):
+                        ast = Parser(formula).parse()
+                        if (ast[0] == "binary" and ast[1] == ":"
+                                and ast[2][0] == "ref" and ast[3][0] == "ref"):
+                            s1, a = normalize_ref(ast[2][1], sheet)
+                            s2, b = normalize_ref(ast[3][1], s1)
+                            targets = expand_ref(f.getAttribute("ref"))
+                            source_refs = expand_ref(a + ":" + b)
+                            if s1 == s2 and len(targets) == len(source_refs):
+                                quoted = s1.replace("'", "''")
+                                for target, source_ref in zip(targets, source_refs):
+                                    formulas[(sheet, target)] = f"='{quoted}'!{source_ref}"
+                                continue
+                        # A scalar or unsupported array stays evaluable only
+                        # at its anchor; a registered numeric member without
+                        # a derivable formula is refused below.
+                        formulas[coord] = formula
+                    else:
+                        formulas[coord] = formula
+                    continue
+                try:
+                    raw = _original_value(cell, shared)
+                except Held:
+                    continue
+                if cell.getAttribute("t") in ("s", "str", "inlineStr"):
+                    defaults[coord] = raw
+                else:
+                    try:
+                        defaults[coord] = float(Decimal(raw))
+                    except (InvalidOperation, ValueError):
+                        defaults[coord] = raw
+    for e in transform["entries"]:
+        coord = (e["sheet"], e["cell"])
+        formulas.pop(coord, None)
+        defaults.pop(coord, None)
+        if e.get("after_formula"):
+            formulas[coord] = e["after_formula"]
+        elif e["action"] == "input_param":
+            key = e["param_key"]
+            value = values.get(key)
+            if value is not None:
+                if params[key].get("unit_code") == "DATE":
+                    inputs[coord] = float(_serial(value))
+                elif isinstance(value, (int, Decimal)) and not isinstance(value, bool):
+                    inputs[coord] = float(value)
+                else:
+                    inputs[coord] = value
+        elif e["action"] == "label_template":
+            kind, payload = _label(e, original_cells, shared, values, params)
+            if kind == "formula":
+                formulas[coord] = payload
+            else:
+                inputs[coord] = payload
+    actions = [{"sheet": sh, "cell": ref, "after_formula": formula}
+               for (sh, ref), formula in formulas.items()]
+    return Evaluator(actions, inputs=inputs, defaults=defaults), formulas
+
+
+def _verify_independent_formulas(source, docs, params, values, registry,
+                                 caches, cond_by_coord, counts):
+    """Evaluate every native numeric formula from facts and static formulas."""
+    from gg_hort_formula_eval import FormulaError
+    model, formulas = _independent_model(source, docs[FILES[0]], params, values)
+    for row in registry:
+        sheet, ref = row["sheet"], row["cell"]
+        coord = (sheet, ref)
+        if (row.get("expected_state") == "formula"
+                and row["result_kind"] in ("numeric_required", "conditional_unused_na")
+                and coord not in formulas):
+            raise Held("verify_independent_unmodeled", f"{sheet}!{ref}")
+        if coord not in formulas:
+            continue
+        kind = row["result_kind"]
+        if kind not in ("numeric_required", "conditional_unused_na"):
+            continue
+        cache = caches.get(sheet, {}).get(ref)
+        actual = cache[1] if cache else None
+        if not isinstance(actual, (int, float, Decimal)) or isinstance(actual, bool):
+            if kind == "conditional_unused_na":
+                # The registry's type gate above has already proved the
+                # string/empty/#N/A branch is licensed for this fact state.
+                counts["non_numeric_conditional"] += 1
+                continue
+            raise Held("verify_independent_non_numeric", f"{sheet}!{ref}")
+        try:
+            expected = model.cell(sheet, ref)
+        except (FormulaError, RecursionError, OverflowError, ZeroDivisionError) as exc:
+            raise Held("verify_independent_unresolved", f"{sheet}!{ref}") from exc
+        if not isinstance(expected, (int, float, Decimal)) or isinstance(expected, bool):
+            raise Held("verify_independent_unresolved", f"{sheet}!{ref}")
+        unit = row.get("unit")
+        if unit in (None, "UNKNOWN", "TEXT"):
+            raise Held("verify_unit_unclassified", f"{sheet}!{ref}")
+        try:
+            compare_raw_cache(expected, actual, unit)
+        except Held as exc:
+            raise Held(exc.code, f"{sheet}!{ref}") from exc
+        counts["independent_formula_checked"] += 1
 
 
 def verify(project_root, source, transform_receipt, native_receipt, receipt_path):
@@ -1945,8 +2218,8 @@ def verify(project_root, source, transform_receipt, native_receipt, receipt_path
         raise Held("i1_design_disposition_required")
     docs, project, auth, values, derivations, fact_sha = _load_context(project_root, source)
     trec = check_transform_receipt(transform_receipt)
-    nrec, native_path = _check_native_receipt(native_receipt, trec, transform_receipt,
-                                            project, fact_sha, auth)
+    nrec, native_path, pdf_path = _check_native_receipt(
+        native_receipt, trec, transform_receipt, project, fact_sha, auth)
     caches = _native_caches(native_path)
     registry = docs[FILES[2]]["registry"]
     entries = {(e["sheet"], e["cell"]): e for e in docs[FILES[0]]["entries"]}
@@ -2122,6 +2395,8 @@ def verify(project_root, source, transform_receipt, native_receipt, receipt_path
             unit = "KRW_1000"
         compare_raw_cache(expected, actual, unit)
         counts["oracle_checked"] += 1
+    _verify_independent_formulas(source, docs, params, values, registry,
+                                 caches, cond_by_coord, counts)
     sheet17 = "17. 추정대차대조표"
     for col in "CDEFGH":
         left = _target_num(caches, sheet17, f"{col}30")
@@ -2161,7 +2436,7 @@ def verify(project_root, source, transform_receipt, native_receipt, receipt_path
     rec = _receipt("verify", project, auth, source, docs, fact_sha, values,
                    native_receipt, project_root)
     rec["input_artifacts"] = [_artifact(transform_receipt), _artifact(native_receipt),
-                              _artifact(native_path)]
+                              _artifact(native_path), _artifact(pdf_path)]
     rec["verify_counts"] = dict(counts)
     _write_receipt(receipt_path, rec)
     return rec

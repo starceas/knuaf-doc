@@ -119,10 +119,11 @@ class RealTreeTests(ContractCase):
                              f"errors: {report['errors']!r}")
             rc = report["runtime_changes"]
             self.assertEqual(rc["declared_count"], rc["verified"])
-            # P13 (horticulture finance bundle) declares four new runtime
-            # files on top of P12.
-            self.assertEqual(110, rc["verified"])
-            self.assertEqual(83, rc["new_count"])
+            # P13 (horticulture finance bundle) declares six new runtime
+            # files on top of P12 — four at commit fbe36ea plus the two
+            # I4-FIX helpers folded into the same stage.
+            self.assertEqual(112, rc["verified"])
+            self.assertEqual(85, rc["new_count"])
         else:
             self.assertNotEqual("ok", report["status"])
             self.assertIn("declared_missing", _codes(report))
@@ -142,9 +143,9 @@ class RealTreeTests(ContractCase):
         self.assertEqual("29abec0ec95369de7ae9e22207349d574f1f46b7",
                          link["baseline_main"])
         # P13's parent is the accepted P12 tree (178 files).
-        self.assertEqual(110, link["change_count"])
-        self.assertEqual(83, link["new_count"])
-        self.assertEqual(83, link["approved_new_files"])
+        self.assertEqual(112, link["change_count"])
+        self.assertEqual(85, link["new_count"])
+        self.assertEqual(85, link["approved_new_files"])
         self.assertEqual("P12", link["parent_candidate"]["stage"])
         self.assertEqual(178, link["parent_candidate"]["file_count"])
         self.assertEqual(

@@ -36,12 +36,20 @@
       "note": "P0-A: shared harness pinning imports to <repo>/skills/knuaf-doc/scripts and evicting foreign gg_* modules; no dev-tree fallback. repair-n1/N1: synthetic module stubs for dependency-gate tests.",
       "origin": "new"
     },
+    "tests/fixtures/hort_finance/formula_eval.py": {
+      "note": "P13: bounded public JSON-formula evaluator for the proposed hort finance formulas — lazily selected IF branches, FormulaError for missing inputs, no workbook engine.",
+      "origin": "new"
+    },
+    "tests/fixtures/hort_finance/synthetic.py": {
+      "note": "P13: public-only synthetic OOXML fixture builder for the H01 transformer suite — eighteen-sheet roster, no teaching-cell values.",
+      "origin": "new"
+    },
     "tests/regression_inventory.json": {
       "note": "P0-A: machine source of truth mapping each known defect to its test and owning gate (P1–P5/deferred).",
       "origin": "new"
     },
     "tests/test_bundle_lineage.py": {
-      "note": "P1+P2 PACKAGE 계보 시험 — 실제 후보 정상 검증, 신규 파일 계약(allowlist·before=null·위장 거부) 포함 적대 합성 트리. P6: pin four new common-contract runtime files and the P5 parent tree. P9: hort_env_systems first bundle counts and parent P8 tree. | P10: P1+P2 PACKAGE 계보 시험 — 실제 후보 정상 검증, 신규 파일 계약(allowlist·before=null·위장 거부) 포함 적대 합성 트리. P6: pin four new common-contract runtime files and the P5 parent tree. P9: pins the P8 parent tree (a96a5bf, 154 files) and the common-workbook extract declared-new file. P10: parent P9 main 3c83f0c (161 files), combined 95 changes and 71 new files. | P11: P1+P2 PACKAGE 계보 시험 — 실제 후보 정상 검증, 신규 파일 계약(allowlist·before=null·위장 거부) 포함 적대 합성 트리. P6: pin four new common-contract runtime files and the P5 parent tree. P9: hort_env_systems first bundle counts and parent P8 tree. P10: 공용 인터뷰 규칙 묶음 재기준 counts and parent P9 tree. P11: parent P10 main ec8a2e8 (163 files), combined 99 changes and 72 new files. P12: pin the P11 parent tree (164 files) and check the ancestor list ends at the parent. | P13: pin the P12 parent tree (178 files), stage P13 and the four new declared-new files' stage/owner sets.",
+      "note": "P1+P2 PACKAGE 계보 시험 — 실제 후보 정상 검증, 신규 파일 계약(allowlist·before=null·위장 거부) 포함 적대 합성 트리. P6: pin four new common-contract runtime files and the P5 parent tree. P9: hort_env_systems first bundle counts and parent P8 tree. | P10: P1+P2 PACKAGE 계보 시험 — 실제 후보 정상 검증, 신규 파일 계약(allowlist·before=null·위장 거부) 포함 적대 합성 트리. P6: pin four new common-contract runtime files and the P5 parent tree. P9: pins the P8 parent tree (a96a5bf, 154 files) and the common-workbook extract declared-new file. P10: parent P9 main 3c83f0c (161 files), combined 95 changes and 71 new files. | P11: P1+P2 PACKAGE 계보 시험 — 실제 후보 정상 검증, 신규 파일 계약(allowlist·before=null·위장 거부) 포함 적대 합성 트리. P6: pin four new common-contract runtime files and the P5 parent tree. P9: hort_env_systems first bundle counts and parent P8 tree. P10: 공용 인터뷰 규칙 묶음 재기준 counts and parent P9 tree. P11: parent P10 main ec8a2e8 (163 files), combined 99 changes and 72 new files. P12: pin the P11 parent tree (164 files) and check the ancestor list ends at the parent. | P13: pin the P12 parent tree (178 files), stage P13 and the four new declared-new files' stage/owner sets. | I4-FIX(P13): same-stage counts re-pinned to 112 changes / 85 new after the two new runtime files.",
       "origin": "new"
     },
     "tests/test_canonical_flow.py": {
@@ -54,6 +62,10 @@
     },
     "tests/test_excel_template_guard.py": {
       "note": "P9 C6 layout-guard tests: detect_layout anchors, legacy/OK-edited map refusal, reviewed_custom variant match/mismatch on synthetic sources (no real bytes).",
+      "origin": "new"
+    },
+    "tests/test_finance_profile_gate.py": {
+      "note": "P13: finance profile migration pre-staging negatives — writers and native boundary never reached on missing/unsupported profiles, synthetic only.",
       "origin": "new"
     },
     "tests/test_finance_scope.py": {
@@ -80,8 +92,48 @@
       "note": "P9 hort_env_systems reuse-registry entries: baseline entries unchanged, identification-only entries, authority-following readiness, synthetic verified success and tamper rejection. P10: pin the approved D3 renamed specialty entry while retaining nine unchanged P8 entry pins. | P13: PROFILE_DECLARED_SHA re-pinned to the 0.2.0 profile hash.",
       "origin": "new"
     },
+    "tests/test_hort_finance_contract.py": {
+      "note": "P13: Astra-4 counterexamples evaluated from the proposed JSON formulas with the bounded evaluator and synthetic fixtures. | I4-FIX(P13): allowed_values 등 중첩 공개 값 검사 반례 추가.",
+      "origin": "new"
+    },
+    "tests/test_hort_finance_pipeline.py": {
+      "note": "P13: end-to-end plan -> transform -> native -> verify chain on synthetic fixture bytes and synthetic contracts. I3D: teacher_image residue counterexamples included. | I4-FIX(P13): 공식 manifest·PDF 합성 fixture와 영수증·입력 의미·수치 캐시 반례 추가.",
+      "origin": "new"
+    },
+    "tests/test_hort_workbook.py": {
+      "note": "P13: I1 transformer tests on generated public fixture bytes only.",
+      "origin": "new"
+    },
     "tests/test_import_isolation.py": {
       "note": "P0-A: B01 import-isolation contract under polluted PYTHONPATH.",
+      "origin": "new"
+    },
+    "tests/test_insect_cli.py": {
+      "note": "P12 insect-plan/insect-evidence CLI stay read-only (project tree bytes unchanged on success and failure), quiet (no input path or marker on stdout/stderr) and carry no body/finance/authorization keys.",
+      "origin": "new"
+    },
+    "tests/test_insect_document.py": {
+      "note": "P12 insect document plan: strict selection parsing, use/adapt and role-fit rules, unresolved-page refusal, superseded-filtered question states, output/capability checks on synthetic modules, no answer values.",
+      "origin": "new"
+    },
+    "tests/test_insect_evidence.py": {
+      "note": "P12 insect evidence review: conflict axis derived from receipt relations (display rounding vs difference), farm-count conflict kept unresolved, fly applicability unverified, required axes, no approval candidate.",
+      "origin": "new"
+    },
+    "tests/test_insect_precedents.py": {
+      "note": "P12 precedent map invariants (closed keys, fixed verification-code table, 145 rows incl. five added gap pages, F0 tables 1-24, title/name identity with no student ID) and the fully isolated identity-check CLI.",
+      "origin": "new"
+    },
+    "tests/test_insect_premise_probes.py": {
+      "note": "P12 insect premise-probes document follows the common interview format and links same-decision existing field_ids only; distinct decisions stay proposals.",
+      "origin": "new"
+    },
+    "tests/test_insect_reuse_registry.py": {
+      "note": "P12 industrial_insects reuse-registry entries: exact identity, per-source keys without inheritance, lineage/catalog/authority gating, artifact tamper, HWP needs_excerpt, R0/R1 reference_only role_mismatch, no student ID.",
+      "origin": "new"
+    },
+    "tests/test_insect_source_receipt.py": {
+      "note": "P12 R0/R1 receipt: hash-before-parse, non-regular/symlink/FIFO refusal, no hash override in the public API, per-field origin bases, whole-parse output/logging isolation, runtime conflict locus; synthetic fixtures without R1 values.",
       "origin": "new"
     },
     "tests/test_major_guard_contract.py": {
@@ -153,58 +205,6 @@
     },
     "tools/validation-provenance.json": {
       "note": "This file; declares origins for the validation layer.",
-      "origin": "new"
-    },
-    "tests/test_insect_cli.py": {
-      "note": "P12 insect-plan/insect-evidence CLI stay read-only (project tree bytes unchanged on success and failure), quiet (no input path or marker on stdout/stderr) and carry no body/finance/authorization keys.",
-      "origin": "new"
-    },
-    "tests/test_insect_document.py": {
-      "note": "P12 insect document plan: strict selection parsing, use/adapt and role-fit rules, unresolved-page refusal, superseded-filtered question states, output/capability checks on synthetic modules, no answer values.",
-      "origin": "new"
-    },
-    "tests/test_insect_precedents.py": {
-      "note": "P12 precedent map invariants (closed keys, fixed verification-code table, 145 rows incl. five added gap pages, F0 tables 1-24, title/name identity with no student ID) and the fully isolated identity-check CLI.",
-      "origin": "new"
-    },
-    "tests/test_insect_source_receipt.py": {
-      "note": "P12 R0/R1 receipt: hash-before-parse, non-regular/symlink/FIFO refusal, no hash override in the public API, per-field origin bases, whole-parse output/logging isolation, runtime conflict locus; synthetic fixtures without R1 values.",
-      "origin": "new"
-    },
-    "tests/test_insect_evidence.py": {
-      "note": "P12 insect evidence review: conflict axis derived from receipt relations (display rounding vs difference), farm-count conflict kept unresolved, fly applicability unverified, required axes, no approval candidate.",
-      "origin": "new"
-    },
-    "tests/test_insect_reuse_registry.py": {
-      "note": "P12 industrial_insects reuse-registry entries: exact identity, per-source keys without inheritance, lineage/catalog/authority gating, artifact tamper, HWP needs_excerpt, R0/R1 reference_only role_mismatch, no student ID.",
-      "origin": "new"
-    },
-    "tests/test_insect_premise_probes.py": {
-      "note": "P12 insect premise-probes document follows the common interview format and links same-decision existing field_ids only; distinct decisions stay proposals.",
-      "origin": "new"
-    },
-    "tests/fixtures/hort_finance/formula_eval.py": {
-      "note": "P13: bounded public JSON-formula evaluator for the proposed hort finance formulas — lazily selected IF branches, FormulaError for missing inputs, no workbook engine.",
-      "origin": "new"
-    },
-    "tests/fixtures/hort_finance/synthetic.py": {
-      "note": "P13: public-only synthetic OOXML fixture builder for the H01 transformer suite — eighteen-sheet roster, no teaching-cell values.",
-      "origin": "new"
-    },
-    "tests/test_finance_profile_gate.py": {
-      "note": "P13: finance profile migration pre-staging negatives — writers and native boundary never reached on missing/unsupported profiles, synthetic only.",
-      "origin": "new"
-    },
-    "tests/test_hort_finance_contract.py": {
-      "note": "P13: Astra-4 counterexamples evaluated from the proposed JSON formulas with the bounded evaluator and synthetic fixtures.",
-      "origin": "new"
-    },
-    "tests/test_hort_finance_pipeline.py": {
-      "note": "P13: end-to-end plan -> transform -> native -> verify chain on synthetic fixture bytes and synthetic contracts. I3D: teacher_image residue counterexamples included.",
-      "origin": "new"
-    },
-    "tests/test_hort_workbook.py": {
-      "note": "P13: I1 transformer tests on generated public fixture bytes only.",
       "origin": "new"
     }
   },

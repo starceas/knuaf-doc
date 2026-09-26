@@ -278,7 +278,7 @@ class FormulaContract(unittest.TestCase):
 
 class PublicContract(unittest.TestCase):
     def setUp(self):
-        lane_tmp = ROOT / '.hw-work/fin/lanes/I1-TRANSFORMER/tmp'
+        lane_tmp = ROOT / '.hw-work/fin/lanes/I4-FIX/tmp'
         lane_tmp.mkdir(parents=True, exist_ok=True)
         self.temp = tempfile.TemporaryDirectory(dir=lane_tmp)
         self.addCleanup(self.temp.cleanup)
@@ -387,6 +387,19 @@ class PublicContract(unittest.TestCase):
         docs = copy.deepcopy(self.docs)
         docs[h.FILES[0]]['entries'][0]['after_formula'] = '=(2+3)+99'
         self.assert_code_path(docs, 'source_formula_number', h.FILES[0]+'.entries.0.after_formula')
+
+    def test_T_PUB_7_nested_control_values_are_audited(self):
+        docs = copy.deepcopy(self.docs)
+        docs[h.FILES[1]]['parameters']['synthetic']['allowed_values'] = ['fixture']
+        self.assert_code_path(
+            docs, 'source_string_value',
+            h.FILES[1]+'.parameters.synthetic.allowed_values.0')
+        docs = copy.deepcopy(self.docs)
+        docs[h.FILES[1]]['parameters']['synthetic']['required_if'] = {
+            'key_equals': ['synthetic', 'fixture']}
+        self.assert_code_path(
+            docs, 'source_string_value',
+            h.FILES[1]+'.parameters.synthetic.required_if.key_equals.1')
 
     # The audit against the real H01 is a local-only step (FD-A): run
     # `gg_hort_workbook.py audit-public --source <H01>` where the workbook

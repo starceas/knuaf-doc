@@ -9,6 +9,7 @@ import copy
 from decimal import Decimal
 import json
 from pathlib import Path
+import re
 import sys
 import tempfile
 import unittest
@@ -22,7 +23,7 @@ import gg_hort_workbook as h
 import gg_major_contract as mc
 from synthetic import build, entries, R, P as PKG, C as CTYPES
 
-TMP = ROOT / ".hw-work/fin/lanes/I3B-FIX/tmp"
+TMP = ROOT / ".hw-work/fin/lanes/I4-FIX/tmp"
 SHEET5 = "5. 원리금상환계획"
 SHEET6 = "6.시설계획"
 SHEET12 = "12 .경비계획"
@@ -44,6 +45,7 @@ def _params(sheet1):
         "zero": {**base, "canonical_cell": sheet1 + "!F1"},
         "loan.slot1.execution_year": {**base, "data_type": "integer",
                                       "unit_code": "YEAR",
+                                      "period_axis": "loan_contract_year",
                                       "canonical_cell": SHEET5 + "!C39"},
         "loan.slot1.principal_krw1000": {**base, "canonical_cell": SHEET5 + "!D39"},
         "loan.slot1.annual_rate": {**base, "unit_code": "RATIO",
@@ -92,18 +94,21 @@ def _map_entries(sheet1):
          "before_state": "absent", "param_key": "loan.slot1.method"},
     ]
     _, rows = h._loan_slot_rows(1)
-    for r in rows:
-        for col in ("B", "C", "D", "E", "F"):
+    schedule = h._loan_schedule(10, Decimal("0.05"), 0, 2, "원금균등")
+    for i, r in enumerate(rows):
+        balance, interest, paid = schedule[i]
+        for col, value in (("B", 2027 + i), ("C", balance), ("D", interest),
+                           ("E", paid), ("F", interest + paid)):
             es.append({"sheet": SHEET5, "cell": f"{col}{r}", "action": "formula",
-                       "before_state": "absent", "after_formula": "=1"})
+                       "before_state": "absent", "after_formula": f"={value}"})
     for r in range(8, 14):
         es.append({"sheet": SHEET5, "cell": f"L{r}", "action": "formula",
-                   "before_state": "absent", "after_formula": "=1"})
+                   "before_state": "absent", "after_formula": "=0"})
     for col in "CDEFGH":
         es.append({"sheet": SHEET17, "cell": f"{col}30", "action": "formula",
-                   "before_state": "absent", "after_formula": "=1"})
+                   "before_state": "absent", "after_formula": "=10"})
         es.append({"sheet": SHEET17, "cell": f"{col}46", "action": "formula",
-                   "before_state": "absent", "after_formula": "=1"})
+                   "before_state": "absent", "after_formula": "=10"})
     es.append({"sheet": SHEET5, "cell": "M1", "action": "formula",
                "before_state": "absent", "after_formula": "=NA()"})
     es.append({"sheet": SHEET5, "cell": "M2", "action": "formula",
@@ -205,16 +210,16 @@ def _native_workbook(path, roster, params, facts):
     _, rows = h._loan_slot_rows(1)
     for i, r in enumerate(rows):
         bal, interest, pp = schedule[i]
-        cells[(SHEET5, f"B{r}")] = (None, str(2027 + i), "=1")
-        cells[(SHEET5, f"C{r}")] = (None, str(bal), "=1")
-        cells[(SHEET5, f"D{r}")] = (None, str(interest), "=1")
-        cells[(SHEET5, f"E{r}")] = (None, str(pp), "=1")
-        cells[(SHEET5, f"F{r}")] = (None, str(interest + pp), "=1")
+        cells[(SHEET5, f"B{r}")] = (None, str(2027 + i), f"={2027 + i}")
+        cells[(SHEET5, f"C{r}")] = (None, str(bal), f"={bal}")
+        cells[(SHEET5, f"D{r}")] = (None, str(interest), f"={interest}")
+        cells[(SHEET5, f"E{r}")] = (None, str(pp), f"={pp}")
+        cells[(SHEET5, f"F{r}")] = (None, str(interest + pp), f"={interest + pp}")
     for r in range(8, 14):
-        cells[(SHEET5, f"L{r}")] = (None, "0", "=1")
+        cells[(SHEET5, f"L{r}")] = (None, "0", "=0")
     for col in "CDEFGH":
-        cells[(SHEET17, f"{col}30")] = (None, "10", "=1")
-        cells[(SHEET17, f"{col}46")] = (None, "10", "=1")
+        cells[(SHEET17, f"{col}30")] = (None, "10", "=10")
+        cells[(SHEET17, f"{col}46")] = (None, "10", "=10")
     cells[(SHEET5, "M1")] = ("e", "#N/A", "=NA()")
     cells[(SHEET5, "M2")] = ("str", "", '=""')
     cells[(SHEET7, "B70")] = ("str", "2027년 계획", "=x")
@@ -229,8 +234,8 @@ def _native_workbook(path, roster, params, facts):
     cells[(roster[0], "D1")] = (None, "7", None)
     cells[(roster[0], "F1")] = (None, "0", None)
     cells[(roster[0], "A1")] = (None, "5", "=2+3")
-    cells[(roster[0], "C1")] = (None, "4", "=A1+1")
-    cells[(roster[0], "I1")] = (None, "7", "=A1+4")
+    cells[(roster[0], "C1")] = (None, "6", "=A1+1")
+    cells[(roster[0], "I1")] = (None, "9", "=A1+4")
     cells[(roster[0], "B2")] = ("inlineStr", "draft", None)
     cells[(roster[0], "G1")] = ("inlineStr", "new", None)
     cells[(SHEET6, "B17")] = ("inlineStr", TEACHER_IMAGE_LABEL, None)
@@ -298,6 +303,7 @@ class Chain(unittest.TestCase):
         self.out = d / "out.xlsx"
         self.transform_rec = d / "transform.json"
         self.native = d / "native.xlsx"
+        self.pdf = d / "native.pdf"
         self.native_rec = d / "native.json"
         self.verify_rec = d / "verify.json"
 
@@ -307,16 +313,42 @@ class Chain(unittest.TestCase):
                     self.transform_rec)
 
     def _issue_native(self, native=None):
+        """Synthetic official-manifest shape; no Office engine in CI."""
         native = native or self.native
-        import gg_core
-        project = gg_core.load(self.root)
+        import gg_office
+        from pypdf import PdfWriter
         auth = h._authorize(self.root)
-        values, derivations, fact_sha = h._facts(
-            project, self.docs[h.FILES[1]]["parameters"])
-        rec = h._receipt("native", project, auth, self.source, self.docs,
-                         fact_sha, values, self.transform_rec, self.root)
-        rec["input_artifacts"] = [h._artifact(self.out)]
-        rec["output_artifacts"] = [h._artifact(native)]
+        if not self.pdf.exists():
+            writer = PdfWriter()
+            for _ in range(18):
+                writer.add_blank_page(width=595, height=842)
+            with self.pdf.open("wb") as output:
+                writer.write(output)
+        xmeta = gg_office.validate_office_file(native, "excel")
+        pmeta = gg_office.validate_pdf_file(self.pdf)
+        prior_sha = h.file_digest(self.transform_rec)
+        rec = {
+            "status": "converted", "engine": "Microsoft Excel",
+            "engine_result": "synthetic fixture conversion",
+            "input_file": str(self.out.resolve()),
+            "input_sha256": h.file_digest(self.out),
+            "published_office": str(native.resolve()),
+            "published_office_sha256": xmeta["sha256"],
+            "published_pdf": str(self.pdf.resolve()),
+            "published_pdf_sha256": pmeta["sha256"],
+            "major_authorization": [auth.to_dict()],
+            "validation": {
+                "finance_profile": h.PROFILE,
+                "template_receipt": {"path": str(self.transform_rec.resolve()),
+                                     "sha256": prior_sha,
+                                     "input_sha256": h.file_digest(self.out),
+                                     "authority": "hort_transform_receipt"},
+                "previous_receipt_sha256": prior_sha,
+                "excel": xmeta, "pdf": pmeta,
+                "native_pdf_coverage": {"worksheet_count": 18,
+                                        "pdf_pages": 18,
+                                        "status": "page_count_floor_met"},
+                "structure_issues": [], "school_issues": []}}
         self.native_rec.write_text(
             json.dumps(rec, ensure_ascii=False, sort_keys=True, indent=2,
                        default=str) + "\n", encoding="utf-8")
@@ -353,17 +385,93 @@ class Chain(unittest.TestCase):
             h.verify(self.root, self.source, self.transform_rec,
                      self.native_rec, self.verify_rec)
 
+    def test_transform_receipt_requires_exact_source_input(self):
+        self._run_to_transform()
+        original = json.loads(self.transform_rec.read_text(encoding="utf-8"))
+        for label, entries in (("empty", []),
+                               ("output", original["output_artifacts"])):
+            rec = copy.deepcopy(original)
+            rec["input_artifacts"] = entries
+            bad = Path(self.temp.name) / ("bad-" + label + ".json")
+            bad.write_text(json.dumps(rec), encoding="utf-8")
+            with self.subTest(label=label), self.assertRaisesRegex(
+                    h.Held, "transform_receipt_invalid"):
+                h.check_transform_receipt(bad)
+
+    def test_explicit_fact_semantics_reject_conflicting_metadata(self):
+        import gg_core
+        project = gg_core.load(self.root)
+        params = self.docs[h.FILES[1]]["parameters"]
+        for key, field, value, code in (
+                ("loan.slot1.principal_krw1000", "unit", "USD", "fact_unit_mismatch"),
+                ("loan.slot1.execution_year", "period", "2099", "fact_period_axis_mismatch"),
+                ("num", "per_unit", "unapproved basis", "fact_per_unit_mismatch"),
+                ("num", "conversion_evidence", "unapproved conversion",
+                 "fact_conversion_evidence_mismatch")):
+            altered = copy.deepcopy(project)
+            hit = next(f for f in altered["facts"].values()
+                       if f.get("field_id") == "hort_env_systems.fin." + key)
+            hit[field] = value
+            with self.subTest(key=key, field=field), self.assertRaisesRegex(h.Held, code):
+                h._facts(altered, params)
+
     def test_native_receipt_stale_rejected(self):
         self._run_to_transform()
         _native_workbook(self.native, self.roster,
                          self.docs[h.FILES[1]]["parameters"], self.facts)
         self._issue_native()
         rec = json.loads(self.native_rec.read_text(encoding="utf-8"))
-        rec["previous_receipt_sha256"] = "0" * 64
+        rec["validation"]["previous_receipt_sha256"] = "0" * 64
         self.native_rec.write_text(json.dumps(rec), encoding="utf-8")
         with self.assertRaisesRegex(h.Held, "native_receipt_stale"):
             h.verify(self.root, self.source, self.transform_rec,
                      self.native_rec, self.verify_rec)
+
+    def test_office_pdf_binding_rejects_manifest_tamper(self):
+        self._run_to_transform()
+        _native_workbook(self.native, self.roster,
+                         self.docs[h.FILES[1]]["parameters"], self.facts)
+        self._issue_native()
+        rec = json.loads(self.native_rec.read_text(encoding="utf-8"))
+        rec["published_pdf_sha256"] = "0" * 64
+        self.native_rec.write_text(json.dumps(rec), encoding="utf-8")
+        with self.assertRaisesRegex(h.Held, "native_receipt_stale"):
+            h.verify(self.root, self.source, self.transform_rec,
+                     self.native_rec, self.verify_rec)
+
+    def test_additive_cache_counterexample(self):
+        """A +1 cache change in an additive formula cannot complete verify."""
+        self._run_to_transform()
+        _native_workbook(self.native, self.roster,
+                         self.docs[h.FILES[1]]["parameters"], self.facts)
+        payload = self.native.read_bytes()
+        import io
+        with zipfile.ZipFile(io.BytesIO(payload)) as zin, \
+                zipfile.ZipFile(self.native, "w") as zout:
+            for info in zin.infolist():
+                data = zin.read(info.filename)
+                if info.filename == "xl/worksheets/sheet1.xml":
+                    data = data.replace(b'<c r="C1"><f>=A1+1</f><v>6</v></c>',
+                                        b'<c r="C1"><f>=A1+1</f><v>7</v></c>')
+                zout.writestr(info, data)
+        self._issue_native()
+        with self.assertRaisesRegex(h.Held, "raw_cache_mismatch"):
+            h.verify(self.root, self.source, self.transform_rec,
+                     self.native_rec, self.verify_rec)
+
+    def test_unsupported_formula_cannot_complete(self):
+        docs = copy.deepcopy(self.docs)
+        target = next(e for e in docs[h.FILES[0]]["entries"]
+                      if e["sheet"] == self.roster[0] and e["cell"] == "C1")
+        target["after_formula"] = "=UNSUPPORTED(A1)"
+        with mock.patch.object(h, "contracts", return_value=docs):
+            self._run_to_transform()
+            _native_workbook(self.native, self.roster,
+                             docs[h.FILES[1]]["parameters"], self.facts)
+            self._issue_native()
+            with self.assertRaisesRegex(h.Held, "verify_independent_unresolved"):
+                h.verify(self.root, self.source, self.transform_rec,
+                         self.native_rec, self.verify_rec)
 
     def test_missing_interest_counterexample(self):
         """Principal 10 at 5%: a native cache dropping the 0.5 interest fails."""
@@ -374,8 +482,8 @@ class Chain(unittest.TestCase):
         import io
         with zipfile.ZipFile(io.BytesIO(payload)) as z:
             sheet5 = z.read("xl/worksheets/sheet5.xml").decode()
-        sheet5 = sheet5.replace('<c r="D43"><f>=1</f><v>0.50</v></c>',
-                                '<c r="D43"><f>=1</f><v>0</v></c>')
+        sheet5 = re.sub(r'(<c r="D43"><f>[^<]*</f><v>)[^<]*(</v></c>)',
+                        r'\g<1>0\g<2>', sheet5, count=1)
         with zipfile.ZipFile(io.BytesIO(payload)) as zin, \
                 zipfile.ZipFile(self.native, "w") as zout:
             for info in zin.infolist():
@@ -416,11 +524,11 @@ class Chain(unittest.TestCase):
             for info in zin.infolist():
                 data = zin.read(info.filename)
                 if info.filename == "xl/worksheets/sheet17.xml":
-                    data = data.replace(b'<c r="C46"><f>=1</f><v>10</v></c>',
-                                        b'<c r="C46"><f>=1</f><v>11</v></c>')
+                    data = re.sub(rb'(<c r="C46"><f>[^<]*</f><v>)[^<]*(</v></c>)',
+                                  rb'\g<1>11\g<2>', data, count=1)
                 zout.writestr(info, data)
         self._issue_native()
-        with self.assertRaisesRegex(h.Held, "accounting_identity_mismatch"):
+        with self.assertRaisesRegex(h.Held, "raw_cache_mismatch|accounting_identity_mismatch"):
             h.verify(self.root, self.source, self.transform_rec,
                      self.native_rec, self.verify_rec)
 
@@ -544,6 +652,23 @@ class Gates(unittest.TestCase):
                 "output_conversion": "identity"}
         spec.update(over)
         return spec
+
+    def test_zero_actual_sales_holds_before_transform(self):
+        params = {"plan.start_year": self._spec(
+            "plan.start_year", data_type="integer", unit_code="YEAR")}
+        project = {"facts": {"year": _fact("year", "plan.start_year", 2027)}}
+        for month in range(1, 13):
+            key = f"sales.y1.m{month}.production_qty"
+            params[key] = self._spec(key, unit_code="SALES_UNIT")
+            project["facts"][key] = _fact(key, key, 10)
+        rate = "sales.y1.marketability_rate"
+        params[rate] = self._spec(rate, unit_code="RATIO")
+        project["facts"][rate] = _fact(rate, rate, 0)
+        with self.assertRaisesRegex(h.Held, "zero_sales_year_unsupported"):
+            h._facts(project, params)
+        project["facts"][rate]["value"] = "0.5"
+        values, _, _ = h._facts(project, params)
+        self.assertEqual(values[rate], Decimal("0.5"))
 
     def test_required_if_group_active(self):
         params = {"a": self._spec("a"),
@@ -759,6 +884,15 @@ class NativeRegressions(unittest.TestCase):
             self.assertEqual(h.compare_raw_cache(5, 5, unit), Decimal(0))
             with self.assertRaisesRegex(h.Held, "raw_cache_mismatch"):
                 h.compare_raw_cache(5, 6, unit)
+
+    def test_profitability_ratio_registry_units(self):
+        rows = h._json(h.REF / h.FILES[2])["registry"]
+        for col in "GHIJK":
+            row = next(r for r in rows if r["sheet"] == "16. 수익성분석"
+                       and r["cell"] == col + "27")
+            self.assertEqual(row["unit"], "RATIO")
+        with self.assertRaisesRegex(h.Held, "raw_cache_mismatch"):
+            h.compare_raw_cache(0.5, 1.5, "RATIO")
 
     def test_conditional_na_requires_inactive_facts(self):
         row = {"sheet": "S", "cell": "A1", "action": "formula",
