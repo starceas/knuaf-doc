@@ -308,13 +308,13 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/fruit-trees/README.md": {
-      "after_sha256": "c77d7479b583508a3bb96ed7260cf8308c38843bed4f98d7a5b23912949e98e5",
+      "after_sha256": "289ee1164dc286478c5abd272ee5605c001d87fba598fa338e9c6c3207ed03ff",
       "before_sha256": null,
       "first_changed": "P8",
-      "owner": "P14",
-      "reason": "P8 fruit_trees first-bundle guidance: plan-only support boundary and registration order | P10: P9: D-A wording — common workbook is the fill template only when the major survey proves no major XLSX | P14: 0.2.0 rebinding, batch/move groups, yearly fields and the production check guide",
+      "owner": "P16",
+      "reason": "P8 fruit_trees first-bundle guidance: plan-only support boundary and registration order | P10: P9: D-A wording — common workbook is the fill template only when the major survey proves no major XLSX | P14: 0.2.0 rebinding, batch/move groups, yearly fields and the production check guide | P16: identity-only reference list section (41 fruit sources)",
       "source": "new",
-      "last_changed": "P14"
+      "last_changed": "P16"
     },
     "skills/knuaf-doc/references/hort-env-systems/README.md": {
       "after_sha256": "2c52cd8600c6de0eb0b8abd8e36907690fc4e5f406882568b6d6a1c6d21cca10",
@@ -1013,22 +1013,22 @@
       "last_changed": "P12"
     },
     "skills/knuaf-doc/references/source-identities.json": {
-      "after_sha256": "5e4612d392eda836806ef701b5f95aafe8ceb09b43266c849a7386d07213635c",
+      "after_sha256": "00bb47d3ebae970073b700e3a9019154322089bf18fa053b1366856b1a9da943",
       "before_sha256": null,
       "first_changed": "P13",
-      "owner": "P13",
-      "reason": "D4 empty identity-only source catalogue; rows are supplied by major-owned registrations | P13: rebased D4 identity-only declaration onto accepted P12",
+      "owner": "P16",
+      "reason": "D4 empty identity-only source catalogue; rows are supplied by major-owned registrations | P13: rebased D4 identity-only declaration onto accepted P12 | P16: 41 fruit_trees identity-only rows (hash + bibliographic only, no excerpts)",
       "source": "new",
-      "last_changed": "P13"
+      "last_changed": "P16"
     },
     "tests/test_source_identities.py": {
-      "after_sha256": "cf1da664c02ed4b12c2213a983580b89d23e986f504cd4fae8abdf7836900fb5",
+      "after_sha256": "c4e7ae7e17c60024de2b8b2c383c006dbb9c63465446ff2a7c684a0708ec01d3",
       "before_sha256": null,
       "first_changed": "P13",
-      "owner": "P13",
-      "reason": "D4 positive and adversarial catalogue, privacy, duplicate-key and registry-binding controls | Astra D4 round 1: sanitized dependency failures and bounded/deep JSON rejection with CLI negatives | P13: rebased D4 identity-only declaration onto accepted P12 | P13: privacy negatives assemble synthetic digit groups at test time without a shipped student-number literal",
+      "owner": "P16",
+      "reason": "D4 positive and adversarial catalogue, privacy, duplicate-key and registry-binding controls | Astra D4 round 1: sanitized dependency failures and bounded/deep JSON rejection with CLI negatives | P13: rebased D4 identity-only declaration onto accepted P12 | P13: privacy negatives assemble synthetic digit groups at test time without a shipped student-number literal | P16: empty-catalogue contract kept on a synthetic empty list now that fruit rows ship; the shipped catalogue must load and pass the CLI check with its real row count",
       "source": "new",
-      "last_changed": "P13"
+      "last_changed": "P16"
     },
     "skills/knuaf-doc/scripts/gg_source_identity.py": {
       "after_sha256": "8e2856d3b6c729eba03f9f85a4854ebd8e477bcd2cc3f8871a3a875ce22d7873",
@@ -1077,14 +1077,14 @@
     }
   },
   "cumulative": true,
-  "note": "선언된 runtime 변경만 — 이 목록 밖의 baseline 변화는 미승인. README.md는 readme_policy로 별도 관리. baseline 파일의 삭제는 허용하지 않으며, 신규 파일은 approved_new_files에 사전 명시된 경로만 before_sha256=null로 선언 가능. P6 공용 작성 계약은 새 런타임 파일을 별도 승인 목록으로 선언한다. P7 공용 전공 출력 가드(정책 B)는 기존 런타임 파일 변경과 기준선 파일 1개(gg_excel_formula_patch.py) 첫 변경을 선언한다. P8 과수 첫 묶음은 과수 모듈 선언·등록과 공용 보조 모듈 2개(참조 XLSX 결정·연구 전달물 검증), 과수 작성계획, 참조집합 데이터·안내 문서를 새 파일로 선언한다. P9 원예환경시스템 첫 묶음은 원예 모듈 선언·등록·표지, 원예 작성계획, 원예 profile·안내 문서를 새 파일로 선언하고 재사용 등록부에 원예 참조 항목을 추가한다. P10: 공용 Kang XLSX 재사용과 템플릿 규칙, D3 전공별 기본 통합문서 우선순위를 P9 원예 모듈과 함께 선언한다. P11 공용 인터뷰 규칙은 기준선 문서 4건(SKILL.md·interview-guide·workflow-order·mid-work-questions) 변경과 특용작물 premise-probes.md 신규 1건을 선언한다. P12 산업곤충 첫 묶음은 곤충 문서 계획·근거 검토 스크립트 4개, 선례 지도·안내·핵심 전제 문서 3개를 새 파일로, 재사용 등록부 곤충 항목 9개와 SKILL·gg.py 등 기존 파일 갱신을 선언한다. P13: D4 식별 전용 카탈로그·검증기·시험 3건을 신규 선언하고 SKILL·source-intake·재사용 시험의 변경을 P12 산업곤충 부모 위에 추가한다. P14 과수 둘째 묶음은 과수 모듈 0.2.0(수확 배치·물량 이동·연도별 수량 필드), 과수 작성계획 확장, 생산·재고 검산과 핵심 전제 질문 문서를 새 파일로 선언한다. | P15 D5: rda.econ.2025 pp133-135 corrected cell mapping, rejected legacy slice, lookup boundary, pinned trust migration; rebased onto accepted P14 (main f9c278c3).",
+  "note": "선언된 runtime 변경만 — 이 목록 밖의 baseline 변화는 미승인. README.md는 readme_policy로 별도 관리. baseline 파일의 삭제는 허용하지 않으며, 신규 파일은 approved_new_files에 사전 명시된 경로만 before_sha256=null로 선언 가능. P6 공용 작성 계약은 새 런타임 파일을 별도 승인 목록으로 선언한다. P7 공용 전공 출력 가드(정책 B)는 기존 런타임 파일 변경과 기준선 파일 1개(gg_excel_formula_patch.py) 첫 변경을 선언한다. P8 과수 첫 묶음은 과수 모듈 선언·등록과 공용 보조 모듈 2개(참조 XLSX 결정·연구 전달물 검증), 과수 작성계획, 참조집합 데이터·안내 문서를 새 파일로 선언한다. P9 원예환경시스템 첫 묶음은 원예 모듈 선언·등록·표지, 원예 작성계획, 원예 profile·안내 문서를 새 파일로 선언하고 재사용 등록부에 원예 참조 항목을 추가한다. P10: 공용 Kang XLSX 재사용과 템플릿 규칙, D3 전공별 기본 통합문서 우선순위를 P9 원예 모듈과 함께 선언한다. P11 공용 인터뷰 규칙은 기준선 문서 4건(SKILL.md·interview-guide·workflow-order·mid-work-questions) 변경과 특용작물 premise-probes.md 신규 1건을 선언한다. P12 산업곤충 첫 묶음은 곤충 문서 계획·근거 검토 스크립트 4개, 선례 지도·안내·핵심 전제 문서 3개를 새 파일로, 재사용 등록부 곤충 항목 9개와 SKILL·gg.py 등 기존 파일 갱신을 선언한다. P13: D4 식별 전용 카탈로그·검증기·시험 3건을 신규 선언하고 SKILL·source-intake·재사용 시험의 변경을 P12 산업곤충 부모 위에 추가한다. P14 과수 둘째 묶음은 과수 모듈 0.2.0(수확 배치·물량 이동·연도별 수량 필드), 과수 작성계획 확장, 생산·재고 검산과 핵심 전제 질문 문서를 새 파일로 선언한다. | P15 D5: rda.econ.2025 pp133-135 corrected cell mapping, rejected legacy slice, lookup boundary, pinned trust migration; rebased onto accepted P14 (main f9c278c3). P16 과수 식별값 소묶음은 새 런타임 파일 없이 출처 식별 목록에 과수 참조 자료 41행을 추가한다.",
   "parent_candidate": {
-    "stage": "P14",
-    "file_count": 185,
-    "tree_sha256": "7afacd85ac97b38eb5cda4f22586c923e2ae22692ea1afe0c27882b5dec24b6d"
+    "stage": "P15",
+    "file_count": 188,
+    "tree_sha256": "a0854e3347144a3c5ebd5ac38afd47c7845b2d1142807c3ad39d03aa2651f848"
   },
   "schema": "knuaf-doc/runtime-changes@2",
-  "stage": "P15",
+  "stage": "P16",
   "stage_lineage": [
     {
       "file_count": 75,
@@ -1175,6 +1175,12 @@
       "file_count": 185,
       "tree_sha256": "7afacd85ac97b38eb5cda4f22586c923e2ae22692ea1afe0c27882b5dec24b6d",
       "note": "P14 기준 main f9c278c(PR #16 과수 둘째 묶음 병합)의 clean export 전체 파일 트리 해시 — P15의 직전 부모"
+    },
+    {
+      "stage": "P15",
+      "file_count": 188,
+      "tree_sha256": "a0854e3347144a3c5ebd5ac38afd47c7845b2d1142807c3ad39d03aa2651f848",
+      "note": "P15 기준 main b489147(PR #13 D5 내용연수 정정 병합)의 clean export 전체 파일 트리 해시 — P16의 직전 부모"
     }
   ]
 }

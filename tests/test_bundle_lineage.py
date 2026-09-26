@@ -119,8 +119,8 @@ class RealTreeTests(ContractCase):
                              f"errors: {report['errors']!r}")
             rc = report["runtime_changes"]
             self.assertEqual(rc["declared_count"], rc["verified"])
-            # P15 (D5 useful-life bundle) adds two new runtime files on
-            # the accepted P14 fruit-trees tree.
+            # P15 (D5 useful-life bundle) added two new runtime files;
+            # P16 (fruit identity rows) changes existing files only.
             self.assertEqual(113, rc["verified"])
             self.assertEqual(86, rc["new_count"])
         else:
@@ -138,22 +138,25 @@ class RealTreeTests(ContractCase):
         self.assertEqual(
             _sha(REPO_ROOT / "tools" / "runtime-changes.json"),
             link["spec_sha256"])
-        self.assertEqual("P15", link["stage"])
+        self.assertEqual("P16", link["stage"])
         self.assertEqual("29abec0ec95369de7ae9e22207349d574f1f46b7",
                          link["baseline_main"])
-        # P15's parent is the accepted P14 tree (185 files, main f9c278c).
+        # P16's parent is the accepted P15 tree (188 files, main b489147).
         self.assertEqual(113, link["change_count"])
         self.assertEqual(86, link["new_count"])
         self.assertEqual(86, link["approved_new_files"])
-        self.assertEqual("P14", link["parent_candidate"]["stage"])
-        self.assertEqual(185, link["parent_candidate"]["file_count"])
+        self.assertEqual("P15", link["parent_candidate"]["stage"])
+        self.assertEqual(188, link["parent_candidate"]["file_count"])
         self.assertEqual(
-            "7afacd85ac97b38eb5cda4f22586c923e2ae22692ea1afe0c27882b5dec24b6d",
+            "a0854e3347144a3c5ebd5ac38afd47c7845b2d1142807c3ad39d03aa2651f848",
             link["parent_candidate"]["tree_sha256"])
+        # D5 (P15) pinned its own parent, the P14 tree; keep that pin on
+        # the P14 ancestor row now that P15 is itself an ancestor.
         d5 = json.loads((REPO_ROOT / "docs/validation/d5-rda-useful-life.json")
                         .read_text(encoding="utf-8"))
-        self.assertEqual(d5["parent_tree_sha256"],
-                         link["parent_candidate"]["tree_sha256"])
+        p14 = [row for row in link["stage_lineage"] if row["stage"] == "P14"]
+        self.assertEqual([d5["parent_tree_sha256"]],
+                         [row["tree_sha256"] for row in p14])
         # The ancestor list ends at the parent; the current stage is not
         # one of its own ancestors.
         lineage = link["stage_lineage"]
@@ -161,7 +164,7 @@ class RealTreeTests(ContractCase):
             {k: link["parent_candidate"][k]
              for k in ("stage", "file_count", "tree_sha256")},
             {k: lineage[-1][k] for k in ("stage", "file_count", "tree_sha256")})
-        self.assertNotIn("P15", [row["stage"] for row in lineage])
+        self.assertNotIn("P16", [row["stage"] for row in lineage])
 
     def test_change_entries_carry_before_after(self):
         rc = json.loads(
@@ -183,7 +186,8 @@ class RealTreeTests(ContractCase):
                               {"P1", "P2", "P3", "P5", "P7", "P9", "P10", "P11", "P12", "P13", "P15"})
                 self.assertIn(meta["owner"],
                               {"A", "B", "C", "P4", "D", "P6", "P7", "P8",
-                               "P9", "P10", "P11", "P12", "P13", "P14", "P15"})
+                               "P9", "P10", "P11", "P12", "P13", "P14", "P15",
+                               "P16"})
             else:
                 # P2 through P15 new files: pre-declared allowlist only.
                 self.assertIn(name, approved)
@@ -194,7 +198,7 @@ class RealTreeTests(ContractCase):
                 self.assertIn(meta["owner"],
                               {"A", "B", "C", "S", "P4", "P5", "P6", "P7",
                                "P8", "P9", "P10", "P11", "P12", "P13",
-                               "P14", "P15"})
+                               "P14", "P15", "P16"})
 
 
 class SyntheticLineageTests(ContractCase):
