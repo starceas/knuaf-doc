@@ -327,19 +327,19 @@
  },
  "subsequent_lanes": [
   {
-   "stage": "P16",
+   "stage": "P17",
    "lane": "rda-lookup-status-20260926",
    "recorded_utc": "2026-09-26T14:30:00Z",
-   "note": "Same-lane lineage record appended at P13 per the p4 lineage-anchor pattern, rebaselined to provisional P16 after the origin/main b489147d (PR #13 D5) merge: accepted parent is now the P15 tree. Provisional number — renumbered P17 after PR #17 merges. All pre-P13 content above is preserved verbatim; lane facts live only inside this block.",
+   "note": "Same-lane lineage record appended at P13 per the p4 lineage-anchor pattern, rebaselined to P17 after the origin/main 0acd0cac (PR #17 fruit identity rows) merge: accepted parent is now the P16 tree. All pre-P13 content above is preserved verbatim; lane facts live only inside this block.",
    "authority": ".rl-work/design/WORKER-BRIEF-RL.md item 7 + .rl-work/design/DESIGN-RL.md (rda-lookup verification status, Astra r3 PASS 2026-09-26)",
    "accepted_parent": {
-    "stage": "P15",
-    "candidate": "main b489147d (PR #13 D5 rda-econ useful-life correction merge)",
-    "file_count": 188,
-    "tree_sha256": "a0854e3347144a3c5ebd5ac38afd47c7845b2d1142807c3ad39d03aa2651f848",
+    "stage": "P16",
+    "candidate": "main 0acd0cac (PR #17 fruit identity rows merge)",
+    "file_count": 189,
+    "tree_sha256": "d66ad61442448f858e73a60b640174d17eca470c8849409181c0d2dfa4ee2cab",
     "digest_method": "check_bundle.tree_digest over regular files (sorted path<TAB>sha256 lines, LF-joined, sha256)",
     "recomputed_in_this_lane": true,
-    "recompute_result": "git archive b489147d export -> check_bundle.disk_files/tree_digest: identical method verified against P13/P14/P15 anchors (188 files)"
+    "recompute_result": "git archive 0acd0cac export -> check_bundle.disk_files/tree_digest: identical method verified against P13/P14/P15 anchors (189 files)"
    },
    "authorized_added_paths": [
     "skills/knuaf-doc/tests/test_gg_rda_verification.py"
@@ -360,7 +360,7 @@
     "tools/validation-bundle.json"
    ],
    "authorized_change_notes": {
-    "docs/validation/p4-lineage.json": "mechanically required - this P16 lane record (P15 parent)",
+    "docs/validation/p4-lineage.json": "mechanically required - this P17 lane record (P16 parent)",
     "skills/knuaf-doc/SKILL.md": "task-authorized - F3 user-facing sentence on verification.verified / approved-only copying (DESIGN-RL S6 F3); merged with main's source-identities bullet and orchard sentence",
     "skills/knuaf-doc/scripts/gg_rda_candidates.py": "task-authorized - K7 delegation to lookup catalog accessors, selection resolve {'unique','unverified'}, approval still unique-only, K8 observation predicate, _UNAPPROVED_REASONS['unverified']",
     "skills/knuaf-doc/scripts/gg_rda_lookup.py": "task-authorized - K1 verification bundle per record, K2 unverified verdict (audit_key path incl.), K3 verification_summary, K4/F1 manifest re-read auth cache, K8 is_verified_observation; merged D5 _is_rejected matching-stage exclusion; D5's record[verification][catalog_status] annotation removed as duplicate (lookup output always overwrites with _verification_bundle - single dict)",
@@ -371,7 +371,7 @@
     "skills/knuaf-doc/tests/test_gg_rda_lookup_audit_key.py": "task-authorized - STATUSES gains unverified; unmanifested synthetic singles expect unverified; audit-selected series stays series; mafra other derives expectation from manifest",
     "skills/knuaf-doc/tests/test_gg_rda_research_integration.py": "task-authorized - fixture records carry extraction.status=extracted",
     "skills/knuaf-doc/tests/test_gg_rda_verification.py": "task-authorized new test - DESIGN-RL S3/S6/S7 verification contract suite + D5 integration assertions (rejected unreachable, exploratory cell unverified)",
-    "tests/test_bundle_lineage.py": "mechanically required - real-tree pin/expected-value updates only (P15->P16, d5 parent reanchored to lineage[-2])",
+    "tests/test_bundle_lineage.py": "mechanically required - real-tree pin/expected-value updates only (P16->P17, d5 parent reanchored to the P14 lineage row)",
     "tools/runtime-changes.json": "mechanically required - tree contract declaration (main key order/format preserved)",
     "tools/validation-bundle.json": "mechanically required - generated manifest artifact"
    },
@@ -381,7 +381,7 @@
    },
    "lane_facts": {
     "pack_bytes_untouched": true,
-    "merge": "origin/main b489147d --no-commit, conflicts resolved per WORKER-BRIEF-RL-MERGE; provisional stage P16 on accepted P15 parent",
+    "merge": "origin/main 0acd0cac --no-commit, conflicts resolved per WORKER-BRIEF-RL-P17; stage P17 on accepted P16 parent",
     "manifest_status_distribution": {
      "rda-econ-2025": {
       "verified_observation": 105,
