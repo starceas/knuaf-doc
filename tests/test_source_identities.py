@@ -67,7 +67,7 @@ class CatalogueTests(unittest.TestCase):
         self.assertTrue(message.startswith("$"), message)
 
     def test_shipped_empty_catalogue_and_cli_contract(self):
-        self.assertEqual({}, identities.load_source_identities())
+        self.assertEqual({}, self._load([]))
 
     def test_unregistered_identity_and_all_kinds(self):
         for kind in sorted(identities.KINDS):
