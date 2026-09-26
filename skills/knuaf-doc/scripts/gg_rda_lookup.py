@@ -375,9 +375,19 @@ def _tag_regional_caveat(record):
     return tagged
 
 
+def _is_rejected(record):
+    # fail-closed on malformed extraction payloads (a non-dict ``extraction``
+    # is not "rejected" — it still can never verify via the K8 predicate)
+    extraction = (record or {}).get("extraction")
+    return isinstance(extraction, dict) \
+        and extraction.get("status") == "rejected"
+
+
 def _filter_records(records, *, crop_key, kind, year, form):
     matched = []
     for rec in records:
+        if _is_rejected(rec):
+            continue
         if crop_key:
             if not (_crop_matches(crop_key, rec.get("crop")) or _record_identity(rec) == crop_key):
                 continue

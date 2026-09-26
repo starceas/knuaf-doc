@@ -14,8 +14,9 @@
       verified_observation ∧ 수령증 완전 ∧ extraction.status == "extracted".
       lookup verification.verified / candidates 관측 축 / research
       promotable이 같은 술어다.
-- R2-2 rejected는 술어 직접 단위 시험(D5 필터는 D5가 가져옴 — 이 판정
-      트리에서는 행이 조회되며 술어가 false를 강제한다).
+- R2-2 rejected는 술어 직접 단위 시험 + 실팩 D5 연동 시험 — D5
+      병합 이후 rejected 행은 매칭에서 제외되며 술어도 false를
+      강제한다(이중 방어).
 - R2-4 검증 실패(인증/항목/수령증/상태/extraction/중복 키/타 팩 권위)와
       증거만 실패(source/rights/conflict/applicability)를 구분 — 후자는
       lookup이 ``unique``+verified를 유지하고 candidates만 unapproved.
@@ -405,7 +406,9 @@ class VerificationFailureAxisTests(VerificationPackMixin):
                      note="quarantined")
 
     def test_extraction_absent_and_malformed(self):
-        # TODO(D5 rebase, PR #13): assert rejected row -> not_found, zero candidates, research exclusion (now only test_rejected_extraction_fails_the_predicate, R2-2).
+        # rejected rows are covered on the real packs by
+        # test_d5_rejected_row_unreachable (R2-2/D5 filter);
+        # missing/malformed extraction stays here.
         for label, extraction in (
             ("absent", False),
             ("non-dict", {"extraction": "not-a-dict"}),
@@ -921,6 +924,53 @@ class ResearchPathTests(VerificationPackMixin):
         got = lookup.lookup_rda_data("감자", "전국", **GOOD_QUERY)
         self.assertEqual(got["status"], "unverified")
 
+    def test_malformed_extraction_values_propose_unpromotable(self):
+        # Merge-review fix: a truthy non-dict ``extraction`` must not
+        # raise in the rejected guard — the proposal flow continues and
+        # the K8 predicate keeps ``promotable`` False.  A rejected dict
+        # still short-circuits with ``extraction_rejected``.
+        target = {"id": "f", "metric": "income",
+                  "answer_state": "not_provided"}
+
+        def _prop_for(record_over):
+            spec = _good_spec(
+                record_over=dict({"metrics": {"income": "400000"}},
+                                 **record_over))
+            td = tempfile.TemporaryDirectory(prefix="gg-vfy-mex-")
+            self.addCleanup(td.cleanup)
+            (packs_dir, file_sha, keys, entries,
+             records_path) = _build(td.name, [spec])
+            lookup.BASE_DIR = packs_dir
+            lookup._CACHE.clear()
+            prov.PINNED_PACKS[TEST_PACK] = {
+                "pack_revision": TEST_REV,
+                "records_file_sha256": file_sha,
+                "record_lines": 1,
+                "relpath": "common/test-pack/records.jsonl",
+            }
+            research.PINNED_CATALOG_AUTHORITIES[TEST_AUTHORITY] = \
+                research.catalog_content_digest(entries)
+            index = prov.build_audit_index(
+                records_path, TEST_PACK, file_sha)
+            cat = research.accept_catalog(
+                entries, verified_indexes={TEST_PACK: index},
+                authority=TEST_AUTHORITY)
+            ctx = research.resolver_context(
+                packs_dir=packs_dir, catalog=cat, pack_ids={TEST_PACK})
+            return research.propose(
+                TEST_REV, target, prov.audit_key_dict(keys[0]),
+                context=ctx)
+
+        for extraction in ("extracted", ["extracted"], 1, True):
+            with self.subTest(case=repr(extraction)):
+                prop = _prop_for({"extra": {"extraction": extraction}})
+                self.assertEqual(prop["status"], "proposal")
+                self.assertFalse(prop["promotable"])
+        with self.subTest(case="rejected_dict"):
+            prop = _prop_for({"extraction": {"status": "rejected"}})
+            self.assertEqual(prop["status"], "unresolved")
+            self.assertEqual(prop["reason"], "extraction_rejected")
+
 
 # ---------------------------------------------------------------------------
 # Real pinned packs: T1 sweep invariant + T2/T3 representative cases
@@ -1050,6 +1100,97 @@ class RealPackVerificationTests(unittest.TestCase):
             audit_key=rec["audit_key"])
         self.assertEqual(sel["status"], "unique")
         self.assertTrue(sel["records"][0]["verification"]["verified"])
+
+    def test_d5_rejected_row_unreachable(self):
+        """D5 통합 (병합 계약): ``extraction.status == "rejected"`` 행은
+        어떤 공개 경로로도 도달되지 않는다.  대표 사례는 온풍난방기
+        (useful_life, 2025) — 실팩에서 읽어 오며 줄 번호·해시는
+        하드코딩하지 않는다."""
+        econ = self.packs["rda.econ.2025"]
+        rejected = [r for r in lookup._pack_records(econ)
+                    if (r.get("extraction") or {}).get("status")
+                    == "rejected"]
+        # the D5 legacy slice exists and stays quarantined in the catalog
+        self.assertTrue(rejected)
+        rep = next((r for r in rejected
+                    if (r.get("basis") or {}).get("item_name")
+                    == "온풍난방기"
+                    and (r.get("basis") or {}).get("year") == 2025),
+                   rejected[0])
+        key = rep["audit_key"]
+        item = (rep.get("basis") or {}).get("item_name")
+        self.assertTrue(item)
+        # 그 행만 걸리는 질의 -> not_found (매칭 단계에서 제외)
+        got = lookup.lookup_rda_data(
+            item, "전국", kind=rep["kind"],
+            year=(rep.get("basis") or {}).get("year"), form="")
+        self.assertEqual("not_found", got["status"])
+        self.assertEqual([], got["records"])
+        # audit_key 선택 경로에서도 제외
+        sel = lookup.lookup_rda_data(
+            item, "전국", kind=rep["kind"], audit_key=key)
+        self.assertEqual("not_found", sel["status"])
+        self.assertEqual([], sel["records"])
+        # rda-candidates: 후보 0건
+        approved = cand.lookup_approved_candidates(
+            item, "전국", "hort_env_systems", kind=rep["kind"],
+            audit_key=key, use_scope="plan_input")
+        self.assertEqual("not_found", approved["status"])
+        self.assertEqual([], approved["candidates"])
+        # research 직접 audit_key 제안 -> D5 가드가 제외
+        manifest = json.loads(
+            (lookup.BASE_DIR / econ["relpath"]).parent
+            .joinpath("manifest.json").read_text(encoding="utf-8"))
+        ctx = research.resolver_context(
+            catalog=research.accept_catalog(
+                self.entries[econ["pack_id"]],
+                verified_indexes={
+                    econ["pack_id"]: prov.build_audit_index(
+                        lookup.BASE_DIR / econ["relpath"],
+                        econ["pack_id"],
+                        manifest["records_file_sha256"])},
+                authority="accepted-catalog-20260921/" + econ["pack_id"]),
+            pack_ids={econ["pack_id"]})
+        prop = research.propose("2025", {"metric": "useful_life_years"},
+                                key, context=ctx)
+        self.assertEqual("unresolved", prop["status"])
+        self.assertEqual("extraction_rejected", prop["reason"])
+
+    def test_d5_exploratory_cell_row_unverified(self):
+        """D5가 추가한 107개 탐색용 셀(pp133-135 정정본): 단일로 걸리면
+        ``unverified`` + ``level: exploratory`` — 추출은 됐어도 원문
+        대조가 끝나지 않은 행이다."""
+        econ = self.packs["rda.econ.2025"]
+        entries = self.entries.get(econ["pack_id"]) or {}
+        target = None
+        for rec in lookup._pack_records(econ):
+            try:
+                norm = prov.normalize_audit_key(rec["audit_key"])
+            except (ValueError, TypeError):
+                continue
+            entry = entries.get(norm)
+            if not entry:
+                continue
+            ref = ((entry.get("source_observation") or {})
+                   .get("prep_receipt_ref") or "")
+            if "corrections/pp133-135-cells.json" not in ref:
+                continue
+            got = self._sweep_query(rec)
+            if got is not None and len(got["records"]) == 1:
+                target = (rec, entry, got)
+                break
+        if target is None:
+            self.skipTest("no isolated D5 exploratory cell row")
+        rec, entry, got = target
+        self.assertEqual("exploratory", entry["catalog_status"])
+        self.assertEqual("unverified", got["status"])
+        v = got["records"][0]["verification"]
+        self.assertEqual("exploratory", v["level"])
+        self.assertEqual("exploratory", v["catalog_status"])
+        self.assertFalse(v["verified"])
+        self.assertEqual("extracted", v["extraction_status"])
+        self.assertIn("탐색용", v["label"])
+        self.assertIn(_LABEL_SUFFIX, v["label"])
 
     def test_t1_row_level_sweep_invariant(self):
         """R2-5 T1: every physical row queried under its own attributes

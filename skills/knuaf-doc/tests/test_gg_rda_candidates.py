@@ -10,6 +10,8 @@ Bound requirements:
   ``verification``; verdicts are
   ``not_found|ambiguous|series|unverified|unique``.  The new API consumes
   the raw result, never redefines it.
+- The approved-candidate API preserves the raw lookup candidate set, order,
+  and audit keys for unaffected observations.
 - Raw observation, eligibility, and use approval are DISTINCT results;
   ``unique`` is never permission.
 - Promotion fails closed on: missing source bytes/receipt (new-format
@@ -32,7 +34,6 @@ Self-contained: ``python3 -B tests/test_gg_rda_candidates.py`` from
 """
 import hashlib
 import json
-import subprocess
 import sys
 import tempfile
 import unittest
@@ -270,7 +271,8 @@ class PositivePathTests(SyntheticFixtureMixin, unittest.TestCase):
 
 
 class RawPreservationTests(SyntheticFixtureMixin, unittest.TestCase):
-    """lookup_rda_data byte-for-byte + candidate set/order/keys intact."""
+    """Unaffected raw candidate set, order, and audit keys stay intact;
+    returned records are cache-detached deep copies (K7)."""
 
     def test_returned_records_never_share_the_cache(self):
         """K7/F1 — the 'lookup unchanged' byte contract is superseded by

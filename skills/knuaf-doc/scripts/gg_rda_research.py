@@ -82,7 +82,7 @@ PINNED_CATALOG_AUTHORITIES = {
     "accepted-catalog-20260921/mafra.specialty.production.2024":
         "0550d458a0747be9929b3205c1ff8ff27f15c6f4cff5d9f3cc12372e336c71c8",
     "accepted-catalog-20260921/rda.econ.2025":
-        "0317280900419472ecaf91e01123c9a90edc93ea0b0c45f9a8c3bda2851257a4",
+        "0d2d0b1cfeceb2a7fb4b12f2c10e10882f6c1957404ff1834a6d1a41e19eca44",
     "accepted-catalog-20260921/rda.income.national.2024":
         "555719cf2565b21b5d4321eeaba7433d60807c280e995e7ed319064fb103adb4",
     "accepted-catalog-20260921/rda.income.regional.2024":
@@ -413,6 +413,12 @@ def propose(current_pack_revision, target, selection, *, context=None):
                 "value": None}
 
     record = resolved.record or {}
+    extraction = record.get("extraction")
+    if isinstance(extraction, dict) \
+            and extraction.get("status") == "rejected":
+        return {"schema": PROPOSAL_SCHEMA, "status": "unresolved",
+                "reason": "extraction_rejected", "target": target,
+                "audit_key": prov.audit_key_dict(norm), "value": None}
     metric = target.get("metric") if isinstance(target, dict) else None
     metrics = record.get("metrics") or {}
     if metric and metric not in _METRIC_UNIT:
