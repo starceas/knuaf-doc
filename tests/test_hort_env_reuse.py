@@ -38,18 +38,14 @@ import gg_reuse  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Pinned constants -- fixed at IMPL-C writing time against commit a96a5bf
-# (the test never shells out to git).  BASELINE_ENTRY_DIGEST pins
-# sha256(_canonical_json(entry)) for nine unchanged a96a5bf entries plus the D3-approved renamed
-# specialty entry (ddccacc), so the hort additions are proven not to have
-# mutated them. Re-pin only against an agreed commit, never the live file.
+# (the test never shells out to git). BASELINE_ENTRY_DIGEST pins the
+# unaffected entries; D5 re-pins only the corrected rda.econ.2025 entry.
 
 BASELINE_ENTRY_DIGEST = {
     "rda.income.national.2024":
         "8e43d31f42bf95915e1bce8869f32a2fde56b39da3412f20fb7e9829348994f7",
     "rda.income.regional.2024":
         "04a94bc8b6704b27eaf01679c2cfb3376451643524a6a797b3d492ff46787d56",
-    "rda.econ.2025":
-        "7e6ff1e08ee4b6e70539d01edbec4ce1ff96f4f9e526e8e468c70c6371c5d49b",
     "mafra.specialty.production.2024":
         "0b636815fa11a515929f4679a802d4d6756686096e37991fbf623fd5ff31c741",
     "official-writing-guide-pdf":

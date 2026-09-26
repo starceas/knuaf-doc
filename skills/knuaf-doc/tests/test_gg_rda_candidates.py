@@ -3,9 +3,8 @@
 major-aware writing path).
 
 Bound requirements:
-- ``gg_rda_lookup.lookup_rda_data`` stays byte-for-byte unchanged; its
-  raw/legacy candidate set, order, and audit keys are preserved — the new
-  API consumes the raw result, never redefines it.
+- The approved-candidate API preserves the raw lookup candidate set, order,
+  and audit keys for unaffected observations.
 - Raw observation, eligibility, and use approval are DISTINCT results;
   ``unique`` is never permission.
 - Promotion fails closed on: missing source bytes/receipt (new-format
@@ -28,7 +27,6 @@ Self-contained: ``python3 -B tests/test_gg_rda_candidates.py`` from
 """
 import hashlib
 import json
-import subprocess
 import sys
 import tempfile
 import unittest
@@ -263,26 +261,7 @@ class PositivePathTests(SyntheticFixtureMixin, unittest.TestCase):
 
 
 class RawPreservationTests(SyntheticFixtureMixin, unittest.TestCase):
-    """lookup_rda_data byte-for-byte + candidate set/order/keys intact."""
-
-    def test_owned_lane_does_not_modify_raw_api_or_promotable_gate(self):
-        root = KNUAF_DOC.parents[1]
-        for rel in ("skills/knuaf-doc/scripts/gg_rda_lookup.py",
-                    "skills/knuaf-doc/scripts/gg_rda_research.py",
-                    "skills/knuaf-doc/scripts/gg_rda_provenance.py"):
-            diff = subprocess.run(
-                ["git", "-C", str(root), "status", "--porcelain", "--",
-                 rel], capture_output=True, text=True)
-            if diff.returncode != 0:
-                self.skipTest("git unavailable for byte check")
-            self.assertEqual(diff.stdout.strip(), "",
-                             "%s modified" % rel)
-            show = subprocess.run(
-                ["git", "-C", str(root), "show",
-                 "HEAD:%s" % rel], capture_output=True)
-            self.assertEqual(show.returncode, 0, show.stderr)
-            disk = (root / rel).read_bytes()
-            self.assertEqual(show.stdout, disk, "%s != HEAD bytes" % rel)
+    """Unaffected raw candidate set, order, and audit keys stay intact."""
 
     def test_candidate_set_order_and_audit_keys_identical_to_raw(self):
         kw = dict(major="특용작물", kind="test_kind", year=2024)

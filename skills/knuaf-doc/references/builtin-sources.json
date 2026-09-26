@@ -117,13 +117,13 @@
    "artifacts": [
     {
      "relative_path": "common/rda-econ-2025/manifest.json",
-     "sha256": "0e3615a59388d092539ad3ca8d4ccfcf9b50271e2f5f54d3af5faed065c669c4",
-     "bytes": 2711315
+     "sha256": "f670ed39d8477f1fe09c42cf2b3d1b0fa724f0d99d9ac5475e7a212c65772a3a",
+     "bytes": 2824522
     },
     {
      "relative_path": "common/rda-econ-2025/records.jsonl",
-     "sha256": "a1cbfb2fa1825f2f0b7594cebe915b26f81cf1c48aee3cafae6c18ceb9267d54",
-     "bytes": 2450976
+     "sha256": "a5dbf6db2aed41254d2a05460d1950a3cdc2a8db51c0d54e82d035d91bd2253a",
+     "bytes": 2572020
     }
    ],
    "coverage": {
@@ -133,19 +133,19 @@
        "key_ref": {
         "kind": "audit_key",
         "pack_id": "rda.econ.2025",
-        "records_file_sha256": "a1cbfb2fa1825f2f0b7594cebe915b26f81cf1c48aee3cafae6c18ceb9267d54",
+        "records_file_sha256": "a5dbf6db2aed41254d2a05460d1950a3cdc2a8db51c0d54e82d035d91bd2253a",
         "physical_jsonl_line_1based": 19,
         "raw_line_sha256": "dba92f4e6d434dd9d1e3056c7e09e2da6c364bb7fadbe06605996a6793aeb142"
        },
        "authority": "verified",
-       "catalog_digest": "0317280900419472ecaf91e01123c9a90edc93ea0b0c45f9a8c3bda2851257a4",
+       "catalog_digest": "0d2d0b1cfeceb2a7fb4b12f2c10e10882f6c1957404ff1834a6d1a41e19eca44",
        "receipt_sha256": null
       },
       {
        "key_ref": {
         "kind": "audit_key",
         "pack_id": "rda.econ.2025",
-        "records_file_sha256": "a1cbfb2fa1825f2f0b7594cebe915b26f81cf1c48aee3cafae6c18ceb9267d54",
+        "records_file_sha256": "a5dbf6db2aed41254d2a05460d1950a3cdc2a8db51c0d54e82d035d91bd2253a",
         "physical_jsonl_line_1based": 1,
         "raw_line_sha256": "c37a9e25b4e1c4e9a2b99b6c4ff128c45ffda4e6025ada9ea2ac754fa78b7dcc"
        },
@@ -885,7 +885,7 @@
    },
    "rda.econ.2025": {
     "records_relpath": "common/rda-econ-2025/records.jsonl",
-    "records_file_sha256": "a1cbfb2fa1825f2f0b7594cebe915b26f81cf1c48aee3cafae6c18ceb9267d54"
+    "records_file_sha256": "a5dbf6db2aed41254d2a05460d1950a3cdc2a8db51c0d54e82d035d91bd2253a"
    },
    "mafra.specialty.production.2024": {
     "records_relpath": "majors/specialty_crops/mafra-specialty-production-2024/records.jsonl",

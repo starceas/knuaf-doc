@@ -4,6 +4,7 @@
     "skills/knuaf-doc/references/benchmark-packs/aliases/crop-aliases.specialty_crops.json",
     "skills/knuaf-doc/references/benchmark-packs/aliases/major-aliases.json",
     "skills/knuaf-doc/references/benchmark-packs/catalog.json",
+    "skills/knuaf-doc/references/benchmark-packs/common/rda-econ-2025/corrections/pp133-135-cells.json",
     "skills/knuaf-doc/references/benchmark-packs/common/rda-econ-2025/manifest.json",
     "skills/knuaf-doc/references/benchmark-packs/common/rda-econ-2025/records.jsonl",
     "skills/knuaf-doc/references/benchmark-packs/common/rda-income-national-2024/manifest.json",
@@ -62,6 +63,7 @@
     "skills/knuaf-doc/scripts/gg_workbook_registry.py",
     "skills/knuaf-doc/tests/test_gg_major_contract.py",
     "skills/knuaf-doc/tests/test_gg_rda_candidates.py",
+    "skills/knuaf-doc/tests/test_gg_rda_d5_useful_life.py",
     "skills/knuaf-doc/tests/test_gg_rda_lookup_audit_key.py",
     "skills/knuaf-doc/tests/test_gg_rda_provenance.py",
     "skills/knuaf-doc/tests/test_gg_rda_research_integration.py",
@@ -132,20 +134,22 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/benchmark-packs/common/rda-econ-2025/manifest.json": {
-      "after_sha256": "0e3615a59388d092539ad3ca8d4ccfcf9b50271e2f5f54d3af5faed065c669c4",
+      "after_sha256": "f670ed39d8477f1fe09c42cf2b3d1b0fa724f0d99d9ac5475e7a212c65772a3a",
       "before_sha256": null,
       "first_changed": "P4",
-      "owner": "P4",
-      "reason": "accepted P4 benchmark-packs data (catalog/records/manifest/schema) from g005-p4-provenance-standalone-corrections-3 | P4-packaging: after_sha256 rebound to ACCEPTED catalog-transform corrections-1 manifest (g005-p4-source-catalog-transform-corrections-1, manifest 1778fd02fc2286ac...) — replaces the pre-review placeholder bytes.",
-      "source": "new"
+      "owner": "P15",
+      "reason": "accepted P4 benchmark-packs data (catalog/records/manifest/schema) from g005-p4-provenance-standalone-corrections-3 | P4-packaging: after_sha256 rebound to ACCEPTED catalog-transform corrections-1 manifest (g005-p4-source-catalog-transform-corrections-1, manifest 1778fd02fc2286ac...) — replaces the pre-review placeholder bytes. | P15: D5 useful-life physical-cell correction and dependent trust migration",
+      "source": "new",
+      "last_changed": "P15"
     },
     "skills/knuaf-doc/references/benchmark-packs/common/rda-econ-2025/records.jsonl": {
-      "after_sha256": "a1cbfb2fa1825f2f0b7594cebe915b26f81cf1c48aee3cafae6c18ceb9267d54",
+      "after_sha256": "a5dbf6db2aed41254d2a05460d1950a3cdc2a8db51c0d54e82d035d91bd2253a",
       "before_sha256": null,
       "first_changed": "P4",
-      "owner": "P4",
-      "reason": "accepted P4 benchmark-packs data (catalog/records/manifest/schema) from g005-p4-provenance-standalone-corrections-3",
-      "source": "new"
+      "owner": "P15",
+      "reason": "accepted P4 benchmark-packs data (catalog/records/manifest/schema) from g005-p4-provenance-standalone-corrections-3 | P15: D5 useful-life physical-cell correction and dependent trust migration",
+      "source": "new",
+      "last_changed": "P15"
     },
     "skills/knuaf-doc/references/benchmark-packs/common/rda-income-national-2024/manifest.json": {
       "after_sha256": "b1ec5b7d59b8813175d2ccbb75272fb3a23062774379708921d16bdd75fe380b",
@@ -269,13 +273,13 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/builtin-sources.json": {
-      "after_sha256": "f804099414ea589a821283c118abc14ae6fb1818ca08abcf60123a2c76d52688",
+      "after_sha256": "a865dbb740572090db0dd23d9a1e69a98d466d749db4b77d914b65151c9e861c",
       "before_sha256": null,
       "first_changed": "P5",
-      "owner": "P12",
-      "reason": "accepted P5 reuse-registry@3 builtin source registry (frozen corrected A+B+C union) | P9: eight hort_env_systems entries appended (teaching workbook structure extract; exemplars and official sources identification-only); existing entries unchanged | P10: P9: register kang-finance-workbook x01/x02 (primary_finance_template) and hort-env raw workbook (reference_only); rename the student-numbered specialty exemplar id to specialty-grad-thesis-finance-xlsx (D-C) | P9-D3: removed the duplicated hort-env-kang-raw-workbook entry (one-hash-one-entry; the hort module registers its own workbook) | P12: nine industrial_insects entries (F0/E1-E4 locator map, E3/E4 HWP and R0/R1 identity-only)",
+      "owner": "P15",
+      "reason": "accepted P5 reuse-registry@3 builtin source registry (frozen corrected A+B+C union) | P9: eight hort_env_systems entries appended (teaching workbook structure extract; exemplars and official sources identification-only); existing entries unchanged | P10: P9: register kang-finance-workbook x01/x02 (primary_finance_template) and hort-env raw workbook (reference_only); rename the student-numbered specialty exemplar id to specialty-grad-thesis-finance-xlsx (D-C) | P9-D3: removed the duplicated hort-env-kang-raw-workbook entry (one-hash-one-entry; the hort module registers its own workbook) | P12: nine industrial_insects entries (F0/E1-E4 locator map, E3/E4 HWP and R0/R1 identity-only) | P15: D5 useful-life physical-cell correction and dependent trust migration",
       "source": "new",
-      "last_changed": "P12"
+      "last_changed": "P15"
     },
     "skills/knuaf-doc/references/common-workbooks/kang-finance-workbook.json": {
       "before_sha256": null,
@@ -307,10 +311,10 @@
       "after_sha256": "289ee1164dc286478c5abd272ee5605c001d87fba598fa338e9c6c3207ed03ff",
       "before_sha256": null,
       "first_changed": "P8",
-      "owner": "P15",
-      "reason": "P8 fruit_trees first-bundle guidance: plan-only support boundary and registration order | P10: P9: D-A wording — common workbook is the fill template only when the major survey proves no major XLSX | P14: 0.2.0 rebinding, batch/move groups, yearly fields and the production check guide | P15: identity-only reference list section (41 fruit sources)",
+      "owner": "P16",
+      "reason": "P8 fruit_trees first-bundle guidance: plan-only support boundary and registration order | P10: P9: D-A wording — common workbook is the fill template only when the major survey proves no major XLSX | P14: 0.2.0 rebinding, batch/move groups, yearly fields and the production check guide | P16: identity-only reference list section (41 fruit sources)",
       "source": "new",
-      "last_changed": "P15"
+      "last_changed": "P16"
     },
     "skills/knuaf-doc/references/hort-env-systems/README.md": {
       "after_sha256": "2c52cd8600c6de0eb0b8abd8e36907690fc4e5f406882568b6d6a1c6d21cca10",
@@ -664,30 +668,33 @@
       "last_changed": "P6"
     },
     "skills/knuaf-doc/scripts/gg_rda_lookup.py": {
-      "after_sha256": "9e2a8c178d4526f042f879473f1b9655aaec3d25600845c124528bd48ee08f1a",
+      "after_sha256": "785fb73a9e99eb907ae47c5e5e005c610657fc0b5d01fd5a9477060e2b1b8a84",
       "before_sha256": null,
       "first_changed": "P4",
-      "owner": "P4",
-      "reason": "accepted P4 lookup candidate module (g005-p4-provenance-standalone-corrections-3)",
-      "source": "new"
+      "owner": "P15",
+      "reason": "accepted P4 lookup candidate module (g005-p4-provenance-standalone-corrections-3) | P15: D5 useful-life physical-cell correction and dependent trust migration",
+      "source": "new",
+      "last_changed": "P15"
     },
     "skills/knuaf-doc/scripts/gg_rda_provenance.py": {
-      "after_sha256": "b23142c7f22776c94c52340eb28f9ef0130bc81407e39c8005cf14b8950ecc45",
+      "after_sha256": "ba32fb38abd4c8fe7eb755596b5c6a90064defb6fcfc7ae79389f657271001ca",
       "before_sha256": null,
       "first_changed": "P4",
-      "owner": "P4",
-      "reason": "accepted P4 provenance candidate module (g005-p4-provenance-standalone-corrections-3)",
+      "owner": "P15",
+      "reason": "accepted P4 provenance candidate module (g005-p4-provenance-standalone-corrections-3) | P15: D5 useful-life physical-cell correction and dependent trust migration",
       "source": "new",
-      "note": "corrections-1: register_snapshot freezes raw line bytes for post-deletion verification (P1-3)."
+      "note": "corrections-1: register_snapshot freezes raw line bytes for post-deletion verification (P1-3).",
+      "last_changed": "P15"
     },
     "skills/knuaf-doc/scripts/gg_rda_research.py": {
-      "after_sha256": "ad93561fadbd3998e4b56f26ef445954a78faaef444676516793df3f81ca0f44",
+      "after_sha256": "3229b365a9aa18c9fe63257808bdad4c67d133d8c762402ff7148ba79515130c",
       "before_sha256": null,
       "first_changed": "P4",
-      "owner": "P4",
-      "reason": "PR3 baseline adapted to P4 propose/apply contract (task P4-SHARED-CORE-INTEGRATION) corrections-3: SCC1 content-bound acceptance / SCC5 exact provenance map / B-TEST-1 snapshot-payload negatives",
+      "owner": "P15",
+      "reason": "PR3 baseline adapted to P4 propose/apply contract (task P4-SHARED-CORE-INTEGRATION) corrections-3: SCC1 content-bound acceptance / SCC5 exact provenance map / B-TEST-1 snapshot-payload negatives | P15: D5 useful-life physical-cell correction and dependent trust migration",
       "source": "new",
-      "note": "corrections-2: SCC1 pinned-authority catalog acceptance, SCC3 target-id requirement, SCC4 unconditional snapshot verification, SCC6 numeric finiteness."
+      "note": "corrections-2: SCC1 pinned-authority catalog acceptance, SCC3 target-id requirement, SCC4 unconditional snapshot verification, SCC6 numeric finiteness.",
+      "last_changed": "P15"
     },
     "skills/knuaf-doc/scripts/gg_research_handoff.py": {
       "after_sha256": "92c06177bf313f6d50c604acdea5cc9b16a2b74a55b887025b213ae71f38a556",
@@ -752,13 +759,13 @@
       "last_changed": "P9"
     },
     "skills/knuaf-doc/tests/test_gg_rda_candidates.py": {
-      "after_sha256": "a76350ab121b31d690bfdb02696f819ed857a05350cd9bf7ba915c5f013d788d",
+      "after_sha256": "00332531ab7f8845d069ade08353294bc06935de6428e41eb5f151b566f87a9d",
       "before_sha256": null,
       "first_changed": "P6",
-      "owner": "P6",
-      "reason": "Synthetic and pinned-pack approval gate regression tests | P6 review: bare-rights and corrected-conflict negative controls",
+      "owner": "P15",
+      "reason": "Synthetic and pinned-pack approval gate regression tests | P6 review: bare-rights and corrected-conflict negative controls | P15: D5 useful-life physical-cell correction and dependent trust migration",
       "source": "new",
-      "last_changed": "P6"
+      "last_changed": "P15"
     },
     "skills/knuaf-doc/tests/test_gg_rda_lookup_audit_key.py": {
       "after_sha256": "732258593fc89559c3680b3244310532e092ae4436314f83febdc3eb5b025843",
@@ -769,12 +776,13 @@
       "source": "new"
     },
     "skills/knuaf-doc/tests/test_gg_rda_provenance.py": {
-      "after_sha256": "5164527cb4488a17e1dd69d3fa305967ee625f401585fffbf3c94e91bad2e214",
+      "after_sha256": "f24f4da2047991cfa021f04a4a84eaef3e8ed355a2c6e6ae822cc62683155e12",
       "before_sha256": null,
       "first_changed": "P4",
-      "owner": "P4",
-      "reason": "accepted provenance lane test (carried over verbatim)",
-      "source": "new"
+      "owner": "P15",
+      "reason": "accepted provenance lane test (carried over verbatim) | P15: D5 useful-life physical-cell correction and dependent trust migration",
+      "source": "new",
+      "last_changed": "P15"
     },
     "skills/knuaf-doc/tests/test_gg_rda_research_integration.py": {
       "after_sha256": "e4ff44b187eacca3477cf404a7f6a2c74354afaa719b820ada4bff6365d4ec7f",
@@ -1008,19 +1016,19 @@
       "after_sha256": "00bb47d3ebae970073b700e3a9019154322089bf18fa053b1366856b1a9da943",
       "before_sha256": null,
       "first_changed": "P13",
-      "owner": "P15",
-      "reason": "D4 empty identity-only source catalogue; rows are supplied by major-owned registrations | P13: rebased D4 identity-only declaration onto accepted P12 | P15: 41 fruit_trees identity-only rows (hash + bibliographic only, no excerpts)",
+      "owner": "P16",
+      "reason": "D4 empty identity-only source catalogue; rows are supplied by major-owned registrations | P13: rebased D4 identity-only declaration onto accepted P12 | P16: 41 fruit_trees identity-only rows (hash + bibliographic only, no excerpts)",
       "source": "new",
-      "last_changed": "P15"
+      "last_changed": "P16"
     },
     "tests/test_source_identities.py": {
       "after_sha256": "c4e7ae7e17c60024de2b8b2c383c006dbb9c63465446ff2a7c684a0708ec01d3",
       "before_sha256": null,
       "first_changed": "P13",
-      "owner": "P15",
-      "reason": "D4 positive and adversarial catalogue, privacy, duplicate-key and registry-binding controls | Astra D4 round 1: sanitized dependency failures and bounded/deep JSON rejection with CLI negatives | P13: rebased D4 identity-only declaration onto accepted P12 | P13: privacy negatives assemble synthetic digit groups at test time without a shipped student-number literal | P15: empty-catalogue contract kept on a synthetic empty list now that fruit rows ship; the shipped catalogue must load and pass the CLI check with its real row count",
+      "owner": "P16",
+      "reason": "D4 positive and adversarial catalogue, privacy, duplicate-key and registry-binding controls | Astra D4 round 1: sanitized dependency failures and bounded/deep JSON rejection with CLI negatives | P13: rebased D4 identity-only declaration onto accepted P12 | P13: privacy negatives assemble synthetic digit groups at test time without a shipped student-number literal | P16: empty-catalogue contract kept on a synthetic empty list now that fruit rows ship; the shipped catalogue must load and pass the CLI check with its real row count",
       "source": "new",
-      "last_changed": "P15"
+      "last_changed": "P16"
     },
     "skills/knuaf-doc/scripts/gg_source_identity.py": {
       "after_sha256": "8e2856d3b6c729eba03f9f85a4854ebd8e477bcd2cc3f8871a3a875ce22d7873",
@@ -1048,17 +1056,35 @@
       "last_changed": "P14",
       "reason": "P14: fruit_trees premise probes in the common interview format with instance sources",
       "source": "new"
+    },
+    "skills/knuaf-doc/references/benchmark-packs/common/rda-econ-2025/corrections/pp133-135-cells.json": {
+      "after_sha256": "552d821f3b0ed970c4d38ac134828f31ca72556088bf0f21e778d1b61e305d0b",
+      "before_sha256": null,
+      "first_changed": "P15",
+      "last_changed": "P15",
+      "owner": "P15",
+      "reason": "D5 source-cell correction mapping and regression coverage | P15: rebased onto accepted P14 (main f9c278c3)",
+      "source": "new"
+    },
+    "skills/knuaf-doc/tests/test_gg_rda_d5_useful_life.py": {
+      "after_sha256": "72b90612274c7d1434a3a58c564345ce672450c1e374be72aaafefab71bc2188",
+      "before_sha256": null,
+      "first_changed": "P15",
+      "last_changed": "P15",
+      "owner": "P15",
+      "reason": "D5 source-cell correction mapping and regression coverage | P15: rebased onto accepted P14 (main f9c278c3)",
+      "source": "new"
     }
   },
   "cumulative": true,
-  "note": "선언된 runtime 변경만 — 이 목록 밖의 baseline 변화는 미승인. README.md는 readme_policy로 별도 관리. baseline 파일의 삭제는 허용하지 않으며, 신규 파일은 approved_new_files에 사전 명시된 경로만 before_sha256=null로 선언 가능. P6 공용 작성 계약은 새 런타임 파일을 별도 승인 목록으로 선언한다. P7 공용 전공 출력 가드(정책 B)는 기존 런타임 파일 변경과 기준선 파일 1개(gg_excel_formula_patch.py) 첫 변경을 선언한다. P8 과수 첫 묶음은 과수 모듈 선언·등록과 공용 보조 모듈 2개(참조 XLSX 결정·연구 전달물 검증), 과수 작성계획, 참조집합 데이터·안내 문서를 새 파일로 선언한다. P9 원예환경시스템 첫 묶음은 원예 모듈 선언·등록·표지, 원예 작성계획, 원예 profile·안내 문서를 새 파일로 선언하고 재사용 등록부에 원예 참조 항목을 추가한다. P10: 공용 Kang XLSX 재사용과 템플릿 규칙, D3 전공별 기본 통합문서 우선순위를 P9 원예 모듈과 함께 선언한다. P11 공용 인터뷰 규칙은 기준선 문서 4건(SKILL.md·interview-guide·workflow-order·mid-work-questions) 변경과 특용작물 premise-probes.md 신규 1건을 선언한다. P12 산업곤충 첫 묶음은 곤충 문서 계획·근거 검토 스크립트 4개, 선례 지도·안내·핵심 전제 문서 3개를 새 파일로, 재사용 등록부 곤충 항목 9개와 SKILL·gg.py 등 기존 파일 갱신을 선언한다. P13: D4 식별 전용 카탈로그·검증기·시험 3건을 신규 선언하고 SKILL·source-intake·재사용 시험의 변경을 P12 산업곤충 부모 위에 추가한다. P14 과수 둘째 묶음은 과수 모듈 0.2.0(수확 배치·물량 이동·연도별 수량 필드), 과수 작성계획 확장, 생산·재고 검산과 핵심 전제 질문 문서를 새 파일로 선언한다. P15 과수 식별값 소묶음은 새 런타임 파일 없이 출처 식별 목록에 과수 참조 자료 41행을 추가한다.",
+  "note": "선언된 runtime 변경만 — 이 목록 밖의 baseline 변화는 미승인. README.md는 readme_policy로 별도 관리. baseline 파일의 삭제는 허용하지 않으며, 신규 파일은 approved_new_files에 사전 명시된 경로만 before_sha256=null로 선언 가능. P6 공용 작성 계약은 새 런타임 파일을 별도 승인 목록으로 선언한다. P7 공용 전공 출력 가드(정책 B)는 기존 런타임 파일 변경과 기준선 파일 1개(gg_excel_formula_patch.py) 첫 변경을 선언한다. P8 과수 첫 묶음은 과수 모듈 선언·등록과 공용 보조 모듈 2개(참조 XLSX 결정·연구 전달물 검증), 과수 작성계획, 참조집합 데이터·안내 문서를 새 파일로 선언한다. P9 원예환경시스템 첫 묶음은 원예 모듈 선언·등록·표지, 원예 작성계획, 원예 profile·안내 문서를 새 파일로 선언하고 재사용 등록부에 원예 참조 항목을 추가한다. P10: 공용 Kang XLSX 재사용과 템플릿 규칙, D3 전공별 기본 통합문서 우선순위를 P9 원예 모듈과 함께 선언한다. P11 공용 인터뷰 규칙은 기준선 문서 4건(SKILL.md·interview-guide·workflow-order·mid-work-questions) 변경과 특용작물 premise-probes.md 신규 1건을 선언한다. P12 산업곤충 첫 묶음은 곤충 문서 계획·근거 검토 스크립트 4개, 선례 지도·안내·핵심 전제 문서 3개를 새 파일로, 재사용 등록부 곤충 항목 9개와 SKILL·gg.py 등 기존 파일 갱신을 선언한다. P13: D4 식별 전용 카탈로그·검증기·시험 3건을 신규 선언하고 SKILL·source-intake·재사용 시험의 변경을 P12 산업곤충 부모 위에 추가한다. P14 과수 둘째 묶음은 과수 모듈 0.2.0(수확 배치·물량 이동·연도별 수량 필드), 과수 작성계획 확장, 생산·재고 검산과 핵심 전제 질문 문서를 새 파일로 선언한다. | P15 D5: rda.econ.2025 pp133-135 corrected cell mapping, rejected legacy slice, lookup boundary, pinned trust migration; rebased onto accepted P14 (main f9c278c3). P16 과수 식별값 소묶음은 새 런타임 파일 없이 출처 식별 목록에 과수 참조 자료 41행을 추가한다.",
   "parent_candidate": {
-    "stage": "P14",
-    "file_count": 185,
-    "tree_sha256": "7afacd85ac97b38eb5cda4f22586c923e2ae22692ea1afe0c27882b5dec24b6d"
+    "stage": "P15",
+    "file_count": 188,
+    "tree_sha256": "a0854e3347144a3c5ebd5ac38afd47c7845b2d1142807c3ad39d03aa2651f848"
   },
   "schema": "knuaf-doc/runtime-changes@2",
-  "stage": "P15",
+  "stage": "P16",
   "stage_lineage": [
     {
       "file_count": 75,
@@ -1149,6 +1175,12 @@
       "file_count": 185,
       "tree_sha256": "7afacd85ac97b38eb5cda4f22586c923e2ae22692ea1afe0c27882b5dec24b6d",
       "note": "P14 기준 main f9c278c(PR #16 과수 둘째 묶음 병합)의 clean export 전체 파일 트리 해시 — P15의 직전 부모"
+    },
+    {
+      "stage": "P15",
+      "file_count": 188,
+      "tree_sha256": "a0854e3347144a3c5ebd5ac38afd47c7845b2d1142807c3ad39d03aa2651f848",
+      "note": "P15 기준 main b489147(PR #13 D5 내용연수 정정 병합)의 clean export 전체 파일 트리 해시 — P16의 직전 부모"
     }
   ]
 }
