@@ -6,6 +6,7 @@ with the common project transaction and output paths.
 """
 
 import json
+import re
 from pathlib import Path
 
 import gg_core
@@ -18,6 +19,65 @@ DEFAULT_PRECEDENTS = (
 )
 
 MAJOR_ID = "industrial_insects"
+LINE_PREFIX = "industrial_insects.line."
+FIELD_INVENTORY = "industrial_insects.line_inventory"
+FIELD_RETIRED = "industrial_insects.line_retired"
+FIELD_PLAN_YEARS = "industrial_insects.plan_years"
+_LINE_TEMPLATE = "industrial_insects.line.{id}."
+_YEAR_TEMPLATE = "industrial_insects.line.{id}.year.{yyyy}."
+
+# Line instance grammar (design §2.3): stable ids are ``l`` + 2-3 digits,
+# plan years are four digits.  Concrete facts carry the id in the field id.
+# Whole-token grammar uses fullmatch so a trailing newline never validates.
+_LINE_ID = re.compile(r"l[0-9]{2,3}")
+_YEAR = re.compile(r"[0-9]{4}")
+_LINE_FIELD = re.compile(r"industrial_insects\.line\.(l[0-9]{2,3})\."
+                         r"([a-z_]+)")
+_LINE_YEAR_FIELD = re.compile(r"industrial_insects\.line\.(l[0-9]{2,3})"
+                              r"\.year\.([0-9]{4})\.([a-z_]+)")
+_LINE_ANY_ID = re.compile(r"^industrial_insects\.line\.(l[0-9]{2,3})\.")
+_LINE_ANY_YEAR = re.compile(r"^industrial_insects\.line\.(l[0-9]{2,3})"
+                            r"\.year\.([0-9]{4})\.")
+
+_PRODUCT_ROLES = ("main", "byproduct", "processed", "service")
+_REF_RULES = {
+    "source_line": {"byproduct", "service"},
+    "input_line": {"processed"},
+}
+_COMPANIONS = (
+    ("survival_rate", "survival_basis"),
+    ("stocking_input", "stocking_unit"),
+)
+# Answer states that count as "answered" for the related-fact pointer.
+_ANSWERED_STATES = {"provided", "explicit_none", "not_applicable",
+                    "withheld"}
+
+# Same-topic project summary field behind each line field (design §2.5):
+# the plan emits a fact pointer (id/revision/field_id, never a value) so a
+# helper can ask whether the earlier project answer applies to this line.
+# Deliberately renamed line fields point at the project field whose topic
+# they refine; fields with no project counterpart are absent here.
+_RELATED_PROJECT_FIELDS = {
+    "species": "species",
+    "purpose": "purpose",
+    "product_form": "product_form",
+    "cycle_days": "cycle_days",
+    "cycles_per_year": "cohort_or_batch",
+    "first_year_sold_cycles": "cohort_or_batch",
+    "stocking_input": "stocking_input",
+    "stocking_unit": "stocking_input",
+    "stock_source": "stocking_input",
+    "survival_rate": "survival_or_loss",
+    "survival_basis": "survival_or_loss",
+    "saleable_per_cycle": "saleable_yield",
+    "sale_unit": "unit",
+    "feed_or_substrate": "feed_or_substrate",
+    "feed_supply": "feed_or_substrate",
+    "channel": "channel",
+    "price_basis": "price_date",
+    "unit_price": "price_date",
+}
+
 ROSTER = {"F0", "E1", "E2", "E3", "E4"}
 SCHEMA_ID = "insect-precedents/v2"
 
@@ -250,6 +310,437 @@ def question_states(module, project):
     return states
 
 
+# -- line / plan-year instances (design §2.2-2.7, §11, §12) --------------------
+
+def _active_by_field(project):
+    """Non-superseded facts grouped by field_id (read-only scan)."""
+    by_field = {}
+    for fact in (project.get("facts") or {}).values():
+        if not isinstance(fact, dict):
+            continue
+        if fact.get("verification") == "superseded":
+            continue
+        by_field.setdefault(fact.get("field_id"), []).append(fact)
+    return by_field
+
+
+def _line_field_state(view, field_id, active):
+    """Common question verdict + answer states + flags, values omitted.
+
+    ``usable`` is False when the field's active facts are ambiguous
+    (multiple_active or disputed): the plan never treats the field as a
+    confirmed value.  question_status is the shared gg_core verdict on the
+    superseded-filtered view — line fields never inherit project answers.
+    """
+    answer_states = sorted(
+        {
+            contract.normalize_answer_state(fact.get("answer_state"))
+            for fact in active
+        }
+    ) or ["not_provided"]
+    flags = []
+    if len(active) >= 2:
+        flags.append("multiple_active")
+    if any(fact.get("verification") == "disputed" for fact in active):
+        flags.append("disputed")
+    return {
+        "question_status": gg_core.question(view, field_id),
+        "answer_states": answer_states,
+        "flags": flags,
+        "usable": not flags,
+    }
+
+
+def _declared_tokens(facts, pattern):
+    """Union of pattern-matching tokens across provided list facts.
+
+    Declaration facts are comma-joined id lists ("l01,l02").  Tokens that
+    fail the grammar are not ids and never become instances; they mark the
+    list with ``inventory_mismatch``.  Conflicting provided lists keep the
+    union (both declarations are reported) and also mark the mismatch.
+    """
+    tokens, raw_lists, malformed = [], [], False
+    for fact in facts:
+        if fact.get("answer_state") != "provided":
+            continue
+        value = fact.get("value")
+        if not isinstance(value, str):
+            malformed = True
+            continue
+        parts = [token.strip() for token in value.split(",")]
+        raw_lists.append(tuple(parts))
+        for token in parts:
+            if pattern.fullmatch(token):
+                if token not in tokens:
+                    tokens.append(token)
+            else:
+                malformed = True
+    differ = len(set(raw_lists)) > 1
+    return tokens, malformed, differ
+
+
+def _has_provided(facts):
+    return any(f.get("answer_state") == "provided" for f in facts)
+
+
+def _single_provided_value(facts):
+    """Raw value of the sole provided fact, else None (never emitted raw
+    for ref fields unless it validates against the declared id grammar)."""
+    provided = [f for f in facts if f.get("answer_state") == "provided"]
+    if len(provided) != 1:
+        return None
+    return provided[0].get("value")
+
+
+def _dependency_superseded(facts, all_facts):
+    """A line fact whose depends_on target is now superseded (§11.4)."""
+    for fact in facts:
+        for dep in fact.get("depends_on") or []:
+            if not isinstance(dep, dict) or dep.get("collection") != "facts":
+                continue
+            target = all_facts.get(dep.get("id"))
+            if isinstance(target, dict) and (
+                    target.get("verification") == "superseded"):
+                return True
+    return False
+
+
+def _line_template_names(module):
+    """Concrete field names behind the declared line/year templates."""
+    line_names, year_names = [], []
+    for q in module.question_schema:
+        fid = q.field_id
+        if fid.startswith(_YEAR_TEMPLATE):
+            year_names.append(fid[len(_YEAR_TEMPLATE):])
+        elif fid.startswith(_LINE_TEMPLATE):
+            line_names.append(fid[len(_LINE_TEMPLATE):])
+    return line_names, year_names
+
+
+def _invalid_field_issue(field_id):
+    """Diagnose by status code, never by echoing the raw field_id: only
+    grammar-verified line id/year tokens inside it may be reported
+    (§2.6 — diagnostics carry status codes, not unvalidated input text)."""
+    issue = {"kind": "invalid_field_id"}
+    ym = _LINE_ANY_YEAR.match(field_id)
+    if ym:
+        issue["line_id"] = ym.group(1)
+        issue["year"] = ym.group(2)
+    else:
+        lm = _LINE_ANY_ID.match(field_id)
+        if lm:
+            issue["line_id"] = lm.group(1)
+    return issue
+
+
+def _reserved_line_ids(facts, questions):
+    """Every grammar-valid line id that ever appears in canonical: all
+    industrial_insects.line.<id>.* fact field ids (every state, superseded
+    included), every line_inventory/line_retired fact's list tokens (every
+    state), and every question record key (§11.5 — a used number is never
+    reissued)."""
+    seen = set()
+    for fact in facts.values():
+        if not isinstance(fact, dict):
+            continue
+        field_id = fact.get("field_id")
+        if not isinstance(field_id, str):
+            continue
+        match = _LINE_ANY_ID.match(field_id)
+        if match:
+            seen.add(match.group(1))
+        elif field_id in (FIELD_INVENTORY, FIELD_RETIRED):
+            value = fact.get("value")
+            if isinstance(value, str):
+                for token in value.split(","):
+                    token = token.strip()
+                    if _LINE_ID.fullmatch(token):
+                        seen.add(token)
+    for key in questions:
+        match = _LINE_ANY_ID.match(key) if isinstance(key, str) else None
+        if match:
+            seen.add(match.group(1))
+    return seen
+
+
+def _next_line_id(seen):
+    """First number above every reserved id, or None when the next number
+    would exceed the ``l[0-9]{2,3}`` grammar ceiling (l999)."""
+    top = max((int(lid[1:]) for lid in seen), default=0)
+    if top >= 999:
+        return None
+    return "l%02d" % (top + 1)
+
+
+def _ref_state(state, facts, lid, field_name, role, role_uncertain,
+               declared, retired, retired_list_uncertain, role_of):
+    """source_line/input_line: echo only a declared-id value (§2.6).
+
+    Reference-rule verdicts only use *confirmed* roles: a target whose
+    role facts are ambiguous or absent makes the reference
+    ``referenced_role_uncertain`` + unusable instead of a definitive
+    violation; an untrusted retired list yields ``retired_uncertain``
+    rather than ``retired_ref``.
+    """
+    flags = set(state["flags"])
+    candidate = _single_provided_value(facts)
+    allowed = _REF_RULES[field_name]
+    if candidate is None:
+        state["value"] = None
+    elif not isinstance(candidate, str) or not _LINE_ID.fullmatch(candidate):
+        state["value"] = {"state": "invalid_ref"}
+        flags.add("invalid_ref")
+    elif candidate == lid:
+        state["value"] = candidate
+        flags.add("role_ref_rule")
+    elif candidate in retired:
+        state["value"] = candidate
+        if retired_list_uncertain:
+            flags.add("retired_uncertain")
+            state["usable"] = False
+        else:
+            flags.add("retired_ref")
+    elif candidate not in declared:
+        state["value"] = {"state": "invalid_ref"}
+        flags.add("invalid_ref")
+    else:
+        state["value"] = candidate
+        # A byproduct/service line hangs off a *main* line (§2.7); a
+        # confirmed non-main role violates the rule, while an
+        # unconfirmed role makes the reference uncertain, not a verdict.
+        target_role = role_of.get(candidate)
+        if field_name == "source_line" and target_role == "main":
+            pass
+        elif target_role is None:
+            flags.add("referenced_role_uncertain")
+            state["usable"] = False
+        elif field_name == "source_line":
+            flags.add("role_ref_rule")
+    if lid not in role_uncertain and (
+            (role in allowed) != _has_provided(facts)):
+        flags.add("role_ref_rule")
+    state["flags"] = sorted(flags)
+    return state
+
+
+def _line_state(module, project):
+    """Line/plan-year instance plan keys — structure ids only, no values."""
+    view = question_view(project)
+    facts = project.get("facts") or {}
+    questions = project.get("questions") or {}
+    line_names, year_names = _line_template_names(module)
+    line_name_set, year_name_set = set(line_names), set(year_names)
+
+    by_field = _active_by_field(project)
+    line_facts, year_facts, ids_with_facts, issues = {}, {}, set(), []
+    for field_id, flist in by_field.items():
+        if not (isinstance(field_id, str)
+                and field_id.startswith(LINE_PREFIX)):
+            continue
+        ym = _LINE_YEAR_FIELD.fullmatch(field_id)
+        if ym and ym.group(3) in year_name_set:
+            year_facts.setdefault(ym.groups(), []).extend(flist)
+            ids_with_facts.add(ym.group(1))
+            continue
+        lm = _LINE_FIELD.fullmatch(field_id)
+        if lm and lm.group(2) in line_name_set:
+            line_facts.setdefault(lm.groups(), []).extend(flist)
+            ids_with_facts.add(lm.group(1))
+            continue
+        for _ in flist:
+            issues.append(_invalid_field_issue(field_id))
+
+    declared, inv_bad, inv_diff = _declared_tokens(
+        by_field.get(FIELD_INVENTORY, []), _LINE_ID)
+    retired, ret_bad, ret_diff = _declared_tokens(
+        by_field.get(FIELD_RETIRED, []), _LINE_ID)
+    plan_years, yr_bad, yr_diff = _declared_tokens(
+        by_field.get(FIELD_PLAN_YEARS, []), _YEAR)
+    declared, retired, year_set = (
+        set(declared), set(retired), set(plan_years))
+
+    # The retired list gets the same state shape as the inventory.  When
+    # it carries any integrity state (disputed, multiple_active, malformed
+    # tokens, conflicting lists) it cannot ground a definitive verdict:
+    # retired_instance/retired_ref become retired_uncertain.
+    line_retired = _line_field_state(
+        view, FIELD_RETIRED, by_field.get(FIELD_RETIRED, []))
+    if ret_bad or ret_diff:
+        line_retired["flags"] = sorted(
+            set(line_retired["flags"]) | {"inventory_mismatch"})
+    retired_list_uncertain = bool(line_retired["flags"])
+
+    label_ok = {
+        lid for (lid, name), fl in line_facts.items()
+        if name == "label" and _has_provided(fl)
+    }
+    live = sorted(
+        lid for lid in declared
+        if (lid not in retired or retired_list_uncertain)
+        and lid in label_ok)
+    # A line's role is confirmed only when its product_role active facts
+    # are a single clean provided value; anything else (disputed,
+    # multiple_active, mixed/unknown/absent) is unconfirmed and must not
+    # ground reference-rule verdicts.
+    role_of, role_uncertain = {}, set()
+    for lid in live:
+        role_facts = line_facts.get((lid, "product_role"), [])
+        role_state = _line_field_state(
+            view, LINE_PREFIX + lid + ".product_role", role_facts)
+        if role_state["usable"] and role_state["answer_states"] == [
+                "provided"]:
+            role_of[lid] = _single_provided_value(role_facts)
+        else:
+            role_of[lid] = None
+            if role_facts:
+                role_uncertain.add(lid)
+    instances = []
+    for lid in sorted(declared | retired | ids_with_facts | label_ok):
+        flags = set()
+        if lid in retired:
+            flags.add("retired_uncertain" if retired_list_uncertain
+                      else "retired_instance")
+        if lid in declared and lid in retired:
+            flags.add("inventory_mismatch")
+        if lid not in declared and lid not in retired:
+            flags.add("undeclared_instance")
+        if lid in declared and lid not in retired and lid not in label_ok:
+            flags.add("inventory_mismatch")
+        instances.append({"id": lid, "flags": sorted(flags)})
+
+    line_inventory = _line_field_state(
+        view, FIELD_INVENTORY, by_field.get(FIELD_INVENTORY, []))
+    inv_flags = set(line_inventory["flags"])
+    if (inv_bad or inv_diff or declared & retired
+            or any(lid not in label_ok for lid in declared - retired)):
+        inv_flags.add("inventory_mismatch")
+    line_inventory["flags"] = sorted(inv_flags)
+
+    plan_years_state = _line_field_state(
+        view, FIELD_PLAN_YEARS, by_field.get(FIELD_PLAN_YEARS, []))
+    if yr_bad or yr_diff:
+        plan_years_state["flags"] = sorted(
+            set(plan_years_state["flags"]) | {"inventory_mismatch"})
+
+    line_questions, related = {}, {}
+    for lid in live:
+        expected_scope = "line:" + lid
+        entry = {}
+        for name in line_names:
+            fid = LINE_PREFIX + lid + "." + name
+            fl = line_facts.get((lid, name), [])
+            st = _line_field_state(view, fid, fl)
+            flags = set(st["flags"])
+            if any(f.get("scope") != expected_scope for f in fl):
+                flags.add("scope_mismatch")
+            if _dependency_superseded(fl, facts):
+                flags.add("dependency_superseded")
+            st["flags"] = sorted(flags)
+            entry[name] = st
+        role = role_of[lid]
+        if role is not None and role not in _PRODUCT_ROLES:
+            entry["product_role"]["flags"] = sorted(
+                set(entry["product_role"]["flags"]) | {"role_ref_rule"})
+        for name in _REF_RULES:
+            entry[name] = _ref_state(
+                entry[name], line_facts.get((lid, name), []), lid, name,
+                role, role_uncertain, declared, retired,
+                retired_list_uncertain, role_of)
+        for name, comp in _COMPANIONS:
+            if _has_provided(line_facts.get((lid, name), [])) and not (
+                    _has_provided(line_facts.get((lid, comp), []))):
+                entry[name]["flags"] = sorted(
+                    set(entry[name]["flags"]) | {"missing_companion"})
+        years = {}
+        year_keys = year_set | {
+            year for (other, year, _name) in year_facts if other == lid}
+        for year in sorted(year_keys):
+            yentry = {}
+            for name in year_names:
+                fid = "%s%s.year.%s.%s" % (LINE_PREFIX, lid, year, name)
+                fl = year_facts.get((lid, year, name), [])
+                st = _line_field_state(view, fid, fl)
+                flags = set(st["flags"])
+                if year not in year_set:
+                    flags.add("undeclared_instance")
+                    st["usable"] = False
+                if any(f.get("scope") != expected_scope for f in fl):
+                    flags.add("scope_mismatch")
+                if _dependency_superseded(fl, facts):
+                    flags.add("dependency_superseded")
+                st["flags"] = sorted(flags)
+                yentry[name] = st
+            years[year] = yentry
+        entry["years"] = years
+        line_questions[lid] = entry
+
+        pointers = {}
+        for name in line_names:
+            proj_name = _RELATED_PROJECT_FIELDS.get(name)
+            if proj_name is None:
+                continue
+            if entry[name]["question_status"] == "reuse":
+                continue
+            proj_field = "industrial_insects." + proj_name
+            ptrs = [
+                {"fact_id": f.get("id"), "revision": f.get("revision"),
+                 "field_id": proj_field}
+                for f in by_field.get(proj_field, [])
+                if f.get("answer_state") in _ANSWERED_STATES
+            ]
+            if ptrs:
+                pointers[name] = ptrs[0] if len(ptrs) == 1 else ptrs
+        if pointers:
+            related[lid] = pointers
+
+    next_id = _next_line_id(_reserved_line_ids(facts, questions))
+    if next_id is None:
+        line_inventory["flags"] = sorted(
+            set(line_inventory["flags"]) | {"line_ids_exhausted"})
+    return {
+        "line_inventory": line_inventory,
+        "line_retired": line_retired,
+        "plan_years": plan_years_state,
+        "instances": instances,
+        "line_questions": line_questions,
+        "related_project_facts": related,
+        "next_line_id": next_id,
+        "instance_issues": issues,
+    }
+
+
+def build_line_view(registry, project):
+    """Line/year instance view for the common interview, no selection JSON.
+
+    ``insect-plan`` without ``--input`` returns this: ``needs_selection``
+    plus the declared lines, their per-field question states and the plan
+    years.  Only validated structure identifiers are emitted — line ids,
+    plan years, and ``source_line``/``input_line`` values when they exactly
+    match a declared id; student answer values never leave the record.
+    """
+    binding = contract.binding_from_project(registry, project)
+    if binding.major_id != MAJOR_ID:
+        raise ValueError("insect plan requires industrial_insects binding")
+    module = registry.resolve(binding.major_id)
+    state = {
+        "major_id": binding.major_id,
+        "module_version": binding.module_version,
+        "contract_version": binding.contract_version,
+        "project_revision": project.get("revision"),
+        "status": "needs_selection",
+        "question_status_meaning": (
+            "reuse = 재질문 불필요 판정일 뿐 검증·승인 아님"
+        ),
+        "answer_scope": "line_instances",
+        "source_ref_check": "registered_id_only",
+        "finance_status": "unsupported",
+        "rendered_paper": False,
+        "canonical_write": False,
+    }
+    state.update(_line_state(module, project))
+    return state
+
+
 def _valid_ref(ref):
     return (
         isinstance(ref, dict)
@@ -370,7 +861,7 @@ def build_plan(registry, project, selections, *,
                 "locator_pending"
             ),
         })
-    return {
+    plan = {
         "major_id": binding.major_id,
         "module_version": binding.module_version,
         "contract_version": binding.contract_version,
@@ -388,3 +879,5 @@ def build_plan(registry, project, selections, *,
         "rendered_paper": False,
         "canonical_write": False,
     }
+    plan.update(_line_state(module, project))
+    return plan

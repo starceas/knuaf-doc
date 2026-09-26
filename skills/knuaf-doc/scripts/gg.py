@@ -245,15 +245,21 @@ def main(argv=None):
                         },
                     }
                 elif a.command == "insect-plan":
-                    if not a.input:
-                        raise ValueError("--input 선택 JSON 필요")
                     import gg_insect_document
 
-                    selection = insect_selection()
-                    value = insect_call(
-                        gg_insect_document.build_plan,
-                        registry, project, selection,
-                    )
+                    if a.input:
+                        selection = insect_selection()
+                        value = insect_call(
+                            gg_insect_document.build_plan,
+                            registry, project, selection,
+                        )
+                    else:
+                        # No selection yet: the common interview reads the
+                        # line/year instances from this view.
+                        value = insect_call(
+                            gg_insect_document.build_line_view,
+                            registry, project,
+                        )
                 elif a.command == "insect-evidence":
                     if not a.pdf or not a.xlsx:
                         raise ValueError("--pdf R0와 --xlsx R1 원본 경로 필요")

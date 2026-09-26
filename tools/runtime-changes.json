@@ -101,12 +101,12 @@
       "note": "corrections-2: SCC5 exact added-path inventory + provenance transfer record."
     },
     "skills/knuaf-doc/SKILL.md": {
-      "after_sha256": "eef96972ee2080249d711104865ebc584fdb8a19c4629f649fd72c099437a90c",
+      "after_sha256": "4fcbab36a880dee2f91a126c5080d98c94f2f1e71f325e7ea170d5c0387a09b1",
       "before_sha256": "c0008fa5239cc16411fd4ef24b5bf901c7a8b9b50c6b621e2bdee3acf734ddc0",
       "first_changed": "P1",
-      "last_changed": "P14",
-      "owner": "P14",
-      "reason": "H11 문서 정정: 사용자 명시 모델도 임의 폴백·대체 금지 규칙 추가 | P5-D1 guidance sync: new '참고자료 폴더 등록' bullet documents the frozen source-scan→source-resolve→source-register→source-view lifecycle and 03_sources.md preservation | P6: document explicit major binding and current industrial insect capability boundary | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P8: fruit_trees plan-only capability and guidance link | P9: hort_env_systems plan-only capability and guidance link | P10: P9: common XLSX template rule + X02 layout guard sentence | P9-D3: major-specific workbook precedence sentence (hort_env_systems base = registered H01) | P11 공용 인터뷰 규칙: 전공별 핵심 전제 목록(C1), 동적 영향 순위(C2), '모르겠다' 도움(C3), 충돌 정리(C5), 미준비 전공 안내, 특용작물 probe 문서 | P12: industrial_insects plan/evidence commands and built-in reuse guidance | P13: D4 identity-catalogue-only precedence guidance | P14: fruit_trees read-only production and inventory check link",
+      "last_changed": "P16",
+      "owner": "P16",
+      "reason": "H11 문서 정정: 사용자 명시 모델도 임의 폴백·대체 금지 규칙 추가 | P5-D1 guidance sync: new '참고자료 폴더 등록' bullet documents the frozen source-scan→source-resolve→source-register→source-view lifecycle and 03_sources.md preservation | P6: document explicit major binding and current industrial insect capability boundary | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P8: fruit_trees plan-only capability and guidance link | P9: hort_env_systems plan-only capability and guidance link | P10: P9: common XLSX template rule + X02 layout guard sentence | P9-D3: major-specific workbook precedence sentence (hort_env_systems base = registered H01) | P11 공용 인터뷰 규칙: 전공별 핵심 전제 목록(C1), 동적 영향 순위(C2), '모르겠다' 도움(C3), 충돌 정리(C5), 미준비 전공 안내, 특용작물 probe 문서 | P12: industrial_insects plan/evidence commands and built-in reuse guidance | P13: D4 identity-catalogue-only precedence guidance | P14: fruit_trees read-only production and inventory check link | P16: industrial_insects 0.2.0 product lines, plan without selection, rebinding guidance",
       "source": "new"
     },
     "skills/knuaf-doc/references/benchmark-packs/aliases/crop-aliases.specialty_crops.json": {
@@ -467,12 +467,12 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg.py": {
-      "after_sha256": "f329dfb1d57f5e334a5348f511967efa862b5851262742bf21a1e0e4d158816e",
+      "after_sha256": "f869e1ce125f168dda9fec0eedc169c98e3d750c7a44cf00e024f261225849cc",
       "before_sha256": "1e200103489c827c0b0ac60a7959045c02ecdae8bd8ae77e9b9a3d255554a0d7",
       "first_changed": "P1",
-      "last_changed": "P12",
-      "owner": "P12",
-      "reason": "C5: Python 3.10 미만 사전 차단(core import 전). C2: UTF-8 명시 I/O | P4 CLI routes: rda-lookup/rda-propose/rda-apply | P5 C-union: source-scan/source-resolve/source-register/source-view CLI routes (gg_source_intake/gg_reuse wiring; --packs-dir rejected on source-scan) | P6: bound major-plan and approved-candidate CLI routes; block crop paper for confirmed insect major | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P12: insect-plan/insect-evidence read-only routes with fixed-code errors",
+      "last_changed": "P16",
+      "owner": "P16",
+      "reason": "C5: Python 3.10 미만 사전 차단(core import 전). C2: UTF-8 명시 I/O | P4 CLI routes: rda-lookup/rda-propose/rda-apply | P5 C-union: source-scan/source-resolve/source-register/source-view CLI routes (gg_source_intake/gg_reuse wiring; --packs-dir rejected on source-scan) | P6: bound major-plan and approved-candidate CLI routes; block crop paper for confirmed insect major | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P12: insect-plan/insect-evidence read-only routes with fixed-code errors | P16: insect-plan without --input returns the line/year instance view",
       "source": "new",
       "note": "corrections-1: apply() wiring now requires packs_dir for live-byte freshness (P1-2)."
     },
@@ -625,13 +625,13 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_major_contract.py": {
-      "after_sha256": "97ade776391d132e944073404746c71c657ecc3c58142066eaab3832b1877314",
+      "after_sha256": "6bbf598ef4601ad34f6cf3297e2331b1e6ed976e0509759aad497659f1924fbc",
       "before_sha256": null,
       "first_changed": "P6",
-      "owner": "P14",
-      "reason": "Peer major declarations, explicit evidenced binding, and read-only proposal router | P6 review: equal-rank F0/E1-E4 example_observed roster and optional document nodes | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P8: fruit_trees peer module declaration and registration (guard algorithm unchanged) | P9: hort_env_systems peer module declaration, registration and cover marker (guard algorithm unchanged) | P14: fruit_trees module 0.2.0 — plan_end_year, cohort area/active-period/yield fields, batch and move templates (guard algorithm unchanged)",
+      "owner": "P16",
+      "reason": "Peer major declarations, explicit evidenced binding, and read-only proposal router | P6 review: equal-rank F0/E1-E4 example_observed roster and optional document nodes | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P8: fruit_trees peer module declaration and registration (guard algorithm unchanged) | P9: hort_env_systems peer module declaration, registration and cover marker (guard algorithm unchanged) | P14: fruit_trees module 0.2.0 — plan_end_year, cohort area/active-period/yield fields, batch and move templates (guard algorithm unchanged) | P16: industrial_insects 0.2.0: product-line and plan-year question templates, line declaration fields (guard algorithm unchanged)",
       "source": "new",
-      "last_changed": "P14"
+      "last_changed": "P16"
     },
     "skills/knuaf-doc/scripts/gg_office.py": {
       "after_sha256": "fb8b01385bbc603ad1ed47f16d5c09d91ba14428dde13f61820d5e4df6bf9b73",
@@ -750,13 +750,13 @@
       "last_changed": "P10"
     },
     "skills/knuaf-doc/tests/test_gg_major_contract.py": {
-      "after_sha256": "2446597a6373c20f4e84676bc9e28b99df49349062ba4f0f9c838a6796eae1dc",
+      "after_sha256": "ce3b230bc171cbebeac76c8826d0411929a7a8dc8603c9684b4144ef4f18284e",
       "before_sha256": null,
       "first_changed": "P6",
-      "owner": "P9",
-      "reason": "Synthetic major binding, peer isolation, and unsupported-output tests | P6 review: precedent parity and optional-node regressions | P8: registered majors now include fruit_trees | P9: registered majors now include hort_env_systems",
+      "owner": "P16",
+      "reason": "Synthetic major binding, peer isolation, and unsupported-output tests | P6 review: precedent parity and optional-node regressions | P8: registered majors now include fruit_trees | P9: registered majors now include hort_env_systems | P16: industrial_insects declared module_version is 0.2.0",
       "source": "new",
-      "last_changed": "P9"
+      "last_changed": "P16"
     },
     "skills/knuaf-doc/tests/test_gg_rda_candidates.py": {
       "after_sha256": "00332531ab7f8845d069ade08353294bc06935de6428e41eb5f151b566f87a9d",
@@ -950,13 +950,13 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/industrial-insects/README.md": {
-      "after_sha256": "60fdc934f9eb4381b1e163d21559c0ad66687aadd83886bc41c5ec35a67c1ee6",
+      "after_sha256": "065294fbbf0dded1b7b3b4e07c09ed6fca79e80a62be049f7f3b6349cc9e853f",
       "before_sha256": null,
       "first_changed": "P12",
-      "owner": "P12",
-      "reason": "P12: industrial_insects first bundle guide — support table, equal-rank precedents, selection JSON, R0/R1 evidence axes, reuse keys, limits",
+      "owner": "P16",
+      "reason": "P12: industrial_insects first bundle guide — support table, equal-rank precedents, selection JSON, R0/R1 evidence axes, reuse keys, limits | P16: product lines, 0.2.0 rebinding, farm-count citation",
       "source": "new",
-      "last_changed": "P12"
+      "last_changed": "P16"
     },
     "skills/knuaf-doc/references/industrial-insects/precedents.json": {
       "after_sha256": "8663b186ee13cd92489de2c7a82149e7ac70b24f1b5a051df35559baa630e544",
@@ -968,31 +968,31 @@
       "last_changed": "P12"
     },
     "skills/knuaf-doc/references/industrial-insects/premise-probes.md": {
-      "after_sha256": "7c4222249c8ea5243c068e443276f0e8f3e0b42cf1adec256a2f442bf9c11f4b",
+      "after_sha256": "352e66a34f25812920b67af85d1470527ee5f4e1c9d57aaaebedcb746bf32d81",
       "before_sha256": null,
       "first_changed": "P12",
-      "owner": "P12",
-      "reason": "P12: industrial_insects premise probes in the common interview format (same-decision links only, QuestionSpec unchanged)",
+      "owner": "P16",
+      "reason": "P12: industrial_insects premise probes in the common interview format (same-decision links only, QuestionSpec unchanged) | P16: 17 probes, one field each, line templates with instance source",
       "source": "new",
-      "last_changed": "P12"
+      "last_changed": "P16"
     },
     "skills/knuaf-doc/scripts/gg_insect_document.py": {
-      "after_sha256": "f1647c1e0313488d81aafcbc785791785957705cb038559529795b253acf5543",
+      "after_sha256": "95a83399544ca689ec11a2e222837e697dbd0e1b7ceca23d81b729fc0351df9e",
       "before_sha256": null,
       "first_changed": "P12",
-      "owner": "P12",
-      "reason": "P12: read-only insect document plan — strict selection parser, single precedent loader, superseded-filtered question states, capability/output check",
+      "owner": "P16",
+      "reason": "P12: read-only insect document plan — strict selection parser, single precedent loader, superseded-filtered question states, capability/output check | P16: line/year instance view, declaration/retirement ids, per-instance question states without values or inheritance",
       "source": "new",
-      "last_changed": "P12"
+      "last_changed": "P16"
     },
     "skills/knuaf-doc/scripts/gg_insect_evidence.py": {
-      "after_sha256": "63599a2c44a5e1dad7d720b823713a3f5f73fd5ccbe252706bd40dcca7d7d3f0",
+      "after_sha256": "df0133a7c696cf470f39b9279c3361534c98e9caf7a11057f2e67e21c4ff9bdb",
       "before_sha256": null,
       "first_changed": "P12",
-      "owner": "P12",
-      "reason": "P12: read-only common-axis review of the pinned R0/R1 receipt; conflict axis from receipt relations, no promotion",
+      "owner": "P16",
+      "reason": "P12: read-only common-axis review of the pinned R0/R1 receipt; conflict axis from receipt relations, no promotion | P16: farm-count citation note (owner decision 4), axes unchanged",
       "source": "new",
-      "last_changed": "P12"
+      "last_changed": "P16"
     },
     "skills/knuaf-doc/scripts/gg_insect_precedent_check.py": {
       "after_sha256": "25febaa1947452516fb5e260be34f95426a33bdc0dc471ff75b1758995f0d049",
@@ -1077,14 +1077,14 @@
     }
   },
   "cumulative": true,
-  "note": "선언된 runtime 변경만 — 이 목록 밖의 baseline 변화는 미승인. README.md는 readme_policy로 별도 관리. baseline 파일의 삭제는 허용하지 않으며, 신규 파일은 approved_new_files에 사전 명시된 경로만 before_sha256=null로 선언 가능. P6 공용 작성 계약은 새 런타임 파일을 별도 승인 목록으로 선언한다. P7 공용 전공 출력 가드(정책 B)는 기존 런타임 파일 변경과 기준선 파일 1개(gg_excel_formula_patch.py) 첫 변경을 선언한다. P8 과수 첫 묶음은 과수 모듈 선언·등록과 공용 보조 모듈 2개(참조 XLSX 결정·연구 전달물 검증), 과수 작성계획, 참조집합 데이터·안내 문서를 새 파일로 선언한다. P9 원예환경시스템 첫 묶음은 원예 모듈 선언·등록·표지, 원예 작성계획, 원예 profile·안내 문서를 새 파일로 선언하고 재사용 등록부에 원예 참조 항목을 추가한다. P10: 공용 Kang XLSX 재사용과 템플릿 규칙, D3 전공별 기본 통합문서 우선순위를 P9 원예 모듈과 함께 선언한다. P11 공용 인터뷰 규칙은 기준선 문서 4건(SKILL.md·interview-guide·workflow-order·mid-work-questions) 변경과 특용작물 premise-probes.md 신규 1건을 선언한다. P12 산업곤충 첫 묶음은 곤충 문서 계획·근거 검토 스크립트 4개, 선례 지도·안내·핵심 전제 문서 3개를 새 파일로, 재사용 등록부 곤충 항목 9개와 SKILL·gg.py 등 기존 파일 갱신을 선언한다. P13: D4 식별 전용 카탈로그·검증기·시험 3건을 신규 선언하고 SKILL·source-intake·재사용 시험의 변경을 P12 산업곤충 부모 위에 추가한다. P14 과수 둘째 묶음은 과수 모듈 0.2.0(수확 배치·물량 이동·연도별 수량 필드), 과수 작성계획 확장, 생산·재고 검산과 핵심 전제 질문 문서를 새 파일로 선언한다. | P15 D5: rda.econ.2025 pp133-135 corrected cell mapping, rejected legacy slice, lookup boundary, pinned trust migration; rebased onto accepted P14 (main f9c278c3).",
+  "note": "선언된 runtime 변경만 — 이 목록 밖의 baseline 변화는 미승인. README.md는 readme_policy로 별도 관리. baseline 파일의 삭제는 허용하지 않으며, 신규 파일은 approved_new_files에 사전 명시된 경로만 before_sha256=null로 선언 가능. P6 공용 작성 계약은 새 런타임 파일을 별도 승인 목록으로 선언한다. P7 공용 전공 출력 가드(정책 B)는 기존 런타임 파일 변경과 기준선 파일 1개(gg_excel_formula_patch.py) 첫 변경을 선언한다. P8 과수 첫 묶음은 과수 모듈 선언·등록과 공용 보조 모듈 2개(참조 XLSX 결정·연구 전달물 검증), 과수 작성계획, 참조집합 데이터·안내 문서를 새 파일로 선언한다. P9 원예환경시스템 첫 묶음은 원예 모듈 선언·등록·표지, 원예 작성계획, 원예 profile·안내 문서를 새 파일로 선언하고 재사용 등록부에 원예 참조 항목을 추가한다. P10: 공용 Kang XLSX 재사용과 템플릿 규칙, D3 전공별 기본 통합문서 우선순위를 P9 원예 모듈과 함께 선언한다. P11 공용 인터뷰 규칙은 기준선 문서 4건(SKILL.md·interview-guide·workflow-order·mid-work-questions) 변경과 특용작물 premise-probes.md 신규 1건을 선언한다. P12 산업곤충 첫 묶음은 곤충 문서 계획·근거 검토 스크립트 4개, 선례 지도·안내·핵심 전제 문서 3개를 새 파일로, 재사용 등록부 곤충 항목 9개와 SKILL·gg.py 등 기존 파일 갱신을 선언한다. P13: D4 식별 전용 카탈로그·검증기·시험 3건을 신규 선언하고 SKILL·source-intake·재사용 시험의 변경을 P12 산업곤충 부모 위에 추가한다. P14 과수 둘째 묶음은 과수 모듈 0.2.0(수확 배치·물량 이동·연도별 수량 필드), 과수 작성계획 확장, 생산·재고 검산과 핵심 전제 질문 문서를 새 파일로 선언한다. | P15 D5: rda.econ.2025 pp133-135 corrected cell mapping, rejected legacy slice, lookup boundary, pinned trust migration; rebased onto accepted P14 (main f9c278c3). P16 산업곤충 2묶음은 곤충 모듈 0.2.0(제품 라인·계획 연도 질문 틀)과 곤충 계획·근거·안내·핵심 전제 문서 갱신을 선언한다. 새 런타임 파일은 없다.",
   "parent_candidate": {
-    "stage": "P14",
-    "file_count": 185,
-    "tree_sha256": "7afacd85ac97b38eb5cda4f22586c923e2ae22692ea1afe0c27882b5dec24b6d"
+    "stage": "P15",
+    "file_count": 188,
+    "tree_sha256": "a0854e3347144a3c5ebd5ac38afd47c7845b2d1142807c3ad39d03aa2651f848"
   },
   "schema": "knuaf-doc/runtime-changes@2",
-  "stage": "P15",
+  "stage": "P16",
   "stage_lineage": [
     {
       "file_count": 75,
@@ -1175,6 +1175,12 @@
       "file_count": 185,
       "tree_sha256": "7afacd85ac97b38eb5cda4f22586c923e2ae22692ea1afe0c27882b5dec24b6d",
       "note": "P14 기준 main f9c278c(PR #16 과수 둘째 묶음 병합)의 clean export 전체 파일 트리 해시 — P15의 직전 부모"
+    },
+    {
+      "stage": "P15",
+      "file_count": 188,
+      "tree_sha256": "a0854e3347144a3c5ebd5ac38afd47c7845b2d1142807c3ad39d03aa2651f848",
+      "note": "P15 기준 main b489147(PR #13 내용연수 정정 병합)의 변경 전 전체 파일 트리 해시"
     }
   ]
 }
