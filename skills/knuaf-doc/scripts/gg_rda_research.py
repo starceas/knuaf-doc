@@ -337,8 +337,10 @@ def _selection_key(selection):
     """Normalize the selection argument to an AuditKey dict or ``None``.
 
     Accepts an AuditKey (dict/tuple), a lookup candidate carrying
-    ``audit_key``, or a whole ``lookup_rda_data`` result — only ``unique``
-    results contribute their single candidate's key; every other verdict
+    ``audit_key``, or a whole ``lookup_rda_data`` result — only
+    ``unique`` and ``unverified`` results contribute their single
+    candidate's key (both are single-observation selections; the
+    verification axis is carried separately); every other verdict
     returns ``None`` (fail closed, no first-record choice)."""
     if not isinstance(selection, dict):
         try:
@@ -346,7 +348,7 @@ def _selection_key(selection):
         except (ValueError, TypeError):
             return None
     if "status" in selection and "records" in selection:
-        if selection.get("status") != "unique":
+        if selection.get("status") not in ("unique", "unverified"):
             return None
         records = selection.get("records") or []
         if len(records) != 1:
@@ -442,10 +444,13 @@ def propose(current_pack_revision, target, selection, *, context=None):
     entry = _catalog_entry(catalog, resolved.audit_key)
     catalog_accepted = _ctx_accepted(ctx)
     receipt_ok = _receipt_ok(entry)
-    promotable = (
-        catalog_status == prov.CatalogStatus.VERIFIED_OBSERVATION.value
-        and catalog_accepted and receipt_ok
-    )
+    # K8: the promotable gate is the shared is_verified_observation
+    # predicate (accepted catalog + verified status + complete receipt +
+    # extracted row) — the same basis lookup's verification.verified and
+    # the candidates observation axis use.  This only narrows promotion:
+    # the previous rule never required an extracted row.
+    promotable = _lookup().is_verified_observation(
+        entry, record, catalog_accepted)
     proposal = {
         "schema": PROPOSAL_SCHEMA,
         "status": "proposal",

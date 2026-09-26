@@ -3,9 +3,13 @@
 major-aware writing path).
 
 Bound requirements:
-- ``gg_rda_lookup.lookup_rda_data`` stays byte-for-byte unchanged; its
-  raw/legacy candidate set, order, and audit keys are preserved — the new
-  API consumes the raw result, never redefines it.
+- ``gg_rda_lookup.lookup_rda_data`` gained the rda-lookup verification-
+  status contract (DESIGN-RL K1–K8 — supersedes the earlier
+  byte-for-byte-unchanged clause): candidate set, order, and audit keys
+  are preserved; returned records are deep copies carrying
+  ``verification``; verdicts are
+  ``not_found|ambiguous|series|unverified|unique``.  The new API consumes
+  the raw result, never redefines it.
 - Raw observation, eligibility, and use approval are DISTINCT results;
   ``unique`` is never permission.
 - Promotion fails closed on: missing source bytes/receipt (new-format
@@ -68,6 +72,9 @@ def _record(rid, name, *, form="생체", year=2024, kind="test_kind",
         "metrics": metrics or {"value": "100"},
         "cost_items": None,
         "locator": {"row_label": name},
+        # mirrors every real pack row's extraction shape — the shared
+        # is_verified_observation predicate requires status "extracted"
+        "extraction": {"status": "extracted"},
     }
 
 
@@ -265,24 +272,24 @@ class PositivePathTests(SyntheticFixtureMixin, unittest.TestCase):
 class RawPreservationTests(SyntheticFixtureMixin, unittest.TestCase):
     """lookup_rda_data byte-for-byte + candidate set/order/keys intact."""
 
-    def test_owned_lane_does_not_modify_raw_api_or_promotable_gate(self):
-        root = KNUAF_DOC.parents[1]
-        for rel in ("skills/knuaf-doc/scripts/gg_rda_lookup.py",
-                    "skills/knuaf-doc/scripts/gg_rda_research.py",
-                    "skills/knuaf-doc/scripts/gg_rda_provenance.py"):
-            diff = subprocess.run(
-                ["git", "-C", str(root), "status", "--porcelain", "--",
-                 rel], capture_output=True, text=True)
-            if diff.returncode != 0:
-                self.skipTest("git unavailable for byte check")
-            self.assertEqual(diff.stdout.strip(), "",
-                             "%s modified" % rel)
-            show = subprocess.run(
-                ["git", "-C", str(root), "show",
-                 "HEAD:%s" % rel], capture_output=True)
-            self.assertEqual(show.returncode, 0, show.stderr)
-            disk = (root / rel).read_bytes()
-            self.assertEqual(show.stdout, disk, "%s != HEAD bytes" % rel)
+    def test_returned_records_never_share_the_cache(self):
+        """K7/F1 — the 'lookup unchanged' byte contract is superseded by
+        the rda-lookup verification status task; what stays guaranteed is
+        that returned records are deep copies: mutating one never
+        contaminates a later (warm-cache) lookup."""
+        kw = dict(major="특용작물", kind="test_kind", year=2024,
+                  form="생체")
+        first = lookup.lookup_rda_data("감자", "전국", **kw)
+        first["records"][0]["metrics"]["value"] = "999"
+        first["records"][0]["basis"]["year"] = 1900
+        first["records"][0]["audit_key"]["raw_line_sha256"] = "x"
+        first["records"][0]["verification"]["verified"] = False
+        second = lookup.lookup_rda_data("감자", "전국", **kw)
+        rec = second["records"][0]
+        self.assertEqual(rec["metrics"]["value"], "100")
+        self.assertEqual(rec["basis"]["year"], 2024)
+        self.assertNotEqual(rec["audit_key"]["raw_line_sha256"], "x")
+        self.assertTrue(rec["verification"]["verified"])
 
     def test_candidate_set_order_and_audit_keys_identical_to_raw(self):
         kw = dict(major="특용작물", kind="test_kind", year=2024)
@@ -295,7 +302,9 @@ class RawPreservationTests(SyntheticFixtureMixin, unittest.TestCase):
             [r["audit_key"] for r in raw["records"]],
             [c["audit_key"] for c in got["candidates"]])
         for c, r in zip(got["candidates"], raw["records"]):
-            self.assertIs(c["record"], r)  # same object, unmodified
+            # the raw result is consumed verbatim — equal deep-copied
+            # records, never the internal cache reference (K7)
+            self.assertEqual(c["record"], r)
 
     def test_integrity_failure_propagates(self):
         prov.PINNED_PACKS[TEST_PACK]["records_file_sha256"] = "0" * 64
@@ -501,17 +510,23 @@ class DistinctResultTests(GateFixtureMixin, unittest.TestCase):
 
     pin_authority = False  # manifest exists but is unauthenticated
 
-    def test_eligible_but_not_approved_without_accepted_catalog(self):
+    def test_unauthenticated_catalog_fails_approval_and_verification(self):
         got = cand.lookup_approved_candidates("감자", "전국",
                                               **GOOD_QUERY)
         self.assertEqual(got["status"], "unapproved")
-        self.assertEqual(got["observation"]["status"], "unique")
+        # K8: catalog authentication is part of the shared verification
+        # predicate — an unauthenticated manifest also fails the
+        # observation axis, so the raw verdict is unverified, not unique
+        self.assertEqual(got["observation"]["status"], "unverified")
         c = got["candidates"][0]
-        # every eligibility axis passed, approval layer failed alone
-        self.assertEqual(c["rejections"], ["catalog_not_accepted"])
-        self.assertTrue(c["eligible"])
+        # selection still resolved (unverified is a single selection);
+        # both the approval layer and the K8 observation axis fail
+        self.assertEqual(c["rejections"],
+                         ["catalog_not_accepted",
+                          "observation_not_verified"])
+        self.assertFalse(c["eligible"])
         self.assertFalse(c["approved"])
-        self.assertEqual(got["counts"]["eligible"], 1)
+        self.assertEqual(got["counts"]["eligible"], 0)
         self.assertEqual(got["counts"]["approved"], 0)
 
 
@@ -609,7 +624,9 @@ class AmbiguityPreservationTests(unittest.TestCase):
         got = cand.lookup_approved_candidates(
             "감자", "전국", audit_key=prov.audit_key_dict(keys[0]),
             **dict(GOOD_QUERY, kind="wholesale_price_series", form=None))
-        self.assertEqual(got["observation"]["status"], "unique")
+        # DESIGN-RL §6 F4: the audit path keeps the same verdict order —
+        # a lone series observation resolves series, never unique
+        self.assertEqual(got["observation"]["status"], "series")
         self.assertEqual(got["status"], "unapproved")
         self.assertIn("series_period_unspecified",
                       got["candidates"][0]["rejections"])
@@ -686,7 +703,7 @@ class RealPackTests(unittest.TestCase):
         got = cand.lookup_approved_candidates(
             "사과", "전국", "과수", kind="useful_life", year=2025,
             form="왜성(M9/M26)", unit="년", use_scope="plan_input")
-        self.assertEqual(got["observation"]["status"], "unique")
+        self.assertEqual(got["observation"]["status"], "unverified")
         self.assertEqual(got["observation"]["candidate_count"], 1)
         self.assertEqual(got["status"], "unapproved")
         self.assertEqual(got["approved_candidates"], [])
@@ -734,7 +751,9 @@ class RealPackTests(unittest.TestCase):
             kind=rec["kind"], year=(rec["basis"] or {}).get("year"),
             form=(rec["crop"] or {}).get("form"),
             use_scope="plan_input", audit_key=row["audit_key"])
-        self.assertEqual(got["observation"]["status"], "unique")
+        # quarantined row: the audit-key selection resolves one
+        # candidate but verifies nothing -> unverified, still unapproved
+        self.assertEqual(got["observation"]["status"], "unverified")
         self.assertEqual(got["status"], "unapproved")
         c = got["candidates"][0]
         self.assertIn("observation_not_verified", c["rejections"])

@@ -324,5 +324,83 @@
   "corrections2_state": "file remains byte-identical to the transferred baseline — no further writes needed in this round",
   "history_note": "the corrections-1 write predates the transfer and remains a recorded departure for the final review to adjudicate; this record does not retroactively authorize it",
   "packaging_consequence": "packaging must consume this module from THIS lane's frozen output once accepted — not from the provenance lane's older frozen copy"
- }
+ },
+ "subsequent_lanes": [
+  {
+   "stage": "P13",
+   "lane": "rda-lookup-status-20260926",
+   "recorded_utc": "2026-09-26T06:12:00Z",
+   "note": "Same-lane lineage record appended at P13 per the p4 lineage-anchor pattern. All pre-P13 content above is preserved verbatim; P13 lane facts live only inside this block.",
+   "authority": ".rl-work/design/WORKER-BRIEF-RL.md item 7 + .rl-work/design/DESIGN-RL.md (rda-lookup verification status, Astra r3 PASS 2026-09-26)",
+   "accepted_parent": {
+    "stage": "P12",
+    "candidate": "main 955e880 (PR #11 industrial_insects first bundle merge)",
+    "file_count": 178,
+    "tree_sha256": "79b9bc0c6479b7d79b17c9923a4133ff1bdd4fbb7ec142081c414172ccdfae61",
+    "digest_method": "check_bundle.tree_digest over regular files (sorted path<TAB>sha256 lines, LF-joined, sha256)",
+    "recomputed_in_this_lane": true,
+    "recompute_result": "git archive HEAD export -> check_bundle.disk_files/tree_digest: identical (178 files)"
+   },
+   "authorized_added_paths": [
+    "skills/knuaf-doc/tests/test_gg_rda_verification.py"
+   ],
+   "authorized_changed_paths": [
+    "docs/validation/p4-lineage.json",
+    "skills/knuaf-doc/SKILL.md",
+    "skills/knuaf-doc/scripts/gg_rda_candidates.py",
+    "skills/knuaf-doc/scripts/gg_rda_lookup.py",
+    "skills/knuaf-doc/scripts/gg_rda_provenance.py",
+    "skills/knuaf-doc/scripts/gg_rda_research.py",
+    "skills/knuaf-doc/tests/test_gg_rda_candidates.py",
+    "skills/knuaf-doc/tests/test_gg_rda_lookup_audit_key.py",
+    "skills/knuaf-doc/tests/test_gg_rda_research_integration.py",
+    "tests/test_bundle_lineage.py",
+    "tools/runtime-changes.json",
+    "tools/validation-bundle.json"
+   ],
+   "authorized_change_notes": {
+    "docs/validation/p4-lineage.json": "mechanically required - this P13 lane record",
+    "skills/knuaf-doc/SKILL.md": "task-authorized - F3 user-facing sentence on verification.verified / approved-only copying (DESIGN-RL S6 F3)",
+    "skills/knuaf-doc/scripts/gg_rda_candidates.py": "task-authorized - K7 delegation to lookup catalog accessors, selection resolve {'unique','unverified'}, approval still unique-only, K8 observation predicate, _UNAPPROVED_REASONS['unverified']",
+    "skills/knuaf-doc/scripts/gg_rda_lookup.py": "task-authorized - K1 verification bundle per record, K2 unverified verdict (audit_key path included, audit-selected series stays series), K3 verification_summary, K4/F1 manifest re-read auth cache, K8 is_verified_observation; _catalog_entries/_catalog_receipt_complete/_pinned_authority_pairs moved here from candidates",
+    "skills/knuaf-doc/scripts/gg_rda_provenance.py": "task-authorized - LookupVerdict.UNVERIFIED",
+    "skills/knuaf-doc/scripts/gg_rda_research.py": "task-authorized - _selection_key accepts unverified singles; promotable via K8 predicate",
+    "skills/knuaf-doc/tests/test_gg_rda_candidates.py": "task-authorized - expectation updates for unverified verdicts, K7 deep-copy (replaces byte-check), K8 rejection reasons",
+    "skills/knuaf-doc/tests/test_gg_rda_lookup_audit_key.py": "task-authorized - STATUSES gains unverified; unmanifested synthetic singles expect unverified; audit-selected series stays series; mafra other derives expectation from manifest",
+    "skills/knuaf-doc/tests/test_gg_rda_research_integration.py": "task-authorized - fixture records carry extraction.status=extracted",
+    "skills/knuaf-doc/tests/test_gg_rda_verification.py": "task-authorized new test - DESIGN-RL S3/S6/S7 verification contract suite",
+    "tests/test_bundle_lineage.py": "mechanically required - real-tree pin/expected-value updates only (P12->P13)",
+    "tools/runtime-changes.json": "mechanically required - tree contract declaration",
+    "tools/validation-bundle.json": "mechanically required - generated manifest artifact"
+   },
+   "explicitly_not_authorized": {
+    "tools/validation-provenance.json": "not touched - new test file rides the defaults.origin=new rule; existing gg_rda test files have no entries",
+    "skills/knuaf-doc/references/benchmark-packs/**": "pack data, builtin-sources.json, PINNED_PACKS and PINNED_CATALOG_AUTHORITIES values are brief-prohibited and byte-untouched"
+   },
+   "lane_facts": {
+    "pack_bytes_untouched": true,
+    "probe_sweep": ".rl-work/probes/sweep.py: unique verdict rows all verified_observation (209/209), unverified-unique count 0",
+    "manifest_status_distribution": {
+     "rda-econ-2025": {
+      "verified_observation": 105,
+      "exploratory": 25,
+      "quarantined": 2470
+     },
+     "rda-income-national-2024": {
+      "verified_observation": 50,
+      "exploratory": 1,
+      "quarantined": 51
+     },
+     "rda-income-regional-2024": {
+      "quarantined": 365
+     },
+     "mafra-specialty-production-2024": {
+      "verified_observation": 2918,
+      "exploratory": 6,
+      "quarantined": 64
+     }
+    }
+   }
+  }
+ ]
 }

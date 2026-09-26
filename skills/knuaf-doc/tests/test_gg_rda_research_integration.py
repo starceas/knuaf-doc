@@ -60,6 +60,9 @@ RECORDS = [
                     "section": "시험", "table": "시험표",
                     "row_label": "감자"},
         "caveats": ["시험용 합성 레코드"],
+        # mirrors every real pack row's extraction shape — the shared
+        # is_verified_observation predicate requires status "extracted"
+        "extraction": {"status": "extracted"},
     },
     {
         "record_id": "test.pack.summary.food.고구마", "pack_id": TEST_PACK,
@@ -78,6 +81,7 @@ RECORDS = [
                     "section": "시험", "table": "시험표",
                     "row_label": "고구마"},
         "caveats": [],
+        "extraction": {"status": "extracted"},
     },
 ]
 
