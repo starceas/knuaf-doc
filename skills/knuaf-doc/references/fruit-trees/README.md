@@ -1,6 +1,6 @@
-# 과수전공(fruit_trees) — 첫 묶음 안내
+# 과수전공(fruit_trees) 안내 (모듈 0.2.0)
 
-과수 모듈은 **자료를 읽고 학교 과수 양식(S01)에 맞춰 부족한 자료와 작성 계획을 보여 주는 단계**까지 지원한다. 과수 논문 본문, 학교 재무 XLSX, 재무 계산, 교수 XLSX 사본 채우기는 아직 지원하지 않는다. 이런 출력은 공용 출력 규칙 B에서 `unsupported_output`으로 멈춘다. 과수 통계 팩은 비어 있다(`empty_slot`).
+과수 모듈은 **자료를 읽고 학교 과수 양식(S01)에 맞춰 부족한 자료와 작성 계획을 보여 주는 단계**와 **학생이 입력한 물량으로 생산·재고를 검산하는 단계**까지 지원한다. 과수 논문 본문, 학교 재무 XLSX, 재무 계산, 교수 XLSX 사본 채우기는 아직 지원하지 않는다. 이런 출력은 공용 출력 규칙 B에서 `unsupported_output`으로 멈춘다. 과수 통계 팩은 비어 있다(`empty_slot`).
 
 ## 지원 경계
 
@@ -8,6 +8,8 @@
 |---|---|
 | 전공 바인딩, `gg.py major-plan` | 지원 (질문·문서 계획·근거 축·재무 미지원 표시) |
 | `scripts/gg_fruit_plan.py <폴더>` 작성계획 | 지원 (읽기 전용, 파일·정본 쓰기 없음, 본문·계산값 없음) |
+| `scripts/gg_orchard_production.py <폴더>` 생산·재고 검산 | 지원 (읽기 전용, kg·주·㎡만, 금액 없음) |
+| `references/fruit-trees/premise-probes.md` 핵심 전제 질문 | 지원 (공용 인터뷰 형식) |
 | 논문 본문·DOCX·PDF | 미지원 → `unsupported_output` |
 | 학교 17시트·XLSX·템플릿 복제/채우기/수식 보정/인쇄 조정 | 미지원 → `unsupported_output` |
 | 재무 계산(다년생·연간 모두) | 미지원 → `unsupported_output` |
@@ -24,9 +26,25 @@ S01 구조를 따른다: 앞부분(표지·제출·인준·요약·목차류), �
 4. 조사 근거: 전공 폴더 XLSX 부재를 확인할 때는 `source-scan` 수령증·진단 파일을 source로 등록하거나(폴더 전체 경로가 일치해야 함), 조사 범위의 전체 경로가 적힌 사용자 확인서를 source로 등록한다. 근거 없이 "없음"으로 판단하지 않는다.
 5. 현재 작업 XLSX: 사실 `fruit_trees.workbook.selection`(값 = inventory `file_id` 또는 `none`). 정본의 선택이 전달물의 연구 당시 선택보다 우선한다.
 
-## 반복 집단(구역·식재집단)
+## 모듈 0.2.0 재바인딩
 
-집단 ID를 field ID에 넣는다: `fruit_trees.block.<id>.<필드>`, `fruit_trees.cohort.<id>.<필드>` (`<id>`는 소문자·숫자·밑줄 32자 이내, 표시 이름과 별개). `...<id>.label`을 등록해야 집단이 선언된다. 질문은 `gg.py question --field fruit_trees.cohort.<id>.tree_count`처럼 집단별로 묻고 횟수를 센다. 과종·품종·대목은 식재집단 → 농장 기본값, 작형·가온은 소속 구역 → 농장 기본값 순으로 이어받되, 명시적 없음·해당 없음·거부·모름은 기본값으로 덮지 않는다. 합계·수령 곡선·생산량은 계산하지 않는다.
+0.2.0에서 질문 계약이 바뀌었다(수확 배치·물량 이동 집단, 연도별 수량 필드, `fruit_trees.plan_end_year`). `module_version` 0.1.0으로 바인딩한 프로젝트는 계획(`gg_fruit_plan.py`)과 검산(`gg_orchard_production.py`)이 `status: held`, `reason: binding_invalid`로 멈추고, 공용 출력 가드는 `major_binding_invalid`로 거부한다. 전공 바인딩 사실을 `module_version` 0.2.0으로 다시 등록하고(새 정본 개정), 교수 승인을 다시 받는다.
+
+## 반복 집단(구역·식재집단·수확 배치·물량 이동)
+
+집단 ID를 field ID에 넣는다: `fruit_trees.block.<id>.<필드>`, `fruit_trees.cohort.<id>.<필드>`, `fruit_trees.batch.<id>.<필드>`, `fruit_trees.move.<id>.<필드>` (`<id>`는 소문자·숫자·밑줄 32자 이내, 표시 이름과 별개). `...<id>.label`을 등록해야 집단이 선언된다. 질문은 `gg.py question --field fruit_trees.cohort.<id>.tree_count`처럼 집단별로 묻고 횟수를 센다. 과종·품종·대목은 식재집단 → 농장 기본값, 작형·가온은 소속 구역 → 농장 기본값 순으로 이어받되, 명시적 없음·해당 없음·거부·모름은 기본값으로 덮지 않는다. 계획은 합계·수령 곡선·생산량을 계산하지 않는다.
+
+식재집단의 연도별 수량 필드 네 개(`bearing_trees`, `yield_kg_per_tree`, `bearing_area_m2`, `yield_kg_per_10a`)는 같은 field ID에 사실의 `period`("YYYY")만 바꿔 연도마다 등록한다. 계획 출력에서는 `{"by_period": {...}, "invalid_periods": [...]}` 모양이고, 같은 연도 두 값은 `duplicate_answer`다. 질문 횟수는 field ID 단위로 세므로 필요한 연도를 한 질문에 묶어 묻는다.
+
+## 생산·재고 검산 `scripts/gg_orchard_production.py <폴더>`
+
+학생 입력만으로 집단·연도별 생산량(kg), 수확 배치 배분, 배치별 재고 잔고를 정확한 분수로 계산해 읽기 전용으로 보여 준다(`derived: true`, `persisted: false`). 과수 바인딩이 없거나 다른 전공이면 `held`·종료코드 2. 금액·재무·본문·파일 출력은 없으며 공용 출력 규칙 B를 거치지 않는다.
+
+- 생산: `yield_basis`가 `per_tree`면 결실 주수 × 주당 수량, `per_area`면 결실 면적 ÷ 1000 × 10a당 수량(`yield_area_basis`가 `bearing_area`일 때만). 결실 주수가 없으면 전체 주수로 대신하지 않는다. 명시 0만 0이고, 미제공·모름·없음은 `not_computable`.
+- 한도: 구역 면적, 집단 면적·주수, 활성기간(`active_from_year`·`active_to_year`)을 대조한다. 한도 값이 없으면 `unverifiable`(`unverified` 숫자만, 소계 제외), 넘으면 `held`.
+- 검산 기간: `business_start_year`부터 10년(`plan_end_year`가 있으면 그 해까지). 기간 밖 입력은 계산하되 `outside_plan_window` 경고.
+- 배치 `origin`: `harvest`(집단 수확), `opening`(기초재고, `opening_year` 시점 잔량), `regrade`(등급 변경), `mix`(혼합). 이동 `kind`: `sale`·`loss`·`own_use`·`process`·`experience`(출고), `regrade`, `mix_in`. 혼합 배치에서 다시 등급 변경·혼합하는 이동은 `unsupported_move`.
+- 결과가 모두 확정이면 `completeness: complete`, 하나라도 미상·위반이면 `partial`. 음수 재고는 해당 연도마다 `negative_inventory`로 남는다. 가공·체험 단위 환산과 재무는 다음 묶음이다.
 
 ## 연구 전달물 `knuaf-research-handoff/v1`
 
