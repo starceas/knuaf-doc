@@ -1471,9 +1471,47 @@ SPECIALTY_CROPS_MODULE = declare_module(
     forbidden_terms=_SPECIALTY_FORBIDDEN,
 )
 
+# industrial_insects product lines (0.2.0): one instance per product flow,
+# declared by line_inventory; the stable id lives in the field id so the
+# common question function counts every line (and plan year) separately.
+# Line fields never inherit the project summary fields (different period
+# and scope); see references/industrial-insects/README.md.
+_INSECT_LINE_FIELDS = (
+    ("label", "라인 이름(인스턴스 선언)", None),
+    ("species", "라인 대상 곤충 종", None),
+    ("purpose", "라인 용도(식용/사료/애완·학습/기타)", None),
+    ("product_form", "라인 제품 형태", None),
+    ("product_role", "라인 역할(main/byproduct/processed/service)", None),
+    ("source_line", "부산물·서비스가 딸린 주 라인 id", None),
+    ("input_line", "가공 라인의 원료 라인 id", None),
+    ("sale_unit", "판매 단위", None),
+    ("cycle_days", "한 회차 일수(입식→판매 가능)", "일"),
+    ("cycles_per_year", "정상 가동 연도 연간 회차 수", "회/년"),
+    ("first_sale_month", "첫 판매 예정 연·월", None),
+    ("first_year_sold_cycles", "첫해 판매 완료 회차 수", "회"),
+    ("stocking_input", "회차당 입식량", None),
+    ("stocking_unit", "입식 단위", None),
+    ("stock_source", "종충·알 확보 방식", None),
+    ("survival_rate", "입식→판매 단계 생존율", "%"),
+    ("survival_basis", "생존율 기준(개체 수/중량)", None),
+    ("saleable_per_cycle", "회차당 외부 판매량", None),
+    ("rearing_boxes", "사육 상자 수", "개"),
+    ("box_tiers", "선반 단 수", "단"),
+    ("density_per_box", "상자당 사육 밀도", None),
+    ("feed_or_substrate", "먹이·배지 종류", None),
+    ("feed_supply", "먹이·배지 조달 방식·월 소요량", None),
+    ("channel", "라인 판로", None),
+    ("unit_price", "판매 단위당 단가", "KRW"),
+    ("price_basis", "단가 근거·확인 시점", None),
+    ("processing_input_per_cycle", "가공 라인의 회차당 원료 투입량", None),
+)
+_INSECT_LINE_YEAR_FIELDS = (
+    ("year_end_in_process", "그해 연말 사육 중 회차 존재 여부", None),
+)
+
 INDUSTRIAL_INSECTS_MODULE = declare_module(
     major_id="industrial_insects",
-    module_version="0.1.0",
+    module_version="0.2.0",
     capabilities={
         "question": "supported",
         "document": "supported",
@@ -1565,6 +1603,34 @@ INDUSTRIAL_INSECTS_MODULE = declare_module(
             meaning="종·용도·판매 행위별 법적 요건 확인",
             target="regulation",
         ),
+        QuestionSpec(
+            field_id="industrial_insects.claims_check",
+            meaning="효능 표시·광고 규정 확인",
+            target="regulation",
+        ),
+        QuestionSpec(
+            field_id="industrial_insects.line_inventory",
+            meaning="제품 라인 목록(선언된 라인 id)",
+            target="line",
+        ),
+        QuestionSpec(
+            field_id="industrial_insects.line_retired",
+            meaning="폐기된 라인 id 목록",
+            target="line",
+        ),
+        QuestionSpec(
+            field_id="industrial_insects.plan_years",
+            meaning="계획 연도 목록",
+            target="period",
+        ),
+    ) + tuple(
+        QuestionSpec("industrial_insects.line.{id}." + name, meaning,
+                     unit=unit, target="line")
+        for name, meaning, unit in _INSECT_LINE_FIELDS
+    ) + tuple(
+        QuestionSpec("industrial_insects.line.{id}.year.{yyyy}." + name,
+                     meaning, unit=unit, target="line_year")
+        for name, meaning, unit in _INSECT_LINE_YEAR_FIELDS
     ),
     # F0 and E1–E4 are equal-rank example_observed precedents — the
     # roster lives at module level; nodes cite no per-exemplar claim and
