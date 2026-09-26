@@ -1,0 +1,52 @@
+{
+  "schema": "knuaf-workbook-audit-blocks/v1",
+  "source": "kang-finance-workbook.json sheet roles plus audited block headers",
+  "variants": {
+    "X01": {"first_year_cash_expense": "D17", "first_year_cash_admin": "D18", "first_year_cash_principal": "D20", "later_loan": "H25", "later_grant": "G25"},
+    "X02": {"first_year_cash_expense": "D18", "first_year_cash_admin": "D19", "first_year_cash_principal": "D21", "later_loan": "H26", "later_grant": "G26"}
+  },
+  "periods": {
+    "11": {"columns": "CDEFG", "first_year": 2026, "header_row": 4},
+    "12": {"columns": "CDEFG", "first_year": 2026, "header_row": 4},
+    "13": {"columns": "CDEFGH", "first_year": 2025, "header_row": 5},
+    "14": {"columns": "DEFGH", "first_year": 2026, "header_row": 6},
+    "15": {"columns": "EFGHI", "first_year": 2026, "header_row": 4}
+  },
+  "regions": {
+    "1": [{"range": "E9:F58", "role": "input", "optional": true}],
+    "3": [{"range": "E19:H29", "role": "input", "optional": true}],
+    "4": [{"range": "C8:E46", "role": "calculation", "optional": true}],
+    "9": [{"range": "C15:C70", "role": "input", "optional": true}],
+    "10": [{"range": "H8:H56", "role": "calculation", "optional": false}],
+    "11": [{"range": "C16:G38", "role": "calculation", "optional": false}],
+    "12": [{"range": "C11:G26", "role": "calculation", "optional": false}],
+    "13": [{"range": "C25:H34", "role": "calculation", "optional": false}],
+    "14": [{"range": "D9:H34", "role": "calculation", "optional": false}],
+    "15": [{"range": "E14:I22", "role": "calculation", "optional": false}]
+  },
+  "file_region_maps": {
+    "X01": {
+      "label_regions": [{"sheet": "1", "range": "B2:B8", "role": "label"}, {"sheet": "11", "range": "B4:G4", "role": "label"}, {"sheet": "13", "range": "B5:H5", "role": "label"}],
+      "example_only": [{"sheet": "참고1. 모델농장분석", "role": "example_only", "metadata_only": true}],
+      "overrides": [{"sheet": "14", "range": "D18", "role": "calculation", "optional": false}]
+    },
+    "X02": {
+      "label_regions": [{"sheet": "1", "range": "B2:B8", "role": "label"}, {"sheet": "11", "range": "B4:G4", "role": "label"}, {"sheet": "13", "range": "B5:H5", "role": "label"}],
+      "example_only": [{"sheet": "참고1. 모델농장분석", "role": "example_only", "metadata_only": true}],
+      "overrides": [{"sheet": "14", "range": "D19", "role": "calculation", "optional": false}]
+    }
+  },
+  "year_pattern_rows": {"11": [25, 29, 30, 35], "15": [14, 21, 22]},
+  "subtotals": [{"sheet": "11", "row": 16, "members": [17, 20, 21, 25, 28, 29, 30], "columns": "CDEFG"}],
+  "constant_siblings": {"10": ["H20", "H32", "H44", "H56"], "14": ["E15", "E16"]},
+  "continuity_links": [
+    {"sheet": "4", "target": "C43", "source": "E42", "meaning": "next opening loan from closing loan"},
+    {"sheet": "13", "target": "C28", "source": "C25", "meaning": "opening equity net of opening liabilities"},
+    {"sheet": "13", "target": "D25", "source": "C25", "meaning": "forecast debt from opening debt"},
+    {"sheet": "10", "target": "H20", "source": "H8", "meaning": "next year's acquisition carry"}
+  ],
+  "base_date_cell": {"sheet": "1", "cell": "B2"},
+  "first_balance_year_cell": {"sheet": "13", "cell": "C5"},
+  "intentional_fixed_refs": {"11": [], "15": []},
+  "optional_blank_refs": {"11": [], "14": []}
+}
