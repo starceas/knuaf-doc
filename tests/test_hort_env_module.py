@@ -1,11 +1,9 @@
 """hort_env_systems peer module — declaration + guard coupling tests (§9).
 
-The horticulture-environment module is a peer like industrial_insects:
-it answers question/document/evidence proposals only.  Every finance
-profile is declared unsupported and the module claims no paper or
-workbook output, so the common policy-B guard refuses
-``school_paper``/``school_excel_workbook``/``finance_calculation`` on a
-bound project (D-H1), and the cover-marker list catches a request whose
+The horticulture-environment module is a peer like industrial_insects.
+Its 0.2.0 declaration allows a receipt-gated 18-sheet workbook profile,
+while generic finance and paper output stay unsupported. The cover-marker
+list catches a request whose
 cover names 원예환경 while its explicit ID is another major (D-H5).
 """
 import dataclasses
@@ -155,7 +153,7 @@ class DeclarationTests(ContractCase):
         self.assertIn(HORT, self.registry.major_ids)
         self.assertEqual(module.major_id, HORT)
         self.assertEqual(module.field_namespace, HORT)
-        self.assertEqual(module.module_version, "0.1.0")
+        self.assertEqual(module.module_version, "0.2.0")
         self.assertEqual(module.contract_version, mc.CONTRACT_VERSION)
         self.assertEqual(dict(module.capabilities), {
             "question": "supported",
@@ -165,14 +163,14 @@ class DeclarationTests(ContractCase):
         })
         self.assertEqual(module.supported_outputs,
                          ("question_list", "document_plan",
-                          "evidence_review"))
+                          "evidence_review", "school_excel_workbook"))
         self.assertEqual(
             module.forbidden_terms,
             ("곤충", "사육", "종충", "동애등에", "귀뚜라미", "특용작물"))
         self.assertEqual(
             module.validation_rules,
             ("namespace_fields", "no_foreign_pack_refs",
-             "forbidden_terms_absent", "no_workbook_output",
+             "forbidden_terms_absent", "hort_workbook_receipt_required",
              "no_hort_calculation"))
         # Equal-rank roster: HT1/HT2 share one kind; packs stay empty.
         self.assertEqual(
@@ -195,16 +193,14 @@ class DeclarationTests(ContractCase):
                 "applicability",
             ),
         })
-        # All three finance profiles are declared unsupported with a
-        # reason — the module computes nothing (D-H1).
+        # Only the dedicated 18-sheet profile is declared supported.
         self.assertEqual(
             [c.profile for c in module.finance_capabilities],
-            ["hort_18_sheet_workbook_v1", "single_annual_cash_v1",
+            ["hort_18_sheet_reconstructed_v1", "single_annual_cash_v1",
              "multi_cycle_facility_cash"])
-        for cap in module.finance_capabilities:
-            with self.subTest(profile=cap.profile):
-                self.assertEqual(cap.status, "unsupported")
-                self.assertTrue(cap.reason)
+        self.assertEqual([c.status for c in module.finance_capabilities],
+                         ["supported", "unsupported", "unsupported"])
+        self.assertTrue(all(c.reason for c in module.finance_capabilities))
 
     def test_question_schema_is_25_namespaced_unique_fields(self):
         fields = self.module.question_schema
@@ -320,7 +316,7 @@ class ProposalTests(ContractCase):
         self.assertEqual(hits, [])
         self.assertEqual(
             [c["status"] for c in payload["capabilities"]],
-            ["unsupported"] * 3)
+            ["supported", "unsupported", "unsupported"])
         self.assertFalse(payload["blocks_document"])
 
     def test_evidence_proposal_carries_module_rules(self):
@@ -358,14 +354,13 @@ class GuardCouplingTests(ContractCase):
                                "ops": [src, fact]}, revision)
         return root
 
-    def test_bound_project_refuses_paper_workbook_and_finance(self):
-        """D-H1: school_paper, school_excel_workbook and
-        finance_calculation are all held as unsupported_output; the
-        refusal leaves every persisted byte unchanged."""
+    def test_bound_project_refuses_paper_and_generic_finance(self):
+        """The workbook kind requires a separate profile and receipt gate."""
         root = self._bound_project()
         before = self._tree_bytes(root)
         spec = {"major_id": HORT}
-        for output in self.mc.OUTPUT_REQUIREMENTS:
+        for output in (self.mc.OUTPUT_SCHOOL_PAPER,
+                       self.mc.OUTPUT_FINANCE_CALCULATION):
             with self.subTest(output=output):
                 with self.assertRaises(self.mc.OutputHeldError) as caught:
                     self.mc.authorize_output(
@@ -373,6 +368,10 @@ class GuardCouplingTests(ContractCase):
                 self.assertEqual(caught.exception.reason,
                                  "unsupported_output",
                                  caught.exception.detail)
+        authorization = self.mc.authorize_output(
+            self.mc.OUTPUT_SCHOOL_WORKBOOK, self._ctx(root, HORT), spec=spec)
+        self.mc.require_finance_profile(
+            authorization, "hort_18_sheet_reconstructed_v1")
         self.assertEqual(self._tree_bytes(root), before)
 
     def test_route_refuses_school_paper_output(self):

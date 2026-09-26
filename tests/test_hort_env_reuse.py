@@ -128,7 +128,7 @@ PROBE_KEY = {"kind": "delimited",
 # sha256 below).  The live file is re-measured inside the test -- the pin
 # only says what the registry SHOULD declare.
 PROFILE_DECLARED_SHA = (
-    "1b8a731eed64cc9e2062fedcb96434bddc4f6110525f1799c4d09293e1877ef4")
+    "a4cc6051497a39b773313676b4ea3f743fa492a26be6728876ad05ff0e14af01")
 PROFILE_DECLARED_BYTES = 40378
 
 

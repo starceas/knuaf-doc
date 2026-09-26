@@ -239,8 +239,13 @@ def school_workbook(spec, path, *, context=None):
     reconfirm just before the file is saved (policy B)."""
     import gg_major_contract as mc
 
+    if not isinstance(spec, dict):
+        raise mc.OutputHeldError("finance_profile_evidence_required")
     authorization = mc.authorize_output(
         mc.OUTPUT_SCHOOL_WORKBOOK, context, spec=spec)
+    mc.require_finance_profile(authorization, spec.get("profile"))
+    if spec.get("profile") != "school_17_sheet_v1":
+        raise mc.OutputHeldError("unsupported_finance_profile")
     from openpyxl import Workbook
     from openpyxl.styles import Alignment, Font
     from openpyxl.utils import get_column_letter
