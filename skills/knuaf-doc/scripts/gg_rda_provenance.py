@@ -60,8 +60,9 @@ class CatalogStatus(enum.Enum):
 class LookupVerdict(enum.Enum):
     NOT_FOUND = "not_found"
     AMBIGUOUS = "ambiguous"
-    UNIQUE = "unique"
     SERIES = "series"
+    UNVERIFIED = "unverified"
+    UNIQUE = "unique"
 
 
 class IntegrityError(Exception):

@@ -1,8 +1,17 @@
 """RDA/MAFRA 통계 원자료 조회. 승격된 references/benchmark-packs JSON만 읽으며
 모델 호출이나 네트워크 접근은 하지 않는다. rank 1(공통) -> rank 2(전공) 순서로
 탐색하고, 부재 시 rank 3(웹)은 allow_web=True일 때만 스텁으로 시도한다.
+
+모든 반환 레코드는 캐시와 공유되지 않는 깊은 복사본이며 ``verification``
+묶음이 붙는다(K1/K7 — 팩 레코드가 스스로 ``verification`` 키를 갖고 있어도
+항상 조회 계층의 계산값으로 덮어쓴다). 완전 필터 단일 관측 또는 audit_key
+지정 선택은 검증된 관측만 ``unique``가 되고 그 외는 ``unverified``다
+(K2 — 관측 검증 술어 ``is_verified_observation``는 candidates/research와
+공용이다).
 """
 
+import copy
+import hashlib
 import json
 import unicodedata
 from pathlib import Path
@@ -98,28 +107,165 @@ def _pack_records(pack):
             _CACHE[key] = []
         else:
             rows = _prov.load_pack_records(path, pack["pack_id"])
-            manifest_path = path.with_name("manifest.json")
-            status_by_line = {}
-            if manifest_path.is_file():
-                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-                if rows and manifest.get("records_file_sha256") == rows[0].audit_key[1]:
-                    status_by_line = {
-                        row["physical_line"]: row["catalog_status"]
-                        for row in manifest.get("rows", [])
-                    }
-            annotated = []
-            for row in rows:
-                if row.record is None:
-                    continue
-                verification = dict(row.record.get("verification") or {})
-                verification["catalog_status"] = status_by_line.get(
-                    row.physical_jsonl_line_1based)
-                annotated.append(dict(
-                    row.record,
-                    audit_key=_prov.audit_key_dict(row.audit_key),
-                    verification=verification))
-            _CACHE[key] = annotated
+            _CACHE[key] = [
+                dict(row.record,
+                     audit_key=_prov.audit_key_dict(row.audit_key))
+                for row in rows if row.record is not None
+            ]
     return _CACHE[key]
+
+
+# ---------------------------------------------------------------------------
+# Approved catalog (pack manifest) loading + authentication — shared with
+# gg_rda_candidates (K4: one verification basis).  A pack's manifest
+# ``rows`` ARE its observation catalog.  Acceptance is authenticated, never
+# claimed: the whole entry set must reproduce a content digest pinned for
+# this pack_id in ``gg_rda_research.PINNED_CATALOG_AUTHORITIES`` (SCC1).
+# Authentication is evaluated against the manifest bytes as they exist at
+# call time; the result memoizes only on (pack_id, manifest-bytes sha256,
+# the pack's own pinned (authority, digest) pairs) so byte or authority
+# changes always recompute (F1).  Cached entries stay internal — callers
+# receive deep copies only (K7).
+
+
+def _research():
+    import gg_rda_research
+
+    return gg_rda_research
+
+
+def _pinned_authority_pairs(pack_id):
+    """Sorted ``(authority, digest)`` pairs pinned for THIS pack — the
+    accepted-catalog authentication is per pack_id, another pack's
+    authority never authenticates this manifest."""
+    pack_id = str(pack_id)
+    return tuple(sorted(
+        (auth, digest)
+        for auth, digest in _research().PINNED_CATALOG_AUTHORITIES.items()
+        if auth == pack_id or auth.endswith("/" + pack_id)))
+
+
+def _catalog_entries(pack):
+    """Read the pack manifest's rows as ``{AuditKey: entry}``.
+
+    Returns ``(entries, accepted)`` — ``entries`` is ``None`` when the
+    manifest is absent/malformed/duplicated; ``accepted`` is True only
+    when the full content reproduces a pinned accepted-catalog authority
+    digest naming this pack_id.  The manifest bytes are re-read and
+    re-hashed on every call; cached results never outlive a manifest or
+    pinned-authority change."""
+    if not isinstance(pack, dict):
+        return None, False
+    relpath = pack.get("relpath")
+    if not relpath:
+        return None, False
+    mpath = (BASE_DIR / relpath).parent / "manifest.json"
+    if not mpath.is_file():
+        return None, False
+    try:
+        mbytes = mpath.read_bytes()
+    except OSError:
+        return None, False
+    msha = hashlib.sha256(mbytes).hexdigest()
+    pack_id = str(pack.get("pack_id"))
+    pinned = _pinned_authority_pairs(pack_id)
+    key = ("catalog", pack_id, msha, pinned)
+    if key in _CACHE:
+        return _CACHE[key]
+    entries, accepted = None, False
+    try:
+        manifest = json.loads(mbytes.decode("utf-8"))
+    except (ValueError, UnicodeDecodeError):
+        manifest = None
+    if isinstance(manifest, dict) \
+            and manifest.get("pack_id") == pack.get("pack_id"):
+        rows = manifest.get("rows")
+        if isinstance(rows, list):
+            parsed = {}
+            ok = True
+            for row in rows:
+                if not isinstance(row, dict):
+                    ok = False
+                    break
+                try:
+                    ekey = _prov.normalize_audit_key(row.get("audit_key"))
+                except (ValueError, TypeError):
+                    ok = False
+                    break
+                if ekey in parsed:
+                    # duplicate physical key — not authenticatable
+                    ok = False
+                    break
+                parsed[ekey] = row
+            if ok:
+                entries = parsed
+                try:
+                    digest = _research().catalog_content_digest(entries)
+                except (ValueError, TypeError):
+                    # FIX1-M2: canonicalization failures (a JSON-escaped
+                    # lone surrogate raising UnicodeEncodeError, a
+                    # ValueError subclass, or a malformed audit key in
+                    # normalization) are malformed content, not a crash
+                    # - keep the parsed entries and fail authentication
+                    # closed (level resolves to unknown).
+                    digest = None
+                accepted = (digest is not None and
+                            any(digest == pinned_d
+                                for _auth, pinned_d in pinned))
+    result = (entries, accepted)
+    _CACHE[key] = result
+    return result
+
+
+def _catalog_receipt_complete(entry):
+    """Complete observation receipt on an approved-catalog entry — the
+    existing accepted-catalog contract ``source_observation.{
+    observation_status, source_pdf_sha256, prep_receipt_ref}`` unchanged."""
+    if not isinstance(entry, dict):
+        return False
+    so = entry.get("source_observation")
+    if not isinstance(so, dict):
+        return False
+    if not isinstance(so.get("observation_status"), str) \
+            or not so["observation_status"].strip():
+        return False
+    if not _is_sha256(so.get("source_pdf_sha256")):
+        return False
+    return isinstance(so.get("prep_receipt_ref"), str) \
+        and bool(so["prep_receipt_ref"].strip())
+
+
+def _is_sha256(v):
+    return isinstance(v, str) and len(v) == 64 \
+        and all(c in "0123456789abcdef" for c in v)
+
+
+def is_verified_observation(entry, record, catalog_accepted):
+    """THE shared observation-verification predicate (K8): this physical
+    row is a source-verified observation only when the manifest is an
+    authenticated accepted catalog for its pack, the row's catalog entry
+    claims ``verified_observation`` with a complete observation receipt,
+    and the row itself is ``extraction.status == "extracted"``.
+
+    ``record`` must come from hash-verified physical bytes (lookup's
+    ``_pack_records`` / research's verified index row).  The same
+    predicate backs ``verification.verified`` here, the candidates
+    observation axis, and the research ``promotable`` gate — one basis,
+    fail-closed."""
+    if not catalog_accepted:
+        return False
+    if not isinstance(entry, dict):
+        return False
+    status = entry.get("catalog_status")
+    if isinstance(status, _prov.CatalogStatus):
+        status = status.value
+    if status != _prov.CatalogStatus.VERIFIED_OBSERVATION.value:
+        return False
+    if not _catalog_receipt_complete(entry):
+        return False
+    extraction = (record or {}).get("extraction")
+    return isinstance(extraction, dict) \
+        and extraction.get("status") == "extracted"
 
 
 def _observation_key(record):
@@ -230,7 +376,11 @@ def _tag_regional_caveat(record):
 
 
 def _is_rejected(record):
-    return (record.get("extraction") or {}).get("status") == "rejected"
+    # fail-closed on malformed extraction payloads (a non-dict ``extraction``
+    # is not "rejected" — it still can never verify via the K8 predicate)
+    extraction = (record or {}).get("extraction")
+    return isinstance(extraction, dict) \
+        and extraction.get("status") == "rejected"
 
 
 def _filter_records(records, *, crop_key, kind, year, form):
@@ -275,10 +425,11 @@ def _search_major(catalog, major_id, **kwargs):
     return _search_pack_group(packs, **kwargs)
 
 
-def _resolve_verdict(candidates, *, complete_filter):
-    """D02 post-selection cardinality (SPEC §4, ACCEPTANCE D02).
+def _resolve_verdict(candidates, *, complete_filter, verify=None):
+    """D02 post-selection cardinality + observation verification.
 
-    Public verdict enum: ``not_found | ambiguous | unique | series``.
+    Public verdict enum: ``not_found | ambiguous | series | unverified |
+    unique``.
 
     - Distinct observations are counted AFTER every supplied filter over
       FULL audit identity — every physical row is its own observation;
@@ -289,12 +440,14 @@ def _resolve_verdict(candidates, *, complete_filter):
       when all are series kinds. ``series`` is returned only when exactly
       ONE observation remains and it is series-typed — a multi-period
       value where scalar extraction is disallowed (binds D03).
-    - ``unique`` requires exactly one distinct observation AND a complete
-      filter combination (crop+region+major+kind+year+form).  No partial-
-      filter combination without an explicit ``audit_key`` may yield
-      ``unique`` — a lone candidate under a partial filter is still
-      ``ambiguous`` because partial specificity cannot establish
-      uniqueness.
+    - A single remaining observation is then gated by the shared
+      ``is_verified_observation`` predicate (K2): ``unique`` only when
+      verified, otherwise ``unverified``.  ``verify(record)`` returns the
+      record's ``verification`` bundle; without one the gate fails closed
+      (``unverified``/``unknown``).  No partial-filter combination
+      without an explicit ``audit_key`` may reach this gate — a lone
+      candidate under a partial filter is still ``ambiguous`` because
+      partial specificity cannot establish uniqueness.
     """
     distinct = _distinct_observations(candidates)
     if not distinct:
@@ -309,7 +462,14 @@ def _resolve_verdict(candidates, *, complete_filter):
         return "ambiguous", ("후보 1건이나 부분 필터만으로는 고유성을 확정할 "
                              "수 없다 — audit_key 또는 crop/region/major/"
                              "kind/year/form 완전 조합이 필요하다")
-    return "unique", None
+    verification = verify(distinct[0]) if verify else {"level": "unknown"}
+    if verification.get("verified") is True:
+        return "unique", ("관측 1건 확인·검증됨 — 사용 승인 아님 "
+                          "(rda-candidates)")
+    return "unverified", (
+        "관측 1건이나 검증되지 않음(%s) — 값을 본문·표에 옮기지 말 것. "
+        "원문 대조·연구 제안(rda-propose)으로만 다룬다"
+        % verification.get("level"))
 
 
 def _relevant_packs(catalog, major_id):
@@ -348,6 +508,24 @@ def _attempt_web(kind, allow_web):
     return _web_lookup_stub()
 
 
+def _verification_summary(records):
+    """K3 top-level tally over the returned records' ``level`` — zero
+    records means all counts zero, ``all_verified`` false, ``notice``
+    null; any non-verified record attaches the notice string."""
+    counts = {"verified": 0, "exploratory": 0, "quarantined": 0,
+              "unknown": 0}
+    for rec in records or []:
+        level = ((rec.get("verification") or {}).get("level"))
+        counts[level if level in counts else "unknown"] += 1
+    unverified_n = len(records or []) - counts["verified"]
+    return dict(counts,
+                all_verified=bool(records) and unverified_n == 0,
+                notice=(
+                    "검증되지 않은 레코드 %d건 포함 — 각 레코드 "
+                    "verification.label 확인" % unverified_n
+                    if unverified_n else None))
+
+
 def _result(status, *, rank_used=None, pack_id=None, records=None,
             reason=None, web=None):
     return {
@@ -357,6 +535,7 @@ def _result(status, *, rank_used=None, pack_id=None, records=None,
         "records": records if records is not None else [],
         "reason": reason,
         "web": web,
+        "verification_summary": _verification_summary(records),
     }
 
 
@@ -370,6 +549,111 @@ def _select_by_audit_key(candidates, audit_key):
         if _prov.normalize_audit_key(rec.get("audit_key")) == wanted:
             return rec
     return None
+
+
+_VERIFICATION_LABELS = {
+    "verified":
+        "검증됨 — 원문 대조 완료(관측 확인일 뿐, 본문·표 사용은 "
+        "rda-candidates 승인 필요)",
+    "exploratory":
+        "탐색용 — 원문 대조 미완. 본문·표에 옮기지 말 것",
+    "quarantined":
+        "격리 — 원문과 불일치하거나 미확인. 본문·표에 옮기지 말 것",
+    "unknown":
+        "검증 상태 확인 불가 — 본문·표에 옮기지 말 것",
+}
+
+
+def _pack_catalogs(catalog, pack_ids):
+    """pack_id -> (entries, accepted) for the cataloged packs that
+    produced records — entries stay internal (never reach callers except
+    as scalar field values)."""
+    out = {}
+    needed = set(pack_ids)
+    for pack in catalog.get("packs", []):
+        pid = pack.get("pack_id")
+        if pid in needed and pid not in out:
+            out[pid] = _catalog_entries(pack)
+    return out
+
+
+def _utf8_status(value):
+    """Return a status only when it can be printed as UTF-8 JSON text."""
+    if not isinstance(value, str):
+        return None
+    try:
+        value.encode("utf-8")
+    except UnicodeEncodeError:
+        return None
+    return value
+
+
+def _verification_bundle(record, catalogs):
+    """K1 per-record verification bundle — computed by THIS layer only
+    (a ``verification`` key already on the pack record is ignored and
+    always overwritten).  ``level`` fails closed to ``unknown`` whenever
+    the authenticated basis is absent, unauthenticated, malformed, or
+    inconsistent with its own claim."""
+    ak = record.get("audit_key")
+    pid = ak.get("pack_id") if isinstance(ak, dict) else None
+    entries, accepted = catalogs.get(pid, (None, False))
+    try:
+        norm = _prov.normalize_audit_key(ak) if ak is not None else None
+    except (ValueError, TypeError):
+        norm = None
+    entry = entries.get(norm) if (entries and norm is not None) else None
+    catalog_status = (entry or {}).get("catalog_status")
+    if isinstance(catalog_status, _prov.CatalogStatus):
+        catalog_status = catalog_status.value
+    receipt_complete = _catalog_receipt_complete(entry)
+    so = (entry or {}).get("source_observation")
+    observation_status = (so.get("observation_status")
+                          if isinstance(so, dict) else None)
+    extraction = record.get("extraction")
+    extraction_status = (extraction.get("status")
+                         if isinstance(extraction, dict) else None)
+    # Only UTF-8 encodable strings may reach the CLI's ensure_ascii=False
+    # JSON output.  In particular, json.loads accepts escaped lone
+    # surrogates that stdout cannot encode.  Never expose malformed status
+    # values, or treat a partially malformed bundle as verified.
+    statuses = (catalog_status, observation_status, extraction_status)
+    safe_statuses = tuple(_utf8_status(value) for value in statuses)
+    # absent (None) is not malformed — only a present value that is not
+    # a UTF-8 encodable string is (K1: level keeps the catalog status)
+    malformed = any(value is not None and safe is None
+                    for value, safe in zip(statuses, safe_statuses))
+    catalog_status, observation_status, extraction_status = safe_statuses
+    verified = (not malformed and
+                is_verified_observation(entry, record, accepted))
+    if verified:
+        level = "verified"
+    elif not malformed and accepted and catalog_status in ("exploratory", "quarantined"):
+        level = catalog_status
+    else:
+        level = "unknown"
+    # Strings are immutable, so these scalar status values cannot expose
+    # cached manifest entries or pack rows to caller mutation.
+    return {
+        "level": level,
+        "verified": bool(verified),
+        "catalog_status": catalog_status,
+        "catalog_accepted": bool(accepted),
+        "receipt_complete": bool(receipt_complete),
+        "observation_status": observation_status,
+        "extraction_status": extraction_status,
+        "label": _VERIFICATION_LABELS[level],
+    }
+
+
+def _decorate_records(records, catalogs):
+    """K7: every returned record is a deep copy detached from the cache,
+    with a freshly computed ``verification`` dict attached."""
+    decorated = []
+    for rec in records:
+        copied = copy.deepcopy(rec)
+        copied["verification"] = _verification_bundle(copied, catalogs)
+        decorated.append(copied)
+    return decorated
 
 
 def lookup_rda_data(crop, region, *, major=None, kind=None, year=None,
@@ -401,22 +685,47 @@ def lookup_rda_data(crop, region, *, major=None, kind=None, year=None,
         reason = "pack_not_promoted" if _any_pack_not_promoted(relevant) else _miss_reason(catalog, major_id, crop_key)
         web = _attempt_web(kind, allow_web)
         return _result("not_found", reason=reason, web=web)
+    catalogs = _pack_catalogs(
+        catalog,
+        [(r.get("audit_key") or {}).get("pack_id") for r in combined])
     if audit_key is not None:
         selected = _select_by_audit_key(combined, audit_key)
         if selected is None:
             return _result("not_found",
                            reason="audit_key가 필터 결과 후보와 일치하지 않는다")
         rank_used = 1 if selected in common_records else 2
-        return _result("unique", rank_used=rank_used,
-                       pack_id=selected["audit_key"]["pack_id"],
-                       records=[selected])
+        pack_id = selected["audit_key"]["pack_id"]
+        # K2 audit path runs the SAME verdict ordering: a series
+        # observation stays ``series`` no matter how it was selected,
+        # a verified single is ``unique``, everything else ``unverified``.
+        verification = _verification_bundle(selected, catalogs)
+        if selected.get("kind") in _SERIES_KINDS:
+            status = "series"
+            reason = ("다기간 시계열 관측 — period 등으로 명시 선택해야 "
+                      "한다 (스칼라 자동 추출 금지)")
+        elif verification["verified"]:
+            status = "unique"
+            reason = ("관측 1건 확인·검증됨 — 사용 승인 아님 "
+                      "(rda-candidates)")
+        else:
+            status = "unverified"
+            reason = ("관측 1건이나 검증되지 않음(%s) — 값을 본문·표에 "
+                      "옮기지 말 것. 원문 대조·연구 제안(rda-propose)으로만 "
+                      "다룬다" % verification["level"])
+        out = copy.deepcopy(selected)
+        out["verification"] = verification
+        return _result(status, rank_used=rank_used, pack_id=pack_id,
+                       records=[out], reason=reason)
     complete_filter = (major is not None and kind is not None
                        and year is not None and form is not None)
-    status, reason = _resolve_verdict(combined, complete_filter=complete_filter)
-    if status != "unique":
-        return _result(status, records=combined, reason=reason)
+    status, reason = _resolve_verdict(
+        combined, complete_filter=complete_filter,
+        verify=lambda rec: _verification_bundle(rec, catalogs))
+    decorated = _decorate_records(combined, catalogs)
+    if status not in ("unique", "unverified"):
+        return _result(status, records=decorated, reason=reason)
     rank_used = 1 if common_records else 2
     all_pack_ids = common_pack_ids + major_pack_ids
     pack_id = all_pack_ids[0] if all_pack_ids else None
-    return _result("unique", rank_used=rank_used, pack_id=pack_id,
-                   records=combined)
+    return _result(status, rank_used=rank_used, pack_id=pack_id,
+                   records=decorated, reason=reason)

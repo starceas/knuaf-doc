@@ -1,18 +1,21 @@
 """Isolated tests for the D02 audit_key lookup contract in
 ``gg_rda_lookup.lookup_rda_data``.
 
-Public status enum: ``not_found | ambiguous | unique | series``
-(stage-g005 API.md §lookup_rda_data sketch + P4-BASELINE-PROVENANCE-BINDING
-§2 — the legacy ``blocked|miss|ambiguous|hit`` internal shorthands are NOT
-the public contract).
+Public status enum: ``not_found | ambiguous | series | unverified |
+unique`` (rda-lookup 검증 상태 과제, DESIGN-RL K2 — the legacy
+``blocked|miss|ambiguous|hit`` internal shorthands are NOT the public
+contract).
 
-Covered rules (ACCEPTANCE.md D02 + SPEC.md §4):
+Covered rules (ACCEPTANCE.md D02 + SPEC.md §4 + DESIGN-RL):
 - ``ambiguous`` whenever >=2 distinct observations remain after ALL supplied
   filters — even under a complete filter set (작약 600g 8083/9000-style
   same-form/same-year collision sharing a legacy record_id).
-- ``unique`` via exactly two paths: (a) explicit ``audit_key`` selection,
+- ``unique`` via exactly two paths — (a) explicit ``audit_key`` selection,
   (b) a complete filter combination isolating exactly one distinct
-  observation.
+  observation — AND only when the shared is_verified_observation
+  predicate holds; an unverified single resolves ``unverified`` instead
+  (this synthetic pack carries no manifest, so every single-selection
+  verdict here is ``unverified``).
 - No partial-filter combination without ``audit_key`` may yield ``unique``
   — a lone candidate under a partial filter stays ``ambiguous``.
 - Byte-identical physical rows are NEVER merged — every physical row is
@@ -171,7 +174,9 @@ class AuditKeySelectionTests(SyntheticPackMixin, unittest.TestCase):
             got = lookup.lookup_rda_data("작약", "전국", major="특용작물",
                                          kind="test_kind", year=2024,
                                          form="600g", audit_key=wanted)
-            self.assertEqual(got["status"], "unique")
+            # no manifest on this pack -> unknown verification ->
+            # unverified (selection still resolves exactly one row)
+            self.assertEqual(got["status"], "unverified")
             self.assertEqual(len(got["records"]), 1)
             self.assertEqual(got["records"][0]["audit_key"], wanted)
 
@@ -184,8 +189,8 @@ class AuditKeySelectionTests(SyntheticPackMixin, unittest.TestCase):
         tup = (key["pack_id"], key["records_file_sha256"],
                key["physical_jsonl_line_1based"], key["raw_line_sha256"])
         by_tuple = lookup.lookup_rda_data("배추", "전국", audit_key=tup)
-        self.assertEqual(by_dict["status"], "unique")
-        self.assertEqual(by_tuple["status"], "unique")
+        self.assertEqual(by_dict["status"], "unverified")
+        self.assertEqual(by_tuple["status"], "unverified")
         self.assertEqual(by_dict["records"], by_tuple["records"])
 
     def test_audit_key_not_in_filtered_candidates_is_not_found(self):
@@ -209,7 +214,9 @@ class CardinalityTests(SyntheticPackMixin, unittest.TestCase):
         got = lookup.lookup_rda_data("배추", "전국", major="특용작물",
                                      kind="test_kind", year=2024,
                                      form="가을")
-        self.assertEqual(got["status"], "unique")
+        # verified only via an authenticated manifest — absent here,
+        # so the single observation resolves unverified, not unique
+        self.assertEqual(got["status"], "unverified")
         self.assertEqual(len(got["records"]), 1)
 
     def test_same_form_same_year_collision_stays_ambiguous(self):
@@ -283,12 +290,15 @@ class CardinalityTests(SyntheticPackMixin, unittest.TestCase):
         self.assertEqual(len(got["records"]), 2)
         self.assertTrue(all(r["kind"] == "wholesale_price_series"
                             for r in got["records"]))
-        # explicit audit_key still isolates one series row -> unique
+        # explicit audit_key isolates one series row -> series
+        # (DESIGN-RL §6 F4: the audit path runs the same verdict order —
+        #  a lone series observation is series whichever way it was
+        #  selected; the former unique expectation is superseded)
         wanted = got["records"][0]["audit_key"]
         sel = lookup.lookup_rda_data("양파", "전국", major="특용작물",
                                      kind="wholesale_price_series",
                                      year=2024, form="", audit_key=wanted)
-        self.assertEqual(sel["status"], "unique")
+        self.assertEqual(sel["status"], "series")
         self.assertEqual(sel["records"][0]["audit_key"], wanted)
 
 
@@ -342,9 +352,11 @@ class DeterminismTests(SyntheticPackMixin, unittest.TestCase):
 
 
 class StatusEnumTests(SyntheticPackMixin, unittest.TestCase):
-    """Public enum only: not_found | ambiguous | unique | series."""
+    """Public enum only: not_found | ambiguous | series | unverified |
+    unique."""
 
-    STATUSES = {"not_found", "ambiguous", "unique", "series"}
+    STATUSES = {"not_found", "ambiguous", "unverified", "unique",
+                "series"}
 
     def test_public_enum_values_only(self):
         for got in (
@@ -382,10 +394,12 @@ class StatusEnumTests(SyntheticPackMixin, unittest.TestCase):
 class RealPackTests(unittest.TestCase):
     """Live pinned packs: real legacy-ID collision + real unique path."""
 
-    def test_mafra_legacy_id_collision_ambiguous_then_keyed_unique(self):
+    def test_mafra_legacy_id_collision_ambiguous_then_keyed(self):
         """mafra 기타 national: 3 distinct observations share legacy
         record_id — ambiguous under complete filter, each distinguishable
-        via audit_key (the D02 colliding-legacy-ID clause on real data)."""
+        via audit_key (the D02 colliding-legacy-ID clause on real data).
+        The keyed verdict follows each row's own manifest status
+        (DESIGN-RL T3): verified -> unique, otherwise unverified."""
         got = lookup.lookup_rda_data(
             "기타", "전국", major="specialty_crops",
             kind="production_stat", year=2024, form="")
@@ -399,15 +413,23 @@ class RealPackTests(unittest.TestCase):
                 "기타", "전국", major="specialty_crops",
                 kind="production_stat", year=2024, form="",
                 audit_key=wanted)
-            self.assertEqual(sel["status"], "unique")
+            expected = ("unique" if sel["records"][0]["verification"]
+                        ["verified"] else "unverified")
+            self.assertEqual(sel["status"], expected)
             self.assertEqual(sel["records"][0]["audit_key"], wanted)
 
-    def test_complete_filter_unique_on_real_pack(self):
+    def test_complete_filter_single_quarantined_on_real_pack(self):
+        """사과 왜성(M9/M26) useful_life — the representative quarantined
+        isolation case: complete filter still isolates one row, the
+        verdict is ``unverified`` and the value stays visible (K2/T2)."""
         got = lookup.lookup_rda_data(
             "사과", "전국", major="fruit_trees", kind="useful_life",
             year=2025, form="왜성(M9/M26)")
-        self.assertEqual(got["status"], "unique")
+        self.assertEqual(got["status"], "unverified")
         self.assertEqual(len(got["records"]), 1)
+        v = got["records"][0]["verification"]
+        self.assertEqual(v["level"], "quarantined")
+        self.assertFalse(v["verified"])
         ak = got["records"][0]["audit_key"]
         self.assertEqual(ak["pack_id"], "rda.econ.2025")
 

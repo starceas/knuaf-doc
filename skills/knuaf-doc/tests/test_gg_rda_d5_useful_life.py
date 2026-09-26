@@ -150,7 +150,10 @@ class D5UsefulLifeTests(unittest.TestCase):
         old_quarantine = lookup.lookup_rda_data(
             first["basis"]["item_name"], "전국", kind="useful_life",
             audit_key=self.manifest["rows"][0]["audit_key"])
-        self.assertEqual("unique", old_quarantine["status"])
+        # P16 rebaseline (DESIGN-RL F6/K2): an unverified single selection
+        # is `unverified`, never `unique` — the quarantined row stays
+        # searchable and its manifest status still surfaces verbatim.
+        self.assertEqual("unverified", old_quarantine["status"])
         self.assertEqual("quarantined", old_quarantine["records"][0]["verification"]["catalog_status"])
         self.assertNotIn("catalog_status", old_quarantine["records"][0])
         still_a_candidate = candidates.lookup_approved_candidates(
@@ -168,7 +171,9 @@ class D5UsefulLifeTests(unittest.TestCase):
                 raw = lookup.lookup_rda_data(
                     rec["basis"]["item_name"], "전국", kind="useful_life",
                     year=2025, audit_key=key)
-                self.assertEqual("unique", raw["status"])
+                # P16 rebaseline (F6/K2): exploratory single -> unverified,
+                # catalog_status still mirrors the manifest row.
+                self.assertEqual("unverified", raw["status"])
                 self.assertEqual("exploratory", raw["records"][0]["verification"]["catalog_status"])
                 self.assertNotIn("catalog_status", raw["records"][0])
                 result = candidates.lookup_approved_candidates(
