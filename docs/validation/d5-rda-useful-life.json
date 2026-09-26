@@ -11,11 +11,12 @@
     "skills/knuaf-doc/scripts/gg_rda_research.py": "3229b365a9aa18c9fe63257808bdad4c67d133d8c762402ff7148ba79515130c"
   },
   "dash_meaning": "Printed dash; applicability unresolved. It is not zero or a number.",
+  "historical_p4_lineage_sha256": "311239d8df6d61ead49db1094c04715ac82ddc850c6bb6d90ec8619a778a2613",
   "historical_p4_receipt": "docs/validation/p4-lineage.json",
   "historical_records_sha256": "a1cbfb2fa1825f2f0b7594cebe915b26f81cf1c48aee3cafae6c18ceb9267d54",
   "lineage_digest_method": "sorted path<TAB>sha256 lines, LF-joined with trailing LF, SHA-256 UTF-8; check_bundle.tree_digest over clean git archive",
   "mapping_sha256": "552d821f3b0ed970c4d38ac134828f31ca72556088bf0f21e778d1b61e305d0b",
-  "merge_note": "P13 parent lineage is provisional and must be rebaselined at merge time.",
+  "merge_note": "Rebaselined at merge: parent is the accepted P14 tree (main f9c278c3, PR #16 fruit bundle 2), 185 files.",
   "new_catalog_content_digest": "0d2d0b1cfeceb2a7fb4b12f2c10e10882f6c1957404ff1834a6d1a41e19eca44",
   "new_manifest_sha256": "f670ed39d8477f1fe09c42cf2b3d1b0fa724f0d99d9ac5475e7a212c65772a3a",
   "new_records_sha256": "a5dbf6db2aed41254d2a05460d1950a3cdc2a8db51c0d54e82d035d91bd2253a",
@@ -26,10 +27,16 @@
     "matches_declared_p11": true,
     "tree_sha256": "2ada8256a47e5e37fa26ba2c9e6aa90bb609f4da1ef60ccfe33dcee03fdba4ce"
   },
-  "parent_commit": "955e880",
-  "parent_file_count": 178,
-  "parent_stage": "P12",
-  "parent_tree_sha256": "79b9bc0c6479b7d79b17c9923a4133ff1bdd4fbb7ec142081c414172ccdfae61",
+  "p13_method_validation": {
+    "commit": "e89780a",
+    "file_count": 181,
+    "matches_declared_p13": true,
+    "tree_sha256": "3ef111c08add6d9798d4794dc41c3c963d01cf0e30244f6cf20f987aeb0d3b8e"
+  },
+  "parent_commit": "f9c278c",
+  "parent_file_count": 185,
+  "parent_stage": "P14",
+  "parent_tree_sha256": "7afacd85ac97b38eb5cda4f22586c923e2ae22692ea1afe0c27882b5dec24b6d",
   "physical_pages": [
     133,
     134,
@@ -41,11 +48,10 @@
   ],
   "schema": "knuaf-doc/d5-rda-useful-life@1",
   "source_pdf_sha256": "38e38ffb8b478584b9f76a8b9d98d56c7cdeb8eb18a2200aef26639a72935a83",
-  "stage": "P13-provisional",
+  "stage": "P15",
   "status_summary": {
     "exploratory_count": 131,
     "quarantined_count": 2471,
     "verified_observation_count": 105
-  },
-  "historical_p4_lineage_sha256": "311239d8df6d61ead49db1094c04715ac82ddc850c6bb6d90ec8619a778a2613"
+  }
 }

@@ -1682,6 +1682,42 @@ _FRUIT_COHORT_FIELDS = (
     ("tree_count", "주수", "주"),
     ("spacing_m", "재식 거리(열간×주간)", "m"),
     ("bearing_status", "미성목/성목/갱신중", None),
+    ("area_m2", "집단 식재 면적", "㎡"),
+    ("active_from_year", "집단 활성 시작 연도", "년"),
+    ("active_to_year", "집단 활성 마지막 연도(폐원·갱신 전)", "년"),
+    ("tree_count_basis", "주수 근거(도면/실측/계획)", None),
+    ("layout_note", "통로·시설·경계·수분수 반영 근거", None),
+    ("yield_basis", "생산량 기준(per_tree/per_area)", None),
+    ("yield_area_basis", "단수 분모(bearing_area/total_area)", None),
+    ("bearing_trees", "연도별 결실 주수", "주"),
+    ("yield_kg_per_tree", "연도별 주당 수확량", "kg/주"),
+    ("bearing_area_m2", "연도별 결실 면적", "㎡"),
+    ("yield_kg_per_10a", "연도별 10a당 수확량", "kg/10a"),
+)
+# Per-year cohort inputs: the year lives in fact.period ("YYYY"), so
+# duplicates are judged per (field_id, period) for these fields only.
+_FRUIT_YEARLY_FIELDS = ("bearing_trees", "yield_kg_per_tree",
+                        "bearing_area_m2", "yield_kg_per_10a")
+_FRUIT_BATCH_FIELDS = (
+    ("label", "배치 표시 이름(선언)", None),
+    ("origin", "배치 유형(harvest/opening/regrade/mix)", None),
+    ("cohort_ref", "원 식재집단 ID(harvest)", None),
+    ("crop_species", "과종(opening)", None),
+    ("cultivar", "품종(opening)", None),
+    ("harvest_year", "원물 수확 연도", "년"),
+    ("opening_year", "기초 재고 기준 연도(opening)", "년"),
+    ("grade", "등급", None),
+    ("quantity_kg", "배치 수량(harvest/opening)", "kg"),
+)
+_FRUIT_MOVE_FIELDS = (
+    ("label", "이동 표시 이름(선언)", None),
+    ("batch_ref", "출발 배치 ID", None),
+    ("kind", "이동 종류(sale/loss/own_use/process/experience/regrade/mix_in)",
+     None),
+    ("year", "이동 연도", "년"),
+    ("quantity_kg", "이동 수량", "kg"),
+    ("channel", "판로(sale)", None),
+    ("target_batch", "도착 배치 ID(regrade/mix_in)", None),
 )
 
 _FRUIT_APPENDIX_ROLES = (
@@ -1692,7 +1728,7 @@ _FRUIT_APPENDIX_ROLES = (
 
 FRUIT_TREES_MODULE = declare_module(
     major_id="fruit_trees",
-    module_version="0.1.0",
+    module_version="0.2.0",
     capabilities={
         "question": "supported",
         "document": "supported",
@@ -1702,6 +1738,9 @@ FRUIT_TREES_MODULE = declare_module(
     question_schema=(
         QuestionSpec("fruit_trees.business_start_year", "사업 시작 연도",
                      unit="년", period="year", target="plan"),
+        QuestionSpec("fruit_trees.plan_end_year",
+                     "검산 기간 마지막 연도(없으면 시작+9)", unit="년",
+                     period="year", target="plan"),
         QuestionSpec("fruit_trees.school_template_edition",
                      "학교 양식 판본", target="plan"),
         QuestionSpec("fruit_trees.region", "과원 지역", target="site"),
@@ -1736,8 +1775,17 @@ FRUIT_TREES_MODULE = declare_module(
         for name, meaning, unit in _FRUIT_BLOCK_FIELDS
     ) + tuple(
         QuestionSpec("fruit_trees.cohort.{id}." + name, meaning,
-                     unit=unit, target="cohort")
+                     unit=unit, target="cohort",
+                     period="year" if name in _FRUIT_YEARLY_FIELDS else None)
         for name, meaning, unit in _FRUIT_COHORT_FIELDS
+    ) + tuple(
+        QuestionSpec("fruit_trees.batch.{id}." + name, meaning,
+                     unit=unit, target="batch")
+        for name, meaning, unit in _FRUIT_BATCH_FIELDS
+    ) + tuple(
+        QuestionSpec("fruit_trees.move.{id}." + name, meaning,
+                     unit=unit, target="move")
+        for name, meaning, unit in _FRUIT_MOVE_FIELDS
     ),
     document_plan=(
         DocumentNodeSpec(
