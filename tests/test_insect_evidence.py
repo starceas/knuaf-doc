@@ -140,6 +140,53 @@ class InsectEvidenceTests(ContractCase):
             if key != "farm_count":
                 self.assertNotIn("conflict_locus", row)
 
+    def test_farm_count_row_cites_published_r0_value(self):
+        # Owner decision 2026-09-26 (4): farm_count carries a fixed citation
+        # of the published R0 figure.  The citation changes no axis, blocker,
+        # or approval state, and no other row carries one.
+        result = self.review()
+        by_key = {row["aggregate"]: row for row in result["observations"]}
+        farm = by_key["farm_count"]
+        self.assertEqual({"value": "2393", "source_id": "R0",
+                          "note": evidence.FARM_COUNT_CITATION_NOTE},
+                         farm["citation"])
+        self.assertEqual("unresolved", farm["axes"]["conflict"])
+        self.assertEqual("unconfirmed", farm["axes"]["rights"])
+        self.assertEqual("unapproved", farm["axes"]["approval"])
+        self.assertFalse(farm["approval_candidate"])
+        self.assertIn("conflict", farm["promotion_blockers"])
+        self.assertIn("rights", farm["promotion_blockers"])
+        for key, row in by_key.items():
+            if key != "farm_count":
+                with self.subTest(aggregate=key):
+                    self.assertNotIn("citation", row)
+
+    def test_r1_figure_confined_to_citation_note(self):
+        # The differing R1 figure may appear only inside the citation note
+        # text (DESIGN-B2 section 4 exception scope).  Forbidden spellings
+        # are derived from the note so this file never spells the value.
+        note = evidence.FARM_COUNT_CITATION_NOTE
+        plain = "".join(ch for ch in note if ch.isdigit())
+        self.assertTrue(plain.isdigit())
+        forbidden = {plain, f"{int(plain):,}"}
+        result = self.review()
+        findings = []
+
+        def walk(node, path):
+            if isinstance(node, dict):
+                for key, value in node.items():
+                    walk(value, path + (key,))
+            elif isinstance(node, list):
+                for index, item in enumerate(node):
+                    walk(item, path + (index,))
+            elif path[-2:] != ("citation", "note"):
+                for token in forbidden:
+                    if token in str(node):
+                        findings.append((path, token))
+
+        walk(result, ())
+        self.assertEqual([], findings)
+
     def test_audit_notes_passed_to_result_top_level(self):
         receipt = sample_receipt()
         result = self.review(receipt)

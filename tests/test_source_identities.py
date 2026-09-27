@@ -67,7 +67,21 @@ class CatalogueTests(unittest.TestCase):
         self.assertTrue(message.startswith("$"), message)
 
     def test_shipped_empty_catalogue_and_cli_contract(self):
-        self.assertEqual({}, identities.load_source_identities())
+        self.assertEqual({}, self._load([]))
+        # Whatever majors have shipped, the whole catalogue must pass the
+        # common checker, both in process and through the CLI.
+        shipped = identities.load_source_identities()
+        rows = json.loads(identities.CATALOGUE_PATH.read_text(
+            encoding="utf-8"))["entries"]
+        self.assertEqual(len(rows), len(shipped))
+        env = dict(os.environ)
+        env["PYTHONDONTWRITEBYTECODE"] = "1"
+        completed = subprocess.run(
+            [sys.executable, "-B", str(Path(identities.__file__)), "check"],
+            env=env, text=True, capture_output=True, timeout=30, check=False)
+        self.assertEqual(0, completed.returncode, completed.stderr)
+        self.assertEqual({"status": "ok", "entries": len(rows)},
+                         json.loads(completed.stdout))
 
     def test_unregistered_identity_and_all_kinds(self):
         for kind in sorted(identities.KINDS):

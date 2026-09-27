@@ -63,8 +63,10 @@ FRUIT_CONFLICT_SECTIONS = {
 DELIVERABLES = (mc.OUTPUT_SCHOOL_PAPER, mc.OUTPUT_SCHOOL_WORKBOOK,
                 mc.OUTPUT_FINANCE_CALCULATION)
 
-_INSTANCE = re.compile(r"^fruit_trees\.(block|cohort)\.([a-z0-9_]{1,32})\."
-                       r"([a-z0-9_]+)$")
+_INSTANCE = re.compile(r"^fruit_trees\.(block|cohort|batch|move)\."
+                       r"([a-z0-9_]{1,32})\.([a-z0-9_]+)$")
+_GROUPS = ("block", "cohort", "batch", "move")
+_YEAR = re.compile(r"^\d{4}$")
 _STABLE_ID = re.compile(r"^[a-z0-9_]{1,32}$")
 _XML_REF = re.compile(r"^section(\d+):(p|t)(\d+)$")
 _ORIGINS = ("신규식재", "승계", "갱신·보식")
@@ -73,7 +75,22 @@ _BEARING = ("미성목", "성목", "갱신중")
 GROUP_FIELDS = {
     "block": tuple(name for name, _, _ in mc._FRUIT_BLOCK_FIELDS),
     "cohort": tuple(name for name, _, _ in mc._FRUIT_COHORT_FIELDS),
+    "batch": tuple(name for name, _, _ in mc._FRUIT_BATCH_FIELDS),
+    "move": tuple(name for name, _, _ in mc._FRUIT_MOVE_FIELDS),
 }
+# Per-year cohort inputs (fact.period = "YYYY"); every other field keeps
+# one answer per field ID.
+YEARLY_FIELDS = mc._FRUIT_YEARLY_FIELDS
+
+
+def is_yearly(field_id):
+    m = _INSTANCE.match(field_id)
+    return bool(m and m.group(1) == "cohort" and m.group(3) in YEARLY_FIELDS)
+
+
+def valid_year(value):
+    return (isinstance(value, str) and bool(_YEAR.match(value))
+            and 1900 <= int(value) <= 2200)
 # Effective-value owners: crop/cultivar/rootstock on the cohort, the
 # cultivation form and heating on its block; both fall back to the farm.
 _COHORT_OWN = ("crop_species", "cultivar", "rootstock")
@@ -424,8 +441,8 @@ def _instances(p):
     for f in facts:
         by_field.setdefault(f["field_id"], []).append(f)
         m = _INSTANCE.match(f["field_id"])
-        if f["field_id"].startswith(("fruit_trees.block.",
-                                     "fruit_trees.cohort.")):
+        if f["field_id"].startswith(tuple(
+                "fruit_trees.%s." % g for g in _GROUPS)):
             if not m or m.group(3) not in GROUP_FIELDS[m.group(1)]:
                 issues.append({"kind": "invalid_field_id",
                                "fact_id": f["id"],
@@ -436,9 +453,16 @@ def _instances(p):
                 issues.append({"kind": "scope_mismatch", "fact_id": f["id"],
                                "expected": expected, "scope": f.get("scope")})
     for fid, group in by_field.items():
-        if sum(1 for f in group if f["answer_state"] == "provided") > 1:
+        provided = [f for f in group if f["answer_state"] == "provided"]
+        if is_yearly(fid):
+            periods = [f.get("period") for f in provided
+                       if valid_year(f.get("period"))]
+            for year in sorted({y for y in periods if periods.count(y) > 1}):
+                issues.append({"kind": "duplicate_answer", "field_id": fid,
+                               "period": year})
+        elif len(provided) > 1:
             issues.append({"kind": "duplicate_answer", "field_id": fid})
-    declared = {"block": [], "cohort": []}
+    declared = {g: [] for g in _GROUPS}
     seen = set()
     for fid in sorted(by_field):
         m = _INSTANCE.match(fid)
@@ -456,14 +480,50 @@ def _instances(p):
     return by_field, declared, issues
 
 
+def _answer_yearly(by_field, field_id):
+    """``{"by_period": {YYYY: answer}, "invalid_periods": [fact_id]}``."""
+    facts = by_field.get(field_id, [])
+    if not facts:
+        return None
+    by_period, invalid = {}, []
+    for f in facts:
+        if valid_year(f.get("period")):
+            by_period.setdefault(f["period"], []).append(f)
+        else:
+            invalid.append(f["id"])
+    out = {}
+    for year, group in sorted(by_period.items()):
+        out[year] = _one_answer(group)
+    return {"by_period": out, "invalid_periods": sorted(invalid)}
+
+
+def _duplicate(provided):
+    """Several provided facts: no value; ``unit`` is the shared unit, or
+    None when the duplicates disagree on it or any unit is not a string."""
+    units = [f.get("unit") for f in provided]
+    shared = units[0] if all(isinstance(u, str) for u in units) \
+        and len(set(units)) == 1 else None
+    return {"answer_state": "duplicate_answer", "value": None,
+            "unit": shared, "fact_ids": [f["id"] for f in provided]}
+
+
+def _one_answer(facts):
+    provided = [f for f in facts if f["answer_state"] == "provided"]
+    if len(provided) > 1:
+        return _duplicate(provided)
+    f = provided[0] if provided else facts[0]
+    return {"answer_state": f["answer_state"],
+            "value": f["value"] if f["answer_state"] == "provided" else None,
+            "unit": f.get("unit"), "fact_ids": [f["id"]]}
+
+
 def _answer(by_field, field_id):
     facts = by_field.get(field_id, [])
     if not facts:
         return None
     provided = [f for f in facts if f["answer_state"] == "provided"]
     if len(provided) > 1:
-        return {"answer_state": "duplicate_answer", "value": None,
-                "fact_ids": [f["id"] for f in provided]}
+        return _duplicate(provided)
     f = provided[0] if provided else facts[0]
     return {"answer_state": f["answer_state"],
             "value": f["value"] if f["answer_state"] == "provided" else None,
@@ -482,15 +542,20 @@ def _effective(by_field, chain):
 
 
 def _instance_plan(p, by_field, declared, issues):
-    out = {"block": {}, "cohort": {}}
+    out = {g: {} for g in _GROUPS}
     questions = []
-    for group in ("block", "cohort"):
+    for group in _GROUPS:
         for iid in declared[group]:
             fields = {}
             for name in GROUP_FIELDS[group]:
                 fid = "fruit_trees.%s.%s.%s" % (group, iid, name)
-                a = _answer(by_field, fid)
-                fields[name] = a or {"answer_state": "no_fact", "value": None}
+                if is_yearly(fid):
+                    fields[name] = _answer_yearly(by_field, fid) or {
+                        "by_period": {}, "invalid_periods": []}
+                else:
+                    a = _answer(by_field, fid)
+                    fields[name] = a or {"answer_state": "no_fact",
+                                         "value": None, "fact_ids": []}
                 questions.append({"field_id": fid,
                                   "action": gg_core.question(p, fid)})
             out[group][iid] = {"fields": fields}

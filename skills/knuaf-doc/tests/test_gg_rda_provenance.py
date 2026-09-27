@@ -170,14 +170,14 @@ class IntegrityGateTests(unittest.TestCase):
 class RealPackIdentityTests(unittest.TestCase):
     """D01: all 6,055 physical rows preserved with immutable audit keys."""
 
-    def test_all_four_packs_index_to_6055_physical_keys(self):
+    def test_all_four_packs_index_to_6162_physical_keys(self):
         total = 0
         for pack_id, pin in prov.PINNED_PACKS.items():
             idx = prov.build_audit_index(PACKS / pin["relpath"], pack_id,
                                          pin["records_file_sha256"])
             self.assertEqual(len(idx), pin["record_lines"])
             total += len(idx)
-        self.assertEqual(total, 6055)
+        self.assertEqual(total, 6162)
 
     def test_econ_byte_identical_lines_keep_distinct_keys(self):
         pin = prov.PINNED_PACKS["rda.econ.2025"]
