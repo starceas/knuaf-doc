@@ -230,6 +230,7 @@ def fill_copy(template: Path, map_path: Path, values_path: Path, out: Path, *, c
     import gg_major_contract as mc
 
     authorization = mc.authorize_output(mc.OUTPUT_SCHOOL_WORKBOOK, context)
+    mc.require_finance_profile(authorization, "school_17_sheet_v1")
     if out.exists():
         raise FileExistsError(f"refusing to overwrite output: {out}")
     map_data, values_data, entries, values, template_digest = _prepare(template, map_path, values_path)

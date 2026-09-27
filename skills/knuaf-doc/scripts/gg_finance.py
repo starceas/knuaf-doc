@@ -827,12 +827,19 @@ def workbook(spec, path, *, context=None):
     just before the file is saved (policy B)."""
     import gg_major_contract as mc
 
+    if not isinstance(spec, dict):
+        raise mc.OutputHeldError("finance_profile_evidence_required")
     if spec.get("profile") == "school_17_sheet_v1":
         from gg_school_excel import school_workbook
 
         return school_workbook(spec, path, context=context)
     authorization = mc.authorize_output(
         mc.OUTPUT_SCHOOL_WORKBOOK, context, spec=spec)
+    mc.require_finance_profile(authorization, spec.get("profile"))
+    if authorization.major_id == "hort_env_systems":
+        raise mc.OutputHeldError("hort_transform_receipt_required")
+    if spec.get("profile") != "single_annual_cash_v1":
+        raise mc.OutputHeldError("unsupported_finance_profile")
     from openpyxl import Workbook
     from openpyxl.styles import Alignment, Font
     from openpyxl.utils import get_column_letter

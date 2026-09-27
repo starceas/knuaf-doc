@@ -696,6 +696,27 @@ class OutputAuthorization:
         }
 
 
+def require_finance_profile(authorization, profile: str) -> None:
+    """Check a named finance profile after policy B has authorized output.
+
+    This does not grant output authority. Callers must first obtain an
+    OutputAuthorization from authorize_output(s).
+    """
+    if not isinstance(authorization, OutputAuthorization):
+        raise OutputHeldError("finance_profile_authorization_required")
+    if not isinstance(profile, str) or not profile:
+        raise OutputHeldError("finance_profile_evidence_required")
+    module = default_registry().resolve(authorization.major_id)
+    if (authorization.module_version != module.module_version
+            or authorization.contract_version != CONTRACT_VERSION):
+        raise OutputHeldError("finance_profile_authorization_stale")
+    if not any(cap.profile == profile and cap.status == "supported"
+               for cap in module.finance_capabilities):
+        raise OutputHeldError("unsupported_finance_profile",
+                              major_id=authorization.major_id,
+                              profile=profile)
+
+
 def explicit_major_ids(spec):
     """Explicit major ids named by a spec: top-level ``major_id`` and
     ``school_profile.major_id``.  Returns ``[(where, value), ...]`` for
@@ -1448,6 +1469,11 @@ SPECIALTY_CROPS_MODULE = declare_module(
             reason="기존 단일 작목 연간 현금 산식 (gg_finance.calculate)",
         ),
         FinanceCapability(
+            profile="school_17_sheet_v1",
+            status="supported",
+            reason="기존 학교 17시트 생성·검증 경로",
+        ),
+        FinanceCapability(
             profile="composite_multi_crop",
             status="unsupported",
             reason="복합·가공·보조금 산식은 기존 계약상 미지원",
@@ -1997,7 +2023,7 @@ FRUIT_TREES_MODULE = declare_module(
 
 HORT_ENV_SYSTEMS_MODULE = declare_module(
     major_id="hort_env_systems",
-    module_version="0.1.0",
+    module_version="0.2.0",
     capabilities={
         "question": "supported",
         "document": "supported",
@@ -2249,10 +2275,9 @@ HORT_ENV_SYSTEMS_MODULE = declare_module(
     ),
     finance_capabilities=(
         FinanceCapability(
-            profile="hort_18_sheet_workbook_v1",
-            status="unsupported",
-            reason="전공 교재 18시트의 입력칸 지도·수식 모순 처분·"
-            "네이티브 재계산 미검증",
+            profile="hort_18_sheet_reconstructed_v1",
+            status="supported",
+            reason="전용 변환기와 검증된 transform 영수증으로만 출력",
         ),
         FinanceCapability(
             profile="single_annual_cash_v1",
@@ -2270,15 +2295,16 @@ HORT_ENV_SYSTEMS_MODULE = declare_module(
         "namespace_fields",
         "no_foreign_pack_refs",
         "forbidden_terms_absent",
-        "no_workbook_output",
+        "hort_workbook_receipt_required",
         "no_hort_calculation",
     ),
-    # No rendered-paper or workbook claim: the document capability
-    # exposes the selectable plan only.
+    # Paper remains unsupported. Workbook output is receipt-gated by the
+    # dedicated horticulture converter at every public writer.
     supported_outputs=(
         "question_list",
         "document_plan",
         "evidence_review",
+        "school_excel_workbook",
     ),
     packs=(),  # empty_slot preserved — no fabricated horticulture data
     forbidden_terms=_HORT_ENV_FORBIDDEN,

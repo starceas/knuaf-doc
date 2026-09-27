@@ -33,6 +33,9 @@
     "skills/knuaf-doc/references/fruit-trees/README.md",
     "skills/knuaf-doc/references/fruit-trees/premise-probes.md",
     "skills/knuaf-doc/references/hort-env-systems/README.md",
+    "skills/knuaf-doc/references/hort-env-systems/finance-params.json",
+    "skills/knuaf-doc/references/hort-env-systems/finance-transform.json",
+    "skills/knuaf-doc/references/hort-env-systems/finance-verify-classes.json",
     "skills/knuaf-doc/references/hort-env-systems/premise-probes.md",
     "skills/knuaf-doc/references/hort-env-systems/profile.json",
     "skills/knuaf-doc/references/industrial-insects/README.md",
@@ -47,7 +50,10 @@
     "skills/knuaf-doc/scripts/gg_finance_body.py",
     "skills/knuaf-doc/scripts/gg_fruit_plan.py",
     "skills/knuaf-doc/scripts/gg_fs.py",
+    "skills/knuaf-doc/scripts/gg_hort_formula_eval.py",
     "skills/knuaf-doc/scripts/gg_hort_plan.py",
+    "skills/knuaf-doc/scripts/gg_hort_registry.py",
+    "skills/knuaf-doc/scripts/gg_hort_workbook.py",
     "skills/knuaf-doc/scripts/gg_insect_document.py",
     "skills/knuaf-doc/scripts/gg_insect_evidence.py",
     "skills/knuaf-doc/scripts/gg_insect_precedent_check.py",
@@ -289,13 +295,13 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/builtin-sources.json": {
-      "after_sha256": "a865dbb740572090db0dd23d9a1e69a98d466d749db4b77d914b65151c9e861c",
+      "after_sha256": "da1d764c893ff6480c44123022073638a50f5e7a3ccc0aaf975de1b2023aabb6",
       "before_sha256": null,
       "first_changed": "P5",
-      "owner": "P15",
-      "reason": "accepted P5 reuse-registry@3 builtin source registry (frozen corrected A+B+C union) | P9: eight hort_env_systems entries appended (teaching workbook structure extract; exemplars and official sources identification-only); existing entries unchanged | P10: P9: register kang-finance-workbook x01/x02 (primary_finance_template) and hort-env raw workbook (reference_only); rename the student-numbered specialty exemplar id to specialty-grad-thesis-finance-xlsx (D-C) | P9-D3: removed the duplicated hort-env-kang-raw-workbook entry (one-hash-one-entry; the hort module registers its own workbook) | P12: nine industrial_insects entries (F0/E1-E4 locator map, E3/E4 HWP and R0/R1 identity-only) | P15: D5 useful-life physical-cell correction and dependent trust migration",
+      "owner": "P20",
+      "reason": "accepted P5 reuse-registry@3 builtin source registry (frozen corrected A+B+C union) | P9: eight hort_env_systems entries appended (teaching workbook structure extract; exemplars and official sources identification-only); existing entries unchanged | P10: P9: register kang-finance-workbook x01/x02 (primary_finance_template) and hort-env raw workbook (reference_only); rename the student-numbered specialty exemplar id to specialty-grad-thesis-finance-xlsx (D-C) | P9-D3: removed the duplicated hort-env-kang-raw-workbook entry (one-hash-one-entry; the hort module registers its own workbook) | P12: nine industrial_insects entries (F0/E1-E4 locator map, E3/E4 HWP and R0/R1 identity-only) | P15: D5 useful-life physical-cell correction and dependent trust migration | P20: hort-env profile.json artifact hash re-pinned to the 0.2.0 profile",
       "source": "new",
-      "last_changed": "P15"
+      "last_changed": "P20"
     },
     "skills/knuaf-doc/references/common-workbooks/formula-audit/AUDIT.md": {
       "after_sha256": "4edd03e636d9e30cd7cee9f4de502389c96610fc396ceb216bec352d5168c61a",
@@ -378,31 +384,58 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/hort-env-systems/README.md": {
-      "after_sha256": "2c52cd8600c6de0eb0b8abd8e36907690fc4e5f406882568b6d6a1c6d21cca10",
+      "after_sha256": "6838e398c7245e8f8867b827beb238cfef283192e835e5a573ab329d74a4c6b8",
       "before_sha256": null,
       "first_changed": "P9",
-      "owner": "P9",
-      "reason": "P9 hort_env_systems guidance: plan-only support boundary, teaching workbook role, source rights boundary",
+      "owner": "P20",
+      "reason": "P9 hort_env_systems guidance: plan-only support boundary, teaching workbook role, source rights boundary | P20: module 0.2.0 — receipt-gated hort_18_sheet_reconstructed_v1 profile only, 0.1.0 explicit rebind and professor-reapproval boundary",
       "source": "new",
-      "last_changed": "P9"
+      "last_changed": "P20"
+    },
+    "skills/knuaf-doc/references/hort-env-systems/finance-params.json": {
+      "after_sha256": "69ef129cdc31728552c45531b406342dad967963be6b2ce2450d359ccb1b7167",
+      "before_sha256": null,
+      "first_changed": "P20",
+      "owner": "P20",
+      "reason": "P20: canonical input parameter map for the H01 finance transformation (1464 params, hash-pinned source, no cell values) | P20: rebased onto accepted P19 (main db2a036)",
+      "source": "new",
+      "last_changed": "P20"
+    },
+    "skills/knuaf-doc/references/hort-env-systems/finance-transform.json": {
+      "after_sha256": "4cb04897389736128e569c5e7b2b517b3566b09c953c13ceb905666ed5e5777a",
+      "before_sha256": null,
+      "first_changed": "P20",
+      "owner": "P20",
+      "reason": "P20: canonical H01 18-sheet transform map (4198 entries, hash-pinned source, no cell values) | P20: rebased onto accepted P19 (main db2a036)",
+      "source": "new",
+      "last_changed": "P20"
+    },
+    "skills/knuaf-doc/references/hort-env-systems/finance-verify-classes.json": {
+      "after_sha256": "7534e107d9d34b3a2b3d95c68767a2779fbdb32c09882b13f576a80d4d7ab8c2",
+      "before_sha256": null,
+      "first_changed": "P20",
+      "owner": "P20",
+      "reason": "P20: verification class registry and rule ids for the hort workbook transformation | I4-FIX(P20): 5,563좌표 등록부 단위 보정 — 16.수익성분석!G27:K27은 RATIO, 판매 수량·금액 보조칸 재분류 | P20: rebased onto accepted P19 (main db2a036)",
+      "source": "new",
+      "last_changed": "P20"
     },
     "skills/knuaf-doc/references/hort-env-systems/premise-probes.md": {
-      "after_sha256": "ff8c2d2051202350f54013115bd5b55c621d44b0e83161e3f3274c525d83753b",
+      "after_sha256": "98305e7c072e9cacb05e7a101f689d9bc005ba19962904b49840ece813ede459",
       "before_sha256": null,
       "first_changed": "P9",
-      "owner": "P9",
-      "reason": "P9 hort_env_systems premise probes in the common interview format (C안): each probe links to declared hort field_ids or is marked as a field proposal",
+      "owner": "P20",
+      "reason": "P9 hort_env_systems premise probes in the common interview format (C안): each probe links to declared hort field_ids or is marked as a field proposal | P20: 문서 버전 2026-09-26.1 / module 0.2.0 — 0.1.0 명시 재바인딩·이전 계획 검토 무효·교수 재확인 전제 단락",
       "source": "new",
-      "last_changed": "P9"
+      "last_changed": "P20"
     },
     "skills/knuaf-doc/references/hort-env-systems/profile.json": {
-      "after_sha256": "1b8a731eed64cc9e2062fedcb96434bddc4f6110525f1799c4d09293e1877ef4",
+      "after_sha256": "a4cc6051497a39b773313676b4ea3f743fa492a26be6728876ad05ff0e14af01",
       "before_sha256": null,
       "first_changed": "P9",
-      "owner": "P9",
-      "reason": "P9 hort_env_systems profile: precedent identity and page locations, teaching-workbook sheet names and caution cell locations, official source bibliography; no cell values, original text or student numbers",
+      "owner": "P20",
+      "reason": "P9 hort_env_systems profile: precedent identity and page locations, teaching-workbook sheet names and caution cell locations, official source bibliography; no cell values, original text or student numbers | P20: module_version 0.2.0 선언 — 등록 해시 builtin-sources와 동기화",
       "source": "new",
-      "last_changed": "P9"
+      "last_changed": "P20"
     },
     "skills/knuaf-doc/references/industrial-insects/README.md": {
       "after_sha256": "065294fbbf0dded1b7b3b4e07c09ed6fca79e80a62be049f7f3b6349cc9e853f",
@@ -555,12 +588,12 @@
       "last_changed": "P7"
     },
     "skills/knuaf-doc/scripts/build_excel_finance_template.py": {
-      "after_sha256": "00d43b44952aa78228220cb027d77f63dca534a88f6a06c304c70d7f9fec9416",
+      "after_sha256": "d7c6c1dbb73b023b9db60aeeefb2bc6665d9388d5015d38e037dd11468a95286",
       "before_sha256": "9630799cf6d9472039a71e93389df77e4aa4ebbec6d39e16d950c146494d9fa1",
       "first_changed": "P1",
-      "last_changed": "P7",
-      "owner": "P7",
-      "reason": "C2: UTF-8 명시 I/O(입력 JSON read_text) | P3-C1 lane4 (devin/swe-2-max, herdr-supervised): extracted build() helper calling gg_finance.validate_economic_inputs(spec, purpose='draft') before workbook() write; hard fail issues refuse the build (status=blocked, no file written), soft blocked provenance issues ride along as economic_validation_issues in the success result. CLI --input/--out interface unchanged. | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output",
+      "last_changed": "P20",
+      "owner": "P20",
+      "reason": "C2: UTF-8 명시 I/O(입력 JSON read_text) | P3-C1 lane4 (devin/swe-2-max, herdr-supervised): extracted build() helper calling gg_finance.validate_economic_inputs(spec, purpose='draft') before workbook() write; hard fail issues refuse the build (status=blocked, no file written), soft blocked provenance issues ride along as economic_validation_issues in the success result. CLI --input/--out interface unchanged. | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P20: spec 검증 전 require_finance_profile — hort_env_systems는 transform 영수증 없으면 held",
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg.py": {
@@ -610,40 +643,40 @@
       "source": "adopted:PR2"
     },
     "skills/knuaf-doc/scripts/gg_excel_fill.py": {
-      "after_sha256": "fdc4fe3b1c8df68f15af12ab7fb2cf74f86a1adb488d1fb68abd9b13f8dfa947",
+      "after_sha256": "19e6a2b23f848789ccbe1a8dc60e428f44ea8dec80a6eac4349051dbfb7d6fde",
       "before_sha256": "8fd2271ecf225e65a93db9a49400d0fc8b74926a213ca728ed9d7132d5ada7b9",
       "first_changed": "P3",
-      "owner": "P7",
-      "reason": "P3-C1 lane4 (devin/swe-2-max, herdr-supervised): added SEMANTIC_UNITS vocabulary constant and a pre-save check rejecting a semanticField map entry whose unit is outside the recognized economic unit vocabulary (mirrored from gg_fact_semantics._NONFINANCIAL_UNIT_RE + gg_finance_body._UNIT_SCALES, kept as a local frozenset to avoid importing the semantic layer into this module). All pre-existing map/values schema, evidence, value-type, and workbook-consistency validation unchanged. | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output",
+      "owner": "P20",
+      "reason": "P3-C1 lane4 (devin/swe-2-max, herdr-supervised): added SEMANTIC_UNITS vocabulary constant and a pre-save check rejecting a semanticField map entry whose unit is outside the recognized economic unit vocabulary (mirrored from gg_fact_semantics._NONFINANCIAL_UNIT_RE + gg_finance_body._UNIT_SCALES, kept as a local frozenset to avoid importing the semantic layer into this module). All pre-existing map/values schema, evidence, value-type, and workbook-consistency validation unchanged. | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P20: school_17_sheet_v1 프로필 고정 require_finance_profile",
       "source": "modified",
-      "last_changed": "P7"
+      "last_changed": "P20"
     },
     "skills/knuaf-doc/scripts/gg_excel_formula_patch.py": {
-      "after_sha256": "2d409f86f2d30094e9ddae901d8bfeab8d8e7ec2e2d39da485aa4d9175781c27",
+      "after_sha256": "c26b5a1b1ed36298216a00fe77ee7150bab8f5c894875b7d2d9d0d80a7730061",
       "before_sha256": "d1e1e77dccf3cfcc8ddb7d25bab9c8e53dd77850d97ed019d8f33884a46250db",
       "first_changed": "P7",
-      "last_changed": "P7",
-      "owner": "P7",
-      "reason": "P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output",
+      "last_changed": "P20",
+      "owner": "P20",
+      "reason": "P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P20: school_17_sheet_v1 프로필 고정 require_finance_profile",
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_excel_print.py": {
-      "after_sha256": "c64d89fa3bcc615b6292176fd13711856e8ae3445846114edc5be7d912cfd2f0",
+      "after_sha256": "44937594585589f69e21bc2836de886504e122f401b8e14ccda6d0aaba6de870",
       "before_sha256": "4332896806b8b4d44e8d76106d41221536edee470f6b56e7ddb88797bc55f2aa",
       "first_changed": "P1",
-      "owner": "P7",
-      "reason": "H6: definedNames 컨테이너 재사용/생성(스키마 순서·localSheetId 유지). C2: UTF-8 | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output",
+      "owner": "P20",
+      "reason": "H6: definedNames 컨테이너 재사용/생성(스키마 순서·localSheetId 유지). C2: UTF-8 | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P20: school_17_sheet_v1 프로필 고정 require_finance_profile",
       "source": "adopted:PR2",
-      "last_changed": "P7"
+      "last_changed": "P20"
     },
     "skills/knuaf-doc/scripts/gg_excel_template.py": {
-      "after_sha256": "985841bdd97bc0f362bebd1891aba9543d420984093ddac24a18c4cda9af9907",
+      "after_sha256": "69d78c4dbb9b843dfede8f2720ffe629ad6859da7451c624d51c27fe07872945",
       "before_sha256": "70933a7abfc4bb9b86f20b05487c785c2abd77be60426089cb70b40741ca508f",
       "first_changed": "P1",
-      "owner": "P10",
-      "reason": "H5: map이 참조하는 미존재 셀을 발행 전 ValueError로 거부(seen_wanted) | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P10: P9: C6 layout guard — detect_layout from extract anchors, source-bytes re-detection at clear; X02 variant refused (layout_variant_unsupported)",
+      "owner": "P20",
+      "reason": "H5: map이 참조하는 미존재 셀을 발행 전 ValueError로 거부(seen_wanted) | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P10: P9: C6 layout guard — detect_layout from extract anchors, source-bytes re-detection at clear; X02 variant refused (layout_variant_unsupported) | P20: school_17_sheet_v1 프로필 고정 require_finance_profile",
       "source": "adopted:PR2",
-      "last_changed": "P10"
+      "last_changed": "P20"
     },
     "skills/knuaf-doc/scripts/gg_fact_semantics.py": {
       "after_sha256": "ba2f2aee005013a9f015e9094e34614ea7854d2bea71a6564cd5249b3ac7fb28",
@@ -654,12 +687,12 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_finance.py": {
-      "after_sha256": "feafd81d84b30261ae93bb13fabe6efd25e7a4ba95bca0480bf293e6a8a4db09",
+      "after_sha256": "a10a1cff6eead40db297e1eb4852b5a1482a02921a795625afa9a24542bf82d8",
       "before_sha256": "49a3258c8d23151c42245d375a96849dbd0c3f57533186ac5b50e87ef1f35f8b",
       "first_changed": "P1",
-      "last_changed": "P7",
-      "owner": "P7",
-      "reason": "C2: UTF-8 명시 I/O(manifest write_text). 계산 함수·수식 미변경 | P3-C1 lane3 (devin/swe-2-max, herdr-supervised): added context= kwarg to require_classified_workbook_inputs (admission-mode CONTEXT_REQUIRED/MAP_SLOT_UNRESOLVED checks, context=None preserves legacy draft behavior unchanged) and new validate_economic_inputs(spec, *, context=None, purpose='draft') pure validation adapter per design-r2 §5 (never raises for draft/admission; returns Issue-shaped dict list; ECONOMIC_SLOT_CONFLICT/PROVENANCE_UNCONNECTED/ECONOMIC_STATUS_UNRESOLVED/CONTEXT_REQUIRED codes). No change to num/investment/composite_contract/calculate/workbook/verify_recalculated bodies. | P3-C1 lane3c (devin/swe-2-max, herdr-supervised, per critic checkpoint 14-CriticLane3FinanceValidation CORRECTIONS_REQUIRED): fixed admission context={} silently accepted (now correctly falsy-checked, parity with require_classified_workbook_inputs's not-context-or-not-isinstance-dict pattern) and TypeError on heterogeneous input_inventory key types in sorted() (now separates non-string keys into their own ECONOMIC_FIELD_DECLARATION fail issue before sorting only the string-keyed subset, preserving Issue.fact_id's null|str contract); 2 new regression tests added. | P4 adapter: resolve_economic_source_refs (D07) | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output",
+      "last_changed": "P20",
+      "owner": "P20",
+      "reason": "C2: UTF-8 명시 I/O(manifest write_text). 계산 함수·수식 미변경 | P3-C1 lane3 (devin/swe-2-max, herdr-supervised): added context= kwarg to require_classified_workbook_inputs (admission-mode CONTEXT_REQUIRED/MAP_SLOT_UNRESOLVED checks, context=None preserves legacy draft behavior unchanged) and new validate_economic_inputs(spec, *, context=None, purpose='draft') pure validation adapter per design-r2 §5 (never raises for draft/admission; returns Issue-shaped dict list; ECONOMIC_SLOT_CONFLICT/PROVENANCE_UNCONNECTED/ECONOMIC_STATUS_UNRESOLVED/CONTEXT_REQUIRED codes). No change to num/investment/composite_contract/calculate/workbook/verify_recalculated bodies. | P3-C1 lane3c (devin/swe-2-max, herdr-supervised, per critic checkpoint 14-CriticLane3FinanceValidation CORRECTIONS_REQUIRED): fixed admission context={} silently accepted (now correctly falsy-checked, parity with require_classified_workbook_inputs's not-context-or-not-isinstance-dict pattern) and TypeError on heterogeneous input_inventory key types in sorted() (now separates non-string keys into their own ECONOMIC_FIELD_DECLARATION fail issue before sorting only the string-keyed subset, preserving Issue.fact_id's null|str contract); 2 new regression tests added. | P4 adapter: resolve_economic_source_refs (D07) | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P20: require_finance_profile + 명시 프로필 허용목록 (school_17_sheet_v1·single_annual_cash_v1); hort_env_systems는 transform 영수증 없으면 held",
       "source": "new",
       "note": "corrections-1: economic-claim verification hooks in admission paths (P1-1)."
     },
@@ -696,14 +729,41 @@
       "reason": "C2: UTF-8 명시 I/O(read_text ×2)",
       "source": "new"
     },
+    "skills/knuaf-doc/scripts/gg_hort_formula_eval.py": {
+      "after_sha256": "6af29f3923eec8dec5ffd0ba7626c85cc240bc694ca4be6085c040e987bd02b4",
+      "before_sha256": null,
+      "first_changed": "P20",
+      "owner": "P20",
+      "reason": "P20(I4-FIX): H01·변환 지도 수식의 런타임 평가기 — 독립 재계산·원시 캐시 대조 지원, 시험 fixture 비의존 | I5-FIX(P20): 계산 미지원과 Excel 셀 오류 예외를 분리하고 오류 함수의 미지원 삼킴을 차단 | I6-FIX(P20): 函数名支持检查前移到参数求值之前, 并新增解析树预扫描, 未选中的 lazy 分支中的未支持函数同样判未支持 | P20: rebased onto accepted P19 (main db2a036)",
+      "source": "new",
+      "last_changed": "P20"
+    },
     "skills/knuaf-doc/scripts/gg_hort_plan.py": {
-      "after_sha256": "8b24fdfa52d0048560c8358d1fe6853d44e9ee8f6773c54d90eb963c15836ad5",
+      "after_sha256": "ea9bc64d78db100569ac5fd1505bd5b30fa30215d31d340717ee7949c252e5a6",
       "before_sha256": null,
       "first_changed": "P9",
-      "owner": "P9",
-      "reason": "P9 hort_env_systems first bundle: read-only writing plan (answer states without values, precedent locations, teaching-workbook cautions on rehash match, evidence rules)",
+      "owner": "P20",
+      "reason": "P9 hort_env_systems first bundle: read-only writing plan (answer states without values, precedent locations, teaching-workbook cautions on rehash match, evidence rules) | P20: 0.1.0 정본은 원답변 보존 module_rebind_required hold; 재바인딩 계획은 이전 계획 검토 무효 표기",
       "source": "new",
-      "last_changed": "P9"
+      "last_changed": "P20"
+    },
+    "skills/knuaf-doc/scripts/gg_hort_registry.py": {
+      "after_sha256": "c2fe2e019c5d229962c1807f46ef5fd96a725697ddfb41991a76c3a3b1c18556",
+      "before_sha256": null,
+      "first_changed": "P20",
+      "owner": "P20",
+      "reason": "P20(I4-FIX): 원본 H01 사본·공개 지도·params로 finance-verify-classes.json 공개 등록부를 재생성하는 생성기 — --check에서 예시 좌표도 검사 | P20: rebased onto accepted P19 (main db2a036)",
+      "source": "new",
+      "last_changed": "P20"
+    },
+    "skills/knuaf-doc/scripts/gg_hort_workbook.py": {
+      "after_sha256": "cf643dc397e4d4189a33ad799faedf05113a44971904663349ca4049a2682050",
+      "before_sha256": null,
+      "first_changed": "P20",
+      "owner": "P20",
+      "reason": "P20: H01-bound 18-sheet transformer — public map only, knuaf-hort-finance-receipt/v1 receipt, transform entry calls require_finance_profile | I4-FIX(P20): transform 영수증의 H01 입력 결속, 사실 단위·기간·무매출 사전 보류, 공식 Office manifest 직접 검증, 수식 전수 독립 계산, 중첩 공개 값 감사 | I5-FIX(P20): 독립 기대값으로 분기를 정한 뒤 네이티브 캐시 자료형과 값을 대조 | P20: rebased onto accepted P19 (main db2a036)",
+      "source": "new",
+      "last_changed": "P20"
     },
     "skills/knuaf-doc/scripts/gg_insect_document.py": {
       "after_sha256": "95a83399544ca689ec11a2e222837e697dbd0e1b7ceca23d81b729fc0351df9e",
@@ -758,22 +818,22 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_major_contract.py": {
-      "after_sha256": "6bbf598ef4601ad34f6cf3297e2331b1e6ed976e0509759aad497659f1924fbc",
+      "after_sha256": "debbae4498aafb0252bad60d7f8e340792880f51948e0c644f1e9995b8a918ab",
       "before_sha256": null,
       "first_changed": "P6",
-      "owner": "P18",
-      "reason": "Peer major declarations, explicit evidenced binding, and read-only proposal router | P6 review: equal-rank F0/E1-E4 example_observed roster and optional document nodes | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P8: fruit_trees peer module declaration and registration (guard algorithm unchanged) | P9: hort_env_systems peer module declaration, registration and cover marker (guard algorithm unchanged) | P14: fruit_trees module 0.2.0 — plan_end_year, cohort area/active-period/yield fields, batch and move templates (guard algorithm unchanged) | P18: industrial_insects 0.2.0: product-line and plan-year question templates, line declaration fields (guard algorithm unchanged)",
+      "owner": "P20",
+      "reason": "Peer major declarations, explicit evidenced binding, and read-only proposal router | P6 review: equal-rank F0/E1-E4 example_observed roster and optional document nodes | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P8: fruit_trees peer module declaration and registration (guard algorithm unchanged) | P9: hort_env_systems peer module declaration, registration and cover marker (guard algorithm unchanged) | P14: fruit_trees module 0.2.0 — plan_end_year, cohort area/active-period/yield fields, batch and move templates (guard algorithm unchanged) | P18: industrial_insects 0.2.0: product-line and plan-year question templates, line declaration fields (guard algorithm unchanged) | P20: require_finance_profile 추가 — hort_env_systems 0.2.0 (영수증 게이트 hort_18_sheet_reconstructed_v1 supported, school_excel_workbook 출력) + specialty school_17_sheet_v1 capability",
       "source": "new",
-      "last_changed": "P18"
+      "last_changed": "P20"
     },
     "skills/knuaf-doc/scripts/gg_office.py": {
-      "after_sha256": "fb8b01385bbc603ad1ed47f16d5c09d91ba14428dde13f61820d5e4df6bf9b73",
+      "after_sha256": "d3ef5f06bb5724f59a80ea59446c0934ee54737c512661351c021ea67abc2ac6",
       "before_sha256": "64b4f8790da95e583cfb06ba4e216999a932e4d570953ad2a681bca19d270a0a",
       "first_changed": "P1",
-      "owner": "P7",
-      "reason": "C6: run_windows_com이 helper 생성 전 WINDOWS_COM_BLOCKED 반환. H15: visible 시트만 계수. C2: UTF-8 | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output",
+      "owner": "P20",
+      "reason": "C6: run_windows_com이 helper 생성 전 WINDOWS_COM_BLOCKED 반환. H15: visible 시트만 계수. C2: UTF-8 | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P20: spec JSON 엄격 파싱(중복키·비유한 수 거부), 공용 _preflight_excel_profile, hort transform 영수증 바인딩·계보 시작 스키마·native 영수증 finance_profile",
       "source": "new",
-      "last_changed": "P7"
+      "last_changed": "P20"
     },
     "skills/knuaf-doc/scripts/gg_office_win.py": {
       "after_sha256": "2d2b51c580f3f8d425e87f4bf1b0721fdc0fdd7c1efe4b4d90023c0ccabe5348",
@@ -856,12 +916,12 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_school_excel.py": {
-      "after_sha256": "39b989f0d79a66e145a32ccbfc43349931fc67fa9a745394cb643c7661abbb18",
+      "after_sha256": "0489cbe42c9c11b9c0096a6d68fea20b81b76e660b9799b46eb07ac65f06acb8",
       "before_sha256": "4bee13020358819f168c13a91c4895d1e50d3def7f9ea72d557423182d2b483a",
       "first_changed": "P1",
-      "last_changed": "P7",
-      "owner": "P7",
-      "reason": "H7: inspect_outputs가 BadZipFile 등을 구조화 issue로 변환. C2: UTF-8 | P4 reference-fill: statistical refs resolve + line labels (D09) | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output",
+      "last_changed": "P20",
+      "owner": "P20",
+      "reason": "H7: inspect_outputs가 BadZipFile 등을 구조화 issue로 변환. C2: UTF-8 | P4 reference-fill: statistical refs resolve + line labels (D09) | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P20: school_workbook은 school_17_sheet_v1만 — require_finance_profile 게이트",
       "source": "adopted:PR2"
     },
     "skills/knuaf-doc/scripts/gg_school_paper.py": {
@@ -1140,14 +1200,14 @@
     }
   },
   "cumulative": true,
-  "note": "선언된 runtime 변경만 — 이 목록 밖의 baseline 변화는 미승인. README.md는 readme_policy로 별도 관리. baseline 파일의 삭제는 허용하지 않으며, 신규 파일은 approved_new_files에 사전 명시된 경로만 before_sha256=null로 선언 가능. P6 공용 작성 계약은 새 런타임 파일을 별도 승인 목록으로 선언한다. P7 공용 전공 출력 가드(정책 B)는 기존 런타임 파일 변경과 기준선 파일 1개(gg_excel_formula_patch.py) 첫 변경을 선언한다. P8 과수 첫 묶음은 과수 모듈 선언·등록과 공용 보조 모듈 2개(참조 XLSX 결정·연구 전달물 검증), 과수 작성계획, 참조집합 데이터·안내 문서를 새 파일로 선언한다. P9 원예환경시스템 첫 묶음은 원예 모듈 선언·등록·표지, 원예 작성계획, 원예 profile·안내 문서를 새 파일로 선언하고 재사용 등록부에 원예 참조 항목을 추가한다. P10: 공용 Kang XLSX 재사용과 템플릿 규칙, D3 전공별 기본 통합문서 우선순위를 P9 원예 모듈과 함께 선언한다. P11 공용 인터뷰 규칙은 기준선 문서 4건(SKILL.md·interview-guide·workflow-order·mid-work-questions) 변경과 특용작물 premise-probes.md 신규 1건을 선언한다. P12 산업곤충 첫 묶음은 곤충 문서 계획·근거 검토 스크립트 4개, 선례 지도·안내·핵심 전제 문서 3개를 새 파일로, 재사용 등록부 곤충 항목 9개와 SKILL·gg.py 등 기존 파일 갱신을 선언한다. P13: D4 식별 전용 카탈로그·검증기·시험 3건을 신규 선언하고 SKILL·source-intake·재사용 시험의 변경을 P12 산업곤충 부모 위에 추가한다. P14 과수 둘째 묶음은 과수 모듈 0.2.0(수확 배치·물량 이동·연도별 수량 필드), 과수 작성계획 확장, 생산·재고 검산과 핵심 전제 질문 문서를 새 파일로 선언한다. | P15 D5: rda.econ.2025 pp133-135 corrected cell mapping, rejected legacy slice, lookup boundary, pinned trust migration; rebased onto accepted P14 (main f9c278c3). P16 과수 식별값 소묶음은 새 런타임 파일 없이 출처 식별 목록에 과수 참조 자료 41행을 추가한다. | P17: rda-lookup 검증 상태 계약 — 반환 레코드 verification 묶음·unverified 판정·verification_summary·공용 is_verified_observation 술어·D5 rejected 매칭 제외와 정합; accepted P16(main 0acd0cac) 위에 재기준화. P18 산업곤충 2묶음은 곤충 모듈 0.2.0(제품 라인·계획 연도 질문 틀)과 곤충 계획·근거·안내·핵심 전제 문서 갱신을 선언한다. 새 런타임 파일은 없다. P19 D6: X01/X02 formula-audit tool, block map, pinned results and human audit summary; rebaselined onto accepted P18 (main eb3ce06).",
+  "note": "선언된 runtime 변경만 — 이 목록 밖의 baseline 변화는 미승인. README.md는 readme_policy로 별도 관리. baseline 파일의 삭제는 허용하지 않으며, 신규 파일은 approved_new_files에 사전 명시된 경로만 before_sha256=null로 선언 가능. P6 공용 작성 계약은 새 런타임 파일을 별도 승인 목록으로 선언한다. P7 공용 전공 출력 가드(정책 B)는 기존 런타임 파일 변경과 기준선 파일 1개(gg_excel_formula_patch.py) 첫 변경을 선언한다. P8 과수 첫 묶음은 과수 모듈 선언·등록과 공용 보조 모듈 2개(참조 XLSX 결정·연구 전달물 검증), 과수 작성계획, 참조집합 데이터·안내 문서를 새 파일로 선언한다. P9 원예환경시스템 첫 묶음은 원예 모듈 선언·등록·표지, 원예 작성계획, 원예 profile·안내 문서를 새 파일로 선언하고 재사용 등록부에 원예 참조 항목을 추가한다. P10: 공용 Kang XLSX 재사용과 템플릿 규칙, D3 전공별 기본 통합문서 우선순위를 P9 원예 모듈과 함께 선언한다. P11 공용 인터뷰 규칙은 기준선 문서 4건(SKILL.md·interview-guide·workflow-order·mid-work-questions) 변경과 특용작물 premise-probes.md 신규 1건을 선언한다. P12 산업곤충 첫 묶음은 곤충 문서 계획·근거 검토 스크립트 4개, 선례 지도·안내·핵심 전제 문서 3개를 새 파일로, 재사용 등록부 곤충 항목 9개와 SKILL·gg.py 등 기존 파일 갱신을 선언한다. P13: D4 식별 전용 카탈로그·검증기·시험 3건을 신규 선언하고 SKILL·source-intake·재사용 시험의 변경을 P12 산업곤충 부모 위에 추가한다. P14 과수 둘째 묶음은 과수 모듈 0.2.0(수확 배치·물량 이동·연도별 수량 필드), 과수 작성계획 확장, 생산·재고 검산과 핵심 전제 질문 문서를 새 파일로 선언한다. | P15 D5: rda.econ.2025 pp133-135 corrected cell mapping, rejected legacy slice, lookup boundary, pinned trust migration; rebased onto accepted P14 (main f9c278c3). P16 과수 식별값 소묶음은 새 런타임 파일 없이 출처 식별 목록에 과수 참조 자료 41행을 추가한다. | P17: rda-lookup 검증 상태 계약 — 반환 레코드 verification 묶음·unverified 판정·verification_summary·공용 is_verified_observation 술어·D5 rejected 매칭 제외와 정합; accepted P16(main 0acd0cac) 위에 재기준화. P18 산업곤충 2묶음은 곤충 모듈 0.2.0(제품 라인·계획 연도 질문 틀)과 곤충 계획·근거·안내·핵심 전제 문서 갱신을 선언한다. 새 런타임 파일은 없다. P19 D6: X01/X02 formula-audit tool, block map, pinned results and human audit summary; rebaselined onto accepted P18 (main eb3ce06). | P20 원예 재무 묶음은 H01 18시트 전용 변환기·지도·매개변수·검증등록부와 수식 평가기·등록부 생성기를 새 파일로 선언하고, 재무 프로필 게이트(require_finance_profile)·hort_env_systems 0.2.0·공용 XLSX 보조 경로 갱신과 builtin-sources/gg_major_contract 양쪽 변경 병합을 수용된 P19(main db2a036) 부모 위에 재선언한다.",
   "parent_candidate": {
-    "stage": "P18",
-    "file_count": 192,
-    "tree_sha256": "88b64dc2e64672506cb0ec285c6c624ee5366eeb67afd26a1368465175ca4916"
+    "stage": "P19",
+    "file_count": 199,
+    "tree_sha256": "193cf60958cf1e6584667614498f50f5cf0a75b799520357c51b5c96db9f6afa"
   },
   "schema": "knuaf-doc/runtime-changes@2",
-  "stage": "P19",
+  "stage": "P20",
   "stage_lineage": [
     {
       "file_count": 75,
@@ -1262,6 +1322,12 @@
       "file_count": 192,
       "tree_sha256": "88b64dc2e64672506cb0ec285c6c624ee5366eeb67afd26a1368465175ca4916",
       "note": "P18 기준 main eb3ce06(PR #18 산업곤충 둘째 묶음 병합)의 clean export 전체 파일 트리 해시 — P19의 직전 부모"
+    },
+    {
+      "stage": "P19",
+      "file_count": 199,
+      "tree_sha256": "193cf60958cf1e6584667614498f50f5cf0a75b799520357c51b5c96db9f6afa",
+      "note": "P19 기준 main db2a036(PR #15 공용 X01/X02 수식 감사 병합)의 clean export 전체 파일 트리 해시 — P20의 직전 부모"
     }
   ]
 }
