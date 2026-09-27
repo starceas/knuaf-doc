@@ -77,7 +77,8 @@ class CommonContractFlowTests(ContractCase):
 
     def test_insect_binding_has_plan_and_empty_pack_without_crop_output(self):
         root = self.make_project()
-        self._bind(root, "industrial_insects", "0.1.0")
+        self._bind(root, "industrial_insects", runtime(
+            "gg_major_contract").INDUSTRIAL_INSECTS_MODULE.module_version)
         plan = self._run(root, "major-plan")
         self.assertEqual(plan.returncode, 0, plan.stderr)
         body = json.loads(plan.stdout)

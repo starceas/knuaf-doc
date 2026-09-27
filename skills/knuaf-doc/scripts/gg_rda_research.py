@@ -82,7 +82,7 @@ PINNED_CATALOG_AUTHORITIES = {
     "accepted-catalog-20260921/mafra.specialty.production.2024":
         "0550d458a0747be9929b3205c1ff8ff27f15c6f4cff5d9f3cc12372e336c71c8",
     "accepted-catalog-20260921/rda.econ.2025":
-        "0317280900419472ecaf91e01123c9a90edc93ea0b0c45f9a8c3bda2851257a4",
+        "0d2d0b1cfeceb2a7fb4b12f2c10e10882f6c1957404ff1834a6d1a41e19eca44",
     "accepted-catalog-20260921/rda.income.national.2024":
         "555719cf2565b21b5d4321eeaba7433d60807c280e995e7ed319064fb103adb4",
     "accepted-catalog-20260921/rda.income.regional.2024":
@@ -337,8 +337,10 @@ def _selection_key(selection):
     """Normalize the selection argument to an AuditKey dict or ``None``.
 
     Accepts an AuditKey (dict/tuple), a lookup candidate carrying
-    ``audit_key``, or a whole ``lookup_rda_data`` result — only ``unique``
-    results contribute their single candidate's key; every other verdict
+    ``audit_key``, or a whole ``lookup_rda_data`` result — only
+    ``unique`` and ``unverified`` results contribute their single
+    candidate's key (both are single-observation selections; the
+    verification axis is carried separately); every other verdict
     returns ``None`` (fail closed, no first-record choice)."""
     if not isinstance(selection, dict):
         try:
@@ -346,7 +348,7 @@ def _selection_key(selection):
         except (ValueError, TypeError):
             return None
     if "status" in selection and "records" in selection:
-        if selection.get("status") != "unique":
+        if selection.get("status") not in ("unique", "unverified"):
             return None
         records = selection.get("records") or []
         if len(records) != 1:
@@ -411,6 +413,12 @@ def propose(current_pack_revision, target, selection, *, context=None):
                 "value": None}
 
     record = resolved.record or {}
+    extraction = record.get("extraction")
+    if isinstance(extraction, dict) \
+            and extraction.get("status") == "rejected":
+        return {"schema": PROPOSAL_SCHEMA, "status": "unresolved",
+                "reason": "extraction_rejected", "target": target,
+                "audit_key": prov.audit_key_dict(norm), "value": None}
     metric = target.get("metric") if isinstance(target, dict) else None
     metrics = record.get("metrics") or {}
     if metric and metric not in _METRIC_UNIT:
@@ -442,10 +450,13 @@ def propose(current_pack_revision, target, selection, *, context=None):
     entry = _catalog_entry(catalog, resolved.audit_key)
     catalog_accepted = _ctx_accepted(ctx)
     receipt_ok = _receipt_ok(entry)
-    promotable = (
-        catalog_status == prov.CatalogStatus.VERIFIED_OBSERVATION.value
-        and catalog_accepted and receipt_ok
-    )
+    # K8: the promotable gate is the shared is_verified_observation
+    # predicate (accepted catalog + verified status + complete receipt +
+    # extracted row) — the same basis lookup's verification.verified and
+    # the candidates observation axis use.  This only narrows promotion:
+    # the previous rule never required an extracted row.
+    promotable = _lookup().is_verified_observation(
+        entry, record, catalog_accepted)
     proposal = {
         "schema": PROPOSAL_SCHEMA,
         "status": "proposal",

@@ -35,7 +35,8 @@ E2_GAP_3 = {
 
 
 def _fact(fid, field_id, *, answer_state="provided",
-          verification="source_located", value="synthetic-value"):
+          verification="source_located", value="synthetic-value",
+          scope="farm"):
     return {
         "id": fid,
         "field_id": field_id,
@@ -44,7 +45,7 @@ def _fact(fid, field_id, *, answer_state="provided",
         "unit": "",
         "value_type": "text",
         "period": None,
-        "scope": "farm",
+        "scope": scope,
         "answer_state": answer_state,
         "verification": verification,
         "source_refs": [
@@ -457,3 +458,78 @@ class PlanContractTests(_InsectCase):
             {"section_id", "role", "action", "reason",
              "observation_refs", "role_fit_reason", "source_refs",
              "evidence_status"})
+
+
+class LineKeysInPlanTests(_InsectCase):
+    """B2 module 0.2.0: build_plan keeps its keys and adds the line
+    instance view (declared ids/years only, never student values)."""
+
+    NEW_KEYS = {
+        "line_inventory", "line_retired", "plan_years", "instances",
+        "line_questions", "related_project_facts", "next_line_id",
+        "instance_issues",
+    }
+
+    def _with_line(self, *extra):
+        project = copy.deepcopy(self.project)
+        project["facts"] = dict(project["facts"])
+        for fact in (
+                _fact("inv", "industrial_insects.line_inventory",
+                      value="l01", scope="project"),
+                _fact("yrs", "industrial_insects.plan_years",
+                      value="2027", scope="project"),
+                _fact("lbl", "industrial_insects.line.l01.label",
+                      value="SECRET-LINE-NAME", scope="line:l01"),
+                _fact("sp", "industrial_insects.line.l01.species",
+                      value="SECRET-LINE-SPECIES", scope="line:l01"),
+                _fact("y27",
+                      "industrial_insects.line.l01.year.2027."
+                      "year_end_in_process",
+                      value="SECRET-YEAR-VALUE", scope="line:l01"),
+                *extra):
+            project["facts"][fact["id"]] = fact
+        return project
+
+    def test_existing_keys_preserved_and_line_keys_added(self):
+        plan = self.plan(project=self._with_line())
+        for key in ("major_id", "module_version", "contract_version",
+                    "project_revision", "status", "selected_sections",
+                    "available_sections", "question_states",
+                    "question_status_meaning", "answer_scope",
+                    "source_ref_check", "finance_status",
+                    "rendered_paper", "canonical_write"):
+            with self.subTest(case=key):
+                self.assertIn(key, plan)
+        self.assertTrue(self.NEW_KEYS <= set(plan))
+        self.assertEqual(plan["instances"], [{"id": "l01", "flags": []}])
+        self.assertEqual(plan["line_inventory"]["question_status"],
+                         "reuse")
+        self.assertIn("l01", plan["line_questions"])
+        self.assertIn("2027", plan["line_questions"]["l01"]["years"])
+        self.assertEqual(plan["next_line_id"], "l02")
+        self.assertEqual(plan["instance_issues"], [])
+        # question_states still covers the declared schema, templates
+        # included, and stays three keys per entry.
+        self.assertEqual(
+            set(plan["question_states"]),
+            {q.field_id for q in self.mc.default_registry()
+             .resolve(MAJOR).question_schema})
+        for state in plan["question_states"].values():
+            self.assertEqual(
+                set(state), {"question_status", "answer_states", "flags"})
+
+    def test_line_values_never_emitted(self):
+        blob = json.dumps(self.plan(project=self._with_line()),
+                          ensure_ascii=False)
+        for secret in ("SECRET-LINE-NAME", "SECRET-LINE-SPECIES",
+                       "SECRET-YEAR-VALUE"):
+            with self.subTest(case=secret):
+                self.assertNotIn(secret, blob)
+
+    def test_line_keys_present_without_selection_or_lines(self):
+        plan = self.plan()
+        self.assertTrue(self.NEW_KEYS <= set(plan))
+        self.assertEqual(plan["instances"], [])
+        self.assertEqual(plan["line_questions"], {})
+        self.assertEqual(plan["line_inventory"]["question_status"], "ask")
+        self.assertEqual(plan["next_line_id"], "l01")

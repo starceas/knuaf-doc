@@ -978,6 +978,7 @@ class TestCommonWorkbooks(unittest.TestCase):
         # a student number — none may appear in registry source_ids or
         # in reference-set / extract ref_ids and labels.
         digit_run = re.compile(r"\d{6,}")
+        separators = re.compile(r"[\s\-_.:/·,()]")
         names = [e["source_id"]
                  for e in self.reg.document["entries"]]
         refset = json.loads((KNUAF_DOC / "references" /
@@ -991,7 +992,8 @@ class TestCommonWorkbooks(unittest.TestCase):
              "kang-finance-workbook.json").read_text(encoding="utf-8"))
         for e in extract["members"].values():
             names.extend([e["ref_id"], *e["labels"].values()])
-        offenders = [n for n in names if digit_run.search(n)]
+        offenders = [n for n in names
+                     if digit_run.search(separators.sub("", n))]
         self.assertEqual(offenders, [])
 
     def test_kang_x01_and_x02_reuse_ready(self):

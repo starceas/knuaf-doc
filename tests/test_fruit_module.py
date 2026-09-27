@@ -37,7 +37,7 @@ class DeclarationTests(ContractCase):
 
     def test_registered_with_plan_only_outputs(self):
         m = self.module
-        self.assertEqual(m.module_version, "0.1.0")
+        self.assertEqual(m.module_version, "0.2.0")
         self.assertEqual(m.capabilities["finance"], "unsupported")
         self.assertEqual(set(m.supported_outputs),
                          {"question_list", "document_plan",
@@ -83,7 +83,36 @@ class DeclarationTests(ContractCase):
         fields = [q.field_id for q in self.module.question_schema]
         self.assertIn("fruit_trees.cohort.{id}.tree_count", fields)
         self.assertIn("fruit_trees.block.{id}.cultivation_form", fields)
+        self.assertIn("fruit_trees.batch.{id}.origin", fields)
+        self.assertIn("fruit_trees.move.{id}.kind", fields)
         self.assertTrue(all(f.startswith("fruit_trees.") for f in fields))
+        yearly = {q.field_id for q in self.module.question_schema
+                  if q.period == "year" and ".cohort." in q.field_id}
+        self.assertEqual(yearly, {"fruit_trees.cohort.{id}." + n for n in (
+            "bearing_trees", "yield_kg_per_tree", "bearing_area_m2",
+            "yield_kg_per_10a")})
+
+    def test_old_module_version_binding_needs_rebind(self):
+        """Bundle 2 raised the question contract to 0.2.0: a binding that
+        recorded 0.1.0 no longer binds (re-bind → new revision)."""
+        root = self.make_project()
+        bind_major(root, "fruit_trees")
+        core = runtime("gg_core")
+        p = core.load(root)
+        fact = dict(p["facts"]["selected_major"], module_version="0.1.0")
+        fact.pop("revision", None)
+        core.apply(root, {"request_id": "old-version", "ops": [
+            {"collection": "facts", "value": fact}]}, p["revision"])
+        with self.assertRaises(self.mc.OutputHeldError) as caught:
+            self.mc.authorize_output("school_paper", self.mc.output_context(
+                root, "fruit_trees"))
+        self.assertEqual(caught.exception.reason, "major_binding_invalid")
+        plan = runtime("gg_fruit_plan").fruit_plan(root)
+        self.assertEqual(plan["status"], "held")
+        self.assertEqual(plan["reason"], "binding_invalid")
+        production = runtime("gg_orchard_production").orchard_production(root)
+        self.assertEqual((production["status"], production["reason"]),
+                         ("held", "binding_invalid"))
 
 
 class GuardLinkTests(ContractCase):
@@ -148,3 +177,13 @@ class GuardLinkTests(ContractCase):
         self.assertEqual(set(availability.values()), {"unsupported_output"})
         self.assertEqual(set(availability), {
             "school_paper", "school_excel_workbook", "finance_calculation"})
+
+    def test_bundle2_texts_have_no_local_paths(self):
+        skill = SCRIPTS.parent
+        for rel in ("scripts/gg_orchard_production.py",
+                    "references/fruit-trees/premise-probes.md",
+                    "references/fruit-trees/README.md"):
+            text = (skill / rel).read_text(encoding="utf-8")
+            with self.subTest(rel=rel):
+                self.assertNotIn("/Users/", text)
+                self.assertNotIn("Desktop", text)
