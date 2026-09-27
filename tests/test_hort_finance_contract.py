@@ -52,7 +52,7 @@ class FormulaContract(unittest.TestCase):
     def test_T_REQ_1_all_area_unit_slots(self):
         sheet = '12 .경비계획'
         keys = [(k,v) for k,v in self.params['parameters'].items()
-                if k.endswith('.coverage_ratio') and v.get('method_tag') == 'area_unit']
+                if k.endswith('.area_kind') and v.get('method_tag') == 'area_unit']
         self.assertEqual(len(keys), 25)
         formula_map = {(a['sheet'],a['cell']):a['after_formula'] for a in self.formula_entries}
         checked = 0
@@ -65,7 +65,7 @@ class FormulaContract(unittest.TestCase):
             self.assertTrue(targets, key)
             values = {(sh,'I2'):2027, (sh,'I3'):1000, (sh,'I4'):1000,
                       (sh,'I5'):1000, (sh,'K'+row):'부지',
-                      (sh,cell):None, (sh,'M'+row):5,
+                      (sh,'M'+row):5,
                       (sh,'N'+row):2027, (sh,'O'+row):0,
                       (sh,'P'+row):None}
             self.assertEqual(self.evaluate(sh,area_cell,values),1000,key)
@@ -75,7 +75,7 @@ class FormulaContract(unittest.TestCase):
                 checked += 1
         self.assertGreaterEqual(checked,25)
 
-    def test_T_REQ_2_flat_material_quote_without_basis_area(self):
+    def test_T_REQ_2_material_basis_area_required(self):
         sheet = '9. 영농자재구매계획'
         keys = [(k,v) for k,v in self.params['parameters'].items() if k.endswith('.basis_m2')]
         self.assertEqual(len(keys),30)
@@ -86,17 +86,18 @@ class FormulaContract(unittest.TestCase):
                            and a['cell'].startswith('E') and matches_ref(a['after_formula'],cell)),None)
             self.assertIsNotNone(target,key)
             values = {(sh,'U'+str(row)):'synthetic item', (sh,'AB'+str(row)):'quote',
-                      (sh,'V'+str(row)):'부지', (sh,'W'+str(row)):None,
-                      (sh,'X'+str(row)):7, (sh,'Y'+str(row)):1,
-                      ('12 .경비계획','I3'):1000}
+                      (sh,'W'+str(row)):1000, (sh,'X'+str(row)):7,
+                      ('12 .경비계획','I5'):1000,
+                      ('8. 생산계획','Y22'):1000, ('8. 생산계획','Y23'):1000,
+                      ('8. 생산계획','Y24'):1000, ('8. 생산계획','Y26'):1000}
             self.assertAlmostEqual(self.evaluate(sh,target,values),7,msg=key)
 
     def _enumerate_optional_key_dependency(self):
         params = self.params['parameters']
-        self.assertEqual(len(params),1464)
+        self.assertEqual(len(params),1379)
         by_coord={tuple(v['canonical_cell'].split('!',1)):(k,v) for k,v in params.items()
                   if '!' in (v.get('canonical_cell') or '')}
-        self.assertEqual(len(by_coord),1433)
+        self.assertEqual(len(by_coord),1348)
         pairs=0; optional_keys=set(); unused_pairs=0; failures=[]
         for action in self.formula_entries:
             refs=referenced_cells(action['after_formula'],action['sheet'])
@@ -192,7 +193,7 @@ class FormulaContract(unittest.TestCase):
 
     def test_T_REQ_3a_optional_branch_enumeration(self):
         pairs, keys, unused, _ = self._enumerate_optional_key_dependency()
-        self.assertEqual((pairs, keys, unused), (3082, 1098, 2213))
+        self.assertEqual((pairs, keys, unused), (2972, 1013, 2163))
 
     def test_T_REQ_3b_optional_branch_formula_evaluation(self):
         _, _, _, failures = self._enumerate_optional_key_dependency()
