@@ -38,6 +38,7 @@
     "skills/knuaf-doc/references/reuse-registry-schema.md",
     "skills/knuaf-doc/references/source-identities.json",
     "skills/knuaf-doc/references/specialty-crops/premise-probes.md",
+    "skills/knuaf-doc/references/student-report.md",
     "skills/knuaf-doc/references/workbook-reference-set.json",
     "skills/knuaf-doc/scripts/gg_fact_semantics.py",
     "skills/knuaf-doc/scripts/gg_finance_body.py",
@@ -56,6 +57,7 @@
     "skills/knuaf-doc/scripts/gg_rda_lookup.py",
     "skills/knuaf-doc/scripts/gg_rda_provenance.py",
     "skills/knuaf-doc/scripts/gg_rda_research.py",
+    "skills/knuaf-doc/scripts/gg_report.py",
     "skills/knuaf-doc/scripts/gg_research_handoff.py",
     "skills/knuaf-doc/scripts/gg_reuse.py",
     "skills/knuaf-doc/scripts/gg_source_identity.py",
@@ -103,12 +105,12 @@
       "last_changed": "P17"
     },
     "skills/knuaf-doc/SKILL.md": {
-      "after_sha256": "0976c31de578bb621de8121f41220cf367e304f2f70f30e36eea05f78adf28a1",
+      "after_sha256": "5b57bb3d7d93ff5de312ff2cb5eb748eed3c45645b41e85d8bba7e18ae09de21",
       "before_sha256": "c0008fa5239cc16411fd4ef24b5bf901c7a8b9b50c6b621e2bdee3acf734ddc0",
       "first_changed": "P1",
-      "last_changed": "P18",
-      "owner": "P18",
-      "reason": "H11 문서 정정: 사용자 명시 모델도 임의 폴백·대체 금지 규칙 추가 | P5-D1 guidance sync: new '참고자료 폴더 등록' bullet documents the frozen source-scan→source-resolve→source-register→source-view lifecycle and 03_sources.md preservation | P6: document explicit major binding and current industrial insect capability boundary | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P8: fruit_trees plan-only capability and guidance link | P9: hort_env_systems plan-only capability and guidance link | P10: P9: common XLSX template rule + X02 layout guard sentence | P9-D3: major-specific workbook precedence sentence (hort_env_systems base = registered H01) | P11 공용 인터뷰 규칙: 전공별 핵심 전제 목록(C1), 동적 영향 순위(C2), '모르겠다' 도움(C3), 충돌 정리(C5), 미준비 전공 안내, 특용작물 probe 문서 | P12: industrial_insects plan/evidence commands and built-in reuse guidance | P13: D4 identity-catalogue-only precedence guidance | P14: fruit_trees read-only production and inventory check link | P17: rda-lookup verification-state guidance sentence (verified is observation confirmation, not approval; unverified/ambiguous/series and 옮기지 말 것 labels never copied) | P18: industrial_insects 0.2.0 product lines, plan without selection, rebinding guidance",
+      "last_changed": "P21",
+      "owner": "P21",
+      "reason": "H11 문서 정정: 사용자 명시 모델도 임의 폴백·대체 금지 규칙 추가 | P5-D1 guidance sync: new '참고자료 폴더 등록' bullet documents the frozen source-scan→source-resolve→source-register→source-view lifecycle and 03_sources.md preservation | P6: document explicit major binding and current industrial insect capability boundary | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P8: fruit_trees plan-only capability and guidance link | P9: hort_env_systems plan-only capability and guidance link | P10: P9: common XLSX template rule + X02 layout guard sentence | P9-D3: major-specific workbook precedence sentence (hort_env_systems base = registered H01) | P11 공용 인터뷰 규칙: 전공별 핵심 전제 목록(C1), 동적 영향 순위(C2), '모르겠다' 도움(C3), 충돌 정리(C5), 미준비 전공 안내, 특용작물 probe 문서 | P12: industrial_insects plan/evidence commands and built-in reuse guidance | P13: D4 identity-catalogue-only precedence guidance | P14: fruit_trees read-only production and inventory check link | P17: rda-lookup verification-state guidance sentence (verified is observation confirmation, not approval; unverified/ambiguous/series and 옮기지 말 것 labels never copied) | P18: industrial_insects 0.2.0 product lines, plan without selection, rebinding guidance | P21: 학생 오류·불편 신고 안내 한 줄과 신고 절",
       "source": "new"
     },
     "skills/knuaf-doc/references/benchmark-packs/aliases/crop-aliases.specialty_crops.json": {
@@ -1087,17 +1089,33 @@
       "reason": "D4 positive and adversarial catalogue, privacy, duplicate-key and registry-binding controls | Astra D4 round 1: sanitized dependency failures and bounded/deep JSON rejection with CLI negatives | P13: rebased D4 identity-only declaration onto accepted P12 | P13: privacy negatives assemble synthetic digit groups at test time without a shipped student-number literal | P16: empty-catalogue contract kept on a synthetic empty list now that fruit rows ship; the shipped catalogue must load and pass the CLI check with its real row count",
       "source": "new",
       "last_changed": "P16"
+    },
+    "skills/knuaf-doc/references/student-report.md": {
+      "after_sha256": "f1d5191b44763b78e75de31c0f6724ccc7b91755b0e8f9605ab6bb5511d9e557",
+      "before_sha256": null,
+      "first_changed": "P21",
+      "owner": "P21",
+      "reason": "P21: 학생 신고 AI 행동 규칙 문서 — 권하기·kind 선택·작성 금지 항목·미리보기 동의·결과 대응(delivery_unknown/retry-unknown 포함)·파일 위치·한계",
+      "source": "new"
+    },
+    "skills/knuaf-doc/scripts/gg_report.py": {
+      "after_sha256": "bf01338534e6a9d423582491d7825b804dd73f5e7687afad889b1644abf2e2ad",
+      "before_sha256": null,
+      "first_changed": "P21",
+      "owner": "P21",
+      "reason": "P21: 학생 오류·불편 신고 스크립트 — draft/show/send, 공개 경로 가림·UTF-16 상한·private 1900 합성, 고정 수신처+시험 endpoint 기록, 전송 claim·영수증·delivery_unknown/--retry-unknown·sent_unrecorded, claim 획득 뒤 재확인(dup), payload 보유 필드 기준 worker_would_alter | F1 처분: 공개 메타데이터(environment·skill_version) 재검사, ECMAScript trim 일치, 계약 형태 명시 실패만 확정 미접수, done 기록 내용 검증, 초안 바이트 그대로 쓰기(CRLF 무관 sha), private 버전 줄바꿈 1개 | F1 재확인 처분: 비문자열 error는 계약 밖(delivery_unknown), 판별 불가 done 기록은 기본 재전송을 막음(delivery_unknown, --retry-unknown만 진행)",
+      "source": "new"
     }
   },
   "cumulative": true,
-  "note": "선언된 runtime 변경만 — 이 목록 밖의 baseline 변화는 미승인. README.md는 readme_policy로 별도 관리. baseline 파일의 삭제는 허용하지 않으며, 신규 파일은 approved_new_files에 사전 명시된 경로만 before_sha256=null로 선언 가능. P6 공용 작성 계약은 새 런타임 파일을 별도 승인 목록으로 선언한다. P7 공용 전공 출력 가드(정책 B)는 기존 런타임 파일 변경과 기준선 파일 1개(gg_excel_formula_patch.py) 첫 변경을 선언한다. P8 과수 첫 묶음은 과수 모듈 선언·등록과 공용 보조 모듈 2개(참조 XLSX 결정·연구 전달물 검증), 과수 작성계획, 참조집합 데이터·안내 문서를 새 파일로 선언한다. P9 원예환경시스템 첫 묶음은 원예 모듈 선언·등록·표지, 원예 작성계획, 원예 profile·안내 문서를 새 파일로 선언하고 재사용 등록부에 원예 참조 항목을 추가한다. P10: 공용 Kang XLSX 재사용과 템플릿 규칙, D3 전공별 기본 통합문서 우선순위를 P9 원예 모듈과 함께 선언한다. P11 공용 인터뷰 규칙은 기준선 문서 4건(SKILL.md·interview-guide·workflow-order·mid-work-questions) 변경과 특용작물 premise-probes.md 신규 1건을 선언한다. P12 산업곤충 첫 묶음은 곤충 문서 계획·근거 검토 스크립트 4개, 선례 지도·안내·핵심 전제 문서 3개를 새 파일로, 재사용 등록부 곤충 항목 9개와 SKILL·gg.py 등 기존 파일 갱신을 선언한다. P13: D4 식별 전용 카탈로그·검증기·시험 3건을 신규 선언하고 SKILL·source-intake·재사용 시험의 변경을 P12 산업곤충 부모 위에 추가한다. P14 과수 둘째 묶음은 과수 모듈 0.2.0(수확 배치·물량 이동·연도별 수량 필드), 과수 작성계획 확장, 생산·재고 검산과 핵심 전제 질문 문서를 새 파일로 선언한다. | P15 D5: rda.econ.2025 pp133-135 corrected cell mapping, rejected legacy slice, lookup boundary, pinned trust migration; rebased onto accepted P14 (main f9c278c3). P16 과수 식별값 소묶음은 새 런타임 파일 없이 출처 식별 목록에 과수 참조 자료 41행을 추가한다. | P17: rda-lookup 검증 상태 계약 — 반환 레코드 verification 묶음·unverified 판정·verification_summary·공용 is_verified_observation 술어·D5 rejected 매칭 제외와 정합; accepted P16(main 0acd0cac) 위에 재기준화. P18 산업곤충 2묶음은 곤충 모듈 0.2.0(제품 라인·계획 연도 질문 틀)과 곤충 계획·근거·안내·핵심 전제 문서 갱신을 선언한다. 새 런타임 파일은 없다.",
+  "note": "선언된 runtime 변경만 — 이 목록 밖의 baseline 변화는 미승인. README.md는 readme_policy로 별도 관리. baseline 파일의 삭제는 허용하지 않으며, 신규 파일은 approved_new_files에 사전 명시된 경로만 before_sha256=null로 선언 가능. P6 공용 작성 계약은 새 런타임 파일을 별도 승인 목록으로 선언한다. P7 공용 전공 출력 가드(정책 B)는 기존 런타임 파일 변경과 기준선 파일 1개(gg_excel_formula_patch.py) 첫 변경을 선언한다. P8 과수 첫 묶음은 과수 모듈 선언·등록과 공용 보조 모듈 2개(참조 XLSX 결정·연구 전달물 검증), 과수 작성계획, 참조집합 데이터·안내 문서를 새 파일로 선언한다. P9 원예환경시스템 첫 묶음은 원예 모듈 선언·등록·표지, 원예 작성계획, 원예 profile·안내 문서를 새 파일로 선언하고 재사용 등록부에 원예 참조 항목을 추가한다. P10: 공용 Kang XLSX 재사용과 템플릿 규칙, D3 전공별 기본 통합문서 우선순위를 P9 원예 모듈과 함께 선언한다. P11 공용 인터뷰 규칙은 기준선 문서 4건(SKILL.md·interview-guide·workflow-order·mid-work-questions) 변경과 특용작물 premise-probes.md 신규 1건을 선언한다. P12 산업곤충 첫 묶음은 곤충 문서 계획·근거 검토 스크립트 4개, 선례 지도·안내·핵심 전제 문서 3개를 새 파일로, 재사용 등록부 곤충 항목 9개와 SKILL·gg.py 등 기존 파일 갱신을 선언한다. P13: D4 식별 전용 카탈로그·검증기·시험 3건을 신규 선언하고 SKILL·source-intake·재사용 시험의 변경을 P12 산업곤충 부모 위에 추가한다. P14 과수 둘째 묶음은 과수 모듈 0.2.0(수확 배치·물량 이동·연도별 수량 필드), 과수 작성계획 확장, 생산·재고 검산과 핵심 전제 질문 문서를 새 파일로 선언한다. | P15 D5: rda.econ.2025 pp133-135 corrected cell mapping, rejected legacy slice, lookup boundary, pinned trust migration; rebased onto accepted P14 (main f9c278c3). P16 과수 식별값 소묶음은 새 런타임 파일 없이 출처 식별 목록에 과수 참조 자료 41행을 추가한다. | P17: rda-lookup 검증 상태 계약 — 반환 레코드 verification 묶음·unverified 판정·verification_summary·공용 is_verified_observation 술어·D5 rejected 매칭 제외와 정합; accepted P16(main 0acd0cac) 위에 재기준화. P18 산업곤충 2묶음은 곤충 모듈 0.2.0(제품 라인·계획 연도 질문 틀)과 곤충 계획·근거·안내·핵심 전제 문서 갱신을 선언한다. 새 런타임 파일은 없다. P21 학생 오류·불편 신고는 신고 스크립트와 AI 행동 규칙 문서를 새 파일로, SKILL.md의 안내 한 줄·신고 절 갱신을 선언한다.",
   "parent_candidate": {
-    "stage": "P17",
-    "file_count": 190,
-    "tree_sha256": "6ff3733b6011ced080a0c9f8909cd4e899744eece75df0dfeae342b1434ae9ac"
+    "stage": "P18",
+    "file_count": 192,
+    "tree_sha256": "88b64dc2e64672506cb0ec285c6c624ee5366eeb67afd26a1368465175ca4916"
   },
   "schema": "knuaf-doc/runtime-changes@2",
-  "stage": "P18",
+  "stage": "P21",
   "stage_lineage": [
     {
       "file_count": 75,
@@ -1206,6 +1224,12 @@
       "file_count": 190,
       "tree_sha256": "6ff3733b6011ced080a0c9f8909cd4e899744eece75df0dfeae342b1434ae9ac",
       "note": "P17 기준 main 4d5ccce(PR #14 조회 상태 병합)의 변경 전 전체 파일 트리 해시"
+    },
+    {
+      "file_count": 192,
+      "note": "P18 기준 main eb3ce06(PR #18 산업곤충 2묶음 병합)의 clean export 전체 파일 트리 해시 — provisional P21의 직전 부모; #15=P19·#19=P20 먼저 병합 시 재기준화",
+      "stage": "P18",
+      "tree_sha256": "88b64dc2e64672506cb0ec285c6c624ee5366eeb67afd26a1368465175ca4916"
     }
   ]
 }

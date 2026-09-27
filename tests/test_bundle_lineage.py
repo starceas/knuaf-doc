@@ -119,10 +119,10 @@ class RealTreeTests(ContractCase):
                              f"errors: {report['errors']!r}")
             rc = report["runtime_changes"]
             self.assertEqual(rc["declared_count"], rc["verified"])
-            # P18 (industrial_insects second bundle) updates declared
-            # runtime files on top of P17.
-            self.assertEqual(114, rc["verified"])
-            self.assertEqual(87, rc["new_count"])
+            # P21 (student report) adds two declared-new runtime files
+            # and updates SKILL.md on top of P18.
+            self.assertEqual(116, rc["verified"])
+            self.assertEqual(89, rc["new_count"])
         else:
             self.assertNotEqual("ok", report["status"])
             self.assertIn("declared_missing", _codes(report))
@@ -138,17 +138,17 @@ class RealTreeTests(ContractCase):
         self.assertEqual(
             _sha(REPO_ROOT / "tools" / "runtime-changes.json"),
             link["spec_sha256"])
-        self.assertEqual("P18", link["stage"])
+        self.assertEqual("P21", link["stage"])
         self.assertEqual("29abec0ec95369de7ae9e22207349d574f1f46b7",
                          link["baseline_main"])
-        # P18's parent is the accepted P17 tree (190 files).
-        self.assertEqual(114, link["change_count"])
-        self.assertEqual(87, link["new_count"])
-        self.assertEqual(87, link["approved_new_files"])
-        self.assertEqual("P17", link["parent_candidate"]["stage"])
-        self.assertEqual(190, link["parent_candidate"]["file_count"])
+        # P21's parent is the accepted P18 tree (192 files).
+        self.assertEqual(116, link["change_count"])
+        self.assertEqual(89, link["new_count"])
+        self.assertEqual(89, link["approved_new_files"])
+        self.assertEqual("P18", link["parent_candidate"]["stage"])
+        self.assertEqual(192, link["parent_candidate"]["file_count"])
         self.assertEqual(
-            "6ff3733b6011ced080a0c9f8909cd4e899744eece75df0dfeae342b1434ae9ac",
+            "88b64dc2e64672506cb0ec285c6c624ee5366eeb67afd26a1368465175ca4916",
             link["parent_candidate"]["tree_sha256"])
         # The ancestor list ends at the parent; the current stage is not
         # one of its own ancestors.
@@ -157,7 +157,7 @@ class RealTreeTests(ContractCase):
             {k: link["parent_candidate"][k]
              for k in ("stage", "file_count", "tree_sha256")},
             {k: lineage[-1][k] for k in ("stage", "file_count", "tree_sha256")})
-        self.assertNotIn("P18", [row["stage"] for row in lineage])
+        self.assertNotIn("P21", [row["stage"] for row in lineage])
         # D5 (P15) pinned its own parent, the P14 tree; keep that pin on
         # the P14 ancestor row now that P15 is itself an ancestor.
         d5 = json.loads((REPO_ROOT / "docs/validation/d5-rda-useful-life.json")
@@ -187,19 +187,19 @@ class RealTreeTests(ContractCase):
                 self.assertIn(meta["owner"],
                               {"A", "B", "C", "P4", "D", "P6", "P7", "P8",
                                "P9", "P10", "P11", "P12", "P13", "P14", "P15",
-                               "P16", "P17", "P18"})
+                               "P16", "P17", "P18", "P21"})
             else:
-                # P2 through P18 new files: pre-declared allowlist only.
+                # P2 through P21 new files: pre-declared allowlist only.
                 self.assertIn(name, approved)
                 self.assertIsNone(meta["before_sha256"])
                 self.assertIn(meta["first_changed"],
                               {"P2", "P3", "P4", "P5", "P6", "P8", "P9",
                                "P10", "P11", "P12", "P13", "P14", "P15",
-                               "P17", "P18"})
+                               "P17", "P18", "P21"})
                 self.assertIn(meta["owner"],
                               {"A", "B", "C", "S", "P4", "P5", "P6", "P7",
                                "P8", "P9", "P10", "P11", "P12", "P13",
-                               "P14", "P15", "P16", "P17", "P18"})
+                               "P14", "P15", "P16", "P17", "P18", "P21"})
 
 
 class SyntheticLineageTests(ContractCase):

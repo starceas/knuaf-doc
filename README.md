@@ -13,6 +13,8 @@
 
 이 저장소를 Codex 플러그인으로 등록하면 `skills/knuaf-doc`가 스킬로 인식됩니다. 설치 방법은 사용 중인 에이전트(Codex CLI/앱)의 플러그인 설치 안내를 따르세요.
 
+사용 중 오류·불편·요청은 AI에게 "신고할래"라고 말하면 내용 확인 후 개발자에게 전달됩니다(개인 정보는 공개 이슈에 올리지 않습니다).
+
 ### 실행 의존성
 
 `skills/knuaf-doc/scripts/requirements-runtime.txt`에 선언되어 있습니다.
