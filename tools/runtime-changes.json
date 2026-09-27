@@ -1033,20 +1033,20 @@
       "last_changed": "P13"
     },
     "skills/knuaf-doc/scripts/gg_hort_workbook.py": {
-      "after_sha256": "0651b3dce19c34a4825140f186a286a4556da9486683c686eb4d5d0e79659778",
+      "after_sha256": "cf643dc397e4d4189a33ad799faedf05113a44971904663349ca4049a2682050",
       "before_sha256": null,
       "first_changed": "P13",
       "owner": "P13",
-      "reason": "P13: H01-bound 18-sheet transformer — public map only, knuaf-hort-finance-receipt/v1 receipt, transform entry calls require_finance_profile | I4-FIX(P13): transform 영수증의 H01 입력 결속, 사실 단위·기간·무매출 사전 보류, 공식 Office manifest 직접 검증, 수식 전수 독립 계산, 중첩 공개 값 감사",
+      "reason": "P13: H01-bound 18-sheet transformer — public map only, knuaf-hort-finance-receipt/v1 receipt, transform entry calls require_finance_profile | I4-FIX(P13): transform 영수증의 H01 입력 결속, 사실 단위·기간·무매출 사전 보류, 공식 Office manifest 직접 검증, 수식 전수 독립 계산, 중첩 공개 값 감사 | I5-FIX(P13): 독립 기대값으로 분기를 정한 뒤 네이티브 캐시 자료형과 값을 대조",
       "source": "new",
       "last_changed": "P13"
     },
     "skills/knuaf-doc/scripts/gg_hort_formula_eval.py": {
-      "after_sha256": "73c1848d5952a828b25a32404b3e2590df7b97a588bb7d93833468ec1b1a12ec",
+      "after_sha256": "5fa96cd5c9f6693c6fdbd99f058eb8f6f723db8d5a6e1061441041a46c132125",
       "before_sha256": null,
       "first_changed": "P13",
       "owner": "P13",
-      "reason": "P13(I4-FIX): H01·변환 지도 수식의 런타임 평가기 — 독립 재계산·원시 캐시 대조 지원, 시험 fixture 비의존",
+      "reason": "P13(I4-FIX): H01·변환 지도 수식의 런타임 평가기 — 독립 재계산·원시 캐시 대조 지원, 시험 fixture 비의존 | I5-FIX(P13): 계산 미지원과 Excel 셀 오류 예외를 분리하고 오류 함수의 미지원 삼킴을 차단",
       "source": "new",
       "last_changed": "P13"
     },
@@ -1061,7 +1061,7 @@
     }
   },
   "cumulative": true,
-  "note": "선언된 runtime 변경만 — 이 목록 밖의 baseline 변화는 미승인. README.md는 readme_policy로 별도 관리. baseline 파일의 삭제는 허용하지 않으며, 신규 파일은 approved_new_files에 사전 명시된 경로만 before_sha256=null로 선언 가능. P6 공용 작성 계약은 새 런타임 파일을 별도 승인 목록으로 선언한다. P7 공용 전공 출력 가드(정책 B)는 기존 런타임 파일 변경과 기준선 파일 1개(gg_excel_formula_patch.py) 첫 변경을 선언한다. P8 과수 첫 묶음은 과수 모듈 선언·등록과 공용 보조 모듈 2개(참조 XLSX 결정·연구 전달물 검증), 과수 작성계획, 참조집합 데이터·안내 문서를 새 파일로 선언한다. P9 원예환경시스템 첫 묶음은 원예 모듈 선언·등록·표지, 원예 작성계획, 원예 profile·안내 문서를 새 파일로 선언하고 재사용 등록부에 원예 참조 항목을 추가한다. P10: 공용 Kang XLSX 재사용과 템플릿 규칙, D3 전공별 기본 통합문서 우선순위를 P9 원예 모듈과 함께 선언한다. P11 공용 인터뷰 규칙은 기준선 문서 4건(SKILL.md·interview-guide·workflow-order·mid-work-questions) 변경과 특용작물 premise-probes.md 신규 1건을 선언한다. P12 산업곤충 첫 묶음은 곤충 문서 계획·근거 검토 스크립트 4개, 선례 지도·안내·핵심 전제 문서 3개를 새 파일로, 재사용 등록부 곤충 항목 9개와 SKILL·gg.py 등 기존 파일 갱신을 선언한다. P13 원예 재무 묶음은 H01 18시트 전용 변환기와 지도·매개변수·검증등록부 3개를 새 파일로, 재무 프로필 게이트와 hort_env_systems 0.2.0 모듈 갱신을 선언한다. I4-FIX(같은 P13 단계)는 수식 평가기·등록부 생성기 2개를 새 파일로 추가하고 변환기·검증등록부 해시를 재선언한다.",
+  "note": "선언된 runtime 변경만 — 이 목록 밖의 baseline 변화는 미승인. README.md는 readme_policy로 별도 관리. baseline 파일의 삭제는 허용하지 않으며, 신규 파일은 approved_new_files에 사전 명시된 경로만 before_sha256=null로 선언 가능. P6 공용 작성 계약은 새 런타임 파일을 별도 승인 목록으로 선언한다. P7 공용 전공 출력 가드(정책 B)는 기존 런타임 파일 변경과 기준선 파일 1개(gg_excel_formula_patch.py) 첫 변경을 선언한다. P8 과수 첫 묶음은 과수 모듈 선언·등록과 공용 보조 모듈 2개(참조 XLSX 결정·연구 전달물 검증), 과수 작성계획, 참조집합 데이터·안내 문서를 새 파일로 선언한다. P9 원예환경시스템 첫 묶음은 원예 모듈 선언·등록·표지, 원예 작성계획, 원예 profile·안내 문서를 새 파일로 선언하고 재사용 등록부에 원예 참조 항목을 추가한다. P10: 공용 Kang XLSX 재사용과 템플릿 규칙, D3 전공별 기본 통합문서 우선순위를 P9 원예 모듈과 함께 선언한다. P11 공용 인터뷰 규칙은 기준선 문서 4건(SKILL.md·interview-guide·workflow-order·mid-work-questions) 변경과 특용작물 premise-probes.md 신규 1건을 선언한다. P12 산업곤충 첫 묶음은 곤충 문서 계획·근거 검토 스크립트 4개, 선례 지도·안내·핵심 전제 문서 3개를 새 파일로, 재사용 등록부 곤충 항목 9개와 SKILL·gg.py 등 기존 파일 갱신을 선언한다. P13 원예 재무 묶음은 H01 18시트 전용 변환기와 지도·매개변수·검증등록부 3개를 새 파일로, 재무 프로필 게이트와 hort_env_systems 0.2.0 모듈 갱신을 선언한다. I4-FIX(같은 P13 단계)는 수식 평가기·등록부 생성기 2개를 새 파일로 추가하고 변환기·검증등록부 해시를 재선언한다. I5-FIX(같은 P13 단계)는 기존 평가기와 검증기의 해시만 재선언하며 신규 파일 수와 부모 P12는 그대로 둔다.",
   "parent_candidate": {
     "stage": "P12",
     "file_count": 178,

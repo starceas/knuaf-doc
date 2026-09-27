@@ -121,7 +121,8 @@ class RealTreeTests(ContractCase):
             self.assertEqual(rc["declared_count"], rc["verified"])
             # P13 (horticulture finance bundle) declares six new runtime
             # files on top of P12 — four at commit fbe36ea plus the two
-            # I4-FIX helpers folded into the same stage.
+            # I4-FIX helpers folded into the same stage. I5-FIX updates
+            # existing files only, so the declared counts stay 112 / 85.
             self.assertEqual(112, rc["verified"])
             self.assertEqual(85, rc["new_count"])
         else:

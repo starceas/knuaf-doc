@@ -8,6 +8,7 @@ from __future__ import annotations
 import copy
 from decimal import Decimal
 import json
+import os
 from pathlib import Path
 import re
 import sys
@@ -23,7 +24,8 @@ import gg_hort_workbook as h
 import gg_major_contract as mc
 from synthetic import build, entries, R, P as PKG, C as CTYPES
 
-TMP = ROOT / ".hw-work/fin/lanes/I4-FIX/tmp"
+TMP = Path(os.environ.get("HFIN_TEST_TMPDIR",
+                          ROOT / ".hw-work/fin/lanes/I5-FIX/tmp"))
 SHEET5 = "5. 원리금상환계획"
 SHEET6 = "6.시설계획"
 SHEET12 = "12 .경비계획"
@@ -472,6 +474,115 @@ class Chain(unittest.TestCase):
             with self.assertRaisesRegex(h.Held, "verify_independent_unresolved"):
                 h.verify(self.root, self.source, self.transform_rec,
                          self.native_rec, self.verify_rec)
+
+    def test_conditional_blank_cache_cannot_skip_independent(self):
+        """Astra-2 counterexample 1: clearing the native cache of a
+        conditional_unused_na cell must not demote the check to the
+        non-numeric aggregate.  The independent evaluator computes
+        =L8+1 -> 1, so a blank/empty cache is a failure, not a skip."""
+        docs = copy.deepcopy(self.docs)
+        docs[h.FILES[0]]["entries"].append(
+            {"sheet": SHEET5, "cell": "M3", "action": "formula",
+             "before_state": "absent", "after_formula": "=L8+1"})
+        docs[h.FILES[2]]["registry"].append(
+            {"sheet": SHEET5, "cell": "M3", "action": "formula",
+             "result_kind": "conditional_unused_na", "unit": "KRW_1000",
+             "printed": True, "core_reachable": True,
+             "expected_state": "formula",
+             "condition_key_if_conditional": "any_inactive:invest.slot1",
+             "active_kind": "number"})
+        docs[h.FILES[2]]["registry_count"] += 1
+        import io
+        with mock.patch.object(h, "contracts", return_value=docs):
+            self._run_to_transform()
+            _native_workbook(self.native, self.roster,
+                             docs[h.FILES[1]]["parameters"], self.facts)
+            payload = self.native.read_bytes()
+            with zipfile.ZipFile(io.BytesIO(payload)) as zin, \
+                    zipfile.ZipFile(self.native, "w") as zout:
+                for info in zin.infolist():
+                    data = zin.read(info.filename)
+                    if info.filename == "xl/worksheets/sheet5.xml":
+                        data = data.replace(
+                            b'<row r="8"><c r="L8">',
+                            b'<row r="8"><c r="M3"><f>L8+1</f></c><c r="L8">', 1)
+                    zout.writestr(info, data)
+            self._issue_native()
+            with self.assertRaisesRegex(h.Held, "verify_independent_non_numeric"):
+                h.verify(self.root, self.source, self.transform_rec,
+                         self.native_rec, self.verify_rec)
+
+    def test_error_wrappers_cannot_swallow_unsupported(self):
+        """Astra-2 counterexample 2: IFERROR and ISNUMBER must not convert a
+        compute-unsupported inner formula into a normal branch value.
+        Both formulas carry the wrong native cache 0 that the buggy
+        evaluator would agree with."""
+        import io
+        for label, formula in (("iferror", "=IFERROR(ABS(-1),0)"),
+                               ("isnumber", "=IF(ISNUMBER(ABS(-1)),1,0)")):
+            with self.subTest(label=label):
+                docs = copy.deepcopy(self.docs)
+                target = next(e for e in docs[h.FILES[0]]["entries"]
+                              if e["sheet"] == self.roster[0]
+                              and e["cell"] == "C1")
+                target["after_formula"] = formula
+                self.out = Path(self.temp.name) / f"out-{label}.xlsx"
+                self.plan_rec = Path(self.temp.name) / f"plan-{label}.json"
+                self.transform_rec = Path(self.temp.name) / f"transform-{label}.json"
+                self.native_rec = Path(self.temp.name) / f"native-{label}.json"
+                with mock.patch.object(h, "contracts", return_value=docs):
+                    self._run_to_transform()
+                    _native_workbook(self.native, self.roster,
+                                     docs[h.FILES[1]]["parameters"], self.facts)
+                    payload = self.native.read_bytes()
+                    with zipfile.ZipFile(io.BytesIO(payload)) as zin, \
+                            zipfile.ZipFile(self.native, "w") as zout:
+                        for info in zin.infolist():
+                            data = zin.read(info.filename)
+                            if info.filename == "xl/worksheets/sheet1.xml":
+                                data = data.replace(
+                                    b'<c r="C1"><f>=A1+1</f><v>6</v></c>',
+                                    b'<c r="C1"><f>' + formula[1:].encode()
+                                    + b'</f><v>0</v></c>')
+                            zout.writestr(info, data)
+                    self._issue_native()
+                    with self.assertRaisesRegex(
+                            h.Held, "verify_independent_unresolved"):
+                        h.verify(self.root, self.source, self.transform_rec,
+                                 self.native_rec, self.verify_rec)
+
+    def test_evaluator_error_classes(self):
+        """Cell errors are catchable Excel results; unsupported grammar is a
+        distinct class that no error-aware function may turn into a value."""
+        import gg_hort_formula_eval as fe
+
+        def run(formula):
+            return fe.Evaluator([{"sheet": "S", "cell": "A1",
+                                  "after_formula": formula}]).cell("S", "A1")
+
+        with self.assertRaises(fe.UnsupportedError):
+            run("=ABS(-1)")
+        with self.assertRaises(fe.UnsupportedError):
+            run("=IFERROR(ABS(-1),0)")
+        with self.assertRaises(fe.UnsupportedError):
+            run("=IF(ISNUMBER(ABS(-1)),1,0)")
+        with self.assertRaises(fe.UnsupportedError):
+            run("=IFNA(ABS(-1),0)")
+        with self.assertRaises(fe.UnsupportedError):
+            run("=ISERROR(ABS(-1))")
+        with self.assertRaises(fe.UnsupportedError):
+            run("=SUM(ABS(-1),1)")
+        # Genuine Excel cell errors stay catchable by the wrappers.
+        self.assertEqual(run("=IFERROR(1/0,7)"), 7)
+        self.assertEqual(run("=IFNA(NA(),5)"), 5)
+        self.assertEqual(run("=IFERROR(NA(),9)"), 9)
+        self.assertFalse(run("=ISNUMBER(1/0)"))
+        self.assertFalse(run("=ISNUMBER(NA())"))
+        self.assertTrue(run("=ISERROR(1/0)"))
+        self.assertFalse(run("=ISERROR(1+1)"))
+        # A raw cell error propagates to the caller, not into PASS counts.
+        with self.assertRaises(fe.FormulaError):
+            run("=1/0")
 
     def test_missing_interest_counterexample(self):
         """Principal 10 at 5%: a native cache dropping the 0.5 interest fails."""

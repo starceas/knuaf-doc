@@ -7,7 +7,20 @@ import re
 
 
 class FormulaError(Exception):
-    pass
+    """A genuine Excel cell error (#N/A, #DIV/0!, #VALUE!, #NUM! ...).
+
+    Error-aware functions (IFERROR/IFNA/ISERROR/ISNUMBER) may observe these;
+    args[0] carries the Excel error literal when known.
+    """
+
+
+class UnsupportedError(Exception):
+    """The evaluator cannot model this construct at all.
+
+    Distinct from a cell error: IFERROR/ISNUMBER/etc. must never convert an
+    unsupported subtree into a normal branch value.  Callers treat it as a
+    hold, never a pass or a cached-error branch.
+    """
 
 
 TOKEN = re.compile(r'''\s*(?:
@@ -26,7 +39,7 @@ def tokenize(formula):
     while pos < len(body):
         match = TOKEN.match(body, pos)
         if not match:
-            raise FormulaError('unsupported syntax at offset %d' % pos)
+            raise UnsupportedError('unsupported syntax at offset %d' % pos)
         out.append((match.lastgroup, match.group(match.lastgroup)))
         pos = match.end()
     out.append(('end', ''))
@@ -48,12 +61,12 @@ class Parser:
 
     def expect(self, value):
         if self.pop()[1] != value:
-            raise FormulaError('expected %s' % value)
+            raise UnsupportedError('expected %s' % value)
 
     def parse(self):
         tree = self.expr(0)
         if self.tokens[self.index][0] != 'end':
-            raise FormulaError('trailing expression')
+            raise UnsupportedError('trailing expression')
         return tree
 
     def expr(self, min_bp):
@@ -84,7 +97,7 @@ class Parser:
             else:
                 left = ('name', value.upper())
         else:
-            raise FormulaError('invalid expression')
+            raise UnsupportedError('invalid expression')
         precedence = {'=': 10, '<>': 10, '<': 10, '>': 10, '<=': 10,
                       '>=': 10, '&': 15, '+': 20, '-': 20, '*': 30, '/': 30,
                       '^': 40, ':': 50}
@@ -115,7 +128,7 @@ def _number(value):
         return float(value)
     if isinstance(value, (int, float)):
         return float(value)
-    raise FormulaError('non-numeric operand')
+    raise FormulaError('#VALUE!')
 
 
 def _sum_number(value):
@@ -128,6 +141,16 @@ def _sum_number(value):
 
 def _truth(value):
     return bool(value) if value is not None else False
+
+
+def _excel_text(value):
+    if value is None:
+        return ''
+    if isinstance(value, bool):
+        return 'TRUE' if value else 'FALSE'
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    return str(value)
 
 
 def _flatten(values):
@@ -178,7 +201,7 @@ class Evaluator:
         if key in self.cache:
             return self.cache[key]
         if key in self.stack:
-            raise FormulaError('circular reference')
+            raise UnsupportedError('circular reference')
         if key not in self.formulas:
             return self.defaults.get(key)
         self.stack.add(key)
@@ -202,7 +225,7 @@ class Evaluator:
         if kind == 'name':
             if node[1] == 'TRUE': return True
             if node[1] == 'FALSE': return False
-            raise FormulaError('unsupported name')
+            raise UnsupportedError('unsupported name')
         if kind == 'unary':
             n = _number(self.eval(node[2], sheet))
             return n if node[1] == '+' else -n
@@ -211,11 +234,11 @@ class Evaluator:
             if op == ':':
                 a, b = node[2], node[3]
                 if a[0] != 'ref' or b[0] != 'ref':
-                    raise FormulaError('unsupported range')
+                    raise UnsupportedError('unsupported range')
                 s1, c1 = normalize_ref(a[1], sheet)
                 s2, c2 = normalize_ref(b[1], s1)
                 if s1 != s2:
-                    raise FormulaError('cross-sheet range')
+                    raise UnsupportedError('cross-sheet range')
                 def split(cell):
                     col, row = re.fullmatch(r'([A-Z]+)(\d+)', cell).groups()
                     n = 0
@@ -240,25 +263,39 @@ class Evaluator:
                             '>':lambda:a>b, '<=':lambda:a<=b, '>=':lambda:a>=b}[op]()
                 except TypeError:
                     return False
-            if op == '&': return str(a if a is not None else '')+str(b if b is not None else '')
+            if op == '&': return _excel_text(a) + _excel_text(b)
             a = _number(a); b = _number(b)
             if op == '+': return a+b
             if op == '-': return a-b
             if op == '*': return a*b
             if op == '/':
-                if b == 0: raise FormulaError('division by zero')
+                if b == 0: raise FormulaError('#DIV/0!')
                 return a/b
             if op == '^': return a**b
         if kind == 'call':
             fn, args = node[1:]
             if fn == 'IF':
-                if len(args) not in (2,3): raise FormulaError('IF arity')
+                if len(args) not in (2,3): raise UnsupportedError('IF arity')
                 return self.eval(args[1 if _truth(self.eval(args[0], sheet)) else 2], sheet) if len(args)==3 or _truth(self.eval(args[0],sheet)) else False
             if fn == 'IFERROR':
                 try: return self.eval(args[0], sheet)
+                except UnsupportedError: raise
                 except FormulaError: return self.eval(args[1], sheet)
+            if fn == 'IFNA':
+                try: return self.eval(args[0], sheet)
+                except UnsupportedError: raise
+                except FormulaError as exc:
+                    if exc.args and exc.args[0] == '#N/A':
+                        return self.eval(args[1], sheet)
+                    raise
+            if fn == 'ISERROR':
+                try: val = self.eval(args[0], sheet)
+                except UnsupportedError: raise
+                except FormulaError: return True
+                return False
             if fn == 'ISNUMBER':
                 try: val = self.eval(args[0], sheet)
+                except UnsupportedError: raise
                 except FormulaError: return False
                 return isinstance(val, (int,float)) and not isinstance(val,bool)
             if fn == 'NA': raise FormulaError('#N/A')
@@ -299,15 +336,20 @@ class Evaluator:
                 return total if fn=='SUMIFS' else count
             if fn == 'PMT':
                 rate,nper,pv=map(_number,vals[:3])
-                if nper<=0: raise FormulaError('invalid PMT term')
+                if nper<=0: raise FormulaError('#NUM!')
                 return -pv/nper if rate==0 else -pv*rate*(1+rate)**nper/((1+rate)**nper-1)
             if fn in ('DATE','YEAR','MONTH','DAY'):
                 import datetime
                 epoch=datetime.datetime(1899,12,30)
-                if fn=='DATE':
-                    d=datetime.datetime(int(_number(vals[0])),int(_number(vals[1])),int(_number(vals[2])))
-                    return (d-epoch).days
-                d=epoch+datetime.timedelta(days=int(_number(vals[0])))
+                try:
+                    if fn=='DATE':
+                        d=datetime.datetime(int(_number(vals[0])),int(_number(vals[1])),int(_number(vals[2])))
+                        return (d-epoch).days
+                    d=epoch+datetime.timedelta(days=int(_number(vals[0])))
+                except (ValueError, OverflowError, TypeError):
+                    # Out-of-range or non-integral date arguments are outside
+                    # the modeled grammar; never collapse them into a value.
+                    raise UnsupportedError('unsupported date argument')
                 return {'YEAR':d.year,'MONTH':d.month,'DAY':d.day}[fn]
-            raise FormulaError('unsupported function '+fn)
-        raise FormulaError('unsupported AST')
+            raise UnsupportedError('unsupported function '+fn)
+        raise UnsupportedError('unsupported AST')

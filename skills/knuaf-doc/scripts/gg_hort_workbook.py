@@ -2173,7 +2173,7 @@ def _independent_model(source, transform, params, values):
 def _verify_independent_formulas(source, docs, params, values, registry,
                                  caches, cond_by_coord, counts):
     """Evaluate every native numeric formula from facts and static formulas."""
-    from gg_hort_formula_eval import FormulaError
+    from gg_hort_formula_eval import FormulaError, UnsupportedError
     model, formulas = _independent_model(source, docs[FILES[0]], params, values)
     for row in registry:
         sheet, ref = row["sheet"], row["cell"]
@@ -2189,19 +2189,24 @@ def _verify_independent_formulas(source, docs, params, values, registry,
             continue
         cache = caches.get(sheet, {}).get(ref)
         actual = cache[1] if cache else None
-        if not isinstance(actual, (int, float, Decimal)) or isinstance(actual, bool):
-            if kind == "conditional_unused_na":
-                # The registry's type gate above has already proved the
-                # string/empty/#N/A branch is licensed for this fact state.
+        try:
+            expected = model.cell(sheet, ref)
+        except FormulaError as exc:
+            if (kind == "conditional_unused_na" and exc.args == ("#N/A",)
+                    and cache and cache[0] == "e" and actual == "#N/A"):
+                counts["non_numeric_conditional"] += 1
+                continue
+            raise Held("verify_independent_unresolved", f"{sheet}!{ref}") from exc
+        except (UnsupportedError, RecursionError, OverflowError,
+                ZeroDivisionError) as exc:
+            raise Held("verify_independent_unresolved", f"{sheet}!{ref}") from exc
+        if not isinstance(expected, (int, float, Decimal)) or isinstance(expected, bool):
+            if kind == "conditional_unused_na" and actual == expected:
                 counts["non_numeric_conditional"] += 1
                 continue
             raise Held("verify_independent_non_numeric", f"{sheet}!{ref}")
-        try:
-            expected = model.cell(sheet, ref)
-        except (FormulaError, RecursionError, OverflowError, ZeroDivisionError) as exc:
-            raise Held("verify_independent_unresolved", f"{sheet}!{ref}") from exc
-        if not isinstance(expected, (int, float, Decimal)) or isinstance(expected, bool):
-            raise Held("verify_independent_unresolved", f"{sheet}!{ref}")
+        if not isinstance(actual, (int, float, Decimal)) or isinstance(actual, bool):
+            raise Held("verify_independent_non_numeric", f"{sheet}!{ref}")
         unit = row.get("unit")
         if unit in (None, "UNKNOWN", "TEXT"):
             raise Held("verify_unit_unclassified", f"{sheet}!{ref}")
