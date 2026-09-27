@@ -23,6 +23,10 @@
     "skills/knuaf-doc/references/benchmark-packs/schema/pack.schema.json",
     "skills/knuaf-doc/references/benchmark-packs/schema/record.schema.json",
     "skills/knuaf-doc/references/builtin-sources.json",
+    "skills/knuaf-doc/references/common-workbooks/formula-audit/AUDIT.md",
+    "skills/knuaf-doc/references/common-workbooks/formula-audit/blocks.json",
+    "skills/knuaf-doc/references/common-workbooks/formula-audit/x01.json",
+    "skills/knuaf-doc/references/common-workbooks/formula-audit/x02.json",
     "skills/knuaf-doc/references/common-workbooks/kang-finance-workbook.json",
     "skills/knuaf-doc/references/fact-semantics.json",
     "skills/knuaf-doc/references/finance-semantics.md",
@@ -60,6 +64,7 @@
     "skills/knuaf-doc/scripts/gg_reuse.py",
     "skills/knuaf-doc/scripts/gg_source_identity.py",
     "skills/knuaf-doc/scripts/gg_source_intake.py",
+    "skills/knuaf-doc/scripts/gg_workbook_audit.py",
     "skills/knuaf-doc/scripts/gg_workbook_registry.py",
     "skills/knuaf-doc/tests/test_gg_major_contract.py",
     "skills/knuaf-doc/tests/test_gg_rda_candidates.py",
@@ -291,6 +296,42 @@
       "reason": "accepted P5 reuse-registry@3 builtin source registry (frozen corrected A+B+C union) | P9: eight hort_env_systems entries appended (teaching workbook structure extract; exemplars and official sources identification-only); existing entries unchanged | P10: P9: register kang-finance-workbook x01/x02 (primary_finance_template) and hort-env raw workbook (reference_only); rename the student-numbered specialty exemplar id to specialty-grad-thesis-finance-xlsx (D-C) | P9-D3: removed the duplicated hort-env-kang-raw-workbook entry (one-hash-one-entry; the hort module registers its own workbook) | P12: nine industrial_insects entries (F0/E1-E4 locator map, E3/E4 HWP and R0/R1 identity-only) | P15: D5 useful-life physical-cell correction and dependent trust migration",
       "source": "new",
       "last_changed": "P15"
+    },
+    "skills/knuaf-doc/references/common-workbooks/formula-audit/AUDIT.md": {
+      "after_sha256": "4edd03e636d9e30cd7cee9f4de502389c96610fc396ceb216bec352d5168c61a",
+      "before_sha256": null,
+      "first_changed": "P19",
+      "last_changed": "P19",
+      "owner": "P19",
+      "reason": "D6 X01/X02 full formula audit, pinned inventory, evaluator and A43/XR dispositions | P19: rebased onto accepted P18 (main eb3ce06)",
+      "source": "new"
+    },
+    "skills/knuaf-doc/references/common-workbooks/formula-audit/blocks.json": {
+      "after_sha256": "66414fe44ac2563ed2fbe6a5bcd1ef832caa7e8a0ae6c9942528500b3e21003c",
+      "before_sha256": null,
+      "first_changed": "P19",
+      "last_changed": "P19",
+      "owner": "P19",
+      "reason": "D6 X01/X02 full formula audit, pinned inventory, evaluator and A43/XR dispositions | P19: rebased onto accepted P18 (main eb3ce06)",
+      "source": "new"
+    },
+    "skills/knuaf-doc/references/common-workbooks/formula-audit/x01.json": {
+      "after_sha256": "785c2a157b8a774421624aa49d86f347ffc4c533051959cc822746bc6ebaecf5",
+      "before_sha256": null,
+      "first_changed": "P19",
+      "last_changed": "P19",
+      "owner": "P19",
+      "reason": "D6 X01/X02 full formula audit, pinned inventory, evaluator and A43/XR dispositions | P19: rebased onto accepted P18 (main eb3ce06)",
+      "source": "new"
+    },
+    "skills/knuaf-doc/references/common-workbooks/formula-audit/x02.json": {
+      "after_sha256": "3594ce66eabb8ec746af3e945a42409f3ad800af37c04832cf322de1780b713d",
+      "before_sha256": null,
+      "first_changed": "P19",
+      "last_changed": "P19",
+      "owner": "P19",
+      "reason": "D6 X01/X02 full formula audit, pinned inventory, evaluator and A43/XR dispositions | P19: rebased onto accepted P18 (main eb3ce06)",
+      "source": "new"
     },
     "skills/knuaf-doc/references/common-workbooks/kang-finance-workbook.json": {
       "before_sha256": null,
@@ -850,6 +891,15 @@
       "reason": "accepted P5 source-intake scanner module — sealed receipts under sources/intake/, never writes 03_sources.md (frozen corrected A+B+C union)",
       "source": "new"
     },
+    "skills/knuaf-doc/scripts/gg_workbook_audit.py": {
+      "after_sha256": "8839a2782c3c8644415a23a6bbcb933fdc8e11e363f6b8c0d21695b046eddc5c",
+      "before_sha256": null,
+      "first_changed": "P19",
+      "last_changed": "P19",
+      "owner": "P19",
+      "reason": "D6 X01/X02 full formula audit, pinned inventory, evaluator and A43/XR dispositions | P19: rebased onto accepted P18 (main eb3ce06)",
+      "source": "new"
+    },
     "skills/knuaf-doc/scripts/gg_workbook_registry.py": {
       "after_sha256": "32c3b9b570b2419003c20d809b6a43ea58f3799e5f759613c56ecd762673febc",
       "before_sha256": null,
@@ -1090,14 +1140,14 @@
     }
   },
   "cumulative": true,
-  "note": "선언된 runtime 변경만 — 이 목록 밖의 baseline 변화는 미승인. README.md는 readme_policy로 별도 관리. baseline 파일의 삭제는 허용하지 않으며, 신규 파일은 approved_new_files에 사전 명시된 경로만 before_sha256=null로 선언 가능. P6 공용 작성 계약은 새 런타임 파일을 별도 승인 목록으로 선언한다. P7 공용 전공 출력 가드(정책 B)는 기존 런타임 파일 변경과 기준선 파일 1개(gg_excel_formula_patch.py) 첫 변경을 선언한다. P8 과수 첫 묶음은 과수 모듈 선언·등록과 공용 보조 모듈 2개(참조 XLSX 결정·연구 전달물 검증), 과수 작성계획, 참조집합 데이터·안내 문서를 새 파일로 선언한다. P9 원예환경시스템 첫 묶음은 원예 모듈 선언·등록·표지, 원예 작성계획, 원예 profile·안내 문서를 새 파일로 선언하고 재사용 등록부에 원예 참조 항목을 추가한다. P10: 공용 Kang XLSX 재사용과 템플릿 규칙, D3 전공별 기본 통합문서 우선순위를 P9 원예 모듈과 함께 선언한다. P11 공용 인터뷰 규칙은 기준선 문서 4건(SKILL.md·interview-guide·workflow-order·mid-work-questions) 변경과 특용작물 premise-probes.md 신규 1건을 선언한다. P12 산업곤충 첫 묶음은 곤충 문서 계획·근거 검토 스크립트 4개, 선례 지도·안내·핵심 전제 문서 3개를 새 파일로, 재사용 등록부 곤충 항목 9개와 SKILL·gg.py 등 기존 파일 갱신을 선언한다. P13: D4 식별 전용 카탈로그·검증기·시험 3건을 신규 선언하고 SKILL·source-intake·재사용 시험의 변경을 P12 산업곤충 부모 위에 추가한다. P14 과수 둘째 묶음은 과수 모듈 0.2.0(수확 배치·물량 이동·연도별 수량 필드), 과수 작성계획 확장, 생산·재고 검산과 핵심 전제 질문 문서를 새 파일로 선언한다. | P15 D5: rda.econ.2025 pp133-135 corrected cell mapping, rejected legacy slice, lookup boundary, pinned trust migration; rebased onto accepted P14 (main f9c278c3). P16 과수 식별값 소묶음은 새 런타임 파일 없이 출처 식별 목록에 과수 참조 자료 41행을 추가한다. | P17: rda-lookup 검증 상태 계약 — 반환 레코드 verification 묶음·unverified 판정·verification_summary·공용 is_verified_observation 술어·D5 rejected 매칭 제외와 정합; accepted P16(main 0acd0cac) 위에 재기준화. P18 산업곤충 2묶음은 곤충 모듈 0.2.0(제품 라인·계획 연도 질문 틀)과 곤충 계획·근거·안내·핵심 전제 문서 갱신을 선언한다. 새 런타임 파일은 없다.",
+  "note": "선언된 runtime 변경만 — 이 목록 밖의 baseline 변화는 미승인. README.md는 readme_policy로 별도 관리. baseline 파일의 삭제는 허용하지 않으며, 신규 파일은 approved_new_files에 사전 명시된 경로만 before_sha256=null로 선언 가능. P6 공용 작성 계약은 새 런타임 파일을 별도 승인 목록으로 선언한다. P7 공용 전공 출력 가드(정책 B)는 기존 런타임 파일 변경과 기준선 파일 1개(gg_excel_formula_patch.py) 첫 변경을 선언한다. P8 과수 첫 묶음은 과수 모듈 선언·등록과 공용 보조 모듈 2개(참조 XLSX 결정·연구 전달물 검증), 과수 작성계획, 참조집합 데이터·안내 문서를 새 파일로 선언한다. P9 원예환경시스템 첫 묶음은 원예 모듈 선언·등록·표지, 원예 작성계획, 원예 profile·안내 문서를 새 파일로 선언하고 재사용 등록부에 원예 참조 항목을 추가한다. P10: 공용 Kang XLSX 재사용과 템플릿 규칙, D3 전공별 기본 통합문서 우선순위를 P9 원예 모듈과 함께 선언한다. P11 공용 인터뷰 규칙은 기준선 문서 4건(SKILL.md·interview-guide·workflow-order·mid-work-questions) 변경과 특용작물 premise-probes.md 신규 1건을 선언한다. P12 산업곤충 첫 묶음은 곤충 문서 계획·근거 검토 스크립트 4개, 선례 지도·안내·핵심 전제 문서 3개를 새 파일로, 재사용 등록부 곤충 항목 9개와 SKILL·gg.py 등 기존 파일 갱신을 선언한다. P13: D4 식별 전용 카탈로그·검증기·시험 3건을 신규 선언하고 SKILL·source-intake·재사용 시험의 변경을 P12 산업곤충 부모 위에 추가한다. P14 과수 둘째 묶음은 과수 모듈 0.2.0(수확 배치·물량 이동·연도별 수량 필드), 과수 작성계획 확장, 생산·재고 검산과 핵심 전제 질문 문서를 새 파일로 선언한다. | P15 D5: rda.econ.2025 pp133-135 corrected cell mapping, rejected legacy slice, lookup boundary, pinned trust migration; rebased onto accepted P14 (main f9c278c3). P16 과수 식별값 소묶음은 새 런타임 파일 없이 출처 식별 목록에 과수 참조 자료 41행을 추가한다. | P17: rda-lookup 검증 상태 계약 — 반환 레코드 verification 묶음·unverified 판정·verification_summary·공용 is_verified_observation 술어·D5 rejected 매칭 제외와 정합; accepted P16(main 0acd0cac) 위에 재기준화. P18 산업곤충 2묶음은 곤충 모듈 0.2.0(제품 라인·계획 연도 질문 틀)과 곤충 계획·근거·안내·핵심 전제 문서 갱신을 선언한다. 새 런타임 파일은 없다. P19 D6: X01/X02 formula-audit tool, block map, pinned results and human audit summary; rebaselined onto accepted P18 (main eb3ce06).",
   "parent_candidate": {
-    "stage": "P17",
-    "file_count": 190,
-    "tree_sha256": "6ff3733b6011ced080a0c9f8909cd4e899744eece75df0dfeae342b1434ae9ac"
+    "stage": "P18",
+    "file_count": 192,
+    "tree_sha256": "88b64dc2e64672506cb0ec285c6c624ee5366eeb67afd26a1368465175ca4916"
   },
   "schema": "knuaf-doc/runtime-changes@2",
-  "stage": "P18",
+  "stage": "P19",
   "stage_lineage": [
     {
       "file_count": 75,
@@ -1206,6 +1256,12 @@
       "file_count": 190,
       "tree_sha256": "6ff3733b6011ced080a0c9f8909cd4e899744eece75df0dfeae342b1434ae9ac",
       "note": "P17 기준 main 4d5ccce(PR #14 조회 상태 병합)의 변경 전 전체 파일 트리 해시"
+    },
+    {
+      "stage": "P18",
+      "file_count": 192,
+      "tree_sha256": "88b64dc2e64672506cb0ec285c6c624ee5366eeb67afd26a1368465175ca4916",
+      "note": "P18 기준 main eb3ce06(PR #18 산업곤충 둘째 묶음 병합)의 clean export 전체 파일 트리 해시 — P19의 직전 부모"
     }
   ]
 }
