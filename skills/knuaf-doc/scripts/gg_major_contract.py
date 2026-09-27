@@ -1471,9 +1471,47 @@ SPECIALTY_CROPS_MODULE = declare_module(
     forbidden_terms=_SPECIALTY_FORBIDDEN,
 )
 
+# industrial_insects product lines (0.2.0): one instance per product flow,
+# declared by line_inventory; the stable id lives in the field id so the
+# common question function counts every line (and plan year) separately.
+# Line fields never inherit the project summary fields (different period
+# and scope); see references/industrial-insects/README.md.
+_INSECT_LINE_FIELDS = (
+    ("label", "라인 이름(인스턴스 선언)", None),
+    ("species", "라인 대상 곤충 종", None),
+    ("purpose", "라인 용도(식용/사료/애완·학습/기타)", None),
+    ("product_form", "라인 제품 형태", None),
+    ("product_role", "라인 역할(main/byproduct/processed/service)", None),
+    ("source_line", "부산물·서비스가 딸린 주 라인 id", None),
+    ("input_line", "가공 라인의 원료 라인 id", None),
+    ("sale_unit", "판매 단위", None),
+    ("cycle_days", "한 회차 일수(입식→판매 가능)", "일"),
+    ("cycles_per_year", "정상 가동 연도 연간 회차 수", "회/년"),
+    ("first_sale_month", "첫 판매 예정 연·월", None),
+    ("first_year_sold_cycles", "첫해 판매 완료 회차 수", "회"),
+    ("stocking_input", "회차당 입식량", None),
+    ("stocking_unit", "입식 단위", None),
+    ("stock_source", "종충·알 확보 방식", None),
+    ("survival_rate", "입식→판매 단계 생존율", "%"),
+    ("survival_basis", "생존율 기준(개체 수/중량)", None),
+    ("saleable_per_cycle", "회차당 외부 판매량", None),
+    ("rearing_boxes", "사육 상자 수", "개"),
+    ("box_tiers", "선반 단 수", "단"),
+    ("density_per_box", "상자당 사육 밀도", None),
+    ("feed_or_substrate", "먹이·배지 종류", None),
+    ("feed_supply", "먹이·배지 조달 방식·월 소요량", None),
+    ("channel", "라인 판로", None),
+    ("unit_price", "판매 단위당 단가", "KRW"),
+    ("price_basis", "단가 근거·확인 시점", None),
+    ("processing_input_per_cycle", "가공 라인의 회차당 원료 투입량", None),
+)
+_INSECT_LINE_YEAR_FIELDS = (
+    ("year_end_in_process", "그해 연말 사육 중 회차 존재 여부", None),
+)
+
 INDUSTRIAL_INSECTS_MODULE = declare_module(
     major_id="industrial_insects",
-    module_version="0.1.0",
+    module_version="0.2.0",
     capabilities={
         "question": "supported",
         "document": "supported",
@@ -1565,6 +1603,34 @@ INDUSTRIAL_INSECTS_MODULE = declare_module(
             meaning="종·용도·판매 행위별 법적 요건 확인",
             target="regulation",
         ),
+        QuestionSpec(
+            field_id="industrial_insects.claims_check",
+            meaning="효능 표시·광고 규정 확인",
+            target="regulation",
+        ),
+        QuestionSpec(
+            field_id="industrial_insects.line_inventory",
+            meaning="제품 라인 목록(선언된 라인 id)",
+            target="line",
+        ),
+        QuestionSpec(
+            field_id="industrial_insects.line_retired",
+            meaning="폐기된 라인 id 목록",
+            target="line",
+        ),
+        QuestionSpec(
+            field_id="industrial_insects.plan_years",
+            meaning="계획 연도 목록",
+            target="period",
+        ),
+    ) + tuple(
+        QuestionSpec("industrial_insects.line.{id}." + name, meaning,
+                     unit=unit, target="line")
+        for name, meaning, unit in _INSECT_LINE_FIELDS
+    ) + tuple(
+        QuestionSpec("industrial_insects.line.{id}.year.{yyyy}." + name,
+                     meaning, unit=unit, target="line_year")
+        for name, meaning, unit in _INSECT_LINE_YEAR_FIELDS
     ),
     # F0 and E1–E4 are equal-rank example_observed precedents — the
     # roster lives at module level; nodes cite no per-exemplar claim and
@@ -1682,6 +1748,42 @@ _FRUIT_COHORT_FIELDS = (
     ("tree_count", "주수", "주"),
     ("spacing_m", "재식 거리(열간×주간)", "m"),
     ("bearing_status", "미성목/성목/갱신중", None),
+    ("area_m2", "집단 식재 면적", "㎡"),
+    ("active_from_year", "집단 활성 시작 연도", "년"),
+    ("active_to_year", "집단 활성 마지막 연도(폐원·갱신 전)", "년"),
+    ("tree_count_basis", "주수 근거(도면/실측/계획)", None),
+    ("layout_note", "통로·시설·경계·수분수 반영 근거", None),
+    ("yield_basis", "생산량 기준(per_tree/per_area)", None),
+    ("yield_area_basis", "단수 분모(bearing_area/total_area)", None),
+    ("bearing_trees", "연도별 결실 주수", "주"),
+    ("yield_kg_per_tree", "연도별 주당 수확량", "kg/주"),
+    ("bearing_area_m2", "연도별 결실 면적", "㎡"),
+    ("yield_kg_per_10a", "연도별 10a당 수확량", "kg/10a"),
+)
+# Per-year cohort inputs: the year lives in fact.period ("YYYY"), so
+# duplicates are judged per (field_id, period) for these fields only.
+_FRUIT_YEARLY_FIELDS = ("bearing_trees", "yield_kg_per_tree",
+                        "bearing_area_m2", "yield_kg_per_10a")
+_FRUIT_BATCH_FIELDS = (
+    ("label", "배치 표시 이름(선언)", None),
+    ("origin", "배치 유형(harvest/opening/regrade/mix)", None),
+    ("cohort_ref", "원 식재집단 ID(harvest)", None),
+    ("crop_species", "과종(opening)", None),
+    ("cultivar", "품종(opening)", None),
+    ("harvest_year", "원물 수확 연도", "년"),
+    ("opening_year", "기초 재고 기준 연도(opening)", "년"),
+    ("grade", "등급", None),
+    ("quantity_kg", "배치 수량(harvest/opening)", "kg"),
+)
+_FRUIT_MOVE_FIELDS = (
+    ("label", "이동 표시 이름(선언)", None),
+    ("batch_ref", "출발 배치 ID", None),
+    ("kind", "이동 종류(sale/loss/own_use/process/experience/regrade/mix_in)",
+     None),
+    ("year", "이동 연도", "년"),
+    ("quantity_kg", "이동 수량", "kg"),
+    ("channel", "판로(sale)", None),
+    ("target_batch", "도착 배치 ID(regrade/mix_in)", None),
 )
 
 _FRUIT_APPENDIX_ROLES = (
@@ -1692,7 +1794,7 @@ _FRUIT_APPENDIX_ROLES = (
 
 FRUIT_TREES_MODULE = declare_module(
     major_id="fruit_trees",
-    module_version="0.1.0",
+    module_version="0.2.0",
     capabilities={
         "question": "supported",
         "document": "supported",
@@ -1702,6 +1804,9 @@ FRUIT_TREES_MODULE = declare_module(
     question_schema=(
         QuestionSpec("fruit_trees.business_start_year", "사업 시작 연도",
                      unit="년", period="year", target="plan"),
+        QuestionSpec("fruit_trees.plan_end_year",
+                     "검산 기간 마지막 연도(없으면 시작+9)", unit="년",
+                     period="year", target="plan"),
         QuestionSpec("fruit_trees.school_template_edition",
                      "학교 양식 판본", target="plan"),
         QuestionSpec("fruit_trees.region", "과원 지역", target="site"),
@@ -1736,8 +1841,17 @@ FRUIT_TREES_MODULE = declare_module(
         for name, meaning, unit in _FRUIT_BLOCK_FIELDS
     ) + tuple(
         QuestionSpec("fruit_trees.cohort.{id}." + name, meaning,
-                     unit=unit, target="cohort")
+                     unit=unit, target="cohort",
+                     period="year" if name in _FRUIT_YEARLY_FIELDS else None)
         for name, meaning, unit in _FRUIT_COHORT_FIELDS
+    ) + tuple(
+        QuestionSpec("fruit_trees.batch.{id}." + name, meaning,
+                     unit=unit, target="batch")
+        for name, meaning, unit in _FRUIT_BATCH_FIELDS
+    ) + tuple(
+        QuestionSpec("fruit_trees.move.{id}." + name, meaning,
+                     unit=unit, target="move")
+        for name, meaning, unit in _FRUIT_MOVE_FIELDS
     ),
     document_plan=(
         DocumentNodeSpec(

@@ -1,10 +1,12 @@
 """승인 후보(approved-candidate) 조회 — 새 전공 인식(major-aware) 작성 경로.
 
-``gg_rda_lookup.lookup_rda_data``는 raw/legacy 계약이다: 물리 행 감사 키를
-붙인 관측 후보 집합·순서와 ``not_found|ambiguous|unique|series`` 판정을
-그대로 보존하며, 이 모듈은 그 결과를 변경하지 않고 소비만 한다. ``unique``
-는 물리 관측 하나가 식별됐다는 뜻이지 작성 사용 허가가 아니다
-(DECISION-20260924 §1·§3).
+``gg_rda_lookup.lookup_rda_data``의 raw/legacy 계약은 rda-lookup 검증
+상태 과제로 갱신됐다(DECISION-20260924 §1·§3의 'lookup 불변' 조항을
+대체): 물리 행 감사 키를 붙인 관측 후보 집합·순서를 보존하면서 공개
+판정은 ``not_found|ambiguous|series|unverified|unique``이고 각 레코드에
+``verification`` 묶음이 붙는다. 이 모듈은 그 결과를 변경하지 않고
+소비만 한다. ``unique``는 검증된 물리 관측 하나가 식별됐다는 뜻이지
+작성 사용 허가가 아니다.
 
 세 결과를 서로 다른 축으로 분리해 반환한다:
 
@@ -26,6 +28,7 @@
 유지되며 이 결과와 합쳐지지 않는다.
 """
 
+import copy
 import json
 from datetime import datetime
 from pathlib import Path
@@ -81,71 +84,27 @@ def _is_timestamp(v):
 # content digest pinned for this pack_id in
 # ``_research.PINNED_CATALOG_AUTHORITIES`` (SCC1 — same trust boundary as
 # the research lane; a caller cannot mint acceptance by construction).
+# The loader itself lives in ``gg_rda_lookup`` (K4 — one verification
+# basis shared with the lookup layer); this shim keeps the call shape
+# identical and hands every caller a fresh deep copy of the internal
+# entries (F1/K7).
 
 
 def _catalog_entries(pack):
-    """Read the pack manifest's rows as ``{AuditKey: entry}``.
-
-    Returns ``(entries, accepted)`` — ``entries`` is ``None`` when the
-    manifest is absent/malformed/duplicated; ``accepted`` is True only
-    when the full content reproduces a pinned accepted-catalog authority
-    digest naming this pack_id.
-    """
-    if not isinstance(pack, dict):
-        return None, False
-    relpath = pack.get("relpath")
-    if not relpath:
-        return None, False
-    mpath = (Path(_lookup.BASE_DIR) / relpath).parent / "manifest.json"
-    if not mpath.is_file():
-        return None, False
-    try:
-        manifest = json.loads(mpath.read_text(encoding="utf-8"))
-    except (OSError, ValueError, UnicodeDecodeError):
-        return None, False
-    if not isinstance(manifest, dict) \
-            or manifest.get("pack_id") != pack.get("pack_id"):
-        return None, False
-    rows = manifest.get("rows")
-    if not isinstance(rows, list):
-        return None, False
-    entries = {}
-    for row in rows:
-        if not isinstance(row, dict):
-            return None, False
-        try:
-            key = _prov.normalize_audit_key(row.get("audit_key"))
-        except (ValueError, TypeError):
-            return None, False
-        if key in entries:
-            return None, False  # duplicate physical key — not authenticatable
-        entries[key] = row
-    digest = _research.catalog_content_digest(entries)
-    pack_id = str(pack.get("pack_id"))
-    accepted = any(
-        digest == pinned
-        for auth, pinned in _research.PINNED_CATALOG_AUTHORITIES.items()
-        if auth == pack_id or auth.endswith("/" + pack_id)
-    )
-    return entries, accepted
+    """``gg_rda_lookup._catalog_entries`` result with a per-call deep
+    copy of the entries dict — behavior unchanged (absent/malformed/
+    duplicated manifests still return ``(None, False)``)."""
+    entries, accepted = _lookup._catalog_entries(pack)
+    if entries is None:
+        return None, accepted
+    return copy.deepcopy(entries), accepted
 
 
 def _catalog_receipt_complete(entry):
-    """Complete observation receipt on an approved-catalog entry — the
-    existing accepted-catalog contract ``source_observation.{
-    observation_status, source_pdf_sha256, prep_receipt_ref}`` unchanged."""
-    if not isinstance(entry, dict):
-        return False
-    so = entry.get("source_observation")
-    if not isinstance(so, dict):
-        return False
-    if not isinstance(so.get("observation_status"), str) \
-            or not so["observation_status"].strip():
-        return False
-    if not _is_sha256(so.get("source_pdf_sha256")):
-        return False
-    return isinstance(so.get("prep_receipt_ref"), str) \
-        and bool(so["prep_receipt_ref"].strip())
+    """Shared receipt check — delegates to
+    ``gg_rda_lookup._catalog_receipt_complete`` (K4, unchanged
+    contract)."""
+    return _lookup._catalog_receipt_complete(entry)
 
 
 # ---------------------------------------------------------------------------
@@ -472,12 +431,15 @@ def _evaluate(record, *, raw_status, pack, entries, catalog_accepted, q):
         rejections.append("audit_identity_absent")
 
     # --- selection: only a raw ``unique`` verdict is an unambiguous
-    # physical-observation selection.  ambiguous sets (incl. a lone
+    # physical-observation selection for APPROVAL.  ``unverified`` also
+    # resolves to exactly one candidate (selection is settled — the gate
+    # just denies verified status), so it never earns
+    # ``observation_selection_unresolved``; ambiguous sets (incl. a lone
     # candidate under a partial filter) and series rows without explicit
     # period selection can never approve at this layer — an explicit
     # audit_key selects one row but does not resolve a multi-observation
     # set it was not taken from, and never resolves a declared conflict.
-    if raw_status != "unique":
+    if raw_status not in ("unique", "unverified"):
         rejections.append("observation_selection_unresolved")
     if record.get("kind") in _lookup._SERIES_KINDS:
         rejections.append("series_period_unspecified")
@@ -503,13 +465,14 @@ def _evaluate(record, *, raw_status, pack, entries, catalog_accepted, q):
         and raw_status == "unique" \
         and record.get("kind") not in _lookup._SERIES_KINDS
 
-    # --- observation verification: the catalog row's status claim, read
-    # regardless of catalog acceptance (distinct axis — a status claim is
-    # not an approval)
+    # --- observation verification (K8): one shared predicate —
+    # authenticated accepted catalog + verified_observation status +
+    # complete receipt + extracted physical row.  The catalog row's
+    # status claim is still reported verbatim for axes output.
     status = (entry or {}).get("catalog_status")
     if isinstance(status, _prov.CatalogStatus):
         status = status.value
-    if status != _VERIFIED:
+    if not _lookup.is_verified_observation(entry, record, catalog_accepted):
         rejections.append("observation_not_verified")
 
     # --- extended evidence axes (current packs carry no ``evidence``
@@ -573,6 +536,9 @@ _UNAPPROVED_REASONS = {
                  "filter required",
     "series": "series observation — explicit period selection required "
               "before any scalar use",
+    "unverified": "single observation resolved but not source-verified "
+                  "(raw verdict unverified) — audit/reference handling "
+                  "only, never a writing value",
 }
 
 

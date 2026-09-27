@@ -1,4 +1,546 @@
 {
   "schema": "knuaf-source-identities/v1",
-  "entries": []
+  "entries": [
+    {
+      "sha256": "e3b654bfcfe70121fbbb62a951bf364a6418c649e71ec62f7ce8a1cfbe4df9f2",
+      "source_id": null,
+      "major": "fruit_trees",
+      "kind": "school_form",
+      "bibliographic": {
+        "title": "과수전공 논문양식 2026",
+        "authors": [],
+        "publisher": "한국농수산대학교 원예학부 과수전공",
+        "year": "2026"
+      },
+      "note": "학교 과수 논문 양식(HWPX). 구조 요약만 사용, 원문 미포함"
+    },
+    {
+      "sha256": "3f6cfe3c37a75af440b5804605ecf64dfbcc393b9b22b60f832c9bebaf728851",
+      "source_id": null,
+      "major": "fruit_trees",
+      "kind": "student_example",
+      "bibliographic": {
+        "title": "영농승계발전계획 (블루베리 체험 농장을 통한 고소득 창출)",
+        "authors": [
+          "신은경"
+        ],
+        "publisher": null,
+        "year": null
+      },
+      "note": null
+    },
+    {
+      "sha256": "d1460be202e89e5e73acc5549e0007949119701e9376fdd57744cad71f202233",
+      "source_id": null,
+      "major": "fruit_trees",
+      "kind": "official_publication",
+      "bibliographic": {
+        "title": "농업전망 2026 제6장 과일 수급 동향과 전망",
+        "authors": [
+          "김형진",
+          "김서영",
+          "강전상",
+          "손우영",
+          "정태호"
+        ],
+        "publisher": "한국농촌경제연구원",
+        "year": "2026"
+      },
+      "note": "발췌 미포함"
+    },
+    {
+      "sha256": "40493e71df8c227143c1a5817f177ba022201abf8b7516d21648e5478afd56cb",
+      "source_id": null,
+      "major": "fruit_trees",
+      "kind": "public_no_derivatives",
+      "bibliographic": {
+        "title": "농업기술길잡이 164 블루베리 (개정5판)",
+        "authors": [],
+        "publisher": "농촌진흥청",
+        "year": "2020"
+      },
+      "note": "공공누리 변경금지 조건. 해시·서지만 등록"
+    },
+    {
+      "sha256": "bfee726b10e3abaa57faf68e4bd8448a32f3f27caff1e3af4c94b897f7445a73",
+      "source_id": null,
+      "major": "fruit_trees",
+      "kind": "public_no_derivatives",
+      "bibliographic": {
+        "title": "농업기술길잡이 005 사과 (개정8판)",
+        "authors": [],
+        "publisher": "농촌진흥청",
+        "year": "2025"
+      },
+      "note": "공공누리 변경금지 조건. 해시·서지만 등록"
+    },
+    {
+      "sha256": "f0992e5cd7560719edb0e8f1011f99691bb075c76ad652186cb32a64793bfb64",
+      "source_id": null,
+      "major": "fruit_trees",
+      "kind": "public_no_derivatives",
+      "bibliographic": {
+        "title": "농업기술길잡이 포도 (개정6판)",
+        "authors": [],
+        "publisher": "농촌진흥청",
+        "year": "2020"
+      },
+      "note": "공공누리 변경금지 조건. 해시·서지만 등록"
+    },
+    {
+      "sha256": "bcf256901b4beeace12c3ee58cb35daf8b12e67aaddfa2cba3099cc71fe5f20b",
+      "source_id": null,
+      "major": "fruit_trees",
+      "kind": "public_no_derivatives",
+      "bibliographic": {
+        "title": "농업기술길잡이 배 (개정8판)",
+        "authors": [],
+        "publisher": "농촌진흥청",
+        "year": "2020"
+      },
+      "note": "공공누리 변경금지 조건. 해시·서지만 등록"
+    },
+    {
+      "sha256": "201215621df8b15a6e9ac5a0ae3a76cf0f91b3ac2d78a1fe869a124c55a16da7",
+      "source_id": null,
+      "major": "fruit_trees",
+      "kind": "public_no_derivatives",
+      "bibliographic": {
+        "title": "농업기술길잡이 복숭아 재배 (개정8판)",
+        "authors": [],
+        "publisher": "농촌진흥청",
+        "year": "2020"
+      },
+      "note": "공공누리 변경금지 조건. 해시·서지만 등록"
+    },
+    {
+      "sha256": "7231039639bb513b0bb0ac9e43fac69e30276579dbfb0f9803cd58ecd6839a9e",
+      "source_id": null,
+      "major": "fruit_trees",
+      "kind": "public_no_derivatives",
+      "bibliographic": {
+        "title": "농업기술길잡이 감 (개정8판)",
+        "authors": [],
+        "publisher": "농촌진흥청",
+        "year": "2024"
+      },
+      "note": "공공누리 변경금지 조건. 해시·서지만 등록"
+    },
+    {
+      "sha256": "54531e5fd0a2a40075304c52f23d6e561a4ed674ab79996d27d52ff0695da1e8",
+      "source_id": null,
+      "major": "fruit_trees",
+      "kind": "public_no_derivatives",
+      "bibliographic": {
+        "title": "농업기술길잡이 과수 병해충 (개정7판)",
+        "authors": [],
+        "publisher": "농촌진흥청",
+        "year": "2020"
+      },
+      "note": "공공누리 변경금지 조건. 해시·서지만 등록"
+    },
+    {
+      "sha256": "649705b11c490a8212c6815d57b614804530724ea6557b3a6693a4f9eaa62a87",
+      "source_id": null,
+      "major": "fruit_trees",
+      "kind": "public_no_derivatives",
+      "bibliographic": {
+        "title": "농업기술길잡이 과수 시설재배 (개정3판)",
+        "authors": [],
+        "publisher": "농촌진흥청",
+        "year": "2023"
+      },
+      "note": "공공누리 변경금지 조건. 해시·서지만 등록"
+    },
+    {
+      "sha256": "350695cac659a0f2651ad1224d4eaa3b4862c99fd3115200609ed3348028e27d",
+      "source_id": null,
+      "major": "fruit_trees",
+      "kind": "public_no_derivatives",
+      "bibliographic": {
+        "title": "농업기술길잡이 자두·매실 (개정2판)",
+        "authors": [],
+        "publisher": "농촌진흥청",
+        "year": "2018"
+      },
+      "note": "공공누리 변경금지 조건. 해시·서지만 등록"
+    },
+    {
+      "sha256": "f6afa766be3f815deedf6ea445aecd7842d465222f3178f93ce495e49c201561",
+      "source_id": null,
+      "major": "fruit_trees",
+      "kind": "public_no_derivatives",
+      "bibliographic": {
+        "title": "농업기술길잡이 키위(참다래) (개정5판)",
+        "authors": [],
+        "publisher": "농촌진흥청",
+        "year": "2020"
+      },
+      "note": "공공누리 변경금지 조건. 해시·서지만 등록"
+    },
+    {
+      "sha256": "0a0319b81d27085f7655eac0260c9928842a7ad2ba98db7a255ce8993b446fa1",
+      "source_id": null,
+      "major": "fruit_trees",
+      "kind": "public_no_derivatives",
+      "bibliographic": {
+        "title": "농업기술길잡이 부지화 시설재배 (개정2판)",
+        "authors": [],
+        "publisher": "농촌진흥청",
+        "year": "2023"
+      },
+      "note": "공공누리 변경금지 조건. 해시·서지만 등록"
+    },
+    {
+      "sha256": "1ecbdcf49e2d76547de5ae16cd2c6d1c283629c11962344d9b2751a60633cd9f",
+      "source_id": null,
+      "major": "fruit_trees",
+      "kind": "public_no_derivatives",
+      "bibliographic": {
+        "title": "농업기술길잡이 고품질 감귤 생산 지침 (개정판)",
+        "authors": [],
+        "publisher": "농촌진흥청",
+        "year": "2023"
+      },
+      "note": "공공누리 변경금지 조건. 해시·서지만 등록"
+    },
+    {
+      "sha256": "1d0f1487f72637b6793bf7c7f2a59e671528e8be5a218e20344c27375e476eac",
+      "source_id": null,
+      "major": "fruit_trees",
+      "kind": "ncs_material",
+      "bibliographic": {
+        "title": "NCS 학습모듈 과원 조성",
+        "authors": [],
+        "publisher": null,
+        "year": null
+      },
+      "note": "파일명 버전 표기 20v3. 이용허가 미확인, 해시·서지만 등록"
+    },
+    {
+      "sha256": "7d581966ba96b431831597267737be850ce5a24d7d3b58d974c0be92351308cf",
+      "source_id": null,
+      "major": "fruit_trees",
+      "kind": "ncs_material",
+      "bibliographic": {
+        "title": "NCS 학습모듈 과수 기상 재해 관리",
+        "authors": [],
+        "publisher": null,
+        "year": null
+      },
+      "note": "파일명 버전 표기 20v3. 이용허가 미확인, 해시·서지만 등록"
+    },
+    {
+      "sha256": "973c9e0ff91a77d0f3a95dac7df9c5a8e784f44ce8e082f81ac5ecd45543ea47",
+      "source_id": null,
+      "major": "fruit_trees",
+      "kind": "ncs_material",
+      "bibliographic": {
+        "title": "NCS 학습모듈 과수 영양 번식",
+        "authors": [],
+        "publisher": null,
+        "year": null
+      },
+      "note": "파일명 버전 표기 20v3. 이용허가 미확인, 해시·서지만 등록"
+    },
+    {
+      "sha256": "8eeebe59181f2eea5dd51e5a2b8a4d39442485fc8e962227a00ab2a2e97c096f",
+      "source_id": null,
+      "major": "fruit_trees",
+      "kind": "ncs_material",
+      "bibliographic": {
+        "title": "NCS 학습모듈 과수 토양관리",
+        "authors": [],
+        "publisher": null,
+        "year": null
+      },
+      "note": "파일명 버전 표기 14v2. 이용허가 미확인, 해시·서지만 등록"
+    },
+    {
+      "sha256": "c8063cd0535c96afde5b76bfe30e6f3ef7b1203458c200b43cf6d339c37e0e8d",
+      "source_id": null,
+      "major": "fruit_trees",
+      "kind": "ncs_material",
+      "bibliographic": {
+        "title": "NCS 학습모듈 과수 정지 및 전정",
+        "authors": [],
+        "publisher": null,
+        "year": null
+      },
+      "note": "파일명 버전 표기 14v2. 이용허가 미확인, 해시·서지만 등록"
+    },
+    {
+      "sha256": "818647be3a4d113fb50730848582d7c2365d7469c27989607a82a17e54545c6b",
+      "source_id": null,
+      "major": "fruit_trees",
+      "kind": "ncs_material",
+      "bibliographic": {
+        "title": "NCS 학습모듈 과수 결실 관리",
+        "authors": [],
+        "publisher": null,
+        "year": null
+      },
+      "note": "파일명 버전 표기 20v3. 이용허가 미확인, 해시·서지만 등록"
+    },
+    {
+      "sha256": "4ce2f2c3a577b0c8fde5659af9d4f23b636f05961bb72e9a3c72d8fbe6b37f00",
+      "source_id": null,
+      "major": "fruit_trees",
+      "kind": "ncs_material",
+      "bibliographic": {
+        "title": "NCS 학습모듈 과수 생리장해관리",
+        "authors": [],
+        "publisher": null,
+        "year": null
+      },
+      "note": "파일명 버전 표기 20v3. 이용허가 미확인, 해시·서지만 등록"
+    },
+    {
+      "sha256": "bb1235ad7a0270676c08332bbf5729d4a1a50c5e919ff8906f7ef55f690daaef",
+      "source_id": null,
+      "major": "fruit_trees",
+      "kind": "ncs_material",
+      "bibliographic": {
+        "title": "NCS 학습모듈 과수 병해충 잡초 관리",
+        "authors": [],
+        "publisher": null,
+        "year": null
+      },
+      "note": "파일명 버전 표기 20v3. 이용허가 미확인, 해시·서지만 등록"
+    },
+    {
+      "sha256": "9383f519e86f9bfe9d2322c5d1f22e15aeea4f51e7b28a9bceee882804942d35",
+      "source_id": null,
+      "major": "fruit_trees",
+      "kind": "ncs_material",
+      "bibliographic": {
+        "title": "NCS 학습모듈 과수 수확후관리",
+        "authors": [],
+        "publisher": null,
+        "year": null
+      },
+      "note": "파일명 버전 표기 14v2. 이용허가 미확인, 해시·서지만 등록"
+    },
+    {
+      "sha256": "c711f7d2bb54fd032597a62c159b90b1ff8e2d21f93fc339aded8c355011e328",
+      "source_id": null,
+      "major": "fruit_trees",
+      "kind": "ncs_material",
+      "bibliographic": {
+        "title": "NCS 학습모듈 과수 유통관리",
+        "authors": [],
+        "publisher": null,
+        "year": null
+      },
+      "note": "파일명 버전 표기 14v2. 이용허가 미확인, 해시·서지만 등록"
+    },
+    {
+      "sha256": "eef60791aee5b5731d4943f8a2aa8b214eaa8e22811cbf224e20cf7d8a17bbec",
+      "source_id": null,
+      "major": "fruit_trees",
+      "kind": "ncs_material",
+      "bibliographic": {
+        "title": "NCS 학습모듈 과수 안전성 관리",
+        "authors": [],
+        "publisher": null,
+        "year": null
+      },
+      "note": "파일명 버전 표기 20v3. 이용허가 미확인, 해시·서지만 등록"
+    },
+    {
+      "sha256": "ee8306dac6642d42bb8fe8cd33f412c7935dbc4bdadebddf7707dd573b87ec74",
+      "source_id": null,
+      "major": "fruit_trees",
+      "kind": "ncs_material",
+      "bibliographic": {
+        "title": "NCS 학습모듈 과수 스마트팜 운영",
+        "authors": [],
+        "publisher": null,
+        "year": null
+      },
+      "note": "파일명 버전 표기 20v1. 이용허가 미확인, 해시·서지만 등록"
+    },
+    {
+      "sha256": "4eea2f7a2e5c38d92f2e8cdb196e8704352a14b354e68bfe98fb7df67a9c05ec",
+      "source_id": null,
+      "major": "fruit_trees",
+      "kind": "official_publication",
+      "bibliographic": {
+        "title": "농작물생산조사 2024년 정기통계품질진단 결과보고서",
+        "authors": [],
+        "publisher": "통계청",
+        "year": "2024"
+      },
+      "note": "별도 재배포 허가 미확인. 원문 미포함"
+    },
+    {
+      "sha256": "b4b138f497cbd748bd7f9fcf0f2e8d3d416b32c0b95f6370bd1cf08db74ec796",
+      "source_id": null,
+      "major": "fruit_trees",
+      "kind": "official_publication",
+      "bibliographic": {
+        "title": "과일 2026년 8월호 (농업관측)",
+        "authors": [],
+        "publisher": "한국농촌경제연구원 농업관측센터",
+        "year": "2026"
+      },
+      "note": "별도 재배포 허가 미확인. 원문 미포함"
+    },
+    {
+      "sha256": "da3267370fbb55976a1c447cdbb81cb8438d5e312b2ef416fbf56cf6c215bb1d",
+      "source_id": null,
+      "major": "fruit_trees",
+      "kind": "official_download",
+      "bibliographic": {
+        "title": "2026년 농작물재해보험 사업시행지침",
+        "authors": [],
+        "publisher": "농림축산식품부",
+        "year": "2026"
+      },
+      "note": "별도 재배포 허가 미확인. 원문 미포함"
+    },
+    {
+      "sha256": "592e09e6a8140a2d0439d9dfb197e979968d696b8af2b28f81c482bb3eb52dbc",
+      "source_id": null,
+      "major": "fruit_trees",
+      "kind": "official_download",
+      "bibliographic": {
+        "title": "벼 농업수입안정보험 4월 20일부터 가입 시작 (보도자료, 판매일정 부록)",
+        "authors": [],
+        "publisher": "농림축산식품부",
+        "year": "2026"
+      },
+      "note": "별도 재배포 허가 미확인. 원문 미포함"
+    },
+    {
+      "sha256": "131bfb2e22e5e2a1fc7f95ad8798b4f9982c65301286e9260d20e6b4db7611ae",
+      "source_id": null,
+      "major": "fruit_trees",
+      "kind": "official_download",
+      "bibliographic": {
+        "title": "2024년 과수 무병화인증기관 지정 (보도자료)",
+        "authors": [],
+        "publisher": "농림축산식품부",
+        "year": "2024"
+      },
+      "note": "별도 재배포 허가 미확인. 원문 미포함"
+    },
+    {
+      "sha256": "8319d065765c6a10a4653f6831eb12040811ec35fc42b90146276445087637e6",
+      "source_id": null,
+      "major": "fruit_trees",
+      "kind": "official_download",
+      "bibliographic": {
+        "title": "사과 농작업일정",
+        "authors": [],
+        "publisher": "농촌진흥청",
+        "year": null
+      },
+      "note": "공공누리 제2유형(출처표시·상업적 이용 금지). 원문 재배포 보류"
+    },
+    {
+      "sha256": "be3f2d27a1eec3d41b5dd6b7388f0c97a95f254f9ad4f270ff9a77a67d5c389c",
+      "source_id": null,
+      "major": "fruit_trees",
+      "kind": "official_download",
+      "bibliographic": {
+        "title": "블루베리 농작업일정",
+        "authors": [],
+        "publisher": "농촌진흥청",
+        "year": null
+      },
+      "note": "공공누리 제2유형(출처표시·상업적 이용 금지). 원문 재배포 보류"
+    },
+    {
+      "sha256": "e975b60773b760d35ca7611d7570cefa3443e6e1b4893ffdb56e7995b2b0db3d",
+      "source_id": null,
+      "major": "fruit_trees",
+      "kind": "official_download",
+      "bibliographic": {
+        "title": "감귤(시설재배) 농작업일정",
+        "authors": [],
+        "publisher": "농촌진흥청",
+        "year": null
+      },
+      "note": "공공누리 제2유형(출처표시·상업적 이용 금지). 원문 재배포 보류"
+    },
+    {
+      "sha256": "24f010a2f672c3edb9bc54bac86ad2a9e7f53bb3edfe8e0507b4b80c6b00ff79",
+      "source_id": null,
+      "major": "fruit_trees",
+      "kind": "official_download",
+      "bibliographic": {
+        "title": "감귤(노지재배) 농작업일정",
+        "authors": [],
+        "publisher": "농촌진흥청",
+        "year": null
+      },
+      "note": "공공누리 제2유형(출처표시·상업적 이용 금지). 원문 재배포 보류"
+    },
+    {
+      "sha256": "56dcd29ebe89a4562a099e66f55e2acbaf44ceab84727f59f0d892059ffb12c4",
+      "source_id": null,
+      "major": "fruit_trees",
+      "kind": "official_download",
+      "bibliographic": {
+        "title": "포도(표준가온) 농작업일정",
+        "authors": [],
+        "publisher": "농촌진흥청",
+        "year": "2024"
+      },
+      "note": "공공누리 제2유형(출처표시·상업적 이용 금지). 원문 재배포 보류"
+    },
+    {
+      "sha256": "78fdae3f5b7508a451783b8a8e32becca1332fea11d0c6c8c1c7b0bf07d700cb",
+      "source_id": null,
+      "major": "fruit_trees",
+      "kind": "official_download",
+      "bibliographic": {
+        "title": "포도(무가온) 농작업일정",
+        "authors": [],
+        "publisher": "농촌진흥청",
+        "year": null
+      },
+      "note": "공공누리 제2유형(출처표시·상업적 이용 금지). 원문 재배포 보류"
+    },
+    {
+      "sha256": "0322f39a1f135203fe8f791c3161e6244bc5bef5996b9111b4c79529e535d7f5",
+      "source_id": null,
+      "major": "fruit_trees",
+      "kind": "official_download",
+      "bibliographic": {
+        "title": "복숭아 농작업일정",
+        "authors": [],
+        "publisher": "농촌진흥청",
+        "year": null
+      },
+      "note": "공공누리 제2유형(출처표시·상업적 이용 금지). 원문 재배포 보류"
+    },
+    {
+      "sha256": "223011c1806d4b36fc2a4f8cc059317fb5c113d2c8fb831ca98d6fe4f92e883c",
+      "source_id": null,
+      "major": "fruit_trees",
+      "kind": "official_download",
+      "bibliographic": {
+        "title": "배 농작업일정",
+        "authors": [],
+        "publisher": "농촌진흥청",
+        "year": null
+      },
+      "note": "공공누리 제2유형(출처표시·상업적 이용 금지). 원문 재배포 보류"
+    },
+    {
+      "sha256": "8cd4522c55de7bb9cab2793f58c74a5185a363d1bd416e6cadff4b1fb7800a70",
+      "source_id": null,
+      "major": "fruit_trees",
+      "kind": "official_download",
+      "bibliographic": {
+        "title": "단감 농작업일정",
+        "authors": [],
+        "publisher": "농촌진흥청",
+        "year": null
+      },
+      "note": "공공누리 제2유형(출처표시·상업적 이용 금지). 원문 재배포 보류"
+    }
+  ]
 }
