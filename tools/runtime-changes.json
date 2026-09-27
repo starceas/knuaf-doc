@@ -84,6 +84,7 @@
     "skills/knuaf-doc/tests/test_gg_source_intake_receipt.py",
     "skills/knuaf-doc/tests/test_gg_source_intake_scan.py",
     "skills/knuaf-doc/tests/test_gg_source_register.py",
+    "tests/local_real_sources.py",
     "tests/test_p2_core.py",
     "tests/test_p2_lock.py",
     "tests/test_p2_mutators.py",
@@ -301,7 +302,7 @@
       "last_changed": "P15"
     },
     "skills/knuaf-doc/references/common-workbooks/corrections/C1.md": {
-          "after_sha256": "f7f546fdcb8df93dbff2d1c44a973e27fd796ace29e02b6bd2cec91ef5d8b5f1",
+          "after_sha256": "48e0540eb630af816b248aea61dca3813efd3bda2b9cff5b29c1d3dd795a4c0c",
           "before_sha256": null,
           "first_changed": "P20",
           "last_changed": "P20",

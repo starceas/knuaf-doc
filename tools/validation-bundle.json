@@ -47,6 +47,11 @@
       "origin": "new",
       "sha256": "9a5fec8bfe2cafb915e58b84c26b5878bfa41db19b98b964da0f9c2383d2e6b4"
     },
+    "tests/local_real_sources.py": {
+      "note": "P20 local integration check for pinned X01/X02/SEO originals; absent inputs report NOT_RUN and exit 2.",
+      "origin": "new",
+      "sha256": "d264d1239fc948b9c6d34df7f59e157a94d337e7e5dfe3147ddc9865b2ebfb51"
+    },
     "tests/regression_inventory.json": {
       "note": "P0-A: machine source of truth mapping each known defect to its test and owning gate (P1–P5/deferred).",
       "origin": "new",
@@ -55,7 +60,7 @@
     "tests/test_bundle_lineage.py": {
       "note": "P1+P2 PACKAGE 계보 시험 — 실제 후보 정상 검증, 신규 파일 계약(allowlist·before=null·위장 거부) 포함 적대 합성 트리. P6: pin four new common-contract runtime files and the P5 parent tree. P9: hort_env_systems first bundle counts and parent P8 tree. | P10: P1+P2 PACKAGE 계보 시험 — 실제 후보 정상 검증, 신규 파일 계약(allowlist·before=null·위장 거부) 포함 적대 합성 트리. P6: pin four new common-contract runtime files and the P5 parent tree. P9: pins the P8 parent tree (a96a5bf, 154 files) and the common-workbook extract declared-new file. P10: parent P9 main 3c83f0c (161 files), combined 95 changes and 71 new files. | P11: P1+P2 PACKAGE 계보 시험 — 실제 후보 정상 검증, 신규 파일 계약(allowlist·before=null·위장 거부) 포함 적대 합성 트리. P6: pin four new common-contract runtime files and the P5 parent tree. P9: hort_env_systems first bundle counts and parent P8 tree. P10: 공용 인터뷰 규칙 묶음 재기준 counts and parent P9 tree. P11: parent P10 main ec8a2e8 (163 files), combined 99 changes and 72 new files. P12: pin the P11 parent tree (164 files) and check the ancestor list ends at the parent. P13: P12 parent main 955e880 (178 files), cumulative 109 changes and 82 new files; D4 identity catalogue retained with P12 industrial_insects. P14: fruit_trees second bundle counts and parent P13 tree. P15: rebased D5 lineage pins (P14 parent main f9c278c, 185 files; cumulative 113 changes and 86 new files; P15 stage label). P16: fruit identity rows on parent P15 tree; the D5 parent-tree pin is checked against the P14 lineage row. P18: pin the P17 parent tree (190 files) and check the ancestor list ends at the parent.",
       "origin": "new",
-      "sha256": "9c2ab23e474af284bb9b7554fca5592eeb8602d5f21dd8a2a6bddcb439679792"
+      "sha256": "61f86abcccbd47f0973d47777df158fc90a485554ae89b55349979af17d57783"
     },
     "tests/test_canonical_flow.py": {
       "note": "P0-A: init/apply/check/export positive controls + C2–C6/H2/H3/H5 defect signatures; synthetic only.",
@@ -222,11 +227,11 @@
     },
     "tests/test_workbook_c1_correction.py": {
       "origin": "new",
-      "sha256": "955b1e3cefcbe238ef09d94998d8b7da127a2f4f30550e93d938a6aef2d91d48"
+      "sha256": "c987360ca59c07ce8b19c7a99c00e412bae6b7d66f25af813cf22e8910ed376c"
     },
     "tests/test_workbook_c1_specialty_e2e.py": {
       "origin": "new",
-      "sha256": "f4e9538c381fe7ee51c23d7632396e0e131916bc75f337f07e2f40d1aad42072"
+      "sha256": "44f33e8daf00ca4d0d01172512028a96996549674624d2e89b2c533d4a4b9d1c"
     },
     "tests/test_workbook_registry.py": {
       "note": "P8 common reference-workbook decision table, X01/X02 identity with exact sheet names, read-only scan, no shipped originals or local paths. | P10: P8 common reference-workbook decision table, X01/X02 identity with exact sheet names, read-only scan, no shipped originals or local paths. P9: v2 reference-set load, extract/--check determinism, registry-extract identity path parser-call counts, resolver template_status keys. P9-D3: major_base_policy decision tests incl. shipped-catalog default path, explicit-selection precedence, unusable-base and duplicate-copy negatives.",
@@ -264,12 +269,12 @@
     "tools/runtime-changes.json": {
       "note": "누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py. P8 declares the fruit_trees first bundle (module registration, two common helper modules, fruit plan, reference-set data and guidance). P9 declares the hort_env_systems first bundle (module registration, hort plan, profile and guidance, reuse-registry entries). | P10: 누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py. P8 declares the fruit_trees first bundle (module registration, two common helper modules, fruit plan, reference-set data and guidance). P9 declares the common XLSX reuse bundle (one new runtime extract file + declared edits to registration, resolver, template guard, and reuse tests). P9-D3 declares the major-specific-precedence edits (registry dedupe, catalog base_for_major, resolver base policy, docs, tests) in the same stage. | P11: 누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py. P8 declares the fruit_trees first bundle (module registration, two common helper modules, fruit plan, reference-set data and guidance). P9 declares the hort_env_systems first bundle (module registration, hort plan, profile and guidance, reuse-registry entries). P10 declares the common interview rules bundle (SKILL.md re-touch, three baseline doc first-changes, specialty-crops premise-probes) re-based onto the P9 parent. P12 declares the industrial_insects first bundle (four read-only insect scripts, locator map, guide and premise probes as new files; nine reuse-registry entries and SKILL/gg.py updates). P13: D4 source identity catalogue, validator, tests and related guidance rebased on accepted P12. P15 declares the D5 useful-life bundle rebased onto accepted P14 (corrected pp133-135 cell mapping and regression test as new files; eight re-declared pack/registry/script/test entries; parent P14 lineage). P18 declares the industrial_insects second bundle (module 0.2.0 product-line question templates and read-only plan/evidence updates; no new runtime file).",
       "origin": "new",
-      "sha256": "0a1b46f8e9c8d70673227e2f080c263feb3ee4348380d039949b4826c7b79fc8"
+      "sha256": "59b837d7f9c7b3e49e71f37c56d1f4900f8d754c2d98abcde32c333ec79e122d"
     },
     "tools/validation-provenance.json": {
       "note": "This file; declares origins for the validation layer.",
       "origin": "new",
-      "sha256": "c5f95cb4f5451fcebb730cf03592cfa93aec1071eaca988670a5e31a49d9417d"
+      "sha256": "ca892836a0a9474ec80e0d45480f88a8f43b2c17b66e861e1e5f575d3d34ec30"
     }
   },
   "generated_by": "tools/build_validation_bundle.py@3",
@@ -284,10 +289,10 @@
     ]
   },
   "runtime_changes": {
-    "approved_new_files": 95,
+    "approved_new_files": 96,
     "baseline_main": "29abec0ec95369de7ae9e22207349d574f1f46b7",
     "change_count": 122,
-    "changes_sha256": "6a001fc5d3240942d1123f1b1a398898e0f15c2783e8ab87f62e004eef82c4c6",
+    "changes_sha256": "41da03d355ad033a6f0a549222926f3a38a6662fed5792497ca047e4705c9ef1",
     "new_count": 95,
     "parent_candidate": {
       "file_count": 199,
@@ -296,7 +301,7 @@
     },
     "schema": "knuaf-doc/runtime-changes@2",
     "spec": "tools/runtime-changes.json",
-    "spec_sha256": "0a1b46f8e9c8d70673227e2f080c263feb3ee4348380d039949b4826c7b79fc8",
+    "spec_sha256": "59b837d7f9c7b3e49e71f37c56d1f4900f8d754c2d98abcde32c333ec79e122d",
     "stage": "P20",
     "stage_lineage": [
       {
@@ -423,5 +428,5 @@
     "verified_count": 122
   },
   "schema": "knuaf-doc/validation-bundle@3",
-  "validation_tree_sha256": "4fa8c43ec07da1e5a3f0667e6195bf3928a87c74276d5fb834fc6ec80b5a434d"
+  "validation_tree_sha256": "d4ad6e3b1bd91114c823f422829f3130bb3b01978630bf06398cda047e30b68e"
 }

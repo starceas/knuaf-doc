@@ -144,7 +144,7 @@ class RealTreeTests(ContractCase):
         # P20's parent is the P19 export tree (199 files).
         self.assertEqual(122, link["change_count"])
         self.assertEqual(95, link["new_count"])
-        self.assertEqual(95, link["approved_new_files"])
+        self.assertEqual(96, link["approved_new_files"])
         self.assertEqual("P19", link["parent_candidate"]["stage"])
         self.assertEqual(199, link["parent_candidate"]["file_count"])
         self.assertEqual(

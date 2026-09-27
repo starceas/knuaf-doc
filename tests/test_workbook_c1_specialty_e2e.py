@@ -1,4 +1,4 @@
-"""End-to-end C1 specialty path on synthetic and local real sources.
+"""End-to-end C1 specialty path on synthetic sources.
 
 Builds a synthetic workbook with the same 30 SEO correction targets,
 binds a synthetic C1 spec to its bytes, runs materialize ->
@@ -22,7 +22,6 @@ from tests.test_workbook_audit_evaluator import audit_module
 ROOT = Path(__file__).resolve().parents[1]
 AUDIT_CLI = ROOT / "skills/knuaf-doc/scripts/gg_workbook_audit.py"
 PATCH_CLI = ROOT / "skills/knuaf-doc/scripts/gg_excel_formula_patch.py"
-SEO_SOURCE = Path("/Users/nara/Desktop/Storage/진셍고트/restored/sources/originals/seo-minseo-finance.xlsx")
 
 NS = 'xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"'
 S9 = "9 .경비계획"
@@ -202,18 +201,6 @@ class SpecialtyChainTests(ContractCase):
                              "'11. 생산원가계획'!G29")
             self.assertEqual(patched.formulas[(S11, "G16")].text,
                              "G17+G20+G25+G21+G29+G30+G28")
-
-    def test_materialize_patch_receipt_chain_on_local_seo(self):
-        if not SEO_SOURCE.is_file():
-            self.skipTest("local SEO source absent")
-        with tempfile.TemporaryDirectory() as tmp:
-            tmp = Path(tmp)
-            project = self.make_project()
-            bind_major(project, "specialty_crops")
-            self.assert_chain(
-                SEO_SOURCE, ROOT / "skills/knuaf-doc/references/common-workbooks"
-                / "corrections/c1-spec.json", tmp / "seo-map.json",
-                tmp / "seo-patched.xlsx", tmp / "seo-receipt.json", project, 30)
 
     def test_precondition_blocks_unbound_source(self):
         a = audit_module()

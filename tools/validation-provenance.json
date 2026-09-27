@@ -24,6 +24,10 @@
       "note": "P11 특용작물 핵심 전제 목록(premise probes): 전작·연작 이력, 다년생 무매출·상환, 건조 수율, 판로 약속 확정(신설 field 제안), 용도 구분 — 공용 형식과 field 연결.",
       "origin": "new"
     },
+    "tests/local_real_sources.py": {
+      "note": "P20 local integration check for pinned X01/X02/SEO originals; absent inputs report NOT_RUN and exit 2.",
+      "origin": "new"
+    },
     "tests/__init__.py": {
       "note": "P0-A: suite package marker.",
       "origin": "new"
