@@ -1232,6 +1232,618 @@ def json_bytes(doc):
     return (json.dumps(doc, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode("utf-8")
 
 
+# ---------------------------------------------------------------------------
+# C1 copy-correction specification, materializer and verifier (D7 r5).
+#
+# The shipped spec binds formula text, coordinates and cell digests only —
+# never numeric example values.  materialize-c1 turns a bound spec into a
+# local gg-xlsx-formula-patch-map/v1 (which may then carry expected_value);
+# verify-c1 applies a spec in memory and checks the signed response vectors
+# (r3 N2), the exclusion probes (r4 N3) and the analyzer diff, and lists the
+# baseline value changes for local review.
+
+C1_SPEC_SCHEMA = "knuaf-c1-correction-spec/v1"
+C1_DELTA = 7
+C1_AUDIT_REVISION = "knuaf-workbook-formula-audit/v1"
+# SEO shares the X01 calculation-area layout (no J block), so the analyzer
+# runs the X01 region/variant map against it.
+C1_ANALYZER_REF = {"X01": "X01", "X02": "X02", "SEO": "X01"}
+C1_SOURCE_IDS = {
+    "X01": "kang-finance-workbook-x01",
+    "X02": "kang-finance-workbook-x02",
+    "SEO": "seo-minseo-finance-xlsx",
+}
+_C1_CELL_XML = re.compile(
+    rb'<c\b[^>]*\br="(?P<addr>[A-Z]+[0-9]+)"[^>]*?(?:/>|>.*?</c>)', re.DOTALL)
+
+
+def c1_spec_path(root=None):
+    root = root or Path(__file__).resolve().parents[1]
+    return (root / "references/common-workbooks/corrections/c1-spec.json")
+
+
+def c1_load_spec(path=None):
+    path = Path(path) if path else c1_spec_path()
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    if doc.get("schema") != C1_SPEC_SCHEMA:
+        raise ValueError("C1 spec schema mismatch")
+    if not isinstance(doc.get("sources"), dict) or not isinstance(doc.get("files"), dict):
+        raise ValueError("C1 spec missing sources/files")
+    return doc
+
+
+def _c1_norm_formula(text):
+    if not isinstance(text, str) or not text.startswith("=") or len(text) < 2:
+        raise ValueError("C1 formula must start with '='")
+    return text[1:]
+
+
+def c1_rows(spec, ref):
+    """Validated (sheet, cell, row) tuples for one bound source."""
+    rows = []
+    seen = set()
+    for row in (spec.get("files") or {}).get(ref) or []:
+        sheet, cell = row.get("sheet"), row.get("cell")
+        if not isinstance(sheet, str) or not isinstance(cell, str):
+            raise ValueError("C1 row missing sheet/cell")
+        if (sheet, cell) in seen:
+            raise ValueError("C1 duplicate target " + sheet + "!" + cell)
+        seen.add((sheet, cell))
+        klass = row.get("class")
+        if klass == "formula_repoint":
+            if "expected_cell_digest" in row or "expected_formula" not in row:
+                raise ValueError("C1 formula_repoint precondition shape " + sheet + "!" + cell)
+            _c1_norm_formula(row["expected_formula"])
+        elif klass == "value_to_formula":
+            if "expected_formula" in row or "expected_cell_digest" not in row:
+                raise ValueError("C1 value_to_formula precondition shape " + sheet + "!" + cell)
+            digest = row["expected_cell_digest"]
+            if not isinstance(digest, str) or len(digest) != 64:
+                raise ValueError("C1 digest shape " + sheet + "!" + cell)
+        else:
+            raise ValueError("C1 unknown class " + repr(klass))
+        if not isinstance(row.get("finding_id"), str):
+            raise ValueError("C1 row missing finding_id")
+        _c1_norm_formula(row.get("new_formula"))
+        rows.append((sheet, cell, row))
+    if not rows:
+        raise ValueError("C1 spec binds no rows for " + ref)
+    return rows
+
+
+def canonical_cell_bytes(path, sheet_name, addr):
+    """The verbatim stored <c> element bytes for one cell (local bytes only)."""
+    with ZipFile(path) as z:
+        root = ET.fromstring(z.read("xl/workbook.xml"))
+        relroot = ET.fromstring(z.read("xl/_rels/workbook.xml.rels"))
+        rels = {x.get("Id"): x.get("Target") for x in relroot.findall(PKG + "Relationship")}
+        for sh in root.findall(".//" + NS + "sheet"):
+            if sh.get("name") != sheet_name:
+                continue
+            target = rels[sh.get(REL + "id")]
+            target = target.lstrip("/") if target.startswith("/") else "xl/" + target
+            target = re.sub(r"^xl/xl/", "xl/", target)
+            raw = z.read(target)
+            for m in _C1_CELL_XML.finditer(raw):
+                if m.group("addr").decode("ascii") == addr:
+                    return m.group(0)
+            return None
+    return None
+
+
+def canonical_cell_digest(path, sheet_name, addr):
+    raw = canonical_cell_bytes(path, sheet_name, addr)
+    return None if raw is None else hashlib.sha256(raw).hexdigest()
+
+
+def c1_precondition_check(spec, ref, source):
+    """Shared gate for materialize-c1 and verify-c1 (M5/N2).
+
+    Verifies the source sha256 and every row's expected formula text or
+    expected cell digest against the real bytes.  Returns the loaded
+    Workbook; raises ValueError listing every mismatch on refusal.
+    """
+    source = Path(source)
+    expected_sha = (spec.get("sources") or {}).get(ref, {}).get("sha256")
+    if not expected_sha:
+        raise ValueError("C1 spec binds no source for " + ref)
+    actual_sha = hashlib.sha256(source.read_bytes()).hexdigest()
+    if actual_sha != expected_sha:
+        raise ValueError(ref + " source hash mismatch: " + actual_sha)
+    rows = c1_rows(spec, ref)
+    book = Workbook.load(source)
+    problems = []
+    for sheet, cell, row in rows:
+        if sheet not in book.sheets:
+            problems.append(sheet + "!" + cell + ": sheet absent")
+            continue
+        if "expected_formula" in row:
+            found = book.formulas.get((sheet, cell))
+            actual = None if found is None else found.text
+            if actual != _c1_norm_formula(row["expected_formula"]):
+                problems.append(sheet + "!" + cell
+                                + ": expected_formula mismatch " + repr(actual))
+        else:
+            actual = canonical_cell_digest(source, sheet, cell)
+            if actual != row["expected_cell_digest"]:
+                problems.append(sheet + "!" + cell
+                                + ": expected_cell_digest mismatch " + repr(actual))
+    if problems:
+        raise ValueError(ref + " C1 preconditions failed: " + "; ".join(problems))
+    return book
+
+
+def apply_c1(book, rows):
+    """Apply the spec rows to an in-memory copy; the source book is untouched."""
+    patched = copy.copy(book)
+    patched.formulas = dict(book.formulas)
+    patched._ast = {}
+    for sheet, cell, row in rows:
+        patched.formulas[sheet, cell] = FORMULA(
+            _c1_norm_formula(row["new_formula"]), None, None)
+    return patched
+
+
+def _c1_refs(row):
+    """Resolved (sheet, cell) references of one row's new formula."""
+    sheet = row["sheet"]
+    ast = Parser(_c1_norm_formula(row["new_formula"])).parse()
+    return {(s, a) for s, a in ast_refs(ast, sheet)}
+
+
+def c1_oracle(oracle_rows, oracle_deps):
+    """The verification oracle for one bound source (r3 N2 + r4 N3).
+
+    Everything here is derived from the APPROVED spec rows and the
+    dependency graph of the workbook patched with them — never from the
+    candidate spec/map under test:
+
+    * groups[finding]["inputs"]: every cell an approved replacement
+      formula references.  Targets of the same finding stay inputs too —
+      perturbing them directly asserts the downstream chain (N2).
+    * vectors: for each intended input, the observed cells are the
+      finding's targets plus the downstream closure (in the approved
+      graph) of every referenced cell on the input's own sheet row — the
+      year-column family whose non-intended members must respond 0.
+      Expected responses are MEASURED on the approved-spec book.
+    * probes: every oracle-referenced cell and its row neighbours +/-1 on
+      the same sheet, probed against each finding's targets unless the
+      cell is a target or an intended input of that finding.
+    """
+    groups = defaultdict(lambda: {"targets": [], "inputs": set()})
+    for sheet, cell, row in oracle_rows:
+        g = groups[row["finding_id"]]
+        g["targets"].append((sheet, cell))
+        g["inputs"] |= _c1_refs(row)
+
+    referenced = set()
+    for refs in oracle_deps.values():
+        referenced |= refs
+    for g in groups.values():
+        referenced |= g["inputs"]
+    referenced_rows = {}
+    for sheet, addr in referenced:
+        _, rownum = split_addr(addr)
+        referenced_rows.setdefault((sheet, rownum), set()).add((sheet, addr))
+
+    vectors = []
+    for finding, g in sorted(groups.items()):
+        tset = set(g["targets"])
+        for in_key in sorted(g["inputs"]):
+            _, rownum = split_addr(in_key[1])
+            family = referenced_rows.get((in_key[0], rownum), {in_key})
+            observe = tset | downstream_many(oracle_deps, family)
+            vectors.append({"finding": finding, "input": in_key,
+                            "observe": sorted(observe)})
+
+    candidates = set()
+    for g in groups.values():
+        for sheet, cell in g["inputs"]:
+            col, rownum = split_addr(cell)
+            for r in (rownum - 1, rownum, rownum + 1):
+                if r >= 1:
+                    candidates.add((sheet, colname(col) + str(r)))
+
+    probes = []
+    for finding, g in sorted(groups.items()):
+        tset = set(g["targets"])
+        for cand in sorted(candidates):
+            if cand in tset or cand in g["inputs"]:
+                continue
+            probes.append({"finding": finding, "input": cand,
+                           "targets": g["targets"]})
+    return groups, vectors, probes
+
+
+def _c1_formula_deps(book):
+    """References-only dependency map (no evaluation)."""
+    deps = {}
+    for key in book.formulas:
+        try:
+            deps[key] = set(ast_refs(book.parse(key), key[0]))
+        except Unsupported:
+            deps[key] = set()
+    return deps
+
+
+def _c1_eval(book, key, memo, overrides=None):
+    return book.evaluate(key[0], key[1], overrides=overrides or {}, memo=memo)
+
+
+def _c1_responses(book, in_key, keys):
+    """Measured +C1_DELTA response at each observed key on one book.
+
+    Cells the evaluator cannot evaluate are recorded as the
+    '<unsupported>' sentinel; a candidate that makes a formerly
+    evaluable cell unsupported — or vice versa — therefore fails,
+    while cells unsupported under both still compare equal.
+    """
+    try:
+        base_in = _c1_eval(book, in_key, {})
+    except Unsupported:
+        return {key: "<unsupported>" for key in keys}
+    if not isinstance(base_in, (int, float, bool)):
+        base_in = 0
+    override = {in_key: base_in + C1_DELTA}
+    memo_b, memo_a = {}, {}
+    out = {}
+    for key in keys:
+        try:
+            before = _c1_eval(book, key, memo_b)
+            after = _c1_eval(book, key, memo_a, override)
+            out[key] = numeric_delta(before, after)
+        except Unsupported:
+            out[key] = "<unsupported>"
+    return out
+
+
+def c1_verify(book, rows, ref, *, blocks=None,
+              analyzer_ref=None, include_baseline_changes=False,
+              fail_fast=False):
+    """Verify a spec-under-test applied in memory is correct (r3 N2 + r4 N3).
+
+    book is the original workbook; rows (the spec under test) are applied
+    in memory.  The entire oracle — intended inputs, signed response vectors
+    and exclusion sets — comes from the shipped approved spec.  The candidate only
+    decides which formulas are written into the in-memory copy, so a
+    candidate can never redefine its own reference.
+    Returns a report dict; report["ok"] is True only when every measured
+    response equals the oracle's response, every exclusion probe is
+    silent, and the analyzer diff introduces no new warning.
+    """
+    oracle_rows = c1_rows(c1_load_spec(), ref)
+    patched = apply_c1(book, rows)
+    oracle_patched = apply_c1(book, oracle_rows)
+    oracle_deps = _c1_formula_deps(oracle_patched)
+    _, vectors, probes = c1_oracle(oracle_rows, oracle_deps)
+    failures = []
+    report = {"ref": ref, "vectors": [], "exclusion_probes": 0,
+              "exclusion_skipped_upstream": 0, "analyzer_diff": None,
+              "baseline_changes": None, "failures": failures}
+
+    # --- N2 signed response vectors (oracle-derived) ----------------------
+    for vec in vectors:
+        in_key = vec["input"]
+        expected = _c1_responses(oracle_patched, in_key, vec["observe"])
+        measured = _c1_responses(patched, in_key, vec["observe"])
+        problems = []
+        for key in vec["observe"]:
+            if measured[key] != expected[key]:
+                problems.append(key[0] + "!" + key[1]
+                                + " \u0394" + repr(measured[key])
+                                + " expected \u0394" + repr(expected[key]))
+        entry = {"finding": vec["finding"],
+                 "input": {"sheet": in_key[0], "cell": in_key[1]},
+                 "ok": not problems, "problems": problems}
+        report["vectors"].append(entry)
+        if problems:
+            failures.append("vector " + vec["finding"] + " "
+                            + in_key[0] + "!" + in_key[1] + ": "
+                            + "; ".join(problems))
+            if fail_fast:
+                report["ok"] = False
+                return report
+
+    # --- N3 exclusion probes (oracle-derived sets) -------------------------
+    ut_deps = _c1_formula_deps(patched)
+    checked = 0
+    for probe in probes:
+        cand, targets = probe["input"], probe["targets"]
+        if (any(reaches(ut_deps, t, cand) for t in targets)
+                and any(reaches(oracle_deps, t, cand) for t in targets)):
+            # The path exists in the approved graph and survives in the
+            # candidate: sanctioned propagation, not a wrong reference.
+            report["exclusion_skipped_upstream"] += 1
+            continue
+        measured = _c1_responses(patched, cand, targets)
+        for key in targets:
+            if measured[key] not in (0, "unchanged_non_numeric",
+                                     "<unsupported>"):
+                failures.append("exclusion " + probe["finding"] + " "
+                                + cand[0] + "!" + cand[1] + " moved "
+                                + key[0] + "!" + key[1])
+                if fail_fast:
+                    report["ok"] = False
+                    report["exclusion_probes"] = checked + 1
+                    return report
+        checked += 1
+    report["exclusion_probes"] = checked
+
+    # --- analyzer diff -----------------------------------------------------
+    if blocks is not None:
+        aref = analyzer_ref or ref
+        orig_entries, _ = inventory(book)
+        new_entries, _ = inventory(patched)
+        before = {(c["rule_id"], c["sheet"], tuple(c["cells"]))
+                  for c in analyze_rules(book, blocks, orig_entries, aref)}
+        after = {(c["rule_id"], c["sheet"], tuple(c["cells"]))
+                 for c in analyze_rules(patched, blocks, new_entries, aref)}
+        report["analyzer_diff"] = {
+            "disappeared": [{"rule_id": r, "sheet": s, "cells": list(c)}
+                            for r, s, c in sorted(before - after)],
+            "remained": [{"rule_id": r, "sheet": s, "cells": list(c)}
+                         for r, s, c in sorted(before & after)],
+            "new_warnings": [{"rule_id": r, "sheet": s, "cells": list(c)}
+                             for r, s, c in sorted(after - before)],
+        }
+        for item in report["analyzer_diff"]["new_warnings"]:
+            failures.append("new analyzer warning " + item["rule_id"]
+                            + " " + item["sheet"] + " " + ",".join(item["cells"]))
+
+    # --- baseline value changes (local only) -------------------------------
+    if include_baseline_changes:
+        changes = []
+        memo_orig, memo_new = {}, {}
+        for key in sorted(book.formulas):
+            before = _c1_eval(book, key, memo_orig)
+            after = _c1_eval(patched, key, memo_new)
+            if not equal_value(before, after):
+                changes.append({"sheet": key[0], "cell": key[1],
+                                "delta": numeric_delta(before, after)})
+        report["baseline_changes"] = changes
+
+    report["ok"] = not failures
+    return report
+
+
+def c1_map_rows(map_doc):
+    """Convert a local gg-xlsx-formula-patch-map/v1 to spec-like rows so a
+    produced map can be verified as a candidate (never the oracle)."""
+    if map_doc.get("schema") != "gg-xlsx-formula-patch-map/v1":
+        raise ValueError("candidate map schema mismatch")
+    source = map_doc.get("source")
+    if not isinstance(source, dict) or not isinstance(source.get("sha256"), str):
+        raise ValueError("candidate map missing source.sha256")
+    patches = map_doc.get("patches")
+    if not isinstance(patches, list) or not patches:
+        raise ValueError("candidate map has no patches")
+    rows = []
+    seen = set()
+    for patch in patches:
+        if not isinstance(patch, dict):
+            raise ValueError("candidate map patch is not an object")
+        sheet, cell = patch.get("sheet"), patch.get("cell")
+        if not isinstance(sheet, str) or not isinstance(cell, str):
+            raise ValueError("candidate patch missing sheet/cell")
+        if (sheet, cell) in seen:
+            raise ValueError("candidate map duplicate target "
+                             + sheet + "!" + cell)
+        seen.add((sheet, cell))
+        new_formula = patch.get("new_formula")
+        if isinstance(new_formula, str) and not new_formula.startswith("="):
+            new_formula = "=" + new_formula
+        row = {"finding_id": "MAP", "sheet": sheet, "cell": cell,
+               "new_formula": new_formula}
+        if "expected_formula" in patch:
+            expected = patch["expected_formula"]
+            row["class"] = "formula_repoint"
+            row["expected_formula"] = (expected
+                                       if isinstance(expected, str)
+                                       and expected.startswith("=")
+                                       else "=" + str(expected))
+        elif "expected_value" in patch:
+            row["class"] = "value_to_formula"
+            row["expected_value"] = patch["expected_value"]
+        else:
+            raise ValueError("candidate patch lacks a precondition: "
+                             + sheet + "!" + cell)
+        _c1_norm_formula(row["new_formula"])
+        rows.append((sheet, cell, row))
+    return rows, source["sha256"]
+
+
+def c1_map_precondition_check(map_doc, source, book):
+    """Check a candidate map's own declared preconditions on the source."""
+    rows, map_sha = c1_map_rows(map_doc)
+    actual_sha = hashlib.sha256(Path(source).read_bytes()).hexdigest()
+    if actual_sha != map_sha:
+        raise ValueError("candidate map source hash mismatch: " + actual_sha)
+    problems = []
+    for sheet, cell, row in rows:
+        if "expected_formula" in row:
+            found = book.formulas.get((sheet, cell))
+            actual = None if found is None else found.text
+            if actual != _c1_norm_formula(row["expected_formula"]):
+                problems.append(sheet + "!" + cell
+                                + ": expected_formula mismatch "
+                                + repr(actual))
+        else:
+            actual = book.values.get((sheet, cell))
+            if actual != row["expected_value"]:
+                problems.append(sheet + "!" + cell
+                                + ": expected_value mismatch "
+                                + repr(actual))
+    if problems:
+        raise ValueError("candidate map preconditions failed: "
+                         + "; ".join(problems))
+    return rows
+
+
+def c1_load_candidate(path):
+    """Load a candidate-under-test file: a C1 spec document or a local
+    gg-xlsx-formula-patch-map/v1.  Returns (kind, document)."""
+    doc = json.loads(Path(path).read_text(encoding="utf-8"))
+    if doc.get("schema") == C1_SPEC_SCHEMA:
+        if not isinstance(doc.get("sources"), dict) \
+                or not isinstance(doc.get("files"), dict):
+            raise ValueError("candidate spec missing sources/files")
+        return "spec", doc
+    if doc.get("schema") == "gg-xlsx-formula-patch-map/v1":
+        return "map", doc
+    raise ValueError("unknown candidate schema: "
+                     + repr(doc.get("schema")))
+
+
+def c1_materialize(spec, ref, source, out, *, spec_path=None):
+    """Write a local gg-xlsx-formula-patch-map/v1 bound to the source bytes."""
+    out = Path(out)
+    if out.exists():
+        raise FileExistsError("refusing to overwrite map: " + str(out))
+    book = c1_precondition_check(spec, ref, source)
+    rows = c1_rows(spec, ref)
+    spec_bytes = Path(spec_path).read_bytes() if spec_path else None
+    spec_sha = hashlib.sha256(spec_bytes).hexdigest() if spec_bytes else None
+    patches = []
+    for sheet, cell, row in rows:
+        if ref in ("X01", "X02"):
+            revision = C1_AUDIT_REVISION
+            locator = ("formula-audit/" + ref.lower() + ".json#"
+                       + row["finding_id"])
+        else:
+            revision = C1_SPEC_SCHEMA + "@" + (spec_sha or "unspecified")
+            locator = "corrections/c1-spec.json#" + row["finding_id"]
+        patch = {
+            "sheet": sheet, "cell": cell,
+            "reason": "C1 " + row["finding_id"] + " copy correction ("
+                      + row["class"] + ")",
+            "new_formula": _c1_norm_formula(row["new_formula"]),
+            "evidence_ref": {
+                "source_id": (spec.get("sources", {}).get(ref, {})
+                              .get("source_id") or C1_SOURCE_IDS.get(ref, ref)),
+                "revision": revision,
+                "locator": locator,
+            },
+        }
+        if "expected_formula" in row:
+            patch["expected_formula"] = _c1_norm_formula(row["expected_formula"])
+        else:
+            value = book.values.get((sheet, cell))
+            if not isinstance(value, (int, float, bool)):
+                raise ValueError("value_to_formula target is not numeric: "
+                                 + sheet + "!" + cell)
+            patch["expected_value"] = value
+        patches.append(patch)
+    out_map = {
+        "schema": "gg-xlsx-formula-patch-map/v1",
+        "local_only": True,
+        "source": {"ref": ref,
+                   "sha256": hashlib.sha256(Path(source).read_bytes()).hexdigest()},
+        "spec": {"schema": C1_SPEC_SCHEMA, "sha256": spec_sha},
+        "patches": patches,
+    }
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_bytes((json.dumps(out_map, ensure_ascii=False, indent=2,
+                                sort_keys=True) + "\n").encode("utf-8"))
+    return out_map
+
+
+def c1_mutant_specs(spec, ref):
+    """Mutation suite (r3 N2 / r4 N3): every returned spec must FAIL verify."""
+    mutants = {}
+    has = {row["finding_id"] for _, _, row in c1_rows(spec, ref)}
+
+    def clone():
+        return copy.deepcopy(spec)
+
+    def row_at(doc, finding, cell):
+        for r in doc["files"][ref]:
+            if r["finding_id"] == finding and r["cell"] == cell:
+                return r
+        raise ValueError("mutant target missing " + finding + " " + cell)
+
+    if "XR-19" in has:
+        doc = clone()
+        row_at(doc, "XR-19", "E29")["new_formula"] = "='9 .경비계획'!C88"
+        row_at(doc, "XR-19", "F29")["new_formula"] = "='9 .경비계획'!C68"
+        mutants["year_swap"] = doc
+    if "XR-18" in has:
+        doc = clone()
+        # Required r4 N3 off-by-one onto the subtotal row (C49→C50 class).
+        for cell, new in (("D30", "='9 .경비계획'!C50"),
+                          ("E30", "='9 .경비계획'!C70"),
+                          ("F30", "='9 .경비계획'!C90"),
+                          ("G30", "='9 .경비계획'!C110")):
+            row_at(doc, "XR-18", cell)["new_formula"] = new
+        mutants["off_by_one"] = doc
+        # Per-year variants: each year's off-by-one is rejected by the
+        # prior-row exclusion probe (C48/C68/C88/C108, the XR-19 inputs).
+        for n, (cell, new) in enumerate((("D30", "='9 .경비계획'!C50"),
+                                         ("E30", "='9 .경비계획'!C70"),
+                                         ("F30", "='9 .경비계획'!C90"),
+                                         ("G30", "='9 .경비계획'!C110")), 1):
+            doc = clone()
+            row_at(doc, "XR-18", cell)["new_formula"] = new
+            mutants["off_by_one_y" + str(n)] = doc
+        # A target that also reads the intended input of a neighbour
+        # relation (D30 = C49+C48): vectors pass, exclusion must reject.
+        doc = clone()
+        row_at(doc, "XR-18", "D30")["new_formula"] = "='9 .경비계획'!C49+'9 .경비계획'!C48"
+        mutants["extra_input"] = doc
+    if "XR-09" in has:
+        doc = clone()
+        row_at(doc, "XR-09", "E35")["new_formula"] = "=E31+E32-E33"
+        mutants["dropped_term"] = doc
+        doc = clone()
+        row_at(doc, "XR-09", "F35")["new_formula"] = "=F31+F32+F33+F34"
+        mutants["sign_flip"] = doc
+    if "XR-22" in has:
+        doc = clone()
+        row_at(doc, "XR-22", "H44")["new_formula"] = "=H20"
+        mutants["broken_carry"] = doc
+    if "XR-20" in has:
+        doc = clone()
+        row_at(doc, "XR-20", "G16")["new_formula"] = (
+            "=G17+G20+G25+G21+G29+G30+G28+G28")
+        mutants["duplicated_term"] = doc
+    return mutants
+
+
+def c1_check(spec, ref, source, *, blocks=None):
+    """Full local gate for one bound source: canonical PASS + mutants FAIL.
+
+    Returns (ok, summary).  The summary carries the canonical report
+    (analyzer diff and baseline changes are local output only) and each
+    mutant's first observed failure.
+    """
+    approved = c1_load_spec()
+    book = c1_precondition_check(approved, ref, source)
+    c1_precondition_check(spec, ref, source)
+    rows = c1_rows(spec, ref)
+    analyzer_ref = C1_ANALYZER_REF.get(ref, ref)
+    canonical = c1_verify(book, rows, ref, blocks=blocks,
+                          analyzer_ref=analyzer_ref,
+                          include_baseline_changes=True)
+    summary = {"ref": ref,
+               "source_sha256": spec["sources"][ref]["sha256"],
+               "canonical": canonical, "mutants": {}}
+    if not canonical["ok"]:
+        return False, summary
+    for name, mutant in c1_mutant_specs(spec, ref).items():
+        report = c1_verify(book, c1_rows(mutant, ref), ref,
+                           fail_fast=True)
+        summary["mutants"][name] = {
+            "ok": report["ok"],
+            "first_failure": (report["failures"] or [None])[0]}
+    ok = canonical["ok"] and all(
+        not m["ok"] for m in summary["mutants"].values())
+    return ok, summary
+
+
+
+
+
+
+
 def audit_markdown(x01, x02):
     from collections import Counter
     lines = ["# X01·X02 formula audit — A43 / XR-01–22", "",
@@ -1326,13 +1938,23 @@ def main(argv=None):
     blocks = json.loads((output_dir / "blocks.json").read_text(encoding="utf-8"))
     extract = json.loads((root / "references/common-workbooks/kang-finance-workbook.json").read_text(encoding="utf-8"))
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", nargs="?", choices=("inventory", "audit"))
-    parser.add_argument("--ref", choices=("X01", "X02"))
+    parser.add_argument("command", nargs="?",
+                        choices=("inventory", "audit", "materialize-c1",
+                                 "verify-c1", "c1-check"))
+    parser.add_argument("--ref", choices=("X01", "X02", "SEO"))
     parser.add_argument("--source", type=Path)
     parser.add_argument("--out", type=Path)
+    parser.add_argument("--spec", type=Path,
+                        help="materialize-c1/c1-check: spec override (default: "
+                             "shipped c1-spec.json); verify-c1: the candidate "
+                             "spec file (alias of --candidate)")
+    parser.add_argument("--candidate", type=Path,
+                        help="verify-c1: candidate spec or local v1 patch map "
+                             "to check against the approved shipped spec")
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--x01", type=Path)
     parser.add_argument("--x02", type=Path)
+    parser.add_argument("--seo", type=Path)
     args = parser.parse_args(argv)
     if args.check:
         if not args.x01 or not args.x02:
@@ -1351,6 +1973,75 @@ def main(argv=None):
             raise SystemExit("AUDIT.md differs from derived report")
         print("AUDIT.md byte-identical match")
         return 0
+    if args.command == "c1-check":
+        spec = c1_load_spec(args.spec)
+        provided = {"X01": args.x01, "X02": args.x02, "SEO": args.seo}
+        provided = {k: v for k, v in provided.items() if v}
+        if not provided:
+            parser.error("c1-check requires at least one of --x01/--x02/--seo")
+        ok_all, summaries = True, {}
+        for ref, source in provided.items():
+            ok, summary = c1_check(spec, ref, source, blocks=blocks)
+            summaries[ref] = summary
+            ok_all = ok_all and ok
+            print(ref + ": canonical " + ("PASS" if summary["canonical"]["ok"] else "FAIL")
+                  + "; mutants: " + ", ".join(
+                      name + (" FAIL(expected)" if not m["ok"] else " PASS(unexpected)")
+                      for name, m in summary["mutants"].items()))
+        if args.out:
+            args.out.write_bytes(json_bytes(summaries))
+        return 0 if ok_all else 1
+    if args.command in ("materialize-c1", "verify-c1"):
+        if not args.ref or not args.source:
+            parser.error(args.command + " requires --ref and --source")
+        if args.command == "materialize-c1":
+            if args.candidate:
+                parser.error("--candidate is only valid for verify-c1")
+            if not args.out:
+                parser.error("materialize-c1 requires --out")
+            spec = c1_load_spec(args.spec)
+            c1_precondition_check(spec, args.ref, args.source)
+            out_map = c1_materialize(spec, args.ref, args.source, args.out,
+                                     spec_path=args.spec or c1_spec_path())
+            print(json.dumps({"status": "materialized", "ref": args.ref,
+                              "map": str(args.out),
+                              "patches": len(out_map["patches"])},
+                             ensure_ascii=False))
+            return 0
+        # verify-c1: the oracle is ALWAYS the approved shipped spec; the
+        # file under test comes from --candidate (or --spec) and may be a
+        # spec document or a local gg-xlsx-formula-patch-map/v1.  Without a
+        # candidate the shipped spec itself is re-verified (canonical).
+        if args.spec and args.candidate:
+            parser.error("verify-c1: use either --spec or --candidate for "
+                         "the candidate file, not both")
+        oracle = c1_load_spec()
+        book = c1_precondition_check(oracle, args.ref, args.source)
+        cand_path = args.candidate or args.spec
+        cand_kind = None
+        if cand_path is None:
+            cand_rows = c1_rows(oracle, args.ref)
+        else:
+            cand_kind, cand_doc = c1_load_candidate(cand_path)
+            if cand_kind == "spec":
+                c1_precondition_check(cand_doc, args.ref, args.source)
+                cand_rows = c1_rows(cand_doc, args.ref)
+            else:
+                cand_rows = c1_map_precondition_check(cand_doc, args.source,
+                                                      book)
+        report = c1_verify(book, cand_rows, args.ref,
+                           blocks=blocks,
+                           analyzer_ref=C1_ANALYZER_REF.get(args.ref, args.ref),
+                           include_baseline_changes=True)
+        report["oracle"] = {"spec": str(c1_spec_path())}
+        report["candidate"] = (None if cand_path is None else
+                               {"path": str(cand_path), "kind": cand_kind})
+        payload = json_bytes(report)
+        if args.out:
+            args.out.write_bytes(payload)
+        else:
+            sys.stdout.buffer.write(payload)
+        return 0 if report["ok"] else 1
     if not args.ref or not args.source:
         parser.error("--ref and --source required")
     if args.command == "inventory":

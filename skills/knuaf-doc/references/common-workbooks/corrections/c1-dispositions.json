@@ -1,0 +1,858 @@
+{
+  "basis": ".common-work/design/DESIGN-D7-C1.md r5; evidence for policy items: .common-work/research/TEXTBOOK-BASIS.md (candidate textbook sha256 661f7281ba270acd716b5106d263eae38e44c0ba88b78935649f89a51ce9a4b4 — course authority NOT established)",
+  "files": {
+    "SEO": {
+      "findings": [
+        {
+          "audit_verdict": "not_audited_same_defects_measured",
+          "class": "formula_repoint",
+          "disposition": "corrected",
+          "id": "XR-02"
+        },
+        {
+          "audit_verdict": "not_audited_same_defects_measured",
+          "class": "formula_repoint",
+          "disposition": "corrected",
+          "id": "XR-03"
+        },
+        {
+          "audit_verdict": "not_audited_same_defects_measured",
+          "class": "formula_repoint",
+          "disposition": "corrected",
+          "id": "XR-09"
+        },
+        {
+          "audit_verdict": "not_audited_same_defects_measured",
+          "class": "formula_repoint",
+          "disposition": "corrected",
+          "id": "XR-18"
+        },
+        {
+          "audit_verdict": "not_audited_same_defects_measured",
+          "class": "formula_repoint",
+          "disposition": "corrected",
+          "id": "XR-19"
+        },
+        {
+          "audit_verdict": "not_audited_same_defects_measured",
+          "class": "formula_repoint",
+          "disposition": "corrected",
+          "id": "XR-20"
+        }
+      ],
+      "note": "Same 30 group-A defective formulas measured at the same cells by the orchestrator (r5 P1); corrected via the same spec rows. XR-22 cells already carry prior-year formulas (no-op).",
+      "source_sha256": "457249255929275b3ee55383bdc36897274f08933af3536866a652b29346cd3a"
+    },
+    "X01": {
+      "findings": [
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "XR-01",
+          "required_decisions": [
+            "First-year zero-denominator display convention."
+          ]
+        },
+        {
+          "audit_verdict": "defect",
+          "class": "formula_repoint",
+          "disposition": "corrected",
+          "id": "XR-02"
+        },
+        {
+          "audit_verdict": "defect",
+          "class": "formula_repoint",
+          "disposition": "corrected",
+          "id": "XR-03"
+        },
+        {
+          "audit_verdict": "policy_dependent",
+          "disposition": "owner_options",
+          "id": "XR-04",
+          "options": [
+            {
+              "consequence": "부산물 수입만큼 주산물 기준 영농잉여보다 커질 수 있다.",
+              "option": "A: (주산물 수입 + 부산물 수입) − 경영비"
+            },
+            {
+              "consequence": "부산물 수입을 소득 기준에 넣지 않는다.",
+              "option": "B: 주산물 수입 − 경영비"
+            },
+            {
+              "consequence": "생산비와 경영비의 구성 차이만큼 A/B와 결과가 달라진다.",
+              "option": "C: 조수입 − 생산비 또는 주산물 수입 − 생산비"
+            }
+          ],
+          "textbook_evidence": "silent",
+          "unresolved": [
+            "지표별 명칭",
+            "부산물 포함 여부",
+            "경영비/생산비 범위",
+            "C11 학교 행 매핑"
+          ]
+        },
+        {
+          "audit_verdict": "policy_dependent",
+          "disposition": "owner_options",
+          "id": "XR-05",
+          "options": [
+            {
+              "consequence": "융자 증가분만큼 계도 증가한다.",
+              "option": "A: 계 = SUM(자부담:융자) — 총투자액 해석"
+            },
+            {
+              "consequence": "융자 증가에도 계가 변하지 않으므로 총자금과 별도 표시해야 한다.",
+              "option": "B: 계 = SUM(자부담:보조) — 부분 소계 해석"
+            }
+          ],
+          "textbook_evidence": "silent",
+          "unresolved": [
+            "표 제목의 계가 A/B 중 무엇인지"
+          ]
+        },
+        {
+          "audit_verdict": "policy_dependent",
+          "disposition": "owner_options",
+          "id": "XR-06",
+          "options": [
+            {
+              "consequence": "입력이 10%이면 첫해 금액은 같을 수 있으나 이후 잔존율 변경과 누계 상한에서 차이가 난다.",
+              "option": "A: 입력 셀이 잔존율이면 정액법 (취득원가−취득원가×표시 잔존율)/내용연수 + 누계 상한"
+            },
+            {
+              "consequence": "표시 셀의 의미를 별도로 정해야 한다; 현재 교재는 이를 결정하지 않는다.",
+              "option": "B: 학교가 자산별 고정 잔존율(예 10%)을 명시하면 고정률 적용"
+            },
+            {
+              "consequence": "A/B와 연간 상각액·순장부금액·손익이 달라진다.",
+              "option": "C: 법인세법 방식 선택이 확인되면 해당 자산·방법에 한해 0원(정률법 5%)·신고 내용연수 적용"
+            }
+          ],
+          "textbook_evidence": "partial",
+          "unresolved": [
+            "학교 회계기준·세법 선택",
+            "자산별 방법·잔존가치·내용연수",
+            "과수 성숙/미성숙·조성비 범위",
+            "연도별 취득·상각 개시",
+            "누계 상한 구현"
+          ]
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "XR-07",
+          "required_decisions": [
+            "Opening survey year vs balance-sheet opening year alignment decision (X01 differs)."
+          ]
+        },
+        {
+          "audit_verdict": "normal_exception",
+          "disposition": "no_action",
+          "id": "XR-08",
+          "reason": "Confirmed structural relation (normal_exception); no defect to correct."
+        },
+        {
+          "audit_verdict": "defect",
+          "class": "formula_repoint",
+          "disposition": "corrected",
+          "id": "XR-09"
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "XR-10",
+          "required_decisions": [
+            "Manual input versus automatic investment link for stored outflow cells."
+          ]
+        },
+        {
+          "audit_verdict": "policy_dependent",
+          "disposition": "owner_options",
+          "id": "XR-11",
+          "options": [
+            {
+              "consequence": "지급액은 현금지출에 반영된다; 다른 비현금 항목·중복은 별도 확인.",
+              "option": "A: C12가 실제 지급된 노동비이면 현재 식 유지"
+            },
+            {
+              "consequence": "현재 식 대비 C12만큼 현금지출이 낮아지고 순현금흐름은 그만큼 높아진다.",
+              "option": "B: C12가 전액 미지급 평가액이면 현금지출 = C31 − C21 − C12"
+            },
+            {
+              "consequence": "총액 일괄 차감은 현금지출을 과소계상한다.",
+              "option": "C: 일부만 지급됐다면 미지급 부분만 차감"
+            }
+          ],
+          "textbook_evidence": "partial",
+          "unresolved": [
+            "C12의 지급 상태·포함 범위",
+            "소득/생산원가에서 평가액을 유지하는 학교 원칙"
+          ]
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "XR-12",
+          "required_decisions": [
+            "First-year expense payment timing or payable treatment."
+          ]
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "XR-13",
+          "required_decisions": [
+            "Income tax payment timing or payable treatment."
+          ]
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "XR-14",
+          "required_decisions": [
+            "Loan contract and draw timing for later borrowing."
+          ]
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "XR-15",
+          "required_decisions": [
+            "Principal repayment timing and next-opening debt carry."
+          ]
+        },
+        {
+          "audit_verdict": "defect",
+          "disposition": "hold",
+          "id": "XR-16",
+          "required_decisions": [
+            "Complete annual debt carry: opening debt, new tranches and repayments mapped through every forecast year (the two-cell demonstration is not a correction)."
+          ]
+        },
+        {
+          "audit_verdict": "defect",
+          "disposition": "hold",
+          "id": "XR-17",
+          "required_decisions": [
+            "Opening-asset ledger mapping: which entered inherited-asset inputs should reach forecast balance and depreciation schedules, and through which cells."
+          ]
+        },
+        {
+          "audit_verdict": "defect",
+          "class": "formula_repoint",
+          "disposition": "corrected",
+          "id": "XR-18"
+        },
+        {
+          "audit_verdict": "defect",
+          "class": "formula_repoint",
+          "disposition": "corrected",
+          "id": "XR-19"
+        },
+        {
+          "audit_verdict": "defect",
+          "class": "formula_repoint",
+          "disposition": "corrected",
+          "id": "XR-20"
+        },
+        {
+          "audit_verdict": "defect",
+          "disposition": "hold",
+          "id": "XR-21",
+          "required_decisions": [
+            "Grant accounting policy: income vs equity treatment of each grant receipt and the receipt timing."
+          ]
+        },
+        {
+          "assumption": "No later purchase or disposal of that asset during the plan period.",
+          "audit_verdict": "defect",
+          "class": "value_to_formula",
+          "disposition": "corrected",
+          "id": "XR-22"
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "W-001",
+          "reason": "No counterexample or authoritative normal-exception rule yet."
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "W-002",
+          "reason": "No counterexample or authoritative normal-exception rule yet."
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "W-003",
+          "reason": "No counterexample or authoritative normal-exception rule yet."
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "W-004",
+          "reason": "No counterexample or authoritative normal-exception rule yet."
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "W-005",
+          "reason": "No counterexample or authoritative normal-exception rule yet."
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "W-006",
+          "reason": "No counterexample or authoritative normal-exception rule yet."
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "W-007",
+          "reason": "No counterexample or authoritative normal-exception rule yet."
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "W-008",
+          "reason": "No counterexample or authoritative normal-exception rule yet."
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "W-009",
+          "reason": "No counterexample or authoritative normal-exception rule yet."
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "W-010",
+          "reason": "No counterexample or authoritative normal-exception rule yet."
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "W-011",
+          "reason": "No counterexample or authoritative normal-exception rule yet."
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "W-012",
+          "reason": "No counterexample or authoritative normal-exception rule yet."
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "W-013",
+          "reason": "No counterexample or authoritative normal-exception rule yet."
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "W-014",
+          "reason": "No counterexample or authoritative normal-exception rule yet."
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "W-015",
+          "reason": "No counterexample or authoritative normal-exception rule yet."
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "W-016",
+          "reason": "No counterexample or authoritative normal-exception rule yet."
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "W-017",
+          "reason": "No counterexample or authoritative normal-exception rule yet."
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "W-018",
+          "reason": "No counterexample or authoritative normal-exception rule yet."
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "W-019",
+          "reason": "No counterexample or authoritative normal-exception rule yet."
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "W-020",
+          "reason": "No counterexample or authoritative normal-exception rule yet."
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "W-021",
+          "reason": "No counterexample or authoritative normal-exception rule yet."
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "W-022",
+          "reason": "No counterexample or authoritative normal-exception rule yet."
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "W-023",
+          "reason": "No counterexample or authoritative normal-exception rule yet."
+        }
+      ],
+      "source_sha256": "5d19b6a2e5dcddccb70c68e39abee8f423bba005c008db7b64076326a17b9c80"
+    },
+    "X02": {
+      "findings": [
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "XR-01",
+          "required_decisions": [
+            "First-year zero-denominator display convention."
+          ]
+        },
+        {
+          "audit_verdict": "defect",
+          "class": "formula_repoint",
+          "disposition": "corrected",
+          "id": "XR-02"
+        },
+        {
+          "audit_verdict": "defect",
+          "class": "formula_repoint",
+          "disposition": "corrected",
+          "id": "XR-03"
+        },
+        {
+          "audit_verdict": "policy_dependent",
+          "disposition": "owner_options",
+          "id": "XR-04",
+          "options": [
+            {
+              "consequence": "부산물 수입만큼 주산물 기준 영농잉여보다 커질 수 있다.",
+              "option": "A: (주산물 수입 + 부산물 수입) − 경영비"
+            },
+            {
+              "consequence": "부산물 수입을 소득 기준에 넣지 않는다.",
+              "option": "B: 주산물 수입 − 경영비"
+            },
+            {
+              "consequence": "생산비와 경영비의 구성 차이만큼 A/B와 결과가 달라진다.",
+              "option": "C: 조수입 − 생산비 또는 주산물 수입 − 생산비"
+            }
+          ],
+          "textbook_evidence": "silent",
+          "unresolved": [
+            "지표별 명칭",
+            "부산물 포함 여부",
+            "경영비/생산비 범위",
+            "C11 학교 행 매핑"
+          ]
+        },
+        {
+          "audit_verdict": "policy_dependent",
+          "disposition": "owner_options",
+          "id": "XR-05",
+          "options": [
+            {
+              "consequence": "융자 증가분만큼 계도 증가한다.",
+              "option": "A: 계 = SUM(자부담:융자) — 총투자액 해석"
+            },
+            {
+              "consequence": "융자 증가에도 계가 변하지 않으므로 총자금과 별도 표시해야 한다.",
+              "option": "B: 계 = SUM(자부담:보조) — 부분 소계 해석"
+            }
+          ],
+          "textbook_evidence": "silent",
+          "unresolved": [
+            "표 제목의 계가 A/B 중 무엇인지"
+          ]
+        },
+        {
+          "audit_verdict": "policy_dependent",
+          "disposition": "owner_options",
+          "id": "XR-06",
+          "options": [
+            {
+              "consequence": "입력이 10%이면 첫해 금액은 같을 수 있으나 이후 잔존율 변경과 누계 상한에서 차이가 난다.",
+              "option": "A: 입력 셀이 잔존율이면 정액법 (취득원가−취득원가×표시 잔존율)/내용연수 + 누계 상한"
+            },
+            {
+              "consequence": "표시 셀의 의미를 별도로 정해야 한다; 현재 교재는 이를 결정하지 않는다.",
+              "option": "B: 학교가 자산별 고정 잔존율(예 10%)을 명시하면 고정률 적용"
+            },
+            {
+              "consequence": "A/B와 연간 상각액·순장부금액·손익이 달라진다.",
+              "option": "C: 법인세법 방식 선택이 확인되면 해당 자산·방법에 한해 0원(정률법 5%)·신고 내용연수 적용"
+            }
+          ],
+          "textbook_evidence": "partial",
+          "unresolved": [
+            "학교 회계기준·세법 선택",
+            "자산별 방법·잔존가치·내용연수",
+            "과수 성숙/미성숙·조성비 범위",
+            "연도별 취득·상각 개시",
+            "누계 상한 구현"
+          ]
+        },
+        {
+          "audit_verdict": "normal_exception",
+          "disposition": "no_action",
+          "id": "XR-07",
+          "reason": "Confirmed structural relation (normal_exception); no defect to correct."
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "XR-08",
+          "required_decisions": [
+            "Later biological-asset cohort investment schedule (X02 only)."
+          ]
+        },
+        {
+          "audit_verdict": "defect",
+          "class": "formula_repoint",
+          "disposition": "corrected",
+          "id": "XR-09"
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "XR-10",
+          "required_decisions": [
+            "Manual input versus automatic investment link for stored outflow cells."
+          ]
+        },
+        {
+          "audit_verdict": "policy_dependent",
+          "disposition": "owner_options",
+          "id": "XR-11",
+          "options": [
+            {
+              "consequence": "지급액은 현금지출에 반영된다; 다른 비현금 항목·중복은 별도 확인.",
+              "option": "A: C12가 실제 지급된 노동비이면 현재 식 유지"
+            },
+            {
+              "consequence": "현재 식 대비 C12만큼 현금지출이 낮아지고 순현금흐름은 그만큼 높아진다.",
+              "option": "B: C12가 전액 미지급 평가액이면 현금지출 = C31 − C21 − C12"
+            },
+            {
+              "consequence": "총액 일괄 차감은 현금지출을 과소계상한다.",
+              "option": "C: 일부만 지급됐다면 미지급 부분만 차감"
+            }
+          ],
+          "textbook_evidence": "partial",
+          "unresolved": [
+            "C12의 지급 상태·포함 범위",
+            "소득/생산원가에서 평가액을 유지하는 학교 원칙"
+          ]
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "XR-12",
+          "required_decisions": [
+            "First-year expense payment timing or payable treatment."
+          ]
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "XR-13",
+          "required_decisions": [
+            "Income tax payment timing or payable treatment."
+          ]
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "XR-14",
+          "required_decisions": [
+            "Loan contract and draw timing for later borrowing."
+          ]
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "XR-15",
+          "required_decisions": [
+            "Principal repayment timing and next-opening debt carry."
+          ]
+        },
+        {
+          "audit_verdict": "defect",
+          "disposition": "hold",
+          "id": "XR-16",
+          "required_decisions": [
+            "Complete annual debt carry: opening debt, new tranches and repayments mapped through every forecast year (the two-cell demonstration is not a correction)."
+          ]
+        },
+        {
+          "audit_verdict": "defect",
+          "disposition": "hold",
+          "id": "XR-17",
+          "required_decisions": [
+            "Opening-asset ledger mapping: which entered inherited-asset inputs should reach forecast balance and depreciation schedules, and through which cells."
+          ]
+        },
+        {
+          "audit_verdict": "defect",
+          "class": "formula_repoint",
+          "disposition": "corrected",
+          "id": "XR-18"
+        },
+        {
+          "audit_verdict": "defect",
+          "class": "formula_repoint",
+          "disposition": "corrected",
+          "id": "XR-19"
+        },
+        {
+          "audit_verdict": "defect",
+          "class": "formula_repoint",
+          "disposition": "corrected",
+          "id": "XR-20"
+        },
+        {
+          "audit_verdict": "defect",
+          "disposition": "hold",
+          "id": "XR-21",
+          "required_decisions": [
+            "Grant accounting policy: income vs equity treatment of each grant receipt and the receipt timing."
+          ]
+        },
+        {
+          "audit_verdict": "normal_exception",
+          "disposition": "no_action",
+          "id": "XR-22",
+          "reason": "Source already carries prior-year formulas; audit verdict normal_exception."
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "W-001",
+          "reason": "No counterexample or authoritative normal-exception rule yet."
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "W-002",
+          "reason": "No counterexample or authoritative normal-exception rule yet."
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "W-003",
+          "reason": "No counterexample or authoritative normal-exception rule yet."
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "W-004",
+          "reason": "No counterexample or authoritative normal-exception rule yet."
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "W-005",
+          "reason": "No counterexample or authoritative normal-exception rule yet."
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "W-006",
+          "reason": "No counterexample or authoritative normal-exception rule yet."
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "W-007",
+          "reason": "No counterexample or authoritative normal-exception rule yet."
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "W-008",
+          "reason": "No counterexample or authoritative normal-exception rule yet."
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "W-009",
+          "reason": "No counterexample or authoritative normal-exception rule yet."
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "W-010",
+          "reason": "No counterexample or authoritative normal-exception rule yet."
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "W-011",
+          "reason": "No counterexample or authoritative normal-exception rule yet."
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "W-012",
+          "reason": "No counterexample or authoritative normal-exception rule yet."
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "W-013",
+          "reason": "No counterexample or authoritative normal-exception rule yet."
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "W-014",
+          "reason": "No counterexample or authoritative normal-exception rule yet."
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "W-015",
+          "reason": "No counterexample or authoritative normal-exception rule yet."
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "W-016",
+          "reason": "No counterexample or authoritative normal-exception rule yet."
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "W-017",
+          "reason": "No counterexample or authoritative normal-exception rule yet."
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "W-018",
+          "reason": "No counterexample or authoritative normal-exception rule yet."
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "W-019",
+          "reason": "No counterexample or authoritative normal-exception rule yet."
+        },
+        {
+          "audit_verdict": "open",
+          "disposition": "hold",
+          "id": "W-020",
+          "reason": "No counterexample or authoritative normal-exception rule yet."
+        }
+      ],
+      "source_sha256": "54d4e55cd57bcb1db0fbfaafe2ed42422767f1561959b8a4f3c673daf77d7e78"
+    }
+  },
+  "policy": {
+    "authority_note": "The candidate textbook is not confirmed as the course basis (author is not the course professor). It therefore does not decide any policy item; options are reported to the owner.",
+    "items": {
+      "XR-04": {
+        "evidence": "silent",
+        "options": [
+          {
+            "consequence": "부산물 수입만큼 주산물 기준 영농잉여보다 커질 수 있다.",
+            "option": "A: (주산물 수입 + 부산물 수입) − 경영비"
+          },
+          {
+            "consequence": "부산물 수입을 소득 기준에 넣지 않는다.",
+            "option": "B: 주산물 수입 − 경영비"
+          },
+          {
+            "consequence": "생산비와 경영비의 구성 차이만큼 A/B와 결과가 달라진다.",
+            "option": "C: 조수입 − 생산비 또는 주산물 수입 − 생산비"
+          }
+        ],
+        "summary": "The candidate textbook does not define 농가소득·농업소득·영농잉여 or the revenue/cost terms they use; only a generic note that term definitions differ by accounting standard (physical p.125).",
+        "unresolved": [
+          "지표별 명칭",
+          "부산물 포함 여부",
+          "경영비/생산비 범위",
+          "C11 학교 행 매핑"
+        ]
+      },
+      "XR-05": {
+        "evidence": "silent",
+        "options": [
+          {
+            "consequence": "융자 증가분만큼 계도 증가한다.",
+            "option": "A: 계 = SUM(자부담:융자) — 총투자액 해석"
+          },
+          {
+            "consequence": "융자 증가에도 계가 변하지 않으므로 총자금과 별도 표시해야 한다.",
+            "option": "B: 계 = SUM(자부담:보조) — 부분 소계 해석"
+          }
+        ],
+        "summary": "The textbook treats borrowing as a financing cash inflow (physical pp.366-367) but does not define whether the investment-plan 계 column is total investment or a partial funding subtotal.",
+        "unresolved": [
+          "표 제목의 계가 A/B 중 무엇인지"
+        ]
+      },
+      "XR-06": {
+        "evidence": "partial",
+        "options": [
+          {
+            "consequence": "입력이 10%이면 첫해 금액은 같을 수 있으나 이후 잔존율 변경과 누계 상한에서 차이가 난다.",
+            "option": "A: 입력 셀이 잔존율이면 정액법 (취득원가−취득원가×표시 잔존율)/내용연수 + 누계 상한"
+          },
+          {
+            "consequence": "표시 셀의 의미를 별도로 정해야 한다; 현재 교재는 이를 결정하지 않는다.",
+            "option": "B: 학교가 자산별 고정 잔존율(예 10%)을 명시하면 고정률 적용"
+          },
+          {
+            "consequence": "A/B와 연간 상각액·순장부금액·손익이 달라진다.",
+            "option": "C: 법인세법 방식 선택이 확인되면 해당 자산·방법에 한해 0원(정률법 5%)·신고 내용연수 적용"
+          }
+        ],
+        "summary": "The textbook gives 감가상각대상금액 = 취득원가 − 잔존가치 (p.187), straight-line (취득원가−잔존가치)/내용연수 (p.190), and a 법인세법 선택 설명 with 잔존가치 원칙 0원·정률법 5% (p.189). It does not fix this form's per-asset residual rates, useful lives, orchard establishment-cost timing, or the school-chosen standard.",
+        "unresolved": [
+          "학교 회계기준·세법 선택",
+          "자산별 방법·잔존가치·내용연수",
+          "과수 성숙/미성숙·조성비 범위",
+          "연도별 취득·상각 개시",
+          "누계 상한 구현"
+        ]
+      },
+      "XR-11": {
+        "evidence": "partial",
+        "options": [
+          {
+            "consequence": "지급액은 현금지출에 반영된다; 다른 비현금 항목·중복은 별도 확인.",
+            "option": "A: C12가 실제 지급된 노동비이면 현재 식 유지"
+          },
+          {
+            "consequence": "현재 식 대비 C12만큼 현금지출이 낮아지고 순현금흐름은 그만큼 높아진다.",
+            "option": "B: C12가 전액 미지급 평가액이면 현금지출 = C31 − C21 − C12"
+          },
+          {
+            "consequence": "총액 일괄 차감은 현금지출을 과소계상한다.",
+            "option": "C: 일부만 지급됐다면 미지급 부분만 차감"
+          }
+        ],
+        "summary": "The textbook supports the general rule that a cash-flow statement selects transactions that actually moved cash (physical p.370). It does not define the farm cost/income classification of 자가노동 평가액, whether it was paid, or this form's 생산원가 composition.",
+        "unresolved": [
+          "C12의 지급 상태·포함 범위",
+          "소득/생산원가에서 평가액을 유지하는 학교 원칙"
+        ]
+      }
+    }
+  },
+  "schema": "knuaf-c1-dispositions/v1"
+}
