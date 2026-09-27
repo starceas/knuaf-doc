@@ -181,6 +181,7 @@ def patch_copy(source: Path, map_path: Path, out: Path, *, context=None) -> dict
     import gg_major_contract as mc
 
     authorization = mc.authorize_output(mc.OUTPUT_SCHOOL_WORKBOOK, context)
+    mc.require_finance_profile(authorization, "school_17_sheet_v1")
     return _patch_copy(source, map_path, out,
                        _authorization=authorization, _context=context)
 

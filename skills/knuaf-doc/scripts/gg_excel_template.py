@@ -627,6 +627,7 @@ def blank_copy(source: Path, map_path: Path, out: Path, *, context=None) -> dict
     import gg_major_contract as mc
 
     authorization = mc.authorize_output(mc.OUTPUT_SCHOOL_WORKBOOK, context)
+    mc.require_finance_profile(authorization, "school_17_sheet_v1")
     if out.exists():
         raise FileExistsError(f"refusing to overwrite output: {out}")
     map_data = json.loads(map_path.read_text(encoding="utf-8"))

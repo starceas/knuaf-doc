@@ -919,6 +919,86 @@ def template_receipt_binding(input_path, receipt_path):
             "input_sha256": actual, "authority": "operation_receipt_only"}
 
 
+def _hort_transform_binding(input_path, receipt_path, authorization, context):
+    """Require I1's full transform proof before an Office job is staged."""
+    import gg_major_contract as mc
+
+    try:
+        from gg_hort_workbook import check_transform_receipt
+        path = Path(receipt_path).resolve()
+        data = check_transform_receipt(path)
+        if not isinstance(data, dict):
+            raise ValueError("transform receipt checker returned no record")
+        expected_root = Path(mc._normalize_context(context).project_root).resolve()
+        if Path(data.get("project_root")).resolve() != expected_root:
+            raise ValueError("transform receipt project mismatch")
+        if (data.get("schema") != "knuaf-hort-finance-receipt/v1"
+                or data.get("stage") != "transform"
+                or data.get("status") != "pass"):
+            raise ValueError("transform receipt stage or schema invalid")
+        if (data.get("profile") != "hort_18_sheet_reconstructed_v1"
+                or data.get("major_id") != authorization.major_id
+                or data.get("module_version") != authorization.module_version
+                or data.get("contract_version") != authorization.contract_version
+                or data.get("project_revision") != authorization.project_revision
+                or data.get("binding_evidence") != authorization.binding_evidence):
+            raise ValueError("transform receipt canonical binding mismatch")
+        actual = compute_sha256(Path(input_path).read_bytes())
+        artifacts = data.get("output_artifacts")
+        if (not isinstance(artifacts, list)
+                or not any(isinstance(item, dict)
+                           and item.get("sha256") == actual for item in artifacts)):
+            raise ValueError("transform output hash mismatch")
+        return {"path": str(path),
+                "sha256": compute_sha256(path.read_bytes()),
+                "input_sha256": actual,
+                "authority": "hort_transform_receipt"}
+    except Exception as error:
+        raise mc.OutputHeldError("hort_transform_receipt_invalid") from error
+
+
+def _preflight_excel_profile(input_path, auths, context, *, spec=None,
+                             template_receipt=None):
+    """Profile and receipt gate shared by direct Excel and batch paths."""
+    import gg_major_contract as mc
+
+    authorization = auths[0]
+    if spec is not None and template_receipt is not None:
+        raise mc.OutputHeldError("finance_profile_evidence_conflict")
+    if spec is not None:
+        mc.require_finance_profile(authorization, spec.get("profile"))
+        if authorization.major_id == "hort_env_systems":
+            raise mc.OutputHeldError("hort_transform_receipt_required")
+        return None, spec["profile"]
+    if authorization.major_id == "hort_env_systems":
+        mc.require_finance_profile(authorization,
+                                   "hort_18_sheet_reconstructed_v1")
+        if template_receipt is None:
+            raise mc.OutputHeldError("hort_transform_receipt_required")
+        return (_hort_transform_binding(input_path, template_receipt,
+                                        authorization, context),
+                "hort_18_sheet_reconstructed_v1")
+    if template_receipt is not None:
+        return (template_receipt_binding(input_path, template_receipt),
+                "legacy_unprofiled_render")
+    if authorization.major_id == "specialty_crops":
+        return None, "legacy_unprofiled_render"
+    raise mc.OutputHeldError("finance_profile_evidence_required")
+
+
+def _strict_json_pairs(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate spec key")
+        result[key] = value
+    return result
+
+
+def _reject_json_constant(value):
+    raise ValueError("nonfinite spec number")
+
+
 def verify_template_lineage(input_file, receipt_paths):
     """Verify local operation ancestry, never financial or human approval."""
     if not receipt_paths:
@@ -964,11 +1044,24 @@ def verify_template_lineage(input_file, receipt_paths):
         raw = path.read_bytes()
         data = json.loads(raw)
         schema = data.get("schema")
+        if (rows and rows[0]["schema"] == "knuaf-hort-finance-receipt/v1"
+                and not (data.get("status") == "converted"
+                         and data.get("engine") == "Microsoft Excel")):
+            raise ValueError("hort transform may only lead to native Excel")
         if not rows and schema not in {
             "gg-xlsx-template-receipt/v1", "gg-xlsx-fill-receipt/v1",
+            "knuaf-hort-finance-receipt/v1",
         }:
-            raise ValueError("template lineage must start with clear or fill")
-        if schema == "gg-xlsx-template-receipt/v1":
+            raise ValueError("template lineage must start with clear, fill or hort transform")
+        if schema == "knuaf-hort-finance-receipt/v1":
+            if rows:
+                raise ValueError("hort transform must start the lineage")
+            from gg_hort_workbook import check_transform_receipt
+            checked = check_transform_receipt(path)
+            source_hash = artifact_hash(checked["input_artifacts"][0], path.parent)
+            output_hash = artifact_hash(checked["output_artifacts"][0], path.parent)
+            operation_status = "transform"
+        elif schema == "gg-xlsx-template-receipt/v1":
             if rows or data.get("output", {}).get("status") not in {
                 "partial", "blank_template",
             } or not isinstance(data.get("cleared"), list):
@@ -990,6 +1083,13 @@ def verify_template_lineage(input_file, receipt_paths):
                 or validation.get("template_receipt", {}).get("sha256") != previous_receipt
             ):
                 raise ValueError("native receipt does not bind the preceding operation")
+            if rows and rows[0]["schema"] == "knuaf-hort-finance-receipt/v1":
+                if (validation.get("finance_profile") !=
+                        "hort_18_sheet_reconstructed_v1"
+                        or validation.get("previous_receipt_sha256") != previous_receipt
+                        or validation.get("template_receipt", {}).get("authority") !=
+                        "hort_transform_receipt"):
+                    raise ValueError("hort native receipt lacks transform profile")
             source_hash = data.get("input_sha256")
             output_hash = artifact_hash({
                 "path": data.get("published_office"),
@@ -1014,7 +1114,10 @@ def verify_template_lineage(input_file, receipt_paths):
     if compute_sha256(Path(input_file).read_bytes()) != previous_output:
         raise ValueError("template lineage does not reach the current workbook")
     return {
-        "status": "pass", "authority": "operation_lineage_only",
+        "status": "pass", "authority": ("hort_transform_lineage_only"
+                                      if rows[0]["schema"] ==
+                                      "knuaf-hort-finance-receipt/v1"
+                                      else "operation_lineage_only"),
         "output_sha256": previous_output, "receipts": rows,
     }
 
@@ -1136,33 +1239,39 @@ def process_excel(
     context=None,
 ) -> dict:
     """Processes Excel workbook: calculates all used ranges, saves XLSX and exports PDF in same session."""
+    import gg_major_contract as mc
+
     input_path = Path(input_file).absolute()
     spec_for_guard = None
-    if spec_file and Path(spec_file).is_file():
+    if spec_file is not None:
         try:
-            loaded = json.loads(Path(spec_file).read_text(encoding="utf-8"))
-        except (OSError, ValueError):
-            loaded = None
-        spec_for_guard = loaded if isinstance(loaded, dict) else None
+            loaded = json.loads(
+                Path(spec_file).read_text(encoding="utf-8"),
+                object_pairs_hook=_strict_json_pairs,
+                parse_constant=_reject_json_constant,
+            )
+        except (OSError, ValueError) as error:
+            raise mc.OutputHeldError("finance_spec_invalid") from error
+        if not isinstance(loaded, dict):
+            raise mc.OutputHeldError("finance_spec_invalid")
+        spec_for_guard = loaded
     auths = _authorize_office(input_path, "workbook", context,
                               spec=spec_for_guard)
+    binding, finance_profile = _preflight_excel_profile(
+        input_path, auths, context, spec=spec_for_guard,
+        template_receipt=template_receipt)
     out_path = Path(out_dir).absolute()
     ws_root = Path(workspace).resolve() if workspace else DEFAULT_GROUP_CONTAINER_DIR
-
-    if spec_file:
-        spec_path = Path(spec_file).absolute()
-        if not spec_path.is_file():
-            raise ValueError(f"지정된 spec 파일이 존재하지 않습니다: {spec_file}")
-
-    binding = None
-    if template_receipt:
-        if spec_file:
-            raise ValueError("template receipt and generated-workbook spec cannot be combined")
-        binding = template_receipt_binding(input_path, template_receipt)
 
     job_dir, staged_in, staged_work, staged_pdf, orig_sha = stage_job(
         input_path, ws_root, resources
     )
+
+    if binding and binding["authority"] == "hort_transform_receipt":
+        if (orig_sha != binding["input_sha256"] or
+                _hort_transform_binding(input_path, template_receipt,
+                                        auths[0], context) != binding):
+            raise mc.OutputHeldError("hort_transform_receipt_stale")
 
     try:
         res = _run_excel_engine(staged_work, staged_pdf, timeout=timeout)
@@ -1329,7 +1438,13 @@ def process_excel(
         "school_issues": school_issues,
         "school_validation": school_validation_status,
         "template_receipt": binding,
-        "financial_content_validation": "not_run" if binding else "see_school_issues_and_spec",
+        "finance_profile": finance_profile,
+        "previous_receipt_sha256": (binding["sha256"] if binding and
+                                     binding["authority"] == "hort_transform_receipt"
+                                     else None),
+        "financial_content_validation": ("not_run" if binding or
+                                         finance_profile == "legacy_unprofiled_render"
+                                         else "see_school_issues_and_spec"),
         "preservation_scope": ["sheet_order", "sheet_visibility", "merged_ranges", "print_ranges", "formulas", "nonblank_values"] if binding else None,
         "template_format_changes": template_format_changes,
         "number_format_validation": "changes_reported_for_visual_review" if binding else None,
@@ -1340,6 +1455,10 @@ def process_excel(
             "status": "page_count_floor_met",
         },
     }
+    if binding and binding["authority"] == "hort_transform_receipt":
+        if _hort_transform_binding(input_path, template_receipt,
+                                   auths[0], context) != binding:
+            raise mc.OutputHeldError("hort_transform_receipt_stale")
     recorded = _reconfirm_office(auths, context, staged_pdf, "workbook",
                                  job_dir)
     receipt = _publish_outputs(
@@ -1376,7 +1495,8 @@ def process_batch(
         if ext == ".docx":
             _authorize_office(p, "paper", context)
         elif ext == ".xlsx":
-            _authorize_office(p, "workbook", context)
+            auths = _authorize_office(p, "workbook", context)
+            _preflight_excel_profile(p, auths, context)
     results = []
     failed_apps = set()
     permission_instructions = []
@@ -1515,7 +1635,8 @@ def main(argv=None):
     sp_e.add_argument("input", help="입력 XLSX 파일 경로")
     sp_e.add_argument("--out-dir", "--out", dest="out_dir", required=True, help="새 대상 출력 디렉터리")
     sp_e.add_argument("--resources", nargs="*", default=[], help="동반 리소스 파일 목록")
-    sp_e.add_argument("--template-receipt", default=None, help="입력 XLSX 해시와 일치하는 fill 영수증; 원본 양식 보존 검사, 내용 판정 별도")
+    sp_e.add_argument("--template-receipt", default=None,
+                      help="입력 XLSX 해시와 일치하는 작업 영수증(원예는 transform 필수); 내용 판정 별도")
     sp_e.add_argument("--spec", default=None, help="학교 17시트 검증용 입력 명세 JSON 경로")
     sp_e.add_argument("--timeout", type=int, default=90, help="AppleScript 타임아웃(초)")
     sp_e.add_argument("--workspace", default=None, help="커스텀 Group Container 작업영역 경로")

@@ -14,6 +14,7 @@ import sys
 import tempfile
 import unicodedata
 from pathlib import Path
+from unittest import mock
 
 from tests._harness import ContractCase, SCRIPTS, runtime
 
@@ -84,7 +85,7 @@ def synth_profile(workbook_sha=WB_SHA):
     return {
         "schema": "knuaf-hort-env-profile/v1",
         "major_id": "hort_env_systems",
-        "module_version": "0.1.0",
+        "module_version": "0.2.0",
         "notice": "합성 시험용 profile — 모든 값이 합성이다.",
         "precedents": [
             _synth_precedent("HT1", "draft_1_by_filename", 200,
@@ -153,7 +154,7 @@ def _base_project():
     return p
 
 
-def _binding_fact(major_id=MAJOR, module_version="0.1.0", fid="m0"):
+def _binding_fact(major_id=MAJOR, module_version="0.2.0", fid="m0"):
     return _fact(fid, "common.major_id", "provided", value=major_id,
                  scope="project", verification="claim_supported",
                  module_version=module_version)
@@ -205,6 +206,38 @@ class _PlanCase(ContractCase):
 
 
 class BindingHeldTests(_PlanCase):
+    def test_old_binding_requires_new_revision_without_changing_answers(self):
+        root = self._project(facts=[_binding_fact(module_version="0.1.0"),
+                                    _fact("a1", MAJOR + ".crop_item",
+                                          "provided", value=SENTINEL_VALUE)])
+        before = (root / "project.json").read_bytes()
+        plan, code = self.hp.build_plan(root, registry=self._registry(),
+                                        profile_path=self._profile_file())
+        self.assertEqual((code, plan["reason"]), (2, "module_rebind_required"))
+        self.assertFalse(plan["prior_plan_reviews_valid"])
+        self.assertTrue(plan["professor_reapproval_required"])
+        self.assertEqual((root / "project.json").read_bytes(), before)
+
+    def test_rebound_plan_marks_older_review_invalid(self):
+        binding = _binding_fact()
+        binding["revision"] = 3
+        root = self._project(facts=[binding])
+        project_path = root / "project.json"
+        project = json.loads(project_path.read_text(encoding="utf-8"))
+        project["reviews"]["prior-plan"] = {
+            "id": "prior-plan", "input_revision": 2, "status": "pass"}
+        project_path.write_text(json.dumps(project, ensure_ascii=False),
+                                encoding="utf-8")
+        before = project_path.read_bytes()
+        with mock.patch.object(self.hp.gg_core, "load", return_value=project):
+            plan, code = self.hp.build_plan(root, registry=self._registry(),
+                                            profile_path=self._profile_file())
+        self.assertEqual(code, 0)
+        self.assertEqual(plan["migration"]["prior_plan_review_ids_invalidated"],
+                         ["prior-plan"])
+        self.assertTrue(plan["migration"]["professor_reapproval_required"])
+        self.assertEqual(project_path.read_bytes(), before)
+
     def test_no_binding_returns_common_only_held(self):
         root = self._project()
         plan, code = self.hp.build_plan(
@@ -221,7 +254,8 @@ class BindingHeldTests(_PlanCase):
             major_id="other_major", module_version="0.1.0",
             capabilities={"question": "supported"},
         )
-        root = self._project(facts=[_binding_fact("other_major")])
+        root = self._project(facts=[_binding_fact(
+            "other_major", module_version="0.1.0")])
         plan, code = self.hp.build_plan(
             root, registry=self._registry(other, self.module),
             profile_path=self._profile_file()
@@ -811,9 +845,9 @@ class PlanContractTests(_PlanCase):
         self.assertEqual(plan["status"], "ok")
         self.assertEqual(plan["binding"]["major_id"], MAJOR)
         self.assertEqual(plan["binding"]["basis"], "legacy_record")
-        self.assertEqual(plan["binding"]["module_version"], "0.1.0")
+        self.assertEqual(plan["binding"]["module_version"], "0.2.0")
         self.assertEqual(plan["project_revision"], 3)
-        self.assertEqual(plan["module_version"], "0.1.0")
+        self.assertEqual(plan["module_version"], "0.2.0")
         self.assertRegex(plan["profile_sha256"], r"^[0-9a-f]{64}$")
         self.assertEqual(
             [q["field_id"] for q in plan["questions"]],
@@ -832,7 +866,8 @@ class PlanContractTests(_PlanCase):
         self.assertEqual(plan["finance"]["status"], "unsupported")
         for fp in plan["finance"]["profiles"]:
             self.assertEqual(set(fp), {"profile", "status", "reason"})
-            self.assertEqual(fp["status"], "unsupported")
+        self.assertEqual([fp["status"] for fp in plan["finance"]["profiles"]],
+                         ["supported", "unsupported", "unsupported"])
         banned = {"calculated", "computed", "result"}
         for key in _all_keys(plan):
             self.assertNotIn(key, banned)

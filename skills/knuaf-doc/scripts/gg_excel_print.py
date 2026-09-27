@@ -191,6 +191,7 @@ def apply(source, map_path, out, receipt_path, *, context=None):
     read or staged, and reconfirmed just before publication."""
     import gg_major_contract as mc
     authorization = mc.authorize_output(mc.OUTPUT_SCHOOL_WORKBOOK, context)
+    mc.require_finance_profile(authorization, "school_17_sheet_v1")
     source, map_path, out, receipt_path = map(Path, (source, map_path, out, receipt_path))
     paths = [p.resolve() for p in (source, map_path, out, receipt_path)]
     if len(set(paths)) != 4: raise ValueError('source, map, output, and receipt must be different')

@@ -20,6 +20,13 @@ def build(base, input_path, out_path, *, major_id=None):
 
     context = mc.output_context(base, major_id)
     spec = json.loads(local(base, input_path).read_text(encoding="utf-8"))
+    if not isinstance(spec, dict):
+        raise mc.OutputHeldError("finance_profile_evidence_required")
+    authorization = mc.authorize_output(
+        mc.OUTPUT_SCHOOL_WORKBOOK, context, spec=spec)
+    mc.require_finance_profile(authorization, spec.get("profile"))
+    if authorization.major_id == "hort_env_systems":
+        raise mc.OutputHeldError("hort_transform_receipt_required")
     issues = validate_economic_inputs(spec, purpose="draft")
     if any(i["status"] == "fail" for i in issues):
         return {
