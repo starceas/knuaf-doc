@@ -23,6 +23,40 @@ class UnsupportedError(Exception):
     """
 
 
+SUPPORTED_FUNCTIONS = frozenset({
+    'IF', 'IFERROR', 'IFNA', 'ISERROR', 'ISNUMBER', 'NA',
+    'AND', 'OR', 'NOT',
+    'SUM', 'MAX', 'MIN', 'COUNT', 'AVERAGE',
+    'LEN', 'RIGHT', 'ROUND', 'INT', 'TEXT',
+    'COUNTIF', 'SUMIF', 'SUMIFS', 'COUNTIFS',
+    'PMT', 'DATE', 'YEAR', 'MONTH', 'DAY',
+})
+
+
+def check_supported(node):
+    """Reject unsupported function/name tokens before any evaluation.
+
+    The unsupported verdict must win over every catchable cell error, so
+    each function name is checked before its arguments can raise one.
+    Scanning the whole parsed formula up front also covers names that lazy
+    evaluation would never reach (e.g. an unselected IF branch).
+    """
+    kind = node[0]
+    if kind == 'call':
+        if node[1] not in SUPPORTED_FUNCTIONS:
+            raise UnsupportedError('unsupported function ' + node[1])
+        for arg in node[2]:
+            check_supported(arg)
+    elif kind == 'name':
+        if node[1] not in ('TRUE', 'FALSE'):
+            raise UnsupportedError('unsupported name')
+    elif kind == 'unary':
+        check_supported(node[2])
+    elif kind == 'binary':
+        check_supported(node[2])
+        check_supported(node[3])
+
+
 TOKEN = re.compile(r'''\s*(?:
     (?P<string>"(?:[^"]|"")*")|
     (?P<ref>(?:(?:'[^']+'|[\w.가-힣]+)!)?\$?[A-Z]{1,3}\$?\d+)|
@@ -206,7 +240,9 @@ class Evaluator:
             return self.defaults.get(key)
         self.stack.add(key)
         try:
-            result = self.eval(Parser(self.formulas[key]).parse(), sheet)
+            tree = Parser(self.formulas[key]).parse()
+            check_supported(tree)
+            result = self.eval(tree, sheet)
             # Excel's top-level formula =<blank reference> caches numeric 0.
             # A raw blank reference remains None inside ISNUMBER and IF.
             if result is None:
@@ -274,6 +310,8 @@ class Evaluator:
             if op == '^': return a**b
         if kind == 'call':
             fn, args = node[1:]
+            if fn not in SUPPORTED_FUNCTIONS:
+                raise UnsupportedError('unsupported function ' + fn)
             if fn == 'IF':
                 if len(args) not in (2,3): raise UnsupportedError('IF arity')
                 return self.eval(args[1 if _truth(self.eval(args[0], sheet)) else 2], sheet) if len(args)==3 or _truth(self.eval(args[0],sheet)) else False

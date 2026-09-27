@@ -123,6 +123,7 @@ class RealTreeTests(ContractCase):
             # files on top of P12 — four at commit fbe36ea plus the two
             # I4-FIX helpers folded into the same stage. I5-FIX updates
             # existing files only, so the declared counts stay 112 / 85.
+            # I6-FIX likewise touches only the existing evaluator file.
             self.assertEqual(112, rc["verified"])
             self.assertEqual(85, rc["new_count"])
         else:

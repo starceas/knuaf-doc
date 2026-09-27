@@ -97,7 +97,7 @@
       "origin": "new"
     },
     "tests/test_hort_finance_pipeline.py": {
-      "note": "P13: end-to-end plan -> transform -> native -> verify chain on synthetic fixture bytes and synthetic contracts. I3D: teacher_image residue counterexamples included. | I4-FIX(P13): 공식 manifest·PDF 합성 fixture와 영수증·입력 의미·수치 캐시 반례 추가. | I5-FIX(P13): Astra-2 빈 캐시·미지원 오류 래퍼 회귀와 Excel 셀 오류 분리 시험.",
+      "note": "P13: end-to-end plan -> transform -> native -> verify chain on synthetic fixture bytes and synthetic contracts. I3D: teacher_image residue counterexamples included. | I4-FIX(P13): 공식 manifest·PDF 합성 fixture와 영수증·입력 의미·수치 캐시 반례 추가. | I5-FIX(P13): Astra-2 빈 캐시·미지원 오류 래퍼 회귀와 Excel 셀 오류 분리 시험. | I6-FIX(P13): Astra-3 인수 오류 먼저 잡히는 미지원 우회 반례(ISNA+NA 래퍼)·lazy 분기 미지원 스캔 회귀 시험 추가.",
       "origin": "new"
     },
     "tests/test_hort_workbook.py": {

@@ -519,7 +519,19 @@ class Chain(unittest.TestCase):
         evaluator would agree with."""
         import io
         for label, formula in (("iferror", "=IFERROR(ABS(-1),0)"),
-                               ("isnumber", "=IF(ISNUMBER(ABS(-1)),1,0)")):
+                               ("isnumber", "=IF(ISNUMBER(ABS(-1)),1,0)"),
+                               # Astra-3: the unsupported function's own
+                               # arguments raise a catchable cell error, so
+                               # an outer wrapper swallows it before the
+                               # unsupported verdict is reached.
+                               ("iferror_arg_error",
+                                "=IFERROR(IF(ISNA(NA()),1,0),0)"),
+                               ("ifna_arg_error",
+                                "=IFNA(IF(ISNA(NA()),1,0),0)"),
+                               ("iserror_arg_error",
+                                "=IF(ISERROR(ISNA(NA())),0,1)"),
+                               ("isnumber_arg_error",
+                                "=IF(ISNUMBER(ISNA(NA())),1,0)")):
             with self.subTest(label=label):
                 docs = copy.deepcopy(self.docs)
                 target = next(e for e in docs[h.FILES[0]]["entries"]
@@ -530,6 +542,7 @@ class Chain(unittest.TestCase):
                 self.plan_rec = Path(self.temp.name) / f"plan-{label}.json"
                 self.transform_rec = Path(self.temp.name) / f"transform-{label}.json"
                 self.native_rec = Path(self.temp.name) / f"native-{label}.json"
+                self.verify_rec = Path(self.temp.name) / f"verify-{label}.json"
                 with mock.patch.object(h, "contracts", return_value=docs):
                     self._run_to_transform()
                     _native_workbook(self.native, self.roster,
@@ -572,6 +585,23 @@ class Chain(unittest.TestCase):
             run("=ISERROR(ABS(-1))")
         with self.assertRaises(fe.UnsupportedError):
             run("=SUM(ABS(-1),1)")
+        # Astra-3: an unsupported function name must surface before its
+        # arguments can produce a catchable Excel cell error that an
+        # IFERROR/IFNA/ISERROR/ISNUMBER wrapper would absorb.
+        with self.assertRaises(fe.UnsupportedError):
+            run("=IFERROR(IF(ISNA(NA()),1,0),0)")
+        with self.assertRaises(fe.UnsupportedError):
+            run("=IFNA(IF(ISNA(NA()),1,0),0)")
+        with self.assertRaises(fe.UnsupportedError):
+            run("=IF(ISERROR(ISNA(NA())),0,1)")
+        with self.assertRaises(fe.UnsupportedError):
+            run("=IF(ISNUMBER(ISNA(NA())),1,0)")
+        # The same rule reaches unsupported names an error wrapper cannot
+        # see because a lazy IF branch never selects them.
+        with self.assertRaises(fe.UnsupportedError):
+            run("=IF(1=1,7,ISNA(0))")
+        with self.assertRaises(fe.UnsupportedError):
+            run("=IF(1=2,ABS(0),7)")
         # Genuine Excel cell errors stay catchable by the wrappers.
         self.assertEqual(run("=IFERROR(1/0,7)"), 7)
         self.assertEqual(run("=IFNA(NA(),5)"), 5)
