@@ -133,12 +133,12 @@
       "source": "new"
     },
     "skills/knuaf-doc/SKILL.md": {
-      "after_sha256": "ea2b10cc6d63a0cb8c645482f7ce5ad88cf61491a14b4e8d7400c76abeba9804",
+      "after_sha256": "b845240622798e447f0549428f3544364a5b6cbcf9e6aabb6d74fd3b4867f25d",
       "before_sha256": "c0008fa5239cc16411fd4ef24b5bf901c7a8b9b50c6b621e2bdee3acf734ddc0",
       "first_changed": "P1",
       "last_changed": "P24",
       "owner": "P24",
-      "reason": "H11 문서 정정: 사용자 명시 모델도 임의 폴백·대체 금지 규칙 추가 | P5-D1 guidance sync: new '참고자료 폴더 등록' bullet documents the frozen source-scan→source-resolve→source-register→source-view lifecycle and 03_sources.md preservation | P6: document explicit major binding and current industrial insect capability boundary | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P8: fruit_trees plan-only capability and guidance link | P9: hort_env_systems plan-only capability and guidance link | P10: P9: common XLSX template rule + X02 layout guard sentence | P9-D3: major-specific workbook precedence sentence (hort_env_systems base = registered H01) | P11 공용 인터뷰 규칙: 전공별 핵심 전제 목록(C1), 동적 영향 순위(C2), '모르겠다' 도움(C3), 충돌 정리(C5), 미준비 전공 안내, 특용작물 probe 문서 | P12: industrial_insects plan/evidence commands and built-in reuse guidance | P13: D4 identity-catalogue-only precedence guidance | P14: fruit_trees read-only production and inventory check link | P17: rda-lookup verification-state guidance sentence (verified is observation confirmation, not approval; unverified/ambiguous/series and 옮기지 말 것 labels never copied) | P18: industrial_insects 0.2.0 product lines, plan without selection, rebinding guidance | P21 C1: seo-minseo template materialize-c1 --ref SEO + formula_patch application guidance | P22: 학생 오류·불편 신고 안내 한 줄과 신고 절 | P23: C1b option-A assumption and copy-only guidance merged with #22 student-report section | P24: 첫 진입 알림·업데이트 경로·7단계 단위 보고 목록",
+      "reason": "H11 문서 정정: 사용자 명시 모델도 임의 폴백·대체 금지 규칙 추가 | P5-D1 guidance sync: new '참고자료 폴더 등록' bullet documents the frozen source-scan→source-resolve→source-register→source-view lifecycle and 03_sources.md preservation | P6: document explicit major binding and current industrial insect capability boundary | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P8: fruit_trees plan-only capability and guidance link | P9: hort_env_systems plan-only capability and guidance link | P10: P9: common XLSX template rule + X02 layout guard sentence | P9-D3: major-specific workbook precedence sentence (hort_env_systems base = registered H01) | P11 공용 인터뷰 규칙: 전공별 핵심 전제 목록(C1), 동적 영향 순위(C2), '모르겠다' 도움(C3), 충돌 정리(C5), 미준비 전공 안내, 특용작물 probe 문서 | P12: industrial_insects plan/evidence commands and built-in reuse guidance | P13: D4 identity-catalogue-only precedence guidance | P14: fruit_trees read-only production and inventory check link | P17: rda-lookup verification-state guidance sentence (verified is observation confirmation, not approval; unverified/ambiguous/series and 옮기지 말 것 labels never copied) | P18: industrial_insects 0.2.0 product lines, plan without selection, rebinding guidance | P21 C1: seo-minseo template materialize-c1 --ref SEO + formula_patch application guidance | P22: 학생 오류·불편 신고 안내 한 줄과 신고 절 | P23: C1b option-A assumption and copy-only guidance merged with #22 student-report section | P24: 첫 진입 알림·업데이트 경로·7단계 단위 보고 목록 | P24 F1: progress grouping is deterministic for consecutive finished and remaining stages",
       "source": "new"
     },
     "skills/knuaf-doc/references/benchmark-packs/aliases/crop-aliases.specialty_crops.json": {
@@ -615,12 +615,12 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/update.md": {
-      "after_sha256": "18b4714316506f0155a24f846ee9760edcd222af97e7809f15a91e9a6e5fdc3d",
+      "after_sha256": "748d7cda8d5d4efd342eca2e7beaa154b226d352e8a46c0cef3fa9ff82b04065",
       "before_sha256": null,
       "first_changed": "P24",
       "last_changed": "P24",
       "owner": "P24",
-      "reason": "P24: 업데이트 동의·상태·복구 안내",
+      "reason": "P24: 업데이트 동의·상태·복구 안내 | P24 F1: recover command documents POSIX quoting and argv",
       "source": "new"
     },
     "skills/knuaf-doc/references/workbook-reference-set.json": {
@@ -962,12 +962,12 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_report.py": {
-      "after_sha256": "49febfc8dd382dfa78cc43cd85d5b963a146285aa7572fe7fff213b751054047",
+      "after_sha256": "c1fed834aff9354dc1d7999d818b7ccdb7bf9f8f93696f49b7da0451af69ac16",
       "before_sha256": null,
       "first_changed": "P22",
       "last_changed": "P24",
       "owner": "P24",
-      "reason": "P22: 학생 오류·불편 신고 스크립트 — draft/show/send, 공개 경로 가림·UTF-16 상한·private 1900 합성, 고정 수신처+시험 endpoint 기록, 전송 claim·영수증·delivery_unknown/--retry-unknown·sent_unrecorded, claim 획득 뒤 재확인(dup), payload 보유 필드 기준 worker_would_alter | F1 처분: 공개 메타데이터(environment·skill_version) 재검사, ECMAScript trim 일치, 계약 형태 명시 실패만 확정 미접수, done 기록 내용 검증, 초안 바이트 그대로 쓰기(CRLF 무관 sha), private 버전 줄바꿈 1개 | F1 재확인 처분: 비문자열 error는 계약 밖(delivery_unknown), 판별 불가 done 기록은 기본 재전송을 막음(delivery_unknown, --retry-unknown만 진행) | P22: main fd94e6d(P22) 위로 재기준화(provisional P22→P22→P22) | P24: 복사 설치 version.json 엄격 판독 후 신고 버전 표시",
+      "reason": "P22: 학생 오류·불편 신고 스크립트 — draft/show/send, 공개 경로 가림·UTF-16 상한·private 1900 합성, 고정 수신처+시험 endpoint 기록, 전송 claim·영수증·delivery_unknown/--retry-unknown·sent_unrecorded, claim 획득 뒤 재확인(dup), payload 보유 필드 기준 worker_would_alter | F1 처분: 공개 메타데이터(environment·skill_version) 재검사, ECMAScript trim 일치, 계약 형태 명시 실패만 확정 미접수, done 기록 내용 검증, 초안 바이트 그대로 쓰기(CRLF 무관 sha), private 버전 줄바꿈 1개 | F1 재확인 처분: 비문자열 error는 계약 밖(delivery_unknown), 판별 불가 done 기록은 기본 재전송을 막음(delivery_unknown, --retry-unknown만 진행) | P22: main fd94e6d(P22) 위로 재기준화(provisional P22→P22→P22) | P24: 복사 설치 version.json 엄격 판독 후 신고 버전 표시 | P24 F1: unreadable version encoding falls back to plugin version or unknown",
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_research_handoff.py": {
@@ -1024,12 +1024,12 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_update.py": {
-      "after_sha256": "17ae79e8a00b445ce382b1834eb50fbe531ed632d21ff20dc3472fd34a61c592",
+      "after_sha256": "33c72e99de5798abd756fca6085ea70b6262f711725373cfddbd1f437d118779",
       "before_sha256": null,
       "first_changed": "P24",
       "last_changed": "P24",
       "owner": "P24",
-      "reason": "P24: 릴리스 확인·복사 설치 교체·저널 복구 CLI",
+      "reason": "P24: 릴리스 확인·복사 설치 교체·저널 복구 CLI | P24 F1: strict lock and recovery ownership, staging identity, quoted recovery, raw ZIP names and unreadable versions",
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_workbook_audit.py": {

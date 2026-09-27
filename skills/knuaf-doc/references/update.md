@@ -51,7 +51,7 @@
 | refused not_newer / target_version_invalid / source_target_alias | 대상이 지금 버전보다 낮지 않거나 knuaf-doc 0.1.0 설치본으로 확인되지 않는다. 다른 폴더를 가리켰는지 확인한다. |
 | refused symlinked_path / cwd_inside_skill / cross_device / unsafe_state_path / helper_exists | 경로·장치 안전 검사에서 멈췄다. 파일은 바뀌지 않았다. 상태 그대로 개발자에게 신고한다. |
 | failed old_restored / target_intact | 새 버전을 놓지 못해 원래대로 되돌렸다. 학생 파일은 그대로다. 신고를 권한다. |
-| failed backup_preserved_target_missing | 예상 밖 상태. backup과 recover 명령을 보존하고 그 명령을 실행한다: `python3 <state_dir>/bin/gg_update-<txid>.py recover --home <홈> --confirm`. |
+| failed backup_preserved_target_missing | 예상 밖 상태. backup과 recover 명령을 보존하고 그 명령을 실행한다: `python3 <state_dir>/bin/gg_update-<txid>.py recover --home <홈> --confirm`. JSON의 `recover` 문자열은 POSIX 인용이 적용되고 `recover_argv`는 인용 없는 인자 배열이므로 셸 없이 실행할 때는 `recover_argv`를 쓴다. |
 | recover: recovered_old | 이전 버전이 복원됐다. check로 현재 버전을 확인한다. |
 | recover: completed | 새 버전이 이미 놓여 있었다. 새 채팅을 안내한다. |
 | recover: not_started | 교체가 시작되지 않았다. 기존 설치 그대로다. |

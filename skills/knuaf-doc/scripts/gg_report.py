@@ -302,7 +302,7 @@ def _read_version_json(path):
     """knuaf-doc/version@1 엄격 판독. 판독 불가면 None."""
     try:
         raw = Path(path).read_text(encoding="utf-8")
-    except OSError:
+    except (OSError, UnicodeDecodeError):
         return None
     pairs = []
     try:

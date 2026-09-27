@@ -209,7 +209,7 @@
       "origin": "new"
     },
     "tests/test_update_check.py": {
-      "note": "P24 U1: version/check URL matrix, copy install path and ZIP guards, apply/adopt/lock/recover cut points, independent helper and guidance regression tests; synthetic and temp fixtures only",
+      "note": "P24 U1: version/check URL matrix, copy install path and ZIP guards, apply/adopt/lock/recover cut points, independent helper and guidance regression tests; synthetic and temp fixtures only | P24 F1: reviewer counterexamples, race, malformed data, negative controls, exact skill guidance and 23 Location rows.",
       "origin": "new"
     },
     "tests/test_workbook_c1b_correction.py": {

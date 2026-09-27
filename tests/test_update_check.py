@@ -174,6 +174,18 @@ def _zip(items):
     return buf.getvalue()
 
 
+def _zip_with_extra(name, data=b"", *, mode=0o100644,
+                    compress=zipfile.ZIP_DEFLATED):
+    """정상 새 트리 zip(_good_zip)에 위반 항목 하나를 더한 fixture.
+
+    정상 트리를 유지한 채 조건 하나만 위반하므로 거절이 그 조건에서
+    나왔음이 보장된다."""
+    buf = io.BytesIO(_good_zip())
+    with zipfile.ZipFile(buf, "a", compression=compress) as zf:
+        zf.writestr(_zi(name, mode=mode, compress=compress), data)
+    return buf.getvalue()
+
+
 def _good_zip(version="0.1.2", top=None):
     """git archive --prefix 형태(디렉터리 항목 포함)의 정상 저장소 zip."""
     top = top or ("knuaf-doc-" + version)
@@ -209,7 +221,10 @@ def _corrupt_entry_bytes(data, victim_name):
 
 # subprocess 절단 드라이버: 모듈 훅을 감은 뒤 지정 절단점에서 os._exit한다.
 # 인자: driver.py <gg_update.py> adopt <cut> <source> <target>
+#       driver.py <gg_update.py> recover <cut> <home>
 # cut: wj<N>(N번째 journal 기록 직후), rn<N>(N번째 rename 직후),
+#      pw<S>(prepared journal 기록 직후 S초 수면 — lock은 계속 소유),
+#      rbk(rename(2) 실패 → rollback rename 성공 직후 절단),
 #      hold<S>(lock 획득 뒤 S초 수면), '-'(절단 없음)
 _DRIVER = """
 import importlib.util, json, os, sys, time
@@ -236,6 +251,23 @@ elif cut.startswith("rn"):
         if calls[0] == n:
             os._exit(0)
     mod._rename = rn
+elif cut.startswith("pw"):
+    secs = float(cut[2:]); orig = mod._write_journal
+    def pw(sd, doc):
+        orig(sd, doc)
+        if doc.get("phase") == "prepared":
+            time.sleep(secs)
+    mod._write_journal = pw
+elif cut == "rbk":
+    calls = [0]; orig = mod._rename
+    def rbk(a, b):
+        calls[0] += 1
+        if calls[0] == 2:
+            raise OSError("rename(2) injected failure")
+        orig(a, b)
+        if calls[0] == 3:
+            os._exit(0)  # rollback 성공 직후, phase 기록 전 절단
+    mod._rename = rbk
 elif cut.startswith("hold"):
     secs = float(cut[4:]); orig = mod._acquire_lock
     def al(sd, nonce):
@@ -248,6 +280,8 @@ if mode == "adopt":
     out = mod.adopt_cmd(rest[0], rest[1], confirm=True)
 elif mode == "apply":
     out = mod.apply_cmd(rest[0], confirm=True)
+elif mode == "recover":
+    out = mod.recover_cmd(rest[0], confirm=True)
 else:
     out = {"status": "error", "reason": "bad_mode"}
 print(json.dumps(out, ensure_ascii=False))
@@ -436,43 +470,130 @@ class UpdateTests(_UpdateCase):
             t, loc=_loc("0.1.3"))[1]["reason"])
 
     def test_zip_rejections_leave_installed_tree(self):
-        cases = (
-            [("top/skills/knuaf-doc/../evil", b"x")],
-            [("/top/skills/knuaf-doc/x", b"x")],
-            [("top/skills/knuaf-doc\\x", b"x")],
-            [("C:top/skills/knuaf-doc/x", b"x")],
-            [("top/a", b"a"), ("other/b", b"b")],
-            [("top/A", b"a"), ("top/a", b"b")],
-            [("top/a", b"a"), ("top/a/b", b"b")],
-            [("top//a", b"a")], [("top/a//", b"a")],
-            [("", b"a")],
-            [("top/a/", b"a", 0o100644)],
-            [("top/a", b"a", 0o120777)],
+        """정상 새 트리를 유지한 채 조건 하나만 위반한 fixture가 정확한
+        reason/detail로 거절되고 기존 설치를 보존하는지 본다."""
+        top = "knuaf-doc-0.1.2"
+        single = (
+            (top + "/skills/knuaf-doc/../evil", b"x", {}, "bad_component"),
+            ("/" + top + "/skills/knuaf-doc/x", b"x", {}, "absolute"),
+            (top + "/skills/knuaf-doc" + BS + "x", b"x", {}, "bad_chars"),
+            ("C:" + top + "/skills/knuaf-doc/x", b"x", {}, "bad_chars"),
+            ("other-top/x", b"x", {}, "top_folder"),
+            (top + "/skills/knuaf-doc/skill.md", b"x", {}, "duplicate"),
+            (top + "/skills/knuaf-doc/scripts/gg_report.py/x",
+             b"x", {}, "file_dir_conflict"),
+            (top + "/skills/knuaf-doc/d//e", b"x", {}, "bad_component"),
+            (top + "/skills/knuaf-doc/trail//", b"x",
+             {"mode": 0o40755}, "bad_component"),
+            (top + "/skills/knuaf-doc/dot/.", b"x", {}, "bad_component"),
+            ("", b"x", {}, "bad_component"),
+            (top + "/skills/knuaf-doc/x" * 26, b"x", {}, "name_too_long"),
+            (top + "/x/", b"x", {"mode": 0o100644}, "dir_declared_file"),
+            (top + "/x", b"x", {"mode": 0o120777}, "entry_type"),
         )
-        for items in cases:
-            with self.subTest(items=items):
+        for name, data, kw, detail in single:
+            with self.subTest(name=name, detail=detail):
                 _, _, target = self.make_target(updater=True)
                 before = _tree_bytes(target)
-                payload = _zip([(_zi(row[0], mode=row[2] if len(row) > 2
-                                     else 0o100644), row[1]) for row in items])
-                self.assertEqual("refused", self._apply(
-                    target, payload=payload)[1]["status"])
+                payload = _zip_with_extra(name, data, **kw)
+                out = self._apply(target, payload=payload)[1]
+                self.assertEqual("refused", out["status"], out)
+                self.assertEqual("zip_invalid", out["reason"], out)
+                self.assertEqual(detail, out.get("detail"), out)
                 self.assertEqual(before, _tree_bytes(target))
+        # 파일/디렉터리 충돌 반대 방향: 자손이 먼저 오고 조상이 파일로 충돌.
         _, _, target = self.make_target(updater=True)
         before = _tree_bytes(target)
-        payload = _zip([(_zi("top/skills/knuaf-doc/huge"), b"x" *
-                         (self.gu.ZIP_FILE_MAX + 1))])
-        self.assertEqual("refused", self._apply(
-            target, payload=payload)[1]["status"])
+        buf = io.BytesIO(_good_zip())
+        with zipfile.ZipFile(buf, "a") as zf:
+            zf.writestr(_zi(top + "/d2/f"), b"x")
+            zf.writestr(_zi(top + "/d2"), b"x")
+        out = self._apply(target, payload=buf.getvalue())[1]
+        self.assertEqual("file_dir_conflict", out.get("detail"), out)
         self.assertEqual(before, _tree_bytes(target))
+
+        # 파일 크기 상한 — 보호를 제거하면 같은 payload가 적용된다(negative control).
+        bomb = _zip_with_extra(top + "/skills/knuaf-doc/huge",
+                               b"x" * (self.gu.ZIP_FILE_MAX + 1))
+        _, _, target = self.make_target(updater=True)
+        before = _tree_bytes(target)
+        out = self._apply(target, payload=bomb)[1]
+        self.assertEqual(("zip_invalid", "size_limit"),
+                         (out["status"] == "refused" and out["reason"],
+                          out.get("detail")), out)
+        self.assertEqual(before, _tree_bytes(target))
+        _, _, control = self.make_target(updater=True)
+        mod = _load_update(control / "scripts" / "gg_update.py")
+        with mock.patch.object(mod, "ZIP_FILE_MAX", 10 ** 12):
+            conn = _connect(302, [("Location", _loc("0.1.2"))])
+            out = mod.apply_cmd("0.1.2", confirm=True, connect=conn,
+                                download=lambda *_: bomb)
+            self.assertEqual("applied", out["status"], out)
+
+        # 합계 상한 — 작은 상한은 거절하고, 상한을 올린 대조군은 적용된다.
+        _, _, target = self.make_target(updater=True)
+        before = _tree_bytes(target)
+        mod = _load_update(target / "scripts" / "gg_update.py")
+        with mock.patch.object(mod, "ZIP_TOTAL_MAX", 128):
+            conn = _connect(302, [("Location", _loc("0.1.2"))])
+            out = mod.apply_cmd("0.1.2", confirm=True, connect=conn,
+                                download=lambda *_: _good_zip())
+            self.assertEqual(("refused", "zip_invalid", "size_limit"),
+                             (out["status"], out.get("reason"),
+                              out.get("detail")), out)
+            self.assertEqual(before, _tree_bytes(target))
+        with mock.patch.object(mod, "ZIP_TOTAL_MAX", 10 ** 12):
+            out = mod.apply_cmd("0.1.2", confirm=True,
+                connect=_connect(302, [("Location", _loc("0.1.2"))]),
+                download=lambda *_: _good_zip())
+            self.assertEqual("applied", out["status"], out)
+
+        # 항목 수 상한 — 상한을 올리면 같은 목록이 통과한다.
         with mock.patch.object(self.gu, "ZIP_MAX_ENTRIES", 1):
             with self.assertRaises(self.gu.Refused):
                 self.gu._normalize_zip(zipfile.ZipFile(
                     io.BytesIO(_good_zip())).infolist())
-        stored = _zip([(_zi("top/skills/knuaf-doc/x", compress=zipfile.ZIP_STORED), b"abc")])
-        corrupt = _corrupt_entry_bytes(stored, "top/skills/knuaf-doc/x")
-        self.assertEqual("refused", self._apply(
-            target, payload=corrupt)[1]["status"])
+
+        # CRC — 같은 파일을 유효하게 두면 적용된다(검사 제거 대조).
+        _, _, target = self.make_target(updater=True)
+        before = _tree_bytes(target)
+        stored = _zip_with_extra(
+            top + "/skills/knuaf-doc/x", b"abc",
+            compress=zipfile.ZIP_STORED)
+        corrupt = _corrupt_entry_bytes(
+            stored, top + "/skills/knuaf-doc/x")
+        out = self._apply(target, payload=corrupt)[1]
+        self.assertEqual(("refused", "zip_invalid", "crc_error"),
+                         (out["status"], out.get("reason"),
+                          out.get("detail")), out)
+        self.assertEqual(before, _tree_bytes(target))
+        _, _, target = self.make_target(updater=True)
+        self.assertEqual("applied",
+                         self._apply(target, payload=stored)[1]["status"])
+
+        # 다운로드 상한 — 본문 상한 초과는 거절, 대조군은 적용.
+        _, _, target = self.make_target(updater=True)
+        before = _tree_bytes(target)
+        mod = _load_update(target / "scripts" / "gg_update.py")
+        conn = _connect_mux({mod.CHECK_HOST: _FakeResp(302,
+                             [("Location", _loc("0.1.2"))]),
+                             mod.DOWNLOAD_HOST: _FakeResp(200, body=_good_zip())})
+        with mock.patch.object(mod, "DOWNLOAD_MAX", 8):
+            out = mod.apply_cmd("0.1.2", confirm=True, connect=conn,
+                                download=lambda v, c: mod._default_download(
+                                    v, c))
+            self.assertEqual("refused", out["status"], out)
+            self.assertEqual("download_failed", out.get("reason"), out)
+        self.assertEqual(before, _tree_bytes(target))
+        _, _, control = self.make_target(updater=True)
+        mod = _load_update(control / "scripts" / "gg_update.py")
+        with mock.patch.object(mod, "DOWNLOAD_MAX", 10 ** 12):
+            conn = _connect_mux({mod.CHECK_HOST: _FakeResp(302,
+                                 [("Location", _loc("0.1.2"))]),
+                                 mod.DOWNLOAD_HOST: _FakeResp(200, body=_good_zip())})
+            out = mod.apply_cmd("0.1.2", confirm=True, connect=conn,
+                                download=lambda v, c: mod._default_download(v, c))
+            self.assertEqual("applied", out["status"], out)
 
     def _assert_symlinked_recovery_bin_refused(self, legacy):
         src = self.make_incoming()
@@ -587,6 +708,16 @@ class UpdateTests(_UpdateCase):
 
     def test_skill_guidance_required_phrases(self):
         raw = SKILL_MD_PATH.read_text(encoding="utf-8")
+        self.assertIn(("> knuaf-doc · 창업논문 작성 도우미\n"
+                       "> prod. 특용작물전공 24학번 김대욱\n"), raw)
+        for sentence in (
+            'next의 ready는 "진행할 수 있음"일 뿐 ✓의 근거가 아니다',
+            'question이 reuse(제공 거부)·deferred(도움 소진)인 사실은 다시 묻거나 자료를 요구하지 않는다',
+            'user_finish 전체',
+            '독립 내용검토 전',
+            '연속한 ✓ 단계가 2개 이상이면 `✓ 1–2단계 끝`처럼, 연속한 ○ 단계가 2개 이상이면 `○ 5–7단계 남음`처럼 항상 한 줄로 묶는다',
+        ):
+            self.assertIn(sentence, raw)
         for phrase in ("prod. 특용작물전공 24학번 김대욱", "최종 답변 맨 앞",
                        "스레드마다 한 번", "references/update.md", "자료·전공 확인",
                        "계획 인터뷰", "조사·근거 정리", "본문 Ⅰ~Ⅵ 초안",
@@ -777,3 +908,271 @@ class UpdateTests(_UpdateCase):
             if first.poll() is None:
                 first.kill()
                 first.communicate()
+
+    def test_unlock_rejects_linked_state_and_incomplete_lock(self):
+        src = self.make_incoming()
+        mod = _load_update(src / "scripts" / "gg_update.py")
+        home, _, _ = self.make_target()
+        outside = self.tmpdir("student-work")
+        lock = outside / "lock"
+        valid = {"schema": mod.LOCK_SCHEMA, "pid": 99999999,
+                 "host_hash": mod._host_hash(), "utc": mod._utcnow(),
+                 "nonce": "a" * 16}
+        lock.write_text(json.dumps(valid), encoding="utf-8")
+        (outside / "sentinel").write_bytes(b"untouched")
+        before = _tree_bytes(outside)
+        (home / mod.STATE_DIR_NAME).symlink_to(outside, target_is_directory=True)
+        self.assertEqual("manual_required", mod.unlock_cmd(home, confirm=True)["status"])
+        self.assertEqual(before, _tree_bytes(outside))
+        (home / mod.STATE_DIR_NAME).unlink()
+        state = home / mod.STATE_DIR_NAME
+        state.mkdir()
+        for bad in ({"schema": mod.LOCK_SCHEMA, "host_hash": mod._host_hash()},
+                    dict(valid, pid="99999999"), dict(valid, pid=True),
+                    dict(valid, nonce=12)):
+            lock = state / "lock"
+            data = json.dumps(bad).encode()
+            lock.write_bytes(data)
+            self.assertEqual("manual_required", mod.unlock_cmd(home, confirm=True)["status"])
+            self.assertEqual(data, lock.read_bytes())
+        lock.unlink()
+        lock.symlink_to(outside / "lock")
+        self.assertEqual("manual_required", mod.unlock_cmd(home, confirm=True)["status"])
+        self.assertEqual(before, _tree_bytes(outside))
+
+    def test_recover_preserves_foreign_staging_leaf(self):
+        src = self.make_incoming()
+        driver = self.root / "leaf-driver.py"
+        driver.write_text(_DRIVER, encoding="utf-8")
+        for kind in ("other_version", "bad_version", "file", "link"):
+            with self.subTest(kind=kind):
+                home, _, target = self.make_target(version=None)
+                subprocess.run([sys.executable, str(driver),
+                                str(src / "scripts" / "gg_update.py"),
+                                "adopt", "rn2", str(src), str(target)], check=True)
+                state = home / "knuaf-doc-update"
+                journal = state / "journal.json"
+                leaf = Path(json.loads(journal.read_text())["staging"]) / "knuaf-doc"
+                if kind == "file":
+                    leaf.write_bytes(b"foreign")
+                elif kind == "link":
+                    leaf.symlink_to(target, target_is_directory=True)
+                else:
+                    _write_skill(leaf, version="9.9.9")
+                    if kind == "bad_version":
+                        (leaf / "version.json").write_bytes(b"\xff")
+                mod = _load_update(src / "scripts" / "gg_update.py")
+                before = (journal.read_bytes(), _tree_bytes(state), _tree_bytes(target))
+                self.assertEqual("manual_required", mod.recover_cmd(home, confirm=True)["status"])
+                self.assertEqual(before, (journal.read_bytes(), _tree_bytes(state),
+                                          _tree_bytes(target)))
+                self.assertTrue((state / "lock").exists())
+                self.assertTrue(os.path.lexists(str(leaf)))
+
+    def test_zip_original_name_nul_rejected(self):
+        top = "knuaf-doc-0.1.2/skills/knuaf-doc/"
+        buf = io.BytesIO(_good_zip())
+        with zipfile.ZipFile(buf, "a") as zf:
+            zf.writestr(top + "nulXignored", b"payload")
+        data = buf.getvalue().replace(b"nulXignored", b"nul\x00ignored")
+        with zipfile.ZipFile(io.BytesIO(data)) as zf:
+            self.assertIn(NUL, zf.infolist()[-1].orig_filename)
+        _, _, target = self.make_target(updater=True)
+        before = _tree_bytes(target)
+        out = self._apply(target, payload=data)[1]
+        self.assertEqual(("refused", "zip_invalid", "bad_chars"),
+                         (out["status"], out["reason"], out["detail"]))
+        self.assertEqual(before, _tree_bytes(target))
+
+    def test_recover_command_quotes_special_home(self):
+        src = self.make_incoming()
+        mod = _load_update(src / "scripts" / "gg_update.py")
+        home = self.root / "공백 $; 'home'"
+        target = _write_skill(home / "skills" / "knuaf-doc", version=None)
+        before = _tree_bytes(target)
+        original, calls = mod._rename, [0]
+        def faulty(a, b):
+            calls[0] += 1
+            if calls[0] in (2, 3):
+                raise OSError("injected")
+            return original(a, b)
+        with mock.patch.object(mod, "_rename", side_effect=faulty):
+            out = mod.adopt_cmd(src, target, confirm=True)
+        self.assertEqual("backup_preserved_target_missing", out["state"])
+        self.assertEqual(out["recover_argv"], shlex.split(out["recover"]))
+        proc = subprocess.run(shlex.split(out["recover"]), capture_output=True,
+                              text=True, check=True)
+        self.assertEqual("recovered_old", json.loads(proc.stdout)["status"])
+        self.assertEqual(before, _tree_bytes(target))
+
+    def test_version_bad_encoding_and_permission(self):
+        src = self.make_incoming()
+        mod = _load_update(src / "scripts" / "gg_update.py")
+        home, _, target = self.make_target()
+        before = _tree_bytes(target)
+        (target / "version.json").write_bytes(b"\xff")
+        cli = subprocess.run([sys.executable, str(src / "scripts" / "gg_update.py"),
+                              "adopt", "--source", str(src), "--target",
+                              str(target), "--confirm"], capture_output=True, text=True)
+        self.assertEqual(0, cli.returncode)
+        self.assertEqual("target_version_invalid", json.loads(cli.stdout)["reason"])
+        self.assertEqual(1, len(cli.stdout.splitlines()))
+        self.assertNotIn("Traceback", cli.stderr)
+        self.assertEqual(b"\xff", (target / "version.json").read_bytes())
+        (target / "version.json").write_text(json.dumps(_version_doc("0.1.1")))
+        read = mod.read_version_file
+        with mock.patch.object(mod, "read_version_file", side_effect=lambda p:
+                               (_ for _ in ()).throw(PermissionError()) if
+                               Path(p) == target / "version.json" else read(p)):
+            out = mod.adopt_cmd(src, target, confirm=True)
+        self.assertEqual("target_version_invalid", out["reason"])
+        self.assertEqual(before, _tree_bytes(target))
+        report = _load_module(SCRIPTS_DIR / "gg_report.py", "report")
+        with mock.patch.object(report.Path, "read_text", side_effect=PermissionError()):
+            self.assertIsNone(report._read_version_json(target / "version.json"))
+
+    def test_backup_collision_lock_unsupported_and_rollback_cut(self):
+        src = self.make_incoming()
+        mod = _load_update(src / "scripts" / "gg_update.py")
+        home, _, target = self.make_target()
+        before = _tree_bytes(target)
+        with mock.patch.object(mod.os, "link", side_effect=OSError("unsupported")):
+            out = mod.adopt_cmd(src, target, confirm=True)
+        self.assertEqual("lock_unsupported", out["reason"])
+        self.assertEqual(before, _tree_bytes(target))
+        self.assertFalse(list((home / "knuaf-doc-update").glob(".lock-tmp-*")))
+        state = home / "knuaf-doc-update"
+        collision = state / "backups" / "0.1.1-20260101T000000Z-bbbbbbbb"
+        collision.mkdir(parents=True)
+        (collision / "sentinel").write_bytes(b"keep")
+        with mock.patch.object(mod, "_utc_stamp", return_value="20260101T000000Z"), \
+             mock.patch.object(mod, "_nonce", side_effect=["a" * 16, "b" * 16, "c" * 16]):
+            out = mod.adopt_cmd(src, target, confirm=True)
+        self.assertEqual("applied", out["status"])
+        self.assertEqual(b"keep", (collision / "sentinel").read_bytes())
+        driver = self.root / "rollback-driver.py"
+        driver.write_text(_DRIVER, encoding="utf-8")
+        home2, _, target2 = self.make_target(version=None)
+        old = _tree_bytes(target2)
+        subprocess.run([sys.executable, str(driver),
+                        str(src / "scripts" / "gg_update.py"), "adopt", "rbk",
+                        str(src), str(target2)], check=True)
+        state2 = home2 / "knuaf-doc-update"
+        helper = next((state2 / "bin").glob("gg_update-*.py"))
+        proc = subprocess.run([sys.executable, str(helper), "recover", "--home",
+                               str(home2), "--confirm"], capture_output=True,
+                              text=True, check=True)
+        self.assertEqual("not_started", json.loads(proc.stdout)["status"])
+        self.assertEqual(old, _tree_bytes(target2))
+        self.assertFalse((state2 / "journal.json").exists())
+
+    def test_location_supplement_23_rows(self):
+        _, _, target = self.make_target()
+        v = "/starceas/knuaf-doc/releases/tag/v1.2.3"
+        rows = {"": "unknown", "https://github.com" + v: "update_available",
+                v: "update_available", "tag/v1.2.3": "unknown",
+                "https://GITHUB.COM" + v: "update_available",
+                v.replace("starceas", "Starceas"): "unknown",
+                v + "/": "unknown", "/starceas/knuaf-doc/releases/": "unknown",
+                "/starceas/knuaf-doc/releases?x=1": "unknown",
+                v.replace("v1", "%761"): "unknown",
+                "https://evil.example" + v: "unknown",
+                "//evil.example" + v: "unknown",
+                "https://github.com@evil.example" + v: "unknown",
+                "https://github.com:444" + v: "unknown",
+                "https://github.com:bad" + v: "unknown",
+                "https://github.com.evil" + v: "unknown",
+                v[:-2]: "unknown", v + "-rc1": "unknown",
+                v.replace("1", "١"): "unknown", v + BS: "unknown",
+                v + NUL: "unknown", v + "\x7f": "unknown", v + "\t": "unknown"}
+        self.assertEqual(23, len(rows))
+        for loc, want in rows.items():
+            with self.subTest(loc=repr(loc)):
+                result = self.gu.check_status(local_root=target,
+                    connect=_connect(302, [("Location", loc)]))
+                self.assertEqual(want, result["status"], result)
+
+    def test_recover_competes_with_apply_and_recover(self):
+        driver = self.root / "race-driver.py"
+        driver.write_text(_DRIVER, encoding="utf-8")
+        src = self.make_incoming()
+        home, _, target = self.make_target(version=None)
+        mod = _load_update(src / "scripts" / "gg_update.py")
+        self.assertEqual("applied", mod.adopt_cmd(src, target, confirm=True)["status"])
+        state = home / "knuaf-doc-update"
+        src3 = _write_skill(self.root / "incoming3" / "knuaf-doc",
+                            version="0.1.3", updater=True)
+        first = subprocess.Popen([sys.executable, str(driver),
+            str(src3 / "scripts" / "gg_update.py"), "adopt", "pw2",
+            str(src3), str(target)], stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE, text=True)
+        try:
+            for _ in range(200):
+                if (state / "lock").exists() and (state / "journal.json").exists():
+                    doc = json.loads((state / "journal.json").read_text())
+                    if doc.get("new_version") == "0.1.3":
+                        break
+                time.sleep(0.01)
+            else:
+                self.fail("concurrent writer did not reach prepared")
+            before = (state / "journal.json").read_bytes()
+            out = mod.recover_cmd(home, confirm=True)
+            self.assertEqual(("refused", "locked"),
+                             (out["status"], out["reason"]))
+            self.assertEqual(before, (state / "journal.json").read_bytes())
+            self.assertTrue((state / "lock").exists())
+        finally:
+            first.communicate(timeout=10)
+
+        # A crashed writer leaves a stale lock. The first recover owns the
+        # replacement lock while the second process attempts to recover.
+        home2, _, target2 = self.make_target(version=None)
+        subprocess.run([sys.executable, str(driver),
+                        str(src / "scripts" / "gg_update.py"), "adopt", "wj1",
+                        str(src), str(target2)], check=True)
+        state2 = home2 / "knuaf-doc-update"
+        first = subprocess.Popen([sys.executable, str(driver),
+            str(src / "scripts" / "gg_update.py"), "recover", "hold2",
+            str(home2)], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            text=True)
+        try:
+            for _ in range(200):
+                doc, state_name = mod._read_lock(state2)
+                if state_name == "ok" and doc["pid"] == first.pid:
+                    break
+                time.sleep(0.01)
+            else:
+                self.fail("first recover did not acquire lock")
+            result = subprocess.run([sys.executable, str(driver),
+                str(src / "scripts" / "gg_update.py"), "recover", "-",
+                str(home2)], capture_output=True, text=True, check=True)
+            second = json.loads(result.stdout)
+            self.assertEqual(("refused", "locked"),
+                             (second["status"], second["reason"]))
+            self.assertTrue((state2 / "journal.json").exists())
+            stdout, stderr = first.communicate(timeout=10)
+            self.assertEqual(0, first.returncode, stderr)
+            self.assertEqual("not_started", json.loads(stdout)["status"])
+            self.assertFalse((state2 / "journal.json").exists())
+        finally:
+            if first.poll() is None:
+                first.kill()
+                first.communicate()
+
+    def test_report_draft_with_corrupt_version(self):
+        root = self.tmpdir("draft-bad-version")
+        skill = root / "skills" / "knuaf-doc"
+        (skill / "scripts").mkdir(parents=True)
+        shutil.copy2(SCRIPTS_DIR / "gg_report.py", skill / "scripts" / "gg_report.py")
+        (skill / "version.json").write_bytes(b"\xff")
+        request = root / "request.json"
+        request.write_text(json.dumps({"kind": "issue", "category": "bug",
+                                       "title": "test", "description": "test"}))
+        output = root / "draft.json"
+        result = subprocess.run([sys.executable, str(skill / "scripts" / "gg_report.py"),
+                                 "draft", "--input", str(request), "--out",
+                                 str(output)], cwd=str(root), capture_output=True,
+                                text=True)
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertTrue(output.exists())
+        self.assertNotIn("Traceback", result.stderr)
