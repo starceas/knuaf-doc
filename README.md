@@ -11,7 +11,7 @@
 
 ## 설치
 
-이 저장소를 Codex 플러그인으로 등록하면 `skills/knuaf-doc`가 스킬로 인식됩니다. 설치 방법은 사용 중인 에이전트(Codex CLI/앱)의 플러그인 설치 안내를 따르세요.
+`skills/knuaf-doc`가 설치 대상 스킬입니다. 설치 방법은 사용 중인 에이전트(Codex CLI/앱)의 스킬 설치 안내를 따르세요. Codex의 GitHub 스킬 설치기는 이 폴더만 복사하므로 저장소의 `.codex-plugin/plugin.json`은 복사본에 들어가지 않습니다.
 
 사용 중 오류·불편·요청은 AI에게 "신고할래"라고 말하면 내용 확인 후 개발자에게 전달됩니다(개인 정보는 공개 이슈에 올리지 않습니다).
 
@@ -26,6 +26,25 @@ pypdf>=6,<7
 ```
 
 Windows에서 네이티브 Office 자동화를 쓰려면 `pywin32`가 추가로 필요합니다(아래 플랫폼 지원 참고). 설치 방법은 `skills/knuaf-doc/references/package-install.md`를 참고하세요.
+
+## 업데이트
+
+0.1.1 이상 설치본은 스킬을 처음 쓰는 새 대화에서 공개 릴리스의 새 버전을 한 번 확인합니다. 새 버전 안내가 보이면 AI에게 **“업데이트해줘”**라고 말하세요. 업데이트는 기존 스킬 폴더를 `<CODEX_HOME>/knuaf-doc-update/backups/`로 옮기고 새 복사본을 놓습니다. 교체 전에 바뀌는 범위와 백업 위치를 설명하고 동의를 받습니다. 학생의 작업 폴더·원고·엑셀·Kordoc 캐시는 건드리지 않습니다. 적용 뒤 새 채팅을 여세요.
+
+직접 **“업데이트 확인”**이라고 물으면 현재 확인 상태를 설명합니다. 설치본의 버전 원천은 [`skills/knuaf-doc/version.json`](skills/knuaf-doc/version.json)입니다. 릴리스 확인이 안 되면 원래 논문 작업을 계속할 수 있습니다. Git 체크아웃과 플러그인 캐시 설치본은 자동 교체 대상이 아니며, 안내된 설치 방식에 따라 수동으로 갱신합니다.
+
+## 0.1.0에서 옮기기
+
+0.1.0에는 새 버전 알림 장치가 없습니다. 한 번만 새 복사본을 `skills` 밖에 설치한 뒤, 그 복사본의 `gg_update.py adopt`로 기존 설치본을 옮깁니다. AI에게 **“https://github.com/starceas/knuaf-doc README대로 knuaf-doc 업데이트해줘”**라고 말해 아래 절차를 진행할 수 있습니다.
+
+1. `$CODEX_HOME/skills/knuaf-doc`(기본 `~/.codex/skills/knuaf-doc`)의 `SKILL.md`에 `name: knuaf-doc`가 있는 복사 설치본을 찾습니다. 없거나 여러 개면 멈춥니다.
+2. 스킬 설치기의 `install-skill-from-github.py --repo starceas/knuaf-doc --path skills/knuaf-doc --ref vX.Y.Z --dest <CODEX_HOME>/knuaf-doc-update/incoming-<UTC>`로 새 버전을 `skills` 밖에 설치합니다. `vX.Y.Z`에는 공개된 최신 릴리스 태그를 넣습니다.
+3. 변경 범위와 백업 위치를 듣고 명시적으로 동의한 뒤 `python3 <incoming>/knuaf-doc/scripts/gg_update.py adopt --source <incoming>/knuaf-doc --target <CODEX_HOME>/skills/knuaf-doc --confirm`을 실행합니다. Windows에서는 `python3` 대신 `py -3`을 사용합니다.
+4. 기존 폴더 백업과 incoming 복사본을 보존하고 새 채팅을 엽니다. 상세 복구 절차는 [`update.md`](skills/knuaf-doc/references/update.md)를 따릅니다.
+
+## 배포(관리자)
+
+매 패치에서 `skills/knuaf-doc/version.json`과 `.codex-plugin/plugin.json`의 버전을 같은 값으로 올립니다. 검토자가 PASS를 준 트리와 머지 대상을 대조한 뒤 머지하고, **그 머지 커밋**을 대상으로 `gh release create vX.Y.Z --target <merge sha>`를 실행합니다. 공개 릴리스를 만들어야 첫 진입 알림이 새 버전을 발견합니다. 릴리스 태그와 업로드 권한은 관리자에게 있습니다.
 
 ## 플랫폼 지원
 
@@ -72,4 +91,3 @@ MIT. 자유롭게 가져다 쓰고, 수정하고, PR을 보내주세요. 자세�
 
 - Windows 환경에서 네이티브 Office 자동화 실제 동작 확인
 - 다른 학교/다른 판 지침 PDF에 대한 호환성
-

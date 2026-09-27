@@ -9,11 +9,13 @@ tempfile.TemporaryDirectory 아래에 둔다.
 import getpass
 import hashlib
 import http.server
+import importlib.util
 import io
 import json
 import os
 import re
 import socket
+import shutil
 import tempfile
 import threading
 import unittest
@@ -290,7 +292,9 @@ class InputValidationTests(_ReportCase):
 
     def test_skill_version_and_environment_shape(self):
         draft = self._build()
-        self.assertEqual("knuaf-doc 0.1.0",
+        installed_version = json.loads((REPO_ROOT / "skills" / "knuaf-doc" /
+            "version.json").read_text(encoding="utf-8"))["version"]
+        self.assertEqual("knuaf-doc " + installed_version,
                          draft["payload"]["skill_version"])
         env = draft["payload"]["environment"]
         self.assertNotIn(socket.gethostname(), env)
@@ -300,9 +304,46 @@ class InputValidationTests(_ReportCase):
 
     def test_skill_version_unknown_without_plugin(self):
         draft = self.gm.build_draft(
-            self._in_doc(), plugin_root=self.tmp)
+            self._in_doc(), plugin_root=self.tmp, skill_root=self.tmp)
         self.assertEqual("knuaf-doc unknown",
                          draft["payload"]["skill_version"])
+
+    def test_copy_install_uses_its_own_version_without_plugin_json(self):
+        copied = self.tmp / "codex-home" / "skills" / "knuaf-doc"
+        (copied / "scripts").mkdir(parents=True)
+        shutil.copy2(REPO_ROOT / "skills" / "knuaf-doc" / "version.json",
+                     copied / "version.json")
+        script = copied / "scripts" / "gg_report.py"
+        shutil.copy2(REPO_ROOT / "skills" / "knuaf-doc" / "scripts" /
+                     "gg_report.py", script)
+        spec = importlib.util.spec_from_file_location("copied_gg_report", script)
+        copied_report = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(copied_report)
+        expected = json.loads((copied / "version.json").read_text(
+            encoding="utf-8"))["version"]
+        draft = copied_report.build_draft(self._in_doc(), plugin_root=self.tmp)
+        self.assertEqual("knuaf-doc " + expected,
+                         draft["payload"]["skill_version"])
+
+    def test_invalid_copy_version_uses_plugin_fallback(self):
+        copied = self.tmp / "skills" / "knuaf-doc"
+        copied.mkdir(parents=True)
+        plugin_dir = self.tmp / ".codex-plugin"
+        plugin_dir.mkdir()
+        (plugin_dir / "plugin.json").write_text(
+            json.dumps({"version": "0.2.0"}), encoding="utf-8")
+        for raw in ('{"schema":"knuaf-doc/version@1","repo":'
+                    '"starceas/knuaf-doc","version":"01.1.0"}',
+                    '{"schema":"knuaf-doc/version@1","repo":"other",'
+                    '"version":"0.1.1"}',
+                    '{"schema":"knuaf-doc/version@1","repo":'
+                    '"starceas/knuaf-doc","version":"0.1.1",'
+                    '"version":"0.1.2"}'):
+            (copied / "version.json").write_text(raw, encoding="utf-8")
+            draft = self.gm.build_draft(self._in_doc(), plugin_root=self.tmp,
+                                        skill_root=copied)
+            self.assertEqual("knuaf-doc 0.2.0",
+                             draft["payload"]["skill_version"])
 
 
 class RedactionTests(_ReportCase):
@@ -534,7 +575,9 @@ class DraftCliTests(_ReportCase):
         self.assertIn("분류: 오류", preview)
         self.assertIn("제목: 테스트 제목", preview)
         self.assertIn("내용:\n설명입니다", preview)
-        self.assertIn("함께 보내는 정보: 스킬 버전 knuaf-doc 0.1.0, 환경",
+        version = json.loads((REPO_ROOT / "skills" / "knuaf-doc" /
+            "version.json").read_text(encoding="utf-8"))["version"]
+        self.assertIn("함께 보내는 정보: 스킬 버전 knuaf-doc " + version + ", 환경",
                       preview)
 
     def test_private_preview_shows_only_sent_fields(self):
@@ -542,7 +585,9 @@ class DraftCliTests(_ReportCase):
         preview = result["preview"]
         self.assertIn("보낼 곳: 개발자 비공개 채널", preview)
         self.assertNotIn("공개 이슈라 누구나 볼 수 있습니다.", preview)
-        self.assertIn("함께 보내는 정보: 스킬 버전 knuaf-doc 0.1.0",
+        version = json.loads((REPO_ROOT / "skills" / "knuaf-doc" /
+            "version.json").read_text(encoding="utf-8"))["version"]
+        self.assertIn("함께 보내는 정보: 스킬 버전 knuaf-doc " + version,
                       preview)
         self.assertNotIn("환경", preview)
 

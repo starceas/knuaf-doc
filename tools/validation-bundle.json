@@ -7,6 +7,10 @@
     "tree_sha256": "41f26c2823491edb8248822e0f50084c57b075b20e300daad6b3d65c262902f4"
   },
   "files": {
+    ".codexclaw/affordance-recovery/1739c45e0a84a79f67d7ae6452af47254f2c349b156116b2ddc37e8a2edae53d.pending": {
+      "origin": "new",
+      "sha256": "52d26753462488ad21852bc6718e21b84835f53765304d0a1e1b89d05a2a71b1"
+    },
     ".github/workflows/validation.yml": {
       "note": "Per-PR CI running the same integrity check and validation runner. repair-n1/N2: receipt path read via os.environ['RUNNER_TEMP'] inside the quoted heredoc. P2-R2: strict report consumer step enforces the ok_platform_scoped/default-scope contract (sole P2-L09-native pending gate, full=false, platform=true, no unexpected/unapproved skips). P2-R3: consumer hardened to independently recompute the report — strict JSON (duplicate keys/nonfinite rejected), present+typed fields, non-bool nonnegative integer counts, framework reconciliation (was_successful/outcomes/testsRun==tests_run==len(entries)/skipped==1), per-entry unique-id + category tally equal to counters with zero failed, declared H9-only known_baseline_defect pairs, fixture_events empty/failure_events 0, only parent-matched subtest_success events, and the exact approved-skip rule string — no trust in accounting.errors or top-level summaries. P2-R4: three consumer consistency holes closed — known_baseline_defect requires the exact (test, defect=H9, gate=P3) triple per regression_inventory (arbitrary nonempty gate rejected); subtest ids must match the complete emitted parent + ' (' + nonempty + ')' shape (unclosed/empty/wrong-prefix rejected, no repr parsing); the exact native withheld skip parent may carry no subtest events at all. All prior strict JSON/type/framework/entries/fixture/gate checks preserved. P2-R5: H9 required-presence invariant enforced independently of supplied totals — exact test id must occur exactly once carrying category known_baseline_defect + defect H9 + gate P3; runtime.known_baseline_defects pinned to integer 1; relabel/ missing/substitute/duplicate with favorable counters all reject.",
       "origin": "new",
@@ -70,7 +74,7 @@
     "tests/test_bundle_lineage.py": {
       "note": "P1+P2 PACKAGE 계보 시험 — 실제 후보 정상 검증, 신규 파일 계약(allowlist·before=null·위장 거부) 포함 적대 합성 트리. P6: pin four new common-contract runtime files and the P5 parent tree. P9: hort_env_systems first bundle counts and parent P8 tree. | P10: P1+P2 PACKAGE 계보 시험 — 실제 후보 정상 검증, 신규 파일 계약(allowlist·before=null·위장 거부) 포함 적대 합성 트리. P6: pin four new common-contract runtime files and the P5 parent tree. P9: pins the P8 parent tree (a96a5bf, 154 files) and the common-workbook extract declared-new file. P10: parent P9 main 3c83f0c (161 files), combined 95 changes and 71 new files. | P11: P1+P2 PACKAGE 계보 시험 — 실제 후보 정상 검증, 신규 파일 계약(allowlist·before=null·위장 거부) 포함 적대 합성 트리. P6: pin four new common-contract runtime files and the P5 parent tree. P9: hort_env_systems first bundle counts and parent P8 tree. P10: 공용 인터뷰 규칙 묶음 재기준 counts and parent P9 tree. P11: parent P10 main ec8a2e8 (163 files), combined 99 changes and 72 new files. P12: pin the P11 parent tree (164 files) and check the ancestor list ends at the parent. P13: P12 parent main 955e880 (178 files), cumulative 109 changes and 82 new files; D4 identity catalogue retained with P12 industrial_insects. P14: fruit_trees second bundle counts and parent P13 tree. P15: rebased D5 lineage pins (P14 parent main f9c278c, 185 files; cumulative 113 changes and 86 new files; P15 stage label). P16: fruit identity rows on parent P15 tree; the D5 parent-tree pin is checked against the P14 lineage row. P18: pin the P17 parent tree (190 files) and check the ancestor list ends at the parent. | P20: pin the P19 parent tree (main db2a036, 199 files), stage P20; cumulative 125 changes and 98 new files — the hort finance bundle (four declared-new runtime files, I4-FIX evaluator/registry helpers, I5/I6-FIX rehashes) redeclared under P20; D5 P14 ancestor pin retained. P22: pin the P21 parent tree (main bb1570d, 217 files) and student-report stage counts (130 changes, 103 new, 104 approved).",
       "origin": "new",
-      "sha256": "3c67cfb168fdd990f53a366890b0f2adf89c5a25870df63c363f3edd5b7c45b8"
+      "sha256": "1f2acd4b5d3099bc63395815fe4547718bf1dfd0d766e8a748c7d23125ae8c64"
     },
     "tests/test_canonical_flow.py": {
       "note": "P0-A: init/apply/check/export positive controls + C2–C6/H2/H3/H5 defect signatures; synthetic only.",
@@ -248,9 +252,14 @@
       "sha256": "2284641938cbf63d390289e9c7416d40696dc0c3b791a06f3e418c51582bf533"
     },
     "tests/test_student_report.py": {
-      "note": "P22 학생 신고 시험 — draft/show/send CLI, 가림(경로·파일명·이메일·주민번호·전화·학번, L1-1~3 경계 회귀), UTF-16 상한·private 1900 합성·environment 미포함, 고정 수신처+KNUAF_REPORT_TEST_ENDPOINT 시험 모드·endpoint_changed, sha confirm, claim O_EXCL·claim 획득 뒤 재확인(dup) 한 번 POST, delivery_unknown·--retry-unknown·sent_unrecorded, 계약 형태 외 201 거부, already_sent POST 0회, 문서 연결; loopback 가짜 Worker(실제 응답 형태)만 사용. F1 처분 회귀: 공개 메타데이터 재검사(pii_remaining, 요청 0회), ECMAScript trim(U+FEFF), 계약 밖 502·다른 kind 코드→delivery_unknown과 --retry-unknown, done 기록 내용 검증, CRLF 텍스트 모드에서도 초안 sha=저장 바이트, private 1900 독립 기대값·보조 평면 문자. F1 재확인 회귀: 비문자열 error CLI(JSON 한 개·exit 1·claim 유지·재호출 요청 0), 첫 성공 뒤 영수증 부재+done 손상 시 기본 재호출 요청 0·--retry-unknown만 전송, 다른 sha done 무시.",
+      "note": "P22 학생 신고 시험 — draft/show/send CLI, 가림(경로·파일명·이메일·주민번호·전화·학번, L1-1~3 경계 회귀), UTF-16 상한·private 1900 합성·environment 미포함, 고정 수신처+KNUAF_REPORT_TEST_ENDPOINT 시험 모드·endpoint_changed, sha confirm, claim O_EXCL·claim 획득 뒤 재확인(dup) 한 번 POST, delivery_unknown·--retry-unknown·sent_unrecorded, 계약 형태 외 201 거부, already_sent POST 0회, 문서 연결; loopback 가짜 Worker(실제 응답 형태)만 사용. F1 처분 회귀: 공개 메타데이터 재검사(pii_remaining, 요청 0회), ECMAScript trim(U+FEFF), 계약 밖 502·다른 kind 코드→delivery_unknown과 --retry-unknown, done 기록 내용 검증, CRLF 텍스트 모드에서도 초안 sha=저장 바이트, private 1900 독립 기대값·보조 평면 문자. F1 재확인 회귀: 비문자열 error CLI(JSON 한 개·exit 1·claim 유지·재호출 요청 0), 첫 성공 뒤 영수증 부재+done 손상 시 기본 재호출 요청 0·--retry-unknown만 전송, 다른 sha done 무시. | P24: installed version.json comparison and copy-install draft preview.",
       "origin": "new",
-      "sha256": "cfb4c0cb5332617bf0f66ef6e3ea15f077fbf7e1e10d2f66d968097f673c63f1"
+      "sha256": "2e16e23855e42a2428e35cfd4e6091574642bd129aabebf9ccda62b5b5a7a8e9"
+    },
+    "tests/test_update_check.py": {
+      "note": "P24 U1: version/check URL matrix, copy install path and ZIP guards, apply/adopt/lock/recover cut points, independent helper and guidance regression tests; synthetic and temp fixtures only",
+      "origin": "new",
+      "sha256": "2412e6470bd05faeb386c5cc951e2bf095a451dc8624c0576629ae44e3e94639"
     },
     "tests/test_workbook_audit_evaluator.py": {
       "origin": "new",
@@ -309,12 +318,12 @@
     "tools/runtime-changes.json": {
       "note": "누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py. P8 declares the fruit_trees first bundle (module registration, two common helper modules, fruit plan, reference-set data and guidance). P9 declares the hort_env_systems first bundle (module registration, hort plan, profile and guidance, reuse-registry entries). | P10: 누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py. P8 declares the fruit_trees first bundle (module registration, two common helper modules, fruit plan, reference-set data and guidance). P9 declares the common XLSX reuse bundle (one new runtime extract file + declared edits to registration, resolver, template guard, and reuse tests). P9-D3 declares the major-specific-precedence edits (registry dedupe, catalog base_for_major, resolver base policy, docs, tests) in the same stage. | P11: 누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py. P8 declares the fruit_trees first bundle (module registration, two common helper modules, fruit plan, reference-set data and guidance). P9 declares the hort_env_systems first bundle (module registration, hort plan, profile and guidance, reuse-registry entries). P10 declares the common interview rules bundle (SKILL.md re-touch, three baseline doc first-changes, specialty-crops premise-probes) re-based onto the P9 parent. P12 declares the industrial_insects first bundle (four read-only insect scripts, locator map, guide and premise probes as new files; nine reuse-registry entries and SKILL/gg.py updates). P13: D4 source identity catalogue, validator, tests and related guidance rebased on accepted P12. P15 declares the D5 useful-life bundle rebased onto accepted P14 (corrected pp133-135 cell mapping and regression test as new files; eight re-declared pack/registry/script/test entries; parent P14 lineage). P18 declares the industrial_insects second bundle (module 0.2.0 product-line question templates and read-only plan/evidence updates; no new runtime file).",
       "origin": "new",
-      "sha256": "1d25e47046593ea16666c8182f68f6092722545e25fc2cf0a0475fa43febdeb3"
+      "sha256": "05b029bc2952b974998f91808979a78b9423f026358d09288b124e9cbcf22482"
     },
     "tools/validation-provenance.json": {
       "note": "This file; declares origins for the validation layer.",
       "origin": "new",
-      "sha256": "0110cbe4b73bf11e63b649fecd9b7e16919581a122bf8cb04ef3d7a05c3553db"
+      "sha256": "0473b1410866e378df0fc08ec3afcd2aae630331705332bdd8c33ea0eb9f6b55"
     }
   },
   "generated_by": "tools/build_validation_bundle.py@3",
@@ -329,20 +338,20 @@
     ]
   },
   "runtime_changes": {
-    "approved_new_files": 105,
+    "approved_new_files": 108,
     "baseline_main": "29abec0ec95369de7ae9e22207349d574f1f46b7",
-    "change_count": 130,
-    "changes_sha256": "488b0dfef42d1f3457b4344e1fbce8a31b9c5c82095b9a086c28e78ed88a35b4",
-    "new_count": 103,
+    "change_count": 134,
+    "changes_sha256": "8a766506d72fdda47d3a9a9be1f9c7bc5773c4c5fa7901220bd89b7b7f0dc291",
+    "new_count": 106,
     "parent_candidate": {
-      "file_count": 220,
-      "stage": "P22",
-      "tree_sha256": "5d8ac5f1b9ecc0ad84dc355854a878ff6709617577243c93279c997e3763a9d6"
+      "file_count": 221,
+      "stage": "P23",
+      "tree_sha256": "6f042f917ac531e417c7b1f3d81c604b80241784baa153239827529aebfeab0a"
     },
     "schema": "knuaf-doc/runtime-changes@2",
     "spec": "tools/runtime-changes.json",
-    "spec_sha256": "1d25e47046593ea16666c8182f68f6092722545e25fc2cf0a0475fa43febdeb3",
-    "stage": "P23",
+    "spec_sha256": "05b029bc2952b974998f91808979a78b9423f026358d09288b124e9cbcf22482",
+    "stage": "P24",
     "stage_lineage": [
       {
         "file_count": 75,
@@ -481,10 +490,16 @@
         "note": "P22 기준 main 7be4c96(PR #22 학생 오류·불편 신고 병합)의 clean export 전체 파일 트리 해시 — P23의 직전 부모",
         "stage": "P22",
         "tree_sha256": "5d8ac5f1b9ecc0ad84dc355854a878ff6709617577243c93279c997e3763a9d6"
+      },
+      {
+        "file_count": 221,
+        "note": "수용 P23 main 99aedf5 clean export 전체 파일 트리 해시 — P24의 직전 부모",
+        "stage": "P23",
+        "tree_sha256": "6f042f917ac531e417c7b1f3d81c604b80241784baa153239827529aebfeab0a"
       }
     ],
-    "verified_count": 130
+    "verified_count": 134
   },
   "schema": "knuaf-doc/validation-bundle@3",
-  "validation_tree_sha256": "2cb1fde45d839080059a7d85b2c8a56b50a4b3dd6fe2fb9de3c83044456aa0a0"
+  "validation_tree_sha256": "b61d998480cfa18f79b8348f59bc18823c22b7e94c7a362f2f99bfa37ed6d97a"
 }
