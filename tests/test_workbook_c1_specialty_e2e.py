@@ -1,6 +1,6 @@
 """End-to-end C1 specialty path on synthetic sources.
 
-Builds a synthetic workbook with the same 30 SEO correction targets,
+Builds a synthetic workbook with the same 63 SEO correction targets,
 binds a synthetic C1 spec to its bytes, runs materialize ->
 gg_excel_formula_patch under the real specialty_crops authorization path,
 and checks the receipt chain (source sha -> spec sha -> map sha ->
@@ -28,10 +28,12 @@ S9 = "9 .경비계획"
 S10 = "10. 감가상각비계획 "
 S11 = "11. 생산원가계획"
 S15 = "15.추정소득분석"
+S14 = "14. 현금흐름계획"
+S3 = "3.투자계획"
 
 
 def build_workbook(path):
-    """Write a minimal xlsx holding SEO's defective 30 target formulas."""
+    """Write a minimal xlsx holding SEO's defective 63 target formulas."""
     formulas = {
         S11: {
             "D25": "SUM(C26:C27)", "E25": "SUM(C26:C27)",
@@ -58,9 +60,34 @@ def build_workbook(path):
             "E21": "'11. 생산원가계획'!C26", "G21": "'11. 생산원가계획'!E26",
             "E22": "'11. 생산원가계획'!C27", "F22": "'11. 생산원가계획'!D27",
             "G22": "'11. 생산원가계획'!E27",
+            "E27": "E5-E26", "F27": "F5-F26", "G27": "G5-G26",
+            "H27": "H5-H26", "I27": "I5-I26",
+            "F28": "F27/F5", "G28": "G27/G5", "H28": "H27/H5",
+            "I28": "I27/I5",
         },
         S9: {},
-        S10: {},
+        S10: {
+            "F12": "(F8-F8*0.1)/F10", "F24": "(F20-F20*0.1)/F22",
+            "F36": "(F32-F32*0.1)/F34", "F48": "(F44-F44*0.1)/F46",
+            "F60": "(F56-F56*0.1)/F58",
+            "G12": "(G8-G8*0.1)/G10", "G24": "(G20-G20*0.1)/G22",
+            "G36": "(G32-G32*0.1)/G34", "G48": "(G44-G44*0.1)/G46",
+            "G60": "(G56-G56*0.1)/G58",
+            "H12": "(H8-H8*0.1)/H10", "H24": "(H20-H20*0.1)/H22",
+            "H36": "(H32-H32*0.1)/H34", "H48": "(H44-H44*0.1)/H46",
+            "H60": "(H56-H56*0.1)/H58",
+        },
+        S14: {
+            "D18": "'11. 생산원가계획'!C31-'11. 생산원가계획'!C21",
+            "E18": "'11. 생산원가계획'!D31-'11. 생산원가계획'!D21",
+            "F18": "'11. 생산원가계획'!E31-'11. 생산원가계획'!E21",
+            "G18": "'11. 생산원가계획'!F31-'11. 생산원가계획'!F21",
+            "H18": "'11. 생산원가계획'!G31-'11. 생산원가계획'!G21",
+        },
+        S3: {
+            "E25": "SUM(F25:G25)", "E26": "SUM(F26:G26)",
+            "E27": "SUM(F27:G27)", "E28": "SUM(F28:G28)",
+        },
     }
     values = {
         S10: {"H20": "23000", "H32": "23000", "H44": "23000",
@@ -82,7 +109,7 @@ def build_workbook(path):
               "G17": "5", "G20": "5", "G21": "5"},
         S15: {},
     }
-    sheets = ["목록", S11, S15, S9, S10]
+    sheets = ["목록", S3, S11, S14, S15, S9, S10]
     book = (
         '<workbook ' + NS +
         ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/'
@@ -189,7 +216,7 @@ class SpecialtyChainTests(ContractCase):
             out = tmp / "patched.xlsx"
             receipt_path = tmp / "patch-receipt.json"
             map_doc, receipt = self.assert_chain(
-                source, spec_path, map_path, out, receipt_path, project, 30)
+                source, spec_path, map_path, out, receipt_path, project, 63)
             self.assertFalse(any("expected_value" in p for p in map_doc["patches"]))
 
             # the patched copy really carries the corrected formulas
@@ -201,6 +228,14 @@ class SpecialtyChainTests(ContractCase):
                              "'11. 생산원가계획'!G29")
             self.assertEqual(patched.formulas[(S11, "G16")].text,
                              "G17+G20+G25+G21+G29+G30+G28")
+            self.assertEqual(patched.formulas[(S15, "F28")].text, "F27/F7")
+            self.assertEqual(patched.formulas[(S10, "F12")].text,
+                             "(F8-F8*F9)/F10")
+            self.assertEqual(patched.formulas[(S14, "D18")].text,
+                             "'11. 생산원가계획'!C31-'11. 생산원가계획'!C21"
+                             "-'11. 생산원가계획'!C12")
+            self.assertEqual(patched.formulas[(S3, "E25")].text,
+                             "SUM(F25:H25)")
 
     def test_precondition_blocks_unbound_source(self):
         a = audit_module()

@@ -1,5 +1,5 @@
 {
-  "basis": ".common-work/design/DESIGN-D7-C1.md r5; evidence for policy items: .common-work/research/TEXTBOOK-BASIS.md (candidate textbook sha256 661f7281ba270acd716b5106d263eae38e44c0ba88b78935649f89a51ce9a4b4 — course authority NOT established)",
+  "basis": ".common-work/design/DESIGN-D7-C1.md r5; evidence for policy items: .common-work/research/TEXTBOOK-BASIS.md (candidate textbook sha256 661f7281ba270acd716b5106d263eae38e44c0ba88b78935649f89a51ce9a4b4 — course authority NOT established); policy items decided by owner 2026-09-27 — public-agency sources first (.common-work/research/POLICY-BASIS.md), required-course textbook second; design .common-work/design/DESIGN-D8-C1B.md r3, per-cell table C1B-SPEC-TABLE.md",
   "files": {
     "SEO": {
       "findings": [
@@ -7,40 +7,184 @@
           "audit_verdict": "not_audited_same_defects_measured",
           "class": "formula_repoint",
           "disposition": "corrected",
-          "id": "XR-02"
+          "id": "XR-02",
+          "spec_cells": 4
         },
         {
           "audit_verdict": "not_audited_same_defects_measured",
           "class": "formula_repoint",
           "disposition": "corrected",
-          "id": "XR-03"
+          "id": "XR-03",
+          "spec_cells": 5
+        },
+        {
+          "audit_verdict": "not_audited_same_defects_measured",
+          "class": "formula_repoint",
+          "decision": "corrected: 영농잉여 블록이 같은 양식의 계(총수입) 행을 사용 (SEO E27:I27 repoint, F28:I28 분모 /F7)",
+          "disposition": "corrected",
+          "evidence": "D8 r2-F1/r3: same-template internal consistency — 교수 본인 X01이 계(row7)를 영농잉여 분자로 사용; RDA 총수입은 부산물 가액을 포함(N 물리11/인쇄5, 물리13/인쇄7; R 물리9/인쇄5)하며 보조 근거로만 사용. 정정 범위는 15.추정소득분석 영농잉여 블록뿐(12!C26, 2!C12 미해당).",
+          "held": [
+            "15!E28 stored first-year rate (stored 0; no source states the intent)"
+          ],
+          "id": "XR-04",
+          "options": [
+            {
+              "consequence": "부산물 수입만큼 주산물 기준 영농잉여보다 커질 수 있다.",
+              "option": "A: (주산물 수입 + 부산물 수입) − 경영비"
+            },
+            {
+              "consequence": "부산물 수입을 소득 기준에 넣지 않는다.",
+              "option": "B: 주산물 수입 − 경영비"
+            },
+            {
+              "consequence": "생산비와 경영비의 구성 차이만큼 A/B와 결과가 달라진다.",
+              "option": "C: 조수입 − 생산비 또는 주산물 수입 − 생산비"
+            }
+          ],
+          "spec_cells": 9,
+          "textbook_evidence": "silent",
+          "unresolved": [
+            "지표별 명칭",
+            "부산물 포함 여부",
+            "경영비/생산비 범위",
+            "C11 학교 행 매핑"
+          ]
+        },
+        {
+          "audit_verdict": "not_audited_same_defects_measured",
+          "class": "formula_repoint",
+          "decision": "corrected (owner option A): later-year 계 = SUM(F:H) (SEO E25:E28)",
+          "disposition": "corrected",
+          "evidence": "D8 r1 XR-05/r2-F5: 소유자 결정 option A(계=융자 포함 총액). 같은 시트 1년차 행이 이미 SUM(F:H)이고 선배 통합문서도 동일 — 내부 일관성. 공공자료·교재는 이 열 규칙을 정하지 않음(not_stated_in_either).",
+          "held": [
+            "first-year stored investment cells (X01 E23, X02 E24, SEO E20/E22/E23)"
+          ],
+          "id": "XR-05",
+          "options": [
+            {
+              "consequence": "융자 증가분만큼 계도 증가한다.",
+              "option": "A: 계 = SUM(자부담:융자) — 총투자액 해석"
+            },
+            {
+              "consequence": "융자 증가에도 계가 변하지 않으므로 총자금과 별도 표시해야 한다.",
+              "option": "B: 계 = SUM(자부담:보조) — 부분 소계 해석"
+            }
+          ],
+          "spec_cells": 4,
+          "textbook_evidence": "silent",
+          "unresolved": [
+            "표 제목의 계가 A/B 중 무엇인지"
+          ]
+        },
+        {
+          "audit_verdict": "not_audited_same_defects_measured",
+          "class": "formula_repoint",
+          "decision": "corrected (residual-rate link only): annual = (cost-cost*rate)/life, rate = labelled 잔존가격율 input (SEO F,G,H)",
+          "disposition": "corrected",
+          "evidence": "D8 r2-F2/F3: 잔존율 링크만 정정. N 물리11/인쇄5 정액법; 교재 T 물리187/인쇄183 감가상각대상금액=취득원가-잔존가치, 물리190/인쇄186 (취득원가-잔존가치)/내용연수. 라벨 잔존가격율 행이 있는 열만 대상. SEO F9/G9/H9 = 0.1 stored rate inputs — 기준값 변화 없음.",
+          "held": [
+            "accumulated cap / expiry after useful life (blocks have accumulated rows 13/25/37/49/61 but a cap needs MIN which the evaluator lacks and start timing is unfixed — known limitation: the charge stays constant every plan year)",
+            "depreciation columns without a residual term (e.g. X01 D-F =D8/D10; per-asset residual choice is student input)"
+          ],
+          "id": "XR-06",
+          "options": [
+            {
+              "consequence": "입력이 10%이면 첫해 금액은 같을 수 있으나 이후 잔존율 변경과 누계 상한에서 차이가 난다.",
+              "option": "A: 입력 셀이 잔존율이면 정액법 (취득원가−취득원가×표시 잔존율)/내용연수 + 누계 상한"
+            },
+            {
+              "consequence": "표시 셀의 의미를 별도로 정해야 한다; 현재 교재는 이를 결정하지 않는다.",
+              "option": "B: 학교가 자산별 고정 잔존율(예 10%)을 명시하면 고정률 적용"
+            },
+            {
+              "consequence": "A/B와 연간 상각액·순장부금액·손익이 달라진다.",
+              "option": "C: 법인세법 방식 선택이 확인되면 해당 자산·방법에 한해 0원(정률법 5%)·신고 내용연수 적용"
+            }
+          ],
+          "spec_cells": 15,
+          "textbook_evidence": "partial",
+          "unresolved": [
+            "학교 회계기준·세법 선택",
+            "자산별 방법·잔존가치·내용연수",
+            "과수 성숙/미성숙·조성비 범위",
+            "연도별 취득·상각 개시",
+            "누계 상한 구현"
+          ]
         },
         {
           "audit_verdict": "not_audited_same_defects_measured",
           "class": "formula_repoint",
           "disposition": "corrected",
-          "id": "XR-09"
+          "id": "XR-09",
+          "spec_cells": 4
+        },
+        {
+          "assumption": "8. 노무비계획 자가 노동비(11!{y}12로 들어오는 ' 1. 급여')는 전액 미지급 평가액이다. 실제로 지급하는 노동은 — 가족에게 지급하는 경우를 포함해 — 고용 노동비로 입력해 현금지출로 남긴다. 이 가정이 거절되면 XR-11은 전부 HELD로 되돌린다.",
+          "audit_verdict": "not_audited_same_defects_measured",
+          "class": "formula_repoint",
+          "decision": "corrected (owner option A): cash = C31-C21-C12 under the wholly-unpaid imputed-labour assumption",
+          "disposition": "corrected",
+          "evidence": "D8 r3 R2-1 option A(소유자 결정 2026-09-27): 자가 노동비는 전액 미지급 평가액으로 가정해 현금지출에서 차감; 실제 지급 노동은 고용 노동비로 입력해 현금지출에 남김. N 물리12/인쇄6 자가노동=기회비용, 물리13/인쇄7 경영비=외부 구입비용; 교재 T 물리370/인쇄366 현금흐름표는 현금 수반 거래만. 11!{y}12가 8-sheet 자가 노동비 소계를 가리키는 것이 전제조건.",
+          "id": "XR-11",
+          "options": [
+            {
+              "consequence": "현재 식 대비 C12만큼 현금지출이 낮아지고 순현금흐름은 그만큼 높아진다.",
+              "option": "A: C12가 전액 미지급 평가액이면 현금지출 = C31 − C21 − C12"
+            },
+            {
+              "consequence": "지급액은 현금지출에 반영된다; 다른 비현금 항목·중복은 별도 확인.",
+              "option": "B: C12가 실제 지급된 노동비이면 현재 식 유지"
+            },
+            {
+              "consequence": "총액 일괄 차감은 현금지출을 과소계상한다.",
+              "option": "C: 일부만 지급됐다면 미지급 부분만 차감"
+            }
+          ],
+          "spec_cells": 5,
+          "superseded_options": [
+            {
+              "consequence": "지급액은 현금지출에 반영된다; 다른 비현금 항목·중복은 별도 확인.",
+              "option": "A: C12가 실제 지급된 노동비이면 현재 식 유지"
+            },
+            {
+              "consequence": "현재 식 대비 C12만큼 현금지출이 낮아지고 순현금흐름은 그만큼 높아진다.",
+              "option": "B: C12가 전액 미지급 평가액이면 현금지출 = C31 − C21 − C12"
+            },
+            {
+              "consequence": "총액 일괄 차감은 현금지출을 과소계상한다.",
+              "option": "C: 일부만 지급됐다면 미지급 부분만 차감"
+            }
+          ],
+          "superseded_options_note": "superseded record (이전 기록 — A/B 문자가 반대로 배정돼 있었음; 현재 정의는 소유자 결정 2026-09-27의 option A = 미지급 평가액 차감)",
+          "textbook_evidence": "partial",
+          "unresolved": [
+            "C12의 지급 상태·포함 범위",
+            "소득/생산원가에서 평가액을 유지하는 학교 원칙"
+          ]
         },
         {
           "audit_verdict": "not_audited_same_defects_measured",
           "class": "formula_repoint",
           "disposition": "corrected",
-          "id": "XR-18"
+          "id": "XR-18",
+          "spec_cells": 4
         },
         {
           "audit_verdict": "not_audited_same_defects_measured",
           "class": "formula_repoint",
           "disposition": "corrected",
-          "id": "XR-19"
+          "id": "XR-19",
+          "spec_cells": 8
         },
         {
           "audit_verdict": "not_audited_same_defects_measured",
           "class": "formula_repoint",
           "disposition": "corrected",
-          "id": "XR-20"
+          "id": "XR-20",
+          "spec_cells": 5
         }
       ],
-      "note": "Same 30 group-A defective formulas measured at the same cells by the orchestrator (r5 P1); corrected via the same spec rows. XR-22 cells already carry prior-year formulas (no-op).",
+      "note": "Same 30 group-A defective formulas measured at the same cells by the orchestrator (r5 P1); corrected via the same spec rows. XR-22 cells already carry prior-year formulas (no-op). C1b policy items XR-04/05/06/11 were measured at SEO's coordinates (33 cells) and corrected under the same owner-approved policy dispositions as X01/X02.",
       "source_sha256": "457249255929275b3ee55383bdc36897274f08933af3536866a652b29346cd3a"
     },
     "X01": {
@@ -57,17 +201,25 @@
           "audit_verdict": "defect",
           "class": "formula_repoint",
           "disposition": "corrected",
-          "id": "XR-02"
+          "id": "XR-02",
+          "spec_cells": 4
         },
         {
           "audit_verdict": "defect",
           "class": "formula_repoint",
           "disposition": "corrected",
-          "id": "XR-03"
+          "id": "XR-03",
+          "spec_cells": 5
         },
         {
           "audit_verdict": "policy_dependent",
-          "disposition": "owner_options",
+          "class": "value_to_formula",
+          "decision": "corrected: 영농잉여 블록이 같은 양식의 계(총수입) 행을 사용 (X02/SEO E27:I27 repoint, F28:I28 분모 /F7; X01 E7 value_to_formula)",
+          "disposition": "corrected",
+          "evidence": "D8 r2-F1/r3: same-template internal consistency — 교수 본인 X01이 계(row7)를 영농잉여 분자로 사용; RDA 총수입은 부산물 가액을 포함(N 물리11/인쇄5, 물리13/인쇄7; R 물리9/인쇄5)하며 보조 근거로만 사용. 정정 범위는 15.추정소득분석 영농잉여 블록뿐(12!C26, 2!C12 미해당).",
+          "held": [
+            "15!E28 stored first-year rate (stored 0; no source states the intent)"
+          ],
           "id": "XR-04",
           "options": [
             {
@@ -83,6 +235,7 @@
               "option": "C: 조수입 − 생산비 또는 주산물 수입 − 생산비"
             }
           ],
+          "spec_cells": 1,
           "textbook_evidence": "silent",
           "unresolved": [
             "지표별 명칭",
@@ -93,7 +246,13 @@
         },
         {
           "audit_verdict": "policy_dependent",
-          "disposition": "owner_options",
+          "class": "formula_repoint",
+          "decision": "corrected (owner option A): later-year 계 = SUM(F:H) (X01/SEO E25:E28, X02 E26:E29)",
+          "disposition": "corrected",
+          "evidence": "D8 r1 XR-05/r2-F5: 소유자 결정 option A(계=융자 포함 총액). 같은 시트 1년차 행이 이미 SUM(F:H)이고 선배 통합문서도 동일 — 내부 일관성. 공공자료·교재는 이 열 규칙을 정하지 않음(not_stated_in_either).",
+          "held": [
+            "first-year stored investment cells (X01 E23, X02 E24, SEO E20/E22/E23)"
+          ],
           "id": "XR-05",
           "options": [
             {
@@ -105,6 +264,7 @@
               "option": "B: 계 = SUM(자부담:보조) — 부분 소계 해석"
             }
           ],
+          "spec_cells": 4,
           "textbook_evidence": "silent",
           "unresolved": [
             "표 제목의 계가 A/B 중 무엇인지"
@@ -112,7 +272,14 @@
         },
         {
           "audit_verdict": "policy_dependent",
-          "disposition": "owner_options",
+          "class": "formula_repoint",
+          "decision": "corrected (residual-rate link only): annual = (cost-cost*rate)/life, rate = labelled 잔존가격율 input (X01 H; X02 H,J; SEO F,G,H)",
+          "disposition": "corrected",
+          "evidence": "D8 r2-F2/F3: 잔존율 링크만 정정. N 물리11/인쇄5 정액법; 교재 T 물리187/인쇄183 감가상각대상금액=취득원가-잔존가치, 물리190/인쇄186 (취득원가-잔존가치)/내용연수. 라벨 잔존가격율 행이 있는 열만 대상.",
+          "held": [
+            "accumulated cap / expiry after useful life (blocks have accumulated rows 13/25/37/49/61 but a cap needs MIN which the evaluator lacks and start timing is unfixed — known limitation: the charge stays constant every plan year)",
+            "depreciation columns without a residual term (e.g. X01 D-F =D8/D10; per-asset residual choice is student input)"
+          ],
           "id": "XR-06",
           "options": [
             {
@@ -128,6 +295,7 @@
               "option": "C: 법인세법 방식 선택이 확인되면 해당 자산·방법에 한해 0원(정률법 5%)·신고 내용연수 적용"
             }
           ],
+          "spec_cells": 5,
           "textbook_evidence": "partial",
           "unresolved": [
             "학교 회계기준·세법 선택",
@@ -155,7 +323,8 @@
           "audit_verdict": "defect",
           "class": "formula_repoint",
           "disposition": "corrected",
-          "id": "XR-09"
+          "id": "XR-09",
+          "spec_cells": 4
         },
         {
           "audit_verdict": "open",
@@ -167,9 +336,27 @@
         },
         {
           "audit_verdict": "policy_dependent",
-          "disposition": "owner_options",
+          "class": "formula_repoint",
+          "decision": "corrected (owner option A): cash = C31-C21-C12 under the wholly-unpaid imputed-labour assumption",
+          "disposition": "corrected",
+          "evidence": "D8 r3 R2-1 option A(소유자 결정 2026-09-27): 자가 노동비는 전액 미지급 평가액으로 가정해 현금지출에서 차감; 실제 지급 노동은 고용 노동비로 입력해 현금지출에 남김. N 물리12/인쇄6 자가노동=기회비용, 물리13/인쇄7 경영비=외부 구입비용; 교재 T 물리370/인쇄366 현금흐름표는 현금 수반 거래만. 11!{y}12가 8-sheet 자가 노동비 소계를 가리키는 것이 전제조건.",
           "id": "XR-11",
           "options": [
+            {
+              "consequence": "현재 식 대비 C12만큼 현금지출이 낮아지고 순현금흐름은 그만큼 높아진다.",
+              "option": "A: C12가 전액 미지급 평가액이면 현금지출 = C31 − C21 − C12"
+            },
+            {
+              "consequence": "지급액은 현금지출에 반영된다; 다른 비현금 항목·중복은 별도 확인.",
+              "option": "B: C12가 실제 지급된 노동비이면 현재 식 유지"
+            },
+            {
+              "consequence": "총액 일괄 차감은 현금지출을 과소계상한다.",
+              "option": "C: 일부만 지급됐다면 미지급 부분만 차감"
+            }
+          ],
+          "spec_cells": 5,
+          "superseded_options": [
             {
               "consequence": "지급액은 현금지출에 반영된다; 다른 비현금 항목·중복은 별도 확인.",
               "option": "A: C12가 실제 지급된 노동비이면 현재 식 유지"
@@ -183,6 +370,7 @@
               "option": "C: 일부만 지급됐다면 미지급 부분만 차감"
             }
           ],
+          "superseded_options_note": "superseded record (이전 기록 — A/B 문자가 반대로 배정돼 있었음; 현재 정의는 소유자 결정 2026-09-27의 option A = 미지급 평가액 차감)",
           "textbook_evidence": "partial",
           "unresolved": [
             "C12의 지급 상태·포함 범위",
@@ -241,19 +429,22 @@
           "audit_verdict": "defect",
           "class": "formula_repoint",
           "disposition": "corrected",
-          "id": "XR-18"
+          "id": "XR-18",
+          "spec_cells": 4
         },
         {
           "audit_verdict": "defect",
           "class": "formula_repoint",
           "disposition": "corrected",
-          "id": "XR-19"
+          "id": "XR-19",
+          "spec_cells": 8
         },
         {
           "audit_verdict": "defect",
           "class": "formula_repoint",
           "disposition": "corrected",
-          "id": "XR-20"
+          "id": "XR-20",
+          "spec_cells": 5
         },
         {
           "audit_verdict": "defect",
@@ -268,7 +459,8 @@
           "audit_verdict": "defect",
           "class": "value_to_formula",
           "disposition": "corrected",
-          "id": "XR-22"
+          "id": "XR-22",
+          "spec_cells": 4
         },
         {
           "audit_verdict": "open",
@@ -425,17 +617,25 @@
           "audit_verdict": "defect",
           "class": "formula_repoint",
           "disposition": "corrected",
-          "id": "XR-02"
+          "id": "XR-02",
+          "spec_cells": 4
         },
         {
           "audit_verdict": "defect",
           "class": "formula_repoint",
           "disposition": "corrected",
-          "id": "XR-03"
+          "id": "XR-03",
+          "spec_cells": 5
         },
         {
           "audit_verdict": "policy_dependent",
-          "disposition": "owner_options",
+          "class": "formula_repoint",
+          "decision": "corrected: 영농잉여 블록이 같은 양식의 계(총수입) 행을 사용 (X02/SEO E27:I27 repoint, F28:I28 분모 /F7; X01 E7 value_to_formula)",
+          "disposition": "corrected",
+          "evidence": "D8 r2-F1/r3: same-template internal consistency — 교수 본인 X01이 계(row7)를 영농잉여 분자로 사용; RDA 총수입은 부산물 가액을 포함(N 물리11/인쇄5, 물리13/인쇄7; R 물리9/인쇄5)하며 보조 근거로만 사용. 정정 범위는 15.추정소득분석 영농잉여 블록뿐(12!C26, 2!C12 미해당).",
+          "held": [
+            "15!E28 stored first-year rate (stored 0; no source states the intent)"
+          ],
           "id": "XR-04",
           "options": [
             {
@@ -451,6 +651,7 @@
               "option": "C: 조수입 − 생산비 또는 주산물 수입 − 생산비"
             }
           ],
+          "spec_cells": 9,
           "textbook_evidence": "silent",
           "unresolved": [
             "지표별 명칭",
@@ -461,7 +662,13 @@
         },
         {
           "audit_verdict": "policy_dependent",
-          "disposition": "owner_options",
+          "class": "formula_repoint",
+          "decision": "corrected (owner option A): later-year 계 = SUM(F:H) (X01/SEO E25:E28, X02 E26:E29)",
+          "disposition": "corrected",
+          "evidence": "D8 r1 XR-05/r2-F5: 소유자 결정 option A(계=융자 포함 총액). 같은 시트 1년차 행이 이미 SUM(F:H)이고 선배 통합문서도 동일 — 내부 일관성. 공공자료·교재는 이 열 규칙을 정하지 않음(not_stated_in_either).",
+          "held": [
+            "first-year stored investment cells (X01 E23, X02 E24, SEO E20/E22/E23)"
+          ],
           "id": "XR-05",
           "options": [
             {
@@ -473,6 +680,7 @@
               "option": "B: 계 = SUM(자부담:보조) — 부분 소계 해석"
             }
           ],
+          "spec_cells": 4,
           "textbook_evidence": "silent",
           "unresolved": [
             "표 제목의 계가 A/B 중 무엇인지"
@@ -480,7 +688,14 @@
         },
         {
           "audit_verdict": "policy_dependent",
-          "disposition": "owner_options",
+          "class": "formula_repoint",
+          "decision": "corrected (residual-rate link only): annual = (cost-cost*rate)/life, rate = labelled 잔존가격율 input (X01 H; X02 H,J; SEO F,G,H)",
+          "disposition": "corrected",
+          "evidence": "D8 r2-F2/F3: 잔존율 링크만 정정. N 물리11/인쇄5 정액법; 교재 T 물리187/인쇄183 감가상각대상금액=취득원가-잔존가치, 물리190/인쇄186 (취득원가-잔존가치)/내용연수. 라벨 잔존가격율 행이 있는 열만 대상.",
+          "held": [
+            "accumulated cap / expiry after useful life (blocks have accumulated rows 13/25/37/49/61 but a cap needs MIN which the evaluator lacks and start timing is unfixed — known limitation: the charge stays constant every plan year)",
+            "depreciation columns without a residual term (e.g. X01 D-F =D8/D10; per-asset residual choice is student input)"
+          ],
           "id": "XR-06",
           "options": [
             {
@@ -496,6 +711,7 @@
               "option": "C: 법인세법 방식 선택이 확인되면 해당 자산·방법에 한해 0원(정률법 5%)·신고 내용연수 적용"
             }
           ],
+          "spec_cells": 10,
           "textbook_evidence": "partial",
           "unresolved": [
             "학교 회계기준·세법 선택",
@@ -523,7 +739,8 @@
           "audit_verdict": "defect",
           "class": "formula_repoint",
           "disposition": "corrected",
-          "id": "XR-09"
+          "id": "XR-09",
+          "spec_cells": 4
         },
         {
           "audit_verdict": "open",
@@ -535,9 +752,27 @@
         },
         {
           "audit_verdict": "policy_dependent",
-          "disposition": "owner_options",
+          "class": "formula_repoint",
+          "decision": "corrected (owner option A): cash = C31-C21-C12 under the wholly-unpaid imputed-labour assumption",
+          "disposition": "corrected",
+          "evidence": "D8 r3 R2-1 option A(소유자 결정 2026-09-27): 자가 노동비는 전액 미지급 평가액으로 가정해 현금지출에서 차감; 실제 지급 노동은 고용 노동비로 입력해 현금지출에 남김. N 물리12/인쇄6 자가노동=기회비용, 물리13/인쇄7 경영비=외부 구입비용; 교재 T 물리370/인쇄366 현금흐름표는 현금 수반 거래만. 11!{y}12가 8-sheet 자가 노동비 소계를 가리키는 것이 전제조건.",
           "id": "XR-11",
           "options": [
+            {
+              "consequence": "현재 식 대비 C12만큼 현금지출이 낮아지고 순현금흐름은 그만큼 높아진다.",
+              "option": "A: C12가 전액 미지급 평가액이면 현금지출 = C31 − C21 − C12"
+            },
+            {
+              "consequence": "지급액은 현금지출에 반영된다; 다른 비현금 항목·중복은 별도 확인.",
+              "option": "B: C12가 실제 지급된 노동비이면 현재 식 유지"
+            },
+            {
+              "consequence": "총액 일괄 차감은 현금지출을 과소계상한다.",
+              "option": "C: 일부만 지급됐다면 미지급 부분만 차감"
+            }
+          ],
+          "spec_cells": 5,
+          "superseded_options": [
             {
               "consequence": "지급액은 현금지출에 반영된다; 다른 비현금 항목·중복은 별도 확인.",
               "option": "A: C12가 실제 지급된 노동비이면 현재 식 유지"
@@ -551,6 +786,7 @@
               "option": "C: 일부만 지급됐다면 미지급 부분만 차감"
             }
           ],
+          "superseded_options_note": "superseded record (이전 기록 — A/B 문자가 반대로 배정돼 있었음; 현재 정의는 소유자 결정 2026-09-27의 option A = 미지급 평가액 차감)",
           "textbook_evidence": "partial",
           "unresolved": [
             "C12의 지급 상태·포함 범위",
@@ -609,19 +845,22 @@
           "audit_verdict": "defect",
           "class": "formula_repoint",
           "disposition": "corrected",
-          "id": "XR-18"
+          "id": "XR-18",
+          "spec_cells": 4
         },
         {
           "audit_verdict": "defect",
           "class": "formula_repoint",
           "disposition": "corrected",
-          "id": "XR-19"
+          "id": "XR-19",
+          "spec_cells": 8
         },
         {
           "audit_verdict": "defect",
           "class": "formula_repoint",
           "disposition": "corrected",
-          "id": "XR-20"
+          "id": "XR-20",
+          "spec_cells": 5
         },
         {
           "audit_verdict": "defect",
@@ -762,7 +1001,59 @@
     }
   },
   "policy": {
-    "authority_note": "The candidate textbook is not confirmed as the course basis (author is not the course professor). It therefore does not decide any policy item; options are reported to the owner.",
+    "authority_note": "Owner decision 2026-09-27: the course textbook (김성학) is the official required-course textbook; for the policy items the public-agency sources (농촌진흥청 N/R/E) are the FIRST basis and the textbook the SECOND; items neither states are reported to the owner. Design D8-C1B r3 is the binding disposition.",
+    "baseline_value_changes": [
+      {
+        "item": "10. 감가상각비계획 J column",
+        "reason": "J9 stored 0 — charge becomes cost/life (residual 0); K-column totals and downstream 11/12/13/15 lines follow",
+        "ref": "X02"
+      },
+      {
+        "item": "XR-11 cash-outflow row and downstream balances",
+        "reason": "imputed 자가 노동비 removed from cash spending; balance-sheet cash and retained lines absorb the difference",
+        "ref": "X01/X02/SEO"
+      }
+    ],
+    "decisions": {
+      "XR-04": {
+        "basis": "D8 r2-F1/r3: same-template internal consistency — 교수 본인 X01이 계(row7)를 영농잉여 분자로 사용; RDA 총수입은 부산물 가액을 포함(N 물리11/인쇄5, 물리13/인쇄7; R 물리9/인쇄5)하며 보조 근거로만 사용. 정정 범위는 15.추정소득분석 영농잉여 블록뿐(12!C26, 2!C12 미해당).",
+        "decision": "corrected",
+        "scope": "15.추정소득분석 surplus block only"
+      },
+      "XR-05": {
+        "basis": "D8 r1 XR-05/r2-F5: 소유자 결정 option A(계=융자 포함 총액). 같은 시트 1년차 행이 이미 SUM(F:H)이고 선배 통합문서도 동일 — 내부 일관성. 공공자료·교재는 이 열 규칙을 정하지 않음(not_stated_in_either).",
+        "decision": "corrected",
+        "scope": "option A — 계 includes 융자"
+      },
+      "XR-06": {
+        "basis": "D8 r2-F2/F3: 잔존율 링크만 정정. N 물리11/인쇄5 정액법; 교재 T 물리187/인쇄183 감가상각대상금액=취득원가-잔존가치, 물리190/인쇄186 (취득원가-잔존가치)/내용연수. 라벨 잔존가격율 행이 있는 열만 대상.",
+        "decision": "corrected",
+        "scope": "residual-rate link only; cap/expiry held"
+      },
+      "XR-11": {
+        "basis": "D8 r3 R2-1 option A(소유자 결정 2026-09-27): 자가 노동비는 전액 미지급 평가액으로 가정해 현금지출에서 차감; 실제 지급 노동은 고용 노동비로 입력해 현금지출에 남김. N 물리12/인쇄6 자가노동=기회비용, 물리13/인쇄7 경영비=외부 구입비용; 교재 T 물리370/인쇄366 현금흐름표는 현금 수반 거래만. 11!{y}12가 8-sheet 자가 노동비 소계를 가리키는 것이 전제조건.",
+        "decision": "corrected",
+        "scope": "option A — wholly-unpaid imputed labour excluded from cash"
+      }
+    },
+    "held": [
+      {
+        "item": "15!E28",
+        "reason": "stored first-year rate value; no source states intent"
+      },
+      {
+        "item": "XR-06 cap/expiry",
+        "reason": "accumulated cap needs MIN (evaluator lacks it) and expiry needs unfixed start timing; known limitation — constant annual charge beyond the life"
+      },
+      {
+        "item": "depreciation columns without a residual term",
+        "reason": "e.g. X01 D-F =D8/D10; per-asset residual choice is student input"
+      },
+      {
+        "item": "stored first-year investment cells",
+        "reason": "X01 E23, X02 E24, SEO E20/E22/E23 — stored values, not formulas"
+      }
+    ],
     "items": {
       "XR-04": {
         "evidence": "silent",
@@ -834,6 +1125,21 @@
         "evidence": "partial",
         "options": [
           {
+            "consequence": "현재 식 대비 C12만큼 현금지출이 낮아지고 순현금흐름은 그만큼 높아진다.",
+            "option": "A: C12가 전액 미지급 평가액이면 현금지출 = C31 − C21 − C12"
+          },
+          {
+            "consequence": "지급액은 현금지출에 반영된다; 다른 비현금 항목·중복은 별도 확인.",
+            "option": "B: C12가 실제 지급된 노동비이면 현재 식 유지"
+          },
+          {
+            "consequence": "총액 일괄 차감은 현금지출을 과소계상한다.",
+            "option": "C: 일부만 지급됐다면 미지급 부분만 차감"
+          }
+        ],
+        "summary": "The textbook supports the general rule that a cash-flow statement selects transactions that actually moved cash (physical p.370). It does not define the farm cost/income classification of 자가노동 평가액, whether it was paid, or this form's 생산원가 composition.",
+        "superseded_options": [
+          {
             "consequence": "지급액은 현금지출에 반영된다; 다른 비현금 항목·중복은 별도 확인.",
             "option": "A: C12가 실제 지급된 노동비이면 현재 식 유지"
           },
@@ -846,7 +1152,7 @@
             "option": "C: 일부만 지급됐다면 미지급 부분만 차감"
           }
         ],
-        "summary": "The textbook supports the general rule that a cash-flow statement selects transactions that actually moved cash (physical p.370). It does not define the farm cost/income classification of 자가노동 평가액, whether it was paid, or this form's 생산원가 composition.",
+        "superseded_options_note": "superseded record (이전 기록 — A/B 문자가 반대로 배정돼 있었음; 현재 정의는 소유자 결정 2026-09-27의 option A = 미지급 평가액 차감)",
         "unresolved": [
           "C12의 지급 상태·포함 범위",
           "소득/생산원가에서 평가액을 유지하는 학교 원칙"
