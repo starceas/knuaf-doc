@@ -124,6 +124,10 @@
       "note": "P0-A: runner-level negative controls on disposable copies (missing/tampered runtime, PYTHONPATH pollution, foreign module cache). repair-n1/N1: nested-flag, injected-skip, XPASS, missing-dependency, stub-version cases.",
       "origin": "new"
     },
+    "tests/test_workbook_c1b_correction.py": {
+      "note": "P23 synthetic C1b spec, policy vectors, mutant rejection and per-source disposition counts; local originals remain in tests/local_real_sources.py.",
+      "origin": "new"
+    },
     "tests/test_workbook_registry.py": {
       "note": "P8 common reference-workbook decision table, X01/X02 identity with exact sheet names, read-only scan, no shipped originals or local paths. | P10: P8 common reference-workbook decision table, X01/X02 identity with exact sheet names, read-only scan, no shipped originals or local paths. P9: v2 reference-set load, extract/--check determinism, registry-extract identity path parser-call counts, resolver template_status keys. P9-D3: major_base_policy decision tests incl. shipped-catalog default path, explicit-selection precedence, unusable-base and duplicate-copy negatives.",
       "origin": "new"

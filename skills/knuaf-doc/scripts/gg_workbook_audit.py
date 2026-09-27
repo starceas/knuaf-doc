@@ -1569,6 +1569,90 @@ def c1_verify(book, rows, ref, *, blocks=None,
         checked += 1
     report["exclusion_probes"] = checked
 
+    # --- Approved-reference closure (D8 r3; oracle-derived) ----------------
+    # A candidate target may only read the cells the approved row for that
+    # same target reads.  Vectors measure the net response and probes only
+    # cover cells that stay outside the downstream graph, so neither can see
+    # a formula that swaps one intended input for an unapproved one when the
+    # net delta happens to agree (e.g. subtracting the labour subtotal
+    # 11!C11 instead of its imputed member 11!C12 — every probe nets to 0
+    # through C31->C11).  This check names the forbidden cell directly.
+    oracle_refs = {(sheet, cell): _c1_refs(row)
+                   for sheet, cell, row in oracle_rows}
+    for sheet, cell, row in rows:
+        approved = oracle_refs.get((sheet, cell))
+        if approved is None:
+            failures.append("reference " + row.get("finding_id", "?")
+                            + " " + sheet + "!" + cell
+                            + " is not an approved target")
+            continue
+        try:
+            cand_refs = _c1_refs(row)
+        except Unsupported as exc:
+            failures.append("reference " + row.get("finding_id", "?")
+                            + " " + sheet + "!" + cell
+                            + " formula does not parse: " + str(exc))
+            continue
+        for extra in sorted(cand_refs - approved):
+            failures.append("reference " + row.get("finding_id", "?")
+                            + " " + sheet + "!" + cell + " reads "
+                            + extra[0] + "!" + extra[1]
+                            + " outside the approved inputs")
+            if fail_fast:
+                report["ok"] = False
+                return report
+
+    # --- Value equivalence (D8 FIX1-1; oracle-derived) ----------------------
+    # The delta vectors are translation-invariant: appending a constant or
+    # rescaling a target (f+1, f*1.0001) leaves every measured delta intact,
+    # so vectors alone cannot reject them.  For every approved target the
+    # candidate cell and the approved spec formula are evaluated on the same
+    # inputs at the base point and at deterministic perturbed points (every
+    # approved input driven non-zero); any difference beyond the cache
+    # tolerance fails.  The reference point always comes from the approved
+    # spec, never from the candidate.
+    for oracle_sheet, oracle_cell, oracle_row in oracle_rows:
+        inputs = sorted(oracle_refs[(oracle_sheet, oracle_cell)])
+        base = {}
+        for in_key in inputs:
+            try:
+                value = _c1_eval(book, in_key, {})
+            except Unsupported:
+                value = None
+            base[in_key] = value
+        points = [None]
+        for j in range(2):
+            point = {}
+            for in_key, value in base.items():
+                numeric = (float(value)
+                           if isinstance(value, (int, float, bool)) else 0.0)
+                point[in_key] = abs(numeric) + j + 1
+            points.append(point)
+        label = oracle_sheet + "!" + oracle_cell
+        for j, point in enumerate(points):
+            memo_c, memo_o = {}, {}
+            try:
+                cand_value = _c1_eval(patched, (oracle_sheet, oracle_cell),
+                                      memo_c, point)
+            except Unsupported:
+                cand_value = "<unsupported>"
+            try:
+                oracle_value = _c1_eval(
+                    oracle_patched, (oracle_sheet, oracle_cell),
+                    memo_o, point)
+            except Unsupported:
+                oracle_value = "<unsupported>"
+            if not equal_value(cand_value, oracle_value):
+                failures.append("value " + oracle_row.get("finding_id", "?")
+                                + " " + label + " differs from the approved "
+                                + "spec value at point " + str(j)
+                                + " (candidate " + repr(cand_value)
+                                + ", approved " + repr(oracle_value) + ")")
+                if fail_fast:
+                    report["ok"] = False
+                    return report
+                break
+
     # --- analyzer diff -----------------------------------------------------
     if blocks is not None:
         aref = analyzer_ref or ref
@@ -1761,6 +1845,10 @@ def c1_mutant_specs(spec, ref):
                 return r
         raise ValueError("mutant target missing " + finding + " " + cell)
 
+    def rows_of(doc, finding):
+        return [r for r in doc["files"][ref]
+                if r["finding_id"] == finding]
+
     if "XR-19" in has:
         doc = clone()
         row_at(doc, "XR-19", "E29")["new_formula"] = "='9 .경비계획'!C88"
@@ -1805,6 +1893,115 @@ def c1_mutant_specs(spec, ref):
         row_at(doc, "XR-20", "G16")["new_formula"] = (
             "=G17+G20+G25+G21+G29+G30+G28+G28")
         mutants["duplicated_term"] = doc
+
+    # --- C1b policy-item mutants (D8 r2/r3): each must be rejected. --------
+    if "XR-04" in has:
+        cells = {r["cell"] for r in rows_of(spec, "XR-04")}
+        if "F28" in cells:
+            # Rate divided by main-crop revenue: the synthetic 100/20/60
+            # input gives 0.6, not the approved 0.5.
+            doc = clone()
+            row_at(doc, "XR-04", "F28")["new_formula"] = "=F27/F5"
+            mutants["xr04_rate_on_main_crop"] = doc
+            # Rate divided by by-product revenue alone.
+            doc = clone()
+            row_at(doc, "XR-04", "F28")["new_formula"] = "=F27/F6"
+            mutants["xr04_rate_on_byproduct"] = doc
+        if "E27" in cells:
+            # Surplus left on main-crop revenue (the pre-correction defect).
+            doc = clone()
+            row_at(doc, "XR-04", "E27")["new_formula"] = "=E5-E26"
+            mutants["xr04_surplus_main_only"] = doc
+        if "E7" in cells:
+            # First-year total drops the by-product term.
+            doc = clone()
+            row_at(doc, "XR-04", "E7")["new_formula"] = "=E5"
+            mutants["xr04_byproduct_dropped"] = doc
+    if "XR-05" in has:
+        # Later-year total keeps dropping the loan column.
+        doc = clone()
+        first = sorted(rows_of(doc, "XR-05"), key=lambda r: r["cell"])[0]
+        rownum = split_addr(first["cell"])[1]
+        first["new_formula"] = ("=SUM(F" + str(rownum) + ":G"
+                                + str(rownum) + ")")
+        mutants["xr05_loan_dropped"] = doc
+        # Constant offset / scale on the total: every delta vector still
+        # matches, so only the value-equivalence check rejects these.
+        doc = clone()
+        row_at(doc, "XR-05", first["cell"])["new_formula"] += "+1"
+        mutants["xr05_constant_offset"] = doc
+        doc = clone()
+        row_at(doc, "XR-05", first["cell"])["new_formula"] = (
+            "=(" + _c1_norm_formula(
+                row_at(spec, "XR-05", first["cell"])["new_formula"])
+            + ")*1.0001")
+        mutants["xr05_scale"] = doc
+    if "XR-06" in has:
+        # Hard-coded residual kept instead of the labelled rate cell.
+        doc = clone()
+        for r in rows_of(doc, "XR-06"):
+            col, cost_row = split_addr(r["cell"])
+            col = colname(col)
+            cost = str(cost_row - 4)
+            life = str(cost_row - 2)
+            r["new_formula"] = ("=(" + col + cost + "-" + col + cost
+                                + "*0.1)/" + col + life)
+        mutants["xr06_residual_constant"] = doc
+        # The annual charge reads another block's rate cell (the first
+        # block's rate input instead of the chain cell of its own block).
+        doc = clone()
+        for r in rows_of(doc, "XR-06"):
+            col, cost_row = split_addr(r["cell"])
+            col = colname(col)
+            if cost_row == 12:
+                continue  # first block has no earlier block to mis-read
+            cost = str(cost_row - 4)
+            life = str(cost_row - 2)
+            r["new_formula"] = ("=(" + col + cost + "-" + col + cost
+                                + "*" + col + "9)/" + col + life)
+        mutants["xr06_wrong_block_rate"] = doc
+        # The annual charge reads a neighbouring asset column's rate cell.
+        doc = clone()
+        for r in sorted(rows_of(doc, "XR-06"), key=lambda r: r["cell"]):
+            col, cost_row = split_addr(r["cell"])
+            other = colname(col - 1 if col > 1 else col + 1)
+            col = colname(col)
+            cost = str(cost_row - 4)
+            life = str(cost_row - 2)
+            rate = str(cost_row - 3)
+            r["new_formula"] = ("=(" + col + cost + "-" + col + cost
+                                + "*" + other + rate + ")/" + col + life)
+            break
+        mutants["xr06_wrong_column_rate"] = doc
+    if "XR-11" in has:
+        p11 = "'11. 생산원가계획'!"
+        cash_cell = sorted(rows_of(spec, "XR-11"),
+                           key=lambda r: r["cell"])[0]["cell"]
+        first_row = row_at(spec, "XR-11", cash_cell)
+        year_col = first_row["new_formula"].split(p11)[1][0]
+        y = year_col  # e.g. "C" for the first year column
+        nxt = chr(ord(y) + 1)
+        def xr11(base):
+            doc = clone()
+            row_at(doc, "XR-11", cash_cell)["new_formula"] = "=" + base
+            return doc
+        mutants["xr11_depreciation_kept"] = xr11(
+            p11 + y + "31-" + p11 + y + "12")
+        mutants["xr11_paid_labour_removed"] = xr11(
+            p11 + y + "31-" + p11 + y + "21-" + p11 + y + "11")
+        mutants["xr11_double_subtraction"] = xr11(
+            p11 + y + "31-" + p11 + y + "21-2*" + p11 + y + "12")
+        mutants["xr11_wrong_year"] = xr11(
+            p11 + y + "31-" + p11 + y + "21-" + p11 + nxt + "12")
+        mutants["xr11_sign_flip"] = xr11(
+            p11 + y + "31-" + p11 + y + "21+" + p11 + y + "12")
+        # Constant offset / scale: delta-identical to the approved formula,
+        # rejected by value equivalence.
+        mutants["xr11_constant_offset"] = xr11(
+            p11 + y + "31-" + p11 + y + "21-" + p11 + y + "12+1")
+        mutants["xr11_scale"] = xr11(
+            "(" + p11 + y + "31-" + p11 + y + "21-" + p11 + y + "12"
+            + ")*1.0001")
     return mutants
 
 

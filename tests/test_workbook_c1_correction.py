@@ -20,6 +20,10 @@ S9 = "9 .경비계획"
 S10 = "10. 감가상각비계획 "
 S11 = "11. 생산원가계획"
 S15 = "15.추정소득분석"
+S14 = "14. 현금흐름계획"
+S8 = "8. 노무비계획"
+S3 = "3.투자계획"
+P11 = "'11. 생산원가계획'!"
 AUDIT_CLI = ROOT / "skills/knuaf-doc/scripts/gg_workbook_audit.py"
 SHEETS = ["목록", "1. 기초재무상태조사", "2. 중장기영농목표", "3.투자계획",
           "4. 원리금상환계획", " 5. 판매계획", "6. 생산계획",
@@ -93,6 +97,86 @@ def synthetic_book():
     for row in (20, 32, 44, 56):
         f(S10, "G" + str(row), "SUM(C{0}:F{0})".format(row))
         f(S10, "I" + str(row), "SUM(H{0}:H{0})".format(row))
+
+    # --- C1b defect structures (X01 shape, same coordinates as the
+    # pinned source) ----------------------------------------------------
+    # Sheet 15 surplus block: row 5 주산물, 6 부산물, 7 계, 26 비용, 27 영농잉여,
+    # 28 영농잉여율.  X01 already uses row 7; E7 is a stored 0 (XR-04 defect).
+    v(S15, "E5", 100)
+    v(S15, "E6", 20)
+    v(S15, "E7", 0)                                  # XR-04 value_to_formula defect
+    f(S15, "E26", "SUM(E20:E25)")
+    for r in range(20, 26):
+        v(S15, "E" + str(r), 12)
+    f(S15, "E27", "E7-E26")
+    v(S15, "E28", 0)                                 # HELD first-year rate
+    for c in "FGHI":
+        v(S15, c + "5", 100)
+        v(S15, c + "6", 20)
+        f(S15, c + "7", "SUM({0}5,{0}6)".format(c))
+        v(S15, c + "26", 60)
+        f(S15, c + "27", "{0}7-{0}26".format(c))
+        f(S15, c + "28", "{0}27/{0}7*100".format(c))  # X01 percent scale
+
+    # Sheet 3 investment: first-year 계 rows already sum F:H (loan included),
+    # later-year rows drop the loan column (XR-05 defect).
+    for r in range(19, 29):
+        for c in "EFGH":
+            v(S3, c + str(r), 0)
+    for r in (19, 20, 21, 22):
+        f(S3, "E" + str(r), "SUM(F{0}:H{0})".format(r))
+    for r in (25, 26, 27, 28):
+        f(S3, "E" + str(r), "SUM(F{0}:G{0})".format(r))
+
+    # Sheet 10 H column: residual-rate input row 9 (stored 0.1) and the rate
+    # chain; the five annual rows hard-code 0.1 instead (XR-06 defect).
+    v(S10, "H9", 0.1)
+    v(S10, "H10", 10)
+    prev_rate, prev_life = "H9", "H10"
+    for base in (8, 20, 32, 44, 56):
+        rate, life = "H" + str(base + 1), "H" + str(base + 2)
+        if base == 8:
+            pass  # H9/H10 are stored inputs
+        else:
+            f(S10, rate, prev_rate)
+            f(S10, life, prev_life)
+        f(S10, "H" + str(base + 4),
+          "(H{0}-H{0}*0.1)/H{1}".format(base, base + 2))
+        prev_rate, prev_life = rate, life
+
+    # Sheet 11 cost structure: C31 = C5+C11+C16; 노무비 C11 sums the 급여
+    # 자가노동비 link C12 and the 고용노동비 link C15; depreciation C21.
+    labour_cols = {"C": "H", "D": "K", "E": "N", "F": "Q", "G": "T"}
+    for c in "CDEFG":
+        f(S11, c + "5", "SUM({0}6:{0}10)".format(c))
+        for r in range(6, 11):
+            v(S11, c + str(r), 100)
+        f(S11, c + "11", "SUM({0}12:{0}15)".format(c))
+        f(S11, c + "12", "'8. 노무비계획'!" + labour_cols[c] + "10")
+        v(S11, c + "13", 0)
+        v(S11, c + "14", 0)
+        f(S11, c + "15", "'8. 노무비계획'!" + labour_cols[c] + "13")
+        f(S11, c + "21", "SUM({0}22:{0}24)".format(c))
+        for r in (22, 23, 24):
+            v(S11, c + str(r), 100)
+        f(S11, c + "31", "{0}5+{0}11+{0}16".format(c))
+
+    # Sheet 8 labour year columns: row 10 = 자가 노동비 소계, row 13 = 고용
+    # 노동비 소계.
+    for col in "HKNQT":
+        v(S8, col + "8", 0)
+        v(S8, col + "9", 0)
+        f(S8, col + "10", "{0}8+{0}9".format(col))
+        v(S8, col + "11", 0)
+        v(S8, col + "12", 0)
+        f(S8, col + "13", "{0}11+{0}12".format(col))
+
+    # Sheet 14 cash outflow: 당기총생산 원가 without the imputed-labour term
+    # (XR-11 defect; X01's E column carries a leading space in the stored text).
+    for d, y in zip("DEFGH", "CDEFG"):
+        f(S14, d + "17", P11 + y + "31-" + P11 + y + "21")
+    b.formulas[S14, "E17"] = a.FORMULA(
+        " " + b.formulas[S14, "E17"].text, None, None)
     return a, b
 
 
@@ -108,7 +192,8 @@ class SpecShapeTests(unittest.TestCase):
             self.assertEqual(len(meta["sha256"]), 64)
             int(meta["sha256"], 16)
         counts = {k: len(v) for k, v in self.spec["files"].items()}
-        self.assertEqual(counts, {"X01": 34, "X02": 30, "SEO": 30})
+        # C1 (30/30/30) + C1b policy items (15/28/33).
+        self.assertEqual(counts, {"X01": 49, "X02": 58, "SEO": 63})
 
     def test_rows_are_whitelisted_and_table_consistent(self):
         allowed = {"finding_id", "sheet", "cell", "class",
@@ -125,7 +210,16 @@ class SpecShapeTests(unittest.TestCase):
         # The 30 group-A rows must be identical across the three sources.
         base = self.spec["files"]["X01"][:30]
         for ref in ("X02", "SEO"):
-            self.assertEqual(self.spec["files"][ref], base)
+            self.assertEqual(self.spec["files"][ref][:30], base)
+        # Tail rows differ per source shape: X01 also carries the XR-22
+        # carry-over rows; the C1b policy findings are XR-04/05/06/11.
+        self.assertEqual(
+            {r["finding_id"] for r in self.spec["files"]["X01"][30:]},
+            {"XR-22", "XR-04", "XR-05", "XR-06", "XR-11"})
+        for ref in ("X02", "SEO"):
+            self.assertEqual(
+                {r["finding_id"] for r in self.spec["files"][ref][30:]},
+                {"XR-04", "XR-05", "XR-06", "XR-11"})
 
     def test_no_numeric_example_values_shipped(self):
         text = SPEC_PATH.read_text(encoding="utf-8")
@@ -173,7 +267,7 @@ class VectorAndMutantTests(unittest.TestCase):
     def test_canonical_spec_passes_on_synthetic(self):
         report = self.a.c1_verify(self.book, self.rows, "X01")
         self.assertTrue(report["ok"], report["failures"][:5])
-        self.assertEqual(len(report["vectors"]), 80)
+        self.assertEqual(len(report["vectors"]), 124)
         self.assertGreater(report["exclusion_probes"], 0)
         self.assertFalse(report["failures"])
 
@@ -192,10 +286,37 @@ class VectorAndMutantTests(unittest.TestCase):
                                         "off_by_one_y3", "off_by_one_y4",
                                         "extra_input", "dropped_term",
                                         "sign_flip", "broken_carry",
-                                        "duplicated_term"})
+                                        "duplicated_term",
+                                        "xr04_byproduct_dropped",
+                                        "xr05_loan_dropped",
+                                        "xr05_constant_offset",
+                                        "xr05_scale",
+                                        "xr06_residual_constant",
+                                        "xr06_wrong_block_rate",
+                                        "xr06_wrong_column_rate",
+                                        "xr11_depreciation_kept",
+                                        "xr11_paid_labour_removed",
+                                        "xr11_double_subtraction",
+                                        "xr11_wrong_year",
+                                        "xr11_sign_flip",
+                                        "xr11_constant_offset",
+                                        "xr11_scale"})
         reasons = {"year_swap": "vector XR-19", "dropped_term": "vector XR-09",
-                   "sign_flip": "vector XR-09", "broken_carry": "vector XR-22",
-                   "duplicated_term": "vector XR-20"}
+                   "sign_flip": "vector XR-09",
+                   "duplicated_term": "vector XR-20",
+                   "xr04_byproduct_dropped": "vector XR-04",
+                   "xr05_loan_dropped": "vector XR-05",
+                   "xr05_constant_offset": "value XR-05",
+                   "xr05_scale": ("vector XR-05", "value XR-05"),
+                   "xr06_residual_constant": "vector XR-06",
+                   "xr06_wrong_block_rate": "vector XR-06",
+                   "xr06_wrong_column_rate": "vector XR-06",
+                   "xr11_double_subtraction": "vector XR-11",
+                   "xr11_wrong_year": "vector XR-11",
+                   "xr11_sign_flip": "vector XR-11",
+                   "xr11_paid_labour_removed": "reference XR-11",
+                   "xr11_constant_offset": "value XR-11",
+                   "xr11_scale": ("vector XR-11", "value XR-11")}
         for name, mutant in mutants.items():
             with self.subTest(mutant=name):
                 report = self.a.c1_verify(
@@ -204,8 +325,23 @@ class VectorAndMutantTests(unittest.TestCase):
                 if name.startswith("off_by_one") or name == "extra_input":
                     self.assertTrue(any(f.startswith("exclusion XR-18") for f in
                                         report["failures"]), (name, report["failures"]))
+                elif name == "broken_carry":
+                    # The carry break surfaces through the XR-06 chain's
+                    # observation of H44 as well as XR-22's own vector.
+                    self.assertTrue(
+                        any("H44" in f or f.startswith("vector XR-22")
+                            for f in report["failures"]),
+                        (name, report["failures"]))
+                elif name == "xr11_depreciation_kept":
+                    self.assertTrue(
+                        any("14. 현금흐름계획" in f
+                            for f in report["failures"]),
+                        (name, report["failures"]))
                 else:
-                    self.assertTrue(any(f.startswith(reasons[name]) for f in
+                    reason = reasons[name]
+                    prefixes = (reason if isinstance(reason, tuple)
+                                else (reason,))
+                    self.assertTrue(any(f.startswith(prefixes) for f in
                                         report["failures"]), (name, report["failures"]))
 
     def test_off_by_one_subtotal_mutant_discriminates(self):
@@ -217,8 +353,6 @@ class VectorAndMutantTests(unittest.TestCase):
         # the required N3 discrimination (correct Δ0, mutant Δ+δ).
         self.assertTrue(any("exclusion" in f and "XR-18" in f for f in
                             report["failures"]), report["failures"][:6])
-
-
 
 
 if __name__ == "__main__":
