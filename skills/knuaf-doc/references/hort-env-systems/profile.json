@@ -1,7 +1,7 @@
 {
   "schema": "knuaf-hort-env-profile/v1",
   "major_id": "hort_env_systems",
-  "module_version": "0.1.0",
+  "module_version": "0.2.0",
   "notice": "이 파일은 비공개 원천의 해시·쪽·셀 위치와 일반 안내만 담는다. 선배 전체논문은 식별값으로 제목과 작성자 이름만 싣고 학번·연락처 등 다른 개인 정보는 싣지 않는다. 해시·위치 공개는 원문 재배포 권리 확인이 아니며 원문·셀 값은 싣지 않는다. 교재 주의 항목은 학생 계획의 검토 목록이지 교재 수정안이 아니다.",
   "precedents": [
     {

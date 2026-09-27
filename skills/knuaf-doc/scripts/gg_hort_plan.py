@@ -516,6 +516,30 @@ def build_plan(project_root, *, registry=None, profile_path=None):
     try:
         binding = gg_major_contract.binding_from_project(registry, project)
     except gg_major_contract.MajorContractError as error:
+        # A 0.1.0 record remains intact. The user must write an explicit
+        # common.major_id 0.2.0 fact through gg.py apply (new revision);
+        # a read-only plan must never migrate canonical answers itself.
+        old_bindings = [fact for fact in (project.get("facts") or {}).values()
+                        if isinstance(fact, dict)
+                        and fact.get("field_id") == "common.major_id"
+                        and fact.get("answer_state") == "provided"
+                        and fact.get("value") == "hort_env_systems"
+                        and fact.get("module_version") == "0.1.0"]
+        if (len(old_bindings) == 1 and error.reason == "binding_invalid"
+                and str(error) == "module_version mismatch"
+                and error.detail.get("recorded") == "0.1.0"
+                and error.detail.get("registered") == "0.2.0"):
+            return {
+                "status": "held",
+                "reason": "module_rebind_required",
+                "from_module_version": "0.1.0",
+                "to_module_version": "0.2.0",
+                "project_revision": project["revision"],
+                "original_answers_preserved": True,
+                "prior_plan_reviews_valid": False,
+                "professor_reapproval_required": True,
+                "action": "common.major_id를 0.2.0으로 명시 재바인딩하고 새 revision에서 계획을 다시 검토",
+            }, 2
         return gg_major_contract.common_only_plan(error.reason), 2
     if binding.major_id != "hort_env_systems":
         return {
@@ -539,11 +563,26 @@ def build_plan(project_root, *, registry=None, profile_path=None):
         }, 2
 
     applicability = dict(module.evidence_applicability)
+    binding_facts = [fact for fact in (project.get("facts") or {}).values()
+                     if isinstance(fact, dict)
+                     and fact.get("field_id") == "common.major_id"
+                     and fact.get("answer_state") == "provided"]
+    binding_revision = binding_facts[0].get("revision", 0) if binding_facts else 0
+    prior_review_ids = [rid for rid, review in (project.get("reviews") or {}).items()
+                        if isinstance(review, dict)
+                        and isinstance(review.get("input_revision"), int)
+                        and review["input_revision"] < binding_revision]
     return {
         "status": "ok",
         "binding": vars(binding),
         "project_revision": project["revision"],
         "module_version": module.module_version,
+        "migration": {
+            "binding_revision": binding_revision,
+            "prior_plan_review_ids_invalidated": prior_review_ids,
+            "professor_reapproval_required": True,
+            "original_answers_preserved": True,
+        },
         "profile_sha256": profile["profile_sha256"],
         "questions": _questions(module, project),
         "document_plan": [
@@ -589,4 +628,3 @@ def main(argv=None):
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
