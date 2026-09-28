@@ -253,14 +253,14 @@
       "sha256": "2284641938cbf63d390289e9c7416d40696dc0c3b791a06f3e418c51582bf533"
     },
     "tests/test_student_report.py": {
-      "note": "P22 학생 신고 시험 — draft/show/send CLI, 가림(경로·파일명·이메일·주민번호·전화·학번, L1-1~3 경계 회귀), UTF-16 상한·private 1900 합성·environment 미포함, 고정 수신처+KNUAF_REPORT_TEST_ENDPOINT 시험 모드·endpoint_changed, sha confirm, claim O_EXCL·claim 획득 뒤 재확인(dup) 한 번 POST, delivery_unknown·--retry-unknown·sent_unrecorded, 계약 형태 외 201 거부, already_sent POST 0회, 문서 연결; loopback 가짜 Worker(실제 응답 형태)만 사용. F1 처분 회귀: 공개 메타데이터 재검사(pii_remaining, 요청 0회), ECMAScript trim(U+FEFF), 계약 밖 502·다른 kind 코드→delivery_unknown과 --retry-unknown, done 기록 내용 검증, CRLF 텍스트 모드에서도 초안 sha=저장 바이트, private 1900 독립 기대값·보조 평면 문자. F1 재확인 회귀: 비문자열 error CLI(JSON 한 개·exit 1·claim 유지·재호출 요청 0), 첫 성공 뒤 영수증 부재+done 손상 시 기본 재호출 요청 0·--retry-unknown만 전송, 다른 sha done 무시. | P26: installed version.json comparison and copy-install draft preview.",
+      "note": "P22 학생 신고 시험 — draft/show/send CLI, 가림(경로·파일명·이메일·주민번호·전화·학번, L1-1~3 경계 회귀), UTF-16 상한·private 1900 합성·environment 미포함, 고정 수신처+KNUAF_REPORT_TEST_ENDPOINT 시험 모드·endpoint_changed, sha confirm, claim O_EXCL·claim 획득 뒤 재확인(dup) 한 번 POST, delivery_unknown·--retry-unknown·sent_unrecorded, 계약 형태 외 201 거부, already_sent POST 0회, 문서 연결; loopback 가짜 Worker(실제 응답 형태)만 사용. F1 처분 회귀: 공개 메타데이터 재검사(pii_remaining, 요청 0회), ECMAScript trim(U+FEFF), 계약 밖 502·다른 kind 코드→delivery_unknown과 --retry-unknown, done 기록 내용 검증, CRLF 텍스트 모드에서도 초안 sha=저장 바이트, private 1900 독립 기대값·보조 평면 문자. F1 재확인 회귀: 비문자열 error CLI(JSON 한 개·exit 1·claim 유지·재호출 요청 0), 첫 성공 뒤 영수증 부재+done 손상 시 기본 재호출 요청 0·--retry-unknown만 전송, 다른 sha done 무시. | P26: installed version.json comparison and copy-install draft preview. | P26 CI: bytecode isolation",
       "origin": "new",
-      "sha256": "2e16e23855e42a2428e35cfd4e6091574642bd129aabebf9ccda62b5b5a7a8e9"
+      "sha256": "bd2edbef6e2111e0e1eda01c043c485fe46639afc3b2e009912e94225f70325d"
     },
     "tests/test_update_check.py": {
-      "note": "P26 U1: version/check URL matrix, copy install path and ZIP guards, apply/adopt/lock/recover cut points, independent helper and guidance regression tests; synthetic and temp fixtures only | P26 F1: reviewer counterexamples, race, malformed data, negative controls, exact skill guidance and 23 Location rows.",
+      "note": "P26 U1: version/check URL matrix, copy install path and ZIP guards, apply/adopt/lock/recover cut points, independent helper and guidance regression tests; synthetic and temp fixtures only | P26 F1: reviewer counterexamples, race, malformed data, negative controls, exact skill guidance and 23 Location rows. | P26 CI: bytecode isolation",
       "origin": "new",
-      "sha256": "21557ef7a34e8c45790afd019ee55d04a47d5e144daf5708b654c0787e9f0fcf"
+      "sha256": "9476eab25a4d493ac91474686581188ad5e828d60481e967efd359e2149719b8"
     },
     "tests/test_workbook_audit_evaluator.py": {
       "origin": "new",
@@ -324,7 +324,7 @@
     "tools/validation-provenance.json": {
       "note": "This file; declares origins for the validation layer.",
       "origin": "new",
-      "sha256": "ae3b4b916126d55f3aad6bf49e78948214bf4ee84e80a02d1f5914504e73766d"
+      "sha256": "dcee740d66f62b77ccd5a58aea3f14678435790b22de3a9f695cabac41399fba"
     }
   },
   "generated_by": "tools/build_validation_bundle.py@3",
@@ -514,5 +514,5 @@
     "verified_count": 134
   },
   "schema": "knuaf-doc/validation-bundle@3",
-  "validation_tree_sha256": "fa9d64eecfe8a1637f327beecc0a440957af323839754ff3334b860c44a4d0b4"
+  "validation_tree_sha256": "c891382f933e93ccf7910b4ee32de937bc45fa62a8c51e16e1e22121066b8ec0"
 }

@@ -86,13 +86,23 @@ def _tree_bytes(root):
 _seq = [0]
 
 
+def _exec_without_bytecode(spec, mod):
+    """Loading an installed script must not mutate its on-disk tree."""
+    previous = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
+    try:
+        spec.loader.exec_module(mod)
+    finally:
+        sys.dont_write_bytecode = previous
+
+
 def _load_update(script):
     """스테이징된 gg_update.py 사본을 고유 모듈명으로 로드한다."""
     _seq[0] += 1
     spec = importlib.util.spec_from_file_location(
         "gg_update_staged_%d" % _seq[0], str(script))
     mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
+    _exec_without_bytecode(spec, mod)
     return mod
 
 
@@ -101,7 +111,7 @@ def _load_module(path, tag):
     spec = importlib.util.spec_from_file_location(
         "staged_%s_%d" % (tag, _seq[0]), str(path))
     mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
+    _exec_without_bytecode(spec, mod)
     return mod
 
 
@@ -227,7 +237,9 @@ def _corrupt_entry_bytes(data, victim_name):
 #      rbk(rename(2) 실패 → rollback rename 성공 직후 절단),
 #      hold<S>(lock 획득 뒤 S초 수면), '-'(절단 없음)
 _DRIVER = """
-import importlib.util, json, os, sys, time
+import sys
+sys.dont_write_bytecode = True
+import importlib.util, json, os, time
 
 script, mode, cut = sys.argv[1], sys.argv[2], sys.argv[3]
 rest = sys.argv[4:]
@@ -291,7 +303,9 @@ print(json.dumps(out, ensure_ascii=False))
 
 # File-signal barriers fix the intervention order; polling delay is not a race oracle.
 _BARRIER_DRIVER = r"""
-import importlib.util, json, os, subprocess, sys, time
+import sys
+sys.dont_write_bytecode = True
+import importlib.util, json, os, subprocess, time
 from pathlib import Path
 script, mode, home, source, target, ready, go = sys.argv[1:]
 ready, go = Path(ready), Path(go)

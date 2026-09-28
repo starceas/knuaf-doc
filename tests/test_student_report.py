@@ -16,6 +16,7 @@ import os
 import re
 import socket
 import shutil
+import sys
 import tempfile
 import threading
 import unittest
@@ -318,7 +319,12 @@ class InputValidationTests(_ReportCase):
                      "gg_report.py", script)
         spec = importlib.util.spec_from_file_location("copied_gg_report", script)
         copied_report = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(copied_report)
+        previous = sys.dont_write_bytecode
+        sys.dont_write_bytecode = True
+        try:
+            spec.loader.exec_module(copied_report)
+        finally:
+            sys.dont_write_bytecode = previous
         expected = json.loads((copied / "version.json").read_text(
             encoding="utf-8"))["version"]
         draft = copied_report.build_draft(self._in_doc(), plugin_root=self.tmp)
