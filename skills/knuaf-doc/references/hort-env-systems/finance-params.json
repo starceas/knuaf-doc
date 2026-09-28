@@ -2,7 +2,7 @@
  "schema": "knuaf-hort-finance-params/v2",
  "source_id": "H01",
  "source_sha256": "e3c9defe376fa74413641408900f6bb656017a389fb9745d9dac221a10951c1c",
- "param_count": 1464,
+ "param_count": 1379,
  "parameters": {
   "invest.slot1.item": {
    "canonical_cell": "4.투자계획!C19",
@@ -28396,34 +28396,6 @@
     }
    }
   },
-  "cost.material.y1.item1.area_kind": {
-   "canonical_cell": "9. 영농자재구매계획!V20",
-   "data_type": "string",
-   "unit_code": "TEXT",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": null,
-    "max": null,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
-   "required_if": {
-    "group_active": "cost.material.y1.item1"
-   },
-   "forbidden_if": {
-    "not": {
-     "group_active": "cost.material.y1.item1"
-    }
-   }
-  },
   "cost.material.y1.item1.basis_m2": {
    "canonical_cell": "9. 영농자재구매계획!W20",
    "data_type": "decimal",
@@ -28435,73 +28407,21 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quotation basis is per-area; not required for flat per-item quotes",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
+   "output_conversion": "positive basis_m2 in ㎡; 10a = 1,000㎡",
    "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y1.item1"
-     },
-     {
-      "any": [
-       {
-        "key_equals": [
-         "cost.material.y1.item1.area_kind",
-         "부지"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y1.item1.area_kind",
-         "시설"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y1.item1.area_kind",
-         "재배"
-        ]
-       }
-      ]
-     }
-    ]
+    "group_active": "cost.material.y1.item1"
    },
    "forbidden_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y1.item1"
-     },
-     {
-      "not": {
-       "any": [
-        {
-         "key_equals": [
-          "cost.material.y1.item1.area_kind",
-          "부지"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y1.item1.area_kind",
-          "시설"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y1.item1.area_kind",
-          "재배"
-         ]
-        }
-       ]
-      }
-     }
-    ]
+    "not": {
+     "group_active": "cost.material.y1.item1"
+    }
    }
   },
   "cost.material.y1.item1.basis_qty": {
@@ -28515,72 +28435,14 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quantity is quoted per item unit basis; basis_qty>0 with basis_m2",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "matched basis_qty * selected area m2 / basis_m2 * use_ratio -> applied item quantity; basis mismatch -> HOLD",
-   "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y1.item1"
-     },
-     {
-      "any": [
-       {
-        "not": {
-         "any": [
-          {
-           "key_equals": [
-            "cost.material.y1.item1.area_kind",
-            "부지"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y1.item1.area_kind",
-            "시설"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y1.item1.area_kind",
-            "재배"
-           ]
-          }
-         ]
-        }
-       },
-       {
-        "key_present": "cost.material.y1.item1.basis_m2"
-       }
-      ]
-     }
-    ]
-   }
-  },
-  "cost.material.y1.item1.use_ratio": {
-   "canonical_cell": "9. 영농자재구매계획!Y20",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
+   "output_conversion": "basis_qty × 재배면적 ㎡ / basis_m2",
    "required_if": {
     "group_active": "cost.material.y1.item1"
    },
@@ -28738,34 +28600,6 @@
     }
    }
   },
-  "cost.material.y1.item2.area_kind": {
-   "canonical_cell": "9. 영농자재구매계획!V21",
-   "data_type": "string",
-   "unit_code": "TEXT",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": null,
-    "max": null,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
-   "required_if": {
-    "group_active": "cost.material.y1.item2"
-   },
-   "forbidden_if": {
-    "not": {
-     "group_active": "cost.material.y1.item2"
-    }
-   }
-  },
   "cost.material.y1.item2.basis_m2": {
    "canonical_cell": "9. 영농자재구매계획!W21",
    "data_type": "decimal",
@@ -28777,73 +28611,21 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quotation basis is per-area; not required for flat per-item quotes",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
+   "output_conversion": "positive basis_m2 in ㎡; 10a = 1,000㎡",
    "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y1.item2"
-     },
-     {
-      "any": [
-       {
-        "key_equals": [
-         "cost.material.y1.item2.area_kind",
-         "부지"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y1.item2.area_kind",
-         "시설"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y1.item2.area_kind",
-         "재배"
-        ]
-       }
-      ]
-     }
-    ]
+    "group_active": "cost.material.y1.item2"
    },
    "forbidden_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y1.item2"
-     },
-     {
-      "not": {
-       "any": [
-        {
-         "key_equals": [
-          "cost.material.y1.item2.area_kind",
-          "부지"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y1.item2.area_kind",
-          "시설"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y1.item2.area_kind",
-          "재배"
-         ]
-        }
-       ]
-      }
-     }
-    ]
+    "not": {
+     "group_active": "cost.material.y1.item2"
+    }
    }
   },
   "cost.material.y1.item2.basis_qty": {
@@ -28857,72 +28639,14 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quantity is quoted per item unit basis; basis_qty>0 with basis_m2",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "matched basis_qty * selected area m2 / basis_m2 * use_ratio -> applied item quantity; basis mismatch -> HOLD",
-   "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y1.item2"
-     },
-     {
-      "any": [
-       {
-        "not": {
-         "any": [
-          {
-           "key_equals": [
-            "cost.material.y1.item2.area_kind",
-            "부지"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y1.item2.area_kind",
-            "시설"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y1.item2.area_kind",
-            "재배"
-           ]
-          }
-         ]
-        }
-       },
-       {
-        "key_present": "cost.material.y1.item2.basis_m2"
-       }
-      ]
-     }
-    ]
-   }
-  },
-  "cost.material.y1.item2.use_ratio": {
-   "canonical_cell": "9. 영농자재구매계획!Y21",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
+   "output_conversion": "basis_qty × 재배면적 ㎡ / basis_m2",
    "required_if": {
     "group_active": "cost.material.y1.item2"
    },
@@ -29080,34 +28804,6 @@
     }
    }
   },
-  "cost.material.y1.item3.area_kind": {
-   "canonical_cell": "9. 영농자재구매계획!V22",
-   "data_type": "string",
-   "unit_code": "TEXT",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": null,
-    "max": null,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
-   "required_if": {
-    "group_active": "cost.material.y1.item3"
-   },
-   "forbidden_if": {
-    "not": {
-     "group_active": "cost.material.y1.item3"
-    }
-   }
-  },
   "cost.material.y1.item3.basis_m2": {
    "canonical_cell": "9. 영농자재구매계획!W22",
    "data_type": "decimal",
@@ -29119,73 +28815,21 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quotation basis is per-area; not required for flat per-item quotes",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
+   "output_conversion": "positive basis_m2 in ㎡; 10a = 1,000㎡",
    "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y1.item3"
-     },
-     {
-      "any": [
-       {
-        "key_equals": [
-         "cost.material.y1.item3.area_kind",
-         "부지"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y1.item3.area_kind",
-         "시설"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y1.item3.area_kind",
-         "재배"
-        ]
-       }
-      ]
-     }
-    ]
+    "group_active": "cost.material.y1.item3"
    },
    "forbidden_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y1.item3"
-     },
-     {
-      "not": {
-       "any": [
-        {
-         "key_equals": [
-          "cost.material.y1.item3.area_kind",
-          "부지"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y1.item3.area_kind",
-          "시설"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y1.item3.area_kind",
-          "재배"
-         ]
-        }
-       ]
-      }
-     }
-    ]
+    "not": {
+     "group_active": "cost.material.y1.item3"
+    }
    }
   },
   "cost.material.y1.item3.basis_qty": {
@@ -29199,72 +28843,14 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quantity is quoted per item unit basis; basis_qty>0 with basis_m2",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "matched basis_qty * selected area m2 / basis_m2 * use_ratio -> applied item quantity; basis mismatch -> HOLD",
-   "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y1.item3"
-     },
-     {
-      "any": [
-       {
-        "not": {
-         "any": [
-          {
-           "key_equals": [
-            "cost.material.y1.item3.area_kind",
-            "부지"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y1.item3.area_kind",
-            "시설"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y1.item3.area_kind",
-            "재배"
-           ]
-          }
-         ]
-        }
-       },
-       {
-        "key_present": "cost.material.y1.item3.basis_m2"
-       }
-      ]
-     }
-    ]
-   }
-  },
-  "cost.material.y1.item3.use_ratio": {
-   "canonical_cell": "9. 영농자재구매계획!Y22",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
+   "output_conversion": "basis_qty × 재배면적 ㎡ / basis_m2",
    "required_if": {
     "group_active": "cost.material.y1.item3"
    },
@@ -29422,34 +29008,6 @@
     }
    }
   },
-  "cost.material.y1.item4.area_kind": {
-   "canonical_cell": "9. 영농자재구매계획!V23",
-   "data_type": "string",
-   "unit_code": "TEXT",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": null,
-    "max": null,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
-   "required_if": {
-    "group_active": "cost.material.y1.item4"
-   },
-   "forbidden_if": {
-    "not": {
-     "group_active": "cost.material.y1.item4"
-    }
-   }
-  },
   "cost.material.y1.item4.basis_m2": {
    "canonical_cell": "9. 영농자재구매계획!W23",
    "data_type": "decimal",
@@ -29461,73 +29019,21 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quotation basis is per-area; not required for flat per-item quotes",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
+   "output_conversion": "positive basis_m2 in ㎡; 10a = 1,000㎡",
    "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y1.item4"
-     },
-     {
-      "any": [
-       {
-        "key_equals": [
-         "cost.material.y1.item4.area_kind",
-         "부지"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y1.item4.area_kind",
-         "시설"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y1.item4.area_kind",
-         "재배"
-        ]
-       }
-      ]
-     }
-    ]
+    "group_active": "cost.material.y1.item4"
    },
    "forbidden_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y1.item4"
-     },
-     {
-      "not": {
-       "any": [
-        {
-         "key_equals": [
-          "cost.material.y1.item4.area_kind",
-          "부지"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y1.item4.area_kind",
-          "시설"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y1.item4.area_kind",
-          "재배"
-         ]
-        }
-       ]
-      }
-     }
-    ]
+    "not": {
+     "group_active": "cost.material.y1.item4"
+    }
    }
   },
   "cost.material.y1.item4.basis_qty": {
@@ -29541,72 +29047,14 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quantity is quoted per item unit basis; basis_qty>0 with basis_m2",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "matched basis_qty * selected area m2 / basis_m2 * use_ratio -> applied item quantity; basis mismatch -> HOLD",
-   "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y1.item4"
-     },
-     {
-      "any": [
-       {
-        "not": {
-         "any": [
-          {
-           "key_equals": [
-            "cost.material.y1.item4.area_kind",
-            "부지"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y1.item4.area_kind",
-            "시설"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y1.item4.area_kind",
-            "재배"
-           ]
-          }
-         ]
-        }
-       },
-       {
-        "key_present": "cost.material.y1.item4.basis_m2"
-       }
-      ]
-     }
-    ]
-   }
-  },
-  "cost.material.y1.item4.use_ratio": {
-   "canonical_cell": "9. 영농자재구매계획!Y23",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
+   "output_conversion": "basis_qty × 재배면적 ㎡ / basis_m2",
    "required_if": {
     "group_active": "cost.material.y1.item4"
    },
@@ -29764,34 +29212,6 @@
     }
    }
   },
-  "cost.material.y1.item5.area_kind": {
-   "canonical_cell": "9. 영농자재구매계획!V24",
-   "data_type": "string",
-   "unit_code": "TEXT",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": null,
-    "max": null,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
-   "required_if": {
-    "group_active": "cost.material.y1.item5"
-   },
-   "forbidden_if": {
-    "not": {
-     "group_active": "cost.material.y1.item5"
-    }
-   }
-  },
   "cost.material.y1.item5.basis_m2": {
    "canonical_cell": "9. 영농자재구매계획!W24",
    "data_type": "decimal",
@@ -29803,73 +29223,21 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quotation basis is per-area; not required for flat per-item quotes",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
+   "output_conversion": "positive basis_m2 in ㎡; 10a = 1,000㎡",
    "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y1.item5"
-     },
-     {
-      "any": [
-       {
-        "key_equals": [
-         "cost.material.y1.item5.area_kind",
-         "부지"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y1.item5.area_kind",
-         "시설"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y1.item5.area_kind",
-         "재배"
-        ]
-       }
-      ]
-     }
-    ]
+    "group_active": "cost.material.y1.item5"
    },
    "forbidden_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y1.item5"
-     },
-     {
-      "not": {
-       "any": [
-        {
-         "key_equals": [
-          "cost.material.y1.item5.area_kind",
-          "부지"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y1.item5.area_kind",
-          "시설"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y1.item5.area_kind",
-          "재배"
-         ]
-        }
-       ]
-      }
-     }
-    ]
+    "not": {
+     "group_active": "cost.material.y1.item5"
+    }
    }
   },
   "cost.material.y1.item5.basis_qty": {
@@ -29883,72 +29251,14 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quantity is quoted per item unit basis; basis_qty>0 with basis_m2",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "matched basis_qty * selected area m2 / basis_m2 * use_ratio -> applied item quantity; basis mismatch -> HOLD",
-   "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y1.item5"
-     },
-     {
-      "any": [
-       {
-        "not": {
-         "any": [
-          {
-           "key_equals": [
-            "cost.material.y1.item5.area_kind",
-            "부지"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y1.item5.area_kind",
-            "시설"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y1.item5.area_kind",
-            "재배"
-           ]
-          }
-         ]
-        }
-       },
-       {
-        "key_present": "cost.material.y1.item5.basis_m2"
-       }
-      ]
-     }
-    ]
-   }
-  },
-  "cost.material.y1.item5.use_ratio": {
-   "canonical_cell": "9. 영농자재구매계획!Y24",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
+   "output_conversion": "basis_qty × 재배면적 ㎡ / basis_m2",
    "required_if": {
     "group_active": "cost.material.y1.item5"
    },
@@ -30106,34 +29416,6 @@
     }
    }
   },
-  "cost.material.y1.item6.area_kind": {
-   "canonical_cell": "9. 영농자재구매계획!V25",
-   "data_type": "string",
-   "unit_code": "TEXT",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": null,
-    "max": null,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
-   "required_if": {
-    "group_active": "cost.material.y1.item6"
-   },
-   "forbidden_if": {
-    "not": {
-     "group_active": "cost.material.y1.item6"
-    }
-   }
-  },
   "cost.material.y1.item6.basis_m2": {
    "canonical_cell": "9. 영농자재구매계획!W25",
    "data_type": "decimal",
@@ -30145,73 +29427,21 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quotation basis is per-area; not required for flat per-item quotes",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
+   "output_conversion": "positive basis_m2 in ㎡; 10a = 1,000㎡",
    "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y1.item6"
-     },
-     {
-      "any": [
-       {
-        "key_equals": [
-         "cost.material.y1.item6.area_kind",
-         "부지"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y1.item6.area_kind",
-         "시설"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y1.item6.area_kind",
-         "재배"
-        ]
-       }
-      ]
-     }
-    ]
+    "group_active": "cost.material.y1.item6"
    },
    "forbidden_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y1.item6"
-     },
-     {
-      "not": {
-       "any": [
-        {
-         "key_equals": [
-          "cost.material.y1.item6.area_kind",
-          "부지"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y1.item6.area_kind",
-          "시설"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y1.item6.area_kind",
-          "재배"
-         ]
-        }
-       ]
-      }
-     }
-    ]
+    "not": {
+     "group_active": "cost.material.y1.item6"
+    }
    }
   },
   "cost.material.y1.item6.basis_qty": {
@@ -30225,72 +29455,14 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quantity is quoted per item unit basis; basis_qty>0 with basis_m2",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "matched basis_qty * selected area m2 / basis_m2 * use_ratio -> applied item quantity; basis mismatch -> HOLD",
-   "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y1.item6"
-     },
-     {
-      "any": [
-       {
-        "not": {
-         "any": [
-          {
-           "key_equals": [
-            "cost.material.y1.item6.area_kind",
-            "부지"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y1.item6.area_kind",
-            "시설"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y1.item6.area_kind",
-            "재배"
-           ]
-          }
-         ]
-        }
-       },
-       {
-        "key_present": "cost.material.y1.item6.basis_m2"
-       }
-      ]
-     }
-    ]
-   }
-  },
-  "cost.material.y1.item6.use_ratio": {
-   "canonical_cell": "9. 영농자재구매계획!Y25",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
+   "output_conversion": "basis_qty × 재배면적 ㎡ / basis_m2",
    "required_if": {
     "group_active": "cost.material.y1.item6"
    },
@@ -30448,34 +29620,6 @@
     }
    }
   },
-  "cost.material.y2.item1.area_kind": {
-   "canonical_cell": "9. 영농자재구매계획!V27",
-   "data_type": "string",
-   "unit_code": "TEXT",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": null,
-    "max": null,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
-   "required_if": {
-    "group_active": "cost.material.y2.item1"
-   },
-   "forbidden_if": {
-    "not": {
-     "group_active": "cost.material.y2.item1"
-    }
-   }
-  },
   "cost.material.y2.item1.basis_m2": {
    "canonical_cell": "9. 영농자재구매계획!W27",
    "data_type": "decimal",
@@ -30487,73 +29631,21 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quotation basis is per-area; not required for flat per-item quotes",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
+   "output_conversion": "positive basis_m2 in ㎡; 10a = 1,000㎡",
    "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y2.item1"
-     },
-     {
-      "any": [
-       {
-        "key_equals": [
-         "cost.material.y2.item1.area_kind",
-         "부지"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y2.item1.area_kind",
-         "시설"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y2.item1.area_kind",
-         "재배"
-        ]
-       }
-      ]
-     }
-    ]
+    "group_active": "cost.material.y2.item1"
    },
    "forbidden_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y2.item1"
-     },
-     {
-      "not": {
-       "any": [
-        {
-         "key_equals": [
-          "cost.material.y2.item1.area_kind",
-          "부지"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y2.item1.area_kind",
-          "시설"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y2.item1.area_kind",
-          "재배"
-         ]
-        }
-       ]
-      }
-     }
-    ]
+    "not": {
+     "group_active": "cost.material.y2.item1"
+    }
    }
   },
   "cost.material.y2.item1.basis_qty": {
@@ -30567,72 +29659,14 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quantity is quoted per item unit basis; basis_qty>0 with basis_m2",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "matched basis_qty * selected area m2 / basis_m2 * use_ratio -> applied item quantity; basis mismatch -> HOLD",
-   "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y2.item1"
-     },
-     {
-      "any": [
-       {
-        "not": {
-         "any": [
-          {
-           "key_equals": [
-            "cost.material.y2.item1.area_kind",
-            "부지"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y2.item1.area_kind",
-            "시설"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y2.item1.area_kind",
-            "재배"
-           ]
-          }
-         ]
-        }
-       },
-       {
-        "key_present": "cost.material.y2.item1.basis_m2"
-       }
-      ]
-     }
-    ]
-   }
-  },
-  "cost.material.y2.item1.use_ratio": {
-   "canonical_cell": "9. 영농자재구매계획!Y27",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
+   "output_conversion": "basis_qty × 재배면적 ㎡ / basis_m2",
    "required_if": {
     "group_active": "cost.material.y2.item1"
    },
@@ -30790,34 +29824,6 @@
     }
    }
   },
-  "cost.material.y2.item2.area_kind": {
-   "canonical_cell": "9. 영농자재구매계획!V28",
-   "data_type": "string",
-   "unit_code": "TEXT",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": null,
-    "max": null,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
-   "required_if": {
-    "group_active": "cost.material.y2.item2"
-   },
-   "forbidden_if": {
-    "not": {
-     "group_active": "cost.material.y2.item2"
-    }
-   }
-  },
   "cost.material.y2.item2.basis_m2": {
    "canonical_cell": "9. 영농자재구매계획!W28",
    "data_type": "decimal",
@@ -30829,73 +29835,21 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quotation basis is per-area; not required for flat per-item quotes",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
+   "output_conversion": "positive basis_m2 in ㎡; 10a = 1,000㎡",
    "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y2.item2"
-     },
-     {
-      "any": [
-       {
-        "key_equals": [
-         "cost.material.y2.item2.area_kind",
-         "부지"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y2.item2.area_kind",
-         "시설"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y2.item2.area_kind",
-         "재배"
-        ]
-       }
-      ]
-     }
-    ]
+    "group_active": "cost.material.y2.item2"
    },
    "forbidden_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y2.item2"
-     },
-     {
-      "not": {
-       "any": [
-        {
-         "key_equals": [
-          "cost.material.y2.item2.area_kind",
-          "부지"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y2.item2.area_kind",
-          "시설"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y2.item2.area_kind",
-          "재배"
-         ]
-        }
-       ]
-      }
-     }
-    ]
+    "not": {
+     "group_active": "cost.material.y2.item2"
+    }
    }
   },
   "cost.material.y2.item2.basis_qty": {
@@ -30909,72 +29863,14 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quantity is quoted per item unit basis; basis_qty>0 with basis_m2",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "matched basis_qty * selected area m2 / basis_m2 * use_ratio -> applied item quantity; basis mismatch -> HOLD",
-   "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y2.item2"
-     },
-     {
-      "any": [
-       {
-        "not": {
-         "any": [
-          {
-           "key_equals": [
-            "cost.material.y2.item2.area_kind",
-            "부지"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y2.item2.area_kind",
-            "시설"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y2.item2.area_kind",
-            "재배"
-           ]
-          }
-         ]
-        }
-       },
-       {
-        "key_present": "cost.material.y2.item2.basis_m2"
-       }
-      ]
-     }
-    ]
-   }
-  },
-  "cost.material.y2.item2.use_ratio": {
-   "canonical_cell": "9. 영농자재구매계획!Y28",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
+   "output_conversion": "basis_qty × 재배면적 ㎡ / basis_m2",
    "required_if": {
     "group_active": "cost.material.y2.item2"
    },
@@ -31132,34 +30028,6 @@
     }
    }
   },
-  "cost.material.y2.item3.area_kind": {
-   "canonical_cell": "9. 영농자재구매계획!V29",
-   "data_type": "string",
-   "unit_code": "TEXT",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": null,
-    "max": null,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
-   "required_if": {
-    "group_active": "cost.material.y2.item3"
-   },
-   "forbidden_if": {
-    "not": {
-     "group_active": "cost.material.y2.item3"
-    }
-   }
-  },
   "cost.material.y2.item3.basis_m2": {
    "canonical_cell": "9. 영농자재구매계획!W29",
    "data_type": "decimal",
@@ -31171,73 +30039,21 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quotation basis is per-area; not required for flat per-item quotes",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
+   "output_conversion": "positive basis_m2 in ㎡; 10a = 1,000㎡",
    "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y2.item3"
-     },
-     {
-      "any": [
-       {
-        "key_equals": [
-         "cost.material.y2.item3.area_kind",
-         "부지"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y2.item3.area_kind",
-         "시설"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y2.item3.area_kind",
-         "재배"
-        ]
-       }
-      ]
-     }
-    ]
+    "group_active": "cost.material.y2.item3"
    },
    "forbidden_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y2.item3"
-     },
-     {
-      "not": {
-       "any": [
-        {
-         "key_equals": [
-          "cost.material.y2.item3.area_kind",
-          "부지"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y2.item3.area_kind",
-          "시설"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y2.item3.area_kind",
-          "재배"
-         ]
-        }
-       ]
-      }
-     }
-    ]
+    "not": {
+     "group_active": "cost.material.y2.item3"
+    }
    }
   },
   "cost.material.y2.item3.basis_qty": {
@@ -31251,72 +30067,14 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quantity is quoted per item unit basis; basis_qty>0 with basis_m2",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "matched basis_qty * selected area m2 / basis_m2 * use_ratio -> applied item quantity; basis mismatch -> HOLD",
-   "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y2.item3"
-     },
-     {
-      "any": [
-       {
-        "not": {
-         "any": [
-          {
-           "key_equals": [
-            "cost.material.y2.item3.area_kind",
-            "부지"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y2.item3.area_kind",
-            "시설"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y2.item3.area_kind",
-            "재배"
-           ]
-          }
-         ]
-        }
-       },
-       {
-        "key_present": "cost.material.y2.item3.basis_m2"
-       }
-      ]
-     }
-    ]
-   }
-  },
-  "cost.material.y2.item3.use_ratio": {
-   "canonical_cell": "9. 영농자재구매계획!Y29",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
+   "output_conversion": "basis_qty × 재배면적 ㎡ / basis_m2",
    "required_if": {
     "group_active": "cost.material.y2.item3"
    },
@@ -31474,34 +30232,6 @@
     }
    }
   },
-  "cost.material.y2.item4.area_kind": {
-   "canonical_cell": "9. 영농자재구매계획!V30",
-   "data_type": "string",
-   "unit_code": "TEXT",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": null,
-    "max": null,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
-   "required_if": {
-    "group_active": "cost.material.y2.item4"
-   },
-   "forbidden_if": {
-    "not": {
-     "group_active": "cost.material.y2.item4"
-    }
-   }
-  },
   "cost.material.y2.item4.basis_m2": {
    "canonical_cell": "9. 영농자재구매계획!W30",
    "data_type": "decimal",
@@ -31513,73 +30243,21 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quotation basis is per-area; not required for flat per-item quotes",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
+   "output_conversion": "positive basis_m2 in ㎡; 10a = 1,000㎡",
    "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y2.item4"
-     },
-     {
-      "any": [
-       {
-        "key_equals": [
-         "cost.material.y2.item4.area_kind",
-         "부지"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y2.item4.area_kind",
-         "시설"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y2.item4.area_kind",
-         "재배"
-        ]
-       }
-      ]
-     }
-    ]
+    "group_active": "cost.material.y2.item4"
    },
    "forbidden_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y2.item4"
-     },
-     {
-      "not": {
-       "any": [
-        {
-         "key_equals": [
-          "cost.material.y2.item4.area_kind",
-          "부지"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y2.item4.area_kind",
-          "시설"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y2.item4.area_kind",
-          "재배"
-         ]
-        }
-       ]
-      }
-     }
-    ]
+    "not": {
+     "group_active": "cost.material.y2.item4"
+    }
    }
   },
   "cost.material.y2.item4.basis_qty": {
@@ -31593,72 +30271,14 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quantity is quoted per item unit basis; basis_qty>0 with basis_m2",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "matched basis_qty * selected area m2 / basis_m2 * use_ratio -> applied item quantity; basis mismatch -> HOLD",
-   "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y2.item4"
-     },
-     {
-      "any": [
-       {
-        "not": {
-         "any": [
-          {
-           "key_equals": [
-            "cost.material.y2.item4.area_kind",
-            "부지"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y2.item4.area_kind",
-            "시설"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y2.item4.area_kind",
-            "재배"
-           ]
-          }
-         ]
-        }
-       },
-       {
-        "key_present": "cost.material.y2.item4.basis_m2"
-       }
-      ]
-     }
-    ]
-   }
-  },
-  "cost.material.y2.item4.use_ratio": {
-   "canonical_cell": "9. 영농자재구매계획!Y30",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
+   "output_conversion": "basis_qty × 재배면적 ㎡ / basis_m2",
    "required_if": {
     "group_active": "cost.material.y2.item4"
    },
@@ -31816,34 +30436,6 @@
     }
    }
   },
-  "cost.material.y2.item5.area_kind": {
-   "canonical_cell": "9. 영농자재구매계획!V31",
-   "data_type": "string",
-   "unit_code": "TEXT",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": null,
-    "max": null,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
-   "required_if": {
-    "group_active": "cost.material.y2.item5"
-   },
-   "forbidden_if": {
-    "not": {
-     "group_active": "cost.material.y2.item5"
-    }
-   }
-  },
   "cost.material.y2.item5.basis_m2": {
    "canonical_cell": "9. 영농자재구매계획!W31",
    "data_type": "decimal",
@@ -31855,73 +30447,21 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quotation basis is per-area; not required for flat per-item quotes",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
+   "output_conversion": "positive basis_m2 in ㎡; 10a = 1,000㎡",
    "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y2.item5"
-     },
-     {
-      "any": [
-       {
-        "key_equals": [
-         "cost.material.y2.item5.area_kind",
-         "부지"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y2.item5.area_kind",
-         "시설"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y2.item5.area_kind",
-         "재배"
-        ]
-       }
-      ]
-     }
-    ]
+    "group_active": "cost.material.y2.item5"
    },
    "forbidden_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y2.item5"
-     },
-     {
-      "not": {
-       "any": [
-        {
-         "key_equals": [
-          "cost.material.y2.item5.area_kind",
-          "부지"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y2.item5.area_kind",
-          "시설"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y2.item5.area_kind",
-          "재배"
-         ]
-        }
-       ]
-      }
-     }
-    ]
+    "not": {
+     "group_active": "cost.material.y2.item5"
+    }
    }
   },
   "cost.material.y2.item5.basis_qty": {
@@ -31935,72 +30475,14 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quantity is quoted per item unit basis; basis_qty>0 with basis_m2",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "matched basis_qty * selected area m2 / basis_m2 * use_ratio -> applied item quantity; basis mismatch -> HOLD",
-   "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y2.item5"
-     },
-     {
-      "any": [
-       {
-        "not": {
-         "any": [
-          {
-           "key_equals": [
-            "cost.material.y2.item5.area_kind",
-            "부지"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y2.item5.area_kind",
-            "시설"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y2.item5.area_kind",
-            "재배"
-           ]
-          }
-         ]
-        }
-       },
-       {
-        "key_present": "cost.material.y2.item5.basis_m2"
-       }
-      ]
-     }
-    ]
-   }
-  },
-  "cost.material.y2.item5.use_ratio": {
-   "canonical_cell": "9. 영농자재구매계획!Y31",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
+   "output_conversion": "basis_qty × 재배면적 ㎡ / basis_m2",
    "required_if": {
     "group_active": "cost.material.y2.item5"
    },
@@ -32158,34 +30640,6 @@
     }
    }
   },
-  "cost.material.y2.item6.area_kind": {
-   "canonical_cell": "9. 영농자재구매계획!V32",
-   "data_type": "string",
-   "unit_code": "TEXT",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": null,
-    "max": null,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
-   "required_if": {
-    "group_active": "cost.material.y2.item6"
-   },
-   "forbidden_if": {
-    "not": {
-     "group_active": "cost.material.y2.item6"
-    }
-   }
-  },
   "cost.material.y2.item6.basis_m2": {
    "canonical_cell": "9. 영농자재구매계획!W32",
    "data_type": "decimal",
@@ -32197,73 +30651,21 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quotation basis is per-area; not required for flat per-item quotes",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
+   "output_conversion": "positive basis_m2 in ㎡; 10a = 1,000㎡",
    "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y2.item6"
-     },
-     {
-      "any": [
-       {
-        "key_equals": [
-         "cost.material.y2.item6.area_kind",
-         "부지"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y2.item6.area_kind",
-         "시설"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y2.item6.area_kind",
-         "재배"
-        ]
-       }
-      ]
-     }
-    ]
+    "group_active": "cost.material.y2.item6"
    },
    "forbidden_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y2.item6"
-     },
-     {
-      "not": {
-       "any": [
-        {
-         "key_equals": [
-          "cost.material.y2.item6.area_kind",
-          "부지"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y2.item6.area_kind",
-          "시설"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y2.item6.area_kind",
-          "재배"
-         ]
-        }
-       ]
-      }
-     }
-    ]
+    "not": {
+     "group_active": "cost.material.y2.item6"
+    }
    }
   },
   "cost.material.y2.item6.basis_qty": {
@@ -32277,72 +30679,14 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quantity is quoted per item unit basis; basis_qty>0 with basis_m2",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "matched basis_qty * selected area m2 / basis_m2 * use_ratio -> applied item quantity; basis mismatch -> HOLD",
-   "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y2.item6"
-     },
-     {
-      "any": [
-       {
-        "not": {
-         "any": [
-          {
-           "key_equals": [
-            "cost.material.y2.item6.area_kind",
-            "부지"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y2.item6.area_kind",
-            "시설"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y2.item6.area_kind",
-            "재배"
-           ]
-          }
-         ]
-        }
-       },
-       {
-        "key_present": "cost.material.y2.item6.basis_m2"
-       }
-      ]
-     }
-    ]
-   }
-  },
-  "cost.material.y2.item6.use_ratio": {
-   "canonical_cell": "9. 영농자재구매계획!Y32",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
+   "output_conversion": "basis_qty × 재배면적 ㎡ / basis_m2",
    "required_if": {
     "group_active": "cost.material.y2.item6"
    },
@@ -32500,34 +30844,6 @@
     }
    }
   },
-  "cost.material.y3.item1.area_kind": {
-   "canonical_cell": "9. 영농자재구매계획!V34",
-   "data_type": "string",
-   "unit_code": "TEXT",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": null,
-    "max": null,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
-   "required_if": {
-    "group_active": "cost.material.y3.item1"
-   },
-   "forbidden_if": {
-    "not": {
-     "group_active": "cost.material.y3.item1"
-    }
-   }
-  },
   "cost.material.y3.item1.basis_m2": {
    "canonical_cell": "9. 영농자재구매계획!W34",
    "data_type": "decimal",
@@ -32539,73 +30855,21 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quotation basis is per-area; not required for flat per-item quotes",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
+   "output_conversion": "positive basis_m2 in ㎡; 10a = 1,000㎡",
    "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y3.item1"
-     },
-     {
-      "any": [
-       {
-        "key_equals": [
-         "cost.material.y3.item1.area_kind",
-         "부지"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y3.item1.area_kind",
-         "시설"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y3.item1.area_kind",
-         "재배"
-        ]
-       }
-      ]
-     }
-    ]
+    "group_active": "cost.material.y3.item1"
    },
    "forbidden_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y3.item1"
-     },
-     {
-      "not": {
-       "any": [
-        {
-         "key_equals": [
-          "cost.material.y3.item1.area_kind",
-          "부지"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y3.item1.area_kind",
-          "시설"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y3.item1.area_kind",
-          "재배"
-         ]
-        }
-       ]
-      }
-     }
-    ]
+    "not": {
+     "group_active": "cost.material.y3.item1"
+    }
    }
   },
   "cost.material.y3.item1.basis_qty": {
@@ -32619,72 +30883,14 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quantity is quoted per item unit basis; basis_qty>0 with basis_m2",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "matched basis_qty * selected area m2 / basis_m2 * use_ratio -> applied item quantity; basis mismatch -> HOLD",
-   "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y3.item1"
-     },
-     {
-      "any": [
-       {
-        "not": {
-         "any": [
-          {
-           "key_equals": [
-            "cost.material.y3.item1.area_kind",
-            "부지"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y3.item1.area_kind",
-            "시설"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y3.item1.area_kind",
-            "재배"
-           ]
-          }
-         ]
-        }
-       },
-       {
-        "key_present": "cost.material.y3.item1.basis_m2"
-       }
-      ]
-     }
-    ]
-   }
-  },
-  "cost.material.y3.item1.use_ratio": {
-   "canonical_cell": "9. 영농자재구매계획!Y34",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
+   "output_conversion": "basis_qty × 재배면적 ㎡ / basis_m2",
    "required_if": {
     "group_active": "cost.material.y3.item1"
    },
@@ -32842,34 +31048,6 @@
     }
    }
   },
-  "cost.material.y3.item2.area_kind": {
-   "canonical_cell": "9. 영농자재구매계획!V35",
-   "data_type": "string",
-   "unit_code": "TEXT",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": null,
-    "max": null,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
-   "required_if": {
-    "group_active": "cost.material.y3.item2"
-   },
-   "forbidden_if": {
-    "not": {
-     "group_active": "cost.material.y3.item2"
-    }
-   }
-  },
   "cost.material.y3.item2.basis_m2": {
    "canonical_cell": "9. 영농자재구매계획!W35",
    "data_type": "decimal",
@@ -32881,73 +31059,21 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quotation basis is per-area; not required for flat per-item quotes",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
+   "output_conversion": "positive basis_m2 in ㎡; 10a = 1,000㎡",
    "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y3.item2"
-     },
-     {
-      "any": [
-       {
-        "key_equals": [
-         "cost.material.y3.item2.area_kind",
-         "부지"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y3.item2.area_kind",
-         "시설"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y3.item2.area_kind",
-         "재배"
-        ]
-       }
-      ]
-     }
-    ]
+    "group_active": "cost.material.y3.item2"
    },
    "forbidden_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y3.item2"
-     },
-     {
-      "not": {
-       "any": [
-        {
-         "key_equals": [
-          "cost.material.y3.item2.area_kind",
-          "부지"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y3.item2.area_kind",
-          "시설"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y3.item2.area_kind",
-          "재배"
-         ]
-        }
-       ]
-      }
-     }
-    ]
+    "not": {
+     "group_active": "cost.material.y3.item2"
+    }
    }
   },
   "cost.material.y3.item2.basis_qty": {
@@ -32961,72 +31087,14 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quantity is quoted per item unit basis; basis_qty>0 with basis_m2",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "matched basis_qty * selected area m2 / basis_m2 * use_ratio -> applied item quantity; basis mismatch -> HOLD",
-   "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y3.item2"
-     },
-     {
-      "any": [
-       {
-        "not": {
-         "any": [
-          {
-           "key_equals": [
-            "cost.material.y3.item2.area_kind",
-            "부지"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y3.item2.area_kind",
-            "시설"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y3.item2.area_kind",
-            "재배"
-           ]
-          }
-         ]
-        }
-       },
-       {
-        "key_present": "cost.material.y3.item2.basis_m2"
-       }
-      ]
-     }
-    ]
-   }
-  },
-  "cost.material.y3.item2.use_ratio": {
-   "canonical_cell": "9. 영농자재구매계획!Y35",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
+   "output_conversion": "basis_qty × 재배면적 ㎡ / basis_m2",
    "required_if": {
     "group_active": "cost.material.y3.item2"
    },
@@ -33184,34 +31252,6 @@
     }
    }
   },
-  "cost.material.y3.item3.area_kind": {
-   "canonical_cell": "9. 영농자재구매계획!V36",
-   "data_type": "string",
-   "unit_code": "TEXT",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": null,
-    "max": null,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
-   "required_if": {
-    "group_active": "cost.material.y3.item3"
-   },
-   "forbidden_if": {
-    "not": {
-     "group_active": "cost.material.y3.item3"
-    }
-   }
-  },
   "cost.material.y3.item3.basis_m2": {
    "canonical_cell": "9. 영농자재구매계획!W36",
    "data_type": "decimal",
@@ -33223,73 +31263,21 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quotation basis is per-area; not required for flat per-item quotes",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
+   "output_conversion": "positive basis_m2 in ㎡; 10a = 1,000㎡",
    "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y3.item3"
-     },
-     {
-      "any": [
-       {
-        "key_equals": [
-         "cost.material.y3.item3.area_kind",
-         "부지"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y3.item3.area_kind",
-         "시설"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y3.item3.area_kind",
-         "재배"
-        ]
-       }
-      ]
-     }
-    ]
+    "group_active": "cost.material.y3.item3"
    },
    "forbidden_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y3.item3"
-     },
-     {
-      "not": {
-       "any": [
-        {
-         "key_equals": [
-          "cost.material.y3.item3.area_kind",
-          "부지"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y3.item3.area_kind",
-          "시설"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y3.item3.area_kind",
-          "재배"
-         ]
-        }
-       ]
-      }
-     }
-    ]
+    "not": {
+     "group_active": "cost.material.y3.item3"
+    }
    }
   },
   "cost.material.y3.item3.basis_qty": {
@@ -33303,72 +31291,14 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quantity is quoted per item unit basis; basis_qty>0 with basis_m2",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "matched basis_qty * selected area m2 / basis_m2 * use_ratio -> applied item quantity; basis mismatch -> HOLD",
-   "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y3.item3"
-     },
-     {
-      "any": [
-       {
-        "not": {
-         "any": [
-          {
-           "key_equals": [
-            "cost.material.y3.item3.area_kind",
-            "부지"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y3.item3.area_kind",
-            "시설"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y3.item3.area_kind",
-            "재배"
-           ]
-          }
-         ]
-        }
-       },
-       {
-        "key_present": "cost.material.y3.item3.basis_m2"
-       }
-      ]
-     }
-    ]
-   }
-  },
-  "cost.material.y3.item3.use_ratio": {
-   "canonical_cell": "9. 영농자재구매계획!Y36",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
+   "output_conversion": "basis_qty × 재배면적 ㎡ / basis_m2",
    "required_if": {
     "group_active": "cost.material.y3.item3"
    },
@@ -33526,34 +31456,6 @@
     }
    }
   },
-  "cost.material.y3.item4.area_kind": {
-   "canonical_cell": "9. 영농자재구매계획!V37",
-   "data_type": "string",
-   "unit_code": "TEXT",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": null,
-    "max": null,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
-   "required_if": {
-    "group_active": "cost.material.y3.item4"
-   },
-   "forbidden_if": {
-    "not": {
-     "group_active": "cost.material.y3.item4"
-    }
-   }
-  },
   "cost.material.y3.item4.basis_m2": {
    "canonical_cell": "9. 영농자재구매계획!W37",
    "data_type": "decimal",
@@ -33565,73 +31467,21 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quotation basis is per-area; not required for flat per-item quotes",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
+   "output_conversion": "positive basis_m2 in ㎡; 10a = 1,000㎡",
    "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y3.item4"
-     },
-     {
-      "any": [
-       {
-        "key_equals": [
-         "cost.material.y3.item4.area_kind",
-         "부지"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y3.item4.area_kind",
-         "시설"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y3.item4.area_kind",
-         "재배"
-        ]
-       }
-      ]
-     }
-    ]
+    "group_active": "cost.material.y3.item4"
    },
    "forbidden_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y3.item4"
-     },
-     {
-      "not": {
-       "any": [
-        {
-         "key_equals": [
-          "cost.material.y3.item4.area_kind",
-          "부지"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y3.item4.area_kind",
-          "시설"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y3.item4.area_kind",
-          "재배"
-         ]
-        }
-       ]
-      }
-     }
-    ]
+    "not": {
+     "group_active": "cost.material.y3.item4"
+    }
    }
   },
   "cost.material.y3.item4.basis_qty": {
@@ -33645,72 +31495,14 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quantity is quoted per item unit basis; basis_qty>0 with basis_m2",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "matched basis_qty * selected area m2 / basis_m2 * use_ratio -> applied item quantity; basis mismatch -> HOLD",
-   "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y3.item4"
-     },
-     {
-      "any": [
-       {
-        "not": {
-         "any": [
-          {
-           "key_equals": [
-            "cost.material.y3.item4.area_kind",
-            "부지"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y3.item4.area_kind",
-            "시설"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y3.item4.area_kind",
-            "재배"
-           ]
-          }
-         ]
-        }
-       },
-       {
-        "key_present": "cost.material.y3.item4.basis_m2"
-       }
-      ]
-     }
-    ]
-   }
-  },
-  "cost.material.y3.item4.use_ratio": {
-   "canonical_cell": "9. 영농자재구매계획!Y37",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
+   "output_conversion": "basis_qty × 재배면적 ㎡ / basis_m2",
    "required_if": {
     "group_active": "cost.material.y3.item4"
    },
@@ -33868,34 +31660,6 @@
     }
    }
   },
-  "cost.material.y3.item5.area_kind": {
-   "canonical_cell": "9. 영농자재구매계획!V38",
-   "data_type": "string",
-   "unit_code": "TEXT",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": null,
-    "max": null,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
-   "required_if": {
-    "group_active": "cost.material.y3.item5"
-   },
-   "forbidden_if": {
-    "not": {
-     "group_active": "cost.material.y3.item5"
-    }
-   }
-  },
   "cost.material.y3.item5.basis_m2": {
    "canonical_cell": "9. 영농자재구매계획!W38",
    "data_type": "decimal",
@@ -33907,73 +31671,21 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quotation basis is per-area; not required for flat per-item quotes",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
+   "output_conversion": "positive basis_m2 in ㎡; 10a = 1,000㎡",
    "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y3.item5"
-     },
-     {
-      "any": [
-       {
-        "key_equals": [
-         "cost.material.y3.item5.area_kind",
-         "부지"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y3.item5.area_kind",
-         "시설"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y3.item5.area_kind",
-         "재배"
-        ]
-       }
-      ]
-     }
-    ]
+    "group_active": "cost.material.y3.item5"
    },
    "forbidden_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y3.item5"
-     },
-     {
-      "not": {
-       "any": [
-        {
-         "key_equals": [
-          "cost.material.y3.item5.area_kind",
-          "부지"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y3.item5.area_kind",
-          "시설"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y3.item5.area_kind",
-          "재배"
-         ]
-        }
-       ]
-      }
-     }
-    ]
+    "not": {
+     "group_active": "cost.material.y3.item5"
+    }
    }
   },
   "cost.material.y3.item5.basis_qty": {
@@ -33987,72 +31699,14 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quantity is quoted per item unit basis; basis_qty>0 with basis_m2",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "matched basis_qty * selected area m2 / basis_m2 * use_ratio -> applied item quantity; basis mismatch -> HOLD",
-   "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y3.item5"
-     },
-     {
-      "any": [
-       {
-        "not": {
-         "any": [
-          {
-           "key_equals": [
-            "cost.material.y3.item5.area_kind",
-            "부지"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y3.item5.area_kind",
-            "시설"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y3.item5.area_kind",
-            "재배"
-           ]
-          }
-         ]
-        }
-       },
-       {
-        "key_present": "cost.material.y3.item5.basis_m2"
-       }
-      ]
-     }
-    ]
-   }
-  },
-  "cost.material.y3.item5.use_ratio": {
-   "canonical_cell": "9. 영농자재구매계획!Y38",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
+   "output_conversion": "basis_qty × 재배면적 ㎡ / basis_m2",
    "required_if": {
     "group_active": "cost.material.y3.item5"
    },
@@ -34210,34 +31864,6 @@
     }
    }
   },
-  "cost.material.y3.item6.area_kind": {
-   "canonical_cell": "9. 영농자재구매계획!V39",
-   "data_type": "string",
-   "unit_code": "TEXT",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": null,
-    "max": null,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
-   "required_if": {
-    "group_active": "cost.material.y3.item6"
-   },
-   "forbidden_if": {
-    "not": {
-     "group_active": "cost.material.y3.item6"
-    }
-   }
-  },
   "cost.material.y3.item6.basis_m2": {
    "canonical_cell": "9. 영농자재구매계획!W39",
    "data_type": "decimal",
@@ -34249,73 +31875,21 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quotation basis is per-area; not required for flat per-item quotes",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
+   "output_conversion": "positive basis_m2 in ㎡; 10a = 1,000㎡",
    "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y3.item6"
-     },
-     {
-      "any": [
-       {
-        "key_equals": [
-         "cost.material.y3.item6.area_kind",
-         "부지"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y3.item6.area_kind",
-         "시설"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y3.item6.area_kind",
-         "재배"
-        ]
-       }
-      ]
-     }
-    ]
+    "group_active": "cost.material.y3.item6"
    },
    "forbidden_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y3.item6"
-     },
-     {
-      "not": {
-       "any": [
-        {
-         "key_equals": [
-          "cost.material.y3.item6.area_kind",
-          "부지"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y3.item6.area_kind",
-          "시설"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y3.item6.area_kind",
-          "재배"
-         ]
-        }
-       ]
-      }
-     }
-    ]
+    "not": {
+     "group_active": "cost.material.y3.item6"
+    }
    }
   },
   "cost.material.y3.item6.basis_qty": {
@@ -34329,72 +31903,14 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quantity is quoted per item unit basis; basis_qty>0 with basis_m2",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "matched basis_qty * selected area m2 / basis_m2 * use_ratio -> applied item quantity; basis mismatch -> HOLD",
-   "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y3.item6"
-     },
-     {
-      "any": [
-       {
-        "not": {
-         "any": [
-          {
-           "key_equals": [
-            "cost.material.y3.item6.area_kind",
-            "부지"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y3.item6.area_kind",
-            "시설"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y3.item6.area_kind",
-            "재배"
-           ]
-          }
-         ]
-        }
-       },
-       {
-        "key_present": "cost.material.y3.item6.basis_m2"
-       }
-      ]
-     }
-    ]
-   }
-  },
-  "cost.material.y3.item6.use_ratio": {
-   "canonical_cell": "9. 영농자재구매계획!Y39",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
+   "output_conversion": "basis_qty × 재배면적 ㎡ / basis_m2",
    "required_if": {
     "group_active": "cost.material.y3.item6"
    },
@@ -34552,34 +32068,6 @@
     }
    }
   },
-  "cost.material.y4.item1.area_kind": {
-   "canonical_cell": "9. 영농자재구매계획!V41",
-   "data_type": "string",
-   "unit_code": "TEXT",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": null,
-    "max": null,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
-   "required_if": {
-    "group_active": "cost.material.y4.item1"
-   },
-   "forbidden_if": {
-    "not": {
-     "group_active": "cost.material.y4.item1"
-    }
-   }
-  },
   "cost.material.y4.item1.basis_m2": {
    "canonical_cell": "9. 영농자재구매계획!W41",
    "data_type": "decimal",
@@ -34591,73 +32079,21 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quotation basis is per-area; not required for flat per-item quotes",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
+   "output_conversion": "positive basis_m2 in ㎡; 10a = 1,000㎡",
    "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y4.item1"
-     },
-     {
-      "any": [
-       {
-        "key_equals": [
-         "cost.material.y4.item1.area_kind",
-         "부지"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y4.item1.area_kind",
-         "시설"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y4.item1.area_kind",
-         "재배"
-        ]
-       }
-      ]
-     }
-    ]
+    "group_active": "cost.material.y4.item1"
    },
    "forbidden_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y4.item1"
-     },
-     {
-      "not": {
-       "any": [
-        {
-         "key_equals": [
-          "cost.material.y4.item1.area_kind",
-          "부지"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y4.item1.area_kind",
-          "시설"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y4.item1.area_kind",
-          "재배"
-         ]
-        }
-       ]
-      }
-     }
-    ]
+    "not": {
+     "group_active": "cost.material.y4.item1"
+    }
    }
   },
   "cost.material.y4.item1.basis_qty": {
@@ -34671,72 +32107,14 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quantity is quoted per item unit basis; basis_qty>0 with basis_m2",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "matched basis_qty * selected area m2 / basis_m2 * use_ratio -> applied item quantity; basis mismatch -> HOLD",
-   "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y4.item1"
-     },
-     {
-      "any": [
-       {
-        "not": {
-         "any": [
-          {
-           "key_equals": [
-            "cost.material.y4.item1.area_kind",
-            "부지"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y4.item1.area_kind",
-            "시설"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y4.item1.area_kind",
-            "재배"
-           ]
-          }
-         ]
-        }
-       },
-       {
-        "key_present": "cost.material.y4.item1.basis_m2"
-       }
-      ]
-     }
-    ]
-   }
-  },
-  "cost.material.y4.item1.use_ratio": {
-   "canonical_cell": "9. 영농자재구매계획!Y41",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
+   "output_conversion": "basis_qty × 재배면적 ㎡ / basis_m2",
    "required_if": {
     "group_active": "cost.material.y4.item1"
    },
@@ -34894,34 +32272,6 @@
     }
    }
   },
-  "cost.material.y4.item2.area_kind": {
-   "canonical_cell": "9. 영농자재구매계획!V42",
-   "data_type": "string",
-   "unit_code": "TEXT",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": null,
-    "max": null,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
-   "required_if": {
-    "group_active": "cost.material.y4.item2"
-   },
-   "forbidden_if": {
-    "not": {
-     "group_active": "cost.material.y4.item2"
-    }
-   }
-  },
   "cost.material.y4.item2.basis_m2": {
    "canonical_cell": "9. 영농자재구매계획!W42",
    "data_type": "decimal",
@@ -34933,73 +32283,21 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quotation basis is per-area; not required for flat per-item quotes",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
+   "output_conversion": "positive basis_m2 in ㎡; 10a = 1,000㎡",
    "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y4.item2"
-     },
-     {
-      "any": [
-       {
-        "key_equals": [
-         "cost.material.y4.item2.area_kind",
-         "부지"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y4.item2.area_kind",
-         "시설"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y4.item2.area_kind",
-         "재배"
-        ]
-       }
-      ]
-     }
-    ]
+    "group_active": "cost.material.y4.item2"
    },
    "forbidden_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y4.item2"
-     },
-     {
-      "not": {
-       "any": [
-        {
-         "key_equals": [
-          "cost.material.y4.item2.area_kind",
-          "부지"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y4.item2.area_kind",
-          "시설"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y4.item2.area_kind",
-          "재배"
-         ]
-        }
-       ]
-      }
-     }
-    ]
+    "not": {
+     "group_active": "cost.material.y4.item2"
+    }
    }
   },
   "cost.material.y4.item2.basis_qty": {
@@ -35013,72 +32311,14 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quantity is quoted per item unit basis; basis_qty>0 with basis_m2",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "matched basis_qty * selected area m2 / basis_m2 * use_ratio -> applied item quantity; basis mismatch -> HOLD",
-   "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y4.item2"
-     },
-     {
-      "any": [
-       {
-        "not": {
-         "any": [
-          {
-           "key_equals": [
-            "cost.material.y4.item2.area_kind",
-            "부지"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y4.item2.area_kind",
-            "시설"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y4.item2.area_kind",
-            "재배"
-           ]
-          }
-         ]
-        }
-       },
-       {
-        "key_present": "cost.material.y4.item2.basis_m2"
-       }
-      ]
-     }
-    ]
-   }
-  },
-  "cost.material.y4.item2.use_ratio": {
-   "canonical_cell": "9. 영농자재구매계획!Y42",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
+   "output_conversion": "basis_qty × 재배면적 ㎡ / basis_m2",
    "required_if": {
     "group_active": "cost.material.y4.item2"
    },
@@ -35236,34 +32476,6 @@
     }
    }
   },
-  "cost.material.y4.item3.area_kind": {
-   "canonical_cell": "9. 영농자재구매계획!V43",
-   "data_type": "string",
-   "unit_code": "TEXT",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": null,
-    "max": null,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
-   "required_if": {
-    "group_active": "cost.material.y4.item3"
-   },
-   "forbidden_if": {
-    "not": {
-     "group_active": "cost.material.y4.item3"
-    }
-   }
-  },
   "cost.material.y4.item3.basis_m2": {
    "canonical_cell": "9. 영농자재구매계획!W43",
    "data_type": "decimal",
@@ -35275,73 +32487,21 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quotation basis is per-area; not required for flat per-item quotes",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
+   "output_conversion": "positive basis_m2 in ㎡; 10a = 1,000㎡",
    "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y4.item3"
-     },
-     {
-      "any": [
-       {
-        "key_equals": [
-         "cost.material.y4.item3.area_kind",
-         "부지"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y4.item3.area_kind",
-         "시설"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y4.item3.area_kind",
-         "재배"
-        ]
-       }
-      ]
-     }
-    ]
+    "group_active": "cost.material.y4.item3"
    },
    "forbidden_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y4.item3"
-     },
-     {
-      "not": {
-       "any": [
-        {
-         "key_equals": [
-          "cost.material.y4.item3.area_kind",
-          "부지"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y4.item3.area_kind",
-          "시설"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y4.item3.area_kind",
-          "재배"
-         ]
-        }
-       ]
-      }
-     }
-    ]
+    "not": {
+     "group_active": "cost.material.y4.item3"
+    }
    }
   },
   "cost.material.y4.item3.basis_qty": {
@@ -35355,72 +32515,14 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quantity is quoted per item unit basis; basis_qty>0 with basis_m2",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "matched basis_qty * selected area m2 / basis_m2 * use_ratio -> applied item quantity; basis mismatch -> HOLD",
-   "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y4.item3"
-     },
-     {
-      "any": [
-       {
-        "not": {
-         "any": [
-          {
-           "key_equals": [
-            "cost.material.y4.item3.area_kind",
-            "부지"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y4.item3.area_kind",
-            "시설"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y4.item3.area_kind",
-            "재배"
-           ]
-          }
-         ]
-        }
-       },
-       {
-        "key_present": "cost.material.y4.item3.basis_m2"
-       }
-      ]
-     }
-    ]
-   }
-  },
-  "cost.material.y4.item3.use_ratio": {
-   "canonical_cell": "9. 영농자재구매계획!Y43",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
+   "output_conversion": "basis_qty × 재배면적 ㎡ / basis_m2",
    "required_if": {
     "group_active": "cost.material.y4.item3"
    },
@@ -35578,34 +32680,6 @@
     }
    }
   },
-  "cost.material.y4.item4.area_kind": {
-   "canonical_cell": "9. 영농자재구매계획!V44",
-   "data_type": "string",
-   "unit_code": "TEXT",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": null,
-    "max": null,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
-   "required_if": {
-    "group_active": "cost.material.y4.item4"
-   },
-   "forbidden_if": {
-    "not": {
-     "group_active": "cost.material.y4.item4"
-    }
-   }
-  },
   "cost.material.y4.item4.basis_m2": {
    "canonical_cell": "9. 영농자재구매계획!W44",
    "data_type": "decimal",
@@ -35617,73 +32691,21 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quotation basis is per-area; not required for flat per-item quotes",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
+   "output_conversion": "positive basis_m2 in ㎡; 10a = 1,000㎡",
    "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y4.item4"
-     },
-     {
-      "any": [
-       {
-        "key_equals": [
-         "cost.material.y4.item4.area_kind",
-         "부지"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y4.item4.area_kind",
-         "시설"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y4.item4.area_kind",
-         "재배"
-        ]
-       }
-      ]
-     }
-    ]
+    "group_active": "cost.material.y4.item4"
    },
    "forbidden_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y4.item4"
-     },
-     {
-      "not": {
-       "any": [
-        {
-         "key_equals": [
-          "cost.material.y4.item4.area_kind",
-          "부지"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y4.item4.area_kind",
-          "시설"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y4.item4.area_kind",
-          "재배"
-         ]
-        }
-       ]
-      }
-     }
-    ]
+    "not": {
+     "group_active": "cost.material.y4.item4"
+    }
    }
   },
   "cost.material.y4.item4.basis_qty": {
@@ -35697,72 +32719,14 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quantity is quoted per item unit basis; basis_qty>0 with basis_m2",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "matched basis_qty * selected area m2 / basis_m2 * use_ratio -> applied item quantity; basis mismatch -> HOLD",
-   "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y4.item4"
-     },
-     {
-      "any": [
-       {
-        "not": {
-         "any": [
-          {
-           "key_equals": [
-            "cost.material.y4.item4.area_kind",
-            "부지"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y4.item4.area_kind",
-            "시설"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y4.item4.area_kind",
-            "재배"
-           ]
-          }
-         ]
-        }
-       },
-       {
-        "key_present": "cost.material.y4.item4.basis_m2"
-       }
-      ]
-     }
-    ]
-   }
-  },
-  "cost.material.y4.item4.use_ratio": {
-   "canonical_cell": "9. 영농자재구매계획!Y44",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
+   "output_conversion": "basis_qty × 재배면적 ㎡ / basis_m2",
    "required_if": {
     "group_active": "cost.material.y4.item4"
    },
@@ -35920,34 +32884,6 @@
     }
    }
   },
-  "cost.material.y4.item5.area_kind": {
-   "canonical_cell": "9. 영농자재구매계획!V45",
-   "data_type": "string",
-   "unit_code": "TEXT",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": null,
-    "max": null,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
-   "required_if": {
-    "group_active": "cost.material.y4.item5"
-   },
-   "forbidden_if": {
-    "not": {
-     "group_active": "cost.material.y4.item5"
-    }
-   }
-  },
   "cost.material.y4.item5.basis_m2": {
    "canonical_cell": "9. 영농자재구매계획!W45",
    "data_type": "decimal",
@@ -35959,73 +32895,21 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quotation basis is per-area; not required for flat per-item quotes",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
+   "output_conversion": "positive basis_m2 in ㎡; 10a = 1,000㎡",
    "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y4.item5"
-     },
-     {
-      "any": [
-       {
-        "key_equals": [
-         "cost.material.y4.item5.area_kind",
-         "부지"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y4.item5.area_kind",
-         "시설"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y4.item5.area_kind",
-         "재배"
-        ]
-       }
-      ]
-     }
-    ]
+    "group_active": "cost.material.y4.item5"
    },
    "forbidden_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y4.item5"
-     },
-     {
-      "not": {
-       "any": [
-        {
-         "key_equals": [
-          "cost.material.y4.item5.area_kind",
-          "부지"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y4.item5.area_kind",
-          "시설"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y4.item5.area_kind",
-          "재배"
-         ]
-        }
-       ]
-      }
-     }
-    ]
+    "not": {
+     "group_active": "cost.material.y4.item5"
+    }
    }
   },
   "cost.material.y4.item5.basis_qty": {
@@ -36039,72 +32923,14 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quantity is quoted per item unit basis; basis_qty>0 with basis_m2",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "matched basis_qty * selected area m2 / basis_m2 * use_ratio -> applied item quantity; basis mismatch -> HOLD",
-   "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y4.item5"
-     },
-     {
-      "any": [
-       {
-        "not": {
-         "any": [
-          {
-           "key_equals": [
-            "cost.material.y4.item5.area_kind",
-            "부지"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y4.item5.area_kind",
-            "시설"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y4.item5.area_kind",
-            "재배"
-           ]
-          }
-         ]
-        }
-       },
-       {
-        "key_present": "cost.material.y4.item5.basis_m2"
-       }
-      ]
-     }
-    ]
-   }
-  },
-  "cost.material.y4.item5.use_ratio": {
-   "canonical_cell": "9. 영농자재구매계획!Y45",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
+   "output_conversion": "basis_qty × 재배면적 ㎡ / basis_m2",
    "required_if": {
     "group_active": "cost.material.y4.item5"
    },
@@ -36262,34 +33088,6 @@
     }
    }
   },
-  "cost.material.y4.item6.area_kind": {
-   "canonical_cell": "9. 영농자재구매계획!V46",
-   "data_type": "string",
-   "unit_code": "TEXT",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": null,
-    "max": null,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
-   "required_if": {
-    "group_active": "cost.material.y4.item6"
-   },
-   "forbidden_if": {
-    "not": {
-     "group_active": "cost.material.y4.item6"
-    }
-   }
-  },
   "cost.material.y4.item6.basis_m2": {
    "canonical_cell": "9. 영농자재구매계획!W46",
    "data_type": "decimal",
@@ -36301,73 +33099,21 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quotation basis is per-area; not required for flat per-item quotes",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
+   "output_conversion": "positive basis_m2 in ㎡; 10a = 1,000㎡",
    "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y4.item6"
-     },
-     {
-      "any": [
-       {
-        "key_equals": [
-         "cost.material.y4.item6.area_kind",
-         "부지"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y4.item6.area_kind",
-         "시설"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y4.item6.area_kind",
-         "재배"
-        ]
-       }
-      ]
-     }
-    ]
+    "group_active": "cost.material.y4.item6"
    },
    "forbidden_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y4.item6"
-     },
-     {
-      "not": {
-       "any": [
-        {
-         "key_equals": [
-          "cost.material.y4.item6.area_kind",
-          "부지"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y4.item6.area_kind",
-          "시설"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y4.item6.area_kind",
-          "재배"
-         ]
-        }
-       ]
-      }
-     }
-    ]
+    "not": {
+     "group_active": "cost.material.y4.item6"
+    }
    }
   },
   "cost.material.y4.item6.basis_qty": {
@@ -36381,72 +33127,14 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quantity is quoted per item unit basis; basis_qty>0 with basis_m2",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "matched basis_qty * selected area m2 / basis_m2 * use_ratio -> applied item quantity; basis mismatch -> HOLD",
-   "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y4.item6"
-     },
-     {
-      "any": [
-       {
-        "not": {
-         "any": [
-          {
-           "key_equals": [
-            "cost.material.y4.item6.area_kind",
-            "부지"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y4.item6.area_kind",
-            "시설"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y4.item6.area_kind",
-            "재배"
-           ]
-          }
-         ]
-        }
-       },
-       {
-        "key_present": "cost.material.y4.item6.basis_m2"
-       }
-      ]
-     }
-    ]
-   }
-  },
-  "cost.material.y4.item6.use_ratio": {
-   "canonical_cell": "9. 영농자재구매계획!Y46",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
+   "output_conversion": "basis_qty × 재배면적 ㎡ / basis_m2",
    "required_if": {
     "group_active": "cost.material.y4.item6"
    },
@@ -36604,34 +33292,6 @@
     }
    }
   },
-  "cost.material.y5.item1.area_kind": {
-   "canonical_cell": "9. 영농자재구매계획!V48",
-   "data_type": "string",
-   "unit_code": "TEXT",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": null,
-    "max": null,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
-   "required_if": {
-    "group_active": "cost.material.y5.item1"
-   },
-   "forbidden_if": {
-    "not": {
-     "group_active": "cost.material.y5.item1"
-    }
-   }
-  },
   "cost.material.y5.item1.basis_m2": {
    "canonical_cell": "9. 영농자재구매계획!W48",
    "data_type": "decimal",
@@ -36643,73 +33303,21 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quotation basis is per-area; not required for flat per-item quotes",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
+   "output_conversion": "positive basis_m2 in ㎡; 10a = 1,000㎡",
    "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y5.item1"
-     },
-     {
-      "any": [
-       {
-        "key_equals": [
-         "cost.material.y5.item1.area_kind",
-         "부지"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y5.item1.area_kind",
-         "시설"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y5.item1.area_kind",
-         "재배"
-        ]
-       }
-      ]
-     }
-    ]
+    "group_active": "cost.material.y5.item1"
    },
    "forbidden_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y5.item1"
-     },
-     {
-      "not": {
-       "any": [
-        {
-         "key_equals": [
-          "cost.material.y5.item1.area_kind",
-          "부지"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y5.item1.area_kind",
-          "시설"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y5.item1.area_kind",
-          "재배"
-         ]
-        }
-       ]
-      }
-     }
-    ]
+    "not": {
+     "group_active": "cost.material.y5.item1"
+    }
    }
   },
   "cost.material.y5.item1.basis_qty": {
@@ -36723,72 +33331,14 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quantity is quoted per item unit basis; basis_qty>0 with basis_m2",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "matched basis_qty * selected area m2 / basis_m2 * use_ratio -> applied item quantity; basis mismatch -> HOLD",
-   "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y5.item1"
-     },
-     {
-      "any": [
-       {
-        "not": {
-         "any": [
-          {
-           "key_equals": [
-            "cost.material.y5.item1.area_kind",
-            "부지"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y5.item1.area_kind",
-            "시설"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y5.item1.area_kind",
-            "재배"
-           ]
-          }
-         ]
-        }
-       },
-       {
-        "key_present": "cost.material.y5.item1.basis_m2"
-       }
-      ]
-     }
-    ]
-   }
-  },
-  "cost.material.y5.item1.use_ratio": {
-   "canonical_cell": "9. 영농자재구매계획!Y48",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
+   "output_conversion": "basis_qty × 재배면적 ㎡ / basis_m2",
    "required_if": {
     "group_active": "cost.material.y5.item1"
    },
@@ -36946,34 +33496,6 @@
     }
    }
   },
-  "cost.material.y5.item2.area_kind": {
-   "canonical_cell": "9. 영농자재구매계획!V49",
-   "data_type": "string",
-   "unit_code": "TEXT",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": null,
-    "max": null,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
-   "required_if": {
-    "group_active": "cost.material.y5.item2"
-   },
-   "forbidden_if": {
-    "not": {
-     "group_active": "cost.material.y5.item2"
-    }
-   }
-  },
   "cost.material.y5.item2.basis_m2": {
    "canonical_cell": "9. 영농자재구매계획!W49",
    "data_type": "decimal",
@@ -36985,73 +33507,21 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quotation basis is per-area; not required for flat per-item quotes",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
+   "output_conversion": "positive basis_m2 in ㎡; 10a = 1,000㎡",
    "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y5.item2"
-     },
-     {
-      "any": [
-       {
-        "key_equals": [
-         "cost.material.y5.item2.area_kind",
-         "부지"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y5.item2.area_kind",
-         "시설"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y5.item2.area_kind",
-         "재배"
-        ]
-       }
-      ]
-     }
-    ]
+    "group_active": "cost.material.y5.item2"
    },
    "forbidden_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y5.item2"
-     },
-     {
-      "not": {
-       "any": [
-        {
-         "key_equals": [
-          "cost.material.y5.item2.area_kind",
-          "부지"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y5.item2.area_kind",
-          "시설"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y5.item2.area_kind",
-          "재배"
-         ]
-        }
-       ]
-      }
-     }
-    ]
+    "not": {
+     "group_active": "cost.material.y5.item2"
+    }
    }
   },
   "cost.material.y5.item2.basis_qty": {
@@ -37065,72 +33535,14 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quantity is quoted per item unit basis; basis_qty>0 with basis_m2",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "matched basis_qty * selected area m2 / basis_m2 * use_ratio -> applied item quantity; basis mismatch -> HOLD",
-   "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y5.item2"
-     },
-     {
-      "any": [
-       {
-        "not": {
-         "any": [
-          {
-           "key_equals": [
-            "cost.material.y5.item2.area_kind",
-            "부지"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y5.item2.area_kind",
-            "시설"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y5.item2.area_kind",
-            "재배"
-           ]
-          }
-         ]
-        }
-       },
-       {
-        "key_present": "cost.material.y5.item2.basis_m2"
-       }
-      ]
-     }
-    ]
-   }
-  },
-  "cost.material.y5.item2.use_ratio": {
-   "canonical_cell": "9. 영농자재구매계획!Y49",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
+   "output_conversion": "basis_qty × 재배면적 ㎡ / basis_m2",
    "required_if": {
     "group_active": "cost.material.y5.item2"
    },
@@ -37288,34 +33700,6 @@
     }
    }
   },
-  "cost.material.y5.item3.area_kind": {
-   "canonical_cell": "9. 영농자재구매계획!V50",
-   "data_type": "string",
-   "unit_code": "TEXT",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": null,
-    "max": null,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
-   "required_if": {
-    "group_active": "cost.material.y5.item3"
-   },
-   "forbidden_if": {
-    "not": {
-     "group_active": "cost.material.y5.item3"
-    }
-   }
-  },
   "cost.material.y5.item3.basis_m2": {
    "canonical_cell": "9. 영농자재구매계획!W50",
    "data_type": "decimal",
@@ -37327,73 +33711,21 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quotation basis is per-area; not required for flat per-item quotes",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
+   "output_conversion": "positive basis_m2 in ㎡; 10a = 1,000㎡",
    "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y5.item3"
-     },
-     {
-      "any": [
-       {
-        "key_equals": [
-         "cost.material.y5.item3.area_kind",
-         "부지"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y5.item3.area_kind",
-         "시설"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y5.item3.area_kind",
-         "재배"
-        ]
-       }
-      ]
-     }
-    ]
+    "group_active": "cost.material.y5.item3"
    },
    "forbidden_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y5.item3"
-     },
-     {
-      "not": {
-       "any": [
-        {
-         "key_equals": [
-          "cost.material.y5.item3.area_kind",
-          "부지"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y5.item3.area_kind",
-          "시설"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y5.item3.area_kind",
-          "재배"
-         ]
-        }
-       ]
-      }
-     }
-    ]
+    "not": {
+     "group_active": "cost.material.y5.item3"
+    }
    }
   },
   "cost.material.y5.item3.basis_qty": {
@@ -37407,72 +33739,14 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quantity is quoted per item unit basis; basis_qty>0 with basis_m2",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "matched basis_qty * selected area m2 / basis_m2 * use_ratio -> applied item quantity; basis mismatch -> HOLD",
-   "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y5.item3"
-     },
-     {
-      "any": [
-       {
-        "not": {
-         "any": [
-          {
-           "key_equals": [
-            "cost.material.y5.item3.area_kind",
-            "부지"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y5.item3.area_kind",
-            "시설"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y5.item3.area_kind",
-            "재배"
-           ]
-          }
-         ]
-        }
-       },
-       {
-        "key_present": "cost.material.y5.item3.basis_m2"
-       }
-      ]
-     }
-    ]
-   }
-  },
-  "cost.material.y5.item3.use_ratio": {
-   "canonical_cell": "9. 영농자재구매계획!Y50",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
+   "output_conversion": "basis_qty × 재배면적 ㎡ / basis_m2",
    "required_if": {
     "group_active": "cost.material.y5.item3"
    },
@@ -37630,34 +33904,6 @@
     }
    }
   },
-  "cost.material.y5.item4.area_kind": {
-   "canonical_cell": "9. 영농자재구매계획!V51",
-   "data_type": "string",
-   "unit_code": "TEXT",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": null,
-    "max": null,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
-   "required_if": {
-    "group_active": "cost.material.y5.item4"
-   },
-   "forbidden_if": {
-    "not": {
-     "group_active": "cost.material.y5.item4"
-    }
-   }
-  },
   "cost.material.y5.item4.basis_m2": {
    "canonical_cell": "9. 영농자재구매계획!W51",
    "data_type": "decimal",
@@ -37669,73 +33915,21 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quotation basis is per-area; not required for flat per-item quotes",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
+   "output_conversion": "positive basis_m2 in ㎡; 10a = 1,000㎡",
    "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y5.item4"
-     },
-     {
-      "any": [
-       {
-        "key_equals": [
-         "cost.material.y5.item4.area_kind",
-         "부지"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y5.item4.area_kind",
-         "시설"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y5.item4.area_kind",
-         "재배"
-        ]
-       }
-      ]
-     }
-    ]
+    "group_active": "cost.material.y5.item4"
    },
    "forbidden_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y5.item4"
-     },
-     {
-      "not": {
-       "any": [
-        {
-         "key_equals": [
-          "cost.material.y5.item4.area_kind",
-          "부지"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y5.item4.area_kind",
-          "시설"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y5.item4.area_kind",
-          "재배"
-         ]
-        }
-       ]
-      }
-     }
-    ]
+    "not": {
+     "group_active": "cost.material.y5.item4"
+    }
    }
   },
   "cost.material.y5.item4.basis_qty": {
@@ -37749,72 +33943,14 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quantity is quoted per item unit basis; basis_qty>0 with basis_m2",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "matched basis_qty * selected area m2 / basis_m2 * use_ratio -> applied item quantity; basis mismatch -> HOLD",
-   "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y5.item4"
-     },
-     {
-      "any": [
-       {
-        "not": {
-         "any": [
-          {
-           "key_equals": [
-            "cost.material.y5.item4.area_kind",
-            "부지"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y5.item4.area_kind",
-            "시설"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y5.item4.area_kind",
-            "재배"
-           ]
-          }
-         ]
-        }
-       },
-       {
-        "key_present": "cost.material.y5.item4.basis_m2"
-       }
-      ]
-     }
-    ]
-   }
-  },
-  "cost.material.y5.item4.use_ratio": {
-   "canonical_cell": "9. 영농자재구매계획!Y51",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
+   "output_conversion": "basis_qty × 재배면적 ㎡ / basis_m2",
    "required_if": {
     "group_active": "cost.material.y5.item4"
    },
@@ -37972,34 +34108,6 @@
     }
    }
   },
-  "cost.material.y5.item5.area_kind": {
-   "canonical_cell": "9. 영농자재구매계획!V52",
-   "data_type": "string",
-   "unit_code": "TEXT",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": null,
-    "max": null,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
-   "required_if": {
-    "group_active": "cost.material.y5.item5"
-   },
-   "forbidden_if": {
-    "not": {
-     "group_active": "cost.material.y5.item5"
-    }
-   }
-  },
   "cost.material.y5.item5.basis_m2": {
    "canonical_cell": "9. 영농자재구매계획!W52",
    "data_type": "decimal",
@@ -38011,73 +34119,21 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quotation basis is per-area; not required for flat per-item quotes",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
+   "output_conversion": "positive basis_m2 in ㎡; 10a = 1,000㎡",
    "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y5.item5"
-     },
-     {
-      "any": [
-       {
-        "key_equals": [
-         "cost.material.y5.item5.area_kind",
-         "부지"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y5.item5.area_kind",
-         "시설"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y5.item5.area_kind",
-         "재배"
-        ]
-       }
-      ]
-     }
-    ]
+    "group_active": "cost.material.y5.item5"
    },
    "forbidden_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y5.item5"
-     },
-     {
-      "not": {
-       "any": [
-        {
-         "key_equals": [
-          "cost.material.y5.item5.area_kind",
-          "부지"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y5.item5.area_kind",
-          "시설"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y5.item5.area_kind",
-          "재배"
-         ]
-        }
-       ]
-      }
-     }
-    ]
+    "not": {
+     "group_active": "cost.material.y5.item5"
+    }
    }
   },
   "cost.material.y5.item5.basis_qty": {
@@ -38091,72 +34147,14 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quantity is quoted per item unit basis; basis_qty>0 with basis_m2",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "matched basis_qty * selected area m2 / basis_m2 * use_ratio -> applied item quantity; basis mismatch -> HOLD",
-   "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y5.item5"
-     },
-     {
-      "any": [
-       {
-        "not": {
-         "any": [
-          {
-           "key_equals": [
-            "cost.material.y5.item5.area_kind",
-            "부지"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y5.item5.area_kind",
-            "시설"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y5.item5.area_kind",
-            "재배"
-           ]
-          }
-         ]
-        }
-       },
-       {
-        "key_present": "cost.material.y5.item5.basis_m2"
-       }
-      ]
-     }
-    ]
-   }
-  },
-  "cost.material.y5.item5.use_ratio": {
-   "canonical_cell": "9. 영농자재구매계획!Y52",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
+   "output_conversion": "basis_qty × 재배면적 ㎡ / basis_m2",
    "required_if": {
     "group_active": "cost.material.y5.item5"
    },
@@ -38314,34 +34312,6 @@
     }
    }
   },
-  "cost.material.y5.item6.area_kind": {
-   "canonical_cell": "9. 영농자재구매계획!V53",
-   "data_type": "string",
-   "unit_code": "TEXT",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": null,
-    "max": null,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
-   "required_if": {
-    "group_active": "cost.material.y5.item6"
-   },
-   "forbidden_if": {
-    "not": {
-     "group_active": "cost.material.y5.item6"
-    }
-   }
-  },
   "cost.material.y5.item6.basis_m2": {
    "canonical_cell": "9. 영농자재구매계획!W53",
    "data_type": "decimal",
@@ -38353,73 +34323,21 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quotation basis is per-area; not required for flat per-item quotes",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "identity",
+   "output_conversion": "positive basis_m2 in ㎡; 10a = 1,000㎡",
    "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y5.item6"
-     },
-     {
-      "any": [
-       {
-        "key_equals": [
-         "cost.material.y5.item6.area_kind",
-         "부지"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y5.item6.area_kind",
-         "시설"
-        ]
-       },
-       {
-        "key_equals": [
-         "cost.material.y5.item6.area_kind",
-         "재배"
-        ]
-       }
-      ]
-     }
-    ]
+    "group_active": "cost.material.y5.item6"
    },
    "forbidden_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y5.item6"
-     },
-     {
-      "not": {
-       "any": [
-        {
-         "key_equals": [
-          "cost.material.y5.item6.area_kind",
-          "부지"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y5.item6.area_kind",
-          "시설"
-         ]
-        },
-        {
-         "key_equals": [
-          "cost.material.y5.item6.area_kind",
-          "재배"
-         ]
-        }
-       ]
-      }
-     }
-    ]
+    "not": {
+     "group_active": "cost.material.y5.item6"
+    }
    }
   },
   "cost.material.y5.item6.basis_qty": {
@@ -38433,72 +34351,14 @@
     "max": null,
     "max_exclusive": false
    },
-   "required_when": "item used AND quantity is quoted per item unit basis; basis_qty>0 with basis_m2",
+   "required_when": "active material item; unused item group wholly absent",
    "allowed_answer_states": [
     "provided",
     "unknown",
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "matched basis_qty * selected area m2 / basis_m2 * use_ratio -> applied item quantity; basis mismatch -> HOLD",
-   "required_if": {
-    "all": [
-     {
-      "group_active": "cost.material.y5.item6"
-     },
-     {
-      "any": [
-       {
-        "not": {
-         "any": [
-          {
-           "key_equals": [
-            "cost.material.y5.item6.area_kind",
-            "부지"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y5.item6.area_kind",
-            "시설"
-           ]
-          },
-          {
-           "key_equals": [
-            "cost.material.y5.item6.area_kind",
-            "재배"
-           ]
-          }
-         ]
-        }
-       },
-       {
-        "key_present": "cost.material.y5.item6.basis_m2"
-       }
-      ]
-     }
-    ]
-   }
-  },
-  "cost.material.y5.item6.use_ratio": {
-   "canonical_cell": "9. 영농자재구매계획!Y53",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "item used in that plan year; unused item group wholly absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
+   "output_conversion": "basis_qty × 재배면적 ㎡ / basis_m2",
    "required_if": {
     "group_active": "cost.material.y5.item6"
    },
@@ -44484,42 +40344,6 @@
     }
    }
   },
-  "cost.overhead.y1.slot3.coverage_ratio": {
-   "canonical_cell": "12 .경비계획!T12",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "slot used AND method=area_unit AND applied area < selected area_kind; else absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
-   "method_tag": "area_unit",
-   "required_if": {
-    "any": []
-   },
-   "forbidden_if": {
-    "not": {
-     "all": [
-      {
-       "group_active": "cost.overhead.y1.slot3"
-      },
-      {
-       "method_is": "area_unit"
-      }
-     ]
-    }
-   }
-  },
   "cost.overhead.y1.slot3.rate_or_unit_price": {
    "canonical_cell": "12 .경비계획!M12",
    "data_type": "decimal",
@@ -44538,7 +40362,7 @@
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "area m2 * coverage_ratio * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
+   "output_conversion": "area m2 * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
    "method_tag": "area_unit",
    "required_if": {
     "all": [
@@ -44778,42 +40602,6 @@
     }
    }
   },
-  "cost.overhead.y1.slot4.coverage_ratio": {
-   "canonical_cell": "12 .경비계획!T13",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "slot used AND method=area_unit AND applied area < selected area_kind; else absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
-   "method_tag": "area_unit",
-   "required_if": {
-    "any": []
-   },
-   "forbidden_if": {
-    "not": {
-     "all": [
-      {
-       "group_active": "cost.overhead.y1.slot4"
-      },
-      {
-       "method_is": "area_unit"
-      }
-     ]
-    }
-   }
-  },
   "cost.overhead.y1.slot4.rate_or_unit_price": {
    "canonical_cell": "12 .경비계획!M13",
    "data_type": "decimal",
@@ -44832,7 +40620,7 @@
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "area m2 * coverage_ratio * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
+   "output_conversion": "area m2 * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
    "method_tag": "area_unit",
    "required_if": {
     "all": [
@@ -45200,42 +40988,6 @@
     }
    }
   },
-  "cost.overhead.y1.slot6.coverage_ratio": {
-   "canonical_cell": "12 .경비계획!T15",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "slot used AND method=area_unit AND applied area < selected area_kind; else absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
-   "method_tag": "area_unit",
-   "required_if": {
-    "any": []
-   },
-   "forbidden_if": {
-    "not": {
-     "all": [
-      {
-       "group_active": "cost.overhead.y1.slot6"
-      },
-      {
-       "method_is": "area_unit"
-      }
-     ]
-    }
-   }
-  },
   "cost.overhead.y1.slot6.rate_or_unit_price": {
    "canonical_cell": "12 .경비계획!M15",
    "data_type": "decimal",
@@ -45254,7 +41006,7 @@
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "area m2 * coverage_ratio * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
+   "output_conversion": "area m2 * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
    "method_tag": "area_unit",
    "required_if": {
     "all": [
@@ -45980,42 +41732,6 @@
     }
    }
   },
-  "cost.overhead.y1.slot10.coverage_ratio": {
-   "canonical_cell": "12 .경비계획!T19",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "slot used AND method=area_unit AND applied area < selected area_kind; else absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
-   "method_tag": "area_unit",
-   "required_if": {
-    "any": []
-   },
-   "forbidden_if": {
-    "not": {
-     "all": [
-      {
-       "group_active": "cost.overhead.y1.slot10"
-      },
-      {
-       "method_is": "area_unit"
-      }
-     ]
-    }
-   }
-  },
   "cost.overhead.y1.slot10.rate_or_unit_price": {
    "canonical_cell": "12 .경비계획!M19",
    "data_type": "decimal",
@@ -46034,7 +41750,7 @@
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "area m2 * coverage_ratio * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
+   "output_conversion": "area m2 * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
    "method_tag": "area_unit",
    "required_if": {
     "all": [
@@ -46274,42 +41990,6 @@
     }
    }
   },
-  "cost.overhead.y1.slot11.coverage_ratio": {
-   "canonical_cell": "12 .경비계획!T20",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "slot used AND method=area_unit AND applied area < selected area_kind; else absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
-   "method_tag": "area_unit",
-   "required_if": {
-    "any": []
-   },
-   "forbidden_if": {
-    "not": {
-     "all": [
-      {
-       "group_active": "cost.overhead.y1.slot11"
-      },
-      {
-       "method_is": "area_unit"
-      }
-     ]
-    }
-   }
-  },
   "cost.overhead.y1.slot11.rate_or_unit_price": {
    "canonical_cell": "12 .경비계획!M20",
    "data_type": "decimal",
@@ -46328,7 +42008,7 @@
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "area m2 * coverage_ratio * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
+   "output_conversion": "area m2 * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
    "method_tag": "area_unit",
    "required_if": {
     "all": [
@@ -47028,42 +42708,6 @@
     }
    }
   },
-  "cost.overhead.y2.slot3.coverage_ratio": {
-   "canonical_cell": "12 .경비계획!T27",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "slot used AND method=area_unit AND applied area < selected area_kind; else absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
-   "method_tag": "area_unit",
-   "required_if": {
-    "any": []
-   },
-   "forbidden_if": {
-    "not": {
-     "all": [
-      {
-       "group_active": "cost.overhead.y2.slot3"
-      },
-      {
-       "method_is": "area_unit"
-      }
-     ]
-    }
-   }
-  },
   "cost.overhead.y2.slot3.rate_or_unit_price": {
    "canonical_cell": "12 .경비계획!M27",
    "data_type": "decimal",
@@ -47082,7 +42726,7 @@
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "area m2 * coverage_ratio * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
+   "output_conversion": "area m2 * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
    "method_tag": "area_unit",
    "required_if": {
     "all": [
@@ -47322,42 +42966,6 @@
     }
    }
   },
-  "cost.overhead.y2.slot4.coverage_ratio": {
-   "canonical_cell": "12 .경비계획!T28",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "slot used AND method=area_unit AND applied area < selected area_kind; else absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
-   "method_tag": "area_unit",
-   "required_if": {
-    "any": []
-   },
-   "forbidden_if": {
-    "not": {
-     "all": [
-      {
-       "group_active": "cost.overhead.y2.slot4"
-      },
-      {
-       "method_is": "area_unit"
-      }
-     ]
-    }
-   }
-  },
   "cost.overhead.y2.slot4.rate_or_unit_price": {
    "canonical_cell": "12 .경비계획!M28",
    "data_type": "decimal",
@@ -47376,7 +42984,7 @@
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "area m2 * coverage_ratio * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
+   "output_conversion": "area m2 * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
    "method_tag": "area_unit",
    "required_if": {
     "all": [
@@ -47744,42 +43352,6 @@
     }
    }
   },
-  "cost.overhead.y2.slot6.coverage_ratio": {
-   "canonical_cell": "12 .경비계획!T30",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "slot used AND method=area_unit AND applied area < selected area_kind; else absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
-   "method_tag": "area_unit",
-   "required_if": {
-    "any": []
-   },
-   "forbidden_if": {
-    "not": {
-     "all": [
-      {
-       "group_active": "cost.overhead.y2.slot6"
-      },
-      {
-       "method_is": "area_unit"
-      }
-     ]
-    }
-   }
-  },
   "cost.overhead.y2.slot6.rate_or_unit_price": {
    "canonical_cell": "12 .경비계획!M30",
    "data_type": "decimal",
@@ -47798,7 +43370,7 @@
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "area m2 * coverage_ratio * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
+   "output_conversion": "area m2 * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
    "method_tag": "area_unit",
    "required_if": {
     "all": [
@@ -48524,42 +44096,6 @@
     }
    }
   },
-  "cost.overhead.y2.slot10.coverage_ratio": {
-   "canonical_cell": "12 .경비계획!T34",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "slot used AND method=area_unit AND applied area < selected area_kind; else absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
-   "method_tag": "area_unit",
-   "required_if": {
-    "any": []
-   },
-   "forbidden_if": {
-    "not": {
-     "all": [
-      {
-       "group_active": "cost.overhead.y2.slot10"
-      },
-      {
-       "method_is": "area_unit"
-      }
-     ]
-    }
-   }
-  },
   "cost.overhead.y2.slot10.rate_or_unit_price": {
    "canonical_cell": "12 .경비계획!M34",
    "data_type": "decimal",
@@ -48578,7 +44114,7 @@
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "area m2 * coverage_ratio * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
+   "output_conversion": "area m2 * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
    "method_tag": "area_unit",
    "required_if": {
     "all": [
@@ -48818,42 +44354,6 @@
     }
    }
   },
-  "cost.overhead.y2.slot11.coverage_ratio": {
-   "canonical_cell": "12 .경비계획!T35",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "slot used AND method=area_unit AND applied area < selected area_kind; else absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
-   "method_tag": "area_unit",
-   "required_if": {
-    "any": []
-   },
-   "forbidden_if": {
-    "not": {
-     "all": [
-      {
-       "group_active": "cost.overhead.y2.slot11"
-      },
-      {
-       "method_is": "area_unit"
-      }
-     ]
-    }
-   }
-  },
   "cost.overhead.y2.slot11.rate_or_unit_price": {
    "canonical_cell": "12 .경비계획!M35",
    "data_type": "decimal",
@@ -48872,7 +44372,7 @@
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "area m2 * coverage_ratio * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
+   "output_conversion": "area m2 * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
    "method_tag": "area_unit",
    "required_if": {
     "all": [
@@ -49572,42 +45072,6 @@
     }
    }
   },
-  "cost.overhead.y3.slot3.coverage_ratio": {
-   "canonical_cell": "12 .경비계획!T42",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "slot used AND method=area_unit AND applied area < selected area_kind; else absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
-   "method_tag": "area_unit",
-   "required_if": {
-    "any": []
-   },
-   "forbidden_if": {
-    "not": {
-     "all": [
-      {
-       "group_active": "cost.overhead.y3.slot3"
-      },
-      {
-       "method_is": "area_unit"
-      }
-     ]
-    }
-   }
-  },
   "cost.overhead.y3.slot3.rate_or_unit_price": {
    "canonical_cell": "12 .경비계획!M42",
    "data_type": "decimal",
@@ -49626,7 +45090,7 @@
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "area m2 * coverage_ratio * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
+   "output_conversion": "area m2 * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
    "method_tag": "area_unit",
    "required_if": {
     "all": [
@@ -49866,42 +45330,6 @@
     }
    }
   },
-  "cost.overhead.y3.slot4.coverage_ratio": {
-   "canonical_cell": "12 .경비계획!T43",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "slot used AND method=area_unit AND applied area < selected area_kind; else absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
-   "method_tag": "area_unit",
-   "required_if": {
-    "any": []
-   },
-   "forbidden_if": {
-    "not": {
-     "all": [
-      {
-       "group_active": "cost.overhead.y3.slot4"
-      },
-      {
-       "method_is": "area_unit"
-      }
-     ]
-    }
-   }
-  },
   "cost.overhead.y3.slot4.rate_or_unit_price": {
    "canonical_cell": "12 .경비계획!M43",
    "data_type": "decimal",
@@ -49920,7 +45348,7 @@
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "area m2 * coverage_ratio * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
+   "output_conversion": "area m2 * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
    "method_tag": "area_unit",
    "required_if": {
     "all": [
@@ -50288,42 +45716,6 @@
     }
    }
   },
-  "cost.overhead.y3.slot6.coverage_ratio": {
-   "canonical_cell": "12 .경비계획!T45",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "slot used AND method=area_unit AND applied area < selected area_kind; else absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
-   "method_tag": "area_unit",
-   "required_if": {
-    "any": []
-   },
-   "forbidden_if": {
-    "not": {
-     "all": [
-      {
-       "group_active": "cost.overhead.y3.slot6"
-      },
-      {
-       "method_is": "area_unit"
-      }
-     ]
-    }
-   }
-  },
   "cost.overhead.y3.slot6.rate_or_unit_price": {
    "canonical_cell": "12 .경비계획!M45",
    "data_type": "decimal",
@@ -50342,7 +45734,7 @@
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "area m2 * coverage_ratio * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
+   "output_conversion": "area m2 * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
    "method_tag": "area_unit",
    "required_if": {
     "all": [
@@ -51068,42 +46460,6 @@
     }
    }
   },
-  "cost.overhead.y3.slot10.coverage_ratio": {
-   "canonical_cell": "12 .경비계획!T49",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "slot used AND method=area_unit AND applied area < selected area_kind; else absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
-   "method_tag": "area_unit",
-   "required_if": {
-    "any": []
-   },
-   "forbidden_if": {
-    "not": {
-     "all": [
-      {
-       "group_active": "cost.overhead.y3.slot10"
-      },
-      {
-       "method_is": "area_unit"
-      }
-     ]
-    }
-   }
-  },
   "cost.overhead.y3.slot10.rate_or_unit_price": {
    "canonical_cell": "12 .경비계획!M49",
    "data_type": "decimal",
@@ -51122,7 +46478,7 @@
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "area m2 * coverage_ratio * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
+   "output_conversion": "area m2 * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
    "method_tag": "area_unit",
    "required_if": {
     "all": [
@@ -51362,42 +46718,6 @@
     }
    }
   },
-  "cost.overhead.y3.slot11.coverage_ratio": {
-   "canonical_cell": "12 .경비계획!T50",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "slot used AND method=area_unit AND applied area < selected area_kind; else absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
-   "method_tag": "area_unit",
-   "required_if": {
-    "any": []
-   },
-   "forbidden_if": {
-    "not": {
-     "all": [
-      {
-       "group_active": "cost.overhead.y3.slot11"
-      },
-      {
-       "method_is": "area_unit"
-      }
-     ]
-    }
-   }
-  },
   "cost.overhead.y3.slot11.rate_or_unit_price": {
    "canonical_cell": "12 .경비계획!M50",
    "data_type": "decimal",
@@ -51416,7 +46736,7 @@
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "area m2 * coverage_ratio * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
+   "output_conversion": "area m2 * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
    "method_tag": "area_unit",
    "required_if": {
     "all": [
@@ -52116,42 +47436,6 @@
     }
    }
   },
-  "cost.overhead.y4.slot3.coverage_ratio": {
-   "canonical_cell": "12 .경비계획!T57",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "slot used AND method=area_unit AND applied area < selected area_kind; else absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
-   "method_tag": "area_unit",
-   "required_if": {
-    "any": []
-   },
-   "forbidden_if": {
-    "not": {
-     "all": [
-      {
-       "group_active": "cost.overhead.y4.slot3"
-      },
-      {
-       "method_is": "area_unit"
-      }
-     ]
-    }
-   }
-  },
   "cost.overhead.y4.slot3.rate_or_unit_price": {
    "canonical_cell": "12 .경비계획!M57",
    "data_type": "decimal",
@@ -52170,7 +47454,7 @@
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "area m2 * coverage_ratio * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
+   "output_conversion": "area m2 * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
    "method_tag": "area_unit",
    "required_if": {
     "all": [
@@ -52410,42 +47694,6 @@
     }
    }
   },
-  "cost.overhead.y4.slot4.coverage_ratio": {
-   "canonical_cell": "12 .경비계획!T58",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "slot used AND method=area_unit AND applied area < selected area_kind; else absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
-   "method_tag": "area_unit",
-   "required_if": {
-    "any": []
-   },
-   "forbidden_if": {
-    "not": {
-     "all": [
-      {
-       "group_active": "cost.overhead.y4.slot4"
-      },
-      {
-       "method_is": "area_unit"
-      }
-     ]
-    }
-   }
-  },
   "cost.overhead.y4.slot4.rate_or_unit_price": {
    "canonical_cell": "12 .경비계획!M58",
    "data_type": "decimal",
@@ -52464,7 +47712,7 @@
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "area m2 * coverage_ratio * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
+   "output_conversion": "area m2 * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
    "method_tag": "area_unit",
    "required_if": {
     "all": [
@@ -52832,42 +48080,6 @@
     }
    }
   },
-  "cost.overhead.y4.slot6.coverage_ratio": {
-   "canonical_cell": "12 .경비계획!T60",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "slot used AND method=area_unit AND applied area < selected area_kind; else absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
-   "method_tag": "area_unit",
-   "required_if": {
-    "any": []
-   },
-   "forbidden_if": {
-    "not": {
-     "all": [
-      {
-       "group_active": "cost.overhead.y4.slot6"
-      },
-      {
-       "method_is": "area_unit"
-      }
-     ]
-    }
-   }
-  },
   "cost.overhead.y4.slot6.rate_or_unit_price": {
    "canonical_cell": "12 .경비계획!M60",
    "data_type": "decimal",
@@ -52886,7 +48098,7 @@
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "area m2 * coverage_ratio * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
+   "output_conversion": "area m2 * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
    "method_tag": "area_unit",
    "required_if": {
     "all": [
@@ -53612,42 +48824,6 @@
     }
    }
   },
-  "cost.overhead.y4.slot10.coverage_ratio": {
-   "canonical_cell": "12 .경비계획!T64",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "slot used AND method=area_unit AND applied area < selected area_kind; else absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
-   "method_tag": "area_unit",
-   "required_if": {
-    "any": []
-   },
-   "forbidden_if": {
-    "not": {
-     "all": [
-      {
-       "group_active": "cost.overhead.y4.slot10"
-      },
-      {
-       "method_is": "area_unit"
-      }
-     ]
-    }
-   }
-  },
   "cost.overhead.y4.slot10.rate_or_unit_price": {
    "canonical_cell": "12 .경비계획!M64",
    "data_type": "decimal",
@@ -53666,7 +48842,7 @@
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "area m2 * coverage_ratio * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
+   "output_conversion": "area m2 * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
    "method_tag": "area_unit",
    "required_if": {
     "all": [
@@ -53906,42 +49082,6 @@
     }
    }
   },
-  "cost.overhead.y4.slot11.coverage_ratio": {
-   "canonical_cell": "12 .경비계획!T65",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "slot used AND method=area_unit AND applied area < selected area_kind; else absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
-   "method_tag": "area_unit",
-   "required_if": {
-    "any": []
-   },
-   "forbidden_if": {
-    "not": {
-     "all": [
-      {
-       "group_active": "cost.overhead.y4.slot11"
-      },
-      {
-       "method_is": "area_unit"
-      }
-     ]
-    }
-   }
-  },
   "cost.overhead.y4.slot11.rate_or_unit_price": {
    "canonical_cell": "12 .경비계획!M65",
    "data_type": "decimal",
@@ -53960,7 +49100,7 @@
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "area m2 * coverage_ratio * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
+   "output_conversion": "area m2 * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
    "method_tag": "area_unit",
    "required_if": {
     "all": [
@@ -54660,42 +49800,6 @@
     }
    }
   },
-  "cost.overhead.y5.slot3.coverage_ratio": {
-   "canonical_cell": "12 .경비계획!T72",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "slot used AND method=area_unit AND applied area < selected area_kind; else absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
-   "method_tag": "area_unit",
-   "required_if": {
-    "any": []
-   },
-   "forbidden_if": {
-    "not": {
-     "all": [
-      {
-       "group_active": "cost.overhead.y5.slot3"
-      },
-      {
-       "method_is": "area_unit"
-      }
-     ]
-    }
-   }
-  },
   "cost.overhead.y5.slot3.rate_or_unit_price": {
    "canonical_cell": "12 .경비계획!M72",
    "data_type": "decimal",
@@ -54714,7 +49818,7 @@
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "area m2 * coverage_ratio * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
+   "output_conversion": "area m2 * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
    "method_tag": "area_unit",
    "required_if": {
     "all": [
@@ -54954,42 +50058,6 @@
     }
    }
   },
-  "cost.overhead.y5.slot4.coverage_ratio": {
-   "canonical_cell": "12 .경비계획!T73",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "slot used AND method=area_unit AND applied area < selected area_kind; else absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
-   "method_tag": "area_unit",
-   "required_if": {
-    "any": []
-   },
-   "forbidden_if": {
-    "not": {
-     "all": [
-      {
-       "group_active": "cost.overhead.y5.slot4"
-      },
-      {
-       "method_is": "area_unit"
-      }
-     ]
-    }
-   }
-  },
   "cost.overhead.y5.slot4.rate_or_unit_price": {
    "canonical_cell": "12 .경비계획!M73",
    "data_type": "decimal",
@@ -55008,7 +50076,7 @@
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "area m2 * coverage_ratio * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
+   "output_conversion": "area m2 * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
    "method_tag": "area_unit",
    "required_if": {
     "all": [
@@ -55376,42 +50444,6 @@
     }
    }
   },
-  "cost.overhead.y5.slot6.coverage_ratio": {
-   "canonical_cell": "12 .경비계획!T75",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "slot used AND method=area_unit AND applied area < selected area_kind; else absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
-   "method_tag": "area_unit",
-   "required_if": {
-    "any": []
-   },
-   "forbidden_if": {
-    "not": {
-     "all": [
-      {
-       "group_active": "cost.overhead.y5.slot6"
-      },
-      {
-       "method_is": "area_unit"
-      }
-     ]
-    }
-   }
-  },
   "cost.overhead.y5.slot6.rate_or_unit_price": {
    "canonical_cell": "12 .경비계획!M75",
    "data_type": "decimal",
@@ -55430,7 +50462,7 @@
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "area m2 * coverage_ratio * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
+   "output_conversion": "area m2 * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
    "method_tag": "area_unit",
    "required_if": {
     "all": [
@@ -56156,42 +51188,6 @@
     }
    }
   },
-  "cost.overhead.y5.slot10.coverage_ratio": {
-   "canonical_cell": "12 .경비계획!T79",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "slot used AND method=area_unit AND applied area < selected area_kind; else absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
-   "method_tag": "area_unit",
-   "required_if": {
-    "any": []
-   },
-   "forbidden_if": {
-    "not": {
-     "all": [
-      {
-       "group_active": "cost.overhead.y5.slot10"
-      },
-      {
-       "method_is": "area_unit"
-      }
-     ]
-    }
-   }
-  },
   "cost.overhead.y5.slot10.rate_or_unit_price": {
    "canonical_cell": "12 .경비계획!M79",
    "data_type": "decimal",
@@ -56210,7 +51206,7 @@
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "area m2 * coverage_ratio * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
+   "output_conversion": "area m2 * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
    "method_tag": "area_unit",
    "required_if": {
     "all": [
@@ -56450,42 +51446,6 @@
     }
    }
   },
-  "cost.overhead.y5.slot11.coverage_ratio": {
-   "canonical_cell": "12 .경비계획!T80",
-   "data_type": "decimal",
-   "unit_code": "RATIO",
-   "per_unit": null,
-   "period_axis": "plan_year",
-   "allowed_range": {
-    "min": 0,
-    "max": 1,
-    "max_exclusive": false
-   },
-   "required_when": "slot used AND method=area_unit AND applied area < selected area_kind; else absent",
-   "allowed_answer_states": [
-    "provided",
-    "unknown",
-    "not_asked"
-   ],
-   "explicit_none_calculation": "HOLD",
-   "output_conversion": "ratio as decimal; percentages divided by 100 on intake",
-   "method_tag": "area_unit",
-   "required_if": {
-    "any": []
-   },
-   "forbidden_if": {
-    "not": {
-     "all": [
-      {
-       "group_active": "cost.overhead.y5.slot11"
-      },
-      {
-       "method_is": "area_unit"
-      }
-     ]
-    }
-   }
-  },
   "cost.overhead.y5.slot11.rate_or_unit_price": {
    "canonical_cell": "12 .경비계획!M80",
    "data_type": "decimal",
@@ -56504,7 +51464,7 @@
     "not_asked"
    ],
    "explicit_none_calculation": "HOLD",
-   "output_conversion": "area m2 * coverage_ratio * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
+   "output_conversion": "area m2 * rate_or_unit_price (KRW_PER_M2) * growth -> KRW_1000",
    "method_tag": "area_unit",
    "required_if": {
     "all": [

@@ -217,8 +217,16 @@ def _native_workbook(path, roster, params, facts):
         cells[(SHEET5, f"D{r}")] = (None, str(interest), f"={interest}")
         cells[(SHEET5, f"E{r}")] = (None, str(pp), f"={pp}")
         cells[(SHEET5, f"F{r}")] = (None, str(interest + pp), f"={interest + pp}")
+    for slot in range(2, 6):
+        _, unused_rows = h._loan_slot_rows(slot)
+        for r in unused_rows:
+            cells[(SHEET5, f"B{r}")] = ("str", "", '=""')
     for r in range(8, 14):
         cells[(SHEET5, f"L{r}")] = (None, "0", "=0")
+    cells[("1. 자산조사", "E53")] = (None, "0", "=0")
+    for r in range(8, 13):
+        cells[(SHEET5, f"C{r}")] = (None, "0", "=0")
+        cells[("4.투자계획", f"F{r}")] = (None, "0", "=0")
     for col in "CDEFGH":
         cells[(SHEET17, f"{col}30")] = (None, "10", "=10")
         cells[(SHEET17, f"{col}46")] = (None, "10", "=10")
@@ -960,22 +968,17 @@ class NativeRegressions(unittest.TestCase):
     """Defects surfaced by the real-Excel native run (I3-NATIVE)."""
 
     def test_draft_label_entries(self):
-        # Design 5.6: both printed sheets carry the draft marker.
+        # BC §5: draft markers are absent from both printed sheets.
         tr = h._json(h.REF / h.FILES[0])
         vc = h._json(h.REF / h.FILES[2])
         targets = [("1. 자산조사", "B2"), ("18. 현금흐름계획", "B2")]
         for sheet, cell in targets:
             hit = [e for e in tr["entries"]
                    if e["sheet"] == sheet and e["cell"] == cell]
-            self.assertEqual(len(hit), 1, (sheet, cell))
-            self.assertEqual(hit[0]["action"], "label_template")
-            self.assertEqual(hit[0]["after_value"], "교수 확인 전 초안")
-            self.assertEqual(hit[0]["before_state"], "blank_node")
+            self.assertEqual(hit, [], (sheet, cell))
             row = [r for r in vc["registry"]
                    if r["sheet"] == sheet and r["cell"] == cell]
-            self.assertEqual(len(row), 1)
-            self.assertEqual(row[0]["result_kind"], "display_string")
-            self.assertTrue(row[0]["printed"])
+            self.assertEqual(row, [])
 
     def test_every_cna_group_has_members(self):
         # any_inactive keys must name param groups with members.

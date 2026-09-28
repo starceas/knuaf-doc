@@ -119,11 +119,9 @@ class RealTreeTests(ContractCase):
                              f"errors: {report['errors']!r}")
             rc = report["runtime_changes"]
             self.assertEqual(rc["declared_count"], rc["verified"])
-            # P23 re-declares the C1b-edited runtime files on the accepted
-            # P22 tree (main 7be4c96, PR #22 student report). C1b adds a
-            # validation-layer test but no new runtime-change entry, so
-            # the 130 declared entries and 103 declared-new files are
-            # inherited from main unchanged.
+            # P24 re-declares six B1-edited runtime files on the accepted
+            # P23 tree (main 99aedf5). The new BC test belongs to the
+            # validation layer, so declared counts remain unchanged.
             self.assertEqual(130, rc["verified"])
             self.assertEqual(103, rc["new_count"])
         else:
@@ -141,17 +139,17 @@ class RealTreeTests(ContractCase):
         self.assertEqual(
             _sha(REPO_ROOT / "tools" / "runtime-changes.json"),
             link["spec_sha256"])
-        self.assertEqual("P23", link["stage"])
+        self.assertEqual("P24", link["stage"])
         self.assertEqual("29abec0ec95369de7ae9e22207349d574f1f46b7",
                          link["baseline_main"])
-        # P23's parent is the accepted P22 tree (main 7be4c96, 220 files).
+        # P24's parent is the accepted P23 tree (main 99aedf5, 221 files).
         self.assertEqual(130, link["change_count"])
         self.assertEqual(103, link["new_count"])
         self.assertEqual(105, link["approved_new_files"])
-        self.assertEqual("P22", link["parent_candidate"]["stage"])
-        self.assertEqual(220, link["parent_candidate"]["file_count"])
+        self.assertEqual("P23", link["parent_candidate"]["stage"])
+        self.assertEqual(221, link["parent_candidate"]["file_count"])
         self.assertEqual(
-            "5d8ac5f1b9ecc0ad84dc355854a878ff6709617577243c93279c997e3763a9d6",
+            "6f042f917ac531e417c7b1f3d81c604b80241784baa153239827529aebfeab0a",
             link["parent_candidate"]["tree_sha256"])
         # The ancestor list ends at the parent; the current stage is not
         # one of its own ancestors.
@@ -160,7 +158,7 @@ class RealTreeTests(ContractCase):
             {k: link["parent_candidate"][k]
              for k in ("stage", "file_count", "tree_sha256")},
             {k: lineage[-1][k] for k in ("stage", "file_count", "tree_sha256")})
-        self.assertNotIn("P23", [row["stage"] for row in lineage])
+        self.assertNotIn("P24", [row["stage"] for row in lineage])
         # D5 (P15) pinned its own parent, the P14 tree; keep that pin on
         # the P14 ancestor row now that P15 is itself an ancestor.
         d5 = json.loads((REPO_ROOT / "docs/validation/d5-rda-useful-life.json")
@@ -190,9 +188,9 @@ class RealTreeTests(ContractCase):
                 self.assertIn(meta["owner"],
                               {"A", "B", "C", "P4", "D", "P6", "P7", "P8",
                                "P9", "P10", "P11", "P12", "P13", "P14", "P15",
-                               "P16", "P17", "P18", "P20", "P21", "P22", "P23"})
+                               "P16", "P17", "P18", "P20", "P21", "P22", "P23", "P24"})
             else:
-                # P2 through P22 new files: pre-declared allowlist only.
+                # P2 through P23 new files: pre-declared allowlist only.
                 self.assertIn(name, approved)
                 self.assertIsNone(meta["before_sha256"])
                 self.assertIn(meta["first_changed"],
@@ -203,7 +201,7 @@ class RealTreeTests(ContractCase):
                               {"A", "B", "C", "S", "P4", "P5", "P6", "P7",
                                "P8", "P9", "P10", "P11", "P12", "P13",
                                "P14", "P15", "P16", "P17", "P18", "P19",
-                               "P20", "P21", "P22", "P23"})
+                               "P20", "P21", "P22", "P23", "P24"})
 
 
 class SyntheticLineageTests(ContractCase):
