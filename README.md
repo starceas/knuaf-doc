@@ -33,6 +33,8 @@ Windows에서 네이티브 Office 자동화를 쓰려면 `pywin32`가 추가로 
 
 직접 **“업데이트 확인”**이라고 물으면 현재 확인 상태를 설명합니다. 설치본의 버전 원천은 [`skills/knuaf-doc/version.json`](skills/knuaf-doc/version.json)입니다. 릴리스 확인이 안 되면 원래 논문 작업을 계속할 수 있습니다. Git 체크아웃과 플러그인 캐시 설치본은 자동 교체 대상이 아니며, 안내된 설치 방식에 따라 수동으로 갱신합니다.
 
+업데이트가 끊기면 OS 잠금은 자동으로 풀립니다. 남은 저널은 학생 동의 후 `gg_update.py recover --home <CODEX_HOME> --confirm`으로 확인합니다. 이 업데이트 잠금은 같은 로컬 잠금 파일을 쓰는 도구 호출끼리만 보장합니다. 사람·다른 프로그램의 상태 폴더 또는 잠금 파일 동시 교체와 NFS·SMB·클라우드 동기 폴더는 지원하지 않습니다.
+
 ## 0.1.0에서 옮기기
 
 0.1.0에는 새 버전 알림 장치가 없습니다. 한 번만 새 복사본을 `skills` 밖에 설치한 뒤, 그 복사본의 `gg_update.py adopt`로 기존 설치본을 옮깁니다. AI에게 **“https://github.com/starceas/knuaf-doc README대로 knuaf-doc 업데이트해줘”**라고 말해 아래 절차를 진행할 수 있습니다.

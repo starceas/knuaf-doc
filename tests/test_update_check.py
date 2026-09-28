@@ -270,8 +270,8 @@ elif cut == "rbk":
     mod._rename = rbk
 elif cut.startswith("hold"):
     secs = float(cut[4:]); orig = mod._acquire_lock
-    def al(sd, nonce):
-        r = orig(sd, nonce)
+    def al(sd):
+        r = orig(sd)
         time.sleep(secs)
         return r
     mod._acquire_lock = al
@@ -287,6 +287,61 @@ else:
 print(json.dumps(out, ensure_ascii=False))
 """
 
+
+
+# File-signal barriers fix the intervention order; polling delay is not a race oracle.
+_BARRIER_DRIVER = r"""
+import importlib.util, json, os, subprocess, sys, time
+from pathlib import Path
+script, mode, home, source, target, ready, go = sys.argv[1:]
+ready, go = Path(ready), Path(go)
+spec = importlib.util.spec_from_file_location('barrier_update', script)
+m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+def pause(doc):
+    ready.write_text(json.dumps(doc), encoding='utf-8')
+    while not go.exists():
+        time.sleep(0.005)
+if mode == 'lock':
+    fd = m._acquire_lock(Path(home) / m.STATE_DIR_NAME)
+    try: pause({'pid': os.getpid()})
+    finally: m._release_lock(fd)
+elif mode == 'parent_with_child':
+    fd = m._acquire_lock(Path(home) / m.STATE_DIR_NAME)
+    child_ready = ready.with_name(ready.name + '-child')
+    child = subprocess.Popen([sys.executable, '-c',
+        'from pathlib import Path; import sys,time; '
+        'Path(sys.argv[1]).write_text("{}"); '
+        'p=Path(sys.argv[2]); '
+        'exec("while not p.exists(): time.sleep(0.005)")',
+        str(child_ready), str(go)], close_fds=True)
+    pause({'pid': os.getpid(), 'child': child.pid})
+elif mode == 'recover':
+    original = m._recover_locked
+    def held(j, h, st):
+        pause({'txid': j['txid'], 'pid': os.getpid()})
+        return original(j, h, st)
+    m._recover_locked = held
+    print(json.dumps(m.recover_cmd(home, confirm=True)), flush=True)
+elif mode == 'adopt':
+    original = m._write_journal
+    def held(st, j):
+        original(st, j)
+        if j['phase'] == 'prepared':
+            pause({'txid': j['txid'], 'pid': os.getpid()})
+    m._write_journal = held
+    print(json.dumps(m.adopt_cmd(source, target, confirm=True)), flush=True)
+"""
+
+
+def _wait_signal(path, proc):
+    end = time.monotonic() + 10
+    while time.monotonic() < end:
+        if path.exists():
+            return json.loads(path.read_text(encoding="utf-8"))
+        if proc.poll() is not None:
+            raise AssertionError("barrier subprocess exited: %s" % proc.communicate()[1])
+        time.sleep(0.005)
+    raise AssertionError("barrier timeout")
 
 class _UpdateCase(ContractCase):
     def setUp(self):
@@ -628,7 +683,7 @@ class UpdateTests(_UpdateCase):
         fixed = "b" * 16
         helper = state / "bin" / ("gg_update-%s.py" % fixed)
         helper.write_text("untouched", encoding="utf-8")
-        with mock.patch.object(mod, "_nonce", side_effect=["a" * 16, fixed]):
+        with mock.patch.object(mod, "_nonce", side_effect=[fixed]):
             out = mod.adopt_cmd(src, target, confirm=True)
         self.assertEqual("helper_exists", out["reason"])
         self.assertEqual("untouched", helper.read_text(encoding="utf-8"))
@@ -638,7 +693,7 @@ class UpdateTests(_UpdateCase):
         external = self.root / "external-helper-target"
         external.write_text("outside", encoding="utf-8")
         (state2 / "bin" / ("gg_update-%s.py" % fixed)).symlink_to(external)
-        with mock.patch.object(mod, "_nonce", side_effect=["a" * 16, fixed]):
+        with mock.patch.object(mod, "_nonce", side_effect=[fixed]):
             out = mod.adopt_cmd(src, target2, confirm=True)
         self.assertEqual("helper_exists", out["reason"])
         self.assertEqual("outside", external.read_text(encoding="utf-8"))
@@ -696,7 +751,7 @@ class UpdateTests(_UpdateCase):
                 result = subprocess.run(cmd, cwd=str(self.root),
                                         capture_output=True, text=True, check=True)
                 self.assertEqual(expected, json.loads(result.stdout)["status"])
-                self.assertFalse((home / "knuaf-doc-update" / "lock").exists())
+                self.assertTrue((home / "knuaf-doc-update" / "lock").is_file())
                 self.assertFalse((home / "knuaf-doc-update" / "journal.json").exists())
                 self.assertEqual(1, len(list((home / "knuaf-doc-update").glob(
                     "journal-*-closed.json"))))
@@ -753,28 +808,23 @@ class UpdateTests(_UpdateCase):
         self.assertEqual(before, _tree_bytes(target))
 
         lock = state / "lock"
-        mod._acquire_lock(state, "a" * 16)
-        doc = json.loads(lock.read_text(encoding="utf-8"))
-        self.assertEqual("a" * 16, doc["nonce"])
+        fd = mod._acquire_lock(state)
+        self.assertTrue(lock.is_file())
         with self.assertRaises(mod.Refused) as caught:
-            mod._acquire_lock(state, "b" * 16)
+            mod._acquire_lock(state)
         self.assertEqual("locked", caught.exception.reason)
-        mod._release_lock(state, "b" * 16)
-        self.assertTrue(lock.exists())
-        self.assertEqual("locked", mod.unlock_cmd(home, confirm=True)["reason"])
-        mod._release_lock(state, "a" * 16)
-        self.assertFalse(lock.exists())
-        lock.write_text("{", encoding="utf-8")
-        self.assertEqual("manual_required", mod.unlock_cmd(home, confirm=True)["status"])
-        self.assertTrue(lock.exists())
+        mod._release_lock(fd)
+        self.assertTrue(lock.is_file())
+        again = mod._acquire_lock(state)
+        mod._release_lock(again)
 
     def test_changed_after_lock_is_refused(self):
         src = self.make_incoming()
         mod = _load_update(src / "scripts" / "gg_update.py")
         home, _, target = self.make_target(version=None)
         original = mod._acquire_lock
-        def race(state, nonce):
-            result = original(state, nonce)
+        def race(state):
+            result = original(state)
             (target / "version.json").write_text(
                 json.dumps(_version_doc("0.1.0")), encoding="utf-8")
             return result
@@ -879,66 +929,51 @@ class UpdateTests(_UpdateCase):
         self.assertEqual((0, 1, 2), mod.read_version_file(target / "version.json"))
 
     def test_two_processes_only_one_adopts(self):
-        driver = self.root / "driver-race.py"
-        driver.write_text(_DRIVER, encoding="utf-8")
+        driver = self.root / "barrier.py"
+        driver.write_text(_BARRIER_DRIVER, encoding="utf-8")
         src = self.make_incoming()
         home, _, target = self.make_target(version=None)
+        state = home / "knuaf-doc-update"
+        ready, go = self.root / "adopt.ready", self.root / "adopt.go"
         first = subprocess.Popen([sys.executable, str(driver),
-                                  str(src / "scripts" / "gg_update.py"),
-                                  "adopt", "hold1", str(src), str(target)],
-                                 cwd=str(self.root), stdout=subprocess.PIPE,
-                                 stderr=subprocess.PIPE, text=True)
+            str(src / "scripts" / "gg_update.py"), "adopt", str(home),
+            str(src), str(target), str(ready), str(go)],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         try:
-            lock = home / "knuaf-doc-update" / "lock"
-            for _ in range(100):
-                if lock.exists():
-                    break
-                time.sleep(0.01)
-            self.assertTrue(lock.exists())
-            second = subprocess.run([sys.executable, str(driver),
-                                     str(src / "scripts" / "gg_update.py"),
-                                     "adopt", "-", str(src), str(target)],
-                                    cwd=str(self.root), capture_output=True,
-                                    text=True, check=True)
-            self.assertEqual("locked", json.loads(second.stdout)["reason"])
-            stdout, stderr = first.communicate(timeout=5)
+            _wait_signal(ready, first)
+            before = (state / "journal.json").read_bytes()
+            mod = _load_update(src / "scripts" / "gg_update.py")
+            self.assertEqual("locked", mod.adopt_cmd(src, target, confirm=True)["reason"])
+            self.assertEqual(before, (state / "journal.json").read_bytes())
+            self.assertTrue((state / "lock").is_file())
+            go.write_text("go")
+            stdout, stderr = first.communicate(timeout=10)
             self.assertEqual(0, first.returncode, stderr)
             self.assertEqual("applied", json.loads(stdout)["status"])
         finally:
             if first.poll() is None:
-                first.kill()
-                first.communicate()
+                first.kill(); first.communicate()
 
-    def test_unlock_rejects_linked_state_and_incomplete_lock(self):
+    def test_unlock_is_usage_error_and_symlink_lock_is_refused(self):
         src = self.make_incoming()
         mod = _load_update(src / "scripts" / "gg_update.py")
-        home, _, _ = self.make_target()
-        outside = self.tmpdir("student-work")
-        lock = outside / "lock"
-        valid = {"schema": mod.LOCK_SCHEMA, "pid": 99999999,
-                 "host_hash": mod._host_hash(), "utc": mod._utcnow(),
-                 "nonce": "a" * 16}
-        lock.write_text(json.dumps(valid), encoding="utf-8")
-        (outside / "sentinel").write_bytes(b"untouched")
-        before = _tree_bytes(outside)
-        (home / mod.STATE_DIR_NAME).symlink_to(outside, target_is_directory=True)
-        self.assertEqual("manual_required", mod.unlock_cmd(home, confirm=True)["status"])
-        self.assertEqual(before, _tree_bytes(outside))
-        (home / mod.STATE_DIR_NAME).unlink()
+        home, _, target = self.make_target()
+        cli = subprocess.run([sys.executable, str(src / "scripts" / "gg_update.py"),
+                              "unlock", "--home", str(home), "--confirm"],
+                             capture_output=True, text=True)
+        self.assertEqual(2, cli.returncode)
+        self.assertEqual({"status": "error", "reason": "usage_error"},
+                         json.loads(cli.stdout))
         state = home / mod.STATE_DIR_NAME
         state.mkdir()
-        for bad in ({"schema": mod.LOCK_SCHEMA, "host_hash": mod._host_hash()},
-                    dict(valid, pid="99999999"), dict(valid, pid=True),
-                    dict(valid, nonce=12)):
-            lock = state / "lock"
-            data = json.dumps(bad).encode()
-            lock.write_bytes(data)
-            self.assertEqual("manual_required", mod.unlock_cmd(home, confirm=True)["status"])
-            self.assertEqual(data, lock.read_bytes())
-        lock.unlink()
-        lock.symlink_to(outside / "lock")
-        self.assertEqual("manual_required", mod.unlock_cmd(home, confirm=True)["status"])
-        self.assertEqual(before, _tree_bytes(outside))
+        outside = self.tmpdir("student-work") / "lock"
+        outside.write_bytes(b"outside")
+        (state / "lock").symlink_to(outside)
+        before = _tree_bytes(target)
+        self.assertEqual("unsafe_state_path", mod.adopt_cmd(
+            src, target, confirm=True)["reason"])
+        self.assertEqual(before, _tree_bytes(target))
+        self.assertEqual(b"outside", outside.read_bytes())
 
     def test_recover_preserves_foreign_staging_leaf(self):
         src = self.make_incoming()
@@ -1036,11 +1071,11 @@ class UpdateTests(_UpdateCase):
         mod = _load_update(src / "scripts" / "gg_update.py")
         home, _, target = self.make_target()
         before = _tree_bytes(target)
-        with mock.patch.object(mod.os, "link", side_effect=OSError("unsupported")):
+        with mock.patch.object(mod, "_os_lock", side_effect=OSError(37, "unsupported")):
             out = mod.adopt_cmd(src, target, confirm=True)
         self.assertEqual("lock_unsupported", out["reason"])
         self.assertEqual(before, _tree_bytes(target))
-        self.assertFalse(list((home / "knuaf-doc-update").glob(".lock-tmp-*")))
+        self.assertTrue((home / "knuaf-doc-update" / "lock").is_file())
         state = home / "knuaf-doc-update"
         collision = state / "backups" / "0.1.1-20260101T000000Z-bbbbbbbb"
         collision.mkdir(parents=True)
@@ -1093,71 +1128,189 @@ class UpdateTests(_UpdateCase):
                 self.assertEqual(want, result["status"], result)
 
     def test_recover_competes_with_apply_and_recover(self):
-        driver = self.root / "race-driver.py"
-        driver.write_text(_DRIVER, encoding="utf-8")
+        driver = self.root / "barrier.py"
+        driver.write_text(_BARRIER_DRIVER, encoding="utf-8")
+        cut = self.root / "cut.py"
+        cut.write_text(_DRIVER, encoding="utf-8")
         src = self.make_incoming()
         home, _, target = self.make_target(version=None)
         mod = _load_update(src / "scripts" / "gg_update.py")
-        self.assertEqual("applied", mod.adopt_cmd(src, target, confirm=True)["status"])
+        subprocess.run([sys.executable, str(cut),
+            str(src / "scripts" / "gg_update.py"), "adopt", "wj1",
+            str(src), str(target)], check=True, capture_output=True)
         state = home / "knuaf-doc-update"
-        src3 = _write_skill(self.root / "incoming3" / "knuaf-doc",
-                            version="0.1.3", updater=True)
+        old = json.loads((state / "journal.json").read_text())
+        ready, go = self.root / "recover.ready", self.root / "recover.go"
         first = subprocess.Popen([sys.executable, str(driver),
-            str(src3 / "scripts" / "gg_update.py"), "adopt", "pw2",
-            str(src3), str(target)], stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE, text=True)
+            str(src / "scripts" / "gg_update.py"), "recover", str(home),
+            str(src), str(target), str(ready), str(go)],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         try:
-            for _ in range(200):
-                if (state / "lock").exists() and (state / "journal.json").exists():
-                    doc = json.loads((state / "journal.json").read_text())
-                    if doc.get("new_version") == "0.1.3":
-                        break
-                time.sleep(0.01)
-            else:
-                self.fail("concurrent writer did not reach prepared")
+            held = _wait_signal(ready, first)
+            self.assertEqual(old["txid"], held["txid"])
             before = (state / "journal.json").read_bytes()
-            out = mod.recover_cmd(home, confirm=True)
-            self.assertEqual(("refused", "locked"),
-                             (out["status"], out["reason"]))
+            self.assertEqual("locked", mod.recover_cmd(home, confirm=True)["reason"])
+            self.assertEqual("locked", mod.adopt_cmd(src, target, confirm=True)["reason"])
             self.assertEqual(before, (state / "journal.json").read_bytes())
-            self.assertTrue((state / "lock").exists())
-        finally:
-            first.communicate(timeout=10)
-
-        # A crashed writer leaves a stale lock. The first recover owns the
-        # replacement lock while the second process attempts to recover.
-        home2, _, target2 = self.make_target(version=None)
-        subprocess.run([sys.executable, str(driver),
-                        str(src / "scripts" / "gg_update.py"), "adopt", "wj1",
-                        str(src), str(target2)], check=True)
-        state2 = home2 / "knuaf-doc-update"
-        first = subprocess.Popen([sys.executable, str(driver),
-            str(src / "scripts" / "gg_update.py"), "recover", "hold2",
-            str(home2)], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            text=True)
-        try:
-            for _ in range(200):
-                doc, state_name = mod._read_lock(state2)
-                if state_name == "ok" and doc["pid"] == first.pid:
-                    break
-                time.sleep(0.01)
-            else:
-                self.fail("first recover did not acquire lock")
-            result = subprocess.run([sys.executable, str(driver),
-                str(src / "scripts" / "gg_update.py"), "recover", "-",
-                str(home2)], capture_output=True, text=True, check=True)
-            second = json.loads(result.stdout)
-            self.assertEqual(("refused", "locked"),
-                             (second["status"], second["reason"]))
-            self.assertTrue((state2 / "journal.json").exists())
+            go.write_text("go")
             stdout, stderr = first.communicate(timeout=10)
             self.assertEqual(0, first.returncode, stderr)
             self.assertEqual("not_started", json.loads(stdout)["status"])
-            self.assertFalse((state2 / "journal.json").exists())
+            closed = state / ("journal-%s-closed.json" % old["txid"])
+            self.assertEqual(old["txid"], json.loads(closed.read_text())["txid"])
+            newer = mod.adopt_cmd(src, target, confirm=True)
+            self.assertEqual("applied", newer["status"])
+            active = json.loads((state / "journal.json").read_text())
+            self.assertNotEqual(old["txid"], active["txid"])
+            self.assertEqual(old["txid"], json.loads(closed.read_text())["txid"])
         finally:
             if first.poll() is None:
-                first.kill()
-                first.communicate()
+                first.kill(); first.communicate()
+
+    def test_lock_identity_barriers_and_foreign_journal(self):
+        src = self.make_incoming()
+        mod = _load_update(src / "scripts" / "gg_update.py")
+        # (a) replacement before open: the new regular file is the lock.
+        home, _, target = self.make_target(version=None)
+        state = home / mod.STATE_DIR_NAME
+        state.mkdir()
+        lock = state / "lock"
+        lock.write_bytes(b"old")
+        lock.unlink(); lock.write_bytes(b"new")
+        self.assertEqual("applied", mod.adopt_cmd(src, target, confirm=True)["status"])
+        self.assertEqual(b"new", lock.read_bytes())
+        # (b) open then replacement before first identity check.
+        home, _, target = self.make_target(version=None)
+        state = home / mod.STATE_DIR_NAME
+        before = _tree_bytes(target)
+        original = mod._os_lock
+        def swap_after_open(fd):
+            original(fd)
+            lock = state / "lock"
+            lock.unlink(); lock.write_bytes(b"foreign")
+        with mock.patch.object(mod, "_os_lock", side_effect=swap_after_open):
+            out = mod.adopt_cmd(src, target, confirm=True)
+        self.assertEqual("lock_replaced", out["reason"])
+        self.assertEqual(before, _tree_bytes(target))
+        self.assertFalse((state / "journal.json").exists())
+        # (c) first identity passed, replacement before final check.
+        home, _, target = self.make_target(version=None)
+        state = home / mod.STATE_DIR_NAME
+        state.mkdir()
+        journal = state / "journal.json"
+        journal.write_text(json.dumps({"schema": mod.JOURNAL_SCHEMA,
+            "home": str(home), "txid": "f" * 16, "phase": "done"}))
+        old_journal = journal.read_bytes()
+        before = _tree_bytes(target)
+        original_check = mod._check_lock_identity
+        checks = [0]
+        def swap_before_final(sd, fd):
+            checks[0] += 1
+            if checks[0] == 2:
+                (sd / "lock").unlink(); (sd / "lock").write_bytes(b"foreign")
+            return original_check(sd, fd)
+        with mock.patch.object(mod, "_check_lock_identity", side_effect=swap_before_final):
+            out = mod.adopt_cmd(src, target, confirm=True)
+        self.assertEqual("lock_replaced", out["reason"])
+        self.assertEqual(2, checks[0])
+        self.assertEqual(before, _tree_bytes(target))
+        self.assertEqual(old_journal, journal.read_bytes())
+
+    def test_lock_lifetime_reentry_failure_and_unsupported(self):
+        src = self.make_incoming()
+        mod = _load_update(src / "scripts" / "gg_update.py")
+        home, _, target = self.make_target(version=None)
+        state = mod._prepare_state(target.parent, home)
+        driver = self.root / "barrier.py"
+        driver.write_text(_BARRIER_DRIVER, encoding="utf-8")
+        ready, go = self.root / "external.ready", self.root / "external.go"
+        fd = mod._acquire_lock(state)
+        try:
+            with self.assertRaises(mod.Refused) as caught:
+                mod._acquire_lock(state)
+            self.assertEqual("locked", caught.exception.reason)
+            competitor = subprocess.run([sys.executable, str(driver),
+                str(src / "scripts" / "gg_update.py"), "lock", str(home),
+                str(src), str(target), str(ready), str(go)],
+                capture_output=True, text=True)
+            self.assertNotEqual(0, competitor.returncode)
+            self.assertIn("locked", competitor.stderr)
+        finally:
+            mod._release_lock(fd)
+        again = mod._acquire_lock(state); mod._release_lock(again)
+        with mock.patch.object(mod, "_os_lock", side_effect=OSError(37, "unsupported")), \
+             mock.patch.object(mod, "_read_journal", side_effect=AssertionError("read")):
+            out = mod.adopt_cmd(src, target, confirm=True)
+        self.assertEqual("lock_unsupported", out["reason"])
+        again = mod._acquire_lock(state); mod._release_lock(again)
+        with mock.patch.object(mod, "_read_journal", side_effect=RuntimeError("injected")):
+            with self.assertRaises(RuntimeError):
+                mod.adopt_cmd(src, target, confirm=True)
+        again = mod._acquire_lock(state); mod._release_lock(again)
+
+    @unittest.skipIf(os.name == "nt", "POSIX SIGKILL evidence")
+    def test_killed_owner_with_live_subprocess_releases_lock(self):
+        src = self.make_incoming()
+        mod = _load_update(src / "scripts" / "gg_update.py")
+        home, _, target = self.make_target(version=None)
+        mod._prepare_state(target.parent, home)
+        driver = self.root / "barrier.py"
+        driver.write_text(_BARRIER_DRIVER, encoding="utf-8")
+        ready, go = self.root / "parent.ready", self.root / "parent.go"
+        parent = subprocess.Popen([sys.executable, str(driver),
+            str(src / "scripts" / "gg_update.py"), "parent_with_child", str(home),
+            str(src), str(target), str(ready), str(go)],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        try:
+            row = _wait_signal(ready, parent)
+            child_ready = ready.with_name(ready.name + "-child")
+            _wait_signal(child_ready, parent)
+            parent.kill(); parent.wait(timeout=10)
+            self.assertTrue(Path("/proc/%d" % row["child"]).exists()
+                            if Path("/proc").exists() else
+                            subprocess.run(["kill", "-0", str(row["child"])],
+                                           capture_output=True).returncode == 0)
+            fd = mod._acquire_lock(home / mod.STATE_DIR_NAME)
+            mod._release_lock(fd)
+        finally:
+            go.write_text("go")
+            if parent.poll() is None:
+                parent.kill(); parent.wait(timeout=10)
+            parent.stdout.close(); parent.stderr.close()
+
+    def test_windows_locking_offsets_mock_only(self):
+        src = self.make_incoming()
+        mod = _load_update(src / "scripts" / "gg_update.py")
+        import types
+        fake = types.SimpleNamespace(LK_NBLCK=10, LK_UNLCK=11)
+        calls = []
+        fake.locking = lambda fd, op, size: calls.append(("locking", fd, op, size))
+        with tempfile.TemporaryFile() as fh, \
+             mock.patch.object(mod.os, "name", "nt"), \
+             mock.patch.object(mod.os, "lseek", side_effect=lambda fd, off, whence:
+                               calls.append(("seek", fd, off, whence))), \
+             mock.patch.dict(sys.modules, {"msvcrt": fake}):
+            fd = fh.fileno()
+            mod._os_lock(fd); mod._os_unlock(fd)
+        self.assertEqual([("seek", fd, 0, os.SEEK_SET),
+                          ("locking", fd, 10, 1),
+                          ("seek", fd, 0, os.SEEK_SET),
+                          ("locking", fd, 11, 1)], calls)
+
+    def test_skill_guidance_user_finish_status_mutants(self):
+        raw = SKILL_MD_PATH.read_text(encoding="utf-8")
+        clauses = (
+            ("⚑로 올리지 않고 DOCX·XLSX 작업을 막지 않는다.",
+             "⚑로 올리고 DOCX·XLSX 작업을 막는다."),
+            ("status에서 이미 통과한 항목은 next에 남아 있어도 다시 미완료로 쓰지 않는다.",
+             "next에 남은 항목은 status에서 이미 통과했어도 다시 미완료로 쓴다."),
+        )
+        for wanted, reversed_meaning in clauses:
+            with self.subTest(wanted=wanted):
+                self.assertEqual(1, raw.count(wanted))
+                mutant = raw.replace(wanted, reversed_meaning, 1)
+                with self.assertRaises(AssertionError):
+                    self.assertIn(wanted, mutant)
 
     def test_report_draft_with_corrupt_version(self):
         root = self.tmpdir("draft-bad-version")

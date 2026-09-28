@@ -1,4 +1,4 @@
-"""knuaf-doc 업데이트 확인·적용·채택·복구·잠금 해제 (설계 U1 r3, 11절 우선).
+"""knuaf-doc 업데이트 확인·적용·채택·복구 (설계 U1 r3, 11.7.1 우선).
 
 표준 라이브러리만 쓰고 이 파일 하나만으로 동작한다 — 교체 과정에서
 state_dir/bin/ 아래에 복사돼 0.1.0 같은 구 설치본의 복구 명령으로도
@@ -7,12 +7,12 @@ state_dir/bin/ 아래에 복사돼 0.1.0 같은 구 설치본의 복구 명령�
 JSON 한 개.  argparse 사용 오류만 exit 2.
 """
 import argparse
+import errno
 import hashlib
 import http.client
 import io
 import json
 import os
-import platform
 import re
 import secrets
 import shlex
@@ -35,7 +35,6 @@ RELEASE_URL_FMT = "https://github.com/starceas/knuaf-doc/releases/tag/v%s"
 USER_AGENT = "knuaf-doc-update/1"
 
 VERSION_SCHEMA = "knuaf-doc/version@1"
-LOCK_SCHEMA = "knuaf-doc/update-lock@1"
 JOURNAL_SCHEMA = "knuaf-doc/update-journal@1"
 
 VERSION_RE = re.compile(
@@ -150,25 +149,6 @@ def _has_link_components(path):
     if _is_link_or_reparse(p):
         return True
     return any(_is_link_or_reparse(parent) for parent in p.parents)
-
-
-def _pid_alive(pid):
-    if not isinstance(pid, int) or isinstance(pid, bool) or pid <= 0:
-        return False
-    try:
-        os.kill(pid, 0)
-    except ProcessLookupError:
-        return False
-    except PermissionError:
-        return True
-    except OSError:
-        return False
-    return True
-
-
-def _host_hash():
-    node = platform.node() or "unknown-host"
-    return hashlib.sha256(node.encode("utf-8")).hexdigest()[:16]
 
 
 def _run_deadline(fn, deadline):
@@ -477,71 +457,78 @@ def _prepare_state(skills_dir, home):
 
 # ------------------------------------------------------------------- lock --
 
-def _acquire_lock(state_dir, nonce):
-    """11.1+11.6: 완성 JSON을 O_EXCL 임시 파일에 쓰고 os.link로 게시한다."""
-    payload = {"schema": LOCK_SCHEMA, "pid": os.getpid(),
-               "host_hash": _host_hash(), "utc": _utcnow(),
-               "nonce": nonce}
-    tmp = None
-    try:
-        fd, tmp = tempfile.mkstemp(dir=str(state_dir), prefix=".lock-tmp-")
-        with os.fdopen(fd, "w", encoding="utf-8") as fh:
-            fh.write(json.dumps(payload, ensure_ascii=False))
-            fh.flush()
-            os.fsync(fh.fileno())
-        os.link(tmp, str(state_dir / "lock"))
-    except FileExistsError:
-        raise Refused("locked", lock=str(state_dir / "lock"))
-    except OSError:
-        raise Refused("lock_unsupported")
-    finally:
-        if tmp:
-            try:
-                os.unlink(tmp)
-            except OSError:
-                pass
-    return state_dir / "lock"
-
-
-def _read_lock(state_dir):
+def _check_lock_identity(state_dir, fd):
+    """열린 잠금 파일이 아직 같은 일반 파일인지 확인한다."""
     lock = state_dir / "lock"
     try:
-        st = os.lstat(str(lock))
-    except FileNotFoundError:
-        return None, "absent"
+        opened, named = os.fstat(fd), os.lstat(str(lock))
     except OSError:
-        return None, "unreadable"
-    if not stat.S_ISREG(st.st_mode) or _is_link_or_reparse(lock):
-        return None, "unreadable"
-    try:
-        doc = json.loads(lock.read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
-        return None, "unreadable"
-    ok = (isinstance(doc, dict)
-          and doc.get("schema") == LOCK_SCHEMA
-          and isinstance(doc.get("pid"), int)
-          and not isinstance(doc.get("pid"), bool)
-          and doc["pid"] > 0
-          and isinstance(doc.get("host_hash"), str)
-          and bool(re.fullmatch(r"[0-9a-f]{16}", doc["host_hash"]))
-          and isinstance(doc.get("utc"), str)
-          and bool(re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", doc["utc"]))
-          and isinstance(doc.get("nonce"), str)
-          and bool(re.fullmatch(r"[0-9a-f]{16}", doc["nonce"])))
-    if not ok:
-        return None, "unreadable"
-    return doc, "ok"
+        raise Refused("lock_replaced", lock=str(lock))
+    if (not stat.S_ISREG(opened.st_mode) or not stat.S_ISREG(named.st_mode)
+            or _is_link_or_reparse(lock)
+            or (opened.st_dev, opened.st_ino) != (named.st_dev, named.st_ino)):
+        raise Refused("lock_replaced", lock=str(lock))
 
 
-def _release_lock(state_dir, nonce):
-    """자기 nonce와 일치할 때만 lock을 지운다."""
-    doc, state = _read_lock(state_dir)
-    if state != "ok" or doc.get("nonce") != nonce:
-        return
+def _os_lock(fd):
+    if os.name == "nt":
+        import msvcrt
+        os.lseek(fd, 0, os.SEEK_SET)
+        msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)
+    else:
+        import fcntl
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+
+def _os_unlock(fd):
+    if os.name == "nt":
+        import msvcrt
+        os.lseek(fd, 0, os.SEEK_SET)
+        msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
+    else:
+        import fcntl
+        fcntl.flock(fd, fcntl.LOCK_UN)
+
+
+def _acquire_lock(state_dir, _nonce_unused=None):
+    """호출마다 새 fd를 열어 비차단 OS 잠금을 잡는다. L은 영구 파일이다."""
+    lock = state_dir / "lock"
+    if _is_link_or_reparse(lock):
+        raise Refused("unsafe_state_path")
     try:
-        os.unlink(str(state_dir / "lock"))
+        fd = os.open(str(lock), os.O_RDWR | os.O_CREAT |
+                     getattr(os, "O_NOFOLLOW", 0), 0o600)
     except OSError:
-        pass
+        raise Refused("unsafe_state_path")
+    acquired = False
+    try:
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            raise Refused("unsafe_state_path")
+        try:
+            _os_lock(fd)
+        except OSError as exc:
+            if exc.errno in (errno.EWOULDBLOCK, errno.EAGAIN, errno.EACCES):
+                raise Refused("locked", lock=str(lock))
+            raise Refused("lock_unsupported")
+        acquired = True
+        _check_lock_identity(state_dir, fd)
+        return fd
+    except BaseException:
+        if acquired:
+            try:
+                _os_unlock(fd)
+            except OSError:
+                pass
+        os.close(fd)
+        raise
+
+
+def _release_lock(fd):
+    """획득한 호출만 해제한다. unlock 실패에도 fd는 닫는다."""
+    try:
+        _os_unlock(fd)
+    finally:
+        os.close(fd)
 
 
 # ---------------------------------------------------------------- journal --
@@ -816,9 +803,13 @@ def _run_replace(target, *, expected, prepare, allow_legacy,
     pre = os.stat(str(target))
     pre_ino = (pre.st_dev, pre.st_ino)
 
-    nonce = _nonce()
-    _acquire_lock(state_dir, nonce)
+    fd = _acquire_lock(state_dir)
     try:
+        prior, prior_state = _read_journal(state_dir / "journal.json", home)
+        if prior_state == "manual_required":
+            raise Refused("journal_requires_recovery")
+        if prior_state == "ok" and prior.get("phase") != "done":
+            raise Refused("journal_requires_recovery")
         post = os.stat(str(target))
         post_v, post_state = _try_version(target)
         if (post.st_dev, post.st_ino) != pre_ino:
@@ -850,8 +841,6 @@ def _run_replace(target, *, expected, prepare, allow_legacy,
                 break
         else:
             raise Refused("backup_name_conflict")
-
-        helper = _stage_helper(state_dir, txid)  # 11.6: rename 전 게시
 
         try:
             staging = Path(tempfile.mkdtemp(prefix=STAGING_PREFIX,
@@ -886,6 +875,16 @@ def _run_replace(target, *, expected, prepare, allow_legacy,
             cleanup_staging()
             raise Failed("prepare", "target_intact")
 
+        try:
+            helper = _stage_helper(state_dir, txid)  # 11.6: rename 전 게시
+        except Refused:
+            cleanup_staging()
+            raise
+        try:
+            _check_lock_identity(state_dir, fd)
+        except Refused:
+            cleanup_staging()
+            raise
         try:
             _write_journal(state_dir, journal)
         except OSError:
@@ -949,7 +948,7 @@ def _run_replace(target, *, expected, prepare, allow_legacy,
                 out["staging"] = str(staging)
         return out
     finally:
-        _release_lock(state_dir, nonce)
+        _release_lock(fd)
 
 
 def _default_download(version, connect=None):
@@ -1038,22 +1037,6 @@ def adopt_cmd(source, target, *, confirm):
 
 
 # ---------------------------------------------------------------- recover --
-
-def _recover_lock_gate(state_dir):
-    """→ None(획득 가능) | 거절 결과 dict.
-
-    읽기 불가·다른 호스트의 lock은 manual_required로 보존한다. 같은
-    호스트의 살아 있는 소유자가 있으면 refused locked다."""
-    doc, state = _read_lock(state_dir)
-    if state == "absent":
-        return None
-    lock = str(state_dir / "lock")
-    if state != "ok" or doc.get("host_hash") != _host_hash():
-        return {"status": "manual_required", "lock": lock}
-    if _pid_alive(doc.get("pid")):
-        return {"status": "refused", "reason": "locked", "lock": lock}
-    return None
-
 
 def _read_journal(journal_path, home_p):
     """→ (dict, 'ok') | (None, 'no_journal'|'manual_required')."""
@@ -1164,8 +1147,7 @@ def _recover_locked(journal, home_p, state_dir):
 
 
 def recover_cmd(home, *, confirm):
-    """11.2: lock을 11.1 방식으로 직접 획득한 배타 구간 안에서만
-    journal을 읽고 T/B/S 실제 상태로 판정·종결한다."""
+    """저널 판독부터 종결까지 apply/adopt와 같은 OS 잠금을 쥔다."""
     if not confirm:
         return _refused(Refused("confirm_required"))
     home_s = str(home)
@@ -1175,183 +1157,51 @@ def recover_cmd(home, *, confirm):
     home_p = Path(os.path.realpath(home_s))
     state_dir = home_p / STATE_DIR_NAME
     journal_path = state_dir / "journal.json"
-    lock = state_dir / "lock"
 
     try:
         st = os.lstat(str(state_dir))
     except FileNotFoundError:
         return {"status": "no_journal"}
     except OSError:
-        return {"status": "manual_required",
-                "journal": str(journal_path)}
+        return {"status": "manual_required", "journal": str(journal_path)}
     if not stat.S_ISDIR(st.st_mode) or _has_link_components(state_dir):
         return {"status": "manual_required", "journal": str(journal_path)}
 
-    gate = _recover_lock_gate(state_dir)
-    if gate is not None:
-        return gate
-    initial, initial_state = _read_journal(journal_path, home_p)
-    if initial_state == "no_journal":
-        return {"status": "no_journal"}
-    if initial_state != "ok" or not isinstance(initial.get("txid"), str):
-        return {"status": "manual_required", "journal": str(journal_path)}
-
-    # 죽은 같은 호스트 소유자의 lock은 내 nonce 경로로 옮겨 놓고(manual_
-    # required면 원래 자리에 복원) 나만의 lock을 11.1 방식으로 게시한다.
-    # 옮기기 직전·직후 lstat이 같지 않으면 누가 갈아 끼운 것이다.
-    nonce = _nonce()
-    aside = state_dir / ("lock-stale-%s" % nonce)
-    prior_doc, prior_state = _read_lock(state_dir)
-    if prior_state == "unreadable":
-        return {"status": "manual_required", "lock": str(lock)}
-    if prior_state == "ok":
-        if prior_doc["host_hash"] != _host_hash():
-            return {"status": "manual_required", "lock": str(lock)}
-        if _pid_alive(prior_doc["pid"]):
-            return {"status": "refused", "reason": "locked", "lock": str(lock)}
     try:
-        st_before = os.lstat(str(lock))
-    except FileNotFoundError:
-        st_before = None
-    except OSError:
-        return {"status": "manual_required", "lock": str(lock)}
-    moved_aside = False
-    if st_before is not None:
-        if prior_state != "ok":
-            return {"status": "manual_required", "lock": str(lock)}
-        before = (st_before.st_dev, st_before.st_ino)
-        try:
-            os.rename(str(lock), str(aside))
-            moved_aside = True
-            st_after = os.lstat(str(aside))
-        except FileNotFoundError:
-            moved_aside = False  # 사이에 사라졌다 — 그대로 진행
-        except OSError:
-            return {"status": "manual_required", "lock": str(lock)}
-        if moved_aside:
-            try:
-                aside_doc = json.loads(aside.read_text(encoding="utf-8"))
-            except (OSError, UnicodeDecodeError, json.JSONDecodeError):
-                aside_doc = None
-            if (st_after.st_dev, st_after.st_ino) != before \
-                    or aside_doc != prior_doc:
-                try:
-                    os.link(str(aside), str(lock))
-                except FileExistsError:
-                    pass
-                except OSError:
-                    return {"status": "manual_required", "lock": str(aside)}
-                os.unlink(str(aside))
-                return {"status": "refused", "reason": "locked",
-                        "lock": str(lock)}
-    try:
-        _acquire_lock(state_dir, nonce)
-    except Refused:
-        # 옮겨 둔 사이 살아 있는 다른 프로세스가 lock을 얻었다.
-        if moved_aside:
-            try:
-                os.link(str(aside), str(lock))
-                os.unlink(str(aside))
-            except FileExistsError:
-                pass
-            except OSError:
-                pass
-        return {"status": "refused", "reason": "locked",
-                "lock": str(lock)}
-    except OSError:
-        if moved_aside:
-            try:
-                os.rename(str(aside), str(lock))
-            except OSError:
-                pass
-        return {"status": "manual_required", "lock": str(lock)}
-
-    consume_stale = False
+        fd = _acquire_lock(state_dir)
+    except Refused as exc:
+        return _refused(exc)
     try:
         journal, jstate = _read_journal(journal_path, home_p)
         if jstate == "no_journal":
             return {"status": "no_journal"}
-        if jstate != "ok" \
-                or journal.get("txid") != initial["txid"] \
-                or not _journal_bounds_ok(journal, home_p, state_dir):
-            return {"status": "manual_required",
-                    "journal": str(journal_path),
-                    "target": journal and journal.get("target"),
-                    "backup": journal and journal.get("backup"),
-                    "staging": journal and journal.get("staging")}
+        if jstate != "ok" or not _journal_bounds_ok(journal, home_p, state_dir):
+            return {"status": "manual_required", "journal": str(journal_path)}
+        _check_lock_identity(state_dir, fd)
         out = _recover_locked(journal, home_p, state_dir)
         if out["status"] != "manual_required":
-            closed = state_dir / ("journal-%s-closed.json"
-                                  % journal["txid"])
+            closed = state_dir / ("journal-%s-closed.json" % journal["txid"])
             try:
+                _check_lock_identity(state_dir, fd)
                 os.rename(str(journal_path), str(closed))
+            except Refused as exc:
+                return _refused(exc)
             except OSError:
-                return {"status": "manual_required",
-                        "journal": str(journal_path)}
-            consume_stale = True
+                return {"status": "manual_required", "journal": str(journal_path)}
         return out
+    except Refused as exc:
+        return _refused(exc)
     finally:
-        _release_lock(state_dir, nonce)
-        if moved_aside and not consume_stale:
-            if not os.path.lexists(str(lock)):
-                try:
-                    os.link(str(aside), str(lock))  # 새 lock이 있으면 실패
-                except OSError:
-                    pass
-        if moved_aside:
-            try:
-                if consume_stale or os.path.lexists(str(lock)):
-                    os.unlink(str(aside))
-            except OSError:
-                pass
-
-
-def unlock_cmd(home, *, confirm):
-    if not confirm:
-        return _refused(Refused("confirm_required"))
-    home_s = str(home)
-    if os.path.abspath(home_s) != os.path.realpath(home_s) \
-            or _has_link_components(home_s):
-        return _refused(Refused("symlinked_path"))
-    state_dir = Path(os.path.realpath(home_s)) / STATE_DIR_NAME
-    lock = state_dir / "lock"
-    try:
-        st = os.lstat(str(state_dir))
-    except FileNotFoundError:
-        return {"status": "no_lock"}
-    except OSError:
-        return {"status": "manual_required", "lock": str(lock)}
-    if not stat.S_ISDIR(st.st_mode) or _has_link_components(state_dir):
-        return {"status": "manual_required", "lock": str(lock)}
-    doc, state = _read_lock(state_dir)
-    if state == "absent":
-        return {"status": "no_lock"}
-    if state != "ok" or doc.get("host_hash") != _host_hash():
-        return {"status": "manual_required", "lock": str(lock)}
-    try:
-        lst = os.lstat(str(lock))
-    except FileNotFoundError:
-        return {"status": "no_lock"}
-    except OSError:
-        return {"status": "manual_required", "lock": str(lock)}
-    if not stat.S_ISREG(lst.st_mode):
-        return {"status": "manual_required", "lock": str(lock)}
-    if _pid_alive(doc.get("pid")):
-        return _refused(Refused("locked", lock=str(lock)))
-    try:
-        os.unlink(str(lock))
-    except OSError:
-        return {"status": "manual_required", "lock": str(lock)}
-    return {"status": "unlocked"}
+        _release_lock(fd)
 
 
 # --------------------------------------------------------------------- cli --
 
 class _Parser(argparse.ArgumentParser):
     def error(self, message):
-        self.exit(2, json.dumps(
-            {"status": "error", "reason": "usage_error"},
-            ensure_ascii=False) + "\n")
+        print(json.dumps({"status": "error", "reason": "usage_error"},
+                         ensure_ascii=False))
+        raise SystemExit(2)
 
 
 def main(argv=None, *, connect=None, download=None):
@@ -1369,9 +1219,6 @@ def main(argv=None, *, connect=None, download=None):
     p_rec = sub.add_parser("recover", help="중단된 교체 복구")
     p_rec.add_argument("--home", required=True)
     p_rec.add_argument("--confirm", action="store_true")
-    p_unl = sub.add_parser("unlock", help="남은 잠금 정리")
-    p_unl.add_argument("--home", required=True)
-    p_unl.add_argument("--confirm", action="store_true")
     args = parser.parse_args(argv)
 
     if args.command == "check":
@@ -1384,8 +1231,6 @@ def main(argv=None, *, connect=None, download=None):
                            confirm=args.confirm)
     elif args.command == "recover":
         result = recover_cmd(args.home, confirm=args.confirm)
-    else:
-        result = unlock_cmd(args.home, confirm=args.confirm)
     print(json.dumps(result, ensure_ascii=False))
     return 0
 

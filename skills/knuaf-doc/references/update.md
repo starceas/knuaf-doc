@@ -45,7 +45,8 @@
 |---|---|
 | applied | 교체 완료. backup 경로를 알리고 새 채팅을 안내한다. |
 | refused confirm_required | 동의 없이 --confirm을 붙이려 했다. 학생 동의를 먼저 받는다. |
-| refused locked | 다른 업데이트가 진행 중이거나 잠금이 남았다. 잠시 뒤 check로 상태를 본다. 프로세스가 죽어 남은 잠금이면 `unlock --home <홈> --confirm`을 학생 동의 후 실행한다. |
+| refused locked | 다른 업데이트·복구가 진행 중이다. 잠시 뒤 다시 확인한다. 업데이트가 끊기면 OS 잠금은 자동으로 풀린다. 저널이 남았으면 학생 동의 후 `recover --home <홈> --confirm`을 실행한다. |
+| refused lock_replaced / lock_unsupported / journal_requires_recovery | 잠금 파일의 외부 교체가 감지됐거나 OS 잠금을 지원하지 않거나 이전 저널의 복구가 필요하다. 상태를 보존하고 개발자에게 신고한다. 이전 저널은 먼저 recover로 확인한다. |
 | refused not_update_available / not_latest | 다시 확인한 결과 대상이 최신이 아니거나 요청 버전이 최신이 아니다. check 결과를 그대로 설명한다. |
 | refused install_kind | 복사 설치가 아니다. hint를 따른다(git이면 `git pull --ff-only`). |
 | refused not_newer / target_version_invalid / source_target_alias | 대상이 지금 버전보다 낮지 않거나 knuaf-doc 0.1.0 설치본으로 확인되지 않는다. 다른 폴더를 가리켰는지 확인한다. |
@@ -56,7 +57,6 @@
 | recover: completed | 새 버전이 이미 놓여 있었다. 새 채팅을 안내한다. |
 | recover: not_started | 교체가 시작되지 않았다. 기존 설치 그대로다. |
 | recover: manual_required | 예상 밖 상태라 아무것도 바꾸지 않았다. journal과 경로를 보존하고 개발자에게 신고한다. |
-| unlock: unlocked / no_lock / manual_required | 잠금을 지웠다 / 잠금이 없었다 / 잠금 파일을 읽지 못해 그대로 뒀다(경로 확인 후 신고). |
 
 응답이 끊겼으면 미적용으로 단정하지 않는다. `check`의 local_version과 `knuaf-doc-update/journal.json`으로 실제 상태를 먼저 확인한다.
 
@@ -64,5 +64,9 @@
 
 - 스킬 폴더를 직접 삭제·이름 변경하지 않는다.
 - skill-installer로 활성 `skills/knuaf-doc`를 덮어쓰지 않는다(설치 경로는 항상 skills 밖 incoming).
-- 학생 동의 없이 apply·adopt·recover·unlock을 실행하지 않는다.
+- 학생 동의 없이 apply·adopt·recover를 실행하지 않는다.
 - 논문·엑셀 본문이나 학생 저자란에 업데이트 표시를 넣지 않는다.
+
+## 한계
+
+같은 로컬 잠금 파일을 쓰는 이 도구의 호출끼리만 배타성을 보장한다. 사람이나 다른 프로그램이 `knuaf-doc-update` 상태 폴더 또는 잠금 파일을 동시에 바꾸는 경우는 지원하지 않는다. NFS·SMB·클라우드 동기 폴더 위의 상태 폴더도 지원하지 않는다.
