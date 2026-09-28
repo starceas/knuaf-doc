@@ -274,16 +274,58 @@ def environment():
         EXTRA_LIMITS["environment"])
 
 
-def _skill_version(plugin_root):
-    """plugin_root/.codex-plugin/plugin.json의 version. 없으면 'unknown'."""
+def _skill_version(plugin_root, skill_root=None):
+    """스킬 루트 version.json 엄격 판독 → plugin.json → 'unknown' (U1).
+
+    version.json은 schema/version/repo 세 키만 허용하고 중복 키·타입·
+    repo 불일치는 판독 불가다(plugin.json으로 내려간다).
+    skill_root 기본값은 이 파일의 스킬 루트(parents[1]).
+    """
+    root = (Path(__file__).resolve().parents[1]
+            if skill_root is None else Path(skill_root))
+    version = _read_version_json(root / "version.json")
+    if version is None:
+        try:
+            doc = json.loads(
+                (Path(plugin_root) / ".codex-plugin" / "plugin.json")
+                .read_text(encoding="utf-8"))
+            version = doc["version"]
+            if not isinstance(version, str):
+                version = "unknown"
+        except (OSError, KeyError, TypeError, json.JSONDecodeError):
+            version = "unknown"
+    return _u16slice("knuaf-doc " + str(version),
+                     EXTRA_LIMITS["skill_version"])
+
+
+def _read_version_json(path):
+    """knuaf-doc/version@1 엄격 판독. 판독 불가면 None."""
     try:
-        doc = json.loads(
-            (Path(plugin_root) / ".codex-plugin" / "plugin.json")
-            .read_text(encoding="utf-8"))
-        version = doc["version"]
-    except (OSError, KeyError, TypeError, json.JSONDecodeError):
-        version = "unknown"
-    return _u16slice("knuaf-doc " + str(version), EXTRA_LIMITS["skill_version"])
+        raw = Path(path).read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None
+    pairs = []
+    try:
+        doc = json.loads(raw,
+                         object_pairs_hook=lambda p: pairs.append(p) or dict(p))
+    except (ValueError, TypeError):
+        return None
+    if not isinstance(doc, dict) or len(pairs) != 1:
+        return None
+    top = pairs[0]
+    if sorted(k for k, _v in top) != ["repo", "schema", "version"]:
+        return None
+    if len(set(k for k, _v in top)) != 3:
+        return None
+    if (doc.get("schema") != "knuaf-doc/version@1"
+            or doc.get("repo") != "starceas/knuaf-doc"
+            or not isinstance(doc.get("version"), str)
+            or re.fullmatch(
+                r"(0|[1-9][0-9]{0,8})\.(0|[1-9][0-9]{0,8})\."
+                r"(0|[1-9][0-9]{0,8})", doc["version"],
+                flags=re.ASCII) is None):
+        return None
+    return doc["version"]
 
 
 def _private_composite(payload):
@@ -361,7 +403,7 @@ def _desired_destination(env_value):
     return {"endpoint": PRODUCT_ENDPOINT, "test_mode": False}
 
 
-def build_draft(input_dict, *, plugin_root):
+def build_draft(input_dict, *, plugin_root, skill_root=None):
     """입력 dict를 검증·가림해 초안 dict를 만든다(파일은 쓰지 않는다)."""
     if not isinstance(input_dict, dict):
         raise ReportError("invalid_input")
@@ -406,7 +448,7 @@ def build_draft(input_dict, *, plugin_root):
     for name in OPTIONAL_FIELDS:
         if name in fields:
             payload[name] = fields[name]
-    payload["skill_version"] = _skill_version(plugin_root)
+    payload["skill_version"] = _skill_version(plugin_root, skill_root)
     # r2 D1-02: private는 environment를 넣지 않는다(Worker가 전달하지 않음).
     if kind == "issue":
         payload["environment"] = environment()
