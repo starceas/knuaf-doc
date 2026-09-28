@@ -87,14 +87,14 @@ def contracts(base=REF):
     tr, params, verify_classes = docs[FILES[0]], docs[FILES[1]], docs[FILES[2]]
     entries = tr.get("entries")
     registry = verify_classes.get("registry")
-    if (not isinstance(entries, list) or tr.get("entry_count") != 4200
-            or len(entries) != 4200 or len({(e.get("sheet"), e.get("cell")) for e in entries}) != 4200
-            or params.get("param_count") != 1464
-            or len(params.get("parameters", {})) != 1464
+    if (not isinstance(entries, list) or tr.get("entry_count") != 4103
+            or len(entries) != 4103 or len({(e.get("sheet"), e.get("cell")) for e in entries}) != 4103
+            or params.get("param_count") != 1379
+            or len(params.get("parameters", {})) != 1379
             or not isinstance(registry, list)
-            or verify_classes.get("registry_count") != 5563
-            or len(registry) != 5563
-            or len({(r.get("sheet"), r.get("cell")) for r in registry}) != 5563):
+            or verify_classes.get("registry_count") != 5466
+            or len(registry) != 5466
+            or len({(r.get("sheet"), r.get("cell")) for r in registry}) != 5466):
         raise Held("public_contract_invalid")
     return docs
 
@@ -1406,6 +1406,21 @@ def _condition_value(row, params, present, resolved, loc):
     raise Held("registry_condition", loc)
 
 
+def _check_sales_units(values):
+    if (values.get("sales.quantity_unit") != values.get("sales.price_per_unit")
+            or values.get("sales.currency") != "원"
+            or not values.get("sales.package_spec")):
+        raise Held("sales_unit_mismatch")
+
+
+def _check_material_basis(values):
+    for key, value in values.items():
+        if (key.startswith("cost.material.") and key.endswith(".basis_m2")
+                and (not isinstance(value, (int, Decimal)) or isinstance(value, bool)
+                     or value <= 0)):
+            raise Held("material_basis_invalid", key)
+
+
 def _facts(project, params):
     facts, fact_sha = _fact_snapshot(project)
     by_key = defaultdict(list)
@@ -1454,6 +1469,10 @@ def _facts(project, params):
         if key in present and forbidden is not None and _eval_cond(
                 forbidden, params, present, resolved, spec):
             raise Held("param_fact_forbidden")
+    if all(k in params for k in ("sales.quantity_unit", "sales.price_per_unit",
+                                "sales.currency", "sales.package_spec")):
+        _check_sales_units(resolved)
+    _check_material_basis(resolved)
     # Category absence declarations and their conflicts.
     categories = {}
     for key, fact in present.items():
@@ -1911,6 +1930,46 @@ def _loan_slot_rows(slot):
     param_row = (39, 73, 96, 119, 142)[slot - 1]
     count = 25 if slot == 1 else 15
     return param_row, range(param_row + 4, param_row + 4 + count)
+
+
+def _verify_loan_identities(caches, start_year):
+    """Compare cached, independently checked operands without output check rows."""
+    sheet = "5. 원리금상환계획"
+
+    def number(sh, ref, detail):
+        value = _target_num(caches, sh, ref)
+        if value == "#ERR" or value is None:
+            raise Held("accounting_identity_mismatch", detail)
+        return Decimal(str(value))
+
+    opening = number("1. 자산조사", "E53", f"{sheet}!opening_debt")
+    prior = Decimal(str(start_year - 1))
+    balances = Decimal(0)
+    for slot in range(1, 6):
+        _, rows = _loan_slot_rows(slot)
+        for r in rows:
+            b = caches.get(sheet, {}).get(f"B{r}")
+            if b is None or b[0] == "e" or b[1] is None:
+                raise Held("accounting_identity_mismatch", f"{sheet}!opening_debt")
+            if b[1] == "":
+                continue
+            if b[0] == "e":
+                raise Held("accounting_identity_mismatch", f"{sheet}!opening_debt")
+            try:
+                year = Decimal(str(b[1]))
+            except (ValueError, TypeError, InvalidOperation):
+                raise Held("accounting_identity_mismatch", f"{sheet}!opening_debt")
+            if year == prior:
+                balances += number(sheet, f"C{r}", f"{sheet}!opening_debt")
+                balances -= number(sheet, f"E{r}", f"{sheet}!opening_debt")
+    if opening != balances:
+        raise Held("accounting_identity_mismatch", f"{sheet}!opening_debt")
+    for k in range(5):
+        detail = f"{sheet}!funding_y{k+1}"
+        left = number(sheet, f"C{8+k}", detail)
+        right = number("4.투자계획", f"F{8+k}", detail)
+        if left != right:
+            raise Held("accounting_identity_mismatch", detail)
 
 
 def _loan_schedule(principal, rate, grace, repay, method):
@@ -2410,12 +2469,8 @@ def verify(project_root, source, transform_receipt, native_receipt, receipt_path
             raise Held("accounting_identity_mismatch", f"{sheet17}!{col}30")
         check_identity(left, right)
         counts["identity"] += 1
-    for r in range(8, 14):
-        actual = _target_num(caches, "5. 원리금상환계획", f"L{r}")
-        if actual == "#ERR" or actual is None:
-            raise Held("accounting_identity_mismatch", f"5. 원리금상환계획!L{r}")
-        check_identity(actual, 0)
-        counts["identity"] += 1
+    _verify_loan_identities(caches, start_year)
+    counts["identity"] += 6
     for row in registry:
         if row["result_kind"] != "display_string":
             continue

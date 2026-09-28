@@ -2,7 +2,7 @@
  "schema": "knuaf-hort-finance-transform/v2",
  "source_id": "H01",
  "source_sha256": "e3c9defe376fa74413641408900f6bb656017a389fb9745d9dac221a10951c1c",
- "entry_count": 4200,
+ "entry_count": 4103,
  "entries": [
   {
    "sheet": "2. 중장기영농목표",
@@ -1653,25 +1653,6 @@
   },
   {
    "sheet": "5. 원리금상환계획",
-   "cell": "K8",
-   "action": "label_template",
-   "before_state": "absent",
-   "after_formula": null,
-   "after_value": "기초부채 차이",
-   "map_source": "merged-map",
-   "reason": "인쇄영역 밖의 대출원장 대조 제목"
-  },
-  {
-   "sheet": "5. 원리금상환계획",
-   "cell": "L8",
-   "action": "formula",
-   "before_state": "absent",
-   "after_formula": "='1. 자산조사'!E53-(SUMIF($B$43:$B$67,('12 .경비계획'!$I$2-1),$C$43:$C$67)-SUMIF($B$43:$B$67,('12 .경비계획'!$I$2-1),$E$43:$E$67)+SUMIF($B$77:$B$91,('12 .경비계획'!$I$2-1),$C$77:$C$91)-SUMIF($B$77:$B$91,('12 .경비계획'!$I$2-1),$E$77:$E$91)+SUMIF($B$100:$B$114,('12 .경비계획'!$I$2-1),$C$100:$C$114)-SUMIF($B$100:$B$114,('12 .경비계획'!$I$2-1),$E$100:$E$114)+SUMIF($B$123:$B$137,('12 .경비계획'!$I$2-1),$C$123:$C$137)-SUMIF($B$123:$B$137,('12 .경비계획'!$I$2-1),$E$123:$E$137)+SUMIF($B$146:$B$160,('12 .경비계획'!$I$2-1),$C$146:$C$160)-SUMIF($B$146:$B$160,('12 .경비계획'!$I$2-1),$E$146:$E$160))",
-   "map_source": "merged-map",
-   "reason": "2026 말 슬롯잔액 합계와 자산조사의 기초 부채 차이; 반드시 0"
-  },
-  {
-   "sheet": "5. 원리금상환계획",
    "cell": "C9",
    "action": "formula",
    "before_state": "formula_normal",
@@ -1705,25 +1686,6 @@
    "after_formula": "=F8+C9-D9",
    "map_source": "merged-map",
    "reason": "첫해는 2026 말 기초부채에서 시작; 후년은 전년 말 잔액 이월"
-  },
-  {
-   "sheet": "5. 원리금상환계획",
-   "cell": "K9",
-   "action": "label_template",
-   "before_state": "absent",
-   "after_formula": null,
-   "after_value": "투자재원 차이",
-   "map_source": "merged-map",
-   "reason": "2027~2031 신규차입과 투자계획 융자 재원 대조 제목"
-  },
-  {
-   "sheet": "5. 원리금상환계획",
-   "cell": "L9",
-   "action": "formula",
-   "before_state": "absent",
-   "after_formula": "=C8-'4.투자계획'!F8",
-   "map_source": "merged-map",
-   "reason": "사업연도별 신규차입과 투자계획 융자 재원 차이; 반드시 0"
   },
   {
    "sheet": "5. 원리금상환계획",
@@ -1763,15 +1725,6 @@
   },
   {
    "sheet": "5. 원리금상환계획",
-   "cell": "L10",
-   "action": "formula",
-   "before_state": "absent",
-   "after_formula": "=C9-'4.투자계획'!F9",
-   "map_source": "merged-map",
-   "reason": "사업연도별 신규차입과 투자계획 융자 재원 차이; 반드시 0"
-  },
-  {
-   "sheet": "5. 원리금상환계획",
    "cell": "C11",
    "action": "formula",
    "before_state": "formula_normal",
@@ -1805,15 +1758,6 @@
    "after_formula": "=F10+C11-D11",
    "map_source": "merged-map",
    "reason": "첫해는 2026 말 기초부채에서 시작; 후년은 전년 말 잔액 이월"
-  },
-  {
-   "sheet": "5. 원리금상환계획",
-   "cell": "L11",
-   "action": "formula",
-   "before_state": "absent",
-   "after_formula": "=C10-'4.투자계획'!F10",
-   "map_source": "merged-map",
-   "reason": "사업연도별 신규차입과 투자계획 융자 재원 차이; 반드시 0"
   },
   {
    "sheet": "5. 원리금상환계획",
@@ -1853,15 +1797,6 @@
   },
   {
    "sheet": "5. 원리금상환계획",
-   "cell": "L12",
-   "action": "formula",
-   "before_state": "absent",
-   "after_formula": "=C11-'4.투자계획'!F11",
-   "map_source": "merged-map",
-   "reason": "사업연도별 신규차입과 투자계획 융자 재원 차이; 반드시 0"
-  },
-  {
-   "sheet": "5. 원리금상환계획",
    "cell": "C13",
    "action": "formula",
    "before_state": "blank_node",
@@ -1895,15 +1830,6 @@
    "after_formula": "=F12+C13-D13",
    "map_source": "merged-map",
    "reason": "첫해는 2026 말 기초부채에서 시작; 후년은 전년 말 잔액 이월"
-  },
-  {
-   "sheet": "5. 원리금상환계획",
-   "cell": "L13",
-   "action": "formula",
-   "before_state": "absent",
-   "after_formula": "=C12-'4.투자계획'!F12",
-   "map_source": "merged-map",
-   "reason": "사업연도별 신규차입과 투자계획 융자 재원 차이; 반드시 0"
   },
   {
    "sheet": "5. 원리금상환계획",
@@ -8383,108 +8309,108 @@
    "cell": "C25",
    "action": "formula",
    "before_state": "blank_node",
-   "after_formula": "=IF($C$126=\"PASS\",C22*C24/1000,NA())",
+   "after_formula": "=C22*C24/1000",
    "map_source": "merged-map",
-   "reason": "C22×C24 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "D25",
    "action": "formula",
    "before_state": "blank_node",
-   "after_formula": "=IF($C$126=\"PASS\",D22*D24/1000,NA())",
+   "after_formula": "=D22*D24/1000",
    "map_source": "merged-map",
-   "reason": "D22×D24 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "E25",
    "action": "formula",
    "before_state": "blank_node",
-   "after_formula": "=IF($C$126=\"PASS\",E22*E24/1000,NA())",
+   "after_formula": "=E22*E24/1000",
    "map_source": "merged-map",
-   "reason": "E22×E24 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "F25",
    "action": "formula",
    "before_state": "formula_shared_anchor",
-   "after_formula": "=IF($C$126=\"PASS\",F22*F24/1000,NA())",
+   "after_formula": "=F22*F24/1000",
    "map_source": "merged-map",
-   "reason": "F22×F24 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "G25",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF($C$126=\"PASS\",G22*G24/1000,NA())",
+   "after_formula": "=G22*G24/1000",
    "map_source": "merged-map",
-   "reason": "G22×G24 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "H25",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF($C$126=\"PASS\",H22*H24/1000,NA())",
+   "after_formula": "=H22*H24/1000",
    "map_source": "merged-map",
-   "reason": "H22×H24 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "I25",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF($C$126=\"PASS\",I22*I24/1000,NA())",
+   "after_formula": "=I22*I24/1000",
    "map_source": "merged-map",
-   "reason": "I22×I24 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "J25",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF($C$126=\"PASS\",J22*J24/1000,NA())",
+   "after_formula": "=J22*J24/1000",
    "map_source": "merged-map",
-   "reason": "J22×J24 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "K25",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF($C$126=\"PASS\",K22*K24/1000,NA())",
+   "after_formula": "=K22*K24/1000",
    "map_source": "merged-map",
-   "reason": "K22×K24 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "L25",
    "action": "formula",
    "before_state": "blank_node",
-   "after_formula": "=IF($C$126=\"PASS\",L22*L24/1000,NA())",
+   "after_formula": "=L22*L24/1000",
    "map_source": "merged-map",
-   "reason": "L22×L24 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "M25",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF($C$126=\"PASS\",M22*M24/1000,NA())",
+   "after_formula": "=M22*M24/1000",
    "map_source": "merged-map",
-   "reason": "M22×M24 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "N25",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF($C$126=\"PASS\",N22*N24/1000,NA())",
+   "after_formula": "=N22*N24/1000",
    "map_source": "merged-map",
-   "reason": "N22×N24 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
@@ -9004,108 +8930,108 @@
    "cell": "C34",
    "action": "formula",
    "before_state": "formula_shared_anchor",
-   "after_formula": "=IF($C$126=\"PASS\",C31*C33/1000,NA())",
+   "after_formula": "=C31*C33/1000",
    "map_source": "merged-map",
-   "reason": "C31×C33 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "D34",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF($C$126=\"PASS\",D31*D33/1000,NA())",
+   "after_formula": "=D31*D33/1000",
    "map_source": "merged-map",
-   "reason": "D31×D33 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "E34",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF($C$126=\"PASS\",E31*E33/1000,NA())",
+   "after_formula": "=E31*E33/1000",
    "map_source": "merged-map",
-   "reason": "E31×E33 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "F34",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF($C$126=\"PASS\",F31*F33/1000,NA())",
+   "after_formula": "=F31*F33/1000",
    "map_source": "merged-map",
-   "reason": "F31×F33 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "G34",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF($C$126=\"PASS\",G31*G33/1000,NA())",
+   "after_formula": "=G31*G33/1000",
    "map_source": "merged-map",
-   "reason": "G31×G33 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "H34",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF($C$126=\"PASS\",H31*H33/1000,NA())",
+   "after_formula": "=H31*H33/1000",
    "map_source": "merged-map",
-   "reason": "H31×H33 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "I34",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF($C$126=\"PASS\",I31*I33/1000,NA())",
+   "after_formula": "=I31*I33/1000",
    "map_source": "merged-map",
-   "reason": "I31×I33 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "J34",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF($C$126=\"PASS\",J31*J33/1000,NA())",
+   "after_formula": "=J31*J33/1000",
    "map_source": "merged-map",
-   "reason": "J31×J33 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "K34",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF($C$126=\"PASS\",K31*K33/1000,NA())",
+   "after_formula": "=K31*K33/1000",
    "map_source": "merged-map",
-   "reason": "K31×K33 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "L34",
    "action": "formula",
    "before_state": "blank_node",
-   "after_formula": "=IF($C$126=\"PASS\",L31*L33/1000,NA())",
+   "after_formula": "=L31*L33/1000",
    "map_source": "merged-map",
-   "reason": "L31×L33 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "M34",
    "action": "formula",
    "before_state": "formula_shared_anchor",
-   "after_formula": "=IF($C$126=\"PASS\",M31*M33/1000,NA())",
+   "after_formula": "=M31*M33/1000",
    "map_source": "merged-map",
-   "reason": "M31×M33 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "N34",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF($C$126=\"PASS\",N31*N33/1000,NA())",
+   "after_formula": "=N31*N33/1000",
    "map_source": "merged-map",
-   "reason": "N31×N33 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
@@ -9607,108 +9533,108 @@
    "cell": "C43",
    "action": "formula",
    "before_state": "formula_shared_anchor",
-   "after_formula": "=IF($C$126=\"PASS\",C40*C42/1000,NA())",
+   "after_formula": "=C40*C42/1000",
    "map_source": "merged-map",
-   "reason": "C40×C42 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "D43",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF($C$126=\"PASS\",D40*D42/1000,NA())",
+   "after_formula": "=D40*D42/1000",
    "map_source": "merged-map",
-   "reason": "D40×D42 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "E43",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF($C$126=\"PASS\",E40*E42/1000,NA())",
+   "after_formula": "=E40*E42/1000",
    "map_source": "merged-map",
-   "reason": "E40×E42 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "F43",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF($C$126=\"PASS\",F40*F42/1000,NA())",
+   "after_formula": "=F40*F42/1000",
    "map_source": "merged-map",
-   "reason": "F40×F42 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "G43",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF($C$126=\"PASS\",G40*G42/1000,NA())",
+   "after_formula": "=G40*G42/1000",
    "map_source": "merged-map",
-   "reason": "G40×G42 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "H43",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF($C$126=\"PASS\",H40*H42/1000,NA())",
+   "after_formula": "=H40*H42/1000",
    "map_source": "merged-map",
-   "reason": "H40×H42 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "I43",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF($C$126=\"PASS\",I40*I42/1000,NA())",
+   "after_formula": "=I40*I42/1000",
    "map_source": "merged-map",
-   "reason": "I40×I42 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "J43",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF($C$126=\"PASS\",J40*J42/1000,NA())",
+   "after_formula": "=J40*J42/1000",
    "map_source": "merged-map",
-   "reason": "J40×J42 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "K43",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF($C$126=\"PASS\",K40*K42/1000,NA())",
+   "after_formula": "=K40*K42/1000",
    "map_source": "merged-map",
-   "reason": "K40×K42 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "L43",
    "action": "formula",
    "before_state": "blank_node",
-   "after_formula": "=IF($C$126=\"PASS\",L40*L42/1000,NA())",
+   "after_formula": "=L40*L42/1000",
    "map_source": "merged-map",
-   "reason": "L40×L42 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "M43",
    "action": "formula",
    "before_state": "formula_shared_anchor",
-   "after_formula": "=IF($C$126=\"PASS\",M40*M42/1000,NA())",
+   "after_formula": "=M40*M42/1000",
    "map_source": "merged-map",
-   "reason": "M40×M42 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "N43",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF($C$126=\"PASS\",N40*N42/1000,NA())",
+   "after_formula": "=N40*N42/1000",
    "map_source": "merged-map",
-   "reason": "N40×N42 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
@@ -10210,108 +10136,108 @@
    "cell": "C52",
    "action": "formula",
    "before_state": "formula_shared_anchor",
-   "after_formula": "=IF($C$126=\"PASS\",C49*C51/1000,NA())",
+   "after_formula": "=C49*C51/1000",
    "map_source": "merged-map",
-   "reason": "C49×C51 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "D52",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF($C$126=\"PASS\",D49*D51/1000,NA())",
+   "after_formula": "=D49*D51/1000",
    "map_source": "merged-map",
-   "reason": "D49×D51 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "E52",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF($C$126=\"PASS\",E49*E51/1000,NA())",
+   "after_formula": "=E49*E51/1000",
    "map_source": "merged-map",
-   "reason": "E49×E51 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "F52",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF($C$126=\"PASS\",F49*F51/1000,NA())",
+   "after_formula": "=F49*F51/1000",
    "map_source": "merged-map",
-   "reason": "F49×F51 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "G52",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF($C$126=\"PASS\",G49*G51/1000,NA())",
+   "after_formula": "=G49*G51/1000",
    "map_source": "merged-map",
-   "reason": "G49×G51 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "H52",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF($C$126=\"PASS\",H49*H51/1000,NA())",
+   "after_formula": "=H49*H51/1000",
    "map_source": "merged-map",
-   "reason": "H49×H51 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "I52",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF($C$126=\"PASS\",I49*I51/1000,NA())",
+   "after_formula": "=I49*I51/1000",
    "map_source": "merged-map",
-   "reason": "I49×I51 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "J52",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF($C$126=\"PASS\",J49*J51/1000,NA())",
+   "after_formula": "=J49*J51/1000",
    "map_source": "merged-map",
-   "reason": "J49×J51 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "K52",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF($C$126=\"PASS\",K49*K51/1000,NA())",
+   "after_formula": "=K49*K51/1000",
    "map_source": "merged-map",
-   "reason": "K49×K51 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "L52",
    "action": "formula",
    "before_state": "blank_node",
-   "after_formula": "=IF($C$126=\"PASS\",L49*L51/1000,NA())",
+   "after_formula": "=L49*L51/1000",
    "map_source": "merged-map",
-   "reason": "L49×L51 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "M52",
    "action": "formula",
    "before_state": "formula_shared_anchor",
-   "after_formula": "=IF($C$126=\"PASS\",M49*M51/1000,NA())",
+   "after_formula": "=M49*M51/1000",
    "map_source": "merged-map",
-   "reason": "M49×M51 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "N52",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF($C$126=\"PASS\",N49*N51/1000,NA())",
+   "after_formula": "=N49*N51/1000",
    "map_source": "merged-map",
-   "reason": "N49×N51 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
@@ -10813,108 +10739,108 @@
    "cell": "C61",
    "action": "formula",
    "before_state": "formula_shared_anchor",
-   "after_formula": "=IF($C$126=\"PASS\",C58*C60/1000,NA())",
+   "after_formula": "=C58*C60/1000",
    "map_source": "merged-map",
-   "reason": "C58×C60 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "D61",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF($C$126=\"PASS\",D58*D60/1000,NA())",
+   "after_formula": "=D58*D60/1000",
    "map_source": "merged-map",
-   "reason": "D58×D60 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "E61",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF($C$126=\"PASS\",E58*E60/1000,NA())",
+   "after_formula": "=E58*E60/1000",
    "map_source": "merged-map",
-   "reason": "E58×E60 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "F61",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF($C$126=\"PASS\",F58*F60/1000,NA())",
+   "after_formula": "=F58*F60/1000",
    "map_source": "merged-map",
-   "reason": "F58×F60 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "G61",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF($C$126=\"PASS\",G58*G60/1000,NA())",
+   "after_formula": "=G58*G60/1000",
    "map_source": "merged-map",
-   "reason": "G58×G60 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "H61",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF($C$126=\"PASS\",H58*H60/1000,NA())",
+   "after_formula": "=H58*H60/1000",
    "map_source": "merged-map",
-   "reason": "H58×H60 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "I61",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF($C$126=\"PASS\",I58*I60/1000,NA())",
+   "after_formula": "=I58*I60/1000",
    "map_source": "merged-map",
-   "reason": "I58×I60 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "J61",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF($C$126=\"PASS\",J58*J60/1000,NA())",
+   "after_formula": "=J58*J60/1000",
    "map_source": "merged-map",
-   "reason": "J58×J60 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "K61",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF($C$126=\"PASS\",K58*K60/1000,NA())",
+   "after_formula": "=K58*K60/1000",
    "map_source": "merged-map",
-   "reason": "K58×K60 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "L61",
    "action": "formula",
    "before_state": "blank_node",
-   "after_formula": "=IF($C$126=\"PASS\",L58*L60/1000,NA())",
+   "after_formula": "=L58*L60/1000",
    "map_source": "merged-map",
-   "reason": "L58×L60 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "M61",
    "action": "formula",
    "before_state": "formula_shared_anchor",
-   "after_formula": "=IF($C$126=\"PASS\",M58*M60/1000,NA())",
+   "after_formula": "=M58*M60/1000",
    "map_source": "merged-map",
-   "reason": "M58×M60 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
    "cell": "N61",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF($C$126=\"PASS\",N58*N60/1000,NA())",
+   "after_formula": "=N58*N60/1000",
    "map_source": "merged-map",
-   "reason": "N58×N60 원→천원; 단위검사 C126 HOLD면 계산 보류. 원본 공란 8셀도 채움."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": " 7. 판매계획",
@@ -13357,24 +13283,6 @@
   },
   {
    "sheet": " 7. 판매계획",
-   "cell": "B126",
-   "action": "label_template",
-   "before_state": "absent",
-   "after_value": "단위 일치 판정",
-   "map_source": "merged-map",
-   "reason": "금액 계산 전 단위 판정 결과."
-  },
-  {
-   "sheet": " 7. 판매계획",
-   "cell": "C126",
-   "action": "formula",
-   "before_state": "absent",
-   "after_formula": "=IF(AND(C122<>\"\",C122=C123,C125=\"원\",LEN(C124)>0),\"PASS\",\"HOLD\")",
-   "map_source": "merged-map",
-   "reason": "C122 수량단위=C123 가격분모, 원 통화, 규격 존재 검사. 별도 출처 검증 필수."
-  },
-  {
-   "sheet": " 7. 판매계획",
    "cell": "C127",
    "action": "input_param",
    "before_state": "absent",
@@ -14001,9 +13909,9 @@
    "cell": "D9",
    "action": "formula",
    "before_state": "formula_normal",
-   "after_formula": "=IF(AND($U$20=\"\",$AB$20=\"해당 없음\"),0,IF(AND(ISNUMBER($Y$20),$Y$20>=0,$Y$20<=1,ISNUMBER(IF($V$20=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$20=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$20=\"재배\",IF(ISNUMBER('12 .경비계획'!$I$5),'12 .경비계획'!$I$5,NA()),NA()))))),IF($V$20=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$20=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$20=\"재배\",IF(ISNUMBER('12 .경비계획'!$I$5),'12 .경비계획'!$I$5,NA()),NA())))*$Y$20,NA()))",
+   "after_formula": "=IF(AND($U$20=\"\",$AB$20=\"해당 없음\"),0,IF(ISNUMBER('12 .경비계획'!$I$5),'12 .경비계획'!$I$5,NA()))",
    "map_source": "merged-map",
-   "reason": "면적 유형별 참조×해당 품목 사용비율; 면적 공란의 0 전파 차단"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -14757,9 +14665,9 @@
    "cell": "D20",
    "action": "formula",
    "before_state": "formula_normal",
-   "after_formula": "=IF(AND($U$27=\"\",$AB$27=\"해당 없음\"),0,IF(AND(ISNUMBER($Y$27),$Y$27>=0,$Y$27<=1,ISNUMBER(IF($V$27=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$27=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$27=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$22),'8. 생산계획'!$Y$22,NA()),NA()))))),IF($V$27=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$27=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$27=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$22),'8. 생산계획'!$Y$22,NA()),NA())))*$Y$27,NA()))",
+   "after_formula": "=IF(AND($U$27=\"\",$AB$27=\"해당 없음\"),0,IF(ISNUMBER('8. 생산계획'!$Y$22),'8. 생산계획'!$Y$22,NA()))",
    "map_source": "merged-map",
-   "reason": "면적 유형별 참조×해당 품목 사용비율; 면적 공란의 0 전파 차단 [T5] 2차년도 재배면적 정본 8.Y22 참조."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -14863,16 +14771,6 @@
   },
   {
    "sheet": "9. 영농자재구매계획",
-   "cell": "V20",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y1.item1.area_kind",
-   "map_source": "merged-map",
-   "reason": "면적 유형: 부지/시설/재배; 인쇄 9행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
    "cell": "W20",
    "action": "input_param",
    "before_state": "absent",
@@ -14890,16 +14788,6 @@
    "param_key": "cost.material.y1.item1.basis_qty",
    "map_source": "merged-map",
    "reason": "기준면적당 품목 수량; 인쇄 9행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
-   "cell": "Y20",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y1.item1.use_ratio",
-   "map_source": "merged-map",
-   "reason": "해당 면적 사용 비율 0~1; 인쇄 9행의 입력 근거"
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -15061,16 +14949,6 @@
   },
   {
    "sheet": "9. 영농자재구매계획",
-   "cell": "V21",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y1.item2.area_kind",
-   "map_source": "merged-map",
-   "reason": "면적 유형: 부지/시설/재배; 인쇄 10행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
    "cell": "W21",
    "action": "input_param",
    "before_state": "absent",
@@ -15088,16 +14966,6 @@
    "param_key": "cost.material.y1.item2.basis_qty",
    "map_source": "merged-map",
    "reason": "기준면적당 품목 수량; 인쇄 10행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
-   "cell": "Y21",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y1.item2.use_ratio",
-   "map_source": "merged-map",
-   "reason": "해당 면적 사용 비율 0~1; 인쇄 10행의 입력 근거"
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -15144,9 +15012,9 @@
    "cell": "AD21",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($U$21=\"\",$AB$21=\"해당 없음\"),0,IF(AND(ISNUMBER($Y$21),$Y$21>=0,$Y$21<=1,ISNUMBER(IF($V$21=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$21=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$21=\"재배\",IF(ISNUMBER('12 .경비계획'!$I$5),'12 .경비계획'!$I$5,NA()),NA()))))),IF($V$21=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$21=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$21=\"재배\",IF(ISNUMBER('12 .경비계획'!$I$5),'12 .경비계획'!$I$5,NA()),NA())))*$Y$21,NA()))",
+   "after_formula": "=IF(AND($U$21=\"\",$AB$21=\"해당 없음\"),0,IF(ISNUMBER('12 .경비계획'!$I$5),'12 .경비계획'!$I$5,NA()))",
    "map_source": "merged-map",
-   "reason": "면적 유형별 참조×해당 품목 사용비율; 면적 공란의 0 전파 차단 [T5] D10는 병합 비기준; 품목별 적용면적을 인쇄 밖 AD21에서 계산."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -15268,16 +15136,6 @@
   },
   {
    "sheet": "9. 영농자재구매계획",
-   "cell": "V22",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y1.item3.area_kind",
-   "map_source": "merged-map",
-   "reason": "면적 유형: 부지/시설/재배; 인쇄 11행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
    "cell": "W22",
    "action": "input_param",
    "before_state": "absent",
@@ -15295,16 +15153,6 @@
    "param_key": "cost.material.y1.item3.basis_qty",
    "map_source": "merged-map",
    "reason": "기준면적당 품목 수량; 인쇄 11행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
-   "cell": "Y22",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y1.item3.use_ratio",
-   "map_source": "merged-map",
-   "reason": "해당 면적 사용 비율 0~1; 인쇄 11행의 입력 근거"
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -15351,9 +15199,9 @@
    "cell": "AD22",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($U$22=\"\",$AB$22=\"해당 없음\"),0,IF(AND(ISNUMBER($Y$22),$Y$22>=0,$Y$22<=1,ISNUMBER(IF($V$22=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$22=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$22=\"재배\",IF(ISNUMBER('12 .경비계획'!$I$5),'12 .경비계획'!$I$5,NA()),NA()))))),IF($V$22=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$22=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$22=\"재배\",IF(ISNUMBER('12 .경비계획'!$I$5),'12 .경비계획'!$I$5,NA()),NA())))*$Y$22,NA()))",
+   "after_formula": "=IF(AND($U$22=\"\",$AB$22=\"해당 없음\"),0,IF(ISNUMBER('12 .경비계획'!$I$5),'12 .경비계획'!$I$5,NA()))",
    "map_source": "merged-map",
-   "reason": "면적 유형별 참조×해당 품목 사용비율; 면적 공란의 0 전파 차단 [T5] D11는 병합 비기준; 품목별 적용면적을 인쇄 밖 AD22에서 계산."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -15439,16 +15287,6 @@
   },
   {
    "sheet": "9. 영농자재구매계획",
-   "cell": "V23",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y1.item4.area_kind",
-   "map_source": "merged-map",
-   "reason": "면적 유형: 부지/시설/재배; 인쇄 12행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
    "cell": "W23",
    "action": "input_param",
    "before_state": "absent",
@@ -15466,16 +15304,6 @@
    "param_key": "cost.material.y1.item4.basis_qty",
    "map_source": "merged-map",
    "reason": "기준면적당 품목 수량; 인쇄 12행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
-   "cell": "Y23",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y1.item4.use_ratio",
-   "map_source": "merged-map",
-   "reason": "해당 면적 사용 비율 0~1; 인쇄 12행의 입력 근거"
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -15522,9 +15350,9 @@
    "cell": "AD23",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($U$23=\"\",$AB$23=\"해당 없음\"),0,IF(AND(ISNUMBER($Y$23),$Y$23>=0,$Y$23<=1,ISNUMBER(IF($V$23=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$23=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$23=\"재배\",IF(ISNUMBER('12 .경비계획'!$I$5),'12 .경비계획'!$I$5,NA()),NA()))))),IF($V$23=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$23=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$23=\"재배\",IF(ISNUMBER('12 .경비계획'!$I$5),'12 .경비계획'!$I$5,NA()),NA())))*$Y$23,NA()))",
+   "after_formula": "=IF(AND($U$23=\"\",$AB$23=\"해당 없음\"),0,IF(ISNUMBER('12 .경비계획'!$I$5),'12 .경비계획'!$I$5,NA()))",
    "map_source": "merged-map",
-   "reason": "면적 유형별 참조×해당 품목 사용비율; 면적 공란의 0 전파 차단 [T5] D12는 병합 비기준; 품목별 적용면적을 인쇄 밖 AD23에서 계산."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -15601,16 +15429,6 @@
   },
   {
    "sheet": "9. 영농자재구매계획",
-   "cell": "V24",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y1.item5.area_kind",
-   "map_source": "merged-map",
-   "reason": "면적 유형: 부지/시설/재배; 인쇄 13행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
    "cell": "W24",
    "action": "input_param",
    "before_state": "absent",
@@ -15628,16 +15446,6 @@
    "param_key": "cost.material.y1.item5.basis_qty",
    "map_source": "merged-map",
    "reason": "기준면적당 품목 수량; 인쇄 13행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
-   "cell": "Y24",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y1.item5.use_ratio",
-   "map_source": "merged-map",
-   "reason": "해당 면적 사용 비율 0~1; 인쇄 13행의 입력 근거"
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -15684,9 +15492,9 @@
    "cell": "AD24",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($U$24=\"\",$AB$24=\"해당 없음\"),0,IF(AND(ISNUMBER($Y$24),$Y$24>=0,$Y$24<=1,ISNUMBER(IF($V$24=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$24=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$24=\"재배\",IF(ISNUMBER('12 .경비계획'!$I$5),'12 .경비계획'!$I$5,NA()),NA()))))),IF($V$24=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$24=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$24=\"재배\",IF(ISNUMBER('12 .경비계획'!$I$5),'12 .경비계획'!$I$5,NA()),NA())))*$Y$24,NA()))",
+   "after_formula": "=IF(AND($U$24=\"\",$AB$24=\"해당 없음\"),0,IF(ISNUMBER('12 .경비계획'!$I$5),'12 .경비계획'!$I$5,NA()))",
    "map_source": "merged-map",
-   "reason": "면적 유형별 참조×해당 품목 사용비율; 면적 공란의 0 전파 차단 [T5] D13는 병합 비기준; 품목별 적용면적을 인쇄 밖 AD24에서 계산."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -15763,16 +15571,6 @@
   },
   {
    "sheet": "9. 영농자재구매계획",
-   "cell": "V25",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y1.item6.area_kind",
-   "map_source": "merged-map",
-   "reason": "면적 유형: 부지/시설/재배; 인쇄 14행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
    "cell": "W25",
    "action": "input_param",
    "before_state": "absent",
@@ -15790,16 +15588,6 @@
    "param_key": "cost.material.y1.item6.basis_qty",
    "map_source": "merged-map",
    "reason": "기준면적당 품목 수량; 인쇄 14행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
-   "cell": "Y25",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y1.item6.use_ratio",
-   "map_source": "merged-map",
-   "reason": "해당 면적 사용 비율 0~1; 인쇄 14행의 입력 근거"
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -15846,9 +15634,9 @@
    "cell": "AD25",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($U$25=\"\",$AB$25=\"해당 없음\"),0,IF(AND(ISNUMBER($Y$25),$Y$25>=0,$Y$25<=1,ISNUMBER(IF($V$25=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$25=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$25=\"재배\",IF(ISNUMBER('12 .경비계획'!$I$5),'12 .경비계획'!$I$5,NA()),NA()))))),IF($V$25=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$25=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$25=\"재배\",IF(ISNUMBER('12 .경비계획'!$I$5),'12 .경비계획'!$I$5,NA()),NA())))*$Y$25,NA()))",
+   "after_formula": "=IF(AND($U$25=\"\",$AB$25=\"해당 없음\"),0,IF(ISNUMBER('12 .경비계획'!$I$5),'12 .경비계획'!$I$5,NA()))",
    "map_source": "merged-map",
-   "reason": "면적 유형별 참조×해당 품목 사용비율; 면적 공란의 0 전파 차단 [T5] D14는 병합 비기준; 품목별 적용면적을 인쇄 밖 AD25에서 계산."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -15880,16 +15668,6 @@
   },
   {
    "sheet": "9. 영농자재구매계획",
-   "cell": "V27",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y2.item1.area_kind",
-   "map_source": "merged-map",
-   "reason": "면적 유형: 부지/시설/재배; 인쇄 20행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
    "cell": "W27",
    "action": "input_param",
    "before_state": "absent",
@@ -15907,16 +15685,6 @@
    "param_key": "cost.material.y2.item1.basis_qty",
    "map_source": "merged-map",
    "reason": "기준면적당 품목 수량; 인쇄 20행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
-   "cell": "Y27",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y2.item1.use_ratio",
-   "map_source": "merged-map",
-   "reason": "해당 면적 사용 비율 0~1; 인쇄 20행의 입력 근거"
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -15988,16 +15756,6 @@
   },
   {
    "sheet": "9. 영농자재구매계획",
-   "cell": "V28",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y2.item2.area_kind",
-   "map_source": "merged-map",
-   "reason": "면적 유형: 부지/시설/재배; 인쇄 21행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
    "cell": "W28",
    "action": "input_param",
    "before_state": "absent",
@@ -16015,16 +15773,6 @@
    "param_key": "cost.material.y2.item2.basis_qty",
    "map_source": "merged-map",
    "reason": "기준면적당 품목 수량; 인쇄 21행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
-   "cell": "Y28",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y2.item2.use_ratio",
-   "map_source": "merged-map",
-   "reason": "해당 면적 사용 비율 0~1; 인쇄 21행의 입력 근거"
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -16071,9 +15819,9 @@
    "cell": "AD28",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($U$28=\"\",$AB$28=\"해당 없음\"),0,IF(AND(ISNUMBER($Y$28),$Y$28>=0,$Y$28<=1,ISNUMBER(IF($V$28=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$28=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$28=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$22),'8. 생산계획'!$Y$22,NA()),NA()))))),IF($V$28=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$28=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$28=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$22),'8. 생산계획'!$Y$22,NA()),NA())))*$Y$28,NA()))",
+   "after_formula": "=IF(AND($U$28=\"\",$AB$28=\"해당 없음\"),0,IF(ISNUMBER('8. 생산계획'!$Y$22),'8. 생산계획'!$Y$22,NA()))",
    "map_source": "merged-map",
-   "reason": "면적 유형별 참조×해당 품목 사용비율; 면적 공란의 0 전파 차단 [T5] 2차년도 재배면적 정본 8.Y22 참조. [T5] D21는 병합 비기준; 품목별 적용면적을 인쇄 밖 AD28에서 계산."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -16096,16 +15844,6 @@
   },
   {
    "sheet": "9. 영농자재구매계획",
-   "cell": "V29",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y2.item3.area_kind",
-   "map_source": "merged-map",
-   "reason": "면적 유형: 부지/시설/재배; 인쇄 22행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
    "cell": "W29",
    "action": "input_param",
    "before_state": "absent",
@@ -16123,16 +15861,6 @@
    "param_key": "cost.material.y2.item3.basis_qty",
    "map_source": "merged-map",
    "reason": "기준면적당 품목 수량; 인쇄 22행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
-   "cell": "Y29",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y2.item3.use_ratio",
-   "map_source": "merged-map",
-   "reason": "해당 면적 사용 비율 0~1; 인쇄 22행의 입력 근거"
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -16179,9 +15907,9 @@
    "cell": "AD29",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($U$29=\"\",$AB$29=\"해당 없음\"),0,IF(AND(ISNUMBER($Y$29),$Y$29>=0,$Y$29<=1,ISNUMBER(IF($V$29=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$29=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$29=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$22),'8. 생산계획'!$Y$22,NA()),NA()))))),IF($V$29=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$29=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$29=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$22),'8. 생산계획'!$Y$22,NA()),NA())))*$Y$29,NA()))",
+   "after_formula": "=IF(AND($U$29=\"\",$AB$29=\"해당 없음\"),0,IF(ISNUMBER('8. 생산계획'!$Y$22),'8. 생산계획'!$Y$22,NA()))",
    "map_source": "merged-map",
-   "reason": "면적 유형별 참조×해당 품목 사용비율; 면적 공란의 0 전파 차단 [T5] 2차년도 재배면적 정본 8.Y22 참조. [T5] D22는 병합 비기준; 품목별 적용면적을 인쇄 밖 AD29에서 계산."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -16213,16 +15941,6 @@
   },
   {
    "sheet": "9. 영농자재구매계획",
-   "cell": "V30",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y2.item4.area_kind",
-   "map_source": "merged-map",
-   "reason": "면적 유형: 부지/시설/재배; 인쇄 23행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
    "cell": "W30",
    "action": "input_param",
    "before_state": "absent",
@@ -16240,16 +15958,6 @@
    "param_key": "cost.material.y2.item4.basis_qty",
    "map_source": "merged-map",
    "reason": "기준면적당 품목 수량; 인쇄 23행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
-   "cell": "Y30",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y2.item4.use_ratio",
-   "map_source": "merged-map",
-   "reason": "해당 면적 사용 비율 0~1; 인쇄 23행의 입력 근거"
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -16296,9 +16004,9 @@
    "cell": "AD30",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($U$30=\"\",$AB$30=\"해당 없음\"),0,IF(AND(ISNUMBER($Y$30),$Y$30>=0,$Y$30<=1,ISNUMBER(IF($V$30=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$30=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$30=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$22),'8. 생산계획'!$Y$22,NA()),NA()))))),IF($V$30=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$30=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$30=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$22),'8. 생산계획'!$Y$22,NA()),NA())))*$Y$30,NA()))",
+   "after_formula": "=IF(AND($U$30=\"\",$AB$30=\"해당 없음\"),0,IF(ISNUMBER('8. 생산계획'!$Y$22),'8. 생산계획'!$Y$22,NA()))",
    "map_source": "merged-map",
-   "reason": "면적 유형별 참조×해당 품목 사용비율; 면적 공란의 0 전파 차단 [T5] 2차년도 재배면적 정본 8.Y22 참조. [T5] D23는 병합 비기준; 품목별 적용면적을 인쇄 밖 AD30에서 계산."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -16323,9 +16031,9 @@
    "cell": "D31",
    "action": "formula",
    "before_state": "formula_normal",
-   "after_formula": "=IF(AND($U$34=\"\",$AB$34=\"해당 없음\"),0,IF(AND(ISNUMBER($Y$34),$Y$34>=0,$Y$34<=1,ISNUMBER(IF($V$34=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$34=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$34=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$23),'8. 생산계획'!$Y$23,NA()),NA()))))),IF($V$34=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$34=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$34=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$23),'8. 생산계획'!$Y$23,NA()),NA())))*$Y$34,NA()))",
+   "after_formula": "=IF(AND($U$34=\"\",$AB$34=\"해당 없음\"),0,IF(ISNUMBER('8. 생산계획'!$Y$23),'8. 생산계획'!$Y$23,NA()))",
    "map_source": "merged-map",
-   "reason": "면적 유형별 참조×해당 품목 사용비율; 면적 공란의 0 전파 차단 [T5] 3차년도 재배면적 정본 8.Y23 참조."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -16384,16 +16092,6 @@
   },
   {
    "sheet": "9. 영농자재구매계획",
-   "cell": "V31",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y2.item5.area_kind",
-   "map_source": "merged-map",
-   "reason": "면적 유형: 부지/시설/재배; 인쇄 24행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
    "cell": "W31",
    "action": "input_param",
    "before_state": "absent",
@@ -16411,16 +16109,6 @@
    "param_key": "cost.material.y2.item5.basis_qty",
    "map_source": "merged-map",
    "reason": "기준면적당 품목 수량; 인쇄 24행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
-   "cell": "Y31",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y2.item5.use_ratio",
-   "map_source": "merged-map",
-   "reason": "해당 면적 사용 비율 0~1; 인쇄 24행의 입력 근거"
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -16467,9 +16155,9 @@
    "cell": "AD31",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($U$31=\"\",$AB$31=\"해당 없음\"),0,IF(AND(ISNUMBER($Y$31),$Y$31>=0,$Y$31<=1,ISNUMBER(IF($V$31=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$31=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$31=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$22),'8. 생산계획'!$Y$22,NA()),NA()))))),IF($V$31=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$31=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$31=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$22),'8. 생산계획'!$Y$22,NA()),NA())))*$Y$31,NA()))",
+   "after_formula": "=IF(AND($U$31=\"\",$AB$31=\"해당 없음\"),0,IF(ISNUMBER('8. 생산계획'!$Y$22),'8. 생산계획'!$Y$22,NA()))",
    "map_source": "merged-map",
-   "reason": "면적 유형별 참조×해당 품목 사용비율; 면적 공란의 0 전파 차단 [T5] 2차년도 재배면적 정본 8.Y22 참조. [T5] D24는 병합 비기준; 품목별 적용면적을 인쇄 밖 AD31에서 계산."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -16546,16 +16234,6 @@
   },
   {
    "sheet": "9. 영농자재구매계획",
-   "cell": "V32",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y2.item6.area_kind",
-   "map_source": "merged-map",
-   "reason": "면적 유형: 부지/시설/재배; 인쇄 25행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
    "cell": "W32",
    "action": "input_param",
    "before_state": "absent",
@@ -16573,16 +16251,6 @@
    "param_key": "cost.material.y2.item6.basis_qty",
    "map_source": "merged-map",
    "reason": "기준면적당 품목 수량; 인쇄 25행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
-   "cell": "Y32",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y2.item6.use_ratio",
-   "map_source": "merged-map",
-   "reason": "해당 면적 사용 비율 0~1; 인쇄 25행의 입력 근거"
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -16629,9 +16297,9 @@
    "cell": "AD32",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($U$32=\"\",$AB$32=\"해당 없음\"),0,IF(AND(ISNUMBER($Y$32),$Y$32>=0,$Y$32<=1,ISNUMBER(IF($V$32=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$32=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$32=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$22),'8. 생산계획'!$Y$22,NA()),NA()))))),IF($V$32=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$32=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$32=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$22),'8. 생산계획'!$Y$22,NA()),NA())))*$Y$32,NA()))",
+   "after_formula": "=IF(AND($U$32=\"\",$AB$32=\"해당 없음\"),0,IF(ISNUMBER('8. 생산계획'!$Y$22),'8. 생산계획'!$Y$22,NA()))",
    "map_source": "merged-map",
-   "reason": "면적 유형별 참조×해당 품목 사용비율; 면적 공란의 0 전파 차단 [T5] 2차년도 재배면적 정본 8.Y22 참조. [T5] D25는 병합 비기준; 품목별 적용면적을 인쇄 밖 AD32에서 계산."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -16762,16 +16430,6 @@
   },
   {
    "sheet": "9. 영농자재구매계획",
-   "cell": "V34",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y3.item1.area_kind",
-   "map_source": "merged-map",
-   "reason": "면적 유형: 부지/시설/재배; 인쇄 31행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
    "cell": "W34",
    "action": "input_param",
    "before_state": "absent",
@@ -16789,16 +16447,6 @@
    "param_key": "cost.material.y3.item1.basis_qty",
    "map_source": "merged-map",
    "reason": "기준면적당 품목 수량; 인쇄 31행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
-   "cell": "Y34",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y3.item1.use_ratio",
-   "map_source": "merged-map",
-   "reason": "해당 면적 사용 비율 0~1; 인쇄 31행의 입력 근거"
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -16915,16 +16563,6 @@
   },
   {
    "sheet": "9. 영농자재구매계획",
-   "cell": "V35",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y3.item2.area_kind",
-   "map_source": "merged-map",
-   "reason": "면적 유형: 부지/시설/재배; 인쇄 32행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
    "cell": "W35",
    "action": "input_param",
    "before_state": "absent",
@@ -16942,16 +16580,6 @@
    "param_key": "cost.material.y3.item2.basis_qty",
    "map_source": "merged-map",
    "reason": "기준면적당 품목 수량; 인쇄 32행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
-   "cell": "Y35",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y3.item2.use_ratio",
-   "map_source": "merged-map",
-   "reason": "해당 면적 사용 비율 0~1; 인쇄 32행의 입력 근거"
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -16998,9 +16626,9 @@
    "cell": "AD35",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($U$35=\"\",$AB$35=\"해당 없음\"),0,IF(AND(ISNUMBER($Y$35),$Y$35>=0,$Y$35<=1,ISNUMBER(IF($V$35=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$35=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$35=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$23),'8. 생산계획'!$Y$23,NA()),NA()))))),IF($V$35=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$35=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$35=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$23),'8. 생산계획'!$Y$23,NA()),NA())))*$Y$35,NA()))",
+   "after_formula": "=IF(AND($U$35=\"\",$AB$35=\"해당 없음\"),0,IF(ISNUMBER('8. 생산계획'!$Y$23),'8. 생산계획'!$Y$23,NA()))",
    "map_source": "merged-map",
-   "reason": "면적 유형별 참조×해당 품목 사용비율; 면적 공란의 0 전파 차단 [T5] 3차년도 재배면적 정본 8.Y23 참조. [T5] D32는 병합 비기준; 품목별 적용면적을 인쇄 밖 AD35에서 계산."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -17077,16 +16705,6 @@
   },
   {
    "sheet": "9. 영농자재구매계획",
-   "cell": "V36",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y3.item3.area_kind",
-   "map_source": "merged-map",
-   "reason": "면적 유형: 부지/시설/재배; 인쇄 33행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
    "cell": "W36",
    "action": "input_param",
    "before_state": "absent",
@@ -17104,16 +16722,6 @@
    "param_key": "cost.material.y3.item3.basis_qty",
    "map_source": "merged-map",
    "reason": "기준면적당 품목 수량; 인쇄 33행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
-   "cell": "Y36",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y3.item3.use_ratio",
-   "map_source": "merged-map",
-   "reason": "해당 면적 사용 비율 0~1; 인쇄 33행의 입력 근거"
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -17160,9 +16768,9 @@
    "cell": "AD36",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($U$36=\"\",$AB$36=\"해당 없음\"),0,IF(AND(ISNUMBER($Y$36),$Y$36>=0,$Y$36<=1,ISNUMBER(IF($V$36=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$36=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$36=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$23),'8. 생산계획'!$Y$23,NA()),NA()))))),IF($V$36=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$36=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$36=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$23),'8. 생산계획'!$Y$23,NA()),NA())))*$Y$36,NA()))",
+   "after_formula": "=IF(AND($U$36=\"\",$AB$36=\"해당 없음\"),0,IF(ISNUMBER('8. 생산계획'!$Y$23),'8. 생산계획'!$Y$23,NA()))",
    "map_source": "merged-map",
-   "reason": "면적 유형별 참조×해당 품목 사용비율; 면적 공란의 0 전파 차단 [T5] 3차년도 재배면적 정본 8.Y23 참조. [T5] D33는 병합 비기준; 품목별 적용면적을 인쇄 밖 AD36에서 계산."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -17194,16 +16802,6 @@
   },
   {
    "sheet": "9. 영농자재구매계획",
-   "cell": "V37",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y3.item4.area_kind",
-   "map_source": "merged-map",
-   "reason": "면적 유형: 부지/시설/재배; 인쇄 34행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
    "cell": "W37",
    "action": "input_param",
    "before_state": "absent",
@@ -17221,16 +16819,6 @@
    "param_key": "cost.material.y3.item4.basis_qty",
    "map_source": "merged-map",
    "reason": "기준면적당 품목 수량; 인쇄 34행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
-   "cell": "Y37",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y3.item4.use_ratio",
-   "map_source": "merged-map",
-   "reason": "해당 면적 사용 비율 0~1; 인쇄 34행의 입력 근거"
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -17277,9 +16865,9 @@
    "cell": "AD37",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($U$37=\"\",$AB$37=\"해당 없음\"),0,IF(AND(ISNUMBER($Y$37),$Y$37>=0,$Y$37<=1,ISNUMBER(IF($V$37=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$37=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$37=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$23),'8. 생산계획'!$Y$23,NA()),NA()))))),IF($V$37=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$37=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$37=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$23),'8. 생산계획'!$Y$23,NA()),NA())))*$Y$37,NA()))",
+   "after_formula": "=IF(AND($U$37=\"\",$AB$37=\"해당 없음\"),0,IF(ISNUMBER('8. 생산계획'!$Y$23),'8. 생산계획'!$Y$23,NA()))",
    "map_source": "merged-map",
-   "reason": "면적 유형별 참조×해당 품목 사용비율; 면적 공란의 0 전파 차단 [T5] 3차년도 재배면적 정본 8.Y23 참조. [T5] D34는 병합 비기준; 품목별 적용면적을 인쇄 밖 AD37에서 계산."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -17302,16 +16890,6 @@
   },
   {
    "sheet": "9. 영농자재구매계획",
-   "cell": "V38",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y3.item5.area_kind",
-   "map_source": "merged-map",
-   "reason": "면적 유형: 부지/시설/재배; 인쇄 35행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
    "cell": "W38",
    "action": "input_param",
    "before_state": "absent",
@@ -17329,16 +16907,6 @@
    "param_key": "cost.material.y3.item5.basis_qty",
    "map_source": "merged-map",
    "reason": "기준면적당 품목 수량; 인쇄 35행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
-   "cell": "Y38",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y3.item5.use_ratio",
-   "map_source": "merged-map",
-   "reason": "해당 면적 사용 비율 0~1; 인쇄 35행의 입력 근거"
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -17385,9 +16953,9 @@
    "cell": "AD38",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($U$38=\"\",$AB$38=\"해당 없음\"),0,IF(AND(ISNUMBER($Y$38),$Y$38>=0,$Y$38<=1,ISNUMBER(IF($V$38=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$38=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$38=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$23),'8. 생산계획'!$Y$23,NA()),NA()))))),IF($V$38=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$38=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$38=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$23),'8. 생산계획'!$Y$23,NA()),NA())))*$Y$38,NA()))",
+   "after_formula": "=IF(AND($U$38=\"\",$AB$38=\"해당 없음\"),0,IF(ISNUMBER('8. 생산계획'!$Y$23),'8. 생산계획'!$Y$23,NA()))",
    "map_source": "merged-map",
-   "reason": "면적 유형별 참조×해당 품목 사용비율; 면적 공란의 0 전파 차단 [T5] 3차년도 재배면적 정본 8.Y23 참조. [T5] D35는 병합 비기준; 품목별 적용면적을 인쇄 밖 AD38에서 계산."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -17419,16 +16987,6 @@
   },
   {
    "sheet": "9. 영농자재구매계획",
-   "cell": "V39",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y3.item6.area_kind",
-   "map_source": "merged-map",
-   "reason": "면적 유형: 부지/시설/재배; 인쇄 36행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
    "cell": "W39",
    "action": "input_param",
    "before_state": "absent",
@@ -17446,16 +17004,6 @@
    "param_key": "cost.material.y3.item6.basis_qty",
    "map_source": "merged-map",
    "reason": "기준면적당 품목 수량; 인쇄 36행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
-   "cell": "Y39",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y3.item6.use_ratio",
-   "map_source": "merged-map",
-   "reason": "해당 면적 사용 비율 0~1; 인쇄 36행의 입력 근거"
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -17502,9 +17050,9 @@
    "cell": "AD39",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($U$39=\"\",$AB$39=\"해당 없음\"),0,IF(AND(ISNUMBER($Y$39),$Y$39>=0,$Y$39<=1,ISNUMBER(IF($V$39=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$39=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$39=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$23),'8. 생산계획'!$Y$23,NA()),NA()))))),IF($V$39=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$39=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$39=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$23),'8. 생산계획'!$Y$23,NA()),NA())))*$Y$39,NA()))",
+   "after_formula": "=IF(AND($U$39=\"\",$AB$39=\"해당 없음\"),0,IF(ISNUMBER('8. 생산계획'!$Y$23),'8. 생산계획'!$Y$23,NA()))",
    "map_source": "merged-map",
-   "reason": "면적 유형별 참조×해당 품목 사용비율; 면적 공란의 0 전파 차단 [T5] 3차년도 재배면적 정본 8.Y23 참조. [T5] D36는 병합 비기준; 품목별 적용면적을 인쇄 밖 AD39에서 계산."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -17527,16 +17075,6 @@
   },
   {
    "sheet": "9. 영농자재구매계획",
-   "cell": "V41",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y4.item1.area_kind",
-   "map_source": "merged-map",
-   "reason": "면적 유형: 부지/시설/재배; 인쇄 42행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
    "cell": "W41",
    "action": "input_param",
    "before_state": "absent",
@@ -17554,16 +17092,6 @@
    "param_key": "cost.material.y4.item1.basis_qty",
    "map_source": "merged-map",
    "reason": "기준면적당 품목 수량; 인쇄 42행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
-   "cell": "Y41",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y4.item1.use_ratio",
-   "map_source": "merged-map",
-   "reason": "해당 면적 사용 비율 0~1; 인쇄 42행의 입력 근거"
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -17628,9 +17156,9 @@
    "cell": "D42",
    "action": "formula",
    "before_state": "formula_normal",
-   "after_formula": "=IF(AND($U$41=\"\",$AB$41=\"해당 없음\"),0,IF(AND(ISNUMBER($Y$41),$Y$41>=0,$Y$41<=1,ISNUMBER(IF($V$41=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$41=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$41=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$24),'8. 생산계획'!$Y$24,NA()),NA()))))),IF($V$41=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$41=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$41=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$24),'8. 생산계획'!$Y$24,NA()),NA())))*$Y$41,NA()))",
+   "after_formula": "=IF(AND($U$41=\"\",$AB$41=\"해당 없음\"),0,IF(ISNUMBER('8. 생산계획'!$Y$24),'8. 생산계획'!$Y$24,NA()))",
    "map_source": "merged-map",
-   "reason": "면적 유형별 참조×해당 품목 사용비율; 면적 공란의 0 전파 차단 [T5] 4차년도 재배면적 정본 8.Y24 참조."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -17689,16 +17217,6 @@
   },
   {
    "sheet": "9. 영농자재구매계획",
-   "cell": "V42",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y4.item2.area_kind",
-   "map_source": "merged-map",
-   "reason": "면적 유형: 부지/시설/재배; 인쇄 43행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
    "cell": "W42",
    "action": "input_param",
    "before_state": "absent",
@@ -17716,16 +17234,6 @@
    "param_key": "cost.material.y4.item2.basis_qty",
    "map_source": "merged-map",
    "reason": "기준면적당 품목 수량; 인쇄 43행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
-   "cell": "Y42",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y4.item2.use_ratio",
-   "map_source": "merged-map",
-   "reason": "해당 면적 사용 비율 0~1; 인쇄 43행의 입력 근거"
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -17772,9 +17280,9 @@
    "cell": "AD42",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($U$42=\"\",$AB$42=\"해당 없음\"),0,IF(AND(ISNUMBER($Y$42),$Y$42>=0,$Y$42<=1,ISNUMBER(IF($V$42=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$42=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$42=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$24),'8. 생산계획'!$Y$24,NA()),NA()))))),IF($V$42=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$42=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$42=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$24),'8. 생산계획'!$Y$24,NA()),NA())))*$Y$42,NA()))",
+   "after_formula": "=IF(AND($U$42=\"\",$AB$42=\"해당 없음\"),0,IF(ISNUMBER('8. 생산계획'!$Y$24),'8. 생산계획'!$Y$24,NA()))",
    "map_source": "merged-map",
-   "reason": "면적 유형별 참조×해당 품목 사용비율; 면적 공란의 0 전파 차단 [T5] 4차년도 재배면적 정본 8.Y24 참조. [T5] D43는 병합 비기준; 품목별 적용면적을 인쇄 밖 AD42에서 계산."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -17851,16 +17359,6 @@
   },
   {
    "sheet": "9. 영농자재구매계획",
-   "cell": "V43",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y4.item3.area_kind",
-   "map_source": "merged-map",
-   "reason": "면적 유형: 부지/시설/재배; 인쇄 44행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
    "cell": "W43",
    "action": "input_param",
    "before_state": "absent",
@@ -17878,16 +17376,6 @@
    "param_key": "cost.material.y4.item3.basis_qty",
    "map_source": "merged-map",
    "reason": "기준면적당 품목 수량; 인쇄 44행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
-   "cell": "Y43",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y4.item3.use_ratio",
-   "map_source": "merged-map",
-   "reason": "해당 면적 사용 비율 0~1; 인쇄 44행의 입력 근거"
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -17934,9 +17422,9 @@
    "cell": "AD43",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($U$43=\"\",$AB$43=\"해당 없음\"),0,IF(AND(ISNUMBER($Y$43),$Y$43>=0,$Y$43<=1,ISNUMBER(IF($V$43=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$43=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$43=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$24),'8. 생산계획'!$Y$24,NA()),NA()))))),IF($V$43=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$43=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$43=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$24),'8. 생산계획'!$Y$24,NA()),NA())))*$Y$43,NA()))",
+   "after_formula": "=IF(AND($U$43=\"\",$AB$43=\"해당 없음\"),0,IF(ISNUMBER('8. 생산계획'!$Y$24),'8. 생산계획'!$Y$24,NA()))",
    "map_source": "merged-map",
-   "reason": "면적 유형별 참조×해당 품목 사용비율; 면적 공란의 0 전파 차단 [T5] 4차년도 재배면적 정본 8.Y24 참조. [T5] D44는 병합 비기준; 품목별 적용면적을 인쇄 밖 AD43에서 계산."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -18013,16 +17501,6 @@
   },
   {
    "sheet": "9. 영농자재구매계획",
-   "cell": "V44",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y4.item4.area_kind",
-   "map_source": "merged-map",
-   "reason": "면적 유형: 부지/시설/재배; 인쇄 45행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
    "cell": "W44",
    "action": "input_param",
    "before_state": "absent",
@@ -18040,16 +17518,6 @@
    "param_key": "cost.material.y4.item4.basis_qty",
    "map_source": "merged-map",
    "reason": "기준면적당 품목 수량; 인쇄 45행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
-   "cell": "Y44",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y4.item4.use_ratio",
-   "map_source": "merged-map",
-   "reason": "해당 면적 사용 비율 0~1; 인쇄 45행의 입력 근거"
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -18096,9 +17564,9 @@
    "cell": "AD44",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($U$44=\"\",$AB$44=\"해당 없음\"),0,IF(AND(ISNUMBER($Y$44),$Y$44>=0,$Y$44<=1,ISNUMBER(IF($V$44=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$44=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$44=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$24),'8. 생산계획'!$Y$24,NA()),NA()))))),IF($V$44=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$44=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$44=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$24),'8. 생산계획'!$Y$24,NA()),NA())))*$Y$44,NA()))",
+   "after_formula": "=IF(AND($U$44=\"\",$AB$44=\"해당 없음\"),0,IF(ISNUMBER('8. 생산계획'!$Y$24),'8. 생산계획'!$Y$24,NA()))",
    "map_source": "merged-map",
-   "reason": "면적 유형별 참조×해당 품목 사용비율; 면적 공란의 0 전파 차단 [T5] 4차년도 재배면적 정본 8.Y24 참조. [T5] D45는 병합 비기준; 품목별 적용면적을 인쇄 밖 AD44에서 계산."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -18175,16 +17643,6 @@
   },
   {
    "sheet": "9. 영농자재구매계획",
-   "cell": "V45",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y4.item5.area_kind",
-   "map_source": "merged-map",
-   "reason": "면적 유형: 부지/시설/재배; 인쇄 46행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
    "cell": "W45",
    "action": "input_param",
    "before_state": "absent",
@@ -18202,16 +17660,6 @@
    "param_key": "cost.material.y4.item5.basis_qty",
    "map_source": "merged-map",
    "reason": "기준면적당 품목 수량; 인쇄 46행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
-   "cell": "Y45",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y4.item5.use_ratio",
-   "map_source": "merged-map",
-   "reason": "해당 면적 사용 비율 0~1; 인쇄 46행의 입력 근거"
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -18258,9 +17706,9 @@
    "cell": "AD45",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($U$45=\"\",$AB$45=\"해당 없음\"),0,IF(AND(ISNUMBER($Y$45),$Y$45>=0,$Y$45<=1,ISNUMBER(IF($V$45=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$45=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$45=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$24),'8. 생산계획'!$Y$24,NA()),NA()))))),IF($V$45=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$45=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$45=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$24),'8. 생산계획'!$Y$24,NA()),NA())))*$Y$45,NA()))",
+   "after_formula": "=IF(AND($U$45=\"\",$AB$45=\"해당 없음\"),0,IF(ISNUMBER('8. 생산계획'!$Y$24),'8. 생산계획'!$Y$24,NA()))",
    "map_source": "merged-map",
-   "reason": "면적 유형별 참조×해당 품목 사용비율; 면적 공란의 0 전파 차단 [T5] 4차년도 재배면적 정본 8.Y24 참조. [T5] D46는 병합 비기준; 품목별 적용면적을 인쇄 밖 AD45에서 계산."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -18337,16 +17785,6 @@
   },
   {
    "sheet": "9. 영농자재구매계획",
-   "cell": "V46",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y4.item6.area_kind",
-   "map_source": "merged-map",
-   "reason": "면적 유형: 부지/시설/재배; 인쇄 47행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
    "cell": "W46",
    "action": "input_param",
    "before_state": "absent",
@@ -18364,16 +17802,6 @@
    "param_key": "cost.material.y4.item6.basis_qty",
    "map_source": "merged-map",
    "reason": "기준면적당 품목 수량; 인쇄 47행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
-   "cell": "Y46",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y4.item6.use_ratio",
-   "map_source": "merged-map",
-   "reason": "해당 면적 사용 비율 0~1; 인쇄 47행의 입력 근거"
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -18420,9 +17848,9 @@
    "cell": "AD46",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($U$46=\"\",$AB$46=\"해당 없음\"),0,IF(AND(ISNUMBER($Y$46),$Y$46>=0,$Y$46<=1,ISNUMBER(IF($V$46=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$46=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$46=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$24),'8. 생산계획'!$Y$24,NA()),NA()))))),IF($V$46=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$46=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$46=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$24),'8. 생산계획'!$Y$24,NA()),NA())))*$Y$46,NA()))",
+   "after_formula": "=IF(AND($U$46=\"\",$AB$46=\"해당 없음\"),0,IF(ISNUMBER('8. 생산계획'!$Y$24),'8. 생산계획'!$Y$24,NA()))",
    "map_source": "merged-map",
-   "reason": "면적 유형별 참조×해당 품목 사용비율; 면적 공란의 0 전파 차단 [T5] 4차년도 재배면적 정본 8.Y24 참조. [T5] D47는 병합 비기준; 품목별 적용면적을 인쇄 밖 AD46에서 계산."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -18508,16 +17936,6 @@
   },
   {
    "sheet": "9. 영농자재구매계획",
-   "cell": "V48",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y5.item1.area_kind",
-   "map_source": "merged-map",
-   "reason": "면적 유형: 부지/시설/재배; 인쇄 53행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
    "cell": "W48",
    "action": "input_param",
    "before_state": "absent",
@@ -18535,16 +17953,6 @@
    "param_key": "cost.material.y5.item1.basis_qty",
    "map_source": "merged-map",
    "reason": "기준면적당 품목 수량; 인쇄 53행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
-   "cell": "Y48",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y5.item1.use_ratio",
-   "map_source": "merged-map",
-   "reason": "해당 면적 사용 비율 0~1; 인쇄 53행의 입력 근거"
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -18607,16 +18015,6 @@
   },
   {
    "sheet": "9. 영농자재구매계획",
-   "cell": "V49",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y5.item2.area_kind",
-   "map_source": "merged-map",
-   "reason": "면적 유형: 부지/시설/재배; 인쇄 54행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
    "cell": "W49",
    "action": "input_param",
    "before_state": "absent",
@@ -18634,16 +18032,6 @@
    "param_key": "cost.material.y5.item2.basis_qty",
    "map_source": "merged-map",
    "reason": "기준면적당 품목 수량; 인쇄 54행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
-   "cell": "Y49",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y5.item2.use_ratio",
-   "map_source": "merged-map",
-   "reason": "해당 면적 사용 비율 0~1; 인쇄 54행의 입력 근거"
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -18690,9 +18078,9 @@
    "cell": "AD49",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($U$49=\"\",$AB$49=\"해당 없음\"),0,IF(AND(ISNUMBER($Y$49),$Y$49>=0,$Y$49<=1,ISNUMBER(IF($V$49=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$49=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$49=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$26),'8. 생산계획'!$Y$26,NA()),NA()))))),IF($V$49=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$49=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$49=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$26),'8. 생산계획'!$Y$26,NA()),NA())))*$Y$49,NA()))",
+   "after_formula": "=IF(AND($U$49=\"\",$AB$49=\"해당 없음\"),0,IF(ISNUMBER('8. 생산계획'!$Y$26),'8. 생산계획'!$Y$26,NA()))",
    "map_source": "merged-map",
-   "reason": "면적 유형별 참조×해당 품목 사용비율; 면적 공란의 0 전파 차단 [T5] 5차년도 재배면적 정본 8.Y25 참조. [T5] D54는 병합 비기준; 품목별 적용면적을 인쇄 밖 AD49에서 계산."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -18724,16 +18112,6 @@
   },
   {
    "sheet": "9. 영농자재구매계획",
-   "cell": "V50",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y5.item3.area_kind",
-   "map_source": "merged-map",
-   "reason": "면적 유형: 부지/시설/재배; 인쇄 55행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
    "cell": "W50",
    "action": "input_param",
    "before_state": "absent",
@@ -18751,16 +18129,6 @@
    "param_key": "cost.material.y5.item3.basis_qty",
    "map_source": "merged-map",
    "reason": "기준면적당 품목 수량; 인쇄 55행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
-   "cell": "Y50",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y5.item3.use_ratio",
-   "map_source": "merged-map",
-   "reason": "해당 면적 사용 비율 0~1; 인쇄 55행의 입력 근거"
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -18807,9 +18175,9 @@
    "cell": "AD50",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($U$50=\"\",$AB$50=\"해당 없음\"),0,IF(AND(ISNUMBER($Y$50),$Y$50>=0,$Y$50<=1,ISNUMBER(IF($V$50=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$50=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$50=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$26),'8. 생산계획'!$Y$26,NA()),NA()))))),IF($V$50=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$50=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$50=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$26),'8. 생산계획'!$Y$26,NA()),NA())))*$Y$50,NA()))",
+   "after_formula": "=IF(AND($U$50=\"\",$AB$50=\"해당 없음\"),0,IF(ISNUMBER('8. 생산계획'!$Y$26),'8. 생산계획'!$Y$26,NA()))",
    "map_source": "merged-map",
-   "reason": "면적 유형별 참조×해당 품목 사용비율; 면적 공란의 0 전파 차단 [T5] 5차년도 재배면적 정본 8.Y25 참조. [T5] D55는 병합 비기준; 품목별 적용면적을 인쇄 밖 AD50에서 계산."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -18832,16 +18200,6 @@
   },
   {
    "sheet": "9. 영농자재구매계획",
-   "cell": "V51",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y5.item4.area_kind",
-   "map_source": "merged-map",
-   "reason": "면적 유형: 부지/시설/재배; 인쇄 56행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
    "cell": "W51",
    "action": "input_param",
    "before_state": "absent",
@@ -18859,16 +18217,6 @@
    "param_key": "cost.material.y5.item4.basis_qty",
    "map_source": "merged-map",
    "reason": "기준면적당 품목 수량; 인쇄 56행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
-   "cell": "Y51",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y5.item4.use_ratio",
-   "map_source": "merged-map",
-   "reason": "해당 면적 사용 비율 0~1; 인쇄 56행의 입력 근거"
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -18915,9 +18263,9 @@
    "cell": "AD51",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($U$51=\"\",$AB$51=\"해당 없음\"),0,IF(AND(ISNUMBER($Y$51),$Y$51>=0,$Y$51<=1,ISNUMBER(IF($V$51=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$51=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$51=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$26),'8. 생산계획'!$Y$26,NA()),NA()))))),IF($V$51=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$51=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$51=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$26),'8. 생산계획'!$Y$26,NA()),NA())))*$Y$51,NA()))",
+   "after_formula": "=IF(AND($U$51=\"\",$AB$51=\"해당 없음\"),0,IF(ISNUMBER('8. 생산계획'!$Y$26),'8. 생산계획'!$Y$26,NA()))",
    "map_source": "merged-map",
-   "reason": "면적 유형별 참조×해당 품목 사용비율; 면적 공란의 0 전파 차단 [T5] 5차년도 재배면적 정본 8.Y25 참조. [T5] D56는 병합 비기준; 품목별 적용면적을 인쇄 밖 AD51에서 계산."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -18940,16 +18288,6 @@
   },
   {
    "sheet": "9. 영농자재구매계획",
-   "cell": "V52",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y5.item5.area_kind",
-   "map_source": "merged-map",
-   "reason": "면적 유형: 부지/시설/재배; 인쇄 57행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
    "cell": "W52",
    "action": "input_param",
    "before_state": "absent",
@@ -18967,16 +18305,6 @@
    "param_key": "cost.material.y5.item5.basis_qty",
    "map_source": "merged-map",
    "reason": "기준면적당 품목 수량; 인쇄 57행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
-   "cell": "Y52",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y5.item5.use_ratio",
-   "map_source": "merged-map",
-   "reason": "해당 면적 사용 비율 0~1; 인쇄 57행의 입력 근거"
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -19023,9 +18351,9 @@
    "cell": "AD52",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($U$52=\"\",$AB$52=\"해당 없음\"),0,IF(AND(ISNUMBER($Y$52),$Y$52>=0,$Y$52<=1,ISNUMBER(IF($V$52=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$52=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$52=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$26),'8. 생산계획'!$Y$26,NA()),NA()))))),IF($V$52=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$52=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$52=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$26),'8. 생산계획'!$Y$26,NA()),NA())))*$Y$52,NA()))",
+   "after_formula": "=IF(AND($U$52=\"\",$AB$52=\"해당 없음\"),0,IF(ISNUMBER('8. 생산계획'!$Y$26),'8. 생산계획'!$Y$26,NA()))",
    "map_source": "merged-map",
-   "reason": "면적 유형별 참조×해당 품목 사용비율; 면적 공란의 0 전파 차단 [T5] 5차년도 재배면적 정본 8.Y25 참조. [T5] D57는 병합 비기준; 품목별 적용면적을 인쇄 밖 AD52에서 계산."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -19050,9 +18378,9 @@
    "cell": "D53",
    "action": "formula",
    "before_state": "formula_normal",
-   "after_formula": "=IF(AND($U$48=\"\",$AB$48=\"해당 없음\"),0,IF(AND(ISNUMBER($Y$48),$Y$48>=0,$Y$48<=1,ISNUMBER(IF($V$48=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$48=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$48=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$26),'8. 생산계획'!$Y$26,NA()),NA()))))),IF($V$48=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$48=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$48=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$26),'8. 생산계획'!$Y$26,NA()),NA())))*$Y$48,NA()))",
+   "after_formula": "=IF(AND($U$48=\"\",$AB$48=\"해당 없음\"),0,IF(ISNUMBER('8. 생산계획'!$Y$26),'8. 생산계획'!$Y$26,NA()))",
    "map_source": "merged-map",
-   "reason": "면적 유형별 참조×해당 품목 사용비율; 면적 공란의 0 전파 차단 [T5] 5차년도 재배면적 정본 8.Y25 참조."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -19111,16 +18439,6 @@
   },
   {
    "sheet": "9. 영농자재구매계획",
-   "cell": "V53",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y5.item6.area_kind",
-   "map_source": "merged-map",
-   "reason": "면적 유형: 부지/시설/재배; 인쇄 58행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
    "cell": "W53",
    "action": "input_param",
    "before_state": "absent",
@@ -19138,16 +18456,6 @@
    "param_key": "cost.material.y5.item6.basis_qty",
    "map_source": "merged-map",
    "reason": "기준면적당 품목 수량; 인쇄 58행의 입력 근거"
-  },
-  {
-   "sheet": "9. 영농자재구매계획",
-   "cell": "Y53",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.material.y5.item6.use_ratio",
-   "map_source": "merged-map",
-   "reason": "해당 면적 사용 비율 0~1; 인쇄 58행의 입력 근거"
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -19194,9 +18502,9 @@
    "cell": "AD53",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($U$53=\"\",$AB$53=\"해당 없음\"),0,IF(AND(ISNUMBER($Y$53),$Y$53>=0,$Y$53<=1,ISNUMBER(IF($V$53=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$53=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$53=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$26),'8. 생산계획'!$Y$26,NA()),NA()))))),IF($V$53=\"부지\",IF(ISNUMBER('12 .경비계획'!$I$3),'12 .경비계획'!$I$3,NA()),IF($V$53=\"시설\",IF(ISNUMBER('12 .경비계획'!$I$4),'12 .경비계획'!$I$4,NA()),IF($V$53=\"재배\",IF(ISNUMBER('8. 생산계획'!$Y$26),'8. 생산계획'!$Y$26,NA()),NA())))*$Y$53,NA()))",
+   "after_formula": "=IF(AND($U$53=\"\",$AB$53=\"해당 없음\"),0,IF(ISNUMBER('8. 생산계획'!$Y$26),'8. 생산계획'!$Y$26,NA()))",
    "map_source": "merged-map",
-   "reason": "면적 유형별 참조×해당 품목 사용비율; 면적 공란의 0 전파 차단 [T5] 5차년도 재배면적 정본 8.Y25 참조. [T5] D58는 병합 비기준; 품목별 적용면적을 인쇄 밖 AD53에서 계산."
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "9. 영농자재구매계획",
@@ -24591,9 +23899,9 @@
    "cell": "C10",
    "action": "formula",
    "before_state": "formula_normal",
-   "after_formula": "=IF(AND($K$12=\"\",$M$12=\"\",$N$12=\"\",$O$12=\"\",$P$12=\"\",$Q$12=\"\",$R$12=\"\",$T$12=\"\"),0,IF(ISNUMBER($P$12),$P$12,IF(AND(ISNUMBER($L$12),ISNUMBER($M$12),ISNUMBER($N$12),ISNUMBER($O$12),$I$2+0>=$N$12),$L$12*$M$12*(1+$O$12)^($I$2+0-$N$12)/1000,NA())))",
+   "after_formula": "=IF(AND($K$12=\"\",$M$12=\"\",$N$12=\"\",$O$12=\"\",$P$12=\"\",$Q$12=\"\",$R$12=\"\"),0,IF(ISNUMBER($P$12),$P$12,IF(AND(ISNUMBER($L$12),ISNUMBER($M$12),ISNUMBER($N$12),ISNUMBER($O$12),$I$2+0>=$N$12),$L$12*$M$12*(1+$O$12)^($I$2+0-$N$12)/1000,NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-3: wholly absent overhead slot yields zero; incomplete active slot holds"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -24695,9 +24003,9 @@
    "cell": "C11",
    "action": "formula",
    "before_state": "formula_normal",
-   "after_formula": "=IF(AND($K$13=\"\",$M$13=\"\",$N$13=\"\",$O$13=\"\",$P$13=\"\",$Q$13=\"\",$R$13=\"\",$T$13=\"\"),0,IF(ISNUMBER($P$13),$P$13,IF(AND(ISNUMBER($L$13),ISNUMBER($M$13),ISNUMBER($N$13),ISNUMBER($O$13),$I$2+0>=$N$13),$L$13*$M$13*(1+$O$13)^($I$2+0-$N$13)/1000,NA())))",
+   "after_formula": "=IF(AND($K$13=\"\",$M$13=\"\",$N$13=\"\",$O$13=\"\",$P$13=\"\",$Q$13=\"\",$R$13=\"\"),0,IF(ISNUMBER($P$13),$P$13,IF(AND(ISNUMBER($L$13),ISNUMBER($M$13),ISNUMBER($N$13),ISNUMBER($O$13),$I$2+0>=$N$13),$L$13*$M$13*(1+$O$13)^($I$2+0-$N$13)/1000,NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-3: wholly absent overhead slot yields zero; incomplete active slot holds"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -24836,9 +24144,9 @@
    "cell": "L12",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($K$12=\"\",$M$12=\"\",$N$12=\"\",$O$12=\"\",$P$12=\"\",$Q$12=\"\",$R$12=\"\",$T$12=\"\"),0,IF(ISNUMBER($P$12),0,IF(ISNUMBER(IF($K$12=\"부지\",$I$3,IF($K$12=\"시설\",$I$4,IF($K$12=\"재배\",$I$5,NA())))),IF($K$12=\"부지\",$I$3,IF($K$12=\"시설\",$I$4,IF($K$12=\"재배\",$I$5,NA())))*IF($T$12=\"\",1,IF(AND(ISNUMBER($T$12),$T$12>=0,$T$12<=1),$T$12,NA())),NA())))",
+   "after_formula": "=IF(AND($K$12=\"\",$M$12=\"\",$N$12=\"\",$O$12=\"\",$P$12=\"\",$Q$12=\"\",$R$12=\"\"),0,IF(ISNUMBER($P$12),0,IF(ISNUMBER(IF($K$12=\"부지\",$I$3,IF($K$12=\"시설\",$I$4,IF($K$12=\"재배\",$I$5,NA())))),IF($K$12=\"부지\",$I$3,IF($K$12=\"시설\",$I$4,IF($K$12=\"재배\",$I$5,NA()))),NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-1: blank coverage uses full selected area"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -24902,16 +24210,6 @@
   },
   {
    "sheet": "12 .경비계획",
-   "cell": "T12",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.overhead.y1.slot3.coverage_ratio",
-   "map_source": "merged-map",
-   "reason": "선택 면적 중 이 항목에 실제 적용되는 비율 0~1"
-  },
-  {
-   "sheet": "12 .경비계획",
    "cell": "H13",
    "action": "label_template",
    "before_state": "absent",
@@ -24952,9 +24250,9 @@
    "cell": "L13",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($K$13=\"\",$M$13=\"\",$N$13=\"\",$O$13=\"\",$P$13=\"\",$Q$13=\"\",$R$13=\"\",$T$13=\"\"),0,IF(ISNUMBER($P$13),0,IF(ISNUMBER(IF($K$13=\"부지\",$I$3,IF($K$13=\"시설\",$I$4,IF($K$13=\"재배\",$I$5,NA())))),IF($K$13=\"부지\",$I$3,IF($K$13=\"시설\",$I$4,IF($K$13=\"재배\",$I$5,NA())))*IF($T$13=\"\",1,IF(AND(ISNUMBER($T$13),$T$13>=0,$T$13<=1),$T$13,NA())),NA())))",
+   "after_formula": "=IF(AND($K$13=\"\",$M$13=\"\",$N$13=\"\",$O$13=\"\",$P$13=\"\",$Q$13=\"\",$R$13=\"\"),0,IF(ISNUMBER($P$13),0,IF(ISNUMBER(IF($K$13=\"부지\",$I$3,IF($K$13=\"시설\",$I$4,IF($K$13=\"재배\",$I$5,NA())))),IF($K$13=\"부지\",$I$3,IF($K$13=\"시설\",$I$4,IF($K$13=\"재배\",$I$5,NA()))),NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-1: blank coverage uses full selected area"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -25015,16 +24313,6 @@
    "param_key": "cost.overhead.y1.slot4.evidence",
    "map_source": "merged-map",
    "reason": "견적/세율/면적/해당 없음의 출처와 기준일"
-  },
-  {
-   "sheet": "12 .경비계획",
-   "cell": "T13",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.overhead.y1.slot4.coverage_ratio",
-   "map_source": "merged-map",
-   "reason": "선택 면적 중 이 항목에 실제 적용되는 비율 0~1"
   },
   {
    "sheet": "12 .경비계획",
@@ -25135,9 +24423,9 @@
    "cell": "L15",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($K$15=\"\",$M$15=\"\",$N$15=\"\",$O$15=\"\",$P$15=\"\",$Q$15=\"\",$R$15=\"\",$T$15=\"\"),0,IF(ISNUMBER($P$15),0,IF(ISNUMBER(IF($K$15=\"부지\",$I$3,IF($K$15=\"시설\",$I$4,IF($K$15=\"재배\",$I$5,NA())))),IF($K$15=\"부지\",$I$3,IF($K$15=\"시설\",$I$4,IF($K$15=\"재배\",$I$5,NA())))*IF($T$15=\"\",1,IF(AND(ISNUMBER($T$15),$T$15>=0,$T$15<=1),$T$15,NA())),NA())))",
+   "after_formula": "=IF(AND($K$15=\"\",$M$15=\"\",$N$15=\"\",$O$15=\"\",$P$15=\"\",$Q$15=\"\",$R$15=\"\"),0,IF(ISNUMBER($P$15),0,IF(ISNUMBER(IF($K$15=\"부지\",$I$3,IF($K$15=\"시설\",$I$4,IF($K$15=\"재배\",$I$5,NA())))),IF($K$15=\"부지\",$I$3,IF($K$15=\"시설\",$I$4,IF($K$15=\"재배\",$I$5,NA()))),NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-1: blank coverage uses full selected area"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -25198,16 +24486,6 @@
    "param_key": "cost.overhead.y1.slot6.evidence",
    "map_source": "merged-map",
    "reason": "견적/세율/면적/해당 없음의 출처와 기준일"
-  },
-  {
-   "sheet": "12 .경비계획",
-   "cell": "T15",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.overhead.y1.slot6.coverage_ratio",
-   "map_source": "merged-map",
-   "reason": "선택 면적 중 이 항목에 실제 적용되는 비율 0~1"
   },
   {
    "sheet": "12 .경비계획",
@@ -25299,9 +24577,9 @@
    "cell": "C17",
    "action": "formula",
    "before_state": "formula_normal",
-   "after_formula": "=IF(AND($K$15=\"\",$M$15=\"\",$N$15=\"\",$O$15=\"\",$P$15=\"\",$Q$15=\"\",$R$15=\"\",$T$15=\"\"),0,IF(ISNUMBER($P$15),$P$15,IF(AND(ISNUMBER($L$15),ISNUMBER($M$15),ISNUMBER($N$15),ISNUMBER($O$15),$I$2+0>=$N$15),$L$15*$M$15*(1+$O$15)^($I$2+0-$N$15)/1000,NA())))",
+   "after_formula": "=IF(AND($K$15=\"\",$M$15=\"\",$N$15=\"\",$O$15=\"\",$P$15=\"\",$Q$15=\"\",$R$15=\"\"),0,IF(ISNUMBER($P$15),$P$15,IF(AND(ISNUMBER($L$15),ISNUMBER($M$15),ISNUMBER($N$15),ISNUMBER($O$15),$I$2+0>=$N$15),$L$15*$M$15*(1+$O$15)^($I$2+0-$N$15)/1000,NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-3: wholly absent overhead slot yields zero; incomplete active slot holds"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -25536,9 +24814,9 @@
    "cell": "L19",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($K$19=\"\",$M$19=\"\",$N$19=\"\",$O$19=\"\",$P$19=\"\",$Q$19=\"\",$R$19=\"\",$T$19=\"\"),0,IF(ISNUMBER($P$19),0,IF(ISNUMBER(IF($K$19=\"부지\",$I$3,IF($K$19=\"시설\",$I$4,IF($K$19=\"재배\",$I$5,NA())))),IF($K$19=\"부지\",$I$3,IF($K$19=\"시설\",$I$4,IF($K$19=\"재배\",$I$5,NA())))*IF($T$19=\"\",1,IF(AND(ISNUMBER($T$19),$T$19>=0,$T$19<=1),$T$19,NA())),NA())))",
+   "after_formula": "=IF(AND($K$19=\"\",$M$19=\"\",$N$19=\"\",$O$19=\"\",$P$19=\"\",$Q$19=\"\",$R$19=\"\"),0,IF(ISNUMBER($P$19),0,IF(ISNUMBER(IF($K$19=\"부지\",$I$3,IF($K$19=\"시설\",$I$4,IF($K$19=\"재배\",$I$5,NA())))),IF($K$19=\"부지\",$I$3,IF($K$19=\"시설\",$I$4,IF($K$19=\"재배\",$I$5,NA()))),NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-1: blank coverage uses full selected area"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -25599,16 +24877,6 @@
    "param_key": "cost.overhead.y1.slot10.evidence",
    "map_source": "merged-map",
    "reason": "견적/세율/면적/해당 없음의 출처와 기준일"
-  },
-  {
-   "sheet": "12 .경비계획",
-   "cell": "T19",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.overhead.y1.slot10.coverage_ratio",
-   "map_source": "merged-map",
-   "reason": "선택 면적 중 이 항목에 실제 적용되는 비율 0~1"
   },
   {
    "sheet": "12 .경비계획",
@@ -25679,9 +24947,9 @@
    "cell": "L20",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($K$20=\"\",$M$20=\"\",$N$20=\"\",$O$20=\"\",$P$20=\"\",$Q$20=\"\",$R$20=\"\",$T$20=\"\"),0,IF(ISNUMBER($P$20),0,IF(ISNUMBER(IF($K$20=\"부지\",$I$3,IF($K$20=\"시설\",$I$4,IF($K$20=\"재배\",$I$5,NA())))),IF($K$20=\"부지\",$I$3,IF($K$20=\"시설\",$I$4,IF($K$20=\"재배\",$I$5,NA())))*IF($T$20=\"\",1,IF(AND(ISNUMBER($T$20),$T$20>=0,$T$20<=1),$T$20,NA())),NA())))",
+   "after_formula": "=IF(AND($K$20=\"\",$M$20=\"\",$N$20=\"\",$O$20=\"\",$P$20=\"\",$Q$20=\"\",$R$20=\"\"),0,IF(ISNUMBER($P$20),0,IF(ISNUMBER(IF($K$20=\"부지\",$I$3,IF($K$20=\"시설\",$I$4,IF($K$20=\"재배\",$I$5,NA())))),IF($K$20=\"부지\",$I$3,IF($K$20=\"시설\",$I$4,IF($K$20=\"재배\",$I$5,NA()))),NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-1: blank coverage uses full selected area"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -25742,16 +25010,6 @@
    "param_key": "cost.overhead.y1.slot11.evidence",
    "map_source": "merged-map",
    "reason": "견적/세율/면적/해당 없음의 출처와 기준일"
-  },
-  {
-   "sheet": "12 .경비계획",
-   "cell": "T20",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.overhead.y1.slot11.coverage_ratio",
-   "map_source": "merged-map",
-   "reason": "선택 면적 중 이 항목에 실제 적용되는 비율 0~1"
   },
   {
    "sheet": "12 .경비계획",
@@ -25843,9 +25101,9 @@
    "cell": "C23",
    "action": "formula",
    "before_state": "formula_normal",
-   "after_formula": "=IF(AND($K$19=\"\",$M$19=\"\",$N$19=\"\",$O$19=\"\",$P$19=\"\",$Q$19=\"\",$R$19=\"\",$T$19=\"\"),0,IF(ISNUMBER($P$19),$P$19,IF(AND(ISNUMBER($L$19),ISNUMBER($M$19),ISNUMBER($N$19),ISNUMBER($O$19),$I$2+0>=$N$19),$L$19*$M$19*(1+$O$19)^($I$2+0-$N$19)/1000,NA())))",
+   "after_formula": "=IF(AND($K$19=\"\",$M$19=\"\",$N$19=\"\",$O$19=\"\",$P$19=\"\",$Q$19=\"\",$R$19=\"\"),0,IF(ISNUMBER($P$19),$P$19,IF(AND(ISNUMBER($L$19),ISNUMBER($M$19),ISNUMBER($N$19),ISNUMBER($O$19),$I$2+0>=$N$19),$L$19*$M$19*(1+$O$19)^($I$2+0-$N$19)/1000,NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-3: wholly absent overhead slot yields zero; incomplete active slot holds"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -25861,9 +25119,9 @@
    "cell": "C24",
    "action": "formula",
    "before_state": "formula_normal",
-   "after_formula": "=IF(AND($K$20=\"\",$M$20=\"\",$N$20=\"\",$O$20=\"\",$P$20=\"\",$Q$20=\"\",$R$20=\"\",$T$20=\"\"),0,IF(ISNUMBER($P$20),$P$20,IF(AND(ISNUMBER($L$20),ISNUMBER($M$20),ISNUMBER($N$20),ISNUMBER($O$20),$I$2+0>=$N$20),$L$20*$M$20*(1+$O$20)^($I$2+0-$N$20)/1000,NA())))",
+   "after_formula": "=IF(AND($K$20=\"\",$M$20=\"\",$N$20=\"\",$O$20=\"\",$P$20=\"\",$Q$20=\"\",$R$20=\"\"),0,IF(ISNUMBER($P$20),$P$20,IF(AND(ISNUMBER($L$20),ISNUMBER($M$20),ISNUMBER($N$20),ISNUMBER($O$20),$I$2+0>=$N$20),$L$20*$M$20*(1+$O$20)^($I$2+0-$N$20)/1000,NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-3: wholly absent overhead slot yields zero; incomplete active slot holds"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -26106,9 +25364,9 @@
    "cell": "L27",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($K$27=\"\",$M$27=\"\",$N$27=\"\",$O$27=\"\",$P$27=\"\",$Q$27=\"\",$R$27=\"\",$T$27=\"\"),0,IF(ISNUMBER($P$27),0,IF(ISNUMBER(IF($K$27=\"부지\",$I$3,IF($K$27=\"시설\",$I$4,IF($K$27=\"재배\",$I$5,NA())))),IF($K$27=\"부지\",$I$3,IF($K$27=\"시설\",$I$4,IF($K$27=\"재배\",$I$5,NA())))*IF($T$27=\"\",1,IF(AND(ISNUMBER($T$27),$T$27>=0,$T$27<=1),$T$27,NA())),NA())))",
+   "after_formula": "=IF(AND($K$27=\"\",$M$27=\"\",$N$27=\"\",$O$27=\"\",$P$27=\"\",$Q$27=\"\",$R$27=\"\"),0,IF(ISNUMBER($P$27),0,IF(ISNUMBER(IF($K$27=\"부지\",$I$3,IF($K$27=\"시설\",$I$4,IF($K$27=\"재배\",$I$5,NA())))),IF($K$27=\"부지\",$I$3,IF($K$27=\"시설\",$I$4,IF($K$27=\"재배\",$I$5,NA()))),NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-1: blank coverage uses full selected area"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -26172,16 +25430,6 @@
   },
   {
    "sheet": "12 .경비계획",
-   "cell": "T27",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.overhead.y2.slot3.coverage_ratio",
-   "map_source": "merged-map",
-   "reason": "선택 면적 중 이 항목에 실제 적용되는 비율 0~1"
-  },
-  {
-   "sheet": "12 .경비계획",
    "cell": "B28",
    "action": "label_template",
    "before_state": "shared_string",
@@ -26231,9 +25479,9 @@
    "cell": "L28",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($K$28=\"\",$M$28=\"\",$N$28=\"\",$O$28=\"\",$P$28=\"\",$Q$28=\"\",$R$28=\"\",$T$28=\"\"),0,IF(ISNUMBER($P$28),0,IF(ISNUMBER(IF($K$28=\"부지\",$I$3,IF($K$28=\"시설\",$I$4,IF($K$28=\"재배\",$I$5,NA())))),IF($K$28=\"부지\",$I$3,IF($K$28=\"시설\",$I$4,IF($K$28=\"재배\",$I$5,NA())))*IF($T$28=\"\",1,IF(AND(ISNUMBER($T$28),$T$28>=0,$T$28<=1),$T$28,NA())),NA())))",
+   "after_formula": "=IF(AND($K$28=\"\",$M$28=\"\",$N$28=\"\",$O$28=\"\",$P$28=\"\",$Q$28=\"\",$R$28=\"\"),0,IF(ISNUMBER($P$28),0,IF(ISNUMBER(IF($K$28=\"부지\",$I$3,IF($K$28=\"시설\",$I$4,IF($K$28=\"재배\",$I$5,NA())))),IF($K$28=\"부지\",$I$3,IF($K$28=\"시설\",$I$4,IF($K$28=\"재배\",$I$5,NA()))),NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-1: blank coverage uses full selected area"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -26294,16 +25542,6 @@
    "param_key": "cost.overhead.y2.slot4.evidence",
    "map_source": "merged-map",
    "reason": "견적/세율/면적/해당 없음의 출처와 기준일"
-  },
-  {
-   "sheet": "12 .경비계획",
-   "cell": "T28",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.overhead.y2.slot4.coverage_ratio",
-   "map_source": "merged-map",
-   "reason": "선택 면적 중 이 항목에 실제 적용되는 비율 0~1"
   },
   {
    "sheet": "12 .경비계획",
@@ -26434,9 +25672,9 @@
    "cell": "L30",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($K$30=\"\",$M$30=\"\",$N$30=\"\",$O$30=\"\",$P$30=\"\",$Q$30=\"\",$R$30=\"\",$T$30=\"\"),0,IF(ISNUMBER($P$30),0,IF(ISNUMBER(IF($K$30=\"부지\",$I$3,IF($K$30=\"시설\",$I$4,IF($K$30=\"재배\",$I$5,NA())))),IF($K$30=\"부지\",$I$3,IF($K$30=\"시설\",$I$4,IF($K$30=\"재배\",$I$5,NA())))*IF($T$30=\"\",1,IF(AND(ISNUMBER($T$30),$T$30>=0,$T$30<=1),$T$30,NA())),NA())))",
+   "after_formula": "=IF(AND($K$30=\"\",$M$30=\"\",$N$30=\"\",$O$30=\"\",$P$30=\"\",$Q$30=\"\",$R$30=\"\"),0,IF(ISNUMBER($P$30),0,IF(ISNUMBER(IF($K$30=\"부지\",$I$3,IF($K$30=\"시설\",$I$4,IF($K$30=\"재배\",$I$5,NA())))),IF($K$30=\"부지\",$I$3,IF($K$30=\"시설\",$I$4,IF($K$30=\"재배\",$I$5,NA()))),NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-1: blank coverage uses full selected area"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -26497,16 +25735,6 @@
    "param_key": "cost.overhead.y2.slot6.evidence",
    "map_source": "merged-map",
    "reason": "견적/세율/면적/해당 없음의 출처와 기준일"
-  },
-  {
-   "sheet": "12 .경비계획",
-   "cell": "T30",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.overhead.y2.slot6.coverage_ratio",
-   "map_source": "merged-map",
-   "reason": "선택 면적 중 이 항목에 실제 적용되는 비율 0~1"
   },
   {
    "sheet": "12 .경비계획",
@@ -26853,9 +26081,9 @@
    "cell": "L34",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($K$34=\"\",$M$34=\"\",$N$34=\"\",$O$34=\"\",$P$34=\"\",$Q$34=\"\",$R$34=\"\",$T$34=\"\"),0,IF(ISNUMBER($P$34),0,IF(ISNUMBER(IF($K$34=\"부지\",$I$3,IF($K$34=\"시설\",$I$4,IF($K$34=\"재배\",$I$5,NA())))),IF($K$34=\"부지\",$I$3,IF($K$34=\"시설\",$I$4,IF($K$34=\"재배\",$I$5,NA())))*IF($T$34=\"\",1,IF(AND(ISNUMBER($T$34),$T$34>=0,$T$34<=1),$T$34,NA())),NA())))",
+   "after_formula": "=IF(AND($K$34=\"\",$M$34=\"\",$N$34=\"\",$O$34=\"\",$P$34=\"\",$Q$34=\"\",$R$34=\"\"),0,IF(ISNUMBER($P$34),0,IF(ISNUMBER(IF($K$34=\"부지\",$I$3,IF($K$34=\"시설\",$I$4,IF($K$34=\"재배\",$I$5,NA())))),IF($K$34=\"부지\",$I$3,IF($K$34=\"시설\",$I$4,IF($K$34=\"재배\",$I$5,NA()))),NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-1: blank coverage uses full selected area"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -26919,22 +26147,12 @@
   },
   {
    "sheet": "12 .경비계획",
-   "cell": "T34",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.overhead.y2.slot10.coverage_ratio",
-   "map_source": "merged-map",
-   "reason": "선택 면적 중 이 항목에 실제 적용되는 비율 0~1"
-  },
-  {
-   "sheet": "12 .경비계획",
    "cell": "C35",
    "action": "formula",
    "before_state": "formula_normal",
-   "after_formula": "=IF(AND($K$27=\"\",$M$27=\"\",$N$27=\"\",$O$27=\"\",$P$27=\"\",$Q$27=\"\",$R$27=\"\",$T$27=\"\"),0,IF(ISNUMBER($P$27),$P$27,IF(AND(ISNUMBER($L$27),ISNUMBER($M$27),ISNUMBER($N$27),ISNUMBER($O$27),$I$2+1>=$N$27),$L$27*$M$27*(1+$O$27)^($I$2+1-$N$27)/1000,NA())))",
+   "after_formula": "=IF(AND($K$27=\"\",$M$27=\"\",$N$27=\"\",$O$27=\"\",$P$27=\"\",$Q$27=\"\",$R$27=\"\"),0,IF(ISNUMBER($P$27),$P$27,IF(AND(ISNUMBER($L$27),ISNUMBER($M$27),ISNUMBER($N$27),ISNUMBER($O$27),$I$2+1>=$N$27),$L$27*$M$27*(1+$O$27)^($I$2+1-$N$27)/1000,NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-3: wholly absent overhead slot yields zero; incomplete active slot holds"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -26987,9 +26205,9 @@
    "cell": "L35",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($K$35=\"\",$M$35=\"\",$N$35=\"\",$O$35=\"\",$P$35=\"\",$Q$35=\"\",$R$35=\"\",$T$35=\"\"),0,IF(ISNUMBER($P$35),0,IF(ISNUMBER(IF($K$35=\"부지\",$I$3,IF($K$35=\"시설\",$I$4,IF($K$35=\"재배\",$I$5,NA())))),IF($K$35=\"부지\",$I$3,IF($K$35=\"시설\",$I$4,IF($K$35=\"재배\",$I$5,NA())))*IF($T$35=\"\",1,IF(AND(ISNUMBER($T$35),$T$35>=0,$T$35<=1),$T$35,NA())),NA())))",
+   "after_formula": "=IF(AND($K$35=\"\",$M$35=\"\",$N$35=\"\",$O$35=\"\",$P$35=\"\",$Q$35=\"\",$R$35=\"\"),0,IF(ISNUMBER($P$35),0,IF(ISNUMBER(IF($K$35=\"부지\",$I$3,IF($K$35=\"시설\",$I$4,IF($K$35=\"재배\",$I$5,NA())))),IF($K$35=\"부지\",$I$3,IF($K$35=\"시설\",$I$4,IF($K$35=\"재배\",$I$5,NA()))),NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-1: blank coverage uses full selected area"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -27053,22 +26271,12 @@
   },
   {
    "sheet": "12 .경비계획",
-   "cell": "T35",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.overhead.y2.slot11.coverage_ratio",
-   "map_source": "merged-map",
-   "reason": "선택 면적 중 이 항목에 실제 적용되는 비율 0~1"
-  },
-  {
-   "sheet": "12 .경비계획",
    "cell": "C36",
    "action": "formula",
    "before_state": "formula_normal",
-   "after_formula": "=IF(AND($K$28=\"\",$M$28=\"\",$N$28=\"\",$O$28=\"\",$P$28=\"\",$Q$28=\"\",$R$28=\"\",$T$28=\"\"),0,IF(ISNUMBER($P$28),$P$28,IF(AND(ISNUMBER($L$28),ISNUMBER($M$28),ISNUMBER($N$28),ISNUMBER($O$28),$I$2+1>=$N$28),$L$28*$M$28*(1+$O$28)^($I$2+1-$N$28)/1000,NA())))",
+   "after_formula": "=IF(AND($K$28=\"\",$M$28=\"\",$N$28=\"\",$O$28=\"\",$P$28=\"\",$Q$28=\"\",$R$28=\"\"),0,IF(ISNUMBER($P$28),$P$28,IF(AND(ISNUMBER($L$28),ISNUMBER($M$28),ISNUMBER($N$28),ISNUMBER($O$28),$I$2+1>=$N$28),$L$28*$M$28*(1+$O$28)^($I$2+1-$N$28)/1000,NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-3: wholly absent overhead slot yields zero; incomplete active slot holds"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -27359,9 +26567,9 @@
    "cell": "C42",
    "action": "formula",
    "before_state": "number",
-   "after_formula": "=IF(AND($K$30=\"\",$M$30=\"\",$N$30=\"\",$O$30=\"\",$P$30=\"\",$Q$30=\"\",$R$30=\"\",$T$30=\"\"),0,IF(ISNUMBER($P$30),$P$30,IF(AND(ISNUMBER($L$30),ISNUMBER($M$30),ISNUMBER($N$30),ISNUMBER($O$30),$I$2+1>=$N$30),$L$30*$M$30*(1+$O$30)^($I$2+1-$N$30)/1000,NA())))",
+   "after_formula": "=IF(AND($K$30=\"\",$M$30=\"\",$N$30=\"\",$O$30=\"\",$P$30=\"\",$Q$30=\"\",$R$30=\"\"),0,IF(ISNUMBER($P$30),$P$30,IF(AND(ISNUMBER($L$30),ISNUMBER($M$30),ISNUMBER($N$30),ISNUMBER($O$30),$I$2+1>=$N$30),$L$30*$M$30*(1+$O$30)^($I$2+1-$N$30)/1000,NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-3: wholly absent overhead slot yields zero; incomplete active slot holds"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -27414,9 +26622,9 @@
    "cell": "L42",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($K$42=\"\",$M$42=\"\",$N$42=\"\",$O$42=\"\",$P$42=\"\",$Q$42=\"\",$R$42=\"\",$T$42=\"\"),0,IF(ISNUMBER($P$42),0,IF(ISNUMBER(IF($K$42=\"부지\",$I$3,IF($K$42=\"시설\",$I$4,IF($K$42=\"재배\",$I$5,NA())))),IF($K$42=\"부지\",$I$3,IF($K$42=\"시설\",$I$4,IF($K$42=\"재배\",$I$5,NA())))*IF($T$42=\"\",1,IF(AND(ISNUMBER($T$42),$T$42>=0,$T$42<=1),$T$42,NA())),NA())))",
+   "after_formula": "=IF(AND($K$42=\"\",$M$42=\"\",$N$42=\"\",$O$42=\"\",$P$42=\"\",$Q$42=\"\",$R$42=\"\"),0,IF(ISNUMBER($P$42),0,IF(ISNUMBER(IF($K$42=\"부지\",$I$3,IF($K$42=\"시설\",$I$4,IF($K$42=\"재배\",$I$5,NA())))),IF($K$42=\"부지\",$I$3,IF($K$42=\"시설\",$I$4,IF($K$42=\"재배\",$I$5,NA()))),NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-1: blank coverage uses full selected area"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -27480,16 +26688,6 @@
   },
   {
    "sheet": "12 .경비계획",
-   "cell": "T42",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.overhead.y3.slot3.coverage_ratio",
-   "map_source": "merged-map",
-   "reason": "선택 면적 중 이 항목에 실제 적용되는 비율 0~1"
-  },
-  {
-   "sheet": "12 .경비계획",
    "cell": "C43",
    "action": "formula",
    "before_state": "formula_normal",
@@ -27548,9 +26746,9 @@
    "cell": "L43",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($K$43=\"\",$M$43=\"\",$N$43=\"\",$O$43=\"\",$P$43=\"\",$Q$43=\"\",$R$43=\"\",$T$43=\"\"),0,IF(ISNUMBER($P$43),0,IF(ISNUMBER(IF($K$43=\"부지\",$I$3,IF($K$43=\"시설\",$I$4,IF($K$43=\"재배\",$I$5,NA())))),IF($K$43=\"부지\",$I$3,IF($K$43=\"시설\",$I$4,IF($K$43=\"재배\",$I$5,NA())))*IF($T$43=\"\",1,IF(AND(ISNUMBER($T$43),$T$43>=0,$T$43<=1),$T$43,NA())),NA())))",
+   "after_formula": "=IF(AND($K$43=\"\",$M$43=\"\",$N$43=\"\",$O$43=\"\",$P$43=\"\",$Q$43=\"\",$R$43=\"\"),0,IF(ISNUMBER($P$43),0,IF(ISNUMBER(IF($K$43=\"부지\",$I$3,IF($K$43=\"시설\",$I$4,IF($K$43=\"재배\",$I$5,NA())))),IF($K$43=\"부지\",$I$3,IF($K$43=\"시설\",$I$4,IF($K$43=\"재배\",$I$5,NA()))),NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-1: blank coverage uses full selected area"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -27611,16 +26809,6 @@
    "param_key": "cost.overhead.y3.slot4.evidence",
    "map_source": "merged-map",
    "reason": "견적/세율/면적/해당 없음의 출처와 기준일"
-  },
-  {
-   "sheet": "12 .경비계획",
-   "cell": "T43",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.overhead.y3.slot4.coverage_ratio",
-   "map_source": "merged-map",
-   "reason": "선택 면적 중 이 항목에 실제 적용되는 비율 0~1"
   },
   {
    "sheet": "12 .경비계획",
@@ -27758,9 +26946,9 @@
    "cell": "L45",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($K$45=\"\",$M$45=\"\",$N$45=\"\",$O$45=\"\",$P$45=\"\",$Q$45=\"\",$R$45=\"\",$T$45=\"\"),0,IF(ISNUMBER($P$45),0,IF(ISNUMBER(IF($K$45=\"부지\",$I$3,IF($K$45=\"시설\",$I$4,IF($K$45=\"재배\",$I$5,NA())))),IF($K$45=\"부지\",$I$3,IF($K$45=\"시설\",$I$4,IF($K$45=\"재배\",$I$5,NA())))*IF($T$45=\"\",1,IF(AND(ISNUMBER($T$45),$T$45>=0,$T$45<=1),$T$45,NA())),NA())))",
+   "after_formula": "=IF(AND($K$45=\"\",$M$45=\"\",$N$45=\"\",$O$45=\"\",$P$45=\"\",$Q$45=\"\",$R$45=\"\"),0,IF(ISNUMBER($P$45),0,IF(ISNUMBER(IF($K$45=\"부지\",$I$3,IF($K$45=\"시설\",$I$4,IF($K$45=\"재배\",$I$5,NA())))),IF($K$45=\"부지\",$I$3,IF($K$45=\"시설\",$I$4,IF($K$45=\"재배\",$I$5,NA()))),NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-1: blank coverage uses full selected area"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -27821,16 +27009,6 @@
    "param_key": "cost.overhead.y3.slot6.evidence",
    "map_source": "merged-map",
    "reason": "견적/세율/면적/해당 없음의 출처와 기준일"
-  },
-  {
-   "sheet": "12 .경비계획",
-   "cell": "T45",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.overhead.y3.slot6.coverage_ratio",
-   "map_source": "merged-map",
-   "reason": "선택 면적 중 이 항목에 실제 적용되는 비율 0~1"
   },
   {
    "sheet": "12 .경비계획",
@@ -28028,9 +27206,9 @@
    "cell": "C48",
    "action": "formula",
    "before_state": "formula_normal",
-   "after_formula": "=IF(AND($K$34=\"\",$M$34=\"\",$N$34=\"\",$O$34=\"\",$P$34=\"\",$Q$34=\"\",$R$34=\"\",$T$34=\"\"),0,IF(ISNUMBER($P$34),$P$34,IF(AND(ISNUMBER($L$34),ISNUMBER($M$34),ISNUMBER($N$34),ISNUMBER($O$34),$I$2+1>=$N$34),$L$34*$M$34*(1+$O$34)^($I$2+1-$N$34)/1000,NA())))",
+   "after_formula": "=IF(AND($K$34=\"\",$M$34=\"\",$N$34=\"\",$O$34=\"\",$P$34=\"\",$Q$34=\"\",$R$34=\"\"),0,IF(ISNUMBER($P$34),$P$34,IF(AND(ISNUMBER($L$34),ISNUMBER($M$34),ISNUMBER($N$34),ISNUMBER($O$34),$I$2+1>=$N$34),$L$34*$M$34*(1+$O$34)^($I$2+1-$N$34)/1000,NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-3: wholly absent overhead slot yields zero; incomplete active slot holds"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -28113,9 +27291,9 @@
    "cell": "C49",
    "action": "formula",
    "before_state": "formula_normal",
-   "after_formula": "=IF(AND($K$35=\"\",$M$35=\"\",$N$35=\"\",$O$35=\"\",$P$35=\"\",$Q$35=\"\",$R$35=\"\",$T$35=\"\"),0,IF(ISNUMBER($P$35),$P$35,IF(AND(ISNUMBER($L$35),ISNUMBER($M$35),ISNUMBER($N$35),ISNUMBER($O$35),$I$2+1>=$N$35),$L$35*$M$35*(1+$O$35)^($I$2+1-$N$35)/1000,NA())))",
+   "after_formula": "=IF(AND($K$35=\"\",$M$35=\"\",$N$35=\"\",$O$35=\"\",$P$35=\"\",$Q$35=\"\",$R$35=\"\"),0,IF(ISNUMBER($P$35),$P$35,IF(AND(ISNUMBER($L$35),ISNUMBER($M$35),ISNUMBER($N$35),ISNUMBER($O$35),$I$2+1>=$N$35),$L$35*$M$35*(1+$O$35)^($I$2+1-$N$35)/1000,NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-3: wholly absent overhead slot yields zero; incomplete active slot holds"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -28168,9 +27346,9 @@
    "cell": "L49",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($K$49=\"\",$M$49=\"\",$N$49=\"\",$O$49=\"\",$P$49=\"\",$Q$49=\"\",$R$49=\"\",$T$49=\"\"),0,IF(ISNUMBER($P$49),0,IF(ISNUMBER(IF($K$49=\"부지\",$I$3,IF($K$49=\"시설\",$I$4,IF($K$49=\"재배\",$I$5,NA())))),IF($K$49=\"부지\",$I$3,IF($K$49=\"시설\",$I$4,IF($K$49=\"재배\",$I$5,NA())))*IF($T$49=\"\",1,IF(AND(ISNUMBER($T$49),$T$49>=0,$T$49<=1),$T$49,NA())),NA())))",
+   "after_formula": "=IF(AND($K$49=\"\",$M$49=\"\",$N$49=\"\",$O$49=\"\",$P$49=\"\",$Q$49=\"\",$R$49=\"\"),0,IF(ISNUMBER($P$49),0,IF(ISNUMBER(IF($K$49=\"부지\",$I$3,IF($K$49=\"시설\",$I$4,IF($K$49=\"재배\",$I$5,NA())))),IF($K$49=\"부지\",$I$3,IF($K$49=\"시설\",$I$4,IF($K$49=\"재배\",$I$5,NA()))),NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-1: blank coverage uses full selected area"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -28234,16 +27412,6 @@
   },
   {
    "sheet": "12 .경비계획",
-   "cell": "T49",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.overhead.y3.slot10.coverage_ratio",
-   "map_source": "merged-map",
-   "reason": "선택 면적 중 이 항목에 실제 적용되는 비율 0~1"
-  },
-  {
-   "sheet": "12 .경비계획",
    "cell": "C50",
    "action": "formula",
    "before_state": "blank_node",
@@ -28302,9 +27470,9 @@
    "cell": "L50",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($K$50=\"\",$M$50=\"\",$N$50=\"\",$O$50=\"\",$P$50=\"\",$Q$50=\"\",$R$50=\"\",$T$50=\"\"),0,IF(ISNUMBER($P$50),0,IF(ISNUMBER(IF($K$50=\"부지\",$I$3,IF($K$50=\"시설\",$I$4,IF($K$50=\"재배\",$I$5,NA())))),IF($K$50=\"부지\",$I$3,IF($K$50=\"시설\",$I$4,IF($K$50=\"재배\",$I$5,NA())))*IF($T$50=\"\",1,IF(AND(ISNUMBER($T$50),$T$50>=0,$T$50<=1),$T$50,NA())),NA())))",
+   "after_formula": "=IF(AND($K$50=\"\",$M$50=\"\",$N$50=\"\",$O$50=\"\",$P$50=\"\",$Q$50=\"\",$R$50=\"\"),0,IF(ISNUMBER($P$50),0,IF(ISNUMBER(IF($K$50=\"부지\",$I$3,IF($K$50=\"시설\",$I$4,IF($K$50=\"재배\",$I$5,NA())))),IF($K$50=\"부지\",$I$3,IF($K$50=\"시설\",$I$4,IF($K$50=\"재배\",$I$5,NA()))),NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-1: blank coverage uses full selected area"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -28365,16 +27533,6 @@
    "param_key": "cost.overhead.y3.slot11.evidence",
    "map_source": "merged-map",
    "reason": "견적/세율/면적/해당 없음의 출처와 기준일"
-  },
-  {
-   "sheet": "12 .경비계획",
-   "cell": "T50",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.overhead.y3.slot11.coverage_ratio",
-   "map_source": "merged-map",
-   "reason": "선택 면적 중 이 항목에 실제 적용되는 비율 0~1"
   },
   {
    "sheet": "12 .경비계획",
@@ -28731,9 +27889,9 @@
    "cell": "L57",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($K$57=\"\",$M$57=\"\",$N$57=\"\",$O$57=\"\",$P$57=\"\",$Q$57=\"\",$R$57=\"\",$T$57=\"\"),0,IF(ISNUMBER($P$57),0,IF(ISNUMBER(IF($K$57=\"부지\",$I$3,IF($K$57=\"시설\",$I$4,IF($K$57=\"재배\",$I$5,NA())))),IF($K$57=\"부지\",$I$3,IF($K$57=\"시설\",$I$4,IF($K$57=\"재배\",$I$5,NA())))*IF($T$57=\"\",1,IF(AND(ISNUMBER($T$57),$T$57>=0,$T$57<=1),$T$57,NA())),NA())))",
+   "after_formula": "=IF(AND($K$57=\"\",$M$57=\"\",$N$57=\"\",$O$57=\"\",$P$57=\"\",$Q$57=\"\",$R$57=\"\"),0,IF(ISNUMBER($P$57),0,IF(ISNUMBER(IF($K$57=\"부지\",$I$3,IF($K$57=\"시설\",$I$4,IF($K$57=\"재배\",$I$5,NA())))),IF($K$57=\"부지\",$I$3,IF($K$57=\"시설\",$I$4,IF($K$57=\"재배\",$I$5,NA()))),NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-1: blank coverage uses full selected area"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -28797,16 +27955,6 @@
   },
   {
    "sheet": "12 .경비계획",
-   "cell": "T57",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.overhead.y4.slot3.coverage_ratio",
-   "map_source": "merged-map",
-   "reason": "선택 면적 중 이 항목에 실제 적용되는 비율 0~1"
-  },
-  {
-   "sheet": "12 .경비계획",
    "cell": "C58",
    "action": "formula",
    "before_state": "formula_normal",
@@ -28865,9 +28013,9 @@
    "cell": "L58",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($K$58=\"\",$M$58=\"\",$N$58=\"\",$O$58=\"\",$P$58=\"\",$Q$58=\"\",$R$58=\"\",$T$58=\"\"),0,IF(ISNUMBER($P$58),0,IF(ISNUMBER(IF($K$58=\"부지\",$I$3,IF($K$58=\"시설\",$I$4,IF($K$58=\"재배\",$I$5,NA())))),IF($K$58=\"부지\",$I$3,IF($K$58=\"시설\",$I$4,IF($K$58=\"재배\",$I$5,NA())))*IF($T$58=\"\",1,IF(AND(ISNUMBER($T$58),$T$58>=0,$T$58<=1),$T$58,NA())),NA())))",
+   "after_formula": "=IF(AND($K$58=\"\",$M$58=\"\",$N$58=\"\",$O$58=\"\",$P$58=\"\",$Q$58=\"\",$R$58=\"\"),0,IF(ISNUMBER($P$58),0,IF(ISNUMBER(IF($K$58=\"부지\",$I$3,IF($K$58=\"시설\",$I$4,IF($K$58=\"재배\",$I$5,NA())))),IF($K$58=\"부지\",$I$3,IF($K$58=\"시설\",$I$4,IF($K$58=\"재배\",$I$5,NA()))),NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-1: blank coverage uses full selected area"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -28928,16 +28076,6 @@
    "param_key": "cost.overhead.y4.slot4.evidence",
    "map_source": "merged-map",
    "reason": "견적/세율/면적/해당 없음의 출처와 기준일"
-  },
-  {
-   "sheet": "12 .경비계획",
-   "cell": "T58",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.overhead.y4.slot4.coverage_ratio",
-   "map_source": "merged-map",
-   "reason": "선택 면적 중 이 항목에 실제 적용되는 비율 0~1"
   },
   {
    "sheet": "12 .경비계획",
@@ -29020,9 +28158,9 @@
    "cell": "C60",
    "action": "formula",
    "before_state": "formula_normal",
-   "after_formula": "=IF(AND($K$42=\"\",$M$42=\"\",$N$42=\"\",$O$42=\"\",$P$42=\"\",$Q$42=\"\",$R$42=\"\",$T$42=\"\"),0,IF(ISNUMBER($P$42),$P$42,IF(AND(ISNUMBER($L$42),ISNUMBER($M$42),ISNUMBER($N$42),ISNUMBER($O$42),$I$2+2>=$N$42),$L$42*$M$42*(1+$O$42)^($I$2+2-$N$42)/1000,NA())))",
+   "after_formula": "=IF(AND($K$42=\"\",$M$42=\"\",$N$42=\"\",$O$42=\"\",$P$42=\"\",$Q$42=\"\",$R$42=\"\"),0,IF(ISNUMBER($P$42),$P$42,IF(AND(ISNUMBER($L$42),ISNUMBER($M$42),ISNUMBER($N$42),ISNUMBER($O$42),$I$2+2>=$N$42),$L$42*$M$42*(1+$O$42)^($I$2+2-$N$42)/1000,NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-3: wholly absent overhead slot yields zero; incomplete active slot holds"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -29075,9 +28213,9 @@
    "cell": "L60",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($K$60=\"\",$M$60=\"\",$N$60=\"\",$O$60=\"\",$P$60=\"\",$Q$60=\"\",$R$60=\"\",$T$60=\"\"),0,IF(ISNUMBER($P$60),0,IF(ISNUMBER(IF($K$60=\"부지\",$I$3,IF($K$60=\"시설\",$I$4,IF($K$60=\"재배\",$I$5,NA())))),IF($K$60=\"부지\",$I$3,IF($K$60=\"시설\",$I$4,IF($K$60=\"재배\",$I$5,NA())))*IF($T$60=\"\",1,IF(AND(ISNUMBER($T$60),$T$60>=0,$T$60<=1),$T$60,NA())),NA())))",
+   "after_formula": "=IF(AND($K$60=\"\",$M$60=\"\",$N$60=\"\",$O$60=\"\",$P$60=\"\",$Q$60=\"\",$R$60=\"\"),0,IF(ISNUMBER($P$60),0,IF(ISNUMBER(IF($K$60=\"부지\",$I$3,IF($K$60=\"시설\",$I$4,IF($K$60=\"재배\",$I$5,NA())))),IF($K$60=\"부지\",$I$3,IF($K$60=\"시설\",$I$4,IF($K$60=\"재배\",$I$5,NA()))),NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-1: blank coverage uses full selected area"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -29141,22 +28279,12 @@
   },
   {
    "sheet": "12 .경비계획",
-   "cell": "T60",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.overhead.y4.slot6.coverage_ratio",
-   "map_source": "merged-map",
-   "reason": "선택 면적 중 이 항목에 실제 적용되는 비율 0~1"
-  },
-  {
-   "sheet": "12 .경비계획",
    "cell": "C61",
    "action": "formula",
    "before_state": "formula_normal",
-   "after_formula": "=IF(AND($K$43=\"\",$M$43=\"\",$N$43=\"\",$O$43=\"\",$P$43=\"\",$Q$43=\"\",$R$43=\"\",$T$43=\"\"),0,IF(ISNUMBER($P$43),$P$43,IF(AND(ISNUMBER($L$43),ISNUMBER($M$43),ISNUMBER($N$43),ISNUMBER($O$43),$I$2+2>=$N$43),$L$43*$M$43*(1+$O$43)^($I$2+2-$N$43)/1000,NA())))",
+   "after_formula": "=IF(AND($K$43=\"\",$M$43=\"\",$N$43=\"\",$O$43=\"\",$P$43=\"\",$Q$43=\"\",$R$43=\"\"),0,IF(ISNUMBER($P$43),$P$43,IF(AND(ISNUMBER($L$43),ISNUMBER($M$43),ISNUMBER($N$43),ISNUMBER($O$43),$I$2+2>=$N$43),$L$43*$M$43*(1+$O$43)^($I$2+2-$N$43)/1000,NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-3: wholly absent overhead slot yields zero; incomplete active slot holds"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -29449,9 +28577,9 @@
    "cell": "L64",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($K$64=\"\",$M$64=\"\",$N$64=\"\",$O$64=\"\",$P$64=\"\",$Q$64=\"\",$R$64=\"\",$T$64=\"\"),0,IF(ISNUMBER($P$64),0,IF(ISNUMBER(IF($K$64=\"부지\",$I$3,IF($K$64=\"시설\",$I$4,IF($K$64=\"재배\",$I$5,NA())))),IF($K$64=\"부지\",$I$3,IF($K$64=\"시설\",$I$4,IF($K$64=\"재배\",$I$5,NA())))*IF($T$64=\"\",1,IF(AND(ISNUMBER($T$64),$T$64>=0,$T$64<=1),$T$64,NA())),NA())))",
+   "after_formula": "=IF(AND($K$64=\"\",$M$64=\"\",$N$64=\"\",$O$64=\"\",$P$64=\"\",$Q$64=\"\",$R$64=\"\"),0,IF(ISNUMBER($P$64),0,IF(ISNUMBER(IF($K$64=\"부지\",$I$3,IF($K$64=\"시설\",$I$4,IF($K$64=\"재배\",$I$5,NA())))),IF($K$64=\"부지\",$I$3,IF($K$64=\"시설\",$I$4,IF($K$64=\"재배\",$I$5,NA()))),NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-1: blank coverage uses full selected area"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -29515,16 +28643,6 @@
   },
   {
    "sheet": "12 .경비계획",
-   "cell": "T64",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.overhead.y4.slot10.coverage_ratio",
-   "map_source": "merged-map",
-   "reason": "선택 면적 중 이 항목에 실제 적용되는 비율 0~1"
-  },
-  {
-   "sheet": "12 .경비계획",
    "cell": "E65",
    "action": "clear",
    "before_state": "shared_string",
@@ -29574,9 +28692,9 @@
    "cell": "L65",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($K$65=\"\",$M$65=\"\",$N$65=\"\",$O$65=\"\",$P$65=\"\",$Q$65=\"\",$R$65=\"\",$T$65=\"\"),0,IF(ISNUMBER($P$65),0,IF(ISNUMBER(IF($K$65=\"부지\",$I$3,IF($K$65=\"시설\",$I$4,IF($K$65=\"재배\",$I$5,NA())))),IF($K$65=\"부지\",$I$3,IF($K$65=\"시설\",$I$4,IF($K$65=\"재배\",$I$5,NA())))*IF($T$65=\"\",1,IF(AND(ISNUMBER($T$65),$T$65>=0,$T$65<=1),$T$65,NA())),NA())))",
+   "after_formula": "=IF(AND($K$65=\"\",$M$65=\"\",$N$65=\"\",$O$65=\"\",$P$65=\"\",$Q$65=\"\",$R$65=\"\"),0,IF(ISNUMBER($P$65),0,IF(ISNUMBER(IF($K$65=\"부지\",$I$3,IF($K$65=\"시설\",$I$4,IF($K$65=\"재배\",$I$5,NA())))),IF($K$65=\"부지\",$I$3,IF($K$65=\"시설\",$I$4,IF($K$65=\"재배\",$I$5,NA()))),NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-1: blank coverage uses full selected area"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -29637,16 +28755,6 @@
    "param_key": "cost.overhead.y4.slot11.evidence",
    "map_source": "merged-map",
    "reason": "견적/세율/면적/해당 없음의 출처와 기준일"
-  },
-  {
-   "sheet": "12 .경비계획",
-   "cell": "T65",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.overhead.y4.slot11.coverage_ratio",
-   "map_source": "merged-map",
-   "reason": "선택 면적 중 이 항목에 실제 적용되는 비율 0~1"
   },
   {
    "sheet": "12 .경비계획",
@@ -29738,9 +28846,9 @@
    "cell": "C67",
    "action": "formula",
    "before_state": "formula_normal",
-   "after_formula": "=IF(AND($K$45=\"\",$M$45=\"\",$N$45=\"\",$O$45=\"\",$P$45=\"\",$Q$45=\"\",$R$45=\"\",$T$45=\"\"),0,IF(ISNUMBER($P$45),$P$45,IF(AND(ISNUMBER($L$45),ISNUMBER($M$45),ISNUMBER($N$45),ISNUMBER($O$45),$I$2+2>=$N$45),$L$45*$M$45*(1+$O$45)^($I$2+2-$N$45)/1000,NA())))",
+   "after_formula": "=IF(AND($K$45=\"\",$M$45=\"\",$N$45=\"\",$O$45=\"\",$P$45=\"\",$Q$45=\"\",$R$45=\"\"),0,IF(ISNUMBER($P$45),$P$45,IF(AND(ISNUMBER($L$45),ISNUMBER($M$45),ISNUMBER($N$45),ISNUMBER($O$45),$I$2+2>=$N$45),$L$45*$M$45*(1+$O$45)^($I$2+2-$N$45)/1000,NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-3: wholly absent overhead slot yields zero; incomplete active slot holds"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -30037,9 +29145,9 @@
    "cell": "L72",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($K$72=\"\",$M$72=\"\",$N$72=\"\",$O$72=\"\",$P$72=\"\",$Q$72=\"\",$R$72=\"\",$T$72=\"\"),0,IF(ISNUMBER($P$72),0,IF(ISNUMBER(IF($K$72=\"부지\",$I$3,IF($K$72=\"시설\",$I$4,IF($K$72=\"재배\",$I$5,NA())))),IF($K$72=\"부지\",$I$3,IF($K$72=\"시설\",$I$4,IF($K$72=\"재배\",$I$5,NA())))*IF($T$72=\"\",1,IF(AND(ISNUMBER($T$72),$T$72>=0,$T$72<=1),$T$72,NA())),NA())))",
+   "after_formula": "=IF(AND($K$72=\"\",$M$72=\"\",$N$72=\"\",$O$72=\"\",$P$72=\"\",$Q$72=\"\",$R$72=\"\"),0,IF(ISNUMBER($P$72),0,IF(ISNUMBER(IF($K$72=\"부지\",$I$3,IF($K$72=\"시설\",$I$4,IF($K$72=\"재배\",$I$5,NA())))),IF($K$72=\"부지\",$I$3,IF($K$72=\"시설\",$I$4,IF($K$72=\"재배\",$I$5,NA()))),NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-1: blank coverage uses full selected area"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -30103,22 +29211,12 @@
   },
   {
    "sheet": "12 .경비계획",
-   "cell": "T72",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.overhead.y5.slot3.coverage_ratio",
-   "map_source": "merged-map",
-   "reason": "선택 면적 중 이 항목에 실제 적용되는 비율 0~1"
-  },
-  {
-   "sheet": "12 .경비계획",
    "cell": "C73",
    "action": "formula",
    "before_state": "formula_normal",
-   "after_formula": "=IF(AND($K$49=\"\",$M$49=\"\",$N$49=\"\",$O$49=\"\",$P$49=\"\",$Q$49=\"\",$R$49=\"\",$T$49=\"\"),0,IF(ISNUMBER($P$49),$P$49,IF(AND(ISNUMBER($L$49),ISNUMBER($M$49),ISNUMBER($N$49),ISNUMBER($O$49),$I$2+2>=$N$49),$L$49*$M$49*(1+$O$49)^($I$2+2-$N$49)/1000,NA())))",
+   "after_formula": "=IF(AND($K$49=\"\",$M$49=\"\",$N$49=\"\",$O$49=\"\",$P$49=\"\",$Q$49=\"\",$R$49=\"\"),0,IF(ISNUMBER($P$49),$P$49,IF(AND(ISNUMBER($L$49),ISNUMBER($M$49),ISNUMBER($N$49),ISNUMBER($O$49),$I$2+2>=$N$49),$L$49*$M$49*(1+$O$49)^($I$2+2-$N$49)/1000,NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-3: wholly absent overhead slot yields zero; incomplete active slot holds"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -30171,9 +29269,9 @@
    "cell": "L73",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($K$73=\"\",$M$73=\"\",$N$73=\"\",$O$73=\"\",$P$73=\"\",$Q$73=\"\",$R$73=\"\",$T$73=\"\"),0,IF(ISNUMBER($P$73),0,IF(ISNUMBER(IF($K$73=\"부지\",$I$3,IF($K$73=\"시설\",$I$4,IF($K$73=\"재배\",$I$5,NA())))),IF($K$73=\"부지\",$I$3,IF($K$73=\"시설\",$I$4,IF($K$73=\"재배\",$I$5,NA())))*IF($T$73=\"\",1,IF(AND(ISNUMBER($T$73),$T$73>=0,$T$73<=1),$T$73,NA())),NA())))",
+   "after_formula": "=IF(AND($K$73=\"\",$M$73=\"\",$N$73=\"\",$O$73=\"\",$P$73=\"\",$Q$73=\"\",$R$73=\"\"),0,IF(ISNUMBER($P$73),0,IF(ISNUMBER(IF($K$73=\"부지\",$I$3,IF($K$73=\"시설\",$I$4,IF($K$73=\"재배\",$I$5,NA())))),IF($K$73=\"부지\",$I$3,IF($K$73=\"시설\",$I$4,IF($K$73=\"재배\",$I$5,NA()))),NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-1: blank coverage uses full selected area"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -30237,22 +29335,12 @@
   },
   {
    "sheet": "12 .경비계획",
-   "cell": "T73",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.overhead.y5.slot4.coverage_ratio",
-   "map_source": "merged-map",
-   "reason": "선택 면적 중 이 항목에 실제 적용되는 비율 0~1"
-  },
-  {
-   "sheet": "12 .경비계획",
    "cell": "C74",
    "action": "formula",
    "before_state": "formula_normal",
-   "after_formula": "=IF(AND($K$50=\"\",$M$50=\"\",$N$50=\"\",$O$50=\"\",$P$50=\"\",$Q$50=\"\",$R$50=\"\",$T$50=\"\"),0,IF(ISNUMBER($P$50),$P$50,IF(AND(ISNUMBER($L$50),ISNUMBER($M$50),ISNUMBER($N$50),ISNUMBER($O$50),$I$2+2>=$N$50),$L$50*$M$50*(1+$O$50)^($I$2+2-$N$50)/1000,NA())))",
+   "after_formula": "=IF(AND($K$50=\"\",$M$50=\"\",$N$50=\"\",$O$50=\"\",$P$50=\"\",$Q$50=\"\",$R$50=\"\"),0,IF(ISNUMBER($P$50),$P$50,IF(AND(ISNUMBER($L$50),ISNUMBER($M$50),ISNUMBER($N$50),ISNUMBER($O$50),$I$2+2>=$N$50),$L$50*$M$50*(1+$O$50)^($I$2+2-$N$50)/1000,NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-3: wholly absent overhead slot yields zero; incomplete active slot holds"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -30390,9 +29478,9 @@
    "cell": "L75",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($K$75=\"\",$M$75=\"\",$N$75=\"\",$O$75=\"\",$P$75=\"\",$Q$75=\"\",$R$75=\"\",$T$75=\"\"),0,IF(ISNUMBER($P$75),0,IF(ISNUMBER(IF($K$75=\"부지\",$I$3,IF($K$75=\"시설\",$I$4,IF($K$75=\"재배\",$I$5,NA())))),IF($K$75=\"부지\",$I$3,IF($K$75=\"시설\",$I$4,IF($K$75=\"재배\",$I$5,NA())))*IF($T$75=\"\",1,IF(AND(ISNUMBER($T$75),$T$75>=0,$T$75<=1),$T$75,NA())),NA())))",
+   "after_formula": "=IF(AND($K$75=\"\",$M$75=\"\",$N$75=\"\",$O$75=\"\",$P$75=\"\",$Q$75=\"\",$R$75=\"\"),0,IF(ISNUMBER($P$75),0,IF(ISNUMBER(IF($K$75=\"부지\",$I$3,IF($K$75=\"시설\",$I$4,IF($K$75=\"재배\",$I$5,NA())))),IF($K$75=\"부지\",$I$3,IF($K$75=\"시설\",$I$4,IF($K$75=\"재배\",$I$5,NA()))),NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-1: blank coverage uses full selected area"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -30453,16 +29541,6 @@
    "param_key": "cost.overhead.y5.slot6.evidence",
    "map_source": "merged-map",
    "reason": "견적/세율/면적/해당 없음의 출처와 기준일"
-  },
-  {
-   "sheet": "12 .경비계획",
-   "cell": "T75",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.overhead.y5.slot6.coverage_ratio",
-   "map_source": "merged-map",
-   "reason": "선택 면적 중 이 항목에 실제 적용되는 비율 0~1"
   },
   {
    "sheet": "12 .경비계획",
@@ -30766,9 +29844,9 @@
    "cell": "L79",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($K$79=\"\",$M$79=\"\",$N$79=\"\",$O$79=\"\",$P$79=\"\",$Q$79=\"\",$R$79=\"\",$T$79=\"\"),0,IF(ISNUMBER($P$79),0,IF(ISNUMBER(IF($K$79=\"부지\",$I$3,IF($K$79=\"시설\",$I$4,IF($K$79=\"재배\",$I$5,NA())))),IF($K$79=\"부지\",$I$3,IF($K$79=\"시설\",$I$4,IF($K$79=\"재배\",$I$5,NA())))*IF($T$79=\"\",1,IF(AND(ISNUMBER($T$79),$T$79>=0,$T$79<=1),$T$79,NA())),NA())))",
+   "after_formula": "=IF(AND($K$79=\"\",$M$79=\"\",$N$79=\"\",$O$79=\"\",$P$79=\"\",$Q$79=\"\",$R$79=\"\"),0,IF(ISNUMBER($P$79),0,IF(ISNUMBER(IF($K$79=\"부지\",$I$3,IF($K$79=\"시설\",$I$4,IF($K$79=\"재배\",$I$5,NA())))),IF($K$79=\"부지\",$I$3,IF($K$79=\"시설\",$I$4,IF($K$79=\"재배\",$I$5,NA()))),NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-1: blank coverage uses full selected area"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -30832,16 +29910,6 @@
   },
   {
    "sheet": "12 .경비계획",
-   "cell": "T79",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.overhead.y5.slot10.coverage_ratio",
-   "map_source": "merged-map",
-   "reason": "선택 면적 중 이 항목에 실제 적용되는 비율 0~1"
-  },
-  {
-   "sheet": "12 .경비계획",
    "cell": "H80",
    "action": "label_template",
    "before_state": "absent",
@@ -30882,9 +29950,9 @@
    "cell": "L80",
    "action": "formula",
    "before_state": "absent",
-   "after_formula": "=IF(AND($K$80=\"\",$M$80=\"\",$N$80=\"\",$O$80=\"\",$P$80=\"\",$Q$80=\"\",$R$80=\"\",$T$80=\"\"),0,IF(ISNUMBER($P$80),0,IF(ISNUMBER(IF($K$80=\"부지\",$I$3,IF($K$80=\"시설\",$I$4,IF($K$80=\"재배\",$I$5,NA())))),IF($K$80=\"부지\",$I$3,IF($K$80=\"시설\",$I$4,IF($K$80=\"재배\",$I$5,NA())))*IF($T$80=\"\",1,IF(AND(ISNUMBER($T$80),$T$80>=0,$T$80<=1),$T$80,NA())),NA())))",
+   "after_formula": "=IF(AND($K$80=\"\",$M$80=\"\",$N$80=\"\",$O$80=\"\",$P$80=\"\",$Q$80=\"\",$R$80=\"\"),0,IF(ISNUMBER($P$80),0,IF(ISNUMBER(IF($K$80=\"부지\",$I$3,IF($K$80=\"시설\",$I$4,IF($K$80=\"재배\",$I$5,NA())))),IF($K$80=\"부지\",$I$3,IF($K$80=\"시설\",$I$4,IF($K$80=\"재배\",$I$5,NA()))),NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-1: blank coverage uses full selected area"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -30945,16 +30013,6 @@
    "param_key": "cost.overhead.y5.slot11.evidence",
    "map_source": "merged-map",
    "reason": "견적/세율/면적/해당 없음의 출처와 기준일"
-  },
-  {
-   "sheet": "12 .경비계획",
-   "cell": "T80",
-   "action": "input_param",
-   "before_state": "absent",
-   "after_formula": null,
-   "param_key": "cost.overhead.y5.slot11.coverage_ratio",
-   "map_source": "merged-map",
-   "reason": "선택 면적 중 이 항목에 실제 적용되는 비율 0~1"
   },
   {
    "sheet": "12 .경비계획",
@@ -31100,9 +30158,9 @@
    "cell": "C85",
    "action": "formula",
    "before_state": "formula_normal",
-   "after_formula": "=IF(AND($K$57=\"\",$M$57=\"\",$N$57=\"\",$O$57=\"\",$P$57=\"\",$Q$57=\"\",$R$57=\"\",$T$57=\"\"),0,IF(ISNUMBER($P$57),$P$57,IF(AND(ISNUMBER($L$57),ISNUMBER($M$57),ISNUMBER($N$57),ISNUMBER($O$57),$I$2+3>=$N$57),$L$57*$M$57*(1+$O$57)^($I$2+3-$N$57)/1000,NA())))",
+   "after_formula": "=IF(AND($K$57=\"\",$M$57=\"\",$N$57=\"\",$O$57=\"\",$P$57=\"\",$Q$57=\"\",$R$57=\"\"),0,IF(ISNUMBER($P$57),$P$57,IF(AND(ISNUMBER($L$57),ISNUMBER($M$57),ISNUMBER($N$57),ISNUMBER($O$57),$I$2+3>=$N$57),$L$57*$M$57*(1+$O$57)^($I$2+3-$N$57)/1000,NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-3: wholly absent overhead slot yields zero; incomplete active slot holds"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -31118,9 +30176,9 @@
    "cell": "C86",
    "action": "formula",
    "before_state": "formula_normal",
-   "after_formula": "=IF(AND($K$58=\"\",$M$58=\"\",$N$58=\"\",$O$58=\"\",$P$58=\"\",$Q$58=\"\",$R$58=\"\",$T$58=\"\"),0,IF(ISNUMBER($P$58),$P$58,IF(AND(ISNUMBER($L$58),ISNUMBER($M$58),ISNUMBER($N$58),ISNUMBER($O$58),$I$2+3>=$N$58),$L$58*$M$58*(1+$O$58)^($I$2+3-$N$58)/1000,NA())))",
+   "after_formula": "=IF(AND($K$58=\"\",$M$58=\"\",$N$58=\"\",$O$58=\"\",$P$58=\"\",$Q$58=\"\",$R$58=\"\"),0,IF(ISNUMBER($P$58),$P$58,IF(AND(ISNUMBER($L$58),ISNUMBER($M$58),ISNUMBER($N$58),ISNUMBER($O$58),$I$2+3>=$N$58),$L$58*$M$58*(1+$O$58)^($I$2+3-$N$58)/1000,NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-3: wholly absent overhead slot yields zero; incomplete active slot holds"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -31172,9 +30230,9 @@
    "cell": "C92",
    "action": "formula",
    "before_state": "formula_normal",
-   "after_formula": "=IF(AND($K$60=\"\",$M$60=\"\",$N$60=\"\",$O$60=\"\",$P$60=\"\",$Q$60=\"\",$R$60=\"\",$T$60=\"\"),0,IF(ISNUMBER($P$60),$P$60,IF(AND(ISNUMBER($L$60),ISNUMBER($M$60),ISNUMBER($N$60),ISNUMBER($O$60),$I$2+3>=$N$60),$L$60*$M$60*(1+$O$60)^($I$2+3-$N$60)/1000,NA())))",
+   "after_formula": "=IF(AND($K$60=\"\",$M$60=\"\",$N$60=\"\",$O$60=\"\",$P$60=\"\",$Q$60=\"\",$R$60=\"\"),0,IF(ISNUMBER($P$60),$P$60,IF(AND(ISNUMBER($L$60),ISNUMBER($M$60),ISNUMBER($N$60),ISNUMBER($O$60),$I$2+3>=$N$60),$L$60*$M$60*(1+$O$60)^($I$2+3-$N$60)/1000,NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-3: wholly absent overhead slot yields zero; incomplete active slot holds"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -31262,9 +30320,9 @@
    "cell": "C98",
    "action": "formula",
    "before_state": "formula_normal",
-   "after_formula": "=IF(AND($K$64=\"\",$M$64=\"\",$N$64=\"\",$O$64=\"\",$P$64=\"\",$Q$64=\"\",$R$64=\"\",$T$64=\"\"),0,IF(ISNUMBER($P$64),$P$64,IF(AND(ISNUMBER($L$64),ISNUMBER($M$64),ISNUMBER($N$64),ISNUMBER($O$64),$I$2+3>=$N$64),$L$64*$M$64*(1+$O$64)^($I$2+3-$N$64)/1000,NA())))",
+   "after_formula": "=IF(AND($K$64=\"\",$M$64=\"\",$N$64=\"\",$O$64=\"\",$P$64=\"\",$Q$64=\"\",$R$64=\"\"),0,IF(ISNUMBER($P$64),$P$64,IF(AND(ISNUMBER($L$64),ISNUMBER($M$64),ISNUMBER($N$64),ISNUMBER($O$64),$I$2+3>=$N$64),$L$64*$M$64*(1+$O$64)^($I$2+3-$N$64)/1000,NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-3: wholly absent overhead slot yields zero; incomplete active slot holds"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -31280,9 +30338,9 @@
    "cell": "C99",
    "action": "formula",
    "before_state": "formula_normal",
-   "after_formula": "=IF(AND($K$65=\"\",$M$65=\"\",$N$65=\"\",$O$65=\"\",$P$65=\"\",$Q$65=\"\",$R$65=\"\",$T$65=\"\"),0,IF(ISNUMBER($P$65),$P$65,IF(AND(ISNUMBER($L$65),ISNUMBER($M$65),ISNUMBER($N$65),ISNUMBER($O$65),$I$2+3>=$N$65),$L$65*$M$65*(1+$O$65)^($I$2+3-$N$65)/1000,NA())))",
+   "after_formula": "=IF(AND($K$65=\"\",$M$65=\"\",$N$65=\"\",$O$65=\"\",$P$65=\"\",$Q$65=\"\",$R$65=\"\"),0,IF(ISNUMBER($P$65),$P$65,IF(AND(ISNUMBER($L$65),ISNUMBER($M$65),ISNUMBER($N$65),ISNUMBER($O$65),$I$2+3>=$N$65),$L$65*$M$65*(1+$O$65)^($I$2+3-$N$65)/1000,NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-3: wholly absent overhead slot yields zero; incomplete active slot holds"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -31417,9 +30475,9 @@
    "cell": "C111",
    "action": "formula",
    "before_state": "formula_normal",
-   "after_formula": "=IF(AND($K$72=\"\",$M$72=\"\",$N$72=\"\",$O$72=\"\",$P$72=\"\",$Q$72=\"\",$R$72=\"\",$T$72=\"\"),0,IF(ISNUMBER($P$72),$P$72,IF(AND(ISNUMBER($L$72),ISNUMBER($M$72),ISNUMBER($N$72),ISNUMBER($O$72),$I$2+4>=$N$72),$L$72*$M$72*(1+$O$72)^($I$2+4-$N$72)/1000,NA())))",
+   "after_formula": "=IF(AND($K$72=\"\",$M$72=\"\",$N$72=\"\",$O$72=\"\",$P$72=\"\",$Q$72=\"\",$R$72=\"\"),0,IF(ISNUMBER($P$72),$P$72,IF(AND(ISNUMBER($L$72),ISNUMBER($M$72),ISNUMBER($N$72),ISNUMBER($O$72),$I$2+4>=$N$72),$L$72*$M$72*(1+$O$72)^($I$2+4-$N$72)/1000,NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-3: wholly absent overhead slot yields zero; incomplete active slot holds"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -31435,9 +30493,9 @@
    "cell": "C112",
    "action": "formula",
    "before_state": "formula_normal",
-   "after_formula": "=IF(AND($K$73=\"\",$M$73=\"\",$N$73=\"\",$O$73=\"\",$P$73=\"\",$Q$73=\"\",$R$73=\"\",$T$73=\"\"),0,IF(ISNUMBER($P$73),$P$73,IF(AND(ISNUMBER($L$73),ISNUMBER($M$73),ISNUMBER($N$73),ISNUMBER($O$73),$I$2+4>=$N$73),$L$73*$M$73*(1+$O$73)^($I$2+4-$N$73)/1000,NA())))",
+   "after_formula": "=IF(AND($K$73=\"\",$M$73=\"\",$N$73=\"\",$O$73=\"\",$P$73=\"\",$Q$73=\"\",$R$73=\"\"),0,IF(ISNUMBER($P$73),$P$73,IF(AND(ISNUMBER($L$73),ISNUMBER($M$73),ISNUMBER($N$73),ISNUMBER($O$73),$I$2+4>=$N$73),$L$73*$M$73*(1+$O$73)^($I$2+4-$N$73)/1000,NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-3: wholly absent overhead slot yields zero; incomplete active slot holds"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -31489,9 +30547,9 @@
    "cell": "C118",
    "action": "formula",
    "before_state": "formula_normal",
-   "after_formula": "=IF(AND($K$75=\"\",$M$75=\"\",$N$75=\"\",$O$75=\"\",$P$75=\"\",$Q$75=\"\",$R$75=\"\",$T$75=\"\"),0,IF(ISNUMBER($P$75),$P$75,IF(AND(ISNUMBER($L$75),ISNUMBER($M$75),ISNUMBER($N$75),ISNUMBER($O$75),$I$2+4>=$N$75),$L$75*$M$75*(1+$O$75)^($I$2+4-$N$75)/1000,NA())))",
+   "after_formula": "=IF(AND($K$75=\"\",$M$75=\"\",$N$75=\"\",$O$75=\"\",$P$75=\"\",$Q$75=\"\",$R$75=\"\"),0,IF(ISNUMBER($P$75),$P$75,IF(AND(ISNUMBER($L$75),ISNUMBER($M$75),ISNUMBER($N$75),ISNUMBER($O$75),$I$2+4>=$N$75),$L$75*$M$75*(1+$O$75)^($I$2+4-$N$75)/1000,NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-3: wholly absent overhead slot yields zero; incomplete active slot holds"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -31579,9 +30637,9 @@
    "cell": "C124",
    "action": "formula",
    "before_state": "formula_normal",
-   "after_formula": "=IF(AND($K$79=\"\",$M$79=\"\",$N$79=\"\",$O$79=\"\",$P$79=\"\",$Q$79=\"\",$R$79=\"\",$T$79=\"\"),0,IF(ISNUMBER($P$79),$P$79,IF(AND(ISNUMBER($L$79),ISNUMBER($M$79),ISNUMBER($N$79),ISNUMBER($O$79),$I$2+4>=$N$79),$L$79*$M$79*(1+$O$79)^($I$2+4-$N$79)/1000,NA())))",
+   "after_formula": "=IF(AND($K$79=\"\",$M$79=\"\",$N$79=\"\",$O$79=\"\",$P$79=\"\",$Q$79=\"\",$R$79=\"\"),0,IF(ISNUMBER($P$79),$P$79,IF(AND(ISNUMBER($L$79),ISNUMBER($M$79),ISNUMBER($N$79),ISNUMBER($O$79),$I$2+4>=$N$79),$L$79*$M$79*(1+$O$79)^($I$2+4-$N$79)/1000,NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-3: wholly absent overhead slot yields zero; incomplete active slot holds"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -31597,9 +30655,9 @@
    "cell": "C125",
    "action": "formula",
    "before_state": "formula_normal",
-   "after_formula": "=IF(AND($K$80=\"\",$M$80=\"\",$N$80=\"\",$O$80=\"\",$P$80=\"\",$Q$80=\"\",$R$80=\"\",$T$80=\"\"),0,IF(ISNUMBER($P$80),$P$80,IF(AND(ISNUMBER($L$80),ISNUMBER($M$80),ISNUMBER($N$80),ISNUMBER($O$80),$I$2+4>=$N$80),$L$80*$M$80*(1+$O$80)^($I$2+4-$N$80)/1000,NA())))",
+   "after_formula": "=IF(AND($K$80=\"\",$M$80=\"\",$N$80=\"\",$O$80=\"\",$P$80=\"\",$Q$80=\"\",$R$80=\"\"),0,IF(ISNUMBER($P$80),$P$80,IF(AND(ISNUMBER($L$80),ISNUMBER($M$80),ISNUMBER($N$80),ISNUMBER($O$80),$I$2+4>=$N$80),$L$80*$M$80*(1+$O$80)^($I$2+4-$N$80)/1000,NA())))",
    "map_source": "params-v3.2",
-   "reason": "T-REQ-3: wholly absent overhead slot yields zero; incomplete active slot holds"
+   "reason": "BC v2: 선배 표의 전체 면적 및 plan 게이트에 따른 계산."
   },
   {
    "sheet": "12 .경비계획",
@@ -38120,26 +37178,6 @@
    "after_formula": "=C44",
    "map_source": "params-v3.2",
    "reason": "V4-FIX: 운반 단위 계약 통합 - C열 출하량은 판매량(판매단위)이고 건수 환산은 E열 금액식에서만 수행. 원본 /10 이중 환산 제거"
-  },
-  {
-   "sheet": "1. 자산조사",
-   "cell": "B2",
-   "action": "label_template",
-   "before_state": "blank_node",
-   "after_formula": null,
-   "after_value": "교수 확인 전 초안",
-   "map_source": "params-v3.2",
-   "reason": "설계 §5.6: T1~T4 교수 확인 전 출력에 초안 문구 표시. 인쇄영역 안 비병합 공란."
-  },
-  {
-   "sheet": "18. 현금흐름계획",
-   "cell": "B2",
-   "action": "label_template",
-   "before_state": "blank_node",
-   "after_formula": null,
-   "after_value": "교수 확인 전 초안",
-   "map_source": "params-v3.2",
-   "reason": "설계 §5.6: T1~T4 교수 확인 전 출력에 초안 문구 표시. 인쇄영역 안 비병합 공란."
   },
   {
    "sheet": "1. 자산조사",
