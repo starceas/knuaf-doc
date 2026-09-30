@@ -407,4 +407,6 @@ def cli(argv: list[str]) -> int:
 
 
 if __name__ == "__main__":
+    for _stream in (sys.stdout, sys.stderr):
+        getattr(_stream, "reconfigure", lambda **_: None)(encoding="utf-8")
     raise SystemExit(cli(sys.argv[1:]))

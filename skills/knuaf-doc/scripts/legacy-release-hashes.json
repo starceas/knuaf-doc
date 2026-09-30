@@ -1,0 +1,580 @@
+{
+ "commits": 23,
+ "files": {
+  "SKILL.md": [
+   "0159ecd2f7d5341d668261e5ba824a06e0d2b2639d02fcf7b3c5f039cdc2d18d",
+   "0976c31de578bb621de8121f41220cf367e304f2f70f30e36eea05f78adf28a1",
+   "0d48bce40d898433038c931df1a20ab647bbcd7e744f064cd767cba204d39e50",
+   "11b058675f98ca83c2edf882bb27b3d5d0ea8a7bd6d8f1bafae8d689a41e233a",
+   "2322567044a7814845bec04102ac913b1b1f26ddc138fcc3fd9590e83aa2e5f6",
+   "35bbba5b70f68be14f24713bc2a0ea377bf0fba23f3dd4580fead90fbcb800fa",
+   "4421d21e8c252d132e3a94261de1b766fda8c77e30d957c7ab70f7083d20b59b",
+   "4cafa13eeec59d88edec43b028c9c2506aafadfb4c4780846e3edefa55641af3",
+   "4e7f8e3e4bbbc69f7a5717cabd4bec230058153bedcae83cd88919954c631f93",
+   "6a51d000542e04c6799525a6a6c2303adac09a4f7621fe4d821eac22f8a3243d",
+   "98610380228b032a1c62903028f3d4a1fc4f2ab023613e0e5cd5685713ad9e4a",
+   "a1b3e387895b0d2fbbe53a9c8062034f847e706c71c37cd6da19fc1e52fde314",
+   "af8171d4da6c3be0add2a15bedb88f912aa190f0610f7676e8b3e1b3f96bb134",
+   "bd59f6049853ee8b811e20616223f19755faff2851063f8a1fd71bbcf8e996b8",
+   "c0008fa5239cc16411fd4ef24b5bf901c7a8b9b50c6b621e2bdee3acf734ddc0",
+   "dc0265afc5ea001fce1dbf1484bfaf99e9b7aedc0f5e840c96fa708da2868944",
+   "eef96972ee2080249d711104865ebc584fdb8a19c4629f649fd72c099437a90c",
+   "f185f2dc38646dc6fb8b5e4f05e61c8294ea46ba178a99964b45a0176b99328f"
+  ],
+  "references/benchmark-packs/aliases/crop-aliases.specialty_crops.json": [
+   "8e7abffc7b4244727b4732f558b722934dd8ea229c0057312d1ee7ea92c2df22"
+  ],
+  "references/benchmark-packs/aliases/major-aliases.json": [
+   "ad1e1e6c2296f93ef27beab8494e840b1578e0d61c6c9bd8e238c640e653c81b"
+  ],
+  "references/benchmark-packs/catalog.json": [
+   "8dcad598073ce3efcce6698dafd2fa81bd24453deeb90216648ff68d1e8f8e68"
+  ],
+  "references/benchmark-packs/common/rda-econ-2025/corrections/pp133-135-cells.json": [
+   "552d821f3b0ed970c4d38ac134828f31ca72556088bf0f21e778d1b61e305d0b"
+  ],
+  "references/benchmark-packs/common/rda-econ-2025/manifest.json": [
+   "0e3615a59388d092539ad3ca8d4ccfcf9b50271e2f5f54d3af5faed065c669c4",
+   "f670ed39d8477f1fe09c42cf2b3d1b0fa724f0d99d9ac5475e7a212c65772a3a"
+  ],
+  "references/benchmark-packs/common/rda-econ-2025/records.jsonl": [
+   "a1cbfb2fa1825f2f0b7594cebe915b26f81cf1c48aee3cafae6c18ceb9267d54",
+   "a5dbf6db2aed41254d2a05460d1950a3cdc2a8db51c0d54e82d035d91bd2253a"
+  ],
+  "references/benchmark-packs/common/rda-income-national-2024/manifest.json": [
+   "b1ec5b7d59b8813175d2ccbb75272fb3a23062774379708921d16bdd75fe380b"
+  ],
+  "references/benchmark-packs/common/rda-income-national-2024/records.jsonl": [
+   "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0"
+  ],
+  "references/benchmark-packs/common/rda-income-regional-2024/manifest.json": [
+   "3ff92cc170b80a80e4f2f3d4f4076a02b95cbdd2d992f06a7b81dcee27e80267"
+  ],
+  "references/benchmark-packs/common/rda-income-regional-2024/records.jsonl": [
+   "c7e38281ccfaaaf40c63ab0880ca5f3ddb1ae18aaa89438ffb7f6da43c87c6df"
+  ],
+  "references/benchmark-packs/majors/food_crops/manifest.json": [
+   "f32813aae8bc6b262af5fd83eead9ff8b736fdff88824e9fa6d8d004bb6983cb"
+  ],
+  "references/benchmark-packs/majors/forestry/manifest.json": [
+   "caba994b7de4e537c037b4681cb4885e1b6f10a6c585c0815bb920102713549b"
+  ],
+  "references/benchmark-packs/majors/fruit_trees/manifest.json": [
+   "90c73236df5c0c403d3684fe7342b692d4504ecd57ccdd114889c427d8e5a12d"
+  ],
+  "references/benchmark-packs/majors/hort_env_systems/manifest.json": [
+   "1a669ee8565ef2cf06cd7de70695ec16324f012cdd221082041f3736ed225793"
+  ],
+  "references/benchmark-packs/majors/industrial_insects/manifest.json": [
+   "8b9e0c38bac6b14a221fae5633099edcc80fcc94f4abcfe4ccd12ff5320333f6",
+   "fd09a661403bdbda3a3967d89f98546ff29ff50176d2ab8cdfa90e51f87ee5b1"
+  ],
+  "references/benchmark-packs/majors/landscape/manifest.json": [
+   "281538d6cef1e1eb8c9788328a86188ccf171b10d6cf58fbeec36ef37cd3e998"
+  ],
+  "references/benchmark-packs/majors/specialty_crops/mafra-specialty-production-2024/manifest.json": [
+   "21149f0790dd9381b07f5941ebd82e0db27ff48645e1d18d97f81577625f95cf"
+  ],
+  "references/benchmark-packs/majors/specialty_crops/mafra-specialty-production-2024/records.jsonl": [
+   "fc1c0b35d63a67dc5a794128f873272d72f0850e6d6470e7d9501270eafdd4be"
+  ],
+  "references/benchmark-packs/majors/vegetables/manifest.json": [
+   "fb6524e808afd88c6e669dfae7c0942ade97e98513c556cff51aa6ab78de36ae"
+  ],
+  "references/benchmark-packs/schema/pack.schema.json": [
+   "c9c375f7fa91e6d266c639dfc2843aa9979178693dcef796aa3294d9ab27ec77"
+  ],
+  "references/benchmark-packs/schema/record.schema.json": [
+   "07b00c66649ef14c67ca8f308fc1680b49f3cd17a447067754a25f68e8b874a6"
+  ],
+  "references/builtin-sources.json": [
+   "6d93db3488d577d3f4c63787766bb4c118c702b67867ab42029f0c5e72904609",
+   "a865dbb740572090db0dd23d9a1e69a98d466d749db4b77d914b65151c9e861c",
+   "cef1717548bb990d0f806e6a95f97077c1d942a3c56969244e8f614c56a32638",
+   "da1d764c893ff6480c44123022073638a50f5e7a3ccc0aaf975de1b2023aabb6",
+   "da44459b5eb14a7702017d8fd9a9c31d9676246cc7f5853ff8a86474bc9bd29d",
+   "f804099414ea589a821283c118abc14ae6fb1818ca08abcf60123a2c76d52688"
+  ],
+  "references/common-workbooks/corrections/C1.md": [
+   "2ff2d08efcb95e22329a81f1761fa472e6699cafe270bdc75dd29c66e24dea4e",
+   "48e0540eb630af816b248aea61dca3813efd3bda2b9cff5b29c1d3dd795a4c0c",
+   "8c01d0040eed16187d9f30bf0817a98e49a663e996295d159eac7ef95655ff89"
+  ],
+  "references/common-workbooks/corrections/c1-dispositions.json": [
+   "14a59a53f5781e60e3d3ed2d45a46e3114eaa5f5f69bed31f8cb8e62ded1951f",
+   "7fc0d5479a8807ad4f5174f762009b007643cd11feb4d7615663a736ae7109d2"
+  ],
+  "references/common-workbooks/corrections/c1-spec.json": [
+   "7c17d2042b94436c967170c6fdaa46d369ecc736cd71d6743e80dc40b4b59879",
+   "96280298b5810224ac963b410fa7ac4675388d09abb802896886d0f0e54aefcd"
+  ],
+  "references/common-workbooks/formula-audit/AUDIT.md": [
+   "4edd03e636d9e30cd7cee9f4de502389c96610fc396ceb216bec352d5168c61a"
+  ],
+  "references/common-workbooks/formula-audit/blocks.json": [
+   "66414fe44ac2563ed2fbe6a5bcd1ef832caa7e8a0ae6c9942528500b3e21003c"
+  ],
+  "references/common-workbooks/formula-audit/x01.json": [
+   "785c2a157b8a774421624aa49d86f347ffc4c533051959cc822746bc6ebaecf5"
+  ],
+  "references/common-workbooks/formula-audit/x02.json": [
+   "3594ce66eabb8ec746af3e945a42409f3ad800af37c04832cf322de1780b713d"
+  ],
+  "references/common-workbooks/kang-finance-workbook.json": [
+   "750dbe4c7b0361811ed8291fde275ed3ae088eaaa82511eff1c5fbda25ebcece"
+  ],
+  "references/cross-review.md": [
+   "ae44cca7ae5f9243d0f9c404b5505af05a50944a8a365ddf7f35bebc5882bf81"
+  ],
+  "references/excel-template.md": [
+   "4513094e1754191edd810947789f2228fb3b15bfbe1a2531e1b18f6b144739e8"
+  ],
+  "references/exemplar-quality.md": [
+   "3d1dbb9d2c605d651f09c6e1656de2d73bcd4ce3b1056b5e593292d05ed4dab0"
+  ],
+  "references/fact-semantics.json": [
+   "84034b46107a29c75bd630ab1f8afce88f2e6aa2a0fad4cfd5d7056b66af5569"
+  ],
+  "references/finance-semantics.md": [
+   "76cf4468e61c0c193e7e72b3d9b5b40f212880db6b0b23985d533ba80d8622f1"
+  ],
+  "references/fruit-trees/README.md": [
+   "1575fca025b95a86fa51b205c53bbbe078f66caf3310672021206b59f14741e6",
+   "289ee1164dc286478c5abd272ee5605c001d87fba598fa338e9c6c3207ed03ff",
+   "4053d3de5cb3e1a13b64ce9839b2ee7ea7869b6bbc1d3e86c95af2fcac58c31c",
+   "c77d7479b583508a3bb96ed7260cf8308c38843bed4f98d7a5b23912949e98e5"
+  ],
+  "references/fruit-trees/premise-probes.md": [
+   "442950d11c3ceaf96059c488e89f5fa6da3e9d2bb380b53182f0ef3d2e1e5068"
+  ],
+  "references/guideline-tracking.md": [
+   "f40585f5ad88cd1c6d7ad267ec7b5e7bd9815ce21f91a19ca3fb31c848a56e4b"
+  ],
+  "references/hort-env-systems/README.md": [
+   "2c52cd8600c6de0eb0b8abd8e36907690fc4e5f406882568b6d6a1c6d21cca10",
+   "6838e398c7245e8f8867b827beb238cfef283192e835e5a573ab329d74a4c6b8",
+   "bb600465bbe59940b67b110f803eb63faeb69e12f10db4d78c63495c54b65cb2"
+  ],
+  "references/hort-env-systems/finance-params.json": [
+   "1dc0d077e1d949eceefc8ee2fc62c4155db7ac6a3f94d4ffb6aac74dcb5220e2",
+   "69ef129cdc31728552c45531b406342dad967963be6b2ce2450d359ccb1b7167"
+  ],
+  "references/hort-env-systems/finance-transform.json": [
+   "1fc0a7a213d496eb5a5539682f686f538987262f7912157f35ae27a2b2b82dc8",
+   "4cb04897389736128e569c5e7b2b517b3566b09c953c13ceb905666ed5e5777a"
+  ],
+  "references/hort-env-systems/finance-verify-classes.json": [
+   "05f84a8ff213003f55e182495c8ba262a0801d8512f0944aef8d80179e41ce33",
+   "7534e107d9d34b3a2b3d95c68767a2779fbdb32c09882b13f576a80d4d7ab8c2"
+  ],
+  "references/hort-env-systems/premise-probes.md": [
+   "84e053fb3d9285cfb0d5af83a22234a27d88d4b47b6c7b982f1624d1cdd20e24",
+   "98305e7c072e9cacb05e7a101f689d9bc005ba19962904b49840ece813ede459",
+   "ff8c2d2051202350f54013115bd5b55c621d44b0e83161e3f3274c525d83753b"
+  ],
+  "references/hort-env-systems/profile.json": [
+   "1b8a731eed64cc9e2062fedcb96434bddc4f6110525f1799c4d09293e1877ef4",
+   "a4cc6051497a39b773313676b4ea3f743fa492a26be6728876ad05ff0e14af01"
+  ],
+  "references/industrial-insects/README.md": [
+   "065294fbbf0dded1b7b3b4e07c09ed6fca79e80a62be049f7f3b6349cc9e853f",
+   "60fdc934f9eb4381b1e163d21559c0ad66687aadd83886bc41c5ec35a67c1ee6"
+  ],
+  "references/industrial-insects/precedents.json": [
+   "8663b186ee13cd92489de2c7a82149e7ac70b24f1b5a051df35559baa630e544"
+  ],
+  "references/industrial-insects/premise-probes.md": [
+   "352e66a34f25812920b67af85d1470527ee5f4e1c9d57aaaebedcb746bf32d81",
+   "7c4222249c8ea5243c068e443276f0e8f3e0b42cf1adec256a2f442bf9c11f4b"
+  ],
+  "references/intake-selection.md": [
+   "41fb622861d1dec95aaee03c6b916bd17a75ad9b9e916d0c7f3f4be87b7efb23"
+  ],
+  "references/interview-guide.md": [
+   "347800db616800494fb3b6c16cab87bba6e687da9c3e82ee513c22d2524a41d3",
+   "8f00e8a2d4c5f530eb7aad4a82e2e1957547e14b54941c8f49bb338035b63f87",
+   "ef077a18154ae03ed1e3daafa3e1a090cae68d8fccd1c79a5d649ea00e3c723c"
+  ],
+  "references/interview-ui.md": [
+   "0f84499b8648635b129b92687a31cc273aade9102d185b1c6a660a64f1dd5f7e"
+  ],
+  "references/korean-polishing.md": [
+   "ede62c0b331e44dbc6f93e2c74e2f2d89b7d6098391c5630d22683b2cb1d3d35"
+  ],
+  "references/locking.md": [
+   "2cc59a7404f9a3f7d58fcacf5fa62e0f41d08e14a0fea43aa31cb3916257728a"
+  ],
+  "references/mid-work-questions.md": [
+   "1797a4f4dd6f9788e0e50606ccd6c3a9ba17687dee7ba4eb7e4e4e1148d70477",
+   "bfe7d61143b9fdfeadf00e84bc2dc3082ac962dabd4ab72d6b6efeba7db21ee8"
+  ],
+  "references/model-routing.md": [
+   "4ca054174f1cdc4397f7dec40ff0e25fed21149e450a124fd69311c06bc47f86",
+   "bda89a6d4cc6886fbf5feec441cfb0f10968e6ea90c1eb018a9205041d0a786b"
+  ],
+  "references/narrative-expansion.md": [
+   "e6798527cfcc2620d1acb999b0649a102b2ef1f35f61e7d442a66dba78fbcd9a"
+  ],
+  "references/package-install.md": [
+   "095e2c115365e1729cc899c6a4766212167ac9d3a44bb2c885f91f8ebacb29e8",
+   "f9fbb26948eb2486248b9b72749530e0977ca2b5bb91ab4c19b0c028e9facab4"
+  ],
+  "references/parser-setup.md": [
+   "d17c047025b8af0c36d21114a54ff5924d8e2338eb4a794e0461cf9bbb2929a0"
+  ],
+  "references/price-research-routes.md": [
+   "f89f038d5c767fd436a7a2c3b42c85f91d2b6a44186f9178fd6630b1438120f6"
+  ],
+  "references/research-routing.md": [
+   "99e2cabcbf814d8b97302880abd9f2effbe6a49d12ac0c1eb9f19e0ec54c99b1"
+  ],
+  "references/research-sources.md": [
+   "0f127da93011dcc7a9be3c56e4219098781307b66a1f781786301789623e46b2"
+  ],
+  "references/reuse-registry-schema.md": [
+   "5942baa34cd705df43d4fe1325d903cf29021392cd4bfc69bcd7c5b393f010e0"
+  ],
+  "references/section-ledger.md": [
+   "643a01bf79d3198ac95a5d30064fb4c415ae60a182a4fa6d1a54d613dce3442c",
+   "a6dab5f426090069f6b82d7bc716feebfca01d750ba1bee484ff686e54551072"
+  ],
+  "references/source-contract.md": [
+   "569571a45855d1e344555901e433b6b053b9448a459c99839db3c1d7247b0177",
+   "89939aba95bccff793176e43280de578b4fe8fa1adf872dedddfb95ce9b6c20a",
+   "a089fa83d8b56739b4216bb7889eba70e778c10cc833b8f948d481e545b35910"
+  ],
+  "references/source-identities.json": [
+   "00bb47d3ebae970073b700e3a9019154322089bf18fa053b1366856b1a9da943",
+   "5e4612d392eda836806ef701b5f95aafe8ceb09b43266c849a7386d07213635c"
+  ],
+  "references/source-intake.md": [
+   "4944003501ab72ab554e5d68359e26a9c66682ff85a3dfabd698cc87a1bc65d4",
+   "838ea42ca4374521e03e5eb50363bd80ceb38ac50ed086d822a681cb8170106c",
+   "92877ef08fb29ff4eb201a51856e40231f40db5ba3334921d4b71973e23dbeba",
+   "ebfcfe7e23ad5ed3bbc153db239f5f6b5e624d68a8087be255d57909bf18e5c6"
+  ],
+  "references/specialty-crops/premise-probes.md": [
+   "2e720727f4969024527d9be857625f316ad12ad79962087a4cd13af688c92309"
+  ],
+  "references/student-report.md": [
+   "f1d5191b44763b78e75de31c0f6724ccc7b91755b0e8f9605ab6bb5511d9e557"
+  ],
+  "references/update.md": [
+   "4903e2668329a5ce149178083ff37302f9edb882868a22280854ed7f6e8e9cf8"
+  ],
+  "references/workbook-reference-set.json": [
+   "61205cb592b25aeff31c53111477d4cfa0519c53428cd93cf269609934c241ad",
+   "de33d81896651dff4e6cf35330a476cf196998d2fdae28d09cfa8c99cdf775a6"
+  ],
+  "references/workflow-order.md": [
+   "57d3d2943e4880a45ef033c518642d8807a4936d45759c2d38b4ae9ca6e50d66",
+   "8915cb0b75aa5abbf547a49afc08beae5a6e7ff58b7c8aa22f0c07444ad8a511"
+  ],
+  "scripts/build_docx.py": [
+   "1faa6dc634a36b656386239fd37bd43ab2a6fde578c8621db610c273bd0d6ac6",
+   "2a824409e5f1da4c61c986571ba20a9eeceae57c2a896e9ef112e46ea170c65e",
+   "b0ce58afc3f24b792843877bb6dc996d634dc12235bade53c34ecb5cdfad9912"
+  ],
+  "scripts/build_excel_finance_template.py": [
+   "00d43b44952aa78228220cb027d77f63dca534a88f6a06c304c70d7f9fec9416",
+   "01d26b52d877e32211eb870bf562083193c171d0bd26a65e2f9d09431ce9d2b8",
+   "9630799cf6d9472039a71e93389df77e4aa4ebbec6d39e16d950c146494d9fa1",
+   "d7c6c1dbb73b023b9db60aeeefb2bc6665d9388d5015d38e037dd11468a95286"
+  ],
+  "scripts/build_status.py": [
+   "07a150c380d46d24bfcc13f1a6e6493f89eaac56ddd56338e66a62b56bee133c"
+  ],
+  "scripts/gg.py": [
+   "1e200103489c827c0b0ac60a7959045c02ecdae8bd8ae77e9b9a3d255554a0d7",
+   "420fcbcb9e0514b886421fa67936876d90eee609a644d864fc616800aa8b3f98",
+   "8db8c4c797a8c43527f1ec0f96a5b77280a4ce3bc736541bbf040df2732f47ae",
+   "b9be59aadb4b8855a24e796adb3100f6848bb552121a137298881f39181a16ed",
+   "f329dfb1d57f5e334a5348f511967efa862b5851262742bf21a1e0e4d158816e",
+   "f869e1ce125f168dda9fec0eedc169c98e3d750c7a44cf00e024f261225849cc"
+  ],
+  "scripts/gg_commands.py": [
+   "22e5664255aa36de870909e7263a8828ec42d9dcb181f74839d86be29dbb0702",
+   "318e584d4f5175f7532cad3ee88ff047cc84d0197aea7ae6d37ee44b08499c5c",
+   "6d295a14b55a0f7cd403e609144414f426bdeadc8edeb4a814a572f253df920f"
+  ],
+  "scripts/gg_core.py": [
+   "1f27609a2848975e23c6e5fcf2bde63d5e5d6f57c5cd19de60813aca31bfb67b",
+   "aa5fbc22d9969b2ca8159c8fd6324ce1e053f025fdcfbc6e76df719a8f723c8a",
+   "b3491a931add687328bf561e7e7cd2aed3edd7a7fee374a28092e771d9124cc5",
+   "f97dbfb564ab0467432055b403aba4fe446d69993c9fbf4a77667d065650a85b"
+  ],
+  "scripts/gg_deps.py": [
+   "758fab9b7a6a3591808f615a53c5f53b007b8ed149b69c8df47a0942b7bc1a24",
+   "f3a4d3d1c2b45d67366e6f6f41ca64a8a89540f06e438862527e1efb41b9eb4e"
+  ],
+  "scripts/gg_document.py": [
+   "cc066f64210558fbf5eb5d0c2e15f318af94a197e1f02fd75ba3ccdf727ec40e",
+   "e83eee6a94393e407a727979c6e5f6e5545f17ca7291e745c68d66dcb835a8b3"
+  ],
+  "scripts/gg_docx_table_layout.py": [
+   "dce52533be20ea6b46e8e6f41f3083af3e0ab20ca43dcb3b19cebf488f581921"
+  ],
+  "scripts/gg_excel_fill.py": [
+   "19e6a2b23f848789ccbe1a8dc60e428f44ea8dec80a6eac4349051dbfb7d6fde",
+   "8fd2271ecf225e65a93db9a49400d0fc8b74926a213ca728ed9d7132d5ada7b9",
+   "f03698e745cbd51e5918f8f43963e52bbf4fcd61657c0518a20c8da33f57b0b3",
+   "fdc4fe3b1c8df68f15af12ab7fb2cf74f86a1adb488d1fb68abd9b13f8dfa947"
+  ],
+  "scripts/gg_excel_formula_patch.py": [
+   "2d409f86f2d30094e9ddae901d8bfeab8d8e7ec2e2d39da485aa4d9175781c27",
+   "c26b5a1b1ed36298216a00fe77ee7150bab8f5c894875b7d2d9d0d80a7730061",
+   "d1e1e77dccf3cfcc8ddb7d25bab9c8e53dd77850d97ed019d8f33884a46250db"
+  ],
+  "scripts/gg_excel_print.py": [
+   "4332896806b8b4d44e8d76106d41221536edee470f6b56e7ddb88797bc55f2aa",
+   "44937594585589f69e21bc2836de886504e122f401b8e14ccda6d0aaba6de870",
+   "66fd3b0c1a88d52ed631fb25c139899798ac27c0706e1b0f105f704e7a869a32",
+   "c64d89fa3bcc615b6292176fd13711856e8ae3445846114edc5be7d912cfd2f0"
+  ],
+  "scripts/gg_excel_template.py": [
+   "1139ec89d416fdce0cff73e7551337e62ece6c1561bdf6b5c0ba2240bd7c89fa",
+   "69d78c4dbb9b843dfede8f2720ffe629ad6859da7451c624d51c27fe07872945",
+   "70933a7abfc4bb9b86f20b05487c785c2abd77be60426089cb70b40741ca508f",
+   "78e7f6895b68607d2fd4652e7025ac0c58420d1b186d6e9901801213bb8fa0fc",
+   "985841bdd97bc0f362bebd1891aba9543d420984093ddac24a18c4cda9af9907"
+  ],
+  "scripts/gg_fact_semantics.py": [
+   "ba2f2aee005013a9f015e9094e34614ea7854d2bea71a6564cd5249b3ac7fb28"
+  ],
+  "scripts/gg_finance.py": [
+   "22060f2cbc9e9385bd8c3d4424d8c13f2b150ae7635c1adbbebe0356bfcabb4a",
+   "49a3258c8d23151c42245d375a96849dbd0c3f57533186ac5b50e87ef1f35f8b",
+   "a10a1cff6eead40db297e1eb4852b5a1482a02921a795625afa9a24542bf82d8",
+   "feafd81d84b30261ae93bb13fabe6efd25e7a4ba95bca0480bf293e6a8a4db09"
+  ],
+  "scripts/gg_finance_body.py": [
+   "3fdae56b16f362600b03f705b01d79a9ddebb5f7e27260dc4f4b7a16e21eba9a"
+  ],
+  "scripts/gg_frontmatter.py": [
+   "c5186fc23618d90009ff28ba06507296bd7a848ad10589976c723f7cf7ca6d57"
+  ],
+  "scripts/gg_frontmatter_layout.py": [
+   "13484701cfaaff81d1eb348f50586d11c55217acd855cc1364d715e38fe8a8d2"
+  ],
+  "scripts/gg_fruit_plan.py": [
+   "387689a721c1b537f09050298401c9e7401ec9a5d1461a6648ce8c6fcde4e0c1",
+   "52f4ef9bb0ccdab8cd14bc6af4f70f8aaa1ec5bf7115e019ee6ad24458be7372"
+  ],
+  "scripts/gg_fs.py": [
+   "03ceb9014db237dfdf5b727813522a9ba0ac5b3ca48425365a04fe21b176b5a1"
+  ],
+  "scripts/gg_guidelines.py": [
+   "9c41baf67c0a03ccf6d4f5dc4ddd0d7f0914e97d297e642dbd715a47bd888d91",
+   "c761caea755f60c94b2e90f498ac388c1047dd95cc6c51643b68a1a4642a7682"
+  ],
+  "scripts/gg_hort_formula_eval.py": [
+   "6af29f3923eec8dec5ffd0ba7626c85cc240bc694ca4be6085c040e987bd02b4"
+  ],
+  "scripts/gg_hort_plan.py": [
+   "8b24fdfa52d0048560c8358d1fe6853d44e9ee8f6773c54d90eb963c15836ad5",
+   "ea9bc64d78db100569ac5fd1505bd5b30fa30215d31d340717ee7949c252e5a6"
+  ],
+  "scripts/gg_hort_registry.py": [
+   "c2fe2e019c5d229962c1807f46ef5fd96a725697ddfb41991a76c3a3b1c18556"
+  ],
+  "scripts/gg_hort_workbook.py": [
+   "51f9d69dfd0a9b757bd62fff6ce4a4f23e79318cdecde8666aa28aea17a03e5b",
+   "cf643dc397e4d4189a33ad799faedf05113a44971904663349ca4049a2682050"
+  ],
+  "scripts/gg_insect_document.py": [
+   "95a83399544ca689ec11a2e222837e697dbd0e1b7ceca23d81b729fc0351df9e",
+   "f1647c1e0313488d81aafcbc785791785957705cb038559529795b253acf5543"
+  ],
+  "scripts/gg_insect_evidence.py": [
+   "63599a2c44a5e1dad7d720b823713a3f5f73fd5ccbe252706bd40dcca7d7d3f0",
+   "df0133a7c696cf470f39b9279c3361534c98e9caf7a11057f2e67e21c4ff9bdb"
+  ],
+  "scripts/gg_insect_precedent_check.py": [
+   "25febaa1947452516fb5e260be34f95426a33bdc0dc471ff75b1758995f0d049"
+  ],
+  "scripts/gg_insect_source_receipt.py": [
+   "dd7a61930ea410b33bad39a70f6c90130ef19e444ddc0dc0b475aaf8bf210765"
+  ],
+  "scripts/gg_kordoc.py": [
+   "887df34c5a108abf016ae3fe79ace91990cfc572bdf5a748c4a4815506a47ae4",
+   "cf84b12ddc3170beee32bef9f70720a203d2cb8063ca33dda47d6bdf67564db1"
+  ],
+  "scripts/gg_lock.py": [
+   "6efa40eee88ba7d7a30cbba7ef98ab9c8ae787e1af21fdaec20d96532da408a7"
+  ],
+  "scripts/gg_major_contract.py": [
+   "12cb49ae59667df1fe59f1943905e88f56e69802a67394d7d20c61ac538caf53",
+   "2bc43f391269e08385bab319542afa428504969d7cd636945b9d7026d0adcef6",
+   "5bfeaf1ea372756324b4ae89c85972cf7aa3ac52151c41dadbbc3d3191ac0d06",
+   "6bbf598ef4601ad34f6cf3297e2331b1e6ed976e0509759aad497659f1924fbc",
+   "97ade776391d132e944073404746c71c657ecc3c58142066eaab3832b1877314",
+   "debbae4498aafb0252bad60d7f8e340792880f51948e0c644f1e9995b8a918ab",
+   "fd30b465f19f1affe8aeddf870b39bae543e4e8b8dba22c6347849663da058b1"
+  ],
+  "scripts/gg_office.py": [
+   "64b4f8790da95e583cfb06ba4e216999a932e4d570953ad2a681bca19d270a0a",
+   "9427c3aba356532ae991941f311602eac9dd2bf66e53a7f077980f957e448e64",
+   "d3ef5f06bb5724f59a80ea59446c0934ee54737c512661351c021ea67abc2ac6",
+   "fb8b01385bbc603ad1ed47f16d5c09d91ba14428dde13f61820d5e4df6bf9b73"
+  ],
+  "scripts/gg_office_win.py": [
+   "1433829b252248c387777be7150e6586894a795b08ad0e1e563717beca4e4cf4",
+   "2d2b51c580f3f8d425e87f4bf1b0721fdc0fdd7c1efe4b4d90023c0ccabe5348"
+  ],
+  "scripts/gg_orchard_production.py": [
+   "7b8a0cf89ba889a759dd86108dcd924eb0c02af8470b8ea99f788c64427b86f5"
+  ],
+  "scripts/gg_publication.py": [
+   "c18a371e43d416d4ce7d1a7b0e69392e87fad450d2798c5250932edd379b09a3"
+  ],
+  "scripts/gg_rda_candidates.py": [
+   "3657bb30681b954755e3e4bf469afb0b7eede5ed84ed4cabf595e0e9eea4ce59",
+   "daac77e5be5290167a450d04f8b6bcd33132369c9ca55b9a825b4a375b27ba4b"
+  ],
+  "scripts/gg_rda_lookup.py": [
+   "785fb73a9e99eb907ae47c5e5e005c610657fc0b5d01fd5a9477060e2b1b8a84",
+   "9e2a8c178d4526f042f879473f1b9655aaec3d25600845c124528bd48ee08f1a",
+   "f73cdd6f3a9220d1ac96514966178ea770b9e8f063a6a20d621eae386aac3a2f"
+  ],
+  "scripts/gg_rda_provenance.py": [
+   "840757b1ca8ae768ecd14ba08b41d4eca4f1ffe90390e6f7b6247585f2eaa725",
+   "b23142c7f22776c94c52340eb28f9ef0130bc81407e39c8005cf14b8950ecc45",
+   "ba32fb38abd4c8fe7eb755596b5c6a90064defb6fcfc7ae79389f657271001ca"
+  ],
+  "scripts/gg_rda_research.py": [
+   "3229b365a9aa18c9fe63257808bdad4c67d133d8c762402ff7148ba79515130c",
+   "a01125bdd68afa6b79b42c06d1f88038c2a90d5b4a016e34fb8840dd233c0d34",
+   "ad93561fadbd3998e4b56f26ef445954a78faaef444676516793df3f81ca0f44"
+  ],
+  "scripts/gg_report.py": [
+   "bf01338534e6a9d423582491d7825b804dd73f5e7687afad889b1644abf2e2ad",
+   "c1fed834aff9354dc1d7999d818b7ccdb7bf9f8f93696f49b7da0451af69ac16"
+  ],
+  "scripts/gg_research_handoff.py": [
+   "92c06177bf313f6d50c604acdea5cc9b16a2b74a55b887025b213ae71f38a556"
+  ],
+  "scripts/gg_reuse.py": [
+   "724466d1d917cfc5218fd75672674dc46021db5c0e0b2bc7e698a1a919397241"
+  ],
+  "scripts/gg_school_excel.py": [
+   "0489cbe42c9c11b9c0096a6d68fea20b81b76e660b9799b46eb07ac65f06acb8",
+   "15608c49c411d0a5031a07bdb9030cb715ed3be73fe2b64db5dd9e043d8fab4e",
+   "39b989f0d79a66e145a32ccbfc43349931fc67fa9a745394cb643c7661abbb18",
+   "4bee13020358819f168c13a91c4895d1e50d3def7f9ea72d557423182d2b483a"
+  ],
+  "scripts/gg_school_format.py": [
+   "0fd8b5ffcee37cde5cdf0213e071edebe949a818776c7839f807d7630a41feed"
+  ],
+  "scripts/gg_school_paper.py": [
+   "dd5c1934b784e71e0a93128abaea8f1363fd2661546f20fa8a86d0f394c8c67f",
+   "de6d7fd8b8b5297ee2950cf1e600b2c0804c2121c825f39c1510e142eec275cc",
+   "deffaddbf496ffe280d017e34608f420bc3446cba61120c199c76462b77d98d4",
+   "e3285762eaa2d58d10331c09cd1826e92ec19db24609d5478fc76adcbd74b0c6"
+  ],
+  "scripts/gg_school_verify.py": [
+   "aedf804719ab6fea21fcf145ce4295ff16c390b09e72629892a1cd67db1ea9f6"
+  ],
+  "scripts/gg_source_identity.py": [
+   "8e2856d3b6c729eba03f9f85a4854ebd8e477bcd2cc3f8871a3a875ce22d7873"
+  ],
+  "scripts/gg_source_intake.py": [
+   "7e8dfa43ec3bc46991507bab025b3a22fc072010a407b67ce2c6d827dc86e615"
+  ],
+  "scripts/gg_update.py": [
+   "6597f31c407cbdfb40b4174b0a467c29f7124a8575b090132026fb3de0e37624"
+  ],
+  "scripts/gg_workbook_audit.py": [
+   "52ffcb1527b4f4027cbd0ec5777f530638aa196de54ea1e0686454e04b15102a",
+   "57ef787b758d47409ebccd33b6c52d7177c03ed904a61bac35ed98187d157fd8",
+   "8839a2782c3c8644415a23a6bbcb933fdc8e11e363f6b8c0d21695b046eddc5c"
+  ],
+  "scripts/gg_workbook_registry.py": [
+   "25fd9a0bccf8046e1bbaae5064b70ba60581b0cdef7d1334dfea28760589351c",
+   "32c3b9b570b2419003c20d809b6a43ea58f3799e5f759613c56ecd762673febc"
+  ],
+  "scripts/lint_evidence.py": [
+   "0e55801636302a9f90aba3eb8ac396902ef6cc857cd8e8f43c048ff785e8689d"
+  ],
+  "scripts/lint_format.py": [
+   "963105b21f1aaf8984d7d18608f4c5da9bf8105fca9461eb75e004d6c5320476"
+  ],
+  "scripts/lint_plaintext.py": [
+   "94ea895604713ed2bbcaad51ea0c274fc72aa8d2d835adc8f549713ba8aa1636"
+  ],
+  "scripts/merge_sections.py": [
+   "f905fab19b5ca57ae6cb8f4e6e27be35b125c18044f984f26e031e54367509a6"
+  ],
+  "scripts/requirements-runtime.txt": [
+   "5cbc314a84901216a50705c7af4e189e4cfcbcdb7f92b05516031bcab08d94c5"
+  ],
+  "scripts/runtime-deps.json": [
+   "58b96a33e13fcddbc6a4a84af3d83fb35a1496731b958504c8c053543ade0f7d"
+  ],
+  "scripts/show_research.py": [
+   "f4675b858c9b819b6db1dc738a1a7535f32164aa0ca7fb99f0c6f3b673f15e44"
+  ],
+  "tests/test_gg_major_contract.py": [
+   "0aef596c78d1cf2dd2b9e05e1d721ceece1b98e4ada20f2f2d51d4eb7bc88cb3",
+   "2446597a6373c20f4e84676bc9e28b99df49349062ba4f0f9c838a6796eae1dc",
+   "bebc08f0d8ea065b9937d28732589606e24850ded42d6ee3d7bde3e520152023",
+   "ce3b230bc171cbebeac76c8826d0411929a7a8dc8603c9684b4144ef4f18284e"
+  ],
+  "tests/test_gg_rda_candidates.py": [
+   "00332531ab7f8845d069ade08353294bc06935de6428e41eb5f151b566f87a9d",
+   "a76350ab121b31d690bfdb02696f819ed857a05350cd9bf7ba915c5f013d788d",
+   "f0b7c495c6576df55692c216a0d554ba88f001a3c82210d641c3edb93e2d6b74"
+  ],
+  "tests/test_gg_rda_d5_useful_life.py": [
+   "72b90612274c7d1434a3a58c564345ce672450c1e374be72aaafefab71bc2188",
+   "8a6fc65ad71a61fe907f17b73c82a4b342f51a3985c7f94bdc3d3d017f8f5495"
+  ],
+  "tests/test_gg_rda_lookup_audit_key.py": [
+   "732258593fc89559c3680b3244310532e092ae4436314f83febdc3eb5b025843",
+   "7def244447919959bb5ad6a722493d48068b8f05f487aaba5f0bd0ec2c0ee510"
+  ],
+  "tests/test_gg_rda_provenance.py": [
+   "5164527cb4488a17e1dd69d3fa305967ee625f401585fffbf3c94e91bad2e214",
+   "f24f4da2047991cfa021f04a4a84eaef3e8ed355a2c6e6ae822cc62683155e12"
+  ],
+  "tests/test_gg_rda_research_integration.py": [
+   "8a6f40185b9e4ac9e6c02df856d34d10417b8c49efa42f8516c286fb1de75a29",
+   "e4ff44b187eacca3477cf404a7f6a2c74354afaa719b820ada4bff6365d4ec7f"
+  ],
+  "tests/test_gg_rda_verification.py": [
+   "847b222bbbd2a80b54b13ae35dae095b60ede6d493e30f2a4e4de6f5841ddf41"
+  ],
+  "tests/test_gg_reuse.py": [
+   "0396e3c5ecf9012608651f3a1431640eb5dd92439f89bd8aa2e46278efb5e335",
+   "08d2cc9bbbd24aedc37f2a0dbef8167f93d24448d10394cebe40696d3e91616b",
+   "55a574c71b84ce13580534ceef5b3e55c6a684459cbe95caffd35af891a954b4",
+   "a08425fa1573461d531992a64dd973e45796794d075cbaa57702536bbb3447a7",
+   "d2a9c7592e237fe56425bb4ad63dcadf93e15a33887fe54074c298a1afa491f9"
+  ],
+  "tests/test_gg_reuse_auditkey.py": [
+   "4671a5527b6d17c6b1628b11d7bad5effbfaf0c91bfdd463dea729e403a2fb83"
+  ],
+  "tests/test_gg_reuse_reasons.py": [
+   "5dbba63524cc51214fe0231711bcfd022173655749b1458e202917598eb1d4f8"
+  ],
+  "tests/test_gg_source_i05_multiprocess.py": [
+   "f07c40b3653041308220bc9249f35529f2fb2af0783cfc2e32e479faa99d3809"
+  ],
+  "tests/test_gg_source_i06_flow.py": [
+   "2ac1748ce5bc879bf6442b71521fc8c1eddf0808b7fc03e2d7944fdd721a982c"
+  ],
+  "tests/test_gg_source_intake_receipt.py": [
+   "b7a5b13a9a860ff272ee7d7f7a154c0b9ba1b7d683e6fcee05b82c056a27dc82"
+  ],
+  "tests/test_gg_source_intake_scan.py": [
+   "3b3a01e0292cb7df89b677259c3c41f8ec5407525cc46b5ab5aae49aee24e249"
+  ],
+  "tests/test_gg_source_register.py": [
+   "4c7947c4e8786fffffbb7e23579faa54932a2ca4099e7a21f9000e36a10c0457"
+  ],
+  "version.json": [
+   "b85da1781dad6458936bdafba9748fa4f44af5834d683c7d5011e6de2a2290e0"
+  ]
+ },
+ "schema": "knuaf-doc/legacy-release-hashes@1",
+ "source": "first-parent main history of starceas/knuaf-doc up to v0.1.1 (335b3d7f3cbf56d60c0be613eb5ea1af6f596a8f)"
+}

@@ -332,4 +332,7 @@ def main(argv=None):
     except (ProbeError,OSError) as e: print(f"BLOCK: {e}",file=sys.stderr); return 2
     print(json.dumps({"status":result["status"],"sha256":result["input"]["sha256"],"violations":len(result["violations"]),"out":str(ns.out) if ns.out else None},ensure_ascii=False))
     return 1 if result["status"]=="blocked" else 0
-if __name__ == "__main__": raise SystemExit(main())
+if __name__ == "__main__":
+    for _stream in (sys.stdout, sys.stderr):
+        getattr(_stream, "reconfigure", lambda **_: None)(encoding="utf-8")
+    raise SystemExit(main())

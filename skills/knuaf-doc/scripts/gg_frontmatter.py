@@ -33,6 +33,7 @@ SUPPORTED = {
     "committee_members",
     "unknown_policy",
     "layout",
+    "major_id",
 }
 
 
@@ -73,6 +74,11 @@ def normalize_school_profile(spec: Mapping[str, Any]) -> dict[str, Any]:
     unknown = sorted(set(raw) - SUPPORTED)
     if unknown:
         raise ValueError("지원하지 않는 school_profile 키: " + ", ".join(unknown))
+    nested_major = _text(raw.get("major_id"))
+    top_major = _text(spec.get("major_id"))
+    if nested_major is not None and top_major is not None \
+            and nested_major != top_major:
+        raise ValueError("school_profile.major_id와 major_id 불일치")
 
     committee = raw.get("committee")
     if committee is None:
@@ -129,6 +135,7 @@ def normalize_school_profile(spec: Mapping[str, Any]) -> dict[str, Any]:
         "graduation_date": _first(raw, spec, "graduation_date"),
         "committee": {"chair": chair, "members": members_list},
         "unknown_policy": policy,
+        "major_id": nested_major or top_major,
     }
 
 

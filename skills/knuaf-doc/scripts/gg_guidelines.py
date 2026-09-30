@@ -9,6 +9,7 @@ complies.
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 SCHEMA = "gg-guideline-inventory/v1"
@@ -318,4 +319,6 @@ def check(root, p):
 
 
 if __name__ == "__main__":
+    for _stream in (sys.stdout, sys.stderr):
+        getattr(_stream, "reconfigure", lambda **_: None)(encoding="utf-8")
     raise SystemExit("use gg.py check/status; this module is a library")

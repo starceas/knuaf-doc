@@ -23,7 +23,7 @@ import re
 
 
 PACKAGE = "kordoc"
-VERSION = "4.13.1"
+VERSION = "4.17.1"
 REGISTRY = "https://registry.npmjs.org"
 OWNER = "ginseng-goat.gg_kordoc"
 DEFAULT_TIMEOUT = 180
@@ -86,19 +86,19 @@ def _node_and_pnpm(node: str | None, pnpm: str | None, *, need_pnpm=True, check_
         raise KordocBlocked(
             "needs_runtime",
             missing=missing,
-            action="Provide --node and --pnpm paths (the bundled host runtime may supply them), or install Node >=18 and pnpm.",
+            action="Provide --node and --pnpm paths (the bundled host runtime may supply them), or install Node >=20 and pnpm.",
         )
     if check_node:
         version_probe = _run([node_path, "--version"], env=_env_for_node(node_path), timeout=15)
         version_text = (version_probe.get("stdout") or "").strip()
         match = re.match(r"v?(\d+)(?:\.(\d+))?", version_text)
-        if not version_probe.get("ok") or not match or int(match.group(1)) < 18:
+        if not version_probe.get("ok") or not match or int(match.group(1)) < 20:
             raise KordocBlocked(
                 "needs_runtime",
-                missing=["node>=18"],
+                missing=["node>=20"],
                 node=node_path,
                 probe=version_probe,
-                action="Provide a Node >=18 executable with --node (the bundled host runtime may supply it).",
+                action="Provide a Node >=20 executable with --node (the bundled host runtime may supply it).",
             )
     if not need_pnpm:
         return node_path, None
@@ -315,7 +315,9 @@ def _claim_cache(root: Path):
     marker_path = root / ".gg-kordoc-cache.json"
     current = _read_json(marker_path)
     if current is not None:
-        if current.get("owner") != OWNER or current.get("package") != PACKAGE or current.get("version") != VERSION or current.get("registry") != REGISTRY:
+        # The cache root is owned across versions: each release lives in its
+        # own versioned subdirectory and keeps its own .gg-kordoc.json marker.
+        if current.get("owner") != OWNER or current.get("package") != PACKAGE or current.get("registry") != REGISTRY:
             raise KordocBlocked("cache_unowned", cache_dir=str(root), action="Choose a new --cache-dir; existing files are preserved.")
         return
     # Do not take over an arbitrary populated directory.
@@ -334,7 +336,7 @@ def _claim_cache(root: Path):
             fh.write("\n")
     except FileExistsError:
         current = _read_json(marker_path)
-        if not current or current.get("owner") != OWNER or current.get("package") != PACKAGE or current.get("version") != VERSION or current.get("registry") != REGISTRY:
+        if not current or current.get("owner") != OWNER or current.get("package") != PACKAGE or current.get("registry") != REGISTRY:
             raise KordocBlocked("cache_unowned", cache_dir=str(root), action="Choose a new --cache-dir; existing files are preserved.")
 
 
@@ -569,16 +571,33 @@ def parse(input_path, out, *, cache_dir=None, node=None, pnpm=None, kordoc=None,
                     replacement = prefix.split("images/")[0].replace("./", "") + destination_sidecars.name + "/images/"
                     content = content.replace(prefix, replacement)
                 # Actual Kordoc -o output may use bare names rather than images/.
-                manifest = json.loads((sidecars / "manifest.json").read_text(encoding="utf-8"))
+                # Kordoc 4.17.1 nests sidecars under images/<output stem>/
+                # (manifest.json included); 4.13.1 kept the flat images/
+                # layout. Accept either, keeping validation at the manifest's
+                # own directory.
+                manifest_path = sidecars / "manifest.json"
+                if not manifest_path.is_file():
+                    preferred = sidecars / stage_md.stem / "manifest.json"
+                    nested = [p for p in sorted(sidecars.glob("*/manifest.json")) if p.is_file()]
+                    if preferred.is_file():
+                        manifest_path = preferred
+                    elif len(nested) == 1:
+                        manifest_path = nested[0]
+                    else:
+                        raise OSError("Invalid image manifest")
+                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
                 if not isinstance(manifest, list):
                     raise OSError("Invalid image manifest")
+                manifest_dir = manifest_path.parent
+                rel = manifest_dir.relative_to(sidecars)
+                asset_prefix = destination_sidecars.name + "/images/" + ("" if str(rel) == "." else rel.as_posix() + "/")
                 for item in manifest:
                     name = item.get("name") if isinstance(item, dict) else None
-                    if not isinstance(name, str) or Path(name).name != name or not (sidecars / name).is_file():
+                    if not isinstance(name, str) or Path(name).name != name or not (manifest_dir / name).is_file():
                         raise OSError("Invalid image manifest entry")
                     for old in (name, "./" + name):
-                        content = content.replace("](" + old + ")", "](" + destination_sidecars.name + "/images/" + name + ")")
-                        content = content.replace('src="' + old + '"', 'src="' + destination_sidecars.name + '/images/' + name + '"')
+                        content = content.replace("](" + old + ")", "](" + asset_prefix + name + ")")
+                        content = content.replace('src="' + old + '"', 'src="' + asset_prefix + name + '"')
                 stage_md.write_text(content, encoding="utf-8")
             # Same-filesystem hard link publishes without overwriting a racing
             # destination. All supporting assets are complete before this point.
@@ -635,4 +654,6 @@ def main(argv=None):
 
 
 if __name__ == "__main__":
+    for _stream in (sys.stdout, sys.stderr):
+        getattr(_stream, "reconfigure", lambda **_: None)(encoding="utf-8")
     raise SystemExit(main())

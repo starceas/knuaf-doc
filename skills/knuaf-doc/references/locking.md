@@ -22,7 +22,8 @@
 
 | 명령 | 동작 | 쓰는 API |
 | --- | --- | --- |
-| `gg.py doctor <폴더>` | 읽기 전용 진단. 가드를 한 번 잡았다 놓아 상태(`free`/`busy`/`unavailable`)를 관측한다. owner를 쓰거나 지우지 않는다 | `probe_lock` |
+| `gg.py doctor <폴더>` | 읽기 전용 진단. 잠금 구조·프로토콜 기록을 보고할 뿐 점유를 관측하지 않는다 | — |
+| `gg.py doctor <폴더> --probe` | 가드를 한 번 잡았다 놓아 상태(`free`/`busy`/`unavailable`)를 관측한다. owner를 쓰거나 지우지 않는다. 관측 결과는 후속 쓰기 허가가 아니다 | `probe_lock` |
 | `gg.py unlock <폴더>` | stale owner 증거를 정리한다. 가드를 한 번 점유한 뒤 `owner.json`만 제거한다. 결과의 `owner_cleaned`가 실제로 제거됐는지 나타낸다. 살아있는 점유(busy)·미사용 가능·손상 상태는 변경 없이 거부한다 | `cleanup_owner` |
 | `gg.py lock-upgrade <폴더>` | 오프라인 전환·복구. **사용자의 오프라인 확인이 선행 조건**이며, 확인 없이 호출하면 `blocked`/`offline_confirmation_required`를 반환한다. 잠금 상태 보고가 아니라 복구 결과(`recovery_id`·`commit_state`·수령증)를 돌려준다 | `upgrade_offline` |
 

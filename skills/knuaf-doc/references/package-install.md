@@ -29,11 +29,24 @@
 
 네트워크도 로컬 wheel도 없으면 `ensure`는 실패를 보고하고, 그 사유를 작업폴더 감사 기록에 남긴다. 설치가 불가능한 의존성이 필요한 산출물(XLSX·DOCX·PDF 검증)은 만들지 않거나 "의존성 미설치로 보류"로 기록한다.
 
-## Windows 네이티브 Office 경로
+## 실행 인터프리터 선택 순서
 
-`pywin32`는 Windows COM 자동화에만 쓰이며 `runtime-deps.json`의 필수 목록에 없다. 설치돼 있어도 Windows 네이티브 경로는 아직 실사용 승인 대상이 아니다 — Office 자동화 호출은 COM 생성·접속 전에 차단돼야 하며, 사용자의 기존 Word/Excel 인스턴스에 붙거나 종료하는 경로는 배포하지 않는다. macOS 핵심 경로와 이 차단 없는 Windows 자동화를 같은 검증 등급으로 기록하지 않는다.
+스킬 스크립트를 실행할 Python 인터프리터는 다음 순서로 고른다:
 
-수정 단계별(P1, P2 …)로 `docs/validation/REGRESSIONS.md`에 `open`으로 남은 항목이 있는 동안 그 기능은 승인된 동작이 아니며, 후속 단계와 함께 운영할 때만 배포가 완결된다.
+1. 현재 실행 인터프리터 — Python 3.10 이상이면 그대로 사용한다.
+2. `py -3` — Windows Python 런처.
+3. `python3`.
+4. 호스트 번들 인터프리터.
+
+`python3 <스킬>/scripts/gg_deps.py python <작업폴더>`가 `.venv`를 포함해 최종 인터프리터를 출력한다.
+
+## Windows·macOS 지원 범위
+
+**Windows는 작성·검토본(DOCX·XLSX 생성, 검토)까지 지원한다. Office 자동 재계산·PDF 변환은 macOS만 지원한다.**
+
+`pywin32`는 Windows COM 자동화에만 쓰이며 필수 의존성에서 뺐다 — `runtime-deps.json`의 필수 목록에 없다. 설치돼 있어도 Windows 네이티브 경로는 아직 실사용 승인 대상이 아니다 — Office 자동화 호출은 COM 생성·접속 전에 차단돼야 하며, 사용자의 기존 Word/Excel 인스턴스에 붙거나 종료하는 경로는 배포하지 않는다. macOS 핵심 경로와 이 차단 없는 Windows 자동화를 같은 검증 등급으로 기록하지 않는다.
+
+`docs/validation/REGRESSIONS.md`는 개발 계보 문서다(학생·배포 필독 문서가 아니다). 수정 단계별(P1, P2 …)로 그곳에 `open`으로 남은 항목이 있는 동안 그 기능은 승인된 동작이 아니며, 후속 단계와 함께 운영할 때만 배포가 완결된다.
 
 ## 제외 대상
 

@@ -1525,6 +1525,525 @@ class OutputPublicationGateTests(ContractCase):
             if r["check_id"] == "output_publication"]
         self.assertEqual([], rows)
 
+    def _narrow_adopt(self, core, root, *, request_id="adopt-narrow",
+                      name="ok.md", data=b"OK", oid=None):
+        """Adopt with a caller-declared scope that is a strict subset of
+        the export scope — the K3-01 reproduction shape."""
+        (root / name).write_bytes(data)
+        p = core.load(root)
+        ov = _output_value(core, root, name, "md", data, p=p)
+        if oid is not None:
+            ov["id"] = oid
+        narrow = [
+            r for r in ov["target_refs"]
+            if r["collection"] not in ("sources", "outputs")]
+        ov["target_refs"] = narrow
+        ov["input_fingerprint"] = core.fingerprint(root, p, narrow)
+        value = core.adopt_output(
+            root, ov, p["revision"], request_id,
+            major_id="specialty_crops")
+        return value, ov, narrow
+
+    def _rewrite_output(self, root, output_id, mutate):
+        p = runtime("gg_core").load(root)
+        rec = p["outputs"][output_id]
+        mutate(rec)
+        (root / "project.json").write_text(
+            json.dumps(p, ensure_ascii=False, indent=2), encoding="utf-8")
+        return rec
+
+    def _publication_rows(self, core, root):
+        return [
+            r for r in core.checks(root, core.load(root))
+            if r["check_id"] == "output_publication"]
+
+    def test_narrow_caller_scope_passes_publication_gate(self):
+        """K3-01 reproduction: the caller-declared (narrow) scope stays
+        on the record and is compared to the receipt's request
+        preimage — check reports no output_publication error."""
+        core = runtime("gg_core")
+        root = self.make_project()
+        _seed(root)
+        bind_major(root)
+        value, ov, narrow = self._narrow_adopt(core, root)
+        self.assertEqual("adopted", value["status"])
+        p = core.load(root)
+        rec = p["outputs"][ov["id"]]
+        receipt = json.loads(
+            (root / rec["publication_ref"]["path"]).read_bytes())
+        self.assertEqual(narrow, rec["target_refs"])
+        self.assertEqual(
+            narrow,
+            receipt["request"]["output_value"]["target_refs"])
+        self.assertNotEqual(narrow, receipt["target_refs"])
+        self.assertEqual([], self._publication_rows(core, root))
+
+    def test_tampered_record_target_refs_blocked(self):
+        core = runtime("gg_core")
+        root = self.make_project()
+        _seed(root)
+        bind_major(root)
+        _value, ov, narrow = self._narrow_adopt(core, root)
+        self._rewrite_output(
+            root, ov["id"],
+            lambda rec: rec.__setitem__(
+                "target_refs",
+                [r for r in narrow if r["collection"] != "facts"]))
+        rows = self._publication_rows(core, root)
+        self.assertEqual(1, len(rows))
+        self.assertEqual("blocked", rows[0]["status"])
+        self.assertIn("target_refs", rows[0]["reason"])
+
+    def test_tampered_record_input_fingerprint_blocked(self):
+        core = runtime("gg_core")
+        root = self.make_project()
+        _seed(root)
+        bind_major(root)
+        _value, ov, narrow = self._narrow_adopt(core, root)
+        self._rewrite_output(
+            root, ov["id"],
+            lambda rec: rec.__setitem__(
+                "input_fingerprint", "0" * 64))
+        rows = self._publication_rows(core, root)
+        self.assertEqual(1, len(rows))
+        self.assertEqual("blocked", rows[0]["status"])
+        self.assertIn("input_fingerprint", rows[0]["reason"])
+
+    def test_tampered_receipt_blocked_by_publication_verify(self):
+        """Corrupting the receipt file itself still fails the existing
+        publication verification, before any field comparison."""
+        core = runtime("gg_core")
+        root = self.make_project()
+        _seed(root)
+        bind_major(root)
+        _value, ov, _narrow = self._narrow_adopt(core, root)
+        p = core.load(root)
+        rec = p["outputs"][ov["id"]]
+        receipt_path = root / rec["publication_ref"]["path"]
+        receipt = json.loads(receipt_path.read_bytes())
+        receipt["request_sha256"] = "0" * 64
+        receipt_path.write_text(
+            json.dumps(receipt, ensure_ascii=False), encoding="utf-8")
+        rows = self._publication_rows(core, root)
+        self.assertEqual(1, len(rows))
+        self.assertEqual("blocked", rows[0]["status"])
+        self.assertIn("발행 검증 실패", rows[0]["reason"])
+
+    def test_sequential_adoptions_with_supersede_clean(self):
+        """Two outputs adopted in sequence and linked by
+        superseded_by keep a clean output_publication gate."""
+        core = runtime("gg_core")
+        root = self.make_project()
+        _seed(root)
+        bind_major(root)
+        self._narrow_adopt(
+            core, root, request_id="adopt-old",
+            name="old.md", data=b"OLD", oid="wb0")
+        self._narrow_adopt(
+            core, root, request_id="adopt-new",
+            name="new.md", data=b"NEW", oid="wb1")
+        p = core.load(root)
+        old_rec = dict(p["outputs"]["wb0"])
+        old_rec["superseded_by"] = "wb1"
+        p2 = core.apply(
+            root,
+            {"request_id": "link",
+             "ops": [{"collection": "outputs", "value": old_rec}]},
+            p["revision"])
+        self.assertEqual("wb1", p2["outputs"]["wb0"]["superseded_by"])
+        self.assertEqual([], self._publication_rows(core, root))
+
+
+class OperationDetailContractTests(ContractCase):
+    """K3-08/R1-02: the result ``detail`` field is an allowlisted
+    diagnostics object — ``code``/``field``/``index``/``missing``/
+    ``path`` only. Code and field values must be code-defined constants.
+    Raw caller text stays in the exception
+    message; it is never copied into the result or the CLI JSON."""
+
+    def _project(self):
+        core = runtime("gg_core")
+        root = self.make_project()
+        _seed(root)
+        bind_major(root)
+        return core, root
+
+    def test_detail_absent_when_not_provided(self):
+        core, root = self._project()
+        (root / "out.md").write_bytes(b"BYTES")
+        p = core.load(root)
+        ov = _output_value(core, root, "out.md", "md", b"BYTES", p=p)
+        ov["id"] = "wb1"
+        ov["file_hash"] = "0" * 64
+        with self.assertRaises(core.OperationError) as cm:
+            core.adopt_output(
+                root, ov, p["revision"], "adopt-hash",
+                major_id="specialty_crops")
+        self.assertEqual("output_hash_mismatch",
+                         cm.exception.result["reason"])
+        self.assertNotIn("detail", cm.exception.result)
+
+    def test_detail_companion_index_and_relative_path(self):
+        """A missing companion reports its input index and the
+        work-folder-relative path — never the OS error text."""
+        core, root = self._project()
+        (root / "out.md").write_bytes(b"BYTES")
+        p = core.load(root)
+        ov = _output_value(core, root, "out.md", "md", b"BYTES", p=p)
+        ov["id"] = "wb1"
+        with self.assertRaises(core.OperationError) as cm:
+            core.adopt_output(
+                root, ov, p["revision"], "adopt-companion",
+                companion_files=[{"path": "comp.md", "sha256": "0" * 64}],
+                major_id="specialty_crops")
+        result = cm.exception.result
+        self.assertEqual("companion_mismatch", result["reason"])
+        self.assertEqual(
+            {"index": 0, "path": "comp.md"}, result["detail"])
+
+    def test_detail_drops_path_outside_workspace(self):
+        """A caller path outside the workspace loses the path key —
+        nothing of it is rewritten or echoed."""
+        core, root = self._project()
+        (root / "out.md").write_bytes(b"BYTES")
+        p = core.load(root)
+        ov = _output_value(core, root, "out.md", "md", b"BYTES", p=p)
+        ov["id"] = "wb1"
+        outside = str(Path(root).parent / "outside-w3-elsewhere.md")
+        with self.assertRaises(core.OperationError) as cm:
+            core.adopt_output(
+                root, ov, p["revision"], "adopt-outside",
+                companion_files=[{"path": outside, "sha256": "0" * 64}],
+                major_id="specialty_crops")
+        result = cm.exception.result
+        self.assertEqual("companion_mismatch", result["reason"])
+        self.assertEqual({"index": 0}, result["detail"])
+        self.assertNotIn(outside,
+                         json.dumps(result, ensure_ascii=False))
+
+    def test_detail_holds_position_not_raw_entry(self):
+        """A malformed companion entry reports its position, not the
+        raw caller-supplied value."""
+        core, root = self._project()
+        (root / "out.md").write_bytes(b"BYTES")
+        p = core.load(root)
+        ov = _output_value(core, root, "out.md", "md", b"BYTES", p=p)
+        ov["id"] = "wb1"
+        bad = {"path": "a.md", "sha256": "0" * 64, "extra": "RAW-VALUE"}
+        with self.assertRaises(core.OperationError) as cm:
+            core.adopt_output(
+                root, ov, p["revision"], "adopt-badcomp",
+                companion_files=[bad],
+                major_id="specialty_crops")
+        result = cm.exception.result
+        self.assertEqual("invalid_companion_files", result["reason"])
+        self.assertEqual({"index": 0}, result["detail"])
+        self.assertNotIn("RAW-VALUE", json.dumps(result,
+                                                 ensure_ascii=False))
+
+    def test_diag_safe_unit(self):
+        core = runtime("gg_core")
+        root = Path("/w3/work")
+        self.assertEqual(
+            {"code": "duplicate_path", "field": "path", "index": 2,
+             "missing": ["format"], "path": "x/y.md"},
+            core._diag_safe(root, {
+                "code": "duplicate_path", "field": "path", "index": 2,
+                "missing": ["format", "bad field"], "fact_id": "f1:x-y.z",
+                "path": "x/y.md", "unknown_key": "dropped"}))
+        # Identifier-shaped caller values are not diagnostic constants.
+        for key in ("code", "field", "fact_id"):
+            with self.subTest(key=key):
+                self.assertIsNone(core._diag_safe(
+                    root, {key: "SYNTHETIC-PRIVATE-VALUE"}))
+                self.assertIsNone(core._diag_safe(root, {key: ["path"]}))
+        self.assertEqual(
+            {"missing": ["path", "review_kind"]},
+            core._diag_safe(root, {"missing": [
+                "SYNTHETIC-KEY", "path", ["format"], "review_kind"]}))
+        self.assertIsNone(core._diag_safe(root, {"fact_id": "path"}))
+        # Bool index and paths outside the work folder are dropped.
+        self.assertIsNone(core._diag_safe(root, {"field": "has space"}))
+        self.assertIsNone(core._diag_safe(root, {"index": True}))
+        self.assertIsNone(core._diag_safe(root, {"index": -1}))
+        self.assertIsNone(core._diag_safe(root, {"missing": ["a b"]}))
+        self.assertIsNone(core._diag_safe(
+            root, {"path": "/etc/passwd"}))
+        self.assertIsNone(core._diag_safe(
+            root, {"path": "../escape.md"}))
+        # Drive/UNC spellings count as absolute on every platform — they
+        # must not pass through as POSIX relative names.
+        self.assertIsNone(core._diag_safe(
+            root, {"path": r"C:\Users\x\secret.md"}))
+        self.assertIsNone(core._diag_safe(
+            root, {"path": r"\\server\share\private.xlsx"}))
+        self.assertIsNone(core._diag_safe(root, "a plain string"))
+        self.assertIsNone(core._diag_safe(None, {"path": "rel.md"}))
+
+    def test_apply_invalid_change_missing_field_diag(self):
+        """invalid_change surfaces the missing field name as a diag —
+        the raw reason text stays in the exception message."""
+        core, root = self._project()
+        p = core.load(root)
+        with self.assertRaises(core.OperationError) as cm:
+            core.apply(
+                root, {"request_id": "r2",
+                       "ops": [{"collection": "reviews",
+                                "value": {"id": "r1"}}]},
+                p["revision"])
+        result = cm.exception.result
+        self.assertEqual("invalid_change", result["reason"])
+        self.assertEqual({"missing": ["review_kind"]}, result["detail"])
+        self.assertNotIn(str(root), json.dumps(result,
+                                              ensure_ascii=False))
+
+    def test_apply_invalid_change_fact_metadata_diag(self):
+        """Metadata rejection gives a fixed code without a record ID."""
+        core, root = self._project()
+        fact = dict(fact_op("fx", "field_x", "v", None)["value"])
+        fact["finance_role"] = "bogus"
+        p = core.load(root)
+        with self.assertRaises(core.OperationError) as cm:
+            core.apply(
+                root, {"request_id": "r3",
+                       "ops": [{"collection": "facts", "value": fact}]},
+                p["revision"])
+        result = cm.exception.result
+        self.assertEqual("invalid_change", result["reason"])
+        self.assertEqual({"code": "fact_metadata_invalid"}, result["detail"])
+
+    def test_cli_fact_metadata_never_echoes_caller_id_or_keys(self):
+        for metadata in (
+            {"finance_role": "bogus"},
+            {"meaning_id": "SYNTHETIC-KEY"},
+            {"measure": {"kind": "quantity", "SYNTHETIC-KEY": "v"}},
+        ):
+            with self.subTest(metadata=metadata):
+                core, root = self._project()
+                fact = dict(fact_op(
+                    "SYNTHETIC-PRIVATE-VALUE", "field_x", "v", None
+                )["value"], **metadata)
+                p = core.load(root)
+                (root / "change.json").write_text(json.dumps({
+                    "request_id": "metadata-probe",
+                    "ops": [{"collection": "facts", "value": fact}],
+                }), encoding="utf-8")
+                before = (root / "project.json").read_bytes()
+                proc = _cli(
+                    root, "apply", str(root), "--change", "change.json",
+                    "--expected-revision", str(p["revision"]))
+                self.assertEqual(2, proc.returncode, proc.stderr + proc.stdout)
+                self.assertNotIn("SYNTHETIC-PRIVATE-VALUE", proc.stdout)
+                self.assertNotIn("SYNTHETIC-KEY", proc.stdout)
+                payload = json.loads(proc.stdout)
+                self.assertEqual("invalid_change", payload["reason"])
+                self.assertEqual("not_committed", payload["commit_state"])
+                self.assertEqual({"code": "fact_metadata_invalid"},
+                                 payload["detail"])
+                self.assertEqual(before, (root / "project.json").read_bytes())
+
+    def test_invalid_output_metadata_field_diag(self):
+        core, root = self._project()
+        (root / "out.md").write_bytes(b"BYTES")
+        p = core.load(root)
+        ov = _output_value(core, root, "out.md", "md", b"BYTES", p=p)
+        ov["id"] = "wb1"
+        ov["format"] = 7
+        with self.assertRaises(core.OperationError) as cm:
+            core.adopt_output(
+                root, ov, p["revision"], "bad-fmt",
+                major_id="specialty_crops")
+        result = cm.exception.result
+        self.assertEqual("invalid_output_metadata", result["reason"])
+        self.assertEqual({"field": "format"}, result["detail"])
+        ov2 = _output_value(core, root, "out.md", "md", b"BYTES", p=p)
+        ov2["id"] = "wb1"
+        del ov2["path"]
+        with self.assertRaises(core.OperationError) as cm:
+            core.adopt_output(
+                root, ov2, p["revision"], "missing-path",
+                major_id="specialty_crops")
+        result = cm.exception.result
+        self.assertEqual("invalid_output_metadata", result["reason"])
+        self.assertEqual({"missing": ["path"]}, result["detail"])
+
+    def test_adoption_metadata_mismatch_field_diag(self):
+        """The adoption binding reports the diverging field name — the
+        caller's value is never echoed."""
+        core, root = self._project()
+
+        class _Adoption:
+            output_value = {"id": "wb1", "format": "md"}
+            managed_path = ".gg-artifacts/x/primary.md"
+            publication_ref = {}
+
+        with self.assertRaises(core.OperationError) as cm:
+            core._bind_adoption_output(
+                _Adoption(), "wb1", {"id": "wb1", "format": "docx"})
+        result = cm.exception.result
+        self.assertEqual("adoption_metadata_mismatch", result["reason"])
+        self.assertEqual({"field": "format"}, result["detail"])
+        with self.assertRaises(core.OperationError) as cm:
+            core._bind_adoption_output(
+                _Adoption(), "wbX", {"id": "wbX", "format": "md"})
+        self.assertEqual({"field": "id"},
+                         cm.exception.result["detail"])
+
+        _Adoption.output_value = {"id": "wb1", "SYNTHETIC-KEY": "v"}
+        with self.assertRaises(core.OperationError) as cm:
+            core._bind_adoption_output(_Adoption(), "wb1", {"id": "wb1"})
+        self.assertEqual("adoption_metadata_mismatch",
+                         cm.exception.result["reason"])
+        self.assertNotIn("detail", cm.exception.result)
+
+    def test_cli_adoption_mismatch_never_echoes_caller_key(self):
+        """Inject a metadata divergence at binding, then exercise the
+        real adopt_output boundary and gg.main stdout in a subprocess."""
+        core, root = self._project()
+        (root / "out.md").write_bytes(b"BYTES")
+        p = core.load(root)
+        ov = _output_value(core, root, "out.md", "md", b"BYTES", p=p)
+        ov["SYNTHETIC-KEY"] = "v"
+        (root / "spec.json").write_text(
+            json.dumps({"output": ov}), encoding="utf-8")
+        before = (root / "project.json").read_bytes()
+        # Normal adoption copies metadata unchanged, so a mismatch needs
+        # controlled fault injection. No runtime file is patched.
+        runner = '''
+import sys
+sys.path.insert(0, sys.argv.pop(1))
+import gg_core as core
+import gg
+original = core._bind_adoption_output
+def mismatch(adoption, key, value):
+    changed = dict(value)
+    changed.pop("SYNTHETIC-KEY", None)
+    return original(adoption, key, changed)
+core._bind_adoption_output = mismatch
+sys.exit(gg.main())
+'''
+        proc = subprocess.run(
+            [sys.executable, "-B", "-c", runner, str(SCRIPTS),
+             "adopt-output", str(root), "--input", "spec.json",
+             "--expected-revision", str(p["revision"]),
+             "--request-id", "adoption-key-probe",
+             "--major", "specialty_crops"],
+            capture_output=True, text=True, env=_env(), cwd=root)
+        self.assertEqual(2, proc.returncode, proc.stderr + proc.stdout)
+        self.assertNotIn("SYNTHETIC-KEY", proc.stdout)
+        payload = json.loads(proc.stdout)
+        self.assertEqual("adoption_metadata_mismatch", payload["reason"])
+        self.assertEqual("not_committed", payload["commit_state"])
+        self.assertNotIn("detail", payload)
+        self.assertEqual(before, (root / "project.json").read_bytes())
+
+    def test_cli_observation_identity_and_missing_fields_diag(self):
+        core, root = self._project()
+        observation = ObservationContractTests()._observation(core, root)
+        for key in ("author_session", "reviewer_session",
+                    "author_id", "reviewer_id", "SYNTHETIC-KEY"):
+            with self.subTest(key=key):
+                malformed = dict(observation, **{key: 7})
+                (root / "observation.json").write_text(
+                    json.dumps(malformed), encoding="utf-8")
+                before = (root / "project.json").read_bytes()
+                proc = _cli(root, "observe", str(root),
+                            "--input", "observation.json",
+                            "--observer", "observer-1")
+                self.assertEqual(2, proc.returncode, proc.stderr + proc.stdout)
+                self.assertNotIn("SYNTHETIC-KEY", proc.stdout)
+                payload = json.loads(proc.stdout)
+                if key == "SYNTHETIC-KEY":
+                    self.assertEqual("observation_unknown_keys",
+                                     payload["reason"])
+                    self.assertNotIn("detail", payload)
+                else:
+                    self.assertEqual("observation_identity_invalid",
+                                     payload["reason"])
+                    self.assertEqual({"field": key}, payload["detail"])
+                self.assertEqual(before, (root / "project.json").read_bytes())
+        (root / "observation.json").write_text('{}', encoding="utf-8")
+        proc = _cli(root, "observe", str(root),
+                    "--input", "observation.json", "--observer", "observer-1")
+        self.assertEqual(2, proc.returncode, proc.stderr + proc.stdout)
+        payload = json.loads(proc.stdout)
+        self.assertEqual("observation_missing_fields", payload["reason"])
+        self.assertEqual({"missing": sorted(observation)}, payload["detail"])
+
+    def test_input_fingerprint_mismatch_field_diag(self):
+        core, root = self._project()
+        (root / "out.md").write_bytes(b"BYTES")
+        p = core.load(root)
+        ov = _output_value(core, root, "out.md", "md", b"BYTES", p=p)
+        ov["id"] = "wb1"
+        ov["input_fingerprint"] = "0" * 64
+        with self.assertRaises(core.OperationError) as cm:
+            core.adopt_output(
+                root, ov, p["revision"], "bad-fp",
+                major_id="specialty_crops")
+        result = cm.exception.result
+        self.assertEqual("input_fingerprint_mismatch", result["reason"])
+        self.assertEqual({"field": "input_fingerprint"},
+                         result["detail"])
+
+    def test_cli_detail_never_echoes_rejected_ref_values(self):
+        """R1-02 counterexamples: a rejected target_refs element is
+        refused AND no substring of it reaches the CLI stdout JSON."""
+        for value in (
+            "SYNTHETIC-PRIVATE-VALUE",
+            r"\\server\share\student-private.xlsx",
+            "/Users/Test Student/private-draft.md",
+        ):
+            with self.subTest(value=value):
+                root = self.make_project()
+                ov = {
+                    "id": "out", "path": "out.md", "format": "md",
+                    "file_hash": "0" * 64, "target_refs": [value],
+                    "input_fingerprint": "0" * 64,
+                }
+                (root / "spec.json").write_text(
+                    json.dumps({"output": ov}), encoding="utf-8")
+                proc = _cli(
+                    root, "adopt-output", str(root),
+                    "--input", "spec.json",
+                    "--expected-revision", "0",
+                    "--request-id", "probe")
+                self.assertEqual(2, proc.returncode,
+                                 proc.stderr + proc.stdout)
+                self.assertNotIn(value, proc.stdout)
+                payload = json.loads(proc.stdout)
+                self.assertEqual("invalid_output_metadata",
+                                 payload["reason"])
+                self.assertEqual({"field": "target_refs"},
+                                 payload["detail"])
+
+    def test_cli_adopt_output_prints_allowlisted_detail(self):
+        """gg.py serializes e.result unchanged — the allowlisted detail
+        object appears verbatim in the CLI JSON."""
+        core, root = self._project()
+        (root / "out.md").write_bytes(b"BYTES")
+        p = core.load(root)
+        ov = _output_value(core, root, "out.md", "md", b"BYTES", p=p)
+        ov["id"] = "wb1"
+        spec = {
+            "output": ov,
+            "companion_files": [{"path": "comp.md", "sha256": "0" * 64}],
+        }
+        (root / "spec.json").write_text(
+            json.dumps(spec), encoding="utf-8")
+        proc = _cli(
+            root, "adopt-output", str(root),
+            "--input", "spec.json",
+            "--expected-revision", str(p["revision"]),
+            "--request-id", "cli-detail",
+            "--major", "specialty_crops")
+        self.assertEqual(2, proc.returncode, proc.stderr + proc.stdout)
+        self.assertNotIn(str(root), proc.stdout)
+        payload = json.loads(proc.stdout)
+        self.assertEqual("companion_mismatch", payload["reason"])
+        self.assertEqual({"index": 0, "path": "comp.md"},
+                         payload["detail"])
+
 
 if __name__ == "__main__":
     unittest.main()

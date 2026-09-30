@@ -1,9 +1,13 @@
-"""학생 오류·불편 신고 CLI (설계 r1 + r2 + r3 수용).
+"""학생 오류·불편 신고 CLI (설계 r1 + r2 + r3 + P27 D3 수용).
 
 학생이 "신고할래 / 불편해요 / 이런 기능 있었으면"이라고 말할 때 AI가
 신고 초안을 만들고, 미리보기 그대로 학생이 확인한 뒤에만 배포된 수신
-Worker로 보낸다.  공개 경로(issue)는 로컬 가림 + Worker 가림 2중,
-비공개 경로(private)는 가림 없이 개발자 채널로 간다.
+Worker로 보낸다.  P27 D3: 신고는 전부 비공개 경로(private)다.  공개
+경로(issue)는 닫혔다 — 초안은 issue_channel_closed로 거절하고, send도
+issue 초안을 보내지 않는다.  다만 과거에 실제로 보낸 issue 초안의
+영수증 읽기(already_sent)는 유지한다.  private 본문도 로컬 경로·
+이메일·전화·주민번호는 가리되, 이름·학번·파일명은 가리지 않는다
+(비공개 채널이라 과도한 가림이 오히려 진단을 해친다).
 
 표준 라이브러리만 쓴다.  네트워크는 urllib.request + 리다이렉트 미추종
 opener 하나다.  모든 파일 쓰기는 새 파일만('x' 모드), UTF-8 명시.
@@ -37,6 +41,8 @@ TIMEOUT_SECONDS = 20
 MAX_BODY_BYTES = 16 * 1024
 PRIVATE_COMPOSITE_MAX = 1900  # r2 D1-02: Worker sendPrivate의 slice(0,1900)
 
+# P27 D3: issue는 과거 초안·영수증 판독용 enum으로만 남긴다. 새 초안은
+# private만 만든다.
 KINDS = ("issue", "private")
 CATEGORIES = ("bug", "feature", "inconvenience", "other")
 INPUT_FIELDS = (
@@ -46,6 +52,9 @@ OPTIONAL_FIELDS = ("steps", "error_message")
 PAYLOAD_KEYS = INPUT_FIELDS + ("skill_version", "environment")
 # F1-01: send 재검사 대상 — 공개 이슈 본문·제목에 들어가는 모든 문자열.
 PUBLIC_SCAN_FIELDS = TEXT_FIELDS + ("skill_version", "environment")
+# R1-03: private send 재검사 대상 — Worker에 전달되는 모든 문자열 필드
+# (private에는 environment가 없다).
+PRIVATE_SCAN_FIELDS = TEXT_FIELDS + ("skill_version",)
 # 로컬 보수 상한(문자 아닌 UTF-16 코드 단위, r2 D1-03). issue는 공개
 # 저장소에 원고·긴 자료가 붙지 못하게 Worker보다 낮게 둔다.
 FIELD_LIMITS = {
@@ -265,6 +274,23 @@ def redact(text):
     return text, counts
 
 
+def redact_private(text):
+    """private 본문 가림. (가림된 텍스트, 유형별 횟수)를 돌려준다.
+
+    P27 D3: 비공개 채널이라 가림은 로컬 경로·이메일·주민번호·전화
+    네 가지뿐이다. 파일명·학번(8자리 숫자)·이름은 가리지 않는다 —
+    진단에 필요한 날짜·파일명 같은 값을 지우지 않기 위해서다.
+    """
+    counts = {}
+    text, counts["path"] = _mask_paths(text)
+    text, counts["email"] = _EMAIL.subn("[이메일 가림]", text)
+    text, counts["resident_number"] = _RRN.subn("[주민번호 가림]", text)
+    text, nm = _MOBILE.subn("[전화번호 가림]", text)
+    text, nl = _LANDLINE.subn("[전화번호 가림]", text)
+    counts["phone"] = nm + nl
+    return text, counts
+
+
 def environment():
     """호스트명·사용자명·경로를 넣지 않는 환경 문자열(≤200 UTF-16)."""
     py = platform.python_version()
@@ -413,6 +439,12 @@ def build_draft(input_dict, *, plugin_root, skill_root=None):
     kind = input_dict.get("kind")
     if kind not in KINDS:
         raise ReportError("invalid_kind")
+    if kind == "issue":
+        # P27 D3: 공개 이슈 경로는 닫혔다. private로 바꾸지 않고 거절한다.
+        raise ReportError(
+            "issue_channel_closed",
+            message="공개 이슈 경로는 닫혔습니다. 비공개(private) 신고만 "
+                    "받습니다.")
     category = input_dict.get("category")
     if category not in CATEGORIES:
         raise ReportError("invalid_category")
@@ -450,23 +482,21 @@ def build_draft(input_dict, *, plugin_root, skill_root=None):
             payload[name] = fields[name]
     payload["skill_version"] = _skill_version(plugin_root, skill_root)
     # r2 D1-02: private는 environment를 넣지 않는다(Worker가 전달하지 않음).
-    if kind == "issue":
-        payload["environment"] = environment()
 
+    # P27 D3: private 본문도 경로·이메일·주민번호·전화는 가리고, 가림
+    # 내역을 초안의 redactions에 싣는다.
     redactions = []
-    if kind == "issue":
-        for name in TEXT_FIELDS:
-            if name not in payload:
-                continue
-            masked, counts = redact(payload[name])
-            payload[name] = masked
-            for rtype, count in counts.items():
-                if count:
-                    redactions.append(
-                        {"field": name, "type": rtype, "count": count})
+    for name in TEXT_FIELDS:
+        if name not in payload:
+            continue
+        masked, counts = redact_private(payload[name])
+        payload[name] = masked
+        for rtype, count in counts.items():
+            if count:
+                redactions.append(
+                    {"field": name, "type": rtype, "count": count})
 
-    if kind == "private" and _u16len(_private_composite(payload)) \
-            > PRIVATE_COMPOSITE_MAX:
+    if _u16len(_private_composite(payload)) > PRIVATE_COMPOSITE_MAX:
         raise ReportError("private_too_long", limit=PRIVATE_COMPOSITE_MAX)
 
     body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
@@ -488,7 +518,7 @@ def build_draft(input_dict, *, plugin_root, skill_root=None):
         "destination": destination,
         "payload": payload,
         "redactions": redactions,
-        "warnings": _warnings(payload) if kind == "issue" else [],
+        "warnings": _warnings(payload),
     }
 
 
@@ -596,6 +626,21 @@ def _validate_draft(draft):
             _, counts = redact(payload[name])
             if any(counts.values()):
                 raise ReportError("pii_remaining", field=name)
+    elif kind == "private":
+        # R1-03: v0.1.1 형식의 구 private 초안은 새 가림을 거치지 않은 채
+        # send에 도달할 수 있다. 전송 전에 네 범주(경로·이메일·주민번호·
+        # 전화)를 다시 검사하고 남아 있으면 거부한다. payload를 고치지
+        # 않는다.
+        for name in PRIVATE_SCAN_FIELDS:
+            if name not in payload:
+                continue
+            _, counts = redact_private(payload[name])
+            if any(counts.values()):
+                raise ReportError(
+                    "private_unredacted", field=name,
+                    message="초안에 가리지 않은 개인 정보(경로·이메일·"
+                            "주민번호·전화번호)가 남아 있습니다. 이 초안은 "
+                            "보내지 않았습니다. 신고 초안을 새로 만드세요.")
 
 
 def _validate_receipt(receipt):
@@ -737,6 +782,27 @@ def _delivery_unknown(reason, draft_path, sha, dest, http_status=None):
     return result
 
 
+def _receipt_reply(draft_path, sha, dest):
+    """영수증 파일이 있으면 그에 맞는 send 결과 dict, 없으면 None.
+
+    P27 D3: 닫힌 issue 초안을 포함해 모든 kind에서 endpoint 비교보다
+    먼저 읽는다 — 이미 보낸 초안은 수신처가 어긋나도 already_sent다.
+    """
+    receipt_path = Path(str(draft_path) + ".receipt.json")
+    if not receipt_path.is_file():
+        return None
+    try:
+        receipt = json.loads(
+            receipt_path.read_text(encoding="utf-8"))
+        _validate_receipt(receipt)
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError,
+            ReportError):
+        return _error("receipt_invalid", sha256=sha)
+    if receipt["draft_sha256"] != sha:
+        return _error("receipt_conflict", sha256=sha)
+    return _already_sent(draft_path, sha, dest, receipt)
+
+
 def _error(code, **fields):
     result = {"status": "error", "error": code}
     result.update(fields)
@@ -794,6 +860,20 @@ def send(draft_path, confirm, *, endpoint=None, opener=None,
     dest = draft["destination"]
     kind = payload["kind"]
 
+    receipt_reply = _receipt_reply(draft_path, sha, dest)
+    if receipt_reply is not None:
+        return receipt_reply
+
+    if kind == "issue":
+        # P27 D3: 공개 이슈 경로는 닫혔다. 영수증이 있는 과거 초안은
+        # 위에서 already_sent로 처리됐으므로 여기까지 온 issue 초안은
+        # 전송하지 않고 거절한다.
+        return _error(
+            "issue_channel_closed", sha256=sha, draft=str(draft_path),
+            message="공개 이슈 경로는 닫혔습니다. 이 초안은 보내지 "
+                    "않았습니다. 비공개(private) 신고 초안을 새로 "
+                    "만드세요.")
+
     if endpoint is not None and endpoint != dest["endpoint"]:
         return _error("endpoint_changed", sha256=sha)
     try:
@@ -804,17 +884,6 @@ def send(draft_path, confirm, *, endpoint=None, opener=None,
         return _error("endpoint_changed", sha256=sha)
 
     receipt_path = Path(str(draft_path) + ".receipt.json")
-    if receipt_path.is_file():
-        try:
-            receipt = json.loads(
-                receipt_path.read_text(encoding="utf-8"))
-            _validate_receipt(receipt)
-        except (OSError, UnicodeDecodeError, json.JSONDecodeError,
-                ReportError):
-            return _error("receipt_invalid", sha256=sha)
-        if receipt["draft_sha256"] != sha:
-            return _error("receipt_conflict", sha256=sha)
-        return _already_sent(draft_path, sha, dest, receipt)
 
     # 시험 훅(r3 R2-02): claim 획득 직전에 다른 전송을 끼워 넣어
     # A-then-B 경합을 재현한다.
@@ -1095,4 +1164,6 @@ def main(argv=None):
 
 
 if __name__ == "__main__":
+    for _stream in (sys.stdout, sys.stderr):
+        getattr(_stream, "reconfigure", lambda **_: None)(encoding="utf-8")
     sys.exit(main())

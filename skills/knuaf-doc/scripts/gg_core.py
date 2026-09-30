@@ -3,6 +3,7 @@
 from pathlib import Path
 from decimal import Decimal, InvalidOperation
 import copy
+import functools
 import hashlib
 import json
 import os
@@ -145,6 +146,96 @@ def load(root):
     return p
 
 
+# Diagnostic identifiers are code-defined schema names, never caller IDs
+# or keys that merely look like identifiers.
+_DIAG_CODES = frozenset({"duplicate_path", "fact_metadata_invalid"})
+_DIAG_FIELDS = frozenset({
+    # Output metadata and review records.
+    "id", "path", "format", "file_hash", "target_refs",
+    "input_fingerprint", "review_kind", "author_id", "reviewer_id",
+    "findings", "disposition", "status", "major_authorization",
+    # Observation identity and required metadata.
+    "author_session", "reviewer_session", "review_kinds", "report_path",
+    "report_hash", "input_revision",
+    # Fact metadata accepted by validate_metadata.
+    "meaning_id", "measure", "finance_role", "kind", "unit",
+    "currency", "denominator", "basis",
+})
+
+
+def _diag_safe(root, diag):
+    """Result ``detail`` contract (API §1): only the fixed diagnostic
+    keys survive — ``code``/``field`` belong to code-defined constant
+    sets, ``index`` is a non-negative int, ``missing`` is a list of
+    code-defined field names, and ``path`` a work-folder-relative path
+    that provably resolves inside ``root``.  Raw caller text and
+    unresolved paths are dropped, never rewritten."""
+    if not isinstance(diag, dict):
+        return None
+    safe = {}
+    for key, allowed in (("code", _DIAG_CODES), ("field", _DIAG_FIELDS)):
+        value = diag.get(key)
+        if isinstance(value, str) and value in allowed:
+            safe[key] = value
+    index = diag.get("index")
+    if type(index) is int and index >= 0:
+        safe["index"] = index
+    missing = diag.get("missing")
+    if isinstance(missing, (list, tuple)):
+        kept = [
+            v for v in missing
+            if isinstance(v, str) and v in _DIAG_FIELDS
+        ]
+        if kept:
+            safe["missing"] = kept
+    path = diag.get("path")
+    if (
+        isinstance(path, str)
+        and path.strip()
+        and root is not None
+        # Windows drive/UNC spellings are absolute on some platforms but
+        # relative filenames on POSIX — refuse them on every platform.
+        and "\\" not in path
+        and not re.match(r"[A-Za-z]:", path)
+    ):
+        try:
+            base = Path(root).resolve()
+            rel = (base / path).resolve().relative_to(base)
+            if str(rel) != ".":
+                safe["path"] = str(rel)
+        except (OSError, ValueError):
+            pass
+    return safe or None
+
+
+def _op_boundary(fn=None, *, work_index=0):
+    """Public-API boundary: an escaping OperationError exposes ``detail``
+    only as the allowlisted diagnostics object (API §1).  The raw
+    exception detail stays in the exception message — it is never copied
+    into the result."""
+    def deco(fn):
+        @functools.wraps(fn)
+        def wrapper(*args, **kwargs):
+            try:
+                return fn(*args, **kwargs)
+            except OperationError as error:
+                if error.result.get("detail") is not None:
+                    root = (
+                        args[work_index]
+                        if len(args) > work_index
+                        else None
+                    )
+                    safe = _diag_safe(root, error.result["detail"])
+                    if safe:
+                        error.result["detail"] = safe
+                    else:
+                        error.result.pop("detail", None)
+                raise
+        return wrapper
+    return deco(fn) if fn is not None else deco
+
+
+@_op_boundary
 def init(root):
     """First product write: persistent protocol is installed before the
     canonical commit (SPEC §3).  Existing project.json is never overwritten
@@ -242,6 +333,7 @@ class OperationError(ValueError):
 
     def __init__(self, result, detail=None):
         self.result = result
+        self.detail = detail
         message = str(result.get("reason"))
         if detail:
             message += ": " + str(detail)
@@ -264,16 +356,31 @@ def _result(operation, target, commit_state, reason, cleanup_errors=None,
         "receipt_path",
         "publication_state",
         "preserved_paths",
+        "detail",
     ):
         if fields.get(key) is not None:
             r[key] = fields[key]
     return r
 
 
-def _op(operation, target, commit_state, reason, detail=None, **fields):
+def _op(operation, target, commit_state, reason, detail=None, diag=None,
+        **fields):
     return OperationError(
-        _result(operation, target, commit_state, reason, **fields), detail
+        _result(
+            operation, target, commit_state, reason, detail=diag, **fields
+        ),
+        detail,
     )
+
+
+class _ChangeError(ValueError):
+    """invalid_change diagnostic carrier: ``diag`` may hold the
+    allowlisted result-detail keys (fixed codes and schema field names);
+    the public boundary filters them before exposure."""
+
+    def __init__(self, message, diag=None):
+        super().__init__(message)
+        self.diag = diag
 
 
 def _recheck_canonical(root, expect_revision, request_id=None):
@@ -836,6 +943,7 @@ def _upgrade_schema_records(root, p):
     return p
 
 
+@_op_boundary
 def upgrade_schema(root):
     """Upgrade a schema-1 project to schema 2 without invalidating reviews.
 
@@ -872,11 +980,13 @@ def _bind_adoption_output(adoption, key, value):
     meta = adoption.output_value
     if key != meta.get("id"):
         raise _op("adopt_output", "canonical", "not_committed",
-                  "adoption_metadata_mismatch", detail="id")
+                  "adoption_metadata_mismatch", detail="id",
+                  diag={"field": "id"})
     for k, v in meta.items():
         if value.get(k) != v:
             raise _op("adopt_output", "canonical", "not_committed",
-                      "adoption_metadata_mismatch", detail=k)
+                      "adoption_metadata_mismatch", detail=k,
+                      diag={"field": k} if k in _DIAG_FIELDS else None)
     value["path"] = adoption.managed_path
     value["publication_ref"] = adoption.publication_ref
 
@@ -1122,10 +1232,13 @@ def _apply_locked(root, change, expected_revision, *, capability, adoption=None)
                 registry=_semantic_context(root, p).get("registry"),
                 mode="new")
             if any(i.get("status") == "fail" for i in meta_issues):
-                raise ValueError(
+                raise _ChangeError(
                     "신규 사실 메타데이터 오류: "
                     + "; ".join(
-                        sorted({i["reason"] for i in meta_issues})))
+                        sorted({i["reason"] for i in meta_issues})),
+                    # validate_metadata supplies reasons, not a structured
+                    # failing field. Do not derive one from raw reason text.
+                    {"code": "fact_metadata_invalid"})
         if col == "sources":
             value["hash"] = digest(local(root, value["path"]).read_bytes())
         if col == "outputs":
@@ -1164,7 +1277,9 @@ def _apply_locked(root, change, expected_revision, *, capability, adoption=None)
                 "path",
             ):
                 if required not in value:
-                    raise ValueError("검토 필드 누락: " + required)
+                    raise _ChangeError(
+                        "검토 필드 누락: " + required,
+                        {"missing": [required]})
             if value["author_id"] == value["reviewer_id"]:
                 raise ValueError("자가검토는 독립검토가 아님")
             if not value["target_refs"] or not value.get("coverage"):
@@ -1306,6 +1421,7 @@ def _apply_locked(root, change, expected_revision, *, capability, adoption=None)
     return p
 
 
+@_op_boundary
 def apply(root, change, expected_revision):
     """Generic canonical apply (API §2).  commit_state always comes from
     rechecking storage, never from the exception type alone."""
@@ -1322,7 +1438,9 @@ def apply(root, change, expected_revision):
         except ValueError as error:
             raise _op(
                 "apply", "canonical", "not_committed", "invalid_change",
-                detail=str(error), request_id=request_id,
+                detail=str(error),
+                diag=getattr(error, "diag", None),
+                request_id=request_id,
             ) from error
 
     return _guarded(
@@ -1345,38 +1463,44 @@ def _check_adopt_output_value(output_value):
     if server_keys:
         raise _op("adopt_output", "canonical", "not_committed",
                   "invalid_output_metadata",
-                  detail="server keys: " + str(sorted(server_keys)))
+                  detail="server keys: " + ", ".join(sorted(server_keys)))
     required = {"id", "path", "format", "file_hash",
                 "target_refs", "input_fingerprint"}
     missing = required - set(output_value)
     if missing:
         raise _op("adopt_output", "canonical", "not_committed",
-                  "invalid_output_metadata", detail=sorted(missing))
+                  "invalid_output_metadata", detail=sorted(missing),
+                  diag={"missing": sorted(missing)})
     meta = dict(output_value)
     _check_record_id(meta["id"])
     if not isinstance(meta["path"], str) or not meta["path"].strip():
         raise _op("adopt_output", "canonical", "not_committed",
-                  "invalid_output_metadata", detail="path")
+                  "invalid_output_metadata", detail="path",
+                  diag={"field": "path"})
     if not isinstance(meta["format"], str) or not meta["format"].strip():
         raise _op("adopt_output", "canonical", "not_committed",
-                  "invalid_output_metadata", detail="format")
+                  "invalid_output_metadata", detail="format",
+                  diag={"field": "format"})
     if not _check_sha256(meta["file_hash"]):
         raise _op("adopt_output", "canonical", "not_committed",
-                  "invalid_output_metadata", detail="file_hash")
+                  "invalid_output_metadata", detail="file_hash",
+                  diag={"field": "file_hash"})
     if not _check_sha256(meta["input_fingerprint"]):
         raise _op("adopt_output", "canonical", "not_committed",
-                  "invalid_output_metadata", detail="input_fingerprint")
+                  "invalid_output_metadata", detail="input_fingerprint",
+                  diag={"field": "input_fingerprint"})
     try:
         meta["target_refs"] = sort_target_refs(meta["target_refs"])
     except ValueError as error:
         raise _op("adopt_output", "canonical", "not_committed",
-                  "invalid_output_metadata", detail=str(error)) from error
+                  "invalid_output_metadata", detail=str(error),
+                  diag={"field": "target_refs"}) from error
     return meta
 
 
 def _check_companions(companion_files):
     companions = []
-    for entry in companion_files or []:
+    for index, entry in enumerate(companion_files or []):
         if (
             not isinstance(entry, dict)
             or set(entry) != {"path", "sha256"}
@@ -1385,13 +1509,16 @@ def _check_companions(companion_files):
             or not _check_sha256(entry["sha256"])
         ):
             raise _op("adopt_output", "canonical", "not_committed",
-                      "invalid_companion_files", detail=str(entry))
+                      "invalid_companion_files",
+                      detail="companion index %d" % index,
+                      diag={"index": index})
         companions.append({"path": entry["path"], "sha256": entry["sha256"]})
     companions.sort(key=lambda e: e["path"].encode("utf-8"))
     paths = [e["path"] for e in companions]
     if len(set(paths)) != len(paths):
         raise _op("adopt_output", "canonical", "not_committed",
-                  "invalid_companion_files", detail="duplicate path")
+                  "invalid_companion_files", detail="duplicate path",
+                  diag={"code": "duplicate_path", "field": "path"})
     return companions
 
 
@@ -1414,6 +1541,7 @@ def _publication_ref_for(root, receipt, receipt_rel):
     }
 
 
+@_op_boundary
 def adopt_output(root, output_value, expected_revision, request_id,
                  companion_files=None, *, major_id=None):
     """Register an existing output file through a managed publication
@@ -1565,7 +1693,9 @@ def adopt_output(root, output_value, expected_revision, request_id,
         # Verify caller claims against actual files while holding the guard.
         if meta["input_fingerprint"] != fingerprint(root, p, meta["target_refs"]):
             raise _op("adopt_output", "canonical", "not_committed",
-                      "input_fingerprint_mismatch", request_id=request_id)
+                      "input_fingerprint_mismatch",
+                      diag={"field": "input_fingerprint"},
+                      request_id=request_id)
         # Canonical source read FIRST (Lane 20 / L19-001): missing or
         # invalid source paths must surface their original errors —
         # invalid_output_metadata / output_source_missing /
@@ -1575,16 +1705,20 @@ def adopt_output(root, output_value, expected_revision, request_id,
             source = local(root, meta["path"])
         except ValueError as error:
             raise _op("adopt_output", "canonical", "not_committed",
-                      "invalid_output_metadata", detail=str(error)) from error
+                      "invalid_output_metadata", detail=str(error),
+                      diag={"field": "path"}) from error
         if meta["path"].startswith(".gg-artifacts/"):
             raise _op("adopt_output", "canonical", "not_committed",
                       "invalid_output_metadata",
-                      detail="managed path cannot be a source")
+                      detail="managed path cannot be a source",
+                      diag={"field": "path"})
         try:
             source_bytes = source.read_bytes()
         except OSError as error:
             raise _op("adopt_output", "canonical", "not_committed",
-                      "output_source_missing", detail=str(error)) from error
+                      "output_source_missing", detail=str(error),
+                      diag={"field": "path", "path": meta["path"]}
+                      ) from error
         if meta["file_hash"] != digest(source_bytes):
             raise _op("adopt_output", "canonical", "not_committed",
                       "output_hash_mismatch", request_id=request_id)
@@ -1652,20 +1786,26 @@ def adopt_output(root, output_value, expected_revision, request_id,
         # the request's output_value (API §5/§6).
         actual_refs = sort_target_refs(_export_refs(p))
         actual_fp = fingerprint(root, p, actual_refs)
-        for companion in companions:
+        for index, companion in enumerate(companions):
             try:
                 companion_path = local(root, companion["path"])
             except ValueError as error:
                 raise _op("adopt_output", "canonical", "not_committed",
-                          "companion_mismatch", detail=str(error)) from error
+                          "companion_mismatch", detail=str(error),
+                          diag={"index": index,
+                                "path": companion["path"]}) from error
             try:
                 companion_bytes = companion_path.read_bytes()
             except OSError as error:
                 raise _op("adopt_output", "canonical", "not_committed",
-                          "companion_mismatch", detail=str(error)) from error
+                          "companion_mismatch", detail=str(error),
+                          diag={"index": index,
+                                "path": companion["path"]}) from error
             if companion["sha256"] != digest(companion_bytes):
                 raise _op("adopt_output", "canonical", "not_committed",
-                          "companion_mismatch", detail=companion["path"])
+                          "companion_mismatch", detail=companion["path"],
+                          diag={"index": index,
+                                "path": companion["path"]})
         # Policy B in-lock recheck: the canonical record loaded under the
         # guard is the authority — a binding change since the pre-lock
         # check holds the adoption before any publish/registration.
@@ -1676,7 +1816,8 @@ def adopt_output(root, output_value, expected_revision, request_id,
                       error.reason, detail=str(error)) from error
         if kinds is None:
             raise _op("adopt_output", "canonical", "not_committed",
-                      "output_source_missing", detail=meta["path"])
+                      "output_source_missing", detail=meta["path"],
+                      diag={"field": "path", "path": meta["path"]})
         adopt_guard(kinds, project=p)
         # Resume check: same request_id already published but unregistered.
         publication_ref = None
@@ -3075,9 +3216,16 @@ def checks(root, p):
                 )
                 continue
             mismatched = []
-            if receipt.get("target_refs") != output.get("target_refs"):
+            # The record's target_refs/input_fingerprint hold the
+            # *caller-declared* scope — compare against the receipt's
+            # request preimage (request.output_value), never against the
+            # receipt's publication-scope fields (K3-01).
+            declared = (
+                (receipt.get("request") or {}).get("output_value") or {}
+            )
+            if output.get("target_refs") != declared.get("target_refs"):
                 mismatched.append("target_refs")
-            if receipt.get("input_fingerprint") != output.get(
+            if output.get("input_fingerprint") != declared.get(
                 "input_fingerprint"
             ):
                 mismatched.append("input_fingerprint")
@@ -3203,6 +3351,7 @@ _OBSERVATION_SERVER_KEYS = {
 }
 
 
+@_op_boundary
 def ingest_review_observation(root, observation, observer):
     """Record an adapter observation through the guard and publication
     boundary (API §8, SPEC §8).  Not an OS-user authentication boundary.
@@ -3226,7 +3375,8 @@ def ingest_review_observation(root, observation, observer):
                if observation.get(k) in (None, "", [], {})]
     if missing:
         raise _op("observe", "observation", "not_committed",
-                  "observation_missing_fields", detail=sorted(missing))
+                  "observation_missing_fields", detail=sorted(missing),
+                  diag={"missing": sorted(missing)})
     recorded = copy.deepcopy(observation)
     recorded["schema"] = "gg-review-observation/2"
     recorded["observed_by"] = observer.strip()
@@ -3234,7 +3384,8 @@ def ingest_review_observation(root, observation, observer):
                 "reviewer_id"):
         if not isinstance(recorded[key], str) or not recorded[key].strip():
             raise _op("observe", "observation", "not_committed",
-                      "observation_identity_invalid", detail=key)
+                      "observation_identity_invalid", detail=key,
+                      diag={"field": key})
     if recorded["author_session"] == recorded["reviewer_session"]:
         raise _op("observe", "observation", "not_committed",
                   "self_session_observation",
@@ -3267,7 +3418,8 @@ def ingest_review_observation(root, observation, observer):
         recorded["target_refs"] = sort_target_refs(recorded["target_refs"])
     except ValueError as error:
         raise _op("observe", "observation", "not_committed",
-                  "invalid_target_refs", detail=str(error)) from error
+                  "invalid_target_refs", detail=str(error),
+                  diag={"field": "target_refs"}) from error
     if not _check_sha256(recorded["input_fingerprint"]):
         raise _op("observe", "observation", "not_committed",
                   "invalid_input_fingerprint")
@@ -3291,7 +3443,8 @@ def ingest_review_observation(root, observation, observer):
             report = local(root, recorded["report_path"])
         except ValueError as error:
             raise _op("observe", "observation", "not_committed",
-                      "invalid_report_path", detail=str(error)) from error
+                      "invalid_report_path", detail=str(error),
+                      diag={"field": "report_path"}) from error
         if not report.is_file():
             raise _op("observe", "observation", "not_committed",
                       "report_missing")
@@ -3310,7 +3463,8 @@ def ingest_review_observation(root, observation, observer):
             root, p, recorded["target_refs"]
         ):
             raise _op("observe", "observation", "not_committed",
-                      "input_fingerprint_mismatch")
+                      "input_fingerprint_mismatch",
+                      diag={"field": "input_fingerprint"})
         # P3 wiring (design-r2 §7 'ingest_review_observation': 기존
         # revision/hash 검사 후, 경제 report의 현재 registry/refs 검증,
         # 그 뒤 기존 publication 발행): an observation declaring any
@@ -4018,6 +4172,7 @@ def _major_contract_mod():
     return gg_major_contract
 
 
+@_op_boundary
 def export(root, kind, *, major_id=None):
     root = Path(root)
     mc = _major_contract_mod()
@@ -4057,6 +4212,7 @@ def export(root, kind, *, major_id=None):
     return _guarded(root, "export", "export", body, confirm)
 
 
+@_op_boundary
 def export_locked(root, kind, *, capability, major_id=None):
     """Export through an immutable managed publication (API §3, SPEC §5).
 
@@ -4388,6 +4544,7 @@ def validate_paper_native_fields(spec):
     return issues
 
 
+@_op_boundary
 def paper(root, spec_path, spec_bytes, requested_path, *, major_id=None):
     """Generate the markdown review body through a managed publication
     (API §6).  The spec file bytes are read once by the caller and never
@@ -4825,6 +4982,7 @@ def _import_retry(src, dest):
     )
 
 
+@_op_boundary(work_index=1)
 def migrate(src, dest, *, offline_confirmed=False):
     """Import a legacy Markdown folder into a new guarded workspace
     (API §7, SPEC §7).
@@ -5069,6 +5227,7 @@ def migration_inventory(root):
     return inventory
 
 
+@_op_boundary
 def migrate_staged(dest, inventory, *, capability):
     _init_locked(dest, capability)
     ops, comparison, inputs, issues = [], [], [], []
@@ -5955,6 +6114,7 @@ def _reg_change_doc_of_record(registration, content):
     }
 
 
+@_op_boundary
 def publish_source_view(root, registration, *, capability):
     """Publishes sources/generated/<view_id>/source-index.json (SCHEMA §9.3
     payload, p5-source-view/2) AFTER a successful canonical registration.
@@ -6114,6 +6274,7 @@ def _reg_persisted_digest(staging, regrec):
     return None
 
 
+@_op_boundary
 def register_source_snapshot(root, selection, expected_revision, *,
                              capability, request_id, registry,
                              runtime_root, key_catalog,

@@ -76,7 +76,7 @@
 `tools/run_validation.py`는 시험 전에 **현재 인터프리터**의 필수 의존성을 점검한다. 정본은 후보의 `skills/knuaf-doc/scripts/runtime-deps.json`이며, 후보의 `gg_deps.py` 읽기 전용 helper(manifest 검증·in-process import·배포판 버전·선언 범위 비교)로 판정한다. 목록·버전은 코드에 하드코딩되지 않는다.
 
 - 적용 대상 의존성은 import 성공 + dist 버전 확인 + 선언 범위 만족을 모두 요구한다. `missing`/`unsupported-version`/`installed-version-unchecked`/manifest 오류는 준비 실패다. `find_spec` 통과만으로 인정하지 않는다.
-- 선언 `platform`이 `sys.platform`과 다른 항목(예: `pywin32`의 `win32`)은 `not_applicable`로 기록하며 결코 누락으로 세지 않는다.
+- 선언 `platform`이 `sys.platform`과 다른 항목은 `not_applicable`로 기록하며 결코 누락으로 세지 않는다(P27에서 `pywin32`가 선언에서 빠져 현재 해당 항목은 없다).
 - 준비 실패 시 시험은 실행하지 않는다: `runtime.status=not_run_dependency`, 실행 수 0, 의존성 진단을 JSON/요약에 남긴다. 이는 passed/known/제품 결함으로 집계되지 않는다.
 
 **스킵 정책**: 의존성 준비가 통과한 뒤의 예상 외 unittest skip은 성공을 막는다. XLSX 시험의 dependency-skip은 제거됐다 — import/fixture 오류는 failure/error로 드러난다. inventory `not_applicable`(§2)과 명시된 deferred(§3)는 unittest skip과 다른 분류이며 그대로 유지된다.

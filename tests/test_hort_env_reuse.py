@@ -40,6 +40,8 @@ import gg_reuse  # noqa: E402
 # Pinned constants -- fixed at IMPL-C writing time against commit a96a5bf
 # (the test never shells out to git). BASELINE_ENTRY_DIGEST pins the
 # unaffected entries; D5 re-pins only the corrected rda.econ.2025 entry.
+# P27 K4-06 re-pins the two official-writing-guide entries whose
+# runtime_present flag now tells the truth (the runtime file is not shipped).
 
 BASELINE_ENTRY_DIGEST = {
     "rda.income.national.2024":
@@ -49,9 +51,9 @@ BASELINE_ENTRY_DIGEST = {
     "mafra.specialty.production.2024":
         "0b636815fa11a515929f4679a802d4d6756686096e37991fbf623fd5ff31c741",
     "official-writing-guide-pdf":
-        "2e99ba6ff1908c3dd3903670d61ad8303bd7602150f712871aeb8b7f08ee8d64",
+        "86e93cccc6108d93bf753b731c8614a87fc41015e137a4878509e1e534173b22",
     "official-writing-guide-hwp":
-        "0b83bcc3a630a46c2afcb30c88826bcdaae9f77c1fd33b6588f81b976b076620",
+        "50e53b4d175beca8d756c4acfeaa55fc7d253ef09b7cde637b2fd8738cb0a546",
     "kim-wonseop-exemplar-pdf":
         "1735d2a0232b5755eff01dc02aa552b0b233e40566df7659d709fc60b80823d3",
     "kim-wonseop-exemplar-hwp":

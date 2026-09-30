@@ -52,9 +52,38 @@ def _version_doc(version, *, repo="starceas/knuaf-doc",
     return {"schema": schema, "version": version, "repo": repo}
 
 
+def _fixture_legacy_bytes():
+    """합성 0.1.0 배포 기준. 실제 Git 이력에는 의존하지 않는다."""
+    return json.dumps({
+        "schema": "knuaf-doc/legacy-release-hashes@1",
+        "files": {
+            "SKILL.md": [hashlib.sha256(SKILL_MD_MIN.encode()).hexdigest()],
+            "scripts/gg_report.py": [
+                hashlib.sha256(REPORT_STUB.encode()).hexdigest(),
+                hashlib.sha256((SCRIPTS_DIR / "gg_report.py").read_bytes()).hexdigest()],
+        },
+    }, sort_keys=True).encode()
+
+
+def _manifest_for_bytes(files):
+    return {"schema": "knuaf-doc/install-manifest@1",
+            "files": {k: hashlib.sha256(v).hexdigest()
+                      for k, v in files.items()
+                      if k != "install-manifest.json"
+                      and not any(part == "__pycache__" for part in k.split("/"))
+                      and not k.endswith(".pyc")
+                      and Path(k).name != ".DS_Store"}}
+
+
+def _write_fixture_manifest(root):
+    (root / "install-manifest.json").write_text(
+        json.dumps(_manifest_for_bytes(_tree_bytes(root)), sort_keys=True),
+        encoding="utf-8")
+
+
 def _write_skill(root, *, version=None, repo="starceas/knuaf-doc",
                  name="knuaf-doc", marker=True, updater=False,
-                 real_report=False):
+                 real_report=False, manifest=True):
     """최소 knuaf-doc 스킬 트리. version=None이면 0.1.0 legacy 설치본."""
     root = Path(root)
     (root / "scripts").mkdir(parents=True, exist_ok=True)
@@ -73,6 +102,12 @@ def _write_skill(root, *, version=None, repo="starceas/knuaf-doc",
             REPORT_STUB, encoding="utf-8")
     if updater:
         shutil.copy2(UPDATE_SCRIPT, root / "scripts" / "gg_update.py")
+        (root / "scripts" / "legacy-release-hashes.json").write_bytes(
+            _fixture_legacy_bytes())
+    # 기존 교체 엔진 시험은 유효 manifest의 대조군으로 둔다.
+    # manifest 없는 0.1.1은 PreservationR3Tests의 독립 픽스처다.
+    if (version is not None or updater) and manifest:
+        _write_fixture_manifest(root)
     return root
 
 
@@ -185,33 +220,45 @@ def _zip(items):
 
 
 def _zip_with_extra(name, data=b"", *, mode=0o100644,
-                    compress=zipfile.ZIP_DEFLATED):
+                    compress=zipfile.ZIP_DEFLATED, refresh_manifest=False):
     """정상 새 트리 zip(_good_zip)에 위반 항목 하나를 더한 fixture.
 
     정상 트리를 유지한 채 조건 하나만 위반하므로 거절이 그 조건에서
     나왔음이 보장된다."""
-    buf = io.BytesIO(_good_zip())
-    with zipfile.ZipFile(buf, "a", compression=compress) as zf:
-        zf.writestr(_zi(name, mode=mode, compress=compress), data)
-    return buf.getvalue()
+    with zipfile.ZipFile(io.BytesIO(_good_zip())) as zf:
+        items = [(info, zf.read(info)) for info in zf.infolist()
+                 if info.filename != name]
+    items.append((_zi(name, mode=mode, compress=compress), data))
+    if refresh_manifest:
+        prefix = "knuaf-doc-0.1.2/skills/knuaf-doc/"
+        files = {info.filename[len(prefix):]: raw for info, raw in items
+                 if info.filename.startswith(prefix) and not info.is_dir()}
+        mname = prefix + "install-manifest.json"
+        items = [(info, raw) for info, raw in items if info.filename != mname]
+        items.append((_zi(mname), json.dumps(_manifest_for_bytes(files)).encode()))
+    return _zip(items)
 
 
-def _good_zip(version="0.1.2", top=None):
+def _good_zip(version="0.1.2", top=None, *, manifest=True):
     """git archive --prefix 형태(디렉터리 항목 포함)의 정상 저장소 zip."""
     top = top or ("knuaf-doc-" + version)
     vjson = json.dumps(_version_doc(version)).encode("utf-8")
+    files = {
+        "SKILL.md": SKILL_MD_MIN.encode("utf-8"),
+        "version.json": vjson,
+        "scripts/gg_report.py": REPORT_STUB.encode("utf-8"),
+        "scripts/gg_update.py": UPDATE_SCRIPT.read_bytes(),
+        "scripts/legacy-release-hashes.json": _fixture_legacy_bytes(),
+    }
+    if manifest:
+        files["install-manifest.json"] = json.dumps(_manifest_for_bytes(files)).encode()
     return _zip([
         (_zi(top + "/", mode=0o40755), b""),
         (_zi(top + "/skills/", mode=0o40755), b""),
         (_zi(top + "/skills/knuaf-doc/", mode=0o40755), b""),
-        (_zi(top + "/skills/knuaf-doc/SKILL.md"),
-         SKILL_MD_MIN.encode("utf-8")),
-        (_zi(top + "/skills/knuaf-doc/version.json"), vjson),
         (_zi(top + "/skills/knuaf-doc/scripts/", mode=0o40755), b""),
-        (_zi(top + "/skills/knuaf-doc/scripts/gg_report.py"),
-         REPORT_STUB.encode("utf-8")),
-        (_zi(top + "/skills/knuaf-doc/scripts/gg_update.py"),
-         UPDATE_SCRIPT.read_bytes()),
+        *((_zi(top + "/skills/knuaf-doc/" + rel), raw)
+          for rel, raw in files.items()),
         (_zi(top + "/README.md"), b"# r" + NL.encode("utf-8")),
     ])
 
@@ -404,7 +451,7 @@ class UpdateTests(_UpdateCase):
         plugin = json.loads(PLUGIN_JSON_PATH.read_text(encoding="utf-8"))
         self.assertEqual({"schema", "version", "repo"}, set(version))
         self.assertEqual(plugin["version"], version["version"])
-        self.assertEqual("0.1.1", version["version"])
+        self.assertEqual("0.1.2", version["version"])
         for raw in ('{"schema":"knuaf-doc/version@1","version":"0.1.1",'
                     '"repo":"starceas/knuaf-doc","repo":"starceas/knuaf-doc"}',
                     '{"schema":"bad","version":"0.1.1","repo":"starceas/knuaf-doc"}',
@@ -583,7 +630,8 @@ class UpdateTests(_UpdateCase):
 
         # 파일 크기 상한 — 보호를 제거하면 같은 payload가 적용된다(negative control).
         bomb = _zip_with_extra(top + "/skills/knuaf-doc/huge",
-                               b"x" * (self.gu.ZIP_FILE_MAX + 1))
+                               b"x" * (self.gu.ZIP_FILE_MAX + 1),
+                               refresh_manifest=True)
         _, _, target = self.make_target(updater=True)
         before = _tree_bytes(target)
         out = self._apply(target, payload=bomb)[1]
@@ -628,7 +676,7 @@ class UpdateTests(_UpdateCase):
         before = _tree_bytes(target)
         stored = _zip_with_extra(
             top + "/skills/knuaf-doc/x", b"abc",
-            compress=zipfile.ZIP_STORED)
+            compress=zipfile.ZIP_STORED, refresh_manifest=True)
         corrupt = _corrupt_entry_bytes(
             stored, top + "/skills/knuaf-doc/x")
         out = self._apply(target, payload=corrupt)[1]
@@ -779,6 +827,15 @@ class UpdateTests(_UpdateCase):
         raw = SKILL_MD_PATH.read_text(encoding="utf-8")
         self.assertIn(("> knuaf-doc · 창업논문 작성 도우미\n"
                        "> prod. 특용작물전공 24학번 김대욱\n"), raw)
+        # DESIGN §7.1 확정 문장 S1–S4 (SKILL.md 본문은 W5 소유).
+        for sentence in (
+            '로 자동 업데이트했어요.',
+            '업데이트를 확인하지 못했어요(인터넷 연결이 막혀 있을 수 있어요). '
+            '지금 작업은 그대로 할 수 있어요.',
+            '같은 차례에',
+            'scripts/gg_update.py auto',
+        ):
+            self.assertIn(sentence, raw)
         for sentence in (
             'next의 ready는 "진행할 수 있음"일 뿐 ✓의 근거가 아니다',
             'question이 reuse(제공 거부)·deferred(도움 소진)인 사실은 다시 묻거나 자료를 요구하지 않는다',
@@ -1333,7 +1390,7 @@ class UpdateTests(_UpdateCase):
         shutil.copy2(SCRIPTS_DIR / "gg_report.py", skill / "scripts" / "gg_report.py")
         (skill / "version.json").write_bytes(b"\xff")
         request = root / "request.json"
-        request.write_text(json.dumps({"kind": "issue", "category": "bug",
+        request.write_text(json.dumps({"kind": "private", "category": "bug",
                                        "title": "test", "description": "test"}))
         output = root / "draft.json"
         result = subprocess.run([sys.executable, str(skill / "scripts" / "gg_report.py"),
@@ -1343,3 +1400,986 @@ class UpdateTests(_UpdateCase):
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertTrue(output.exists())
         self.assertNotIn("Traceback", result.stderr)
+
+
+class AutoTests(_UpdateCase):
+    """`auto` 하위 명령: 저널 잔존 복구 → check → copy 설치 교체 (P27 §1)."""
+
+    def _auto(self, target, *, connect=None, download=None):
+        mod = _load_update(target / "scripts" / "gg_update.py")
+        conn = connect or _connect(302, [("Location", _loc("0.1.2"))])
+        dl = download or (lambda _v, _c: _good_zip())
+        return mod, mod.auto_cmd(connect=conn, download=dl)
+
+    def test_auto_updates_copy_install(self):
+        _, _, target = self.make_target(updater=True)
+        before_keys = set(_tree_bytes(target))
+        mod, out = self._auto(target)
+        self.assertEqual("updated", out["status"], out)
+        self.assertEqual("0.1.1", out["from"])
+        self.assertEqual("0.1.2", out["to"])
+        self.assertTrue(Path(out["backup"]).is_dir())
+        self.assertEqual((0, 1, 2),
+                         mod.read_version_file(target / "version.json"))
+        # 이전 트리는 백업에 그대로 있다.
+        backup = _tree_bytes(out["backup"])
+        for rel in before_keys:
+            self.assertIn(rel, backup)
+
+    def test_auto_up_to_date(self):
+        _, _, target = self.make_target(version="0.1.2", updater=True)
+        _, out = self._auto(target)
+        self.assertEqual("up_to_date", out["status"], out)
+        self.assertEqual("0.1.2", out["local_version"])
+
+    def test_auto_check_failed_and_exit_zero(self):
+        _, _, target = self.make_target(updater=True)
+        mod = _load_update(target / "scripts" / "gg_update.py")
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            code = mod.main(["auto"],
+                            connect=_connect(error=OSError("secret-path")))
+        self.assertEqual(0, code)
+        self.assertEqual(1, len(buf.getvalue().splitlines()))
+        out = json.loads(buf.getvalue())
+        self.assertEqual("check_failed", out["status"], out)
+        self.assertEqual("offline", out["reason"], out)
+        self.assertNotIn("secret-path", buf.getvalue())
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            code = mod.main(["auto"], connect=_connect(
+                302, [("Location", "not-a-release-path")]))
+        self.assertEqual(0, code)
+        out = json.loads(buf.getvalue())
+        self.assertEqual(("check_failed", "unknown"),
+                         (out["status"], out["reason"]), out)
+
+    def test_auto_skipped_local_newer_and_no_release(self):
+        _, _, target = self.make_target(updater=True)
+        before = _tree_bytes(target)
+        _, out = self._auto(target, connect=_connect(
+            302, [("Location", _loc("0.1.0"))]))
+        self.assertEqual(("skipped", "local_newer"),
+                         (out["status"], out["reason"]), out)
+        _, out = self._auto(target, connect=_connect(
+            302, [("Location", "/starceas/knuaf-doc/releases")]))
+        self.assertEqual(("skipped", "no_release"),
+                         (out["status"], out["reason"]), out)
+        self.assertEqual(before, _tree_bytes(target))
+
+    def test_auto_never_replaces_non_copy_install(self):
+        _, _, target = self.make_target(updater=True)
+        before = _tree_bytes(target)
+        (target / ".git").mkdir()
+        _, out = self._auto(target)
+        self.assertEqual(("skipped", "install_kind"),
+                         (out["status"], out["reason"]), out)
+        self.assertEqual("git", out["install_kind"], out)
+        self.assertEqual(before, _tree_bytes(target))
+        cache = self.tmpdir("pcache") / "plugins" / "cache" / "skills" \
+            / "knuaf-doc"
+        _write_skill(cache, version="0.1.1", updater=True)
+        before = _tree_bytes(cache)
+        _, out = self._auto(cache)
+        self.assertEqual(("skipped", "install_kind"),
+                         (out["status"], out["reason"]), out)
+        self.assertEqual("plugin_cache", out["install_kind"], out)
+        self.assertEqual(before, _tree_bytes(cache))
+
+    def test_auto_skipped_when_lock_held(self):
+        home, skills, target = self.make_target(updater=True)
+        mod = _load_update(target / "scripts" / "gg_update.py")
+        state = mod._prepare_state(skills, home)
+        before = _tree_bytes(target)
+        fd = mod._acquire_lock(state)
+        try:
+            out = mod.auto_cmd(
+                connect=_connect(302, [("Location", _loc("0.1.2"))]),
+                download=lambda *_: _good_zip())
+        finally:
+            mod._release_lock(fd)
+        self.assertEqual(("skipped", "locked"),
+                         (out["status"], out["reason"]), out)
+        self.assertEqual(before, _tree_bytes(target))
+
+    def test_auto_failed_reports_stage_and_state(self):
+        _, _, target = self.make_target(updater=True)
+        before = _tree_bytes(target)
+        mod = _load_update(target / "scripts" / "gg_update.py")
+        original, calls = mod._rename, [0]
+
+        def faulty(a, b):
+            calls[0] += 1
+            if calls[0] == 1:
+                raise OSError("injected")
+            return original(a, b)
+
+        with mock.patch.object(mod, "_rename", side_effect=faulty):
+            out = mod.auto_cmd(
+                connect=_connect(302, [("Location", _loc("0.1.2"))]),
+                download=lambda *_: _good_zip())
+        self.assertEqual(("failed", "move_old", "target_intact"),
+                         (out["status"], out["stage"], out["state"]), out)
+        self.assertEqual(before, _tree_bytes(target))
+
+    def test_auto_recovers_pending_journal(self):
+        driver = self.root / "driver-auto-journal.py"
+        driver.write_text(_DRIVER, encoding="utf-8")
+        src = self.make_incoming()
+        home, _, target = self.make_target(version=None, updater=True)
+        old = _tree_bytes(target)
+        subprocess.run([sys.executable, str(driver),
+                        str(src / "scripts" / "gg_update.py"), "adopt", "wj1",
+                        str(src), str(target)], cwd=str(self.root),
+                       capture_output=True, check=True)
+        state = home / "knuaf-doc-update"
+        journal = state / "journal.json"
+        self.assertNotEqual("done", json.loads(
+            journal.read_text(encoding="utf-8"))["phase"])
+        mod = _load_update(target / "scripts" / "gg_update.py")
+        out = mod.auto_cmd()
+        self.assertEqual("recovered", out["status"], out)
+        self.assertEqual("not_started", out["recover"]["status"], out)
+        self.assertEqual(old, _tree_bytes(target))
+        self.assertFalse(journal.exists())
+        self.assertEqual(1, len(list(state.glob("journal-*-closed.json"))))
+
+    def test_auto_from_staged_helper_recovers_old(self):
+        """끊김이 target을 지운 상태: bin/ 아래 게시된 도우미 사본으로
+        auto를 실행해도 저널 복구가 된다."""
+        driver = self.root / "driver-auto-helper.py"
+        driver.write_text(_DRIVER, encoding="utf-8")
+        src = self.make_incoming()
+        home, _, target = self.make_target(version=None)
+        old = _tree_bytes(target)
+        subprocess.run([sys.executable, str(driver),
+                        str(src / "scripts" / "gg_update.py"), "adopt", "rn1",
+                        str(src), str(target)], cwd=str(self.root),
+                       capture_output=True, check=True)
+        self.assertFalse(target.exists())
+        state = home / "knuaf-doc-update"
+        helper = next((state / "bin").glob("gg_update-*.py"))
+        mod = _load_update(helper)
+        out = mod.auto_cmd()
+        self.assertEqual("recovered", out["status"], out)
+        self.assertEqual("recovered_old", out["recover"]["status"], out)
+        self.assertEqual(old, _tree_bytes(target))
+
+    def test_auto_done_journal_does_not_recover(self):
+        src = self.make_incoming()
+        mod = _load_update(src / "scripts" / "gg_update.py")
+        home, _, target = self.make_target(version=None)
+        self.assertEqual("applied",
+                         mod.adopt_cmd(src, target, confirm=True)["status"])
+        state = home / "knuaf-doc-update"
+        journal = state / "journal.json"
+        self.assertEqual("done", json.loads(
+            journal.read_text(encoding="utf-8"))["phase"])
+        mod = _load_update(target / "scripts" / "gg_update.py")
+        out = mod.auto_cmd(connect=_connect(
+            302, [("Location", _loc("0.1.2"))]))
+        self.assertEqual("up_to_date", out["status"], out)
+        self.assertTrue(journal.exists())
+        self.assertEqual([], list(state.glob("journal-*-closed.json")))
+
+    def test_auto_skips_user_files_in_skill(self):
+        _, _, target = self.make_target(updater=True)
+        (target / "draft.docx").write_text("user", encoding="utf-8")
+        before = _tree_bytes(target)
+        _, out = self._auto(target)
+        self.assertEqual(("skipped", "user_files_in_skill"),
+                         (out["status"], out["reason"]), out)
+        self.assertIn("draft.docx", out["files"])
+        self.assertEqual(before, _tree_bytes(target))
+
+
+class UserFilesInSkillTests(_UpdateCase):
+    """_run_replace 공통: 새 트리에 없는 대상 경로의 차단·무시 규칙 (P27 §1)."""
+
+    def test_block_rules_apply_each(self):
+        for rel in ("my-notes.txt",            # (a) 최상위 알려진 항목 밖
+                    "references/보고서.docx",    # (b) 문서 확장자
+                    "scripts/project.json",    # (c) project.json
+                    "data/output.csv"):        # (a)+(b) 겸용
+            with self.subTest(rel=rel):
+                _, _, target = self.make_target(updater=True)
+                extra = target / rel
+                extra.parent.mkdir(parents=True, exist_ok=True)
+                extra.write_text("user", encoding="utf-8")
+                before = _tree_bytes(target)
+                _, out = self._apply(target)
+                self.assertEqual("refused", out["status"], out)
+                self.assertEqual("user_files_in_skill", out["reason"], out)
+                self.assertIn(rel, out["files"], out)
+                self.assertEqual(before, _tree_bytes(target))
+
+    def test_block_rules_apply_to_adopt(self):
+        src = self.make_incoming()
+        mod = _load_update(src / "scripts" / "gg_update.py")
+        _, _, target = self.make_target(version=None)
+        (target / "scripts" / "논문.hwp").write_text("user",
+                                                   encoding="utf-8")
+        before = _tree_bytes(target)
+        out = mod.adopt_cmd(src, target, confirm=True)
+        self.assertEqual(("refused", "user_files_in_skill"),
+                         (out["status"], out["reason"]), out)
+        self.assertEqual(before, _tree_bytes(target))
+
+    def test_ignored_names_apply(self):
+        """__pycache__·*.pyc·.DS_Store는 계속 무시한다."""
+        _, _, target = self.make_target(updater=True)
+        (target / "references").mkdir()
+        (target / "references" / ".DS_Store").write_bytes(b"x")
+        (target / ".DS_Store").write_bytes(b"x")
+        cache = target / "scripts" / "__pycache__"
+        cache.mkdir()
+        (cache / "gg_update.cpython-313.pyc").write_bytes(b"x")
+        top_cache = target / "__pycache__"
+        top_cache.mkdir()
+        (top_cache / "mod.pyc").write_bytes(b"x")
+        _, out = self._apply(target)
+        self.assertEqual("applied", out["status"], out)
+        backup = Path(out["backup"])
+        for rel in (".DS_Store", "references/.DS_Store",
+                    "scripts/__pycache__/gg_update.cpython-313.pyc"):
+            self.assertTrue((backup / rel).exists(), rel)
+
+    def _apply(self, target, *, version="0.1.2", payload=None, loc=None):
+        mod = _load_update(target / "scripts" / "gg_update.py")
+        conn = _connect(302, [("Location", loc or _loc(version))])
+        result = mod.apply_cmd(version, confirm=True, connect=conn,
+                               download=lambda _v, _c: payload or _good_zip(version))
+        return mod, result
+
+
+# 별도 프로세스 I/O 결함 주입 드라이버:
+# driver.py <gg_update.py> <target> <fail_hit>
+# os.stat이 target을 fail_hit번째로 볼 때 PermissionError를 심는다.
+_IO_DRIVER = r"""
+import sys
+sys.dont_write_bytecode = True
+import importlib.util, io, json, os, zipfile
+
+script, target, fail_hit = sys.argv[1], sys.argv[2], int(sys.argv[3])
+spec = importlib.util.spec_from_file_location("gu_io", script)
+mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
+
+vjson = json.dumps({"schema": "knuaf-doc/version@1", "version": "9.9.9",
+                    "repo": "starceas/knuaf-doc"}).encode()
+skill_md = b"---\nname: knuaf-doc\ndescription: t\n---\n# t\n"
+buf = io.BytesIO()
+with zipfile.ZipFile(buf, "w") as zf:
+    for name, data, mode in (
+        ("knuaf-doc-9.9.9/", b"", 0o40755),
+        ("knuaf-doc-9.9.9/skills/", b"", 0o40755),
+        ("knuaf-doc-9.9.9/skills/knuaf-doc/", b"", 0o40755),
+        ("knuaf-doc-9.9.9/skills/knuaf-doc/SKILL.md", skill_md, 0o100644),
+        ("knuaf-doc-9.9.9/skills/knuaf-doc/version.json", vjson, 0o100644),
+        ("knuaf-doc-9.9.9/skills/knuaf-doc/scripts/", b"", 0o40755),
+        ("knuaf-doc-9.9.9/skills/knuaf-doc/scripts/gg_report.py",
+         b"# report marker\n", 0o100644),
+    ):
+        info = zipfile.ZipInfo(name)
+        info.external_attr = mode << 16
+        zf.writestr(info, data)
+payload = buf.getvalue()
+
+
+class Resp:
+    status = 302
+    def getheaders(self):
+        return [("Location",
+                 "/starceas/knuaf-doc/releases/tag/v9.9.9")]
+    def read(self, n=-1):
+        return b""
+
+
+class Conn:
+    def request(self, *a, **kw):
+        pass
+    def getresponse(self):
+        return Resp()
+
+
+real_stat = os.stat
+hits = [0]
+
+
+def faulty(path, *a, **kw):
+    if str(path) == target:
+        hits[0] += 1
+        if hits[0] == fail_hit or (fail_hit < 0 and hits[0] >= -fail_hit):
+            raise PermissionError("SYNTHETIC injected stat failure")
+    return real_stat(path, *a, **kw)
+
+
+os.stat = faulty
+rc = mod.main(["auto"], connect=lambda host, timeout: Conn(),
+              download=lambda *a: payload)
+sys.exit(rc)
+"""
+
+
+class PreservationR1Tests(_UpdateCase):
+    """R1-01 반례: 학생 파일·정본이 어떤 교체 경로에서도 옮겨지지 않는다."""
+
+    def _dispatch(self, cmd, target, *, payload=None,
+                  extra_in_src=None, version="0.1.2"):
+        conn = _connect(302, [("Location", _loc(version))])
+
+        def dl(_v, _c):
+            return payload if payload is not None else _good_zip(version)
+
+        if cmd in ("auto", "apply"):
+            mod = _load_update(target / "scripts" / "gg_update.py")
+            if cmd == "auto":
+                return mod.auto_cmd(connect=conn, download=dl)
+            return mod.apply_cmd(version, confirm=True,
+                                 connect=conn, download=dl)
+        src = self.make_incoming(version=version)
+        for rel, data in (extra_in_src or {}).items():
+            p = src / rel
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_bytes(data)
+        _write_fixture_manifest(src)
+        mod = _load_update(src / "scripts" / "gg_update.py")
+        return mod.adopt_cmd(src, target, confirm=True)
+
+    def _want(self, cmd):
+        """auto는 거절을 skipped(reason 유지)로 내린다."""
+        return "skipped" if cmd == "auto" else "refused"
+
+    def _write_manifest(self, mod, root):
+        doc = mod.build_install_manifest(root)
+        (Path(root) / mod.MANIFEST_NAME).write_text(
+            json.dumps(doc, ensure_ascii=False, sort_keys=True),
+            encoding="utf-8")
+        return doc
+
+    def test_added_student_markdown_refused_everywhere(self):
+        """반례 1: 새 트리에 없는 references/*.md는 세 경로 모두 거절."""
+        rel = "references/student-draft.md"
+        for cmd in ("auto", "apply", "adopt"):
+            with self.subTest(cmd=cmd):
+                _, _, target = self.make_target(updater=True)
+                p = target / rel
+                p.parent.mkdir(exist_ok=True)
+                p.write_text("SYNTHETIC STUDENT DRAFT", encoding="utf-8")
+                before = _tree_bytes(target)
+                out = self._dispatch(cmd, target)
+                self.assertEqual(self._want(cmd), out["status"], out)
+                self.assertEqual("user_files_in_skill", out["reason"], out)
+                self.assertIn(rel, out["files"], out)
+                self.assertEqual(b"SYNTHETIC STUDENT DRAFT", p.read_bytes())
+                self.assertEqual(before, _tree_bytes(target))
+
+    def test_project_json_name_collision_refused_everywhere(self):
+        """반례 2: 새 트리가 같은 이름·다른 바이트를 실어도 학생 쪽이 이긴다."""
+        rel = "scripts/project.json"
+        for cmd in ("auto", "apply", "adopt"):
+            with self.subTest(cmd=cmd):
+                _, _, target = self.make_target(updater=True)
+                p = target / rel
+                p.write_text('{"student":"original"}', encoding="utf-8")
+                before = _tree_bytes(target)
+                if cmd == "adopt":
+                    out = self._dispatch(
+                        cmd, target,
+                        extra_in_src={rel: b'{"sample":true}'})
+                else:
+                    out = self._dispatch(cmd, target, payload=_zip_with_extra(
+                        "knuaf-doc-0.1.2/skills/knuaf-doc/" + rel,
+                        b'{"sample":true}', refresh_manifest=True))
+                self.assertEqual(self._want(cmd), out["status"], out)
+                self.assertEqual("user_files_in_skill", out["reason"], out)
+                self.assertIn(rel, out["files"], out)
+                self.assertEqual(b'{"student":"original"}', p.read_bytes())
+                self.assertEqual(before, _tree_bytes(target))
+
+    def test_manifest_install_blocks_modified_and_added(self):
+        """manifest가 있는 설치본: 목록 밖 추가·sha 불일치 변경 모두 차단."""
+        extra = "references/student-draft.md"
+        for cmd in ("auto", "apply", "adopt"):
+            with self.subTest(cmd=cmd):
+                _, _, target = self.make_target(updater=True)
+                mod = _load_update(target / "scripts" / "gg_update.py")
+                self._write_manifest(mod, target)
+                (target / "scripts" / "gg_report.py").write_text(
+                    REPORT_STUB + "# changed line\n", encoding="utf-8")
+                p = target / extra
+                p.parent.mkdir(exist_ok=True)
+                p.write_text("student", encoding="utf-8")
+                before = _tree_bytes(target)
+                out = self._dispatch(cmd, target)
+                self.assertEqual(self._want(cmd), out["status"], out)
+                self.assertEqual("user_files_in_skill", out["reason"], out)
+                self.assertIn(extra, out["files"], out)
+                self.assertIn("scripts/gg_report.py", out["files"], out)
+                self.assertEqual(before, _tree_bytes(target))
+
+    def test_manifest_install_ignores_generated_files(self):
+        """manifest 설치본에서도 무시 목록은 통과하고, 목록 안 파일은
+        정상 교체·백업된다."""
+        _, _, target = self.make_target(updater=True)
+        mod = _load_update(target / "scripts" / "gg_update.py")
+        self._write_manifest(mod, target)
+        (target / "references").mkdir(exist_ok=True)
+        (target / "references" / ".DS_Store").write_bytes(b"x")
+        cache = target / "scripts" / "__pycache__"
+        cache.mkdir()
+        (cache / "m.pyc").write_bytes(b"x")
+        before = _tree_bytes(target)
+        out = self._dispatch("apply", target)
+        self.assertEqual("applied", out["status"], out)
+        backup = Path(out["backup"])
+        self.assertTrue((backup / "install-manifest.json").exists())
+        self.assertTrue((backup / "references" / ".DS_Store").exists())
+        self.assertEqual((0, 1, 2),
+                         mod.read_version_file(target / "version.json"))
+
+    def test_legacy_install_refuses_new_markdown_and_project_json(self):
+        """manifest 없는 설치본의 배포 기준 밖 파일은 확장자와 무관하게 거절."""
+        _, _, target = self.make_target(version=None)
+        (target / "references").mkdir(exist_ok=True)
+        (target / "references" / "memo.md").write_text("m",
+                                                     encoding="utf-8")
+        before = _tree_bytes(target)
+        src = self.make_incoming()
+        mod = _load_update(src / "scripts" / "gg_update.py")
+        out = mod.adopt_cmd(src, target, confirm=True)
+        self.assertEqual("refused", out["status"], out)
+        self.assertIn("references/memo.md", out["files"], out)
+        self.assertEqual(before, _tree_bytes(target))
+        # 비문서 파일도 알려진 배포 바이트가 아니면 보존한다.
+        _, _, target = self.make_target(version=None)
+        (target / "references").mkdir(exist_ok=True)
+        (target / "references" / "memo.txt").write_text("m",
+                                                      encoding="utf-8")
+        before = _tree_bytes(target)
+        out = mod.adopt_cmd(src, target, confirm=True)
+        self.assertEqual(("refused", "user_files_in_skill"),
+                         (out["status"], out["reason"]), out)
+        self.assertIn("references/memo.txt", out["files"], out)
+        self.assertEqual(before, _tree_bytes(target))
+
+
+class ManifestTests(_UpdateCase):
+    """install-manifest.json 생성·새 트리 검증 (R1-01 배포 목록)."""
+
+    def _apply(self, target, *, version="0.1.2", payload=None):
+        mod = _load_update(target / "scripts" / "gg_update.py")
+        conn = _connect(302, [("Location", _loc(version))])
+        result = mod.apply_cmd(version, confirm=True, connect=conn,
+                               download=lambda *_: payload or _good_zip())
+        return mod, result
+
+    def _manifest_bytes(self, files):
+        doc = {"schema": self.gu.MANIFEST_SCHEMA, "files": files}
+        return json.dumps(doc, ensure_ascii=False).encode("utf-8")
+
+    def _good_manifest(self):
+        vjson = json.dumps(_version_doc("0.1.2")).encode("utf-8")
+        return {
+            "SKILL.md": hashlib.sha256(
+                SKILL_MD_MIN.encode("utf-8")).hexdigest(),
+            "version.json": hashlib.sha256(vjson).hexdigest(),
+            "scripts/gg_report.py": hashlib.sha256(
+                REPORT_STUB.encode("utf-8")).hexdigest(),
+            "scripts/gg_update.py": hashlib.sha256(
+                UPDATE_SCRIPT.read_bytes()).hexdigest(),
+            "scripts/legacy-release-hashes.json": hashlib.sha256(
+                _fixture_legacy_bytes()).hexdigest(),
+        }
+
+    def test_build_manifest_excludes_self_and_generated(self):
+        src = self.make_incoming()
+        (src / "references").mkdir(exist_ok=True)
+        (src / "references" / "x.md").write_text("x", encoding="utf-8")
+        (src / "scripts" / "__pycache__").mkdir()
+        (src / "scripts" / "__pycache__" / "a.pyc").write_bytes(b"p")
+        (src / ".DS_Store").write_bytes(b"d")
+        (src / "install-manifest.json").write_text("{}", encoding="utf-8")
+        doc = self.gu.build_install_manifest(src)
+        self.assertEqual(self.gu.MANIFEST_SCHEMA, doc["schema"])
+        keys = set(doc["files"])
+        self.assertIn("references/x.md", keys)
+        self.assertIn("scripts/gg_update.py", keys)
+        for bad in ("install-manifest.json", ".DS_Store",
+                    "scripts/__pycache__/a.pyc"):
+            self.assertNotIn(bad, keys)
+        want = hashlib.sha256(
+            (src / "references" / "x.md").read_bytes()).hexdigest()
+        self.assertEqual(want, doc["files"]["references/x.md"])
+        (src / "linked").symlink_to(src / "references",
+                                    target_is_directory=True)
+        with self.assertRaises(self.gu.Refused):
+            self.gu.build_install_manifest(src)
+
+    def test_new_tree_manifest_must_match(self):
+        top = "knuaf-doc-0.1.2"
+        mpath = top + "/skills/knuaf-doc/install-manifest.json"
+        good = self._good_manifest()
+        _, _, target = self.make_target(updater=True)
+        mod, out = self._apply(target, payload=_zip_with_extra(
+            mpath, self._manifest_bytes(good)))
+        self.assertEqual("applied", out["status"], out)
+        for name, files in (
+            ("missing", {k: v for k, v in good.items()
+                         if k != "version.json"}),
+            ("wrong_sha", dict(good, **{"SKILL.md": "0" * 64})),
+            ("extra", dict(good, **{"references/x.md": "1" * 64})),
+        ):
+            with self.subTest(name=name):
+                _, _, target = self.make_target(updater=True)
+                before = _tree_bytes(target)
+                mod, out = self._apply(target, payload=_zip_with_extra(
+                    mpath, self._manifest_bytes(files)))
+                self.assertEqual(("refused", "zip_invalid",
+                                  "manifest_mismatch"),
+                                 (out["status"], out.get("reason"),
+                                  out.get("detail")), out)
+                self.assertEqual(before, _tree_bytes(target))
+        for name, raw in (("garbage", b"{"),
+                          ("bad_schema", b'{"schema":"other","files":{}}')):
+            with self.subTest(name=name):
+                _, _, target = self.make_target(updater=True)
+                before = _tree_bytes(target)
+                mod, out = self._apply(target,
+                                       payload=_zip_with_extra(mpath, raw))
+                self.assertEqual(("refused", "zip_invalid",
+                                  "manifest_invalid"),
+                                 (out["status"], out.get("reason"),
+                                  out.get("detail")), out)
+                self.assertEqual(before, _tree_bytes(target))
+
+    def test_adopt_source_manifest_enforced(self):
+        src = self.make_incoming()
+        mod = _load_update(src / "scripts" / "gg_update.py")
+        doc = mod.build_install_manifest(src)
+        (src / "install-manifest.json").write_text(
+            json.dumps(doc, ensure_ascii=False, sort_keys=True),
+            encoding="utf-8")
+        _, _, target = self.make_target(version=None)
+        out = mod.adopt_cmd(src, target, confirm=True)
+        self.assertEqual("applied", out["status"], out)
+        self.assertTrue((target / "install-manifest.json").is_file())
+        # 목록 생성 뒤 원천이 바뀌면 거절한다.
+        src = self.make_incoming()
+        mod = _load_update(src / "scripts" / "gg_update.py")
+        doc = mod.build_install_manifest(src)
+        (src / "install-manifest.json").write_text(
+            json.dumps(doc, ensure_ascii=False, sort_keys=True),
+            encoding="utf-8")
+        (src / "SKILL.md").write_text(SKILL_MD_MIN + "tampered\n",
+                                    encoding="utf-8")
+        _, _, target = self.make_target(version=None)
+        before = _tree_bytes(target)
+        out = mod.adopt_cmd(src, target, confirm=True)
+        self.assertEqual(("refused", "zip_invalid", "manifest_mismatch"),
+                         (out["status"], out.get("reason"),
+                          out.get("detail")), out)
+        self.assertEqual(before, _tree_bytes(target))
+
+    def test_manifest_cli_write_and_stdout(self):
+        src = self.make_incoming()
+        script = src / "scripts" / "gg_update.py"
+        proc = subprocess.run([sys.executable, str(script), "manifest",
+                               "--write"], capture_output=True, text=True)
+        self.assertEqual(0, proc.returncode, proc.stderr)
+        self.assertEqual(1, len(proc.stdout.splitlines()))
+        out = json.loads(proc.stdout)
+        self.assertEqual("written", out["status"], out)
+        manifest = src / "install-manifest.json"
+        self.assertTrue(manifest.is_file())
+        doc = json.loads(manifest.read_text(encoding="utf-8"))
+        self.assertEqual("knuaf-doc/install-manifest@1", doc["schema"])
+        self.assertEqual(hashlib.sha256(script.read_bytes()).hexdigest(),
+                         doc["files"]["scripts/gg_update.py"])
+        self.assertNotIn("install-manifest.json", doc["files"])
+        proc = subprocess.run([sys.executable, str(script), "manifest"],
+                              capture_output=True, text=True)
+        self.assertEqual(0, proc.returncode, proc.stderr)
+        out = json.loads(proc.stdout)
+        self.assertEqual("knuaf-doc/install-manifest@1", out["schema"])
+        self.assertNotIn("install-manifest.json", out["files"])
+
+
+class PreservationR3Tests(_UpdateCase):
+    """R1-01/R2-01: 세 교체 경로의 바이트 보존과 정상 전환 대조."""
+
+    commands = ("auto", "apply", "adopt")
+
+    def _case(self, version="0.1.1"):
+        _, _, target = self.make_target(version=version, manifest=False)
+        (target / "references").mkdir()
+        (target / "references" / "update.md").write_bytes(b"OLD RELEASE GUIDE")
+        src = self.make_incoming(version="0.1.3")
+        (src / "references").mkdir()
+        (src / "references" / "update.md").write_bytes(b"NEW RELEASE GUIDE")
+        # 기준은 수정 전 합성 구 배포본에서 계산한다. Git은 쓰지 않는다.
+        doc = {"schema": self.gu.LEGACY_SCHEMA,
+               "files": {rel: [hashlib.sha256(raw).hexdigest()]
+                         for rel, raw in _tree_bytes(target).items()}}
+        (src / "scripts" / self.gu.LEGACY_NAME).write_text(json.dumps(doc))
+        _write_fixture_manifest(src)
+        if version is not None and self.gu.parse_version(version) >= (0, 1, 2):
+            _write_fixture_manifest(target)
+        mod = _load_update(src / "scripts" / "gg_update.py")
+        return target, src, mod
+
+    def _run(self, cmd, target, src, mod):
+        prefix = "knuaf-doc-0.1.3/skills/knuaf-doc/"
+        payload = _zip([(_zi(prefix + rel), raw)
+                        for rel, raw in _tree_bytes(src).items()])
+        argv = {"auto": ["auto"],
+                "apply": ["apply", "--version", "0.1.3", "--confirm"],
+                "adopt": ["adopt", "--source", str(src),
+                          "--target", str(target), "--confirm"]}[cmd]
+        buf = io.StringIO()
+        # auto/apply는 새 updater의 코드로 대상 설치본만 주입한다.
+        # 옛 설치본에 새 코드를 덮어써 기준 바이트를 바꾸지 않는다.
+        root = target if cmd != "adopt" else src
+        with (mock.patch.object(mod, "skill_root", return_value=root),
+              redirect_stdout(buf)):
+            code = mod.main(argv, connect=_connect(
+                302, [("Location", _loc("0.1.3"))]),
+                download=lambda *_: payload)
+        self.assertEqual(0, code)
+        self.assertEqual(1, len(buf.getvalue().splitlines()))
+        return json.loads(buf.getvalue())
+
+    def _refusal(self, cmd, target, src, mod, reason, **extra):
+        before = _tree_bytes(target)
+        with mock.patch.object(mod, "_rename", wraps=mod._rename) as ren:
+            out = self._run(cmd, target, src, mod)
+        self.assertEqual("skipped" if cmd == "auto" else "refused",
+                         out["status"], out)
+        self.assertEqual(reason, out["reason"], out)
+        for key, value in extra.items():
+            self.assertEqual(value, out.get(key), out)
+        self.assertEqual(before, _tree_bytes(target))
+        ren.assert_not_called()
+        return out
+
+    def test_same_path_legacy_markdown_change_refused_everywhere(self):
+        for cmd in self.commands:
+            with self.subTest(cmd=cmd):
+                target, src, mod = self._case()
+                path = target / "references" / "update.md"
+                path.write_bytes(path.read_bytes() + b" SYNTHETIC STUDENT ORIGINAL")
+                out = self._refusal(cmd, target, src, mod, "user_files_in_skill")
+                self.assertEqual(["references/update.md"], out["files"])
+
+    def test_pristine_legacy_succeeds_everywhere(self):
+        for cmd in self.commands:
+            with self.subTest(cmd=cmd):
+                target, src, mod = self._case()
+                old = _tree_bytes(target)
+                new = _tree_bytes(src)
+                out = self._run(cmd, target, src, mod)
+                self.assertEqual("updated" if cmd == "auto" else "applied",
+                                 out["status"], out)
+                self.assertEqual(new, _tree_bytes(target))
+                self.assertEqual(old, _tree_bytes(out["backup"]))
+
+    def test_legacy_unknown_file_refused_everywhere(self):
+        for cmd in self.commands:
+            for rel in ("references/student-data.json", "scripts/memo.txt"):
+                with self.subTest(cmd=cmd, rel=rel):
+                    target, src, mod = self._case()
+                    (target / rel).write_bytes(b"SYNTHETIC STUDENT DATA")
+                    out = self._refusal(cmd, target, src, mod, "user_files_in_skill")
+                    self.assertEqual([rel], out["files"])
+
+    def test_modern_invalid_manifest_refused_everywhere(self):
+        cases = {"missing": None, "json": "{",
+                 "schema": '{"schema":"other","files":{}}',
+                 "files": '{"schema":"knuaf-doc/install-manifest@1","files":[]}',
+                 "entry": json.dumps({"schema": self.gu.MANIFEST_SCHEMA,
+                                       "files": {"SKILL.md": ["0" * 64]}}),
+                 "duplicate": '{"schema":"knuaf-doc/install-manifest@1",'
+                              '"files":{},"files":{}}'}
+        for cmd in self.commands:
+            for name, raw in cases.items():
+                with self.subTest(cmd=cmd, case=name):
+                    target, src, mod = self._case("0.1.2")
+                    p = target / mod.MANIFEST_NAME
+                    if raw is None:
+                        p.unlink()
+                    else:
+                        p.write_text(raw)
+                    (target / "references" / "update.md").write_bytes(b"STUDENT ORIGINAL")
+                    self._refusal(cmd, target, src, mod, "install_manifest_invalid",
+                                  state="missing" if raw is None else "corrupt")
+
+    def test_manifest_read_permission_error_refused_everywhere(self):
+        real = Path.read_text
+        for cmd in self.commands:
+            with self.subTest(cmd=cmd):
+                target, src, mod = self._case("0.1.2")
+                p = target / mod.MANIFEST_NAME
+                def unreadable(path, *a, **kw):
+                    if path == p:
+                        raise PermissionError("injected read denial")
+                    return real(path, *a, **kw)
+                with mock.patch.object(Path, "read_text", unreadable):
+                    self._refusal(cmd, target, src, mod, "install_manifest_invalid",
+                                  state="unreadable")
+
+    def test_legacy_reference_unavailable_refused_everywhere(self):
+        for cmd in self.commands:
+            for name, raw in (("missing", None), ("corrupt", "{"),
+                              ("schema", '{"schema":"other","files":{}}'),
+                              ("entry", json.dumps({"schema": self.gu.LEGACY_SCHEMA,
+                                                    "files": {"SKILL.md": "0" * 64}}))):
+                with self.subTest(cmd=cmd, case=name):
+                    target, src, mod = self._case()
+                    p = src / "scripts" / mod.LEGACY_NAME
+                    if raw is None:
+                        p.unlink()
+                    else:
+                        p.write_text(raw)
+                    _write_fixture_manifest(src)  # 새 트리 불일치를 반례에 섞지 않는다.
+                    self._refusal(cmd, target, src, mod, "legacy_reference_unavailable",
+                                  state="missing" if raw is None else "corrupt")
+
+    def test_incoming_manifest_missing_refused_everywhere(self):
+        for cmd in self.commands:
+            with self.subTest(cmd=cmd):
+                target, src, mod = self._case()
+                (src / mod.MANIFEST_NAME).unlink()
+                self._refusal(cmd, target, src, mod, "zip_invalid",
+                              detail="manifest_missing")
+
+    def test_ignored_files_pass_everywhere(self):
+        for cmd in self.commands:
+            for version in ("0.1.1", "0.1.2"):
+                with self.subTest(cmd=cmd, version=version):
+                    target, src, mod = self._case(version)
+                    for rel in (".DS_Store", "references/.DS_Store",
+                                "scripts/cache.pyc", "scripts/__pycache__/memo.txt"):
+                        p = target / rel
+                        p.parent.mkdir(parents=True, exist_ok=True)
+                        p.write_bytes(b"generated")
+                    before = _tree_bytes(target)
+                    out = self._run(cmd, target, src, mod)
+                    self.assertEqual("updated" if cmd == "auto" else "applied",
+                                     out["status"], out)
+                    self.assertEqual(before, _tree_bytes(out["backup"]))
+
+    def test_links_and_special_files_are_not_hashed_or_moved(self):
+        for cmd in self.commands:
+            for kind in ("link", "fifo"):
+                with self.subTest(cmd=cmd, kind=kind):
+                    target, src, mod = self._case()
+                    p = target / "references" / "student-data.json"
+                    if kind == "link":
+                        p.symlink_to(target / "references" / "update.md")
+                    elif hasattr(os, "mkfifo"):
+                        os.mkfifo(p)
+                    else:
+                        continue
+                    before = os.lstat(p)
+                    self._refusal(cmd, target, src, mod, "user_files_in_skill")
+                    self.assertEqual((before.st_mode, before.st_ino),
+                                     (os.lstat(p).st_mode, os.lstat(p).st_ino))
+
+    def test_bin_helper_publishes_and_loads_its_own_reference(self):
+        target, src, mod = self._case()
+        expected = mod._load_legacy_reference()
+        reference_bytes = (src / "scripts" / mod.LEGACY_NAME).read_bytes()
+        out = self._run("adopt", target, src, mod)
+        self.assertEqual("applied", out["status"], out)
+        bin_dir = target.parents[1] / mod.STATE_DIR_NAME / "bin"
+        helpers = list(bin_dir.glob("gg_update-*.py"))
+        self.assertEqual(1, len(helpers))
+        helper = _load_update(helpers[0])
+        companion = helpers[0].with_name(helpers[0].stem + "-" + mod.LEGACY_NAME)
+        self.assertEqual(companion, helper._legacy_reference_path())
+        self.assertEqual(reference_bytes, companion.read_bytes())
+        (src / "scripts" / mod.LEGACY_NAME).unlink()
+        (target / "scripts" / mod.LEGACY_NAME).write_text("{")
+        _write_fixture_manifest(target)
+        self.assertEqual(expected, helper._load_legacy_reference())
+        # 도우미를 다시 실행해도 자신과 함께 게시된 기준을 쓴다.
+        _, _, other = self.make_target(version="0.1.1", manifest=False)
+        (other / "references").mkdir()
+        p = other / "references" / "update.md"
+        p.write_bytes(b"OLD RELEASE GUIDE SYNTHETIC STUDENT ORIGINAL")
+        for cmd in self.commands:
+            with self.subTest(cmd=cmd):
+                self._refusal(cmd, other, target, helper, "user_files_in_skill")
+        companion.unlink()
+        for cmd in self.commands:
+            with self.subTest(cmd=cmd, state="missing"):
+                self._refusal(cmd, other, target, helper, "legacy_reference_unavailable",
+                              state="missing")
+
+
+class IoBoundaryTests(_UpdateCase):
+    """R1-04: 예상 가능한 파일시스템 실패를 구조화된 failed로 닫는다."""
+
+    def _auto(self, mod):
+        conn = _connect(302, [("Location", _loc("0.1.2"))])
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            code = mod.main(["auto"], connect=conn,
+                            download=lambda *_: _good_zip())
+        self.assertEqual(0, code)
+        self.assertEqual(1, len(buf.getvalue().splitlines()))
+        return json.loads(buf.getvalue())
+
+    def test_stat_failure_before_and_after_lock(self):
+        for fail_hit in (2, 3):  # 2: 잠금 전 stat, 3: 잠금 후 stat
+            with self.subTest(fail_hit=fail_hit):
+                _, _, target = self.make_target(updater=True)
+                before = _tree_bytes(target)
+                mod = _load_update(target / "scripts" / "gg_update.py")
+                real, hits = mod.os.stat, [0]
+
+                def faulty(path, *a, **kw):
+                    if str(path) == str(target):
+                        hits[0] += 1
+                        if hits[0] == fail_hit:
+                            raise PermissionError("injected")
+                    return real(path, *a, **kw)
+
+                with mock.patch.object(mod.os, "stat",
+                                       side_effect=faulty):
+                    out = self._auto(mod)
+                self.assertEqual(("failed", "prepare", "target_intact"),
+                                 (out["status"], out["stage"],
+                                  out["state"]), out)
+                self.assertEqual(before, _tree_bytes(target))
+
+    def test_staging_lstat_failure_is_structured(self):
+        _, _, target = self.make_target(updater=True)
+        before = _tree_bytes(target)
+        mod = _load_update(target / "scripts" / "gg_update.py")
+        real = mod.os.lstat
+
+        def faulty(path, *a, **kw):
+            if Path(str(path)).name.startswith(mod.STAGING_PREFIX):
+                raise PermissionError("injected")
+            return real(path, *a, **kw)
+
+        with mock.patch.object(mod.os, "lstat", side_effect=faulty):
+            out = self._auto(mod)
+        self.assertEqual(("failed", "prepare", "target_intact"),
+                         (out["status"], out["stage"], out["state"]), out)
+        self.assertEqual(before, _tree_bytes(target))
+
+    def test_unverifiable_target_reports_unknown_with_recover(self):
+        _, _, target = self.make_target(updater=True)
+        mod = _load_update(target / "scripts" / "gg_update.py")
+        real, hits = mod.os.stat, [0]
+
+        def faulty(path, *a, **kw):
+            if str(path) == str(target):
+                hits[0] += 1
+                if hits[0] >= 3:  # 잠금 후 stat과 재확인 모두 실패
+                    raise PermissionError("injected")
+            return real(path, *a, **kw)
+
+        with mock.patch.object(mod.os, "stat", side_effect=faulty):
+            out = self._auto(mod)
+        self.assertEqual(("failed", "prepare", "unknown"),
+                         (out["status"], out["stage"], out["state"]), out)
+        self.assertIn("recover", out)
+        self.assertIn("recover_argv", out)
+        self.assertEqual(shlex.split(out["recover"]), out["recover_argv"])
+        self.assertTrue(target.is_dir())
+
+    def test_apply_and_adopt_share_the_boundary(self):
+        _, _, target = self.make_target(updater=True)
+        before = _tree_bytes(target)
+        mod = _load_update(target / "scripts" / "gg_update.py")
+        real, hits = mod.os.stat, [0]
+
+        def faulty(path, *a, **kw):
+            if str(path) == str(target):
+                hits[0] += 1
+                if hits[0] == 3:
+                    raise PermissionError("injected")
+            return real(path, *a, **kw)
+
+        with mock.patch.object(mod.os, "stat", side_effect=faulty):
+            out = mod.apply_cmd("0.1.2", confirm=True,
+                                connect=_connect(
+                                    302, [("Location", _loc("0.1.2"))]),
+                                download=lambda *_: _good_zip())
+        self.assertEqual(("failed", "prepare", "target_intact"),
+                         (out["status"], out["stage"], out["state"]), out)
+        self.assertEqual(before, _tree_bytes(target))
+        src = self.make_incoming()
+        mod = _load_update(src / "scripts" / "gg_update.py")
+        _, _, target2 = self.make_target(version=None)
+        before = _tree_bytes(target2)
+        hits = [0]
+
+        def faulty2(path, *a, **kw):
+            if str(path) == str(target2):
+                hits[0] += 1
+                if hits[0] == 3:
+                    raise PermissionError("injected")
+            return real(path, *a, **kw)
+
+        with mock.patch.object(mod.os, "stat", side_effect=faulty2):
+            out = mod.adopt_cmd(src, target2, confirm=True)
+        self.assertEqual(("failed", "prepare", "target_intact"),
+                         (out["status"], out["stage"], out["state"]), out)
+        self.assertEqual(before, _tree_bytes(target2))
+
+    def test_recover_oserror_is_manual_required(self):
+        driver = self.root / "driver-io.py"
+        driver.write_text(_DRIVER, encoding="utf-8")
+        src = self.make_incoming()
+        home, _, target = self.make_target(version=None)
+        subprocess.run([sys.executable, str(driver),
+                        str(src / "scripts" / "gg_update.py"), "adopt",
+                        "wj1", str(src), str(target)],
+                       capture_output=True, check=True)
+        mod = _load_update(src / "scripts" / "gg_update.py")
+        with mock.patch.object(mod, "_recover_locked",
+                               side_effect=OSError("injected")):
+            out = mod.recover_cmd(home, confirm=True)
+        self.assertEqual("manual_required", out["status"], out)
+
+    def test_cli_auto_io_failure_is_single_json(self):
+        """별도 프로세스: 잠금 후 stat 실패도 exit 0·stdout JSON 1개."""
+        driver = self.root / "io-driver.py"
+        driver.write_text(_IO_DRIVER, encoding="utf-8")
+        for fail_hit in (3, -3):  # -3: 잠금 후 stat부터 계속 실패 → unknown
+
+            with self.subTest(fail_hit=fail_hit):
+                _, _, target = self.make_target(updater=True)
+                before = _tree_bytes(target)
+                proc = subprocess.run(
+                    [sys.executable, str(driver),
+                     str(target / "scripts" / "gg_update.py"),
+                     str(target), str(fail_hit)],
+                    capture_output=True, text=True)
+                self.assertEqual(0, proc.returncode, proc.stderr)
+                self.assertEqual(1, len(proc.stdout.splitlines()),
+                                 proc.stdout)
+                self.assertNotIn("Traceback", proc.stderr)
+                out = json.loads(proc.stdout)
+                self.assertEqual("failed", out["status"], out)
+                state = "target_intact" if fail_hit == 3 else "unknown"
+                self.assertEqual(state, out["state"], out)
+                self.assertEqual(before, _tree_bytes(target))
+
+    def test_main_closes_any_exception_as_failed_json(self):
+        _, _, target = self.make_target(updater=True)
+        mod = _load_update(target / "scripts" / "gg_update.py")
+        buf = io.StringIO()
+        with mock.patch.object(mod, "auto_cmd",
+                               side_effect=OSError("injected")), \
+                redirect_stdout(buf):
+            code = mod.main(["auto"])
+        self.assertEqual(0, code)
+        self.assertEqual(1, len(buf.getvalue().splitlines()))
+        out = json.loads(buf.getvalue())
+        self.assertEqual(("failed", "internal", "unknown"),
+                         (out["status"], out["stage"], out["state"]), out)
