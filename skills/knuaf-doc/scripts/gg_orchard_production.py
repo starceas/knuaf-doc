@@ -879,4 +879,6 @@ def main(argv):
 
 
 if __name__ == "__main__":
+    for _stream in (sys.stdout, sys.stderr):
+        getattr(_stream, "reconfigure", lambda **_: None)(encoding="utf-8")
     raise SystemExit(main(sys.argv[1:]))

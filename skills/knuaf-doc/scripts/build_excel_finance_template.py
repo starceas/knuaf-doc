@@ -3,6 +3,7 @@
 
 import argparse
 import json
+import sys
 from pathlib import Path
 from gg_core import local
 from gg_finance import validate_economic_inputs, workbook
@@ -39,6 +40,8 @@ def build(base, input_path, out_path, *, major_id=None):
 
 
 if __name__ == "__main__":
+    for _stream in (sys.stdout, sys.stderr):
+        getattr(_stream, "reconfigure", lambda **_: None)(encoding="utf-8")
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("base")
     ap.add_argument(

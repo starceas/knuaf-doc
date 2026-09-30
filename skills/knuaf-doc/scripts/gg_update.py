@@ -1,8 +1,8 @@
 """knuaf-doc 업데이트 확인·적용·채택·복구 (설계 U1 r3, 11.7.1 우선).
 
-표준 라이브러리만 쓰고 이 파일 하나만으로 동작한다 — 교체 과정에서
-state_dir/bin/ 아래에 복사돼 0.1.0 같은 구 설치본의 복구 명령으로도
-실행되기 때문이다(11.3).  네트워크는 http.client.HTTPSConnection 한
+표준 라이브러리만 쓴다. 교체 과정에서 state_dir/bin/ 아래에
+legacy 기준 해시 사본과 함께 복사돼 구 설치본의 복구 명령으로도
+실행된다(11.3). 네트워크는 http.client.HTTPSConnection 한
 번, 리다이렉트 미추종, check는 본문을 읽지 않는다.  출력은 stdout에
 JSON 한 개.  argparse 사용 오류만 exit 2.
 """
@@ -36,6 +36,10 @@ USER_AGENT = "knuaf-doc-update/1"
 
 VERSION_SCHEMA = "knuaf-doc/version@1"
 JOURNAL_SCHEMA = "knuaf-doc/update-journal@1"
+MANIFEST_SCHEMA = "knuaf-doc/install-manifest@1"
+MANIFEST_NAME = "install-manifest.json"
+LEGACY_SCHEMA = "knuaf-doc/legacy-release-hashes@1"
+LEGACY_NAME = "legacy-release-hashes.json"
 
 VERSION_RE = re.compile(
     r"(0|[1-9][0-9]{0,8})\.(0|[1-9][0-9]{0,8})\.(0|[1-9][0-9]{0,8})\Z",
@@ -526,7 +530,10 @@ def _acquire_lock(state_dir, _nonce_unused=None):
 def _release_lock(fd):
     """획득한 호출만 해제한다. unlock 실패에도 fd는 닫는다."""
     try:
-        _os_unlock(fd)
+        try:
+            _os_unlock(fd)
+        except OSError:
+            pass  # fd를 닫으면 OS 잠금은 어차피 풀린다.
     finally:
         os.close(fd)
 
@@ -605,7 +612,10 @@ def _cleanup_staging(journal):
 
 
 def _stage_helper(state_dir, txid):
-    """11.3+11.6: 자기 gg_update.py를 bin에 O_EXCL 새 파일로 게시한다."""
+    """자기 코드·legacy 데이터를 트랜잭션별 O_EXCL 파일로 게시한다.
+
+    bin 안의 도우미는 같은 stem의 해시 사본만 읽는다. 이후 업데이트가
+    더 넓은 legacy 목록을 게시해도 이전 도우미의 기준은 바뀌지 않는다."""
     bin_dir = state_dir / "bin"
     if _is_link_or_reparse(bin_dir) or not bin_dir.is_dir():
         raise Refused("unsafe_state_path")
@@ -613,16 +623,34 @@ def _stage_helper(state_dir, txid):
             os.path.join(os.path.realpath(str(state_dir)), "bin"):
         raise Refused("unsafe_state_path")
     helper = bin_dir / ("gg_update-%s.py" % txid)
+    reference = helper.with_name(helper.stem + "-" + LEGACY_NAME)
+    legacy_path = _legacy_reference_path()
+    _load_legacy_reference()  # 손상된 기준은 게시하지 않는다.
+    _publish_helper_file(legacy_path, reference)
+    try:
+        _publish_helper_file(Path(__file__).resolve(), helper)
+    except Refused:
+        try:
+            reference.unlink()
+        except OSError:
+            pass
+        raise
+    _fsync_dir(bin_dir)
+    return helper
+
+
+def _publish_helper_file(source, dest):
+    """기존 도우미·기준 파일은 덮어쓰지 않는다."""
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
     flags |= getattr(os, "O_NOFOLLOW", 0)
     try:
-        fd = os.open(str(helper), flags, 0o644)
+        fd = os.open(str(dest), flags, 0o644)
     except FileExistsError:
         raise Refused("helper_exists")
     except OSError:
         raise Refused("unsafe_state_path")
     try:
-        with open(str(Path(__file__).resolve()), "rb") as src:
+        with open(str(source), "rb") as src:
             while True:
                 chunk = src.read(1 << 20)
                 if not chunk:
@@ -634,14 +662,12 @@ def _stage_helper(state_dir, txid):
     except OSError:
         os.close(fd)
         try:
-            os.unlink(str(helper))
+            os.unlink(str(dest))
         except OSError:
             pass
         raise Refused("unsafe_state_path")
     else:
         os.close(fd)
-    _fsync_dir(bin_dir)
-    return helper
 
 
 # ------------------------------------------------------------------- zip --
@@ -775,6 +801,99 @@ def _validate_new_tree(new_root, expected):
         raise Refused("new_tree_invalid")
     if version != expected:
         raise Refused("new_tree_invalid")
+    _check_new_tree_manifest(new_root)
+
+
+def _hash_path_valid(key):
+    """배포 목록의 정규 상대 POSIX 파일 경로만 허용한다."""
+    return (isinstance(key, str) and bool(key)
+            and not any(c in key for c in ("\\", ":"))
+            and not any(ord(c) < 32 or ord(c) == 127 for c in key)
+            and all(part not in ("", ".", "..")
+                    for part in key.split("/")))
+
+
+def _load_hash_reference(path, schema, *, legacy=False):
+    """파일 읽기·형식 상태를 합치지 않는다: valid/missing/unreadable/corrupt."""
+    def unique_pairs(pairs):
+        obj = {}
+        for key, value in pairs:
+            if key in obj:
+                raise ValueError("duplicate key")
+            obj[key] = value
+        return obj
+
+    try:
+        st = os.lstat(str(path))
+        if not stat.S_ISREG(st.st_mode) or _is_link_or_reparse(path):
+            return None, "corrupt"
+        raw = Path(path).read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return None, "missing"
+    except OSError:
+        return None, "unreadable"
+    except UnicodeDecodeError:
+        return None, "corrupt"
+    try:
+        doc = json.loads(raw, object_pairs_hook=unique_pairs)
+    except ValueError:
+        return None, "corrupt"
+    if not isinstance(doc, dict) \
+            or doc.get("schema") != schema \
+            or not isinstance(doc.get("files"), dict):
+        return None, "corrupt"
+    files = {}
+    for key, value in doc["files"].items():
+        values = value if legacy else [value]
+        if not _hash_path_valid(key) or key == MANIFEST_NAME \
+                or not isinstance(values, list) or not values \
+                or any(not isinstance(v, str)
+                       or re.fullmatch(r"[0-9a-f]{64}", v) is None
+                       for v in values):
+            return None, "corrupt"
+        files[key] = value
+    return files, "valid"
+
+
+def _load_manifest(root):
+    return _load_hash_reference(Path(root) / MANIFEST_NAME, MANIFEST_SCHEMA)
+
+
+def _legacy_reference_path():
+    """실행 중인 코드의 기준만 읽는다(target·incoming 경로 주입 금지)."""
+    here = Path(__file__).resolve()
+    if here.parent.name == "bin":
+        return here.with_name(here.stem + "-" + LEGACY_NAME)
+    return here.parents[1] / "scripts" / LEGACY_NAME
+
+
+def _load_legacy_reference():
+    files, state = _load_hash_reference(
+        _legacy_reference_path(), LEGACY_SCHEMA, legacy=True)
+    if state != "valid":
+        raise Refused("legacy_reference_unavailable", state=state)
+    return files
+
+
+def _check_new_tree_manifest(new_root):
+    """새 트리는 필수 manifest와 파일 집합·해시가 정확히 같아야 한다."""
+    files, state = _load_manifest(new_root)
+    if state == "missing":
+        raise Refused("zip_invalid", detail="manifest_missing")
+    if state != "valid":
+        raise Refused("zip_invalid", detail="manifest_invalid")
+    actual = {}
+    for path in _iter_tree(new_root):
+        rel = path.relative_to(new_root)
+        if rel.as_posix() == MANIFEST_NAME or _ignored_rel(path, rel):
+            continue
+        if _is_link_or_reparse(path):
+            raise Refused("zip_invalid", detail="manifest_mismatch")
+        if path.is_dir():
+            continue
+        actual[rel.as_posix()] = _sha256_file(path)
+    if actual != files:
+        raise Refused("zip_invalid", detail="manifest_mismatch")
 
 
 def _copy_source(source, dest):
@@ -787,168 +906,335 @@ def _copy_source(source, dest):
 
 # ---------------------------------------------------------------- replace --
 
+USER_FILE_REPORT_MAX = 20
+
+
+def _iter_tree(root):
+    """root 아래 모든 경로를 모은다. 링크 디렉터리는 내려가지 않는다."""
+    root = Path(root)
+    out = []
+    stack = [root]
+    while stack:
+        current = stack.pop()
+        with os.scandir(str(current)) as it:
+            for entry in it:
+                path = Path(entry.path)
+                out.append(path)
+                try:
+                    if entry.is_dir(follow_symlinks=False):
+                        stack.append(path)
+                except OSError:
+                    pass
+    return out
+
+
+def _ignored_rel(path, rel):
+    """보존 판정·배포 목록에서 빼는 생성물 (__pycache__·*.pyc·.DS_Store)."""
+    return any(part == "__pycache__" for part in rel.parts) \
+        or path.name == ".DS_Store" or path.name.endswith(".pyc")
+
+
+def _sha256_file(path):
+    h = hashlib.sha256()
+    with open(str(path), "rb") as fh:
+        for chunk in iter(lambda: fh.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _sha256_quiet(path):
+    try:
+        return _sha256_file(path)
+    except OSError:
+        return None
+
+
+def build_install_manifest(skill_root):
+    """배포 목록 생성 (개발자용): {"schema", "files": {posix 경로: sha256}}.
+
+    install-manifest.json 자체와 무시 목록은 넣지 않는다.  링크가
+    하나라도 섞여 있으면 거절한다."""
+    root = Path(skill_root)
+    files = {}
+    for path in _iter_tree(root):
+        rel = path.relative_to(root)
+        if rel.as_posix() == MANIFEST_NAME or _ignored_rel(path, rel):
+            continue
+        if _is_link_or_reparse(path):
+            raise Refused("source_has_links", path=rel.as_posix())
+        if path.is_dir():
+            continue
+        files[rel.as_posix()] = _sha256_file(path)
+    return {"schema": MANIFEST_SCHEMA, "files": files}
+
+
+def _user_file_blockers(target, new_leaf):
+    """설치본의 모든 파일이 알려진 배포 바이트인지 증명한다.
+
+    0.1.2+는 manifest가 필수다. manifest 없는 구 설치본만 실행 중인
+    코드의 legacy 기준 해시를 쓴다. 새 트리와의 차이는 근거가 아니다."""
+    manifest, state = _load_manifest(target)
+    version, _ = _try_version(target)
+    legacy = state == "missing" and (version is None or version < (0, 1, 2))
+    if state != "valid" and not legacy:
+        raise Refused("install_manifest_invalid", state=state)
+    reference = _load_legacy_reference() if legacy else manifest
+    blockers = []
+    for path in _iter_tree(target):
+        rel = path.relative_to(target)
+        relkey = rel.as_posix()
+        if relkey == MANIFEST_NAME or _ignored_rel(path, rel):
+            continue
+        linked = _is_link_or_reparse(path)
+        mode = os.lstat(str(path)).st_mode
+        if not linked and stat.S_ISDIR(mode):
+            continue
+        want = reference.get(relkey)
+        bad = want is None or linked or not stat.S_ISREG(mode)
+        if not bad:
+            digest = _sha256_quiet(path)
+            bad = digest not in want if legacy else digest != want
+        if bad:
+            blockers.append(relkey)
+            if len(blockers) >= USER_FILE_REPORT_MAX:
+                break
+    return blockers
+
+
+def _target_is_old(target, pre_ino, old_version, legacy):
+    """대상이 잡아둔 교체 전 신원 그대로인지 다시 확인한다.
+
+    inode를 잡기 전의 실패면 버전 신원만 비교한다.  확인 자체가
+    실패하면 False — 모르는 상태를 intact로 부르지 않는다."""
+    try:
+        st = os.stat(str(target))
+    except OSError:
+        return False
+    if pre_ino is not None and (st.st_dev, st.st_ino) != pre_ino:
+        return False
+    version, state = _try_version(target)
+    if legacy:
+        return state == "legacy"
+    return state == "version" and version == old_version
+
+
+def _recover_hint(home, helper=None):
+    """recover 명령 안내. helper가 게시되기 전이면 실행 중인 이 파일."""
+    script = str(helper) if helper is not None \
+        else str(Path(__file__).resolve())
+    argv = ["python3", script, "recover", "--home", str(home), "--confirm"]
+    return {"recover_argv": argv, "recover": shlex.join(argv)}
+
+
+def _io_failed(stage, target, pre_ino, old_version, legacy, home,
+               helper=None):
+    """예상 가능한 파일시스템 OSError → 구조화된 Failed로 닫는다.
+
+    대상이 교체 전 신원으로 확인될 때만 target_intact다."""
+    if target is not None \
+            and _target_is_old(target, pre_ino, old_version, legacy):
+        return Failed(stage, "target_intact")
+    extra = _recover_hint(home, helper) if home is not None else {}
+    return Failed(stage, "unknown", **extra)
+
+
 def _run_replace(target, *, expected, prepare, allow_legacy,
                  connect=None, deadline=CHECK_DEADLINE, version_arg=None):
     """apply/adopt 공용 교체 엔진. journal 단계:
     prepared → old_moved → new_placed → done."""
-    skills_dir, home, old_version, legacy = _validate_target(
-        target, allow_legacy=allow_legacy)
-    target = skills_dir / SKILL_NAME
-    if old_version is not None and expected is not None \
-            and old_version >= expected:
-        raise Refused("not_newer")
-    _cwd_guard(target)
-    state_dir = _prepare_state(skills_dir, home)
-
-    pre = os.stat(str(target))
-    pre_ino = (pre.st_dev, pre.st_ino)
-
-    fd = _acquire_lock(state_dir)
+    target_c = None       # 검증 끝난 정본 대상 경로
+    home = None
+    pre_ino = None
+    old_version = None
+    legacy = False
+    helper = None
+    moved = False         # 첫 rename(이전 트리 이동)을 시도한 뒤 True
     try:
-        prior, prior_state = _read_journal(state_dir / "journal.json", home)
-        if prior_state == "manual_required":
-            raise Refused("journal_requires_recovery")
-        if prior_state == "ok" and prior.get("phase") != "done":
-            raise Refused("journal_requires_recovery")
-        post = os.stat(str(target))
-        post_v, post_state = _try_version(target)
-        if (post.st_dev, post.st_ino) != pre_ino:
-            raise Refused("changed_during_update")
-        if legacy:
-            if post_state != "legacy":
+        skills_dir, home, old_version, legacy = _validate_target(
+            target, allow_legacy=allow_legacy)
+        target_c = skills_dir / SKILL_NAME
+        if old_version is not None and expected is not None \
+                and old_version >= expected:
+            raise Refused("not_newer")
+        _cwd_guard(target_c)
+        state_dir = _prepare_state(skills_dir, home)
+
+        pre = os.stat(str(target_c))
+        pre_ino = (pre.st_dev, pre.st_ino)
+
+        fd = _acquire_lock(state_dir)
+        try:
+            prior, prior_state = _read_journal(state_dir / "journal.json",
+                                               home)
+            if prior_state == "manual_required":
+                raise Refused("journal_requires_recovery")
+            if prior_state == "ok" and prior.get("phase") != "done":
+                raise Refused("journal_requires_recovery")
+            post = os.stat(str(target_c))
+            post_v, post_state = _try_version(target_c)
+            if (post.st_dev, post.st_ino) != pre_ino:
                 raise Refused("changed_during_update")
-        elif post_state != "version" or post_v != old_version:
-            raise Refused("changed_during_update")
+            if legacy:
+                if post_state != "legacy":
+                    raise Refused("changed_during_update")
+            elif post_state != "version" or post_v != old_version:
+                raise Refused("changed_during_update")
 
-        if version_arg is not None:
-            status = check_status(connect=connect, deadline=deadline,
-                                  local_root=target)
-            if status["status"] != "update_available":
-                raise Refused("not_update_available",
-                              check_status=status["status"])
-            if status["latest_version"] != format_version(version_arg):
-                raise Refused("not_latest",
-                              latest=status["latest_version"])
+            if version_arg is not None:
+                status = check_status(connect=connect, deadline=deadline,
+                                      local_root=target_c)
+                if status["status"] != "update_available":
+                    raise Refused("not_update_available",
+                                  check_status=status["status"])
+                if status["latest_version"] != format_version(version_arg):
+                    raise Refused("not_latest",
+                                  latest=status["latest_version"])
 
-        # 백업 이름 + txid — 존재하면 새 nonce로 다시 만든다.
-        backups = state_dir / "backups"
-        for _ in range(100):
-            txid = _nonce()
-            backup = backups / ("%s-%s-%s" % (
-                format_version(old_version) if old_version else "unknown",
-                _utc_stamp(), txid[:8]))
-            if not os.path.lexists(str(backup)):
-                break
-        else:
-            raise Refused("backup_name_conflict")
+            # 백업 이름 + txid — 존재하면 새 nonce로 다시 만든다.
+            backups = state_dir / "backups"
+            for _ in range(100):
+                txid = _nonce()
+                backup = backups / ("%s-%s-%s" % (
+                    format_version(old_version)
+                    if old_version else "unknown",
+                    _utc_stamp(), txid[:8]))
+                if not os.path.lexists(str(backup)):
+                    break
+            else:
+                raise Refused("backup_name_conflict")
 
-        try:
-            staging = Path(tempfile.mkdtemp(prefix=STAGING_PREFIX,
-                                            dir=str(skills_dir)))
-        except OSError:
-            raise Failed("prepare", "target_intact")
-        st = os.lstat(str(staging))
-        new_leaf = staging / SKILL_NAME
-
-        journal = {
-            "schema": JOURNAL_SCHEMA, "txid": txid,
-            "home": str(home), "skills_dir": str(skills_dir),
-            "target": str(target), "backup": str(backup),
-            "staging": str(staging),
-            "staging_dev": st.st_dev, "staging_ino": st.st_ino,
-            "old_version": (format_version(old_version)
-                            if old_version else None),
-            "new_version": format_version(expected),
-            "phase": "prepared", "utc": _utcnow(),
-        }
-
-        def cleanup_staging():
-            return _cleanup_staging(journal)
-
-        try:
-            prepare(new_leaf)          # zip 추출 또는 source 복사
-            _validate_new_tree(new_leaf, expected)
-        except Refused:
-            cleanup_staging()
-            raise
-        except OSError:
-            cleanup_staging()
-            raise Failed("prepare", "target_intact")
-
-        try:
-            helper = _stage_helper(state_dir, txid)  # 11.6: rename 전 게시
-        except Refused:
-            cleanup_staging()
-            raise
-        try:
-            _check_lock_identity(state_dir, fd)
-        except Refused:
-            cleanup_staging()
-            raise
-        try:
-            _write_journal(state_dir, journal)
-        except OSError:
-            cleanup_staging()
-            raise Failed("prepare", "target_intact")
-
-        try:
-            _rename(str(target), str(backup))
-        except OSError:
-            cleanup_staging()
-            raise Failed("move_old", "target_intact")
-
-        journal["phase"] = "old_moved"
-        try:
-            _write_journal(state_dir, journal)
-        except OSError:
-            pass  # 기록하지 못해도 실제 상태표가 recover를 이끈다.
-
-        try:
-            _rename(str(new_leaf), str(target))
-        except OSError:
             try:
-                _rename(str(backup), str(target))
+                staging = Path(tempfile.mkdtemp(prefix=STAGING_PREFIX,
+                                                dir=str(skills_dir)))
+                st = os.lstat(str(staging))
             except OSError:
-                raise Failed(
-                    "place_new", "backup_preserved_target_missing",
-                    backup=str(backup),
-                    recover_argv=["python3", str(helper), "recover",
-                                  "--home", str(home), "--confirm"],
-                    recover=shlex.join(
-                        ["python3", str(helper), "recover",
-                         "--home", str(home), "--confirm"]))
-            journal["phase"] = "prepared"
+                raise _io_failed("prepare", target_c, pre_ino,
+                                 old_version, legacy, home)
+            new_leaf = staging / SKILL_NAME
+
+            journal = {
+                "schema": JOURNAL_SCHEMA, "txid": txid,
+                "home": str(home), "skills_dir": str(skills_dir),
+                "target": str(target_c), "backup": str(backup),
+                "staging": str(staging),
+                "staging_dev": st.st_dev, "staging_ino": st.st_ino,
+                "old_version": (format_version(old_version)
+                                if old_version else None),
+                "new_version": format_version(expected),
+                "phase": "prepared", "utc": _utcnow(),
+            }
+
+            def cleanup_staging():
+                return _cleanup_staging(journal)
+
+            try:
+                prepare(new_leaf)      # zip 추출 또는 source 복사
+                _validate_new_tree(new_leaf, expected)
+                blockers = _user_file_blockers(target_c, new_leaf)
+                if blockers:
+                    raise Refused("user_files_in_skill", files=blockers)
+            except Refused:
+                cleanup_staging()
+                raise
+            except OSError:
+                cleanup_staging()
+                raise _io_failed("prepare", target_c, pre_ino,
+                                 old_version, legacy, home)
+
+            try:
+                helper = _stage_helper(state_dir, txid)  # 11.6: 게시
+            except Refused:
+                cleanup_staging()
+                raise
+            except OSError:
+                cleanup_staging()
+                raise _io_failed("prepare", target_c, pre_ino,
+                                 old_version, legacy, home)
+            try:
+                _check_lock_identity(state_dir, fd)
+            except Refused:
+                cleanup_staging()
+                raise
+            except OSError:
+                cleanup_staging()
+                raise _io_failed("prepare", target_c, pre_ino,
+                                 old_version, legacy, home, helper)
+            try:
+                _write_journal(state_dir, journal)
+            except OSError:
+                cleanup_staging()
+                raise _io_failed("prepare", target_c, pre_ino,
+                                 old_version, legacy, home, helper)
+
+            moved = True
+            try:
+                _rename(str(target_c), str(backup))
+            except OSError:
+                cleanup_staging()
+                err = _io_failed("move_old", target_c, pre_ino,
+                                 old_version, legacy, home, helper)
+                if err.state != "target_intact":
+                    err.extra["backup"] = str(backup)
+                raise err
+
+            journal["phase"] = "old_moved"
+            try:
+                _write_journal(state_dir, journal)
+            except OSError:
+                pass  # 기록하지 못해도 실제 상태표가 recover를 이끈다.
+
+            try:
+                _rename(str(new_leaf), str(target_c))
+            except OSError:
+                try:
+                    _rename(str(backup), str(target_c))
+                except OSError:
+                    raise Failed(
+                        "place_new", "backup_preserved_target_missing",
+                        backup=str(backup),
+                        recover_argv=["python3", str(helper), "recover",
+                                      "--home", str(home), "--confirm"],
+                        recover=shlex.join(
+                            ["python3", str(helper), "recover",
+                             "--home", str(home), "--confirm"]))
+                journal["phase"] = "prepared"
+                try:
+                    _write_journal(state_dir, journal)
+                except OSError:
+                    pass
+                raise Failed("place_new", "old_restored",
+                             backup=str(backup))
+
+            journal["phase"] = "new_placed"
             try:
                 _write_journal(state_dir, journal)
             except OSError:
                 pass
-            raise Failed("place_new", "old_restored",
-                         backup=str(backup))
 
-        journal["phase"] = "new_placed"
-        try:
-            _write_journal(state_dir, journal)
-        except OSError:
-            pass
+            cleanup = _cleanup_staging(journal)
+            journal["phase"] = "done"
+            try:
+                _write_journal(state_dir, journal)
+            except OSError:
+                pass
 
-        cleanup = _cleanup_staging(journal)
-        journal["phase"] = "done"
-        try:
-            _write_journal(state_dir, journal)
-        except OSError:
-            pass
-
-        out = {"status": "applied",
-               "old_version": journal["old_version"],
-               "new_version": journal["new_version"],
-               "backup": str(backup)}
-        if cleanup != "done":
-            out["cleanup"] = cleanup
-            if cleanup == "skipped":
-                out["staging"] = str(staging)
-        return out
-    finally:
-        _release_lock(fd)
+            out = {"status": "applied",
+                   "old_version": journal["old_version"],
+                   "new_version": journal["new_version"],
+                   "backup": str(backup)}
+            if cleanup != "done":
+                out["cleanup"] = cleanup
+                if cleanup == "skipped":
+                    out["staging"] = str(staging)
+            return out
+        finally:
+            _release_lock(fd)
+    except (Refused, Failed):
+        raise
+    except OSError:
+        raise _io_failed("replace" if moved else "prepare",
+                         target_c, pre_ino, old_version, legacy,
+                         home, helper)
 
 
 def _default_download(version, connect=None):
@@ -1003,6 +1289,8 @@ def apply_cmd(version_text, *, confirm, connect=None, download=None):
         return _refused(exc)
     except Failed as exc:
         return _failed(exc)
+    except OSError:
+        return _failed(Failed("prepare", "unknown"))
 
 
 def adopt_cmd(source, target, *, confirm):
@@ -1032,6 +1320,85 @@ def adopt_cmd(source, target, *, confirm):
                             allow_legacy=True)
     except Refused as exc:
         return _refused(exc)
+    except Failed as exc:
+        return _failed(exc)
+    except OSError:
+        return _failed(Failed("prepare", "unknown"))
+
+
+def auto_cmd(*, connect=None, download=None):
+    """완전 자동 업데이트. phase≠done 저널이 남아 있으면 recover를 먼저
+    실행하고, check가 update_available이며 복사 설치일 때만 확인 없이
+    교체한다.  어떤 결과든 JSON 한 개."""
+    try:
+        return _auto_run(connect=connect, download=download)
+    except OSError:
+        return _failed(Failed("auto", "unknown"))
+
+
+def _auto_run(*, connect=None, download=None):
+    try:
+        root = skill_root()
+    except Refused as exc:
+        out = {"status": "skipped", "reason": exc.reason}
+        out.update(exc.extra)
+        return out
+    # bin/ 아래 게시된 복구 도우미로 실행되면 parents[1]는 상태 폴더다.
+    home = root.parent if root.name == STATE_DIR_NAME \
+        else root.parent.parent
+    journal_path = home / STATE_DIR_NAME / "journal.json"
+    if os.path.lexists(str(journal_path)):
+        doc, jstate = _read_journal(journal_path, home)
+        if jstate != "ok" or doc.get("phase") != "done":
+            rec = recover_cmd(home, confirm=True)
+            if rec["status"] == "manual_required":
+                return {"status": "failed", "stage": "recover",
+                        "state": "manual_required", "recover": rec}
+            if rec["status"] == "refused":
+                out = {"status": "skipped",
+                       "reason": rec.get("reason"), "recover": rec}
+                return out
+            if rec["status"] != "no_journal":
+                return {"status": "recovered", "recover": rec}
+            # 저널이 읽는 사이에 사라졌다 — check로 진행한다.
+    chk = check_status(connect=connect, local_root=root)
+    status = chk["status"]
+    if status in ("offline", "unknown"):
+        out = {"status": "check_failed", "reason": status}
+        if chk.get("reason"):
+            out["check_reason"] = chk["reason"]
+        return out
+    if status == "up_to_date":
+        return {"status": "up_to_date",
+                "local_version": chk["local_version"],
+                "latest_version": chk["latest_version"]}
+    if status != "update_available":
+        return {"status": "skipped", "reason": status}
+    if chk["install_kind"] != "copy":
+        return {"status": "skipped", "reason": "install_kind",
+                "install_kind": chk["install_kind"]}
+    latest = parse_version(chk["latest_version"])
+    dl = download or _default_download
+    holder = {}
+
+    def prepare(new_leaf):
+        if "zip" not in holder:
+            holder["zip"] = dl(latest, connect)
+        _extract_zip(holder["zip"], new_leaf)
+
+    try:
+        out = _run_replace(root, expected=latest, prepare=prepare,
+                           allow_legacy=False, connect=connect)
+        result = {"status": "updated", "from": out["old_version"],
+                  "to": out["new_version"], "backup": out["backup"]}
+        for key in ("cleanup", "staging"):
+            if key in out:
+                result[key] = out[key]
+        return result
+    except Refused as exc:
+        out = {"status": "skipped", "reason": exc.reason}
+        out.update(exc.extra)
+        return out
     except Failed as exc:
         return _failed(exc)
 
@@ -1191,11 +1558,33 @@ def recover_cmd(home, *, confirm):
         return out
     except Refused as exc:
         return _refused(exc)
+    except OSError:
+        return {"status": "manual_required", "journal": str(journal_path)}
     finally:
         _release_lock(fd)
 
 
 # --------------------------------------------------------------------- cli --
+
+def manifest_cmd(*, write):
+    """개발자용: 이 스크립트의 스킬 루트 배포 목록을 만든다."""
+    try:
+        root = skill_root()
+        doc = build_install_manifest(root)
+        if not write:
+            return doc
+        path = root / MANIFEST_NAME
+        path.write_text(json.dumps(doc, ensure_ascii=False,
+                                   sort_keys=True, indent=1) + "\n",
+                        encoding="utf-8")
+        _fsync_dir(root)
+        return {"status": "written", "path": str(path),
+                "files": len(doc["files"])}
+    except Refused as exc:
+        return _refused(exc)
+    except OSError:
+        return _failed(Failed("manifest", "unknown"))
+
 
 class _Parser(argparse.ArgumentParser):
     def error(self, message):
@@ -1209,6 +1598,7 @@ def main(argv=None, *, connect=None, download=None):
                      description="knuaf-doc 업데이트 확인·적용·복구")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("check", help="새 버전이 있는지 확인")
+    sub.add_parser("auto", help="복구·확인·교체를 한 번에 하는 자동 업데이트")
     p_apply = sub.add_parser("apply", help="최신 릴리스로 교체")
     p_apply.add_argument("--version", required=True)
     p_apply.add_argument("--confirm", action="store_true")
@@ -1219,21 +1609,35 @@ def main(argv=None, *, connect=None, download=None):
     p_rec = sub.add_parser("recover", help="중단된 교체 복구")
     p_rec.add_argument("--home", required=True)
     p_rec.add_argument("--confirm", action="store_true")
+    p_man = sub.add_parser("manifest",
+                           help="배포 목록 install-manifest.json 생성(개발자용)")
+    p_man.add_argument("--write", action="store_true",
+                       help="스킬 루트에 install-manifest.json을 쓴다")
     args = parser.parse_args(argv)
 
-    if args.command == "check":
-        result = check_status(connect=connect)
-    elif args.command == "apply":
-        result = apply_cmd(args.version, confirm=args.confirm,
-                           connect=connect, download=download)
-    elif args.command == "adopt":
-        result = adopt_cmd(args.source, args.target,
-                           confirm=args.confirm)
-    elif args.command == "recover":
-        result = recover_cmd(args.home, confirm=args.confirm)
+    try:
+        if args.command == "check":
+            result = check_status(connect=connect)
+        elif args.command == "auto":
+            result = auto_cmd(connect=connect, download=download)
+        elif args.command == "apply":
+            result = apply_cmd(args.version, confirm=args.confirm,
+                               connect=connect, download=download)
+        elif args.command == "adopt":
+            result = adopt_cmd(args.source, args.target,
+                               confirm=args.confirm)
+        elif args.command == "recover":
+            result = recover_cmd(args.home, confirm=args.confirm)
+        elif args.command == "manifest":
+            result = manifest_cmd(write=args.write)
+    except Exception:
+        result = {"status": "failed", "stage": "internal",
+                  "state": "unknown"}
     print(json.dumps(result, ensure_ascii=False))
     return 0
 
 
 if __name__ == "__main__":
+    for _stream in (sys.stdout, sys.stderr):
+        getattr(_stream, "reconfigure", lambda **_: None)(encoding="utf-8")
     sys.exit(main())

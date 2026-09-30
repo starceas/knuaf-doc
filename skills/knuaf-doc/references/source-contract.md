@@ -78,34 +78,105 @@
 현재 계획에 맞게 소폭 보완할 수 있으며, 그때도 `action: "adapt"`와 보완
 이유를 해당 task에 남긴다.
 
+## 출력 등록(`adopt-output`)과 동반 파일
+
+생성·수정된 출력 파일을 `project.json.outputs`에 등록하는 유일한 경로는
+`gg.py adopt-output <폴더> --input <spec.json> --expected-revision <N>
+--major <전공ID>`다. 일반 `apply`로 출력 레코드를 새로 만들거나 고칠 수
+없다 — 예외는 기존 출력에 처음 `superseded_by` 이력을 연결하는
+메타데이터 전용 갱신 하나뿐이며, 그 조건은 [section-ledger](section-ledger.md)의
+출력 계보 절을 따른다.
+
+spec은 `{"output": {…호출자 메타데이터…}, "companion_files": []}` 형태다.
+`companion_files`는 생략할 수 있고, 이 두 키 외의 최상위 키는 거부된다.
+`output`에는 [section-ledger](section-ledger.md)의 필수 필드 `id`,
+`format`, `path`, `file_hash`, `target_refs`, `input_fingerprint`를 적는다.
+`path`는 작업폴더 기준 상대경로다. `file_hash`는 실제 파일 바이트의
+SHA-256이고, `target_refs`는 현재 정본에서 계산한 `{collection, id}`
+객체의 배열, `input_fingerprint`는 그 refs로 계산한 입력 지문이다.
+스킬이 해시·지문·발행 참조를 지어내지 않는다.
+`publication_ref`·`revision`·`stale`는 서버가 관리하는 키라 spec에 넣으면
+거부된다.
+
+출력 요청의 **명시 전공 ID는 `--major` 옵션으로만** 준다. 이 명령은 spec
+안의 `output.major_id`·`output.school_profile.major_id` 같은 키를 읽지
+않는다. `--major` 값은 정본의 유효한 `common.major_id` 바인딩과 같아야
+하며, 없거나 다르면 등록 전에 거부된다.
+
+아래는 새 `init` 프로젝트에 특용작물을 바인딩한 뒤 실제로 실행해 성공한
+spec과 명령이다. `file_hash`·`input_fingerprint`·`target_refs`는 그때의
+파일 바이트와 정본 상태에서 계산된 값이므로, 다른 정본·파일에는 그대로
+쓸 수 없다.
+
+```sh
+python3 <스킬>/scripts/gg.py adopt-output <폴더> --input adopt.json \
+  --expected-revision <현재 revision> --major specialty_crops
+```
+
+```json
+{
+  "output": {
+    "id": "finance",
+    "path": "finance.xlsx",
+    "format": "xlsx",
+    "file_hash": "49880b44777569a72223c336b2028db9fa96a7d9deda50006c16a7bb3208e44a",
+    "target_refs": [
+      {"collection": "facts", "id": "farm_name"},
+      {"collection": "facts", "id": "selected_major"},
+      {"collection": "sections", "id": "intro"},
+      {"collection": "sources", "id": "answer"},
+      {"collection": "sources", "id": "major-answer"}
+    ],
+    "input_fingerprint": "998593e4b44bdeb4592dcd5471fc97baffa5713527f80ef610721048ff7416f8"
+  },
+  "companion_files": [
+    {"path": "source-map.json",
+     "sha256": "095bb31de44e5de7bf4c74ba6cf7812debb5f5961b2906a9112fb61f4e614957"}
+  ]
+}
+```
+
+채택되면 출력 파일과 동반 파일의 관리 사본이 `.gg-artifacts/<발행ID>/`
+아래 만들어지고 `outputs` 레코드의 `path`는 그 관리 경로를 가리킨다.
+발행 수령증(`.publication.json`)도 같은 폴더에 남는다. 같은 요청의
+재실행은 기존 발행 수령증을 대조해 새 출력을 만들지 않고 기존 결과를
+돌려준다. 등록된 출력은 `superseded_by` 계보로 current·history를 나눠
+관리하고, 새 등록이 옛 출력을 지우지 않는다.
+
+주 파일과 `companion_files`의 각 동반 파일은 파일별로 출력 권한을
+판별한다. 형식은 접미사와 파일 바이트를 함께 본다 — 확장자와 내용이
+다르거나 형식을 판별할 수 없는 파일은 거부된다. JSON 객체로 파싱되는
+동반 `.json` 파일은 주 출력의 kind를 상속하고, 그 밖의 동반 파일은
+독립 형식으로 판별한다.
+
 ## 엑셀 map·receipt 연결
 
-`gg_excel_template.py`의 `source-map.json`, `inspect-report.json`, blank-copy
-receipt는 실행 증거 파일이다. 이 파일들이 `project.json`을 대신하는 별도
-정본이 되지 않도록, 생성 직후 `project.json.outputs`에 상대경로와 해시를
-등록하고 `source_refs`로 템플릿 출처와 revision, 실제 시트·셀 범위를 연결한다.
-blank workbook도 같은 outputs 기록에 포함한다.
+`gg_excel_template.py` 계열이 만드는 `source-map.json`·
+`inspect-report.json`·`*-receipt.json`은 실행 증거다. JSON 파일은 주
+출력으로 등록되지 않으므로(등록을 시도하면 `unknown_output`으로 거부),
+다음 둘 중 하나로 연결한다:
 
-CLI가 호환성을 위해 map/receipt의 `source.sha256` 키를 쓸 수 있지만,
-`project.json.sources[*].hash`가 canonical source hash다. 등록 시 다음처럼
-어댑터를 거쳐 같은 값을 비교한다.
+- 주 XLSX를 등록하는 같은 adopt spec의 `companion_files`에
+  `{"path", "sha256"}` 레코드로 넣는다. 주 출력과 함께 발행되며 주
+  출력의 kind를 상속한다.
+- 출력 레코드의 `checks[]` 항목에 `evidence_path`·`evidence_hash`로
+  검사 증거를 연결한다(check 필드 형식은 [section-ledger](section-ledger.md) 참조).
 
-`outputs` 레코드는 [section-ledger](section-ledger.md)의 필수 필드
-`id`, `format`, `path`, `file_hash`, `target_refs`, `input_fingerprint`,
-`checks`를 따른다. `target_refs`는 코어가 요구하는
-`{"collection":"sections|facts", "id":"실제 레코드 ID"}` 객체의 배열이어야
-하며, 꺾쇠표시 예시나 task 문자열을 그대로 넣지 않는다. map·receipt 증거의
-`format`은 최종 제출 형식이 아니므로, 해당 재무 task와 실제 절·사실을
-연결한 뒤 파일·해시·검사 결과를 등록한다.
+blank workbook과 채운 재무 workbook은 XLSX 산출물이므로 각각 주 출력으로
+`adopt-output`에 등록한다. 이 파일들이 `project.json`을 대신하는 별도
+정본이 되지 않도록, 실행한 task와 절·출처 연결은 정본에 남긴다.
+
+`project.json.sources[*].hash`가 canonical source hash다. map/receipt 안의
+`source.sha256`은 같은 원본을 가리키는 보조 값이므로 등록 전에 sources
+레코드의 해시와 대조한다.
 
 같은 실행을 재무 절에 적용했다면 `tasks`에도 연결한다. 예를 들어
 `task-IV-xlsx-template-20260906-01`의 `source_refs`는
 `seo-minseo-finance-xlsx`의 실제 revision과 시트·셀 locator를 가리키고,
-`outputs`에는 map·receipt·blank workbook의 각 상대경로·파일 해시를 등록한다.
-`target_refs`는 코어가 요구하는 `{collection, id}` 형식의 실제 `sections`·
-`facts` 레코드로 채우며, task 연결은 `source_refs`와 task의 별도 기록으로
-남긴다. 검사 증거는 `checks`의 `evidence_path`와 `evidence_hash`로 연결한다.
-이전 receipt의 `status`를 읽어 현재 task나 output의 상태를 직접 덮어쓰지 않는다.
+`target_refs`는 `{collection, id}` 형식의 실제 `sections`·`facts` 등
+정본 레코드를 가리킨다. 출력·증거 파일의 등록은 위의 adopt-output
+경로로만 한다. 이전 receipt의 `status`를 읽어 현재 task나 output의
+상태를 직접 덮어쓰지 않는다.
 
 ```json
 {
@@ -121,19 +192,19 @@ CLI가 호환성을 위해 map/receipt의 `source.sha256` 키를 쓸 수 있지�
 }
 ```
 
-최신 receipt가 실제 파일 해시와 검사 결과로 확인되면 그 output만 현재
-후보로 남긴다. 과거 output은 삭제하지 않고 `superseded_by`를 가진 이력으로
-보존한다.
+최신 출력이 실제 파일 해시와 검사 결과로 확인되면 그 output만 현재
+후보로 남긴다. 과거 output은 삭제하지 않고 `superseded_by`를 가진
+이력으로 보존한다.
 
-`source.path`·`output.path`와 등록된 `outputs.path`에는 작업폴더 기준 상대경로만
-남긴다. 현재 CLI가 원시 map/receipt 안에 절대경로를 쓸 수 있으므로,
-`project.json`에 apply하기 전에 경로를 상대경로로 정규화하고 원시 파일을
-문서·패키지에 복사하지 않는다. 이 경로 정규화는 계약상 필수 동작이며 현재
-CLI의 모든 버전에서 자동으로 보장되는 기계 게이트라고 주장하지 않는다.
-map/receipt의 `partial` 또는 `blank_template`은 당시 실행의
-사실일 뿐 현재 상태 도장이 아니다. 이후 더 최신 receipt가 생성되면 이전
-receipt는 `superseded`로 history에 보존하고 현재 판정에서 제외한다. 상태를
-바꾸려면 실제 파일·해시·검사 결과를 확인한 새 apply 기록이 필요하다.
+원시 map/receipt 안에는 절대경로가 남을 수 있다. `source.path`·
+`output.path`와 정본의 `outputs.path`에는 작업폴더 기준 상대경로만
+남기고, 원시 map/receipt 파일을 문서·패키지에 복사하지 않는다. 이 경로
+정규화는 계약상 필수 동작이며 현재 CLI의 모든 버전에서 자동으로
+보장되는 기계 게이트라고 주장하지 않는다. map/receipt의 `partial` 또는
+`blank_template`은 당시 실행의 사실일 뿐 현재 상태 도장이 아니다. 더
+최신 receipt가 생기면 이전 receipt는 현재 판정 근거에서 제외하고
+증거 파일로 보존한다. 출력 상태를 바꾸려면 실제 파일·해시·검사 결과를
+확인한 새 adopt-output 등록과 `superseded_by` 연결이 필요하다.
 
 ## 보존·검증 경계
 

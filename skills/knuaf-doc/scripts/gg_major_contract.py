@@ -87,6 +87,22 @@ FINANCE_ENVELOPE_FIELDS = (
 )
 
 
+class _HeldReason(str):
+    """A ``reason`` code string that still points at its source error.
+
+    Hold helpers historically receive ``error.reason`` from callers; the
+    subclass keeps the error reachable so ``common_only_plan`` can add the
+    error's detail (recorded/registered module versions) without changing
+    any call site.  It compares and serializes exactly like the plain
+    code string.
+    """
+
+    def __new__(cls, code, error):
+        obj = super().__new__(cls, code)
+        obj.error = error
+        return obj
+
+
 class MajorContractError(Exception):
     """Fail-closed base error.  ``reason`` is the machine-checkable id."""
 
@@ -95,6 +111,7 @@ class MajorContractError(Exception):
     def __init__(self, message=None, **detail):
         super().__init__(message or self.reason)
         self.detail = detail
+        self.reason = _HeldReason(self.reason, self)
 
 
 class MissingMajorError(MajorContractError):
@@ -585,14 +602,30 @@ def binding_from_project(registry, project):
 
 
 def common_only_plan(reason="major_required"):
-    """Missing major: hold major-dependent work; common source org only."""
-    return {
+    """Missing major: hold major-dependent work; common source org only.
+
+    ``reason`` may be the bare hold code, the ``_HeldReason`` carried by
+    ``error.reason``, or the MajorContractError itself — the held plan
+    always gets the per-reason guidance, and a version-mismatch
+    binding_invalid also reports the recorded/registered module versions
+    (K3-02)."""
+    error = reason if isinstance(reason, MajorContractError) \
+        else getattr(reason, "error", None)
+    code = str(error.reason) if error is not None else str(reason)
+    detail = getattr(error, "detail", None) or {}
+    plan = {
         "status": "held",
-        "reason": reason,
+        "reason": code,
         "common_only": True,
         "allowed": ("source_organization", "answer_state_recording"),
         "held": CAPABILITY_KINDS,
+        "guidance": held_guidance(code, error),
     }
+    if code == "binding_invalid":
+        for key in ("recorded", "registered"):
+            if detail.get(key):
+                plan[key + "_version"] = detail[key]
+    return plan
 
 
 # ---------------------------------------------------------------------
@@ -627,6 +660,35 @@ OUTPUT_GUIDANCE = (
     "작목명·표지·옛 출력으로 전공을 추정하지 않는다."
 )
 
+OUTPUT_GUIDANCE_UNSUPPORTED = (
+    "전공 미지원 출력: 바인딩된 전공 모듈이 요청한 출력을 지원하지 않습니다. "
+    "해당 전공의 지원 출력인지 확인한 뒤 지원되는 출력으로 다시 요청하세요."
+)
+
+_UNSUPPORTED_OUTPUT_REASONS = frozenset({
+    "unsupported_output",
+    "unsupported_finance_profile",
+})
+
+
+def held_guidance(reason, error=None):
+    """Per-cause held guidance (K3-02): a recorded/registered module
+    version mismatch, an output the bound major does not support, or the
+    default missing-major display guidance.  ``error`` — when the caller
+    still has it — supplies the version detail."""
+    detail = getattr(error, "detail", None) or {}
+    if str(reason) == "binding_invalid" \
+            and detail.get("recorded") and detail.get("registered"):
+        return (
+            "기록된 모듈 버전 %s이 등록 버전 %s와 다릅니다. "
+            "원답변을 보존한 새 revision으로 %s를 다시 기록하세요."
+            % (detail["recorded"], detail["registered"],
+               detail["registered"])
+        )
+    if str(reason) in _UNSUPPORTED_OUTPUT_REASONS:
+        return OUTPUT_GUIDANCE_UNSUPPORTED
+    return OUTPUT_GUIDANCE
+
 
 class OutputHeldError(MajorContractError):
     """Output refused before any return/staging/receipt (policy B).
@@ -638,7 +700,7 @@ class OutputHeldError(MajorContractError):
 
     def __init__(self, reason, message=None, **detail):
         self.reason = reason
-        detail.setdefault("guidance", OUTPUT_GUIDANCE)
+        detail.setdefault("guidance", held_guidance(reason))
         super().__init__(message or reason, **detail)
 
 
@@ -1026,11 +1088,18 @@ def authorize_output(output, context, *, spec=None, registry=None,
             "정본에 common.major_id 바인딩이 없음",
         ) from error
     except MajorContractError as error:
+        held_detail = {
+            "binding_reason": str(error.reason),
+            "binding_detail": str(error),
+            "guidance": held_guidance(error.reason, error),
+        }
+        for key in ("recorded", "registered"):
+            if error.detail.get(key):
+                held_detail[key + "_version"] = error.detail[key]
         raise OutputHeldError(
             "major_binding_invalid",
             "정본의 전공 바인딩이 유효하지 않음",
-            binding_reason=error.reason,
-            binding_detail=str(error),
+            **held_detail,
         ) from error
     if binding.major_id != requested:
         raise OutputHeldError(

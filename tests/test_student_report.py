@@ -1,4 +1,8 @@
-"""학생 신고 CLI(gg_report) 계약 시험 — 설계 r1 + r2(D1-01~06) + r3.
+"""학생 신고 CLI(gg_report) 계약 시험 — 설계 r1 + r2(D1-01~06) + r3 + P27 D3.
+
+P27 D3: 신고는 전부 private다. 새 issue 초안은 issue_channel_closed로
+거절되고, send도 issue 초안을 보내지 않는다(과거 영수증 읽기만 유지).
+issue 초안이 필요한 시험은 _legacy_issue_draft로 손으로 만든다.
 
 실제 Worker에는 보내지 않는다. 127.0.0.1 임의 포트의 http.server가
 src/index.js와 같은 JSON 응답을 흉내 낸다. draft는
@@ -100,6 +104,17 @@ class _WorkerServer:
         return "http://127.0.0.1:%d" % self.server.server_address[1]
 
 
+class _CaptureOpener:
+    """네트워크 대신 전송 요청만 기록하는 opener(실제 접속 없음)."""
+
+    def __init__(self):
+        self.calls = []
+
+    def open(self, request, timeout):
+        self.calls.append(request)
+        raise OSError("test: no network")
+
+
 class _ReportCase(ContractCase):
     def setUp(self):
         self.gm = runtime("gg_report")
@@ -123,17 +138,17 @@ class _ReportCase(ContractCase):
             code = self.gm.main(argv)
         return code, json.loads(buf.getvalue())
 
-    def _in_doc(self, kind="issue", **fields):
+    def _in_doc(self, kind="private", **fields):
         doc = {"kind": kind, "category": "bug",
                "title": "테스트 제목", "description": "설명입니다"}
         doc.update(fields)
         return doc
 
-    def _build(self, kind="issue", **fields):
+    def _build(self, kind="private", **fields):
         return self.gm.build_draft(
             self._in_doc(kind, **fields), plugin_root=REPO_ROOT)
 
-    def _error_of(self, kind="issue", **fields):
+    def _error_of(self, kind="private", **fields):
         with self.assertRaises(self.gm.ReportError) as caught:
             self._build(kind, **fields)
         return caught.exception
@@ -144,7 +159,7 @@ class _ReportCase(ContractCase):
                         encoding="utf-8")
         return path
 
-    def _draft_file(self, name="r", kind="issue", **fields):
+    def _draft_file(self, name="r", kind="private", **fields):
         in_path = self._write_input(name, self._in_doc(kind, **fields))
         out_path = self.tmp / ("%s.draft.json" % name)
         code, result = self._cli(
@@ -167,6 +182,61 @@ class _ReportCase(ContractCase):
     def _sending(self, path, pattern):
         path = Path(path)
         return sorted(path.parent.glob(path.name + pattern))
+
+    def _legacy_issue_draft(self, name="legacy", *, test_server=None,
+                            **payload_overrides):
+        """과거 버전이 만든 것과 같은 유효한 issue 초안 파일을 쓴다.
+
+        P27 D3 이후 draft 명령으로는 issue 초안을 만들 수 없으므로,
+        이전 형식을 손으로 재현한다(값은 이미 trim·가림이 끝난 형태).
+        """
+        payload = {"kind": "issue", "category": "bug",
+                   "title": "테스트 제목", "description": "설명입니다",
+                   "skill_version": "knuaf-doc 0.1.1",
+                   "environment": "Darwin 25.6.0 arm64; Python 3.13.1"}
+        payload.update(payload_overrides)
+        if test_server is not None:
+            destination = {"endpoint": test_server.base + "/report",
+                           "test_mode": True}
+        else:
+            destination = {"endpoint": self.gm.PRODUCT_ENDPOINT,
+                           "test_mode": False}
+        draft = {"schema": self.gm.DRAFT_SCHEMA,
+                 "created_at": "2026-09-01T00:00:00Z",
+                 "destination": destination,
+                 "payload": payload, "redactions": [], "warnings": []}
+        text = (json.dumps(draft, ensure_ascii=False, indent=2,
+                           sort_keys=True) + "\n")
+        path = self.tmp / ("%s.draft.json" % name)
+        path.write_text(text, encoding="utf-8")
+        return path, hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+    def _legacy_private_draft(self, name="legacy-private", *,
+                              test_server=None, **payload_overrides):
+        """R1-03: v0.1.1이 만든 것과 같은 유효한 private 초안 파일을 쓴다.
+
+        구 버전은 private 본문을 가리지 않았다. 가림은 초안 생성 단계에서만
+        일어나므로 이미 만들어진 초안은 원문 그대로 send에 도달한다.
+        """
+        payload = {"kind": "private", "category": "bug",
+                   "title": "테스트 제목", "description": "설명입니다",
+                   "skill_version": "knuaf-doc 0.1.1"}
+        payload.update(payload_overrides)
+        if test_server is not None:
+            destination = {"endpoint": test_server.base + "/report",
+                           "test_mode": True}
+        else:
+            destination = {"endpoint": self.gm.PRODUCT_ENDPOINT,
+                           "test_mode": False}
+        draft = {"schema": self.gm.DRAFT_SCHEMA,
+                 "created_at": "2026-09-01T00:00:00Z",
+                 "destination": destination, "payload": payload,
+                 "redactions": [], "warnings": []}
+        text = (json.dumps(draft, ensure_ascii=False, indent=2,
+                           sort_keys=True) + "\n")
+        path = self.tmp / ("%s.draft.json" % name)
+        path.write_text(text, encoding="utf-8")
+        return path, hashlib.sha256(text.encode("utf-8")).hexdigest()
 
     def _assert_fully_masked(self, text):
         """로컬 재검사 + Worker 가림 포트 뒤에도 아무것도 안 남는지."""
@@ -192,6 +262,18 @@ class InputValidationTests(_ReportCase):
         self.assertEqual(
             "invalid_category", self._error_of(category="x").code)
 
+    def test_issue_kind_refused(self):
+        # P27 D3: 새 issue 초안은 private로 바꾸지 않고 거절한다.
+        self.assertEqual(
+            "issue_channel_closed", self._error_of(kind="issue").code)
+        in_path = self._write_input("i", self._in_doc("issue"))
+        out_path = self.tmp / "i.draft.json"
+        code, result = self._cli(
+            ["draft", "--input", str(in_path), "--out", str(out_path)])
+        self.assertEqual(2, code)
+        self.assertEqual("issue_channel_closed", result["error"])
+        self.assertFalse(out_path.exists())
+
     def test_non_string_field_rejected(self):
         self.assertEqual(
             "not_string", self._error_of(description=123).code)
@@ -199,7 +281,7 @@ class InputValidationTests(_ReportCase):
     def test_missing_fields(self):
         self.assertEqual(
             "missing_fields", self._error_of(description="  ").code)
-        doc = {"kind": "issue", "category": "bug",
+        doc = {"kind": "private", "category": "bug",
                "description": "있음"}
         with self.assertRaises(self.gm.ReportError) as caught:
             self.gm.build_draft(doc, plugin_root=REPO_ROOT)
@@ -210,16 +292,15 @@ class InputValidationTests(_ReportCase):
         self.assertEqual(
             "too_long", self._error_of(title="가" * 121).code)
 
-    def test_issue_local_limits(self):
-        self._build(description="가" * 2000)
+    def test_private_field_limits(self):
+        # private 필드 상한(8000)은 합성 문자열 상한(private_too_long)보다
+        # 먼저 걸린다.
         self.assertEqual(
-            "too_long", self._error_of(description="가" * 2001).code)
-        self._build(steps="가" * 2000)
+            "too_long", self._error_of(description="가" * 8001).code)
         self.assertEqual(
-            "too_long", self._error_of(steps="가" * 2001).code)
-        self._build(error_message="가" * 4000)
+            "too_long", self._error_of(steps="가" * 8001).code)
         self.assertEqual(
-            "too_long", self._error_of(error_message="가" * 4001).code)
+            "too_long", self._error_of(error_message="가" * 8001).code)
 
     def test_private_field_limit_8000(self):
         self._build("private", description="가" * 1500)
@@ -266,21 +347,12 @@ class InputValidationTests(_ReportCase):
                              "private", description="한" * (fit + 1),
                              steps="y", error_message="z").code)
 
-    def test_payload_body_16kb(self):
-        # issue 로컬 상한 합계(2000+2000+4000 한글)가 UTF-8로 16KB 초과.
-        exc = self._error_of(description="한" * 2000, steps="한" * 2000,
-                             error_message="한" * 4000)
-        self.assertEqual("too_large", exc.code)
-
     def test_optional_omitted_fields_pass(self):
-        # r3 R2-01: 선택 필드·environment(private)가 없어도 비교 통과.
+        # r3 R2-01: 선택 필드·environment(private에는 없음)가 없어도 통과.
         private = self._build("private")
         self.assertNotIn("steps", private["payload"])
         self.assertNotIn("environment", private["payload"])
-        issue = self._build("issue")
-        self.assertNotIn("steps", issue["payload"])
-        self.assertNotIn("error_message", issue["payload"])
-        self.assertIn("environment", issue["payload"])
+        self.assertNotIn("error_message", private["payload"])
 
     def test_empty_optional_field_dropped(self):
         draft = self._build(steps="   ")
@@ -291,13 +363,19 @@ class InputValidationTests(_ReportCase):
         self.assertEqual("제목", draft["payload"]["title"])
         self.assertEqual("설명", draft["payload"]["description"])
 
-    def test_skill_version_and_environment_shape(self):
+    def test_skill_version_shape_and_no_environment(self):
         draft = self._build()
         installed_version = json.loads((REPO_ROOT / "skills" / "knuaf-doc" /
             "version.json").read_text(encoding="utf-8"))["version"]
         self.assertEqual("knuaf-doc " + installed_version,
                          draft["payload"]["skill_version"])
-        env = draft["payload"]["environment"]
+        # r2 D1-02: private는 environment를 싣지 않는다.
+        self.assertNotIn("environment", draft["payload"])
+
+    def test_environment_helper_shape(self):
+        # P27 D3: 새 초안은 environment를 만들지 않지만, 과거 issue 초안의
+        # 필드 형태를 정의한 헬퍼는 유지한다.
+        env = self.gm.environment()
         self.assertNotIn(socket.gethostname(), env)
         self.assertNotIn(getpass.getuser(), env)
         self.assertNotIn(os.getcwd(), env)
@@ -444,11 +522,37 @@ class RedactionTests(_ReportCase):
         words = {w["word"] for w in draft["warnings"]}
         self.assertNotIn("전화", words)
 
-    def test_private_not_redacted(self):
-        draft = self._build("private", description="전화 010-1234-5678")
-        self.assertIn("010-1234-5678", draft["payload"]["description"])
+    def test_private_redacts_path_email_phone_rrn(self):
+        # P27 D3: private도 경로·이메일·전화·주민번호는 가리고 내역을 싣는다.
+        draft = self._build(
+            description=("연락 010-1234-5678 메일 a@b.co "
+                         "번호 900101-1234567"),
+            error_message="/Users/hong/논문/초안")
+        desc = draft["payload"]["description"]
+        self.assertIn("[전화번호 가림]", desc)
+        self.assertIn("[이메일 가림]", desc)
+        self.assertIn("[주민번호 가림]", desc)
+        self.assertNotIn("010-1234-5678", desc)
+        self.assertNotIn("a@b.co", desc)
+        # 경로 가림은 줄 끝까지 덮는다.
+        self.assertEqual("[경로 가림]",
+                         draft["payload"]["error_message"])
+        types = {(r["field"], r["type"]) for r in draft["redactions"]}
+        self.assertIn(("description", "phone"), types)
+        self.assertIn(("description", "email"), types)
+        self.assertIn(("description", "resident_number"), types)
+        self.assertIn(("error_message", "path"), types)
+
+    def test_private_keeps_diagnostic_values(self):
+        # P27 D3: 비공개 채널이라 이름·학번·파일명·날짜 숫자는 가리지 않는다.
+        draft = self._build(
+            description="김학생 학번 20241234 원고.hwp 날짜 20260927")
+        desc = draft["payload"]["description"]
+        self.assertIn("김학생", desc)
+        self.assertIn("20241234", desc)
+        self.assertIn("원고.hwp", desc)
+        self.assertIn("20260927", desc)
         self.assertEqual([], draft["redactions"])
-        self.assertEqual([], draft["warnings"])
 
     def test_redaction_counts_per_field(self):
         draft = self._build(
@@ -572,8 +676,12 @@ class DraftCliTests(_ReportCase):
         self.assertEqual(2, code)
         self.assertEqual("cannot_read_input", result["error"])
 
-    def test_issue_preview_text(self):
-        _, _, result = self._draft_file()
+    def test_legacy_issue_preview_via_show(self):
+        # P27 D3: 새 issue 초안은 못 만들지만 과거 초안의 미리보기는 유지.
+        path, _ = self._legacy_issue_draft()
+        code, result = self._cli(["show", "--draft", str(path)])
+        self.assertEqual(0, code, result)
+        self.assertEqual("draft", result["status"])
         preview = result["preview"]
         self.assertIn("보낼 곳: 공개 GitHub 이슈(starceas/knuaf-doc)",
                       preview)
@@ -581,9 +689,7 @@ class DraftCliTests(_ReportCase):
         self.assertIn("분류: 오류", preview)
         self.assertIn("제목: 테스트 제목", preview)
         self.assertIn("내용:\n설명입니다", preview)
-        version = json.loads((REPO_ROOT / "skills" / "knuaf-doc" /
-            "version.json").read_text(encoding="utf-8"))["version"]
-        self.assertIn("함께 보내는 정보: 스킬 버전 knuaf-doc " + version + ", 환경",
+        self.assertIn("함께 보내는 정보: 스킬 버전 knuaf-doc 0.1.1, 환경",
                       preview)
 
     def test_private_preview_shows_only_sent_fields(self):
@@ -619,8 +725,7 @@ class DraftCliTests(_ReportCase):
 class EndpointTests(_ReportCase):
     def test_test_endpoint_recorded_in_draft(self):
         server = _WorkerServer(
-            self, lambda h: (201, {"ok": True, "kind": "issue",
-                                   "number": 1, "url": "https://x/1"}))
+            self, lambda h: (201, {"ok": True, "kind": "private"}))
         self._set_test_env(server.base)
         path, _, result = self._draft_file()
         doc = json.loads(path.read_text(encoding="utf-8"))
@@ -710,7 +815,7 @@ class DraftRevalidationTests(_ReportCase):
                          self._send_error(path, sha)["error"])
 
     def test_missing_environment_in_issue_invalid(self):
-        path, _, _ = self._draft_file()
+        path, _ = self._legacy_issue_draft()
         sha = self._rewrite_draft(
             path, lambda d: d["payload"].pop("environment"))
         self.assertEqual("invalid_draft",
@@ -723,12 +828,13 @@ class DraftRevalidationTests(_ReportCase):
         self.assertEqual("invalid_draft",
                          self._send_error(path, sha)["error"])
 
-    def test_pii_remaining_blocks_send(self):
+    def test_pii_remaining_blocks_legacy_draft(self):
+        # F1-01: 과거 issue 초안의 재검사도 유지 — PII가 남아 있으면
+        # channel 닫힘보다 먼저 pii_remaining으로 거부한다.
         server = _WorkerServer(
             self, lambda h: (201, {"ok": True, "kind": "issue",
                                    "number": 1, "url": "https://x/1"}))
-        self._set_test_env(server.base)
-        path, _, _ = self._draft_file()
+        path, _ = self._legacy_issue_draft(test_server=server)
         sha = self._rewrite_draft(
             path, lambda d: d["payload"].__setitem__(
                 "description",
@@ -736,6 +842,70 @@ class DraftRevalidationTests(_ReportCase):
         self.assertEqual("pii_remaining",
                          self._send_error(path, sha)["error"])
         self.assertEqual(0, len(server.requests))
+
+    def test_private_unredacted_legacy_send_blocked_r1_03(self):
+        # R1-03: REVIEW의 legacy_private_send 반례 — 경로·이메일·전화가
+        # 남은 구 private 초안은 opener 호출 0회로 private_unredacted다.
+        capture = _CaptureOpener()
+        path, sha = self._legacy_private_draft(
+            description="/Users/Synthetic/private.xlsx "
+                        "user@example.test 010-1234-5678")
+        result = self.gm.send(path, sha, opener=capture)
+        self.assertEqual("error", result["status"])
+        self.assertEqual("private_unredacted", result["error"])
+        self.assertEqual("description", result["field"])
+        self.assertIn("새로", result["message"])
+        self.assertEqual(0, len(capture.calls))
+        # 거절은 claim·영수증 파일을 만들기 전에 일어난다.
+        self.assertFalse(Path(str(path) + ".sending.json").exists())
+        self.assertFalse(Path(str(path) + ".receipt.json").exists())
+
+    def test_private_unredacted_rescans_fields_r1_03(self):
+        # R1-03: 네 범주(경로·이메일·주민번호·전화)가 어떤 전송 문자열
+        # 필드에 남아 있어도 거절한다. 치환하지 않는다 — 초안 바이트 불변.
+        cases = (
+            ("title", "문의 user@example.test"),
+            ("description", "/Users/Synthetic/private.xlsx"),
+            ("steps", "전화 010-1234-5678"),
+            ("error_message", "번호 900101-1234567"),
+            ("skill_version", "knuaf-doc 0.1.1 user@example.test"),
+        )
+        for field, value in cases:
+            with self.subTest(field=field):
+                capture = _CaptureOpener()
+                path, sha = self._legacy_private_draft(
+                    name="p-%s" % field, **{field: value})
+                before = path.read_bytes()
+                result = self.gm.send(path, sha, opener=capture)
+                self.assertEqual("error", result["status"])
+                self.assertEqual("private_unredacted", result["error"])
+                self.assertEqual(field, result["field"])
+                self.assertEqual(0, len(capture.calls))
+                self.assertEqual(before, path.read_bytes())
+
+    def test_private_unredacted_show_rejected_r1_03(self):
+        # R1-03: show 미리보기 검증도 같은 재검사를 거친다.
+        path, sha = self._legacy_private_draft(
+            description="/Users/Synthetic/private.xlsx")
+        code, result = self._cli(["show", "--draft", str(path)])
+        self.assertEqual(2, code)
+        self.assertEqual("error", result["status"])
+
+    def test_new_private_draft_passes_rescan_r1_03(self):
+        # R1-03 대조: 새 초안으로 만든 private은 생성 단계에서 가림이
+        # 끝났으므로 재검사를 통과하고 전송 경로에 도달한다(요청 1회).
+        server = _WorkerServer(
+            self, lambda h: (201, {"ok": True, "kind": "private"}))
+        self._set_test_env(server.base)
+        path, sha, _ = self._draft_file(
+            description="메일 a@b.co 연락 010-1234-5678 /Users/x/y.docx")
+        result = self.gm.send(path, sha)
+        self.assertEqual("sent", result["status"])
+        self.assertEqual(1, len(server.requests))
+        body = json.loads(server.requests[0][1].decode("utf-8"))
+        self.assertNotIn("a@b.co", body["description"])
+        self.assertNotIn("010-1234-5678", body["description"])
+        self.assertNotIn("/Users/x", body["description"])
 
     def test_unknown_payload_key_invalid(self):
         path, _, _ = self._draft_file()
@@ -745,17 +915,18 @@ class DraftRevalidationTests(_ReportCase):
                          self._send_error(path, sha)["error"])
 
     def test_metadata_fields_rescanned_f1_01(self):
-        # F1-01: environment·skill_version도 공개 재검사 대상 — 거부, 요청 0회.
+        # F1-01: environment·skill_version도 공개 재검사 대상 — 과거 issue
+        # 초안을 send에 넣으면 거부되고 요청은 0회다.
         server = _WorkerServer(
             self, lambda h: (201, {"ok": True, "kind": "issue",
                                    "number": 1, "url": "https://x/1"}))
-        self._set_test_env(server.base)
         for field, value in (
                 ("environment", "Darwin 1 arm64 /Users/demo/가상학생/notes"),
                 ("skill_version", "knuaf-doc 가상.docx"),
                 ("environment", "Linux; 010-1234-5678")):
             with self.subTest(field=field, value=value):
-                path, _, _ = self._draft_file(name="m%d" % len(value))
+                path, _ = self._legacy_issue_draft(
+                    name="m%d" % len(value), test_server=server)
                 sha = self._rewrite_draft(
                     path, lambda d: d["payload"].__setitem__(field, value))
                 result = self._send_error(path, sha)
@@ -786,17 +957,16 @@ class SendTests(_ReportCase):
         self._set_test_env(server.base)
         return server
 
-    def test_send_201_issue_receipt_and_done(self):
-        server = self._server(lambda h: (201, {
-            "ok": True, "kind": "issue", "number": 12,
-            "url": "https://github.com/starceas/knuaf-doc/issues/12"}))
+    def test_send_201_private_receipt_and_done(self):
+        server = self._server(
+            lambda h: (201, {"ok": True, "kind": "private"}))
         path, sha, _ = self._draft_file()
         result = self.gm.send(path, sha)
         self.assertEqual("sent", result["status"])
-        self.assertEqual("issue", result["kind"])
-        self.assertEqual(12, result["number"])
+        self.assertEqual("private", result["kind"])
         self.assertTrue(result["test_mode"])
-        self.assertIn("공개 이슈 #12로 접수됐습니다", result["message"])
+        self.assertNotIn("number", result)
+        self.assertIn("비공개로 전달됐습니다", result["message"])
         self.assertEqual(1, len(server.requests))
         req_path, body, ctype, ua = server.requests[0]
         self.assertEqual("/report", req_path)
@@ -810,34 +980,70 @@ class SendTests(_ReportCase):
             Path(str(path) + ".receipt.json").read_text(encoding="utf-8"))
         self.assertEqual(self.gm.RECEIPT_SCHEMA, receipt["schema"])
         self.assertEqual(sha, receipt["draft_sha256"])
-        self.assertEqual(12, receipt["number"])
+        self.assertEqual("private", receipt["kind"])
         self.assertTrue(receipt["test_mode"])
+        self.assertNotIn("number", receipt)
+        self.assertNotIn("url", receipt)
         self.assertFalse(Path(str(path) + ".sending.json").exists())
         self.assertTrue(self._sending(path, ".sending.*.done.json"))
 
-    def test_send_201_private(self):
+    def test_issue_draft_send_refused_channel_closed(self):
+        # P27 D3: 영수증이 없는 과거 issue 초안은 send가 거절하고 POST도 없다.
         server = self._server(
-            lambda h: (201, {"ok": True, "kind": "private"}))
-        path, sha, _ = self._draft_file(kind="private")
+            lambda h: (201, {"ok": True, "kind": "issue", "number": 1,
+                             "url": "https://github.com/x/1"}))
+        path, sha = self._legacy_issue_draft(test_server=server)
+        code, result = self._cli(
+            ["send", "--draft", str(path), "--confirm", sha])
+        self.assertEqual(2, code)
+        self.assertEqual("error", result["status"])
+        self.assertEqual("issue_channel_closed", result["error"])
+        self.assertEqual(0, len(server.requests))
+        self.assertFalse(Path(str(path) + ".sending.json").exists())
+
+    def test_issue_draft_with_receipt_is_already_sent(self):
+        # P27 D3: 과거에 실제로 보낸 issue 초안의 영수증은 계속 읽는다.
+        server = self._server(
+            lambda h: (201, {"ok": True, "kind": "issue", "number": 9,
+                             "url": "https://github.com/x/9"}))
+        path, sha = self._legacy_issue_draft(test_server=server)
+        receipt = {"schema": self.gm.RECEIPT_SCHEMA, "draft_sha256": sha,
+                   "kind": "issue", "number": 12,
+                   "url": "https://github.com/starceas/knuaf-doc/issues/12",
+                   "sent_at": "2026-09-01T00:00:00Z", "test_mode": True}
+        Path(str(path) + ".receipt.json").write_text(
+            json.dumps(receipt), encoding="utf-8")
         result = self.gm.send(path, sha)
-        self.assertEqual("sent", result["status"])
-        self.assertNotIn("number", result)
-        self.assertIn("비공개로 전달됐습니다", result["message"])
-        receipt = json.loads(
-            Path(str(path) + ".receipt.json").read_text(encoding="utf-8"))
-        self.assertNotIn("number", receipt)
-        self.assertNotIn("url", receipt)
+        self.assertEqual("already_sent", result["status"])
+        self.assertEqual(12, result["number"])
+        self.assertEqual(
+            "https://github.com/starceas/knuaf-doc/issues/12",
+            result["url"])
+        self.assertEqual(0, len(server.requests))
+
+    def test_issue_draft_receipt_problems_still_reported(self):
+        path, sha = self._legacy_issue_draft()
+        Path(str(path) + ".receipt.json").write_text(json.dumps(
+            {"schema": self.gm.RECEIPT_SCHEMA, "draft_sha256": "0" * 64,
+             "kind": "issue", "number": 1, "url": "https://github.com/x/1",
+             "sent_at": "2026-09-01T00:00:00Z", "test_mode": False}),
+            encoding="utf-8")
+        self.assertEqual("receipt_conflict",
+                         self.gm.send(path, sha)["error"])
+        Path(str(path) + ".receipt.json").write_text(json.dumps(
+            {"schema": self.gm.RECEIPT_SCHEMA, "draft_sha256": sha,
+             "kind": "issue"}), encoding="utf-8")
+        self.assertEqual("receipt_invalid",
+                         self.gm.send(path, sha)["error"])
 
     def test_already_sent_makes_no_request(self):
-        server = self._server(lambda h: (201, {
-            "ok": True, "kind": "issue", "number": 3,
-            "url": "https://github.com/x/3"}))
+        server = self._server(
+            lambda h: (201, {"ok": True, "kind": "private"}))
         path, sha, _ = self._draft_file()
         first = self.gm.send(path, sha)
         self.assertEqual("sent", first["status"])
         second = self.gm.send(path, sha)
         self.assertEqual("already_sent", second["status"])
-        self.assertEqual(3, second["number"])
         self.assertEqual(1, len(server.requests))
 
     def test_rejected_400_and_resend_allowed(self):
@@ -846,8 +1052,7 @@ class SendTests(_ReportCase):
         def responder(handler):
             if state["fail"]:
                 return 400, {"ok": False, "error": "invalid_kind"}
-            return 201, {"ok": True, "kind": "issue", "number": 7,
-                         "url": "https://github.com/x/7"}
+            return 201, {"ok": True, "kind": "private"}
 
         server = self._server(responder)
         path, sha, _ = self._draft_file()
@@ -889,7 +1094,7 @@ class SendTests(_ReportCase):
 
     def test_server_error_502(self):
         self._server(lambda h: (502, {
-            "ok": False, "error": "github_failed", "status": 500}))
+            "ok": False, "error": "discord_failed", "status": 500}))
         path, sha, _ = self._draft_file()
         result = self.gm.send(path, sha)
         self.assertEqual("not_sent", result["status"])
@@ -910,7 +1115,7 @@ class SendTests(_ReportCase):
         server = self._server(lambda h: (201, {
             "ok": True, "kind": "issue", "number": "12",
             "url": "http://not-https"}))
-        path, sha, _ = self._draft_file()
+        path, sha, _ = self._draft_file()  # private 초안에 다른 kind 응답
         result = self.gm.send(path, sha)
         self.assertEqual("delivery_unknown", result["status"])
         self.assertEqual(201, result["http_status"])
@@ -955,15 +1160,14 @@ class SendTests(_ReportCase):
         self.assertTrue(self._sending(path, ".sending.*.done.json"))
 
     def test_receipt_write_failure_sent_unrecorded(self):
-        server = self._server(lambda h: (201, {
-            "ok": True, "kind": "issue", "number": 5,
-            "url": "https://github.com/x/5"}))
+        server = self._server(
+            lambda h: (201, {"ok": True, "kind": "private"}))
         path, sha, _ = self._draft_file()
         # 영수증 경로를 디렉터리로 막아 쓰기 실패를 재현한다.
         Path(str(path) + ".receipt.json").mkdir()
         result = self.gm.send(path, sha)
         self.assertEqual("sent_unrecorded", result["status"])
-        self.assertEqual(5, result["number"])
+        self.assertEqual("private", result["kind"])
         self.assertEqual(1, len(server.requests))
         # claim은 남아 다음 send는 delivery_unknown으로 멈춘다.
         again = self.gm.send(path, sha)
@@ -973,8 +1177,7 @@ class SendTests(_ReportCase):
     def test_receipt_conflict(self):
         path, sha, _ = self._draft_file()
         receipt = {"schema": self.gm.RECEIPT_SCHEMA,
-                   "draft_sha256": "0" * 64, "kind": "issue",
-                   "number": 1, "url": "https://github.com/x/1",
+                   "draft_sha256": "0" * 64, "kind": "private",
                    "sent_at": "2026-09-27T00:00:00Z", "test_mode": False}
         Path(str(path) + ".receipt.json").write_text(
             json.dumps(receipt), encoding="utf-8")
@@ -984,7 +1187,7 @@ class SendTests(_ReportCase):
     def test_receipt_invalid_shape(self):
         path, sha, _ = self._draft_file()
         receipt = {"schema": self.gm.RECEIPT_SCHEMA,
-                   "draft_sha256": sha, "kind": "issue"}
+                   "draft_sha256": "nothex", "kind": "private"}
         Path(str(path) + ".receipt.json").write_text(
             json.dumps(receipt), encoding="utf-8")
         result = self.gm.send(path, sha)
@@ -1005,9 +1208,8 @@ class SendTests(_ReportCase):
     def test_race_a_then_b_exactly_one_post(self):
         """r3 R2-02 회귀: B가 영수증 검사를 통과한 뒤 A가 전송을 끝내면
         B는 claim 획득 뒤 재확인에서 already_sent, 전체 POST 1회."""
-        server = self._server(lambda h: (201, {
-            "ok": True, "kind": "issue", "number": 9,
-            "url": "https://github.com/x/9"}))
+        server = self._server(
+            lambda h: (201, {"ok": True, "kind": "private"}))
         path, sha, _ = self._draft_file()
         result = self.gm.send(
             path, sha,
@@ -1019,9 +1221,8 @@ class SendTests(_ReportCase):
         self.assertTrue(Path(str(path) + ".receipt.json").is_file())
 
     def test_done_record_without_receipt_is_already_sent(self):
-        server = self._server(lambda h: (201, {
-            "ok": True, "kind": "issue", "number": 2,
-            "url": "https://github.com/x/2"}))
+        server = self._server(
+            lambda h: (201, {"ok": True, "kind": "private"}))
         path, sha, _ = self._draft_file()
         done = {"schema": self.gm.CLAIM_SCHEMA, "draft_sha256": sha,
                 "started_at": "2026-09-27T00:00:00Z", "token": "abcd",
@@ -1034,9 +1235,8 @@ class SendTests(_ReportCase):
 
     def test_other_sha_done_record_is_ignored_f1_04(self):
         # F1-04: 다른 초안(sha)의 완전한 done은 이 초안의 성공 증거가 아니다.
-        server = self._server(lambda h: (201, {
-            "ok": True, "kind": "issue", "number": 3,
-            "url": "https://github.com/x/3"}))
+        server = self._server(
+            lambda h: (201, {"ok": True, "kind": "private"}))
         path, sha, _ = self._draft_file()
         Path(str(path) + ".sending.b.done.json").write_text(json.dumps(
             {"schema": self.gm.CLAIM_SCHEMA, "draft_sha256": "0" * 64,
@@ -1048,9 +1248,8 @@ class SendTests(_ReportCase):
     def test_unverifiable_done_record_blocks_default_send_f1_r2_02(self):
         # F1 R2-02: 실제 첫 성공 → 영수증 부재 → done 손상 → 기본 재호출은
         # 요청 증가 0(delivery_unknown). --retry-unknown만 새 요청을 만든다.
-        server = self._server(lambda h: (201, {
-            "ok": True, "kind": "issue", "number": 5,
-            "url": "https://github.com/x/5"}))
+        server = self._server(
+            lambda h: (201, {"ok": True, "kind": "private"}))
         for damage in ("{", "{}", "no-token"):
             with self.subTest(damage=damage):
                 before = len(server.requests)
@@ -1092,7 +1291,7 @@ class SendTests(_ReportCase):
                 self.assertEqual("delivery_unknown", result["status"])
                 self.assertEqual(1, len(server.requests))
         server = self._server(lambda h: (502, {
-            "ok": False, "error": "github_failed", "status": 500}))
+            "ok": False, "error": "discord_failed", "status": 500}))
         path, sha, _ = self._draft_file(name="estr")
         code, result = self._cli(
             ["send", "--draft", str(path), "--confirm", sha])
@@ -1116,9 +1315,7 @@ class SendTests(_ReportCase):
                     self.send_response(502)
                     self.send_header("Content-Type", "text/html")
                 else:
-                    data = json.dumps({"ok": True, "kind": "issue",
-                                       "number": 4,
-                                       "url": "https://github.com/x/4"}
+                    data = json.dumps({"ok": True, "kind": "private"}
                                       ).encode("utf-8")
                     self.send_response(201)
                     self.send_header("Content-Type", "application/json")
@@ -1150,9 +1347,9 @@ class SendTests(_ReportCase):
         self.assertTrue(self._sending(path, ".sending.*.stale.json"))
 
     def test_mismatched_error_code_is_delivery_unknown_f1_03(self):
-        # issue 전송에 discord_failed(다른 kind의 코드)는 계약 밖.
+        # private 전송에 github_failed(다른 kind의 코드)는 계약 밖.
         self._server(lambda h: (502, {"ok": False,
-                                      "error": "discord_failed"}))
+                                      "error": "github_failed"}))
         path, sha, _ = self._draft_file()
         self.assertEqual("delivery_unknown",
                          self.gm.send(path, sha)["status"])
@@ -1186,12 +1383,18 @@ class DocsTests(_ReportCase):
                       text)
         # r2 D1 추가: 원본 비외송 원칙의 한정 예외 명시.
         self.assertIn("원본 파일·원고·정본은 보내지 않습니다", text)
+        # P27 D3 / DESIGN §7.1 S5: 신고 절의 확정 문장(W5가 쓴다).
+        self.assertIn("신고는 개발자가 먼저 비공개로 받아 검토합니다",
+                      text)
 
     def test_reference_doc_exists_for_ai(self):
         doc = (REPO_ROOT / "skills/knuaf-doc/references/student-report.md")
         text = doc.read_text(encoding="utf-8")
         self.assertIn("gg_report.py", text)
         self.assertIn("scripts/gg_report.py", text)
+        # P27 D3: 비공개 단일 경로와 issue_channel_closed 거절을 안내한다.
+        self.assertIn("private", text)
+        self.assertIn("issue_channel_closed", text)
 
     def test_readme_install_notice(self):
         text = (REPO_ROOT / "README.md").read_text(encoding="utf-8")

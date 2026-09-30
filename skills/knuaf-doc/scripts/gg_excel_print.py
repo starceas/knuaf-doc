@@ -395,4 +395,7 @@ def main(argv=None):
         return 2
     except (ValueError, OSError, KeyError, zipfile.BadZipFile) as e:
         print('BLOCK: ' + str(e), file=sys.stderr); return 2
-if __name__ == '__main__': raise SystemExit(main())
+if __name__ == '__main__':
+    for _stream in (sys.stdout, sys.stderr):
+        getattr(_stream, "reconfigure", lambda **_: None)(encoding="utf-8")
+    raise SystemExit(main())

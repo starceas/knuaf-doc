@@ -20,12 +20,14 @@ def main(argv=None):
             )
         )
         return 2
-    # All runtime text I/O is UTF-8 (C2); stdout is part of that contract —
-    # blocked/error JSON must not crash on a non-UTF-8 console locale.
-    try:
-        sys.stdout.reconfigure(encoding="utf-8")
-    except (AttributeError, ValueError, OSError):
-        pass
+    # All runtime text I/O is UTF-8 (C2); stdout and stderr are part of
+    # that contract — blocked/error JSON must not crash on a non-UTF-8
+    # console locale.
+    for _stream in (sys.stdout, sys.stderr):
+        try:
+            _stream.reconfigure(encoding="utf-8")
+        except (AttributeError, ValueError, OSError):
+            pass
     import gg_core as core
 
     ap = argparse.ArgumentParser(description="논문 정본·검사·검토본 관리")

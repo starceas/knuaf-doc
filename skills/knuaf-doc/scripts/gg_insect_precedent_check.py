@@ -17,6 +17,7 @@ from io import BytesIO, StringIO
 import json
 import logging
 from pathlib import Path
+import sys
 import warnings
 
 import gg_insect_document
@@ -150,4 +151,6 @@ def main(argv=None, *, map_path=MAP_PATH):
 
 
 if __name__ == "__main__":
+    for _stream in (sys.stdout, sys.stderr):
+        getattr(_stream, "reconfigure", lambda **_: None)(encoding="utf-8")
     raise SystemExit(main())
