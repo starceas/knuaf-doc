@@ -245,7 +245,7 @@
     "tests/test_p27_small.py": {
       "note": "P27: school_profile.major_id, 사유별 held 안내, pywin32 제거 doctor, runtime_present, CP949 CLI --help",
       "origin": "new",
-      "sha256": "c8e6f16bb988cb3bd3b69b4895c2164c9b4b05d8bd2b2d0af7cbca3d6c806329"
+      "sha256": "2dbff69df65d5b53567d10b9d1dda465f1fdf54b98893d16d9b4441fb111fa74"
     },
     "tests/test_question_gate.py": {
       "note": "P0-A: question/help-step ladder + H8 defect reproduction.",
@@ -275,7 +275,7 @@
     "tests/test_update_check.py": {
       "note": "P26 U1: version/check URL matrix, copy install path and ZIP guards, apply/adopt/lock/recover cut points, independent helper and guidance regression tests; synthetic and temp fixtures only | P26 F1: reviewer counterexamples, race, malformed data, negative controls, exact skill guidance and 23 Location rows. | P26 CI: bytecode isolation | P27: auto 전 status 분기·user_files_in_skill·저널 복구·0.1.2 버전·SKILL.md S1–S4 단언; 신고 fixture kind private | P27 검토 r1: install-manifest 보존 판정 반례(auto·apply·adopt), OSError 결함 주입·별도 프로세스 CLI 계약 | P27 검토 r2: 레거시 기준 해시 pristine 판정·manifest 누락/손상/읽기오류 거절·새 트리 manifest 필수·bin 기준 사본(auto·apply·adopt 각각)",
       "origin": "new",
-      "sha256": "90476f5474bf680ab4393a63d24561879e0db91168d92ab5b8113ba9784e4c7d"
+      "sha256": "dafe14ea0a7c00d7d89600e1d97bbf01f387eec68b0503fdcae78197101b5235"
     },
     "tests/test_workbook_audit_evaluator.py": {
       "origin": "new",
@@ -535,5 +535,5 @@
     "verified_count": 150
   },
   "schema": "knuaf-doc/validation-bundle@3",
-  "validation_tree_sha256": "f6a871543767a2bc1d0742cf792b4391aa180a230636787c7c577b789e966f49"
+  "validation_tree_sha256": "c750dabc9b37cc03fee29210f65b72ca250489688d20852e97409c9c5bce0459"
 }

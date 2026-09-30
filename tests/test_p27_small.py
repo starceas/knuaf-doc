@@ -238,26 +238,46 @@ class K202Utf8Entry(ContractCase):
     CLIS = ("build_docx.py", "gg_excel_template.py", "gg_school_paper.py",
             "gg_deps.py", "gg_office.py")
 
+    # 자식 Python에서 stdio를 명시적으로 CP949로 내려 실제 대역을
+    # probe한 뒤 runpy로 정상 CLI를 실행한다 — LC_ALL 같은 호스트
+    # locale 설치 여부에 의존하지 않는다.
+    _CP949_PROBE = (
+        "import sys\n"
+        "sys.stdout.reconfigure(encoding='cp949')\n"
+        "sys.stderr.reconfigure(encoding='cp949')\n"
+        "print(sys.stdout.encoding, sys.stderr.encoding)\n")
+    _CP949_RUN = (
+        "import os, runpy, sys\n"
+        "sys.stdout.reconfigure(encoding='cp949')\n"
+        "sys.stderr.reconfigure(encoding='cp949')\n"
+        "print(sys.stdout.encoding, sys.stderr.encoding, file=sys.stderr)\n"
+        "del sys.argv[0]\n"
+        "sys.path.insert(0, os.path.dirname(os.path.abspath(sys.argv[0])))\n"
+        "runpy.run_path(sys.argv[0], run_name='__main__')\n")
+
     def _cp949_env(self):
         env = dict(os.environ)
         env.pop("PYTHONIOENCODING", None)
         env.pop("PYTHONUTF8", None)
         env["PYTHONDONTWRITEBYTECODE"] = "1"
-        env["LC_ALL"] = "ko_KR.CP949"
         return env
 
     def test_help_under_cp949_locale(self):
         env = self._cp949_env()
         probe = subprocess.run(
-            [sys.executable, "-c",
-             "import sys; print(sys.stdout.encoding)"],
+            [sys.executable, "-B", "-c", self._CP949_PROBE],
             capture_output=True, text=True, env=env)
-        # The locale actually downgrades the pipe band on this host —
+        # The reconfigure really drops the pipe band to cp949 —
         # otherwise this leg proves nothing and must not silently pass.
-        self.assertEqual(probe.stdout.strip(), "cp949", probe.stderr)
+        self.assertEqual(probe.stdout.strip(), "cp949 cp949",
+                         probe.stderr)
         for script in self.CLIS:
             with self.subTest(script=script):
-                proc = _cli(script, "--help", env=env)
+                proc = subprocess.run(
+                    [sys.executable, "-B", "-c", self._CP949_RUN,
+                     str(SCRIPTS / script), "--help"],
+                    capture_output=True, text=True, env=env)
+                self.assertIn("cp949 cp949", proc.stderr)
                 self.assertEqual(
                     proc.returncode, 0,
                     proc.stdout[-500:] + proc.stderr[-500:])

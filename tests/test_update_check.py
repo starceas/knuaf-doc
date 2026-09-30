@@ -19,7 +19,7 @@ import tempfile
 import time
 import unittest
 import zipfile
-from contextlib import redirect_stderr, redirect_stdout
+from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest import mock
 
@@ -1653,14 +1653,20 @@ class UserFilesInSkillTests(_UpdateCase):
 
 
 # 별도 프로세스 I/O 결함 주입 드라이버:
-# driver.py <gg_update.py> <target> <fail_hit>
-# os.stat이 target을 fail_hit번째로 볼 때 PermissionError를 심는다.
+# driver.py <gg_update.py> <target> <stage>
+# stage: pre_lock(_prepare_state 완료 후 첫 target stat),
+#        post_lock(_acquire_lock 성공 후 첫 target stat),
+#        post_lock_forever(잠금 후 target stat 계속 실패),
+#        control(주입 없는 정상 대조군).
+# 발동은 전체 os.stat 호출 ordinal이 아니라 prepare/lock 의미 단계에
+# 묶는다 — Path.is_dir의 os.stat 경유가 Python 버전마다 다르기 때문.
+# 발동 횟수는 stderr의 IO_INJECTION_FIRED 마커로 남긴다.
 _IO_DRIVER = r"""
 import sys
 sys.dont_write_bytecode = True
-import importlib.util, io, json, os, zipfile
+import hashlib, importlib.util, io, json, os, zipfile
 
-script, target, fail_hit = sys.argv[1], sys.argv[2], int(sys.argv[3])
+script, target, stage = sys.argv[1], sys.argv[2], sys.argv[3]
 spec = importlib.util.spec_from_file_location("gu_io", script)
 mod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mod)
@@ -1668,6 +1674,12 @@ spec.loader.exec_module(mod)
 vjson = json.dumps({"schema": "knuaf-doc/version@1", "version": "9.9.9",
                     "repo": "starceas/knuaf-doc"}).encode()
 skill_md = b"---\nname: knuaf-doc\ndescription: t\n---\n# t\n"
+files = {"SKILL.md": skill_md,
+         "version.json": vjson,
+         "scripts/gg_report.py": b"# report marker\n"}
+manifest = {"schema": "knuaf-doc/install-manifest@1",
+            "files": {k: hashlib.sha256(v).hexdigest()
+                      for k, v in files.items()}}
 buf = io.BytesIO()
 with zipfile.ZipFile(buf, "w") as zf:
     for name, data, mode in (
@@ -1678,7 +1690,9 @@ with zipfile.ZipFile(buf, "w") as zf:
         ("knuaf-doc-9.9.9/skills/knuaf-doc/version.json", vjson, 0o100644),
         ("knuaf-doc-9.9.9/skills/knuaf-doc/scripts/", b"", 0o40755),
         ("knuaf-doc-9.9.9/skills/knuaf-doc/scripts/gg_report.py",
-         b"# report marker\n", 0o100644),
+         files["scripts/gg_report.py"], 0o100644),
+        ("knuaf-doc-9.9.9/skills/knuaf-doc/install-manifest.json",
+         json.dumps(manifest, sort_keys=True).encode(), 0o100644),
     ):
         info = zipfile.ZipInfo(name)
         info.external_attr = mode << 16
@@ -1703,20 +1717,40 @@ class Conn:
 
 
 real_stat = os.stat
-hits = [0]
+armed = [False]
+fired = [0]
 
 
 def faulty(path, *a, **kw):
-    if str(path) == target:
-        hits[0] += 1
-        if hits[0] == fail_hit or (fail_hit < 0 and hits[0] >= -fail_hit):
-            raise PermissionError("SYNTHETIC injected stat failure")
+    if armed[0] and str(path) == target:
+        fired[0] += 1
+        if stage != "post_lock_forever":
+            armed[0] = False
+        raise PermissionError("SYNTHETIC injected stat failure")
     return real_stat(path, *a, **kw)
 
 
+real_prepare, real_lock = mod._prepare_state, mod._acquire_lock
+
+
+def _prep(*a, **kw):
+    r = real_prepare(*a, **kw)
+    armed[0] = stage == "pre_lock"
+    return r
+
+
+def _lock(*a, **kw):
+    r = real_lock(*a, **kw)
+    armed[0] = stage in ("post_lock", "post_lock_forever")
+    return r
+
+
+mod._prepare_state = _prep
+mod._acquire_lock = _lock
 os.stat = faulty
 rc = mod.main(["auto"], connect=lambda host, timeout: Conn(),
               download=lambda *a: payload)
+sys.stderr.write("IO_INJECTION_FIRED=%d\n" % fired[0])
 sys.exit(rc)
 """
 
@@ -2230,28 +2264,70 @@ class IoBoundaryTests(_UpdateCase):
         self.assertEqual(1, len(buf.getvalue().splitlines()))
         return json.loads(buf.getvalue())
 
+    @contextmanager
+    def _armed_stat_failure(self, mod, target, stage):
+        """target os.stat 결함을 실제 단계 경계에 묶는다.
+
+        전체 os.stat 호출 ordinal 대신 _prepare_state 완료(잠금 전)와
+        _acquire_lock 성공(잠금 후)에서 발동시킨다 — Path.is_dir가
+        os.stat을 경유하는 방식이 Python 버전마다 달라도 같은 지점에서
+        발동한다.  stage: pre_lock | post_lock |
+        post_lock_forever(계속 실패) | control(주입 없음).
+        yield하는 fired 카운터로 주입 발동 여부를 호출자가 확인한다.
+        """
+        armed, fired = [False], [0]
+        real_stat = mod.os.stat
+
+        def faulty(path, *a, **kw):
+            if armed[0] and str(path) == str(target):
+                fired[0] += 1
+                if stage != "post_lock_forever":
+                    armed[0] = False
+                raise PermissionError("injected")
+            return real_stat(path, *a, **kw)
+
+        real_prepare, real_lock = mod._prepare_state, mod._acquire_lock
+
+        def prepare_then_arm(*a, **kw):
+            result = real_prepare(*a, **kw)
+            armed[0] = stage == "pre_lock"
+            return result
+
+        def lock_then_arm(*a, **kw):
+            result = real_lock(*a, **kw)
+            armed[0] = stage in ("post_lock", "post_lock_forever")
+            return result
+
+        with mock.patch.object(mod.os, "stat", side_effect=faulty), \
+                mock.patch.object(mod, "_prepare_state",
+                                  side_effect=prepare_then_arm), \
+                mock.patch.object(mod, "_acquire_lock",
+                                  side_effect=lock_then_arm):
+            yield fired
+
     def test_stat_failure_before_and_after_lock(self):
-        for fail_hit in (2, 3):  # 2: 잠금 전 stat, 3: 잠금 후 stat
-            with self.subTest(fail_hit=fail_hit):
+        # 잠금 전·후 target stat 실패가 같은 구조화 결과로 닫힌다.
+        for stage in ("pre_lock", "post_lock"):
+            with self.subTest(stage=stage):
                 _, _, target = self.make_target(updater=True)
                 before = _tree_bytes(target)
                 mod = _load_update(target / "scripts" / "gg_update.py")
-                real, hits = mod.os.stat, [0]
-
-                def faulty(path, *a, **kw):
-                    if str(path) == str(target):
-                        hits[0] += 1
-                        if hits[0] == fail_hit:
-                            raise PermissionError("injected")
-                    return real(path, *a, **kw)
-
-                with mock.patch.object(mod.os, "stat",
-                                       side_effect=faulty):
+                with self._armed_stat_failure(
+                        mod, target, stage) as fired:
                     out = self._auto(mod)
+                self.assertGreaterEqual(fired[0], 1, out)
                 self.assertEqual(("failed", "prepare", "target_intact"),
                                  (out["status"], out["stage"],
                                   out["state"]), out)
                 self.assertEqual(before, _tree_bytes(target))
+        with self.subTest(stage="control"):
+            _, _, target = self.make_target(updater=True)
+            mod = _load_update(target / "scripts" / "gg_update.py")
+            with self._armed_stat_failure(
+                    mod, target, "control") as fired:
+                out = self._auto(mod)
+            self.assertEqual(0, fired[0])
+            self.assertEqual("updated", out["status"], out)
 
     def test_staging_lstat_failure_is_structured(self):
         _, _, target = self.make_target(updater=True)
@@ -2272,43 +2348,32 @@ class IoBoundaryTests(_UpdateCase):
 
     def test_unverifiable_target_reports_unknown_with_recover(self):
         _, _, target = self.make_target(updater=True)
+        before = _tree_bytes(target)
         mod = _load_update(target / "scripts" / "gg_update.py")
-        real, hits = mod.os.stat, [0]
-
-        def faulty(path, *a, **kw):
-            if str(path) == str(target):
-                hits[0] += 1
-                if hits[0] >= 3:  # 잠금 후 stat과 재확인 모두 실패
-                    raise PermissionError("injected")
-            return real(path, *a, **kw)
-
-        with mock.patch.object(mod.os, "stat", side_effect=faulty):
+        with self._armed_stat_failure(
+                mod, target, "post_lock_forever") as fired:
             out = self._auto(mod)
+        # 잠금 후 stat과 _target_is_old 재확인이 모두 실패했다.
+        self.assertGreaterEqual(fired[0], 2, out)
         self.assertEqual(("failed", "prepare", "unknown"),
                          (out["status"], out["stage"], out["state"]), out)
         self.assertIn("recover", out)
         self.assertIn("recover_argv", out)
         self.assertEqual(shlex.split(out["recover"]), out["recover_argv"])
         self.assertTrue(target.is_dir())
+        self.assertEqual(before, _tree_bytes(target))
 
     def test_apply_and_adopt_share_the_boundary(self):
         _, _, target = self.make_target(updater=True)
         before = _tree_bytes(target)
         mod = _load_update(target / "scripts" / "gg_update.py")
-        real, hits = mod.os.stat, [0]
-
-        def faulty(path, *a, **kw):
-            if str(path) == str(target):
-                hits[0] += 1
-                if hits[0] == 3:
-                    raise PermissionError("injected")
-            return real(path, *a, **kw)
-
-        with mock.patch.object(mod.os, "stat", side_effect=faulty):
+        with self._armed_stat_failure(
+                mod, target, "post_lock") as fired:
             out = mod.apply_cmd("0.1.2", confirm=True,
                                 connect=_connect(
                                     302, [("Location", _loc("0.1.2"))]),
                                 download=lambda *_: _good_zip())
+        self.assertGreaterEqual(fired[0], 1, out)
         self.assertEqual(("failed", "prepare", "target_intact"),
                          (out["status"], out["stage"], out["state"]), out)
         self.assertEqual(before, _tree_bytes(target))
@@ -2316,17 +2381,10 @@ class IoBoundaryTests(_UpdateCase):
         mod = _load_update(src / "scripts" / "gg_update.py")
         _, _, target2 = self.make_target(version=None)
         before = _tree_bytes(target2)
-        hits = [0]
-
-        def faulty2(path, *a, **kw):
-            if str(path) == str(target2):
-                hits[0] += 1
-                if hits[0] == 3:
-                    raise PermissionError("injected")
-            return real(path, *a, **kw)
-
-        with mock.patch.object(mod.os, "stat", side_effect=faulty2):
+        with self._armed_stat_failure(
+                mod, target2, "post_lock") as fired:
             out = mod.adopt_cmd(src, target2, confirm=True)
+        self.assertGreaterEqual(fired[0], 1, out)
         self.assertEqual(("failed", "prepare", "target_intact"),
                          (out["status"], out["stage"], out["state"]), out)
         self.assertEqual(before, _tree_bytes(target2))
@@ -2347,28 +2405,55 @@ class IoBoundaryTests(_UpdateCase):
         self.assertEqual("manual_required", out["status"], out)
 
     def test_cli_auto_io_failure_is_single_json(self):
-        """별도 프로세스: 잠금 후 stat 실패도 exit 0·stdout JSON 1개."""
+        """별도 프로세스: 잠금 전후 stat 실패도 exit 0·stdout JSON 1개."""
         driver = self.root / "io-driver.py"
         driver.write_text(_IO_DRIVER, encoding="utf-8")
-        for fail_hit in (3, -3):  # -3: 잠금 후 stat부터 계속 실패 → unknown
 
-            with self.subTest(fail_hit=fail_hit):
+        def run(stage, target):
+            return subprocess.run(
+                [sys.executable, str(driver),
+                 str(target / "scripts" / "gg_update.py"),
+                 str(target), stage],
+                capture_output=True, text=True)
+
+        def fired_count(proc):
+            marker = [line for line in proc.stderr.splitlines()
+                      if line.startswith("IO_INJECTION_FIRED=")]
+            self.assertEqual(1, len(marker), proc.stderr)
+            return int(marker[0].rsplit("=", 1)[1])
+
+        for stage, state in (("pre_lock", "target_intact"),
+                             ("post_lock", "target_intact"),
+                             ("post_lock_forever", "unknown")):
+            with self.subTest(stage=stage):
                 _, _, target = self.make_target(updater=True)
                 before = _tree_bytes(target)
-                proc = subprocess.run(
-                    [sys.executable, str(driver),
-                     str(target / "scripts" / "gg_update.py"),
-                     str(target), str(fail_hit)],
-                    capture_output=True, text=True)
+                proc = run(stage, target)
                 self.assertEqual(0, proc.returncode, proc.stderr)
                 self.assertEqual(1, len(proc.stdout.splitlines()),
                                  proc.stdout)
                 self.assertNotIn("Traceback", proc.stderr)
+                self.assertGreaterEqual(fired_count(proc), 1,
+                                        proc.stderr)
                 out = json.loads(proc.stdout)
                 self.assertEqual("failed", out["status"], out)
-                state = "target_intact" if fail_hit == 3 else "unknown"
+                self.assertEqual("prepare", out["stage"], out)
                 self.assertEqual(state, out["state"], out)
+                if state == "unknown":
+                    self.assertIn("recover", out)
+                    self.assertIn("recover_argv", out)
                 self.assertEqual(before, _tree_bytes(target))
+        with self.subTest(stage="control"):
+            _, _, target = self.make_target(updater=True)
+            proc = run("control", target)
+            self.assertEqual(0, proc.returncode, proc.stderr)
+            self.assertEqual(1, len(proc.stdout.splitlines()),
+                             proc.stdout)
+            self.assertNotIn("Traceback", proc.stderr)
+            self.assertEqual(0, fired_count(proc), proc.stderr)
+            out = json.loads(proc.stdout)
+            self.assertEqual("updated", out["status"], out)
+            self.assertTrue(Path(out["backup"]).is_dir())
 
     def test_main_closes_any_exception_as_failed_json(self):
         _, _, target = self.make_target(updater=True)
