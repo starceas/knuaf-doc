@@ -157,85 +157,116 @@ def load_plain_policy(path=None):
     return data
 
 
-_CHAPTER_NUMERAL = re.compile(
-    r"^([ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]|VIII|VII|III|VI|IV|IX|II|X|I|V)"
-    r"\s*[\.．]\s*(\S.*)$"
+# One number grammar for rendering, summary scope, and length boundaries:
+# I..X / Ⅰ..Ⅹ / positive Arabic digits, ASCII/fullwidth dot with optional
+# whitespace on both sides; Unicode Roman alone also allows a space, no dot.
+# ASCII "I study ..." is prose. Bare Arabic chapters advance 1,2,... only
+# in an already plain Arabic outline; under #/Roman chapters they are level 2.
+_CHAPTER_NUMBER = re.compile(
+    r"^([ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]|VIII|VII|III|VI|IV|IX|II|X|I|V|[1-9]\d*)"
+    r"\s*[.．]\s*(\S.*)$"
 )
 _CHAPTER_UNICODE = re.compile(r"^([ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ])\s+(\S.*)$")
-_CHAPTER_ARABIC = re.compile(r"^([1-9]\d*)[\.．]\s*(?!\d)(\S.*)$")
 _ROMAN_NUMBERS = dict(zip(("I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"), range(1, 11)))
 _ROMAN_NUMBERS.update(zip("ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ", range(1, 11)))
 
 
-def _chapter_heading(line):
-    heading = line.strip()
-    md = re.match(r"^(#{1,6})\s+(.+)$", heading)
-    if md:
-        if len(md[1]) != 1:
+def _numbered_heading(text):
+    match = _CHAPTER_NUMBER.fullmatch(text) or _CHAPTER_UNICODE.fullmatch(text)
+    if match is None:
+        return None
+    numeral, title = match.groups()
+    # \d also matches Unicode decimal tails; they are still Arabic numbers.
+    if numeral.isdecimal():
+        if re.match(r"\d", title):  # 1.2 is not a chapter number.
             return None
-        heading = md[2]
-    roman = _CHAPTER_NUMERAL.fullmatch(heading) or _CHAPTER_UNICODE.fullmatch(heading)
-    if roman:
-        return "roman", _ROMAN_NUMBERS[roman[1]], roman[2]
-    arabic = _CHAPTER_ARABIC.fullmatch(heading)
-    if arabic:
-        return "arabic", int(arabic[1]), arabic[2]
-    return None
+        return "arabic", int(numeral), title, False
+    return "roman", _ROMAN_NUMBERS[numeral], title, numeral.isascii()
+
+
+def _intro_title(title, keywords):
+    return any(re.match(re.escape(k) + r"(?:$|\s|[(:：—–-])", title) for k in keywords)
+
+
+class _HeadingState:
+    """Prefix-only heading rule shared by parse() and introduction length.
+
+    A labelled 요약/초록/Abstract scope may contain bare ASCII Roman I/II
+    subsections. A new chapter-1 sequence, a Unicode/Arabic chapter, an
+    explicit # body chapter, or an I. 머리말/서론 starts the body once.
+    Markdown ##+ is always a subsection. No suffix or lookahead is read.
+    """
+
+    def __init__(self):
+        self.summary = False
+        self.summary_number = None
+        self.body = False
+        self.outline = None
+        self.number = 0
+        self.marked = False
+
+    def read(self, line):
+        text = line.strip()
+        if re.match(r"^[-+*]\s+", text):
+            return None, text
+        md = re.match(r"^(#{1,6})\s+(.+)$", text)
+        level = len(md[1]) if md else None
+        if md:
+            text = md[2]
+        chapter = _numbered_heading(text)
+        title = chapter[2] if chapter else text
+        if not self.body and level in (None, 1) and re.fullmatch(
+            r"요약|초록|abstract", title, re.IGNORECASE
+        ):
+            self.summary = True
+            return level or (1 if chapter else None), text
+        if md and level != 1:
+            return level, text
+        if md:
+            self.body, self.summary, self.marked = True, False, True
+            self.outline = chapter[0] if chapter else None
+            self.number = chapter[1] if chapter else 0
+            return 1, text
+        if chapter:
+            family, number, title, ascii_roman = chapter
+            if self.summary and ascii_roman and not _intro_title(title, ("머리말", "서론")):
+                if self.summary_number is None or number != 1:
+                    self.summary_number = number
+                    return 2, text
+            main = family == "roman" or (
+                not self.marked and self.outline in (None, "arabic")
+                and number == self.number + 1
+            )
+            if main:
+                self.body, self.summary = True, False
+                self.outline, self.number, self.marked = family, number, False
+                return 1, text
+            return 2, text
+        for level, pattern in enumerate((
+            r"\d+\. ", r"[가-힣]\. ", r"\d+\) ", r"[가-힣]\) ",
+            r"\(\d+\) ", r"\([가-힣]\) ", r"[①-⑳]", r"[㉮-㉾]",
+        ), 2):
+            if re.match(pattern, text):
+                return level, text
+        return None, text
 
 
 def _front_matter_length(text, keywords):
-    # 제목은 제외하고 표·캡션·소제목을 포함한 원문을 공백 제외로 센다.
-    # 노드 재조립은 표 구분자 등 원문을 잃으므로 사용하지 않는다.
+    # Stop at H without parsing its suffix. Raw spans retain table separators.
     lines = draft(text).splitlines()
-    nodes = parse(text, with_spans=True)
-    markdown = any(re.match(r"^\s*#{1,6}\s+", line) for line in lines)
-    start = None
-    style = None
-    summary = False
-    summary_number = None
+    state, start = _HeadingState(), None
     if isinstance(keywords, str):
         keywords = [keywords]
-    for node in nodes:
-        line = lines[node["start_line"]]
-        if start is None and node.get("text") == "요약" and node.get("level", 1) == 1:
-            summary = True
+    for index, line in enumerate(lines):
+        level, title = state.read(line)
+        if level != 1 or not state.body:
             continue
-        chapter = _chapter_heading(node.get("text", ""))
-        intro = chapter is not None and chapter[1] == 1 and any(
-            re.match(re.escape(k) + r"(?:$|\s|[(:：—–-])", chapter[2])
-            for k in keywords
-        )
-        if markdown:
-            # Numbered plain subsections and their ## equivalents share level 2.
-            if node["kind"] != "heading" or node.get("level") != 1:
-                continue
-        else:
-            # Only a plain document can use the strict numbered-chapter fallback.
-            if chapter is None or node.get("list_item"):
-                continue
-            if start is not None and not (node["kind"] == "heading" and node.get("level") == 1) and (
-                chapter[0] != style or chapter[1] <= 1
-            ):
-                continue
-            if summary:
-                # Plain summaries may number their own ASCII I/II/... sections.
-                # A new chapter-1 sequence ends that scope, regardless of title.
-                ascii_roman = bool(re.match(r"^(?:VIII|VII|III|VI|IV|IX|II|X|I|V)[.．]", line.strip()))
-                if summary_number is None and ascii_roman and chapter[1] == 1 and not intro:
-                    summary_number = 1
-                    continue
-                if summary_number is not None and chapter[1] != 1:
-                    summary_number = chapter[1]
-                    continue
         if start is not None:
-            end = node["start_line"]
-            return len(re.sub(r"\s+", "", "\n".join(lines[start:end])))
-        # The first body chapter consumes the summary state permanently.
-        summary = False
-        if not intro:
+            return len(re.sub(r"\s+", "", "\n".join(lines[start:index])))
+        chapter = _numbered_heading(title)
+        if chapter is None or chapter[1] != 1 or not _intro_title(chapter[2], keywords):
             return None
-        style = chapter[0]
-        start = node["end_line"]
+        start = index + 1
     return len(re.sub(r"\s+", "", "\n".join(lines[start:]))) if start is not None else None
 
 
@@ -663,14 +694,7 @@ def _swot_placed(body_nodes):
 def parse(text, *, with_spans=False):
     lines, nodes, i = draft(text).splitlines(), [], 0
     previous_prose = False
-    # Bare Arabic chapter numbers are a fallback only without a marked main
-    # outline. Explicit #/Roman chapters keep bare 1./2. rows at level 2.
-    arabic_outline = not any(
-        re.match(r"^\s*#\s+", line)
-        or (_chapter_heading(line) or (None,))[0] == "roman"
-        for line in lines
-    )
-    arabic_number = 0
+    heading_state = _HeadingState()
     def append(node):
         if with_spans:
             node.update(start_line=start_line, end_line=i)
@@ -703,30 +727,7 @@ def parse(text, *, with_spans=False):
                 {"kind": "caption", "label": m[1], "number": int(m[2]), "text": s}
             )
         else:
-            level = None
-            patterns = [
-                r"(?:[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩIVX]+\. |[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]\s+)",
-                r"\d+\. ",
-                r"[가-힣]\. ",
-                r"\d+\) ",
-                r"[가-힣]\) ",
-                r"\(\d+\) ",
-                r"\([가-힣]\) ",
-                r"[①-⑳]",
-                r"[㉮-㉾]",
-            ]
-            for j, pat in enumerate(patterns, 1):
-                if re.match(pat, s):
-                    level = j
-                    break
-            md = re.match(r"^(#{1,6})\s+(.+)", s)
-            if md:
-                level, s = len(md[1]), md[2]
-            elif arabic_outline and level == 2:
-                chapter = _CHAPTER_ARABIC.fullmatch(s)
-                if chapter and int(chapter[1]) == arabic_number + 1:
-                    level = 1
-                    arabic_number += 1
+            level, s = heading_state.read(s)
             list_item = False
             if re.match(r"^[-+*]\s+", s):
                 list_item = True

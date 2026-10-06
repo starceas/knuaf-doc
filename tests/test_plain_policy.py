@@ -3,6 +3,7 @@
 기존 P1~P6 반례와 표·그림 출처·사진 정책을 모든 입력에 적용한다.
 """
 import json
+import random
 import contextlib
 import io
 from pathlib import Path
@@ -406,6 +407,122 @@ class PlainPolicyF2Fixes(ContractCase):
                     {"source_kind_forbidden", "source_grade_forbidden"}]
             self.assertEqual(rows, [])
             self.assertEqual((root / "answer.txt").read_text(), raw)
+
+
+class PlainPolicyF3Properties(ContractCase):
+    @staticmethod
+    def suffixes():
+        # Fixed seed: same generated corpus in pytest and unittest discovery.
+        atoms = ("## 1. 개요\n나", "1. 개요\n나", "### 개요\n나", "2 . 계획\n다",
+                 "I study agriculture.", "I . 계획", "Ⅰ. 계획", "# 1. 서론\n새 본문",
+                 "요약", "초록", "Abstract", "요약을 닮은 문구", "\n\n",
+                 "# 요약\n## I . 개요", "1. Abstract", "- 1. 서론", "나. 계획",
+                 "표 1. 계획\n|항목|값|\n|---|---|\n|가|1|\n출처: 본인 작성",
+                 "[사진 필요: 예정지]", "\t", "## Ⅰ . 서론", "본문의 서론을 살펴본다.", "# 1٠ . 현황")
+        rng = random.Random(20261007)
+        return ("", *atoms, *("\n".join(rng.choices(atoms, k=rng.randint(2, 6)))
+                               for _ in range(48)))
+
+    @staticmethod
+    def content(length):
+        # Oracle is the known raw interval C, not a reconstructed node tree.
+        core = ("가\nI study agriculture.\n1 . 연구목적\n나. 계획\n표 1. 계획\n"
+                "|항목|값|\n|---|---|\n|가|1|\n출처: 본인 작성\n")
+        return core + "나" * (length - len("".join(core.split()))) + "\n"
+
+    def test_generated_suffix_preserves_length_and_all_prefix_nodes(self):
+        summary = "요약\nI . 사업의 개요\n내용\nII . 투자분석\n내용\n"
+        pairs = ((summary, "Ⅰ. 머리말", "Ⅱ. 현황"),
+                 (summary, "I . 서론", "II . 현황"),
+                 (summary, "1 . 서론", "Ⅱ . 현황"),
+                 ("# Abstract\n## I . 개요\n내용\n", "# 1. 서론", "# 현황"),
+                 ("", "1 . 머리말", "2 . 현황"),
+                 ("", "# Ⅰ. 머리말", "# 2. 현황"))
+        for preface, first, end in pairs:
+            for length in (1800, 1801, 2500, 2501):
+                prefix = preface + first + "\n" + self.content(length) + end + "\n"
+                before = doc.parse(prefix, with_spans=True)
+                self.assertEqual((before[-1]["kind"], before[-1]["level"]), ("heading", 1))
+                for suffix in self.suffixes():
+                    with self.subTest(first=first, end=end, length=length, suffix=suffix):
+                        text = prefix + suffix
+                        self.assertEqual(doc._front_matter_length(text, ["머리말", "서론"]), length)
+                        self.assertEqual(doc.parse(text, with_spans=True)[:len(before)], before)
+                # Arbitrary invalid suffix syntax cannot change L either. Full
+                # document rendering still rejects unsupported Markdown.
+                self.assertEqual(doc._front_matter_length(prefix + "```bad\n<script>",
+                                                          ["머리말", "서론"]), length)
+                expected = set() if length <= 1800 else {
+                    "front_matter_over" if length > 2500 else "front_matter_long"}
+                for major in ALL_MAJORS[:-1]:
+                    for suffix in ("1. 개요\n나", "## 1. 개요\n나", "### 개요\n나"):
+                        with self.subTest(major=major, first=first, length=length, suffix=suffix):
+                            self.assertEqual(ids(check(prefix + suffix, major_id=major)) &
+                                             {"front_matter_long", "front_matter_over"}, expected)
+
+    def test_number_and_summary_notations_share_the_same_body_decision(self):
+        summary_titles = ("요약", "초록", "Abstract", "ABSTRACT", "# 요약", "# 초록",
+                          "# Abstract", "I . 요약", "Ⅰ. 초록", "1 . Abstract", "# 1 . 초록")
+        sections = ("I. 사업의 개요\n내용\nII. 투자분석\n내용\n",
+                    "I . 사업의 개요\n내용\nII . 투자분석\n내용\n",
+                    "I． 사업의 개요\n내용\nII ． 투자분석\n내용\n",
+                    "## I . 사업의 개요\n내용\n### II . 투자분석\n내용\n",
+                    "## Ⅰ . 사업의 개요\n내용\n### Ⅱ . 투자분석\n내용\n")
+        for title in summary_titles:
+            for section in sections:
+                for first, end in (("I. 서론", "II. 현황"), ("I . 서론", "II . 현황"),
+                                   ("Ⅰ. 서론", "Ⅱ. 현황"), ("Ⅰ . 서론", "Ⅱ . 현황"),
+                                   ("Ⅰ 서론", "Ⅱ 현황"), ("1. 서론", "2. 현황"),
+                                   ("1 . 서론", "2 . 현황"), ("# I . 서론", "# II . 현황")):
+                    with self.subTest(summary=title, section=section, first=first):
+                        text = title + "\n" + section + first + "\n" + self.content(2501) + end + "\n"
+                        self.assertEqual(doc._front_matter_length(text, ["머리말", "서론"]), 2501)
+                        nodes = doc.parse(text)
+                        child = next(n for n in nodes if n.get("text") == "1 . 연구목적")
+                        self.assertEqual((child["kind"], child["level"]), ("heading", 2))
+                        self.assertEqual((nodes[-1]["kind"], nodes[-1]["level"]), ("heading", 1))
+
+    def test_first_non_intro_consumes_summary_once_for_generated_suffixes(self):
+        for summary in ("", "# 요약\n내용\n", "초록\nI . 개요\nII . 분석\n",
+                        "1 . Abstract\n## I . 개요\n내용\n"):
+            prefix = summary + "# Ⅰ. 영농계획\n본문의 서론을 살펴본다.\nⅡ. 현황\n"
+            for suffix in self.suffixes():
+                with self.subTest(summary=summary, suffix=suffix):
+                    self.assertIsNone(doc._front_matter_length(prefix + suffix +
+                        "\n# 요약\n# 1. 서론\n" + "가" * 2501, ["머리말", "서론"]))
+            for subheading in ("1. 서론", "## 1. 서론"):
+                for major in ALL_MAJORS[:-1]:
+                    self.assertFalse(ids(check(prefix + subheading + "\n" + "가" * 2501,
+                                               major_id=major)) &
+                                     {"front_matter_long", "front_matter_over"})
+
+    def test_main_heading_spacing_is_identical_in_parser_and_length_gate(self):
+        for numeral in ("I", "Ⅰ", "1"):
+            for dot in (".", "．"):
+                for before in ("", " ", "\t"):
+                    for after in ("", " ", "\t"):
+                        heading = numeral + before + dot + after + "서론"
+                        with self.subTest(heading=heading):
+                            text = heading + "\n" + "가" * 2501 + "\n# 현황\n나"
+                            node = doc.parse(text)[0]
+                            self.assertEqual((node["kind"], node["level"]), ("heading", 1))
+                            self.assertEqual(doc._front_matter_length(text, ["머리말", "서론"]), 2501)
+        # Every decimal numeral matched by the common grammar must take
+        # the numeric branch, including Unicode tails after an ASCII digit.
+        for numeral, number in (("1٠", 10), ("1２", 12)):
+            for dot in (".", "．"):
+                for before in ("", " "):
+                    for after in ("", " "):
+                        heading = numeral + before + dot + after + "현황"
+                        with self.subTest(decimal=heading):
+                            self.assertEqual(doc._numbered_heading(heading),
+                                             ("arabic", number, "현황", False))
+                            text = "Ⅰ . 서론\n" + "가" * 2501 + "\n# " + heading + "\n나"
+                            self.assertEqual(doc._front_matter_length(text, ["머리말", "서론"]), 2501)
+                            self.assertEqual(doc.parse(text)[-2]["level"], 1)
+        for prose in ("I study agriculture.", "I .", "1.2 자료", "I 서론"):
+            self.assertIsNone(doc._front_matter_length(prose + "\n" + "가" * 2501,
+                                                       ["머리말", "서론"]))
 
 
 class PlainPolicyScope(ContractCase):
