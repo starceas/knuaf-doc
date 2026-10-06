@@ -279,8 +279,8 @@
       "artifacts": [
         {
           "relative_path": "references/exemplar-quality.md",
-          "sha256": "fff91adab1d9f4a5db5e94b41a35eb7839e9966fb32ca38f2d1b1940ba45b183",
-          "bytes": 9296
+          "sha256": "c6bfedd6264d6c82979a14029fd8281c19212a6c71334b6efea10f04c9370bed",
+          "bytes": 9302
         }
       ],
       "coverage": {
@@ -321,8 +321,8 @@
       "artifacts": [
         {
           "relative_path": "references/exemplar-quality.md",
-          "sha256": "fff91adab1d9f4a5db5e94b41a35eb7839e9966fb32ca38f2d1b1940ba45b183",
-          "bytes": 9296
+          "sha256": "c6bfedd6264d6c82979a14029fd8281c19212a6c71334b6efea10f04c9370bed",
+          "bytes": 9302
         }
       ],
       "coverage": {},
@@ -453,8 +453,8 @@
       "artifacts": [
         {
           "relative_path": "references/excel-template.md",
-          "sha256": "dc6353a9021452b7320085139979b5e0ad87b91f67b18a8ee1b73fc988cf60ea",
-          "bytes": 20807
+          "sha256": "e58bb5600a899d456188d09d024ebb6937d8f3e3e06fbb03ac7ff5bc268a00b5",
+          "bytes": 21518
         }
       ],
       "coverage": {

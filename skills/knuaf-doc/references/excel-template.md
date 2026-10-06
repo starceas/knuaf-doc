@@ -5,7 +5,7 @@ records follow [source-contract.md](source-contract.md). This page documents
 only the reusable CLI contract.
 
 `scripts/gg_excel_template.py` creates a local, source-bound blank copy of an
-existing school workbook. It does not generate a new 17-sheet model and does
+existing school workbook. It does not generate a replacement workbook and does
 not correct legacy formulas.
 
 ```text
@@ -48,7 +48,11 @@ dependency of the installed plugin. Register the workbook supplied for the
 current project and retain its hash and source role. The source workbook is
 never written. An NFD filename is resolved when an NFC path is supplied.
 
-## Input-sheet roles in the supplied school template
+## Specialty-crop input-sheet roles in the supplied 17-sheet template
+
+This mapping is limited to the supplied specialty-crop template. Other majors
+use their own reviewed form and role map; the horticultural-environment H01
+workbook has 18 sheets and does not use these coordinates.
 
 User-confirmed on 2026-09-15: in the current numbered 17-sheet school workbook,
 excluding the contents sheet, red input sheets are 1, 3, 4, 5, 6, 7, 8, 9 and 10.
@@ -74,14 +78,20 @@ do not add sheets to the submission form merely to satisfy a preferred model.
 
 ### Inflation and labor cost input rules (물가 및 노무비 반영 규칙)
 
-> ℹ️ **적용 범위**: 본 물가 및 노무비 분리 반영 규칙은 **모든 전공 공통 기본값**이다([사용자 결정 2026-10-06 22:39]). 전 전공에서 일반 물가와 노무비 상승률을 분리하고 공식 통계(KOSIS 등)에 근거하여 반영한다.
+> ℹ️ **적용 범위**: 상승률 분리 규칙은 **모든 전공 공통 기본값**이다([사용자 결정 2026-10-06 22:39]). 입력 위치와 시트 수는 해당 전공 양식을 따른다.
 
-1. **전 부문 물가 반영**:
-   매출(판매가격: Sheet 5), 영농자재(Sheet 7), 노무비(Sheet 8), 경비(Sheet 9) 모두 물가상승률을 반영한다.
-2. **노무비 상승률 최우선 및 분리 적용**:
-   교수 지적에 따라 **노무비(고용노동임금) 계획이 가장 중요**하다. 일반 소비자물가상승률(자재·경비·매출)과 임금 상승률(노무비)은 성격이 다르므로 **반드시 분리하여 적용**한다. Sheet 8(노무비계획)의 임금 상승률 수식/열을 유효하게 연결하여 연도별 일당 인상을 반영해야 하며, 5개년 동일 단가로 방치하지 않는다.
+**구현 상태**: 물가·노무비 공식 통계 입력 구현(D8)과 Ⅳ장 표 전개기(D9)는 후속 단계이며, 지금은 규칙만 정한다.
+
+1. **세 상승률의 분리**:
+   일반물가 상승률은 영농자재·경비, 임금 상승률은 노무비, 판매가 상승률은 매출에 각각 적용한다. 세 입력을 하나의 소비자물가 상승률로 묶지 않는다. 입력값은 상승률 r이며 내부 배율은 1+r이다.
+2. **노무비 반영과 전공별 양식 확인**:
+   교수 지적에 따라 **노무비(고용노동임금) 계획이 가장 중요**하다. 해당 전공 양식의 노무비 입력 셀·임금 상승률 수식/열을 검토해 연도별 일당 인상을 반영하고, 근거 없이 여러 해를 동일 단가로 방치하지 않는다. 원예환경시스템 18시트는 H01의 전용 입력 지도를 따른다.
 3. **공식 통계 근거 필수 (임의 추정 금지)**:
-   적용하는 물가상승률 및 임금상승률은 반드시 공식 통계(KOSIS 소비자물가조사, 농가 고용노동임금 등)에서 가져와야 하며, 각 값마다 출처 ID(`source_id`), 기준연도(`reference_year`), locator를 입력 근거에 명시한다. 근거 없는 임의 추정값이나 템플릿의 잔존 예시값을 무단으로 사용하지 않는다.
+   일반물가·임금·판매가 각각의 상승률은 해당 항목에 맞는 공식 통계를 확인하고, 각 값마다 출처 ID(`project.json.sources[*].id`), 기준연도와 locator를 입력 근거에 명시한다. 근거 없는 임의 추정값이나 템플릿의 잔존 예시값을 무단으로 사용하지 않는다.
+
+#### 특용작물 17시트의 좌표 (해당 원본 전용)
+
+확인한 특용작물 양식에서는 매출이 Sheet 5, 영농자재가 Sheet 7, 노무비가 Sheet 8, 경비가 Sheet 9다. 이 좌표를 다른 전공에 적용하지 않는다. Ⅳ장 표 전개는 [specialty-crops/finance-flow.md](specialty-crops/finance-flow.md)를 따른다.
 
 ## Saved-file compatibility verification
 
@@ -134,7 +144,7 @@ map, values and output hashes and records each old/new value with its evidence.
 It may contain private inputs and is not a public artifact.
 
 After filling, recalculate in the spreadsheet application and compare the
-saved 17-sheet values with the manuscript. Check inherited formulas, including
+saved values in the applicable major's form with the manuscript. Check inherited formulas, including
 channel/grade ratios and period offsets. `filled` means mapped values were
 written; it is not calculation or content approval. Formula corrections need
 a separate reviewed change and dependent checks; this utility never rewrites
@@ -248,7 +258,7 @@ Register the current XLSX output with `layout_kind: "provided_template"` and
 The manifest must bind the current workbook hash, a successful Microsoft Excel
 run, `validation.excel.valid: true`, and `school_validation:
 "source_template_preservation_only"`, with no structure/school issues. The
-runtime also scans the 17-sheet workbook for formula and cached error cells.
+specialty-crop supplied-template runtime also scans that workbook for formula and cached error cells.
 This route preserves the supplied form's coordinates; it does not certify
 financial interpretation or replace independent content and print review.
 Do not label an unverified workbook or an old output with this tag to bypass

@@ -106,7 +106,8 @@ def _validate_plain_rules(rules):
             raise ValueError("plain-thesis-policy.json 수치 필드 오류")
     if fm["warn_chars"] >= fm["error_chars"]:
         raise ValueError("plain-thesis-policy.json front_matter 수치 오류")
-    for values in (rules["forbidden_body_terms"], cap.get("forbidden_terms"),
+    for values in (rules["forbidden_body_terms"], fm.get("title_keywords"),
+                   cap.get("forbidden_terms"),
                    obj.get("credit_labels"), obj.get("missing_credit_values"),
                    src.get("forbidden_kinds"), img.get("ai_kinds"),
                    img.get("ai_markers")):
@@ -119,7 +120,7 @@ def _validate_plain_rules(rules):
         type(v) is int and v > 0 for v in grades
     ):
         raise ValueError("plain-thesis-policy.json forbidden_grades 오류")
-    for part, key in ((fm, "title_keyword"), (img, "placeholder_prefix")):
+    for part, key in ((img, "placeholder_prefix"),):
         if not isinstance(part.get(key), str) or not part[key].strip():
             raise ValueError("plain-thesis-policy.json 문자열 필드 오류: " + key)
     if not all(isinstance(k, str) and k and type(v) is int and v > 0
@@ -157,26 +158,68 @@ def load_plain_policy(path=None):
 
 
 _CHAPTER_NUMERAL = re.compile(
-    r"^\s*([ⅠⅡⅢⅣⅤⅥⅦ]|VII|VI|IV|III|II|I|V)\s*[\.．]"
+    r"^([ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]|VIII|VII|III|VI|IV|IX|II|X|I|V)"
+    r"(?:\s*[\.．]\s*|\s+)(\S.*)$"
 )
-_INTRO_HEAD = re.compile(r"^[ⅠI]\s*[\.．]")
+_CHAPTER_ARABIC = re.compile(r"^([1-9]\d*)[\.．]\s*(?!\d)(\S.*)$")
 
 
-def _front_matter_length(text, keyword):
+def _chapter_heading(line):
+    heading = line.strip()
+    md = re.match(r"^(#{1,6})\s+(.+)$", heading)
+    if md:
+        if len(md[1]) != 1:
+            return None
+        heading = md[2]
+    roman = _CHAPTER_NUMERAL.fullmatch(heading)
+    if roman:
+        return "roman", roman[1], roman[2]
+    arabic = _CHAPTER_ARABIC.fullmatch(heading)
+    if arabic:
+        return "arabic", arabic[1], arabic[2]
+    return None
+
+
+def _front_matter_length(text, keywords):
     # 제목은 제외하고 표·캡션·소제목을 포함한 원문을 공백 제외로 센다.
     # 노드 재조립은 표 구분자 등 원문을 잃으므로 사용하지 않는다.
     parts = []
     inside = False
+    style = None
+    summary = False
+    if isinstance(keywords, str):
+        keywords = [keywords]
     for line in draft(text).splitlines():
-        heading = re.sub(r"^#{1,6}\s+", "", line.strip())
+        if not inside and re.sub(r"^#{1,6}\s+", "", line.strip()) == "요약":
+            summary = True
+        chapter = _chapter_heading(line)
         if not inside:
-            if _INTRO_HEAD.match(heading) and keyword in heading:
-                inside = True
-        elif _CHAPTER_NUMERAL.match(heading):
+            if chapter is None:
+                continue
+            style, number, title = chapter
+            if number not in {"Ⅰ", "I", "1"} or not any(
+                re.match(re.escape(k) + r"(?:$|\s|[(:：—–-])", title)
+                for k in keywords
+            ):
+                # A separately labelled summary may have its own I/II headings.
+                # Its numbering is not the thesis body's first chapter.
+                if summary:
+                    continue
+                return None
+            inside = True
+        elif chapter is not None and chapter[0] == style:
             break
         else:
             parts.append(line)
     return len(re.sub(r"\s+", "", "\n".join(parts))) if inside else None
+
+
+def _term_count(text, term):
+    if term.isascii():
+        # Korean particles may follow an acronym; Latin identifiers may not.
+        pattern = r"(?<![A-Za-z0-9_])" + re.escape(term) + r"(?![A-Za-z0-9_])"
+        return len(re.findall(pattern, text, re.IGNORECASE | re.ASCII))
+    return text.count(term)
 
 
 def project_major(p):
@@ -226,7 +269,7 @@ def plain_policy_check(text, issues, nodes, major_id):
             body_parts.append(n["alt"] + " " + n["path"])
     body = "\n".join(body_parts)
     for term in policy["forbidden_body_terms"]:
-        hits = body.count(term)
+        hits = _term_count(body, term)
         if hits:
             issues.append(
                 (
@@ -234,8 +277,12 @@ def plain_policy_check(text, issues, nodes, major_id):
                     "본문 금칙 재무 용어 %d회: %s" % (hits, term),
                 )
             )
+    # Captions are printed once and must count towards limited terms too.
+    limited_body = "\n".join(body_parts + [
+        n["text"] for n in nodes if n["kind"] == "caption"
+    ])
     for term, limit in policy["limited_terms"].items():
-        hits = body.count(term)
+        hits = _term_count(limited_body, term)
         if hits > limit:
             issues.append(
                 (
@@ -244,7 +291,7 @@ def plain_policy_check(text, issues, nodes, major_id):
                 )
             )
     fm = policy["front_matter"]
-    length = _front_matter_length(text, fm["title_keyword"])
+    length = _front_matter_length(text, fm["title_keywords"])
     if length is not None:
         if length > fm["error_chars"]:
             issues.append(
@@ -279,7 +326,7 @@ def plain_policy_check(text, issues, nodes, major_id):
                     % (len(title), cap["warn_chars"], n["text"]),
                 )
             )
-        hits = [t for t in cap_terms if t in title]
+        hits = [t for t in cap_terms if _term_count(title, t)]
         if hits:
             issues.append(
                 (

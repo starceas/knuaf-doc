@@ -17,7 +17,7 @@
     "손익분기": 6
   },
   "front_matter": {
-    "title_keyword": "머리말",
+    "title_keywords": ["머리말", "서론"],
     "warn_chars": 1800,
     "error_chars": 2500
   },

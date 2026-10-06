@@ -176,6 +176,140 @@ class PlainPolicyBody(ContractCase):
             assert "image_ai_generated" in ids(check(text, major_id=OTHER_MAJOR, root=self._root()))
 
 
+class PlainPolicyReviewFixes(ContractCase):
+    def test_labelled_summary_headings_do_not_hide_the_first_body_chapter(self):
+        summary = "요약\nI. 사업의 개요\n요약 내용\nII. 투자분석\n요약 내용\n"
+        for major in ALL_MAJORS:
+            for heading in ("Ⅰ. 머리말", "Ⅰ 서론", "1. 서론"):
+                with self.subTest(major=major, heading=heading):
+                    text = summary + heading + "\n" + "가" * 2501 + "\nⅡ. 계획\n나"
+                    assert "front_matter_over" in ids(check(text, major_id=major))
+                    if heading != "1. 서론":
+                        assert doc._front_matter_length(text, ["머리말", "서론"]) == 2501
+
+    def test_real_first_chapter_titles_and_exact_boundaries_for_every_major(self):
+        titles = ("Ⅰ. 머리말", "I. 머리말", "Ⅰ 머리말", "1. 머리말",
+                  "Ⅰ. 서론", "I. 서론", "Ⅰ 서론", "1. 서론")
+        boundaries = ((1800, set()), (1801, {"front_matter_long"}),
+                      (2500, {"front_matter_long"}), (2501, {"front_matter_over"}))
+        for major in ALL_MAJORS:
+            for title in titles:
+                for prefix in ("", "# "):
+                    for length, expected in boundaries:
+                        with self.subTest(major=major, title=prefix + title, length=length):
+                            out = ids(check(prefix + title + "\n" + "가 " * length,
+                                            major_id=major))
+                            self.assertEqual(out & {"front_matter_long", "front_matter_over"},
+                                             expected)
+
+    def test_first_chapter_stops_at_next_chapter_and_retains_subheadings(self):
+        for first, second in (("Ⅰ 서론", "Ⅱ 현황"), ("I. 머리말", "II. 현황"),
+                              ("1. 서론", "2. 현황")):
+            content = "가 " * 20 + "\n## 1. 연구목적\n나. 계획\n|항목|값|\n|---|---|\n|가|1|\n"
+            text = first + "\n" + content + second + "\n" + "나" * 3000
+            self.assertEqual(doc._front_matter_length(text, ["머리말", "서론"]),
+                             len("".join(content.split())))
+        # Arabic subsection titles in a Roman-numbered first chapter are not chapter ends.
+        content = "가\n1. 연구목적\n나\n2. 연구방법\n다\n"
+        self.assertEqual(doc._front_matter_length("Ⅰ 서론\n" + content + "Ⅱ 현황\n라",
+                                                 ["머리말", "서론"]),
+                         len("".join(content.split())))
+
+    def test_later_or_lower_level_intro_is_not_the_first_chapter(self):
+        for title in ("Ⅰ. 본론\nⅡ. 서론", "1. 개요\n2. 서론",
+                      "## Ⅰ. 서론", "Ⅰ. 서론적 검토"):
+            self.assertIsNone(doc._front_matter_length(title + "\n" + "가" * 2501,
+                                                       ["머리말", "서론"]))
+
+    def test_ascii_terms_ignore_case_but_do_not_match_inside_latin_words(self):
+        for major in ALL_MAJORS:
+            with self.subTest(major=major):
+                out = check("npv nPv npv를 irr Irr은 bcr BcR은 b/c B/c가", major_id=major)
+                counts = {reason.split(": ")[-1]: int(reason.split(" ")[4].split("회")[0])
+                          for cid, reason in out if cid == "forbidden_term"}
+                self.assertEqual(counts, {"NPV": 3, "IRR": 2, "BCR": 2, "B/C": 2})
+                self.assertNotIn("forbidden_term", ids(check(
+                    "irrigation preNPVpost BCRValue b/catalog npv_value IRR2", major_id=major)))
+                for term in ("npv", "iRr", "bCr", "b/c"):
+                    text = "표 1. " + term + "\n|값|\n|---|\n|1|\n출처: 본인 작성"
+                    self.assertIn("caption_forbidden", ids(check(text, major_id=major)))
+                self.assertNotIn("caption_forbidden", ids(check(
+                    "표 1. irrigation\n|값|\n|---|\n|1|\n출처: 본인 작성", major_id=major)))
+
+    def test_limited_term_counts_printed_body_cells_and_captions_once(self):
+        def text(extra):
+            body = "손익분기 손익분기" + (" 손익분기" if extra == "body" else "")
+            cells = "손익분기 손익분기" + (" 손익분기" if extra == "cell" else "")
+            tables = ("표 1. 손익분기점\n|항목|값|\n|---|---|\n|" + cells
+                      + "|1|\n출처: 본인 작성\n"
+                      "표 2. 손익분기점\n|값|\n|---|\n|2|\n출처: 본인 작성")
+            if extra == "caption":
+                tables += "\n표 3. 손익분기점\n|값|\n|---|\n|3|\n출처: 본인 작성"
+            return body + "\n" + tables
+        for major in ALL_MAJORS:
+            self.assertNotIn("term_limit", ids(check(text(None), major_id=major)))
+            for extra in ("body", "cell", "caption"):
+                with self.subTest(major=major, extra=extra):
+                    rows = [(cid, reason) for cid, reason in check(text(extra), major_id=major)
+                            if cid == "term_limit"]
+                    self.assertEqual(rows, [("term_limit", "제한 용어 손익분기 7회(상한 6회)")])
+
+    def test_seven_caption_only_mentions_warn(self):
+        text = "\n".join("표 %d. 손익분기점\n|값|\n|---|\n|1|\n출처: 본인 작성" % i
+                         for i in range(1, 8))
+        self.assertIn(("term_limit", "제한 용어 손익분기 7회(상한 6회)"), check(text))
+
+    def _registered(self, major, **meta):
+        root = self.make_project()
+        if major is not None:
+            bind_major(root, major)
+        raw = "학생의 직접 견학 원답변\n"
+        write_text(root, "answer.txt", raw)
+        op = source_op()
+        op["value"].update(meta)
+        core.apply(root, {"request_id": "f-author-survey", "ops": [op]},
+                   core.load(root)["revision"])
+        self.assertEqual((root / "answer.txt").read_text(), raw)
+        return root
+
+    def test_author_survey_interviews_allowed_with_either_documented_marker(self):
+        for major in ALL_MAJORS[:-1]:
+            for marker in ({"source_type": "author_survey", "source": "사용자 견학"},
+                           {"source": "작성자 직접 조사"}):
+                with self.subTest(major=major, marker=marker):
+                    root = self._registered(major, kind="interview", verified="user-stated",
+                                            grade=5, **marker)
+                    project = core.load(root)
+                    self.assertEqual(project["sources"]["answer"]["verified"], "user-stated")
+                    for key, value in marker.items():
+                        self.assertEqual(project["sources"]["answer"][key], value)
+                    rows = [r for r in core.checks(root, project) if r["check_id"] in
+                            {"source_kind_forbidden", "source_grade_forbidden"}]
+                    self.assertEqual(rows, [])
+
+    def test_external_interviews_and_partial_or_article_markers_still_rejected(self):
+        rejected = ({}, {"verified": "user-stated", "source": "사용자 견학"},
+                    {"source_type": "external_interview"},
+                    {"source": "기사에 나온 작성자 직접 조사"},
+                    {"source_type": "author_survey", "kind": "news"},
+                    {"source": "작성자 직접 조사", "kind": "blog"})
+        for major in ALL_MAJORS[:-1]:
+            for marker in rejected:
+                with self.subTest(major=major, marker=marker):
+                    root = self._registered(major, **dict({"kind": "interview"}, **marker))
+                    rows = [r for r in core.checks(root, core.load(root))
+                            if r["check_id"] == "source_kind_forbidden"]
+                    self.assertEqual(len(rows), 1)
+                    self.assertEqual((rows[0]["status"], rows[0]["severity"]), ("fail", "error"))
+
+    def test_author_marker_does_not_exempt_forbidden_grade(self):
+        for grade in (3, 4, "3", "4"):
+            root = self._registered(SC, kind="interview", source_type="author_survey", grade=grade)
+            out = core.checks(root, core.load(root))
+            self.assertNotIn("source_kind_forbidden", {r["check_id"] for r in out})
+            self.assertIn("source_grade_forbidden", {r["check_id"] for r in out})
+
+
 class PlainPolicyScope(ContractCase):
     """전공 여부와 관계없이 같은 기본 정책을 적용한다."""
 
@@ -363,7 +497,9 @@ class PlainPolicyFile(ContractCase):
             ("objects", "credit_labels", [7]),
             ("images", "ai_markers", "ai_generated"),
             ("sources", "forbidden_grades", ["3"]),
-            ("front_matter", "title_keyword", None),
+            ("front_matter", "title_keywords", None),
+            ("front_matter", "title_keywords", []),
+            ("front_matter", "title_keywords", [None]),
         ]
         for group, key, value in changes:
             data = json.loads(json.dumps(original))
