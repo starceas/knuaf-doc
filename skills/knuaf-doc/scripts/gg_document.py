@@ -1,5 +1,6 @@
 """Supported Markdown: headings, paragraphs, pipe tables, local images, emphasis."""
 
+import json
 import re
 from pathlib import Path
 from gg_core import draft
@@ -53,6 +54,340 @@ FARM_MARKERS = ("농장명",)
 CONTENT_REVIEW_HINTS = frozenset(
     {"intro_topics", "closing_elements", "process_plan"}
 )
+
+# 평문(졸업논문) 정책 검사 중 차단이 아니라 확인·보고 대상인 항목.
+# 코어(gg_core)와 명령 어댑터(gg_commands)는 이 집합에 든 ID만
+# severity="warning"으로 집계한다.
+WARNING_CHECKS = frozenset(
+    {
+        "term_limit",
+        "front_matter_long",
+        "caption_long",
+        "photo_placeholder",
+    }
+)
+
+INFO_CHECKS = frozenset({"sourced_objects"})
+
+POLICY_PATH = (
+    Path(__file__).resolve().parents[1]
+    / "references"
+    / "plain-thesis-policy.json"
+)
+
+_POLICY_SHAPES = {
+    "forbidden_body_terms": list,
+    "limited_terms": dict,
+    "front_matter": dict,
+    "caption": dict,
+    "objects": dict,
+    "sources": dict,
+    "images": dict,
+}
+
+
+def policy_for_major(policy, major_id):
+    """모든 입력에 공통 값을 적용하고 해당 전공의 재정의만 합친다."""
+    rules = {key: policy[key] for key in _POLICY_SHAPES}
+    for key, value in policy["majors"].get(major_id, {}).items():
+        rules[key] = {**rules[key], **value} if isinstance(value, dict) else value
+    return rules
+
+
+def _validate_plain_rules(rules):
+    for key, shape in _POLICY_SHAPES.items():
+        if not isinstance(rules.get(key), shape):
+            raise ValueError("plain-thesis-policy.json 필드 오류: " + key)
+    fm, cap, obj = rules["front_matter"], rules["caption"], rules["objects"]
+    src, img = rules["sources"], rules["images"]
+    for part, keys in ((fm, ("warn_chars", "error_chars")),
+                       (cap, ("warn_chars",)), (obj, ("scan_lines",))):
+        if not all(type(part.get(k)) is int and part[k] > 0 for k in keys):
+            raise ValueError("plain-thesis-policy.json 수치 필드 오류")
+    if fm["warn_chars"] >= fm["error_chars"]:
+        raise ValueError("plain-thesis-policy.json front_matter 수치 오류")
+    for values in (rules["forbidden_body_terms"], cap.get("forbidden_terms"),
+                   obj.get("credit_labels"), obj.get("missing_credit_values"),
+                   src.get("forbidden_kinds"), img.get("ai_kinds"),
+                   img.get("ai_markers")):
+        if not isinstance(values, list) or not values or not all(
+            isinstance(v, str) and v.strip() for v in values
+        ):
+            raise ValueError("plain-thesis-policy.json 목록 필드 오류")
+    grades = src.get("forbidden_grades")
+    if not isinstance(grades, list) or not grades or not all(
+        type(v) is int and v > 0 for v in grades
+    ):
+        raise ValueError("plain-thesis-policy.json forbidden_grades 오류")
+    for part, key in ((fm, "title_keyword"), (img, "placeholder_prefix")):
+        if not isinstance(part.get(key), str) or not part[key].strip():
+            raise ValueError("plain-thesis-policy.json 문자열 필드 오류: " + key)
+    if not all(isinstance(k, str) and k and type(v) is int and v > 0
+               for k, v in rules["limited_terms"].items()):
+        raise ValueError("plain-thesis-policy.json limited_terms 수치 오류")
+
+
+def load_plain_policy(path=None):
+    """정책 누락·손상은 전공 판정 전에 실패로 닫는다."""
+    p = Path(path) if path is not None else POLICY_PATH
+    try:
+        data = json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        raise ValueError("plain-thesis-policy.json 읽기 실패: %s" % e) from e
+    if not isinstance(data, dict):
+        raise ValueError("plain-thesis-policy.json 최상위가 객체 아님")
+    if data.get("schema") != "knuaf-plain-thesis-policy/v1":
+        raise ValueError("plain-thesis-policy.json schema 오류")
+    majors = data.get("majors")
+    if not isinstance(majors, dict):
+        raise ValueError("plain-thesis-policy.json majors 필드 오류")
+    if "counts" in data:
+        raise ValueError("plain-thesis-policy.json 폐지된 counts 필드")
+    _validate_plain_rules(data)
+    for major, override in majors.items():
+        if not isinstance(major, str) or not major or not isinstance(override, dict):
+            raise ValueError("plain-thesis-policy.json majors 필드 오류")
+        if set(override) - set(_POLICY_SHAPES):
+            raise ValueError("plain-thesis-policy.json majors 미지원 정책 필드")
+        for key, value in override.items():
+            if not isinstance(value, _POLICY_SHAPES[key]):
+                raise ValueError("plain-thesis-policy.json majors 필드 오류: " + key)
+        _validate_plain_rules(policy_for_major(data, major))
+    return data
+
+
+_CHAPTER_NUMERAL = re.compile(
+    r"^\s*([ⅠⅡⅢⅣⅤⅥⅦ]|VII|VI|IV|III|II|I|V)\s*[\.．]"
+)
+_INTRO_HEAD = re.compile(r"^[ⅠI]\s*[\.．]")
+
+
+def _front_matter_length(text, keyword):
+    # 제목은 제외하고 표·캡션·소제목을 포함한 원문을 공백 제외로 센다.
+    # 노드 재조립은 표 구분자 등 원문을 잃으므로 사용하지 않는다.
+    parts = []
+    inside = False
+    for line in draft(text).splitlines():
+        heading = re.sub(r"^#{1,6}\s+", "", line.strip())
+        if not inside:
+            if _INTRO_HEAD.match(heading) and keyword in heading:
+                inside = True
+        elif _CHAPTER_NUMERAL.match(heading):
+            break
+        else:
+            parts.append(line)
+    return len(re.sub(r"\s+", "", "\n".join(parts))) if inside else None
+
+
+def project_major(p):
+    """정본 프로젝트의 common.major_id 바인딩을 읽는다. 확인 불가 시
+    None — 공통 기본 정책을 적용한다."""
+    try:
+        import gg_major_contract as mc
+
+        return mc.binding_from_project(
+            mc.default_registry(), p
+        ).major_id
+    except Exception:
+        return None
+
+
+def _project_major(root):
+    """문서 검사 입력의 루트가 프로젝트 폴더일 때 전공을 읽는다."""
+    if root is None:
+        return None
+    try:
+        if not (Path(root) / "project.json").is_file():
+            return None
+        import gg_core as core_mod
+
+        return project_major(core_mod.load(root))
+    except Exception:
+        return None
+
+
+def plain_policy_check(text, issues, nodes, major_id):
+    """단일 정본 정책 게이트. 학교 구조 검사를 건너뛰는 짧은 입력에도
+    모든 전공·전공 미확인 입력에 공통 기본값을 적용하고 해당 전공의
+    majors 재정의만 합친다."""
+    try:
+        policy = load_plain_policy()
+    except ValueError as e:
+        issues.append(("plain_policy_file", str(e)))
+        return
+    policy = policy_for_major(policy, major_id)
+    body_parts = []
+    for n in nodes:
+        if n["kind"] in {"paragraph", "heading"}:
+            body_parts.append(n["text"])
+        elif n["kind"] == "table":
+            body_parts.extend(c for row in n["rows"] for c in row)
+        elif n["kind"] == "image":
+            body_parts.append(n["alt"] + " " + n["path"])
+    body = "\n".join(body_parts)
+    for term in policy["forbidden_body_terms"]:
+        hits = body.count(term)
+        if hits:
+            issues.append(
+                (
+                    "forbidden_term",
+                    "본문 금칙 재무 용어 %d회: %s" % (hits, term),
+                )
+            )
+    for term, limit in policy["limited_terms"].items():
+        hits = body.count(term)
+        if hits > limit:
+            issues.append(
+                (
+                    "term_limit",
+                    "제한 용어 %s %d회(상한 %d회)" % (term, hits, limit),
+                )
+            )
+    fm = policy["front_matter"]
+    length = _front_matter_length(text, fm["title_keyword"])
+    if length is not None:
+        if length > fm["error_chars"]:
+            issues.append(
+                (
+                    "front_matter_over",
+                    "머리말 공백 제외 %d자(상한 %d자)"
+                    % (length, fm["error_chars"]),
+                )
+            )
+        elif length > fm["warn_chars"]:
+            issues.append(
+                (
+                    "front_matter_long",
+                    "머리말 공백 제외 %d자(권고 %d자 이하)"
+                    % (length, fm["warn_chars"]),
+                )
+            )
+    cap = policy["caption"]
+    cap_terms = list(policy["forbidden_body_terms"]) + list(
+        cap["forbidden_terms"]
+    )
+    for n in nodes:
+        if n["kind"] != "caption":
+            continue
+        m = CAPTION.fullmatch(n["text"])
+        title = m[3].strip() if m else n["text"]
+        if len(title) > cap["warn_chars"]:
+            issues.append(
+                (
+                    "caption_long",
+                    "캡션 %d자(권고 %d자 이하): %s"
+                    % (len(title), cap["warn_chars"], n["text"]),
+                )
+            )
+        hits = [t for t in cap_terms if t in title]
+        if hits:
+            issues.append(
+                (
+                    "caption_forbidden",
+                    "캡션 금지 표현(%s): %s" % (", ".join(hits), n["text"]),
+                )
+            )
+    sourced_object_check(nodes, issues, policy)
+    img = policy["images"]
+    placeholders = text.count(img["placeholder_prefix"])
+    if placeholders:
+        issues.append(
+            (
+                "photo_placeholder",
+                "미해결 사진 자리 표기 %d건(제출 전 학생 사진으로 교체): %s…"
+                % (placeholders, img["placeholder_prefix"]),
+            )
+        )
+    return policy
+
+
+def _plain_objects(nodes):
+    """지원 형식의 캡션+객체는 한 번만 센다. 무캡션 객체도 출처를 검사한다."""
+    groups = []
+    i = 0
+    while i < len(nodes):
+        n = nodes[i]
+        kind = n["kind"]
+        if kind == "caption" or kind in {"table", "image"}:
+            label = n["label"] if kind == "caption" else (
+                "표" if kind == "table" else "그림")
+            end = i
+            if i + 1 < len(nodes):
+                after = nodes[i + 1]
+                if (kind == "caption" and label == "표" and after["kind"] == "table") or (
+                    kind == "image" and after["kind"] == "caption" and after["label"] == "그림"
+                ):
+                    end += 1
+            groups.append((label, i, end))
+            i = end + 1
+        else:
+            i += 1
+    return groups
+
+
+def _object_neighbors(nodes, start, end, window):
+    for origin, step in ((start - 1, -1), (end + 1, 1)):
+        pos = origin
+        for distance in range(1, window + 1):
+            if not 0 <= pos < len(nodes) or nodes[pos]["kind"] != "paragraph":
+                break  # 다음 표·그림·절의 출처를 끌어오지 않는다.
+            yield pos, distance
+            pos += step
+
+
+def _placeholder_figure(nodes, start, end, policy):
+    if any(n["kind"] == "image" for n in nodes[start:end + 1]):
+        return False
+    return any(
+        policy["images"]["placeholder_prefix"] in nodes[pos]["text"]
+        for pos, _ in _object_neighbors(nodes, start, end, 1)
+    )
+
+
+def sourced_object_check(nodes, issues, policy):
+    """출처 표기 존재만 검사한다. 수치 진위·이용권리는 사람 검토 대상이다."""
+    obj = policy["objects"]
+    labels = "|".join(re.escape(v) for v in obj["credit_labels"])
+    credit_re = re.compile(r"^(?:[\\*＊·•]\s*)*(?:" + labels + r")\s*[:：]\s*(.*?)\s*$")
+    absent = {re.sub(r"\s+", "", v).casefold() for v in obj["missing_credit_values"]}
+    groups = _plain_objects(nodes)
+    # 각 출처 줄은 가장 가까운 객체 하나에만 연결한다. 동거리면 앞 객체.
+    owners = {}
+    pending = set()
+    for index, (label, start, end) in enumerate(groups):
+        neighbors = list(_object_neighbors(nodes, start, end, obj["scan_lines"]))
+        if label == "그림" and _placeholder_figure(nodes, start, end, policy):
+            pending.add(index)
+            continue
+        for pos, distance in neighbors:
+            m = credit_re.fullmatch(nodes[pos]["text"].strip().strip("*"))
+            if not m:
+                continue
+            value = m[1].strip().strip("*[] ")
+            if not value or re.sub(r"\s+", "", value).casefold() in absent:
+                continue
+            candidate = (distance, index)
+            if candidate < owners.get(pos, (float("inf"), float("inf"))):
+                owners[pos] = candidate
+    credited = {index for _, index in owners.values()}
+    counts = {"표": 0, "그림": 0}
+    for index, (label, start, end) in enumerate(groups):
+        if index in pending:
+            continue
+        if label == "그림":
+            pieces = [n.get("text", "") + " " + n.get("alt", "") + " " + n.get("path", "")
+                      for n in nodes[start:end + 1]]
+            pieces += [nodes[pos]["text"] for pos, (_, owner) in owners.items() if owner == index]
+            if any(marker.casefold() in "\n".join(pieces).casefold()
+                   for marker in policy["images"]["ai_markers"]):
+                issues.append(("image_ai_generated", "AI 생성 이미지 산출물 금지: " + pieces[0].strip()))
+        if index in credited:
+            counts[label] += 1
+        else:
+            n = next((n for n in nodes[start:end + 1] if n["kind"] == "caption"), nodes[start])
+            name = n.get("text") or n.get("path") or "캡션 없는 표"
+            issues.append(("object_credit", "%s 출처 표기 없음: %s" % (label, name)))
+    issues.append(("sourced_objects", "출처 있는 표 %d개·그림 %d개" % (counts["표"], counts["그림"])))
 
 
 def _norm_cell(s):
@@ -397,9 +732,12 @@ def require_tokens(issues, cid, body, tokens, reason):
         issues.append((cid, reason + ": " + ", ".join(missing)))
 
 
-def check(text, base):
+def check(text, base, major_id=None):
     nodes = parse(text)
     issues = []
+    if major_id is None:
+        major_id = _project_major(base)
+    policy = plain_policy_check(text, issues, nodes, major_id)
     full = set()
     for n in nodes:
         if n["kind"] in {"paragraph", "heading"}:
@@ -443,7 +781,12 @@ def check(text, base):
             j = i + 1 if n["label"] == "표" else i - 1
             kind = "table" if n["label"] == "표" else "image"
             if j < 0 or j >= len(nodes) or nodes[j]["kind"] != kind:
-                issues.append(("missing_object", n["text"] + " 실제 객체 없음"))
+                pending_photo = (
+                    policy and n["label"] == "그림"
+                    and _placeholder_figure(nodes, i, i, policy)
+                )
+                if not pending_photo:
+                    issues.append(("missing_object", n["text"] + " 실제 객체 없음"))
         if n["kind"] == "image":
             if (
                 i + 1 >= len(nodes)
@@ -455,6 +798,7 @@ def check(text, base):
             if (
                 p.is_absolute()
                 or "://" in str(p)
+                or base is None
                 or not (Path(base) / p).is_file()
                 or not (Path(base) / p).resolve().is_relative_to(Path(base).resolve())
             ):

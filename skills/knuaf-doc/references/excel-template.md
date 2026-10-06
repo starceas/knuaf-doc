@@ -72,6 +72,17 @@ color as approval for arbitrary formula changes. Investment analysis absent from
 the prescribed workbook can be verified in a separate calculation artifact;
 do not add sheets to the submission form merely to satisfy a preferred model.
 
+### Inflation and labor cost input rules (물가 및 노무비 반영 규칙)
+
+> ℹ️ **적용 범위**: 본 물가 및 노무비 분리 반영 규칙은 **모든 전공 공통 기본값**이다([사용자 결정 2026-10-06 22:39]). 전 전공에서 일반 물가와 노무비 상승률을 분리하고 공식 통계(KOSIS 등)에 근거하여 반영한다.
+
+1. **전 부문 물가 반영**:
+   매출(판매가격: Sheet 5), 영농자재(Sheet 7), 노무비(Sheet 8), 경비(Sheet 9) 모두 물가상승률을 반영한다.
+2. **노무비 상승률 최우선 및 분리 적용**:
+   교수 지적에 따라 **노무비(고용노동임금) 계획이 가장 중요**하다. 일반 소비자물가상승률(자재·경비·매출)과 임금 상승률(노무비)은 성격이 다르므로 **반드시 분리하여 적용**한다. Sheet 8(노무비계획)의 임금 상승률 수식/열을 유효하게 연결하여 연도별 일당 인상을 반영해야 하며, 5개년 동일 단가로 방치하지 않는다.
+3. **공식 통계 근거 필수 (임의 추정 금지)**:
+   적용하는 물가상승률 및 임금상승률은 반드시 공식 통계(KOSIS 소비자물가조사, 농가 고용노동임금 등)에서 가져와야 하며, 각 값마다 출처 ID(`source_id`), 기준연도(`reference_year`), locator를 입력 근거에 명시한다. 근거 없는 임의 추정값이나 템플릿의 잔존 예시값을 무단으로 사용하지 않는다.
+
 ## Saved-file compatibility verification
 
 The generator preserves original XML namespace prefixes and declarations with

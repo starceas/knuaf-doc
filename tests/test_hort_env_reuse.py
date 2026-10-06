@@ -55,11 +55,11 @@ BASELINE_ENTRY_DIGEST = {
     "official-writing-guide-hwp":
         "50e53b4d175beca8d756c4acfeaa55fc7d253ef09b7cde637b2fd8738cb0a546",
     "kim-wonseop-exemplar-pdf":
-        "1735d2a0232b5755eff01dc02aa552b0b233e40566df7659d709fc60b80823d3",
+        "73bd533c82c447605092cc6cd03ea173448df6b4ccaeef07710a4ad27c4ce88e",
     "kim-wonseop-exemplar-hwp":
-        "438903e009b0708854f61ca010c14fb8a34f360345b49655e9fc2648d04a3af0",
+        "ffc8f34b9585776419026da935c4af0732463842a7c6c51406cfb669d17a54d8",
     "seo-minseo-finance-xlsx":
-        "92251ee46930f468b3aa3328cfb289863d8af23bbafdcd8fd9b20bdd6e21c991",
+        "6b1ef5e7f78b3a171ccfe4cba6061f8f5d86ed960333bbaec155d6ef6a000f8e",
     "specialty-grad-thesis-finance-xlsx":
         "c50902c5513fd5fb0d085983e1a9e001742cfa5e91100517d709d55123fda991",
 }

@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 import sys
 import gg_core as c
-from gg_document import check
+from gg_document import INFO_CHECKS, WARNING_CHECKS, check, project_major
 
 
 def main(mode):
@@ -20,7 +20,9 @@ def main(mode):
     a = ap.parse_args()
     path = Path(a.target)
     try:
-        root = path if path.is_dir() else path.parent.parent
+        root = path if path.is_dir() else path.parent
+        if not path.is_dir() and not (root / "project.json").exists():
+            root = root.parent if (root.parent / "project.json").exists() else root
         p = c.load(root) if (root / "project.json").exists() else None
         if mode == "status":
             if not p:
@@ -71,8 +73,19 @@ def main(mode):
                 )
                 text = "\n\n".join(c.draft(f.read_text(encoding="utf-8")) for f in files)
             rows = [
-                c.result(cid, str(path), "fail", reason, p["revision"] if p else 0)
-                for cid, reason in check(text, root)
+                c.result(
+                    cid,
+                    str(path),
+                    "pass" if cid in INFO_CHECKS else "fail",
+                    reason,
+                    p["revision"] if p else 0,
+                    "info" if cid in INFO_CHECKS else (
+                        "warning" if cid in WARNING_CHECKS else "error"
+                    ),
+                )
+                for cid, reason in check(
+                    text, root, major_id=(project_major(p) if p else None) or a.major
+                )
             ]
             if not rows:
                 rows = [
