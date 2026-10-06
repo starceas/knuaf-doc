@@ -310,6 +310,104 @@ class PlainPolicyReviewFixes(ContractCase):
             self.assertIn("source_grade_forbidden", {r["check_id"] for r in out})
 
 
+class PlainPolicyF2Fixes(ContractCase):
+    def test_summary_ends_at_first_body_chapter_even_with_later_intro(self):
+        for major in ALL_MAJORS[:-1]:
+            for length in (1800, 1801, 2500, 2501):
+                for subheading in ("1. 서론", "## 1. 서론"):
+                    with self.subTest(major=major, length=length, subheading=subheading):
+                        text = ("# 요약\n사업 요약\n# Ⅰ. 영농계획\n본문의 서론을 살펴본다.\n"
+                                + subheading + "\n" + "가" * length + "\n# Ⅱ. 현황\n나")
+                        self.assertIsNone(doc._front_matter_length(text, ["머리말", "서론"]))
+                        self.assertFalse(ids(check(text, major_id=major)) &
+                                         {"front_matter_long", "front_matter_over"})
+                        child = next(n for n in doc.parse(text) if n.get("text") == "1. 서론")
+                        self.assertEqual((child["kind"], child["level"]), ("heading", 2))
+            for prefix in ("", "# 요약\n사업 요약\n", "# 요약\n## I. 사업 요약\n내용\n"):
+                text = prefix + "# Ⅰ. 영농계획\n서론을 살펴본다.\n# 1. 서론\n" + "가" * 2501
+                self.assertIsNone(doc._front_matter_length(text, ["머리말", "서론"]))
+
+    def test_prose_and_equal_level_subsections_preserve_exact_length_boundaries(self):
+        cases = (("# Ⅰ. 머리말", "가\nI study agriculture.\n", "# Ⅱ. 계획"),
+                 ("# 1. 서론", "가\n1. 연구목적\n", "# 2. 현황"),
+                 ("# 1. 서론", "가\n## 1. 연구목적\n", "# 2. 현황"))
+        for major in ALL_MAJORS[:-1]:
+            for heading, prefix, end in cases:
+                for length, expected in ((1800, set()), (1801, {"front_matter_long"}),
+                                         (2500, {"front_matter_long"}), (2501, {"front_matter_over"})):
+                    with self.subTest(major=major, heading=heading, prefix=prefix, length=length):
+                        content = prefix + "나" * (length - len("".join(prefix.split())))
+                        text = heading + "\n" + content + "\n" + end + "\n" + "다" * 3000
+                        self.assertEqual(doc._front_matter_length(text, ["머리말", "서론"]), length)
+                        self.assertEqual(ids(check(text, major_id=major)) &
+                                         {"front_matter_long", "front_matter_over"}, expected)
+                        if "I study" in prefix:
+                            node = next(n for n in doc.parse(text) if n["text"] == "I study agriculture.")
+                            self.assertEqual(node["kind"], "paragraph")
+                        else:
+                            node = next(n for n in doc.parse(text) if n["text"] == "1. 연구목적")
+                            self.assertEqual((node["kind"], node["level"]), ("heading", 2))
+
+    def test_raw_spans_include_tables_and_stop_at_actual_level_one(self):
+        content = "가\n## 1. 연구목적\n표 1. 계획\n|항목|값|\n|---|---|\n|가|1|\n출처: 본인 작성\n"
+        for end in ("# Ⅱ. 현황", "# 2. 현황", "# 현황"):
+            text = "# Ⅰ. 머리말\n" + content + end + "\n" + "나" * 3000
+            self.assertEqual(doc._front_matter_length(text, ["머리말", "서론"]),
+                             len("".join(content.split())))
+            nodes = doc.parse(text, with_spans=True)
+            self.assertEqual([{k: v for k, v in n.items() if k not in {"start_line", "end_line"}}
+                              for n in nodes], doc.parse(text))
+            table = next(n for n in nodes if n["kind"] == "table")
+            raw = "\n".join(core.draft(text).splitlines()[table["start_line"]:table["end_line"]])
+            self.assertIn("|---|---|", raw)
+
+    def test_plain_number_fallback_rejects_english_pronoun_as_a_chapter(self):
+        content = "가\nI study agriculture.\n1. 연구목적\n2. 연구방법\n" + "나" * 2501 + "\n"
+        text = "Ⅰ 머리말\n" + content + "Ⅱ 계획\n다"
+        self.assertEqual(doc._front_matter_length(text, ["머리말", "서론"]),
+                         len("".join(content.split())))
+        for raw in ("요약\n본문 요약\nⅠ 영농계획\n1. 서론\n", "Ⅰ 영농계획\n서론을 살펴본다.\n"):
+            self.assertIsNone(doc._front_matter_length(raw + "가" * 2501, ["머리말", "서론"]))
+
+    def test_interview_display_contract_rejects_explicit_type_conflicts(self):
+        raw = "신문 기자가 타인 농장주를 인터뷰한 합성 기사. 학생 본인 조사가 아니다.\n"
+        types = ("external_interview", "external_news", "external_author_survey",
+                 "external_", "news", "blog", "interview", "sns", "cafe", "shop", "press")
+        for major in ALL_MAJORS[:-1]:
+            for source_type in types:
+                with self.subTest(major=major, source_type=source_type):
+                    root = self.make_project()
+                    if major:
+                        bind_major(root, major)
+                    write_text(root, "answer.txt", raw)
+                    op = source_op()
+                    op["value"].update(kind="interview", source="작성자 직접 조사",
+                                       source_type=source_type)
+                    core.apply(root, {"request_id": "f2-conflict", "ops": [op]}, core.load(root)["revision"])
+                    project = core.load(root)
+                    rows = [r for r in core.checks(root, project) if r["check_id"] == "source_kind_forbidden"]
+                    self.assertEqual(len(rows), 1)
+                    self.assertEqual((rows[0]["status"], rows[0]["severity"]), ("fail", "error"))
+                    self.assertEqual((root / "answer.txt").read_text(), raw)
+                    self.assertEqual(project["sources"]["answer"]["hash"], core.digest(raw.encode()))
+
+    def test_marked_disguise_is_not_automatically_classified_from_raw_content(self):
+        # The F2 disposition accepts a metadata trust contract, not truth inference.
+        raw = "신문 기자가 타인 농장주를 인터뷰한 합성 기사. 학생 본인 조사가 아니다.\n"
+        for major in ALL_MAJORS[:-1]:
+            root = self.make_project()
+            if major:
+                bind_major(root, major)
+            write_text(root, "answer.txt", raw)
+            op = source_op()
+            op["value"].update(kind="interview", source="타인 기사형 인터뷰", source_type="author_survey")
+            core.apply(root, {"request_id": "f2-trust-boundary", "ops": [op]}, core.load(root)["revision"])
+            rows = [r for r in core.checks(root, core.load(root)) if r["check_id"] in
+                    {"source_kind_forbidden", "source_grade_forbidden"}]
+            self.assertEqual(rows, [])
+            self.assertEqual((root / "answer.txt").read_text(), raw)
+
+
 class PlainPolicyScope(ContractCase):
     """전공 여부와 관계없이 같은 기본 정책을 적용한다."""
 

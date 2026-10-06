@@ -2876,10 +2876,15 @@ def checks(root, p):
             add("source_missing", sid, "원자료 읽기 실패", status="blocked")
         if plain_policy is not None:
             kind = s.get("kind")
-            author_interview = kind == "interview" and (
-                s.get("source_type") == "author_survey"
-                or s.get("source") == "작성자 직접 조사"
+            source_type = s.get("source_type")
+            external_type = isinstance(source_type, str) and (
+                source_type.startswith("external_")
+                or source_type in plain_policy["sources"]["forbidden_kinds"]
             )
+            author_interview = kind == "interview" and (
+                source_type == "author_survey"
+                or s.get("source") == "작성자 직접 조사"
+            ) and not external_type
             if kind in plain_policy["sources"]["forbidden_kinds"] and not author_interview:
                 add(
                     "source_kind_forbidden",

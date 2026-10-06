@@ -159,9 +159,12 @@ def load_plain_policy(path=None):
 
 _CHAPTER_NUMERAL = re.compile(
     r"^([ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]|VIII|VII|III|VI|IV|IX|II|X|I|V)"
-    r"(?:\s*[\.．]\s*|\s+)(\S.*)$"
+    r"\s*[\.．]\s*(\S.*)$"
 )
+_CHAPTER_UNICODE = re.compile(r"^([ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ])\s+(\S.*)$")
 _CHAPTER_ARABIC = re.compile(r"^([1-9]\d*)[\.．]\s*(?!\d)(\S.*)$")
+_ROMAN_NUMBERS = dict(zip(("I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"), range(1, 11)))
+_ROMAN_NUMBERS.update(zip("ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ", range(1, 11)))
 
 
 def _chapter_heading(line):
@@ -171,47 +174,69 @@ def _chapter_heading(line):
         if len(md[1]) != 1:
             return None
         heading = md[2]
-    roman = _CHAPTER_NUMERAL.fullmatch(heading)
+    roman = _CHAPTER_NUMERAL.fullmatch(heading) or _CHAPTER_UNICODE.fullmatch(heading)
     if roman:
-        return "roman", roman[1], roman[2]
+        return "roman", _ROMAN_NUMBERS[roman[1]], roman[2]
     arabic = _CHAPTER_ARABIC.fullmatch(heading)
     if arabic:
-        return "arabic", arabic[1], arabic[2]
+        return "arabic", int(arabic[1]), arabic[2]
     return None
 
 
 def _front_matter_length(text, keywords):
     # 제목은 제외하고 표·캡션·소제목을 포함한 원문을 공백 제외로 센다.
     # 노드 재조립은 표 구분자 등 원문을 잃으므로 사용하지 않는다.
-    parts = []
-    inside = False
+    lines = draft(text).splitlines()
+    nodes = parse(text, with_spans=True)
+    markdown = any(re.match(r"^\s*#{1,6}\s+", line) for line in lines)
+    start = None
     style = None
     summary = False
+    summary_number = None
     if isinstance(keywords, str):
         keywords = [keywords]
-    for line in draft(text).splitlines():
-        if not inside and re.sub(r"^#{1,6}\s+", "", line.strip()) == "요약":
+    for node in nodes:
+        line = lines[node["start_line"]]
+        if start is None and node.get("text") == "요약" and node.get("level", 1) == 1:
             summary = True
-        chapter = _chapter_heading(line)
-        if not inside:
-            if chapter is None:
+            continue
+        chapter = _chapter_heading(node.get("text", ""))
+        intro = chapter is not None and chapter[1] == 1 and any(
+            re.match(re.escape(k) + r"(?:$|\s|[(:：—–-])", chapter[2])
+            for k in keywords
+        )
+        if markdown:
+            # Numbered plain subsections and their ## equivalents share level 2.
+            if node["kind"] != "heading" or node.get("level") != 1:
                 continue
-            style, number, title = chapter
-            if number not in {"Ⅰ", "I", "1"} or not any(
-                re.match(re.escape(k) + r"(?:$|\s|[(:：—–-])", title)
-                for k in keywords
-            ):
-                # A separately labelled summary may have its own I/II headings.
-                # Its numbering is not the thesis body's first chapter.
-                if summary:
-                    continue
-                return None
-            inside = True
-        elif chapter is not None and chapter[0] == style:
-            break
         else:
-            parts.append(line)
-    return len(re.sub(r"\s+", "", "\n".join(parts))) if inside else None
+            # Only a plain document can use the strict numbered-chapter fallback.
+            if chapter is None or node.get("list_item"):
+                continue
+            if start is not None and not (node["kind"] == "heading" and node.get("level") == 1) and (
+                chapter[0] != style or chapter[1] <= 1
+            ):
+                continue
+            if summary:
+                # Plain summaries may number their own ASCII I/II/... sections.
+                # A new chapter-1 sequence ends that scope, regardless of title.
+                ascii_roman = bool(re.match(r"^(?:VIII|VII|III|VI|IV|IX|II|X|I|V)[.．]", line.strip()))
+                if summary_number is None and ascii_roman and chapter[1] == 1 and not intro:
+                    summary_number = 1
+                    continue
+                if summary_number is not None and chapter[1] != 1:
+                    summary_number = chapter[1]
+                    continue
+        if start is not None:
+            end = node["start_line"]
+            return len(re.sub(r"\s+", "", "\n".join(lines[start:end])))
+        # The first body chapter consumes the summary state permanently.
+        summary = False
+        if not intro:
+            return None
+        style = chapter[0]
+        start = node["end_line"]
+    return len(re.sub(r"\s+", "", "\n".join(lines[start:]))) if start is not None else None
 
 
 def _term_count(text, term):
@@ -635,10 +660,24 @@ def _swot_placed(body_nodes):
     return False
 
 
-def parse(text):
+def parse(text, *, with_spans=False):
     lines, nodes, i = draft(text).splitlines(), [], 0
     previous_prose = False
+    # Bare Arabic chapter numbers are a fallback only without a marked main
+    # outline. Explicit #/Roman chapters keep bare 1./2. rows at level 2.
+    arabic_outline = not any(
+        re.match(r"^\s*#\s+", line)
+        or (_chapter_heading(line) or (None,))[0] == "roman"
+        for line in lines
+    )
+    arabic_number = 0
+    def append(node):
+        if with_spans:
+            node.update(start_line=start_line, end_line=i)
+        nodes.append(node)
+
     while i < len(lines):
+        start_line = i
         s = lines[i].strip()
         i += 1
         if not s:
@@ -654,19 +693,19 @@ def parse(text):
                     break
                 s = lines[i].strip()
                 i += 1
-            nodes.append({"kind": "table", "rows": rows})
+            append({"kind": "table", "rows": rows})
         elif IMAGE.fullmatch(s):
             m = IMAGE.fullmatch(s)
-            nodes.append({"kind": "image", "alt": m[1], "path": m[2]})
+            append({"kind": "image", "alt": m[1], "path": m[2]})
         elif CAPTION.fullmatch(s):
             m = CAPTION.fullmatch(s)
-            nodes.append(
+            append(
                 {"kind": "caption", "label": m[1], "number": int(m[2]), "text": s}
             )
         else:
             level = None
             patterns = [
-                r"[ⅠⅡⅢⅣⅤⅥIVX]+\. ",
+                r"(?:[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩIVX]+\. |[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]\s+)",
                 r"\d+\. ",
                 r"[가-힣]\. ",
                 r"\d+\) ",
@@ -683,6 +722,11 @@ def parse(text):
             md = re.match(r"^(#{1,6})\s+(.+)", s)
             if md:
                 level, s = len(md[1]), md[2]
+            elif arabic_outline and level == 2:
+                chapter = _CHAPTER_ARABIC.fullmatch(s)
+                if chapter and int(chapter[1]) == arabic_number + 1:
+                    level = 1
+                    arabic_number += 1
             list_item = False
             if re.match(r"^[-+*]\s+", s):
                 list_item = True
@@ -715,10 +759,10 @@ def parse(text):
             prose = node["kind"] == "paragraph" and not list_item
             if prose and previous_prose:
                 node["soft_continue"] = True
-            nodes.append(node)
+            append(node)
             previous_prose = prose
             if tail:
-                nodes.append({"kind": "paragraph", "text": tail})
+                append({"kind": "paragraph", "text": tail})
                 previous_prose = True
             # A Markdown hard break terminates this line's paragraph boundary.
             if lines[i - 1].endswith("  "):
