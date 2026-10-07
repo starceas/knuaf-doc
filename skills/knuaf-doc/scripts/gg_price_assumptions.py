@@ -37,9 +37,10 @@ spec 계약:
 
 import json
 import math
+import re
 from decimal import Decimal
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import urlsplit
 
 D = Decimal
 
@@ -94,11 +95,44 @@ def _finite_positive(v):
 
 
 def _official_url(url):
-    """https이고 호스트가 공식 도메인 계열에 속하면 True."""
-    if not isinstance(url, str) or not url.strip():
+    """모호한 입력을 먼저 거부하고 한 번 파싱한 HTTPS 호스트만 판정한다."""
+    if not isinstance(url, str) or not url:
         return False
-    host = (urlparse(url.strip()).hostname or "").lower()
-    if urlparse(url.strip()).scheme != "https" or not host:
+    # 공백·제어·유니코드와 브라우저가 자동으로 escape하는 문자는 받지
+    # 않는다. 유니코드 경로·질의는 명시 percent encoding으로 표현한다.
+    if not re.fullmatch(r"[A-Za-z0-9._~:/?#\[\]@!$&()*+,;=%-]+", url):
+        return False
+    if re.search(r"%(?![A-Fa-f0-9]{2})", url):
+        return False
+    # urlsplit/WHATWG의 자동 보정(공백 제거·역슬래시·IDNA·userinfo·
+    # host percent decoding·빈 port 등)이 끼어들 수 없는 authority만 허용.
+    if not url.lower().startswith("https://"):
+        return False
+    try:
+        parsed = urlsplit(url)
+        authority = parsed.netloc
+        if not re.fullmatch(r"[A-Za-z0-9.-]+(?::443)?", authority):
+            return False
+        host = parsed.hostname
+        if parsed.scheme != "https" or not host or parsed.port not in (None, 443):
+            return False
+    except ValueError:
+        return False
+    # 빈 ?/#를 Python은 직렬화 때 없애고 WHATWG는 보존한다.
+    if ("?" in url.split("#", 1)[0] and not parsed.query
+            or "#" in url and not parsed.fragment):
+        return False
+    # WHATWG는 (percent encoded 형태 포함) 점 경로를 제거한다.
+    # Python이 그대로 보존하는 이런 locator는 정규화로 추측하지 않는다.
+    if any(re.fullmatch(r"(?:\.|%2e){1,2}", part, re.IGNORECASE)
+           for part in parsed.path.split("/")):
+        return False
+    host = host.lower()
+    labels = host.split(".")
+    if len(host) > 253 or any(
+        not re.fullmatch(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?", label)
+        or label.startswith("xn--") for label in labels
+    ):
         return False
     return any(host == s or host.endswith("." + s) for s in OFFICIAL_URL_SUFFIXES)
 
@@ -317,27 +351,45 @@ def canonical_dimensions(mapping):
                 hit = canon_key
                 break
         if hit is None:
-            hit = key  # 알 수 없는 차원은 그대로 보존(대상이 선언하지 않으면 미검사)
+            hit = key  # 알 수 없는 차원도 보존해 누락·충돌을 대조한다.
         if isinstance(value, str):
             if not value.strip():
                 raise ValueError(f"차원 {raw_key}: 빈 문자열 불가")
-            canon[hit] = value.strip()
+            normalized = value.strip()
         elif isinstance(value, list) and value and all(
             isinstance(v, str) and v.strip() for v in value
         ):
-            canon[hit] = [v.strip() for v in value]
+            normalized = [v.strip() for v in value]
         else:
             raise ValueError(
                 f"차원 {raw_key}: 비어 있지 않은 문자열 또는 문자열 목록 필요"
             )
+        _merge_dimensions(canon, {hit: normalized}, origin="차원 별칭")
     return canon
+
+
+def _dimension_values(value):
+    """단일 문자열과 같은 값 하나의 목록은 동일한 차원 선언이다."""
+    return frozenset(value if isinstance(value, list) else [value])
+
+
+def _merge_dimensions(target, additions, *, origin="계획 차원"):
+    """빠진 차원만 보완한다. 이미 확정한 값의 변경·목록 확장은 거부한다."""
+    for key, value in additions.items():
+        if key in target and _dimension_values(target[key]) != _dimension_values(value):
+            raise ValueError(
+                f"{origin}: {key} 차원 불일치·충돌 — "
+                f"확정 계획 {target[key]!r}, 보조 선언 {value!r}"
+            )
+        if key not in target:
+            target[key] = value
 
 
 def _series_dimensions(entry):
     """수열의 정본 차원. dimensions를 정본화하고 최상위 unit을 병합."""
     canon = canonical_dimensions(entry.get("dimensions") or {})
-    if "unit" not in canon and isinstance(entry.get("unit"), str):
-        canon["unit"] = entry["unit"]
+    if isinstance(entry.get("unit"), str):
+        _merge_dimensions(canon, {"unit": entry["unit"]}, origin="수열 단위")
     return canon
 
 
@@ -346,14 +398,31 @@ def check_dimensions(entry, target_dimensions=None, *, required=(), origin=""):
 
     - target이 선언한 각 차원은 수열도 같은 값을 명시해야 한다
       (수열 측 부재·값 불일치는 거부).
-    - crop은 목록 멤버십으로 비교. target의 region "전국"은 제약 없음으로 본다.
+    - 문자열 또는 문자열 목록의 값 집합이 정확히 같아야 한다.
+      region "전국"도 확정 지역값이며 와일드카드가 아니다.
     - ``required``: target·수열 양쪽에 반드시 있어야 하는 정본 키.
-    - 수열이 선언한 차원이 target에 없으면 그 차원은 검사하지 않는다.
+    - crop을 필수로 요구하는 판매 경로는 수열의 모든 차원(단위 포함)이
+      계획에 확정돼 있어야 한다. 일반·임금의 부분 차원 대조는 유지한다.
     """
     series_dims = _series_dimensions(entry)
     target = canonical_dimensions(target_dimensions or {})
     sid = entry.get("id")
-    for key in required:
+    required_keys = set(required)
+    if "crop" in required_keys:
+        required_keys.update(series_dims)
+    for key, want in target.items():
+        got = series_dims.get(key)
+        if got is None:
+            raise ValueError(
+                f"{origin}: 계획이 {key}={want!r}을 요구하지만 "
+                f"출처 {sid}가 해당 차원을 명시하지 않음"
+            )
+        if _dimension_values(got) != _dimension_values(want):
+            raise ValueError(
+                f"{origin}: 출처 {sid}의 {key}={got!r}가 계획 대상 "
+                f"{want!r}과 불일치 — 조건이 다른 수열 전용 금지"
+            )
+    for key in sorted(required_keys):
         if key not in target:
             raise ValueError(
                 f"{origin}: 계획 대상 차원에 {key} 선언이 없어 "
@@ -363,21 +432,6 @@ def check_dimensions(entry, target_dimensions=None, *, required=(), origin=""):
             raise ValueError(
                 f"{origin}: 출처 {sid}가 {key} 차원을 명시하지 않아 "
                 "계획 조건과 대조할 수 없음"
-            )
-    for key, want in target.items():
-        if key == "region" and want == "전국":
-            continue
-        got = series_dims.get(key)
-        if got is None:
-            raise ValueError(
-                f"{origin}: 계획이 {key}={want!r}을 요구하지만 "
-                f"출처 {sid}가 해당 차원을 명시하지 않음"
-            )
-        wants = want if isinstance(want, list) else [want]
-        if got not in wants:
-            raise ValueError(
-                f"{origin}: 출처 {sid}의 {key}={got!r}가 계획 대상 "
-                f"{want!r}과 불일치 — 조건이 다른 수열 전용 금지"
             )
 
 
@@ -502,26 +556,42 @@ def resolve_series_rate(entry, observation=None, declared_rate=None, *, origin="
 def plan_target_dimensions(spec, assumption=None):
     """계획 대상 차원 → 정본 키 사전.
 
-    spec.crops + spec.region/cultivation + spec["price_dimensions"]에
-    assumption["target_dimensions"]를 병합한다(뒤가 우선). crop은 목록.
+    spec.crops와 최상위 작목·지역·재배·상품·거래·등급이 권위다.
+    price_dimensions·target_dimensions·역할별 target은 미확정 차원만
+    보완하며 같은 키의 다른 값은 거부한다. spec.unit은 재무표 표시 단위로
+    판매 단위와 별개다(판매 단위는 보조 차원에서 명시한다).
     """
     target = {}
     crops = []
-    for c in (spec.get("crops") if isinstance(spec, dict) else None) or []:
-        if isinstance(c, str):
-            crops.append(c)
-        elif isinstance(c, dict) and isinstance(c.get("name"), str):
-            crops.append(c["name"])
+    declared_crops = spec.get("crops", [])
+    if not isinstance(declared_crops, list):
+        raise ValueError("계획 crops 차원은 작목 목록 필요")
+    for c in declared_crops:
+        name = c.get("name") if isinstance(c, dict) else c
+        if not isinstance(name, str) or not name.strip():
+            raise ValueError("계획 crops 차원은 비어 있지 않은 작목 이름 필요")
+        crops.append(name.strip())
     if crops:
         target["crop"] = crops
-    for key in ("region", "cultivation"):
-        v = spec.get(key)
-        if isinstance(v, str) and v.strip():
-            target[key] = v.strip()
-    target.update(canonical_dimensions(spec.get("price_dimensions")))
-    target.update(canonical_dimensions(spec.get("target_dimensions")))
+    for key, aliases in DIMENSION_ALIASES.items():
+        if key == "unit":
+            continue
+        for alias in aliases:
+            if alias in spec:
+                _merge_dimensions(target, canonical_dimensions({alias: spec[alias]}))
+    _merge_dimensions(target, canonical_dimensions(spec.get("price_dimensions")))
+    _merge_dimensions(target, canonical_dimensions(spec.get("target_dimensions")))
+    block = spec.get("price_assumptions")
+    if isinstance(block, dict):
+        for role in ROLES:
+            raw = block.get(role)
+            if isinstance(raw, dict):
+                _merge_dimensions(
+                    target, canonical_dimensions(raw.get("target_dimensions")),
+                    origin=f"price_assumptions.{role}",
+                )
     if isinstance(assumption, dict):
-        target.update(canonical_dimensions(assumption.get("target_dimensions")))
+        _merge_dimensions(target, canonical_dimensions(assumption.get("target_dimensions")))
     return target
 
 
@@ -536,6 +606,8 @@ def _normalize_role(role, raw, *, registry, student_sources, plan_years,
         )
     if not isinstance(raw, dict):
         raise ValueError(f"{origin}: 객체 필요")
+    target = dict(target_dims)
+    _merge_dimensions(target, canonical_dimensions(raw.get("target_dimensions")), origin=origin)
     status = raw.get("status", "applied")
     if status == "not_applied":
         reason = raw.get("reason")
@@ -560,8 +632,6 @@ def _normalize_role(role, raw, *, registry, student_sources, plan_years,
     base_year = check_base_year(raw["base_year"], source, origin=origin)
     check_role(source, role, origin=origin)
 
-    target = dict(target_dims)
-    target.update(canonical_dimensions(raw.get("target_dimensions")))
     series_dims = _series_dimensions(source)
     if role == "sales":
         check_dimensions(

@@ -5,6 +5,7 @@
 판매가에 총지수를 자동 대입하지 않는다. 모든 거부는 ValueError.
 """
 import json
+import copy
 from pathlib import Path
 
 from openpyxl import load_workbook
@@ -24,7 +25,9 @@ def _spec(**over):
         production_evidence={k: "합성 근거" for k in
                              ("area", "seedlings", "yield", "growth",
                               "commodity")},
-        crops=["합성작목"], area_m2="1000", production_kg="2000",
+        crops=["합성작목"], region="전국",
+        price_dimensions={"unit": "원/kg", "channel": "농가수취"},
+        area_m2="1000", production_kg="2000",
         purchase_price="3", direct_price="5", purchase_share="0.5",
         direct_share="0.5", land="0", facility="10000", equipment="2000",
         equity="6000", loan="6000", loan_rate="0.02", salvage="1000",
@@ -564,7 +567,8 @@ class V1CounterexampleTests(ContractCase):
 
     def test_v1_02_unconfirmed_endpoint_rejected(self):
         """봄감자 2025는 미확인 — 관측 구간 끝점으로 못 쓴다."""
-        spec = _spec(crops=["봄감자"], region="전국")
+        spec = _spec(crops=["봄감자"], region="전국", cultivation="년 1기작/10a",
+                     price_dimensions={"unit": "원/kg", "channel": "농가수취(주산물 단가)"})
         spec["price_assumptions"]["sales"] = self._sales_applied(
             "official.rda.crop_income.spring_potato.output_price",
             observation={"start_year": 2020, "end_year": 2025})
@@ -601,7 +605,8 @@ class V1CounterexampleTests(ContractCase):
 
     def test_v1_03_target_dimensions_on_assumption(self):
         """target_dimensions를 가정 블록에 선언해도 같은 규칙 적용."""
-        spec = _spec(crops=["봄감자"])
+        spec = _spec(crops=["봄감자"], cultivation="년 1기작/10a",
+                     price_dimensions={"unit": "원/kg", "channel": "농가수취(주산물 단가)"})
         spec["price_assumptions"]["sales"] = self._sales_applied(
             "official.rda.crop_income.spring_potato.output_price",
             target_dimensions={"channel": "소매"})
@@ -695,3 +700,215 @@ class V1CounterexampleTests(ContractCase):
              "application_base_year": 1000}
         with self.assertRaisesRegex(ValueError, "유한하지 않음"):
             self.pa.multiplier(a, 3000)
+
+
+class V2CounterexampleTests(ContractCase):
+    """V2-scratch의 URL·계획 덮어쓰기·only_crop 입력과 우회 변형."""
+
+    def setUp(self):
+        self.pa = runtime("gg_price_assumptions")
+
+    def norm(self, spec):
+        return self.pa.normalize_price_assumptions(spec, YEARS)
+
+    def potato_spec(self):
+        sid = "official.rda.crop_income.spring_potato.output_price"
+        dims = self.pa.canonical_dimensions(self.pa.load_registry()[sid]["dimensions"])
+        dims["unit"] = "원/kg"
+        return _spec(crops=["봄감자"], region=dims["region"],
+                     cultivation=dims["cultivation"], price_dimensions=dims,
+                     price_assumptions={
+                         **_spec()["price_assumptions"],
+                         "sales": {"source_id": sid, "base_year": None,
+                                   "application_base_year": 2027}})
+
+    def test_v2_01_backslash_url_rejected(self):
+        entry = _student_source(url="https://evil.example\\@kosis.kr/a")
+        with self.assertRaisesRegex(ValueError, "https"):
+            self.pa.check_source_entry(entry)
+
+    def test_v2_01_ambiguous_authorities_rejected(self):
+        urls = [
+            "https://evil.example\\@kosis.kr/a", "https://kosis.kr\\evil/a",
+            "https://evil.example@kosis.kr/a", "https://user:pass@kosis.kr/a",
+            "https://@kosis.kr/a", "https:///kosis.kr/a", "https:////kosis.kr/a",
+            "https:kosis.kr/a", "https://", "https://kosis.kr:80/a",
+            "https://kosis.kr:0/a", "https://kosis.kr:65536/a",
+            "https://kosis.kr:-1/a", "https://kosis.kr:abc/a",
+            "https://kosis.kr:/a", "https://kosis.kr:0443/a",
+            "https://kosis.kr:443:443/a", "https://[kosis.kr]/a",
+            "https://[::1]/a", "https://kosis.kr./a", "https://.kosis.kr/a",
+            "https://a..kosis.kr/a", "https://-a.kosis.kr/a",
+            "https://a-.kosis.kr/a", "https://a_b.kosis.kr/a",
+            "https://%6bosis.kr/a", "https://kosis%2ekr/a",
+            "https://ｋｏｓｉｓ.kr/a", "https://kosis。kr/a",
+            "https://한글.kosis.kr/a", "https://xn--bj0bj06e.kosis.kr/a",
+            "https://kosis.kr.evil.example/a", "https://evilkosis.kr/a",
+            "https://kosis.kr@evil.example/a", "http://kosis.kr/a",
+        ]
+        for field in ("url", "evidence_url"):
+            for url in urls:
+                with self.subTest(field=field, url=url):
+                    with self.assertRaisesRegex(ValueError, "https|공식"):
+                        self.pa.check_source_entry(_student_source(**{field: url}))
+
+    def test_v2_01_whitespace_and_controls_rejected(self):
+        for char in [chr(i) for i in range(33)] + ["\x7f", "\x85", "\xa0", "\u200b", "\u3000"]:
+            for url in (char + "https://kosis.kr/a", "https://ko" + char + "sis.kr/a",
+                        "https://kosis.kr/a" + char):
+                with self.subTest(url=repr(url)):
+                    with self.assertRaises(ValueError):
+                        self.pa.check_source_entry(_student_source(url=url))
+
+    def test_v2_01_normal_official_urls_accepted(self):
+        for url in ("https://kosis.kr", "HTTPS://KOSIS.KR:443/a?x=1#part",
+                    "https://stat.kosis.kr/a", "https://www.rda.go.kr/a",
+                    "https://kamis.or.kr/a", "https://www.example.re.kr/a",
+                    "https://kosis.kr/a%20b?x=%ED%95%9C"):
+            with self.subTest(url=url):
+                self.assertEqual("student.sample.series",
+                                 self.pa.check_source_entry(_student_source(url=url)))
+
+    def test_v2_01_browser_locator_rewrites_rejected(self):
+        for suffix in ("/한글", "/a/../b", "/a/%2E./b", "/a/./b", "/%2e/b",
+                       "/a?x='a'", '/a"b', "/a<b", "/a%", "/a%GG"):
+            with self.subTest(suffix=suffix):
+                with self.assertRaises(ValueError):
+                    self.pa.check_source_entry(_student_source(url="https://kosis.kr" + suffix))
+
+    def test_v2_01_empty_query_or_fragment_rejected(self):
+        for suffix in ("/a?", "/a#", "/a?#f", "/a?x#"):
+            with self.subTest(suffix=suffix):
+                with self.assertRaises(ValueError):
+                    self.pa.check_source_entry(_student_source(url="https://kosis.kr" + suffix))
+
+    def test_v2_03_review_override_paths_rejected(self):
+        for field in ("price_dimensions", "target_dimensions", "assumption"):
+            spec = self.potato_spec()
+            spec.update(crops=["병풀"], region="제주", cultivation="시설")
+            override = {"crop": "봄감자", "region": "전국",
+                        "cultivation": "년 1기작/10a"}
+            spec.pop("price_dimensions")
+            if field == "assumption":
+                spec["price_assumptions"]["sales"]["target_dimensions"] = override
+            else:
+                spec[field] = override
+            with self.subTest(field=field):
+                with self.assertRaisesRegex(ValueError, "불일치|충돌"):
+                    self.norm(spec)
+
+    def test_v2_03_each_authoritative_dimension_rejects_override(self):
+        for key in ("crop", "region", "cultivation", "product", "channel", "grade"):
+            for field in ("price_dimensions", "target_dimensions", "assumption"):
+                spec = _spec(**({key: "계획 값"} if key != "crop" else
+                                {"crops": ["계획 값"]}))
+                override = {key: "다른 값"}
+                if field == "assumption":
+                    spec["price_assumptions"]["general"]["target_dimensions"] = override
+                else:
+                    spec[field] = override
+                with self.subTest(key=key, field=field):
+                    with self.assertRaisesRegex(ValueError, "불일치|충돌"):
+                        self.norm(spec)
+
+    def test_v2_03_supplementary_conflicts_rejected(self):
+        for field in ("target_dimensions", "assumption"):
+            spec = _spec(price_dimensions={"channel": "농가수취"})
+            override = {"거래단계": "소매"}
+            if field == "assumption":
+                spec["price_assumptions"]["wage"]["target_dimensions"] = override
+            else:
+                spec[field] = override
+            with self.subTest(field=field):
+                with self.assertRaisesRegex(ValueError, "불일치|충돌"):
+                        self.norm(spec)
+
+    def test_v2_03_role_target_conflict_rejected_on_not_applied(self):
+        spec = _spec(region="제주")
+        spec["price_assumptions"]["sales"]["target_dimensions"] = {"region": "전국"}
+        with self.assertRaisesRegex(ValueError, "불일치|충돌"):
+            self.norm(spec)
+
+    def test_v2_03_cross_role_targets_cannot_disagree(self):
+        spec = _spec()
+        spec.pop("region")
+        spec["price_assumptions"]["general"]["target_dimensions"] = {"region": "제주"}
+        spec["price_assumptions"]["sales"]["target_dimensions"] = {"지역": "전국"}
+        with self.assertRaisesRegex(ValueError, "불일치|충돌"):
+            self.norm(spec)
+
+    def test_v2_03_public_plan_merger_rejects_role_override(self):
+        with self.assertRaisesRegex(ValueError, "불일치|충돌"):
+            self.pa.plan_target_dimensions(_spec(crops=[{"name": "병풀"}]),
+                                           {"target_dimensions": {"작목": "봄감자"}})
+
+    def test_v2_03_conflicting_aliases_rejected_in_either_order(self):
+        for pairs in (("crop", "작목"), ("region", "지역"), ("unit", "단위")):
+            for ordered in (pairs, tuple(reversed(pairs))):
+                with self.subTest(ordered=ordered):
+                    with self.assertRaisesRegex(ValueError, "불일치|충돌"):
+                        self.pa.canonical_dimensions({ordered[0]: "A", ordered[1]: "B"})
+
+    def test_v2_03_only_crop_rejected(self):
+        spec = self.potato_spec()
+        for key in ("region", "cultivation", "price_dimensions"):
+            spec.pop(key)
+        with self.assertRaisesRegex(ValueError, "차원|선언"):
+            self.norm(spec)
+
+    def test_v2_03_every_series_dimension_required(self):
+        dims = {"crop": "합성작목", "region": "전국", "cultivation": "노지",
+                "product": "생물", "channel": "농가수취", "grade": "상", "unit": "원/kg"}
+        entry = _student_source(dimensions=dims)
+        for missing in dims:
+            target = {key: value for key, value in dims.items() if key != missing}
+            with self.subTest(missing=missing):
+                with self.assertRaisesRegex(ValueError, "차원|선언"):
+                    self.pa.check_dimensions(entry, target, required=("crop",))
+
+    def test_v2_03_nationwide_is_an_exact_dimension(self):
+        entry = _student_source(dimensions={"crop": "합성작목", "region": "제주"})
+        with self.assertRaisesRegex(ValueError, "불일치"):
+            self.pa.check_dimensions(entry, {"crop": "합성작목", "region": "전국",
+                                             "unit": "원/kg"}, required=("crop",))
+
+    def test_v2_03_multicrop_membership_does_not_prove_equality(self):
+        spec = self.potato_spec()
+        spec["crops"] = ["봄감자", "병풀"]
+        spec["price_dimensions"].pop("crop")
+        with self.assertRaisesRegex(ValueError, "불일치|충돌"):
+            self.norm(spec)
+
+    def test_v2_03_series_unit_conflict_rejected(self):
+        entry = _student_source(dimensions={"crop": "합성작목", "unit": "원/10kg"})
+        with self.assertRaisesRegex(ValueError, "불일치|충돌"):
+            self.pa.check_dimensions(entry, {"crop": "합성작목", "unit": "원/10kg"},
+                                     required=("crop",))
+
+    def test_v2_03_complete_matching_plan_accepted_without_mutation(self):
+        spec = self.potato_spec()
+        spec["target_dimensions"] = {"작목": ["봄감자"]}
+        spec["price_assumptions"]["sales"]["target_dimensions"] = {"region": "전국"}
+        before = copy.deepcopy(spec)
+        self.assertEqual("applied", self.norm(spec)["sales"]["status"])
+        self.assertEqual(spec, before)
+
+    def test_v2_03_missing_dimensions_explicit_not_applied(self):
+        spec = _spec(crops=["봄감자"])
+        self.assertEqual("not_applied", self.norm(spec)["sales"]["status"])
+
+    def test_v2_01_03_workbook_rejection_leaves_no_outputs(self):
+        root = self.make_project()
+        bind_major(root, "specialty_crops")
+        ctx = runtime("gg_major_contract").output_context(root, "specialty_crops")
+        specs = [self.potato_spec(), _spec(price_sources=[_student_source(
+            url="https://evil.example\\@kosis.kr/a")])]
+        specs[0]["crops"] = ["병풀"]
+        for i, spec in enumerate(specs):
+            out = Path(root) / (str(i) + ".xlsx")
+            before = copy.deepcopy(spec)
+            with self.assertRaises(ValueError):
+                runtime("gg_school_excel").school_workbook(spec, out, context=ctx)
+            self.assertFalse(out.exists())
+            self.assertFalse(out.with_suffix(".manifest.json").exists())
+            self.assertEqual(before, spec)

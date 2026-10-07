@@ -20,7 +20,7 @@
    "role": "sales"
   }
  },
- "footnote_input_contract": "각주는 구조화 객체만 받는다: {source_id, base_year, observation:{start_year,end_year}?, rate?(검산용), application_base_year?} 또는 {status:'not_applied', reason}. 자유 문자열·note·source_name 등 임의 문구 필드는 거부한다. r은 항상 레지스트리 관측 수열의 CAGR 계산값만 출력한다.",
+ "footnote_input_contract": "--input은 {footnotes:{kind:{source_id,base_year,observation?,rate?,application_base_year?,target_dimensions?,unit?}},application_receipt?:'작업 폴더 안 영수증.json'} 또는 기존 각주 객체. 적용 문구는 실제 W-A manifest(file_hash)·W-B D8 patch receipt(output.sha256)가 입력 XLSX SHA와 일치하고 출처·관측기간·기초연도·r·대상 차원을 재검산한 경우만 허용한다. sales는 crop 및 수열 차원 전체가 필요하다. 임금 AC38/AD38 캐시가 있으면 대조한다. 영수증 부재·불일치는 참고값(워크북 적용 확인 불가)과 경고. 자유 문자열·임의 문구 필드는 거부한다. 명시 미적용은 {status:'not_applied',reason}.",
  "layout": {
   "id": "knuaf_dept_workbook_v1",
   "description": "학과 제공 통합문서 레이아웃 지문. 모든 signature는 필수다: 시트가 존재하고 anchor 열의 max_row 이내에 pattern(공백 제거 정규화 텍스트 대상 정규식)이 보여야 지원 레이아웃이다. 하나라도 실패하면 미지원 레이아웃으로 보류하고 실패한 지문을 sheet·pattern·desc로 사용자에게 보인다. 지문의 강도 기준은 '추출기(extract 앵커/머리글)가 그 시트의 표를 실제로 찾는 데 필요한 최소 구조 증거'다 — 추출이 견디는 라벨 서식 변형(예: 연도 블록의 '가. ' 접두 유무)을 지문이 추가로 요구하면 안 된다.",
@@ -1309,5 +1309,21 @@
     }
    ]
   }
- ]
+ ],
+ "plan_years": {
+  "sheet": "7. 영농자재소요계획",
+  "anchor_col": "B",
+  "anchor_regex": "^(?:[가-힣]\\.)?\\d{4}년",
+  "count_from": {
+   "sheet": "11. 생산원가계획",
+   "header_cells": [
+    "C4",
+    "D4",
+    "E4",
+    "F4",
+    "G4"
+   ]
+  },
+  "note": "연도별 비용표의 계획연도 집합은 자재 시트 라벨에서 읽고 개수는 생산원가 머리글로 확인한다. 각 year_blocks 그룹의 순서·개수·중복·누락·빈 블록을 대조한다. W-023 시트 간 연도 대응은 변경하거나 승인하지 않는다."
+ }
 }

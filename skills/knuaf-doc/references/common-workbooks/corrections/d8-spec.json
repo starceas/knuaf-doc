@@ -53,6 +53,10 @@
   "observation_contract": {
     "source_registry": "official-price-series.json or explicit price_sources",
     "allowed_role": "wage",
+    "validator": "gg_price_assumptions.check_observations before unit conversion, for both Y and Z columns",
+    "observed_values": "raw years and values must exactly match resolved registered observations; unobserved years are rejected",
+    "gender_contract": "a series without gender dimensions supplies the same value to both Y and Z",
+    "alternative_values": "explicit price_sources registration with official schema and a different id; bundled id cannot be overridden",
     "output_unit": "원/일",
     "base_year": "registered index basis; null for nominal currency series",
     "required_metadata": [

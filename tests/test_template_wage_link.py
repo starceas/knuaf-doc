@@ -261,7 +261,7 @@ class WageLinkTests(ContractCase):
         sid = 'official.rda.crop_income.synthetic.daily_wage'
         vals = []
         for row, year in zip(range(26, 32), range(2018, 2024)):
-            for col, v in [('X', year), ('Y', 100+row), ('Z', 80+row)]:
+            for col, v in [('X', year), ('Y', 100+row), ('Z', 100+row)]:
                 vals.append({'sheet': S8, 'cell': f'{col}{row}', 'value': v,
                              'value_type': 'integer', 'answer_state': 'provided',
                              'evidence_ref': {'source_id': sid, 'revision': 1, 'origin': 'factual', 'locator': f'synthetic year {year}, daily wage'}})
@@ -290,7 +290,7 @@ class WageLinkTests(ContractCase):
         self.assertEqual(self.tpl.sha256(self.src), before)
         b = self.audit.Workbook.load(self.root/'filled.xlsx')
         self.assertAlmostEqual(b.evaluate(S8, 'AC38'), (131/126)**(1/5)-1)
-        self.assertAlmostEqual(b.evaluate(S8, 'AD38'), (111/106)**(1/5)-1)
+        self.assertAlmostEqual(b.evaluate(S8, 'AD38'), (131/126)**(1/5)-1)
 
     def test_missing_wage_evidence_partial_or_invalid_observations_rejected(self):
         out, _ = self.apply(self.patch.materialize_d8(self.src, prepare_observations=True))
@@ -428,6 +428,151 @@ class WageLinkTests(ContractCase):
             out, _ = self.apply(self.patch.materialize_d8(self.src, prepare_observations=True), 'prepared.xlsx')
         return self.fill.fill_copy(out, self.json('fill.json', self.tpl.wage_fill_map(out)),
                                    self.json('values.json', v), self.root/name, context=self.context)
+
+    def test_v2_02_tampered_hourly_values_and_unobserved_years_rejected(self):
+        for case in ('tampered', 'unobserved'):
+            v = self.hourly_observations()
+            v['wage_observations']['unit_conversion'] = self.conversion()
+            years = list(range(2030, 2036)) if case == 'unobserved' else list(range(2020, 2026))
+            v['wage_observations'].update(observation_years=years, application_base_year=years[-1]+1)
+            for row, year in zip(range(26, 32), years):
+                for e in v['values']:
+                    if e['cell'][1:] == str(row):
+                        e['value'] = year if e['cell'][0] == 'X' else 1
+            with self.subTest(case=case), self.assertRaisesRegex(ValueError, '확정 관측과 불일치'):
+                self.prepared_fill(v, case+'.xlsx')
+            self.assertFalse((self.root/(case+'.xlsx')).exists())
+
+    def test_v2_02_each_raw_value_must_match_in_both_gender_columns(self):
+        import math
+        for row in range(26, 32):
+            for col in 'YZ':
+                v = self.hourly_observations()
+                v['wage_observations']['unit_conversion'] = self.conversion()
+                e = next(e for e in v['values'] if e['cell'] == f'{col}{row}')
+                # Even a one-float-step difference is not a registered observation.
+                e.update(value=math.nextafter(float(e['value']), math.inf), value_type='number')
+                with self.subTest(cell=e['cell']), self.assertRaisesRegex(ValueError, '확정 관측과 불일치'):
+                    self.prepared_fill(v)
+                self.assertFalse((self.root/'filled.xlsx').exists())
+
+    def test_v2_02_registered_daily_series_cannot_have_different_female_values(self):
+        v = self.observations()
+        for e in v['values']:
+            if e['cell'][0] == 'Z': e['value'] -= 20
+        with self.assertRaisesRegex(ValueError, '확정 관측과 불일치'):
+            self.prepared_fill(v)
+        self.assertFalse((self.root/'filled.xlsx').exists())
+
+    def test_v2_02_bundled_id_cannot_be_shadowed_with_changed_registration(self):
+        v = self.hourly_observations()
+        v['wage_observations']['unit_conversion'] = self.conversion()
+        entry = copy.deepcopy(runtime('gg_price_assumptions').load_registry()[v['wage_observations']['statistic_id']])
+        for obs in entry['observations']: obs['value'] = 1
+        v['price_sources'] = [entry]
+        for e in v['values']:
+            if e['cell'][0] in 'YZ': e['value'] = 1
+        with self.assertRaisesRegex(ValueError, '확정 관측과 불일치'):
+            self.prepared_fill(v)
+        self.assertFalse((self.root/'filled.xlsx').exists())
+
+    def test_v2_02_conversion_cannot_hide_changed_or_preconverted_raw_values(self):
+        for case, scale, hours in [('compensated', 2, 3.25), ('preconverted', 6.5, 6.5)]:
+            v = self.hourly_observations()
+            v['wage_observations']['unit_conversion'] = self.conversion(hours)
+            for e in v['values']:
+                if e['cell'][0] in 'YZ': e.update(value=e['value']*scale, value_type='number')
+            with self.subTest(case=case), self.assertRaisesRegex(ValueError, '확정 관측과 불일치'):
+                self.prepared_fill(v)
+            self.assertFalse((self.root/'filled.xlsx').exists())
+
+    def test_v2_02_failure_does_not_mutate_or_convert_the_write_plan(self):
+        v = self.hourly_observations()
+        v['wage_observations']['unit_conversion'] = self.conversion()
+        v['values'][-1]['value'] = 1
+        cells = {(e['sheet'], e['cell']): e for e in v['values']}
+        original = copy.deepcopy(cells)
+        with self.assertRaisesRegex(ValueError, '확정 관측과 불일치'):
+            self.fill._wage_observations(dict.fromkeys(cells), cells, v)
+        self.assertEqual(cells, original)
+        with self.assertRaisesRegex(ValueError, '확정 관측과 불일치'):
+            self.prepared_fill(v)
+        self.assertFalse((self.root/'filled.xlsx').exists())
+        before = self.tpl.sha256(self.root/'prepared.xlsx')
+        good = self.hourly_observations()
+        good['wage_observations']['unit_conversion'] = self.conversion()
+        self.prepared_fill(good)
+        self.assertEqual(self.tpl.sha256(self.root/'prepared.xlsx'), before)
+        self.assertEqual(self.audit.Workbook.load(self.root/'filled.xlsx').values[S8, 'Z31'], 10030*6.5)
+
+    def test_v2_02_year_value_pairs_cannot_be_shifted_or_reordered(self):
+        for case in ('swapped_values', 'missing_year', 'future_years'):
+            v = self.hourly_observations()
+            v['wage_observations']['unit_conversion'] = self.conversion()
+            if case == 'swapped_values':
+                for col in 'YZ':
+                    a, b = [next(e for e in v['values'] if e['cell'] == f'{col}{row}') for row in (26, 27)]
+                    a['value'], b['value'] = b['value'], a['value']
+            else:
+                years = [2019, 2021, 2022, 2023, 2024, 2025] if case == 'missing_year' else list(range(2030, 2036))
+                v['wage_observations'].update(observation_years=years, application_base_year=years[-1]+1)
+                for row, year in zip(range(26, 32), years):
+                    next(e for e in v['values'] if e['cell'] == f'X{row}')['value'] = year
+            with self.subTest(case=case), self.assertRaisesRegex(ValueError, '확정 관측과 불일치'):
+                self.prepared_fill(v)
+            self.assertFalse((self.root/'filled.xlsx').exists())
+
+    def test_v2_02_different_values_require_registration_under_another_id(self):
+        for unit in ('원/시간', '원/일'):
+            v = self.hourly_observations()
+            sid = 'official.synthetic.alternative.' + ('hourly' if unit == '원/시간' else 'daily')
+            years = list(range(2030, 2036))
+            observations = [{'year': year, 'value': 1+i} for i, year in enumerate(years)]
+            v['price_sources'] = [student_series(sid, observations, unit=unit)]
+            v['wage_observations'].update(statistic_id=sid, unit=unit,
+                                         observation_years=years, application_base_year=2036)
+            if unit == '원/시간': v['wage_observations']['unit_conversion'] = self.conversion()
+            for row, obs in zip(range(26, 32), observations):
+                for e in v['values']:
+                    if e['cell'][1:] == str(row):
+                        e['value'] = obs['year'] if e['cell'][0] == 'X' else obs['value']
+                    e['evidence_ref']['source_id'] = sid
+            missing = copy.deepcopy(v); missing['price_sources'] = []
+            with self.subTest(unit=unit), self.assertRaisesRegex(ValueError, '알 수 없는 출처 id'):
+                self.prepared_fill(missing)
+            self.assertFalse((self.root/'filled.xlsx').exists())
+            original = copy.deepcopy(v)
+            name = sid+'.xlsx'
+            receipt = self.prepared_fill(v, name)
+            b = self.audit.Workbook.load(self.root/name)
+            for row, obs in zip(range(26, 32), observations):
+                self.assertEqual(b.values[S8, f'X{row}'], obs['year'])
+                for col in 'YZ':
+                    self.assertEqual(b.values[S8, f'{col}{row}'], obs['value']*(6.5 if unit == '원/시간' else 1))
+            self.assertEqual(receipt['wage_observations']['statistic_id'], sid)
+            self.assertEqual(v, original)
+            # A declared but unconfirmed year cannot supply an observation.
+            v['price_sources'][0]['observations'].pop()
+            v['price_sources'][0]['unconfirmed_years'] = [2035]
+            with self.subTest(unconfirmed=unit), self.assertRaisesRegex(ValueError, '확정 관측과 불일치'):
+                self.prepared_fill(v)
+            self.assertFalse((self.root/'filled.xlsx').exists())
+
+    def test_v2_02_all_converted_values_follow_only_registered_raw_times_hours(self):
+        for hours in (0.5, 9):  # Explicit synthetic factors, never defaults.
+            v = self.hourly_observations()
+            v['wage_observations']['unit_conversion'] = self.conversion(hours)
+            before = copy.deepcopy(v)
+            name = f'hours-{hours}.xlsx'
+            receipt = self.prepared_fill(v, name)
+            b = self.audit.Workbook.load(self.root/name)
+            for row, year, raw in zip(range(26, 32), range(2020, 2026), (8590, 8720, 9160, 9620, 9860, 10030)):
+                self.assertEqual(b.values[S8, f'X{row}'], year)
+                for col in 'YZ':
+                    self.assertEqual(b.values[S8, f'{col}{row}'], raw*hours)
+                    written = next(e for e in receipt['written'] if e['cell'] == f'{col}{row}')
+                    self.assertEqual(written['newValue'], raw*hours)
+            self.assertEqual(v, before)
 
     def test_v1_05_explicit_hourly_conversion_changes_values_and_preserves_years(self):
         v = self.hourly_observations()

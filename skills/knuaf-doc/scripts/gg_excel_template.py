@@ -393,7 +393,7 @@ def wage_fill_map(source: Path) -> dict:
             "template": {"sha256": sha256(source)},
             "entries": [{"sheet": "8. 노무비계획", "range": "X26:Z31",
                          "role": "wage.observation", "period": "observation",
-                         "source_note": "registered official wage series, 원/일; hourly conversion requires explicit hours and evidence",
+                         "source_note": "raw years and both wage columns must match registered observations before explicit hourly conversion; no default hours",
                          "editable": True}]}
 
 

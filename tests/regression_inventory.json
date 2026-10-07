@@ -644,6 +644,103 @@
     "skills.knuaf-doc.tests.test_finance_tables.TestRun.test_policy_gate_blocks_publish",
     "skills.knuaf-doc.tests.test_finance_tables.TestRun.test_policy_gate_passes_clean_output"
    ]
+  },
+  {
+   "id": "V2-01",
+   "note": "I2: actual FIX-A2/B2/C2b regression symbols; V3 independent acceptance remains pending.",
+   "scope": "public_runtime_and_full_pytest",
+   "status": "implemented_pending_independent_review",
+   "tests": [
+    "tests.test_price_assumptions.V2CounterexampleTests.test_v2_01_backslash_url_rejected",
+    "tests.test_price_assumptions.V2CounterexampleTests.test_v2_01_ambiguous_authorities_rejected",
+    "tests.test_price_assumptions.V2CounterexampleTests.test_v2_01_whitespace_and_controls_rejected",
+    "tests.test_price_assumptions.V2CounterexampleTests.test_v2_01_normal_official_urls_accepted",
+    "tests.test_price_assumptions.V2CounterexampleTests.test_v2_01_browser_locator_rewrites_rejected",
+    "tests.test_price_assumptions.V2CounterexampleTests.test_v2_01_empty_query_or_fragment_rejected",
+    "tests.test_price_assumptions.V2CounterexampleTests.test_v2_01_03_workbook_rejection_leaves_no_outputs"
+   ]
+  },
+  {
+   "id": "V2-02",
+   "note": "I2: actual FIX-A2/B2/C2b regression symbols; V3 independent acceptance remains pending.",
+   "scope": "public_runtime_and_full_pytest",
+   "status": "implemented_pending_independent_review",
+   "tests": [
+    "tests.test_template_wage_link.WageLinkTests.test_v2_02_tampered_hourly_values_and_unobserved_years_rejected",
+    "tests.test_template_wage_link.WageLinkTests.test_v2_02_each_raw_value_must_match_in_both_gender_columns",
+    "tests.test_template_wage_link.WageLinkTests.test_v2_02_registered_daily_series_cannot_have_different_female_values",
+    "tests.test_template_wage_link.WageLinkTests.test_v2_02_bundled_id_cannot_be_shadowed_with_changed_registration",
+    "tests.test_template_wage_link.WageLinkTests.test_v2_02_conversion_cannot_hide_changed_or_preconverted_raw_values",
+    "tests.test_template_wage_link.WageLinkTests.test_v2_02_failure_does_not_mutate_or_convert_the_write_plan",
+    "tests.test_template_wage_link.WageLinkTests.test_v2_02_year_value_pairs_cannot_be_shifted_or_reordered",
+    "tests.test_template_wage_link.WageLinkTests.test_v2_02_different_values_require_registration_under_another_id",
+    "tests.test_template_wage_link.WageLinkTests.test_v2_02_all_converted_values_follow_only_registered_raw_times_hours"
+   ]
+  },
+  {
+   "id": "V2-03",
+   "note": "I2: actual FIX-A2/B2/C2b regression symbols; V3 independent acceptance remains pending.",
+   "scope": "public_runtime_and_full_pytest",
+   "status": "implemented_pending_independent_review",
+   "tests": [
+    "tests.test_price_assumptions.V2CounterexampleTests.test_v2_03_review_override_paths_rejected",
+    "tests.test_price_assumptions.V2CounterexampleTests.test_v2_03_each_authoritative_dimension_rejects_override",
+    "tests.test_price_assumptions.V2CounterexampleTests.test_v2_03_supplementary_conflicts_rejected",
+    "tests.test_price_assumptions.V2CounterexampleTests.test_v2_03_role_target_conflict_rejected_on_not_applied",
+    "tests.test_price_assumptions.V2CounterexampleTests.test_v2_03_cross_role_targets_cannot_disagree",
+    "tests.test_price_assumptions.V2CounterexampleTests.test_v2_03_public_plan_merger_rejects_role_override",
+    "tests.test_price_assumptions.V2CounterexampleTests.test_v2_03_conflicting_aliases_rejected_in_either_order",
+    "tests.test_price_assumptions.V2CounterexampleTests.test_v2_03_only_crop_rejected",
+    "tests.test_price_assumptions.V2CounterexampleTests.test_v2_03_every_series_dimension_required",
+    "tests.test_price_assumptions.V2CounterexampleTests.test_v2_03_nationwide_is_an_exact_dimension",
+    "tests.test_price_assumptions.V2CounterexampleTests.test_v2_03_multicrop_membership_does_not_prove_equality",
+    "tests.test_price_assumptions.V2CounterexampleTests.test_v2_03_series_unit_conflict_rejected",
+    "tests.test_price_assumptions.V2CounterexampleTests.test_v2_03_complete_matching_plan_accepted_without_mutation",
+    "tests.test_price_assumptions.V2CounterexampleTests.test_v2_03_missing_dimensions_explicit_not_applied",
+    "tests.test_price_assumptions.V2CounterexampleTests.test_v2_01_03_workbook_rejection_leaves_no_outputs"
+   ]
+  },
+  {
+   "id": "V2-04",
+   "note": "I2: actual FIX-A2/B2/C2b regression symbols; V3 independent acceptance remains pending.",
+   "scope": "full_pytest_skill_suite",
+   "status": "implemented_pending_independent_review",
+   "tests": [
+    "skills.knuaf-doc.tests.test_finance_tables.TestRun.test_receipt_path_loading_and_missing_receipt",
+    "skills.knuaf-doc.tests.test_finance_tables.TestV2Receipt.test_no_receipt_cannot_claim_applied",
+    "skills.knuaf-doc.tests.test_finance_tables.TestV2Receipt.test_sha_bound_patch_receipt",
+    "skills.knuaf-doc.tests.test_finance_tables.TestV2Receipt.test_applied_formula_full_string",
+    "skills.knuaf-doc.tests.test_finance_tables.TestV2Receipt.test_malformed_and_structural_only_receipts_downgrade",
+    "skills.knuaf-doc.tests.test_finance_tables.TestV2Receipt.test_receipt_mismatch_variants",
+    "skills.knuaf-doc.tests.test_finance_tables.TestV2Receipt.test_manifest_and_tampered_endpoints",
+    "skills.knuaf-doc.tests.test_finance_tables.TestV2Receipt.test_wage_cache_and_both_sexes",
+    "skills.knuaf-doc.tests.test_finance_tables.TestV2Receipt.test_real_patch_producer_receipt_and_sales_dimensions",
+    "skills.knuaf-doc.tests.test_finance_tables.TestV2Receipt.test_sales_requires_crop",
+    "skills.knuaf-doc.tests.test_finance_tables.TestV2Receipt.test_complete_formula_strings"
+   ]
+  },
+  {
+   "id": "V2-05",
+   "note": "I2: actual FIX-A2/B2/C2b regression symbols; V3 independent acceptance remains pending.",
+   "scope": "full_pytest_skill_suite",
+   "status": "implemented_pending_independent_review",
+   "tests": [
+    "skills.knuaf-doc.tests.test_finance_tables.TestRun.test_incomplete_year_group_not_published",
+    "skills.knuaf-doc.tests.test_finance_tables.TestV2Years.test_missing_duplicate_and_extra_years",
+    "skills.knuaf-doc.tests.test_finance_tables.TestV2Years.test_invalid_plan_headers_fail",
+    "skills.knuaf-doc.tests.test_finance_tables.TestV2Years.test_anchor_plan_source_is_not_shortened_or_duplicated",
+    "skills.knuaf-doc.tests.test_finance_tables.TestV2Years.test_valid_years_still_five"
+   ]
+  },
+  {
+   "id": "V2-06",
+   "note": "I2: actual FIX-A2/B2/C2b regression symbols; V3 independent acceptance remains pending.",
+   "scope": "full_pytest_skill_suite",
+   "status": "implemented_pending_independent_review",
+   "tests": [
+    "skills.knuaf-doc.tests.test_finance_tables.TestV2Receipt.test_applied_formula_full_string",
+    "skills.knuaf-doc.tests.test_finance_tables.TestV2Receipt.test_complete_formula_strings"
+   ]
   }
  ],
  "review": "knuaf-doc-astra-pr-review/review/20260919-astra (ASTRA-REVIEW.md, probes.py, probe-results.json)",

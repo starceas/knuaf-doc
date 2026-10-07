@@ -279,7 +279,7 @@ def _wage_observations(map_cells: dict, value_cells: dict, values_data: dict):
             raise ValueError("unit_conversion requires factual evidence_ref")
     elif unit != "원/일" or conversion is not None:
         raise ValueError("wage observations require 원/일; indices and sales prices are not daily wages")
-    converted = {}
+    observed_values = {col: [] for col in 'YZ'}
     for row, year in zip(range(26, 32), years):
         for col in "XYZ":
             value = value_cells[sheet, f"{col}{row}"]
@@ -291,8 +291,20 @@ def _wage_observations(map_cells: dict, value_cells: dict, values_data: dict):
                     or (col != "X" and raw <= 0)
                     or ("unit" in value and value["unit"] != ("년" if col == "X" else unit))):
                 raise ValueError("wage observation requires positive official daily values and matching years")
-            if col != "X" and conversion is not None:
-                daily = raw * factor
+            if col != "X":
+                observed_values[col].append(raw)
+    # Compare each raw column with the resolved series before conversion.
+    # A scalar series without a gender dimension has the same observations
+    # for Y and Z; declaring price_sources under its id cannot override it.
+    from gg_price_assumptions import check_observations
+    for col, raw_values in observed_values.items():
+        check_observations(source, years, raw_values, origin=f"wage_observations.{col}")
+    converted = {}
+    if conversion is not None:
+        for row in range(26, 32):
+            for col in 'YZ':
+                value = value_cells[sheet, f"{col}{row}"]
+                daily = value['value'] * factor
                 if not _finite_cell_number(daily) or daily <= 0:
                     raise ValueError("converted daily wage must be positive and finite")
                 converted[sheet, f"{col}{row}"] = {**value, "value": daily, "value_type": "number"}
@@ -300,7 +312,7 @@ def _wage_observations(map_cells: dict, value_cells: dict, values_data: dict):
     value_cells.update(converted)
     return {**meta, "statistic_id": source["id"], "input_unit": unit, "unit": "원/일", "observation_range": [years[0], years[-1]],
             "application_count": meta["application_base_year"] - years[-1],
-            "source_verification": "student_supplied; locator not independently verified"}
+            "source_verification": "registered observations matched before conversion; locator not independently verified"}
 
 
 def fill_copy(template: Path, map_path: Path, values_path: Path, out: Path, *, context=None) -> dict:
