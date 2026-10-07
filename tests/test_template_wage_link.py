@@ -1,7 +1,9 @@
 """D8 synthetic counterexamples; no student or professor values are bundled."""
 import copy
 import json
+import math
 import tempfile
+from decimal import Decimal
 from pathlib import Path
 
 from tests._harness import ContractCase, bind_major, runtime
@@ -876,3 +878,160 @@ class WageLinkTests(ContractCase):
             for e in v['values']: e['evidence_ref']['source_id'] = decorate(canonical)
             with self.assertRaises(ValueError): self.prepared_fill(v, f'filled-alias-{i}.xlsx')
             self.assertFalse((self.root/f'filled-alias-{i}.xlsx').exists())
+
+    def test_v4_03_excel_number_is_the_token_excel_persists(self):
+        # Excel 16.113.3 observed behavior (work/FIX-B4-evidence probes):
+        # the literal text is truncated at 15 significant digits (never
+        # rounded — .15g would emit '0.031210102577695'/'0.0663821164938492'),
+        # a trailing ".0" and signed zero collapse, fixed-point notation is
+        # kept while it needs at most 21 characters, otherwise Excel writes
+        # "d.dddE±dd" with an uppercase E and a signed >=2-digit exponent.
+        en = self.patch._excel_number
+        observed = {
+            0.020000000000000018: '0.02',          # V4-03 reproduction rates
+            0.031210102577694965: '0.0312101025776949',
+            0.06638211649384917: '0.0663821164938491',
+            -0.031210102577694965: '-0.0312101025776949',
+            0.3: '0.3', 0.30000000000000004: '0.3', 0.1: '0.1', 0.05: '0.05',
+            0.049999999999999996: '0.0499999999999999',
+            0.6666666666666666: '0.666666666666666',
+            3.141592653589793: '3.14159265358979',
+            0.12345678901234567: '0.123456789012345',
+            0.000123456789012345678: '0.000123456789012345',
+            5.0: '5', 5: '5', 2.5: '2.5', 0.0: '0', -0.0: '0', 0: '0',
+            1e-05: '0.00001', 1e-06: '0.000001', 9.9e-07: '0.00000099',
+            1e-10: '0.0000000001', 1.2e-10: '0.00000000012',
+            1e-11: '0.00000000001', 9.87e-12: '0.00000000000987',
+            1.2345e-06: '0.0000012345', 1.23456789e-08: '0.0000000123456789',
+            1.23456789012345e-06: '1.23456789012345E-06',
+            1.23456789012345e-07: '1.23456789012345E-07',
+            9.876543210987654e-12: '9.87654321098765E-12',
+            5.5e-17: '0.000000000000000055', 5.55e-17: '0.0000000000000000555',
+            5.555e-17: '5.555E-17', -5.55e-17: '-0.0000000000000000555',
+            -5.555e-17: '-5.555E-17', -1e-07: '-0.0000001',
+            -1.23456789012345e-06: '-1.23456789012345E-06', 7e-22: '7E-22',
+            1e+15: '1000000000000000', 1e+16: '10000000000000000',
+            1e+18: '1000000000000000000', 1e+20: '100000000000000000000',
+            1e+21: '1E+21', 1e+22: '1E+22', 2e+21: '2E+21',
+            1.5e+300: '1.5E+300', 999999999999999: '999999999999999',
+            1234567890123456: '1234567890123450',
+            12345678901234567: '12345678901234500',
+            123456789012345678: '123456789012345000',
+            1234567890123456789: '1234567890123450000',
+            99999999999999999999: '100000000000000000000',  # float == 1e20
+            1234567890.123456789: '1234567890.12345',
+            0.0000123456789012345: '0.0000123456789012345',
+            1.0000000000000002: '1', 1.0000000000000009: '1',
+        }
+        for x, expected in observed.items():
+            self.assertEqual(en(x), expected, repr(x))
+        for bad in (True, False, '0.02', None, float('nan'), float('inf'),
+                    -float('inf'), [], {}, Decimal('0.1')):
+            with self.subTest(bad=bad), self.assertRaises(ValueError):
+                en(bad)
+
+    def test_v4_03_original_reproduction_tokens(self):
+        # Assert the observed production formulas, without depending on the
+        # new helper or receipt fields: this fails on the original producer.
+        c = assumptions(0.02)
+        for role in ('wage_male', 'wage_female'):
+            c[role] = registered_rate('official.kosis.farm_purchase.labor')
+        c['general'] = registered_rate('official.kosis.cpi.total')
+        plan = self.patch.materialize_d8(self.src, c)
+        formulas = {(p['sheet'], p['cell']): p.get('new_formula') for p in plan['patches']}
+        self.assertEqual(formulas[S5, 'D38'], '=C38*$O$7/1000*(1+0.02)^0')
+        self.assertEqual(formulas[S8, 'AC38'], '=0.0663821164938491')
+        self.assertEqual(formulas[S8, 'AD38'], '=0.0663821164938491')
+        self.assertEqual(formulas[S9, 'C38'], '=C18*(1+0.0312101025776949)')
+
+    def test_v4_03_literal_error_and_downstream_rate_tolerance(self):
+        consumer = runtime('gg_finance_tables')
+        for r in (0.0, -0.0, 0.020000000000000018, 0.031210102577694965,
+                  0.06638211649384917, -0.031210102577694965,
+                  -0.9999999999999999, 1.2345678901234567e-10,
+                  -1.2345678901234567e-10, 1.0000000000000009,
+                  1234567890.1234567):
+            with self.subTest(r=r):
+                token = self.patch._excel_number(r)
+                decimal_r, decimal_token = Decimal(repr(r)), Decimal(token)
+                if r == 0:
+                    self.assertEqual(token, '0')
+                else:
+                    bound = Decimal(10) ** (decimal_r.adjusted() - 14)
+                    self.assertLess(abs(decimal_token - decimal_r), bound)
+                    self.assertLessEqual(abs(float(token) - r), 1.1e-14 * abs(r))
+                self.assertTrue(consumer._same_rate(float(token), r))
+                self.assertTrue(math.isclose(float(token), r, rel_tol=1e-12, abs_tol=1e-12))
+
+    def test_v4_03_emitted_rate_literals_are_excel_stable(self):
+        # V4-03: tokens the producer writes must already be the form a native
+        # Excel save persists verbatim, otherwise inspect_preserved_template
+        # reports "template formula/value changed" on a correct workbook.
+        c = assumptions(0.031210102577694965)
+        c['general'] = registered_rate('official.kosis.cpi.total')
+        plan = self.patch.materialize_d8(self.src, c)
+        rates = plan['d8']['rates']
+        for role in ('wage_male', 'wage_female', 'sales', 'general'):
+            item = rates[role]
+            resolved = self.patch._official_rate(c[role], role, price_sources=c['price_sources'])
+            self.assertEqual(item['r'], resolved['r'])
+            self.assertEqual(item['r_literal'], self.patch._excel_number(item['r']))
+            digits = item['r_literal'].lstrip('-').split('E')[0].replace('.', '').strip('0')
+            self.assertLessEqual(len(digits or '0'), 15, item['r_literal'])
+        male = rates['wage_male']['r_literal']
+        ac38 = next(p for p in plan['patches'] if (p['sheet'], p['cell']) == (S8, 'AC38'))
+        self.assertEqual(ac38['new_formula'], '=' + male)
+        sales_token = '*(1+' + rates['sales']['r_literal'] + ')^'
+        for p in plan['patches']:
+            if p['sheet'] == S5 and 'new_formula' in p:
+                self.assertIn(sales_token, p['new_formula'], p)
+        general = next(p for p in plan['patches'] if p['sheet'] == S9 and 'new_formula' in p)
+        self.assertTrue(general['new_formula'].endswith('*(1+' + rates['general']['r_literal'] + ')'))
+        out, receipt = self.apply(plan)
+        self.assertEqual(receipt['d8']['rates'], rates)
+        book = self.audit.Workbook.load(out)
+        self.assertEqual(book.formulas[S8, 'AC38'].text, male)
+        self.assertEqual(self.patch.materialize_d8(out, c)['patches'], [])
+
+    def test_v4_03_signed_sales_rates_preserve_calculation_and_idempotence(self):
+        for r in (0.0, -0.031210102577694965, 0.031210102577694965,
+                  1.2345678901234567e-06):
+            with self.subTest(r=r):
+                c = assumptions(r)
+                plan = self.patch.materialize_d8(self.src, c)
+                full_r = plan['d8']['rates']['sales']['r']
+                token = plan['d8']['rates']['sales']['r_literal']
+                out, _ = self.apply(plan, name='signed-' + str(r) + '.xlsx')
+                book = self.audit.Workbook.load(out)
+                for i, col in enumerate('DFHJL'):
+                    self.assertEqual(book.formulas[S5, col+'38'].text,
+                                     f'{"CEGIK"[i]}38*$O$7/1000*(1+{token})^{i}')
+                    self.assertTrue(math.isclose(book.evaluate(S5, col+'38'),
+                                                2 * (1 + full_r) ** i,
+                                                rel_tol=1e-12, abs_tol=1e-12))
+                self.assertEqual(self.patch.materialize_d8(out, c)['patches'], [])
+
+    def test_v4_03_stale_long_repr_tokens_are_rewritten(self):
+        # Same defect family variant: a workbook still carrying a pre-fix
+        # >15-digit repr token must be re-emitted in the persisted form,
+        # not accepted as "already applied".
+        from openpyxl import load_workbook
+        c = assumptions(0.031210102577694965)
+        c['general'] = registered_rate('official.kosis.cpi.total')
+        rates = self.patch.materialize_d8(self.src, c)['d8']['rates']
+        canonical = rates['sales']['r_literal']
+        stale = '0.031210102577694965'  # the exact V4-03 observed token
+        self.assertNotEqual(stale, canonical)
+        w = load_workbook(self.src)
+        w[S5]['D38'] = '=C38*$O$7/1000*(1+' + stale + ')^0'
+        w[S8]['AC38'] = '=' + repr(rates['wage_male']['r'])
+        w[S8]['AD38'] = '=' + repr(rates['wage_female']['r'])
+        w[S9]['C38'] = '=C18*(1+' + repr(rates['general']['r']) + ')'
+        w.save(self.src); w.close()
+        plan = self.patch.materialize_d8(self.src, c)
+        p = next(p for p in plan['patches'] if (p['sheet'], p['cell']) == (S5, 'D38'))
+        self.assertEqual(p['new_formula'], '=C38*$O$7/1000*(1+' + canonical + ')^0')
+        formulas = {(p['sheet'], p['cell']): p.get('new_formula') for p in plan['patches']}
+        self.assertEqual(formulas[S8, 'AC38'], '=' + rates['wage_male']['r_literal'])
+        self.assertEqual(formulas[S8, 'AD38'], '=' + rates['wage_female']['r_literal'])
+        self.assertEqual(formulas[S9, 'C38'], '=C18*(1+' + rates['general']['r_literal'] + ')')

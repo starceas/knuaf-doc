@@ -96,6 +96,7 @@
     "student_registration": "assumptions.price_sources",
     "observed_values": "must match registered observations; cannot overwrite bundled observations",
     "gender_contract": "gender/sex/성별 of a wage series must match wage_male=남자 or wage_female=여자",
+    "formula_literal_serialization": "gg_excel_formula_patch._excel_number emits the token observed to survive native Excel saves: truncate Decimal(repr(r)) to 15 significant digits toward zero; use fixed-point while the unsigned text is <=21 chars, else an uppercase E with a signed exponent of at least 2 digits; collapse trailing .0 and signed zero. Receipt d8.rates[*].r retains the full-precision CAGR and r_literal records the formula token. For decimal order k the truncation error is <10^(k-14), hence <1e-14*abs(Decimal(repr(r))); including binary-float conversions the normal-rate bound is 1.1e-14*abs(r), with zero exact. This is inside gg_finance_tables rel/abs 1e-12 rate tolerance; it is not a blanket relative-error guarantee for compounded amounts near r=-1",
     "roles": {
       "wage_male": "wage",
       "wage_female": "wage",

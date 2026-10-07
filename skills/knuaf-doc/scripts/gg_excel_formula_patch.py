@@ -72,6 +72,49 @@ def _expected_number(value: object) -> int | float:
     return value
 
 
+def _excel_number(value: object) -> str:
+    """Serialize a finite number as the formula literal Excel persists.
+
+    Excel truncates a formula's numeric literal text at 15 significant
+    digits (it does not round), drops a trailing ".0", writes the stored
+    literal back verbatim in fixed-point notation when that needs at most
+    21 characters, and otherwise emits a "d.dddE±dd" mantissa form.  Emit
+    that stored form directly so a native save leaves the token identical.
+    For d = Decimal(repr(value)) with decimal order k, truncation gives
+    |Decimal(token) - d| < 10**(k - 14), or < 1e-14 * |d|.
+    Allowing for both binary-float conversions, normal finite rates differ
+    by at most 1.1e-14 * |value|, inside the downstream rel/abs 1e-12
+    tolerance. Zero is exact. Receipts retain the original rate in r and
+    record this formula token separately in r_literal.
+    """
+    x = float(_expected_number(value))
+    if x == 0:
+        return "0"
+    sign, digits, exp = Decimal(repr(x)).as_tuple()
+    digits = list(digits)
+    if len(digits) > 15:
+        exp += len(digits) - 15
+        del digits[15:]
+    while len(digits) > 1 and digits[-1] == 0:
+        digits.pop()
+        exp += 1
+    if exp >= 0:
+        fixed = "".join(map(str, digits)) + "0" * exp
+    elif len(digits) + exp > 0:
+        cut = len(digits) + exp
+        fixed = "".join(map(str, digits[:cut])) + "." + "".join(map(str, digits[cut:]))
+    else:
+        fixed = "0." + "0" * -(len(digits) + exp) + "".join(map(str, digits))
+    sign_text = "-" if sign else ""
+    if len(fixed) <= 21:
+        return sign_text + fixed
+    exponent = exp + len(digits) - 1
+    mantissa = str(digits[0])
+    if len(digits) > 1:
+        mantissa += "." + "".join(map(str, digits[1:]))
+    return f"{sign_text}{mantissa}E{exponent:+03d}"
+
+
 def _patches(data: dict) -> list[dict]:
     if data.get("schema") != MAP_SCHEMA:
         raise ValueError(f"map schema must be {MAP_SCHEMA}")
@@ -310,7 +353,8 @@ def materialize_d8(source: Path, assumptions: dict | None = None, *, prepare_obs
                         "application_base_year": int(daily_base_year)}, int(first_year) + 4)
             item["daily_base_year"] = daily_base_year
             item["daily_base_application_count"] = int(count)
-            add(sheet, rate_cell, repr(item["r"]))
+            item["r_literal"] = _excel_number(item["r"])
+            add(sheet, rate_cell, item["r_literal"])
             add(sheet, col+"34", f"{col}31*(1+${rate_cell[:2]}$38)^{int(count)}")
         sales_sheet = spec["sales_sheet"]
         if sales_sheet not in book.sheets:
@@ -321,6 +365,8 @@ def materialize_d8(source: Path, assumptions: dict | None = None, *, prepare_obs
             sales_first_year = int(sales_first_year.strip().rstrip("년"))
         if item.get("mode") != "not_applied" and item["application_base_year"] != sales_first_year:
             raise ValueError("sales application year differs from preserved C36")
+        if item.get("mode") != "not_applied":
+            item["r_literal"] = _excel_number(item["r"])
         # Repoint from the exact quantity cell, never multiply an already
         # escalated revenue. This makes rate updates idempotent.
         for row, price in spec["sales_rows"].items():
@@ -332,7 +378,7 @@ def materialize_d8(source: Path, assumptions: dict | None = None, *, prepare_obs
                 if item.get("mode") == "not_applied":
                     desired = base
                 else:
-                    desired = base + f"*(1+{item['r']!r})^{i}"
+                    desired = base + f"*(1+{item['r_literal']})^{i}"
                 add(sales_sheet, revenue+row, desired)
         note = (item["reason"] if item.get("mode") == "not_applied" else
                 f"판매가 상승률 {item['r']:.8%}; "
@@ -352,10 +398,11 @@ def materialize_d8(source: Path, assumptions: dict | None = None, *, prepare_obs
             rates["general"] = _official_rate(assumptions["general"], "general", price_sources=assumptions.get("price_sources", []))
             if rates["general"]["application_base_year"] != first_year:
                 raise ValueError("general application year differs from preserved plan year")
+            rates["general"]["r_literal"] = _excel_number(rates["general"]["r"])
             for (s, ref), old in book.formulas.items():
                 match = re.fullmatch(r"([A-Z]+[1-9][0-9]*)\*(?:1\.025|\(1\+[0-9.eE+\-]+\))", old.text)
                 if s in {"9 .경비계획", "7. 영농자재소요계획"} and match:
-                    add(s, ref, match[1] + f"*(1+{rates['general']['r']!r})")
+                    add(s, ref, match[1] + "*(1+" + rates["general"]["r_literal"] + ")")
     return {"schema": MAP_SCHEMA, "source": {"sha256": sha256(source)},
             "patches": patches,
             "d8": {"schema": spec["schema"], "spec_sha256": sha256(D8_SPEC_PATH),

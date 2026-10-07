@@ -791,6 +791,44 @@
     "tests.test_template_wage_link.WageLinkTests.test_v3_04_exact_x01_observation_formula_is_prepared_without_numeric_writes",
     "tests.test_template_wage_link.WageLinkTests.test_v3_04_x01_exception_rejects_unregistered_sha_formula_and_audit_drift"
    ]
+  },
+  {
+   "id": "V4-01",
+   "note": "I4: actual FIX-B4/C4 regression symbols; V5 independent acceptance remains pending.",
+   "scope": "full_pytest_skill_suite",
+   "status": "implemented_pending_independent_review",
+   "tests": [
+    "skills.knuaf-doc.tests.test_finance_tables.TestV4CompleteApplicationProof.test_deployment_map_covers_every_target_in_every_year",
+    "skills.knuaf-doc.tests.test_finance_tables.TestV4CompleteApplicationProof.test_missing_coverage_map_cannot_approve_subset",
+    "skills.knuaf-doc.tests.test_finance_tables.TestV4CompleteApplicationProof.test_base_reference_constant_and_missing_target_cannot_hide",
+    "skills.knuaf-doc.tests.test_finance_tables.TestV4CompleteApplicationProof.test_unknown_added_item_and_duplicate_label_downgrade",
+    "skills.knuaf-doc.tests.test_finance_tables.TestV4CompleteApplicationProof.test_required_target_missing_every_year_downgrades",
+    "skills.knuaf-doc.tests.test_finance_tables.TestV4CompleteApplicationProof.test_wage_matching_rate_caches_do_not_prove_partial_price_chains"
+   ]
+  },
+  {
+   "id": "V4-02",
+   "note": "I4: actual FIX-B4/C4 regression symbols; V5 independent acceptance remains pending.",
+   "scope": "full_pytest_skill_suite",
+   "status": "implemented_pending_independent_review",
+   "tests": [
+    "skills.knuaf-doc.tests.test_finance_tables.TestV4CompleteApplicationProof.test_receipt_gender_uses_producer_rule_for_both_columns",
+    "skills.knuaf-doc.tests.test_finance_tables.TestV4CompleteApplicationProof.test_receipt_gender_matches_actual_column_in_each_format"
+   ]
+  },
+  {
+   "id": "V4-03",
+   "note": "I4: actual FIX-B4/C4 regression symbols; V5 independent acceptance remains pending.",
+   "scope": "public_runtime_and_full_pytest",
+   "status": "implemented_pending_independent_review",
+   "tests": [
+    "tests.test_template_wage_link.WageLinkTests.test_v4_03_excel_number_is_the_token_excel_persists",
+    "tests.test_template_wage_link.WageLinkTests.test_v4_03_original_reproduction_tokens",
+    "tests.test_template_wage_link.WageLinkTests.test_v4_03_literal_error_and_downstream_rate_tolerance",
+    "tests.test_template_wage_link.WageLinkTests.test_v4_03_emitted_rate_literals_are_excel_stable",
+    "tests.test_template_wage_link.WageLinkTests.test_v4_03_signed_sales_rates_preserve_calculation_and_idempotence",
+    "tests.test_template_wage_link.WageLinkTests.test_v4_03_stale_long_repr_tokens_are_rewritten"
+   ]
   }
  ],
  "review": "knuaf-doc-astra-pr-review/review/20260919-astra (ASTRA-REVIEW.md, probes.py, probe-results.json)",
