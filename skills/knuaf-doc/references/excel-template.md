@@ -80,14 +80,99 @@ do not add sheets to the submission form merely to satisfy a preferred model.
 
 > ℹ️ **적용 범위**: 상승률 분리 규칙은 **모든 전공 공통 기본값**이다([사용자 결정 2026-10-06 22:39]). 입력 위치와 시트 수는 해당 전공 양식을 따른다.
 
-**구현 상태**: 물가·노무비 공식 통계 입력 구현(D8)과 Ⅳ장 표 전개기(D9)는 후속 단계이며, 지금은 규칙만 정한다.
+**구현 상태**: 물가·노무비 공식 통계 분리(D8) 및 Ⅳ장 표 전개기(D9) 구현 완료. 과거 단일 `inflation` 배율 입력은 완전히 **폐기**되었으며(입력 시 오류 발생), 일반물가·임금·판매가 상승률을 각각 분리하여 공식 통계 기반으로 입력해야 한다.
 
-1. **세 상승률의 분리**:
-   일반물가 상승률은 영농자재·경비, 임금 상승률은 노무비, 판매가 상승률은 매출에 각각 적용한다. 세 입력을 하나의 소비자물가 상승률로 묶지 않는다. 입력값은 상승률 r이며 내부 배율은 1+r이다.
-2. **노무비 반영과 전공별 양식 확인**:
-   교수 지적에 따라 **노무비(고용노동임금) 계획이 가장 중요**하다. 해당 전공 양식의 노무비 입력 셀·임금 상승률 수식/열을 검토해 연도별 일당 인상을 반영하고, 근거 없이 여러 해를 동일 단가로 방치하지 않는다. 원예환경시스템 18시트는 H01의 전용 입력 지도를 따른다.
-3. **공식 통계 근거 필수 (임의 추정 금지)**:
-   일반물가·임금·판매가 각각의 상승률은 해당 항목에 맞는 공식 통계를 확인하고, 각 값마다 출처 ID(`project.json.sources[*].id`), 기준연도와 locator를 입력 근거에 명시한다. 근거 없는 임의 추정값이나 템플릿의 잔존 예시값을 무단으로 사용하지 않는다.
+1. **세 상승률의 분리 및 관측 CAGR 강제**:
+   - 일반물가 상승률은 영농자재·경비, 임금 상승률은 노무비, 판매가 상승률은 매출에 각각 적용한다.
+   - 세 입력을 하나의 소비자물가 상승률로 묶지 않는다.
+   - **상승률 r은 공식 관측 수열의 끝점 연평균 변화율(CAGR)로만 산출**된다. 명시적 `rate` 입력은 검산용(`max(5e-4, 0.05 × |cagr|)` 허용오차 내 일치)이며, 관측값 없는 임의 계획 가정 r은 입력할 수 없다. 내부 계산 배율은 `1 + r`이다.
+   - 계획연도 배율은 `(1 + r)^(계획연도 - application_base_year)`로 적용되며, 적용 횟수는 연도 차이와 같다. 모든 관측값·r·배율은 유한수여야 한다(NaN/Infinity 거부).
+2. **노무비 반영 및 이중 적용 금지**:
+   - 노무비(고용노동임금) 계획은 **연도별 임금 상승률**을 반영한다.
+   - 동일 가격에 상승률을 두 번 곱하지 않는다. 노무 단가에 임금 상승률을 곱한 뒤, 노무비 총액에 일반물가를 다시 곱하지 않는다. 감가상각비와 고정 차입금 원리금에는 물가를 적용하지 않는다.
+3. **공식 통계 근거 및 판매가 미반영 명시 선택**:
+   - 일반물가는 KOSIS 소비자물가 총지수(`DT_1J22003`), 자재·경비 세목은 농가구입가격지수 재료비·경비(`DT_1J62`), 노무비는 농가구입가격지수 노무비(`DT_1J62`), 판매가는 농진청 소득자료집 동일 작목 주산물 단가를 우선한다.
+   - 판매가 수열은 계획의 작목·재배형태·지역·상품·단위·거래단계 차원과 일치해야 한다(`crop` 필수). **총합 지수인 농가판매가격지수 총지수(`DT_1J60`)와 번들 KAMIS 쌀 수열(`allowed_roles: []`)은 판매가로 적용할 수 없다.**
+   - 학생 작목과 동일 조건의 공식 수열이 없으면, 전국 총지수를 임의 대입하지 않고 **"판매가 상승 미반영(확인 불가)"을 명시 선택**한다.
+   - 통계에서 확인되지 않은 수치는 임의 추정 없이 `확인 불가`로 남긴다.
+
+#### 두 엑셀 경로별 사용 절차 및 명령 계약
+
+두 경로(템플릿 우선 경로 및 레거시 17시트 생성기 경로) 모두 동일한 공통 가격 가정 모듈(`gg_price_assumptions`)의 공식 출처 계약과 기준연도/역할 검증을 공유한다.
+
+##### 경로 1. 학과 원본 템플릿 우선 경로 (W-B 패치·채우기 계약)
+
+학과에서 배포한 원본 통합문서(XLSX)를 사본으로 복구하고 채우는 주 경로다.
+
+1. **구조 복구 (`materialize-d8`)**:
+   - 명령:
+     ```bash
+     python3 skills/knuaf-doc/scripts/gg_excel_formula_patch.py materialize-d8 --source <원본.xlsx> --out <패치맵.json>
+     python3 skills/knuaf-doc/scripts/gg_excel_formula_patch.py --source <원본.xlsx> --map <패치맵.json> --out <복구사본.xlsx> --receipt <영수증.json> --project <프로젝트폴더> --major specialty_crops
+     ```
+   - 정상 X01은 0개 패치로 변경 없음 영수증을 발급한다(무변경 영수증은 기존 영수증 유지).
+2. **관측 준비 (`--prepare-observations` 및 `wage-map`)**:
+   - 명령:
+     ```bash
+     python3 skills/knuaf-doc/scripts/gg_excel_formula_patch.py materialize-d8 --source <사본.xlsx> --out <준비맵.json> --prepare-observations
+     python3 skills/knuaf-doc/scripts/gg_excel_formula_patch.py --source <사본.xlsx> --map <준비맵.json> --out <준비사본.xlsx> --receipt <영수증.json> --project <프로젝트폴더> --major specialty_crops
+     python3 skills/knuaf-doc/scripts/gg_excel_template.py wage-map --source <준비사본.xlsx> --out-map <값지도.json>
+     ```
+   - 관측 연도 사슬과 복사 수식을 명시적으로 비우며, 기존 fill CLI를 통해 관측값을 입력한다(수식 쓰기 금지 유지).
+3. **관측값 입력 형식 (`wage_observations`) 및 시간급 환산 계약**:
+   - 값 파일에 `statistic_id`, `base_year`, 6개 `observation_years`, `application_base_year`를 지정한다.
+   - `values`는 8번 시트 X26:Z31 18개 셀 모두 정수 연도 및 양수 원/일이어야 하며, `evidence_ref(source_id, revision, locator, origin="factual")`가 필수다.
+   - **단위 일치 및 시간급 환산**: 관측표(X26:Z31)는 원/일 단위이므로 등록된 원/일 수열만 직접 입력할 수 있다. 농진청 소득자료집 고용노동 단가 등 시간급(원/시간) 수열을 일급으로 환산할 때는 반드시 `unit_conversion: {"from": "원/시간", "to": "원/일", "hours_per_day": float, "evidence_ref": {...}}` 명시 계약이 있어야 한다. **기본 환산 시간은 존재하지 않으며**, 근거 없는 임의 시간 입력은 거부된다.
+4. **가격 계약 (`--assumptions <JSON>`)**:
+   - materialize-d8에 `--assumptions <가정.json>`을 전달한다.
+   - 필드는 `wage_male`, `wage_female`, `sales`, 선택적 `general`로 분리한다. 각 계산 항목은 `base_year`, `observation_years`, `observed_values`, `application_base_year`, `evidence_ref`를 요구한다. 학생 선언 수열은 `assumptions.price_sources`에 포함한다.
+   - r은 공식 관측값의 끝점 CAGR로만 정해지며(음수 허용), 명시 r은 검산 오차 내 일치해야 한다.
+   - 판매가는 `dimensions`와 `target_dimensions`의 작목(crop)·재배형태(cultivation)·지역(region)·단위(unit)·상품(product)·등급(grade)·유통단계(channel) 일치를 요구하며(`crop` 필수), 없으면 `{"mode": "not_applied", "reason": "확인 불가"}`를 명시한다.
+   - 임금률은 공식 노무비 지수 또는 RDA 고용노동 계열만, 판매가는 RDA output_price 계열만 허용한다.
+5. **적용 기초연도 대조 및 경계**:
+   - 임금과 판매의 적용 기초연도는 원본에 보존된 F6 및 C36과 대조한다. 불일치를 이유로 원본 연도나 연결을 임의 변경하지 않는다. 공식 수열 준비와 구조 복구만으로 제출/통계 승인이라고 간주하지 않는다.
+
+##### 경로 2. 레거시 17시트 생성기 경로 (W-A 스펙 계약)
+
+스펙 JSON에서 17시트 전체를 새로 생성하는 보조 경로다.
+
+- **스펙 계약**:
+  - `spec["price_assumptions"]` 객체에 `general`, `wage`, `sales` 세 역할을 필수로 정의한다.
+  - 이전 `inflation` 단일 키 입력 시 명시적 오류로 거부된다.
+  - 각 역할은 공식 관측 수열의 끝점 CAGR로 계산되며, `rate`를 명시할 경우 수열 CAGR과 일치해야 한다.
+  - 각 역할 정의 형식:
+    ```json
+    {
+      "general": {
+        "source_id": "official.kosis.cpi.total",
+        "base_year": 2020,
+        "application_base_year": 2025
+      },
+      "wage": {
+        "source_id": "official.kosis.farm_purchase.labor",
+        "base_year": 2020,
+        "application_base_year": 2025
+      },
+      "sales": {
+        "status": "not_applied",
+        "reason": "확인 불가"
+      }
+    }
+    ```
+  - 학생이 직접 조회한 작목별 수열은 `spec["price_sources"]`에 선언한다. 학생 수열도 공인 기관 종류(`agency_kind`), 공인 https 도메인, locator, 기준연도(지수 정수, 명목 null), unit, dimensions, allowed_roles를 준수해야 하며, 관측/미확인 연도 교집합은 거부된다.
+  - 생성 명령:
+    ```bash
+    python3 skills/knuaf-doc/scripts/build_excel_finance_template.py project --input spec.json --out build/output.xlsx --major specialty_crops
+    ```
+
+#### 보류 사항 (사용자 결정 대기)
+
+1. **W-023 노무비 첫해 F6=2027년 및 생산원가 첫해 대응**:
+   - 실제 FX 및 X01 양식의 `8. 노무비계획!F6` 셀은 `2027년`으로 기재되어 있으며, 생산원가계획 첫해와의 연결 대응은 지도교수 해석 대상이다. 코드는 이를 임의 수정하지 않고 보존하며, **사용자 결정 대기**로 둔다.
+2. **첫해 자재·경비의 `*1.025*1.025*1.025` 식**:
+   - X01 `7!C16:C19`, `9!C18`의 1.025 3회 곱셈 식은 기준 단가의 연도 근거 확인 전까지 임의 변경하지 않고 보존하며, **사용자 결정 대기**로 둔다.
+3. **Q-W-B2 시간급→일급 1일 환산 노동시간**:
+   - 템플릿 임금 관측표는 원/일 단위이고, 번들 공식 고용노동 단가는 원/시간이다. 1일 노동시간의 공적 근거 확인 전까지 기본 환산 시간을 두지 않으며, 학생이 공식 근거와 함께 `unit_conversion`을 명시해야만 환산을 허용한다 (**사용자/조사 후 결정 대기**).
 
 #### 특용작물 17시트의 좌표 (해당 원본 전용)
 

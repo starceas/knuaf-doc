@@ -52,6 +52,7 @@ description: 한국농수산대학교 창업논문·영농계획서와 동반 �
 - “고칠 부분 보기”: `check <폴더>`의 위치별 결과와 내용검토 결과를 구분해 설명한다.
 - “검토본 받기”: `export <폴더> --kind review --major <전공ID>`. 생성된 실제 경로와 미검증 항목을 알려준다. 교수 승인으로 표시하지 않는다.
 - 산출물 등록: 생성·수정된 출력 파일을 정본에 등록하는 유일한 경로는 `adopt-output <폴더> --input <spec.json> --expected-revision <N> --major <전공ID>`다. spec 형식·동반 파일 판별·수령증 규칙은 [source-contract](references/source-contract.md)를 따른다.
+- 재무표 전개: 특용작물전공 Ⅳ장 재무표 전개는 학과 제공 템플릿(및 그 파생)을 대상으로 `gg.py finance-tables <폴더> --xlsx <재계산통합문서> [--input 각주.json] [--out 경로] --major specialty_crops` 명령으로 실행한다([specialty-crops/finance-flow](references/specialty-crops/finance-flow.md)).
 - 잠금 문제: 잠금 점유 확인은 `doctor <폴더> --probe`로 한다(기본 `doctor`는 구조만 읽기 전용 보고). 비정상 종료 잔여물은 `unlock <폴더>`, 오프라인 전환·복구는 사용자 확인 후 `lock-upgrade <폴더>`로만 진행하며 `.gg-lock` 디렉터리·수령증 파일을 직접 고치지 않는다. 상세 [locking](references/locking.md).
 - "업데이트해줘 / 업데이트 확인": [update](references/update.md)의 절차를 따르고 `scripts/gg_update.py auto`를 쓴다.
 
@@ -117,10 +118,11 @@ description: 한국농수산대학교 창업논문·영농계획서와 동반 �
 - 자료 투입·발췌·재검토: [source-intake](references/source-intake.md)
 - 전공별 지원 범위·전용 명령: [majors](references/majors.md)
 - 출력 명령·형식별 한계·재무 양식: [outputs](references/outputs.md)
-- 특용·약용작물·생허브 가격 조사: [price-research-routes](references/price-research-routes.md) — 조사 전 읽고 위임 시 작목·상품 형태·거래 단계·기간·경로 전달. 옛 관측을 현재 시세로 쓰지 않는다.
+- 특용·약용작물·생허브 가격 조사 및 공식 통계: [price-research-routes](references/price-research-routes.md) — 일반물가·자재·노무비·판매가 공식 통계 선택표(R1 권고), 관측 수열 끝점 연평균 변화율(CAGR) r 산출 강제 및 세 상승률 분리 규칙. 옛 관측을 현재 시세로 쓰지 않으며 학생 직접 수열(`price_sources`)도 공공 공식 출처 계약 필수.
+- 재무 엑셀 템플릿 및 물가·노무비 반영: [excel-template](references/excel-template.md) — 템플릿 우선 경로(materialize-d8·wage-map) 및 레거시 경로(price_assumptions) 사용 절차. 원/일 단위 노무비 관측 강제, 명시 `unit_conversion` 없는 시간급 환산 불가, 관측 끝점 CAGR 검산 계약.
 - 질문과 변경: [mid-work-questions](references/mid-work-questions.md)
 - 학부 졸업논문 눈높이·재무 지표 경계(모든 전공 공통 기본값): [thesis-level](references/thesis-level.md)
-- 특용작물전공 Ⅳ장 재무표 전개(특용작물 전용, 타 전공은 각 선배 플로우): [specialty-crops/finance-flow](references/specialty-crops/finance-flow.md)
+- 특용작물전공 Ⅳ장 재무표 전개(특용작물 전용, 타 전공은 각 선배 플로우): [specialty-crops/finance-flow](references/specialty-crops/finance-flow.md) — 학과 제공 템플릿(및 그 파생) 대상 gg.py finance-tables 전개 명령, 행별 단위 계약(`row_units`), 명명 빈 행 보존, 구조화 각주 입력 및 발행 전 정책 게이트 검증.
 - 시각자료·사진 정책 및 촬영 자리 가이드: [figure-photo-policy](references/figure-photo-policy.md)
 - 장별 논증·실행성·수치 품질(작성 전·검토 때 읽음, 분량·키워드로 충족 금지): [exemplar-quality](references/exemplar-quality.md)
 - 서술 설계·문단 확장(길이·문단 수 목표 금지): [narrative-expansion](references/narrative-expansion.md)
