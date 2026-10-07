@@ -12,14 +12,14 @@ Markdown으로 만든다. 표 지도는
 - 표가 통째로 비면 만들지 않는다(빈 표를 수치로 채우지 않음).
 - 공식 통계 각주(물가·임금·판매가 상승률)는 입력 JSON으로 받는다. 없으면
   각주를 만들지 않고 ``확인 불가`` 경고만 남긴다.
-- 적용 문구는 입력 XLSX SHA에 묶인 D8 영수증과 재검산 일치가 있을
-  때만 쓴다. 영수증 부재·불일치는 참고값과 경고로 표시한다.
+- 상승률 각주는 항상 참고값이다. r이 워크북 계산에 실제로 쓰였는지는
+  이 도구가 증명하지 않으며, 출력 문구도 통합문서에서 따로 확인해야
+  한다고 밝힌다(Q-DESIGN-1 처분 A).
 - 연도별 비용표는 워크북의 계획연도 집합·개수와 일치해야 발행한다.
 - 입력 통합문서는 읽기만 하며 절대 수정하지 않는다(사본 사용 전제).
 """
 
 import argparse
-import hashlib
 import json
 import math
 from pathlib import Path
@@ -32,7 +32,6 @@ import openpyxl
 
 import gg_major_contract as mc
 import gg_price_assumptions as pa
-from gg_excel_template import check_wage_gender
 
 MAJOR_ID = "specialty_crops"
 MISSING = "확인 불가"
@@ -178,9 +177,8 @@ def _sheet_files(path):
 
 
 def _sheet_meta(path, sheet_file):
-    """시트 XML에서 실제 수식(공유 수식 포함)과 병합 범위를 읽는다."""
-    formulas = {}
-    shared = {}
+    """시트 XML에서 수식 셀 참조(공유 수식 따르는 셀 포함)와 병합 범위를 읽는다."""
+    formula_refs = set()
     merges = []
     with zipfile.ZipFile(path) as z:
         root = ET.fromstring(z.read(sheet_file))
@@ -192,24 +190,9 @@ def _sheet_meta(path, sheet_file):
         ref = cell.get("r")
         if ref is None:
             continue
-        f = cell.find(_XLS_MAIN + "f")
-        if f is not None:
-            formulas[ref] = f.text
-            if f.get("t") == "shared" and f.text:
-                shared[f.get("si")] = (ref, f.text)
-    # Read effective shared formulas without recalculating or modifying XLSX.
-    from openpyxl.formula.translate import Translator, TranslatorError
-    for cell in root.iter(_XLS_MAIN + "c"):
-        f = cell.find(_XLS_MAIN + "f")
-        if f is not None and f.get("t") == "shared" and not f.text:
-            base = shared.get(f.get("si"))
-            if base:
-                try:
-                    formulas[cell.get("r")] = Translator(
-                        "=" + base[1], origin=base[0]).translate_formula(cell.get("r"))[1:]
-                except (ValueError, IndexError, TranslatorError):
-                    pass  # Missing/unreadable formula cannot prove application.
-    return formulas, merges
+        if cell.find(_XLS_MAIN + "f") is not None:
+            formula_refs.add(ref)
+    return formula_refs, merges
 
 
 def _ref_to_rc(ref):
@@ -234,7 +217,7 @@ class _SheetView:
     read_only 모드로 값만 읽고(큰 파일·손상 스타일 내성), 수식·병합은
     시트 XML에서 직접 읽는다."""
 
-    def __init__(self, ws_values, formulas, merges):
+    def __init__(self, ws_values, formula_refs, merges):
         self.cells = {}
         self.max_row = 0
         self.max_col = 0
@@ -247,10 +230,8 @@ class _SheetView:
                     if cell.column > getattr(self, "max_col", 0):
                         self.max_col = cell.column
         self.formulas = {
-            rc for rc in (_ref_to_rc(f) for f in formulas) if rc
+            rc for rc in (_ref_to_rc(f) for f in formula_refs) if rc
         }
-        self.formula_text = {_ref_to_rc(ref): text for ref, text in formulas.items()} \
-            if isinstance(formulas, dict) else {}
         self.covered = {}
         for ref in merges:
             cells = _range_cells(ref)
@@ -723,8 +704,9 @@ def _col_letter(idx):
 # 각주 구조화 입력의 허용 필드 — 이 밖의 키(자유 문구 note·label·
 # source_name·locator 등)는 정책 우회 통로가 될 수 있어 거부한다.
 # 계약: {source_id, base_year, observation?{start_year,end_year},
-#        rate?(검산용), application_base_year?, target_dimensions?,
-#        unit?(등록 단위 대조)}
+#        rate?(검산용), target_dimensions?, unit?(등록 단위 대조),
+#        application_base_year?(구 계약 필드 — 받아도 출력·검증에
+#        쓰지 않는다. 각주는 r이 실제로 쓰였는지 주장하지 않으므로)}
 #   또는 {status:"not_applied", reason}.
 _FOOTNOTE_KEYS = frozenset({
     "status", "reason", "source_id", "base_year", "observation",
@@ -733,330 +715,20 @@ _FOOTNOTE_KEYS = frozenset({
 
 
 def _same_rate(a, b):
+    """D8 수치 직렬화 회귀가 공유하는 유한 수치 비교(허용오차 1e-12)."""
     return (type(a) in (int, float) and type(b) in (int, float)
             and math.isfinite(a) and math.isfinite(b)
             and math.isclose(a, b, rel_tol=1e-12, abs_tol=1e-12))
 
 
-def _same_dimensions(a, b):
-    return (set(a) == set(b) and all(
-        set(a[k] if isinstance(a[k], list) else [a[k]])
-        == set(b[k] if isinstance(b[k], list) else [b[k]]) for k in a))
-
-
-def _receipt_rates(receipt, workbook_hash, *, layout_id=None):
-    """Read the two existing producer formats; unknown receipts fail closed."""
-    if not isinstance(receipt, dict):
-        raise ValueError("워크북 SHA에 연결된 적용 영수증 없음")
-    if receipt.get("schema") == "gg-xlsx-formula-patch-receipt/v1":
-        if receipt.get("output", {}).get("sha256") != workbook_hash:
-            raise ValueError("적용 영수증 output.sha256 불일치")
-        d8 = receipt.get("d8") or {}
-        rates = d8.get("rates")
-        if not isinstance(rates, dict):
-            raise ValueError("D8 rates 없음(구조 복구는 통계 적용 증거가 아님)")
-        assumptions = d8.get("assumptions") or {}
-        sources = assumptions.get("price_sources") or []
-        student = {}
-        for source in sources:
-            sid = pa.check_source_entry(source, origin="application_receipt")
-            if sid in student:
-                raise ValueError("영수증 출처 id 중복")
-            student[sid] = source
-        result = {}
-        for key, raw in rates.items():
-            if key not in {"general", "sales", "wage_male", "wage_female"}:
-                raise ValueError("알 수 없는 D8 rate 역할")
-            role = "wage" if key.startswith("wage_") else key
-            if raw.get("mode") == "not_applied":
-                continue
-            if raw.get("mode", "applied") != "applied" or raw.get("status", "applied") != "applied":
-                raise ValueError("영수증은 미적용 또는 알 수 없는 상태")
-            item = {
-                "source_id": raw.get("evidence_ref", {}).get("source_id"),
-                "base_year": raw.get("base_year"),
-                "rate": raw.get("r"),
-                "application_base_year": raw.get("application_base_year"),
-                "target_dimensions": raw.get("target_dimensions") or {},
-                "observation_years": raw.get("observation_years"),
-                "observed_values": raw.get("observed_values"),
-                "cache_cell": {"wage_male": "AC38", "wage_female": "AD38"}.get(key),
-                "plan_crops": _receipt_plan_crops(receipt, assumptions),
-            }
-            if "unit" in raw:
-                item["unit"] = raw["unit"]
-            years = item["observation_years"]
-            if not isinstance(years, list) or len(years) < 2:
-                raise ValueError("영수증 관측기간 없음")
-            item["observation"] = {"start_year": years[0], "end_year": years[-1]}
-            result.setdefault(role, []).append(item)
-        # A single wage note cannot silently describe only one sex.
-        if "wage" in result and len(result["wage"]) != 2:
-            # Keep other roles usable; the wage role alone lacks full proof.
-            result.pop("wage")
-        return result, student
-    if receipt.get("profile") == FINANCE_PROFILE:
-        if receipt.get("file_hash") != workbook_hash:
-            raise ValueError("적용 manifest file_hash 불일치")
-        if layout_id != FINANCE_PROFILE:
-            raise ValueError("레거시 manifest 생산자와 워크북 레이아웃 불일치")
-        rates = receipt.get("price_assumptions")
-        if not isinstance(rates, dict):
-            raise ValueError("manifest price_assumptions 없음")
-        result = {}
-        for role, raw in rates.items():
-            if isinstance(raw, dict) and raw.get("status") == "applied":
-                cells = ("AC38", "AD38") if role == "wage" else (None,)
-                result[role] = [{**raw, "cache_cell": cell,
-                                "plan_crops": _receipt_plan_crops(receipt, {})}
-                               for cell in cells]
-        return result, {}
-    raise ValueError("지원하지 않는 적용 영수증 형식")
-
-
-def _receipt_plan_crops(receipt, assumptions):
-    crops = []
-    for obj in (receipt, assumptions, receipt.get("plan") or {},
-                assumptions.get("price_dimensions") or {},
-                assumptions.get("target_dimensions") or {}):
-        dims = pa.canonical_dimensions({k: obj[k] for k in ("crop", "작목") if k in obj})
-        values = [obj["crops"]] if "crops" in obj else []
-        if "crop" in dims:
-            values.append(dims["crop"])
-        for value in values:
-            items = value if isinstance(value, list) else [value]
-            if not items or any(not isinstance(v, str) or not v.strip() for v in items):
-                raise ValueError("영수증 계획 작목 형식 오류")
-            crops.append(set(items))
-    return crops
-
-
-_NUMERIC_FORMULA = r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?"
-
-
-def _formula(view, cell):
-    text = view.formula_text.get(_ref_to_rc(cell))
-    return re.sub(r"\s+", "", text).lstrip("=").replace("$", "") if text else None
-
-
-def _numeric_cache(view, cell):
-    value = view.value(*_ref_to_rc(cell))
-    if value is not None and (type(value) not in (int, float) or not math.isfinite(value)):
-        raise ValueError("적용 증거 셀 %s 캐시 오류" % cell)
-    return value
-
-
-def _year_value(value):
-    match = re.fullmatch(r"(\d{4})년?", _norm(value))
-    return int(match[1]) if match else None
-
-
-def _workbook_application(role, rate, base_year, view_for, application_proof=None):
-    """Prove the preserved department layout's actual annual price factors.
-
-    Read only exact producer formulas (including shared formula expansion),
-    and cross-check numeric caches when present. No arbitrary Excel evaluator
-    or invented observation/base year is used here.
-    """
-    if view_for is None:
-        raise ValueError("워크북 실제 적용률을 읽을 증거 없음")
-    if role == "wage":
-        view, _ = view_for("8. 노무비계획")
-        if view is None or _year_value(view.value(6, _col("F"))) != base_year:
-            raise ValueError("임금 적용 기초연도와 워크북 F6 불일치")
-        for cell in ("AC38", "AD38"):
-            if not _same_rate(_numeric_cache(view, cell), rate):
-                raise ValueError("남녀 임금 캐시 %s 없음 또는 r 불일치" % cell)
-        # Matching rate cells alone do not prove that every wage price uses
-        # them. Check both observation bases and all three five-year chains.
-        daily_year = _numeric_cache(view, "X31")
-        if (type(daily_year) not in (int, float) or int(daily_year) != daily_year
-                or not 1900 <= daily_year <= base_year):
-            raise ValueError("임금 기초 관측연도 X31 확인 불가")
-        count = int(base_year - daily_year)
-        for col, rate_cell in (("Y", "AC38"), ("Z", "AD38")):
-            cell, prior = col + "34", col + "31"
-            if _formula(view, cell) != "%s*(1+%s)^%d" % (prior, rate_cell, count):
-                raise ValueError("임금 기초단가 수식·적용 횟수 불일치: " + cell)
-            _check_price_cache(view, cell, prior, (1 + rate) ** count)
-        columns = ("F", "I", "L", "O", "R")
-        for i, col in enumerate(columns):
-            if _year_value(view.value(6, _col(col))) != base_year + i:
-                raise ValueError("임금 계획연도 불일치: " + col + "6")
-            for row, base, rate_cell in ((8, "Y34", "AC38"),
-                                         (11, "Y34", "AC38"),
-                                         (12, "Z34", "AD38")):
-                cell = col + str(row)
-                prior = columns[i-1] + str(row) if i else base
-                expected = prior + "*(1+%s)" % rate_cell if i else prior
-                if _formula(view, cell) != expected:
-                    raise ValueError("임금 전년 항목 배율 수식 불일치: " + cell)
-                _check_price_cache(view, cell, prior, 1 + rate if i else 1)
-        return
-    if role == "sales":
-        view, _ = view_for("5. 판매계획")
-        if view is None or _year_value(view.value(36, _col("C"))) != base_year:
-            raise ValueError("판매가 적용 기초연도와 워크북 C36 불일치")
-        for row, price in {38: "O7", 39: "O8", 40: "O9", 41: "O11", 42: "O12", 43: "O13"}.items():
-            for i, (q, rev) in enumerate(zip("CEGIK", "DFHJL")):
-                qty, cell = q + str(row), rev + str(row)
-                text = _formula(view, cell)
-                pattern = re.escape(qty + "*" + price + "/1000")
-                match = re.fullmatch(pattern + r"(?:\*\(1\+(" + _NUMERIC_FORMULA + r")\)\^([0-4]))?", text or "")
-                if not match:
-                    raise ValueError("판매가 실제 배율 수식 확인 불가: " + cell)
-                if match[1] is None:
-                    factor = 1.0
-                    if i and not _same_rate(rate, 0):
-                        raise ValueError("판매가 연도별 배율 미적용: " + cell)
-                else:
-                    if int(match[2]) != i or not _same_rate(float(match[1]), rate):
-                        raise ValueError("판매가 실제 r·적용 횟수 불일치: " + cell)
-                    factor = (1 + rate) ** i
-                actual = _numeric_cache(view, cell)
-                quantity = _numeric_cache(view, qty)
-                unit_price = _numeric_cache(view, price)
-                if all(v is not None for v in (actual, quantity, unit_price)) and not _same_rate(
-                        actual, quantity * unit_price / 1000 * factor):
-                    raise ValueError("판매가 수식·매출 캐시 불일치: " + cell)
-        return
-    if role == "general":
-        proof = (application_proof if application_proof is not None else
-                 load_table_map().get("application_proof", {})).get("general", {})
-        sheets = proof.get("sheets")
-        if not sheets:
-            raise ValueError("일반물가 적용 대상·예외 지도 없음")
-        for spec in sheets:
-            sheet = spec["sheet"]
-            view, _ = view_for(sheet)
-            if view is None:
-                raise ValueError("일반물가 적용률 증거 시트 없음: " + sheet)
-            anchors = [(r, int(re.search(r"(\d{4})년", _norm(view.value(r, 2)))[1]))
-                       for r in range(1, view.max_row + 1)
-                       if re.match(r"^(?:[가-힣]\.)?\d{4}년", _norm(view.value(r, 2)))]
-            if (len(anchors) != 5 or anchors[0][1] != base_year
-                    or [y for _, y in anchors] != list(range(base_year, base_year + 5))):
-                raise ValueError("일반물가 적용 기초연도·연도별 증거 불일치")
-            targets = spec["targets"]
-            if not targets:
-                raise ValueError("일반물가 적용 대상 목록 없음: " + sheet)
-            # Classify every annual block before reading any formulas. A base
-            # reference, literal, missing label, or renamed row cannot drop out
-            # of the coverage set merely because it lacks a prior-year ref.
-            label_sets = [{_norm(label) for label in item["labels"]} for item in targets]
-            exceptions = {_norm(label) for item in spec.get("exceptions", [])
-                          for label in item["labels"]}
-            blocks = []
-            for i, (start, _) in enumerate(anchors):
-                stop = anchors[i+1][0] if i+1 < len(anchors) else view.max_row + 1
-                block = [[] for _ in targets]
-                for row in range(start+1, stop):
-                    label = _norm(view.value(row, 2))
-                    matched = [j for j, labels in enumerate(label_sets) if label in labels]
-                    if len(matched) > 1:
-                        raise ValueError("일반물가 지도 대상 중복: " + label)
-                    if matched:
-                        block[matched[0]].append(row)
-                    elif label not in exceptions and (label or view.value(row, 3) is not None
-                                                      or (row, 3) in view.formulas):
-                        raise ValueError("일반물가 지도에 없는 항목: %s!B%d" % (sheet, row))
-                blocks.append(block)
-            for j, item in enumerate(targets):
-                if any(len(block[j]) != 1 for block in blocks):
-                    raise ValueError("일반물가 대상 항목 누락·중복: " + item["labels"][0])
-                rows = [block[j][0] for block in blocks]
-                if item.get("optional_when_blank") and all(
-                        view.value(row, 3) is None and (row, 3) not in view.formulas for row in rows):
-                    continue  # Only an explicitly listed, entirely blank item.
-                if view.value(rows[0], 3) is None and not _formula(view, "C%d" % rows[0]):
-                    raise ValueError("일반물가 첫해 항목 값·수식 없음: " + item["labels"][0])
-                for i in range(1, len(rows)):
-                    cell, prior = "C%d" % rows[i], "C%d" % rows[i-1]
-                    text = _formula(view, cell)
-                    match = re.fullmatch(re.escape(prior) + r"\*\(1\+(" + _NUMERIC_FORMULA + r")\)", text or "")
-                    if not match or not _same_rate(float(match[1]), rate):
-                        raise ValueError("일반물가 전년 항목·실제 r 수식 불일치: %s!%s" % (sheet, cell))
-                    _check_price_cache(view, cell, prior, 1 + rate)
-        return
-    raise ValueError("워크북 적용률 검사가 없는 역할")
-
-
-def _check_price_cache(view, cell, prior, factor):
-    actual, before = _numeric_cache(view, cell), _numeric_cache(view, prior)
-    if not math.isfinite(factor):
-        raise ValueError("가격 배율이 유한하지 않음: " + cell)
-    if actual is not None and before is not None and not _same_rate(actual, before * factor):
-        raise ValueError("가격 배율 수식·캐시 불일치: " + cell)
-
-
-def _check_application(info, source, resolved, role, applications, registry,
-                       student_sources, view_for, application_proof=None):
-    """Recompute receipt data and compare its actual rates, not display tolerances."""
-    entries = (applications or {}).get(role)
-    if not entries:
-        raise ValueError("해당 역할의 적용 영수증 없음")
-    if type(info.get("application_base_year")) is not int:
-        raise ValueError("적용 확인에는 적용 기초연도 필요")
-    target = pa.canonical_dimensions(info.get("target_dimensions") or {})
-    if role == "wage" and (len(entries) != 2 or
-            {e.get("cache_cell") for e in entries} != {"AC38", "AD38"}):
-        raise ValueError("남자·여자 임금 적용 증거 모두 필요")
-    for entry in entries:
-        if entry.get("status", "applied") != "applied":
-            raise ValueError("영수증은 미적용 상태")
-        sid = entry.get("source_id")
-        src = pa.resolve_series(sid, registry, student_sources)
-        pa.check_role(src, role, origin="application_receipt")
-        if role == "wage":
-            check_wage_gender(src, "남자" if entry["cache_cell"] == "AC38" else "여자",
-                              origin="application_receipt." + entry["cache_cell"])
-        if "base_year" not in entry:
-            raise ValueError("영수증 기준연도 없음")
-        by = pa.check_base_year(entry["base_year"], src, origin="application_receipt")
-        if "unit" in entry:
-            pa.check_unit(src, entry["unit"], origin="application_receipt")
-        dims = pa.canonical_dimensions(entry.get("target_dimensions") or {})
-        if role == "sales":
-            crop = target.get("crop")
-            crops = set(crop if isinstance(crop, list) else [crop])
-            if any(plan != crops for plan in entry.get("plan_crops", [])):
-                raise ValueError("영수증 계획 작목과 판매 각주 대상 불일치")
-        pa.check_dimensions(src, dims, required=("crop",) if role == "sales" else (),
-                            origin="application_receipt")
-        if "observation" not in entry or "rate" not in entry:
-            raise ValueError("영수증 관측기간·r 없음")
-        res = pa.resolve_series_rate(src, entry["observation"], entry["rate"],
-                                     origin="application_receipt")
-        for key in ("start_value", "end_value"):
-            if key in entry["observation"] and not _same_rate(
-                    entry["observation"][key], res["observation"][key]):
-                raise ValueError("영수증 관측 끝점과 등록값 불일치")
-        # The producer may accept rounded declared rates. The applied r must
-        # still equal the computed r, so that tolerance cannot authorize drift.
-        if not _same_rate(entry["rate"], res["rate"]):
-            raise ValueError("영수증 실제 r과 재계산 CAGR 불일치")
-        if "observation_years" in entry:
-            pa.check_observations(src, entry["observation_years"], entry["observed_values"],
-                                  origin="application_receipt")
-        if (sid != source["id"] or by != info["base_year"]
-                or type(entry.get("application_base_year")) is not int
-                or entry["application_base_year"] != info["application_base_year"]
-                or not _same_dimensions(dims, target)
-                or res["observation"] != resolved["observation"]
-                or not _same_rate(res["rate"], resolved["rate"])):
-            raise ValueError("각주와 영수증 출처·기간·기초연도·r·대상 차원 불일치")
-    _workbook_application(role, resolved["rate"], info["application_base_year"], view_for, application_proof)
-
-
-def _resolve_footnote(kind, cfg, info, registry, *, applications=None,
-                      receipt_error=None, student_sources=None, view_for=None,
-                      application_proof=None):
+def _resolve_footnote(kind, cfg, info, registry):
     """구조화 각주 입력 → '* ...' 줄. 실패 시 (None, 사유).
 
     입력은 가격 가정 계약과 같다: source_id·base_year·observation·
     검산용 rate. 출처 해석·역할·기준연도·단위·차원·관측·CAGR 검증은
     모두 gg_price_assumptions의 공개 함수로 하고, 출력하는 r은
-    항상 관측 수열의 끝점 CAGR 계산값이다."""
+    항상 관측 수열의 끝점 CAGR 계산값이다. 출력 각주는 참고값이다 —
+    r이 워크북 계산에 쓰였는지는 이 도구가 증명하지 않는다."""
     label = cfg.get("label") or kind
     role = cfg.get("role")
     origin = "footnote.%s" % kind
@@ -1078,7 +750,7 @@ def _resolve_footnote(kind, cfg, info, registry, *, applications=None,
         return None, "출처 id(source_id) 필요"
     try:
         # id는 정규화하지 않는다 — 대소문자·공백 변형은 미등록 id로 거부.
-        src = pa.resolve_series(sid, registry, student_sources)
+        src = pa.resolve_series(sid, registry)
         pa.check_role(src, role, origin=origin)
         if "base_year" not in info:
             raise ValueError(
@@ -1094,40 +766,27 @@ def _resolve_footnote(kind, cfg, info, registry, *, applications=None,
             src, info.get("observation"), info.get("rate"), origin=origin)
     except ValueError as e:
         return None, str(e)
-    aby = info.get("application_base_year")
-    if aby is not None and (type(aby) is not int or isinstance(aby, bool)):
-        return None, "적용 기초연도는 정수 필요"
     r = res["rate"]
     obs = res["observation"]
     interval = res["interval_years"]
-    basis = ("기준연도 %d" % base_year) if base_year is not None \
+    basis = ("지수 기준연도 %d" % base_year) if base_year is not None \
         else "지수 기준연도 해당 없음"
-    err = receipt_error
-    try:
-        if err:
-            raise ValueError(err)
-        _check_application(info, src, res, role, applications, registry,
-                           student_sources, view_for, application_proof)
-    except (ValueError, KeyError, TypeError, AttributeError, OverflowError) as e:
-        err = str(e)
-    status_text = "참고값(워크북 적용 확인 불가)" if err else "적용"
     parts = ["출처: %s %s %s [%s]" % (src.get("agency") or "",
              src.get("statistic_name") or "", src.get("item_name") or "", sid),
              basis, "관측기간 %d~%d년" % (obs["start_year"], obs["end_year"]),
-             "관측 연평균 변화율 %.4f%%" % (r * 100),
              "산식 r=(끝값/시작값)^(1/%d)-1" % interval]
-    if aby is not None:
-        parts.append("적용 기초연도 %d년" % aby)
-    line = "* %s %.4f%% %s (%s)" % (label, r * 100, status_text, ", ".join(parts))
-    return line, err
+    line = ("* %s r=%.4f%%는 참고값이다 (%s). 이 값이 위 표의 계산에 "
+            "쓰였는지는 통합문서에서 따로 확인해야 한다."
+            % (label, r * 100, ", ".join(parts)))
+    return line, None
 
 
-def _footnote_lines(table, footnotes, warnings, registry, table_map, **application_context):
+def _footnote_lines(table, footnotes, warnings, registry, table_map):
     """각주 입력 → '* ...' 줄 목록. 입력 없으면 확인 불가 경고만.
 
-    각주는 구조화 객체(가격 가정/영수증 형태)만 받는다. 자유 문자열과
+    각주는 구조화 객체(가격 가정 형태)만 받는다. 자유 문자열과
     임의 문구 필드는 거부하고, r은 레지스트리 관측 수열로 다시 계산해
-    출력한다."""
+    출력한다. 출력 각주는 항상 참고값이다."""
     kinds = table.get("footnotes", [])
     if not kinds:
         return []
@@ -1150,11 +809,7 @@ def _footnote_lines(table, footnotes, warnings, registry, table_map, **applicati
             line, err = None, "가격 레지스트리를 읽을 수 없음"
         else:
             line, err = _resolve_footnote(
-                kind, kind_cfg.get(kind) or {}, info, registry, **application_context)
-        if line is not None and err:
-            warnings.append({"table": table.get("id"), "cell": None,
-                             "row_label": "", "reason": "footnote_unverified",
-                             "detail": "%s: %s" % (kind, err)})
+                kind, kind_cfg.get(kind) or {}, info, registry)
         if line is None:
             warnings.append({
                 "table": table.get("id"),
@@ -1271,7 +926,7 @@ def _plan_years(table_map, view_for):
 
 
 def generate(workbook_path, *, major_id, footnotes=None, map_path=None,
-             registry=None, application_receipt=None):
+             registry=None):
     """통합문서 경로 → {'markdown', 'emitted', 'skipped', 'warnings',
     'missing_required', 'layout'}.
 
@@ -1280,8 +935,7 @@ def generate(workbook_path, *, major_id, footnotes=None, map_path=None,
     선언하면 학과 제공 템플릿 레이아웃과 다를 때
     ``status='unsupported_layout'``으로 조기 반환한다. ``registry``는
     각주 검증용 가격 수열 레지스트리 주입 지점(생략 시 번들 JSON).
-    ``application_receipt``는 기존 W-A manifest 또는 W-B patch receipt
-    객체다. 재계산으로 XLSX SHA가 바뀌면 원 영수증을 자동 승계하지 않는다."""
+    상승률 각주는 항상 참고값으로 출력한다."""
     if major_id != MAJOR_ID:
         raise ValueError("unsupported_major: %r" % (major_id,))
     table_map = load_table_map(map_path)
@@ -1342,19 +996,6 @@ def generate(workbook_path, *, major_id, footnotes=None, map_path=None,
             "reason": "registry_unavailable",
             "detail": registry_err})
 
-    applications, student_sources, receipt_error = {}, {}, None
-    try:
-        applications, student_sources = _receipt_rates(
-            application_receipt, hashlib.sha256(path.read_bytes()).hexdigest(),
-            # This extractor supports department workbooks only. A caller's
-            # display map (including a renamed layout id) is not provenance.
-            layout_id="knuaf_dept_workbook_v1")
-    except (ValueError, KeyError, TypeError, AttributeError) as e:
-        receipt_error = str(e)
-    application_context = {"applications": applications,
-                           "student_sources": student_sources,
-                           "receipt_error": receipt_error, "view_for": view_for,
-                           "application_proof": table_map.get("application_proof", {})}
     plan_years, plan_error = _plan_years(table_map, view_for)
     invalid_year_groups = []
 
@@ -1372,7 +1013,11 @@ def generate(workbook_path, *, major_id, footnotes=None, map_path=None,
         md.extend(_render_markdown_table(headers, rows, col_letters))
         md.append(
             table_map["source_credit_template"].format(sheet=sheet_title))
-        md.extend(notes)
+        # 원문 상승률 주석은 출처·관측 검증 없이 복사하지 않는다.
+        # 해당 상승률은 구조화 입력을 검증한 참고값 각주로만 안내한다.
+        rate_note_pattern = table_map.get("workbook_rate_note_pattern")
+        md.extend(note for note in notes if not rate_note_pattern
+                  or not re.search(rate_note_pattern, _norm(note)))
         md.extend(foot_lines)
         md.append("")
         emitted.append({"table": tid, "title": title,
@@ -1396,7 +1041,7 @@ def generate(workbook_path, *, major_id, footnotes=None, map_path=None,
                 continue
             extract = table["extract"]
             foot_lines = _footnote_lines(table, footnotes, warnings,
-                                         registry, table_map, **application_context)
+                                         registry, table_map)
             kind = extract["kind"]
             if kind == "year_blocks":
                 regex = re.compile(extract["anchor_regex"])
@@ -1535,8 +1180,6 @@ def run(base, xlsx, *, major_id=None, input_path=None, out="build/finance-tables
     if out_path.exists():
         raise ValueError("기존 산출물을 덮어쓰지 않음: 새 경로 지정")
     footnotes = None
-    application_receipt = None
-    receipt_warning = None
     if input_path:
         src = (base_path / input_path).resolve()
         if not src.is_relative_to(base_path):
@@ -1544,23 +1187,8 @@ def run(base, xlsx, *, major_id=None, input_path=None, out="build/finance-tables
                              + str(input_path))
         footnotes = json.loads(src.read_text(encoding="utf-8"))
         if isinstance(footnotes, dict) and "footnotes" in footnotes:
-            receipt_ref = footnotes.get("application_receipt")
-            if receipt_ref is not None:
-                if not isinstance(receipt_ref, str):
-                    raise ValueError("application_receipt는 작업 폴더 안 영수증 경로 필요")
-                receipt_path = (base_path / receipt_ref).resolve()
-                if not receipt_path.is_relative_to(base_path):
-                    raise ValueError("작업 폴더 밖 영수증 경로는 허용하지 않음")
-                try:
-                    application_receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
-                except (OSError, ValueError) as e:
-                    receipt_warning = "적용 영수증 읽기 실패: %s" % e
             footnotes = footnotes["footnotes"]
-    result = generate(xlsx, major_id=auth.major_id, footnotes=footnotes,
-                      application_receipt=application_receipt)
-    if receipt_warning:
-        result["warnings"].append({"table": None, "cell": None, "row_label": "",
-                                   "reason": "receipt_unavailable", "detail": receipt_warning})
+    result = generate(xlsx, major_id=auth.major_id, footnotes=footnotes)
     if result.get("status") == "unsupported_layout":
         failed = result.get("failed_signatures") or []
         return {

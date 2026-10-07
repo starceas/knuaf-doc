@@ -702,21 +702,15 @@
   },
   {
    "id": "V2-04",
-   "note": "I2: actual FIX-A2/B2/C2b regression symbols; V3 independent acceptance remains pending.",
+   "note": "I2: actual FIX-A2/B2/C2b regression symbols; V3 independent acceptance remains pending. | I5: Q-DESIGN-1 A로 기능 폐지(superseded); 참고값 문구·출처/기간/산식·적용 주장 부재 회귀로 재매핑. V2-06 산식 문자열 보존 검사는 유지. V6 독립 판정은 별도.",
    "scope": "full_pytest_skill_suite",
-   "status": "implemented_pending_independent_review",
+   "status": "superseded",
    "tests": [
-    "skills.knuaf-doc.tests.test_finance_tables.TestRun.test_receipt_path_loading_and_missing_receipt",
-    "skills.knuaf-doc.tests.test_finance_tables.TestV2Receipt.test_no_receipt_cannot_claim_applied",
-    "skills.knuaf-doc.tests.test_finance_tables.TestV2Receipt.test_sha_bound_patch_receipt",
-    "skills.knuaf-doc.tests.test_finance_tables.TestV2Receipt.test_applied_formula_full_string",
-    "skills.knuaf-doc.tests.test_finance_tables.TestV2Receipt.test_malformed_and_structural_only_receipts_downgrade",
-    "skills.knuaf-doc.tests.test_finance_tables.TestV2Receipt.test_receipt_mismatch_variants",
-    "skills.knuaf-doc.tests.test_finance_tables.TestV2Receipt.test_manifest_and_tampered_endpoints",
-    "skills.knuaf-doc.tests.test_finance_tables.TestV2Receipt.test_wage_cache_and_both_sexes",
-    "skills.knuaf-doc.tests.test_finance_tables.TestV2Receipt.test_real_patch_producer_receipt_and_sales_dimensions",
-    "skills.knuaf-doc.tests.test_finance_tables.TestV2Receipt.test_sales_requires_crop",
-    "skills.knuaf-doc.tests.test_finance_tables.TestV2Receipt.test_complete_formula_strings"
+    "skills.knuaf-doc.tests.test_finance_tables.TestFootnotes.test_reference_footnote_full_string",
+    "skills.knuaf-doc.tests.test_finance_tables.TestFootnotes.test_sales_requires_crop",
+    "skills.knuaf-doc.tests.test_finance_tables.TestFootnotes.test_sales_crop_and_dimensions",
+    "skills.knuaf-doc.tests.test_finance_tables.TestFootnotes.test_unit_and_unconfirmed_observations_rejected",
+    "skills.knuaf-doc.tests.test_finance_tables.TestFootnotes.test_workbook_rate_notes_use_validated_reference"
    ]
   },
   {
@@ -734,31 +728,24 @@
   },
   {
    "id": "V2-06",
-   "note": "I2: actual FIX-A2/B2/C2b regression symbols; V3 independent acceptance remains pending.",
+   "note": "I2: actual FIX-A2/B2/C2b regression symbols; V3 independent acceptance remains pending. | I5: Q-DESIGN-1 A로 기능 폐지(superseded); 참고값 문구·출처/기간/산식·적용 주장 부재 회귀로 재매핑. V2-06 산식 문자열 보존 검사는 유지. V6 독립 판정은 별도.",
    "scope": "full_pytest_skill_suite",
-   "status": "implemented_pending_independent_review",
+   "status": "superseded",
    "tests": [
-    "skills.knuaf-doc.tests.test_finance_tables.TestV2Receipt.test_applied_formula_full_string",
-    "skills.knuaf-doc.tests.test_finance_tables.TestV2Receipt.test_complete_formula_strings"
+    "skills.knuaf-doc.tests.test_finance_tables.TestFootnotes.test_reference_footnote_full_string",
+    "skills.knuaf-doc.tests.test_finance_tables.TestFootnotes.test_complete_formula_strings"
    ]
   },
   {
    "id": "V3-01",
-   "note": "I3: actual FIX-B3/C3 regression symbols; V4 independent acceptance remains pending.",
+   "note": "I3: actual FIX-B3/C3 regression symbols; V4 independent acceptance remains pending. | I5: Q-DESIGN-1 A로 기능 폐지(superseded); 참고값 문구·출처/기간/산식·적용 주장 부재 회귀로 재매핑. V2-06 산식 문자열 보존 검사는 유지. V6 독립 판정은 별도.",
    "scope": "full_pytest_skill_suite",
-   "status": "implemented_pending_independent_review",
+   "status": "superseded",
    "tests": [
-    "skills.knuaf-doc.tests.test_finance_tables.TestV3ApplicationProof.test_matching_hash_without_workbook_rate_evidence_is_reference",
-    "skills.knuaf-doc.tests.test_finance_tables.TestV3ApplicationProof.test_legacy_manifest_cannot_attest_department_workbook",
-    "skills.knuaf-doc.tests.test_finance_tables.TestV3ApplicationProof.test_either_sex_not_applied_or_missing_cache_downgrades_whole_wage",
-    "skills.knuaf-doc.tests.test_finance_tables.TestV3ApplicationProof.test_sales_metadata_without_workbook_view_is_reference",
-    "skills.knuaf-doc.tests.test_finance_tables.TestV3ApplicationProof.test_custom_map_layout_name_cannot_relabel_receipt_producer",
-    "skills.knuaf-doc.tests.test_finance_tables.TestV3ApplicationProof.test_general_rate_mismatch_missing_year_and_cache_contradiction",
-    "skills.knuaf-doc.tests.test_finance_tables.TestV3ApplicationProof.test_unreadable_general_chain_cannot_hide_behind_another_matching_item",
-    "skills.knuaf-doc.tests.test_finance_tables.TestV3ApplicationProof.test_general_zero_and_negative_rates_require_actual_matching_formula",
-    "skills.knuaf-doc.tests.test_finance_tables.TestV3ApplicationProof.test_manifest_wage_uses_both_caches_even_when_parsed_as_legacy",
-    "skills.knuaf-doc.tests.test_finance_tables.TestV3ApplicationProof.test_sales_actual_formula_all_years_and_receipt_plan_crop",
-    "skills.knuaf-doc.tests.test_finance_tables.TestV3ApplicationProof.test_shared_general_formulas_are_read_and_missing_base_is_unverified"
+    "skills.knuaf-doc.tests.test_finance_tables.TestFootnotes.test_reference_footnote_full_string",
+    "skills.knuaf-doc.tests.test_finance_tables.TestFootnotes.test_complete_formula_strings",
+    "skills.knuaf-doc.tests.test_finance_tables.TestFootnotes.test_negative_observed_rate_is_reference",
+    "skills.knuaf-doc.tests.test_finance_tables.TestFootnotes.test_workbook_rate_notes_use_validated_reference"
    ]
   },
   {
@@ -794,26 +781,23 @@
   },
   {
    "id": "V4-01",
-   "note": "I4: actual FIX-B4/C4 regression symbols; V5 independent acceptance remains pending.",
+   "note": "I4: actual FIX-B4/C4 regression symbols; V5 independent acceptance remains pending. | I5: Q-DESIGN-1 A로 기능 폐지(superseded); 참고값 문구·출처/기간/산식·적용 주장 부재 회귀로 재매핑. V2-06 산식 문자열 보존 검사는 유지. V6 독립 판정은 별도.",
    "scope": "full_pytest_skill_suite",
-   "status": "implemented_pending_independent_review",
+   "status": "superseded",
    "tests": [
-    "skills.knuaf-doc.tests.test_finance_tables.TestV4CompleteApplicationProof.test_deployment_map_covers_every_target_in_every_year",
-    "skills.knuaf-doc.tests.test_finance_tables.TestV4CompleteApplicationProof.test_missing_coverage_map_cannot_approve_subset",
-    "skills.knuaf-doc.tests.test_finance_tables.TestV4CompleteApplicationProof.test_base_reference_constant_and_missing_target_cannot_hide",
-    "skills.knuaf-doc.tests.test_finance_tables.TestV4CompleteApplicationProof.test_unknown_added_item_and_duplicate_label_downgrade",
-    "skills.knuaf-doc.tests.test_finance_tables.TestV4CompleteApplicationProof.test_required_target_missing_every_year_downgrades",
-    "skills.knuaf-doc.tests.test_finance_tables.TestV4CompleteApplicationProof.test_wage_matching_rate_caches_do_not_prove_partial_price_chains"
+    "skills.knuaf-doc.tests.test_finance_tables.TestFootnotes.test_reference_footnote_full_string",
+    "skills.knuaf-doc.tests.test_finance_tables.TestFootnotes.test_complete_formula_strings",
+    "skills.knuaf-doc.tests.test_finance_tables.TestFootnotes.test_workbook_rate_notes_use_validated_reference"
    ]
   },
   {
    "id": "V4-02",
-   "note": "I4: actual FIX-B4/C4 regression symbols; V5 independent acceptance remains pending.",
+   "note": "I4: actual FIX-B4/C4 regression symbols; V5 independent acceptance remains pending. | I5: Q-DESIGN-1 A로 기능 폐지(superseded); 참고값 문구·출처/기간/산식·적용 주장 부재 회귀로 재매핑. V2-06 산식 문자열 보존 검사는 유지. V6 독립 판정은 별도.",
    "scope": "full_pytest_skill_suite",
-   "status": "implemented_pending_independent_review",
+   "status": "superseded",
    "tests": [
-    "skills.knuaf-doc.tests.test_finance_tables.TestV4CompleteApplicationProof.test_receipt_gender_uses_producer_rule_for_both_columns",
-    "skills.knuaf-doc.tests.test_finance_tables.TestV4CompleteApplicationProof.test_receipt_gender_matches_actual_column_in_each_format"
+    "skills.knuaf-doc.tests.test_finance_tables.TestFootnotes.test_reference_footnote_full_string",
+    "skills.knuaf-doc.tests.test_finance_tables.TestFootnotes.test_complete_formula_strings"
    ]
   },
   {
@@ -828,6 +812,17 @@
     "tests.test_template_wage_link.WageLinkTests.test_v4_03_emitted_rate_literals_are_excel_stable",
     "tests.test_template_wage_link.WageLinkTests.test_v4_03_signed_sales_rates_preserve_calculation_and_idempotence",
     "tests.test_template_wage_link.WageLinkTests.test_v4_03_stale_long_repr_tokens_are_rewritten"
+   ]
+  },
+  {
+   "id": "V5-01",
+   "note": "I5: V5 처분에 따라 Q-DESIGN-1 A로 기능 폐지(superseded); 캐시 공백/금액 오류를 승인하는 적용 판정 자체를 제거하고 참고값 및 별도 확인 안내로 전환. V6 독립 판정은 별도.",
+   "scope": "full_pytest_skill_suite",
+   "status": "superseded",
+   "tests": [
+    "skills.knuaf-doc.tests.test_finance_tables.TestFootnotes.test_reference_footnote_full_string",
+    "skills.knuaf-doc.tests.test_finance_tables.TestFootnotes.test_complete_formula_strings",
+    "skills.knuaf-doc.tests.test_finance_tables.TestFootnotes.test_workbook_rate_notes_use_validated_reference"
    ]
   }
  ],

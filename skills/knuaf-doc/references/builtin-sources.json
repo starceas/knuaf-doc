@@ -453,8 +453,8 @@
       "artifacts": [
         {
           "relative_path": "references/excel-template.md",
-          "sha256": "156e2e40e981f5cf815a5b34d17cc62f6387ee7cc3d44b182d747e7d4ae698bc",
-          "bytes": 34949
+          "sha256": "092f186f20d7d1d6842a3b6a75604ff39a620c1d1265f4cc089ef59d38411064",
+          "bytes": 33926
         }
       ],
       "coverage": {
