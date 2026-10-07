@@ -119,6 +119,9 @@ description: 한국농수산대학교 창업논문·영농계획서와 동반 �
 - 출력 명령·형식별 한계·재무 양식: [outputs](references/outputs.md)
 - 특용·약용작물·생허브 가격 조사: [price-research-routes](references/price-research-routes.md) — 조사 전 읽고 위임 시 작목·상품 형태·거래 단계·기간·경로 전달. 옛 관측을 현재 시세로 쓰지 않는다.
 - 질문과 변경: [mid-work-questions](references/mid-work-questions.md)
+- 학부 졸업논문 눈높이·재무 지표 경계(모든 전공 공통 기본값): [thesis-level](references/thesis-level.md)
+- 특용작물전공 Ⅳ장 재무표 전개(특용작물 전용, 타 전공은 각 선배 플로우): [specialty-crops/finance-flow](references/specialty-crops/finance-flow.md)
+- 시각자료·사진 정책 및 촬영 자리 가이드: [figure-photo-policy](references/figure-photo-policy.md)
 - 장별 논증·실행성·수치 품질(작성 전·검토 때 읽음, 분량·키워드로 충족 금지): [exemplar-quality](references/exemplar-quality.md)
 - 서술 설계·문단 확장(길이·문단 수 목표 금지): [narrative-expansion](references/narrative-expansion.md)
 - 지침별 적용·누락 검사(선언·개수만으로 전체 준수라고 말하지 않음): [guideline-tracking](references/guideline-tracking.md)

@@ -2849,12 +2849,65 @@ def checks(root, p):
     def add(cid, target, reason, severity="error", status="fail"):
         out.append(result(cid, target, status, reason, p["revision"], severity))
 
+    # 평문 정책 정본 — 출처 종류·등급·AI 이미지 거부는 본문이 아니라
+    # 등록 레코드의 kind/grade를 본다. 정본 파일이 없거나 깨지면
+    # 조용히 통과하지 않고 blocked로 실패한다. 모든 전공·전공 미확인
+    # 입력에 공통 기본값을 적용하고 majors 재정의만 합친다.
+    plain_major = None
+    try:
+        import gg_document as _policy_doc
+
+        plain_policy = _policy_doc.load_plain_policy()
+        plain_major = _policy_doc.project_major(p)
+        plain_policy = _policy_doc.policy_for_major(plain_policy, plain_major)
+    except (ImportError, OSError, ValueError, KeyError, TypeError) as e:
+        plain_policy = None
+        add(
+            "plain_policy",
+            "plain-thesis-policy.json",
+            "평문 논문 정책 정본 없음/손상: " + str(e)[:200],
+            status="blocked",
+        )
     for sid, s in p["sources"].items():
         try:
             if digest(local(root, s["path"]).read_bytes()) != s["hash"]:
                 add("source_hash", sid, "원자료 변경: 재검토 필요")
         except (OSError, ValueError):
             add("source_missing", sid, "원자료 읽기 실패", status="blocked")
+        if plain_policy is not None:
+            kind = s.get("kind")
+            source_type = s.get("source_type")
+            external_type = isinstance(source_type, str) and (
+                source_type.startswith("external_")
+                or source_type in plain_policy["sources"]["forbidden_kinds"]
+            )
+            author_interview = kind == "interview" and (
+                source_type == "author_survey"
+                or s.get("source") == "작성자 직접 조사"
+            ) and not external_type
+            if kind in plain_policy["sources"]["forbidden_kinds"] and not author_interview:
+                add(
+                    "source_kind_forbidden",
+                    sid,
+                    "비공식 출처 종류는 사용 불가: " + str(kind),
+                )
+            elif kind in plain_policy["images"]["ai_kinds"]:
+                add(
+                    "image_ai_generated",
+                    sid,
+                    "AI 생성 이미지 산출물 금지: " + str(kind),
+                )
+            grade = s.get("grade")
+            forbidden_grades = plain_policy["sources"]["forbidden_grades"]
+            if grade in forbidden_grades or str(grade) in {
+                str(g) for g in forbidden_grades
+            }:
+                add(
+                    "source_grade_forbidden",
+                    sid,
+                    "3·4등급 출처는 더 이상 허용하지 않음: grade "
+                    + str(grade),
+                )
     for fid, f in p["facts"].items():
         for ref in f["source_refs"]:
             s = p["sources"].get(ref["id"])
@@ -3173,9 +3226,19 @@ def checks(root, p):
             }
         else:
             hint_ids = set()
-        for cid, reason in gg_document.check(merged(root, p), root):
-            add(cid, "body", reason,
-                severity="warning" if cid in hint_ids else "error")
+        warning_ids = set(hint_ids) | set(
+            getattr(gg_document, "WARNING_CHECKS", ())
+        )
+        for cid, reason in gg_document.check(
+            merged(root, p), root, major_id=plain_major
+        ):
+            if cid == "plain_policy_file":
+                continue  # 정책 파일 오류는 위 출처 블록이 한 번 낸다
+            if cid in gg_document.INFO_CHECKS:
+                add(cid, "body", reason, severity="info", status="pass")
+            else:
+                add(cid, "body", reason,
+                    severity="warning" if cid in warning_ids else "error")
         lineage = output_lineage(p)
         for oid, verdict in lineage.items():
             if verdict["state"] == "invalid":

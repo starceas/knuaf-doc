@@ -119,12 +119,10 @@ class RealTreeTests(ContractCase):
                              f"errors: {report['errors']!r}")
             rc = report["runtime_changes"]
             self.assertEqual(rc["declared_count"], rc["verified"])
-            # P27 adds the diagnosis-decision, kordoc 4.17.1 and auto-update
-            # changes (two new runtime reference files, the install manifest and the
-            # legacy release hash reference)
-            # on the P26 tree.
-            self.assertEqual(150, rc["verified"])
-            self.assertEqual(110, rc["new_count"])
+            # P28 adds the plain-thesis policy gate (all majors by default),
+            # 이유림 exemplar registration and 문서 정본 changes on the P27 tree.
+            self.assertEqual(160, rc["verified"])
+            self.assertEqual(114, rc["new_count"])
         else:
             self.assertNotEqual("ok", report["status"])
             self.assertIn("declared_missing", _codes(report))
@@ -140,17 +138,17 @@ class RealTreeTests(ContractCase):
         self.assertEqual(
             _sha(REPO_ROOT / "tools" / "runtime-changes.json"),
             link["spec_sha256"])
-        self.assertEqual("P27", link["stage"])
+        self.assertEqual("P28", link["stage"])
         self.assertEqual("29abec0ec95369de7ae9e22207349d574f1f46b7",
                          link["baseline_main"])
-        # P27's parent is the accepted P26 tree (main 335b3d7, 226 files).
-        self.assertEqual(150, link["change_count"])
-        self.assertEqual(110, link["new_count"])
-        self.assertEqual(112, link["approved_new_files"])
-        self.assertEqual("P26", link["parent_candidate"]["stage"])
-        self.assertEqual(226, link["parent_candidate"]["file_count"])
+        # P28's parent is the accepted P27 tree (main d08e98e, 233 files).
+        self.assertEqual(160, link["change_count"])
+        self.assertEqual(114, link["new_count"])
+        self.assertEqual(116, link["approved_new_files"])
+        self.assertEqual("P27", link["parent_candidate"]["stage"])
+        self.assertEqual(233, link["parent_candidate"]["file_count"])
         self.assertEqual(
-            "53ee3e0b06d02e2824a615c54772f50fa1e4a1b037c62c4cb120db6324c61fd4",
+            "78383df4921946e8f37a7a8ae354f08667ff4317d2285c0317a535cbb9e97cfb",
             link["parent_candidate"]["tree_sha256"])
         # The ancestor list ends at the parent; the current stage is not
         # one of its own ancestors.
@@ -159,7 +157,7 @@ class RealTreeTests(ContractCase):
             {k: link["parent_candidate"][k]
              for k in ("stage", "file_count", "tree_sha256")},
             {k: lineage[-1][k] for k in ("stage", "file_count", "tree_sha256")})
-        self.assertNotIn("P27", [row["stage"] for row in lineage])
+        self.assertNotIn("P28", [row["stage"] for row in lineage])
         # D5 (P15) pinned its own parent, the P14 tree; keep that pin on
         # the P14 ancestor row now that P15 is itself an ancestor.
         d5 = json.loads((REPO_ROOT / "docs/validation/d5-rda-useful-life.json")
@@ -185,11 +183,11 @@ class RealTreeTests(ContractCase):
                 # Earlier stage labels retained; P11 first-changes the
                 # common interview-guide docs.
                 self.assertIn(meta["first_changed"],
-                              {"P1", "P2", "P3", "P5", "P7", "P9", "P10", "P11", "P12", "P13", "P15", "P25", "P26", "P27"})
+                              {"P1", "P2", "P3", "P5", "P7", "P9", "P10", "P11", "P12", "P13", "P15", "P25", "P26", "P27", "P28"})
                 self.assertIn(meta["owner"],
                               {"A", "B", "C", "P4", "D", "P6", "P7", "P8",
                                "P9", "P10", "P11", "P12", "P13", "P14", "P15",
-                               "P16", "P17", "P18", "P20", "P21", "P22", "P23", "P24", "P25", "P26", "P27"})
+                               "P16", "P17", "P18", "P20", "P21", "P22", "P23", "P24", "P25", "P26", "P27", "P28"})
             else:
                 # New files require the pre-declared allowlist.
                 self.assertIn(name, approved)
@@ -197,12 +195,12 @@ class RealTreeTests(ContractCase):
                 self.assertIn(meta["first_changed"],
                               {"P2", "P3", "P4", "P5", "P6", "P8", "P9",
                                "P10", "P11", "P12", "P13", "P14", "P15",
-                               "P17", "P18", "P19", "P20", "P21", "P22", "P25", "P26", "P27"})
+                               "P17", "P18", "P19", "P20", "P21", "P22", "P25", "P26", "P27", "P28"})
                 self.assertIn(meta["owner"],
                               {"A", "B", "C", "S", "P4", "P5", "P6", "P7",
                                "P8", "P9", "P10", "P11", "P12", "P13",
                                "P14", "P15", "P16", "P17", "P18", "P19",
-                               "P20", "P21", "P22", "P23", "P24", "P25", "P26", "P27"})
+                               "P20", "P21", "P22", "P23", "P24", "P25", "P26", "P27", "P28"})
 
 
 class SyntheticLineageTests(ContractCase):

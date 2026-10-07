@@ -57,6 +57,10 @@ SOURCE_SHA = {
         "67c1eb5192f445d914d329748f1e3275bcb3ce5d4757c9d1ca9a6c3caccb4720",
     "kim-wonseop-exemplar-hwp":
         "906ad6ff04760f30feefad938e1b40a8dcbf7d9f62704784cdfe6cfe5504e13e",
+    "lee-yurim-exemplar-hwp":
+        "03a39a9e3eb9ef22e61de98b6c0a97aab94a14efe16c6cb82e0dc4c81ea26513",
+    "lee-yurim-exemplar-pdf":
+        "861ea3bc89cb70f6e3cf9b06c1e9e758ef6dec05119ac2ea63c1b3c351cf8e29",
     "seo-minseo-finance-xlsx":
         "457249255929275b3ee55383bdc36897274f08933af3536866a652b29346cd3a",
     "specialty-grad-thesis-finance-xlsx":
@@ -928,6 +932,77 @@ class TestI01Matrix(unittest.TestCase):
             self.assertEqual(json.loads(out.read_text(encoding="utf-8")),
                              matrix)
         print(json.dumps(matrix, ensure_ascii=False, indent=1))
+
+
+class TestYurimExemplarRegistration(unittest.TestCase):
+    """The lee-yurim (산약) entries are registered as the primary
+    narrative benchmark but grant NO reuse: identification-only shape
+    (no runtime artifact, coverage or lineage) so a yurim hash never
+    inherits the kim entry's verified key (same boundary as
+    test_i01_9_shared_artifact_no_inheritance)."""
+
+    YURIM_IDS = ("lee-yurim-exemplar-hwp", "lee-yurim-exemplar-pdf")
+    YURIM_KEY = {"kind": "delimited",
+                 "value": "lee-yurim-exemplar:finance-table-structure"}
+
+    def setUp(self):
+        self.reg = registry()
+        self.entries = {e["source_id"]: e
+                        for e in self.reg.document["entries"]}
+
+    def test_entries_registered_identification_only(self):
+        for sid in self.YURIM_IDS:
+            e = self.entries[sid]
+            self.assertEqual(e["role"], "narrative_exemplar", sid)
+            self.assertEqual(e["class"], "specialty_exemplar", sid)
+            self.assertIsNone(e["runtime"], sid)
+            self.assertFalse(e["runtime_present"], sid)
+            self.assertEqual(e["artifacts"], [], sid)
+            self.assertFalse(e["coverage"], sid)
+            self.assertEqual(e["lineage"], [], sid)
+
+    def test_yurim_hashes_classify_to_own_entries(self):
+        for sid in self.YURIM_IDS:
+            hits = gg_reuse.classify_source(self.reg, SOURCE_SHA[sid])
+            self.assertEqual([h["source_id"] for h in hits], [sid], sid)
+
+    def test_no_inheritance_of_kim_verification(self):
+        # The verified kim key requested on a yurim hash stays
+        # unsatisfied — coverage and lineage are per-entry claims.
+        for sid in self.YURIM_IDS:
+            v = gg_reuse.resolve_reuse(
+                SOURCE_SHA[sid],
+                {"kind": "narrative_reference", "keys": [KIM_KEY]},
+                context=ctx(self.reg))
+            self.assertNotEqual(v["status"], "reuse_ready", sid)
+            self.assertEqual(v["selected_entry"], sid, sid)
+            self.assertIn("coverage_incomplete", v["reasons"], sid)
+            self.assertIn("lineage_missing", v["reasons"], sid)
+            self.assertIn(KIM_KEY, v["unsatisfied"], sid)
+
+    def test_yurim_scoped_key_also_not_ready(self):
+        # Even a structure-pattern key scoped to the yurim source has
+        # no grant — the registration is identification-only.
+        for sid in self.YURIM_IDS:
+            v = gg_reuse.resolve_reuse(
+                SOURCE_SHA[sid],
+                {"kind": "narrative_reference",
+                 "keys": [self.YURIM_KEY]},
+                context=ctx(self.reg))
+            self.assertNotEqual(v["status"], "reuse_ready", sid)
+            self.assertIn("coverage_incomplete", v["reasons"], sid)
+
+    def test_kim_baseline_still_reuse_ready(self):
+        # The benchmark demotion is documentary: the kim record is
+        # source identity, role, coverage and lineage stay intact. P28
+        # refreshes the deployed artifact fingerprint; the verified key
+        # still resolves.
+        v = gg_reuse.resolve_reuse(
+            SOURCE_SHA["kim-wonseop-exemplar-pdf"],
+            {"kind": "narrative_reference", "keys": [KIM_KEY]},
+            context=ctx(self.reg))
+        self.assertEqual(v["status"], "reuse_ready")
+        self.assertEqual(v["satisfied"], [KIM_KEY])
 
 
 class TestCommonWorkbooks(unittest.TestCase):
