@@ -1,0 +1,91 @@
+{
+  "schema": "gg-template-price-link-spec/v1",
+  "layout": "x01",
+  "wage_sheet": "8. 노무비계획",
+  "wage_rows": {
+    "8": {
+      "base": "Y34",
+      "rate": "AC38"
+    },
+    "11": {
+      "base": "Y34",
+      "rate": "AC38"
+    },
+    "12": {
+      "base": "Z34",
+      "rate": "AD38"
+    }
+  },
+  "year_columns": [
+    "F",
+    "I",
+    "L",
+    "O",
+    "R"
+  ],
+  "observation_range": "X26:Z31",
+  "sales_sheet": " 5. 판매계획",
+  "sales_rows": {
+    "38": "O7",
+    "39": "O8",
+    "40": "O9",
+    "41": "O11",
+    "42": "O12",
+    "43": "O13"
+  },
+  "protected_sheets": [
+    "4. 원리금상환계획",
+    "10. 감가상각비계획 ",
+    "11. 생산원가계획",
+    "14. 현금흐름계획",
+    "15.추정소득분석"
+  ],
+  "preserved_findings": [
+    "W-023",
+    "XR-11",
+    "XR-02",
+    "XR-03",
+    "XR-09",
+    "XR-18",
+    "XR-19",
+    "XR-20"
+  ],
+  "observation_contract": {
+    "source_registry": "official-price-series.json or explicit price_sources",
+    "allowed_role": "wage",
+    "output_unit": "원/일",
+    "base_year": "registered index basis; null for nominal currency series",
+    "required_metadata": [
+      "statistic_id",
+      "unit",
+      "base_year",
+      "observation_years",
+      "application_base_year"
+    ],
+    "hourly_conversion": {
+      "from": "원/시간",
+      "to": "원/일",
+      "required": [
+        "hours_per_day",
+        "evidence_ref"
+      ],
+      "default_hours_per_day": null
+    },
+    "forbidden_daily_sources": [
+      "sales price",
+      "index",
+      "hourly wage without explicit conversion"
+    ]
+  },
+  "rate_contract": {
+    "validator": "gg_price_assumptions public API",
+    "student_registration": "assumptions.price_sources",
+    "observed_values": "must match registered observations; cannot overwrite bundled observations",
+    "roles": {
+      "wage_male": "wage",
+      "wage_female": "wage",
+      "sales": "sales",
+      "general": "general"
+    }
+  }
+}

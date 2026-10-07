@@ -1,0 +1,1313 @@
+{
+ "schema": "knuaf-finance-table-map/v1",
+ "major_id": "specialty_crops",
+ "note": "특용작물전공 전용 Ⅳ장 재무표 전개 지도. 앵커·머리글·정지 표식은 셀 텍스트의 모든 공백(줄바꿈 포함)을 제거한 정규화 문자열과 비교한다. 연도는 통합문서에 기재된 계획연도(Y~Y+4)를 그대로 읽는다. 좌표는 학과 양식 버전마다 다르므로 라벨/앵커로 블록을 찾는다. 비율 표현은 행별 단위 계약(row_units: percent_value=셀이 이미 백분율값, ratio=셀이 비율)을 따르며 값 크기로 단위를 추정하지 않는다. 이름 있는 데이터 행의 값 열이 전부 비면 확인 불가로 보존하고, optional_when_blank에 든 행만 생략한다. optional 표만 표 단위 생략이 허용된다.",
+ "chapter": "Ⅳ. 재무계획",
+ "missing_value": "확인 불가",
+ "source_credit_template": "출처 : 작성자 산출(학과 양식 통합문서 '{sheet}')",
+ "lead_template": "{title}{josa} 표 {no}에 나타내었다.",
+ "footnote_kinds": {
+  "general_price": {
+   "label": "일반물가 상승률",
+   "role": "general"
+  },
+  "wage": {
+   "label": "임금 상승률",
+   "role": "wage"
+  },
+  "selling_price": {
+   "label": "판매가 상승률",
+   "role": "sales"
+  }
+ },
+ "footnote_input_contract": "각주는 구조화 객체만 받는다: {source_id, base_year, observation:{start_year,end_year}?, rate?(검산용), application_base_year?} 또는 {status:'not_applied', reason}. 자유 문자열·note·source_name 등 임의 문구 필드는 거부한다. r은 항상 레지스트리 관측 수열의 CAGR 계산값만 출력한다.",
+ "layout": {
+  "id": "knuaf_dept_workbook_v1",
+  "description": "학과 제공 통합문서 레이아웃 지문. 모든 signature는 필수다: 시트가 존재하고 anchor 열의 max_row 이내에 pattern(공백 제거 정규화 텍스트 대상 정규식)이 보여야 지원 레이아웃이다. 하나라도 실패하면 미지원 레이아웃으로 보류하고 실패한 지문을 sheet·pattern·desc로 사용자에게 보인다. 지문의 강도 기준은 '추출기(extract 앵커/머리글)가 그 시트의 표를 실제로 찾는 데 필요한 최소 구조 증거'다 — 추출이 견디는 라벨 서식 변형(예: 연도 블록의 '가. ' 접두 유무)을 지문이 추가로 요구하면 안 된다.",
+  "signatures": [
+   {
+    "sheet": "1. 기초재무상태조사",
+    "col": "B",
+    "max_row": 15,
+    "pattern": "^가\\.자산",
+    "desc": "'가. 자산' 블록 머리"
+   },
+   {
+    "sheet": "4. 원리금상환계획",
+    "col": "B",
+    "max_row": 15,
+    "pattern": "상환계획종합",
+    "desc": "'가. 상환계획 종합' 블록 머리"
+   },
+   {
+    "sheet": "7. 영농자재소요계획",
+    "col": "B",
+    "max_row": 15,
+    "pattern": "^적용기준",
+    "desc": "'적용기준' 머리 행"
+   },
+   {
+    "sheet": "8. 노무비계획",
+    "col": "B",
+    "max_row": 15,
+    "pattern": "노동력소요",
+    "desc": "'가. 노동력 소요 및 노무비 계획' 블록 머리"
+   },
+   {
+    "sheet": "10. 감가상각비계획",
+    "col": "B",
+    "max_row": 15,
+    "pattern": "^(?:[가-힣]\\.)?\\d{4}년",
+    "desc": "연도 블록 앵커('가. 2026년' 또는 '2026년' 형식)"
+   },
+   {
+    "sheet": "11. 생산원가계획",
+    "col": "B",
+    "max_row": 15,
+    "pattern": "^과목$",
+    "desc": "'과목' 머리 행"
+   },
+   {
+    "sheet": "13. 추정대차대조표",
+    "col": "B",
+    "max_row": 15,
+    "pattern": "^과목$",
+    "desc": "'과목' 머리 행"
+   },
+   {
+    "sheet": "14. 현금흐름계획",
+    "col": "B",
+    "max_row": 15,
+    "pattern": "^구분$",
+    "desc": "'구분' 머리 행"
+   },
+   {
+    "sheet": "15.추정소득분석",
+    "col": "B",
+    "max_row": 15,
+    "pattern": "^비목별",
+    "desc": "'비목별' 머리 행"
+   }
+  ]
+ },
+ "sheet_name_normalization": "시트 이름 비교 시 공백·마침표를 제거한다",
+ "sections": [
+  {
+   "id": "1",
+   "heading": "1. 자산조사",
+   "tables": [
+    {
+     "id": "asset_land",
+     "title": "토지 보유 현황",
+     "sheet": "1. 기초재무상태조사",
+     "unit": "천원",
+     "optional": true,
+     "extract": {
+      "kind": "block",
+      "anchor": "(1)토지",
+      "anchor_col": "B",
+      "header_offsets": [
+       2
+      ],
+      "data_offset": 3,
+      "stop_before": [
+       "(2)"
+      ],
+      "cols": [
+       "B",
+       "C",
+       "D",
+       "E",
+       "F",
+       "H"
+      ],
+      "value_cols": [
+       "D",
+       "E",
+       "F"
+      ],
+      "col_formats": {
+       "D": "number",
+       "E": "int_comma",
+       "F": "text"
+      }
+     }
+    },
+    {
+     "id": "asset_building",
+     "title": "건물 및 구축물 보유 현황",
+     "sheet": "1. 기초재무상태조사",
+     "unit": "천원",
+     "optional": true,
+     "extract": {
+      "kind": "block",
+      "anchor": "(2)건물",
+      "anchor_col": "B",
+      "header_offsets": [
+       2
+      ],
+      "data_offset": 3,
+      "stop_before": [
+       "(3)"
+      ],
+      "cols": [
+       "B",
+       "C",
+       "D",
+       "E",
+       "F",
+       "G",
+       "H"
+      ],
+      "value_cols": [
+       "D",
+       "E",
+       "F",
+       "G"
+      ],
+      "col_formats": {
+       "D": "number",
+       "E": "int_comma",
+       "F": "number",
+       "G": "text"
+      }
+     }
+    },
+    {
+     "id": "asset_plants",
+     "title": "대식물 보유 현황",
+     "sheet": "1. 기초재무상태조사",
+     "unit": "천원",
+     "optional": true,
+     "extract": {
+      "kind": "block",
+      "anchor": "(3)대식물",
+      "anchor_col": "B",
+      "header_offsets": [
+       2
+      ],
+      "data_offset": 3,
+      "stop_before": [
+       "(4)"
+      ],
+      "cols": [
+       "B",
+       "C",
+       "D",
+       "E",
+       "F",
+       "G",
+       "H"
+      ],
+      "value_cols": [
+       "D",
+       "E",
+       "F",
+       "G"
+      ],
+      "col_formats": {
+       "D": "number",
+       "E": "int_comma",
+       "F": "number",
+       "G": "text"
+      }
+     }
+    },
+    {
+     "id": "asset_animals",
+     "title": "대동물 보유 현황",
+     "sheet": "1. 기초재무상태조사",
+     "unit": "천원",
+     "optional": true,
+     "extract": {
+      "kind": "block",
+      "anchor": "(4)대동물",
+      "anchor_col": "B",
+      "header_offsets": [
+       2
+      ],
+      "data_offset": 3,
+      "stop_before": [
+       "(5)"
+      ],
+      "cols": [
+       "B",
+       "C",
+       "D",
+       "E",
+       "F",
+       "G",
+       "H"
+      ],
+      "value_cols": [
+       "D",
+       "E",
+       "F",
+       "G",
+       "H"
+      ],
+      "col_formats": {
+       "E": "number",
+       "F": "number",
+       "G": "int_comma",
+       "H": "int_comma"
+      }
+     }
+    },
+    {
+     "id": "asset_machines",
+     "title": "농기계 및 차량운반구 보유 현황",
+     "sheet": "1. 기초재무상태조사",
+     "unit": "천원",
+     "optional": true,
+     "extract": {
+      "kind": "block",
+      "anchor": "(5)대농기계",
+      "anchor_col": "B",
+      "header_offsets": [
+       2
+      ],
+      "data_offset": 3,
+      "stop_before": [
+       "(6)"
+      ],
+      "cols": [
+       "B",
+       "C",
+       "D",
+       "E",
+       "F",
+       "G",
+       "H"
+      ],
+      "value_cols": [
+       "D",
+       "E",
+       "F",
+       "G"
+      ],
+      "col_formats": {
+       "D": "number",
+       "E": "int_comma",
+       "F": "number",
+       "G": "text"
+      }
+     }
+    },
+    {
+     "id": "asset_cash",
+     "title": "현금 및 예금 보유 현황",
+     "sheet": "1. 기초재무상태조사",
+     "unit": "천원",
+     "optional": true,
+     "extract": {
+      "kind": "block",
+      "anchor": "(6)현금",
+      "anchor_col": "B",
+      "header_offsets": [
+       2
+      ],
+      "data_offset": 3,
+      "stop_before": [
+       "(7)"
+      ],
+      "cols": [
+       "B",
+       "C",
+       "E",
+       "G"
+      ],
+      "value_cols": [
+       "E"
+      ],
+      "col_formats": {
+       "E": "int_comma"
+      }
+     }
+    },
+    {
+     "id": "asset_materials",
+     "title": "재고 생산자재 보유 현황",
+     "sheet": "1. 기초재무상태조사",
+     "unit": "천원",
+     "optional": true,
+     "extract": {
+      "kind": "block",
+      "anchor": "(7)재고생산자재",
+      "anchor_col": "B",
+      "header_offsets": [
+       2
+      ],
+      "data_offset": 3,
+      "stop_before": [
+       "(8)"
+      ],
+      "cols": [
+       "B",
+       "C",
+       "D",
+       "E",
+       "F",
+       "G"
+      ],
+      "value_cols": [
+       "D",
+       "E",
+       "F"
+      ],
+      "col_formats": {
+       "D": "number",
+       "E": "int_comma",
+       "F": "int_comma"
+      }
+     }
+    },
+    {
+     "id": "asset_produce",
+     "title": "재고 농산물 보유 현황",
+     "sheet": "1. 기초재무상태조사",
+     "unit": "천원",
+     "optional": true,
+     "extract": {
+      "kind": "block",
+      "anchor": "(8)재고농산물",
+      "anchor_col": "B",
+      "header_offsets": [
+       2
+      ],
+      "data_offset": 3,
+      "stop_before": [
+       "나.부채"
+      ],
+      "cols": [
+       "B",
+       "C",
+       "D",
+       "E",
+       "F",
+       "G",
+       "H"
+      ],
+      "value_cols": [
+       "D",
+       "E",
+       "F",
+       "G"
+      ],
+      "col_formats": {
+       "D": "number",
+       "E": "int_comma",
+       "F": "int_comma",
+       "G": "text"
+      }
+     }
+    },
+    {
+     "id": "asset_debt",
+     "title": "부채 보유 현황",
+     "sheet": "1. 기초재무상태조사",
+     "unit": "천원",
+     "optional": true,
+     "extract": {
+      "kind": "block",
+      "anchor": "나.부채",
+      "anchor_col": "B",
+      "header_offsets": [
+       2
+      ],
+      "data_offset": 3,
+      "stop_before": [],
+      "cols": [
+       "B",
+       "C",
+       "D",
+       "E",
+       "F",
+       "G"
+      ],
+      "value_cols": [
+       "E"
+      ],
+      "col_formats": {
+       "E": "int_comma",
+       "F": "text"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "2",
+   "heading": "2. 투자계획 및 원리금 상환계획",
+   "tables": [
+    {
+     "id": "invest_summary",
+     "title": "총괄 투자계획",
+     "sheet": "3.투자계획",
+     "unit": "천원",
+     "extract": {
+      "kind": "block",
+      "anchor": "총괄투자계획",
+      "anchor_col": "B",
+      "header_offsets": [
+       2,
+       3
+      ],
+      "data_offset": 4,
+      "stop_before": [
+       "세부투자계획"
+      ],
+      "cols": [
+       "B",
+       "C",
+       "D",
+       "E",
+       "F",
+       "G"
+      ],
+      "value_cols": [
+       "C",
+       "D",
+       "E",
+       "F"
+      ],
+      "col_formats": {
+       "B": "text",
+       "C": "int_comma",
+       "D": "int_comma",
+       "E": "int_comma",
+       "F": "int_comma"
+      },
+      "header_map": {
+       "B": "투자연도",
+       "C": "소요액",
+       "D": "자부담",
+       "E": "보조",
+       "F": "융자",
+       "G": "비고"
+      }
+     }
+    },
+    {
+     "id": "invest_yearly",
+     "title": "연차별 세부투자계획",
+     "sheet": "3.투자계획",
+     "unit": "천원",
+     "extract": {
+      "kind": "block",
+      "anchor": "세부투자계획",
+      "anchor_col": "B",
+      "header_offsets": [
+       2,
+       3
+      ],
+      "data_offset": 4,
+      "stop_before": [],
+      "cols": [
+       "B",
+       "C",
+       "D",
+       "E",
+       "F",
+       "G",
+       "H",
+       "I"
+      ],
+      "value_cols": [
+       "E",
+       "F",
+       "G",
+       "H"
+      ],
+      "col_formats": {
+       "B": "text",
+       "E": "int_comma",
+       "F": "int_comma",
+       "G": "int_comma",
+       "H": "int_comma"
+      },
+      "header_map": {
+       "B": "연도별",
+       "C": "투자항목",
+       "D": "규격",
+       "E": "계",
+       "F": "자부담",
+       "G": "보조",
+       "H": "융자",
+       "I": "비고"
+      }
+     }
+    },
+    {
+     "id": "loan_summary",
+     "title": "연도별 원리금 상환계획",
+     "sheet": "4. 원리금상환계획",
+     "unit": "천원",
+     "extract": {
+      "kind": "block",
+      "anchor": "상환계획종합",
+      "anchor_col": "B",
+      "header_offsets": [
+       2,
+       3
+      ],
+      "data_offset": 4,
+      "stop_before": [
+       "융자종류별"
+      ],
+      "cols": [
+       "B",
+       "C",
+       "D",
+       "E",
+       "F",
+       "G"
+      ],
+      "value_cols": [
+       "C",
+       "D",
+       "E",
+       "F"
+      ],
+      "col_formats": {
+       "B": "text",
+       "C": "int_comma",
+       "D": "int_comma",
+       "E": "int_comma",
+       "F": "int_comma"
+      },
+      "header_map": {
+       "B": "연도",
+       "C": "융자금액",
+       "D": "원금상환",
+       "E": "이자",
+       "F": "연말융자잔액",
+       "G": "비고"
+      }
+     }
+    },
+    {
+     "id": "loan_terms",
+     "title": "융자 종류 및 조건",
+     "sheet": "4. 원리금상환계획",
+     "unit": "천원",
+     "extract": {
+      "kind": "block",
+      "anchor": "융자종류별원리금상환계획",
+      "anchor_col": "B",
+      "header_offsets": [
+       2
+      ],
+      "data_offset": 3,
+      "stop_before_regex": "^연차$",
+      "skip_row_regex": "^\\(단위",
+      "cols": [
+       "B",
+       "C",
+       "D",
+       "E",
+       "F",
+       "G"
+      ],
+      "value_cols": [
+       "C",
+       "D",
+       "F",
+       "G"
+      ],
+      "col_formats": {
+       "C": "text",
+       "D": "int_comma",
+       "F": "ratio_cell",
+       "G": "int_comma"
+      }
+     }
+    },
+    {
+     "id": "loan_schedule",
+     "title": "연차별 융자금 상환 내역",
+     "sheet": "4. 원리금상환계획",
+     "unit": "천원",
+     "extract": {
+      "kind": "block",
+      "anchor_regex": "^연차$",
+      "anchor_col": "B",
+      "search_after": "융자종류별원리금상환계획",
+      "anchor_is_header": true,
+      "header_offsets": [
+       0,
+       1
+      ],
+      "data_offset": 2,
+      "stop_before": [],
+      "cols": [
+       "B",
+       "C",
+       "D",
+       "E",
+       "F",
+       "G"
+      ],
+      "value_cols": [
+       "C",
+       "D",
+       "E",
+       "F"
+      ],
+      "col_formats": {
+       "B": "text",
+       "C": "int_comma",
+       "D": "int_comma",
+       "E": "int_comma",
+       "F": "int_comma"
+      },
+      "header_map": {
+       "B": "연차",
+       "C": "연초융자잔액",
+       "D": "이자",
+       "E": "원금상환",
+       "F": "계",
+       "G": "비고"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "3",
+   "heading": "3. 생산원가계획",
+   "tables": [
+    {
+     "id": "materials_year",
+     "title_template": "{year} 영농자재 소요계획",
+     "group": "가. 영농자재 소요계획",
+     "sheet": "7. 영농자재소요계획",
+     "unit": "천원",
+     "footnotes": [
+      "general_price"
+     ],
+     "extract": {
+      "kind": "year_blocks",
+      "anchor_regex": "^(?:[가-힣]\\.)?\\d{4}년",
+      "anchor_col": "B",
+      "header_offsets": [
+       2
+      ],
+      "data_offset": 3,
+      "cols": [
+       "B",
+       "C",
+       "D",
+       "E",
+       "G"
+      ],
+      "value_cols": [
+       "C",
+       "D",
+       "G"
+      ],
+      "col_formats": {
+       "C": "number",
+       "D": "number",
+       "G": "int_comma"
+      },
+      "header_map": {
+       "B": "비목",
+       "C": "비용/10a",
+       "D": "재배면적(㎡)",
+       "E": "산출기준",
+       "G": "금액(천원)"
+      }
+     }
+    },
+    {
+     "id": "labor_days",
+     "title": "연도별 노동력 투입 일수",
+     "group": "나. 노무비 계획",
+     "sheet": "8. 노무비계획",
+     "unit": "일",
+     "extract": {
+      "kind": "year_grid",
+      "anchor": "노동력소요",
+      "anchor_col": "B",
+      "year_row_offset": 2,
+      "sub_row_offset": 3,
+      "data_offset": 4,
+      "stop_before_regex": "^나\\.",
+      "label_cols": [
+       "B",
+       "C",
+       "D",
+       "E"
+      ],
+      "label_header_map": {
+       "B": "구분",
+       "C": "인력",
+       "D": "종류",
+       "E": "성별"
+      },
+      "optional_when_blank": [
+       "가족",
+       "상용직",
+       "급여",
+       "상여금",
+       "퇴직급여"
+      ],
+      "pick": {
+       "sub": "작업 일수",
+       "format": "number"
+      }
+     }
+    },
+    {
+     "id": "labor_amount",
+     "title": "연도별 노무비 계획",
+     "group": "나. 노무비 계획",
+     "sheet": "8. 노무비계획",
+     "unit": "천원",
+     "footnotes": [
+      "wage"
+     ],
+     "extract": {
+      "kind": "year_grid",
+      "anchor": "노동력소요",
+      "anchor_col": "B",
+      "year_row_offset": 2,
+      "sub_row_offset": 3,
+      "data_offset": 4,
+      "stop_before_regex": "^나\\.",
+      "label_cols": [
+       "B",
+       "C",
+       "D",
+       "E"
+      ],
+      "label_header_map": {
+       "B": "구분",
+       "C": "인력",
+       "D": "종류",
+       "E": "성별"
+      },
+      "optional_when_blank": [
+       "가족",
+       "상용직",
+       "급여",
+       "상여금",
+       "퇴직급여"
+      ],
+      "pick": {
+       "sub": "금액",
+       "format": "int_comma"
+      }
+     }
+    },
+    {
+     "id": "labor_basis_y1",
+     "title": "노동비 산출근거(1년차)",
+     "group": "나. 노무비 계획",
+     "sheet": "8. 노무비계획",
+     "unit": "천원",
+     "footnotes": [
+      "wage"
+     ],
+     "extract": {
+      "kind": "block",
+      "anchor_regex": "^나\\.",
+      "anchor_col": "B",
+      "header_offsets": [
+       2,
+       3
+      ],
+      "data_offset": 4,
+      "stop_before_regex": "^다\\.",
+      "cols": [
+       "B",
+       "I",
+       "K",
+       "L",
+       "N",
+       "O",
+       "P",
+       "R",
+       "S",
+       "U"
+      ],
+      "value_cols": [
+       "I",
+       "K",
+       "L",
+       "N",
+       "O",
+       "P",
+       "R",
+       "S",
+       "U"
+      ],
+      "col_formats": {
+       "I": "number",
+       "K": "number",
+       "L": "int_comma",
+       "N": "int_comma",
+       "O": "number",
+       "P": "int_comma",
+       "R": "number",
+       "S": "int_comma",
+       "U": "int_comma"
+      },
+      "header_map": {
+       "B": "항목",
+       "I": "작업일수",
+       "K": "자가 일수",
+       "L": "자가 단가(원)",
+       "N": "자가 계(천원)",
+       "O": "고용(남) 일수",
+       "P": "고용(남) 계(천원)",
+       "R": "고용(여) 일수",
+       "S": "고용(여) 단가(원)",
+       "U": "고용(여) 계(천원)"
+      }
+     }
+    },
+    {
+     "id": "labor_basis_y2",
+     "title": "노동비 산출근거(2년차 이후)",
+     "group": "나. 노무비 계획",
+     "sheet": "8. 노무비계획",
+     "unit": "천원",
+     "footnotes": [
+      "wage"
+     ],
+     "extract": {
+      "kind": "block",
+      "anchor_regex": "^다\\.",
+      "anchor_col": "B",
+      "header_offsets": [
+       2,
+       3
+      ],
+      "data_offset": 4,
+      "stop_before": [],
+      "cols": [
+       "B",
+       "I",
+       "K",
+       "L",
+       "N",
+       "O",
+       "P",
+       "R",
+       "S",
+       "U"
+      ],
+      "value_cols": [
+       "I",
+       "K",
+       "L",
+       "N",
+       "O",
+       "P",
+       "R",
+       "S",
+       "U"
+      ],
+      "col_formats": {
+       "I": "number",
+       "K": "number",
+       "L": "int_comma",
+       "N": "int_comma",
+       "O": "number",
+       "P": "int_comma",
+       "R": "number",
+       "S": "int_comma",
+       "U": "int_comma"
+      },
+      "header_map": {
+       "B": "항목",
+       "I": "작업일수",
+       "K": "자가 일수",
+       "L": "자가 단가(원)",
+       "N": "자가 계(천원)",
+       "O": "고용(남) 일수",
+       "P": "고용(남) 계(천원)",
+       "R": "고용(여) 일수",
+       "S": "고용(여) 단가(원)",
+       "U": "고용(여) 계(천원)"
+      }
+     }
+    },
+    {
+     "id": "expenses_year",
+     "title_template": "{year} 경비 계획",
+     "group": "다. 경비 계획",
+     "sheet": "9. 경비계획",
+     "unit": "천원",
+     "footnotes": [
+      "general_price"
+     ],
+     "extract": {
+      "kind": "year_blocks",
+      "anchor_regex": "^(?:[가-힣]\\.)?\\d{4}년",
+      "anchor_col": "B",
+      "header_offsets": [
+       2
+      ],
+      "data_offset": 3,
+      "cols": [
+       "B",
+       "C",
+       "D",
+       "E"
+      ],
+      "value_cols": [
+       "C"
+      ],
+      "col_formats": {
+       "C": "int_comma"
+      },
+      "header_map": {
+       "B": "과목",
+       "C": "금액",
+       "D": "산출근거",
+       "E": "비고"
+      }
+     }
+    },
+    {
+     "id": "depreciation_year",
+     "title_template": "{year} 감가상각비 계획",
+     "group": "라. 감가상각비 계획",
+     "sheet": "10. 감가상각비계획",
+     "unit": "천원",
+     "extract": {
+      "kind": "year_blocks",
+      "anchor_regex": "^(?:[가-힣]\\.)?\\d{4}년",
+      "anchor_col": "B",
+      "header_offsets": [
+       2,
+       3
+      ],
+      "data_offset": 4,
+      "cols": [
+       "B",
+       "C",
+       "D",
+       "E",
+       "F",
+       "G",
+       "H",
+       "I"
+      ],
+      "value_cols": [
+       "C",
+       "D",
+       "E",
+       "F",
+       "G",
+       "H",
+       "I"
+      ],
+      "col_formats": {
+       "C": "number",
+       "D": "number",
+       "E": "number",
+       "F": "number",
+       "G": "number",
+       "H": "number",
+       "I": "number"
+      }
+     }
+    },
+    {
+     "id": "production_cost",
+     "title": "생산원가계획 종합",
+     "group": "마. 생산원가계획 종합",
+     "sheet": "11. 생산원가계획",
+     "unit": "천원",
+     "extract": {
+      "kind": "block",
+      "anchor": "과목",
+      "anchor_col": "B",
+      "anchor_is_header": true,
+      "header_offsets": [
+       0
+      ],
+      "data_offset": 1,
+      "stop_before": [],
+      "cols": [
+       "B",
+       "C",
+       "D",
+       "E",
+       "F",
+       "G"
+      ],
+      "value_cols": [
+       "C",
+       "D",
+       "E",
+       "F",
+       "G"
+      ],
+      "col_formats": {
+       "C": "int_comma",
+       "D": "int_comma",
+       "E": "int_comma",
+       "F": "int_comma",
+       "G": "int_comma"
+      },
+      "header_map": {
+       "B": "과목"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "4",
+   "heading": "4. 손익계획",
+   "tables": [
+    {
+     "id": "income_plan",
+     "title": "연도별 손익계획",
+     "sheet": "12. 손익계획",
+     "unit": "천원",
+     "footnotes": [
+      "selling_price",
+      "general_price",
+      "wage"
+     ],
+     "extract": {
+      "kind": "block",
+      "anchor": "과목",
+      "anchor_col": "B",
+      "anchor_is_header": true,
+      "header_offsets": [
+       0,
+       1
+      ],
+      "data_offset": 2,
+      "stop_after": [
+       "당기순이익"
+      ],
+      "optional_when_blank": [
+       "경상이익"
+      ],
+      "cols": [
+       "B",
+       "C",
+       "D",
+       "E",
+       "F",
+       "G"
+      ],
+      "value_cols": [
+       "C",
+       "D",
+       "E",
+       "F",
+       "G"
+      ],
+      "col_formats": {
+       "C": "int_comma",
+       "D": "int_comma",
+       "E": "int_comma",
+       "F": "int_comma",
+       "G": "int_comma"
+      },
+      "header_map": {
+       "B": "과목"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "5",
+   "heading": "5. 추정대차대조표",
+   "tables": [
+    {
+     "id": "balance_sheet",
+     "title": "추정대차대조표",
+     "sheet": "13. 추정대차대조표",
+     "unit": "천원",
+     "footnotes": [
+      "selling_price",
+      "general_price",
+      "wage"
+     ],
+     "extract": {
+      "kind": "block",
+      "anchor": "과목",
+      "anchor_col": "B",
+      "anchor_is_header": true,
+      "header_offsets": [
+       0,
+       1
+      ],
+      "data_offset": 2,
+      "stop_after": [
+       "부채와자본총계"
+      ],
+      "keep_rows": [
+       "자산",
+       "부채",
+       "자본"
+      ],
+      "cols": [
+       "B",
+       "C",
+       "D",
+       "E",
+       "F",
+       "G",
+       "H"
+      ],
+      "value_cols": [
+       "C",
+       "D",
+       "E",
+       "F",
+       "G",
+       "H"
+      ],
+      "col_formats": {
+       "C": "int_comma",
+       "D": "int_comma",
+       "E": "int_comma",
+       "F": "int_comma",
+       "G": "int_comma",
+       "H": "int_comma"
+      },
+      "header_map": {
+       "B": "과목"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "6",
+   "heading": "6. 현금흐름계획",
+   "tables": [
+    {
+     "id": "cash_flow",
+     "title": "연도별 현금흐름계획",
+     "sheet": "14. 현금흐름계획",
+     "unit": "천원",
+     "footnotes": [
+      "selling_price",
+      "general_price",
+      "wage"
+     ],
+     "extract": {
+      "kind": "block",
+      "anchor": "구분",
+      "anchor_col": "B",
+      "anchor_is_header": true,
+      "header_offsets": [
+       0,
+       1
+      ],
+      "data_offset": 2,
+      "stop_after": [
+       "누적수지균형"
+      ],
+      "trailing_notes": true,
+      "blank_repeat_labels": true,
+      "cols": [
+       "B",
+       "C",
+       "D",
+       "E",
+       "F",
+       "G",
+       "H",
+       "I"
+      ],
+      "value_cols": [
+       "D",
+       "E",
+       "F",
+       "G",
+       "H"
+      ],
+      "col_formats": {
+       "D": "int_comma",
+       "E": "int_comma",
+       "F": "int_comma",
+       "G": "int_comma",
+       "H": "int_comma"
+      },
+      "header_map": {
+       "B": "구분",
+       "C": "항목",
+       "I": "비고"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "7",
+   "heading": "7. 추정소득분석",
+   "tables": [
+    {
+     "id": "income_analysis",
+     "title": "연도별 추정소득분석",
+     "sheet": "15. 추정소득분석",
+     "unit": "천원",
+     "footnotes": [
+      "selling_price",
+      "general_price",
+      "wage"
+     ],
+     "extract": {
+      "kind": "block",
+      "anchor": "비목별",
+      "anchor_col": "B",
+      "anchor_is_header": true,
+      "header_offsets": [
+       0
+      ],
+      "data_offset": 1,
+      "stop_before": [],
+      "blank_repeat_labels": true,
+      "row_units": {
+       "영농잉여율": "percent_value",
+       "소득율": "ratio"
+      },
+      "cols": [
+       "B",
+       "C",
+       "D",
+       "E",
+       "F",
+       "G",
+       "H",
+       "I"
+      ],
+      "value_cols": [
+       "E",
+       "F",
+       "G",
+       "H",
+       "I"
+      ],
+      "col_formats": {
+       "E": "int_comma",
+       "F": "int_comma",
+       "G": "int_comma",
+       "H": "int_comma",
+       "I": "int_comma"
+      },
+      "header_map": {
+       "B": "구분",
+       "C": "항목",
+       "D": "세부항목"
+      }
+     }
+    }
+   ]
+  }
+ ]
+}

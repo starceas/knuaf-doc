@@ -26,6 +26,7 @@ from gg_excel_template import (
     _serialize_dom,
     merged_cells,
     sha256,
+    template_price_sources,
     workbook_sheets,
 )
 
@@ -77,7 +78,7 @@ def _patches(data: dict) -> list[dict]:
     if not isinstance(source, dict) or not isinstance(source.get("sha256"), str):
         raise ValueError("map must contain source.sha256")
     patches = data.get("patches", data.get("entries"))
-    if not isinstance(patches, list) or not patches:
+    if not isinstance(patches, list) or (not patches and "d8" not in data):
         raise ValueError("map must contain non-empty patches")
     return patches
 
@@ -96,6 +97,237 @@ def _evidence(patch: dict) -> dict:
     if not isinstance(evidence["locator"], str) or not evidence["locator"].strip():
         raise ValueError("evidence_ref.locator must be non-empty")
     return evidence
+
+
+D8_SPEC_PATH = (Path(__file__).resolve().parents[1] / "references"
+                / "common-workbooks/corrections/d8-spec.json")
+
+
+def _official_rate(item: dict, kind: str, *, price_sources=None) -> dict:
+    """Adapt template endpoints to the shared official-series contract."""
+    from gg_price_assumptions import (
+        load_registry, normalize_price_assumptions, multiplier,
+        resolve_series, check_observations, check_dimensions,
+    )
+    if not isinstance(item, dict):
+        raise ValueError(f"{kind} rate metadata required")
+    evidence = _evidence({"evidence_ref": item.get("evidence_ref")})
+    if evidence.get("origin") != "factual":
+        raise ValueError(f"{kind} requires official statistic evidence with factual origin")
+    role = "wage" if kind in {"wage_male", "wage_female"} else kind
+    if role not in {"general", "wage", "sales"}:
+        raise ValueError("unknown price role")
+    year = item.get("application_base_year")
+    if type(year) is not int or not 1900 <= year <= 9999:
+        raise ValueError(f"{kind}.application_base_year must be a year")
+    years, values = item.get("observation_years"), item.get("observed_values")
+    if (not isinstance(years, list) or len(years) < 2
+            or any(type(y) is not int or not 1900 <= y <= 9999 for y in years)
+            or any(b <= a for a, b in zip(years, years[1:]))
+            or not isinstance(values, list) or len(values) != len(years)):
+        raise ValueError("invalid rate observation years/values")
+    if year < years[-1]:
+        raise ValueError("application year precedes observation end")
+    raw = {"source_id": evidence["source_id"], "application_base_year": year,
+           "observation": {"start_year": years[0], "end_year": years[-1]}}
+    if "base_year" in item:
+        raw["base_year"] = item["base_year"]
+    if "r" in item:
+        raw["rate"] = _expected_number(item["r"])
+    for field in ("dimensions", "target_dimensions"):
+        if field in item:
+            raw[field] = item[field]
+    spec = {"price_sources": [] if price_sources is None else price_sources,
+            "price_assumptions": {r: raw if r == role else
+                {"status": "not_applied", "reason": "separate template role"}
+                for r in ("general", "wage", "sales")}}
+    if "target_dimensions" in item:
+        spec["target_dimensions"] = item["target_dimensions"]
+        if isinstance(item["target_dimensions"], dict):
+            spec["crops"] = [item["target_dimensions"].get("crop")]
+    registry = load_registry()
+    normalized = normalize_price_assumptions(spec, list(range(year, year + 5)), registry=registry)[role]
+    for plan_year in range(year, year + 5):
+        multiplier(normalized, plan_year)
+    # Template copies may carry observed_values for review, but those values
+    # cannot replace a registered series under its official id.
+    source = resolve_series(evidence["source_id"], registry=registry,
+                            student_sources=template_price_sources(spec["price_sources"]))
+    check_observations(source, years, values, origin=kind)
+    if "dimensions" in item:
+        check_dimensions(source, item["dimensions"], origin=kind)
+    return {**item, "r": normalized["rate"], "unit": normalized["unit"],
+            "evidence_ref": {**evidence, "source_id": source["id"]},
+            "base_year": normalized["base_year"],
+            "observation_range": [years[0], years[-1]],
+            "application_counts": list(range(5)),
+            "source_verification": "registered official series; locator not independently verified"}
+
+
+def materialize_d8(source: Path, assumptions: dict | None = None, *, prepare_observations=False) -> dict:
+    """Materialize an exact SHA/precondition-bound map; no workbook is written.
+
+    With no assumptions, only disconnected daily-wage chains are restored.
+    Existing X01 chains remain byte-identical. Rates/observation preparation
+    are explicit, separately reviewable operations.
+    """
+    from gg_excel_template import detect_layout
+    from gg_workbook_audit import Workbook
+    if detect_layout(source) != "x01":
+        raise ValueError("layout_variant_unsupported: D8 requires x01")
+    spec = _json(D8_SPEC_PATH)
+    book = Workbook.load(source)
+    sheet = spec["wage_sheet"]
+    if sheet not in book.sheets:
+        raise ValueError("D8 wage sheet missing")
+    patches = []
+    structural_evidence = {"source_id": "template.d8.wage_link", "revision": 1,
+                           "locator": "d8-spec.json wage_rows/year_columns; DESIGN-PR2 P2-P6"}
+
+    def add(s, cell, formula=None, *, prepare=False):
+        old = book.formulas.get((s, cell))
+        if not prepare and old is not None and _normalize_formula(old.text, "existing formula") == formula:
+            return
+        p = {"sheet": s, "cell": cell, "reason": "D8 explicit price/wage connection; preserve C1 and year labels",
+             "evidence_ref": structural_evidence}
+        if old is not None:
+            p["expected_formula"] = "=" + old.text
+        else:
+            value = book.values.get((s, cell))
+            p["expected_value"] = _expected_number(value)
+        if prepare:
+            if old is None:
+                return
+            p.update(operation="prepare_wage_input", new_value=None)
+        else:
+            p["new_formula"] = "=" + formula
+        patches.append(p)
+
+    for row, route in spec["wage_rows"].items():
+        for i, col in enumerate(spec["year_columns"]):
+            ref = col + row
+            prior = None if not i else spec["year_columns"][i-1] + row
+            desired = route["base"] if not i else f"{prior}*(1+${route['rate'][:2]}$38)"
+            old = book.formulas.get((sheet, ref))
+            if old is not None:
+                expression = _normalize_formula(old.text, "existing formula")
+                accepted = {desired, col + "9"} if row == "8" else {desired}
+                if prior:
+                    accepted.add(prior)
+                if expression not in accepted and not re.fullmatch(r"[0-9]+(?:\.[0-9]+)?", expression):
+                    raise ValueError(f"unreviewed wage formula: {sheet}!{ref}")
+            add(sheet, ref, desired)
+    if prepare_observations:
+        if assumptions is not None:
+            raise ValueError("prepare observations, fill sourced values, then apply rate assumptions")
+        for row in range(26, 32):
+            for col in "XYZ":
+                ref = f"{col}{row}"
+                old = book.formulas.get((sheet, ref))
+                # Only the school's consecutive year chain and carried female
+                # observation are convertible; other formulas need review.
+                if old is not None:
+                    expected = f"X{row-1}+1" if col == "X" and row > 26 else "Z29" if ref == "Z28" else None
+                    if old.text != expected:
+                        raise ValueError(f"unreviewed observation formula: {ref}")
+                    add(sheet, ref, prepare=True)
+        for col, rate_cell in (("Y", "AC38"), ("Z", "AD38")):
+            old = book.formulas.get((sheet, rate_cell))
+            desired = f"({col}31/{col}26)^(1/(X31-X26))-1"
+            if old is not None and old.text not in {f"AVERAGE({rate_cell[:2]}26:{rate_cell[:2]}37)", desired}:
+                raise ValueError(f"unreviewed observation rate formula: {rate_cell}")
+            add(sheet, rate_cell, desired)
+    rates = {}
+    if assumptions is not None:
+        if not isinstance(assumptions, dict) or set(assumptions) - {"wage_male", "wage_female", "sales", "general", "price_sources"}:
+            raise ValueError("unknown D8 assumptions")
+        for kind in ("wage_male", "wage_female"):
+            rates[kind] = _official_rate(assumptions.get(kind), kind, price_sources=assumptions.get("price_sources", []))
+        sales = assumptions.get("sales")
+        if isinstance(sales, dict) and sales.get("mode") == "not_applied":
+            if sales.get("reason") != "확인 불가":
+                raise ValueError("sales not_applied requires explicit 확인 불가")
+            rates["sales"] = {"mode": "not_applied", "reason": "판매가 상승 미반영(확인 불가)"}
+        else:
+            rates["sales"] = _official_rate(sales, "sales", price_sources=assumptions.get("price_sources", []))
+        # Pricing year is a preserved school label, including W-023. Never
+        # choose a different year to make the arithmetic look plausible.
+        first_year = book.evaluate(sheet, "F6")
+        if isinstance(first_year, str) and re.fullmatch(r"[0-9]{4}년?", first_year.strip()):
+            first_year = int(first_year.strip().rstrip("년"))
+        if isinstance(first_year, bool) or not isinstance(first_year, (int, float)):
+            raise ValueError("preserved F6 is not a plan year; W-023 review required")
+        for kind, col, rate_cell in (("wage_male", "Y", "AC38"), ("wage_female", "Z", "AD38")):
+            item = rates[kind]
+            if item["application_base_year"] != first_year:
+                raise ValueError("wage application year differs from preserved F6; W-023 review required")
+            daily_base_year = book.evaluate(sheet, "X31")
+            if (isinstance(daily_base_year, bool) or not isinstance(daily_base_year, (int, float))
+                    or not 1900 <= daily_base_year <= 9999 or int(daily_base_year) != daily_base_year):
+                raise ValueError("daily wage observation end year must be filled before rate application")
+            count = item["application_base_year"] - daily_base_year
+            if count < 0 or int(count) != count:
+                raise ValueError("wage base observation year invalid")
+            from gg_price_assumptions import multiplier
+            # The daily-wage anchor can precede the rate's application base
+            # by more than four years; validate its actual cumulative factor.
+            multiplier({"role": "wage", "status": "applied", "rate": item["r"],
+                        "application_base_year": int(daily_base_year)}, int(first_year) + 4)
+            item["daily_base_year"] = daily_base_year
+            item["daily_base_application_count"] = int(count)
+            add(sheet, rate_cell, repr(item["r"]))
+            add(sheet, col+"34", f"{col}31*(1+${rate_cell[:2]}$38)^{int(count)}")
+        sales_sheet = spec["sales_sheet"]
+        if sales_sheet not in book.sheets:
+            raise ValueError("sales sheet missing")
+        item = rates["sales"]
+        sales_first_year = book.evaluate(sales_sheet, "C36")
+        if isinstance(sales_first_year, str) and re.fullmatch(r"[0-9]{4}년?", sales_first_year.strip()):
+            sales_first_year = int(sales_first_year.strip().rstrip("년"))
+        if item.get("mode") != "not_applied" and item["application_base_year"] != sales_first_year:
+            raise ValueError("sales application year differs from preserved C36")
+        # Repoint from the exact quantity cell, never multiply an already
+        # escalated revenue. This makes rate updates idempotent.
+        for row, price in spec["sales_rows"].items():
+            for i, (quantity, revenue) in enumerate(zip("CEGIK", "DFHJL")):
+                base = f"{quantity}{row}*${price[0]}${price[1:]}/1000"
+                old = book.formulas.get((sales_sheet, revenue+row))
+                if old is None or not (old.text == base or re.fullmatch(re.escape(base) + r"\*\(1\+[0-9.eE+\-]+\)\^[0-4]", old.text)):
+                    raise ValueError(f"unreviewed sales formula: {revenue}{row}")
+                if item.get("mode") == "not_applied":
+                    desired = base
+                else:
+                    desired = base + f"*(1+{item['r']!r})^{i}"
+                add(sales_sheet, revenue+row, desired)
+        note = (item["reason"] if item.get("mode") == "not_applied" else
+                f"판매가 상승률 {item['r']:.8%}; "
+                f"{'지수 기준연도 해당 없음' if item['base_year'] is None else str(item['base_year']) + ' 기준연도'}; "
+                f"관측 {item['observation_years'][0]}~{item['observation_years'][-1]}; "
+                f"적용 기초연도 {item['application_base_year']}; 적용 횟수 0~4; "
+                f"출처: {item['evidence_ref']['source_id']} ({item['evidence_ref']['locator']})")
+        old_note = book.values.get((sales_sheet, "B46"))
+        if (sales_sheet, "B46") in book.formulas or not isinstance(old_note, str):
+            raise ValueError("reviewed sales assumption note B46 missing or formula")
+        if old_note != note:
+            patches.append({"sheet": sales_sheet, "cell": "B46", "expected_text": old_note,
+                            "new_text": note, "operation": "price_assumption_note",
+                            "reason": "Replace stale 2.5% comment with actual sales-rate decision",
+                            "evidence_ref": structural_evidence})
+        if "general" in assumptions:
+            rates["general"] = _official_rate(assumptions["general"], "general", price_sources=assumptions.get("price_sources", []))
+            if rates["general"]["application_base_year"] != first_year:
+                raise ValueError("general application year differs from preserved plan year")
+            for (s, ref), old in book.formulas.items():
+                match = re.fullmatch(r"([A-Z]+[1-9][0-9]*)\*(?:1\.025|\(1\+[0-9.eE+\-]+\))", old.text)
+                if s in {"9 .경비계획", "7. 영농자재소요계획"} and match:
+                    add(s, ref, match[1] + f"*(1+{rates['general']['r']!r})")
+    return {"schema": MAP_SCHEMA, "source": {"sha256": sha256(source)},
+            "patches": patches,
+            "d8": {"schema": spec["schema"], "spec_sha256": sha256(D8_SPEC_PATH),
+                   "assumptions": assumptions, "rates": rates,
+                   "prepare_observations": prepare_observations,
+                   "preserved_findings": spec["preserved_findings"],
+                   "inherited_observations": "not verified; structural repair is not statistical approval"}}
 
 
 def _qualified(dom: minidom.Document, root: minidom.Element, local: str) -> minidom.Element:
@@ -198,7 +430,30 @@ def _patch_copy(source: Path, map_path: Path, out: Path, *,
     actual_sha = sha256(source)
     if expected_sha != actual_sha:
         raise RuntimeError(f"source version changed: map sha256={expected_sha}, current sha256={actual_sha}")
+    if "d8" in data:
+        d8 = data["d8"]
+        if not isinstance(d8, dict) or not isinstance(d8.get("prepare_observations"), bool):
+            raise ValueError("invalid D8 contract")
+        reviewed = materialize_d8(source, d8.get("assumptions"),
+                                  prepare_observations=d8["prepare_observations"])
+        if reviewed["d8"] != d8 or reviewed["patches"] != data.get("patches"):
+            raise ValueError("D8 map differs from materialized specification")
     patches = _patches(data)
+    if not patches:
+        import shutil
+        if _authorization is not None:
+            import gg_major_contract as mc
+            mc.reconfirm_output(_authorization, _context)
+        shutil.copyfile(source, out)
+        receipt = {"schema": "gg-xlsx-formula-patch-receipt/v1",
+                   "source": {"path": str(source.resolve()), "sha256": actual_sha},
+                   "map": {"path": str(map_path.resolve()), "sha256": sha256(map_path)},
+                   "output": {"path": str(out.resolve()), "sha256": sha256(out), "status": "unchanged"},
+                   "patched": [], "expanded_shared_formulas": [],
+                   "formulaCachesInvalidated": 0, "recalcNeeded": False, "d8": data["d8"]}
+        if _authorization is not None:
+            receipt["majorAuthorization"] = _authorization.to_dict()
+        return receipt
     with zipfile.ZipFile(source, "r") as zin:
         sheets = dict(workbook_sheets(zin))
         by_sheet: dict[str, list[dict]] = {}
@@ -220,13 +475,26 @@ def _patch_copy(source: Path, map_path: Path, out: Path, *,
             patch["cell"] = cell_ref
             has_formula = "expected_formula" in patch
             has_value = "expected_value" in patch
-            if has_formula == has_value:
+            has_text = "expected_text" in patch
+            if sum((has_formula, has_value, has_text)) != 1:
                 raise ValueError("patch must contain exactly one of expected_formula or expected_value")
             if has_formula:
                 patch["expected_formula"] = _normalize_formula(patch.get("expected_formula"), "expected_formula")
-            else:
+            elif has_value:
                 patch["expected_value"] = _expected_number(patch.get("expected_value"))
-            patch["new_formula"] = _normalize_formula(patch.get("new_formula"), "new_formula")
+            else:
+                if ("d8" not in data or patch.get("operation") != "price_assumption_note"
+                        or not isinstance(patch["expected_text"], str)
+                        or not isinstance(patch.get("new_text"), str) or not patch["new_text"].strip()
+                        or "new_formula" in patch):
+                    raise ValueError("invalid reviewed price assumption note")
+            prepare = patch.get("operation") == "prepare_wage_input"
+            if prepare:
+                if ("d8" not in data or not has_formula or "new_formula" in patch
+                        or "new_value" not in patch or patch["new_value"] is not None):
+                    raise ValueError("invalid reviewed wage-input preparation")
+            elif not has_text:
+                patch["new_formula"] = _normalize_formula(patch.get("new_formula"), "new_formula")
             if not isinstance(patch.get("reason"), str) or not patch["reason"].strip():
                 raise ValueError("patch reason must be non-empty")
             _evidence(patch)
@@ -241,6 +509,8 @@ def _patch_copy(source: Path, map_path: Path, out: Path, *,
             "patched": [], "expanded_shared_formulas": [],
             "formulaCachesInvalidated": 0, "recalcNeeded": True,
         }
+        if "d8" in data:
+            receipt["d8"] = data["d8"]
         for sheet, target in sheets.items():
             raw = zin.read(target)
             root = ET.fromstring(raw)
@@ -259,6 +529,24 @@ def _patch_copy(source: Path, map_path: Path, out: Path, *,
                 old = _formula_text(et_cell)
                 f_et = et_cell.find(f"{{{NS_MAIN}}}f")
                 dom_cell = dom_cells[ref]
+                if patch.get("operation") == "price_assumption_note":
+                    from gg_excel_template import load_shared, text_value
+                    from gg_excel_fill import _set_cell_value
+                    if old is not None or text_value(et_cell, load_shared(zin)) != patch["expected_text"]:
+                        raise ValueError(f"expected text mismatch: {sheet}!{ref}")
+                    _set_cell_value(dom_cell, "string", patch["new_text"])
+                    receipt["patched"].append(patch)
+                    continue
+                if patch.get("operation") == "prepare_wage_input":
+                    if old is None or _normalize_formula(old, "existing formula") != patch["expected_formula"]:
+                        raise ValueError(f"expected formula mismatch: {sheet}!{ref}")
+                    for child in list(dom_cell.childNodes):
+                        if child.nodeType == child.ELEMENT_NODE and child.namespaceURI == NS_MAIN and child.localName in {"f", "v", "is"}:
+                            dom_cell.removeChild(child)
+                    if dom_cell.hasAttribute("t"):
+                        dom_cell.removeAttribute("t")
+                    receipt["patched"].append({**patch, "operation": "prepare_wage_input", "old_formula": "=" + old})
+                    continue
                 if "expected_value" in patch:
                     if old is not None:
                         raise ValueError(f"expected_value target is a formula cell: {sheet}!{ref}")
@@ -346,6 +634,25 @@ def _patch_copy(source: Path, map_path: Path, out: Path, *,
 
 
 def cli(argv: list[str]) -> int:
+    if argv and argv[0] == "materialize-d8":
+        parser = argparse.ArgumentParser(description="Materialize source-bound D8 formula patch map")
+        parser.add_argument("--source", required=True, type=Path)
+        parser.add_argument("--out", required=True, type=Path)
+        parser.add_argument("--assumptions", type=Path)
+        parser.add_argument("--prepare-observations", action="store_true")
+        args = parser.parse_args(argv[1:])
+        try:
+            result = materialize_d8(args.source, _json(args.assumptions) if args.assumptions else None,
+                                    prepare_observations=args.prepare_observations)
+            args.out.parent.mkdir(parents=True, exist_ok=True)
+            with args.out.open("x", encoding="utf-8") as stream:
+                json.dump(result, stream, ensure_ascii=False, indent=2)
+            print(json.dumps({"status": "materialized", "patches": len(result["patches"]),
+                              "out": str(args.out)}, ensure_ascii=False))
+            return 0
+        except (OSError, ValueError, RuntimeError) as exc:
+            print(f"BLOCK: {exc}", file=sys.stderr)
+            return 2
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", required=True, type=Path)
     parser.add_argument("--map", required=True, type=Path)

@@ -94,7 +94,7 @@ def _evidence(value: dict) -> dict:
         raise ValueError("evidence_ref.revision must be an integer or revision string")
     if not isinstance(evidence["locator"], str) or not evidence["locator"].strip():
         raise ValueError("evidence_ref.locator must be non-empty")
-    if evidence["origin"] not in ORIGINS:
+    if not isinstance(evidence["origin"], str) or evidence["origin"] not in ORIGINS:
         raise ValueError(f"evidence_ref.origin must be one of {sorted(ORIGINS)}")
     return evidence
 
@@ -103,12 +103,12 @@ def _typed_value(value: dict) -> tuple[str, object]:
     if "value_type" not in value or "value" not in value:
         raise ValueError("value must contain value and value_type")
     value_type = value["value_type"]
-    if value_type not in VALUE_TYPES:
+    if not isinstance(value_type, str) or value_type not in VALUE_TYPES:
         raise ValueError(f"unsupported value_type: {value_type!r}")
     raw = value["value"]
     if "answer_state" not in value:
         raise ValueError("value must contain answer_state")
-    if value["answer_state"] not in STATES:
+    if not isinstance(value["answer_state"], str) or value["answer_state"] not in STATES:
         raise ValueError("unsupported answer_state")
     if value["answer_state"] != "provided" and value_type != "blank":
         raise ValueError("unresolved/none answers cannot be converted to cell values")
@@ -121,11 +121,21 @@ def _typed_value(value: dict) -> tuple[str, object]:
         raise ValueError("integer value_type requires an integer")
     elif value_type == "number" and (not isinstance(raw, (int, float)) or isinstance(raw, bool)):
         raise ValueError("number value_type requires a JSON number")
-    elif value_type == "number" and isinstance(raw, float) and not math.isfinite(raw):
-        raise ValueError("number value_type must be finite")
+    elif value_type in {"integer", "number"} and not _finite_cell_number(raw):
+        raise ValueError("numeric value_type must be finite")
     elif value_type == "boolean" and not isinstance(raw, bool):
         raise ValueError("boolean value_type requires a boolean")
     return value_type, raw
+
+
+def _finite_cell_number(raw: object) -> bool:
+    """Excel numeric cells and conversion factors must fit finite numbers."""
+    if isinstance(raw, bool) or not isinstance(raw, (int, float)):
+        return False
+    try:
+        return math.isfinite(raw)
+    except OverflowError:
+        return False
 
 
 def _cell_value_node(cell: minidom.Element, name: str) -> minidom.Element:
@@ -226,6 +236,73 @@ def _prepare(template: Path, map_path: Path, values_path: Path):
     return map_data, values_data, entries, values, actual
 
 
+def _wage_observations(map_cells: dict, value_cells: dict, values_data: dict):
+    """Validate the whole daily-wage block before allowing any value write."""
+    sheet = "8. 노무비계획"
+    cells = {(sheet, f"{col}{row}") for row in range(26, 32) for col in "XYZ"}
+    selected = cells.intersection(value_cells)
+    if not selected:
+        return None
+    if selected != cells or not cells.issubset(map_cells):
+        raise ValueError("wage observations require all X26:Z31 values")
+    meta = values_data.get("wage_observations")
+    if not isinstance(meta, dict):
+        raise ValueError("wage_observations metadata required")
+    for field in ("application_base_year",):
+        if isinstance(meta.get(field), bool) or not isinstance(meta.get(field), int):
+            raise ValueError(f"wage_observations.{field} must be a year")
+    years = meta.get("observation_years")
+    if (not isinstance(years, list) or len(years) != 6
+            or any(isinstance(y, bool) or not isinstance(y, int) or not 1900 <= y <= 9999 for y in years)
+            or any(b <= a for a, b in zip(years, years[1:]))
+            or not years[-1] <= meta["application_base_year"] <= 9999):
+        raise ValueError("invalid wage observation years/application base year")
+    statistic_id = meta.get("statistic_id")
+    # Source identity, allowed role and nominal/index basis are resolved by
+    # the same public contract used by the legacy workbook path.
+    from gg_excel_template import wage_observation_source
+    source = wage_observation_source(meta, values_data.get("price_sources", []))
+    unit = source["unit"]
+    if meta.get("unit") != unit:
+        raise ValueError("wage_observations.unit differs from registered source unit")
+    conversion = meta.get("unit_conversion")
+    factor = 1.0
+    if unit == "원/시간":
+        if (not isinstance(conversion, dict)
+                or set(conversion) != {"from", "to", "hours_per_day", "evidence_ref"}
+                or conversion["from"] != "원/시간" or conversion["to"] != "원/일"):
+            raise ValueError("hourly wages require explicit 원/시간 to 원/일 unit_conversion")
+        factor = conversion["hours_per_day"]
+        if not _finite_cell_number(factor) or factor <= 0:
+            raise ValueError("hours_per_day must be a positive finite number; no default")
+        if _evidence(conversion)["origin"] != "factual":
+            raise ValueError("unit_conversion requires factual evidence_ref")
+    elif unit != "원/일" or conversion is not None:
+        raise ValueError("wage observations require 원/일; indices and sales prices are not daily wages")
+    converted = {}
+    for row, year in zip(range(26, 32), years):
+        for col in "XYZ":
+            value = value_cells[sheet, f"{col}{row}"]
+            kind, raw = _typed_value(value)
+            evidence = _evidence(value)
+            if (evidence["source_id"] != statistic_id or evidence["origin"] != "factual"
+                    or kind not in {"integer", "number"}
+                    or (col == "X" and (kind != "integer" or raw != year))
+                    or (col != "X" and raw <= 0)
+                    or ("unit" in value and value["unit"] != ("년" if col == "X" else unit))):
+                raise ValueError("wage observation requires positive official daily values and matching years")
+            if col != "X" and conversion is not None:
+                daily = raw * factor
+                if not _finite_cell_number(daily) or daily <= 0:
+                    raise ValueError("converted daily wage must be positive and finite")
+                converted[sheet, f"{col}{row}"] = {**value, "value": daily, "value_type": "number"}
+    # Only change the local write plan once the entire block is validated.
+    value_cells.update(converted)
+    return {**meta, "statistic_id": source["id"], "input_unit": unit, "unit": "원/일", "observation_range": [years[0], years[-1]],
+            "application_count": meta["application_base_year"] - years[-1],
+            "source_verification": "student_supplied; locator not independently verified"}
+
+
 def fill_copy(template: Path, map_path: Path, values_path: Path, out: Path, *, context=None) -> dict:
     import gg_major_contract as mc
 
@@ -305,6 +382,8 @@ def fill_copy(template: Path, map_path: Path, values_path: Path, out: Path, *, c
             _evidence(value)
             value_cells[key] = value
 
+        wage_meta = _wage_observations(map_cells, value_cells, values_data)
+
         modified: dict[str, bytes] = {}
         receipt = {
             "schema": "gg-xlsx-fill-receipt/v1",
@@ -316,6 +395,8 @@ def fill_copy(template: Path, map_path: Path, values_path: Path, out: Path, *, c
             "formulaCellsProtected": 0, "mergedCellsProtected": 0,
             "formulaCachesInvalidated": 0, "recalcNeeded": True, "errors": [],
         }
+        if wage_meta is not None:
+            receipt["wage_observations"] = wage_meta
         for sheet, target in sheets.items():
             raw = zin.read(target)
             root = ET.fromstring(raw)

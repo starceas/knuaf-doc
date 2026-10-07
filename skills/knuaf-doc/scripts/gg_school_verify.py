@@ -13,6 +13,7 @@ from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter
 
 from gg_finance import num
+from gg_price_assumptions import multiplier_d as price_multiplier_d
 from gg_school_excel import SCHOOL_SHEETS, check_unsupported, validate
 
 D = Decimal
@@ -23,7 +24,7 @@ GOAL_RATIO_CELLS = {"C12", "D12", "E12", "F12", "G12"}
 
 def calculate_school_expected(spec):
     """Computes independent 5-year accounting and financial schedules in Decimal."""
-    years, v = validate(spec)
+    years, v, price = validate(spec)
     land = v["land"]
     facility = v["facility"]
     equipment = v["equipment"]
@@ -39,7 +40,6 @@ def calculate_school_expected(spec):
     repair_facility_rate = v["repair_facility_rate"]
     repair_equipment_rate = v["repair_equipment_rate"]
     utility_per_10a = v["utility_per_10a"]
-    inflation = v["inflation"]
     area_m2 = v["area_m2"]
     production_kg = v["production_kg"]
     purchase_price = v["purchase_price"]
@@ -84,10 +84,15 @@ def calculate_school_expected(spec):
     land_self = land - land_loan
     total_capex = facility + equipment + land
 
+    # 세 상승률 분리: 일반물가→자재·수도광열비, 임금→노무비, 판매가→매출.
+    # 이중 적용 금지(노무총액에 일반물가 재적용 없음), 감가상각·고정 원리금 제외.
+    mult_g = [price_multiplier_d(price["general"], y) for y in years]
+    mult_w = [price_multiplier_d(price["wage"], y) for y in years]
+    mult_s = [price_multiplier_d(price["sales"], y) for y in years]
+
     opening_cash = equity
     purchase_rev = (production_kg * purchase_share * effective_purchase_price) / D(1000)
     direct_rev = (production_kg * direct_share * effective_direct_price) / D(1000)
-    rev = purchase_rev + direct_rev
     fac_dep_annual = (facility - salvage) / life if life > 0 else D(0)
     eq_dep_annual = equipment / life if life > 0 else D(0)
 
@@ -121,11 +126,14 @@ def calculate_school_expected(spec):
         cur_fac_book -= fac_dep
         cur_eq_book -= eq_dep
 
-        infl = inflation ** (t - 1)
-        yr_mat = materials * infl
-        yr_lab = labor * infl
-        yr_util = utility * infl
+        yr_mat = materials * mult_g[i]
+        yr_lab = labor * mult_w[i]
+        yr_util = utility * mult_g[i]
         yr_rep = repair_fac + repair_eq
+
+        yr_purchase_rev = purchase_rev * mult_s[i]
+        yr_direct_rev = direct_rev * mult_s[i]
+        rev = yr_purchase_rev + yr_direct_rev
 
         prod_cash_cost = yr_mat + yr_lab + yr_util + yr_rep
         cogs = prod_cash_cost + tot_dep
@@ -153,8 +161,8 @@ def calculate_school_expected(spec):
             {
                 "year": year,
                 "revenue": rev,
-                "purchase_rev": purchase_rev,
-                "direct_rev": direct_rev,
+                "purchase_rev": yr_purchase_rev,
+                "direct_rev": yr_direct_rev,
                 "materials": yr_mat,
                 "labor": yr_lab,
                 "utility": yr_util,

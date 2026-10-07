@@ -60,6 +60,7 @@ def main(argv=None):
             "source-resolve",
             "source-register",
             "source-view",
+            "finance-tables",
         ],
     )
     ap.add_argument("folder", nargs="?")
@@ -583,6 +584,15 @@ def main(argv=None):
                 with gg_lock.Lock(a.folder) as capability:
                     value = core.publish_source_view(
                         a.folder, registration, capability=capability)
+        elif a.command == "finance-tables":
+            if not a.xlsx:
+                raise ValueError("--xlsx 재계산 완료 통합문서 경로 필요")
+            import gg_finance_tables
+
+            value, code = gg_finance_tables.run(
+                a.folder, a.xlsx, major_id=a.major,
+                input_path=a.input,
+                out=a.out or "build/finance-tables.md")
         elif a.command == "paper":
             if not a.input:
                 raise ValueError("--input 논문 입력 JSON 필요")

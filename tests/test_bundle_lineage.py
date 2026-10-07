@@ -121,8 +121,8 @@ class RealTreeTests(ContractCase):
             self.assertEqual(rc["declared_count"], rc["verified"])
             # P28 adds the plain-thesis policy gate (all majors by default),
             # 이유림 exemplar registration and 문서 정본 changes on the P27 tree.
-            self.assertEqual(160, rc["verified"])
-            self.assertEqual(114, rc["new_count"])
+            self.assertEqual(167, rc["verified"])
+            self.assertEqual(120, rc["new_count"])
         else:
             self.assertNotEqual("ok", report["status"])
             self.assertIn("declared_missing", _codes(report))
@@ -142,9 +142,9 @@ class RealTreeTests(ContractCase):
         self.assertEqual("29abec0ec95369de7ae9e22207349d574f1f46b7",
                          link["baseline_main"])
         # P28's parent is the accepted P27 tree (main d08e98e, 233 files).
-        self.assertEqual(160, link["change_count"])
-        self.assertEqual(114, link["new_count"])
-        self.assertEqual(116, link["approved_new_files"])
+        self.assertEqual(167, link["change_count"])
+        self.assertEqual(120, link["new_count"])
+        self.assertEqual(124, link["approved_new_files"])
         self.assertEqual("P27", link["parent_candidate"]["stage"])
         self.assertEqual(233, link["parent_candidate"]["file_count"])
         self.assertEqual(
