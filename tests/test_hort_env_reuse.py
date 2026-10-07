@@ -59,7 +59,7 @@ BASELINE_ENTRY_DIGEST = {
     "kim-wonseop-exemplar-hwp":
         "b84223e411f041aa09cc0501af8d57b1c51c6eb0061eb92929534d59f86fc62c",
     "seo-minseo-finance-xlsx":
-        "28b244a854f9914cf9211f3d60ff20d6392a805701e55a9a8f3d47ee7adea891",
+        "4f9a38445a0d38f31c5b9682fd97f1a1315bfddf129226fccb03c17eef5100c1",
     "specialty-grad-thesis-finance-xlsx":
         "c50902c5513fd5fb0d085983e1a9e001742cfa5e91100517d709d55123fda991",
 }

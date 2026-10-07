@@ -44,13 +44,16 @@
 4. **이중 적용 금지**:
    - 동일 가격에 상승률을 두 번 곱하지 않는다. 노무비 단가에 임금 상승률을 곱한 뒤, 노무비 총액에 일반물가 상승률을 다시 곱하는 행위는 엄격히 금지된다.
    - 감가상각비와 고정 차입금 원리금 상환액에는 물가상승률을 적용하지 않는다.
-5. **판매가 차원 일치 및 미반영 명시 선택**:
-   - 판매가 수열은 계획의 작목(`crop`), 재배형태(`cultivation`), 지역(`region`), 상품(`product`), 단위(`unit`), 거래단계(`channel`), 등급(`grade`) 차원이 모두 일치해야 한다(`crop` 필수).
-   - 학생 작목·조건과 일치하는 공식 수열이 없을 경우, 전국 총지수를 임의로 대입하지 말고 "판매가 상승 미반영(확인 불가)"을 **명시 선택**한다 (`{"status": "not_applied", "reason": "확인 불가"}` 또는 `{mode: "not_applied", reason: "확인 불가"}`).
-6. **학생 직접 입력 수열(`price_sources`)의 공식 출처 계약**:
-   - 학생이 수열을 직접 추가할 때도 엄격한 공식 출처 계약을 통과해야 한다:
+5. **판매가 차원 일치 및 계획 권위 원칙**:
+   - **계획의 권위**: 사업계획(spec의 `crops`, `region`, `cultivation`, `product`, `channel`, `grade` 등 최상위 선언)이 절대적 기준이다. 보조 차원(`price_dimensions`, `target_dimensions`, 역할별 `target_dimensions`)이 계획과 충돌하면 거부된다(뒤 값 우선 금지).
+   - **수열 차원 완전 일치**: 판매가 수열이 선언한 모든 차원(최상위 수열 `unit` 포함)은 계획이 같은 값으로 확정해야 한다(`crop` 필수). 계획에 없는 차원이 수열에 있거나 조건이 다르면 적용을 거부한다.
+   - **`전국` 와일드카드 불가**: `전국`도 하나의 고정된 지역값이며 와일드카드가 아니다. 다른 작목을 포함한 목록 멤버십이나 유사 작목으로 대체 적용할 수 없다.
+   - 조건 불일치 시 전국 총지수나 다른 작목 단가를 임의 대입하지 말고 "판매가 상승 미반영(확인 불가)"을 **명시 선택**한다 (`{"status": "not_applied", "reason": "확인 불가"}` 또는 `{mode: "not_applied", reason: "확인 불가"}`).
+6. **학생 직접 입력 수열(`price_sources`)의 공식 출처 및 엄격 URL 계약**:
+   - 학생이 수열을 직접 추가할 때도 엄격한 공공기관 공식 출처 계약을 통과해야 한다:
      - **기관 종류(`agency_kind`)**: 국가통계(`national_statistics`), 중앙정부(`central_government`), 지자체(`local_government`), 공공기관(`public_corporation`), 국공립연구기관(`public_research_institute`) 중 하나 필수.
-     - **공식 도메인**: HTTPS 필수 및 공인 도메인(`go.kr`, `kosis.kr`, `kamis.or.kr`, `re.kr` 계열). 블로그·개인 사이트 불가.
+     - **엄격 HTTPS 공식 URL**: `url` 및 `evidence_url`은 `https://` 프로토콜 필수이며 공인 도메인(`kosis.kr`, `go.kr`, `kamis.or.kr`, `re.kr` 계열)의 정확 일치 또는 `.` 접미사여야 한다.
+     - **URL 우회 차단**: 백슬래시(`\`), userinfo(`@`), 공백, 제어문자, NBSP, 443 외 포트, 빈 host/port, 유니코드/IDNA 변형(punycode `xn--`), 불완전 percent encoding, 점 경로(`.`, `..`, `%2e`), 빈 `?`/`#` 등 브라우저와 파서 간 해석이 달라지는 모호한 URL은 입력 단계에서 즉시 거부된다.
      - **필수 필드**: `evidence_locator`, `base_year`(지수는 기준연도 정수, 명목은 null 필수), `unit`, 비어 있지 않은 `dimensions`(dict), `allowed_roles`(목록 필수).
      - **연도 정합성**: 관측 연도와 미확인 연도(`unconfirmed_years`)의 교집합 금지.
 7. **확인 불가 원칙**:

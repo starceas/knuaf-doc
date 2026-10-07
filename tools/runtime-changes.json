@@ -149,7 +149,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/SKILL.md": {
-      "after_sha256": "23230cf1e102e8a8ba11edb166a6b97255fb2d4a6ea79bb9d3fc3d5976d20359",
+      "after_sha256": "75bf4e7fa4ceee10a5d9151131df7d391fed79c90e745174bde56ba74072399b",
       "before_sha256": "c0008fa5239cc16411fd4ef24b5bf901c7a8b9b50c6b621e2bdee3acf734ddc0",
       "first_changed": "P1",
       "last_changed": "P28",
@@ -158,7 +158,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "c6ad0b8b3f28e62df2aeb28c590a6d381ca84a77ab3c93882e0abb505c79ba43",
+      "after_sha256": "675c0db83475fb31a640467b6aae27dbae81ac9669c89ffae1fa92dca8282caa",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "P28",
@@ -339,7 +339,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/builtin-sources.json": {
-      "after_sha256": "139983e80687491021a47455c9405ff1f7d10cba8b149f3f9c6d61ae671b06bb",
+      "after_sha256": "7161b8e96ca5250124c94febeaeda460af99025672e356a9f615dec908b0d15d",
       "before_sha256": null,
       "first_changed": "P5",
       "last_changed": "P28",
@@ -429,7 +429,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/excel-template.md": {
-      "after_sha256": "e371f06b4f61fd8b81b95a33f51c7233b9cc0b23c6827fd9d41dbadec2749652",
+      "after_sha256": "fdae2c7fbb58babd7297b6a359a20c105b064edfe362e261e0f867a432a3054e",
       "before_sha256": "4513094e1754191edd810947789f2228fb3b15bfbe1a2531e1b18f6b144739e8",
       "first_changed": "P28",
       "last_changed": "P28",
@@ -680,7 +680,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/price-research-routes.md": {
-      "after_sha256": "dcc63c215d46cd6e921df1a0fb984422a8f0732ce1e514060df8f0a79fe317a2",
+      "after_sha256": "94cf33c63588408019859b37208b83bf00b905bb5122640bdb524011b7b27c47",
       "before_sha256": "f89f038d5c767fd436a7a2c3b42c85f91d2b6a44186f9178fd6630b1438120f6",
       "first_changed": "P28",
       "last_changed": "P28",
@@ -698,7 +698,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/research-sources.md": {
-      "after_sha256": "7995af5cda2e54cadf2c4b4086e12ef84109e9f2467f62e35f6badf20511c082",
+      "after_sha256": "ba6ac079cf03fea393d36ab023019b3d4b039f939ad1e09c75d0833842c8de2b",
       "before_sha256": "0f127da93011dcc7a9be3c56e4219098781307b66a1f781786301789623e46b2",
       "first_changed": "P28",
       "last_changed": "P28",
@@ -751,7 +751,7 @@
       "source": "modified"
     },
     "skills/knuaf-doc/references/specialty-crops/finance-flow.md": {
-      "after_sha256": "e34a08bf1004dd41dc04bd3d107a0f376c97335e0554c195d70e360396b61297",
+      "after_sha256": "90b7b319c510ef53e591330871e3b581251f6cf8cabf2ccda598a24a41c595f6",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "P28",
@@ -787,7 +787,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/thesis-level.md": {
-      "after_sha256": "cc667eacd3df629f2f572f2a9722ede8fe81156f4478448b51020206d57c7388",
+      "after_sha256": "15c0380e47210bff2dc5da949bcae2b8c8deef3089deb5c2d4f6eaa63e75ce04",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "P28",

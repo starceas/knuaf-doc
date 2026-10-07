@@ -122,13 +122,18 @@ do not add sheets to the submission form merely to satisfy a preferred model.
 3. **관측값 입력 형식 (`wage_observations`) 및 시간급 환산 계약**:
    - 값 파일에 `statistic_id`, `base_year`, 6개 `observation_years`, `application_base_year`를 지정한다.
    - `values`는 8번 시트 X26:Z31 18개 셀 모두 정수 연도 및 양수 원/일이어야 하며, `evidence_ref(source_id, revision, locator, origin="factual")`가 필수다.
-   - **단위 일치 및 시간급 환산**: 관측표(X26:Z31)는 원/일 단위이므로 등록된 원/일 수열만 직접 입력할 수 있다. 농진청 소득자료집 고용노동 단가 등 시간급(원/시간) 수열을 일급으로 환산할 때는 반드시 `unit_conversion: {"from": "원/시간", "to": "원/일", "hours_per_day": float, "evidence_ref": {...}}` 명시 계약이 있어야 한다. **기본 환산 시간은 존재하지 않으며**, 근거 없는 임의 시간 입력은 거부된다.
+   - **등록 수열 원단위 값·연도 대조**: 등록 id를 사용할 경우 환산 전 원단위 값과 연도가 등록 수열의 관측값과 **정확히 일치**해야 한다(`check_observations`). 등록 수열에 성별 차원이 없으면 남자(Y열)·여자(Z열) 모두 같은 등록 관측값이어야 한다. 미관측 연도나 임의 변조값은 거부되며, 다른 값·연도를 쓰려면 다른 id의 공식 스키마 `price_sources`로 명시 등록해야 한다(같은 번들 id 덮어쓰기 불가).
+   - **단위 일치 및 시간급 환산**: 관측표(X26:Z31)는 원/일 단위이므로 등록된 원/일 수열만 직접 입력할 수 있다. 농진청 소득자료집 고용노동 단가나 최저임금 등 시간급(원/시간) 수열을 일급으로 환산할 때는 반드시 `unit_conversion: {"from": "원/시간", "to": "원/일", "hours_per_day": float, "evidence_ref": {...}}` 명시 계약이 있어야 한다. **기본 환산 시간은 존재하지 않으며**(Q-W-B2 사용자/조사 후 결정 대기), 대조가 끝난 원값에 명시 시간을 곱한 결과로만 일급이 결정된다(임의 보상 환산 금지).
 4. **가격 계약 (`--assumptions <JSON>`)**:
    - materialize-d8에 `--assumptions <가정.json>`을 전달한다.
    - 필드는 `wage_male`, `wage_female`, `sales`, 선택적 `general`로 분리한다. 각 계산 항목은 `base_year`, `observation_years`, `observed_values`, `application_base_year`, `evidence_ref`를 요구한다. 학생 선언 수열은 `assumptions.price_sources`에 포함한다.
    - r은 공식 관측값의 끝점 CAGR로만 정해지며(음수 허용), 명시 r은 검산 오차 내 일치해야 한다.
-   - 판매가는 `dimensions`와 `target_dimensions`의 작목(crop)·재배형태(cultivation)·지역(region)·단위(unit)·상품(product)·등급(grade)·유통단계(channel) 일치를 요구하며(`crop` 필수), 없으면 `{"mode": "not_applied", "reason": "확인 불가"}`를 명시한다.
-   - 임금률은 공식 노무비 지수 또는 RDA 고용노동 계열만, 판매가는 RDA output_price 계열만 허용한다.
+   - **계획 차원의 권위**: 사업계획의 최상위 차원이 기준이며 보조 차원이 충돌하면 거부된다. 판매가는 수열이 선언한 모든 차원(단위 포함)이 계획과 일치해야 하며(`crop` 필수), 전국은 고정 지역값이지 와일드카드가 아니다. 미일치 시 `{"mode": "not_applied", "reason": "확인 불가"}`를 명시한다.
+   - **역할별 허용 계약 (`allowed_roles`)**: 수열의 `allowed_roles`에 해당 역할(`wage`, `sales`, `general`)이 포함되어 있어야 한다.
+     - 번들 일반물가(`general`): `official.kosis.cpi.total`, `official.kosis.farm_purchase.materials`, `official.kosis.farm_purchase.expenses`.
+     - 번들 노무비(`wage`): `official.kosis.farm_purchase.labor`, `official.moel.establishment_wage.total`, `official.minimumwage.hourly`.
+     - 번들 판매가(`sales`): `official.rda.crop_income.spring_potato.output_price` (단, 작목 등 계획 차원 일치 필수; 번들에 없는 학생 작목은 공식 스키마 `price_sources`로 직접 등록).
+     - 시장 참고용(판매가 적용 불가, `allowed_roles: []`): `official.kosis.farm_sales.total`(총지수), `official.kamis.retail.rice_20kg.top`(쌀 소매가).
 5. **적용 기초연도 대조 및 경계**:
    - 임금과 판매의 적용 기초연도는 원본에 보존된 F6 및 C36과 대조한다. 불일치를 이유로 원본 연도나 연결을 임의 변경하지 않는다. 공식 수열 준비와 구조 복구만으로 제출/통계 승인이라고 간주하지 않는다.
 
@@ -159,7 +164,7 @@ do not add sheets to the submission form merely to satisfy a preferred model.
       }
     }
     ```
-  - 학생이 직접 조회한 작목별 수열은 `spec["price_sources"]`에 선언한다. 학생 수열도 공인 기관 종류(`agency_kind`), 공인 https 도메인, locator, 기준연도(지수 정수, 명목 null), unit, dimensions, allowed_roles를 준수해야 하며, 관측/미확인 연도 교집합은 거부된다.
+  - 학생이 직접 조회한 작목별 수열은 `spec["price_sources"]`에 선언한다. 학생 수열도 공인 기관 종류(`agency_kind`), 엄격 https 공식 도메인(백슬래시·@·공백·제어문자·NBSP·443 외 포트·유니코드/IDNA 변형 등 모호한 URL 거부), locator, 기준연도(지수 정수, 명목 null), unit, dimensions, allowed_roles를 준수해야 하며, 관측/미확인 연도 교집합은 거부된다.
   - 생성 명령:
     ```bash
     python3 skills/knuaf-doc/scripts/build_excel_finance_template.py project --input spec.json --out build/output.xlsx --major specialty_crops
