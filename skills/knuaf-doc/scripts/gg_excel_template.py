@@ -393,7 +393,7 @@ def wage_fill_map(source: Path) -> dict:
             "template": {"sha256": sha256(source)},
             "entries": [{"sheet": "8. 노무비계획", "range": "X26:Z31",
                          "role": "wage.observation", "period": "observation",
-                         "source_note": "raw years and both wage columns must match registered observations before explicit hourly conversion; no default hours",
+                         "source_note": "raw years and both wage columns must match registered observations and target gender before explicit hourly conversion; gender-specific single sources cannot fill both columns; no default hours",
                          "editable": True}]}
 
 
@@ -424,6 +424,21 @@ def wage_observation_source(metadata: dict, price_sources: list) -> dict:
     check_unit(source, ("원/일", "원/시간"), origin="wage_observations")
     check_base_year(metadata["base_year"], source, origin="wage_observations")
     return source
+
+
+def check_wage_gender(source: dict, gender: str, *, origin: str) -> None:
+    """A gender-specific series can supply only its matching school column.
+
+    The single-source observation format fills both columns, so such a
+    series is rejected there. Separate male/female rate inputs can use it.
+    """
+    from gg_price_assumptions import canonical_dimensions
+    dimensions = canonical_dimensions(source.get("dimensions"))
+    for key, value in dimensions.items():
+        if key.casefold() in {"gender", "sex", "성별"} and value != gender:
+            raise ValueError(f"{origin}: source gender {key}={value!r} "
+                             f"does not match target gender {gender!r}; "
+                             "separate gender sources required")
 
 
 def default_entries(inventory: list[dict]) -> list[dict]:

@@ -20,7 +20,7 @@
    "role": "sales"
   }
  },
- "footnote_input_contract": "--input은 {footnotes:{kind:{source_id,base_year,observation?,rate?,application_base_year?,target_dimensions?,unit?}},application_receipt?:'작업 폴더 안 영수증.json'} 또는 기존 각주 객체. 적용 문구는 실제 W-A manifest(file_hash)·W-B D8 patch receipt(output.sha256)가 입력 XLSX SHA와 일치하고 출처·관측기간·기초연도·r·대상 차원을 재검산한 경우만 허용한다. sales는 crop 및 수열 차원 전체가 필요하다. 임금 AC38/AD38 캐시가 있으면 대조한다. 영수증 부재·불일치는 참고값(워크북 적용 확인 불가)과 경고. 자유 문자열·임의 문구 필드는 거부한다. 명시 미적용은 {status:'not_applied',reason}.",
+ "footnote_input_contract": "--input은 {footnotes:{kind:{source_id,base_year,observation?,rate?,application_base_year?,target_dimensions?,unit?}},application_receipt?:작업 폴더 안 영수증 경로} 또는 기존 각주 객체. W-A manifest(file_hash)·W-B D8 patch receipt(output.sha256)를 읽되, SHA 동일성만으로 적용을 승인하지 않는다. 생산자 형식과 워크북 레이아웃이 일치해야 하므로 학과 템플릿에 레거시 manifest는 참고값이다(레거시 워크북 전개 보류 유지). 출처·관측기간·기초연도·r·대상 차원을 재검산하고 임금은 남녀 둘 다 적용 상태이며 AC38/AD38 숫자 캐시·F6 기초연도가 일치해야 한다. 하나라도 미적용·누락·불일치면 임금 각주 전체를 참고값으로 표시한다. 일반물가는 자재·경비의 5개년 전년 항목 배율 수식, 판매가는 5개년 수량×기준단가×가격배율 수식·C36 기초연도를 읽어 실제 r·적용 횟수와 대조한다. 숫자 캐시가 있으면 수식과도 대조하고, 읽을 수 있는 증거가 없거나 모순되면 참고값(워크북 적용 확인 불가)과 경고다. sales는 crop 및 수열 차원 전체가 필요하고 영수증 계획 작목이 있으면 각주 대상과 일치해야 한다. 자유 문자열·임의 문구 필드는 거부한다. 명시 미적용은 {status:not_applied,reason}.",
  "layout": {
   "id": "knuaf_dept_workbook_v1",
   "description": "학과 제공 통합문서 레이아웃 지문. 모든 signature는 필수다: 시트가 존재하고 anchor 열의 max_row 이내에 pattern(공백 제거 정규화 텍스트 대상 정규식)이 보여야 지원 레이아웃이다. 하나라도 실패하면 미지원 레이아웃으로 보류하고 실패한 지문을 sheet·pattern·desc로 사용자에게 보인다. 지문의 강도 기준은 '추출기(extract 앵커/머리글)가 그 시트의 표를 실제로 찾는 데 필요한 최소 구조 증거'다 — 추출이 견디는 라벨 서식 변형(예: 연도 블록의 '가. ' 접두 유무)을 지문이 추가로 요구하면 안 된다.",

@@ -118,16 +118,19 @@ do not add sheets to the submission form merely to satisfy a preferred model.
      python3 skills/knuaf-doc/scripts/gg_excel_formula_patch.py --source <사본.xlsx> --map <준비맵.json> --out <준비사본.xlsx> --receipt <영수증.json> --project <프로젝트폴더> --major specialty_crops
      python3 skills/knuaf-doc/scripts/gg_excel_template.py wage-map --source <준비사본.xlsx> --out-map <값지도.json>
      ```
-   - 관측 연도 사슬과 복사 수식을 명시적으로 비우며, 기존 fill CLI를 통해 관측값을 입력한다(수식 쓰기 금지 유지).
+   - **X01 원본 관측 준비**: 등록 X01 원본의 실제 관측 수식 변형(`Z27=Z28`)은 원본 SHA(`5d19b6a...`) 및 감사 자료(`formula-audit/x01.json`, SHA `785c2a1...`)에 묶어 검토된 수식으로 허용된다. 따라서 `materialize-d8 --prepare-observations`가 X01 원본 사본과 FX 양쪽 모두에서 정상 동작한다.
+   - 관측 연도 사슬과 복사 수식(X01은 Z27, FX는 Z28)을 명시적으로 비우며, 기존 fill CLI를 통해 관측값을 입력한다(수식 쓰기 금지 유지).
 3. **관측값 입력 형식 (`wage_observations`) 및 시간급 환산 계약**:
    - 값 파일에 `statistic_id`, `base_year`, 6개 `observation_years`, `application_base_year`를 지정한다.
    - `values`는 8번 시트 X26:Z31 18개 셀 모두 정수 연도 및 양수 원/일이어야 하며, `evidence_ref(source_id, revision, locator, origin="factual")`가 필수다.
-   - **등록 수열 원단위 값·연도 대조**: 등록 id를 사용할 경우 환산 전 원단위 값과 연도가 등록 수열의 관측값과 **정확히 일치**해야 한다(`check_observations`). 등록 수열에 성별 차원이 없으면 남자(Y열)·여자(Z열) 모두 같은 등록 관측값이어야 한다. 미관측 연도나 임의 변조값은 거부되며, 다른 값·연도를 쓰려면 다른 id의 공식 스키마 `price_sources`로 명시 등록해야 한다(같은 번들 id 덮어쓰기 불가).
+   - **등록 수열 원단위 값·연도 대조**: 등록 id를 사용할 경우 환산 전 원단위 값과 연도가 등록 수열의 관측값과 **정확히 일치**해야 한다(`check_observations`).
+   - **임금 관측 성별 계약**: 등록 수열에 성별 차원이 없으면 남자(Y열)·여자(Z열) 모두 같은 등록 관측값이어야 한다. 등록 수열에 성별 차원(`gender`·`sex`·`성별`)이 있는 수열은 현재 단일 출처·남녀 전체 블록(`wage_observations`) 입력 형식으로는 **거부**된다(남성 수치를 여성 관측으로 복제 금지). 남녀 상승률(`wage_male`·`wage_female`) 입력은 각각 맞는 성별 출처만(`wage_male`은 남자, `wage_female`은 여자) 사용할 수 있으며 반대 성별이나 복수 성별 선언은 거부된다. 미관측 연도나 임의 변조값은 거부되며, 다른 값·연도를 쓰려면 다른 id의 공식 스키마 `price_sources`로 명시 등록해야 한다(같은 번들 id 덮어쓰기 불가).
    - **단위 일치 및 시간급 환산**: 관측표(X26:Z31)는 원/일 단위이므로 등록된 원/일 수열만 직접 입력할 수 있다. 농진청 소득자료집 고용노동 단가나 최저임금 등 시간급(원/시간) 수열을 일급으로 환산할 때는 반드시 `unit_conversion: {"from": "원/시간", "to": "원/일", "hours_per_day": float, "evidence_ref": {...}}` 명시 계약이 있어야 한다. **기본 환산 시간은 존재하지 않으며**(Q-W-B2 사용자/조사 후 결정 대기), 대조가 끝난 원값에 명시 시간을 곱한 결과로만 일급이 결정된다(임의 보상 환산 금지).
 4. **가격 계약 (`--assumptions <JSON>`)**:
    - materialize-d8에 `--assumptions <가정.json>`을 전달한다.
    - 필드는 `wage_male`, `wage_female`, `sales`, 선택적 `general`로 분리한다. 각 계산 항목은 `base_year`, `observation_years`, `observed_values`, `application_base_year`, `evidence_ref`를 요구한다. 학생 선언 수열은 `assumptions.price_sources`에 포함한다.
    - r은 공식 관측값의 끝점 CAGR로만 정해지며(음수 허용), 명시 r은 검산 오차 내 일치해야 한다.
+   - **가격 가정 어댑터**: 공통 차원 정규화(`canonical_dimensions`)를 적용하여 판매가 작목(`target_dimensions`)은 문자열(`crop: "봄감자"`), 목록(`crop: ["봄감자"]`), 또는 한글 별칭(`작목: "봄감자"`)을 모두 지원한다. 임금(`wage_male`, `wage_female`)에는 작목이 필수가 아니며 지역(`region` 또는 `지역` 별칭)만 지정할 수 있다.
    - **계획 차원의 권위**: 사업계획의 최상위 차원이 기준이며 보조 차원이 충돌하면 거부된다. 판매가는 수열이 선언한 모든 차원(단위 포함)이 계획과 일치해야 하며(`crop` 필수), 전국은 고정 지역값이지 와일드카드가 아니다. 미일치 시 `{"mode": "not_applied", "reason": "확인 불가"}`를 명시한다.
    - **역할별 허용 계약 (`allowed_roles`)**: 수열의 `allowed_roles`에 해당 역할(`wage`, `sales`, `general`)이 포함되어 있어야 한다.
      - 번들 일반물가(`general`): `official.kosis.cpi.total`, `official.kosis.farm_purchase.materials`, `official.kosis.farm_purchase.expenses`.

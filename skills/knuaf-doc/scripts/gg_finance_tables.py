@@ -177,8 +177,9 @@ def _sheet_files(path):
 
 
 def _sheet_meta(path, sheet_file):
-    """시트 XML에서 수식 셀 집합과 병합 범위를 읽는다."""
-    formulas = set()
+    """시트 XML에서 실제 수식(공유 수식 포함)과 병합 범위를 읽는다."""
+    formulas = {}
+    shared = {}
     merges = []
     with zipfile.ZipFile(path) as z:
         root = ET.fromstring(z.read(sheet_file))
@@ -190,8 +191,23 @@ def _sheet_meta(path, sheet_file):
         ref = cell.get("r")
         if ref is None:
             continue
-        if cell.find(_XLS_MAIN + "f") is not None:
-            formulas.add(ref)
+        f = cell.find(_XLS_MAIN + "f")
+        if f is not None:
+            formulas[ref] = f.text
+            if f.get("t") == "shared" and f.text:
+                shared[f.get("si")] = (ref, f.text)
+    # Read effective shared formulas without recalculating or modifying XLSX.
+    from openpyxl.formula.translate import Translator, TranslatorError
+    for cell in root.iter(_XLS_MAIN + "c"):
+        f = cell.find(_XLS_MAIN + "f")
+        if f is not None and f.get("t") == "shared" and not f.text:
+            base = shared.get(f.get("si"))
+            if base:
+                try:
+                    formulas[cell.get("r")] = Translator(
+                        "=" + base[1], origin=base[0]).translate_formula(cell.get("r"))[1:]
+                except (ValueError, IndexError, TranslatorError):
+                    pass  # Missing/unreadable formula cannot prove application.
     return formulas, merges
 
 
@@ -232,6 +248,8 @@ class _SheetView:
         self.formulas = {
             rc for rc in (_ref_to_rc(f) for f in formulas) if rc
         }
+        self.formula_text = {_ref_to_rc(ref): text for ref, text in formulas.items()} \
+            if isinstance(formulas, dict) else {}
         self.covered = {}
         for ref in merges:
             cells = _range_cells(ref)
@@ -725,7 +743,7 @@ def _same_dimensions(a, b):
         == set(b[k] if isinstance(b[k], list) else [b[k]]) for k in a))
 
 
-def _receipt_rates(receipt, workbook_hash):
+def _receipt_rates(receipt, workbook_hash, *, layout_id=None):
     """Read the two existing producer formats; unknown receipts fail closed."""
     if not isinstance(receipt, dict):
         raise ValueError("워크북 SHA에 연결된 적용 영수증 없음")
@@ -736,7 +754,8 @@ def _receipt_rates(receipt, workbook_hash):
         rates = d8.get("rates")
         if not isinstance(rates, dict):
             raise ValueError("D8 rates 없음(구조 복구는 통계 적용 증거가 아님)")
-        sources = (d8.get("assumptions") or {}).get("price_sources") or []
+        assumptions = d8.get("assumptions") or {}
+        sources = assumptions.get("price_sources") or []
         student = {}
         for source in sources:
             sid = pa.check_source_entry(source, origin="application_receipt")
@@ -750,6 +769,8 @@ def _receipt_rates(receipt, workbook_hash):
             role = "wage" if key.startswith("wage_") else key
             if raw.get("mode") == "not_applied":
                 continue
+            if raw.get("mode", "applied") != "applied" or raw.get("status", "applied") != "applied":
+                raise ValueError("영수증은 미적용 또는 알 수 없는 상태")
             item = {
                 "source_id": raw.get("evidence_ref", {}).get("source_id"),
                 "base_year": raw.get("base_year"),
@@ -759,6 +780,7 @@ def _receipt_rates(receipt, workbook_hash):
                 "observation_years": raw.get("observation_years"),
                 "observed_values": raw.get("observed_values"),
                 "cache_cell": {"wage_male": "AC38", "wage_female": "AD38"}.get(key),
+                "plan_crops": _receipt_plan_crops(receipt, assumptions),
             }
             if "unit" in raw:
                 item["unit"] = raw["unit"]
@@ -768,18 +790,155 @@ def _receipt_rates(receipt, workbook_hash):
             item["observation"] = {"start_year": years[0], "end_year": years[-1]}
             result.setdefault(role, []).append(item)
         # A single wage note cannot silently describe only one sex.
-        if "wage" in result and not all(k in rates for k in ("wage_male", "wage_female")):
-            raise ValueError("남자·여자 임금 적용 영수증 모두 필요")
+        if "wage" in result and len(result["wage"]) != 2:
+            # Keep other roles usable; the wage role alone lacks full proof.
+            result.pop("wage")
         return result, student
     if receipt.get("profile") == FINANCE_PROFILE:
         if receipt.get("file_hash") != workbook_hash:
             raise ValueError("적용 manifest file_hash 불일치")
+        if layout_id != FINANCE_PROFILE:
+            raise ValueError("레거시 manifest 생산자와 워크북 레이아웃 불일치")
         rates = receipt.get("price_assumptions")
         if not isinstance(rates, dict):
             raise ValueError("manifest price_assumptions 없음")
-        return {role: [raw] for role, raw in rates.items()
-                if isinstance(raw, dict) and raw.get("status") == "applied"}, {}
+        result = {}
+        for role, raw in rates.items():
+            if isinstance(raw, dict) and raw.get("status") == "applied":
+                cells = ("AC38", "AD38") if role == "wage" else (None,)
+                result[role] = [{**raw, "cache_cell": cell,
+                                "plan_crops": _receipt_plan_crops(receipt, {})}
+                               for cell in cells]
+        return result, {}
     raise ValueError("지원하지 않는 적용 영수증 형식")
+
+
+def _receipt_plan_crops(receipt, assumptions):
+    crops = []
+    for obj in (receipt, assumptions, receipt.get("plan") or {},
+                assumptions.get("price_dimensions") or {},
+                assumptions.get("target_dimensions") or {}):
+        dims = pa.canonical_dimensions({k: obj[k] for k in ("crop", "작목") if k in obj})
+        values = [obj["crops"]] if "crops" in obj else []
+        if "crop" in dims:
+            values.append(dims["crop"])
+        for value in values:
+            items = value if isinstance(value, list) else [value]
+            if not items or any(not isinstance(v, str) or not v.strip() for v in items):
+                raise ValueError("영수증 계획 작목 형식 오류")
+            crops.append(set(items))
+    return crops
+
+
+_NUMERIC_FORMULA = r"[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?"
+
+
+def _formula(view, cell):
+    text = view.formula_text.get(_ref_to_rc(cell))
+    return re.sub(r"\s+", "", text).lstrip("=").replace("$", "") if text else None
+
+
+def _numeric_cache(view, cell):
+    value = view.value(*_ref_to_rc(cell))
+    if value is not None and (type(value) not in (int, float) or not math.isfinite(value)):
+        raise ValueError("적용 증거 셀 %s 캐시 오류" % cell)
+    return value
+
+
+def _year_value(value):
+    match = re.fullmatch(r"(\d{4})년?", _norm(value))
+    return int(match[1]) if match else None
+
+
+def _workbook_application(role, rate, base_year, view_for):
+    """Prove the preserved department layout's actual annual price factors.
+
+    Read only exact producer formulas (including shared formula expansion),
+    and cross-check numeric caches when present. No arbitrary Excel evaluator
+    or invented observation/base year is used here.
+    """
+    if view_for is None:
+        raise ValueError("워크북 실제 적용률을 읽을 증거 없음")
+    if role == "wage":
+        view, _ = view_for("8. 노무비계획")
+        if view is None or _year_value(view.value(6, _col("F"))) != base_year:
+            raise ValueError("임금 적용 기초연도와 워크북 F6 불일치")
+        for cell in ("AC38", "AD38"):
+            if not _same_rate(_numeric_cache(view, cell), rate):
+                raise ValueError("남녀 임금 캐시 %s 없음 또는 r 불일치" % cell)
+        return
+    if role == "sales":
+        view, _ = view_for("5. 판매계획")
+        if view is None or _year_value(view.value(36, _col("C"))) != base_year:
+            raise ValueError("판매가 적용 기초연도와 워크북 C36 불일치")
+        for row, price in {38: "O7", 39: "O8", 40: "O9", 41: "O11", 42: "O12", 43: "O13"}.items():
+            for i, (q, rev) in enumerate(zip("CEGIK", "DFHJL")):
+                qty, cell = q + str(row), rev + str(row)
+                text = _formula(view, cell)
+                pattern = re.escape(qty + "*" + price + "/1000")
+                match = re.fullmatch(pattern + r"(?:\*\(1\+(" + _NUMERIC_FORMULA + r")\)\^([0-4]))?", text or "")
+                if not match:
+                    raise ValueError("판매가 실제 배율 수식 확인 불가: " + cell)
+                if match[1] is None:
+                    factor = 1.0
+                    if i and not _same_rate(rate, 0):
+                        raise ValueError("판매가 연도별 배율 미적용: " + cell)
+                else:
+                    if int(match[2]) != i or not _same_rate(float(match[1]), rate):
+                        raise ValueError("판매가 실제 r·적용 횟수 불일치: " + cell)
+                    factor = (1 + rate) ** i
+                actual = _numeric_cache(view, cell)
+                quantity = _numeric_cache(view, qty)
+                unit_price = _numeric_cache(view, price)
+                if all(v is not None for v in (actual, quantity, unit_price)) and not _same_rate(
+                        actual, quantity * unit_price / 1000 * factor):
+                    raise ValueError("판매가 수식·매출 캐시 불일치: " + cell)
+        return
+    if role == "general":
+        for sheet in ("7. 영농자재소요계획", "9. 경비계획"):
+            view, _ = view_for(sheet)
+            if view is None:
+                raise ValueError("일반물가 적용률 증거 시트 없음: " + sheet)
+            anchors = [(r, int(re.search(r"(\d{4})년", _norm(view.value(r, 2)))[1]))
+                       for r in range(1, view.max_row + 1)
+                       if re.match(r"^(?:[가-힣]\.)?\d{4}년", _norm(view.value(r, 2)))]
+            if (len(anchors) != 5 or anchors[0][1] != base_year
+                    or [y for _, y in anchors] != list(range(base_year, base_year + 5))):
+                raise ValueError("일반물가 적용 기초연도·연도별 증거 불일치")
+            for i in range(1, len(anchors)):
+                start, _ = anchors[i]
+                stop = anchors[i+1][0] if i+1 < len(anchors) else view.max_row + 1
+                prior_start = anchors[i-1][0]
+                proven = 0
+                for row in range(start, stop):
+                    cell = "C%d" % row
+                    text = _formula(view, cell)
+                    if text is None and (row, 3) in view.formulas:
+                        raise ValueError("일반물가 증거 수식 읽기 실패: " + cell)
+                    refs = [int(n) for n in re.findall(r"\bC([1-9]\d*)\b", text or "")
+                            if prior_start <= int(n) < start]
+                    if not refs or re.fullmatch(r"C[1-9]\d*", text or ""):
+                        continue  # Current-year totals and unchanged fixed costs are not price factors.
+                    prior = "C%d" % refs[0]
+                    match = re.fullmatch(re.escape(prior) + r"\*(?:\(1\+(" + _NUMERIC_FORMULA
+                                         + r")\)|(" + _NUMERIC_FORMULA + r"))", text)
+                    if not match:
+                        raise ValueError("일반물가 배율 수식 확인 불가: " + cell)
+                    factor = 1 + float(match[1]) if match[1] is not None else float(match[2])
+                    label = _norm(view.value(row, 2))
+                    if factor == 0 and "종자" in label:
+                        continue  # Explicit perennial seed omission is not an inflation claim.
+                    if (label != _norm(view.value(refs[0], 2))
+                            or not _same_rate(factor, 1 + rate)):
+                        raise ValueError("일반물가 전년 항목·실제 r 불일치: " + cell)
+                    actual, before = _numeric_cache(view, cell), _numeric_cache(view, prior)
+                    if actual is not None and before is not None and not _same_rate(actual, before * factor):
+                        raise ValueError("일반물가 수식·캐시 불일치: " + cell)
+                    proven += 1
+                if not proven:
+                    raise ValueError("일반물가 연도간 적용률 증거 없음: " + sheet)
+        return
+    raise ValueError("워크북 적용률 검사가 없는 역할")
 
 
 def _check_application(info, source, resolved, role, applications, registry,
@@ -791,6 +950,9 @@ def _check_application(info, source, resolved, role, applications, registry,
     if type(info.get("application_base_year")) is not int:
         raise ValueError("적용 확인에는 적용 기초연도 필요")
     target = pa.canonical_dimensions(info.get("target_dimensions") or {})
+    if role == "wage" and (len(entries) != 2 or
+            {e.get("cache_cell") for e in entries} != {"AC38", "AD38"}):
+        raise ValueError("남자·여자 임금 적용 증거 모두 필요")
     for entry in entries:
         if entry.get("status", "applied") != "applied":
             raise ValueError("영수증은 미적용 상태")
@@ -803,6 +965,11 @@ def _check_application(info, source, resolved, role, applications, registry,
         if "unit" in entry:
             pa.check_unit(src, entry["unit"], origin="application_receipt")
         dims = pa.canonical_dimensions(entry.get("target_dimensions") or {})
+        if role == "sales":
+            crop = target.get("crop")
+            crops = set(crop if isinstance(crop, list) else [crop])
+            if any(plan != crops for plan in entry.get("plan_crops", [])):
+                raise ValueError("영수증 계획 작목과 판매 각주 대상 불일치")
         pa.check_dimensions(src, dims, required=("crop",) if role == "sales" else (),
                             origin="application_receipt")
         if "observation" not in entry or "rate" not in entry:
@@ -827,13 +994,7 @@ def _check_application(info, source, resolved, role, applications, registry,
                 or res["observation"] != resolved["observation"]
                 or not _same_rate(res["rate"], resolved["rate"])):
             raise ValueError("각주와 영수증 출처·기간·기초연도·r·대상 차원 불일치")
-        cell = entry.get("cache_cell")
-        if cell and view_for:
-            view, _ = view_for("8. 노무비계획")
-            if view is not None:
-                value = view.value(38, _col(cell[:-2]))
-                if value is not None and not _same_rate(value, res["rate"]):
-                    raise ValueError("임금 캐시 %s와 영수증 r 불일치" % cell)
+    _workbook_application(role, resolved["rate"], info["application_base_year"], view_for)
 
 
 def _resolve_footnote(kind, cfg, info, registry, *, applications=None,
@@ -895,7 +1056,7 @@ def _resolve_footnote(kind, cfg, info, registry, *, applications=None,
             raise ValueError(err)
         _check_application(info, src, res, role, applications, registry,
                            student_sources, view_for)
-    except (ValueError, KeyError, TypeError, AttributeError) as e:
+    except (ValueError, KeyError, TypeError, AttributeError, OverflowError) as e:
         err = str(e)
     status_text = "참고값(워크북 적용 확인 불가)" if err else "적용"
     parts = ["출처: %s %s %s [%s]" % (src.get("agency") or "",
@@ -1132,7 +1293,10 @@ def generate(workbook_path, *, major_id, footnotes=None, map_path=None,
     applications, student_sources, receipt_error = {}, {}, None
     try:
         applications, student_sources = _receipt_rates(
-            application_receipt, hashlib.sha256(path.read_bytes()).hexdigest())
+            application_receipt, hashlib.sha256(path.read_bytes()).hexdigest(),
+            # This extractor supports department workbooks only. A caller's
+            # display map (including a renamed layout id) is not provenance.
+            layout_id="knuaf_dept_workbook_v1")
     except (ValueError, KeyError, TypeError, AttributeError) as e:
         receipt_error = str(e)
     application_context = {"applications": applications,

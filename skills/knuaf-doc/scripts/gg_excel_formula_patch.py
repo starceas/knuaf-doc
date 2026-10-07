@@ -26,6 +26,7 @@ from gg_excel_template import (
     _serialize_dom,
     merged_cells,
     sha256,
+    check_wage_gender,
     template_price_sources,
     workbook_sheets,
 )
@@ -107,7 +108,7 @@ def _official_rate(item: dict, kind: str, *, price_sources=None) -> dict:
     """Adapt template endpoints to the shared official-series contract."""
     from gg_price_assumptions import (
         load_registry, normalize_price_assumptions, multiplier,
-        resolve_series, check_observations, check_dimensions,
+        resolve_series, check_observations, check_dimensions, canonical_dimensions,
     )
     if not isinstance(item, dict):
         raise ValueError(f"{kind} rate metadata required")
@@ -142,9 +143,12 @@ def _official_rate(item: dict, kind: str, *, price_sources=None) -> dict:
                 {"status": "not_applied", "reason": "separate template role"}
                 for r in ("general", "wage", "sales")}}
     if "target_dimensions" in item:
-        spec["target_dimensions"] = item["target_dimensions"]
-        if isinstance(item["target_dimensions"], dict):
-            spec["crops"] = [item["target_dimensions"].get("crop")]
+        target = canonical_dimensions(item["target_dimensions"])
+        spec["target_dimensions"] = target
+        raw["target_dimensions"] = target
+        if "crop" in target:
+            crop = target["crop"]
+            spec["crops"] = crop if isinstance(crop, list) else [crop]
     registry = load_registry()
     normalized = normalize_price_assumptions(spec, list(range(year, year + 5)), registry=registry)[role]
     for plan_year in range(year, year + 5):
@@ -153,6 +157,8 @@ def _official_rate(item: dict, kind: str, *, price_sources=None) -> dict:
     # cannot replace a registered series under its official id.
     source = resolve_series(evidence["source_id"], registry=registry,
                             student_sources=template_price_sources(spec["price_sources"]))
+    if kind in {"wage_male", "wage_female"}:
+        check_wage_gender(source, "남자" if kind == "wage_male" else "여자", origin=kind)
     check_observations(source, years, values, origin=kind)
     if "dimensions" in item:
         check_dimensions(source, item["dimensions"], origin=kind)
@@ -162,6 +168,26 @@ def _official_rate(item: dict, kind: str, *, price_sources=None) -> dict:
             "observation_range": [years[0], years[-1]],
             "application_counts": list(range(5)),
             "source_verification": "registered official series; locator not independently verified"}
+
+
+def _reviewed_observation_formulas(source: Path, spec: dict) -> dict:
+    """Admit exact formulas only for the registered SHA and pinned audit."""
+    reviewed = {}
+    source_digest = sha256(source)
+    for entry in spec.get("reviewed_observation_formulas", []):
+        if source_digest != entry["source_sha256"]:
+            continue
+        audit_path = D8_SPEC_PATH.parent.parent / entry["audit_file"]
+        if sha256(audit_path) != entry["audit_sha256"]:
+            raise ValueError("reviewed observation audit hash differs")
+        audit = _json(audit_path)
+        if (audit.get("schema") != "knuaf-workbook-formula-audit/v1"
+                or audit.get("source_sha256") != source_digest
+                or not any(all(row.get(k) == entry[k] for k in ("sheet", "cell", "formula"))
+                           for row in audit.get("inventory", []))):
+            raise ValueError("reviewed observation audit source/formula differs")
+        reviewed[entry["sheet"], entry["cell"]] = entry
+    return reviewed
 
 
 def materialize_d8(source: Path, assumptions: dict | None = None, *, prepare_observations=False) -> dict:
@@ -184,12 +210,12 @@ def materialize_d8(source: Path, assumptions: dict | None = None, *, prepare_obs
     structural_evidence = {"source_id": "template.d8.wage_link", "revision": 1,
                            "locator": "d8-spec.json wage_rows/year_columns; DESIGN-PR2 P2-P6"}
 
-    def add(s, cell, formula=None, *, prepare=False):
+    def add(s, cell, formula=None, *, prepare=False, evidence=None):
         old = book.formulas.get((s, cell))
         if not prepare and old is not None and _normalize_formula(old.text, "existing formula") == formula:
             return
         p = {"sheet": s, "cell": cell, "reason": "D8 explicit price/wage connection; preserve C1 and year labels",
-             "evidence_ref": structural_evidence}
+             "evidence_ref": structural_evidence if evidence is None else evidence}
         if old is not None:
             p["expected_formula"] = "=" + old.text
         else:
@@ -220,6 +246,7 @@ def materialize_d8(source: Path, assumptions: dict | None = None, *, prepare_obs
     if prepare_observations:
         if assumptions is not None:
             raise ValueError("prepare observations, fill sourced values, then apply rate assumptions")
+        reviewed = _reviewed_observation_formulas(source, spec)
         for row in range(26, 32):
             for col in "XYZ":
                 ref = f"{col}{row}"
@@ -228,9 +255,17 @@ def materialize_d8(source: Path, assumptions: dict | None = None, *, prepare_obs
                 # observation are convertible; other formulas need review.
                 if old is not None:
                     expected = f"X{row-1}+1" if col == "X" and row > 26 else "Z29" if ref == "Z28" else None
+                    evidence = None
                     if old.text != expected:
-                        raise ValueError(f"unreviewed observation formula: {ref}")
-                    add(sheet, ref, prepare=True)
+                        entry = reviewed.get((sheet, ref))
+                        if entry is None or old.text != entry["formula"]:
+                            raise ValueError(f"unreviewed observation formula: {ref}")
+                        evidence = {**structural_evidence,
+                                    "locator": (f"d8-spec.json reviewed_observation_formulas; "
+                                                f"source_sha256={entry['source_sha256']}; "
+                                                f"{entry['audit_file']} sha256={entry['audit_sha256']}; "
+                                                f"{sheet}!{ref}={entry['formula']}")}
+                    add(sheet, ref, prepare=True, evidence=evidence)
         for col, rate_cell in (("Y", "AC38"), ("Z", "AD38")):
             old = book.formulas.get((sheet, rate_cell))
             desired = f"({col}31/{col}26)^(1/(X31-X26))-1"

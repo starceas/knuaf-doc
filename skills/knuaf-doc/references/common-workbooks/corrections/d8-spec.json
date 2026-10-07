@@ -24,6 +24,16 @@
     "R"
   ],
   "observation_range": "X26:Z31",
+  "reviewed_observation_formulas": [
+    {
+      "source_sha256": "5d19b6a2e5dcddccb70c68e39abee8f423bba005c008db7b64076326a17b9c80",
+      "audit_file": "formula-audit/x01.json",
+      "audit_sha256": "785c2a157b8a774421624aa49d86f347ffc4c533051959cc822746bc6ebaecf5",
+      "sheet": "8. 노무비계획",
+      "cell": "Z27",
+      "formula": "Z28"
+    }
+  ],
   "sales_sheet": " 5. 판매계획",
   "sales_rows": {
     "38": "O7",
@@ -55,7 +65,7 @@
     "allowed_role": "wage",
     "validator": "gg_price_assumptions.check_observations before unit conversion, for both Y and Z columns",
     "observed_values": "raw years and values must exactly match resolved registered observations; unobserved years are rejected",
-    "gender_contract": "a series without gender dimensions supplies the same value to both Y and Z",
+    "gender_contract": "a series without gender dimensions supplies the same value to both Y and Z; gender/sex/성별 must match Y=남자 or Z=여자; gender-specific single-source observations are rejected because both columns are required",
     "alternative_values": "explicit price_sources registration with official schema and a different id; bundled id cannot be overridden",
     "output_unit": "원/일",
     "base_year": "registered index basis; null for nominal currency series",
@@ -85,6 +95,7 @@
     "validator": "gg_price_assumptions public API",
     "student_registration": "assumptions.price_sources",
     "observed_values": "must match registered observations; cannot overwrite bundled observations",
+    "gender_contract": "gender/sex/성별 of a wage series must match wage_male=남자 or wage_female=여자",
     "roles": {
       "wage_male": "wage",
       "wage_female": "wage",

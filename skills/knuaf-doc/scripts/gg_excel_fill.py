@@ -260,8 +260,10 @@ def _wage_observations(map_cells: dict, value_cells: dict, values_data: dict):
     statistic_id = meta.get("statistic_id")
     # Source identity, allowed role and nominal/index basis are resolved by
     # the same public contract used by the legacy workbook path.
-    from gg_excel_template import wage_observation_source
+    from gg_excel_template import wage_observation_source, check_wage_gender
     source = wage_observation_source(meta, values_data.get("price_sources", []))
+    for col, gender in (("Y", "남자"), ("Z", "여자")):
+        check_wage_gender(source, gender, origin=f"wage_observations.{col}")
     unit = source["unit"]
     if meta.get("unit") != unit:
         raise ValueError("wage_observations.unit differs from registered source unit")

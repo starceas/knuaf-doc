@@ -935,7 +935,7 @@ class TestRun(unittest.TestCase):
                    "price_assumptions": {"general": {**info, "status": "applied",
                        "rate": resolved["rate"], "observation": resolved["observation"]}}}
         (self.root / "receipt.json").write_text(json.dumps(receipt), encoding="utf-8")
-        for ref, applied in [("receipt.json", True), ("missing.json", False)]:
+        for ref, applied in [("receipt.json", False), ("missing.json", False)]:
             (self.root / "input.json").write_text(json.dumps({
                 "footnotes": {"general_price": info}, "application_receipt": ref}), encoding="utf-8")
             value, code = ft.run(self.root, self.xlsx, major_id="specialty_crops",
@@ -943,7 +943,7 @@ class TestRun(unittest.TestCase):
             self.assertEqual(code, 0)
             text = Path(value["path"]).read_text(encoding="utf-8")
             self.assertEqual("% 적용" in text, applied)
-            if not applied:
+            if ref == 'missing.json':
                 self.assertTrue(any(w["reason"] == "receipt_unavailable" for w in value["warnings"]))
         for ref in ("../escape.json", {"sha256": "inline"}):
             (self.root / "input.json").write_text(json.dumps({
@@ -982,12 +982,40 @@ class TestRun(unittest.TestCase):
         self.assertIn("official.kosis.cpi.total", text)
 
 
+def _general_evidence(path, rate=GENERAL_R):
+    """Synthetic annual producer formulas, separate from the extracted tables."""
+    w = openpyxl.load_workbook(path)
+    for name in ('7. 영농자재소요계획', '9. 경비계획'):
+        s = w.create_sheet(name)
+        for i in range(5):
+            anchor = 2 + i * 10
+            s['B%d' % anchor] = '%d년' % (2026+i)
+            s['B%d' % (anchor+3)] = '합성 물가 적용 비목'
+            s['C%d' % (anchor+3)] = 100 if not i else '=C%d*(1+%r)' % (anchor-7, rate)
+    w.save(path)
+    w.close()
+
+
+def _workbook_view(path):
+    w = openpyxl.load_workbook(path, data_only=True, read_only=True)
+    files = ft._sheet_files(path)
+    views = {s.title: ft._SheetView(s, *ft._sheet_meta(path, files[s.title])) for s in w}
+    w.close()
+    def view_for(name):
+        for title, view in views.items():
+            if ft._SHEET_KEY.sub('', title) == ft._SHEET_KEY.sub('', name):
+                return view, title
+        return None, name
+    return view_for
+
+
 class TestV2Receipt(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.xlsx = Path(self.tmp.name) / "mini.xlsx"
         _build_workbook(self.xlsx)
+        _general_evidence(self.xlsx)
         self.map_path = self.xlsx.with_suffix(".map.json")
         self.map_path.write_text(json.dumps(MINI_MAP), encoding="utf-8")
         self.info = {"source_id": "test.general", "base_year": 2020,
@@ -1059,19 +1087,33 @@ class TestV2Receipt(unittest.TestCase):
                         **self.info, "status": "applied", "rate": GENERAL_R,
                         "observation": {"start_year": 2020, "end_year": 2025,
                                         "start_value": 100, "end_value": 110}}}}
-        self.assertIn("% 적용", self.gen(manifest)["markdown"])
+        self.assertNotIn("% 적용", self.gen(manifest)["markdown"])
+        # Parsing support is retained, but a legacy producer cannot attest a
+        # department-layout output, regardless of the declared SHA.
+        rates, _ = ft._receipt_rates(manifest, manifest['file_hash'], layout_id=ft.FINANCE_PROFILE)
+        self.assertEqual(rates['general'][0]['rate'], GENERAL_R)
+        line, err = ft._resolve_footnote('general_price', MINI_MAP['footnote_kinds']['general_price'],
+            self.info, REGISTRY, applications=rates, view_for=_workbook_view(self.xlsx))
+        self.assertIsNone(err)
+        self.assertIn('% 적용', line)
         for key, value in [("start_value", 1), ("end_value", 111),
                            ("start_year", 2022), ("end_year", 2024)]:
             with self.subTest(key=key):
                 bad = copy.deepcopy(manifest)
                 bad["price_assumptions"]["general"]["observation"][key] = value
                 self.assertNotIn("% 적용", self.gen(bad)["markdown"])
+                rates, _ = ft._receipt_rates(bad, bad['file_hash'], layout_id=ft.FINANCE_PROFILE)
+                line, err = ft._resolve_footnote('general_price', MINI_MAP['footnote_kinds']['general_price'],
+                    self.info, REGISTRY, applications=rates, view_for=_workbook_view(self.xlsx))
+                self.assertTrue(err)
+                self.assertNotIn('% 적용', line)
         manifest["file_hash"] = "0" * 64
         self.assertNotIn("% 적용", self.gen(manifest)["markdown"])
 
     def test_wage_cache_and_both_sexes(self):
         w = openpyxl.load_workbook(self.xlsx)
         ws = w.create_sheet("8. 노무비계획")
+        ws['F6'] = '2026년'
         ws["AC38"] = GENERAL_R
         ws["AD38"] = GENERAL_R
         w.save(self.xlsx)
@@ -1123,14 +1165,15 @@ class TestV2Receipt(unittest.TestCase):
                 "base_year": raw["base_year"], "application_base_year": 2026,
                 "target_dimensions": raw["target_dimensions"]}
         cfg = MINI_MAP["footnote_kinds"]["selling_price"]
+        view_for = _workbook_view(output)
         line, err = ft._resolve_footnote("selling_price", cfg, info, pa.load_registry(),
-                                       applications=applications, student_sources=sources)
+                                       applications=applications, student_sources=sources, view_for=view_for)
         self.assertIsNone(err)
         self.assertIn("2.0000% 적용", line)
         # A scalar and its one-element list denote the same confirmed crop.
         info["target_dimensions"] = {**raw["target_dimensions"], "crop": ["synthetic"]}
         line, err = ft._resolve_footnote("selling_price", cfg, info, pa.load_registry(),
-                                       applications=applications, student_sources=sources)
+                                       applications=applications, student_sources=sources, view_for=view_for)
         self.assertIsNone(err)
         for key in raw["target_dimensions"]:
             with self.subTest(missing=key):
@@ -1229,5 +1272,254 @@ class TestV2Years(unittest.TestCase):
         self.assertFalse(any(x["table"] == "t_years" for x in r["missing_required"]))
 
 
-if __name__ == "__main__":
+class TestV3ApplicationProof(unittest.TestCase):
+    setUp = TestV2Receipt.setUp
+    gen = TestV2Receipt.gen
+    receipt = TestV2Receipt.receipt
+
+    def test_matching_hash_without_workbook_rate_evidence_is_reference(self):
+        w = openpyxl.load_workbook(self.xlsx)
+        for name in ('7. 영농자재소요계획', '9. 경비계획'):
+            del w[name]
+        w.save(self.xlsx)
+        w.close()
+        self.assertNotIn('% 적용', self.gen(self.receipt())['markdown'])
+
+    def test_legacy_manifest_cannot_attest_department_workbook(self):
+        receipt = {'profile': ft.FINANCE_PROFILE,
+                   'file_hash': hashlib.sha256(self.xlsx.read_bytes()).hexdigest(),
+                   'price_assumptions': {'general': {**self.info, 'status': 'applied',
+                       'rate': GENERAL_R, 'observation': {'start_year': 2020, 'end_year': 2025}}}}
+        self.assertNotIn('% 적용', self.gen(receipt)['markdown'])
+
+    def test_either_sex_not_applied_or_missing_cache_downgrades_whole_wage(self):
+        w = openpyxl.load_workbook(self.xlsx)
+        s = w.create_sheet('8. 노무비계획')
+        s['F6'] = '2026년'
+        s['AC38'] = GENERAL_R
+        s['AD38'] = GENERAL_R
+        w.save(self.xlsx)
+        w.close()
+        m = copy.deepcopy(MINI_MAP)
+        m['sections'][0]['tables'][0]['footnotes'] = ['wage']
+        self.map_path.write_text(json.dumps(m), encoding='utf-8')
+        receipt = self.receipt()
+        raw = receipt['d8']['rates'].pop('general')
+        raw['evidence_ref']['source_id'] = 'test.wage'
+        def generate():
+            return ft.generate(self.xlsx, major_id='specialty_crops', map_path=self.map_path,
+                registry=REGISTRY, application_receipt=receipt,
+                footnotes={'wage': {**self.info, 'source_id': 'test.wage'}})['markdown']
+        for sex in ('wage_male', 'wage_female'):
+            with self.subTest(sex=sex):
+                receipt['d8']['rates'] = {k: copy.deepcopy(raw) for k in ('wage_male', 'wage_female')}
+                receipt['d8']['rates'][sex] = {'mode': 'not_applied', 'reason': '확인 불가'}
+                self.assertNotIn('% 적용', generate())
+        receipt['d8']['rates'] = {k: copy.deepcopy(raw) for k in ('wage_male', 'wage_female')}
+        for cell in ('AC38', 'AD38'):
+            w = openpyxl.load_workbook(self.xlsx)
+            w['8. 노무비계획'][cell] = None
+            w.save(self.xlsx)
+            w.close()
+            receipt['output']['sha256'] = hashlib.sha256(self.xlsx.read_bytes()).hexdigest()
+            self.assertNotIn('% 적용', generate())
+
+    def test_sales_metadata_without_workbook_view_is_reference(self):
+        cfg = MINI_MAP['footnote_kinds']['selling_price']
+        info = {'source_id': 'test.sales', 'base_year': None,
+                'application_base_year': 2026, 'target_dimensions': {'crop': '시험작목', 'region': '전국', 'unit': '원/kg'}}
+        source = copy.deepcopy(REGISTRY['test.sales'])
+        source['dimensions']['crop'] = '시험작목'
+        source['unit'] = '원/kg'
+        source['dimensions']['unit'] = '원/kg'
+        registry = {**REGISTRY, 'test.sales': source}
+        resolved = pa.resolve_series_rate(source)
+        line, err = ft._resolve_footnote('selling_price', cfg, info, registry,
+            applications={'sales': [{**info, 'rate': resolved['rate'],
+                                    'observation': resolved['observation']}]})
+        self.assertTrue(err)
+        self.assertIsNotNone(line)
+        self.assertNotIn('% 적용', line)
+
+    def test_custom_map_layout_name_cannot_relabel_receipt_producer(self):
+        m = copy.deepcopy(MINI_MAP)
+        m['layout'] = {'id': ft.FINANCE_PROFILE, 'signatures': []}
+        self.map_path.write_text(json.dumps(m), encoding='utf-8')
+        res = pa.resolve_series_rate(REGISTRY['test.general'])
+        manifest = {'profile': ft.FINANCE_PROFILE,
+                    'file_hash': hashlib.sha256(self.xlsx.read_bytes()).hexdigest(),
+                    'price_assumptions': {'general': {**self.info, 'status': 'applied',
+                        'rate': res['rate'], 'observation': res['observation']}}}
+        self.assertNotIn('% 적용', self.gen(manifest)['markdown'])
+
+    def test_general_rate_mismatch_missing_year_and_cache_contradiction(self):
+        for cell, value in [('C15', '=C5*1.025'), ('C45', '=C35*(1+0.1)'),
+                            ('C25', None), ('B32', '2028년')]:
+            with self.subTest(cell=cell, value=value):
+                original = self.xlsx.read_bytes()
+                w = openpyxl.load_workbook(self.xlsx)
+                w['7. 영농자재소요계획'][cell] = value
+                w.save(self.xlsx)
+                w.close()
+                self.assertNotIn('% 적용', self.gen(self.receipt())['markdown'])
+                self.xlsx.write_bytes(original)
+        import xml.etree.ElementTree as ET
+        import zipfile
+        ns = ft._XLS_MAIN
+        name = ft._sheet_files(self.xlsx)['7. 영농자재소요계획']
+        with zipfile.ZipFile(self.xlsx) as z:
+            entries = {n: z.read(n) for n in z.namelist()}
+        root = ET.fromstring(entries[name])
+        cell = next(c for c in root.iter(ns+'c') if c.get('r') == 'C15')
+        cell.find(ns+'v').text = '999'  # Formula says ~101.9, cache contradicts it.
+        entries[name] = ET.tostring(root)
+        with zipfile.ZipFile(self.xlsx, 'w') as z:
+            for n, data in entries.items():
+                z.writestr(n, data)
+        self.assertNotIn('% 적용', self.gen(self.receipt())['markdown'])
+
+    def test_unreadable_general_chain_cannot_hide_behind_another_matching_item(self):
+        w = openpyxl.load_workbook(self.xlsx)
+        material = w['7. 영농자재소요계획']
+        for i in range(5):
+            row = 6+i*10
+            material['B%d' % row] = '다른 물가 적용 비목'
+            material['C%d' % row] = 100 if not i else '=C%d*(1+%r)' % (row-10, GENERAL_R)
+        material['C16'] = '=(C6*1.025)'
+        w.save(self.xlsx)
+        w.close()
+        self.assertNotIn('% 적용', self.gen(self.receipt())['markdown'])
+
+    def test_general_zero_and_negative_rates_require_actual_matching_formula(self):
+        for end in (100, 90):
+            with self.subTest(end=end):
+                r = pa.cagr(100, end, 5)
+                source = copy.deepcopy(REGISTRY['test.general'])
+                source['observations'] = [{'year': 2020, 'value': 100}, {'year': 2025, 'value': end}]
+                w = openpyxl.load_workbook(self.xlsx)
+                for name in ('7. 영농자재소요계획', '9. 경비계획'):
+                    for row in (15, 25, 35, 45):
+                        w[name]['C%d' % row] = '=C%d*(1+%r)' % (row-10, r)
+                w.save(self.xlsx)
+                w.close()
+                receipt = self.receipt()
+                raw = receipt['d8']['rates']['general']
+                raw.update(r=r, observed_values=[100, end])
+                result = ft.generate(self.xlsx, major_id='specialty_crops', map_path=self.map_path,
+                    registry={**REGISTRY, 'test.general': source}, application_receipt=receipt,
+                    footnotes={'general_price': self.info})
+                self.assertIn('%.4f%% 적용' % (r*100), result['markdown'])
+
+    def test_manifest_wage_uses_both_caches_even_when_parsed_as_legacy(self):
+        w = openpyxl.load_workbook(self.xlsx)
+        s = w.create_sheet('8. 노무비계획')
+        s['F6'] = '2026년'
+        s['AC38'] = GENERAL_R
+        s['AD38'] = GENERAL_R + .001
+        w.save(self.xlsx)
+        w.close()
+        info = {**self.info, 'source_id': 'test.wage'}
+        res = pa.resolve_series_rate(REGISTRY['test.wage'])
+        manifest = {'profile': ft.FINANCE_PROFILE,
+                    'file_hash': hashlib.sha256(self.xlsx.read_bytes()).hexdigest(),
+                    'price_assumptions': {'wage': {**info, 'status': 'applied',
+                        'rate': res['rate'], 'observation': res['observation']}}}
+        applications, sources = ft._receipt_rates(manifest, manifest['file_hash'], layout_id=ft.FINANCE_PROFILE)
+        line, err = ft._resolve_footnote('wage', MINI_MAP['footnote_kinds']['wage'], info, REGISTRY,
+            applications=applications, student_sources=sources, view_for=_workbook_view(self.xlsx))
+        self.assertTrue(err)
+        self.assertNotIn('% 적용', line)
+        w = openpyxl.load_workbook(self.xlsx)
+        w['8. 노무비계획']['AD38'] = GENERAL_R
+        w.save(self.xlsx)
+        w.close()
+        manifest['file_hash'] = hashlib.sha256(self.xlsx.read_bytes()).hexdigest()
+        applications, sources = ft._receipt_rates(manifest, manifest['file_hash'], layout_id=ft.FINANCE_PROFILE)
+        line, err = ft._resolve_footnote('wage', MINI_MAP['footnote_kinds']['wage'], info, REGISTRY,
+            applications=applications, student_sources=sources, view_for=_workbook_view(self.xlsx))
+        self.assertIsNone(err)
+        self.assertIn('% 적용', line)
+
+    def test_sales_actual_formula_all_years_and_receipt_plan_crop(self):
+        source = copy.deepcopy(REGISTRY['test.sales'])
+        source['dimensions']['crop'] = '시험작목'
+        source['unit'] = '원/kg'
+        source['dimensions']['unit'] = '원/kg'
+        r = pa.resolve_series_rate(source)['rate']
+        info = {'source_id': source['id'], 'base_year': None, 'application_base_year': 2026,
+                'target_dimensions': {'crop': '시험작목', 'region': '전국', 'unit': '원/kg'}}
+        w = openpyxl.load_workbook(self.xlsx)
+        s = w.create_sheet(' 5. 판매계획')
+        s['C36'] = '2026년'
+        for row, price in {38: 'O7', 39: 'O8', 40: 'O9', 41: 'O11', 42: 'O12', 43: 'O13'}.items():
+            s[price] = 20
+            for i, (q, rev) in enumerate(zip('CEGIK', 'DFHJL')):
+                s[q+str(row)] = 100
+                s[rev+str(row)] = '=%s%d*$%s$%s/1000*(1+%r)^%d' % (q, row, price[0], price[1:], r, i)
+        w.save(self.xlsx)
+        w.close()
+        m = copy.deepcopy(MINI_MAP)
+        m['sections'][0]['tables'][0]['footnotes'] = ['selling_price']
+        self.map_path.write_text(json.dumps(m), encoding='utf-8')
+        def receipt():
+            return {'schema': 'gg-xlsx-formula-patch-receipt/v1',
+                    'output': {'sha256': hashlib.sha256(self.xlsx.read_bytes()).hexdigest()},
+                    'd8': {'assumptions': {'crops': ['시험작목']}, 'rates': {'sales': {
+                        'evidence_ref': {'source_id': source['id']}, 'base_year': None,
+                        'application_base_year': 2026, 'observation_years': [2020, 2024],
+                        'observed_values': [3000, 3300], 'r': r, 'target_dimensions': info['target_dimensions']}}}}
+        def generate(rcpt):
+            return ft.generate(self.xlsx, major_id='specialty_crops', map_path=self.map_path,
+                registry={**REGISTRY, source['id']: source}, application_receipt=rcpt,
+                footnotes={'selling_price': info})['markdown']
+        self.assertIn('% 적용', generate(receipt()))
+        for field, value in [('crops', ['다른작목']), ('crop', '다른작목'), ('작목', '다른작목')]:
+            bad = receipt()
+            bad['d8']['assumptions'] = {field: value}
+            self.assertNotIn('% 적용', generate(bad))
+        for cell, value in [('F38', '=E38*$O$7/1000'),
+                            ('J38', '=I38*$O$7/1000*(1+%r)^2' % r),
+                            ('L43', '=K43*$O$13/1000*(1+0.1)^4'),
+                            ('H39', None), ('C36', '2027년')]:
+            with self.subTest(cell=cell, value=value):
+                original = self.xlsx.read_bytes()
+                w = openpyxl.load_workbook(self.xlsx)
+                w[' 5. 판매계획'][cell] = value
+                w.save(self.xlsx)
+                w.close()
+                self.assertNotIn('% 적용', generate(receipt()))
+                self.xlsx.write_bytes(original)
+
+    def test_shared_general_formulas_are_read_and_missing_base_is_unverified(self):
+        import xml.etree.ElementTree as ET
+        import zipfile
+        ns = ft._XLS_MAIN
+        name = ft._sheet_files(self.xlsx)['7. 영농자재소요계획']
+        with zipfile.ZipFile(self.xlsx) as z:
+            entries = {n: z.read(n) for n in z.namelist()}
+        root = ET.fromstring(entries[name])
+        for c in root.iter(ns+'c'):
+            if c.get('r') in ('C15', 'C25', 'C35', 'C45'):
+                f = c.find(ns+'f')
+                f.set('t', 'shared')
+                f.set('si', '0')
+                if c.get('r') == 'C15':
+                    f.set('ref', 'C15:C45')
+                else:
+                    f.text = None
+        entries[name] = ET.tostring(root)
+        def save():
+            with zipfile.ZipFile(self.xlsx, 'w') as z:
+                for n, data in entries.items():
+                    z.writestr(n, data)
+        save()
+        self.assertIn('% 적용', self.gen(self.receipt())['markdown'])
+        follower = next(c for c in root.iter(ns+'c') if c.get('r') == 'C25')
+        follower.find(ns+'f').set('si', '99')
+        entries[name] = ET.tostring(root)
+        save()
+        self.assertNotIn('% 적용', self.gen(self.receipt())['markdown'])
+
+
+if __name__ == '__main__':
     unittest.main()

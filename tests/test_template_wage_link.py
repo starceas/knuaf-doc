@@ -278,6 +278,157 @@ class WageLinkTests(ContractCase):
             self.fill.fill_copy(self.src, m, v, self.root/'filled.xlsx', context=self.context)
         self.assertFalse((self.root/'filled.xlsx').exists())
 
+    def test_v3_02_gender_specific_single_source_cannot_fill_both_columns(self):
+        index = 0
+        for key in ('gender', 'sex', '성별', ' gender ', ' sex ', ' 성별 ', 'Gender', 'SEX'):
+            for gender in ('남자', '여자', ['남자'], ['여자'], ['남자', '여자']):
+                index += 1
+                name = f'gender-{index}.xlsx'
+                v = self.observations()
+                v['price_sources'][0]['dimensions'][key] = gender
+                with self.subTest(key=key, gender=gender), self.assertRaises(ValueError):
+                    self.prepared_fill(v, name)
+                self.assertFalse((self.root/name).exists())
+        self.prepared_fill(self.observations())
+        self.assertTrue((self.root/'filled.xlsx').exists())
+
+    def test_v3_02_gender_rejection_preserves_hourly_write_plan(self):
+        v = self.hourly_observations()
+        v['wage_observations']['unit_conversion'] = self.conversion()
+        source = copy.deepcopy(runtime('gg_price_assumptions').load_registry()['official.minimumwage.hourly'])
+        source.update(id='synthetic.gender', dimensions={'region': '전국', 'sex': '남자'})
+        v['price_sources'] = [source]
+        v['wage_observations']['statistic_id'] = source['id']
+        for value in v['values']:
+            value['evidence_ref']['source_id'] = source['id']
+        before = copy.deepcopy(v)
+        cells = {(value['sheet'], value['cell']): value for value in v['values']}
+        cell_before = copy.deepcopy(cells)
+        with self.assertRaisesRegex(ValueError, 'gender'):
+            self.fill._wage_observations(dict.fromkeys(cells), cells, v)
+        self.assertEqual(cells, cell_before)
+        self.assertEqual(v, before)
+        source_digest = self.tpl.sha256(self.src)
+        with self.assertRaisesRegex(ValueError, 'gender'):
+            self.prepared_fill(v)
+        self.assertFalse((self.root/'filled.xlsx').exists())
+        self.assertEqual(v, before)
+        v['price_sources'][0]['dimensions'].pop('sex')
+        self.prepared_fill(v)
+        self.assertTrue((self.root/'filled.xlsx').exists())
+        self.assertEqual(self.tpl.sha256(self.src), source_digest)
+
+    def test_v3_02_rate_gender_must_match_its_column_and_aliases(self):
+        for key in ('gender', 'sex', '성별'):
+            c = assumptions()
+            for kind, gender in (('wage_male', '남자'), ('wage_female', '여자')):
+                source = next(s for s in c['price_sources'] if s['id'] == c[kind]['evidence_ref']['source_id'])
+                source['dimensions'][key] = gender
+            self.patch.materialize_d8(self.src, c)
+            for bad in ('opposite', 'conflicting_alias', 'multi_gender'):
+                mutated = copy.deepcopy(c)
+                dims = mutated['price_sources'][0]['dimensions']
+                if bad == 'opposite': dims[key] = '여자'
+                elif bad == 'conflicting_alias': dims['sex' if key != 'sex' else 'gender'] = '여자'
+                else: dims[key] = ['남자', '여자']
+                with self.subTest(key=key, bad=bad), self.assertRaises(ValueError):
+                    self.patch.materialize_d8(self.src, mutated)
+
+    def adapter_variants(self):
+        scalar = assumptions(.02)
+        listed = copy.deepcopy(scalar)
+        listed['sales']['target_dimensions'] = copy.deepcopy(listed['sales']['target_dimensions'])
+        listed['sales']['target_dimensions']['crop'] = ['synthetic']
+        alias = copy.deepcopy(scalar)
+        alias['sales']['target_dimensions'] = copy.deepcopy(alias['sales']['target_dimensions'])
+        alias['sales']['target_dimensions']['작목'] = alias['sales']['target_dimensions'].pop('crop')
+        region = copy.deepcopy(scalar)
+        region['wage_male']['target_dimensions'] = {'region': '전국'}
+        region_alias = copy.deepcopy(scalar)
+        region_alias['wage_male']['target_dimensions'] = {'지역': '전국'}
+        return [scalar, listed, alias, region, region_alias]
+
+    def test_v3_03_normal_dimension_variants_materialize_and_cli(self):
+        import contextlib
+        import io
+        for i, c in enumerate(self.adapter_variants()):
+            with self.subTest(variant=i):
+                before = copy.deepcopy(c)
+                plan = self.patch.materialize_d8(self.src, c)
+                self.assertEqual(c, before)
+                self.assertAlmostEqual(plan['d8']['rates']['sales']['r'], .02)
+                self.assertAlmostEqual(plan['d8']['rates']['wage_male']['r'], .06)
+                out = self.root / f'cli-{i}.json'
+                with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                    code = self.patch.cli(['materialize-d8', '--source', str(self.src),
+                                           '--assumptions', str(self.json(f'config-{i}.json', c)), '--out', str(out)])
+                self.assertEqual(code, 0)
+                self.assertEqual(json.loads(out.read_text()), plan)
+
+    def test_v3_03_normalization_still_rejects_missing_conflicting_or_invalid_crop(self):
+        for bad in ({'작목': 'other'}, {'crop': 'synthetic', '작목': 'other'},
+                    {'crop': [['synthetic']]}, {'crop': []}, {'crop': None}, {}):
+            c = assumptions(.02)
+            c['sales']['target_dimensions'] = copy.deepcopy(c['sales']['target_dimensions'])
+            dims = c['sales']['target_dimensions']
+            dims.pop('crop')
+            dims.update(bad)
+            with self.subTest(bad=bad), self.assertRaises(ValueError):
+                self.patch.materialize_d8(self.src, c)
+
+    def x01_observation_fixture(self):
+        # Only the SHA admission is simulated here; the actual registered X01
+        # is replayed separately, outside this portable synthetic suite.
+        from openpyxl import load_workbook
+        w = load_workbook(self.src)
+        w[S8]['Z28'] = 82
+        w[S8]['Z27'] = '=Z28'
+        w.save(self.src)
+        w.close()
+        return '5d19b6a2e5dcddccb70c68e39abee8f423bba005c008db7b64076326a17b9c80'
+
+    def test_v3_04_exact_x01_observation_formula_is_prepared_without_numeric_writes(self):
+        from unittest.mock import patch
+        digest = self.x01_observation_fixture()
+        real_sha = self.patch.sha256
+        with patch.object(self.patch, 'sha256', side_effect=lambda p: digest if p == self.src else real_sha(p)):
+            plan = self.patch.materialize_d8(self.src, prepare_observations=True)
+        clearing = [p for p in plan['patches'] if p.get('operation') == 'prepare_wage_input']
+        self.assertEqual({p['cell'] for p in clearing}, {'X27', 'X28', 'X29', 'X30', 'X31', 'Z27'})
+        target = next(p for p in clearing if p['cell'] == 'Z27')
+        self.assertEqual(target['expected_formula'], '=Z28')
+        self.assertIsNone(target['new_value'])
+        self.assertIn('source_sha256', target['evidence_ref']['locator'])
+        self.assertFalse(any(p['cell'] == 'Z28' for p in clearing))
+
+    def test_v3_04_x01_exception_rejects_unregistered_sha_formula_and_audit_drift(self):
+        from unittest.mock import patch
+        digest = self.x01_observation_fixture()
+        with self.assertRaisesRegex(ValueError, 'unreviewed observation'):
+            self.patch.materialize_d8(self.src, prepare_observations=True)
+        real_sha = self.patch.sha256
+        audit_path = self.patch.D8_SPEC_PATH.parent.parent / 'formula-audit/x01.json'
+        with patch.object(self.patch, 'sha256', side_effect=lambda p: digest if p == self.src else '0'*64 if p == audit_path else real_sha(p)):
+            with self.assertRaisesRegex(ValueError, 'audit'):
+                self.patch.materialize_d8(self.src, prepare_observations=True)
+        real_json = self.patch._json
+        for bad in ('source_sha256', 'inventory'):
+            audit = real_json(audit_path)
+            if bad == 'source_sha256': audit[bad] = '0'*64
+            else: audit['inventory'] = [r for r in audit['inventory'] if (r['sheet'], r['cell']) != (S8, 'Z27')]
+            with patch.object(self.patch, 'sha256', side_effect=lambda p: digest if p == self.src else real_sha(p)):
+                with patch.object(self.patch, '_json', side_effect=lambda p: audit if p == audit_path else real_json(p)):
+                    with self.subTest(audit=bad), self.assertRaisesRegex(ValueError, 'audit'):
+                        self.patch.materialize_d8(self.src, prepare_observations=True)
+        from openpyxl import load_workbook
+        w = load_workbook(self.src)
+        w[S8]['Z27'] = '=Z29'
+        w.save(self.src)
+        w.close()
+        with patch.object(self.patch, 'sha256', side_effect=lambda p: digest if p == self.src else real_sha(p)):
+            with self.assertRaisesRegex(ValueError, 'unreviewed observation'):
+                self.patch.materialize_d8(self.src, prepare_observations=True)
+
     def test_observation_preparation_fill_and_receipt(self):
         before = self.tpl.sha256(self.src)
         out, rec = self.apply(self.patch.materialize_d8(self.src, prepare_observations=True))

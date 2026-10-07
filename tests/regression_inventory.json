@@ -741,6 +741,56 @@
     "skills.knuaf-doc.tests.test_finance_tables.TestV2Receipt.test_applied_formula_full_string",
     "skills.knuaf-doc.tests.test_finance_tables.TestV2Receipt.test_complete_formula_strings"
    ]
+  },
+  {
+   "id": "V3-01",
+   "note": "I3: actual FIX-B3/C3 regression symbols; V4 independent acceptance remains pending.",
+   "scope": "full_pytest_skill_suite",
+   "status": "implemented_pending_independent_review",
+   "tests": [
+    "skills.knuaf-doc.tests.test_finance_tables.TestV3ApplicationProof.test_matching_hash_without_workbook_rate_evidence_is_reference",
+    "skills.knuaf-doc.tests.test_finance_tables.TestV3ApplicationProof.test_legacy_manifest_cannot_attest_department_workbook",
+    "skills.knuaf-doc.tests.test_finance_tables.TestV3ApplicationProof.test_either_sex_not_applied_or_missing_cache_downgrades_whole_wage",
+    "skills.knuaf-doc.tests.test_finance_tables.TestV3ApplicationProof.test_sales_metadata_without_workbook_view_is_reference",
+    "skills.knuaf-doc.tests.test_finance_tables.TestV3ApplicationProof.test_custom_map_layout_name_cannot_relabel_receipt_producer",
+    "skills.knuaf-doc.tests.test_finance_tables.TestV3ApplicationProof.test_general_rate_mismatch_missing_year_and_cache_contradiction",
+    "skills.knuaf-doc.tests.test_finance_tables.TestV3ApplicationProof.test_unreadable_general_chain_cannot_hide_behind_another_matching_item",
+    "skills.knuaf-doc.tests.test_finance_tables.TestV3ApplicationProof.test_general_zero_and_negative_rates_require_actual_matching_formula",
+    "skills.knuaf-doc.tests.test_finance_tables.TestV3ApplicationProof.test_manifest_wage_uses_both_caches_even_when_parsed_as_legacy",
+    "skills.knuaf-doc.tests.test_finance_tables.TestV3ApplicationProof.test_sales_actual_formula_all_years_and_receipt_plan_crop",
+    "skills.knuaf-doc.tests.test_finance_tables.TestV3ApplicationProof.test_shared_general_formulas_are_read_and_missing_base_is_unverified"
+   ]
+  },
+  {
+   "id": "V3-02",
+   "note": "I3: actual FIX-B3/C3 regression symbols; V4 independent acceptance remains pending.",
+   "scope": "public_runtime_and_full_pytest",
+   "status": "implemented_pending_independent_review",
+   "tests": [
+    "tests.test_template_wage_link.WageLinkTests.test_v3_02_gender_specific_single_source_cannot_fill_both_columns",
+    "tests.test_template_wage_link.WageLinkTests.test_v3_02_gender_rejection_preserves_hourly_write_plan",
+    "tests.test_template_wage_link.WageLinkTests.test_v3_02_rate_gender_must_match_its_column_and_aliases"
+   ]
+  },
+  {
+   "id": "V3-03",
+   "note": "I3: actual FIX-B3/C3 regression symbols; V4 independent acceptance remains pending.",
+   "scope": "public_runtime_and_full_pytest",
+   "status": "implemented_pending_independent_review",
+   "tests": [
+    "tests.test_template_wage_link.WageLinkTests.test_v3_03_normal_dimension_variants_materialize_and_cli",
+    "tests.test_template_wage_link.WageLinkTests.test_v3_03_normalization_still_rejects_missing_conflicting_or_invalid_crop"
+   ]
+  },
+  {
+   "id": "V3-04",
+   "note": "I3: actual FIX-B3/C3 regression symbols; V4 independent acceptance remains pending.",
+   "scope": "public_runtime_and_full_pytest",
+   "status": "implemented_pending_independent_review",
+   "tests": [
+    "tests.test_template_wage_link.WageLinkTests.test_v3_04_exact_x01_observation_formula_is_prepared_without_numeric_writes",
+    "tests.test_template_wage_link.WageLinkTests.test_v3_04_x01_exception_rejects_unregistered_sha_formula_and_audit_drift"
+   ]
   }
  ],
  "review": "knuaf-doc-astra-pr-review/review/20260919-astra (ASTRA-REVIEW.md, probes.py, probe-results.json)",
