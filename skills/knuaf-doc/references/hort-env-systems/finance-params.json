@@ -5056,7 +5056,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y1.m2.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!D8",
@@ -5110,7 +5111,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y1.m3.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!E8",
@@ -5164,7 +5166,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y1.m4.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!F8",
@@ -5218,7 +5221,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y1.m5.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!G8",
@@ -5272,7 +5276,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y1.m6.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!H8",
@@ -5326,7 +5331,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y1.m7.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!I8",
@@ -5380,7 +5386,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y1.m8.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!J8",
@@ -5434,7 +5441,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y1.m9.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!K8",
@@ -5488,7 +5496,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y1.m10.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!L8",
@@ -5542,7 +5551,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y1.m11.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!M8",
@@ -5596,7 +5606,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y1.m12.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!N8",
@@ -5650,7 +5661,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y2.year": {
    "canonical_cell": " 7. 판매계획!B9",
@@ -6550,7 +6562,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y2.m2.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!D9",
@@ -6604,7 +6617,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y2.m3.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!E9",
@@ -6658,7 +6672,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y2.m4.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!F9",
@@ -6712,7 +6727,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y2.m5.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!G9",
@@ -6766,7 +6782,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y2.m6.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!H9",
@@ -6820,7 +6837,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y2.m7.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!I9",
@@ -6874,7 +6892,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y2.m8.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!J9",
@@ -6928,7 +6947,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y2.m9.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!K9",
@@ -6982,7 +7002,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y2.m10.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!L9",
@@ -7036,7 +7057,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y2.m11.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!M9",
@@ -7090,7 +7112,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y2.m12.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!N9",
@@ -7144,7 +7167,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y3.year": {
    "canonical_cell": " 7. 판매계획!B10",
@@ -8044,7 +8068,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y3.m2.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!D10",
@@ -8098,7 +8123,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y3.m3.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!E10",
@@ -8152,7 +8178,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y3.m4.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!F10",
@@ -8206,7 +8233,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y3.m5.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!G10",
@@ -8260,7 +8288,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y3.m6.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!H10",
@@ -8314,7 +8343,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y3.m7.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!I10",
@@ -8368,7 +8398,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y3.m8.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!J10",
@@ -8422,7 +8453,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y3.m9.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!K10",
@@ -8476,7 +8508,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y3.m10.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!L10",
@@ -8530,7 +8563,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y3.m11.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!M10",
@@ -8584,7 +8618,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y3.m12.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!N10",
@@ -8638,7 +8673,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y4.year": {
    "canonical_cell": " 7. 판매계획!B11",
@@ -9538,7 +9574,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y4.m2.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!D11",
@@ -9592,7 +9629,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y4.m3.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!E11",
@@ -9646,7 +9684,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y4.m4.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!F11",
@@ -9700,7 +9739,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y4.m5.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!G11",
@@ -9754,7 +9794,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y4.m6.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!H11",
@@ -9808,7 +9849,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y4.m7.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!I11",
@@ -9862,7 +9904,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y4.m8.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!J11",
@@ -9916,7 +9959,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y4.m9.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!K11",
@@ -9970,7 +10014,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y4.m10.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!L11",
@@ -10024,7 +10069,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y4.m11.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!M11",
@@ -10078,7 +10124,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y4.m12.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!N11",
@@ -10132,7 +10179,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y5.year": {
    "canonical_cell": " 7. 판매계획!B12",
@@ -11032,7 +11080,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y5.m2.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!D12",
@@ -11086,7 +11135,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y5.m3.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!E12",
@@ -11140,7 +11190,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y5.m4.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!F12",
@@ -11194,7 +11245,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y5.m5.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!G12",
@@ -11248,7 +11300,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y5.m6.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!H12",
@@ -11302,7 +11355,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y5.m7.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!I12",
@@ -11356,7 +11410,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y5.m8.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!J12",
@@ -11410,7 +11465,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y5.m9.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!K12",
@@ -11464,7 +11520,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y5.m10.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!L12",
@@ -11518,7 +11575,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y5.m11.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!M12",
@@ -11572,7 +11630,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "price.observed.y5.m12.krw_per_unit": {
    "canonical_cell": " 7. 판매계획!N12",
@@ -11626,7 +11685,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.quantity_unit": {
    "canonical_cell": " 7. 판매계획!C122",
@@ -12703,7 +12763,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y1.m1.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!C73",
@@ -12811,7 +12872,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y1.m2.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!D73",
@@ -12919,7 +12981,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y1.m3.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!E73",
@@ -13027,7 +13090,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y1.m4.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!F73",
@@ -13135,7 +13199,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y1.m5.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!G73",
@@ -13243,7 +13308,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y1.m6.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!H73",
@@ -13351,7 +13417,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y1.m7.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!I73",
@@ -13459,7 +13526,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y1.m8.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!J73",
@@ -13567,7 +13635,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y1.m9.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!K73",
@@ -13675,7 +13744,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y1.m10.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!L73",
@@ -13783,7 +13853,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y1.m11.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!M73",
@@ -13891,7 +13962,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y1.m12.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!N73",
@@ -15723,7 +15795,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y2.m1.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!C83",
@@ -15831,7 +15904,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y2.m2.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!D83",
@@ -15939,7 +16013,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y2.m3.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!E83",
@@ -16047,7 +16122,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y2.m4.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!F83",
@@ -16155,7 +16231,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y2.m5.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!G83",
@@ -16263,7 +16340,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y2.m6.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!H83",
@@ -16371,7 +16449,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y2.m7.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!I83",
@@ -16479,7 +16558,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y2.m8.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!J83",
@@ -16587,7 +16667,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y2.m9.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!K83",
@@ -16695,7 +16776,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y2.m10.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!L83",
@@ -16803,7 +16885,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y2.m11.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!M83",
@@ -16911,7 +16994,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y2.m12.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!N83",
@@ -18743,7 +18827,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y3.m1.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!C93",
@@ -18851,7 +18936,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y3.m2.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!D93",
@@ -18959,7 +19045,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y3.m3.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!E93",
@@ -19067,7 +19154,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y3.m4.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!F93",
@@ -19175,7 +19263,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y3.m5.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!G93",
@@ -19283,7 +19372,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y3.m6.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!H93",
@@ -19391,7 +19481,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y3.m7.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!I93",
@@ -19499,7 +19590,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y3.m8.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!J93",
@@ -19607,7 +19699,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y3.m9.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!K93",
@@ -19715,7 +19808,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y3.m10.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!L93",
@@ -19823,7 +19917,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y3.m11.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!M93",
@@ -19931,7 +20026,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y3.m12.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!N93",
@@ -21763,7 +21859,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y4.m1.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!C103",
@@ -21871,7 +21968,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y4.m2.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!D103",
@@ -21979,7 +22077,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y4.m3.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!E103",
@@ -22087,7 +22186,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y4.m4.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!F103",
@@ -22195,7 +22295,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y4.m5.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!G103",
@@ -22303,7 +22404,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y4.m6.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!H103",
@@ -22411,7 +22513,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y4.m7.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!I103",
@@ -22519,7 +22622,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y4.m8.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!J103",
@@ -22627,7 +22731,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y4.m9.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!K103",
@@ -22735,7 +22840,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y4.m10.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!L103",
@@ -22843,7 +22949,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y4.m11.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!M103",
@@ -22951,7 +23058,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y4.m12.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!N103",
@@ -24783,7 +24891,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y5.m1.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!C113",
@@ -24891,7 +25000,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y5.m2.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!D113",
@@ -24999,7 +25109,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y5.m3.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!E113",
@@ -25107,7 +25218,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y5.m4.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!F113",
@@ -25215,7 +25327,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y5.m5.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!G113",
@@ -25323,7 +25436,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y5.m6.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!H113",
@@ -25431,7 +25545,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y5.m7.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!I113",
@@ -25539,7 +25654,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y5.m8.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!J113",
@@ -25647,7 +25763,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y5.m9.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!K113",
@@ -25755,7 +25872,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y5.m10.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!L113",
@@ -25863,7 +25981,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y5.m11.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!M113",
@@ -25971,7 +26090,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "sales.y5.m12.closing_stock_qty": {
    "canonical_cell": " 7. 판매계획!N113",
@@ -28252,7 +28372,8 @@
       "group_active": "cost.overhead.y5.slot12"
      }
     ]
-   }
+   },
+   "price_contract": "source:summary"
   },
   "cost.material.source_summary": {
    "canonical_cell": "9. 영농자재구매계획!AE4",
@@ -28366,7 +28487,8 @@
       "group_active": "cost.material.y5.item6"
      }
     ]
-   }
+   },
+   "price_contract": "source:summary"
   },
   "cost.material.y1.item1.name": {
    "canonical_cell": "9. 영농자재구매계획!U20",
@@ -28478,7 +28600,8 @@
     "not": {
      "group_active": "cost.material.y1.item1"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.material.y1.item1.purchase_month": {
    "canonical_cell": "9. 영농자재구매계획!AA20",
@@ -28570,7 +28693,8 @@
    "required_if": {
     "group_active": "cost.material.y1.item1"
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.material.y1.item2.name": {
    "canonical_cell": "9. 영농자재구매계획!U21",
@@ -28682,7 +28806,8 @@
     "not": {
      "group_active": "cost.material.y1.item2"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.material.y1.item2.purchase_month": {
    "canonical_cell": "9. 영농자재구매계획!AA21",
@@ -28774,7 +28899,8 @@
    "required_if": {
     "group_active": "cost.material.y1.item2"
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.material.y1.item3.name": {
    "canonical_cell": "9. 영농자재구매계획!U22",
@@ -28886,7 +29012,8 @@
     "not": {
      "group_active": "cost.material.y1.item3"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.material.y1.item3.purchase_month": {
    "canonical_cell": "9. 영농자재구매계획!AA22",
@@ -28978,7 +29105,8 @@
    "required_if": {
     "group_active": "cost.material.y1.item3"
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.material.y1.item4.name": {
    "canonical_cell": "9. 영농자재구매계획!U23",
@@ -29090,7 +29218,8 @@
     "not": {
      "group_active": "cost.material.y1.item4"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.material.y1.item4.purchase_month": {
    "canonical_cell": "9. 영농자재구매계획!AA23",
@@ -29182,7 +29311,8 @@
    "required_if": {
     "group_active": "cost.material.y1.item4"
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.material.y1.item5.name": {
    "canonical_cell": "9. 영농자재구매계획!U24",
@@ -29294,7 +29424,8 @@
     "not": {
      "group_active": "cost.material.y1.item5"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.material.y1.item5.purchase_month": {
    "canonical_cell": "9. 영농자재구매계획!AA24",
@@ -29386,7 +29517,8 @@
    "required_if": {
     "group_active": "cost.material.y1.item5"
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.material.y1.item6.name": {
    "canonical_cell": "9. 영농자재구매계획!U25",
@@ -29498,7 +29630,8 @@
     "not": {
      "group_active": "cost.material.y1.item6"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.material.y1.item6.purchase_month": {
    "canonical_cell": "9. 영농자재구매계획!AA25",
@@ -29590,7 +29723,8 @@
    "required_if": {
     "group_active": "cost.material.y1.item6"
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.material.y2.item1.name": {
    "canonical_cell": "9. 영농자재구매계획!U27",
@@ -29702,7 +29836,8 @@
     "not": {
      "group_active": "cost.material.y2.item1"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.material.y2.item1.purchase_month": {
    "canonical_cell": "9. 영농자재구매계획!AA27",
@@ -29794,7 +29929,8 @@
    "required_if": {
     "group_active": "cost.material.y2.item1"
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.material.y2.item2.name": {
    "canonical_cell": "9. 영농자재구매계획!U28",
@@ -29906,7 +30042,8 @@
     "not": {
      "group_active": "cost.material.y2.item2"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.material.y2.item2.purchase_month": {
    "canonical_cell": "9. 영농자재구매계획!AA28",
@@ -29998,7 +30135,8 @@
    "required_if": {
     "group_active": "cost.material.y2.item2"
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.material.y2.item3.name": {
    "canonical_cell": "9. 영농자재구매계획!U29",
@@ -30110,7 +30248,8 @@
     "not": {
      "group_active": "cost.material.y2.item3"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.material.y2.item3.purchase_month": {
    "canonical_cell": "9. 영농자재구매계획!AA29",
@@ -30202,7 +30341,8 @@
    "required_if": {
     "group_active": "cost.material.y2.item3"
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.material.y2.item4.name": {
    "canonical_cell": "9. 영농자재구매계획!U30",
@@ -30314,7 +30454,8 @@
     "not": {
      "group_active": "cost.material.y2.item4"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.material.y2.item4.purchase_month": {
    "canonical_cell": "9. 영농자재구매계획!AA30",
@@ -30406,7 +30547,8 @@
    "required_if": {
     "group_active": "cost.material.y2.item4"
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.material.y2.item5.name": {
    "canonical_cell": "9. 영농자재구매계획!U31",
@@ -30518,7 +30660,8 @@
     "not": {
      "group_active": "cost.material.y2.item5"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.material.y2.item5.purchase_month": {
    "canonical_cell": "9. 영농자재구매계획!AA31",
@@ -30610,7 +30753,8 @@
    "required_if": {
     "group_active": "cost.material.y2.item5"
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.material.y2.item6.name": {
    "canonical_cell": "9. 영농자재구매계획!U32",
@@ -30722,7 +30866,8 @@
     "not": {
      "group_active": "cost.material.y2.item6"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.material.y2.item6.purchase_month": {
    "canonical_cell": "9. 영농자재구매계획!AA32",
@@ -30814,7 +30959,8 @@
    "required_if": {
     "group_active": "cost.material.y2.item6"
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.material.y3.item1.name": {
    "canonical_cell": "9. 영농자재구매계획!U34",
@@ -30926,7 +31072,8 @@
     "not": {
      "group_active": "cost.material.y3.item1"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.material.y3.item1.purchase_month": {
    "canonical_cell": "9. 영농자재구매계획!AA34",
@@ -31018,7 +31165,8 @@
    "required_if": {
     "group_active": "cost.material.y3.item1"
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.material.y3.item2.name": {
    "canonical_cell": "9. 영농자재구매계획!U35",
@@ -31130,7 +31278,8 @@
     "not": {
      "group_active": "cost.material.y3.item2"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.material.y3.item2.purchase_month": {
    "canonical_cell": "9. 영농자재구매계획!AA35",
@@ -31222,7 +31371,8 @@
    "required_if": {
     "group_active": "cost.material.y3.item2"
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.material.y3.item3.name": {
    "canonical_cell": "9. 영농자재구매계획!U36",
@@ -31334,7 +31484,8 @@
     "not": {
      "group_active": "cost.material.y3.item3"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.material.y3.item3.purchase_month": {
    "canonical_cell": "9. 영농자재구매계획!AA36",
@@ -31426,7 +31577,8 @@
    "required_if": {
     "group_active": "cost.material.y3.item3"
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.material.y3.item4.name": {
    "canonical_cell": "9. 영농자재구매계획!U37",
@@ -31538,7 +31690,8 @@
     "not": {
      "group_active": "cost.material.y3.item4"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.material.y3.item4.purchase_month": {
    "canonical_cell": "9. 영농자재구매계획!AA37",
@@ -31630,7 +31783,8 @@
    "required_if": {
     "group_active": "cost.material.y3.item4"
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.material.y3.item5.name": {
    "canonical_cell": "9. 영농자재구매계획!U38",
@@ -31742,7 +31896,8 @@
     "not": {
      "group_active": "cost.material.y3.item5"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.material.y3.item5.purchase_month": {
    "canonical_cell": "9. 영농자재구매계획!AA38",
@@ -31834,7 +31989,8 @@
    "required_if": {
     "group_active": "cost.material.y3.item5"
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.material.y3.item6.name": {
    "canonical_cell": "9. 영농자재구매계획!U39",
@@ -31946,7 +32102,8 @@
     "not": {
      "group_active": "cost.material.y3.item6"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.material.y3.item6.purchase_month": {
    "canonical_cell": "9. 영농자재구매계획!AA39",
@@ -32038,7 +32195,8 @@
    "required_if": {
     "group_active": "cost.material.y3.item6"
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.material.y4.item1.name": {
    "canonical_cell": "9. 영농자재구매계획!U41",
@@ -32150,7 +32308,8 @@
     "not": {
      "group_active": "cost.material.y4.item1"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.material.y4.item1.purchase_month": {
    "canonical_cell": "9. 영농자재구매계획!AA41",
@@ -32242,7 +32401,8 @@
    "required_if": {
     "group_active": "cost.material.y4.item1"
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.material.y4.item2.name": {
    "canonical_cell": "9. 영농자재구매계획!U42",
@@ -32354,7 +32514,8 @@
     "not": {
      "group_active": "cost.material.y4.item2"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.material.y4.item2.purchase_month": {
    "canonical_cell": "9. 영농자재구매계획!AA42",
@@ -32446,7 +32607,8 @@
    "required_if": {
     "group_active": "cost.material.y4.item2"
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.material.y4.item3.name": {
    "canonical_cell": "9. 영농자재구매계획!U43",
@@ -32558,7 +32720,8 @@
     "not": {
      "group_active": "cost.material.y4.item3"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.material.y4.item3.purchase_month": {
    "canonical_cell": "9. 영농자재구매계획!AA43",
@@ -32650,7 +32813,8 @@
    "required_if": {
     "group_active": "cost.material.y4.item3"
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.material.y4.item4.name": {
    "canonical_cell": "9. 영농자재구매계획!U44",
@@ -32762,7 +32926,8 @@
     "not": {
      "group_active": "cost.material.y4.item4"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.material.y4.item4.purchase_month": {
    "canonical_cell": "9. 영농자재구매계획!AA44",
@@ -32854,7 +33019,8 @@
    "required_if": {
     "group_active": "cost.material.y4.item4"
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.material.y4.item5.name": {
    "canonical_cell": "9. 영농자재구매계획!U45",
@@ -32966,7 +33132,8 @@
     "not": {
      "group_active": "cost.material.y4.item5"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.material.y4.item5.purchase_month": {
    "canonical_cell": "9. 영농자재구매계획!AA45",
@@ -33058,7 +33225,8 @@
    "required_if": {
     "group_active": "cost.material.y4.item5"
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.material.y4.item6.name": {
    "canonical_cell": "9. 영농자재구매계획!U46",
@@ -33170,7 +33338,8 @@
     "not": {
      "group_active": "cost.material.y4.item6"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.material.y4.item6.purchase_month": {
    "canonical_cell": "9. 영농자재구매계획!AA46",
@@ -33262,7 +33431,8 @@
    "required_if": {
     "group_active": "cost.material.y4.item6"
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.material.y5.item1.name": {
    "canonical_cell": "9. 영농자재구매계획!U48",
@@ -33374,7 +33544,8 @@
     "not": {
      "group_active": "cost.material.y5.item1"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.material.y5.item1.purchase_month": {
    "canonical_cell": "9. 영농자재구매계획!AA48",
@@ -33466,7 +33637,8 @@
    "required_if": {
     "group_active": "cost.material.y5.item1"
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.material.y5.item2.name": {
    "canonical_cell": "9. 영농자재구매계획!U49",
@@ -33578,7 +33750,8 @@
     "not": {
      "group_active": "cost.material.y5.item2"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.material.y5.item2.purchase_month": {
    "canonical_cell": "9. 영농자재구매계획!AA49",
@@ -33670,7 +33843,8 @@
    "required_if": {
     "group_active": "cost.material.y5.item2"
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.material.y5.item3.name": {
    "canonical_cell": "9. 영농자재구매계획!U50",
@@ -33782,7 +33956,8 @@
     "not": {
      "group_active": "cost.material.y5.item3"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.material.y5.item3.purchase_month": {
    "canonical_cell": "9. 영농자재구매계획!AA50",
@@ -33874,7 +34049,8 @@
    "required_if": {
     "group_active": "cost.material.y5.item3"
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.material.y5.item4.name": {
    "canonical_cell": "9. 영농자재구매계획!U51",
@@ -33986,7 +34162,8 @@
     "not": {
      "group_active": "cost.material.y5.item4"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.material.y5.item4.purchase_month": {
    "canonical_cell": "9. 영농자재구매계획!AA51",
@@ -34078,7 +34255,8 @@
    "required_if": {
     "group_active": "cost.material.y5.item4"
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.material.y5.item5.name": {
    "canonical_cell": "9. 영농자재구매계획!U52",
@@ -34190,7 +34368,8 @@
     "not": {
      "group_active": "cost.material.y5.item5"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.material.y5.item5.purchase_month": {
    "canonical_cell": "9. 영농자재구매계획!AA52",
@@ -34282,7 +34461,8 @@
    "required_if": {
     "group_active": "cost.material.y5.item5"
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.material.y5.item6.name": {
    "canonical_cell": "9. 영농자재구매계획!U53",
@@ -34394,7 +34574,8 @@
     "not": {
      "group_active": "cost.material.y5.item6"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.material.y5.item6.purchase_month": {
    "canonical_cell": "9. 영농자재구매계획!AA53",
@@ -34486,7 +34667,8 @@
    "required_if": {
     "group_active": "cost.material.y5.item6"
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.labor.y1.slot1.hours": {
    "canonical_cell": "11. 인건비계획!AD10",
@@ -34540,7 +34722,8 @@
    },
    "forbidden_if": {
     "key_present": "cost.labor.y1.slot1.daily_krw"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.labor.y1.slot1.daily_krw": {
    "canonical_cell": "11. 인건비계획!AF10",
@@ -34573,7 +34756,8 @@
    },
    "forbidden_if": {
     "key_present": "cost.labor.y1.slot1.hourly_krw"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.labor.y1.slot1.paid_hours_day": {
    "canonical_cell": "11. 인건비계획!AG10",
@@ -34756,7 +34940,8 @@
    },
    "forbidden_if": {
     "key_present": "cost.labor.y1.slot2.daily_krw"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.labor.y1.slot2.daily_krw": {
    "canonical_cell": "11. 인건비계획!AF11",
@@ -34789,7 +34974,8 @@
    },
    "forbidden_if": {
     "key_present": "cost.labor.y1.slot2.hourly_krw"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.labor.y1.slot2.paid_hours_day": {
    "canonical_cell": "11. 인건비계획!AG11",
@@ -34972,7 +35158,8 @@
    },
    "forbidden_if": {
     "key_present": "cost.labor.y1.slot3.daily_krw"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.labor.y1.slot3.daily_krw": {
    "canonical_cell": "11. 인건비계획!AF12",
@@ -35005,7 +35192,8 @@
    },
    "forbidden_if": {
     "key_present": "cost.labor.y1.slot3.hourly_krw"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.labor.y1.slot3.paid_hours_day": {
    "canonical_cell": "11. 인건비계획!AG12",
@@ -35188,7 +35376,8 @@
    },
    "forbidden_if": {
     "key_present": "cost.labor.y1.slot4.daily_krw"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.labor.y1.slot4.daily_krw": {
    "canonical_cell": "11. 인건비계획!AF13",
@@ -35221,7 +35410,8 @@
    },
    "forbidden_if": {
     "key_present": "cost.labor.y1.slot4.hourly_krw"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.labor.y1.slot4.paid_hours_day": {
    "canonical_cell": "11. 인건비계획!AG13",
@@ -35404,7 +35594,8 @@
    },
    "forbidden_if": {
     "key_present": "cost.labor.y2.slot1.daily_krw"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.labor.y2.slot1.daily_krw": {
    "canonical_cell": "11. 인건비계획!AF15",
@@ -35437,7 +35628,8 @@
    },
    "forbidden_if": {
     "key_present": "cost.labor.y2.slot1.hourly_krw"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.labor.y2.slot1.paid_hours_day": {
    "canonical_cell": "11. 인건비계획!AG15",
@@ -35620,7 +35812,8 @@
    },
    "forbidden_if": {
     "key_present": "cost.labor.y2.slot2.daily_krw"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.labor.y2.slot2.daily_krw": {
    "canonical_cell": "11. 인건비계획!AF16",
@@ -35653,7 +35846,8 @@
    },
    "forbidden_if": {
     "key_present": "cost.labor.y2.slot2.hourly_krw"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.labor.y2.slot2.paid_hours_day": {
    "canonical_cell": "11. 인건비계획!AG16",
@@ -35836,7 +36030,8 @@
    },
    "forbidden_if": {
     "key_present": "cost.labor.y2.slot3.daily_krw"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.labor.y2.slot3.daily_krw": {
    "canonical_cell": "11. 인건비계획!AF17",
@@ -35869,7 +36064,8 @@
    },
    "forbidden_if": {
     "key_present": "cost.labor.y2.slot3.hourly_krw"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.labor.y2.slot3.paid_hours_day": {
    "canonical_cell": "11. 인건비계획!AG17",
@@ -36052,7 +36248,8 @@
    },
    "forbidden_if": {
     "key_present": "cost.labor.y2.slot4.daily_krw"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.labor.y2.slot4.daily_krw": {
    "canonical_cell": "11. 인건비계획!AF18",
@@ -36085,7 +36282,8 @@
    },
    "forbidden_if": {
     "key_present": "cost.labor.y2.slot4.hourly_krw"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.labor.y2.slot4.paid_hours_day": {
    "canonical_cell": "11. 인건비계획!AG18",
@@ -36268,7 +36466,8 @@
    },
    "forbidden_if": {
     "key_present": "cost.labor.y3.slot1.daily_krw"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.labor.y3.slot1.daily_krw": {
    "canonical_cell": "11. 인건비계획!AF20",
@@ -36301,7 +36500,8 @@
    },
    "forbidden_if": {
     "key_present": "cost.labor.y3.slot1.hourly_krw"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.labor.y3.slot1.paid_hours_day": {
    "canonical_cell": "11. 인건비계획!AG20",
@@ -36484,7 +36684,8 @@
    },
    "forbidden_if": {
     "key_present": "cost.labor.y3.slot2.daily_krw"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.labor.y3.slot2.daily_krw": {
    "canonical_cell": "11. 인건비계획!AF21",
@@ -36517,7 +36718,8 @@
    },
    "forbidden_if": {
     "key_present": "cost.labor.y3.slot2.hourly_krw"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.labor.y3.slot2.paid_hours_day": {
    "canonical_cell": "11. 인건비계획!AG21",
@@ -36700,7 +36902,8 @@
    },
    "forbidden_if": {
     "key_present": "cost.labor.y3.slot3.daily_krw"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.labor.y3.slot3.daily_krw": {
    "canonical_cell": "11. 인건비계획!AF22",
@@ -36733,7 +36936,8 @@
    },
    "forbidden_if": {
     "key_present": "cost.labor.y3.slot3.hourly_krw"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.labor.y3.slot3.paid_hours_day": {
    "canonical_cell": "11. 인건비계획!AG22",
@@ -36916,7 +37120,8 @@
    },
    "forbidden_if": {
     "key_present": "cost.labor.y3.slot4.daily_krw"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.labor.y3.slot4.daily_krw": {
    "canonical_cell": "11. 인건비계획!AF23",
@@ -36949,7 +37154,8 @@
    },
    "forbidden_if": {
     "key_present": "cost.labor.y3.slot4.hourly_krw"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.labor.y3.slot4.paid_hours_day": {
    "canonical_cell": "11. 인건비계획!AG23",
@@ -37132,7 +37338,8 @@
    },
    "forbidden_if": {
     "key_present": "cost.labor.y4.slot1.daily_krw"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.labor.y4.slot1.daily_krw": {
    "canonical_cell": "11. 인건비계획!AF25",
@@ -37165,7 +37372,8 @@
    },
    "forbidden_if": {
     "key_present": "cost.labor.y4.slot1.hourly_krw"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.labor.y4.slot1.paid_hours_day": {
    "canonical_cell": "11. 인건비계획!AG25",
@@ -37348,7 +37556,8 @@
    },
    "forbidden_if": {
     "key_present": "cost.labor.y4.slot2.daily_krw"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.labor.y4.slot2.daily_krw": {
    "canonical_cell": "11. 인건비계획!AF26",
@@ -37381,7 +37590,8 @@
    },
    "forbidden_if": {
     "key_present": "cost.labor.y4.slot2.hourly_krw"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.labor.y4.slot2.paid_hours_day": {
    "canonical_cell": "11. 인건비계획!AG26",
@@ -37564,7 +37774,8 @@
    },
    "forbidden_if": {
     "key_present": "cost.labor.y4.slot3.daily_krw"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.labor.y4.slot3.daily_krw": {
    "canonical_cell": "11. 인건비계획!AF27",
@@ -37597,7 +37808,8 @@
    },
    "forbidden_if": {
     "key_present": "cost.labor.y4.slot3.hourly_krw"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.labor.y4.slot3.paid_hours_day": {
    "canonical_cell": "11. 인건비계획!AG27",
@@ -37780,7 +37992,8 @@
    },
    "forbidden_if": {
     "key_present": "cost.labor.y4.slot4.daily_krw"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.labor.y4.slot4.daily_krw": {
    "canonical_cell": "11. 인건비계획!AF28",
@@ -37813,7 +38026,8 @@
    },
    "forbidden_if": {
     "key_present": "cost.labor.y4.slot4.hourly_krw"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.labor.y4.slot4.paid_hours_day": {
    "canonical_cell": "11. 인건비계획!AG28",
@@ -37996,7 +38210,8 @@
    },
    "forbidden_if": {
     "key_present": "cost.labor.y5.slot1.daily_krw"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.labor.y5.slot1.daily_krw": {
    "canonical_cell": "11. 인건비계획!AF30",
@@ -38029,7 +38244,8 @@
    },
    "forbidden_if": {
     "key_present": "cost.labor.y5.slot1.hourly_krw"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.labor.y5.slot1.paid_hours_day": {
    "canonical_cell": "11. 인건비계획!AG30",
@@ -38212,7 +38428,8 @@
    },
    "forbidden_if": {
     "key_present": "cost.labor.y5.slot2.daily_krw"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.labor.y5.slot2.daily_krw": {
    "canonical_cell": "11. 인건비계획!AF31",
@@ -38245,7 +38462,8 @@
    },
    "forbidden_if": {
     "key_present": "cost.labor.y5.slot2.hourly_krw"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.labor.y5.slot2.paid_hours_day": {
    "canonical_cell": "11. 인건비계획!AG31",
@@ -38428,7 +38646,8 @@
    },
    "forbidden_if": {
     "key_present": "cost.labor.y5.slot3.daily_krw"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.labor.y5.slot3.daily_krw": {
    "canonical_cell": "11. 인건비계획!AF32",
@@ -38461,7 +38680,8 @@
    },
    "forbidden_if": {
     "key_present": "cost.labor.y5.slot3.hourly_krw"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.labor.y5.slot3.paid_hours_day": {
    "canonical_cell": "11. 인건비계획!AG32",
@@ -38644,7 +38864,8 @@
    },
    "forbidden_if": {
     "key_present": "cost.labor.y5.slot4.daily_krw"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.labor.y5.slot4.daily_krw": {
    "canonical_cell": "11. 인건비계획!AF33",
@@ -38677,7 +38898,8 @@
    },
    "forbidden_if": {
     "key_present": "cost.labor.y5.slot4.hourly_krw"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.labor.y5.slot4.paid_hours_day": {
    "canonical_cell": "11. 인건비계획!AG33",
@@ -39390,7 +39612,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:summary"
   },
   "cost.labor.wage_evidence_summary": {
    "canonical_cell": "11. 인건비계획!AJ5",
@@ -39974,7 +40197,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:summary"
   },
   "cost.overhead.y1.slot1.area_kind": {
    "canonical_cell": "12 .경비계획!K10",
@@ -40039,7 +40263,8 @@
    },
    "forbidden_if": {
     "method_is": "direct"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y1.slot1.direct_quote_krw1000": {
    "canonical_cell": "12 .경비계획!P10",
@@ -40075,7 +40300,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y1.slot1.payment_month": {
    "canonical_cell": "12 .경비계획!Q10",
@@ -40205,7 +40431,8 @@
    },
    "forbidden_if": {
     "method_is": "direct"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y1.slot2.direct_quote_krw1000": {
    "canonical_cell": "12 .경비계획!P11",
@@ -40241,7 +40468,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y1.slot2.payment_month": {
    "canonical_cell": "12 .경비계획!Q11",
@@ -40380,7 +40608,8 @@
    },
    "forbidden_if": {
     "method_is": "direct"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y1.slot3.price_observation_year": {
    "canonical_cell": "12 .경비계획!N12",
@@ -40463,7 +40692,8 @@
      "method_is": "area_unit"
     }
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.overhead.y1.slot3.direct_quote_krw1000": {
    "canonical_cell": "12 .경비계획!P12",
@@ -40499,7 +40729,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y1.slot3.payment_month": {
    "canonical_cell": "12 .경비계획!Q12",
@@ -40638,7 +40869,8 @@
    },
    "forbidden_if": {
     "method_is": "direct"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y1.slot4.price_observation_year": {
    "canonical_cell": "12 .경비계획!N13",
@@ -40721,7 +40953,8 @@
      "method_is": "area_unit"
     }
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.overhead.y1.slot4.direct_quote_krw1000": {
    "canonical_cell": "12 .경비계획!P13",
@@ -40757,7 +40990,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y1.slot4.payment_month": {
    "canonical_cell": "12 .경비계획!Q13",
@@ -40885,7 +41119,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y1.slot5.payment_month": {
    "canonical_cell": "12 .경비계획!Q14",
@@ -41024,7 +41259,8 @@
    },
    "forbidden_if": {
     "method_is": "direct"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y1.slot6.price_observation_year": {
    "canonical_cell": "12 .경비계획!N15",
@@ -41107,7 +41343,8 @@
      "method_is": "area_unit"
     }
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.overhead.y1.slot6.direct_quote_krw1000": {
    "canonical_cell": "12 .경비계획!P15",
@@ -41143,7 +41380,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y1.slot6.payment_month": {
    "canonical_cell": "12 .경비계획!Q15",
@@ -41271,7 +41509,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y1.slot7.payment_month": {
    "canonical_cell": "12 .경비계획!Q16",
@@ -41465,7 +41704,8 @@
    },
    "forbidden_if": {
     "method_is": "direct"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y1.slot8.direct_quote_krw1000": {
    "canonical_cell": "12 .경비계획!P17",
@@ -41501,7 +41741,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y1.slot8.payment_month": {
    "canonical_cell": "12 .경비계획!Q17",
@@ -41629,7 +41870,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y1.slot9.payment_month": {
    "canonical_cell": "12 .경비계획!Q18",
@@ -41768,7 +42010,8 @@
    },
    "forbidden_if": {
     "method_is": "direct"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y1.slot10.price_observation_year": {
    "canonical_cell": "12 .경비계획!N19",
@@ -41851,7 +42094,8 @@
      "method_is": "area_unit"
     }
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.overhead.y1.slot10.direct_quote_krw1000": {
    "canonical_cell": "12 .경비계획!P19",
@@ -41887,7 +42131,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y1.slot10.payment_month": {
    "canonical_cell": "12 .경비계획!Q19",
@@ -42026,7 +42271,8 @@
    },
    "forbidden_if": {
     "method_is": "direct"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y1.slot11.price_observation_year": {
    "canonical_cell": "12 .경비계획!N20",
@@ -42109,7 +42355,8 @@
      "method_is": "area_unit"
     }
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.overhead.y1.slot11.direct_quote_krw1000": {
    "canonical_cell": "12 .경비계획!P20",
@@ -42145,7 +42392,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y1.slot11.payment_month": {
    "canonical_cell": "12 .경비계획!Q20",
@@ -42273,7 +42521,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y1.slot12.payment_month": {
    "canonical_cell": "12 .경비계획!Q21",
@@ -42403,7 +42652,8 @@
    },
    "forbidden_if": {
     "method_is": "direct"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y2.slot1.direct_quote_krw1000": {
    "canonical_cell": "12 .경비계획!P25",
@@ -42439,7 +42689,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y2.slot1.payment_month": {
    "canonical_cell": "12 .경비계획!Q25",
@@ -42569,7 +42820,8 @@
    },
    "forbidden_if": {
     "method_is": "direct"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y2.slot2.direct_quote_krw1000": {
    "canonical_cell": "12 .경비계획!P26",
@@ -42605,7 +42857,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y2.slot2.payment_month": {
    "canonical_cell": "12 .경비계획!Q26",
@@ -42744,7 +42997,8 @@
    },
    "forbidden_if": {
     "method_is": "direct"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y2.slot3.price_observation_year": {
    "canonical_cell": "12 .경비계획!N27",
@@ -42827,7 +43081,8 @@
      "method_is": "area_unit"
     }
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.overhead.y2.slot3.direct_quote_krw1000": {
    "canonical_cell": "12 .경비계획!P27",
@@ -42863,7 +43118,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y2.slot3.payment_month": {
    "canonical_cell": "12 .경비계획!Q27",
@@ -43002,7 +43258,8 @@
    },
    "forbidden_if": {
     "method_is": "direct"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y2.slot4.price_observation_year": {
    "canonical_cell": "12 .경비계획!N28",
@@ -43085,7 +43342,8 @@
      "method_is": "area_unit"
     }
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.overhead.y2.slot4.direct_quote_krw1000": {
    "canonical_cell": "12 .경비계획!P28",
@@ -43121,7 +43379,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y2.slot4.payment_month": {
    "canonical_cell": "12 .경비계획!Q28",
@@ -43249,7 +43508,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y2.slot5.payment_month": {
    "canonical_cell": "12 .경비계획!Q29",
@@ -43388,7 +43648,8 @@
    },
    "forbidden_if": {
     "method_is": "direct"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y2.slot6.price_observation_year": {
    "canonical_cell": "12 .경비계획!N30",
@@ -43471,7 +43732,8 @@
      "method_is": "area_unit"
     }
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.overhead.y2.slot6.direct_quote_krw1000": {
    "canonical_cell": "12 .경비계획!P30",
@@ -43507,7 +43769,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y2.slot6.payment_month": {
    "canonical_cell": "12 .경비계획!Q30",
@@ -43635,7 +43898,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y2.slot7.payment_month": {
    "canonical_cell": "12 .경비계획!Q31",
@@ -43829,7 +44093,8 @@
    },
    "forbidden_if": {
     "method_is": "direct"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y2.slot8.direct_quote_krw1000": {
    "canonical_cell": "12 .경비계획!P32",
@@ -43865,7 +44130,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y2.slot8.payment_month": {
    "canonical_cell": "12 .경비계획!Q32",
@@ -43993,7 +44259,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y2.slot9.payment_month": {
    "canonical_cell": "12 .경비계획!Q33",
@@ -44132,7 +44399,8 @@
    },
    "forbidden_if": {
     "method_is": "direct"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y2.slot10.price_observation_year": {
    "canonical_cell": "12 .경비계획!N34",
@@ -44215,7 +44483,8 @@
      "method_is": "area_unit"
     }
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.overhead.y2.slot10.direct_quote_krw1000": {
    "canonical_cell": "12 .경비계획!P34",
@@ -44251,7 +44520,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y2.slot10.payment_month": {
    "canonical_cell": "12 .경비계획!Q34",
@@ -44390,7 +44660,8 @@
    },
    "forbidden_if": {
     "method_is": "direct"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y2.slot11.price_observation_year": {
    "canonical_cell": "12 .경비계획!N35",
@@ -44473,7 +44744,8 @@
      "method_is": "area_unit"
     }
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.overhead.y2.slot11.direct_quote_krw1000": {
    "canonical_cell": "12 .경비계획!P35",
@@ -44509,7 +44781,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y2.slot11.payment_month": {
    "canonical_cell": "12 .경비계획!Q35",
@@ -44637,7 +44910,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y2.slot12.payment_month": {
    "canonical_cell": "12 .경비계획!Q36",
@@ -44767,7 +45041,8 @@
    },
    "forbidden_if": {
     "method_is": "direct"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y3.slot1.direct_quote_krw1000": {
    "canonical_cell": "12 .경비계획!P40",
@@ -44803,7 +45078,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y3.slot1.payment_month": {
    "canonical_cell": "12 .경비계획!Q40",
@@ -44933,7 +45209,8 @@
    },
    "forbidden_if": {
     "method_is": "direct"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y3.slot2.direct_quote_krw1000": {
    "canonical_cell": "12 .경비계획!P41",
@@ -44969,7 +45246,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y3.slot2.payment_month": {
    "canonical_cell": "12 .경비계획!Q41",
@@ -45108,7 +45386,8 @@
    },
    "forbidden_if": {
     "method_is": "direct"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y3.slot3.price_observation_year": {
    "canonical_cell": "12 .경비계획!N42",
@@ -45191,7 +45470,8 @@
      "method_is": "area_unit"
     }
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.overhead.y3.slot3.direct_quote_krw1000": {
    "canonical_cell": "12 .경비계획!P42",
@@ -45227,7 +45507,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y3.slot3.payment_month": {
    "canonical_cell": "12 .경비계획!Q42",
@@ -45366,7 +45647,8 @@
    },
    "forbidden_if": {
     "method_is": "direct"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y3.slot4.price_observation_year": {
    "canonical_cell": "12 .경비계획!N43",
@@ -45449,7 +45731,8 @@
      "method_is": "area_unit"
     }
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.overhead.y3.slot4.direct_quote_krw1000": {
    "canonical_cell": "12 .경비계획!P43",
@@ -45485,7 +45768,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y3.slot4.payment_month": {
    "canonical_cell": "12 .경비계획!Q43",
@@ -45613,7 +45897,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y3.slot5.payment_month": {
    "canonical_cell": "12 .경비계획!Q44",
@@ -45752,7 +46037,8 @@
    },
    "forbidden_if": {
     "method_is": "direct"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y3.slot6.price_observation_year": {
    "canonical_cell": "12 .경비계획!N45",
@@ -45835,7 +46121,8 @@
      "method_is": "area_unit"
     }
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.overhead.y3.slot6.direct_quote_krw1000": {
    "canonical_cell": "12 .경비계획!P45",
@@ -45871,7 +46158,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y3.slot6.payment_month": {
    "canonical_cell": "12 .경비계획!Q45",
@@ -45999,7 +46287,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y3.slot7.payment_month": {
    "canonical_cell": "12 .경비계획!Q46",
@@ -46193,7 +46482,8 @@
    },
    "forbidden_if": {
     "method_is": "direct"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y3.slot8.direct_quote_krw1000": {
    "canonical_cell": "12 .경비계획!P47",
@@ -46229,7 +46519,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y3.slot8.payment_month": {
    "canonical_cell": "12 .경비계획!Q47",
@@ -46357,7 +46648,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y3.slot9.payment_month": {
    "canonical_cell": "12 .경비계획!Q48",
@@ -46496,7 +46788,8 @@
    },
    "forbidden_if": {
     "method_is": "direct"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y3.slot10.price_observation_year": {
    "canonical_cell": "12 .경비계획!N49",
@@ -46579,7 +46872,8 @@
      "method_is": "area_unit"
     }
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.overhead.y3.slot10.direct_quote_krw1000": {
    "canonical_cell": "12 .경비계획!P49",
@@ -46615,7 +46909,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y3.slot10.payment_month": {
    "canonical_cell": "12 .경비계획!Q49",
@@ -46754,7 +47049,8 @@
    },
    "forbidden_if": {
     "method_is": "direct"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y3.slot11.price_observation_year": {
    "canonical_cell": "12 .경비계획!N50",
@@ -46837,7 +47133,8 @@
      "method_is": "area_unit"
     }
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.overhead.y3.slot11.direct_quote_krw1000": {
    "canonical_cell": "12 .경비계획!P50",
@@ -46873,7 +47170,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y3.slot11.payment_month": {
    "canonical_cell": "12 .경비계획!Q50",
@@ -47001,7 +47299,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y3.slot12.payment_month": {
    "canonical_cell": "12 .경비계획!Q51",
@@ -47131,7 +47430,8 @@
    },
    "forbidden_if": {
     "method_is": "direct"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y4.slot1.direct_quote_krw1000": {
    "canonical_cell": "12 .경비계획!P55",
@@ -47167,7 +47467,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y4.slot1.payment_month": {
    "canonical_cell": "12 .경비계획!Q55",
@@ -47297,7 +47598,8 @@
    },
    "forbidden_if": {
     "method_is": "direct"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y4.slot2.direct_quote_krw1000": {
    "canonical_cell": "12 .경비계획!P56",
@@ -47333,7 +47635,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y4.slot2.payment_month": {
    "canonical_cell": "12 .경비계획!Q56",
@@ -47472,7 +47775,8 @@
    },
    "forbidden_if": {
     "method_is": "direct"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y4.slot3.price_observation_year": {
    "canonical_cell": "12 .경비계획!N57",
@@ -47555,7 +47859,8 @@
      "method_is": "area_unit"
     }
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.overhead.y4.slot3.direct_quote_krw1000": {
    "canonical_cell": "12 .경비계획!P57",
@@ -47591,7 +47896,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y4.slot3.payment_month": {
    "canonical_cell": "12 .경비계획!Q57",
@@ -47730,7 +48036,8 @@
    },
    "forbidden_if": {
     "method_is": "direct"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y4.slot4.price_observation_year": {
    "canonical_cell": "12 .경비계획!N58",
@@ -47813,7 +48120,8 @@
      "method_is": "area_unit"
     }
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.overhead.y4.slot4.direct_quote_krw1000": {
    "canonical_cell": "12 .경비계획!P58",
@@ -47849,7 +48157,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y4.slot4.payment_month": {
    "canonical_cell": "12 .경비계획!Q58",
@@ -47977,7 +48286,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y4.slot5.payment_month": {
    "canonical_cell": "12 .경비계획!Q59",
@@ -48116,7 +48426,8 @@
    },
    "forbidden_if": {
     "method_is": "direct"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y4.slot6.price_observation_year": {
    "canonical_cell": "12 .경비계획!N60",
@@ -48199,7 +48510,8 @@
      "method_is": "area_unit"
     }
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.overhead.y4.slot6.direct_quote_krw1000": {
    "canonical_cell": "12 .경비계획!P60",
@@ -48235,7 +48547,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y4.slot6.payment_month": {
    "canonical_cell": "12 .경비계획!Q60",
@@ -48363,7 +48676,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y4.slot7.payment_month": {
    "canonical_cell": "12 .경비계획!Q61",
@@ -48557,7 +48871,8 @@
    },
    "forbidden_if": {
     "method_is": "direct"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y4.slot8.direct_quote_krw1000": {
    "canonical_cell": "12 .경비계획!P62",
@@ -48593,7 +48908,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y4.slot8.payment_month": {
    "canonical_cell": "12 .경비계획!Q62",
@@ -48721,7 +49037,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y4.slot9.payment_month": {
    "canonical_cell": "12 .경비계획!Q63",
@@ -48860,7 +49177,8 @@
    },
    "forbidden_if": {
     "method_is": "direct"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y4.slot10.price_observation_year": {
    "canonical_cell": "12 .경비계획!N64",
@@ -48943,7 +49261,8 @@
      "method_is": "area_unit"
     }
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.overhead.y4.slot10.direct_quote_krw1000": {
    "canonical_cell": "12 .경비계획!P64",
@@ -48979,7 +49298,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y4.slot10.payment_month": {
    "canonical_cell": "12 .경비계획!Q64",
@@ -49118,7 +49438,8 @@
    },
    "forbidden_if": {
     "method_is": "direct"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y4.slot11.price_observation_year": {
    "canonical_cell": "12 .경비계획!N65",
@@ -49201,7 +49522,8 @@
      "method_is": "area_unit"
     }
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.overhead.y4.slot11.direct_quote_krw1000": {
    "canonical_cell": "12 .경비계획!P65",
@@ -49237,7 +49559,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y4.slot11.payment_month": {
    "canonical_cell": "12 .경비계획!Q65",
@@ -49365,7 +49688,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y4.slot12.payment_month": {
    "canonical_cell": "12 .경비계획!Q66",
@@ -49495,7 +49819,8 @@
    },
    "forbidden_if": {
     "method_is": "direct"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y5.slot1.direct_quote_krw1000": {
    "canonical_cell": "12 .경비계획!P70",
@@ -49531,7 +49856,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y5.slot1.payment_month": {
    "canonical_cell": "12 .경비계획!Q70",
@@ -49661,7 +49987,8 @@
    },
    "forbidden_if": {
     "method_is": "direct"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y5.slot2.direct_quote_krw1000": {
    "canonical_cell": "12 .경비계획!P71",
@@ -49697,7 +50024,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y5.slot2.payment_month": {
    "canonical_cell": "12 .경비계획!Q71",
@@ -49836,7 +50164,8 @@
    },
    "forbidden_if": {
     "method_is": "direct"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y5.slot3.price_observation_year": {
    "canonical_cell": "12 .경비계획!N72",
@@ -49919,7 +50248,8 @@
      "method_is": "area_unit"
     }
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.overhead.y5.slot3.direct_quote_krw1000": {
    "canonical_cell": "12 .경비계획!P72",
@@ -49955,7 +50285,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y5.slot3.payment_month": {
    "canonical_cell": "12 .경비계획!Q72",
@@ -50094,7 +50425,8 @@
    },
    "forbidden_if": {
     "method_is": "direct"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y5.slot4.price_observation_year": {
    "canonical_cell": "12 .경비계획!N73",
@@ -50177,7 +50509,8 @@
      "method_is": "area_unit"
     }
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.overhead.y5.slot4.direct_quote_krw1000": {
    "canonical_cell": "12 .경비계획!P73",
@@ -50213,7 +50546,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y5.slot4.payment_month": {
    "canonical_cell": "12 .경비계획!Q73",
@@ -50341,7 +50675,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y5.slot5.payment_month": {
    "canonical_cell": "12 .경비계획!Q74",
@@ -50480,7 +50815,8 @@
    },
    "forbidden_if": {
     "method_is": "direct"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y5.slot6.price_observation_year": {
    "canonical_cell": "12 .경비계획!N75",
@@ -50563,7 +50899,8 @@
      "method_is": "area_unit"
     }
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.overhead.y5.slot6.direct_quote_krw1000": {
    "canonical_cell": "12 .경비계획!P75",
@@ -50599,7 +50936,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y5.slot6.payment_month": {
    "canonical_cell": "12 .경비계획!Q75",
@@ -50727,7 +51065,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y5.slot7.payment_month": {
    "canonical_cell": "12 .경비계획!Q76",
@@ -50921,7 +51260,8 @@
    },
    "forbidden_if": {
     "method_is": "direct"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y5.slot8.direct_quote_krw1000": {
    "canonical_cell": "12 .경비계획!P77",
@@ -50957,7 +51297,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y5.slot8.payment_month": {
    "canonical_cell": "12 .경비계획!Q77",
@@ -51085,7 +51426,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y5.slot9.payment_month": {
    "canonical_cell": "12 .경비계획!Q78",
@@ -51224,7 +51566,8 @@
    },
    "forbidden_if": {
     "method_is": "direct"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y5.slot10.price_observation_year": {
    "canonical_cell": "12 .경비계획!N79",
@@ -51307,7 +51650,8 @@
      "method_is": "area_unit"
     }
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.overhead.y5.slot10.direct_quote_krw1000": {
    "canonical_cell": "12 .경비계획!P79",
@@ -51343,7 +51687,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y5.slot10.payment_month": {
    "canonical_cell": "12 .경비계획!Q79",
@@ -51482,7 +51827,8 @@
    },
    "forbidden_if": {
     "method_is": "direct"
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y5.slot11.price_observation_year": {
    "canonical_cell": "12 .경비계획!N80",
@@ -51565,7 +51911,8 @@
      "method_is": "area_unit"
     }
    },
-   "zero_evidence": true
+   "zero_evidence": true,
+   "price_contract": "series:general"
   },
   "cost.overhead.y5.slot11.direct_quote_krw1000": {
    "canonical_cell": "12 .경비계획!P80",
@@ -51601,7 +51948,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y5.slot11.payment_month": {
    "canonical_cell": "12 .경비계획!Q80",
@@ -51729,7 +52077,8 @@
     "not": {
      "method_is": "direct"
     }
-   }
+   },
+   "price_contract": "source:quote"
   },
   "cost.overhead.y5.slot12.payment_month": {
    "canonical_cell": "12 .경비계획!Q81",
@@ -54267,7 +54616,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:summary"
   },
   "price.observed.currency": {
    "canonical_cell": " 7. 판매계획!C130",
@@ -58481,7 +58831,8 @@
    "output_conversion": "identity",
    "required_if": {
     "all": []
-   }
+   },
+   "price_contract": "source:evidence"
   },
   "plan.base_date": {
    "canonical_cell": "1. 자산조사!M1",
@@ -59465,7 +59816,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "packaging.y1.packages_per_sales_unit": {
    "canonical_cell": "15. 손익계획!M40",
@@ -59938,7 +60290,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "transport.y1.shipments_per_sales_unit": {
    "canonical_cell": "15. 손익계획!M42",
@@ -60501,7 +60854,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "packaging.y2.packages_per_sales_unit": {
    "canonical_cell": "15. 손익계획!N40",
@@ -60974,7 +61328,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "transport.y2.shipments_per_sales_unit": {
    "canonical_cell": "15. 손익계획!N42",
@@ -61537,7 +61892,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "packaging.y3.packages_per_sales_unit": {
    "canonical_cell": "15. 손익계획!O40",
@@ -62010,7 +62366,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "transport.y3.shipments_per_sales_unit": {
    "canonical_cell": "15. 손익계획!O42",
@@ -62573,7 +62930,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "packaging.y4.packages_per_sales_unit": {
    "canonical_cell": "15. 손익계획!P40",
@@ -63046,7 +63404,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "transport.y4.shipments_per_sales_unit": {
    "canonical_cell": "15. 손익계획!P42",
@@ -63609,7 +63968,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "packaging.y5.packages_per_sales_unit": {
    "canonical_cell": "15. 손익계획!Q40",
@@ -64082,7 +64442,8 @@
       ]
      }
     ]
-   }
+   },
+   "price_contract": "source:quote"
   },
   "transport.y5.shipments_per_sales_unit": {
    "canonical_cell": "15. 손익계획!Q42",
@@ -67446,7 +67807,8 @@
    "output_conversion": "identity",
    "required_if": {
     "any": []
-   }
+   },
+   "price_contract": "source:evidence"
   },
   "facility.cost_reference": {
    "canonical_cell": "6.시설계획!B73",
@@ -67469,7 +67831,8 @@
    "output_conversion": "identity",
    "required_if": {
     "any": []
-   }
+   },
+   "price_contract": "source:evidence"
   },
   "facility.cost_growth_note": {
    "canonical_cell": "6.시설계획!B74",

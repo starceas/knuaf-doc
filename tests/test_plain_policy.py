@@ -538,10 +538,14 @@ class PlainPolicyScope(ContractCase):
 
     def test_every_major_rejects_same_body_and_uncredited_objects(self):
         reference = doc.check(self.BAD_BODY, None, major_id=SC)
+        policy_ids = _ERROR_IDS | _WARNING_IDS | doc.INFO_CHECKS
         for major in ALL_MAJORS:
             with self.subTest(major=major):
                 out = doc.check(self.BAD_BODY, None, major_id=major)
-                assert out == reference
+                # Common policy is identical; school outline/content slots
+                # deliberately follow the selected major's contract (X1-03).
+                assert [r for r in out if r[0] in policy_ids] == [
+                    r for r in reference if r[0] in policy_ids]
                 assert {"forbidden_term", "front_matter_over", "caption_forbidden",
                         "object_credit", "photo_placeholder", "sourced_objects"} <= ids(out)
                 missing = [reason for cid, reason in out if cid == "object_credit"]

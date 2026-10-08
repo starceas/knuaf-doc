@@ -23,3 +23,81 @@ SKILL.md "출력 지원 한계" 절의 상세다. 출력 생성·등록 경로�
 ## 본문 재무 수치의 자동 대조
 
 정본의 범위·기간·항목·값·단위를 같은 절에 명시한 문장으로 제한한다. 예를 들어 실제 정본 값으로 `농장A 1년차 매출액은 1,000 천원이다.`처럼 작성한다(기간·범위 순서는 바꿀 수 있다). 쉼표·줄바꿈으로 나눈 각 절에 범위·기간을 반복한다. 다른 항목의 숫자·단위, 전년 값, 문서 다른 곳의 범위를 빌려 통과시키지 않는다. 암묵적 문맥·별도 반올림 규칙은 추정하지 않고 대조 실패로 남겨 근거를 확인한다. 이 기계 대조가 독립 내용검토를 대신하지 않는다.
+
+## 학교 논문 본문 (특용작물)과 표 출처 (`table_sources`)
+
+`gg.py paper <폴더> --input <spec.json> [--out <경로>] --major specialty_crops`는 특용작물 학교 논문 본문(`build/검토전_본문.md` 등)을 생성하고 관리 발행한다.
+
+### 표 출처 입력 계약 (`table_sources`)
+본문 생성기(`scripts/gg_school_paper.py`)가 출력하는 6개 표에 표별 실제 출처를 붙이려면 spec의 `table_sources` 필드로 출처 객체를 전달한다:
+- **대상 표 ID 6개 (또는 정확한 생성 캡션)**:
+  1. `farm_overview`: "표 1. 농장 종합 개요" (Ⅱ.1.가 농장 개요)
+  2. `climate`: "표 2. 기상환경" (Ⅱ.1.나.1) 기상환경)
+  3. `disasters`: "표 3. 재해" (Ⅱ.1.나.6) 재해)
+  4. `shipping_markets`: "표 4. 출하시장 거리" (Ⅱ.1.다.1) 지리적 조건)
+  5. `growth_targets`: "표 5. 가족구성 및 성장목표" (Ⅲ.2.가 농장의 가족구성 및 성장목표)
+  6. `swot`: "표 6. SWOT 분석" (Ⅲ.2.마 SWOT 분석)
+- **입력 형식**:
+  ```json
+  {
+    "major_id": "specialty_crops",
+    "table_sources": {
+      "farm_overview": {
+        "sources": [
+          {
+            "kind": "interview",
+            "source_type": "author_survey",
+            "source": "작성자 직접 조사",
+            "title": "농장 현황 조사 기록",
+            "year": "2026",
+            "locator": "조사일지 1쪽",
+            "survey_date": "2026-09-10",
+            "subject": "농장 부지 및 시설",
+            "verified": "user-stated"
+          }
+        ]
+      },
+      "climate": {
+        "sources": [
+          {
+            "kind": "stat",
+            "source_type": "official_stat",
+            "source": "기상청",
+            "title": "기상연보",
+            "year": "2025",
+            "locator": "표 3-1",
+            "url": "https://data.kma.go.kr/..."
+          }
+        ]
+      }
+    }
+  }
+  ```
+- **허용 kind / source_type 조합 (어댑터 허용 enum)**:
+  | kind | source_type | 허용 내용 및 필수 요건 |
+  |---|---|---|
+  | `stat` | `official_stat` | 국가·공공기관 공식 통계 |
+  | `public_data` | `official_public` | 공공 DB, 법령, 사업 지침 |
+  | `academic` | `academic_paper` | 학술논문 |
+  | `research_report` | `institution_report` | 대학·연구기관 보고서 |
+  | `school_material` | `official_school` | 학교 공식 자료 |
+  | `textbook` | `formal_textbook` | 정규 교재 |
+  | `interview` | `author_survey` | 작성자 직접 조사 (`source="작성자 직접 조사"`, `verified="user-stated"`, 실제 `survey_date`·`subject` 필수. 일반 타인 인터뷰 금지) |
+
+- **필수 및 선택 필드**:
+  - 필수 필드: `kind`, `source_type`, `source`, `title`, `year`, `locator`
+  - 선택 필드: `url` (평문 HTTP/HTTPS만 허용), `grade` (1 또는 2만 허용, 3/4등급 금지), `survey_date`, `subject`, `verified`, `id`, `revision`
+  - 정본 출처 연결: `id`와 `revision`을 함께 지정하면 `project.sources` 레코드와 개정·종류·서지 충돌을 대조 검증한다.
+- **인용 필드 문자 허용 부류 및 실질 문자 요건 (`_plain`)**:
+  - 인용 필드(`source`, `title`, `year`, `locator` 및 비-URL 서지 필드)는 유한한 허용 문자 부류만 통과한다: NFKC 정규화 후 글자(Unicode `L*`), 숫자(`N*`), 구두점(`P*`), 지정 일반 기호 16종(`_SYMBOLS`: `°©®±×÷−+=∼₩$¥€£¢`), 일반 ASCII 공백(` `)만 허용된다.
+  - 보이지 않는 결합 문자(Unicode `M*`: 결합 자모 결합자 `U+034F`, 결합 악센트 등), 변형 선택자(`U+FE00~FE0F`, `U+E0100~E01EF` 계열), 제어문자/형식문자(`C*`, 줄바꿈·탭·U+200B 등), 목록 외 기호(이모지 등)는 명시 거부된다.
+  - **표시 문자열 실질 문자 요건**: 결합 마크를 제외한 정규화 표시 문자열(`display`)에 글자(`L*`) 또는 숫자(`N*`)가 반드시 1자 이상 포함되어야 한다 (기호나 구두점만으로 채운 문자열 거부).
+  - **자리표시자 판정 기준**: `미정`, `미확인`, `확인필요`, `자료없음`, `n/a` 등 미확인 값 판정도 마크를 제거한 표시 문자열(`display`) 기준으로 검사하므로, 결합 문자나 변형 선택자를 끼워 넣은 위장 자리표시자(`미\u034f정`, `미\ufe0f정`, `미\U000e0100정` 등)도 `미확인 출처 값`으로 즉시 거부된다.
+  - **무효 입력 처리 및 6표 무효 시 발행 차단**: 유효하지 않은 출처 입력은 빈 값으로 지워 no-op 처리하지 않고 `invalid_spec`/`not_committed` 오류로 명시 거부된다. 6개 표 모두 결합 문자(`U+034F` 등) 무효 입력인 경우 본문 발행 파일이나 발행 영수증이 전혀 생성되지 않는다.
+  - **URL 필드**: 평문 HTTP(S) 주소여야 하며, 결합 마크(`M*`)나 공백이 포함되면 거부된다.
+- **동작 원칙과 경계**:
+  - **정확한 no-op (미제공 시 동작 없음)**: `table_sources`가 없거나 빈 객체이면 원문 텍스트를 그대로 반환한다.
+  - **기본 출처 자동 삽입 없음**: spec에 출처가 주어지지 않은 표에는 "본인 작성", "작성자 직접 조사", "확인 필요" 등의 임의 기본 문구를 채워 넣지 않는다. 출처 없는 표는 기존처럼 `gg_document.check`의 `object_credit` 정책 오류가 유지된다.
+  - **출처 줄 확인 한계**: 학교 논문 표 출처는 출처 줄이 있는지 확인할 뿐 진위를 보증하지 않으며, 보이지 않는 한글 채움 문자 일부는 아직 걸러내지 못한다.
+  - **생성기 코드 보존 (frozen)**: `scripts/gg_school_paper.py` 코드는 일체 변경되지 않는다(frozen 계약 준수). 저수준 함수 직접 호출(`school_paper()`)이나 독립 실행에는 출처가 삽입되지 않으며, 관리 경로(`gg.py paper` → `core.paper`)에서만 관리 발행 직전에 단독 출처 문단으로 삽입된다.
+  - **새 revision 필요**: 기존 요청 수령증(receipt)이 존재하는 경우 재호출은 기존 결과를 반환하므로, 표 출처를 새로 적용하거나 변경하려면 새 revision(개정)과 새 출력 경로로 요청해야 한다.

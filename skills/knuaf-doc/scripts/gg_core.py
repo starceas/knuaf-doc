@@ -4617,8 +4617,9 @@ def paper(root, spec_path, spec_bytes, requested_path, *, major_id=None):
     and is rechecked inside it; a held output raises ``_op(...)`` with
     ``not_committed`` and the guard's hold code."""
     root = Path(root)
+    from gg_school_table_sources import load_spec, attach_table_sources
     try:
-        spec = json.loads(spec_bytes)
+        spec = load_spec(spec_bytes)
     except ValueError as error:
         raise _op("paper", "requested_output", "not_committed",
                   "invalid_spec", detail=str(error)) from error
@@ -4797,6 +4798,13 @@ def paper(root, spec_path, spec_bytes, requested_path, *, major_id=None):
         from gg_school_paper import paper as school_paper
 
         body_text = school_paper(spec, context=ctx)
+        # D3/X1-02: frozen renderer stays unchanged. Insert only explicit
+        # credits before encoding, hashing and managed publication staging.
+        try:
+            body_text = attach_table_sources(body_text, spec, project=p)
+        except ValueError as error:
+            raise _op("paper", "requested_output", "not_committed",
+                      "invalid_spec", detail=str(error)) from error
         body_bytes = body_text.encode()
         body_sha = digest(body_bytes)
         staging_rel = ".gg-paper-staging-" + request_sha[:16]

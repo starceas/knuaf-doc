@@ -53,6 +53,7 @@ description: 한국농수산대학교 창업논문·영농계획서와 동반 �
 - “검토본 받기”: `export <폴더> --kind review --major <전공ID>`. 생성된 실제 경로와 미검증 항목을 알려준다. 교수 승인으로 표시하지 않는다.
 - 산출물 등록: 생성·수정된 출력 파일을 정본에 등록하는 유일한 경로는 `adopt-output <폴더> --input <spec.json> --expected-revision <N> --major <전공ID>`다. spec 형식·동반 파일 판별·수령증 규칙은 [source-contract](references/source-contract.md)를 따른다.
 - 재무표 전개: 특용작물전공 Ⅳ장 재무표 전개는 학과 제공 템플릿(및 그 파생)을 대상으로 `gg.py finance-tables <폴더> --xlsx <재계산통합문서> [--input 각주.json] [--out 경로] --major specialty_crops` 명령으로 실행한다([specialty-crops/finance-flow](references/specialty-crops/finance-flow.md)).
+- “학교 논문 생성(특용작물)”: `gg.py paper <폴더> --input <spec.json> [--out <경로>] --major specialty_crops`. spec의 `table_sources`(표 ID 6개: `farm_overview`, `climate`, `disasters`, `shipping_markets`, `growth_targets`, `swot`)로 표별 출처를 입력하며, 미제공 시 no-op이고 출처 없는 표는 정책 오류(`object_credit`)가 유지된다([outputs](references/outputs.md)).
 - 잠금 문제: 잠금 점유 확인은 `doctor <폴더> --probe`로 한다(기본 `doctor`는 구조만 읽기 전용 보고). 비정상 종료 잔여물은 `unlock <폴더>`, 오프라인 전환·복구는 사용자 확인 후 `lock-upgrade <폴더>`로만 진행하며 `.gg-lock` 디렉터리·수령증 파일을 직접 고치지 않는다. 상세 [locking](references/locking.md).
 - "업데이트해줘 / 업데이트 확인": [update](references/update.md)의 절차를 따르고 `scripts/gg_update.py auto`를 쓴다.
 

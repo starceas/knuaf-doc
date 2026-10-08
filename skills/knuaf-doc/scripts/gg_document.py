@@ -2,8 +2,9 @@
 
 import json
 import re
+import unicodedata
 from pathlib import Path
-from gg_core import draft
+from gg_core import draft, START, END
 
 # 학명 이탤릭은 이명법(속명+종소명)+명명자/등급 표지가 함께 나오는 경우만
 # 적용한다. 종소명 자리의 영어 기능어(전치사·접속사·관사·조동사·대명사·흔한
@@ -74,9 +75,11 @@ POLICY_PATH = (
     / "references"
     / "plain-thesis-policy.json"
 )
+HORT_PROFILE_PATH = POLICY_PATH.parent / "hort-env-systems" / "profile.json"
 
 _POLICY_SHAPES = {
     "forbidden_body_terms": list,
+    "forbidden_body_term_aliases": list,
     "limited_terms": dict,
     "front_matter": dict,
     "caption": dict,
@@ -115,6 +118,9 @@ def _validate_plain_rules(rules):
             isinstance(v, str) and v.strip() for v in values
         ):
             raise ValueError("plain-thesis-policy.json 목록 필드 오류")
+    aliases = rules["forbidden_body_term_aliases"]
+    if not all(isinstance(v, str) and v.strip() for v in aliases):
+        raise ValueError("plain-thesis-policy.json 별칭 목록 오류")
     grades = src.get("forbidden_grades")
     if not isinstance(grades, list) or not grades or not all(
         type(v) is int and v > 0 for v in grades
@@ -278,6 +284,152 @@ def _term_count(text, term):
     return text.count(term)
 
 
+_HANGUL_FINALS = "ㄱㄲㄳㄴㄵㄶㄷㄹㄺㄻㄼㄽㄾㄿㅀㅁㅂㅄㅅㅆㅇㅈㅊㅋㅌㅍㅎ"
+_COMPAT_FINAL = {c: chr(0x11a8 + i) for i, c in enumerate(_HANGUL_FINALS)}
+
+
+def _term_separator(c):
+    return (c.isspace() or unicodedata.category(c) == "Cf"
+            or unicodedata.category(c).startswith("P") or c == "\u034f"
+            or 0xfe00 <= ord(c) <= 0xfe0f or 0xe0100 <= ord(c) <= 0xe01ef)
+
+
+def _compact_term_text(text):
+    """Remove separators first, then compose modern Hangul with source spans.
+
+    Only the 19 L / 21 V / 27 T modern jamo and their compatibility forms
+    are composed. A compatibility consonant before V starts a new syllable;
+    otherwise it may close LV. Archaic/residual jamo are retained, without
+    guessing missing vowels, emoji, digits or lookalike letters.
+    """
+    tokens = []
+    start = 0
+    while start < len(text):
+        end = start + 1
+        # Keep ordinary accent normalization; invisible combining separators
+        # must not merge unrelated original character spans.
+        while (end < len(text) and unicodedata.combining(text[end])
+               and not _term_separator(text[end])):
+            end += 1
+        source = text[start:end]
+        for c in unicodedata.normalize("NFKC", source).casefold():
+            if _term_separator(c):
+                continue
+            # Precomposed syllables may also receive an explicit final jamo.
+            pieces = unicodedata.normalize("NFD", c) if 0xac00 <= ord(c) <= 0xd7a3 else c
+            for piece in pieces:
+                tokens.append((piece, start, end, _COMPAT_FINAL.get(source)))
+        start = end
+    chars, spans, i = [], [], 0
+    while i < len(tokens):
+        c, start, end, _ = tokens[i]
+        if (0x1100 <= ord(c) <= 0x1112 and i + 1 < len(tokens)
+                and 0x1161 <= ord(tokens[i + 1][0]) <= 0x1175):
+            vowel = tokens[i + 1]
+            syllable = 0xac00 + ((ord(c) - 0x1100) * 21 + ord(vowel[0]) - 0x1161) * 28
+            end, i = vowel[2], i + 2
+            if i < len(tokens):
+                final, _, final_end, compat_final = tokens[i]
+                next_is_vowel = (i + 1 < len(tokens)
+                                 and 0x1161 <= ord(tokens[i + 1][0]) <= 0x1175)
+                if compat_final and not next_is_vowel:
+                    final = compat_final
+                # A compatibility cluster is a final even when followed by V;
+                # a simple compatibility consonant before V stays an onset.
+                if 0x11a8 <= ord(final) <= 0x11c2:
+                    syllable += ord(final) - 0x11a7
+                    end, i = final_end, i + 1
+            chars.append(chr(syllable))
+            spans.append((start, end))
+        else:
+            chars.append(c)
+            spans.append((start, end))
+            i += 1
+    return "".join(chars), spans
+
+
+def _latin_identifier_edge(text, index, step):
+    # Invisible format marks must not turn an identifier into a standalone
+    # acronym. Actual punctuation/space remains a lexical boundary.
+    while 0 <= index < len(text) and unicodedata.category(text[index]) in {"Cf", "Mn", "Me"}:
+        index += step
+    if not 0 <= index < len(text):
+        return False
+    c = unicodedata.normalize("NFKC", text[index])
+    return any(x.isdecimal() or x == "_" or "LATIN" in unicodedata.name(x, "") for x in c)
+
+
+def _forbidden_spans(text, term, compact, spans, *, needle=None):
+    if needle is None:
+        needle = _compact_term_text(term)[0]
+    if not needle:
+        return []
+    out, offset = [], 0
+    while True:
+        found = compact.find(needle, offset)
+        if found < 0:
+            return out
+        start, end = spans[found][0], spans[found + len(needle) - 1][1]
+        if not term.isascii() or not (
+            _latin_identifier_edge(text, start - 1, -1)
+            or _latin_identifier_edge(text, end, 1)
+        ):
+            if not out or out[-1] != (start, end):
+                out.append((start, end))
+            offset = found + len(needle)
+        else:
+            offset = found + 1
+
+
+def _draft_region(text):
+    """Use the same envelope as draft(), retaining its identified offset."""
+    raw = draft(text)  # Also validates paired markers before reading offsets.
+    if START in text or END in text:
+        start, end = text.index(START) + len(START), text.index(END)
+    else:
+        match = re.search(
+            r"^##\s+DRAFT[^\n]*\n(.*?)(?=^##\s+(?:STATUS|INPUT|RESEARCH|FACTS|OPEN)\b|\Z)",
+            text, re.M | re.S,
+        )
+        start, end = match.span(1) if match else (0, len(text))
+    region = text[start:end]
+    return raw, start + len(region) - len(region.lstrip())
+
+
+def _body_term_units(text, nodes):
+    """Keep cells/sections separate; soft paragraph lines may form a term.
+
+    Each character maps back to the unmodified input, including DRAFT
+    wrappers, indentation and Markdown heading prefixes.
+    """
+    if any("term_parts" not in n for n in nodes):
+        nodes = parse(text, with_spans=True, _with_term_positions=True)
+    units, chunks, positions = [], [], []
+    def flush():
+        if chunks:
+            units.append(("".join(chunks), positions.copy()))
+            chunks.clear()
+            positions.clear()
+    for n in nodes:
+        parts = n["term_parts"]
+        if not n.get("soft_continue"):
+            flush()
+        if not parts:
+            continue
+        for part, start in parts:
+            if not part:
+                continue
+            if chunks:
+                chunks.append("\n")
+                positions.append(start - 1)
+            chunks.append(part)
+            positions.extend(range(start, start + len(part)))
+            if n["kind"] != "paragraph":
+                flush()
+    flush()
+    return units
+
+
 def project_major(p):
     """정본 프로젝트의 common.major_id 바인딩을 읽는다. 확인 불가 시
     None — 공통 기본 정책을 적용한다."""
@@ -323,14 +475,28 @@ def plain_policy_check(text, issues, nodes, major_id):
             body_parts.extend(c for row in n["rows"] for c in row)
         elif n["kind"] == "image":
             body_parts.append(n["alt"] + " " + n["path"])
-    body = "\n".join(body_parts)
-    for term in policy["forbidden_body_terms"]:
-        hits = _term_count(body, term)
+    units = [(raw, positions, *_compact_term_text(raw))
+             for raw, positions in _body_term_units(text, nodes)]
+    line_offsets = [0] + [m.end() for m in re.finditer("\n", text)]
+    for term in policy["forbidden_body_terms"] + policy["forbidden_body_term_aliases"]:
+        needle = _compact_term_text(term)[0]
+        occurrences, line_index = [], 0
+        for raw, positions, compact, spans in units:
+            for start, end in _forbidden_spans(raw, term, compact, spans, needle=needle):
+                pos = positions[start]
+                while line_index + 1 < len(line_offsets) and line_offsets[line_index + 1] <= pos:
+                    line_index += 1
+                line = line_index + 1
+                column = pos - line_offsets[line_index] + 1
+                original = text[pos:positions[end - 1] + 1]
+                occurrences.append("%d행 %d열 %r" % (line, column, original))
+        hits = len(occurrences)
         if hits:
             issues.append(
                 (
                     "forbidden_term",
-                    "본문 금칙 재무 용어 %d회: %s" % (hits, term),
+                    "본문 금칙 재무 용어 %d회(원문 %s): %s"
+                    % (hits, "; ".join(occurrences), term),
                 )
             )
     # Captions are printed once and must count towards limited terms too.
@@ -691,47 +857,73 @@ def _swot_placed(body_nodes):
     return False
 
 
-def parse(text, *, with_spans=False):
-    lines, nodes, i = draft(text).splitlines(), [], 0
+def parse(text, *, with_spans=False, _with_term_positions=False):
+    raw, origin = _draft_region(text) if _with_term_positions else (draft(text), 0)
+    lines, nodes, i = raw.splitlines(), [], 0
+    line_offsets, offset = [], origin
+    if _with_term_positions:
+        for line in raw.splitlines(keepends=True):
+            line_offsets.append(offset)
+            offset += len(line)
     previous_prose = False
     heading_state = _HeadingState()
-    def append(node):
+    def append(node, term_parts=()):
         if with_spans:
             node.update(start_line=start_line, end_line=i)
+        if _with_term_positions:
+            node["term_parts"] = term_parts
         nodes.append(node)
 
     while i < len(lines):
         start_line = i
         s = lines[i].strip()
+        source_start = (line_offsets[i] + len(lines[i]) - len(lines[i].lstrip())
+                        if _with_term_positions else 0)
         i += 1
         if not s:
             previous_prose = False
             continue
         if s.startswith("|"):
-            rows = []
+            rows, term_parts = [], []
             while True:
                 row = [x.strip() for x in s.strip("|").split("|")]
                 if not all(re.fullmatch(r":?-{2,}:?", x) for x in row):
                     rows.append(row)
+                    if _with_term_positions:
+                        left = len(s) - len(s.lstrip("|"))
+                        right = len(s.rstrip("|"))
+                        cursor = left
+                        for cell in s[left:right].split("|"):
+                            term_parts.append((cell.strip(), source_start + cursor
+                                               + len(cell) - len(cell.lstrip())))
+                            cursor += len(cell) + 1
                 if i >= len(lines) or not lines[i].strip().startswith("|"):
                     break
                 s = lines[i].strip()
+                if _with_term_positions:
+                    source_start = line_offsets[i] + len(lines[i]) - len(lines[i].lstrip())
                 i += 1
-            append({"kind": "table", "rows": rows})
+            append({"kind": "table", "rows": rows}, term_parts)
         elif IMAGE.fullmatch(s):
             m = IMAGE.fullmatch(s)
-            append({"kind": "image", "alt": m[1], "path": m[2]})
+            append({"kind": "image", "alt": m[1], "path": m[2]},
+                   [(m[1], source_start + m.start(1)), (m[2], source_start + m.start(2))])
         elif CAPTION.fullmatch(s):
             m = CAPTION.fullmatch(s)
             append(
                 {"kind": "caption", "label": m[1], "number": int(m[2]), "text": s}
             )
         else:
+            md = re.match(r"^(#{1,6})\s+(.+)$", s)
             level, s = heading_state.read(s)
+            if md:
+                source_start += md.start(2)
             list_item = False
-            if re.match(r"^[-+*]\s+", s):
+            bullet = re.match(r"^[-+*]\s+", s)
+            if bullet:
                 list_item = True
                 s = re.sub(r"^[-+*]\s+", "", s)
+                source_start += bullet.end()
             if (
                 s.startswith(("```", "<table", "<script", "> "))
                 or re.search(r"\[[^\]]+\]\([^)]+\)", s)
@@ -751,6 +943,7 @@ def parse(text, *, with_spans=False):
                     head = s[: m.start() + 1].rstrip()
                     rest = m.group(1).strip()
                     if head and rest:
+                        tail_start = source_start + m.start(1)
                         s, tail = head, rest
             node = {"kind": "heading" if (level and not list_item) else "paragraph", "text": s}
             if level:
@@ -760,10 +953,10 @@ def parse(text, *, with_spans=False):
             prose = node["kind"] == "paragraph" and not list_item
             if prose and previous_prose:
                 node["soft_continue"] = True
-            append(node)
+            append(node, [(s, source_start)])
             previous_prose = prose
             if tail:
-                append({"kind": "paragraph", "text": tail})
+                append({"kind": "paragraph", "text": tail}, [(tail, tail_start)])
                 previous_prose = True
             # A Markdown hard break terminates this line's paragraph boundary.
             if lines[i - 1].endswith("  "):
@@ -825,7 +1018,7 @@ def require_tokens(issues, cid, body, tokens, reason):
 
 
 def check(text, base, major_id=None):
-    nodes = parse(text)
+    nodes = parse(text, with_spans=True, _with_term_positions=True)
     issues = []
     if major_id is None:
         major_id = _project_major(base)
@@ -975,7 +1168,9 @@ def check(text, base, major_id=None):
     toc_range = school_toc_range(nodes)
     toc_start, body_start = toc_range if toc_range else (-1, -1)
     for i, n in enumerate(nodes):
-        if n["kind"] != "heading":
+        # These locations/content slots belong to the specialty-crop
+        # outline. Peer majors have their own contracts, not this fallback.
+        if major_id != "specialty_crops" or n["kind"] != "heading":
             continue
         if toc_start <= i < body_start:
             continue
@@ -1077,7 +1272,7 @@ def check(text, base, major_id=None):
         if re.search(r"[ⅥVI]+\s*[\.．]", n["text"]) and "참고문헌" in n["text"]:
             if re.search(r"관련\s*논문", body):
                 issues.append(("related_papers_place", "관련 논문은 Ⅲ-6이지 Ⅵ이 아님"))
-    school_structure(text, issues, nodes=nodes)
+    school_structure(text, issues, nodes=nodes, major_id=major_id)
     return issues
 
 
@@ -1151,7 +1346,69 @@ def school_toc_range(nodes):
     return None
 
 
-def school_structure(text, issues, nodes=None):
+def _peer_swot_paths(major_id):
+    """Only explicitly declared outline locations are structural rules.
+
+    Fruit S01 is declared in the registry. Horticulture's optional plan
+    links HT1/HT2 profile locations; neither precedent imposes six chapters
+    or mandatory front matter. Majors without these contracts are skipped.
+    """
+    import gg_major_contract as mc
+
+    if major_id not in {"fruit_trees", "hort_env_systems"}:
+        return ()
+    module = mc.default_registry().resolve(major_id)
+    paths = set()
+    if major_id == "fruit_trees":
+        for node in module.document_plan:
+            if node.role != "swot":
+                continue
+            match = re.match(r"([ⅠⅡⅢⅣⅤⅥ]|III|II|IV|VI|I|V)-(\d+)\b", node.rationale or "")
+            if match:
+                paths.add((_ROMAN_NUMBERS[match[1]], int(match[2])))
+    else:
+        refs = {ref for n in module.document_plan if n.role == "environment_analysis"
+                for ref in n.precedent_refs}
+        if not refs:
+            return ()
+        profile = json.loads(HORT_PROFILE_PATH.read_text(encoding="utf-8"))
+        if profile["major_id"] != major_id:
+            raise ValueError("원예 목차 프로필 전공 불일치")
+        for precedent in profile["precedents"]:
+            if precedent["ref"] not in refs:
+                continue
+            for section in precedent["sections"]:
+                if not re.search(r"SWOT", section["title"], re.IGNORECASE):
+                    continue
+                match = re.fullmatch(r"ch(\d+)_sec(\d+)", section["item"])
+                if match:
+                    paths.add(tuple(int(x) for x in match.groups()))
+    return tuple(sorted(paths))
+
+
+def _check_peer_swot(body_nodes, paths, issues):
+    if not paths:
+        return
+    chapter = section = None
+    expected = ", ".join("%s-%d" % ("ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ"[c - 1], s) for c, s in paths)
+    for n in body_nodes:
+        if n.get("kind") != "heading":
+            continue
+        title = n["text"].strip()
+        if n.get("level") == 1:
+            numbered = _numbered_heading(title)
+            chapter = numbered[1] if numbered else None
+            section = None
+        elif n.get("level") == 2:
+            match = re.match(r"^(\d+)\s*[.．]", title)
+            section = int(match[1]) if match else None
+        if re.search(r"SWOT", title, re.IGNORECASE) and (
+            n.get("level") != 2 or (chapter, section) not in paths
+        ):
+            issues.append(("school_swot", "선택 전공 목차의 SWOT는 " + expected))
+
+
+def school_structure(text, issues, nodes=None, major_id=None):
     if nodes is None:
         nodes = parse(text)
     toc_range = school_toc_range(nodes)
@@ -1161,6 +1418,13 @@ def school_structure(text, issues, nodes=None):
     else:
         body_nodes = nodes
         body_text = text
+
+    if major_id != "specialty_crops":
+        try:
+            _check_peer_swot(body_nodes, _peer_swot_paths(major_id), issues)
+        except (OSError, ValueError, KeyError, TypeError) as e:
+            issues.append(("school_structure_policy", "전공 목차 계약 읽기 실패: %s" % e))
+        return issues
 
     n_chapters = sum(1 for pat, _ in CHAPTERS if re.search(pat, body_text))
     has_front = all(x in text for x in FRONT)
