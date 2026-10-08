@@ -8,6 +8,9 @@ from decimal import Context, Decimal, InvalidOperation, ROUND_HALF_UP
 from pathlib import Path
 from gg_core import digest, local
 from gg_finance import num
+from gg_price_assumptions import footnote as price_footnote
+from gg_price_assumptions import multiplier_d as price_multiplier_d
+from gg_price_assumptions import normalize_price_assumptions
 
 # Irregular names are formula targets. Do not "fix" spaces or periods.
 SCHOOL_SHEETS = (
@@ -105,6 +108,13 @@ def validate(spec, *, resolver=None):
     if spec.get("unit") != "천원" or spec.get("quantity_unit") != "kg":
         raise ValueError("학교 제출 엑셀 단위는 천원, 수량은 kg")
 
+    if "inflation" in spec:
+        raise ValueError(
+            "'inflation' 단일 배율 입력은 폐기되었습니다. "
+            "price_assumptions.general(일반물가)·wage(임금)·sales(판매가)에 "
+            "상승률 r과 출처 id·기준연도·관측기간·적용 기초연도를 입력하세요"
+        )
+
     # F14: strict nonblank string validation for production evidence
     evidence = spec.get("production_evidence")
     if not isinstance(evidence, dict):
@@ -136,7 +146,6 @@ def validate(spec, *, resolver=None):
         "repair_facility_rate",
         "repair_equipment_rate",
         "utility_per_10a",
-        "inflation",
     )
     values = {k: num(spec[k]) for k in fields}
 
@@ -173,9 +182,6 @@ def validate(spec, *, resolver=None):
     ):
         if values[k] < 0:
             raise ValueError(f"{k} 항목은 0 이상 필요")
-
-    if values["inflation"] <= 0:
-        raise ValueError("물가상승률은 양수 필요")
 
     # F4: salvage bound
     if values["salvage"] > values["facility"]:
@@ -231,7 +237,9 @@ def validate(spec, *, resolver=None):
     if values["loan"] > 0 and spec["term"] <= 0:
         raise ValueError("융자금이 있는 경우 상환기간은 1 이상의 정수 필요")
 
-    return years, values
+    price_assumptions = normalize_price_assumptions(spec, years)
+
+    return years, values, price_assumptions
 
 
 def school_workbook(spec, path, *, context=None):
@@ -254,8 +262,17 @@ def school_workbook(spec, path, *, context=None):
     if unsupported:
         return unsupported
 
-    years, v = validate(spec)
+    years, v, price = validate(spec)
     start = years[0]
+    mult_g = [price_multiplier_d(price["general"], y) for y in years]
+    mult_w = [price_multiplier_d(price["wage"], y) for y in years]
+    mult_s = [price_multiplier_d(price["sales"], y) for y in years]
+
+    def _step(a):
+        return 1.0 + a["rate"] if a["status"] == "applied" else None
+
+    step_g = _step(price["general"])
+    step_w = _step(price["wage"])
     wb = Workbook()
     wb.active.title = SCHOOL_SHEETS[0]
     for name in SCHOOL_SHEETS[1:]:
@@ -463,11 +480,14 @@ def school_workbook(spec, path, *, context=None):
     for t in range(5):
         rev_col = get_column_letter(4 + t)
         qty_col = get_column_letter(5 + 2 * t)
+        ms = float(mult_s[t])
+        suffix = "" if ms == 1.0 else f"*{ms}"
         sales[f"{rev_col}38"] = f"{years[t]}년"
-        sales[f"{rev_col}39"] = f"={qty_col}22*$O$7/1000"
-        sales[f"{rev_col}40"] = f"={qty_col}26*$O$10/1000"
+        sales[f"{rev_col}39"] = f"={qty_col}22*$O$7/1000{suffix}"
+        sales[f"{rev_col}40"] = f"={qty_col}26*$O$10/1000{suffix}"
         sales[f"{rev_col}41"] = 0
         sales[f"{rev_col}50"] = f"={rev_col}39+{rev_col}40+{rev_col}41"
+    sales["B42"] = price_footnote(price["sales"])
 
     # F5 & F10: 3.투자계획 - 총괄 및 5개년 연차별 세부투자계획
     tot_loan = v["loan"]
@@ -709,10 +729,30 @@ def school_workbook(spec, path, *, context=None):
         exp.cell(b + 5, 4, "* 구입금액의 대농기구수선비율 적용")
         exp.cell(b + 6, 2, "2. 수도 광열비")
         if t == 0:
-            exp.cell(b + 6, 3, "=$D$7*$D$8/1000")
+            mg0 = float(mult_g[0])
+            exp.cell(
+                b + 6,
+                3,
+                f"=$D$7*$D$8/1000{'' if mg0 == 1.0 else f'*{mg0}'}",
+            )
+            exp.cell(b + 6, 4, "수도광열비×면적/1000×일반물가배율")
         else:
-            exp.cell(b + 6, 3, f"=C{b + 6 - 20}*{float(v['inflation'])}")
-        exp.cell(b + 6, 4, "수도광열비×면적/1000×물가")
+            exp.cell(
+                b + 6,
+                3,
+                (
+                    f"=C{b + 6 - 20}*{step_g}"
+                    if step_g is not None
+                    else f"=C{b + 6 - 20}"
+                ),
+            )
+            exp.cell(
+                b + 6,
+                4,
+                "전년 수도광열비×(1+일반물가)"
+                if step_g is not None
+                else "전년과 동일(일반물가 미적용·명시 선택)",
+            )
         exp.cell(b + 8, 2, "3. 감가상각비")
         exp.cell(b + 8, 3, f"=SUM(C{b+9}:C{b+11})")
         exp.cell(b + 8, 4, "* 감가상각비계획 참조")
@@ -751,8 +791,12 @@ def school_workbook(spec, path, *, context=None):
             f"=C{b+3}+C{b+6}+C{b+8}+C{b+12}+C{b+15}+C{b+16}+C{b+17}",
         )
         exp.cell(b + 18, 4, "7과목 합계. 해당 없어도 0으로 남김")
+        if t == 0:
+            exp.cell(b + 19, 2, price_footnote(price["general"]))
 
-    # F10: 7. 영농자재소요계획 & 8. 노무비계획 (basis text & inflation roll-forward)
+    # F10: 7. 영농자재소요계획 & 8. 노무비계획 (basis text & rate roll-forward)
+    # 일반물가(r_g)는 자재, 임금(r_w)은 노무비 — 같은 가격에 두 률을
+    # 함께 곱하지 않는다(P5 이중 적용 금지).
     mat["B2"] = "7. 영농자재소요계획"
     mat["I2"] = "(단위:천원)"
     labor["B2"] = "8. 노무비계획"
@@ -761,7 +805,7 @@ def school_workbook(spec, path, *, context=None):
         r = 4 + t
         if t == 0:
             mat.cell(r, 2, year)
-            mat.cell(r, 3, float(v["materials"]))
+            mat.cell(r, 3, float(v["materials"] * mult_g[0]))
             mat.cell(
                 r,
                 4,
@@ -769,7 +813,7 @@ def school_workbook(spec, path, *, context=None):
                 or ("[확인 필요]" if v["materials"] > 0 else "-"),
             )
             labor.cell(r, 2, year)
-            labor.cell(r, 3, float(v["labor"]))
+            labor.cell(r, 3, float(v["labor"] * mult_w[0]))
             labor.cell(
                 r,
                 4,
@@ -777,15 +821,37 @@ def school_workbook(spec, path, *, context=None):
             )
         else:
             mat.cell(r, 2, f"=B{r-1}+1")
-            mat.cell(r, 3, f"=C{r-1}*{float(v['inflation'])}")
-            mat.cell(r, 4, "전년 자재비 × 물가상승률")
+            mat.cell(
+                r,
+                3,
+                f"=C{r-1}*{step_g}" if step_g is not None else f"=C{r-1}",
+            )
+            mat.cell(
+                r,
+                4,
+                "전년 자재비 × (1+일반물가)"
+                if step_g is not None
+                else "전년과 동일(일반물가 미적용·명시 선택)",
+            )
             labor.cell(r, 2, f"=B{r-1}+1")
-            labor.cell(r, 3, f"=C{r-1}*{float(v['inflation'])}")
-            labor.cell(r, 4, "전년 노무비 × 물가상승률")
+            labor.cell(
+                r,
+                3,
+                f"=C{r-1}*{step_w}" if step_w is not None else f"=C{r-1}",
+            )
+            labor.cell(
+                r,
+                4,
+                "전년 노무비 × (1+임금상승률)"
+                if step_w is not None
+                else "전년과 동일(임금상승률 미적용·명시 선택)",
+            )
     mat["B10"] = "합계"
     mat["C10"] = "=SUM(C4:C8)"
+    mat["B12"] = price_footnote(price["general"])
     labor["B10"] = "합계"
     labor["C10"] = "=SUM(C4:C8)"
+    labor["B12"] = price_footnote(price["wage"])
 
     cost["B2"] = "11. 생산원가계획"
     cost["I2"] = "(단위:천원)"
@@ -1064,11 +1130,11 @@ def school_workbook(spec, path, *, context=None):
     sales.print_area = "B2:O31,B38:O50"
 
     prod.print_area = "B2:I26"
-    mat.print_area = "B2:E10"
-    labor.print_area = "B2:E10"
+    mat.print_area = "B2:E12"
+    labor.print_area = "B2:E12"
 
     # 9 .경비계획: discontiguous print areas per summary and annual blocks
-    exp.print_area = "B2:E10,B12:E30,B32:E50,B52:E70,B72:E90,B92:E110"
+    exp.print_area = "B2:E10,B12:E31,B32:E50,B52:E70,B72:E90,B92:E110"
 
     dep.print_area = "B2:I17"
     cost.print_area = "B2:G36"  # fitToHeight=1 avoids orphan row on page 19
@@ -1090,6 +1156,26 @@ def school_workbook(spec, path, *, context=None):
                 "years": years,
                 "file_hash": digest(path.read_bytes()),
                 "input_hash": digest(spec),
+                "price_assumptions": {
+                    role: (
+                        {
+                            "status": a["status"],
+                            "reason": a.get("reason"),
+                        }
+                        if a["status"] != "applied"
+                        else {
+                            "status": "applied",
+                            "rate": a["rate"],
+                            "rate_source": a["rate_source"],
+                            "reference_cagr": a["reference_cagr"],
+                            "source_id": a["source_id"],
+                            "base_year": a["base_year"],
+                            "observation": a["observation"],
+                            "application_base_year": a["application_base_year"],
+                        }
+                    )
+                    for role, a in price.items()
+                },
                 "recalculation": "not_run",
                 "rendering": "not_run",
                 "major_authorization": authorization.to_dict(),

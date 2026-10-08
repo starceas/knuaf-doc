@@ -52,6 +52,7 @@ description: 한국농수산대학교 창업논문·영농계획서와 동반 �
 - “고칠 부분 보기”: `check <폴더>`의 위치별 결과와 내용검토 결과를 구분해 설명한다.
 - “검토본 받기”: `export <폴더> --kind review --major <전공ID>`. 생성된 실제 경로와 미검증 항목을 알려준다. 교수 승인으로 표시하지 않는다.
 - 산출물 등록: 생성·수정된 출력 파일을 정본에 등록하는 유일한 경로는 `adopt-output <폴더> --input <spec.json> --expected-revision <N> --major <전공ID>`다. spec 형식·동반 파일 판별·수령증 규칙은 [source-contract](references/source-contract.md)를 따른다.
+- 재무표 전개: 특용작물전공 Ⅳ장 재무표 전개는 학과 제공 템플릿(및 그 파생)을 대상으로 `gg.py finance-tables <폴더> --xlsx <재계산통합문서> [--input 각주.json] [--out 경로] --major specialty_crops` 명령으로 실행한다([specialty-crops/finance-flow](references/specialty-crops/finance-flow.md)).
 - 잠금 문제: 잠금 점유 확인은 `doctor <폴더> --probe`로 한다(기본 `doctor`는 구조만 읽기 전용 보고). 비정상 종료 잔여물은 `unlock <폴더>`, 오프라인 전환·복구는 사용자 확인 후 `lock-upgrade <폴더>`로만 진행하며 `.gg-lock` 디렉터리·수령증 파일을 직접 고치지 않는다. 상세 [locking](references/locking.md).
 - "업데이트해줘 / 업데이트 확인": [update](references/update.md)의 절차를 따르고 `scripts/gg_update.py auto`를 쓴다.
 
@@ -117,10 +118,11 @@ description: 한국농수산대학교 창업논문·영농계획서와 동반 �
 - 자료 투입·발췌·재검토: [source-intake](references/source-intake.md)
 - 전공별 지원 범위·전용 명령: [majors](references/majors.md)
 - 출력 명령·형식별 한계·재무 양식: [outputs](references/outputs.md)
-- 특용·약용작물·생허브 가격 조사: [price-research-routes](references/price-research-routes.md) — 조사 전 읽고 위임 시 작목·상품 형태·거래 단계·기간·경로 전달. 옛 관측을 현재 시세로 쓰지 않는다.
+- 특용·약용작물·생허브 가격 조사 및 공식 통계: [price-research-routes](references/price-research-routes.md) — 일반물가·자재·노무비·판매가 공식 통계 선택표(R1 권고), 관측 수열 끝점 연평균 변화율(CAGR) r 산출 강제, 계획 차원 권위 및 판매 수열 전체 차원 일치 필수, 남녀 상승률 각각 맞는 성별 출처 필요(수식 패치 시 대상 열 성별 대조), 학생 직접 수열(`price_sources`)의 엄격 HTTPS 공식 URL 계약.
+- 재무 엑셀 템플릿 및 물가·노무비 반영: [excel-template](references/excel-template.md) — 템플릿 우선 경로(materialize-d8·wage-map) 및 레거시 경로(price_assumptions) 사용 절차. 패치 수식의 상승률 상수를 Excel 보존 정밀도인 유효숫자 15자리로 직렬화(`_excel_number`)하여 재저장 시 수식 문자열(토큰) 불변 보장, 패치 영수증에 원 계산값 `r`과 수식 표기값 `r_literal` 분리 보존(오차 1e-12 이내 정합), 등록 수열 원단위 값·연도 정확 일치 대조, 성별 없는 수열은 남녀 동일 관측, 성별 있는 수열은 단일 출처 블록에서 거부(남성 수치 여성 복제 금지), 남녀 상승률(`wage_male`·`wage_female`)은 각각 맞는 성별 출처만 허용, 판매가 작목은 문자열·목록·별칭 허용 및 임금 작목 불필요(지역만 가능), 등록 X01 원본 관측 수식 변형(Z27=Z28) 해시 묶음 허용(X01·FX 양쪽 관측 준비 동작), 명시 `unit_conversion` 없는 시간급 환산 불가, 역할별 허용 계약(`allowed_roles`).
 - 질문과 변경: [mid-work-questions](references/mid-work-questions.md)
 - 학부 졸업논문 눈높이·재무 지표 경계(모든 전공 공통 기본값): [thesis-level](references/thesis-level.md)
-- 특용작물전공 Ⅳ장 재무표 전개(특용작물 전용, 타 전공은 각 선배 플로우): [specialty-crops/finance-flow](references/specialty-crops/finance-flow.md)
+- 특용작물전공 Ⅳ장 재무표 전개(특용작물 전용, 타 전공은 각 선배 플로우): [specialty-crops/finance-flow](references/specialty-crops/finance-flow.md) — 학과 제공 템플릿(및 그 파생) 대상 gg.py finance-tables 전개 명령, Ⅳ장 상승률 각주는 전부 "참고값"으로 출력(표 계산에 쓰였는지는 통합문서에서 따로 확인, 영수증·수식·캐시 역산 검증 폐지), 공식 통계 id 해석·역할·단위·기준연도·관측기간·차원 검증 및 끝점 CAGR r 산출을 거친 구조화 참고값 각주 출력, 원문 상승률·성장률 주석 생략, 연도별 표 그룹 완전성 검증, 행별 단위 계약(`row_units`), 레이아웃 지문, 명명 빈 행 '확인 불가' 보존 및 발행 전 정책 게이트 검증.
 - 시각자료·사진 정책 및 촬영 자리 가이드: [figure-photo-policy](references/figure-photo-policy.md)
 - 장별 논증·실행성·수치 품질(작성 전·검토 때 읽음, 분량·키워드로 충족 금지): [exemplar-quality](references/exemplar-quality.md)
 - 서술 설계·문단 확장(길이·문단 수 목표 금지): [narrative-expansion](references/narrative-expansion.md)

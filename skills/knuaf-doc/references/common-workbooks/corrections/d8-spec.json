@@ -1,0 +1,107 @@
+{
+  "schema": "gg-template-price-link-spec/v1",
+  "layout": "x01",
+  "wage_sheet": "8. 노무비계획",
+  "wage_rows": {
+    "8": {
+      "base": "Y34",
+      "rate": "AC38"
+    },
+    "11": {
+      "base": "Y34",
+      "rate": "AC38"
+    },
+    "12": {
+      "base": "Z34",
+      "rate": "AD38"
+    }
+  },
+  "year_columns": [
+    "F",
+    "I",
+    "L",
+    "O",
+    "R"
+  ],
+  "observation_range": "X26:Z31",
+  "reviewed_observation_formulas": [
+    {
+      "source_sha256": "5d19b6a2e5dcddccb70c68e39abee8f423bba005c008db7b64076326a17b9c80",
+      "audit_file": "formula-audit/x01.json",
+      "audit_sha256": "785c2a157b8a774421624aa49d86f347ffc4c533051959cc822746bc6ebaecf5",
+      "sheet": "8. 노무비계획",
+      "cell": "Z27",
+      "formula": "Z28"
+    }
+  ],
+  "sales_sheet": " 5. 판매계획",
+  "sales_rows": {
+    "38": "O7",
+    "39": "O8",
+    "40": "O9",
+    "41": "O11",
+    "42": "O12",
+    "43": "O13"
+  },
+  "protected_sheets": [
+    "4. 원리금상환계획",
+    "10. 감가상각비계획 ",
+    "11. 생산원가계획",
+    "14. 현금흐름계획",
+    "15.추정소득분석"
+  ],
+  "preserved_findings": [
+    "W-023",
+    "XR-11",
+    "XR-02",
+    "XR-03",
+    "XR-09",
+    "XR-18",
+    "XR-19",
+    "XR-20"
+  ],
+  "observation_contract": {
+    "source_registry": "official-price-series.json or explicit price_sources",
+    "allowed_role": "wage",
+    "validator": "gg_price_assumptions.check_observations before unit conversion, for both Y and Z columns",
+    "observed_values": "raw years and values must exactly match resolved registered observations; unobserved years are rejected",
+    "gender_contract": "a series without gender dimensions supplies the same value to both Y and Z; gender/sex/성별 must match Y=남자 or Z=여자; gender-specific single-source observations are rejected because both columns are required",
+    "alternative_values": "explicit price_sources registration with official schema and a different id; bundled id cannot be overridden",
+    "output_unit": "원/일",
+    "base_year": "registered index basis; null for nominal currency series",
+    "required_metadata": [
+      "statistic_id",
+      "unit",
+      "base_year",
+      "observation_years",
+      "application_base_year"
+    ],
+    "hourly_conversion": {
+      "from": "원/시간",
+      "to": "원/일",
+      "required": [
+        "hours_per_day",
+        "evidence_ref"
+      ],
+      "default_hours_per_day": null
+    },
+    "forbidden_daily_sources": [
+      "sales price",
+      "index",
+      "hourly wage without explicit conversion"
+    ]
+  },
+  "rate_contract": {
+    "validator": "gg_price_assumptions public API",
+    "student_registration": "assumptions.price_sources",
+    "observed_values": "must match registered observations; cannot overwrite bundled observations",
+    "gender_contract": "gender/sex/성별 of a wage series must match wage_male=남자 or wage_female=여자",
+    "formula_literal_serialization": "gg_excel_formula_patch._excel_number emits the token observed to survive native Excel saves: truncate Decimal(repr(r)) to 15 significant digits toward zero; use fixed-point while the unsigned text is <=21 chars, else an uppercase E with a signed exponent of at least 2 digits; collapse trailing .0 and signed zero. Receipt d8.rates[*].r retains the full-precision CAGR and r_literal records the formula token. For decimal order k the truncation error is <10^(k-14), hence <1e-14*abs(Decimal(repr(r))); including binary-float conversions the normal-rate bound is 1.1e-14*abs(r), with zero exact. This is inside gg_finance_tables rel/abs 1e-12 rate tolerance; it is not a blanket relative-error guarantee for compounded amounts near r=-1",
+    "roles": {
+      "wage_male": "wage",
+      "wage_female": "wage",
+      "sales": "sales",
+      "general": "general"
+    }
+  }
+}

@@ -334,6 +334,7 @@ def inspect_source(source: Path, out_map: Path | None, report: Path | None) -> d
                     formulas += 1
                 cells.append({"cell": ref, "value": text_value(c, shared),
                               "formula": f.text if f is not None else None,
+                              "hasFormula": f is not None,
                               "style": c.attrib.get("s")})
             sheet_summaries.append({"name": name, "index": idx, "xml": target,
                                     "cellCount": len(cells), "formulaCount": formulas})
@@ -378,6 +379,66 @@ def inspect_source(source: Path, out_map: Path | None, report: Path | None) -> d
 def e(sheet: str, refs: str, semantic: str, reason: str, action: str = "clear") -> dict:
     return {"sheet": sheet, "range": refs, "semanticField": semantic, "reason": reason,
             "action": action, "explicit": True}
+
+
+def wage_fill_map(source: Path) -> dict:
+    """Value-only map; formula observations must first be explicitly prepared.
+
+    The fill engine requires a complete, sourced six-year observation block.
+    This map never grants permission to overwrite a formula.
+    """
+    if detect_layout(source) != "x01":
+        raise ValueError("layout_variant_unsupported: wage observations require x01")
+    return {"schema": "gg-xlsx-fill-map/v1",
+            "template": {"sha256": sha256(source)},
+            "entries": [{"sheet": "8. 노무비계획", "range": "X26:Z31",
+                         "role": "wage.observation", "period": "observation",
+                         "source_note": "raw years and both wage columns must match registered observations and target gender before explicit hourly conversion; gender-specific single sources cannot fill both columns; no default hours",
+                         "editable": True}]}
+
+
+def template_price_sources(price_sources: list) -> dict:
+    """Index the template's explicit list using the shared entry validator."""
+    from gg_price_assumptions import check_source_entry
+    if not isinstance(price_sources, list):
+        raise ValueError("price_sources must be a list")
+    sources = {}
+    for entry in price_sources:
+        sid = check_source_entry(entry, origin="price_sources")
+        if sid in sources:
+            raise ValueError(f"duplicate price_sources id: {sid}")
+        sources[sid] = entry
+    return sources
+
+
+def wage_observation_source(metadata: dict, price_sources: list) -> dict:
+    """Resolve observation provenance through the shared price contract."""
+    from gg_price_assumptions import (
+        load_registry, resolve_series, check_role, check_unit, check_base_year,
+    )
+    if "base_year" not in metadata:
+        raise ValueError("wage_observations.base_year required; nominal series use null")
+    source = resolve_series(metadata.get("statistic_id"), registry=load_registry(),
+                            student_sources=template_price_sources(price_sources))
+    check_role(source, "wage", origin="wage_observations")
+    check_unit(source, ("원/일", "원/시간"), origin="wage_observations")
+    check_base_year(metadata["base_year"], source, origin="wage_observations")
+    return source
+
+
+def check_wage_gender(source: dict, gender: str, *, origin: str) -> None:
+    """A gender-specific series can supply only its matching school column.
+
+    The single-source observation format fills both columns, so such a
+    series is rejected there. Separate male/female rate inputs can use it.
+    """
+    from gg_price_assumptions import canonical_dimensions
+    dimensions = canonical_dimensions(source.get("dimensions"))
+    for key, value in dimensions.items():
+        if key.casefold() in {"gender", "sex", "성별"} and value != gender:
+            raise ValueError(f"{origin}: source gender {key}={value!r} "
+                             f"does not match target gender {gender!r}; "
+                             "separate gender sources required")
 
 
 def default_entries(inventory: list[dict]) -> list[dict]:
@@ -510,6 +571,12 @@ def default_entries(inventory: list[dict]) -> list[dict]:
         ("14. 현금흐름계획", "B25", "cash-flow method note; fixed reference text"),
     ]
     out.extend(e(sheet, refs, "legacy_constant", reason, "preserve") for sheet, refs, reason in preserve)
+    for cell in inventory:
+        if (cell.get("sheet") == "8. 노무비계획"
+                and re.fullmatch(r"[XYZ](?:2[6-9]|3[01])", cell.get("cell", ""))
+                and not cell.get("hasFormula", cell.get("formula") is not None)):
+            out.append(e(cell["sheet"], cell["cell"], "wage_observation",
+                         "replace example observation with sourced official daily wage/year"))
     return out
 
 
@@ -798,6 +865,9 @@ def cli(argv: list[str]) -> int:
     i.add_argument("--source", required=True, type=Path)
     i.add_argument("--out-map", required=True, type=Path)
     i.add_argument("--report", type=Path)
+    w = sp.add_parser("wage-map")
+    w.add_argument("--source", required=True, type=Path)
+    w.add_argument("--out-map", required=True, type=Path)
     c = sp.add_parser("clear")
     c.add_argument("--source", required=True, type=Path)
     c.add_argument("--map", required=True, type=Path)
@@ -808,7 +878,13 @@ def cli(argv: list[str]) -> int:
     c.add_argument("--major", default=None, help="명시 전공 ID")
     args = p.parse_args(argv)
     try:
-        if args.cmd == "inspect":
+        if args.cmd == "wage-map":
+            result = wage_fill_map(resolve_source(args.source))
+            args.out_map.parent.mkdir(parents=True, exist_ok=True)
+            with args.out_map.open("x", encoding="utf-8") as stream:
+                json.dump(result, stream, ensure_ascii=False, indent=2)
+            print(json.dumps({"status": "mapped", "map": str(args.out_map)}, ensure_ascii=False))
+        elif args.cmd == "inspect":
             r = inspect_source(args.source, args.out_map, args.report)
             print(json.dumps({"status": "inspected", "source": r["source"], "entries": len(r["entries"]),
                               "sheets": len(r["sheets"]), "map": str(args.out_map),

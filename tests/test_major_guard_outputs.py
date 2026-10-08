@@ -100,7 +100,23 @@ def _school_spec(**over):
         materials="500", labor="800", packing="100", transport="100",
         household="2000", repair_facility_rate="0.01",
         repair_equipment_rate="0.02", utility_per_10a="50",
-        inflation="1.02", grace=1, term=5, life=10)
+        price_assumptions={
+            "general": {
+                "source_id": "official.kosis.cpi.total",
+                "base_year": 2020,
+                "application_base_year": 2027,
+            },
+            "wage": {
+                "source_id": "official.kosis.farm_purchase.labor",
+                "base_year": 2020,
+                "application_base_year": 2027,
+            },
+            "sales": {
+                "status": "not_applied",
+                "reason": "학생 작목 판매가 수열 확인 불가",
+            },
+        },
+        grace=1, term=5, life=10)
     spec.update(over)
     return spec
 

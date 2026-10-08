@@ -80,14 +80,115 @@ do not add sheets to the submission form merely to satisfy a preferred model.
 
 > ℹ️ **적용 범위**: 상승률 분리 규칙은 **모든 전공 공통 기본값**이다([사용자 결정 2026-10-06 22:39]). 입력 위치와 시트 수는 해당 전공 양식을 따른다.
 
-**구현 상태**: 물가·노무비 공식 통계 입력 구현(D8)과 Ⅳ장 표 전개기(D9)는 후속 단계이며, 지금은 규칙만 정한다.
+**구현 상태**: 물가·노무비 공식 통계 분리(D8) 및 Ⅳ장 표 전개기(D9) 구현 완료. 과거 단일 `inflation` 배율 입력은 완전히 **폐기**되었으며(입력 시 오류 발생), 일반물가·임금·판매가 상승률을 각각 분리하여 공식 통계 기반으로 입력해야 한다.
 
-1. **세 상승률의 분리**:
-   일반물가 상승률은 영농자재·경비, 임금 상승률은 노무비, 판매가 상승률은 매출에 각각 적용한다. 세 입력을 하나의 소비자물가 상승률로 묶지 않는다. 입력값은 상승률 r이며 내부 배율은 1+r이다.
-2. **노무비 반영과 전공별 양식 확인**:
-   교수 지적에 따라 **노무비(고용노동임금) 계획이 가장 중요**하다. 해당 전공 양식의 노무비 입력 셀·임금 상승률 수식/열을 검토해 연도별 일당 인상을 반영하고, 근거 없이 여러 해를 동일 단가로 방치하지 않는다. 원예환경시스템 18시트는 H01의 전용 입력 지도를 따른다.
-3. **공식 통계 근거 필수 (임의 추정 금지)**:
-   일반물가·임금·판매가 각각의 상승률은 해당 항목에 맞는 공식 통계를 확인하고, 각 값마다 출처 ID(`project.json.sources[*].id`), 기준연도와 locator를 입력 근거에 명시한다. 근거 없는 임의 추정값이나 템플릿의 잔존 예시값을 무단으로 사용하지 않는다.
+1. **세 상승률의 분리 및 관측 CAGR 강제**:
+   - 일반물가 상승률은 영농자재·경비, 임금 상승률은 노무비, 판매가 상승률은 매출에 각각 적용한다.
+   - 세 입력을 하나의 소비자물가 상승률로 묶지 않는다.
+   - **상승률 r은 공식 관측 수열의 끝점 연평균 변화율(CAGR)로만 산출**된다. 명시적 `rate` 입력은 검산용(`max(5e-4, 0.05 × |cagr|)` 허용오차 내 일치)이며, 관측값 없는 임의 계획 가정 r은 입력할 수 없다. 내부 계산 배율은 `1 + r`이다.
+   - 계획연도 배율은 `(1 + r)^(계획연도 - application_base_year)`로 적용되며, 적용 횟수는 연도 차이와 같다. 모든 관측값·r·배율은 유한수여야 한다(NaN/Infinity 거부).
+2. **노무비 반영 및 이중 적용 금지**:
+   - 노무비(고용노동임금) 계획은 **연도별 임금 상승률**을 반영한다.
+   - 동일 가격에 상승률을 두 번 곱하지 않는다. 노무 단가에 임금 상승률을 곱한 뒤, 노무비 총액에 일반물가를 다시 곱하지 않는다. 감가상각비와 고정 차입금 원리금에는 물가를 적용하지 않는다.
+3. **공식 통계 근거 및 판매가 미반영 명시 선택**:
+   - 일반물가는 KOSIS 소비자물가 총지수(`DT_1J22003`), 자재·경비 세목은 농가구입가격지수 재료비·경비(`DT_1J62`), 노무비는 농가구입가격지수 노무비(`DT_1J62`), 판매가는 농진청 소득자료집 동일 작목 주산물 단가를 우선한다.
+   - 판매가 수열은 계획의 작목·재배형태·지역·상품·단위·거래단계 차원과 일치해야 한다(`crop` 필수). **총합 지수인 농가판매가격지수 총지수(`DT_1J60`)와 번들 KAMIS 쌀 수열(`allowed_roles: []`)은 판매가로 적용할 수 없다.**
+   - 학생 작목과 동일 조건의 공식 수열이 없으면, 전국 총지수를 임의 대입하지 않고 **"판매가 상승 미반영(확인 불가)"을 명시 선택**한다.
+   - 통계에서 확인되지 않은 수치는 임의 추정 없이 `확인 불가`로 남긴다.
+4. **수식 숫자 표기 및 Excel 정밀도 보존 (`_excel_number`)**:
+   - 패치(`materialize-d8`)가 워크북 수식에 쓰는 상승률 상수는 **유효숫자 15자리**(Excel이 보존하는 정밀도)로 직렬화하여 기록한다.
+   - Excel은 수식에 적힌 숫자를 최대 15자리까지만 보존하고 끝자리를 잘라내므로(절단), 15자리를 초과하는 숫자를 그대로 쓰면 Excel에서 열고 다시 저장할 때 수식 글자(문자열 토큰)가 달라져 보존 검사에 걸리게 된다. 처음부터 15자리 정밀도로 기록해 두면 재저장해도 수식 문자열이 바뀌지 않아 안전하게 통과할 수 있다.
+   - 부호 없는 숫자가 21자리 이하이면 일반 소수점 형태(고정소수점)로 표기하고, 초과하면 지수 형태(`d.dddE±dd`)로 표기한다. 끝에 붙는 불필요한 `.0`이나 부호 있는 0(`-0`)은 제거한다.
+   - 영수증 `d8.rates[*]`에는 원래 계산된 상승률 `r`(원 CAGR 계산값)을 그대로 보존하고, 수식에 기록된 값은 `r_literal` 필드에 별도로 남긴다.
+   - 원래 `r`과 수식 표기값 `r_literal`의 차이는 최대 `1.1e-14 * |r|` 수준으로 아주 미세하여, 하류 허용오차(`1e-12`, 1조 분의 1) 안에서 안전하게 일치한다.
+
+#### 두 엑셀 경로별 사용 절차 및 명령 계약
+
+두 경로(템플릿 우선 경로 및 레거시 17시트 생성기 경로) 모두 동일한 공통 가격 가정 모듈(`gg_price_assumptions`)의 공식 출처 계약과 기준연도/역할 검증을 공유한다.
+
+##### 경로 1. 학과 원본 템플릿 우선 경로 (W-B 패치·채우기 계약)
+
+학과에서 배포한 원본 통합문서(XLSX)를 사본으로 복구하고 채우는 주 경로다.
+
+1. **구조 복구 (`materialize-d8`)**:
+   - 명령:
+     ```bash
+     python3 skills/knuaf-doc/scripts/gg_excel_formula_patch.py materialize-d8 --source <원본.xlsx> --out <패치맵.json>
+     python3 skills/knuaf-doc/scripts/gg_excel_formula_patch.py --source <원본.xlsx> --map <패치맵.json> --out <복구사본.xlsx> --receipt <영수증.json> --project <프로젝트폴더> --major specialty_crops
+     ```
+   - 정상 X01은 0개 패치로 변경 없음 영수증을 발급한다(무변경 영수증은 기존 영수증 유지). 수식 패치 시 `r_literal`이 수식 문자열 상수로 기록된다.
+2. **관측 준비 (`--prepare-observations` 및 `wage-map`)**:
+   - 명령:
+     ```bash
+     python3 skills/knuaf-doc/scripts/gg_excel_formula_patch.py materialize-d8 --source <사본.xlsx> --out <준비맵.json> --prepare-observations
+     python3 skills/knuaf-doc/scripts/gg_excel_formula_patch.py --source <사본.xlsx> --map <준비맵.json> --out <준비사본.xlsx> --receipt <영수증.json> --project <프로젝트폴더> --major specialty_crops
+     python3 skills/knuaf-doc/scripts/gg_excel_template.py wage-map --source <준비사본.xlsx> --out-map <값지도.json>
+     ```
+   - **X01 원본 관측 준비**: 등록 X01 원본의 실제 관측 수식 변형(`Z27=Z28`)은 원본 SHA(`5d19b6a...`) 및 감사 자료(`formula-audit/x01.json`, SHA `785c2a1...`)에 묶어 검토된 수식으로 허용된다. 따라서 `materialize-d8 --prepare-observations`가 X01 원본 사본과 FX 양쪽 모두에서 정상 동작한다.
+   - 관측 연도 사슬과 복사 수식(X01은 Z27, FX는 Z28)을 명시적으로 비우며, 기존 fill CLI를 통해 관측값을 입력한다(수식 쓰기 금지 유지).
+3. **관측값 입력 형식 (`wage_observations`) 및 시간급 환산 계약**:
+   - 값 파일에 `statistic_id`, `base_year`, 6개 `observation_years`, `application_base_year`를 지정한다.
+   - `values`는 8번 시트 X26:Z31 18개 셀 모두 정수 연도 및 양수 원/일이어야 하며, `evidence_ref(source_id, revision, locator, origin="factual")`가 필수다.
+   - **등록 수열 원단위 값·연도 대조**: 등록 id를 사용할 경우 환산 전 원단위 값과 연도가 등록 수열의 관측값과 **정확히 일치**해야 한다(`check_observations`).
+   - **임금 관측 및 패치 성별 계약**: 등록 수열에 성별 차원이 없으면 남자(Y열)·여자(Z열) 모두 같은 등록 관측값이어야 한다. 등록 수열에 성별 차원(`gender`·`sex`·`성별`)이 있는 수열은 현재 단일 출처·남녀 전체 블록(`wage_observations`) 입력 형식으로는 **거부**된다(남성 수치를 여성 관측으로 복제 금지). 남녀 상승률(`wage_male`·`wage_female`) 입력은 각각 맞는 성별 출처만(`wage_male`은 남자, `wage_female`은 여자) 사용할 수 있으며 반대 성별이나 복수 성별 선언은 거부된다. 패치 시에도 생산자(`gg_excel_template.check_wage_gender`)를 통해 대상 열(남자=AC38, 여자=AD38)과 출처 성별을 엄격히 대조한다. 미관측 연도나 임의 변조값은 거부되며, 다른 값·연도를 쓰려면 다른 id의 공식 스키마 `price_sources`로 명시 등록해야 한다(같은 번들 id 덮어쓰기 불가).
+   - **단위 일치 및 시간급 환산**: 관측표(X26:Z31)는 원/일 단위이므로 등록된 원/일 수열만 직접 입력할 수 있다. 농진청 소득자료집 고용노동 단가나 최저임금 등 시간급(원/시간) 수열을 일급으로 환산할 때는 반드시 `unit_conversion: {"from": "원/시간", "to": "원/일", "hours_per_day": float, "evidence_ref": {...}}` 명시 계약이 있어야 한다. **기본 환산 시간은 존재하지 않으며**(Q-W-B2 사용자/조사 후 결정 대기), 대조가 끝난 원값에 명시 시간을 곱한 결과로만 일급이 결정된다(임의 보상 환산 금지).
+4. **가격 계약 (`--assumptions <JSON>`)**:
+   - materialize-d8에 `--assumptions <가정.json>`을 전달한다.
+   - 필드는 `wage_male`, `wage_female`, `sales`, 선택적 `general`로 분리한다. 각 계산 항목은 `base_year`, `observation_years`, `observed_values`, `application_base_year`, `evidence_ref`를 요구한다. 학생 선언 수열은 `assumptions.price_sources`에 포함한다.
+   - r은 공식 관측값의 끝점 CAGR로만 정해지며(음수 허용), 명시 r은 검산 오차 내 일치해야 한다.
+   - **가격 가정 어댑터**: 공통 차원 정규화(`canonical_dimensions`)를 적용하여 판매가 작목(`target_dimensions`)은 문자열(`crop: "봄감자"`), 목록(`crop: ["봄감자"]`), 또는 한글 별칭(`작목: "봄감자"`)을 모두 지원한다. 임금(`wage_male`, `wage_female`)에는 작목이 필수가 아니며 지역(`region` 또는 `지역` 별칭)만 지정할 수 있다.
+   - **계획 차원의 권위**: 사업계획의 최상위 차원이 기준이며 보조 차원이 충돌하면 거부된다. 판매가는 수열이 선언한 모든 차원(단위 포함)이 계획과 일치해야 하며(`crop` 필수), 전국은 고정 지역값이지 와일드카드가 아니다. 미일치 시 `{"mode": "not_applied", "reason": "확인 불가"}`를 명시한다.
+   - **역할별 허용 계약 (`allowed_roles`)**: 수열의 `allowed_roles`에 해당 역할(`wage`, `sales`, `general`)이 포함되어 있어야 한다.
+     - 번들 일반물가(`general`): `official.kosis.cpi.total`, `official.kosis.farm_purchase.materials`, `official.kosis.farm_purchase.expenses`.
+     - 번들 노무비(`wage`): `official.kosis.farm_purchase.labor`, `official.moel.establishment_wage.total`, `official.minimumwage.hourly`.
+     - 번들 판매가(`sales`): `official.rda.crop_income.spring_potato.output_price` (단, 작목 등 계획 차원 일치 필수; 번들에 없는 학생 작목은 공식 스키마 `price_sources`로 직접 등록).
+     - 시장 참고용(판매가 적용 불가, `allowed_roles: []`): `official.kosis.farm_sales.total`(총지수), `official.kamis.retail.rice_20kg.top`(쌀 소매가).
+5. **적용 기초연도 대조 및 경계**:
+   - 임금과 판매의 적용 기초연도는 원본에 보존된 F6 및 C36과 대조한다. 불일치를 이유로 원본 연도나 연결을 임의 변경하지 않는다. 공식 수열 준비와 구조 복구만으로 제출/통계 승인이라고 간주하지 않는다.
+6. **Ⅳ장 재무표 각주 참고값 계약**:
+   - Ⅳ장 상승률 각주는 전부 "참고값"으로 출력되며, 표 계산에 쓰였는지는 통합문서에서 따로 확인해야 한다 (전개기는 워크북 수식·캐시 역산 검증이나 실제 사용 보증을 하지 않음). 상세 계약과 구조화 각주 입력 형식은 [finance-flow](specialty-crops/finance-flow.md)를 따른다.
+
+##### 경로 2. 레거시 17시트 생성기 경로 (W-A 스펙 계약)
+
+스펙 JSON에서 17시트 전체를 새로 생성하는 보조 경로다.
+
+- **스펙 계약**:
+  - `spec["price_assumptions"]` 객체에 `general`, `wage`, `sales` 세 역할을 필수로 정의한다.
+  - 이전 `inflation` 단일 키 입력 시 명시적 오류로 거부된다.
+  - 각 역할은 공식 관측 수열의 끝점 CAGR로 계산되며, `rate`를 명시할 경우 수열 CAGR과 일치해야 한다.
+  - 각 역할 정의 형식:
+    ```json
+    {
+      "general": {
+        "source_id": "official.kosis.cpi.total",
+        "base_year": 2020,
+        "application_base_year": 2025
+      },
+      "wage": {
+        "source_id": "official.kosis.farm_purchase.labor",
+        "base_year": 2020,
+        "application_base_year": 2025
+      },
+      "sales": {
+        "status": "not_applied",
+        "reason": "확인 불가"
+      }
+    }
+    ```
+  - 학생이 직접 조회한 작목별 수열은 `spec["price_sources"]`에 선언한다. 학생 수열도 공인 기관 종류(`agency_kind`), 엄격 https 공식 도메인(백슬래시·@·공백·제어문자·NBSP·443 외 포트·유니코드/IDNA 변형 등 모호한 URL 거부), locator, 기준연도(지수 정수, 명목 null), unit, dimensions, allowed_roles를 준수해야 하며, 관측/미확인 연도 교집합은 거부된다.
+  - 생성 명령:
+    ```bash
+    python3 skills/knuaf-doc/scripts/build_excel_finance_template.py project --input spec.json --out build/output.xlsx --major specialty_crops
+    ```
+
+#### 보류 사항 (사용자 결정 대기)
+
+1. **W-023 노무비 첫해 F6=2027년 및 생산원가 첫해 대응**:
+   - 실제 FX 및 X01 양식의 `8. 노무비계획!F6` 셀은 `2027년`으로 기재되어 있으며, 생산원가계획 첫해와의 연결 대응은 지도교수 해석 대상이다. 코드는 이를 임의 수정하지 않고 보존하며, **사용자 결정 대기**로 둔다.
+2. **첫해 자재·경비의 `*1.025*1.025*1.025` 식**:
+   - X01 `7!C16:C19`, `9!C18`의 1.025 3회 곱셈 식은 기준 단가의 연도 근거 확인 전까지 임의 변경하지 않고 보존하며, **사용자 결정 대기**로 둔다.
+3. **Q-W-B2 시간급→일급 1일 환산 노동시간**:
+   - 템플릿 임금 관측표는 원/일 단위이고, 번들 공식 고용노동 단가는 원/시간이다. 1일 노동시간의 공적 근거 확인 전까지 기본 환산 시간을 두지 않으며, 학생이 공식 근거와 함께 `unit_conversion`을 명시해야만 환산을 허용한다 (**사용자/조사 후 결정 대기**).
 
 #### 특용작물 17시트의 좌표 (해당 원본 전용)
 
