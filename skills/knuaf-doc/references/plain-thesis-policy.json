@@ -13,6 +13,13 @@
     "할인율",
     "민감도"
   ],
+  "forbidden_body_term_aliases": [
+    "net present value",
+    "internal rate of return",
+    "discount rate",
+    "benefit-cost ratio",
+    "sensitivity analysis"
+  ],
   "limited_terms": {
     "손익분기": 6
   },

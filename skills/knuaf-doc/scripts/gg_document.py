@@ -2,6 +2,7 @@
 
 import json
 import re
+import unicodedata
 from pathlib import Path
 from gg_core import draft
 
@@ -74,9 +75,11 @@ POLICY_PATH = (
     / "references"
     / "plain-thesis-policy.json"
 )
+HORT_PROFILE_PATH = POLICY_PATH.parent / "hort-env-systems" / "profile.json"
 
 _POLICY_SHAPES = {
     "forbidden_body_terms": list,
+    "forbidden_body_term_aliases": list,
     "limited_terms": dict,
     "front_matter": dict,
     "caption": dict,
@@ -115,6 +118,9 @@ def _validate_plain_rules(rules):
             isinstance(v, str) and v.strip() for v in values
         ):
             raise ValueError("plain-thesis-policy.json 목록 필드 오류")
+    aliases = rules["forbidden_body_term_aliases"]
+    if not all(isinstance(v, str) and v.strip() for v in aliases):
+        raise ValueError("plain-thesis-policy.json 별칭 목록 오류")
     grades = src.get("forbidden_grades")
     if not isinstance(grades, list) or not grades or not all(
         type(v) is int and v > 0 for v in grades
@@ -278,6 +284,106 @@ def _term_count(text, term):
     return text.count(term)
 
 
+def _compact_term_text(text):
+    """NFKC/casefold only for body prohibitions; retain original spans.
+
+    Combining marks and Hangul jamo are normalized together so composition
+    does not lose a character or move the reported original occurrence.
+    """
+    chars, spans = [], []
+    start = 0
+    def jamo(c):
+        return (0x1100 <= ord(c) <= 0x11ff or 0x3130 <= ord(c) <= 0x318f
+                or 0xa960 <= ord(c) <= 0xa97f or 0xd7b0 <= ord(c) <= 0xd7ff)
+    while start < len(text):
+        end = start + 1
+        while end < len(text) and (
+            unicodedata.combining(text[end])
+            or (jamo(text[end]) and (jamo(text[end - 1])
+                                    or 0xac00 <= ord(text[end - 1]) <= 0xd7a3))
+        ):
+            end += 1
+        for c in unicodedata.normalize("NFKC", text[start:end]).casefold():
+            category = unicodedata.category(c)
+            invisible_mark = (c == "\u034f" or 0xfe00 <= ord(c) <= 0xfe0f
+                              or 0xe0100 <= ord(c) <= 0xe01ef)
+            if c.isspace() or category == "Cf" or invisible_mark or category.startswith("P"):
+                continue
+            chars.append(c)
+            spans.append((start, end))
+        start = end
+    return "".join(chars), spans
+
+
+def _latin_identifier_edge(text, index, step):
+    # Invisible format marks must not turn an identifier into a standalone
+    # acronym. Actual punctuation/space remains a lexical boundary.
+    while 0 <= index < len(text) and unicodedata.category(text[index]) in {"Cf", "Mn", "Me"}:
+        index += step
+    if not 0 <= index < len(text):
+        return False
+    c = unicodedata.normalize("NFKC", text[index])
+    return any(x.isdecimal() or x == "_" or "LATIN" in unicodedata.name(x, "") for x in c)
+
+
+def _forbidden_spans(text, term, compact, spans):
+    needle = _compact_term_text(term)[0]
+    if not needle:
+        return []
+    out, offset = [], 0
+    while True:
+        found = compact.find(needle, offset)
+        if found < 0:
+            return out
+        start, end = spans[found][0], spans[found + len(needle) - 1][1]
+        if not term.isascii() or not (
+            _latin_identifier_edge(text, start - 1, -1)
+            or _latin_identifier_edge(text, end, 1)
+        ):
+            if not out or out[-1] != (start, end):
+                out.append((start, end))
+            offset = found + len(needle)
+        else:
+            offset = found + 1
+
+
+def _body_term_units(text, nodes):
+    """Keep cells/sections separate; soft paragraph lines may form a term.
+
+    Each character maps back to the unmodified input, including DRAFT
+    wrappers, indentation and Markdown heading prefixes.
+    """
+    raw = draft(text)
+    origin = text.find(raw)
+    line_offsets, offset = [], origin
+    for line in raw.splitlines(keepends=True):
+        line_offsets.append(offset)
+        offset += len(line)
+    units = []
+    for n in nodes:
+        if n["kind"] in {"paragraph", "heading"}:
+            parts = [n["text"]]
+        elif n["kind"] == "table":
+            parts = [c for row in n["rows"] for c in row]
+        elif n["kind"] == "image":
+            parts = [n["alt"], n["path"]]
+        else:
+            continue
+        cursor = line_offsets[n["start_line"]]
+        for part in parts:
+            if not part:
+                continue
+            start = text.find(part, cursor)
+            positions = list(range(start, start + len(part)))
+            if n.get("soft_continue") and units:
+                old, old_positions = units[-1]
+                units[-1] = (old + "\n" + part, old_positions + [cursor] + positions)
+            else:
+                units.append((part, positions))
+            cursor = start + len(part)
+    return units
+
+
 def project_major(p):
     """정본 프로젝트의 common.major_id 바인딩을 읽는다. 확인 불가 시
     None — 공통 기본 정책을 적용한다."""
@@ -323,14 +429,23 @@ def plain_policy_check(text, issues, nodes, major_id):
             body_parts.extend(c for row in n["rows"] for c in row)
         elif n["kind"] == "image":
             body_parts.append(n["alt"] + " " + n["path"])
-    body = "\n".join(body_parts)
-    for term in policy["forbidden_body_terms"]:
-        hits = _term_count(body, term)
+    units = [(raw, positions, *_compact_term_text(raw))
+             for raw, positions in _body_term_units(text, nodes)]
+    for term in policy["forbidden_body_terms"] + policy["forbidden_body_term_aliases"]:
+        occurrences = []
+        for raw, positions, compact, spans in units:
+            for start, end in _forbidden_spans(raw, term, compact, spans):
+                pos = positions[start]
+                line = text.count("\n", 0, pos) + 1
+                column = pos - text.rfind("\n", 0, pos)
+                occurrences.append("%d행 %d열 %r" % (line, column, raw[start:end]))
+        hits = len(occurrences)
         if hits:
             issues.append(
                 (
                     "forbidden_term",
-                    "본문 금칙 재무 용어 %d회: %s" % (hits, term),
+                    "본문 금칙 재무 용어 %d회(원문 %s): %s"
+                    % (hits, "; ".join(occurrences), term),
                 )
             )
     # Captions are printed once and must count towards limited terms too.
@@ -825,7 +940,7 @@ def require_tokens(issues, cid, body, tokens, reason):
 
 
 def check(text, base, major_id=None):
-    nodes = parse(text)
+    nodes = parse(text, with_spans=True)
     issues = []
     if major_id is None:
         major_id = _project_major(base)
@@ -975,7 +1090,9 @@ def check(text, base, major_id=None):
     toc_range = school_toc_range(nodes)
     toc_start, body_start = toc_range if toc_range else (-1, -1)
     for i, n in enumerate(nodes):
-        if n["kind"] != "heading":
+        # These locations/content slots belong to the specialty-crop
+        # outline. Peer majors have their own contracts, not this fallback.
+        if major_id != "specialty_crops" or n["kind"] != "heading":
             continue
         if toc_start <= i < body_start:
             continue
@@ -1077,7 +1194,7 @@ def check(text, base, major_id=None):
         if re.search(r"[ⅥVI]+\s*[\.．]", n["text"]) and "참고문헌" in n["text"]:
             if re.search(r"관련\s*논문", body):
                 issues.append(("related_papers_place", "관련 논문은 Ⅲ-6이지 Ⅵ이 아님"))
-    school_structure(text, issues, nodes=nodes)
+    school_structure(text, issues, nodes=nodes, major_id=major_id)
     return issues
 
 
@@ -1151,7 +1268,69 @@ def school_toc_range(nodes):
     return None
 
 
-def school_structure(text, issues, nodes=None):
+def _peer_swot_paths(major_id):
+    """Only explicitly declared outline locations are structural rules.
+
+    Fruit S01 is declared in the registry. Horticulture's optional plan
+    links HT1/HT2 profile locations; neither precedent imposes six chapters
+    or mandatory front matter. Majors without these contracts are skipped.
+    """
+    import gg_major_contract as mc
+
+    if major_id not in {"fruit_trees", "hort_env_systems"}:
+        return ()
+    module = mc.default_registry().resolve(major_id)
+    paths = set()
+    if major_id == "fruit_trees":
+        for node in module.document_plan:
+            if node.role != "swot":
+                continue
+            match = re.match(r"([ⅠⅡⅢⅣⅤⅥ]|III|II|IV|VI|I|V)-(\d+)\b", node.rationale or "")
+            if match:
+                paths.add((_ROMAN_NUMBERS[match[1]], int(match[2])))
+    else:
+        refs = {ref for n in module.document_plan if n.role == "environment_analysis"
+                for ref in n.precedent_refs}
+        if not refs:
+            return ()
+        profile = json.loads(HORT_PROFILE_PATH.read_text(encoding="utf-8"))
+        if profile["major_id"] != major_id:
+            raise ValueError("원예 목차 프로필 전공 불일치")
+        for precedent in profile["precedents"]:
+            if precedent["ref"] not in refs:
+                continue
+            for section in precedent["sections"]:
+                if not re.search(r"SWOT", section["title"], re.IGNORECASE):
+                    continue
+                match = re.fullmatch(r"ch(\d+)_sec(\d+)", section["item"])
+                if match:
+                    paths.add(tuple(int(x) for x in match.groups()))
+    return tuple(sorted(paths))
+
+
+def _check_peer_swot(body_nodes, paths, issues):
+    if not paths:
+        return
+    chapter = section = None
+    expected = ", ".join("%s-%d" % ("ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ"[c - 1], s) for c, s in paths)
+    for n in body_nodes:
+        if n.get("kind") != "heading":
+            continue
+        title = n["text"].strip()
+        if n.get("level") == 1:
+            numbered = _numbered_heading(title)
+            chapter = numbered[1] if numbered else None
+            section = None
+        elif n.get("level") == 2:
+            match = re.match(r"^(\d+)\s*[.．]", title)
+            section = int(match[1]) if match else None
+        if re.search(r"SWOT", title, re.IGNORECASE) and (
+            n.get("level") != 2 or (chapter, section) not in paths
+        ):
+            issues.append(("school_swot", "선택 전공 목차의 SWOT는 " + expected))
+
+
+def school_structure(text, issues, nodes=None, major_id=None):
     if nodes is None:
         nodes = parse(text)
     toc_range = school_toc_range(nodes)
@@ -1161,6 +1340,13 @@ def school_structure(text, issues, nodes=None):
     else:
         body_nodes = nodes
         body_text = text
+
+    if major_id != "specialty_crops":
+        try:
+            _check_peer_swot(body_nodes, _peer_swot_paths(major_id), issues)
+        except (OSError, ValueError, KeyError, TypeError) as e:
+            issues.append(("school_structure_policy", "전공 목차 계약 읽기 실패: %s" % e))
+        return issues
 
     n_chapters = sum(1 for pat, _ in CHAPTERS if re.search(pat, body_text))
     has_front = all(x in text for x in FRONT)

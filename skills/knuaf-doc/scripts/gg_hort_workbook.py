@@ -23,6 +23,7 @@ from xml.etree import ElementTree as ET
 
 from gg_excel_template import (workbook_sheets, load_shared, merged_cells,
                                expand_ref, _serialize_dom, local, text_value)
+import gg_price_assumptions as _pa
 
 HERE = Path(__file__).resolve().parent
 REF = HERE.parent / "references" / "hort-env-systems"
@@ -46,6 +47,26 @@ _TEACHER_IMAGE_LABEL = "학생 시설 도면·견적서 첨부"
 ZERO_RULE = "HFIN-V3-EXPLICIT-NONE-ZERO-1"
 BLANK_RULE = "HFIN-V3-EXPLICIT-NONE-BLANK-1"
 CATEGORY_RULE = "HFIN-V3-CATEGORY-ABSENCE-ZERO-1"
+PRICE_RULE = "HFIN-V3-PRICE-SERIES-CAGR-1"
+SUMMARY_RULE = "HFIN-V3-EVIDENCE-SUMMARY-GENERATED-1"
+# X1-01 input contract (W3-2): growth-rate params declare which official
+# statistics series binds them; quote/evidence/summary params must cite
+# resolvable, classified, admissible sources.
+_PRICE_CONTRACT_ROLES = {"series:general": "general", "series:wage": "wage",
+                         "series:sales": "sales"}
+_PRICE_CONTRACT_KINDS = frozenset(_PRICE_CONTRACT_ROLES) | {
+    "source:quote", "source:evidence", "source:summary"}
+_PRICE_ASSUMPTION_FIELDS = {"source_id", "base_year", "application_base_year",
+                            "unit", "observation", "target_dimensions",
+                            "series", "status"}
+# Displayed evidence summaries are generated from verified series footnotes
+# plus cited-source labels, never from the student's free text.
+_SUMMARY_GROWTH_PREFIX = {
+    "cost.material.source_summary": "cost.material.",
+    "cost.overhead.source_summary": "cost.overhead.",
+}
+_STUDENT_MARKS = {"학생 견적", "작성자 직접 조사"}
+_POLICY_PATH = HERE.parent / "references" / "plain-thesis-policy.json"
 # Disposed by the lane lead: coordinate registry, machine predicates and the
 # area-label formula are implemented in this file and the public contracts.
 PIPELINE_READY = True
@@ -659,7 +680,7 @@ _AUDIT_PARAM = {"canonical_cell", "data_type", "unit_code", "per_unit", "period_
                 "explicit_none_display_note", "output_conversion", "method_tag",
                 "required_if", "forbidden_if", "zero_evidence", "allowed_values",
                 "source_lanes", "mapping_status", "validation_status", "specification",
-                "conversion_evidence"}
+                "conversion_evidence", "price_contract"}
 _AUDIT_REGISTRY = {"sheet", "cell", "action", "result_kind", "unit", "printed",
                    "core_reachable", "expected_state", "condition_key_if_conditional",
                    "active_kind"}
@@ -859,6 +880,11 @@ def audit_public_documents(docs, source, expected_sha=SOURCE_SHA):
             add("allowed_values_type", path + ".allowed_values")
         if p.get("zero_evidence") is not None and not isinstance(p["zero_evidence"], bool):
             add("zero_evidence_type", path + ".zero_evidence")
+        pc = p.get("price_contract")
+        if pc is not None and (pc not in _PRICE_CONTRACT_KINDS
+                               or (pc in _PRICE_CONTRACT_ROLES
+                                   and p.get("unit_code") != "RATIO")):
+            add("param_price_contract", path + ".price_contract")
     registry = vc.get("registry")
     if not isinstance(registry, list) or vc.get("registry_count") != len(registry):
         add("registry_count", FILES[2] + ".registry_count")
@@ -972,7 +998,7 @@ def audit_public_documents(docs, source, expected_sha=SOURCE_SHA):
                 continue
             if re.fullmatch(r"[a-f0-9]{64}", value):
                 add("non_source_digest", loc)
-            if field in ("sheet", "canonical_cell"):
+            if field in ("sheet", "canonical_cell", "price_contract"):
                 continue
             if field == "after_formula":
                 for number in _formula_numbers(value):
@@ -1234,7 +1260,8 @@ def _fact_snapshot(project):
                "answer_state": f.get("answer_state"), "revision": f.get("revision"),
                "value": f.get("value"), "unit": f.get("unit"),
                "period": f.get("period")}
-        for semantic in ("per_unit", "specification", "conversion_evidence"):
+        for semantic in ("per_unit", "specification", "conversion_evidence",
+                         "price_assumption"):
             if semantic in f:
                 row[semantic] = f[semantic]
         rows.append(row)
@@ -1357,7 +1384,8 @@ def _check_fact_period(key, spec, fact, start_year, values):
 
 
 def _has_evidence(fact):
-    return bool(fact.get("reason") or fact.get("source_refs"))
+    return bool(fact.get("reason") or fact.get("source_refs")
+                or fact.get("price_assumption"))
 
 
 def _declared_keys(project, params):
@@ -1421,6 +1449,208 @@ def _check_material_basis(values):
             raise Held("material_basis_invalid", key)
 
 
+def _evidence_policy():
+    """Forbidden source kinds/grades shared with the plain-thesis gate."""
+    policy = _json(_POLICY_PATH)
+    sources, images = policy.get("sources") or {}, policy.get("images") or {}
+    return (set(sources.get("forbidden_kinds") or ()),
+            sources.get("forbidden_grades") or (),
+            set(images.get("ai_kinds") or ()))
+
+
+def _check_fact_sources(key, fact, sources, policy):
+    """Contract-scoped facts cite resolvable, classified, admissible sources.
+
+    Admissibility mirrors gg_core.checks: forbidden kinds (with the narrow
+    author-survey interview exception), AI-generated kinds, forbidden grades,
+    and explicit external_* / forbidden-kind source_type conflicts refuse.
+    A source with no usable classification (kind missing or the generic
+    'file' bucket and no source_type) cannot be vetted, so it also refuses.
+    """
+    refs = fact.get("source_refs")
+    if not isinstance(refs, list) or not refs or not isinstance(sources, dict):
+        raise Held("evidence_source_missing", key)
+    kinds, grades, ai_kinds = policy
+    for ref in refs:
+        sid = ref.get("id") if isinstance(ref, dict) else None
+        source = sources.get(sid)
+        if source is None:
+            raise Held("evidence_source_missing", key)
+        if ref.get("revision") is not None \
+                and ref["revision"] != source.get("revision"):
+            raise Held("evidence_source_revision", key)
+        kind, stype = source.get("kind"), source.get("source_type")
+        external = isinstance(stype, str) and (
+            stype.startswith("external_") or stype in kinds)
+        author_interview = kind == "interview" and not external and (
+            stype == "author_survey" or source.get("source") == "작성자 직접 조사")
+        if external or kind in ai_kinds or (
+                kind in kinds and not author_interview):
+            raise Held("evidence_source_forbidden", key)
+        grade = source.get("grade")
+        if grade in grades or str(grade) in {str(g) for g in grades}:
+            raise Held("evidence_source_forbidden", key)
+        if not ((isinstance(kind, str) and kind.strip() and kind != "file")
+                or (isinstance(stype, str) and stype.strip())):
+            raise Held("evidence_source_unclassified", key)
+
+
+def _student_price_sources(project, facts):
+    """Student-declared series from sources and fact price_assumption blocks.
+
+    Every declaration must pass the series-entry contract; two different
+    entries carrying the same id refuse rather than silently prefer one.
+    """
+    out = {}
+
+    def add(entry, origin):
+        try:
+            sid = _pa.check_source_entry(entry, origin=origin)
+        except ValueError as exc:
+            raise Held("price_contract_invalid", f"{origin}:{exc}") from exc
+        if sid in out and out[sid] != entry:
+            raise Held("price_source_conflict", sid)
+        out[sid] = entry
+
+    for sid, source in sorted((project.get("sources") or {}).items()):
+        if isinstance(source, dict) and "price_series" in source:
+            add(source["price_series"], f"source:{sid}")
+    for fid, fact in sorted(facts.items()):
+        assumption = fact.get("price_assumption")
+        if isinstance(assumption, dict) and "series" in assumption:
+            add(assumption["series"], f"fact:{fid}")
+    return out
+
+
+def _normalize_growth(key, spec, fact, registry, student_sources, start_year,
+                      crop):
+    """Apply the PR-2 official-statistics contract to one growth-rate fact.
+
+    The declared fact value is a tolerance-checked cross-check only; the
+    applied rate is the endpoint CAGR of the bound confirmed series.
+    """
+    role = _PRICE_CONTRACT_ROLES[spec["price_contract"]]
+    assumption = fact.get("price_assumption")
+    if not isinstance(assumption, dict):
+        raise Held("price_contract_missing", key)
+    unknown = set(assumption) - _PRICE_ASSUMPTION_FIELDS
+    if unknown:
+        raise Held("price_contract_invalid", f"{key}:{sorted(unknown)[0]}")
+    if assumption.get("status", "applied") != "applied":
+        raise Held("price_contract_invalid", key)
+    origin = "price_assumption." + key
+    for field in ("source_id", "base_year", "unit", "observation"):
+        if field not in assumption:
+            raise Held("price_contract_missing", f"{key}:{field}")
+    if not isinstance(assumption.get("observation"), dict):
+        raise Held("price_contract_invalid", f"{key}:observation")
+    try:
+        source = _pa.resolve_series(assumption["source_id"], registry,
+                                    student_sources)
+        base_year = _pa.check_base_year(assumption["base_year"], source,
+                                        origin=origin)
+        _pa.check_role(source, role, origin=origin)
+        _pa.check_unit(source, assumption["unit"], origin=origin)
+        target = _pa.canonical_dimensions(assumption.get("target_dimensions"))
+        if isinstance(crop, str) and crop.strip():
+            declared_crop = _pa.canonical_dimensions({"crop": crop.strip()})
+            if "crop" in target and target["crop"] != declared_crop["crop"]:
+                raise ValueError(
+                    f"{origin}: target_dimensions.crop이 계획 작목과 불일치")
+            target.setdefault("crop", declared_crop["crop"])
+        if role == "sales":
+            _pa.check_dimensions(source, target, required=("crop",),
+                                 origin=origin)
+        else:
+            series_crop = _pa.canonical_dimensions(
+                source.get("dimensions") or {}).get("crop")
+            if series_crop and target.get("crop") and series_crop not in (
+                    target["crop"] if isinstance(target["crop"], list)
+                    else [target["crop"]]):
+                raise ValueError(
+                    f"{origin}: 출처 {source['id']}는 {series_crop} 수열 — "
+                    "다른 작목에 전용 금지")
+        year = re.search(r"(?:^|\.)y([1-5])(?:\.|$)", key)
+        if year and start_year:
+            expected_base = start_year + int(year.group(1)) - 2
+            aby = assumption.get("application_base_year")
+            if aby is not None and aby != expected_base:
+                raise ValueError(
+                    f"{origin}: 적용 기초연도 {aby!r}는 직전 연도 "
+                    f"{expected_base}와 불일치")
+        resolved = _pa.resolve_series_rate(
+            source, observation=assumption["observation"],
+            declared_rate=fact.get("value"), origin=origin)
+    except ValueError as exc:
+        raise Held("price_contract_invalid", f"{key}:{exc}") from exc
+    return {"source": source, "base_year": base_year,
+            "resolved": resolved, "role": role}
+
+
+def _series_label(source, resolved):
+    """Verified footnote text for one applied series."""
+    name = source.get("statistic_name") or source["id"]
+    item = source.get("item_name")
+    if isinstance(item, str) and item.strip():
+        name += " " + item.strip()
+    obs = resolved["observation"]
+    return (f"{name}[{source['id']}] "
+            f"{obs['start_year']}~{obs['end_year']}년 관측 "
+            f"연평균 {resolved['rate'] * 100:+.2f}%")
+
+
+def _source_label(source):
+    """Display label for one cited source — official series or student mark."""
+    entry = source.get("price_series")
+    if isinstance(entry, dict):
+        series = _pa.confirmed_series(entry)
+        name = entry.get("statistic_name") or entry["id"]
+        item = entry.get("item_name")
+        if isinstance(item, str) and item.strip():
+            name += " " + item.strip()
+        if len(series) < 2:
+            return f"{name}[{entry['id']}] (확정 관측 2점 미만)"
+        years = sorted(series)
+        rate = _pa.cagr(series[years[0]], series[years[-1]],
+                        years[-1] - years[0])
+        return (f"{name}[{entry['id']}] {years[0]}~{years[-1]}년 관측 "
+                f"연평균 {rate * 100:+.2f}%")
+    mark = source.get("source")
+    if isinstance(mark, str) and mark in _STUDENT_MARKS:
+        return mark
+    if source.get("source_type") == "author_survey":
+        return "작성자 직접 조사"
+    return mark if isinstance(mark, str) and mark.strip() else "출처 미상"
+
+
+def _generated_summary(key, fact, sources, assumptions):
+    """Rendered evidence summary from contract-verified data only.
+
+    Series footnotes for the matching growth family come first, then labels
+    for each cited source. Student free text never reaches the cell.
+    """
+    labels = []
+    prefix = _SUMMARY_GROWTH_PREFIX.get(key)
+    if prefix:
+        for gkey in sorted(assumptions):
+            if gkey.startswith(prefix):
+                label = _series_label(assumptions[gkey]["source"],
+                                      assumptions[gkey]["resolved"])
+                if label not in labels:
+                    labels.append(label)
+    for ref in fact.get("source_refs") or []:
+        sid = ref.get("id") if isinstance(ref, dict) else None
+        source = (sources or {}).get(sid)
+        if source is None:
+            continue
+        label = _source_label(source)
+        if label not in labels:
+            labels.append(label)
+    if not labels:
+        raise Held("evidence_summary_empty", key)
+    return " · ".join(labels)
+
+
 def _facts(project, params):
     facts, fact_sha = _fact_snapshot(project)
     by_key = defaultdict(list)
@@ -1457,6 +1687,65 @@ def _facts(project, params):
             continue
         present[key] = fact
         resolved[key] = _check_value(key, spec, fact)
+    # X1-01 input contract (W3-2): growth-rate params bind to a
+    # price_assumption whose rate is the bound official series' endpoint CAGR
+    # (the declared value is a cross-check only); quote/evidence/summary
+    # params must cite resolvable, classified, admissible sources; displayed
+    # evidence summaries are generated from verified data, not free text.
+    contract_keys = [key for key, fact in present.items()
+                     if fact.get("answer_state") == "provided"
+                     and resolved.get(key) != _ABSENCE_SENTINEL
+                     and (params[key].get("price_contract")
+                          or params[key].get("unit_code") == "EVIDENCE_REF")]
+    if contract_keys:
+        sources = project.get("sources")
+        policy = _evidence_policy()
+        student_sources = _student_price_sources(project, facts)
+        registry = None
+        assumptions = {}
+        for key in contract_keys:
+            spec, fact = params[key], present[key]
+            _check_fact_sources(key, fact, sources, policy)
+            contract = spec.get("price_contract")
+            if contract not in _PRICE_CONTRACT_ROLES:
+                continue
+            if registry is None:
+                registry = _pa.load_registry()
+            normalized = _normalize_growth(
+                key, spec, fact, registry, student_sources,
+                int(resolved.get("plan.start_year") or 0),
+                resolved.get("sales.crop_item"))
+            resolved[key] = Decimal(str(normalized["resolved"]["rate"]))
+            assumptions[key] = normalized
+            derivations.append({
+                "source_fact_id": fact.get("id"),
+                "source_revision": fact.get("revision"),
+                "rule_id": PRICE_RULE, "param_key": key,
+                "target_cell": spec.get("canonical_cell"),
+                "derived_value": normalized["resolved"]["rate"],
+                "unit_code": spec.get("unit_code"),
+                "source_answer_state": "provided",
+                "evidence_ref": fact.get("source_refs"),
+                "price_source_id": normalized["source"]["id"],
+                "price_role": normalized["role"],
+                "base_year": normalized["base_year"],
+                "observation": normalized["resolved"]["observation"],
+                "declared_rate": normalized["resolved"]["declared_rate"]})
+        for key in contract_keys:
+            spec, fact = params[key], present[key]
+            if spec.get("price_contract") != "source:summary":
+                continue
+            generated = _generated_summary(key, fact, sources, assumptions)
+            derivations.append({
+                "source_fact_id": fact.get("id"),
+                "source_revision": fact.get("revision"),
+                "rule_id": SUMMARY_RULE, "param_key": key,
+                "target_cell": spec.get("canonical_cell"),
+                "derived_value": generated,
+                "unit_code": spec.get("unit_code"),
+                "source_answer_state": "provided",
+                "evidence_ref": fact.get("source_refs")})
+            resolved[key] = generated
     # Required / forbidden gates from the public condition trees.
     for key, spec in params.items():
         required = spec.get("required_if")
