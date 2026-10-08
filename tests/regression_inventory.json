@@ -376,7 +376,7 @@
   }
  ],
  "note": "P1 transitions: fixed defects keep their baseline signature as evidence and gain real regression tests that must pass. open defects still reproduce their exact baseline signature; unexpected success there is still XPASS/failure. A green suite is not a product PASS.",
- "pr2_note": "PR-2 regression mapping supplements the historical defects list. All mapped skill tests require full pytest; default runner coverage alone is insufficient. Independent Astra review pending.",
+ "pr2_note": "PR-2 regression mapping supplements the historical defects list. All mapped skill tests require full pytest; default runner coverage alone is insufficient. Independent Astra review pending. | I6: V6-01 adds seven regression mappings without changing any prior entry. V6-02 is a documentation example correction, verified by W-D7 public/direct CLI in Python 3.10/3.14; no new test mapping.",
  "pr2_regressions": [
   {
    "id": "V1-01",
@@ -823,6 +823,21 @@
     "skills.knuaf-doc.tests.test_finance_tables.TestFootnotes.test_reference_footnote_full_string",
     "skills.knuaf-doc.tests.test_finance_tables.TestFootnotes.test_complete_formula_strings",
     "skills.knuaf-doc.tests.test_finance_tables.TestFootnotes.test_workbook_rate_notes_use_validated_reference"
+   ]
+  },
+  {
+   "id": "V6-01",
+   "note": "I6: FIX-C6 renders all workbook cell text through the same rate-note filter; warning retains source sheet/cell; ordinary repair/depreciation notes and validated reference footnotes are preserved. Seven new regressions; V7 final acceptance remains pending.",
+   "scope": "full_pytest_skill_suite",
+   "status": "implemented_pending_independent_review",
+   "tests": [
+    "skills.knuaf-doc.tests.test_finance_tables.TestRun.test_public_and_direct_cli_drop_inline_note_identically",
+    "skills.knuaf-doc.tests.test_finance_tables.TestWorkbookRateNotes.test_every_cell_render_path_drops_with_source_coordinate",
+    "skills.knuaf-doc.tests.test_finance_tables.TestWorkbookRateNotes.test_independent_continuation_and_trailing_notes",
+    "skills.knuaf-doc.tests.test_finance_tables.TestWorkbookRateNotes.test_inline_note_keywords_and_reference_footnotes",
+    "skills.knuaf-doc.tests.test_finance_tables.TestWorkbookRateNotes.test_merged_note_warns_at_original_cell",
+    "skills.knuaf-doc.tests.test_finance_tables.TestWorkbookRateNotes.test_non_rate_application_text_is_preserved",
+    "skills.knuaf-doc.tests.test_finance_tables.TestWorkbookRateNotes.test_year_block_inline_note_keeps_all_five_tables"
    ]
   }
  ],

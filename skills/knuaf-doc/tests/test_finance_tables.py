@@ -25,7 +25,9 @@ table map exercise the contract:
 """
 
 import copy
+from contextlib import redirect_stdout
 import hashlib
+import io
 import json
 import sys
 import tempfile
@@ -761,6 +763,129 @@ class TestFootnotes(unittest.TestCase):
             self.assertTrue(any(w["reason"] == "footnote_missing" for w in missing["warnings"]))
 
 
+class TestWorkbookRateNotes(unittest.TestCase):
+    """V6-01: 모든 원문 출력 경로와 좌표 경고, 일반 계산 설명 보존."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.xlsx = Path(self._tmp.name) / "notes.xlsx"
+        self.map_path = Path(self._tmp.name) / "map.json"
+
+    def _generate(self, cells, table_map=None, footnotes=None):
+        _build_workbook(self.xlsx)
+        wb = openpyxl.load_workbook(self.xlsx)
+        for cell, value in cells.items():
+            wb["S1"][cell] = value
+        wb.save(self.xlsx)
+        wb.close()
+        before = self.xlsx.read_bytes()
+        self.map_path.write_text(json.dumps(table_map or MINI_MAP,
+                                            ensure_ascii=False), encoding="utf-8")
+        result = ft.generate(self.xlsx, major_id="specialty_crops",
+                             map_path=self.map_path, footnotes=footnotes,
+                             registry=REGISTRY)
+        self.assertEqual(self.xlsx.read_bytes(), before)
+        return result
+
+    def _dropped_cells(self, result):
+        warnings = [w for w in result["warnings"]
+                    if w["reason"] == "workbook_rate_note_dropped"]
+        self.assertTrue(all(w["sheet"] == "S1" for w in warnings))
+        return {w["cell"] for w in warnings}
+
+    def test_inline_note_keywords_and_reference_footnotes(self):
+        m = copy.deepcopy(MINI_MAP)
+        extract = m["sections"][0]["tables"][0]["extract"]
+        extract["value_cols"] = ["C"]
+        extract["note_cols"] = ["D"]
+        for note in ("* 일반물가 상승률 90% 적용", "연평균 성장률 90% 적용",
+                     "연평균 변화율 90% 적용", "물가 상 승 률 90% 적용"):
+            for footnotes in (None, {"general_price": {
+                    "source_id": "test.general", "base_year": 2020}}):
+                with self.subTest(note=note, footnotes=footnotes):
+                    result = self._generate({"D4": note}, m, footnotes)
+                    self.assertIn("| 토지 | 330,000 |  |", result["markdown"])
+                    self.assertNotIn("90%", result["markdown"])
+                    self.assertEqual(self._dropped_cells(result), {"'S1'!D4"})
+                    if footnotes:
+                        self.assertIn("r=%.4f%%는 참고값이다" % (GENERAL_R * 100),
+                                      result["markdown"])
+                    else:
+                        self.assertTrue(any(w["reason"] == "footnote_missing"
+                                            for w in result["warnings"]))
+
+    def test_every_cell_render_path_drops_with_source_coordinate(self):
+        # 값·구조 행·빈 행 라벨·연도 열 라벨/값·머리글 경로.
+        for cell in ("D4", "D8", "B9", "C54", "G54", "C56", "B3", "F52"):
+            with self.subTest(cell=cell):
+                m = copy.deepcopy(MINI_MAP)
+                m["sections"][0]["tables"][0]["extract"]["header_map"] = {}
+                text = "* 원문 성장률 90% 적용" if cell == "D8" else "원문 성장률 90% 적용"
+                if cell == "F52":
+                    text = "2026년 " + text
+                result = self._generate({cell: text}, m)
+                self.assertNotIn("90%", result["markdown"])
+                self.assertIn("'S1'!" + cell, self._dropped_cells(result))
+                self.assertIn("표 1.", result["markdown"])
+
+    def test_year_block_inline_note_keeps_all_five_tables(self):
+        m = copy.deepcopy(MINI_MAP)
+        extract = m["sections"][0]["tables"][3]["extract"]
+        extract["cols"].append("D")
+        extract["note_cols"] = ["D"]
+        baseline = self._generate({}, m)
+        result = self._generate({"D26": "* 일반물가 상승률 90% 적용"}, m)
+        self.assertEqual(result["markdown"], baseline["markdown"])
+        self.assertEqual(result["emitted"], baseline["emitted"])
+        self.assertEqual(len([e for e in result["emitted"]
+                              if e["table"].startswith("t_years@")]), 5)
+        self.assertEqual(self._dropped_cells(result), {"'S1'!D26"})
+
+    def test_merged_note_warns_at_original_cell(self):
+        _build_workbook(self.xlsx)
+        wb = openpyxl.load_workbook(self.xlsx)
+        wb["S1"]["D4"] = "* 일반물가 상승률 90% 적용"
+        wb["S1"].merge_cells("D4:D5")
+        wb.save(self.xlsx)
+        wb.close()
+        self.map_path.write_text(json.dumps(MINI_MAP), encoding="utf-8")
+        result = ft.generate(self.xlsx, major_id="specialty_crops",
+                             map_path=self.map_path)
+        self.assertNotIn("90%", result["markdown"])
+        self.assertEqual(self._dropped_cells(result), {"'S1'!D4"})
+
+    def test_independent_continuation_and_trailing_notes(self):
+        cells = {"B5": "* 수선비는 구입금액의 0.5% 적용",
+                 "B6": "연평균 성장률 90% 적용",
+                 "B7": "감가상각은 내용년수 적용",
+                 "B13": "* 일반물가 상승률 91% 적용", "C13": None}
+        for row in (5, 6, 7):
+            cells["C%d" % row] = None
+            cells["D%d" % row] = None
+        m = copy.deepcopy(MINI_MAP)
+        m["sections"][0]["tables"][0]["extract"]["trailing_notes"] = True
+        result = self._generate(cells, m)
+        self.assertNotIn("90%", result["markdown"])
+        self.assertNotIn("91%", result["markdown"])
+        self.assertIn(cells["B5"], result["markdown"])
+        self.assertIn(cells["B7"], result["markdown"])
+        self.assertTrue({"'S1'!B6", "'S1'!B13"} <= self._dropped_cells(result))
+        # '*' 선두인 독립 주석도 같은 좌표 경고를 낸다.
+        result = self._generate({"B5": "* 연평균 성장률 90% 적용",
+                                 "C5": None, "D5": None})
+        self.assertNotIn("90%", result["markdown"])
+        self.assertIn("'S1'!B5", self._dropped_cells(result))
+
+    def test_non_rate_application_text_is_preserved(self):
+        for note in ("수선비 구입금액의 0.5% 적용", "수선비 6% 적용",
+                     "감가상각 내용년수 적용", "일반물가 참고 설명"):
+            with self.subTest(note=note):
+                result = self._generate({"D4": note})
+                self.assertIn("| 토지 | 330,000 | %s |" % note, result["markdown"])
+                self.assertEqual(self._dropped_cells(result), set())
+
+
 class TestLayout(unittest.TestCase):
     """V1-10: 학과 템플릿 레이아웃 지문."""
 
@@ -985,6 +1110,40 @@ class TestRun(unittest.TestCase):
         out = self.root / "build/tables.md"
         self.assertTrue(out.is_file())
         self.assertIn("| 토지 | 330,000 |", out.read_text(encoding="utf-8"))
+
+    def test_public_and_direct_cli_drop_inline_note_identically(self):
+        import gg
+
+        wb = openpyxl.load_workbook(self.xlsx)
+        wb["S1"]["D4"] = "* 일반물가 상승률 90% 적용"
+        wb["S1"]["D5"] = "수선비 0.5% 적용"
+        wb.save(self.xlsx)
+        wb.close()
+        for has_footnote in (False, True):
+            with self.subTest(footnote=has_footnote):
+                args = [str(self.root), "--xlsx", str(self.xlsx),
+                        "--major", "specialty_crops"]
+                if has_footnote:
+                    args += ["--input", self._input({"general_price": {
+                        "source_id": "official.kosis.cpi.total", "base_year": 2020}})]
+                outputs = []
+                reports = []
+                for name, main, prefix in (("public", gg.main, ["finance-tables"]),
+                                           ("direct", ft.main, [])):
+                    out = "%s-%s.md" % (name, has_footnote)
+                    stream = io.StringIO()
+                    with redirect_stdout(stream):
+                        code = main(prefix + args + ["--out", out])
+                    self.assertEqual(code, 0, stream.getvalue())
+                    reports.append(json.loads(stream.getvalue()))
+                    outputs.append((self.root / out).read_bytes())
+                self.assertEqual(outputs[0], outputs[1])
+                self.assertEqual(reports[0]["warnings"], reports[1]["warnings"])
+                self.assertNotIn("90%", outputs[0].decode("utf-8"))
+                self.assertIn("수선비 0.5% 적용", outputs[0].decode("utf-8"))
+                self.assertTrue(any(w["reason"] == "workbook_rate_note_dropped"
+                                    and w["cell"] == "'S1'!D4"
+                                    for w in reports[0]["warnings"]))
 
     def test_run_no_overwrite(self):
         ft.run(self.root, self.xlsx, major_id="specialty_crops",

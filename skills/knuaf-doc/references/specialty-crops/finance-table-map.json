@@ -22,6 +22,7 @@
  },
  "footnote_input_contract": "--input은 {footnotes:{kind:{source_id,base_year,observation?,rate?,application_base_year?,target_dimensions?,unit?}}} 형태의 구조화 각주 입력이다(그 밖의 최상위 키는 읽지 않는다). 상승률 각주는 항상 참고값이다 — 전개기는 r이 워크북 계산에 쓰였는지 증명하지 않으며, 출력 문구도 '통합문서에서 따로 확인해야 한다'고 밝힌다. source_id는 번들 official-price-series 레지스트리에 등록된 공식 통계 id여야 하고 역할·기준연도·단위·대상 차원·관측기간을 검증한다. 출력하는 r은 항상 관측 수열 끝점의 CAGR이며 자유 문자열·임의 문구 필드·검산 rate 불일치는 거부한다. 판매가는 crop 차원이 필수다. 명시 미적용은 {status:not_applied,reason}. 구 계약의 application_base_year 필드는 받아도 출력·검증에 쓰지 않는다. 통합문서 원문 상승률·성장률·연평균 변화율 주석은 검증 없이 복사하지 않고 구조화 참고값 각주로 안내한다.",
  "workbook_rate_note_pattern": "상승률|성장률|연평균변화율",
+ "workbook_rate_note_contract": "표 안 비고·라벨·값·구조 행·머리글과 독립 주석 등 렌더되는 모든 원문 셀 텍스트에 같은 패턴 필터를 적용한다. 일치한 셀은 빈 문자열로 생략하고 workbook_rate_note_dropped 경고에 원문 시트·셀을 기록한다. 상승률·성장률·연평균변화율 키워드가 없는 수선비 0.5%/6% 적용과 감가상각 설명은 보존한다. 검증된 구조화 참고값 각주는 이 원문 필터 대상이 아니다.",
  "layout": {
   "id": "knuaf_dept_workbook_v1",
   "description": "학과 제공 통합문서 레이아웃 지문. 모든 signature는 필수다: 시트가 존재하고 anchor 열의 max_row 이내에 pattern(공백 제거 정규화 텍스트 대상 정규식)이 보여야 지원 레이아웃이다. 하나라도 실패하면 미지원 레이아웃으로 보류하고 실패한 지문을 sheet·pattern·desc로 사용자에게 보인다. 지문의 강도 기준은 '추출기(extract 앵커/머리글)가 그 시트의 표를 실제로 찾는 데 필요한 최소 구조 증거'다 — 추출이 견디는 라벨 서식 변형(예: 연도 블록의 '가. ' 접두 유무)을 지문이 추가로 요구하면 안 된다.",

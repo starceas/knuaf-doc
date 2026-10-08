@@ -158,7 +158,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "a26b268ccb7f3733dbe8df32a87124cf1e69f960e6be9bb560e05a1e4d0649c0",
+      "after_sha256": "e1fc8a76b68ccbceabb998aa847daf945e57883e38e3ba02215736e43a17cca4",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "P28",
@@ -751,7 +751,7 @@
       "source": "modified"
     },
     "skills/knuaf-doc/references/specialty-crops/finance-flow.md": {
-      "after_sha256": "b50d6cd1a2b6a7bffe6564a71e4a80894622e6a4be1fd147274a3d90c664e9f1",
+      "after_sha256": "4235ea285d251825614d394b8206277a7d6908bb5bbc5abb96f17a90e0150f3d",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "P28",
@@ -760,7 +760,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/specialty-crops/finance-table-map.json": {
-      "after_sha256": "4fdcd215f2cabcb7dc9447c1ee088cd700b9af0347fd87a439b762c24c20662b",
+      "after_sha256": "a8968c41490f6992ecbc99f7a9cb7e6025d01d757b3ef92a5b45091d756af562",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "P28",
@@ -960,7 +960,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_finance_tables.py": {
-      "after_sha256": "41af76f26bf6d8650a4e5d1933dea144e4b1fc2e01cdf2ba7b4642192c4cd4cc",
+      "after_sha256": "a91b38b0086c7390d6bf5945a63a8b43ddf204b2e7105dcc2c5fe8d6e28c3941",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "P28",
@@ -1363,7 +1363,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/tests/test_finance_tables.py": {
-      "after_sha256": "004a5173f2b7574d502f75add61225b86fa0f5ea9e8e1d381c5b8b5c33734f65",
+      "after_sha256": "4ef1a75adb29a3b717edde8bf8dbd01c74e691392f9321f346562195e67a0621",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "P28",

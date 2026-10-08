@@ -217,7 +217,8 @@ class _SheetView:
     read_only 모드로 값만 읽고(큰 파일·손상 스타일 내성), 수식·병합은
     시트 XML에서 직접 읽는다."""
 
-    def __init__(self, ws_values, formula_refs, merges):
+    def __init__(self, ws_values, formula_refs, merges, rate_note_pattern=None):
+        self.rate_note_pattern = rate_note_pattern
         self.cells = {}
         self.max_row = 0
         self.max_col = 0
@@ -316,19 +317,40 @@ def _find_anchor(view, extract, start_row=1):
     return None
 
 
-def _header_label_parts(view, col_letter, header_rows):
+def _workbook_text(view, r, c, text, warnings, table_id, sheet_title):
+    """원문 셀의 상승률 주석을 모든 출력 경로에서 같은 기준으로 생략한다."""
+    if (view.rate_note_pattern and isinstance(text, str)
+            and re.search(view.rate_note_pattern, _norm(text))):
+        source_r, source_c = view._coord(r, c)
+        warnings.append({
+            "table": table_id,
+            "sheet": sheet_title,
+            "cell": "'%s'!%s%d" % (sheet_title, _col_letter(source_c), source_r),
+            "row_label": "",
+            "reason": "workbook_rate_note_dropped",
+        })
+        return ""
+    return text
+
+
+def _header_label_parts(view, col_letter, header_rows, warnings,
+                        table_id, sheet_title):
     parts = []
     for r in header_rows:
-        t = _disp(view.value_wide(r, _col(col_letter)))
+        t = _workbook_text(view, r, _col(col_letter),
+                           _disp(view.value_wide(r, _col(col_letter))),
+                           warnings, table_id, sheet_title)
         if t and (not parts or parts[-1] != t):
             parts.append(t)
     return parts
 
 
-def _resolve_headers(view, cols, header_rows, header_map):
+def _resolve_headers(view, cols, header_rows, header_map, warnings,
+                     table_id, sheet_title):
     """열 머리글: header_map 우선, 없으면 마지막 머리글(중복이면 상위+하위)."""
     header_map = header_map or {}
-    parts_by_col = {c: _header_label_parts(view, c, header_rows) for c in cols}
+    parts_by_col = {c: _header_label_parts(view, c, header_rows, warnings,
+                                          table_id, sheet_title) for c in cols}
     leafs = {c: (p[-1] if p else "") for c, p in parts_by_col.items()}
     counts = {}
     for c in cols:
@@ -366,6 +388,7 @@ def _render_cell(view, r, col_idx, col_letter, role, fmt, warnings,
             "reason": st,
         })
         return MISSING
+    v = _workbook_text(view, r, col_idx, v, warnings, table_id, sheet_title)
     if role == "structural":
         return _disp(v)
     return _FORMATS.get(fmt, _fmt_number)(v)
@@ -438,7 +461,10 @@ def _extract_block_rows(view, extract, anchor_row, table_id, sheet_title,
             r += 1
             continue
         if first_text.startswith("*"):
-            notes.append(first_text)
+            note = _workbook_text(view, r, col_idxs[letter], first_text,
+                                   warnings, table_id, sheet_title)
+            if note:
+                notes.append(note)
             seen_note = True
         else:
             first_label = _norm(view.value(r, _col(col_letters[0])))
@@ -452,7 +478,9 @@ def _extract_block_rows(view, extract, anchor_row, table_id, sheet_title,
                 rendered = {}
                 for letter in col_letters:
                     st, v = statuses[letter]
-                    rendered[letter] = _disp(v) if st == "ok" else ""
+                    rendered[letter] = _workbook_text(
+                        view, r, col_idxs[letter], _disp(v),
+                        warnings, table_id, sheet_title) if st == "ok" else ""
                 rows.append((r, rendered))
             elif has_value:
                 norm_label = _norm(label)
@@ -482,7 +510,12 @@ def _extract_block_rows(view, extract, anchor_row, table_id, sheet_title,
                        for k in optional_blank):
                     pass  # 지도가 명시한 미보유/미사용 행만 생략
                 elif seen_note:
-                    notes.append("* " + label)  # '*' 주석의 이어지는 줄
+                    label_col = next(col_idxs[l] for l in col_letters
+                                     if _disp(view.value(r, col_idxs[l])))
+                    note = _workbook_text(view, r, label_col, "* " + label,
+                                           warnings, table_id, sheet_title)
+                    if note:
+                        notes.append(note)  # '*' 주석의 이어지는 줄
                 else:
                     rendered = {}
                     for letter in col_letters:
@@ -504,7 +537,7 @@ def _extract_block_rows(view, extract, anchor_row, table_id, sheet_title,
     return rows, r_stop
 
 
-def _trailing_notes(view, r, cols, notes):
+def _trailing_notes(view, r, cols, notes, warnings, table_id, sheet_title):
     """데이터 종료 직후 '*' 주석 줄을 모은다."""
     col_idxs = [_col(c) for c in cols]
     while r <= view.max_row:
@@ -512,12 +545,15 @@ def _trailing_notes(view, r, cols, notes):
         for c in col_idxs:
             v = view.value(r, c)
             if v is not None and _disp(v):
-                texts.append(_disp(v))
+                texts.append((c, _disp(v)))
         if not texts:
             r += 1
             continue
-        if texts[0].startswith("*"):
-            notes.append(texts[0])
+        if texts[0][1].startswith("*"):
+            c, text = texts[0]
+            note = _workbook_text(view, r, c, text, warnings, table_id, sheet_title)
+            if note:
+                notes.append(note)
             r += 1
             continue
         break
@@ -545,14 +581,16 @@ def _emit_table(view, spec, extract, anchor_row, table_id, sheet_title,
     col_idxs = {l: _col(l) for l in col_letters}
     header_rows = [anchor_row + o for o in extract["header_offsets"]]
     headers = _resolve_headers(
-        view, col_letters, header_rows, extract.get("header_map"))
+        view, col_letters, header_rows, extract.get("header_map"),
+        warnings, table_id, sheet_title)
     rows, r_stop = _extract_block_rows(
         view, extract, anchor_row, table_id, sheet_title, warnings, notes,
         col_idxs, extra_stop_re=extra_stop_re)
     if not rows:
         return None
     if extract.get("trailing_notes"):
-        _trailing_notes(view, r_stop + 1, col_letters, notes)
+        _trailing_notes(view, r_stop + 1, col_letters, notes,
+                        warnings, table_id, sheet_title)
     label_cols = [l for l in col_letters
                   if l not in set(extract.get("value_cols", []))
                   and l not in set(extract.get("note_cols", []))]
@@ -577,7 +615,8 @@ def _emit_year_grid(view, spec, extract, sheet_title, warnings):
     while c <= view.max_col:
         v = view.raw(year_row, c)
         if isinstance(v, str) and re.match(r"^\d{4}년", _disp(v)):
-            groups.append((c, _disp(v)))
+            groups.append((c, _workbook_text(view, year_row, c, _disp(v),
+                                             warnings, spec.get("id"), sheet_title)))
         elif isinstance(v, (int, float)) and 1900 <= v <= 2100:
             groups.append((c, "%d년" % int(v)))
         c += 1
@@ -631,7 +670,12 @@ def _emit_year_grid(view, spec, extract, sheet_title, warnings):
                 first_text = _disp(v)
                 break
         if first_text.startswith("*"):
-            notes.append(first_text)
+            note_col = (_col(letter) if letter in label_letters
+                        else picked[int(letter)][0])
+            note = _workbook_text(view, r, note_col, first_text,
+                                   warnings, spec.get("id"), sheet_title)
+            if note:
+                notes.append(note)
             seen_note = True
             r += 1
             continue
@@ -645,7 +689,9 @@ def _emit_year_grid(view, spec, extract, sheet_title, warnings):
             rendered = {}
             for letter in label_letters:
                 st, v = statuses[letter]
-                rendered[letter] = _disp(v) if st == "ok" else ""
+                rendered[letter] = _workbook_text(
+                    view, r, _col(letter), _disp(v), warnings,
+                    spec.get("id"), sheet_title) if st == "ok" else ""
             for i, (pc, _) in enumerate(picked):
                 st, v = statuses[str(i)]
                 if st != "ok":
@@ -656,6 +702,8 @@ def _emit_year_grid(view, spec, extract, sheet_title, warnings):
                         "row_label": label, "reason": st})
                     rendered[str(i)] = MISSING
                 else:
+                    v = _workbook_text(view, r, pc, v, warnings,
+                                       spec.get("id"), sheet_title)
                     rendered[str(i)] = _FORMATS.get(fmt, _fmt_number)(v)
             rows.append((r, rendered))
         elif label:
@@ -665,13 +713,20 @@ def _emit_year_grid(view, spec, extract, sheet_title, warnings):
                    for k in optional_blank):
                 pass  # 지도가 명시한 미보유/미사용 행만 생략
             elif seen_note:
-                notes.append("* " + label)  # '*' 주석의 이어지는 줄
+                label_col = next(_col(l) for l in label_letters
+                                 if _disp(view.value(r, _col(l))))
+                note = _workbook_text(view, r, label_col, "* " + label,
+                                       warnings, spec.get("id"), sheet_title)
+                if note:
+                    notes.append(note)  # '*' 주석의 이어지는 줄
             else:
                 # 라벨은 있는데 값이 전부 빈 행은 '확인 불가'로 보존
                 rendered = {}
                 for letter in label_letters:
                     st, v = statuses[letter]
-                    rendered[letter] = _disp(v) if st == "ok" else ""
+                    rendered[letter] = _workbook_text(
+                        view, r, _col(letter), _disp(v), warnings,
+                        spec.get("id"), sheet_title) if st == "ok" else ""
                 for i, (pc, _) in enumerate(picked):
                     st, _ = statuses[str(i)]
                     warnings.append({
@@ -684,7 +739,9 @@ def _emit_year_grid(view, spec, extract, sheet_title, warnings):
         r += 1
     if not rows:
         return None, "empty"
-    headers = [_disp(view.value(sub_row, _col(l))) or l for l in label_letters]
+    headers = [_workbook_text(view, sub_row, _col(l),
+                              _disp(view.value(sub_row, _col(l))), warnings,
+                              spec.get("id"), sheet_title) or l for l in label_letters]
     headers = [extract.get("label_header_map", {}).get(l, headers[i])
                for i, l in enumerate(label_letters)]
     headers += [h for _, h in picked]
@@ -961,7 +1018,8 @@ def generate(workbook_path, *, major_id, footnotes=None, map_path=None,
                 formulas, merges = (
                     _sheet_meta(path, sheet_file) if sheet_file
                     else (set(), []))
-                view = _SheetView(ws_v, formulas, merges)
+                view = _SheetView(ws_v, formulas, merges,
+                                  table_map.get("workbook_rate_note_pattern"))
             views[sheet_name] = (
                 view, ws_v.title if ws_v is not None else sheet_name)
         return views[sheet_name]
@@ -1013,11 +1071,9 @@ def generate(workbook_path, *, major_id, footnotes=None, map_path=None,
         md.extend(_render_markdown_table(headers, rows, col_letters))
         md.append(
             table_map["source_credit_template"].format(sheet=sheet_title))
-        # 원문 상승률 주석은 출처·관측 검증 없이 복사하지 않는다.
-        # 해당 상승률은 구조화 입력을 검증한 참고값 각주로만 안내한다.
-        rate_note_pattern = table_map.get("workbook_rate_note_pattern")
-        md.extend(note for note in notes if not rate_note_pattern
-                  or not re.search(rate_note_pattern, _norm(note)))
+        # 원문 셀은 표·독립 주석 경로 모두 _workbook_text를 거친다.
+        # 구조화 입력을 검증한 참고값 각주는 원문 필터 대상이 아니다.
+        md.extend(notes)
         md.extend(foot_lines)
         md.append("")
         emitted.append({"table": tid, "title": title,
