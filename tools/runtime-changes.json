@@ -159,7 +159,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "09476d70fe213aaa0851881d8c9557064af3457a7d6bd9b5ef933a389eb60eda",
+      "after_sha256": "d550127411a3e613ee16e2887f2822d01a0867304fdc414e6b09722539e6f41b",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "P28",
@@ -492,7 +492,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/hort-env-systems/README.md": {
-      "after_sha256": "d638c0e9fa8e91b1670b05335b32026da676e847f2705d05bc3be77143ec98e4",
+      "after_sha256": "86eef1f034c8fa547385cff04859ff54aff058b60d923d3b3a507c838600bfba",
       "before_sha256": null,
       "first_changed": "P9",
       "last_changed": "P27",
@@ -645,7 +645,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/outputs.md": {
-      "after_sha256": "1ee2272d2202c7f05d96c039465a0865a48951d15c0bb2e1fede0baec74732ed",
+      "after_sha256": "4b808faccec949a018e6ba1f766dd79c860a26f9556b1c33895b53e308427808",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "P27",
@@ -681,7 +681,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/price-research-routes.md": {
-      "after_sha256": "e5aa917fb4978f36d695183f75f01dc52275029c273236adb9d7df4e0b51599f",
+      "after_sha256": "081165f514424b0bf4bf5a5c8f6fa5a2259ea7e68358a654e45c597f6a113172",
       "before_sha256": "f89f038d5c767fd436a7a2c3b42c85f91d2b6a44186f9178fd6630b1438120f6",
       "first_changed": "P28",
       "last_changed": "P28",
@@ -699,7 +699,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/research-sources.md": {
-      "after_sha256": "224b89eaf2484bf041884a7cd51b321ad5257d6e9f054ad5f1e78069aa756b77",
+      "after_sha256": "e1cf52a71e2910b20ae4c343276e96c0ead2e9df17262f611ab9c6809c1bbfa3",
       "before_sha256": "0f127da93011dcc7a9be3c56e4219098781307b66a1f781786301789623e46b2",
       "first_changed": "P28",
       "last_changed": "P28",
@@ -788,7 +788,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/thesis-level.md": {
-      "after_sha256": "b3908afde5539edbf41b8464fe7b41948e4b2a5de9630a860929a2dc9ecf3933",
+      "after_sha256": "c378ff8bd3ad9293b03a216e562f8a8fee69f769623068b0fc1ca9726dc55ee1",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "P28",
