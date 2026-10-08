@@ -52,7 +52,7 @@ def _project(facts, sources="default"):
     if sources == "default":
         project["sources"] = {
             "s1": {"revision": 1, "kind": "stat",
-                   "source_type": "official_statistics",
+                   "source_type": "official_stat",
                    "source": "KOSIS 농가판매및구입가격조사", "grade": 1}}
     elif sources is not None:
         project["sources"] = sources
@@ -208,7 +208,7 @@ class SeriesContract(unittest.TestCase):
         project = _project([_fact(MAT, "0.05", price_assumption=_assumption(
             source_id="dup.id", series=a))],
             sources={"s1": {"revision": 1, "kind": "stat",
-                            "source_type": "official_statistics",
+                            "source_type": "official_stat",
                             "source": "KOSIS", "grade": 1,
                             "price_series": b}})
         with self.assertRaisesRegex(h.Held, "price_source_conflict"):
@@ -269,6 +269,89 @@ class SourceContract(unittest.TestCase):
                     h.Held, "evidence_source_(forbidden|unclassified)"):
                 h._facts(project, self.params)
 
+    def test_pv1_unknown_kind_and_variant_refusals(self):
+        """PV1-01 reproductions: open classifications and variant spellings
+        must refuse, not normalize into acceptance."""
+        for source in (
+                # unknown kind — not in the documented enum
+                {"kind": "made_up",
+                 "source": "개인 블로그에서 가져온 상승률 37%"},
+                # case variant of a forbidden kind is not "blog" — and is
+                # not an allowed pair either
+                {"kind": "BLOG", "source": "블로그"},
+                # generic file bucket + any source_type stays unclassified
+                {"kind": "file", "source_type": "unclassified",
+                 "source": "개인 블로그에서 가져온 상승률 37%"},
+                # allowed kind without its paired source_type
+                {"kind": "stat",
+                 "source": "개인 블로그에서 가져온 상승률 37%"},
+                # non-enum spelling of the official pair
+                {"kind": "stat", "source_type": "official_statistics"},
+                # interview without either documented author-survey marker
+                {"kind": "interview", "source": "타인 기사형 인터뷰"},
+                {"kind": "interview", "source_type": "external_press"},
+                # mismatched documented pairs
+                {"kind": "stat", "source_type": "academic_paper"},
+                {"kind": "academic", "source_type": "official_stat"},
+                # non-string kind/source_type
+                {"kind": ["stat"], "source_type": "official_stat"},
+                {"kind": "stat", "source_type": ["official_stat"]}):
+            project = _project([_fact(QUOTE, 5000)],
+                               sources={"s1": dict(source, revision=1)})
+            with self.subTest(source=source), self.assertRaisesRegex(
+                    h.Held, "evidence_source_(forbidden|unclassified)"):
+                h._facts(project, self.params)
+
+    def test_grade_is_allowlisted_not_normalized(self):
+        """PV1-01: ３, " 3 ", "3" spellings and out-of-range grades refuse;
+        only the canonical ints 1/2 (or an absent grade) are accepted."""
+        for grade in (3, 4):
+            src = {"revision": 1, "kind": "stat", "source_type": "official_stat",
+                   "source": "KOSIS", "grade": grade}
+            project = _project([_fact(QUOTE, 5000)], sources={"s1": src})
+            with self.subTest(grade=grade), self.assertRaisesRegex(
+                    h.Held, "evidence_source_forbidden"):
+                h._facts(project, self.params)
+        for grade in ("３", " 3 ", "3", "４", "１", "1", 0, 5, True, "낮음",
+                      [1], {"g": 1}, 1.0):
+            src = {"revision": 1, "kind": "stat", "source_type": "official_stat",
+                   "source": "KOSIS", "grade": grade}
+            project = _project([_fact(QUOTE, 5000)], sources={"s1": src})
+            with self.subTest(grade=grade), self.assertRaisesRegex(
+                    h.Held, "evidence_source_grade"):
+                h._facts(project, self.params)
+
+    def test_documented_kind_source_type_pairs_pass(self):
+        """The closed vocabulary: every documented pair is admissible."""
+        policy = h._evidence_policy()
+        for kind, stype in (("stat", "official_stat"),
+                            ("public_data", "official_public"),
+                            ("academic", "academic_paper"),
+                            ("research_report", "institution_report"),
+                            ("school_material", "official_school"),
+                            ("textbook", "formal_textbook"),
+                            ("interview", "author_survey")):
+            fact = {"source_refs": [{"id": "s1", "revision": 1}]}
+            sources = {"s1": {"revision": 1, "kind": kind,
+                              "source_type": stype, "source": "근거"}}
+            with self.subTest(pair=(kind, stype)):
+                h._check_fact_sources(QUOTE, fact, sources, policy)
+        # documented alternate marker: interview + source="작성자 직접 조사"
+        # without source_type (mirrors gg_core.checks)
+        fact = {"source_refs": [{"id": "s1", "revision": 1}]}
+        sources = {"s1": {"revision": 1, "kind": "interview",
+                         "source": "작성자 직접 조사"}}
+        h._check_fact_sources(QUOTE, fact, sources, policy)
+        # canonical grades 1/2 and absent grade are admissible
+        for grade in (1, 2, None):
+            src = {"revision": 1, "kind": "stat",
+                   "source_type": "official_stat", "source": "KOSIS"}
+            if grade is not None:
+                src["grade"] = grade
+            sources = {"s1": src}
+            with self.subTest(grade=grade):
+                h._check_fact_sources(QUOTE, fact, sources, policy)
+
     def test_author_survey_interview_admissible(self):
         for source in ({"kind": "interview", "source_type": "author_survey"},
                        {"kind": "interview", "source": "작성자 직접 조사"}):
@@ -294,26 +377,63 @@ class SummaryGeneration(unittest.TestCase):
         self.params = _specs(SUM_OVH, SUM_MAT, SUM_WAGE, OVH, MAT)
 
     def test_reproduction_free_text_never_displayed(self):
-        """The reported defect: blog-sourced free text used to pass through."""
+        """The reported defect: blog-sourced free text used to pass through.
+        Even on an admissible record the free `source` string is dropped —
+        the cell shows only the fixed student mark."""
         for key in (SUM_OVH, SUM_WAGE):
             fact = _fact(key, "개인 블로그에서 가져온 상승률 37%")
+            project = _project([fact], sources={
+                "s1": {"revision": 1, "kind": "interview",
+                       "source_type": "author_survey",
+                       "source": "개인 블로그에서 가져온 상승률 37%"}})
             with self.subTest(key=key):
-                values, derivations, _ = h._facts(_project([fact]), self.params)
+                values, derivations, _ = h._facts(project, self.params)
+                self.assertEqual(values[key], "작성자 직접 조사")
                 self.assertNotIn("블로그", values[key])
                 self.assertNotIn("37%", values[key])
                 self.assertEqual(
                     [d for d in derivations if d["rule_id"] == h.SUMMARY_RULE
                      ][0]["derived_value"], values[key])
 
+    def test_pv1_stat_kind_free_text_refused(self):
+        """PV1-01 reproduction: an admissible stat/official_stat record
+        without a price_series or a student mark carries nothing the
+        summary may display — the fact refuses instead of copying the
+        record's free `source` text into the cell."""
+        for key in (SUM_OVH, SUM_WAGE, SUM_MAT):
+            for source in (
+                    {"kind": "stat", "source_type": "official_stat",
+                     "source": "개인 블로그에서 가져온 상승률 37%"},
+                    {"kind": "academic", "source_type": "academic_paper",
+                     "source": "어떤 논문"},
+                    {"kind": "public_data", "source_type": "official_public",
+                     "source": "공공데이터 설명"}):
+                project = _project([_fact(key, "폐기될 자유 문구")],
+                                   sources={"s1": dict(source, revision=1)})
+                with self.subTest(key=key, source=source), \
+                        self.assertRaisesRegex(
+                            h.Held, "evidence_summary_unlabeled"):
+                    h._facts(project, self.params)
+
     def test_summary_generated_with_series_footnote(self):
         facts = [
             _fact(OVH, str(_pa.cagr(100.0, 130.2, 5)),
                   price_assumption=_assumption(source_id=OVH_SERIES)),
-            _fact(SUM_OVH, "원본 2009~2018·3%"),
+            _fact(SUM_OVH, "원본 2009~2018·3%",
+                  refs=[{"id": "s2", "revision": 1}]),
         ]
-        values, _, _ = h._facts(_project(facts), self.params)
+        sources = {
+            "s1": {"revision": 1, "kind": "stat",
+                   "source_type": "official_stat",
+                   "source": "KOSIS 농가판매및구입가격조사", "grade": 1},
+            "s2": {"revision": 1, "kind": "stat",
+                   "source_type": "official_stat", "source": "KOSIS",
+                   "price_series": _student_series()},
+        }
+        values, _, _ = h._facts(_project(facts, sources=sources), self.params)
         text = values[SUM_OVH]
         self.assertIn(OVH_SERIES, text)
+        self.assertIn("student.kosis.custom", text)
         self.assertIn("관측", text)
         self.assertIn("연평균", text)
         self.assertNotIn("원본", text)
@@ -321,7 +441,8 @@ class SummaryGeneration(unittest.TestCase):
 
     def test_student_marks_in_generated_summary(self):
         for mark, source in (
-                ("학생 견적", {"kind": "stat", "source": "학생 견적"}),
+                ("학생 견적", {"kind": "stat", "source_type": "official_stat",
+                             "source": "학생 견적"}),
                 ("작성자 직접 조사", {"kind": "interview",
                                    "source_type": "author_survey"}),
                 ("학생 견적", {"kind": "interview", "source": "학생 견적",
@@ -335,9 +456,18 @@ class SummaryGeneration(unittest.TestCase):
                 self.assertNotIn("자유 문구", values[SUM_OVH])
 
     def test_official_source_label_and_absence_sentinel(self):
-        project = _project([_fact(SUM_OVH, "자유 문구")])
+        # An admissible record still needs approved display content: a
+        # price_series-bearing source renders the verified footnote.
+        sources = {"s1": {"revision": 1, "kind": "stat",
+                          "source_type": "official_stat",
+                          "source": "KOSIS 농가판매및구입가격조사", "grade": 1,
+                          "price_series": _student_series()}}
+        project = _project([_fact(SUM_OVH, "자유 문구")], sources=sources)
         values, _, _ = h._facts(project, self.params)
-        self.assertIn("KOSIS", values[SUM_OVH])
+        self.assertIn("테스트 수열", values[SUM_OVH])
+        self.assertIn("student.kosis.custom", values[SUM_OVH])
+        self.assertNotIn("KOSIS 농가판매및구입가격조사", values[SUM_OVH])
+        self.assertNotIn("자유 문구", values[SUM_OVH])
         # '해당 없음' declared absence passes through the hold path unchanged
         fact = _fact(SUM_OVH, "해당 없음", refs=[])
         values, _, _ = h._facts(_project([fact], sources=None), self.params)
@@ -346,9 +476,17 @@ class SummaryGeneration(unittest.TestCase):
     def test_material_summary_includes_growth_family(self):
         facts = [
             _fact(MAT, str(_cagr()), price_assumption=_assumption()),
-            _fact(SUM_MAT, "아무 문구"),
+            _fact(SUM_MAT, "아무 문구", refs=[{"id": "s2", "revision": 1}]),
         ]
-        values, _, _ = h._facts(_project(facts), self.params)
+        sources = {
+            "s1": {"revision": 1, "kind": "stat",
+                   "source_type": "official_stat",
+                   "source": "KOSIS 농가판매및구입가격조사", "grade": 1},
+            "s2": {"revision": 1, "kind": "interview",
+                   "source_type": "author_survey",
+                   "source": "작성자 직접 조사"},
+        }
+        values, _, _ = h._facts(_project(facts, sources=sources), self.params)
         self.assertIn(MAT_SERIES, values[SUM_MAT])
 
 

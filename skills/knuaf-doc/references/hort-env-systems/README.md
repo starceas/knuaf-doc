@@ -32,7 +32,8 @@
 원예환경시스템 18시트 재무 파라미터는 엄격한 출처 및 가격 계약을 따른다:
 - **연간 상승률 (자재·경비 등 55키)**: 임의 비율(자유 RATIO) 입력 불가. PR-2 공통 공식 통계 계약(`price_contract: "series:general"`)으로만 정해진다. `price_assumption`(공식 출처 ID `source_id`, 기준연도 `base_year`, 단위 `unit`, 관측 `observation`, 선언 r)을 필수로 요구하며 `gg_price_assumptions` 공개 함수로 검증된다. 실제 셀 적용값은 항상 확정 관측 수열의 끝점 CAGR(연평균 변화율)로 대체된다.
 - **학생 단가·견적 (300키)**: 연간 상승률과 분리된 `source:quote` 출처 계약으로 다루어지며, 출력 라벨은 출처 레코드의 `source`("학생 견적") 또는 `source_type="author_survey"`("작성자 직접 조사")로 명시 표시된다.
-- **근거 요약 필드 (`cost.overhead.source_summary`, `cost.labor.wage_evidence_summary` 등 5키)**: 비어 있지 않은 자유 문자열을 받는 것이 아니라, 검증된 관측 수열 각주(`통계명[source_id] 관측기간 연평균 ±x.xx%`)와 인용 출처 라벨로 자동 생성된 검증 문구(`source:summary`)만 셀(B2 표시 문구 등)에 들어간다. 개인 블로그·SNS 등 비공식 근거는 전면 거부된다.
+- **근거 요약 필드 (`cost.overhead.source_summary`, `cost.labor.wage_evidence_summary` 등 5키)**: 요약 셀은 승인된 공식 수열의 식별·관측기간·계산값(`통계명[source_id] 시작~끝년 관측 연평균 ±x.xx%`) 또는 고정 학생 표시("학생 견적" / "작성자 직접 조사")로만 자동 생성된다. 학생이 작성한 임의의 서지 문장이나 `source.source` 자유 문자열은 출력에 도달하지 않는다(임의 자유 문구 우회 차단).
+- **출처 허용 목록 및 신뢰 등급 제한 (`_check_fact_sources`)**: 근거 출처의 `kind`/`source_type`은 사전에 정의된 유한한 7개 허용 쌍(`stat`/`official_stat`, `public_data`/`official_public`, `academic`/`academic_paper`, `research_report`/`institution_report`, `school_material`/`official_school`, `textbook`/`formal_textbook`, `interview`/`author_survey`)만 인정된다. `interview`는 `author_survey`(또는 `source="작성자 직접 조사"`)만 허용되며 일반 타인 인터뷰나 외부 출처(`external_*`)는 차단된다. 신뢰 등급(`grade`)은 정수 1 또는 2만 허용되며, 정책 금지값(3, 4)은 물론 문자열·전각·공백 변형(`"３"`, `" 3 "`, `"3"`)이나 불리언·실수 등 비정규형은 정규화 없이 명시 거부된다.
 - **생산 증가율 예외**: `sales.y2~y5.growth_rate`는 가격·임금 물가상승률이 아니라 **전년 대비 생산 증가율(생산량 스케일링)**이므로 물가 통계 수열 계약(`price_contract`) 대상이 아니며 기존 동작을 유지한다.
 
 ## 자료와 권리

@@ -68,7 +68,7 @@
 9. **원예환경시스템 18시트 재무 입력 계약 (`price_contract`)**:
    - 공식 통계 상승률 요건은 **원예환경시스템 18시트 재무 파라미터(자재·경비 연간 상승률 55키)**에도 `price_contract: "series:general"`로 동일하게 적용된다. 임의의 계획 상승률이나 비공식 출처는 거부되며, 실제 적용값은 공식 관측 수열의 끝점 CAGR로 대체된다.
    - 학생 자재 단가·시설 견적(300키)은 상승률과 분리되어 `source:quote` 출처 계약으로 관리되며 "학생 견적/작성자 직접 조사"(`source_type="author_survey"`)로 명확히 표시된다.
-   - 근거 요약 필드(`cost.overhead.source_summary`, `cost.labor.wage_evidence_summary` 등 5키)는 자유 문구를 받지 않고, 검증된 관측 수열 각주와 인용 출처 라벨로 자동 생성된 검증 문구(`source:summary`)만 셀에 반영된다.
+   - 근거 요약 필드(`cost.overhead.source_summary`, `cost.labor.wage_evidence_summary` 등 5키)는 공식 수열 식별·관측기간·계산값(`통계명[id] 시작~끝년 관측 연평균 ±x.xx%`) 또는 고정 학생 표시("학생 견적" / "작성자 직접 조사")로만 생성되며, 학생이 작성한 임의 서지 문장이나 `source.source` 자유 문자열은 출력에 도달하지 않는다. 근거 출처의 `kind`/`source_type`은 7개 허용 쌍(`stat`/`official_stat`, `public_data`/`official_public`, `academic`/`academic_paper`, `research_report`/`institution_report`, `school_material`/`official_school`, `textbook`/`formal_textbook`, `interview`/`author_survey`)으로 닫혀 있으며(`interview`는 `author_survey`만 허용), 신뢰 등급은 정수 1·2만 허용되고 미지·대소문자·전각 변형(`"３"`, `" 3 "` 등)이나 비정규형은 명시 거부된다.
    - **생산 증가율 예외**: `sales.y2~y5.growth_rate`는 가격·임금 물가상승률이 아니라 **전년 대비 생산 증가율(생산량 스케일링)**이므로 물가 통계 수열 계약(`price_contract`) 대상이 아니며 기존 동작을 유지한다.
 
 DBpia(dbpia.co.kr)는 기관 인증이 필요하다. **KCI·ScienceON을 먼저 본다.**

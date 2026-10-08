@@ -182,6 +182,75 @@ class SchoolTableSourcesTests(ContractCase):
         value = self.attach(entries={'swot': {'sources': [source(url='https://example.test/data?q=1&v=2')]}})
         self.assertIn('https://example.test/data?q=1&v=2', value)
 
+    def test_invisible_marks_and_variation_selectors_rejected(self):
+        # PV1-02: combining marks and variation selectors carry no glyph of
+        # their own and must not ride through the citation gate.
+        invisible = ('\u034f', '\ufe0f', '\ufe00', '\U000e0100', '\u0301',
+                     '\u20dd', '\u0489', '\u200b', '\u200c', '\u200d', '\u2060',
+                     '\ufeff', '\u00ad', '\u180e', '\U000e0001', '\U0001d173')
+        for field in ('source', 'title', 'year', 'locator'):
+            for mark in invisible:
+                for attack in (mark, '가' + mark, mark + '합성', '가' + mark + '나'):
+                    with self.subTest(field=field, attack=repr(attack)), \
+                            self.assertRaises(ValueError):
+                        self.attach(entries={'swot': {'sources': [source(**{field: attack})]}})
+        # Optional fields go through the same contract.
+        with self.assertRaises(ValueError):
+            self.attach(entries={'swot': {'sources': [source(kind='st\u034fat')]}})
+        with self.assertRaises(ValueError):
+            self.attach(entries={'swot': {'sources': [source(id='syn\u034fthetic', revision=1)]}})
+        with self.assertRaises(ValueError):
+            self.attach(entries={'swot': {'sources': [source(url='https://example.test/\u034f')]}})
+        survey = source(kind='interview', source_type='author_survey',
+                        source='작성자 직접 조사', survey_date='2026-10-08',
+                        subject='합성 조사 대상', verified='user-stated')
+        for field in ('source', 'survey_date', 'subject', 'verified'):
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                self.attach(entries={'swot': {'sources': [dict(survey, **{field: survey[field] + '\u034f'})]}})
+
+    def test_placeholder_judged_on_display_string(self):
+        # Marks hidden inside a placeholder are judged by what prints.
+        hidden = ('미\u034f정', '미\ufe0f정', '미\U000e0100정', '미\u20dd정',
+                  '미\u034f확인', '확인\u034f필요', '자료\ufe0f없음', '없\u0489음',
+                  'n\u034f/a', '\u034f-\u034f', '미정\u034f')
+        for field in ('source', 'title', 'year', 'locator'):
+            for attack in hidden:
+                with self.subTest(field=field, attack=repr(attack)), \
+                        self.assertRaises(ValueError):
+                    self.attach(entries={'swot': {'sources': [source(**{field: attack})]}})
+
+    def test_display_string_requires_letter_or_digit(self):
+        for attack in ('.', '·', '§', '()', '——', '···', '?!', '°°', '∼∼', '※※', ' , ;'):
+            for field in ('source', 'title', 'year', 'locator'):
+                with self.subTest(field=field, attack=repr(attack)), \
+                        self.assertRaises(ValueError):
+                    self.attach(entries={'swot': {'sources': [source(**{field: attack})]}})
+
+    def test_compat_and_needed_symbol_chars_still_accepted(self):
+        good = [source(source='농촌진흥청\u3000(전북)', title='「농업기상」 — ２０２４년'),
+                source(title='±0.5°C 범위 ∼ 상세', locator='§3 표 4-1'),
+                source(title='café 보고서'),
+                source(locator='제３판 p. 12')]
+        value = self.attach(entries={'swot': {'sources': good}})
+        self.assertIn('출처:', value)
+
+    def test_all_six_invisible_sources_publish_nothing(self):
+        # PV1-02 regression: a spec whose six table citations are all
+        # invalid must produce no publication file and no receipt.
+        bad = dict(self.spec, table_sources={
+            key: {'sources': [source(source='\u034f', title='\ufe0f',
+                                     year='\U000e0100', locator='\u034f')]}
+            for key in IDS})
+        write_text(self.root, 'spec.json', json.dumps(bad, ensure_ascii=False))
+        before = self._tree_bytes(self.root)
+        with self.assertRaises(self.core.OperationError) as caught:
+            self.core.paper(self.root, 'spec.json',
+                            (self.root / 'spec.json').read_bytes(), 'build/invisible.md')
+        self.assertEqual(caught.exception.result['reason'], 'invalid_spec')
+        self.assertEqual(caught.exception.result['commit_state'], 'not_committed')
+        self.assertFalse((self.root / 'build/invisible.md').exists())
+        self.assertEqual(self._tree_bytes(self.root), before)
+
     def test_caption_alias_compound_source_and_unrelated_text(self):
         entries = {CAPTIONS[-1]: {'sources': [source(title='합성 첫 자료'), source(title='합성 둘째 자료')]}}
         value = self.attach(entries=entries)

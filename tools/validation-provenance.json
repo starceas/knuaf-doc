@@ -85,7 +85,7 @@
       "origin": "new"
     },
     "tests/regression_inventory.json": {
-      "note": "P0-A: machine source of truth mapping each known defect to its test and owning gate (P1–P5/deferred). | PR-2: latest D8/D9 integration; I-01 only measured count constants adjusted in lineage test. Full pytest covers split public/skill test locations. | I2 appends V2-01 through V2-06 mappings and retains every existing entry. | I3 appends V3-01 through V3-04 mappings and retains every existing entry. | I4 appends V4-01 through V4-03 mappings and retains every existing entry. | I5 preserves all entries; Q-DESIGN-1 A superseded application-proof mappings rebind to existing reference regressions; V4-03, V1/V2 other guards and year completeness unchanged. | I6: all prior entries preserved, V6-01 seven new symbols mapped and AST checked; V6-02 documentation-only correction recorded without test mapping.",
+      "note": "P0-A: machine source of truth mapping each known defect to its test and owning gate (P1–P5/deferred). | PR-2: latest D8/D9 integration; I-01 only measured count constants adjusted in lineage test. Full pytest covers split public/skill test locations. | I2 appends V2-01 through V2-06 mappings and retains every existing entry. | I3 appends V3-01 through V3-04 mappings and retains every existing entry. | I4 appends V4-01 through V4-03 mappings and retains every existing entry. | I5 preserves all entries; Q-DESIGN-1 A superseded application-proof mappings rebind to existing reference regressions; V4-03, V1/V2 other guards and year completeness unchanged. | I6: all prior entries preserved, V6-01 seven new symbols mapped and AST checked; V6-02 documentation-only correction recorded without test mapping. | I8 adds PV1-01~04 mappings; preserves all existing inventory entries and 66 PR-3 mappings.",
       "origin": "new"
     },
     "tests/test_bundle_lineage.py": {
@@ -157,7 +157,7 @@
       "origin": "new"
     },
     "tests/test_hort_price_contract.py": {
-      "note": "PR-3 X1 regression tests; root tests belong to validation layer per I precedent.",
+      "note": "PR-3 X1 regression tests; root tests belong to validation layer per I precedent. | I8 PV1-01: finite source kind/type/grade admission and generated evidence summary regressions (FIX3-1).",
       "origin": "new"
     },
     "tests/test_hort_workbook.py": {
@@ -241,7 +241,7 @@
       "origin": "new"
     },
     "tests/test_policy_normalization.py": {
-      "note": "PR-3 X1 regression tests; root tests belong to validation layer per I precedent.",
+      "note": "PR-3 X1 regression tests; root tests belong to validation layer per I precedent. | I8 PV1-03/04: modern Hangul separator composition, occurrence spans, parser offsets and linear scaling regressions (FIX3-2).",
       "origin": "new"
     },
     "tests/test_price_assumptions.py": {
@@ -269,7 +269,7 @@
       "origin": "new"
     },
     "tests/test_school_table_sources.py": {
-      "note": "PR-3 X1 regression tests; root tests belong to validation layer per I precedent.",
+      "note": "PR-3 X1 regression tests; root tests belong to validation layer per I precedent. | I8 PV1-02: finite bibliographic display characters and invalid six-table publication refusal (FIX3-3).",
       "origin": "new"
     },
     "tests/test_source_identities.py": {

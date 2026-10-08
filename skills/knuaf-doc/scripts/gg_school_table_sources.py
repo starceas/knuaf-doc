@@ -46,6 +46,14 @@ _REQUIRED = {'kind', 'source_type', 'source', 'title', 'year', 'locator'}
 _OPTIONAL = {'url', 'grade', 'survey_date', 'subject', 'verified', 'id', 'revision'}
 _MISSING = {'n/a', 'na', 'none', 'null', 'unknown', '-', '—', '미정', '미확인',
             '확인필요', '자료없음', '없음', '해당없음', '미제공'}
+# Finite display contract for citation fields: letters (L*), numbers
+# (N*), punctuation (P*), ASCII space and this fixed general-symbol set.
+# Everything else on the normalized display string — marks Mn/Me/Mc
+# (combining marks and variation selectors such as U+034F, FE0F, E0100
+# which carry no glyph of their own), separators other than ' ',
+# control/format/private/surrogate/unassigned (C*) and unlisted symbols —
+# is refused outright.
+_SYMBOLS = frozenset('°©®±×÷−+=∼₩$¥€£¢')
 
 
 def load_spec(spec_bytes):
@@ -74,9 +82,22 @@ def _plain(value, field, *, url=False):
     forbidden = '|#[]<>\\`*{}~' + ('()"' if url else '')
     if any(c in normalized for c in forbidden) or re.search(r'(?<!\w)_[^_]+_', normalized):
         raise ValueError('출처 Markdown/자리표시자 금지: ' + field)
-    folded = _compact(normalized).casefold()
+    # Display string = NFKC minus marks. Placeholders and substance are
+    # judged on what would actually print (미͏정 → 미정).
+    display = ''.join(c for c in normalized
+                      if not unicodedata.category(c).startswith('M'))
+    folded = _compact(display).casefold()
     if folded in _MISSING or any(x in folded for x in ('확인필요', '미정', '미확인', '자료없음')):
         raise ValueError('미확인 출처 값: ' + field)
+    if url:
+        bad = any(unicodedata.category(c).startswith('M') for c in normalized)
+    else:
+        bad = any(unicodedata.category(c)[0] not in 'LNP' and c != ' '
+                  and c not in _SYMBOLS for c in normalized)
+    if bad:
+        raise ValueError('출처 허용 문자 부류 외 문자: ' + field)
+    if not url and not any(unicodedata.category(c)[0] in 'LN' for c in display):
+        raise ValueError('출처 표시 문자열에 글자·숫자가 없음: ' + field)
     if not url and re.search(r'(?:https?://|!\s*\[)', normalized, re.I):
         raise ValueError('URL은 별도 평문 url 필드에만 허용: ' + field)
     if url:

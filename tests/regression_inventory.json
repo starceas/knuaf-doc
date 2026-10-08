@@ -935,6 +935,52 @@
         "tests.test_policy_normalization.PolicyNormalizationTests.test_normalization_does_not_spread_to_limits_or_captions",
         "tests.test_policy_normalization.PolicyNormalizationTests.test_alias_list_is_validated_and_read_from_policy"
       ]
+    },
+    {
+      "id": "PV1-01",
+      "scope": "public_runtime_and_full_pytest",
+      "status": "implemented_pending_independent_review",
+      "tests": [
+        "tests.test_hort_price_contract.SourceContract.test_pv1_unknown_kind_and_variant_refusals",
+        "tests.test_hort_price_contract.SourceContract.test_grade_is_allowlisted_not_normalized",
+        "tests.test_hort_price_contract.SourceContract.test_documented_kind_source_type_pairs_pass",
+        "tests.test_hort_price_contract.SummaryGeneration.test_pv1_stat_kind_free_text_refused"
+      ]
+    },
+    {
+      "id": "PV1-02",
+      "scope": "public_runtime_and_full_pytest",
+      "status": "implemented_pending_independent_review",
+      "tests": [
+        "tests.test_school_table_sources.SchoolTableSourcesTests.test_invisible_marks_and_variation_selectors_rejected",
+        "tests.test_school_table_sources.SchoolTableSourcesTests.test_placeholder_judged_on_display_string",
+        "tests.test_school_table_sources.SchoolTableSourcesTests.test_display_string_requires_letter_or_digit",
+        "tests.test_school_table_sources.SchoolTableSourcesTests.test_compat_and_needed_symbol_chars_still_accepted",
+        "tests.test_school_table_sources.SchoolTableSourcesTests.test_all_six_invisible_sources_publish_nothing"
+      ]
+    },
+    {
+      "id": "PV1-03",
+      "scope": "public_runtime_and_full_pytest",
+      "status": "implemented_pending_independent_review",
+      "tests": [
+        "tests.test_policy_normalization.PolicyNormalizationTests.test_pv1_separator_and_jamo_matrix",
+        "tests.test_policy_normalization.PolicyNormalizationTests.test_pv1_jamo_occurrence_spans_and_columns",
+        "tests.test_policy_normalization.PolicyNormalizationTests.test_pv1_supported_mixed_forms_in_all_majors",
+        "tests.test_policy_normalization.PolicyNormalizationTests.test_pv1_original_spans_cover_only_each_syllable",
+        "tests.test_policy_normalization.PolicyNormalizationTests.test_pv1_unsupported_spellings_are_not_guessed",
+        "tests.test_policy_normalization.PolicyNormalizationTests.test_pv1_draft_and_heading_tail_offsets",
+        "tests.test_policy_normalization.PolicyNormalizationTests.test_pv1_offsets_for_markers_indentation_repeated_cells_and_images"
+      ]
+    },
+    {
+      "id": "PV1-04",
+      "scope": "public_runtime_and_full_pytest",
+      "status": "implemented_pending_independent_review",
+      "tests": [
+        "tests.test_policy_normalization.PolicyNormalizationTests.test_pv1_soft_paragraph_scaling",
+        "tests.test_policy_normalization.PolicyNormalizationTests.test_pv1_policy_check_scaling_with_and_without_hits"
+      ]
     }
   ],
   "review": "knuaf-doc-astra-pr-review/review/20260919-astra (ASTRA-REVIEW.md, probes.py, probe-results.json)",

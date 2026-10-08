@@ -66,6 +66,20 @@ _SUMMARY_GROWTH_PREFIX = {
     "cost.overhead.source_summary": "cost.overhead.",
 }
 _STUDENT_MARKS = {"학생 견적", "작성자 직접 조사"}
+# Closed citation vocabulary for contract-scoped facts — the documented
+# kind/source_type pairs (outputs.md, source-intake.md; the same enum as
+# gg_school_table_sources.SOURCE_TYPES).  A kind without its paired
+# source_type, an unknown or case-variant kind, and the generic "file"
+# bucket all refuse rather than normalizing in.
+_SOURCE_KIND_TYPES = {
+    "stat": "official_stat", "public_data": "official_public",
+    "academic": "academic_paper", "research_report": "institution_report",
+    "school_material": "official_school", "textbook": "formal_textbook",
+    "interview": "author_survey",
+}
+# grade is absent or the canonical int 1/2; the policy's forbidden 3/4 in
+# any other spelling ("３", " 3 ", "3") refuses instead of matching.
+_SOURCE_GRADES = (1, 2)
 _POLICY_PATH = HERE.parent / "references" / "plain-thesis-policy.json"
 # Disposed by the lane lead: coordinate registry, machine predicates and the
 # area-label formula are implemented in this file and the public contracts.
@@ -1459,13 +1473,16 @@ def _evidence_policy():
 
 
 def _check_fact_sources(key, fact, sources, policy):
-    """Contract-scoped facts cite resolvable, classified, admissible sources.
+    """Contract-scoped facts cite resolvable sources from a closed vocabulary.
 
-    Admissibility mirrors gg_core.checks: forbidden kinds (with the narrow
-    author-survey interview exception), AI-generated kinds, forbidden grades,
-    and explicit external_* / forbidden-kind source_type conflicts refuse.
-    A source with no usable classification (kind missing or the generic
-    'file' bucket and no source_type) cannot be vetted, so it also refuses.
+    kind/source_type must be one of the documented pairs in
+    _SOURCE_KIND_TYPES (same enum as outputs.md / gg_school_table_sources);
+    the interview record additionally keeps the documented alternate
+    marker source == "작성자 직접 조사" with no source_type, mirroring
+    gg_core.checks.  grade is absent or the canonical int 1/2.  Forbidden
+    kinds and grades, AI-generated kinds, external_* / forbidden-kind
+    source_types, unknown or variant kinds, and the generic "file" bucket
+    all refuse — nothing is normalized into acceptance.
     """
     refs = fact.get("source_refs")
     if not isinstance(refs, list) or not refs or not isinstance(sources, dict):
@@ -1482,16 +1499,27 @@ def _check_fact_sources(key, fact, sources, policy):
         kind, stype = source.get("kind"), source.get("source_type")
         external = isinstance(stype, str) and (
             stype.startswith("external_") or stype in kinds)
-        author_interview = kind == "interview" and not external and (
-            stype == "author_survey" or source.get("source") == "작성자 직접 조사")
-        if external or kind in ai_kinds or (
-                kind in kinds and not author_interview):
+        author_survey = kind == "interview" and not external and (
+            stype == "author_survey"
+            or source.get("source") == "작성자 직접 조사")
+        if external or (isinstance(kind, str) and (
+                kind in ai_kinds
+                or kind in kinds and not author_survey)):
             raise Held("evidence_source_forbidden", key)
         grade = source.get("grade")
-        if grade in grades or str(grade) in {str(g) for g in grades}:
+        if isinstance(grade, int) and not isinstance(grade, bool) \
+                and grade in grades:
             raise Held("evidence_source_forbidden", key)
-        if not ((isinstance(kind, str) and kind.strip() and kind != "file")
-                or (isinstance(stype, str) and stype.strip())):
+        if grade is not None and (type(grade) is not int
+                                  or grade not in _SOURCE_GRADES):
+            raise Held("evidence_source_grade", key)
+        if kind == "interview":
+            admissible = author_survey and stype in (None, "author_survey")
+        else:
+            admissible = (isinstance(kind, str)
+                          and _SOURCE_KIND_TYPES.get(kind) == stype
+                          and stype is not None)
+        if not admissible:
             raise Held("evidence_source_unclassified", key)
 
 
@@ -1600,7 +1628,12 @@ def _series_label(source, resolved):
 
 
 def _source_label(source):
-    """Display label for one cited source — official series or student mark."""
+    """Display label for one cited source — official series or student mark.
+
+    Only approved content reaches the cell: the verified price_series
+    footnote, or one of the fixed student marks.  A record carrying
+    neither refuses — its free `source` text is never copied through.
+    """
     entry = source.get("price_series")
     if isinstance(entry, dict):
         series = _pa.confirmed_series(entry)
@@ -1620,7 +1653,7 @@ def _source_label(source):
         return mark
     if source.get("source_type") == "author_survey":
         return "작성자 직접 조사"
-    return mark if isinstance(mark, str) and mark.strip() else "출처 미상"
+    raise Held("evidence_summary_unlabeled", source.get("id"))
 
 
 def _generated_summary(key, fact, sources, assumptions):

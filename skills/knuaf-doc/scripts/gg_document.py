@@ -4,7 +4,7 @@ import json
 import re
 import unicodedata
 from pathlib import Path
-from gg_core import draft
+from gg_core import draft, START, END
 
 # 학명 이탤릭은 이명법(속명+종소명)+명명자/등급 표지가 함께 나오는 경우만
 # 적용한다. 종소명 자리의 영어 기능어(전치사·접속사·관사·조동사·대명사·흔한
@@ -284,34 +284,67 @@ def _term_count(text, term):
     return text.count(term)
 
 
-def _compact_term_text(text):
-    """NFKC/casefold only for body prohibitions; retain original spans.
+_HANGUL_FINALS = "ㄱㄲㄳㄴㄵㄶㄷㄹㄺㄻㄼㄽㄾㄿㅀㅁㅂㅄㅅㅆㅇㅈㅊㅋㅌㅍㅎ"
+_COMPAT_FINAL = {c: chr(0x11a8 + i) for i, c in enumerate(_HANGUL_FINALS)}
 
-    Combining marks and Hangul jamo are normalized together so composition
-    does not lose a character or move the reported original occurrence.
+
+def _term_separator(c):
+    return (c.isspace() or unicodedata.category(c) == "Cf"
+            or unicodedata.category(c).startswith("P") or c == "\u034f"
+            or 0xfe00 <= ord(c) <= 0xfe0f or 0xe0100 <= ord(c) <= 0xe01ef)
+
+
+def _compact_term_text(text):
+    """Remove separators first, then compose modern Hangul with source spans.
+
+    Only the 19 L / 21 V / 27 T modern jamo and their compatibility forms
+    are composed. A compatibility consonant before V starts a new syllable;
+    otherwise it may close LV. Archaic/residual jamo are retained, without
+    guessing missing vowels, emoji, digits or lookalike letters.
     """
-    chars, spans = [], []
+    tokens = []
     start = 0
-    def jamo(c):
-        return (0x1100 <= ord(c) <= 0x11ff or 0x3130 <= ord(c) <= 0x318f
-                or 0xa960 <= ord(c) <= 0xa97f or 0xd7b0 <= ord(c) <= 0xd7ff)
     while start < len(text):
         end = start + 1
-        while end < len(text) and (
-            unicodedata.combining(text[end])
-            or (jamo(text[end]) and (jamo(text[end - 1])
-                                    or 0xac00 <= ord(text[end - 1]) <= 0xd7a3))
-        ):
+        # Keep ordinary accent normalization; invisible combining separators
+        # must not merge unrelated original character spans.
+        while (end < len(text) and unicodedata.combining(text[end])
+               and not _term_separator(text[end])):
             end += 1
-        for c in unicodedata.normalize("NFKC", text[start:end]).casefold():
-            category = unicodedata.category(c)
-            invisible_mark = (c == "\u034f" or 0xfe00 <= ord(c) <= 0xfe0f
-                              or 0xe0100 <= ord(c) <= 0xe01ef)
-            if c.isspace() or category == "Cf" or invisible_mark or category.startswith("P"):
+        source = text[start:end]
+        for c in unicodedata.normalize("NFKC", source).casefold():
+            if _term_separator(c):
                 continue
+            # Precomposed syllables may also receive an explicit final jamo.
+            pieces = unicodedata.normalize("NFD", c) if 0xac00 <= ord(c) <= 0xd7a3 else c
+            for piece in pieces:
+                tokens.append((piece, start, end, _COMPAT_FINAL.get(source)))
+        start = end
+    chars, spans, i = [], [], 0
+    while i < len(tokens):
+        c, start, end, _ = tokens[i]
+        if (0x1100 <= ord(c) <= 0x1112 and i + 1 < len(tokens)
+                and 0x1161 <= ord(tokens[i + 1][0]) <= 0x1175):
+            vowel = tokens[i + 1]
+            syllable = 0xac00 + ((ord(c) - 0x1100) * 21 + ord(vowel[0]) - 0x1161) * 28
+            end, i = vowel[2], i + 2
+            if i < len(tokens):
+                final, _, final_end, compat_final = tokens[i]
+                next_is_vowel = (i + 1 < len(tokens)
+                                 and 0x1161 <= ord(tokens[i + 1][0]) <= 0x1175)
+                if compat_final and not next_is_vowel:
+                    final = compat_final
+                # A compatibility cluster is a final even when followed by V;
+                # a simple compatibility consonant before V stays an onset.
+                if 0x11a8 <= ord(final) <= 0x11c2:
+                    syllable += ord(final) - 0x11a7
+                    end, i = final_end, i + 1
+            chars.append(chr(syllable))
+            spans.append((start, end))
+        else:
             chars.append(c)
             spans.append((start, end))
-        start = end
+            i += 1
     return "".join(chars), spans
 
 
@@ -326,8 +359,9 @@ def _latin_identifier_edge(text, index, step):
     return any(x.isdecimal() or x == "_" or "LATIN" in unicodedata.name(x, "") for x in c)
 
 
-def _forbidden_spans(text, term, compact, spans):
-    needle = _compact_term_text(term)[0]
+def _forbidden_spans(text, term, compact, spans, *, needle=None):
+    if needle is None:
+        needle = _compact_term_text(term)[0]
     if not needle:
         return []
     out, offset = [], 0
@@ -347,40 +381,52 @@ def _forbidden_spans(text, term, compact, spans):
             offset = found + 1
 
 
+def _draft_region(text):
+    """Use the same envelope as draft(), retaining its identified offset."""
+    raw = draft(text)  # Also validates paired markers before reading offsets.
+    if START in text or END in text:
+        start, end = text.index(START) + len(START), text.index(END)
+    else:
+        match = re.search(
+            r"^##\s+DRAFT[^\n]*\n(.*?)(?=^##\s+(?:STATUS|INPUT|RESEARCH|FACTS|OPEN)\b|\Z)",
+            text, re.M | re.S,
+        )
+        start, end = match.span(1) if match else (0, len(text))
+    region = text[start:end]
+    return raw, start + len(region) - len(region.lstrip())
+
+
 def _body_term_units(text, nodes):
     """Keep cells/sections separate; soft paragraph lines may form a term.
 
     Each character maps back to the unmodified input, including DRAFT
     wrappers, indentation and Markdown heading prefixes.
     """
-    raw = draft(text)
-    origin = text.find(raw)
-    line_offsets, offset = [], origin
-    for line in raw.splitlines(keepends=True):
-        line_offsets.append(offset)
-        offset += len(line)
-    units = []
+    if any("term_parts" not in n for n in nodes):
+        nodes = parse(text, with_spans=True, _with_term_positions=True)
+    units, chunks, positions = [], [], []
+    def flush():
+        if chunks:
+            units.append(("".join(chunks), positions.copy()))
+            chunks.clear()
+            positions.clear()
     for n in nodes:
-        if n["kind"] in {"paragraph", "heading"}:
-            parts = [n["text"]]
-        elif n["kind"] == "table":
-            parts = [c for row in n["rows"] for c in row]
-        elif n["kind"] == "image":
-            parts = [n["alt"], n["path"]]
-        else:
+        parts = n["term_parts"]
+        if not n.get("soft_continue"):
+            flush()
+        if not parts:
             continue
-        cursor = line_offsets[n["start_line"]]
-        for part in parts:
+        for part, start in parts:
             if not part:
                 continue
-            start = text.find(part, cursor)
-            positions = list(range(start, start + len(part)))
-            if n.get("soft_continue") and units:
-                old, old_positions = units[-1]
-                units[-1] = (old + "\n" + part, old_positions + [cursor] + positions)
-            else:
-                units.append((part, positions))
-            cursor = start + len(part)
+            if chunks:
+                chunks.append("\n")
+                positions.append(start - 1)
+            chunks.append(part)
+            positions.extend(range(start, start + len(part)))
+            if n["kind"] != "paragraph":
+                flush()
+    flush()
     return units
 
 
@@ -431,14 +477,19 @@ def plain_policy_check(text, issues, nodes, major_id):
             body_parts.append(n["alt"] + " " + n["path"])
     units = [(raw, positions, *_compact_term_text(raw))
              for raw, positions in _body_term_units(text, nodes)]
+    line_offsets = [0] + [m.end() for m in re.finditer("\n", text)]
     for term in policy["forbidden_body_terms"] + policy["forbidden_body_term_aliases"]:
-        occurrences = []
+        needle = _compact_term_text(term)[0]
+        occurrences, line_index = [], 0
         for raw, positions, compact, spans in units:
-            for start, end in _forbidden_spans(raw, term, compact, spans):
+            for start, end in _forbidden_spans(raw, term, compact, spans, needle=needle):
                 pos = positions[start]
-                line = text.count("\n", 0, pos) + 1
-                column = pos - text.rfind("\n", 0, pos)
-                occurrences.append("%d행 %d열 %r" % (line, column, raw[start:end]))
+                while line_index + 1 < len(line_offsets) and line_offsets[line_index + 1] <= pos:
+                    line_index += 1
+                line = line_index + 1
+                column = pos - line_offsets[line_index] + 1
+                original = text[pos:positions[end - 1] + 1]
+                occurrences.append("%d행 %d열 %r" % (line, column, original))
         hits = len(occurrences)
         if hits:
             issues.append(
@@ -806,47 +857,73 @@ def _swot_placed(body_nodes):
     return False
 
 
-def parse(text, *, with_spans=False):
-    lines, nodes, i = draft(text).splitlines(), [], 0
+def parse(text, *, with_spans=False, _with_term_positions=False):
+    raw, origin = _draft_region(text) if _with_term_positions else (draft(text), 0)
+    lines, nodes, i = raw.splitlines(), [], 0
+    line_offsets, offset = [], origin
+    if _with_term_positions:
+        for line in raw.splitlines(keepends=True):
+            line_offsets.append(offset)
+            offset += len(line)
     previous_prose = False
     heading_state = _HeadingState()
-    def append(node):
+    def append(node, term_parts=()):
         if with_spans:
             node.update(start_line=start_line, end_line=i)
+        if _with_term_positions:
+            node["term_parts"] = term_parts
         nodes.append(node)
 
     while i < len(lines):
         start_line = i
         s = lines[i].strip()
+        source_start = (line_offsets[i] + len(lines[i]) - len(lines[i].lstrip())
+                        if _with_term_positions else 0)
         i += 1
         if not s:
             previous_prose = False
             continue
         if s.startswith("|"):
-            rows = []
+            rows, term_parts = [], []
             while True:
                 row = [x.strip() for x in s.strip("|").split("|")]
                 if not all(re.fullmatch(r":?-{2,}:?", x) for x in row):
                     rows.append(row)
+                    if _with_term_positions:
+                        left = len(s) - len(s.lstrip("|"))
+                        right = len(s.rstrip("|"))
+                        cursor = left
+                        for cell in s[left:right].split("|"):
+                            term_parts.append((cell.strip(), source_start + cursor
+                                               + len(cell) - len(cell.lstrip())))
+                            cursor += len(cell) + 1
                 if i >= len(lines) or not lines[i].strip().startswith("|"):
                     break
                 s = lines[i].strip()
+                if _with_term_positions:
+                    source_start = line_offsets[i] + len(lines[i]) - len(lines[i].lstrip())
                 i += 1
-            append({"kind": "table", "rows": rows})
+            append({"kind": "table", "rows": rows}, term_parts)
         elif IMAGE.fullmatch(s):
             m = IMAGE.fullmatch(s)
-            append({"kind": "image", "alt": m[1], "path": m[2]})
+            append({"kind": "image", "alt": m[1], "path": m[2]},
+                   [(m[1], source_start + m.start(1)), (m[2], source_start + m.start(2))])
         elif CAPTION.fullmatch(s):
             m = CAPTION.fullmatch(s)
             append(
                 {"kind": "caption", "label": m[1], "number": int(m[2]), "text": s}
             )
         else:
+            md = re.match(r"^(#{1,6})\s+(.+)$", s)
             level, s = heading_state.read(s)
+            if md:
+                source_start += md.start(2)
             list_item = False
-            if re.match(r"^[-+*]\s+", s):
+            bullet = re.match(r"^[-+*]\s+", s)
+            if bullet:
                 list_item = True
                 s = re.sub(r"^[-+*]\s+", "", s)
+                source_start += bullet.end()
             if (
                 s.startswith(("```", "<table", "<script", "> "))
                 or re.search(r"\[[^\]]+\]\([^)]+\)", s)
@@ -866,6 +943,7 @@ def parse(text, *, with_spans=False):
                     head = s[: m.start() + 1].rstrip()
                     rest = m.group(1).strip()
                     if head and rest:
+                        tail_start = source_start + m.start(1)
                         s, tail = head, rest
             node = {"kind": "heading" if (level and not list_item) else "paragraph", "text": s}
             if level:
@@ -875,10 +953,10 @@ def parse(text, *, with_spans=False):
             prose = node["kind"] == "paragraph" and not list_item
             if prose and previous_prose:
                 node["soft_continue"] = True
-            append(node)
+            append(node, [(s, source_start)])
             previous_prose = prose
             if tail:
-                append({"kind": "paragraph", "text": tail})
+                append({"kind": "paragraph", "text": tail}, [(tail, tail_start)])
                 previous_prose = True
             # A Markdown hard break terminates this line's paragraph boundary.
             if lines[i - 1].endswith("  "):
@@ -940,7 +1018,7 @@ def require_tokens(issues, cid, body, tokens, reason):
 
 
 def check(text, base, major_id=None):
-    nodes = parse(text, with_spans=True)
+    nodes = parse(text, with_spans=True, _with_term_positions=True)
     issues = []
     if major_id is None:
         major_id = _project_major(base)
