@@ -109,7 +109,7 @@
       "origin": "new"
     },
     "tests/test_finance_gate.py": {
-      "note": "PR-4 ORDER-A: 본문 전 재무 게이트 정상·반례 28건 — 수용 질문·원답변 연결, 모름/거부/되물음 누락, 라벨 위장, 전공·기간/단위, 실제 CLI; 알려진 stale 한계 반례 포함.",
+      "note": "PR-4 ORDER-A: 본문 전 재무 게이트 정상·반례 28건 — 수용 질문·원답변 연결, 모름/거부/되물음 누락, 라벨 위장, 전공·기간/단위, 실제 CLI; 알려진 stale 한계 반례 포함. | F1 V1-01: preserve original 28 tests; add duplicate negative-profit apply regression, all 84 nonempty duplicate combinations and 63 invalid-binding cases (31 test methods total).",
       "origin": "new"
     },
     "tests/test_finance_profile_gate.py": {

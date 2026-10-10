@@ -2032,7 +2032,10 @@ def finance_gate(p):
         return {"state": "missing", "supported": True,
                 "reason": "본문 전 재무 게이트 기록 필요",
                 "missing": [FINANCE_GATE_STATE]}
-    if state["value"] == "not_computable" and profit is None:
+    # Invalid/duplicate records are not an absence of calculation results.
+    profit_absent = not any(f.get("field_id") == FINANCE_GATE_PROFIT
+                            for f in p.get("facts", {}).values())
+    if state["value"] == "not_computable" and profit_absent:
         if isinstance(state.get("reason"), str) and state["reason"].strip():
             return {"state": "not_computable", "supported": True,
                     "reason": state["reason"]}

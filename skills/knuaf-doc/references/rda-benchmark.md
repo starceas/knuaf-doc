@@ -131,8 +131,8 @@ r = L.lookup_rda_data("인삼", "전국", major="특용작물전공", kind="prod
 # not_found, reason=excluded_from_mafra_specialty_survey
 ```
 
-호출 인자: `lookup_rda_data(crop, region=None, *, major=None, kind=None,
-year=None, form=None, audit_key=None, allow_web=False, ...)`.
+호출 인자: `lookup_rda_data(crop, region, *, major=None, kind=None, year=None,
+form=None, allow_web=False, audit_key=None)`. `region`은 필수 인자다.
 작목 표기는 `references/benchmark-packs/aliases/major-aliases.json`의 별칭을 거친다.
 
 ## 6. 연구 제안 → 정본 반영 (propose → apply)
@@ -145,7 +145,8 @@ year=None, form=None, audit_key=None, allow_web=False, ...)`.
   `state == not_provided`일 때만 제안이 만들어진다(`_ELIGIBLE_TARGET_STATES`).
   이미 학생이 답한 대상이면 제안 자체가 나오지 않는다.
   성공 시 `proposal` 객체, 실패 시 `unresolved(reason=...)`를 반환한다.
-- `gg_rda_research.apply(proposal, expected_revision, target_current)` —
+- `gg_rda_research.apply(proposal, *, expected_revision, target_current=None,
+  packs_dir=None)` — `expected_revision` 이후 인자는 키워드로 전달한다.
   팩 무결성(records 해시·audit_key)·라이브 바이트 해시·대상 현재 상태를
   다시 확인하고 `ready | stale | rejected`로 판정한다. 제안 후 대상이
   응답됐거나 제안 시점 상태와 다르면 `stale`로 거부 — 덮어쓰기 없다.

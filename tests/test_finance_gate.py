@@ -4,6 +4,7 @@ Synthetic amounts are copied result fixtures, not claims about a real farm or
 native Office. The existing calculator is also exercised without modification.
 """
 import copy
+import itertools
 import json
 import subprocess
 import sys
@@ -253,6 +254,87 @@ class BodyFinanceGateTests(ContractCase):
         duplicate = dict(p["facts"]["gate-state"], id="gate-state-duplicate")
         self.apply([{"collection": "facts", "value": duplicate}])
         self.assert_blocked("missing")
+
+    def test_duplicate_negative_profit_is_not_missing_calculation(self):
+        self.record("not_computable", "-100", reason="수취가격 부족")
+        self.body()
+        duplicate = copy.deepcopy(self.core.load(self.root)["facts"]["gate-profit"])
+        duplicate["id"] = "duplicate-profit"
+        self.apply([{"collection": "facts", "value": duplicate}])
+        self.assert_blocked("missing")
+
+    def test_all_duplicate_gate_field_combinations(self):
+        fields = ("gate-state", "gate-profit", "gate-answer")
+        combinations = [subset for size in range(1, 4)
+                        for subset in itertools.combinations(fields, size)]
+        for state, profit in itertools.product(
+                ("surplus", "deficit_pending", "deficit_accepted", "not_computable"),
+                ("-100", "0", "100")):
+            self.root = self.make_project()
+            bind_major(self.root)
+            self.record(state, profit, reason="수취가격 부족")
+            self.answer()
+            self.body()
+            p = self.core.load(self.root)
+            for subset in combinations:
+                with self.subTest(state=state, profit=profit, duplicated=subset):
+                    bad = copy.deepcopy(p)
+                    for field in subset:
+                        duplicate = copy.deepcopy(bad["facts"][field])
+                        duplicate["id"] += "-duplicate"
+                        bad["facts"][duplicate["id"]] = duplicate
+                    if "gate-state" in subset or "gate-profit" in subset:
+                        expected = "missing"
+                    elif profit == "100":
+                        expected = "surplus"  # A surplus needs no acceptance.
+                    else:
+                        expected = "deficit_pending"
+                    self.assertEqual(expected, self.core.finance_gate(bad)["state"])
+                    check = next(c for c in self.core.checks(self.root, bad)
+                                 if c["check_id"] == "finance_gate")
+                    task = next(t for t in self.core.next_tasks(bad)
+                                if t["id"] == "finance_gate")
+                    if expected == "surplus":
+                        self.assertEqual(("pass", "ready"),
+                                         (check["status"], task["status"]))
+                    else:
+                        self.assertEqual(("fail", "error", "needs_user"),
+                                         (check["status"], check["severity"], task["status"]))
+                        self.assertIn("submission_candidate", check["required_for"])
+
+    def test_invalid_gate_bindings_are_not_absent_records(self):
+        for state in ("surplus", "deficit_accepted", "not_computable"):
+            self.root = self.make_project()
+            bind_major(self.root)
+            self.record(state, "-100", reason="수취가격 부족")
+            self.answer()
+            self.body()
+            p = self.core.load(self.root)
+            for field, mutation in itertools.product(
+                    ("gate-state", "gate-profit", "gate-answer"),
+                    ("unreviewed", "no_refs", "missing_source", "stale_revision",
+                     "missing_claim", "claim_mismatch", "no_claim_review")):
+                with self.subTest(state=state, field=field, mutation=mutation):
+                    bad = copy.deepcopy(p)
+                    fact = bad["facts"][field]
+                    ref = fact["source_refs"][0]
+                    source = bad["sources"][ref["id"]]
+                    if mutation == "unreviewed":
+                        fact["verification"] = "source_located"
+                    elif mutation == "no_refs":
+                        fact["source_refs"] = []
+                    elif mutation == "missing_source":
+                        ref["id"] = "missing-source"
+                    elif mutation == "stale_revision":
+                        ref["revision"] += 1
+                    elif mutation == "missing_claim":
+                        ref["claim_id"] = "missing-claim"
+                    elif mutation == "claim_mismatch":
+                        source["claims"][ref["claim_id"]]["value"] = "mismatched"
+                    else:
+                        source["claim_review"] = None
+                    expected = "deficit_pending" if field == "gate-answer" else "missing"
+                    self.assertEqual(expected, self.core.finance_gate(bad)["state"])
 
     def test_wrong_profit_period_or_unit_does_not_pass(self):
         self.record("surplus", "100")
