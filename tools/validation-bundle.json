@@ -92,6 +92,11 @@
       "origin": "new",
       "sha256": "2920e933fc87351c9834bdffa0ec87a43931ad9b8dc194ba0123b18890fb48a2"
     },
+    "tests/test_finance_gate.py": {
+      "note": "PR-4 ORDER-A: 본문 전 재무 게이트 정상·반례 28건 — 수용 질문·원답변 연결, 모름/거부/되물음 누락, 라벨 위장, 전공·기간/단위, 실제 CLI; 알려진 stale 한계 반례 포함.",
+      "origin": "new",
+      "sha256": "82ca8da688bc0eef39d5c3002648c503491c450511f00c642c1983199c54d58f"
+    },
     "tests/test_finance_profile_gate.py": {
       "note": "P20: finance profile migration pre-staging negatives — writers and native boundary never reached on missing/unsupported profiles, synthetic only.",
       "origin": "new",
@@ -369,12 +374,12 @@
     "tools/runtime-changes.json": {
       "note": "누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py. P8 declares the fruit_trees first bundle (module registration, two common helper modules, fruit plan, reference-set data and guidance). P9 declares the hort_env_systems first bundle (module registration, hort plan, profile and guidance, reuse-registry entries). | P10: 누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py. P8 declares the fruit_trees first bundle (module registration, two common helper modules, fruit plan, reference-set data and guidance). P9 declares the common XLSX reuse bundle (one new runtime extract file + declared edits to registration, resolver, template guard, and reuse tests). P9-D3 declares the major-specific-precedence edits (registry dedupe, catalog base_for_major, resolver base policy, docs, tests) in the same stage. | P11: 누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py. P8 declares the fruit_trees first bundle (module registration, two common helper modules, fruit plan, reference-set data and guidance). P9 declares the hort_env_systems first bundle (module registration, hort plan, profile and guidance, reuse-registry entries). P10 declares the common interview rules bundle (SKILL.md re-touch, three baseline doc first-changes, specialty-crops premise-probes) re-based onto the P9 parent. P12 declares the industrial_insects first bundle (four read-only insect scripts, locator map, guide and premise probes as new files; nine reuse-registry entries and SKILL/gg.py updates). P13: D4 source identity catalogue, validator, tests and related guidance rebased on accepted P12. P15 declares the D5 useful-life bundle rebased onto accepted P14 (corrected pp133-135 cell mapping and regression test as new files; eight re-declared pack/registry/script/test entries; parent P14 lineage). P18 declares the industrial_insects second bundle (module 0.2.0 product-line question templates and read-only plan/evidence updates; no new runtime file). | PR-2: latest D8/D9 integration; I-01 only measured count constants adjusted in lineage test. Full pytest covers split public/skill test locations. | I2 refreshes after hashes for existing declarations; before hashes, baseline, lineage and allowlist preserved. | I3 refreshes after hashes for existing declarations; before hashes, baseline, lineage and allowlist preserved. | I4 refreshes after hashes for existing declarations; before hashes, baseline, lineage and allowlist preserved. | I5 refreshes only existing after hashes; before hashes, baseline, lineage and allowlist preserved. | I6: existing after hashes refreshed; baseline, before/source/owner/reason and all lineage/allowlist unchanged, counts 167/120/124. | I9: W-D10 문서5개 및 install-manifest after SHA만 갱신; PV2 FAIL 후 알려진 한계 문서화, 코드·테스트·계보·허용목록 불변.",
       "origin": "new",
-      "sha256": "84b68f66184deeb2494a57d1732e1b60b7cd51371a77f2e2d8c0756a23bc29b7"
+      "sha256": "82aa7ce599de93a61338532d6476c6a16180da62b65c0744a00917cdd87bbffc"
     },
     "tools/validation-provenance.json": {
       "note": "This file; declares origins for the validation layer.",
       "origin": "new",
-      "sha256": "115176e1f377f22e06ddfe24b9456e153817c8e7b8b27da491d056a1b72324b2"
+      "sha256": "5e93c2613a34454a44b6747678c4f026ef3daab96289b98b9b5fe4974be4deb4"
     }
   },
   "generated_by": "tools/build_validation_bundle.py@3",
@@ -392,7 +397,7 @@
     "approved_new_files": 125,
     "baseline_main": "29abec0ec95369de7ae9e22207349d574f1f46b7",
     "change_count": 168,
-    "changes_sha256": "cf7048af0b6f5798ee31cc6b57191625cb739a7a5a4d22b983c90ad5c9c45d09",
+    "changes_sha256": "8627464b2fbaded716c534bc450333d3ab6cbfbea0c7e7abd5d130f28b61b7d8",
     "new_count": 121,
     "parent_candidate": {
       "file_count": 233,
@@ -401,7 +406,7 @@
     },
     "schema": "knuaf-doc/runtime-changes@2",
     "spec": "tools/runtime-changes.json",
-    "spec_sha256": "84b68f66184deeb2494a57d1732e1b60b7cd51371a77f2e2d8c0756a23bc29b7",
+    "spec_sha256": "82aa7ce599de93a61338532d6476c6a16180da62b65c0744a00917cdd87bbffc",
     "stage": "P28",
     "stage_lineage": [
       {
@@ -576,5 +581,5 @@
     "verified_count": 168
   },
   "schema": "knuaf-doc/validation-bundle@3",
-  "validation_tree_sha256": "2c6763063041ef980b657dfcfbd2c557e7a1a8596db76cfc9dfb00e3a33a08a1"
+  "validation_tree_sha256": "d419236989c73d99eb5e1325bb08767ad806d7dd184c3c01f3a6934c95f5ef67"
 }

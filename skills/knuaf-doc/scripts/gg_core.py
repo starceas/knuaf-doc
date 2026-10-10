@@ -1978,6 +1978,110 @@ def user_finish_task_list(p):
     ]
 
 
+FINANCE_GATE_STATE = "finance.gate.state"
+FINANCE_GATE_PROFIT = "finance.gate.target_profit"
+FINANCE_GATE_ACCEPTANCE = "finance.gate.acceptance"
+
+
+def _finance_gate_fact(p, field_id):
+    """One claim-backed record, using the ordinary fact/source contract."""
+    facts = [f for f in p.get("facts", {}).values()
+             if f.get("field_id") == field_id]
+    if len(facts) != 1:
+        return None
+    f = facts[0]
+    if (f.get("answer_state") != "provided"
+            or f.get("verification") != "claim_supported"
+            or not f.get("source_refs")):
+        return None
+    for ref in f["source_refs"]:
+        source = p.get("sources", {}).get(ref.get("id"), {})
+        claim = source.get("claims", {}).get(ref.get("claim_id"))
+        if (ref.get("revision") != source.get("revision")
+                or not ref.get("locator") or not source.get("claim_review")
+                or not isinstance(claim, dict)
+                or any(f.get(k) != claim.get(k) for k in (
+                    "field_id", "value", "unit", "period", "scope",
+                    "answer_state", "kind"))):
+            return None
+    return f
+
+
+def finance_gate(p):
+    """Read existing calculation results and interview records; never calculate.
+
+    A missing/invalid major retains the existing major guard's ownership.
+    Only modules with a supported finance profile receive this gate.
+    """
+    import gg_major_contract as mc
+
+    try:
+        registry = mc.default_registry()
+        binding = mc.binding_from_project(registry, p)
+        module = registry.resolve(binding.major_id)
+    except mc.MajorContractError:
+        return {"state": "not_computable", "supported": False,
+                "reason": "전공 미확인: 기존 전공 확인 경로를 따름"}
+    if not any(c.status == "supported" for c in module.finance_capabilities):
+        return {"state": "not_computable", "supported": False,
+                "reason": "재무 계산 미지원 전공: 수치 의존 부분만 보류"}
+    state = _finance_gate_fact(p, FINANCE_GATE_STATE)
+    profit = _finance_gate_fact(p, FINANCE_GATE_PROFIT)
+    if state is None or state.get("value") not in {
+            "surplus", "deficit_pending", "deficit_accepted", "not_computable"}:
+        return {"state": "missing", "supported": True,
+                "reason": "본문 전 재무 게이트 기록 필요",
+                "missing": [FINANCE_GATE_STATE]}
+    if state["value"] == "not_computable" and profit is None:
+        if isinstance(state.get("reason"), str) and state["reason"].strip():
+            return {"state": "not_computable", "supported": True,
+                    "reason": state["reason"]}
+    # The copied target-year annual profit must retain its unit and period.
+    # A not_computable label cannot hide an available result.
+    amount = None
+    if (profit is not None and profit.get("value_type") == "decimal"
+            and profit.get("unit") == "원" and profit.get("scope") == "annual"
+            and profit.get("period") is not None
+            and profit.get("period") == state.get("period")):
+        try:
+            amount = Decimal(profit["value"])
+            if not amount.is_finite():
+                amount = None
+        except (InvalidOperation, TypeError, ValueError):
+            pass
+    if amount is None:
+        return {"state": "missing", "supported": True,
+                "reason": "계획 마지막 연도의 연간 손익·단위·기간 근거 필요",
+                "missing": [FINANCE_GATE_PROFIT]}
+    if amount > 0:
+        return {"state": "surplus", "supported": True,
+                "reason": "목표연도 연간 손익 > 0"}
+    acceptance = _finance_gate_fact(p, FINANCE_GATE_ACCEPTANCE)
+    q = p.get("questions", {}).get(FINANCE_GATE_ACCEPTANCE, {})
+    qref = q.get("source_ref")
+    if not isinstance(qref, dict):
+        qref = {}
+    source = p.get("sources", {}).get(qref.get("id"), {})
+    if (acceptance is not None
+            and acceptance.get("kind") == "reported_fact"
+            and acceptance.get("value") == "proceed_with_deficit"
+            and acceptance.get("question_ref") == {
+                "id": FINANCE_GATE_ACCEPTANCE,
+                "decision_revision": q.get("decision_revision")}
+            and q.get("attempts", 0) >= 1
+            and qref.get("locator")
+            and qref.get("revision") == source.get("revision")
+            and any(ref.get("id") == qref.get("id")
+                    and ref.get("revision") == qref.get("revision")
+                    for ref in acceptance["source_refs"])):
+        return {"state": "deficit_accepted", "supported": True,
+                "reason": "목표연도 적자: 되물음과 학생의 알고 진행 원답변 연결"}
+    return {"state": "deficit_pending", "supported": True,
+            "reason": "목표연도 손익 ≤ 0: 학생 수용 전 본문 보류",
+            "missing": [FINANCE_GATE_ACCEPTANCE],
+            "question": question(p, FINANCE_GATE_ACCEPTANCE)}
+
+
 def next_tasks(p):
     result = []
     for t in p["tasks"].values():
@@ -1999,6 +2103,14 @@ def next_tasks(p):
                 "missing": missing,
             }
         )
+    gate_state = finance_gate(p)
+    if gate_state["supported"]:
+        blocked = gate_state["state"] in {"missing", "deficit_pending"}
+        result.append({"id": "finance_gate", "status": "needs_user" if blocked else "ready",
+                       "missing": gate_state.get("missing", []),
+                       "reason": gate_state["reason"], "gate_state": gate_state["state"],
+                       **({"question": gate_state["question"]}
+                          if "question" in gate_state else {})})
     result.extend(user_finish_task_list(p))
     return result
 
@@ -2769,6 +2881,11 @@ def _finance_check_items(p):
             f.get("answer_state") == "provided"
             and f.get("unit") in _finance_body_mod()._MONETARY_UNITS
             and f.get("value") is not None
+            # Copied gate result is interview context, not a second
+            # manuscript financial claim. Ordinary profit facts retain
+            # their existing body crosschecks.
+            and not (f.get("field_id") == FINANCE_GATE_PROFIT
+                     and f.get("finance_role") == "context")
         )
 
     def item(fid):
@@ -2848,6 +2965,28 @@ def checks(root, p):
 
     def add(cid, target, reason, severity="error", status="fail"):
         out.append(result(cid, target, status, reason, p["revision"], severity))
+
+    gate_state = finance_gate(p)
+    if gate_state["supported"]:
+        has_body = False
+        for section in p["sections"].values():
+            try:
+                if draft(local(root, section["path"]).read_text(encoding="utf-8")):
+                    has_body = True
+                    break
+            except (OSError, ValueError):
+                pass  # Existing section-file checks own missing/unreadable files.
+        blocked = gate_state["state"] in {"missing", "deficit_pending"}
+        # Before any body exists, next owns missing-gate guidance. A new
+        # major binding must not change unrelated review gate rows.
+        if has_body or not blocked:
+            out.append(result(
+                "finance_gate", "body", "fail" if blocked else "pass",
+                gate_state["reason"], p["revision"],
+                severity="error" if blocked else "info",
+                evidence=[{"gate_state": gate_state["state"]}],
+                required_for=["submission_candidate"] if blocked else [],
+            ))
 
     # 평문 정책 정본 — 출처 종류·등급·AI 이미지 거부는 본문이 아니라
     # 등록 레코드의 kind/grade를 본다. 정본 파일이 없거나 깨지면
