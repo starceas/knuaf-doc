@@ -121,6 +121,98 @@ class BodyFinanceGateTests(ContractCase):
         self.body()
         self.assert_allowed("surplus")
 
+    def withdraw_gate_fact(self, fact_id, mode):
+        original = copy.deepcopy(self.core.load(self.root)["facts"][fact_id])
+        withdrawn = copy.deepcopy(original)
+        if mode == "not_provided":
+            withdrawn.update(answer_state="not_provided", value=None)
+        else:
+            withdrawn["verification"] = "superseded"
+        self.apply([{"collection": "facts", "value": withdrawn}])
+        return original
+
+    def test_withdrawn_profit_allows_reasoned_not_computable(self):
+        for profit, mode in itertools.product(("100", "-100"),
+                                              ("not_provided", "superseded")):
+            with self.subTest(profit=profit, mode=mode):
+                self.root = self.make_project()
+                bind_major(self.root)
+                self.record("not_computable", profit, reason="수취가격 철회로 재계산 보류")
+                self.withdraw_gate_fact("gate-profit", mode)
+                self.body()
+                self.assert_allowed("not_computable")
+
+    def test_withdrawn_profit_plus_one_active_profit_uses_active_value(self):
+        for mode, profit, accepted in itertools.product(
+                ("not_provided", "superseded"), ("100", "-100"), (False, True)):
+            with self.subTest(mode=mode, profit=profit, accepted=accepted):
+                self.root = self.make_project()
+                bind_major(self.root)
+                self.record("not_computable", profit, reason="철회된 이전 기록")
+                if accepted:
+                    self.answer()
+                active = self.withdraw_gate_fact("gate-profit", mode)
+                active["id"] = "replacement-profit"
+                self.apply([{"collection": "facts", "value": active}])
+                self.body()
+                if profit == "100":
+                    self.assert_allowed("surplus")
+                elif accepted:
+                    self.assert_allowed("deficit_accepted")
+                else:
+                    self.assert_blocked("deficit_pending")
+
+    def test_withdrawn_profit_does_not_exempt_two_active_duplicates(self):
+        for mode in ("not_provided", "superseded"):
+            with self.subTest(mode=mode):
+                self.root = self.make_project()
+                bind_major(self.root)
+                self.record("not_computable", "-100", reason="활성 중복은 계산 부재가 아님")
+                original = self.withdraw_gate_fact("gate-profit", mode)
+                active = [copy.deepcopy(original) for _ in range(2)]
+                for index, fact in enumerate(active):
+                    fact["id"] = "active-profit-%d" % index
+                self.apply([{"collection": "facts", "value": f} for f in active])
+                self.body()
+                self.assert_blocked("missing")
+
+    def test_withdrawn_profit_still_requires_not_computable_reason(self):
+        for mode in ("not_provided", "superseded"):
+            with self.subTest(mode=mode):
+                self.root = self.make_project()
+                bind_major(self.root)
+                self.record("not_computable", "100")
+                self.withdraw_gate_fact("gate-profit", mode)
+                self.body()
+                self.assert_blocked("missing")
+
+    def test_withdrawn_state_and_acceptance_need_one_active_replacement(self):
+        for mode, fact_id in itertools.product(("not_provided", "superseded"),
+                                               ("gate-state", "gate-answer")):
+            with self.subTest(mode=mode, fact_id=fact_id):
+                self.root = self.make_project()
+                bind_major(self.root)
+                self.record("deficit_accepted", "-100")
+                self.answer()
+                self.body()
+                active = self.withdraw_gate_fact(fact_id, mode)
+                self.assert_blocked("missing" if fact_id == "gate-state" else "deficit_pending")
+                active["id"] = "replacement-" + fact_id
+                self.apply([{"collection": "facts", "value": active}])
+                self.assert_allowed("deficit_accepted")
+
+    def test_unknown_and_withheld_profit_are_not_withdrawn(self):
+        for state in ("unknown", "withheld"):
+            with self.subTest(state=state):
+                self.root = self.make_project()
+                bind_major(self.root)
+                self.record("not_computable", "100", reason="입력 부족")
+                fact = copy.deepcopy(self.core.load(self.root)["facts"]["gate-profit"])
+                fact.update(answer_state=state, value=None, reason="학생 원답변")
+                self.apply([{"collection": "facts", "value": fact}])
+                self.body()
+                self.assert_blocked("missing")
+
     def replace_profit_metadata(self, changes):
         """Register revised metadata through apply with current matching claims."""
         p = self.core.load(self.root)

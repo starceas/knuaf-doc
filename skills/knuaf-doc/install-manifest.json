@@ -37,7 +37,7 @@
   "references/exemplar-quality.md": "c6bfedd6264d6c82979a14029fd8281c19212a6c71334b6efea10f04c9370bed",
   "references/fact-semantics.json": "84034b46107a29c75bd630ab1f8afce88f2e6aa2a0fad4cfd5d7056b66af5569",
   "references/figure-photo-policy.md": "f7cde62741259840cbb786bcb21d19ef5aee9c40ca919b5821052b09f075ad27",
-  "references/finance-semantics.md": "4c640c3d052c8c5e267bac43795e4eecaee2a4f2b8c7b706fd26b7a8be356a6a",
+  "references/finance-semantics.md": "265c3fac759fbe0d29e11d7b041659e29bb730d8ef3b061701a3ccb9abcd22e6",
   "references/fruit-trees/README.md": "381ba8111e3c5679d316b6c058a3bf6cd0dea9194a8ec6d9d355d991e35bd07c",
   "references/fruit-trees/premise-probes.md": "442950d11c3ceaf96059c488e89f5fa6da3e9d2bb380b53182f0ef3d2e1e5068",
   "references/guideline-tracking.md": "f40585f5ad88cd1c6d7ad267ec7b5e7bd9815ce21f91a19ca3fb31c848a56e4b",
@@ -68,7 +68,7 @@
   "references/parser-setup.md": "5a62ce2e87ccae9e491ebce1470d43a228bf51a60348b92cc5e60fb495aa49ed",
   "references/plain-thesis-policy.json": "0b7bfa365194a5486d9ece4c6d0d33685f820ad8d4175cc88a77bbf5cc3e6767",
   "references/price-research-routes.md": "081165f514424b0bf4bf5a5c8f6fa5a2259ea7e68358a654e45c597f6a113172",
-  "references/rda-benchmark.md": "fabcabfbe019f0bb9e52531035e0f505bb3c759465b806fc0e3ce54e9637dd53",
+  "references/rda-benchmark.md": "61ed9370d90999cc9ad714ff3165b959ec298450446c8208d0b12ea4b96bc346",
   "references/research-routing.md": "8ff3be4866621a25c3ce962d7c91447ca2c0712ac43a2effa122649667594b4e",
   "references/research-sources.md": "e1cf52a71e2910b20ae4c343276e96c0ead2e9df17262f611ab9c6809c1bbfa3",
   "references/reuse-registry-schema.md": "5942baa34cd705df43d4fe1325d903cf29021392cd4bfc69bcd7c5b393f010e0",
@@ -89,7 +89,7 @@
   "scripts/build_status.py": "d97a4338604ce75b5ed483ac3ff76784040b5b201b4561457c860bc8f3aa21b9",
   "scripts/gg.py": "efd253e90deb5b29df0dab0168a1e8ca31eb12cbe3f5925911603a5918329720",
   "scripts/gg_commands.py": "238d2a477c64a472d5782e06a0c19b90c872db76a92b3fddce13c3835cecab2c",
-  "scripts/gg_core.py": "70bea391799936edd9af45c8de795a75db60522a5d6f80f4860b62b476c80855",
+  "scripts/gg_core.py": "3295257d16d1916f4b22ccbb6c4e934c64ceffbc14a6c8d9f3c139c8fba7a411",
   "scripts/gg_deps.py": "2ce4ce41ec151cc12e44801216a5bec5fea952641e40a1e7731674dbc2b5861c",
   "scripts/gg_document.py": "36954550da7915e626d4f40725793e013316b39cc399e9ce8933e4a33ce65ac9",
   "scripts/gg_docx_table_layout.py": "dce52533be20ea6b46e8e6f41f3083af3e0ab20ca43dcb3b19cebf488f581921",
@@ -163,7 +163,7 @@
   "tests/test_gg_source_intake_receipt.py": "b7a5b13a9a860ff272ee7d7f7a154c0b9ba1b7d683e6fcee05b82c056a27dc82",
   "tests/test_gg_source_intake_scan.py": "3b3a01e0292cb7df89b677259c3c41f8ec5407525cc46b5ab5aae49aee24e249",
   "tests/test_gg_source_register.py": "4c7947c4e8786fffffbb7e23579faa54932a2ca4099e7a21f9000e36a10c0457",
-  "version.json": "c45162a40154b669e7415b34ccdb37978cc55d4eef406a45b191ca2ce4b4aa15"
+  "version.json": "f3f774db9fa392fd9ca58b7ec5cefab0b6053ea3f4771e3d68e1f82330a9cabd"
  },
  "schema": "knuaf-doc/install-manifest@1"
 }

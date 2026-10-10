@@ -15,6 +15,7 @@
 | `finance.gate.acceptance` | text `proceed_with_deficit`, unit `""`, scope `project`, `kind: reported_fact` | 숫자를 보고 적자를 알고 진행한다는 학생 원답변; 모름은 unknown/value null, 거부는 withheld/value null+reason, 조정·거절은 provided의 다른 값 |
 
 손익 기록의 `kind`, `finance_role`, `meaning_id`, `measure`가 위 형태 중 하나라도 맞지 않으면 유효한 손익 기록이 없는 것으로 보고 `missing`으로 판정한다.
+철회한 사실(`answer_state: not_provided` 또는 `verification: superseded`)은 게이트에서 기록 없음으로 본다.
 
 각 field는 한 사실 ID를 새 개정으로 갱신한다(같은 field의 여러 ID는 모호하므로
 통과하지 않는다). 제공된 판정·손익·수용은 `answer_state: provided`,

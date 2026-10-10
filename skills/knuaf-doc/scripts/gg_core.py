@@ -1986,7 +1986,9 @@ FINANCE_GATE_ACCEPTANCE = "finance.gate.acceptance"
 def _finance_gate_fact(p, field_id):
     """One claim-backed record, using the ordinary fact/source contract."""
     facts = [f for f in p.get("facts", {}).values()
-             if f.get("field_id") == field_id]
+             if f.get("field_id") == field_id
+             and f.get("answer_state") != "not_provided"
+             and f.get("verification") != "superseded"]
     if len(facts) != 1:
         return None
     f = facts[0]
@@ -2032,8 +2034,10 @@ def finance_gate(p):
         return {"state": "missing", "supported": True,
                 "reason": "본문 전 재무 게이트 기록 필요",
                 "missing": [FINANCE_GATE_STATE]}
-    # Invalid/duplicate records are not an absence of calculation results.
+    # Invalid/duplicate active records are not an absence of calculation results.
     profit_absent = not any(f.get("field_id") == FINANCE_GATE_PROFIT
+                            and f.get("answer_state") != "not_provided"
+                            and f.get("verification") != "superseded"
                             for f in p.get("facts", {}).values())
     if state["value"] == "not_computable" and profit_absent:
         if isinstance(state.get("reason"), str) and state["reason"].strip():
