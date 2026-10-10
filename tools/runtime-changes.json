@@ -47,11 +47,15 @@
     "skills/knuaf-doc/references/industrial-insects/README.md",
     "skills/knuaf-doc/references/industrial-insects/precedents.json",
     "skills/knuaf-doc/references/industrial-insects/premise-probes.md",
+    "skills/knuaf-doc/references/kim-finance-bible.md",
+    "skills/knuaf-doc/references/lessons-learned.md",
     "skills/knuaf-doc/references/locking.md",
     "skills/knuaf-doc/references/majors.md",
     "skills/knuaf-doc/references/official-price-series.json",
+    "skills/knuaf-doc/references/open-questions.md",
     "skills/knuaf-doc/references/outputs.md",
     "skills/knuaf-doc/references/plain-thesis-policy.json",
+    "skills/knuaf-doc/references/rda-benchmark.md",
     "skills/knuaf-doc/references/reuse-registry-schema.md",
     "skills/knuaf-doc/references/source-identities.json",
     "skills/knuaf-doc/references/specialty-crops/finance-flow.md",
@@ -159,12 +163,12 @@
       "source": "new"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "ba08127d780d7ce4985c23e036d96ccd06bb79fc889365b51a417134e6f4c855",
+      "after_sha256": "618ba6e8ca4d1554deaba00613f06a5e0c98b864f3deea40af189171bd2f8122",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "P28",
       "owner": "P28",
-      "reason": "P27: 설치본 배포 파일 목록(상대경로→sha256) — 자동 업데이트 보존 판정 기준 | P27 r3 재생성(legacy-release-hashes.json 포함 149항목) | P28: 재생성 — 신규 references 4건 포함 | P28 integration: gg_update.py manifest --write로 최신 배포 바이트 목록 재생성 | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존 | F2: V2 재확인 수용에 따라 같은 파서 계층의 첫 장/장 경계와 원문 span을 적용하고 명시적 외부 유형 충돌 거부·수동 신뢰 계약을 문서화; 설치 manifest 재생성. 기초 정본·단계·부모 계보·원본 source pin 보존 | F3: 전역 Markdown 유무 판정을 제거하고 prefix-only 공통 제목 규칙·요약 단일 종료·번호 공백 문법으로 통일; 설치 manifest 재생성. 원본/부모 계보·stage·source pin 보존 | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes. | PR-4 ORDER-I: install manifest regenerated for ORDER-A file bytes; I remeasured final bytes.",
+      "reason": "P27: 설치본 배포 파일 목록(상대경로→sha256) — 자동 업데이트 보존 판정 기준 | P27 r3 재생성(legacy-release-hashes.json 포함 149항목) | P28: 재생성 — 신규 references 4건 포함 | P28 integration: gg_update.py manifest --write로 최신 배포 바이트 목록 재생성 | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존 | F2: V2 재확인 수용에 따라 같은 파서 계층의 첫 장/장 경계와 원문 span을 적용하고 명시적 외부 유형 충돌 거부·수동 신뢰 계약을 문서화; 설치 manifest 재생성. 기초 정본·단계·부모 계보·원본 source pin 보존 | F3: 전역 Markdown 유무 판정을 제거하고 prefix-only 공통 제목 규칙·요약 단일 종료·번호 공백 문법으로 통일; 설치 manifest 재생성. 원본/부모 계보·stage·source pin 보존 | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes. | PR-4 ORDER-I: install manifest regenerated for ORDER-A file bytes; I remeasured final bytes. | PR-4 ORDER-I: install manifest regenerated with restored references; I remeasured final bytes.",
       "source": "new"
     },
     "skills/knuaf-doc/references/benchmark-packs/aliases/crop-aliases.specialty_crops.json": {
@@ -581,6 +585,15 @@
       "reason": "P11 공용 인터뷰 규칙: 전공별 핵심 전제 목록(C1), 동적 영향 순위(C2), '모르겠다' 도움(C3), 충돌 정리(C5), 미준비 전공 안내, 특용작물 probe 문서 | P25: Q2-2 가족사항 문항에 본인·가족 노동 실지급 확인(한 번만 묻고 미답·미확정 시 option A 기본값; 경영주 지급·인출은 경영주 급여·가계비 규칙으로 중복 반영 없이 처리, 경영주가 아닌 가족 지급만 고용 노동비 행 11–13)과 설명·재무 입력 분산 예시 추가 — FIX1: 경영주 본인 인출과 가계비의 이중 계상 방지 | P27: K1-09 배포 밖 필독 문서 제거, D5 배정 표현 정합, SKILL.md에서 옮긴 작문 상세 | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존 | F2: V2 재확인 수용에 따라 같은 파서 계층의 첫 장/장 경계와 원문 span을 적용하고 명시적 외부 유형 충돌 거부·수동 신뢰 계약을 문서화; 설치 manifest 재생성. 기초 정본·단계·부모 계보·원본 source pin 보존 | PR-4 ORDER-A: 되물음을 본문 전 필수 게이트로 연결; I remeasured final bytes.",
       "source": "new"
     },
+    "skills/knuaf-doc/references/kim-finance-bible.md": {
+      "after_sha256": "aabe39735401823a107db4eb72c7bb674ed0226f5fe1053e5ded23c70c75d160",
+      "before_sha256": null,
+      "first_changed": "P28",
+      "last_changed": "P28",
+      "owner": "P28",
+      "reason": "PR-4 ORDER-B: PR-1 참고 문서 복구 — 본문 지표 비노출·학교 양식 정본 기준으로 재작성",
+      "source": "new"
+    },
     "skills/knuaf-doc/references/korean-polishing.md": {
       "after_sha256": "49a73dcb60dd9b00a59a8b037e308fc140fb6717cec600b194ef63e347e79e57",
       "before_sha256": "ede62c0b331e44dbc6f93e2c74e2f2d89b7d6098391c5630d22683b2cb1d3d35",
@@ -588,6 +601,15 @@
       "last_changed": "P28",
       "owner": "P28",
       "reason": "P28: 윤문 대상에 표 제목·캡션·각주·표 아래 설명문 명시 포함, 윤문 기록 필수화 | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존",
+      "source": "new"
+    },
+    "skills/knuaf-doc/references/lessons-learned.md": {
+      "after_sha256": "70f613bdcabc89db616acb38ffae368e05c8c6050c366edde20fd078546aea5b",
+      "before_sha256": null,
+      "first_changed": "P28",
+      "last_changed": "P28",
+      "owner": "P28",
+      "reason": "PR-4 ORDER-B: PR-1 참고 문서 복구 — 현재 재무 게이트·도구 경로 정책에 맞춰 재작성",
       "source": "new"
     },
     "skills/knuaf-doc/references/locking.md": {
@@ -644,6 +666,15 @@
       "reason": "PR-2: approved D8/D9 product/skill-test file; W-A/B/C and FIX-A/B/C/C2 evidence. Added by single derived-file writer I.",
       "source": "new"
     },
+    "skills/knuaf-doc/references/open-questions.md": {
+      "after_sha256": "355045caf9952f781f3ce831a3c30fb0a177f9b3cd9174d4844f9926b393562e",
+      "before_sha256": null,
+      "first_changed": "P28",
+      "last_changed": "P28",
+      "owner": "P28",
+      "reason": "PR-4 ORDER-B: PR-1 참고 문서 복구 — 코드 실측 정정(LEVEL_PT·plan_year_calc)과 추적 규약",
+      "source": "new"
+    },
     "skills/knuaf-doc/references/outputs.md": {
       "after_sha256": "4b808faccec949a018e6ba1f766dd79c860a26f9556b1c33895b53e308427808",
       "before_sha256": null,
@@ -687,6 +718,15 @@
       "last_changed": "P28",
       "owner": "P28",
       "reason": "P28: 봉산허브·허브아이 업체 게시가 참고 불가(출처 불가) 처리, 공식 통계 경로로 좁힘 | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes.",
+      "source": "new"
+    },
+    "skills/knuaf-doc/references/rda-benchmark.md": {
+      "after_sha256": "dd0ce6dd3ace0388fe4043522f52675af3ae8506620c64ebe2623a067e3791da",
+      "before_sha256": null,
+      "first_changed": "P28",
+      "last_changed": "P28",
+      "owner": "P28",
+      "reason": "PR-4 ORDER-B: PR-1 참고 문서 복구 — 관측별 verification·5상태/propose-apply 계약 실측 반영",
       "source": "new"
     },
     "skills/knuaf-doc/references/research-routing.md": {
@@ -1621,7 +1661,7 @@
     }
   },
   "cumulative": true,
-  "note": "선언된 runtime 변경만 — 이 목록 밖의 baseline 변화는 미승인. README.md는 readme_policy로 별도 관리. baseline 파일의 삭제는 허용하지 않으며, 신규 파일은 approved_new_files에 사전 명시된 경로만 before_sha256=null로 선언 가능. P6 공용 작성 계약은 새 런타임 파일을 별도 승인 목록으로 선언한다. P7 공용 전공 출력 가드(정책 B)는 기존 런타임 파일 변경과 기준선 파일 1개(gg_excel_formula_patch.py) 첫 변경을 선언한다. P8 과수 첫 묶음은 과수 모듈 선언·등록과 공용 보조 모듈 2개(참조 XLSX 결정·연구 전달물 검증), 과수 작성계획, 참조집합 데이터·안내 문서를 새 파일로 선언한다. P9 원예환경시스템 첫 묶음은 원예 모듈 선언·등록·표지, 원예 작성계획, 원예 profile·안내 문서를 새 파일로 선언하고 재사용 등록부에 원예 참조 항목을 추가한다. P10: 공용 Kang XLSX 재사용과 템플릿 규칙, D3 전공별 기본 통합문서 우선순위를 P9 원예 모듈과 함께 선언한다. P11 공용 인터뷰 규칙은 기준선 문서 4건(SKILL.md·interview-guide·workflow-order·mid-work-questions) 변경과 특용작물 premise-probes.md 신규 1건을 선언한다. P12 산업곤충 첫 묶음은 곤충 문서 계획·근거 검토 스크립트 4개, 선례 지도·안내·핵심 전제 문서 3개를 새 파일로, 재사용 등록부 곤충 항목 9개와 SKILL·gg.py 등 기존 파일 갱신을 선언한다. P13: D4 식별 전용 카탈로그·검증기·시험 3건을 신규 선언하고 SKILL·source-intake·재사용 시험의 변경을 P12 산업곤충 부모 위에 추가한다. P14 과수 둘째 묶음은 과수 모듈 0.2.0(수확 배치·물량 이동·연도별 수량 필드), 과수 작성계획 확장, 생산·재고 검산과 핵심 전제 질문 문서를 새 파일로 선언한다. | P15 D5: rda.econ.2025 pp133-135 corrected cell mapping, rejected legacy slice, lookup boundary, pinned trust migration; rebased onto accepted P14 (main f9c278c3). P16 과수 식별값 소묶음은 새 런타임 파일 없이 출처 식별 목록에 과수 참조 자료 41행을 추가한다. | P17: rda-lookup 검증 상태 계약 — 반환 레코드 verification 묶음·unverified 판정·verification_summary·공용 is_verified_observation 술어·D5 rejected 매칭 제외와 정합; accepted P16(main 0acd0cac) 위에 재기준화. P18 산업곤충 2묶음은 곤충 모듈 0.2.0(제품 라인·계획 연도 질문 틀)과 곤충 계획·근거·안내·핵심 전제 문서 갱신을 선언한다. 새 런타임 파일은 없다. P19 D6: X01/X02 formula-audit tool, block map, pinned results and human audit summary; rebaselined onto accepted P18 (main eb3ce06). | P20 원예 재무 묶음은 H01 18시트 전용 변환기·지도·매개변수·검증등록부와 수식 평가기·등록부 생성기를 새 파일로 선언하고, 재무 프로필 게이트(require_finance_profile)·hort_env_systems 0.2.0·공용 XLSX 보조 경로 갱신과 builtin-sources/gg_major_contract 양쪽 변경 병합을 수용된 P19(main db2a036) 부모 위에 재선언한다. P21 D7-C1: X01/X02/SEO copy-correction spec (34/30/30 rows), materialize/verify/check tooling in gg_workbook_audit, dispositions and C1.md, synthetic unit + specialty e2e tests, SKILL guidance; rebaselined onto accepted P20 (main fd94e6d). P22 학생 오류·불편 신고는 신고 스크립트와 AI 행동 규칙 문서를 새 파일로, SKILL.md의 안내 한 줄·신고 절 갱신을 선언한다; accepted P21(main bb1570d) 위에 재기준화. P23 C1b: XR-04/05/06/11 policy-item copy corrections and FIX1 verifier/disposition repairs rebased onto accepted P22 (main 7be4c96); synthetic C1b test declared in validation provenance. P24 원예 근거 부족 16묶음을 처분하고 초안 표시를 제거했으며, 공개 지도 4,103건·입력 계약 1,379건·검증 등록부 5,466행을 수용된 P23(main 99aedf5) 부모 위에 재선언한다. | P25: 인터뷰 후속 — 자가·가족 노동 실지급 여부를 Q2-2 가족사항 문항에서 한 번만 묻고 지급 시 고용 노동비·미답 시 option A(무급) 기본값으로 처리; accepted P24(main 3240421) 위에 재기준화. | P26 U1: 릴리스 확인·복사 설치 교체/복구·버전 원천·첫 진입 및 진행 목록 안내를 수용 P25(main 949c9a9) 위에 재선언한다. | P27: 진단 결정 반영(D3 비공개 신고, D5 A안 위임, D6 업데이트 실패 안내, D7 Windows 작성·검토본 범위), 결정 불필요 정합 수정, kordoc 4.17.1, 완전 자동 업데이트(auto), 버전 0.1.2를 수용 P26(main 335b3d7) 위에 선언한다. | P28: 이유림 기준 전환 + 졸업논문 눈높이 정책/게이트(특용작물 전용) — 문서 갱신, 신규 references 4건(thesis-level·figure-photo-policy·plain-thesis-policy·specialty-crops/finance-flow), gg_document/gg_core/gg_commands 정책 게이트, builtin-sources 이유림 식별 등록, reuse 테스트 확장, install-manifest 재생성. accepted P27(main d08e98e) 위에 선언. | PR-2 D8/D9: added official price registry, split-rate module, template D8 spec, chapter-IV module/map/test; existing baseline and parent lineage preserved. | PR-3 X1-01~04: normalize policy terms, scope school structure, require official hort price contracts, and add school table source adapter; P28 baseline/parent lineage preserved per I integration precedent. | I8: PV1 FIX3-1/2/3 and W-D9 refresh existing after hashes only; declarations, allowlist, baseline, before/source/owner/reason and stage lineage preserved; no new files. | PR-4 ORDER-A: 본문 전 재무 게이트 구현·지침 6건의 after 지문만 재측정 — baseline·before·허용목록·stage 계보·owner/first_changed 보존.",
+  "note": "선언된 runtime 변경만 — 이 목록 밖의 baseline 변화는 미승인. README.md는 readme_policy로 별도 관리. baseline 파일의 삭제는 허용하지 않으며, 신규 파일은 approved_new_files에 사전 명시된 경로만 before_sha256=null로 선언 가능. P6 공용 작성 계약은 새 런타임 파일을 별도 승인 목록으로 선언한다. P7 공용 전공 출력 가드(정책 B)는 기존 런타임 파일 변경과 기준선 파일 1개(gg_excel_formula_patch.py) 첫 변경을 선언한다. P8 과수 첫 묶음은 과수 모듈 선언·등록과 공용 보조 모듈 2개(참조 XLSX 결정·연구 전달물 검증), 과수 작성계획, 참조집합 데이터·안내 문서를 새 파일로 선언한다. P9 원예환경시스템 첫 묶음은 원예 모듈 선언·등록·표지, 원예 작성계획, 원예 profile·안내 문서를 새 파일로 선언하고 재사용 등록부에 원예 참조 항목을 추가한다. P10: 공용 Kang XLSX 재사용과 템플릿 규칙, D3 전공별 기본 통합문서 우선순위를 P9 원예 모듈과 함께 선언한다. P11 공용 인터뷰 규칙은 기준선 문서 4건(SKILL.md·interview-guide·workflow-order·mid-work-questions) 변경과 특용작물 premise-probes.md 신규 1건을 선언한다. P12 산업곤충 첫 묶음은 곤충 문서 계획·근거 검토 스크립트 4개, 선례 지도·안내·핵심 전제 문서 3개를 새 파일로, 재사용 등록부 곤충 항목 9개와 SKILL·gg.py 등 기존 파일 갱신을 선언한다. P13: D4 식별 전용 카탈로그·검증기·시험 3건을 신규 선언하고 SKILL·source-intake·재사용 시험의 변경을 P12 산업곤충 부모 위에 추가한다. P14 과수 둘째 묶음은 과수 모듈 0.2.0(수확 배치·물량 이동·연도별 수량 필드), 과수 작성계획 확장, 생산·재고 검산과 핵심 전제 질문 문서를 새 파일로 선언한다. | P15 D5: rda.econ.2025 pp133-135 corrected cell mapping, rejected legacy slice, lookup boundary, pinned trust migration; rebased onto accepted P14 (main f9c278c3). P16 과수 식별값 소묶음은 새 런타임 파일 없이 출처 식별 목록에 과수 참조 자료 41행을 추가한다. | P17: rda-lookup 검증 상태 계약 — 반환 레코드 verification 묶음·unverified 판정·verification_summary·공용 is_verified_observation 술어·D5 rejected 매칭 제외와 정합; accepted P16(main 0acd0cac) 위에 재기준화. P18 산업곤충 2묶음은 곤충 모듈 0.2.0(제품 라인·계획 연도 질문 틀)과 곤충 계획·근거·안내·핵심 전제 문서 갱신을 선언한다. 새 런타임 파일은 없다. P19 D6: X01/X02 formula-audit tool, block map, pinned results and human audit summary; rebaselined onto accepted P18 (main eb3ce06). | P20 원예 재무 묶음은 H01 18시트 전용 변환기·지도·매개변수·검증등록부와 수식 평가기·등록부 생성기를 새 파일로 선언하고, 재무 프로필 게이트(require_finance_profile)·hort_env_systems 0.2.0·공용 XLSX 보조 경로 갱신과 builtin-sources/gg_major_contract 양쪽 변경 병합을 수용된 P19(main db2a036) 부모 위에 재선언한다. P21 D7-C1: X01/X02/SEO copy-correction spec (34/30/30 rows), materialize/verify/check tooling in gg_workbook_audit, dispositions and C1.md, synthetic unit + specialty e2e tests, SKILL guidance; rebaselined onto accepted P20 (main fd94e6d). P22 학생 오류·불편 신고는 신고 스크립트와 AI 행동 규칙 문서를 새 파일로, SKILL.md의 안내 한 줄·신고 절 갱신을 선언한다; accepted P21(main bb1570d) 위에 재기준화. P23 C1b: XR-04/05/06/11 policy-item copy corrections and FIX1 verifier/disposition repairs rebased onto accepted P22 (main 7be4c96); synthetic C1b test declared in validation provenance. P24 원예 근거 부족 16묶음을 처분하고 초안 표시를 제거했으며, 공개 지도 4,103건·입력 계약 1,379건·검증 등록부 5,466행을 수용된 P23(main 99aedf5) 부모 위에 재선언한다. | P25: 인터뷰 후속 — 자가·가족 노동 실지급 여부를 Q2-2 가족사항 문항에서 한 번만 묻고 지급 시 고용 노동비·미답 시 option A(무급) 기본값으로 처리; accepted P24(main 3240421) 위에 재기준화. | P26 U1: 릴리스 확인·복사 설치 교체/복구·버전 원천·첫 진입 및 진행 목록 안내를 수용 P25(main 949c9a9) 위에 재선언한다. | P27: 진단 결정 반영(D3 비공개 신고, D5 A안 위임, D6 업데이트 실패 안내, D7 Windows 작성·검토본 범위), 결정 불필요 정합 수정, kordoc 4.17.1, 완전 자동 업데이트(auto), 버전 0.1.2를 수용 P26(main 335b3d7) 위에 선언한다. | P28: 이유림 기준 전환 + 졸업논문 눈높이 정책/게이트(특용작물 전용) — 문서 갱신, 신규 references 4건(thesis-level·figure-photo-policy·plain-thesis-policy·specialty-crops/finance-flow), gg_document/gg_core/gg_commands 정책 게이트, builtin-sources 이유림 식별 등록, reuse 테스트 확장, install-manifest 재생성. accepted P27(main d08e98e) 위에 선언. | PR-2 D8/D9: added official price registry, split-rate module, template D8 spec, chapter-IV module/map/test; existing baseline and parent lineage preserved. | PR-3 X1-01~04: normalize policy terms, scope school structure, require official hort price contracts, and add school table source adapter; P28 baseline/parent lineage preserved per I integration precedent. | I8: PV1 FIX3-1/2/3 and W-D9 refresh existing after hashes only; declarations, allowlist, baseline, before/source/owner/reason and stage lineage preserved; no new files. | PR-4 ORDER-A: 본문 전 재무 게이트 구현·지침 6건의 after 지문만 재측정 — baseline·before·허용목록·stage 계보·owner/first_changed 보존. | PR-4 ORDER-B: PR-1 참고 문서 4건(kim-finance-bible·lessons-learned·open-questions·rda-benchmark)을 허용목록에 새로 선언 — baseline·부모 계보 보존.",
   "parent_candidate": {
     "file_count": 233,
     "stage": "P27",

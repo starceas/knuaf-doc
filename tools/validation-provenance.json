@@ -260,6 +260,10 @@
       "note": "P8 knuaf-research-handoff/v1 strict parsing: duplicate keys, NaN, closed keys, IDs, self-hash, hold scope, decision refs, reference gaps, xr_refs.",
       "origin": "new"
     },
+    "tests/test_restored_references.py": {
+      "note": "PR-4 ORDER-B: 복구 참고 문서 4건의 references 존재·install-manifest 등재·SKILL.md 링크 재발 방지 검사(음성 대조로 검출 확인).",
+      "origin": "new"
+    },
     "tests/test_runner_contract.py": {
       "note": "repair-n1/N1 (new file): meta-tests asserting the N1 contract — dependency preflight semantics, verdict priority, JSON fields. P2-R2: extended subprocess controls (scoped verdict, external gate, tamper) and pure non-recursing accounting/classification tests for subtests, fixtures, expectedFailure/XPASS and gate mutations. P2-R3: bundle-tamper assertion folded into the pre-existing nested test_unexpected_failure_beats_incomplete — standalone method removed, no new nested exemption. | P27 K2-03: pywin32 선언 제거로 not_applicable 빈 목록",
       "origin": "new"
