@@ -108,6 +108,10 @@
       "note": "P9 C6 layout-guard tests: detect_layout anchors, legacy/OK-edited map refusal, reviewed_custom variant match/mismatch on synthetic sources (no real bytes).",
       "origin": "new"
     },
+    "tests/test_finance_gate.py": {
+      "note": "PR-4 ORDER-A: 본문 전 재무 게이트 정상·반례 28건 — 수용 질문·원답변 연결, 모름/거부/되물음 누락, 라벨 위장, 전공·기간/단위, 실제 CLI; 알려진 stale 한계 반례 포함. | F1 V1-01: preserve original 28 tests; add duplicate negative-profit apply regression, all 84 nonempty duplicate combinations and 63 invalid-binding cases (31 test methods total).",
+      "origin": "new"
+    },
     "tests/test_finance_profile_gate.py": {
       "note": "P20: finance profile migration pre-staging negatives — writers and native boundary never reached on missing/unsupported profiles, synthetic only.",
       "origin": "new"
@@ -254,6 +258,10 @@
     },
     "tests/test_research_handoff.py": {
       "note": "P8 knuaf-research-handoff/v1 strict parsing: duplicate keys, NaN, closed keys, IDs, self-hash, hold scope, decision refs, reference gaps, xr_refs.",
+      "origin": "new"
+    },
+    "tests/test_restored_references.py": {
+      "note": "PR-4 ORDER-B: 복구 참고 문서 4건의 references 존재·install-manifest 등재·SKILL.md 링크 재발 방지 검사(음성 대조로 검출 확인).",
       "origin": "new"
     },
     "tests/test_runner_contract.py": {
