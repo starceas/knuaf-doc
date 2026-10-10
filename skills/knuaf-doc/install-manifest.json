@@ -163,7 +163,7 @@
   "tests/test_gg_source_intake_receipt.py": "b7a5b13a9a860ff272ee7d7f7a154c0b9ba1b7d683e6fcee05b82c056a27dc82",
   "tests/test_gg_source_intake_scan.py": "3b3a01e0292cb7df89b677259c3c41f8ec5407525cc46b5ab5aae49aee24e249",
   "tests/test_gg_source_register.py": "4c7947c4e8786fffffbb7e23579faa54932a2ca4099e7a21f9000e36a10c0457",
-  "version.json": "e81097ccab282e2bddc2b18c4292d3304cb6e180daddecb22565c45b3f0fe754"
+  "version.json": "c45162a40154b669e7415b34ccdb37978cc55d4eef406a45b191ca2ce4b4aa15"
  },
  "schema": "knuaf-doc/install-manifest@1"
 }

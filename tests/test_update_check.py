@@ -451,7 +451,7 @@ class UpdateTests(_UpdateCase):
         plugin = json.loads(PLUGIN_JSON_PATH.read_text(encoding="utf-8"))
         self.assertEqual({"schema", "version", "repo"}, set(version))
         self.assertEqual(plugin["version"], version["version"])
-        self.assertEqual("0.1.2", version["version"])
+        self.assertEqual("0.1.3", version["version"])
         for raw in ('{"schema":"knuaf-doc/version@1","version":"0.1.1",'
                     '"repo":"starceas/knuaf-doc","repo":"starceas/knuaf-doc"}',
                     '{"schema":"bad","version":"0.1.1","repo":"starceas/knuaf-doc"}',
