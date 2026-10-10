@@ -14,6 +14,8 @@
 | `finance.gate.target_profit` | decimal 문자열, unit `원`, scope `annual`, period 계획 마지막 연도(state와 동일) | 기존 계산 결과의 목표연도 연간 손익; `kind: observation`, `finance_role: context`, `meaning_id: sales.net_profit`, `measure: {kind: monetary_total, currency: KRW, unit: 원}` |
 | `finance.gate.acceptance` | text `proceed_with_deficit`, unit `""`, scope `project`, `kind: reported_fact` | 숫자를 보고 적자를 알고 진행한다는 학생 원답변; 모름은 unknown/value null, 거부는 withheld/value null+reason, 조정·거절은 provided의 다른 값 |
 
+손익 기록의 `kind`, `finance_role`, `meaning_id`, `measure`가 위 형태 중 하나라도 맞지 않으면 유효한 손익 기록이 없는 것으로 보고 `missing`으로 판정한다.
+
 각 field는 한 사실 ID를 새 개정으로 갱신한다(같은 field의 여러 ID는 모호하므로
 통과하지 않는다). 제공된 판정·손익·수용은 `answer_state: provided`,
 `verification: claim_supported`, 원자료의 현재 revision·locator·claim_id를 가진

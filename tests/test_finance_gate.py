@@ -121,6 +121,76 @@ class BodyFinanceGateTests(ContractCase):
         self.body()
         self.assert_allowed("surplus")
 
+    def replace_profit_metadata(self, changes):
+        """Register revised metadata through apply with current matching claims."""
+        p = self.core.load(self.root)
+        facts = [copy.deepcopy(p["facts"][key])
+                 for key in ("gate-state", "gate-profit")]
+        for key, value in changes.items():
+            if value is None:
+                facts[1].pop(key, None)
+            else:
+                facts[1][key] = value
+        claims = {}
+        for fact in facts:
+            ref = fact["source_refs"][0]
+            ref["revision"] = p["sources"]["calculation"]["revision"] + 1
+            claims.update(claim_of(fact, ref["claim_id"]))
+        source = source_op("calculation.json", claims=claims)
+        source["value"]["id"] = "calculation"
+        self.apply([source, *[{"collection": "facts", "value": f} for f in facts]])
+        self.assertIsNotNone(self.core._finance_gate_fact(
+            self.core.load(self.root), "finance.gate.target_profit"))
+
+    def test_positive_profit_requires_documented_record_shape(self):
+        measures = {"kind": "monetary_total", "currency": "KRW", "unit": "원"}
+        variants = [
+            {"kind": "assumption"}, {"kind": "target"},
+            {"finance_role": "plan"}, {"finance_role": None},
+            {"meaning_id": "sales.revenue"}, {"meaning_id": None},
+            {"measure": None},
+            *[{"measure": {**measures, key: value}} for key, value in (
+                ("kind", "quantity"), ("currency", "USD"), ("unit", "천원"))],
+            *[{"measure": {k: v for k, v in measures.items() if k != key}}
+              for key in measures],
+        ]
+        for label, changes in itertools.product(("surplus", "not_computable"), variants):
+            with self.subTest(label=label, changes=changes):
+                self.root = self.make_project()
+                bind_major(self.root)
+                self.record(label, "100", reason="기록 형식 불일치는 계산 부재가 아님")
+                self.replace_profit_metadata(changes)
+                self.body()
+                self.assert_blocked("missing")
+
+    def test_documented_record_shape_preserves_valid_paths(self):
+        for label, profit in (("surplus", "100"), ("deficit_accepted", "-100"),
+                              ("not_computable", None)):
+            with self.subTest(label=label):
+                self.root = self.make_project()
+                bind_major(self.root)
+                self.record(label, profit, reason="가격 입력 미제공")
+                if label == "deficit_accepted":
+                    self.answer()
+                self.body()
+                self.assert_allowed(label)
+
+    def test_documented_measure_allows_existing_optional_metadata(self):
+        for extras in ({"denominator": None}, {"basis": None},
+                       {"denominator": None, "basis": None}):
+            with self.subTest(extras=extras):
+                self.root = self.make_project()
+                bind_major(self.root)
+                self.record("surplus", "100")
+                measure = {"unit": "원", "currency": "KRW", "kind": "monetary_total",
+                           **extras}
+                semantics = runtime("gg_fact_semantics")
+                self.assertEqual([], semantics.validate_metadata(
+                    {"measure": measure}, registry=None, mode="new"))
+                self.replace_profit_metadata({"measure": measure})
+                self.body()
+                self.assert_allowed("surplus")
+
     def test_accepted_deficit_body_allowed_and_answer_reused(self):
         self.record("deficit_accepted", "-100")
         self.answer()

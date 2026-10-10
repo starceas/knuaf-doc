@@ -2042,7 +2042,14 @@ def finance_gate(p):
     # The copied target-year annual profit must retain its unit and period.
     # A not_computable label cannot hide an available result.
     amount = None
-    if (profit is not None and profit.get("value_type") == "decimal"
+    if (profit is not None
+            and profit.get("kind") == "observation"
+            and profit.get("finance_role") == "context"
+            and profit.get("meaning_id") == "sales.net_profit"
+            and isinstance(profit.get("measure"), dict)
+            and all(profit["measure"].get(key) == value for key, value in
+                    {"kind": "monetary_total", "currency": "KRW", "unit": "원"}.items())
+            and profit.get("value_type") == "decimal"
             and profit.get("unit") == "원" and profit.get("scope") == "annual"
             and profit.get("period") is not None
             and profit.get("period") == state.get("period")):
