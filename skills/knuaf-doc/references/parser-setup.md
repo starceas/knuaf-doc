@@ -32,3 +32,9 @@
 확인한 공식 출처: [Kordoc 저장소](https://github.com/chrisryugj/kordoc), [CLI와 MCP 사용법](https://github.com/chrisryugj/kordoc/blob/main/README.md). 스킬 릴리스마다 검증한 정확한 버전만 설치하며 업데이트는 별도 검증 후 바꾼다. 기존 설치는 필요한 기능을 확인해 재사용한다.
 
 산출물 생성(XLSX·DOCX·PDF 검증)에 필요한 Python 패키지 의존성은 이 문서의 파서 준비와 별개이며 [package-install.md](package-install.md)의 선언·프로젝트 전용 환경 계약을 따른다.
+
+## 기존 원고를 장별로 나누기
+
+파서가 만든 Markdown·텍스트 또는 DOCX 원고를 공식 목차에 따라 절 초안으로 나누려면 `python scripts/gg_draft_split.py <작업폴더> --from <원고.md|txt|docx> --toc <목차.json>`을 사용한다. HWP/HWPX는 먼저 위 문서 읽기 준비 절차로 Markdown/텍스트로 변환하고 표·본문 순서를 확인한다. 목차 JSON은 절 ID·제목·정규식을 포함하며 `--toc`으로 전달한다. 도구는 목차나 장 구성을 하드코딩하지 않는다.
+
+기본 실행은 쓰기 없는 분할 계획만 출력한다. 제목 중복·순서 오류·표 안의 제목·첫 제목 전 본문은 `held`로 남기며 `proposed`만 적용할 수 있다. 계획을 검토한 뒤 `--apply --plan <확정-plan.json> --from <같은-원고> --change-out <작업폴더-안-변경.json>`으로 초안 파일과 `gg.py apply` 입력을 만들고, 이어서 `gg.py apply <작업폴더> --change <변경.json> --expected-revision <현재 revision>`으로 정본에 등록한다. 원본은 `sources/imported/`에 보존하고 기존 절 파일은 덮어쓰지 않는다. 분할은 사실 확인이나 검토 완료가 아니다. 표는 한 덩어리로 유지하며 병합 셀·그림·각주·복잡한 레이아웃은 원본과 별도 대조한다.

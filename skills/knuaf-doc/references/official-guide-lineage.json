@@ -1,0 +1,55 @@
+{
+  "schema": "d1-local-derivation-evidence/1",
+  "scope": "S0 byte identity, source PDF hash, 15 sampled requirements, current-policy edits; no full-inventory or independent approval",
+  "verifier": "d1-local-source-check",
+  "source_pdf_sha256": "f60b58b7dcde86eab9f273dd50114ac296d009bd60abb940aaa866a54e866de2",
+  "source_hashes_sha256": "409e420189bfc22ead7dce442e69b8a8932081ae1563569defa1e5e8442388d2",
+  "sample_check_sha256": "96199b2cb85468d8f85e2d16ffa1cf51736d6b50dcb80c16899d7a7dd71e6db3",
+  "artifacts": [
+    {
+      "relative_path": "references/official-toc.md",
+      "sha256": "87fa7a502aff42d735d44579d9e68fe1491ce26ac242ac7a25c661b719ca552f",
+      "bytes": 6090
+    },
+    {
+      "relative_path": "references/rules/CH1_intro.md",
+      "sha256": "5a90072799b984707ec995fbfa1750655160613c1ac202c33f24e1ca8012658b",
+      "bytes": 2288
+    },
+    {
+      "relative_path": "references/rules/CH2_external.md",
+      "sha256": "4ef9642b1b7dfe161667f4fe9e94b8ae7232db64ffa18c7cc2ad28b7a39e31ba",
+      "bytes": 5482
+    },
+    {
+      "relative_path": "references/rules/CH3_plan.md",
+      "sha256": "a5e954b793ba6f9337f83d518073a7054a4356a355cfbc77b2a6b97d71887818",
+      "bytes": 6017
+    },
+    {
+      "relative_path": "references/rules/CH4_finance.md",
+      "sha256": "8eddb17b93e73adfa100a98b12814cd8bec2e97e49c21577b049316c8c83e9f1",
+      "bytes": 10330
+    },
+    {
+      "relative_path": "references/rules/CH5_CH6_closing.md",
+      "sha256": "a2ab7fd7022ccbabf89ba05650a1163c3603b969741192448d8de4111abe1f27",
+      "bytes": 5521
+    },
+    {
+      "relative_path": "references/rules/F_format.md",
+      "sha256": "42cfe3d5268686f21b51f28c3e593e7e6a54d84981de3d7309b2a9810baaf154",
+      "bytes": 10470
+    },
+    {
+      "relative_path": "references/rules/PRE_frontmatter.md",
+      "sha256": "b1bbb41214e9d0117301cdd62c9ee99ddfe7348c283b43663a255c2ddfc839d1",
+      "bytes": 4056
+    },
+    {
+      "relative_path": "references/guideline-inventory.json",
+      "sha256": "5067f07c348184d41f1f936d40327a2f92bb9d314974ca9aba6727f25733e4c5",
+      "bytes": 68625
+    }
+  ]
+}

@@ -289,17 +289,24 @@ class TestI01Negatives(unittest.TestCase):
         self.reg = registry()
 
     def test_i01_1_missing_runtime_artifact(self):
-        # shipped truth: official-toc.md is absent at runtime (R3)
-        v = gg_reuse.resolve_reuse(
-            SOURCE_SHA["official-writing-guide-pdf"],
-            {"kind": "writing_rule", "keys": [GUIDE_KEY]},
-            context=ctx(self.reg))
-        self.assertNotEqual(v["status"], "reuse_ready")
-        self.assertIn("runtime_missing", v["reasons"])
-        self.assertTrue(v["needed_excerpt"])
-        ex = v["needed_excerpt"][0]
-        self.assertEqual(ex["artifact"], "references/official-toc.md")
-        self.assertEqual(ex["range_hint"]["kind"], "whole_file")
+        # Missing-file negative uses a deployment copy; the checked-in
+        # runtime now intentionally contains the official guide assets.
+        with tempfile.TemporaryDirectory() as td:
+            dst = Path(td) / "deploy"
+            shutil.copytree(KNUAF_DOC, dst)
+            (dst / "references" / "official-toc.md").unlink()
+            reg = gg_reuse.load_registry(
+                dst / "references" / "builtin-sources.json")
+            v = gg_reuse.resolve_reuse(
+                SOURCE_SHA["official-writing-guide-pdf"],
+                {"kind": "writing_rule", "keys": [GUIDE_KEY]},
+                context=ctx(reg))
+            self.assertNotEqual(v["status"], "reuse_ready")
+            self.assertIn("runtime_missing", v["reasons"])
+            self.assertTrue(v["needed_excerpt"])
+            ex = v["needed_excerpt"][0]
+            self.assertEqual(ex["artifact"], "references/official-toc.md")
+            self.assertEqual(ex["range_hint"]["kind"], "whole_file")
 
     def test_i01_2_tampered_artifact_bytes(self):
         # relocate the shipped registry onto a temp deployment with the
@@ -845,13 +852,13 @@ class TestI01Matrix(unittest.TestCase):
             c = ctx(reg)
 
             v = gg_reuse.resolve_reuse(
-                SOURCE_SHA[sid], use, context=c)
+                entry["source_sha256"][0], use, context=c)
             cells["I01.verdict"] = v["status"]
             cells["I01.reasons"] = v["reasons"]
 
             # I01.3 — wrong role for the requested use
             vv = gg_reuse.resolve_reuse(
-                SOURCE_SHA[sid],
+                entry["source_sha256"][0],
                 {"kind": wrong_kind[entry["role"]],
                  "keys": [delimited_probe]}, context=c)
             cells["I01.3"] = ("role_mismatch" in vv["reasons"])
@@ -864,7 +871,8 @@ class TestI01Matrix(unittest.TestCase):
                 dict(probe, physical_jsonl_line_1based=True)
                 if kind == "statistical_observation"
                 else {"kind": "delimited", "value": "BAD:UPPER"}]}
-            vm = gg_reuse.resolve_reuse(SOURCE_SHA[sid], bad, context=c)
+            vm = gg_reuse.resolve_reuse(
+                entry["source_sha256"][0], bad, context=c)
             cells["I01.6"] = (vm["status"] == "invalid_request")
 
             # I01.1 — missing artifact: real where the artifact is
@@ -883,7 +891,7 @@ class TestI01Matrix(unittest.TestCase):
                 else:
                     with tempfile.TemporaryDirectory() as td:
                         ve = gg_reuse.resolve_reuse(
-                            SOURCE_SHA[sid], use,
+                            entry["source_sha256"][0], use,
                             context=ctx(reg, runtime_root=Path(td)))
                         cells["I01.1"] = (
                             "runtime_missing" in ve["reasons"]

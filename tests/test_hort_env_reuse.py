@@ -42,6 +42,8 @@ import gg_reuse  # noqa: E402
 # unaffected entries; D5 re-pins only the corrected rda.econ.2025 entry.
 # P27 K4-06 re-pins the two official-writing-guide entries whose
 # runtime_present flag now tells the truth (the runtime file is not shipped).
+# Restore 0.1.4 re-pins only these two approved school entries after the
+# extracts, artifact hashes and lineage were restored; other pins stay fixed.
 
 BASELINE_ENTRY_DIGEST = {
     "rda.income.national.2024":
@@ -51,9 +53,9 @@ BASELINE_ENTRY_DIGEST = {
     "mafra.specialty.production.2024":
         "0b636815fa11a515929f4679a802d4d6756686096e37991fbf623fd5ff31c741",
     "official-writing-guide-pdf":
-        "86e93cccc6108d93bf753b731c8614a87fc41015e137a4878509e1e534173b22",
+        "43fe15800bc3999c4ac39a1d016161bfd3d41a6ecadd84b40fe5e753a15f0d5b",
     "official-writing-guide-hwp":
-        "50e53b4d175beca8d756c4acfeaa55fc7d253ef09b7cde637b2fd8738cb0a546",
+        "03e67b3bfcf5b02d53910405fde3f0200fe74e027414de22739b4f1bbb80c51b",
     "kim-wonseop-exemplar-pdf":
         "ccd556454636d77860e355a5be4ee63f8b79ba79ff3333767db210fac07a4568",
     "kim-wonseop-exemplar-hwp":

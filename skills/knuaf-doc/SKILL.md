@@ -40,12 +40,15 @@ description: 한국농수산대학교 창업논문·영농계획서와 동반 �
 
 학생에게 JSON·명령어·모델 등급을 배우도록 요구하지 않는다. 현재 구현은 로컬 검토용이다. Ⅰ~Ⅵ 작성·내용검토·수치대조·DOCX·XLSX를 마쳐도 한글 마무리와 교수 승인은 사용자 일이다. 전체 수용·독립 내용검토·다른 환경 시험 전에 학교 최종 제출 완료라 말하지 않고 자동 최종 승인은 지원하지 않는다.
 
+2020 특용작물 학교 작성요령의 목차·장별 규칙·공통 지침 목록은 이 스킬에 내장돼 있다. 먼저 `references/official-toc.md`, 필요한 `references/rules/*.md`, `references/guideline-inventory.json`을 읽는다. 학생에게 이 학교 작성요령을 다시 첨부하라고 요구하지 않는다. 교수의 새 양식·추가 지시가 있을 때만 추가 자료로 등록한다. 다른 전공에는 이 특용작물 목차를 자동 적용하지 않고 해당 전공 계약을 따른다. 내장 자료의 범위·추출 한계는 준수 판정과 별도로 알린다.
+
 ## 시작·재개
 
 첫 자료 질문 전 [현재 작성물 선택](references/intake-selection.md)을 읽는다. 현재 원고·엑셀의 파일명/위치 또는 첨부를 먼저 받고(Q1a) 참고자료 폴더를 별도로 받는다(Q1b). 지정한 원고의 현재성·작목/주제·작성 목적을 짧게 확인한 뒤(Q1c) 그 기준으로 진행한다. 폴더 안 초안·엑셀·project.json이 있어도 현재 작성물을 임의 선택·이어쓰기하지 않고 이미 확인된 선택·없음 답변은 재사용한다.
 
 - “시작하기”: 사용자가 지정한 폴더를 우선한다. 새 빈 작업폴더에 `scripts/gg.py init <폴더>`를 실행한다. 원본 학교 지침·학생 답변은 읽기 전용으로 보존한다.
 - “참고자료 폴더 등록”: [source-intake](references/source-intake.md)의 `source-scan`→`source-resolve`→`source-register`→`source-view` 흐름으로만 진행한다. 스캔은 증거만 만들고 명시적 선택만 등록된다. `source-identities.json` 등재 출처는 해시·서지정보만 기록하고 발췌·본문 스냅샷을 남기지 않는다.
+- “내장 학교 지침 등록”: 원 PDF가 이미 등록돼 있으면 기존 원문 바인딩을 유지한다. 원 PDF가 없는 설치본에서는 PDF 원천 해시의 `official-writing-guide:toc-rules` 재사용 판정과 내장 발췌의 실제 해시·계보를 확인하고, `official-toc.md` 사본을 새 `school_rule` 출처(`official-writing-guide-extract`)로 source-intake 흐름에 등록한다. `source-register`로 보존된 사본 경로를 확인한 뒤 `gg.py apply`로 `project.json.sources` 레코드를 만들고, 반환된 개정으로 profile을 연결한다. 출처 해시는 실제 발췌 사본 바이트이고 원 PDF 해시로 위장하지 않는다. 모든 내장 규칙·목록의 실제 해시, 원천 PDF ID·해시·물리 쪽수·계보를 출처 작업 기록에 연결한다. 공용 inventory는 보존하고 프로젝트용 사본의 `source.id`·`source.sha256`만 이 발췌 출처에 다시 묶는다. 원 `source`·공용 inventory 해시·계보 증거 해시는 `origin`에 보존하고 `requirements`·`conflicts`는 그대로 둔다. `page`는 원 PDF 물리 쪽수다. `rules.guideline_profile`에 사본의 실제 경로·해시, 발췌 출처의 현재 개정, 전체 요구 ID를 연결한다([guideline-tracking](references/guideline-tracking.md), [source-contract](references/source-contract.md)). `reuse_ready`는 해당 키의 로컬 재사용 가능성이고 원 PDF의 시각 검토·전량 대조·교수 승인은 미확인이다. 학생 적용·검토는 실제 자료로 새로 등록한다.
 - “전공 선택·계약”: 확인된 `common.major_id` 사실과 해당 모듈의 `module_version`을 원답변 출처와 함께 `gg.py apply`로 정본에 기록한다(사실: `answer_state: provided`, `verification: claim_supported`, `value_type: text`, `unit: ""`, `scope: project`, 원답변 claim의 `source_refs`). `gg.py major-plan <폴더>`는 전공별 질문·문서 계획·근거·재무 능력을 읽기 전용으로 보여 준다. 지원 범위·전용 명령·선례·재바인딩은 [majors](references/majors.md).
 - “결과물 출력 전 전공 확인”(공용 규칙 B): 논문 본문·재무 계산·XLSX·DOCX·PDF와 그 영수증을 만드는 모든 경로는 출력 요청의 **명시 전공 ID**(spec의 `major_id`·`school_profile.major_id` 또는 명령의 `--major <전공ID>`)와 정본의 **유효한 `common.major_id` 바인딩**이 둘 다 있고 같아야 실행된다. 하나라도 없거나 다르거나, 표지·학과명이 다른 전공을 가리키거나, 선택 전공이 그 출력을 지원하지 않으면 생성 전 `{"status": "held", "reason": …}`로 멈춘다. 작목명·표지·옛 출력·템플릿으로 전공을 추정하지 않는다. 멈추면 전공을 직접 확인받아 바인딩을 등록하고(원 spec은 그대로, 새 개정에 `major_id`) 다시 실행한다. 바인딩은 새 revision이므로 교수 승인을 다시 받고 내용이 안 바뀐 검토는 유지된다. 정본 밖 독립 도구는 `--project`·`--major`를 함께 주며([outputs](references/outputs.md)) 자료 읽기·`inspect`·`major-plan`·`check`·`status`·작성계획은 막지 않는다.
 - “이어서 하기”: `status <폴더>`·`next <폴더>`를 실행하고 현재 정본과 대상 절을 읽는다. 확인된 작성 폴더에 `project.json`이 없으면 원본을 두고 `import <기존폴더> --out <새폴더>`를 쓰되, 기존 폴더를 편집 중인 앱·프로세스가 없다고 확인한 뒤 `--offline-confirmed`를 붙인다(구형 폴더는 이 확인 없이 거부. 경과 시간·추정 금지). import는 인터뷰·가정표·증거·절 원본을 보존하고 수치·미결·중복·충돌을 `migration/inputs.json`에 기록한다. `migration-review`는 보존된 원답변부터 대조해 사실을 등록하고 재인터뷰·기존 검증 자동 승격은 하지 않는다.
@@ -113,6 +116,13 @@ description: 한국농수산대학교 창업논문·영농계획서와 동반 �
 
 ## 필요한 문서
 
+- 내장 학교 목차·공용 지침(2020 특용작물): [official-toc](references/official-toc.md), [guideline-inventory](references/guideline-inventory.json). 원문 사실·양식·내부 해석을 구분하고 교수의 새 지시는 별도 등록한다.
+- 절 작성 전 장별 규칙: Ⅰ [CH1](references/rules/CH1_intro.md), Ⅱ [CH2](references/rules/CH2_external.md), Ⅲ [CH3](references/rules/CH3_plan.md), Ⅳ [CH4](references/rules/CH4_finance.md), Ⅴ·Ⅵ [CH5·CH6](references/rules/CH5_CH6_closing.md). 출력·검토 전 [F_format](references/rules/F_format.md)·[PRE_frontmatter](references/rules/PRE_frontmatter.md), 작문 전 [W_writing_spec](references/rules/W_writing_spec.md)을 읽는다.
+- 과거 보조 관찰: [EX_excel_buildspec](references/rules/EX_excel_buildspec.md), [EX_excel_structure](references/rules/EX_excel_structure.md), [EX_exemplar_structure](references/rules/EX_exemplar_structure.md). `EX_*`는 학교 의무·현행 선배 수준 기준·현행 엑셀 명세가 아니다. 현행 정책은 `thesis-level.md`, `figure-photo-policy.md`, `specialty-crops/finance-flow.md`, `price-research-routes.md`를 따른다. 목록 OG-037·OG-102~111과 CH4의 투자분석은 2020 원문 사실이며 제출 본문·부록·주석의 금칙 지표 게이트를 면제하지 않는다.
+- DOI 실재 조회: [research-sources](references/research-sources.md#ⅲ-6-doi-실재-조회), [gg_doi.py](scripts/gg_doi.py). 조회는 `source_located`까지이고 주장 뒷받침은 사람 확인 후 등록한다.
+- 원고 장별 분할: [parser-setup](references/parser-setup.md#기존-원고를-장별로-나누기), [gg_draft_split.py](scripts/gg_draft_split.py). 입력 목차와 분할 계획을 확인하고 모호한 항목은 `held`로 보존한다.
+- 통계 우선 조회(N5): [research-sources](references/research-sources.md#2-공통-출처-전공-무관), [interview-guide](references/interview-guide.md). 지원 전공·작목·지역의 내장 `rda-candidates`를 먼저 확인하고 승인 밖·미확정은 공식 외부 조사로 이어간다. 통계 후보로 학생의 실제 조건을 확정하지 않는다.
+- 복구·대체·제외 색인: 공개 저장소의 [docs/missing-assets-index.md](https://github.com/starceas/knuaf-doc/blob/main/docs/missing-assets-index.md).
 - 진행·자료 부족: [workflow-order](references/workflow-order.md)
 - 반복 오류와 본문 전 재무 게이트 교훈: [lessons-learned](references/lessons-learned.md)
 - 재무 공식·판정 해석과 김성학 교수 자료 요약: [kim-finance-bible](references/kim-finance-bible.md)
@@ -146,4 +156,4 @@ description: 한국농수산대학교 창업논문·영농계획서와 동반 �
 
 DOCX 생성·XLSX 템플릿 복제·채우기·수식 보정·인쇄 조정·macOS Office 재계산·PDF 변환의 명령과 한계는 [outputs](references/outputs.md)를 따른다. Windows는 작성·검토본(DOCX·XLSX 생성·검토)까지 지원하고 Office 자동 재계산·PDF 변환은 macOS만 지원한다. 생성물은 사람이 확인하기 전까지 제출 완료로 표시하지 않는다.
 
-원본·개인 자료는 외부로 보내거나 패키지에 포함하지 않는다. 공개 배포·교수 전달·파서 준비 외 추가 설치는 별도 승인이며 문서 읽기용 Kordoc 전용 캐시 설치는 첫 사용 준비에 포함한다.
+원본·개인 자료는 외부로 보내거나 패키지에 포함하지 않는다. 사용자 결정으로 공개된 내장 학교 규칙 12파일·공용 지침 목록·계보 메타데이터는 예외다([source-contract](references/source-contract.md)). 공개 배포·교수 전달·파서 준비 외 추가 설치는 별도 승인이며 문서 읽기용 Kordoc 전용 캐시 설치는 첫 사용 준비에 포함한다.

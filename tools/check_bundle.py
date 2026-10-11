@@ -44,6 +44,8 @@ import json
 from pathlib import Path
 import sys
 
+import check_asset_disposition
+
 BASELINE_SPEC = "tools/baseline-files.json"
 MANIFEST = "tools/validation-bundle.json"
 PROVENANCE = "tools/validation-provenance.json"
@@ -468,6 +470,12 @@ def check(root):
         if manifest_doc.get("validation_tree_sha256") not in (None, recomputed_tree):
             errors.append({"code": "manifest_tree_digest", "path": MANIFEST,
                            "detail": "embedded validation_tree_sha256 does not recompute"})
+
+    for error in check_asset_disposition.check(root):
+        errors.append({"code": "asset_disposition:" + error["code"],
+                       "path": error["path"],
+                       "detail": (f"asset_disposition:{error['code']}:"
+                                  f"{error['path']}")})
 
     baseline_doc_files = baseline_doc.get("files", {})
     report = {
