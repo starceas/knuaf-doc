@@ -163,8 +163,8 @@ cd skills/knuaf-doc
 
 # 원자료 감사 조회 (본문 승인 경로 아님)
 python3 scripts/gg.py rda-lookup --crop 참깨 --region 경남 --major 특용작물전공
-python3 scripts/gg.py rda-lookup --crop 인삼 --kind production_stat
-python3 scripts/gg.py rda-lookup --crop 참깨 --kind official_market_price --audit-key '<json>'
+python3 scripts/gg.py rda-lookup --crop 인삼 --region 전국 --rda-kind production_stat
+python3 scripts/gg.py rda-lookup --crop 참깨 --region 전국 --rda-kind official_market_price --audit-key '<json>'
 
 # 작성 경로 — 정본 바인딩 기준 후보 목록 + missing
 python3 scripts/gg.py rda-candidates <프로젝트폴더>

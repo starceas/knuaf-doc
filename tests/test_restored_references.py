@@ -50,6 +50,14 @@ class RestoredReferenceTests(unittest.TestCase):
         ]
         self.assertEqual([], missing)
 
+    def test_rda_lookup_examples_use_region_and_rda_kind(self):
+        examples = [line for line in (REFERENCES_DIR / "rda-benchmark.md").read_text(
+            encoding="utf-8").splitlines() if line.startswith("python3 scripts/gg.py rda-lookup")]
+        self.assertTrue(examples)
+        self.assertTrue(all("--region " in line and "--kind " not in line
+                            and ("--rda-kind " in line or "--major " in line)
+                            for line in examples))
+
 
 if __name__ == "__main__":
     unittest.main()
