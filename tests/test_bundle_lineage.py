@@ -87,6 +87,16 @@ def _synth_tree(tmp, *, change_a=True, tamper=None, new_file=None):
         "readme_policy": {},
         "files": {},
     }), encoding="utf-8")
+    # Minimal valid deployment inputs; these trees test bundle lineage.
+    (root / "docs").mkdir()
+    (root / "docs" / "asset-disposition.json").write_text(json.dumps({
+        "assets": [], "required_builtin_source_ids": []}), encoding="utf-8")
+    skill = root / "skills" / "knuaf-doc"
+    (skill / "references").mkdir(parents=True)
+    (skill / "install-manifest.json").write_text(
+        json.dumps({"files": {}}), encoding="utf-8")
+    (skill / "references" / "builtin-sources.json").write_text(
+        json.dumps({"entries": []}), encoding="utf-8")
     return root
 
 
@@ -121,8 +131,9 @@ class RealTreeTests(ContractCase):
             self.assertEqual(rc["declared_count"], rc["verified"])
             # P28 adds the plain-thesis policy gate (all majors by default),
             # 이유림 exemplar registration and 문서 정본 changes on the P27 tree.
-            self.assertEqual(172, rc["verified"])
-            self.assertEqual(125, rc["new_count"])
+            # Restore v0.1.4 adds 16 runtime assets and five skill test files.
+            self.assertEqual(194, rc["verified"])
+            self.assertEqual(146, rc["new_count"])
         else:
             self.assertNotEqual("ok", report["status"])
             self.assertIn("declared_missing", _codes(report))
@@ -142,9 +153,9 @@ class RealTreeTests(ContractCase):
         self.assertEqual("29abec0ec95369de7ae9e22207349d574f1f46b7",
                          link["baseline_main"])
         # P28's parent is the accepted P27 tree (main d08e98e, 233 files).
-        self.assertEqual(172, link["change_count"])
-        self.assertEqual(125, link["new_count"])
-        self.assertEqual(129, link["approved_new_files"])
+        self.assertEqual(194, link["change_count"])
+        self.assertEqual(146, link["new_count"])
+        self.assertEqual(155, link["approved_new_files"])
         self.assertEqual("P27", link["parent_candidate"]["stage"])
         self.assertEqual(233, link["parent_candidate"]["file_count"])
         self.assertEqual(

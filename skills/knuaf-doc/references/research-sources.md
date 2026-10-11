@@ -37,6 +37,8 @@
 | 토양 조건 | 흙토람(토양환경정보) | soil.rda.go.kr | 불필요 |
 | 시설·기자재 단가 | 농자재 가격정보 · 조달청 나라장터 | g2b.go.kr | 불필요 |
 
+**소득·경영비를 조사하기 전 내장 RDA 자료를 먼저 조회한다.** 전공이 [majors.md](majors.md)에 명시된 조회 지원 범위에 있고 작목·지역을 확인했으면 `python scripts/gg.py rda-candidates <폴더> --crop <품목> --region <지역> --year <연도> --unit <단위> --use-scope <용도>`를 실행한다. 결과가 `status: approved`이고 `approved_candidates`에 해당 값이 있을 때만 승인 후보로 사용할 수 있다. `candidate`, `unverified`, `ambiguous`, `series`, `unapproved`, `not_found`는 확정 사실이나 사용 승인으로 취급하지 않는다. 후보만으로 학생의 실제 비용·수량·운영 조건을 확정하지 말고, 빠진 개인 조건은 인터뷰에서 확인한다. 후보가 승인되지 않거나 지원 전공 밖이면 그 상태를 기록하고 공식 외부 자료 조사로 이어간다.
+
 ### 물가상승률 및 노무비 조사 원칙 (R1 권고 및 지적 6 반영)
 
 1. **공식 통계 선택 기준**:
@@ -79,6 +81,14 @@ DBpia(dbpia.co.kr)는 기관 인증이 필요하다. **KCI·ScienceON을 먼저 
 **학위논문은 DOI가 없는 경우가 많다.** 학술적 사실(생육조건·성분)의 근거로 쓸 때는
 학위수여기관·연도·페이지를 특정하고, 가능하면 같은 내용의 학술지 논문을 함께 확보한다.
 Ⅲ-6 관련논문은 DOI 확인이 가능한 학술지 논문을 우선한다.
+
+## Ⅲ-6 DOI 실재 조회
+
+출처는 먼저 [source-intake.md](source-intake.md) 절차로 등록하고 정본 출처 ID를 확인한다. 등록된 DOI는 `python scripts/gg_doi.py <작업폴더> [--source-id <ID>]`로 Crossref에서 읽기 전용 조회할 수 있다. 임시 후보는 `--doi <DOI>`를 사용한다. 결과를 파일로 보관할 때 `--out sources/web/doi-check.json`을 지정하면 새 파일만 만들며 기존 파일은 덮어쓰지 않는다.
+
+`resolved`는 Crossref가 해당 DOI 레코드를 반환했다는 뜻이며 현행 사실 상태의 `source_located`까지만 뒷받침한다. 제목·연도·학술지명은 대조 단서다. 원문을 읽고 주장을 뒷받침하는지 사람이 확인하기 전에는 `claim_supported`로 올리지 않는다. `not_found`는 Crossref에서 레코드를 찾지 못했다는 뜻이며 다른 등록기관의 부재를 증명하지 않는다. `network_error`와 `unparseable`도 확인 또는 주장 지지 상태가 아니다.
+
+조회기는 `project.json`을 수정하지 않는다. 정본 반영은 결과와 원문을 확인한 뒤 `gg.py apply`의 잠금·개정 경로로만 한다. 요청은 항목별 순차 처리이며 기본 간격 1초·시간 제한 15초, 자동 재시도와 캐시는 없다.
 
 ## 3. 전공·작목별 분기
 

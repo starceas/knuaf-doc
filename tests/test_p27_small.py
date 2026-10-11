@@ -208,9 +208,10 @@ class K203RuntimeDeps(ContractCase):
 
 class K406BuiltinSources(ContractCase):
     """K4-06: the two official-toc.md registry entries declare
-    runtime_present=false (the file is not shipped)."""
+    runtime_present=true (the restored extracts are shipped).
+    Presence alone does not establish HWP coverage or verification."""
 
-    def test_official_toc_entries_not_runtime_present(self):
+    def test_official_toc_entries_runtime_present(self):
         doc = json.loads((REFERENCES / "builtin-sources.json").read_text(
             encoding="utf-8"))
         targets = {"official-writing-guide-pdf",
@@ -219,7 +220,7 @@ class K406BuiltinSources(ContractCase):
                  if e.get("source_id") in targets}
         self.assertEqual(set(found), targets)
         for sid, entry in found.items():
-            self.assertIs(entry["runtime_present"], False, sid)
+            self.assertIs(entry["runtime_present"], True, sid)
 
     def test_registry_still_validates(self):
         registry = runtime("gg_reuse").load_registry(
@@ -228,7 +229,7 @@ class K406BuiltinSources(ContractCase):
                    for e in registry.document["entries"]}
         for sid in ("official-writing-guide-pdf",
                     "official-writing-guide-hwp"):
-            self.assertIs(entries[sid]["runtime_present"], False, sid)
+            self.assertIs(entries[sid]["runtime_present"], True, sid)
 
 
 class K202Utf8Entry(ContractCase):

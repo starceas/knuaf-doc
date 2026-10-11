@@ -1,0 +1,2052 @@
+{
+  "schema": "gg-guideline-inventory/v1",
+  "source": {
+    "id": "official-writing-guide-pdf",
+    "sha256": "f60b58b7dcde86eab9f273dd50114ac296d009bd60abb940aaa866a54e866de2",
+    "physical_page_count": 26
+  },
+  "requirements": [
+    {
+      "id": "OG-001",
+      "locator": "I-1 한글 기준",
+      "requirement": "원고는 국문으로 작성하고 한자·영자는 괄호 안에 병기할 수 있다.",
+      "applies_to": [
+        "전 본문"
+      ],
+      "kind": "content",
+      "certainty": "explicit",
+      "page": 1,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "본문 언어와 괄호 병기를 확인한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-002",
+      "locator": "I-1 편집용지",
+      "requirement": "A4 210×297 mm를 사용한다.",
+      "applies_to": [
+        "문서"
+      ],
+      "kind": "machine",
+      "certainty": "explicit",
+      "page": 1,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "문서 용지 크기가 A4인지 확인한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-003",
+      "locator": "I-1 글자 모양",
+      "requirement": "본문 글꼴은 신명조로 한다.",
+      "applies_to": [
+        "본문·표·그림 설명"
+      ],
+      "kind": "user_finish",
+      "certainty": "explicit",
+      "page": 1,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "최종 한글 환경에서 신명조 적용 여부를 확인한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-004",
+      "locator": "I-1 줄간격",
+      "requirement": "줄간격은 160%로 한다.",
+      "applies_to": [
+        "본문"
+      ],
+      "kind": "machine",
+      "certainty": "explicit",
+      "page": 1,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "문단 줄간격을 측정한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-005",
+      "locator": "I-1 본문 크기",
+      "requirement": "본문 글자 크기는 12 pt로 한다.",
+      "applies_to": [
+        "본문"
+      ],
+      "kind": "machine",
+      "certainty": "explicit",
+      "page": 1,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "본문 기본 스타일이 12 pt인지 확인한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-006",
+      "locator": "I-1 여백/위쪽",
+      "requirement": "위쪽 여백은 20.0 mm로 설정한다.",
+      "applies_to": [
+        "문서"
+      ],
+      "kind": "user_finish",
+      "certainty": "explicit",
+      "page": 1,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "한글 편집용지 여백값을 측정한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-007",
+      "locator": "I-1 여백/아래쪽",
+      "requirement": "아래쪽 여백은 15.0 mm로 설정한다.",
+      "applies_to": [
+        "문서"
+      ],
+      "kind": "user_finish",
+      "certainty": "explicit",
+      "page": 1,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "한글 편집용지 여백값을 측정한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-008",
+      "locator": "I-1 여백/머리말",
+      "requirement": "머리말 여백은 15.0 mm로 설정한다.",
+      "applies_to": [
+        "문서"
+      ],
+      "kind": "user_finish",
+      "certainty": "explicit",
+      "page": 1,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "한글 편집용지 여백값을 측정한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-009",
+      "locator": "I-1 여백/꼬리말",
+      "requirement": "꼬리말 여백은 15.0 mm로 설정한다.",
+      "applies_to": [
+        "문서"
+      ],
+      "kind": "user_finish",
+      "certainty": "explicit",
+      "page": 1,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "한글 편집용지 여백값을 측정한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-010",
+      "locator": "I-1 여백/왼쪽",
+      "requirement": "왼쪽 여백은 30.0 mm로 설정한다.",
+      "applies_to": [
+        "문서"
+      ],
+      "kind": "user_finish",
+      "certainty": "explicit",
+      "page": 1,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "한글 편집용지 여백값을 측정한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-011",
+      "locator": "I-1 여백/오른쪽",
+      "requirement": "오른쪽 여백은 30.0 mm로 설정한다.",
+      "applies_to": [
+        "문서"
+      ],
+      "kind": "user_finish",
+      "certainty": "explicit",
+      "page": 1,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "한글 편집용지 여백값을 측정한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-012",
+      "locator": "I-1 여백/제본",
+      "requirement": "제본 여백은 0.0 mm로 설정한다.",
+      "applies_to": [
+        "문서"
+      ],
+      "kind": "user_finish",
+      "certainty": "explicit",
+      "page": 1,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "한글 편집용지 여백값을 측정한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-013",
+      "locator": "I-1 들여쓰기",
+      "requirement": "문단 시작은 2칸 띄운다.",
+      "applies_to": [
+        "본문"
+      ],
+      "kind": "machine",
+      "certainty": "explicit",
+      "page": 1,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "본문 문단 첫 줄 들여쓰기를 확인한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-014",
+      "locator": "I-1 정렬",
+      "requirement": "정렬방식은 혼합정렬로 한다.",
+      "applies_to": [
+        "본문"
+      ],
+      "kind": "machine",
+      "certainty": "explicit",
+      "page": 1,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "문단 정렬 설정을 확인한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-015",
+      "locator": "I-1 큰 제목",
+      "requirement": "큰 제목은 신명조 20 pt·진하게로 한다.",
+      "applies_to": [
+        "장 제목"
+      ],
+      "kind": "visual",
+      "certainty": "explicit",
+      "page": 1,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "장 제목의 크기·굵기·글꼴을 확인한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-016",
+      "locator": "I-1 중간 제목",
+      "requirement": "중간 제목은 신명조 13~18 pt·진하게로 한다.",
+      "applies_to": [
+        "절 제목"
+      ],
+      "kind": "visual",
+      "certainty": "explicit",
+      "page": 1,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "중간 제목 크기 범위와 굵기를 확인한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-017",
+      "locator": "I-1 본문",
+      "requirement": "본문은 신명조 12 pt로 유지한다.",
+      "applies_to": [
+        "본문"
+      ],
+      "kind": "visual",
+      "certainty": "explicit",
+      "page": 1,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "본문 스타일을 확인한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-018",
+      "locator": "I-1 각주",
+      "requirement": "각주는 있을 경우 신명조 9 pt로 한다.",
+      "applies_to": [
+        "각주"
+      ],
+      "kind": "user_finish",
+      "certainty": "explicit",
+      "condition": "각주가 있을 때",
+      "page": 2,
+      "authority": "instruction",
+      "verification": "각주 스타일을 확인한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-019",
+      "locator": "I-2-(1) 작물명",
+      "requirement": "작물명 첫 등장에 학명 전체를 쓰고 이후 속명을 약자로 쓴다.",
+      "applies_to": [
+        "작물명"
+      ],
+      "kind": "content",
+      "certainty": "explicit",
+      "page": 2,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "첫 등장/후속 표기를 대조한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-020",
+      "locator": "I-2-(1) 학명 서체",
+      "requirement": "학명의 속명·종명은 이탤릭, 명명자와 var. 등은 로마체로 쓴다.",
+      "applies_to": [
+        "학명"
+      ],
+      "kind": "visual",
+      "certainty": "explicit",
+      "page": 2,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "학명 각 토큰의 서체를 확인한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-021",
+      "locator": "I-2-(2) 국문 저자",
+      "requirement": "국문 논문 저자 2인은 ‘과’, 3인 이상은 ‘등’으로 연결한다.",
+      "applies_to": [
+        "본문 인용"
+      ],
+      "kind": "content",
+      "certainty": "explicit",
+      "page": 2,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "저자 수별 연결어를 검사한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-022",
+      "locator": "I-2-(2) 영문 저자",
+      "requirement": "영문 논문 저자 2인은 and, 3인 이상은 et al. 표기를 사용한다.",
+      "applies_to": [
+        "본문 인용"
+      ],
+      "kind": "content",
+      "certainty": "explicit",
+      "page": 2,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "저자 수별 연결어를 검사한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-023",
+      "locator": "I-2-(2) 다중 인용",
+      "requirement": "같은 괄호 안 여러 문헌은 세미콜론으로 구분한다.",
+      "applies_to": [
+        "본문 인용"
+      ],
+      "kind": "content",
+      "certainty": "explicit",
+      "page": 2,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "다중 인용 구분자를 확인한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-024",
+      "locator": "I-2-(3) 표·그림 인용",
+      "requirement": "본문에서 표·그림을 인용할 때 번호를 포함한다.",
+      "applies_to": [
+        "본문-표/그림 연결"
+      ],
+      "kind": "content",
+      "certainty": "explicit",
+      "page": 2,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "본문에 표/그림 번호 참조가 있는지 확인한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-025",
+      "locator": "I-3-(1) SI",
+      "requirement": "SI 단위 기술을 원칙으로 하며 로마자 정자·소문자를 사용한다.",
+      "applies_to": [
+        "수치·단위"
+      ],
+      "kind": "content",
+      "certainty": "explicit",
+      "page": 3,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "단위 토큰을 검사한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-026",
+      "locator": "I-3-(1) 예외 단위",
+      "requirement": "liter는 L, mL, μL로 표기한다.",
+      "applies_to": [
+        "액체 단위"
+      ],
+      "kind": "content",
+      "certainty": "explicit",
+      "condition": "liter를 사용할 때",
+      "page": 3,
+      "authority": "instruction",
+      "verification": "예외 단위 표기를 확인한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-027",
+      "locator": "I-3-(1) 띄어쓰기",
+      "requirement": "수치와 단위 사이에 한 칸을 둔다. 각도·분·초·%·℃는 예외다.",
+      "applies_to": [
+        "수치·단위"
+      ],
+      "kind": "content",
+      "certainty": "explicit",
+      "page": 3,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "수치-단위 간격과 예외를 검사한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-028",
+      "locator": "I-3-(1) 복수형",
+      "requirement": "단위에는 복수형을 쓰지 않는다.",
+      "applies_to": [
+        "수치·단위"
+      ],
+      "kind": "content",
+      "certainty": "explicit",
+      "page": 3,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "단위 복수형을 검사한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-029",
+      "locator": "I-3-(2) 고유명사",
+      "requirement": "인명·지명 등 고유명사는 원어로 쓴다.",
+      "applies_to": [
+        "고유명사"
+      ],
+      "kind": "content",
+      "certainty": "explicit",
+      "page": 3,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "고유명사 원어 사용을 확인한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-030",
+      "locator": "I-3-(2) 연도",
+      "requirement": "연도는 서기를 사용한다.",
+      "applies_to": [
+        "연도"
+      ],
+      "kind": "content",
+      "certainty": "explicit",
+      "page": 3,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "연도 표기를 확인한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-031",
+      "locator": "I-3-(3) 약자",
+      "requirement": "약자·약호는 첫 등장에 완전명칭을 함께 쓰고 다음부터 약자를 쓴다.",
+      "applies_to": [
+        "전 본문"
+      ],
+      "kind": "content",
+      "certainty": "explicit",
+      "page": 3,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "첫 등장 확장 여부를 확인한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-032",
+      "locator": "I-4-(1) 제목 설명",
+      "requirement": "표·그림 제목과 설명은 한글로, 본문을 참조하지 않아도 이해되게 간결히 작성한다.",
+      "applies_to": [
+        "표·그림 캡션"
+      ],
+      "kind": "content",
+      "certainty": "explicit",
+      "page": 3,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "캡션 독립 이해 가능성을 검토한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-033",
+      "locator": "I-4-(2) 번호",
+      "requirement": "표·그림은 Table 1., Fig. 1.처럼 일련번호와 끝 종지부를 쓴다.",
+      "applies_to": [
+        "표·그림 캡션"
+      ],
+      "kind": "content",
+      "certainty": "explicit",
+      "page": 3,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "번호 연속성과 마침표를 검사한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-034",
+      "locator": "I-4-(3) 위치",
+      "requirement": "표제는 표 상단 왼쪽, 그림 표제는 하단 가운데에 둔다.",
+      "applies_to": [
+        "표·그림 캡션"
+      ],
+      "kind": "visual",
+      "certainty": "explicit",
+      "page": 3,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "캡션 위치를 렌더에서 확인한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-035",
+      "locator": "II-1 머리지면",
+      "requirement": "머리지면 순서는 겉표지→인준서→표제면→제출서→목차다.",
+      "applies_to": [
+        "앞부분"
+      ],
+      "kind": "content",
+      "certainty": "explicit",
+      "page": 4,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "물리 페이지 순서를 확인한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-036",
+      "locator": "II-2 요약 순서",
+      "requirement": "요약에 I. 사업의 개요를 지정 순서로 둔다.",
+      "applies_to": [
+        "요약"
+      ],
+      "kind": "content",
+      "certainty": "explicit",
+      "page": 4,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "요약 소제목과 순서를 확인한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-037",
+      "locator": "II-2 요약 순서",
+      "requirement": "요약에 II. 투자분석를 지정 순서로 둔다.",
+      "applies_to": [
+        "요약"
+      ],
+      "kind": "content",
+      "certainty": "explicit",
+      "page": 4,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "요약 소제목과 순서를 확인한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-038",
+      "locator": "II-2 요약 순서",
+      "requirement": "요약에 III. 수익성분석를 지정 순서로 둔다.",
+      "applies_to": [
+        "요약"
+      ],
+      "kind": "content",
+      "certainty": "explicit",
+      "page": 4,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "요약 소제목과 순서를 확인한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-039",
+      "locator": "II-2 요약 순서",
+      "requirement": "요약에 IV. 자금운영계획를 지정 순서로 둔다.",
+      "applies_to": [
+        "요약"
+      ],
+      "kind": "content",
+      "certainty": "explicit",
+      "page": 4,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "요약 소제목과 순서를 확인한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-040",
+      "locator": "II-2 요약 순서",
+      "requirement": "요약에 V. 중장기 발전방향 및 성장목표를 지정 순서로 둔다.",
+      "applies_to": [
+        "요약"
+      ],
+      "kind": "content",
+      "certainty": "explicit",
+      "page": 4,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "요약 소제목과 순서를 확인한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-041",
+      "locator": "II-3 제목 번호(Ⅰ단계 예시, p4 하단)",
+      "requirement": "제목 번호 단계 1은 I., II., III. 순서를 따르며 원문 예시는 20 pt·진하게로 표시한다.",
+      "applies_to": [
+        "본문 제목"
+      ],
+      "kind": "content",
+      "certainty": "explicit",
+      "page": 4,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "제목 번호 계층과 순서를 검사한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-042",
+      "locator": "II-3 제목 번호",
+      "requirement": "제목 번호 단계 2는 1., 2., 3. 순서를 따르며 원문 예시는 18 pt·진하게로 표시한다.",
+      "applies_to": [
+        "본문 제목"
+      ],
+      "kind": "content",
+      "certainty": "explicit",
+      "page": 5,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "제목 번호 계층과 순서를 검사한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-043",
+      "locator": "II-3 제목 번호",
+      "requirement": "제목 번호 단계 3는 가., 나., 다. 순서를 따른다. 원문 예시는 20 pt·진하게로 표시한다.",
+      "applies_to": [
+        "본문 제목"
+      ],
+      "kind": "content",
+      "certainty": "explicit",
+      "page": 5,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "제목 번호 계층과 순서를 검사한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-044",
+      "locator": "II-3 제목 번호",
+      "requirement": "제목 번호 단계 4는 1), 2), 3) 순서를 따른다. 원문 예시는 20 pt·진하게로 표시한다.",
+      "applies_to": [
+        "본문 제목"
+      ],
+      "kind": "content",
+      "certainty": "explicit",
+      "page": 5,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "제목 번호 계층과 순서를 검사한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-045",
+      "locator": "II-3 제목 번호",
+      "requirement": "제목 번호 단계 5는 가), 나), 다) 순서를 따른다. 원문 예시는 20 pt·진하게로 표시한다.",
+      "applies_to": [
+        "본문 제목"
+      ],
+      "kind": "content",
+      "certainty": "explicit",
+      "page": 5,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "제목 번호 계층과 순서를 검사한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-046",
+      "locator": "II-3 제목 번호",
+      "requirement": "제목 번호 단계 6는 (1), (2), (3) 순서를 따른다. 원문 예시는 20 pt·진하게로 표시한다.",
+      "applies_to": [
+        "본문 제목"
+      ],
+      "kind": "content",
+      "certainty": "explicit",
+      "page": 5,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "제목 번호 계층과 순서를 검사한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-047",
+      "locator": "II-3 제목 번호",
+      "requirement": "제목 번호 단계 7는 (가), (나), (다) 순서를 따른다. 원문 예시는 20 pt·진하게로 표시한다.",
+      "applies_to": [
+        "본문 제목"
+      ],
+      "kind": "content",
+      "certainty": "explicit",
+      "page": 5,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "제목 번호 계층과 순서를 검사한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-048",
+      "locator": "II-3 제목 번호",
+      "requirement": "제목 번호 단계 8는 ①, ②, ③ 순서를 따른다. 원문 예시는 20 pt·진하게로 표시한다.",
+      "applies_to": [
+        "본문 제목"
+      ],
+      "kind": "content",
+      "certainty": "explicit",
+      "page": 5,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "제목 번호 계층과 순서를 검사한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-049",
+      "locator": "II-3 제목 번호",
+      "requirement": "제목 번호 단계 9는 ㉮, ㉯, ㉰ 순서를 따른다. 원문 예시는 20 pt·진하게로 표시한다.",
+      "applies_to": [
+        "본문 제목"
+      ],
+      "kind": "content",
+      "certainty": "explicit",
+      "page": 5,
+      "authority": "instruction",
+      "condition": null,
+      "verification": "제목 번호 계층과 순서를 검사한다.",
+      "source_role": "instructions"
+    },
+    {
+      "id": "OG-050",
+      "locator": "양식1 겉표지",
+      "requirement": "겉표지에 농업전문학사 학위논문, 영농창업계획(또는 영농 승계 발전계획), 제목, 연월, 학교, 전공, 이름을 중앙 세로 배치한다.",
+      "applies_to": [
+        "양식1 겉표지"
+      ],
+      "kind": "visual",
+      "certainty": "template",
+      "condition": "예시 연월·명칭은 복사하지 않음",
+      "page": 6,
+      "authority": "form",
+      "verification": "필드 존재와 중앙 세로 위계를 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-051",
+      "locator": "양식1 색상",
+      "requirement": "양식의 파란 글씨는 교체 가능한 자리표시자·안내의 시각 표식이며 최종 본문 색상 규칙으로 간주하지 않는다.",
+      "applies_to": [
+        "양식1"
+      ],
+      "kind": "visual",
+      "certainty": "inferred",
+      "condition": "파란 샘플 텍스트가 있을 때",
+      "page": 6,
+      "authority": "form",
+      "verification": "최종 대체 필드가 실제 값으로 바뀌고 색상은 별도 결정인지 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-052",
+      "locator": "양식2 표제·제출면",
+      "requirement": "상단 지도교수, 학위논문·영농창업계획 제목, 제출 문구, 제출연월, 학교·학과·이름을 배치한다.",
+      "applies_to": [
+        "양식2 표제/제출면"
+      ],
+      "kind": "visual",
+      "certainty": "template",
+      "condition": "예시 이름·연월은 복사하지 않음",
+      "page": 7,
+      "authority": "form",
+      "verification": "필드와 상대 위치를 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-053",
+      "locator": "양식3 인준서",
+      "requirement": "인준 문구와 연월, 위원장 및 위원 3인의 이름·(인) 날인란을 세로로 둔다.",
+      "applies_to": [
+        "양식3 인준서"
+      ],
+      "kind": "visual",
+      "certainty": "template",
+      "condition": "심사위원 확정 전에는 자리표시자로 둠",
+      "page": 8,
+      "authority": "form",
+      "verification": "문구·서명선·인 수를 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-054",
+      "locator": "양식4 목차",
+      "requirement": "목차에 요약·표 목차·그림 목차, Ⅰ~Ⅵ 장, 감사의 글과 점선 리더·쪽수를 둔다.",
+      "applies_to": [
+        "양식4 목차"
+      ],
+      "kind": "visual",
+      "certainty": "template",
+      "condition": "예시 쪽수는 현행 원고에 복사하지 않음",
+      "page": 9,
+      "authority": "form",
+      "verification": "실제 목차 항목과 쪽수가 본문과 일치하는지 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-055",
+      "locator": "양식5 머리말 항목",
+      "requirement": "머리말은 창업(승계) 형태·방법, 지역 지리·환경, 작목 전망, 애로·제한, 농장 발전방향·꿈·비전을 소주제로 다룬다.",
+      "applies_to": [
+        "Ⅰ. 머리말"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "page": 10,
+      "authority": "form",
+      "condition": null,
+      "verification": "소주제별 내용 존재를 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-056",
+      "locator": "양식5 작성방법",
+      "requirement": "머리말은 서론처럼 간결·명쾌하게 쓰고 소주제별 한두 문단을 연결하며 같은 문단 문장은 이어 쓴다.",
+      "applies_to": [
+        "Ⅰ. 머리말"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "page": 10,
+      "authority": "form",
+      "condition": null,
+      "verification": "문단 구조와 연결성을 검토한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-057",
+      "locator": "Ⅱ-1-가 표1",
+      "requirement": "농장 종합 개요 표에 농장명·경영주·농장위치(예정)·가족사항·주요작목 행을 둔다.",
+      "applies_to": [
+        "Ⅱ-1-가"
+      ],
+      "kind": "visual",
+      "certainty": "template",
+      "condition": "값은 학생 사실",
+      "page": 11,
+      "authority": "form",
+      "verification": "5개 행과 2열 구조를 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-058",
+      "locator": "Ⅱ-1-가 설명",
+      "requirement": "표 아래 농장명 배경, 농장주, 위치, 주요작목을 1)~4)로 설명한다.",
+      "applies_to": [
+        "Ⅱ-1-가"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "page": 11,
+      "authority": "form",
+      "condition": null,
+      "verification": "1)~4) 설명이 표와 연결되는지 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-059",
+      "locator": "Ⅱ-1-가-4) 위치",
+      "requirement": "주소와 간단한 지도를 제시하고 그림 1. 창농 예정 위치 캡션을 둔다.",
+      "applies_to": [
+        "Ⅱ-1-가-4)"
+      ],
+      "kind": "visual",
+      "certainty": "template",
+      "condition": "위치 미확정이면 확인 필요",
+      "page": 12,
+      "authority": "example",
+      "verification": "주소·지도·캡션 연결을 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-060",
+      "locator": "Ⅱ-1-가-4) 교통망",
+      "requirement": "교통망은 농장 방문 안내 위주로 기술한다.",
+      "applies_to": [
+        "Ⅱ-1-가-4)"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "page": 12,
+      "authority": "form",
+      "condition": null,
+      "verification": "방문 경로 설명 여부를 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-061",
+      "locator": "Ⅱ-1-나-1 기상표",
+      "requirement": "기상표에 12개월(12월~11월), 계절 묶음, 연평균 열을 둔다.",
+      "applies_to": [
+        "Ⅱ-1-나-1)"
+      ],
+      "kind": "visual",
+      "certainty": "template",
+      "condition": "관측자료 미확정이면 확인 필요",
+      "page": 13,
+      "authority": "form",
+      "verification": "12개월·계절·연평균 열을 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-062",
+      "locator": "Ⅱ-1-나-1 기상행",
+      "requirement": "기상행은 평균·최고·최저기온, 강우량, 평균·최고적설량, 주된풍향, 평균·최대풍속 9항목이다.",
+      "applies_to": [
+        "기상표"
+      ],
+      "kind": "content",
+      "certainty": "template",
+      "condition": "예시 수치는 복사하지 않음",
+      "page": 13,
+      "authority": "form",
+      "verification": "9행과 단위를 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-063",
+      "locator": "Ⅱ-1-나-1 관측정보",
+      "requirement": "기상표 하단에 관측장소, 최근 5개년 평균 기간, 초상일·만상일을 적는다.",
+      "applies_to": [
+        "기상표"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "page": 13,
+      "authority": "form",
+      "condition": null,
+      "verification": "하단 필드와 기간을 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-064",
+      "locator": "Ⅱ-1-나-2 지형",
+      "requirement": "지형은 경사도, 농기계 진입 용이성, 산간지·중산간지·평야지를 기술한다.",
+      "applies_to": [
+        "Ⅱ-1-나-2)"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "page": 13,
+      "authority": "form",
+      "condition": null,
+      "verification": "세 요소가 기술되는지 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-065",
+      "locator": "Ⅱ-1-나-3 토양",
+      "requirement": "토양은 종류, 비옥도, 토심을 기술한다.",
+      "applies_to": [
+        "Ⅱ-1-나-3)"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "page": 13,
+      "authority": "form",
+      "condition": null,
+      "verification": "세 요소가 기술되는지 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-066",
+      "locator": "Ⅱ-1-나-4 수리",
+      "requirement": "수리조건은 물 조달 방법과 물 부족 여부를 기술한다.",
+      "applies_to": [
+        "Ⅱ-1-나-4)"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "page": 13,
+      "authority": "form",
+      "condition": null,
+      "verification": "조달원과 부족 여부를 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-067",
+      "locator": "Ⅱ-1-나-5 포장",
+      "requirement": "포장의 경지정리 상태는 크기와 모양을 기술한다.",
+      "applies_to": [
+        "Ⅱ-1-나-5)"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "page": 13,
+      "authority": "form",
+      "condition": null,
+      "verification": "크기·모양을 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-068",
+      "locator": "Ⅱ-1-나-6 재해표",
+      "requirement": "재해를 가장 자주·자주·가끔 발생 3단으로 분류하고 한발·홍수·태풍·공장폐수·공해가스·야생동물 등을 고려한다.",
+      "applies_to": [
+        "재해표"
+      ],
+      "kind": "visual",
+      "certainty": "template",
+      "condition": "예시 항목은 지역 조사로 대체",
+      "page": 14,
+      "authority": "form",
+      "verification": "3단 열과 재해 대상 기록을 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-069",
+      "locator": "Ⅱ-1-다-1 지리",
+      "requirement": "지리 조건에 주도로·연결도로망, 차량 진입 용이성, 주요 출하시장 거리를 기술한다.",
+      "applies_to": [
+        "Ⅱ-1-다-1)"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "page": 14,
+      "authority": "form",
+      "condition": null,
+      "verification": "세 하위 항목을 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-070",
+      "locator": "출하 여건 표",
+      "requirement": "주요 출하시장·거리·소요시간·비고 표를 둔다.",
+      "applies_to": [
+        "출하 여건"
+      ],
+      "kind": "visual",
+      "certainty": "template",
+      "condition": "시장값은 조사 근거 필요",
+      "page": 14,
+      "authority": "form",
+      "verification": "4열 표와 단위를 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-071",
+      "locator": "Ⅱ-1-다-2 생산현황 표",
+      "requirement": "주요 농산물 생산현황 표에 순위·농산물명·생산규모·총매출액·주요 출하시장 1·2순위 열을 둔다.",
+      "applies_to": [
+        "Ⅱ-1-다-2)"
+      ],
+      "kind": "visual",
+      "certainty": "template",
+      "condition": "예시 순위·수치는 복사하지 않음",
+      "page": 15,
+      "authority": "form",
+      "verification": "열과 순위 행을 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-072",
+      "locator": "Ⅱ-1-다-3 유통표",
+      "requirement": "영농조직상태·주요 농산물 유통과정 표에 작목명·영농조직·출하방법·주요 출하선을 둔다.",
+      "applies_to": [
+        "Ⅱ-1-다-3)"
+      ],
+      "kind": "visual",
+      "certainty": "template",
+      "condition": "영농조직은 사실 확인",
+      "page": 15,
+      "authority": "form",
+      "verification": "4열 표를 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-073",
+      "locator": "Ⅱ-1-다-3 조직",
+      "requirement": "영농조직은 작목반·영농조합법인 등을 쓰고 괄호에 참여농가 수를 적는다.",
+      "applies_to": [
+        "Ⅱ-1-다-3)"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "condition": "조직에 참여하는 경우",
+      "page": 15,
+      "authority": "form",
+      "verification": "조직명과 괄호 수치의 근거를 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-074",
+      "locator": "Ⅱ-1-다 작성방법",
+      "requirement": "경영주·농장위치·가족사항을 정의하고 영농 참여율을 설명한다.",
+      "applies_to": [
+        "Ⅱ-1-다"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "page": 15,
+      "authority": "form",
+      "condition": null,
+      "verification": "정의와 참여율 설명을 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-075",
+      "locator": "Ⅱ 외부환경 작성방법",
+      "requirement": "가족 영농 참여율은 가족 노동력 공급 가능량 계산의 기초자료로 사용한다.",
+      "applies_to": [
+        "Ⅱ-1 가족사항"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "page": 16,
+      "authority": "form",
+      "condition": null,
+      "verification": "참여율이 노동력 계획과 연결되는지 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-076",
+      "locator": "Ⅱ 지역조건 대비",
+      "requirement": "지역 기상·지형·토양을 작목의 생육조건과 대비하여 적합성·개량 필요를 설명한다.",
+      "applies_to": [
+        "Ⅱ-1-나"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "page": 16,
+      "authority": "form",
+      "condition": null,
+      "verification": "조건→작목 요구→판정의 연결을 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-077",
+      "locator": "Ⅱ 지리사회경제",
+      "requirement": "지리·사회·경제 조건은 유통·판매와 연결하고 농장에서 시장까지 경로를 기술한다.",
+      "applies_to": [
+        "Ⅱ-1-다"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "page": 16,
+      "authority": "form",
+      "condition": null,
+      "verification": "경로와 판매 판단의 연결을 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-078",
+      "locator": "Ⅱ-2-가 수급",
+      "requirement": "시장환경분석에 생산 동향·수출입 동향·수급 전망을 둔다.",
+      "applies_to": [
+        "Ⅱ-2-가"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "page": 16,
+      "authority": "form",
+      "condition": null,
+      "verification": "3개 하위 항목을 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-079",
+      "locator": "Ⅱ-2-나 소비",
+      "requirement": "소비동향 분석을 둔다.",
+      "applies_to": [
+        "Ⅱ-2-나"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "page": 17,
+      "authority": "form",
+      "condition": null,
+      "verification": "절과 근거가 존재하는지 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-080",
+      "locator": "Ⅱ-2-다 가격유통",
+      "requirement": "가격형성과 유통경로 분석을 둔다.",
+      "applies_to": [
+        "Ⅱ-2-다"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "page": 17,
+      "authority": "form",
+      "condition": null,
+      "verification": "절과 가격·경로 연결을 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-081",
+      "locator": "Ⅲ-1~2 비전",
+      "requirement": "농장비전, 영농목표 및 전략을 배치한다.",
+      "applies_to": [
+        "Ⅲ-1~2"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "page": 18,
+      "authority": "form",
+      "condition": null,
+      "verification": "두 절과 목표-전략 연결을 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-082",
+      "locator": "표 가족구성 성장목표",
+      "requirement": "가정·농장 행과 작성연도 기준 창업·목표 2시점의 가족·경영·시설 항목을 표로 제시한다.",
+      "applies_to": [
+        "Ⅲ-2-가"
+      ],
+      "kind": "visual",
+      "certainty": "template",
+      "condition": "예시 2021/2025 연도·값은 복사하지 않음",
+      "page": 18,
+      "authority": "form",
+      "verification": "표 병합·행·2시점 구조를 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-083",
+      "locator": "성장목표 항목",
+      "requirement": "가정에는 본인 연령·역할, 가족 구성, 생활 목표; 농장에는 주력작목, 생산방식/경영유형, 생산규모, 연간매출액·순이익, 주요 생산시설을 적는다.",
+      "applies_to": [
+        "Ⅲ-2-가"
+      ],
+      "kind": "content",
+      "certainty": "template",
+      "condition": "학생 사실·계획 근거 필요",
+      "page": 18,
+      "authority": "form",
+      "verification": "모든 항목의 값/빈칸 상태를 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-084",
+      "locator": "Ⅲ-2-다 매출근거",
+      "requirement": "매출액 근거에 평균 생산 증가율, 직거래 가격(원/1 kg), 10a당 평균 생산량을 적는다.",
+      "applies_to": [
+        "Ⅲ-2-다"
+      ],
+      "kind": "content",
+      "certainty": "template",
+      "condition": "값은 조사·가정 구분",
+      "page": 19,
+      "authority": "form",
+      "verification": "세 근거 항목과 단위를 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-085",
+      "locator": "Ⅲ-2-라 벤치마킹",
+      "requirement": "모델농장분석(벤치마킹)을 둔다.",
+      "applies_to": [
+        "Ⅲ-2-라"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "page": 19,
+      "authority": "form",
+      "condition": null,
+      "verification": "비교 대상·판단·적용이 있는지 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-086",
+      "locator": "Ⅲ-2-마 SWOT",
+      "requirement": "SWOT 분석을 둔다.",
+      "applies_to": [
+        "Ⅲ-2-마"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "page": 19,
+      "authority": "form",
+      "condition": null,
+      "verification": "강점·약점·기회·위협과 전략 연결을 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-087",
+      "locator": "Ⅲ-4 순서",
+      "requirement": "재배기술은 일반사항→본포준비와 토양관리→재배기술 순으로 작성한다.",
+      "applies_to": [
+        "Ⅲ-4"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "page": 19,
+      "authority": "form",
+      "condition": null,
+      "verification": "소제목 순서를 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-088",
+      "locator": "Ⅲ-4 일반사항",
+      "requirement": "일반사항에 효능, 영양성분, 이용방법, 품종(있으면 특성), 재배환경을 둔다.",
+      "applies_to": [
+        "Ⅲ-4-가"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "page": 19,
+      "authority": "form",
+      "condition": null,
+      "verification": "5개 항목과 근거를 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-089",
+      "locator": "Ⅲ-4 재배방법",
+      "requirement": "재배방법에 관수·잡초방제·병해충방제·친환경 방제법·PLS 제도·수확 및 저장법을 포함한다.",
+      "applies_to": [
+        "Ⅲ-4-다-2)"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "page": 20,
+      "authority": "form",
+      "condition": null,
+      "verification": "6개 실행 항목을 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-090",
+      "locator": "Ⅲ-5 가공판매",
+      "requirement": "가공·판매계획에 가공 정의, 가공사업 전망, 해당 작물 가공품 시장 현황, 가공품 생산계획(아이디어 도출)을 둔다.",
+      "applies_to": [
+        "Ⅲ-5"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "page": 20,
+      "authority": "form",
+      "condition": null,
+      "verification": "4개 하위 항목과 근거를 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-091",
+      "locator": "Ⅲ-6 논문",
+      "requirement": "관련 논문을 3개 이상 조사하여 내용을 요약한다.",
+      "applies_to": [
+        "Ⅲ-6"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "page": 20,
+      "authority": "form",
+      "condition": null,
+      "verification": "실재 검증된 3편 이상과 요약을 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-092",
+      "locator": "Ⅳ 절 구성",
+      "requirement": "재무계획에 자산조사·생산원가계획·손익계획·추정대차대조표·현금흐름계획·추정소득분석 6절을 둔다.",
+      "applies_to": [
+        "Ⅳ"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "page": 21,
+      "authority": "form",
+      "condition": null,
+      "verification": "6절 존재와 순서를 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-093",
+      "locator": "Ⅳ 소득목표",
+      "requirement": "연도별 소득 목표는 연도별 추정소득과 일치시킨다.",
+      "applies_to": [
+        "Ⅳ"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "page": 21,
+      "authority": "form",
+      "condition": null,
+      "verification": "목표표와 추정소득표를 대조한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-094",
+      "locator": "Ⅳ 영농기반",
+      "requirement": "영농기반은 자산조사 결과와 지역 임대차·자금조달 가능성을 고려해 작성한다.",
+      "applies_to": [
+        "Ⅳ"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "page": 21,
+      "authority": "form",
+      "condition": null,
+      "verification": "자산·임대차·조달 근거를 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-095",
+      "locator": "Ⅳ 투자개요",
+      "requirement": "투자 개요에 실제 투자 분야 중심의 대상·시기·금액, 사업 목적과 기대효과를 연도별로 적는다.",
+      "applies_to": [
+        "Ⅳ-투자계획"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "page": 21,
+      "authority": "form",
+      "condition": null,
+      "verification": "대상·시기·금액·목적·효과를 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-096",
+      "locator": "Ⅳ 연차투자",
+      "requirement": "연차별 투자내용에 대상별 금액을 적고 비고에 조달자금 종류와 원리금 조건을 적는다.",
+      "applies_to": [
+        "Ⅳ-투자계획"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "page": 21,
+      "authority": "form",
+      "condition": null,
+      "verification": "대상별 금액과 조달조건을 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-097",
+      "locator": "Ⅳ 정책자금",
+      "requirement": "정책자금 지원 시 농림사업 시행지침과 일치시킨다.",
+      "applies_to": [
+        "Ⅳ-투자계획"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "condition": "정책자금 사용 시",
+      "page": 21,
+      "authority": "form",
+      "verification": "시행지침 근거를 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-098",
+      "locator": "Ⅳ 투자재원 총괄",
+      "requirement": "연차별 투자재원 총괄은 연차별 투자내용의 연도별 합계를 옮기고 정책자금 종류를 적는다.",
+      "applies_to": [
+        "Ⅳ-투자계획"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "page": 22,
+      "authority": "form",
+      "condition": null,
+      "verification": "총괄과 세부 합계를 대조한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-099",
+      "locator": "Ⅳ 투자 일치점검",
+      "requirement": "중장기 발전계획·투자계획·연차별 투자재원 표 간 금액·시기를 일치시킨다.",
+      "applies_to": [
+        "Ⅳ-투자계획"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "page": 22,
+      "authority": "form",
+      "condition": null,
+      "verification": "세 표의 연도·금액을 교차검산한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-100",
+      "locator": "Ⅳ 과잉투자",
+      "requirement": "농기계·시설 규모가 과잉투자가 되지 않도록 모델을 참고한다.",
+      "applies_to": [
+        "Ⅳ-투자계획"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "page": 22,
+      "authority": "form",
+      "condition": null,
+      "verification": "규모-필요량 근거를 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-101",
+      "locator": "Ⅳ 교체시기",
+      "requirement": "농업용 시설·장비는 내용연수가 끝나면 교체하는 것을 원칙으로 한다.",
+      "applies_to": [
+        "Ⅳ-투자계획"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "page": 22,
+      "authority": "form",
+      "condition": null,
+      "verification": "내용연수와 교체연도를 대조한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-102",
+      "locator": "Ⅳ 투자분석 조건",
+      "requirement": "신규 투자가 있을 경우에만 투자분석을 작성하고 수익 일정성 여부에 맞는 모델을 선택한다.",
+      "applies_to": [
+        "Ⅳ-투자분석"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "condition": "신규 투자 발생 시",
+      "page": 22,
+      "authority": "form",
+      "verification": "신규 투자·수익 변동·모델 선택 근거를 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-103",
+      "locator": "Ⅳ 신규수익",
+      "requirement": "투자분석 수익에는 신규 투자로 발생한 수익만 사용한다.",
+      "applies_to": [
+        "Ⅳ-투자분석"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "page": 22,
+      "authority": "form",
+      "condition": null,
+      "verification": "기존 자산 수익이 섞이지 않았는지 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-104",
+      "locator": "Ⅳ 할인율",
+      "requirement": "할인율은 조달자금 할인율의 가중평균값을 사용한다.",
+      "applies_to": [
+        "Ⅳ-투자분석"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "page": 22,
+      "authority": "form",
+      "condition": null,
+      "verification": "조달비중·금리·할인율 계산을 재현한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-105",
+      "locator": "Ⅳ 기간잔존",
+      "requirement": "불규칙 수익의 분석기간은 주 투자대상 경제적 수명으로 정하고 기타 대상은 내구연수 종료 시 재투자하며, 종료시 남은 장부가격을 그 해 수익으로 처리한다.",
+      "applies_to": [
+        "Ⅳ-투자분석"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "condition": "불규칙 수익 시",
+      "page": 22,
+      "authority": "form",
+      "verification": "분석기간·재투자·장부잔존 처리를 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-106",
+      "locator": "Ⅳ 방법1",
+      "requirement": "방법1은 초기투자에 투자금액 합계, 추가투자에 투자 후 운영비를 넣고 운영비에서 감가상각비·이자를 제외하며 실제 매출액을 수익으로 넣는다.",
+      "applies_to": [
+        "Ⅳ-투자분석"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "condition": "신규투자가 있고 투자분석 방법1(매출과 운영비 분리)을 선택한 경우",
+      "page": 22,
+      "authority": "form",
+      "verification": "입력 항목과 제외 비용을 재계산한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-107",
+      "locator": "Ⅳ 방법2",
+      "requirement": "방법2는 초기투자에 투자금액, 추가비용은 비우고 총수익에서 방법1의 추가비용을 뺀 금액을 수익으로 넣는다.",
+      "applies_to": [
+        "Ⅳ-투자분석"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "condition": "신규투자가 있고 투자분석 방법2(순수익 입력)를 선택한 경우",
+      "page": 23,
+      "authority": "form",
+      "verification": "방법1·2의 수익·비용 정의를 구분한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-108",
+      "locator": "Ⅳ 가계비",
+      "requirement": "법인이 아닌 농가는 경영주 인건비가 비용에 없으므로 투자분석에 가계비를 비용으로 반영한다.",
+      "applies_to": [
+        "Ⅳ-투자분석"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "condition": "농가 분석 시",
+      "page": 23,
+      "authority": "form",
+      "verification": "가계비 입력·단위를 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-109",
+      "locator": "Ⅳ 지표기준",
+      "requirement": "NPV·B/C·IRR 및 원금회수기간에 기초해 투자판단 이유를 설명한다.",
+      "applies_to": [
+        "Ⅳ-투자분석"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "page": 23,
+      "authority": "form",
+      "condition": null,
+      "verification": "각 지표와 판단 문장이 연결되는지 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-110",
+      "locator": "Ⅳ 불리한 결과",
+      "requirement": "NPV<0, B/C<1, IRR<조달 할인율이면 불리한 결과를 숨기지 않고 기록한다.",
+      "applies_to": [
+        "Ⅳ-투자분석"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "page": 23,
+      "authority": "form",
+      "condition": null,
+      "verification": "지표 경계값과 결론을 대조한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-111",
+      "locator": "Ⅳ 상환가능성",
+      "requirement": "지표가 유리해도 원금회수기간이 원리금 상환기간보다 길면 연도별 현금흐름으로 상환 가능성을 검토한다.",
+      "applies_to": [
+        "Ⅳ-투자분석"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "page": 23,
+      "authority": "form",
+      "condition": null,
+      "verification": "상환 일정과 회수기간을 비교한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-112",
+      "locator": "Ⅴ 맺음말",
+      "requirement": "맺음말에 창업설계 전체의 간단한 결론, 창업 후 발전 전략·비전, 미진한 검토사항과 보완계획을 담는다.",
+      "applies_to": [
+        "Ⅴ"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "page": 24,
+      "authority": "form",
+      "condition": null,
+      "verification": "세 요소를 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-113",
+      "locator": "Ⅵ 서지 요소",
+      "requirement": "참고문헌에 저자·연도·제목·쪽수/출판사 또는 학회지·권호·쪽수 등 서지 요소를 적는다.",
+      "applies_to": [
+        "Ⅵ"
+      ],
+      "kind": "content",
+      "certainty": "template",
+      "condition": "예시 서지는 복사하지 않음",
+      "page": 25,
+      "authority": "example",
+      "verification": "각 문헌 유형별 필수 요소를 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-114",
+      "locator": "Ⅵ 서체정렬",
+      "requirement": "참고문헌은 신명조 12 pt 가는 글씨체와 양쪽혼합 정렬로 한다.",
+      "applies_to": [
+        "Ⅵ"
+      ],
+      "kind": "user_finish",
+      "certainty": "explicit_annotation",
+      "page": 25,
+      "authority": "form",
+      "condition": null,
+      "verification": "최종 문서에서 글꼴·정렬을 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-115",
+      "locator": "Ⅵ 영문 순서",
+      "requirement": "영문 문헌은 저자명→출판연도→논문/단행본명→단행본 인용쪽→출판사/학회지→권호→쪽수 순서로 적는다.",
+      "applies_to": [
+        "Ⅵ"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "page": 26,
+      "authority": "form",
+      "condition": null,
+      "verification": "영문 문헌 필드 순서를 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-116",
+      "locator": "Ⅵ 영문 저자",
+      "requirement": "영문 저자 2명은 and, 3명 이상은 마지막 저자 앞에 and를 둔다.",
+      "applies_to": [
+        "Ⅵ"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "page": 26,
+      "authority": "form",
+      "condition": null,
+      "verification": "저자 연결어를 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-117",
+      "locator": "Ⅵ 단행본·학위논문",
+      "requirement": "단행본은 인용 쪽수·출판사·도시, 학위논문은 학위명·수여대학을 포함한다.",
+      "applies_to": [
+        "Ⅵ"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "condition": "문헌 유형에 따라",
+      "page": 26,
+      "authority": "form",
+      "verification": "유형별 필수 필드를 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-118",
+      "locator": "Ⅵ 국문",
+      "requirement": "국문 문헌은 영문과 같은 요소 순서로 쓰고 저자명은 가나다 순으로 배열한다.",
+      "applies_to": [
+        "Ⅵ"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "page": 26,
+      "authority": "form",
+      "condition": null,
+      "verification": "국문 정렬과 요소 순서를 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-119",
+      "locator": "Ⅵ 언어순서",
+      "requirement": "영문·일문·국문을 함께 인용하면 영문→일문→국문 순으로 배열한다.",
+      "applies_to": [
+        "Ⅵ"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "condition": "혼합 언어 문헌 시",
+      "page": 26,
+      "authority": "form",
+      "verification": "언어 그룹 순서를 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-120",
+      "locator": "Ⅵ 동일저자",
+      "requirement": "같은 저자는 단독저작물→공동저작물 순으로 배열하고 공동저자는 가나다 순으로 정리한다.",
+      "applies_to": [
+        "Ⅵ"
+      ],
+      "kind": "content",
+      "certainty": "explicit_annotation",
+      "condition": "동일 저자 문헌 시",
+      "page": 26,
+      "authority": "form",
+      "verification": "동일 저자 정렬을 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-121",
+      "page": 6,
+      "locator": "양식1 시각 위계",
+      "requirement": "겉표지는 제목·계획명이 가장 크게, 연월·학교·전공·이름은 더 작은 크기로 중앙 세로 위계를 유지한다.",
+      "applies_to": [
+        "양식1 겉표지"
+      ],
+      "kind": "visual",
+      "authority": "form",
+      "certainty": "template",
+      "condition": "실제 글자 크기는 학교 최종 설정을 확인",
+      "verification": "렌더에서 중앙 정렬·상대 글자 크기 위계·필드 간 간격을 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-122",
+      "page": 7,
+      "locator": "양식2 시각 위계",
+      "requirement": "표제·제출면은 영농창업계획 제목을 크게, 제출 문구·연월을 중간, 학교·학과·이름을 하단에 배치한다.",
+      "applies_to": [
+        "양식2 표제/제출면"
+      ],
+      "kind": "visual",
+      "authority": "form",
+      "certainty": "template",
+      "condition": "실제 글자 크기는 학교 최종 설정을 확인",
+      "verification": "렌더에서 제목→제출문구/연월→기관·이름의 상대 위치와 크기를 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-123",
+      "page": 8,
+      "locator": "양식3 시각 위계",
+      "requirement": "인준서는 인준 문구와 날짜를 상단 중앙에 두고, 위원장·위원 서명선과 (인) 칸을 일정 간격으로 세로 배치한다.",
+      "applies_to": [
+        "양식3 인준서"
+      ],
+      "kind": "visual",
+      "authority": "form",
+      "certainty": "template",
+      "condition": "위원 수·직함은 학교 확인 필요",
+      "verification": "렌더에서 중앙 위계, 서명선·(인) 칸의 수평 정렬과 절단 여부를 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-124",
+      "page": 9,
+      "locator": "양식4 시각 위계",
+      "requirement": "목차 제목은 중앙, 항목명은 왼쪽, 점선 리더와 쪽수는 오른쪽으로 정렬해 계층을 읽게 한다.",
+      "applies_to": [
+        "양식4 목차"
+      ],
+      "kind": "visual",
+      "authority": "form",
+      "certainty": "template",
+      "condition": "실제 항목·쪽수는 생성 원고에서 계산",
+      "verification": "렌더 목차에서 제목·항목·리더·쪽수 정렬과 계층 가독성을 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-125",
+      "page": 9,
+      "locator": "양식4 쪽수 표기",
+      "requirement": "목차 예시는 앞부분에 로마자, 본문 장에 아라비아 숫자를 보여 주며 예시 쪽수는 실제 원고 계산값으로 대체한다.",
+      "applies_to": [
+        "양식4 목차"
+      ],
+      "kind": "visual",
+      "authority": "form",
+      "certainty": "template",
+      "condition": "앞부분/본문 쪽수 체계를 사용할 때",
+      "verification": "목차 쪽수가 실제 페이지와 일치하고 예시 숫자가 잔존하지 않는지 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-126",
+      "page": 15,
+      "locator": "Ⅱ-1-다 작성방법/경영주",
+      "requirement": "경영주는 독립 창업이면 졸업생 본인, 승계면 부모 등 실제 경영 담당자를 명시한다.",
+      "applies_to": [
+        "Ⅱ-1-다"
+      ],
+      "kind": "content",
+      "authority": "form",
+      "certainty": "explicit_annotation",
+      "condition": "창업 형태에 따라",
+      "verification": "창업/승계 선택과 경영주 이름·역할이 일치하는지 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-127",
+      "page": 15,
+      "locator": "Ⅱ-1-다 작성방법/위치",
+      "requirement": "농장 위치는 외부 방문자가 찾을 수 있는 주소·경로 관점으로 설명한다.",
+      "applies_to": [
+        "Ⅱ-1-다"
+      ],
+      "kind": "content",
+      "authority": "form",
+      "certainty": "explicit_annotation",
+      "condition": null,
+      "verification": "주소·경로가 방문자 관점으로 재현되는지 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-128",
+      "page": 16,
+      "locator": "p16 상단 가족 영농 참여율 정의(전쪽 가족사항 설명 계속)",
+      "requirement": "가족 영농 참여율은 일일 노동시간 중 영농시간 비율(예: 8/10=80%)로 산정하고 가족 노동력 공급량에 사용한다.",
+      "applies_to": [
+        "Ⅱ-1-다"
+      ],
+      "kind": "content",
+      "authority": "form",
+      "certainty": "explicit_annotation",
+      "condition": "가족 노동을 투입하는 경우",
+      "verification": "분자·분모·기간과 노동력 계산 연결을 확인한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-129",
+      "page": 26,
+      "locator": "Ⅵ 정렬/영문",
+      "requirement": "영문 참고문헌은 저자명의 알파벳 순서로 배열한다.",
+      "applies_to": [
+        "Ⅵ"
+      ],
+      "kind": "content",
+      "authority": "form",
+      "certainty": "explicit_annotation",
+      "condition": "영문 문헌이 있을 때",
+      "verification": "영문 참고문헌 저자명 알파벳 정렬을 대조한다.",
+      "source_role": "forms_examples"
+    },
+    {
+      "id": "OG-130",
+      "page": 19,
+      "locator": "Ⅲ-3 세부영농계획",
+      "requirement": "세부영농계획을 별도 절로 작성한다.",
+      "applies_to": [
+        "Ⅲ-3"
+      ],
+      "kind": "content",
+      "authority": "form",
+      "certainty": "explicit_annotation",
+      "source_role": "forms_examples",
+      "condition": null,
+      "verification": "작업 시기·규모·인력 등 실제 계획이 별도 절에 제시됐는지 확인한다."
+    },
+    {
+      "id": "OG-131",
+      "page": 19,
+      "locator": "Ⅲ-4-다-1) 번식방법",
+      "requirement": "재배기술에 번식방법을 기술한다.",
+      "applies_to": [
+        "Ⅲ-4-다-1)"
+      ],
+      "kind": "content",
+      "authority": "form",
+      "certainty": "explicit_annotation",
+      "source_role": "forms_examples",
+      "condition": null,
+      "verification": "번식 재료·방법과 해당 농장의 적용 조건을 확인한다."
+    }
+  ],
+  "conflicts": [
+    {
+      "ids": [
+        "OG-035",
+        "OG-050",
+        "OG-052",
+        "OG-053",
+        "OG-054"
+      ],
+      "source_locations": [
+        "p4 II-1 머리지면 순서",
+        "p6 양식1 겉표지",
+        "p7 양식2 표제·제출면",
+        "p8 양식3 인준서",
+        "p9 양식4 목차"
+      ],
+      "nature": "p4 문장 순서는 겉표지→인준서→표제면→제출서→목차로 적지만, p6–9의 양식 라벨·시각 페이지는 표제/제출(양식2) 뒤에 인준서(양식3)를 보여 준다.",
+      "resolution_status": "requires_explicit_profile",
+      "resolution": "renderer/profile이 채택 순서를 명시하고 두 출처를 함께 보존한다. 이 충돌만으로 자동 PASS하지 않는다.",
+      "id": "SRC-CONFLICT-01"
+    },
+    {
+      "ids": [
+        "OG-015",
+        "OG-016",
+        "OG-041",
+        "OG-042",
+        "OG-043",
+        "OG-044",
+        "OG-045",
+        "OG-046",
+        "OG-047",
+        "OG-048",
+        "OG-049"
+      ],
+      "source_locations": [
+        "p1 I-1 글자 모양",
+        "p5 II-3 제목 번호"
+      ],
+      "nature": "p1의 큰/중간 제목 크기(20 pt, 13–18 pt)와 p5 번호 단계 예시(I 20 pt, 1 18 pt, 하위 단계 20 pt)가 서로 다른 분류축으로 보인다.",
+      "resolution_status": "requires_explicit_profile",
+      "resolution": "번호 체계와 제목 클래스의 크기를 별도 설정하고, 실제 문서 프로필에서 선택을 기록한다.",
+      "id": "SRC-CONFLICT-02"
+    },
+    {
+      "ids": [
+        "OG-032",
+        "OG-033",
+        "OG-024",
+        "OG-059"
+      ],
+      "source_locations": [
+        "p3 I-4 표·그림 제목/번호",
+        "p12 그림 1. 창농 예정 위치",
+        "p13 이후 표·그림 번호 예시"
+      ],
+      "nature": "p3는 제목·설명을 한글로 쓰라고 하면서 번호 예시를 Table 1./Fig. 1.로 제시한다. p12 이후 양식은 표 1./그림 1. 한국어 번호를 사용한다.",
+      "resolution_status": "requires_explicit_profile",
+      "resolution": "캡션 언어와 번호 접두어를 학교 최종 프로필에서 선택해 기록한다. 원문의 Table/Fig 예시를 기계적으로 강제하거나 한국어 양식을 자동 오류 처리하지 않는다.",
+      "id": "SRC-CONFLICT-03"
+    },
+    {
+      "ids": [
+        "OG-054",
+        "OG-085",
+        "OG-086"
+      ],
+      "source_locations": [
+        "p9 목차 II-3/4",
+        "p19 III-2-라/마"
+      ],
+      "nature": "목차 예시는 모델농장·SWOT을 II에, 본문 예시는 III에 배치한다.",
+      "resolution_status": "requires_explicit_profile",
+      "resolution": "본문 배치와 실제 목차를 일치시키고 선택한 원문 위치를 기록한다.",
+      "id": "SRC-CONFLICT-04"
+    }
+  ]
+}

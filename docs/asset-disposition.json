@@ -1,0 +1,1005 @@
+{
+  "schema": "knuaf-doc/asset-disposition@1",
+  "basis": "AUDIT appendices A and E; S0-S5 are anonymized origin labels. payload_path names the current package successor when it differs from the audited source path.",
+  "assets": [
+    {
+      "path": "S0/AGENTS.md",
+      "sha256": "7adcf529b87afff3eaf2006a095c734d5fd2c3dd6be46a6b0a092b74bc3b8afc",
+      "disposition": "대체",
+      "reason": "개발 소유·권한 문서; 학생 payload 제외는 의도. 현재 감사 권한으로 복원하지 않음"
+    },
+    {
+      "path": "S0/LICENSE",
+      "sha256": "5c0dec70fcf17ee5b7996447fcb5cea513accb1c9343e5e064d130906b98d7c0",
+      "disposition": "대체",
+      "reason": "저장소 루트 LICENSE가 현재 고지를 소유. 개발본 바이트 차이는 별도 저작권 판정 아님"
+    },
+    {
+      "path": "S0/README.md",
+      "sha256": "5677feab698e2221239296665dc0d4872c9971be07875c7fd2dc66b7364f26eb",
+      "disposition": "대체",
+      "reason": "저장소 루트 README·SKILL로 안내 대체. 옛 개발본 그대로 복구 불필요"
+    },
+    {
+      "path": "S0/agents/openai.yaml",
+      "sha256": "8b83485a8d847de9c2dc1e6653968ae68aab2ad20444f8449495858e02136385",
+      "disposition": "개발 전용",
+      "reason": "옛 ginseng-goat 이름을 쓰는 호스트 표시·기본 프롬프트. 메타데이터 제외; 동작 손실 미입증"
+    },
+    {
+      "path": "S0/references/approval-checklist.md",
+      "sha256": "c25c026da3946279baaaefc9445ef3e634158c28d042126821a5dba302a6a72a",
+      "disposition": "대체",
+      "reason": "검토·출력·교수 승인 조건은 현재 core/cross-review/guideline-tracking에 이관. 옛 전역 BLOCK·모호성 0 규칙 복원 금지"
+    },
+    {
+      "path": "S0/references/config.md",
+      "sha256": "c9f653cec10fe526dafd5005439be81eace89c53d317d834ee38fd361aff5870",
+      "disposition": "대체",
+      "reason": "00_config·자동 폴더 선택·원문 없으면 전역 BLOCK 등 구 계약. intake-selection/project.json로 대체"
+    },
+    {
+      "path": "S0/references/entry-points.md",
+      "sha256": "7f0a8806e80ca489bc2a66c13dac9c36b2cbc4e8cee69fcc44e2e05bac6c0602",
+      "disposition": "대체",
+      "reason": "재개·intake는 현행으로 대체; 원고 자동 분할 N4·재무 게이트 K1의 고유 기능은 별도 처분"
+    },
+    {
+      "path": "S0/references/evidence-lint.md",
+      "sha256": "481877f8e366b58dd7a3cc25827a038edb3262fec76e90d1817e6232db1e86ef",
+      "disposition": "대체",
+      "reason": "구 02_receipts·등급·verified 문법은 대체. DOI 실재 조회 N3는 배포 대체 도구 미확인"
+    },
+    {
+      "path": "S0/references/excel-format.md",
+      "sha256": "cf13f0e6659f55e81ed88a7ff658c34509b9c0133d48b67e355e92fd50ab4153",
+      "disposition": "대체",
+      "reason": "구 단위·가정입력 시트·상수·출력순서에 충돌. 현행 excel-template/outputs/교정 명세로 대체"
+    },
+    {
+      "path": "S0/references/excel-submission.md",
+      "sha256": "f5b802c93c832392ac832415f51376993c4d1fb0ad60b070f2311ecd54c0b06c",
+      "disposition": "개발 전용",
+      "reason": "빌더에 development-environment-only로 명시. 현행 excel-template/outputs와 템플릿 우선 계약으로 기능 승계"
+    },
+    {
+      "path": "S0/references/exemplar-guide.md",
+      "sha256": "a3da3cb0e4b5286972eb0a59a0016bc7106778bfb3f1d338679c5d04c8d6be84",
+      "disposition": "개발 전용",
+      "reason": "빌더와 narrative-expansion에서 개발 전용 명시. exemplar-quality·narrative-expansion이 일반 품질 기준 제공"
+    },
+    {
+      "path": "S0/references/financial-feasibility-gate.md",
+      "sha256": "73849f5a46bef2eacfc6d60d936ff4168baefaf8fd224643f83a5d20ec926be4",
+      "disposition": "대체",
+      "reason": "옛 전역 게이트 문서 전체 복원 금지, w5R가 기능 처분; K1: w5R 기능 복구 범위와 중복. 단일 작목·전역 중단 등 옛 문서 전체 복원 금지"
+    },
+    {
+      "path": "S0/references/kim-finance-bible.md",
+      "sha256": "d24f1d904463d3d62854fe976e3163698e4fae40ada9a910237885f270a8cd93",
+      "disposition": "배포(w5R)",
+      "reason": "K1 담당 경계는 w5R; K1: PR #1 채택→공개 export 제외·payload 포함→공개 main 설치에서 누락. w5R"
+    },
+    {
+      "path": "S0/references/lessons-learned.md",
+      "sha256": "d31d58983d116a0d9e639ca593b6b237cdb2b3d007cb33a51fc5cc88239bcc19",
+      "disposition": "배포(w5R)",
+      "reason": "K1 담당 경계는 w5R; K1: L3 포함. 같은 payload/main 단절, w5R"
+    },
+    {
+      "path": "S0/references/official-toc.md",
+      "sha256": "9c8285baf5be8887c8e9b3dc6322279e0997afb7ceb9ebd522e6f8a141bddac0",
+      "disposition": "배포",
+      "reason": "N1/N3/N4 복구 대상; N1: 명시적 권리 미확인 제외; 파일과 재사용 계보 모두 없음"
+    },
+    {
+      "path": "S0/references/open-questions.md",
+      "sha256": "58545a533bd4b391af926cc81cd04a58d515ade2db40e13e81bbc1adff5f0b42",
+      "disposition": "배포(w5R)",
+      "reason": "K1 담당 경계는 w5R; K1: 학교 상충·미결 참고문서. payload/main 단절, w5R"
+    },
+    {
+      "path": "S0/references/rda-benchmark.md",
+      "sha256": "4f556164ba38ca2d2ded8be4c4ff708c05942fd08e2b7741bb9df4ce5ae7a2a4",
+      "disposition": "배포(w5R)",
+      "reason": "K1 담당 경계는 w5R; K1/N5: 조회 안내 문서. payload/main 단절, w5R; 진입 안내 연결은 별도"
+    },
+    {
+      "path": "S0/references/rule-enforcement.md",
+      "sha256": "235f6c0ce268aba2058883b223370b1a819925e2434dc91c008878b55ee9f07f",
+      "disposition": "대체",
+      "reason": "문서 자체가 guideline-tracking/section-ledger/source-contract로 대체 경로를 지정. 복구 불필요"
+    },
+    {
+      "path": "S0/references/rules/CH1_intro.md",
+      "sha256": "bc8fcdc39f5a35f51d6b13d9631b3fd0d323ae3a37793cc280bce0516411b60e",
+      "disposition": "배포",
+      "reason": "N1/N3/N4 복구 대상; N1: 머리말 요구·소제목. 허용목록 밖; 원문/현행 대조 후 필요한 기능만 복구"
+    },
+    {
+      "path": "S0/references/rules/CH2_external.md",
+      "sha256": "43a9c7409a822d47cdb6ebab54d8bccb8391970d2bd3bf4258368c23866d2308",
+      "disposition": "배포",
+      "reason": "N1/N3/N4 복구 대상; N1: 외부환경 세부 요구·조사/표 위치. 허용목록 밖; 원문/현행 대조 후 필요한 기능만 복구"
+    },
+    {
+      "path": "S0/references/rules/CH3_plan.md",
+      "sha256": "2fc4b127bad453a29b50d9d712e0167ca878eb690b52e44130bc64fb9b0a54ee",
+      "disposition": "배포",
+      "reason": "N1/N3/N4 복구 대상; N1: 영농계획 세부 요구·재배/판매/관련 논문. 허용목록 밖; 원문/현행 대조 후 필요한 기능만 복구"
+    },
+    {
+      "path": "S0/references/rules/CH4_finance.md",
+      "sha256": "71ada58f00d9d23a848aad8ed783bfc4294e36e20ffadc08f2251ab7fa51dee5",
+      "disposition": "배포",
+      "reason": "N1/N3/N4 복구 대상; N1: 재무계획 요구·산출근거; 옛 제출 지표는 현행 정책 대조 필요. 허용목록 밖; 원문/현행 대조 후 필요한 기능만 복구"
+    },
+    {
+      "path": "S0/references/rules/CH5_CH6_closing.md",
+      "sha256": "d144be69807d63f9e6a1cf22d475f668b08f8c8db24217bcdc1af04779c53158",
+      "disposition": "배포",
+      "reason": "N1/N3/N4 복구 대상; N1: 맺음말·참고문헌 요구. 허용목록 밖; 원문/현행 대조 후 필요한 기능만 복구"
+    },
+    {
+      "path": "S0/references/rules/EX_excel_buildspec.md",
+      "sha256": "36989513830cff529ef16846afe7286c87e8210533a908545362e142343a401d",
+      "disposition": "배포",
+      "reason": "N1/N3/N4 복구 대상; N1: 엑셀 생성 세부 명세; 현행 템플릿 계약에 상당 부분 이관. 허용목록 밖; 원문/현행 대조 후 필요한 기능만 복구"
+    },
+    {
+      "path": "S0/references/rules/EX_excel_structure.md",
+      "sha256": "8d9ac226dd5593b34fc70ba3159b422395f2b2573fafc05766db59b30f677734",
+      "disposition": "배포",
+      "reason": "N1/N3/N4 복구 대상; N1: 예시 엑셀의 구조·계산 관찰; 원자료 배포와 구분. 허용목록 밖; 원문/현행 대조 후 필요한 기능만 복구"
+    },
+    {
+      "path": "S0/references/rules/EX_exemplar_structure.md",
+      "sha256": "c25eadff3d31f0f04796cff0cf5110b93708ad6774ffe27a3c39997931ca2487",
+      "disposition": "배포",
+      "reason": "N1/N3/N4 복구 대상; N1: 선배논문 구조 관찰; 공식 학교 의무로 승격 금지. 허용목록 밖; 원문/현행 대조 후 필요한 기능만 복구"
+    },
+    {
+      "path": "S0/references/rules/F_format.md",
+      "sha256": "8994a3a2568656d742da21c17fcbeca0ccb44a2411567b75fec6c3a4624bc356",
+      "disposition": "배포",
+      "reason": "N1/N3/N4 복구 대상; N1: 학명·인용·단위·표그림·번호·병합 규칙; 검사기 일부 유지. 허용목록 밖; 원문/현행 대조 후 필요한 기능만 복구"
+    },
+    {
+      "path": "S0/references/rules/PRE_frontmatter.md",
+      "sha256": "3d27bca302860acceb7e005b1c68d4e97af494ea6a3548242b0887066f61aeca",
+      "disposition": "배포",
+      "reason": "N1/N3/N4 복구 대상; N1: 머리지면·요약·목차; 생성기 일부 유지. 허용목록 밖; 원문/현행 대조 후 필요한 기능만 복구"
+    },
+    {
+      "path": "S0/references/rules/W_writing_spec.md",
+      "sha256": "1b3a71c5880d420163698f47bda61ee89b59c547b7f58fe1909b2f2be8ade9dd",
+      "disposition": "배포",
+      "reason": "N1/N3/N4 복구 대상; N1: 절 작성 사양; narrative-expansion 등 일부 대체. 허용목록 밖; 원문/현행 대조 후 필요한 기능만 복구"
+    },
+    {
+      "path": "S0/scripts/build_plugin.py",
+      "sha256": "68cb9cb8a7bbf38f7c413f9190a60fb736a954168f650f1e68b365a6f0acda13",
+      "disposition": "개발 전용",
+      "reason": "학생 도구 제외는 정상. 그러나 payload-only4 생산 경로의 공개 후계가 없음; §4.1"
+    },
+    {
+      "path": "S0/scripts/extract_draft.py",
+      "sha256": "52c7e95dc8e1163cec3587fb0227d3f855259351d4ec9b3919f3687eba8275f1",
+      "disposition": "배포",
+      "reason": "N1/N3/N4 복구 대상; N4: 원고 장별 분할. 명시 폐기 처분 미확인",
+      "payload_path": "scripts/gg_draft_split.py"
+    },
+    {
+      "path": "S0/scripts/gg_finance.py.bak",
+      "sha256": "dde17691dd4c543db066f018226dbcc3f36f407ec4c20accf73d6c399c1f1465",
+      "disposition": "개발 전용",
+      "reason": "백업 바이트. 배포 제외 유지"
+    },
+    {
+      "path": "S0/scripts/init_workspace.py",
+      "sha256": "8c7a0adf40bef4d227b6a8e3743989a63cbf9a8c6256a99e755c29a0103a33df",
+      "disposition": "대체",
+      "reason": "구 평문 작업폴더 생성. gg.py init가 현재 정본을 생성하므로 대체"
+    },
+    {
+      "path": "S0/scripts/verify_doi.py",
+      "sha256": "6e78d0c254fd27a70ee09c2ca6c4c67f78421c1aef8d38cdac04e433f6176617",
+      "disposition": "배포",
+      "reason": "N1/N3/N4 복구 대상; N3: Crossref 실재 조회. 명시 폐기 처분 미확인",
+      "payload_path": "scripts/gg_doi.py"
+    },
+    {
+      "path": "S1/manifest.json",
+      "sha256": "a8a301a644e36db961635571e4dd2d89350dcd659a7ad9a60f5a8ce1ca52f21d",
+      "disposition": "개발 전용",
+      "reason": "권고: source-snapshot 내부 메타데이터. 학생 스킬 공통 파일이 아님"
+    },
+    {
+      "path": "S2/scripts/inert_probe.py",
+      "sha256": "e5bde4f0eec314dd3bf1333bd5737d35d6b1a1507998759072b5e5b65b32387e",
+      "disposition": "개발 전용",
+      "reason": "권고: 업데이트 시험용 probe. 배포 제외 유지"
+    },
+    {
+      "path": "S3/references/student-data.json",
+      "sha256": "b5f56421ca8ec1a26aa255980d8f78719086462ee31cfd986fe333da1af6a847",
+      "disposition": "개발 전용",
+      "reason": "권고: 사용자 파일 보존 시험 fixture. 실제 학생 자료로 오인하거나 배포 금지"
+    },
+    {
+      "path": "S4/.knuaf-doc-version",
+      "sha256": "5a435b5bc39eb42bbfb42176fd49bef1fd7a274c42f0dbf35c7f6931a3aaf2a1",
+      "disposition": "대체",
+      "reason": "권고: QA 설치 표시. 현재 version.json이 버전 계약을 소유"
+    },
+    {
+      "path": "S5/references/output-tooling.md",
+      "sha256": "e382d328662b49f2bddd7b9e56f2b1958946a86903cd80788c4dfbcaa3283e50",
+      "disposition": "대체",
+      "reason": "권고: QA 설치본의 출력 설명 분리본. 현재 outputs.md가 출력 명령·한계를 소유; 독립 누락 기능 미확인"
+    },
+    {
+      "path": "S0/docs/BACKLOG-20260919.md",
+      "sha256": "55d74b01ef3a876ca3900eb3c5954798de2b1d43a5a40b8885f4d2802a091ffd",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/C3-ACCESS-RECOVERY-DECISION-20260917.md",
+      "sha256": "8a9cc944ea1e0502c8848c6df96b97d17a854b6bdbe6886c0146e4a04a4d6846",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/C3-BLANK-VERIFICATION-ADJUDICATION-20260917.md",
+      "sha256": "364f8ff4cdb0d1860f2902825d0de3ae8ad63248be64afa38dc4db15edc442d2",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/C3-CLOSEOUT-ACCEPTANCE-DECISION-20260917.md",
+      "sha256": "61d2a67fb19ab767bd416009a813bef7db4eab0d6f77ea6d71cd61a83c820958",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/C3-DERIVED-SNOW-DECISION-20260917.md",
+      "sha256": "db6d0d0a660514317e1c89ee7a8eddc72677668499cee74ea5bb06ee39395d24",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/C3-INFERENCE-CLARIFICATION-20260917.md",
+      "sha256": "4d663496892ff721cbdf09b8387865b565aa74a01586e04fbe7d2d0ac369c29d",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/C3-RESEARCH-CLOSURE-20260917.md",
+      "sha256": "955dc11c4da9f33b0c48f96ca21f9448178de5ab8a7945d9b8d0df6a41238d8f",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/C3-USER-ASSUMPTION-CLOSEOUT-DECISION-20260918.md",
+      "sha256": "d1f4a1686a6702d51482380ce82c26873723cebd183d9b83410ad800a3c9d096",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/CONTINUOUS-CLOSEOUT-20260916.md",
+      "sha256": "c7c19a1c9f40bc09a0ad0fb953b22b38b6903b20dbb9ffb11804a56357764f55",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/COORDINATOR-CUSTODY-20260916.md",
+      "sha256": "f4f3aa93117f069d5d5a8b7108ff2ea3277299ddef5b4da96aa2e14cdaf9755a",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/COORDINATOR-RESTART-20260917.md",
+      "sha256": "fbe1539d8aa974bf25162273a3b67769deb401f3102c6b6d50717e3394a35fc0",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/FINAL-ARTIFACTS-20260916.md",
+      "sha256": "6480777820b448aecef4f723622be5ea235fb1e88639b820529973c1599584e9",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/FINANCE-INTERVIEW-ADDENDUM-20260908.md",
+      "sha256": "131e0f5d67bd5e3f62c9aee3727bc5f1bfa25a303cb75d7225fd8e14eb841571",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/FULL-AUDIT-PLAN-20260908.md",
+      "sha256": "dab736cf496c4b49bec8477f78c5032d6a35fa057010cb45b9a73a98255e611f",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/FULL-AUDIT-RUNBOOK-20260908.md",
+      "sha256": "f007af7292dcebeacabc13295cb5fd60433c9201ffa734b1ebf1fa57058770de",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/GINSENG-GOAT-INTEGRATED-DESIGN.md",
+      "sha256": "db0be84d23336813acfebd0a233fd19de7d82522ddc75391fe2b2c7b645e7086",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/GJC-HANDOFF-BASELINE.json",
+      "sha256": "6d88bd201f85775d3b16bb844e03e2f4d4f2180743e081c20cf691ff36e51b71",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/GJC-IMPLEMENTATION-BRIEF.md",
+      "sha256": "4fc36d735028355e5e127c70f67f1d69921202a81ee265a27590b9c45d3a113c",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/HOTFIX-SAFETY-ARCHITECTURE.md",
+      "sha256": "7e1f0144fce670ab35c9dd2d6bbd305ffb893b8f6bec34fd23cd5d3763d39fc2",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/INTERVIEW-NARRATIVE-EXPANSION-20260908.md",
+      "sha256": "6dcd7a0da5d1ab886f37dd4a3d34cb21fc807ace068a1284b330cfa8f900f1a7",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/KIM-FINANCE-BIBLE-ARCHITECTURE.md",
+      "sha256": "09786b7909afd88e563ece2b3d74b3d8f7f4f3024ca2db429f6d914437e2b7c6",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/KMA-CREDENTIAL-DISTRIBUTION-DECISION-20260917.md",
+      "sha256": "38bff30e76561f6b293d19419bd7517998d4b187976bf78f06e0a5a175c49650",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/MISSING-HISTORICAL-OUTPUT-DECISION-20260917.md",
+      "sha256": "091520d03bc4e06da581b6da6fa4a66836f77967b34d0876ab7e3405ea8ad55d",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/OMO-AUDIT-HANDOFF-20260908.md",
+      "sha256": "ad806f1a75ff9852179e88000fdff3667921ec9f76d397f5c87c54c97de31774",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/OMO-S6-IMPLEMENTATION-20260909.md",
+      "sha256": "08c418e1d1daea25c383a134199760ff0ec4f7d2a59267ebe380de0d836b4216",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/OUTPUT-LINEAGE-METADATA-DECISION-20260917.md",
+      "sha256": "1a0762132bbe13df15a84b7adfbaa8691b1fa68603f27a7c5dbbcf9da069aa5e",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/R93-REVIEW-SUCCESSOR-DECISION-20260917.md",
+      "sha256": "e0647644066880140602c68ebb2f248d81c2691d7139f4eeac02a4ade2349920",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/RDA-BENCHMARK-PACK-ARCHITECTURE.md",
+      "sha256": "6450feae5b3906e0250390129a553e3fa630fd8b285d8d48496a16e9306cab94",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/REMAINING-WORK-20260916.md",
+      "sha256": "bd7bc9047ed22b610c4ee670521d2741380067c37182330456e6cdb2df824724",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/RESUME-CORRECTION-20260917.md",
+      "sha256": "ebc9b69dfe7602a3747322dd2e3e7f853c60dc55c36ec354a3313d6a0973ccb1",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/REVIEWER-CHANGE-20260916-FABLE51.md",
+      "sha256": "11ce5348652b68cd522e266c7c0967364dd42e43e4374f4f4d6d4e57ada0688c",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/SKILL-FOLLOWUP-20260916.md",
+      "sha256": "c1d3203a89ee4f1dfc6e8286ad91c8ce03a52ab5c4d2cde08bdf5803fba808bb",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/SOURCE-ARCHITECTURE.md",
+      "sha256": "2491ebd83046d5797ff249c86573f062ebc60043e26aa6c57f98533b48fd26a4",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/SOURCE-INTAKE-SKIP-ARCHITECTURE.md",
+      "sha256": "03b185ce4bfe6c679224e8693d11f41b844b66c20f5d93d41ace3a789d99faeb",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/STUDENT-GUIDE.md",
+      "sha256": "835ace5267712f5360e31dd218749794c21bf0f40ccaaea0809476660d8de498",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/TABLE-PARENTHETICAL-NEGATIVE-DECISION-20260916.md",
+      "sha256": "d956eb04c8646573b70f67e6db10819d5a952f83d6fb3b4fd4c2915ae3bfcf7b",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/WINDOWS-LOCK-ARCHITECTURE.md",
+      "sha256": "959e177d63fc8852a3ad82e3b4718a0390e6aaf9afe97098ebf72264ff7a9ac7",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/WORKSPACE-ROLE-PLACEMENT-20260917.md",
+      "sha256": "048d08d0cbd4180ee8299dc81f782146d7c4f24d3480519bf1ed2bbd7de682a9",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/audits/20260919-knuaf-doc-analysis-report.md",
+      "sha256": "e60ff6ebcfe0315e80450baa52146db82d4ab165be4f4c289c6f3164647a2991",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/briefs/20260918-gemini-rda-parse.md",
+      "sha256": "fa4dd0b06ca146ee7faa7e9ec34d4b1623287bafbce427a8b78768cf35c8c8d8",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/briefs/20260918-opus-rda-verify.md",
+      "sha256": "54669c014b3bfee8344cabc989d6c60f72ad8dd32ab62d99e529c69c5dcb1d13",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/briefs/20260918-sonnet-kim-finance.md",
+      "sha256": "8232f0522eb5fe651d77ac951ed797110cc8e12c710c5013941e5465a037143d",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/briefs/20260918-sonnet-source-intake-skip.md",
+      "sha256": "85dc1c57326a900f2ed0369961a6d787eb7026ebbfce11052fe0260024c3a703",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/briefs/20260918-swe-rda-lookup.md",
+      "sha256": "23f96332611ce304a34c65468bbbbc2d1445706b0766a8c6c1f1a7f16b941f23",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/briefs/20260919-sonnet-c1-lock-dispatch.md",
+      "sha256": "7b0076800596fc0a70df73ba69a865690433ff3bfa094815f54a0c25fd12410c",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/briefs/20260919-sonnet-hotfix-dispatch.md",
+      "sha256": "511f69d5e73314d50120611b8d556a569f769c3ec27e90e2c0c7d040eee60fa2",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/ginseng-goat-workflow.html",
+      "sha256": "35539b95cb99decbdc28250161b05772904ccb053e2968b2f249971144345d6d",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/ginseng-goat-workflow.visual-check.1440x900.dark.png",
+      "sha256": "1ba6e40593dcb0be9594398f9ab44dc1260b13fa671694e13bd368f9fd36adc1",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/ginseng-goat-workflow.visual-check.1440x900.light.png",
+      "sha256": "38de5e9a79fd85e7c78e491376ea2ef2b203b3999677f717f8d3abfdfc46f4d0",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/ginseng-goat-workflow.visual-check.2048x1320.dark.png",
+      "sha256": "6d225dc2efa2a32819370d85d7d7230933c293db70da95985573d88388ecf605",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/ginseng-goat-workflow.visual-check.2048x1320.light.png",
+      "sha256": "c9b6baecd2b3b4b12d8cb6ec63abb0a93fef597e3d3e178e7d1a6a2704851ddf",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/ginseng-goat-workflow.visual-check.html",
+      "sha256": "3df4ba6d59e6df7598a242bbf645475d2653f5a08584389eab57d23241ee8dc3",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/docs/ginseng-goat-workflow.visual-check.json",
+      "sha256": "f70df244d5f676b44f7ae925b9ac09e32200e4e26644f6f72ff77755bb75edec",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/fixtures/acceptance/III-4_재배기술.md",
+      "sha256": "0e293b947dde5a1a11a34769756cb95b114bea013b8c24601f480421e2cc5844",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/fixtures/acceptance/V_맺음말.md",
+      "sha256": "ad33affe89250956eae014e37f6dd5e59c8e05ae3c2899b5d6bb6327a206bd5f",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/fixtures/acceptance/author-input.md",
+      "sha256": "bbd09c0ae15bdaca6418eebfa4652b3a2106dba6692b3c657416df3c6038735e",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/fixtures/acceptance/corrected-draft.md",
+      "sha256": "4f6daff57411c566f7dba4b57959595f43cfe221078680c8390c26dadd9e5e34",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/fixtures/acceptance/sample/.keep",
+      "sha256": "84f7852c9567c710cc0f0f5629f42051dbc51395dc8cb58e6072d4264afa186a",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/fixtures/acceptance/school-source-extract.md",
+      "sha256": "a5b7eb97d116835cf3e1888a8ded3c9ed3f3b297d2ce9917383247630ea9820e",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/fixtures/rda/aliases/crop-aliases.specialty_crops.json",
+      "sha256": "f55c8095affd5c40b85eb6c67d1243bcfde56887b10339379c0ed713b84819a5",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/fixtures/rda/aliases/major-aliases.json",
+      "sha256": "cee007407d77ca7e87cb8017ec34d50918fea2b2cf0421633ab1a17c457aeb27",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/fixtures/rda/catalog.json",
+      "sha256": "4a02ec848386da66bedc518a9afd5c01df5b70022c1d075630a644d131512633",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/fixtures/rda/common/rda-income-national-2024/records.jsonl",
+      "sha256": "78f0fa7d7de7dd8e49be85e4955ffb285c11e1f17a1d7d6c3580f4be493e3871",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/fixtures/rda/common/rda-income-regional-2024/records.jsonl",
+      "sha256": "e0b0a565d8e702fd6fa4a4058e54bee35dc0844e07ee22f28e04d8c48e606cc9",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/fixtures/rda/majors/specialty_crops/mafra-specialty-production-2024/records.jsonl",
+      "sha256": "e1b015ab4e6eee4cd174264699d80cbf9526b3a921f293a29d02e47e1dd23a6a",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/fixtures/s6-workbook-economic-classification.json",
+      "sha256": "6d3c8af335edfe260d6e2b55f54431b9214dd9d92c6b6561c0bfcc76ed83d9cc",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/run_acceptance.py",
+      "sha256": "d61b76b2e70534712bab5084a6938a42edaa288a37fd75cf1e996ed1bc6482ca",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_build_plugin_runtime.py",
+      "sha256": "f8ffbb84d5f3966d9b946d109c8b09f813c013503221d318e55607caeca67920",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_document_bibliography.py",
+      "sha256": "5fdb54267d43a29ddae99be3f04adcdb593879bba127fb1e6743fd5629179163",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_document_layout.py",
+      "sha256": "7493ca6e8e7192dd881b4b049c684062d16ad4fdca6819d1fc024a7ac41976e7",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_docx_prose_fidelity.py",
+      "sha256": "1cdcc8524e08cb31b2448a108ffbb18d9d8b79b54435a7b4e643bd55c94eef95",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_docx_school.py",
+      "sha256": "a70d0a7e08f3c16b90c08dd37313d3fa05e2fdf366ea746a9b18f39f3fc88e4d",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_docx_table_layout.py",
+      "sha256": "c6b6eedefc6b407f9df0eb9a2dbce758f1656e7d2a523b997c77278900322af4",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_excel_fill.py",
+      "sha256": "872347e394c6c853885793f9cbc7bb7603c39208aad06e1f842244dea06c2a95",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_excel_formula_patch.py",
+      "sha256": "68789cab13a43849b82607211f1b1d92a82f2cd4c74857fc0c3614027127542d",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_excel_print.py",
+      "sha256": "d323e5953efef92fa14414b5f210a1bce3fff6026928331709eac61651f3f29b",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_excel_template.py",
+      "sha256": "66418134d1b5269714efbcd473375acfcbe5eca672bc3ad3726555afc6fbea9a",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_finance_print_layout.py",
+      "sha256": "73f89a67a374799c17c8f16b2b7c9d685f2e79d327be0dd7ffd8b615ae866ddc",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_frontmatter_renderer.py",
+      "sha256": "0abf8efc8ff86ff14af4b106fc6c13ae5e09756ab3fa1f370de498b9d95ab947",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_gates.py",
+      "sha256": "9071290fa6e0dcd3f28f0682a5ef266dbb9f1cf3775c6021c3b3226fd9d2e4c1",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_guidelines.py",
+      "sha256": "fbce53571a807b33ccc16c55b1554980c9351c92fb5daed251e72857ff42117d",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_kim_finance_bible.py",
+      "sha256": "0857e5e9cff3b3962d555ebf1a522230f0420692e246a1334da3af1308f64d88",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_kordoc.py",
+      "sha256": "b121dc74dc24d8e03dbc73733549d0132ea7344f59f7d2f31171810d6d5f92a9",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_migration.py",
+      "sha256": "ca274e38f347c77bdeda07475e07edd30b0db298f9672671d08741e2c2221a12",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_office.py",
+      "sha256": "7c0136dea5a142cf6fe3ade7fa970df6d063dfa363f4fddab65eeb665a36ad05",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_office_template.py",
+      "sha256": "a6b52d727005aaed6276f4d3338f3b5431968d40df8fd8b5c2293b601ea406b2",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_plugin_credit.py",
+      "sha256": "c9c743fba0396ee50d41cbaf7e0fd5ceda1d7a99608ce764acce8b2cfb1a3438",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_product_acceptance.py",
+      "sha256": "cc325ddfe53440f50d3afbc14e43c8ebae45a79a7e2ab5ecdf22f308896539fd",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_product_research.py",
+      "sha256": "255bacec9edeaa3bfd6e5af891dd7b73a5531e0c4426258c2e2c4b12218ac610",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_product_security.py",
+      "sha256": "0f2cbbebc777df537fa72e798322fb43a261577194555cb1b023e21957b8a5b7",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_product_workflow.py",
+      "sha256": "59eaaee5cbd7901872c691acf758210270b34d1e11ade4121fc6df960dbe6cbd",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_provided_template_output.py",
+      "sha256": "70e20bb4cd7ef2164e6f21e65d7e66f098271d74bb19999f343cbdd31c2e9551",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_rda_lookup.py",
+      "sha256": "20f6efa928a3243089ce1ceba1363da2c4633bcab6e2c61c261e1123f21ca664",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_runtime.py",
+      "sha256": "b9caee5ad36c3b72258bf9f1a9cc501c3a05059d4043dcde75f73174c6914fc4",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_runtime_dependencies.py",
+      "sha256": "6574ba98b7705da4fb332e3ebd1779ba308316c32cd7a9be1f70abb5d2d01b2e",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_s6_approval.py",
+      "sha256": "4a8d0a267f4a71ad093fef1c8c54cb363454226b13036621b09a011402c5ca7c",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_s6_composite_contract.py",
+      "sha256": "f2f2a74c4c64ed57acde5937d1c8bf75f46aeaa859e2c407845325f755dc70e3",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_s6_fill_semantics.py",
+      "sha256": "c29c4148eb15ffb06c8d09907370ef10fc948ee10d5f039a90ab33576add5fbc",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_s6_finance_semantics.py",
+      "sha256": "3b026c30353d8f04c2b666ced8e5e13b4c288b66909987645165474197b5f0d0",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_s6_fingerprint.py",
+      "sha256": "9d06acc1fb8f4161c496797bd86a39781bc12dc9f2890303ee03c762a075d415",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_s6_lock.py",
+      "sha256": "2a3583ea72957e2f69cb2f06449ccfcb992a62c21e96ab5a706136ac887de7a9",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_s6_lock_cli_windows.py",
+      "sha256": "b824278b8080641fea080d39396940592ee516f54fe64c0c9b9fae6625b1f72e",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_s6_lock_crossplatform.py",
+      "sha256": "305ddab57a01533ee431a51a8888cc0d01f331eaa88ebae3931b5bdcfefe5bbe",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_s6_lock_windows.py",
+      "sha256": "debdd9e4c171edbb1d4322cfd0bdfbc935364cb77b93e8e8508efe66772c7a2f",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_s6_number_style.py",
+      "sha256": "c50ce9b06823644fd51000f67ec5886cb4feba1b670952bb3bcc37960b9632a4",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_s6_operation_receipt.py",
+      "sha256": "f3341a167e211a0f535d54c279b789aade21f9328c1e5edcb94cc6f57d8fb6d1",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_s6_package_references.py",
+      "sha256": "41302204656383c1b9156679f1a9b9a4c457c06985e8a5129f75fb6568002217",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_s6_publication.py",
+      "sha256": "7cd70eefebad049ac9709ae3bd395c1b01c1efece6e3193846a1316ae842d344",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_s6_publication_windows.py",
+      "sha256": "e42b2626a505df7e094e7916139e6fd82a68b435e8a1daee99f59f77274f8f4d",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_s6_receipt_inputs.py",
+      "sha256": "6ca443c5f938f743e849f94f12dd9e1587fdf6ee20afcf5195fc31f171271d24",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_s6_review_observation.py",
+      "sha256": "2371d58893b8893ca6adb48dfafe83805f671fdf4bec18aeb59b49d85470d6b9",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_s6_schema_upgrade.py",
+      "sha256": "a6c664acaa1b3fa9a098d126952ea0c20d981c4763ebc9d50f1658d757c61e1b",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_s6_source_note_style.py",
+      "sha256": "cc49c8f837d44afe1bdff2fb2400098436197f551a25aa2b7855ad3b4eee8f28",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_s6_task_results.py",
+      "sha256": "afc01d12e37f2e5a5889ab7ed79f36233e624b2ab407f186ab23f06e5eb9c6eb",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_s6_template_lineage.py",
+      "sha256": "feea84e876eb704df8fc64ae40b1ee035251daf0ff754618e5e980a17a95c994",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_school_caption_alignment.py",
+      "sha256": "7958a4eb7692071628faebf8d411c7d571b63c84c7bbde168c319900f2a655c1",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_school_excel.py",
+      "sha256": "08bd0c5e1b074db5ee561216f77e19000b3303f9550b2137103c187bfa5be049",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_school_format.py",
+      "sha256": "102d2fdb3f6dcbc7ba5946bc0b6291f39b294c15515a2ea20f9c54ab89ed4d1c",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_school_paper.py",
+      "sha256": "f5f5d9f4574733e7165d7c28500e238d49a6a9bce05039d855225aad3922363a",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_school_verify.py",
+      "sha256": "c2ae8d1d4ae3fed1ac0fbab39c97d6a69e690905bbfcc19610bf9f317b16b14a",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_source_intake.py",
+      "sha256": "95e070576c379565e49ba1f1205355f02fabe3b55e732a47cab9af788df983b8",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_visual_review.py",
+      "sha256": "7f84f96e9bde83dcf785fc39f758c3f1958e394f1c1346136800d46775296e80",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/test_windows_lock_emulator.py",
+      "sha256": "5139a7c6cb69af1ddfba02f90b732f76c0cdd04b251ca6299ecfd27c3b315e54",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/tests/windows_lock_emulator.py",
+      "sha256": "b8e11b3a29151a1d7089379a359e84b2c16fc30a01a3ace3ec8b0c129aa8d299",
+      "disposition": "개발 전용",
+      "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
+    },
+    {
+      "path": "S0/references/guideline-inventory.json",
+      "sha256": "5067f07c348184d41f1f936d40327a2f92bb9d314974ca9aba6727f25733e4c5",
+      "disposition": "배포",
+      "reason": "AMEND-I2-1 R1: N2 공용 지침 목록의 현행 복구 payload; 독립 배포 필수 항목",
+      "payload_path": "references/guideline-inventory.json"
+    },
+    {
+      "path": "S0/references/official-guide-lineage.json",
+      "sha256": "a6d8df96f1553fc1e819a047177f440fe8b2fa10ea20e2b8e25385403a00aff7",
+      "disposition": "배포",
+      "reason": "AMEND-I2-1 R1: 학교 발췌 출처 계보의 현행 복구 payload; 독립 배포 필수 항목",
+      "payload_path": "references/official-guide-lineage.json"
+    }
+  ],
+  "required_builtin_source_ids": [
+    "official-writing-guide-pdf",
+    "official-writing-guide-hwp"
+  ],
+  "required_source_policy": "This list is independently maintained here; never regenerate it from builtin-sources.json or export output."
+}

@@ -6,8 +6,11 @@
 
 ## 두 산출물의 분리
 
-- **설치 플러그인**: `skills/knuaf-doc/` 런타임과 `.codex-plugin/`만 포함한다.
-  시험·개발 문서·학교 원문 자료는 들어가지 않는다.
+- **설치 플러그인**: `skills/knuaf-doc/`와 `.codex-plugin/`을 포함한다.
+  현행 `gg_update.py manifest --write`는 스킬 내부 시험·합성 fixture도
+  설치 목록에 기록한다. 루트 `tests/`·개발 문서·학교 원 PDF/HWP는
+  설치 payload 밖이다. 0.1.5는 공개 승인된 학교 규칙 발췌·공용 지침
+  목록·계보 메타데이터를 스킬 내부에 포함한다.
 - **공개 저장소 검증 묶음**: 위 런타임에 더해 `tests/`, `tools/`,
   `docs/validation/`, `.github/workflows/`, `requirements-validation.txt`를
   포함한다. 시험은 배포 런타임을 직접 import하며 개발 트리로 fallback하지
@@ -74,8 +77,18 @@ JSON의 `full_validation_completed`는 실행 무결성 사실이며 제품 PASS
 | `declared_missing` / `declared_hash_mismatch` | manifest가 고정한 검증 파일이 없거나 변함 — 실패. 합법적 변경이면 `--write-manifest`로 갱신 필요 |
 | `undeclared_file` | baseline도 manifest도 아닌 파일 — 실패 |
 | `manifest_*` | manifest 스키마/자기참조/baseline 중복/트리 digest·baseline spec SHA·runtime_changes 링크 불일치 — 실패 |
+| `asset_disposition:<code>` | 개발 처분표의 배포 항목과 실제 payload·설치 manifest 불일치, 또는 필수 학교 항목이 누락/`runtime_present:false` — 실패 |
 
 exit code: 정상 0, 무결성 발견 1, 사용 오류 2.
+
+0.1.5부터 `check(root)`는 stdlib 검사기 `check_asset_disposition.py`의
+오류를 합산한다. 독립 입력 `docs/asset-disposition.json`의 배포 처분을
+payload·설치 manifest와 대조하고 `required_builtin_source_ids`의 두
+학교 항목을 검사한다. 필수 목록은 export 결과에서 재생성하지 않는다.
+오류 상세는 `asset_disposition:<code>:<path>`다. 기존 runner·CI의
+`check_bundle.py` 선행 경로가 같은 실패를 전달한다. 합성 트리 시험은
+검증 묶음 해시를 다시 생성한 뒤에도 payload/manifest 누락과 필수
+학교 항목의 `runtime_present:false`가 번들 검사 실패임을 확인한다.
 
 ## 재생성과 clean export
 

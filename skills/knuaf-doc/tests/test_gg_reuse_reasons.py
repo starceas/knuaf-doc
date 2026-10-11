@@ -9,6 +9,7 @@ Run: python3 -B tests/test_gg_reuse_reasons.py
 """
 import hashlib
 import json
+import shutil
 import sys
 import tempfile
 import unittest
@@ -52,6 +53,14 @@ NAT_KEY = {"kind": "audit_key", "pack_id": "rda.income.national.2024",
 
 def registry():
     return gg_reuse.load_registry(REGISTRY_PATH)
+
+
+def registry_with_missing_guide(tmp):
+    deploy = Path(tmp) / "deploy"
+    shutil.copytree(KNUAF_DOC, deploy)
+    (deploy / "references" / "official-toc.md").unlink()
+    return gg_reuse.load_registry(
+        deploy / "references" / "builtin-sources.json")
 
 
 def ctx(reg, **kw):
@@ -137,13 +146,15 @@ class TestReasonClosure(unittest.TestCase):
         self._check_wire(v)
 
     def test_reasons_union_precedence(self):
-        # role_mismatch (blocked) + runtime_missing (needs_excerpt)
-        # -> union keeps both, status picks the higher-precedence class
-        v = gg_reuse.resolve_reuse(
-            GUIDE_SHA,
-            {"kind": "narrative_reference",
-             "keys": [{"kind": "delimited", "value": "a:b"}]},
-            context=ctx(self.reg))
+        # Keep the negative case realistic by removing the artifact from a
+        # temporary deployment rather than claiming the shipped one is absent.
+        with tempfile.TemporaryDirectory() as td:
+            reg = registry_with_missing_guide(td)
+            v = gg_reuse.resolve_reuse(
+                GUIDE_SHA,
+                {"kind": "narrative_reference",
+                 "keys": [{"kind": "delimited", "value": "a:b"}]},
+                context=ctx(reg))
         self.assertIn("role_mismatch", v["reasons"])
         self.assertIn("runtime_missing", v["reasons"])
         self.assertEqual(v["status"], "blocked")
@@ -161,10 +172,12 @@ class TestReasonClosure(unittest.TestCase):
         self._check_wire(v)
 
     def test_needs_excerpt_exit_3(self):
-        v = gg_reuse.resolve_reuse(
-            GUIDE_SHA,
-            {"kind": "writing_rule", "keys": [GUIDE_KEY]},
-            context=ctx(self.reg))
+        with tempfile.TemporaryDirectory() as td:
+            reg = registry_with_missing_guide(td)
+            v = gg_reuse.resolve_reuse(
+                GUIDE_SHA,
+                {"kind": "writing_rule", "keys": [GUIDE_KEY]},
+                context=ctx(reg))
         self.assertEqual(v["status"], "needs_excerpt")
         self.assertEqual(v["exit"], 3)
         self.assertIn("runtime_missing", v["reasons"])
@@ -205,12 +218,14 @@ class TestReasonClosure(unittest.TestCase):
         # the guide's artifact is absent at runtime (runtime_missing,
         # gap-class) while its coverage-claimed key absent from the key
         # catalog is authority_conflict (conflict-class)
-        kc = ctx(self.reg)["key_catalog"]
-        del kc["writing_rule"][GUIDE_KEY["value"]]
-        v2 = gg_reuse.resolve_reuse(
-            GUIDE_SHA,
-            {"kind": "writing_rule", "keys": [GUIDE_KEY]},
-            context=ctx(self.reg, key_catalog=kc))
+        with tempfile.TemporaryDirectory() as td:
+            reg = registry_with_missing_guide(td)
+            kc = ctx(reg)["key_catalog"]
+            del kc["writing_rule"][GUIDE_KEY["value"]]
+            v2 = gg_reuse.resolve_reuse(
+                GUIDE_SHA,
+                {"kind": "writing_rule", "keys": [GUIDE_KEY]},
+                context=ctx(reg, key_catalog=kc))
         self.assertEqual(v2["status"], "blocked")
         self.assertIn("authority_conflict", v2["reasons"])
         self.assertIn("runtime_missing", v2["reasons"])

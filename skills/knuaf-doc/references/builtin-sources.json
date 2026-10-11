@@ -213,7 +213,7 @@
       "lineage": [],
       "build_allowlist_ref": null
     },
-    {
+        {
       "source_id": "official-writing-guide-pdf",
       "class": "school_guideline",
       "role": "official_guideline",
@@ -221,12 +221,52 @@
         "f60b58b7dcde86eab9f273dd50114ac296d009bd60abb940aaa866a54e866de2"
       ],
       "runtime": "references/official-toc.md",
-      "runtime_present": false,
+      "runtime_present": true,
       "artifacts": [
         {
           "relative_path": "references/official-toc.md",
-          "sha256": "9c8285baf5be8887c8e9b3dc6322279e0997afb7ceb9ebd522e6f8a141bddac0",
-          "bytes": 5221
+          "sha256": "87fa7a502aff42d735d44579d9e68fe1491ce26ac242ac7a25c661b719ca552f",
+          "bytes": 6090
+        },
+        {
+          "relative_path": "references/rules/CH1_intro.md",
+          "sha256": "5a90072799b984707ec995fbfa1750655160613c1ac202c33f24e1ca8012658b",
+          "bytes": 2288
+        },
+        {
+          "relative_path": "references/rules/CH2_external.md",
+          "sha256": "4ef9642b1b7dfe161667f4fe9e94b8ae7232db64ffa18c7cc2ad28b7a39e31ba",
+          "bytes": 5482
+        },
+        {
+          "relative_path": "references/rules/CH3_plan.md",
+          "sha256": "a5e954b793ba6f9337f83d518073a7054a4356a355cfbc77b2a6b97d71887818",
+          "bytes": 6017
+        },
+        {
+          "relative_path": "references/rules/CH4_finance.md",
+          "sha256": "8eddb17b93e73adfa100a98b12814cd8bec2e97e49c21577b049316c8c83e9f1",
+          "bytes": 10330
+        },
+        {
+          "relative_path": "references/rules/CH5_CH6_closing.md",
+          "sha256": "a2ab7fd7022ccbabf89ba05650a1163c3603b969741192448d8de4111abe1f27",
+          "bytes": 5521
+        },
+        {
+          "relative_path": "references/rules/F_format.md",
+          "sha256": "42cfe3d5268686f21b51f28c3e593e7e6a54d84981de3d7309b2a9810baaf154",
+          "bytes": 10470
+        },
+        {
+          "relative_path": "references/rules/PRE_frontmatter.md",
+          "sha256": "b1bbb41214e9d0117301cdd62c9ee99ddfe7348c283b43663a255c2ddfc839d1",
+          "bytes": 4056
+        },
+        {
+          "relative_path": "references/guideline-inventory.json",
+          "sha256": "5067f07c348184d41f1f936d40327a2f92bb9d314974ca9aba6727f25733e4c5",
+          "bytes": 68625
         }
       ],
       "coverage": {
@@ -239,15 +279,79 @@
               },
               "authority": "verified",
               "catalog_digest": null,
-              "receipt_sha256": null
+              "receipt_sha256": "a6d8df96f1553fc1e819a047177f440fe8b2fa10ea20e2b8e25385403a00aff7"
             }
           ]
         }
       },
-      "lineage": [],
-      "build_allowlist_ref": null
+      "lineage": [
+        {
+          "to": "references/official-toc.md",
+          "relationship": "derived_excerpt",
+          "verification": "verified",
+          "verifier": "d1-local-source-check",
+          "receipt_sha256": "a6d8df96f1553fc1e819a047177f440fe8b2fa10ea20e2b8e25385403a00aff7"
+        },
+        {
+          "to": "references/rules/CH1_intro.md",
+          "relationship": "derived_excerpt",
+          "verification": "verified",
+          "verifier": "d1-local-source-check",
+          "receipt_sha256": "a6d8df96f1553fc1e819a047177f440fe8b2fa10ea20e2b8e25385403a00aff7"
+        },
+        {
+          "to": "references/rules/CH2_external.md",
+          "relationship": "derived_excerpt",
+          "verification": "verified",
+          "verifier": "d1-local-source-check",
+          "receipt_sha256": "a6d8df96f1553fc1e819a047177f440fe8b2fa10ea20e2b8e25385403a00aff7"
+        },
+        {
+          "to": "references/rules/CH3_plan.md",
+          "relationship": "derived_excerpt",
+          "verification": "verified",
+          "verifier": "d1-local-source-check",
+          "receipt_sha256": "a6d8df96f1553fc1e819a047177f440fe8b2fa10ea20e2b8e25385403a00aff7"
+        },
+        {
+          "to": "references/rules/CH4_finance.md",
+          "relationship": "derived_excerpt",
+          "verification": "verified",
+          "verifier": "d1-local-source-check",
+          "receipt_sha256": "a6d8df96f1553fc1e819a047177f440fe8b2fa10ea20e2b8e25385403a00aff7"
+        },
+        {
+          "to": "references/rules/CH5_CH6_closing.md",
+          "relationship": "derived_excerpt",
+          "verification": "verified",
+          "verifier": "d1-local-source-check",
+          "receipt_sha256": "a6d8df96f1553fc1e819a047177f440fe8b2fa10ea20e2b8e25385403a00aff7"
+        },
+        {
+          "to": "references/rules/F_format.md",
+          "relationship": "derived_excerpt",
+          "verification": "verified",
+          "verifier": "d1-local-source-check",
+          "receipt_sha256": "a6d8df96f1553fc1e819a047177f440fe8b2fa10ea20e2b8e25385403a00aff7"
+        },
+        {
+          "to": "references/rules/PRE_frontmatter.md",
+          "relationship": "derived_excerpt",
+          "verification": "verified",
+          "verifier": "d1-local-source-check",
+          "receipt_sha256": "a6d8df96f1553fc1e819a047177f440fe8b2fa10ea20e2b8e25385403a00aff7"
+        },
+        {
+          "to": "references/guideline-inventory.json",
+          "relationship": "derived_excerpt",
+          "verification": "verified",
+          "verifier": "d1-local-source-check",
+          "receipt_sha256": "a6d8df96f1553fc1e819a047177f440fe8b2fa10ea20e2b8e25385403a00aff7"
+        }
+      ],
+      "build_allowlist_ref": "install-manifest.json"
     },
-    {
+        {
       "source_id": "official-writing-guide-hwp",
       "class": "school_guideline",
       "role": "official_guideline",
@@ -255,17 +359,121 @@
         "efcbbc7fe261477ebd8628883733aacd4214fa365974617dced1304d99f6c631"
       ],
       "runtime": "references/official-toc.md",
-      "runtime_present": false,
+      "runtime_present": true,
       "artifacts": [
         {
           "relative_path": "references/official-toc.md",
-          "sha256": "9c8285baf5be8887c8e9b3dc6322279e0997afb7ceb9ebd522e6f8a141bddac0",
-          "bytes": 5221
+          "sha256": "87fa7a502aff42d735d44579d9e68fe1491ce26ac242ac7a25c661b719ca552f",
+          "bytes": 6090
+        },
+        {
+          "relative_path": "references/rules/CH1_intro.md",
+          "sha256": "5a90072799b984707ec995fbfa1750655160613c1ac202c33f24e1ca8012658b",
+          "bytes": 2288
+        },
+        {
+          "relative_path": "references/rules/CH2_external.md",
+          "sha256": "4ef9642b1b7dfe161667f4fe9e94b8ae7232db64ffa18c7cc2ad28b7a39e31ba",
+          "bytes": 5482
+        },
+        {
+          "relative_path": "references/rules/CH3_plan.md",
+          "sha256": "a5e954b793ba6f9337f83d518073a7054a4356a355cfbc77b2a6b97d71887818",
+          "bytes": 6017
+        },
+        {
+          "relative_path": "references/rules/CH4_finance.md",
+          "sha256": "8eddb17b93e73adfa100a98b12814cd8bec2e97e49c21577b049316c8c83e9f1",
+          "bytes": 10330
+        },
+        {
+          "relative_path": "references/rules/CH5_CH6_closing.md",
+          "sha256": "a2ab7fd7022ccbabf89ba05650a1163c3603b969741192448d8de4111abe1f27",
+          "bytes": 5521
+        },
+        {
+          "relative_path": "references/rules/F_format.md",
+          "sha256": "42cfe3d5268686f21b51f28c3e593e7e6a54d84981de3d7309b2a9810baaf154",
+          "bytes": 10470
+        },
+        {
+          "relative_path": "references/rules/PRE_frontmatter.md",
+          "sha256": "b1bbb41214e9d0117301cdd62c9ee99ddfe7348c283b43663a255c2ddfc839d1",
+          "bytes": 4056
+        },
+        {
+          "relative_path": "references/guideline-inventory.json",
+          "sha256": "5067f07c348184d41f1f936d40327a2f92bb9d314974ca9aba6727f25733e4c5",
+          "bytes": 68625
         }
       ],
       "coverage": {},
-      "lineage": [],
-      "build_allowlist_ref": null
+      "lineage": [
+        {
+          "to": "references/official-toc.md",
+          "relationship": "shared_artifact",
+          "verification": "unverified",
+          "verifier": null,
+          "receipt_sha256": null
+        },
+        {
+          "to": "references/rules/CH1_intro.md",
+          "relationship": "shared_artifact",
+          "verification": "unverified",
+          "verifier": null,
+          "receipt_sha256": null
+        },
+        {
+          "to": "references/rules/CH2_external.md",
+          "relationship": "shared_artifact",
+          "verification": "unverified",
+          "verifier": null,
+          "receipt_sha256": null
+        },
+        {
+          "to": "references/rules/CH3_plan.md",
+          "relationship": "shared_artifact",
+          "verification": "unverified",
+          "verifier": null,
+          "receipt_sha256": null
+        },
+        {
+          "to": "references/rules/CH4_finance.md",
+          "relationship": "shared_artifact",
+          "verification": "unverified",
+          "verifier": null,
+          "receipt_sha256": null
+        },
+        {
+          "to": "references/rules/CH5_CH6_closing.md",
+          "relationship": "shared_artifact",
+          "verification": "unverified",
+          "verifier": null,
+          "receipt_sha256": null
+        },
+        {
+          "to": "references/rules/F_format.md",
+          "relationship": "shared_artifact",
+          "verification": "unverified",
+          "verifier": null,
+          "receipt_sha256": null
+        },
+        {
+          "to": "references/rules/PRE_frontmatter.md",
+          "relationship": "shared_artifact",
+          "verification": "unverified",
+          "verifier": null,
+          "receipt_sha256": null
+        },
+        {
+          "to": "references/guideline-inventory.json",
+          "relationship": "shared_artifact",
+          "verification": "unverified",
+          "verifier": null,
+          "receipt_sha256": null
+        }
+      ],
+      "build_allowlist_ref": "install-manifest.json"
     },
     {
       "source_id": "kim-wonseop-exemplar-pdf",
@@ -896,7 +1104,119 @@
       "lineage": [],
       "build_allowlist_ref": null
     }
-  ],
+,
+    {
+      "source_id": "support-ex-excel-buildspec",
+      "class": "historical_support_document",
+      "role": "reference_only",
+      "source_sha256": [
+        "36989513830cff529ef16846afe7286c87e8210533a908545362e142343a401d"
+      ],
+      "runtime": "references/rules/EX_excel_buildspec.md",
+      "runtime_present": true,
+      "artifacts": [
+        {
+          "relative_path": "references/rules/EX_excel_buildspec.md",
+          "sha256": "c7c1a8ac6f045f9432ca370ce4f429f8c60b18283c4bf00162579deb1c675e22",
+          "bytes": 12862
+        }
+      ],
+      "coverage": {},
+      "lineage": [
+        {
+          "to": "references/rules/EX_excel_buildspec.md",
+          "relationship": "derived_snapshot",
+          "verification": "verified",
+          "verifier": "d1-snapshot-byte-check",
+          "receipt_sha256": "409e420189bfc22ead7dce442e69b8a8932081ae1563569defa1e5e8442388d2"
+        }
+      ],
+      "build_allowlist_ref": "install-manifest.json"
+    },
+    {
+      "source_id": "support-ex-excel-structure",
+      "class": "historical_support_document",
+      "role": "reference_only",
+      "source_sha256": [
+        "8d9ac226dd5593b34fc70ba3159b422395f2b2573fafc05766db59b30f677734"
+      ],
+      "runtime": "references/rules/EX_excel_structure.md",
+      "runtime_present": true,
+      "artifacts": [
+        {
+          "relative_path": "references/rules/EX_excel_structure.md",
+          "sha256": "8f6880d637201e473fdd101efcca2c28fd33054a1de372b778069915ce80e540",
+          "bytes": 8221
+        }
+      ],
+      "coverage": {},
+      "lineage": [
+        {
+          "to": "references/rules/EX_excel_structure.md",
+          "relationship": "derived_snapshot",
+          "verification": "verified",
+          "verifier": "d1-snapshot-byte-check",
+          "receipt_sha256": "409e420189bfc22ead7dce442e69b8a8932081ae1563569defa1e5e8442388d2"
+        }
+      ],
+      "build_allowlist_ref": "install-manifest.json"
+    },
+    {
+      "source_id": "support-ex-exemplar-structure",
+      "class": "historical_support_document",
+      "role": "reference_only",
+      "source_sha256": [
+        "c25eadff3d31f0f04796cff0cf5110b93708ad6774ffe27a3c39997931ca2487"
+      ],
+      "runtime": "references/rules/EX_exemplar_structure.md",
+      "runtime_present": true,
+      "artifacts": [
+        {
+          "relative_path": "references/rules/EX_exemplar_structure.md",
+          "sha256": "93a3c48a453ae5e0c9d1bc3025f6db3c61178dd93c18c1ea788a604cc57a6781",
+          "bytes": 5969
+        }
+      ],
+      "coverage": {},
+      "lineage": [
+        {
+          "to": "references/rules/EX_exemplar_structure.md",
+          "relationship": "derived_snapshot",
+          "verification": "verified",
+          "verifier": "d1-snapshot-byte-check",
+          "receipt_sha256": "409e420189bfc22ead7dce442e69b8a8932081ae1563569defa1e5e8442388d2"
+        }
+      ],
+      "build_allowlist_ref": "install-manifest.json"
+    },
+    {
+      "source_id": "support-w-writing-spec",
+      "class": "historical_support_document",
+      "role": "reference_only",
+      "source_sha256": [
+        "1b3a71c5880d420163698f47bda61ee89b59c547b7f58fe1909b2f2be8ade9dd"
+      ],
+      "runtime": "references/rules/W_writing_spec.md",
+      "runtime_present": true,
+      "artifacts": [
+        {
+          "relative_path": "references/rules/W_writing_spec.md",
+          "sha256": "69ad565cd599854b2c87df59ddc5d0b63fa40c1fa056d4a72b47f0f1acaa6093",
+          "bytes": 5853
+        }
+      ],
+      "coverage": {},
+      "lineage": [
+        {
+          "to": "references/rules/W_writing_spec.md",
+          "relationship": "derived_snapshot",
+          "verification": "verified",
+          "verifier": "d1-snapshot-byte-check",
+          "receipt_sha256": "409e420189bfc22ead7dce442e69b8a8932081ae1563569defa1e5e8442388d2"
+        }
+      ],
+      "build_allowlist_ref": "install-manifest.json"
+    }  ],
   "p4_trust": {
     "packs_dir": {
       "relative_root": "benchmark-packs",
