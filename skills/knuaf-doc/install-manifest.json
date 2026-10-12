@@ -1,6 +1,6 @@
 {
  "files": {
-  "SKILL.md": "888f7806b35823449ae7fabb77a5f4306277f79a22633a3a21c89e08a1b670ac",
+  "SKILL.md": "28f6939a17f4ce5b0dabb33f5e76dabe4f9f19a929f02864b49c7938e193914c",
   "references/benchmark-packs/aliases/crop-aliases.specialty_crops.json": "8e7abffc7b4244727b4732f558b722934dd8ea229c0057312d1ee7ea92c2df22",
   "references/benchmark-packs/aliases/major-aliases.json": "ad1e1e6c2296f93ef27beab8494e840b1578e0d61c6c9bd8e238c640e653c81b",
   "references/benchmark-packs/catalog.json": "8dcad598073ce3efcce6698dafd2fa81bd24453deeb90216648ff68d1e8f8e68",
@@ -32,7 +32,7 @@
   "references/common-workbooks/formula-audit/x01.json": "785c2a157b8a774421624aa49d86f347ffc4c533051959cc822746bc6ebaecf5",
   "references/common-workbooks/formula-audit/x02.json": "3594ce66eabb8ec746af3e945a42409f3ad800af37c04832cf322de1780b713d",
   "references/common-workbooks/kang-finance-workbook.json": "750dbe4c7b0361811ed8291fde275ed3ae088eaaa82511eff1c5fbda25ebcece",
-  "references/cross-review.md": "ae44cca7ae5f9243d0f9c404b5505af05a50944a8a365ddf7f35bebc5882bf81",
+  "references/cross-review.md": "c44dbcb9dedfb2127e79e790c9108ebcaa3ffec8d7da7a6abdf56587e12c3e70",
   "references/excel-template.md": "092f186f20d7d1d6842a3b6a75604ff39a620c1d1265f4cc089ef59d38411064",
   "references/exemplar-quality.md": "c6bfedd6264d6c82979a14029fd8281c19212a6c71334b6efea10f04c9370bed",
   "references/fact-semantics.json": "84034b46107a29c75bd630ab1f8afce88f2e6aa2a0fad4cfd5d7056b66af5569",
@@ -52,7 +52,7 @@
   "references/industrial-insects/precedents.json": "8663b186ee13cd92489de2c7a82149e7ac70b24f1b5a051df35559baa630e544",
   "references/industrial-insects/premise-probes.md": "352e66a34f25812920b67af85d1470527ee5f4e1c9d57aaaebedcb746bf32d81",
   "references/intake-selection.md": "41fb622861d1dec95aaee03c6b916bd17a75ad9b9e916d0c7f3f4be87b7efb23",
-  "references/interview-guide.md": "7705140d1ab5ea8037e73b66189a0fccb53611ee10f88e0eb259ae32753fef75",
+  "references/interview-guide.md": "59d352de67294bce3a341f5f370fe594903dda39a4e6f93f58c133e3dff29c27",
   "references/interview-ui.md": "0f84499b8648635b129b92687a31cc273aade9102d185b1c6a660a64f1dd5f7e",
   "references/kim-finance-bible.md": "88d20f35090ff8924fb0dbb0a9b3ffbf1c321693e14ae43cdac5aeb127f29281",
   "references/korean-polishing.md": "49a73dcb60dd9b00a59a8b037e308fc140fb6717cec600b194ef63e347e79e57",
@@ -97,7 +97,7 @@
   "references/thesis-level.md": "c378ff8bd3ad9293b03a216e562f8a8fee69f769623068b0fc1ca9726dc55ee1",
   "references/update.md": "795eed60402f247658ba60bf0c04787e0316ae15aef426ee3b9d00981551e5da",
   "references/workbook-reference-set.json": "de33d81896651dff4e6cf35330a476cf196998d2fdae28d09cfa8c99cdf775a6",
-  "references/workflow-order.md": "14ca21d3de25c29f7f104f261f153885bf0c4cc1588968417c9ece95fbd4be8e",
+  "references/workflow-order.md": "6f8d347924301473d03ccedbf39220c0ab9c0682052cf95ed451ebf154528960",
   "scripts/build_docx.py": "8225681678cb270b5bc666343c8a8e36dcc4337a6c971eb935a8ff3c08629e78",
   "scripts/build_excel_finance_template.py": "13aa6ad336b798aa00a2ffcb2ca99531a30a77f88fa1fb96e650c464338f135a",
   "scripts/build_status.py": "d97a4338604ce75b5ed483ac3ff76784040b5b201b4561457c860bc8f3aa21b9",
@@ -184,7 +184,7 @@
   "tests/test_gg_source_register.py": "4c7947c4e8786fffffbb7e23579faa54932a2ca4099e7a21f9000e36a10c0457",
   "tests/test_n5_guidance_link.py": "32462d60e2a3c7a40cffb6eecfb138f8046d382ad16bb15377b3490e3ddbb43a",
   "tests/test_official_guide_reuse.py": "2169e23583f04860fbeb77fe1fe802bed756efd5147156c294eddb3e9ba4d87c",
-  "version.json": "17008bfab1fbeb247db14f3c32d1d32c17f00dea43e18d71be5eebd92f38998e"
+  "version.json": "7e9192dddf05ddbae1eb216d6a1c757ecd989c11d03de64cc3c8a2b2aed8d135"
  },
  "schema": "knuaf-doc/install-manifest@1"
 }
