@@ -451,7 +451,7 @@ class UpdateTests(_UpdateCase):
         plugin = json.loads(PLUGIN_JSON_PATH.read_text(encoding="utf-8"))
         self.assertEqual({"schema", "version", "repo"}, set(version))
         self.assertEqual(plugin["version"], version["version"])
-        self.assertEqual("0.1.5", version["version"])
+        self.assertEqual("0.1.6", version["version"])
         for raw in ('{"schema":"knuaf-doc/version@1","version":"0.1.1",'
                     '"repo":"starceas/knuaf-doc","repo":"starceas/knuaf-doc"}',
                     '{"schema":"bad","version":"0.1.1","repo":"starceas/knuaf-doc"}',
@@ -848,7 +848,7 @@ class UpdateTests(_UpdateCase):
                        "스레드마다 한 번", "references/update.md", "자료·전공 확인",
                        "계획 인터뷰", "조사·근거 정리", "본문 Ⅰ~Ⅵ 초안",
                        "재무 엑셀", "검토·고치기", "워드 검토본",
-                       "지금 확인할 것", "다음에 할 말", "상단 블록",
+                       "지금 확인할 것", "다음 작업", "상단 블록",
                        "10줄 이하", "독립 내용검토 전", "ready", "reuse",
                        "deferred", "user_finish", "그 뒤", "✓", "▶", "○", "⚑"):
             self.assertIn(phrase, raw)
