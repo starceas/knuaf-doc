@@ -154,7 +154,10 @@
   "skills/knuaf-doc/tests/test_n5_guidance_link.py",
   "skills/knuaf-doc/tests/test_official_guide_reuse.py",
   "tests/test_asset_disposition.py",
-  "tools/check_asset_disposition.py"
+  "tools/check_asset_disposition.py",
+  "tests/fixtures/hort_finance/synthetic.py",
+  "tests/test_major_guard_outputs.py",
+  "tests/test_sales_price_numeric_contract.py"
  ],
  "baseline_main": "29abec0ec95369de7ae9e22207349d574f1f46b7",
  "baseline_spec": "tools/baseline-files.json",
@@ -180,12 +183,12 @@
    "source": "new"
   },
   "skills/knuaf-doc/SKILL.md": {
-   "after_sha256": "888f7806b35823449ae7fabb77a5f4306277f79a22633a3a21c89e08a1b670ac",
+   "after_sha256": "e2a240c323b20ff33bdacaf46b02e4b9736e4e58f2654107dd57ae7dc763ccf2",
    "before_sha256": "c0008fa5239cc16411fd4ef24b5bf901c7a8b9b50c6b621e2bdee3acf734ddc0",
    "first_changed": "P1",
    "last_changed": "P28",
    "owner": "P28",
-   "reason": "H11 문서 정정: 사용자 명시 모델도 임의 폴백·대체 금지 규칙 추가 | P5-D1 guidance sync: new '참고자료 폴더 등록' bullet documents the frozen source-scan→source-resolve→source-register→source-view lifecycle and 03_sources.md preservation | P6: document explicit major binding and current industrial insect capability boundary | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P8: fruit_trees plan-only capability and guidance link | P9: hort_env_systems plan-only capability and guidance link | P10: P9: common XLSX template rule + X02 layout guard sentence | P9-D3: major-specific workbook precedence sentence (hort_env_systems base = registered H01) | P11 공용 인터뷰 규칙: 전공별 핵심 전제 목록(C1), 동적 영향 순위(C2), '모르겠다' 도움(C3), 충돌 정리(C5), 미준비 전공 안내, 특용작물 probe 문서 | P12: industrial_insects plan/evidence commands and built-in reuse guidance | P13: D4 identity-catalogue-only precedence guidance | P14: fruit_trees read-only production and inventory check link | P17: rda-lookup verification-state guidance sentence (verified is observation confirmation, not approval; unverified/ambiguous/series and 옮기지 말 것 labels never copied) | P18: industrial_insects 0.2.0 product lines, plan without selection, rebinding guidance | P21 C1: seo-minseo template materialize-c1 --ref SEO + formula_patch application guidance | P22: 학생 오류·불편 신고 안내 한 줄과 신고 절 | P23: C1b option-A assumption and copy-only guidance merged with #22 student-report section | P25: option-A 실지급 확인을 interview-guide Q2-2 문항에 연결하고 경영주 예외(경영주 인출은 급여·가계비 규칙, 중복 반영 금지)를 명시하는 문장군 — FIX1 | P25: 중복된 경영주 급여 설명을 정리하고 기존 option-A 문장을 경영주 예외와 일치시킴 — FIX2 | P26: 첫 진입 알림·업데이트 경로·7단계 단위 보고 목록 | P26 F1: progress grouping is deterministic for consecutive finished and remaining stages | P26 F2: OS lock | P27: 진입 계약 재구성(22KB 이하, 절단 재읽기 규칙, 불변 조건 앞배치), 완전 자동 업데이트 첫 진입(auto·S1·S2), D5 A안 위임, D3 비공개 신고, D7 Windows 범위, import --offline-confirmed·doctor --probe 안내, 전공·출력 상세를 majors.md·outputs.md로 분리 | P27 검토 r1: 첫 진입 결과별 안내를 update.md 표와 1:1로, 0.1.x 업데이트 경로 구분(R1-05) | P27 검토 r2: user_files_in_skill 문구(원래 배포본과 다른 파일), install_manifest_invalid·legacy_reference_unavailable 첫 진입 안내 | P28: thesis-level/figure-photo-policy 링크 추가 (이유림 기준 전환·사진 정책) | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes. | PR-4 ORDER-A: 본문 전 재무 게이트 — 불변4의 적자 서술을 게이트 조건 아래로 묶고 복구 참고 문서 4개 링크; I remeasured final bytes. | N1-N5/X1: built-in guidance, extract source binding and restored tool links. | ORDER-I2: remeasured final 0.1.5 file bytes after preserving PR32 inputs. | AMEND-I2-1 R3: explain source-register snapshot then canonical sources apply and profile revision.",
+   "reason": "H11 문서 정정: 사용자 명시 모델도 임의 폴백·대체 금지 규칙 추가 | P5-D1 guidance sync: new '참고자료 폴더 등록' bullet documents the frozen source-scan→source-resolve→source-register→source-view lifecycle and 03_sources.md preservation | P6: document explicit major binding and current industrial insect capability boundary | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P8: fruit_trees plan-only capability and guidance link | P9: hort_env_systems plan-only capability and guidance link | P10: P9: common XLSX template rule + X02 layout guard sentence | P9-D3: major-specific workbook precedence sentence (hort_env_systems base = registered H01) | P11 공용 인터뷰 규칙: 전공별 핵심 전제 목록(C1), 동적 영향 순위(C2), '모르겠다' 도움(C3), 충돌 정리(C5), 미준비 전공 안내, 특용작물 probe 문서 | P12: industrial_insects plan/evidence commands and built-in reuse guidance | P13: D4 identity-catalogue-only precedence guidance | P14: fruit_trees read-only production and inventory check link | P17: rda-lookup verification-state guidance sentence (verified is observation confirmation, not approval; unverified/ambiguous/series and 옮기지 말 것 labels never copied) | P18: industrial_insects 0.2.0 product lines, plan without selection, rebinding guidance | P21 C1: seo-minseo template materialize-c1 --ref SEO + formula_patch application guidance | P22: 학생 오류·불편 신고 안내 한 줄과 신고 절 | P23: C1b option-A assumption and copy-only guidance merged with #22 student-report section | P25: option-A 실지급 확인을 interview-guide Q2-2 문항에 연결하고 경영주 예외(경영주 인출은 급여·가계비 규칙, 중복 반영 금지)를 명시하는 문장군 — FIX1 | P25: 중복된 경영주 급여 설명을 정리하고 기존 option-A 문장을 경영주 예외와 일치시킴 — FIX2 | P26: 첫 진입 알림·업데이트 경로·7단계 단위 보고 목록 | P26 F1: progress grouping is deterministic for consecutive finished and remaining stages | P26 F2: OS lock | P27: 진입 계약 재구성(22KB 이하, 절단 재읽기 규칙, 불변 조건 앞배치), 완전 자동 업데이트 첫 진입(auto·S1·S2), D5 A안 위임, D3 비공개 신고, D7 Windows 범위, import --offline-confirmed·doctor --probe 안내, 전공·출력 상세를 majors.md·outputs.md로 분리 | P27 검토 r1: 첫 진입 결과별 안내를 update.md 표와 1:1로, 0.1.x 업데이트 경로 구분(R1-05) | P27 검토 r2: user_files_in_skill 문구(원래 배포본과 다른 파일), install_manifest_invalid·legacy_reference_unavailable 첫 진입 안내 | P28: thesis-level/figure-photo-policy 링크 추가 (이유림 기준 전환·사진 정책) | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes. | PR-4 ORDER-A: 본문 전 재무 게이트 — 불변4의 적자 서술을 게이트 조건 아래로 묶고 복구 참고 문서 4개 링크; I remeasured final bytes. | N1-N5/X1: built-in guidance, extract source binding and restored tool links. | ORDER-I2: remeasured final 0.1.5 file bytes after preserving PR32 inputs. | AMEND-I2-1 R3: explain source-register snapshot then canonical sources apply and profile revision. | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
    "source": "new"
   },
   "skills/knuaf-doc/install-manifest.json": {
@@ -460,12 +463,12 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/excel-template.md": {
-   "after_sha256": "092f186f20d7d1d6842a3b6a75604ff39a620c1d1265f4cc089ef59d38411064",
+   "after_sha256": "f68fb29a3820217ec5e57734240be91aff0aa5047749b5dd39a62c8fd9fe7663",
    "before_sha256": "4513094e1754191edd810947789f2228fb3b15bfbe1a2531e1b18f6b144739e8",
    "first_changed": "P28",
    "last_changed": "P28",
    "owner": "P28",
-   "reason": "P28: 물가·노무비 분리 상승률 규칙 절 추가 (특용작물, 공식 통계 근거 필수) | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존 | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes.",
+   "reason": "P28: 물가·노무비 분리 상승률 규칙 절 추가 (특용작물, 공식 통계 근거 필수) | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존 | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes. | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
    "source": "new"
   },
   "skills/knuaf-doc/references/exemplar-quality.md": {
@@ -531,21 +534,21 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/hort-env-systems/finance-params.json": {
-   "after_sha256": "21c3a805987c14007729cc00625f2f0e9d517c7da1ce918a61f63d11b15531b7",
+   "after_sha256": "d4bbba59a1c1f1510f9660ac4c67ff9edef0d955fa4a02297d7ba7c60b642d78",
    "before_sha256": null,
    "first_changed": "P20",
-   "last_changed": "P24",
-   "owner": "P24",
-   "reason": "P20: canonical input parameter map for the H01 finance transformation (1464 params, hash-pinned source, no cell values) | P20: rebased onto accepted P19 (main db2a036) | P24: 입력 계약 1,379키, 자재 면적·수량 계약과 경비 coverage 제거",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "P20: canonical input parameter map for the H01 finance transformation (1464 params, hash-pinned source, no cell values) | P20: rebased onto accepted P19 (main db2a036) | P24: 입력 계약 1,379키, 자재 면적·수량 계약과 경비 coverage 제거 | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
    "source": "new"
   },
   "skills/knuaf-doc/references/hort-env-systems/finance-transform.json": {
-   "after_sha256": "1fc0a7a213d496eb5a5539682f686f538987262f7912157f35ae27a2b2b82dc8",
+   "after_sha256": "06ba2dd33b7b111a5437e6041c506f144dac02ddd84047782f07864d2d3adb3d",
    "before_sha256": null,
    "first_changed": "P20",
-   "last_changed": "P24",
-   "owner": "P24",
-   "reason": "P20: canonical H01 18-sheet transform map (4198 entries, hash-pinned source, no cell values) | P20: rebased onto accepted P19 (main db2a036) | P24: 공개 지도 4,103엔트리, 초안 표시 제거와 수식 140개 재작성",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "P20: canonical H01 18-sheet transform map (4198 entries, hash-pinned source, no cell values) | P20: rebased onto accepted P19 (main db2a036) | P24: 공개 지도 4,103엔트리, 초안 표시 제거와 수식 140개 재작성 | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
    "source": "new"
   },
   "skills/knuaf-doc/references/hort-env-systems/finance-verify-classes.json": {
@@ -603,12 +606,12 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/interview-guide.md": {
-   "after_sha256": "7705140d1ab5ea8037e73b66189a0fccb53611ee10f88e0eb259ae32753fef75",
+   "after_sha256": "a6e8ecb80440198f27d0c5aad660426ab31c409dec2a43ecab07cfa17998dd74",
    "before_sha256": "8f00e8a2d4c5f530eb7aad4a82e2e1957547e14b54941c8f49bb338035b63f87",
    "first_changed": "P11",
    "last_changed": "P28",
    "owner": "P28",
-   "reason": "P11 공용 인터뷰 규칙: 전공별 핵심 전제 목록(C1), 동적 영향 순위(C2), '모르겠다' 도움(C3), 충돌 정리(C5), 미준비 전공 안내, 특용작물 probe 문서 | P25: Q2-2 가족사항 문항에 본인·가족 노동 실지급 확인(한 번만 묻고 미답·미확정 시 option A 기본값; 경영주 지급·인출은 경영주 급여·가계비 규칙으로 중복 반영 없이 처리, 경영주가 아닌 가족 지급만 고용 노동비 행 11–13)과 설명·재무 입력 분산 예시 추가 — FIX1: 경영주 본인 인출과 가계비의 이중 계상 방지 | P27: K1-09 배포 밖 필독 문서 제거, D5 배정 표현 정합, SKILL.md에서 옮긴 작문 상세 | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존 | F2: V2 재확인 수용에 따라 같은 파서 계층의 첫 장/장 경계와 원문 span을 적용하고 명시적 외부 유형 충돌 거부·수동 신뢰 계약을 문서화; 설치 manifest 재생성. 기초 정본·단계·부모 계보·원본 source pin 보존 | PR-4 ORDER-A: 되물음을 본문 전 필수 게이트로 연결; I remeasured final bytes. | N3/N5: DOI intake and approved built-in statistics before external research. | ORDER-I2: remeasured final 0.1.5 file bytes after preserving PR32 inputs.",
+   "reason": "P11 공용 인터뷰 규칙: 전공별 핵심 전제 목록(C1), 동적 영향 순위(C2), '모르겠다' 도움(C3), 충돌 정리(C5), 미준비 전공 안내, 특용작물 probe 문서 | P25: Q2-2 가족사항 문항에 본인·가족 노동 실지급 확인(한 번만 묻고 미답·미확정 시 option A 기본값; 경영주 지급·인출은 경영주 급여·가계비 규칙으로 중복 반영 없이 처리, 경영주가 아닌 가족 지급만 고용 노동비 행 11–13)과 설명·재무 입력 분산 예시 추가 — FIX1: 경영주 본인 인출과 가계비의 이중 계상 방지 | P27: K1-09 배포 밖 필독 문서 제거, D5 배정 표현 정합, SKILL.md에서 옮긴 작문 상세 | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존 | F2: V2 재확인 수용에 따라 같은 파서 계층의 첫 장/장 경계와 원문 span을 적용하고 명시적 외부 유형 충돌 거부·수동 신뢰 계약을 문서화; 설치 manifest 재생성. 기초 정본·단계·부모 계보·원본 source pin 보존 | PR-4 ORDER-A: 되물음을 본문 전 필수 게이트로 연결; I remeasured final bytes. | N3/N5: DOI intake and approved built-in statistics before external research. | ORDER-I2: remeasured final 0.1.5 file bytes after preserving PR32 inputs. | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
    "source": "new"
   },
   "skills/knuaf-doc/references/kim-finance-bible.md": {
@@ -684,12 +687,12 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/official-price-series.json": {
-   "after_sha256": "5ed3631961680cdbd55838d1f294d27f7844cf8a93ba963b22f1b56385929c38",
+   "after_sha256": "4758c47dc9f5ff12d4f83e0091896075f220ee66ddd9688f597648e7f807b515",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
    "owner": "P28",
-   "reason": "PR-2: approved D8/D9 product/skill-test file; W-A/B/C and FIX-A/B/C/C2 evidence. Added by single derived-file writer I.",
+   "reason": "PR-2: approved D8/D9 product/skill-test file; W-A/B/C and FIX-A/B/C/C2 evidence. Added by single derived-file writer I. | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
    "source": "new"
   },
   "skills/knuaf-doc/references/open-questions.md": {
@@ -738,12 +741,12 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/price-research-routes.md": {
-   "after_sha256": "081165f514424b0bf4bf5a5c8f6fa5a2259ea7e68358a654e45c597f6a113172",
+   "after_sha256": "b2a37e2ad20db768bbe9cc72331f93ba8d3ea052129042a86ba24eac7e6d5bdc",
    "before_sha256": "f89f038d5c767fd436a7a2c3b42c85f91d2b6a44186f9178fd6630b1438120f6",
    "first_changed": "P28",
    "last_changed": "P28",
    "owner": "P28",
-   "reason": "P28: 봉산허브·허브아이 업체 게시가 참고 불가(출처 불가) 처리, 공식 통계 경로로 좁힘 | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes.",
+   "reason": "P28: 봉산허브·허브아이 업체 게시가 참고 불가(출처 불가) 처리, 공식 통계 경로로 좁힘 | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes. | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
    "source": "new"
   },
   "skills/knuaf-doc/references/rda-benchmark.md": {
@@ -765,12 +768,12 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/research-sources.md": {
-   "after_sha256": "6acc7243bd3d031584d94cd9ee057173d245f69f15a8a3a4bbd8dcff13a8af84",
+   "after_sha256": "f3907e2c7b73fd935db3c6f27deb0d602e8d87b2888883aed1763954db2a3894",
    "before_sha256": "0f127da93011dcc7a9be3c56e4219098781307b66a1f781786301789623e46b2",
    "first_changed": "P28",
    "last_changed": "P28",
    "owner": "P28",
-   "reason": "P28: 출처 제한 적용 범위 표기, 물가·노무비 공식 통계 조사 원칙 추가 | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes. | N3/N5: DOI intake and approved built-in statistics before external research. | ORDER-I2: remeasured final 0.1.5 file bytes after preserving PR32 inputs.",
+   "reason": "P28: 출처 제한 적용 범위 표기, 물가·노무비 공식 통계 조사 원칙 추가 | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes. | N3/N5: DOI intake and approved built-in statistics before external research. | ORDER-I2: remeasured final 0.1.5 file bytes after preserving PR32 inputs. | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
    "source": "new"
   },
   "skills/knuaf-doc/references/reuse-registry-schema.md": {
@@ -809,30 +812,30 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/source-intake.md": {
-   "after_sha256": "60eaf26df817ad710e9afb4451cf07099b5367bf6e224147c4aee3f3a4b26954",
+   "after_sha256": "4ab62e6d88d96384d826c4fe23660ac6045fcd2bc713b1613e317330bedc1d6b",
    "before_sha256": "ebfcfe7e23ad5ed3bbc153db239f5f6b5e624d68a8087be255d57909bf18e5c6",
    "first_changed": "P5",
    "last_changed": "P28",
    "owner": "P28",
-   "reason": "P5-D1 guidance conflict fix (OWNERSHIP 1.1): removed the stale 'scan folder -> build 03_sources.md index' instruction at line 28 and documents the frozen source-scan→source-resolve→source-register→source-view lifecycle — sealed scan receipt under sources/intake/, read-only resolve, explicit-selection register, registration-bound generated view under sources/generated/<view_id>/source-index.json; 03_sources.md byte-preserved on all paths incl. failure (SPEC 3.7) | P10: P9: common XLSX dedup rule — exact sha uses registry extract; different sha re-parses even with identical 17 sheet names; layout_family is a hint | P9-D3: major-specific workbook precedence note (base_for_major/H01; explicit selection wins) | P13: D4 r4 catalogue-listed-source precedence for new registrations; existing linked extracts remain | P28: 등급제를 허용/금지 기준으로 교체 — news·blog·interview·sns·cafe·shop·press 즉시 차단 (특용작물) | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존 | F2: V2 재확인 수용에 따라 같은 파서 계층의 첫 장/장 경계와 원문 span을 적용하고 명시적 외부 유형 충돌 거부·수동 신뢰 계약을 문서화; 설치 manifest 재생성. 기초 정본·단계·부모 계보·원본 source pin 보존",
+   "reason": "P5-D1 guidance conflict fix (OWNERSHIP 1.1): removed the stale 'scan folder -> build 03_sources.md index' instruction at line 28 and documents the frozen source-scan→source-resolve→source-register→source-view lifecycle — sealed scan receipt under sources/intake/, read-only resolve, explicit-selection register, registration-bound generated view under sources/generated/<view_id>/source-index.json; 03_sources.md byte-preserved on all paths incl. failure (SPEC 3.7) | P10: P9: common XLSX dedup rule — exact sha uses registry extract; different sha re-parses even with identical 17 sheet names; layout_family is a hint | P9-D3: major-specific workbook precedence note (base_for_major/H01; explicit selection wins) | P13: D4 r4 catalogue-listed-source precedence for new registrations; existing linked extracts remain | P28: 등급제를 허용/금지 기준으로 교체 — news·blog·interview·sns·cafe·shop·press 즉시 차단 (특용작물) | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존 | F2: V2 재확인 수용에 따라 같은 파서 계층의 첫 장/장 경계와 원문 span을 적용하고 명시적 외부 유형 충돌 거부·수동 신뢰 계약을 문서화; 설치 manifest 재생성. 기초 정본·단계·부모 계보·원본 source pin 보존 | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
    "source": "modified"
   },
   "skills/knuaf-doc/references/specialty-crops/finance-flow.md": {
-   "after_sha256": "4235ea285d251825614d394b8206277a7d6908bb5bbc5abb96f17a90e0150f3d",
+   "after_sha256": "f42b0c77b861598f79d77f96e584404af1905e7792b3b5e4f3473df862be1479",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
    "owner": "P28",
-   "reason": "P28: 특용작물 전용 이유림 Ⅳ장 재무표 전개 문서(전공 분리 설계) | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존 | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes.",
+   "reason": "P28: 특용작물 전용 이유림 Ⅳ장 재무표 전개 문서(전공 분리 설계) | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존 | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes. | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
    "source": "new"
   },
   "skills/knuaf-doc/references/specialty-crops/finance-table-map.json": {
-   "after_sha256": "a8968c41490f6992ecbc99f7a9cb7e6025d01d757b3ef92a5b45091d756af562",
+   "after_sha256": "e1a6f9e48e86f84ad38da9e0a9dd4b3001fe4f8de03ad7bb6bb9a976c09a26ba",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
    "owner": "P28",
-   "reason": "PR-2: approved D8/D9 product/skill-test file; W-A/B/C and FIX-A/B/C/C2 evidence. Added by single derived-file writer I.",
+   "reason": "PR-2: approved D8/D9 product/skill-test file; W-A/B/C and FIX-A/B/C/C2 evidence. Added by single derived-file writer I. | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
    "source": "new"
   },
   "skills/knuaf-doc/references/specialty-crops/premise-probes.md": {
@@ -854,12 +857,12 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/thesis-level.md": {
-   "after_sha256": "c378ff8bd3ad9293b03a216e562f8a8fee69f769623068b0fc1ca9726dc55ee1",
+   "after_sha256": "f37d4c28fd7814150f36e35cf159d14883620373ab511266950aae37ba496661",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
    "owner": "P28",
-   "reason": "P28: 졸업논문 눈높이·재무 지표 경계·머리말 상한·출처 제한 정본 문서 (특용작물 강제) | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존 | F2: V2 재확인 수용에 따라 같은 파서 계층의 첫 장/장 경계와 원문 span을 적용하고 명시적 외부 유형 충돌 거부·수동 신뢰 계약을 문서화; 설치 manifest 재생성. 기초 정본·단계·부모 계보·원본 source pin 보존 | F3: 전역 Markdown 유무 판정을 제거하고 prefix-only 공통 제목 규칙·요약 단일 종료·번호 공백 문법으로 통일; 설치 manifest 재생성. 원본/부모 계보·stage·source pin 보존 | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes.",
+   "reason": "P28: 졸업논문 눈높이·재무 지표 경계·머리말 상한·출처 제한 정본 문서 (특용작물 강제) | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존 | F2: V2 재확인 수용에 따라 같은 파서 계층의 첫 장/장 경계와 원문 span을 적용하고 명시적 외부 유형 충돌 거부·수동 신뢰 계약을 문서화; 설치 manifest 재생성. 기초 정본·단계·부모 계보·원본 source pin 보존 | F3: 전역 Markdown 유무 판정을 제거하고 prefix-only 공통 제목 규칙·요약 단일 종료·번호 공백 문법으로 통일; 설치 manifest 재생성. 원본/부모 계보·stage·source pin 보존 | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes. | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
    "source": "new"
   },
   "skills/knuaf-doc/references/update.md": {
@@ -881,12 +884,12 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/workflow-order.md": {
-   "after_sha256": "14ca21d3de25c29f7f104f261f153885bf0c4cc1588968417c9ece95fbd4be8e",
+   "after_sha256": "3c1c984510a97178cb852f613a96f4de45c19228d1e054c31e10551329a7625f",
    "before_sha256": "8915cb0b75aa5abbf547a49afc08beae5a6e7ff58b7c8aa22f0c07444ad8a511",
    "first_changed": "P11",
    "last_changed": "P28",
    "owner": "P28",
-   "reason": "P11 공용 인터뷰 규칙: 전공별 핵심 전제 목록(C1), 동적 영향 순위(C2), '모르겠다' 도움(C3), 충돌 정리(C5), 미준비 전공 안내, 특용작물 probe 문서 | P28: 이유림 우선 벤치마크·출처 제한·물가/노무비 분리·윤문 범위 확장 반영 | PR-4 ORDER-A: '재무 게이트' 절 정본 — 검사 시점·4상태·되물음·검사 경계; I remeasured final bytes. | N1/N2: document restored school requirements and source-binding boundaries. | ORDER-I2: remeasured final 0.1.5 file bytes after preserving PR32 inputs.",
+   "reason": "P11 공용 인터뷰 규칙: 전공별 핵심 전제 목록(C1), 동적 영향 순위(C2), '모르겠다' 도움(C3), 충돌 정리(C5), 미준비 전공 안내, 특용작물 probe 문서 | P28: 이유림 우선 벤치마크·출처 제한·물가/노무비 분리·윤문 범위 확장 반영 | PR-4 ORDER-A: '재무 게이트' 절 정본 — 검사 시점·4상태·되물음·검사 경계; I remeasured final bytes. | N1/N2: document restored school requirements and source-binding boundaries. | ORDER-I2: remeasured final 0.1.5 file bytes after preserving PR32 inputs. | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
    "source": "new"
   },
   "skills/knuaf-doc/scripts/build_docx.py": {
@@ -899,12 +902,12 @@
    "source": "adopted:PR2"
   },
   "skills/knuaf-doc/scripts/build_excel_finance_template.py": {
-   "after_sha256": "13aa6ad336b798aa00a2ffcb2ca99531a30a77f88fa1fb96e650c464338f135a",
+   "after_sha256": "da8b662716f34c29a0d440843d474ebb0ac3651e8940bf227a1d343e729c9a8f",
    "before_sha256": "9630799cf6d9472039a71e93389df77e4aa4ebbec6d39e16d950c146494d9fa1",
    "first_changed": "P1",
-   "last_changed": "P27",
-   "owner": "P27",
-   "reason": "C2: UTF-8 명시 I/O(입력 JSON read_text) | P3-C1 lane4 (devin/swe-2-max, herdr-supervised): extracted build() helper calling gg_finance.validate_economic_inputs(spec, purpose='draft') before workbook() write; hard fail issues refuse the build (status=blocked, no file written), soft blocked provenance issues ride along as economic_validation_issues in the success result. CLI --input/--out interface unchanged. | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P20: spec 검증 전 require_finance_profile — hort_env_systems는 transform 영수증 없으면 held | P27: K2-02: CLI 진입점 stdout·stderr UTF-8 재설정",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "C2: UTF-8 명시 I/O(입력 JSON read_text) | P3-C1 lane4 (devin/swe-2-max, herdr-supervised): extracted build() helper calling gg_finance.validate_economic_inputs(spec, purpose='draft') before workbook() write; hard fail issues refuse the build (status=blocked, no file written), soft blocked provenance issues ride along as economic_validation_issues in the success result. CLI --input/--out interface unchanged. | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P20: spec 검증 전 require_finance_profile — hort_env_systems는 transform 영수증 없으면 held | P27: K2-02: CLI 진입점 stdout·stderr UTF-8 재설정 | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
    "source": "new"
   },
   "skills/knuaf-doc/scripts/build_status.py": {
@@ -974,12 +977,12 @@
    "source": "modified"
   },
   "skills/knuaf-doc/scripts/gg_excel_formula_patch.py": {
-   "after_sha256": "2bed0f04db6484e3a478b673bfbdab3098224045f26fc610d4a421e2c5e03ce1",
+   "after_sha256": "7e6d8ec826929c02ddc4660dfd8a6d3c2e491a734d88c00be91046b0059c835e",
    "before_sha256": "d1e1e77dccf3cfcc8ddb7d25bab9c8e53dd77850d97ed019d8f33884a46250db",
    "first_changed": "P7",
    "last_changed": "P28",
    "owner": "P28",
-   "reason": "P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P20: school_17_sheet_v1 프로필 고정 require_finance_profile | P27: K2-02: CLI 진입점 stdout·stderr UTF-8 재설정 | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes.",
+   "reason": "P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P20: school_17_sheet_v1 프로필 고정 require_finance_profile | P27: K2-02: CLI 진입점 stdout·stderr UTF-8 재설정 | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes. | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_excel_print.py": {
@@ -1027,12 +1030,12 @@
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_finance_tables.py": {
-   "after_sha256": "a91b38b0086c7390d6bf5945a63a8b43ddf204b2e7105dcc2c5fe8d6e28c3941",
+   "after_sha256": "a660bab6ae3583fbf18abb3a6894fab4e4b16dffaa8fe02ab8f20eb5fe0280d7",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
    "owner": "P28",
-   "reason": "PR-2: approved D8/D9 product/skill-test file; W-A/B/C and FIX-A/B/C/C2 evidence. Added by single derived-file writer I.",
+   "reason": "PR-2: approved D8/D9 product/skill-test file; W-A/B/C and FIX-A/B/C/C2 evidence. Added by single derived-file writer I. | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_frontmatter.py": {
@@ -1098,12 +1101,12 @@
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_hort_workbook.py": {
-   "after_sha256": "3eff6573e673ac7bab1df69de793d72446ff0076ffe593816bfbba51a34156ff",
+   "after_sha256": "877c1f273b6c46c7732e51e36fcc1e63e31fb3779191bab23921e9aea9e6e0d6",
    "before_sha256": null,
    "first_changed": "P20",
-   "last_changed": "P27",
-   "owner": "P27",
-   "reason": "P20: H01-bound 18-sheet transformer — public map only, knuaf-hort-finance-receipt/v1 receipt, transform entry calls require_finance_profile | I4-FIX(P20): transform 영수증의 H01 입력 결속, 사실 단위·기간·무매출 사전 보류, 공식 Office manifest 직접 검증, 수식 전수 독립 계산, 중첩 공개 값 감사 | I5-FIX(P20): 독립 기대값으로 분기를 정한 뒤 네이티브 캐시 자료형과 값을 대조 | P20: rebased onto accepted P19 (main db2a036) | P24: 고정 개수·sales/W plan 게이트와 캐시 기반 대출 항등식 검사 | P27: K2-02: CLI 진입점 stdout·stderr UTF-8 재설정",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "P20: H01-bound 18-sheet transformer — public map only, knuaf-hort-finance-receipt/v1 receipt, transform entry calls require_finance_profile | I4-FIX(P20): transform 영수증의 H01 입력 결속, 사실 단위·기간·무매출 사전 보류, 공식 Office manifest 직접 검증, 수식 전수 독립 계산, 중첩 공개 값 감사 | I5-FIX(P20): 독립 기대값으로 분기를 정한 뒤 네이티브 캐시 자료형과 값을 대조 | P20: rebased onto accepted P19 (main db2a036) | P24: 고정 개수·sales/W plan 게이트와 캐시 기반 대출 항등식 검사 | P27: K2-02: CLI 진입점 stdout·stderr UTF-8 재설정 | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_insect_document.py": {
@@ -1196,12 +1199,12 @@
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_price_assumptions.py": {
-   "after_sha256": "9080ff2cad57e5cda48738a019d0cb1346c89b1922aa0fda78ce400c9d781d74",
+   "after_sha256": "0ce493232cc03187ab45265b3b8276b751eb479c349023d46e7f9baee7958d4e",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
    "owner": "P28",
-   "reason": "PR-2: approved D8/D9 product/skill-test file; W-A/B/C and FIX-A/B/C/C2 evidence. Added by single derived-file writer I.",
+   "reason": "PR-2: approved D8/D9 product/skill-test file; W-A/B/C and FIX-A/B/C/C2 evidence. Added by single derived-file writer I. | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_publication.py": {
@@ -1277,12 +1280,12 @@
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_school_excel.py": {
-   "after_sha256": "7357a1f475b501ac5a1a118f7935d0c1dd0d618c05780ace228c584f293679a7",
+   "after_sha256": "82e2309c740eeecf3f79d89078800da59f0f069bdc3576ce66c71ef5525e5a81",
    "before_sha256": "4bee13020358819f168c13a91c4895d1e50d3def7f9ea72d557423182d2b483a",
    "first_changed": "P1",
    "last_changed": "P28",
    "owner": "P28",
-   "reason": "H7: inspect_outputs가 BadZipFile 등을 구조화 issue로 변환. C2: UTF-8 | P4 reference-fill: statistical refs resolve + line labels (D09) | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P20: school_workbook은 school_17_sheet_v1만 — require_finance_profile 게이트 | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes.",
+   "reason": "H7: inspect_outputs가 BadZipFile 등을 구조화 issue로 변환. C2: UTF-8 | P4 reference-fill: statistical refs resolve + line labels (D09) | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P20: school_workbook은 school_17_sheet_v1만 — require_finance_profile 게이트 | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes. | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
    "source": "adopted:PR2"
   },
   "skills/knuaf-doc/scripts/gg_school_format.py": {
@@ -1314,12 +1317,12 @@
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_school_verify.py": {
-   "after_sha256": "01b7094a8e78be6e284a9c33126a0cbd500fcf51b6a01d934fcaa44935902bbd",
+   "after_sha256": "2c16f421e612598e043e9e4f43a60791ca87dc7e9651ac6fccba0e0da06268bb",
    "before_sha256": "aedf804719ab6fea21fcf145ce4295ff16c390b09e72629892a1cd67db1ea9f6",
    "first_changed": "P28",
    "last_changed": "P28",
    "owner": "P28",
-   "reason": "PR-2 W-A: verifier uses separated general/wage/sales assumptions; baseline before hash retained.",
+   "reason": "PR-2 W-A: verifier uses separated general/wage/sales assumptions; baseline before hash retained. | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_source_identity.py": {
@@ -1439,12 +1442,12 @@
    "source": "new"
   },
   "skills/knuaf-doc/tests/test_finance_tables.py": {
-   "after_sha256": "4ef1a75adb29a3b717edde8bf8dbd01c74e691392f9321f346562195e67a0621",
+   "after_sha256": "e64d53f055d24855fc7c0d560a4317191f544cabf6de0fef4b90ff347e8e5b8a",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
    "owner": "P28",
-   "reason": "PR-2: approved D8/D9 product/skill-test file; W-A/B/C and FIX-A/B/C/C2 evidence. Added by single derived-file writer I.",
+   "reason": "PR-2: approved D8/D9 product/skill-test file; W-A/B/C and FIX-A/B/C/C2 evidence. Added by single derived-file writer I. | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
    "source": "new"
   },
   "skills/knuaf-doc/tests/test_gg_major_contract.py": {
@@ -1881,6 +1884,51 @@
    "last_changed": "P28",
    "owner": "P28",
    "reason": "Restore v0.1.4: synthetic regression and approved school-entry expectations.",
+   "source": "new"
+  },
+  "tests/fixtures/hort_finance/synthetic.py": {
+   "first_changed": "P28",
+   "before_sha256": null,
+   "after_sha256": "c17d3d2902f7f991e82cfd4396aec03a716875b4c02ce428da6db8152aae9e58",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
+   "source": "new"
+  },
+  "tests/test_major_guard_outputs.py": {
+   "first_changed": "P28",
+   "before_sha256": null,
+   "after_sha256": "e1e30088440835a41fa0e7dea3be9c94e01a3e20329201b4a92d74be6f0a4b2d",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
+   "source": "new"
+  },
+  "tests/test_price_assumptions.py": {
+   "first_changed": "P28",
+   "before_sha256": null,
+   "after_sha256": "8621f57455119c579e1f5ffe4b5d20f87a14b5ae78e8834b5db17f73cdab3439",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
+   "source": "new"
+  },
+  "tests/test_sales_price_numeric_contract.py": {
+   "first_changed": "P28",
+   "before_sha256": null,
+   "after_sha256": "5df97a6402b2ef3b9e3964a2a7cb7ee0191fe3f07f38a8a6007c92bed6c870df",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
+   "source": "new"
+  },
+  "tests/test_template_wage_link.py": {
+   "first_changed": "P28",
+   "before_sha256": null,
+   "after_sha256": "c5146f2b6e3557fedeb648f4c7fa801be89e8e7630089784b37c005f932a48c6",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
    "source": "new"
   }
  },

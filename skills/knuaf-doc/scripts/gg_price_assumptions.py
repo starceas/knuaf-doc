@@ -72,6 +72,128 @@ DIMENSION_ALIASES = {
 RATE_ABS_TOLERANCE = 5e-4
 RATE_REL_TOLERANCE = 0.05
 
+CPI_SOURCE_ID = "official.kosis.cpi.total"
+
+
+class SalesPriceHeld(ValueError):
+    """Missing sales evidence, with existing research/selection kept separate."""
+
+    def __init__(self, reason, *, writing_year=None, anchor=None, source_id=None,
+                 missing_years=(), raw=None):
+        raw = raw if isinstance(raw, dict) else {}
+        self.detail = {
+            "status": "held", "role": "sales", "anchor": anchor,
+            "source_id": source_id, "reason": reason,
+            "required_years": list(range(writing_year - 5, writing_year))
+                if type(writing_year) is int else [],
+            "missing_years": list(missing_years),
+            "research": raw.get("research", {"status": "not_started", "candidates": []}),
+            "selection": raw.get("selection", {"status": "awaiting"}),
+        }
+        super().__init__(f"판매가 계산 보류: {reason}; missing_years={list(missing_years)}")
+
+
+def _sales_window(entry, writing_year, *, raw=None, anchor=None):
+    check_source_entry(entry, origin="sales")
+    years = list(range(writing_year - 5, writing_year))
+    series = confirmed_series(entry)
+    missing = [y for y in years if y not in series]
+    if missing:
+        raise SalesPriceHeld("확인 불가: 확인된 5개 연도 관측 필요", writing_year=writing_year,
+                             source_id=entry["id"], anchor=anchor,
+                             missing_years=missing, raw=raw)
+    return years, [series[y] for y in years]
+
+
+def _normalize_sales_assumption(raw, *, writing_year, start_year,
+                               target_dimensions, registry=None,
+                               student_sources=None, anchor=None):
+    """One price condition: five-year mean and separate nationwide annual CPI."""
+    if type(writing_year) is not int or not 1905 <= writing_year <= 9999:
+        raise SalesPriceHeld("writing_year 정수 작성연도 필요", raw=raw, anchor=anchor)
+    if type(start_year) is not int or not 1900 <= start_year <= 9999:
+        raise SalesPriceHeld("영농 시작연도 필요", writing_year=writing_year, raw=raw, anchor=anchor)
+    if not isinstance(raw, dict):
+        raise SalesPriceHeld("판매가 입력 객체 필요", writing_year=writing_year, anchor=anchor)
+    if raw.get("status", "applied") != "applied" or raw.get("mode") == "not_applied":
+        raise SalesPriceHeld("not_applied는 판매가 계산을 우회할 수 없음; 사유/관측 필요",
+                             writing_year=writing_year, raw=raw, anchor=anchor)
+    if raw.get("application_base_year") != start_year:
+        raise ValueError("sales.application_base_year는 첫 계획연도와 같아야 함")
+    if "writing_year" in raw and raw["writing_year"] != writing_year:
+        raise ValueError("sales.writing_year가 명시 작성연도와 불일치")
+    registry = load_registry() if registry is None else registry
+    source_id = raw.get("source_id")
+    try:
+        source = resolve_series(source_id, registry, student_sources)
+    except ValueError as exc:
+        raise SalesPriceHeld(str(exc), writing_year=writing_year, source_id=source_id,
+                             raw=raw, anchor=anchor) from exc
+    check_source_entry(source, origin="sales")
+    check_role(source, "sales", origin="sales")
+    if "base_year" not in raw:
+        raise ValueError("sales: base_year 필드 필요")
+    check_base_year(raw["base_year"], source, origin="sales")
+    if source["base_year"] is not None or not source["unit"].startswith("원/"):
+        raise ValueError("sales 시작가는 명목 가격 단위 원/... 필요; 지수 대입 금지")
+    target = canonical_dimensions(target_dimensions)
+    _merge_dimensions(target, canonical_dimensions(raw.get("target_dimensions")), origin="sales")
+    check_dimensions(source, target, required=("crop", "unit", "channel"), origin="sales")
+    if "unit" in raw:
+        check_unit(source, raw["unit"], origin="sales")
+    years, values = _sales_window(source, writing_year, raw=raw, anchor=anchor)
+    window = {"start_year": years[0], "end_year": years[-1]}
+    if raw.get("observation", window) != window:
+        raise ValueError("sales 5년 관측기간은 writing_year-5..writing_year-1이어야 함")
+    if "observation_years" in raw or "observed_values" in raw:
+        if raw.get("observation_years") != years:
+            raise ValueError("sales 관측 연도는 중복 없는 정확한 5개 연도 필요")
+        check_observations(source, years, raw.get("observed_values"), origin="sales")
+    cpi_id = raw.get("cpi_source_id", CPI_SOURCE_ID)
+    if cpi_id != CPI_SOURCE_ID:
+        raise ValueError("판매가 상승률은 DT_1J22003 전국 연간 총지수만 허용")
+    cpi = resolve_series(cpi_id, registry)
+    check_source_entry(cpi, origin="sales.cpi")
+    if (cpi.get("table_id") != "DT_1J22003" or cpi.get("org_id") != "101"
+            or cpi.get("frequency") != "annual" or cpi.get("item_name") != "총지수"
+            or cpi.get("dimensions") != {"region": "전국", "item": "총지수"}
+            or type(cpi.get("base_year")) is not int
+            or cpi.get("unit") != f"지수({cpi['base_year']}=100)"):
+        raise ValueError("판매가 CPI 표·전국·총지수·연간·기준연도/단위 불일치")
+    _, cpi_values = _sales_window(cpi, writing_year, raw=raw, anchor=anchor)
+    resolved = resolve_series_rate(cpi, window, raw.get("rate"), origin="sales.cpi")
+    base_price = float(sum(D(str(v)) for v in values) / D(5))
+    return {
+        "role": "sales", "status": "applied", "writing_year": writing_year,
+        "application_base_year": start_year, "source_id": source_id,
+        "statistic_name": source["statistic_name"], "item_name": source.get("item_name"),
+        "agency": source["agency"], "unit": source["unit"], "base_year": source["base_year"],
+        "dimensions": _series_dimensions(source), "target_dimensions": target,
+        "price_evidence": {k: source.get(k) for k in ("url", "evidence_locator", "retrieved_at", "revision")},
+        "base_price": base_price, "price_observations": [{"year": y, "value": v} for y, v in zip(years, values)],
+        "rate": resolved["rate"], "reference_cagr": resolved["rate"],
+        "rate_source": "sales_cpi_cagr", "declared_rate": resolved["declared_rate"],
+        "observation": resolved["observation"], "interval_years": 4,
+        "cpi_source_id": cpi_id, "cpi_base_year": cpi["base_year"],
+        "cpi_observations": [{"year": y, "value": v} for y, v in zip(years, cpi_values)],
+    }
+
+
+def normalize_sales_assumption(raw, *, writing_year, start_year,
+                               target_dimensions, registry=None,
+                               student_sources=None, anchor=None):
+    """Keep sales holds structured without changing independent cost roles."""
+    try:
+        return _normalize_sales_assumption(raw, writing_year=writing_year,
+            start_year=start_year, target_dimensions=target_dimensions,
+            registry=registry, student_sources=student_sources, anchor=anchor)
+    except SalesPriceHeld:
+        raise
+    except ValueError as exc:
+        raise SalesPriceHeld(str(exc), writing_year=writing_year, anchor=anchor,
+            source_id=raw.get("source_id") if isinstance(raw, dict) else None,
+            raw=raw) from exc
+
 
 def registry_path():
     return (
@@ -690,7 +812,7 @@ def _normalize_role(role, raw, *, registry, student_sources, plan_years,
     }
 
 
-def normalize_price_assumptions(spec, plan_years, *, registry=None):
+def normalize_price_role(spec, role, plan_years, *, registry=None):
     """spec → {"general": A, "wage": A, "sales": A} 정규화. 실패 시 ValueError.
 
     ``plan_years``: 5개 계획연도 목록(validate의 plan_years 결과).
@@ -720,17 +842,37 @@ def normalize_price_assumptions(spec, plan_years, *, registry=None):
 
     target_dims = plan_target_dimensions(spec)
 
-    return {
-        role: _normalize_role(
-            role,
-            block.get(role),
-            registry=registry,
-            student_sources=student_sources,
-            plan_years=plan_years,
-            target_dims=target_dims,
-        )
-        for role in ROLES
-    }
+    if role not in ROLES:
+        raise ValueError("unknown price role")
+    raw = block.get(role)
+    if role != "sales":
+        return _normalize_role(role, raw, registry=registry,
+                               student_sources=student_sources,
+                               plan_years=plan_years, target_dims=target_dims)
+    kwargs = dict(writing_year=spec.get("writing_year"), start_year=plan_years[0],
+                  target_dimensions=target_dims, registry=registry,
+                  student_sources=student_sources)
+    if isinstance(raw, dict) and "anchors" in raw:
+        if raw.get("status", "applied") != "applied" or raw.get("mode") == "not_applied":
+            raise SalesPriceHeld("not_applied는 판매가 계산 불가", writing_year=spec.get("writing_year"), raw=raw)
+        anchors = raw["anchors"]
+        if not isinstance(anchors, dict) or not anchors:
+            raise SalesPriceHeld("활성 앵커별 판매가 자료 필요", writing_year=spec.get("writing_year"), raw=raw)
+        common = {k: v for k, v in raw.items() if k != "anchors"}
+        result = {key: normalize_sales_assumption({**common, **item}, anchor=key, **kwargs)
+                  for key, item in anchors.items() if isinstance(item, dict)}
+        if len(result) != len(anchors):
+            raise ValueError("sales anchors는 객체 사전 필요")
+        first = next(iter(result.values()))
+        return {**first, "anchors": result}
+    return normalize_sales_assumption(raw, **kwargs)
+
+
+def normalize_price_assumptions(spec, plan_years, *, registry=None):
+    """Three independent roles; sales alone uses complete five-year prices/CPI."""
+    registry = load_registry() if registry is None else registry
+    return {role: normalize_price_role(spec, role, plan_years, registry=registry)
+            for role in ROLES}
 
 
 def applications(assumption, plan_year):
@@ -742,6 +884,8 @@ def applications(assumption, plan_year):
 
 def multiplier(assumption, plan_year):
     """해당 계획연도의 누적 배율 (1+r)^n (float). 비유한 결과는 ValueError."""
+    if assumption.get("role") == "sales" and assumption["status"] != "applied":
+        raise SalesPriceHeld("판매가 미적용 배율로 계산 우회 불가")
     if assumption["status"] != "applied":
         return 1.0
     try:
@@ -763,6 +907,16 @@ def multiplier_d(assumption, plan_year):
 def footnote(assumption):
     """표 아래 `출처:` 근거 문구 — 통계명·기준연도·관측기간·산식 표기."""
     label = ROLE_LABELS[assumption["role"]]
+    if assumption.get("rate_source") == "sales_cpi_cagr":
+        anchors = assumption.get("anchors", {"price": assumption})
+        price_text = "; ".join(f"출처: {k}: 5년 평균 {a['base_price']:.15g} {a['unit']} [{a['source_id']}]"
+                               for k, a in anchors.items())
+        return (f"* 판매가 작성연도 {assumption['writing_year']}, "
+                f"관측기간 {assumption['writing_year']-5}~{assumption['writing_year']-1}년; {price_text}; "
+                f"CPI [{assumption['cpi_source_id']}] 기준연도 {assumption['cpi_base_year']}, "
+                f"{assumption['observation']['start_value']}→{assumption['observation']['end_value']}, "
+                f"산식 r=(끝값/시작값)^(1/4)-1={assumption['rate']:.15g}; "
+                f"적용 기초연도 {assumption['application_base_year']}, 적용 횟수 0~4")
     if assumption["status"] != "applied":
         return f"* {label} 상승률 미적용(명시 선택): {assumption['reason']}"
     obs = assumption["observation"]

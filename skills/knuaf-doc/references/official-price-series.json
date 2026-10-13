@@ -2,7 +2,7 @@
   "schema": "knuaf-official-price-series/v1",
   "purpose": "R1이 2026-10-07에 실제 조회한 공식 공표 수열만 수록한다. 미확인 값은 observations에 넣지 않고 unconfirmed_years에 '확인 불가'로 남긴다. 학생 작목 판매가는 번들에 없으므로 spec.price_sources로 같은 스키마의 수열을 학생이 직접 입력한다.",
   "retrieved_at": "2026-10-07",
-  "rate_rule": "연평균 변화율(CAGR) r=(V_end/V_start)^(1/(end_year-start_year))-1. 입력은 r(0.05=5%), 내부 배율 1+r.",
+  "rate_rule": "일반물가·임금은 해당 관측 수열 CAGR. 판매 시작가는 작성연도 W 직전 5개 연도 명목가격 평균, 상승률은 동일 창 DT_1J22003 전국 연간 총지수의 4개 연간격 CAGR. 첫해 지수 0.",
   "series": [
     {
       "id": "official.kosis.cpi.total",
@@ -23,19 +23,42 @@
       "base_year": 2020,
       "unit": "지수(2020=100)",
       "frequency": "annual",
-      "dimensions": {"region": "전국", "item": "총지수"},
+      "dimensions": {
+        "region": "전국",
+        "item": "총지수"
+      },
       "observations": [
-        {"year": 2020, "value": 100.0},
-        {"year": 2021, "value": 102.5},
-        {"year": 2022, "value": 107.72},
-        {"year": 2023, "value": 111.59},
-        {"year": 2024, "value": 114.18},
-        {"year": 2025, "value": 116.61}
+        {
+          "year": 2020,
+          "value": 100.0
+        },
+        {
+          "year": 2021,
+          "value": 102.5
+        },
+        {
+          "year": 2022,
+          "value": 107.72
+        },
+        {
+          "year": 2023,
+          "value": 111.59
+        },
+        {
+          "year": 2024,
+          "value": 114.18
+        },
+        {
+          "year": 2025,
+          "value": 116.61
+        }
       ],
       "unconfirmed_years": [],
-      "allowed_roles": ["general"],
+      "allowed_roles": [
+        "general"
+      ],
       "aggregate": false,
-      "note": "소비자 지출 바구니 지수이므로 농자재 고유 가격변동을 대표하지 않는다. 자재·경비 세목이 중요하면 farm_purchase.materials/expenses를 사용한다.",
+      "note": "소비자 지출 바구니 지수이므로 농자재 고유 가격변동을 대표하지 않는다. 자재·경비 세목이 중요하면 farm_purchase.materials/expenses를 사용한다. 판매가 전용 정규화에서 DT_1J22003 전국·총지수·연간 및 W 직전 5개 관측을 별도 검증한 후 미래 판매가격의 고정 상승률 근거로만 사용한다. 작목 시작가 수열로는 사용할 수 없다.",
       "retrieved_at": "2026-10-07",
       "revision": 1
     },
@@ -58,17 +81,40 @@
       "base_year": 2020,
       "unit": "지수(2020=100)",
       "frequency": "annual",
-      "dimensions": {"region": "전국", "cost_category": "재료비"},
+      "dimensions": {
+        "region": "전국",
+        "cost_category": "재료비"
+      },
       "observations": [
-        {"year": 2020, "value": 100.0},
-        {"year": 2021, "value": 108.4},
-        {"year": 2022, "value": 145.8},
-        {"year": 2023, "value": 141.4},
-        {"year": 2024, "value": 132.5},
-        {"year": 2025, "value": 129.8}
+        {
+          "year": 2020,
+          "value": 100.0
+        },
+        {
+          "year": 2021,
+          "value": 108.4
+        },
+        {
+          "year": 2022,
+          "value": 145.8
+        },
+        {
+          "year": 2023,
+          "value": 141.4
+        },
+        {
+          "year": 2024,
+          "value": 132.5
+        },
+        {
+          "year": 2025,
+          "value": 129.8
+        }
       ],
       "unconfirmed_years": [],
-      "allowed_roles": ["general"],
+      "allowed_roles": [
+        "general"
+      ],
       "aggregate": false,
       "note": "재료비에는 사료비(가중치 136.5)가 포함되므로 경종농가는 세목 검토가 필요하다.",
       "retrieved_at": "2026-10-07",
@@ -93,17 +139,40 @@
       "base_year": 2020,
       "unit": "지수(2020=100)",
       "frequency": "annual",
-      "dimensions": {"region": "전국", "cost_category": "경비"},
+      "dimensions": {
+        "region": "전국",
+        "cost_category": "경비"
+      },
       "observations": [
-        {"year": 2020, "value": 100.0},
-        {"year": 2021, "value": 107.3},
-        {"year": 2022, "value": 133.1},
-        {"year": 2023, "value": 127.3},
-        {"year": 2024, "value": 129.3},
-        {"year": 2025, "value": 130.2}
+        {
+          "year": 2020,
+          "value": 100.0
+        },
+        {
+          "year": 2021,
+          "value": 107.3
+        },
+        {
+          "year": 2022,
+          "value": 133.1
+        },
+        {
+          "year": 2023,
+          "value": 127.3
+        },
+        {
+          "year": 2024,
+          "value": 129.3
+        },
+        {
+          "year": 2025,
+          "value": 130.2
+        }
       ],
       "unconfirmed_years": [],
-      "allowed_roles": ["general"],
+      "allowed_roles": [
+        "general"
+      ],
       "aggregate": false,
       "note": "수도광열비 등 경비 항목 보정용.",
       "retrieved_at": "2026-10-07",
@@ -128,17 +197,40 @@
       "base_year": 2020,
       "unit": "지수(2020=100)",
       "frequency": "annual",
-      "dimensions": {"region": "전국", "cost_category": "노무비"},
+      "dimensions": {
+        "region": "전국",
+        "cost_category": "노무비"
+      },
       "observations": [
-        {"year": 2020, "value": 100.0},
-        {"year": 2021, "value": 108.9},
-        {"year": 2022, "value": 122.9},
-        {"year": 2023, "value": 132.1},
-        {"year": 2024, "value": 135.8},
-        {"year": 2025, "value": 137.9}
+        {
+          "year": 2020,
+          "value": 100.0
+        },
+        {
+          "year": 2021,
+          "value": 108.9
+        },
+        {
+          "year": 2022,
+          "value": 122.9
+        },
+        {
+          "year": 2023,
+          "value": 132.1
+        },
+        {
+          "year": 2024,
+          "value": 135.8
+        },
+        {
+          "year": 2025,
+          "value": 137.9
+        }
       ],
       "unconfirmed_years": [],
-      "allowed_roles": ["wage"],
+      "allowed_roles": [
+        "wage"
+      ],
       "aggregate": false,
       "note": "임금 가격지수이며 원/일이 아니다. 지수로 기초 일당을 만들 수 없고 지역·작업·숙련·계절 차이는 반영하지 못한다.",
       "retrieved_at": "2026-10-07",
@@ -163,14 +255,35 @@
       "base_year": 2020,
       "unit": "지수(2020=100)",
       "frequency": "annual",
-      "dimensions": {"region": "전국", "item": "총지수"},
+      "dimensions": {
+        "region": "전국",
+        "item": "총지수"
+      },
       "observations": [
-        {"year": 2020, "value": 100.0},
-        {"year": 2021, "value": 111.7},
-        {"year": 2022, "value": 108.7},
-        {"year": 2023, "value": 109.3},
-        {"year": 2024, "value": 116.3},
-        {"year": 2025, "value": 119.1}
+        {
+          "year": 2020,
+          "value": 100.0
+        },
+        {
+          "year": 2021,
+          "value": 111.7
+        },
+        {
+          "year": 2022,
+          "value": 108.7
+        },
+        {
+          "year": 2023,
+          "value": 109.3
+        },
+        {
+          "year": 2024,
+          "value": 116.3
+        },
+        {
+          "year": 2025,
+          "value": 119.1
+        }
       ],
       "unconfirmed_years": [],
       "allowed_roles": [],
@@ -197,17 +310,40 @@
       "base_year": null,
       "unit": "천원/인·월",
       "frequency": "annual",
-      "dimensions": {"region": "전국", "coverage": "상용 1인 이상 사업체 전체 근로자"},
+      "dimensions": {
+        "region": "전국",
+        "coverage": "상용 1인 이상 사업체 전체 근로자"
+      },
       "observations": [
-        {"year": 2020, "value": 3527},
-        {"year": 2021, "value": 3689},
-        {"year": 2022, "value": 3869},
-        {"year": 2023, "value": 3966},
-        {"year": 2024, "value": 4079},
-        {"year": 2025, "value": 4205}
+        {
+          "year": 2020,
+          "value": 3527
+        },
+        {
+          "year": 2021,
+          "value": 3689
+        },
+        {
+          "year": 2022,
+          "value": 3869
+        },
+        {
+          "year": 2023,
+          "value": 3966
+        },
+        {
+          "year": 2024,
+          "value": 4079
+        },
+        {
+          "year": 2025,
+          "value": 4205
+        }
       ],
       "unconfirmed_years": [],
-      "allowed_roles": ["wage"],
+      "allowed_roles": [
+        "wage"
+      ],
       "aggregate": false,
       "note": "농업 일용 임금이 아닌 사업체 전체 월급이며 배너 교체 가능. 농업 노무비 기본값으로는 부적합(대안).",
       "retrieved_at": "2026-10-07",
@@ -232,17 +368,40 @@
       "base_year": null,
       "unit": "원/시간",
       "frequency": "annual",
-      "dimensions": {"region": "전국", "basis": "적용연도별 고시액"},
+      "dimensions": {
+        "region": "전국",
+        "basis": "적용연도별 고시액"
+      },
       "observations": [
-        {"year": 2020, "value": 8590},
-        {"year": 2021, "value": 8720},
-        {"year": 2022, "value": 9160},
-        {"year": 2023, "value": 9620},
-        {"year": 2024, "value": 9860},
-        {"year": 2025, "value": 10030}
+        {
+          "year": 2020,
+          "value": 8590
+        },
+        {
+          "year": 2021,
+          "value": 8720
+        },
+        {
+          "year": 2022,
+          "value": 9160
+        },
+        {
+          "year": 2023,
+          "value": 9620
+        },
+        {
+          "year": 2024,
+          "value": 9860
+        },
+        {
+          "year": 2025,
+          "value": 10030
+        }
       ],
       "unconfirmed_years": [],
-      "allowed_roles": ["wage"],
+      "allowed_roles": [
+        "wage"
+      ],
       "aggregate": false,
       "note": "실제 농촌 임금 조사가 아니라 정책 하한액. 농업 일당 관측 상승률 대체로 부적합(대안).",
       "retrieved_at": "2026-10-07",
@@ -267,15 +426,36 @@
       "base_year": null,
       "unit": "원/20kg",
       "frequency": "annual",
-      "dimensions": {"region": "전국", "stage": "소매", "item": "쌀 20kg 상품"},
+      "dimensions": {
+        "region": "전국",
+        "stage": "소매",
+        "item": "쌀 20kg 상품"
+      },
       "observations": [
-        {"year": 2021, "value": 59080},
-        {"year": 2022, "value": 51336},
-        {"year": 2023, "value": 53278},
-        {"year": 2024, "value": 53512},
-        {"year": 2025, "value": 58872}
+        {
+          "year": 2021,
+          "value": 59080
+        },
+        {
+          "year": 2022,
+          "value": 51336
+        },
+        {
+          "year": 2023,
+          "value": 53278
+        },
+        {
+          "year": 2024,
+          "value": 53512
+        },
+        {
+          "year": 2025,
+          "value": 58872
+        }
       ],
-      "unconfirmed_years": [2020],
+      "unconfirmed_years": [
+        2020
+      ],
       "unconfirmed_note": "2020 연간 소매가격: 확인 불가",
       "allowed_roles": [],
       "aggregate": false,
@@ -303,17 +483,41 @@
       "base_year": null,
       "unit": "원/kg",
       "frequency": "annual",
-      "dimensions": {"region": "전국", "crop": "봄감자", "form": "년 1기작/10a", "stage": "농가수취(주산물 단가)"},
+      "dimensions": {
+        "region": "전국",
+        "crop": "봄감자",
+        "form": "년 1기작/10a",
+        "stage": "농가수취(주산물 단가)"
+      },
       "observations": [
-        {"year": 2020, "value": 898},
-        {"year": 2021, "value": 940},
-        {"year": 2022, "value": 1193},
-        {"year": 2023, "value": 1300},
-        {"year": 2024, "value": 1190}
+        {
+          "year": 2020,
+          "value": 898
+        },
+        {
+          "year": 2021,
+          "value": 940
+        },
+        {
+          "year": 2022,
+          "value": 1193
+        },
+        {
+          "year": 2023,
+          "value": 1300
+        },
+        {
+          "year": 2024,
+          "value": 1190
+        }
       ],
-      "unconfirmed_years": [2025],
+      "unconfirmed_years": [
+        2025
+      ],
       "unconfirmed_note": "2025 조사연도 자료집 미확보 — 존재하지 않는다는 판정이 아니라 확인 불가",
-      "allowed_roles": ["sales"],
+      "allowed_roles": [
+        "sales"
+      ],
       "aggregate": false,
       "note": "동일 작목·재배형태·지역 조건일 때만 판매가 상승률의 근거. 경로 재현 예시이며 다른 작목에 전용 금지. 조사연도와 발간연도를 구분한다.",
       "retrieved_at": "2026-10-07",

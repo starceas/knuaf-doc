@@ -85,40 +85,9 @@ def _finance_spec(**over):
 
 
 def _school_spec(**over):
-    """Synthetic school_17_sheet_v1 spec satisfying gg_school_excel.validate
-    (no real school or student data)."""
-    spec = dict(
-        profile="school_17_sheet_v1", writing_year=2026,
-        source_refs=["synthetic:합성-원답변"], unit="천원", quantity_unit="kg",
-        production_evidence={k: "합성 근거" for k in
-                             ("area", "seedlings", "yield", "growth",
-                              "commodity")},
-        crops=["합성작목"], area_m2="1000", production_kg="2000",
-        purchase_price="3", direct_price="5", purchase_share="0.5",
-        direct_share="0.5", land="0", facility="10000", equipment="2000",
-        equity="6000", loan="6000", loan_rate="0.02", salvage="1000",
-        materials="500", labor="800", packing="100", transport="100",
-        household="2000", repair_facility_rate="0.01",
-        repair_equipment_rate="0.02", utility_per_10a="50",
-        price_assumptions={
-            "general": {
-                "source_id": "official.kosis.cpi.total",
-                "base_year": 2020,
-                "application_base_year": 2027,
-            },
-            "wage": {
-                "source_id": "official.kosis.farm_purchase.labor",
-                "base_year": 2020,
-                "application_base_year": 2027,
-            },
-            "sales": {
-                "status": "not_applied",
-                "reason": "학생 작목 판매가 수열 확인 불가",
-            },
-        },
-        grace=1, term=5, life=10)
-    spec.update(over)
-    return spec
+    # Authorization still uses the same synthetic farm; sales now has complete evidence.
+    from tests.test_price_assumptions import _spec
+    return _spec(**over)
 
 
 class _Base(ContractCase):

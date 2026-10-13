@@ -20,13 +20,13 @@ YEARS = [2027, 2028, 2029, 2030, 2031]  # writing_year=2026
 def _spec(**over):
     """Synthetic school_17_sheet_v1 spec (no real student data)."""
     spec = dict(
-        profile="school_17_sheet_v1", writing_year=2026,
+        profile="school_17_sheet_v1", writing_year=2026, start_year=2027,
         source_refs=["synthetic:합성-원답변"], unit="천원", quantity_unit="kg",
         production_evidence={k: "합성 근거" for k in
                              ("area", "seedlings", "yield", "growth",
                               "commodity")},
         crops=["합성작목"], region="전국",
-        price_dimensions={"unit": "원/kg", "channel": "농가수취"},
+        price_dimensions={"unit": "원/kg"},
         area_m2="1000", production_kg="2000",
         purchase_price="3", direct_price="5", purchase_share="0.5",
         direct_share="0.5", land="0", facility="10000", equipment="2000",
@@ -46,12 +46,18 @@ def _spec(**over):
                 "application_base_year": 2027,
             },
             "sales": {
-                "status": "not_applied",
-                "reason": "학생 작목 판매가 수열 확인 불가",
+                "application_base_year": 2027,
+                "anchors": {k: {"source_id": "student."+k, "base_year": None, "target_dimensions":{"channel":{"purchase":"수매","direct":"직거래"}[k]}}
+                            for k in ("purchase", "direct")},
             },
         },
         grace=1, term=5, life=10)
     spec.update(over)
+    defaults = [_student_source("student."+k, observations=[{"year":y,"value":v} for y,v in zip(range(2021,2026), vs)])
+                for k,vs in [("purchase",[1,2,3,4,5]),("direct",[3,4,5,6,7])]]
+    for entry in defaults:
+        entry["dimensions"]["channel"] = {"student.purchase":"수매","student.direct":"직거래"}[entry["id"]]
+    spec["price_sources"] = defaults + spec.get("price_sources", [])
     return spec
 
 
@@ -63,6 +69,8 @@ def _student_source(sid="student.sample.series", **over):
         statistic_name="합성 수매단가",
         item_name="합성작목 수매 단가", unit="원/kg", base_year=None,
         observations=[
+            {"year": 2021, "value": 92.0},
+            {"year": 2022, "value": 96.0},
             {"year": 2023, "value": 100.0},
             {"year": 2024, "value": 104.0},
             {"year": 2025, "value": 108.16},
@@ -185,12 +193,13 @@ class NormalizeValidationTests(ContractCase):
             "source_id": "student.sample.series",
             "base_year": None,
             "application_base_year": 2027,
+            "target_dimensions":{"channel":"농가수취"},
         }
         a = self.norm(spec)["sales"]
         self.assertEqual("applied", a["status"])
         self.assertIsNone(a["base_year"])
         self.assertAlmostEqual(
-            a["rate"], self.pa.cagr(100.0, 108.16, 2), places=12)
+            a["rate"], self.pa.cagr(102.5, 116.61, 4), places=12)
 
     def test_nonpositive_observation_rejected(self):
         bad = _student_source(observations=[
@@ -261,23 +270,20 @@ class NormalizeValidationTests(ContractCase):
             self.norm(spec)
 
     def test_not_applied_is_explicit_choice(self):
-        a = self.norm(_spec())["sales"]
-        self.assertEqual("not_applied", a["status"])
-        self.assertEqual(1.0, self.pa.multiplier(a, 2029))
-        self.assertIn("미적용", self.pa.footnote(a))
+        spec = _spec()
+        spec['price_assumptions']['sales'] = {'status':'not_applied','reason':'확인 불가'}
+        with self.assertRaisesRegex(ValueError, 'not_applied'):
+            self.norm(spec)
+        with self.assertRaisesRegex(ValueError, '우회'):
+            self.pa.multiplier({'role':'sales','status':'not_applied'}, 2029)
 
     def test_negative_rate_allowed(self):
-        spec = _spec(
-            price_sources=[_student_source(observations=[
-                {"year": 2021, "value": 59080},
-                {"year": 2025, "value": 58872}])])
-        spec["price_assumptions"]["sales"] = {
-            "source_id": "student.sample.series",
-            "base_year": None,
-            "application_base_year": 2027,
-        }
-        a = self.norm(spec)["sales"]
-        self.assertLess(a["rate"], 0)
+        registry = copy.deepcopy(self.pa.load_registry())
+        cpi = registry['official.kosis.cpi.total']
+        cpi['observations'] = [{'year':y,'value':100*(.98**i)} for i,y in enumerate(range(2021,2026))]
+        a = self.pa.normalize_price_assumptions(_spec(), YEARS, registry=registry)['sales']
+        self.assertAlmostEqual(-.02, a['rate'], places=12)
+        self.assertLess(self.pa.multiplier(a,2029),1)
 
     def test_rate_floor_rejected(self):
         spec = _spec()
@@ -319,28 +325,13 @@ class SeparateRatesModelTests(ContractCase):
         self.mc = runtime("gg_major_contract")
 
     def _divergent_spec(self):
-        """상승률은 명시하지 않는다 — 수열의 확정 관측 CAGR이 적용률(V1-01)."""
-        return _spec(
-            price_sources=[_student_source()],
-            price_assumptions={
-                "general": {
-                    "source_id": "official.kosis.cpi.total",
-                    "base_year": 2020,
-                    "application_base_year": 2027},
-                "wage": {
-                    "source_id": "official.kosis.farm_purchase.labor",
-                    "base_year": 2020,
-                    "application_base_year": 2027},
-                "sales": {
-                    "source_id": "student.sample.series",
-                    "base_year": None,
-                    "application_base_year": 2027},
-            })
+        # DR-01/03: two independently verified anchors; sales uses W-bound CPI.
+        return _spec()
 
     def test_three_rates_diverge_per_year(self):
         rg = self.pa.cagr(100.0, 116.61, 5)   # CPI 2020→2025
         rw = self.pa.cagr(100.0, 137.9, 5)    # 농가구입가격지수 노무비 2020→2025
-        rs = self.pa.cagr(100.0, 108.16, 2)   # 합성 수매단가 2023→2025
+        rs = self.pa.cagr(102.5, 116.61, 4)   # 합성 수매단가 2023→2025
         exp = self.verify.calculate_school_expected(self._divergent_spec())
         yrs = exp["expected_years"]
         for i in range(5):
@@ -383,7 +374,7 @@ class SeparateRatesModelTests(ContractCase):
         exp = wb["9 .경비계획"]
         self.assertEqual(f"=C4*{step_g}", mat["C5"].value)
         self.assertEqual(f"=C4*{step_w}", labor["C5"].value)
-        self.assertEqual(f"=G22*$O$7/1000*{ms_2028}", sales["E39"].value)
+        self.assertEqual(f"=G22*$O$7/1000*(1+{runtime('gg_excel_formula_patch')._excel_number(norm['sales']['rate'])})^1", sales["E39"].value)
         # 수도광열비는 일반물가와 같은 률(2년차 블록 C38 = 전년 C18 ×(1+r_g))
         self.assertEqual(f"=C18*{step_g}", exp["C38"].value)
         # 각주에 통계명·기준연도·관측기간·산식이 드러남
@@ -395,16 +386,14 @@ class SeparateRatesModelTests(ContractCase):
 
     def test_sales_not_applied_note_is_visible(self):
         root = self.make_project()
-        bind_major(root, "specialty_crops")
-        ctx = self.mc.output_context(root, "specialty_crops")
-        out = Path(root) / "school.xlsx"
-        self.sx.school_workbook(_spec(), out, context=ctx)
-        wb = load_workbook(out)
-        sales = wb[" 5. 판매계획"]
-        self.assertIn("판매가 상승률 미적용(명시 선택)", sales["B42"].value)
-        # 미적용이면 5년 모두 같은 가격 수식(배율 접미사 없음)
-        self.assertEqual("=E22*$O$7/1000", sales["D39"].value)
-        self.assertEqual("=M22*$O$7/1000", sales["H39"].value)
+        bind_major(root, 'specialty_crops')
+        ctx = self.mc.output_context(root, 'specialty_crops')
+        out = Path(root) / 'school.xlsx'
+        spec = _spec()
+        spec['price_assumptions']['sales'] = {'status':'not_applied','reason':'확인 불가'}
+        with self.assertRaisesRegex(ValueError, 'not_applied'):
+            self.sx.school_workbook(spec, out, context=ctx)
+        self.assertFalse(out.exists())
 
     def test_manifest_records_assumptions(self):
         root = self.make_project()
@@ -417,7 +406,10 @@ class SeparateRatesModelTests(ContractCase):
         pa = manifest["price_assumptions"]
         self.assertEqual("applied", pa["general"]["status"])
         self.assertEqual("official.kosis.cpi.total", pa["general"]["source_id"])
-        self.assertEqual("not_applied", pa["sales"]["status"])
+        self.assertEqual("applied", pa["sales"]["status"])
+        self.assertEqual(3, pa["sales"]["anchors"]["purchase"]["base_price"])
+        self.assertEqual(5, pa["sales"]["anchors"]["direct"]["base_price"])
+        self.assertEqual("official.kosis.cpi.total", pa["sales"]["cpi_source_id"])
 
 
 class V1CounterexampleTests(ContractCase):
@@ -435,6 +427,8 @@ class V1CounterexampleTests(ContractCase):
     def _sales_applied(self, sid, base_year=None, **extra):
         a = {"source_id": sid, "base_year": base_year,
              "application_base_year": 2027}
+        if sid == "student.sample.series":
+            a["target_dimensions"]={"channel":"농가수취"}
         a.update(extra)
         return a
 
@@ -476,7 +470,7 @@ class V1CounterexampleTests(ContractCase):
             {"year": 2025, "value": 108.16}])])
         spec["price_assumptions"]["sales"] = self._sales_applied(
             "student.sample.series")
-        with self.assertRaisesRegex(ValueError, "미만"):
+        with self.assertRaisesRegex(ValueError, "5개"):
             self.norm(spec)
 
     def test_v1_01_window_endpoint_not_observed_rejected(self):
@@ -625,7 +619,7 @@ class V1CounterexampleTests(ContractCase):
     def test_v1_03_matching_dimensions_accepted(self):
         """봄감자 전국·노지·농가수취·원/kg 대상은 감자 수열과 일치."""
         spec = _spec(
-            crops=["봄감자"], region="전국",
+            writing_year=2025, crops=["봄감자"], region="전국",
             price_dimensions={
                 "cultivation": "년 1기작/10a",
                 "unit": "원/kg",
@@ -635,7 +629,7 @@ class V1CounterexampleTests(ContractCase):
         a = self.norm(spec)["sales"]
         self.assertEqual("applied", a["status"])
         self.assertAlmostEqual(
-            self.pa.cagr(898.0, 1190.0, 4), a["rate"], places=12)
+            self.pa.cagr(100.0, 114.18, 4), a["rate"], places=12)
 
     def test_v1_03_crop_alias_normalization(self):
         """별칭·한글 차원 키도 정본 키로 대조된다."""
@@ -890,12 +884,15 @@ class V2CounterexampleTests(ContractCase):
         spec["target_dimensions"] = {"작목": ["봄감자"]}
         spec["price_assumptions"]["sales"]["target_dimensions"] = {"region": "전국"}
         before = copy.deepcopy(spec)
-        self.assertEqual("applied", self.norm(spec)["sales"]["status"])
+        with self.assertRaisesRegex(ValueError, "2025"):
+            self.norm(spec)
         self.assertEqual(spec, before)
 
     def test_v2_03_missing_dimensions_explicit_not_applied(self):
-        spec = _spec(crops=["봄감자"])
-        self.assertEqual("not_applied", self.norm(spec)["sales"]["status"])
+        spec = _spec(crops=['봄감자'])
+        spec['price_assumptions']['sales'] = {'status':'not_applied','reason':'차원 자료 부족'}
+        with self.assertRaisesRegex(ValueError, 'not_applied'):
+            self.norm(spec)
 
     def test_v2_01_03_workbook_rejection_leaves_no_outputs(self):
         root = self.make_project()

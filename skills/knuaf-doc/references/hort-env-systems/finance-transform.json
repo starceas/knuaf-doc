@@ -7688,7 +7688,7 @@
    "cell": "C13",
    "action": "formula",
    "before_state": "formula_normal",
-   "after_formula": "=IF(COUNT(C8:C12)=0,\"\",AVERAGE(C8:C12))",
+   "after_formula": "=IF(COUNT(C8:C12)<>5,\"\",AVERAGE(C8:C12))",
    "map_source": "merged-map",
    "reason": "월별 관측 평균; 증거 없는 월은 공란, 계획가격과 분리."
   },
@@ -7697,7 +7697,7 @@
    "cell": "D13",
    "action": "formula",
    "before_state": "formula_shared_anchor",
-   "after_formula": "=IF(COUNT(D8:D12)=0,\"\",AVERAGE(D8:D12))",
+   "after_formula": "=IF(COUNT(D8:D12)<>5,\"\",AVERAGE(D8:D12))",
    "map_source": "merged-map",
    "reason": "월별 관측 평균; 증거 없는 월은 공란, 계획가격과 분리."
   },
@@ -7706,7 +7706,7 @@
    "cell": "E13",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF(COUNT(E8:E12)=0,\"\",AVERAGE(E8:E12))",
+   "after_formula": "=IF(COUNT(E8:E12)<>5,\"\",AVERAGE(E8:E12))",
    "map_source": "merged-map",
    "reason": "월별 관측 평균; 증거 없는 월은 공란, 계획가격과 분리."
   },
@@ -7715,7 +7715,7 @@
    "cell": "F13",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF(COUNT(F8:F12)=0,\"\",AVERAGE(F8:F12))",
+   "after_formula": "=IF(COUNT(F8:F12)<>5,\"\",AVERAGE(F8:F12))",
    "map_source": "merged-map",
    "reason": "월별 관측 평균; 증거 없는 월은 공란, 계획가격과 분리."
   },
@@ -7724,7 +7724,7 @@
    "cell": "G13",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF(COUNT(G8:G12)=0,\"\",AVERAGE(G8:G12))",
+   "after_formula": "=IF(COUNT(G8:G12)<>5,\"\",AVERAGE(G8:G12))",
    "map_source": "merged-map",
    "reason": "월별 관측 평균; 증거 없는 월은 공란, 계획가격과 분리."
   },
@@ -7733,7 +7733,7 @@
    "cell": "H13",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF(COUNT(H8:H12)=0,\"\",AVERAGE(H8:H12))",
+   "after_formula": "=IF(COUNT(H8:H12)<>5,\"\",AVERAGE(H8:H12))",
    "map_source": "merged-map",
    "reason": "월별 관측 평균; 증거 없는 월은 공란, 계획가격과 분리."
   },
@@ -7742,7 +7742,7 @@
    "cell": "I13",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF(COUNT(I8:I12)=0,\"\",AVERAGE(I8:I12))",
+   "after_formula": "=IF(COUNT(I8:I12)<>5,\"\",AVERAGE(I8:I12))",
    "map_source": "merged-map",
    "reason": "월별 관측 평균; 증거 없는 월은 공란, 계획가격과 분리."
   },
@@ -7751,7 +7751,7 @@
    "cell": "J13",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF(COUNT(J8:J12)=0,\"\",AVERAGE(J8:J12))",
+   "after_formula": "=IF(COUNT(J8:J12)<>5,\"\",AVERAGE(J8:J12))",
    "map_source": "merged-map",
    "reason": "월별 관측 평균; 증거 없는 월은 공란, 계획가격과 분리."
   },
@@ -7760,7 +7760,7 @@
    "cell": "K13",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF(COUNT(K8:K12)=0,\"\",AVERAGE(K8:K12))",
+   "after_formula": "=IF(COUNT(K8:K12)<>5,\"\",AVERAGE(K8:K12))",
    "map_source": "merged-map",
    "reason": "월별 관측 평균; 증거 없는 월은 공란, 계획가격과 분리."
   },
@@ -7769,7 +7769,7 @@
    "cell": "L13",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF(COUNT(L8:L12)=0,\"\",AVERAGE(L8:L12))",
+   "after_formula": "=IF(COUNT(L8:L12)<>5,\"\",AVERAGE(L8:L12))",
    "map_source": "merged-map",
    "reason": "월별 관측 평균; 증거 없는 월은 공란, 계획가격과 분리."
   },
@@ -7778,7 +7778,7 @@
    "cell": "M13",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF(COUNT(M8:M12)=0,\"\",AVERAGE(M8:M12))",
+   "after_formula": "=IF(COUNT(M8:M12)<>5,\"\",AVERAGE(M8:M12))",
    "map_source": "merged-map",
    "reason": "월별 관측 평균; 증거 없는 월은 공란, 계획가격과 분리."
   },
@@ -7787,7 +7787,7 @@
    "cell": "N13",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF(COUNT(N8:N12)=0,\"\",AVERAGE(N8:N12))",
+   "after_formula": "=IF(COUNT(N8:N12)<>5,\"\",AVERAGE(N8:N12))",
    "map_source": "merged-map",
    "reason": "월별 관측 평균; 증거 없는 월은 공란, 계획가격과 분리."
   },
@@ -7796,7 +7796,7 @@
    "cell": "O13",
    "action": "formula",
    "before_state": "formula_shared_member",
-   "after_formula": "=IF(COUNT(C13:N13)=0,\"\",AVERAGE(C13:N13))",
+   "after_formula": "=IF(COUNT(C13:N13)<>12,\"\",AVERAGE(C13:N13))",
    "map_source": "merged-map",
    "reason": "관측 평균의 참고 표시만 수행."
   },

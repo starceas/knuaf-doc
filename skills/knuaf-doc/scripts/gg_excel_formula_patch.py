@@ -150,11 +150,18 @@ D8_SPEC_PATH = (Path(__file__).resolve().parents[1] / "references"
 def _official_rate(item: dict, kind: str, *, price_sources=None) -> dict:
     """Adapt template endpoints to the shared official-series contract."""
     from gg_price_assumptions import (
-        load_registry, normalize_price_assumptions, multiplier,
+        load_registry, normalize_price_role, multiplier,
         resolve_series, check_observations, check_dimensions, canonical_dimensions,
     )
     if not isinstance(item, dict):
         raise ValueError(f"{kind} rate metadata required")
+    if kind == "sales":
+        a = normalize_price_role(
+            {"writing_year": item.get("writing_year"),
+             "price_assumptions": {"sales": item},
+             "price_sources": price_sources or []},
+            "sales", [item.get("application_base_year")])
+        return {**a, "r": a["rate"]}
     evidence = _evidence({"evidence_ref": item.get("evidence_ref")})
     if evidence.get("origin") != "factual":
         raise ValueError(f"{kind} requires official statistic evidence with factual origin")
@@ -182,9 +189,7 @@ def _official_rate(item: dict, kind: str, *, price_sources=None) -> dict:
         if field in item:
             raw[field] = item[field]
     spec = {"price_sources": [] if price_sources is None else price_sources,
-            "price_assumptions": {r: raw if r == role else
-                {"status": "not_applied", "reason": "separate template role"}
-                for r in ("general", "wage", "sales")}}
+            "price_assumptions": {role: raw}}
     if "target_dimensions" in item:
         target = canonical_dimensions(item["target_dimensions"])
         spec["target_dimensions"] = target
@@ -193,7 +198,7 @@ def _official_rate(item: dict, kind: str, *, price_sources=None) -> dict:
             crop = target["crop"]
             spec["crops"] = crop if isinstance(crop, list) else [crop]
     registry = load_registry()
-    normalized = normalize_price_assumptions(spec, list(range(year, year + 5)), registry=registry)[role]
+    normalized = normalize_price_role(spec, role, list(range(year, year + 5)), registry=registry)
     for plan_year in range(year, year + 5):
         multiplier(normalized, plan_year)
     # Template copies may carry observed_values for review, but those values
@@ -317,17 +322,22 @@ def materialize_d8(source: Path, assumptions: dict | None = None, *, prepare_obs
             add(sheet, rate_cell, desired)
     rates = {}
     if assumptions is not None:
-        if not isinstance(assumptions, dict) or set(assumptions) - {"wage_male", "wage_female", "sales", "general", "price_sources"}:
+        if not isinstance(assumptions, dict) or set(assumptions) - {"writing_year", "wage_male", "wage_female", "sales", "general", "price_sources"}:
             raise ValueError("unknown D8 assumptions")
         for kind in ("wage_male", "wage_female"):
             rates[kind] = _official_rate(assumptions.get(kind), kind, price_sources=assumptions.get("price_sources", []))
         sales = assumptions.get("sales")
-        if isinstance(sales, dict) and sales.get("mode") == "not_applied":
-            if sales.get("reason") != "확인 불가":
-                raise ValueError("sales not_applied requires explicit 확인 불가")
-            rates["sales"] = {"mode": "not_applied", "reason": "판매가 상승 미반영(확인 불가)"}
-        else:
-            rates["sales"] = _official_rate(sales, "sales", price_sources=assumptions.get("price_sources", []))
+        from gg_price_assumptions import normalize_price_role, footnote
+        if isinstance(sales, dict) and (sales.get("mode") == "not_applied" or sales.get("status") == "not_applied"):
+            from gg_price_assumptions import SalesPriceHeld
+            raise SalesPriceHeld("not_applied는 판매가 계산 우회 불가",
+                                 writing_year=assumptions.get("writing_year"), raw=sales)
+        rates["sales"] = normalize_price_role(
+            {"writing_year": assumptions.get("writing_year"),
+             "price_assumptions": {"sales": sales},
+             "price_sources": assumptions.get("price_sources", [])},
+            "sales", [sales.get("application_base_year")] if isinstance(sales, dict) else [None])
+        rates["sales"]["r"] = rates["sales"]["rate"]
         # Pricing year is a preserved school label, including W-023. Never
         # choose a different year to make the arithmetic look plausible.
         first_year = book.evaluate(sheet, "F6")
@@ -360,6 +370,10 @@ def materialize_d8(source: Path, assumptions: dict | None = None, *, prepare_obs
         if sales_sheet not in book.sheets:
             raise ValueError("sales sheet missing")
         item = rates["sales"]
+        anchors = item.get("anchors", {})
+        allowed_anchors = set(spec["sales_rows"].values())
+        if set(anchors) - allowed_anchors:
+            raise ValueError("D8 sales anchors must use O7/O8/O9/O11/O12/O13")
         sales_first_year = book.evaluate(sales_sheet, "C36")
         if isinstance(sales_first_year, str) and re.fullmatch(r"[0-9]{4}년?", sales_first_year.strip()):
             sales_first_year = int(sales_first_year.strip().rstrip("년"))
@@ -370,6 +384,19 @@ def materialize_d8(source: Path, assumptions: dict | None = None, *, prepare_obs
         # Repoint from the exact quantity cell, never multiply an already
         # escalated revenue. This makes rate updates idempotent.
         for row, price in spec["sales_rows"].items():
+            quantities = [book.evaluate(sales_sheet, c+row) for c in "CEGIK"]
+            if any(isinstance(v, bool) or not isinstance(v, (int, float)) for v in quantities):
+                raise ValueError(f"D8 sales quantity unavailable: {row}")
+            active = any(v > 0 for v in quantities)
+            if active:
+                if price not in anchors:
+                    raise ValueError(f"D8 active sales anchor needs five-year prices: {price}")
+                a = anchors[price]
+                if a["unit"] != "원/kg":
+                    raise ValueError("D8 sales anchor requires 원/kg")
+                observed = [_excel_number(o["value"]) for o in a["price_observations"]]
+                # Replace teaching averages/direct prices with the verified condition.
+                add(sales_sheet, price, "(" + "+".join(observed) + ")/5")
             for i, (quantity, revenue) in enumerate(zip("CEGIK", "DFHJL")):
                 base = f"{quantity}{row}*${price[0]}${price[1:]}/1000"
                 old = book.formulas.get((sales_sheet, revenue+row))
@@ -380,12 +407,7 @@ def materialize_d8(source: Path, assumptions: dict | None = None, *, prepare_obs
                 else:
                     desired = base + f"*(1+{item['r_literal']})^{i}"
                 add(sales_sheet, revenue+row, desired)
-        note = (item["reason"] if item.get("mode") == "not_applied" else
-                f"판매가 상승률 {item['r']:.8%}; "
-                f"{'지수 기준연도 해당 없음' if item['base_year'] is None else str(item['base_year']) + ' 기준연도'}; "
-                f"관측 {item['observation_years'][0]}~{item['observation_years'][-1]}; "
-                f"적용 기초연도 {item['application_base_year']}; 적용 횟수 0~4; "
-                f"출처: {item['evidence_ref']['source_id']} ({item['evidence_ref']['locator']})")
+        note = footnote(item)
         old_note = book.values.get((sales_sheet, "B46"))
         if (sales_sheet, "B46") in book.formulas or not isinstance(old_note, str):
             raise ValueError("reviewed sales assumption note B46 missing or formula")

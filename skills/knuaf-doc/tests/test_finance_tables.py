@@ -278,6 +278,12 @@ REGISTRY = {
         "test.aggregate", ["sales"], aggregate=True),
 }
 
+# DR-03: selling-price fixtures are nominal, complete, and CPI is separate.
+REGISTRY['test.sales']['unit'] = '원/kg'
+REGISTRY['test.sales']['dimensions']['channel'] = '농가수취'
+REGISTRY['test.sales']['observations'] = [{'year':y,'value':v} for y,v in zip(range(2021,2026),[3000,3100,3200,3300,3400])]
+REGISTRY[pa.CPI_SOURCE_ID] = pa.load_registry()[pa.CPI_SOURCE_ID]
+
 # test.general: (110/100)^(1/5)-1 = 0.0192377...
 GENERAL_R = pa.cagr(100.0, 110.0, 5)
 
@@ -658,7 +664,7 @@ class TestFootnotes(unittest.TestCase):
         registry = {**REGISTRY, "test.sales": source}
         line, err = ft._resolve_footnote(
             "selling_price", cfg,
-            {"source_id": "test.sales", "base_year": None}, registry)
+            {"source_id": "test.sales", "base_year": None, "writing_year": 2026, "application_base_year": 2027, "target_dimensions":{"channel":"농가수취","unit":"원/kg","region":"전국"}}, registry)
         self.assertIsNone(line)
         self.assertIn("crop", err)
         for dims in ({"crop": "다른작목", "region": "전국"},
@@ -666,15 +672,15 @@ class TestFootnotes(unittest.TestCase):
             with self.subTest(dims=dims):
                 line, err = ft._resolve_footnote(
                     "selling_price", cfg,
-                    {"source_id": "test.sales", "base_year": None,
+                    {"source_id": "test.sales", "base_year": None, "writing_year": 2026, "application_base_year": 2027,
                      "target_dimensions": dims}, registry)
                 self.assertIsNone(line)
                 self.assertTrue(err)
         line, err = ft._resolve_footnote(
             "selling_price", cfg,
-            {"source_id": "test.sales", "base_year": None,
+            {"source_id": "test.sales", "base_year": None, "writing_year": 2026, "application_base_year": 2027,
              "target_dimensions": {"crop": "시험작목", "region": "전국",
-                                   "unit": source["unit"]}},
+                                   "unit": source["unit"], "channel":"농가수취"}},
             registry)
         self.assertIsNone(err)
         self.assertIn("참고값이다", line)
@@ -682,7 +688,7 @@ class TestFootnotes(unittest.TestCase):
     def test_sales_requires_crop(self):
         line, err = ft._resolve_footnote(
             "selling_price", MINI_MAP["footnote_kinds"]["selling_price"],
-            {"source_id": "test.sales", "base_year": None}, REGISTRY)
+            {"source_id": "test.sales", "base_year": None, "writing_year": 2026, "application_base_year": 2027, "target_dimensions":{"channel":"농가수취","unit":"원/kg","region":"전국"}}, REGISTRY)
         self.assertIsNone(line)
         self.assertIn("crop", err)
 
@@ -698,9 +704,16 @@ class TestFootnotes(unittest.TestCase):
                 resolved = pa.resolve_series_rate(src)
                 base = src["base_year"]
                 line, err = ft._resolve_footnote(kind, cfg, {
-                    "source_id": sid, "base_year": base,
+                    "source_id": sid, "base_year": base, **({"writing_year":2026,"application_base_year":2027} if kind=="selling_price" else {}),
                     "target_dimensions": {**src["dimensions"], "unit": src["unit"]}}, registry)
                 self.assertIsNone(err)
+                if kind == 'selling_price':
+                    self.assertIn('5년 평균 3200 원/kg [test.sales]', line)
+                    self.assertIn('CPI [official.kosis.cpi.total]', line)
+                    self.assertIn('102.5→116.61', line)
+                    self.assertIn('^(1/4)-1=0.0327684982091536', line)
+                    self.assertIn('통합문서에서 따로 확인해야 한다', line)
+                    continue
                 basis = "지수 기준연도 %d" % base if base else "지수 기준연도 해당 없음"
                 self.assertEqual(line, (
                     "* %s r=%.4f%%는 참고값이다 (출처: 국가데이터처(구 통계청) "

@@ -63,5 +63,6 @@ if __name__ == "__main__":
         }, ensure_ascii=False))
         raise SystemExit(2)
     except (ValueError, KeyError, OSError) as e:
-        print(json.dumps({"status": "blocked", "reason": str(e)}, ensure_ascii=False))
+        print(json.dumps({"status": "blocked", "reason": str(e),
+                          "price_hold": getattr(e, "detail", None)}, ensure_ascii=False))
         raise SystemExit(2)
