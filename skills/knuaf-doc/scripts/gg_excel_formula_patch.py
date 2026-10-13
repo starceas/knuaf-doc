@@ -374,6 +374,17 @@ def materialize_d8(source: Path, assumptions: dict | None = None, *, prepare_obs
         allowed_anchors = set(spec["sales_rows"].values())
         if set(anchors) - allowed_anchors:
             raise ValueError("D8 sales anchors must use O7/O8/O9/O11/O12/O13")
+        # Cell names alone do not identify a price condition: an entire
+        # normalized record can move together with its own target_dimensions.
+        # Check resolved source dimensions against the fixed X01 row contract
+        # and any existing common plan conditions before adding price formulas.
+        from gg_price_assumptions import canonical_dimensions, check_dimensions
+        common_target = canonical_dimensions(sales.get("target_dimensions"))
+        for price, anchor in anchors.items():
+            origin = f"D8 sales anchor {price}"
+            check_dimensions(anchor, common_target, origin=origin)
+            check_dimensions(anchor, spec["sales_anchor_dimensions"][price],
+                             required=("channel", "grade", "unit"), origin=origin)
         sales_first_year = book.evaluate(sales_sheet, "C36")
         if isinstance(sales_first_year, str) and re.fullmatch(r"[0-9]{4}년?", sales_first_year.strip()):
             sales_first_year = int(sales_first_year.strip().rstrip("년"))

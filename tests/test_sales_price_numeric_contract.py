@@ -256,10 +256,121 @@ class SalesNumericContract(ContractCase):
         for index,(row,anchor) in enumerate({"38":"O7","39":"O8","40":"O9","41":"O11","42":"O12","43":"O13"}.items(),1):
             b=index*100+30
             self.assertEqual(b,book.evaluate(S5,anchor))
-            self.assertAlmostEqual(b*.1,book.evaluate(S5,"D"+row))
-            self.assertAlmostEqual(b*.1*((116.61/102.5)**.25)**2,book.evaluate(S5,"H"+row),places=10)
+            for year, column in enumerate("DFHJL"):
+                self.assertAlmostEqual(b*.1*((116.61/102.5)**.25)**year,
+                                       book.evaluate(S5,column+row),places=10)
         self.assertEqual([],patch.materialize_d8(out,cfg)["patches"])
         self.assertEqual(6,len(receipt["d8"]["rates"]["sales"]["anchors"]))
+
+    def d8_inputs(self):
+        root = self.make_project()
+        src = root / "source.xlsx"
+        fixture(src)
+        return root, src, assumptions(), runtime("gg_excel_formula_patch")
+
+    def test_d8_swapped_channel_records_rejected(self):
+        _, src, cfg, patch = self.d8_inputs()
+        for left, right in (("O7", "O11"), ("O8", "O12"), ("O9", "O13")):
+            bad = copy.deepcopy(cfg)
+            anchors = bad["sales"]["anchors"]
+            anchors[left], anchors[right] = anchors[right], anchors[left]
+            before = copy.deepcopy(bad)
+            with self.subTest(pair=(left, right)), self.assertRaisesRegex(ValueError, "D8.*channel"):
+                patch.materialize_d8(src, bad)
+            self.assertEqual(before, bad)
+
+    def test_d8_swapped_grade_records_rejected(self):
+        _, src, cfg, patch = self.d8_inputs()
+        for left, right in (("O7", "O8"), ("O8", "O9"), ("O11", "O12"), ("O12", "O13")):
+            bad = copy.deepcopy(cfg)
+            anchors = bad["sales"]["anchors"]
+            anchors[left], anchors[right] = anchors[right], anchors[left]
+            with self.subTest(pair=(left, right)), self.assertRaisesRegex(ValueError, "D8.*grade"):
+                patch.materialize_d8(src, bad)
+
+    def test_d8_missing_target_cannot_bypass_row_condition(self):
+        _, src, cfg, patch = self.d8_inputs()
+        # A valid O7 source normalizes against a matching common target;
+        # putting it in O11 must still fail without an anchor-local target.
+        target = cfg["sales"]["target_dimensions"]
+        target.update(channel="수매", grade="상품")
+        raw = cfg["sales"]["anchors"]["O7"]
+        raw.pop("target_dimensions")
+        cfg["sales"]["anchors"] = {"O11": raw}
+        w = load_workbook(src)
+        for row in (38, 39, 40, 42, 43):
+            for col in "CEGIK": w[S5][col+str(row)] = 0
+        w.save(src); w.close()
+        with self.assertRaisesRegex(ValueError, "D8.*channel"):
+            patch.materialize_d8(src, cfg)
+
+    def test_d8_missing_grade_rejected(self):
+        _, src, cfg, patch = self.d8_inputs()
+        raw = cfg["sales"]["anchors"]["O7"]
+        raw["target_dimensions"].pop("grade")
+        source = next(e for e in cfg["price_sources"] if e["id"] == raw["source_id"])
+        source["dimensions"].pop("grade")
+        with self.assertRaisesRegex(ValueError, "D8.*grade"):
+            patch.materialize_d8(src, cfg)
+
+    def test_d8_row_dimensions_accept_aliases_and_singleton_lists(self):
+        _, src, cfg, patch = self.d8_inputs()
+        for raw in cfg["sales"]["anchors"].values():
+            e = next(e for e in cfg["price_sources"] if e["id"] == raw["source_id"])
+            raw["target_dimensions"]["거래단계"] = [raw["target_dimensions"].pop("channel")]
+            raw["target_dimensions"]["등급"] = [raw["target_dimensions"].pop("grade")]
+            e["dimensions"]["거래단계"] = e["dimensions"].pop("channel")
+            e["dimensions"]["등급"] = e["dimensions"].pop("grade")
+        self.assertEqual(6, len(patch.materialize_d8(src, cfg)["d8"]["rates"]["sales"]["anchors"]))
+        # No new common-target input is required when each anchor already
+        # declares the full condition under the existing shared contract.
+        common = cfg["sales"].pop("target_dimensions")
+        for raw in cfg["sales"]["anchors"].values(): raw["target_dimensions"].update(common)
+        self.assertEqual(6, len(patch.materialize_d8(src, cfg)["d8"]["rates"]["sales"]["anchors"]))
+
+    def test_d8_only_existing_kg_unit_supported(self):
+        _, src, cfg, patch = self.d8_inputs()
+        cfg["sales"]["target_dimensions"]["unit"] = "원/g"
+        for raw in cfg["sales"]["anchors"].values():
+            e = next(e for e in cfg["price_sources"] if e["id"] == raw["source_id"])
+            e["unit"] = e["dimensions"]["unit"] = "원/g"
+        with self.assertRaisesRegex(ValueError, "원/kg|unit"):
+            patch.materialize_d8(src, cfg)
+
+    def test_d8_inactive_missing_anchor_allowed_but_wrong_record_rejected(self):
+        _, src, cfg, patch = self.d8_inputs()
+        w = load_workbook(src)
+        for col in "CEGIK": w[S5][col+"41"] = 0
+        w.save(src); w.close()
+        cfg["sales"]["anchors"].pop("O11")
+        patch.materialize_d8(src, cfg)
+        cfg["sales"]["anchors"]["O11"] = copy.deepcopy(cfg["sales"]["anchors"]["O7"])
+        with self.assertRaisesRegex(ValueError, "D8.*channel"):
+            patch.materialize_d8(src, cfg)
+
+    def test_d8_active_missing_and_unknown_anchors_rejected(self):
+        _, src, cfg, patch = self.d8_inputs()
+        bad = copy.deepcopy(cfg); bad["sales"]["anchors"].pop("O7")
+        with self.assertRaisesRegex(ValueError, "active sales anchor"):
+            patch.materialize_d8(src, bad)
+        bad = copy.deepcopy(cfg); bad["sales"]["anchors"]["O10"] = bad["sales"]["anchors"].pop("O7")
+        with self.assertRaisesRegex(ValueError, "D8 sales anchors"):
+            patch.materialize_d8(src, bad)
+
+    def test_d8_common_plan_conflict_rejected_without_publication(self):
+        root, src, cfg, patch = self.d8_inputs()
+        cfg["sales"]["anchors"]["O7"]["target_dimensions"]["crop"] = "other"
+        with self.assertRaises(ValueError): patch.materialize_d8(src, cfg)
+        # CLI failure preserves a prior map and creates no new map.
+        import contextlib, io
+        config = root / "assumptions.json"; config.write_text(json.dumps(cfg))
+        for exists in (False, True):
+            out = root / ("held-existing.json" if exists else "held-new.json")
+            if exists: out.write_text("prior map")
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                rc = patch.cli(["materialize-d8", "--source", str(src), "--assumptions", str(config), "--out", str(out)])
+            self.assertNotEqual(0, rc)
+            self.assertEqual("prior map" if exists else None, out.read_text() if out.exists() else None)
 
     def test_hort_all_sixty_prices_and_production_growth_preserved(self):
         h=runtime("gg_hort_workbook");project,params=horticulture_inputs()

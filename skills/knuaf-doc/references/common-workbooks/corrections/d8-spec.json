@@ -43,6 +43,38 @@
     "42": "O12",
     "43": "O13"
   },
+  "sales_anchor_dimensions": {
+    "O7": {
+      "channel": "수매",
+      "grade": "상품",
+      "unit": "원/kg"
+    },
+    "O8": {
+      "channel": "수매",
+      "grade": "중품",
+      "unit": "원/kg"
+    },
+    "O9": {
+      "channel": "수매",
+      "grade": "하품",
+      "unit": "원/kg"
+    },
+    "O11": {
+      "channel": "직거래",
+      "grade": "상품",
+      "unit": "원/kg"
+    },
+    "O12": {
+      "channel": "직거래",
+      "grade": "중품",
+      "unit": "원/kg"
+    },
+    "O13": {
+      "channel": "직거래",
+      "grade": "하품",
+      "unit": "원/kg"
+    }
+  },
   "protected_sheets": [
     "4. 원리금상환계획",
     "10. 감가상각비계획 ",

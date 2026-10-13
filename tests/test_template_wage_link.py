@@ -61,6 +61,7 @@ def fixture(path, broken=True):
     sale['C36'] = '2026년'
     sale['B46'] = '* 판매가격 물가상승률 2.5% 적용'
     for row, price in {38: 'O7', 39: 'O8', 40: 'O9', 41: 'O11', 42: 'O12', 43: 'O13'}.items():
+        sale['B'+str(row)] = ('수매' if row < 41 else '직거래') + '(' + {38:'상품',39:'중품',40:'하품',41:'상품',42:'중품',43:'하품'}[row] + ')'
         sale[price] = 20
         for q, r in zip('CEGIK', 'DFHJL'):
             sale[f'{q}{row}'] = 100
@@ -118,13 +119,15 @@ def assumptions(sales_r=None):
             {'year': y, 'value': v} for y, v in zip(d['sales']['observation_years'], d['sales']['observed_values'])],
             role='sales', unit='원/kg', dimensions=dims))
     d['writing_year'] = 2026
-    dims = {'crop':'synthetic','region':'national','unit':'원/kg','channel':'producer'}
+    dims = {'crop':'synthetic','region':'national','unit':'원/kg'}
     d['sales'] = {'writing_year':2026,'application_base_year':2026,'target_dimensions':dims.copy(),'dimensions':dims.copy(),'anchors':{}}
-    for anchor in ['O7','O8','O9','O11','O12','O13']:
+    for anchor, channel, grade in [('O7','수매','상품'), ('O8','수매','중품'), ('O9','수매','하품'),
+                                   ('O11','직거래','상품'), ('O12','직거래','중품'), ('O13','직거래','하품')]:
         sid = 'synthetic.price.'+anchor
-        source = student_series(sid,[{'year':y,'value':v} for y,v in zip(range(2021,2026),[18,19,20,21,22])],role='sales',unit='원/kg',dimensions=dims)
+        source = student_series(sid,[{'year':y,'value':v} for y,v in zip(range(2021,2026),[18,19,20,21,22])],role='sales',unit='원/kg',dimensions={**dims,'channel':channel,'grade':grade})
         d['price_sources'].append(source)
-        d['sales']['anchors'][anchor] = {'source_id':sid,'base_year':None}
+        d['sales']['anchors'][anchor] = {'source_id':sid,'base_year':None,
+                                       'target_dimensions':{'channel':channel,'grade':grade}}
     return d
 
 

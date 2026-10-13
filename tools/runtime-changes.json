@@ -409,7 +409,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/common-workbooks/corrections/d8-spec.json": {
-   "after_sha256": "3112029a1aebd9e895516da9c2c2f71b0ae4b0e2d50b4dd72d52fc9570e656b3",
+   "after_sha256": "8cb0fb52f2032078ab2c776eec64c106dd644261c975144d4a6749efe02c3cd4",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
@@ -977,7 +977,7 @@
    "source": "modified"
   },
   "skills/knuaf-doc/scripts/gg_excel_formula_patch.py": {
-   "after_sha256": "7e6d8ec826929c02ddc4660dfd8a6d3c2e491a734d88c00be91046b0059c835e",
+   "after_sha256": "ff5f89af4eb875cfda1c6978ae2ce90044c55a08a58a335bfa43f4e445c98697",
    "before_sha256": "d1e1e77dccf3cfcc8ddb7d25bab9c8e53dd77850d97ed019d8f33884a46250db",
    "first_changed": "P7",
    "last_changed": "P28",
@@ -1916,7 +1916,7 @@
   "tests/test_sales_price_numeric_contract.py": {
    "first_changed": "P28",
    "before_sha256": null,
-   "after_sha256": "5df97a6402b2ef3b9e3964a2a7cb7ee0191fe3f07f38a8a6007c92bed6c870df",
+   "after_sha256": "a596a673c38c25819944b154f35ca43e73f00bd56c0e4f2f9b27e23d037fd81c",
    "last_changed": "P28",
    "owner": "P28",
    "reason": "P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
@@ -1925,7 +1925,7 @@
   "tests/test_template_wage_link.py": {
    "first_changed": "P28",
    "before_sha256": null,
-   "after_sha256": "c5146f2b6e3557fedeb648f4c7fa801be89e8e7630089784b37c005f932a48c6",
+   "after_sha256": "2cc17d9a2d6a015f888472342e3f87820105b6086ca8e9f3726374571726ebb6",
    "last_changed": "P28",
    "owner": "P28",
    "reason": "P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
