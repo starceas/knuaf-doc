@@ -1,7 +1,8 @@
 """Native Windows local-filesystem primitives (Python 3.10+).
 
-No POSIX emulation. Component handles deny write/delete sharing while a
-path operation runs. All reparse points are refused, including junctions.
+No POSIX emulation. Parent directory handles deny delete sharing while a
+path operation runs, allowing child creation/rename. All reparse points are
+refused, including junctions.
 The caller still owns the cooperative workspace guard. No directory
 power-loss durability, network/cloud filesystem or hostile-writer guarantee.
 """
@@ -160,11 +161,11 @@ class Directory:
         self.created = []
         try:
             current = Path(self.path.anchor)
-            self.handles.append(_open(current, _READ, 3, "directory"))
+            self.handles.append(_open(current, _READ, 3, "directory", share=3))
             for part in self.path.parts[1:]:
                 current = current / part
                 try:
-                    handle = _open(current, _READ, 3, "directory")
+                    handle = _open(current, _READ, 3, "directory", share=3)
                 except FileNotFoundError:
                     if not create:
                         raise
@@ -173,7 +174,7 @@ class Directory:
                         self.created.append(current)
                     except FileExistsError:
                         pass
-                    handle = _open(current, _READ, 3, "directory")
+                    handle = _open(current, _READ, 3, "directory", share=3)
                 self.handles.append(handle)
         except BaseException:
             self.close()
