@@ -47,7 +47,7 @@ def _spec(**over):
             },
             "sales": {
                 "application_base_year": 2027,
-                "anchors": {k: {"source_id": "student."+k, "base_year": None, "target_dimensions":{"channel":{"purchase":"수매","direct":"직거래"}[k]}}
+                "anchors": {k: {"source_id": "student."+k, "base_year": None, "target_dimensions":{"channel":{"purchase":"수매","direct":"직거래"}[k], "grade":"상품"}}
                             for k in ("purchase", "direct")},
             },
         },
@@ -57,6 +57,7 @@ def _spec(**over):
                 for k,vs in [("purchase",[1,2,3,4,5]),("direct",[3,4,5,6,7])]]
     for entry in defaults:
         entry["dimensions"]["channel"] = {"student.purchase":"수매","student.direct":"직거래"}[entry["id"]]
+        entry["dimensions"]["grade"] = "상품"  # school fixture sells 상품
     spec["price_sources"] = defaults + spec.get("price_sources", [])
     return spec
 

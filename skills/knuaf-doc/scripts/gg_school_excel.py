@@ -11,6 +11,7 @@ from gg_finance import num
 from gg_price_assumptions import footnote as price_footnote
 from gg_price_assumptions import multiplier_d as price_multiplier_d
 from gg_price_assumptions import normalize_price_assumptions
+from gg_price_assumptions import canonical_dimensions, check_dimensions
 
 # Irregular names are formula targets. Do not "fix" spaces or periods.
 SCHOOL_SHEETS = (
@@ -241,10 +242,33 @@ def validate(spec, *, resolver=None):
     if values["loan"] > 0 and spec["term"] <= 0:
         raise ValueError("융자금이 있는 경우 상환기간은 1 이상의 정수 필요")
 
-    price_assumptions = normalize_price_assumptions(spec, years)
+    active = [k for k in ("purchase", "direct") if values[k + "_share"] > 0]
+    # Only these school rows sell 상품. Bind an omitted target grade to
+    # that output condition, never fill an unknown source grade. The
+    # shared normalizer then requires the source to prove the condition.
+    block = spec.get("price_assumptions")
+    raw_sales = block.get("sales") if isinstance(block, dict) else None
+    price_spec = spec
+    if isinstance(raw_sales, dict):
+        def row_target(raw):
+            if not isinstance(raw, dict):
+                return raw
+            target = canonical_dimensions(raw.get("target_dimensions"))
+            target.setdefault("grade", "상품")
+            return {**raw, "target_dimensions": target}
+
+        if isinstance(raw_sales.get("anchors"), dict):
+            bound = {**raw_sales, "anchors": {
+                key: row_target(raw) if key in active else raw
+                for key, raw in raw_sales["anchors"].items()}}
+        elif "anchors" not in raw_sales and len(active) == 1:
+            bound = row_target(raw_sales)
+        else:
+            bound = raw_sales
+        price_spec = {**spec, "price_assumptions": {**block, "sales": bound}}
+    price_assumptions = normalize_price_assumptions(price_spec, years)
     sale = price_assumptions["sales"]
     anchors = sale.get("anchors", {})
-    active = [k for k in ("purchase", "direct") if values[k + "_share"] > 0]
     if not anchors and len(active) == 1:
         anchors = {active[0]: dict(sale)}
     if set(anchors) - {"purchase", "direct"}:
@@ -259,9 +283,13 @@ def validate(spec, *, resolver=None):
         # The school row fixes its channel. Input target/source agreement
         # cannot turn O7 into direct sales or O10 into purchase sales.
         channel = {"purchase": "수매", "direct": "직거래"}[key]
-        if (a["dimensions"].get("channel") != channel
-                or a["target_dimensions"].get("channel") != channel):
-            raise ValueError(f"school {key} 채널은 {channel}로 확정 — 출처/target 채널 불일치")
+        try:
+            check_dimensions(a, {"channel": channel}, required=("channel",),
+                             origin=f"school {key}")
+        except ValueError as exc:
+            raise ValueError(f"school {key} 채널은 {channel}로 확정 — 출처/target 채널 불일치: {exc}") from exc
+        check_dimensions(a, {"grade": "상품"}, required=("grade",),
+                         origin=f"school {key} 상품 행")
         if a["unit"] != "원/kg":
             raise ValueError("school 판매가는 원/kg 필요")
         mean = Decimal(str(a["base_price"]))

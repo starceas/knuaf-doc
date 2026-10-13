@@ -25,15 +25,19 @@ def source(sid="synthetic.purchase", values=(100,200,300,400,500), channel="수�
 
 
 def sales_spec():
-    return _spec(purchase_price="300",direct_price="500",
+    spec = _spec(purchase_price="300",direct_price="500",
         price_dimensions={"unit":"원/kg"},
         price_sources=[source(),source("synthetic.direct",(300,400,500,600,700),"직거래")],
         price_assumptions={
             "general":{"source_id":"official.kosis.cpi.total","base_year":2020,"application_base_year":2027},
             "wage":{"source_id":"official.kosis.farm_purchase.labor","base_year":2020,"application_base_year":2027},
             "sales":{"application_base_year":2027,"anchors":{
-                "purchase":{"source_id":"synthetic.purchase","base_year":None,"target_dimensions":{"channel":"수매"}},
-                "direct":{"source_id":"synthetic.direct","base_year":None,"target_dimensions":{"channel":"직거래"}}}}})
+                "purchase":{"source_id":"synthetic.purchase","base_year":None,"target_dimensions":{"channel":"수매","grade":"상품"}},
+                "direct":{"source_id":"synthetic.direct","base_year":None,"target_dimensions":{"channel":"직거래","grade":"상품"}}}}})
+    for entry in spec["price_sources"]:
+        if entry["id"] in ("synthetic.purchase", "synthetic.direct"):
+            entry["dimensions"]["grade"] = "상품"
+    return spec
 
 
 def horticulture_inputs():
@@ -170,6 +174,117 @@ class SalesNumericContract(ContractCase):
         wb.close();spec["purchase_price"]="999"
         with self.assertRaisesRegex(ValueError,"불일치"):runtime("gg_school_excel").school_workbook(spec,root/"bad.xlsx",context=ctx)
         self.assertFalse((root/"bad.xlsx").exists())
+
+    def test_school_valid_lower_grade_records_refused_before_output(self):
+        root=self.make_project();bind_major(root)
+        ctx=runtime("gg_major_contract").output_context(root,"specialty_crops")
+        school=runtime("gg_school_excel")
+        for key in ("purchase","direct"):
+            for grade in ("중품","하품"):
+                spec=sales_spec()
+                raw=spec["price_assumptions"]["sales"]["anchors"][key]
+                raw["target_dimensions"]["grade"]=grade
+                next(e for e in spec["price_sources"] if e["id"]==raw["source_id"])["dimensions"]["grade"]=grade
+                # Valid source/own target agreement is insufficient for
+                # the school workbook's fixed 상품 output row.
+                self.assertEqual(grade,self.normalize(spec)["anchors"][key]["dimensions"]["grade"])
+                out=root/(key+grade+".xlsx")
+                with self.subTest(key=key,grade=grade),self.assertRaisesRegex(ValueError,"school.*grade"):
+                    school.school_workbook(spec,out,context=ctx)
+                self.assertFalse(out.exists())
+                self.assertFalse(out.with_suffix(".manifest.json").exists())
+                # Refusal also preserves an already-existing output pair.
+                school.school_workbook(sales_spec(),out,context=ctx)
+                previous={p:p.read_bytes() for p in (out,out.with_suffix(".manifest.json"))}
+                before=copy.deepcopy(spec)
+                with self.assertRaisesRegex(ValueError,"school.*grade"):
+                    school.school_workbook(spec,out,context=ctx)
+                self.assertEqual(before,spec)
+                self.assertEqual(previous,{p:p.read_bytes() for p in previous})
+
+    def test_school_unknown_source_grade_cannot_be_filled_as_product(self):
+        root=self.make_project();bind_major(root)
+        ctx=runtime("gg_major_contract").output_context(root,"specialty_crops")
+        for key in ("purchase","direct"):
+            spec=sales_spec()
+            raw=spec["price_assumptions"]["sales"]["anchors"][key]
+            raw["target_dimensions"].pop("grade")
+            next(e for e in spec["price_sources"] if e["id"]==raw["source_id"])["dimensions"].pop("grade")
+            self.normalize(spec)  # shared contract still permits unknown grade
+            before=copy.deepcopy(spec);out=root/(key+"-unknown.xlsx")
+            with self.subTest(key=key),self.assertRaisesRegex(ValueError,"grade"):
+                runtime("gg_school_excel").school_workbook(spec,out,context=ctx)
+            self.assertFalse(out.exists());self.assertFalse(out.with_suffix(".manifest.json").exists())
+            self.assertEqual(before,spec)
+
+    def test_school_known_product_source_binds_omitted_target_grade(self):
+        root=self.make_project();bind_major(root)
+        ctx=runtime("gg_major_contract").output_context(root,"specialty_crops")
+        spec=sales_spec()
+        for raw in spec["price_assumptions"]["sales"]["anchors"].values():
+            raw["target_dimensions"].pop("grade")
+        before=copy.deepcopy(spec);out=root/"known-product.xlsx"
+        runtime("gg_school_excel").school_workbook(spec,out,context=ctx)
+        receipt=json.loads(out.with_suffix(".manifest.json").read_text())
+        for a in receipt["price_assumptions"]["sales"]["anchors"].values():
+            self.assertEqual("상품",a["dimensions"]["grade"])
+            self.assertEqual("상품",a["target_dimensions"]["grade"])
+        self.assertEqual(before,spec)
+        book=runtime("gg_workbook_audit").Workbook.load(out)
+        self.assertEqual(300,book.evaluate(S5,"D39"))
+        self.assertEqual(500,book.evaluate(S5,"D40"))
+        self.assertAlmostEqual(800*((116.61/102.5)**.25)**2,
+            book.evaluate(S5,"F39")+book.evaluate(S5,"F40"),places=10)
+
+    def test_school_inactive_unknown_grade_remains_input_only(self):
+        root=self.make_project();bind_major(root)
+        ctx=runtime("gg_major_contract").output_context(root,"specialty_crops")
+        spec=sales_spec();spec.pop("direct_price")
+        spec.update(purchase_share="1",direct_share="0")
+        raw=spec["price_assumptions"]["sales"]["anchors"]["direct"]
+        raw["target_dimensions"].pop("grade")
+        next(e for e in spec["price_sources"] if e["id"]==raw["source_id"])["dimensions"].pop("grade")
+        before=copy.deepcopy(spec);out=root/"inactive-unknown.xlsx"
+        runtime("gg_school_excel").school_workbook(spec,out,context=ctx)
+        book=runtime("gg_workbook_audit").Workbook.load(out)
+        self.assertEqual(600,book.evaluate(S5,"D39"))
+        self.assertEqual(0,book.evaluate(S5,"O10"))
+        receipt=json.loads(out.with_suffix(".manifest.json").read_text())
+        self.assertEqual({"purchase"},set(receipt["price_assumptions"]["sales"]["anchors"]))
+        self.assertEqual(before,spec)
+
+    def test_school_row_dimensions_accept_aliases_and_singleton_lists(self):
+        root=self.make_project();bind_major(root)
+        ctx=runtime("gg_major_contract").output_context(root,"specialty_crops")
+        spec=sales_spec()
+        for raw in spec["price_assumptions"]["sales"]["anchors"].values():
+            e=next(e for e in spec["price_sources"] if e["id"]==raw["source_id"])
+            for dims in (raw["target_dimensions"],e["dimensions"]):
+                channel,grade=dims.pop("channel"),dims.pop("grade")
+                # Source schema requires strings; target conditions also
+                # accept equivalent singleton lists under check_dimensions.
+                dims["거래단계"]=channel if dims is e["dimensions"] else [channel]
+                dims["등급"]=grade if dims is e["dimensions"] else [grade]
+                dims["단위"]="원/kg" if dims is e["dimensions"] else ["원/kg"]
+        out=root/"aliases.xlsx"
+        runtime("gg_school_excel").school_workbook(spec,out,context=ctx)
+        self.assertEqual(Decimal(800),runtime("gg_school_verify").calculate_school_expected(spec)["expected_years"][0]["revenue"])
+
+    def test_school_valid_wrong_channel_or_unit_refused_without_conversion(self):
+        root=self.make_project();bind_major(root)
+        ctx=runtime("gg_major_contract").output_context(root,"specialty_crops")
+        for axis,value in (("channel","도매"),("unit","원/10kg")):
+            spec=sales_spec()
+            for raw in spec["price_assumptions"]["sales"]["anchors"].values():
+                e=next(e for e in spec["price_sources"] if e["id"]==raw["source_id"])
+                raw["target_dimensions"][axis]=value;e["dimensions"][axis]=value
+                if axis=="unit":e["unit"]=value
+            if axis=="unit":spec["price_dimensions"]["unit"]=value
+            self.normalize(spec)
+            out=root/(axis+"-mismatch.xlsx")
+            with self.subTest(axis=axis),self.assertRaisesRegex(ValueError,"채널 불일치|원/kg"):
+                runtime("gg_school_excel").school_workbook(spec,out,context=ctx)
+            self.assertFalse(out.exists());self.assertFalse(out.with_suffix(".manifest.json").exists())
 
     def test_fr01_swapped_source_and_target_rejected_before_output(self):
         root=self.make_project();bind_major(root)
