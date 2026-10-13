@@ -490,6 +490,26 @@ def rename_noreplace(src, dst, *, source_identity, source_parent_identity,
         except (OSError, ValueError):
             return FsWriteResult("not_installed", "windows_parent_check_failed", dst,
                                  preserved_paths=[str(src), str(dst)])
+        if source_identity.get("kind") == "directory":
+            # Caller retains its registered, byte-locked guard. Our parent
+            # pin chains must not survive the owned directory rename.
+            stack.close()
+            result = _rename_noreplace(src, dst, **kwargs)
+            try:
+                assert_identity(src.parent, source_parent_identity)
+                assert_identity(dst.parent, destination_parent_identity)
+                if result["state"] == "not_installed":
+                    assert_identity(src, source_identity)
+            except (FsError, OSError) as error:
+                return FsWriteResult(
+                    "unknown", "directory_rename_postcheck_failed", dst,
+                    preserved_paths=[str(src), str(dst)],
+                    cleanup_errors=list(result.get("cleanup_errors") or []) + [{
+                        "reason": getattr(error, "reason", "identity_check_failed"),
+                        "operation": "directory_rename_postcheck",
+                    }],
+                )
+            return result
         return _rename_noreplace(src, dst, **kwargs)
 
 

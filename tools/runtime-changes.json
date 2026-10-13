@@ -194,7 +194,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/install-manifest.json": {
-   "after_sha256": "b05259766d82d0927519e05162efc4d0cbbca42ed1cab9207601e9b801f126ea",
+   "after_sha256": "a2f600735124593718eb3f2e0fe836ffaf6e1d80a33dfffd3809846e0883bf3f",
    "before_sha256": null,
    "first_changed": "P27",
    "last_changed": "P28",
@@ -644,7 +644,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/locking.md": {
-   "after_sha256": "407771429e3e20fac443832855465f11be174d5e6f12addb1dea3a8c940b0cc1",
+   "after_sha256": "afb90c6de8a94a22af7d60139a2622d2bd33627f0d6427ff664b6caa2d582799",
    "before_sha256": null,
    "first_changed": "P2",
    "last_changed": "P27",
@@ -1059,7 +1059,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_fs.py": {
-   "after_sha256": "42c926e995fb831e4a508b8592c1d0d7a3765dfea6c3ace4a7e0eefca79d5e35",
+   "after_sha256": "b468116d4df9884d74cedd4c77d0a9d124934d251d9813d661b9ce3fbd043f48",
    "before_sha256": null,
    "first_changed": "P2",
    "owner": "B",

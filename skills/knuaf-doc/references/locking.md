@@ -42,7 +42,7 @@ export·paper·adopt-output·observe·import는 완료 후 불변 수령증(`.gg
 
 Python 3.10·3.14의 일반 로컬 NTFS 드라이브에서 Windows byte lock을 사용한다. 발행 파일은 binary bytes로 읽고 쓰며, 파일 식별자·수령증·payload hash를 대조한다. 기존 목적지는 덮어쓰지 않는다. 같은 요청은 수령증을 확인해 재사용하고, 요청 ID가 같아도 입력이 다르면 충돌로 거부한다. import 이동 중 가드 점유를 유지하고 이동 후 경로를 다시 연결한다.
 
-디렉터리 구성요소 핸들은 실제 읽기/목록 접근 권한으로 열고 읽기·쓰기 공유를 허용하되 삭제 공유를 거부하여 부모 이름의 rename을 막는다. 자식 파일 생성·rename에 필요한 쓰기 공유는 허용하며, 협조하는 쓰기는 OS guard로 직렬화한다. 그 권한이 없으면 경로를 거부한다. import에서 살아 있는 하위 guard 때문에 경로 기반 rename이 접근/공유 오류로 거부되면, 동일 directory identity를 확인한 native handle rename을 no-replace로 시도한다. guard 해제·복사·삭제 우회는 하지 않으며 기존 사후 검증을 유지한다.
+디렉터리 구성요소 핸들은 실제 읽기/목록 접근 권한으로 열고 읽기·쓰기 공유를 허용하되 삭제 공유를 거부하여 부모 이름의 rename을 막는다. 자식 파일 생성·rename에 필요한 쓰기 공유는 허용하며, 협조하는 쓰기는 OS guard로 직렬화한다. 그 권한이 없으면 경로를 거부한다. import에서 살아 있는 하위 guard 때문에 경로 기반 rename이 접근/공유 오류로 거부되면, 동일 directory identity를 확인한 native handle rename을 no-replace로 시도한다. 자기 소유 디렉터리를 이동할 때는 source·destination 부모 핀 체인을 닫아 자신의 rename을 막지 않도록 한다. 이 구간에서도 등록된 capability와 OS guard 점유는 유지하며, 이동 전 source·부모 식별자와 이동 후 목적지·양쪽 부모 식별자를 대조한다. 부모 식별자가 불확실하면 경로를 보존하고 unknown/indeterminate로 보고한다. 이 구간의 연속 부모 이름 핀은 보장하지 않으며, 비협조적 메타데이터 변경은 보장 범위 밖이다. 일반 파일 rename은 부모 핀을 유지한다. guard 해제·복사·삭제 우회는 하지 않는다.
 
 경로 구성요소의 reparse point(심볼릭 링크·junction 포함), ADS(`name:stream`), 장치 이름(`CON`·`NUL` 등), 끝 점·공백과 UNC·장치 namespace는 지원하지 않는다. 중첩 경로·한글·공백은 지원한다. 협조하는 쓰기 명령은 같은 가드를 사용해야 한다. 파일 핸들 검사만으로 관리자 권한의 공격자나 모든 비협조적 변경을 차단한다고 보장하지 않는다.
 
