@@ -55,7 +55,7 @@ SUMMARY_RULE = "HFIN-V3-EVIDENCE-SUMMARY-GENERATED-1"
 _PRICE_CONTRACT_ROLES = {"series:general": "general", "series:wage": "wage",
                          "series:sales": "sales"}
 _PRICE_CONTRACT_KINDS = frozenset(_PRICE_CONTRACT_ROLES) | {
-    "source:quote", "source:evidence", "source:summary"}
+    "source:quote", "source:evidence", "source:summary", "sales:five_year_price"}
 _PRICE_ASSUMPTION_FIELDS = {"source_id", "base_year", "application_base_year",
                             "unit", "observation", "target_dimensions",
                             "series", "status"}
@@ -633,6 +633,8 @@ def _zip_transform(source, tr, values, params=None):
                 value = values.get(pkey)
                 if value is None:
                     _put(cell, "blank", None)
+                elif spec.get("price_contract") == "sales:five_year_price":
+                    _put(cell, "formula", _sales_price_formula(pkey, values))
                 elif spec.get("unit_code") == "DATE":
                     _put(cell, "number", _serial(value))
                 else:
@@ -1684,6 +1686,85 @@ def _generated_summary(key, fact, sources, assumptions):
     return " · ".join(labels)
 
 
+def _sales_price_formula(key, values):
+    """A verified month-specific base and one common CPI rate; quantities unchanged."""
+    match = re.fullmatch(r"sales\.y([1-5])\.m([1-9]|1[0-2])\.price_krw_per_unit", key)
+    if not match or "_sales_cpi_rate" not in values:
+        raise Held("sales_price_contract_missing", key)
+    year, month = map(int, match.groups())
+    col = chr(ord("C") + month - 1)
+    from gg_excel_formula_patch import _excel_number
+    if year == 1:
+        return f'=IF(COUNT({col}8:{col}12)=5,AVERAGE({col}8:{col}12),"")'
+    return f'={col}72*(1+{_excel_number(float(values["_sales_cpi_rate"]))})^{year-1}'
+
+
+def _derive_sales_prices(project, params, present, values, derivations):
+    keys = [k for k, p in params.items() if p.get("price_contract") == "sales:five_year_price"]
+    if not keys:
+        return
+    students = _student_price_sources(project, project.get("facts") or {})
+    registry = _pa.load_registry()
+    common_writing = None
+    for month in range(1, 13):
+        first = f"sales.y1.m{month}.price_krw_per_unit"
+        if first not in present:
+            # Missing first-year evidence stays missing; later quote facts cannot bypass it.
+            if any(f"sales.y{y}.m{month}.price_krw_per_unit" in present for y in range(2, 6)):
+                raise Held("sales_price_contract_missing", first)
+            continue
+        fact = present[first]
+        _check_fact_sources(first, fact, project.get("sources"), _evidence_policy())
+        raw = fact.get("price_assumption")
+        if not isinstance(raw, dict):
+            raise Held("sales_price_contract_missing", first)
+        writing = raw.get("writing_year")
+        if common_writing is not None and writing != common_writing:
+            raise Held("sales_writing_year_conflict", first)
+        common_writing = writing
+        target = _pa.canonical_dimensions(raw.get("target_dimensions"))
+        _pa._merge_dimensions(target, {"month": str(month)}, origin=first)
+        crop = values.get("sales.crop_item")
+        if crop:
+            _pa._merge_dimensions(target, {"crop": crop}, origin=first)
+        expected_unit = "원/" + str(values.get("sales.price_per_unit", ""))
+        _pa._merge_dimensions(target, {"unit": expected_unit}, origin=first)
+        try:
+            a = _pa.normalize_sales_assumption(raw, writing_year=writing,
+                start_year=int(values.get("plan.start_year") or 0),
+                target_dimensions=target, registry=registry, student_sources=students,
+                anchor=f"m{month}")
+            source = _pa.resolve_series(a["source_id"], registry, students)
+            if source.get("dimensions", {}).get("month") != str(month):
+                raise ValueError("월별 시작가는 같은 월(month)의 5년 수열 필요")
+        except ValueError as exc:
+            raise Held("sales_price_held", getattr(exc, "detail", str(exc))) from exc
+        values["_sales_cpi_rate"] = Decimal(str(a["rate"]))
+        for i, observed in enumerate(a["price_observations"], 1):
+            for key, value in ((f"price.observed.y{i}.year", observed["year"]),
+                               (f"price.observed.y{i}.m{month}.krw_per_unit", Decimal(str(observed["value"])))):
+                if key in values and values[key] != value:
+                    raise Held("sales_observation_mismatch", key)
+                if key in params:
+                    values[key] = value
+        for year in range(1, 6):
+            key = f"sales.y{year}.m{month}.price_krw_per_unit"
+            if key not in keys:
+                continue
+            computed = Decimal(str(a["base_price"])) * _pa.multiplier_d(a, a["application_base_year"]+year-1)
+            if key in present:
+                if abs(Decimal(str(values[key])) - computed) > Decimal("1e-9"):
+                    raise Held("sales_price_mean_mismatch", key)
+                if year > 1 and present[key].get("price_assumption") not in (None, raw):
+                    raise Held("sales_price_contract_conflict", key)
+            values[key] = computed
+            derivations.append({"rule_id": "SALES-FIVE-YEAR-MEAN-CPI", "param_key": key,
+                "target_cell": params[key]["canonical_cell"], "source_fact_id": fact.get("id"),
+                "source_revision": fact.get("revision"), "derived_value": computed,
+                "unit_code": params[key]["unit_code"], "evidence_ref": fact.get("source_refs"),
+                "price_assumption": a, "formula": _sales_price_formula(key, values)})
+
+
 def _facts(project, params):
     facts, fact_sha = _fact_snapshot(project)
     by_key = defaultdict(list)
@@ -1720,6 +1801,7 @@ def _facts(project, params):
             continue
         present[key] = fact
         resolved[key] = _check_value(key, spec, fact)
+    _derive_sales_prices(project, params, present, resolved, derivations)
     # X1-01 input contract (W3-2): growth-rate params bind to a
     # price_assumption whose rate is the bound official series' endpoint CAGR
     # (the declared value is a cross-check only); quote/evidence/summary
@@ -1784,7 +1866,7 @@ def _facts(project, params):
         required = spec.get("required_if")
         if required is None:
             required = TRUE_COND if spec["required_when"].startswith("always") else FALSE_COND
-        if key not in present and _eval_cond(required, params, present, resolved, spec):
+        if key not in present and key not in resolved and _eval_cond(required, params, present, resolved, spec):
             raise Held("required_fact_missing")
     for key, spec in params.items():
         forbidden = spec.get("forbidden_if")
@@ -2534,7 +2616,9 @@ def _independent_model(source, transform, params, values):
             key = e["param_key"]
             value = values.get(key)
             if value is not None:
-                if params[key].get("unit_code") == "DATE":
+                if params[key].get("price_contract") == "sales:five_year_price":
+                    formulas[coord] = _sales_price_formula(key, values)
+                elif params[key].get("unit_code") == "DATE":
                     inputs[coord] = float(_serial(value))
                 elif isinstance(value, (int, Decimal)) and not isinstance(value, bool):
                     inputs[coord] = float(value)

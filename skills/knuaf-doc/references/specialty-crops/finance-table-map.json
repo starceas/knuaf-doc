@@ -20,7 +20,7 @@
    "role": "sales"
   }
  },
- "footnote_input_contract": "--input은 {footnotes:{kind:{source_id,base_year,observation?,rate?,application_base_year?,target_dimensions?,unit?}}} 형태의 구조화 각주 입력이다(그 밖의 최상위 키는 읽지 않는다). 상승률 각주는 항상 참고값이다 — 전개기는 r이 워크북 계산에 쓰였는지 증명하지 않으며, 출력 문구도 '통합문서에서 따로 확인해야 한다'고 밝힌다. source_id는 번들 official-price-series 레지스트리에 등록된 공식 통계 id여야 하고 역할·기준연도·단위·대상 차원·관측기간을 검증한다. 출력하는 r은 항상 관측 수열 끝점의 CAGR이며 자유 문자열·임의 문구 필드·검산 rate 불일치는 거부한다. 판매가는 crop 차원이 필수다. 명시 미적용은 {status:not_applied,reason}. 구 계약의 application_base_year 필드는 받아도 출력·검증에 쓰지 않는다. 통합문서 원문 상승률·성장률·연평균 변화율 주석은 검증 없이 복사하지 않고 구조화 참고값 각주로 안내한다.",
+ "footnote_input_contract": "일반물가·임금 각주는 기존 source_id/base_year/observation/rate 계약. 판매가 selling_price는 writing_year, application_base_year(S), source_id/base_year/target_dimensions 또는 anchors 조건별 사전, 선택 cpi_source_id(official.kosis.cpi.total만)를 받는다. 가격 시작가는 W-5..W-1의 5개 확인 가격 평균이고 상승률은 별도 DT_1J22003 전국 총지수 연간의 동일 창 4간격 CAGR. not_applied는 판매가에서 계산 보류, 비용 역할의 기존 명시 미적용 계약은 유지한다. 각주는 참고값이며 실제 수식 적용을 증명하지 않는다. research/selection 기록만으로 자료 불완전·차원 불일치를 통과시키지 않는다.",
  "workbook_rate_note_pattern": "상승률|성장률|연평균변화율",
  "workbook_rate_note_contract": "표 안 비고·라벨·값·구조 행·머리글과 독립 주석 등 렌더되는 모든 원문 셀 텍스트에 같은 패턴 필터를 적용한다. 일치한 셀은 빈 문자열로 생략하고 workbook_rate_note_dropped 경고에 원문 시트·셀을 기록한다. 상승률·성장률·연평균변화율 키워드가 없는 수선비 0.5%/6% 적용과 감가상각 설명은 보존한다. 검증된 구조화 참고값 각주는 이 원문 필터 대상이 아니다.",
  "layout": {

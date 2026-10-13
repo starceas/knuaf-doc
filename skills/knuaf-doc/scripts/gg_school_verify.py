@@ -50,7 +50,7 @@ def calculate_school_expected(spec):
     term = spec["term"]
     life = spec["life"]
 
-    pur_hist = spec.get("purchase_price_history")
+    pur_hist = [o["value"] for o in price["sales"].get("anchors", {}).get("purchase", {}).get("price_observations", [])]
     if pur_hist and len(pur_hist) == 5:
         pur_avg = sum(num(str(p)) for p in pur_hist) / D(5)
         if abs(purchase_price - pur_avg) > Decimal("0.05"):
@@ -61,7 +61,7 @@ def calculate_school_expected(spec):
     else:
         effective_purchase_price = purchase_price
 
-    dir_hist = spec.get("direct_price_history")
+    dir_hist = [o["value"] for o in price["sales"].get("anchors", {}).get("direct", {}).get("price_observations", [])]
     if dir_hist and len(dir_hist) == 5:
         dir_avg = sum(num(str(p)) for p in dir_hist) / D(5)
         if abs(direct_price - dir_avg) > Decimal("0.05"):

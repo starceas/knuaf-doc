@@ -61,6 +61,7 @@ def fixture(path, broken=True):
     sale['C36'] = '2026년'
     sale['B46'] = '* 판매가격 물가상승률 2.5% 적용'
     for row, price in {38: 'O7', 39: 'O8', 40: 'O9', 41: 'O11', 42: 'O12', 43: 'O13'}.items():
+        sale['B'+str(row)] = ('수매' if row < 41 else '직거래') + '(' + {38:'상품',39:'중품',40:'하품',41:'상품',42:'중품',43:'하품'}[row] + ')'
         sale[price] = 20
         for q, r in zip('CEGIK', 'DFHJL'):
             sale[f'{q}{row}'] = 100
@@ -117,6 +118,16 @@ def assumptions(sales_r=None):
         d['price_sources'].append(student_series(sid, [
             {'year': y, 'value': v} for y, v in zip(d['sales']['observation_years'], d['sales']['observed_values'])],
             role='sales', unit='원/kg', dimensions=dims))
+    d['writing_year'] = 2026
+    dims = {'crop':'synthetic','region':'national','unit':'원/kg'}
+    d['sales'] = {'writing_year':2026,'application_base_year':2026,'target_dimensions':dims.copy(),'dimensions':dims.copy(),'anchors':{}}
+    for anchor, channel, grade in [('O7','수매','상품'), ('O8','수매','중품'), ('O9','수매','하품'),
+                                   ('O11','직거래','상품'), ('O12','직거래','중품'), ('O13','직거래','하품')]:
+        sid = 'synthetic.price.'+anchor
+        source = student_series(sid,[{'year':y,'value':v} for y,v in zip(range(2021,2026),[18,19,20,21,22])],role='sales',unit='원/kg',dimensions={**dims,'channel':channel,'grade':grade})
+        d['price_sources'].append(source)
+        d['sales']['anchors'][anchor] = {'source_id':sid,'base_year':None,
+                                       'target_dimensions':{'channel':channel,'grade':grade}}
     return d
 
 
@@ -194,12 +205,12 @@ class WageLinkTests(ContractCase):
         b = self.audit.Workbook.load(out)
         self.assertAlmostEqual(b.evaluate(S8, 'I11') / b.evaluate(S8, 'F11'), 1.06)
         self.assertAlmostEqual(b.evaluate(S8, 'I12') / b.evaluate(S8, 'F12'), 1.04)
-        self.assertAlmostEqual(b.evaluate(S5, 'L38') / b.evaluate(S5, 'D38'), 1.02**4)
+        self.assertAlmostEqual(b.evaluate(S5, 'L38') / b.evaluate(S5, 'D38'), ((116.61/102.5)**.25)**4)
         r = (116.61/100)**(1/5)-1
         self.assertAlmostEqual(b.evaluate(S9, 'C38'), 100*(1+r))
-        self.assertIn('2.00000000%', b.values[S5, 'B46'])
+        self.assertIn('official.kosis.cpi.total', b.values[S5, 'B46'])
         self.assertIn('출처:', b.values[S5, 'B46'])
-        self.assertIn('지수 기준연도 해당 없음', b.values[S5, 'B46'])
+        self.assertIn('5년 평균', b.values[S5, 'B46'])
         self.assertNotIn('None', b.values[S5, 'B46'])
         self.assertEqual(rec['d8']['rates']['wage_male']['daily_base_application_count'], 3)
         self.assertEqual(self.patch.materialize_d8(out, config)['patches'], [])
@@ -208,18 +219,18 @@ class WageLinkTests(ContractCase):
         self.assertAlmostEqual(self.audit.Workbook.load(changed).evaluate(S9, 'C38'), 100*(130.2/100)**(1/5))
 
     def test_negative_rate_allowed(self):
-        out, _ = self.apply(self.patch.materialize_d8(self.src, assumptions(-.02)))
-        b = self.audit.Workbook.load(out)
-        self.assertAlmostEqual(b.evaluate(S5, 'L38')/b.evaluate(S5, 'D38'), .98**4)
+        # Price-series decline is not a negative CPI rate; reject the asserted substitute.
+        c = assumptions(-.02)
+        c['sales']['rate'] = -.02
+        with self.assertRaisesRegex(ValueError, '불일치'):
+            self.patch.materialize_d8(self.src, c)
 
     def test_sales_not_applied_is_explicit(self):
-        out, rec = self.apply(self.patch.materialize_d8(self.src, assumptions()))
-        b = self.audit.Workbook.load(out)
-        self.assertEqual(b.evaluate(S5, 'D38'), b.evaluate(S5, 'L38'))
-        self.assertIn('미반영', rec['d8']['rates']['sales']['reason'])
-        self.assertEqual(b.values[S5, 'B46'], '판매가 상승 미반영(확인 불가)')
-        c = assumptions(); del c['sales']
-        with self.assertRaises(ValueError): self.patch.materialize_d8(self.src, c)
+        c = assumptions()
+        c['sales'] = {'mode':'not_applied','reason':'확인 불가'}
+        with self.assertRaisesRegex(ValueError, 'not_applied'):
+            self.patch.materialize_d8(self.src, c)
+        self.assertFalse((self.root/'patched.xlsx').exists())
 
     def test_unsourced_invalid_rates_and_dimensions_rejected(self):
         cases = []
@@ -230,7 +241,7 @@ class WageLinkTests(ContractCase):
         c = assumptions(.02); c['wage_male']['observed_values'][0] = 0; cases.append(c)
         c = assumptions(.02); c['wage_male']['r'] = .25; cases.append(c)
         c = assumptions(.02); c['sales']['target_dimensions'] = dict(c['sales']['dimensions'], crop='other'); cases.append(c)
-        c = assumptions(.02); c['sales']['evidence_ref']['source_id'] = 'official.kosis.farm_sales.total'; cases.append(c)
+        c = assumptions(.02); c['sales']['anchors']['O7']['source_id'] = 'official.kosis.farm_sales.total'; cases.append(c)
         c = assumptions(.02); c['wage_female']['application_base_year'] = 2027; cases.append(c)
         for i, c in enumerate(cases):
             with self.subTest(case=i), self.assertRaises(ValueError): self.patch.materialize_d8(self.src, c)
@@ -358,7 +369,7 @@ class WageLinkTests(ContractCase):
                 before = copy.deepcopy(c)
                 plan = self.patch.materialize_d8(self.src, c)
                 self.assertEqual(c, before)
-                self.assertAlmostEqual(plan['d8']['rates']['sales']['r'], .02)
+                self.assertAlmostEqual(plan['d8']['rates']['sales']['r'], (116.61/102.5)**.25-1)
                 self.assertAlmostEqual(plan['d8']['rates']['wage_male']['r'], .06)
                 out = self.root / f'cli-{i}.json'
                 with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
@@ -816,10 +827,10 @@ class WageLinkTests(ContractCase):
             item = registered_rate(sid)
             c = assumptions(); c['wage_male'] = item
             out, _ = self.apply(self.patch.materialize_d8(self.src, c), sid.split('.')[-1]+'.xlsx')
-            normalized = pa.normalize_price_assumptions({
+            normalized = pa.normalize_price_role({
                 'price_assumptions': {'wage': {'source_id': sid, 'base_year': item['base_year'], 'application_base_year': 2026},
                                      'general': {'status': 'not_applied', 'reason': 'test'},
-                                     'sales': {'status': 'not_applied', 'reason': 'test'}}}, list(range(2026, 2031)))['wage']
+                                     'sales': {'status': 'not_applied', 'reason': 'test'}}}, 'wage', list(range(2026, 2031)))
             b = self.audit.Workbook.load(out)
             self.assertAlmostEqual(b.evaluate(S8, 'AC38'), normalized['rate'])
             self.assertAlmostEqual(b.evaluate(S8, 'I11')/b.evaluate(S8, 'F11'), 1+normalized['rate'])
@@ -939,7 +950,7 @@ class WageLinkTests(ContractCase):
         c['general'] = registered_rate('official.kosis.cpi.total')
         plan = self.patch.materialize_d8(self.src, c)
         formulas = {(p['sheet'], p['cell']): p.get('new_formula') for p in plan['patches']}
-        self.assertEqual(formulas[S5, 'D38'], '=C38*$O$7/1000*(1+0.02)^0')
+        self.assertEqual(formulas[S5, 'D38'], '=C38*$O$7/1000*(1+0.0327684982091536)^0')
         self.assertEqual(formulas[S8, 'AC38'], '=0.0663821164938491')
         self.assertEqual(formulas[S8, 'AD38'], '=0.0663821164938491')
         self.assertEqual(formulas[S9, 'C38'], '=C18*(1+0.0312101025776949)')
@@ -983,7 +994,7 @@ class WageLinkTests(ContractCase):
         self.assertEqual(ac38['new_formula'], '=' + male)
         sales_token = '*(1+' + rates['sales']['r_literal'] + ')^'
         for p in plan['patches']:
-            if p['sheet'] == S5 and 'new_formula' in p:
+            if p['sheet'] == S5 and 'new_formula' in p and p['cell'] not in c['sales']['anchors']:
                 self.assertIn(sales_token, p['new_formula'], p)
         general = next(p for p in plan['patches'] if p['sheet'] == S9 and 'new_formula' in p)
         self.assertTrue(general['new_formula'].endswith('*(1+' + rates['general']['r_literal'] + ')'))
@@ -997,19 +1008,23 @@ class WageLinkTests(ContractCase):
         for r in (0.0, -0.031210102577694965, 0.031210102577694965,
                   1.2345678901234567e-06):
             with self.subTest(r=r):
+                from unittest import mock
+                registry = copy.deepcopy(runtime('gg_price_assumptions').load_registry())
+                registry['official.kosis.cpi.total']['observations'] = [{'year':y,'value':100*(1+r)**i} for i,y in enumerate(range(2021,2026))]
                 c = assumptions(r)
-                plan = self.patch.materialize_d8(self.src, c)
-                full_r = plan['d8']['rates']['sales']['r']
-                token = plan['d8']['rates']['sales']['r_literal']
-                out, _ = self.apply(plan, name='signed-' + str(r) + '.xlsx')
-                book = self.audit.Workbook.load(out)
-                for i, col in enumerate('DFHJL'):
-                    self.assertEqual(book.formulas[S5, col+'38'].text,
-                                     f'{"CEGIK"[i]}38*$O$7/1000*(1+{token})^{i}')
-                    self.assertTrue(math.isclose(book.evaluate(S5, col+'38'),
-                                                2 * (1 + full_r) ** i,
-                                                rel_tol=1e-12, abs_tol=1e-12))
-                self.assertEqual(self.patch.materialize_d8(out, c)['patches'], [])
+                with mock.patch.object(runtime('gg_price_assumptions'), 'load_registry', return_value=registry):
+                    plan = self.patch.materialize_d8(self.src, c)
+                    full_r = plan['d8']['rates']['sales']['r']
+                    token = plan['d8']['rates']['sales']['r_literal']
+                    out, _ = self.apply(plan, name='signed-' + str(r) + '.xlsx')
+                    book = self.audit.Workbook.load(out)
+                    for i, col in enumerate('DFHJL'):
+                        self.assertEqual(book.formulas[S5, col+'38'].text,
+                                         f'{"CEGIK"[i]}38*$O$7/1000*(1+{token})^{i}')
+                        self.assertTrue(math.isclose(book.evaluate(S5, col+'38'),
+                                                    2 * (1 + full_r) ** i,
+                                                    rel_tol=1e-12, abs_tol=1e-12))
+                    self.assertEqual(self.patch.materialize_d8(out, c)['patches'], [])
 
     def test_v4_03_stale_long_repr_tokens_are_rewritten(self):
         # Same defect family variant: a workbook still carrying a pre-fix

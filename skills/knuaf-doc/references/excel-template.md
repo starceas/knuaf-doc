@@ -84,16 +84,16 @@ do not add sheets to the submission form merely to satisfy a preferred model.
 
 1. **세 상승률의 분리 및 관측 CAGR 강제**:
    - 일반물가 상승률은 영농자재·경비, 임금 상승률은 노무비, 판매가 상승률은 매출에 각각 적용한다.
-   - 세 입력을 하나의 소비자물가 상승률로 묶지 않는다.
-   - **상승률 r은 공식 관측 수열의 끝점 연평균 변화율(CAGR)로만 산출**된다. 명시적 `rate` 입력은 검산용(`max(5e-4, 0.05 × |cagr|)` 허용오차 내 일치)이며, 관측값 없는 임의 계획 가정 r은 입력할 수 없다. 내부 계산 배율은 `1 + r`이다.
-   - 계획연도 배율은 `(1 + r)^(계획연도 - application_base_year)`로 적용되며, 적용 횟수는 연도 차이와 같다. 모든 관측값·r·배율은 유한수여야 한다(NaN/Infinity 거부).
+   - 판매가 r이 CPI를 사용해도 일반물가·임금·판매 역할을 하나로 합치지 않는다. 비용·임금은 판매 자료와 독립해서 검증하며 `sales: not_applied` 자리표시를 요구하지 않는다. 판매가 5년 완전성을 임금용 최소 2점 관측 계약에 일괄 적용하지 않는다.
+   - 비용·임금 r은 해당 역할의 공식 관측 수열 CAGR, 판매가 r은 **문서 작성연도 직전 5년의 전국 연간 CPI 총지수 CAGR(4간격)**으로 산출한다. 판매 시작가 B는 같은 5년 동일 작목·조건 가격 산술평균이다. [판매가 계약](price-research-routes.md#판매가-시작가상승률적용-계약)을 따른다. 명시적 `rate` 입력은 검산용(`max(5e-4, 0.05 × |cagr|)` 허용오차 내 일치)이며, 관측값 없는 임의 계획 가정 r은 입력할 수 없다. 내부 계산 배율은 `1 + r`이다.
+   - 비용·임금은 각 역할의 기존 적용 기초연도를 사용한다. 판매가는 `application_base_year=S`로 영농 첫해 B, 다음해 B(1+r), 이후 B(1+r)^(t−S)다. 작성연도 W와 S는 따로 확인하며 관측 창을 S나 현재 날짜로 바꾸지 않는다. 모든 관측값·r·배율은 유한수여야 한다(NaN/Infinity 거부).
 2. **노무비 반영 및 이중 적용 금지**:
    - 노무비(고용노동임금) 계획은 **연도별 임금 상승률**을 반영한다.
    - 동일 가격에 상승률을 두 번 곱하지 않는다. 노무 단가에 임금 상승률을 곱한 뒤, 노무비 총액에 일반물가를 다시 곱하지 않는다. 감가상각비와 고정 차입금 원리금에는 물가를 적용하지 않는다.
-3. **공식 통계 근거 및 판매가 미반영 명시 선택**:
-   - 일반물가는 KOSIS 소비자물가 총지수(`DT_1J22003`), 자재·경비 세목은 농가구입가격지수 재료비·경비(`DT_1J62`), 노무비는 농가구입가격지수 노무비(`DT_1J62`), 판매가는 농진청 소득자료집 동일 작목 주산물 단가를 우선한다.
+3. **공식 통계 근거 및 판매 자료 부족 처리**:
+   - 일반물가는 KOSIS 소비자물가 총지수(`DT_1J22003`), 자재·경비 세목과 노무비는 농가구입가격지수의 해당 항목(`DT_1J62`)을 사용한다. 판매 시작가는 농진청 소득자료집 등 동일 작목·조건의 공식 연간 단가, 판매가 r은 별도 `DT_1J22003` 전국 연간 총지수다. 가격과 CPI 각각 정확한 5개 연도 전체·원값·출처를 확인하며 CPI에 작목 차원 일치를 요구하지 않는다.
    - 판매가 수열은 계획의 작목·재배형태·지역·상품·단위·거래단계 차원과 일치해야 한다(`crop` 필수). **총합 지수인 농가판매가격지수 총지수(`DT_1J60`)와 번들 KAMIS 쌀 수열(`allowed_roles: []`)은 판매가로 적용할 수 없다.**
-   - 학생 작목과 동일 조건의 공식 수열이 없으면, 전국 총지수를 임의 대입하지 않고 **"판매가 상승 미반영(확인 불가)"을 명시 선택**한다.
+   - 가격 또는 CPI가 부족하면 해당 계산·의존 출력만 보류한다. 역할·앵커·필요 창·누락 연도·부족 조건을 남기고, 실제 공식 후보의 연도·단위·가격 성격·계획 차이·조회 근거를 제시한다. 조사 미실행·후보 없음/접속 실패·후보 미선택·사람 선택 기록을 구분한다. 빈 후보나 `sales.status/mode=not_applied`는 계산 우회로가 아니다. 사람 선택 후에도 자료·창·차원을 재검증하며 다른 창/조건은 명시적 계획·규칙 변경으로 기록한다.
    - 통계에서 확인되지 않은 수치는 임의 추정 없이 `확인 불가`로 남긴다.
 4. **수식 숫자 표기 및 Excel 정밀도 보존 (`_excel_number`)**:
    - 패치(`materialize-d8`)가 워크북 수식에 쓰는 상승률 상수는 **유효숫자 15자리**(Excel이 보존하는 정밀도)로 직렬화하여 기록한다.
@@ -134,17 +134,34 @@ do not add sheets to the submission form merely to satisfy a preferred model.
    - **단위 일치 및 시간급 환산**: 관측표(X26:Z31)는 원/일 단위이므로 등록된 원/일 수열만 직접 입력할 수 있다. 농진청 소득자료집 고용노동 단가나 최저임금 등 시간급(원/시간) 수열을 일급으로 환산할 때는 반드시 `unit_conversion: {"from": "원/시간", "to": "원/일", "hours_per_day": float, "evidence_ref": {...}}` 명시 계약이 있어야 한다. **기본 환산 시간은 존재하지 않으며**(Q-W-B2 사용자/조사 후 결정 대기), 대조가 끝난 원값에 명시 시간을 곱한 결과로만 일급이 결정된다(임의 보상 환산 금지).
 4. **가격 계약 (`--assumptions <JSON>`)**:
    - materialize-d8에 `--assumptions <가정.json>`을 전달한다.
-   - 필드는 `wage_male`, `wage_female`, `sales`, 선택적 `general`로 분리한다. 각 계산 항목은 `base_year`, `observation_years`, `observed_values`, `application_base_year`, `evidence_ref`를 요구한다. 학생 선언 수열은 `assumptions.price_sources`에 포함한다.
-   - r은 공식 관측값의 끝점 CAGR로만 정해지며(음수 허용), 명시 r은 검산 오차 내 일치해야 한다.
+   - 역할은 `wage_male`, `wage_female`, `sales`, 선택적 `general`로 분리한다. 비용·임금 관측 항목은 `base_year`, `observation_years`, `observed_values`, `application_base_year`, `evidence_ref` 계약을 유지하고 학생 선언 수열은 `assumptions.price_sources`에 포함한다. 판매가에는 명시적 작성연도 W·워크북 첫 판매연도 S·활성 앵커별 가격 근거와 별도 CPI 근거가 필요하다. 판매가의 두 근거를 단일 source_id·작목 CAGR로 합치지 않는다.
+   - 비용·임금 r은 해당 공식 관측 CAGR, 판매가 r은 동일 5년 전국 연간 CPI CAGR이다. 완전한 관측에서 나온 0%·음수 r은 허용되며 명시 r은 검산 오차 내 일치해야 한다. 가격 부족을 0%로 바꾸지 않는다.
    - **가격 가정 어댑터**: 공통 차원 정규화(`canonical_dimensions`)를 적용하여 판매가 작목(`target_dimensions`)은 문자열(`crop: "봄감자"`), 목록(`crop: ["봄감자"]`), 또는 한글 별칭(`작목: "봄감자"`)을 모두 지원한다. 임금(`wage_male`, `wage_female`)에는 작목이 필수가 아니며 지역(`region` 또는 `지역` 별칭)만 지정할 수 있다.
-   - **계획 차원의 권위**: 사업계획의 최상위 차원이 기준이며 보조 차원이 충돌하면 거부된다. 판매가는 수열이 선언한 모든 차원(단위 포함)이 계획과 일치해야 하며(`crop` 필수), 전국은 고정 지역값이지 와일드카드가 아니다. 미일치 시 `{"mode": "not_applied", "reason": "확인 불가"}`를 명시한다.
+   - **계획 차원의 권위**: 사업계획의 최상위 차원이 기준이며 보조 차원이 충돌하면 거부된다. 판매가는 수열이 선언한 모든 차원(단위 포함)이 계획과 일치해야 하며(`crop` 필수), 전국은 고정 지역값이지 와일드카드가 아니다. 미일치는 해당 판매 계산 보류와 공식 후보 조사·사람 선택·재검증으로 처리한다. CPI의 전국 차원은 해당 상승률 수열의 조건이며 가격의 지역 조건을 덮지 않는다.
    - **역할별 허용 계약 (`allowed_roles`)**: 수열의 `allowed_roles`에 해당 역할(`wage`, `sales`, `general`)이 포함되어 있어야 한다.
      - 번들 일반물가(`general`): `official.kosis.cpi.total`, `official.kosis.farm_purchase.materials`, `official.kosis.farm_purchase.expenses`.
      - 번들 노무비(`wage`): `official.kosis.farm_purchase.labor`, `official.moel.establishment_wage.total`, `official.minimumwage.hourly`.
-     - 번들 판매가(`sales`): `official.rda.crop_income.spring_potato.output_price` (단, 작목 등 계획 차원 일치 필수; 번들에 없는 학생 작목은 공식 스키마 `price_sources`로 직접 등록).
+     - 번들 판매 시작가 후보: `official.rda.crop_income.spring_potato.output_price`. 작목 등 계획 차원 일치와 필요한 5년 전체가 필수다. 로컬 번들은 2025가 미확인이므로 W=2026 계산은 보류한다. 판매 상승률에 CPI를 허용해도 명목 단가의 `allowed_roles`·단위·차원 검사를 생략하지 않는다.
      - 시장 참고용(판매가 적용 불가, `allowed_roles: []`): `official.kosis.farm_sales.total`(총지수), `official.kamis.retail.rice_20kg.top`(쌀 소매가).
 5. **적용 기초연도 대조 및 경계**:
-   - 임금과 판매의 적용 기초연도는 원본에 보존된 F6 및 C36과 대조한다. 불일치를 이유로 원본 연도나 연결을 임의 변경하지 않는다. 공식 수열 준비와 구조 복구만으로 제출/통계 승인이라고 간주하지 않는다.
+   - 임금은 원본 F6, 판매가는 첫 판매연도 C36=S와 적용 기초연도를 대조한다. 판매가의 W를 S−1로 추론하지 않는다. 불일치를 이유로 원본 연도나 연결을 임의 변경하지 않는다. 공식 수열 준비와 구조 복구만으로 제출/통계 승인이라고 간주하지 않는다.
+   - D8 입력은 `assumptions.writing_year=W`, `sales.application_base_year=S`와 `sales.anchors`를 사용한다. 앵커 키는 `O7`, `O8`, `O9`, `O11`, `O12`, `O13`이며 활성 조건마다 `source_id`·`base_year`·`target_dimensions`를 지정한다. 가격 수열은 최상위 `price_sources`의 공식 스키마로 선언한다. 예를 들어 아래 O7 부분은 위 합성 수매 수열을 `price_sources`로 함께 제공할 때의 구조이며 전체 패치 입력은 아니다.
+     ```json
+     {
+       "writing_year": 2026,
+       "sales": {
+         "application_base_year": 2027,
+         "anchors": {
+           "O7": {
+             "source_id": "student.purchase",
+             "base_year": null,
+             "target_dimensions": {"crop": "합성작목", "region": "전국", "channel": "수매", "unit": "원/kg"}
+           }
+         }
+       }
+     }
+     ```
+   - D8는 활성 앵커마다 출처·가격 5개 원값·원단위·B·대상 셀을 연결해야 한다. 등록 D8의 매출 38/39/40/41/42/43행은 O7/O8/O9/O11/O12/O13을 참조한다. 학교 생성의 O7/O10 좌표를 D8에 전용하지 않는다. 기존 앵커의 일부 평균이나 직접값은 검증된 B를 대신하지 못한다. 첫해 매출은 수량×B/1000, 후속 수식은 동일 r 누적으로 대조한다.
 6. **Ⅳ장 재무표 각주 참고값 계약**:
    - Ⅳ장 상승률 각주는 전부 "참고값"으로 출력되며, 표 계산에 쓰였는지는 통합문서에서 따로 확인해야 한다 (전개기는 워크북 수식·캐시 역산 검증이나 실제 사용 보증을 하지 않음). 상세 계약과 구조화 각주 입력 형식은 [finance-flow](specialty-crops/finance-flow.md)를 따른다.
 
@@ -155,31 +172,79 @@ do not add sheets to the submission form merely to satisfy a preferred model.
 - **스펙 계약**:
   - `spec["price_assumptions"]` 객체에 `general`, `wage`, `sales` 세 역할을 필수로 정의한다.
   - 이전 `inflation` 단일 키 입력 시 명시적 오류로 거부된다.
-  - 각 역할은 공식 관측 수열의 끝점 CAGR로 계산되며, `rate`를 명시할 경우 수열 CAGR과 일치해야 한다.
-  - 각 역할 정의 형식:
+  - 비용·임금은 해당 역할의 공식 관측 CAGR, 판매가는 별도 가격 5년 평균 B와 같은 창 CPI CAGR r로 계산한다. 수매·직거래 등 각 조건의 근거를 분리하고 명시 `rate`는 계산된 r의 검산값으로만 사용한다.
+  - 작성연도 W와 영농 시작연도 S를 명시하고 같은 5년 가격·CPI 근거를 연결한다. `sales.status=not_applied`를 넣어 계속 계산하는 구 예제는 사용하지 않는다.
+  - 학교 생성의 수매 O7·직거래 O10에는 각 채널 B가 들어가고 첫해 매출은 수량×B/1000으로 대조한다. 이전 `purchase_price`·`direct_price`나 선택적 이력 평균이 검증된 B를 덮지 못한다. 생성 수식과 `gg_school_verify` 기대값을 함께 확인한다.
+  - 비용·임금 역할 입력 부분 예시(판매가·전공·생산 근거 등 전체 생성 spec은 아님):
     ```json
     {
       "general": {
         "source_id": "official.kosis.cpi.total",
         "base_year": 2020,
-        "application_base_year": 2025
+        "application_base_year": 2027
       },
       "wage": {
         "source_id": "official.kosis.farm_purchase.labor",
         "base_year": 2020,
-        "application_base_year": 2025
-      },
-      "sales": {
-        "status": "not_applied",
-        "reason": "확인 불가"
+        "application_base_year": 2027
       }
     }
     ```
+  - 판매가 입력은 최상위 `writing_year=W`, `start_year=S`와 `price_assumptions.sales.application_base_year=S`를 분리한다. 학교 앵커명은 `purchase`·`direct`, 각 앵커는 가격 `source_id`·명목 수열 `base_year:null`·`target_dimensions`를 지정한다. 계획의 공통 차원과 앵커 차원을 합쳐 모든 가격 차원을 검증하며 상충 값으로 계획을 덮지 않는다.
+  - `cpi_source_id`는 생략 가능하고 지정해도 `official.kosis.cpi.total`만 허용한다. CPI 관측은 번들에서 읽으며 학생 `price_sources`로 그 값을 덮어쓰지 않는다. 각 앵커 `base_price`는 출처의 원 단위 값이고 학교 원/천원·판매 수량 단위와 환산을 대조한다.
+  - 합성 가격을 선언하는 판매가 입력 부분 예시(전공·비용·생산 등 전체 생성에 필요한 필드는 별도로 제공):
+```json
+{
+  "writing_year": 2026,
+  "start_year": 2027,
+  "crops": ["합성작목"],
+  "region": "전국",
+  "price_dimensions": {"unit": "원/kg"},
+  "price_assumptions": {
+    "sales": {
+      "application_base_year": 2027,
+      "cpi_source_id": "official.kosis.cpi.total",
+      "anchors": {
+        "purchase": {"source_id": "student.purchase", "base_year": null, "target_dimensions": {"channel": "수매"}},
+        "direct": {"source_id": "student.direct", "base_year": null, "target_dimensions": {"channel": "직거래"}}
+      }
+    }
+  },
+  "price_sources": [
+    {
+      "id": "student.purchase", "agency": "합성 공공기관(시험용)", "agency_kind": "public_corporation",
+      "statistic_name": "합성 수매가격", "item_name": "합성작목", "base_year": null, "unit": "원/kg",
+      "url": "https://synthetic.example.go.kr/prices", "evidence_locator": "시험용 선언; 실제 공표값 아님",
+      "dimensions": {"crop": "합성작목", "region": "전국", "channel": "수매"}, "allowed_roles": ["sales"],
+      "observations": [{"year":2021,"value":100},{"year":2022,"value":200},{"year":2023,"value":300},{"year":2024,"value":400},{"year":2025,"value":500}],
+      "unconfirmed_years": []
+    },
+    {
+      "id": "student.direct", "agency": "합성 공공기관(시험용)", "agency_kind": "public_corporation",
+      "statistic_name": "합성 직거래가격", "item_name": "합성작목", "base_year": null, "unit": "원/kg",
+      "url": "https://synthetic.example.go.kr/prices", "evidence_locator": "시험용 선언; 실제 공표값 아님",
+      "dimensions": {"crop": "합성작목", "region": "전국", "channel": "직거래"}, "allowed_roles": ["sales"],
+      "observations": [{"year":2021,"value":300},{"year":2022,"value":400},{"year":2023,"value":500},{"year":2024,"value":600},{"year":2025,"value":700}],
+      "unconfirmed_years": []
+    }
+  ]
+}
+```
+  - 위 합성 가격 평균은 수매 300원/kg·직거래 500원/kg이며 CPI는 합성 5%가 아니라 로컬 2021~2025 관측에서 약 **3.276849820915354%**다. 2027 단가는 각각 300·500, 2028은 각각 그 값에 `(1+r)`를 한 번 곱한다. 기존 `purchase_price`·`direct_price`나 이력이 다른 평균을 주장하면 거부하며, 두 채널 평균을 복제하지 않는다. 합성 URL·기관·가격은 실제 조사 근거가 아니다.
+  - 판매가의 수학적 검산 예: W=2026/S=2027, 동일 조건 가격 100·200·300·400·500, CPI 100·105·110.25·115.7625·121.550625이면 B=300·r=5%, 2027=300·2028=315·2029=330.75. 합성 설명값이며 실제 출처나 생성 승인 예제가 아니다.
   - 학생이 직접 조회한 작목별 수열은 `spec["price_sources"]`에 선언한다. 학생 수열도 공인 기관 종류(`agency_kind`), 엄격 https 공식 도메인(백슬래시·@·공백·제어문자·NBSP·443 외 포트·유니코드/IDNA 변형 등 모호한 URL 거부), locator, 기준연도(지수 정수, 명목 null), unit, dimensions, allowed_roles를 준수해야 하며, 관측/미확인 연도 교집합은 거부된다.
   - 생성 명령:
     ```bash
     python3 skills/knuaf-doc/scripts/build_excel_finance_template.py project --input spec.json --out build/output.xlsx --major specialty_crops
     ```
+
+#### 원예 판매단가 및 공통 역할 검증
+
+원예 가격 사실은 `price_assumption.writing_year=W`, `application_base_year=S`, 가격 `source_id`·`base_year`·`target_dimensions`로 같은 월·조건의 5년 공식 수열에 연결하고 확인된 `plan.start_year`와 대조한다. 관측표 B8:B12·C8:N12의 완전성만 확인하고 실제 계획단가를 독립 견적 입력으로 남겨두면 안 된다. 활성 월의 C:N 72/82/92/102/112행 단가와 24/33/42/51/60행 표시, 25/34/43/52/61행 매출까지 B·CPI 누적이 연결돼야 한다. 월별에서 연간으로 집계할 근거가 없으면 해당 가격을 보류한다.
+
+각 월의 첫해 사실 `sales.y1.m<n>.price_krw_per_unit`에 위 `price_assumption`을 둔다. 공식 수열은 기존 `project.sources[source_id].price_series` 또는 `fact.price_assumption.series`에 등록하고 `price_series.dimensions.month`를 `"1"`~`"12"` 문자열로 선언한다. month 조건은 `param_key`의 월에서 확정해 출처와 대조하며 다른 월 수열로 바꿀 수 없다. 명목 단가의 `base_year`는 null이다. 첫해 사실값은 검증된 월별 B와 일치하는지 확인하는 검산값이다. 이후 4년 단가 사실은 생략할 수 있고, 제공했으면 계산값과 다를 때 거부한다. 공개 파라미터 계약은 `price_contract: sales:five_year_price`이며 실제 60셀은 첫해 COUNT=5 조건의 관측 AVERAGE·후속 동일 CPI 누적 수식으로 작성한다. 월별 단가의 새 연간 평균을 만들지 않는다.
+
+공통 판매 검증은 `normalize_sales_assumption`, 역할 단위 검증은 `normalize_price_role`로 분리한다. 일반물가·임금 호출은 판매 자료나 판매 미적용 자리표시를 요구하지 않는다. 임금의 성별·원/시간→원/일 근거·기존 관측 계약과 원예 O84/O94/O104/O114 생산량 증가율은 유지한다.
 
 #### 보류 사항 (사용자 결정 대기)
 

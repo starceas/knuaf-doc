@@ -768,6 +768,7 @@ def _col_letter(idx):
 _FOOTNOTE_KEYS = frozenset({
     "status", "reason", "source_id", "base_year", "observation",
     "rate", "application_base_year", "target_dimensions", "unit",
+    "writing_year", "anchors", "cpi_source_id", "research", "selection",
 })
 
 
@@ -794,6 +795,16 @@ def _resolve_footnote(kind, cfg, info, registry):
     extra = sorted(set(info) - _FOOTNOTE_KEYS)
     if extra:
         return None, "허용되지 않은 각주 필드: " + ", ".join(extra)
+    if role == "sales":
+        try:
+            spec = {"writing_year": info.get("writing_year"),
+                    "price_assumptions": {"sales": info},
+                    "target_dimensions": info.get("target_dimensions", {})}
+            a = pa.normalize_price_role(spec, "sales", [info.get("application_base_year")], registry=registry)
+        except ValueError as exc:
+            return None, str(exc)
+        return (pa.footnote(a) + ". 이 값은 참고값이다. 위 표의 계산에 쓰였는지는 "
+                "통합문서에서 따로 확인해야 한다."), None
     status = info.get("status", "applied")
     if status == "not_applied":
         reason = info.get("reason")

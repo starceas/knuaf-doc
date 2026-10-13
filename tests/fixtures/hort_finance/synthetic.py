@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from io import BytesIO
 import zipfile
 
 M = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
@@ -22,12 +23,22 @@ def build(path: Path, roster: list[str]):
     rels += f'<Relationship Id="rId19" Type="{R}/calcChain" Target="calcChain.xml"/>'
     relationships = f'<Relationships xmlns="{P}">{rels}</Relationships>'
     types = (f'<Types xmlns="{C}"><Default Extension="xml" ContentType="application/xml"/>'
+             '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+             '<Default Extension="bin" ContentType="application/octet-stream"/>'
+             '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+             '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
+             '<Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>'
              '<Override PartName="/xl/calcChain.xml" '
              'ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.calcChain+xml"/>'
-             '</Types>')
-    styles = (f'<styleSheet xmlns="{M}"><numFmts count="0"/><cellXfs count="1">'
-              '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
-              '</cellXfs></styleSheet>')
+             + ''.join(f'<Override PartName="/xl/worksheets/sheet{i}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' for i in range(1,19))
+             + '</Types>')
+    # Preserve the exact cell-state probes, but supply a real style table
+    # and package relationships so a workbook reader can open the fixture.
+    from openpyxl import Workbook
+    style_package = BytesIO()
+    Workbook().save(style_package)
+    with zipfile.ZipFile(style_package) as standard:
+        styles = standard.read("xl/styles.xml")
     shared = f'<sst xmlns="{M}" count="1" uniqueCount="1"><si><t>fixture</t></si></sst>'
     for_sheet_one = (f'<worksheet xmlns="{M}"><sheetData>'
                      '<row r="1"><c r="A1"><v>3</v></c><c r="C1" t="s"><v>0</v></c>'
@@ -44,6 +55,7 @@ def build(path: Path, roster: list[str]):
     empty = f'<worksheet xmlns="{M}"><sheetData/></worksheet>'
     with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
         z.writestr("[Content_Types].xml", types)
+        z.writestr("_rels/.rels", f'<Relationships xmlns="{P}"><Relationship Id="rId1" Type="{R}/officeDocument" Target="xl/workbook.xml"/></Relationships>')
         z.writestr("xl/workbook.xml", workbook)
         z.writestr("xl/_rels/workbook.xml.rels", relationships)
         z.writestr("xl/styles.xml", styles)
