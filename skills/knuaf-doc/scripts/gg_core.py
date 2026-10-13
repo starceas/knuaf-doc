@@ -4847,7 +4847,7 @@ def paper(root, spec_path, spec_bytes, requested_path, *, major_id=None):
         except ValueError as error:
             raise _op("paper", "requested_output", "not_committed",
                       "invalid_requested_path", detail=str(error)) from error
-        requested_rel = str(requested.relative_to(Path(root).resolve()))
+        requested_rel = requested.relative_to(Path(root).resolve()).as_posix()
         request = {
             "kind": "paper",
             "input_revision": p["revision"],
@@ -5437,16 +5437,17 @@ def migration_inventory(root):
         dirs[:] = sorted(d for d in dirs if d not in {".work", ".git", "__pycache__"})
         for name in dirs + sorted(names):
             path = Path(directory) / name
-            if path.is_symlink():
+            if (path.is_symlink() or (sys.platform == "win32"
+                    and getattr(path.lstat(), "st_file_attributes", 0) & 0x400)):
                 raise ValueError(
                     "마이그레이션은 심볼릭 링크를 따라가지 않음: "
-                    + str(path.relative_to(root))
+                    + path.relative_to(root).as_posix()
                 )
             if path.is_file():
-                inventory[str(path.relative_to(root))] = digest(path.read_bytes())
+                inventory[path.relative_to(root).as_posix()] = digest(path.read_bytes())
             elif not path.is_dir():
                 raise ValueError(
-                    "일반 파일/폴더가 아닌 원본: " + str(path.relative_to(root))
+                    "일반 파일/폴더가 아닌 원본: " + path.relative_to(root).as_posix()
                 )
     return inventory
 
@@ -5618,7 +5619,7 @@ def migrate_staged(dest, inventory, *, capability):
             issues.append(
                 dict(
                     code="legacy_marker_extra",
-                    path=str(path.relative_to(dest)),
+                    path=path.relative_to(dest).as_posix(),
                     reason="DRAFT 마커 밖 원문은 병합·검사에 보이지 않음. 원본 보존; 대조 후 마커 안 이동 또는 제거 필요",
                     excerpt=marker_extra[:120],
                 )
@@ -5628,8 +5629,8 @@ def migrate_staged(dest, inventory, *, capability):
                 "file": path.name,
                 "body_preserved": preserved,
                 "marker_extra": marker_extra is not None,
-                "original_hash": inventory[str(path.relative_to(dest))],
-                "preserved_path": str(saved.relative_to(dest)),
+                "original_hash": inventory[path.relative_to(dest).as_posix()],
+                "preserved_path": saved.relative_to(dest).as_posix(),
                 "status": "legacy_unreviewed",
             }
         )
@@ -5641,7 +5642,7 @@ def migrate_staged(dest, inventory, *, capability):
                 "collection": "sections",
                 "value": {
                     "id": path.stem,
-                    "path": str(path.relative_to(dest)),
+                    "path": path.relative_to(dest).as_posix(),
                     "title": title[1] if title else path.stem,
                     "order": i,
                     "status": "drafting",
@@ -5649,7 +5650,7 @@ def migrate_staged(dest, inventory, *, capability):
                     "depends_on": [
                         {
                             "collection": "sources",
-                            "id": "legacy:" + str(path.relative_to(dest)),
+                            "id": "legacy:" + path.relative_to(dest).as_posix(),
                             "revision": 1,
                         }
                     ],

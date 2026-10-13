@@ -135,8 +135,9 @@ class RealTreeTests(ContractCase):
             # P28 sales-price integration declares five more test/fixture
             # paths; all five are new against the pinned baseline. The
             # strict-count repair also declares this validation test itself.
-            self.assertEqual(200, rc["verified"])
-            self.assertEqual(152, rc["new_count"])
+            # Windows publication adds the native filesystem primitive.
+            self.assertEqual(201, rc["verified"])
+            self.assertEqual(153, rc["new_count"])
         else:
             self.assertNotEqual("ok", report["status"])
             self.assertIn("declared_missing", _codes(report))
@@ -159,9 +160,10 @@ class RealTreeTests(ContractCase):
         # The five additions include two already-allowlisted test paths,
         # so integration grows the approved-new list by three to 158.
         # Declaring this strict-count test adds one more path to all counts.
-        self.assertEqual(200, link["change_count"])
-        self.assertEqual(152, link["new_count"])
-        self.assertEqual(159, link["approved_new_files"])
+        # Windows publication adds one runtime path and its approval.
+        self.assertEqual(201, link["change_count"])
+        self.assertEqual(153, link["new_count"])
+        self.assertEqual(160, link["approved_new_files"])
         self.assertEqual("P27", link["parent_candidate"]["stage"])
         self.assertEqual(233, link["parent_candidate"]["file_count"])
         self.assertEqual(

@@ -10,11 +10,9 @@ name: validation
 # - Dependencies are limited to the runtime requirements resolved through
 #   requirements-validation.txt. The validation layer adds no third-party
 #   packages.
-# - The ubuntu job runs the real suite. The windows job is STRUCTURAL ONLY:
-#   it verifies bundle integrity and manifest determinism on Windows, and
-#   does not claim native Windows runtime or Office automation coverage.
-# - This workflow definition has not itself been executed on a hosted
-#   runner yet; that is recorded in docs/validation/BUNDLE.md.
+# - Ubuntu runs the full suite. Windows structural integrity is preserved;
+#   a separate native Windows publication job runs Python 3.10 and 3.14.
+# - Native publication execution does not claim Office automation coverage.
 
 on:
   pull_request:
@@ -348,5 +346,44 @@ jobs:
         run: python tools/check_bundle.py --root .
       - name: Manifest determinism (stdlib only)
         run: python tools/build_validation_bundle.py --root . --check
-      # Deliberately no tools/run_validation.py here: Windows runtime,
-      # byte-lock semantics, and Office automation remain unverified.
+      # Keep this independent stdlib structural gate. Native publication is
+      # checked separately; Office automation remains outside both jobs.
+
+  windows-publication:
+    name: native publication (windows, py${{ matrix.python }})
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.10', '3.14']
+    env:
+      PYTHONUTF8: '1'
+      PYTHONIOENCODING: utf-8
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - name: Preserve published bytes before checkout
+        shell: bash
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install runtime dependencies
+        run: python -m pip install -r requirements-validation.txt
+      - name: Bundle integrity
+        run: python tools/check_bundle.py --root . --json "$env:RUNNER_TEMP/native-bundle-report.json"
+      - name: Manifest is current
+        run: python tools/build_validation_bundle.py --root . --check
+      - name: Native init apply publication replay cleanup (no skips)
+        run: python tools/run_native_publication.py --json "$env:RUNNER_TEMP/native-publication-report.json"
+      - name: Upload native publication reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-publication-py${{ matrix.python }}
+          path: |
+            ${{ runner.temp }}/native-bundle-report.json
+            ${{ runner.temp }}/native-publication-report.json
+          if-no-files-found: error

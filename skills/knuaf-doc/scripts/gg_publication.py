@@ -10,8 +10,8 @@ succeeded — that judgment belongs to lane A.
 
 Every publish_* runs ``assert_held`` after pure input validation and before
 any product write (mkdir/temp included).  All workspace paths are handled
-with no-follow fd-relative operations; ports that cannot provide them are
-refused before the first write.  Staging prepared outside the guard is
+with POSIX no-follow fd-relative operations or native Windows checked
+component handles; unsupported ports are refused before the first write.  Staging prepared outside the guard is
 always re-inventoried after the capability check.
 
 ``managed`` for ``publish_requested_file`` is ``{"path", "sha256"}`` plus an
@@ -22,12 +22,14 @@ import hashlib
 import json
 import os
 import stat
+import sys
 import unicodedata
 import uuid
 from pathlib import Path
 
 import gg_fs
 import gg_lock
+import gg_winfs
 
 RECEIPT_SCHEMA = "gg-publication/1"
 REF_SCHEMA = "gg-publication-ref/1"
@@ -87,7 +89,7 @@ class PublicationError(ValueError):
 
 def _result(state, destination=None, *, publication_ref=None,
             target_sha256=None, reason=None, preserved=(), cleanup=()):
-    return {
+    result = {
         "state": state,
         "publication_ref": publication_ref,
         "destination": None if destination is None else str(destination),
@@ -96,6 +98,10 @@ def _result(state, destination=None, *, publication_ref=None,
         "cleanup_errors": list(cleanup),
         "reason": reason,
     }
+    if sys.platform == "win32":
+        result["durability_notes"] = [{"reason": "dir_fsync_unsupported",
+                                       "operation": "fsync_dir"}]
+    return result
 
 
 def _fail(destination, reason, *, preserved=(), cleanup=(),
@@ -106,6 +112,8 @@ def _fail(destination, reason, *, preserved=(), cleanup=(),
 
 
 def _port_supported():
+    if sys.platform == "win32":
+        return gg_winfs.supported()
     return (
         os.name == "posix"
         and hasattr(os, "O_NOFOLLOW")
@@ -151,6 +159,8 @@ def _check_relative_path(value, what="상대 경로"):
         raise ValueError(what + "는 절대/UNC/백슬래시 경로가 아니어야 함: "
                          + value)
     for part in value.split("/"):
+        if sys.platform == "win32":
+            gg_winfs.validate_component(part)
         if part in ("", ".", ".."):
             raise ValueError(what + "에 빈/./.. 구성요소: " + value)
         if len(part) == 2 and part[1] == ":" and part[0].isalpha():
@@ -160,6 +170,16 @@ def _check_relative_path(value, what="상대 경로"):
 
 def _check_abs_destination(value):
     _check_str(value, "import 대상 경로")
+    if sys.platform == "win32":
+        # Keep request bytes unchanged; accept native local-drive spelling.
+        from pathlib import PureWindowsPath
+        path = PureWindowsPath(value)
+        if (not path.is_absolute() or path.drive.startswith("\\")
+                or not path.name or any(p in ("", ".", "..") for p in value.replace("\\", "/").split("/"))):
+            raise ValueError("import 대상은 정규화된 local drive 절대 경로여야 함")
+        for part in path.parts[1:]:
+            gg_winfs.validate_component(part)
+        return value
     parts = value.split("/")
     if not value.startswith("/") or value == "/":
         raise ValueError("import 대상은 절대 경로여야 함: " + value)
@@ -406,7 +426,23 @@ def _build_receipt(workspace_id, protocol_sha256, checked, *,
 
 
 def _open_dir(path):
+    if sys.platform == "win32":
+        return gg_winfs.Directory(path)
     return os.open(path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+
+
+def _close_dir(fd):
+    if isinstance(fd, gg_winfs.Directory):
+        fd.close()
+    else:
+        os.close(fd)
+
+
+def _dir_names(fd):
+    if isinstance(fd, gg_winfs.Directory):
+        return gg_winfs.names(fd.path)
+    with os.scandir(fd) as it:
+        return sorted(e.name for e in it)
 
 
 def _open_dir_at(dir_fd, name):
@@ -423,7 +459,7 @@ def _open_checked(dir_fd, part, st):
     nfd = _open_dir_at(dir_fd, part)
     opened = os.fstat(nfd)
     if (opened.st_dev, opened.st_ino) != (st.st_dev, st.st_ino):
-        os.close(nfd)
+        _close_dir(nfd)
         raise ValueError("디렉터리가 경합으로 교체됨: " + part)
     return nfd
 
@@ -439,16 +475,19 @@ def _walk_parent(root, rel):
                 raise ValueError(
                     "경로 구성요소가 디렉터리가 아니거나 링크: " + part)
             nfd = _open_checked(fd, part, st)
-            os.close(fd)
+            _close_dir(fd)
             fd = nfd
         return fd, parts[-1]
     except Exception:
-        os.close(fd)
+        _close_dir(fd)
         raise
 
 
 def _read_file(root, rel):
     """No-follow read of a root-relative regular file; returns bytes."""
+    if sys.platform == "win32":
+        _check_relative_path(rel)
+        return gg_winfs.read_bytes(Path(root) / rel)[0]
     fd, name = _walk_parent(root, rel)
     try:
         st = _stat_at(fd, name)
@@ -469,11 +508,17 @@ def _read_file(root, rel):
         finally:
             os.close(ffd)
     finally:
-        os.close(fd)
+        _close_dir(fd)
 
 
 def _lstat_rel(root, rel):
     """stat_result for a root-relative path via no-follow walk, or None."""
+    if sys.platform == "win32":
+        _check_relative_path(rel)
+        try:
+            return gg_winfs.lstat(Path(root) / rel)
+        except FileNotFoundError:
+            return None
     fd = None
     try:
         fd, name = _walk_parent(root, rel)
@@ -485,7 +530,7 @@ def _lstat_rel(root, rel):
         return None
     finally:
         if fd is not None:
-            os.close(fd)
+            _close_dir(fd)
 
 
 def _ensure_dirs(root, rel):
@@ -494,6 +539,11 @@ def _ensure_dirs(root, rel):
     (final dir fd, [created rel paths]).  Product write — caller holds the
     capability."""
     parts = _check_relative_path(rel)
+    if sys.platform == "win32":
+        with gg_winfs.Directory(root):
+            directory = gg_winfs.Directory(Path(root) / rel, create=True)
+            return directory, [p.relative_to(gg_winfs._absolute(root)).as_posix()
+                               for p in directory.created]
     created = []
     fd = _open_dir(root)
     prefix = []
@@ -512,12 +562,12 @@ def _ensure_dirs(root, rel):
                 raise ValueError(
                     "디렉터리 생성 경로가 링크/비디렉터리: " + part)
             nfd = _open_checked(fd, part, st)
-            os.close(fd)
+            _close_dir(fd)
             fd = nfd
             prefix.append(part)
         return fd, created
     except Exception:
-        os.close(fd)
+        _close_dir(fd)
         raise
 
 
@@ -534,7 +584,7 @@ def _scan_fd(fd, prefix, out):
             try:
                 _scan_fd(nfd, rel, out)
             finally:
-                os.close(nfd)
+                _close_dir(nfd)
         elif stat.S_ISREG(st.st_mode):
             ffd = os.open(
                 entry.name, os.O_RDONLY | os.O_NOFOLLOW, dir_fd=fd)
@@ -561,17 +611,22 @@ def _scan_fd(fd, prefix, out):
 
 def _scan_tree(base):
     """Recursive regular-file inventory of a directory (no-follow)."""
+    if sys.platform == "win32":
+        return gg_winfs.scan_tree(base)
     out = []
     fd = _open_dir(base)
     try:
         _scan_fd(fd, "", out)
     finally:
-        os.close(fd)
+        _close_dir(fd)
     return out
 
 
 def _scan_root_filtered(base, drop_top_dirs, drop_root_files):
     """Workspace-root inventory excluding control objects; no-follow."""
+    if sys.platform == "win32":
+        return gg_winfs.scan_tree(base, drop_top_dirs=drop_top_dirs,
+                                  drop_root_files=drop_root_files)
     out = []
     fd = _open_dir(base)
     try:
@@ -595,7 +650,7 @@ def _scan_root_filtered(base, drop_top_dirs, drop_root_files):
                 try:
                     _scan_fd(nfd, name, out)
                 finally:
-                    os.close(nfd)
+                    _close_dir(nfd)
             elif stat.S_ISREG(st.st_mode):
                 ffd = os.open(
                     name, os.O_RDONLY | os.O_NOFOLLOW, dir_fd=fd)
@@ -616,7 +671,7 @@ def _scan_root_filtered(base, drop_top_dirs, drop_root_files):
             else:
                 raise ValueError("일반 파일/디렉터리가 아닌 항목: " + name)
     finally:
-        os.close(fd)
+        _close_dir(fd)
     return out
 
 
@@ -801,10 +856,9 @@ def _iter_managed_receipts(root):
             raise ValueError(".gg-artifacts가 링크/비디렉터리")
         fd = _open_dir(Path(root) / ARTIFACT_DIR)
         try:
-            with os.scandir(fd) as it:
-                names = sorted(e.name for e in it)
+            names = _dir_names(fd)
         finally:
-            os.close(fd)
+            _close_dir(fd)
         for name in names:
             if len(name) != 64 or any(c not in _HEX for c in name):
                 continue
@@ -815,20 +869,18 @@ def _iter_managed_receipts(root):
             raise ValueError("build가 링크/비디렉터리")
         fd = _open_dir(Path(root) / BUILD_DIR)
         try:
-            with os.scandir(fd) as it:
-                revs = sorted(e.name for e in it)
+            revs = _dir_names(fd)
         finally:
-            os.close(fd)
+            _close_dir(fd)
         for rev in revs:
             sub = _lstat_rel(root, BUILD_DIR + "/" + rev)
             if sub is None or not stat.S_ISDIR(sub.st_mode):
                 continue
             fd = _open_dir(Path(root) / BUILD_DIR / rev)
             try:
-                with os.scandir(fd) as it:
-                    kinds = sorted(e.name for e in it)
+                kinds = _dir_names(fd)
             finally:
-                os.close(fd)
+                _close_dir(fd)
             for kind in kinds:
                 sub = _lstat_rel(root, BUILD_DIR + "/" + rev + "/" + kind)
                 if sub is None or not stat.S_ISDIR(sub.st_mode):
@@ -976,7 +1028,7 @@ def publish_directory(root, capability, *, staging, destination, intent,
     if parent_rel and parent_rel != ".":
         try:
             pfd, created = _ensure_dirs(root, parent_rel)
-            os.close(pfd)
+            _close_dir(pfd)
         except (ValueError, OSError) as e:
             _fail(destination, "parent 준비 실패: " + str(e),
                   preserved=[str(staging)] + created)
@@ -1145,7 +1197,7 @@ def publish_output(root, capability, *, intent, sources):
 
     try:
         bfd, created = _ensure_dirs(root, bundle_rel)
-        os.close(bfd)
+        _close_dir(bfd)
     except (ValueError, OSError) as e:
         _fail(bundle_rel, "관리 디렉터리 준비 실패: " + str(e), preserved=[])
 
@@ -1161,7 +1213,7 @@ def publish_output(root, capability, *, intent, sources):
         parent_rel = str(Path(dest_rel).parent).replace("\\", "/")
         try:
             pfd, made = _ensure_dirs(root, parent_rel)
-            os.close(pfd)
+            _close_dir(pfd)
             created += made
         except (ValueError, OSError) as e:
             _fail(bundle_rel, "bundle 하위 디렉터리 실패: " + str(e),
@@ -1416,7 +1468,7 @@ def publish_requested_file(root, capability, *, managed, requested_path):
     try:
         if parent_rel and parent_rel != ".":
             pfd, created = _ensure_dirs(root, parent_rel)
-            os.close(pfd)
+            _close_dir(pfd)
             parent_abs = Path(root) / parent_rel
         else:
             parent_abs = Path(root)
@@ -1433,12 +1485,16 @@ def publish_requested_file(root, capability, *, managed, requested_path):
     try:
         pfd = _open_dir(parent_abs)
         try:
-            tfd = os.open(
-                tmp_name,
-                os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
-                0o644, dir_fd=pfd)
+            if sys.platform == "win32":
+                tfd = gg_fs._open_nofollow(
+                    tmp_abs, os.O_WRONLY | os.O_CREAT | os.O_EXCL)
+            else:
+                tfd = os.open(
+                    tmp_name,
+                    os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+                    0o644, dir_fd=pfd)
         finally:
-            os.close(pfd)
+            _close_dir(pfd)
         try:
             view = memoryview(managed_bytes)
             while view:
@@ -1506,12 +1562,19 @@ def publish_requested_file(root, capability, *, managed, requested_path):
 
 
 def _cleanup_temp(root, rel):
+    if sys.platform == "win32":
+        try:
+            _check_relative_path(rel)
+            gg_winfs.unlink_file(Path(root) / rel)
+        except (OSError, ValueError):
+            pass
+        return
     try:
         fd, name = _walk_parent(root, rel)
         try:
             os.unlink(name, dir_fd=fd)
         finally:
-            os.close(fd)
+            _close_dir(fd)
     except (OSError, ValueError):
         pass
 
@@ -1580,7 +1643,7 @@ def publish_observation(root, capability, *, recorded):
         _obs_fail("관측 기록 충돌: 동일 경로 다른 bytes")
     try:
         dfd, created = _ensure_dirs(root, OBSERVATION_DIR)
-        os.close(dfd)
+        _close_dir(dfd)
     except (ValueError, OSError) as e:
         _obs_fail("관측 디렉터리 준비 실패: " + str(e))
     write = gg_fs.publish_bytes_noreplace(

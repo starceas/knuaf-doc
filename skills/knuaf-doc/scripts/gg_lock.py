@@ -31,6 +31,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import gg_fs
+import gg_winfs
 
 LOCK_DIR = ".gg-lock"
 PROTOCOL_NAME = "protocol.json"
@@ -189,7 +190,7 @@ class _WindowsPort:
         self._msvcrt = msvcrt
 
     def open_guard(self, path):
-        return os.open(str(path), os.O_RDWR | os.O_BINARY)
+        return gg_winfs.open_file(path, os.O_RDWR, share_delete=True)
 
     def lock(self, fd):
         os.lseek(fd, 0, os.SEEK_SET)
@@ -530,7 +531,7 @@ def _write_owner_file(lockdir, owner):
                 "owner_not_regular", code="kind",
                 operation="owner_write", path=owner_path,
             )
-        os.unlink(str(owner_path))
+        gg_fs.unlink_file(owner_path)
     fd = gg_fs._open_nofollow(
         owner_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL
     )
@@ -541,7 +542,7 @@ def _write_owner_file(lockdir, owner):
             view = view[os.write(fd, view):]
         os.fsync(fd)
         st = os.fstat(fd)
-        return gg_fs._identity_from_stat(st, "file", owner_path)
+        return gg_fs.fd_identity(fd, kind="file")
     finally:
         os.close(fd)
 
@@ -567,9 +568,7 @@ def _install_control(root, *, recovery_id=None, workspace_id=None):
     try:
         os.write(fd, b"\x00")
         os.fsync(fd)
-        guard_id = gg_fs._identity_from_stat(
-            os.fstat(fd), "file", guard_path
-        )
+        guard_id = gg_fs.fd_identity(fd, kind="file")
     finally:
         os.close(fd)
     protocol = {
@@ -683,6 +682,14 @@ def _cleanup_owner_record(cap):
     whole-dict match plus stable inode re-checks, never another
     worker's file."""
     lockdir = Path(cap.root) / LOCK_DIR
+    if sys.platform == "win32":
+        with gg_winfs.Directory(lockdir):
+            gg_fs.assert_identity(lockdir, cap.directory_identity)
+            try:
+                gg_winfs.unlink_file(lockdir / OWNER_NAME, expected_record=cap.owner)
+            except FileNotFoundError:
+                return
+        return
     dir_fd = os.open(
         str(lockdir),
         os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
@@ -879,7 +886,8 @@ def rebind_after_rename(capability, *, previous_root, new_root):
                 "invalid_capability", "previous_root_still_present"
             )
     except gg_fs.FsError as error:
-        if error.reason != "stat_failed":
+        if (error.reason != "stat_failed"
+                or error.detail.get("code") != errno.ENOENT):
             raise LockError("invalid_capability", error.reason)
     new_id = gg_fs.identity(new_root, kind="directory")
     if not gg_fs.same_identity(new_id, capability.root_identity):
@@ -1370,9 +1378,7 @@ def _recovery_new(root):
         try:
             os.write(guard_fd, b"\x00")
             os.fsync(guard_fd)
-            rguard_id = gg_fs._identity_from_stat(
-                os.fstat(guard_fd), "file", rdir / GUARD_NAME
-            )
+            rguard_id = gg_fs.fd_identity(guard_fd, kind="file")
         finally:
             os.close(guard_fd)
         claim = {
