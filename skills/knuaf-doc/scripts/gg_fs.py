@@ -525,14 +525,28 @@ def _rename_noreplace(
         return FsWriteResult(
             "not_installed", "cross_filesystem", dst, preserved_paths=preserved
         )
+    rename_diagnostics = []
     try:
-        _os_rename_noreplace(src, dst)
+        try:
+            _os_rename_noreplace(src, dst)
+        except OSError as error:
+            if not (sys.platform == "win32" and kind == "directory"
+                    and getattr(error, "winerror", None) in (5, 32)):
+                raise
+            rename_diagnostics.append({"reason": "os_error", "operation": "os_rename",
+                                       "code": error.errno,
+                                       "winerror": error.winerror})
+            gg_winfs.rename_directory_noreplace(src, dst, source_identity=source_identity)
     except FsError as error:
         return FsWriteResult(
             "not_installed", error.reason, dst, preserved_paths=preserved
         )
     except OSError as error:
         code = error.errno
+        if sys.platform == "win32":
+            rename_diagnostics.append({"reason": "os_error", "operation": "rename_noreplace",
+                                       "code": code,
+                                       "winerror": getattr(error, "winerror", None)})
         if code in (errno.EEXIST, errno.ENOTEMPTY):
             return FsWriteResult(
                 "not_installed", "destination_exists", dst,
@@ -547,6 +561,7 @@ def _rename_noreplace(
             return FsWriteResult(
                 "not_installed", "permission_denied", dst,
                 preserved_paths=preserved,
+                cleanup_errors=rename_diagnostics,
             )
         if code in (
             errno.ENOSYS,
@@ -581,7 +596,7 @@ def _rename_noreplace(
         # not pending owner/temp cleanup. Keep real I/O failures visible.
         if not (sys.platform == "win32" and error.reason == "dir_fsync_unsupported"):
             cleanup_errors.append(error.detail)
-    return FsWriteResult(
+    result = FsWriteResult(
         "installed",
         None,
         dst,
@@ -589,6 +604,9 @@ def _rename_noreplace(
         sha256=digest,
         cleanup_errors=cleanup_errors,
     )
+    if rename_diagnostics:
+        result["rename_diagnostics"] = rename_diagnostics
+    return result
 
 
 def publish_bytes_noreplace(path, data, *, parent_identity, existing_sha256=None):

@@ -1338,6 +1338,10 @@ def publish_workspace(staging, capability, *, destination, intent, files):
         return _after_import_rename_exception(
             destination, staging, staging_identity, receipt_sha, e)
     if res["state"] == "not_installed":
+        if not os.path.lexists(dst):
+            _fail(destination, "import rename not_installed: " + str(res.get("reason"))
+                  + "; OS errors: " + repr(res.get("cleanup_errors") or []),
+                  preserved=[str(staging)], cleanup=res.get("cleanup_errors") or [])
         return _existing_import_destination(
             destination, checked, staging, receipt_sha)
     if res["state"] != "installed":

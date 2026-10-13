@@ -5094,12 +5094,7 @@ def _import_inventory(root):
     """Source-content inventory for import: protocol/control files are not
     source content — the source guard owner record and the import receipt
     stub change across calls and must not falsify the freeze check."""
-    inventory = migration_inventory(root)
-    return {
-        name: sha
-        for name, sha in inventory.items()
-        if name.split("/")[0] not in _control_files()
-    }
+    return migration_inventory(root, exclude_top=_control_files())
 
 
 def _import_request(src, dest, inventory):
@@ -5431,10 +5426,13 @@ def migrate(src, dest, *, offline_confirmed=False):
                 ) from error
 
 
-def migration_inventory(root):
+def migration_inventory(root, *, exclude_top=()):
     inventory = {}
     for directory, dirs, names in os.walk(root, followlinks=False):
-        dirs[:] = sorted(d for d in dirs if d not in {".work", ".git", "__pycache__"})
+        excluded = set(exclude_top) if Path(directory) == Path(root) else set()
+        dirs[:] = sorted(d for d in dirs
+                         if d not in {".work", ".git", "__pycache__"} | excluded)
+        names = [n for n in names if n not in excluded]
         for name in dirs + sorted(names):
             path = Path(directory) / name
             if (path.is_symlink() or (sys.platform == "win32"

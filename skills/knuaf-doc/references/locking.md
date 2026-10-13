@@ -42,6 +42,8 @@ export·paper·adopt-output·observe·import는 완료 후 불변 수령증(`.gg
 
 Python 3.10·3.14의 일반 로컬 NTFS 드라이브에서 Windows byte lock을 사용한다. 발행 파일은 binary bytes로 읽고 쓰며, 파일 식별자·수령증·payload hash를 대조한다. 기존 목적지는 덮어쓰지 않는다. 같은 요청은 수령증을 확인해 재사용하고, 요청 ID가 같아도 입력이 다르면 충돌로 거부한다. import 이동 중 가드 점유를 유지하고 이동 후 경로를 다시 연결한다.
 
+디렉터리 구성요소 핸들은 실제 읽기/목록 접근 권한으로 열어 rename 공유 거부를 적용한다. 그 권한이 없으면 경로를 거부한다. import에서 살아 있는 하위 guard 때문에 경로 기반 rename이 접근/공유 오류로 거부되면, 동일 directory identity를 확인한 native handle rename을 no-replace로 시도한다. guard 해제·복사·삭제 우회는 하지 않으며 기존 사후 검증을 유지한다.
+
 경로 구성요소의 reparse point(심볼릭 링크·junction 포함), ADS(`name:stream`), 장치 이름(`CON`·`NUL` 등), 끝 점·공백과 UNC·장치 namespace는 지원하지 않는다. 중첩 경로·한글·공백은 지원한다. 협조하는 쓰기 명령은 같은 가드를 사용해야 한다. 파일 핸들 검사만으로 관리자 권한의 공격자나 모든 비협조적 변경을 차단한다고 보장하지 않는다.
 
 Windows에서는 directory fsync에 따른 전원 상실 내구성을 보장하지 않는다. 설치·재읽기 검증이 성공해도 `durability_notes`의 `dir_fsync_unsupported` 메모가 남을 수 있다. owner 기록 정리 오류와 OS 가드 해제 결과는 별개이며, 실패 기록을 성공으로 바꾸지 않는다. SMB·FAT·클라우드 동기화 폴더·Office 자동화는 이 발행 검증의 범위 밖이다. 기존 Windows protocol 식별자와 새 handle 식별자가 불일치하면 자동 변환하지 않고 정본을 보존한 채 복구 진단으로 거부한다.

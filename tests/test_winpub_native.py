@@ -191,6 +191,16 @@ class PublicationLifecycle(unittest.TestCase):
         self._released(self.root)
 
     def test_import_core_inventory_replay_source_and_foreign_preserved(self):
+        canonical = (self.root / "project.json").read_bytes()
+        real_read = Path.read_bytes
+        def payload_read(path):
+            if path.relative_to(self.root).parts[0] in core._control_files():
+                raise AssertionError("import inventory read a control object")
+            return real_read(path)
+        with lock.Lock(self.root):
+            with mock.patch.object(Path, "read_bytes", payload_read):
+                self.assertEqual(core._import_inventory(self.root),
+                                 {"project.json": core.digest(canonical)})
         source = self.parent / "legacy source"
         (source / "sections").mkdir(parents=True)
         data = "# 개요\n본문\n".encode("utf-8")
@@ -220,8 +230,16 @@ class PublicationLifecycle(unittest.TestCase):
         dest = self.parent / "native moved workspace"
         with lock.Lock(stage) as cap:
             guard = cap.guard_identity
-            result = pub.publish_workspace(stage, cap, destination=str(dest),
-                intent=_import_intent(dest, files), files=files)
+            real_rename = fs.rename_noreplace
+            def traced_rename(*args, **kwargs):
+                result = real_rename(*args, **kwargs)
+                if kwargs["source_identity"]["kind"] == "directory":
+                    print("directory rename evidence: " + json.dumps({k: result.get(k)
+                        for k in ("state", "reason", "cleanup_errors", "rename_diagnostics")}))
+                return result
+            with mock.patch.object(fs, "rename_noreplace", side_effect=traced_rename):
+                result = pub.publish_workspace(stage, cap, destination=str(dest),
+                    intent=_import_intent(dest, files), files=files)
             self.assertEqual(result["state"], "published")
             self.assertEqual(result["cleanup_errors"], [])
             self.assertFalse(stage.exists())
@@ -327,6 +345,11 @@ class WindowsPrimitives(PublicationLifecycle):
         self.assertFalse((outside / "new.txt").exists())
 
     def test_windows_aliases_refused_before_write(self):
+        # No normalization/OS call may run before rejecting the raw alias.
+        with mock.patch.object(os.path, "abspath", side_effect=AssertionError("normalized raw alias")):
+            for raw in ("C:/raw/file.", "C:/raw/space ", "C:/raw/CON.txt"):
+                with self.subTest(raw=raw), self.assertRaises(ValueError):
+                    winfs._absolute(raw)
         (self.root / "managed.bin").write_bytes(b"payload")
         managed = {"path": "managed.bin", "sha256": fs.sha256_bytes(b"payload")}
         canonical = (self.root / "project.json").read_bytes()
