@@ -157,7 +157,8 @@
   "tools/check_asset_disposition.py",
   "tests/fixtures/hort_finance/synthetic.py",
   "tests/test_major_guard_outputs.py",
-  "tests/test_sales_price_numeric_contract.py"
+  "tests/test_sales_price_numeric_contract.py",
+  "tests/test_bundle_lineage.py"
  ],
  "baseline_main": "29abec0ec95369de7ae9e22207349d574f1f46b7",
  "baseline_spec": "tools/baseline-files.json",
@@ -1929,6 +1930,15 @@
    "last_changed": "P28",
    "owner": "P28",
    "reason": "P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
+   "source": "new"
+  },
+  "tests/test_bundle_lineage.py": {
+   "before_sha256": null,
+   "after_sha256": "f56760d0b0c139e87102ee0e9eca94242b83edae60e6b539ec60f5f47da940f6",
+   "first_changed": "P28",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "PR36 CI strict-count repair: preserve exact declaration counts and declare the changed validation test; integration adds five new declarations and three approvals, this test adds one further declaration/new/approval.",
    "source": "new"
   }
  },

@@ -132,8 +132,11 @@ class RealTreeTests(ContractCase):
             # P28 adds the plain-thesis policy gate (all majors by default),
             # 이유림 exemplar registration and 문서 정본 changes on the P27 tree.
             # Restore v0.1.4 adds 16 runtime assets and five skill test files.
-            self.assertEqual(194, rc["verified"])
-            self.assertEqual(146, rc["new_count"])
+            # P28 sales-price integration declares five more test/fixture
+            # paths; all five are new against the pinned baseline. The
+            # strict-count repair also declares this validation test itself.
+            self.assertEqual(200, rc["verified"])
+            self.assertEqual(152, rc["new_count"])
         else:
             self.assertNotEqual("ok", report["status"])
             self.assertIn("declared_missing", _codes(report))
@@ -153,9 +156,12 @@ class RealTreeTests(ContractCase):
         self.assertEqual("29abec0ec95369de7ae9e22207349d574f1f46b7",
                          link["baseline_main"])
         # P28's parent is the accepted P27 tree (main d08e98e, 233 files).
-        self.assertEqual(194, link["change_count"])
-        self.assertEqual(146, link["new_count"])
-        self.assertEqual(155, link["approved_new_files"])
+        # The five additions include two already-allowlisted test paths,
+        # so integration grows the approved-new list by three to 158.
+        # Declaring this strict-count test adds one more path to all counts.
+        self.assertEqual(200, link["change_count"])
+        self.assertEqual(152, link["new_count"])
+        self.assertEqual(159, link["approved_new_files"])
         self.assertEqual("P27", link["parent_candidate"]["stage"])
         self.assertEqual(233, link["parent_candidate"]["file_count"])
         self.assertEqual(
