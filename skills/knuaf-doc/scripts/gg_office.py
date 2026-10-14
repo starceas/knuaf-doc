@@ -3,12 +3,13 @@
 
 Stages original DOCX/XLSX unchanged into a dedicated per-platform job
 workspace (macOS: Office sandbox Group Container; Windows: local app-data
-folder), drives Word field updates / Excel range recalculations and PDF
+folder), drives Word field updates and PDF
 exports in the same automation session (macOS: bounded AppleScript via
 osascript; Windows: bounded win32com COM calls run in a helper subprocess,
 see gg_office_win.py), validates ZIP/PDF, and publishes to new destination
 directories with overwrite protection. Only macOS and Windows are
-implemented; other platforms fail closed with a clear error.
+implemented; other platforms fail closed with a clear error. macOS Excel
+conversion is held until owned-workbook recalculation can be proven.
 """
 
 from __future__ import annotations
@@ -57,90 +58,10 @@ def _default_workspace_dir() -> Path:
 
 DEFAULT_GROUP_CONTAINER_DIR = _default_workspace_dir()
 
-WORD_APPLESCRIPT_TEMPLATE = """
-on run argv
-    with timeout of {timeout} seconds
-        tell application "Microsoft Word"
-            try
-                -- This Word build does not keep a stored document reference
-                -- stable across field/update/save event boundaries.  The
-                -- isolated job opens exactly one document, so use the
-                -- dictionary's stable document-1 / active-document forms.
-                -- A background or osascript-auto-launched Word accepts the
-                -- open lock yet never registers the document (-1712 at the
-                -- open boundary); the foreground-visible session is
-                -- established by the Python preflight before this runs.
-                open (POSIX file (item 1 of argv))
-                repeat 2 times
-                    repaginate document 1
-                    -- On this build `every field of document 1` answers
-                    -- neither `count` (so `repeat with` enumeration raises
-                    -- -1708) nor the generic `update`; the dedicated
-                    -- `update field` command accepts the plural specifier
-                    -- directly and is a no-op on an empty collection.
-                    update field (fields of document 1)
-                end repeat
-                repaginate document 1
-                save document 1
-                -- Word's dictionary declares the PDF target as `text`.
-                -- Pass argv item 2 directly rather than coercing it through a
-                -- POSIX-file alias: the latter returned zero on this Office
-                -- build while creating no usable file at the requested path.
-                -- Keep the direct target inside Word's application scope.  A
-                -- stored document reference on this build can become
-                -- unbound at the save-as command boundary (-2753), whereas
-                -- the sole staged active document is stable here.
-                save as active document file name (item 2 of argv) file format format PDF
-                -- PDF pagination can refresh PAGEREF display caches after
-                -- the first DOCX save. Persist them in the staged document
-                -- before closing; otherwise the PDF is current but DOCX is not.
-                save document 1
-                close active document saving no
-                return "Word process completed; Word " & version
-            on error messageText number errorNumber
-                try
-                    close active document saving no
-                end try
-                error messageText number errorNumber
-            end try
-        end tell
-    end timeout
-end run
-"""
-
-EXCEL_APPLESCRIPT_TEMPLATE = """
-on run argv
-    with timeout of {timeout} seconds
-        tell application "Microsoft Excel"
-            try
-                -- Excel's dictionary requires the named workbook-file
-                -- argument here; passing a POSIX path directly returns -50
-                -- on the supported macOS build.
-                -- The staged copy is intentionally opened read-write; the
-                -- original never enters the Excel session.
-                open workbook workbook file name (item 1 of argv)
-                -- Excel's AppleScript `calculate` command is application-wide
-                -- in this dictionary, rather than range-addressable.
-                calculate
-                save active workbook
-                -- Excel exposes PDF export through a sheet's named
-                -- filename/file-format parameters.  On the supported build
-                -- this exports the workbook's printable sheets; Python
-                -- verifies the resulting PDF has at least one page per
-                -- worksheet before publication.
-                save as active sheet filename (item 2 of argv) file format PDF file format
-                close active workbook saving no
-                return "Excel process completed; Excel " & version
-            on error messageText number errorNumber
-                try
-                    close active workbook saving no
-                end try
-                error messageText number errorNumber
-            end try
-        end tell
-    end timeout
-end run
-"""
+from gg_office_session import (
+    WORD_APPLESCRIPT_TEMPLATE, EXCEL_APPLESCRIPT_TEMPLATE, SESSION_MARKER,
+    run_session, read_session, retain_job, EXCEL_RECALCULATION_HOLD,
+)
 
 
 def compute_sha256(data: bytes) -> str:
@@ -340,7 +261,8 @@ def stage_job(
     staged_input_dir = job_dir / "input"
     staged_output_dir = job_dir / "output"
 
-    staged_input_dir.mkdir(parents=True, exist_ok=True)
+    job_dir.mkdir(parents=True, exist_ok=False)
+    staged_input_dir.mkdir(parents=True, exist_ok=False)
     staged_output_dir.mkdir(parents=True, exist_ok=True)
 
     staged_input_file = staged_input_dir / input_resolved.name
@@ -394,7 +316,16 @@ def ensure_word_foreground_session(timeout: int = 30) -> None:
 
 
 def run_osascript(script: str, args: list[str], timeout: int = 90) -> subprocess.CompletedProcess:
-    """Executes osascript with bounded timeout."""
+    """Guard conversion templates; other read-only probes use raw transport."""
+    if script.startswith(SESSION_MARKER):
+        kind = "word" if 'tell application "Microsoft Word"' in script else "excel"
+        return run_session(kind, script, args, timeout, run_raw=_run_osascript_raw,
+                           prepare_word=ensure_word_foreground_session)
+    return _run_osascript_raw(script, args, timeout=timeout)
+
+
+def _run_osascript_raw(script: str, args: list[str], timeout: int = 90):
+    """Bound the transport; timeout does not cancel Office's AppleEvent."""
     cmd = ["osascript", "-e", script] + [str(a) for a in args]
     try:
         res = subprocess.run(
@@ -519,7 +450,6 @@ def _run_word_engine(
 ) -> subprocess.CompletedProcess:
     """Dispatches Word field-update/repagination/PDF-export to the platform engine."""
     if sys.platform == "darwin":
-        ensure_word_foreground_session()
         return run_osascript(
             WORD_APPLESCRIPT_TEMPLATE.format(timeout=timeout),
             [str(staged_work), str(staged_pdf)],
@@ -698,6 +628,9 @@ def _publish_outputs(
             "timestamp_iso": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             "validation": val_data,
         }
+        session = read_session(job_dir)
+        if session is not None:
+            receipt["office_session"] = session
         if major_authorization is not None:
             receipt["major_authorization"] = major_authorization
 
@@ -735,15 +668,16 @@ def _authorize_office(input_path: Path, pdf_origin: str, context, *,
 
 def _hold_if_moved(auths, context, job_dir: Path):
     """Before any receipt (success or failure) is written after staging:
-    if the canonical binding/revision moved, remove this call's own job
-    staging and hold (policy B)."""
+    if the canonical binding/revision moved, hold (policy B). Retain a
+    live/unknown Office job; otherwise remove this call's own staging."""
     import gg_major_contract as mc
 
     try:
         for auth in auths:
             mc.reconfirm_output(auth, context)
     except mc.OutputHeldError:
-        shutil.rmtree(job_dir, ignore_errors=True)
+        if not retain_job(job_dir):
+            shutil.rmtree(job_dir, ignore_errors=True)
         raise
 
 
@@ -759,9 +693,18 @@ def _reconfirm_office(auths, context, staged_pdf: Path, pdf_origin: str,
         try:
             mc.output_kinds_for_file(staged_pdf, pdf_origin=pdf_origin)
         except mc.OutputHeldError:
-            shutil.rmtree(job_dir, ignore_errors=True)
+            if not retain_job(job_dir):
+                shutil.rmtree(job_dir, ignore_errors=True)
             raise
     return [auth.to_dict() for auth in auths]
+
+
+def _write_failure_receipt(job_dir: Path, receipt: dict) -> None:
+    session = read_session(job_dir)
+    if session is not None:
+        receipt["office_session"] = session
+    (job_dir / "failure_receipt.json").write_text(
+        json.dumps(receipt, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def process_word(
@@ -798,10 +741,7 @@ def process_word(
             "returncode": -1712,
         }
         _hold_if_moved(auths, context, job_dir)
-        (job_dir / "failure_receipt.json").write_text(
-            json.dumps(fail_receipt, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
+        _write_failure_receipt(job_dir, fail_receipt)
         return fail_receipt
 
     if res.returncode != 0:
@@ -818,10 +758,7 @@ def process_word(
             "returncode": res.returncode,
         }
         _hold_if_moved(auths, context, job_dir)
-        (job_dir / "failure_receipt.json").write_text(
-            json.dumps(fail_receipt, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
+        _write_failure_receipt(job_dir, fail_receipt)
         return fail_receipt
 
     recorded = _reconfirm_office(auths, context, staged_pdf, "paper", job_dir)
@@ -856,10 +793,7 @@ def process_word(
             "returncode": res.returncode,
         }
         _hold_if_moved(auths, context, job_dir)
-        (job_dir / "failure_receipt.json").write_text(
-            json.dumps(fail_receipt, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
+        _write_failure_receipt(job_dir, fail_receipt)
         return fail_receipt
 
 def template_receipt_binding(input_path, receipt_path):
@@ -1238,7 +1172,7 @@ def process_excel(
     *,
     context=None,
 ) -> dict:
-    """Processes Excel workbook: calculates all used ranges, saves XLSX and exports PDF in same session."""
+    """Authorize/profile-check Excel input; macOS conversion is held before staging."""
     import gg_major_contract as mc
 
     input_path = Path(input_file).absolute()
@@ -1260,6 +1194,8 @@ def process_excel(
     binding, finance_profile = _preflight_excel_profile(
         input_path, auths, context, spec=spec_for_guard,
         template_receipt=template_receipt)
+    if sys.platform == "darwin":
+        raise mc.OutputHeldError(EXCEL_RECALCULATION_HOLD)
     out_path = Path(out_dir).absolute()
     ws_root = Path(workspace).resolve() if workspace else DEFAULT_GROUP_CONTAINER_DIR
 
@@ -1288,10 +1224,7 @@ def process_excel(
             "returncode": -1712,
         }
         _hold_if_moved(auths, context, job_dir)
-        (job_dir / "failure_receipt.json").write_text(
-            json.dumps(fail_receipt, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
+        _write_failure_receipt(job_dir, fail_receipt)
         return fail_receipt
 
     if res.returncode != 0:
@@ -1308,10 +1241,7 @@ def process_excel(
             "returncode": res.returncode,
         }
         _hold_if_moved(auths, context, job_dir)
-        (job_dir / "failure_receipt.json").write_text(
-            json.dumps(fail_receipt, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
+        _write_failure_receipt(job_dir, fail_receipt)
         return fail_receipt
 
     try:
@@ -1335,10 +1265,7 @@ def process_excel(
             "returncode": res.returncode,
         }
         _hold_if_moved(auths, context, job_dir)
-        (job_dir / "failure_receipt.json").write_text(
-            json.dumps(fail_receipt, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
+        _write_failure_receipt(job_dir, fail_receipt)
         return fail_receipt
 
     # A supplied template and the legacy generated workbook share sheet names
@@ -1392,10 +1319,7 @@ def process_excel(
             "school_validation": school_validation_status,
         }
         _hold_if_moved(auths, context, job_dir)
-        (job_dir / "failure_receipt.json").write_text(
-            json.dumps(fail_receipt, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
+        _write_failure_receipt(job_dir, fail_receipt)
         return fail_receipt
 
     school_issues = []
@@ -1427,10 +1351,7 @@ def process_excel(
             "school_validation": school_validation_status,
         }
         _hold_if_moved(auths, context, job_dir)
-        (job_dir / "failure_receipt.json").write_text(
-            json.dumps(fail_receipt, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
+        _write_failure_receipt(job_dir, fail_receipt)
         return fail_receipt
 
     extra_val = {
@@ -1555,6 +1476,11 @@ def process_batch(
                 or "시간 초과" in err
                 or "권한 오류" in err
                 or "-1743" in err
+                or res.get("office_session", {}).get("cleanup") in {"preserved", "unknown"}
+                or res.get("office_session", {}).get("reason") in {
+                    "existing_or_unknown_office_documents", "office_session_busy",
+                    "previous_office_session_unknown", "office_guard_state_unreadable",
+                }
             ):
                 failed_apps.add(app)
             if "권한 오류" in err or "-1743" in err:
@@ -1631,7 +1557,7 @@ def main(argv=None):
     sp_w.add_argument("--json", action="store_true", help="JSON 출력")
 
     # excel subcommand
-    sp_e = sub.add_parser("excel", help="XLSX 전 시트 재계산 및 동일 세션 PDF 내보내기")
+    sp_e = sub.add_parser("excel", help="XLSX Office 변환(macOS 재계산·PDF 보류)")
     sp_e.add_argument("input", help="입력 XLSX 파일 경로")
     sp_e.add_argument("--out-dir", "--out", dest="out_dir", required=True, help="새 대상 출력 디렉터리")
     sp_e.add_argument("--resources", nargs="*", default=[], help="동반 리소스 파일 목록")

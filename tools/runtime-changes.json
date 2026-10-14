@@ -159,7 +159,9 @@
   "tests/test_major_guard_outputs.py",
   "tests/test_sales_price_numeric_contract.py",
   "tests/test_bundle_lineage.py",
-  "skills/knuaf-doc/scripts/gg_winfs.py"
+  "skills/knuaf-doc/scripts/gg_winfs.py",
+  "skills/knuaf-doc/scripts/gg_office_session.py",
+  "tests/test_window_hygiene.py"
  ],
  "baseline_main": "29abec0ec95369de7ae9e22207349d574f1f46b7",
  "baseline_spec": "tools/baseline-files.json",
@@ -185,21 +187,21 @@
    "source": "new"
   },
   "skills/knuaf-doc/SKILL.md": {
-   "after_sha256": "e2a240c323b20ff33bdacaf46b02e4b9736e4e58f2654107dd57ae7dc763ccf2",
+   "after_sha256": "e2dd2a00521315bef680df8de02ca253fc599027d7a4709581f17a3f0d3a4ea0",
    "before_sha256": "c0008fa5239cc16411fd4ef24b5bf901c7a8b9b50c6b621e2bdee3acf734ddc0",
    "first_changed": "P1",
    "last_changed": "P28",
    "owner": "P28",
-   "reason": "H11 문서 정정: 사용자 명시 모델도 임의 폴백·대체 금지 규칙 추가 | P5-D1 guidance sync: new '참고자료 폴더 등록' bullet documents the frozen source-scan→source-resolve→source-register→source-view lifecycle and 03_sources.md preservation | P6: document explicit major binding and current industrial insect capability boundary | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P8: fruit_trees plan-only capability and guidance link | P9: hort_env_systems plan-only capability and guidance link | P10: P9: common XLSX template rule + X02 layout guard sentence | P9-D3: major-specific workbook precedence sentence (hort_env_systems base = registered H01) | P11 공용 인터뷰 규칙: 전공별 핵심 전제 목록(C1), 동적 영향 순위(C2), '모르겠다' 도움(C3), 충돌 정리(C5), 미준비 전공 안내, 특용작물 probe 문서 | P12: industrial_insects plan/evidence commands and built-in reuse guidance | P13: D4 identity-catalogue-only precedence guidance | P14: fruit_trees read-only production and inventory check link | P17: rda-lookup verification-state guidance sentence (verified is observation confirmation, not approval; unverified/ambiguous/series and 옮기지 말 것 labels never copied) | P18: industrial_insects 0.2.0 product lines, plan without selection, rebinding guidance | P21 C1: seo-minseo template materialize-c1 --ref SEO + formula_patch application guidance | P22: 학생 오류·불편 신고 안내 한 줄과 신고 절 | P23: C1b option-A assumption and copy-only guidance merged with #22 student-report section | P25: option-A 실지급 확인을 interview-guide Q2-2 문항에 연결하고 경영주 예외(경영주 인출은 급여·가계비 규칙, 중복 반영 금지)를 명시하는 문장군 — FIX1 | P25: 중복된 경영주 급여 설명을 정리하고 기존 option-A 문장을 경영주 예외와 일치시킴 — FIX2 | P26: 첫 진입 알림·업데이트 경로·7단계 단위 보고 목록 | P26 F1: progress grouping is deterministic for consecutive finished and remaining stages | P26 F2: OS lock | P27: 진입 계약 재구성(22KB 이하, 절단 재읽기 규칙, 불변 조건 앞배치), 완전 자동 업데이트 첫 진입(auto·S1·S2), D5 A안 위임, D3 비공개 신고, D7 Windows 범위, import --offline-confirmed·doctor --probe 안내, 전공·출력 상세를 majors.md·outputs.md로 분리 | P27 검토 r1: 첫 진입 결과별 안내를 update.md 표와 1:1로, 0.1.x 업데이트 경로 구분(R1-05) | P27 검토 r2: user_files_in_skill 문구(원래 배포본과 다른 파일), install_manifest_invalid·legacy_reference_unavailable 첫 진입 안내 | P28: thesis-level/figure-photo-policy 링크 추가 (이유림 기준 전환·사진 정책) | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes. | PR-4 ORDER-A: 본문 전 재무 게이트 — 불변4의 적자 서술을 게이트 조건 아래로 묶고 복구 참고 문서 4개 링크; I remeasured final bytes. | N1-N5/X1: built-in guidance, extract source binding and restored tool links. | ORDER-I2: remeasured final 0.1.5 file bytes after preserving PR32 inputs. | AMEND-I2-1 R3: explain source-register snapshot then canonical sources apply and profile revision. | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
+   "reason": "H11 문서 정정: 사용자 명시 모델도 임의 폴백·대체 금지 규칙 추가 | P5-D1 guidance sync: new '참고자료 폴더 등록' bullet documents the frozen source-scan→source-resolve→source-register→source-view lifecycle and 03_sources.md preservation | P6: document explicit major binding and current industrial insect capability boundary | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P8: fruit_trees plan-only capability and guidance link | P9: hort_env_systems plan-only capability and guidance link | P10: P9: common XLSX template rule + X02 layout guard sentence | P9-D3: major-specific workbook precedence sentence (hort_env_systems base = registered H01) | P11 공용 인터뷰 규칙: 전공별 핵심 전제 목록(C1), 동적 영향 순위(C2), '모르겠다' 도움(C3), 충돌 정리(C5), 미준비 전공 안내, 특용작물 probe 문서 | P12: industrial_insects plan/evidence commands and built-in reuse guidance | P13: D4 identity-catalogue-only precedence guidance | P14: fruit_trees read-only production and inventory check link | P17: rda-lookup verification-state guidance sentence (verified is observation confirmation, not approval; unverified/ambiguous/series and 옮기지 말 것 labels never copied) | P18: industrial_insects 0.2.0 product lines, plan without selection, rebinding guidance | P21 C1: seo-minseo template materialize-c1 --ref SEO + formula_patch application guidance | P22: 학생 오류·불편 신고 안내 한 줄과 신고 절 | P23: C1b option-A assumption and copy-only guidance merged with #22 student-report section | P25: option-A 실지급 확인을 interview-guide Q2-2 문항에 연결하고 경영주 예외(경영주 인출은 급여·가계비 규칙, 중복 반영 금지)를 명시하는 문장군 — FIX1 | P25: 중복된 경영주 급여 설명을 정리하고 기존 option-A 문장을 경영주 예외와 일치시킴 — FIX2 | P26: 첫 진입 알림·업데이트 경로·7단계 단위 보고 목록 | P26 F1: progress grouping is deterministic for consecutive finished and remaining stages | P26 F2: OS lock | P27: 진입 계약 재구성(22KB 이하, 절단 재읽기 규칙, 불변 조건 앞배치), 완전 자동 업데이트 첫 진입(auto·S1·S2), D5 A안 위임, D3 비공개 신고, D7 Windows 범위, import --offline-confirmed·doctor --probe 안내, 전공·출력 상세를 majors.md·outputs.md로 분리 | P27 검토 r1: 첫 진입 결과별 안내를 update.md 표와 1:1로, 0.1.x 업데이트 경로 구분(R1-05) | P27 검토 r2: user_files_in_skill 문구(원래 배포본과 다른 파일), install_manifest_invalid·legacy_reference_unavailable 첫 진입 안내 | P28: thesis-level/figure-photo-policy 링크 추가 (이유림 기준 전환·사진 정책) | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes. | PR-4 ORDER-A: 본문 전 재무 게이트 — 불변4의 적자 서술을 게이트 조건 아래로 묶고 복구 참고 문서 4개 링크; I remeasured final bytes. | N1-N5/X1: built-in guidance, extract source binding and restored tool links. | ORDER-I2: remeasured final 0.1.5 file bytes after preserving PR32 inputs. | AMEND-I2-1 R3: explain source-register snapshot then canonical sources apply and profile revision. | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13. | PR41 P1: macOS Excel fail-closed before staging/transport; no native proof; synthetic Office contracts preserved.",
    "source": "new"
   },
   "skills/knuaf-doc/install-manifest.json": {
-   "after_sha256": "da08bcfc384f83bf8ab9502042e601927d11742f461dab44beedb88509981eae",
+   "after_sha256": "04c6cb4c71b29fee13d5da75ca7119142d8ba88638d1d6441fe5ca0c199c4f61",
    "before_sha256": null,
    "first_changed": "P27",
    "last_changed": "P28",
    "owner": "P28",
-   "reason": "P27: 설치본 배포 파일 목록(상대경로→sha256) — 자동 업데이트 보존 판정 기준 | P27 r3 재생성(legacy-release-hashes.json 포함 149항목) | P28: 재생성 — 신규 references 4건 포함 | P28 integration: gg_update.py manifest --write로 최신 배포 바이트 목록 재생성 | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존 | F2: V2 재확인 수용에 따라 같은 파서 계층의 첫 장/장 경계와 원문 span을 적용하고 명시적 외부 유형 충돌 거부·수동 신뢰 계약을 문서화; 설치 manifest 재생성. 기초 정본·단계·부모 계보·원본 source pin 보존 | F3: 전역 Markdown 유무 판정을 제거하고 prefix-only 공통 제목 규칙·요약 단일 종료·번호 공백 문법으로 통일; 설치 manifest 재생성. 원본/부모 계보·stage·source pin 보존 | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes. | PR-4 ORDER-I: install manifest regenerated for ORDER-A file bytes; I remeasured final bytes. | PR-4 ORDER-I: install manifest regenerated with restored references; I remeasured final bytes. | PR-4 ORDER-I: install manifest regenerated for 0.1.3 bytes; I remeasured final bytes. | F1: regenerate existing install-file fingerprints for reviewed findings. | F2 P1: refresh existing install fingerprints. | F3: refresh existing install fingerprints for the P2 patch. | Restore v0.1.4: regenerate all installed-file fingerprints with gg_update.py. | ORDER-I2: remeasured final 0.1.5 file bytes after preserving PR32 inputs. | AMEND-I2-1 regenerate installation fingerprints after R1-R3 amendments. | Windows native publication: handle identity, binary I/O, checked paths, owner cleanup and publication scope",
+   "reason": "P27: 설치본 배포 파일 목록(상대경로→sha256) — 자동 업데이트 보존 판정 기준 | P27 r3 재생성(legacy-release-hashes.json 포함 149항목) | P28: 재생성 — 신규 references 4건 포함 | P28 integration: gg_update.py manifest --write로 최신 배포 바이트 목록 재생성 | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존 | F2: V2 재확인 수용에 따라 같은 파서 계층의 첫 장/장 경계와 원문 span을 적용하고 명시적 외부 유형 충돌 거부·수동 신뢰 계약을 문서화; 설치 manifest 재생성. 기초 정본·단계·부모 계보·원본 source pin 보존 | F3: 전역 Markdown 유무 판정을 제거하고 prefix-only 공통 제목 규칙·요약 단일 종료·번호 공백 문법으로 통일; 설치 manifest 재생성. 원본/부모 계보·stage·source pin 보존 | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes. | PR-4 ORDER-I: install manifest regenerated for ORDER-A file bytes; I remeasured final bytes. | PR-4 ORDER-I: install manifest regenerated with restored references; I remeasured final bytes. | PR-4 ORDER-I: install manifest regenerated for 0.1.3 bytes; I remeasured final bytes. | F1: regenerate existing install-file fingerprints for reviewed findings. | F2 P1: refresh existing install fingerprints. | F3: refresh existing install fingerprints for the P2 patch. | Restore v0.1.4: regenerate all installed-file fingerprints with gg_update.py. | ORDER-I2: remeasured final 0.1.5 file bytes after preserving PR32 inputs. | AMEND-I2-1 regenerate installation fingerprints after R1-R3 amendments. | Windows native publication: handle identity, binary I/O, checked paths, owner cleanup and publication scope | Window-hygiene Office-only scope: refreshed reviewed bytes and strict +2 declaration/new/approval counts; no browser product reference or live Office validation. | PR41 P1: synchronized macOS Excel HOLD product hashes.",
    "source": "new"
   },
   "skills/knuaf-doc/references/benchmark-packs/aliases/crop-aliases.specialty_crops.json": {
@@ -526,6 +528,24 @@
    "reason": "P14: fruit_trees premise probes in the common interview format with instance sources",
    "source": "new"
   },
+  "skills/knuaf-doc/references/guideline-inventory.json": {
+   "after_sha256": "5067f07c348184d41f1f936d40327a2f92bb9d314974ca9aba6727f25733e4c5",
+   "before_sha256": null,
+   "first_changed": "P28",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "N2: ship common guideline inventory without student application records.",
+   "source": "new"
+  },
+  "skills/knuaf-doc/references/guideline-tracking.md": {
+   "after_sha256": "93ed3c4f09fa2bd36f7192925944079c5358dbab173ec7e4f3bce4c889246cab",
+   "before_sha256": "f40585f5ad88cd1c6d7ad267ec7b5e7bd9815ce21f91a19ca3fb31c848a56e4b",
+   "first_changed": "P28",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "N2: built-in guideline inventory and project-specific source binding.",
+   "source": "new"
+  },
   "skills/knuaf-doc/references/hort-env-systems/README.md": {
    "after_sha256": "86eef1f034c8fa547385cff04859ff54aff058b60d923d3b3a507c838600bfba",
    "before_sha256": null,
@@ -688,6 +708,15 @@
    "reason": "P28: 표·그림 적극 활용(이유림 수치), 사진 자리 표기, 특용작물 재무 지표 경계 | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존",
    "source": "new"
   },
+  "skills/knuaf-doc/references/official-guide-lineage.json": {
+   "after_sha256": "a6d8df96f1553fc1e819a047177f440fe8b2fa10ea20e2b8e25385403a00aff7",
+   "before_sha256": null,
+   "first_changed": "P28",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "N1/N2: preserve source and extract lineage evidence.",
+   "source": "new"
+  },
   "skills/knuaf-doc/references/official-price-series.json": {
    "after_sha256": "4758c47dc9f5ff12d4f83e0091896075f220ee66ddd9688f597648e7f807b515",
    "before_sha256": null,
@@ -695,6 +724,15 @@
    "last_changed": "P28",
    "owner": "P28",
    "reason": "PR-2: approved D8/D9 product/skill-test file; W-A/B/C and FIX-A/B/C/C2 evidence. Added by single derived-file writer I. | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
+   "source": "new"
+  },
+  "skills/knuaf-doc/references/official-toc.md": {
+   "after_sha256": "87fa7a502aff42d735d44579d9e68fe1491ce26ac242ac7a25c661b719ca552f",
+   "before_sha256": null,
+   "first_changed": "P28",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "N1: restore reviewed school writing extracts; EX files remain historical observations.",
    "source": "new"
   },
   "skills/knuaf-doc/references/open-questions.md": {
@@ -707,12 +745,12 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/outputs.md": {
-   "after_sha256": "4b808faccec949a018e6ba1f766dd79c860a26f9556b1c33895b53e308427808",
+   "after_sha256": "d586c4cbaab130f001fab1e5f60edb07a2f59a4d4ccf7a8261456f21e9dc244d",
    "before_sha256": null,
    "first_changed": "P27",
    "last_changed": "P27",
    "owner": "P27",
-   "reason": "P27: SKILL.md에서 옮긴 출력 명령·한계(뜻 불변)",
+   "reason": "P27: SKILL.md에서 옮긴 출력 명령·한계(뜻 불변) | Window-hygiene Office-only scope: refreshed reviewed bytes and strict +2 declaration/new/approval counts; no browser product reference or live Office validation. | PR41 P1: macOS Excel fail-closed before staging/transport; no native proof; synthetic Office contracts preserved.",
    "source": "new"
   },
   "skills/knuaf-doc/references/package-install.md": {
@@ -784,6 +822,105 @@
    "first_changed": "P5",
    "owner": "P5",
    "reason": "accepted P5 reuse-registry@3 schema reference (frozen corrected A+B+C union)",
+   "source": "new"
+  },
+  "skills/knuaf-doc/references/rules/CH1_intro.md": {
+   "after_sha256": "5a90072799b984707ec995fbfa1750655160613c1ac202c33f24e1ca8012658b",
+   "before_sha256": null,
+   "first_changed": "P28",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "N1: restore reviewed school writing extracts; EX files remain historical observations.",
+   "source": "new"
+  },
+  "skills/knuaf-doc/references/rules/CH2_external.md": {
+   "after_sha256": "4ef9642b1b7dfe161667f4fe9e94b8ae7232db64ffa18c7cc2ad28b7a39e31ba",
+   "before_sha256": null,
+   "first_changed": "P28",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "N1: restore reviewed school writing extracts; EX files remain historical observations.",
+   "source": "new"
+  },
+  "skills/knuaf-doc/references/rules/CH3_plan.md": {
+   "after_sha256": "a5e954b793ba6f9337f83d518073a7054a4356a355cfbc77b2a6b97d71887818",
+   "before_sha256": null,
+   "first_changed": "P28",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "N1: restore reviewed school writing extracts; EX files remain historical observations.",
+   "source": "new"
+  },
+  "skills/knuaf-doc/references/rules/CH4_finance.md": {
+   "after_sha256": "8eddb17b93e73adfa100a98b12814cd8bec2e97e49c21577b049316c8c83e9f1",
+   "before_sha256": null,
+   "first_changed": "P28",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "N1: restore reviewed school writing extracts; EX files remain historical observations.",
+   "source": "new"
+  },
+  "skills/knuaf-doc/references/rules/CH5_CH6_closing.md": {
+   "after_sha256": "a2ab7fd7022ccbabf89ba05650a1163c3603b969741192448d8de4111abe1f27",
+   "before_sha256": null,
+   "first_changed": "P28",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "N1: restore reviewed school writing extracts; EX files remain historical observations.",
+   "source": "new"
+  },
+  "skills/knuaf-doc/references/rules/EX_excel_buildspec.md": {
+   "after_sha256": "c7c1a8ac6f045f9432ca370ce4f429f8c60b18283c4bf00162579deb1c675e22",
+   "before_sha256": null,
+   "first_changed": "P28",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "N1: restore reviewed school writing extracts; EX files remain historical observations.",
+   "source": "new"
+  },
+  "skills/knuaf-doc/references/rules/EX_excel_structure.md": {
+   "after_sha256": "8f6880d637201e473fdd101efcca2c28fd33054a1de372b778069915ce80e540",
+   "before_sha256": null,
+   "first_changed": "P28",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "N1: restore reviewed school writing extracts; EX files remain historical observations.",
+   "source": "new"
+  },
+  "skills/knuaf-doc/references/rules/EX_exemplar_structure.md": {
+   "after_sha256": "93a3c48a453ae5e0c9d1bc3025f6db3c61178dd93c18c1ea788a604cc57a6781",
+   "before_sha256": null,
+   "first_changed": "P28",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "N1: restore reviewed school writing extracts; EX files remain historical observations.",
+   "source": "new"
+  },
+  "skills/knuaf-doc/references/rules/F_format.md": {
+   "after_sha256": "42cfe3d5268686f21b51f28c3e593e7e6a54d84981de3d7309b2a9810baaf154",
+   "before_sha256": null,
+   "first_changed": "P28",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "N1: restore reviewed school writing extracts; EX files remain historical observations.",
+   "source": "new"
+  },
+  "skills/knuaf-doc/references/rules/PRE_frontmatter.md": {
+   "after_sha256": "b1bbb41214e9d0117301cdd62c9ee99ddfe7348c283b43663a255c2ddfc839d1",
+   "before_sha256": null,
+   "first_changed": "P28",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "N1: restore reviewed school writing extracts; EX files remain historical observations.",
+   "source": "new"
+  },
+  "skills/knuaf-doc/references/rules/W_writing_spec.md": {
+   "after_sha256": "69ad565cd599854b2c87df59ddc5d0b63fa40c1fa056d4a72b47f0f1acaa6093",
+   "before_sha256": null,
+   "first_changed": "P28",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "N1: restore reviewed school writing extracts; EX files remain historical observations.",
    "source": "new"
   },
   "skills/knuaf-doc/references/section-ledger.md": {
@@ -968,6 +1105,24 @@
    "owner": "P28",
    "reason": "H1: '<'·'^' 병합 계속 표식을 빈칸으로 분류(_filled_cell) | P28: plain_policy_check — 금칙어·제한 용어·머리말 길이·캡션·표/그림 출처 표기·사진 자리·AI 이미지 검사 | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존 | F2: V2 재확인 수용에 따라 같은 파서 계층의 첫 장/장 경계와 원문 span을 적용하고 명시적 외부 유형 충돌 거부·수동 신뢰 계약을 문서화; 설치 manifest 재생성. 기초 정본·단계·부모 계보·원본 source pin 보존 | F3: 전역 Markdown 유무 판정을 제거하고 prefix-only 공통 제목 규칙·요약 단일 종료·번호 공백 문법으로 통일; 설치 manifest 재생성. 원본/부모 계보·stage·source pin 보존",
    "source": "adopted:PR2"
+  },
+  "skills/knuaf-doc/scripts/gg_doi.py": {
+   "after_sha256": "158e1416390aed99d86808c9a075fc655a21adb1057204673b36ed35fd7c2d4b",
+   "before_sha256": null,
+   "first_changed": "P28",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "N3: read-only DOI lookup with response identity checks.",
+   "source": "new"
+  },
+  "skills/knuaf-doc/scripts/gg_draft_split.py": {
+   "after_sha256": "3d81a1abf59ae0d8a33fb7596410e9f8ea75dec43147e091755faa1a836d7fda",
+   "before_sha256": null,
+   "first_changed": "P28",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "N4: preserve held ranges and tables; prepare canonical source/section operations. | AMEND-I2-1 R2: hold all simultaneous section matches and preserve held body boundaries; cover reversed TOC order.",
+   "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_excel_fill.py": {
    "after_sha256": "050c47c1999e065967dd55a36ad9d9145aff846367854dec3bf1e40597d23033",
@@ -1174,13 +1329,21 @@
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_office.py": {
-   "after_sha256": "efe77d1f9b524043f68ebde1c39e45fee6cf0f916db65c247784a7a9ebf0592e",
+   "after_sha256": "056fcfe425fcd62a3aadd66e7724d39d3638636e8da2e3cdd2346df08a6070f2",
    "before_sha256": "64b4f8790da95e583cfb06ba4e216999a932e4d570953ad2a681bca19d270a0a",
    "first_changed": "P1",
    "last_changed": "P27",
    "owner": "P27",
-   "reason": "C6: run_windows_com이 helper 생성 전 WINDOWS_COM_BLOCKED 반환. H15: visible 시트만 계수. C2: UTF-8 | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P20: spec JSON 엄격 파싱(중복키·비유한 수 거부), 공용 _preflight_excel_profile, hort transform 영수증 바인딩·계보 시작 스키마·native 영수증 finance_profile | P27: K2-02: CLI 진입점 stdout·stderr UTF-8 재설정",
+   "reason": "C6: run_windows_com이 helper 생성 전 WINDOWS_COM_BLOCKED 반환. H15: visible 시트만 계수. C2: UTF-8 | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P20: spec JSON 엄격 파싱(중복키·비유한 수 거부), 공용 _preflight_excel_profile, hort transform 영수증 바인딩·계보 시작 스키마·native 영수증 finance_profile | P27: K2-02: CLI 진입점 stdout·stderr UTF-8 재설정 | Window-hygiene Office-only scope: refreshed reviewed bytes and strict +2 declaration/new/approval counts; no browser product reference or live Office validation. | PR41 P1: macOS Excel fail-closed before staging/transport; no native proof; synthetic Office contracts preserved.",
    "source": "new"
+  },
+  "skills/knuaf-doc/scripts/gg_office_session.py": {
+   "after_sha256": "e4b5a7b10ef2210a1439c165577137f42b66bdfb5834ee8f20607386be4f7b8e",
+   "before_sha256": null,
+   "first_changed": "P28",
+   "owner": "P27",
+   "reason": "Window-hygiene Office-only scope: exact owned-document path/saved-state preservation; fake transport and POSIX fixture tests only. Browser references excluded; no live Office/native support claim. | PR41 P1: macOS Excel fail-closed before staging/transport; no native proof; synthetic Office contracts preserved.",
+   "source": "new; window-hygiene Office-only reviewed worktree bytes; fake transport/own fixtures, no browser reference"
   },
   "skills/knuaf-doc/scripts/gg_office_win.py": {
    "after_sha256": "0a9c848baf04ea763a01bddbc868221b36256dbf055e0d4219e8bbe35efa3d52",
@@ -1353,6 +1516,14 @@
    "reason": "P26: 릴리스 확인·복사 설치 교체·저널 복구 CLI | P26 F1: strict lock and recovery ownership, staging identity, quoted recovery, raw ZIP names and unreadable versions | P26 F2: OS lock | P27: 완전 자동 업데이트 auto(recover→check→copy 교체), user_files_in_skill 보호, K2-02: CLI 진입점 stdout·stderr UTF-8 재설정 | P27 검토 r1: install-manifest 기반 사용자 파일 보존 판정(R1-01), OSError 구조화 결과(R1-04), manifest 하위 명령 | P27 검토 r2: manifest 상태 구분·0.1.2+ 누락/손상 거절(R2-01), 레거시는 legacy-release-hashes 기준 pristine 판정만(R1-01), 새 트리 manifest 필수, bin 도우미에 기준 사본 게시",
    "source": "new"
   },
+  "skills/knuaf-doc/scripts/gg_winfs.py": {
+   "after_sha256": "09d96e11afe5c503675adf9807c5a21cd4310911037eb9176077178235a28812",
+   "before_sha256": null,
+   "first_changed": "P28",
+   "owner": "P28",
+   "reason": "Windows native publication primitives; continuation of the cumulative P28 tree, approved INTENT-winpub scope",
+   "source": "new"
+  },
   "skills/knuaf-doc/scripts/gg_workbook_audit.py": {
    "after_sha256": "9cb0b7faa60a51aecbad4712949380658f4ac14d2107aa7b2e0472589f736e65",
    "before_sha256": null,
@@ -1443,6 +1614,15 @@
    "reason": "P27: K2-02: CLI 진입점 stdout·stderr UTF-8 재설정",
    "source": "new"
   },
+  "skills/knuaf-doc/tests/fixtures/sample-toc.json": {
+   "after_sha256": "1f782f955872f01e7fbf0d53adfea6952f7d6b8af3cf2e871577caa500192c3b",
+   "before_sha256": null,
+   "first_changed": "P28",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "Restore v0.1.4: synthetic regression and approved school-entry expectations.",
+   "source": "new"
+  },
   "skills/knuaf-doc/tests/test_finance_tables.py": {
    "after_sha256": "e64d53f055d24855fc7c0d560a4317191f544cabf6de0fef4b90ff347e8e5b8a",
    "before_sha256": null,
@@ -1450,6 +1630,24 @@
    "last_changed": "P28",
    "owner": "P28",
    "reason": "PR-2: approved D8/D9 product/skill-test file; W-A/B/C and FIX-A/B/C/C2 evidence. Added by single derived-file writer I. | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
+   "source": "new"
+  },
+  "skills/knuaf-doc/tests/test_gg_doi.py": {
+   "after_sha256": "1ad9b10c42c3f83eb559b32569465c22aa7c4af42ac0b7ee956bad312109c36e",
+   "before_sha256": null,
+   "first_changed": "P28",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "N3: read-only DOI lookup with response identity checks.",
+   "source": "new"
+  },
+  "skills/knuaf-doc/tests/test_gg_draft_split.py": {
+   "after_sha256": "f7d8ea7d1b697a9231306118c5d5fb9648cbb0c895d46baafaae39816e4f521c",
+   "before_sha256": null,
+   "first_changed": "P28",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "N4: preserve held ranges and tables; prepare canonical source/section operations. | AMEND-I2-1 R2: hold all simultaneous section matches and preserve held body boundaries; cover reversed TOC order.",
    "source": "new"
   },
   "skills/knuaf-doc/tests/test_gg_major_contract.py": {
@@ -1581,6 +1779,24 @@
    "reason": "accepted P5 source-register contract test (frozen corrected A+B+C union)",
    "source": "new"
   },
+  "skills/knuaf-doc/tests/test_n5_guidance_link.py": {
+   "after_sha256": "32462d60e2a3c7a40cffb6eecfb138f8046d382ad16bb15377b3490e3ddbb43a",
+   "before_sha256": null,
+   "first_changed": "P28",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "Restore v0.1.4: synthetic regression and approved school-entry expectations.",
+   "source": "new"
+  },
+  "skills/knuaf-doc/tests/test_official_guide_reuse.py": {
+   "after_sha256": "2169e23583f04860fbeb77fe1fe802bed756efd5147156c294eddb3e9ba4d87c",
+   "before_sha256": null,
+   "first_changed": "P28",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "Restore v0.1.4: synthetic regression and approved school-entry expectations.",
+   "source": "new"
+  },
   "skills/knuaf-doc/version.json": {
    "after_sha256": "17008bfab1fbeb247db14f3c32d1d32c17f00dea43e18d71be5eebd92f38998e",
    "before_sha256": null,
@@ -1588,6 +1804,33 @@
    "last_changed": "P28",
    "owner": "P28",
    "reason": "P26: 엄격한 복사 설치 버전 원천 | P27: 버전 0.1.2 | PR-4 ORDER-I: version 0.1.3; I remeasured final bytes. | F3: patch release version 0.1.4. | Restore v0.1.4: version and built-in school guidance for the update path. | ORDER-I2: remeasured final 0.1.5 file bytes after preserving PR32 inputs.",
+   "source": "new"
+  },
+  "tests/fixtures/hort_finance/synthetic.py": {
+   "after_sha256": "c17d3d2902f7f991e82cfd4396aec03a716875b4c02ce428da6db8152aae9e58",
+   "before_sha256": null,
+   "first_changed": "P28",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
+   "source": "new"
+  },
+  "tests/test_bundle_lineage.py": {
+   "after_sha256": "4ae09a4a3271fc9fc1cac653d45128b2fbae682c15c03d3696e9d1cd6a8fe7ac",
+   "before_sha256": null,
+   "first_changed": "P28",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "PR36 CI strict-count repair: preserve exact declaration counts and declare the changed validation test; integration adds five new declarations and three approvals, this test adds one further declaration/new/approval. | Window-hygiene Office-only scope: refreshed reviewed bytes and strict +2 declaration/new/approval counts; no browser product reference or live Office validation.",
+   "source": "new"
+  },
+  "tests/test_major_guard_outputs.py": {
+   "after_sha256": "7bcfdb3284bfc647114563f307bce33af027ceb81615b243fddab63ce3af3f1d",
+   "before_sha256": null,
+   "first_changed": "P28",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13. | PR41 P1: macOS Excel fail-closed before staging/transport; no native proof; synthetic Office contracts preserved.",
    "source": "new"
   },
   "tests/test_p2_core.py": {
@@ -1681,6 +1924,24 @@
    "reason": "P3 신규 S-lane 계약 시험 (50 tests: metadata/classify/price-history/lookup_input_state/consumers/report/result-shape, 독립 검토 반영 review-identity freshness 확장 4건 포함)",
    "source": "new"
   },
+  "tests/test_price_assumptions.py": {
+   "after_sha256": "4c63d664290157556e7cffb2fa31a79de12827f469543c133667f4e491c12c3e",
+   "before_sha256": null,
+   "first_changed": "P28",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
+   "source": "new"
+  },
+  "tests/test_sales_price_numeric_contract.py": {
+   "after_sha256": "f4082ea87a996de75175c6bd5f5684d1b84f241aedbecc71e5614e69513b424b",
+   "before_sha256": null,
+   "first_changed": "P28",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
+   "source": "new"
+  },
   "tests/test_source_identities.py": {
    "after_sha256": "c4e7ae7e17c60024de2b8b2c383c006dbb9c63465446ff2a7c684a0708ec01d3",
    "before_sha256": null,
@@ -1690,265 +1951,22 @@
    "reason": "D4 positive and adversarial catalogue, privacy, duplicate-key and registry-binding controls | Astra D4 round 1: sanitized dependency failures and bounded/deep JSON rejection with CLI negatives | P13: rebased D4 identity-only declaration onto accepted P12 | P13: privacy negatives assemble synthetic digit groups at test time without a shipped student-number literal | P16: empty-catalogue contract kept on a synthetic empty list now that fruit rows ship; the shipped catalogue must load and pass the CLI check with its real row count",
    "source": "new"
   },
-  "skills/knuaf-doc/references/guideline-inventory.json": {
-   "after_sha256": "5067f07c348184d41f1f936d40327a2f92bb9d314974ca9aba6727f25733e4c5",
-   "before_sha256": null,
-   "first_changed": "P28",
-   "last_changed": "P28",
-   "owner": "P28",
-   "reason": "N2: ship common guideline inventory without student application records.",
-   "source": "new"
-  },
-  "skills/knuaf-doc/references/guideline-tracking.md": {
-   "after_sha256": "93ed3c4f09fa2bd36f7192925944079c5358dbab173ec7e4f3bce4c889246cab",
-   "before_sha256": "f40585f5ad88cd1c6d7ad267ec7b5e7bd9815ce21f91a19ca3fb31c848a56e4b",
-   "first_changed": "P28",
-   "last_changed": "P28",
-   "owner": "P28",
-   "reason": "N2: built-in guideline inventory and project-specific source binding.",
-   "source": "new"
-  },
-  "skills/knuaf-doc/references/official-guide-lineage.json": {
-   "after_sha256": "a6d8df96f1553fc1e819a047177f440fe8b2fa10ea20e2b8e25385403a00aff7",
-   "before_sha256": null,
-   "first_changed": "P28",
-   "last_changed": "P28",
-   "owner": "P28",
-   "reason": "N1/N2: preserve source and extract lineage evidence.",
-   "source": "new"
-  },
-  "skills/knuaf-doc/references/official-toc.md": {
-   "after_sha256": "87fa7a502aff42d735d44579d9e68fe1491ce26ac242ac7a25c661b719ca552f",
-   "before_sha256": null,
-   "first_changed": "P28",
-   "last_changed": "P28",
-   "owner": "P28",
-   "reason": "N1: restore reviewed school writing extracts; EX files remain historical observations.",
-   "source": "new"
-  },
-  "skills/knuaf-doc/references/rules/CH1_intro.md": {
-   "after_sha256": "5a90072799b984707ec995fbfa1750655160613c1ac202c33f24e1ca8012658b",
-   "before_sha256": null,
-   "first_changed": "P28",
-   "last_changed": "P28",
-   "owner": "P28",
-   "reason": "N1: restore reviewed school writing extracts; EX files remain historical observations.",
-   "source": "new"
-  },
-  "skills/knuaf-doc/references/rules/CH2_external.md": {
-   "after_sha256": "4ef9642b1b7dfe161667f4fe9e94b8ae7232db64ffa18c7cc2ad28b7a39e31ba",
-   "before_sha256": null,
-   "first_changed": "P28",
-   "last_changed": "P28",
-   "owner": "P28",
-   "reason": "N1: restore reviewed school writing extracts; EX files remain historical observations.",
-   "source": "new"
-  },
-  "skills/knuaf-doc/references/rules/CH3_plan.md": {
-   "after_sha256": "a5e954b793ba6f9337f83d518073a7054a4356a355cfbc77b2a6b97d71887818",
-   "before_sha256": null,
-   "first_changed": "P28",
-   "last_changed": "P28",
-   "owner": "P28",
-   "reason": "N1: restore reviewed school writing extracts; EX files remain historical observations.",
-   "source": "new"
-  },
-  "skills/knuaf-doc/references/rules/CH4_finance.md": {
-   "after_sha256": "8eddb17b93e73adfa100a98b12814cd8bec2e97e49c21577b049316c8c83e9f1",
-   "before_sha256": null,
-   "first_changed": "P28",
-   "last_changed": "P28",
-   "owner": "P28",
-   "reason": "N1: restore reviewed school writing extracts; EX files remain historical observations.",
-   "source": "new"
-  },
-  "skills/knuaf-doc/references/rules/CH5_CH6_closing.md": {
-   "after_sha256": "a2ab7fd7022ccbabf89ba05650a1163c3603b969741192448d8de4111abe1f27",
-   "before_sha256": null,
-   "first_changed": "P28",
-   "last_changed": "P28",
-   "owner": "P28",
-   "reason": "N1: restore reviewed school writing extracts; EX files remain historical observations.",
-   "source": "new"
-  },
-  "skills/knuaf-doc/references/rules/EX_excel_buildspec.md": {
-   "after_sha256": "c7c1a8ac6f045f9432ca370ce4f429f8c60b18283c4bf00162579deb1c675e22",
-   "before_sha256": null,
-   "first_changed": "P28",
-   "last_changed": "P28",
-   "owner": "P28",
-   "reason": "N1: restore reviewed school writing extracts; EX files remain historical observations.",
-   "source": "new"
-  },
-  "skills/knuaf-doc/references/rules/EX_excel_structure.md": {
-   "after_sha256": "8f6880d637201e473fdd101efcca2c28fd33054a1de372b778069915ce80e540",
-   "before_sha256": null,
-   "first_changed": "P28",
-   "last_changed": "P28",
-   "owner": "P28",
-   "reason": "N1: restore reviewed school writing extracts; EX files remain historical observations.",
-   "source": "new"
-  },
-  "skills/knuaf-doc/references/rules/EX_exemplar_structure.md": {
-   "after_sha256": "93a3c48a453ae5e0c9d1bc3025f6db3c61178dd93c18c1ea788a604cc57a6781",
-   "before_sha256": null,
-   "first_changed": "P28",
-   "last_changed": "P28",
-   "owner": "P28",
-   "reason": "N1: restore reviewed school writing extracts; EX files remain historical observations.",
-   "source": "new"
-  },
-  "skills/knuaf-doc/references/rules/F_format.md": {
-   "after_sha256": "42cfe3d5268686f21b51f28c3e593e7e6a54d84981de3d7309b2a9810baaf154",
-   "before_sha256": null,
-   "first_changed": "P28",
-   "last_changed": "P28",
-   "owner": "P28",
-   "reason": "N1: restore reviewed school writing extracts; EX files remain historical observations.",
-   "source": "new"
-  },
-  "skills/knuaf-doc/references/rules/PRE_frontmatter.md": {
-   "after_sha256": "b1bbb41214e9d0117301cdd62c9ee99ddfe7348c283b43663a255c2ddfc839d1",
-   "before_sha256": null,
-   "first_changed": "P28",
-   "last_changed": "P28",
-   "owner": "P28",
-   "reason": "N1: restore reviewed school writing extracts; EX files remain historical observations.",
-   "source": "new"
-  },
-  "skills/knuaf-doc/references/rules/W_writing_spec.md": {
-   "after_sha256": "69ad565cd599854b2c87df59ddc5d0b63fa40c1fa056d4a72b47f0f1acaa6093",
-   "before_sha256": null,
-   "first_changed": "P28",
-   "last_changed": "P28",
-   "owner": "P28",
-   "reason": "N1: restore reviewed school writing extracts; EX files remain historical observations.",
-   "source": "new"
-  },
-  "skills/knuaf-doc/scripts/gg_doi.py": {
-   "after_sha256": "158e1416390aed99d86808c9a075fc655a21adb1057204673b36ed35fd7c2d4b",
-   "before_sha256": null,
-   "first_changed": "P28",
-   "last_changed": "P28",
-   "owner": "P28",
-   "reason": "N3: read-only DOI lookup with response identity checks.",
-   "source": "new"
-  },
-  "skills/knuaf-doc/scripts/gg_draft_split.py": {
-   "after_sha256": "3d81a1abf59ae0d8a33fb7596410e9f8ea75dec43147e091755faa1a836d7fda",
-   "before_sha256": null,
-   "first_changed": "P28",
-   "last_changed": "P28",
-   "owner": "P28",
-   "reason": "N4: preserve held ranges and tables; prepare canonical source/section operations. | AMEND-I2-1 R2: hold all simultaneous section matches and preserve held body boundaries; cover reversed TOC order.",
-   "source": "new"
-  },
-  "skills/knuaf-doc/tests/fixtures/sample-toc.json": {
-   "after_sha256": "1f782f955872f01e7fbf0d53adfea6952f7d6b8af3cf2e871577caa500192c3b",
-   "before_sha256": null,
-   "first_changed": "P28",
-   "last_changed": "P28",
-   "owner": "P28",
-   "reason": "Restore v0.1.4: synthetic regression and approved school-entry expectations.",
-   "source": "new"
-  },
-  "skills/knuaf-doc/tests/test_gg_doi.py": {
-   "after_sha256": "1ad9b10c42c3f83eb559b32569465c22aa7c4af42ac0b7ee956bad312109c36e",
-   "before_sha256": null,
-   "first_changed": "P28",
-   "last_changed": "P28",
-   "owner": "P28",
-   "reason": "N3: read-only DOI lookup with response identity checks.",
-   "source": "new"
-  },
-  "skills/knuaf-doc/tests/test_gg_draft_split.py": {
-   "after_sha256": "f7d8ea7d1b697a9231306118c5d5fb9648cbb0c895d46baafaae39816e4f521c",
-   "before_sha256": null,
-   "first_changed": "P28",
-   "last_changed": "P28",
-   "owner": "P28",
-   "reason": "N4: preserve held ranges and tables; prepare canonical source/section operations. | AMEND-I2-1 R2: hold all simultaneous section matches and preserve held body boundaries; cover reversed TOC order.",
-   "source": "new"
-  },
-  "skills/knuaf-doc/tests/test_n5_guidance_link.py": {
-   "after_sha256": "32462d60e2a3c7a40cffb6eecfb138f8046d382ad16bb15377b3490e3ddbb43a",
-   "before_sha256": null,
-   "first_changed": "P28",
-   "last_changed": "P28",
-   "owner": "P28",
-   "reason": "Restore v0.1.4: synthetic regression and approved school-entry expectations.",
-   "source": "new"
-  },
-  "skills/knuaf-doc/tests/test_official_guide_reuse.py": {
-   "after_sha256": "2169e23583f04860fbeb77fe1fe802bed756efd5147156c294eddb3e9ba4d87c",
-   "before_sha256": null,
-   "first_changed": "P28",
-   "last_changed": "P28",
-   "owner": "P28",
-   "reason": "Restore v0.1.4: synthetic regression and approved school-entry expectations.",
-   "source": "new"
-  },
-  "tests/fixtures/hort_finance/synthetic.py": {
-   "first_changed": "P28",
-   "before_sha256": null,
-   "after_sha256": "c17d3d2902f7f991e82cfd4396aec03a716875b4c02ce428da6db8152aae9e58",
-   "last_changed": "P28",
-   "owner": "P28",
-   "reason": "P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
-   "source": "new"
-  },
-  "tests/test_major_guard_outputs.py": {
-   "first_changed": "P28",
-   "before_sha256": null,
-   "after_sha256": "e1e30088440835a41fa0e7dea3be9c94e01a3e20329201b4a92d74be6f0a4b2d",
-   "last_changed": "P28",
-   "owner": "P28",
-   "reason": "P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
-   "source": "new"
-  },
-  "tests/test_price_assumptions.py": {
-   "first_changed": "P28",
-   "before_sha256": null,
-   "after_sha256": "4c63d664290157556e7cffb2fa31a79de12827f469543c133667f4e491c12c3e",
-   "last_changed": "P28",
-   "owner": "P28",
-   "reason": "P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
-   "source": "new"
-  },
-  "tests/test_sales_price_numeric_contract.py": {
-   "first_changed": "P28",
-   "before_sha256": null,
-   "after_sha256": "f4082ea87a996de75175c6bd5f5684d1b84f241aedbecc71e5614e69513b424b",
-   "last_changed": "P28",
-   "owner": "P28",
-   "reason": "P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
-   "source": "new"
-  },
   "tests/test_template_wage_link.py": {
-   "first_changed": "P28",
-   "before_sha256": null,
    "after_sha256": "2cc17d9a2d6a015f888472342e3f87820105b6086ca8e9f3726374571726ebb6",
+   "before_sha256": null,
+   "first_changed": "P28",
    "last_changed": "P28",
    "owner": "P28",
    "reason": "P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
    "source": "new"
   },
-  "tests/test_bundle_lineage.py": {
+  "tests/test_window_hygiene.py": {
+   "after_sha256": "503571e58616d30228f56d55286b4177c8fc535a5bfb3f3b6f479c79dea6bf67",
    "before_sha256": null,
-   "after_sha256": "d82ac8136378927fa44ae660ec49242520df00dc76e38a3551531b508a5062ad",
    "first_changed": "P28",
-   "last_changed": "P28",
-   "owner": "P28",
-   "reason": "PR36 CI strict-count repair: preserve exact declaration counts and declare the changed validation test; integration adds five new declarations and three approvals, this test adds one further declaration/new/approval.",
-   "source": "new"
-  },
-  "skills/knuaf-doc/scripts/gg_winfs.py": {
-   "before_sha256": null,
-   "after_sha256": "09d96e11afe5c503675adf9807c5a21cd4310911037eb9176077178235a28812",
-   "first_changed": "P28",
-   "owner": "P28",
-   "source": "new",
-   "reason": "Windows native publication primitives; continuation of the cumulative P28 tree, approved INTENT-winpub scope"
+   "owner": "B",
+   "reason": "Window-hygiene Office-only scope: exact owned-document path/saved-state preservation; fake transport and POSIX fixture tests only. Browser references excluded; no live Office/native support claim. | PR41 P1: macOS Excel fail-closed before staging/transport; no native proof; synthetic Office contracts preserved.",
+   "source": "new; window-hygiene Office-only reviewed worktree bytes; fake transport/own fixtures, no browser reference"
   }
  },
  "cumulative": true,

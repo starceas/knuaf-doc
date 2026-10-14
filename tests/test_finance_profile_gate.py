@@ -63,7 +63,9 @@ class FinanceGateTests(ContractCase):
                         with self.assertRaises(self.mc.OutputHeldError):
                             self.mc.require_finance_profile(auth, profile)
 
+    @mock.patch.object(sys, "platform", "linux")
     def test_office_direct_matrix_holds_before_staging(self):
+        # Synthetic staging boundary, independent of the macOS Excel hold.
         for major in MAJORS:
             path = self.xlsx(major)
             with self.subTest(major=major), mock.patch.object(
@@ -83,6 +85,7 @@ class FinanceGateTests(ContractCase):
                             context=self.context(major))
                     stage.assert_not_called()
 
+    @mock.patch.object(sys, "platform", "linux")
     def test_office_spec_and_batch_matrix_before_staging(self):
         for major in MAJORS:
             path = self.xlsx(major)
@@ -167,6 +170,7 @@ class FinanceGateTests(ContractCase):
                             context=self.context(major))
                     stage.assert_not_called()
 
+    @mock.patch.object(sys, "platform", "linux")
     def test_office_batch_excel_four_major_matrix(self):
         for major in MAJORS:
             path = self.xlsx(major)
@@ -206,6 +210,7 @@ class FinanceGateTests(ContractCase):
                             context=self.context(major))
                     stage.assert_not_called()
 
+    @mock.patch.object(sys, "platform", "linux")
     def test_hort_receipt_schema_and_output_hash_hold(self):
         major = "hort_env_systems"
         source = self.xlsx(major)
@@ -283,7 +288,9 @@ class FinanceGateTests(ContractCase):
                 self.office.verify_template_lineage(source,
                                                     [receipt, operation])
 
+    @mock.patch.object(sys, "platform", "linux")
     def test_specialty_legacy_render_receipt_states_no_content_check(self):
+        # Mock engine only; this is not evidence of macOS Excel support.
         major = "specialty_crops"
         source = self.xlsx(major)
         root = self.roots[major]
