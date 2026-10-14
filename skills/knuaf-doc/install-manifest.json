@@ -1,6 +1,6 @@
 {
  "files": {
-  "SKILL.md": "e2a240c323b20ff33bdacaf46b02e4b9736e4e58f2654107dd57ae7dc763ccf2",
+  "SKILL.md": "e2dd2a00521315bef680df8de02ca253fc599027d7a4709581f17a3f0d3a4ea0",
   "references/benchmark-packs/aliases/crop-aliases.specialty_crops.json": "8e7abffc7b4244727b4732f558b722934dd8ea229c0057312d1ee7ea92c2df22",
   "references/benchmark-packs/aliases/major-aliases.json": "ad1e1e6c2296f93ef27beab8494e840b1578e0d61c6c9bd8e238c640e653c81b",
   "references/benchmark-packs/catalog.json": "8dcad598073ce3efcce6698dafd2fa81bd24453deeb90216648ff68d1e8f8e68",
@@ -66,7 +66,7 @@
   "references/official-price-series.json": "4758c47dc9f5ff12d4f83e0091896075f220ee66ddd9688f597648e7f807b515",
   "references/official-toc.md": "87fa7a502aff42d735d44579d9e68fe1491ce26ac242ac7a25c661b719ca552f",
   "references/open-questions.md": "97e8ac9e3bfbc5a01f25c4a949b565fcf2cdd4e022bf3f499c3c3067179493b0",
-  "references/outputs.md": "76a84413368f0316caa2ae02038d336d0110a5d29ed4e7699c85cbb7c5a68841",
+  "references/outputs.md": "d586c4cbaab130f001fab1e5f60edb07a2f59a4d4ccf7a8261456f21e9dc244d",
   "references/package-install.md": "ec98421637d74a682d7509fb567e7019ed51451a9080df4bd5e9306d6172c561",
   "references/parser-setup.md": "b377b1d436f1f8157a39f8bcd2e2c2b482451ea50435f5fbafc28192c0116122",
   "references/plain-thesis-policy.json": "0b7bfa365194a5486d9ece4c6d0d33685f820ad8d4175cc88a77bbf5cc3e6767",
@@ -133,8 +133,8 @@
   "scripts/gg_kordoc.py": "e26d416cdfc52e309dc3da3ec301b220276b04ea5e6d1ac26b2616211063b83d",
   "scripts/gg_lock.py": "8ff8228189ee9e44633b836b50068843d5510cb188c9e98443c1ddc2f4ea0c40",
   "scripts/gg_major_contract.py": "012ecb0313395ee8322d7a478a2d45c916514847a10a3ede6404f35ef0e116e6",
-  "scripts/gg_office.py": "fcbfb315f4a319b59613d61dc2f1599087231d1d9f0ed2557916c299852ddba2",
-  "scripts/gg_office_session.py": "f5731b54cc9a30bf7abb280890c9214adaeebb7d90d56215c4d1028f1ea9199e",
+  "scripts/gg_office.py": "056fcfe425fcd62a3aadd66e7724d39d3638636e8da2e3cdd2346df08a6070f2",
+  "scripts/gg_office_session.py": "e4b5a7b10ef2210a1439c165577137f42b66bdfb5834ee8f20607386be4f7b8e",
   "scripts/gg_office_win.py": "0a9c848baf04ea763a01bddbc868221b36256dbf055e0d4219e8bbe35efa3d52",
   "scripts/gg_orchard_production.py": "a66466e1ea91aedf4c9e1411c0a9e48bbe7cca279c68fff3e1ca760307af52d7",
   "scripts/gg_price_assumptions.py": "0ce493232cc03187ab45265b3b8276b751eb479c349023d46e7f9baee7958d4e",

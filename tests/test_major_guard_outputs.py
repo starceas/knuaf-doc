@@ -45,6 +45,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 from unittest import mock
 
 from tests._harness import (
@@ -678,7 +679,8 @@ class OfficePublishGuardTests(_Base):
         super().setUp()
         self.office = runtime("gg_office")
         from docx import Document
-        self.work = self.make_project() / "office"
+        # Resolve the synthetic temp alias for non-darwin mock-engine runs.
+        self.work = self.make_project().resolve() / "office"
         self.work.mkdir()
         self.docx_in = self.work / "논문.docx"
         doc = Document()
@@ -715,7 +717,9 @@ class OfficePublishGuardTests(_Base):
         try:
             with mock.patch.object(self.office, "_run_word_engine", word), \
                     mock.patch.object(self.office, "_run_excel_engine",
-                                      excel):
+                                      excel), \
+                    mock.patch.object(self.office, "sys",
+                        SimpleNamespace(platform="linux") if engine_kind == "excel" else sys):
                 if engine_kind == "word":
                     return (self.office.process_word(
                         self.docx_in, out, workspace=ws, context=ctx),

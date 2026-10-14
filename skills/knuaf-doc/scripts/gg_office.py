@@ -3,12 +3,13 @@
 
 Stages original DOCX/XLSX unchanged into a dedicated per-platform job
 workspace (macOS: Office sandbox Group Container; Windows: local app-data
-folder), drives Word field updates / Excel range recalculations and PDF
+folder), drives Word field updates and PDF
 exports in the same automation session (macOS: bounded AppleScript via
 osascript; Windows: bounded win32com COM calls run in a helper subprocess,
 see gg_office_win.py), validates ZIP/PDF, and publishes to new destination
 directories with overwrite protection. Only macOS and Windows are
-implemented; other platforms fail closed with a clear error.
+implemented; other platforms fail closed with a clear error. macOS Excel
+conversion is held until owned-workbook recalculation can be proven.
 """
 
 from __future__ import annotations
@@ -59,7 +60,7 @@ DEFAULT_GROUP_CONTAINER_DIR = _default_workspace_dir()
 
 from gg_office_session import (
     WORD_APPLESCRIPT_TEMPLATE, EXCEL_APPLESCRIPT_TEMPLATE, SESSION_MARKER,
-    run_session, read_session, retain_job,
+    run_session, read_session, retain_job, EXCEL_RECALCULATION_HOLD,
 )
 
 
@@ -1171,7 +1172,7 @@ def process_excel(
     *,
     context=None,
 ) -> dict:
-    """Processes Excel workbook: calculates all used ranges, saves XLSX and exports PDF in same session."""
+    """Authorize/profile-check Excel input; macOS conversion is held before staging."""
     import gg_major_contract as mc
 
     input_path = Path(input_file).absolute()
@@ -1193,6 +1194,8 @@ def process_excel(
     binding, finance_profile = _preflight_excel_profile(
         input_path, auths, context, spec=spec_for_guard,
         template_receipt=template_receipt)
+    if sys.platform == "darwin":
+        raise mc.OutputHeldError(EXCEL_RECALCULATION_HOLD)
     out_path = Path(out_dir).absolute()
     ws_root = Path(workspace).resolve() if workspace else DEFAULT_GROUP_CONTAINER_DIR
 
@@ -1554,7 +1557,7 @@ def main(argv=None):
     sp_w.add_argument("--json", action="store_true", help="JSON 출력")
 
     # excel subcommand
-    sp_e = sub.add_parser("excel", help="XLSX 전 시트 재계산 및 동일 세션 PDF 내보내기")
+    sp_e = sub.add_parser("excel", help="XLSX Office 변환(macOS 재계산·PDF 보류)")
     sp_e.add_argument("input", help="입력 XLSX 파일 경로")
     sp_e.add_argument("--out-dir", "--out", dest="out_dir", required=True, help="새 대상 출력 디렉터리")
     sp_e.add_argument("--resources", nargs="*", default=[], help="동반 리소스 파일 목록")

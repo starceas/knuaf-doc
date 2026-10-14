@@ -15,9 +15,18 @@ import time
 
 SESSION_MARKER = "-- gg-office-owned-session-v1"
 SCHEMA = "gg-office-session/v1"
+EXCEL_RECALCULATION_HOLD = "owned_workbook_recalculation_unproven"
 
 
 def _template(kind: str) -> str:
+    if kind == "excel":
+        # No exact-workbook dependency-graph calculation is proven. Even
+        # a direct template invocation must not enter Office operations.
+        return f'''{SESSION_MARKER}
+on run argv
+    error "{EXCEL_RECALCULATION_HOLD}" number -2700
+end run
+'''
     app = "Microsoft Word" if kind == "word" else "Microsoft Excel"
     noun = "document" if kind == "word" else "workbook"
     plural = "documents" if kind == "word" else "workbooks"
@@ -49,26 +58,6 @@ def _template(kind: str) -> str:
                 set sessionStage to "saving"
                 {check}
                 save {target}
-"""
-    else:
-        operations = f"""
-                open workbook workbook file name jobPOSIX
-                set sessionStage to "calculating"
-                {check}
-                set sheetCount to count of worksheets of {target}
-                -- Range-addressable sTBL1175 in the installed dictionary.
-                -- Never fall back to application-wide calculate.
-                repeat with sheetNumber from 1 to sheetCount
-                    {check}
-                    if calculation is not calculation automatic then error "manual_calculation_not_supported" number -2700
-                    calculate (used range of worksheet sheetNumber of {target})
-                end repeat
-                set sessionStage to "saving"
-                {check}
-                save {target}
-                set sessionStage to "exporting"
-                {check}
-                save as (active sheet of {target}) filename (item 2 of argv) file format PDF file format
 """
     return f"""{SESSION_MARKER}
 on requireOwned(jobHFS, jobPOSIX)
@@ -156,6 +145,10 @@ def run_session(kind: str, script: str, args: list[str], timeout: int, *,
     directory. Production always uses one fixed guard directory independent
     of --workspace. Failed/unknown cleanup is never followed by compensation.
     """
+    if kind == "excel":
+        from gg_major_contract import OutputHeldError
+
+        raise OutputHeldError(EXCEL_RECALCULATION_HOLD)
     import fcntl  # Only called by the darwin dispatcher.
 
     work, pdf = (Path(a).absolute() for a in args)

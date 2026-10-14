@@ -187,21 +187,21 @@
    "source": "new"
   },
   "skills/knuaf-doc/SKILL.md": {
-   "after_sha256": "e2a240c323b20ff33bdacaf46b02e4b9736e4e58f2654107dd57ae7dc763ccf2",
+   "after_sha256": "e2dd2a00521315bef680df8de02ca253fc599027d7a4709581f17a3f0d3a4ea0",
    "before_sha256": "c0008fa5239cc16411fd4ef24b5bf901c7a8b9b50c6b621e2bdee3acf734ddc0",
    "first_changed": "P1",
    "last_changed": "P28",
    "owner": "P28",
-   "reason": "H11 문서 정정: 사용자 명시 모델도 임의 폴백·대체 금지 규칙 추가 | P5-D1 guidance sync: new '참고자료 폴더 등록' bullet documents the frozen source-scan→source-resolve→source-register→source-view lifecycle and 03_sources.md preservation | P6: document explicit major binding and current industrial insect capability boundary | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P8: fruit_trees plan-only capability and guidance link | P9: hort_env_systems plan-only capability and guidance link | P10: P9: common XLSX template rule + X02 layout guard sentence | P9-D3: major-specific workbook precedence sentence (hort_env_systems base = registered H01) | P11 공용 인터뷰 규칙: 전공별 핵심 전제 목록(C1), 동적 영향 순위(C2), '모르겠다' 도움(C3), 충돌 정리(C5), 미준비 전공 안내, 특용작물 probe 문서 | P12: industrial_insects plan/evidence commands and built-in reuse guidance | P13: D4 identity-catalogue-only precedence guidance | P14: fruit_trees read-only production and inventory check link | P17: rda-lookup verification-state guidance sentence (verified is observation confirmation, not approval; unverified/ambiguous/series and 옮기지 말 것 labels never copied) | P18: industrial_insects 0.2.0 product lines, plan without selection, rebinding guidance | P21 C1: seo-minseo template materialize-c1 --ref SEO + formula_patch application guidance | P22: 학생 오류·불편 신고 안내 한 줄과 신고 절 | P23: C1b option-A assumption and copy-only guidance merged with #22 student-report section | P25: option-A 실지급 확인을 interview-guide Q2-2 문항에 연결하고 경영주 예외(경영주 인출은 급여·가계비 규칙, 중복 반영 금지)를 명시하는 문장군 — FIX1 | P25: 중복된 경영주 급여 설명을 정리하고 기존 option-A 문장을 경영주 예외와 일치시킴 — FIX2 | P26: 첫 진입 알림·업데이트 경로·7단계 단위 보고 목록 | P26 F1: progress grouping is deterministic for consecutive finished and remaining stages | P26 F2: OS lock | P27: 진입 계약 재구성(22KB 이하, 절단 재읽기 규칙, 불변 조건 앞배치), 완전 자동 업데이트 첫 진입(auto·S1·S2), D5 A안 위임, D3 비공개 신고, D7 Windows 범위, import --offline-confirmed·doctor --probe 안내, 전공·출력 상세를 majors.md·outputs.md로 분리 | P27 검토 r1: 첫 진입 결과별 안내를 update.md 표와 1:1로, 0.1.x 업데이트 경로 구분(R1-05) | P27 검토 r2: user_files_in_skill 문구(원래 배포본과 다른 파일), install_manifest_invalid·legacy_reference_unavailable 첫 진입 안내 | P28: thesis-level/figure-photo-policy 링크 추가 (이유림 기준 전환·사진 정책) | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes. | PR-4 ORDER-A: 본문 전 재무 게이트 — 불변4의 적자 서술을 게이트 조건 아래로 묶고 복구 참고 문서 4개 링크; I remeasured final bytes. | N1-N5/X1: built-in guidance, extract source binding and restored tool links. | ORDER-I2: remeasured final 0.1.5 file bytes after preserving PR32 inputs. | AMEND-I2-1 R3: explain source-register snapshot then canonical sources apply and profile revision. | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
+   "reason": "H11 문서 정정: 사용자 명시 모델도 임의 폴백·대체 금지 규칙 추가 | P5-D1 guidance sync: new '참고자료 폴더 등록' bullet documents the frozen source-scan→source-resolve→source-register→source-view lifecycle and 03_sources.md preservation | P6: document explicit major binding and current industrial insect capability boundary | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P8: fruit_trees plan-only capability and guidance link | P9: hort_env_systems plan-only capability and guidance link | P10: P9: common XLSX template rule + X02 layout guard sentence | P9-D3: major-specific workbook precedence sentence (hort_env_systems base = registered H01) | P11 공용 인터뷰 규칙: 전공별 핵심 전제 목록(C1), 동적 영향 순위(C2), '모르겠다' 도움(C3), 충돌 정리(C5), 미준비 전공 안내, 특용작물 probe 문서 | P12: industrial_insects plan/evidence commands and built-in reuse guidance | P13: D4 identity-catalogue-only precedence guidance | P14: fruit_trees read-only production and inventory check link | P17: rda-lookup verification-state guidance sentence (verified is observation confirmation, not approval; unverified/ambiguous/series and 옮기지 말 것 labels never copied) | P18: industrial_insects 0.2.0 product lines, plan without selection, rebinding guidance | P21 C1: seo-minseo template materialize-c1 --ref SEO + formula_patch application guidance | P22: 학생 오류·불편 신고 안내 한 줄과 신고 절 | P23: C1b option-A assumption and copy-only guidance merged with #22 student-report section | P25: option-A 실지급 확인을 interview-guide Q2-2 문항에 연결하고 경영주 예외(경영주 인출은 급여·가계비 규칙, 중복 반영 금지)를 명시하는 문장군 — FIX1 | P25: 중복된 경영주 급여 설명을 정리하고 기존 option-A 문장을 경영주 예외와 일치시킴 — FIX2 | P26: 첫 진입 알림·업데이트 경로·7단계 단위 보고 목록 | P26 F1: progress grouping is deterministic for consecutive finished and remaining stages | P26 F2: OS lock | P27: 진입 계약 재구성(22KB 이하, 절단 재읽기 규칙, 불변 조건 앞배치), 완전 자동 업데이트 첫 진입(auto·S1·S2), D5 A안 위임, D3 비공개 신고, D7 Windows 범위, import --offline-confirmed·doctor --probe 안내, 전공·출력 상세를 majors.md·outputs.md로 분리 | P27 검토 r1: 첫 진입 결과별 안내를 update.md 표와 1:1로, 0.1.x 업데이트 경로 구분(R1-05) | P27 검토 r2: user_files_in_skill 문구(원래 배포본과 다른 파일), install_manifest_invalid·legacy_reference_unavailable 첫 진입 안내 | P28: thesis-level/figure-photo-policy 링크 추가 (이유림 기준 전환·사진 정책) | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes. | PR-4 ORDER-A: 본문 전 재무 게이트 — 불변4의 적자 서술을 게이트 조건 아래로 묶고 복구 참고 문서 4개 링크; I remeasured final bytes. | N1-N5/X1: built-in guidance, extract source binding and restored tool links. | ORDER-I2: remeasured final 0.1.5 file bytes after preserving PR32 inputs. | AMEND-I2-1 R3: explain source-register snapshot then canonical sources apply and profile revision. | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13. | PR41 P1: macOS Excel fail-closed before staging/transport; no native proof; synthetic Office contracts preserved.",
    "source": "new"
   },
   "skills/knuaf-doc/install-manifest.json": {
-   "after_sha256": "8b2368f78bd0da09a55aff78347e3d4fc2be071af1ffc6ef862a8b7fb901da02",
+   "after_sha256": "04c6cb4c71b29fee13d5da75ca7119142d8ba88638d1d6441fe5ca0c199c4f61",
    "before_sha256": null,
    "first_changed": "P27",
    "last_changed": "P28",
    "owner": "P28",
-   "reason": "P27: 설치본 배포 파일 목록(상대경로→sha256) — 자동 업데이트 보존 판정 기준 | P27 r3 재생성(legacy-release-hashes.json 포함 149항목) | P28: 재생성 — 신규 references 4건 포함 | P28 integration: gg_update.py manifest --write로 최신 배포 바이트 목록 재생성 | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존 | F2: V2 재확인 수용에 따라 같은 파서 계층의 첫 장/장 경계와 원문 span을 적용하고 명시적 외부 유형 충돌 거부·수동 신뢰 계약을 문서화; 설치 manifest 재생성. 기초 정본·단계·부모 계보·원본 source pin 보존 | F3: 전역 Markdown 유무 판정을 제거하고 prefix-only 공통 제목 규칙·요약 단일 종료·번호 공백 문법으로 통일; 설치 manifest 재생성. 원본/부모 계보·stage·source pin 보존 | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes. | PR-4 ORDER-I: install manifest regenerated for ORDER-A file bytes; I remeasured final bytes. | PR-4 ORDER-I: install manifest regenerated with restored references; I remeasured final bytes. | PR-4 ORDER-I: install manifest regenerated for 0.1.3 bytes; I remeasured final bytes. | F1: regenerate existing install-file fingerprints for reviewed findings. | F2 P1: refresh existing install fingerprints. | F3: refresh existing install fingerprints for the P2 patch. | Restore v0.1.4: regenerate all installed-file fingerprints with gg_update.py. | ORDER-I2: remeasured final 0.1.5 file bytes after preserving PR32 inputs. | AMEND-I2-1 regenerate installation fingerprints after R1-R3 amendments. | Windows native publication: handle identity, binary I/O, checked paths, owner cleanup and publication scope | Window-hygiene Office-only scope: refreshed reviewed bytes and strict +2 declaration/new/approval counts; no browser product reference or live Office validation.",
+   "reason": "P27: 설치본 배포 파일 목록(상대경로→sha256) — 자동 업데이트 보존 판정 기준 | P27 r3 재생성(legacy-release-hashes.json 포함 149항목) | P28: 재생성 — 신규 references 4건 포함 | P28 integration: gg_update.py manifest --write로 최신 배포 바이트 목록 재생성 | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존 | F2: V2 재확인 수용에 따라 같은 파서 계층의 첫 장/장 경계와 원문 span을 적용하고 명시적 외부 유형 충돌 거부·수동 신뢰 계약을 문서화; 설치 manifest 재생성. 기초 정본·단계·부모 계보·원본 source pin 보존 | F3: 전역 Markdown 유무 판정을 제거하고 prefix-only 공통 제목 규칙·요약 단일 종료·번호 공백 문법으로 통일; 설치 manifest 재생성. 원본/부모 계보·stage·source pin 보존 | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes. | PR-4 ORDER-I: install manifest regenerated for ORDER-A file bytes; I remeasured final bytes. | PR-4 ORDER-I: install manifest regenerated with restored references; I remeasured final bytes. | PR-4 ORDER-I: install manifest regenerated for 0.1.3 bytes; I remeasured final bytes. | F1: regenerate existing install-file fingerprints for reviewed findings. | F2 P1: refresh existing install fingerprints. | F3: refresh existing install fingerprints for the P2 patch. | Restore v0.1.4: regenerate all installed-file fingerprints with gg_update.py. | ORDER-I2: remeasured final 0.1.5 file bytes after preserving PR32 inputs. | AMEND-I2-1 regenerate installation fingerprints after R1-R3 amendments. | Windows native publication: handle identity, binary I/O, checked paths, owner cleanup and publication scope | Window-hygiene Office-only scope: refreshed reviewed bytes and strict +2 declaration/new/approval counts; no browser product reference or live Office validation. | PR41 P1: synchronized macOS Excel HOLD product hashes.",
    "source": "new"
   },
   "skills/knuaf-doc/references/benchmark-packs/aliases/crop-aliases.specialty_crops.json": {
@@ -745,12 +745,12 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/outputs.md": {
-   "after_sha256": "76a84413368f0316caa2ae02038d336d0110a5d29ed4e7699c85cbb7c5a68841",
+   "after_sha256": "d586c4cbaab130f001fab1e5f60edb07a2f59a4d4ccf7a8261456f21e9dc244d",
    "before_sha256": null,
    "first_changed": "P27",
    "last_changed": "P27",
    "owner": "P27",
-   "reason": "P27: SKILL.md에서 옮긴 출력 명령·한계(뜻 불변) | Window-hygiene Office-only scope: refreshed reviewed bytes and strict +2 declaration/new/approval counts; no browser product reference or live Office validation.",
+   "reason": "P27: SKILL.md에서 옮긴 출력 명령·한계(뜻 불변) | Window-hygiene Office-only scope: refreshed reviewed bytes and strict +2 declaration/new/approval counts; no browser product reference or live Office validation. | PR41 P1: macOS Excel fail-closed before staging/transport; no native proof; synthetic Office contracts preserved.",
    "source": "new"
   },
   "skills/knuaf-doc/references/package-install.md": {
@@ -1329,20 +1329,20 @@
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_office.py": {
-   "after_sha256": "fcbfb315f4a319b59613d61dc2f1599087231d1d9f0ed2557916c299852ddba2",
+   "after_sha256": "056fcfe425fcd62a3aadd66e7724d39d3638636e8da2e3cdd2346df08a6070f2",
    "before_sha256": "64b4f8790da95e583cfb06ba4e216999a932e4d570953ad2a681bca19d270a0a",
    "first_changed": "P1",
    "last_changed": "P27",
    "owner": "P27",
-   "reason": "C6: run_windows_com이 helper 생성 전 WINDOWS_COM_BLOCKED 반환. H15: visible 시트만 계수. C2: UTF-8 | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P20: spec JSON 엄격 파싱(중복키·비유한 수 거부), 공용 _preflight_excel_profile, hort transform 영수증 바인딩·계보 시작 스키마·native 영수증 finance_profile | P27: K2-02: CLI 진입점 stdout·stderr UTF-8 재설정 | Window-hygiene Office-only scope: refreshed reviewed bytes and strict +2 declaration/new/approval counts; no browser product reference or live Office validation.",
+   "reason": "C6: run_windows_com이 helper 생성 전 WINDOWS_COM_BLOCKED 반환. H15: visible 시트만 계수. C2: UTF-8 | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P20: spec JSON 엄격 파싱(중복키·비유한 수 거부), 공용 _preflight_excel_profile, hort transform 영수증 바인딩·계보 시작 스키마·native 영수증 finance_profile | P27: K2-02: CLI 진입점 stdout·stderr UTF-8 재설정 | Window-hygiene Office-only scope: refreshed reviewed bytes and strict +2 declaration/new/approval counts; no browser product reference or live Office validation. | PR41 P1: macOS Excel fail-closed before staging/transport; no native proof; synthetic Office contracts preserved.",
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_office_session.py": {
-   "after_sha256": "f5731b54cc9a30bf7abb280890c9214adaeebb7d90d56215c4d1028f1ea9199e",
+   "after_sha256": "e4b5a7b10ef2210a1439c165577137f42b66bdfb5834ee8f20607386be4f7b8e",
    "before_sha256": null,
    "first_changed": "P28",
    "owner": "P27",
-   "reason": "Window-hygiene Office-only scope: exact owned-document path/saved-state preservation; fake transport and POSIX fixture tests only. Browser references excluded; no live Office/native support claim.",
+   "reason": "Window-hygiene Office-only scope: exact owned-document path/saved-state preservation; fake transport and POSIX fixture tests only. Browser references excluded; no live Office/native support claim. | PR41 P1: macOS Excel fail-closed before staging/transport; no native proof; synthetic Office contracts preserved.",
    "source": "new; window-hygiene Office-only reviewed worktree bytes; fake transport/own fixtures, no browser reference"
   },
   "skills/knuaf-doc/scripts/gg_office_win.py": {
@@ -1825,12 +1825,12 @@
    "source": "new"
   },
   "tests/test_major_guard_outputs.py": {
-   "after_sha256": "e1e30088440835a41fa0e7dea3be9c94e01a3e20329201b4a92d74be6f0a4b2d",
+   "after_sha256": "7bcfdb3284bfc647114563f307bce33af027ceb81615b243fddab63ce3af3f1d",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
    "owner": "P28",
-   "reason": "P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
+   "reason": "P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13. | PR41 P1: macOS Excel fail-closed before staging/transport; no native proof; synthetic Office contracts preserved.",
    "source": "new"
   },
   "tests/test_p2_core.py": {
@@ -1961,11 +1961,11 @@
    "source": "new"
   },
   "tests/test_window_hygiene.py": {
-   "after_sha256": "71ead37999a715436c963ade2ba970e4f60aade8f322a48a8ed889e5a1adacbb",
+   "after_sha256": "503571e58616d30228f56d55286b4177c8fc535a5bfb3f3b6f479c79dea6bf67",
    "before_sha256": null,
    "first_changed": "P28",
    "owner": "B",
-   "reason": "Window-hygiene Office-only scope: exact owned-document path/saved-state preservation; fake transport and POSIX fixture tests only. Browser references excluded; no live Office/native support claim.",
+   "reason": "Window-hygiene Office-only scope: exact owned-document path/saved-state preservation; fake transport and POSIX fixture tests only. Browser references excluded; no live Office/native support claim. | PR41 P1: macOS Excel fail-closed before staging/transport; no native proof; synthetic Office contracts preserved.",
    "source": "new; window-hygiene Office-only reviewed worktree bytes; fake transport/own fixtures, no browser reference"
   }
  },

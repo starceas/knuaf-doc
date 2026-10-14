@@ -16,13 +16,13 @@ SKILL.md "출력 지원 한계" 절의 상세다. 출력 생성·등록 경로�
 
 최신 UI 접근 오류 `-10005`의 진단·해결과 실제 앱 검증은 이번 단위 fixture 검사 범위에서 제외한다.
 
-Excel 자동화는 자동 계산 모드만 대상으로 하며 수동 계산 모드는 `manual_calculation_not_supported`로 자동 작업을 보류한다. 앱 전체 재계산으로 대체하지 않고 작업 통합문서의 시트별 used range를 대상으로 한다. 교차시트 의존성·캐시 정확성과 PDF 내용은 산출물로 별도 확인해야 한다.
+**모든 macOS Excel 자동 변환은 보류한다.** 정확한 작업 통합문서 전체의 수식 의존성 계산을 지원한다는 근거가 없어, 기존 전공 권한·재무 프로필 확인 뒤 스테이징 전에 `owned_workbook_recalculation_unproven`으로 중단한다. 정상·단순·무수식 파일이나 명세·입력 영수증이 있는 파일도 같은 보류 대상이다. 앱 조회·열기·계산·저장·PDF·닫기 및 성공 발행에 진입하지 않으며, CLI는 `held`와 종료 코드 2를 반환한다. 시트별 used range 계산은 제거했고 앱 전체 계산·자동모드 변경·매크로·반복 계산으로 우회하지 않는다. 이는 변환 기능 복구가 아닌 의도적 기능 보류다.
 
-`scripts/gg_office.py`는 macOS Office 샌드박스 파일 접근을 지원하기 위해 전용 그룹 컨테이너(`~/Library/Group Containers/UBF8T346G9.Office/ginseng-goat/`) 작업영역에서 원본을 불변으로 격리 스테이징하여 변환한다. **이 단계는 macOS만 지원한다 — Windows는 작성·검토본(DOCX·XLSX 생성, 검토)까지 지원하고 Office 자동 재계산·PDF 변환은 지원하지 않는다.**
+`scripts/gg_office.py word`는 macOS Office 샌드박스 파일 접근을 지원하기 위해 전용 그룹 컨테이너(`~/Library/Group Containers/UBF8T346G9.Office/ginseng-goat/`) 작업영역에서 원본을 불변으로 격리 스테이징하여 변환한다. **Word 변환은 macOS만 지원한다. macOS Excel 변환은 위 사유로 보류하며, Windows는 작성·검토본(DOCX·XLSX 생성, 검토)까지 지원하고 Office 자동 재계산·PDF 변환은 지원하지 않는다.**
 
 - Word: `scripts/gg_office.py word <문서.docx> --out-dir <새폴더> --project <정본 폴더> --major <전공ID>` (인쇄 모양 목차/색인 필드 2회 갱신 및 PDF 동시 출력)
-- Excel: `scripts/gg_office.py excel <재무.xlsx> --out-dir <새폴더> --project <정본 폴더> --major <전공ID> [--spec <명세.json> 또는 --template-receipt <입력영수증.json>]` (전 시트 used range 재계산 및 단일 세션 PDF 내보내기)
-- 일괄: `scripts/gg_office.py batch <파일1.docx> <파일2.docx> <파일1.xlsx> <파일2.xlsx> --out-dir <새폴더> --project <정본 폴더> --major <전공ID>` (UI 클릭 없는 연속 실행, 앱별 최초 권한/시간초과 시 즉시 중단)
+- Excel: `scripts/gg_office.py excel <재무.xlsx> --out-dir <새폴더> --project <정본 폴더> --major <전공ID> [--spec <명세.json> 또는 --template-receipt <입력영수증.json>]` (macOS에서는 권한·프로필 확인 뒤 변환 보류, 새 XLSX/PDF·성공 영수증 생성 없음)
+- 일괄: `scripts/gg_office.py batch <파일1.docx> <파일2.docx> <파일1.xlsx> <파일2.xlsx> --out-dir <새폴더> --project <정본 폴더> --major <전공ID>` (macOS Excel 단계에서 전체 배치 중단. 뒤의 Word도 미처리하며 앞서 발행된 항목은 되돌리지 않음. 기존 전체 입력 권한·프로필 사전 확인 및 Word 권한/시간초과 중단 계약 유지)
 
 산출물은 새 목적지 폴더에만 무덮어쓰기로 발행되며, 원본은 유지된다. Office 변환 및 기계 검사 완료는 최종 교수 승인이 아니며 최종 제출 완료로 자동 승격되지 않는다.
 

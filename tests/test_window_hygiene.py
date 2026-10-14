@@ -4,15 +4,18 @@ No Office launch or user files. Script checks cover targeting syntax; native
 AppleScript semantics and saved output caches require separate app evidence.
 """
 import copy
+import contextlib
+import io
 import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest import mock
 
-from tests._harness import runtime
+from tests._harness import ContractCase, bind_major, runtime
 
 try:
     import fcntl
@@ -180,11 +183,12 @@ class OfficeSessionTests(unittest.TestCase):
     def test_app_locks_are_independent(self):
         import fcntl
         self.guard.mkdir()
-        fd = os.open(self.guard / "word.lock", os.O_RDWR | os.O_CREAT, 0o600)
+        # Excel execution is held, but its lock must not block Word.
+        fd = os.open(self.guard / "excel.lock", os.O_RDWR | os.O_CREAT, 0o600)
         self.addCleanup(os.close, fd)
         fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         raw = self.transport()
-        self.assertEqual(self.run_job(raw, kind="excel").returncode, 0)
+        self.assertEqual(self.run_job(raw, kind="word").returncode, 0)
         self.assertEqual(raw.call_count, 2)
 
     def test_inflight_crash_and_malformed_lock_fail_closed(self):
@@ -201,6 +205,18 @@ class OfficeSessionTests(unittest.TestCase):
                                ("excel", self.session.EXCEL_APPLESCRIPT_TEMPLATE)]:
             with self.subTest(kind=kind):
                 text = template.format(timeout=9)
+                if kind == "excel":
+                    self.assertIn(self.session.EXCEL_RECALCULATION_HOLD, text)
+                    self.assertIn("error ", text)
+                    for operation in ("tell application", "open workbook", "calculate",
+                                      "save ", "save as ", "close ", "used range"):
+                        self.assertNotIn(operation, text)
+                    self.assertNotIn("saving no", text)
+                    self.assertNotIn("quit", text)
+                    self.assertNotIn("active workbook", text)
+                    self.assertNotIn("workbook 1", text)
+                    self.assertNotIn("repeat 2 times", text)
+                    continue
                 self.assertNotIn("saving no", text)
                 self.assertNotIn("quit", text)
                 self.assertNotIn("active document", text)
@@ -217,11 +233,6 @@ class OfficeSessionTests(unittest.TestCase):
                 self.assertIn("close (" + target + ") saving ask", text)
                 self.assertLess(text.index("if not (saved of"), text.index("close ("))
                 self.assertNotIn("close ", text.split("on error messageText", 1)[1])
-                if kind == "excel":
-                    self.assertNotIn("workbook 1", text)
-                    self.assertIn("manual_calculation_not_supported", text)
-                    self.assertNotIn("repeat 2 times", text)
-                    self.assertNotIn("calculate full", text)
 
     def test_failure_after_confirmed_close_reports_cleanup_separately(self):
         res = self.run_job(self.transport())
@@ -258,6 +269,163 @@ class OfficeSessionTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.run_job(raw)
         raw.assert_not_called()
+
+
+class DarwinExcelHoldTests(ContractCase):
+    """No native transport: the accepted P1 disposition holds all Excel jobs."""
+
+    HOLD = "owned_workbook_recalculation_unproven"
+
+    def setUp(self):
+        self.office = runtime("gg_office")
+        self.session = runtime("gg_office_session")
+        self.mc = runtime("gg_major_contract")
+        self.root = self.make_project()
+        bind_major(self.root)
+        self.context = self.mc.output_context(self.root, "specialty_crops")
+        self.out = self.root / "new-output"
+        self.workspace = self.root / "new-workspace"
+
+    def workbook(self, name, *, sheets=1, formulas=True):
+        from openpyxl import Workbook
+        wb = Workbook()
+        for i in range(sheets):
+            ws = wb.active if i == 0 else wb.create_sheet()
+            ws.title = "S" + str(i + 1)
+            ws["A1"] = "=1+1" if formulas else 2
+        path = self.root / (name + ".xlsx")
+        wb.save(path)
+        return path
+
+    def test_public_legacy_spec_receipt_multisheet_and_no_formula_hold(self):
+        for case in ("legacy", "spec", "receipt", "multi-sheet", "no-formula"):
+            source = self.workbook(case, sheets=3 if case == "multi-sheet" else 1,
+                                   formulas=case != "no-formula")
+            kwargs = {}
+            if case == "spec":
+                spec = self.root / "spec.json"
+                spec.write_text(json.dumps({"major_id": "specialty_crops",
+                    "profile": "school_17_sheet_v1"}), encoding="utf-8")
+                kwargs["spec_file"] = spec
+            if case == "receipt":
+                digest = self.office.compute_sha256(source.read_bytes())
+                receipt = self.root / "fill.json"
+                receipt.write_text(json.dumps({
+                    "schema": "gg-xlsx-fill-receipt/v1", "written": ["A1"],
+                    "template": {"path": str(source), "sha256": digest},
+                    "map": {"path": str(source), "sha256": digest},
+                    "values": {"path": str(source), "sha256": digest},
+                    "output": {"status": "filled", "sha256": digest},
+                }), encoding="utf-8")
+                kwargs["template_receipt"] = receipt
+            before = self._tree_bytes(self.root)
+            with self.subTest(case=case), mock.patch.object(sys, "platform", "darwin"), \
+                    mock.patch.object(self.office, "_authorize_office",
+                        wraps=self.office._authorize_office) as auth, \
+                    mock.patch.object(self.office, "_preflight_excel_profile",
+                        wraps=self.office._preflight_excel_profile) as profile, \
+                    mock.patch.object(self.office, "stage_job",
+                        side_effect=AssertionError("STAGE_REACHED")) as stage, \
+                    mock.patch.object(self.office, "_run_excel_engine") as engine, \
+                    mock.patch.object(self.office, "_publish_outputs") as publish, \
+                    mock.patch.object(self.office, "_run_osascript_raw") as raw:
+                with self.assertRaises(self.mc.OutputHeldError) as held:
+                    self.office.process_excel(source, self.out,
+                        workspace=self.workspace, context=self.context, **kwargs)
+                self.assertEqual(self.HOLD, held.exception.reason)
+                auth.assert_called_once()
+                profile.assert_called_once()
+                for boundary in (stage, engine, publish, raw):
+                    boundary.assert_not_called()
+            self.assertEqual(before, self._tree_bytes(self.root))
+            self.assertFalse(self.workspace.exists())
+            self.assertFalse(self.out.exists())
+
+    def test_low_level_guard_holds_before_inventory_or_session_writes(self):
+        folder = self.root / "job-direct" / "output"
+        folder.mkdir(parents=True)
+        work = folder / "synthetic.xlsx"
+        work.write_bytes(b"synthetic staged workbook")
+        pdf = folder / "synthetic.pdf"
+        guard = self.root / "new-guards"
+        raw = mock.Mock(side_effect=lambda script, args, **kw:
+            subprocess.CompletedProcess([], 0, "GG_OFFICE_INVENTORY|0" if not args
+                else "GG_OFFICE_SESSION|closed|saved|synthetic", ""))
+        prepare = mock.Mock()
+        def guarded(*args, **kwargs):
+            return self.session.run_session(*args, **kwargs, guard_dir=guard)
+        script = self.session.EXCEL_APPLESCRIPT_TEMPLATE.format(timeout=9)
+        unsafe = self.session.SESSION_MARKER + '\ntell application "Microsoft Excel" to calculate'
+        calls = (
+            lambda: self.office._run_excel_engine(work, pdf, timeout=9),
+            lambda: self.office.run_osascript(unsafe, [str(work), str(pdf)], 9),
+            lambda: self.session.run_session("excel", script, [str(work), str(pdf)], 9,
+                run_raw=raw, prepare_word=prepare, guard_dir=guard),
+        )
+        before = self._tree_bytes(self.root)
+        for number, call in enumerate(calls):
+            with self.subTest(entry=number), mock.patch.object(sys, "platform", "darwin"), \
+                    mock.patch.object(self.office, "run_session", side_effect=guarded), \
+                    mock.patch.object(self.office, "_run_osascript_raw", raw):
+                with self.assertRaises(self.mc.OutputHeldError) as held:
+                    call()
+                self.assertEqual(self.HOLD, held.exception.reason)
+            raw.assert_not_called()
+            prepare.assert_not_called()
+            self.assertEqual(before, self._tree_bytes(self.root))
+            self.assertFalse(guard.exists())
+            self.assertFalse(pdf.exists())
+
+    def test_cli_and_mixed_batch_stop_at_excel_without_publishing(self):
+        source = self.workbook("batch")
+        first, later = self.root / "before.docx", self.root / "after.docx"
+        from docx import Document
+        for path in (first, later):
+            doc = Document()
+            doc.add_paragraph("synthetic Word input")
+            doc.save(path)
+        prior = self.root / "prior-word.pdf"
+        def word(path, *args, **kwargs):
+            prior.write_bytes(b"synthetic previously published Word PDF")
+            return {"status": "converted"}
+        with mock.patch.object(sys, "platform", "darwin"), \
+                mock.patch.object(self.office, "stage_job",
+                    side_effect=AssertionError("STAGE_REACHED")) as stage, \
+                mock.patch.object(self.office, "_run_excel_engine") as engine, \
+                mock.patch.object(self.office, "_publish_outputs") as publish, \
+                mock.patch.object(self.office, "_run_osascript_raw") as raw, \
+                mock.patch.object(self.office, "process_word", side_effect=word) as words:
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                rc = self.office.main(["excel", str(source), "--out-dir", str(self.out),
+                    "--project", str(self.root), "--major", "specialty_crops"])
+            self.assertEqual(2, rc)
+            result = json.loads(stdout.getvalue())
+            self.assertEqual("held", result["status"])
+            self.assertEqual(self.HOLD, result["reason"])
+            with self.assertRaises(self.mc.OutputHeldError) as held:
+                self.office.process_batch([first, source, later], self.out,
+                    workspace=self.workspace, context=self.context)
+            self.assertEqual(self.HOLD, held.exception.reason)
+            words.assert_called_once()
+            self.assertEqual(first, words.call_args.args[0])
+            self.assertEqual(b"synthetic previously published Word PDF", prior.read_bytes())
+            for boundary in (stage, engine, publish, raw):
+                boundary.assert_not_called()
+        self.assertFalse(self.workspace.exists())
+        self.assertFalse(self.out.exists())
+
+    def test_word_and_windows_dispatch_keep_their_contracts(self):
+        result = subprocess.CompletedProcess([], 0, "synthetic", "")
+        with mock.patch.object(sys, "platform", "darwin"), \
+                mock.patch.object(self.office, "run_osascript", return_value=result) as raw:
+            self.assertIs(result, self.office._run_word_engine(Path("a.docx"), Path("a.pdf")))
+            raw.assert_called_once()
+        with mock.patch.object(sys, "platform", "win32"), \
+                mock.patch.object(self.office, "run_windows_com", return_value=result) as com:
+            self.assertIs(result, self.office._run_excel_engine(Path("a.xlsx"), Path("a.pdf")))
+            self.assertEqual("excel", com.call_args.args[0])
+            com.assert_called_once()
 
 
 if __name__ == "__main__":
