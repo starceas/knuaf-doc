@@ -905,6 +905,124 @@ def rebind_after_rename(capability, *, previous_root, new_root):
     return None
 
 
+def move_workspace_windows(capability, *, destination, source_identity,
+                           source_parent_identity, destination_parent_identity):
+    """R5: park the same locked guard name outside the owned moving tree.
+
+    Caller has closed inventories/readers. Never unlock/reacquire, copy,
+    unlink or create a guard. Ambiguous locations stop further name moves.
+    Only publication's Windows import branch calls this procedure.
+    """
+    root, dst = Path(capability.root), Path(destination)
+    assert_held(capability, root)
+    park = root.parent / (".gg-import-guard-" + capability.token)
+    original_guard = root / LOCK_DIR / GUARD_NAME
+    paths = [str(root), str(dst), str(park)]
+    errors = []
+    fd = capability._fd
+    guard_id = capability.guard_identity
+
+    def live_guard():
+        if (_CAPS.get(capability.token) is not capability
+                or capability.released or capability.pid != os.getpid()
+                or capability._fd != fd):
+            raise LockError("invalid_capability", "guard_continuity_changed")
+        if not gg_fs.same_identity(gg_fs.fd_identity(fd, kind="file"), guard_id):
+            raise LockError("invalid_capability", "guard_identity_mismatch")
+
+    def known(path, kind):
+        try:
+            return gg_fs.identity(path, kind=kind)
+        except gg_fs.FsError as error:
+            if error.reason == "stat_failed" and error.detail.get("code") == errno.ENOENT:
+                return None
+            raise
+
+    def result(state, reason):
+        return gg_fs.FsWriteResult(state, reason, dst,
+            identity_value=source_identity if state == "installed" else None,
+            preserved_paths=paths, cleanup_errors=list(errors))
+
+    def move_guard_name(src, target, src_parent_id, target_parent_id, operation):
+        # A normal file publish hashes bytes through a second fd, which is
+        # forbidden for this byte-locked guard. Verify metadata identity only.
+        with gg_winfs.Directory(src.parent), gg_winfs.Directory(target.parent):
+            live_guard()
+            gg_fs.assert_identity(src.parent, src_parent_id)
+            gg_fs.assert_identity(target.parent, target_parent_id)
+            gg_fs.assert_identity(src, guard_id)
+            try:
+                gg_fs._os_rename_noreplace(src, target)
+            except OSError as error:
+                errors.append({"operation": operation, "reason": str(error),
+                               "code": error.errno,
+                               "winerror": getattr(error, "winerror", None)})
+            live_guard()
+            gg_fs.assert_identity(src.parent, src_parent_id)
+            gg_fs.assert_identity(target.parent, target_parent_id)
+            src_id, target_id = known(src, "file"), known(target, "file")
+            if src_id is None and gg_fs.same_identity(target_id, guard_id):
+                return "installed"
+            if gg_fs.same_identity(src_id, guard_id) and not gg_fs.same_identity(target_id, guard_id):
+                return "not_installed"
+            return "unknown"
+
+    try:
+        gg_fs.assert_identity(root, source_identity)
+        gg_fs.assert_identity(root.parent, source_parent_identity)
+        gg_fs.assert_identity(dst.parent, destination_parent_identity)
+        parked = move_guard_name(original_guard, park, capability.directory_identity,
+                                 source_parent_identity, "guard_park")
+        if parked != "installed":
+            if parked == "not_installed":
+                assert_held(capability, root)
+            return result(parked, "guard_park_" + parked)
+
+        # move_guard_name has closed every subtree/parent pin. The original
+        # registered fd and byte lock stay live while root is renamed once.
+        live_guard()
+        renamed = gg_fs.rename_noreplace(root, dst, source_identity=source_identity,
+            source_parent_identity=source_parent_identity,
+            destination_parent_identity=destination_parent_identity)
+        errors.extend(renamed.get("cleanup_errors") or [])
+        errors.extend(renamed.get("rename_diagnostics") or [])
+        live_guard()
+        gg_fs.assert_identity(root.parent, source_parent_identity)
+        gg_fs.assert_identity(dst.parent, destination_parent_identity)
+        if renamed["state"] == "unknown":
+            return result("unknown", renamed.get("reason") or "root_rename_unknown")
+        root_id, dst_id = known(root, "directory"), known(dst, "directory")
+        if renamed["state"] == "not_installed":
+            if (not gg_fs.same_identity(root_id, source_identity)
+                    or gg_fs.same_identity(dst_id, source_identity)):
+                return result("unknown", "root_not_installed_unverified")
+            restored = move_guard_name(park, original_guard, source_parent_identity,
+                                      capability.directory_identity, "guard_restore_source")
+            if restored != "installed":
+                return result("unknown", "guard_restore_source_" + restored)
+            assert_held(capability, root)
+            return result("not_installed", renamed.get("reason") or "root_not_installed")
+        if root_id is not None or not gg_fs.same_identity(dst_id, source_identity):
+            return result("unknown", "root_install_unverified")
+        returned = move_guard_name(park, dst / LOCK_DIR / GUARD_NAME,
+            source_parent_identity, capability.directory_identity, "guard_restore_destination")
+        if returned != "installed":
+            return result("unknown", "guard_restore_destination_" + returned)
+        live_guard()
+        gg_fs.assert_identity(dst, source_identity)
+        gg_fs.assert_identity(dst / LOCK_DIR, capability.directory_identity)
+        gg_fs.assert_identity(dst / LOCK_DIR / GUARD_NAME, guard_id)
+        _p, data, _pi = _read_protocol(dst / LOCK_DIR)
+        if gg_fs.sha256_bytes(data) != capability.protocol_sha256:
+            return result("unknown", "protocol_changed_after_guard_return")
+        return result("installed", None)
+    except (OSError, ValueError) as error:
+        errors.append({"operation": "workspace_guard_move", "reason": str(error),
+                       "code": getattr(error, "errno", None),
+                       "winerror": getattr(error, "winerror", None)})
+        return result("unknown", "workspace_guard_move_unverifiable")
+
+
 def cleanup_owner(root):
     """The 'unlock' operation: acquire the ready v2 guard once, then
     remove only the stale owner record. Busy/unavailable/legacy/damaged

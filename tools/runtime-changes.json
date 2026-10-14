@@ -194,7 +194,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/install-manifest.json": {
-   "after_sha256": "a2f600735124593718eb3f2e0fe836ffaf6e1d80a33dfffd3809846e0883bf3f",
+   "after_sha256": "da08bcfc384f83bf8ab9502042e601927d11742f461dab44beedb88509981eae",
    "before_sha256": null,
    "first_changed": "P27",
    "last_changed": "P28",
@@ -644,7 +644,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/locking.md": {
-   "after_sha256": "afb90c6de8a94a22af7d60139a2622d2bd33627f0d6427ff664b6caa2d582799",
+   "after_sha256": "8da00100e88e933b3064ee42505b56f25a90f81c81661bf3dd05b6a20674dff2",
    "before_sha256": null,
    "first_changed": "P2",
    "last_changed": "P27",
@@ -941,7 +941,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_core.py": {
-   "after_sha256": "e8eefed9dad528c1d7fe9ec669f391dea0fb8bd8e3952347d44d26fab20eab8a",
+   "after_sha256": "da6be45f92746f7acae159b2ace0bf8195299e19ec3ff2ab6f6205259303b422",
    "amended_in": "P1-S01,P2-R7,P2-R8,P3-C1,Lanes15-28",
    "before_sha256": "b3491a931add687328bf561e7e7cd2aed3edd7a7fee374a28092e771d9124cc5",
    "first_changed": "P1",
@@ -1157,7 +1157,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_lock.py": {
-   "after_sha256": "b30ce7c2c5a799b3a380cff01ed6e1fe6827e824076fe8c020fcfd42ecc08049",
+   "after_sha256": "8ff8228189ee9e44633b836b50068843d5510cb188c9e98443c1ddc2f4ea0c40",
    "before_sha256": null,
    "first_changed": "P2",
    "owner": "B",
@@ -1210,7 +1210,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_publication.py": {
-   "after_sha256": "63abc0a502d914ccaa6a8daead898db5de816634827d9b3e248d26ee6f6e56aa",
+   "after_sha256": "a5718947447e8a4fde41b8c9ceaf177a0a9a2f6cac201e735864285e6c5fc971",
    "before_sha256": null,
    "first_changed": "P2",
    "owner": "C",

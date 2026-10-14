@@ -1329,12 +1329,21 @@ def publish_workspace(staging, capability, *, destination, intent, files):
     staging_parent_identity = _identity_of(staging.parent, "directory")
 
     try:
-        res = gg_fs.rename_noreplace(
-            str(staging), str(dst),
-            source_identity=staging_identity,
-            source_parent_identity=staging_parent_identity,
-            destination_parent_identity=dest_parent_identity)
+        if sys.platform == "win32":
+            res = gg_lock.move_workspace_windows(
+                capability, destination=str(dst), source_identity=staging_identity,
+                source_parent_identity=staging_parent_identity,
+                destination_parent_identity=dest_parent_identity)
+        else:
+            res = gg_fs.rename_noreplace(
+                str(staging), str(dst),
+                source_identity=staging_identity,
+                source_parent_identity=staging_parent_identity,
+                destination_parent_identity=dest_parent_identity)
     except OSError as e:
+        if sys.platform == "win32":
+            _fail(destination, "guarded import rename exception: " + str(e),
+                  preserved=[str(staging), str(dst)], state="indeterminate")
         return _after_import_rename_exception(
             destination, staging, staging_identity, receipt_sha, e)
     if res["state"] == "not_installed":
@@ -1346,7 +1355,10 @@ def publish_workspace(staging, capability, *, destination, intent, files):
             destination, checked, staging, receipt_sha)
     if res["state"] != "installed":
         _fail(destination, "import rename indeterminate: "
-              + str(res.get("reason")), preserved=[str(staging)],
+              + str(res.get("reason")),
+              preserved=(res.get("preserved_paths") or [str(staging)])
+              if sys.platform == "win32" else [str(staging)],
+              cleanup=(res.get("cleanup_errors") or []) if sys.platform == "win32" else [],
               state="indeterminate")
 
     cleanup = list(res.get("cleanup_errors") or [])

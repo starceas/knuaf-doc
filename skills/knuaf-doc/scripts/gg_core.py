@@ -5275,6 +5275,7 @@ def migrate(src, dest, *, offline_confirmed=False):
         tmp = tempfile.TemporaryDirectory(
             prefix=".gg-import-", dir=dest.parent
         )
+        preserve_tmp = False
         try:
             staged = Path(tmp.name) / "workspace"
             shutil.copytree(
@@ -5347,6 +5348,9 @@ def migrate(src, dest, *, offline_confirmed=False):
                             "import", "import_destination", "indeterminate",
                             "destination_publish_indeterminate",
                             publication_state=state, detail=str(error),
+                            **({"preserved_paths": [tmp.name, *getattr(error, "result", {}).get("preserved_paths", [])],
+                                "cleanup_errors": getattr(error, "result", {}).get("cleanup_errors", [])}
+                               if sys.platform == "win32" else {}),
                         ) from error
                     # Post-rename verification, protocol check and
                     # capability rebind are all inside publish_workspace;
@@ -5357,6 +5361,25 @@ def migrate(src, dest, *, offline_confirmed=False):
                 cleanup_type = getattr(lm, "LockCleanupError", None)
                 if cleanup_type is None or not isinstance(error, cleanup_type):
                     raise
+                prior = getattr(error, "prior_error", None)
+                if (sys.platform == "win32" and isinstance(prior, OperationError)
+                        and prior.result.get("commit_state") == "indeterminate"):
+                    prior.result["cleanup_errors"].append({"release": str(error),
+                        "release_confirmed": error.release_confirmed})
+                    raise prior from error
+                if (sys.platform == "win32" and prior is not None
+                        and not isinstance(prior, OperationError)):
+                    # Cancellation after parking proves neither non-installation
+                    # nor canonical guard restoration, even if dest is absent.
+                    raise _op(
+                        "import", "import_destination", "indeterminate",
+                        "staged_release_failed",
+                        detail=f"{type(prior).__name__}: {prior}",
+                        preserved_paths=[tmp.name, str(staged), str(dest),
+                            str(staged.parent / (".gg-import-guard-" + staged_cap.token))],
+                        cleanup_errors=[{"release": str(error),
+                            "release_confirmed": error.release_confirmed}],
+                    ) from error
                 raise _op(
                     "import", "import_destination",
                     "committed_cleanup_pending" if dest.exists()
@@ -5365,8 +5388,21 @@ def migrate(src, dest, *, offline_confirmed=False):
                     detail=str(error),
                     cleanup_errors=[{"release": str(error)}],
                 ) from error
+        except BaseException as error:
+            if (sys.platform == "win32" and not (isinstance(error, OperationError)
+                    and error.result.get("commit_state") == "not_committed")):
+                # Unknown guard/root location is evidence, including cancellation.
+                # Disable GC finalization as well as the explicit finally cleanup.
+                preserve_tmp = True
+                tmp._finalizer.detach()
+                if isinstance(error, OperationError):
+                    preserved = error.result.setdefault("preserved_paths", [])
+                    if tmp.name not in preserved:
+                        preserved.append(tmp.name)
+            raise
         finally:
-            tmp.cleanup()
+            if not preserve_tmp:
+                tmp.cleanup()
         try:
             load(dest)
             local(dest, ".gg-lock/protocol.json").read_bytes()
@@ -5410,9 +5446,14 @@ def migrate(src, dest, *, offline_confirmed=False):
         return migrated
     finally:
         if source_cap is not None:
+            prior = sys.exc_info()[1]
             try:
                 source_cap.__exit__(*sys.exc_info())
             except Exception as error:
+                if (sys.platform == "win32" and isinstance(prior, OperationError)
+                        and prior.result.get("commit_state") == "indeterminate"):
+                    prior.result["cleanup_errors"].append({"source_release": str(error)})
+                    raise prior from error
                 if migrated is not None and dest.exists():
                     state = "committed_cleanup_pending"
                 elif not dest.exists():
