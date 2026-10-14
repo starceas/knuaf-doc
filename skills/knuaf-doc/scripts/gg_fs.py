@@ -12,8 +12,10 @@ This module imports nothing from the product.  It provides:
 - sanitized filesystem error details (reason/code/operation/path only).
 
 Anything the platform cannot prove (stable identity, atomic no-replace
-rename, directory fsync) fails closed instead of falling back to
-path/size/mtime heuristics or exists()+rename.
+rename) fails closed instead of falling back to
+path/size/mtime heuristics or exists()+rename. Windows directory fsync is
+explicitly unsupported; visibility results carry durability_notes separately.
+Calling fsync_dir itself still raises FsError.
 """
 
 import ctypes
@@ -25,6 +27,9 @@ import stat
 import sys
 import uuid
 from pathlib import Path
+from contextlib import ExitStack
+
+import gg_winfs
 
 __all__ = [
     "FsError",
@@ -77,7 +82,7 @@ def FsWriteResult(
     preserved_paths=None,
     cleanup_errors=None,
 ):
-    return {
+    result = {
         "state": state,
         "reason": reason,
         "path": str(path),
@@ -86,6 +91,10 @@ def FsWriteResult(
         "preserved_paths": list(preserved_paths or []),
         "cleanup_errors": list(cleanup_errors or []),
     }
+    if sys.platform == "win32":
+        result["durability_notes"] = [{"reason": "dir_fsync_unsupported",
+                                       "operation": "fsync_dir"}]
+    return result
 
 
 def _check_json_keys(value):
@@ -163,6 +172,15 @@ def _identity_from_stat(st, kind, path):
 def identity(path, *, kind):
     """Real no-follow identity of an existing file or directory."""
     path = Path(path)
+    if sys.platform == "win32":
+        try:
+            return gg_winfs.identity(path, kind)
+        except FileNotFoundError as error:
+            raise FsError("stat_failed", code=errno.ENOENT,
+                          operation="identity", path=path) from error
+        except (OSError, ValueError) as error:
+            raise FsError("windows_identity_failed", code=getattr(error, "winerror", None),
+                          operation="identity", path=path) from error
     try:
         st = os.lstat(path)
     except OSError as error:
@@ -177,6 +195,12 @@ def identity(path, *, kind):
 
 
 def fd_identity(fd, *, kind):
+    if sys.platform == "win32":
+        try:
+            return gg_winfs.fd_identity(fd, kind)
+        except OSError as error:
+            raise FsError("windows_identity_failed", code=getattr(error, "winerror", None),
+                          operation="fd_identity", path=None) from error
     try:
         st = os.fstat(fd)
     except OSError as error:
@@ -212,6 +236,8 @@ def sha256_bytes(data):
 
 
 def _open_nofollow(path, flags, mode=0o600):
+    if sys.platform == "win32":
+        return gg_winfs.open_file(path, flags)
     flags |= getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
     return os.open(str(path), flags, mode)
 
@@ -227,7 +253,7 @@ def read_bytes(path):
             raise FsError(
                 "not_regular_file", code="kind", operation="read", path=path
             )
-        ident = _identity_from_stat(st, "file", path)
+        ident = fd_identity(fd, kind="file")
         chunks = []
         while True:
             chunk = os.read(fd, 1 << 20)
@@ -274,6 +300,11 @@ def fsync_dir(path):
 
 def mkdir_directory(path):
     path = Path(path)
+    if sys.platform == "win32":
+        path = gg_winfs._absolute(path)  # validate final component before mkdir
+        with gg_winfs.Directory(path.parent):
+            os.mkdir(str(path))
+            return identity(path, kind="directory")
     try:
         os.mkdir(str(path))
     except OSError as error:
@@ -288,6 +319,8 @@ def unlink_file(path, *, expected_identity=None):
     follows the final component. If expected_identity is given it must
     match before removal."""
     path = Path(path)
+    if sys.platform == "win32":
+        return gg_winfs.unlink_file(path, expected_identity=expected_identity)
     try:
         st = os.lstat(path)
     except FileNotFoundError:
@@ -442,7 +475,45 @@ def _post_rename_state(src, dst, source_identity, error):
         )
 
 
-def rename_noreplace(
+def rename_noreplace(src, dst, *, source_identity, source_parent_identity,
+                     destination_parent_identity):
+    kwargs = dict(source_identity=source_identity,
+                  source_parent_identity=source_parent_identity,
+                  destination_parent_identity=destination_parent_identity)
+    if sys.platform != "win32":
+        return _rename_noreplace(src, dst, **kwargs)
+    with ExitStack() as stack:
+        try:
+            src, dst = gg_winfs._absolute(src), gg_winfs._absolute(dst)
+            stack.enter_context(gg_winfs.Directory(Path(src).parent))
+            stack.enter_context(gg_winfs.Directory(Path(dst).parent))
+        except (OSError, ValueError):
+            return FsWriteResult("not_installed", "windows_parent_check_failed", dst,
+                                 preserved_paths=[str(src), str(dst)])
+        if source_identity.get("kind") == "directory":
+            # Caller retains its registered, byte-locked guard. Our parent
+            # pin chains must not survive the owned directory rename.
+            stack.close()
+            result = _rename_noreplace(src, dst, **kwargs)
+            try:
+                assert_identity(src.parent, source_parent_identity)
+                assert_identity(dst.parent, destination_parent_identity)
+                if result["state"] == "not_installed":
+                    assert_identity(src, source_identity)
+            except (FsError, OSError) as error:
+                return FsWriteResult(
+                    "unknown", "directory_rename_postcheck_failed", dst,
+                    preserved_paths=[str(src), str(dst)],
+                    cleanup_errors=list(result.get("cleanup_errors") or []) + [{
+                        "reason": getattr(error, "reason", "identity_check_failed"),
+                        "operation": "directory_rename_postcheck",
+                    }],
+                )
+            return result
+        return _rename_noreplace(src, dst, **kwargs)
+
+
+def _rename_noreplace(
     src,
     dst,
     *,
@@ -474,14 +545,28 @@ def rename_noreplace(
         return FsWriteResult(
             "not_installed", "cross_filesystem", dst, preserved_paths=preserved
         )
+    rename_diagnostics = []
     try:
-        _os_rename_noreplace(src, dst)
+        try:
+            _os_rename_noreplace(src, dst)
+        except OSError as error:
+            if not (sys.platform == "win32" and kind == "directory"
+                    and getattr(error, "winerror", None) in (5, 32)):
+                raise
+            rename_diagnostics.append({"reason": "os_error", "operation": "os_rename",
+                                       "code": error.errno,
+                                       "winerror": error.winerror})
+            gg_winfs.rename_directory_noreplace(src, dst, source_identity=source_identity)
     except FsError as error:
         return FsWriteResult(
             "not_installed", error.reason, dst, preserved_paths=preserved
         )
     except OSError as error:
         code = error.errno
+        if sys.platform == "win32":
+            rename_diagnostics.append({"reason": "os_error", "operation": "rename_noreplace",
+                                       "code": code,
+                                       "winerror": getattr(error, "winerror", None)})
         if code in (errno.EEXIST, errno.ENOTEMPTY):
             return FsWriteResult(
                 "not_installed", "destination_exists", dst,
@@ -496,6 +581,7 @@ def rename_noreplace(
             return FsWriteResult(
                 "not_installed", "permission_denied", dst,
                 preserved_paths=preserved,
+                cleanup_errors=rename_diagnostics,
             )
         if code in (
             errno.ENOSYS,
@@ -526,8 +612,11 @@ def rename_noreplace(
     try:
         fsync_dir(dst.parent)
     except FsError as error:
-        cleanup_errors.append(error.detail)
-    return FsWriteResult(
+        # An unsupported directory flush is a platform guarantee limit,
+        # not pending owner/temp cleanup. Keep real I/O failures visible.
+        if not (sys.platform == "win32" and error.reason == "dir_fsync_unsupported"):
+            cleanup_errors.append(error.detail)
+    result = FsWriteResult(
         "installed",
         None,
         dst,
@@ -535,9 +624,26 @@ def rename_noreplace(
         sha256=digest,
         cleanup_errors=cleanup_errors,
     )
+    if rename_diagnostics:
+        result["rename_diagnostics"] = rename_diagnostics
+    return result
 
 
 def publish_bytes_noreplace(path, data, *, parent_identity, existing_sha256=None):
+    kwargs = dict(parent_identity=parent_identity, existing_sha256=existing_sha256)
+    if sys.platform != "win32":
+        return _publish_bytes_noreplace(path, data, **kwargs)
+    try:
+        path = gg_winfs._absolute(path)  # reject aliases before creating any temp
+        directory = gg_winfs.Directory(Path(path).parent)
+    except (OSError, ValueError):
+        return FsWriteResult("not_installed", "windows_parent_check_failed", path,
+                             preserved_paths=[str(path)])
+    with directory:
+        return _publish_bytes_noreplace(path, data, **kwargs)
+
+
+def _publish_bytes_noreplace(path, data, *, parent_identity, existing_sha256=None):
     """Publish bytes to a path that must not already hold foreign content:
     exclusive temp in the same parent -> fsync -> no-replace rename ->
     post-verify. Returns FsWriteResult."""
@@ -604,7 +710,7 @@ def publish_bytes_noreplace(path, data, *, parent_identity, existing_sha256=None
     temp_identity = None
     try:
         st = os.fstat(fd)
-        temp_identity = _identity_from_stat(st, "file", temp)
+        temp_identity = fd_identity(fd, kind="file")
         view = memoryview(data)
         while view:
             written = os.write(fd, view)

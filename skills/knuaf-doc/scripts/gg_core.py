@@ -4847,7 +4847,7 @@ def paper(root, spec_path, spec_bytes, requested_path, *, major_id=None):
         except ValueError as error:
             raise _op("paper", "requested_output", "not_committed",
                       "invalid_requested_path", detail=str(error)) from error
-        requested_rel = str(requested.relative_to(Path(root).resolve()))
+        requested_rel = requested.relative_to(Path(root).resolve()).as_posix()
         request = {
             "kind": "paper",
             "input_revision": p["revision"],
@@ -5094,12 +5094,7 @@ def _import_inventory(root):
     """Source-content inventory for import: protocol/control files are not
     source content — the source guard owner record and the import receipt
     stub change across calls and must not falsify the freeze check."""
-    inventory = migration_inventory(root)
-    return {
-        name: sha
-        for name, sha in inventory.items()
-        if name.split("/")[0] not in _control_files()
-    }
+    return migration_inventory(root, exclude_top=_control_files())
 
 
 def _import_request(src, dest, inventory):
@@ -5280,6 +5275,7 @@ def migrate(src, dest, *, offline_confirmed=False):
         tmp = tempfile.TemporaryDirectory(
             prefix=".gg-import-", dir=dest.parent
         )
+        preserve_tmp = False
         try:
             staged = Path(tmp.name) / "workspace"
             shutil.copytree(
@@ -5352,6 +5348,9 @@ def migrate(src, dest, *, offline_confirmed=False):
                             "import", "import_destination", "indeterminate",
                             "destination_publish_indeterminate",
                             publication_state=state, detail=str(error),
+                            **({"preserved_paths": [tmp.name, *getattr(error, "result", {}).get("preserved_paths", [])],
+                                "cleanup_errors": getattr(error, "result", {}).get("cleanup_errors", [])}
+                               if sys.platform == "win32" else {}),
                         ) from error
                     # Post-rename verification, protocol check and
                     # capability rebind are all inside publish_workspace;
@@ -5362,6 +5361,25 @@ def migrate(src, dest, *, offline_confirmed=False):
                 cleanup_type = getattr(lm, "LockCleanupError", None)
                 if cleanup_type is None or not isinstance(error, cleanup_type):
                     raise
+                prior = getattr(error, "prior_error", None)
+                if (sys.platform == "win32" and isinstance(prior, OperationError)
+                        and prior.result.get("commit_state") == "indeterminate"):
+                    prior.result["cleanup_errors"].append({"release": str(error),
+                        "release_confirmed": error.release_confirmed})
+                    raise prior from error
+                if (sys.platform == "win32" and prior is not None
+                        and not isinstance(prior, OperationError)):
+                    # Cancellation after parking proves neither non-installation
+                    # nor canonical guard restoration, even if dest is absent.
+                    raise _op(
+                        "import", "import_destination", "indeterminate",
+                        "staged_release_failed",
+                        detail=f"{type(prior).__name__}: {prior}",
+                        preserved_paths=[tmp.name, str(staged), str(dest),
+                            str(staged.parent / (".gg-import-guard-" + staged_cap.token))],
+                        cleanup_errors=[{"release": str(error),
+                            "release_confirmed": error.release_confirmed}],
+                    ) from error
                 raise _op(
                     "import", "import_destination",
                     "committed_cleanup_pending" if dest.exists()
@@ -5370,8 +5388,21 @@ def migrate(src, dest, *, offline_confirmed=False):
                     detail=str(error),
                     cleanup_errors=[{"release": str(error)}],
                 ) from error
+        except BaseException as error:
+            if (sys.platform == "win32" and not (isinstance(error, OperationError)
+                    and error.result.get("commit_state") == "not_committed")):
+                # Unknown guard/root location is evidence, including cancellation.
+                # Disable GC finalization as well as the explicit finally cleanup.
+                preserve_tmp = True
+                tmp._finalizer.detach()
+                if isinstance(error, OperationError):
+                    preserved = error.result.setdefault("preserved_paths", [])
+                    if tmp.name not in preserved:
+                        preserved.append(tmp.name)
+            raise
         finally:
-            tmp.cleanup()
+            if not preserve_tmp:
+                tmp.cleanup()
         try:
             load(dest)
             local(dest, ".gg-lock/protocol.json").read_bytes()
@@ -5415,9 +5446,14 @@ def migrate(src, dest, *, offline_confirmed=False):
         return migrated
     finally:
         if source_cap is not None:
+            prior = sys.exc_info()[1]
             try:
                 source_cap.__exit__(*sys.exc_info())
             except Exception as error:
+                if (sys.platform == "win32" and isinstance(prior, OperationError)
+                        and prior.result.get("commit_state") == "indeterminate"):
+                    prior.result["cleanup_errors"].append({"source_release": str(error)})
+                    raise prior from error
                 if migrated is not None and dest.exists():
                     state = "committed_cleanup_pending"
                 elif not dest.exists():
@@ -5431,22 +5467,26 @@ def migrate(src, dest, *, offline_confirmed=False):
                 ) from error
 
 
-def migration_inventory(root):
+def migration_inventory(root, *, exclude_top=()):
     inventory = {}
     for directory, dirs, names in os.walk(root, followlinks=False):
-        dirs[:] = sorted(d for d in dirs if d not in {".work", ".git", "__pycache__"})
+        excluded = set(exclude_top) if Path(directory) == Path(root) else set()
+        dirs[:] = sorted(d for d in dirs
+                         if d not in {".work", ".git", "__pycache__"} | excluded)
+        names = [n for n in names if n not in excluded]
         for name in dirs + sorted(names):
             path = Path(directory) / name
-            if path.is_symlink():
+            if (path.is_symlink() or (sys.platform == "win32"
+                    and getattr(path.lstat(), "st_file_attributes", 0) & 0x400)):
                 raise ValueError(
                     "마이그레이션은 심볼릭 링크를 따라가지 않음: "
-                    + str(path.relative_to(root))
+                    + path.relative_to(root).as_posix()
                 )
             if path.is_file():
-                inventory[str(path.relative_to(root))] = digest(path.read_bytes())
+                inventory[path.relative_to(root).as_posix()] = digest(path.read_bytes())
             elif not path.is_dir():
                 raise ValueError(
-                    "일반 파일/폴더가 아닌 원본: " + str(path.relative_to(root))
+                    "일반 파일/폴더가 아닌 원본: " + path.relative_to(root).as_posix()
                 )
     return inventory
 
@@ -5618,7 +5658,7 @@ def migrate_staged(dest, inventory, *, capability):
             issues.append(
                 dict(
                     code="legacy_marker_extra",
-                    path=str(path.relative_to(dest)),
+                    path=path.relative_to(dest).as_posix(),
                     reason="DRAFT 마커 밖 원문은 병합·검사에 보이지 않음. 원본 보존; 대조 후 마커 안 이동 또는 제거 필요",
                     excerpt=marker_extra[:120],
                 )
@@ -5628,8 +5668,8 @@ def migrate_staged(dest, inventory, *, capability):
                 "file": path.name,
                 "body_preserved": preserved,
                 "marker_extra": marker_extra is not None,
-                "original_hash": inventory[str(path.relative_to(dest))],
-                "preserved_path": str(saved.relative_to(dest)),
+                "original_hash": inventory[path.relative_to(dest).as_posix()],
+                "preserved_path": saved.relative_to(dest).as_posix(),
                 "status": "legacy_unreviewed",
             }
         )
@@ -5641,7 +5681,7 @@ def migrate_staged(dest, inventory, *, capability):
                 "collection": "sections",
                 "value": {
                     "id": path.stem,
-                    "path": str(path.relative_to(dest)),
+                    "path": path.relative_to(dest).as_posix(),
                     "title": title[1] if title else path.stem,
                     "order": i,
                     "status": "drafting",
@@ -5649,7 +5689,7 @@ def migrate_staged(dest, inventory, *, capability):
                     "depends_on": [
                         {
                             "collection": "sources",
-                            "id": "legacy:" + str(path.relative_to(dest)),
+                            "id": "legacy:" + path.relative_to(dest).as_posix(),
                             "revision": 1,
                         }
                     ],
