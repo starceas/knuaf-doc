@@ -12,6 +12,12 @@ SKILL.md "출력 지원 한계" 절의 상세다. 출력 생성·등록 경로�
 
 ## macOS Office 재계산·PDF
 
+현재 코드는 이번 실행의 작업 사본 경로와 실제 열린 문서의 정확한 대응·현재 저장 상태를 확인한 문서만 닫는다. 기존 사용자 문서·미저장 변경은 건드리지 않는다. 저장·닫기 실패, timeout·dirty·unknown에서는 후속 자동 close/quit 없이 보존 또는 결과 불명으로 기록하며 작업 사본을 유지한다. 닫힘이 이미 확인된 뒤 변환 검사·발행이 실패한 경우에는 확인된 닫힘과 실패 결과를 따로 기록한다. 앱 전체 quit은 없으며 Word/Excel 앱은 유지한다. 이 동작 설명은 실제 앱에서의 내용 보존·변환 성공을 보증하지 않는다.
+
+최신 UI 접근 오류 `-10005`의 진단·해결과 실제 앱 검증은 이번 단위 fixture 검사 범위에서 제외한다.
+
+Excel 자동화는 자동 계산 모드만 대상으로 하며 수동 계산 모드는 `manual_calculation_not_supported`로 자동 작업을 보류한다. 앱 전체 재계산으로 대체하지 않고 작업 통합문서의 시트별 used range를 대상으로 한다. 교차시트 의존성·캐시 정확성과 PDF 내용은 산출물로 별도 확인해야 한다.
+
 `scripts/gg_office.py`는 macOS Office 샌드박스 파일 접근을 지원하기 위해 전용 그룹 컨테이너(`~/Library/Group Containers/UBF8T346G9.Office/ginseng-goat/`) 작업영역에서 원본을 불변으로 격리 스테이징하여 변환한다. **이 단계는 macOS만 지원한다 — Windows는 작성·검토본(DOCX·XLSX 생성, 검토)까지 지원하고 Office 자동 재계산·PDF 변환은 지원하지 않는다.**
 
 - Word: `scripts/gg_office.py word <문서.docx> --out-dir <새폴더> --project <정본 폴더> --major <전공ID>` (인쇄 모양 목차/색인 필드 2회 갱신 및 PDF 동시 출력)

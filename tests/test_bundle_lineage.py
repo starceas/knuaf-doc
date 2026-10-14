@@ -136,8 +136,10 @@ class RealTreeTests(ContractCase):
             # paths; all five are new against the pinned baseline. The
             # strict-count repair also declares this validation test itself.
             # Windows publication adds the native filesystem primitive.
-            self.assertEqual(201, rc["verified"])
-            self.assertEqual(153, rc["new_count"])
+            # Office-only window hygiene adds exactly gg_office_session.py
+            # and test_window_hygiene.py: 201/153 + 2 = 203/155.
+            self.assertEqual(203, rc["verified"])
+            self.assertEqual(155, rc["new_count"])
         else:
             self.assertNotEqual("ok", report["status"])
             self.assertIn("declared_missing", _codes(report))
@@ -161,9 +163,11 @@ class RealTreeTests(ContractCase):
         # so integration grows the approved-new list by three to 158.
         # Declaring this strict-count test adds one more path to all counts.
         # Windows publication adds one runtime path and its approval.
-        self.assertEqual(201, link["change_count"])
-        self.assertEqual(153, link["new_count"])
-        self.assertEqual(160, link["approved_new_files"])
+        # Office-only helper and fixture test add two declarations, two
+        # new files and two approvals: 201/153/160 -> 203/155/162.
+        self.assertEqual(203, link["change_count"])
+        self.assertEqual(155, link["new_count"])
+        self.assertEqual(162, link["approved_new_files"])
         self.assertEqual("P27", link["parent_candidate"]["stage"])
         self.assertEqual(233, link["parent_candidate"]["file_count"])
         self.assertEqual(
