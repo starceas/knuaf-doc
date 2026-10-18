@@ -138,8 +138,11 @@ class RealTreeTests(ContractCase):
             # Windows publication adds the native filesystem primitive.
             # Office-only window hygiene adds exactly gg_office_session.py
             # and test_window_hygiene.py: 201/153 + 2 = 203/155.
-            self.assertEqual(203, rc["verified"])
-            self.assertEqual(155, rc["new_count"])
+            # The kordoc-hwpx feature adds four product/test paths
+            # (gg_hwpx.py, build_hwpx.py, test_hwpx_adapter.py,
+            # test_build_hwpx.py): 203/155 + 4 = 207/159.
+            self.assertEqual(207, rc["verified"])
+            self.assertEqual(159, rc["new_count"])
         else:
             self.assertNotEqual("ok", report["status"])
             self.assertIn("declared_missing", _codes(report))
@@ -165,9 +168,11 @@ class RealTreeTests(ContractCase):
         # Windows publication adds one runtime path and its approval.
         # Office-only helper and fixture test add two declarations, two
         # new files and two approvals: 201/153/160 -> 203/155/162.
-        self.assertEqual(203, link["change_count"])
-        self.assertEqual(155, link["new_count"])
-        self.assertEqual(162, link["approved_new_files"])
+        # The kordoc-hwpx feature adds four declarations, four new files and
+        # four approvals: 203/155/162 -> 207/159/166.
+        self.assertEqual(207, link["change_count"])
+        self.assertEqual(159, link["new_count"])
+        self.assertEqual(166, link["approved_new_files"])
         self.assertEqual("P27", link["parent_candidate"]["stage"])
         self.assertEqual(233, link["parent_candidate"]["file_count"])
         self.assertEqual(

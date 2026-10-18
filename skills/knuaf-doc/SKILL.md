@@ -54,6 +54,7 @@ description: 한국농수산대학교 창업논문·영농계획서와 동반 �
 - “이어서 하기”: `status <폴더>`·`next <폴더>`를 실행하고 현재 정본과 대상 절을 읽는다. 확인된 작성 폴더에 `project.json`이 없으면 원본을 두고 `import <기존폴더> --out <새폴더>`를 쓰되, 기존 폴더를 편집 중인 앱·프로세스가 없다고 확인한 뒤 `--offline-confirmed`를 붙인다(구형 폴더는 이 확인 없이 거부. 경과 시간·추정 금지). import는 인터뷰·가정표·증거·절 원본을 보존하고 수치·미결·중복·충돌을 `migration/inputs.json`에 기록한다. `migration-review`는 보존된 원답변부터 대조해 사실을 등록하고 재인터뷰·기존 검증 자동 승격은 하지 않는다.
 - “고칠 부분 보기”: `check <폴더>`의 위치별 결과와 내용검토 결과를 구분해 설명한다.
 - “검토본 받기”: `export <폴더> --kind review --major <전공ID>`. 생성된 실제 경로와 미검증 항목을 알려준다. 교수 승인으로 표시하지 않는다.
+- “HWPX 검토본 받기”: `scripts/build_hwpx.py <폴더> --major <전공ID>`(기본 `--in build/본문_통합.md --out build/검토전_논문.hwpx`). 여백·쪽번호·신명조 후처리와 `kordoc validate`·표 수치 대조를 거친다. 표지·제출면·목차의 쪽 나눔·정렬은 재현하지 않아 한글에서 사람이 마무리한다([outputs](references/outputs.md)).
 - 산출물 등록: 생성·수정된 출력 파일을 정본에 등록하는 유일한 경로는 `adopt-output <폴더> --input <spec.json> --expected-revision <N> --major <전공ID>`다. spec 형식·동반 파일 판별·수령증 규칙은 [source-contract](references/source-contract.md)를 따른다.
 - 재무표 전개: 특용작물전공 Ⅳ장 재무표 전개는 학과 제공 템플릿(및 그 파생)을 대상으로 `gg.py finance-tables <폴더> --xlsx <재계산통합문서> [--input 각주.json] [--out 경로] --major specialty_crops` 명령으로 실행한다([specialty-crops/finance-flow](references/specialty-crops/finance-flow.md)).
 - “학교 논문 생성(특용작물)”: `gg.py paper <폴더> --input <spec.json> [--out <경로>] --major specialty_crops`. spec의 `table_sources`(표 ID 6개: `farm_overview`, `climate`, `disasters`, `shipping_markets`, `growth_targets`, `swot`)로 표별 출처를 입력하며, 미제공 시 no-op이고 출처 없는 표는 정책 오류(`object_credit`)가 유지된다([outputs](references/outputs.md)).

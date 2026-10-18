@@ -33,6 +33,18 @@ REQUIRED_PARSE_FLAGS = (
     "--keep-empty-paragraphs",
     "--silent",
 )
+# Core `generate` (markdown -> HWPX) options the HWPX adapter relies on.
+REQUIRED_GENERATE_FLAGS = (
+    "--preset",
+    "--paper",
+    "--plain",
+    "--image-dir",
+    "--silent",
+)
+# Windows command shims: subprocess would route these through cmd.exe and
+# re-parse Korean, spaces and ^&% in arguments, so they are never executed
+# directly.
+SHIM_SUFFIXES = (".cmd", ".bat", ".ps1")
 
 
 class KordocBlocked(RuntimeError):
@@ -120,7 +132,12 @@ _ENV_ALLOWLIST = frozenset({
     "NODE_EXTRA_CA_CERTS", "SSL_CERT_FILE", "SSL_CERT_DIR",
     "PNPM_HOME", "COREPACK_HOME", "COREPACK_ENABLE_DOWNLOAD_PROMPT",
     "SYSTEMROOT", "WINDIR", "COMSPEC", "PATHEXT",
-    "APPDATA", "LOCALAPPDATA", "PROGRAMFILES",
+    "APPDATA", "LOCALAPPDATA", "PROGRAMFILES", "PROGRAMFILES(X86)",
+    "COMMONPROGRAMFILES", "PROGRAMDATA",
+    # Windows still resolves the home directory from USERPROFILE (HOME is
+    # usually unset there), and pnpm/Node read the drive and program-data
+    # locations below.  All are non-secret path values.
+    "USERPROFILE", "HOMEDRIVE", "HOMEPATH", "SYSTEMDRIVE",
     "NO_COLOR", "CI", "KORDOC_OFFLINE",
 })
 
@@ -226,7 +243,7 @@ def _package_paths(version_root: Path):
     return package_root, package_root / "package.json", package_root / "dist" / "cli.js"
 
 
-def _validated_install(version_root: Path, node_path: str):
+def _validated_install(version_root: Path, node_path: str, *, need_generate: bool = False):
     package_root, package_json, cli = _package_paths(version_root)
     marker = _read_json(version_root / ".gg-kordoc.json")
     spec = _read_json(package_json)
@@ -236,10 +253,19 @@ def _validated_install(version_root: Path, node_path: str):
         return None
     if not cli.is_file():
         return None
-    smoke = _run([node_path, str(cli), "--help"], env=_env_for_node(node_path), timeout=30)
+    cli_command = [node_path, str(cli)]
+    smoke = _run(cli_command + ["--help"], env=_env_for_node(node_path), timeout=30)
     if not smoke.get("ok"):
         return None
-    return {"version_root": version_root, "package_root": package_root, "cli": cli, "smoke": smoke}
+    capability = {"help": "ok", "smoke": "help"}
+    if need_generate:
+        generate = _probe_generate(cli_command, env=_env_for_node(node_path), timeout=30)
+        if not generate["ok"]:
+            return None
+        capability["generate"] = "ok"
+        capability["required_generate_flags"] = list(REQUIRED_GENERATE_FLAGS)
+    return {"version_root": version_root, "package_root": package_root, "cli": cli,
+            "smoke": smoke, "capability": capability}
 
 
 def _version_from_probe(probe: dict) -> str | None:
@@ -264,11 +290,85 @@ def _resolve_kordoc(value: str | None) -> tuple[str | None, str | None]:
     return (str(Path(found).resolve()), "path") if found else (None, None)
 
 
-def _probe_external(path: str, *, source_kind: str, node_path: str | None = None, timeout=DEFAULT_TIMEOUT):
-    """Verify identity, version and parse flags with bounded CLI smoke probes."""
+def _is_windows_shim(path: Path, platform: str) -> bool:
+    """True for a Windows command shim (.cmd/.bat/.ps1) that subprocess would
+    hand to cmd.exe.  ``platform`` is passed in rather than read from
+    ``sys.platform`` here, so the decision can be exercised from macOS.
+    """
+    return platform.startswith("win") and path.suffix.lower() in SHIM_SUFFIXES
+
+
+def _sibling_cli_js(shim: Path):
+    """Locate the real ``dist/cli.js`` behind a Windows kordoc shim.
+
+    Covers the two shapes that actually install a kordoc shim: npm global and
+    local (``<dir>/node_modules/kordoc/dist/cli.js``) and pnpm global
+    (``<dir>/global/<n>/node_modules/kordoc/dist/cli.js``).  Returns the first
+    existing candidate, or None when the entry point cannot be found.
+    """
+    base = shim.parent
+    candidates = [
+        base / "node_modules" / PACKAGE / "dist" / "cli.js",
+        base.parent / "node_modules" / PACKAGE / "dist" / "cli.js",
+        base / "lib" / "node_modules" / PACKAGE / "dist" / "cli.js",
+    ]
+    candidates.extend(sorted(base.glob(f"global/*/node_modules/{PACKAGE}/dist/cli.js")))
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def _exec_command_for_cli(path: str, *, node_path: str | None, platform: str | None = None):
+    """Map a resolved Kordoc CLI path to a shell-free exec command.
+
+    A Windows shim is never passed to subprocess directly (``shell=False``
+    would route it through cmd.exe, which re-parses Korean text, spaces and
+    ``^&%`` in arguments).  Its sibling ``dist/cli.js`` is executed with Node
+    instead.  Returns ``(command, evidence)``; command is None when a shim
+    cannot be resolved to a Node entry point.
+    """
+    if platform is None:
+        platform = sys.platform
+    shim = Path(path)
+    if not _is_windows_shim(shim, platform):
+        return [str(shim)], {"shim": False}
+    cli_js = _sibling_cli_js(shim)
+    if cli_js is None:
+        return None, {"shim": True, "reason": "windows_shim_unresolved"}
+    if not node_path:
+        return None, {"shim": True, "reason": "windows_shim_needs_node", "cli_js": str(cli_js)}
+    return [node_path, str(cli_js)], {"shim": True, "cli_js": str(cli_js)}
+
+
+def _external_command(path: str, node_path: str | None):
+    """Resolve an external path to its exec command, looking up Node only when
+    a Windows shim actually requires it."""
+    command, evidence = _exec_command_for_cli(path, node_path=node_path)
+    if command is None and evidence.get("reason") == "windows_shim_needs_node":
+        discovered = shutil.which("node")
+        if discovered:
+            command, evidence = _exec_command_for_cli(path, node_path=discovered)
+            if command is not None:
+                evidence["node_path"] = discovered
+    return command, evidence
+
+
+def _probe_generate(cli_command: list[str], *, env, timeout=DEFAULT_TIMEOUT):
+    """Probe ``generate --help`` and require the core HWPX generation flags."""
+    probe = _run(list(cli_command) + ["generate", "--help"], env=env, timeout=min(timeout, 30))
+    text = " ".join((probe.get("stdout") or "", probe.get("stderr") or ""))
+    missing = [flag for flag in REQUIRED_GENERATE_FLAGS if flag not in text]
+    return {"ok": bool(probe.get("ok")) and not missing, "probe": probe, "missing_flags": missing}
+
+
+def _probe_external(cli_command: list[str], *, path: str, source_kind: str,
+                    node_path: str | None = None, timeout=DEFAULT_TIMEOUT,
+                    need_generate: bool = False):
+    """Verify identity, version, parse flags and (optionally) generate support."""
     probe_env = _env_for_external(node_path=node_path)
-    version_probe = _run([path, "--version"], env=probe_env, timeout=min(timeout, 30))
-    help_probe = _run([path, "--help"], env=probe_env, timeout=min(timeout, 30))
+    version_probe = _run(list(cli_command) + ["--version"], env=probe_env, timeout=min(timeout, 30))
+    help_probe = _run(list(cli_command) + ["--help"], env=probe_env, timeout=min(timeout, 30))
     version = _version_from_probe(version_probe)
     help_text = " ".join((help_probe.get("stdout") or "", help_probe.get("stderr") or ""))
     missing_flags = [flag for flag in REQUIRED_PARSE_FLAGS if flag not in help_text]
@@ -284,29 +384,41 @@ def _probe_external(path: str, *, source_kind: str, node_path: str | None = None
         rejection.append("identity_missing")
     if missing_flags:
         rejection.append("required_flags_missing")
+    generate_evidence = None
+    if need_generate:
+        generate_evidence = _probe_generate(cli_command, env=probe_env, timeout=timeout)
+        if not generate_evidence["ok"]:
+            rejection.append("generate_unavailable" if not generate_evidence["probe"].get("ok") else "generate_flags_missing")
     evidence = {
         "path": path,
+        "source_kind": source_kind,
         "version_probe": version_probe,
         "help_probe": help_probe,
         "missing_flags": missing_flags,
         "identity": identity,
     }
+    if generate_evidence is not None:
+        evidence["generate"] = generate_evidence
     if rejection:
         evidence["reasons"] = rejection
         return None, evidence
+    capability = {
+        "version": "ok",
+        "help": "ok",
+        "required_parse_flags": list(REQUIRED_PARSE_FLAGS),
+        "smoke": "version_help",
+    }
+    if generate_evidence is not None:
+        capability["generate"] = "ok"
+        capability["required_generate_flags"] = list(REQUIRED_GENERATE_FLAGS)
     return {
         "cli_path": path,
-        "cli_command": [path],
+        "cli_command": list(cli_command),
         "actual_version": version,
         "node_path": node_path,
         "source": "external",
         "source_kind": source_kind,
-        "capability_verification": {
-            "version": "ok",
-            "help": "ok",
-            "required_parse_flags": list(REQUIRED_PARSE_FLAGS),
-            "smoke": "version_help",
-        },
+        "capability_verification": capability,
     }, evidence
 
 
@@ -340,8 +452,43 @@ def _claim_cache(root: Path):
             raise KordocBlocked("cache_unowned", cache_dir=str(root), action="Choose a new --cache-dir; existing files are preserved.")
 
 
-def ensure(*, cache_dir=None, node=None, pnpm=None, kordoc=None, timeout=DEFAULT_TIMEOUT):
-    """Ensure a validated Kordoc installation and return its CLI path."""
+def _publish(stage_md: Path, target: Path) -> None:
+    """Publish staged bytes to ``target`` without ever overwriting a file.
+
+    A hard link publishes atomically on filesystems that support it.  Where
+    hard links are unavailable (FAT/exFAT, common on Windows removable media)
+    an exclusive create keeps the same no-overwrite guarantee.
+    """
+    try:
+        os.link(stage_md, target)
+        return
+    except FileExistsError as exc:
+        raise KordocBlocked(
+            "output_exists",
+            output=str(target),
+            action="Output appeared during parse; existing files are preserved.",
+        ) from exc
+    except OSError:
+        pass
+    try:
+        with open(target, "xb") as handle:
+            handle.write(stage_md.read_bytes())
+    except FileExistsError as exc:
+        raise KordocBlocked(
+            "output_exists",
+            output=str(target),
+            action="Output appeared during parse; existing files are preserved.",
+        ) from exc
+
+
+def ensure(*, cache_dir=None, node=None, pnpm=None, kordoc=None, timeout=DEFAULT_TIMEOUT,
+           need_generate=False):
+    """Ensure a validated Kordoc installation and return its CLI path.
+
+    ``need_generate`` additionally requires the resolved CLI to advertise the
+    ``generate`` (markdown -> HWPX) subcommand with its core options, so callers
+    such as the HWPX adapter can rely on it.
+    """
     rejected_candidates = []
     external_path, source_kind = _resolve_kordoc(kordoc)
     if external_path:
@@ -352,27 +499,40 @@ def ensure(*, cache_dir=None, node=None, pnpm=None, kordoc=None, timeout=DEFAULT
             node_candidate = Path(node).expanduser()
             if node_candidate.is_file():
                 external_node = str(node_candidate.resolve())
-        candidate, evidence = _probe_external(
-            external_path, source_kind=source_kind, node_path=external_node, timeout=timeout
-        )
-        if candidate:
-            return _result(
-                "ready",
-                action="reused_existing",
-                package=PACKAGE,
-                version=candidate["actual_version"],
-                actual_version=candidate["actual_version"],
-                cli_path=candidate["cli_path"],
-                cli_command=candidate["cli_command"],
-                command=candidate["cli_command"],
-                source=candidate["source"],
-                source_kind=candidate["source_kind"],
-                node_path=candidate.get("node_path"),
-                capability_verification=candidate["capability_verification"],
-                rejected_candidates=rejected_candidates,
+        cli_command, shim_evidence = _external_command(external_path, external_node)
+        if cli_command is None:
+            rejected_candidates.append({
+                "path": external_path,
+                "source_kind": shim_evidence.get("source_kind", source_kind),
+                "reasons": [shim_evidence.get("reason", "windows_shim_unresolved")],
+                **shim_evidence,
+            })
+        else:
+            candidate, evidence = _probe_external(
+                cli_command, path=external_path, source_kind=source_kind,
+                node_path=shim_evidence.get("node_path", external_node),
+                timeout=timeout, need_generate=need_generate,
             )
-        evidence["source_kind"] = source_kind
-        rejected_candidates.append(evidence)
+            if candidate:
+                return _result(
+                    "ready",
+                    action="reused_existing",
+                    package=PACKAGE,
+                    version=candidate["actual_version"],
+                    actual_version=candidate["actual_version"],
+                    cli_path=candidate["cli_path"],
+                    cli_command=candidate["cli_command"],
+                    command=candidate["cli_command"],
+                    source=candidate["source"],
+                    source_kind=candidate["source_kind"],
+                    node_path=candidate.get("node_path"),
+                    shim=shim_evidence.get("shim", False),
+                    shim_cli_js=shim_evidence.get("cli_js"),
+                    capability_verification=candidate["capability_verification"],
+                    rejected_candidates=rejected_candidates,
+                )
+            evidence["source_kind"] = source_kind
+            rejected_candidates.append(evidence)
 
     try:
         node_path, _ = _node_and_pnpm(node, pnpm, need_pnpm=False)
@@ -383,7 +543,7 @@ def ensure(*, cache_dir=None, node=None, pnpm=None, kordoc=None, timeout=DEFAULT
     root = _cache_root(cache_dir)
     _claim_cache(root)
     version_root = root / VERSION
-    cached = _validated_install(version_root, node_path) if version_root.exists() else None
+    cached = _validated_install(version_root, node_path, need_generate=need_generate) if version_root.exists() else None
     if cached:
         return _result(
             "ready",
@@ -397,7 +557,7 @@ def ensure(*, cache_dir=None, node=None, pnpm=None, kordoc=None, timeout=DEFAULT
             command=[node_path, str(cached["cli"])],
             node_path=node_path,
             smoke="help_ok",
-            capability_verification={"help": "ok", "smoke": "help"},
+            capability_verification=cached["capability"],
             rejected_candidates=rejected_candidates,
         )
     if version_root.exists():
@@ -406,7 +566,7 @@ def ensure(*, cache_dir=None, node=None, pnpm=None, kordoc=None, timeout=DEFAULT
             cache_dir=str(root),
             version=VERSION,
             rejected_candidates=rejected_candidates,
-            action="Existing owned cache is incomplete or failed --help; choose a new cache or repair it manually. No files were overwritten.",
+            action="Existing owned cache is incomplete or failed the capability check; choose a new cache or repair it manually. No files were overwritten.",
         )
 
     try:
@@ -450,9 +610,9 @@ def ensure(*, cache_dir=None, node=None, pnpm=None, kordoc=None, timeout=DEFAULT
             json.dumps({"owner": OWNER, "package": PACKAGE, "version": VERSION, "registry": REGISTRY}, indent=2) + "\n",
             encoding="utf-8",
         )
-        validated = _validated_install(stage, node_path)
+        validated = _validated_install(stage, node_path, need_generate=need_generate)
         if not validated:
-            raise KordocBlocked("validation_failed", action="Install completed but package/version/CLI --help validation failed; no cache was published.")
+            raise KordocBlocked("validation_failed", action="Install completed but package/version/CLI capability validation failed; no cache was published.")
         os.replace(stage, version_root)
         return _result(
             "ready",
@@ -466,7 +626,7 @@ def ensure(*, cache_dir=None, node=None, pnpm=None, kordoc=None, timeout=DEFAULT
             command=[node_path, str(version_root / "node_modules" / PACKAGE / "dist" / "cli.js")],
             node_path=node_path,
             smoke="help_ok",
-            capability_verification={"help": "ok", "smoke": "help"},
+            capability_verification=validated["capability"],
             rejected_candidates=rejected_candidates,
         )
     except KordocBlocked:
@@ -599,9 +759,12 @@ def parse(input_path, out, *, cache_dir=None, node=None, pnpm=None, kordoc=None,
                         content = content.replace("](" + old + ")", "](" + asset_prefix + name + ")")
                         content = content.replace('src="' + old + '"', 'src="' + asset_prefix + name + '"')
                 stage_md.write_text(content, encoding="utf-8")
-            # Same-filesystem hard link publishes without overwriting a racing
-            # destination. All supporting assets are complete before this point.
-            os.link(stage_md, target)
+            # Publish only after all supporting assets are complete.
+            _publish(stage_md, target)
+        except KordocBlocked:
+            if destination_sidecars is not None:
+                shutil.rmtree(destination_sidecars, ignore_errors=True)
+            raise
         except (OSError, ValueError, TypeError) as exc:
             if destination_sidecars is not None:
                 shutil.rmtree(destination_sidecars, ignore_errors=True)
