@@ -283,6 +283,54 @@ class KordocAdapterTests(unittest.TestCase):
         self.assertEqual(1, len(parked))
         self.assertTrue((parked[0] / ".abs-root").is_file())
 
+    def _dangling_cache(self):
+        """Windows 첫 시험의 잔해: 표식은 맞는데 node_modules/kordoc 링크가 사라진 자리를 가리킨다."""
+        self._root_marker(gk.VERSION)
+        broken = self.cache / gk.VERSION
+        (broken / "node_modules").mkdir(parents=True)
+        gone = self.cache / f".staging-{gk.VERSION}-gone"  # 이름 바꾸기 전 설치 자리 — 이미 없다
+        try:
+            os.symlink(gone, broken / "node_modules" / "kordoc", target_is_directory=True)
+        except (OSError, NotImplementedError) as exc:
+            self.skipTest(f"symlink unavailable: {exc}")
+        (broken / ".gg-kordoc.json").write_text(
+            json.dumps({"owner": gk.OWNER, "package": gk.PACKAGE,
+                        "version": gk.VERSION, "registry": gk.REGISTRY}),
+            encoding="utf-8")
+        self.assertFalse((broken / "node_modules" / "kordoc" / "dist" / "cli.js").exists())
+        return broken
+
+    def test_dangling_link_cache_is_set_aside_then_reinstalled_and_reused(self):
+        # 실제 끊긴 링크(가짜 표시 파일이 아님)에서 ensure가 격리 → 재설치 → 재사용까지 간다.
+        self._activate(move_sensitive=True)
+        broken = self._dangling_cache()
+        first = gk.ensure(cache_dir=str(self.cache), pnpm=self.pnpm)
+        self.assertEqual("installed", first["action"])
+        self.assertTrue(Path(first["cli_path"]).is_file())
+        self.assertTrue(Path(first["cli_path"]).resolve().is_relative_to(broken.resolve()))
+        parked = [p for p in self.cache.iterdir() if p.name.startswith(f".broken-{gk.VERSION}-")]
+        self.assertEqual(1, len(parked))
+        # 옛 폴더는 지우지 않고 그대로(끊긴 링크 포함) 보존한다.
+        self.assertTrue(os.path.islink(parked[0] / "node_modules" / "kordoc"))
+        self.assertEqual(1, len([c for c, _ in self.fake.calls if "add" in c]))
+        again = gk.ensure(cache_dir=str(self.cache), pnpm=self.pnpm)
+        self.assertEqual("reused", again["action"])
+        self.assertEqual(1, len([c for c, _ in self.fake.calls if "add" in c]))
+        self.assertEqual(1, len([p for p in self.cache.iterdir()
+                                 if p.name.startswith(f".broken-{gk.VERSION}-")]))
+
+    def test_dangling_link_cache_that_cannot_be_moved_does_not_reinstall(self):
+        # 격리가 막히면(Windows 열린 파일) 그 위에 덮어 설치하지 않고 이유와 자리를 알린다.
+        self._activate(move_sensitive=True)
+        broken = self._dangling_cache()
+        with mock.patch.object(gk.os, "replace",
+                               side_effect=PermissionError(13, "simulated open handle")):
+            with self.assertRaises(gk.KordocBlocked) as ctx:
+                gk.ensure(cache_dir=str(self.cache), pnpm=self.pnpm)
+        self.assertEqual("cache_invalid", ctx.exception.reason)
+        self.assertEqual([], [c for c, _ in self.fake.calls if "add" in c])
+        self.assertTrue(os.path.islink(broken / "node_modules" / "kordoc"))
+
     def test_failed_install_reports_when_set_aside_fails(self):
         # R5-02: 옮기지 못했는데 옮긴 것처럼 안내하면 안 된다(Windows에서 파일이 열려 있을 때).
         self._activate(install_rc=1)

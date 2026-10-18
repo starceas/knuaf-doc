@@ -230,7 +230,7 @@
     "tests/test_kordoc_adapter.py": {
       "note": "P27: kordoc 4.17.1 어댑터 — Node 20 하한, 버전 무관 캐시 루트, 버전 폴더 표식, 필수 플래그, 중첩/납작 사이드카(가짜 실행파일, 네트워크 없음)",
       "origin": "new",
-      "sha256": "87bca76ea5d7ba969627483cdfc42d0b6c0d509ed7aff465a5001aa009224642"
+      "sha256": "b1770ce787779ccbeb992704606dbdbab796cdca1d78afd53f18a55dbaf069ea"
     },
     "tests/test_major_guard_contract.py": {
       "note": "P7 policy B common output guard unit contract (A32-L1–L6, explicit null, label conflict, forged context, registered unsupported module, file-kind sniffing, reconfirm). P8: fruit_trees is registered — unknown-major coverage moved to an unregistered ID, the synthetic peer renamed probe_major, real fruit_trees checked on every writer and CLI (unsupported_output) and against a specialty binding (major_binding_mismatch). P9: hort_env_systems is registered — the unregistered sample moved to a synthetic ID that no real major will register. | P10: P7 policy B common output guard unit contract (A32-L1–L6, explicit null, label conflict, forged context, registered unsupported module, file-kind sniffing, reconfirm). P8: fruit_trees is registered — unknown-major coverage moved to an unregistered ID, the synthetic peer renamed probe_major, real fruit_trees checked on every writer and CLI (unsupported_output) and against a specialty binding (major_binding_mismatch).",
@@ -596,5 +596,5 @@
     "verified_count": 207
   },
   "schema": "knuaf-doc/validation-bundle@3",
-  "validation_tree_sha256": "cf30bef90e0f833e4be457f9d77e0a9827d4b8d74344dbe02fe3d49900140c36"
+  "validation_tree_sha256": "1c0cb217a9914dd1d5aedc2c9a553e018d00d4ea2c345050b7534767e5fd9d05"
 }
