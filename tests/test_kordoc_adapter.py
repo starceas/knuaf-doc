@@ -47,8 +47,11 @@ class FakeRuntime:
     def __init__(self, *, node, parse_help=PARSER_HELP, generate_help=GENERATE_HELP,
                  generate_rc=0, external_generate_help=None, external_generate_rc=None,
                  node_version="v20.11.0", cli_version="kordoc 4.99.0",
-                 sidecar_layout="nested"):
+                 sidecar_layout="nested", move_sensitive=False, install_rc=0):
         self.node = node
+        # pnpm이 Windows에서 절대 경로 정션을 만들어 설치 자리를 옮기면 깨지는 상황.
+        self.move_sensitive = move_sensitive
+        self.install_rc = install_rc
         self.parse_help = parse_help
         self.generate_help = generate_help
         self.generate_rc = generate_rc
@@ -68,6 +71,13 @@ class FakeRuntime:
         cmd = list(cmd)
         self.calls.append((cmd, str(cwd) if cwd else None))
         external = cmd[0] != self.node
+        if self.move_sensitive and cmd[0] == self.node and len(cmd) > 1 \
+                and cmd[1].endswith("cli.js") and cmd[-1] == "--help":
+            base = Path(cmd[1]).parents[3]
+            recorded = base / ".abs-root"
+            if not recorded.is_file() or recorded.read_text(encoding="utf-8") != str(base):
+                return {"ok": False, "returncode": 1, "stdout": "",
+                        "stderr": "Error: Cannot find module " + cmd[1]}
         if cmd[0] == self.node and cmd[1:] == ["--version"]:
             return self._ok(self.node_version)
         if cmd[-1] == "--version":
@@ -94,6 +104,10 @@ class FakeRuntime:
         return [c for c, _ in self.calls if "generate" in c]
 
     def _install(self, cwd):
+        if self.install_rc:
+            return {"ok": False, "returncode": self.install_rc,
+                    "stdout": "", "stderr": "install failed"}
+        (Path(cwd) / ".abs-root").write_text(str(cwd), encoding="utf-8")
         pkg = Path(cwd) / "node_modules" / gk.PACKAGE
         (pkg / "dist").mkdir(parents=True, exist_ok=True)
         (pkg / "package.json").write_text(
@@ -211,6 +225,165 @@ class KordocAdapterTests(unittest.TestCase):
         (pkg / "package.json").write_text(
             json.dumps({"name": "kordoc", "version": gk.VERSION}), encoding="utf-8")
         (pkg / "dist" / "cli.js").write_text("// fake\n", encoding="utf-8")
+        with self.assertRaises(gk.KordocBlocked) as ctx:
+            gk.ensure(cache_dir=str(self.cache), pnpm=self.pnpm)
+        self.assertEqual("cache_invalid", ctx.exception.reason)
+
+    # ---- 설치 자리 (Windows 링크 끊김 회귀) -----------------------------------
+
+    def test_install_runs_in_final_folder_without_rename(self):
+        # pnpm이 Windows에서 절대 경로 정션을 만들므로, 임시 폴더에 설치한 뒤
+        # 이름을 바꾸면 끊어진다. 설치는 최종 폴더에서 바로 해야 한다.
+        self._activate(move_sensitive=True)
+        result = gk.ensure(cache_dir=str(self.cache), pnpm=self.pnpm, need_generate=True)
+        self.assertEqual("installed", result["action"])
+        final = (self.cache / gk.VERSION).resolve()
+        add_cwds = [Path(cwd).resolve() for cmd, cwd in self.fake.calls if "add" in cmd]
+        self.assertEqual([final], add_cwds)
+        self.assertTrue(Path(result["cli_path"]).resolve().is_relative_to(final))
+        self.assertEqual([], [p.name for p in self.cache.iterdir()
+                              if p.name.startswith(".staging")])
+
+    def test_installed_cache_is_reused_on_second_call(self):
+        self._activate(move_sensitive=True)
+        gk.ensure(cache_dir=str(self.cache), pnpm=self.pnpm)
+        again = gk.ensure(cache_dir=str(self.cache), pnpm=self.pnpm)
+        self.assertEqual("reused", again["action"])
+
+    def test_failed_install_is_set_aside_and_retry_succeeds(self):
+        self._activate(install_rc=1)
+        with self.assertRaises(gk.KordocBlocked) as ctx:
+            gk.ensure(cache_dir=str(self.cache), pnpm=self.pnpm)
+        self.assertEqual("install_failed", ctx.exception.reason)
+        self.assertFalse((self.cache / gk.VERSION).exists())
+        self.assertEqual(1, len([p for p in self.cache.iterdir()
+                                 if p.name.startswith(f".failed-{gk.VERSION}-")]))
+        self.fake.install_rc = 0
+        result = gk.ensure(cache_dir=str(self.cache), pnpm=self.pnpm)
+        self.assertEqual("installed", result["action"])
+
+    def test_owned_but_broken_cache_is_set_aside_and_reinstalled(self):
+        # 옛 설치 방식이 남긴, 표식은 맞는데 안쪽 링크가 끊긴 캐시.
+        self._activate(move_sensitive=True)
+        self._root_marker(gk.VERSION)
+        broken = self.cache / gk.VERSION
+        pkg = broken / "node_modules" / "kordoc"
+        (pkg / "dist").mkdir(parents=True)
+        (pkg / "package.json").write_text(
+            json.dumps({"name": "kordoc", "version": gk.VERSION}), encoding="utf-8")
+        (pkg / "dist" / "cli.js").write_text("// dangling\n", encoding="utf-8")
+        (broken / ".abs-root").write_text(str(self.cache / ".staging-old"), encoding="utf-8")
+        (broken / ".gg-kordoc.json").write_text(
+            json.dumps({"owner": gk.OWNER, "package": gk.PACKAGE,
+                        "version": gk.VERSION, "registry": gk.REGISTRY}),
+            encoding="utf-8")
+        result = gk.ensure(cache_dir=str(self.cache), pnpm=self.pnpm)
+        self.assertEqual("installed", result["action"])
+        parked = [p for p in self.cache.iterdir() if p.name.startswith(f".broken-{gk.VERSION}-")]
+        self.assertEqual(1, len(parked))
+        self.assertTrue((parked[0] / ".abs-root").is_file())
+
+    def _dangling_cache(self):
+        """Windows 첫 시험의 잔해: 표식은 맞는데 node_modules/kordoc 링크가 사라진 자리를 가리킨다."""
+        self._root_marker(gk.VERSION)
+        broken = self.cache / gk.VERSION
+        (broken / "node_modules").mkdir(parents=True)
+        gone = self.cache / f".staging-{gk.VERSION}-gone"  # 이름 바꾸기 전 설치 자리 — 이미 없다
+        try:
+            os.symlink(gone, broken / "node_modules" / "kordoc", target_is_directory=True)
+        except (OSError, NotImplementedError) as exc:
+            self.skipTest(f"symlink unavailable: {exc}")
+        (broken / ".gg-kordoc.json").write_text(
+            json.dumps({"owner": gk.OWNER, "package": gk.PACKAGE,
+                        "version": gk.VERSION, "registry": gk.REGISTRY}),
+            encoding="utf-8")
+        self.assertFalse((broken / "node_modules" / "kordoc" / "dist" / "cli.js").exists())
+        return broken
+
+    def test_dangling_link_cache_is_set_aside_then_reinstalled_and_reused(self):
+        # 실제 끊긴 링크(가짜 표시 파일이 아님)에서 ensure가 격리 → 재설치 → 재사용까지 간다.
+        self._activate(move_sensitive=True)
+        broken = self._dangling_cache()
+        first = gk.ensure(cache_dir=str(self.cache), pnpm=self.pnpm)
+        self.assertEqual("installed", first["action"])
+        self.assertTrue(Path(first["cli_path"]).is_file())
+        self.assertTrue(Path(first["cli_path"]).resolve().is_relative_to(broken.resolve()))
+        parked = [p for p in self.cache.iterdir() if p.name.startswith(f".broken-{gk.VERSION}-")]
+        self.assertEqual(1, len(parked))
+        # 옛 폴더는 지우지 않고 그대로(끊긴 링크 포함) 보존한다.
+        self.assertTrue(os.path.islink(parked[0] / "node_modules" / "kordoc"))
+        self.assertEqual(1, len([c for c, _ in self.fake.calls if "add" in c]))
+        again = gk.ensure(cache_dir=str(self.cache), pnpm=self.pnpm)
+        self.assertEqual("reused", again["action"])
+        self.assertEqual(1, len([c for c, _ in self.fake.calls if "add" in c]))
+        self.assertEqual(1, len([p for p in self.cache.iterdir()
+                                 if p.name.startswith(f".broken-{gk.VERSION}-")]))
+
+    def test_dangling_link_cache_that_cannot_be_moved_does_not_reinstall(self):
+        # 격리가 막히면(Windows 열린 파일) 그 위에 덮어 설치하지 않고 이유와 자리를 알린다.
+        self._activate(move_sensitive=True)
+        broken = self._dangling_cache()
+        with mock.patch.object(gk.os, "replace",
+                               side_effect=PermissionError(13, "simulated open handle")):
+            with self.assertRaises(gk.KordocBlocked) as ctx:
+                gk.ensure(cache_dir=str(self.cache), pnpm=self.pnpm)
+        self.assertEqual("cache_invalid", ctx.exception.reason)
+        self.assertEqual([], [c for c, _ in self.fake.calls if "add" in c])
+        self.assertTrue(os.path.islink(broken / "node_modules" / "kordoc"))
+
+    def test_failed_install_reports_when_set_aside_fails(self):
+        # R5-02: 옮기지 못했는데 옮긴 것처럼 안내하면 안 된다(Windows에서 파일이 열려 있을 때).
+        self._activate(install_rc=1)
+        real_replace = gk.os.replace
+        busy = PermissionError(13, "simulated open handle")
+        with mock.patch.object(gk.os, "replace", side_effect=busy):
+            with self.assertRaises(gk.KordocBlocked) as ctx:
+                gk.ensure(cache_dir=str(self.cache), pnpm=self.pnpm)
+        self.assertEqual("install_failed", ctx.exception.reason)
+        outcome = ctx.exception.details["quarantine"]
+        self.assertFalse(outcome["moved"])
+        self.assertIn("simulated open handle", outcome["error"])
+        self.assertEqual((self.cache / gk.VERSION).resolve(),
+                         Path(outcome["remains_at"]).resolve())
+        self.assertIn("could NOT be moved", ctx.exception.details["action"])
+        self.assertTrue((self.cache / gk.VERSION).exists())
+        self.assertIs(real_replace, gk.os.replace)
+
+    def test_failed_install_reports_where_it_was_set_aside(self):
+        self._activate(install_rc=1)
+        with self.assertRaises(gk.KordocBlocked) as ctx:
+            gk.ensure(cache_dir=str(self.cache), pnpm=self.pnpm)
+        outcome = ctx.exception.details["quarantine"]
+        self.assertTrue(outcome["moved"])
+        self.assertTrue(Path(outcome["moved_to"]).is_dir())
+        self.assertIn(outcome["moved_to"], ctx.exception.details["action"])
+
+    def test_broken_cache_that_cannot_be_set_aside_is_reported(self):
+        self._activate(move_sensitive=True)
+        self._root_marker(gk.VERSION)
+        broken = self.cache / gk.VERSION
+        pkg = broken / "node_modules" / "kordoc"
+        (pkg / "dist").mkdir(parents=True)
+        (pkg / "package.json").write_text(
+            json.dumps({"name": "kordoc", "version": gk.VERSION}), encoding="utf-8")
+        (pkg / "dist" / "cli.js").write_text("// dangling\n", encoding="utf-8")
+        (broken / ".abs-root").write_text("elsewhere", encoding="utf-8")
+        (broken / ".gg-kordoc.json").write_text(
+            json.dumps({"owner": gk.OWNER, "package": gk.PACKAGE,
+                        "version": gk.VERSION, "registry": gk.REGISTRY}),
+            encoding="utf-8")
+        with mock.patch.object(gk.os, "replace",
+                               side_effect=PermissionError(13, "simulated open handle")):
+            with self.assertRaises(gk.KordocBlocked) as ctx:
+                gk.ensure(cache_dir=str(self.cache), pnpm=self.pnpm)
+        self.assertEqual("cache_invalid", ctx.exception.reason)
+        self.assertFalse(ctx.exception.details["quarantine"]["moved"])
+        self.assertTrue(broken.exists())
+
+    def test_folder_without_marker_is_not_taken_as_cache(self):
+        self._activate()
+        self._root_marker(gk.VERSION)
+        (self.cache / gk.VERSION).mkdir()
         with self.assertRaises(gk.KordocBlocked) as ctx:
             gk.ensure(cache_dir=str(self.cache), pnpm=self.pnpm)
         self.assertEqual("cache_invalid", ctx.exception.reason)

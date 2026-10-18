@@ -561,13 +561,25 @@ def ensure(*, cache_dir=None, node=None, pnpm=None, kordoc=None, timeout=DEFAULT
             rejected_candidates=rejected_candidates,
         )
     if version_root.exists():
-        raise KordocBlocked(
-            "cache_invalid",
-            cache_dir=str(root),
-            version=VERSION,
-            rejected_candidates=rejected_candidates,
-            action="Existing owned cache is incomplete or failed the capability check; choose a new cache or repair it manually. No files were overwritten.",
-        )
+        if _owned_but_broken(version_root, node_path):
+            # 우리가 설치했지만 안쪽 링크가 끊긴 캐시(옛 방식이 설치 뒤 폴더 이름을 바꿔
+            # 남긴 잔해 등)는 지우지 않고 옆으로 치워 두고 새로 설치한다.
+            outcome = _quarantine(version_root, root, "broken")
+            if not outcome["moved"]:
+                raise KordocBlocked(
+                    "cache_invalid", cache_dir=str(root), version=VERSION,
+                    rejected_candidates=rejected_candidates, quarantine=outcome,
+                    action="The existing cache is broken and could not be set aside "
+                           f"({outcome['error']}). Close programs using it, then delete or rename "
+                           f"{outcome['remains_at']} and retry. No files were deleted.")
+        else:
+            raise KordocBlocked(
+                "cache_invalid",
+                cache_dir=str(root),
+                version=VERSION,
+                rejected_candidates=rejected_candidates,
+                action="Existing owned cache is incomplete or failed the capability check; choose a new cache or repair it manually. No files were overwritten.",
+            )
 
     try:
         _, pnpm_cmd = _node_and_pnpm(node_path, pnpm, need_pnpm=True, check_node=False)
@@ -575,10 +587,20 @@ def ensure(*, cache_dir=None, node=None, pnpm=None, kordoc=None, timeout=DEFAULT
         if rejected_candidates:
             exc.details["rejected_candidates"] = rejected_candidates
         raise
-    stage = root / f".staging-{VERSION}-{uuid.uuid4().hex}"
-    stage.mkdir(mode=0o700)
+    # 최종 위치에서 바로 설치한다. pnpm은 Windows에서 절대 경로 정션으로 패키지를
+    # 연결하므로, 다른 이름의 폴더에 설치한 뒤 이름을 바꾸면 링크가 끊어진다.
+    # "반쯤 설치된 캐시를 쓰지 않는다"는 보장은 표식(.gg-kordoc.json)을 검증이
+    # 끝난 뒤에 쓰는 것으로 지킨다 — 표식이 없으면 어떤 경로도 이 폴더를 캐시로 보지 않는다.
     try:
-        (stage / "package.json").write_text(
+        version_root.mkdir(mode=0o700)
+    except FileExistsError:
+        raise KordocBlocked(
+            "cache_busy", cache_dir=str(root), version=VERSION,
+            action="Another run may be installing this cache right now; wait and retry.")
+    except OSError as exc:
+        raise KordocBlocked("cache_publish_failed", error=str(exc), action="No cache was published; retry with a writable cache directory.")
+    try:
+        (version_root / "package.json").write_text(
             json.dumps({"name": "ginseng-goat-kordoc-cache", "private": True}, indent=2) + "\n",
             encoding="utf-8",
         )
@@ -595,25 +617,22 @@ def ensure(*, cache_dir=None, node=None, pnpm=None, kordoc=None, timeout=DEFAULT
         install_env = _env_for_node(node_path)
         install_env["COREPACK_HOME"] = str(root / "corepack")
         install_env["COREPACK_ENABLE_DOWNLOAD_PROMPT"] = "0"
-        install = _run(install_cmd, cwd=stage, env=install_env, timeout=timeout)
+        install = _run(install_cmd, cwd=version_root, env=install_env, timeout=timeout)
         if not install.get("ok"):
             raise KordocBlocked(
                 "install_failed",
                 command=install_cmd,
                 process=install,
-                action="Retry ensure; the partial staging directory is retained for audit and can be removed manually.",
+                action="Retry ensure after checking the network and pnpm.",
             )
-        # Claim the staging tree before validation so the same validator is
-        # used for both fresh and reused installs.  It is published only after
-        # the package metadata and --help smoke check pass.
-        (stage / ".gg-kordoc.json").write_text(
+        # 표식은 설치가 끝난 뒤에 쓰고, 같은 검증기로 패키지 정보와 --help를 확인한다.
+        (version_root / ".gg-kordoc.json").write_text(
             json.dumps({"owner": OWNER, "package": PACKAGE, "version": VERSION, "registry": REGISTRY}, indent=2) + "\n",
             encoding="utf-8",
         )
-        validated = _validated_install(stage, node_path, need_generate=need_generate)
+        validated = _validated_install(version_root, node_path, need_generate=need_generate)
         if not validated:
             raise KordocBlocked("validation_failed", action="Install completed but package/version/CLI capability validation failed; no cache was published.")
-        os.replace(stage, version_root)
         return _result(
             "ready",
             action="installed",
@@ -621,18 +640,51 @@ def ensure(*, cache_dir=None, node=None, pnpm=None, kordoc=None, timeout=DEFAULT
             version=VERSION,
             actual_version=VERSION,
             cache_dir=str(root),
-            cli_path=str(version_root / "node_modules" / PACKAGE / "dist" / "cli.js"),
-            cli_command=[node_path, str(version_root / "node_modules" / PACKAGE / "dist" / "cli.js")],
-            command=[node_path, str(version_root / "node_modules" / PACKAGE / "dist" / "cli.js")],
+            cli_path=str(validated["cli"]),
+            cli_command=[node_path, str(validated["cli"])],
+            command=[node_path, str(validated["cli"])],
             node_path=node_path,
             smoke="help_ok",
             capability_verification=validated["capability"],
             rejected_candidates=rejected_candidates,
         )
-    except KordocBlocked:
+    except KordocBlocked as exc:
+        outcome = _quarantine(version_root, root, "failed")
+        exc.details["quarantine"] = outcome
+        exc.details["action"] = f"{exc.details.get('action', '')} {_set_aside_note(outcome)}".strip()
         raise
     except OSError as exc:
-        raise KordocBlocked("cache_publish_failed", error=str(exc), action="No cache was published; retry with a writable cache directory.")
+        outcome = _quarantine(version_root, root, "failed")
+        raise KordocBlocked("cache_publish_failed", error=str(exc), quarantine=outcome,
+                            action=f"No cache was published; retry with a writable cache directory. {_set_aside_note(outcome)}")
+
+
+def _owned_but_broken(version_root: Path, node_path: str) -> bool:
+    marker = _read_json(version_root / ".gg-kordoc.json")
+    if not marker or marker.get("owner") != OWNER or marker.get("version") != VERSION or marker.get("registry") != REGISTRY:
+        return False
+    return _validated_install(version_root, node_path, need_generate=False) is None
+
+
+def _quarantine(path: Path, root: Path, tag: str) -> dict:
+    """실패·고장 난 설치 폴더를 지우지 않고 캐시 안 숨김 폴더로 옮긴다(다음 시도가 막히지 않게).
+
+    옮기지 못하면(예: Windows에서 다른 프로그램이 파일을 열고 있을 때) 그 사실과
+    오류, 폴더가 실제로 남은 자리를 그대로 돌려준다 — 옮긴 것처럼 안내하지 않는다.
+    """
+    target = root / f".{tag}-{VERSION}-{uuid.uuid4().hex}"
+    try:
+        os.replace(path, target)
+    except OSError as exc:
+        return {"moved": False, "remains_at": str(path), "error": str(exc)}
+    return {"moved": True, "moved_to": str(target)}
+
+
+def _set_aside_note(outcome: dict) -> str:
+    if outcome["moved"]:
+        return f"The partial install was set aside as {outcome['moved_to']} and can be removed manually."
+    return (f"The partial install could NOT be moved ({outcome['error']}) and still sits at "
+            f"{outcome['remains_at']}. Close programs using it, then delete or rename that folder before retrying.")
 
 
 def parse(input_path, out, *, cache_dir=None, node=None, pnpm=None, kordoc=None, timeout=DEFAULT_TIMEOUT):

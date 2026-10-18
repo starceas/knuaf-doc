@@ -29,6 +29,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+from urllib.parse import quote, unquote
 import zipfile
 
 import gg_fs
@@ -159,7 +160,8 @@ def transform_hwpx(data: bytes, *, font: str = SCHOOL_FONT,
             member = zin.read(info.filename)
             if SECTION_RE.fullmatch(info.filename):
                 text = member.decode("utf-8")
-                updated = rewrite_margins(text, margins_mm)
+                updated = (rewrite_margins(text, margins_mm)
+                           if margins_mm is not None else text)
                 if updated != text:
                     applied["margins"].append(info.filename)
                 if page_numbers:
@@ -170,12 +172,29 @@ def transform_hwpx(data: bytes, *, font: str = SCHOOL_FONT,
                 member = updated.encode("utf-8")
             elif info.filename == HEADER_NAME:
                 text = member.decode("utf-8")
-                updated = rewrite_fonts(text, font)
+                updated = rewrite_fonts(text, font) if font is not None else text
                 if updated != text:
                     applied["font"].append(info.filename)
                 member = updated.encode("utf-8")
             zout.writestr(info, member)
     return target.getvalue(), applied
+
+
+def missing_format_steps(applied, *, font, margins_mm, page_numbers):
+    """요청한 서식 변환 중 하나도 적용되지 않은 항목 목록.
+
+    kordoc 산출물의 네임스페이스 접두사·비자기닫힘 요소·colPr 부재 등으로
+    정규식이 아무것도 못 바꿨는데도 그대로 발행해 매니페스트가 적용된 것처럼
+    적는 일을 막는다. None/False인 항목은 요청하지 않은 것으로 본다.
+    """
+    requested = []
+    if margins_mm is not None:
+        requested.append("margins")
+    if font is not None:
+        requested.append("font")
+    if page_numbers:
+        requested.append("page_numbers")
+    return [name for name in requested if not applied.get(name)]
 
 
 # --- 외부 프로세스 -------------------------------------------------------
@@ -278,21 +297,45 @@ _NUMBER_RE = re.compile(r"[+-]?\d[\d,]*(?:\.\d+)?")
 _TABLE_ROW_RE = re.compile(r"^\s*\|.*\|\s*$", re.MULTILINE)
 
 
-def table_numbers(text: str):
-    """파이프 표 행에서 뽑은 완전한 수치 토큰의 문서 순서 목록.
+def _split_table_row(row: str):
+    body = row.strip()
+    if body.startswith("|"):
+        body = body[1:]
+    if body.endswith("|"):
+        body = body[:-1]
+    return body.split("|")
 
-    부호·소수점을 보존하고 천단위 쉼표만 정규화한다(-100·100, 1.25·25.1을
-    서로 다르게 본다). 순서까지 비교해야 셀 위치 바뀜을 잡는다.
+
+def table_numbers(text: str):
+    """파이프 표에서 뽑은 (표, 행, 칸, 토큰) 목록(문서 순서).
+
+    칸 좌표까지 남겨야 ``| x | 10 | y |`` → ``| x | y | 10 |``처럼 토큰 순서는
+    같고 칸만 옮겨진 경우를 잡는다. 부호·소수점을 보존하고 천단위 쉼표만
+    정규화한다(-100·100, 1.25·25.1을 서로 다르게 본다).
     """
-    tokens = []
-    for row in _TABLE_ROW_RE.findall(text):
-        tokens.extend(match.group(0).replace(",", "")
-                      for match in _NUMBER_RE.finditer(row))
-    return tokens
+    entries = []
+    table = -1
+    row = 0
+    in_table = False
+    for line in text.splitlines():
+        if not _TABLE_ROW_RE.match(line):
+            in_table = False
+            continue
+        if in_table:
+            row += 1
+        else:
+            in_table = True
+            table += 1
+            row = 0
+        for column, cell in enumerate(_split_table_row(line)):
+            for match in _NUMBER_RE.finditer(cell):
+                entries.append(
+                    (table, row, column, match.group(0).replace(",", "")))
+    return entries
 
 
 def compare_table_numbers(source_text: str, parsed_text: str) -> dict:
-    """원문 표 수치와 재파싱 표 수치의 문서 순서 열 비교(부호·소수점 보존)."""
+    """원문 표 수치와 재파싱 표 수치를 (표, 행, 칸) 좌표까지 비교(부호·소수점 보존)."""
     expected = table_numbers(source_text)
     observed = table_numbers(parsed_text)
     if expected == observed:
@@ -301,16 +344,149 @@ def compare_table_numbers(source_text: str, parsed_text: str) -> dict:
                  min(len(expected), len(observed)))
     return {"match": False, "index": index,
             "expected_count": len(expected), "observed_count": len(observed),
-            "expected": expected[index:index + 3],
-            "observed": observed[index:index + 3]}
+            "expected": [list(item) for item in expected[index:index + 3]],
+            "observed": [list(item) for item in observed[index:index + 3]]}
 
 
-_IMAGE_RE = re.compile(r"!\[[^\]]*\]\(\s*([^)\s]+)")
+# CommonMark: 백슬래시는 뒤가 ASCII 문장부호일 때만 이스케이프다. 그 밖(글자 등)에서는
+# 글자 그대로라서 Windows 경로(``figs\\a.png``)의 역슬래시를 지우면 안 된다.
+_ASCII_PUNCT = frozenset("!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~")
+
+
+def _image_alt_end(text: str, start: int) -> int:
+    """``![`` 뒤 대체텍스트의 닫는 ``]`` 위치(이스케이프 무시). 없으면 -1."""
+    index = start
+    length = len(text)
+    while index < length:
+        if text[index] == "\\" and index + 1 < length:
+            index += 2
+            continue
+        if text[index] == "]":
+            return index
+        index += 1
+    return -1
+
+
+def _parse_image_destination(text: str, open_index: int):
+    """``(`` 다음부터 목적지와 닫는 ``)`` 뒤 위치를 파싱한다(실패 시 (None, None)).
+
+    ``<...>``로 감싼 목적지(공백 허용)·괄호 균형·뒤따르는 "제목" 문자열을
+    이해한다. 백슬래시 이스케이프는 여기서 푼다.
+    """
+    length = len(text)
+    index = open_index + 1
+    while index < length and text[index] in " \t\n":
+        index += 1
+    if index < length and text[index] == "<":
+        index += 1
+        chars = []
+        while index < length and text[index] not in ">\n":
+            if text[index] == "\\" and index + 1 < length and text[index + 1] in _ASCII_PUNCT:
+                chars.append(text[index + 1])
+                index += 2
+                continue
+            chars.append(text[index])
+            index += 1
+        if index >= length or text[index] != ">":
+            return None, None
+        index += 1
+        destination = "".join(chars)
+    else:
+        depth = 0
+        chars = []
+        while index < length:
+            char = text[index]
+            if char in " \t\n" and depth == 0:
+                break
+            if char == "\\" and index + 1 < length and text[index + 1] in _ASCII_PUNCT:
+                chars.append(text[index + 1])
+                index += 2
+                continue
+            if char == "(":
+                depth += 1
+            elif char == ")":
+                if depth == 0:
+                    break
+                depth -= 1
+            chars.append(char)
+            index += 1
+        destination = "".join(chars)
+    while index < length and text[index] in " \t\n":
+        index += 1
+    if index < length and text[index] in "\"'(":
+        closer = ")" if text[index] == "(" else text[index]
+        index += 1
+        while index < length and text[index] != closer:
+            if text[index] == "\\" and index + 1 < length:
+                index += 2
+                continue
+            index += 1
+        if index >= length:
+            return None, None
+        index += 1
+        while index < length and text[index] in " \t\n":
+            index += 1
+    if index >= length or text[index] != ")":
+        return None, None
+    return destination, index + 1
+
+
+def _scan_images(text: str):
+    """그림 참조마다 (대체텍스트 끝 ``]`` 위치, 닫는 ``)`` 뒤 위치, 해석된 경로)를 낸다."""
+    search = 0
+    length = len(text)
+    while True:
+        open_at = text.find("![", search)
+        if open_at == -1:
+            return
+        alt_end = _image_alt_end(text, open_at + 2)
+        if (alt_end == -1 or alt_end + 1 >= length
+                or text[alt_end + 1] != "("):
+            search = open_at + 2
+            continue
+        destination, next_index = _parse_image_destination(text, alt_end + 1)
+        if destination is None:
+            search = open_at + 2
+            continue
+        yield open_at, alt_end, next_index, unquote(destination)
+        search = next_index
 
 
 def image_references(text: str):
-    """마크다운 그림 참조(![alt](경로))의 경로 목록(문서 순서)."""
-    return [match.group(1) for match in _IMAGE_RE.finditer(text)]
+    """마크다운 그림 참조(![대체텍스트](목적지))의 목적지 목록(문서 순서).
+
+    ``<...>``로 감싼 목적지(공백 허용)와 뒤따르는 "제목" 문자열을 이해하고,
+    백슬래시 이스케이프·퍼센트 인코딩을 경로 해석 전에 푼다(``farm%20photo.png``
+    → ``farm photo.png``). 경계 판정은 ``resolve_images``가 그대로 한다.
+    """
+    return [path for _, _, _, path in _scan_images(text)]
+
+
+def normalize_image_destinations(text: str) -> str:
+    """kordoc에 넘기는 마크다운의 그림 목적지를 퍼센트 인코딩 한 가지 표기로 통일한다.
+
+    우리 파서가 읽는 표기(``<...>``·이스케이프·제목)를 kordoc 생성기도 그림으로
+    읽는다는 보장이 없어서(``<farm photo.png>``는 그림이 빠진 채 발행됐다), 경로
+    해석에 쓴 값 그대로를 생성기가 읽는 단순 표기로 다시 쓴다.
+    """
+    out = []
+    cursor = 0
+    for open_at, alt_end, next_index, path in _scan_images(text):
+        out.append(text[cursor:alt_end + 1])
+        out.append("(" + quote(path, safe="/") + ")")
+        cursor = next_index
+    out.append(text[cursor:])
+    return "".join(out)
+
+
+def embedded_picture_count(data: bytes) -> int:
+    """HWPX 본문 XML의 그림(``<hp:pic``) 개수."""
+    count = 0
+    with zipfile.ZipFile(io.BytesIO(data)) as zin:
+        for info in zin.infolist():
+            if SECTION_RE.fullmatch(info.filename):
+                count += zin.read(info.filename).decode("utf-8").count("<hp:pic")
+    return count
 
 
 def resolve_images(text: str, image_dir):
@@ -399,7 +575,8 @@ def build(markdown, out, *, context, authorization, cli_command=None,
     work = Path(tempfile.mkdtemp(prefix=".gg-hwpx-", dir=str(target.parent)))
     try:
         md_path = work / "input.md"
-        md_path.write_text(text, encoding="utf-8", newline="\n")
+        md_path.write_text(normalize_image_destinations(text), encoding="utf-8",
+                          newline="\n")
         raw_path = work / "raw.hwpx"
 
         command = None
@@ -437,6 +614,20 @@ def build(markdown, out, *, context, authorization, cli_command=None,
             raw_path.read_bytes(), font=font, margins_mm=margins_mm,
             page_numbers=page_numbers,
         )
+        pictures = embedded_picture_count(transformed)
+        if pictures < len(references):
+            raise HwpxBlocked(
+                "images_not_embedded", referenced=len(references), embedded=pictures,
+                action="원문의 그림 표기 일부가 HWPX에 그림으로 들어가지 않았습니다. "
+                       "발행하지 않았습니다. 그림 경로 표기를 단순하게 고쳐 보세요.")
+        missing = missing_format_steps(
+            applied, font=font, margins_mm=margins_mm,
+            page_numbers=page_numbers)
+        if missing:
+            raise HwpxBlocked(
+                "format_not_applied", missing=missing, applied=applied,
+                action="kordoc 산출물에 요청한 서식(여백·글꼴·쪽번호)을 적용하지 "
+                       "못했습니다. HWPX 구조를 확인하세요. 발행하지 않았습니다.")
 
         verification = {"validate": None, "reparse": None, "table_numbers": None}
         if verify:
@@ -493,7 +684,7 @@ def build(markdown, out, *, context, authorization, cli_command=None,
             output_sha256=hashlib.sha256(output_bytes).hexdigest(),
             applied=applied,
             font=font,
-            margins_mm=dict(margins_mm),
+            margins_mm=dict(margins_mm) if margins_mm is not None else None,
             page_numbers=bool(page_numbers),
             images={"dir": str(image_dir), "referenced": references},
             verification=verification,

@@ -39,6 +39,7 @@ SAMPLE_MD = (
 # 받은 argv를 argv-<부명령>.json으로 남겨 image-dir 전달 여부를 시험한다.
 FAKE_CLI = """\
 import json
+import re
 import sys
 import zipfile
 from pathlib import Path
@@ -68,14 +69,14 @@ HEADER = (
 )
 
 
-def write_hwpx(path):
+def write_hwpx(path, section=SECTION):
     with zipfile.ZipFile(path, "w") as archive:
         info = zipfile.ZipInfo("mimetype")
         info.compress_type = zipfile.ZIP_STORED
         archive.writestr(info, b"application/hwp+zip")
         archive.writestr("META-INF/container.xml", "<container/>")
         archive.writestr("Contents/header.xml", HEADER)
-        archive.writestr("Contents/section0.xml", SECTION)
+        archive.writestr("Contents/section0.xml", section)
 
 
 def main(argv):
@@ -91,7 +92,14 @@ def main(argv):
         if CONTROL.get("generate_empty"):
             Path(out).write_bytes(b"")
             return 0
-        write_hwpx(out)
+        md_text = Path(args[-1]).read_text(encoding="utf-8")
+        (HERE / "input-md.txt").write_text(md_text, encoding="utf-8")
+        section = CONTROL.get("section", SECTION)
+        # 단순 표기(공백·<> 없는) 그림만 그림으로 읽는 생성기를 흉내낸다.
+        pictures = len(re.findall(r"!\\[[^\\]]*\\]\\([^<)\\s]+\\)", md_text))
+        if pictures and not CONTROL.get("drop_pictures"):
+            section = section.replace("</hp:run>", "<hp:pic/>" * pictures + "</hp:run>", 1)
+        write_hwpx(out, section=section)
         return 0
     if args and args[0] == "validate":
         if CONTROL.get("validate_no_output"):
@@ -129,6 +137,15 @@ HEADER_SAMPLE = (
     '<hh:font id="0" face="함초롬바탕" type="TTF" isEmbedded="0"/>'
     '<hh:font id="1" face="HY견고딕" type="TTF" isEmbedded="0"/></hh:fontface>'
     '</hh:fontfaces></hh:head>'
+)
+
+# 지적 1 반례: 비자기닫힘 margin·colPr 부재라 여백·쪽번호 정규식이 아무것도 못 바꾼다.
+UNFORMATTABLE_SECTION = (
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>'
+    '<hs:sec xmlns:hp="http://www.hancom.co.kr/hwpml/2011/paragraph"><hp:p><hp:run>'
+    '<hp:secPr><hp:pagePr><hp:margin header="1" footer="1" gutter="0" '
+    'left="1" right="1" top="1" bottom="1"></hp:margin></hp:pagePr></hp:secPr>'
+    '<hp:t>x</hp:t></hp:run></hp:p></hs:sec>'
 )
 
 
@@ -180,9 +197,12 @@ class PureTransformTests(unittest.TestCase):
         raw = b"\xef\xbb\xbfa\r\nb\rc"
         self.assertEqual("a\nb\nc", gh.normalize_markdown(raw))
 
-    def test_table_numbers_keep_sign_decimal_and_order(self):
-        self.assertEqual(["1", "2", "10000", "12345"],
-                         gh.table_numbers(SAMPLE_MD))
+    def test_table_numbers_keep_sign_decimal_and_position(self):
+        # (표, 행, 칸, 토큰) 좌표를 보존한다 — 부호·소수점·순서·칸 위치.
+        self.assertEqual(
+            [(0, 0, 1, "1"), (0, 0, 2, "2"),
+             (0, 2, 1, "10000"), (0, 2, 2, "12345")],
+            gh.table_numbers(SAMPLE_MD))
 
     def test_compare_table_numbers_is_exact(self):
         # R1-04: 부호·소수점·순서를 버리면 이 반례들이 '일치'로 통과한다.
@@ -198,6 +218,30 @@ class PureTransformTests(unittest.TestCase):
         self.assertFalse(result["match"])
         self.assertEqual(0, result["index"])
 
+    def test_compare_table_numbers_catches_cell_shift_same_flat_order(self):
+        # 지적 2: 평평한 토큰 목록만 비교하면 칸만 옮겨진 아래 두 표가 '일치'로
+        # 통과한다. (표, 행, 칸) 좌표를 함께 비교해야 잡힌다.
+        moved = gh.compare_table_numbers("| x | 10 | y |", "| x | y | 10 |")
+        self.assertFalse(moved["match"])
+        self.assertEqual(0, moved["index"])
+
+    def test_missing_format_steps_reports_unapplied_requests(self):
+        # 지적 1: 요청한 서식 변환 중 하나도 적용되지 않은 항목만 보고한다.
+        empty = {"margins": [], "font": [], "page_numbers": []}
+        self.assertEqual(
+            ["margins", "font", "page_numbers"],
+            gh.missing_format_steps(empty, font="신명조", margins_mm={"top": 20},
+                                    page_numbers=True))
+        self.assertEqual(
+            [], gh.missing_format_steps(empty, font=None, margins_mm=None,
+                                        page_numbers=False))
+        self.assertEqual(
+            ["page_numbers"],
+            gh.missing_format_steps(
+                {"margins": ["Contents/section0.xml"],
+                 "font": ["Contents/header.xml"], "page_numbers": []},
+                font="신명조", margins_mm={"top": 20}, page_numbers=True))
+
     def test_image_references_and_resolution(self):
         with tempfile.TemporaryDirectory(prefix="hwpx-img-") as tmp:
             base = Path(tmp)
@@ -210,6 +254,41 @@ class PureTransformTests(unittest.TestCase):
             self.assertEqual(["nope.png"], missing)
             _, escaped = gh.resolve_images("![밖](../outside.png)\n", base)
             self.assertEqual(["../outside.png"], escaped)
+
+    def test_image_paths_with_spaces_escapes_and_percent_encoding(self):
+        # 지적 3: <...>로 감싼 공백 목적지·퍼센트 인코딩·이스케이프를 경로 해석
+        # 전에 풀어야 정상 입력을 거부하지 않는다(경계 판정은 그대로 유지).
+        with tempfile.TemporaryDirectory(prefix="hwpx-img-") as tmp:
+            base = Path(tmp)
+            (base / "farm photo.png").write_bytes(b"\x89PNG")
+            (base / "a(b).png").write_bytes(b"\x89PNG")
+            text = ("![농장](<farm photo.png>)\n\n"
+                    "![농장](farm%20photo.png)\n\n"
+                    '![괄호](a\\(b\\).png "제목")\n\n'
+                    "![밖](<../outside space.png>)\n")
+            self.assertEqual(
+                ["farm photo.png", "farm photo.png", "a(b).png",
+                 "../outside space.png"],
+                gh.image_references(text))
+            referenced, missing = gh.resolve_images(text, base)
+            self.assertEqual(4, len(referenced))
+            self.assertEqual(["../outside space.png"], missing)
+
+    def test_normalize_image_destinations_is_stable_and_plain(self):
+        text = ("a ![x](<farm photo.png>) b ![y](plain.png) ![z](a\\(b\\).png \"t\")\n")
+        once = gh.normalize_image_destinations(text)
+        self.assertEqual("a ![x](farm%20photo.png) b ![y](plain.png) ![z](a%28b%29.png)\n",
+                         once)
+        self.assertEqual(once, gh.normalize_image_destinations(once))
+        self.assertEqual(gh.image_references(text), gh.image_references(once))
+
+    def test_image_backslash_before_letter_is_kept_for_windows_paths(self):
+        # CommonMark: 역슬래시는 뒤가 문장부호일 때만 이스케이프. Windows 식 경로의
+        # 역슬래시를 지우면 안 된다.
+        text = ("![a](figs\\a.png)\n\n![b](<figs\\b c.png>)\n\n"
+                "![c](..\\figs\\d.png)\n")
+        self.assertEqual(["figs\\a.png", "figs\\b c.png", "..\\figs\\d.png"],
+                         gh.image_references(text))
 
     def test_transform_only_touches_header_and_section(self):
         raw = synthetic_hwpx()
@@ -400,6 +479,17 @@ class BuildTests(ContractCase):
             self._build()
         self.assertEqual("empty_output", ctx.exception.reason)
 
+    def test_build_blocks_when_requested_format_not_applied(self):
+        # 지적 1: 여백·쪽번호 정규식이 아무것도 못 바꾼 HWPX는 그대로 발행하지
+        # 않는다(매니페스트가 적용된 것처럼 적지 않도록).
+        self._control(markdown=SAMPLE_MD, section=UNFORMATTABLE_SECTION)
+        target = self.root / "out" / "result.hwpx"
+        with self.assertRaises(gh.HwpxBlocked) as ctx:
+            self._build()
+        self.assertEqual("format_not_applied", ctx.exception.reason)
+        self.assertEqual(["margins", "page_numbers"], ctx.exception.details["missing"])
+        self.assertFalse(target.exists())
+
     def test_verify_blocks_when_validate_failed(self):
         self._control(markdown=SAMPLE_MD,
                       validate={"ok": False, "issues": [{"message": "bad"}]})
@@ -504,6 +594,44 @@ class BuildTests(ContractCase):
         self.assertIn("--image-dir", argv)
         self.assertEqual(str(folder.resolve()),
                          argv[argv.index("--image-dir") + 1])
+
+    def test_image_destinations_are_normalized_for_the_generator(self):
+        # R5-01: 우리 파서가 읽는 <...> 표기를 생성기가 그림으로 못 읽어 그림 없는
+        # HWPX가 발행되던 문제. 생성기에는 단순한 퍼센트 인코딩 표기로 넘긴다.
+        folder = self.root / "src2"
+        folder.mkdir()
+        (folder / "farm photo.png").write_bytes(b"\x89PNG\r\n\x1a\n")
+        md = folder / "in.md"
+        md.write_text('![농장](<farm photo.png> "제목")\n', encoding="utf-8")
+        self._control(markdown="")
+        target = self.root / "norm.hwpx"
+        gh.build(md, target, context=self.context,
+                 authorization=self.authorization, cli_command=self.cli)
+        sent = (self.root / "input-md.txt").read_text(encoding="utf-8")
+        self.assertEqual("![농장](farm%20photo.png)\n", sent)
+        self.assertEqual(1, gh.embedded_picture_count(target.read_bytes()))
+
+    def test_images_not_embedded_blocks_publish(self):
+        folder = self.root / "src3"
+        folder.mkdir()
+        (folder / "picture.png").write_bytes(b"\x89PNG\r\n\x1a\n")
+        md = folder / "in.md"
+        md.write_text("![그림](picture.png)\n", encoding="utf-8")
+        self._control(markdown="", drop_pictures=True)
+        target = self.root / "lost.hwpx"
+        with self.assertRaises(gh.HwpxBlocked) as ctx:
+            gh.build(md, target, context=self.context,
+                     authorization=self.authorization, cli_command=self.cli)
+        self.assertEqual("images_not_embedded", ctx.exception.reason)
+        self.assertFalse(target.exists())
+
+    def test_margins_none_returns_normally(self):
+        # R5-03: 여백을 요청하지 않는 호출이 발행 뒤 예외로 끝나면 재시도가 막힌다.
+        self._control(markdown=SAMPLE_MD)
+        result, target = self._build(margins_mm=None)
+        self.assertEqual("ready", result["status"])
+        self.assertIsNone(result["margins_mm"])
+        self.assertTrue(target.is_file())
 
     def test_missing_image_blocks_before_generate(self):
         # R1-05: 해결되지 않는 그림은 조용히 1×1로 만들지 않고 거절한다.
