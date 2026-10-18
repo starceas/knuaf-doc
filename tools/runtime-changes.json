@@ -200,7 +200,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/install-manifest.json": {
-   "after_sha256": "f2c6376ae18c4b9b7e3152935ead293a2f3a2b4994db5ace3aa608ec5737af0b",
+   "after_sha256": "fe21339e4a26eaa9d809812d5cc669ab1f552997cce08009657ed0c80c7c0fdf",
    "before_sha256": null,
    "first_changed": "P27",
    "last_changed": "P28",
@@ -1280,12 +1280,12 @@
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_hwpx.py": {
-   "after_sha256": "1102c6346f61b479a9c0f6c5ba486a918212fe3f695aa51a34533af37d26df8d",
+   "after_sha256": "68d01e91dd01c3587ed1e141943fb9373b69a79c07ae190b8c66003c78e5748f",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
    "owner": "P28",
-   "reason": "W1/W1b kordoc-hwpx: 마크다운→HWPX 어댑터(kordoc generate, 학교 여백·글꼴·쪽번호 후처리, validate·표 수치 대조, before_publish 재확인 훅). | W2c: review R1-01..R1-07 반영(매니페스트 이름 <출력파일 전체이름>.manifest.json, gg_hwpx 라이브러리화, verify 실패 시 미발행, 표 수치 정확 비교, image_dir 기본=원문 폴더, 생성 스냅샷 해시). | W2d: review2 R1-02/R1-03 수정(build()가 필수 context+authorization로 발행 직전 reconfirm, validate는 process_ok+returncode==0+status=='ok'). | W2e: review3 R1-02 반례 수정(build()가 authorization.output==OUTPUT_SCHOOL_PAPER를 발행 전 확인).",
+   "reason": "W1/W1b kordoc-hwpx: 마크다운→HWPX 어댑터(kordoc generate, 학교 여백·글꼴·쪽번호 후처리, validate·표 수치 대조, before_publish 재확인 훅). | W2c: review R1-01..R1-07 반영(매니페스트 이름 <출력파일 전체이름>.manifest.json, gg_hwpx 라이브러리화, verify 실패 시 미발행, 표 수치 정확 비교, image_dir 기본=원문 폴더, 생성 스냅샷 해시). | W2d: review2 R1-02/R1-03 수정(build()가 필수 context+authorization로 발행 직전 reconfirm, validate는 process_ok+returncode==0+status=='ok'). | W2e: review3 R1-02 반례 수정(build()가 authorization.output==OUTPUT_SCHOOL_PAPER를 발행 전 확인). | F1: 리뷰 P2 3건(서식 미적용이면 format_not_applied로 발행 차단, 표 수치를 (표·행·칸) 좌표까지 비교, 그림 목적지 파서 - 공백·<>·퍼센트·이스케이프, Windows 역슬래시 경로 보존).",
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_insect_document.py": {
@@ -1325,12 +1325,12 @@
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_kordoc.py": {
-   "after_sha256": "cb133b27a62699af0b2ae0f9de5d9d3265354d2279169cfaa658f62159e1e4c4",
+   "after_sha256": "5d42c404b4652fee7a401ec629eec12c154af17f6cc19b3147accc722bfdf48c",
    "before_sha256": "887df34c5a108abf016ae3fe79ace91990cfc572bdf5a748c4a4815506a47ae4",
    "first_changed": "P1",
    "last_changed": "P28",
    "owner": "P27",
-   "reason": "C2: subprocess.run UTF-8 | P27: kordoc 4.17.1·Node 20, 캐시 루트 표식 버전 무관, 4.17.1 중첩 사이드카 배치 지원, K2-02: CLI 진입점 stdout·stderr UTF-8 재설정 | W2/W2b kordoc-hwpx: ensure(need_generate) generate 능력 검사, Windows .cmd 셔임→node+cli.js, FAT/exFAT 발행 폴백, Windows 환경변수 허용목록(USERPROFILE·HOMEDRIVE·HOMEPATH·SYSTEMDRIVE·PROGRAMDATA·PROGRAMFILES(X86)·COMMONPROGRAMFILES) 추가.",
+   "reason": "C2: subprocess.run UTF-8 | P27: kordoc 4.17.1·Node 20, 캐시 루트 표식 버전 무관, 4.17.1 중첩 사이드카 배치 지원, K2-02: CLI 진입점 stdout·stderr UTF-8 재설정 | W2/W2b kordoc-hwpx: ensure(need_generate) generate 능력 검사, Windows .cmd 셔임→node+cli.js, FAT/exFAT 발행 폴백, Windows 환경변수 허용목록(USERPROFILE·HOMEDRIVE·HOMEPATH·SYSTEMDRIVE·PROGRAMDATA·PROGRAMFILES(X86)·COMMONPROGRAMFILES) 추가. | F2: Windows 실기기 FAIL 수정 - pnpm 설치를 임시 폴더가 아니라 최종 폴더에서 바로 하고(정션 링크가 이름 바꾸기로 끊어지던 결함) 실패·고장 난 설치는 .failed-/.broken- 숨김 폴더로 치운다.",
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_lock.py": {
@@ -1856,12 +1856,12 @@
    "source": "new"
   },
   "tests/test_hwpx_adapter.py": {
-   "after_sha256": "9d37209c9b4e333e69ffb210d836ade7ec182e74075e67fce6c5b9a926c0201c",
+   "after_sha256": "e8982cba467b12dc02bc09bc9db1ffc4e6c8ea15460d924eec093e38608acf96",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
    "owner": "P28",
-   "reason": "W1 kordoc-hwpx: HWPX 어댑터 시험(크로스플랫폼 가짜 CLI). | W2c: review R1-01..R1-07 반영(매니페스트 이름 <출력파일 전체이름>.manifest.json, gg_hwpx 라이브러리화, verify 실패 시 미발행, 표 수치 정확 비교, image_dir 기본=원문 폴더, 생성 스냅샷 해시). | W2d: review2 R1-02/R1-03 수정(build()가 필수 context+authorization로 발행 직전 reconfirm, validate는 process_ok+returncode==0+status=='ok'). | W2e: review3 R1-02 반례 수정(build()가 authorization.output==OUTPUT_SCHOOL_PAPER를 발행 전 확인).",
+   "reason": "W1 kordoc-hwpx: HWPX 어댑터 시험(크로스플랫폼 가짜 CLI). | W2c: review R1-01..R1-07 반영(매니페스트 이름 <출력파일 전체이름>.manifest.json, gg_hwpx 라이브러리화, verify 실패 시 미발행, 표 수치 정확 비교, image_dir 기본=원문 폴더, 생성 스냅샷 해시). | W2d: review2 R1-02/R1-03 수정(build()가 필수 context+authorization로 발행 직전 reconfirm, validate는 process_ok+returncode==0+status=='ok'). | W2e: review3 R1-02 반례 수정(build()가 authorization.output==OUTPUT_SCHOOL_PAPER를 발행 전 확인). | F1: 위 P2 3건 시험과 Windows 역슬래시 경로 시험.",
    "source": "new"
   },
   "tests/test_major_guard_outputs.py": {
