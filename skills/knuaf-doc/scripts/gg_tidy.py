@@ -9,6 +9,7 @@ ever removed; run-like siblings are reported for the user to judge.
 
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 import re
@@ -16,10 +17,19 @@ import stat
 
 WORK_DIR = ".gg-work"
 NOTES_DIR = "notes"
-RUN_NAME = re.compile(r"^r\d+$")
+RUN_NAME = re.compile(r"r[0-9]+")
 OUTSIDE_NAME = re.compile(r"(^build-|^evidence-|^run\d+$|_F\d)")
 
 __all__ = ["tidy", "WORK_DIR", "NOTES_DIR"]
+
+
+def _is_run_name(name):
+    """Only a whole ``r`` + ASCII digits name is a numbered run.
+
+    ``fullmatch`` keeps ``r001\\n`` and other rule-outside names out of the
+    candidate set; ``re.match`` would accept a trailing newline.
+    """
+    return RUN_NAME.fullmatch(name) is not None
 
 
 def _rel(root, path):
@@ -39,10 +49,75 @@ def _mentions(text, base):
         start = index + 1
 
 
+def _decode(data):
+    """Decode a JSON blob; a BOM wins, otherwise UTF-8."""
+    if data.startswith(b"\xef\xbb\xbf"):
+        return data[3:].decode("utf-8")
+    if data.startswith(b"\xff\xfe") or data.startswith(b"\xfe\xff"):
+        return data.decode("utf-16")
+    return data.decode("utf-8")
+
+def _raw_mentions(data, base):
+    """Undecodable or damaged bytes: search the encodings we accept.
+
+    The same trailing-boundary rule as ``_mentions`` applies, so a
+    reference to ``r0010`` never protects ``r001``.
+    """
+    for encoding in ("utf-8", "utf-16-le", "utf-16-be"):
+        needle = base.encode(encoding)
+        width = 1 if encoding == "utf-8" else 2
+        start = 0
+        while True:
+            index = data.find(needle, start)
+            if index < 0:
+                break
+            end = index + len(needle)
+            tail = data[end:end + width]
+            if len(tail) < width:
+                return True
+            char = tail.decode(encoding, errors="ignore")
+            if not char or not (char.isalnum() or char == "_"):
+                return True
+            start = index + 1
+    return False
+
+def _strings(value):
+    """Every string in a decoded JSON value, keys included."""
+    if isinstance(value, str):
+        yield value
+    elif isinstance(value, dict):
+        for key, item in value.items():
+            yield from _strings(key)
+            yield from _strings(item)
+    elif isinstance(value, (list, tuple)):
+        for item in value:
+            yield from _strings(item)
+
+def _matches(text, base):
+    """Compare with a backslash normalized to a slash on both sides."""
+    return _mentions(text.replace("\\", "/"), base)
+
 def _json_blobs(root):
-    """Read every ``*.json`` under root once.  ``None`` means unreadable."""
+    """Read every ``*.json`` under root; also report enumeration failures.
+
+    A directory we cannot list may hold a reference we cannot see, so the
+    caller must treat ``errors`` as "reference state unknown".
+    """
     blobs = []
-    for dirpath, dirnames, filenames in os.walk(root, followlinks=False):
+    errors = []
+
+    def onerror(error):
+        name = getattr(error, "filename", None) or str(error)
+        errors.append(
+            {
+                "path": str(name),
+                "reason": "scan_failed:%s" % getattr(error, "errno", error),
+            }
+        )
+
+    for dirpath, dirnames, filenames in os.walk(
+        root, followlinks=False, onerror=onerror
+    ):
         dirnames[:] = [
             name for name in dirnames
             if name not in {".git", "__pycache__"}
@@ -55,25 +130,30 @@ def _json_blobs(root):
                 blobs.append((path, path.read_bytes()))
             except OSError:
                 blobs.append((path, None))
-    return blobs
+    return blobs, errors
 
 
 def _referencing(blobs, root, run):
     """Return (relative path, reason) when a JSON file mentions this run."""
     base = "%s/%s/%s" % (WORK_DIR, run.parent.name, run.name)
-    variants = (base, base.replace("/", "\\"))
     for path, data in blobs:
         if path.is_relative_to(run):
             continue
         if data is None:
             return _rel(root, path), "unreadable_reference"
+        if _raw_mentions(data, base):
+            return _rel(root, path), "referenced"
         try:
-            text = data.decode("utf-8")
+            text = _decode(data)
         except UnicodeDecodeError:
-            if any(item.encode("utf-8") in data for item in variants):
-                return _rel(root, path), "referenced"
             continue
-        if any(_mentions(text, item) for item in variants):
+        if _matches(text, base):
+            return _rel(root, path), "referenced"
+        try:
+            value = json.loads(text)
+        except ValueError:
+            continue
+        if any(_matches(item, base) for item in _strings(value)):
             return _rel(root, path), "referenced"
     return None
 
@@ -119,7 +199,7 @@ def _run_entries(parent):
     except OSError:
         return entries
     for child in children:
-        if not RUN_NAME.match(child.name):
+        if not _is_run_name(child.name):
             continue
         if child.is_symlink() or child.is_dir():
             entries.append(child)
@@ -164,7 +244,10 @@ def _outside(root):
 
 def _plan(root):
     work = root / WORK_DIR
-    plan = {"candidates": [], "kept": [], "outside": _outside(root)}
+    plan = {
+        "candidates": [], "kept": [], "outside": _outside(root),
+        "scan_errors": [],
+    }
     if not os.path.lexists(work):
         return plan
     if work.is_symlink():
@@ -173,7 +256,8 @@ def _plan(root):
     if not work.is_dir():
         plan["kept"].append(_kept(root, work, "work_dir_not_directory"))
         return plan
-    blobs = _json_blobs(root)
+    blobs, scan_errors = _json_blobs(root)
+    plan["scan_errors"] = scan_errors
     try:
         artifacts = sorted(work.iterdir(), key=lambda item: item.name)
     except OSError:
@@ -196,7 +280,7 @@ def _plan(root):
             continue
         runs = []
         for child in children:
-            if not RUN_NAME.match(child.name):
+            if not _is_run_name(child.name):
                 plan["kept"].append(_kept(root, child, "non_run"))
             elif child.is_symlink() or child.is_dir():
                 runs.append(child)
@@ -236,6 +320,7 @@ def _value(plan, applied):
         "candidates": plan["candidates"],
         "kept": plan["kept"],
         "outside_candidates": plan["outside"],
+        "scan_errors": plan.get("scan_errors", []),
         "totals": {
             "candidate_count": len(plan["candidates"]),
             "candidate_bytes": total,
@@ -254,7 +339,7 @@ def _recheck(root, target):
         raise ValueError("outside_work")
     if target.parent.name == NOTES_DIR:
         raise ValueError("notes")
-    if not RUN_NAME.match(target.name):
+    if not _is_run_name(target.name):
         raise ValueError("not_run")
     if os.path.islink(target):
         raise ValueError("symlink")
@@ -325,6 +410,19 @@ def tidy(root, *, apply=False):
             reason="work_dir_symlink",
             lock_state="unavailable",
         )
+        value["deleted"] = []
+        value["errors"] = []
+        return value
+    if plan["scan_errors"]:
+        value = _value(plan, False)
+        value.update(
+            status="blocked",
+            applied=False,
+            reason="reference_scan_incomplete",
+            lock_state="not_attempted",
+        )
+        value["deleted"] = []
+        value["errors"] = []
         return value
 
     import gg_lock
@@ -332,6 +430,17 @@ def tidy(root, *, apply=False):
     try:
         with gg_lock.Lock(root):
             plan = _plan(root)
+            if plan["scan_errors"]:
+                value = _value(plan, False)
+                value.update(
+                    status="blocked",
+                    applied=False,
+                    reason="reference_scan_incomplete",
+                    lock_state="held",
+                )
+                value["deleted"] = []
+                value["errors"] = []
+                return value
             deleted = []
             errors = []
             for candidate in plan["candidates"]:
@@ -360,4 +469,6 @@ def tidy(root, *, apply=False):
             reason=error.reason,
             lock_state=error.status,
         )
+        value["deleted"] = []
+        value["errors"] = []
         return value

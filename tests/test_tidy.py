@@ -290,6 +290,104 @@ class TidyTests(ContractCase):
         self.assertEqual("not_needed", result["lock"])
         self.assertEqual(before, self._tree_bytes(root))
 
+    def test_json_escaped_references_are_preserved(self):
+        root = self.make_project()
+        run = self._run(root, "재무", "r001")
+        self._run(root, "재무", "r002")
+        build = Path(root) / "build"
+        build.mkdir()
+        cases = {
+            "unicode": json.dumps(
+                {"evidence_path": ".gg-work/재무/r001/evidence.txt"},
+                ensure_ascii=True,
+            ),
+            "backslash": json.dumps(
+                {"evidence_path": ".gg-work\\재무\\r001\\evidence.txt"}
+            ),
+            "escaped_slash": (
+                '{"evidence_path": ".gg-work\\/재무\\/r001\\/evidence.txt"}'
+            ),
+        }
+        for name, text in cases.items():
+            with self.subTest(case=name):
+                (build / "receipt.json").write_text(text, encoding="utf-8")
+                result = self.tidy.tidy(root, apply=True)
+                self.assertEqual("applied", result["status"])
+                self.assertEqual([], result["deleted"])
+                self.assertTrue((run / "trial.txt").is_file())
+                self.assertEqual(
+                    "referenced",
+                    self._reasons(result)[".gg-work/재무/r001"],
+                )
+
+        (build / "receipt.json").write_text(
+            cases["unicode"], encoding="utf-16"
+        )
+        result = self.tidy.tidy(root, apply=True)
+        self.assertEqual([], result["deleted"])
+        self.assertTrue((run / "trial.txt").is_file())
+
+    def test_json_keys_are_searched_too(self):
+        root = self.make_project()
+        run = self._run(root, "finance", "r001")
+        self._run(root, "finance", "r002")
+        build = Path(root) / "build"
+        build.mkdir()
+        (build / "receipt.json").write_text(
+            json.dumps({".gg-work/finance/r001/key.json": "value"}),
+            encoding="utf-8",
+        )
+        result = self.tidy.tidy(root, apply=True)
+        self.assertEqual([], result["deleted"])
+        self.assertTrue((run / "trial.txt").is_file())
+
+    def test_unreadable_reference_area_blocks_apply(self):
+        root = self.make_project()
+        run = self._run(root, "finance", "r001")
+        self._run(root, "finance", "r002")
+        build = Path(root) / "build"
+        build.mkdir()
+        (build / "receipt.json").write_text(
+            json.dumps(
+                {"evidence": ".gg-work/finance/r001/evidence.txt"}
+            ),
+            encoding="utf-8",
+        )
+        build.chmod(0)
+        try:
+            try:
+                list(build.iterdir())
+            except PermissionError:
+                pass
+            else:
+                self.skipTest("permission failure not reproducible")
+
+            preview = self.tidy.tidy(root)
+            self.assertTrue(preview["scan_errors"])
+            applied = self.tidy.tidy(root, apply=True)
+            self.assertEqual("blocked", applied["status"])
+            self.assertEqual("reference_scan_incomplete", applied["reason"])
+            self.assertFalse(applied["applied"])
+            self.assertTrue((run / "trial.txt").is_file())
+        finally:
+            build.chmod(0o700)
+
+    def test_names_outside_the_run_rule_are_preserved(self):
+        root = self.make_project()
+        odd = Path(root) / ".gg-work" / "finance" / "r001\n"
+        odd.mkdir(parents=True)
+        (odd / "evidence.txt").write_text("must preserve")
+        self._run(root, "finance", "r002")
+        preview = self.tidy.tidy(root)
+        self.assertEqual([], preview["candidates"])
+        self.assertEqual(
+            "non_run", self._reasons(preview)[".gg-work/finance/r001\n"]
+        )
+        result = self.tidy.tidy(root, apply=True)
+        self.assertEqual("applied", result["status"])
+        self.assertEqual([], result["deleted"])
+        self.assertTrue((odd / "evidence.txt").is_file())
+
     def test_cli_preview_then_apply(self):
         root = self.make_project()
         self._run(root, "finance", "r001")
