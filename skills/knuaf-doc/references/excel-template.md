@@ -390,7 +390,7 @@ is an execution record; independent arithmetic and native checks still apply.
 Update the fill map hash to the patched copy before filling it.
 
 For native output from a supplied template, use `gg_office.py excel filled.xlsx
---template-receipt filled-receipt.json --out-dir native-v1`. This checks the fill
+--template-receipt filled-receipt.json --out-dir .gg-work/<산출물>/<회차>`. This checks the fill
 receipt's input binding and compares saved sheet order, visibility, merges,
 print ranges, formulas and values against this copy. It does not apply the
 legacy generator's fixed cell contract. Native number-format changes are listed

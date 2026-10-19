@@ -141,8 +141,10 @@ class RealTreeTests(ContractCase):
             # The kordoc-hwpx feature adds four product/test paths
             # (gg_hwpx.py, build_hwpx.py, test_hwpx_adapter.py,
             # test_build_hwpx.py): 203/155 + 4 = 207/159.
-            self.assertEqual(207, rc["verified"])
-            self.assertEqual(159, rc["new_count"])
+            # Output hygiene adds gg_tidy.py, output-hygiene.md and
+            # test_tidy.py: 207/159 + 3 = 210/162.
+            self.assertEqual(210, rc["verified"])
+            self.assertEqual(162, rc["new_count"])
         else:
             self.assertNotEqual("ok", report["status"])
             self.assertIn("declared_missing", _codes(report))
@@ -170,9 +172,11 @@ class RealTreeTests(ContractCase):
         # new files and two approvals: 201/153/160 -> 203/155/162.
         # The kordoc-hwpx feature adds four declarations, four new files and
         # four approvals: 203/155/162 -> 207/159/166.
-        self.assertEqual(207, link["change_count"])
-        self.assertEqual(159, link["new_count"])
-        self.assertEqual(166, link["approved_new_files"])
+        # Output hygiene adds three declarations, three new files and three
+        # approvals: 207/159/166 -> 210/162/169.
+        self.assertEqual(210, link["change_count"])
+        self.assertEqual(162, link["new_count"])
+        self.assertEqual(169, link["approved_new_files"])
         self.assertEqual("P27", link["parent_candidate"]["stage"])
         self.assertEqual(233, link["parent_candidate"]["file_count"])
         self.assertEqual(

@@ -24,9 +24,9 @@ SKILL.md "출력 지원 한계" 절의 상세다. 출력 생성·등록 경로�
 
 `scripts/gg_office.py word`는 macOS Office 샌드박스 파일 접근을 지원하기 위해 전용 그룹 컨테이너(`~/Library/Group Containers/UBF8T346G9.Office/ginseng-goat/`) 작업영역에서 원본을 불변으로 격리 스테이징하여 변환한다. **Word 변환은 macOS만 지원한다. macOS Excel 변환은 위 사유로 보류하며, Windows는 작성·검토본(DOCX·XLSX 생성, 검토)까지 지원하고 Office 자동 재계산·PDF 변환은 지원하지 않는다.**
 
-- Word: `scripts/gg_office.py word <문서.docx> --out-dir <새폴더> --project <정본 폴더> --major <전공ID>` (인쇄 모양 목차/색인 필드 2회 갱신 및 PDF 동시 출력)
-- Excel: `scripts/gg_office.py excel <재무.xlsx> --out-dir <새폴더> --project <정본 폴더> --major <전공ID> [--spec <명세.json> 또는 --template-receipt <입력영수증.json>]` (macOS에서는 권한·프로필 확인 뒤 변환 보류, 새 XLSX/PDF·성공 영수증 생성 없음)
-- 일괄: `scripts/gg_office.py batch <파일1.docx> <파일2.docx> <파일1.xlsx> <파일2.xlsx> --out-dir <새폴더> --project <정본 폴더> --major <전공ID>` (macOS Excel 단계에서 전체 배치 중단. 뒤의 Word도 미처리하며 앞서 발행된 항목은 되돌리지 않음. 기존 전체 입력 권한·프로필 사전 확인 및 Word 권한/시간초과 중단 계약 유지)
+- Word: `scripts/gg_office.py word <문서.docx> --out-dir .gg-work/<산출물>/<회차> --project <정본 폴더> --major <전공ID>` (인쇄 모양 목차/색인 필드 2회 갱신 및 PDF 동시 출력)
+- Excel: `scripts/gg_office.py excel <재무.xlsx> --out-dir .gg-work/<산출물>/<회차> --project <정본 폴더> --major <전공ID> [--spec <명세.json> 또는 --template-receipt <입력영수증.json>]` (macOS에서는 권한·프로필 확인 뒤 변환 보류, 새 XLSX/PDF·성공 영수증 생성 없음)
+- 일괄: `scripts/gg_office.py batch <파일1.docx> <파일2.docx> <파일1.xlsx> <파일2.xlsx> --out-dir .gg-work/<산출물>/<회차> --project <정본 폴더> --major <전공ID>` (macOS Excel 단계에서 전체 배치 중단. 뒤의 Word도 미처리하며 앞서 발행된 항목은 되돌리지 않음. 기존 전체 입력 권한·프로필 사전 확인 및 Word 권한/시간초과 중단 계약 유지)
 
 산출물은 새 목적지 폴더에만 무덮어쓰기로 발행되며, 원본은 유지된다. Office 변환 및 기계 검사 완료는 최종 교수 승인이 아니며 최종 제출 완료로 자동 승격되지 않는다.
 
