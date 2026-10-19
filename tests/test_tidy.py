@@ -414,6 +414,50 @@ class TidyTests(ContractCase):
                     self._reasons(preview)[".gg-work/finance/r001"],
                 )
 
+    def test_outside_candidates_are_reported_at_any_depth(self):
+        root = self.make_project()
+        finance = Path(root) / "finance"
+        deep = finance / "build-f2"
+        deep.mkdir(parents=True)
+        (deep / "build-f9").mkdir()
+        (deep / "old.xlsx").write_text("old")
+        (finance / "재무_F2.xlsx").write_text("old")
+        (finance / ".gg-work" / "build-f7").mkdir(parents=True)
+        (finance / ".git" / "build-f8").mkdir(parents=True)
+        (finance / "run3").mkdir()
+        with tempfile.TemporaryDirectory(prefix="tidy-outside-") as td:
+            target = Path(td) / "elsewhere"
+            target.mkdir()
+            try:
+                os.symlink(target, finance / "build-f5")
+            except OSError:
+                self.skipTest("symlink unsupported")
+
+            result = self.tidy.tidy(root)
+
+            self.assertEqual(
+                {
+                    "finance/build-f2",
+                    "finance/run3",
+                    "finance/재무_F2.xlsx",
+                    "finance/build-f5",
+                },
+                self._paths(result["outside_candidates"]),
+            )
+            kinds = {
+                item["path"]: item["kind"]
+                for item in result["outside_candidates"]
+            }
+            self.assertEqual("dir", kinds["finance/build-f2"])
+            self.assertEqual("file", kinds["finance/재무_F2.xlsx"])
+            self.assertEqual("link", kinds["finance/build-f5"])
+            self.assertEqual([], result["outside_scan_errors"])
+
+            applied = self.tidy.tidy(root, apply=True)
+            self.assertEqual([], applied["deleted"])
+            self.assertTrue((deep / "old.xlsx").is_file())
+            self.assertTrue((finance / "재무_F2.xlsx").is_file())
+
     def test_cli_preview_then_apply(self):
         root = self.make_project()
         self._run(root, "finance", "r001")

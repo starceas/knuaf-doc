@@ -4,7 +4,8 @@ Only ``<root>/.gg-work/<artifact>/rNNN/`` folders are deletion
 candidates.  A candidate is preserved when it is the latest run of its
 artifact, contains ``.keep``, is referenced by any JSON file in the
 workspace, or contains a symbolic link.  Nothing outside ``.gg-work`` is
-ever removed; run-like siblings are reported for the user to judge.
+ever removed; run-like names at any depth are reported read-only for the
+user to judge.
 """
 
 from __future__ import annotations
@@ -17,6 +18,9 @@ import stat
 
 WORK_DIR = ".gg-work"
 NOTES_DIR = "notes"
+# Never walked when looking for outside candidates; a nested control or
+# VCS directory is not the user's stray output.
+SKIP_DIRS = {WORK_DIR, ".git", ".gg-lock", ".gg-recovery", "__pycache__"}
 RUN_NAME = re.compile(r"r[0-9]+")
 OUTSIDE_NAME = re.compile(r"(^build-|^evidence-|^run\d+$|_F\d)")
 
@@ -227,28 +231,58 @@ def _kept(root, path, reason, **extra):
 
 
 def _outside(root):
+    """Read-only report of run-like names anywhere under the workspace.
+
+    The user runs ``tidy`` on the writing folder, so a stray ``build-f2``
+    usually sits one level down.  Nothing here is ever deleted.  Symlinks
+    are reported but never followed, control/VCS directories are skipped,
+    and a candidate directory is reported without descending into it.
+    """
     found = []
-    try:
-        children = sorted(root.iterdir(), key=lambda item: item.name)
-    except OSError:
-        return found
-    for child in children:
-        if child.name == WORK_DIR or not OUTSIDE_NAME.search(child.name):
-            continue
-        kind = "file"
-        try:
-            if stat.S_ISDIR(os.lstat(child).st_mode):
-                kind = "dir"
-        except OSError:
-            pass
-        found.append({"path": child.name, "kind": kind})
-    return found
+    errors = []
+
+    def onerror(error):
+        name = getattr(error, "filename", None) or str(error)
+        errors.append(
+            {
+                "path": str(name),
+                "reason": "scan_failed:%s" % getattr(error, "errno", error),
+            }
+        )
+
+    for dirpath, dirnames, filenames in os.walk(
+        root, followlinks=False, onerror=onerror
+    ):
+        keep = []
+        for name in sorted(dirnames):
+            path = Path(dirpath) / name
+            if name in SKIP_DIRS:
+                continue
+            if path.is_symlink():
+                if OUTSIDE_NAME.search(name):
+                    found.append({"path": _rel(root, path), "kind": "link"})
+                continue
+            if OUTSIDE_NAME.search(name):
+                found.append({"path": _rel(root, path), "kind": "dir"})
+                continue
+            keep.append(name)
+        dirnames[:] = keep
+        for name in sorted(filenames):
+            path = Path(dirpath) / name
+            if not OUTSIDE_NAME.search(name):
+                continue
+            kind = "link" if path.is_symlink() else "file"
+            found.append({"path": _rel(root, path), "kind": kind})
+    found.sort(key=lambda item: item["path"])
+    return found, errors
 
 
 def _plan(root):
     work = root / WORK_DIR
+    outside, outside_errors = _outside(root)
     plan = {
-        "candidates": [], "kept": [], "outside": _outside(root),
+        "candidates": [], "kept": [], "outside": outside,
+        "outside_scan_errors": outside_errors,
         "scan_errors": [],
     }
     if not os.path.lexists(work):
@@ -323,6 +357,7 @@ def _value(plan, applied):
         "candidates": plan["candidates"],
         "kept": plan["kept"],
         "outside_candidates": plan["outside"],
+        "outside_scan_errors": plan.get("outside_scan_errors", []),
         "scan_errors": plan.get("scan_errors", []),
         "totals": {
             "candidate_count": len(plan["candidates"]),
