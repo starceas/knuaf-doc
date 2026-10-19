@@ -61,6 +61,7 @@ def main(argv=None):
             "source-register",
             "source-view",
             "finance-tables",
+            "tidy",
         ],
     )
     ap.add_argument("folder", nargs="?")
@@ -80,6 +81,7 @@ def main(argv=None):
     ap.add_argument("--request-id")
     ap.add_argument("--probe", action="store_true")
     ap.add_argument("--offline-confirmed", action="store_true")
+    ap.add_argument("--apply", action="store_true")
     ap.add_argument("--resume")
     # P4 research/lookup options (rda-* commands only; never touch canonical)
     ap.add_argument("--crop")
@@ -584,6 +586,11 @@ def main(argv=None):
                 with gg_lock.Lock(a.folder) as capability:
                     value = core.publish_source_view(
                         a.folder, registration, capability=capability)
+        elif a.command == "tidy":
+            import gg_tidy
+
+            value = gg_tidy.tidy(a.folder, apply=a.apply)
+            code = 2 if value.get("status") in {"blocked", "failed"} else 0
         elif a.command == "finance-tables":
             if not a.xlsx:
                 raise ValueError("--xlsx 재계산 완료 통합문서 경로 필요")
