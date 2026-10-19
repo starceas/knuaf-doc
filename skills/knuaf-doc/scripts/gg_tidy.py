@@ -58,27 +58,30 @@ def _decode(data):
     return data.decode("utf-8")
 
 def _raw_mentions(data, base):
-    """Undecodable or damaged bytes: search the encodings we accept.
+    """Damaged bytes: search every encoding and both path separators.
 
-    The same trailing-boundary rule as ``_mentions`` applies, so a
+    A receipt may carry ``.gg-work/x/r001`` or ``.gg-work\\x\\r001``; the
+    decoded path is the same either way, so both spellings must protect
+    the run.  The trailing-boundary rule of ``_mentions`` applies, so a
     reference to ``r0010`` never protects ``r001``.
     """
-    for encoding in ("utf-8", "utf-16-le", "utf-16-be"):
-        needle = base.encode(encoding)
-        width = 1 if encoding == "utf-8" else 2
-        start = 0
-        while True:
-            index = data.find(needle, start)
-            if index < 0:
-                break
-            end = index + len(needle)
-            tail = data[end:end + width]
-            if len(tail) < width:
-                return True
-            char = tail.decode(encoding, errors="ignore")
-            if not char or not (char.isalnum() or char == "_"):
-                return True
-            start = index + 1
+    for form in (base, base.replace("/", "\\")):
+        for encoding in ("utf-8", "utf-16-le", "utf-16-be"):
+            needle = form.encode(encoding)
+            width = 1 if encoding == "utf-8" else 2
+            start = 0
+            while True:
+                index = data.find(needle, start)
+                if index < 0:
+                    break
+                end = index + len(needle)
+                tail = data[end:end + width]
+                if len(tail) < width:
+                    return True
+                char = tail.decode(encoding, errors="ignore")
+                if not char or not (char.isalnum() or char == "_"):
+                    return True
+                start = index + 1
     return False
 
 def _strings(value):

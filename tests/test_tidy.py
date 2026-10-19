@@ -388,6 +388,32 @@ class TidyTests(ContractCase):
         self.assertEqual([], result["deleted"])
         self.assertTrue((odd / "evidence.txt").is_file())
 
+    def test_damaged_json_with_raw_backslash_path_is_preserved(self):
+        root = self.make_project()
+        run = self._run(root, "finance", "r001")
+        self._run(root, "finance", "r002")
+        receipt = Path(root) / "receipt.json"
+        cases = {
+            "slash": b"\xff.gg-work/finance/r001/evidence.txt",
+            "backslash": b"\xff.gg-work\\finance\\r001\\evidence.txt",
+            "utf16_backslash": (
+                b"\xff\xfe"
+                + ".gg-work\\finance\\r001\\evidence.txt".encode("utf-16-le")
+            ),
+        }
+        for name, data in cases.items():
+            with self.subTest(case=name):
+                receipt.write_bytes(data)
+                preview = self.tidy.tidy(root)
+                self.assertEqual([], preview["candidates"])
+                result = self.tidy.tidy(root, apply=True)
+                self.assertEqual([], result["deleted"])
+                self.assertTrue((run / "trial.txt").is_file())
+                self.assertEqual(
+                    "referenced",
+                    self._reasons(preview)[".gg-work/finance/r001"],
+                )
+
     def test_cli_preview_then_apply(self):
         root = self.make_project()
         self._run(root, "finance", "r001")
