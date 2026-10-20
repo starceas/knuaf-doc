@@ -61,6 +61,9 @@ LOCATION_MAX = 256
 SKILL_NAME = "knuaf-doc"
 STAGING_PREFIX = ".knuaf-doc-staging-"
 STATE_DIR_NAME = "knuaf-doc-update"
+GUI_MARKER_SCHEMA = "knuaf-gui/skill-install@1"
+GUI_MARKER_PATH = (".knuaf-gui", "skill-install.json")
+GUI_PROVIDER_DIRS = (".claude", ".agents")
 
 
 # ---------------------------------------------------------------- results --
@@ -240,6 +243,40 @@ def skill_root():
         raise Refused("symlinked_path")
     return Path(here_real).parents[1]
 
+
+def _gui_managed(root):
+    """GUI가 이 설치 사본을 관리 중인가 (R1-05 2항).
+
+    프로젝트 표시 파일이 실행 사본의 실제 경로를 지목할 때만 True다.
+    `<프로젝트>/.claude/skills/knuaf-doc`·`.agents/skills/knuaf-doc`
+    모양이 아니면 표시 파일을 읽지 않는다(플러그인·직접 설치). cwd는
+    보지 않는다.
+    """
+    r = Path(root).resolve()
+    if r.parent.name != "skills" \
+            or r.parent.parent.name not in GUI_PROVIDER_DIRS:
+        return False
+    project = r.parent.parent.parent
+    marker = project.joinpath(*GUI_MARKER_PATH)
+    try:
+        doc = json.loads(marker.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return False
+    if not isinstance(doc, dict) or doc.get("schema") != GUI_MARKER_SCHEMA:
+        return False
+    installs = doc.get("installs")
+    if not isinstance(installs, list):
+        return False
+    for item in installs:
+        rel = item.get("path") if isinstance(item, dict) else None
+        if not isinstance(rel, str) or not rel:
+            continue
+        try:
+            if (project / rel).resolve() == r:
+                return True
+        except (OSError, RuntimeError, ValueError):
+            continue
+    return False
 
 def classify_install(root):
     """install_kind 우선순위: plugin_cache → git → copy → unknown."""
@@ -1327,7 +1364,8 @@ def adopt_cmd(source, target, *, confirm):
 
 
 def auto_cmd(*, connect=None, download=None):
-    """완전 자동 업데이트. phase≠done 저널이 남아 있으면 recover를 먼저
+    """완전 자동 업데이트. GUI 관리 설치면 아무것도 하지 않고 managed를
+    돌려준다. 아니면 phase≠done 저널이 남아 있을 때 recover를 먼저
     실행하고, check가 update_available이며 복사 설치일 때만 확인 없이
     교체한다.  어떤 결과든 JSON 한 개."""
     try:
@@ -1347,6 +1385,10 @@ def _auto_run(*, connect=None, download=None):
     home = root.parent if root.name == STATE_DIR_NAME \
         else root.parent.parent
     journal_path = home / STATE_DIR_NAME / "journal.json"
+    if _gui_managed(root):
+        # GUI 설치본은 GUI가 판을 고정한다. 남은 저널 정리도 재설치 몫.
+        return {"result": "managed",
+                "journal_present": os.path.lexists(str(journal_path))}
     if os.path.lexists(str(journal_path)):
         doc, jstate = _read_journal(journal_path, home)
         if jstate != "ok" or doc.get("phase") != "done":

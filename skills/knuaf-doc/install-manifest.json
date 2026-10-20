@@ -1,6 +1,6 @@
 {
  "files": {
-  "SKILL.md": "91806df0be6f0007456e8ee2585d05bcd1806027c09625efaa56ca175d4b821d",
+  "SKILL.md": "843fc0a294d9950397a9913f7071a356e9518a4dd1cc1e3f41bb0448edb6cc7d",
   "references/benchmark-packs/aliases/crop-aliases.specialty_crops.json": "8e7abffc7b4244727b4732f558b722934dd8ea229c0057312d1ee7ea92c2df22",
   "references/benchmark-packs/aliases/major-aliases.json": "ad1e1e6c2296f93ef27beab8494e840b1578e0d61c6c9bd8e238c640e653c81b",
   "references/benchmark-packs/catalog.json": "8dcad598073ce3efcce6698dafd2fa81bd24453deeb90216648ff68d1e8f8e68",
@@ -96,7 +96,7 @@
   "references/specialty-crops/premise-probes.md": "2e720727f4969024527d9be857625f316ad12ad79962087a4cd13af688c92309",
   "references/student-report.md": "edcf76e914d516dc39e8f1b5efe77d2f7a228ae5152ef5bd8d3904667465c096",
   "references/thesis-level.md": "f37d4c28fd7814150f36e35cf159d14883620373ab511266950aae37ba496661",
-  "references/update.md": "795eed60402f247658ba60bf0c04787e0316ae15aef426ee3b9d00981551e5da",
+  "references/update.md": "a70d16603095e9ffc4b3148bbedf88425d5d270c757ac9e4450b312f6fdc5cb3",
   "references/workbook-reference-set.json": "de33d81896651dff4e6cf35330a476cf196998d2fdae28d09cfa8c99cdf775a6",
   "references/workflow-order.md": "3c1c984510a97178cb852f613a96f4de45c19228d1e054c31e10551329a7625f",
   "scripts/build_docx.py": "8225681678cb270b5bc666343c8a8e36dcc4337a6c971eb935a8ff3c08629e78",
@@ -157,7 +157,7 @@
   "scripts/gg_source_identity.py": "d7f64e8fe3c081d7fbaaa62f0fb98132941895f700868aa924c98f3dbcf200f4",
   "scripts/gg_source_intake.py": "7e8dfa43ec3bc46991507bab025b3a22fc072010a407b67ce2c6d827dc86e615",
   "scripts/gg_tidy.py": "b42324e56a16c7ce4a471e6b473ae0f1266a8ed0cfdd58d4ba2f4824c9c555f0",
-  "scripts/gg_update.py": "44677c4ff402f14d56656522431d36f7026f71c94973e7ddb061cfbbfcb28b5d",
+  "scripts/gg_update.py": "fa7382ca4a75de006a8c6232dc72fe597f10e726facb8fcf74477ffb79db5d37",
   "scripts/gg_winfs.py": "09d96e11afe5c503675adf9807c5a21cd4310911037eb9176077178235a28812",
   "scripts/gg_workbook_audit.py": "9cb0b7faa60a51aecbad4712949380658f4ac14d2107aa7b2e0472589f736e65",
   "scripts/gg_workbook_registry.py": "58713d823579fddfd3ba67871218ff7da60c9c2ed31d421c5241fa902843e5b1",

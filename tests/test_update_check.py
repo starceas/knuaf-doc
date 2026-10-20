@@ -1593,6 +1593,112 @@ class AutoTests(_UpdateCase):
         self.assertEqual(before, _tree_bytes(target))
 
 
+class ManagedMarkerTests(_UpdateCase):
+    """R1-05: GUI 관리 표시가 실행 사본을 지목하면 auto만 멈춘다."""
+
+    def _gui_install(self, provider=".claude", project="proj"):
+        root = self.tmpdir(project)
+        target = _write_skill(root / provider / "skills" / "knuaf-doc",
+                              version="0.1.1", updater=True)
+        return root, target
+
+    def _marker(self, project, *paths, schema="knuaf-gui/skill-install@1",
+                raw=None):
+        marker = project / ".knuaf-gui" / "skill-install.json"
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        if raw is not None:
+            marker.write_text(raw, encoding="utf-8")
+        else:
+            marker.write_text(json.dumps({
+                "schema": schema,
+                "installs": [{"path": path, "tag": "v0.1.8",
+                              "commit": "0" * 40,
+                              "manifest_sha256": "0" * 64}
+                             for path in paths],
+            }), encoding="utf-8")
+        return marker
+
+    def _auto(self, target):
+        mod = _load_update(target / "scripts" / "gg_update.py")
+        return mod, mod.auto_cmd(
+            connect=_connect(302, [("Location", _loc("0.1.2"))]),
+            download=lambda _v, _c: _good_zip())
+
+    def test_auto_managed_blocks_update_without_touching_tree(self):
+        for provider in (".claude", ".agents"):
+            project, target = self._gui_install(provider, "p" + provider[1:])
+            self._marker(project, provider + "/skills/knuaf-doc")
+            before = _tree_bytes(target)
+            _, out = self._auto(target)
+            self.assertEqual({"result": "managed", "journal_present": False},
+                             out)
+            self.assertEqual(before, _tree_bytes(target))
+            state = project / provider / "knuaf-doc-update"
+            self.assertFalse((state / "backups").exists(), provider)
+
+    def test_auto_managed_skips_pending_journal_recovery(self):
+        driver = self.root / "driver-managed-journal.py"
+        driver.write_text(_DRIVER, encoding="utf-8")
+        src = self.make_incoming()
+        project = self.tmpdir("proj")
+        target = _write_skill(project / ".claude" / "skills" / "knuaf-doc",
+                              version=None, updater=True)
+        subprocess.run([sys.executable, str(driver),
+                        str(src / "scripts" / "gg_update.py"), "adopt", "wj1",
+                        str(src), str(target)], cwd=str(self.root),
+                       capture_output=True, check=True)
+        state = project / ".claude" / "knuaf-doc-update"
+        journal = state / "journal.json"
+        self.assertTrue(journal.exists())
+        self.assertNotEqual("done", json.loads(
+            journal.read_text(encoding="utf-8"))["phase"])
+        before = _tree_bytes(target)
+        self._marker(project, ".claude/skills/knuaf-doc")
+        _, out = self._auto(target)
+        self.assertEqual({"result": "managed", "journal_present": True}, out)
+        self.assertTrue(journal.exists())
+        self.assertEqual([], list(state.glob("journal-*-closed.json")))
+        self.assertEqual(before, _tree_bytes(target))
+
+    def test_marker_for_other_path_or_install_kind_is_ignored(self):
+        project, target = self._gui_install()
+        self._marker(project, ".claude/skills/other-skill")
+        _, out = self._auto(target)
+        self.assertEqual("updated", out["status"], out)
+        # 직접 설치(<홈>/skills/knuaf-doc)는 표시 파일이 있어도 관리 대상이 아니다.
+        home, _, direct = self.make_target(updater=True)
+        self._marker(home, "skills/knuaf-doc")
+        _, out = self._auto(direct)
+        self.assertEqual("updated", out["status"], out)
+
+    def test_unreadable_or_mismatched_marker_is_not_managed(self):
+        cases = (
+            "not json",
+            json.dumps({"schema": "other", "installs": [
+                {"path": ".claude/skills/knuaf-doc"}]}),
+            json.dumps({"schema": "knuaf-gui/skill-install@1",
+                        "installs": "not-a-list"}),
+            json.dumps({"schema": "knuaf-gui/skill-install@1",
+                        "installs": [{"path": 1}, "x"]}),
+        )
+        for i, raw in enumerate(cases):
+            project, target = self._gui_install(project="proj%d" % i)
+            self._marker(project, raw=raw)
+            _, out = self._auto(target)
+            self.assertEqual("updated", out["status"], (i, out))
+
+    def test_explicit_apply_is_not_blocked_by_marker(self):
+        project, target = self._gui_install()
+        self._marker(project, ".claude/skills/knuaf-doc")
+        mod = _load_update(target / "scripts" / "gg_update.py")
+        out = mod.apply_cmd(
+            "0.1.2", confirm=True,
+            connect=_connect(302, [("Location", _loc("0.1.2"))]),
+            download=lambda _v, _c: _good_zip())
+        self.assertEqual("applied", out["status"], out)
+        self.assertEqual((0, 1, 2),
+                         mod.read_version_file(target / "version.json"))
+
 class UserFilesInSkillTests(_UpdateCase):
     """_run_replace 공통: 새 트리에 없는 대상 경로의 차단·무시 규칙 (P27 §1)."""
 
