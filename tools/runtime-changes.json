@@ -175,7 +175,7 @@
  "baseline_spec_sha256": "094a062217f563cb62f79721c2eb6f1eac15574fe691ac4a6b72595a413f0392",
  "changes": {
   ".codex-plugin/plugin.json": {
-   "after_sha256": "f3b07ad79de3f98fb953740ff65b608ed70360fb34d17330bf24dbd20c7a74e7",
+   "after_sha256": "3d2e4264fdcc1d1ec488b8cf2c88df480fbbf3f4ae43441cd5b31ea852688a1f",
    "before_sha256": "5b6c8ae48fa215f81f71b55feda736f167666cb6d66afe04b9337d8f4bc527cf",
    "first_changed": "P26",
    "last_changed": "P28",
@@ -203,7 +203,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/install-manifest.json": {
-   "after_sha256": "31ad9c5c8dbf2341c33646730cd30e7ee3bba794f1d4ce400796d84c5e1262b0",
+   "after_sha256": "495a2ff8d8dd42ff10e552cb62a7a0402599e107731fdf537dc077ab91ab8645",
    "before_sha256": null,
    "first_changed": "P27",
    "last_changed": "P28",
@@ -1841,7 +1841,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/version.json": {
-   "after_sha256": "7e9192dddf05ddbae1eb216d6a1c757ecd989c11d03de64cc3c8a2b2aed8d135",
+   "after_sha256": "05768bc6b0bc3c9d930d23186439066a1fc68565aa24019e1cdede17f0df06fb",
    "before_sha256": null,
    "first_changed": "P26",
    "last_changed": "P28",
