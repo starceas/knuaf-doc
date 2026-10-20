@@ -104,13 +104,55 @@ def check_no_symlinks(path: Path) -> None:
 HYPERLINK_REL_TYPE = (
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink"
 )
+SAFE_HYPERLINK_PREFIXES = ("http://", "https://", "mailto:")
+# External relationship types Word/Excel add on their own during a save and
+# that never fetch content into the document: the attached template
+# (Normal.dotm) and the building-block glossary.  Allowed regardless of target.
+BENIGN_EXTERNAL_REL_SUFFIXES = ("/attachedTemplate", "/glossaryDocument")
+
+def _rel_type_suffix(rel_type: str) -> str:
+    return "/" + rel_type.rstrip("/").rsplit("/", 1)[-1]
+
+def _has_url_scheme(target: str) -> bool:
+    """True when a relationship target carries a real URL scheme.
+
+    A single-letter scheme is a Windows drive letter (``C:\\...``), not a
+    URL scheme.
+    """
+    scheme = urllib.parse.urlsplit(target.strip()).scheme
+    return len(scheme) > 1
+
+def classify_external_relationship(rel_type: str, target: str) -> tuple[bool, str]:
+    """Returns (allowed, reason) for one TargetMode=External relationship."""
+    if rel_type == HYPERLINK_REL_TYPE:
+        if target.startswith(SAFE_HYPERLINK_PREFIXES):
+            return True, "hyperlink"
+        return False, "위험한 외부 하이퍼링크"
+    if _rel_type_suffix(rel_type) in BENIGN_EXTERNAL_REL_SUFFIXES:
+        return True, "benign_office_rel"
+    if not _has_url_scheme(target):
+        # externalLinkPath / externalLink / oleObject ... pointing at a bare
+        # file name or a local path: no network or file:// fetch involved.
+        return True, "local_target"
+    return False, "위험한 외부 OOXML 관계 참조"
 
 
-def check_ooxml_relationships(zip_path: Path) -> None:
-    """Validates that OOXML package contains no dangerous external path traversals or external resource links."""
+def check_ooxml_relationships(
+    zip_path: Path,
+    baseline_external: set[tuple[str, str, str]] | None = None,
+) -> set[tuple[str, str, str]]:
+    """Validates that OOXML package contains no dangerous external path traversals or external resource links.
+
+    Returns the set of ``(rels_part, rel_type, target)`` external relationships
+    seen.  When ``baseline_external`` (the set screened on the INPUT file) is
+    given, an unsafe external relationship that was already present in the
+    baseline is tolerated: only relationships newly introduced by the Office
+    application are fatal.
+    """
     if not zip_path.is_file():
         raise ValueError(f"파일을 찾을 수 없습니다: {zip_path}")
 
+    external: set[tuple[str, str, str]] = set()
     try:
         with zipfile.ZipFile(zip_path, "r") as zf:
             bad_member = zf.testzip()
@@ -141,18 +183,20 @@ def check_ooxml_relationships(zip_path: Path) -> None:
                             rel_type = elem.get("Type", "")
 
                             if target_mode == "External":
-                                if rel_type == HYPERLINK_REL_TYPE:
-                                    if (
-                                        target.startswith("http://")
-                                        or target.startswith("https://")
-                                        or target.startswith("mailto:")
-                                    ):
-                                        continue
-                                    raise ValueError(
-                                        f"위험한 외부 하이퍼링크 거부: {target} (in {name})"
-                                    )
+                                key = (name, rel_type, target)
+                                external.add(key)
+                                allowed, why = classify_external_relationship(
+                                    rel_type, target)
+                                if allowed:
+                                    continue
+                                if baseline_external is not None \
+                                        and key in baseline_external:
+                                    # Already screened when the input was
+                                    # staged; the app merely carried it over.
+                                    continue
                                 raise ValueError(
-                                    f"위험한 외부 OOXML 관계 참조 거부 (타입: {rel_type}, 대상: {target}, 위치: {name})"
+                                    f"{why} 거부 (타입: {rel_type}, "
+                                    f"대상: {target}, 위치: {name})"
                                 )
                             else:
                                 if target.startswith("file:"):
@@ -195,6 +239,7 @@ def check_ooxml_relationships(zip_path: Path) -> None:
                         raise ValueError(f"잘못된 OOXML 관계 XML ({name}): {e}")
     except (zipfile.BadZipFile, zipfile.LargeZipFile) as e:
         raise ValueError(f"유효한 OOXML ZIP 파일이 아닙니다: {e}")
+    return external
 
 def stage_resources(
     resource_paths: list[str | Path],
@@ -239,11 +284,13 @@ def stage_job(
     input_file: Path,
     workspace_root: Path,
     resources: list[str | Path] | None = None,
-) -> tuple[Path, Path, Path, Path, str]:
+) -> tuple[Path, Path, Path, Path, str, set[tuple[str, str, str]]]:
     """Sets up a unique job directory under workspace and stages copies of input and resources.
 
     Returns:
-        job_dir, staged_input_file, staged_working_file, staged_pdf_file, orig_sha256
+        job_dir, staged_input_file, staged_working_file, staged_pdf_file,
+        orig_sha256, baseline_external (external relationships screened on
+        the input; passed back to validate_office_file after conversion)
     """
     input_path = Path(input_file)
     check_no_symlinks(input_path)
@@ -252,7 +299,7 @@ def stage_job(
     if not input_resolved.is_file():
         raise ValueError(f"입력 파일이 존재하지 않습니다: {input_path}")
 
-    check_ooxml_relationships(input_resolved)
+    baseline_external = check_ooxml_relationships(input_resolved)
 
     orig_sha256 = compute_sha256(input_resolved.read_bytes())
 
@@ -280,7 +327,43 @@ def stage_job(
             [staged_input_dir, staged_output_dir],
         )
 
-    return job_dir, staged_input_file, staged_working_file, staged_pdf_file, orig_sha256
+    return (job_dir, staged_input_file, staged_working_file, staged_pdf_file,
+            orig_sha256, baseline_external)
+
+def job_receipt_paths(
+    job_dir: Path,
+    workspace_root: Path,
+    input_file: Path,
+    staged_working_file: Path | None = None,
+    staged_pdf_file: Path | None = None,
+) -> dict:
+    """Receipt fragment describing a job without embedding absolute home paths.
+
+    ``job_dir`` / ``staged_*`` are relative to the workspace root (POSIX
+    separators) and ``input_file`` is the basename only; the workspace itself
+    is reported by ``doctor`` / ``jobs``.
+    """
+    ws = Path(workspace_root)
+
+    def rel(p: Path) -> str:
+        try:
+            return Path(p).relative_to(ws).as_posix()
+        except ValueError:
+            try:
+                return Path(p).resolve().relative_to(ws.resolve()).as_posix()
+            except ValueError:
+                return Path(p).name
+    frag = {
+        "workspace_relative": True,
+        "job_id": Path(job_dir).name,
+        "job_dir": rel(job_dir),
+        "input_file": Path(input_file).name,
+    }
+    if staged_working_file is not None:
+        frag["staged_working_file"] = rel(staged_working_file)
+    if staged_pdf_file is not None:
+        frag["staged_pdf_file"] = rel(staged_pdf_file)
+    return frag
 
 
 WORD_READY_APPLESCRIPT = 'tell application "Microsoft Word" to return name'
@@ -475,7 +558,8 @@ def _run_excel_engine(
     raise ValueError(f"미지원 플랫폼: {sys.platform} (Excel 자동화는 macOS/Windows만 지원)")
 
 
-def validate_office_file(path: Path, expected_kind: str) -> dict:
+def validate_office_file(path: Path, expected_kind: str,
+                         baseline_external: set[tuple[str, str, str]] | None = None) -> dict:
     """Validates that output DOCX/XLSX is readable and structurally sound."""
     if not path.is_file() or path.stat().st_size == 0:
         raise ValueError(f"출력 Office 파일이 생성되지 않았거나 비어 있습니다: {path}")
@@ -495,8 +579,10 @@ def validate_office_file(path: Path, expected_kind: str) -> dict:
     except (zipfile.BadZipFile, zipfile.LargeZipFile) as e:
         raise ValueError(f"출력 Office ZIP 손상: {e}")
 
-    # Re-screen relationships on the app-rewritten output before publication
-    check_ooxml_relationships(path)
+    # Re-screen relationships on the app-rewritten output before publication.
+    # What the input already carried is tolerated; a relationship the app
+    # newly introduced is still fatal.
+    check_ooxml_relationships(path, baseline_external)
 
     return {
         "valid": True,
@@ -565,10 +651,13 @@ def _publish_outputs(
     engine_stderr: str = "",
     extra_validation: dict | None = None,
     major_authorization: list | None = None,
+    workspace_root: Path | None = None,
+    baseline_external: set[tuple[str, str, str]] | None = None,
 ) -> dict:
     """Publishes validated staged files to new destination directory without overwriting."""
     # Validate staged files BEFORE creating output directory
-    office_meta = validate_office_file(staged_working_file, expected_kind)
+    office_meta = validate_office_file(
+        staged_working_file, expected_kind, baseline_external)
     pdf_meta = validate_pdf_file(staged_pdf_file)
 
     # Verify original file integrity
@@ -616,10 +705,11 @@ def _publish_outputs(
             "engine": engine_name,
             "engine_result": engine_result.strip(),
             "engine_stderr": engine_stderr.strip(),
-            "job_dir": str(job_dir),
-            "staged_working_file": str(staged_working_file),
-            "staged_pdf_file": str(staged_pdf_file),
-            "input_file": str(input_file.resolve()),
+            **job_receipt_paths(
+                job_dir,
+                Path(workspace_root) if workspace_root is not None
+                else Path(job_dir).parent,
+                input_file, staged_working_file, staged_pdf_file),
             "input_sha256": orig_sha256,
             "published_office": str(dest_office),
             "published_office_sha256": staged_work_sha,
@@ -722,9 +812,8 @@ def process_word(
     out_path = Path(out_dir).absolute()
     ws_root = Path(workspace).resolve() if workspace else DEFAULT_GROUP_CONTAINER_DIR
 
-    job_dir, staged_in, staged_work, staged_pdf, orig_sha = stage_job(
-        input_path, ws_root, resources
-    )
+    (job_dir, staged_in, staged_work, staged_pdf, orig_sha,
+     baseline_external) = stage_job(input_path, ws_root, resources)
 
     try:
         res = _run_word_engine(staged_work, staged_pdf, timeout=timeout)
@@ -732,10 +821,8 @@ def process_word(
         fail_receipt = {
             "status": "fail",
             "app": "Word",
-            "input_file": str(input_path),
+            **job_receipt_paths(job_dir, ws_root, input_path, staged_work),
             "input_sha256": orig_sha,
-            "job_dir": str(job_dir),
-            "staged_working_file": str(staged_work),
             "error": f"[Microsoft Word 시간 초과: -1712] {exc}",
             "engine_stderr": str(exc),
             "returncode": -1712,
@@ -749,10 +836,8 @@ def process_word(
         fail_receipt = {
             "status": "fail",
             "app": "Word",
-            "input_file": str(input_path),
+            **job_receipt_paths(job_dir, ws_root, input_path, staged_work),
             "input_sha256": orig_sha,
-            "job_dir": str(job_dir),
-            "staged_working_file": str(staged_work),
             "error": err_msg,
             "engine_stderr": (res.stderr or "").strip(),
             "returncode": res.returncode,
@@ -775,6 +860,8 @@ def process_word(
             engine_result=res.stdout or "Word completed",
             expected_kind="word",
             engine_stderr=res.stderr or "",
+            workspace_root=ws_root,
+            baseline_external=baseline_external,
         )
     except Exception as exc:
         # Word's AppleScript save-as can return zero without creating the PDF.
@@ -783,11 +870,9 @@ def process_word(
         fail_receipt = {
             "status": "fail",
             "app": "Word",
-            "input_file": str(input_path),
+            **job_receipt_paths(job_dir, ws_root, input_path, staged_work,
+                                staged_pdf),
             "input_sha256": orig_sha,
-            "job_dir": str(job_dir),
-            "staged_working_file": str(staged_work),
-            "staged_pdf_file": str(staged_pdf),
             "error": f"[Microsoft Word 출력 검증 실패] {exc}",
             "engine_stderr": (res.stderr or "").strip(),
             "returncode": res.returncode,
@@ -1161,6 +1246,20 @@ def inspect_preserved_template(before, after):
     return issues
 
 
+def _legacy_school_check_applies(sheetnames, is_school_spec: bool,
+                                 school_sheets=None) -> bool:
+    """Decides whether the legacy 17-sheet school inspector runs.
+
+    Only an explicit school-profile --spec, or a workbook whose sheet names
+    equal the full SCHOOL_SHEETS sequence in order, qualifies.  A partial
+    name overlap with a supplied template must never trigger it.
+    """
+    if is_school_spec:
+        return True
+    if school_sheets is None:
+        from gg_school_excel import SCHOOL_SHEETS as school_sheets
+    return list(sheetnames) == list(school_sheets)
+
 def process_excel(
     input_file: str | Path,
     out_dir: str | Path,
@@ -1199,9 +1298,8 @@ def process_excel(
     out_path = Path(out_dir).absolute()
     ws_root = Path(workspace).resolve() if workspace else DEFAULT_GROUP_CONTAINER_DIR
 
-    job_dir, staged_in, staged_work, staged_pdf, orig_sha = stage_job(
-        input_path, ws_root, resources
-    )
+    (job_dir, staged_in, staged_work, staged_pdf, orig_sha,
+     baseline_external) = stage_job(input_path, ws_root, resources)
 
     if binding and binding["authority"] == "hort_transform_receipt":
         if (orig_sha != binding["input_sha256"] or
@@ -1215,10 +1313,8 @@ def process_excel(
         fail_receipt = {
             "status": "fail",
             "app": "Excel",
-            "input_file": str(input_path),
+            **job_receipt_paths(job_dir, ws_root, input_path, staged_work),
             "input_sha256": orig_sha,
-            "job_dir": str(job_dir),
-            "staged_working_file": str(staged_work),
             "error": f"[Microsoft Excel 시간 초과: -1712] {exc}",
             "engine_stderr": str(exc),
             "returncode": -1712,
@@ -1232,10 +1328,8 @@ def process_excel(
         fail_receipt = {
             "status": "fail",
             "app": "Excel",
-            "input_file": str(input_path),
+            **job_receipt_paths(job_dir, ws_root, input_path, staged_work),
             "input_sha256": orig_sha,
-            "job_dir": str(job_dir),
-            "staged_working_file": str(staged_work),
             "error": err_msg,
             "engine_stderr": (res.stderr or "").strip(),
             "returncode": res.returncode,
@@ -1255,11 +1349,9 @@ def process_excel(
         fail_receipt = {
             "status": "fail",
             "app": "Excel",
-            "input_file": str(input_path),
+            **job_receipt_paths(job_dir, ws_root, input_path, staged_work,
+                                staged_pdf),
             "input_sha256": orig_sha,
-            "job_dir": str(job_dir),
-            "staged_working_file": str(staged_work),
-            "staged_pdf_file": str(staged_pdf),
             "error": f"[Microsoft Excel PDF 출력 검증 실패] {exc}",
             "engine_stderr": (res.stderr or "").strip(),
             "returncode": res.returncode,
@@ -1287,7 +1379,6 @@ def process_excel(
             from gg_school_excel import SCHOOL_SHEETS, inspect_school_workbook
 
             wb_temp = load_workbook(staged_work, read_only=True)
-            sheetnames_set = set(wb_temp.sheetnames)
 
             is_school_spec = False
             if spec_file:
@@ -1298,7 +1389,8 @@ def process_excel(
                 except Exception:
                     pass
 
-            has_school_sheets = bool(sheetnames_set & set(SCHOOL_SHEETS))
+            has_school_sheets = _legacy_school_check_applies(
+                wb_temp.sheetnames, is_school_spec, SCHOOL_SHEETS)
 
             if is_school_spec or has_school_sheets:
                 school_validation_status = "evaluated"
@@ -1311,9 +1403,8 @@ def process_excel(
         fail_receipt = {
             "status": "fail",
             "app": "Excel",
-            "input_file": str(input_path),
+            **job_receipt_paths(job_dir, ws_root, input_path),
             "input_sha256": orig_sha,
-            "job_dir": str(job_dir),
             "error": "엑셀 구조 검사 실패",
             "structure_issues": structure_issues,
             "school_validation": school_validation_status,
@@ -1343,9 +1434,8 @@ def process_excel(
         fail_receipt = {
             "status": "fail",
             "app": "Excel",
-            "input_file": str(input_path),
+            **job_receipt_paths(job_dir, ws_root, input_path),
             "input_sha256": orig_sha,
-            "job_dir": str(job_dir),
             "error": "학교 재무 검증 실패",
             "school_issues": school_issues,
             "school_validation": school_validation_status,
@@ -1395,6 +1485,8 @@ def process_excel(
         expected_kind="excel",
         engine_stderr=res.stderr or "",
         extra_validation=extra_val,
+        workspace_root=ws_root,
+        baseline_external=baseline_external,
     )
     return receipt
 

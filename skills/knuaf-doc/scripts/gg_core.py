@@ -125,6 +125,25 @@ def draft_marker_extra(raw):
     return "\n".join(extra).strip() or None
 
 
+_REPLACE_BACKOFF = (0.05, 0.15, 0.45)
+
+
+def _replace_with_retry(src, dst):
+    """os.replace, retried only for the Windows sharing-violation shape.
+
+    Windows antivirus/editor handles can hold the destination for a few
+    hundred milliseconds; every other platform and errno raises at once.
+    """
+    for delay in _REPLACE_BACKOFF:
+        try:
+            os.replace(src, dst)
+            return
+        except PermissionError:
+            if sys.platform != "win32":
+                raise
+            time.sleep(delay)
+    os.replace(src, dst)
+
 def atomic(path, data):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -134,7 +153,7 @@ def atomic(path, data):
             f.write(data)
             f.flush()
             os.fsync(f.fileno())
-        os.replace(name, path)
+        _replace_with_retry(name, path)
     finally:
         if os.path.exists(name):
             os.unlink(name)
@@ -2972,6 +2991,15 @@ def _body_check_items(p, *, registry):
     return items
 
 
+class _UnsupportedFormula(ValueError):
+    """검사기가 표현하지 못하는 산식. 데이터가 틀린 것이 아니라 도구의 한계다."""
+
+
+_SUPPORTED_OPS = (
+    "지금 도구는 두 항 나눗셈·뺄셈과 두 항 이상 덧셈·곱셈만 검산할 수 있음"
+)
+
+
 def checks(root, p):
     from gg_document import parse
 
@@ -3155,16 +3183,27 @@ def checks(root, p):
                         raise ValueError("환산으로 기간/범위를 바꿀 수 없음")
                     value = vals[0] * Decimal(factors[(src["unit"], f["unit"])])
                 elif op in {"multiply", "divide", "add", "subtract"}:
-                    if len(vals) != 2 or not f["formula"].get("unit_reason"):
-                        raise ValueError("이항 산식/단위 근거 필요")
-                    value = {
-                        "multiply": lambda: vals[0] * vals[1],
-                        "divide": lambda: vals[0] / vals[1],
-                        "add": lambda: vals[0] + vals[1],
-                        "subtract": lambda: vals[0] - vals[1],
-                    }[op]()
+                    n_ary = op in {"add", "multiply"}
+                    if len(vals) < 2 or (not n_ary and len(vals) != 2):
+                        raise _UnsupportedFormula(
+                            "피연산자 %d개: %s" % (len(vals), _SUPPORTED_OPS)
+                        )
+                    if not f["formula"].get("unit_reason"):
+                        raise ValueError("단위 근거 필요")
+                    value = vals[0]
+                    for v in vals[1:]:
+                        if op == "add":
+                            value = value + v
+                        elif op == "multiply":
+                            value = value * v
+                        elif op == "divide":
+                            value = value / v
+                        else:
+                            value = value - v
                 else:
-                    raise ValueError("미지원 산식")
+                    raise _UnsupportedFormula(
+                        "미지원 연산 '%s': %s" % (op, _SUPPORTED_OPS)
+                    )
                 if value != Decimal(f["value"]):
                     raise ValueError("계산 결과 불일치")
             except (
@@ -3174,7 +3213,15 @@ def checks(root, p):
                 ArithmeticError,
                 TypeError,
             ) as e:
-                add("calculation", fid, str(e))
+                add(
+                    "calculation",
+                    fid,
+                    str(e),
+                    status=(
+                        "blocked" if isinstance(e, _UnsupportedFormula)
+                        else "fail"
+                    ),
+                )
     # Lane 22: one shared _semantic_context call (a file read) serves
     # every P3 consumer in this pass — the fact loop below, the
     # finance_review loop, and the body crosscheck's required items.
@@ -3483,6 +3530,7 @@ def checks(root, p):
                     "body_finance_crosscheck",
                     item.get("fact_id") or item["location"],
                     item["reason"],
+                    status=item.get("status", "fail"),
                 )
         # Lane 21: the real §6 entry point, additive under its own
         # check_id and gated on crosscheck_sections's own complete_mode
@@ -4539,6 +4587,13 @@ def export_locked(root, kind, *, capability, major_id=None):
             detail="소유권 미확인 산출물 충돌: 기존 경로를 보존함",
         )
     body_text = merged(root, p)
+    # 빈 본문을 발행하고 "generated"라고 답하면 호출자는 0바이트 산출물을
+    # 완료로 읽는다. 제목만 있는 초안은 merged()가 제목을 돌려주므로 통과한다.
+    if not body_text.strip():
+        raise _op(
+            "export", "export", "not_committed", "empty_export_body",
+            detail="내보낼 본문이 없음: 등록된 절이 없거나 모든 절의 초안이 비어 있음",
+        )
     state = completion(root, p, report)
     manifest = {
         "kind": kind,
@@ -4760,11 +4815,42 @@ def validate_paper_native_fields(spec):
     return issues
 
 
+PAPER_BODY_MARKER = "Ⅰ. 머리말"
+
+
+def _custom_paper_body(body):
+    """Validate a caller-supplied paper body, or return None.
+
+    The generated frontmatter stays; only the body from Ⅰ. 머리말 on is
+    replaced.  A body that starts elsewhere cannot be joined to the
+    frontmatter, and an empty body would publish an empty paper as done.
+    """
+    if body is None:
+        return None
+    if not isinstance(body, str):
+        raise TypeError("본문(body_markdown)은 문자열이어야 함")
+    body = body.replace("\ufeff", "").strip()
+    if not body:
+        raise ValueError(
+            "본문(body_markdown)이 비어 있음: 병합된 본문 파일을 지정")
+    first = body.splitlines()[0].lstrip("#").strip()
+    if not first.startswith(PAPER_BODY_MARKER):
+        raise ValueError(
+            "본문은 '%s'로 시작해야 함 (받은 첫 줄: %s)"
+            % (PAPER_BODY_MARKER, first[:40]))
+    return body
+
+
 @_op_boundary
-def paper(root, spec_path, spec_bytes, requested_path, *, major_id=None):
+def paper(root, spec_path, spec_bytes, requested_path, *, major_id=None,
+          body_markdown=None):
     """Generate the markdown review body through a managed publication
     (API §6).  The spec file bytes are read once by the caller and never
     re-read — a swapped file cannot ride into the request.
+
+    ``body_markdown`` replaces the generated Ⅰ–Ⅵ body with the caller's
+    own merged text while the generated frontmatter stays.  The frozen
+    renderer is untouched: the splice happens here, in the adapter.
 
     Policy B (G-B): the common major output guard runs before the lock
     and is rechecked inside it; a held output raises ``_op(...)`` with
@@ -4820,6 +4906,11 @@ def paper(root, spec_path, spec_bytes, requested_path, *, major_id=None):
                       i["reason"] for i in native_issues
                       if i["status"] == "fail"),
                   issues=native_issues)
+    try:
+        body_override = _custom_paper_body(body_markdown)
+    except (TypeError, ValueError) as error:
+        raise _op("paper", "requested_output", "not_committed",
+                  "invalid_spec", detail=str(error)) from error
     spec_rel = str(spec_path)
 
     paper_auth = {}
@@ -4858,6 +4949,8 @@ def paper(root, spec_path, spec_bytes, requested_path, *, major_id=None):
             "requested_path": requested_rel,
             "output_format": "md",
         }
+        if body_override is not None:
+            request["body_sha256"] = digest(body_override.encode())
         request_sha = _request_sha256(request)
         request_id = "gg:paper:" + request_sha
         intent = {
@@ -4951,6 +5044,13 @@ def paper(root, spec_path, spec_bytes, requested_path, *, major_id=None):
         from gg_school_paper import paper as school_paper
 
         body_text = school_paper(spec, context=ctx)
+        if body_override is not None:
+            marker = body_text.find(PAPER_BODY_MARKER)
+            if marker < 0:
+                raise _op("paper", "requested_output", "not_committed",
+                          "invalid_spec",
+                          detail="학교 본문 시작 표식 누락")
+            body_text = body_text[:marker] + body_override + "\n"
         # D3/X1-02: frozen renderer stays unchanged. Insert only explicit
         # credits before encoding, hashing and managed publication staging.
         try:

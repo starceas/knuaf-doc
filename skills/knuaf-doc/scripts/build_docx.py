@@ -6,20 +6,26 @@ import json
 from pathlib import Path
 import re
 import sys
-from docx import Document
-from docx.shared import Pt, Mm, RGBColor, Twips
-from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_TAB_ALIGNMENT, WD_TAB_LEADER
-from docx.enum.section import WD_SECTION
-from docx.enum.style import WD_STYLE_TYPE
-from docx.enum.table import WD_TABLE_ALIGNMENT
-from docx.oxml import OxmlElement
-from docx.oxml.ns import qn
+
+DOCX_IMPORT_ERROR = None
+try:
+    from docx import Document
+    from docx.shared import Pt, Mm, RGBColor, Twips
+    from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_TAB_ALIGNMENT, WD_TAB_LEADER
+    from docx.enum.section import WD_SECTION
+    from docx.enum.style import WD_STYLE_TYPE
+    from docx.enum.table import WD_TABLE_ALIGNMENT
+    from docx.oxml import OxmlElement
+    from docx.oxml.ns import qn
+    import gg_docx_table_layout
+except ImportError as error:  # python-docx (or its layout helper) absent
+    DOCX_IMPORT_ERROR = error
+
 from gg_document import parse, spans, SCI, FRONT, school_toc_range, school_frontmatter_plan
 from gg_core import digest, local
-import gg_docx_table_layout
 
 FONT = "신명조"
-LEVEL_PT = {1: 20, 2: 18, 3: 16, 4: 14, 5: 13, 6: 12, 7: 12, 8: 12, 9: 12}
+LEVEL_PT = {1: 20, 2: 18, 3: 16, 4: 14, 5: 13, 6: 13, 7: 13, 8: 13, 9: 13}
 
 
 def set_font(run, name, size_pt, bold=False, color=(0, 0, 0)):
@@ -519,11 +525,17 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("base")
-    ap.add_argument("--in", dest="inp", default="build/본문_통합.md")
+    ap.add_argument("--in", dest="inp", default="build/검토전_본문.md")
     ap.add_argument("--out", default="build/검토전_논문.docx")
     ap.add_argument("--font", default=FONT)
     ap.add_argument("--major", default=None, help="명시 전공 ID")
     a = ap.parse_args(argv)
+    if DOCX_IMPORT_ERROR is not None:
+        print(json.dumps({
+            "status": "blocked",
+            "reason": "의존성 미설치: python-docx (%s)" % DOCX_IMPORT_ERROR,
+        }, ensure_ascii=False))
+        return 2
     import gg_major_contract as mc
     try:
         context = mc.output_context(a.base, a.major)
@@ -533,6 +545,8 @@ def main(argv=None):
         if out.exists():
             raise ValueError("기존 산출물을 덮어쓰지 않음: 새 경로 지정")
         source_text = src.read_text(encoding="utf-8")
+        if not source_text.strip():
+            raise ValueError("내보낼 본문이 없음: 입력 파일이 비어 있음")
         table_reports = []
         doc = convert(source_text, a.font, Path(a.base),
                       table_reports=table_reports, context=context)
@@ -586,7 +600,12 @@ def main(argv=None):
                          ensure_ascii=False))
         return 2
     except (ValueError, OSError) as e:
-        print(str(e))
+        # The app reads a JSON envelope; a bare traceback line loses the
+        # reason. gg.py uses the same status/reason shape.
+        print(json.dumps(
+            {"status": "blocked",
+             "reason": "%s: %s" % (type(e).__name__, e)},
+            ensure_ascii=False))
         return 2
 
 

@@ -1677,6 +1677,8 @@ def _table_claim_verdict(rows, context, label, expected_d, unit, period_keys, sc
     return matched, conflicted
 
 
+_MACHINE_FIELD_ID = re.compile(r"^[A-Za-z][A-Za-z0-9]*(?:[._][A-Za-z0-9]+)+$")
+
 def crosscheck_body(text, values):
     """Check explicit scope/period/metric/amount/unit claims, not arbitrary prose.
 
@@ -1718,7 +1720,16 @@ def crosscheck_body(text, values):
             continue
         issue["location"] = label
         if label not in text:
-            issue["reason"] = "본문에 재무 항목 없음"
+            if _MACHINE_FIELD_ID.match(label):
+                # A fact identifier is not prose: it cannot appear in the
+                # body, so a miss says nothing about the body being wrong.
+                issue["status"] = "blocked"
+                issue["reason"] = (
+                    "사실 이름이 기계용 식별자라 본문에서 찾을 수 없음: "
+                    "field_id 를 본문에 쓰는 항목 이름(예: 매출액)으로 두어야 대조한다"
+                )
+            else:
+                issue["reason"] = "본문에 재무 항목 없음"
             issues.append(issue)
             continue
 

@@ -1,7 +1,7 @@
-# ginseng-goat runtime dependencies — declared, not discovered.
+# ginseng-goat runtime dependencies - declared, not discovered.
 # Install into the project's own environment:
-#   python3 -m venv <작업폴더>/.venv
-#   <작업폴더>/.venv/bin/python -m pip install -r <이 파일>
+#   python3 -m venv <work-folder>/.venv
+#   <work-folder>/.venv/bin/python -m pip install -r <this file>
 # Offline wheelhouse: add --no-index --find-links <wheels-dir>
 # Details: references/package-install.md
 openpyxl>=3.1,<4
