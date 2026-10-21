@@ -271,6 +271,36 @@ class WorkbookSelectionTests(_MultiWorkbookCase):
         self.assertEqual([-50.0, -40.0, -30.0, -20.0, -10.0],
                          deficit[0]["evidence"][0]["net_profit"])
 
+    def test_near_miss_candidates_stay_ambiguous(self):
+        """게이트 -10,000원 vs 후보 -11/-12천원은 어느 쪽도 일치가 아니다."""
+        years = (2026, 2027, 2028, 2029, 2030)
+        self.add_source("a", "finance/a.xlsx",
+                        profit=(-50, -40, -30, -20, -11), years=years)
+        self.add_source("b", "finance/b.xlsx",
+                        profit=(-50, -40, -30, -20, -12), years=years)
+        self.record_gate("deficit_pending", -10000)
+
+        rows = self.rows()
+        self.assertEqual(["FINANCE_PLAN_WORKBOOK_AMBIGUOUS"], self.codes(rows))
+        self.assertEqual("pending", rows[0]["status"])
+        # 어느 후보의 적자 판정도 현재 계획의 결과로 소비되지 않는다.
+        self.assertNotIn("PLAN_ALL_YEARS_DEFICIT", self.codes(rows))
+
+    def test_sub_won_conversion_difference_still_matches(self):
+        """같은 값의 천원↔원 환산은 부동소수 오차만 있어도 일치다."""
+        years = (2026, 2027, 2028, 2029, 2030)
+        self.add_source("a", "finance/a.xlsx",
+                        profit=(1, 2, 3, 4, 25753.87399530496), years=years)
+        self.add_source("b", "finance/b.xlsx",
+                        profit=(-50, -40, -30, -20, -10), years=years)
+        self.record_gate("deficit_pending", 25753873.99530496)
+
+        rows = self.rows()
+        # a가 일치 후보로 선택되면 b의 적자는 판정되지 않고 모호 경고도 없다.
+        self.assertNotIn("FINANCE_PLAN_WORKBOOK_AMBIGUOUS", self.codes(rows))
+        self.assertNotIn("PLAN_ALL_YEARS_DEFICIT", self.codes(rows))
+        self.assertEqual(["OPENING_ASSETS_UNDECLARED"], self.codes(rows))
+
 class AcceptedDeficitTests(_MultiWorkbookCase):
     """INTEG-R1-03: 유효한 적자 수용은 같은 적자를 다시 차단하지 않는다."""
 
@@ -312,6 +342,20 @@ class AcceptedDeficitTests(_MultiWorkbookCase):
                    if r["evidence"][0].get("code") == "PLAN_ALL_YEARS_DEFICIT"]
         self.assertEqual(1, len(deficit))
         self.assertEqual("fail", deficit[0]["status"])
+        self.assertTrue(self.core.blocks_skill_candidate(deficit[0]))
+
+    def test_acceptance_does_not_cover_a_near_miss_amount(self):
+        """수용 -10,000원 vs 계획 -11천원(-11,000원)은 다른 적자다."""
+        rows = self._accepted(profit=(-50, -40, -30, -20, -11),
+                              target=-10000)
+        self.assertEqual("deficit_accepted",
+                         self.core.finance_gate(self.core.load(self.root))["state"])
+        deficit = [r for r in rows
+                   if r["evidence"][0].get("code") == "PLAN_ALL_YEARS_DEFICIT"]
+        self.assertEqual(1, len(deficit))
+        self.assertEqual("fail", deficit[0]["status"])
+        self.assertEqual("error", deficit[0]["severity"])
+        self.assertNotIn("accepted", deficit[0]["evidence"][0])
         self.assertTrue(self.core.blocks_skill_candidate(deficit[0]))
 
     def test_blocked_plan_stays_blocked_after_acceptance(self):

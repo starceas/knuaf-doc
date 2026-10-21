@@ -2478,7 +2478,12 @@ def _finance_plan_candidates(root, p):
     return sorted(found)
 
 def _finance_plan_matches_target(report, period, target):
-    """이 계획의 목표연도 손익이 재무 게이트 기록과 같은가."""
+    """이 계획의 목표연도 손익이 재무 게이트 기록과 같은가.
+
+    통합문서는 천원, 게이트 기록은 원 단위다. 같은 값의 단위 환산만
+    일치로 보고, 부동소수 표현 오차(1원 미만) 밖의 차이는 다른 금액이다.
+    천원 단위 반올림 차이는 실제로 다른 금액이므로 면제하지 않는다.
+    """
     if period is None or target is None:
         return False
     years = report.get("years") or []
@@ -2488,8 +2493,7 @@ def _finance_plan_matches_target(report, period, target):
     if str(years[-1]) != str(period).rstrip("년"):
         return False
     won = float(profits[-1]) * _FINANCE_PLAN_WON_PER_UNIT
-    return abs(won - target) <= max(_FINANCE_PLAN_WON_PER_UNIT,
-                                    abs(target) * 0.001)
+    return abs(won - target) < 1.0
 
 def _finance_plan_workbook(root, p, review):
     """(검사할 경로, 그 검사 결과, 후보 목록).
