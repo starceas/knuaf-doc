@@ -877,6 +877,13 @@ class PlainPolicyObjectCredits(ContractCase):
     def test_format_cli_explicit_major_for_unbound_project(self):
         commands = runtime("gg_commands")
         root = self.make_project()
+        # An empty target is blocked (P1-GUI); the point here is that the
+        # explicit major is accepted on a project without a binding.
+        write_text(root, "sections/s1.md", "간단한 계획이다.")
+        core = runtime("gg_core")
+        core.apply(root, {"request_id": "body", "ops": [section_op(
+            "s1", "Ⅰ. 머리말", "sections/s1.md")]},
+            core.load(root)["revision"])
         output = io.StringIO()
         with patch.object(sys, "argv", ["lint_plaintext.py", str(root), "--major", SC]), contextlib.redirect_stdout(output):
             commands.main("format")

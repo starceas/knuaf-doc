@@ -16,6 +16,7 @@ import argparse
 import importlib
 import importlib.metadata
 import json
+import os
 import re
 import subprocess
 import sys
@@ -296,7 +297,19 @@ def ensure(project, find_links=None, no_index=False):
         cmd.append("--no-index")
     if find_links:
         cmd += ["--find-links", str(find_links)]
-    proc = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", timeout=600)
+    proc = subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=600,
+        env={
+            **os.environ,
+            "PYTHONUTF8": "1",
+            "PYTHONIOENCODING": "utf-8",
+        },
+    )
     verified = {}
     versions = {}
     if proc.returncode == 0:

@@ -358,20 +358,26 @@ class ExcelTemplatePresaveTests(ContractCase):
         self.assertTrue(out.exists())
 
 
-def _seed_econ(root):
+def _seed_econ(root, *, body=False):
     """A project whose sole fact is a provided monetary fact carrying P3
-    economic metadata — the kind a calculation-kind review covers."""
+    economic metadata — the kind a calculation-kind review covers.
+
+    ``body`` adds one drafted section so an export has something to
+    publish (export refuses an empty manuscript, P1-GUI)."""
     write_text(root, "answer.txt", "매출액: 1000천원\n")
     fact = fact_op("sales", "매출액", "1000", "천원",
                    value_type="decimal", period="2026년",
                    scope="농장 전체", claim_id="c1")
     fact["value"]["measure"] = {"kind": "monetary_total", "currency": "KRW"}
     fact["value"]["finance_role"] = "plan"
+    ops = [source_op(claims=claim_of(fact["value"])), fact]
+    if body:
+        write_text(root, "intro.md", "매출액은 1,000 천원이다.\n")
+        ops.append({"collection": "sections", "value": {
+            "id": "intro", "title": "머리말", "path": "intro.md",
+            "order": 1, "status": "drafting"}})
     return runtime("gg_core").apply(
-        root,
-        {"request_id": "seed",
-         "ops": [source_op(claims=claim_of(fact["value"])), fact]},
-        0)
+        root, {"request_id": "seed", "ops": ops}, 0)
 
 
 def _semantics_report(sem, core, root, p, refs, *, registry=None):
@@ -423,13 +429,13 @@ def _drifted_context(core):
     return mock.patch.object(core, "_semantic_context", ctx)
 
 
-def _bind_economic_review(core, root):
+def _bind_economic_review(core, root, *, body=False):
     """Full honest fixture: economic fact + persisted semantics report +
     schema-2 observation + applied bound calculation review.  Returns
     the post-apply project dict (canonical revision R+1; the review keeps
     the observed input_revision R)."""
     sem = runtime("gg_fact_semantics")
-    p = _seed_econ(root)
+    p = _seed_econ(root, body=body)
     refs = core.sort_target_refs(core._export_refs(p))
     report = _semantics_report(sem, core, root, p, refs)
     write_text(root, "report.json", json.dumps(report, ensure_ascii=False))
@@ -1250,7 +1256,7 @@ class ExportGateOrderingTests(ContractCase):
         gating, blocked content preserved."""
         core = runtime("gg_core")
         root = self.make_project()
-        _bind_economic_review(core, root)
+        _bind_economic_review(core, root, body=True)
         bind_major(root)
         write_text(root, "report.json", '{"schema":"tampered"}')
         with self.assertRaises(core.OperationError) as cm:

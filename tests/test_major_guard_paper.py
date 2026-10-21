@@ -55,6 +55,18 @@ def _cli(script, *args):
 
 
 class _Base(ContractCase):
+    @staticmethod
+    def _seed_body(root):
+        """Export refuses an empty body (P1-GUI); these cases need content
+        so each row still exercises its own guard."""
+        write_text(root, "intro.md", "농장명은 행복농장이다.\n")
+        return runtime("gg_core").apply(root, {
+            "request_id": "body",
+            "ops": [{"collection": "sections", "value": {
+                "id": "intro", "title": "머리말", "path": "intro.md",
+                "order": 1, "status": "drafting"}}]},
+            runtime("gg_core").load(root)["revision"])
+
     def setUp(self):
         self.core = runtime("gg_core")
         self.mc = runtime("gg_major_contract")
@@ -268,6 +280,7 @@ class PaperGeneratorGuardTests(_Base):
                        "major_id_conflict", major_id=INSECTS)
         insect_root = self.make_project()
         bind_major(insect_root, INSECTS)
+        self._seed_body(insect_root)
         insect = _spec(major_id=INSECTS)
         insect["school_profile"]["department"] = "산업곤충학과"
         self._all_held(insect_root, insect, "unsupported_output")
@@ -524,6 +537,7 @@ class ExportAdoptGuardTests(_Base):
         self._export_held(root, "major_id_required")                  # L1
         self._export_held(root, "major_binding_required", SPECIALTY)  # L6
         bind_major(root)
+        self._seed_body(root)
         self._export_held(root, "major_id_required")                  # L2
         self._export_held(root, "unknown_major", UNREGISTERED)        # L4
         self._export_held(root, "major_binding_mismatch",
@@ -543,12 +557,14 @@ class ExportAdoptGuardTests(_Base):
                           kinds=("draft",))
         insect_root = self.make_project()
         bind_major(insect_root, INSECTS)
+        self._seed_body(insect_root)
         self._export_held(insect_root, "unsupported_output", INSECTS,
                           kinds=("draft",))
 
     def test_merge_forwards_major(self):
         root = self.make_project()
         bind_major(root)
+        self._seed_body(root)
         before = self._tree_bytes(root)
         held = _cli("merge_sections.py", root)
         self.assertNotEqual(held.returncode, 0)

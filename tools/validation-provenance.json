@@ -362,6 +362,66 @@
   "tools/validation-provenance.json": {
    "note": "This file; declares origins for the validation layer.",
    "origin": "new"
+  },
+  "tests/test_p1_gui_inherit.py": {
+   "note": "P1-GUI: JUDGE-A/JUDGE-B 올림 항목(빈 export 거절, 기계용 field_id 보류, n항 검산, paper body 어댑터·CLI, atomic 재시도, 명령 빈 대상 차단, doctor 의존성, build_docx 봉투·의존성·기본값) 시험",
+   "origin": "new"
+  },
+  "tests/test_office_relationships.py": {
+   "note": "P1-GUI: OOXML 외부 관계 분류·입력 baseline 허용, 17시트 전체 순서 일치 판정, 영수증 작업영역 상대경로 — 합성 zip만 사용",
+   "origin": "new"
+  },
+  "tests/test_deps.py": {
+   "note": "P1-GUI: pip 요구 파일 ASCII와 pip 자식 UTF-8 환경 전달",
+   "origin": "new"
+  },
+  "tests/test_finance_unsupported.py": {
+   "note": "P1-GUI: 재무 생성기 거절 사유가 실제로 걸린 조건만 가리키는지",
+   "origin": "new"
+  },
+  "tests/test_skill_frontmatter.py": {
+   "note": "P1-GUI 시험 이사(cb72ae1): 앞머리 값·미확인 표시·날짜 비복제",
+   "origin": "new"
+  },
+  "tests/test_skill_frontmatter_layout.py": {
+   "note": "P1-GUI 시험 이사(cb72ae1): 학교 양식 밴드 렌더·넘침 거절·슬롯 없는 행 보존",
+   "origin": "new"
+  },
+  "tests/test_skill_docx_table_layout.py": {
+   "note": "P1-GUI 시험 이사(cb72ae1): 표 폭·글꼴 하한·값 불변",
+   "origin": "new"
+  },
+  "tests/test_skill_guidelines.py": {
+   "note": "P1-GUI 시험 이사(cb72ae1): 지침 인벤토리 해시 결합·fail-closed 판정",
+   "origin": "new"
+  },
+  "tests/test_skill_kordoc.py": {
+   "note": "P1-GUI 시험 이사(cb72ae1): 가짜 CLI로 파싱·거절·캐시 소유권·프록시 자격 제거",
+   "origin": "new"
+  },
+  "tests/test_skill_excel_formula_patch.py": {
+   "note": "P1-GUI 시험 이사(cb72ae1): 수식 패치 사전조건·위험 수식 거절·전부 아니면 전무 발행",
+   "origin": "new"
+  },
+  "tests/test_skill_commands.py": {
+   "note": "P1-GUI 시험 이사(cb72ae1): 레거시 진입점의 정본 요구·빈 대상 차단·JSON 보고",
+   "origin": "new"
+  },
+  "tests/test_skill_school_paper.py": {
+   "note": "P1-GUI 시험 이사(cb72ae1): 5년 창·미확인 표시·표 고정 행 (frozen 생성기는 불변)",
+   "origin": "new"
+  },
+  "tests/test_skill_excel_fill.py": {
+   "note": "P1-GUI 시험 이사(cb72ae1): 셀 쓰기·수식/병합 보호·미응답 수치화 금지",
+   "origin": "new"
+  },
+  "tests/test_skill_school_verify.py": {
+   "note": "P1-GUI 시험 이사(cb72ae1): 재계산 항등식·상환 스케줄·to_d 거절 (본체 price_assumptions 계약)",
+   "origin": "new"
+  },
+  "tests/test_skill_show_research.py": {
+   "note": "P1-GUI 시험 이사(cb72ae1): 정본 기반 근거 조회(별도 원장 미사용)",
+   "origin": "new"
   }
  },
  "readme_policy": {
