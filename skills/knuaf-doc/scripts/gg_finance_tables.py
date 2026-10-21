@@ -1444,6 +1444,8 @@ def review_plan(workbook_path, *, declared_assets=None, area_declarations=None,
                 "PLAN_YEARS_UNREADABLE", status="blocked", severity="error",
                 reason="손익계획의 계획연도 머리글을 3개 이상 읽지 못함",
                 remedy="12 손익계획의 연도 머리글을 확인한다"))
+            return {"status": "reviewed", "years": years, "figures": {},
+                    "issues": issues}
         _sales_row, sales = _series(
             plan,
             lambda label: label.endswith("매출액")
@@ -1451,6 +1453,7 @@ def review_plan(workbook_path, *, declared_assets=None, area_declarations=None,
             cols)
         _profit_row, profit = _series(plan, lambda label: label.endswith("당기순이익"), cols)
         _cash_header, cash_cols = _year_columns(cash)
+        cash_years = [year for _, year in cash_cols]
         _cum_row, cash_balance = _series(cash, lambda label: "누적수지균형" in label, cash_cols)
         _loan_row, loan_inflow = _series(cash, lambda label: label == "융자금", cash_cols, 3)
         _invest_row, facility_invest = _series(cash, lambda label: label == "시설투자", cash_cols, 3)
@@ -1470,21 +1473,46 @@ def review_plan(workbook_path, *, declared_assets=None, area_declarations=None,
             "loan_inflow": loan_inflow,
         }
 
-        if profit and all(v is not None for v in profit):
-            if all(v <= 0 for v in profit):
-                issues.append(_plan_issue(
-                    "PLAN_ALL_YEARS_DEFICIT", severity="error",
-                    reason="계획 5개년 당기순이익이 모두 0 이하",
-                    remedy="목표연도 손익이 양수가 되도록 계획을 다시 세우거나, 학생에게 숫자와 조정 후보를 보여 준 뒤 진행한다",
-                    evidence={"years": years, "net_profit": profit}))
-            elif profit[-1] > 0 and sum(profit) <= 0:
-                issues.append(_plan_issue(
-                    "PLAN_TRAJECTORY_NOT_RECOVERED", status="pending",
-                    severity="warning",
-                    reason="목표연도만 흑자이고 5개년 누적 당기순이익은 0 이하",
-                    remedy="회수되지 않는 궤적임을 본문에 밝히거나 계획을 조정한다",
-                    evidence={"years": years, "net_profit": profit}))
-        if sales and all(v is not None for v in sales):
+        def unreadable(values, labels):
+            """값을 읽지 못한 연도 목록 — 빈 목록이면 시계열이 온전하다."""
+            if not labels:
+                return ["연도"]
+            if values is None:
+                return list(labels)
+            return [labels[i] for i, value in enumerate(values[:len(labels)])
+                    if value is None]
+
+        missing_profit = unreadable(profit, years)
+        if missing_profit:
+            issues.append(_plan_issue(
+                "PLAN_NET_PROFIT_UNREADABLE", status="blocked", severity="error",
+                reason="당기순이익을 읽지 못한 연도: "
+                       + ", ".join(str(year) for year in missing_profit),
+                remedy="엑셀에서 재계산·저장해 수식 캐시를 만들거나 해당 셀 값을 확인한 뒤 다시 검사한다",
+                evidence={"years": years, "net_profit": profit}))
+        elif all(value <= 0 for value in profit):
+            issues.append(_plan_issue(
+                "PLAN_ALL_YEARS_DEFICIT", severity="error",
+                reason="계획 5개년 당기순이익이 모두 0 이하",
+                remedy="목표연도 손익이 양수가 되도록 계획을 다시 세우거나, 학생에게 숫자와 조정 후보를 보여 준 뒤 진행한다",
+                evidence={"years": years, "net_profit": profit}))
+        elif profit[-1] > 0 and sum(profit) <= 0:
+            issues.append(_plan_issue(
+                "PLAN_TRAJECTORY_NOT_RECOVERED", status="pending",
+                severity="warning",
+                reason="목표연도만 흑자이고 5개년 누적 당기순이익은 0 이하",
+                remedy="회수되지 않는 궤적임을 본문에 밝히거나 계획을 조정한다",
+                evidence={"years": years, "net_profit": profit}))
+
+        missing_sales = unreadable(sales, years)
+        if missing_sales:
+            issues.append(_plan_issue(
+                "PLAN_SALES_UNREADABLE", status="blocked", severity="error",
+                reason="매출액을 읽지 못한 연도: "
+                       + ", ".join(str(year) for year in missing_sales),
+                remedy="엑셀에서 재계산·저장해 수식 캐시를 만들거나 해당 셀 값을 확인한 뒤 다시 검사한다",
+                evidence={"years": years, "sales": sales}))
+        else:
             for index in range(2, len(sales)):
                 prior = sales[index - 1]
                 if prior and prior > 0 and sales[index] / prior > 2:
@@ -1494,12 +1522,21 @@ def review_plan(workbook_path, *, declared_assets=None, area_declarations=None,
                         remedy="급증 근거(면적·단수·단가)를 본문에 밝히거나 계획을 조정한다",
                         evidence={"years": years, "sales": sales}))
 
-        if profit and cash_balance:
+        missing_cash = (unreadable(cash_balance, cash_years)
+                        if len(cash_cols) >= 3 else ["연도"])
+        if missing_cash:
+            issues.append(_plan_issue(
+                "CASH_FLOW_UNREADABLE", status="blocked", severity="error",
+                reason="누적 현금 잔액을 읽지 못한 연도: "
+                       + ", ".join(str(year) for year in missing_cash),
+                remedy="14. 현금흐름계획의 누적수지균형 행과 연도 머리글을 확인하고 재계산·저장한다",
+                evidence={"years": cash_years, "cash_balance": cash_balance}))
+        elif not missing_profit:
             opening = _opening_cash(workbook)
             previous = opening
             for index, value in enumerate(profit):
-                if value is None or index >= len(cash_balance) or cash_balance[index] is None:
-                    continue
+                if index >= len(cash_balance):
+                    break
                 current = cash_balance[index]
                 if value < 0 and previous is not None and current > previous:
                     drivers = {
@@ -1587,8 +1624,60 @@ def _opening_cash(workbook):
         return assets.get("cash")
     return None
 
+_BED_TOKEN = re.compile(
+    r"([0-9][0-9,]*(?:\.[0-9]+)?)\s*(㎡|m2|m²|제곱미터|㎥|m3|m³|cm|m)")
+_UNIT_DIMENSION = {
+    "㎡": (1, 0), "m2": (1, 0), "m²": (1, 0), "제곱미터": (1, 0),
+    "㎥": (1, 1), "m3": (1, 1), "m³": (1, 1),
+    "m": (0, 1), "cm": (0, 1),
+}
+_AREA_DIMENSION = (1, 0)
+
+def _bed_area_equivalent(text):
+    """배지 계산식이 실제로 쓴 베드 면적(㎡) 또는 None.
+
+    숫자 뒤 단위로 차원을 따라가며 ㎡가 되는 지점의 값을 돌려준다.
+    ``(1,500㎡ ÷ 1.9m) × 1.0m`` → 789.5㎡ (통로 폭 환산),
+    ``(1,500㎡ ÷ 1.9m) × 0.15m`` → 118.4㎡ (폭 누락)이다.
+    해석할 수 없으면 None — 첫 면적 토큰을 그대로 쓰지 않는다.
+    """
+    lines = [line for line in str(text).splitlines()
+             if "배지" in _norm(line) or "물량" in _norm(line)]
+    line = next((line for line in lines if _AREA_TOKEN.search(line)), None)
+    if line is None:
+        line = next((line for line in lines
+                     if _BED_TOKEN.search(line) and ("㎥" in line or "m3" in line)), None)
+    if line is None:
+        return None
+    tokens = list(_BED_TOKEN.finditer(line))
+    if not tokens:
+        return None
+    value = None
+    dimension = (0, 0)
+    area = None
+    previous_end = None
+    for match in tokens:
+        amount = float(match.group(1).replace(",", ""))
+        unit = _UNIT_DIMENSION[match.group(2)]
+        if value is None:
+            value, dimension = amount, unit
+        else:
+            gap = line[previous_end:match.start()]
+            if "/" in gap or "÷" in gap:
+                value = value / amount
+                dimension = (dimension[0] - unit[0], dimension[1] - unit[1])
+            elif any(op in gap for op in ("*", "×", "x", "X")):
+                value = value * amount
+                dimension = (dimension[0] + unit[0], dimension[1] + unit[1])
+            else:
+                break
+        if dimension == _AREA_DIMENSION:
+            area = value
+        previous_end = match.end()
+    return area
+
 def _bed_base_issues(workbook, declarations):
-    """배지 계산에 재배면적을 그대로 쓰면 베드 면적 선언과 대조한다."""
+    """배지 계산식이 쓴 면적이 베드 면적 선언과 같은지 본다."""
     bed = declarations.get("bed_m2")
     issues = []
     for sheet in workbook.worksheets:
@@ -1597,24 +1686,32 @@ def _bed_base_issues(workbook, declarations):
                 if not isinstance(value, str):
                     continue
                 text = _norm(value)
-                if "배지" not in text or not re.search(r"[÷/]", text) or not re.search(r"[×*]", text):
+                if "배지" not in text:
                     continue
-                match = _AREA_TOKEN.search(value)
-                if not match:
+                if "물량" not in text and "㎥" not in value and "m3" not in text:
                     continue
-                used = float(match.group(1).replace(",", ""))
-                if bed is None:
+                used = _bed_area_equivalent(value)
+                if used is None:
+                    issues.append(_plan_issue(
+                        "AREA_BED_UNVERIFIABLE", status="pending", severity="warning",
+                        reason="배지 계산식에서 베드 면적을 읽지 못함",
+                        remedy="배지 계산에 베드 면적(㎡)과 폭·깊이(m)를 단위와 함께 적는다",
+                        evidence={"sheet": sheet.title, "text": value,
+                                  "bed_m2": bed}))
+                elif bed is None:
                     issues.append(_plan_issue(
                         "AREA_BED_UNDECLARED", status="pending", severity="warning",
-                        reason="배지 계산에 면적 %s㎡를 썼지만 베드 면적 선언이 없음" % match.group(1),
+                        reason="배지 계산에 면적 %s㎡를 썼지만 베드 면적 선언이 없음" % round(used, 1),
                         remedy="finance.area.bed_m2를 선언하고 배지 계산의 분모를 그 값으로 맞춘다",
-                        evidence={"sheet": sheet.title, "text": value}))
+                        evidence={"sheet": sheet.title, "text": value, "used_m2": used}))
                 elif not math.isclose(used, bed, rel_tol=0.005, abs_tol=1):
                     issues.append(_plan_issue(
                         "AREA_BED_BASE_MISMATCH",
-                        reason="배지 계산이 베드 면적 %s㎡ 대신 %s㎡를 사용" % (bed, match.group(1)),
-                        remedy="배지량 계산의 면적을 베드 면적으로 바꾸거나, 베드 면적 선언을 실제 시공 기준으로 고친다",
-                        evidence={"sheet": sheet.title, "text": value, "bed_m2": bed}))
+                        reason="배지 계산식의 면적 환산값 %s㎡가 베드 면적 선언 %s㎡와 다름"
+                               % (round(used, 1), bed),
+                        remedy="배지 계산의 면적·폭·깊이를 단위와 함께 다시 적어 베드 면적 선언과 맞춘다",
+                        evidence={"sheet": sheet.title, "text": value,
+                                  "used_m2": used, "bed_m2": bed}))
     return issues
 
 def run(base, xlsx, *, major_id=None, input_path=None, out="build/finance-tables.md"):

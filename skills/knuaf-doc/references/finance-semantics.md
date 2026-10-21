@@ -70,6 +70,7 @@ stale 자동 감지와 원고 쓰기 시점의 물리적 차단은 현재 지원
 ### 5개년 손익 궤적
 
 - `12 손익계획`의 연도별 `당기순이익`을 읽는다.
+- 값 하나라도 읽히지 않으면(수식 캐시 없음·셀 비어 있음) `PLAN_NET_PROFIT_UNREADABLE`(blocked)로 검사 불가를 밝히고 재계산·저장 또는 셀 값 확인을 안내한다. 일부 연도만 보고 적자·흑자를 단정하지 않는다. 같은 규칙이 매출(`PLAN_SALES_UNREADABLE`)·누적 현금(`CASH_FLOW_UNREADABLE`)·연도 머리글(`PLAN_YEARS_UNREADABLE`)에도 적용된다. `blocked`는 "문제 없음"이 아니라 미수행이다.
 - 모든 연도가 0 이하이면 `PLAN_ALL_YEARS_DEFICIT`(error)다. 학생에게 연도별 숫자와 조정 후보를 보여 준 뒤에만 진행한다.
 - 목표연도만 흑자이고 5개년 누적이 0 이하이면 `PLAN_TRAJECTORY_NOT_RECOVERED`(warning)다.
 - 3년차 이후 매출이 전년 대비 2배를 넘으면 `PLAN_GROWTH_JUMP`(warning)다. 1년차 부분 작기에서 2년차로 넘어가는 증가는 정상 범위로 보고 검사하지 않는다.
@@ -86,5 +87,6 @@ stale 자동 감지와 원고 쓰기 시점의 물리적 차단은 현재 지원
 - 시설·재배·베드·경영 면적은 `finance.area.<role>` 사실로 한 번만 선언한다. role은 `facility_m2`·`cultivation_m2`·`bed_m2`·`management_m2`이고 단위는 ㎡다.
 - 선언값과 통합문서의 `3.투자계획` 비닐하우스 규격, `6. 생산계획` 재배면적, `9 .경비계획` 경영면적이 다르면 `AREA_DECLARATION_MISMATCH`(error)다.
 - 본문에서 `재배면적은 1,500 ㎡`처럼 역할 라벨 뒤에 온 면적이 선언값과 다르면 `AREA_BODY_MISMATCH`(error)다.
-- 배지량 계산문이 `(1,500 ㎡ ÷ 1.9 m) × 0.15 m`처럼 베드 면적 대신 재배·시설 면적을 쓰면 `AREA_BED_BASE_MISMATCH`(error)다. 베드 면적 선언이 없으면 `AREA_BED_UNDECLARED`(warning)다.
+- 배지량 계산문은 숫자 뒤 단위로 차원을 따라가 ㎡가 되는 지점의 값을 베드 면적으로 본다. `(1,500 ㎡ ÷ 1.9 m) × 1.0 m × 0.15 m`는 789.5 ㎡(폭 환산 포함)로 선언값과 맞고, `(1,500 ㎡ ÷ 1.9 m) × 0.15 m`는 118.4 ㎡(폭 누락)로 선언값과 다르다. 다르면 `AREA_BED_BASE_MISMATCH`(error)다. 첫 면적 토큰만으로 단정하지 않는다.
+- 계산식에서 베드 면적을 읽지 못하면 `AREA_BED_UNVERIFIABLE`(warning)로 확인 필요를 남긴다. 베드 면적 선언이 없으면 `AREA_BED_UNDECLARED`(warning)다.
 - 선언이 하나도 없으면 `AREA_DENOMINATORS_UNDECLARED`(warning)로 통합문서에서 읽은 면적을 보여 준다. 선언 없이 통과시키지 않되 본문을 막지는 않는다.

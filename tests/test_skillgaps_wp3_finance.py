@@ -18,6 +18,10 @@ if str(SCRIPTS) not in sys.path:
 import gg_finance_tables as ft  # noqa: E402
 
 
+NARROW_BED = "* 배지: 물량 = (1,500㎡ ÷ 1.9m) × 0.15m = 118.4㎥"
+WIDE_BED = "* 배지: 물량 = (1,500㎡ ÷ 1.9m) × 1.0m × 0.15m = 118.4㎥"
+
+
 def plan_workbook(path, *, years=(2027, 2028, 2029, 2030, 2031),
                   sales=(100, 200, 300, 400, 500),
                   profit=(-10, -5, 0, 5, 10),
@@ -25,7 +29,7 @@ def plan_workbook(path, *, years=(2027, 2028, 2029, 2030, 2031),
                   loan=(0, 0, 0, 0, 0),
                   facility_invest=(0, 0, 0, 0, 0),
                   machine_invest=(0, 0, 0, 0, 0),
-                  depreciation=100, bed_note=False):
+                  depreciation=100, bed_note=None):
     from openpyxl import Workbook
     wb = Workbook()
     assets = wb.active
@@ -87,9 +91,18 @@ def plan_workbook(path, *, years=(2027, 2028, 2029, 2030, 2031),
     expense["B8"] = "경영면적(m2) > 1년차"
     expense["D8"] = 1500
     if bed_note:
-        expense["B20"] = "* 배지: 물량 = (1,500㎡ ÷ 1.9m) × 0.15m = 118.4㎥"
+        expense["B20"] = bed_note
     wb.save(path)
     wb.close()
+
+
+def leave_uncached(path, sheet, cell, formula):
+    """Store a formula without a cached result — data_only reads None."""
+    import openpyxl
+    workbook = openpyxl.load_workbook(path)
+    workbook[sheet][cell] = formula
+    workbook.save(path)
+    workbook.close()
 
 
 def codes(result):
@@ -156,7 +169,7 @@ class PlanReviewTests(unittest.TestCase):
         self.assertEqual(issue["evidence"]["total"], 200000.0)
 
     def test_area_denominators_compare_body_and_bed_base(self):
-        plan_workbook(self.path, bed_note=True)
+        plan_workbook(self.path, bed_note=NARROW_BED)
         result = self.review(
             area_declarations={"facility_m2": 1500, "cultivation_m2": 1500,
                                "management_m2": 1500, "bed_m2": 789},
@@ -165,10 +178,64 @@ class PlanReviewTests(unittest.TestCase):
         self.assertIn("AREA_BED_BASE_MISMATCH", codes(result))
         clean = self.review(
             area_declarations={"facility_m2": 1500, "cultivation_m2": 1500,
-                               "management_m2": 1500, "bed_m2": 1500},
+                               "management_m2": 1500, "bed_m2": 789},
             body_text="재배면적은 1,500 ㎡로 잡았다.")
         self.assertNotIn("AREA_BODY_MISMATCH", codes(clean))
-        self.assertNotIn("AREA_BED_BASE_MISMATCH", codes(clean))
+
+    def test_bed_area_converted_with_explicit_width_is_not_flagged(self):
+        plan_workbook(self.path, bed_note=WIDE_BED)
+        result = self.review(
+            area_declarations={"facility_m2": 1500, "cultivation_m2": 1500,
+                               "management_m2": 1500, "bed_m2": 789.4737})
+        self.assertNotIn("AREA_BED_BASE_MISMATCH", codes(result))
+        self.assertNotIn("AREA_BED_UNVERIFIABLE", codes(result))
+
+    def test_bed_area_omitted_width_still_fails(self):
+        plan_workbook(self.path, bed_note=NARROW_BED)
+        result = self.review(
+            area_declarations={"facility_m2": 1500, "cultivation_m2": 1500,
+                               "management_m2": 1500, "bed_m2": 789.4737})
+        issue = next(i for i in result["issues"]
+                     if i["code"] == "AREA_BED_BASE_MISMATCH")
+        self.assertAlmostEqual(issue["evidence"]["used_m2"], 118.4211, places=3)
+
+    def test_bed_area_without_area_basis_needs_review(self):
+        plan_workbook(self.path, bed_note="* 배지: 물량 = 118.4㎥ (베드 면적 미기재)")
+        result = self.review(
+            area_declarations={"facility_m2": 1500, "cultivation_m2": 1500,
+                               "management_m2": 1500, "bed_m2": 789})
+        issue = next(i for i in result["issues"]
+                     if i["code"] == "AREA_BED_UNVERIFIABLE")
+        self.assertEqual(issue["severity"], "warning")
+
+    def test_unreadable_profit_is_reported_not_a_clean_pass(self):
+        plan_workbook(self.path, profit=(-10, -20, -30, -40, -50))
+        leave_uncached(self.path, "12 손익계획", "C26", "=-10")
+        result = self.review(
+            declared_assets={"land": 112283.094, "cash": 87716.906},
+            area_declarations={"facility_m2": 1500, "cultivation_m2": 1500,
+                               "management_m2": 1500, "bed_m2": 789})
+        self.assertTrue(result["issues"])
+        self.assertIsNone(result["figures"]["net_profit"][0])
+        issue = next(i for i in result["issues"]
+                     if i["code"] == "PLAN_NET_PROFIT_UNREADABLE")
+        self.assertEqual(issue["status"], "blocked")
+        self.assertEqual(issue["evidence"]["years"][0], 2027)
+        self.assertNotIn("PLAN_ALL_YEARS_DEFICIT", codes(result))
+
+    def test_unreadable_sales_and_cash_are_reported(self):
+        plan_workbook(self.path)
+        leave_uncached(self.path, "12 손익계획", "D6", "=200")
+        leave_uncached(self.path, "14. 현금흐름계획", "E24", "=0")
+        result = self.review()
+        self.assertIn("PLAN_SALES_UNREADABLE", codes(result))
+        self.assertIn("CASH_FLOW_UNREADABLE", codes(result))
+
+    def test_complete_series_keep_the_deficit_check(self):
+        plan_workbook(self.path, profit=(-10, -20, -30, -40, -50))
+        result = self.review()
+        self.assertIn("PLAN_ALL_YEARS_DEFICIT", codes(result))
+        self.assertNotIn("PLAN_NET_PROFIT_UNREADABLE", codes(result))
 
     def test_area_declaration_mismatch(self):
         plan_workbook(self.path)
