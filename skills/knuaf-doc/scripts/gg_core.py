@@ -3029,6 +3029,71 @@ def _recovery_source_hash(root, p, sid):
         doc="SKILL.md#검사-차단-복구",
     )
 
+def _advance_references(p, ops):
+    """apply가 올릴 개정에 맞춰 참조 개정을 함께 올린다.
+
+    ``ops``의 기록은 apply가 개정을 1 올린다. 그 기록을 참조하던 유효
+    참조(참조 개정이 현재 개정과 같던 참조)는 새 개정을 따라가야 하므로,
+    참조를 가진 사실·규칙·절을 같은 트랜잭션에 넣는다. 이미 어긋나 있던
+    참조는 건드리지 않는다 — 복구가 낡은 참조를 조용히 덮지 않게 한다.
+    """
+    values, new_revision = {}, {}
+    for op in ops:
+        col, value = op["collection"], copy.deepcopy(op["value"])
+        key = value["id"]
+        prev = p[col].get(key)
+        new_revision[(col, key)] = prev["revision"] + 1 if prev else 1
+        values[(col, key)] = value
+
+    def rebase(record, col):
+        changed = False
+        for field, target in (
+            ("source_refs", "sources"),
+            ("input_refs", "facts"),
+            ("depends_on", None),
+        ):
+            for ref in record.get(field) or []:
+                ref_col = target or ref.get("collection")
+                old = (p.get(ref_col) or {}).get(ref.get("id"), {}).get(
+                    "revision")
+                new = new_revision.get((ref_col, ref.get("id")))
+                if new is None or ref.get("revision") != old:
+                    continue
+                if ref["revision"] != new:
+                    ref["revision"] = new
+                    changed = True
+        condition = record.get("applies_when")
+        if col == "rules" and isinstance(condition, dict):
+            old = p["facts"].get(condition.get("fact_id"), {}).get("revision")
+            new = new_revision.get(("facts", condition.get("fact_id")))
+            if (
+                new is not None
+                and condition.get("revision") == old
+                and old != new
+            ):
+                condition["revision"] = new
+                changed = True
+        return changed
+
+    changed = True
+    while changed:
+        changed = False
+        for col in ("facts", "rules", "sections"):
+            for key, record in p[col].items():
+                work = values.get((col, key))
+                if work is None:
+                    work = copy.deepcopy(record)
+                if rebase(work, col):
+                    changed = True
+                    if (col, key) not in new_revision:
+                        new_revision[(col, key)] = record["revision"] + 1
+                if (col, key) in new_revision:
+                    values[(col, key)] = work
+    return [
+        {"collection": col, "value": value}
+        for (col, _key), value in values.items()
+    ]
+
 def _recovery_claim_missing(root, p, fid, sid, claim_id):
     source = copy.deepcopy(p["sources"][sid])
     fact = copy.deepcopy(p["facts"][fid])
@@ -3055,10 +3120,10 @@ def _recovery_claim_missing(root, p, fid, sid, claim_id):
     rel = ".gg-work/recovery/claim-%s.json" % fid
     change = {
         "request_id": "recover:claim:%s:%d" % (fid, p["revision"]),
-        "ops": [
+        "ops": _advance_references(p, [
             {"collection": "sources", "value": source},
             {"collection": "facts", "value": fact},
-        ],
+        ]),
     }
     argv = [[
         sys.executable,
@@ -3079,7 +3144,8 @@ def _recovery_claim_missing(root, p, fid, sid, claim_id):
             % (ref.get("locator") or "출처 파일"),
             "아래 change의 claim.quote에 확인한 원문 문장을 적는다",
             "change를 %s에 저장한다" % rel,
-            "apply 명령을 실행한다",
+            "apply 명령을 실행한다. change는 같은 출처를 쓰는 다른 사실·"
+            "규칙의 근거 개정도 함께 맞춘다(원자료 내용은 바뀌지 않았다)",
             "원문이 이 값을 뒷받침하지 않으면 claim을 만들지 말고 사실의 "
             "출처·값을 먼저 고친다",
         ],
@@ -3148,8 +3214,10 @@ def _body_candidates(root, p):
 
     관례상 절 본문은 이름이 ``sections``인 폴더의 Markdown이다. 등록된
     경로의 상위 폴더도 포함하므로 프로젝트가 다른 위치를 쓰더라도 같은
-    폴더 안의 미등록 파일을 잡는다. 가져오기 보존본(migration/)과 작업
-    임시 폴더는 제외한다.
+    폴더 안의 미등록 파일을 잡는다. 프로젝트 루트는 본문 폴더로 보지
+    않는다 — 루트에는 인터뷰 원답변·학교 자료 사본처럼 논문 절이 아닌
+    보존 자료가 함께 있으므로, 루트를 훑으면 그것들을 미등록 본문으로
+    잘못 안내한다. 가져오기 보존본(migration/)과 작업 임시 폴더도 제외한다.
     """
     base = Path(root).resolve()
     registered = {
@@ -3158,7 +3226,8 @@ def _body_candidates(root, p):
         if isinstance(s, dict) and s.get("path")
     }
     roots = set()
-    roots.update(Path(x).parent for x in registered)
+    roots.update(
+        Path(x).parent for x in registered if Path(x).parent != base)
     skip = {
         ".git", ".hg", ".svn", "__pycache__", "node_modules",
         ".gg-work", ".gg-tmp", ".gg-recovery", ".gg-lock",

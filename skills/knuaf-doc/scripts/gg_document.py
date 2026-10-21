@@ -465,15 +465,32 @@ _SITE_PHOTO_HEADINGS = (
     "재배지",
 )
 
-def _needs_site_photo(nodes, text):
-    """현장·시설 사진이 필요한 절 제목이 있는지 확인한다."""
-    for n in nodes:
+def _photo_gap_sections(nodes):
+    """현장·시설 사진이 필요한 절 중 그 절 안에 그림이 없는 것.
+
+    절 경계는 ``section_body``와 같이 제목 레벨로 자른다. 문서 어딘가에
+    있는 그림이 아니라 그 절 안의 그림만 누락을 해소한다 — 다른 절의
+    기후 그래프가 예정지 사진 누락을 덮지 않게 한다.
+    """
+    gaps = []
+    for i, n in enumerate(nodes):
         if n["kind"] != "heading":
             continue
-        title = n["text"]
-        if any(marker in title for marker in _SITE_PHOTO_HEADINGS):
-            return True
-    return False
+        if not any(marker in n["text"] for marker in _SITE_PHOTO_HEADINGS):
+            continue
+        level = n.get("level") or 1
+        images = 0
+        for extra in nodes[i + 1:]:
+            if (
+                extra["kind"] == "heading"
+                and (extra.get("level") or 99) <= level
+            ):
+                break
+            if extra["kind"] == "image":
+                images += 1
+        if not images:
+            gaps.append(n["text"])
+    return gaps
 
 def _project_major(root):
     """문서 검사 입력의 루트가 프로젝트 폴더일 때 전공을 읽는다."""
@@ -591,6 +608,7 @@ def plain_policy_check(text, issues, nodes, major_id):
     sourced_object_check(nodes, issues, policy)
     img = policy["images"]
     placeholders = text.count(img["placeholder_prefix"])
+    photo_gaps = _photo_gap_sections(nodes)
     if placeholders:
         issues.append(
             (
@@ -599,19 +617,19 @@ def plain_policy_check(text, issues, nodes, major_id):
                 % (placeholders, img["placeholder_prefix"]),
             )
         )
-    elif _needs_site_photo(nodes, text) and not any(
-        n["kind"] == "image" for n in nodes
-    ):
-        # 사진 자리 표기가 0건인데 현장·시설 서술이 있으면, 사진이 필요한
-        # 본문인데도 자리를 만들지 않은 상태다. 자리 표기가 있을 때만
-        # 경고하던 검사는 이 경우를 통과시켰다. 그림·사진 정책상 학생
-        # 촬영 대상인 서술(예정지·시설·작업장)이 있고 삽입된 그림도 없을
-        # 때만 낸다. 차단이 아니라 확인 요청이다.
+    elif photo_gaps:
+        # 사진 자리 표기가 0건인데 현장·시설 서술 절이 있으면, 사진이
+        # 필요한 본문인데도 자리를 만들지 않은 상태다. 자리 표기가 있을
+        # 때만 경고하던 검사는 이 경우를 통과시켰다. 그림·사진 정책상 학생
+        # 촬영 대상인 서술(예정지·시설·작업장)이 있고 그 절에 삽입된 그림도
+        # 없을 때만 낸다. 다른 절의 그림(예: 기후 그래프)은 이 누락을
+        # 해소하지 않는다. 차단이 아니라 확인 요청이다.
         issues.append(
             (
                 "photo_missing",
-                "사진 자리 0개: 현장·시설 서술이 있으나 학생 촬영 사진 자리"
-                "(%s…)도 삽입된 그림도 없다" % img["placeholder_prefix"],
+                "사진 자리 0개: 현장·시설 서술 절(%s)에 학생 촬영 사진 자리"
+                "(%s…)도 삽입된 그림도 없다"
+                % (", ".join(photo_gaps[:3]), img["placeholder_prefix"]),
             )
         )
     return policy

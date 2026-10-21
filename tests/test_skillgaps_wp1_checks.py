@@ -120,6 +120,87 @@ class ClaimRecoveryTests(ContractCase):
             "claim_missing",
             {r["check_id"] for r in core.checks(root, core.load(root))})
 
+    def test_shared_source_refs_follow_the_recovered_revision(self):
+        # 검토자 반례: 누락 claim 1개 + 같은 출처의 정상 claim 1개.
+        # 복구 change를 그대로 적용하면 정상 사실까지 개정이 어긋나면 안 된다.
+        core = runtime("gg_core")
+        root = self.make_project()
+        write_text(root, "answer.txt", "매출 1,000천원; 재배면적 100㎡\n")
+        missing = fact_op("sales", "매출액", "1000", "천원",
+                          value_type="decimal", period="2026년",
+                          claim_id="missing")
+        area = fact_op("area", "재배면적", "100", "㎡",
+                       value_type="decimal", period="2026년",
+                       claim_id="area")
+        claim = {k: area["value"][k] for k in (
+            "field_id", "value", "unit", "period", "scope",
+            "answer_state", "kind")}
+        core.apply(root, {"request_id": "wp1-shared", "ops": [
+            source_op(claims={"area": claim}), missing, area]},
+            core.load(root)["revision"])
+        p = core.load(root)
+        change = next(
+            r for r in core.checks(root, p)
+            if r["check_id"] == "claim_missing")["recovery"]["change"]
+        source = next(o for o in change["ops"]
+                      if o["collection"] == "sources")
+        source["value"]["claims"]["c-sales"]["quote"] = "매출 1,000천원"
+        core.apply(root, change, p["revision"])
+        after = core.load(root)
+        self.assertEqual(2, after["sources"]["answer"]["revision"])
+        for fid in ("sales", "area"):
+            self.assertEqual(
+                2, after["facts"][fid]["source_refs"][0]["revision"])
+        self.assertEqual(
+            [],
+            [r["check_id"] for r in core.checks(root, after)
+             if r["check_id"] in ("claim_missing", "source_revision")])
+
+    def test_recovery_rebases_derived_inputs(self):
+        # 같은 출처를 쓰는 계산 사실의 입력 개정도 함께 맞춘다.
+        core = runtime("gg_core")
+        root = self.make_project()
+        write_text(root, "answer.txt", "매출 1,000천원; 재배면적 100㎡\n")
+        missing = fact_op("sales", "매출액", "1000", "천원",
+                          value_type="decimal", period="2026년",
+                          claim_id="missing")
+        area = fact_op("area", "재배면적", "100", "㎡",
+                       value_type="decimal", period="2026년",
+                       claim_id="area")
+        derived = {"collection": "facts", "value": {
+            "id": "per_area", "field_id": "매출액/면적", "kind": "derived",
+            "value": "10", "unit": "천원/㎡", "value_type": "decimal",
+            "period": "2026년", "scope": "farm", "answer_state": "provided",
+            "verification": "claim_supported",
+            "source_refs": [
+                {"id": "answer", "locator": "line 1", "revision": 1}],
+            "input_refs": [{"id": "sales", "revision": 1},
+                           {"id": "area", "revision": 1}],
+            "formula": {"op": "divide", "unit_reason": "매출을 면적으로 나눔"}}}
+        claim = {k: area["value"][k] for k in (
+            "field_id", "value", "unit", "period", "scope",
+            "answer_state", "kind")}
+        core.apply(root, {"request_id": "wp1-derived", "ops": [
+            source_op(claims={"area": claim}), missing, area, derived]},
+            core.load(root)["revision"])
+        p = core.load(root)
+        change = next(
+            r for r in core.checks(root, p)
+            if r["check_id"] == "claim_missing")["recovery"]["change"]
+        source = next(o for o in change["ops"]
+                      if o["collection"] == "sources")
+        source["value"]["claims"]["c-sales"]["quote"] = "매출 1,000천원"
+        core.apply(root, change, p["revision"])
+        after = core.load(root)
+        self.assertEqual(
+            [2, 2],
+            [r["revision"] for r in after["facts"]["per_area"]["input_refs"]])
+        self.assertEqual(
+            [],
+            [r["check_id"] for r in core.checks(root, after)
+             if r["check_id"] in
+             ("claim_missing", "source_revision", "calculation")])
+
     def test_school_and_guideline_recovery_are_attached(self):
         core = runtime("gg_core")
         root = self.make_project()
@@ -176,6 +257,21 @@ class BodyRegistryTests(ContractCase):
                 if r["check_id"] == "body_registry"]
         self.assertEqual(1, len(rows))
         self.assertIn("02-초안.md", rows[0]["recovery"]["summary"])
+
+    def test_root_level_body_does_not_flag_preserved_materials(self):
+        # 검토자 반례: 본문이 루트에 있으면 인터뷰 원답변·학교 자료까지
+        # 미등록 본문으로 판정해 논문 절로 승격하라고 안내했다.
+        core = runtime("gg_core")
+        root = self.make_project()
+        write_text(root, "manuscript.md", "# Ⅰ. 머리말\n\n본문이다.\n")
+        write_text(root, "00_interview_log.md", "# 인터뷰 기록\n\n원답변 보존본.\n")
+        write_text(root, "sources/guidelines/official-toc.md", "# 학교 목차\n")
+        core.apply(root, {"request_id": "wp1-root-body", "ops": [
+            section_op("intro", "Ⅰ. 머리말", "manuscript.md")]},
+            core.load(root)["revision"])
+        rows = [r for r in core.checks(root, core.load(root))
+                if r["check_id"] == "body_registry"]
+        self.assertEqual([], rows)
 
 
 class BodyFinanceScopeTests(ContractCase):
@@ -278,3 +374,14 @@ class PhotoGapTests(ContractCase):
         self.assertNotIn(
             "photo_missing",
             self._ids("# Ⅰ. 머리말\n\n창업 동기를 적는다.\n"))
+
+    def test_figure_in_another_section_does_not_clear_the_gap(self):
+        # 검토자 반례: 다른 절(기후)의 그림 하나가 예정지 사진 누락을 꺼서는
+        # 안 된다. 사진이 필요한 절 안의 그림만 누락을 해소한다.
+        self.assertIn(
+            "photo_missing",
+            self._ids(
+                "# Ⅱ. 외부환경분석\n\n## 가. 농장 개요\n\n"
+                "예정지 필지와 배수 여건을 설명한다.\n\n"
+                "## 나. 기후\n\n![기온](temperature.png)\n"
+                "그림 1. 월평균 기온\n출처: 기상청\n"))
