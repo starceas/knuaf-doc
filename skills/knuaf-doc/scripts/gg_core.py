@@ -8,6 +8,7 @@ import hashlib
 import json
 import os
 import re
+import shlex
 import shutil
 import socket
 import sys
@@ -2139,12 +2140,13 @@ def result(
     evidence=None,
     owner="skill",
     required_for=None,
+    recovery=None,
 ):
     if owner not in {"skill", "user", "professor"}:
         raise ValueError("검사 소유자 오류")
     if required_for is None:
         required_for = ["submission_candidate"] if severity == "error" else []
-    return dict(
+    row = dict(
         check_id=cid,
         target=target,
         status=status,
@@ -2156,6 +2158,10 @@ def result(
         input_revision=revision,
         checker_version=VERSION,
     )
+    # 복구 절차는 차단에만 붙는다. 통과 행의 출력 모양은 그대로 둔다.
+    if recovery is not None:
+        row["recovery"] = recovery
+    return row
 
 
 VISUAL_FAIL = {
@@ -2972,13 +2978,405 @@ def _body_check_items(p, *, registry):
     return items
 
 
+# --- 검사 차단의 복구 절차 -----------------------------------------------
+#
+# 차단 결과에는 사람이 그대로 실행할 수 있는 명령(argv)과 절차를 붙인다.
+# 명령 문자열은 표시용이고, 셸 없이 실행하는 주체는 argv를 쓴다(update.md의
+# recover_argv와 같은 규약). 새 차단은 "막고 끝"이 아니라 복구 경로를 낸다.
+
+def _gg_command(root, command, *args):
+    return [
+        sys.executable,
+        str(Path(__file__).resolve().with_name("gg.py")),
+        command,
+        str(Path(root).resolve()),
+        *args,
+    ]
+
+def _recovery(code, summary, *, steps=None, argv=None, doc=None, change=None,
+              notice=None):
+    rec = {"code": code, "summary": summary}
+    if steps:
+        rec["steps"] = list(steps)
+    if argv:
+        rec["argv"] = [list(a) for a in argv]
+        rec["commands"] = [shlex.join(a) for a in argv]
+    if change is not None:
+        rec["change"] = change
+    if doc:
+        rec["doc"] = doc
+    if notice:
+        rec["notice"] = notice
+    return rec
+
+def _recovery_source_hash(root, p, sid):
+    preview = _gg_command(root, "source-refresh", "--source", sid)
+    commit = _gg_command(
+        root, "source-refresh", "--source", sid,
+        "--reviewed", "--apply", "--expected-revision", str(p["revision"]))
+    return _recovery(
+        "source_hash",
+        "등록 뒤 원자료 바이트가 바뀌었다. 새 내용을 검토한 뒤 해시를 다시 "
+        "등록한다. 해시만 갱신하고 내용을 검토하지 않으면 안 된다",
+        steps=[
+            "원자료 파일을 열어 등록 이후 바뀐 부분을 확인한다",
+            "이 자료를 근거로 쓴 사실·본문 주장을 새 내용과 대조한다",
+            "미리보기로 바뀐 해시와 영향을 받는 사실·규칙 목록을 확인한다",
+            "검토를 마쳤으면 --reviewed --apply로 해시와 근거 개정을 함께 "
+            "다시 등록한다",
+        ],
+        argv=[preview, commit],
+        doc="SKILL.md#검사-차단-복구",
+    )
+
+def _section_body_unregistered(root, section):
+    """정본에 채택되지 않은 본문 변경이 있는 절인지 확인한다.
+
+    apply는 sections op를 받으면 현재 파일을 읽어 ``draft_hash``를 다시
+    계산한다. 그래서 본문이 등록본과 다른 절을 참조 보정에 넣으면 그
+    변경이 조용히 정본에 채택되고 ``draft_changed`` 오류가 사라진다.
+    확인할 수 없을 때도 True(채택하지 않음)로 닫는다.
+    """
+    try:
+        raw = local(root, section["path"]).read_text(encoding="utf-8")
+    except (OSError, KeyError, TypeError):
+        return True
+    return digest(draft(raw)) != section.get("draft_hash")
+
+def _advance_references(root, p, ops):
+    """apply가 올릴 개정에 맞춰 참조 개정을 함께 올린다.
+
+    ``ops``의 기록은 apply가 개정을 1 올린다. 그 기록을 참조하던 유효
+    참조(참조 개정이 현재 개정과 같던 참조)는 새 개정을 따라가야 하므로,
+    참조를 가진 사실·규칙·절을 같은 트랜잭션에 넣는다. 이미 어긋나 있던
+    참조는 건드리지 않는다 — 복구가 낡은 참조를 조용히 덮지 않게 한다.
+
+    본문이 정본 등록본과 다른 절은 넣지 않고 이름을 돌려준다. 참조 개정만
+    맞추는 복구가 등록하지 않은 본문 변경을 채택해서는 안 되기 때문이다.
+    """
+    values, new_revision = {}, {}
+    for op in ops:
+        col, value = op["collection"], copy.deepcopy(op["value"])
+        key = value["id"]
+        prev = p[col].get(key)
+        new_revision[(col, key)] = prev["revision"] + 1 if prev else 1
+        values[(col, key)] = value
+
+    deferred = []
+    def rebase(record, col):
+        changed = False
+        for field, target in (
+            ("source_refs", "sources"),
+            ("input_refs", "facts"),
+            ("depends_on", None),
+        ):
+            for ref in record.get(field) or []:
+                ref_col = target or ref.get("collection")
+                old = (p.get(ref_col) or {}).get(ref.get("id"), {}).get(
+                    "revision")
+                new = new_revision.get((ref_col, ref.get("id")))
+                if new is None or ref.get("revision") != old:
+                    continue
+                if ref["revision"] != new:
+                    ref["revision"] = new
+                    changed = True
+        condition = record.get("applies_when")
+        if col == "rules" and isinstance(condition, dict):
+            old = p["facts"].get(condition.get("fact_id"), {}).get("revision")
+            new = new_revision.get(("facts", condition.get("fact_id")))
+            if (
+                new is not None
+                and condition.get("revision") == old
+                and old != new
+            ):
+                condition["revision"] = new
+                changed = True
+        return changed
+
+    changed = True
+    while changed:
+        changed = False
+        for col in ("facts", "rules", "sections"):
+            for key, record in p[col].items():
+                if col == "sections" and _section_body_unregistered(
+                        root, record):
+                    if key not in deferred:
+                        deferred.append(key)
+                    continue
+                work = values.get((col, key))
+                if work is None:
+                    work = copy.deepcopy(record)
+                if rebase(work, col):
+                    changed = True
+                    if (col, key) not in new_revision:
+                        new_revision[(col, key)] = record["revision"] + 1
+                if (col, key) in new_revision:
+                    values[(col, key)] = work
+    return [
+        {"collection": col, "value": value}
+        for (col, _key), value in values.items()
+    ], deferred
+
+def _recovery_claim_missing(root, p, fid, sid, claim_id):
+    source = copy.deepcopy(p["sources"][sid])
+    fact = copy.deepcopy(p["facts"][fid])
+    ref = next(
+        (r for r in fact.get("source_refs", []) if r.get("id") == sid), {})
+    claims = source.get("claims")
+    if not isinstance(claims, dict):
+        claims = {}
+        source["claims"] = claims
+    claims[claim_id] = {
+        "field_id": fact.get("field_id"),
+        "value": fact.get("value"),
+        "unit": fact.get("unit"),
+        "period": fact.get("period"),
+        "scope": fact.get("scope"),
+        "answer_state": fact.get("answer_state"),
+        "kind": fact.get("kind"),
+        "locator": ref.get("locator"),
+        "quote": None,
+    }
+    for r in fact.get("source_refs", []):
+        if r.get("id") == sid:
+            r["claim_id"] = claim_id
+    rel = ".gg-work/recovery/claim-%s.json" % fid
+    ops, deferred = _advance_references(root, p, [
+        {"collection": "sources", "value": source},
+        {"collection": "facts", "value": fact},
+    ])
+    change = {
+        "request_id": "recover:claim:%s:%d" % (fid, p["revision"]),
+        "ops": ops,
+    }
+    argv = [[
+        sys.executable,
+        str(Path(__file__).resolve().with_name("gg.py")),
+        "apply",
+        str(Path(root).resolve()),
+        "--change",
+        str(Path(root).resolve() / rel),
+        "--expected-revision",
+        str(p["revision"]),
+    ]]
+    steps = [
+        "원문 위치(%s)에서 이 값과 같은 내용을 확인한다"
+        % (ref.get("locator") or "출처 파일"),
+        "아래 change의 claim.quote에 확인한 원문 문장을 적는다",
+        "change를 %s에 저장한다" % rel,
+        "apply 명령을 실행한다. change는 같은 출처를 쓰는 다른 사실·"
+        "규칙의 근거 개정도 함께 맞춘다(원자료 내용은 바뀌지 않았다)",
+    ]
+    notice = ("change는 서식이다. quote를 실제 원문 문장으로 채우지 않으면 "
+              "검토 근거가 남지 않는다.")
+    if deferred:
+        steps.append(
+            "본문이 정본 등록본과 다른 절(%s)은 이 change에 넣지 않았다. "
+            "그 절은 본문을 대조한 뒤 따로 재등록해야 하고, 그때까지 "
+            "draft_changed·dependency_revision이 남는다" % ", ".join(deferred))
+        notice += (" 본문 변경이 등록되지 않은 절은 자동으로 재등록하지 "
+                   "않는다.")
+    steps.append(
+        "원문이 이 값을 뒷받침하지 않으면 claim을 만들지 말고 사실의 "
+        "출처·값을 먼저 고친다")
+    return _recovery(
+        "claim_missing",
+        "이 사실을 뒷받침하는 원문 대조값(claim)이 출처에 없다. 원문에서 "
+        "해당 문장을 확인한 뒤 claim을 등록한다",
+        steps=steps,
+        argv=argv,
+        change=change,
+        doc="references/finance-semantics.md",
+        notice=notice,
+    )
+
+def _recovery_school_profile(root, p):
+    return _recovery(
+        "school_profile",
+        "학교 규칙이 정본에 하나도 없다. 내장 2020 작성요령을 출처로 "
+        "등록한 뒤 규칙 항목을 연결한다",
+        steps=[
+            "SKILL.md의 '내장 학교 지침 등록' 절차로 official-toc 사본을 "
+            "school_rule 출처로 등록한다(source-scan → source-resolve → "
+            "source-register → apply)",
+            "rules.guideline_profile에 사본 경로·해시·요구 ID 집합을 "
+            "연결한다",
+            "항목별 규칙 레코드에 source_refs(locator 포함)를 붙인다",
+            "등록 뒤 check를 다시 실행해 guideline_profile 결과를 확인한다",
+        ],
+        argv=[_gg_command(root, "check")],
+        doc="references/guideline-tracking.md#항목-근거를-누가-언제-붙이나",
+    )
+
+def _recovery_guideline_profile(root, p):
+    return _recovery(
+        "guideline_profile",
+        "지침 항목은 등록됐지만 항목별 검증 근거가 붙지 않았다. 항목마다 "
+        "적용 여부와 본문 위치를 연결한다",
+        steps=[
+            "blocked 항목부터 rules[ID].applicable과 locations"
+            "(section_id·실제 본문 quote)를 채운다",
+            "해당 없음은 확인된 사실로 조건이 거짓임을 입증한 경우에만 "
+            "na_reason·depends_on과 함께 등록한다",
+            "근거를 붙이는 담당·시점은 guideline-tracking.md의 표를 따른다",
+            "등록 뒤 check를 다시 실행한다",
+        ],
+        argv=[_gg_command(root, "check")],
+        doc="references/guideline-tracking.md#항목-근거를-누가-언제-붙이나",
+    )
+
+def _recovery_body_registry(root, p, unregistered):
+    names = ", ".join(
+        Path(x).relative_to(Path(root).resolve()).as_posix()
+        for x in unregistered[:5])
+    if len(unregistered) > 5:
+        names += " 외 %d개" % (len(unregistered) - 5)
+    return _recovery(
+        "body_registry",
+        "본문 파일이 있는데 정본 sections에 등록되지 않았다: " + names,
+        steps=[
+            "각 본문 파일의 절 ID·제목·order·path를 정한다",
+            "apply로 sections 레코드를 등록한다(draft_hash는 apply가 계산한다)",
+            "등록 뒤 check를 다시 실행해 본문 검사가 실제 본문을 읽는지 "
+            "확인한다",
+        ],
+        doc="references/section-ledger.md#저장",
+    )
+
+def _body_candidates(root, p):
+    """정본에 등록돼야 할 본문 후보 파일.
+
+    관례상 절 본문은 이름이 ``sections``인 폴더의 Markdown이다. 등록된
+    경로의 상위 폴더도 포함하므로 프로젝트가 다른 위치를 쓰더라도 같은
+    폴더 안의 미등록 파일을 잡는다. 프로젝트 루트는 본문 폴더로 보지
+    않는다 — 루트에는 인터뷰 원답변·학교 자료 사본처럼 논문 절이 아닌
+    보존 자료가 함께 있으므로, 루트를 훑으면 그것들을 미등록 본문으로
+    잘못 안내한다. 가져오기 보존본(migration/)과 작업 임시 폴더도 제외한다.
+    """
+    base = Path(root).resolve()
+    registered = {
+        str(local(base, s["path"]).resolve())
+        for s in p.get("sections", {}).values()
+        if isinstance(s, dict) and s.get("path")
+    }
+    roots = set()
+    roots.update(
+        Path(x).parent for x in registered if Path(x).parent != base)
+    skip = {
+        ".git", ".hg", ".svn", "__pycache__", "node_modules",
+        ".gg-work", ".gg-tmp", ".gg-recovery", ".gg-lock",
+        "migration",
+    }
+    for current, dirnames, _files in os.walk(base):
+        dirnames[:] = sorted(d for d in dirnames if d not in skip)
+        if Path(current).name == "sections":
+            roots.add(Path(current))
+    found = set()
+    for folder in roots:
+        if not folder.is_dir():
+            continue
+        for path in folder.rglob("*.md"):
+            if not path.is_file():
+                continue
+            rel = path.relative_to(base)
+            if any(part in skip for part in rel.parts):
+                continue
+            found.add(str(path.resolve()))
+    return registered, found
+
+def source_refresh(
+    root,
+    sid,
+    *,
+    expected_revision=None,
+    reviewed=False,
+    apply_change=False,
+    request_id=None,
+):
+    """원자료 해시를 다시 등록한다(검토 확인 후).
+
+    등록된 해시와 실제 바이트가 다를 때, 새 내용을 검토한 사람이 해시와
+    그 출처를 참조하는 사실·규칙의 개정을 한 트랜잭션으로 다시 묶는다.
+    미리보기(기본)는 아무것도 쓰지 않는다.
+    """
+    p = load(root)
+    if sid not in p["sources"]:
+        raise ValueError("등록되지 않은 출처: " + str(sid))
+    if expected_revision is None:
+        expected_revision = p["revision"]
+    if expected_revision != p["revision"]:
+        raise ValueError(
+            "개정 불일치: 현재 %d, 요청 %d"
+            % (p["revision"], expected_revision))
+    source = p["sources"][sid]
+    actual = digest(local(root, source["path"]).read_bytes())
+    facts = sorted(
+        fid for fid, f in p["facts"].items()
+        if any(r.get("id") == sid for r in f.get("source_refs", []))
+    )
+    rules = sorted(
+        rid for rid, r in p["rules"].items()
+        if any(x.get("id") == sid for x in r.get("source_refs", []))
+    )
+    preview = {
+        "source": sid,
+        "path": source["path"],
+        "registered_hash": source["hash"],
+        "actual_hash": actual,
+        "changed": actual != source["hash"],
+        "dependents": {"facts": facts, "rules": rules},
+        "revision": p["revision"],
+    }
+    if actual == source["hash"]:
+        return dict(preview, status="up_to_date")
+    if not apply_change:
+        return dict(
+            preview,
+            status="preview",
+            notice="미리보기만 했다. 검토 뒤 --reviewed --apply로 다시 "
+                   "등록한다.",
+        )
+    if not reviewed:
+        raise ValueError(
+            "새 원자료를 검토한 뒤 --reviewed를 붙여야 다시 등록할 수 있음")
+    new_revision = source["revision"] + 1
+    ops = [{"collection": "sources", "value": copy.deepcopy(source)}]
+    for fid in facts:
+        fact = copy.deepcopy(p["facts"][fid])
+        for ref in fact.get("source_refs", []):
+            if ref.get("id") == sid:
+                ref["revision"] = new_revision
+        ops.append({"collection": "facts", "value": fact})
+    for rid in rules:
+        rule = copy.deepcopy(p["rules"][rid])
+        for ref in rule.get("source_refs", []):
+            if ref.get("id") == sid:
+                ref["revision"] = new_revision
+        ops.append({"collection": "rules", "value": rule})
+    change = {
+        "request_id": request_id or (
+            "source-refresh:%s:%d" % (sid, expected_revision)),
+        "ops": ops,
+    }
+    updated = apply(root, change, expected_revision)
+    return dict(
+        preview,
+        status="refreshed",
+        hash=updated["sources"][sid]["hash"],
+        source_revision=updated["sources"][sid]["revision"],
+        revision=updated["revision"],
+    )
+
 def checks(root, p):
     from gg_document import parse
 
     out = []
 
-    def add(cid, target, reason, severity="error", status="fail"):
-        out.append(result(cid, target, status, reason, p["revision"], severity))
+    def add(cid, target, reason, severity="error", status="fail",
+            recovery=None):
+        out.append(
+            result(cid, target, status, reason, p["revision"], severity,
+                   recovery=recovery))
 
     gate_state = finance_gate(p)
     if gate_state["supported"]:
@@ -3024,7 +3422,10 @@ def checks(root, p):
     for sid, s in p["sources"].items():
         try:
             if digest(local(root, s["path"]).read_bytes()) != s["hash"]:
-                add("source_hash", sid, "원자료 변경: 재검토 필요")
+                add(
+                    "source_hash", sid, "원자료 변경: 재검토 필요",
+                    recovery=_recovery_source_hash(root, p, sid),
+                )
         except (OSError, ValueError):
             add("source_missing", sid, "원자료 읽기 실패", status="blocked")
         if plain_policy is not None:
@@ -3107,6 +3508,8 @@ def checks(root, p):
                         fid,
                         "원문 대조값 없음: 의미 검토 필요",
                         status="blocked",
+                        recovery=_recovery_claim_missing(
+                            root, p, fid, ref.get("id"), "c-" + fid),
                     )
                 elif any(
                     f[k] != claim.get(k)
@@ -3248,6 +3651,36 @@ def checks(root, p):
                     add("dependency_revision", sid, "절 의존 개정 불일치")
         except (OSError, KeyError, ValueError) as e:
             add("section", sid, str(e), status="blocked")
+    # G3-02/G1-10: 등록 공백을 조용히 통과시키지 않는다. 본문 파일이 있는데
+    # sections에 없으면 본문 검사는 그 파일을 읽지 않는다(merged()는
+    # sections만 합친다). 그래서 sourced_objects가 0/0으로 pass가 되고
+    # 단위·서지·정책 검사도 빈 문자열을 본다. 여기서 등록 공백 자체를
+    # 경고로 드러내고 복구 절차를 함께 낸다. 제출 차단은 gate의 coverage가
+    # 이미 맡으므로 기본 check는 경고로 둔다.
+    try:
+        registered, found = _body_candidates(root, p)
+        unregistered = sorted(found - registered)
+        if not p["sections"] and unregistered:
+            add(
+                "body_registry",
+                "sections",
+                "본문 파일 %d개가 정본 sections에 등록되지 않아 본문 검사를 "
+                "건너뜀: 등록 전 검사 결과는 본문을 읽지 않았다"
+                % len(unregistered),
+                severity="warning",
+                recovery=_recovery_body_registry(root, p, unregistered),
+            )
+        elif unregistered:
+            add(
+                "body_registry",
+                "sections",
+                "등록되지 않은 본문 파일 %d개는 검사 대상이 아님"
+                % len(unregistered),
+                severity="warning",
+                recovery=_recovery_body_registry(root, p, unregistered),
+            )
+    except (OSError, ValueError, KeyError, TypeError):
+        pass  # 등록 공백 판정 실패는 아래 본문 검사 실패로 드러난다
     for rid, rule in p["rules"].items():
         guideline_ids = set()
         profile_rule = p["rules"].get("guideline_profile")
@@ -3334,6 +3767,8 @@ def checks(root, p):
                     severity="warning" if ready else "error",
                     evidence=[{"status": gstatus, "blockers": guideline_report.get("blockers", []), "inventory": guideline_report.get("inventory", {})}],
                     required_for=[] if ready else ["submission_candidate"],
+                    recovery=None if ready else _recovery_guideline_profile(
+                        root, p),
                 )
             )
             for item in guideline_report.get("items", []):
@@ -3364,7 +3799,10 @@ def checks(root, p):
     except (ImportError, OSError, ValueError, KeyError, TypeError) as e:
         out.append(result("guideline_runtime", "project", "blocked", str(e), p["revision"]))
     if not p["rules"]:
-        add("school_profile", "project", "학교 규칙 미등록", status="blocked")
+        add(
+            "school_profile", "project", "학교 규칙 미등록", status="blocked",
+            recovery=_recovery_school_profile(root, p),
+        )
     try:
         import gg_document
 
@@ -3381,7 +3819,7 @@ def checks(root, p):
             hint_ids = set()
         warning_ids = set(hint_ids) | set(
             getattr(gg_document, "WARNING_CHECKS", ())
-        )
+        ) | set(getattr(gg_document, "POLICY_ADVISORY_CHECKS", ()))
         for cid, reason in gg_document.check(
             merged(root, p), root, major_id=plain_major
         ):
@@ -3484,6 +3922,18 @@ def checks(root, p):
                     item.get("fact_id") or item["location"],
                     item["reason"],
                 )
+        else:
+            # G3-03: 비교 대상이 없으면 이 검사는 아무것도 보지 않는다.
+            # 행이 사라지면 "검사했고 문제 없음"과 구분되지 않으므로,
+            # 검사하지 않았다는 사실을 별도 ID로 남긴다(차단 아님).
+            add(
+                "body_finance_crosscheck_scope",
+                "body",
+                "본문 재무 대조 안 함: 대조할 금액 사실이 없음"
+                "(금액·단위·기간을 사실로 등록해야 검사가 실행된다)",
+                severity="info",
+                status="not_checked",
+            )
         # Lane 21: the real §6 entry point, additive under its own
         # check_id and gated on crosscheck_sections's own complete_mode
         # litmus (every section carrying a claims list).  In that regime

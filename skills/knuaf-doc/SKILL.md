@@ -29,8 +29,9 @@ description: 한국농수산대학교 창업논문·영농계획서와 동반 �
 - `updated`면 "{to}로 자동 업데이트했어요." + 같은 차례에 새 SKILL.md를 다시 읽고 그 지침으로 이어간다(스킬 목록·설명 갱신은 다음 대화부터).
 - `check_failed`면 "업데이트를 확인하지 못했어요(인터넷 연결이 막혀 있을 수 있어요). 지금 작업은 그대로 할 수 있어요."를 쓴다.
 - `skipped`(`user_files_in_skill`)는 "스킬 폴더에 원래 배포본과 다른 파일이 있어 자동 업데이트를 건너뛰었어요"(files 목록은 작업 폴더로), `install_manifest_invalid`·`legacy_reference_unavailable`은 "스킬 설치 정보를 확인할 수 없어 자동 업데이트를 멈췄어요". 둘 다 신고 권유.
+- `skipped`(`new_tree_invalid` 등 안전 검사 거부)는 "새 버전 파일이 검증을 통과하지 못해 자동 업데이트를 멈췄어요. 지금 버전으로 계속 쓸 수 있어요." + 신고 권유. `reason`과 `detail`을 함께 보여 준다. 같은 실패가 반복되면 새 버전 쪽 문제이므로 학생이 할 일은 신고뿐이다.
 - `failed`는 "업데이트가 중간에 멈췄어요", `recovered`는 "지난번 끊긴 업데이트를 정리했어요" + 신고 권유(state별 대응·recover 명령은 update.md 표).
-- 그 밖의 `skipped`·`up_to_date`는 첫 진입에서 말하지 않는다.
+- 아래는 첫 진입에서 말하지 않는다: `up_to_date`, `skipped`(`install_kind`·`local_newer`·`no_release`·`locked`). 그 밖의 `skipped`는 위 규칙대로 한 줄 알린다.
 
 어떤 결과든 업데이트 실패는 작업을 막지 않는다. 학생이 "업데이트 확인"·"업데이트해줘"라고 직접 요청하면 네트워크·쓰기 권한을 허용하고 모든 상태를 쉬운 말로 설명한다.
 
@@ -63,6 +64,22 @@ description: 한국농수산대학교 창업논문·영농계획서와 동반 �
 - "업데이트해줘 / 업데이트 확인": [update](references/update.md)의 절차를 따르고 `scripts/gg_update.py auto`를 쓴다.
 
 명령은 이 스킬의 실제 `scripts/gg.py` 경로와 현재 Python 실행기를 쓰고 특정 홈 경로·다른 호스트 설치를 가정하지 않는다. `doctor <폴더>` 탐지는 기능 시험을 대신하지 않는다.
+
+## 검사 차단 복구
+
+`check`·`status` 결과에서 차단된 행에는 `recovery`가 붙는다. `recovery.summary`는 왜 막혔는지, `recovery.steps`는 무엇을 확인해야 하는지, `recovery.commands`(셸 없이 실행할 때는 `recovery.argv`)는 그대로 실행할 명령이다. 학생에게는 명령 문자열이 아니라 "무엇이 막혔고 무엇을 확인해야 하는지"를 쉬운 말로 먼저 말하고, 학생이 실행을 원하면 명령을 그대로 준다.
+
+| 검사 | 막힌 뜻 | 복구 경로 |
+|---|---|---|
+| `source_hash` | 등록한 뒤 원자료 파일 바이트가 바뀌었다 | `gg.py source-refresh <폴더> --source <출처ID>`로 미리보기 → 바뀐 부분을 검토하고 그 자료를 근거로 쓴 사실·본문을 대조 → `--reviewed --apply --expected-revision <N>`로 해시와 근거 개정을 함께 다시 등록 |
+| `claim_missing` | 사실을 뒷받침하는 원문 대조값이 출처에 없다 | `recovery.change` 서식을 `.gg-work/recovery/`에 저장하고 `quote`에 확인한 원문 문장을 적은 뒤 `gg.py apply`로 등록. 그 change는 같은 출처를 쓰는 다른 사실·규칙의 근거 개정도 함께 맞춘다(원자료 내용은 바뀌지 않는다). 본문이 등록본과 다른 절은 자동 재등록하지 않으므로 그 절은 따로 재등록한다. 원문이 값을 뒷받침하지 않으면 claim을 만들지 말고 사실의 출처·값을 고친다 |
+| `school_profile` | 학교 규칙이 하나도 등록되지 않았다 | "내장 학교 지침 등록" 절차로 발췌 사본을 `school_rule` 출처로 등록하고 `rules.guideline_profile`을 연결 |
+| `guideline_profile` | 지침 항목별 검증 근거가 붙지 않았다 | `rules[항목ID]`의 `applicable`·`locations`를 채우고 해당 없음은 조건을 거짓으로 입증한 경우에만 등록([guideline-tracking](references/guideline-tracking.md)) |
+| `body_registry` | 본문 파일이 있는데 `sections`에 등록되지 않아 본문 검사가 그 파일을 읽지 않았다 | 절 ID·제목·order·path를 정해 `apply`로 `sections`에 등록하고 다시 `check` |
+| `body_finance_crosscheck_scope` | 대조할 금액 사실이 없어 재무 본문 대조를 하지 않았다 | 금액 사실을 단위·기간과 함께 등록한 뒤 다시 `check`. "검사 안 됨"을 통과로 말하지 않는다 |
+| `photo_missing` | 현장·시설 서술이 있는데 사진 자리도 삽입된 그림도 없다 | [figure-photo-policy](references/figure-photo-policy.md) 규격대로 `[사진 필요: …]` 자리를 만들거나 권리 확인된 자료를 넣는다 |
+
+`recovery`가 붙은 차단은 해시·개정만 맞춰 통과시키지 않는다. 해시를 다시 등록하기 전에 그 자료를 근거로 쓴 사실·본문을 다시 대조하는 것이 조건이고, `source-refresh`는 `--reviewed` 없이는 쓰지 않는다.
 
 ## 진행 목록
 
