@@ -143,7 +143,10 @@ class RealTreeTests(ContractCase):
             # test_build_hwpx.py): 203/155 + 4 = 207/159.
             # Output hygiene adds gg_tidy.py, output-hygiene.md and
             # test_tidy.py: 207/159 + 3 = 210/162.
-            self.assertEqual(210, rc["verified"])
+            # The skill-gaps integration declares two WP-4 reference
+            # changes that the pinned baseline already ships
+            # (cross-review.md, intake-selection.md): 210 + 2 = 212/162.
+            self.assertEqual(212, rc["verified"])
             self.assertEqual(162, rc["new_count"])
         else:
             self.assertNotEqual("ok", report["status"])
@@ -174,7 +177,10 @@ class RealTreeTests(ContractCase):
         # four approvals: 203/155/162 -> 207/159/166.
         # Output hygiene adds three declarations, three new files and three
         # approvals: 207/159/166 -> 210/162/169.
-        self.assertEqual(210, link["change_count"])
+        # The skill-gaps integration adds two baseline-shipped reference
+        # changes (cross-review.md, intake-selection.md) and no new files:
+        # 210/162/169 -> 212/162/169.
+        self.assertEqual(212, link["change_count"])
         self.assertEqual(162, link["new_count"])
         self.assertEqual(169, link["approved_new_files"])
         self.assertEqual("P27", link["parent_candidate"]["stage"])

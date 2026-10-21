@@ -3,9 +3,11 @@
 
 import argparse
 import json
+import os
 from pathlib import Path
 import re
 import sys
+import time
 
 DOCX_IMPORT_ERROR = None
 try:
@@ -20,7 +22,6 @@ try:
     import gg_docx_table_layout
 except ImportError as error:  # python-docx (or its layout helper) absent
     DOCX_IMPORT_ERROR = error
-
 from gg_document import parse, spans, SCI, FRONT, school_toc_range, school_frontmatter_plan
 from gg_core import digest, local
 
@@ -38,8 +39,9 @@ def set_font(run, name, size_pt, bold=False, color=(0, 0, 0)):
 
 
 def runs(p, text, font, size=12, bold=False, color=(0, 0, 0)):
-    # Keep long reference URLs intact in the DOCX relationship instead of
-    # leaving the last digit stranded on a printed line.
+    # Long reference URLs stay clickable *and* printable: the URL itself is
+    # the run text, so the printed copy keeps the address instead of a
+    # generic "원문 링크" label. Word wraps the URL inside the relationship.
     url_match = re.search(r"https?://[^\s]+", text)
     if url_match and len(url_match.group(0)) > 65:
         from docx.opc.constants import RELATIONSHIP_TYPE as RT
@@ -53,7 +55,7 @@ def runs(p, text, font, size=12, bold=False, color=(0, 0, 0)):
         props.append(fonts)
         sz=OxmlElement("w:sz");sz.set(qn("w:val"),str(size*2));props.append(sz)
         col=OxmlElement("w:color");col.set(qn("w:val"),"000000");props.append(col)
-        run.append(props);label=OxmlElement("w:t");label.text="원문 링크";run.append(label);link.append(run);p._p.append(link)
+        run.append(props);label=OxmlElement("w:t");label.text=url;run.append(label);link.append(run);p._p.append(link)
         runs(p, text[url_match.end():], font, size, bold, color)
         return
     # Scientific genus/species only; author and infraspecific rank remain roman.
@@ -522,6 +524,76 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
     return doc
 
 
+def base_dir(value):
+    """Resolve the project folder without depending on a readable cwd.
+
+    ``os.getcwd()`` raises EPERM when the process cwd sits in a folder the
+    sandbox/TCC cannot stat (the project folder itself stays readable). An
+    absolute folder needs no cwd lookup; a relative one falls back to the
+    shell's ``$PWD`` so ``build_docx.py . ...`` still runs from the project.
+    """
+    path = Path(value).expanduser()
+    if path.is_absolute():
+        return Path(os.path.normpath(str(path)))
+    try:
+        cwd = Path(os.getcwd())
+    except OSError:
+        shell_cwd = os.environ.get("PWD", "")
+        if not os.path.isabs(shell_cwd):
+            raise ValueError(
+                "작업 폴더를 절대 경로로 지정하세요: 현재 폴더를 읽을 수 없고 "
+                "PWD도 없습니다(cwd 조회 실패). 예: build_docx.py "
+                "/절대/경로 --in ...")
+        cwd = Path(shell_cwd)
+        print("알림: 현재 폴더를 읽을 수 없어 PWD를 기준으로 계산했습니다: "
+              + str(cwd), file=sys.stderr)
+    return Path(os.path.normpath(str(cwd / path)))
+
+def rehash(base, out):
+    """Refresh ``file_hash`` after a human post-processing pass.
+
+    The build-time manifest hash covers the DOCX exactly as ``doc.save``
+    wrote it. Page-break/spacing edits made afterwards (Word, python-docx)
+    leave the hash stale, so this rewrites the receipt and records each
+    previous hash instead of pretending the build-time hash still matches.
+    """
+    target = local(base, out)
+    manifest_path = target.with_suffix(".manifest.json")
+    if not target.is_file():
+        raise ValueError("재해시할 DOCX 없음: " + str(out))
+    if not manifest_path.is_file():
+        raise ValueError(
+            "매니페스트 없음: " + str(manifest_path)
+            + " — --rehash는 build_docx.py가 만든 매니페스트만 갱신합니다")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if manifest.get("kind") != "draft" or not manifest.get("input_hash"):
+        raise ValueError("build_docx.py 매니페스트가 아님: " + str(manifest_path))
+    current = digest(target.read_bytes())
+    previous = manifest.get("file_hash")
+    if previous == current:
+        return {"status": "unchanged", "file_hash": current,
+                "file_hash_stage": manifest.get("file_hash_stage"),
+                "manifest": str(manifest_path)}
+    history = manifest.setdefault("rehash", [])
+    history.append({
+        "from": previous,
+        "to": current,
+        "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    })
+    manifest["file_hash"] = current
+    manifest["file_hash_stage"] = "post_processed"
+    data = json.dumps(manifest, ensure_ascii=False, indent=2).encode("utf-8")
+    tmp = manifest_path.with_name(manifest_path.name + ".tmp")
+    try:
+        tmp.write_bytes(data)
+        os.replace(tmp, manifest_path)
+    finally:
+        if tmp.exists():
+            tmp.unlink()
+    return {"status": "rehashed", "file_hash": current,
+            "file_hash_stage": "post_processed", "previous": previous,
+            "manifest": str(manifest_path)}
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("base")
@@ -529,26 +601,34 @@ def main(argv=None):
     ap.add_argument("--out", default="build/검토전_논문.docx")
     ap.add_argument("--font", default=FONT)
     ap.add_argument("--major", default=None, help="명시 전공 ID")
+    ap.add_argument("--rehash", metavar="DOCX",
+                    help="후처리한 DOCX의 매니페스트 file_hash를 다시 계산한다")
     a = ap.parse_args(argv)
-    if DOCX_IMPORT_ERROR is not None:
-        print(json.dumps({
-            "status": "blocked",
-            "reason": "의존성 미설치: python-docx (%s)" % DOCX_IMPORT_ERROR,
-        }, ensure_ascii=False))
-        return 2
     import gg_major_contract as mc
     try:
-        context = mc.output_context(a.base, a.major)
+        base = base_dir(a.base)
+        # 재해시는 python-docx를 쓰지 않는다 — 의존성 검사 뒤에 두면
+        # docx가 없는 환경에서 후처리 해시 갱신까지 막힌다.
+        if a.rehash:
+            print(json.dumps(rehash(base, a.rehash), ensure_ascii=False))
+            return 0
+        if DOCX_IMPORT_ERROR is not None:
+            print(json.dumps({
+                "status": "blocked",
+                "reason": "의존성 미설치: python-docx (%s)" % DOCX_IMPORT_ERROR,
+            }, ensure_ascii=False))
+            return 2
+        context = mc.output_context(base, a.major)
         authorization = mc.authorize_output(mc.OUTPUT_SCHOOL_PAPER, context)
-        src = local(a.base, a.inp)
-        out = local(a.base, a.out)
+        src = local(base, a.inp)
+        out = local(base, a.out)
         if out.exists():
             raise ValueError("기존 산출물을 덮어쓰지 않음: 새 경로 지정")
         source_text = src.read_text(encoding="utf-8")
         if not source_text.strip():
             raise ValueError("내보낼 본문이 없음: 입력 파일이 비어 있음")
         table_reports = []
-        doc = convert(source_text, a.font, Path(a.base),
+        doc = convert(source_text, a.font, base,
                       table_reports=table_reports, context=context)
         mc.reconfirm_output(authorization, context)
         out.parent.mkdir(parents=True, exist_ok=True)
@@ -565,6 +645,7 @@ def main(argv=None):
                 "reports": table_reports,
             },
             "file_hash": digest(out.read_bytes()),
+            "file_hash_stage": "build",
             "input_hash": digest(src.read_bytes()),
             "font": a.font,
             "font_available": "not_run",
@@ -585,7 +666,7 @@ def main(argv=None):
                 else None
             ),
             "major_authorization": authorization.to_dict(),
-            "notice": "저수준 미검증 출력. 목차 필드 갱신·전체 페이지·학교 원문·학명·그림·표·머리행 검토 필요. 한글에서 글꼴 신명조·여백(위20/아래15/머리15/꼬리15/좌30/우30/제본0 mm)·페이지 번호를 확인한다. 이 세 가지는 스킬 작성 완료를 막지 않으며 자동 통과하지 않는다.",
+            "notice": "저수준 미검증 출력. 목차 필드 갱신·전체 페이지·학교 원문·학명·그림·표·머리행 검토 필요. 한글에서 글꼴 신명조·여백(위20/아래15/머리15/꼬리15/좌30/우30/제본0 mm)·페이지 번호를 확인한다. 이 세 가지는 스킬 작성 완료를 막지 않으며 자동 통과하지 않는다. file_hash는 빌드 직후 파일 기준이다. 쪽 나눔·여백 등 후처리로 파일을 다시 저장했다면 --rehash로 매니페스트 해시를 갱신한다.",
         }
         out.with_suffix(".manifest.json").write_text(
             json.dumps(manifest, ensure_ascii=False, indent=2),

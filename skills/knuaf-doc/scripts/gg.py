@@ -60,6 +60,7 @@ def main(argv=None):
             "source-resolve",
             "source-register",
             "source-view",
+            "source-refresh",
             "finance-tables",
             "tidy",
         ],
@@ -111,6 +112,9 @@ def main(argv=None):
     ap.add_argument("--external-root")
     ap.add_argument("--selection")
     ap.add_argument("--source-hash")
+    # 검사 차단 복구: 등록된 출처의 해시를 검토 뒤 다시 등록한다.
+    ap.add_argument("--source")
+    ap.add_argument("--reviewed", action="store_true")
     a = ap.parse_args(argv)
     p4_commands = {"rda-lookup", "rda-propose", "rda-apply"}
     p5_commands = {
@@ -689,6 +693,19 @@ def main(argv=None):
                     if a.scope == "submission"
                     else core.checks(a.folder, p)
                 )
+            elif a.command == "source-refresh":
+                if not a.source:
+                    raise ValueError("--source 출처 ID 필요")
+                value = core.source_refresh(
+                    a.folder,
+                    a.source,
+                    expected_revision=a.expected_revision,
+                    reviewed=a.reviewed,
+                    apply_change=a.apply,
+                    request_id=a.request_id,
+                )
+                code = 0 if value.get("status") in {
+                    "preview", "up_to_date", "refreshed"} else 1
             elif a.command == "status":
                 report = core.gate(a.folder, p)
                 state = core.completion(a.folder, p, report)

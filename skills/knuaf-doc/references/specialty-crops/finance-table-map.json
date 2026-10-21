@@ -1275,7 +1275,7 @@
       "stop_before": [],
       "blank_repeat_labels": true,
       "row_units": {
-       "영농잉여율": "percent_value",
+       "영농잉여율": "ratio",
        "소득율": "ratio"
       },
       "cols": [

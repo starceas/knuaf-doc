@@ -450,6 +450,36 @@ def _qualified(dom: minidom.Document, root: minidom.Element, local: str) -> mini
     return dom.createElementNS(NS_MAIN, f"{prefix}:{local}" if prefix else local)
 
 
+_REL_NS = "http://schemas.openxmlformats.org/package/2006/relationships"
+_CT_NS = "http://schemas.openxmlformats.org/package/2006/content-types"
+_CALC_CHAIN = "xl/calcChain.xml"
+
+def _drop_calcchain(modified: dict[str, bytes], zin: zipfile.ZipFile) -> list[str]:
+    """Remove the calcChain part and every reference to it.
+
+    ``prepare_wage_input`` deletes a formula node.  A calcChain that still
+    lists that cell is an OOXML inconsistency (Excel's repair prompt), so the
+    chain is dropped as a whole — Excel rebuilds it on the next calculation.
+    """
+    if _CALC_CHAIN not in zin.namelist():
+        return []
+    dropped = [_CALC_CHAIN]
+    rels_name = "xl/_rels/workbook.xml.rels"
+    if rels_name in zin.namelist():
+        rels = _serialize_dom(modified.get(rels_name) or zin.read(rels_name), rels_name)
+        for rel in list(rels.getElementsByTagNameNS(_REL_NS, "Relationship")):
+            if (rel.getAttribute("Type") or "").endswith("/calcChain"):
+                rel.parentNode.removeChild(rel)
+        modified[rels_name] = rels.toxml(encoding="utf-8")
+    types_name = "[Content_Types].xml"
+    if types_name in zin.namelist():
+        types = _serialize_dom(modified.get(types_name) or zin.read(types_name), types_name)
+        for override in list(types.getElementsByTagNameNS(_CT_NS, "Override")):
+            if override.getAttribute("PartName") == "/" + _CALC_CHAIN:
+                override.parentNode.removeChild(override)
+        modified[types_name] = types.toxml(encoding="utf-8")
+    return dropped
+
 def _expand_targeted_shared(root, dom, dom_cells, patches, sheet):
     """Materialize only complete shared groups touched by a reviewed patch.
 
@@ -624,6 +654,7 @@ def _patch_copy(source: Path, map_path: Path, out: Path, *,
             "patched": [], "expanded_shared_formulas": [],
             "formulaCachesInvalidated": 0, "recalcNeeded": True,
         }
+        cleared_formulas = 0
         if "d8" in data:
             receipt["d8"] = data["d8"]
         for sheet, target in sheets.items():
@@ -660,6 +691,7 @@ def _patch_copy(source: Path, map_path: Path, out: Path, *,
                             dom_cell.removeChild(child)
                     if dom_cell.hasAttribute("t"):
                         dom_cell.removeAttribute("t")
+                    cleared_formulas += 1
                     receipt["patched"].append({**patch, "operation": "prepare_wage_input", "old_formula": "=" + old})
                     continue
                 if "expected_value" in patch:
@@ -736,11 +768,19 @@ def _patch_copy(source: Path, map_path: Path, out: Path, *,
         except KeyError:
             raise ValueError("workbook.xml missing; cannot set recalculation flags")
 
+        dropped: list[str] = []
+        if cleared_formulas:
+            dropped = _drop_calcchain(modified, zin)
+            if dropped:
+                receipt["calcChainRemoved"] = True
+
         if _authorization is not None:
             import gg_major_contract as mc
             mc.reconfirm_output(_authorization, _context)
         with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as zout:
             for info in zin.infolist():
+                if info.filename in dropped:
+                    continue
                 zout.writestr(info, modified.get(info.filename, zin.read(info.filename)))
     if _authorization is not None:
         receipt["majorAuthorization"] = _authorization.to_dict()

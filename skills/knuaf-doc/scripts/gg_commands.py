@@ -5,7 +5,13 @@ import json
 from pathlib import Path
 import sys
 import gg_core as c
-from gg_document import INFO_CHECKS, WARNING_CHECKS, check, project_major
+from gg_document import (
+    INFO_CHECKS,
+    POLICY_ADVISORY_CHECKS,
+    WARNING_CHECKS,
+    check,
+    project_major,
+)
 
 
 def main(mode):
@@ -84,7 +90,8 @@ def main(mode):
                     reason,
                     p["revision"] if p else 0,
                     "info" if cid in INFO_CHECKS else (
-                        "warning" if cid in WARNING_CHECKS else "error"
+                        "warning" if cid in WARNING_CHECKS
+                        or cid in POLICY_ADVISORY_CHECKS else "error"
                     ),
                 )
                 for cid, reason in check(

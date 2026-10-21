@@ -1221,6 +1221,502 @@ def generate(workbook_path, *, major_id, footnotes=None, map_path=None,
     }
 
 
+FINANCE_PLAN_CHECK = "finance_plan_review"
+_YEAR_LABEL = re.compile(r"^(\d{4})년?$")
+_AREA_TOKEN = re.compile(r"([0-9][0-9,]*(?:\.[0-9]+)?)\s*(?:㎡|m2|m²|제곱미터)")
+_BLOCK_LABEL = re.compile(r"^\((\d)\)")
+
+_ASSET_ROLES = {
+    "1": ("land", 5),
+    "2": ("building", 5),
+    "3": ("plants", 5),
+    "4": ("animals", 8),
+    "5": ("machines", 5),
+    "6": ("cash", 5),
+    "7": ("materials", 6),
+    "8": ("produce", 6),
+}
+_ASSET_ALIASES = {
+    "land": "land", "토지": "land",
+    "building": "building", "건물": "building", "건물및구축물": "building",
+    "plants": "plants", "대식물": "plants",
+    "animals": "animals", "대동물": "animals",
+    "machines": "machines", "대농기계": "machines",
+    "농기계": "machines", "차량운반구": "machines",
+    "cash": "cash", "현금": "cash", "현금및준현금": "cash",
+    "materials": "materials", "재고생산자재": "materials",
+    "produce": "produce", "재고농산물": "produce",
+}
+_AREA_ROLES = {
+    "facility_m2": ("시설면적", "시설 면적", "하우스면적", "비닐하우스면적"),
+    "cultivation_m2": ("재배면적", "재배 면적", "경작면적", "생산면적"),
+    "bed_m2": ("베드면적", "베드 면적", "배지면적", "배지 면적"),
+    "management_m2": ("경영면적",),
+}
+
+def _plan_issue(code, *, status="fail", severity="error", reason="",
+                remedy="", evidence=None):
+    return {
+        "code": code,
+        "check_id": FINANCE_PLAN_CHECK,
+        "status": status,
+        "severity": severity,
+        "reason": reason,
+        "remedy": remedy,
+        "evidence": evidence or {},
+    }
+
+def _number(value):
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    value = float(value)
+    return value if math.isfinite(value) else None
+
+def _year_columns(ws, max_header_row=12):
+    """(header_row, [(column_index, year), ...]) — most year labels wins."""
+    best = (None, [])
+    for r in range(1, min(ws.max_row, max_header_row) + 1):
+        cols = []
+        for c in range(1, ws.max_column + 1):
+            match = _YEAR_LABEL.match(_norm(ws.cell(r, c).value))
+            if match:
+                cols.append((c, int(match.group(1))))
+        if len(cols) > len(best[1]):
+            best = (r, cols)
+    return best if len(best[1]) >= 3 else (None, [])
+
+def _series(ws, predicate, cols, label_col=2):
+    for r in range(1, ws.max_row + 1):
+        label = _norm(ws.cell(r, label_col).value)
+        if label and predicate(label):
+            return r, [_number(ws.cell(r, c).value) for c, _ in cols]
+    return None, None
+
+def _depreciation_series(ws, count):
+    """Sum the '계' columns of each year block's 감가상각비 row."""
+    rows = [r for r in range(1, ws.max_row + 1)
+            if _norm(ws.cell(r, 2).value) == "감가상각비"]
+    if len(rows) != count:
+        return [None] * count
+    out = []
+    for r in rows:
+        header = None
+        for probe in range(r - 1, max(r - 8, 0), -1):
+            labels = [_norm(ws.cell(probe, c).value) for c in range(1, ws.max_column + 1)]
+            if "계" in labels:
+                header = labels
+                break
+        total = 0.0
+        seen = False
+        for c in range(1, ws.max_column + 1):
+            if header is not None and header[c - 1] != "계":
+                continue
+            value = _number(ws.cell(r, c).value)
+            if value is not None:
+                total += value
+                seen = True
+        out.append(total if seen else None)
+    return out
+
+def _opening_assets(ws):
+    """기초재무상태 자산 블록별 합계 (천원)."""
+    blocks = []
+    for r in range(1, ws.max_row + 1):
+        label = _norm(ws.cell(r, 2).value)
+        match = _BLOCK_LABEL.match(label)
+        if match and match.group(1) in _ASSET_ROLES:
+            blocks.append((r, _ASSET_ROLES[match.group(1)]))
+    out = {role: 0.0 for role, _ in _ASSET_ROLES.values()}
+    for index, (start, (role, column)) in enumerate(blocks):
+        end = blocks[index + 1][0] if index + 1 < len(blocks) else ws.max_row + 1
+        for r in range(start + 1, end):
+            label = _norm(ws.cell(r, 2).value)
+            if label.startswith("나."):
+                break
+            if "합계" in label or label == "계" or label.startswith("*"):
+                continue
+            value = _number(ws.cell(r, column).value)
+            if value is not None:
+                out[role] += value
+    return out
+
+def _normalize_declared_assets(declared):
+    """role → 천원. dict 또는 [{role|label|name, amount|value}]."""
+    if declared is None:
+        return None
+    items = declared.items() if isinstance(declared, dict) else [
+        (item.get("role") or item.get("label") or item.get("name"),
+         item.get("amount", item.get("value")))
+        for item in declared]
+    out = {}
+    for label, amount in items:
+        key = _norm(label)
+        role = _ASSET_ALIASES.get(key)
+        if role is None:
+            raise ValueError("unknown opening asset role: %r" % (label,))
+        value = _number(amount)
+        if value is None:
+            raise ValueError("opening asset amount must be a finite number: %r" % (label,))
+        out[role] = value
+    return out
+
+def _area_roles(workbook):
+    """Workbook area cells by role (㎡)."""
+    areas = {}
+    sheet = _find_sheet(workbook, "3.투자계획")
+    if sheet is not None:
+        for r in range(1, sheet.max_row + 1):
+            if "비닐하우스" in _norm(sheet.cell(r, 3).value):
+                spec = sheet.cell(r, 4).value
+                match = _AREA_TOKEN.search(str(spec or ""))
+                if match:
+                    areas["facility_m2"] = float(match.group(1).replace(",", ""))
+                    break
+    sheet = _find_sheet(workbook, "6. 생산계획")
+    if sheet is not None:
+        for r in range(1, sheet.max_row + 1):
+            if _norm(sheet.cell(r, 2).value) != "재배면적(㎡)":
+                continue
+            for c in range(3, sheet.max_column + 1):
+                value = _number(sheet.cell(r, c).value)
+                if value is not None:
+                    areas["cultivation_m2"] = value
+                    break
+            break
+    sheet = _find_sheet(workbook, "9 .경비계획")
+    if sheet is not None:
+        for r in range(1, sheet.max_row + 1):
+            label = _norm(sheet.cell(r, 2).value)
+            if label.startswith("경영면적(m2)>1년차"):
+                value = _number(sheet.cell(r, 4).value)
+                if value is not None:
+                    areas["management_m2"] = value
+                break
+    return areas
+
+def _body_area_mentions(text, declarations):
+    issues = []
+    labels = {}
+    for role, names in _AREA_ROLES.items():
+        for name in names:
+            labels[name] = role
+    pattern = re.compile(
+        "(%s)\\s*(?:은|는|이|가|:)?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)\\s*(?:㎡|m2|m²|제곱미터)"
+        % "|".join(re.escape(name) for name in sorted(labels, key=len, reverse=True)))
+    for match in pattern.finditer(text or ""):
+        role = labels[match.group(1)]
+        declared = declarations.get(role)
+        value = float(match.group(2).replace(",", ""))
+        if declared is not None and not math.isclose(value, declared, rel_tol=0.005, abs_tol=1):
+            issues.append(_plan_issue(
+                "AREA_BODY_MISMATCH",
+                reason="본문 %s 값 %s㎡가 선언값 %s㎡와 다름" % (role, match.group(2), declared),
+                remedy="본문·표·엑셀이 같은 면적 분모를 쓰도록 수정하거나 선언값을 고친다",
+                evidence={"role": role, "body": match.group(0), "declared": declared}))
+    return issues
+
+def review_plan(workbook_path, *, declared_assets=None, area_declarations=None,
+                body_text=None):
+    """Ⅳ장 계획의 숫자 궤적·기초자산·면적 분모를 검사한다.
+
+    ``declared_assets``는 학생이 답한 기초일 보유 자산(천원),
+    ``area_declarations``는 시설·재배·베드·경영 면적(㎡) 선언,
+    ``body_text``는 합쳐진 본문이다. 읽기만 하며 통합문서를 고치지 않는다.
+    """
+    path = Path(workbook_path)
+    workbook = openpyxl.load_workbook(path, data_only=True)
+    try:
+        issues = []
+        plan = _find_sheet(workbook, "12 손익계획")
+        cash = _find_sheet(workbook, "14. 현금흐름계획")
+        if plan is None or cash is None:
+            issues.append(_plan_issue(
+                "PLAN_SHEET_MISSING", status="blocked", severity="error",
+                reason="손익계획·현금흐름계획 시트를 찾지 못함",
+                remedy="학과 17시트 통합문서의 시트 이름을 확인한다"))
+            return {"status": "reviewed", "years": [], "figures": {},
+                    "issues": issues}
+
+        header_row, cols = _year_columns(plan)
+        years = [year for _, year in cols]
+        if len(cols) < 3:
+            issues.append(_plan_issue(
+                "PLAN_YEARS_UNREADABLE", status="blocked", severity="error",
+                reason="손익계획의 계획연도 머리글을 3개 이상 읽지 못함",
+                remedy="12 손익계획의 연도 머리글을 확인한다"))
+            return {"status": "reviewed", "years": years, "figures": {},
+                    "issues": issues}
+        _sales_row, sales = _series(
+            plan,
+            lambda label: label.endswith("매출액")
+            and "원가" not in label and "이익" not in label,
+            cols)
+        _profit_row, profit = _series(plan, lambda label: label.endswith("당기순이익"), cols)
+        _cash_header, cash_cols = _year_columns(cash)
+        cash_years = [year for _, year in cash_cols]
+        _cum_row, cash_balance = _series(cash, lambda label: "누적수지균형" in label, cash_cols)
+        _loan_row, loan_inflow = _series(cash, lambda label: label == "융자금", cash_cols, 3)
+        _invest_row, facility_invest = _series(cash, lambda label: label == "시설투자", cash_cols, 3)
+        _machine_row, machine_invest = _series(cash, lambda label: label == "농기계투자", cash_cols, 3)
+        investment = [
+            (a or 0) + (b or 0)
+            for a, b in zip(facility_invest or [None] * len(years),
+                            machine_invest or [None] * len(years))
+        ] or None
+        depreciation_sheet = _find_sheet(workbook, "10. 감가상각비계획 ")
+        depreciation = (_depreciation_series(depreciation_sheet, len(years))
+                        if depreciation_sheet is not None else [None] * len(years))
+
+        figures = {
+            "sales": sales, "net_profit": profit, "cash_balance": cash_balance,
+            "depreciation": depreciation, "investment": investment,
+            "loan_inflow": loan_inflow,
+        }
+
+        def unreadable(values, labels):
+            """값을 읽지 못한 연도 목록 — 빈 목록이면 시계열이 온전하다."""
+            if not labels:
+                return ["연도"]
+            if values is None:
+                return list(labels)
+            return [labels[i] for i, value in enumerate(values[:len(labels)])
+                    if value is None]
+
+        missing_profit = unreadable(profit, years)
+        if missing_profit:
+            issues.append(_plan_issue(
+                "PLAN_NET_PROFIT_UNREADABLE", status="blocked", severity="error",
+                reason="당기순이익을 읽지 못한 연도: "
+                       + ", ".join(str(year) for year in missing_profit),
+                remedy="엑셀에서 재계산·저장해 수식 캐시를 만들거나 해당 셀 값을 확인한 뒤 다시 검사한다",
+                evidence={"years": years, "net_profit": profit}))
+        elif all(value <= 0 for value in profit):
+            issues.append(_plan_issue(
+                "PLAN_ALL_YEARS_DEFICIT", severity="error",
+                reason="계획 5개년 당기순이익이 모두 0 이하",
+                remedy="목표연도 손익이 양수가 되도록 계획을 다시 세우거나, 학생에게 숫자와 조정 후보를 보여 준 뒤 진행한다",
+                evidence={"years": years, "net_profit": profit}))
+        elif profit[-1] > 0 and sum(profit) <= 0:
+            issues.append(_plan_issue(
+                "PLAN_TRAJECTORY_NOT_RECOVERED", status="pending",
+                severity="warning",
+                reason="목표연도만 흑자이고 5개년 누적 당기순이익은 0 이하",
+                remedy="회수되지 않는 궤적임을 본문에 밝히거나 계획을 조정한다",
+                evidence={"years": years, "net_profit": profit}))
+
+        missing_sales = unreadable(sales, years)
+        if missing_sales:
+            issues.append(_plan_issue(
+                "PLAN_SALES_UNREADABLE", status="blocked", severity="error",
+                reason="매출액을 읽지 못한 연도: "
+                       + ", ".join(str(year) for year in missing_sales),
+                remedy="엑셀에서 재계산·저장해 수식 캐시를 만들거나 해당 셀 값을 확인한 뒤 다시 검사한다",
+                evidence={"years": years, "sales": sales}))
+        else:
+            for index in range(2, len(sales)):
+                prior = sales[index - 1]
+                if prior and prior > 0 and sales[index] / prior > 2:
+                    issues.append(_plan_issue(
+                        "PLAN_GROWTH_JUMP", status="pending", severity="warning",
+                        reason="%d→%d년 매출이 2배를 넘게 증가" % (years[index - 1], years[index]),
+                        remedy="급증 근거(면적·단수·단가)를 본문에 밝히거나 계획을 조정한다",
+                        evidence={"years": years, "sales": sales}))
+
+        missing_cash = (unreadable(cash_balance, cash_years)
+                        if len(cash_cols) >= 3 else ["연도"])
+        if missing_cash:
+            issues.append(_plan_issue(
+                "CASH_FLOW_UNREADABLE", status="blocked", severity="error",
+                reason="누적 현금 잔액을 읽지 못한 연도: "
+                       + ", ".join(str(year) for year in missing_cash),
+                remedy="14. 현금흐름계획의 누적수지균형 행과 연도 머리글을 확인하고 재계산·저장한다",
+                evidence={"years": cash_years, "cash_balance": cash_balance}))
+        elif not missing_profit:
+            opening = _opening_cash(workbook)
+            previous = opening
+            for index, value in enumerate(profit):
+                if index >= len(cash_balance):
+                    break
+                current = cash_balance[index]
+                if value < 0 and previous is not None and current > previous:
+                    drivers = {
+                        "year": years[index] if index < len(years) else None,
+                        "net_profit": value,
+                        "cash_before": previous,
+                        "cash_after": current,
+                        "depreciation": (depreciation[index]
+                                         if depreciation and index < len(depreciation) else None),
+                        "investment": (investment[index]
+                                       if investment and index < len(investment) else None),
+                        "loan_inflow": (loan_inflow[index]
+                                        if loan_inflow and index < len(loan_inflow) else None),
+                    }
+                    issues.append(_plan_issue(
+                        "CASH_PROFIT_DIVERGENCE", status="pending", severity="warning",
+                        reason="당기순이익 %s인데 현금 잔액이 %s→%s로 증가" % (value, previous, current),
+                        remedy="감가상각·투자·융자·재고 중 어느 항목 때문인지 보고서에 한 문단으로 설명한다",
+                        evidence=drivers))
+                previous = current
+
+        declared = _normalize_declared_assets(declared_assets)
+        opening_assets = _opening_assets(_find_sheet(workbook, "1. 기초재무상태조사")) \
+            if _find_sheet(workbook, "1. 기초재무상태조사") is not None else None
+        if opening_assets is None:
+            issues.append(_plan_issue(
+                "OPENING_ASSETS_SHEET_MISSING", status="blocked", severity="error",
+                reason="기초재무상태조사 시트를 찾지 못함",
+                remedy="학과 17시트 통합문서의 시트 이름을 확인한다"))
+        elif declared is None:
+            issues.append(_plan_issue(
+                "OPENING_ASSETS_UNDECLARED", status="pending", severity="warning",
+                reason="학생이 말한 기초일 보유 자산과 기초재무상태를 대조하지 않음",
+                remedy="인터뷰 원답변의 보유 자산을 finance.opening_assets.<role> 사실로 등록한 뒤 다시 검사한다",
+                evidence={"workbook": opening_assets,
+                          "total": sum(opening_assets.values())}))
+        else:
+            for role, amount in opening_assets.items():
+                stated = declared.get(role, 0.0)
+                if not math.isclose(amount, stated, rel_tol=0.005, abs_tol=1):
+                    issues.append(_plan_issue(
+                        "OPENING_ASSETS_MISMATCH",
+                        reason="기초재무상태 %s %s천원 ≠ 학생 답변 %s천원" % (role, amount, stated),
+                        remedy="엑셀 기초재무상태를 학생 답변에 맞추거나, 답변을 새 근거로 다시 등록한다",
+                        evidence={"role": role, "workbook": amount, "declared": stated}))
+            total_workbook = sum(opening_assets.values())
+            total_declared = sum(declared.get(role, 0.0) for role in opening_assets)
+            if not math.isclose(total_workbook, total_declared, rel_tol=0.005, abs_tol=1):
+                issues.append(_plan_issue(
+                    "OPENING_ASSETS_TOTAL_MISMATCH",
+                    reason="기초자산 합계 %s천원 ≠ 학생 답변 합계 %s천원" % (total_workbook, total_declared),
+                    remedy="자산 항목별 차이를 확인한다",
+                    evidence={"workbook": total_workbook, "declared": total_declared}))
+
+        areas = _area_roles(workbook)
+        declarations = area_declarations
+        if declarations is not None:
+            declarations = {key: float(value) for key, value in declarations.items()}
+            for role, value in declarations.items():
+                if role in areas and not math.isclose(value, areas[role], rel_tol=0.005, abs_tol=1):
+                    issues.append(_plan_issue(
+                        "AREA_DECLARATION_MISMATCH",
+                        reason="%s 선언 %s㎡ ≠ 통합문서 %s㎡" % (role, value, areas[role]),
+                        remedy="면적 선언과 통합문서 중 하나를 고쳐 같은 분모를 쓴다",
+                        evidence={"role": role, "declared": value, "workbook": areas[role]}))
+            issues.extend(_body_area_mentions(body_text, declarations))
+            issues.extend(_bed_base_issues(workbook, declarations))
+        elif body_text or areas:
+            issues.append(_plan_issue(
+                "AREA_DENOMINATORS_UNDECLARED", status="pending", severity="warning",
+                reason="시설·재배·베드 면적 분모를 한 곳에서 선언하지 않음",
+                remedy="finance.area.<role> 사실로 면적을 선언한 뒤 본문·엑셀·표를 대조한다",
+                evidence={"workbook": areas}))
+
+        return {"status": "reviewed", "years": years, "figures": figures,
+                "opening_assets": opening_assets, "areas": areas,
+                "issues": issues}
+    finally:
+        workbook.close()
+
+def _opening_cash(workbook):
+    sheet = _find_sheet(workbook, "1. 기초재무상태조사")
+    if sheet is not None:
+        assets = _opening_assets(sheet)
+        return assets.get("cash")
+    return None
+
+_BED_TOKEN = re.compile(
+    r"([0-9][0-9,]*(?:\.[0-9]+)?)\s*(㎡|m2|m²|제곱미터|㎥|m3|m³|cm|m)")
+# (면적 차원, 길이 차원, m 기준 배율) — cm는 0.01 m다.
+_UNIT_DIMENSION = {
+    "㎡": (1, 0, 1.0), "m2": (1, 0, 1.0), "m²": (1, 0, 1.0), "제곱미터": (1, 0, 1.0),
+    "㎥": (1, 1, 1.0), "m3": (1, 1, 1.0), "m³": (1, 1, 1.0),
+    "m": (0, 1, 1.0), "cm": (0, 1, 0.01),
+}
+_AREA_DIMENSION = (1, 0)
+
+def _bed_area_equivalent(text):
+    """배지 계산식이 실제로 쓴 베드 면적(㎡) 또는 None.
+
+    숫자 뒤 단위로 차원을 따라가며 ㎡가 되는 지점의 값을 돌려준다.
+    ``(1,500㎡ ÷ 1.9m) × 1.0m`` → 789.5㎡ (통로 폭 환산),
+    ``(1,500㎡ ÷ 1.9m) × 0.15m`` → 118.4㎡ (폭 누락)이다.
+    해석할 수 없으면 None — 첫 면적 토큰을 그대로 쓰지 않는다.
+    """
+    lines = [line for line in str(text).splitlines()
+             if "배지" in _norm(line) or "물량" in _norm(line)]
+    line = next((line for line in lines if _AREA_TOKEN.search(line)), None)
+    if line is None:
+        line = next((line for line in lines
+                     if _BED_TOKEN.search(line) and ("㎥" in line or "m3" in line)), None)
+    if line is None:
+        return None
+    tokens = list(_BED_TOKEN.finditer(line))
+    if not tokens:
+        return None
+    value = None
+    dimension = (0, 0)
+    area = None
+    previous_end = None
+    for match in tokens:
+        amount = float(match.group(1).replace(",", ""))
+        area_axis, length_axis, scale = _UNIT_DIMENSION[match.group(2)]
+        amount *= scale
+        unit = (area_axis, length_axis)
+        if value is None:
+            value, dimension = amount, unit
+        else:
+            gap = line[previous_end:match.start()]
+            if "/" in gap or "÷" in gap:
+                value = value / amount
+                dimension = (dimension[0] - unit[0], dimension[1] - unit[1])
+            elif any(op in gap for op in ("*", "×", "x", "X")):
+                value = value * amount
+                dimension = (dimension[0] + unit[0], dimension[1] + unit[1])
+            else:
+                break
+        if dimension == _AREA_DIMENSION:
+            area = value
+        previous_end = match.end()
+    return area
+
+def _bed_base_issues(workbook, declarations):
+    """배지 계산식이 쓴 면적이 베드 면적 선언과 같은지 본다."""
+    bed = declarations.get("bed_m2")
+    issues = []
+    for sheet in workbook.worksheets:
+        for row in sheet.iter_rows(values_only=True):
+            for value in row:
+                if not isinstance(value, str):
+                    continue
+                text = _norm(value)
+                if "배지" not in text:
+                    continue
+                if "물량" not in text and "㎥" not in value and "m3" not in text:
+                    continue
+                used = _bed_area_equivalent(value)
+                if used is None:
+                    issues.append(_plan_issue(
+                        "AREA_BED_UNVERIFIABLE", status="pending", severity="warning",
+                        reason="배지 계산식에서 베드 면적을 읽지 못함",
+                        remedy="배지 계산에 베드 면적(㎡)과 폭·깊이(m)를 단위와 함께 적는다",
+                        evidence={"sheet": sheet.title, "text": value,
+                                  "bed_m2": bed}))
+                elif bed is None:
+                    issues.append(_plan_issue(
+                        "AREA_BED_UNDECLARED", status="pending", severity="warning",
+                        reason="배지 계산에 면적 %s㎡를 썼지만 베드 면적 선언이 없음" % round(used, 1),
+                        remedy="finance.area.bed_m2를 선언하고 배지 계산의 분모를 그 값으로 맞춘다",
+                        evidence={"sheet": sheet.title, "text": value, "used_m2": used}))
+                elif not math.isclose(used, bed, rel_tol=0.005, abs_tol=1):
+                    issues.append(_plan_issue(
+                        "AREA_BED_BASE_MISMATCH",
+                        reason="배지 계산식의 면적 환산값 %s㎡가 베드 면적 선언 %s㎡와 다름"
+                               % (round(used, 1), bed),
+                        remedy="배지 계산의 면적·폭·깊이를 단위와 함께 다시 적어 베드 면적 선언과 맞춘다",
+                        evidence={"sheet": sheet.title, "text": value,
+                                  "used_m2": used, "bed_m2": bed}))
+    return issues
+
 def run(base, xlsx, *, major_id=None, input_path=None, out="build/finance-tables.md"):
     """전공 가드 + 재무 프로필 게이트를 거쳐 표 묶음 Markdown을 쓴다.
 
