@@ -203,7 +203,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/install-manifest.json": {
-   "after_sha256": "3899f56e51f3d571795123cd68a137c316d15896f10f674b574c5f5aa0dd5079",
+   "after_sha256": "5e547bab1e028bb40f56f396c55c5b307f492afacbc42e188cc86ca8670c8499",
    "before_sha256": null,
    "first_changed": "P27",
    "last_changed": "P28",
@@ -1119,7 +1119,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_core.py": {
-   "after_sha256": "bd2df0419e1d03e1ba2e4b2e06ad384233878326dd2443aa5a541e8a6d5a5b06",
+   "after_sha256": "4bd7dba05811a1a0d5df2fb26feb0b10c9521048b14c295e3e15cccfda3804e0",
    "amended_in": "P1-S01,P2-R7,P2-R8,P3-C1,Lanes15-28",
    "before_sha256": "b3491a931add687328bf561e7e7cd2aed3edd7a7fee374a28092e771d9124cc5",
    "first_changed": "P1",
