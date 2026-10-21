@@ -15,6 +15,7 @@ auto의 저널 복구는 자동이다 — 이전에 끊긴 교체가 있으면 �
 | status | 의미 | 학생에게 하는 말 |
 |---|---|---|
 | updated | to 버전으로 교체됐다. backup에 이전 폴더가 있다 | "{to}로 자동 업데이트했어요." 그런 다음 **같은 차례에** 새 SKILL.md를 다시 읽고 그 지침으로 작업을 이어간다. 스킬 목록·설명의 갱신은 다음 대화부터 적용된다 |
+| managed | 앱(GUI)이 이 설치의 판을 관리한다. auto는 복구·확인·교체를 하지 않는다 | 첫 진입이면 말하지 않는다. 학생이 물었으면 "앱이 업데이트를 관리해요." 앱에서 업데이트한다 |
 | up_to_date | 이미 최신이다 | 첫 진입이면 말하지 않는다. 학생이 물었으면 "지금 버전이 최신이에요." |
 | skipped·install_kind | 복사 설치가 아니다(git·플러그인 캐시·기타) | 첫 진입이면 말하지 않는다. 물었으면 설치 방식을 설명한다(git이면 `git pull --ff-only`) |
 | skipped·local_newer | 설치본이 공개 릴리스보다 새롭다 | 첫 진입이면 말하지 않는다. 물었으면 "설치된 버전이 공개 릴리스보다 새로워요. 개발 중 버전일 수 있어요." |
@@ -29,7 +30,7 @@ auto의 저널 복구는 자동이다 — 이전에 끊긴 교체가 있으면 �
 | failed | 교체·복구 도중 실패 | "업데이트가 중간에 멈췄어요" 한 줄 안내 + 신고 권유. state가 old_restored·target_intact면 학생 파일은 그대로다. backup_preserved_target_missing이면 JSON의 `recover` 문자열 또는 `recover_argv` 배열 명령을 실행한다(셸 없이 실행할 때는 `recover_argv`). state가 unknown이면 실제 상태를 확인하지 못한 것이므로 `version.json`·`journal.json`을 보고 JSON의 recover 명령을 실행한다 |
 | recovered | 이전에 끊긴 교체를 복구했다 | "지난번 끊긴 업데이트를 정리했어요" 한 줄 안내 + 신고 권유. recover.status가 recovered_old면 이전 버전이 복원됐고, completed면 새 버전이 이미 놓여 있었고, not_started면 교체가 시작되지 않았던 것이다 |
 
-첫 진입 ③에서 말하지 않는 결과는 `up_to_date`와 `skipped`(`install_kind`·`local_newer`·`no_release`·`locked`)뿐이다. 그 밖의 `skipped`는 안전 검사가 멈춘 것이므로 한 줄 알린다. 조용히 넘기면 학생은 업데이트가 된 줄 안다 — 이 표에 없는 reason이 와도 "업데이트를 하지 못했다"는 사실과 reason은 말한다.
+첫 진입 ③에서 말하지 않는 결과는 `up_to_date`·`managed`와 `skipped`(`install_kind`·`local_newer`·`no_release`·`locked`)뿐이다. 그 밖의 `skipped`는 안전 검사가 멈춘 것이므로 한 줄 알린다. 조용히 넘기면 학생은 업데이트가 된 줄 안다 — 이 표에 없는 reason이 와도 "업데이트를 하지 못했다"는 사실과 reason은 말한다.
 
 응답이 끊겼으면 미적용으로 단정하지 않는다. `version.json`과 `<홈>/knuaf-doc-update/journal.json`으로 실제 상태를 먼저 확인한다.
 

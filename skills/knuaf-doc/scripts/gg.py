@@ -74,6 +74,9 @@ def main(argv=None):
     ap.add_argument("--kind", default="review")
     ap.add_argument("--field")
     ap.add_argument("--input")
+    ap.add_argument("--body",
+                    help="정본 절을 합친 본문 마크다운 경로. 주면 Ⅰ–Ⅵ 골격 "
+                         "대신 이 본문을 쓰고 앞머리만 생성한다")
     ap.add_argument("--pdf")
     ap.add_argument("--xlsx")
     ap.add_argument("--observer")
@@ -171,11 +174,33 @@ def main(argv=None):
                     "lock_state": "unavailable",
                     "reason": str(e),
                 }
+            try:
+                import gg_deps
+
+                deps_report = gg_deps.doctor(a.folder)
+                dependencies = {
+                    row["import_name"]: row["status"] == "installed"
+                    for row in deps_report["dependencies"]
+                }
+                deps_detail = deps_report
+                deps_notice = ""
+            except Exception as e:
+                # The project venv probe is the truth; only when it cannot
+                # run do we fall back to this interpreter, and we say so.
+                dependencies = {
+                    m: bool(importlib.util.find_spec(m))
+                    for m in ("docx", "openpyxl", "pypdf")
+                }
+                deps_detail = {
+                    "status": "unavailable",
+                    "reason": str(e),
+                    "selected_python": sys.executable,
+                }
+                deps_notice = " 의존성은 현재 CLI 인터프리터 기준."
             value = {
                 "python": sys.version,
-                "dependencies": {
-                    m: bool(importlib.util.find_spec(m)) for m in ("docx", "openpyxl")
-                },
+                "dependencies": dependencies,
+                "deps": deps_detail,
                 "recalculation": "not_run",
                 "render": "not_run",
                 "hwp": "unsupported",
@@ -188,7 +213,8 @@ def main(argv=None):
                     for p in list(Path(a.folder).rglob(".gg-tmp-*"))
                     + list(Path(a.folder).rglob(".gg-export-*"))
                 ],
-                "notice": "설치 탐지는 실행 검증이 아님. 채팅만 가능하면 초안과 원답변 인계, 제출 후보 불가.",
+                "notice": "설치 탐지는 실행 검증이 아님. 채팅만 가능하면 초안과 원답변 인계, 제출 후보 불가."
+                + deps_notice,
             }
         elif a.command == "unlock":
             import gg_lock
@@ -611,9 +637,13 @@ def main(argv=None):
             spec_bytes = src.read_bytes()
             requested_rel = a.out or "build/검토전_본문.md"
             core.local(a.folder, requested_rel)
+            body_text = None
+            if a.body:
+                body_path = core.local(a.folder, a.body)
+                body_text = body_path.read_text(encoding="utf-8-sig")
             value = core.paper(
                 a.folder, rel(src), spec_bytes, requested_rel,
-                major_id=a.major)
+                major_id=a.major, body_markdown=body_text)
         elif a.command == "adopt-output":
             # SPEC: caller supplies {output, companion_files?} metadata —
             # core validates every claim against actual bytes and the

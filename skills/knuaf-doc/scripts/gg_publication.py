@@ -71,10 +71,14 @@ _REQUEST_KEYS = {
         "target_refs", "input_fingerprint"}),
     "paper": frozenset({
         "kind", "input_revision", "target_refs", "input_fingerprint",
-        "spec_path", "spec_sha256", "requested_path", "output_format"}),
+        "spec_path", "spec_sha256", "requested_path", "output_format",
+        "body_sha256"}),
     "import": frozenset({"kind", "source_inventory", "destination"}),
 }
-_REQUEST_OPTIONAL = {"adopt_output": frozenset({"companion_files"})}
+_REQUEST_OPTIONAL = {
+    "adopt_output": frozenset({"companion_files"}),
+    "paper": frozenset({"body_sha256"}),
+}
 _HEX = frozenset("0123456789abcdef")
 
 
@@ -324,6 +328,8 @@ def _check_request(request):
         _check_relative_path(request["requested_path"], "requested_path")
         if request["output_format"] != "md":
             raise ValueError("paper output_format은 md만 허용")
+        if "body_sha256" in request:
+            _check_sha256(request["body_sha256"], "body_sha256")
     elif kind == "import":
         _check_file_entries(request["source_inventory"],
                             require_destination=False,

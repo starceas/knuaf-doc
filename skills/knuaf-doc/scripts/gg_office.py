@@ -19,7 +19,7 @@ import hashlib
 import importlib.util
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 import posixpath
 import shutil
 import subprocess
@@ -104,7 +104,88 @@ def check_no_symlinks(path: Path) -> None:
 HYPERLINK_REL_TYPE = (
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink"
 )
+SAFE_HYPERLINK_PREFIXES = ("http://", "https://", "mailto:")
+# External relationship types Word/Excel add on their own during a save and
+# that never fetch content into the document: the attached template
+# (Normal.dotm) and the building-block glossary.  They are allowed only when
+# the target is a local file — a remote template is still a fetch.
+BENIGN_EXTERNAL_REL_SUFFIXES = ("/attachedTemplate", "/glossaryDocument")
 
+def _rel_type_suffix(rel_type: str) -> str:
+    return "/" + rel_type.rstrip("/").rsplit("/", 1)[-1]
+
+def _fully_unquoted(text: str) -> str:
+    """Percent-decode until stable, so an encoded separator cannot hide."""
+    for _ in range(3):
+        decoded = urllib.parse.unquote(text)
+        if decoded == text:
+            break
+        text = decoded
+    return text
+
+def _is_network_path(path: str) -> bool:
+    """True for UNC / ``\\\\host`` / ``//host`` shapes, in either separator.
+
+    Checked on the *decoded* path: ``file:////host/share`` and
+    ``%5C%5Chost%5Cshare`` are both network paths even though neither carries
+    a netloc and neither starts with a literal backslash pair in the raw
+    target.  ``PureWindowsPath.drive`` also reports the share of a UNC path,
+    which a plain local path or a drive path never does.
+    """
+    if path.replace("\\", "/").startswith("//"):
+        return True
+    return len(PureWindowsPath(path).drive) > 2
+
+def _local_external_target(target: str) -> tuple[bool, str]:
+    """Returns (allowed, reason) for a non-hyperlink external target.
+
+    Allowed: a plain local path, a Windows drive path, or a ``file://`` URL
+    with no host.  Refused: any other URL scheme (a remote template fetch),
+    UNC / ``\\\\host`` / ``//host`` network paths, and ``..`` traversal out of
+    the package's own directory.  A single-letter scheme is a drive letter,
+    not a URL.
+
+    The network and traversal rules apply to the *resolved* path as well as
+    to the raw target: decoding and URL parsing must not be a way around
+    them.
+    """
+    raw = target.strip()
+    if not raw:
+        return False, "빈 외부 관계 대상"
+    if raw.startswith(("\\\\", "//")):
+        return False, "네트워크 경로"
+    parts = urllib.parse.urlsplit(raw)
+    scheme = parts.scheme.lower()
+    if scheme == "file":
+        if parts.netloc:
+            return False, "네트워크 파일 경로"
+        path = _fully_unquoted(parts.path)
+    elif len(scheme) == 1:
+        path = _fully_unquoted(raw)
+    elif scheme:
+        return False, "원격 대상"
+    else:
+        path = _fully_unquoted(raw)
+    if _is_network_path(path):
+        return False, "네트워크 경로"
+    if any(part == ".." for part in path.replace("\\", "/").split("/")):
+        return False, "상위 경로 탈출"
+    return True, "local_target"
+
+def classify_external_relationship(rel_type: str, target: str) -> tuple[bool, str]:
+    """Returns (allowed, reason) for one TargetMode=External relationship."""
+    if rel_type == HYPERLINK_REL_TYPE:
+        if target.startswith(SAFE_HYPERLINK_PREFIXES):
+            return True, "hyperlink"
+        return False, "위험한 외부 하이퍼링크"
+    allowed, reason = _local_external_target(target)
+    if not allowed:
+        return False, "위험한 외부 OOXML 관계 참조 (%s)" % reason
+    if _rel_type_suffix(rel_type) in BENIGN_EXTERNAL_REL_SUFFIXES:
+        return True, "benign_office_rel"
+    # externalLinkPath / externalLink / oleObject ... pointing at a local
+    # path: no network or file:// fetch involved.
+    return True, "local_target"
 
 def check_ooxml_relationships(zip_path: Path) -> None:
     """Validates that OOXML package contains no dangerous external path traversals or external resource links."""
@@ -141,18 +222,16 @@ def check_ooxml_relationships(zip_path: Path) -> None:
                             rel_type = elem.get("Type", "")
 
                             if target_mode == "External":
-                                if rel_type == HYPERLINK_REL_TYPE:
-                                    if (
-                                        target.startswith("http://")
-                                        or target.startswith("https://")
-                                        or target.startswith("mailto:")
-                                    ):
-                                        continue
-                                    raise ValueError(
-                                        f"위험한 외부 하이퍼링크 거부: {target} (in {name})"
-                                    )
+                                # The same classification runs on input and
+                                # output: an input baseline never excuses a
+                                # remote, network or traversing target.
+                                allowed, why = classify_external_relationship(
+                                    rel_type, target)
+                                if allowed:
+                                    continue
                                 raise ValueError(
-                                    f"위험한 외부 OOXML 관계 참조 거부 (타입: {rel_type}, 대상: {target}, 위치: {name})"
+                                    f"{why} 거부 (타입: {rel_type}, "
+                                    f"대상: {target}, 위치: {name})"
                                 )
                             else:
                                 if target.startswith("file:"):
@@ -243,7 +322,8 @@ def stage_job(
     """Sets up a unique job directory under workspace and stages copies of input and resources.
 
     Returns:
-        job_dir, staged_input_file, staged_working_file, staged_pdf_file, orig_sha256
+        job_dir, staged_input_file, staged_working_file, staged_pdf_file,
+        orig_sha256
     """
     input_path = Path(input_file)
     check_no_symlinks(input_path)
@@ -281,6 +361,41 @@ def stage_job(
         )
 
     return job_dir, staged_input_file, staged_working_file, staged_pdf_file, orig_sha256
+
+def job_receipt_paths(
+    job_dir: Path,
+    workspace_root: Path,
+    input_file: Path,
+    staged_working_file: Path | None = None,
+    staged_pdf_file: Path | None = None,
+) -> dict:
+    """Receipt fragment describing a job without embedding absolute home paths.
+
+    ``job_dir`` / ``staged_*`` are relative to the workspace root (POSIX
+    separators) and ``input_file`` is the basename only; the workspace itself
+    is reported by ``doctor`` / ``jobs``.
+    """
+    ws = Path(workspace_root)
+
+    def rel(p: Path) -> str:
+        try:
+            return Path(p).relative_to(ws).as_posix()
+        except ValueError:
+            try:
+                return Path(p).resolve().relative_to(ws.resolve()).as_posix()
+            except ValueError:
+                return Path(p).name
+    frag = {
+        "workspace_relative": True,
+        "job_id": Path(job_dir).name,
+        "job_dir": rel(job_dir),
+        "input_file": Path(input_file).name,
+    }
+    if staged_working_file is not None:
+        frag["staged_working_file"] = rel(staged_working_file)
+    if staged_pdf_file is not None:
+        frag["staged_pdf_file"] = rel(staged_pdf_file)
+    return frag
 
 
 WORD_READY_APPLESCRIPT = 'tell application "Microsoft Word" to return name'
@@ -495,7 +610,8 @@ def validate_office_file(path: Path, expected_kind: str) -> dict:
     except (zipfile.BadZipFile, zipfile.LargeZipFile) as e:
         raise ValueError(f"출력 Office ZIP 손상: {e}")
 
-    # Re-screen relationships on the app-rewritten output before publication
+    # Re-screen relationships on the app-rewritten output before publication,
+    # under the same rule as the input.
     check_ooxml_relationships(path)
 
     return {
@@ -565,6 +681,7 @@ def _publish_outputs(
     engine_stderr: str = "",
     extra_validation: dict | None = None,
     major_authorization: list | None = None,
+    workspace_root: Path | None = None,
 ) -> dict:
     """Publishes validated staged files to new destination directory without overwriting."""
     # Validate staged files BEFORE creating output directory
@@ -616,10 +733,11 @@ def _publish_outputs(
             "engine": engine_name,
             "engine_result": engine_result.strip(),
             "engine_stderr": engine_stderr.strip(),
-            "job_dir": str(job_dir),
-            "staged_working_file": str(staged_working_file),
-            "staged_pdf_file": str(staged_pdf_file),
-            "input_file": str(input_file.resolve()),
+            **job_receipt_paths(
+                job_dir,
+                Path(workspace_root) if workspace_root is not None
+                else Path(job_dir).parent,
+                input_file, staged_working_file, staged_pdf_file),
             "input_sha256": orig_sha256,
             "published_office": str(dest_office),
             "published_office_sha256": staged_work_sha,
@@ -732,10 +850,8 @@ def process_word(
         fail_receipt = {
             "status": "fail",
             "app": "Word",
-            "input_file": str(input_path),
+            **job_receipt_paths(job_dir, ws_root, input_path, staged_work),
             "input_sha256": orig_sha,
-            "job_dir": str(job_dir),
-            "staged_working_file": str(staged_work),
             "error": f"[Microsoft Word 시간 초과: -1712] {exc}",
             "engine_stderr": str(exc),
             "returncode": -1712,
@@ -749,10 +865,8 @@ def process_word(
         fail_receipt = {
             "status": "fail",
             "app": "Word",
-            "input_file": str(input_path),
+            **job_receipt_paths(job_dir, ws_root, input_path, staged_work),
             "input_sha256": orig_sha,
-            "job_dir": str(job_dir),
-            "staged_working_file": str(staged_work),
             "error": err_msg,
             "engine_stderr": (res.stderr or "").strip(),
             "returncode": res.returncode,
@@ -775,6 +889,7 @@ def process_word(
             engine_result=res.stdout or "Word completed",
             expected_kind="word",
             engine_stderr=res.stderr or "",
+            workspace_root=ws_root,
         )
     except Exception as exc:
         # Word's AppleScript save-as can return zero without creating the PDF.
@@ -783,11 +898,9 @@ def process_word(
         fail_receipt = {
             "status": "fail",
             "app": "Word",
-            "input_file": str(input_path),
+            **job_receipt_paths(job_dir, ws_root, input_path, staged_work,
+                                staged_pdf),
             "input_sha256": orig_sha,
-            "job_dir": str(job_dir),
-            "staged_working_file": str(staged_work),
-            "staged_pdf_file": str(staged_pdf),
             "error": f"[Microsoft Word 출력 검증 실패] {exc}",
             "engine_stderr": (res.stderr or "").strip(),
             "returncode": res.returncode,
@@ -1161,6 +1274,20 @@ def inspect_preserved_template(before, after):
     return issues
 
 
+def _legacy_school_check_applies(sheetnames, is_school_spec: bool,
+                                 school_sheets=None) -> bool:
+    """Decides whether the legacy 17-sheet school inspector runs.
+
+    Only an explicit school-profile --spec, or a workbook whose sheet names
+    equal the full SCHOOL_SHEETS sequence in order, qualifies.  A partial
+    name overlap with a supplied template must never trigger it.
+    """
+    if is_school_spec:
+        return True
+    if school_sheets is None:
+        from gg_school_excel import SCHOOL_SHEETS as school_sheets
+    return list(sheetnames) == list(school_sheets)
+
 def process_excel(
     input_file: str | Path,
     out_dir: str | Path,
@@ -1215,10 +1342,8 @@ def process_excel(
         fail_receipt = {
             "status": "fail",
             "app": "Excel",
-            "input_file": str(input_path),
+            **job_receipt_paths(job_dir, ws_root, input_path, staged_work),
             "input_sha256": orig_sha,
-            "job_dir": str(job_dir),
-            "staged_working_file": str(staged_work),
             "error": f"[Microsoft Excel 시간 초과: -1712] {exc}",
             "engine_stderr": str(exc),
             "returncode": -1712,
@@ -1232,10 +1357,8 @@ def process_excel(
         fail_receipt = {
             "status": "fail",
             "app": "Excel",
-            "input_file": str(input_path),
+            **job_receipt_paths(job_dir, ws_root, input_path, staged_work),
             "input_sha256": orig_sha,
-            "job_dir": str(job_dir),
-            "staged_working_file": str(staged_work),
             "error": err_msg,
             "engine_stderr": (res.stderr or "").strip(),
             "returncode": res.returncode,
@@ -1255,11 +1378,9 @@ def process_excel(
         fail_receipt = {
             "status": "fail",
             "app": "Excel",
-            "input_file": str(input_path),
+            **job_receipt_paths(job_dir, ws_root, input_path, staged_work,
+                                staged_pdf),
             "input_sha256": orig_sha,
-            "job_dir": str(job_dir),
-            "staged_working_file": str(staged_work),
-            "staged_pdf_file": str(staged_pdf),
             "error": f"[Microsoft Excel PDF 출력 검증 실패] {exc}",
             "engine_stderr": (res.stderr or "").strip(),
             "returncode": res.returncode,
@@ -1287,7 +1408,6 @@ def process_excel(
             from gg_school_excel import SCHOOL_SHEETS, inspect_school_workbook
 
             wb_temp = load_workbook(staged_work, read_only=True)
-            sheetnames_set = set(wb_temp.sheetnames)
 
             is_school_spec = False
             if spec_file:
@@ -1298,7 +1418,8 @@ def process_excel(
                 except Exception:
                     pass
 
-            has_school_sheets = bool(sheetnames_set & set(SCHOOL_SHEETS))
+            has_school_sheets = _legacy_school_check_applies(
+                wb_temp.sheetnames, is_school_spec, SCHOOL_SHEETS)
 
             if is_school_spec or has_school_sheets:
                 school_validation_status = "evaluated"
@@ -1311,9 +1432,8 @@ def process_excel(
         fail_receipt = {
             "status": "fail",
             "app": "Excel",
-            "input_file": str(input_path),
+            **job_receipt_paths(job_dir, ws_root, input_path),
             "input_sha256": orig_sha,
-            "job_dir": str(job_dir),
             "error": "엑셀 구조 검사 실패",
             "structure_issues": structure_issues,
             "school_validation": school_validation_status,
@@ -1343,9 +1463,8 @@ def process_excel(
         fail_receipt = {
             "status": "fail",
             "app": "Excel",
-            "input_file": str(input_path),
+            **job_receipt_paths(job_dir, ws_root, input_path),
             "input_sha256": orig_sha,
-            "job_dir": str(job_dir),
             "error": "학교 재무 검증 실패",
             "school_issues": school_issues,
             "school_validation": school_validation_status,
@@ -1395,6 +1514,7 @@ def process_excel(
         expected_kind="excel",
         engine_stderr=res.stderr or "",
         extra_validation=extra_val,
+        workspace_root=ws_root,
     )
     return receipt
 

@@ -26,6 +26,8 @@ def main(mode):
     a = ap.parse_args()
     path = Path(a.target)
     try:
+        if not path.exists():
+            raise ValueError("대상 경로가 없음: " + str(path))
         root = path if path.is_dir() else path.parent
         if not path.is_dir() and not (root / "project.json").exists():
             root = root.parent if (root.parent / "project.json").exists() else root
@@ -78,6 +80,8 @@ def main(mode):
                     key=lambda f: c.section_order(f.name),
                 )
                 text = "\n\n".join(c.draft(f.read_text(encoding="utf-8")) for f in files)
+            if not text.strip():
+                raise ValueError("검사할 본문이 없음: " + str(path))
             rows = [
                 c.result(
                     cid,
