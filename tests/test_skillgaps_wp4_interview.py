@@ -46,9 +46,11 @@ class InterviewContract(unittest.TestCase):
     def test_physical_constraint_question_filters_candidates(self):
         q23 = section(self.text, "### Q2-3.")
         self.assertIn("신체 제약", q23)
-        self.assertIn("토경", q23)
-        self.assertIn("저상", q23)
         self.assertIn("확인 필요", q23)
+        self.assertIn("후보 제외 기준", q23)
+        self.assertIn("명시적으로 제외한", q23)
+        self.assertIn("저상 베드는 굽은 작업 제약의 완화책이 아니다", q23)
+        self.assertNotIn("저상 베드·관수 자동화", q23)
 
     def test_internship_question_collects_required_fields(self):
         q26 = section(self.text, "### Q2-6.")
