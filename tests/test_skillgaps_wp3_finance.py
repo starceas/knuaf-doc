@@ -1,0 +1,265 @@
+"""WP-3 regression tests: five-year trajectory and area denominators.
+
+- all-deficit plans fail, loss-with-cash-growth asks for an explanation;
+- opening assets are compared per category, not only by total;
+- body/bed area denominators are checked against one declaration.
+"""
+
+from pathlib import Path
+import sys
+import tempfile
+import unittest
+
+TESTS = Path(__file__).resolve().parent
+SCRIPTS = TESTS.parent / "skills" / "knuaf-doc" / "scripts"
+if str(SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS))
+
+import gg_finance_tables as ft  # noqa: E402
+
+
+NARROW_BED = "* 배지: 물량 = (1,500㎡ ÷ 1.9m) × 0.15m = 118.4㎥"
+WIDE_BED = "* 배지: 물량 = (1,500㎡ ÷ 1.9m) × 1.0m × 0.15m = 118.4㎥"
+CM_BED = "* 배지: 물량 = (1,500㎡ ÷ 1.9m) × 100cm × 15cm = 118.4㎥"
+
+
+def plan_workbook(path, *, years=(2027, 2028, 2029, 2030, 2031),
+                  sales=(100, 200, 300, 400, 500),
+                  profit=(-10, -5, 0, 5, 10),
+                  cash=(0, 0, 0, 0, 0),
+                  loan=(0, 0, 0, 0, 0),
+                  facility_invest=(0, 0, 0, 0, 0),
+                  machine_invest=(0, 0, 0, 0, 0),
+                  depreciation=100, bed_note=None):
+    from openpyxl import Workbook
+    wb = Workbook()
+    assets = wb.active
+    assets.title = "1. 기초재무상태조사"
+    assets["B6"] = "(1) 토지"
+    assets["B9"] = "답"
+    assets["D9"] = 1500
+    assets["E9"] = 112283.094
+    assets["B36"] = "(6) 현금 및 준현금"
+    assets["C39"] = "예금"
+    assets["E39"] = 87716.906
+    assets["B41"] = "합계"
+    assets["E41"] = 87716.906
+    assets["B43"] = "(7) 재고생산자재"
+
+    plan = wb.create_sheet("12 손익계획")
+    plan["B4"] = "과목"
+    for offset, year in enumerate(years):
+        plan.cell(4, 3 + offset, "%d년" % year)
+    plan["B6"] = "I. 매출액"
+    plan["B26"] = "X. 당기순이익"
+    for offset in range(len(years)):
+        plan.cell(6, 3 + offset, sales[offset])
+        plan.cell(26, 3 + offset, profit[offset])
+
+    flow = wb.create_sheet("14. 현금흐름계획")
+    flow["B5"] = "구  분"
+    for offset, year in enumerate(years):
+        flow.cell(6, 4 + offset, "%d년" % year)
+    flow["C12"] = "융자금"
+    flow["C15"] = "시설투자"
+    flow["C16"] = "농기계투자"
+    flow["B24"] = "누적수지균형(D)\n(D=전년도D+금년도C)"
+    for offset in range(len(years)):
+        flow.cell(12, 4 + offset, loan[offset])
+        flow.cell(15, 4 + offset, facility_invest[offset])
+        flow.cell(16, 4 + offset, machine_invest[offset])
+        flow.cell(24, 4 + offset, cash[offset])
+
+    dep = wb.create_sheet("10. 감가상각비계획 ")
+    for index in range(len(years)):
+        base = 4 + index * 10
+        dep.cell(base + 2, 5, "계")
+        dep.cell(base + 2, 9, "계")
+        dep.cell(base + 8, 2, "감 가 상 각 비")
+        dep.cell(base + 8, 3, depreciation / 2)
+        dep.cell(base + 8, 5, depreciation / 2)
+        dep.cell(base + 8, 9, depreciation / 2)
+
+    invest = wb.create_sheet("3.투자계획")
+    invest["C19"] = "비닐하우스 신축"
+    invest["D19"] = "1,500㎡ 파이프비닐"
+
+    production = wb.create_sheet("6. 생산계획")
+    production["B8"] = "재배면적(㎡)"
+    production["H8"] = 1500
+
+    expense = wb.create_sheet("9 .경비계획")
+    expense["B8"] = "경영면적(m2) > 1년차"
+    expense["D8"] = 1500
+    if bed_note:
+        expense["B20"] = bed_note
+    wb.save(path)
+    wb.close()
+
+
+def leave_uncached(path, sheet, cell, formula):
+    """Store a formula without a cached result — data_only reads None."""
+    import openpyxl
+    workbook = openpyxl.load_workbook(path)
+    workbook[sheet][cell] = formula
+    workbook.save(path)
+    workbook.close()
+
+
+def codes(result):
+    return [issue["code"] for issue in result["issues"]]
+
+
+
+
+class PlanReviewTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.path = Path(self.tmp.name) / "plan.xlsx"
+
+    def review(self, **kwargs):
+        return ft.review_plan(self.path, **kwargs)
+
+    def test_all_years_deficit_is_an_error(self):
+        plan_workbook(self.path, profit=(-10, -20, -30, -40, -50))
+        result = self.review()
+        self.assertIn("PLAN_ALL_YEARS_DEFICIT", codes(result))
+
+    def test_growth_jump_and_unrecovered_trajectory(self):
+        plan_workbook(self.path, sales=(100, 200, 700, 800, 900),
+                      profit=(-100, -50, -10, 20, 40))
+        result = self.review()
+        self.assertIn("PLAN_GROWTH_JUMP", codes(result))
+        self.assertIn("PLAN_TRAJECTORY_NOT_RECOVERED", codes(result))
+        self.assertNotIn("PLAN_ALL_YEARS_DEFICIT", codes(result))
+
+    def test_loss_with_cash_growth_requires_explanation(self):
+        plan_workbook(self.path, profit=(-10, -20, -30, -40, -50),
+                      cash=(100000, 100000, 100000, 100000, 100000),
+                      depreciation=500)
+        result = self.review()
+        issue = next(i for i in result["issues"]
+                     if i["code"] == "CASH_PROFIT_DIVERGENCE")
+        self.assertEqual(issue["evidence"]["depreciation"], 500)
+        self.assertEqual(issue["evidence"]["cash_before"], 87716.906)
+
+    def test_loss_with_falling_cash_is_not_flagged(self):
+        plan_workbook(self.path, profit=(-10, 20, 30, 40, 50),
+                      cash=(1000, 2000, 3000, 4000, 5000))
+        result = self.review()
+        self.assertNotIn("CASH_PROFIT_DIVERGENCE", codes(result))
+
+    def test_opening_assets_compare_per_category(self):
+        plan_workbook(self.path)
+        result = self.review(declared_assets={"cash": 200000})
+        mismatches = [i for i in result["issues"]
+                      if i["code"] == "OPENING_ASSETS_MISMATCH"]
+        self.assertEqual({i["evidence"]["role"] for i in mismatches},
+                         {"land", "cash"})
+        matched = self.review(declared_assets={
+            "land": 112283.094, "cash": 87716.906})
+        self.assertNotIn("OPENING_ASSETS_MISMATCH", codes(matched))
+
+    def test_undeclared_opening_assets_is_a_warning(self):
+        plan_workbook(self.path)
+        result = self.review()
+        issue = next(i for i in result["issues"]
+                     if i["code"] == "OPENING_ASSETS_UNDECLARED")
+        self.assertEqual(issue["severity"], "warning")
+        self.assertEqual(issue["evidence"]["total"], 200000.0)
+
+    def test_area_denominators_compare_body_and_bed_base(self):
+        plan_workbook(self.path, bed_note=NARROW_BED)
+        result = self.review(
+            area_declarations={"facility_m2": 1500, "cultivation_m2": 1500,
+                               "management_m2": 1500, "bed_m2": 789},
+            body_text="재배면적은 1,000 ㎡로 잡았다.")
+        self.assertIn("AREA_BODY_MISMATCH", codes(result))
+        self.assertIn("AREA_BED_BASE_MISMATCH", codes(result))
+        clean = self.review(
+            area_declarations={"facility_m2": 1500, "cultivation_m2": 1500,
+                               "management_m2": 1500, "bed_m2": 789},
+            body_text="재배면적은 1,500 ㎡로 잡았다.")
+        self.assertNotIn("AREA_BODY_MISMATCH", codes(clean))
+
+    def test_bed_area_converted_with_explicit_width_is_not_flagged(self):
+        plan_workbook(self.path, bed_note=WIDE_BED)
+        result = self.review(
+            area_declarations={"facility_m2": 1500, "cultivation_m2": 1500,
+                               "management_m2": 1500, "bed_m2": 789.4737})
+        self.assertNotIn("AREA_BED_BASE_MISMATCH", codes(result))
+        self.assertNotIn("AREA_BED_UNVERIFIABLE", codes(result))
+
+    def test_bed_area_in_centimeters_matches_the_meter_form(self):
+        declarations = {"facility_m2": 1500, "cultivation_m2": 1500,
+                        "management_m2": 1500, "bed_m2": 789.4737}
+        plan_workbook(self.path, bed_note=WIDE_BED)
+        meters = self.review(area_declarations=declarations)
+        plan_workbook(self.path, bed_note=CM_BED)
+        centimeters = self.review(area_declarations=declarations)
+        for result in (meters, centimeters):
+            self.assertNotIn("AREA_BED_BASE_MISMATCH", codes(result))
+            self.assertNotIn("AREA_BED_UNVERIFIABLE", codes(result))
+        self.assertEqual(codes(meters), codes(centimeters))
+
+    def test_centimeter_scale_is_not_taken_as_meters(self):
+        plan_workbook(self.path, bed_note=CM_BED)
+        result = self.review(
+            area_declarations={"facility_m2": 1500, "cultivation_m2": 1500,
+                               "management_m2": 1500, "bed_m2": 118.4211})
+        issue = next(i for i in result["issues"]
+                     if i["code"] == "AREA_BED_BASE_MISMATCH")
+        self.assertAlmostEqual(issue["evidence"]["used_m2"], 789.4737, places=3)
+
+    def test_bed_area_omitted_width_still_fails(self):
+        plan_workbook(self.path, bed_note=NARROW_BED)
+        result = self.review(
+            area_declarations={"facility_m2": 1500, "cultivation_m2": 1500,
+                               "management_m2": 1500, "bed_m2": 789.4737})
+        issue = next(i for i in result["issues"]
+                     if i["code"] == "AREA_BED_BASE_MISMATCH")
+        self.assertAlmostEqual(issue["evidence"]["used_m2"], 118.4211, places=3)
+
+    def test_bed_area_without_area_basis_needs_review(self):
+        plan_workbook(self.path, bed_note="* 배지: 물량 = 118.4㎥ (베드 면적 미기재)")
+        result = self.review(
+            area_declarations={"facility_m2": 1500, "cultivation_m2": 1500,
+                               "management_m2": 1500, "bed_m2": 789})
+        issue = next(i for i in result["issues"]
+                     if i["code"] == "AREA_BED_UNVERIFIABLE")
+        self.assertEqual(issue["severity"], "warning")
+
+    def test_unreadable_profit_is_reported_not_a_clean_pass(self):
+        plan_workbook(self.path, profit=(-10, -20, -30, -40, -50))
+        leave_uncached(self.path, "12 손익계획", "C26", "=-10")
+        result = self.review(
+            declared_assets={"land": 112283.094, "cash": 87716.906},
+            area_declarations={"facility_m2": 1500, "cultivation_m2": 1500,
+                               "management_m2": 1500, "bed_m2": 789})
+        self.assertTrue(result["issues"])
+        self.assertIsNone(result["figures"]["net_profit"][0])
+        issue = next(i for i in result["issues"]
+                     if i["code"] == "PLAN_NET_PROFIT_UNREADABLE")
+        self.assertEqual(issue["status"], "blocked")
+        self.assertEqual(issue["evidence"]["years"][0], 2027)
+        self.assertNotIn("PLAN_ALL_YEARS_DEFICIT", codes(result))
+
+    def test_unreadable_sales_and_cash_are_reported(self):
+        plan_workbook(self.path)
+        leave_uncached(self.path, "12 손익계획", "D6", "=200")
+        leave_uncached(self.path, "14. 현금흐름계획", "E24", "=0")
+        result = self.review()
+        self.assertIn("PLAN_SALES_UNREADABLE", codes(result))
+        self.assertIn("CASH_FLOW_UNREADABLE", codes(result))
+
+    def test_complete_series_keep_the_deficit_check(self):
+        plan_workbook(self.path, profit=(-10, -20, -30, -40, -50))
+        result = self.review()
+        self.assertIn("PLAN_ALL_YEARS_DEFICIT", codes(result))
+        self.assertNotIn("PLAN_NET_PROFIT_UNREADABLE", codes(result))
+
+    def test_area_declaration_mismatch(self):
+        plan_workbook(self.path)
+        result = self.review(area_declarations={"cultivation_m2": 1200})
+        self.assertIn("AREA_DECLARATION_MISMATCH", codes(result))
