@@ -203,7 +203,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/install-manifest.json": {
-   "after_sha256": "5e547bab1e028bb40f56f396c55c5b307f492afacbc42e188cc86ca8670c8499",
+   "after_sha256": "7231a6f0f95d793d540acbf333686eb07b72df14f3a07d8f989ad78fe8405e6b",
    "before_sha256": null,
    "first_changed": "P27",
    "last_changed": "P28",
@@ -517,7 +517,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/finance-semantics.md": {
-   "after_sha256": "ecfb21fe72b9bf7f39e10851a11ac4e981663785fc3b150c66d3e36e52d619c4",
+   "after_sha256": "4e8f5e1f60a18ab0d67794d797ff6f99aeb229660dfa61c3b21451f4fdb9860c",
    "before_sha256": null,
    "first_changed": "P3",
    "last_changed": "P28",

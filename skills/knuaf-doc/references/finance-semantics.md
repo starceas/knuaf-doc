@@ -59,7 +59,9 @@ stale 자동 감지와 원고 쓰기 시점의 물리적 차단은 현재 지원
 
 ## 계획 궤적·기초자산·면적 분모 검사
 
-`check`의 `check_id="finance_plan_review"`는 학과 17시트 통합문서의 캐시 값만 읽어 다음을 본다. 구현은 `scripts/gg_finance_tables.py`의 `review_plan()`이며 통합문서를 고치지 않는다. 검사 행의 target은 `finance`다.
+`check`의 `check_id="finance_plan_review"`는 학과 17시트 통합문서의 캐시 값만 읽어 다음을 본다. 구현은 `scripts/gg_finance_tables.py`의 `review_plan()`이며 통합문서를 고치지 않는다. 검사 행의 target은 `finance`다. 이 검사는 재무 프로필 `school_17_sheet_v1`을 지원하는 전공에만 연결한다 — 18시트 등 다른 프로필(예: 원예환경시스템의 `hort_18_sheet_reconstructed_v1`)에는 돌지 않으며, 그 프로필의 시트명을 17시트에 맞춰 개명하라고 안내하지 않는다.
+
+- 검사 대상은 현재 계획 통합문서다. 해시가 현재 파일과 같은 `.xlsx` 원자료가 하나면 그것을, 둘 이상이면 `finance.gate.target_profit`(목표연도 손익, 원)과 마지막 연도·값이 일치하는 하나를 쓴다. source `revision`(그 레코드의 편집 횟수)이나 등록 순서로 고르지 않는다. 하나로 확정할 수 없으면 임의로 고르지 않고 `FINANCE_PLAN_WORKBOOK_AMBIGUOUS`(warning)로 후보 목록과 선택 필요를 보여 준다. 이 경고는 차단이 아니다.
 
 ### 기초재무상태 ↔ 학생이 말한 보유 자산
 
@@ -71,7 +73,7 @@ stale 자동 감지와 원고 쓰기 시점의 물리적 차단은 현재 지원
 
 - `12 손익계획`의 연도별 `당기순이익`을 읽는다.
 - 값 하나라도 읽히지 않으면(수식 캐시 없음·셀 비어 있음) `PLAN_NET_PROFIT_UNREADABLE`(blocked)로 검사 불가를 밝히고 재계산·저장 또는 셀 값 확인을 안내한다. 일부 연도만 보고 적자·흑자를 단정하지 않는다. 같은 규칙이 매출(`PLAN_SALES_UNREADABLE`)·누적 현금(`CASH_FLOW_UNREADABLE`)·연도 머리글(`PLAN_YEARS_UNREADABLE`)에도 적용된다. `blocked`는 "문제 없음"이 아니라 미수행이다.
-- 모든 연도가 0 이하이면 `PLAN_ALL_YEARS_DEFICIT`(error)다. 학생에게 연도별 숫자와 조정 후보를 보여 준 뒤에만 진행한다.
+- 모든 연도가 0 이하이면 `PLAN_ALL_YEARS_DEFICIT`(error)다. 학생에게 연도별 숫자와 조정 후보를 보여 준 뒤에만 진행한다. 단, `finance.gate.state`가 `deficit_accepted`이고 그 수용의 목표연도 손익 기록이 이 계획의 마지막 연도·값과 같으면 같은 적자를 다시 묻지 않고 warning으로만 남긴다(제출을 막지 않음). 수용 전 적자와 시트·캐시 미판독(blocked)은 그대로 차단한다.
 - 목표연도만 흑자이고 5개년 누적이 0 이하이면 `PLAN_TRAJECTORY_NOT_RECOVERED`(warning)다.
 - 3년차 이후 매출이 전년 대비 2배를 넘으면 `PLAN_GROWTH_JUMP`(warning)다. 1년차 부분 작기에서 2년차로 넘어가는 증가는 정상 범위로 보고 검사하지 않는다.
 - 경고는 차단이 아니라 본문에 근거를 밝히라는 요구다.
