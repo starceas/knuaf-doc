@@ -203,7 +203,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/install-manifest.json": {
-   "after_sha256": "f8491b8c0a4bb765335d0f43ce41ff8f54535ae1e9511102aee947089a676b16",
+   "after_sha256": "c04f0f719ac764b21d639a263549d88daf9a5c8f13758dff528862d7c3237f8c",
    "before_sha256": null,
    "first_changed": "P27",
    "last_changed": "P28",
