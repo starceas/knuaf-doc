@@ -3029,13 +3029,30 @@ def _recovery_source_hash(root, p, sid):
         doc="SKILL.md#검사-차단-복구",
     )
 
-def _advance_references(p, ops):
+def _section_body_unregistered(root, section):
+    """정본에 채택되지 않은 본문 변경이 있는 절인지 확인한다.
+
+    apply는 sections op를 받으면 현재 파일을 읽어 ``draft_hash``를 다시
+    계산한다. 그래서 본문이 등록본과 다른 절을 참조 보정에 넣으면 그
+    변경이 조용히 정본에 채택되고 ``draft_changed`` 오류가 사라진다.
+    확인할 수 없을 때도 True(채택하지 않음)로 닫는다.
+    """
+    try:
+        raw = local(root, section["path"]).read_text(encoding="utf-8")
+    except (OSError, KeyError, TypeError):
+        return True
+    return digest(draft(raw)) != section.get("draft_hash")
+
+def _advance_references(root, p, ops):
     """apply가 올릴 개정에 맞춰 참조 개정을 함께 올린다.
 
     ``ops``의 기록은 apply가 개정을 1 올린다. 그 기록을 참조하던 유효
     참조(참조 개정이 현재 개정과 같던 참조)는 새 개정을 따라가야 하므로,
     참조를 가진 사실·규칙·절을 같은 트랜잭션에 넣는다. 이미 어긋나 있던
     참조는 건드리지 않는다 — 복구가 낡은 참조를 조용히 덮지 않게 한다.
+
+    본문이 정본 등록본과 다른 절은 넣지 않고 이름을 돌려준다. 참조 개정만
+    맞추는 복구가 등록하지 않은 본문 변경을 채택해서는 안 되기 때문이다.
     """
     values, new_revision = {}, {}
     for op in ops:
@@ -3045,6 +3062,7 @@ def _advance_references(p, ops):
         new_revision[(col, key)] = prev["revision"] + 1 if prev else 1
         values[(col, key)] = value
 
+    deferred = []
     def rebase(record, col):
         changed = False
         for field, target in (
@@ -3080,6 +3098,11 @@ def _advance_references(p, ops):
         changed = False
         for col in ("facts", "rules", "sections"):
             for key, record in p[col].items():
+                if col == "sections" and _section_body_unregistered(
+                        root, record):
+                    if key not in deferred:
+                        deferred.append(key)
+                    continue
                 work = values.get((col, key))
                 if work is None:
                     work = copy.deepcopy(record)
@@ -3092,7 +3115,7 @@ def _advance_references(p, ops):
     return [
         {"collection": col, "value": value}
         for (col, _key), value in values.items()
-    ]
+    ], deferred
 
 def _recovery_claim_missing(root, p, fid, sid, claim_id):
     source = copy.deepcopy(p["sources"][sid])
@@ -3118,12 +3141,13 @@ def _recovery_claim_missing(root, p, fid, sid, claim_id):
         if r.get("id") == sid:
             r["claim_id"] = claim_id
     rel = ".gg-work/recovery/claim-%s.json" % fid
+    ops, deferred = _advance_references(root, p, [
+        {"collection": "sources", "value": source},
+        {"collection": "facts", "value": fact},
+    ])
     change = {
         "request_id": "recover:claim:%s:%d" % (fid, p["revision"]),
-        "ops": _advance_references(p, [
-            {"collection": "sources", "value": source},
-            {"collection": "facts", "value": fact},
-        ]),
+        "ops": ops,
     }
     argv = [[
         sys.executable,
@@ -3135,25 +3159,35 @@ def _recovery_claim_missing(root, p, fid, sid, claim_id):
         "--expected-revision",
         str(p["revision"]),
     ]]
+    steps = [
+        "원문 위치(%s)에서 이 값과 같은 내용을 확인한다"
+        % (ref.get("locator") or "출처 파일"),
+        "아래 change의 claim.quote에 확인한 원문 문장을 적는다",
+        "change를 %s에 저장한다" % rel,
+        "apply 명령을 실행한다. change는 같은 출처를 쓰는 다른 사실·"
+        "규칙의 근거 개정도 함께 맞춘다(원자료 내용은 바뀌지 않았다)",
+    ]
+    notice = ("change는 서식이다. quote를 실제 원문 문장으로 채우지 않으면 "
+              "검토 근거가 남지 않는다.")
+    if deferred:
+        steps.append(
+            "본문이 정본 등록본과 다른 절(%s)은 이 change에 넣지 않았다. "
+            "그 절은 본문을 대조한 뒤 따로 재등록해야 하고, 그때까지 "
+            "draft_changed·dependency_revision이 남는다" % ", ".join(deferred))
+        notice += (" 본문 변경이 등록되지 않은 절은 자동으로 재등록하지 "
+                   "않는다.")
+    steps.append(
+        "원문이 이 값을 뒷받침하지 않으면 claim을 만들지 말고 사실의 "
+        "출처·값을 먼저 고친다")
     return _recovery(
         "claim_missing",
         "이 사실을 뒷받침하는 원문 대조값(claim)이 출처에 없다. 원문에서 "
         "해당 문장을 확인한 뒤 claim을 등록한다",
-        steps=[
-            "원문 위치(%s)에서 이 값과 같은 내용을 확인한다"
-            % (ref.get("locator") or "출처 파일"),
-            "아래 change의 claim.quote에 확인한 원문 문장을 적는다",
-            "change를 %s에 저장한다" % rel,
-            "apply 명령을 실행한다. change는 같은 출처를 쓰는 다른 사실·"
-            "규칙의 근거 개정도 함께 맞춘다(원자료 내용은 바뀌지 않았다)",
-            "원문이 이 값을 뒷받침하지 않으면 claim을 만들지 말고 사실의 "
-            "출처·값을 먼저 고친다",
-        ],
+        steps=steps,
         argv=argv,
         change=change,
         doc="references/finance-semantics.md",
-        notice="change는 서식이다. quote를 실제 원문 문장으로 채우지 않으면 "
-               "검토 근거가 남지 않는다.",
+        notice=notice,
     )
 
 def _recovery_school_profile(root, p):

@@ -201,6 +201,78 @@ class ClaimRecoveryTests(ContractCase):
              if r["check_id"] in
              ("claim_missing", "source_revision", "calculation")])
 
+    def _section_project(self, body):
+        core = runtime("gg_core")
+        root = self.make_project()
+        write_text(root, "answer.txt", "매출 1,000천원; 재배면적 100㎡\n")
+        missing = fact_op("sales", "매출액", "1000", "천원",
+                          value_type="decimal", period="2026년",
+                          claim_id="missing")
+        area = fact_op("area", "재배면적", "100", "㎡",
+                       value_type="decimal", period="2026년",
+                       claim_id="area")
+        claim = {k: area["value"][k] for k in (
+            "field_id", "value", "unit", "period", "scope",
+            "answer_state", "kind")}
+        write_text(root, "sections/intro.md", body)
+        core.apply(root, {"request_id": "wp1-section-recovery", "ops": [
+            source_op(claims={"area": claim}), missing, area,
+            section_op("intro", "Ⅰ. 머리말", "sections/intro.md",
+                       depends_on=[{"collection": "facts", "id": "sales",
+                                    "revision": 1}])]},
+            core.load(root)["revision"])
+        return core, root
+
+    def _apply_recovery(self, core, root):
+        p = core.load(root)
+        change = next(
+            r for r in core.checks(root, p)
+            if r["check_id"] == "claim_missing")["recovery"]["change"]
+        next(o for o in change["ops"]
+             if o["collection"] == "sources")["value"]["claims"]["c-sales"][
+                 "quote"] = "매출 1,000천원"
+        core.apply(root, change, p["revision"])
+        return core.load(root)
+
+    def test_unregistered_body_change_is_not_adopted_by_claim_recovery(self):
+        # 검토자 반례: 참조 개정만 맞추는 복구가 등록하지 않은 본문 변경을
+        # 재해시해 draft_changed 오류를 지우면 안 된다.
+        core, root = self._section_project("# Ⅰ. 머리말\n\n기존 등록 본문.\n")
+        write_text(root, "sections/intro.md", "# Ⅰ. 머리말\n\n등록하지 않은 수정.\n")
+        p = core.load(root)
+        registered = p["sections"]["intro"]["draft_hash"]
+        self.assertIn("draft_changed",
+                      {r["check_id"] for r in core.checks(root, p)})
+        after = self._apply_recovery(core, root)
+        self.assertEqual(registered, after["sections"]["intro"]["draft_hash"])
+        self.assertEqual(1, after["sections"]["intro"]["revision"])
+        self.assertNotEqual(
+            registered, core.digest(core.draft(
+                (root / "sections/intro.md").read_text(encoding="utf-8"))))
+        ids = {r["check_id"] for r in core.checks(root, after)}
+        self.assertIn("draft_changed", ids)
+        self.assertNotIn("claim_missing", ids)
+        self.assertNotIn("source_revision", ids)
+
+    def test_unchanged_body_section_is_rebased_by_claim_recovery(self):
+        core, root = self._section_project("# Ⅰ. 머리말\n\n기존 등록 본문.\n")
+        after = self._apply_recovery(core, root)
+        self.assertEqual(2, after["sections"]["intro"]["revision"])
+        self.assertEqual(
+            2, after["sections"]["intro"]["depends_on"][0]["revision"])
+        ids = {r["check_id"] for r in core.checks(root, after)}
+        self.assertNotIn("draft_changed", ids)
+        self.assertNotIn("dependency_revision", ids)
+
+    def test_recovery_names_sections_left_for_separate_registration(self):
+        core, root = self._section_project("# Ⅰ. 머리말\n\n기존 등록 본문.\n")
+        write_text(root, "sections/intro.md", "# Ⅰ. 머리말\n\n등록하지 않은 수정.\n")
+        row = next(r for r in core.checks(root, core.load(root))
+                   if r["check_id"] == "claim_missing")
+        self.assertTrue(any("intro" in s for s in row["recovery"]["steps"]))
+        self.assertIn("자동으로 재등록하지 않는다",
+                      row["recovery"]["notice"])
+
     def test_school_and_guideline_recovery_are_attached(self):
         core = runtime("gg_core")
         root = self.make_project()

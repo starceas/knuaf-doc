@@ -72,7 +72,7 @@ description: 한국농수산대학교 창업논문·영농계획서와 동반 �
 | 검사 | 막힌 뜻 | 복구 경로 |
 |---|---|---|
 | `source_hash` | 등록한 뒤 원자료 파일 바이트가 바뀌었다 | `gg.py source-refresh <폴더> --source <출처ID>`로 미리보기 → 바뀐 부분을 검토하고 그 자료를 근거로 쓴 사실·본문을 대조 → `--reviewed --apply --expected-revision <N>`로 해시와 근거 개정을 함께 다시 등록 |
-| `claim_missing` | 사실을 뒷받침하는 원문 대조값이 출처에 없다 | `recovery.change` 서식을 `.gg-work/recovery/`에 저장하고 `quote`에 확인한 원문 문장을 적은 뒤 `gg.py apply`로 등록. 그 change는 같은 출처를 쓰는 다른 사실·규칙의 근거 개정도 함께 맞춘다(원자료 내용은 바뀌지 않는다). 원문이 값을 뒷받침하지 않으면 claim을 만들지 말고 사실의 출처·값을 고친다 |
+| `claim_missing` | 사실을 뒷받침하는 원문 대조값이 출처에 없다 | `recovery.change` 서식을 `.gg-work/recovery/`에 저장하고 `quote`에 확인한 원문 문장을 적은 뒤 `gg.py apply`로 등록. 그 change는 같은 출처를 쓰는 다른 사실·규칙의 근거 개정도 함께 맞춘다(원자료 내용은 바뀌지 않는다). 본문이 등록본과 다른 절은 자동 재등록하지 않으므로 그 절은 따로 재등록한다. 원문이 값을 뒷받침하지 않으면 claim을 만들지 말고 사실의 출처·값을 고친다 |
 | `school_profile` | 학교 규칙이 하나도 등록되지 않았다 | "내장 학교 지침 등록" 절차로 발췌 사본을 `school_rule` 출처로 등록하고 `rules.guideline_profile`을 연결 |
 | `guideline_profile` | 지침 항목별 검증 근거가 붙지 않았다 | `rules[항목ID]`의 `applicable`·`locations`를 채우고 해당 없음은 조건을 거짓으로 입증한 경우에만 등록([guideline-tracking](references/guideline-tracking.md)) |
 | `body_registry` | 본문 파일이 있는데 `sections`에 등록되지 않아 본문 검사가 그 파일을 읽지 않았다 | 절 ID·제목·order·path를 정해 `apply`로 `sections`에 등록하고 다시 `check` |
