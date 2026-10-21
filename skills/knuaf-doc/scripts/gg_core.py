@@ -2414,6 +2414,101 @@ def _finance_body_mod():
     import gg_finance_body
     return gg_finance_body
 
+def _finance_tables_mod():
+    """WP-3 integration point (gg_finance_tables.review_plan). Lazily
+    imported; gg_finance_tables never imports gg_core."""
+    import gg_finance_tables
+    return gg_finance_tables
+
+_FINANCE_ASSET_ROLES = (
+    "land", "building", "plants", "animals", "machines", "cash",
+    "materials", "produce")
+_FINANCE_AREA_ROLES = (
+    "facility_m2", "cultivation_m2", "bed_m2", "management_m2")
+
+def _finance_plan_workbook(root, p):
+    """현재 정본 재무 통합문서 경로.
+
+    해시가 맞는 ``.xlsx`` 원자료만 후보로 삼고, revision이 높은 쪽,
+    같으면 나중에 등록된 쪽을 고른다. 후보가 없으면 None — 경로·해시
+    상태는 기존 ``source_hash``/``source_missing`` 검사가 보고한다.
+    """
+    chosen = None
+    for source in p.get("sources", {}).values():
+        path = source.get("path")
+        if not isinstance(path, str) or not path.lower().endswith(".xlsx"):
+            continue
+        try:
+            if digest(local(root, path).read_bytes()) != source.get("hash"):
+                continue
+        except (OSError, ValueError):
+            continue
+        rank = source.get("revision") or 0
+        if chosen is None or rank >= chosen[0]:
+            chosen = (rank, path)
+    return chosen[1] if chosen else None
+
+def _finance_declared_numbers(p, prefix, roles, unit):
+    """``finance.<group>.<role>`` 사실을 {role: 값}으로 모은다.
+
+    단위가 계약과 다르거나 값이 숫자가 아니면 선언으로 보지 않는다.
+    하나도 없으면 None — review_plan이 미선언 경고를 낸다.
+    """
+    declared = {}
+    for fact in p.get("facts", {}).values():
+        field = fact.get("field_id")
+        if not isinstance(field, str) or not field.startswith(prefix):
+            continue
+        role = field[len(prefix):]
+        if role not in roles or fact.get("unit") != unit:
+            continue
+        if (fact.get("answer_state") == "not_provided"
+                or fact.get("verification") == "superseded"):
+            continue
+        try:
+            declared[role] = float(str(fact.get("value")).replace(",", ""))
+        except (TypeError, ValueError):
+            continue
+    return declared or None
+
+def _add_finance_plan_review(root, p, body, add):
+    """WP-3 ``review_plan``을 ``finance_plan_review`` 행으로 연결한다.
+
+    ``blocked``는 검사 미수행이다 — 통과로 소비하지 않고 제출 후보를
+    막는다(HANDOFF-WP3-to-WP1). ``pending``은 경고라 막지 않는다.
+    """
+    workbook = _finance_plan_workbook(root, p)
+    if workbook is None:
+        return
+    try:
+        report = _finance_tables_mod().review_plan(
+            local(root, workbook),
+            declared_assets=_finance_declared_numbers(
+                p, "finance.opening_assets.", _FINANCE_ASSET_ROLES, "천원"),
+            area_declarations=_finance_declared_numbers(
+                p, "finance.area.", _FINANCE_AREA_ROLES, "㎡"),
+            body_text=body,
+        )
+    except Exception as e:  # 검사는 예외로 죽지 않는다 — 읽기 실패는 blocked
+        add(
+            "finance_plan_review", "finance",
+            "계획 검사를 수행하지 못함: " + str(e)[:200],
+            status="blocked",
+            recovery="통합문서를 Excel에서 열어 재계산·저장한 뒤 다시 검사한다",
+        )
+        return
+    for issue in report.get("issues", []):
+        status = issue.get("status", "fail")
+        evidence = dict(issue.get("evidence") or {})
+        evidence["code"] = issue["code"]
+        add(
+            "finance_plan_review", "finance", issue["reason"],
+            severity=issue.get("severity", "error"),
+            status=status,
+            evidence=[evidence],
+            recovery=issue.get("remedy") if status == "blocked" else None,
+        )
+
 
 def _fact_semantics_mod():
     """P3 S-lane integration point (gg_fact_semantics.py). Lazily
@@ -3373,10 +3468,10 @@ def checks(root, p):
     out = []
 
     def add(cid, target, reason, severity="error", status="fail",
-            recovery=None):
+            recovery=None, evidence=None):
         out.append(
             result(cid, target, status, reason, p["revision"], severity,
-                   recovery=recovery))
+                   recovery=recovery, evidence=evidence))
 
     gate_state = finance_gate(p)
     if gate_state["supported"]:
@@ -3910,6 +4005,11 @@ def checks(root, p):
         for cid, reason in inspect_outputs(root, p, lineage):
             add(cid, "xlsx", reason)
         body = merged(root, p)
+        # WP-3 handoff: the 5-year plan / opening-asset / area review is
+        # only meaningful for finance-supported majors and a hash-current
+        # workbook source. blocked rows stay blocked (never a pass).
+        if gate_state["supported"]:
+            _add_finance_plan_review(root, p, body, add)
         items, claims_block = _finance_check_items(p)
         if claims_block:
             add("body_finance_crosscheck", "body", claims_block, status="blocked")
