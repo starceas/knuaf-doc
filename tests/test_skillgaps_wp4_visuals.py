@@ -30,10 +30,22 @@ class FigurePolicyContract(unittest.TestCase):
 
     def test_public_plate_license_evidence_is_required(self):
         evidence = section(self.text, "## 6. 공공 도판 이용조건 증거 대조")
-        for token in ("이용조건", "조회일", "SHA-256", "대조 실패"):
+        for token in ("이용조건", "조회일", "SHA-256", "삽입하지 않는다"):
             self.assertIn(token, evidence)
-        self.assertIn("삽입하지 않는다", evidence)
-        self.assertIn("원본", evidence)
+        self.assertIn("첨부 파일 A", evidence)
+        self.assertIn("추출 원본 B", evidence)
+        self.assertIn("hash(A) == hash(B)", evidence)
+
+    def test_extraction_and_transform_are_allowed(self):
+        evidence = section(self.text, "## 6. 공공 도판 이용조건 증거 대조")
+        self.assertIn("해시가 달라도 된다", evidence)
+        self.assertIn("계보", evidence)
+        self.assertIn("변형본 해시가 원본과 다르다는 사실만으로는 거부 사유가 아니다", evidence)
+
+    def test_different_source_file_is_still_blocked(self):
+        evidence = section(self.text, "## 6. 공공 도판 이용조건 증거 대조")
+        self.assertIn("이용조건이 다른 파일에 적용된 것", evidence)
+        self.assertIn("2의 동일성 불일치", evidence)
 
     def test_chapter_checklist_records_missing_plates(self):
         checklist = section(self.text, "## 7. 장별 공공도판 체크리스트")
