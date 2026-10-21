@@ -47,11 +47,56 @@ class RelationshipTests(ContractCase):
             "file:///C:/Users/student/AppData/Roaming/Microsoft/Templates/"
             "Normal.dotm",
             "C:\\Users\\student\\Templates\\Normal.dotm",
+            "Normal.dotm",
         ):
-            path = _docx(self.root / "word.docx", _rel(
-                "rId1", REL + "attachedTemplate", target))
-            seen = self.office.check_ooxml_relationships(path)
-            self.assertEqual(1, len(seen))
+            with self.subTest(target=target):
+                path = _docx(self.root / "word.docx", _rel(
+                    "rId1", REL + "attachedTemplate", target))
+                self.office.check_ooxml_relationships(path)
+
+    def test_a_local_file_url_template_passes(self):
+        """Word writes the user's own template as a host-less file URL."""
+        path = _docx(self.root / "word.docx", _rel(
+            "rId1", REL + "attachedTemplate",
+            "file:///Users/student/Library/Group%20Containers/User%20Content"
+            ".dotm"))
+        self.office.check_ooxml_relationships(path)
+
+    def test_remote_network_and_traversing_targets_are_refused(self):
+        """The allowance is for local files only: these five shapes stay
+        refused on input and output alike."""
+        cases = (
+            ("attachedTemplate", "https://example.invalid/remote.dotm"),
+            ("externalLinkPath", "\\\\example.invalid\\share\\book.xlsx"),
+            ("oleObject", "//example.invalid/share/object.bin"),
+            ("oleObject", "../../outside/object.bin"),
+            ("attachedTemplate", "file://example.invalid/share/remote.dotm"),
+        )
+        for suffix, target in cases:
+            with self.subTest(target=target):
+                path = _docx(self.root / "word.docx", _rel(
+                    "rId1", REL + suffix, target))
+                with self.assertRaises(ValueError) as cm:
+                    self.office.check_ooxml_relationships(path)
+                self.assertIn("위험한 외부 OOXML 관계 참조", str(cm.exception))
+
+    def test_remote_targets_are_refused_even_when_present_on_input(self):
+        """There is no input baseline that excuses them: the same rule
+        screens staging and the app-rewritten output."""
+        for suffix, target in (
+            ("attachedTemplate", "https://example.invalid/remote.dotm"),
+            ("oleObject", "\\\\example.invalid\\share\\object.bin"),
+        ):
+            with self.subTest(target=target):
+                path = _docx(self.root / "word.docx", _rel(
+                    "rId1", REL + suffix, target))
+                for call in (self.office.stage_job,
+                             self.office.validate_office_file):
+                    with self.assertRaises(ValueError):
+                        if call is self.office.stage_job:
+                            call(path, self.root / "ws")
+                        else:
+                            call(path, "word")
 
     def test_glossary_document_external_rel_passes(self):
         path = _docx(self.root / "word.docx", _rel(
@@ -59,20 +104,12 @@ class RelationshipTests(ContractCase):
             "file:///C:/Program%20Files/Office/Building%20Blocks.dotx"))
         self.office.check_ooxml_relationships(path)
 
-    def test_a_new_dangerous_relationship_is_still_rejected(self):
+    def test_a_dangerous_relationship_is_rejected(self):
         path = _docx(self.root / "word.docx", _rel(
             "rId1", REL + "oleObject", "https://example.invalid/payload.exe"))
         with self.assertRaises(ValueError) as cm:
             self.office.check_ooxml_relationships(path)
         self.assertIn("위험한 외부 OOXML 관계 참조", str(cm.exception))
-
-    def test_an_input_baseline_tolerates_what_the_app_carried_over(self):
-        path = _docx(self.root / "word.docx", _rel(
-            "rId1", REL + "oleObject", "https://example.invalid/payload.exe"))
-        key = ("word/_rels/settings.xml.rels", REL + "oleObject",
-               "https://example.invalid/payload.exe")
-        # The input already carried it; the app merely saved the file.
-        self.office.check_ooxml_relationships(path, {key})
 
     def test_local_targets_and_plain_hyperlinks_are_allowed(self):
         for rel_type, target in (

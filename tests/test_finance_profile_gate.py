@@ -256,7 +256,7 @@ class FinanceGateTests(ContractCase):
         with mock.patch.dict(sys.modules, {"gg_hort_workbook": checker}), \
                 mock.patch.object(self.office, "stage_job", return_value=(
                     self.roots[major], source, source,
-                    self.roots[major] / "unused.pdf", "0" * 64, set())), \
+                    self.roots[major] / "unused.pdf", "0" * 64)), \
                 mock.patch.object(self.office, "_run_excel_engine") as engine:
             with self.assertRaises(self.mc.OutputHeldError):
                 self.office.process_excel(
@@ -296,7 +296,7 @@ class FinanceGateTests(ContractCase):
         root = self.roots[major]
         engine = SimpleNamespace(returncode=0, stdout="synthetic", stderr="")
         stage_result = (root, source, source, root / "unused.pdf",
-                        self.office.compute_sha256(source.read_bytes()), set())
+                        self.office.compute_sha256(source.read_bytes()))
         with mock.patch.object(self.office, "stage_job",
                                return_value=stage_result), \
                 mock.patch.object(self.office, "_run_excel_engine",

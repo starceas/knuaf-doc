@@ -226,18 +226,51 @@ class PaperBodyTests(ContractCase):
         "# Ⅶ. 참고문헌\n\n참고문헌.\n"
     )
 
-    def _setup(self):
+    def _setup(self, *, title=None):
         core = runtime("gg_core")
         root = self.make_project()
         _seed(root)
         bind_major(root)
+        profile = {"mode": "school", "school": "합성대학교",
+                   "department": "특용작물학과"}
+        if title is not None:
+            profile["title"] = title
         spec = root / "paper-spec.json"
         spec.write_text(json.dumps(
             {"author": "합성", "writing_year": 2026, "years": 5,
-             "school_profile": {"mode": "school", "school": "합성대학교",
-                                "department": "특용작물학과"}},
+             "school_profile": profile},
             ensure_ascii=False), encoding="utf-8")
         return core, root, spec
+
+    def _assert_frontmatter_intact(self, text):
+        """R1-02: the five frontmatter forms survive a body splice."""
+        for form in ("겉표지", "표제면", "제출서", "인준서", "목차"):
+            self.assertIn("\n%s\n" % form, "\n" + text + "\n", form)
+        self.assertIn("2026 목차로 쓴 농장현황", text)
+        self.assertNotIn("Ⅲ. 영농계획수립", text)
+
+    def test_a_title_starting_with_the_marker_keeps_the_frontmatter(self):
+        """The title's own line begins with Ⅰ. 머리말; the splice must not
+        treat it as the body boundary."""
+        core, root, spec = self._setup(
+            title="Ⅰ. 머리말부터 시작하는 영농창업계획")
+        value = core.paper(
+            root, "paper-spec.json", spec.read_bytes(), "build/body.md",
+            major_id="specialty_crops", body_markdown=self.STUDENT_BODY)
+        self.assertEqual("generated", value["status"])
+        text = (root / "build/body.md").read_text(encoding="utf-8")
+        self._assert_frontmatter_intact(text)
+        self.assertIn("Ⅰ. 머리말부터 시작하는 영농창업계획", text)
+
+    def test_a_title_containing_the_marker_keeps_the_frontmatter(self):
+        core, root, spec = self._setup(
+            title="2026년 영농창업계획 — Ⅰ. 머리말 개정판")
+        core.paper(root, "paper-spec.json", spec.read_bytes(),
+                   "build/body.md", major_id="specialty_crops",
+                   body_markdown=self.STUDENT_BODY)
+        text = (root / "build/body.md").read_text(encoding="utf-8")
+        self._assert_frontmatter_intact(text)
+        self.assertIn("2026년 영농창업계획 — Ⅰ. 머리말 개정판", text)
 
     def test_body_replaces_the_generated_skeleton_and_keeps_frontmatter(self):
         core, root, spec = self._setup()
@@ -246,11 +279,8 @@ class PaperBodyTests(ContractCase):
             major_id="specialty_crops", body_markdown=self.STUDENT_BODY)
         self.assertEqual("generated", value["status"])
         text = (root / "build/body.md").read_text(encoding="utf-8")
-        self.assertIn("겉표지", text)
-        self.assertIn("목차", text)
+        self._assert_frontmatter_intact(text)
         self.assertIn("Ⅱ. 농장현황", text)
-        self.assertIn("2026 목차로 쓴 농장현황", text)
-        self.assertNotIn("Ⅲ. 영농계획수립", text)
         # The request records the body hash it actually published.
         receipt = json.loads(
             (root / "build" / str(core.load(root)["revision"]) / "paper"

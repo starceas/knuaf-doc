@@ -1660,6 +1660,36 @@ class ManagedMarkerTests(_UpdateCase):
         self.assertEqual([], list(state.glob("journal-*-closed.json")))
         self.assertEqual(before, _tree_bytes(target))
 
+    def test_a_symlinked_invocation_still_reports_managed(self):
+        """R1-04: the verdict is by real path, so a project alias answers
+        the same as the real installation."""
+        import subprocess
+        import sys as _sys
+        project = self.tmpdir("proj")
+        target = _write_skill(project / ".claude" / "skills" / "knuaf-doc",
+                              version="0.1.1", updater=True)
+        self._marker(project, ".claude/skills/knuaf-doc")
+        state = project / ".claude" / "knuaf-doc-update"
+        state.mkdir(parents=True)
+        journal = state / "journal.json"
+        journal.write_bytes(b'{"phase":"prepared"}')
+        alias = self.root / "alias"
+        alias.symlink_to(project, target_is_directory=True)
+        script_rel = Path(".claude") / "skills" / "knuaf-doc" / "scripts" \
+            / "gg_update.py"
+        outs = {}
+        for label, base in (("real", project), ("alias", alias)):
+            proc = subprocess.run(
+                [_sys.executable, "-B", str(base / script_rel), "auto"],
+                capture_output=True, text=True, encoding="utf-8",
+                errors="replace", cwd=str(self.root), timeout=120)
+            self.assertEqual(0, proc.returncode, proc.stderr)
+            outs[label] = json.loads(proc.stdout.strip().splitlines()[-1])
+        self.assertEqual({"result": "managed", "journal_present": True},
+                         outs["real"])
+        self.assertEqual(outs["real"], outs["alias"])
+        self.assertEqual(b'{"phase":"prepared"}', journal.read_bytes())
+
     def test_marker_for_other_path_or_install_kind_is_ignored(self):
         project, target = self._gui_install()
         self._marker(project, ".claude/skills/other-skill")

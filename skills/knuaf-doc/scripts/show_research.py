@@ -78,11 +78,18 @@ def facts_citing(p, sid):
 
 
 def section_sources(p, section):
-    """절이 쓰는 출처 — 작업 기록의 source_refs를 우선, 없으면 사실의 scope로 보완."""
+    """절이 쓰는 출처 — 작업의 명시 절 ID를 정확히 비교한다.
+
+    ``III-1`` 조회가 ``III-10`` 작업을 끌어오면 안 되므로 부분 문자열
+    일치는 쓰지 않는다.  명시 절 ID가 없는 작업만 자기 ID가 정확히 같은
+    경우에 한해 인정한다.
+    """
     ids = set()
     for t in p["tasks"].values():
-        linked = t.get("section") or t.get("section_id") or t.get("id", "")
-        if section not in str(linked):
+        linked = t.get("section") or t.get("section_id")
+        if linked is None:
+            linked = t.get("id")
+        if str(linked) != str(section):
             continue
         for ref in t.get("source_refs", []):
             if ref.get("id"):

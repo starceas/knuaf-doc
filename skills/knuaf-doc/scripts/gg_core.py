@@ -4818,6 +4818,30 @@ def validate_paper_native_fields(spec):
 PAPER_BODY_MARKER = "Ⅰ. 머리말"
 
 
+def _paper_body_offset(text):
+    """Offset of the generated body's first chapter line, or -1.
+
+    The boundary is a whole line equal to the marker (leading ``#`` and
+    surrounding whitespace ignored) that comes *after* the 목차 line.  A
+    title or subtitle that merely starts with or contains the marker — even
+    on a line of its own before the TOC — is frontmatter, not the body, and
+    must survive the splice.
+    """
+    offset = 0
+    after_toc = False
+    for line in text.splitlines(keepends=True):
+        bare = line.strip()
+        if not after_toc:
+            if bare == "목차":
+                after_toc = True
+            offset += len(line)
+            continue
+        if bare.lstrip("#").strip() == PAPER_BODY_MARKER:
+            return offset
+        offset += len(line)
+    return -1
+
+
 def _custom_paper_body(body):
     """Validate a caller-supplied paper body, or return None.
 
@@ -5045,7 +5069,7 @@ def paper(root, spec_path, spec_bytes, requested_path, *, major_id=None,
 
         body_text = school_paper(spec, context=ctx)
         if body_override is not None:
-            marker = body_text.find(PAPER_BODY_MARKER)
+            marker = _paper_body_offset(body_text)
             if marker < 0:
                 raise _op("paper", "requested_output", "not_committed",
                           "invalid_spec",

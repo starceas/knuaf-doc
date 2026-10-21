@@ -107,20 +107,42 @@ HYPERLINK_REL_TYPE = (
 SAFE_HYPERLINK_PREFIXES = ("http://", "https://", "mailto:")
 # External relationship types Word/Excel add on their own during a save and
 # that never fetch content into the document: the attached template
-# (Normal.dotm) and the building-block glossary.  Allowed regardless of target.
+# (Normal.dotm) and the building-block glossary.  They are allowed only when
+# the target is a local file — a remote template is still a fetch.
 BENIGN_EXTERNAL_REL_SUFFIXES = ("/attachedTemplate", "/glossaryDocument")
 
 def _rel_type_suffix(rel_type: str) -> str:
     return "/" + rel_type.rstrip("/").rsplit("/", 1)[-1]
 
-def _has_url_scheme(target: str) -> bool:
-    """True when a relationship target carries a real URL scheme.
+def _local_external_target(target: str) -> tuple[bool, str]:
+    """Returns (allowed, reason) for a non-hyperlink external target.
 
-    A single-letter scheme is a Windows drive letter (``C:\\...``), not a
-    URL scheme.
+    Allowed: a plain local path, a Windows drive path, or a ``file://`` URL
+    with no host.  Refused: any other URL scheme (a remote template fetch),
+    UNC / ``\\\\host`` / ``//host`` network paths, and ``..`` traversal out of
+    the package's own directory.  A single-letter scheme is a drive letter,
+    not a URL.
     """
-    scheme = urllib.parse.urlsplit(target.strip()).scheme
-    return len(scheme) > 1
+    raw = target.strip()
+    if not raw:
+        return False, "빈 외부 관계 대상"
+    if raw.startswith(("\\\\", "//")):
+        return False, "네트워크 경로"
+    parts = urllib.parse.urlsplit(raw)
+    scheme = parts.scheme.lower()
+    if scheme == "file":
+        if parts.netloc:
+            return False, "네트워크 파일 경로"
+        path = urllib.parse.unquote(parts.path)
+    elif len(scheme) == 1:
+        path = urllib.parse.unquote(raw)
+    elif scheme:
+        return False, "원격 대상"
+    else:
+        path = urllib.parse.unquote(raw)
+    if any(part == ".." for part in path.replace("\\", "/").split("/")):
+        return False, "상위 경로 탈출"
+    return True, "local_target"
 
 def classify_external_relationship(rel_type: str, target: str) -> tuple[bool, str]:
     """Returns (allowed, reason) for one TargetMode=External relationship."""
@@ -128,31 +150,20 @@ def classify_external_relationship(rel_type: str, target: str) -> tuple[bool, st
         if target.startswith(SAFE_HYPERLINK_PREFIXES):
             return True, "hyperlink"
         return False, "위험한 외부 하이퍼링크"
+    allowed, reason = _local_external_target(target)
+    if not allowed:
+        return False, "위험한 외부 OOXML 관계 참조 (%s)" % reason
     if _rel_type_suffix(rel_type) in BENIGN_EXTERNAL_REL_SUFFIXES:
         return True, "benign_office_rel"
-    if not _has_url_scheme(target):
-        # externalLinkPath / externalLink / oleObject ... pointing at a bare
-        # file name or a local path: no network or file:// fetch involved.
-        return True, "local_target"
-    return False, "위험한 외부 OOXML 관계 참조"
+    # externalLinkPath / externalLink / oleObject ... pointing at a local
+    # path: no network or file:// fetch involved.
+    return True, "local_target"
 
-
-def check_ooxml_relationships(
-    zip_path: Path,
-    baseline_external: set[tuple[str, str, str]] | None = None,
-) -> set[tuple[str, str, str]]:
-    """Validates that OOXML package contains no dangerous external path traversals or external resource links.
-
-    Returns the set of ``(rels_part, rel_type, target)`` external relationships
-    seen.  When ``baseline_external`` (the set screened on the INPUT file) is
-    given, an unsafe external relationship that was already present in the
-    baseline is tolerated: only relationships newly introduced by the Office
-    application are fatal.
-    """
+def check_ooxml_relationships(zip_path: Path) -> None:
+    """Validates that OOXML package contains no dangerous external path traversals or external resource links."""
     if not zip_path.is_file():
         raise ValueError(f"파일을 찾을 수 없습니다: {zip_path}")
 
-    external: set[tuple[str, str, str]] = set()
     try:
         with zipfile.ZipFile(zip_path, "r") as zf:
             bad_member = zf.testzip()
@@ -183,16 +194,12 @@ def check_ooxml_relationships(
                             rel_type = elem.get("Type", "")
 
                             if target_mode == "External":
-                                key = (name, rel_type, target)
-                                external.add(key)
+                                # The same classification runs on input and
+                                # output: an input baseline never excuses a
+                                # remote, network or traversing target.
                                 allowed, why = classify_external_relationship(
                                     rel_type, target)
                                 if allowed:
-                                    continue
-                                if baseline_external is not None \
-                                        and key in baseline_external:
-                                    # Already screened when the input was
-                                    # staged; the app merely carried it over.
                                     continue
                                 raise ValueError(
                                     f"{why} 거부 (타입: {rel_type}, "
@@ -239,7 +246,6 @@ def check_ooxml_relationships(
                         raise ValueError(f"잘못된 OOXML 관계 XML ({name}): {e}")
     except (zipfile.BadZipFile, zipfile.LargeZipFile) as e:
         raise ValueError(f"유효한 OOXML ZIP 파일이 아닙니다: {e}")
-    return external
 
 def stage_resources(
     resource_paths: list[str | Path],
@@ -284,13 +290,12 @@ def stage_job(
     input_file: Path,
     workspace_root: Path,
     resources: list[str | Path] | None = None,
-) -> tuple[Path, Path, Path, Path, str, set[tuple[str, str, str]]]:
+) -> tuple[Path, Path, Path, Path, str]:
     """Sets up a unique job directory under workspace and stages copies of input and resources.
 
     Returns:
         job_dir, staged_input_file, staged_working_file, staged_pdf_file,
-        orig_sha256, baseline_external (external relationships screened on
-        the input; passed back to validate_office_file after conversion)
+        orig_sha256
     """
     input_path = Path(input_file)
     check_no_symlinks(input_path)
@@ -299,7 +304,7 @@ def stage_job(
     if not input_resolved.is_file():
         raise ValueError(f"입력 파일이 존재하지 않습니다: {input_path}")
 
-    baseline_external = check_ooxml_relationships(input_resolved)
+    check_ooxml_relationships(input_resolved)
 
     orig_sha256 = compute_sha256(input_resolved.read_bytes())
 
@@ -327,8 +332,7 @@ def stage_job(
             [staged_input_dir, staged_output_dir],
         )
 
-    return (job_dir, staged_input_file, staged_working_file, staged_pdf_file,
-            orig_sha256, baseline_external)
+    return job_dir, staged_input_file, staged_working_file, staged_pdf_file, orig_sha256
 
 def job_receipt_paths(
     job_dir: Path,
@@ -558,8 +562,7 @@ def _run_excel_engine(
     raise ValueError(f"미지원 플랫폼: {sys.platform} (Excel 자동화는 macOS/Windows만 지원)")
 
 
-def validate_office_file(path: Path, expected_kind: str,
-                         baseline_external: set[tuple[str, str, str]] | None = None) -> dict:
+def validate_office_file(path: Path, expected_kind: str) -> dict:
     """Validates that output DOCX/XLSX is readable and structurally sound."""
     if not path.is_file() or path.stat().st_size == 0:
         raise ValueError(f"출력 Office 파일이 생성되지 않았거나 비어 있습니다: {path}")
@@ -579,10 +582,9 @@ def validate_office_file(path: Path, expected_kind: str,
     except (zipfile.BadZipFile, zipfile.LargeZipFile) as e:
         raise ValueError(f"출력 Office ZIP 손상: {e}")
 
-    # Re-screen relationships on the app-rewritten output before publication.
-    # What the input already carried is tolerated; a relationship the app
-    # newly introduced is still fatal.
-    check_ooxml_relationships(path, baseline_external)
+    # Re-screen relationships on the app-rewritten output before publication,
+    # under the same rule as the input.
+    check_ooxml_relationships(path)
 
     return {
         "valid": True,
@@ -652,12 +654,10 @@ def _publish_outputs(
     extra_validation: dict | None = None,
     major_authorization: list | None = None,
     workspace_root: Path | None = None,
-    baseline_external: set[tuple[str, str, str]] | None = None,
 ) -> dict:
     """Publishes validated staged files to new destination directory without overwriting."""
     # Validate staged files BEFORE creating output directory
-    office_meta = validate_office_file(
-        staged_working_file, expected_kind, baseline_external)
+    office_meta = validate_office_file(staged_working_file, expected_kind)
     pdf_meta = validate_pdf_file(staged_pdf_file)
 
     # Verify original file integrity
@@ -812,8 +812,9 @@ def process_word(
     out_path = Path(out_dir).absolute()
     ws_root = Path(workspace).resolve() if workspace else DEFAULT_GROUP_CONTAINER_DIR
 
-    (job_dir, staged_in, staged_work, staged_pdf, orig_sha,
-     baseline_external) = stage_job(input_path, ws_root, resources)
+    job_dir, staged_in, staged_work, staged_pdf, orig_sha = stage_job(
+        input_path, ws_root, resources
+    )
 
     try:
         res = _run_word_engine(staged_work, staged_pdf, timeout=timeout)
@@ -861,7 +862,6 @@ def process_word(
             expected_kind="word",
             engine_stderr=res.stderr or "",
             workspace_root=ws_root,
-            baseline_external=baseline_external,
         )
     except Exception as exc:
         # Word's AppleScript save-as can return zero without creating the PDF.
@@ -1298,8 +1298,9 @@ def process_excel(
     out_path = Path(out_dir).absolute()
     ws_root = Path(workspace).resolve() if workspace else DEFAULT_GROUP_CONTAINER_DIR
 
-    (job_dir, staged_in, staged_work, staged_pdf, orig_sha,
-     baseline_external) = stage_job(input_path, ws_root, resources)
+    job_dir, staged_in, staged_work, staged_pdf, orig_sha = stage_job(
+        input_path, ws_root, resources
+    )
 
     if binding and binding["authority"] == "hort_transform_receipt":
         if (orig_sha != binding["input_sha256"] or
@@ -1486,7 +1487,6 @@ def process_excel(
         engine_stderr=res.stderr or "",
         extra_validation=extra_val,
         workspace_root=ws_root,
-        baseline_external=baseline_external,
     )
     return receipt
 

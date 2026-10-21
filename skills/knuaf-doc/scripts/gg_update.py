@@ -1375,6 +1375,18 @@ def auto_cmd(*, connect=None, download=None):
 
 
 def _auto_run(*, connect=None, download=None):
+    # GUI 관리 설치 판정은 실제 경로 기준이다 (DECISION-R1-05 2·3항).
+    # 링크를 거쳐 실행해도 같은 설치본이므로 같은 답을 내야 하고, 그래서
+    # skill_root()의 링크 거절보다 먼저 본다.  관리 대상이 아니면 아래
+    # 기존 경로(링크 거절 포함)를 그대로 탄다.
+    real_root = Path(os.path.realpath(__file__)).parents[1]
+    if _gui_managed(real_root):
+        real_home = real_root.parent if real_root.name == STATE_DIR_NAME \
+            else real_root.parent.parent
+        # GUI 설치본은 GUI가 판을 고정한다. 남은 저널 정리도 재설치 몫.
+        return {"result": "managed",
+                "journal_present": os.path.lexists(
+                    str(real_home / STATE_DIR_NAME / "journal.json"))}
     try:
         root = skill_root()
     except Refused as exc:
@@ -1385,10 +1397,6 @@ def _auto_run(*, connect=None, download=None):
     home = root.parent if root.name == STATE_DIR_NAME \
         else root.parent.parent
     journal_path = home / STATE_DIR_NAME / "journal.json"
-    if _gui_managed(root):
-        # GUI 설치본은 GUI가 판을 고정한다. 남은 저널 정리도 재설치 몫.
-        return {"result": "managed",
-                "journal_present": os.path.lexists(str(journal_path))}
     if os.path.lexists(str(journal_path)):
         doc, jstate = _read_journal(journal_path, home)
         if jstate != "ok" or doc.get("phase") != "done":

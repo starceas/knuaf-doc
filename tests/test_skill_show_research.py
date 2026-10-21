@@ -73,6 +73,37 @@ class ShowResearchTests(ContractCase):
         self.assertEqual(0, r.returncode, r.stderr)
         self.assertIn("이 출처를 쓰는 사실 2건", r.stdout)
 
+    def test_a_section_id_is_matched_exactly(self):
+        """R1-03: III-1 must not borrow III-10's sources."""
+        core = runtime("gg_core")
+        root = self.project()
+        core.apply(root, {"request_id": "task", "ops": [{
+            "collection": "tasks",
+            "value": {"id": "research-10", "section_id": "III-10",
+                      "required_fields": [],
+                      "source_refs": [{"id": "answer", "revision": 1,
+                                       "locator": "line 1"}]}}]},
+            core.load(root)["revision"])
+        hit = run_show(root, "--section", "III-10")
+        self.assertEqual(0, hit.returncode, hit.stderr)
+        self.assertIn("출처 1건", hit.stdout)
+        miss = run_show(root, "--section", "III-1")
+        self.assertEqual(0, miss.returncode, miss.stderr)
+        self.assertIn("작업 기록에 연결된 출처가 없다", miss.stdout)
+        self.assertNotIn("[answer]", miss.stdout)
+
+    def test_a_task_id_is_not_matched_as_a_substring(self):
+        core = runtime("gg_core")
+        root = self.project()
+        core.apply(root, {"request_id": "task2", "ops": [{
+            "collection": "tasks",
+            "value": {"id": "III-10", "required_fields": [],
+                      "source_refs": [{"id": "answer", "revision": 1,
+                                       "locator": "line 1"}]}}]},
+            core.load(root)["revision"])
+        miss = run_show(root, "--section", "III-1")
+        self.assertIn("작업 기록에 연결된 출처가 없다", miss.stdout)
+
     def test_unknown_source_is_reported_not_raised(self):
         r = run_show(self.project(), "--id", "nope")
         self.assertEqual(0, r.returncode)
