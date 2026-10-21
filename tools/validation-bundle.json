@@ -307,6 +307,54 @@
       "origin": "new",
       "sha256": "32778ed820aefc9f80e9ba426248b12a3e39b6eb0e4ba2de779071a1f6ba9540"
     },
+    "tests/test_skillgaps_integ_plan_review.py": {
+      "origin": "new",
+      "sha256": "9ded43aa23bd525992e7168a87b9428ab64d8b02a9b9e51e03e307be64998a53"
+    },
+    "tests/test_skillgaps_wp1_checks.py": {
+      "origin": "new",
+      "sha256": "0a23ae89e98671cae5fe9188bdbefe833227601ef6147dc1ef98449c98f9bcc3"
+    },
+    "tests/test_skillgaps_wp2_docx.py": {
+      "origin": "new",
+      "sha256": "6126e47560f9b228a1330cbfab56a63be46c9a222e19cbc29fa0219bd0187425"
+    },
+    "tests/test_skillgaps_wp2_hwpx.py": {
+      "origin": "new",
+      "sha256": "6e432c2c6b05cc929d2964047fed1820d369cd9ac246f4accf06f3f019adcccf"
+    },
+    "tests/test_skillgaps_wp2_session.py": {
+      "origin": "new",
+      "sha256": "7cb2c6bf8d1e749ba2983b44110fb4ead46544baf3d5b2339f098b85347327ff"
+    },
+    "tests/test_skillgaps_wp3_calcchain.py": {
+      "origin": "new",
+      "sha256": "3c990f9d5fde3da548c927c16603f9d1435c04ea0ce4627ac3f899db9f5e2b22"
+    },
+    "tests/test_skillgaps_wp3_finance.py": {
+      "origin": "new",
+      "sha256": "4881c99ac41aa7a6db84b1ec1dee80267db7e5c44e7a1e196dfaf585114bd5b5"
+    },
+    "tests/test_skillgaps_wp3_income_analysis.py": {
+      "origin": "new",
+      "sha256": "66e0e0ea22ce6d17d12e8bd4e30933dad2f9cc57d6e5ff3e11d76f10360412fb"
+    },
+    "tests/test_skillgaps_wp4_interview.py": {
+      "origin": "new",
+      "sha256": "6936bf0af7c78ecffe4219281609ad8e20713818ab9a92a2fa18ea07f7517d85"
+    },
+    "tests/test_skillgaps_wp4_review.py": {
+      "origin": "new",
+      "sha256": "a3861071262235a49ea1644b5040bbcf284103a4cbd8c4970fc3d1099e10d6df"
+    },
+    "tests/test_skillgaps_wp4_style.py": {
+      "origin": "new",
+      "sha256": "4d1e7b5dddcaeb62ed2188e9942c81869bf3bde591c1283895fa73b74abad286"
+    },
+    "tests/test_skillgaps_wp4_visuals.py": {
+      "origin": "new",
+      "sha256": "89805eefbd2f61be10dc7a2f2d8a74b905230e295258fff54e77090056d403e3"
+    },
     "tests/test_student_report.py": {
       "note": "P22 학생 신고 시험 — draft/show/send CLI, 가림(경로·파일명·이메일·주민번호·전화·학번, L1-1~3 경계 회귀), UTF-16 상한·private 1900 합성·environment 미포함, 고정 수신처+KNUAF_REPORT_TEST_ENDPOINT 시험 모드·endpoint_changed, sha confirm, claim O_EXCL·claim 획득 뒤 재확인(dup) 한 번 POST, delivery_unknown·--retry-unknown·sent_unrecorded, 계약 형태 외 201 거부, already_sent POST 0회, 문서 연결; loopback 가짜 Worker(실제 응답 형태)만 사용. F1 처분 회귀: 공개 메타데이터 재검사(pii_remaining, 요청 0회), ECMAScript trim(U+FEFF), 계약 밖 502·다른 kind 코드→delivery_unknown과 --retry-unknown, done 기록 내용 검증, CRLF 텍스트 모드에서도 초안 sha=저장 바이트, private 1900 독립 기대값·보조 평면 문자. F1 재확인 회귀: 비문자열 error CLI(JSON 한 개·exit 1·claim 유지·재호출 요청 0), 첫 성공 뒤 영수증 부재+done 손상 시 기본 재호출 요청 0·--retry-unknown만 전송, 다른 sha done 무시. | P26: installed version.json comparison and copy-install draft preview. | P26 CI: bytecode isolation | P27 D3: issue 초안·전송 거절, 과거 issue 영수증 호환, private 가림, SKILL.md S5 단언 | P27 검토 r1: 구 private 초안 send 재검사",
       "origin": "new",
@@ -389,7 +437,7 @@
     "tools/runtime-changes.json": {
       "note": "누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py. P8 declares the fruit_trees first bundle (module registration, two common helper modules, fruit plan, reference-set data and guidance). P9 declares the hort_env_systems first bundle (module registration, hort plan, profile and guidance, reuse-registry entries). | P10: 누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py. P8 declares the fruit_trees first bundle (module registration, two common helper modules, fruit plan, reference-set data and guidance). P9 declares the common XLSX reuse bundle (one new runtime extract file + declared edits to registration, resolver, template guard, and reuse tests). P9-D3 declares the major-specific-precedence edits (registry dedupe, catalog base_for_major, resolver base policy, docs, tests) in the same stage. | P11: 누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py. P8 declares the fruit_trees first bundle (module registration, two common helper modules, fruit plan, reference-set data and guidance). P9 declares the hort_env_systems first bundle (module registration, hort plan, profile and guidance, reuse-registry entries). P10 declares the common interview rules bundle (SKILL.md re-touch, three baseline doc first-changes, specialty-crops premise-probes) re-based onto the P9 parent. P12 declares the industrial_insects first bundle (four read-only insect scripts, locator map, guide and premise probes as new files; nine reuse-registry entries and SKILL/gg.py updates). P13: D4 source identity catalogue, validator, tests and related guidance rebased on accepted P12. P15 declares the D5 useful-life bundle rebased onto accepted P14 (corrected pp133-135 cell mapping and regression test as new files; eight re-declared pack/registry/script/test entries; parent P14 lineage). P18 declares the industrial_insects second bundle (module 0.2.0 product-line question templates and read-only plan/evidence updates; no new runtime file). | PR-2: latest D8/D9 integration; I-01 only measured count constants adjusted in lineage test. Full pytest covers split public/skill test locations. | I2 refreshes after hashes for existing declarations; before hashes, baseline, lineage and allowlist preserved. | I3 refreshes after hashes for existing declarations; before hashes, baseline, lineage and allowlist preserved. | I4 refreshes after hashes for existing declarations; before hashes, baseline, lineage and allowlist preserved. | I5 refreshes only existing after hashes; before hashes, baseline, lineage and allowlist preserved. | I6: existing after hashes refreshed; baseline, before/source/owner/reason and all lineage/allowlist unchanged, counts 167/120/124. | I9: W-D10 문서5개 및 install-manifest after SHA만 갱신; PV2 FAIL 후 알려진 한계 문서화, 코드·테스트·계보·허용목록 불변.",
       "origin": "new",
-      "sha256": "4a3596e207d5745340f3367e3214db85636f2bdac4c1b5fa5bfa32472ab34ee4"
+      "sha256": "e36bac37f65ca820b7fac41b9512ab8a5d5e4acefda64aa97b6233c5ddd52ffd"
     },
     "tools/validation-provenance.json": {
       "note": "This file; declares origins for the validation layer.",
@@ -411,8 +459,8 @@
   "runtime_changes": {
     "approved_new_files": 169,
     "baseline_main": "29abec0ec95369de7ae9e22207349d574f1f46b7",
-    "change_count": 210,
-    "changes_sha256": "3f491d9f73462f2eaddf745cda7c87f49279cfa822d27b4ebe107f98197cfadd",
+    "change_count": 212,
+    "changes_sha256": "0a0c05b12ccde2dc21dbf71a15626ce126fc3110cbd4be1e63b4a6f842c626c0",
     "new_count": 162,
     "parent_candidate": {
       "file_count": 233,
@@ -421,7 +469,7 @@
     },
     "schema": "knuaf-doc/runtime-changes@2",
     "spec": "tools/runtime-changes.json",
-    "spec_sha256": "4a3596e207d5745340f3367e3214db85636f2bdac4c1b5fa5bfa32472ab34ee4",
+    "spec_sha256": "e36bac37f65ca820b7fac41b9512ab8a5d5e4acefda64aa97b6233c5ddd52ffd",
     "stage": "P28",
     "stage_lineage": [
       {
@@ -593,8 +641,8 @@
         "tree_sha256": "78383df4921946e8f37a7a8ae354f08667ff4317d2285c0317a535cbb9e97cfb"
       }
     ],
-    "verified_count": 210
+    "verified_count": 212
   },
   "schema": "knuaf-doc/validation-bundle@3",
-  "validation_tree_sha256": "8d679861d88a451f9c2f04d0cff1c5cbee28cb8ee022ff148e78abfdf187235d"
+  "validation_tree_sha256": "7fe5938e02ba8f0fb06bb54bb58736c16b74ab7b1a64b136beedb93420ce5187"
 }
