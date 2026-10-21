@@ -68,6 +68,11 @@ WARNING_CHECKS = frozenset(
     }
 )
 
+# 차단은 아니지만 통과로 넘기면 안 되는 확인 항목. WARNING_CHECKS와
+# 분리해 둔 이유는 그 집합이 기존 시험에 고정돼 있어서다. 코어와 명령
+# 어댑터는 두 집합을 함께 warning으로 집계한다.
+POLICY_ADVISORY_CHECKS = frozenset({"photo_missing"})
+
 INFO_CHECKS = frozenset({"sourced_objects"})
 
 POLICY_PATH = (
@@ -443,6 +448,33 @@ def project_major(p):
         return None
 
 
+# 학생이 직접 촬영해야 하는 시각자료가 필요한 절(그림·사진 정책 §3의
+# 유형별 대상). 이 제목이 있는데 사진 자리도 삽입된 그림도 없으면
+# "사진이 필요한 본문인데 자리를 만들지 않았다"로 본다.
+_SITE_PHOTO_HEADINGS = (
+    "농장 개요",
+    "농장개요",
+    "예정지",
+    "농장 전경",
+    "시설",
+    "온실",
+    "하우스",
+    "저온저장고",
+    "실습",
+    "작업장",
+    "재배지",
+)
+
+def _needs_site_photo(nodes, text):
+    """현장·시설 사진이 필요한 절 제목이 있는지 확인한다."""
+    for n in nodes:
+        if n["kind"] != "heading":
+            continue
+        title = n["text"]
+        if any(marker in title for marker in _SITE_PHOTO_HEADINGS):
+            return True
+    return False
+
 def _project_major(root):
     """문서 검사 입력의 루트가 프로젝트 폴더일 때 전공을 읽는다."""
     if root is None:
@@ -565,6 +597,21 @@ def plain_policy_check(text, issues, nodes, major_id):
                 "photo_placeholder",
                 "미해결 사진 자리 표기 %d건(제출 전 학생 사진으로 교체): %s…"
                 % (placeholders, img["placeholder_prefix"]),
+            )
+        )
+    elif _needs_site_photo(nodes, text) and not any(
+        n["kind"] == "image" for n in nodes
+    ):
+        # 사진 자리 표기가 0건인데 현장·시설 서술이 있으면, 사진이 필요한
+        # 본문인데도 자리를 만들지 않은 상태다. 자리 표기가 있을 때만
+        # 경고하던 검사는 이 경우를 통과시켰다. 그림·사진 정책상 학생
+        # 촬영 대상인 서술(예정지·시설·작업장)이 있고 삽입된 그림도 없을
+        # 때만 낸다. 차단이 아니라 확인 요청이다.
+        issues.append(
+            (
+                "photo_missing",
+                "사진 자리 0개: 현장·시설 서술이 있으나 학생 촬영 사진 자리"
+                "(%s…)도 삽입된 그림도 없다" % img["placeholder_prefix"],
             )
         )
     return policy
@@ -1017,6 +1064,34 @@ def require_tokens(issues, cid, body, tokens, reason):
         issues.append((cid, reason + ": " + ", ".join(missing)))
 
 
+_BIB_YEAR = re.compile(r"(?<!\d)(?:19|20)\d{2}[a-z]?(?![\d])")
+_BIB_MASK = (
+    re.compile(r"https?://\S+"),
+    re.compile(r"\(\s*조회[^)]*\)"),
+    re.compile(r"「[^」]*」"),
+)
+
+def _bibliography_entry(line):
+    """서지 줄의 (발행연도 match, 저자부)를 찾는다.
+
+    URL·조회일·인용 제목 안의 숫자는 발행연도가 아니고, 그 안의 낱말도
+    저자 이름이 아니다. 이 구간을 가린 뒤 연도 접미(2026b 같은 판 구분)를
+    허용해 발행연도를 찾고, 저자부는 첫 가림 구간 앞에서 자른다.
+    """
+    spans = []
+    masked = line
+    for pattern in _BIB_MASK:
+        for m in pattern.finditer(masked):
+            spans.append((m.start(), m.end()))
+        masked = pattern.sub(
+            lambda m: " " * len(m.group(0)), masked)
+    year = _BIB_YEAR.search(masked)
+    if year is None:
+        return None
+    cut = min(
+        [start for start, _ in spans if start < year.start()] or [year.start()])
+    return year, line[:cut].strip().rstrip(".")
+
 def check(text, base, major_id=None):
     nodes = parse(text, with_spans=True, _with_term_positions=True)
     issues = []
@@ -1241,10 +1316,10 @@ def check(text, base, major_id=None):
             if not re.search(r"\d{4}", body):
                 issues.append(("bibliography_year", "참고문헌 출판연도 없음"))
             for line in body.splitlines():
-                m = re.search(r"\b(?:19|20)\d{2}\b", line)
-                if not m:
+                entry = _bibliography_entry(line)
+                if not entry:
                     continue
-                author_part = line[: m.start()].strip().rstrip(".")
+                _year, author_part = entry
                 if re.search(r"[가-힣]", author_part):
                     # 완전한 2–4음절 이름 토큰만 짝짓는다. 경계가 없으면
                     # "농촌진흥청 국립원예특작과학원" 같은 긴 기관명이 잘려
