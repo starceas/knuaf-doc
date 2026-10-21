@@ -3,19 +3,28 @@
 The lock coordinates this CLI, not the user's UI. An interrupted AppleEvent
 may still run in Office, so an in-flight/unknown record blocks subsequent
 CLI sessions until a human reconciles it. Never infer ownership from focus.
+
+A blocked session reports the exact command that clears the record
+(``gg_office_session.py --recover word``). That command never closes,
+quits or deletes anything: it only rewrites the guard record after a human
+has confirmed that Office no longer holds the staged document, and it
+refuses while another session still holds the lock.
 """
 from __future__ import annotations
 
+import argparse
 import json
 import os
 from pathlib import Path
 import stat
 import subprocess
+import sys
 import time
 
 SESSION_MARKER = "-- gg-office-owned-session-v1"
 SCHEMA = "gg-office-session/v1"
 EXCEL_RECALCULATION_HOLD = "owned_workbook_recalculation_unproven"
+AUDIT_NAME = "recovery-audit.jsonl"
 
 
 def _template(kind: str) -> str:
@@ -117,6 +126,97 @@ else
 end if'''
 
 
+def default_guard_dir() -> Path:
+    return (Path.home() / "Library" / "Group Containers"
+            / "UBF8T346G9.Office" / "ginseng-goat" / ".sessions")
+
+def recovery_command(kind: str, guard_dir: Path | None = None) -> str:
+    """사람이 그대로 칠 수 있는 복구 명령. 가드 경로가 기본값이면 생략한다."""
+    parts = [sys.executable, str(Path(__file__).resolve()), "--recover", kind]
+    if guard_dir is not None and Path(guard_dir) != default_guard_dir():
+        parts += ["--guard-dir", str(guard_dir)]
+    return " ".join("'" + part + "'" if " " in part else part for part in parts)
+
+def recover_session(kind: str, *, guard_dir: Path | None = None) -> dict:
+    """unknown/inflight 가드 기록을 사람 확인 뒤 idle로 되돌린다.
+
+    Office 문서를 닫거나 종료하지 않고, 잡 폴더도 지우지 않는다. 세션이
+    실제로 잠금을 잡고 있으면 아무것도 바꾸지 않고 busy를 돌려준다.
+    """
+    import fcntl
+
+    if kind not in {"word", "excel"}:
+        raise ValueError("kind는 word 또는 excel이어야 합니다: " + str(kind))
+    guard_dir = Path(guard_dir) if guard_dir is not None else default_guard_dir()
+    lock_path = guard_dir / (kind + ".lock")
+    if not lock_path.exists():
+        return {"status": "idle", "kind": kind, "guard_path": str(lock_path),
+                "note": "가드 기록이 없습니다. 복구할 것이 없습니다."}
+    fd = os.open(lock_path, os.O_RDWR | os.O_NOFOLLOW)
+    try:
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            raise ValueError("가드 파일이 일반 파일이 아님: " + str(lock_path))
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return {"status": "busy", "kind": kind, "guard_path": str(lock_path),
+                    "note": "다른 Office 세션이 아직 실행 중입니다. 끝난 뒤 다시 실행하세요."}
+        raw = os.read(fd, 65536)
+        previous = {}
+        if raw:
+            try:
+                previous = json.loads(raw)
+            except ValueError:
+                previous = {"state": "unreadable", "raw": raw[:200].decode("utf-8", "replace")}
+        if previous.get("state") == "idle":
+            return {"status": "idle", "kind": kind, "guard_path": str(lock_path),
+                    "note": "이미 idle입니다."}
+        record = {"state": "idle", "recovered_from": previous.get("state"),
+                  "job_dir": previous.get("job_dir"), "kind": kind,
+                  "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
+        data = json.dumps({"state": "idle", "job_dir": previous.get("job_dir")},
+                          ensure_ascii=False).encode("utf-8")
+        os.lseek(fd, 0, os.SEEK_SET)
+        os.ftruncate(fd, 0)
+        os.write(fd, data)
+        os.fsync(fd)
+        _append_audit(guard_dir, record)
+        return {"status": "recovered", "kind": kind, "guard_path": str(lock_path),
+                "previous_state": record["recovered_from"],
+                "job_dir": record["job_dir"],
+                "audit": str(guard_dir / AUDIT_NAME),
+                "note": ("가드 기록만 idle로 바꿨습니다. Office 문서·잡 폴더·"
+                         "산출물은 그대로입니다. 남은 문서가 있으면 Word에서 "
+                         "직접 닫으세요.")}
+    finally:
+        os.close(fd)
+
+def _append_audit(guard_dir: Path, record: dict) -> None:
+    path = guard_dir / AUDIT_NAME
+    line = json.dumps(record, ensure_ascii=False).encode("utf-8") + b"\n"
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_NOFOLLOW, 0o600)
+    try:
+        os.write(fd, line)
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+def main(argv=None) -> int:
+    parser = argparse.ArgumentParser(
+        description="Office 세션 가드 복구(문서 닫기·앱 종료·파일 삭제 없음)")
+    parser.add_argument("--recover", choices=("word", "excel"), required=True,
+                        help="unknown/inflight 가드 기록을 idle로 되돌린다")
+    parser.add_argument("--guard-dir", help="기본 가드 폴더 대신 쓸 경로")
+    args = parser.parse_args(argv)
+    try:
+        value = recover_session(args.recover, guard_dir=args.guard_dir)
+    except (ValueError, OSError) as error:
+        print(json.dumps({"status": "failed", "reason": str(error)},
+                         ensure_ascii=False))
+        return 2
+    print(json.dumps(value, ensure_ascii=False))
+    return 0 if value["status"] in {"recovered", "idle"} else 2
+
 def read_session(job_dir: Path) -> dict | None:
     path = Path(job_dir) / "office_session.json"
     if not path.exists():
@@ -164,9 +264,15 @@ def run_session(kind: str, script: str, args: list[str], timeout: int, *,
         (job / "office_session.json").write_text(
             json.dumps(evidence, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    def blocked(reason):
+    def blocked(reason, recovery=None):
         record(reason, "not_attempted")
-        result = subprocess.CompletedProcess(["osascript"], 2, "", reason)
+        text = reason
+        if recovery:
+            evidence["recovery"] = recovery
+            text = (reason + "\n복구: " + recovery
+                    + "\nOffice에 이 작업의 문서가 남아 있지 않은지 확인한 뒤 실행하세요. "
+                      "이 명령은 문서를 닫거나 앱을 종료하거나 파일을 지우지 않습니다.")
+        result = subprocess.CompletedProcess(["osascript"], 2, "", text)
         result.office_session = dict(evidence)
         return result
 
@@ -174,8 +280,7 @@ def run_session(kind: str, script: str, args: list[str], timeout: int, *,
             or not job.name.startswith("job-") or pdf.parent != work.parent
             or not work.is_file() or work.is_symlink() or pdf.exists()):
         raise ValueError("Office automation requires a fresh staged job/output copy")
-    guard_dir = guard_dir or (Path.home() / "Library" / "Group Containers"
-                             / "UBF8T346G9.Office" / "ginseng-goat" / ".sessions")
+    guard_dir = guard_dir or default_guard_dir()
     guard_dir.mkdir(parents=True, exist_ok=True)
     lock_path = guard_dir / (kind + ".lock")
     evidence["guard_path"] = str(lock_path)
@@ -191,12 +296,13 @@ def run_session(kind: str, script: str, args: list[str], timeout: int, *,
             return blocked("office_session_busy")
         raw_state = os.read(fd, 65536)
         if raw_state:
+            recovery = recovery_command(kind, guard_dir)
             try:
                 previous = json.loads(raw_state)
                 if previous.get("state") != "idle":
-                    return blocked("previous_office_session_unknown")
+                    return blocked("previous_office_session_unknown", recovery)
             except (ValueError, AttributeError):
-                return blocked("office_guard_state_unreadable")
+                return blocked("office_guard_state_unreadable", recovery)
 
         def guard_state(state):
             raw = json.dumps({"state": state, "job_dir": str(job)},
@@ -253,3 +359,8 @@ def run_session(kind: str, script: str, args: list[str], timeout: int, *,
         if locked:
             fcntl.flock(fd, fcntl.LOCK_UN)
         os.close(fd)
+
+if __name__ == "__main__":
+    for _stream in (sys.stdout, sys.stderr):
+        getattr(_stream, "reconfigure", lambda **_: None)(encoding="utf-8")
+    raise SystemExit(main())
