@@ -71,6 +71,11 @@ class RelationshipTests(ContractCase):
             ("oleObject", "//example.invalid/share/object.bin"),
             ("oleObject", "../../outside/object.bin"),
             ("attachedTemplate", "file://example.invalid/share/remote.dotm"),
+            # R1b: the same shapes reached through URL parsing or encoding.
+            ("attachedTemplate",
+             "file:////example.invalid/share/remote.dotm"),
+            ("attachedTemplate",
+             "%5C%5Cexample.invalid%5Cshare%5Cremote.dotm"),
         )
         for suffix, target in cases:
             with self.subTest(target=target):
@@ -86,6 +91,10 @@ class RelationshipTests(ContractCase):
         for suffix, target in (
             ("attachedTemplate", "https://example.invalid/remote.dotm"),
             ("oleObject", "\\\\example.invalid\\share\\object.bin"),
+            ("attachedTemplate",
+             "file:////example.invalid/share/remote.dotm"),
+            ("attachedTemplate",
+             "%5C%5Cexample.invalid%5Cshare%5Cremote.dotm"),
         ):
             with self.subTest(target=target):
                 path = _docx(self.root / "word.docx", _rel(

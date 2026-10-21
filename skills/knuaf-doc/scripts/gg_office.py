@@ -19,7 +19,7 @@ import hashlib
 import importlib.util
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 import posixpath
 import shutil
 import subprocess
@@ -114,6 +114,28 @@ BENIGN_EXTERNAL_REL_SUFFIXES = ("/attachedTemplate", "/glossaryDocument")
 def _rel_type_suffix(rel_type: str) -> str:
     return "/" + rel_type.rstrip("/").rsplit("/", 1)[-1]
 
+def _fully_unquoted(text: str) -> str:
+    """Percent-decode until stable, so an encoded separator cannot hide."""
+    for _ in range(3):
+        decoded = urllib.parse.unquote(text)
+        if decoded == text:
+            break
+        text = decoded
+    return text
+
+def _is_network_path(path: str) -> bool:
+    """True for UNC / ``\\\\host`` / ``//host`` shapes, in either separator.
+
+    Checked on the *decoded* path: ``file:////host/share`` and
+    ``%5C%5Chost%5Cshare`` are both network paths even though neither carries
+    a netloc and neither starts with a literal backslash pair in the raw
+    target.  ``PureWindowsPath.drive`` also reports the share of a UNC path,
+    which a plain local path or a drive path never does.
+    """
+    if path.replace("\\", "/").startswith("//"):
+        return True
+    return len(PureWindowsPath(path).drive) > 2
+
 def _local_external_target(target: str) -> tuple[bool, str]:
     """Returns (allowed, reason) for a non-hyperlink external target.
 
@@ -122,6 +144,10 @@ def _local_external_target(target: str) -> tuple[bool, str]:
     UNC / ``\\\\host`` / ``//host`` network paths, and ``..`` traversal out of
     the package's own directory.  A single-letter scheme is a drive letter,
     not a URL.
+
+    The network and traversal rules apply to the *resolved* path as well as
+    to the raw target: decoding and URL parsing must not be a way around
+    them.
     """
     raw = target.strip()
     if not raw:
@@ -133,13 +159,15 @@ def _local_external_target(target: str) -> tuple[bool, str]:
     if scheme == "file":
         if parts.netloc:
             return False, "네트워크 파일 경로"
-        path = urllib.parse.unquote(parts.path)
+        path = _fully_unquoted(parts.path)
     elif len(scheme) == 1:
-        path = urllib.parse.unquote(raw)
+        path = _fully_unquoted(raw)
     elif scheme:
         return False, "원격 대상"
     else:
-        path = urllib.parse.unquote(raw)
+        path = _fully_unquoted(raw)
+    if _is_network_path(path):
+        return False, "네트워크 경로"
     if any(part == ".." for part in path.replace("\\", "/").split("/")):
         return False, "상위 경로 탈출"
     return True, "local_target"

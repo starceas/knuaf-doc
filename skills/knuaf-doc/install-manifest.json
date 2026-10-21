@@ -136,7 +136,7 @@
   "scripts/gg_kordoc.py": "5d42c404b4652fee7a401ec629eec12c154af17f6cc19b3147accc722bfdf48c",
   "scripts/gg_lock.py": "8ff8228189ee9e44633b836b50068843d5510cb188c9e98443c1ddc2f4ea0c40",
   "scripts/gg_major_contract.py": "012ecb0313395ee8322d7a478a2d45c916514847a10a3ede6404f35ef0e116e6",
-  "scripts/gg_office.py": "1c0def3e8087ab5528cde6df36ab55e18ad98848d56f1cdc662120830e43041b",
+  "scripts/gg_office.py": "ba6da6a8dcd35b663f8d516df9ae69a0d1233cb8d9724b7d7511d64a07e24bef",
   "scripts/gg_office_session.py": "e4b5a7b10ef2210a1439c165577137f42b66bdfb5834ee8f20607386be4f7b8e",
   "scripts/gg_office_win.py": "0a9c848baf04ea763a01bddbc868221b36256dbf055e0d4219e8bbe35efa3d52",
   "scripts/gg_orchard_production.py": "a66466e1ea91aedf4c9e1411c0a9e48bbe7cca279c68fff3e1ca760307af52d7",
