@@ -56,3 +56,35 @@ stale 자동 감지와 원고 쓰기 시점의 물리적 차단은 현재 지원
 `gg.py check`/`status` 출력의 `check_id="fact_semantics"`는 경제 사실 각각의 메타데이터 자체가 유효한지(알 수 없는 `measure.kind`·잘못된 currency·허용 외 `finance_role` 등 `gg_fact_semantics.classify_fact`의 판정)를 보고한다. `check_id="finance_review"`는 `review_kind`가 `content`·`logic`·`calculation` 셋 중 하나이면서 경제 사실을 대상으로 하는 검토 기록이 현재 유효한 의미 보고서와 묶여 있는지를 보고한다(Lane 27 — 세 종류가 같은 freshness 계약을 공유). `_finance_review_state`(DESIGN.md §7)가 돌려주는 상태는 다섯 가지다. `not_applicable`은 세 종류 검토가 아니거나 경제 사실을 대상으로 하지 않는 경우로 항목이 만들어지지 않는다. `unresolved`는 경제 검토인데 묶인 보고서(`path`·`report_hash`)가 없는 상태이며 `gg-finance-semantics-report/1` 보고서를 바인딩하면 해소된다. `invalid`는 묶인 파일이 읽히지 않거나 바이트 해시가 다르거나 JSON·스키마가 보고서 형식이 아니거나 연결된 관측 기록이 무효인 상태로, 파일과 기록을 다시 맞춰야 한다. `stale`은 보고서는 유효하지만 검사 범위·바인딩·결과·입력 개정·지문 등이 현재 정본과 어긋나는 상태이며 의미 검토를 다시 실행해 새 보고서로 바인딩해야 한다. `fresh`는 모든 조건이 맞는 상태로 역시 항목이 만들어지지 않는다.
 
 쓰기 경로와 읽기 경로의 역할은 다르다. 새 경제 검토(content·logic·calculation)의 `apply` 등록, 그 검토의 관측 기록 `ingest_review_observation`, 경제 사실을 대상으로 하는 새 출력의 `adopt_output` 등록은 각각 쓰기 시점에 바인딩된 보고서를 검사한다 — 파일이 읽히고, 바이트 해시가 기록과 같고, `gg-finance-semantics-report/1` 스키마와 `semantics` 객체를 갖는 고정 무결성과 함께 현재성도 다시 계산한다. 출력은 `checks[]` 항목의 `evidence_path`·`evidence_hash`가 그 보고서를 가리켜야 한다([section-ledger.md](section-ledger.md)의 출력 checks 계약과 같은 필드). 세 쓰기 경로는 `_validate_new_economic_review_binding` 하나를 공유하며, 그 안의 `_fresh_semantics_issues`가 현재 프로젝트에서 registry·검사 범위·소비 바인딩·입력 지문을 새로 도출해 보고서 선언과 대조한다 — 어긋나면 등록·발행·채택이 그 자리에서 거부된다(Lane 25). 읽기 시점의 `_finance_review_state`는 같은 재계산을 매번 다시 수행하고 저장된 `status="pass"` 문자열을 신뢰하지 않는다 — 쓰기·읽기 두 층이 각각 현재성을 검증한다. 따라서 과거에 유효했던 보고서·검토 조합도 입력이 바뀌면 `stale`로 되돌아오고, `submission_candidate` 출력은 이 항목이 차단 상태인 한 게이트를 통과하지 못한다. `draft`·`review` 출력은 차단 없이 차단 내용을 보존해보낸다([cross-review.md](cross-review.md)의 검토 계약과 같은 원칙).
+
+## 계획 궤적·기초자산·면적 분모 검사
+
+`check`의 `check_id="finance_plan_review"`는 학과 17시트 통합문서의 캐시 값만 읽어 다음을 본다. 구현은 `scripts/gg_finance_tables.py`의 `review_plan()`이며 통합문서를 고치지 않는다. 검사 행의 target은 `finance`다.
+
+### 기초재무상태 ↔ 학생이 말한 보유 자산
+
+- 학생이 답한 기초일 보유 자산은 `finance.opening_assets.<role>` 사실로 등록한다. role은 `land`·`building`·`plants`·`animals`·`machines`·`cash`·`materials`·`produce`이고 값·단위는 엑셀과 같은 **천원**이다. 답하지 않은 항목은 0으로 본다.
+- `1. 기초재무상태조사`의 자산 블록 합계와 항목별로 대조한다(허용 오차 0.5% 또는 1천원). 불일치는 `OPENING_ASSETS_MISMATCH`(error)다. 합계만 맞고 구성이 다른 경우(예: 학생은 현금만 있다고 했는데 엑셀에 토지가 잡힌 경우)도 항목 검사에서 잡힌다.
+- 사실이 없으면 `OPENING_ASSETS_UNDECLARED`(warning, 사용자 확인)로 남기고 통합문서 항목별 금액을 evidence에 보여 준다. 이 경고는 본문을 막지 않는다.
+
+### 5개년 손익 궤적
+
+- `12 손익계획`의 연도별 `당기순이익`을 읽는다.
+- 모든 연도가 0 이하이면 `PLAN_ALL_YEARS_DEFICIT`(error)다. 학생에게 연도별 숫자와 조정 후보를 보여 준 뒤에만 진행한다.
+- 목표연도만 흑자이고 5개년 누적이 0 이하이면 `PLAN_TRAJECTORY_NOT_RECOVERED`(warning)다.
+- 3년차 이후 매출이 전년 대비 2배를 넘으면 `PLAN_GROWTH_JUMP`(warning)다. 1년차 부분 작기에서 2년차로 넘어가는 증가는 정상 범위로 보고 검사하지 않는다.
+- 경고는 차단이 아니라 본문에 근거를 밝히라는 요구다.
+
+### 손익–현금 차이
+
+- 연도별 `당기순이익`과 `14. 현금흐름계획`의 `누적수지균형`을 비교한다. 1년차의 직전 현금은 `1. 기초재무상태조사`의 현금 합계다.
+- 당기순이익이 0 미만인데 현금 잔액이 늘면 `CASH_PROFIT_DIVERGENCE`(warning)다. evidence에 그 해의 감가상각비·투자·융자금·순이익을 싣는다.
+- 보고서는 차이가 감가상각·투자·융자·재고 중 어느 항목 때문인지 한 문단으로 설명한다. 설명 없이 숫자만 옮기지 않는다.
+
+### 면적 분모
+
+- 시설·재배·베드·경영 면적은 `finance.area.<role>` 사실로 한 번만 선언한다. role은 `facility_m2`·`cultivation_m2`·`bed_m2`·`management_m2`이고 단위는 ㎡다.
+- 선언값과 통합문서의 `3.투자계획` 비닐하우스 규격, `6. 생산계획` 재배면적, `9 .경비계획` 경영면적이 다르면 `AREA_DECLARATION_MISMATCH`(error)다.
+- 본문에서 `재배면적은 1,500 ㎡`처럼 역할 라벨 뒤에 온 면적이 선언값과 다르면 `AREA_BODY_MISMATCH`(error)다.
+- 배지량 계산문이 `(1,500 ㎡ ÷ 1.9 m) × 0.15 m`처럼 베드 면적 대신 재배·시설 면적을 쓰면 `AREA_BED_BASE_MISMATCH`(error)다. 베드 면적 선언이 없으면 `AREA_BED_UNDECLARED`(warning)다.
+- 선언이 하나도 없으면 `AREA_DENOMINATORS_UNDECLARED`(warning)로 통합문서에서 읽은 면적을 보여 준다. 선언 없이 통과시키지 않되 본문을 막지는 않는다.
