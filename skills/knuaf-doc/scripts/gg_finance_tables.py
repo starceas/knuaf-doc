@@ -1626,10 +1626,11 @@ def _opening_cash(workbook):
 
 _BED_TOKEN = re.compile(
     r"([0-9][0-9,]*(?:\.[0-9]+)?)\s*(㎡|m2|m²|제곱미터|㎥|m3|m³|cm|m)")
+# (면적 차원, 길이 차원, m 기준 배율) — cm는 0.01 m다.
 _UNIT_DIMENSION = {
-    "㎡": (1, 0), "m2": (1, 0), "m²": (1, 0), "제곱미터": (1, 0),
-    "㎥": (1, 1), "m3": (1, 1), "m³": (1, 1),
-    "m": (0, 1), "cm": (0, 1),
+    "㎡": (1, 0, 1.0), "m2": (1, 0, 1.0), "m²": (1, 0, 1.0), "제곱미터": (1, 0, 1.0),
+    "㎥": (1, 1, 1.0), "m3": (1, 1, 1.0), "m³": (1, 1, 1.0),
+    "m": (0, 1, 1.0), "cm": (0, 1, 0.01),
 }
 _AREA_DIMENSION = (1, 0)
 
@@ -1658,7 +1659,9 @@ def _bed_area_equivalent(text):
     previous_end = None
     for match in tokens:
         amount = float(match.group(1).replace(",", ""))
-        unit = _UNIT_DIMENSION[match.group(2)]
+        area_axis, length_axis, scale = _UNIT_DIMENSION[match.group(2)]
+        amount *= scale
+        unit = (area_axis, length_axis)
         if value is None:
             value, dimension = amount, unit
         else:

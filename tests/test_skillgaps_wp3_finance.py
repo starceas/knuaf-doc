@@ -20,6 +20,7 @@ import gg_finance_tables as ft  # noqa: E402
 
 NARROW_BED = "* 배지: 물량 = (1,500㎡ ÷ 1.9m) × 0.15m = 118.4㎥"
 WIDE_BED = "* 배지: 물량 = (1,500㎡ ÷ 1.9m) × 1.0m × 0.15m = 118.4㎥"
+CM_BED = "* 배지: 물량 = (1,500㎡ ÷ 1.9m) × 100cm × 15cm = 118.4㎥"
 
 
 def plan_workbook(path, *, years=(2027, 2028, 2029, 2030, 2031),
@@ -189,6 +190,27 @@ class PlanReviewTests(unittest.TestCase):
                                "management_m2": 1500, "bed_m2": 789.4737})
         self.assertNotIn("AREA_BED_BASE_MISMATCH", codes(result))
         self.assertNotIn("AREA_BED_UNVERIFIABLE", codes(result))
+
+    def test_bed_area_in_centimeters_matches_the_meter_form(self):
+        declarations = {"facility_m2": 1500, "cultivation_m2": 1500,
+                        "management_m2": 1500, "bed_m2": 789.4737}
+        plan_workbook(self.path, bed_note=WIDE_BED)
+        meters = self.review(area_declarations=declarations)
+        plan_workbook(self.path, bed_note=CM_BED)
+        centimeters = self.review(area_declarations=declarations)
+        for result in (meters, centimeters):
+            self.assertNotIn("AREA_BED_BASE_MISMATCH", codes(result))
+            self.assertNotIn("AREA_BED_UNVERIFIABLE", codes(result))
+        self.assertEqual(codes(meters), codes(centimeters))
+
+    def test_centimeter_scale_is_not_taken_as_meters(self):
+        plan_workbook(self.path, bed_note=CM_BED)
+        result = self.review(
+            area_declarations={"facility_m2": 1500, "cultivation_m2": 1500,
+                               "management_m2": 1500, "bed_m2": 118.4211})
+        issue = next(i for i in result["issues"]
+                     if i["code"] == "AREA_BED_BASE_MISMATCH")
+        self.assertAlmostEqual(issue["evidence"]["used_m2"], 789.4737, places=3)
 
     def test_bed_area_omitted_width_still_fails(self):
         plan_workbook(self.path, bed_note=NARROW_BED)
