@@ -137,6 +137,24 @@ def recovery_command(kind: str, guard_dir: Path | None = None) -> str:
         parts += ["--guard-dir", str(guard_dir)]
     return " ".join("'" + part + "'" if " " in part else part for part in parts)
 
+def guard_record(raw: bytes) -> dict:
+    """가드 파일 내용을 dict로 읽는다.
+
+    깨진 JSON뿐 아니라 ``[]``·``null``·문자열·숫자처럼 dict가 아닌 유효
+    JSON도 같은 '읽을 수 없음'으로 다룬다. 두 호출부(run_session·복구)가
+    같은 판정을 쓰도록 한 곳에 둔다.
+    """
+    if not raw:
+        return {}
+    try:
+        value = json.loads(raw)
+    except ValueError:
+        value = None
+    if not isinstance(value, dict):
+        return {"state": "unreadable",
+                "raw": raw[:200].decode("utf-8", "replace")}
+    return value
+
 def recover_session(kind: str, *, guard_dir: Path | None = None) -> dict:
     """unknown/inflight 가드 기록을 사람 확인 뒤 idle로 되돌린다.
 
@@ -161,13 +179,7 @@ def recover_session(kind: str, *, guard_dir: Path | None = None) -> dict:
         except BlockingIOError:
             return {"status": "busy", "kind": kind, "guard_path": str(lock_path),
                     "note": "다른 Office 세션이 아직 실행 중입니다. 끝난 뒤 다시 실행하세요."}
-        raw = os.read(fd, 65536)
-        previous = {}
-        if raw:
-            try:
-                previous = json.loads(raw)
-            except ValueError:
-                previous = {"state": "unreadable", "raw": raw[:200].decode("utf-8", "replace")}
+        previous = guard_record(os.read(fd, 65536))
         if previous.get("state") == "idle":
             return {"status": "idle", "kind": kind, "guard_path": str(lock_path),
                     "note": "이미 idle입니다."}
@@ -265,13 +277,16 @@ def run_session(kind: str, script: str, args: list[str], timeout: int, *,
             json.dumps(evidence, ensure_ascii=False, indent=2), encoding="utf-8")
 
     def blocked(reason, recovery=None):
-        record(reason, "not_attempted")
+        # The command must land in the on-disk receipt, not only in the
+        # returned object: a later flow that reads office_session.json
+        # alone still has to find it.
         text = reason
         if recovery:
             evidence["recovery"] = recovery
             text = (reason + "\n복구: " + recovery
                     + "\nOffice에 이 작업의 문서가 남아 있지 않은지 확인한 뒤 실행하세요. "
                       "이 명령은 문서를 닫거나 앱을 종료하거나 파일을 지우지 않습니다.")
+        record(reason, "not_attempted")
         result = subprocess.CompletedProcess(["osascript"], 2, "", text)
         result.office_session = dict(evidence)
         return result
@@ -297,12 +312,11 @@ def run_session(kind: str, script: str, args: list[str], timeout: int, *,
         raw_state = os.read(fd, 65536)
         if raw_state:
             recovery = recovery_command(kind, guard_dir)
-            try:
-                previous = json.loads(raw_state)
-                if previous.get("state") != "idle":
-                    return blocked("previous_office_session_unknown", recovery)
-            except (ValueError, AttributeError):
+            previous = guard_record(raw_state)
+            if previous.get("state") == "unreadable":
                 return blocked("office_guard_state_unreadable", recovery)
+            if previous.get("state") != "idle":
+                return blocked("previous_office_session_unknown", recovery)
 
         def guard_state(state):
             raw = json.dumps({"state": state, "job_dir": str(job)},

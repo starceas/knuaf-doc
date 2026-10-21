@@ -52,6 +52,62 @@ class OfficeRecoveryTests(ContractCase):
         self.assertIn("--recover word", command)
         self.assertIn("--guard-dir", command)
 
+    def test_blocked_receipt_on_disk_carries_recovery_command(self):
+        result = self._blocked('{"state":"unknown"}')
+        command = self.session.recovery_command("word", self.guard)
+        receipt = json.loads(
+            (self.job / "office_session.json").read_text(encoding="utf-8"))
+        self.assertEqual(command, result.office_session["recovery"])
+        self.assertEqual(command, receipt["recovery"])
+        self.assertEqual("previous_office_session_unknown", receipt["reason"])
+
+    def test_non_object_guard_json_is_unreadable_and_recoverable(self):
+        for state in ("[]", "null", '"text"', "42"):
+            with self.subTest(state=state):
+                result = self._blocked(state)
+                self.assertEqual(2, result.returncode)
+                self.assertIn("office_guard_state_unreadable", result.stderr)
+                command = self.session.recovery_command("word", self.guard)
+                self.assertIn(command, result.stderr)
+                receipt = json.loads(
+                    (self.job / "office_session.json").read_text(encoding="utf-8"))
+                self.assertEqual(command, receipt["recovery"])
+
+                value = self.session.recover_session("word", guard_dir=self.guard)
+                self.assertEqual("recovered", value["status"])
+                self.assertEqual("unreadable", value["previous_state"])
+                self.assertEqual(
+                    {"state": "idle", "job_dir": None},
+                    json.loads((self.guard / "word.lock").read_text(encoding="utf-8")))
+
+                retry = self.session.run_session(
+                    "word", self.session.WORD_APPLESCRIPT_TEMPLATE.format(timeout=5),
+                    [str(self.work), str(self.pdf)], 5,
+                    run_raw=mock.Mock(side_effect=[
+                        subprocess.CompletedProcess(
+                            ["osascript"], 0, "GG_OFFICE_INVENTORY|0", ""),
+                        subprocess.CompletedProcess(
+                            ["osascript"], 0,
+                            "GG_OFFICE_SESSION|closed|saved|synthetic", "")]),
+                    guard_dir=self.guard)
+                self.assertEqual(0, retry.returncode)
+                self.assertEqual("closed", retry.office_session["cleanup"])
+
+    def test_cli_recovers_non_object_guard_as_json(self):
+        for state in ("[]", "null"):
+            with self.subTest(state=state):
+                (self.guard / "word.lock").write_text(state, encoding="utf-8")
+                result = subprocess.run(
+                    [sys.executable, "-B", str(Path(self.session.__file__)),
+                     "--recover", "word", "--guard-dir", str(self.guard)],
+                    capture_output=True, text=True)
+                self.assertEqual(0, result.returncode,
+                                 result.stdout + result.stderr)
+                self.assertNotIn("Traceback", result.stderr)
+                payload = json.loads(result.stdout)
+                self.assertEqual("recovered", payload["status"])
+                self.assertEqual("unreadable", payload["previous_state"])
+
     def test_recovery_clears_record_without_touching_job_files(self):
         (self.guard / "word.lock").write_text('{"state":"unknown"}', encoding="utf-8")
         before = {str(p): p.read_bytes() for p in self.job.rglob("*") if p.is_file()}
