@@ -2425,15 +2425,46 @@ _FINANCE_ASSET_ROLES = (
     "materials", "produce")
 _FINANCE_AREA_ROLES = (
     "facility_m2", "cultivation_m2", "bed_m2", "management_m2")
+# review_plan은 학과 17시트 통합문서 전용 검사다. 다른 재무 프로필
+# (예: 원예 18시트)에 돌리면 없는 시트를 결함으로 오판한다(INTEG-R1-02).
+_FINANCE_PLAN_PROFILE = "school_17_sheet_v1"
+# 12 손익계획·1. 기초재무상태조사 금액 단위는 천원이고, 재무 게이트의
+# 목표연도 손익 사실은 원 단위다(INTEG-R1-03 반례).
+_FINANCE_PLAN_WON_PER_UNIT = 1000.0
 
-def _finance_plan_workbook(root, p):
-    """현재 정본 재무 통합문서 경로.
+def _finance_plan_supported(p):
+    """이 검사가 실제로 지원하는 재무 프로필인지.
 
-    해시가 맞는 ``.xlsx`` 원자료만 후보로 삼고, revision이 높은 쪽,
-    같으면 나중에 등록된 쪽을 고른다. 후보가 없으면 None — 경로·해시
-    상태는 기존 ``source_hash``/``source_missing`` 검사가 보고한다.
+    ``finance_gate``의 ``supported``는 "어떤 재무 프로필이든 하나 이상
+    지원"이라는 뜻이라, 18시트 원예 통합문서까지 17시트 검사를 돌리면
+    전공 계약을 깨뜨린다.
     """
-    chosen = None
+    import gg_major_contract as mc
+
+    try:
+        registry = mc.default_registry()
+        module = registry.resolve(
+            mc.binding_from_project(registry, p).major_id)
+    except mc.MajorContractError:
+        return False
+    return any(
+        c.status == "supported" and c.profile == _FINANCE_PLAN_PROFILE
+        for c in module.finance_capabilities)
+
+def _finance_gate_target(p):
+    """유효한 목표연도 손익 기록 → (연도, 원). 없으면 (None, None)."""
+    fact = _finance_gate_fact(p, FINANCE_GATE_PROFIT)
+    if fact is None:
+        return None, None
+    try:
+        amount = float(str(fact.get("value")).replace(",", ""))
+    except (TypeError, ValueError):
+        return None, None
+    return fact.get("period"), amount
+
+def _finance_plan_candidates(root, p):
+    """해시가 현재 파일과 같은 ``.xlsx`` 원자료 경로(정렬)."""
+    found = set()
     for source in p.get("sources", {}).values():
         path = source.get("path")
         if not isinstance(path, str) or not path.lower().endswith(".xlsx"):
@@ -2443,10 +2474,61 @@ def _finance_plan_workbook(root, p):
                 continue
         except (OSError, ValueError):
             continue
-        rank = source.get("revision") or 0
-        if chosen is None or rank >= chosen[0]:
-            chosen = (rank, path)
-    return chosen[1] if chosen else None
+        found.add(path)
+    return sorted(found)
+
+def _finance_plan_matches_target(report, period, target):
+    """이 계획의 목표연도 손익이 재무 게이트 기록과 같은가."""
+    if period is None or target is None:
+        return False
+    years = report.get("years") or []
+    profits = (report.get("figures") or {}).get("net_profit") or []
+    if not years or not profits or profits[-1] is None:
+        return False
+    if str(years[-1]) != str(period).rstrip("년"):
+        return False
+    won = float(profits[-1]) * _FINANCE_PLAN_WON_PER_UNIT
+    return abs(won - target) <= max(_FINANCE_PLAN_WON_PER_UNIT,
+                                    abs(target) * 0.001)
+
+def _finance_plan_workbook(root, p, review):
+    """(검사할 경로, 그 검사 결과, 후보 목록).
+
+    후보가 하나면 그것이 현재 계획이다. 둘 이상이면 **기존 재무 게이트의
+    목표연도 손익 기록과 일치하는 하나**만 고른다. source ``revision``은
+    레코드 편집 횟수일 뿐 계획의 신구 관계가 아니므로 순서·개정 수로
+    고르지 않는다(INTEG-R1-01). 확정할 수 없으면 경로는 None이고,
+    호출부가 모호함을 드러낸다.
+    """
+    candidates = _finance_plan_candidates(root, p)
+    if not candidates:
+        return None, None, candidates
+    if len(candidates) == 1:
+        return candidates[0], review(local(root, candidates[0])), candidates
+    period, target = _finance_gate_target(p)
+    matched = []
+    for path in candidates:
+        try:
+            report = review(local(root, path))
+        except Exception:  # 후보 판별 실패는 그 후보만 제외한다
+            continue
+        if _finance_plan_matches_target(report, period, target):
+            matched.append((path, report))
+    if len(matched) == 1:
+        return matched[0][0], matched[0][1], candidates
+    return None, None, candidates
+
+def _finance_deficit_accepted(p, gate_state, report):
+    """현재 계획과 같은 숫자에 대한 유효한 적자 수용인가.
+
+    게이트 상태 문자열만으로 면제하지 않는다 — 목표연도 손익 기록이 이
+    계획의 마지막 연도·값과 일치해야 한다. 시트·캐시 미판독(blocked)과
+    수용 전 적자는 그대로 차단된다(INTEG-R1-03).
+    """
+    if gate_state.get("state") != "deficit_accepted":
+        return False
+    period, target = _finance_gate_target(p)
+    return _finance_plan_matches_target(report, period, target)
 
 def _finance_declared_numbers(p, prefix, roles, unit):
     """``finance.<group>.<role>`` 사실을 {role: 값}으로 모은다.
@@ -2471,24 +2553,27 @@ def _finance_declared_numbers(p, prefix, roles, unit):
             continue
     return declared or None
 
-def _add_finance_plan_review(root, p, body, add):
+def _add_finance_plan_review(root, p, body, add, gate_state):
     """WP-3 ``review_plan``을 ``finance_plan_review`` 행으로 연결한다.
 
     ``blocked``는 검사 미수행이다 — 통과로 소비하지 않고 제출 후보를
     막는다(HANDOFF-WP3-to-WP1). ``pending``은 경고라 막지 않는다.
     """
-    workbook = _finance_plan_workbook(root, p)
-    if workbook is None:
-        return
-    try:
-        report = _finance_tables_mod().review_plan(
-            local(root, workbook),
-            declared_assets=_finance_declared_numbers(
-                p, "finance.opening_assets.", _FINANCE_ASSET_ROLES, "천원"),
-            area_declarations=_finance_declared_numbers(
-                p, "finance.area.", _FINANCE_AREA_ROLES, "㎡"),
+    declared_assets = _finance_declared_numbers(
+        p, "finance.opening_assets.", _FINANCE_ASSET_ROLES, "천원")
+    area_declarations = _finance_declared_numbers(
+        p, "finance.area.", _FINANCE_AREA_ROLES, "㎡")
+
+    def review(path):
+        return _finance_tables_mod().review_plan(
+            path,
+            declared_assets=declared_assets,
+            area_declarations=area_declarations,
             body_text=body,
         )
+
+    try:
+        workbook, report, candidates = _finance_plan_workbook(root, p, review)
     except Exception as e:  # 검사는 예외로 죽지 않는다 — 읽기 실패는 blocked
         add(
             "finance_plan_review", "finance",
@@ -2497,13 +2582,35 @@ def _add_finance_plan_review(root, p, body, add):
             recovery="통합문서를 Excel에서 열어 재계산·저장한 뒤 다시 검사한다",
         )
         return
+    if workbook is None:
+        if candidates:
+            # 어느 파일이 현재 계획인지 확정할 수 없다. 임의로 고르지
+            # 않고 선택 필요를 드러낸다(차단하지 않음).
+            add(
+                "finance_plan_review", "finance",
+                "현재 재무 계획 통합문서를 확정할 수 없음: 후보 %d개"
+                % len(candidates),
+                severity="warning",
+                status="pending",
+                evidence=[{"code": "FINANCE_PLAN_WORKBOOK_AMBIGUOUS",
+                           "candidates": candidates}],
+            )
+        return
+    accepted = _finance_deficit_accepted(p, gate_state, report)
     for issue in report.get("issues", []):
         status = issue.get("status", "fail")
+        severity = issue.get("severity", "error")
+        reason = issue["reason"]
         evidence = dict(issue.get("evidence") or {})
         evidence["code"] = issue["code"]
+        if issue.get("code") == "PLAN_ALL_YEARS_DEFICIT" and accepted:
+            # 유효한 적자 수용은 위험 서술만 남기고 제출을 막지 않는다.
+            status, severity = "pending", "warning"
+            reason += " — 학생이 목표연도 적자를 확인하고 진행에 동의함"
+            evidence["accepted"] = True
         add(
-            "finance_plan_review", "finance", issue["reason"],
-            severity=issue.get("severity", "error"),
+            "finance_plan_review", "finance", reason,
+            severity=severity,
             status=status,
             evidence=[evidence],
             recovery=issue.get("remedy") if status == "blocked" else None,
@@ -4008,8 +4115,8 @@ def checks(root, p):
         # WP-3 handoff: the 5-year plan / opening-asset / area review is
         # only meaningful for finance-supported majors and a hash-current
         # workbook source. blocked rows stay blocked (never a pass).
-        if gate_state["supported"]:
-            _add_finance_plan_review(root, p, body, add)
+        if gate_state["supported"] and _finance_plan_supported(p):
+            _add_finance_plan_review(root, p, body, add, gate_state)
         items, claims_block = _finance_check_items(p)
         if claims_block:
             add("body_finance_crosscheck", "body", claims_block, status="blocked")
