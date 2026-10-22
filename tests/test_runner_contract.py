@@ -583,6 +583,46 @@ class RunnerAccountingTests(unittest.TestCase):
         with mock.patch.object(sys, "platform", platform):
             return self.rv._evaluate_external_gate(entries, True)
 
+    # -- outcome recording robustness ------------------------------------
+
+    def test_formatter_failure_keeps_original_error(self):
+        """A traceback formatter that dies must not lose the outcome.
+
+        Reproduces 2026-10-22: Python 3.15 formats inside
+        ``addError``/``addFailure`` and probes the module directory of
+        each frame; with the run's disposable copy removed it raised
+        ``FileNotFoundError`` and the gate died without naming the
+        failing test, hiding the original ``ModuleNotFoundError``.
+        """
+        class T(unittest.TestCase):
+            def test_import_missing_module(self):
+                raise ModuleNotFoundError("No module named 'tests.gone'",
+                                          name="tests.gone")
+
+        suite = unittest.TestSuite()
+        suite.addTests(unittest.TestLoader().loadTestsFromTestCase(T))
+        gone = FileNotFoundError(
+            2, "No such file or directory", "/gone/copy/tests")
+        with mock.patch.object(unittest.TestResult, "_exc_info_to_string",
+                               side_effect=gone) as fmt:
+            result = unittest.TextTestRunner(
+                stream=io.StringIO(), verbosity=0,
+                resultclass=self.rv.RecordingResult).run(suite)
+        self.assertTrue(fmt.called)
+        rep = self.rv._summarize_result(result, {})
+        e = rep["entries"][0]
+        self.assertTrue(e["test"].endswith("test_import_missing_module"))
+        self.assertEqual("failed", e["category"])
+        self.assertEqual(1, rep["tests_run"])
+        self.assertEqual(1, rep["unexpected_failed"])
+        # The original error survives: type, message and the failing id.
+        self.assertIn("ModuleNotFoundError", e["detail"])
+        self.assertIn("tests.gone", e["detail"])
+        # The formatter failure is recorded, not swallowed silently.
+        self.assertIn("traceback formatting failed", e["detail"])
+        self.assertIn("FileNotFoundError", e["detail"])
+        self.assertEqual([], rep["accounting"]["errors"])
+
     # -- parent/subtest accounting ---------------------------------------
 
     def test_failed_subtest_makes_parent_failed_once(self):
