@@ -106,6 +106,10 @@
 
 **결과 회계**(P2-R2): `runtime.entries`는 시작된 부모 시험마다 정확히 하나의 terminal 분류를 갖고 `tests_run`은 framework `testsRun`과 같다. subTest 결과는 부모의 `events`로 보존된다 — 실패/에러 subTest가 하나라도 있으면 부모는 `failed`(passed/known-baseline 불가), skip subTest만이면 부모는 `skipped`(실패 우선). 클래스/모듈 fixture 결과는 시작된 부모가 없으므로 `fixture_events`에 분리 기록되며 failure/error는 `unexpected_failed`에 계산되고 skip은 미승인 skip이다. framework의 failures/errors/skipped/expectedFailures/unexpectedSuccesses와 기록을 대조하고 불일치는 회계 오류(exit 1)다. `wasSuccessful()==False`이면 exit 0 불가. unittest `expectedFailure`·`unexpectedSuccess`는 둘 다 unexpected 실패로 계산된다 — KNOWN_DEFECTS/inventory 경로만이 기저결함을 인정한다.
 
+**오류 기록 견고성**(2026-10-22): outcome 기록은 트레이스백 포맷 성공에 의존하지 않는다. `unittest`는 `addError`/`addFailure`/`addSubTest` 안에서 `_exc_info_to_string`을 호출하므로, 포맷이 예외를 내면 원래 오류가 사라지고 실행 전체가 죽는다. Python 3.15는 `TracebackException` 생성 시 각 프레임 모듈의 디렉터리를 조회하므로(`_find_incompatible_extension_module`), 실행 사본이 사라진 상태에서는 `FileNotFoundError`가 난다 — 2026-10-22 커밋 게이트가 `ModuleNotFoundError`를 기록하다 이 지점에서 죽어 실패 시험 이름을 남기지 못했다. `RecordingResult._exc_info_to_string`은 포맷 실패를 잡아 `<예외 타입>: <메시지> [traceback formatting failed: <포맷 예외>]`로 기록하고 실행을 계속한다. 회귀 시험은 `tests.test_runner_contract.RunnerAccountingTests.test_formatter_failure_keeps_original_error` — 포맷 실패를 주입해 원래 오류의 타입·메시지와 실패 시험 ID가 남는지 확인하며, in-process라 중첩 skip 목록(10개 고정)에 추가되지 않는다.
+
+**중단된 실행의 잔여 프로세스**(2026-10-22): `test_update_check`의 배리어 자식 프로세스는 `go` 파일을 5ms 간격으로 폴링한다. 러너가 SIGKILL로 끊기면 `go`를 쓰는 `finally`가 실행되지 않아 그 자식이 영원히 남는다 — 2026-10-22 실측으로 692개(최장 8일 16시간)가 누적되어 load average 60 이상, CPU 270%를 점유했다. 이 상시 부하가 벽시계(`time.perf_counter`) 기반 타이밍 시험을 비결정적으로 만든 배경이므로, 자식 폴링에 300초 데드라인을 두어 고아가 스스로 종료하게 한다(정상 경로는 `go`를 즉시 받으므로 동작 변화 없음).
+
 ## 7. P4 패키징 검증 (2026-09-21, packaging lane — 준비 증거이며 수용 아님)
 
 본 절은 `P4-packaging` 레인(work/g005-p4-packaging-1)이 생성한 패키지보내기에서 실행한 검증 결과다. 상위 레인들의 독립 수용은 별도 문서에 기록됐으며, 여기의 수치는 이 export에서 새로 실행한 독립 영수증에 근거한다.

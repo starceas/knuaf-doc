@@ -369,11 +369,16 @@ if mode == 'lock':
 elif mode == 'parent_with_child':
     fd = m._acquire_lock(Path(home) / m.STATE_DIR_NAME)
     child_ready = ready.with_name(ready.name + '-child')
+    # The waiter polls for ``go``; the deadline makes an orphan exit by
+    # itself when the runner is killed before it can release the barrier.
+    # Without it every interrupted run leaked one spinning process that
+    # could never terminate (observed: 728 of them, load average >60).
     child = subprocess.Popen([sys.executable, '-c',
         'from pathlib import Path; import sys,time; '
         'Path(sys.argv[1]).write_text("{}"); '
-        'p=Path(sys.argv[2]); '
-        'exec("while not p.exists(): time.sleep(0.005)")',
+        'p=Path(sys.argv[2]); deadline=time.time()+300; '
+        'exec("while not p.exists() and time.time() < deadline: '
+        'time.sleep(0.005)")',
         str(child_ready), str(go)], close_fds=True)
     pause({'pid': os.getpid(), 'child': child.pid})
 elif mode == 'recover':
@@ -398,11 +403,35 @@ def _wait_signal(path, proc):
     end = time.monotonic() + 10
     while time.monotonic() < end:
         if path.exists():
-            return json.loads(path.read_text(encoding="utf-8"))
+            # The writer creates the file before filling it, so a reader
+            # that parses on the first sighting can catch the empty window
+            # (observed as JSONDecodeError under a loaded machine).
+            try:
+                return json.loads(path.read_text(encoding="utf-8"))
+            except ValueError:
+                pass
         if proc.poll() is not None:
             raise AssertionError("barrier subprocess exited: %s" % proc.communicate()[1])
         time.sleep(0.005)
     raise AssertionError("barrier timeout")
+
+def _wait_exit(pid, timeout=10.0):
+    """Wait until an orphaned subprocess disappears.
+
+    It is not our child, so there is nothing to reap — only the pid to
+    watch.  Used where a SIGKILLed owner leaves a live child behind on
+    purpose: the temporary tree must not be torn down while it runs.
+    """
+    end = time.monotonic() + timeout
+    while time.monotonic() < end:
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return True
+        except PermissionError:
+            pass
+        time.sleep(0.01)
+    return False
 
 class _UpdateCase(ContractCase):
     def setUp(self):
@@ -1328,12 +1357,14 @@ class UpdateTests(_UpdateCase):
         driver = self.root / "barrier.py"
         driver.write_text(_BARRIER_DRIVER, encoding="utf-8")
         ready, go = self.root / "parent.ready", self.root / "parent.go"
+        child_pid = None
         parent = subprocess.Popen([sys.executable, str(driver),
             str(src / "scripts" / "gg_update.py"), "parent_with_child", str(home),
             str(src), str(target), str(ready), str(go)],
             stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         try:
             row = _wait_signal(ready, parent)
+            child_pid = row.get("child")
             child_ready = ready.with_name(ready.name + "-child")
             _wait_signal(child_ready, parent)
             parent.kill(); parent.wait(timeout=10)
@@ -1348,6 +1379,12 @@ class UpdateTests(_UpdateCase):
             if parent.poll() is None:
                 parent.kill(); parent.wait(timeout=10)
             parent.stdout.close(); parent.stderr.close()
+            # The SIGKILLed owner left its child running on purpose; release
+            # the barrier and let it exit before setUp's temp tree is removed,
+            # otherwise cleanup races with it ("Directory not empty").
+            if child_pid is not None:
+                self.assertTrue(_wait_exit(child_pid),
+                                "orphaned subprocess still alive")
 
     def test_windows_locking_offsets_mock_only(self):
         src = self.make_incoming()

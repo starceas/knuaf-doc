@@ -119,30 +119,36 @@ class PolicyNormalizationTests(ContractCase):
 
     def test_pv1_soft_paragraph_scaling(self):
         # Loose relative bound only: no machine-specific absolute timeout.
+        # Measured in CPU time, not wall clock: the contract here is
+        # algorithmic scaling, and on a loaded machine a single wall-clock
+        # sample can be descheduled for hundreds of milliseconds.  Observed
+        # with eight suites running in parallel: wall-clock ratios of
+        # 9.4-14.7x while the CPU-time ratio stayed at 4.0-4.2x.
         timings = []
         for n in (2000, 8000):
             text = "농장 계획을 정리한다.\n" * n
             nodes = doc.parse(text, with_spans=True)
             samples = []
-            for _ in range(2):
-                start = time.perf_counter()
+            for _ in range(3):
+                start = time.process_time()
                 units = doc._body_term_units(text, nodes)
-                samples.append(time.perf_counter() - start)
+                samples.append(time.process_time() - start)
                 self.assertEqual(len(units), 1)
                 self.assertEqual(len(units[0][0]), len(units[0][1]))
             timings.append(min(samples))
         self.assertLess(timings[1] / timings[0], 8)
 
     def test_pv1_policy_check_scaling_with_and_without_hits(self):
+        # CPU time for the same reason as the paragraph scaling guard above.
         for fragment in ("농장 계획을 정리한다.\n", "NPV\n\n", "할이ㄴ율\n"):
             timings = []
             for n in (2000, 8000):
                 text = fragment * n
                 samples = []
-                for _ in range(2):
-                    start = time.perf_counter()
+                for _ in range(3):
+                    start = time.process_time()
                     rows = forbidden(text)
-                    samples.append(time.perf_counter() - start)
+                    samples.append(time.process_time() - start)
                     if "NPV" in fragment or "할이ㄴ율" in fragment:
                         self.assertIn("%d회" % n, rows[0])
                     else:

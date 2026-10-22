@@ -128,6 +128,25 @@ NATIVE_GATE = {
 }
 
 
+def _describe_exception(err):
+    """``Type: message`` for an exc_info tuple, with no traceback work.
+
+    Last-resort record: it must not read files, import modules or walk
+    frames, because those are exactly the operations that can fail while
+    an outcome is being recorded.
+    """
+    exc = err[1] if isinstance(err, tuple) and len(err) > 1 else None
+    if exc is None:
+        return repr(err)
+    try:
+        message = str(exc)
+    except Exception:  # noqa: BLE001 - a record must never raise
+        message = "<unprintable %s>" % type(exc).__name__
+    if message:
+        return "%s: %s" % (type(exc).__name__, message)
+    return type(exc).__name__
+
+
 class RecordingResult(unittest.TextTestResult):
     """Complete outcome recorder.
 
@@ -163,6 +182,28 @@ class RecordingResult(unittest.TextTestResult):
         self._current = None
 
     # -- helpers ------------------------------------------------------------
+    def _exc_info_to_string(self, err, test):
+        """Record the outcome even when traceback formatting itself fails.
+
+        ``unittest`` formats inside ``addError``/``addFailure``/
+        ``addSubTest`` (through ``super()``), so an unguarded formatter
+        failure loses the original error *and* aborts the whole run.
+        Observed 2026-10-22: Python 3.15's ``TracebackException`` probes
+        the module directory of each frame
+        (``_find_incompatible_extension_module``); the run's disposable
+        ``git checkout-index`` copy had been removed mid-run, so the
+        ``tests`` package directory no longer existed and ``iterdir()``
+        raised ``FileNotFoundError`` while a ``ModuleNotFoundError`` was
+        being recorded.  The fallback keeps the exception type and
+        message, which is what makes the failure attributable.
+        """
+        try:
+            return super()._exc_info_to_string(err, test)
+        except Exception as fmt_err:  # noqa: BLE001 - never re-raise
+            return "%s [traceback formatting failed: %s]" % (
+                _describe_exception(err),
+                _describe_exception((None, fmt_err)))
+
     def _is_subtest_pseudo(self, test):
         """True when ``test`` is a subtest pseudo-object reported while its
         parent is running (its id is ``<parent id> (<params>)``)."""
