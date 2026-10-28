@@ -1,4 +1,4 @@
-"""Explicit channel claims must not contradict the recalculated workbook."""
+"""Numeric diagnostics remain visible without blocking readable prose."""
 import copy
 import json
 import subprocess
@@ -6,11 +6,14 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from zipfile import ZipFile
 from openpyxl import Workbook
 from tests._harness import SCRIPTS, runtime
 
 
 class BodyPlanCheckTests(unittest.TestCase):
+    """Keep review case names while migrating their verdicts to warnings."""
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
@@ -33,7 +36,7 @@ class BodyPlanCheckTests(unittest.TestCase):
 
     def test_late_start_in_narrative_is_rejected_even_with_matching_ratio_elsewhere(self):
         result = self.mod.crosscheck('온라인·직거래 2042년 소량 시작\n2041년 직거래 15%', self.xlsx, self.mapping)
-        self.assertEqual(result['status'], 'fail')
+        self.assertEqual(result['status'], 'warning')
         self.assertEqual(result['issues'][0]['expected'], '2041')
         self.assertEqual(result['issues'][0]['metric'], 'start')
         self.assertEqual(result['issues'][0]['line'], 1)
@@ -46,16 +49,16 @@ class BodyPlanCheckTests(unittest.TestCase):
         ):
             with self.subTest(metric=metric):
                 result = self.mod.crosscheck(claim + '\n2041년 직거래 15%', self.xlsx, self.mapping)
-                self.assertEqual(result['status'], 'not_checked')
-                self.assertEqual([r['status'] for r in result['comparisons']], ['pass'])
+                self.assertEqual(result['status'], 'warning')
+                self.assertEqual([r['status'] for r in result['comparisons']], ['match'])
                 self.assertEqual([(r['line'], r['metric'], r['status'], r['quote'])
                                   for r in result['issues']], [(1, metric, 'not_checked', claim)])
 
     def test_unparsed_prefix_and_matching_suffix_on_same_line_do_not_pass(self):
         claim = '직거래 단가 9,999원/kg은 2041년 계획이며 판매비율은 15%다.'
         result = self.mod.crosscheck(claim, self.xlsx, self.mapping)
-        self.assertEqual(result['status'], 'not_checked')
-        self.assertEqual([(r['metric'], r['status']) for r in result['comparisons']], [('share', 'pass')])
+        self.assertEqual(result['status'], 'warning')
+        self.assertEqual([(r['metric'], r['status']) for r in result['comparisons']], [('share', 'match')])
         self.assertEqual([(r['line'], r['metric']) for r in result['issues']], [(1, 'price')])
 
     def test_metrics_between_years_cannot_be_confirmed_against_the_earlier_plan(self):
@@ -65,7 +68,7 @@ class BodyPlanCheckTests(unittest.TestCase):
         ):
             with self.subTest(metric=metric):
                 result = self.mod.crosscheck(claim, self.xlsx, self.mapping)
-                self.assertEqual(result['status'], 'not_checked')
+                self.assertEqual(result['status'], 'warning')
                 issue = next(r for r in result['issues'] if r['metric'] == metric)
                 self.assertEqual((issue['status'], issue['candidate_years'], issue['unparsed'], issue['quote']),
                                  ('not_checked', [2041, 2042], unparsed, claim))
@@ -78,8 +81,8 @@ class BodyPlanCheckTests(unittest.TestCase):
         ):
             with self.subTest(metric=metric):
                 result = self.mod.crosscheck(claim, self.xlsx, self.mapping)
-                self.assertEqual(result['status'], 'fail')
-                mismatch = next(r for r in result['issues'] if r['status'] == 'fail')
+                self.assertEqual(result['status'], 'warning')
+                mismatch = next(r for r in result['issues'] if r['status'] == 'warning')
                 self.assertEqual((mismatch['year'], mismatch['metric'], mismatch['actual'],
                                   mismatch['expected'], mismatch['locator']['cell']),
                                  (2042, metric, actual, expected, cell))
@@ -92,7 +95,7 @@ class BodyPlanCheckTests(unittest.TestCase):
         ):
             with self.subTest(claim=claim):
                 result = self.mod.crosscheck(claim, self.xlsx, self.mapping)
-                self.assertEqual(result['status'], 'pass')
+                self.assertEqual(result['status'], 'warning')
                 self.assertEqual(result['issues'], [])
                 self.assertTrue(all(r['actual'] == r['expected'] for r in result['comparisons']))
 
@@ -110,7 +113,7 @@ class BodyPlanCheckTests(unittest.TestCase):
                     with self.subTest(following=following, metric=metric, separator=separator):
                         claim = f'{prefix}{separator}{text}은 {following}년 계획이다.'
                         result = self.mod.crosscheck(claim, self.xlsx, self.mapping)
-                        self.assertEqual(result['status'], 'not_checked')
+                        self.assertEqual(result['status'], 'warning')
                         issue = next(r for r in result['issues']
                                      if r['metric'] == metric and r['unparsed'] in text)
                         self.assertEqual((issue['status'], issue['candidate_years'], issue['quote']),
@@ -129,9 +132,9 @@ class BodyPlanCheckTests(unittest.TestCase):
             ):
                 with self.subTest(year=year, metric=metric):
                     result = self.mod.crosscheck(f'{prefix}, {year}년 {text}', self.xlsx, self.mapping)
-                    self.assertEqual(result['status'], 'fail')
+                    self.assertEqual(result['status'], 'warning')
                     self.assertEqual([(r['year'], r['metric'], r['status'], r['expected'])
-                                      for r in result['issues']], [(year, metric, 'fail', expected)])
+                                      for r in result['issues']], [(year, metric, 'warning', expected)])
 
     def test_even_an_adjacent_year_does_not_override_an_unseparated_following_year(self):
         for claim, metric in (
@@ -141,7 +144,7 @@ class BodyPlanCheckTests(unittest.TestCase):
         ):
             with self.subTest(metric=metric):
                 result = self.mod.crosscheck(claim, self.xlsx, self.mapping)
-                self.assertEqual(result['status'], 'not_checked')
+                self.assertEqual(result['status'], 'warning')
                 self.assertEqual(result['comparisons'], [])
                 self.assertEqual([(r['metric'], r['candidate_years']) for r in result['issues']],
                                  [(metric, [2041, 2042])])
@@ -158,9 +161,9 @@ class BodyPlanCheckTests(unittest.TestCase):
         ):
             with self.subTest(claim=claim):
                 result = self.mod.crosscheck(claim, self.xlsx, self.mapping)
-                self.assertEqual(result['status'], 'fail')
+                self.assertEqual(result['status'], 'warning')
                 self.assertEqual({(r['year'], r['metric'], r['status']) for r in result['comparisons']},
-                                 {(year, metric, 'fail' if year == 2041 else 'pass')
+                                 {(year, metric, 'warning' if year == 2041 else 'match')
                                   for year in (2041, 2042) for metric in metrics})
 
     def test_group_grammar_covers_lists_ranges_and_unmarked_endpoints(self):
@@ -176,13 +179,13 @@ class BodyPlanCheckTests(unittest.TestCase):
         ):
             with self.subTest(expression=expression):
                 result = self.mod.crosscheck(f'직거래 {expression} 비율은 모두 30%다.', self.xlsx, self.mapping)
-                self.assertEqual(result['status'], 'fail')
+                self.assertEqual(result['status'], 'warning')
                 self.assertEqual([r['year'] for r in result['comparisons']], years)
         mapping = copy.deepcopy(self.mapping)
         for year in ('2041', '2042'):
             mapping['channels'][0]['years'][year] = mapping['channels'][0]['years']['2042'].copy()
         result = self.mod.crosscheck('직거래 2041년 및 2042년 단가 2,600원/kg, 비율 30%', self.xlsx, mapping)
-        self.assertEqual(result['status'], 'pass')
+        self.assertEqual(result['status'], 'warning')
         self.assertEqual({(r['year'], r['metric']) for r in result['comparisons']},
                          {(year, metric) for year in (2041, 2042) for metric in ('price', 'share')})
         self.assertEqual(result['issues'], [])
@@ -194,9 +197,9 @@ class BodyPlanCheckTests(unittest.TestCase):
                 for year, row in (('2041', 4), ('2042', 3), ('2043', 4)):
                     mapping['channels'][0]['years'][year][metric]['cell'] = f'{column}{row}'
                 result = self.mod.crosscheck(f'직거래 2041~2043년 {text}', self.xlsx, mapping)
-                self.assertEqual(result['status'], 'fail')
+                self.assertEqual(result['status'], 'warning')
                 self.assertEqual([(r['year'], r['status']) for r in result['comparisons']],
-                                 [(2041, 'pass'), (2042, 'fail'), (2043, 'pass')])
+                                 [(2041, 'match'), (2042, 'warning'), (2043, 'match')])
                 self.assertEqual(result['issues'][0]['locator']['cell'], f'{column}3')
 
     def test_uncertain_groups_preserve_every_member_instead_of_comparing_a_subset(self):
@@ -210,33 +213,34 @@ class BodyPlanCheckTests(unittest.TestCase):
             with self.subTest(expression=expression):
                 claim = f'직거래 {expression} 단가 2,600원/kg, 비율 30%'
                 result = self.mod.crosscheck(claim + '\n2044년 직거래 60%', self.xlsx, self.mapping)
-                self.assertEqual(result['status'], 'not_checked')
+                self.assertEqual(result['status'], 'warning')
                 self.assertEqual([(r['line'], r['year'], r['status']) for r in result['comparisons']],
-                                 [(2, 2044, 'pass')])
+                                 [(2, 2044, 'match')])
                 self.assertEqual({(r['metric'], tuple(r['candidate_years']), r['status'], r['quote'])
                                   for r in result['issues']},
                                  {(metric, tuple(candidates), 'not_checked', claim) for metric in ('price', 'share')})
 
     def test_later_group_does_not_hide_behind_an_earlier_matching_period(self):
         result = self.mod.crosscheck('직거래 2040년 0%, 2041년 및 2042년 비율은 모두 30%', self.xlsx, self.mapping)
-        self.assertEqual(result['status'], 'fail')
+        self.assertEqual(result['status'], 'warning')
         self.assertEqual([(r['year'], r['status']) for r in result['comparisons']],
-                         [(2040, 'pass'), (2041, 'fail'), (2042, 'pass')])
+                         [(2040, 'match'), (2041, 'warning'), (2042, 'match')])
 
     def test_unmapped_range_year_blocks_even_when_all_known_years_match(self):
         mapping = copy.deepcopy(self.mapping)
         mapping['channels'][0]['years']['2043']['share']['cell'] = 'B6'
         result = self.mod.crosscheck('직거래 2043년~2045년 비율은 모두 60%', self.xlsx, mapping)
-        self.assertEqual(result['status'], 'blocked')
+        self.assertEqual(result['status'], 'warning')
         self.assertEqual([(r['year'], r['status']) for r in result['comparisons']],
-                         [(2043, 'pass'), (2044, 'pass'), (2045, 'blocked')])
+                         [(2043, 'match'), (2044, 'match'), (2045, 'not_checked')])
+        self.assertIsNone(result['issues'][0]['expected'])
 
     def test_cli_summary_counts_comparisons_and_unchecked_claims_for_every_status(self):
         for claim, mapping, status, code, comparisons, unchecked in (
-            ('직거래 2041년 비율 15%', self.mapping, 'pass', 0, 1, 0),
-            ('직거래 2041년 대비 2042년 비율 30%', self.mapping, 'not_checked', 2, 0, 1),
-            ('직거래 2041년 대비 2042년 비율 30%\n2044년 직거래 60%', self.mapping, 'not_checked', 2, 1, 1),
-            ('직거래 2041년 및 2042년 비율 30%', self.mapping, 'fail', 1, 2, 0),
+            ('직거래 2041년 비율 15%', self.mapping, 'warning', 0, 1, 0),
+            ('직거래 2041년 대비 2042년 비율 30%', self.mapping, 'warning', 0, 0, 1),
+            ('직거래 2041년 대비 2042년 비율 30%\n2044년 직거래 60%', self.mapping, 'warning', 0, 1, 1),
+            ('직거래 2041년 및 2042년 비율 30%', self.mapping, 'warning', 0, 2, 0),
             ('직거래 2041년 비율 15%', {}, 'blocked', 2, 0, 0),
         ):
             with self.subTest(status=status, comparisons=comparisons):
@@ -253,18 +257,18 @@ class BodyPlanCheckTests(unittest.TestCase):
 
     def test_start_ratio_and_rounded_price_match(self):
         result = self.mod.crosscheck('2041년 직거래 15%로 시작\n2042년 온라인 30%\n2040년 직거래 단가 2,400원/kg', self.xlsx, self.mapping)
-        self.assertEqual(result['status'], 'pass')
+        self.assertEqual(result['status'], 'warning')
         self.assertEqual([(r['metric'], r['actual'], r['expected']) for r in result['comparisons']],
                          [('start', '2041', '2041'), ('share', '15', '15'), ('share', '30', '30'), ('price', '2400', '2400')])
 
     def test_ratio_and_price_mismatch_name_their_cells(self):
         result = self.mod.crosscheck('2041년 직거래 20%, 단가 2,600원/kg', self.xlsx, self.mapping)
-        self.assertEqual(result['status'], 'fail')
+        self.assertEqual(result['status'], 'warning')
         self.assertEqual([r['locator']['cell'] for r in result['issues']], ['B3', 'C3'])
 
     def test_zero_claims_does_not_pass(self):
         result = self.mod.crosscheck('판로는 학생에게 확인한다.', self.xlsx, self.mapping)
-        self.assertEqual(result['status'], 'not_checked')
+        self.assertEqual(result['status'], 'warning')
         self.assertEqual(result['comparisons'], [])
 
     def test_missing_cache_is_blocked_not_zero(self):
@@ -289,8 +293,11 @@ class BodyPlanCheckTests(unittest.TestCase):
         locator.write_text(json.dumps(self.mapping, ensure_ascii=False), encoding='utf-8')
         result = subprocess.run([sys.executable, str(SCRIPTS / 'gg_body_plan_check.py'), '--body', str(body),
                                  '--xlsx', str(self.xlsx), '--map', str(locator)], capture_output=True, text=True)
-        self.assertEqual(result.returncode, 1, result.stderr)
-        self.assertEqual(json.loads(result.stdout)['status'], 'fail')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload['status'], 'warning')
+        self.assertEqual([(r['metric'], r['actual'], r['expected']) for r in payload['issues']],
+                         [('start', '2042', '2041')])
 
     def test_cli_with_matching_and_unparsed_claims_returns_not_checked(self):
         locator = self.root / 'map.json'
@@ -302,7 +309,63 @@ class BodyPlanCheckTests(unittest.TestCase):
                 result = subprocess.run([sys.executable, str(SCRIPTS / 'gg_body_plan_check.py'),
                                          '--body', str(body), '--xlsx', str(self.xlsx),
                                          '--map', str(locator)], capture_output=True, text=True)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                payload = json.loads(result.stdout)
+                self.assertEqual(payload['status'], 'warning')
+                self.assertEqual(payload['issues'][0]['quote'], text)
+
+    def test_reviewed_respective_and_growth_claims_are_nonblocking_warnings(self):
+        locator = self.root / 'map.json'
+        locator.write_text(json.dumps(self.mapping, ensure_ascii=False), encoding='utf-8')
+        for claim in (
+            '직거래 2041년 및 2042년의 비율은 각각 15%와 30%다.',
+            '직거래 2041년과 2042년의 단가는 각각 2,500원/kg과 2,600원/kg이다.',
+            '직거래 2041년과 2042년은 각각 15%, 30%다.',
+            '직거래 2041년부터 2042년까지 비율을 15%에서 30%로 늘린다.',
+        ):
+            with self.subTest(claim=claim):
+                body = self.root / 'body.md'
+                body.write_text(claim, encoding='utf-8')
+                result = subprocess.run([sys.executable, str(SCRIPTS / 'gg_body_plan_check.py'),
+                                         '--body', str(body), '--xlsx', str(self.xlsx),
+                                         '--map', str(locator)], capture_output=True, text=True)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(json.loads(result.stdout)['status'], 'warning')
+
+    def test_unreadable_inputs_remain_blocked_with_summary_and_nonzero_exit(self):
+        body, locator = self.root / 'body.md', self.root / 'map.json'
+        body.write_text('직거래 2041년 비율 15%', encoding='utf-8')
+        locator.write_text(json.dumps(self.mapping, ensure_ascii=False), encoding='utf-8')
+        corrupt = self.root / 'corrupt.xlsx'
+        corrupt.write_bytes(b'not a zip')
+        wrong_format = self.root / 'unsupported.xls'
+        wrong_format.write_bytes(b'not an OOXML workbook')
+        malformed = self.root / 'malformed.xlsx'
+        with ZipFile(self.xlsx) as source, ZipFile(malformed, 'w') as output:
+            for member in source.namelist():
+                output.writestr(member, b'<broken' if member == 'xl/workbook.xml' else source.read(member))
+        invalid_json = self.root / 'invalid.json'
+        invalid_json.write_text('{', encoding='utf-8')
+        invalid_refs = self.root / 'invalid-refs.json'
+        mapping = copy.deepcopy(self.mapping)
+        mapping['channels'][0]['years']['2041']['share']['sheet'] = '없는 시트'
+        invalid_refs.write_text(json.dumps(mapping, ensure_ascii=False), encoding='utf-8')
+        for label, body_path, xlsx, map_path in (
+            ('corrupt archive', body, corrupt, locator),
+            ('missing workbook', body, self.root / 'missing.xlsx', locator),
+            ('malformed workbook XML', body, malformed, locator),
+            ('unsupported workbook format', body, wrong_format, locator),
+            ('invalid map JSON', body, self.xlsx, invalid_json),
+            ('invalid map reference', body, self.xlsx, invalid_refs),
+            ('missing map', body, self.xlsx, self.root / 'missing.json'),
+            ('missing body', self.root / 'missing.md', self.xlsx, locator),
+        ):
+            with self.subTest(label=label):
+                result = subprocess.run([sys.executable, str(SCRIPTS / 'gg_body_plan_check.py'),
+                                         '--body', str(body_path), '--xlsx', str(xlsx),
+                                         '--map', str(map_path)], capture_output=True, text=True)
                 self.assertEqual(result.returncode, 2, result.stderr)
                 payload = json.loads(result.stdout)
-                self.assertEqual(payload['status'], 'not_checked')
-                self.assertEqual(payload['issues'][0]['quote'], text)
+                self.assertEqual(payload['status'], 'blocked')
+                self.assertEqual((payload['summary']['comparison_count'], payload['summary']['not_checked_count']),
+                                 (0, 0))

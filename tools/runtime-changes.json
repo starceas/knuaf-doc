@@ -207,7 +207,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/install-manifest.json": {
-   "after_sha256": "afe238ddedce2c473f838e1c8c1aacd7333f847a1556d7e6205df5670b548696",
+   "after_sha256": "997ba3b477c7f413ef6ed8bbc8009ad7d77f706a8f4aec105f48ee61fe687f41",
    "before_sha256": null,
    "first_changed": "P27",
    "last_changed": "P28",
@@ -388,7 +388,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/body-plan-check.md": {
-   "after_sha256": "4d4d8a53fd4a5a22c34f482e56e6c977efb5c583f8d8074b09ab75aa0100acd8",
+   "after_sha256": "c33cbd6c37542975ae80c408c5e5ecde0cc07c1a96a1f98ea891b1cf3f2c07cc",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
@@ -1050,7 +1050,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/thesis-level.md": {
-   "after_sha256": "03c5e34a8c4d73ed58a2c6bacc7efaa375e612bbdeb28aec44f44521730e5453",
+   "after_sha256": "e7847883b357ab8b3e8436d8ed42d8aecb7fccc731a99bab70b0ea80b053ac53",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
@@ -1141,7 +1141,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_body_plan_check.py": {
-   "after_sha256": "9a970d4c674376cb44bd016fc2e4055bc0ceb77607e5131d4a5fd9088ae1b00c",
+   "after_sha256": "499d47f244631d0070e39f8e28a359b28730196d4befe4c0bca6ba74ee6e243f",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",

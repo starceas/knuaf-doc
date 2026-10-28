@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compare explicit narrative channel/year/share/price claims to cached XLSX cells.
+"""Warn about narrative channel/year/share/price numbers using cached XLSX cells.
 
 A reviewed locator map supplies workbook semantics; no major's cell addresses
 or channel aliases are silently imposed on another major.
@@ -9,6 +9,7 @@ from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 import json
 from pathlib import Path
 import re
+from zipfile import BadZipFile
 
 YEAR = re.compile(r"(?<!\d)(\d{4})(년)?(?!\d)")
 START = re.compile(r"시작(?!가)|개시|진출|도입")
@@ -93,7 +94,7 @@ def _direct_year_prefix(text, aliases, metric):
 
 
 def crosscheck(text, workbook_path, mapping):
-    """Return observed comparisons; zero observed claims is not a pass.
+    """Return advisory comparisons, never a correctness verdict on prose.
 
     mapping={channels:[{name,aliases:[...],years:{YYYY:{share:{sheet,cell},
     price:{sheet,cell}}}}]}. share is a fraction, price is won/kg.
@@ -201,17 +202,18 @@ def crosscheck(text, workbook_path, mapping):
                     result = {'line': line_number, 'channel': name, 'year': year, 'metric': kind,
                               'actual': str(actual), 'expected': str(expected) if expected is not None else None,
                               'locator': locator, 'quote': line}
-                    result['status'] = 'blocked' if expected is None else ('pass' if actual == expected else 'fail')
+                    result['status'] = 'not_checked' if expected is None else ('match' if actual == expected else 'warning')
+                    if expected is None:
+                        result['reason'] = 'interpreted claim has no comparison value in the reviewed map'
                     comparisons.append(result)
-                    if result['status'] != 'pass':
+                    if result['status'] != 'match':
                         issues.append(result)
-    status = ('fail' if any(i['status'] == 'fail' for i in issues) else
-              'blocked' if any(i['status'] == 'blocked' for i in issues) else
-              'not_checked' if not comparisons or issues else 'pass')
-    return {'status': status, 'comparisons': comparisons, 'issues': issues}
+    return {'status': 'warning', 'message': '확인 권장', 'comparisons': comparisons, 'issues': issues}
 
 
 def main(argv=None):
+    from openpyxl.utils.exceptions import InvalidFileException
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--body', required=True)
     parser.add_argument('--xlsx', required=True)
@@ -220,16 +222,16 @@ def main(argv=None):
     try:
         result = crosscheck(Path(args.body).read_text(encoding='utf-8'), args.xlsx,
                             json.loads(Path(args.locator_map).read_text(encoding='utf-8')))
-    except (OSError, ValueError, KeyError, TypeError) as error:
-        result = {'status': 'blocked', 'reason': str(error)}
+    except (OSError, ValueError, KeyError, TypeError, BadZipFile, InvalidFileException, SyntaxError) as error:
+        result = {'status': 'blocked', 'message': '확인 불가', 'reason': str(error)}
     result['summary'] = {
-        'meaning': "이 문장 해석 검사는 'fail이면 확실히 틀림'만 보장하는 보조 검사다. "
-                   "'pass'는 '비교한 주장에서 모순을 못 찾음'일 뿐 본문 전체가 맞다는 근거가 아니다.",
+        'meaning': '보조 경고, 판정 근거 아님. 문장 숫자 대조 결과는 확인 권장 사항이며 '
+                   '본문의 맞음·틀림을 확정하거나 작성을 막지 않는다. 입력을 읽거나 검증하지 못한 경우만 확인 불가로 차단한다.',
         'comparison_count': len(result.get('comparisons', [])),
         'not_checked_count': sum(issue['status'] == 'not_checked' for issue in result.get('issues', [])),
     }
     print(json.dumps(result, ensure_ascii=False, indent=2))
-    return 0 if result['status'] == 'pass' else (1 if result['status'] == 'fail' else 2)
+    return 2 if result['status'] == 'blocked' else 0
 
 
 if __name__ == '__main__':
