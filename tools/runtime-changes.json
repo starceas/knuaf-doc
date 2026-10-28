@@ -207,7 +207,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/install-manifest.json": {
-   "after_sha256": "56a41de476757626dacce3daf2afa4ad8d77f962d4d83867e844e9ccb2529845",
+   "after_sha256": "afe238ddedce2c473f838e1c8c1aacd7333f847a1556d7e6205df5670b548696",
    "before_sha256": null,
    "first_changed": "P27",
    "last_changed": "P28",
@@ -1005,7 +1005,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/source-intake.md": {
-   "after_sha256": "4ab62e6d88d96384d826c4fe23660ac6045fcd2bc713b1613e317330bedc1d6b",
+   "after_sha256": "40fa4143db857084e386ce4932a30bd0645e72b09c5d6d7759117d74c4331fe0",
    "before_sha256": "ebfcfe7e23ad5ed3bbc153db239f5f6b5e624d68a8087be255d57909bf18e5c6",
    "first_changed": "P5",
    "last_changed": "P28",
