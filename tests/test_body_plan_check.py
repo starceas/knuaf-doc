@@ -19,7 +19,7 @@ class BodyPlanCheckTests(unittest.TestCase):
         book = Workbook()
         sheet = book.active
         sheet.title = '판매계획'
-        for row, values in enumerate(((0, 2400.4), (0.15, 2500), (0.3, 2600)), 2):
+        for row, values in enumerate(((0, 2400.4), (0.15, 2500), (0.3, 2600), (0.45, 2700), (0.6, 2800)), 2):
             sheet.cell(row, 2, values[0])
             sheet.cell(row, 3, values[1])
         book.save(self.xlsx)
@@ -27,7 +27,7 @@ class BodyPlanCheckTests(unittest.TestCase):
         self.mapping = {'channels': [{'name': '직거래', 'aliases': ['직거래', '온라인'], 'years': {
             str(2040 + i): {'share': {'sheet': '판매계획', 'cell': f'B{i+2}'},
                            'price': {'sheet': '판매계획', 'cell': f'C{i+2}'}}
-            for i in range(3)
+            for i in range(5)
         }}]}
         self.mod = runtime('gg_body_plan_check')
 
@@ -57,6 +57,94 @@ class BodyPlanCheckTests(unittest.TestCase):
         self.assertEqual(result['status'], 'not_checked')
         self.assertEqual([(r['metric'], r['status']) for r in result['comparisons']], [('share', 'pass')])
         self.assertEqual([(r['line'], r['metric']) for r in result['issues']], [(1, 'price')])
+
+    def test_metrics_between_years_cannot_be_confirmed_against_the_earlier_plan(self):
+        for metric, claim, unparsed in (
+            ('price', '직거래 2041년 15%로 시작하며, 단가 2,500원/kg은 2042년 기준이다.', '2,500원/kg'),
+            ('share', '직거래 2041년 시작했고, 비율 15%는 2042년 계획이다.', '15%'),
+        ):
+            with self.subTest(metric=metric):
+                result = self.mod.crosscheck(claim, self.xlsx, self.mapping)
+                self.assertEqual(result['status'], 'not_checked')
+                issue = next(r for r in result['issues'] if r['metric'] == metric)
+                self.assertEqual((issue['status'], issue['candidate_years'], issue['unparsed'], issue['quote']),
+                                 ('not_checked', [2041, 2042], unparsed, claim))
+                self.assertFalse(any(r['metric'] == metric for r in result['comparisons']))
+
+    def test_year_before_metric_controls_still_report_the_later_year_mismatch(self):
+        for metric, claim, actual, expected, cell in (
+            ('price', '직거래 2041년 15%로 시작하며, 2042년 단가 2,500원/kg이다.', '2500', '2600', 'C4'),
+            ('share', '직거래 2041년 시작했고, 2042년 비율 15%로 계획한다.', '15', '30', 'B4'),
+        ):
+            with self.subTest(metric=metric):
+                result = self.mod.crosscheck(claim, self.xlsx, self.mapping)
+                self.assertEqual(result['status'], 'fail')
+                mismatch = next(r for r in result['issues'] if r['status'] == 'fail')
+                self.assertEqual((mismatch['year'], mismatch['metric'], mismatch['actual'],
+                                  mismatch['expected'], mismatch['locator']['cell']),
+                                 (2042, metric, actual, expected, cell))
+
+    def test_normal_claims_and_directly_year_bound_multiple_periods_pass(self):
+        for claim in (
+            '2041년 직거래 15%로 시작\n2042년 직거래 30%, 2,600원/kg',
+            '직거래 2040년 0%, 2041년 비율 15%, 2042년 30%, 2043년 45%, 2044년 60%',
+            '온라인 2041년 시작, 2042년 단가 2,600원/kg, 2043년 가격 2,700원/kg',
+        ):
+            with self.subTest(claim=claim):
+                result = self.mod.crosscheck(claim, self.xlsx, self.mapping)
+                self.assertEqual(result['status'], 'pass')
+                self.assertEqual(result['issues'], [])
+                self.assertTrue(all(r['actual'] == r['expected'] for r in result['comparisons']))
+
+    def test_ambiguous_start_share_and_price_before_third_fourth_and_fifth_years(self):
+        shares = {2040: 0, 2041: 15, 2042: 30, 2043: 45}
+        for following in (2042, 2043, 2044):
+            previous = following - 1
+            prefix = '직거래 ' + ', '.join(f'{year}년 {shares[year]}%' for year in range(2040, following))
+            for metric, text in (
+                ('start', '시작'),
+                ('share', f'비율 {shares[previous]}%'),
+                ('price', f'단가 {2500 + (previous - 2041) * 100:,}원/kg'),
+            ):
+                for separator in (', ', '로 계획하며 '):
+                    with self.subTest(following=following, metric=metric, separator=separator):
+                        claim = f'{prefix}{separator}{text}은 {following}년 계획이다.'
+                        result = self.mod.crosscheck(claim, self.xlsx, self.mapping)
+                        self.assertEqual(result['status'], 'not_checked')
+                        issue = next(r for r in result['issues']
+                                     if r['metric'] == metric and r['unparsed'] in text)
+                        self.assertEqual((issue['status'], issue['candidate_years'], issue['quote']),
+                                         ('not_checked', [previous, following], claim))
+                        self.assertFalse(any(r['metric'] == metric and r['year'] == previous
+                                             for r in result['comparisons']))
+
+    def test_explicit_later_years_retain_start_share_and_price_mismatches(self):
+        shares = {2040: 0, 2041: 15, 2042: 30, 2043: 45}
+        for year in (2042, 2043, 2044):
+            prefix = '직거래 ' + ', '.join(f'{prior}년 {shares[prior]}%' for prior in range(2040, year))
+            for metric, text, expected in (
+                ('start', '시작', '2041'),
+                ('share', f'비율 {shares[year - 1]}%', str(shares[year - 1] + 15)),
+                ('price', f'단가 {2500 + (year - 2042) * 100:,}원/kg', str(2600 + (year - 2042) * 100)),
+            ):
+                with self.subTest(year=year, metric=metric):
+                    result = self.mod.crosscheck(f'{prefix}, {year}년 {text}', self.xlsx, self.mapping)
+                    self.assertEqual(result['status'], 'fail')
+                    self.assertEqual([(r['year'], r['metric'], r['status'], r['expected'])
+                                      for r in result['issues']], [(year, metric, 'fail', expected)])
+
+    def test_even_an_adjacent_year_does_not_override_an_unseparated_following_year(self):
+        for claim, metric in (
+            ('직거래 2041년 단가 2,500원/kg은 2042년 기준이다.', 'price'),
+            ('직거래 2041년 비율 15%는 2042년 계획이다.', 'share'),
+            ('직거래 2041년 시작은 2042년이다.', 'start'),
+        ):
+            with self.subTest(metric=metric):
+                result = self.mod.crosscheck(claim, self.xlsx, self.mapping)
+                self.assertEqual(result['status'], 'not_checked')
+                self.assertEqual(result['comparisons'], [])
+                self.assertEqual([(r['metric'], r['candidate_years']) for r in result['issues']],
+                                 [(metric, [2041, 2042])])
 
     def test_start_ratio_and_rounded_price_match(self):
         result = self.mod.crosscheck('2041년 직거래 15%로 시작\n2042년 온라인 30%\n2040년 직거래 단가 2,400원/kg', self.xlsx, self.mapping)

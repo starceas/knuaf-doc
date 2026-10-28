@@ -40,6 +40,21 @@ def _cell(workbook, ref):
     return _number(workbook[sheet][address].value)
 
 
+def _direct_year_prefix(text, aliases, metric):
+    """Accept only a year followed by an optional channel/metric label.
+
+    This is a deliberately narrow input grammar, not prose interpretation.
+    Intervening claims or connecting prose cannot prove year attribution.
+    """
+    channel = '(?:' + '|'.join(re.escape(alias) for alias in aliases) + ')'
+    labels = {'start': '', 'share': '(?:판매비율|비율|비중)', 'price': '(?:단가|가격)'}
+    label = labels[metric]
+    pattern = r'\s*(?:' + channel + r'\s*)?'
+    if label:
+        pattern += '(?:' + label + r'\s*)?'
+    return re.fullmatch(pattern + r'[:：]?\s*', text) is not None
+
+
 def crosscheck(text, workbook_path, mapping):
     """Return observed comparisons; zero observed claims is not a pass.
 
@@ -109,12 +124,28 @@ def crosscheck(text, workbook_path, mapping):
                     })
         for index, match in enumerate(years):
             year = int(match[1])
-            segment = line[match.end():years[index + 1].start() if index + 1 < len(years) else len(line)]
+            following = years[index + 1] if index + 1 < len(years) else None
+            segment = line[match.end():following.start() if following else len(line)]
             claims = []
-            if START.search(segment):
-                claims.append(('start', Decimal(year), None))
-            claims.extend(('share', _number(m[1]), m[1]) for m in SHARE.finditer(segment))
-            claims.extend(('price', _number(m[1]), m[1]) for m in PRICE.finditer(segment))
+            for kind, pattern in (('start', START), ('share', SHARE), ('price', PRICE)):
+                for metric in pattern.finditer(segment):
+                    tail = segment[metric.end():].rstrip()
+                    closed = not tail or tail.endswith((',', ';', '|', '.', '。'))
+                    if following and (
+                        not _direct_year_prefix(segment[:metric.start()], aliases, kind) or not closed
+                    ):
+                        issues.append({
+                            'line': line_number, 'channel': name, 'metric': kind,
+                            'quote': line, 'status': 'not_checked',
+                            'reason': 'metric between explicit years; year attribution is ambiguous',
+                            'candidate_years': [year, int(following[1])],
+                            'unparsed': metric[0],
+                        })
+                        continue
+                    if kind == 'start':
+                        claims.append((kind, Decimal(year), None))
+                    else:
+                        claims.append((kind, _number(metric[1]), metric[1]))
             for kind, actual, display in claims:
                 if kind == 'start':
                     expected = Decimal(start) if start is not None else None

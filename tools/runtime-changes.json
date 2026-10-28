@@ -207,7 +207,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/install-manifest.json": {
-   "after_sha256": "168e874f0b146920fe8b17f0e352caaea1913799f5f11ce91d775c9199d88dab",
+   "after_sha256": "19ced5f064d86f806ab9526185db8f589c3d70f8885e6a20c91f9bb6b23ab9ed",
    "before_sha256": null,
    "first_changed": "P27",
    "last_changed": "P28",
@@ -388,7 +388,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/body-plan-check.md": {
-   "after_sha256": "2395c93f5e46416e074451cd9d02a0164a5a34bf829c82bc5eca63f8e3dd3f6b",
+   "after_sha256": "ceb753fc9ef87398e1ba325ec8d501d074c7035126c85aa9d21a5615c497d20d",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
@@ -1141,7 +1141,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_body_plan_check.py": {
-   "after_sha256": "a87df5aa964d0f4de61b58ebc9ebd91feb77e9abfc7a668c7c75d38643ee5190",
+   "after_sha256": "55738fa42799c4cf008b45fd6047a4e413897b69a81018b2fe4929a45f262054",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
