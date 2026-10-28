@@ -767,6 +767,27 @@ class TestFootnotes(unittest.TestCase):
             {"source_id": "test.general", "base_year": 2020}, REGISTRY)
         self.assertIn("r=%.4f%%" % (GENERAL_R * 100), line)
 
+    def test_wage_footnote_unreadable_window_is_refused_not_printed(self):
+        # 사이 연도 빠짐·창 길이 다름·0 시작값은 AC38과 같은 값을 만들 수 없다:
+        # 각주를 찍지 않고 footnote_invalid 사유를 남긴다.
+        cfg = MINI_MAP["footnote_kinds"]["wage"]
+        full = [{"year": y, "value": 100.0 + 5 * i} for i, y in enumerate(range(2020, 2026))]
+        cases = {
+            "gap": ([o for o in full if o["year"] != 2023], None, "확인 불가"),
+            "short_window": (full, {"start_year": 2023, "end_year": 2025}, "6개 연도"),
+            "zero_start": ([{**full[0], "value": 0.0}] + full[1:], None, "양수"),
+        }
+        for label, (obs, window, needle) in cases.items():
+            with self.subTest(case=label):
+                src = copy.deepcopy(REGISTRY["test.wage"])
+                src["observations"] = obs
+                info = {"source_id": "test.wage", "base_year": 2020}
+                if window:
+                    info["observation"] = window
+                line, err = ft._resolve_footnote("wage", cfg, info, {**REGISTRY, "test.wage": src})
+                self.assertIsNone(line)
+                self.assertIn(needle, err)
+
     def test_negative_observed_rate_is_reference(self):
         src = copy.deepcopy(REGISTRY["test.general"])
         src["observations"] = [{"year": 2020, "value": 100.0},

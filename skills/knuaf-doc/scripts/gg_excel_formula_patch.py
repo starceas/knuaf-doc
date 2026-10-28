@@ -259,6 +259,12 @@ def _keep_x01_wage_rates(book, sheet: str, add) -> None:
             old = book.formulas.get((sheet, ref))
             if old is None or old.text != f"({obs}{row+1}-{obs}{row})/{obs}{row}":
                 raise ValueError(f"unreviewed yearly wage rate formula: {ref}")
+        # AVERAGE(AC26:AC37) also counts AC31:AC37; anything there would make
+        # the workbook mean differ from the five yearly rates read below.
+        for row in range(31, 38):
+            ref = f"{rate_col}{row}"
+            if (sheet, ref) in book.formulas or book.values.get((sheet, ref)) not in (None, ""):
+                raise ValueError(f"unreviewed value inside wage mean range: {ref}")
         cell = f"{rate_col}38"
         desired = _x01_wage_rate_formula(rate_col)
         old = book.formulas.get((sheet, cell))

@@ -405,6 +405,34 @@ class FinanceGateTests(ContractCase):
                 check.assert_not_called()
                 self.assertFalse(out.exists())
 
+    def test_specialty_profile_variants_never_reach_the_generator(self):
+        # Missing, empty or near-miss profile names are held earlier with
+        # their own reason; none slips past the template-route gate.
+        school = runtime("gg_school_excel")
+        wrapper = runtime("build_excel_finance_template")
+        root = self.roots["specialty_crops"]
+        expected = {"school_17_sheet_v1": "specialty_template_route_required",
+                    None: "finance_profile_evidence_required",
+                    "": "finance_profile_evidence_required",
+                    "School_17_Sheet_V1": "unsupported_finance_profile",
+                    " school_17_sheet_v1": "unsupported_finance_profile"}
+        for profile, reason in expected.items():
+            spec = {"major_id": "specialty_crops", "profile": profile}
+            (root / "variant.json").write_text(json.dumps(spec), encoding="utf-8")
+            with self.subTest(profile=profile), \
+                    mock.patch.object(school, "check_unsupported",
+                                      side_effect=AssertionError("SCHOOL_REACHED")), \
+                    mock.patch.object(wrapper, "validate_economic_inputs",
+                                      side_effect=AssertionError("VALIDATION_REACHED")):
+                with self.assertRaises(self.mc.OutputHeldError) as held:
+                    school.school_workbook(spec, root / "v.xlsx",
+                                           context=self.context("specialty_crops"))
+                self.assertEqual(held.exception.reason, reason)
+                with self.assertRaises(self.mc.OutputHeldError) as held:
+                    wrapper.build(root, "variant.json", "v.xlsx", major_id="specialty_crops")
+                self.assertEqual(held.exception.reason, reason)
+                self.assertFalse((root / "v.xlsx").exists())
+
     def test_build_wrapper_holds_hort_before_economic_validation(self):
         wrapper = runtime("build_excel_finance_template")
         major = "hort_env_systems"

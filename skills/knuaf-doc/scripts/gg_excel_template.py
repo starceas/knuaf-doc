@@ -966,31 +966,76 @@ LABOR_SHEET = "8. 노무비계획"
 LABOR_SUMMARY_DAYS = {"남자": ("G11", "J11", "M11", "P11", "S11"),
                       "여자": ("G12", "J12", "M12", "P12", "S12")}
 LABOR_TASK_BLOCKS = ((range(26, 34), "1년차"), (range(40, 48), "2년차 이후"))
+# 위 좌표가 X01 배치인지 확인하는 칸 이름(앞뒤 공백·칸 안 공백 무시).
+LABOR_LAYOUT_ANCHORS = (("C11", "일용직"), ("E11", "남"), ("E12", "여"),
+                        ("R24", "고용(여자)"), ("R38", "고용(여자)"),
+                        ("O25", "일수"), ("R25", "일수"), ("O39", "일수"), ("R39", "일수"))
+LABOR_MALE_HEADERS = ("고용(남자,단가동일)", "고용(남자)")
 
 
-def labor_review(workbook) -> list[dict]:
-    """Daily-labor gender warnings on an X01 '8. 노무비계획' sheet.
+def _labor_blocked(code, reason, evidence):
+    # Not a pass: blocked status, warning severity like the check it replaces.
+    return {"code": code, "status": "blocked", "severity": "warning", "reason": reason,
+            "remedy": "교수님 양식(X01) '8. 노무비계획' 배치인지 확인하고, 엑셀에서 재계산·저장해 "
+                      "수식 캐시를 만든 뒤 다시 검사한다",
+            "evidence": evidence}
 
-    ``workbook`` is an openpyxl workbook loaded with cached values (or a
-    path).  Hired days only in the male column read as the template's
-    default label rather than a planned choice; every task row with hired
-    days is listed so the student can confirm who is hired for it."""
-    if isinstance(workbook, (str, Path)):
-        import openpyxl
-        book = openpyxl.load_workbook(workbook, data_only=True)
-        try:
-            return labor_review(book)
-        finally:
-            book.close()
-    if LABOR_SHEET not in workbook.sheetnames:
+
+def labor_review(path) -> list[dict]:
+    """Daily-labor gender review on a professor-template (X01) workbook.
+
+    Applies only when ``detect_layout`` identifies the file as X01; any
+    other workbook (another major's form, X02, unknown) is not in scope
+    and yields no issue.  On an X01 workbook, hired days only in the male
+    column are a warning (``LABOR_HIRED_MALE_ONLY``).  A missing sheet
+    (``LABOR_SHEET_MISSING``), a different labor layout
+    (``LABOR_LAYOUT_UNSUPPORTED``) or a days cell that cannot be read as a
+    number — text, or a formula without a cached value
+    (``LABOR_DAYS_UNREADABLE``) — is blocked, never a silent pass.  Only a
+    truly empty, formula-free cell counts as 0 days."""
+    path = Path(path)
+    if detect_layout(path) != "x01":
         return []
-    ws = workbook[LABOR_SHEET]
+    import openpyxl
+    workbook = openpyxl.load_workbook(path, data_only=True)
+    formulas = openpyxl.load_workbook(path, data_only=False)
+    try:
+        return _labor_review_x01(workbook, formulas)
+    finally:
+        workbook.close()
+        formulas.close()
+
+
+def _labor_review_x01(workbook, formulas) -> list[dict]:
+    if LABOR_SHEET not in workbook.sheetnames:
+        return [_labor_blocked("LABOR_SHEET_MISSING",
+                               "'8. 노무비계획' 시트를 찾지 못해 일용직 성별을 확인하지 못함",
+                               {"sheets": list(workbook.sheetnames)})]
+    ws, wf = workbook[LABOR_SHEET], formulas[LABOR_SHEET]
+    norm = lambda v: re.sub(r"\s+", "", v) if isinstance(v, str) else v
+    mismatched = [{"cell": ref, "expected": text, "found": ws[ref].value}
+                  for ref, text in LABOR_LAYOUT_ANCHORS if norm(ws[ref].value) != text]
+    mismatched += [{"cell": ref, "expected": list(LABOR_MALE_HEADERS), "found": ws[ref].value}
+                   for ref in ("O24", "O38") if norm(ws[ref].value) not in LABOR_MALE_HEADERS]
+    if mismatched:
+        return [_labor_blocked("LABOR_LAYOUT_UNSUPPORTED",
+                               "'8. 노무비계획' 칸 배치가 교수님 양식과 달라 남녀 고용 일수를 읽지 못함",
+                               {"mismatched": mismatched})]
+    unreadable = []
 
     def days(ref):
         value = ws[ref].value
-        return value if isinstance(value, (int, float)) and not isinstance(value, bool) else 0
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            return value
+        source = wf[ref].value
+        if value is None and not (isinstance(source, str) and source.startswith("=")):
+            return 0
+        if isinstance(value, str) and not value.strip() and source == value:
+            return 0
+        unreadable.append({"cell": ref, "value": value, "formula": source
+                           if isinstance(source, str) and source.startswith("=") else None})
+        return 0
 
-    issues = []
     male = sum(days(r) for r in LABOR_SUMMARY_DAYS["남자"])
     female = sum(days(r) for r in LABOR_SUMMARY_DAYS["여자"])
     tasks = []
@@ -1000,18 +1045,23 @@ def labor_review(workbook) -> list[dict]:
             if m or f:
                 tasks.append({"period": period, "row": row, "task": ws[f"B{row}"].value,
                               "male_days": m, "female_days": f})
+    if unreadable:
+        return [_labor_blocked("LABOR_DAYS_UNREADABLE",
+                               "고용 일수 칸을 숫자로 읽지 못함(글자이거나 수식 캐시 없음): "
+                               + ", ".join(u["cell"] for u in unreadable),
+                               {"cells": unreadable})]
     task_male = sum(t["male_days"] for t in tasks)
     task_female = sum(t["female_days"] for t in tasks)
     if (male > 0 and female == 0) or (task_male > 0 and task_female == 0):
-        issues.append({
+        return [{
             "code": "LABOR_HIRED_MALE_ONLY", "status": "pending", "severity": "warning",
             "reason": "일용직 고용 일수가 남자 칸에만 있음(남 %s일·여 %s일, 작업별 남 %s일·여 %s일)"
                       % (male, female, task_male, task_female),
             "remedy": "작업별(수확·선별·포장 등)로 남녀 누구를 고용하는지 학생에게 확인해 칸을 나누고, "
                       "근거 자료에 성별 구분이 없으면 작업 관행으로 정한 이유를 각주에 적는다",
             "evidence": {"summary": {"male_days": male, "female_days": female}, "tasks": tasks},
-        })
-    return issues
+        }]
+    return []
 
 
 def cli(argv: list[str]) -> int:

@@ -33,11 +33,16 @@ def labelled_template(path):
     wb.save(path)
 
 
-def labor_book(path, *, male, female, task_male=(), task_female=()):
-    from openpyxl import Workbook
-    wb = Workbook()
-    ws = wb.active
-    ws.title = S8
+LABOR_LABELS = {"C11": "일용직", "E11": "남", "E12": "여",
+                "O24": "고용(남자, 단가 동일)", "R24": "고용(여자)",
+                "O38": "고용(남자, 단가 동일)", "R38": "고용(여자)",
+                "O25": "일수", "R25": "일수", "O39": "일수", "R39": "일수"}
+
+
+def labor_sheet(ws, *, male=(), female=(), task_male=(), task_female=()):
+    """X01 '8. 노무비계획' labels plus the given hired days."""
+    for cell, text in LABOR_LABELS.items():
+        ws[cell] = text
     for cells, days in ((("G11", "J11", "M11", "P11", "S11"), male),
                         (("G12", "J12", "M12", "P12", "S12"), female)):
         for cell, value in zip(cells, days):
@@ -46,8 +51,25 @@ def labor_book(path, *, male, female, task_male=(), task_female=()):
         ws[f"B{row}"], ws[f"O{row}"] = task, m
     for row, (task, f) in enumerate(task_female, 26):
         ws[f"B{row}"], ws[f"R{row}"] = task, f
-    wb.save(path)
 
+
+def x01_anchors(wb):
+    """The two cells detect_layout reads to name a workbook X01."""
+    inv = wb["3.투자계획"] if "3.투자계획" in wb.sheetnames else wb.create_sheet("3.투자계획")
+    inv["C24"] = "계"
+    if "10. 감가상각비계획 " not in wb.sheetnames:
+        wb.create_sheet("10. 감가상각비계획 ")
+
+
+def labor_book(path, *, x01=True, **days):
+    from openpyxl import Workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.title = S8
+    labor_sheet(ws, **days)
+    if x01:
+        x01_anchors(wb)
+    wb.save(path)
 
 class CropLabelTests(ContractCase):
     def setUp(self):
@@ -140,6 +162,21 @@ class CropLabelTests(ContractCase):
                 self.assertEqual(result["status"], "fail")
                 self.assertTrue(result["violations"])
 
+    def test_check_unreadable_after_file_is_blocked_not_pass(self):
+        import contextlib, io
+        bad = self.root / "bad.xlsx"
+        bad.write_bytes(b"not a workbook")
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err), contextlib.redirect_stdout(io.StringIO()) as out:
+            code = self.tpl.cli(["label-check", "--before", str(self.src), "--after", str(bad)])
+        self.assertEqual(code, 2)
+        self.assertIn("BLOCK", err.getvalue())
+        self.assertNotIn('"pass"', out.getvalue())
+        with contextlib.redirect_stderr(io.StringIO()), contextlib.redirect_stdout(io.StringIO()):
+            code = self.tpl.cli(["label-check", "--before", str(self.src),
+                                 "--after", str(self.root / "missing.xlsx")])
+        self.assertEqual(code, 2)
+
 
 class LaborReviewTests(ContractCase):
     def setUp(self):
@@ -175,23 +212,70 @@ class LaborReviewTests(ContractCase):
             with self.subTest(case=label):
                 self.assertEqual(self.review(**kw), [])
 
-    def test_review_plan_surfaces_warning(self):
+    def test_unreadable_labor_sheet_is_blocked_not_a_pass(self):
+        from openpyxl import Workbook, load_workbook
+        path = self.root / "labor.xlsx"
+        cases = {}
+        wb = Workbook(); wb.active.title = "8. 노무계획"; x01_anchors(wb); wb.save(path)
+        cases["sheet_missing"] = ("LABOR_SHEET_MISSING", self.tpl.labor_review(path))
+        labor_book(path, female=(0, 60))
+        wb = load_workbook(path); wb[S8]["R24"] = "고용 인부"; wb.save(path)
+        cases["header_changed"] = ("LABOR_LAYOUT_UNSUPPORTED", self.tpl.labor_review(path))
+        labor_book(path, male=(0, "60일"))
+        cases["text_days"] = ("LABOR_DAYS_UNREADABLE", self.tpl.labor_review(path))
+        labor_book(path)
+        wb = load_workbook(path); wb[S8]["J12"] = "=60*1"; wb.save(path)  # no cached value
+        cases["uncached_formula"] = ("LABOR_DAYS_UNREADABLE", self.tpl.labor_review(path))
+        for label, (code, issues) in cases.items():
+            with self.subTest(case=label):
+                self.assertEqual([i["code"] for i in issues], [code])
+                self.assertEqual(issues[0]["status"], "blocked")
+        # Header whitespace differences are the same layout, not unreadable.
+        labor_book(path, female=(0, 60))
+        wb = load_workbook(path); wb[S8]["R24"] = " 고용 (여자) "; wb.save(path)
+        self.assertEqual(self.tpl.labor_review(path), [])
+
+    def test_non_x01_workbook_is_not_applicable(self):
+        from openpyxl import Workbook
+        path = self.root / "other.xlsx"
+        # Another form with male-only days or no labor sheet at all: not in scope.
+        labor_book(path, x01=False, male=(0, 60, 60, 60, 60))
+        self.assertEqual(self.tpl.labor_review(path), [])
+        wb = Workbook(); wb.active.title = "11. 인건비계획"; wb.save(path)
+        self.assertEqual(self.tpl.labor_review(path), [])
+        # X02 (perennial-asset variant) is a different layout, also not in scope.
+        labor_book(path, x01=False, male=(0, 60))
+        from openpyxl import load_workbook
+        wb = load_workbook(path)
+        wb.create_sheet("3.투자계획")["C25"] = "계"
+        wb.create_sheet("10. 감가상각비계획 ")["J7"] = "대식물"
+        wb.save(path)
+        self.assertEqual(self.tpl.detect_layout(path), "x02")
+        self.assertEqual(self.tpl.labor_review(path), [])
+
+    def test_review_plan_surfaces_warning_and_unreadable(self):
         from tests.test_skillgaps_wp3_finance import plan_workbook
         from openpyxl import load_workbook
+        review = runtime("gg_finance_tables").review_plan
         path = self.root / "plan.xlsx"
         plan_workbook(path)
-        before = [i["code"] for i in runtime("gg_finance_tables").review_plan(path)["issues"]]
-        self.assertNotIn("LABOR_HIRED_MALE_ONLY", before)
+        # Not an X01 workbook: no labor issue at all.
+        self.assertFalse([i for i in review(path)["issues"] if i["code"].startswith("LABOR_")])
         wb = load_workbook(path)
-        ws = wb.create_sheet(S8)
-        for cell in ("J11", "M11", "P11", "S11"):
-            ws[cell] = 60
+        x01_anchors(wb)
+        wb.save(path)
+        missing = next(i for i in review(path)["issues"] if i["code"] == "LABOR_SHEET_MISSING")
+        self.assertEqual(missing["status"], "blocked")
+        wb = load_workbook(path)
+        labor_sheet(wb.create_sheet(S8), male=(0, 60, 60, 60, 60))
         wb.save(path)
         wb.close()
-        plan = runtime("gg_finance_tables").review_plan(path)
+        plan = review(path)
         item = next(i for i in plan["issues"] if i["code"] == "LABOR_HIRED_MALE_ONLY")
         self.assertEqual(item["check_id"], "finance_plan_review")
         self.assertEqual(item["severity"], "warning")
+        self.assertFalse([i for i in plan["issues"] if i["code"].startswith("LABOR_")
+                          and i["status"] == "blocked"])
 
 
 class MaterialSheetPrintTests(ContractCase):
@@ -203,20 +287,28 @@ class MaterialSheetPrintTests(ContractCase):
         self.tpl = runtime("gg_excel_template")
         self.mc = runtime("gg_major_contract")
 
-    def source(self, *, x02=False):
+    def source(self, *, x02=False, unknown=False):
         from openpyxl import Workbook
         wb = Workbook()
         inv = wb.active
         inv.title = "3.투자계획"
-        inv["C25" if x02 else "C24"] = "계"
+        if not unknown:
+            inv["C25" if x02 else "C24"] = "계"
         dep = wb.create_sheet("10. 감가상각비계획 ")
         if x02:
             dep["J7"] = "대식물"
         for name in (S7, "12 손익계획"):
             wb.create_sheet(name)["B2"] = name
-        path = self.root / ("x02.xlsx" if x02 else "x01.xlsx")
+        path = self.root / ("x02.xlsx" if x02 else "unknown.xlsx" if unknown else "x01.xlsx")
         wb.save(path)
         return path
+
+    def test_unidentified_layout_material_sheet_is_protected(self):
+        src = self.source(unknown=True)
+        self.assertEqual(self.tpl.detect_layout(src), "unknown")
+        with self.assertRaisesRegex(ValueError, "영농자재소요계획.*X01"):
+            self.apply(src, S7, name="unk")
+        self.assertFalse((self.root / "unk.xlsx").exists())
 
     def apply(self, src, sheet, major="specialty_crops", name="out"):
         project = self.make_project()

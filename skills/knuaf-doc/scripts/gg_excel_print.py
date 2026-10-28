@@ -193,11 +193,15 @@ X01_MATERIAL_SHEET = '7. 영농자재소요계획'
 
 
 def _x01_material_sheet(source, authorization):
-    """Sheet name to keep untouched, or None when the rule does not apply."""
+    """Sheet name to keep untouched, or None when the rule does not apply.
+
+    An identified X01 copy is protected.  An unidentified layout is
+    protected too (it cannot be shown not to be X01); an identified other
+    layout (X02) is out of scope."""
     from gg_excel_template import detect_layout
     if authorization.major_id != 'specialty_crops':
         return None
-    return X01_MATERIAL_SHEET if detect_layout(source) == 'x01' else None
+    return X01_MATERIAL_SHEET if detect_layout(source) in ('x01', 'unknown') else None
 
 
 def apply(source, map_path, out, receipt_path, *, context=None):

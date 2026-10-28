@@ -840,10 +840,15 @@ def _resolve_footnote(kind, cfg, info, registry):
         r = res["rate"]
         if role == "wage":
             # 특용작물 교수님 양식(X01) '8. 노무비계획' AC38·AD38과 같은 방식:
-            # 연도별 상승률 (V_t-V_(t-1))/V_(t-1)의 산술평균(사용자 결정
-            # 2026-10-28). 사이 연도 관측이 하나라도 없으면 계산하지 않는다.
+            # 관측표 6개 연도(X26:X31)의 연도별 상승률 (V_t-V_(t-1))/V_(t-1) 5개를
+            # 산술평균(사용자 결정 2026-10-28). 창 길이가 다르거나 사이 연도
+            # 관측이 하나라도 없으면 AC38과 같은 값이 아니므로 계산하지 않는다.
             series = pa.confirmed_series(src)
             years = range(obs["start_year"], obs["end_year"] + 1)
+            if len(years) != 6:
+                raise ValueError(
+                    "%s: 임금 상승률은 교수님 양식 관측표와 같은 6개 연도(5개 상승률) 창 필요 "
+                    "(%d~%d년)" % (origin, obs["start_year"], obs["end_year"]))
             gaps = [y for y in years if y not in series]
             if gaps:
                 raise ValueError(
@@ -1635,9 +1640,9 @@ def review_plan(workbook_path, *, declared_assets=None, area_declarations=None,
                 remedy="finance.area.<role> 사실로 면적을 선언한 뒤 본문·엑셀·표를 대조한다",
                 evidence={"workbook": areas}))
 
-        # 일용직 성별 쏠림 경고(판정은 gg_excel_template.labor_review).
+        # 일용직 성별 확인(판정은 gg_excel_template.labor_review; 못 읽으면 blocked).
         from gg_excel_template import labor_review
-        for item in labor_review(workbook):
+        for item in labor_review(path):
             issues.append(_plan_issue(item["code"], status=item["status"],
                                       severity=item["severity"], reason=item["reason"],
                                       remedy=item["remedy"], evidence=item["evidence"]))

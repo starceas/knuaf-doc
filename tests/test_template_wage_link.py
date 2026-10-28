@@ -889,6 +889,17 @@ class WageLinkTests(ContractCase):
             c = assumptions(); c['wage_male']['r'] = r
             with self.subTest(r=r), self.assertRaises(ValueError): self.patch.materialize_d8(self.src, c)
 
+    def test_wage_mean_range_must_hold_only_the_five_yearly_rates(self):
+        # AC38 =AVERAGE(AC26:AC37) would silently include anything in
+        # AC31:AC37, so the applied mean could not be checked: refuse.
+        from openpyxl import load_workbook
+        for cell, value in (('AC33', 0.5), ('AD31', '=AD30')):
+            fixture(self.src)
+            w = load_workbook(self.src); w[S8][cell] = value; w.save(self.src); w.close()
+            with self.subTest(cell=cell), self.assertRaisesRegex(
+                    ValueError, 'inside wage mean range: ' + cell):
+                self.patch.materialize_d8(self.src, assumptions())
+
     def test_declared_wage_rate_refused_x01_mean_is_applied(self):
         c = assumptions()
         c['wage_male']['r'] = .06  # a declared CAGR cannot replace AC38
