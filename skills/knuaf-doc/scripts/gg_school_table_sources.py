@@ -2,6 +2,9 @@
 
 No default credits, file writes or replacement of existing citations. Input
 table_sources maps the six IDs (or exact captions) to {sources: [objects]}.
+Only external agency names are printed in caption-ending parentheses;
+author surveys retain validation but print no self-credit. Title, year,
+locator and optional URL stay in the input provenance, not the caption.
 Each source requires kind/source_type/source/title/year/locator, with an
 optional plain HTTP(S) url and grade 1/2. These are the D3 proposed adapter
 enums, not a claim about the global registry: stat/official_stat,
@@ -150,14 +153,12 @@ def _source(value, project):
         for key in _REQUIRED | {'grade', 'verified', 'survey_date', 'subject', 'url'}:
             if key != 'locator' and key in record and key in value and record[key] != value[key]:
                 raise ValueError('정본 출처 종류/서지 충돌: ' + key)
-    parts = [fields['source'], fields['title'], fields['year'], fields['locator']]
     if kind == 'interview':
-        parts.extend([fields['survey_date'], fields['subject'], fields['verified']])
-    if 'id' in fields:
-        parts.append('%s revision %s' % (fields['id'], value['revision']))
-    if 'url' in fields:
-        parts.append(fields['url'])
-    return ', '.join(parts)
+        return ''
+    from gg_document import self_credit
+    if self_credit(fields['source']):
+        raise ValueError('외부 출처에는 기관명만 명시; 본인 작성 출처 금지')
+    return fields['source']
 
 
 def validate_table_sources(spec, *, project=None):
@@ -176,11 +177,13 @@ def validate_table_sources(spec, *, project=None):
         if not isinstance(entry, dict) or set(entry) != {'sources'} \
                 or not isinstance(entry['sources'], list) or not entry['sources']:
             raise ValueError('표 출처에는 비어 있지 않은 sources 배열만 허용')
-        result[target] = '출처: ' + '; '.join(_source(s, project) for s in entry['sources'])
+        agencies = list(dict.fromkeys(_source(s, project) for s in entry['sources']))
+        result[target] = ', '.join(agency for agency in agencies if agency)
     return result
 
 
 def _targets(nodes, keys):
+    from gg_document import split_caption_credit
     headings, candidates = {}, {key: [] for key in keys}
     for index, node in enumerate(nodes):
         if node['kind'] == 'heading':
@@ -191,7 +194,7 @@ def _targets(nodes, keys):
             continue
         for key in keys:
             caption, context = TABLES[key]
-            if _compact(node['text']) == _compact(caption):
+            if _compact(split_caption_credit(node['text'])[0]) == _compact(caption):
                 candidates[key].append(index)
                 if tuple(headings[k] for k in sorted(headings)) != tuple(map(_compact, context)):
                     raise ValueError('표 제목/문맥 불일치: ' + key)
@@ -269,36 +272,32 @@ def attach_table_sources(text, spec, *, project=None):
     targets = _targets(nodes, rendered)
     policy = document.policy_for_major(document.load_plain_policy(), 'specialty_crops')
     groups, candidates = _credits(nodes, policy)
-    owners = {pos: min(options)[1] for pos, options in candidates.items()}
     edits = []
     lines = text.splitlines(keepends=True)
     for key, table_index in targets.items():
         group = next(i for i, (_, end) in enumerate(groups) if end == table_index)
-        own = [pos for pos, owner in owners.items() if owner == group]
-        if own:
-            if (len(own) != 1 or own[0] != table_index + 1
-                    or nodes[own[0]]['text'] != rendered[key]):
-                raise ValueError('기존 출처 충돌/소유 불명확: ' + key)
-            continue
         if any(any(owner == group for _, owner in options) for options in candidates.values()):
-            raise ValueError('주변 기존 출처의 소유 불명확: ' + key)
-        end_line = nodes[table_index]['end_line'] + line_offset
-        offset = sum(map(len, lines[:end_line]))
-        ending = '\r\n' if lines[end_line - 1].endswith('\r\n') else '\n'
-        prefix = '' if text[:offset].endswith('\n') else ending
-        edits.append((offset, prefix + ending + rendered[key] + ending + ending))
+            raise ValueError('주변 기존 출처 충돌: 제목 끝 괄호로 옮기세요: ' + key)
+        _, existing = document.split_caption_credit(nodes[table_index - 1]['text'])
+        expected = rendered[key] or None
+        if existing is not None:
+            if existing != expected:
+                raise ValueError('기존 출처 충돌: ' + key)
+            continue
+        if expected is None:
+            continue
+        line_index = nodes[table_index - 1]['start_line'] + line_offset
+        line = lines[line_index]
+        content = line.rstrip('\r\n')
+        offset = sum(map(len, lines[:line_index])) + len(content.rstrip())
+        edits.append((offset, ' (출처 : ' + expected + ')'))
     result = text
     for offset, insertion in sorted(edits, reverse=True):
         result = result[:offset] + insertion + result[offset:]
-    # Reparse actual transformed bytes and verify each credit's real owner.
+    # Reparse the actual caption edits, including the idempotent case.
     after = document.parse(result, with_spans=True)
-    after_targets = _targets(after, rendered)
-    after_groups, after_candidates = _credits(after, policy)
-    for key, index in after_targets.items():
-        pos = index + 1
-        group = next(i for i, (_, end) in enumerate(after_groups) if end == index)
-        if (pos >= len(after) or after[pos]['kind'] != 'paragraph'
-                or after[pos]['text'] != rendered[key]
-                or min(after_candidates.get(pos, [(float('inf'), -1)]))[1] != group):
+    for key, index in _targets(after, rendered).items():
+        _, actual = document.split_caption_credit(after[index - 1]['text'])
+        if actual != (rendered[key] or None):
             raise ValueError('변환 후 출처 귀속 오류: ' + key)
     return result
