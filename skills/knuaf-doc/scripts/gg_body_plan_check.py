@@ -8,14 +8,80 @@ import argparse
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 import json
 from pathlib import Path
+import posixpath
 import re
-from zipfile import BadZipFile
+from xml.etree import ElementTree as ET
+from zipfile import BadZipFile, ZipFile
 
 YEAR = re.compile(r"(?<!\d)(\d{4})(년)?(?!\d)")
 START = re.compile(r"시작(?!가)|개시|진출|도입")
 NUMBER = r"[+-]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?"
 SHARE = re.compile(r"(" + NUMBER + r")\s*%")
 PRICE = re.compile(r"(" + NUMBER + r")\s*원\s*/\s*kg", re.I)
+
+_XLS_MAIN = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
+_XLS_REL = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}"
+_PKG_REL = "{http://schemas.openxmlformats.org/package/2006/relationships}"
+
+
+def _check_workbook_package(path):
+    """Check required XML parts and shared-string references before openpyxl."""
+    with ZipFile(path) as package:
+        names = set(package.namelist())
+
+        def xml_part(part, root_tag=None):
+            if part not in names:
+                raise ValueError('missing XLSX part: ' + part)
+            try:
+                root = ET.fromstring(package.read(part))
+            except ET.ParseError as error:
+                raise ValueError(f'invalid XLSX XML {part}: {error}') from error
+            if root_tag is not None and root.tag != root_tag:
+                raise ValueError('invalid XLSX XML root: ' + part)
+            return root
+
+        def target_part(relationship, directory):
+            if (relationship is None or not relationship.get('Target')
+                    or relationship.get('TargetMode') not in (None, 'Internal')):
+                raise ValueError('missing or external XLSX part relationship')
+            target = relationship.get('Target')
+            part = posixpath.normpath(target.lstrip('/') if target.startswith('/')
+                                      else posixpath.join(directory, target))
+            if part == '..' or part.startswith('../'):
+                raise ValueError('XLSX relationship leaves the package: ' + target)
+            return part
+
+        xml_part('[Content_Types].xml', '{http://schemas.openxmlformats.org/package/2006/content-types}Types')
+        root_rels = xml_part('_rels/.rels', _PKG_REL + 'Relationships')
+        workbook = xml_part('xl/workbook.xml', _XLS_MAIN + 'workbook')
+        workbook_rels = xml_part('xl/_rels/workbook.xml.rels', _PKG_REL + 'Relationships')
+        office_documents = [rel for rel in root_rels.findall(_PKG_REL + 'Relationship')
+                            if rel.get('Type') == _XLS_REL[1:-1] + '/officeDocument']
+        if len(office_documents) != 1 or target_part(office_documents[0], '') != 'xl/workbook.xml':
+            raise ValueError('invalid XLSX officeDocument relationship')
+        by_id = {rel.get('Id'): rel for rel in workbook_rels.findall(_PKG_REL + 'Relationship')}
+        sheets = workbook.findall(_XLS_MAIN + 'sheets/' + _XLS_MAIN + 'sheet')
+        if not sheets:
+            raise ValueError('XLSX workbook has no referenced sheets')
+        shared_count = None
+        if 'xl/sharedStrings.xml' in names:
+            strings = xml_part('xl/sharedStrings.xml', _XLS_MAIN + 'sst')
+            shared_count = len(strings.findall(_XLS_MAIN + 'si'))
+        for sheet in sheets:
+            part = target_part(by_id.get(sheet.get(_XLS_REL + 'id')), 'xl')
+            root = xml_part(part)
+            for cell in root.iter(_XLS_MAIN + 'c'):
+                if cell.get('t') != 's':
+                    continue
+                if shared_count is None:
+                    raise ValueError('missing XLSX part: xl/sharedStrings.xml')
+                value = cell.find(_XLS_MAIN + 'v')
+                try:
+                    index = int(value.text if value is not None else '')
+                except (TypeError, ValueError) as error:
+                    raise ValueError(f'invalid shared-string index: {part}!{cell.get("r")}') from error
+                if not 0 <= index < shared_count:
+                    raise ValueError(f'shared-string index out of range: {part}!{cell.get("r")}')
 
 
 def _number(value):
@@ -106,6 +172,7 @@ def crosscheck(text, workbook_path, mapping):
     if not isinstance(channels, list) or not channels:
         raise ValueError('channels must be a non-empty list')
     plans = []
+    _check_workbook_package(workbook_path)
     workbook = load_workbook(workbook_path, data_only=True, read_only=True)
     try:
         names, aliases_seen = set(), set()
@@ -222,7 +289,7 @@ def main(argv=None):
     try:
         result = crosscheck(Path(args.body).read_text(encoding='utf-8'), args.xlsx,
                             json.loads(Path(args.locator_map).read_text(encoding='utf-8')))
-    except (OSError, ValueError, KeyError, TypeError, BadZipFile, InvalidFileException, SyntaxError) as error:
+    except (OSError, ValueError, KeyError, IndexError, TypeError, BadZipFile, InvalidFileException, SyntaxError) as error:
         result = {'status': 'blocked', 'message': '확인 불가', 'reason': str(error)}
     result['summary'] = {
         'meaning': '보조 경고, 판정 근거 아님. 문장 숫자 대조 결과는 확인 권장 사항이며 '

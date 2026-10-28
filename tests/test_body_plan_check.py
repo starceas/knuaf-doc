@@ -6,8 +6,9 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from xml.etree import ElementTree as ET
 from zipfile import ZipFile
-from openpyxl import Workbook
+from openpyxl import Workbook, load_workbook
 from tests._harness import SCRIPTS, runtime
 
 
@@ -33,6 +34,13 @@ class BodyPlanCheckTests(unittest.TestCase):
             for i in range(5)
         }}]}
         self.mod = runtime('gg_body_plan_check')
+
+    def _write_package(self, name, parts):
+        path = self.root / name
+        with ZipFile(path, 'w') as package:
+            for part, data in parts.items():
+                package.writestr(part, data)
+        return path
 
     def test_late_start_in_narrative_is_rejected_even_with_matching_ratio_elsewhere(self):
         result = self.mod.crosscheck('온라인·직거래 2042년 소량 시작\n2041년 직거래 15%', self.xlsx, self.mapping)
@@ -340,10 +348,19 @@ class BodyPlanCheckTests(unittest.TestCase):
         corrupt.write_bytes(b'not a zip')
         wrong_format = self.root / 'unsupported.xls'
         wrong_format.write_bytes(b'not an OOXML workbook')
-        malformed = self.root / 'malformed.xlsx'
-        with ZipFile(self.xlsx) as source, ZipFile(malformed, 'w') as output:
-            for member in source.namelist():
-                output.writestr(member, b'<broken' if member == 'xl/workbook.xml' else source.read(member))
+        with ZipFile(self.xlsx) as source:
+            parts = {name: source.read(name) for name in source.namelist()}
+        malformed = self._write_package('malformed.xlsx', parts | {'xl/workbook.xml': b'<broken'})
+        package_cases = []
+        for index, part in enumerate(('[Content_Types].xml', '_rels/.rels', 'xl/workbook.xml',
+                                      'xl/_rels/workbook.xml.rels', 'xl/worksheets/sheet1.xml')):
+            path = self._write_package(f'missing-part-{index}.xlsx',
+                                       {name: data for name, data in parts.items() if name != part})
+            package_cases.append((f'missing {part}', body, path, locator))
+        for index, part in enumerate(('[Content_Types].xml', '_rels/.rels',
+                                      'xl/_rels/workbook.xml.rels', 'xl/worksheets/sheet1.xml')):
+            path = self._write_package(f'broken-part-{index}.xlsx', parts | {part: b'<broken'})
+            package_cases.append((f'broken {part}', body, path, locator))
         invalid_json = self.root / 'invalid.json'
         invalid_json.write_text('{', encoding='utf-8')
         invalid_refs = self.root / 'invalid-refs.json'
@@ -359,6 +376,7 @@ class BodyPlanCheckTests(unittest.TestCase):
             ('invalid map reference', body, self.xlsx, invalid_refs),
             ('missing map', body, self.xlsx, self.root / 'missing.json'),
             ('missing body', self.root / 'missing.md', self.xlsx, locator),
+            *package_cases,
         ):
             with self.subTest(label=label):
                 result = subprocess.run([sys.executable, str(SCRIPTS / 'gg_body_plan_check.py'),
@@ -366,6 +384,124 @@ class BodyPlanCheckTests(unittest.TestCase):
                                          '--map', str(map_path)], capture_output=True, text=True)
                 self.assertEqual(result.returncode, 2, result.stderr)
                 payload = json.loads(result.stdout)
-                self.assertEqual(payload['status'], 'blocked')
+                self.assertEqual((payload['status'], payload['message']), ('blocked', '확인 불가'))
+                self.assertEqual((payload['summary']['comparison_count'], payload['summary']['not_checked_count']),
+                                 (0, 0))
+
+    def test_shared_string_references_require_a_readable_table_and_in_range_index(self):
+        main = '{http://schemas.openxmlformats.org/spreadsheetml/2006/main}'
+        pkg = '{http://schemas.openxmlformats.org/package/2006/relationships}'
+        ct = '{http://schemas.openxmlformats.org/package/2006/content-types}'
+        with ZipFile(self.xlsx) as source:
+            parts = {name: source.read(name) for name in source.namelist()}
+        strings = (f'<sst xmlns="{main[1:-1]}"><si><t>unused</t></si>'
+                   '<si><t>0.15</t></si></sst>').encode()
+        parts['xl/sharedStrings.xml'] = strings
+        types = ET.fromstring(parts['[Content_Types].xml'])
+        ET.SubElement(types, ct + 'Override', PartName='/xl/sharedStrings.xml',
+                      ContentType='application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml')
+        parts['[Content_Types].xml'] = ET.tostring(types)
+        relationships = ET.fromstring(parts['xl/_rels/workbook.xml.rels'])
+        ET.SubElement(relationships, pkg + 'Relationship', Id='rIdShared',
+                      Type='http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings',
+                      Target='sharedStrings.xml')
+        parts['xl/_rels/workbook.xml.rels'] = ET.tostring(relationships)
+        sheet = ET.fromstring(parts['xl/worksheets/sheet1.xml'])
+        cell = sheet.find(f'.//{main}c[@r="B3"]')
+        cell.set('t', 's')
+        cell.find(main + 'v').text = '1'
+        parts['xl/worksheets/sheet1.xml'] = ET.tostring(sheet)
+        valid = self._write_package('shared-valid.xlsx', parts)
+        result = self.mod.crosscheck('직거래 2041년 비율15%', valid, self.mapping)
+        self.assertEqual(result['status'], 'warning')
+        self.assertEqual([(r['year'], r['metric'], r['actual'], r['expected'], r['status'])
+                          for r in result['comparisons']], [(2041, 'share', '15', '15', 'match')])
+        self.assertEqual(result['issues'], [])
+        body, locator = self.root / 'body.md', self.root / 'map.json'
+        body.write_text('직거래 2041년 비율15%', encoding='utf-8')
+        locator.write_text(json.dumps(self.mapping, ensure_ascii=False), encoding='utf-8')
+        for label, index, table in (
+            ('missing', '1', None),
+            ('broken', '1', b'<broken'),
+            ('empty', '0', f'<sst xmlns="{main[1:-1]}"/>'.encode()),
+            ('negative', '-1', strings),
+            ('past-end', '2', strings),
+            ('noninteger', '0.5', strings),
+            ('missing-index', None, strings),
+        ):
+            with self.subTest(label=label):
+                changed = parts.copy()
+                if table is None:
+                    del changed['xl/sharedStrings.xml']
+                else:
+                    changed['xl/sharedStrings.xml'] = table
+                sheet = ET.fromstring(parts['xl/worksheets/sheet1.xml'])
+                cell = sheet.find(f'.//{main}c[@r="B3"]')
+                value = cell.find(main + 'v')
+                if index is None:
+                    cell.remove(value)
+                else:
+                    value.text = index
+                changed['xl/worksheets/sheet1.xml'] = ET.tostring(sheet)
+                path = self._write_package(f'shared-{label}.xlsx', changed)
+                result = subprocess.run([sys.executable, str(SCRIPTS / 'gg_body_plan_check.py'),
+                                         '--body', str(body), '--xlsx', str(path),
+                                         '--map', str(locator)], capture_output=True, text=True)
+                self.assertEqual(result.returncode, 2, result.stderr)
+                payload = json.loads(result.stdout)
+                self.assertEqual((payload['status'], payload['message']), ('blocked', '확인 불가'))
+                self.assertEqual((payload['summary']['comparison_count'], payload['summary']['not_checked_count']),
+                                 (0, 0))
+
+    def test_every_referenced_sheet_is_checked_using_its_relationship_target(self):
+        main = '{http://schemas.openxmlformats.org/spreadsheetml/2006/main}'
+        doc = '{http://schemas.openxmlformats.org/officeDocument/2006/relationships}'
+        ct = '{http://schemas.openxmlformats.org/package/2006/content-types}'
+        book = load_workbook(self.xlsx)
+        book.create_sheet('별도')['A1'] = '참고'
+        base = self.root / 'two-sheets.xlsx'
+        book.save(base)
+        book.close()
+        with ZipFile(base) as source:
+            parts = {name: source.read(name) for name in source.namelist()}
+        workbook = ET.fromstring(parts['xl/workbook.xml'])
+        sheet = workbook.find(f'{main}sheets/{main}sheet[@name="별도"]')
+        relationships = ET.fromstring(parts['xl/_rels/workbook.xml.rels'])
+        relationship = next(rel for rel in relationships if rel.get('Id') == sheet.get(doc + 'id'))
+        old = relationship.get('Target').lstrip('/')
+        target = 'xl/worksheets/renamed.xml'
+        relationship.set('Target', 'worksheets/renamed.xml')
+        parts['xl/_rels/workbook.xml.rels'] = ET.tostring(relationships)
+        parts[target] = parts.pop(old)
+        types = ET.fromstring(parts['[Content_Types].xml'])
+        types.find(f'{ct}Override[@PartName="/{old}"]').set('PartName', '/' + target)
+        parts['[Content_Types].xml'] = ET.tostring(types)
+        valid = self._write_package('renamed-valid.xlsx', parts)
+        result = self.mod.crosscheck('직거래 2041년 비율15%', valid, self.mapping)
+        self.assertEqual([(r['year'], r['actual'], r['expected'], r['status']) for r in result['comparisons']],
+                         [(2041, '15', '15', 'match')])
+        self.assertEqual(result['issues'], [])
+        body, locator = self.root / 'body.md', self.root / 'map.json'
+        body.write_text('직거래 2041년 비율15%', encoding='utf-8')
+        locator.write_text(json.dumps(self.mapping, ensure_ascii=False), encoding='utf-8')
+        shared = ET.fromstring(parts[target])
+        cell = shared.find(f'.//{main}c[@r="A1"]')
+        cell.clear()
+        cell.attrib.update(r='A1', t='s')
+        ET.SubElement(cell, main + 'v').text = '0'
+        for label, data in (('missing', None), ('broken', b'<broken'), ('shared', ET.tostring(shared))):
+            with self.subTest(label=label):
+                changed = parts.copy()
+                if data is None:
+                    del changed[target]
+                else:
+                    changed[target] = data
+                path = self._write_package(f'unmapped-{label}.xlsx', changed)
+                result = subprocess.run([sys.executable, str(SCRIPTS / 'gg_body_plan_check.py'),
+                                         '--body', str(body), '--xlsx', str(path),
+                                         '--map', str(locator)], capture_output=True, text=True)
+                self.assertEqual(result.returncode, 2, result.stderr)
+                payload = json.loads(result.stdout)
+                self.assertEqual((payload['status'], payload['message']), ('blocked', '확인 불가'))
                 self.assertEqual((payload['summary']['comparison_count'], payload['summary']['not_checked_count']),
                                  (0, 0))
