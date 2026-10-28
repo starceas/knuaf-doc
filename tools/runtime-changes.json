@@ -206,7 +206,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/install-manifest.json": {
-   "after_sha256": "92dbdfa6c8b2c55b1ebd639267167377f6f9859c6d9a248f036c883ba23a4df7",
+   "after_sha256": "32549c36e0ac6e0809f3b31c54aaa4cb0c9b560258709a2adac58cf7e1e9dfc8",
    "before_sha256": null,
    "first_changed": "P27",
    "last_changed": "P28",
@@ -825,12 +825,12 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/plan-fit-rules.md": {
-   "after_sha256": "c885eeaee719420cb9e9b83297dfdb826191eb23c0ab0b72dcfe15de09182f00",
+   "after_sha256": "09bb82bf996d75e8213ed299cd2b96e2dc13f1f1305404b220972f56e02abf47",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
    "owner": "P28",
-   "reason": "Plan-fit rules and check: cultivation-method equipment fit, removal of unowned asset rows, distinct grade and channel prices, channel-cost reflection notes | R2: unreadable tables and uncached price-history formulas block instead of passing | R3: partly unreadable tables, blocks, rows and sales columns block instead of hiding behind readable ones",
+   "reason": "Plan-fit rules and check: cultivation-method equipment fit, removal of unowned asset rows, distinct grade and channel prices, channel-cost reflection notes | R2: unreadable tables and uncached price-history formulas block instead of passing | R3: partly unreadable tables, blocks, rows and sales columns block instead of hiding behind readable ones | R4: one shared table check (expected counts from the school layout, real column range) for every table",
    "source": "new"
   },
   "skills/knuaf-doc/references/price-research-routes.md": {
@@ -1435,12 +1435,12 @@
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_plan_fit.py": {
-   "after_sha256": "1e644f6d4e654ac4b7bcf3e8d6a1ad81e34d9d9be4c92e38cd7533ad127b7514",
+   "after_sha256": "0f1d156468c1a145d3ca3ffc27372b026f3090a974c18333c28ef764638ca73c",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
    "owner": "P28",
-   "reason": "Plan-fit rules and check: cultivation-method equipment fit, removal of unowned asset rows, distinct grade and channel prices, channel-cost reflection notes | R2: unreadable tables and uncached price-history formulas block instead of passing | R3: partly unreadable tables, blocks, rows and sales columns block instead of hiding behind readable ones",
+   "reason": "Plan-fit rules and check: cultivation-method equipment fit, removal of unowned asset rows, distinct grade and channel prices, channel-cost reflection notes | R2: unreadable tables and uncached price-history formulas block instead of passing | R3: partly unreadable tables, blocks, rows and sales columns block instead of hiding behind readable ones | R4: one shared table check (expected counts from the school layout, real column range) for every table",
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_price_assumptions.py": {

@@ -68,6 +68,17 @@ _ASSET_BLOCKS = {
 }
 _DEPRECIATION_GROUPS = {"계", "영농시설", "대농기구", "생물자산"}
 
+# 학과 17시트 양식(X01) 배치 기준 기대 개수. 공통 표 확인(_TableCheck)이 쓴다.
+LAYOUT = {
+    "investment": {"year_rows": 5},                # 3.투자계획 연차별 세부투자계획 연도 칸(B)
+    "assets": {"blocks": 8},                       # 1. 기초재무상태조사 (1)~(8)
+    "depreciation": {"blocks": 5},                 # 10. 감가상각비계획 가.~마. 연도 표
+    "labor": {"tables": 2},                        # 8. 노무비계획 산출근거 1년차·2년차 이후
+    "sales_history": {"years": 5},                 # 5. 판매계획 가격 이력 연도 열
+    "sales_shares": {"years": 5},                  # 5. 판매계획 판매비율 연도 열
+    "sga": {"years": 5},                           # 12 손익계획 연도 열
+}
+
 
 def _norm(value):
     if value is None:
@@ -198,12 +209,105 @@ def _not_number(row, col, value):
     return "%s 값이 숫자가 아님: %r" % (_addr(row, col), value)
 
 
+class _TableCheck:
+    """표 읽기 공통 단계.
+
+    각 표는 (1) 양식이 기대하는 연도 열·블록 수와 실제로 읽은 수를 대조하고
+    (2) 표의 실제 열 범위(머리글 행의 글자·병합 범위와 자료 행에 값이 있는 끝 열 중
+    더 넓은 쪽) 안에서 머리글로 인정되지 않은 열에 값이 남았는지 본다. 하나라도
+    어긋나면 그 표 전체를 blocked로 낸다. 개별 읽기 함수는 이 확인을 통과한 결과만 쓴다.
+    """
+
+    def __init__(self, book, pair, sheet):
+        self.book, self.pair, self.sheet = book, pair, sheet
+        self.ws_f, self.ws = pair
+        self.problems = []
+
+    def fail(self, what):
+        self.problems.append(what)
+
+    def expect(self, what, expected, found):
+        if found < expected:
+            self.fail("%s %d개 기대, %d개 읽음" % (what, expected, found))
+
+    def _filled(self, row, col):
+        raw, data = self.ws_f.cell(row, col).value, self.ws.cell(row, col).value
+        if isinstance(raw, str) and raw.startswith("="):
+            return True
+        if data is None:
+            return False
+        return _norm(data) not in _EMPTY_TEXT
+
+    def extent(self, header_rows, data_rows, start=2):
+        """표의 끝 열.
+
+        머리글 행의 글자·병합 중 마지막 열을 먼저 잡는다(머리글 사이의 빈 열은
+        병합된 머리글의 오른쪽 칸이라 표 안이다). 그 뒤 자료 행에 바로 이어지는
+        값이 있으면 그 끝까지 넓힌다. 마지막 머리글 글자가 빠져도 그 열의 병합이나
+        자료 값이 표 범위를 지킨다. 머리글이 끝나고 두 칸 이상 비면 다른 표다.
+        """
+        header_rows = list(header_rows)
+        data_rows = list(data_rows)
+        covered = set()
+        for m in self.ws_f.merged_cells.ranges:
+            if any(m.min_row <= r <= m.max_row for r in header_rows):
+                covered.update(range(m.min_col, m.max_col + 1))
+        end = start
+        gap = 0
+        for c in range(start, self.ws.max_column + 1):
+            if c in covered or any(self._filled(r, c) for r in header_rows):
+                end, gap = c, 0
+            elif any(self._filled(r, c) for r in data_rows):
+                gap = 0  # 머리글은 비었지만 자료가 이어진다(예: 이름 지운 장비 열)
+            elif end > start:
+                gap += 1
+                if gap >= 2:
+                    break  # 머리글·자료 모두 두 칸 이상 빈 열: 표 밖
+        c = end + 1
+        while c <= self.ws.max_column and any(self._filled(r, c) for r in data_rows):
+            end = c
+            c += 1
+        return end
+
+    def segments(self, rows, col):
+        """col 열의 칸 구획 수. 병합된 칸은 하나로, 글자가 없어도 병합이면 하나로 센다."""
+        merged = [m for m in self.ws_f.merged_cells.ranges
+                  if m.min_col <= col <= m.max_col and m.max_row > m.min_row]
+        keys = set()
+        for r in rows:
+            hit = next((m for m in merged if m.min_row <= r <= m.max_row), None)
+            if hit is not None:
+                keys.add(("m", hit.min_row))
+            elif self._filled(r, col):
+                keys.add(("c", r))
+        return len(keys)
+
+    def stray(self, data_rows, known_cols, start, end, what):
+        """[start, end+1] 안에서 known_cols 밖 칸에 값이 있으면 실패.
+
+        end+1(표 바로 오른쪽 열)도 본다. 머리글이 끝난 바로 다음 열의 값은 표가
+        이어진 것이라 버리면 안 된다. 한 칸 이상 빈 열 뒤는 다른 표로 보고 읽지 않는다.
+        """
+        for r in data_rows:
+            for c in range(start, end + 2):
+                if c not in known_cols and self._filled(r, c):
+                    self.fail("%s 값이 %s 머리글로 인정되지 않은 열에 있음" % (_addr(r, c), what))
+                    return
+
+    def result(self, rows):
+        """(행, None) 또는 (None, 문제들). 읽기 함수는 이 결과만 돌려준다."""
+        if self.problems:
+            return None, "; ".join(self.problems[:4])
+        return rows, None
+
+
 def _investment_rows(book):
     """3.투자계획 연차별 세부투자계획 → ([(행, 항목명, 금액, 캐시없음)], 문제)."""
     pair = book.sheet("3.투자계획")
     if pair is None:
         return None, "시트 없음"
     ws = pair[1]
+    check = _TableCheck(book, pair, "3.투자계획")
     header = None
     for r in range(1, ws.max_row + 1):
         if _norm(ws.cell(r, 3).value) == "투자항목":
@@ -213,21 +317,41 @@ def _investment_rows(book):
         return None, "C열 '투자항목' 머리글 없음"
     if _norm(ws.cell(header, 5).value) != "계":
         return None, "E%d 금액 머리글이 '계'가 아님" % header
-    rows = []
+    # 표 범위: 머리글 아래 B~I에 값이 있거나 B열 연도 병합에 걸친 행이 이어지는 곳까지.
+    # 첫 빈 행에서 끝난다(표 아래 메모는 밖).
+    merged_b = set()
+    for m in pair[0].merged_cells.ranges:
+        if m.min_col <= 2 <= m.max_col and m.min_row > header:
+            merged_b.update(range(m.min_row, m.max_row + 1))
+    last = header
     for r in range(header + 1, ws.max_row + 1):
+        if r in merged_b or any(check._filled(r, c) for c in range(2, 10)):
+            last = r
+        elif last > header:
+            break
+    # 연도 수: B열 연도 칸 구획(병합된 첫해 블록은 글자가 비어도 한 해로 센다).
+    check.expect("연도 칸(B열)", LAYOUT["investment"]["year_rows"],
+                 check.segments(range(header + 1, last + 1), 2))
+    data_rows = range(header + 1, last + 1)
+    # 머리글 열: B 연도, C 항목, D 규격, E 계, F 자부담, G 보조, H 융자, I 비고.
+    width = check.extent([header - 1, header], data_rows)
+    check.stray(data_rows, set(range(2, 10)), 2, width, "투자표")
+    rows = []
+    for r in data_rows:
         name = _norm(ws.cell(r, 3).value)
         if name in ("계", "합계"):
             continue
         amount, uncached, bad = _read_number(book, pair, r, 5)
         if bad is not None:
-            return None, _not_number(r, 5, bad)
+            check.fail(_not_number(r, 5, bad))
+            continue
         if not name:
             # 항목명 없이 금액만 있는 행은 '빈 행'이 아니다. B열 연도가 있는 행은 연도 소계라 제외.
             if (amount or uncached) and not _norm(ws.cell(r, 2).value):
-                return None, "E%d에 금액이 있는데 C%d 투자항목이 비어 있음" % (r, r)
+                check.fail("E%d에 금액이 있는데 C%d 투자항목이 비어 있음" % (r, r))
             continue
         rows.append((r, ws.cell(r, 3).value, amount, uncached))
-    return rows, None
+    return check.result(rows)
 
 
 def _asset_rows(book):
@@ -236,6 +360,7 @@ def _asset_rows(book):
     if pair is None:
         return None, "시트 없음"
     ws = pair[1]
+    check = _TableCheck(book, pair, "1. 기초재무상태조사")
     blocks = []
     section_end = ws.max_row + 1
     for r in range(1, ws.max_row + 1):
@@ -248,9 +373,11 @@ def _asset_rows(book):
             blocks.append((r, _ASSET_BLOCKS[match.group(1)]))
     if not blocks:
         return None, "B열 '(1) 토지' 같은 자산 블록 머리글 없음"
+    check.expect("자산 블록", LAYOUT["assets"]["blocks"], len(blocks))
     rows = []
     for index, (start, (role, col)) in enumerate(blocks):
         end = blocks[index + 1][0] if index + 1 < len(blocks) else section_end
+        title = str(ws.cell(start, 2).value).strip()
         header = None
         for r in range(start + 1, min(end, start + 4)):
             # 머리글은 글자로만 인정한다. 금액 0·숫자를 머리글로 잡으면 그 행이 사라진다.
@@ -260,70 +387,101 @@ def _asset_rows(book):
                 break
         if header is None:
             # 빈 블록은 '해당 없음'이다. 무엇이든 적혀 있는데 금액 머리글이 없으면 못 읽음.
-            if any(_norm(ws.cell(r, c).value) for r in range(start + 1, end)
-                   for c in range(2, 9)):
-                return None, "%s 블록(%d행)의 금액 머리글 없음" % (
-                    str(ws.cell(start, 2).value).strip(), start)
+            if any(check._filled(r, c) for r in range(start + 1, end) for c in range(2, 9)):
+                check.fail("%s 블록(%d행)의 금액 머리글 없음" % (title, start))
             continue
-        for r in range(header + 1, end):
+        data_rows = range(header + 1, end)
+        # 블록 열 범위: 머리글 줄의 글자·병합 끝(양식 H열)까지. 그 오른쪽은 표 밖 메모다.
+        width = check.extent([header], [])
+        known = {c for c in range(2, width + 1) if check._filled(header, c)}
+        for m in pair[0].merged_cells.ranges:
+            if m.min_row <= header <= m.max_row:
+                known.update(range(m.min_col, m.max_col + 1))
+        check.stray(data_rows, known, 2, width, "%s 블록" % title)
+        for r in data_rows:
             label = _norm(ws.cell(r, 2).value)
             if "합계" in label or label == "계" or label.startswith("*"):
                 continue
             amount, uncached, bad = _read_number(book, pair, r, col)
             if bad is not None:
-                return None, _not_number(r, col, bad)
+                check.fail(_not_number(r, col, bad))
+                continue
             name = ws.cell(r, 2).value if label else ws.cell(r, 3).value
             if not _norm(name):
                 # 종류(B)·명칭(C)이 모두 비었는데 금액이 있으면 '빈 행'이 아니다.
                 if uncached or amount:
-                    return None, "%s에 금액이 있는데 B%d·C%d 종류·명칭이 비어 있음" % (
-                        _addr(r, col), r, r)
+                    check.fail("%s에 금액이 있는데 B%d·C%d 종류·명칭이 비어 있음" % (
+                        _addr(r, col), r, r))
                 continue
             note = _norm(ws.cell(r, 8).value)
             rows.append((role, r, name, amount, uncached, note))
-    return rows, None
+    return check.result(rows)
 
 
 def _depreciation_items(book):
     """10. 감가상각비계획 → ([(행, 열, 항목명, 취득가격, 캐시없음)], 문제).
 
-    블록마다 판정한다. 한 블록을 읽었다고 다른 블록의 읽기 실패를 덮지 않는다.
+    연도 표('구분')마다 판정한다. 한 표를 읽었다고 다른 표의 읽기 실패를 덮지 않는다.
     """
     pair = book.sheet("10. 감가상각비계획")
     if pair is None:
         return None, "시트 없음"
     ws_f, ws = pair
-    sections = cost_rows = 0
+    check = _TableCheck(book, pair, "10. 감가상각비계획")
+    sections = [r for r in range(1, ws.max_row + 1) if _norm(ws.cell(r, 2).value) == "구분"]
+    if not sections:
+        return None, "B열 '구분' 표 없음"
+    check.expect("연도 표('구분')", LAYOUT["depreciation"]["blocks"], len(sections))
     items = []
-    for r in range(1, ws.max_row + 1):
-        label = _norm(ws.cell(r, 2).value)
-        if label == "구분":
-            sections += 1
-        is_name_row = _norm(ws.cell(r + 1, 2).value) == "취득가격"
-        if label not in _DEPRECIATION_LABELS and not is_name_row:
-            # 표 안의 알 수 없는 행에 숫자·수식이 있으면 표 구조를 잘못 읽은 것이다.
-            for c in range(3, ws.max_column + 1):
-                raw, data = ws_f.cell(r, c).value, ws.cell(r, c).value
-                if _number(data) is not None or (isinstance(raw, str) and raw.startswith("=")):
-                    return None, "%d행 '%s'를 해석하지 못함(%s에 값)" % (
-                        r, ws.cell(r, 2).value, _addr(r, c))
+    for index, start in enumerate(sections):
+        end = sections[index + 1] if index + 1 < len(sections) else ws.max_row + 1
+        cost = next((r for r in range(start + 1, end)
+                     if _norm(ws.cell(r, 2).value) == "취득가격"), None)
+        if cost is None:
+            check.fail("%d행 '구분' 표에 '취득가격' 행 없음" % start)
             continue
-        if label != "취득가격":
-            continue
-        cost_rows += 1
-        for c in range(3, ws.max_column + 1):
-            name = _norm(ws.cell(r - 1, c).value)
-            if not name or name in _DEPRECIATION_GROUPS:
+        last = cost
+        for r in range(cost, end):
+            label = _norm(ws.cell(r, 2).value)
+            if label in _DEPRECIATION_LABELS:
+                last = r
+            elif label:
+                break  # 다음 연도 제목(나. … 등)
+        # 표 열 범위: 머리글 두 줄(구분 / 장비 이름)과 자료 행이 함께 이루는 실제 끝.
+        # 머리글 안쪽의 빈 열(장비 이름 지운 미보유 열 등)은 아래 이름 없는 열 규칙이 보고,
+        # 마지막 머리글 칸 오른쪽에 자료가 이어지면 머리글이 빠진 장비라 막는다.
+        width = check.extent(range(start, cost), range(cost, last + 1))
+        header_end = max([c for c in range(3, width + 1)
+                          if any(check._filled(r, c) for r in range(start, cost))]
+                         + [m.max_col for m in ws_f.merged_cells.ranges
+                            if m.min_row <= cost - 1 and m.max_row >= start] + [2])
+        if width > header_end:
+            check.fail("%s 값이 감가상각 표(%d행) 머리글 끝(%s열) 밖에 있음" % (
+                _addr(cost, header_end + 1), start, openpyxl.utils.get_column_letter(header_end)))
+        for r in range(start + 1, last + 1):
+            if r == cost - 1 or _norm(ws.cell(r, 2).value) in _DEPRECIATION_LABELS:
                 continue
-            cost, uncached, bad = _read_number(book, pair, r, c)
+            if any(_number(ws.cell(r, c).value) is not None
+                   or (isinstance(ws_f.cell(r, c).value, str)
+                       and ws_f.cell(r, c).value.startswith("="))
+                   for c in range(3, width + 1)):
+                check.fail("%d행 '%s'를 해석하지 못함" % (r, ws.cell(r, 2).value))
+        for c in range(3, width + 1):
+            name = _norm(ws.cell(cost - 1, c).value)
+            if name in _DEPRECIATION_GROUPS:
+                continue
+            amount, uncached, bad = _read_number(book, pair, cost, c)
             if bad is not None:
-                return None, _not_number(r, c, bad)
-            items.append((r, c, ws.cell(r - 1, c).value, cost, uncached))
-    if not cost_rows:
-        return None, "B열 '취득가격' 행 없음"
-    if cost_rows < sections:
-        return None, "'구분' 표 %d개 중 '취득가격' 행 %d개" % (sections, cost_rows)
-    return items, None
+                check.fail(_not_number(cost, c, bad))
+                continue
+            if not name:
+                # 장비 이름 없는 열: 0·빈 칸은 양식 빈 열, 금액이 있으면 못 읽음.
+                if amount or uncached:
+                    check.fail("%s에 취득가격이 있는데 %s 장비 이름이 비어 있음" % (
+                        _addr(cost, c), _addr(cost - 1, c)))
+                continue
+            items.append((cost, c, ws.cell(cost - 1, c).value, amount, uncached))
+    return check.result(items)
 
 
 def _labor_tasks(book):
@@ -332,49 +490,55 @@ def _labor_tasks(book):
     if pair is None:
         return None, "시트 없음"
     ws = pair[1]
+    check = _TableCheck(book, pair, "8. 노무비계획")
+    titles = sum(1 for r in range(1, ws.max_row + 1)
+                 if "노동비산출근거" in _norm(ws.cell(r, 2).value))
+    headers = [r for r in range(1, ws.max_row + 1) if _norm(ws.cell(r, 2).value) == "항목"]
+    if not headers:
+        return None, "B열 '항목' 머리글(노동비 산출근거) 없음"
+    check.expect("산출근거 표 제목", LAYOUT["labor"]["tables"], titles)
+    check.expect("'항목' 머리글", max(titles, LAYOUT["labor"]["tables"]), len(headers))
     tasks = []
-    headers = titles = 0
-    for r in range(1, ws.max_row + 1):
-        if "노동비산출근거" in _norm(ws.cell(r, 2).value):
-            titles += 1
-    r = 1
-    while r <= ws.max_row:
-        if _norm(ws.cell(r, 2).value) != "항목":
-            r += 1
-            continue
-        headers += 1
-        days_col = None
-        for c in range(3, ws.max_column + 1):
-            if _norm(ws.cell(r, c).value) == "작업일수":
-                days_col = c
-                break
+    for index, header in enumerate(headers):
+        days_col = next((c for c in range(3, ws.max_column + 1)
+                         if _norm(ws.cell(header, c).value) == "작업일수"), None)
         if days_col is None:
-            return None, "%d행 '항목' 표에 '작업일수' 머리글 없음" % r
-        start = r
-        r += 1
-        closed = False
-        while r <= ws.max_row:
-            name = _norm(ws.cell(r, 2).value)
-            if name in ("합계", "계"):
-                closed = True
+            check.fail("%d행 '항목' 표에 '작업일수' 머리글 없음" % header)
+            continue
+        limit = headers[index + 1] if index + 1 < len(headers) else ws.max_row + 1
+        total = None
+        for r in range(header + 1, limit):
+            label = _norm(ws.cell(r, 2).value)
+            if label in ("합계", "계"):
+                total = r
                 break
-            if name == "항목" or "노동비산출근거" in name:
-                break  # 합계 없이 다음 표가 시작됨
+            if "노동비산출근거" in label:
+                break
+        if total is None:
+            check.fail("%d행 '항목' 표의 '합계' 행 없음" % header)
+            continue
+        # 표 열 범위: 머리글 두 줄(항목 / 일수·단가·계)의 글자·병합 끝(양식 U열).
+        # 그 오른쪽은 임금 상승률 관측표 등 다른 표라 이 표로 읽지 않는다.
+        width = check.extent([header, header + 1], [])
+        known = {c for c in range(2, width + 1)
+                 if check._filled(header, c) or check._filled(header + 1, c)}
+        for m in pair[0].merged_cells.ranges:
+            if m.min_row <= header + 1 and m.max_row >= header:
+                known.update(range(m.min_col, m.max_col + 1))
+        check.stray(range(header + 1, total + 1), known, 2, width, "노무 산출근거 표")
+        for r in range(header + 1, total):
+            name = _norm(ws.cell(r, 2).value)
+            if r == header + 1 and not name:
+                continue  # 머리글 둘째 줄
             days, uncached, bad = _read_number(book, pair, r, days_col)
-            if bad is not None and name:
-                return None, _not_number(r, days_col, bad)
+            if bad is not None:
+                check.fail(_not_number(r, days_col, bad))
+                continue
             if name:
                 tasks.append((r, ws.cell(r, 2).value, days, uncached))
             elif days or uncached:
-                return None, "%s에 일수가 있는데 B%d 작업명이 비어 있음" % (_addr(r, days_col), r)
-            r += 1
-        if not closed:
-            return None, "%d행 '항목' 표의 '합계' 행 없음" % start
-    if not headers:
-        return None, "B열 '항목' 머리글(노동비 산출근거) 없음"
-    if titles > headers:
-        return None, "노동비 산출근거 표 %d개 중 '항목' 머리글 %d개" % (titles, headers)
-    return tasks, None
+                check.fail("%s에 일수가 있는데 B%d 작업명이 비어 있음" % (_addr(r, days_col), r))
+    return check.result(tasks)
 
 
 def _check_equipment(book, method, fit, allow, issues):
@@ -524,8 +688,10 @@ def _sga_total(book, issues):
     """12 손익계획 판매비와 관리비(포장비·운반비·기타) 연도 합. 못 읽으면 None."""
     pair = book.sheet("12 손익계획")
     if pair is None:
+        _unreadable(issues, "12 손익계획", "시트 없음")
         return None
     ws = pair[1]
+    check = _TableCheck(book, pair, "12 손익계획")
     start = end = None
     for r in range(1, ws.max_row + 1):
         label = _norm(ws.cell(r, 2).value)
@@ -534,21 +700,31 @@ def _sga_total(book, issues):
         elif start is not None and "영업이익" in label:
             end = r
             break
-    if start is None or end is None:
+    header = next((r for r in range(1, (start or 1)) if _norm(ws.cell(r, 2).value) == "과목"), None)
+    if start is None or end is None or header is None:
+        _unreadable(issues, "12 손익계획", "'과목' 머리글·'판매비와 관리비'~'영업이익' 행 없음")
         return None
+    year_cols = [c for c in range(3, ws.max_column + 1) if _YEAR.match(_norm(ws.cell(header, c).value))]
+    check.expect("연도 열", LAYOUT["sga"]["years"], len(year_cols))
+    data_rows = range(start, end)
+    width = check.extent([header], data_rows)
+    check.stray(data_rows, {2} | set(year_cols), 2, width, "판매관리비 연도")
     total = 0.0
-    for r in range(start + 1, end):
-        for c in range(3, 8):
+    for r in data_rows:
+        for c in year_cols:
             number, uncached, bad = _read_number(book, pair, r, c)
             if uncached:
                 _uncached(issues, "12 손익계획", _addr(r, c))
                 return None
             if bad is not None:
-                _unreadable(issues, "12 손익계획", _not_number(r, c, bad))
-                return None
-            if number:
+                check.fail(_not_number(r, c, bad))
+            elif number and r > start:
                 total += abs(number)
-    return total
+    rows, problem = check.result(total)
+    if problem:
+        _unreadable(issues, "12 손익계획", problem)
+        return None
+    return rows
 
 
 def _sales_unreadable(issues, sheet, what):
@@ -570,41 +746,55 @@ def _grade_rows_ok(ws, row):
     return None
 
 
+def _history_cols(ws_f, ws, header, price_col):
+    """가격 이력 연도 머리글 열: 연도 글자·숫자 또는 연도 수식."""
+    cols = []
+    for c in range(4, price_col):
+        head = _norm(ws.cell(header, c).value)
+        raw = ws_f.cell(header, c).value
+        if _YEAR.match(head) or _number(ws.cell(header, c).value) is not None \
+                or (isinstance(raw, str) and raw.startswith("=")):
+            cols.append(c)
+    return cols
+
+
 def _read_sales(book, issues):
-    """판매계획 단가·이력·비율. 못 읽으면 이슈를 남기고 None."""
+    """판매계획 단가·이력·비율. 공통 표 확인을 거치며, 못 읽으면 이슈를 남기고 None."""
     pair = book.sheet(" 5. 판매계획")
     if pair is None:
         _sales_unreadable(issues, "5. 판매계획", "시트 없음")
         return None
-    ws = pair[1]
+    ws_f, ws = pair
     sheet = ws.title.strip()
+    check = _TableCheck(book, pair, sheet)
     out = {"sheet": sheet, "prices": {}, "history": {}, "shares": {},
            "notes": _sales_notes(ws)}
     blocked = False
+
+    # 가. 연도별 가격 추이 — 판로마다 이력 연도 열 5개 + 평균가격 열.
     for channel, label in PRICE_LABELS.items():
         row = _find_row(ws, label)
         if row is None:
-            _sales_unreadable(issues, sheet, "B열 '%s' 행 없음" % label)
-            return None
+            check.fail("B열 '%s' 행 없음" % label)
+            continue
         problem = _grade_rows_ok(ws, row)
         if problem:
-            _sales_unreadable(issues, sheet, problem)
-            return None
+            check.fail(problem)
+            continue
         header = row - 1
-        price_col = None
-        hist_cols = []
-        for c in range(3, ws.max_column + 1):
-            head = _norm(ws.cell(header, c).value)
-            if head == "평균가격":
-                price_col = c
-                break
-            raw = pair[0].cell(header, c).value
-            if _YEAR.match(head) or _number(ws.cell(header, c).value) is not None \
-                    or (isinstance(raw, str) and raw.startswith("=")):
-                hist_cols.append(c)
+        price_col = next((c for c in range(3, ws.max_column + 1)
+                          if _norm(ws.cell(header, c).value) == "평균가격"), None)
         if price_col is None:
-            _sales_unreadable(issues, sheet, "%d행 '평균가격' 머리글 없음" % header)
-            return None
+            check.fail("%d행 '평균가격' 머리글 없음" % header)
+            continue
+        hist_cols = _history_cols(ws_f, ws, header, price_col)
+        check.expect("%s 가격 이력 연도 열" % CHANNELS[channel],
+                     LAYOUT["sales_history"]["years"], len(hist_cols))
+        data_rows = range(row, row + len(GRADES))
+        # 표 끝 열: 머리글 행·등급 행에서 값이 있는 마지막 열(평균가격 열 뒤도 본다).
+        width = check.extent([header], data_rows)
+        check.stray(data_rows, {2, 3} | set(hist_cols) | {price_col}, 2, width,
+                    "%s 가격 이력 연도" % CHANNELS[channel])
         for offset, grade in enumerate(GRADES):
             r = row + offset
             cell = _addr(r, price_col)
@@ -621,71 +811,69 @@ def _read_sales(book, issues):
                 blocked = True
             out["prices"][(channel, grade)] = (number, cell)
             series = []
-            for c in range(4, price_col):
+            for c in hist_cols:
                 hv, huncached, hbad = _read_number(book, pair, r, c)
-                if c not in hist_cols:
-                    # 연도 머리글 없는 칸의 값은 버리지 않는다(이력 열을 잘못 읽은 것).
-                    if huncached or hv is not None or hbad is not None:
-                        _sales_unreadable(issues, sheet, "%s 값의 연도 머리글(%d행) 없음" % (_addr(r, c), header))
-                        blocked = True
-                    continue
                 if huncached:
                     # 이력 수식 캐시 없음은 '빈 이력'이 아니다(미판매 등급 복사 이력을 놓친다).
                     _uncached(issues, sheet, _addr(r, c))
                     blocked = True
                 elif hbad is not None:
-                    _sales_unreadable(issues, sheet, _not_number(r, c, hbad))
-                    blocked = True
+                    check.fail(_not_number(r, c, hbad))
                 series.append(hv)
             out["history"][(channel, grade)] = series
+
+    # 나. 유통채널별 판매계획 — 판매비율 연도 열 5개, 각 옆 판매량 열.
     ratio_rows = {}
     for channel, label in RATIO_LABELS.items():
         row = _find_row(ws, label)
         if row is None:
-            _sales_unreadable(issues, sheet, "B열 '%s' 행 없음" % label)
-            return None
+            check.fail("B열 '%s' 행 없음" % label)
+            continue
         problem = _grade_rows_ok(ws, row)
         if problem:
-            _sales_unreadable(issues, sheet, problem)
-            return None
+            check.fail(problem)
+            continue
         ratio_rows[channel] = row
-    first = min(ratio_rows.values())
-    share_cols = []
-    share_header = None
-    for header in range(first - 1, max(first - 5, 0), -1):
-        share_cols = [c for c in range(3, ws.max_column + 1)
-                      if _norm(ws.cell(header, c).value) == "판매비율"]
-        if share_cols:
-            share_header = header
-            break
-    if not share_cols:
-        _sales_unreadable(issues, sheet, "'%s' 위 '판매비율' 머리글 없음" % RATIO_LABELS["purchase"])
+    if len(ratio_rows) == len(RATIO_LABELS):
+        first = min(ratio_rows.values())
+        share_header = next((h for h in range(first - 1, max(first - 5, 0), -1)
+                             if any(_norm(ws.cell(h, c).value) in ("판매비율", "판매량")
+                                    for c in range(3, ws.max_column + 1))), None)
+        if share_header is None:
+            check.fail("'%s' 위 '판매비율'·'판매량' 머리글 없음" % RATIO_LABELS["purchase"])
+        else:
+            share_cols = [c for c in range(3, ws.max_column + 1)
+                          if _norm(ws.cell(share_header, c).value) == "판매비율"]
+            volume_cols = [c for c in range(3, ws.max_column + 1)
+                           if _norm(ws.cell(share_header, c).value) == "판매량"]
+            year_row = share_header - 1
+            note_cols = {c for c in range(3, ws.max_column + 1)
+                         if _norm(ws.cell(year_row, c).value) == "비고"}
+            check.expect("판매비율 연도 열", LAYOUT["sales_shares"]["years"], len(share_cols))
+            check.expect("판매량 연도 열", LAYOUT["sales_shares"]["years"], len(volume_cols))
+            data_rows = range(first, max(ratio_rows.values()) + len(GRADES) + 1)
+            # 표 끝 열은 마지막 머리글이 아니라 연도 머리글 두 줄과 자료 행의 실제 끝이다.
+            width = check.extent([year_row, share_header], data_rows)
+            check.stray(data_rows, {2, 3} | set(share_cols) | set(volume_cols) | note_cols,
+                        2, width, "판매비율·판매량 연도")
+            for channel, row in ratio_rows.items():
+                for offset, grade in enumerate(GRADES):
+                    r = row + offset
+                    values = []
+                    for c in share_cols:
+                        value, uncached, bad = _read_number(book, pair, r, c)
+                        if uncached:
+                            _uncached(issues, sheet, _addr(r, c))
+                            blocked = True
+                        elif bad is not None:
+                            check.fail(_not_number(r, c, bad))
+                        values.append(value or 0.0)
+                    out["shares"][(channel, grade)] = values
+
+    _, problem = check.result(out)
+    if problem:
+        _sales_unreadable(issues, sheet, problem)
         return None
-    # 판매량 열(판매비율 바로 오른쪽)은 비율×생산량이라 읽지 않는다. 그 밖의 열에 값이 있으면
-    # 판매비율 머리글이 빠진 연도라 그 판매를 놓친다.
-    known = set(share_cols) | {c + 1 for c in share_cols}
-    for channel, row in ratio_rows.items():
-        for offset, grade in enumerate(GRADES):
-            r = row + offset
-            values = []
-            for c in share_cols:
-                value, uncached, bad = _read_number(book, pair, r, c)
-                if uncached:
-                    _uncached(issues, sheet, _addr(r, c))
-                    blocked = True
-                elif bad is not None:
-                    _sales_unreadable(issues, sheet, _not_number(r, c, bad))
-                    blocked = True
-                values.append(value or 0.0)
-            for c in range(4, max(known) + 1):
-                if c in known:
-                    continue
-                stray, suncached, sbad = _read_number(book, pair, r, c)
-                if stray is not None or suncached or sbad is not None:
-                    _sales_unreadable(issues, sheet, "%s 값의 '판매비율' 머리글(%d행) 없음" % (
-                        _addr(r, c), share_header))
-                    blocked = True
-            out["shares"][(channel, grade)] = values
     return None if blocked else out
 
 

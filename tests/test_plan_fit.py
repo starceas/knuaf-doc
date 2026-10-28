@@ -17,32 +17,59 @@ from tests.test_skill_school_verify import _source, base_spec
 GRADE_ROWS = ("상품", "중품", "하품")
 
 
+ASSET_BLOCKS = (  # (제목 행, 제목, 금액 열, 금액 머리글) — 학과 17시트 양식 배치
+    (6, "(1) 토지", 5, "평가액(천원)"), (12, "(2) 건물및구축물", 5, "평가액(천원)"),
+    (18, "(3) 대식물", 5, "평가액(천원)"), (24, "(4) 대동물", 8, "금액(천원)"),
+    (30, "(5) 대농기계 및 차량운반구 등", 5, "구입가격(천원)"),
+    (36, "(6) 현금 및 준현금", 5, "평가액(천원)"), (43, "(7) 재고생산자재", 6, "금액(천원)"),
+    (49, "(8) 재고농산물", 6, "평가액(천원)"))
+YEARS = (2027, 2028, 2029, 2030, 2031)
+
+
 def plan_book(path, *, investments=(("비닐하우스", 50000), ("고설베드", 20000)),
               opening=(), depreciation=(("비닐하우스", 50000),),
               tasks=(("정식·베드관리", 5), ("수확 및 선별", 30)),
               prices=None, history=None, shares=None, notes=(),
               sga=(0, 0, 0, 0, 0), formula_cells=()):
-    """Build a minimal school-layout workbook and save it to ``path``."""
+    """Build a synthetic workbook with the school template's table counts.
+
+    Only labels and positions the checker reads are reproduced: eight asset
+    blocks, five investment year cells, five depreciation year tables, two
+    labour tables and five plan years. ``opening`` fills the land block,
+    ``investments``/``depreciation``/``tasks`` fill the first year/table."""
     prices = prices or {("purchase", "상품"): 3000, ("direct", "상품"): 6000}
     shares = shares or {("purchase", "상품"): 0.7, ("direct", "상품"): 0.3}
     history = history or {}
     wb = Workbook()
     base = wb.active
     base.title = "1. 기초재무상태조사"
-    base["B6"] = "(1) 토지"
-    base["B8"], base["E8"], base["H8"] = "종류", "평가액(천원)", "비고"
+    base["B4"] = "가. 자산"
+    for title_row, title, col, head in ASSET_BLOCKS:
+        # 양식 머리글: B 종류, C 명칭·주소, D·E·F·G 수량·금액·연도, H 비고(대동물은 H 금액).
+        base.cell(title_row, 2, title)
+        for c, text in zip(range(2, 9), ("종류", "명칭", "수량", "구분", "연수", "연도", "비고")):
+            base.cell(title_row + 2, c, text)
+        base.cell(title_row + 2, col, head)
     for i, (name, amount, note) in enumerate(opening):
         base.cell(9 + i, 2, name)
         base.cell(9 + i, 5, amount)
         base.cell(9 + i, 8, note)
-    base["B12"] = "(2) 건물및구축물"
+    base["B55"] = "나. 부채"
 
     inv = wb.create_sheet("3.투자계획")
-    inv["C18"], inv["E18"] = "투자항목", "계"
+    inv["B17"], inv["C17"], inv["E17"], inv["I17"] = "연도별", "투자대상", "투자금액(천원)", "비   고"
+    inv["C18"], inv["D18"], inv["E18"], inv["F18"], inv["G18"], inv["H18"] = (
+        "투자항목", "규격", "계", "자부담", "보조", "융자")
+    inv["B19"] = YEARS[0]
     for i, (name, amount) in enumerate(investments):
         inv.cell(19 + i, 3, name)
         inv.cell(19 + i, 5, amount)
-    inv.cell(19 + len(investments), 3, "계")
+    total = 19 + len(investments)
+    inv.cell(total, 3, "계")
+    inv.cell(total, 5, sum(a for _, a in investments if isinstance(a, (int, float))))
+    for i, year in enumerate(YEARS[1:], start=1):
+        inv.cell(total + i, 2, year)
+        inv.cell(total + i, 5, 0)
 
     sales = wb.create_sheet(" 5. 판매계획")
     hist_cols = (5, 7, 9, 11, 13)
@@ -61,9 +88,11 @@ def plan_book(path, *, investments=(("비닐하우스", 50000), ("고설베드",
                 sales.cell(row + offset, c, value)
     for i, text in enumerate(notes):
         sales.cell(14 + i, 2, text)
-    for c in range(4, 14, 2):
+    for c, year in zip(range(4, 14, 2), YEARS):
+        sales.cell(19, c, "%d년" % year)
         sales.cell(20, c, "판매비율")
         sales.cell(20, c + 1, "판매량")
+    sales.cell(19, 14, "비고")
     for channel, row, label in (("purchase", 22, "수매시장"),
                                 ("direct", 26, "직거래")):
         sales.cell(row, 2, label)
@@ -73,20 +102,32 @@ def plan_book(path, *, investments=(("비닐하우스", 50000), ("고설베드",
                 sales.cell(row + offset, c, shares.get((channel, grade), 0))
 
     labor = wb.create_sheet("8. 노무비계획")
-    labor["B24"], labor["I24"] = "항목", "작업일수"
-    for i, (name, days) in enumerate(tasks):
-        labor.cell(26 + i, 2, name)
-        labor.cell(26 + i, 9, days)
-    labor.cell(26 + len(tasks), 2, "합계")
+    for title_row, title, rows in ((22, "나. 노동비 산출근거(1년차)", tasks),
+                                   (36, "다. 노동비 산출근거(2년차 이후)", ())):
+        labor.cell(title_row, 2, title)
+        labor.cell(title_row + 2, 2, "항목")
+        labor.cell(title_row + 2, 9, "작업일수")
+        for i, (name, days) in enumerate(rows):
+            labor.cell(title_row + 4 + i, 2, name)
+            labor.cell(title_row + 4 + i, 9, days)
+        labor.cell(title_row + 4 + max(len(rows), 1), 2, "합계")
 
     dep = wb.create_sheet("10. 감가상각비계획 ")
-    dep["C6"] = "영농시설"
-    dep["B8"] = "취  득  가  격"
-    for i, (name, cost) in enumerate(depreciation):
-        dep.cell(7, 3 + i, name)
-        dep.cell(8, 3 + i, cost)
+    for block, year in enumerate(YEARS):
+        top = 4 + 12 * block
+        dep.cell(top, 2, "%s. %d년" % ("가나다라마"[block], year))
+        dep.cell(top + 2, 2, "구       분")
+        dep.cell(top + 2, 3, "영농시설")
+        dep.cell(top + 4, 2, "취  득  가  격")
+        if block == 0:
+            for i, (name, cost) in enumerate(depreciation):
+                dep.cell(top + 3, 3 + i, name)
+                dep.cell(top + 4, 3 + i, cost)
 
     pl = wb.create_sheet("12 손익계획")
+    pl["B4"] = "과목"
+    for c, year in enumerate(YEARS, start=3):
+        pl.cell(4, c, "%d년" % year)
     pl["B11"], pl["B12"], pl["B13"] = "IV. 판매비와 관리비", " 1. 포장비", " 2. 운반비"
     for c, value in enumerate(sga, start=3):
         pl.cell(13, c, value)
@@ -367,11 +408,13 @@ class PartlyUnreadableIsNotPassTests(_PlanFitCase):
 
     @staticmethod
     def two_depreciation_blocks(broken):
+        """First year table: 관리기 0; second: 비닐하우스 50000. ``broken`` makes
+        only the first table's cost header unreadable."""
         def edit(wb):
             ws = wb["10. 감가상각비계획 "]
             ws["B8"] = "취득가격(천원)" if broken else "취득가격"
             ws["C7"], ws["C8"] = "관리기", 0
-            ws["B18"], ws["C17"], ws["C18"] = "취득가격", "비닐하우스", 50000
+            ws["C19"], ws["C20"] = "비닐하우스", 50000
         return edit
 
     def test_depreciation_control_reads_both_blocks(self):
@@ -384,8 +427,8 @@ class PartlyUnreadableIsNotPassTests(_PlanFitCase):
         self.assertBlocked(result, "10. 감가상각비계획")
 
     def test_depreciation_section_without_cost_row_blocks(self):
-        result = self.check(edit=_cells("10. 감가상각비계획 ", B18="구  분",
-                                        C19="관리기", B20="취득가(원)", C20=0))
+        result = self.check(edit=_cells("10. 감가상각비계획 ", C19="관리기",
+                                        B20="취득가(원)", C20=0))
         self.assertBlocked(result, "10. 감가상각비계획")
 
     # --- same failure in the other readers ---------------------------------
@@ -396,11 +439,18 @@ class PartlyUnreadableIsNotPassTests(_PlanFitCase):
         self.assertBlocked(self.check(tasks=(("경운", "미정"),)), "8. 노무비계획")
 
     def test_amount_without_item_name_blocks(self):
-        self.assertBlocked(self.check(edit=_cells("3.투자계획", E23=4000)), "3.투자계획")
+        # 첫해 블록 안(투자항목 2개 아래, '계' 위)에 이름 없는 금액 행을 끼운다.
+        def nameless(wb):
+            ws = wb["3.투자계획"]
+            ws.insert_rows(21)
+            ws["E21"] = 4000
+        self.assertBlocked(self.check(edit=nameless), "3.투자계획")
         self.assertBlocked(self.check(edit=_cells("8. 노무비계획", B27=None)), "8. 노무비계획")
 
     def test_year_subtotal_row_is_not_a_nameless_item(self):
-        self.assertEqual("pass", self.check(edit=_cells("3.투자계획", B23=2028, E23=0))["status"])
+        # 연도 칸(B)만 있고 투자항목 없는 연도 행(금액 0)은 해당 없음이다.
+        self.assertEqual("pass", self.check()["status"])
+        self.assertEqual("pass", self.check(investments=())["status"])
 
     def test_cash_named_in_second_column_is_read(self):
         result = self.check(opening=((None, 0, ""),),
@@ -427,6 +477,100 @@ class PartlyUnreadableIsNotPassTests(_PlanFitCase):
     def test_selling_expense_text_blocks(self):
         result = self.check(sga=(0, 0, 0, 0, 0), edit=_cells("12 손익계획", C13="별도"))
         self.assertBlocked(result, "12 손익계획")
+
+
+class SharedTableCheckTests(_PlanFitCase):
+    """Every table goes through one check: expected counts from the school
+    layout, and the table's real column range (not the last recognised header).
+
+    Each case removes or blanks one header at the table's last year/column and
+    leaves a value under it; a control keeps the header."""
+
+    def check(self, edit=None, **book):
+        book.setdefault("sga", (1, 1, 1, 1, 1))
+        return self.review(method="고설수경", edit=edit, **book)
+
+    def assertBlockedOn(self, result, sheet):
+        self.assertEqual("blocked", result["status"], result["issues"])
+        self.assertIn(sheet, [i["evidence"].get("sheet") for i in result["issues"]
+                              if i["status"] == "blocked"])
+
+    # --- review case: last share year header missing -----------------------
+
+    def test_last_share_year_control_reads_the_sale(self):
+        result = self.check(edit=_cells(" 5. 판매계획", L23=0.2))
+        self.assertEqual("fail", result["status"])
+        self.assertIn("SALES_PRICE_MISSING", self.codes(result))
+
+    def test_last_share_year_header_missing_blocks(self):
+        result = self.check(edit=_cells(" 5. 판매계획", L20=None, L23=0.2))
+        self.assertBlockedOn(result, "5. 판매계획")
+
+    def test_last_volume_year_header_missing_blocks(self):
+        self.assertBlockedOn(self.check(edit=_cells(" 5. 판매계획", M20=None)), "5. 판매계획")
+
+    # --- same boundary in the other tables ----------------------------------
+
+    def test_last_history_year_header_missing_blocks(self):
+        result = self.check(edit=_cells(" 5. 판매계획", M6=None, M8=3000))
+        self.assertBlockedOn(result, "5. 판매계획")
+
+    def test_value_after_average_price_column_blocks(self):
+        self.assertBlockedOn(self.check(edit=_cells(" 5. 판매계획", P8=3000)), "5. 판매계획")
+
+    def test_last_selling_expense_year_header_missing_blocks(self):
+        result = self.check(sga=(0, 0, 0, 0, 0), edit=_cells("12 손익계획", G4=None, G13=500))
+        self.assertBlockedOn(result, "12 손익계획")
+
+    def test_last_investment_year_missing_blocks(self):
+        def drop_last_year(wb):
+            ws = wb["3.투자계획"]
+            last = max(r for r in range(19, ws.max_row + 1) if ws.cell(r, 2).value)
+            ws.cell(last, 2).value = None
+        self.assertBlockedOn(self.check(edit=drop_last_year), "3.투자계획")
+
+    def test_value_right_of_investment_note_column_blocks(self):
+        self.assertBlockedOn(self.check(edit=_cells("3.투자계획", J19=4000)), "3.투자계획")
+
+    def test_last_depreciation_year_table_missing_blocks(self):
+        self.assertBlockedOn(self.check(edit=_cells("10. 감가상각비계획 ", B54=None)),
+                             "10. 감가상각비계획")
+
+    def test_depreciation_cost_under_column_without_name_blocks(self):
+        result = self.check(edit=_cells("10. 감가상각비계획 ", D8=7000))
+        self.assertBlockedOn(result, "10. 감가상각비계획")
+
+    def test_depreciation_value_right_of_last_header_blocks(self):
+        # 머리글 '영농시설'을 지우면 첫해 표 머리글은 C7 장비 이름까지다. D8 값은 표 밖 열이다.
+        result = self.check(edit=_cells("10. 감가상각비계획 ", C6=None, D8=7000))
+        self.assertBlockedOn(result, "10. 감가상각비계획")
+
+    def test_last_asset_block_missing_blocks(self):
+        self.assertBlockedOn(self.check(edit=_cells("1. 기초재무상태조사", B49=None)),
+                             "1. 기초재무상태조사")
+
+    def test_asset_value_right_of_block_header_blocks(self):
+        result = self.check(opening=(("전", 100, ""),),
+                            edit=_cells("1. 기초재무상태조사", I9=500))
+        self.assertBlockedOn(result, "1. 기초재무상태조사")
+
+    def test_second_labour_table_missing_blocks(self):
+        self.assertBlockedOn(self.check(edit=_cells("8. 노무비계획", B36=None, B38=None)),
+                             "8. 노무비계획")
+
+    def test_labour_value_under_unnamed_column_blocks(self):
+        self.assertBlockedOn(self.check(edit=_cells("8. 노무비계획", J26=3)), "8. 노무비계획")
+
+    def test_table_to_the_right_of_a_gap_is_not_read(self):
+        # A separate table two empty columns to the right (like the wage
+        # observation block beside the labour table) is outside this table's range.
+        result = self.check(edit=_cells("8. 노무비계획", W26="자료집",
+                                        X24="인건비 평균 상승률", Y26=117156))
+        self.assertEqual("pass", result["status"], result["issues"])
+
+    def test_value_right_after_last_header_column_blocks(self):
+        self.assertBlockedOn(self.check(edit=_cells("8. 노무비계획", K24="자가 노동비", L26=3)),
+                             "8. 노무비계획")
 
 
 def bare_notes():
