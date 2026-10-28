@@ -9,7 +9,7 @@ import subprocess
 import sys
 import tempfile
 
-from openpyxl import Workbook
+from openpyxl import Workbook, load_workbook
 
 from tests._harness import SCRIPTS, ContractCase, runtime
 from tests.test_skill_school_verify import _source, base_spec
@@ -98,7 +98,7 @@ def plan_book(path, *, investments=(("비닐하우스", 50000), ("고설베드",
     return path
 
 
-class PlanFitTests(ContractCase):
+class _PlanFitCase(ContractCase):
     def setUp(self):
         self.pf = runtime("gg_plan_fit")
         tmp = tempfile.TemporaryDirectory(prefix="knuaf-plan-fit-")
@@ -111,11 +111,16 @@ class PlanFitTests(ContractCase):
         "* 직거래 단가: 합성 기관 소매가 5개년 평균. 택배비는 판매관리비 운반비로 계상.",
     )
 
-    def review(self, method="protected_soilless", allow=None, **book):
+    def review(self, method="protected_soilless", allow=None, edit=None, **book):
         book.setdefault("notes", self.GOOD_NOTES)
         book.setdefault("sga", (100, 200, 300, 300, 300))
         self.count += 1
         path = plan_book(self.dir / ("plan-%d.xlsx" % self.count), **book)
+        if edit:
+            wb = load_workbook(path)
+            edit(wb)
+            wb.save(path)
+            wb.close()
         return self.pf.review_fit(path, method=method, allow=allow)
 
     @staticmethod
@@ -123,6 +128,8 @@ class PlanFitTests(ContractCase):
         return [i["code"] for i in result["issues"]
                 if severity is None or i["severity"] == severity]
 
+
+class PlanFitTests(_PlanFitCase):
     def test_plan_matching_its_method_passes(self):
         result = self.review()
         self.assertEqual("pass", result["status"], result["issues"])
@@ -263,6 +270,63 @@ class PlanFitTests(ContractCase):
         self.assertEqual((1, "fail"), (code, out["status"]))
         self.assertEqual(2, run(str(good), "--method", "공중재배")[0])
         self.assertEqual(2, run(str(good), "--allow", "이유없음")[0])
+
+
+class UnreadableIsNotPassTests(_PlanFitCase):
+    """Values or tables the check cannot read must block, never pass.
+
+    Six cases from the independent review: a readable copied history fails,
+    an uncached history formula and unreadable investment/labour tables
+    block instead of disappearing as "no items"."""
+
+    def test_baseline_passes(self):
+        self.assertEqual("pass", self.review(method="고설수경")["status"])
+
+    def test_unsold_grade_history_value_fails(self):
+        result = self.review(method="고설수경", history={
+            ("purchase", "상품"): (3000,), ("purchase", "중품"): (3000,)})
+        self.assertEqual("fail", result["status"])
+        self.assertIn("SALES_UNUSED_PRICE", self.codes(result))
+
+    def test_uncached_history_formula_blocks(self):
+        result = self.review(method="고설수경",
+                             history={("purchase", "상품"): (3000,)},
+                             formula_cells=((" 5. 판매계획", "E8", "=E7"),))
+        self.assertEqual("blocked", result["status"])
+        cells = [i["evidence"]["cell"] for i in result["issues"]
+                 if i["code"] == "PLAN_FIT_UNCACHED"]
+        self.assertEqual(["E8"], cells)
+
+    def test_missing_investment_sheet_blocks(self):
+        result = self.review(method="고설수경",
+                             edit=lambda wb: wb.remove(wb["3.투자계획"]))
+        self.assertEqual("blocked", result["status"])
+        self.assertEqual(["3.투자계획"], self.unreadable_sheets(result))
+
+    def test_unreadable_investment_header_blocks(self):
+        def rename(wb):
+            wb["3.투자계획"]["C18"] = "투자 항목명"
+        result = self.review(method="고설수경", investments=(("관리기", 0),),
+                             edit=rename)
+        self.assertEqual("blocked", result["status"])
+        self.assertEqual(["3.투자계획"], self.unreadable_sheets(result))
+
+    def test_unreadable_labour_header_blocks(self):
+        def rename(wb):
+            wb["8. 노무비계획"]["I24"] = "작업일수(일)"
+        result = self.review(method="고설수경", tasks=(("경운", 6),), edit=rename)
+        self.assertEqual("blocked", result["status"])
+        self.assertEqual(["8. 노무비계획"], self.unreadable_sheets(result))
+
+    def test_empty_but_readable_tables_still_pass(self):
+        result = self.review(method="고설수경", investments=(), depreciation=(),
+                             tasks=())
+        self.assertEqual("pass", result["status"], result["issues"])
+
+    @staticmethod
+    def unreadable_sheets(result):
+        return [i["evidence"]["sheet"] for i in result["issues"]
+                if i["code"] == "PLAN_FIT_TABLE_UNREADABLE"]
 
 
 def bare_notes():

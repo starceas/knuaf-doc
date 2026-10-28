@@ -63,7 +63,9 @@ python3 skills/knuaf-doc/scripts/gg_plan_fit.py <재계산된_통합문서.xlsx>
 | `CHANNEL_COST_UNREFLECTED` | error | 판매관리비가 0이고 판로 비용 반영 각주도 없음 |
 | `GRADE_BASIS_NOTE_MISSING` / `CHANNEL_SOURCE_NOTE_MISSING` | warning | 등급 구성 근거·판로 거래단계 출처 각주 없음 |
 | `CULTIVATION_METHOD_UNDECLARED` | warning | `--method` 없음 — 장비·작업 대조 생략 |
-| `PLAN_FIT_UNCACHED` 등 `blocked` | blocked | 수식 캐시 없음·양식을 읽지 못함. 통과가 아니다 |
+| `PLAN_FIT_UNCACHED` | blocked | 단가·가격 이력·금액·일수 수식 캐시 없음. 빈 값으로 보지 않는다 |
+| `PLAN_FIT_TABLE_UNREADABLE` | blocked | 투자계획·기초재무상태·감가상각비계획·노무비 산출근거 시트가 없거나 머리글(`투자항목`·`취득가격`·`항목`/`작업일수` 등)을 못 찾음. "해당 항목 없음"과 다르다 — 표를 읽었는데 행이 없으면 통과 |
+| `SALES_LAYOUT_UNREADABLE`·`PLAN_FIT_LAYOUT_UNSUPPORTED` | blocked | 판매계획 표를 못 읽음 / 학과 17시트 양식 아님. 통과가 아니다 |
 
 한계:
 - 장비·작업 대조는 이름 키워드 대조다. 목록에 없는 이름의 불필요 장비는 못 잡으므로 1절 규칙으로 사람이 본다.

@@ -18,7 +18,8 @@
   없음(``CHANNEL_COST_UNREFLECTED``, error).
 - 등급 근거·판로별 거래단계 각주 없음(warning).
 
-캐시 없는 수식은 값을 추정하지 않고 ``blocked``로 남긴다.
+캐시 없는 수식과 찾지 못한 표(시트·머리글 없음)는 값을 추정하거나 "항목 없음"으로
+보지 않고 ``blocked``로 남긴다.
 """
 
 import argparse
@@ -157,11 +158,20 @@ def _matches(name, keywords):
 
 # --- 장비·자산 행 ----------------------------------------------------------
 
+def _unreadable(issues, sheet, what):
+    """표를 찾지 못함 — '해당 항목 없음'이 아니므로 통과로 보고하지 않는다."""
+    issues.append(_issue(
+        "PLAN_FIT_TABLE_UNREADABLE", status="blocked",
+        reason="%s: %s — 표를 읽지 못해 검사하지 않음" % (sheet, what),
+        remedy="학과 17시트 양식의 시트 이름·머리글을 확인한다. 이 검사는 다른 표 형식을 해석하지 않는다",
+        evidence={"sheet": sheet, "problem": what}))
+
+
 def _investment_rows(book):
-    """3.투자계획 연차별 세부투자계획의 (행, 항목명, 금액, 캐시없음)."""
+    """3.투자계획 연차별 세부투자계획 → ([(행, 항목명, 금액, 캐시없음)], 문제)."""
     pair = book.sheet("3.투자계획")
     if pair is None:
-        return None
+        return None, "시트 없음"
     ws = pair[1]
     header = None
     for r in range(1, ws.max_row + 1):
@@ -169,7 +179,7 @@ def _investment_rows(book):
             header = r
             break
     if header is None:
-        return None
+        return None, "C열 '투자항목' 머리글 없음"
     rows = []
     for r in range(header + 1, ws.max_row + 1):
         name = _norm(ws.cell(r, 3).value)
@@ -177,20 +187,22 @@ def _investment_rows(book):
             continue
         amount, uncached = book.value(pair, r, 5)
         rows.append((r, ws.cell(r, 3).value, _number(amount), uncached))
-    return rows
+    return rows, None
 
 
 def _asset_rows(book):
-    """1. 기초재무상태조사 자산 블록의 (블록, 행, 항목명, 금액, 캐시없음)."""
+    """1. 기초재무상태조사 자산 블록 → ([(블록, 행, 항목명, 금액, 캐시없음, 비고)], 문제)."""
     pair = book.sheet("1. 기초재무상태조사")
     if pair is None:
-        return None
+        return None, "시트 없음"
     ws = pair[1]
     blocks = []
     for r in range(1, ws.max_row + 1):
         match = _BLOCK_LABEL.match(_norm(ws.cell(r, 2).value))
         if match and match.group(1) in _ASSET_BLOCKS:
             blocks.append((r, _ASSET_BLOCKS[match.group(1)]))
+    if not blocks:
+        return None, "B열 '(1) 토지' 같은 자산 블록 머리글 없음"
     rows = []
     for index, (start, (role, col)) in enumerate(blocks):
         end = blocks[index + 1][0] if index + 1 < len(blocks) else ws.max_row + 1
@@ -200,6 +212,10 @@ def _asset_rows(book):
                 header = r
                 break
         if header is None:
+            # 빈 블록은 '해당 없음'이다. 항목이 있는데 금액 머리글이 없으면 못 읽음.
+            if any(_norm(ws.cell(r, 2).value) for r in range(start + 1, end)):
+                return None, "%s 블록(%d행)의 금액 머리글 없음" % (
+                    str(ws.cell(start, 2).value).strip(), start)
             continue
         for r in range(header + 1, end):
             label = _norm(ws.cell(r, 2).value)
@@ -210,55 +226,63 @@ def _asset_rows(book):
             amount, uncached = book.value(pair, r, col)
             note = _norm(ws.cell(r, 8).value)
             rows.append((role, r, ws.cell(r, 2).value, _number(amount), uncached, note))
-    return rows
+    return rows, None
 
 
 def _depreciation_items(book):
-    """10. 감가상각비계획의 (행, 열, 항목명, 취득가격, 캐시없음)."""
+    """10. 감가상각비계획 → ([(행, 열, 항목명, 취득가격, 캐시없음)], 문제)."""
     pair = book.sheet("10. 감가상각비계획")
     if pair is None:
-        return None
+        return None, "시트 없음"
     ws = pair[1]
     items = []
+    found = False
     for r in range(2, ws.max_row + 1):
         if _norm(ws.cell(r, 2).value) != "취득가격":
             continue
+        found = True
         for c in range(3, ws.max_column + 1):
             name = _norm(ws.cell(r - 1, c).value)
             if not name or name in _DEPRECIATION_GROUPS:
                 continue
             cost, uncached = book.value(pair, r, c)
             items.append((r, c, ws.cell(r - 1, c).value, _number(cost), uncached))
-    return items
+    if not found:
+        return None, "B열 '취득가격' 행 없음"
+    return items, None
 
 
 def _labor_tasks(book):
-    """8. 노무비계획 노동비 산출근거의 (행, 작업명, 작업일수, 캐시없음)."""
+    """8. 노무비계획 노동비 산출근거 → ([(행, 작업명, 작업일수, 캐시없음)], 문제)."""
     pair = book.sheet("8. 노무비계획")
     if pair is None:
-        return None
+        return None, "시트 없음"
     ws = pair[1]
     tasks = []
+    headers = 0
     r = 1
     while r <= ws.max_row:
         if _norm(ws.cell(r, 2).value) != "항목":
             r += 1
             continue
+        headers += 1
         days_col = None
         for c in range(3, ws.max_column + 1):
             if _norm(ws.cell(r, c).value) == "작업일수":
                 days_col = c
                 break
-        r += 1
         if days_col is None:
-            continue
+            return None, "%d행 '항목' 표에 '작업일수' 머리글 없음" % r
+        r += 1
         while r <= ws.max_row and _norm(ws.cell(r, 2).value) not in ("합계", "계"):
             name = _norm(ws.cell(r, 2).value)
             if name:
                 days, uncached = book.value(pair, r, days_col)
                 tasks.append((r, ws.cell(r, 2).value, _number(days), uncached))
             r += 1
-    return tasks
+    if not headers:
+        return None, "B열 '항목' 머리글(노동비 산출근거) 없음"
+    return tasks, None
 
 
 def _check_equipment(book, method, fit, allow, issues):
@@ -318,33 +342,36 @@ def _check_equipment(book, method, fit, allow, issues):
             remedy="0원·빈 행으로 두지 말고 행 내용을 지운다(수식 행은 남기고 항목명·규격·비고만 비운다)",
             evidence=evidence))
 
-    invest = _investment_rows(book)
-    if invest is not None:
-        for r, name, amount, uncached in invest:
-            if uncached:
-                _uncached(issues, "3.투자계획", "E%d" % r)
-                continue
-            unowned("3.투자계획", "C%d" % r, name, amount, "investment")
-            mismatch("3.투자계획", "C%d" % r, name)
-    assets = _asset_rows(book)
-    if assets is not None:
-        for role, r, name, amount, uncached, note in assets:
-            if uncached:
-                _uncached(issues, "1. 기초재무상태조사", "row %d" % r)
-                continue
-            unowned("1. 기초재무상태조사", "B%d" % r, name, amount,
-                    "opening_" + role, note)
-            if role == "machines":
-                mismatch("1. 기초재무상태조사", "B%d" % r, name)
-    items = _depreciation_items(book)
-    if items is not None:
-        for r, c, name, cost, uncached in items:
-            cell = "%s%d" % (openpyxl.utils.get_column_letter(c), r - 1)
-            if uncached:
-                _uncached(issues, "10. 감가상각비계획", cell)
-                continue
-            unowned("10. 감가상각비계획", cell, name, cost, "depreciation")
-            mismatch("10. 감가상각비계획", cell, name)
+    invest, problem = _investment_rows(book)
+    if problem:
+        _unreadable(issues, "3.투자계획", problem)
+    for r, name, amount, uncached in invest or ():
+        if uncached:
+            _uncached(issues, "3.투자계획", "E%d" % r)
+            continue
+        unowned("3.투자계획", "C%d" % r, name, amount, "investment")
+        mismatch("3.투자계획", "C%d" % r, name)
+    assets, problem = _asset_rows(book)
+    if problem:
+        _unreadable(issues, "1. 기초재무상태조사", problem)
+    for role, r, name, amount, uncached, note in assets or ():
+        if uncached:
+            _uncached(issues, "1. 기초재무상태조사", "row %d" % r)
+            continue
+        unowned("1. 기초재무상태조사", "B%d" % r, name, amount,
+                "opening_" + role, note)
+        if role == "machines":
+            mismatch("1. 기초재무상태조사", "B%d" % r, name)
+    items, problem = _depreciation_items(book)
+    if problem:
+        _unreadable(issues, "10. 감가상각비계획", problem)
+    for r, c, name, cost, uncached in items or ():
+        cell = "%s%d" % (openpyxl.utils.get_column_letter(c), r - 1)
+        if uncached:
+            _uncached(issues, "10. 감가상각비계획", cell)
+            continue
+        unowned("10. 감가상각비계획", cell, name, cost, "depreciation")
+        mismatch("10. 감가상각비계획", cell, name)
 
 
 def _check_tasks(book, method, fit, issues):
@@ -352,7 +379,9 @@ def _check_tasks(book, method, fit, issues):
         return
     unneeded = fit["methods"][method]["unneeded_tasks"]
     label = fit["methods"][method]["label"]
-    tasks = _labor_tasks(book)
+    tasks, problem = _labor_tasks(book)
+    if problem:
+        _unreadable(issues, "8. 노무비계획", problem)
     for r, name, days, uncached in tasks or ():
         hits = _matches(name, unneeded)
         if not hits:
@@ -474,6 +503,9 @@ def _read_sales(book, issues):
             series = []
             for c in hist_cols:
                 hv, huncached = book.value(pair, r, c)
+                if huncached:
+                    # 이력 수식 캐시 없음은 '빈 이력'이 아니다(미판매 등급 복사 이력을 놓친다).
+                    _uncached(issues, sheet, "%s%d" % (openpyxl.utils.get_column_letter(c), r))
                 series.append(None if huncached else _number(hv))
             out["history"][(channel, grade)] = series
     ratio_rows = {}

@@ -206,7 +206,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/install-manifest.json": {
-   "after_sha256": "f3bfb72cd406e4b979e4eb659e5b3890bfcc16c8be790e00acf93a3e15db97fa",
+   "after_sha256": "1c0dbf4b2a665abe6b910dfc31df49c838ffb00daabd9225702a812212115513",
    "before_sha256": null,
    "first_changed": "P27",
    "last_changed": "P28",
@@ -825,12 +825,12 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/plan-fit-rules.md": {
-   "after_sha256": "5b58870255ebaa811eb14cf68ca6eb2c46644260556c78cc6c5adf239c338caf",
+   "after_sha256": "9499f9a412e8722b54fec9cfd6d19fae3b4ffaae2e60844b6c483c44c3ad639e",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
    "owner": "P28",
-   "reason": "Plan-fit rules and check: cultivation-method equipment fit, removal of unowned asset rows, distinct grade and channel prices, channel-cost reflection notes",
+   "reason": "Plan-fit rules and check: cultivation-method equipment fit, removal of unowned asset rows, distinct grade and channel prices, channel-cost reflection notes | R2: unreadable tables and uncached price-history formulas block instead of passing",
    "source": "new"
   },
   "skills/knuaf-doc/references/price-research-routes.md": {
@@ -1435,12 +1435,12 @@
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_plan_fit.py": {
-   "after_sha256": "49005919cf61d4518c403e06f1b3cf3147aafcb84a065c95c5a02e37618b1e63",
+   "after_sha256": "5c570c822d4606313e1a81bd87f449e3cf405c4bc6c3f9387e7145819ff9d652",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
    "owner": "P28",
-   "reason": "Plan-fit rules and check: cultivation-method equipment fit, removal of unowned asset rows, distinct grade and channel prices, channel-cost reflection notes",
+   "reason": "Plan-fit rules and check: cultivation-method equipment fit, removal of unowned asset rows, distinct grade and channel prices, channel-cost reflection notes | R2: unreadable tables and uncached price-history formulas block instead of passing",
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_price_assumptions.py": {
