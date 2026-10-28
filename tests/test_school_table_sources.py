@@ -64,7 +64,7 @@ class SchoolTableSourcesTests(ContractCase):
     def test_core_inserts_before_publication_hash(self):
         value = self.publish()
         body = Path(value['path']).read_bytes()
-        self.assertEqual(body.count('출처: '.encode()), 6)
+        self.assertEqual(body.count('(출처 : '.encode()), 6)
         managed = self.root / ('build/%s/paper' % self.core.load(self.root)['revision'])
         self.assertEqual((managed / 'paper.md').read_bytes(), body)
         receipts = self.core._find_request(self.root, value['request_id'], operation='paper')
@@ -95,15 +95,18 @@ class SchoolTableSourcesTests(ContractCase):
             with self.subTest(bits=bits):
                 value = self.attach(entries=credits(selected))
                 errors = self.issues(value)
-                expected = {cap for cap, yes in zip(CAPTIONS, bits) if not yes}
-                self.assertEqual({v.split('없음: ', 1)[1] for k, v in errors if k == 'object_credit'}, expected)
+                actual = {self.doc.split_caption_credit(n['text'])[0]
+                          for n in self.doc.parse(value) if n['kind'] == 'caption'
+                          and self.doc.split_caption_credit(n['text'])[1] is not None}
+                self.assertEqual(actual, {cap for cap, yes in zip(CAPTIONS, bits) if yes})
                 self.assertEqual([(k, v) for k, v in errors if k not in {'object_credit', 'sourced_objects'}], baseline)
-                # Delete exactly the inserted regions, including blank lines.
+                self.assertFalse(any(k == 'object_credit' for k, _ in errors))
+                # Remove only the caption suffixes; all other bytes must survive.
                 restored = value
                 for key in selected:
                     rendered = runtime('gg_school_table_sources').validate_table_sources(
                         {'table_sources': credits([key])})[key]
-                    restored = restored.replace('\n' + rendered + '\n\n', '', 1)
+                    restored = restored.replace(' (출처 : ' + rendered + ')', '', 1)
                 self.assertEqual(restored.encode(), self.original.encode())
                 self.assertEqual(self.attach(text=value, entries=credits(selected)), value)
 
@@ -140,10 +143,13 @@ class SchoolTableSourcesTests(ContractCase):
                  ('school_material', 'official_school'), ('textbook', 'formal_textbook')]
         for kind, st in pairs:
             with self.subTest(kind=kind):
-                self.assertIn('출처:', self.attach(entries={'swot': {'sources': [source(kind=kind, source_type=st)]}}))
+                self.assertIn('(출처 : 합성 검증 기관)', self.attach(entries={'swot': {'sources': [source(kind=kind, source_type=st)]}}))
         survey = source(kind='interview', source_type='author_survey', source='작성자 직접 조사',
                         survey_date='2026-10-08', subject='합성 조사 대상', verified='user-stated')
-        self.assertIn('2026-10-08', self.attach(entries={'swot': {'sources': [survey]}}))
+        self.assertEqual(self.attach(entries={'swot': {'sources': [survey]}}), self.original)
+        mixed = self.attach(entries={'swot': {'sources': [survey, source()]}})
+        self.assertIn('(출처 : 합성 검증 기관)', mixed)
+        self.assertNotIn('작성자 직접 조사', mixed)
         for field in ('survey_date', 'subject', 'verified'):
             bad = dict(survey)
             bad.pop(field)
@@ -180,7 +186,8 @@ class SchoolTableSourcesTests(ContractCase):
             with self.subTest(url=url), self.assertRaises(ValueError):
                 self.attach(entries={'swot': {'sources': [source(url=url)]}})
         value = self.attach(entries={'swot': {'sources': [source(url='https://example.test/data?q=1&v=2')]}})
-        self.assertIn('https://example.test/data?q=1&v=2', value)
+        self.assertIn('(출처 : 합성 검증 기관)', value)
+        self.assertNotIn('https://example.test/data?q=1&v=2', value)
 
     def test_invisible_marks_and_variation_selectors_rejected(self):
         # PV1-02: combining marks and variation selectors carry no glyph of
@@ -232,7 +239,7 @@ class SchoolTableSourcesTests(ContractCase):
                 source(title='café 보고서'),
                 source(locator='제３판 p. 12')]
         value = self.attach(entries={'swot': {'sources': good}})
-        self.assertIn('출처:', value)
+        self.assertIn('(출처 : 농촌진흥청\u3000(전북), 합성 검증 기관)', value)
 
     def test_all_six_invisible_sources_publish_nothing(self):
         # PV1-02 regression: a spec whose six table citations are all
@@ -252,16 +259,17 @@ class SchoolTableSourcesTests(ContractCase):
         self.assertEqual(self._tree_bytes(self.root), before)
 
     def test_caption_alias_compound_source_and_unrelated_text(self):
-        entries = {CAPTIONS[-1]: {'sources': [source(title='합성 첫 자료'), source(title='합성 둘째 자료')]}}
+        entries = {CAPTIONS[-1]: {'sources': [source(), source(title='합성 둘째 자료'),
+                                             source(source='다른 합성 기관')]}}
         value = self.attach(entries=entries)
-        self.assertEqual(value.count('출처:'), 1)
-        self.assertIn('; ', value)
+        self.assertEqual(value.count('(출처 : '), 1)
+        self.assertIn('(출처 : 합성 검증 기관, 다른 합성 기관)', value)
         text = self.original.replace('표 1은 농장 종합 개요다.',
                                      '표 1은 농장 종합 개요다. 목차에 표 1. 농장 종합 개요가 있다.')
-        self.assertEqual(self.attach(text=text, entries=credits(['farm_overview'])).count('출처:'), 1)
+        self.assertEqual(self.attach(text=text, entries=credits(['farm_overview'])).count('(출처 : '), 1)
         # A caption-looking cell cannot introduce a second table candidate.
         text = self.original.replace('|농장명|', '|표 1. 농장 종합 개요|')
-        self.assertEqual(self.attach(text=text, entries=credits(['farm_overview'])).count('출처:'), 1)
+        self.assertEqual(self.attach(text=text, entries=credits(['farm_overview'])).count('(출처 : '), 1)
 
     def test_missing_duplicate_title_context_and_draft_spans(self):
         texts = [self.original.replace(CAPTIONS[0], '표 1. 다른 제목'),
@@ -295,11 +303,10 @@ class SchoolTableSourcesTests(ContractCase):
                      self.original.rstrip('\n'), self.original.replace('|농장명|', '|출처: 셀 자료|')):
             with self.subTest(text=text[:50]):
                 value = self.attach(text=text, entries=credits())
-                ending = '\r\n' if '\r\n' in text else '\n'
                 restored = value
                 for line in runtime('gg_school_table_sources').validate_table_sources(
                         {'table_sources': credits()}).values():
-                    restored = restored.replace(ending + line + ending + ending, '', 1)
+                    restored = restored.replace(' (출처 : ' + line + ')', '', 1)
                 self.assertEqual(restored.encode(), text.encode())
                 self.assertEqual(self.attach(text=value, entries=credits()), value)
 
@@ -312,14 +319,14 @@ class SchoolTableSourcesTests(ContractCase):
         # Preserve the second table's declared heading context in the gap.
         text = ''.join(lines[:start]) + '나. 지역적 조건\n1) 기상환경\n' + ''.join(lines[end:])
         value = self.attach(text=text, entries=credits(['farm_overview', 'climate']))
-        self.assertEqual(sum(k == 'object_credit' for k, _ in self.issues(value)), 4)
-        # An EOF table gets a new paragraph without dropping any original byte.
+        self.assertIn(('sourced_objects', '출처 있는 표 2개·그림 0개'), self.issues(value))
+        # Caption suffixes preserve an EOF table's original bytes.
         swot = next(i for i, n in enumerate(nodes) if n.get('text') == CAPTIONS[-1])
         text = ''.join(lines[:nodes[swot+1]['end_line']]).rstrip('\n')
         value = self.attach(text=text, entries=credits(['swot']))
         rendered = runtime('gg_school_table_sources').validate_table_sources(
             {'table_sources': credits(['swot'])})['swot']
-        self.assertEqual(value.replace('\n\n' + rendered + '\n\n', '', 1), text)
+        self.assertEqual(value.replace(' (출처 : ' + rendered + ')', '', 1), text)
         self.assertEqual(self.attach(text=value, entries=credits(['swot'])), value)
 
     def test_duplicate_json_keys_at_every_nested_level(self):
@@ -335,7 +342,7 @@ class SchoolTableSourcesTests(ContractCase):
         credited = self.attach(entries=credits(['farm_overview']))
         self.assertEqual(self.attach(text=credited, entries=credits(['farm_overview'])), credited)
         entries = credits(['farm_overview'])
-        entries['farm_overview']['sources'][0]['title'] = '합성 다른 자료'
+        entries['farm_overview']['sources'][0]['source'] = '합성 다른 기관'
         with self.assertRaises(ValueError):
             self.attach(text=credited, entries=entries)
         text = self.original.replace(CAPTIONS[0], '출처: 다른 출처\n\n' + CAPTIONS[0])
@@ -355,7 +362,7 @@ class SchoolTableSourcesTests(ContractCase):
         record = dict(source(), id='synthetic-source', revision=2)
         project = {'sources': {'synthetic-source': record}}
         entries = {'swot': {'sources': [record]}}
-        self.assertIn('출처:', self.attach(entries=entries, project=project))
+        self.assertIn('(출처 : 합성 검증 기관)', self.attach(entries=entries, project=project))
         for changes in ({'revision': 1}, {'kind': 'academic', 'source_type': 'academic_paper'},
                         {'title': '다른 서지'}, {'source': '다른 기관'}):
             bad = {'swot': {'sources': [dict(record, **changes)]}}
@@ -371,7 +378,7 @@ class SchoolTableSourcesTests(ContractCase):
                       url='https://example.test/data')
         provided = {k: v for k, v in record.items() if k not in {'grade', 'url'}}
         entries = {'swot': {'sources': [provided]}}
-        self.assertIn('출처:', self.attach(entries=entries, project={'sources': {'synthetic-source': record}}))
+        self.assertIn('(출처 : 합성 검증 기관)', self.attach(entries=entries, project={'sources': {'synthetic-source': record}}))
         for grade in (3, 4, '3', '4'):
             with self.subTest(grade=grade), self.assertRaises(ValueError):
                 self.attach(entries=entries, project={'sources': {'synthetic-source': dict(record, grade=grade)}})
@@ -397,7 +404,7 @@ class SchoolTableSourcesTests(ContractCase):
                 '--input', 'cli.json', '--out', 'build/cli.md']
         result = subprocess.run(args, capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual((self.root / 'build/cli.md').read_text(encoding='utf-8').count('출처:'), 6)
+        self.assertEqual((self.root / 'build/cli.md').read_text(encoding='utf-8').count('(출처 : '), 6)
         raw = raw.replace('"kind": "stat"', '"kind": "blog", "kind": "stat"', 1)
         write_text(self.root, 'cli.json', raw)
         before = self._tree_bytes(self.root)
@@ -410,7 +417,7 @@ class SchoolTableSourcesTests(ContractCase):
         self.assertEqual(hashlib.sha256((SCRIPTS / 'gg_school_paper.py').read_bytes()).hexdigest(),
                          'b70d36698e07fe3f9cb5a9869c866da49fbd7692fbb675f282013aeec76f81e1')
         self.assertEqual(self.sp.paper(dict(self.spec, table_sources=credits()), context=self.context), self.original)
-        self.assertEqual(sum(k == 'object_credit' for k, _ in self.issues(self.original)), 6)
+        self.assertIn(('sourced_objects', '출처 있는 표 0개·그림 0개'), self.issues(self.original))
 
     def test_docx_conversion_preserves_tables_and_credit_placement(self):
         convert = runtime('build_docx').convert
@@ -420,6 +427,8 @@ class SchoolTableSourcesTests(ContractCase):
         self.assertEqual(len(before.tables), 9)  # three form tables and six body tables
         self.assertEqual([t._tbl.xml for t in before.tables], [t._tbl.xml for t in after.tables])
         for table in after.tables[-6:]:
-            following = table._tbl.getnext()
-            self.assertTrue(following.tag.endswith('}p'))
-            self.assertTrue(''.join(following.xpath('.//w:t/text()')).startswith('출처:'))
+            caption = table._tbl.getprevious()
+            self.assertTrue(caption.tag.endswith('}p'))
+            self.assertTrue(''.join(caption.xpath('.//w:t/text()')).endswith('(출처 : 합성 검증 기관)'))
+            sizes = caption.xpath('.//w:rPr/w:sz/@w:val')
+            self.assertEqual(set(sizes), {'24'})  # title and credit both 12 pt

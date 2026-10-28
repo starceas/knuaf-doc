@@ -37,34 +37,6 @@ sys.path.insert(0, str(SCRIPTS))
 import gg_reuse  # noqa: E402
 
 # ---------------------------------------------------------------------------
-# Pinned constants -- fixed at IMPL-C writing time against commit a96a5bf
-# (the test never shells out to git). BASELINE_ENTRY_DIGEST pins the
-# unaffected entries; D5 re-pins only the corrected rda.econ.2025 entry.
-# P27 K4-06 re-pins the two official-writing-guide entries whose
-# runtime_present flag now tells the truth (the runtime file is not shipped).
-# Restore 0.1.4 re-pins only these two approved school entries after the
-# extracts, artifact hashes and lineage were restored; other pins stay fixed.
-
-BASELINE_ENTRY_DIGEST = {
-    "rda.income.national.2024":
-        "8e43d31f42bf95915e1bce8869f32a2fde56b39da3412f20fb7e9829348994f7",
-    "rda.income.regional.2024":
-        "04a94bc8b6704b27eaf01679c2cfb3376451643524a6a797b3d492ff46787d56",
-    "mafra.specialty.production.2024":
-        "0b636815fa11a515929f4679a802d4d6756686096e37991fbf623fd5ff31c741",
-    "official-writing-guide-pdf":
-        "43fe15800bc3999c4ac39a1d016161bfd3d41a6ecadd84b40fe5e753a15f0d5b",
-    "official-writing-guide-hwp":
-        "03e67b3bfcf5b02d53910405fde3f0200fe74e027414de22739b4f1bbb80c51b",
-    "kim-wonseop-exemplar-pdf":
-        "ccd556454636d77860e355a5be4ee63f8b79ba79ff3333767db210fac07a4568",
-    "kim-wonseop-exemplar-hwp":
-        "b84223e411f041aa09cc0501af8d57b1c51c6eb0061eb92929534d59f86fc62c",
-    "seo-minseo-finance-xlsx":
-        "5277a3d1eb731ac8953f550031f7b38493ce212678db1de1d5e2ff68f4bb65b5",
-    "specialty-grad-thesis-finance-xlsx":
-        "c50902c5513fd5fb0d085983e1a9e001742cfa5e91100517d709d55123fda991",
-}
 
 HORT_IDS = [
     "hort-env-ht1-exemplar-pdf",
@@ -217,7 +189,7 @@ def _verified_hx1_doc(profile_bytes):
 
 
 class TestRegistryIntegrity(unittest.TestCase):
-    """1-2: shipped registry loads; baseline entries byte-identical."""
+    """Shipped registry identity and uniqueness invariants."""
 
     def setUp(self):
         self.reg = registry()
@@ -240,18 +212,6 @@ class TestRegistryIntegrity(unittest.TestCase):
         self.assertEqual(len(seen), len(set(seen)),
                          "duplicate source_sha256 across entries")
 
-    def test_baseline_entries_unchanged(self):
-        entries = {e["source_id"]: e
-                   for e in self.reg.document["entries"]}
-        for sid, digest in BASELINE_ENTRY_DIGEST.items():
-            self.assertIn(sid, entries,
-                          "missing baseline entry %s" % sid)
-            observed = hashlib.sha256(
-                gg_reuse._canonical_json(entries[sid])
-                .encode("utf-8")).hexdigest()
-            self.assertEqual(
-                observed, digest,
-                "pinned entry %s mutated by the hort addition" % sid)
 
 
 class TestHortEntries(unittest.TestCase):

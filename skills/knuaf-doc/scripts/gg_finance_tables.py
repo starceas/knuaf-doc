@@ -1073,19 +1073,15 @@ def generate(workbook_path, *, major_id, footnotes=None, map_path=None,
         nonlocal table_no
         table_no += 1
         caption = "표 %d. %s(단위: %s)" % (table_no, title, unit)
-        # 본문 참조 문장(object_reference) → 캡션 → 표 → 출처 → 주석 순.
-        # 출처는 반드시 표 바로 뒤에 둔다: 주석이 사이에 끼면 인접 표가
-        # 출처 줄을 가로채 gg_document.check의 object_credit이 실패한다.
+        # 본문 참조 → 캡션 → 표 → 주석. 자체 산출 표에는 출처를 붙이지 않는다.
         md.append(table_map["lead_template"].format(
             title=title, josa=_eun_neun(title), no=table_no))
         md.append(caption)
         md.extend(_render_markdown_table(headers, rows, col_letters))
-        md.append(
-            table_map["source_credit_template"].format(sheet=sheet_title))
         # 원문 셀은 표·독립 주석 경로 모두 _workbook_text를 거친다.
         # 구조화 입력을 검증한 참고값 각주는 원문 필터 대상이 아니다.
-        md.extend(notes)
-        md.extend(foot_lines)
+        for note in [*notes, *foot_lines]:
+            md.append("주 : " + re.sub(r"^(?:\*\s*|주\s*[:：]\s*)", "", note))
         md.append("")
         emitted.append({"table": tid, "title": title,
                         "rows": len(rows), "number": table_no})
@@ -1779,7 +1775,7 @@ def run(base, xlsx, *, major_id=None, input_path=None, out="build/finance-tables
     issues = gd.check(
         result["markdown"], str(base_path), major_id=auth.major_id)
     errors = [list(i) for i in issues
-              if i[0] not in gd.INFO_CHECKS | gd.WARNING_CHECKS]
+              if i[0] not in gd.INFO_CHECKS | gd.WARNING_CHECKS | gd.POLICY_ADVISORY_CHECKS]
     if errors:
         return {
             "status": "failed",

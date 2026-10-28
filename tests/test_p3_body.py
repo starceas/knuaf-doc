@@ -310,6 +310,14 @@ class UnitTests(ContractCase):
 
 
 class TableContextReuseTests(ContractCase):
+    def test_spaced_note_belongs_only_to_preceding_table(self):
+        text = ("표 1. 첫 계획\n|항목|값|\n|---|---|\n|수입|1|\n"
+                "주 : 첫 계획은 천원 단위다.\n"
+                "표 2. 둘째 계획\n|항목|값|\n|---|---|\n|수입|2|\n")
+        first, second = runtime("gg_school_excel")._body_tables(text)
+        self.assertIn("주 : 첫 계획은 천원 단위다.", first[1])
+        self.assertNotIn("천원", second[1])
+
     def test_body_tables_reused_from_gg_school_excel(self):
         """B lane must reuse _body_tables rather than reimplement table
         context ownership — this test imports it via gg_school_excel and
