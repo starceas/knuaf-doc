@@ -71,7 +71,7 @@ WARNING_CHECKS = frozenset(
 # 차단은 아니지만 통과로 넘기면 안 되는 확인 항목. WARNING_CHECKS와
 # 분리해 둔 이유는 그 집합이 기존 시험에 고정돼 있어서다. 코어와 명령
 # 어댑터는 두 집합을 함께 warning으로 집계한다.
-POLICY_ADVISORY_CHECKS = frozenset({"photo_missing"})
+POLICY_ADVISORY_CHECKS = frozenset({"photo_missing", "object_credit_position"})
 
 INFO_CHECKS = frozenset({"sourced_objects"})
 
@@ -588,7 +588,7 @@ def plain_policy_check(text, issues, nodes, major_id):
         if n["kind"] != "caption":
             continue
         m = CAPTION.fullmatch(n["text"])
-        title = m[3].strip() if m else n["text"]
+        title, _ = split_caption_credit(m[3].strip() if m else n["text"])
         if len(title) > cap["warn_chars"]:
             issues.append(
                 (
@@ -678,8 +678,23 @@ def _placeholder_figure(nodes, start, end, policy):
     )
 
 
+def split_caption_credit(text):
+    """Return caption/title and optional trailing source, preserving nested parentheses."""
+    match = re.search(r"\s*[(（]출처\s*[:：]\s*(.*)[)）]\s*$", text)
+    return (text[:match.start()].rstrip(), match[1].strip()) if match else (text, None)
+
+
+def self_credit(value):
+    """Recognize explicit self-attribution, not the authorship of unmarked objects."""
+    compact = re.sub(r"\s+", "", value)
+    return re.search(
+        r"(?:본인|작성자|저자|필자|자체|직접)(?:직접)?"
+        r"(?:작성|산출|촬영|조사|평가|계획|제작)", compact
+    ) is not None
+
+
 def sourced_object_check(nodes, issues, policy):
-    """출처 표기 존재만 검사한다. 수치 진위·이용권리는 사람 검토 대상이다."""
+    """Validate explicit credits. Unmarked objects may be self-authored."""
     obj = policy["objects"]
     labels = "|".join(re.escape(v) for v in obj["credit_labels"])
     credit_re = re.compile(r"^(?:[\\*＊·•]\s*)*(?:" + labels + r")\s*[:：]\s*(.*?)\s*$")
@@ -697,17 +712,37 @@ def sourced_object_check(nodes, issues, policy):
             m = credit_re.fullmatch(nodes[pos]["text"].strip().strip("*"))
             if not m:
                 continue
-            value = m[1].strip().strip("*[] ")
-            if not value or re.sub(r"\s+", "", value).casefold() in absent:
-                continue
             candidate = (distance, index)
             if candidate < owners.get(pos, (float("inf"), float("inf"))):
                 owners[pos] = candidate
-    credited = {index for _, index in owners.values()}
+    credited = set()
+    def validate(value, name):
+        compact = re.sub(r"\s+", "", value.strip("*[] ")).casefold()
+        if self_credit(value):
+            issues.append(("object_credit", "본인 작성·산출·촬영 자료에는 출처를 쓰지 않는다. "
+                           "외부 자료 기반이면 기관명만 남긴다: " + name))
+            return False
+        if not compact or compact in absent:
+            issues.append(("object_credit", "출처 미확인: " + name))
+            return False
+        return True
+
+    for pos, (_, owner) in owners.items():
+        value = credit_re.fullmatch(nodes[pos]["text"].strip().strip("*"))[1]
+        if validate(value, nodes[pos]["text"]):
+            credited.add(owner)
+            issues.append(("object_credit_position",
+                           "출처는 제목 끝 괄호 '(출처 : 기관명)'로 옮기고 설명은 아래 '주 :' 줄로 분리: "
+                           + nodes[pos]["text"]))
     counts = {"표": 0, "그림": 0}
     for index, (label, start, end) in enumerate(groups):
         if index in pending:
             continue
+        for node in nodes[start:end + 1]:
+            if node["kind"] == "caption":
+                _, value = split_caption_credit(node["text"])
+                if value is not None and validate(value, node["text"]):
+                    credited.add(index)
         if label == "그림":
             pieces = [n.get("text", "") + " " + n.get("alt", "") + " " + n.get("path", "")
                       for n in nodes[start:end + 1]]
@@ -717,10 +752,6 @@ def sourced_object_check(nodes, issues, policy):
                 issues.append(("image_ai_generated", "AI 생성 이미지 산출물 금지: " + pieces[0].strip()))
         if index in credited:
             counts[label] += 1
-        else:
-            n = next((n for n in nodes[start:end + 1] if n["kind"] == "caption"), nodes[start])
-            name = n.get("text") or n.get("path") or "캡션 없는 표"
-            issues.append(("object_credit", "%s 출처 표기 없음: %s" % (label, name)))
     issues.append(("sourced_objects", "출처 있는 표 %d개·그림 %d개" % (counts["표"], counts["그림"])))
 
 

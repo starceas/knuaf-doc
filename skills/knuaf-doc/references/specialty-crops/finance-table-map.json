@@ -4,7 +4,6 @@
  "note": "특용작물전공 전용 Ⅳ장 재무표 전개 지도. 앵커·머리글·정지 표식은 셀 텍스트의 모든 공백(줄바꿈 포함)을 제거한 정규화 문자열과 비교한다. 연도는 통합문서에 기재된 계획연도(Y~Y+4)를 그대로 읽는다. 좌표는 학과 양식 버전마다 다르므로 라벨/앵커로 블록을 찾는다. 비율 표현은 행별 단위 계약(row_units: percent_value=셀이 이미 백분율값, ratio=셀이 비율)을 따르며 값 크기로 단위를 추정하지 않는다. 이름 있는 데이터 행의 값 열이 전부 비면 확인 불가로 보존하고, optional_when_blank에 든 행만 생략한다. optional 표만 표 단위 생략이 허용된다.",
  "chapter": "Ⅳ. 재무계획",
  "missing_value": "확인 불가",
- "source_credit_template": "출처 : 작성자 산출(학과 양식 통합문서 '{sheet}')",
  "lead_template": "{title}{josa} 표 {no}에 나타내었다.",
  "footnote_kinds": {
   "general_price": {

@@ -255,8 +255,8 @@
         },
         {
           "relative_path": "references/rules/F_format.md",
-          "sha256": "42cfe3d5268686f21b51f28c3e593e7e6a54d84981de3d7309b2a9810baaf154",
-          "bytes": 10470
+          "sha256": "1c2f5828fb339dc2e56b9c4e44709e4e4ea24c747fb572fd614599c16ff7c0ad",
+          "bytes": 10703
         },
         {
           "relative_path": "references/rules/PRE_frontmatter.md",
@@ -393,8 +393,8 @@
         },
         {
           "relative_path": "references/rules/F_format.md",
-          "sha256": "42cfe3d5268686f21b51f28c3e593e7e6a54d84981de3d7309b2a9810baaf154",
-          "bytes": 10470
+          "sha256": "1c2f5828fb339dc2e56b9c4e44709e4e4ea24c747fb572fd614599c16ff7c0ad",
+          "bytes": 10703
         },
         {
           "relative_path": "references/rules/PRE_frontmatter.md",
@@ -487,8 +487,8 @@
       "artifacts": [
         {
           "relative_path": "references/exemplar-quality.md",
-          "sha256": "c6bfedd6264d6c82979a14029fd8281c19212a6c71334b6efea10f04c9370bed",
-          "bytes": 9302
+          "sha256": "6f7431bf3f77b31d305d9a859d4ad70e72c30e1329f721fcbf44f276bb2f3606",
+          "bytes": 9288
         }
       ],
       "coverage": {
@@ -529,8 +529,8 @@
       "artifacts": [
         {
           "relative_path": "references/exemplar-quality.md",
-          "sha256": "c6bfedd6264d6c82979a14029fd8281c19212a6c71334b6efea10f04c9370bed",
-          "bytes": 9302
+          "sha256": "6f7431bf3f77b31d305d9a859d4ad70e72c30e1329f721fcbf44f276bb2f3606",
+          "bytes": 9288
         }
       ],
       "coverage": {},

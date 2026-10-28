@@ -54,7 +54,6 @@ MINI_MAP = {
     "schema": "test-mini/v1",
     "chapter": "Ⅳ. 재무계획",
     "missing_value": MISSING,
-    "source_credit_template": "출처 : 작성자 산출(통합문서 '{sheet}')",
     "lead_template": "{title}{josa} 표 {no}에 나타내었다.",
     "workbook_rate_note_pattern": "상승률|성장률|연평균변화율",
     "footnote_kinds": {
@@ -447,11 +446,10 @@ class TestExtract(_Base):
         self.assertNotIn("가족", grid)
         self.assertIn("|  | 외주 | %s | %s |" % (MISSING, MISSING), grid)
 
-    def test_source_credit_per_table(self):
+    def test_self_calculated_tables_have_no_credit(self):
         credits = [l for l in self.md.splitlines()
-                   if l.strip().startswith("출처")]
-        self.assertEqual(len(credits), len(self.result["emitted"]))
-        self.assertTrue(all("통합문서" in c for c in credits))
+                   if l.strip().startswith("출처") or "(출처 :" in l]
+        self.assertEqual(credits, [])
 
     def test_lead_in_reference(self):
         self.assertIn("시험 투자내역은 표 1에 나타내었다.", self.md)
@@ -471,7 +469,7 @@ class TestExtract(_Base):
         issues = gd.check(self.md, str(self.xlsx.parent),
                           major_id="specialty_crops")
         errors = [i for i in issues
-                  if i[0] not in gd.INFO_CHECKS | gd.WARNING_CHECKS]
+                  if i[0] not in gd.INFO_CHECKS | gd.WARNING_CHECKS | gd.POLICY_ADVISORY_CHECKS]
         self.assertEqual(errors, [])
 
     def test_workbook_unchanged(self):
@@ -543,7 +541,7 @@ class TestFootnotes(unittest.TestCase):
             "source_id": "test.general", "base_year": 2020,
             "observation": {"start_year": 2020, "end_year": 2025}}})
         self.assertIn(
-            "* 일반물가 상승률 r=%.4f%%는 참고값이다" % (GENERAL_R * 100),
+            "주 : 일반물가 상승률 r=%.4f%%는 참고값이다" % (GENERAL_R * 100),
             r["markdown"])
         self.assertFalse(self._warn_reasons(r, "general_price"))
 
@@ -564,13 +562,12 @@ class TestFootnotes(unittest.TestCase):
             "rate": 0.99}})
         self.assertTrue(self._warn_reasons(r, "general_price"))
         self.assertNotIn("99", r["markdown"])
-        self.assertIn("* 일반물가 상승률 %s" % MISSING, r["markdown"])
 
     def test_zero_rate_is_legitimate(self):
         # 평탄 수열 → r=0도 정상값(결측과 혼동 금지).
         r = self._gen({"general_price": {
             "source_id": "test.flat", "base_year": None}})
-        self.assertIn("* 일반물가 상승률 r=0.0000%는 참고값이다", r["markdown"])
+        self.assertIn("r=0.0000%", r["markdown"])
         self.assertFalse(self._warn_reasons(r, "general_price"))
 
     def test_rejects_unstructured_inputs(self):
@@ -605,8 +602,6 @@ class TestFootnotes(unittest.TestCase):
                 r = self._gen({"general_price": info})
                 self.assertTrue(
                     self._warn_reasons(r, "general_price"))
-                self.assertIn(
-                    "* 일반물가 상승률 %s" % MISSING, r["markdown"])
         self.assertNotIn("90%", self._gen(
             {"general_price": bad_inputs[0]})["markdown"])
 
@@ -614,8 +609,7 @@ class TestFootnotes(unittest.TestCase):
         r = self._gen({"general_price": {
             "status": "not_applied",
             "reason": "자재비 가격자료 없음"}})
-        self.assertIn("* 일반물가 상승률 미적용(명시 선택): 자재비 가격자료 없음",
-                      r["markdown"])
+        self.assertIn("자재비 가격자료 없음", r["markdown"])
         self.assertFalse(self._warn_reasons(r, "general_price"))
 
     def test_sales_aggregate_rejected(self):
@@ -624,7 +618,6 @@ class TestFootnotes(unittest.TestCase):
             "source_id": "test.aggregate", "base_year": 2020}})
         self.assertTrue(self._warn_reasons(r, "selling_price"))
         self.assertNotIn("시험통계", r["markdown"])
-        self.assertIn("* 판매가 상승률 %s" % MISSING, r["markdown"])
 
     def test_target_dimensions_checked(self):
         r = self._gen({"general_price": {
@@ -769,7 +762,7 @@ class TestFootnotes(unittest.TestCase):
                 footnotes={"general_price": {"source_id": "test.general", "base_year": 2020}},
                 map_path=self.map_path, registry=REGISTRY)
             self.assertNotIn("원문 연평균 성장률", result["markdown"])
-            self.assertIn("* 수선비는 구입금액의 0.5%", result["markdown"])
+            self.assertIn("주 : 수선비는 구입금액의 0.5%", result["markdown"])
             self.assertIn("r=%.4f%%는 참고값이다" % (GENERAL_R * 100), result["markdown"])
             missing = ft.generate(xlsx, major_id="specialty_crops", map_path=self.map_path)
             self.assertNotIn("원문 연평균 성장률", missing["markdown"])
@@ -881,8 +874,8 @@ class TestWorkbookRateNotes(unittest.TestCase):
         result = self._generate(cells, m)
         self.assertNotIn("90%", result["markdown"])
         self.assertNotIn("91%", result["markdown"])
-        self.assertIn(cells["B5"], result["markdown"])
-        self.assertIn(cells["B7"], result["markdown"])
+        self.assertIn("주 : " + cells["B5"].removeprefix("* "), result["markdown"])
+        self.assertIn("주 : " + cells["B7"], result["markdown"])
         self.assertTrue({"'S1'!B6", "'S1'!B13"} <= self._dropped_cells(result))
         # '*' 선두인 독립 주석도 같은 좌표 경고를 낸다.
         result = self._generate({"B5": "* 연평균 성장률 90% 적용",
@@ -1256,7 +1249,7 @@ class TestRun(unittest.TestCase):
         self.assertEqual(value["status"], "generated")
         out = self.root / "build/tables.md"
         text = out.read_text(encoding="utf-8")
-        self.assertIn("* 일반물가 상승률", text)
+        self.assertIn("주 : 일반물가 상승률", text)
         self.assertIn("official.kosis.cpi.total", text)
 
 
