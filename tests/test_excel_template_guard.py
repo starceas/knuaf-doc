@@ -97,9 +97,9 @@ class InspectLayoutTests(ContractCase):
 
 
 class MalformedAnchorTests(ContractCase):
-    """A2: an empty or malformed anchor list must never classify — a
-    layout-unrecognised source refuses the legacy map, never re-uses
-    the X01 coordinates."""
+    """A2: an empty or malformed anchor list must never classify — the
+    identification config is unreadable (``TemplateUnreadable``), so the
+    legacy map is refused and the X01 coordinates are never re-used."""
 
     def setUp(self):
         self.tpl = runtime("gg_excel_template")
@@ -111,13 +111,14 @@ class MalformedAnchorTests(ContractCase):
             _workbook(src, variant="x02")
             with mock.patch.object(tpl, "_load_layout_anchors",
                                    return_value=anchors):
-                self.assertEqual(tpl.detect_layout(src), "unknown")
+                with self.assertRaises(tpl.TemplateUnreadable):
+                    tpl.detect_layout(src)
                 # a legacy map has no layout block -> default_x01,
-                # refused because detection is unknown
+                # refused because the layout cannot be identified
                 m = _map(Path(tmp) / "map.json", tpl, src)
                 out = Path(tmp) / "out.xlsx"
                 with self.assertRaisesRegex(
-                        ValueError, "layout_variant_unsupported"):
+                        ValueError, "layout identification config unreadable"):
                     tpl.blank_copy(src, m, out, context=_ctx(self))
                 self.assertFalse(out.exists())
 

@@ -171,19 +171,29 @@ def merged_cells(root: ET.Element) -> tuple[set[str], set[str]]:
     return anchors, nonanchors
 
 
+def _validated_anchors(anchors) -> dict:
+    """The variant -> anchor-list map, or ``TemplateUnreadable``: an empty
+    or malformed anchor list can never classify a workbook."""
+    if (not isinstance(anchors, dict) or not anchors
+            or any(not isinstance(variant_anchors, list) or not variant_anchors
+                   or not all(_anchor_well_formed(a) for a in variant_anchors)
+                   for variant_anchors in anchors.values())):
+        raise TemplateUnreadable("layout identification config unreadable: "
+                                 "anchor list missing or malformed")
+    return anchors
+
+
 def _load_layout_anchors() -> dict:
-    """Shipped layout anchors keyed by variant ("x01"/"x02"); {} on any
-    problem — a missing or unreadable extract is "unknown", never a
-    guessed layout."""
+    """Shipped layout anchors keyed by variant ("x01"/"x02").  A missing,
+    unparsable or wrong-schema extract raises ``TemplateUnreadable``: a
+    workbook that cannot be identified is never "another form"."""
     try:
         doc = json.loads(LAYOUT_EXTRACT_PATH.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return {}
-    if not isinstance(doc, dict) \
-            or doc.get("schema") != "knuaf-common-workbook-extract/v1":
-        return {}
-    anchors = doc.get("layout_anchors")
-    return anchors if isinstance(anchors, dict) else {}
+    except (OSError, ValueError) as exc:
+        raise TemplateUnreadable(f"layout identification config unreadable: {exc}") from exc
+    if not isinstance(doc, dict) or doc.get("schema") != "knuaf-common-workbook-extract/v1":
+        raise TemplateUnreadable("layout identification config unreadable: schema mismatch")
+    return _validated_anchors(doc.get("layout_anchors"))
 
 
 def _anchor_well_formed(anchor) -> bool:
@@ -279,11 +289,9 @@ def _cell_record(cell: ET.Element, shared: list[str]) -> dict | None:
 
 
 def _layout_of(cells: dict) -> str:
-    anchors = _load_layout_anchors()
-    if not anchors or any(not isinstance(variant_anchors, list) or not variant_anchors
-                          or not all(_anchor_well_formed(a) for a in variant_anchors)
-                          for variant_anchors in anchors.values()):
-        return "unknown"
+    # An unreadable or malformed identification config raises: it is never
+    # "another form".
+    anchors = _validated_anchors(_load_layout_anchors())
     for variant, variant_anchors in anchors.items():
         states = []
         for a in variant_anchors:
@@ -295,19 +303,101 @@ def _layout_of(cells: dict) -> str:
     return "unknown"
 
 
+def _opened_sheet_names(path: Path) -> list[str]:
+    """First check of the shared read: open the file with openpyxl, the
+    library the later checks read it with.  Any failure is unreadable."""
+    import warnings
+    import openpyxl
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            workbook = openpyxl.load_workbook(path)
+    except Exception as exc:  # openpyxl raises many parser types
+        raise TemplateUnreadable(f"workbook does not open: {path.name}: "
+                                 f"{type(exc).__name__}: {exc}") from exc
+    try:
+        return list(workbook.sheetnames)
+    finally:
+        workbook.close()
+
+
+_SHEET_ROOTS = {local("worksheet"), local("chartsheet")}
+_OFFICE_DOCUMENT = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"
+_SHARED_STRINGS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings"
+_REQUIRED_PARTS = (("[Content_Types].xml", "{http://schemas.openxmlformats.org/package/2006/content-types}Types"),
+                   ("_rels/.rels", f"{{{NS_PKG}}}Relationships"),
+                   ("xl/workbook.xml", local("workbook")),
+                   ("xl/_rels/workbook.xml.rels", f"{{{NS_PKG}}}Relationships"))
+
+
+def _part_root(z: zipfile.ZipFile, name: str, tag: str) -> ET.Element:
+    if name not in z.namelist():
+        raise TemplateUnreadable(f"package part missing: {name}")
+    try:
+        root = ET.fromstring(z.read(name))
+    except ET.ParseError as exc:
+        raise TemplateUnreadable(f"package part is not XML: {name}: {exc}") from exc
+    if root.tag != tag:
+        raise TemplateUnreadable(f"package part has the wrong root: {name}")
+    return root
+
+
+def _package_shared_strings(z: zipfile.ZipFile) -> list[str]:
+    """Package structure half of the first check (openpyxl opens files
+    whose ``_rels/.rels`` is missing or broken): the four required parts
+    exist and parse with their roots, the package relationship points at
+    ``xl/workbook.xml``, and a listed shared-string part exists and
+    parses.  Returns the shared strings."""
+    roots = {name: _part_root(z, name, tag) for name, tag in _REQUIRED_PARTS}
+    office = [r for r in roots["_rels/.rels"] if r.attrib.get("Type") == _OFFICE_DOCUMENT]
+    if len(office) != 1 or office[0].attrib.get("Target", "").lstrip("/") != "xl/workbook.xml":
+        raise TemplateUnreadable("package relationship does not point at xl/workbook.xml")
+    listed = [r for r in roots["xl/_rels/workbook.xml.rels"] if r.attrib.get("Type") == _SHARED_STRINGS]
+    if listed or "xl/sharedStrings.xml" in z.namelist():
+        root = _part_root(z, "xl/sharedStrings.xml", local("sst"))
+        return ["".join(si.itertext()) for si in root.findall(local("si"))]
+    return []
+
+
 def read_template(source: Path) -> TemplateRead:
-    """The shared read check every template tool runs first: open the
-    package, parse every sheet, resolve every shared formula, identify the
-    layout.  Any failure raises ``TemplateUnreadable``."""
+    """The shared read check every template tool runs first.
+
+    1. The file opens with openpyxl, and the package structure holds:
+       ``[Content_Types].xml``, ``_rels/.rels`` (pointing at the workbook),
+       ``xl/workbook.xml`` and ``xl/_rels/workbook.xml.rels`` exist and
+       parse with their roots; a listed ``xl/sharedStrings.xml`` exists and
+       parses; at least one sheet; every listed sheet part exists with a
+       worksheet (with ``sheetData``) or chartsheet root; the sheet list
+       equals the one openpyxl opened.
+    2. Every cell parses (``t="s"`` indices inside the shared-string
+       table) and every shared formula resolves.
+    3. The layout is identified with the shipped anchors.
+    Any failure — including an unreadable identification config — raises
+    ``TemplateUnreadable``.  ``layout == "unknown"`` therefore always
+    means "read and identified as another form"."""
     from gg_workbook_audit import translate
     try:
         path = resolve_source(Path(source))
+    except FileNotFoundError as exc:
+        raise TemplateUnreadable(str(exc)) from exc
+    opened = _opened_sheet_names(path)
+    try:
         with zipfile.ZipFile(path) as z:
-            shared = load_shared(z)
+            shared = _package_shared_strings(z)
             sheets = workbook_sheets(z)
+            if not sheets:
+                raise TemplateUnreadable("workbook lists no sheets")
+            if [name for name, _ in sheets] != opened:
+                raise TemplateUnreadable("sheet list differs from the opened workbook")
+            for name, target in sheets:
+                if target not in z.namelist():
+                    raise TemplateUnreadable(f"sheet part missing: {name!r} ({target})")
             cells = {}
             for name, target in sheets:
                 root = ET.fromstring(z.read(target))
+                if root.tag not in _SHEET_ROOTS or (
+                        root.tag == local("worksheet") and root.find(local("sheetData")) is None):
+                    raise TemplateUnreadable(f"sheet part is not a worksheet: {name!r} ({target})")
                 anchors, followers = {}, []
                 for c in root.iter(local("c")):
                     ref = c.attrib.get("r")
@@ -343,17 +433,11 @@ def detect_layout(source: Path) -> str:
 
     A variant is named only when every one of its anchors holds.  The
     column-J predicate is exclusive, so both variants can never hold
-    together.  Every variant must carry a non-empty list of
-    well-formed anchors (sheet str, cell matching ``CELL_RE``,
-    ``expect`` with exactly one known predicate) — an empty or
-    malformed anchor list can never satisfy ``all()`` silently.
-    Any malformed anchor or unreadable workbook returns ``unknown``
-    — fail closed.  Callers that must tell "unreadable" from "another
-    form" use ``read_template``."""
-    try:
-        return read_template(source).layout
-    except TemplateUnreadable:
-        return "unknown"
+    together.  An empty or malformed anchor list never classifies.
+    ``unknown`` means the workbook was read and is another form; a file
+    or identification config that cannot be read raises
+    ``TemplateUnreadable`` (callers block or protect, never pass)."""
+    return read_template(source).layout
 
 
 def _check_map_layout(map_data: dict, source: Path) -> None:
@@ -387,6 +471,8 @@ def _check_map_layout(map_data: dict, source: Path) -> None:
 
 def inspect_source(source: Path, out_map: Path | None, report: Path | None) -> dict:
     source = resolve_source(source).resolve()
+    # Shared read check first: an unreadable file stops here (blocked).
+    detected = read_template(source).layout
     if out_map and out_map.exists():
         raise FileExistsError(f"refusing to overwrite map: {out_map}")
     if report and report.exists():
@@ -416,7 +502,7 @@ def inspect_source(source: Path, out_map: Path | None, report: Path | None) -> d
                                     "cellCount": len(cells), "formulaCount": formulas})
             inventory.extend({"sheet": name, **c} for c in cells)
     entries = default_entries(inventory)
-    detected = detect_layout(source)
+    # ``detected`` comes from the shared read check above.
     result = {
         "schema": "gg-xlsx-template-map/v1",
         "source": {"path": str(source), "sha256": digest, "size": source.stat().st_size},

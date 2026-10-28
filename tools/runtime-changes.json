@@ -205,7 +205,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/install-manifest.json": {
-   "after_sha256": "b90c039021238e0329f2412d839bcaae605190565eb414a6ad4f3164f1a122e6",
+   "after_sha256": "fc6ff569f2e4c1f1f92f92ad46f306221c82c12b301edbe8398ed25ba0092cf8",
    "before_sha256": null,
    "first_changed": "P27",
    "last_changed": "P28",
@@ -386,7 +386,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/builtin-sources.json": {
-   "after_sha256": "eb87cfdec5a777a0b20b96e5ebb77ea20d8f64e36c0fc46c33f82158e80c81d6",
+   "after_sha256": "fec8e9d3e928edd433afd6a47e07136277a3af54fd4a644a8d47821f094e6c54",
    "before_sha256": null,
    "first_changed": "P5",
    "last_changed": "P28",
@@ -493,7 +493,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/excel-template.md": {
-   "after_sha256": "c59d22a4e94bf7ccaade2bc26d8c9ed6883f53cc63a43a06406a2a3a2817251e",
+   "after_sha256": "73ee0ff3628bb80ba9e7e88c487f782d15fca18c2dc1e665b044804003604b69",
    "before_sha256": "4513094e1754191edd810947789f2228fb3b15bfbe1a2531e1b18f6b144739e8",
    "first_changed": "P28",
    "last_changed": "P28",
@@ -1204,7 +1204,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_excel_print.py": {
-   "after_sha256": "ac477545c1964a3e951c659033050daa285506bb7359f8c5e7a6b657002a4785",
+   "after_sha256": "1d08f6c5131105ffba31561f83f7220b7030c0b9058a2ed3e9935b3fa4d7ca59",
    "before_sha256": "4332896806b8b4d44e8d76106d41221536edee470f6b56e7ddb88797bc55f2aa",
    "first_changed": "P1",
    "last_changed": "P27",
@@ -1213,7 +1213,7 @@
    "source": "adopted:PR2"
   },
   "skills/knuaf-doc/scripts/gg_excel_template.py": {
-   "after_sha256": "ca512f3baa7fee7d5983d525d3722789fab13997c4f49526264bd13af9e5c95d",
+   "after_sha256": "791c433c2a5b5780f2cbab83f860fed460f117764dd041e598150fe64239cfa0",
    "before_sha256": "70933a7abfc4bb9b86f20b05487c785c2abd77be60426089cb70b40741ca508f",
    "first_changed": "P1",
    "last_changed": "P28",
@@ -2049,7 +2049,7 @@
    "source": "new"
   },
   "tests/test_specialty_template_route.py": {
-   "after_sha256": "585470a32a5e91aec3f220eae562eb17a738d897278a191f8db9f104f0d87629",
+   "after_sha256": "4344a68e742407cd50af5b38db6d0db26e2e3634a44ac71bdf9c8462f7e8a332",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",

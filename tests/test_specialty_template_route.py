@@ -306,7 +306,8 @@ class SharedReadCheckTests(ContractCase):
             with self.subTest(file=label):
                 with self.assertRaises(self.tpl.TemplateUnreadable):
                     self.tpl.read_template(path)
-                self.assertEqual(self.tpl.detect_layout(path), "unknown")
+                with self.assertRaises(self.tpl.TemplateUnreadable):
+                    self.tpl.detect_layout(path)
                 self.assertEqual([i["code"] for i in self.tpl.labor_review(path)],
                                  ["LABOR_WORKBOOK_UNREADABLE"])
                 self.assertEqual(self.tpl.crop_label_check(self.good, path)["status"], "blocked")
@@ -337,6 +338,215 @@ class SharedReadCheckTests(ContractCase):
         self.assertEqual(self.tpl.labor_review(other), [])
         with self.assertRaisesRegex(ValueError, "layout_variant_unsupported"):
             self.patch.materialize_d8(other, prepare_observations=True)
+
+
+class PackageAndIdentificationFailureTests(ContractCase):
+    """R3: the shared read check opens the file with openpyxl first and
+    checks the package; an identification config it cannot read is
+    unreadable too.  Each case is blocked in every tool and CLI; a normal
+    X01 and a normal other form keep their results."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name)
+        self.tpl = runtime("gg_excel_template")
+        self.patch = runtime("gg_excel_formula_patch")
+        self.pr = runtime("gg_excel_print")
+        self.mc = runtime("gg_major_contract")
+        self.x01 = self.root / "x01.xlsx"
+        labelled_template(self.x01)
+        from openpyxl import Workbook
+        self.other = self.root / "other.xlsx"
+        wb = Workbook()
+        wb.active.title = "11. 인건비계획"
+        wb.active["B2"] = "다른 양식"
+        wb.save(self.other)
+
+    def rewrite(self, source, name, edit):
+        import zipfile
+        out = self.root / name
+        with zipfile.ZipFile(source) as z, zipfile.ZipFile(out, "w") as w:
+            sheets = dict(self.tpl.workbook_sheets(z))
+            for item in z.infolist():
+                data = edit(item.filename, z.read(item.filename), sheets)
+                if data is not None:
+                    w.writestr(item, data)
+        return out
+
+    def broken_packages(self):
+        no_ct = lambda n, d, s: None if n == "[Content_Types].xml" else d
+        def sheet_data_removed(n, d, s):
+            if n != s[S6]:
+                return d
+            start, end = d.find(b"<sheetData"), d.find(b"</sheetData>")
+            return d[:start] + d[end + len(b"</sheetData>"):]
+        return {
+            "x01_no_content_types": self.rewrite(self.x01, "a.xlsx", no_ct),
+            "other_no_content_types": self.rewrite(self.other, "b.xlsx", no_ct),
+            "broken_workbook_part": self.rewrite(
+                self.x01, "w.xlsx", lambda n, d, s: b"<broken/>" if n == "xl/workbook.xml" else d),
+            "broken_sheet_part": self.rewrite(
+                self.x01, "s.xlsx", lambda n, d, s: b"<broken/>" if n == s[S6] else d),
+            "sheet_without_sheetData": self.rewrite(self.x01, "d.xlsx", sheet_data_removed),
+            "listed_sheet_part_missing": self.rewrite(
+                self.x01, "m.xlsx", lambda n, d, s: None if n == s[S6] else d),
+            # 추가 2: openpyxl opens these, the package check does not.
+            "root_rels_missing": self.rewrite(
+                self.x01, "r.xlsx", lambda n, d, s: None if n == "_rels/.rels" else d),
+            "root_rels_broken": self.rewrite(
+                self.x01, "rb.xlsx", lambda n, d, s: b"<Relationships" if n == "_rels/.rels" else d),
+            "other_root_rels_missing": self.rewrite(
+                self.other, "or.xlsx", lambda n, d, s: None if n == "_rels/.rels" else d),
+            "shared_strings_missing": self.shared_strings_case("ss.xlsx", None),
+            "shared_strings_broken": self.shared_strings_case("sb.xlsx", b"<sst"),
+            "shared_string_index_out_of_range": self.shared_strings_case("si.xlsx", "index"),
+        }
+
+    def shared_strings_case(self, name, replacement):
+        """X01 stand-in whose labels are stored as shared strings (t="s"),
+        then the table is removed, broken, or a cell points past it."""
+        from openpyxl import load_workbook
+        base = self.root / "sst-base.xlsx"
+        if not base.exists():
+            # Excel-style storage: move inline strings into xl/sharedStrings.xml.
+            import re
+            strings = []
+            def to_shared(data):
+                def repl(m):
+                    strings.append(m.group(2))
+                    return m.group(1).replace(b' t="inlineStr"', b' t="s"') + b"<v>%d</v></c>" % (len(strings) - 1)
+                return re.sub(rb'(<c [^>]*t="inlineStr"[^>]*>)<is><t>(.*?)</t></is></c>', repl, data)
+            src = self.rewrite(self.x01, "sst-tmp.xlsx", lambda n, d, s: to_shared(d)
+                               if n.startswith("xl/worksheets/") else d)
+            import zipfile
+            sst = (b'<?xml version="1.0" encoding="UTF-8"?><sst xmlns="' + self.tpl.NS_MAIN.encode()
+                   + b'">' + b"".join(b"<si><t>" + s + b"</t></si>" for s in strings) + b"</sst>")
+            with zipfile.ZipFile(src) as z, zipfile.ZipFile(base, "w") as w:
+                for item in z.infolist():
+                    data = z.read(item.filename)
+                    if item.filename == "[Content_Types].xml":
+                        data = data.replace(b"</Types>", b'<Override PartName="/xl/sharedStrings.xml" ContentType='
+                                            b'"application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/></Types>')
+                    if item.filename == "xl/_rels/workbook.xml.rels":
+                        data = data.replace(b"</Relationships>", b'<Relationship Id="rIdSST" Type="http://schemas.'
+                                            b'openxmlformats.org/officeDocument/2006/relationships/sharedStrings" '
+                                            b'Target="sharedStrings.xml"/></Relationships>')
+                    w.writestr(item, data)
+                w.writestr("xl/sharedStrings.xml", sst)
+            self.assertTrue(strings)
+            wb = load_workbook(base)  # the Excel-style control opens and reads the same labels
+            self.assertEqual(wb[S5]["B30"].value, "미상품과")
+            wb.close()
+            self.assertEqual(self.tpl.read_template(base).layout, "x01")
+        if replacement == "index":
+            return self.rewrite(base, name, lambda n, d, s: d.replace(b't="s"><v>0</v>', b't="s"><v>9999</v>', 1)
+                                if n.startswith("xl/worksheets/") else d)
+        return self.rewrite(base, name, lambda n, d, s: replacement if n == "xl/sharedStrings.xml" else d)
+
+    def assert_blocked_everywhere(self, path, *, before=None):
+        import contextlib, io
+        before = before or self.x01
+        tpl, patch = self.tpl, self.patch
+        for call in (lambda: tpl.read_template(path), lambda: tpl.detect_layout(path),
+                     lambda: tpl.crop_label_map(path, "herbaceous"),
+                     lambda: patch.materialize_d8(path, prepare_observations=True),
+                     lambda: tpl.wage_fill_map(path),
+                     lambda: tpl.inspect_source(path, None, None)):
+            with self.assertRaises(tpl.TemplateUnreadable):
+                call()
+        self.assertEqual([(i["code"], i["status"]) for i in tpl.labor_review(path)],
+                         [("LABOR_WORKBOOK_UNREADABLE", "blocked")])
+        self.assertEqual(tpl.crop_label_check(before, path)["status"], "blocked")
+        self.assertEqual(tpl.crop_label_check(path, before)["status"], "blocked")
+        n = len(list(self.root.iterdir()))
+        for cli, argv in (
+                (tpl.cli, ["labor-review", "--workbook", str(path)]),
+                (tpl.cli, ["label-check", "--before", str(before), "--after", str(path)]),
+                (tpl.cli, ["label-check", "--before", str(path), "--after", str(before)]),
+                (tpl.cli, ["label-map", "--source", str(path), "--category", "herbaceous",
+                           "--out-map", str(self.root / f"lm{n}.json"),
+                           "--out-values", str(self.root / f"lv{n}.json")]),
+                (tpl.cli, ["wage-map", "--source", str(path), "--out-map", str(self.root / f"wm{n}.json")]),
+                (tpl.cli, ["inspect", "--source", str(path), "--out-map", str(self.root / f"im{n}.json")]),
+                (patch.cli, ["materialize-d8", "--source", str(path), "--prepare-observations",
+                             "--out", str(self.root / f"d8{n}.json")])):
+            with self.subTest(cli=argv[0]), contextlib.redirect_stdout(io.StringIO()), \
+                    contextlib.redirect_stderr(io.StringIO()):
+                self.assertEqual(cli(argv), 2)
+        for out in ("lm", "lv", "wm", "im", "d8"):
+            self.assertFalse(list(self.root.glob(f"{out}{n}.json")))
+        with self.assertRaises(tpl.TemplateUnreadable):
+            self.print_copy(path, f"p{n}")
+        self.assertFalse((self.root / f"p{n}.xlsx").exists())
+
+    def print_copy(self, src, name):
+        project = self.make_project()
+        bind_major(project, "specialty_crops")
+        ctx = self.mc.output_context(project, "specialty_crops")
+        m = self.root / f"{name}.map.json"
+        m.write_text(json.dumps({"schema": self.pr.SCHEMA, "source": {"sha256": self.tpl.sha256(src)},
+                                 "sheets": [{"sheet": S6, "fit_width": 1, "fit_height": 0,
+                                             "reason": "합성"}]}, ensure_ascii=False), encoding="utf-8")
+        return self.pr.apply(src, m, self.root / f"{name}.xlsx", self.root / f"{name}.json", context=ctx)
+
+    def test_package_failures_are_blocked_in_every_tool(self):
+        import openpyxl
+        for label, path in self.broken_packages().items():
+            with self.subTest(case=label):
+                self.assert_blocked_everywhere(path)
+        # Counterexample A: the X01 copy without [Content_Types].xml does not
+        # open with openpyxl, and that is the first check's reason.
+        with self.assertRaisesRegex(self.tpl.TemplateUnreadable, "does not open"):
+            self.tpl.read_template(self.root / "a.xlsx")
+        with self.assertRaises(Exception):
+            openpyxl.load_workbook(self.root / "a.xlsx")
+        # 추가 2: openpyxl alone opens a copy without _rels/.rels; the package
+        # half of the first check is what stops it.
+        wb = openpyxl.load_workbook(self.root / "r.xlsx")
+        wb.close()
+        with self.assertRaisesRegex(self.tpl.TemplateUnreadable, r"package part missing: _rels/\.rels"):
+            self.tpl.read_template(self.root / "r.xlsx")
+
+    def test_identification_config_failure_is_unreadable_not_another_form(self):
+        bad_json = self.root / "anchors.json"
+        bad_json.write_text("{not json", encoding="utf-8")
+        wrong_schema = self.root / "schema.json"
+        wrong_schema.write_text(json.dumps({"schema": "other/v1", "layout_anchors": {}}), encoding="utf-8")
+        no_anchors = self.root / "empty.json"
+        no_anchors.write_text(json.dumps({"schema": "knuaf-common-workbook-extract/v1",
+                                          "layout_anchors": {}}), encoding="utf-8")
+        for label, config in (("missing", self.root / "absent.json"), ("unparsable", bad_json),
+                              ("wrong_schema", wrong_schema), ("no_anchors", no_anchors)):
+            for workbook in (self.x01, self.other):
+                with self.subTest(config=label, workbook=workbook.name), \
+                        mock.patch.object(self.tpl, "LAYOUT_EXTRACT_PATH", config):
+                    self.assert_blocked_everywhere(workbook, before=workbook)
+
+    def test_normal_x01_and_other_form_results_unchanged(self):
+        import contextlib, io
+        self.assertEqual(self.tpl.detect_layout(self.x01), "x01")
+        self.assertEqual(self.tpl.detect_layout(self.other), "unknown")
+        labor = self.root / "labor-x01.xlsx"
+        labor_book(labor, female=(0, 60, 60, 60, 60))
+        for path in (labor, self.other):
+            with self.subTest(workbook=path.name):
+                with contextlib.redirect_stdout(io.StringIO()) as out:
+                    self.assertEqual(self.tpl.cli(["labor-review", "--workbook", str(path)]), 0)
+                self.assertEqual(json.loads(out.getvalue()), {"status": "reviewed", "issues": []})
+        for path in (self.x01, self.other):
+            with self.subTest(workbook=path.name):
+                with contextlib.redirect_stdout(io.StringIO()) as out:
+                    self.assertEqual(self.tpl.cli(["label-check", "--before", str(path),
+                                                   "--after", str(path)]), 0)
+                self.assertEqual(json.loads(out.getvalue())["status"], "pass")
+        with self.assertRaisesRegex(ValueError, "layout_variant_unsupported"):
+            self.patch.materialize_d8(self.other, prepare_observations=True)
+        self.assertEqual(self.tpl.inspect_source(self.other, None, None)["mapStatus"],
+                         "manual_map_required")
+        self.assertEqual(self.tpl.inspect_source(self.x01, None, None)["mapStatus"], "ok")
+        receipt = self.print_copy(self.x01, "x01print")
+        self.assertEqual(receipt["changes"][0]["sheet"], S6)
 
 
 class LaborReviewTests(ContractCase):
