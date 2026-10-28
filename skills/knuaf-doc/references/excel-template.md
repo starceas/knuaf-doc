@@ -126,7 +126,7 @@ do not add sheets to the submission form merely to satisfy a preferred model.
      python3 skills/knuaf-doc/scripts/gg_excel_formula_patch.py --source <사본.xlsx> --map <준비맵.json> --out <준비사본.xlsx> --receipt <영수증.json> --project <프로젝트폴더> --major specialty_crops
      python3 skills/knuaf-doc/scripts/gg_excel_template.py wage-map --source <준비사본.xlsx> --out-map <값지도.json>
      ```
-   - **X01 원본 관측 준비**: 등록 X01 원본의 실제 관측 수식 변형(`Z27=Z28`)은 원본 SHA(`5d19b6a...`) 및 감사 자료(`formula-audit/x01.json`, SHA `785c2a1...`)에 묶어 검토된 수식으로 허용된다. 따라서 `materialize-d8 --prepare-observations`가 X01 원본 사본과 FX 양쪽 모두에서 정상 동작한다.
+   - **X01 원본 관측 준비**: 등록 X01 원본의 실제 관측 수식 변형(`Z27=Z28`)은 등록 원본(SHA `5d19b6a...`)과 감사 자료(`formula-audit/x01.json`, SHA `785c2a1...`)에 묶어 검토된 수식으로 허용된다. 등록 원본 파일 자체이거나, 모든 수식이 감사 목록과 칸마다 같은 사본(칸 이름 변경·값 채우기만 거친 사본)이면 허용한다. 수식이 하나라도 바뀌거나 늘거나 줄었거나 시트가 다르면 거부한다. 따라서 `label-map`과 `--prepare-observations`는 어느 순서로 해도 같은 사본이 된다. FX 양식도 그대로 동작한다.
    - 관측 연도 사슬과 복사 수식(X01은 Z27, FX는 Z28)을 명시적으로 비우며, 기존 fill CLI를 통해 관측값을 입력한다(수식 쓰기 금지 유지).
 3. **관측값 입력 형식 (`wage_observations`) 및 시간급 환산 계약**:
    - 값 파일에 `statistic_id`, `base_year`, 6개 `observation_years`, `application_base_year`를 지정한다.
@@ -274,8 +274,9 @@ do not add sheets to the submission form merely to satisfy a preferred model.
 | 8. 노무비계획 O24·O38 | 고용(남자, 단가 동일) | 고용(남자) | 고용(남자) | 고용(남자) |
 
 - 작목 분류는 전공·작목명으로 정하고, 모르면 학생에게 묻는다. 생산량을 포기 수가 아니라 면적으로 계산하는 계획이면 `재배면적`을 고른다.
-- 명령: `gg_excel_template.py label-map --source <사본> --category <분류> [--choice "6. 생산계획!B17=재배시설"] --out-map <맵> --out-values <값>` → `gg_excel_fill.py`로 새 사본에 적용 → `gg_excel_template.py label-check --before <사본> --after <새 사본>`. `label-check`는 표에 있는 칸이 원래 글자에서 허용 이름으로 바뀐 것만 허용하고, 수식 글자·숫자·다른 글자가 하나라도 다르면 실패한다.
-- 원래 글자가 표와 다른 양식(새 연도 정본 등)은 거부한다. 표를 새 좌표·글자로 다시 맞춘 뒤 쓴다.
+- 명령: `gg_excel_template.py label-map --source <사본> --category <분류> [--choice "6. 생산계획!B17=재배시설"] --out-map <맵> --out-values <값>` → `gg_excel_fill.py`로 새 사본에 적용 → `gg_excel_template.py label-check --before <사본> --after <새 사본>`. `label-check`는 표에 있는 칸이 원래 글자에서 허용 이름으로 바뀐 것만 허용한다. 수식은 글자·`<f>` 속성(공유수식 `t`·`si`·`ref`)·풀어 쓴 수식까지, 값은 자료형까지(숫자 6611과 글자 "6611"은 다르다) 비교해 하나라도 다르면 `fail`(종료 1)이다. 두 파일 중 하나라도 읽지 못하면 `blocked`(종료 2)다.
+- `label-map`의 원본은 등록 X01·X02 원본, 또는 모든 수식이 등록 감사와 칸마다 같은 사본(관측 준비·값 채우기를 거친 사본)이다. 원래 글자가 표와 다르거나 수식이 등록 감사와 다른 양식(새 연도 정본 등)은 거부한다. 표를 새 좌표·글자·감사로 다시 맞춘 뒤 쓴다.
+- 읽기 공통 확인: `label-map`·`label-check`·`labor-review`·`materialize-d8`·`wage-map`은 먼저 `gg_excel_template.read_template`으로 통합문서를 열고 모든 시트·칸·공유수식을 읽어 양식을 식별한다. 파일이 없거나 ZIP·XML이 깨졌거나 공유수식 기준 칸이 없으면 `TemplateUnreadable`로 모두 blocked(CLI 종료 2)이며, 읽을 수 있는 다른 양식(해당 없음)과 구분한다.
 - `1. 기초재무상태조사` (3) 대식물 표(주수·경제수령·식재년도)는 다년생 나무가 없으면 칸 이름을 바꾸지 않고 표 전체를 "해당 없음"으로 둔다. `7. 영농자재소요계획` 각주의 예시 묘목 단가 문장은 학생 자재 근거로 교체한다(값 채우기 경로).
 - 이름을 바꾼 칸이 칸 폭을 넘으면 칸 폭을 바꾸지 말고 렌더 검사에서 확인한다.
 
@@ -283,7 +284,7 @@ do not add sheets to the submission form merely to satisfy a preferred model.
 
 `8. 노무비계획` 11행(남)·12행(여)의 연도별 작업 일수와 작업별 산출근거(1년차 26~33행, 2년차 이후 40~47행)의 남자 O열·여자 R열 일수를 학생 계획대로 나눈다. 작업별(수확·선별·포장 등)로 누구를 고용하는지 묻고([interview-guide](interview-guide.md#q2-4-투자자금-조달-iv장-전체)), 근거 자료에 성별 구분이 없으면 작업 관행으로 정한 이유를 각주에 적는다. `gg_excel_template.py labor-review --workbook <재계산본>`과 `gg.py check`의 `finance_plan_review`는 고용 일수가 남자 칸에만 있으면 `LABOR_HIRED_MALE_ONLY` 경고와 작업별 일수 목록을 낸다. 경고는 막지 않는다 — 실제로 남자만 고용하는 계획이면 그 근거를 본문·각주에 남긴다.
 
-이 검사는 X01 배치로 식별된 통합문서에만 적용한다. 다른 전공 양식·X02 등 X01이 아닌 통합문서는 검사 대상이 아니라 이슈를 내지 않는다. X01인데 `8. 노무비계획` 시트가 없거나(`LABOR_SHEET_MISSING`), 칸 이름 배치가 다르거나(`LABOR_LAYOUT_UNSUPPORTED`), 일수 칸이 글자이거나 수식 캐시가 없으면(`LABOR_DAYS_UNREADABLE`) 통과가 아니라 `blocked`로 남는다. 엑셀에서 재계산·저장한 뒤 다시 검사한다. 빈 칸(수식 없음)만 0일로 본다.
+이 검사는 X01 배치로 식별된 통합문서에만 적용한다. 다른 전공 양식·X02 등 읽을 수 있지만 X01이 아닌 통합문서는 검사 대상이 아니라 이슈를 내지 않는다(종료 0). 파일이 없거나 열 수 없으면 `LABOR_WORKBOOK_UNREADABLE`로 `blocked`(CLI `status: blocked`, 종료 2)다. X01인데 `8. 노무비계획` 시트가 없거나(`LABOR_SHEET_MISSING`), 칸 이름 배치가 다르거나(`LABOR_LAYOUT_UNSUPPORTED`), 일수 칸이 글자이거나 수식 캐시가 없으면(`LABOR_DAYS_UNREADABLE`) 통과가 아니라 `blocked`로 남는다. 엑셀에서 재계산·저장한 뒤 다시 검사한다. 빈 칸(수식 없음)만 0일로 본다.
 
 #### 7번 영농자재소요계획 인쇄 설정
 
@@ -295,7 +296,7 @@ X01 `7. 영농자재소요계획`은 교수님 양식 인쇄 설정(인쇄 영�
 
 1. **연도 등록**: 새 파일을 `references/workbook-reference-set.json` `members`에 새 `ref_id`로 추가한다(SHA-256·시트 이름·받은 날·출처). 옛 항목은 지우지 않는다. 논문 작업은 시작할 때 쓰는 양식 `ref_id`·해시를 정본에 기록하고 작업 중에는 바꾸지 않는다.
 2. **차이표**: 옛·새 정본 각각에 `gg_excel_template.py inspect`(시트 순서·모든 칸 글자·값·수식)와 `gg_workbook_audit.py inventory --ref <ref_id>`(수식 목록)를 돌려 비교표를 만들고, 인쇄 설정(인쇄 영역·방향·배율·나눔)은 두 파일의 시트 XML `pageSetup`·`rowBreaks`·`colBreaks`와 인쇄 영역 정의를 직접 대조한다. 관리자가 확인한 뒤 기본 양식을 넘긴다.
-3. **예외 층 다시 맞추기**: 칸 이름 표(`x01-crop-labels.json`, 등록 해시와 원래 글자가 다르면 거부), 레이아웃 기준점(`kang-finance-workbook.json` `layout_anchors`, 맞지 않으면 `unknown`으로 거부), 수식 정정 명세(`corrections/`, 원본 해시·기대 수식 전제조건으로 거부)는 새 좌표·글자로 다시 맞춘다. 7번 인쇄 설정 규칙은 X01 배치로 감지되는 모든 사본에 걸리므로 새 정본의 인쇄 설정이 달라졌으면 규칙 문구와 `gg_excel_print.py`의 설명을 함께 고친다.
+3. **예외 층 다시 맞추기**: 칸 이름 표(`x01-crop-labels.json`의 등록 해시·감사 파일·원래 글자, 다르면 거부), 레이아웃 기준점(`kang-finance-workbook.json` `layout_anchors`, 맞지 않으면 `unknown`으로 거부), 수식 정정 명세(`corrections/`, 원본 해시·기대 수식 전제조건으로 거부)는 새 좌표·글자로 다시 맞춘다. 새 정본의 수식 감사(`formula-audit/`)를 만들어 칸 이름 표와 `d8-spec.json`에 감사 SHA를 함께 적는다. 7번 인쇄 설정 규칙은 X01 배치로 감지되는 모든 사본에 걸리므로 새 정본의 인쇄 설정이 달라졌으면 규칙 문구와 `gg_excel_print.py`의 설명을 함께 고친다.
 4. **알려진 오류 목록**: 정본 안의 명백한 오류는 고치지 않고 그대로 쓰되, `references/common-workbooks/formula-audit/AUDIT.md`에 연도별로 적고 다음 정본에서 고쳐졌는지 확인한다.
 
 ## Saved-file compatibility verification

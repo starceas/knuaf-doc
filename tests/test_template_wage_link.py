@@ -435,17 +435,19 @@ class WageLinkTests(ContractCase):
         with self.assertRaisesRegex(ValueError, 'unreviewed observation'):
             self.patch.materialize_d8(self.src, prepare_observations=True)
         real_sha = self.patch.sha256
-        audit_path = self.patch.D8_SPEC_PATH.parent.parent / 'formula-audit/x01.json'
-        with patch.object(self.patch, 'sha256', side_effect=lambda p: digest if p == self.src else '0'*64 if p == audit_path else real_sha(p)):
+        audit_path = self.tpl.COMMON_WORKBOOKS_DIR / 'formula-audit/x01.json'
+        bad_audit_sha = lambda p: digest if p == self.src else '0'*64 if Path(p) == audit_path else real_sha(p)
+        with patch.object(self.patch, 'sha256', side_effect=bad_audit_sha), \
+                patch.object(self.tpl, 'sha256', side_effect=bad_audit_sha):
             with self.assertRaisesRegex(ValueError, 'audit'):
                 self.patch.materialize_d8(self.src, prepare_observations=True)
-        real_json = self.patch._json
+        real_json = self.tpl._json_file
         for bad in ('source_sha256', 'inventory'):
             audit = real_json(audit_path)
             if bad == 'source_sha256': audit[bad] = '0'*64
             else: audit['inventory'] = [r for r in audit['inventory'] if (r['sheet'], r['cell']) != (S8, 'Z27')]
             with patch.object(self.patch, 'sha256', side_effect=lambda p: digest if p == self.src else real_sha(p)):
-                with patch.object(self.patch, '_json', side_effect=lambda p: audit if p == audit_path else real_json(p)):
+                with patch.object(self.tpl, '_json_file', side_effect=lambda p: audit if Path(p) == audit_path else real_json(p)):
                     with self.subTest(audit=bad), self.assertRaisesRegex(ValueError, 'audit'):
                         self.patch.materialize_d8(self.src, prepare_observations=True)
         from openpyxl import load_workbook
@@ -456,6 +458,70 @@ class WageLinkTests(ContractCase):
         with patch.object(self.patch, 'sha256', side_effect=lambda p: digest if p == self.src else real_sha(p)):
             with self.assertRaisesRegex(ValueError, 'unreviewed observation'):
                 self.patch.materialize_d8(self.src, prepare_observations=True)
+
+    def synthetic_audit(self, digest):
+        """The src's own formula inventory, standing in for the pinned audit."""
+        entries, _ = self.audit.inventory(self.audit.Workbook.load(self.src))
+        from openpyxl import load_workbook
+        w = load_workbook(self.src)
+        roles = {name: 'input' for name in w.sheetnames}
+        w.close()
+        return {'schema': 'knuaf-workbook-formula-audit/v1', 'source_sha256': digest,
+                'inventory': entries, 'sheet_roles': roles}
+
+    def test_r1_01_copy_derived_by_value_fill_or_preparation_keeps_the_exception(self):
+        """R1-01: a relabelled (value-only) copy and a prepared copy of the
+        registered template still admit Z27 — proved cell by cell against the
+        audit, not by the whole-file hash.  Any formula drift refuses it."""
+        from unittest.mock import patch
+        from openpyxl import load_workbook
+        fixture(self.src, broken=False)  # D8 restores no chain: preparation is the only transform
+        digest = self.x01_observation_fixture()
+        audit = self.synthetic_audit(digest)
+        real_sha = self.patch.sha256
+        is_src = lambda p: Path(p) == self.src
+        sha = lambda p: digest if is_src(p) else real_sha(p)
+        def derived(name, edit):
+            path = self.root / name
+            w = load_workbook(self.src)
+            edit(w)
+            w.save(path)
+            w.close()
+            return path
+        labelled = derived('labelled.xlsx', lambda w: w[S5].__setitem__('B30', '미상품'))
+        retitled = derived('retitled.xlsx', lambda w: w[S8].__setitem__('B2', '다른 제목'))
+        drifted = {'formula_changed': derived('f.xlsx', lambda w: w[S11].__setitem__('C11', '=C12')),
+                   'formula_added': derived('a.xlsx', lambda w: w[S8].__setitem__('B3', '=1+1')),
+                   'formula_removed': derived('r.xlsx', lambda w: w[S11].__setitem__('C11', 5)),
+                   'sheet_added': derived('s.xlsx', lambda w: w.create_sheet('추가'))}
+        with patch.object(self.patch, 'sha256', side_effect=sha), \
+                patch.object(self.tpl, 'registered_audit', return_value=audit):
+            for path in (labelled, retitled):
+                with self.subTest(copy=path.name):
+                    plan = self.patch.materialize_d8(path, prepare_observations=True)
+                    z27 = next(p for p in plan['patches'] if p['cell'] == 'Z27')
+                    self.assertEqual(z27['operation'], 'prepare_wage_input')
+                    self.assertIn('(derived)', z27['evidence_ref']['locator'])
+            for label, path in drifted.items():
+                with self.subTest(drift=label), self.assertRaisesRegex(ValueError, 'unreviewed observation'):
+                    self.patch.materialize_d8(path, prepare_observations=True)
+            # The registered file itself is still admitted as registered.
+            plan = self.patch.materialize_d8(self.src, prepare_observations=True)
+            self.assertIn('(registered)', next(p for p in plan['patches'] if p['cell'] == 'Z27')
+                          ['evidence_ref']['locator'])
+        # A prepared copy (observation formulas removed) is still the derived
+        # template for later steps: only X26:Z31 may lose formulas.
+        with patch.object(self.patch, 'sha256', side_effect=sha), \
+                patch.object(self.tpl, 'sha256', side_effect=sha):
+            prepared, _ = self.apply(self.patch.materialize_d8(self.src, prepare_observations=True))
+        read = self.tpl.read_template(prepared)
+        self.assertEqual(self.tpl.derivation_mismatches(read, audit), [])
+        w = load_workbook(prepared)
+        w[S8]['Y34'] = 5
+        w.save(self.root / 'outside.xlsx')
+        w.close()
+        self.assertEqual(len(self.tpl.derivation_mismatches(
+            self.tpl.read_template(self.root / 'outside.xlsx'), audit)), 1)
 
     def test_observation_preparation_fill_and_receipt(self):
         before = self.tpl.sha256(self.src)

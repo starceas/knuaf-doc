@@ -205,7 +205,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/install-manifest.json": {
-   "after_sha256": "178e5d167215147422be82389cb20fb4db248993da8a988715bc78bad270ef8a",
+   "after_sha256": "b90c039021238e0329f2412d839bcaae605190565eb414a6ad4f3164f1a122e6",
    "before_sha256": null,
    "first_changed": "P27",
    "last_changed": "P28",
@@ -386,7 +386,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/builtin-sources.json": {
-   "after_sha256": "1c36a9ba576e606d036e4f8c93fb3a61b15151819fb62bb823b412a7bcddacc8",
+   "after_sha256": "eb87cfdec5a777a0b20b96e5ebb77ea20d8f64e36c0fc46c33f82158e80c81d6",
    "before_sha256": null,
    "first_changed": "P5",
    "last_changed": "P28",
@@ -476,7 +476,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/common-workbooks/x01-crop-labels.json": {
-   "after_sha256": "da47b0d4830c6bff7a38a84a5336ea6fd503c927d7d6be0729c72bd81f3cc58e",
+   "after_sha256": "4b3370ffd43c1196de2e33473a72a6ac89d3c9b95992f048b7af853afb399184",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
@@ -493,7 +493,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/excel-template.md": {
-   "after_sha256": "eace21ac9133b1c6827f0184e8361b142b40225e2bd2f05ad2c143c8b760f3ef",
+   "after_sha256": "c59d22a4e94bf7ccaade2bc26d8c9ed6883f53cc63a43a06406a2a3a2817251e",
    "before_sha256": "4513094e1754191edd810947789f2228fb3b15bfbe1a2531e1b18f6b144739e8",
    "first_changed": "P28",
    "last_changed": "P28",
@@ -1195,7 +1195,7 @@
    "source": "modified"
   },
   "skills/knuaf-doc/scripts/gg_excel_formula_patch.py": {
-   "after_sha256": "7b525e293ecb0a0eaecb7a869b66c6242472cf7a173375e3aef58931bfc91137",
+   "after_sha256": "6c96516f8b48727c4b81900e48ba911e85c20cde8112eda47029ee79d27022fe",
    "before_sha256": "d1e1e77dccf3cfcc8ddb7d25bab9c8e53dd77850d97ed019d8f33884a46250db",
    "first_changed": "P7",
    "last_changed": "P28",
@@ -1213,7 +1213,7 @@
    "source": "adopted:PR2"
   },
   "skills/knuaf-doc/scripts/gg_excel_template.py": {
-   "after_sha256": "88deeb24111a1f763f03dfc4eb9c43b86f942b215312bd4bf55ead9dd916ac60",
+   "after_sha256": "ca512f3baa7fee7d5983d525d3722789fab13997c4f49526264bd13af9e5c95d",
    "before_sha256": "70933a7abfc4bb9b86f20b05487c785c2abd77be60426089cb70b40741ca508f",
    "first_changed": "P1",
    "last_changed": "P28",
@@ -2049,7 +2049,7 @@
    "source": "new"
   },
   "tests/test_specialty_template_route.py": {
-   "after_sha256": "871c1d747663b3963f7d4a9bfaa6cb18a4e5f2ab2c59fde17e1c1857cbd523ff",
+   "after_sha256": "585470a32a5e91aec3f220eae562eb17a738d897278a191f8db9f104f0d87629",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
@@ -2058,7 +2058,7 @@
    "source": "new"
   },
   "tests/test_template_wage_link.py": {
-   "after_sha256": "80a243eaeee6e1574e02579aa240ccb42df29fc7c1b9fd0295eeffd9de68526d",
+   "after_sha256": "d86426d19c882893564e97c850b4a8f3458ec3049dda78457c578d77c46325d4",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",

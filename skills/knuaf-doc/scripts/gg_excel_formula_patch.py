@@ -219,22 +219,30 @@ def _official_rate(item: dict, kind: str, *, price_sources=None) -> dict:
 
 
 def _reviewed_observation_formulas(source: Path, spec: dict) -> dict:
-    """Admit exact formulas only for the registered SHA and pinned audit."""
+    """Admit exact formulas only for the registered template and pinned
+    audit.  The source is the registered file itself, or a copy whose every
+    formula still matches that audit cell by cell (crop labels or other
+    value fills changed only values; ``derivation_mismatches``)."""
+    from gg_excel_template import derivation_mismatches, read_template, registered_audit
     reviewed = {}
     source_digest = sha256(source)
     for entry in spec.get("reviewed_observation_formulas", []):
-        if source_digest != entry["source_sha256"]:
+        binding = {"sha256": entry["source_sha256"], "audit_file": entry["audit_file"],
+                   "audit_sha256": entry["audit_sha256"]}
+        registered = source_digest == entry["source_sha256"]
+        try:
+            audit = registered_audit(binding)
+        except ValueError as exc:
+            if not registered:
+                continue
+            raise ValueError(f"reviewed observation audit source/formula differs: {exc}") from exc
+        if not registered and derivation_mismatches(read_template(source), audit):
             continue
-        audit_path = D8_SPEC_PATH.parent.parent / entry["audit_file"]
-        if sha256(audit_path) != entry["audit_sha256"]:
-            raise ValueError("reviewed observation audit hash differs")
-        audit = _json(audit_path)
-        if (audit.get("schema") != "knuaf-workbook-formula-audit/v1"
-                or audit.get("source_sha256") != source_digest
-                or not any(all(row.get(k) == entry[k] for k in ("sheet", "cell", "formula"))
-                           for row in audit.get("inventory", []))):
+        if not any(all(row.get(k) == entry[k] for k in ("sheet", "cell", "formula"))
+                   for row in audit.get("inventory", [])):
             raise ValueError("reviewed observation audit source/formula differs")
-        reviewed[entry["sheet"], entry["cell"]] = entry
+        reviewed[entry["sheet"], entry["cell"]] = {
+            **entry, "admitted": "registered" if registered else "derived"}
     return reviewed
 
 
@@ -298,9 +306,11 @@ def materialize_d8(source: Path, assumptions: dict | None = None, *, prepare_obs
     Existing X01 chains remain byte-identical. Rates/observation preparation
     are explicit, separately reviewable operations.
     """
-    from gg_excel_template import detect_layout
+    from gg_excel_template import read_template
     from gg_workbook_audit import Workbook
-    if detect_layout(source) != "x01":
+    # Shared read check first: an unreadable file raises TemplateUnreadable
+    # (blocked), distinct from a readable workbook of another layout.
+    if read_template(source).layout != "x01":
         raise ValueError("layout_variant_unsupported: D8 requires x01")
     spec = _json(D8_SPEC_PATH)
     book = Workbook.load(source)
@@ -363,7 +373,7 @@ def materialize_d8(source: Path, assumptions: dict | None = None, *, prepare_obs
                             raise ValueError(f"unreviewed observation formula: {ref}")
                         evidence = {**structural_evidence,
                                     "locator": (f"d8-spec.json reviewed_observation_formulas; "
-                                                f"source_sha256={entry['source_sha256']}; "
+                                                f"source_sha256={entry['source_sha256']} ({entry['admitted']}); "
                                                 f"{entry['audit_file']} sha256={entry['audit_sha256']}; "
                                                 f"{sheet}!{ref}={entry['formula']}")}
                     add(sheet, ref, prepare=True, evidence=evidence)

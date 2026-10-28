@@ -225,6 +225,118 @@ def _anchor_holds(expect, cell_state) -> bool:
     return False
 
 
+class TemplateUnreadable(ValueError):
+    """The workbook could not be opened or parsed.  Callers report this as
+    blocked — never as a pass and never as "not this template"."""
+
+
+class TemplateRead:
+    """One parsed workbook: sheet order, every stored cell, layout.
+
+    ``cells[(sheet, ref)]`` holds ``kind`` (``f`` formula, ``n`` number,
+    ``s`` string, ``b``/``e``/``d``), the normalized ``value``, and for a
+    formula its stored ``formula`` text, ``fattrs`` (every ``<f>``
+    attribute) and ``resolved`` text (shared followers translated from
+    their anchor).  ``display`` is the cell as ``text_value`` reads it,
+    cached formula results included."""
+    __slots__ = ("path", "sheets", "cells", "layout")
+
+    def __init__(self, path, sheets, cells, layout):
+        self.path, self.sheets, self.cells, self.layout = path, sheets, cells, layout
+
+
+def _cell_record(cell: ET.Element, shared: list[str]) -> dict | None:
+    f = cell.find(local("f"))
+    display = text_value(cell, shared)
+    if f is not None:
+        return {"kind": "f", "value": None, "formula": f.text or "",
+                "fattrs": tuple(sorted(f.attrib.items())), "display": display}
+    t = cell.attrib.get("t", "n")
+    v = cell.find(local("v"))
+    if t == "inlineStr":
+        kind, value = "s", "".join(cell.itertext())
+    elif v is None or v.text is None:
+        return None
+    elif t == "s":
+        try:
+            kind, value = "s", shared[int(v.text)]
+        except (ValueError, IndexError):
+            raise TemplateUnreadable(f"shared string index unreadable: {cell.attrib.get('r')}")
+    elif t == "str":
+        kind, value = "s", v.text
+    elif t == "n":
+        try:
+            kind, value = "n", repr(float(v.text))
+        except ValueError:
+            raise TemplateUnreadable(f"number cell unreadable: {cell.attrib.get('r')}")
+    elif t in ("b", "e", "d"):
+        kind, value = t, v.text
+    else:
+        raise TemplateUnreadable(f"unknown cell type {t!r}: {cell.attrib.get('r')}")
+    if kind == "s" and value == "":
+        return None
+    return {"kind": kind, "value": value, "display": display}
+
+
+def _layout_of(cells: dict) -> str:
+    anchors = _load_layout_anchors()
+    if not anchors or any(not isinstance(variant_anchors, list) or not variant_anchors
+                          or not all(_anchor_well_formed(a) for a in variant_anchors)
+                          for variant_anchors in anchors.values()):
+        return "unknown"
+    for variant, variant_anchors in anchors.items():
+        states = []
+        for a in variant_anchors:
+            rec = cells.get((a["sheet"], a["cell"]))
+            states.append({} if rec is None else
+                          {"value": rec["display"], "formula": rec["kind"] == "f"})
+        if all(_anchor_holds(a["expect"], s) for a, s in zip(variant_anchors, states)):
+            return variant
+    return "unknown"
+
+
+def read_template(source: Path) -> TemplateRead:
+    """The shared read check every template tool runs first: open the
+    package, parse every sheet, resolve every shared formula, identify the
+    layout.  Any failure raises ``TemplateUnreadable``."""
+    from gg_workbook_audit import translate
+    try:
+        path = resolve_source(Path(source))
+        with zipfile.ZipFile(path) as z:
+            shared = load_shared(z)
+            sheets = workbook_sheets(z)
+            cells = {}
+            for name, target in sheets:
+                root = ET.fromstring(z.read(target))
+                anchors, followers = {}, []
+                for c in root.iter(local("c")):
+                    ref = c.attrib.get("r")
+                    if not ref or not CELL_RE.match(ref):
+                        raise TemplateUnreadable(f"cell without a valid address in {name!r}")
+                    rec = _cell_record(c, shared)
+                    if rec is None:
+                        continue
+                    if rec["kind"] == "f":
+                        attrs = dict(rec["fattrs"])
+                        if attrs.get("t") == "shared" and not rec["formula"]:
+                            followers.append((ref, rec, attrs.get("si")))
+                        else:
+                            rec["resolved"] = rec["formula"]
+                            if attrs.get("t") == "shared":
+                                anchors[attrs.get("si")] = (ref, rec["formula"])
+                    cells[name, ref] = rec
+                for ref, rec, si in followers:
+                    if si not in anchors:
+                        raise TemplateUnreadable(f"shared formula anchor missing: {name}!{ref}")
+                    anchor, text = anchors[si]
+                    rec["resolved"] = translate(text, anchor, ref)
+    except TemplateUnreadable:
+        raise
+    except (OSError, KeyError, ValueError, IndexError, ET.ParseError, zipfile.BadZipFile) as exc:
+        raise TemplateUnreadable(f"workbook unreadable: {Path(source).name}: {exc}") from exc
+    return TemplateRead(path, [name for name, _ in sheets], cells, _layout_of(cells))
+
+
 def detect_layout(source: Path) -> str:
     """Classify the source as ``x01`` | ``x02`` | ``unknown`` by checking
     the shipped C1 ``layout_anchors`` against the source bytes.
@@ -236,48 +348,12 @@ def detect_layout(source: Path) -> str:
     ``expect`` with exactly one known predicate) — an empty or
     malformed anchor list can never satisfy ``all()`` silently.
     Any malformed anchor or unreadable workbook returns ``unknown``
-    — fail closed."""
-    anchors = _load_layout_anchors()
-    if not anchors:
-        return "unknown"
-    if any(not isinstance(variant_anchors, list) or not variant_anchors
-           or not all(_anchor_well_formed(a) for a in variant_anchors)
-           for variant_anchors in anchors.values()):
-        return "unknown"
+    — fail closed.  Callers that must tell "unreadable" from "another
+    form" use ``read_template``."""
     try:
-        with zipfile.ZipFile(resolve_source(source)) as z:
-            shared = load_shared(z)
-            sheets = dict(workbook_sheets(z))
-            needed = {a["sheet"]
-                      for variant_anchors in anchors.values()
-                      for a in variant_anchors}
-            cells = {}
-            for name in needed:
-                target = sheets.get(name)
-                if target is None:
-                    continue
-                root = ET.fromstring(z.read(target))
-                cells[name] = {
-                    c.attrib["r"]: {
-                        "value": text_value(c, shared),
-                        "formula": c.find(local("f")) is not None,
-                    }
-                    for c in root.findall(f".//{local('c')}")
-                    if c.attrib.get("r")
-                }
-    except (OSError, KeyError, ValueError, zipfile.BadZipFile,
-            FileNotFoundError):
+        return read_template(source).layout
+    except TemplateUnreadable:
         return "unknown"
-    for variant, variant_anchors in anchors.items():
-        try:
-            if all(_anchor_holds(
-                    a["expect"],
-                    cells.get(a["sheet"], {}).get(a["cell"], {}))
-                    for a in variant_anchors):
-                return variant
-        except (KeyError, TypeError):
-            continue
-    return "unknown"
 
 
 def _check_map_layout(map_data: dict, source: Path) -> None:
@@ -387,7 +463,7 @@ def wage_fill_map(source: Path) -> dict:
     The fill engine requires a complete, sourced six-year observation block.
     This map never grants permission to overwrite a formula.
     """
-    if detect_layout(source) != "x01":
+    if read_template(source).layout != "x01":
         raise ValueError("layout_variant_unsupported: wage observations require x01")
     return {"schema": "gg-xlsx-fill-map/v1",
             "template": {"sha256": sha256(source)},
@@ -858,35 +934,80 @@ def blank_copy(source: Path, map_path: Path, out: Path, *, context=None) -> dict
     return receipt
 
 
-CROP_LABELS_PATH = (
-    Path(__file__).resolve().parents[1] / "references"
-    / "common-workbooks" / "x01-crop-labels.json"
-)
-CROP_LABEL_SCHEMA = "knuaf-template-crop-labels/v1"
+COMMON_WORKBOOKS_DIR = Path(__file__).resolve().parents[1] / "references" / "common-workbooks"
+CROP_LABELS_PATH = COMMON_WORKBOOKS_DIR / "x01-crop-labels.json"
+CROP_LABEL_SCHEMA = "knuaf-template-crop-labels/v2"
+FORMULA_AUDIT_SCHEMA = "knuaf-workbook-formula-audit/v1"
+# The X01/X02 wage observation block: observation preparation removes its
+# formulas and the wage fill writes sourced numbers there.
+OBSERVATION_BLOCK = ("8. 노무비계획", "X26:Z31")
 
 
 def _crop_label_table() -> dict:
-    table = json.loads(CROP_LABELS_PATH.read_text(encoding="utf-8"))
+    table = _json_file(CROP_LABELS_PATH)
     if table.get("schema") != CROP_LABEL_SCHEMA:
         raise ValueError("crop label table schema mismatch")
     return table
 
 
-def _sheet_cells(source: Path) -> dict[tuple[str, str], dict]:
-    """(sheet, cell) -> {"value", "formula"} for every stored cell."""
-    out = {}
-    with zipfile.ZipFile(resolve_source(source)) as z:
-        shared = load_shared(z)
-        for name, target in workbook_sheets(z):
-            root = ET.fromstring(z.read(target))
-            for c in root.findall(f".//{local('c')}"):
-                ref = c.attrib.get("r")
-                if not ref:
-                    continue
-                f = c.find(local("f"))
-                out[name, ref] = {"value": None if f is not None else text_value(c, shared),
-                                  "formula": None if f is None else (f.text or "")}
+def _json_file(path: Path) -> dict:
+    return json.loads(Path(path).read_text(encoding="utf-8"))
+
+
+def registered_audit(binding: dict) -> dict:
+    """The pinned formula audit of a registered template: the audit file
+    must hash to ``audit_sha256`` and describe the template ``sha256``."""
+    path = COMMON_WORKBOOKS_DIR / binding["audit_file"]
+    if sha256(path) != binding["audit_sha256"]:
+        raise ValueError(f"registered template audit hash differs: {binding['audit_file']}")
+    audit = _json_file(path)
+    if audit.get("schema") != FORMULA_AUDIT_SCHEMA or audit.get("source_sha256") != binding["sha256"]:
+        raise ValueError(f"registered template audit source differs: {binding['audit_file']}")
+    return audit
+
+
+def derivation_mismatches(read: TemplateRead, audit: dict, *, open_range=OBSERVATION_BLOCK) -> list[str]:
+    """Cell-by-cell proof that ``read`` is the audited template after only
+    the defined copy transforms.  Every audited formula must be present
+    with the same resolved text (a shared formula expanded to plain
+    formulas is the same formula), no other cell may hold a formula, and
+    the sheet set must match.  Only the observation block (``open_range``)
+    may have lost its formulas — prepared, or filled with numbers.  Value
+    and label cells are the fill path and are not compared here."""
+    out = []
+    if set(read.sheets) != set(audit.get("sheet_roles", {})):
+        out.append("sheet set differs: " + ", ".join(sorted(set(read.sheets) ^ set(audit.get("sheet_roles", {})))))
+    expected = {(row["sheet"], row["cell"]): row["formula"] for row in audit["inventory"]}
+    actual = {key: rec["resolved"] for key, rec in read.cells.items() if rec["kind"] == "f"}
+    sheet, refs = open_range
+    open_cells = {(sheet, ref) for ref in expand_ref(refs)}
+    for key in sorted(set(expected) | set(actual)):
+        want, got = expected.get(key), actual.get(key)
+        if want == got or (key in open_cells and want is not None and got is None):
+            continue
+        out.append(f"{key[0]}!{key[1]}: registered formula {want!r}, found {got!r}")
     return out
+
+
+def registered_template(read: TemplateRead, bindings: dict) -> tuple[str, str]:
+    """``(ref, "registered"|"derived")`` for a workbook that is a registered
+    template or a copy of one after only the defined transforms; raises
+    ValueError naming the first differing cells otherwise."""
+    digest = sha256(read.path)
+    for ref, binding in bindings.items():
+        if digest == binding["sha256"]:
+            return ref, "registered"
+    problems = []
+    for ref, binding in bindings.items():
+        if read.layout != ref.lower():
+            problems.append(f"{ref}: layout {read.layout}")
+            continue
+        mismatches = derivation_mismatches(read, registered_audit(binding))
+        if not mismatches:
+            return ref, "derived"
+        problems.append(f"{ref}: {len(mismatches)} cells differ ({'; '.join(mismatches[:3])})")
+    raise ValueError("not a registered template or a copy derived from one by the defined "
+                     "transforms: " + " | ".join(problems))
 
 
 def crop_label_map(source: Path, category: str, choices: dict | None = None) -> tuple[dict, dict]:
@@ -895,18 +1016,21 @@ def crop_label_map(source: Path, category: str, choices: dict | None = None) -> 
     ``category`` is one of the table's crop categories (asked from the
     student when the major/crop does not settle it).  ``choices`` picks a
     listed alternative per ``"<sheet>!<cell>"``; the first listed label is
-    the default.  The source must still carry each original label — a
-    template whose label moved needs the table re-aligned first."""
+    the default.  The source is the registered X01/X02 or a copy of it
+    whose every formula still matches the registered audit
+    (``registered_template``); each original label must still be there —
+    a template whose label moved needs the table re-aligned first."""
     table = _crop_label_table()
     if category not in table["categories"]:
         raise ValueError(f"unknown crop category: {category!r}; "
                          f"choose one of {sorted(table['categories'])}")
-    source = resolve_source(source)
-    digest = sha256(source)
-    if digest not in table["templates"].values():
+    read = read_template(source)
+    try:
+        ref, admitted = registered_template(read, table["templates"])
+    except ValueError as exc:
         raise ValueError("crop labels are aligned to registered X01/X02 only; "
-                         "re-align x01-crop-labels.json for a new template year")
-    cells = _sheet_cells(source)
+                         "re-align x01-crop-labels.json for a new template year — " + str(exc)) from exc
+    digest = sha256(read.path)
     choices = dict(choices or {})
     entries, values = [], []
     for row in table["cells"]:
@@ -915,8 +1039,8 @@ def crop_label_map(source: Path, category: str, choices: dict | None = None) -> 
         label = choices.pop(key, options[0])
         if label not in options:
             raise ValueError(f"{key}: {label!r} is not a listed {category} label {options}")
-        stored = cells.get((row["sheet"], row["cell"]))
-        if stored is None or stored["formula"] is not None or stored["value"] != row["original"]:
+        stored = read.cells.get((row["sheet"], row["cell"]))
+        if stored is None or stored["kind"] != "s" or stored["value"] != row["original"]:
             raise ValueError(f"{key}: expected original label {row['original']!r}")
         if label == row["original"]:
             continue
@@ -926,7 +1050,8 @@ def crop_label_map(source: Path, category: str, choices: dict | None = None) -> 
         values.append({"sheet": row["sheet"], "cell": row["cell"], "value": label,
                        "value_type": "string", "answer_state": "provided",
                        "evidence_ref": {"source_id": "template.crop_labels", "revision": 1,
-                                        "locator": f"x01-crop-labels.json {key} {category}",
+                                        "locator": f"x01-crop-labels.json {key} {category}; "
+                                                   f"{ref} {admitted}",
                                         "origin": "assumption"}})
     if choices:
         raise ValueError("choices name cells outside the label table: " + ", ".join(sorted(choices)))
@@ -935,29 +1060,44 @@ def crop_label_map(source: Path, category: str, choices: dict | None = None) -> 
     return fill_map, fill_values
 
 
+def _compared(rec: dict | None):
+    """What label-check compares: formulas by stored text, every ``<f>``
+    attribute (shared ``t``/``si``/``ref``) and resolved text; other cells
+    by kind and value — a number stored as text is a different cell."""
+    if rec is None:
+        return None
+    if rec["kind"] == "f":
+        return ("f", rec["formula"], rec["fattrs"], rec["resolved"])
+    return (rec["kind"], rec["value"])
+
+
 def crop_label_check(before: Path, after: Path) -> dict:
-    """Prove a relabel changed only listed label cells: every formula text,
-    every number and every other stored value stays identical."""
+    """Prove a relabel changed only listed label cells: every formula
+    (text, attributes, resolved meaning), every value and its type, and
+    the sheet list stay identical.  A workbook that cannot be read is
+    ``blocked``, never a pass."""
     table = _crop_label_table()
     allowed = {(r["sheet"], r["cell"]): r for r in table["cells"]}
-    a, b = _sheet_cells(before), _sheet_cells(after)
+    try:
+        a, b = read_template(before), read_template(after)
+    except TemplateUnreadable as exc:
+        return {"status": "blocked", "reason": str(exc), "labelsChanged": [], "violations": []}
     changed, violations = [], []
-    for key in sorted(set(a) | set(b)):
-        old, new = a.get(key), b.get(key)
+    if a.sheets != b.sheets:
+        violations.append({"sheets": {"old": a.sheets, "new": b.sheets}})
+    for key in sorted(set(a.cells) | set(b.cells)):
+        old, new = _compared(a.cells.get(key)), _compared(b.cells.get(key))
         if old == new:
             continue
         row = allowed.get(key)
-        ok = (row is not None and old is not None and new is not None
-              and old["formula"] is None and new["formula"] is None
-              and old["value"] == row["original"]
-              and any(new["value"] in v for v in row["labels"].values()))
+        ok = (row is not None and old == ("s", row["original"]) and new is not None
+              and new[0] == "s" and any(new[1] in v for v in row["labels"].values()))
         (changed if ok else violations).append(
             {"sheet": key[0], "cell": key[1], "old": old, "new": new})
     return {"status": "pass" if not violations else "fail",
             "labelsChanged": changed, "violations": violations,
-            "formulasCompared": sum(1 for v in a.values() if v["formula"] is not None),
-            "numbersCompared": sum(1 for v in a.values()
-                                   if isinstance(v["value"], (int, float)) and not isinstance(v["value"], bool))}
+            "formulasCompared": sum(1 for v in a.cells.values() if v["kind"] == "f"),
+            "numbersCompared": sum(1 for v in a.cells.values() if v["kind"] == "n")}
 
 
 LABOR_SHEET = "8. 노무비계획"
@@ -984,21 +1124,33 @@ def _labor_blocked(code, reason, evidence):
 def labor_review(path) -> list[dict]:
     """Daily-labor gender review on a professor-template (X01) workbook.
 
-    Applies only when ``detect_layout`` identifies the file as X01; any
-    other workbook (another major's form, X02, unknown) is not in scope
-    and yields no issue.  On an X01 workbook, hired days only in the male
-    column are a warning (``LABOR_HIRED_MALE_ONLY``).  A missing sheet
-    (``LABOR_SHEET_MISSING``), a different labor layout
-    (``LABOR_LAYOUT_UNSUPPORTED``) or a days cell that cannot be read as a
-    number — text, or a formula without a cached value
-    (``LABOR_DAYS_UNREADABLE``) — is blocked, never a silent pass.  Only a
-    truly empty, formula-free cell counts as 0 days."""
+    The shared read check (``read_template``) runs first: a file that is
+    missing or cannot be read is blocked (``LABOR_WORKBOOK_UNREADABLE``).
+    A readable workbook not identified as X01 (another major's form, X02,
+    unknown) is not in scope and yields no issue.  On an X01 workbook,
+    hired days only in the male column are a warning
+    (``LABOR_HIRED_MALE_ONLY``).  A missing sheet (``LABOR_SHEET_MISSING``),
+    a different labor layout (``LABOR_LAYOUT_UNSUPPORTED``) or a days cell
+    that cannot be read as a number — text, or a formula without a cached
+    value (``LABOR_DAYS_UNREADABLE``) — is blocked, never a silent pass.
+    Only a truly empty, formula-free cell counts as 0 days."""
     path = Path(path)
-    if detect_layout(path) != "x01":
+    try:
+        layout = read_template(path).layout
+    except TemplateUnreadable as exc:
+        return [_labor_blocked("LABOR_WORKBOOK_UNREADABLE",
+                               "통합문서를 열거나 읽지 못해 일용직 성별을 확인하지 못함",
+                               {"workbook": path.name, "error": str(exc)})]
+    if layout != "x01":
         return []
     import openpyxl
-    workbook = openpyxl.load_workbook(path, data_only=True)
-    formulas = openpyxl.load_workbook(path, data_only=False)
+    try:
+        workbook = openpyxl.load_workbook(path, data_only=True)
+        formulas = openpyxl.load_workbook(path, data_only=False)
+    except Exception as exc:  # openpyxl raises many parser types
+        return [_labor_blocked("LABOR_WORKBOOK_UNREADABLE",
+                               "통합문서를 열거나 읽지 못해 일용직 성별을 확인하지 못함",
+                               {"workbook": path.name, "error": f"{type(exc).__name__}: {exc}"})]
     try:
         return _labor_review_x01(workbook, formulas)
     finally:
@@ -1114,11 +1266,13 @@ def cli(argv: list[str]) -> int:
         if args.cmd == "label-check":
             result = crop_label_check(args.before, args.after)
             print(json.dumps(result, ensure_ascii=False))
-            return 0 if result["status"] == "pass" else 1
+            return {"pass": 0, "fail": 1}.get(result["status"], 2)
         if args.cmd == "labor-review":
             issues = labor_review(args.workbook)
-            print(json.dumps({"status": "reviewed", "issues": issues}, ensure_ascii=False))
-            return 0
+            blocked = any(i["status"] == "blocked" for i in issues)
+            print(json.dumps({"status": "blocked" if blocked else "reviewed", "issues": issues},
+                             ensure_ascii=False))
+            return 2 if blocked else 0
         if args.cmd == "wage-map":
             result = wage_fill_map(resolve_source(args.source))
             args.out_map.parent.mkdir(parents=True, exist_ok=True)

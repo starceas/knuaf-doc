@@ -162,20 +162,181 @@ class CropLabelTests(ContractCase):
                 self.assertEqual(result["status"], "fail")
                 self.assertTrue(result["violations"])
 
+    def test_label_map_admits_copy_derived_from_registered_template_only(self):
+        """R1-01 (reverse order): a prepared or value-filled copy of the
+        registered template is admitted by a cell-level formula match with
+        the audit; any formula or sheet drift is refused."""
+        from openpyxl import load_workbook
+        audit_mod = runtime("gg_workbook_audit")
+        entries, _ = audit_mod.inventory(audit_mod.Workbook.load(self.src))
+        wb = load_workbook(self.src)
+        audit = {"schema": "knuaf-workbook-formula-audit/v1", "source_sha256": X01_SHA,
+                 "inventory": entries, "sheet_roles": {n: "input" for n in wb.sheetnames}}
+        wb.close()
+        def copy(name, edit):
+            path = self.root / name
+            wb = load_workbook(self.src)
+            edit(wb)
+            wb.save(path)
+            wb.close()
+            return path
+        filled = copy("filled.xlsx", lambda wb: wb[S6].__setitem__("H8", 4321))
+        drift = {"formula_changed": copy("f.xlsx", lambda wb: wb[S5].__setitem__("D30", "=1-D25")),
+                 "formula_added": copy("a.xlsx", lambda wb: wb[S6].__setitem__("H9", "=H8")),
+                 "sheet_added": copy("s.xlsx", lambda wb: wb.create_sheet("추가"))}
+        with mock.patch.object(self.tpl, "registered_audit", return_value=audit):
+            fill_map, values = self.tpl.crop_label_map(filled, "herbaceous")
+            self.assertEqual(fill_map["template"]["sha256"], self.tpl.sha256(filled))
+            self.assertIn("X01 derived", values["values"][0]["evidence_ref"]["locator"])
+            for label, path in drift.items():
+                with self.subTest(drift=label), self.assertRaisesRegex(ValueError, "registered X01/X02"):
+                    self.tpl.crop_label_map(path, "herbaceous")
+
     def test_check_unreadable_after_file_is_blocked_not_pass(self):
         import contextlib, io
         bad = self.root / "bad.xlsx"
         bad.write_bytes(b"not a workbook")
-        err = io.StringIO()
-        with contextlib.redirect_stderr(err), contextlib.redirect_stdout(io.StringIO()) as out:
-            code = self.tpl.cli(["label-check", "--before", str(self.src), "--after", str(bad)])
-        self.assertEqual(code, 2)
-        self.assertIn("BLOCK", err.getvalue())
-        self.assertNotIn('"pass"', out.getvalue())
-        with contextlib.redirect_stderr(io.StringIO()), contextlib.redirect_stdout(io.StringIO()):
-            code = self.tpl.cli(["label-check", "--before", str(self.src),
-                                 "--after", str(self.root / "missing.xlsx")])
-        self.assertEqual(code, 2)
+        for after in (bad, self.root / "missing.xlsx"):
+            with self.subTest(after=after.name):
+                result = self.tpl.crop_label_check(self.src, after)
+                self.assertEqual(result["status"], "blocked")
+                with contextlib.redirect_stdout(io.StringIO()) as out:
+                    code = self.tpl.cli(["label-check", "--before", str(self.src),
+                                         "--after", str(after)])
+                self.assertEqual(code, 2)
+                self.assertEqual(json.loads(out.getvalue())["status"], "blocked")
+
+    def test_check_fails_on_shared_formula_attribute_or_value_type_change(self):
+        """R1-02: a shared follower re-pointed to another anchor (same empty
+        formula text, different meaning) and a number stored as text with the
+        same digits are violations, not passes."""
+        import zipfile
+        from openpyxl import load_workbook
+        wb = load_workbook(self.src)
+        prod = wb[S6]
+        prod["H9"], prod["H10"] = "=H8*2", "=H8+1"
+        wb.save(self.src)
+        wb.close()
+        shared = self.root / "shared.xlsx"
+        with zipfile.ZipFile(self.src) as z, zipfile.ZipFile(shared, "w") as out:
+            target = dict(self.tpl.workbook_sheets(z))[S6]
+            for item in z.infolist():
+                data = z.read(item.filename)
+                if item.filename == target:
+                    text = data.decode()
+                    text = text.replace('<f>H8*2</f>', '<f t="shared" ref="H9:I9" si="0">H8*2</f>')
+                    text = text.replace('<f>H8+1</f>', '<f t="shared" ref="H10:I10" si="1">H8+1</f>')
+                    text = text.replace('<c r="H10"', '<c r="I9"><f t="shared" si="0"/></c><c r="H10"', 1)
+                    data = text.encode()
+                out.writestr(item, data)
+        out = self.relabel_from(shared, "herbaceous")
+        self.assertEqual(self.tpl.crop_label_check(shared, out)["status"], "pass")
+        cases = {"shared_si": ('<c r="I9"><f t="shared" si="0"/>', '<c r="I9"><f t="shared" si="1"/>'),
+                 "number_as_text": ('<c r="H8" t="n">', '<c r="H8" t="str">')}
+        for label, (old, new) in cases.items():
+            with self.subTest(change=label):
+                bad = self.root / f"bad-{label}.xlsx"
+                with zipfile.ZipFile(out) as z, zipfile.ZipFile(bad, "w") as w:
+                    target = dict(self.tpl.workbook_sheets(z))[S6]
+                    for item in z.infolist():
+                        data = z.read(item.filename)
+                        if item.filename == target:
+                            self.assertIn(old.encode(), data)
+                            data = data.replace(old.encode(), new.encode(), 1)
+                        w.writestr(item, data)
+                result = self.tpl.crop_label_check(shared, bad)
+                self.assertEqual(result["status"], "fail")
+                cell = "I9" if label == "shared_si" else "H8"
+                self.assertEqual([(v["sheet"], v["cell"]) for v in result["violations"]], [(S6, cell)])
+
+    def relabel_from(self, source, category):
+        real = self.tpl.sha256
+        with mock.patch.object(self.tpl, "sha256",
+                               side_effect=lambda p: X01_SHA if Path(p) == source else real(p)):
+            fill_map, values = self.tpl.crop_label_map(source, category)
+        m, v = self.root / "rf.m.json", self.root / "rf.v.json"
+        m.write_text(json.dumps(fill_map, ensure_ascii=False), encoding="utf-8")
+        v.write_text(json.dumps(values, ensure_ascii=False), encoding="utf-8")
+        project = self.make_project()
+        bind_major(project)
+        ctx = runtime("gg_major_contract").output_context(project, "specialty_crops")
+        out = self.root / "rf.xlsx"
+        with mock.patch.object(self.fill, "sha256",
+                               side_effect=lambda p: X01_SHA if Path(p) == source else real(p)):
+            self.fill.fill_copy(source, m, v, out, context=ctx)
+        return out
+
+
+class SharedReadCheckTests(ContractCase):
+    """One read check runs before every template tool: a file it cannot
+    read is blocked in each of them — never a pass, never 'another form'."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name)
+        self.tpl = runtime("gg_excel_template")
+        self.patch = runtime("gg_excel_formula_patch")
+        self.good = self.root / "good.xlsx"
+        labelled_template(self.good)
+
+    def unreadable(self):
+        import zipfile
+        corrupt = self.root / "corrupt.xlsx"
+        corrupt.write_bytes(b"not an xlsx")
+        no_workbook = self.root / "no-workbook.xlsx"
+        with zipfile.ZipFile(self.good) as z, zipfile.ZipFile(no_workbook, "w") as out:
+            for item in z.infolist():
+                if item.filename != "xl/workbook.xml":
+                    out.writestr(item, z.read(item.filename))
+        orphan = self.root / "orphan-shared.xlsx"
+        with zipfile.ZipFile(self.good) as z, zipfile.ZipFile(orphan, "w") as out:
+            target = dict(self.tpl.workbook_sheets(z))[S5]
+            for item in z.infolist():
+                data = z.read(item.filename)
+                if item.filename == target:
+                    data = data.replace(b"<f>100%-D25-D29</f>", b'<f t="shared" si="7"/>')
+                out.writestr(item, data)
+        return {"corrupt": corrupt, "missing": self.root / "missing.xlsx",
+                "no_workbook_part": no_workbook, "shared_anchor_missing": orphan}
+
+    def test_every_template_tool_blocks_an_unreadable_workbook(self):
+        import contextlib, io
+        for label, path in self.unreadable().items():
+            with self.subTest(file=label):
+                with self.assertRaises(self.tpl.TemplateUnreadable):
+                    self.tpl.read_template(path)
+                self.assertEqual(self.tpl.detect_layout(path), "unknown")
+                self.assertEqual([i["code"] for i in self.tpl.labor_review(path)],
+                                 ["LABOR_WORKBOOK_UNREADABLE"])
+                self.assertEqual(self.tpl.crop_label_check(self.good, path)["status"], "blocked")
+                self.assertEqual(self.tpl.crop_label_check(path, self.good)["status"], "blocked")
+                for tool in (lambda: self.tpl.crop_label_map(path, "herbaceous"),
+                             lambda: self.patch.materialize_d8(path, prepare_observations=True),
+                             lambda: self.tpl.wage_fill_map(path)):
+                    with self.assertRaises(self.tpl.TemplateUnreadable):
+                        tool()
+                for cli, argv in (
+                        (self.tpl.cli, ["label-map", "--source", str(path), "--category", "herbaceous",
+                                        "--out-map", str(self.root / f"{label}.m"),
+                                        "--out-values", str(self.root / f"{label}.v")]),
+                        (self.patch.cli, ["materialize-d8", "--source", str(path),
+                                          "--out", str(self.root / f"{label}.d8")]),
+                        (self.tpl.cli, ["labor-review", "--workbook", str(path)])):
+                    with contextlib.redirect_stdout(io.StringIO()), \
+                            contextlib.redirect_stderr(io.StringIO()):
+                        self.assertEqual(cli(argv), 2, argv[0])
+
+    def test_readable_other_form_is_not_applicable_not_blocked(self):
+        from openpyxl import Workbook
+        other = self.root / "other.xlsx"
+        wb = Workbook()
+        wb.active.title = "11. 인건비계획"
+        wb.save(other)
+        self.assertEqual(self.tpl.read_template(other).layout, "unknown")
+        self.assertEqual(self.tpl.labor_review(other), [])
+        with self.assertRaisesRegex(ValueError, "layout_variant_unsupported"):
+            self.patch.materialize_d8(other, prepare_observations=True)
 
 
 class LaborReviewTests(ContractCase):
@@ -189,6 +350,27 @@ class LaborReviewTests(ContractCase):
         path = self.root / "labor.xlsx"
         labor_book(path, **kw)
         return self.tpl.labor_review(path)
+
+    def test_missing_or_corrupt_file_is_blocked_not_reviewed(self):
+        """R1-03: a file that cannot be read is not 'another form'."""
+        import contextlib, io
+        corrupt = self.root / "corrupt.xlsx"
+        corrupt.write_bytes(b"not an xlsx")
+        for path in (corrupt, self.root / "missing.xlsx"):
+            with self.subTest(path=path.name):
+                issues = self.tpl.labor_review(path)
+                self.assertEqual([(i["code"], i["status"]) for i in issues],
+                                 [("LABOR_WORKBOOK_UNREADABLE", "blocked")])
+                with contextlib.redirect_stdout(io.StringIO()) as out:
+                    code = self.tpl.cli(["labor-review", "--workbook", str(path)])
+                self.assertEqual(code, 2)
+                self.assertEqual(json.loads(out.getvalue())["status"], "blocked")
+        # A readable non-X01 workbook stays not-applicable with exit 0.
+        other = self.root / "other.xlsx"
+        labor_book(other, x01=False, male=(0, 60))
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            self.assertEqual(self.tpl.cli(["labor-review", "--workbook", str(other)]), 0)
+        self.assertEqual(json.loads(out.getvalue()), {"status": "reviewed", "issues": []})
 
     def test_male_only_hired_days_warn_with_task_list(self):
         issues = self.review(male=(0, 60, 60, 60, 60), female=(0, 0, 0, 0, 0),

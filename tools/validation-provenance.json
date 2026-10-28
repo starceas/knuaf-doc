@@ -305,7 +305,7 @@
    "origin": "new"
   },
   "tests/test_template_wage_link.py": {
-   "note": " | PR-2: latest D8/D9 integration; I-01 only measured count constants adjusted in lineage test. Full pytest covers split public/skill test locations. | FIX-B2: V2-02 raw registered observations before wage conversion; 39 tests. | FIX-B3: V3-02 gender fencing, V3-03 canonical dimensions and V3-04 registered X01 observation formula; 46 tests. | FIX-B4: V4-03 15 significant digit formula serialization; 52 tests.",
+   "note": " | PR-2: latest D8/D9 integration; I-01 only measured count constants adjusted in lineage test. Full pytest covers split public/skill test locations. | FIX-B2: V2-02 raw registered observations before wage conversion; 39 tests. | FIX-B3: V3-02 gender fencing, V3-03 canonical dimensions and V3-04 registered X01 observation formula; 46 tests. | FIX-B4: V4-03 15 significant digit formula serialization; 52 tests. | PR2 R2: 등록 원본에서 값만 채운 사본·관측 준비 사본도 칸 단위 수식 대조로 Z27 예외 허용, 수식 변경·추가·삭제·시트 추가는 거부; 감사 파일 변조 시험은 공용 감사 로더로 옮김.",
    "origin": "new"
   },
   "tests/test_update_check.py": {
