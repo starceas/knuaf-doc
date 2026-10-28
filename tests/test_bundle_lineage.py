@@ -146,8 +146,8 @@ class RealTreeTests(ContractCase):
             # The skill-gaps integration declares two WP-4 reference
             # changes that the pinned baseline already ships
             # (cross-review.md, intake-selection.md): 210 + 2 = 212/162.
-            self.assertEqual(212, rc["verified"])
-            self.assertEqual(162, rc["new_count"])
+            self.assertEqual(216, rc["verified"])
+            self.assertEqual(166, rc["new_count"])
         else:
             self.assertNotEqual("ok", report["status"])
             self.assertIn("declared_missing", _codes(report))
@@ -180,9 +180,10 @@ class RealTreeTests(ContractCase):
         # The skill-gaps integration adds two baseline-shipped reference
         # changes (cross-review.md, intake-selection.md) and no new files:
         # 210/162/169 -> 212/162/169.
-        self.assertEqual(212, link["change_count"])
-        self.assertEqual(162, link["new_count"])
-        self.assertEqual(169, link["approved_new_files"])
+        # Counts are measured from runtime-changes.json after adding body-writing assets.
+        self.assertEqual(216, link["change_count"])
+        self.assertEqual(166, link["new_count"])
+        self.assertEqual(173, link["approved_new_files"])
         self.assertEqual("P27", link["parent_candidate"]["stage"])
         self.assertEqual(233, link["parent_candidate"]["file_count"])
         self.assertEqual(

@@ -26,6 +26,7 @@
   "skills/knuaf-doc/references/benchmark-packs/majors/vegetables/manifest.json",
   "skills/knuaf-doc/references/benchmark-packs/schema/pack.schema.json",
   "skills/knuaf-doc/references/benchmark-packs/schema/record.schema.json",
+  "skills/knuaf-doc/references/body-plan-check.md",
   "skills/knuaf-doc/references/builtin-sources.json",
   "skills/knuaf-doc/references/common-workbooks/corrections/C1.md",
   "skills/knuaf-doc/references/common-workbooks/corrections/c1-dispositions.json",
@@ -51,6 +52,7 @@
   "skills/knuaf-doc/references/industrial-insects/README.md",
   "skills/knuaf-doc/references/industrial-insects/precedents.json",
   "skills/knuaf-doc/references/industrial-insects/premise-probes.md",
+  "skills/knuaf-doc/references/intro-story.md",
   "skills/knuaf-doc/references/kim-finance-bible.md",
   "skills/knuaf-doc/references/lessons-learned.md",
   "skills/knuaf-doc/references/locking.md",
@@ -84,6 +86,8 @@
   "skills/knuaf-doc/references/update.md",
   "skills/knuaf-doc/references/workbook-reference-set.json",
   "skills/knuaf-doc/scripts/build_hwpx.py",
+  "skills/knuaf-doc/scripts/gg_body_layout.py",
+  "skills/knuaf-doc/scripts/gg_body_plan_check.py",
   "skills/knuaf-doc/scripts/gg_doi.py",
   "skills/knuaf-doc/scripts/gg_draft_split.py",
   "skills/knuaf-doc/scripts/gg_fact_semantics.py",
@@ -203,7 +207,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/install-manifest.json": {
-   "after_sha256": "91190d33ee19e4e34a5fcf9997e757cb6f730311563a81a08430b560a52c5155",
+   "after_sha256": "2185fd96ce007306488c8b42b816665d6b74b6a6aad83227e24d64a521c7d7a1",
    "before_sha256": null,
    "first_changed": "P27",
    "last_changed": "P28",
@@ -383,8 +387,17 @@
    "reason": "accepted P4 benchmark-packs data (catalog/records/manifest/schema) from g005-p4-provenance-standalone-corrections-3",
    "source": "new"
   },
+  "skills/knuaf-doc/references/body-plan-check.md": {
+   "after_sha256": "b8840b5241cd6fa4bc92b57b08eb8437e49a675c8b692ed17dd66d5f10d91933",
+   "before_sha256": null,
+   "first_changed": "P28",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "Common body writing, explicit workbook plan comparison and rendered-layout review.",
+   "source": "new"
+  },
   "skills/knuaf-doc/references/builtin-sources.json": {
-   "after_sha256": "1bb5ad9d01f75ed880199bac80fbdb61dbfe000a3c09b4be98fb4ffdc5205f0f",
+   "after_sha256": "a14a463d85766c356eb989fa2dee8e1a4c4e25bf1d58057041f2e7222c123d0a",
    "before_sha256": null,
    "first_changed": "P5",
    "last_changed": "P28",
@@ -508,7 +521,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/figure-photo-policy.md": {
-   "after_sha256": "184eba85a5381297750eccaefcddcb0b69fb2d95c16670a30c309325c3452313",
+   "after_sha256": "b952c8d297312e62182a89f7d323d3870952b7ae540fb82bf825d5f340d8b42d",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
@@ -657,6 +670,15 @@
    "last_changed": "P28",
    "owner": "P28",
    "reason": "P11 공용 인터뷰 규칙: 전공별 핵심 전제 목록(C1), 동적 영향 순위(C2), '모르겠다' 도움(C3), 충돌 정리(C5), 미준비 전공 안내, 특용작물 probe 문서 | P25: Q2-2 가족사항 문항에 본인·가족 노동 실지급 확인(한 번만 묻고 미답·미확정 시 option A 기본값; 경영주 지급·인출은 경영주 급여·가계비 규칙으로 중복 반영 없이 처리, 경영주가 아닌 가족 지급만 고용 노동비 행 11–13)과 설명·재무 입력 분산 예시 추가 — FIX1: 경영주 본인 인출과 가계비의 이중 계상 방지 | P27: K1-09 배포 밖 필독 문서 제거, D5 배정 표현 정합, SKILL.md에서 옮긴 작문 상세 | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존 | F2: V2 재확인 수용에 따라 같은 파서 계층의 첫 장/장 경계와 원문 span을 적용하고 명시적 외부 유형 충돌 거부·수동 신뢰 계약을 문서화; 설치 manifest 재생성. 기초 정본·단계·부모 계보·원본 source pin 보존 | PR-4 ORDER-A: 되물음을 본문 전 필수 게이트로 연결; I remeasured final bytes. | N3/N5: DOI intake and approved built-in statistics before external research. | ORDER-I2: remeasured final 0.1.5 file bytes after preserving PR32 inputs. | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
+   "source": "new"
+  },
+  "skills/knuaf-doc/references/intro-story.md": {
+   "after_sha256": "39453ba727cbf338859a5fd776bbe69446ed0e6baffb1f91067ea19ce3ec8d7d",
+   "before_sha256": null,
+   "first_changed": "P28",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "Common body writing, explicit workbook plan comparison and rendered-layout review.",
    "source": "new"
   },
   "skills/knuaf-doc/references/kim-finance-bible.md": {
@@ -857,7 +879,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/rules/CH1_intro.md": {
-   "after_sha256": "86b21e96d38399ee9d477225f156af6ece500828babe0271bb3d13075cdf3b67",
+   "after_sha256": "f55721ed1d1fd5fe438bc908127f5cd0fc4fd7985f6d3c01c911b6cdff4540f7",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
@@ -929,7 +951,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/rules/F_format.md": {
-   "after_sha256": "1c2f5828fb339dc2e56b9c4e44709e4e4ea24c747fb572fd614599c16ff7c0ad",
+   "after_sha256": "5e21a3aaf66fcf347291fb6883e39ea33b130f381ea45577888d54a835879eff",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
@@ -938,7 +960,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/rules/PRE_frontmatter.md": {
-   "after_sha256": "9760206c6061abd4ebd6043f95b4bff60a059ee4aff370d4816ab7803ca1ee77",
+   "after_sha256": "518398e195a8480abed23596dcbe46c18fc033c345796d8b50ad0dadcd17baef",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
@@ -1028,7 +1050,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/thesis-level.md": {
-   "after_sha256": "c7258a1eb720e617c40587ab601d95cf5a262f5effc196519e556ac9d3fe922b",
+   "after_sha256": "03c5e34a8c4d73ed58a2c6bacc7efaa375e612bbdeb28aec44f44521730e5453",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
@@ -1064,7 +1086,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/scripts/build_docx.py": {
-   "after_sha256": "3641602afac2bc14aeafccb7d73ac3ec269e2fe0fafbbe235c72e617ebeafed8",
+   "after_sha256": "abe36e939b06dc1c258a8474d81108726a65458524fe53e15ffb2010cbfc5606",
    "before_sha256": "b0ce58afc3f24b792843877bb6dc996d634dc12235bade53c34ecb5cdfad9912",
    "first_changed": "P1",
    "last_changed": "P27",
@@ -1109,6 +1131,24 @@
    "reason": "C5: Python 3.10 미만 사전 차단(core import 전). C2: UTF-8 명시 I/O | P4 CLI routes: rda-lookup/rda-propose/rda-apply | P5 C-union: source-scan/source-resolve/source-register/source-view CLI routes (gg_source_intake/gg_reuse wiring; --packs-dir rejected on source-scan) | P6: bound major-plan and approved-candidate CLI routes; block crop paper for confirmed insect major | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P12: insect-plan/insect-evidence read-only routes with fixed-code errors | P18: insect-plan without --input returns the line/year instance view | P27: K2-02: CLI 진입점 stdout·stderr UTF-8 재설정(stderr 포함), K3-08 detail 출력 | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes. | P28 output hygiene: 최종본 고정 이름·.gg-work 작업 구역·tidy 미리보기/apply 규칙 | P1-GUI: 판정서 JUDGE-A/JUDGE-B 올림 항목 반영",
    "source": "new"
   },
+  "skills/knuaf-doc/scripts/gg_body_layout.py": {
+   "after_sha256": "c27e2deff35fa975e897e84584475a143c2255fbf5818f9bcd674ac164c3db23",
+   "before_sha256": null,
+   "first_changed": "P28",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "Common body writing, explicit workbook plan comparison and rendered-layout review.",
+   "source": "new"
+  },
+  "skills/knuaf-doc/scripts/gg_body_plan_check.py": {
+   "after_sha256": "5b93acce3c4c2548436388666bfe86fa588bcff38aa15b3f5d0cfbdf95a23d1e",
+   "before_sha256": null,
+   "first_changed": "P28",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "Common body writing, explicit workbook plan comparison and rendered-layout review.",
+   "source": "new"
+  },
   "skills/knuaf-doc/scripts/gg_commands.py": {
    "after_sha256": "623066f34dd07fb9d1935dc261d35d639f89424349eb920b4c7ab58dc7c50cf0",
    "before_sha256": "22e5664255aa36de870909e7263a8828ec42d9dcb181f74839d86be29dbb0702",
@@ -1139,7 +1179,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_document.py": {
-   "after_sha256": "375adee1bbb5cfb1dfa590cef9ff463b16c946383b0c95396fc5c42190054463",
+   "after_sha256": "f8877086216124a1a1d174c367561a9e32c7684e2af57496908f26bbd959735a",
    "before_sha256": "e83eee6a94393e407a727979c6e5f6e5545f17ca7291e745c68d66dcb835a8b3",
    "first_changed": "P1",
    "last_changed": "P28",
@@ -1884,7 +1924,7 @@
    "source": "new"
   },
   "tests/test_bundle_lineage.py": {
-   "after_sha256": "096fff86f46243d40c75ab2daad920f4319a2c8bcc6abaebad80af28dca32620",
+   "after_sha256": "71b07e3a6ee29bdab2f1f0b3d14c05e7e81ed72d055c8c406d59ca6f1cf381bb",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",

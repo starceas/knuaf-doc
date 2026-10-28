@@ -32,6 +32,22 @@ SCI = re.compile(
 )
 CAPTION = re.compile(r"^\s*(표|그림)\s*(\d+)\s*\.\s*(.+)$")
 IMAGE = re.compile(r"^!\[([^\]]*)\]\(([^)]+)\)$")
+
+# Printed photo guides remain unresolved requests, just like authoring markers.
+PHOTO_GUIDE = re.compile(r"^※\s*이 자리에\s+.+?사진 추가 필요(?:[（(].*[)）])?\s*$")
+
+
+def photo_guide(text):
+    """Return the short printed guide, or None for ordinary prose."""
+    text = text.strip()
+    if PHOTO_GUIDE.fullmatch(text):
+        return text
+    match = re.fullmatch(r"\[사진 필요:\s*(.*)\]", text)
+    if not match:
+        return None
+    fields = [part.strip() for part in match[1].split("|")]
+    target = fields[1] if len(fields) > 1 else fields[0]
+    return "※ 이 자리에 " + target.removesuffix(" 사진") + " 사진 추가 필요"
 CLIMATE = [
     "평균기온",
     "최고기온",
@@ -607,14 +623,17 @@ def plain_policy_check(text, issues, nodes, major_id):
             )
     sourced_object_check(nodes, issues, policy)
     img = policy["images"]
-    placeholders = text.count(img["placeholder_prefix"])
+    placeholders = text.count(img["placeholder_prefix"]) + sum(
+        bool(PHOTO_GUIDE.fullmatch(line.strip())) for line in text.splitlines()
+    )
     photo_gaps = _photo_gap_sections(nodes)
     if placeholders:
         issues.append(
             (
                 "photo_placeholder",
-                "미해결 사진 자리 표기 %d건(제출 전 학생 사진으로 교체): %s…"
-                % (placeholders, img["placeholder_prefix"]),
+                "미해결 사진 자리 표기 %d건(제출 전 학생 사진으로 교체). "
+                "본문은 파란 한 줄 가이드, 촬영 상세는 별도 학생 목록으로 분리한다."
+                % placeholders,
             )
         )
     elif photo_gaps:
@@ -673,7 +692,7 @@ def _placeholder_figure(nodes, start, end, policy):
     if any(n["kind"] == "image" for n in nodes[start:end + 1]):
         return False
     return any(
-        policy["images"]["placeholder_prefix"] in nodes[pos]["text"]
+        photo_guide(nodes[pos]["text"]) is not None
         for pos, _ in _object_neighbors(nodes, start, end, 1)
     )
 
