@@ -167,6 +167,37 @@ def _unreadable(issues, sheet, what):
         evidence={"sheet": sheet, "problem": what}))
 
 
+_EMPTY_TEXT = {"", "-", "–", "—"}
+_ASSET_HEADER_WORDS = ("천원", "금액", "평가액", "가격")
+_DEPRECIATION_LABELS = {"구분", "취득가격", "잔존가격율", "내용년수(년)", "사용년수(년)",
+                        "감가상각비", "감가상각누계", "장부가격"}
+
+
+def _read_number(book, pair, row, col):
+    """(숫자 또는 None, 캐시없음, 숫자 아닌 값). 빈 칸·'-'·'해당 없음'은 None."""
+    value, uncached = book.value(pair, row, col)
+    if uncached:
+        return None, True, None
+    if value is None:
+        return None, False, None
+    number = _number(value)
+    if number is not None:
+        return number, False, None
+    if isinstance(value, str):
+        key = _norm(value)
+        if key in _EMPTY_TEXT or "해당없음" in key:
+            return None, False, None
+    return None, False, value
+
+
+def _addr(row, col):
+    return "%s%d" % (openpyxl.utils.get_column_letter(col), row)
+
+
+def _not_number(row, col, value):
+    return "%s 값이 숫자가 아님: %r" % (_addr(row, col), value)
+
+
 def _investment_rows(book):
     """3.투자계획 연차별 세부투자계획 → ([(행, 항목명, 금액, 캐시없음)], 문제)."""
     pair = book.sheet("3.투자계획")
@@ -180,13 +211,22 @@ def _investment_rows(book):
             break
     if header is None:
         return None, "C열 '투자항목' 머리글 없음"
+    if _norm(ws.cell(header, 5).value) != "계":
+        return None, "E%d 금액 머리글이 '계'가 아님" % header
     rows = []
     for r in range(header + 1, ws.max_row + 1):
         name = _norm(ws.cell(r, 3).value)
-        if not name or name in ("계", "합계"):
+        if name in ("계", "합계"):
             continue
-        amount, uncached = book.value(pair, r, 5)
-        rows.append((r, ws.cell(r, 3).value, _number(amount), uncached))
+        amount, uncached, bad = _read_number(book, pair, r, 5)
+        if bad is not None:
+            return None, _not_number(r, 5, bad)
+        if not name:
+            # 항목명 없이 금액만 있는 행은 '빈 행'이 아니다. B열 연도가 있는 행은 연도 소계라 제외.
+            if (amount or uncached) and not _norm(ws.cell(r, 2).value):
+                return None, "E%d에 금액이 있는데 C%d 투자항목이 비어 있음" % (r, r)
+            continue
+        rows.append((r, ws.cell(r, 3).value, amount, uncached))
     return rows, None
 
 
@@ -197,58 +237,92 @@ def _asset_rows(book):
         return None, "시트 없음"
     ws = pair[1]
     blocks = []
+    section_end = ws.max_row + 1
     for r in range(1, ws.max_row + 1):
-        match = _BLOCK_LABEL.match(_norm(ws.cell(r, 2).value))
+        label = _norm(ws.cell(r, 2).value)
+        if blocks and label.startswith("나."):
+            section_end = r  # 자산(가.) 다음 절(부채 등)은 이 검사 밖이다.
+            break
+        match = _BLOCK_LABEL.match(label)
         if match and match.group(1) in _ASSET_BLOCKS:
             blocks.append((r, _ASSET_BLOCKS[match.group(1)]))
     if not blocks:
         return None, "B열 '(1) 토지' 같은 자산 블록 머리글 없음"
     rows = []
     for index, (start, (role, col)) in enumerate(blocks):
-        end = blocks[index + 1][0] if index + 1 < len(blocks) else ws.max_row + 1
+        end = blocks[index + 1][0] if index + 1 < len(blocks) else section_end
         header = None
         for r in range(start + 1, min(end, start + 4)):
-            if _norm(ws.cell(r, col).value):
+            # 머리글은 글자로만 인정한다. 금액 0·숫자를 머리글로 잡으면 그 행이 사라진다.
+            text = ws.cell(r, col).value
+            if isinstance(text, str) and any(w in _norm(text) for w in _ASSET_HEADER_WORDS):
                 header = r
                 break
         if header is None:
-            # 빈 블록은 '해당 없음'이다. 항목이 있는데 금액 머리글이 없으면 못 읽음.
-            if any(_norm(ws.cell(r, 2).value) for r in range(start + 1, end)):
+            # 빈 블록은 '해당 없음'이다. 무엇이든 적혀 있는데 금액 머리글이 없으면 못 읽음.
+            if any(_norm(ws.cell(r, c).value) for r in range(start + 1, end)
+                   for c in range(2, 9)):
                 return None, "%s 블록(%d행)의 금액 머리글 없음" % (
                     str(ws.cell(start, 2).value).strip(), start)
             continue
         for r in range(header + 1, end):
             label = _norm(ws.cell(r, 2).value)
-            if label.startswith("나."):
-                break
-            if not label or "합계" in label or label == "계" or label.startswith("*"):
+            if "합계" in label or label == "계" or label.startswith("*"):
                 continue
-            amount, uncached = book.value(pair, r, col)
+            amount, uncached, bad = _read_number(book, pair, r, col)
+            if bad is not None:
+                return None, _not_number(r, col, bad)
+            name = ws.cell(r, 2).value if label else ws.cell(r, 3).value
+            if not _norm(name):
+                # 종류(B)·명칭(C)이 모두 비었는데 금액이 있으면 '빈 행'이 아니다.
+                if uncached or amount:
+                    return None, "%s에 금액이 있는데 B%d·C%d 종류·명칭이 비어 있음" % (
+                        _addr(r, col), r, r)
+                continue
             note = _norm(ws.cell(r, 8).value)
-            rows.append((role, r, ws.cell(r, 2).value, _number(amount), uncached, note))
+            rows.append((role, r, name, amount, uncached, note))
     return rows, None
 
 
 def _depreciation_items(book):
-    """10. 감가상각비계획 → ([(행, 열, 항목명, 취득가격, 캐시없음)], 문제)."""
+    """10. 감가상각비계획 → ([(행, 열, 항목명, 취득가격, 캐시없음)], 문제).
+
+    블록마다 판정한다. 한 블록을 읽었다고 다른 블록의 읽기 실패를 덮지 않는다.
+    """
     pair = book.sheet("10. 감가상각비계획")
     if pair is None:
         return None, "시트 없음"
-    ws = pair[1]
+    ws_f, ws = pair
+    sections = cost_rows = 0
     items = []
-    found = False
-    for r in range(2, ws.max_row + 1):
-        if _norm(ws.cell(r, 2).value) != "취득가격":
+    for r in range(1, ws.max_row + 1):
+        label = _norm(ws.cell(r, 2).value)
+        if label == "구분":
+            sections += 1
+        is_name_row = _norm(ws.cell(r + 1, 2).value) == "취득가격"
+        if label not in _DEPRECIATION_LABELS and not is_name_row:
+            # 표 안의 알 수 없는 행에 숫자·수식이 있으면 표 구조를 잘못 읽은 것이다.
+            for c in range(3, ws.max_column + 1):
+                raw, data = ws_f.cell(r, c).value, ws.cell(r, c).value
+                if _number(data) is not None or (isinstance(raw, str) and raw.startswith("=")):
+                    return None, "%d행 '%s'를 해석하지 못함(%s에 값)" % (
+                        r, ws.cell(r, 2).value, _addr(r, c))
             continue
-        found = True
+        if label != "취득가격":
+            continue
+        cost_rows += 1
         for c in range(3, ws.max_column + 1):
             name = _norm(ws.cell(r - 1, c).value)
             if not name or name in _DEPRECIATION_GROUPS:
                 continue
-            cost, uncached = book.value(pair, r, c)
-            items.append((r, c, ws.cell(r - 1, c).value, _number(cost), uncached))
-    if not found:
+            cost, uncached, bad = _read_number(book, pair, r, c)
+            if bad is not None:
+                return None, _not_number(r, c, bad)
+            items.append((r, c, ws.cell(r - 1, c).value, cost, uncached))
+    if not cost_rows:
         return None, "B열 '취득가격' 행 없음"
+    if cost_rows < sections:
+        return None, "'구분' 표 %d개 중 '취득가격' 행 %d개" % (sections, cost_rows)
     return items, None
 
 
@@ -259,7 +333,10 @@ def _labor_tasks(book):
         return None, "시트 없음"
     ws = pair[1]
     tasks = []
-    headers = 0
+    headers = titles = 0
+    for r in range(1, ws.max_row + 1):
+        if "노동비산출근거" in _norm(ws.cell(r, 2).value):
+            titles += 1
     r = 1
     while r <= ws.max_row:
         if _norm(ws.cell(r, 2).value) != "항목":
@@ -273,15 +350,30 @@ def _labor_tasks(book):
                 break
         if days_col is None:
             return None, "%d행 '항목' 표에 '작업일수' 머리글 없음" % r
+        start = r
         r += 1
-        while r <= ws.max_row and _norm(ws.cell(r, 2).value) not in ("합계", "계"):
+        closed = False
+        while r <= ws.max_row:
             name = _norm(ws.cell(r, 2).value)
+            if name in ("합계", "계"):
+                closed = True
+                break
+            if name == "항목" or "노동비산출근거" in name:
+                break  # 합계 없이 다음 표가 시작됨
+            days, uncached, bad = _read_number(book, pair, r, days_col)
+            if bad is not None and name:
+                return None, _not_number(r, days_col, bad)
             if name:
-                days, uncached = book.value(pair, r, days_col)
-                tasks.append((r, ws.cell(r, 2).value, _number(days), uncached))
+                tasks.append((r, ws.cell(r, 2).value, days, uncached))
+            elif days or uncached:
+                return None, "%s에 일수가 있는데 B%d 작업명이 비어 있음" % (_addr(r, days_col), r)
             r += 1
+        if not closed:
+            return None, "%d행 '항목' 표의 '합계' 행 없음" % start
     if not headers:
         return None, "B열 '항목' 머리글(노동비 산출근거) 없음"
+    if titles > headers:
+        return None, "노동비 산출근거 표 %d개 중 '항목' 머리글 %d개" % (titles, headers)
     return tasks, None
 
 
@@ -447,27 +539,56 @@ def _sga_total(book, issues):
     total = 0.0
     for r in range(start + 1, end):
         for c in range(3, 8):
-            value, uncached = book.value(pair, r, c)
+            number, uncached, bad = _read_number(book, pair, r, c)
             if uncached:
-                _uncached(issues, "12 손익계획", "%s%d" % (openpyxl.utils.get_column_letter(c), r))
+                _uncached(issues, "12 손익계획", _addr(r, c))
                 return None
-            number = _number(value)
+            if bad is not None:
+                _unreadable(issues, "12 손익계획", _not_number(r, c, bad))
+                return None
             if number:
                 total += abs(number)
     return total
 
 
+def _sales_unreadable(issues, sheet, what):
+    issues.append(_issue(
+        "SALES_LAYOUT_UNREADABLE", status="blocked",
+        reason="%s: %s — 판매 단가·비율을 읽지 못해 검사하지 않음" % (sheet, what),
+        remedy="학과 17시트 판매계획 양식(평균가격(수매)·평균가격(직거래)·수매시장·직거래 행)을 확인한다",
+        evidence={"sheet": sheet, "problem": what}))
+
+
+def _grade_rows_ok(ws, row):
+    """row부터 세 행의 C열이 상품·중품·하품인지(비어 있으면 양식 그대로로 본다)."""
+    for offset, grade in enumerate(GRADES):
+        text = _norm(ws.cell(row + offset, 3).value)
+        if text and text != grade:
+            return "C%d 등급이 '%s'가 아님(%r)" % (row + offset, grade, ws.cell(row + offset, 3).value)
+    if _norm(ws.cell(row, 3).value) != GRADES[0]:
+        return "C%d 첫 등급 '상품' 없음" % row
+    return None
+
+
 def _read_sales(book, issues):
+    """판매계획 단가·이력·비율. 못 읽으면 이슈를 남기고 None."""
     pair = book.sheet(" 5. 판매계획")
     if pair is None:
+        _sales_unreadable(issues, "5. 판매계획", "시트 없음")
         return None
     ws = pair[1]
     sheet = ws.title.strip()
     out = {"sheet": sheet, "prices": {}, "history": {}, "shares": {},
            "notes": _sales_notes(ws)}
+    blocked = False
     for channel, label in PRICE_LABELS.items():
         row = _find_row(ws, label)
         if row is None:
+            _sales_unreadable(issues, sheet, "B열 '%s' 행 없음" % label)
+            return None
+        problem = _grade_rows_ok(ws, row)
+        if problem:
+            _sales_unreadable(issues, sheet, problem)
             return None
         header = row - 1
         price_col = None
@@ -478,63 +599,94 @@ def _read_sales(book, issues):
                 price_col = c
                 break
             raw = pair[0].cell(header, c).value
-            if _YEAR.match(head) or isinstance(_number(ws.cell(header, c).value), float) \
+            if _YEAR.match(head) or _number(ws.cell(header, c).value) is not None \
                     or (isinstance(raw, str) and raw.startswith("=")):
                 hist_cols.append(c)
         if price_col is None:
+            _sales_unreadable(issues, sheet, "%d행 '평균가격' 머리글 없음" % header)
             return None
         for offset, grade in enumerate(GRADES):
             r = row + offset
-            value, uncached = book.value(pair, r, price_col)
-            cell = "%s%d" % (openpyxl.utils.get_column_letter(price_col), r)
+            cell = _addr(r, price_col)
+            number, uncached, bad = _read_number(book, pair, r, price_col)
             if uncached:
                 _uncached(issues, sheet, cell)
-                return None
-            number = _number(value)
-            if value not in (None, "") and number is None and not (
-                    isinstance(value, str) and "해당없음" in _norm(value)):
+                blocked = True
+            elif bad is not None:
                 issues.append(_issue(
                     "SALES_PRICE_UNREADABLE", status="blocked",
-                    reason="%s!%s 단가가 숫자가 아님: %r" % (sheet, cell, value),
+                    reason="%s!%s 단가가 숫자가 아님: %r" % (sheet, cell, bad),
                     remedy="단가 칸에는 숫자 또는 빈 칸만 둔다",
                     evidence={"cell": cell}))
-                return None
+                blocked = True
             out["prices"][(channel, grade)] = (number, cell)
             series = []
-            for c in hist_cols:
-                hv, huncached = book.value(pair, r, c)
+            for c in range(4, price_col):
+                hv, huncached, hbad = _read_number(book, pair, r, c)
+                if c not in hist_cols:
+                    # 연도 머리글 없는 칸의 값은 버리지 않는다(이력 열을 잘못 읽은 것).
+                    if huncached or hv is not None or hbad is not None:
+                        _sales_unreadable(issues, sheet, "%s 값의 연도 머리글(%d행) 없음" % (_addr(r, c), header))
+                        blocked = True
+                    continue
                 if huncached:
                     # 이력 수식 캐시 없음은 '빈 이력'이 아니다(미판매 등급 복사 이력을 놓친다).
-                    _uncached(issues, sheet, "%s%d" % (openpyxl.utils.get_column_letter(c), r))
-                series.append(None if huncached else _number(hv))
+                    _uncached(issues, sheet, _addr(r, c))
+                    blocked = True
+                elif hbad is not None:
+                    _sales_unreadable(issues, sheet, _not_number(r, c, hbad))
+                    blocked = True
+                series.append(hv)
             out["history"][(channel, grade)] = series
     ratio_rows = {}
     for channel, label in RATIO_LABELS.items():
         row = _find_row(ws, label)
         if row is None:
+            _sales_unreadable(issues, sheet, "B열 '%s' 행 없음" % label)
+            return None
+        problem = _grade_rows_ok(ws, row)
+        if problem:
+            _sales_unreadable(issues, sheet, problem)
             return None
         ratio_rows[channel] = row
     first = min(ratio_rows.values())
     share_cols = []
+    share_header = None
     for header in range(first - 1, max(first - 5, 0), -1):
         share_cols = [c for c in range(3, ws.max_column + 1)
                       if _norm(ws.cell(header, c).value) == "판매비율"]
         if share_cols:
+            share_header = header
             break
     if not share_cols:
+        _sales_unreadable(issues, sheet, "'%s' 위 '판매비율' 머리글 없음" % RATIO_LABELS["purchase"])
         return None
+    # 판매량 열(판매비율 바로 오른쪽)은 비율×생산량이라 읽지 않는다. 그 밖의 열에 값이 있으면
+    # 판매비율 머리글이 빠진 연도라 그 판매를 놓친다.
+    known = set(share_cols) | {c + 1 for c in share_cols}
     for channel, row in ratio_rows.items():
         for offset, grade in enumerate(GRADES):
             r = row + offset
             values = []
             for c in share_cols:
-                value, uncached = book.value(pair, r, c)
+                value, uncached, bad = _read_number(book, pair, r, c)
                 if uncached:
-                    _uncached(issues, sheet, "%s%d" % (openpyxl.utils.get_column_letter(c), r))
-                    return None
-                values.append(_number(value) or 0.0)
+                    _uncached(issues, sheet, _addr(r, c))
+                    blocked = True
+                elif bad is not None:
+                    _sales_unreadable(issues, sheet, _not_number(r, c, bad))
+                    blocked = True
+                values.append(value or 0.0)
+            for c in range(4, max(known) + 1):
+                if c in known:
+                    continue
+                stray, suncached, sbad = _read_number(book, pair, r, c)
+                if stray is not None or suncached or sbad is not None:
+                    _sales_unreadable(issues, sheet, "%s 값의 '판매비율' 머리글(%d행) 없음" % (
+                        _addr(r, c), share_header))
+                    blocked = True
             out["shares"][(channel, grade)] = values
-    return out
+    return None if blocked else out
 
 
 def _has_note(notes, words):
@@ -544,12 +696,7 @@ def _has_note(notes, words):
 def _check_sales(book, issues):
     sales = _read_sales(book, issues)
     if sales is None:
-        if not any(i["code"] == "PLAN_FIT_UNCACHED" for i in issues):
-            issues.append(_issue(
-                "SALES_LAYOUT_UNREADABLE", status="blocked",
-                reason="5. 판매계획의 단가표·유통채널 표를 찾지 못함",
-                remedy="학과 17시트 판매계획 양식(평균가격(수매)·평균가격(직거래)·수매시장·직거래 행)을 확인한다"))
-        return
+        return  # _read_sales가 blocked 이유를 이미 남겼다.
     sheet = sales["sheet"]
     sold = {key: any(v > 0 for v in values) for key, values in sales["shares"].items()}
     channel_sold = {ch: any(sold[(ch, g)] for g in GRADES) for ch in CHANNELS}

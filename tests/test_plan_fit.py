@@ -329,6 +329,106 @@ class UnreadableIsNotPassTests(_PlanFitCase):
                 if i["code"] == "PLAN_FIT_TABLE_UNREADABLE"]
 
 
+def _cells(sheet, **cells):
+    def edit(wb):
+        for ref, value in cells.items():
+            wb[sheet][ref] = value
+    return edit
+
+
+class PartlyUnreadableIsNotPassTests(_PlanFitCase):
+    """A readable row or block must not hide another one the check cannot read.
+
+    The first four cases come from the second independent review; the rest
+    are the same failure in the other readers."""
+
+    def check(self, edit=None, **book):
+        book.setdefault("sga", (1, 1, 1, 1, 1))
+        return self.review(method="고설수경", edit=edit, **book)
+
+    def assertBlocked(self, result, sheet=None):
+        self.assertEqual("blocked", result["status"], result["issues"])
+        if sheet is not None:
+            self.assertIn(sheet, [i["evidence"].get("sheet") for i in result["issues"]
+                                  if i["status"] == "blocked"])
+
+    # --- review cases -----------------------------------------------------
+
+    def test_asset_control_warns(self):
+        result = self.check(opening=(("전", 0, ""),))
+        self.assertEqual("pass", result["status"])
+        self.assertEqual(["OPENING_ZERO_ROW"], self.codes(result))
+
+    def test_asset_amount_is_never_taken_as_header(self):
+        result = self.check(opening=(("전", 0, ""),),
+                            edit=_cells("1. 기초재무상태조사", E8=None))
+        self.assertBlocked(result, "1. 기초재무상태조사")
+        self.assertNotIn("OPENING_ZERO_ROW", self.codes(result))
+
+    @staticmethod
+    def two_depreciation_blocks(broken):
+        def edit(wb):
+            ws = wb["10. 감가상각비계획 "]
+            ws["B8"] = "취득가격(천원)" if broken else "취득가격"
+            ws["C7"], ws["C8"] = "관리기", 0
+            ws["B18"], ws["C17"], ws["C18"] = "취득가격", "비닐하우스", 50000
+        return edit
+
+    def test_depreciation_control_reads_both_blocks(self):
+        result = self.check(edit=self.two_depreciation_blocks(False))
+        self.assertEqual("fail", result["status"])
+        self.assertEqual({"UNOWNED_ROW", "EQUIPMENT_METHOD_MISMATCH"}, set(self.codes(result)))
+
+    def test_one_unreadable_depreciation_block_blocks(self):
+        result = self.check(edit=self.two_depreciation_blocks(True))
+        self.assertBlocked(result, "10. 감가상각비계획")
+
+    def test_depreciation_section_without_cost_row_blocks(self):
+        result = self.check(edit=_cells("10. 감가상각비계획 ", B18="구  분",
+                                        C19="관리기", B20="취득가(원)", C20=0))
+        self.assertBlocked(result, "10. 감가상각비계획")
+
+    # --- same failure in the other readers ---------------------------------
+
+    def test_text_amount_blocks(self):
+        self.assertBlocked(self.check(investments=(("관리기", "미정"),)), "3.투자계획")
+        self.assertBlocked(self.check(opening=(("전", "미정", ""),)), "1. 기초재무상태조사")
+        self.assertBlocked(self.check(tasks=(("경운", "미정"),)), "8. 노무비계획")
+
+    def test_amount_without_item_name_blocks(self):
+        self.assertBlocked(self.check(edit=_cells("3.투자계획", E23=4000)), "3.투자계획")
+        self.assertBlocked(self.check(edit=_cells("8. 노무비계획", B27=None)), "8. 노무비계획")
+
+    def test_year_subtotal_row_is_not_a_nameless_item(self):
+        self.assertEqual("pass", self.check(edit=_cells("3.투자계획", B23=2028, E23=0))["status"])
+
+    def test_cash_named_in_second_column_is_read(self):
+        result = self.check(opening=((None, 0, ""),),
+                            edit=_cells("1. 기초재무상태조사", C9="예금"))
+        self.assertEqual(["OPENING_ZERO_ROW"], self.codes(result))
+
+    def test_second_labour_table_without_days_header_blocks(self):
+        result = self.check(edit=_cells("8. 노무비계획", B40="항목", I40="일수",
+                                        B41="경운", I41=5, B42="합계"))
+        self.assertBlocked(result, "8. 노무비계획")
+
+    def test_labour_table_without_total_row_blocks(self):
+        self.assertBlocked(self.check(edit=_cells("8. 노무비계획", B28=None)), "8. 노무비계획")
+
+    def test_sales_value_without_year_or_share_header_blocks(self):
+        self.assertBlocked(self.check(edit=_cells(" 5. 판매계획", E10=None, E12=3000)), "5. 판매계획")
+        self.assertBlocked(self.check(edit=_cells(" 5. 판매계획", H20=None, H23=0.2)), "5. 판매계획")
+
+    def test_sales_text_or_wrong_grade_blocks(self):
+        self.assertBlocked(self.check(edit=_cells(" 5. 판매계획", D23="약간")), "5. 판매계획")
+        self.assertBlocked(self.check(edit=_cells(" 5. 판매계획", C8="특품")), "5. 판매계획")
+        self.assertBlocked(self.check(edit=_cells(" 5. 판매계획", C27="특품")), "5. 판매계획")
+
+    def test_selling_expense_text_blocks(self):
+        result = self.check(sga=(0, 0, 0, 0, 0), edit=_cells("12 손익계획", C13="별도"))
+        self.assertBlocked(result, "12 손익계획")
+
+
 def bare_notes():
     return ("* 등급: 상품 단일 등급 가정, 수매 도매 경락가와 직거래 소매가 평균.",)
 
