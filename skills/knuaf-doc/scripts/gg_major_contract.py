@@ -670,6 +670,35 @@ _UNSUPPORTED_OUTPUT_REASONS = frozenset({
     "unsupported_finance_profile",
 })
 
+# 특용작물전공 제출 엑셀은 교수님 양식(X01, 대식물 계정이 필요하면 X02)을
+# 틀로 복제해 값만 채운다(사용자 결정 2026-10-28). 스펙에서 17시트를 새로
+# 조립하는 레거시 생성기는 이 전공에서 입구에서 막는다. 다른 전공의 경로는
+# 이 결정과 무관하다.
+LEGACY_GENERATOR_CLOSED_MAJORS = frozenset({"specialty_crops"})
+
+OUTPUT_GUIDANCE_TEMPLATE_ROUTE = (
+    "특용작물전공 엑셀은 교수님 양식(X01, 대식물 계정이 필요하면 X02) 기준입니다. "
+    "17시트를 새로 만드는 생성기는 쓰지 않습니다. 양식 원본을 복제해 값만 채우세요: "
+    "gg_excel_template.py inspect → clear → gg_excel_fill.py "
+    "(절차: references/excel-template.md '경로 1. 학과 원본 템플릿 우선 경로')."
+)
+
+
+def require_template_route(authorization, profile) -> None:
+    """Refuse the legacy 17-sheet generator (``school_17_sheet_v1`` spec
+    build) for a major whose submission workbook must be copied from the
+    professor's template.
+
+    Call after ``authorize_output`` succeeded and before any generator
+    validation or write.  Other profiles and other majors are unchanged."""
+    if not isinstance(authorization, OutputAuthorization):
+        raise OutputHeldError("finance_profile_authorization_required")
+    if (profile == "school_17_sheet_v1"
+            and authorization.major_id in LEGACY_GENERATOR_CLOSED_MAJORS):
+        raise OutputHeldError("specialty_template_route_required",
+                              major_id=authorization.major_id)
+
+
 
 def held_guidance(reason, error=None):
     """Per-cause held guidance (K3-02): a recorded/registered module
@@ -687,6 +716,8 @@ def held_guidance(reason, error=None):
         )
     if str(reason) in _UNSUPPORTED_OUTPUT_REASONS:
         return OUTPUT_GUIDANCE_UNSUPPORTED
+    if str(reason) == "specialty_template_route_required":
+        return OUTPUT_GUIDANCE_TEMPLATE_ROUTE
     return OUTPUT_GUIDANCE
 
 
@@ -1540,7 +1571,8 @@ SPECIALTY_CROPS_MODULE = declare_module(
         FinanceCapability(
             profile="school_17_sheet_v1",
             status="supported",
-            reason="기존 학교 17시트 생성·검증 경로",
+            reason="교수님 양식(X01·X02) 복제·채우기·검증 경로; "
+            "스펙으로 17시트를 새로 만드는 레거시 생성기는 입구에서 막음",
         ),
         FinanceCapability(
             profile="composite_multi_crop",

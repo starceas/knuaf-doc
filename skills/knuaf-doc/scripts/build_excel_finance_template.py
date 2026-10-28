@@ -26,6 +26,7 @@ def build(base, input_path, out_path, *, major_id=None):
     authorization = mc.authorize_output(
         mc.OUTPUT_SCHOOL_WORKBOOK, context, spec=spec)
     mc.require_finance_profile(authorization, spec.get("profile"))
+    mc.require_template_route(authorization, spec.get("profile"))
     if authorization.major_id == "hort_env_systems":
         raise mc.OutputHeldError("hort_transform_receipt_required")
     issues = validate_economic_inputs(spec, purpose="draft")

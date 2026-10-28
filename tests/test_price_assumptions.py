@@ -17,6 +17,19 @@ from tests._harness import (
 YEARS = [2027, 2028, 2029, 2030, 2031]  # writing_year=2026
 
 
+def legacy_workbook(spec, path, *, context):
+    """Run the retained 17-sheet generator body under a real policy-B
+    authorization.  The public ``school_workbook`` entry refuses
+    specialty_crops (template route only); these tests keep guarding the
+    body's price/validation arithmetic until it is removed."""
+    mc = runtime("gg_major_contract")
+    sx = runtime("gg_school_excel")
+    authorization = mc.authorize_output(
+        mc.OUTPUT_SCHOOL_WORKBOOK, context, spec=spec)
+    mc.require_finance_profile(authorization, spec.get("profile"))
+    return sx._generate_school_workbook(spec, path, authorization, context)
+
+
 def _spec(**over):
     """Synthetic school_17_sheet_v1 spec (no real student data)."""
     spec = dict(
@@ -367,7 +380,7 @@ class SeparateRatesModelTests(ContractCase):
         bind_major(root, "specialty_crops")
         ctx = self.mc.output_context(root, "specialty_crops")
         out = Path(root) / "school.xlsx"
-        self.sx.school_workbook(spec, out, context=ctx)
+        legacy_workbook(spec, out, context=ctx)
         wb = load_workbook(out)
         mat = wb["7. 영농자재소요계획"]
         labor = wb["8. 노무비계획"]
@@ -393,7 +406,7 @@ class SeparateRatesModelTests(ContractCase):
         spec = _spec()
         spec['price_assumptions']['sales'] = {'status':'not_applied','reason':'확인 불가'}
         with self.assertRaisesRegex(ValueError, 'not_applied'):
-            self.sx.school_workbook(spec, out, context=ctx)
+            legacy_workbook(spec, out, context=ctx)
         self.assertFalse(out.exists())
 
     def test_manifest_records_assumptions(self):
@@ -401,7 +414,7 @@ class SeparateRatesModelTests(ContractCase):
         bind_major(root, "specialty_crops")
         ctx = self.mc.output_context(root, "specialty_crops")
         out = Path(root) / "school.xlsx"
-        self.sx.school_workbook(_spec(), out, context=ctx)
+        legacy_workbook(_spec(), out, context=ctx)
         manifest = json.loads(
             out.with_suffix(".manifest.json").read_text(encoding="utf-8"))
         pa = manifest["price_assumptions"]
@@ -906,7 +919,7 @@ class V2CounterexampleTests(ContractCase):
             out = Path(root) / (str(i) + ".xlsx")
             before = copy.deepcopy(spec)
             with self.assertRaises(ValueError):
-                runtime("gg_school_excel").school_workbook(spec, out, context=ctx)
+                legacy_workbook(spec, out, context=ctx)
             self.assertFalse(out.exists())
             self.assertFalse(out.with_suffix(".manifest.json").exists())
             self.assertEqual(before, spec)

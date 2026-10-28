@@ -499,23 +499,31 @@ class FinanceAndDocxGuardTests(_Base):
         self.assertIn("status", finance.composite_contract(_finance_spec()))
 
     def test_t3_rev_school_17_sheet(self):
+        from tests.test_price_assumptions import legacy_workbook
         school = runtime("gg_school_excel")
         finance = runtime("gg_finance")
         root = self._project()
         ctx = self._ctx(root, SPECIALTY)
+        # Specialty crops use the professor-template route; both public
+        # entries to the legacy generator hold before any output.
         for label, build in (
-                ("direct", lambda path: school.school_workbook(
-                    _school_spec(), path, context=ctx)),
-                ("via_finance", lambda path: finance.workbook(
-                    _school_spec(), path, context=ctx))):
-            with self.subTest(path=label):
+                ("direct", school.school_workbook),
+                ("via_finance", finance.workbook)):
+            with self.subTest(path=label, entry="closed"):
                 out = Path(root) / ("school-%s.xlsx" % label)
-                build(out)
-                self.assertTrue(out.exists())
-                manifest = json.loads(out.with_suffix(".manifest.json")
-                                      .read_text(encoding="utf-8"))
-                self.assertEqual(manifest["major_authorization"]["major_id"],
-                                 SPECIALTY)
+                before = self._tree_bytes(root)
+                self._held("specialty_template_route_required", build,
+                           _school_spec(), out, context=ctx)
+                self.assertFalse(out.exists())
+                self.assertEqual(self._tree_bytes(root), before)
+        # The retained generator body still binds its authorization into
+        # the manifest and reconfirms the canonical record before saving.
+        out = Path(root) / "school-body.xlsx"
+        legacy_workbook(_school_spec(), out, context=ctx)
+        manifest = json.loads(out.with_suffix(".manifest.json")
+                              .read_text(encoding="utf-8"))
+        self.assertEqual(manifest["major_authorization"]["major_id"],
+                         SPECIALTY)
         real = self.mc.authorize_output
 
         def authorize_then_swap(*args, **kw):
@@ -525,7 +533,7 @@ class FinanceAndDocxGuardTests(_Base):
 
         with mock.patch.object(self.mc, "authorize_output",
                                authorize_then_swap):
-            self._held("project_revision_changed", school.school_workbook,
+            self._held("project_revision_changed", legacy_workbook,
                        _school_spec(), Path(root) / "school-raced.xlsx",
                        context=ctx)
         self.assertFalse((Path(root) / "school-raced.xlsx").exists())

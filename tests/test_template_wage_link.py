@@ -37,8 +37,11 @@ def fixture(path, broken=True):
     for col, rate in [('Y', 'AC38'), ('Z', 'AD38')]:
         for row in range(32, 39):
             s[f'{col}{row}'] = f'={col}{row-1}*(1+${rate[:2]}$38)'
-    s['AC38'] = 0.05
-    s['AD38'] = 0.04
+    # X01: yearly rates in AC26:AC30/AD26:AD30, arithmetic mean in AC38/AD38.
+    for obs, rate_col in (('Y', 'AC'), ('Z', 'AD')):
+        for row in range(26, 31):
+            s[f'{rate_col}{row}'] = f'=({obs}{row+1}-{obs}{row})/{obs}{row}'
+        s[f'{rate_col}38'] = f'=AVERAGE({rate_col}26:{rate_col}37)'
     for row, base, rate in [(8, 'Y34', 'AC38'), (11, 'Y34', 'AC38'), (12, 'Z34', 'AD38')]:
         for i, col in enumerate(['F', 'I', 'L', 'O', 'R']):
             prior = ['F', 'I', 'L', 'O', 'R'][i-1]
@@ -198,13 +201,22 @@ class WageLinkTests(ContractCase):
         out, _ = self.apply(plan)
         self.assertEqual(self.audit.Workbook.load(out).formulas[S8, 'F11'].text, 'Y34')
 
+    def x01_mean(self, book, col):
+        """Arithmetic mean of the yearly rates over rows 26..31 (X01 AC38/AD38)."""
+        v = [book.evaluate(S8, f'{col}{row}') for row in range(26, 32)]
+        return sum((b - a) / a for a, b in zip(v, v[1:])) / 5
+
     def test_distinct_rates_no_double_application_and_update_idempotency(self):
         config = assumptions(.02)
+        for kind in ('wage_male', 'wage_female'):
+            config[kind].pop('r', None)
         config['general'] = registered_rate('official.kosis.cpi.total')
         out, rec = self.apply(self.patch.materialize_d8(self.src, config))
         b = self.audit.Workbook.load(out)
-        self.assertAlmostEqual(b.evaluate(S8, 'I11') / b.evaluate(S8, 'F11'), 1.06)
-        self.assertAlmostEqual(b.evaluate(S8, 'I12') / b.evaluate(S8, 'F12'), 1.04)
+        male, female = self.x01_mean(b, 'Y'), self.x01_mean(b, 'Z')
+        self.assertNotAlmostEqual(male, female)
+        self.assertAlmostEqual(b.evaluate(S8, 'I11') / b.evaluate(S8, 'F11'), 1 + male)
+        self.assertAlmostEqual(b.evaluate(S8, 'I12') / b.evaluate(S8, 'F12'), 1 + female)
         self.assertAlmostEqual(b.evaluate(S5, 'L38') / b.evaluate(S5, 'D38'), ((116.61/102.5)**.25)**4)
         r = (116.61/100)**(1/5)-1
         self.assertAlmostEqual(b.evaluate(S9, 'C38'), 100*(1+r))
@@ -370,7 +382,10 @@ class WageLinkTests(ContractCase):
                 plan = self.patch.materialize_d8(self.src, c)
                 self.assertEqual(c, before)
                 self.assertAlmostEqual(plan['d8']['rates']['sales']['r'], (116.61/102.5)**.25-1)
-                self.assertAlmostEqual(plan['d8']['rates']['wage_male']['r'], .06)
+                self.assertEqual(plan['d8']['rates']['wage_male']['evidence_ref']['source_id'],
+                                 'official.rda.crop_income.synthetic.wage_male')
+                self.assertEqual(plan['d8']['rates']['wage_male']['rate_method'],
+                                 'x01_arithmetic_mean_of_yearly_rates')
                 out = self.root / f'cli-{i}.json'
                 with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
                     code = self.patch.cli(['materialize-d8', '--source', str(self.src),
@@ -446,6 +461,8 @@ class WageLinkTests(ContractCase):
         before = self.tpl.sha256(self.src)
         out, rec = self.apply(self.patch.materialize_d8(self.src, prepare_observations=True))
         self.assertEqual(sum(p['operation']=='prepare_wage_input' for p in rec['patched']), 6)
+        # Observation preparation never rewrites the X01 rate formulas.
+        self.assertFalse(any(p['cell'] in ('AC38', 'AD38') for p in rec['patched']))
         receipt = self.fill.fill_copy(out, self.json('fill.json', self.tpl.wage_fill_map(out)),
                                      self.json('values.json', self.observations()), self.root/'filled.xlsx', context=self.context)
         self.assertEqual(receipt['wage_observations']['observation_range'], [2018, 2023])
@@ -453,8 +470,12 @@ class WageLinkTests(ContractCase):
         self.assertEqual(receipt['wage_observations']['unit'], '원/일')
         self.assertEqual(self.tpl.sha256(self.src), before)
         b = self.audit.Workbook.load(self.root/'filled.xlsx')
-        self.assertAlmostEqual(b.evaluate(S8, 'AC38'), (131/126)**(1/5)-1)
-        self.assertAlmostEqual(b.evaluate(S8, 'AD38'), (131/126)**(1/5)-1)
+        mean = sum((b2 - a) / a for a, b2 in zip(range(126, 131), range(127, 132))) / 5
+        for cell, col in (('AC38', 'AC'), ('AD38', 'AD')):
+            self.assertEqual(b.formulas[S8, cell].text, f'AVERAGE({col}26:{col}37)')
+            self.assertAlmostEqual(b.evaluate(S8, cell), mean, places=12)
+            # The arithmetic mean differs from the endpoint CAGR it replaced.
+            self.assertNotAlmostEqual(b.evaluate(S8, cell), (131/126)**(1/5)-1, places=9)
 
     def test_missing_wage_evidence_partial_or_invalid_observations_rejected(self):
         out, _ = self.apply(self.patch.materialize_d8(self.src, prepare_observations=True))
@@ -826,14 +847,20 @@ class WageLinkTests(ContractCase):
         for sid in ['official.kosis.farm_purchase.labor', 'official.minimumwage.hourly']:
             item = registered_rate(sid)
             c = assumptions(); c['wage_male'] = item
-            out, _ = self.apply(self.patch.materialize_d8(self.src, c), sid.split('.')[-1]+'.xlsx')
+            out, rec = self.apply(self.patch.materialize_d8(self.src, c), sid.split('.')[-1]+'.xlsx')
             normalized = pa.normalize_price_role({
                 'price_assumptions': {'wage': {'source_id': sid, 'base_year': item['base_year'], 'application_base_year': 2026},
                                      'general': {'status': 'not_applied', 'reason': 'test'},
                                      'sales': {'status': 'not_applied', 'reason': 'test'}}}, 'wage', list(range(2026, 2031)))
             b = self.audit.Workbook.load(out)
-            self.assertAlmostEqual(b.evaluate(S8, 'AC38'), normalized['rate'])
-            self.assertAlmostEqual(b.evaluate(S8, 'I11')/b.evaluate(S8, 'F11'), 1+normalized['rate'])
+            # The registered series is validated, but the applied rate is
+            # the X01 arithmetic mean of the workbook's yearly rates.
+            self.assertEqual(b.formulas[S8, 'AC38'].text, 'AVERAGE(AC26:AC37)')
+            mean = self.x01_mean(b, 'Y')
+            self.assertAlmostEqual(b.evaluate(S8, 'AC38'), mean)
+            self.assertNotAlmostEqual(b.evaluate(S8, 'AC38'), normalized['rate'])
+            self.assertAlmostEqual(b.evaluate(S8, 'I11')/b.evaluate(S8, 'F11'), 1+mean)
+            self.assertEqual(rec['d8']['rates']['wage_male']['evidence_ref']['source_id'], sid)
             self.assertEqual(self.patch.materialize_d8(out, c)['patches'], [])
 
     def test_v1_06_registered_values_cannot_be_replaced_under_bundled_id(self):
@@ -862,13 +889,19 @@ class WageLinkTests(ContractCase):
             c = assumptions(); c['wage_male']['r'] = r
             with self.subTest(r=r), self.assertRaises(ValueError): self.patch.materialize_d8(self.src, c)
 
-    def test_shared_check_rate_is_only_a_check_actual_cagr_is_applied(self):
+    def test_declared_wage_rate_refused_x01_mean_is_applied(self):
         c = assumptions()
-        c['wage_male']['r'] = .061  # Within FIX-A's documented rounding tolerance.
+        c['wage_male']['r'] = .06  # a declared CAGR cannot replace AC38
+        with self.assertRaisesRegex(ValueError, 'wage_male.r.*AC38'):
+            self.patch.materialize_d8(self.src, c)
+        c['wage_male'].pop('r')
         out, rec = self.apply(self.patch.materialize_d8(self.src, c))
         b = self.audit.Workbook.load(out)
-        self.assertAlmostEqual(rec['d8']['rates']['wage_male']['r'], .06)
-        self.assertAlmostEqual(b.evaluate(S8, 'I11')/b.evaluate(S8, 'F11'), 1.06)
+        item = rec['d8']['rates']['wage_male']
+        self.assertEqual(item['rate_method'], 'x01_arithmetic_mean_of_yearly_rates')
+        self.assertNotIn('r', item)
+        self.assertAlmostEqual(item['applied_rate'], self.x01_mean(b, 'Y'))
+        self.assertAlmostEqual(b.evaluate(S8, 'I11')/b.evaluate(S8, 'F11'), 1 + self.x01_mean(b, 'Y'))
 
     def test_id_whitespace_is_rejected_by_shared_resolution_in_both_paths(self):
         pa = runtime('gg_price_assumptions')
@@ -951,8 +984,9 @@ class WageLinkTests(ContractCase):
         plan = self.patch.materialize_d8(self.src, c)
         formulas = {(p['sheet'], p['cell']): p.get('new_formula') for p in plan['patches']}
         self.assertEqual(formulas[S5, 'D38'], '=C38*$O$7/1000*(1+0.0327684982091536)^0')
-        self.assertEqual(formulas[S8, 'AC38'], '=0.0663821164938491')
-        self.assertEqual(formulas[S8, 'AD38'], '=0.0663821164938491')
+        # X01 wage-rate cells keep their arithmetic-mean formula: no literal.
+        self.assertNotIn((S8, 'AC38'), formulas)
+        self.assertNotIn((S8, 'AD38'), formulas)
         self.assertEqual(formulas[S9, 'C38'], '=C18*(1+0.0312101025776949)')
 
     def test_v4_03_literal_error_and_downstream_rate_tolerance(self):
@@ -982,16 +1016,17 @@ class WageLinkTests(ContractCase):
         c['general'] = registered_rate('official.kosis.cpi.total')
         plan = self.patch.materialize_d8(self.src, c)
         rates = plan['d8']['rates']
-        for role in ('wage_male', 'wage_female', 'sales', 'general'):
+        for role in ('sales', 'general'):
             item = rates[role]
             resolved = self.patch._official_rate(c[role], role, price_sources=c['price_sources'])
             self.assertEqual(item['r'], resolved['r'])
             self.assertEqual(item['r_literal'], self.patch._excel_number(item['r']))
             digits = item['r_literal'].lstrip('-').split('E')[0].replace('.', '').strip('0')
             self.assertLessEqual(len(digits or '0'), 15, item['r_literal'])
-        male = rates['wage_male']['r_literal']
-        ac38 = next(p for p in plan['patches'] if (p['sheet'], p['cell']) == (S8, 'AC38'))
-        self.assertEqual(ac38['new_formula'], '=' + male)
+        for role in ('wage_male', 'wage_female'):
+            self.assertNotIn('r_literal', rates[role])
+        self.assertFalse(any((p['sheet'], p['cell']) in ((S8, 'AC38'), (S8, 'AD38'))
+                             for p in plan['patches']))
         sales_token = '*(1+' + rates['sales']['r_literal'] + ')^'
         for p in plan['patches']:
             if p['sheet'] == S5 and 'new_formula' in p and p['cell'] not in c['sales']['anchors']:
@@ -1001,7 +1036,7 @@ class WageLinkTests(ContractCase):
         out, receipt = self.apply(plan)
         self.assertEqual(receipt['d8']['rates'], rates)
         book = self.audit.Workbook.load(out)
-        self.assertEqual(book.formulas[S8, 'AC38'].text, male)
+        self.assertEqual(book.formulas[S8, 'AC38'].text, 'AVERAGE(AC26:AC37)')
         self.assertEqual(self.patch.materialize_d8(out, c)['patches'], [])
 
     def test_v4_03_signed_sales_rates_preserve_calculation_and_idempotence(self):
@@ -1039,14 +1074,17 @@ class WageLinkTests(ContractCase):
         self.assertNotEqual(stale, canonical)
         w = load_workbook(self.src)
         w[S5]['D38'] = '=C38*$O$7/1000*(1+' + stale + ')^0'
-        w[S8]['AC38'] = '=' + repr(rates['wage_male']['r'])
-        w[S8]['AD38'] = '=' + repr(rates['wage_female']['r'])
+        w[S8]['AC38'] = '=0.0663821164938491'  # an earlier CAGR literal
+        w[S8]['AD38'] = '=(Z31/Z26)^(1/(X31-X26))-1'  # an earlier CAGR formula
         w[S9]['C38'] = '=C18*(1+' + repr(rates['general']['r']) + ')'
         w.save(self.src); w.close()
         plan = self.patch.materialize_d8(self.src, c)
         p = next(p for p in plan['patches'] if (p['sheet'], p['cell']) == (S5, 'D38'))
         self.assertEqual(p['new_formula'], '=C38*$O$7/1000*(1+' + canonical + ')^0')
         formulas = {(p['sheet'], p['cell']): p.get('new_formula') for p in plan['patches']}
-        self.assertEqual(formulas[S8, 'AC38'], '=' + rates['wage_male']['r_literal'])
-        self.assertEqual(formulas[S8, 'AD38'], '=' + rates['wage_female']['r_literal'])
+        self.assertEqual(formulas[S8, 'AC38'], '=AVERAGE(AC26:AC37)')
+        self.assertEqual(formulas[S8, 'AD38'], '=AVERAGE(AD26:AD37)')
+        w = load_workbook(self.src); w[S8]['AC38'] = '=AC26*2'; w.save(self.src); w.close()
+        with self.assertRaisesRegex(ValueError, 'unreviewed wage rate formula: AC38'):
+            self.patch.materialize_d8(self.src, c)
         self.assertEqual(formulas[S9, 'C38'], '=C18*(1+' + rates['general']['r_literal'] + ')')

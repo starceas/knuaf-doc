@@ -238,6 +238,53 @@ def _reviewed_observation_formulas(source: Path, spec: dict) -> dict:
     return reviewed
 
 
+# 특용작물 X01의 임금 상승률은 연도별 상승률(AC26:AC30, AD26:AD30)의 산술평균
+# AC38 =AVERAGE(AC26:AC37), AD38 =AVERAGE(AD26:AD37)이다(사용자 결정
+# 2026-10-28, 교수님 양식 기준). D8은 이 수식을 바꾸지 않는다. 이전 판이 쓴
+# 끝점 CAGR 수식이나 상승률 상수가 남은 사본은 원래 수식으로 되돌린다.
+_X01_WAGE_RATE_COLUMNS = (("Y", "AC"), ("Z", "AD"))
+_RATE_LITERAL = re.compile(r"-?[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?")
+
+
+def _x01_wage_rate_formula(rate_col: str) -> str:
+    return f"AVERAGE({rate_col}26:{rate_col}37)"
+
+
+def _keep_x01_wage_rates(book, sheet: str, add) -> None:
+    """Require the X01 yearly-rate formulas; restore AC38/AD38 to the X01
+    arithmetic mean when an earlier patch replaced them."""
+    for obs, rate_col in _X01_WAGE_RATE_COLUMNS:
+        for row in range(26, 31):
+            ref = f"{rate_col}{row}"
+            old = book.formulas.get((sheet, ref))
+            if old is None or old.text != f"({obs}{row+1}-{obs}{row})/{obs}{row}":
+                raise ValueError(f"unreviewed yearly wage rate formula: {ref}")
+        cell = f"{rate_col}38"
+        desired = _x01_wage_rate_formula(rate_col)
+        old = book.formulas.get((sheet, cell))
+        if old is None:
+            raise ValueError(f"unreviewed wage rate cell: {cell} must keep X01 ={desired}")
+        if old.text == desired:
+            continue
+        legacy_cagr = f"({obs}31/{obs}26)^(1/(X31-X26))-1"
+        if old.text != legacy_cagr and not _RATE_LITERAL.fullmatch(old.text):
+            raise ValueError(f"unreviewed wage rate formula: {cell}")
+        add(sheet, cell, desired)
+
+
+def _x01_wage_rate_value(book, sheet: str, obs: str) -> float:
+    """The value X01 AVERAGE(AC26:AC37) yields over the filled table."""
+    yearly = []
+    for row in range(26, 31):
+        start = book.evaluate(sheet, f"{obs}{row}")
+        end = book.evaluate(sheet, f"{obs}{row+1}")
+        if (any(isinstance(v, bool) or not isinstance(v, (int, float)) for v in (start, end))
+                or start <= 0):
+            raise ValueError("daily wage observations must be filled before rate application")
+        yearly.append((end - start) / start)
+    return sum(yearly) / len(yearly)
+
+
 def materialize_d8(source: Path, assumptions: dict | None = None, *, prepare_observations=False) -> dict:
     """Materialize an exact SHA/precondition-bound map; no workbook is written.
 
@@ -314,17 +361,16 @@ def materialize_d8(source: Path, assumptions: dict | None = None, *, prepare_obs
                                                 f"{entry['audit_file']} sha256={entry['audit_sha256']}; "
                                                 f"{sheet}!{ref}={entry['formula']}")}
                     add(sheet, ref, prepare=True, evidence=evidence)
-        for col, rate_cell in (("Y", "AC38"), ("Z", "AD38")):
-            old = book.formulas.get((sheet, rate_cell))
-            desired = f"({col}31/{col}26)^(1/(X31-X26))-1"
-            if old is not None and old.text not in {f"AVERAGE({rate_cell[:2]}26:{rate_cell[:2]}37)", desired}:
-                raise ValueError(f"unreviewed observation rate formula: {rate_cell}")
-            add(sheet, rate_cell, desired)
+        _keep_x01_wage_rates(book, sheet, add)
     rates = {}
     if assumptions is not None:
         if not isinstance(assumptions, dict) or set(assumptions) - {"writing_year", "wage_male", "wage_female", "sales", "general", "price_sources"}:
             raise ValueError("unknown D8 assumptions")
-        for kind in ("wage_male", "wage_female"):
+        for kind, rate_cell in (("wage_male", "AC38"), ("wage_female", "AD38")):
+            if isinstance(assumptions.get(kind), dict) and "r" in assumptions[kind]:
+                raise ValueError(
+                    f"{kind}.r: 임금 상승률은 X01 {rate_cell} 산술평균 수식"
+                    "(연도별 상승률 평균)이 계산한다 — 직접 입력 불가")
             rates[kind] = _official_rate(assumptions.get(kind), kind, price_sources=assumptions.get("price_sources", []))
         sales = assumptions.get("sales")
         from gg_price_assumptions import normalize_price_role, footnote
@@ -357,15 +403,22 @@ def materialize_d8(source: Path, assumptions: dict | None = None, *, prepare_obs
             if count < 0 or int(count) != count:
                 raise ValueError("wage base observation year invalid")
             from gg_price_assumptions import multiplier
-            # The daily-wage anchor can precede the rate's application base
-            # by more than four years; validate its actual cumulative factor.
-            multiplier({"role": "wage", "status": "applied", "rate": item["r"],
+            # The applied rate is the template's own arithmetic mean over the
+            # filled observation table; the declared series is validated for
+            # source, gender and year only.  The daily-wage anchor can precede
+            # the application base by more than four years; validate its
+            # actual cumulative factor.
+            applied = _x01_wage_rate_value(book, sheet, col)
+            multiplier({"role": "wage", "status": "applied", "rate": applied,
                         "application_base_year": int(daily_base_year)}, int(first_year) + 4)
+            item.pop("r", None)
+            item["rate_method"] = "x01_arithmetic_mean_of_yearly_rates"
+            item["rate_formula"] = _x01_wage_rate_formula(rate_cell[:2])
+            item["applied_rate"] = applied
             item["daily_base_year"] = daily_base_year
             item["daily_base_application_count"] = int(count)
-            item["r_literal"] = _excel_number(item["r"])
-            add(sheet, rate_cell, item["r_literal"])
             add(sheet, col+"34", f"{col}31*(1+${rate_cell[:2]}$38)^{int(count)}")
+        _keep_x01_wage_rates(book, sheet, add)
         sales_sheet = spec["sales_sheet"]
         if sales_sheet not in book.sheets:
             raise ValueError("sales sheet missing")

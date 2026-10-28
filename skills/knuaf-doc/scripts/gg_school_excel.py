@@ -311,7 +311,10 @@ def validate(spec, *, resolver=None):
 
 def school_workbook(spec, path, *, context=None):
     """Guarded school workbook build: authorize before any output,
-    reconfirm just before the file is saved (policy B)."""
+    reconfirm just before the file is saved (policy B).
+
+    특용작물전공은 교수님 양식 복제 경로만 쓰므로 여기서 막는다
+    (``require_template_route``). 생성 본체는 그대로 남아 있다."""
     import gg_major_contract as mc
 
     if not isinstance(spec, dict):
@@ -321,6 +324,14 @@ def school_workbook(spec, path, *, context=None):
     mc.require_finance_profile(authorization, spec.get("profile"))
     if spec.get("profile") != "school_17_sheet_v1":
         raise mc.OutputHeldError("unsupported_finance_profile")
+    mc.require_template_route(authorization, spec.get("profile"))
+    return _generate_school_workbook(spec, path, authorization, context)
+
+
+def _generate_school_workbook(spec, path, authorization, context):
+    """Legacy 17-sheet generator body; callers pass a policy-B
+    authorization.  Kept unchanged for a later removal decision."""
+    import gg_major_contract as mc
     from openpyxl import Workbook
     from openpyxl.styles import Alignment, Font
     from openpyxl.utils import get_column_letter
@@ -328,7 +339,6 @@ def school_workbook(spec, path, *, context=None):
     unsupported = check_unsupported(spec)
     if unsupported:
         return unsupported
-
     years, v, price = validate(spec)
     start = years[0]
     mult_g = [price_multiplier_d(price["general"], y) for y in years]

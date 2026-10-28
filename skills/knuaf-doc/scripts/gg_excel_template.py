@@ -858,6 +858,162 @@ def blank_copy(source: Path, map_path: Path, out: Path, *, context=None) -> dict
     return receipt
 
 
+CROP_LABELS_PATH = (
+    Path(__file__).resolve().parents[1] / "references"
+    / "common-workbooks" / "x01-crop-labels.json"
+)
+CROP_LABEL_SCHEMA = "knuaf-template-crop-labels/v1"
+
+
+def _crop_label_table() -> dict:
+    table = json.loads(CROP_LABELS_PATH.read_text(encoding="utf-8"))
+    if table.get("schema") != CROP_LABEL_SCHEMA:
+        raise ValueError("crop label table schema mismatch")
+    return table
+
+
+def _sheet_cells(source: Path) -> dict[tuple[str, str], dict]:
+    """(sheet, cell) -> {"value", "formula"} for every stored cell."""
+    out = {}
+    with zipfile.ZipFile(resolve_source(source)) as z:
+        shared = load_shared(z)
+        for name, target in workbook_sheets(z):
+            root = ET.fromstring(z.read(target))
+            for c in root.findall(f".//{local('c')}"):
+                ref = c.attrib.get("r")
+                if not ref:
+                    continue
+                f = c.find(local("f"))
+                out[name, ref] = {"value": None if f is not None else text_value(c, shared),
+                                  "formula": None if f is None else (f.text or "")}
+    return out
+
+
+def crop_label_map(source: Path, category: str, choices: dict | None = None) -> tuple[dict, dict]:
+    """Fill map + values that rename only the template's crop-bound labels.
+
+    ``category`` is one of the table's crop categories (asked from the
+    student when the major/crop does not settle it).  ``choices`` picks a
+    listed alternative per ``"<sheet>!<cell>"``; the first listed label is
+    the default.  The source must still carry each original label — a
+    template whose label moved needs the table re-aligned first."""
+    table = _crop_label_table()
+    if category not in table["categories"]:
+        raise ValueError(f"unknown crop category: {category!r}; "
+                         f"choose one of {sorted(table['categories'])}")
+    source = resolve_source(source)
+    digest = sha256(source)
+    if digest not in table["templates"].values():
+        raise ValueError("crop labels are aligned to registered X01/X02 only; "
+                         "re-align x01-crop-labels.json for a new template year")
+    cells = _sheet_cells(source)
+    choices = dict(choices or {})
+    entries, values = [], []
+    for row in table["cells"]:
+        key = f"{row['sheet']}!{row['cell']}"
+        options = row["labels"][category]
+        label = choices.pop(key, options[0])
+        if label not in options:
+            raise ValueError(f"{key}: {label!r} is not a listed {category} label {options}")
+        stored = cells.get((row["sheet"], row["cell"]))
+        if stored is None or stored["formula"] is not None or stored["value"] != row["original"]:
+            raise ValueError(f"{key}: expected original label {row['original']!r}")
+        if label == row["original"]:
+            continue
+        entries.append({"sheet": row["sheet"], "cell": row["cell"], "role": "label.crop_category",
+                        "period": None, "editable": True,
+                        "source_note": f"작목 분류 {category} 칸 이름; 원래 글자 {row['original']!r}"})
+        values.append({"sheet": row["sheet"], "cell": row["cell"], "value": label,
+                       "value_type": "string", "answer_state": "provided",
+                       "evidence_ref": {"source_id": "template.crop_labels", "revision": 1,
+                                        "locator": f"x01-crop-labels.json {key} {category}",
+                                        "origin": "assumption"}})
+    if choices:
+        raise ValueError("choices name cells outside the label table: " + ", ".join(sorted(choices)))
+    fill_map = {"schema": "gg-xlsx-fill-map/v1", "template": {"sha256": digest}, "entries": entries}
+    fill_values = {"schema": "gg-xlsx-fill-values/v1", "values": values}
+    return fill_map, fill_values
+
+
+def crop_label_check(before: Path, after: Path) -> dict:
+    """Prove a relabel changed only listed label cells: every formula text,
+    every number and every other stored value stays identical."""
+    table = _crop_label_table()
+    allowed = {(r["sheet"], r["cell"]): r for r in table["cells"]}
+    a, b = _sheet_cells(before), _sheet_cells(after)
+    changed, violations = [], []
+    for key in sorted(set(a) | set(b)):
+        old, new = a.get(key), b.get(key)
+        if old == new:
+            continue
+        row = allowed.get(key)
+        ok = (row is not None and old is not None and new is not None
+              and old["formula"] is None and new["formula"] is None
+              and old["value"] == row["original"]
+              and any(new["value"] in v for v in row["labels"].values()))
+        (changed if ok else violations).append(
+            {"sheet": key[0], "cell": key[1], "old": old, "new": new})
+    return {"status": "pass" if not violations else "fail",
+            "labelsChanged": changed, "violations": violations,
+            "formulasCompared": sum(1 for v in a.values() if v["formula"] is not None),
+            "numbersCompared": sum(1 for v in a.values()
+                                   if isinstance(v["value"], (int, float)) and not isinstance(v["value"], bool))}
+
+
+LABOR_SHEET = "8. 노무비계획"
+# X01 '8. 노무비계획': 고용 노동비 일용직 남(11행)·여(12행) 연도별 작업 일수 칸과
+# 작업별 산출근거(1년차 26~33행, 2년차 이후 40~47행)의 남자 O·여자 R 일수 칸.
+LABOR_SUMMARY_DAYS = {"남자": ("G11", "J11", "M11", "P11", "S11"),
+                      "여자": ("G12", "J12", "M12", "P12", "S12")}
+LABOR_TASK_BLOCKS = ((range(26, 34), "1년차"), (range(40, 48), "2년차 이후"))
+
+
+def labor_review(workbook) -> list[dict]:
+    """Daily-labor gender warnings on an X01 '8. 노무비계획' sheet.
+
+    ``workbook`` is an openpyxl workbook loaded with cached values (or a
+    path).  Hired days only in the male column read as the template's
+    default label rather than a planned choice; every task row with hired
+    days is listed so the student can confirm who is hired for it."""
+    if isinstance(workbook, (str, Path)):
+        import openpyxl
+        book = openpyxl.load_workbook(workbook, data_only=True)
+        try:
+            return labor_review(book)
+        finally:
+            book.close()
+    if LABOR_SHEET not in workbook.sheetnames:
+        return []
+    ws = workbook[LABOR_SHEET]
+
+    def days(ref):
+        value = ws[ref].value
+        return value if isinstance(value, (int, float)) and not isinstance(value, bool) else 0
+
+    issues = []
+    male = sum(days(r) for r in LABOR_SUMMARY_DAYS["남자"])
+    female = sum(days(r) for r in LABOR_SUMMARY_DAYS["여자"])
+    tasks = []
+    for rows, period in LABOR_TASK_BLOCKS:
+        for row in rows:
+            m, f = days(f"O{row}"), days(f"R{row}")
+            if m or f:
+                tasks.append({"period": period, "row": row, "task": ws[f"B{row}"].value,
+                              "male_days": m, "female_days": f})
+    task_male = sum(t["male_days"] for t in tasks)
+    task_female = sum(t["female_days"] for t in tasks)
+    if (male > 0 and female == 0) or (task_male > 0 and task_female == 0):
+        issues.append({
+            "code": "LABOR_HIRED_MALE_ONLY", "status": "pending", "severity": "warning",
+            "reason": "일용직 고용 일수가 남자 칸에만 있음(남 %s일·여 %s일, 작업별 남 %s일·여 %s일)"
+                      % (male, female, task_male, task_female),
+            "remedy": "작업별(수확·선별·포장 등)로 남녀 누구를 고용하는지 학생에게 확인해 칸을 나누고, "
+                      "근거 자료에 성별 구분이 없으면 작업 관행으로 정한 이유를 각주에 적는다",
+            "evidence": {"summary": {"male_days": male, "female_days": female}, "tasks": tasks},
+        })
+    return issues
+
+
 def cli(argv: list[str]) -> int:
     p = argparse.ArgumentParser(description="inspect and create a source-bound reusable XLSX template")
     sp = p.add_subparsers(dest="cmd", required=True)
@@ -868,6 +1024,17 @@ def cli(argv: list[str]) -> int:
     w = sp.add_parser("wage-map")
     w.add_argument("--source", required=True, type=Path)
     w.add_argument("--out-map", required=True, type=Path)
+    lm = sp.add_parser("label-map", help="작목 분류별 칸 이름 채우기 맵·값 생성")
+    lm.add_argument("--source", required=True, type=Path)
+    lm.add_argument("--category", required=True)
+    lm.add_argument("--choice", action="append", default=[], metavar="SHEET!CELL=LABEL")
+    lm.add_argument("--out-map", required=True, type=Path)
+    lm.add_argument("--out-values", required=True, type=Path)
+    lc = sp.add_parser("label-check", help="칸 이름 변경 뒤 수식·숫자 불변 확인")
+    lc.add_argument("--before", required=True, type=Path)
+    lc.add_argument("--after", required=True, type=Path)
+    lr = sp.add_parser("labor-review", help="일용직 성별 고용 일수 경고")
+    lr.add_argument("--workbook", required=True, type=Path)
     c = sp.add_parser("clear")
     c.add_argument("--source", required=True, type=Path)
     c.add_argument("--map", required=True, type=Path)
@@ -878,6 +1045,30 @@ def cli(argv: list[str]) -> int:
     c.add_argument("--major", default=None, help="명시 전공 ID")
     args = p.parse_args(argv)
     try:
+        if args.cmd == "label-map":
+            choices = {}
+            for item in args.choice:
+                key, sep, label = item.partition("=")
+                if not sep:
+                    raise ValueError(f"--choice needs SHEET!CELL=LABEL: {item!r}")
+                choices[key] = label
+            fill_map, fill_values = crop_label_map(args.source, args.category, choices)
+            for path, data in ((args.out_map, fill_map), (args.out_values, fill_values)):
+                path.parent.mkdir(parents=True, exist_ok=True)
+                with path.open("x", encoding="utf-8") as stream:
+                    json.dump(data, stream, ensure_ascii=False, indent=2)
+            print(json.dumps({"status": "mapped", "labels": len(fill_values["values"]),
+                              "map": str(args.out_map), "values": str(args.out_values)},
+                             ensure_ascii=False))
+            return 0
+        if args.cmd == "label-check":
+            result = crop_label_check(args.before, args.after)
+            print(json.dumps(result, ensure_ascii=False))
+            return 0 if result["status"] == "pass" else 1
+        if args.cmd == "labor-review":
+            issues = labor_review(args.workbook)
+            print(json.dumps({"status": "reviewed", "issues": issues}, ensure_ascii=False))
+            return 0
         if args.cmd == "wage-map":
             result = wage_fill_map(resolve_source(args.source))
             args.out_map.parent.mkdir(parents=True, exist_ok=True)

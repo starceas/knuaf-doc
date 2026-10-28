@@ -783,9 +783,10 @@ def _resolve_footnote(kind, cfg, info, registry):
     """구조화 각주 입력 → '* ...' 줄. 실패 시 (None, 사유).
 
     입력은 가격 가정 계약과 같다: source_id·base_year·observation·
-    검산용 rate. 출처 해석·역할·기준연도·단위·차원·관측·CAGR 검증은
-    모두 gg_price_assumptions의 공개 함수로 하고, 출력하는 r은
-    항상 관측 수열의 끝점 CAGR 계산값이다. 출력 각주는 참고값이다 —
+    검산용 rate. 출처 해석·역할·기준연도·단위·차원·관측 검증은
+    모두 gg_price_assumptions의 공개 함수로 한다. 일반물가 r은 관측
+    수열의 끝점 CAGR, 임금 r은 교수님 양식 AC38·AD38과 같은 연도별
+    상승률 산술평균이다. 출력 각주는 참고값이다 —
     r이 워크북 계산에 쓰였는지는 이 도구가 증명하지 않는다."""
     label = cfg.get("label") or kind
     role = cfg.get("role")
@@ -831,18 +832,45 @@ def _resolve_footnote(kind, cfg, info, registry):
         pa.check_dimensions(src, info.get("target_dimensions"),
                             required=("crop",) if role == "sales" else (), origin=origin)
         res = pa.resolve_series_rate(
-            src, info.get("observation"), info.get("rate"), origin=origin)
+            src, info.get("observation"),
+            None if role == "wage" else info.get("rate"), origin=origin)
+        obs = res["observation"]
+        interval = res["interval_years"]
+        formula = "산식 r=(끝값/시작값)^(1/%d)-1" % interval
+        r = res["rate"]
+        if role == "wage":
+            # 특용작물 교수님 양식(X01) '8. 노무비계획' AC38·AD38과 같은 방식:
+            # 연도별 상승률 (V_t-V_(t-1))/V_(t-1)의 산술평균(사용자 결정
+            # 2026-10-28). 사이 연도 관측이 하나라도 없으면 계산하지 않는다.
+            series = pa.confirmed_series(src)
+            years = range(obs["start_year"], obs["end_year"] + 1)
+            gaps = [y for y in years if y not in series]
+            if gaps:
+                raise ValueError(
+                    "%s: 임금 연도별 상승률 평균에 필요한 관측 연도 확인 불가 %s"
+                    % (origin, gaps))
+            yearly = [(series[y] - series[y - 1]) / series[y - 1] for y in years[1:]]
+            r = sum(yearly) / len(yearly)
+            formula = ("산식 r=연도별 상승률의 산술평균(%d개 연도, 교수님 양식 "
+                       "AC38·AD38과 같은 방식)" % len(yearly))
+            declared = info.get("rate")
+            if declared is not None:
+                if (isinstance(declared, bool) or not isinstance(declared, (int, float))
+                        or not math.isfinite(declared)):
+                    raise ValueError("%s: 상승률 r은 유한 수치 필요" % origin)
+                tol = max(pa.RATE_ABS_TOLERANCE, pa.RATE_REL_TOLERANCE * abs(r))
+                if abs(declared - r) > tol:
+                    raise ValueError(
+                        "%s: 명시 상승률 %.6f가 연도별 상승률 산술평균 %.6f와 불일치"
+                        % (origin, declared, r))
     except ValueError as e:
         return None, str(e)
-    r = res["rate"]
-    obs = res["observation"]
-    interval = res["interval_years"]
     basis = ("지수 기준연도 %d" % base_year) if base_year is not None \
         else "지수 기준연도 해당 없음"
     parts = ["출처: %s %s %s [%s]" % (src.get("agency") or "",
              src.get("statistic_name") or "", src.get("item_name") or "", sid),
              basis, "관측기간 %d~%d년" % (obs["start_year"], obs["end_year"]),
-             "산식 r=(끝값/시작값)^(1/%d)-1" % interval]
+             formula]
     line = ("* %s r=%.4f%%는 참고값이다 (%s). 이 값이 위 표의 계산에 "
             "쓰였는지는 통합문서에서 따로 확인해야 한다."
             % (label, r * 100, ", ".join(parts)))
@@ -1610,6 +1638,13 @@ def review_plan(workbook_path, *, declared_assets=None, area_declarations=None,
                 reason="시설·재배·베드 면적 분모를 한 곳에서 선언하지 않음",
                 remedy="finance.area.<role> 사실로 면적을 선언한 뒤 본문·엑셀·표를 대조한다",
                 evidence={"workbook": areas}))
+
+        # 일용직 성별 쏠림 경고(판정은 gg_excel_template.labor_review).
+        from gg_excel_template import labor_review
+        for item in labor_review(workbook):
+            issues.append(_plan_issue(item["code"], status=item["status"],
+                                      severity=item["severity"], reason=item["reason"],
+                                      remedy=item["remedy"], evidence=item["evidence"]))
 
         return {"status": "reviewed", "years": years, "figures": figures,
                 "opening_assets": opening_assets, "areas": areas,

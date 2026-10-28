@@ -97,7 +97,7 @@
    "origin": "new"
   },
   "tests/regression_inventory.json": {
-   "note": "P0-A: machine source of truth mapping each known defect to its test and owning gate (P1–P5/deferred). | PR-2: latest D8/D9 integration; I-01 only measured count constants adjusted in lineage test. Full pytest covers split public/skill test locations. | I2 appends V2-01 through V2-06 mappings and retains every existing entry. | I3 appends V3-01 through V3-04 mappings and retains every existing entry. | I4 appends V4-01 through V4-03 mappings and retains every existing entry. | I5 preserves all entries; Q-DESIGN-1 A superseded application-proof mappings rebind to existing reference regressions; V4-03, V1/V2 other guards and year completeness unchanged. | I6: all prior entries preserved, V6-01 seven new symbols mapped and AST checked; V6-02 documentation-only correction recorded without test mapping. | I8 adds PV1-01~04 mappings; preserves all existing inventory entries and 66 PR-3 mappings.",
+   "note": "P0-A: machine source of truth mapping each known defect to its test and owning gate (P1–P5/deferred). | PR-2: latest D8/D9 integration; I-01 only measured count constants adjusted in lineage test. Full pytest covers split public/skill test locations. | I2 appends V2-01 through V2-06 mappings and retains every existing entry. | I3 appends V3-01 through V3-04 mappings and retains every existing entry. | I4 appends V4-01 through V4-03 mappings and retains every existing entry. | I5 preserves all entries; Q-DESIGN-1 A superseded application-proof mappings rebind to existing reference regressions; V4-03, V1/V2 other guards and year completeness unchanged. | I6: all prior entries preserved, V6-01 seven new symbols mapped and AST checked; V6-02 documentation-only correction recorded without test mapping. | I8 adds PV1-01~04 mappings; preserves all existing inventory entries and 66 PR-3 mappings. | PR2: D8 임금 항목의 CAGR 적용 시험을 X01 산술평균 적용·직접 r 거부 시험(test_declared_wage_rate_refused_x01_mean_is_applied)으로 이름 교체.",
    "origin": "new"
   },
   "tests/test_asset_disposition.py": {
@@ -129,7 +129,7 @@
    "origin": "new"
   },
   "tests/test_finance_profile_gate.py": {
-   "note": "P20: finance profile migration pre-staging negatives — writers and native boundary never reached on missing/unsupported profiles, synthetic only.",
+   "note": "P20: finance profile migration pre-staging negatives — writers and native boundary never reached on missing/unsupported profiles, synthetic only. | PR2: 특용작물 school_17_sheet_v1 생성기·래퍼 행렬은 이제 입구 차단(specialty_template_route_required) 확인으로 바뀜 — 생성기 본체·경제 검증 미도달 확인 유지, 다른 전공 행 그대로, 지원 프로필(single_annual_cash_v1)은 경제 검증 도달 확인 추가.",
    "origin": "new"
   },
   "tests/test_finance_scope.py": {

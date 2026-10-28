@@ -1,0 +1,58 @@
+{
+  "schema": "knuaf-template-crop-labels/v1",
+  "note": "교수님 양식(X01·X02)의 예시 작목(묘목을 심는 다년생 나무) 전제로 고정된 칸 이름을 작목 분류에 맞춰 바꾸는 층. 칸 이름(글자 칸)만 바꾸며 수식·숫자 칸은 건드리지 않는다. 이 칸들은 양식 안 어떤 수식도 참조하지 않는다. 양식 연도가 바뀌면 이 표만 새 좌표·원래 글자로 다시 맞춘다.",
+  "templates": {
+    "X01": "5d19b6a2e5dcddccb70c68e39abee8f423bba005c008db7b64076326a17b9c80",
+    "X02": "54d4e55cd57bcb1db0fbfaafe2ed42422767f1561959b8a4f3c673daf77d7e78"
+  },
+  "categories": {
+    "woody_perennial": "묘목을 심어 여러 해 수확하는 나무·관목 작목",
+    "herbaceous": "씨앗·모종·종근으로 정식·파종하는 초본 작목(한해살이·다년생 초본·채소·약초)",
+    "mushroom": "배지에 종균을 접종하는 버섯 작목"
+  },
+  "cells": [
+    {
+      "sheet": " 5. 판매계획", "cell": "B30", "original": "미상품과",
+      "meaning": "판매하지 않는 등외품 비율 행",
+      "labels": {"woody_perennial": ["미상품과"], "herbaceous": ["미상품"], "mushroom": ["미상품"]}
+    },
+    {
+      "sheet": "6. 생산계획", "cell": "B17", "original": "묘목수",
+      "meaning": "생산량 산출근거의 심는 단위 행",
+      "labels": {"woody_perennial": ["묘목수"],
+                 "herbaceous": ["정식 주수", "파종량", "재배면적", "재배시설"],
+                 "mushroom": ["배지 수"]}
+    },
+    {
+      "sheet": "6. 생산계획", "cell": "E25", "original": "묘목수(1년차)",
+      "meaning": "1년차 생산 기준 합계 행",
+      "labels": {"woody_perennial": ["묘목수(1년차)"],
+                 "herbaceous": ["정식 주수(1년차)", "파종량(1년차)", "재배면적(1년차)"],
+                 "mushroom": ["배지 수(1년차)"]}
+    },
+    {
+      "sheet": "6. 생산계획", "cell": "E27", "original": "묘목수(2년차 이후)",
+      "meaning": "2년차 이후 생산 기준 합계 행",
+      "labels": {"woody_perennial": ["묘목수(2년차 이후)"],
+                 "herbaceous": ["정식 주수(2년차 이후)", "파종량(2년차 이후)", "재배면적(2년차 이후)"],
+                 "mushroom": ["배지 수(2년차 이후)"]}
+    },
+    {
+      "sheet": "7. 영농자재소요계획", "cell": "C4", "original": "묘목비(원/10a)",
+      "meaning": "심는 재료비 열 머리글",
+      "labels": {"woody_perennial": ["묘목비(원/10a)"],
+                 "herbaceous": ["종자·육묘비(원/10a)", "종근비(원/10a)"],
+                 "mushroom": ["종균비(원/10a)"]}
+    },
+    {
+      "sheet": "8. 노무비계획", "cell": "O24", "original": "고용(남자, 단가 동일)",
+      "meaning": "1년차 작업별 남자 고용 일수 열 머리글",
+      "labels": {"woody_perennial": ["고용(남자)"], "herbaceous": ["고용(남자)"], "mushroom": ["고용(남자)"]}
+    },
+    {
+      "sheet": "8. 노무비계획", "cell": "O38", "original": "고용(남자, 단가 동일)",
+      "meaning": "2년차 이후 작업별 남자 고용 일수 열 머리글",
+      "labels": {"woody_perennial": ["고용(남자)"], "herbaceous": ["고용(남자)"], "mushroom": ["고용(남자)"]}
+    }
+  ]
+}

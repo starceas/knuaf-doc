@@ -395,17 +395,14 @@ class FinanceGateTests(ContractCase):
                     mock.patch.object(school, "check_unsupported",
                                       side_effect=AssertionError(
                                           "SCHOOL_REACHED")) as check:
+                with self.assertRaises(self.mc.OutputHeldError) as held:
+                    school.school_workbook(
+                        spec, out, context=self.context(major))
                 if major == "specialty_crops":
-                    with self.assertRaisesRegex(AssertionError,
-                                                "SCHOOL_REACHED"):
-                        school.school_workbook(
-                            spec, out, context=self.context(major))
-                    check.assert_called_once()
-                else:
-                    with self.assertRaises(self.mc.OutputHeldError):
-                        school.school_workbook(
-                            spec, out, context=self.context(major))
-                    check.assert_not_called()
+                    # Template route only: held before the generator body.
+                    self.assertEqual(held.exception.reason,
+                                     "specialty_template_route_required")
+                check.assert_not_called()
                 self.assertFalse(out.exists())
 
     def test_build_wrapper_holds_hort_before_economic_validation(self):
@@ -437,18 +434,28 @@ class FinanceGateTests(ContractCase):
                     mock.patch.object(wrapper, "validate_economic_inputs",
                                       side_effect=AssertionError(
                                           "VALIDATION_REACHED")) as check:
+                with self.assertRaises(self.mc.OutputHeldError) as held:
+                    wrapper.build(root, spec.name, "output.xlsx",
+                                  major_id=major)
                 if major == "specialty_crops":
-                    with self.assertRaisesRegex(AssertionError,
-                                                "VALIDATION_REACHED"):
-                        wrapper.build(root, spec.name, "output.xlsx",
-                                      major_id=major)
-                    check.assert_called_once()
-                else:
-                    with self.assertRaises(self.mc.OutputHeldError):
-                        wrapper.build(root, spec.name, "output.xlsx",
-                                      major_id=major)
-                    check.assert_not_called()
+                    self.assertEqual(held.exception.reason,
+                                     "specialty_template_route_required")
+                check.assert_not_called()
                 self.assertFalse((root / "output.xlsx").exists())
+        # A supported specialty profile still reaches economic validation.
+        root = self.roots["specialty_crops"]
+        spec = root / "wrapper-annual.json"
+        spec.write_text(json.dumps({"major_id": "specialty_crops",
+                                    "profile": "single_annual_cash_v1"}),
+                        encoding="utf-8")
+        with mock.patch.object(wrapper, "validate_economic_inputs",
+                               side_effect=AssertionError(
+                                   "VALIDATION_REACHED")) as check:
+            with self.assertRaisesRegex(AssertionError, "VALIDATION_REACHED"):
+                wrapper.build(root, spec.name, "output.xlsx",
+                              major_id="specialty_crops")
+            check.assert_called_once()
+        self.assertFalse((root / "output.xlsx").exists())
 
     def test_windows_direct_helper_stays_blocked_before_com_import(self):
         helper = runtime("gg_office_win")
