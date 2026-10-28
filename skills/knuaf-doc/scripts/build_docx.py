@@ -24,7 +24,7 @@ except ImportError as error:  # python-docx (or its layout helper) absent
     DOCX_IMPORT_ERROR = error
 from gg_document import parse, spans, SCI, FRONT, school_toc_range, school_frontmatter_plan, split_caption_credit
 from gg_core import digest, local
-from gg_document import photo_guide
+from gg_document import photo_guide, photo_requests
 from gg_body_layout import NOTE, spacer_positions, review_requests
 
 FONT = "신명조"
@@ -296,6 +296,10 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
                 runs(blank, "", font, 12)
                 last_prose = None
             render_node(node, allow_soft_wrap=True)
+            if (photo_guide(node.get("text", "")) and index + 1 < len(sequence)
+                    and sequence[index + 1]["kind"] == "caption"
+                    and sequence[index + 1]["label"] == "그림"):
+                doc.paragraphs[-1].paragraph_format.keep_with_next = True
             if index + 1 < len(sequence) and NOTE.match(sequence[index + 1].get("text", "")):
                 if node["kind"] == "table":
                     # Chain the final row to its explanation without forcing a
@@ -684,10 +688,7 @@ def main(argv=None):
             "render": "not_run",
             "hwp": "not_run",
             "layout_review": review_requests(parse(source_text)),
-            "photo_requests": [
-                n["text"] for n in parse(source_text)
-                if photo_guide(n.get("text", ""))
-            ],
+            "photo_requests": photo_requests(parse(source_text)),
             "school_frontmatter": (
                 {
                     "layout": "forms_1_to_4" if parsed_plan.get("official_order") else "logical_legacy",

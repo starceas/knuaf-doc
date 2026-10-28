@@ -29,6 +29,29 @@ class BodyWritingLayoutTests(ContractCase):
         self.assertEqual(paragraph.alignment, 1)
         self.assertEqual(paragraph.paragraph_format.first_line_indent, 0)
 
+    def test_list_and_table_cell_photo_requests_remain_unresolved(self):
+        guide = '※ 이 자리에 실제 부지 전경 사진 추가 필요'
+        examples = [prefix + guide for prefix in ('', '- ', '* ', '+ ')]
+        examples.extend('|대상|사진 요청|\n|---|---|\n|예정지|' + prefix + guide + '|'
+                        for prefix in ('', '- ', '* ', '+ '))
+        docmod = runtime('gg_document')
+        for text in examples:
+            with self.subTest(text=text):
+                issues = docmod.check(text, None)
+                requests = [message for check, message in issues if check == 'photo_placeholder']
+                self.assertEqual(len(requests), 1)
+                self.assertIn('1건', requests[0])
+                self.assertEqual(docmod.photo_requests(docmod.parse(text)), [guide])
+
+    def test_mixed_photo_request_count_keeps_legacy_prefix_without_double_counting(self):
+        guide = '※ 이 자리에 실제 부지 전경 사진 추가 필요'
+        text = ('- ' + guide + '\n\n|요청|\n|---|\n|' + guide
+                + '|\n\n[사진 필요: 실제 시설 전경]\n본문 속 [사진 필요: 실제 작업 장면]')
+        issues = runtime('gg_document').check(text, None)
+        requests = [message for check, message in issues if check == 'photo_placeholder']
+        self.assertEqual(len(requests), 1)
+        self.assertIn('4건', requests[0])
+
     def test_detailed_authoring_marker_does_not_leak_shooting_instructions(self):
         doc = self.convert('[사진 필요: PHOTO-001 | 부지 전경 | 수평 원경 촬영 | 그림 1. 전경 | 80% | 입지 절]')
         printed = '\n'.join(p.text for p in doc.paragraphs)
@@ -54,3 +77,24 @@ class BodyWritingLayoutTests(ContractCase):
         previous = table.getprevious().getprevious()
         self.assertEqual(''.join(previous.xpath('.//w:t/text()')), 'Ⅰ. 머리말')
         self.assertEqual(''.join(table.getnext().xpath('.//w:t/text()')), 'Ⅱ. 환경')
+
+    def test_photo_guide_caption_and_note_form_one_kept_block(self):
+        guide = '※ 이 자리에 실제 부지 전경 사진 추가 필요'
+        for request in (guide, '- ' + guide, '[사진 필요: 실제 부지 전경]'):
+            with self.subTest(request=request):
+                doc = self.convert('앞 본문.\n\n' + request + '\n그림 1. 예정지 전경\n'
+                                   '주 : 촬영 안내.\n\n뒤 본문.')
+                self.assertEqual([p.text for p in doc.paragraphs],
+                                 ['앞 본문.', '', guide, '그림 1. 예정지 전경',
+                                  '주 : 촬영 안내.', '', '뒤 본문.'])
+                self.assertTrue(doc.paragraphs[2].paragraph_format.keep_with_next)
+                self.assertTrue(doc.paragraphs[3].paragraph_format.keep_with_next)
+                self.assertFalse(doc.paragraphs[4].paragraph_format.keep_with_next)
+                self.assertFalse(doc.paragraphs[1].paragraph_format.keep_with_next)
+                self.assertFalse(doc.paragraphs[5].paragraph_format.keep_with_next)
+
+    def test_photo_guide_does_not_chain_to_unrelated_prose(self):
+        guide = '※ 이 자리에 실제 부지 전경 사진 추가 필요'
+        doc = self.convert(guide + '\n\n뒤 본문.')
+        self.assertEqual([p.text for p in doc.paragraphs], [guide, '', '뒤 본문.'])
+        self.assertFalse(doc.paragraphs[0].paragraph_format.keep_with_next)

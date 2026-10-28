@@ -95,6 +95,18 @@ def crosscheck(text, workbook_path, mapping):
             continue
         name, aliases, values, start = matches[0]
         years = list(YEAR.finditer(line))
+        # The year-first extractor cannot attribute preceding metrics. Keep
+        # every such candidate visible even when another claim matches.
+        if years:
+            prefix = line[:years[0].start()]
+            for kind, pattern in (('start', START), ('share', SHARE), ('price', PRICE)):
+                for metric in pattern.finditer(prefix):
+                    issues.append({
+                        'line': line_number, 'channel': name, 'metric': kind,
+                        'quote': line, 'status': 'not_checked',
+                        'reason': 'metric precedes first year; explicit year attribution required',
+                        'unparsed': metric[0],
+                    })
         for index, match in enumerate(years):
             year = int(match[1])
             segment = line[match.end():years[index + 1].start() if index + 1 < len(years) else len(line)]

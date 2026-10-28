@@ -207,7 +207,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/install-manifest.json": {
-   "after_sha256": "2185fd96ce007306488c8b42b816665d6b74b6a6aad83227e24d64a521c7d7a1",
+   "after_sha256": "168e874f0b146920fe8b17f0e352caaea1913799f5f11ce91d775c9199d88dab",
    "before_sha256": null,
    "first_changed": "P27",
    "last_changed": "P28",
@@ -388,7 +388,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/body-plan-check.md": {
-   "after_sha256": "b8840b5241cd6fa4bc92b57b08eb8437e49a675c8b692ed17dd66d5f10d91933",
+   "after_sha256": "2395c93f5e46416e074451cd9d02a0164a5a34bf829c82bc5eca63f8e3dd3f6b",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
@@ -521,7 +521,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/figure-photo-policy.md": {
-   "after_sha256": "b952c8d297312e62182a89f7d323d3870952b7ae540fb82bf825d5f340d8b42d",
+   "after_sha256": "6b5c7eee00347132fed4002c7436333b084bdad6e07961cc1fbc328425623d03",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
@@ -1086,7 +1086,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/scripts/build_docx.py": {
-   "after_sha256": "abe36e939b06dc1c258a8474d81108726a65458524fe53e15ffb2010cbfc5606",
+   "after_sha256": "c9fadbc996fe4c8aac0fcf99c4732550c7b6352ecb6ec7ce57e1f87f7f3d5250",
    "before_sha256": "b0ce58afc3f24b792843877bb6dc996d634dc12235bade53c34ecb5cdfad9912",
    "first_changed": "P1",
    "last_changed": "P27",
@@ -1132,7 +1132,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_body_layout.py": {
-   "after_sha256": "c27e2deff35fa975e897e84584475a143c2255fbf5818f9bcd674ac164c3db23",
+   "after_sha256": "4f8df680d3ccb1ede862a34788ef8f3c3e9e6f3c683e86ce65ee36cb92696a10",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
@@ -1141,7 +1141,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_body_plan_check.py": {
-   "after_sha256": "5b93acce3c4c2548436388666bfe86fa588bcff38aa15b3f5d0cfbdf95a23d1e",
+   "after_sha256": "a87df5aa964d0f4de61b58ebc9ebd91feb77e9abfc7a668c7c75d38643ee5190",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
@@ -1179,7 +1179,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_document.py": {
-   "after_sha256": "f8877086216124a1a1d174c367561a9e32c7684e2af57496908f26bbd959735a",
+   "after_sha256": "8837a5f28c7fdae3932c29eb6f5753980eb1f5dc3276cd1d4ebee6df3653d5ad",
    "before_sha256": "e83eee6a94393e407a727979c6e5f6e5545f17ca7291e745c68d66dcb835a8b3",
    "first_changed": "P1",
    "last_changed": "P28",

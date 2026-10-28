@@ -48,6 +48,25 @@ def photo_guide(text):
     fields = [part.strip() for part in match[1].split("|")]
     target = fields[1] if len(fields) > 1 else fields[0]
     return "※ 이 자리에 " + target.removesuffix(" 사진") + " 사진 추가 필요"
+
+
+def photo_requests(nodes):
+    """Collect photo requests from the same parsed paragraphs/lists/cells."""
+    requests = []
+    for node in nodes:
+        if node["kind"] == "table":
+            texts = (cell for row in node["rows"] for cell in row)
+        else:
+            texts = (node.get("text", ""),)
+        for text in texts:
+            # Paragraph lists are already normalized by parse(); table
+            # cells can carry the same supported bullet prefix themselves.
+            normalized = re.sub(r"^[-+*]\s+", "", text.strip())
+            if photo_guide(normalized):
+                requests.append(normalized)
+    return requests
+
+
 CLIMATE = [
     "평균기온",
     "최고기온",
@@ -624,7 +643,7 @@ def plain_policy_check(text, issues, nodes, major_id):
     sourced_object_check(nodes, issues, policy)
     img = policy["images"]
     placeholders = text.count(img["placeholder_prefix"]) + sum(
-        bool(PHOTO_GUIDE.fullmatch(line.strip())) for line in text.splitlines()
+        bool(PHOTO_GUIDE.fullmatch(request)) for request in photo_requests(nodes)
     )
     photo_gaps = _photo_gap_sections(nodes)
     if placeholders:

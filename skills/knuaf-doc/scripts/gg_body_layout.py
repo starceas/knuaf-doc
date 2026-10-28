@@ -19,7 +19,8 @@ def object_blocks(nodes):
         if i + 1 < len(nodes):
             after = nodes[i + 1]
             if (kind == 'caption' and node['label'] == '표' and after['kind'] == 'table'
-                    or kind == 'image' and after['kind'] == 'caption' and after['label'] == '그림'):
+                    or (kind == 'image' or photo_guide(node.get('text', '')))
+                    and after['kind'] == 'caption' and after['label'] == '그림'):
                 i += 1
         while i + 1 < len(nodes):
             after = nodes[i + 1]

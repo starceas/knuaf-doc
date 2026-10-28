@@ -38,6 +38,26 @@ class BodyPlanCheckTests(unittest.TestCase):
         self.assertEqual(result['issues'][0]['metric'], 'start')
         self.assertEqual(result['issues'][0]['line'], 1)
 
+    def test_metrics_before_year_cannot_hide_behind_a_matching_claim(self):
+        for metric, claim in (
+            ('start', '직거래 시작은 2042년이다.'),
+            ('price', '직거래 단가 9,999원/kg은 2041년 계획이다.'),
+            ('share', '직거래 비율 99%는 2041년 계획이다.'),
+        ):
+            with self.subTest(metric=metric):
+                result = self.mod.crosscheck(claim + '\n2041년 직거래 15%', self.xlsx, self.mapping)
+                self.assertEqual(result['status'], 'not_checked')
+                self.assertEqual([r['status'] for r in result['comparisons']], ['pass'])
+                self.assertEqual([(r['line'], r['metric'], r['status'], r['quote'])
+                                  for r in result['issues']], [(1, metric, 'not_checked', claim)])
+
+    def test_unparsed_prefix_and_matching_suffix_on_same_line_do_not_pass(self):
+        claim = '직거래 단가 9,999원/kg은 2041년 계획이며 판매비율은 15%다.'
+        result = self.mod.crosscheck(claim, self.xlsx, self.mapping)
+        self.assertEqual(result['status'], 'not_checked')
+        self.assertEqual([(r['metric'], r['status']) for r in result['comparisons']], [('share', 'pass')])
+        self.assertEqual([(r['line'], r['metric']) for r in result['issues']], [(1, 'price')])
+
     def test_start_ratio_and_rounded_price_match(self):
         result = self.mod.crosscheck('2041년 직거래 15%로 시작\n2042년 온라인 30%\n2040년 직거래 단가 2,400원/kg', self.xlsx, self.mapping)
         self.assertEqual(result['status'], 'pass')
@@ -78,3 +98,18 @@ class BodyPlanCheckTests(unittest.TestCase):
                                  '--xlsx', str(self.xlsx), '--map', str(locator)], capture_output=True, text=True)
         self.assertEqual(result.returncode, 1, result.stderr)
         self.assertEqual(json.loads(result.stdout)['status'], 'fail')
+
+    def test_cli_with_matching_and_unparsed_claims_returns_not_checked(self):
+        locator = self.root / 'map.json'
+        locator.write_text(json.dumps(self.mapping, ensure_ascii=False), encoding='utf-8')
+        for text in ('직거래 시작은 2042년이다.', '직거래 단가 9,999원/kg은 2041년 계획이다.'):
+            with self.subTest(text=text):
+                body = self.root / 'body.md'
+                body.write_text(text + '\n2041년 직거래 15%', encoding='utf-8')
+                result = subprocess.run([sys.executable, str(SCRIPTS / 'gg_body_plan_check.py'),
+                                         '--body', str(body), '--xlsx', str(self.xlsx),
+                                         '--map', str(locator)], capture_output=True, text=True)
+                self.assertEqual(result.returncode, 2, result.stderr)
+                payload = json.loads(result.stdout)
+                self.assertEqual(payload['status'], 'not_checked')
+                self.assertEqual(payload['issues'][0]['quote'], text)
