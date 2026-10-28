@@ -206,7 +206,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/install-manifest.json": {
-   "after_sha256": "ca1f8228fa72061ec989771869176a1d7764f58778251d65014eff949b553feb",
+   "after_sha256": "f3bfb72cd406e4b979e4eb659e5b3890bfcc16c8be790e00acf93a3e15db97fa",
    "before_sha256": null,
    "first_changed": "P27",
    "last_changed": "P28",
@@ -1013,12 +1013,12 @@
    "source": "modified"
   },
   "skills/knuaf-doc/references/specialty-crops/finance-flow.md": {
-   "after_sha256": "3be39767f749ea7ad422b6747d522c23e709a424a908f7cfd8b6ea26787b7077",
+   "after_sha256": "0c4d7b70d41b8a5045910bc27c53ed639a6fabccd650db9c13f95221281d9dd3",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
    "owner": "P28",
-   "reason": "P28: 특용작물 전용 이유림 Ⅳ장 재무표 전개 문서(전공 분리 설계) | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존 | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes. | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13. | Plan-fit rules and check: cultivation-method equipment fit, removal of unowned asset rows, distinct grade and channel prices, channel-cost reflection notes",
+   "reason": "P28: 특용작물 전용 이유림 Ⅳ장 재무표 전개 문서(전공 분리 설계) | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존 | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes. | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13. | Plan-fit rules and check: cultivation-method equipment fit, removal of unowned asset rows, distinct grade and channel prices, channel-cost reflection notes | Specialty wage growth follows the department template: arithmetic mean of yearly rates, not CAGR",
    "source": "new"
   },
   "skills/knuaf-doc/references/specialty-crops/finance-table-map.json": {
