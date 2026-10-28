@@ -36,6 +36,7 @@
   "skills/knuaf-doc/references/common-workbooks/formula-audit/x01.json",
   "skills/knuaf-doc/references/common-workbooks/formula-audit/x02.json",
   "skills/knuaf-doc/references/common-workbooks/kang-finance-workbook.json",
+  "skills/knuaf-doc/references/cultivation-fit.json",
   "skills/knuaf-doc/references/fact-semantics.json",
   "skills/knuaf-doc/references/figure-photo-policy.md",
   "skills/knuaf-doc/references/finance-semantics.md",
@@ -62,6 +63,7 @@
   "skills/knuaf-doc/references/output-hygiene.md",
   "skills/knuaf-doc/references/outputs.md",
   "skills/knuaf-doc/references/plain-thesis-policy.json",
+  "skills/knuaf-doc/references/plan-fit-rules.md",
   "skills/knuaf-doc/references/rda-benchmark.md",
   "skills/knuaf-doc/references/reuse-registry-schema.md",
   "skills/knuaf-doc/references/rules/CH1_intro.md",
@@ -104,6 +106,7 @@
   "skills/knuaf-doc/scripts/gg_major_contract.py",
   "skills/knuaf-doc/scripts/gg_office_session.py",
   "skills/knuaf-doc/scripts/gg_orchard_production.py",
+  "skills/knuaf-doc/scripts/gg_plan_fit.py",
   "skills/knuaf-doc/scripts/gg_price_assumptions.py",
   "skills/knuaf-doc/scripts/gg_publication.py",
   "skills/knuaf-doc/scripts/gg_rda_candidates.py",
@@ -203,7 +206,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/install-manifest.json": {
-   "after_sha256": "1ed7a67c6261582d9ddb2d7784a470e10489ecbf55e655cdbdd8fafe4ea38832",
+   "after_sha256": "ca1f8228fa72061ec989771869176a1d7764f58778251d65014eff949b553feb",
    "before_sha256": null,
    "first_changed": "P27",
    "last_changed": "P28",
@@ -479,6 +482,15 @@
    "first_changed": "P28",
    "owner": "P28",
    "reason": "통합 단계(feat/skill-gaps-20261021, WP-4 산출): 장 간 서술 일관성·학교 지침 충돌·머리말 재사용·전공 범위·신체 제약·현장실습 인터뷰 규칙. first_changed/owner는 tests/test_bundle_lineage.py의 고정 단계 enum(P1~P28)에 이 단계 태그가 없어 마지막 수용 단계 값을 쓴다.",
+   "source": "new"
+  },
+  "skills/knuaf-doc/references/cultivation-fit.json": {
+   "after_sha256": "f45cb6e9f487a5b91fc6e542792ee3ab939959c9f69a34cfe05ff60b0c2d1dbb",
+   "before_sha256": null,
+   "first_changed": "P28",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "Plan-fit rules and check: cultivation-method equipment fit, removal of unowned asset rows, distinct grade and channel prices, channel-cost reflection notes",
    "source": "new"
   },
   "skills/knuaf-doc/references/excel-template.md": {
@@ -812,6 +824,15 @@
    "reason": "P28: 평문 논문 정책 단일 정본 JSON — 금칙어·머리말 상한·캡션·객체 출처 표기·출처 kind/등급·이미지 규칙 | R-all: applies_to_majors 제한 폐기, 모든 전공·major_id 없음·미확인 공통 기본값 및 majors override 적용 | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존",
    "source": "new"
   },
+  "skills/knuaf-doc/references/plan-fit-rules.md": {
+   "after_sha256": "5b58870255ebaa811eb14cf68ca6eb2c46644260556c78cc6c5adf239c338caf",
+   "before_sha256": null,
+   "first_changed": "P28",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "Plan-fit rules and check: cultivation-method equipment fit, removal of unowned asset rows, distinct grade and channel prices, channel-cost reflection notes",
+   "source": "new"
+  },
   "skills/knuaf-doc/references/price-research-routes.md": {
    "after_sha256": "b2a37e2ad20db768bbe9cc72331f93ba8d3ea052129042a86ba24eac7e6d5bdc",
    "before_sha256": "f89f038d5c767fd436a7a2c3b42c85f91d2b6a44186f9178fd6630b1438120f6",
@@ -992,12 +1013,12 @@
    "source": "modified"
   },
   "skills/knuaf-doc/references/specialty-crops/finance-flow.md": {
-   "after_sha256": "f42b0c77b861598f79d77f96e584404af1905e7792b3b5e4f3473df862be1479",
+   "after_sha256": "3be39767f749ea7ad422b6747d522c23e709a424a908f7cfd8b6ea26787b7077",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
    "owner": "P28",
-   "reason": "P28: 특용작물 전용 이유림 Ⅳ장 재무표 전개 문서(전공 분리 설계) | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존 | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes. | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
+   "reason": "P28: 특용작물 전용 이유림 Ⅳ장 재무표 전개 문서(전공 분리 설계) | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존 | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes. | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13. | Plan-fit rules and check: cultivation-method equipment fit, removal of unowned asset rows, distinct grade and channel prices, channel-cost reflection notes",
    "source": "new"
   },
   "skills/knuaf-doc/references/specialty-crops/finance-table-map.json": {
@@ -1413,6 +1434,15 @@
    "reason": "P14: fruit_trees read-only production and batch inventory reconciliation (kg/trees/m2 only, exact fractions, no money, no writes) | P27: K2-02: CLI 진입점 stdout·stderr UTF-8 재설정",
    "source": "new"
   },
+  "skills/knuaf-doc/scripts/gg_plan_fit.py": {
+   "after_sha256": "49005919cf61d4518c403e06f1b3cf3147aafcb84a065c95c5a02e37618b1e63",
+   "before_sha256": null,
+   "first_changed": "P28",
+   "last_changed": "P28",
+   "owner": "P28",
+   "reason": "Plan-fit rules and check: cultivation-method equipment fit, removal of unowned asset rows, distinct grade and channel prices, channel-cost reflection notes",
+   "source": "new"
+  },
   "skills/knuaf-doc/scripts/gg_price_assumptions.py": {
    "after_sha256": "0ce493232cc03187ab45265b3b8276b751eb479c349023d46e7f9baee7958d4e",
    "before_sha256": null,
@@ -1532,12 +1562,12 @@
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_school_verify.py": {
-   "after_sha256": "2c16f421e612598e043e9e4f43a60791ca87dc7e9651ac6fccba0e0da06268bb",
+   "after_sha256": "0f19fb4cc1edff4a05b20db1de2f0300b0098649cc00bbfb529af648116e928b",
    "before_sha256": "aedf804719ab6fea21fcf145ce4295ff16c390b09e72629892a1cd67db1ea9f6",
    "first_changed": "P28",
    "last_changed": "P28",
    "owner": "P28",
-   "reason": "PR-2 W-A: verifier uses separated general/wage/sales assumptions; baseline before hash retained. | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
+   "reason": "PR-2 W-A: verifier uses separated general/wage/sales assumptions; baseline before hash retained. | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13. | Plan-fit rules and check: cultivation-method equipment fit, removal of unowned asset rows, distinct grade and channel prices, channel-cost reflection notes",
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_source_identity.py": {
@@ -1884,7 +1914,7 @@
    "source": "new"
   },
   "tests/test_bundle_lineage.py": {
-   "after_sha256": "096fff86f46243d40c75ab2daad920f4319a2c8bcc6abaebad80af28dca32620",
+   "after_sha256": "2ba8928b11c52e6426d80b9a75bdd1fc9e290c5d7091b1d469078f844a58140c",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
