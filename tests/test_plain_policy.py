@@ -125,7 +125,7 @@ class PlainPolicyBody(ContractCase):
         text = (
             "# Ⅰ. 머리말\n"
             "이 계획은 산약 재배의 경험을 정리한 것이다.\n\n"
-            "표 1. 재배 일정\n\n|월|작업|\n|-|-|\n|3|정식|\n출처: 본인 작성\n"
+            "표 1. 재배 일정\n\n|월|작업|\n|-|-|\n|3|정식|\n"
         )
         assert not ids(check(text)) & _ERROR_IDS
 
@@ -145,27 +145,22 @@ class PlainPolicyBody(ContractCase):
         )
         assert "image_ai_generated" in ids(issues)
 
-    def test_image_without_credit_is_error(self):
-        issues = check(
-            "![밭 전경](images/field.png)\n그림 1. 밭 전경\n",
-            root=self._root(),
-        )
-        assert "object_credit" in ids(issues)
-        assert "image_credit" not in ids(issues)
-        for credit in ("출처: 본인 촬영", "출처 : 농촌진흥청"):
-            credited = check(
-                "![밭 전경](images/field.png)\n그림 1. 밭 전경\n" + credit,
+    def test_own_image_needs_no_credit_and_external_image_uses_caption(self):
+        for suffix, expected in (("", 0), (" (출처 : 농촌진흥청)", 1)):
+            issues = check(
+                "![밭 전경](images/field.png)\n그림 1. 밭 전경" + suffix + "\n",
                 root=self._root(),
             )
-            assert "object_credit" not in ids(credited)
-            assert ("sourced_objects", "출처 있는 표 0개·그림 1개") in credited
+            assert "object_credit" not in ids(issues)
+            assert ("sourced_objects", "출처 있는 표 0개·그림 %d개" % expected) in issues
 
     def test_caption_or_path_is_not_a_credit(self):
         issues = check(
             "![출처 본인 촬영](images/출처-field.png)\n그림 1. 본인 촬영 밭 전경\n",
             root=self._root(),
         )
-        assert "object_credit" in ids(issues)
+        assert "object_credit" not in ids(issues)
+        assert ("sourced_objects", "출처 있는 표 0개·그림 0개") in issues
 
 
 
@@ -536,7 +531,7 @@ class PlainPolicyScope(ContractCase):
         "[사진 필요: 정식 직후 밭]\n"
     )
 
-    def test_every_major_rejects_same_body_and_uncredited_objects(self):
+    def test_every_major_applies_same_policy_without_guessing_authorship(self):
         reference = doc.check(self.BAD_BODY, None, major_id=SC)
         policy_ids = _ERROR_IDS | _WARNING_IDS | doc.INFO_CHECKS
         for major in ALL_MAJORS:
@@ -547,14 +542,11 @@ class PlainPolicyScope(ContractCase):
                 assert [r for r in out if r[0] in policy_ids] == [
                     r for r in reference if r[0] in policy_ids]
                 assert {"forbidden_term", "front_matter_over", "caption_forbidden",
-                        "object_credit", "photo_placeholder", "sourced_objects"} <= ids(out)
-                missing = [reason for cid, reason in out if cid == "object_credit"]
-                assert len(missing) == 2
-                assert any("표" in reason for reason in missing)
-                assert any("그림" in reason for reason in missing)
+                        "photo_placeholder", "sourced_objects"} <= ids(out)
+                assert "object_credit" not in ids(out)
                 assert all("미적용" not in reason for _, reason in out)
 
-    def test_projects_reject_same_article_body_and_uncredited_objects(self):
+    def test_projects_reject_same_article_body_without_guessing_authorship(self):
         for major in ALL_MAJORS[:-1]:
             with self.subTest(major=major):
                 root = self.make_project()
@@ -569,7 +561,7 @@ class PlainPolicyScope(ContractCase):
                            core.load(root)["revision"])
                 out = core.checks(root, core.load(root))
                 for cid in ("source_kind_forbidden", "forbidden_term",
-                            "front_matter_over", "object_credit"):
+                            "front_matter_over"):
                     rows = [row for row in out if row["check_id"] == cid]
                     assert rows
                     assert all((row["severity"], row["status"]) == ("error", "fail")
@@ -782,73 +774,80 @@ class PlainPolicyFile(ContractCase):
 class PlainPolicyObjectCredits(ContractCase):
     TABLE = "표 1. 재배 계획\n|항목|값|\n|---|---|\n|면적|1|\n"
 
-    def test_table_credit_before_or_after_and_self_authored(self):
-        for credit in ("출처: 본인 작성", "출처 : 농촌진흥청", "* 출처 : 본인작성",
-                       "**출처: 본인 작성**", "출처：통계청"):
-            for text in (credit + "\n" + self.TABLE, self.TABLE + credit):
-                out = check(text)
-                assert "object_credit" not in ids(out), text
-                assert ("sourced_objects", "출처 있는 표 1개·그림 0개") in out
+    def test_caption_credit_and_self_authored_objects_for_every_major(self):
+        for major in ALL_MAJORS:
+            for agency in ("농촌진흥청", "국가데이터처(구 통계청)",
+                           "© OpenStreetMap contributors"):
+                with self.subTest(major=major, agency=agency):
+                    text = self.TABLE.replace("재배 계획", "재배 계획 (출처 : " + agency + ")")
+                    out = check(text, major_id=major)
+                    assert "object_credit" not in ids(out)
+                    assert "object_credit_position" not in ids(out)
+                    assert ("sourced_objects", "출처 있는 표 1개·그림 0개") in out
+            out = check(self.TABLE, major_id=major)
+            assert "object_credit" not in ids(out)
+            assert ("sourced_objects", "출처 있는 표 0개·그림 0개") in out
 
-    def test_absent_table_source_is_error(self):
-        for credit in ("", "출처:", "출처: 확인 불가", "출처: [확인 필요]",
-                       "출처: N/A", "자료: 본인 작성", "이 표의 출처는 없다."):
-            out = check(self.TABLE + credit)
-            assert "object_credit" in ids(out), credit
-            assert "object_credit" not in doc.WARNING_CHECKS
-            assert "object_credit" not in doc.INFO_CHECKS
+    def test_self_credit_is_error_in_caption_or_old_line(self):
+        for major in ALL_MAJORS:
+            for credit in ("본인 작성", "작성자 산출(통합문서)", "본인 촬영",
+                           "작성자 직접 조사", "농촌진흥청 자료를 바탕으로 본인 작성"):
+                for text in (self.TABLE + "출처 : " + credit,
+                             self.TABLE.replace("재배 계획", "재배 계획 (출처 : " + credit + ")")):
+                    with self.subTest(major=major, credit=credit):
+                        out = check(text, major_id=major)
+                        assert "object_credit" in ids(out)
+                        assert ("sourced_objects", "출처 있는 표 0개·그림 0개") in out
 
-    def test_credit_not_reused_between_adjacent_objects(self):
+    def test_explicit_unresolved_credit_is_error_but_absence_is_not(self):
+        for value in ("", "확인 불가", "[확인 필요]", "N/A"):
+            out = check(self.TABLE.replace("재배 계획", "재배 계획 (출처 : " + value + ")"))
+            assert "object_credit" in ids(out)
+        assert "object_credit" not in ids(check(self.TABLE))
+
+    def test_old_line_is_advisory_and_not_reused_between_objects(self):
         second = self.TABLE.replace("표 1.", "표 2.")
-        out = check(self.TABLE + "출처: 본인 작성\n" + second)
-        errors = [r for cid, r in out if cid == "object_credit"]
-        assert len(errors) == 1 and "표 2." in errors[0]
+        out = check(self.TABLE + "출처 : 농촌진흥청\n" + second)
+        assert "object_credit" not in ids(out)
+        assert sum(cid == "object_credit_position" for cid, _ in out) == 1
         assert ("sourced_objects", "출처 있는 표 1개·그림 0개") in out
-        out = check(self.TABLE + "출처: 본인 작성\n" + second + "출처: 통계청")
+        assert "object_credit_position" in doc.POLICY_ADVISORY_CHECKS
+        for text in (self.TABLE + "# 새 절\n출처 : 농촌진흥청",
+                     self.TABLE + "\n".join(["설명"] * 5) + "\n출처 : 농촌진흥청"):
+            assert "object_credit_position" not in ids(check(text))
+
+    def test_credit_is_excluded_from_title_length_and_notes_stay_separate(self):
+        text = self.TABLE.replace("재배 계획", "재배 계획 (출처 : " + "합성기관" * 10 + ")")
+        out = check(text + "주 : 합성 설명을 별도 줄에 둔다.")
+        assert "caption_long" not in ids(out)
         assert "object_credit" not in ids(out)
-        assert ("sourced_objects", "출처 있는 표 2개·그림 0개") in out
+        assert ("sourced_objects", "출처 있는 표 1개·그림 0개") in out
 
-    def test_credit_does_not_cross_heading_or_table(self):
-        for text in (self.TABLE + "# 새 절\n출처: 본인 작성",
-                     self.TABLE + "\n".join(["설명"] * 5) + "\n출처: 본인 작성",
-                     self.TABLE + "그림 1. 위치\n출처: 본인 촬영"):
-            out = check(text)
-            assert any(cid == "object_credit" and "표 1." in reason for cid, reason in out)
-
-    def test_uncaptioned_objects_still_require_credit(self):
-        table = self.TABLE.split("\n", 1)[1]
-        out = check(table)
-        assert "object_credit" in ids(out)
-        assert "object_credit" not in ids(check(table + "출처: 본인 작성"))
-        assert "object_credit" in ids(check("![밭](field.png)", root=self.make_project()))
-
-    def test_placeholder_is_warning_without_source_error_or_count(self):
-        out = check("그림 1의 정식 모습을 넣을 예정이다.\n그림 1. 정식 모습\n"
-                    "[사진 필요: P1 | 밭 | 전경 | 정식 | 반쪽 | Ⅲ장]\n")
-        assert "photo_placeholder" in ids(out)
-        assert "object_credit" not in ids(out)
-        assert "missing_object" not in ids(out)
-        assert ("sourced_objects", "출처 있는 표 0개·그림 0개") in out
-        out = check(self.TABLE + "[사진 필요: 밭 전경]")
-        assert "object_credit" in ids(out)  # 사진 자리가 표 출처를 면제하지 않는다.
+    def test_uncaptioned_objects_and_photo_placeholders_do_not_require_credit(self):
+        for text in (self.TABLE.split("\n", 1)[1], "![밭](field.png)",
+                     "그림 1. 정식 모습\n[사진 필요: 밭 전경]"):
+            assert "object_credit" not in ids(check(text, root=self.make_project()))
 
     def test_real_normal_objects_pass_existing_and_policy_checks(self):
         root = self.make_project()
         (root / "field.png").write_bytes(b"local image fixture")
         out = check("표 1과 그림 1을 참고한다.\n" + self.TABLE
-                    + "출처: 본인 작성\n![밭](field.png)\n그림 1. 밭 전경\n출처: 본인 촬영",
+                    + "![밭](field.png)\n그림 1. 밭 전경 (출처 : 농촌진흥청)",
                     root=root)
-        assert out == [("sourced_objects", "출처 있는 표 1개·그림 1개")]
+        assert out == [("sourced_objects", "출처 있는 표 0개·그림 1개")]
 
-    def test_core_missing_credit_is_error_and_count_is_info(self):
-        root = self.make_project()
-        bind_major(root, SC)
-        write_text(root, "sections/s1.md", self.TABLE)
-        sec = section_op("s1", "Ⅰ. 머리말", "sections/s1.md")
-        core.apply(root, {"request_id": "credit", "ops": [sec]}, core.load(root)["revision"])
-        out = core.checks(root, core.load(root))
-        row = next(r for r in out if r["check_id"] == "object_credit")
-        assert (row["severity"], row["status"]) == ("error", "fail")
+    def test_core_self_credit_is_error_and_old_external_credit_is_warning(self):
+        for credit, cid, severity in (
+            ("본인 작성", "object_credit", "error"),
+            ("농촌진흥청", "object_credit_position", "warning"),
+        ):
+            root = self.make_project()
+            bind_major(root, SC)
+            write_text(root, "sections/s1.md", self.TABLE + "출처 : " + credit)
+            core.apply(root, {"request_id": "credit", "ops": [
+                section_op("s1", "Ⅰ. 머리말", "sections/s1.md")]}, core.load(root)["revision"])
+            row = next(r for r in core.checks(root, core.load(root)) if r["check_id"] == cid)
+            assert (row["severity"], row["status"]) == (severity, "fail")
 
     def test_format_cli_default_policy_and_info_exit_code(self):
         commands = runtime("gg_commands")
