@@ -1404,7 +1404,7 @@ _CELL_VALUE = re.compile(
 _CELL_BAD_PAREN = re.compile(r"^\s*[+-]?\s*\(.*\d")
 
 
-_TABLE_NOTE = re.compile(r"^(?:주\)|주:|자료:|출처:|단위:)")
+_TABLE_NOTE = re.compile(r"^(?:주\s*\)|(?:주|자료|출처|단위)\s*[:：])")
 
 
 def _is_table_note(text):

@@ -22,7 +22,7 @@ try:
     import gg_docx_table_layout
 except ImportError as error:  # python-docx (or its layout helper) absent
     DOCX_IMPORT_ERROR = error
-from gg_document import parse, spans, SCI, FRONT, school_toc_range, school_frontmatter_plan
+from gg_document import parse, spans, SCI, FRONT, school_toc_range, school_frontmatter_plan, split_caption_credit
 from gg_core import digest, local
 
 FONT = "신명조"
@@ -479,8 +479,8 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
                 "목차와 본문 사이에 렌더되지 않는 항목이 있습니다: "
                 + _unrendered[0].get('text','').strip()[:80]
             )
-        table_entries=[(n['text'],n['_bookmark'],2) for n in body_nodes if n['kind']=='caption' and n.get('label')=='표']
-        figure_entries=[(n['text'],n['_bookmark'],2) for n in body_nodes if n['kind']=='caption' and n.get('label')=='그림']
+        table_entries=[(split_caption_credit(n['text'])[0],n['_bookmark'],2) for n in body_nodes if n['kind']=='caption' and n.get('label')=='표']
+        figure_entries=[(split_caption_credit(n['text'])[0],n['_bookmark'],2) for n in body_nodes if n['kind']=='caption' and n.get('label')=='그림']
         entries=[]
         if prelim: entries.append(('요약','gg_summary',0))
         if table_entries: entries.append(('표 목차','gg_tables',0))

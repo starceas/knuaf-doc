@@ -196,7 +196,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/SKILL.md": {
-   "after_sha256": "c7aab41ea81e14be2032cf1172212dd4be3289f2ff6449dd119ed83b4576ff36",
+   "after_sha256": "05c3878a346a04dad864dd642aba06d98a34bd268afa848a3f9220bc024e5196",
    "before_sha256": "c0008fa5239cc16411fd4ef24b5bf901c7a8b9b50c6b621e2bdee3acf734ddc0",
    "first_changed": "P1",
    "last_changed": "P28",
@@ -205,7 +205,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/install-manifest.json": {
-   "after_sha256": "a504a169941e949baf278912d520f63ec36d27c546667a53f13343ffe7746488",
+   "after_sha256": "4429b48ddcb37faf134c69da2df5a4b102977de9a0ad197db1657704e442522f",
    "before_sha256": null,
    "first_changed": "P27",
    "last_changed": "P28",
@@ -386,7 +386,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/builtin-sources.json": {
-   "after_sha256": "5cf124ba5760d6e876cd0b2d73d957db1ecd294d57e5a0b355612236138f82d8",
+   "after_sha256": "453033102864a67c494f4e6ca8c0b8b36d31e58940238570b49a4f26b257fc8a",
    "before_sha256": null,
    "first_changed": "P5",
    "last_changed": "P28",
@@ -502,7 +502,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/exemplar-quality.md": {
-   "after_sha256": "c6bfedd6264d6c82979a14029fd8281c19212a6c71334b6efea10f04c9370bed",
+   "after_sha256": "6f7431bf3f77b31d305d9a859d4ad70e72c30e1329f721fcbf44f276bb2f3606",
    "before_sha256": "3d1dbb9d2c605d651f09c6e1656de2d73bcd4ce3b1056b5e593292d05ed4dab0",
    "first_changed": "P28",
    "last_changed": "P28",
@@ -519,7 +519,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/figure-photo-policy.md": {
-   "after_sha256": "1a8ce2cdfcdc16c93f448eeb8326d72dcec76d9d10ea6d505f4a965ce834c6b3",
+   "after_sha256": "184eba85a5381297750eccaefcddcb0b69fb2d95c16670a30c309325c3452313",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
@@ -716,7 +716,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/majors.md": {
-   "after_sha256": "e196cf251b66e2eabd801f59b37e7878d6e231966cd4b3d356c0a347d4fcc895",
+   "after_sha256": "63517e5907f2f5e180b44bfb68391641e8d49e651e67b1ccf33dc433dfb6c51e",
    "before_sha256": null,
    "first_changed": "P27",
    "last_changed": "P27",
@@ -797,7 +797,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/outputs.md": {
-   "after_sha256": "a4a9ddb28628ff3393b4113063cefae07c8862e7396c730defe7aab2ecbb2d3a",
+   "after_sha256": "c2588407df39d5e1edb0432f3a488fa8e4947a0669dbd1561a8c7dc121c6ac4a",
    "before_sha256": null,
    "first_changed": "P27",
    "last_changed": "P28",
@@ -824,7 +824,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/plain-thesis-policy.json": {
-   "after_sha256": "0b7bfa365194a5486d9ece4c6d0d33685f820ad8d4175cc88a77bbf5cc3e6767",
+   "after_sha256": "275388305828ce94527979044cdf65cd62ae021ae995b39481de1de08ea2f8f6",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
@@ -949,7 +949,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/rules/F_format.md": {
-   "after_sha256": "42cfe3d5268686f21b51f28c3e593e7e6a54d84981de3d7309b2a9810baaf154",
+   "after_sha256": "1c2f5828fb339dc2e56b9c4e44709e4e4ea24c747fb572fd614599c16ff7c0ad",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
@@ -1012,7 +1012,7 @@
    "source": "modified"
   },
   "skills/knuaf-doc/references/specialty-crops/finance-flow.md": {
-   "after_sha256": "f42b0c77b861598f79d77f96e584404af1905e7792b3b5e4f3473df862be1479",
+   "after_sha256": "cf580bb46f9e19adb20d9220b8ea0e7b10dbdb3539f3186ab3a1278f4a941bdd",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
@@ -1021,7 +1021,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/specialty-crops/finance-table-map.json": {
-   "after_sha256": "4ad0d150ef00d7f498c326797dda81e4f01ea7dcb7fec617083cd20ad0f1d54c",
+   "after_sha256": "bfb278975cff3ef19ca17547693d73205650f60bb566609bfb5b05144907c02d",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
@@ -1048,7 +1048,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/thesis-level.md": {
-   "after_sha256": "d6a893c35f5578508f2dc9af66340d15aefca6633f691ee06120d519dee50033",
+   "after_sha256": "c7258a1eb720e617c40587ab601d95cf5a262f5effc196519e556ac9d3fe922b",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
@@ -1084,7 +1084,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/scripts/build_docx.py": {
-   "after_sha256": "d7b2e6c6869aae83f42e8a331445edfd38e8677e90ad54bea97feb667e48f270",
+   "after_sha256": "3641602afac2bc14aeafccb7d73ac3ec269e2fe0fafbbe235c72e617ebeafed8",
    "before_sha256": "b0ce58afc3f24b792843877bb6dc996d634dc12235bade53c34ecb5cdfad9912",
    "first_changed": "P1",
    "last_changed": "P27",
@@ -1159,7 +1159,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_document.py": {
-   "after_sha256": "fb8882ceed6be3b6e858635932c812332db4085e4aaf1cae3e7ad8985b421583",
+   "after_sha256": "375adee1bbb5cfb1dfa590cef9ff463b16c946383b0c95396fc5c42190054463",
    "before_sha256": "e83eee6a94393e407a727979c6e5f6e5545f17ca7291e745c68d66dcb835a8b3",
    "first_changed": "P1",
    "last_changed": "P28",
@@ -1248,7 +1248,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_finance_tables.py": {
-   "after_sha256": "3385287779e028d9cb1c182f7942aa93b0f8f028d8d6684b322fa1c138aeee50",
+   "after_sha256": "067175c9979687524fae46b3133a0acee082f7b7e7dfa6da368b77ade6a171fa",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
@@ -1515,7 +1515,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_school_excel.py": {
-   "after_sha256": "c44b6e24c2713e9bf7dd70e8e9fc56d8280299a8f7bf3ad3e4c283a534670512",
+   "after_sha256": "b6c5b4a1328a90a20ec93ed5e085caa3796a6d464d8bf02330b55ecfbba83ddc",
    "before_sha256": "4bee13020358819f168c13a91c4895d1e50d3def7f9ea72d557423182d2b483a",
    "first_changed": "P1",
    "last_changed": "P28",
@@ -1543,7 +1543,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_school_table_sources.py": {
-   "after_sha256": "98bebb6fd042279c65bb70762cba21ffef44f1e3954bf511aa50746c8176801f",
+   "after_sha256": "93f2fb2b715daa03469ed82a1f04fd2fb3fda29706cb13c2b4adc885e167630b",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
@@ -1703,7 +1703,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/tests/test_finance_tables.py": {
-   "after_sha256": "3a4d3a315d9d873c7e3fb9ae3752b2c1d0706d91fe9066b0ac328a90be9136a9",
+   "after_sha256": "5fad9643a70f576c5da707c359a9e77de6e9938bec1a308c8f36ce3d52dd2c83",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
@@ -1988,7 +1988,7 @@
    "source": "new"
   },
   "tests/test_p3_body.py": {
-   "after_sha256": "d1201fdc87ef89c040aa7f72b790f72443856b55d62aeb3890acb5067fac5eb9",
+   "after_sha256": "bb90761ef30d6db19020f6aea7c495128f2496f9ddeeb08eeff984faed87dfc2",
    "before_sha256": null,
    "first_changed": "P3",
    "owner": "B",
