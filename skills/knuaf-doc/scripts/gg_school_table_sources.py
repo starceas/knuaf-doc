@@ -6,7 +6,8 @@ Only external agency names are printed in caption-ending parentheses;
 author surveys retain validation but print no self-credit. Title, year,
 locator and optional URL stay in the input provenance, not the caption.
 Each source requires kind/source_type/source/title/year/locator, with an
-optional plain HTTP(S) url and grade 1/2. These are the D3 proposed adapter
+optional plain HTTP(S) url and legacy grade metadata. Legacy 1/2 markers
+are equivalent allowed sources, not ranks. These are the adapter
 enums, not a claim about the global registry: stat/official_stat,
 public_data/official_public, academic/academic_paper,
 research_report/institution_report, school_material/official_school,
@@ -117,10 +118,11 @@ def _plain(value, field, *, url=False):
 
 
 def _check_grade(grade):
+    """Validate legacy markers without distinguishing allowed-source ranks."""
     if isinstance(grade, str):
         grade = unicodedata.normalize('NFKC', _plain(grade, 'grade')).strip()
     if isinstance(grade, bool) or str(grade) not in {'1', '2'}:
-        raise ValueError('출처 등급은 1/2만 허용; 3/4등급 금지')
+        raise ValueError('기존 grade는 동등한 허용 출처 표식 1·2만 가능; 3·4등급 금지')
 
 
 def _source(value, project):
@@ -150,7 +152,8 @@ def _source(value, project):
             raise ValueError('정본 출처 없음/개정 충돌')
         if 'grade' in record:
             _check_grade(record['grade'])
-        for key in _REQUIRED | {'grade', 'verified', 'survey_date', 'subject', 'url'}:
+        # Both legacy grades were validated above; they are not bibliography.
+        for key in _REQUIRED | {'verified', 'survey_date', 'subject', 'url'}:
             if key != 'locator' and key in record and key in value and record[key] != value[key]:
                 raise ValueError('정본 출처 종류/서지 충돌: ' + key)
     if kind == 'interview':

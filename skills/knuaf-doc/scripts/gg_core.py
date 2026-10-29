@@ -3639,9 +3639,9 @@ def checks(root, p):
                 required_for=["submission_candidate"] if blocked else [],
             ))
 
-    # 평문 정책 정본 — 출처 종류·등급·AI 이미지 거부는 본문이 아니라
-    # 등록 레코드의 kind/grade를 본다. 정본 파일이 없거나 깨지면
-    # 조용히 통과하지 않고 blocked로 실패한다. 모든 전공·전공 미확인
+    # 출처는 허용/금지로만 판단한다. 기존 grade 1·2는 순위가 아닌
+    # 동등한 허용 표식이며, kind 금지와 기존 grade 3·4 거부는 유지한다.
+    # 정책 정본이 없거나 깨지면 blocked로 실패한다. 모든 전공·전공 미확인
     # 입력에 공통 기본값을 적용하고 majors 재정의만 합친다.
     plain_major = None
     try:
