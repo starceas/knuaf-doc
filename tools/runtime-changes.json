@@ -106,7 +106,6 @@
   "skills/knuaf-doc/scripts/gg_major_contract.py",
   "skills/knuaf-doc/scripts/gg_office_session.py",
   "skills/knuaf-doc/scripts/gg_orchard_production.py",
-  "skills/knuaf-doc/scripts/gg_plan_fit.py",
   "skills/knuaf-doc/scripts/gg_price_assumptions.py",
   "skills/knuaf-doc/scripts/gg_publication.py",
   "skills/knuaf-doc/scripts/gg_rda_candidates.py",
@@ -206,12 +205,12 @@
    "source": "new"
   },
   "skills/knuaf-doc/install-manifest.json": {
-   "after_sha256": "83d7bf31385389e63aa0772fc9c0ddcb366c59e335239067c385e4d0210f27a5",
+   "after_sha256": "6926a95cd0a9ea28c9c683a9be03b6c6e428b613390c2d48c5fbfdd3914f0d44",
    "before_sha256": null,
    "first_changed": "P27",
    "last_changed": "P28",
    "owner": "P28",
-   "reason": "P27: 설치본 배포 파일 목록(상대경로→sha256) — 자동 업데이트 보존 판정 기준 | P27 r3 재생성(legacy-release-hashes.json 포함 149항목) | P28: 재생성 — 신규 references 4건 포함 | P28 integration: gg_update.py manifest --write로 최신 배포 바이트 목록 재생성 | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존 | F2: V2 재확인 수용에 따라 같은 파서 계층의 첫 장/장 경계와 원문 span을 적용하고 명시적 외부 유형 충돌 거부·수동 신뢰 계약을 문서화; 설치 manifest 재생성. 기초 정본·단계·부모 계보·원본 source pin 보존 | F3: 전역 Markdown 유무 판정을 제거하고 prefix-only 공통 제목 규칙·요약 단일 종료·번호 공백 문법으로 통일; 설치 manifest 재생성. 원본/부모 계보·stage·source pin 보존 | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes. | PR-4 ORDER-I: install manifest regenerated for ORDER-A file bytes; I remeasured final bytes. | PR-4 ORDER-I: install manifest regenerated with restored references; I remeasured final bytes. | PR-4 ORDER-I: install manifest regenerated for 0.1.3 bytes; I remeasured final bytes. | F1: regenerate existing install-file fingerprints for reviewed findings. | F2 P1: refresh existing install fingerprints. | F3: refresh existing install fingerprints for the P2 patch. | Restore v0.1.4: regenerate all installed-file fingerprints with gg_update.py. | ORDER-I2: remeasured final 0.1.5 file bytes after preserving PR32 inputs. | AMEND-I2-1 regenerate installation fingerprints after R1-R3 amendments. | Windows native publication: handle identity, binary I/O, checked paths, owner cleanup and publication scope | Window-hygiene Office-only scope: refreshed reviewed bytes and strict +2 declaration/new/approval counts; no browser product reference or live Office validation. | PR41 P1: synchronized macOS Excel HOLD product hashes. | W2b kordoc-hwpx: gg_update.py manifest --write로 재생성(신규 gg_hwpx.py·build_hwpx.py 포함). | P28 output hygiene: tidy 신규 파일·설치/검증 번들 목록 갱신 | P28 output hygiene 검토 FAIL 수정: JSON 이스케이프 참조·열거 실패·회차명 경계 | P28 I1-01 마무리: 원시 바이트 참조 검사가 /·\\ 두 표기를 모든 인코딩에서 확인 | P28 outside scan: tidy 밖 정리 후보를 작성 폴더 하위까지 읽기 전용 보고 | P1-GUI: managed 표시(GUI 설치본 auto 차단) — 판정 기준 R1-05 | P1-GUI: 판정서 JUDGE-A/JUDGE-B 올림 항목 반영 | P1-R1: 검토 지적 4건 수정(외부 관계 허용 범위 축소·본문 경계 줄 단위·절 ID 정확 비교·링크 실행 managed) | P1-R1b: 해석·디코딩 뒤 최종 경로에도 네트워크 경로 거절 적용(file:////host, 인코딩된 UNC) | R-v0.2.0: v0.2.0 릴리즈 — 버전 두 곳과 install-manifest의 version.json 해시를 0.2.0으로 갱신 | Plan-fit: regenerated after adding the check and rule files and merging main",
+   "reason": "P27: 설치본 배포 파일 목록(상대경로→sha256) — 자동 업데이트 보존 판정 기준 | P27 r3 재생성(legacy-release-hashes.json 포함 149항목) | P28: 재생성 — 신규 references 4건 포함 | P28 integration: gg_update.py manifest --write로 최신 배포 바이트 목록 재생성 | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존 | F2: V2 재확인 수용에 따라 같은 파서 계층의 첫 장/장 경계와 원문 span을 적용하고 명시적 외부 유형 충돌 거부·수동 신뢰 계약을 문서화; 설치 manifest 재생성. 기초 정본·단계·부모 계보·원본 source pin 보존 | F3: 전역 Markdown 유무 판정을 제거하고 prefix-only 공통 제목 규칙·요약 단일 종료·번호 공백 문법으로 통일; 설치 manifest 재생성. 원본/부모 계보·stage·source pin 보존 | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes. | PR-4 ORDER-I: install manifest regenerated for ORDER-A file bytes; I remeasured final bytes. | PR-4 ORDER-I: install manifest regenerated with restored references; I remeasured final bytes. | PR-4 ORDER-I: install manifest regenerated for 0.1.3 bytes; I remeasured final bytes. | F1: regenerate existing install-file fingerprints for reviewed findings. | F2 P1: refresh existing install fingerprints. | F3: refresh existing install fingerprints for the P2 patch. | Restore v0.1.4: regenerate all installed-file fingerprints with gg_update.py. | ORDER-I2: remeasured final 0.1.5 file bytes after preserving PR32 inputs. | AMEND-I2-1 regenerate installation fingerprints after R1-R3 amendments. | Windows native publication: handle identity, binary I/O, checked paths, owner cleanup and publication scope | Window-hygiene Office-only scope: refreshed reviewed bytes and strict +2 declaration/new/approval counts; no browser product reference or live Office validation. | PR41 P1: synchronized macOS Excel HOLD product hashes. | W2b kordoc-hwpx: gg_update.py manifest --write로 재생성(신규 gg_hwpx.py·build_hwpx.py 포함). | P28 output hygiene: tidy 신규 파일·설치/검증 번들 목록 갱신 | P28 output hygiene 검토 FAIL 수정: JSON 이스케이프 참조·열거 실패·회차명 경계 | P28 I1-01 마무리: 원시 바이트 참조 검사가 /·\\ 두 표기를 모든 인코딩에서 확인 | P28 outside scan: tidy 밖 정리 후보를 작성 폴더 하위까지 읽기 전용 보고 | P1-GUI: managed 표시(GUI 설치본 auto 차단) — 판정 기준 R1-05 | P1-GUI: 판정서 JUDGE-A/JUDGE-B 올림 항목 반영 | P1-R1: 검토 지적 4건 수정(외부 관계 허용 범위 축소·본문 경계 줄 단위·절 ID 정확 비교·링크 실행 managed) | P1-R1b: 해석·디코딩 뒤 최종 경로에도 네트워크 경로 거절 적용(file:////host, 인코딩된 UNC) | R-v0.2.0: v0.2.0 릴리즈 — 버전 두 곳과 install-manifest의 version.json 해시를 0.2.0으로 갱신 | Plan-fit: regenerated after adding the check and rule files and merging main | R6: regenerated after the plan-fit checker left this change",
    "source": "new"
   },
   "skills/knuaf-doc/references/benchmark-packs/aliases/crop-aliases.specialty_crops.json": {
@@ -485,12 +484,12 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/cultivation-fit.json": {
-   "after_sha256": "f45cb6e9f487a5b91fc6e542792ee3ab939959c9f69a34cfe05ff60b0c2d1dbb",
+   "after_sha256": "29cca38356cf25beb0976b7749db7234da7534221acc950f9e688a82776e689c",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
    "owner": "P28",
-   "reason": "Plan-fit rules and check: cultivation-method equipment fit, removal of unowned asset rows, distinct grade and channel prices, channel-cost reflection notes",
+   "reason": "Plan-fit rules and check: cultivation-method equipment fit, removal of unowned asset rows, distinct grade and channel prices, channel-cost reflection notes | R6: kept as rule data linked from the rules and finance-flow; note no longer describes a checker",
    "source": "new"
   },
   "skills/knuaf-doc/references/excel-template.md": {
@@ -825,12 +824,12 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/plan-fit-rules.md": {
-   "after_sha256": "1fe2ae71ac7c4a71eaf18e4429ebdfa31b5e0c41c93eedd348f373bf4c5e9d72",
+   "after_sha256": "43450057776bf7faef137343f75e0e70b8f8a69a472fc3fdeac25a7a3df54f8d",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
    "owner": "P28",
-   "reason": "Plan-fit rules and check: cultivation-method equipment fit, removal of unowned asset rows, distinct grade and channel prices, channel-cost reflection notes | R2: unreadable tables and uncached price-history formulas block instead of passing | R3: partly unreadable tables, blocks, rows and sales columns block instead of hiding behind readable ones | R4: one shared table check (expected counts from the school layout, real column range) for every table | R5: states and exit codes, person-check procedure for unverified tables, registered template areas",
+   "reason": "Plan-fit rules and check: cultivation-method equipment fit, removal of unowned asset rows, distinct grade and channel prices, channel-cost reflection notes | R2: unreadable tables and uncached price-history formulas block instead of passing | R3: partly unreadable tables, blocks, rows and sales columns block instead of hiding behind readable ones | R4: one shared table check (expected counts from the school layout, real column range) for every table | R5: states and exit codes, person-check procedure for unverified tables, registered template areas | R6: rules only; the automatic check moves to a later change and people check plans against these rules",
    "source": "new"
   },
   "skills/knuaf-doc/references/price-research-routes.md": {
@@ -1013,12 +1012,12 @@
    "source": "modified"
   },
   "skills/knuaf-doc/references/specialty-crops/finance-flow.md": {
-   "after_sha256": "e1c9e63c230bf2a4b2d03b49ebdf6329af6fb51c457511c9ce9034fd080ef6d0",
+   "after_sha256": "29b1179299e8ec9cfa5f3a6cc5581e1eb916376b90c2a67a5e7c5d17aca1a566",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
    "owner": "P28",
-   "reason": "P28: 특용작물 전용 이유림 Ⅳ장 재무표 전개 문서(전공 분리 설계) | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존 | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes. | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13. | Plan-fit rules and check: cultivation-method equipment fit, removal of unowned asset rows, distinct grade and channel prices, channel-cost reflection notes | Specialty wage growth follows the department template: arithmetic mean of yearly rates, not CAGR | R5: what to do after fail, unverified and not_applicable plan-fit results",
+   "reason": "P28: 특용작물 전용 이유림 Ⅳ장 재무표 전개 문서(전공 분리 설계) | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존 | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes. | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13. | Plan-fit rules and check: cultivation-method equipment fit, removal of unowned asset rows, distinct grade and channel prices, channel-cost reflection notes | Specialty wage growth follows the department template: arithmetic mean of yearly rates, not CAGR | R5: what to do after fail, unverified and not_applicable plan-fit results | R6: check-run step removed; rule links kept",
    "source": "new"
   },
   "skills/knuaf-doc/references/specialty-crops/finance-table-map.json": {
@@ -1434,15 +1433,6 @@
    "reason": "P14: fruit_trees read-only production and batch inventory reconciliation (kg/trees/m2 only, exact fractions, no money, no writes) | P27: K2-02: CLI 진입점 stdout·stderr UTF-8 재설정",
    "source": "new"
   },
-  "skills/knuaf-doc/scripts/gg_plan_fit.py": {
-   "after_sha256": "1b7eae1f0dd82723f616ec12b79b74d5a634dc5f2518c98ff71ed961c8d3eddd",
-   "before_sha256": null,
-   "first_changed": "P28",
-   "last_changed": "P28",
-   "owner": "P28",
-   "reason": "Plan-fit rules and check: cultivation-method equipment fit, removal of unowned asset rows, distinct grade and channel prices, channel-cost reflection notes | R2: unreadable tables and uncached price-history formulas block instead of passing | R3: partly unreadable tables, blocks, rows and sales columns block instead of hiding behind readable ones | R4: one shared table check (expected counts from the school layout, real column range) for every table | R5: not_applicable outside the school template, sheet-wide residual check against recognised areas, unverified state separate from fail",
-   "source": "new"
-  },
   "skills/knuaf-doc/scripts/gg_price_assumptions.py": {
    "after_sha256": "0ce493232cc03187ab45265b3b8276b751eb479c349023d46e7f9baee7958d4e",
    "before_sha256": null,
@@ -1562,12 +1552,12 @@
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_school_verify.py": {
-   "after_sha256": "0f19fb4cc1edff4a05b20db1de2f0300b0098649cc00bbfb529af648116e928b",
+   "after_sha256": "2c16f421e612598e043e9e4f43a60791ca87dc7e9651ac6fccba0e0da06268bb",
    "before_sha256": "aedf804719ab6fea21fcf145ce4295ff16c390b09e72629892a1cd67db1ea9f6",
    "first_changed": "P28",
    "last_changed": "P28",
    "owner": "P28",
-   "reason": "PR-2 W-A: verifier uses separated general/wage/sales assumptions; baseline before hash retained. | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13. | Plan-fit rules and check: cultivation-method equipment fit, removal of unowned asset rows, distinct grade and channel prices, channel-cost reflection notes",
+   "reason": "PR-2 W-A: verifier uses separated general/wage/sales assumptions; baseline before hash retained. | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13.",
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_source_identity.py": {
@@ -1914,12 +1904,12 @@
    "source": "new"
   },
   "tests/test_bundle_lineage.py": {
-   "after_sha256": "2ba8928b11c52e6426d80b9a75bdd1fc9e290c5d7091b1d469078f844a58140c",
+   "after_sha256": "00e4251ba21a2f3ea05228f4e2ed6dcda0acd2c7809862548f30416432ef15c9",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
    "owner": "P28",
-   "reason": "PR36 CI strict-count repair: preserve exact declaration counts and declare the changed validation test; integration adds five new declarations and three approvals, this test adds one further declaration/new/approval. | Window-hygiene Office-only scope: refreshed reviewed bytes and strict +2 declaration/new/approval counts; no browser product reference or live Office validation. | P28 kordoc-hwpx: runtime-changes 수치 고정 갱신(change_count 203→207, new_count 155→159, approved_new_files 162→166). | P28 output hygiene: tidy 신규 파일·설치/검증 번들 목록 갱신",
+   "reason": "PR36 CI strict-count repair: preserve exact declaration counts and declare the changed validation test; integration adds five new declarations and three approvals, this test adds one further declaration/new/approval. | Window-hygiene Office-only scope: refreshed reviewed bytes and strict +2 declaration/new/approval counts; no browser product reference or live Office validation. | P28 kordoc-hwpx: runtime-changes 수치 고정 갱신(change_count 203→207, new_count 155→159, approved_new_files 162→166). | P28 output hygiene: tidy 신규 파일·설치/검증 번들 목록 갱신 | R6: strict counts remeasured after the plan-fit checker left this change (215/165/172 -> 214/164/171)",
    "source": "new"
   },
   "tests/test_hwpx_adapter.py": {

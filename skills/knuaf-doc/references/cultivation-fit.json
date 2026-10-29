@@ -1,6 +1,6 @@
 {
   "schema": "knuaf-cultivation-fit/v1",
-  "note": "재배방식별 장비·작업 대조표. gg_plan_fit.py가 읽는 유일한 목록이다. 키워드는 공백을 지운 장비·작업 이름에 부분 문자열로 대조한다. typical_equipment는 인터뷰 안내용 예시이며 검사는 unneeded_* 목록만 차단·경고한다(자유 기재 장비명을 허용 목록으로 막지 않는다). 규칙 설명은 plan-fit-rules.md.",
+  "note": "재배방식별 장비·작업 규칙 자료. typical_equipment는 인터뷰 안내용 예시이고, unneeded_equipment·unneeded_tasks는 그 재배방식 계획에 보통 두지 않는 장비·작업 이름(공백을 지운 이름에 부분 문자열로 찾는 낱말)이다. 지금은 사람이 이 목록으로 통합문서를 확인한다. 규칙 설명은 plan-fit-rules.md.",
   "methods": {
     "open_field": {
       "label": "노지",

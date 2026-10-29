@@ -272,22 +272,6 @@ def verify_school_recalculated(spec, path):
         return [{"status": "fail", "reason": f"엑셀 파일 로드 실패: {e}"}]
 
     issues = []
-    # 두 판로를 모두 팔면 거래단계가 달라 단가도 달라야 한다
-    # (references/plan-fit-rules.md). 명세 값만 보므로 캐시와 무관하다.
-    values = expected["values"]
-    if (
-        values["purchase_share"] > 0
-        and values["direct_share"] > 0
-        and abs(expected["effective_purchase_price"]
-                - expected["effective_direct_price"]) <= TOLERANCE
-    ):
-        issues.append(
-            {
-                "cell": " 5. 판매계획!O7,O10",
-                "status": "fail",
-                "reason": "수매·직거래 단가 동일 — 판로별 거래단계 출처로 따로 잡아야 함",
-            }
-        )
 
     # 1. 17-sheet name and sequence check
     if tuple(wb_formula.sheetnames) != SCHOOL_SHEETS:
