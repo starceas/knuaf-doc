@@ -213,7 +213,7 @@
       "lineage": [],
       "build_allowlist_ref": null
     },
-        {
+    {
       "source_id": "official-writing-guide-pdf",
       "class": "school_guideline",
       "role": "official_guideline",
@@ -230,8 +230,8 @@
         },
         {
           "relative_path": "references/rules/CH1_intro.md",
-          "sha256": "5a90072799b984707ec995fbfa1750655160613c1ac202c33f24e1ca8012658b",
-          "bytes": 2288
+          "sha256": "f55721ed1d1fd5fe438bc908127f5cd0fc4fd7985f6d3c01c911b6cdff4540f7",
+          "bytes": 2911
         },
         {
           "relative_path": "references/rules/CH2_external.md",
@@ -255,13 +255,13 @@
         },
         {
           "relative_path": "references/rules/F_format.md",
-          "sha256": "1c2f5828fb339dc2e56b9c4e44709e4e4ea24c747fb572fd614599c16ff7c0ad",
-          "bytes": 10703
+          "sha256": "5e21a3aaf66fcf347291fb6883e39ea33b130f381ea45577888d54a835879eff",
+          "bytes": 11138
         },
         {
           "relative_path": "references/rules/PRE_frontmatter.md",
-          "sha256": "b1bbb41214e9d0117301cdd62c9ee99ddfe7348c283b43663a255c2ddfc839d1",
-          "bytes": 4056
+          "sha256": "518398e195a8480abed23596dcbe46c18fc033c345796d8b50ad0dadcd17baef",
+          "bytes": 6057
         },
         {
           "relative_path": "references/guideline-inventory.json",
@@ -351,7 +351,7 @@
       ],
       "build_allowlist_ref": "install-manifest.json"
     },
-        {
+    {
       "source_id": "official-writing-guide-hwp",
       "class": "school_guideline",
       "role": "official_guideline",
@@ -368,8 +368,8 @@
         },
         {
           "relative_path": "references/rules/CH1_intro.md",
-          "sha256": "5a90072799b984707ec995fbfa1750655160613c1ac202c33f24e1ca8012658b",
-          "bytes": 2288
+          "sha256": "f55721ed1d1fd5fe438bc908127f5cd0fc4fd7985f6d3c01c911b6cdff4540f7",
+          "bytes": 2911
         },
         {
           "relative_path": "references/rules/CH2_external.md",
@@ -393,13 +393,13 @@
         },
         {
           "relative_path": "references/rules/F_format.md",
-          "sha256": "1c2f5828fb339dc2e56b9c4e44709e4e4ea24c747fb572fd614599c16ff7c0ad",
-          "bytes": 10703
+          "sha256": "5e21a3aaf66fcf347291fb6883e39ea33b130f381ea45577888d54a835879eff",
+          "bytes": 11138
         },
         {
           "relative_path": "references/rules/PRE_frontmatter.md",
-          "sha256": "b1bbb41214e9d0117301cdd62c9ee99ddfe7348c283b43663a255c2ddfc839d1",
-          "bytes": 4056
+          "sha256": "518398e195a8480abed23596dcbe46c18fc033c345796d8b50ad0dadcd17baef",
+          "bytes": 6057
         },
         {
           "relative_path": "references/guideline-inventory.json",
@@ -1103,8 +1103,7 @@
       "coverage": {},
       "lineage": [],
       "build_allowlist_ref": null
-    }
-,
+    },
     {
       "source_id": "support-ex-excel-buildspec",
       "class": "historical_support_document",
@@ -1216,7 +1215,8 @@
         }
       ],
       "build_allowlist_ref": "install-manifest.json"
-    }  ],
+    }
+  ],
   "p4_trust": {
     "packs_dir": {
       "relative_root": "benchmark-packs",

@@ -116,6 +116,10 @@
    "note": "P6 synthetic guarded project binding, major-plan and approved-candidate CLI, raw lookup compatibility, and insect paper refusal. Direct core and generator refusal of explicit insect paper, binding and school-profile guard. Empty profile and insect department negatives. Spaced insect department and insect-only major cover regression. P7: refusal expectations moved to policy B hold codes (major_id_required, unsupported_output, major_marker_conflict).",
    "origin": "new"
   },
+  "tests/test_deps.py": {
+   "note": "P1-GUI: pip 요구 파일 ASCII와 pip 자식 UTF-8 환경 전달",
+   "origin": "new"
+  },
   "tests/test_doc_contracts.py": {
    "note": "P27: 문서에 적힌 명령(import --offline-confirmed, doctor --probe, adopt-output 직후 check, school_profile.major_id, 원예 0.2.0 major-plan)을 새 init 프로젝트에서 그대로 실행하는 계약 시험",
    "origin": "new"
@@ -134,6 +138,10 @@
   },
   "tests/test_finance_scope.py": {
    "note": "P0-A: finance crosscheck scope — non-financial positive control + H9/R6 under-check defect.",
+   "origin": "new"
+  },
+  "tests/test_finance_unsupported.py": {
+   "note": "P1-GUI: 재무 생성기 거절 사유가 실제로 걸린 조건만 가리키는지",
    "origin": "new"
   },
   "tests/test_fruit_module.py": {
@@ -161,7 +169,7 @@
    "origin": "new"
   },
   "tests/test_hort_env_reuse.py": {
-   "note": "P9 hort_env_systems reuse-registry entries: baseline entries unchanged, identification-only entries, authority-following readiness, synthetic verified success and tamper rejection. P10: pin the approved D3 renamed specialty entry while retaining nine unchanged P8 entry pins. | P20: PROFILE_DECLARED_SHA re-pinned to the 0.2.0 profile hash. | P27 K4-06: official-writing-guide 두 항목 canonical digest 재고정 | P28 R-all: 배포 문서 공통 정책 변경에 따른 김원섭 PDF/HWP 및 서민서 artifact SHA-256·크기 재핀의 canonical entry digest 3개 전파; 기존 source identity·role·coverage·lineage와 비교 assertion은 그대로 유지 | F: 단위 예시 및 전공 양식/상승률 문서 정정에 따른 실제 artifact 지문 변경으로 김원섭 PDF/HWP·서민서 기대 canonical digest 3개만 전파; de2f323 테스트는 세 문자열 치환 외 바이트 동일. | I-03 explicitly approved: SEO canonical digest string only, measured after I-02 artifact repin; assertions, branches and all other test bytes preserved. | I2 approved measured SEO canonical digest one-string repin; all assertions and rejection branches preserved. | I3 approved measured SEO canonical digest one-string repin; all assertions and rejection branches preserved. | I4 approved measured SEO canonical digest one-string repin; all assertions and rejection branches preserved. | I5 approved measured SEO canonical digest one-string repin; all assertions and rejection branches preserved. | Restore v0.1.4: synthetic regression and approved school-entry expectations. | Caption-source policy: remove the obsolete whole-entry digest snapshot test and unused constants instead of re-pinning implementation bytes; retain identity/uniqueness, authority/readiness and artifact-tamper behavior tests. | Registry contract restoration supersedes that removal: preserve all nine original source contracts using semantic digests derived from main, exempt only sha256/bytes of the four approved caption-policy artifact declarations, and verify those declarations against actual runtime files. Roles, coverage, authority, lineage, artifact paths and all other fingerprints remain protected. | PR2: CAPTION_POLICY_ARTIFACTS에 seo-minseo-finance-xlsx의 references/excel-template.md 한 항목 추가(특용작물 엑셀 기준 문서 개정); 그 항목 BASELINE_SEMANTIC_DIGEST만 main 레코드에서 sha256·bytes를 뺀 값으로 교체(main=PR2=b41b3288…), 실파일 대조 대상에 포함.",
+   "note": "P9 hort_env_systems reuse-registry entries: baseline entries unchanged, identification-only entries, authority-following readiness, synthetic verified success and tamper rejection. P10: pin the approved D3 renamed specialty entry while retaining nine unchanged P8 entry pins. | P20: PROFILE_DECLARED_SHA re-pinned to the 0.2.0 profile hash. | P27 K4-06: official-writing-guide 두 항목 canonical digest 재고정 | P28 R-all: 배포 문서 공통 정책 변경에 따른 김원섭 PDF/HWP 및 서민서 artifact SHA-256·크기 재핀의 canonical entry digest 3개 전파; 기존 source identity·role·coverage·lineage와 비교 assertion은 그대로 유지 | F: 단위 예시 및 전공 양식/상승률 문서 정정에 따른 실제 artifact 지문 변경으로 김원섭 PDF/HWP·서민서 기대 canonical digest 3개만 전파; de2f323 테스트는 세 문자열 치환 외 바이트 동일. | I-03 explicitly approved: SEO canonical digest string only, measured after I-02 artifact repin; assertions, branches and all other test bytes preserved. | I2 approved measured SEO canonical digest one-string repin; all assertions and rejection branches preserved. | I3 approved measured SEO canonical digest one-string repin; all assertions and rejection branches preserved. | I4 approved measured SEO canonical digest one-string repin; all assertions and rejection branches preserved. | I5 approved measured SEO canonical digest one-string repin; all assertions and rejection branches preserved. | Restore v0.1.4: synthetic regression and approved school-entry expectations. | Caption-source policy: remove the obsolete whole-entry digest snapshot test and unused constants instead of re-pinning implementation bytes; retain identity/uniqueness, authority/readiness and artifact-tamper behavior tests. | Registry contract restoration supersedes that removal: preserve all nine original source contracts using semantic digests derived from main, exempt only sha256/bytes of the four approved caption-policy artifact declarations, and verify those declarations against actual runtime files. Roles, coverage, authority, lineage, artifact paths and all other fingerprints remain protected. | Body-writing policy: allow CH1_intro/PRE_frontmatter fingerprint slots only; preserve all original semantic digests and compare approved artifacts to actual file SHA-256 and size. | PR2: CAPTION_POLICY_ARTIFACTS에 seo-minseo-finance-xlsx의 references/excel-template.md 한 항목 추가(특용작물 엑셀 기준 문서 개정); 그 항목 BASELINE_SEMANTIC_DIGEST만 main 레코드에서 sha256·bytes를 뺀 값으로 교체(main=PR2=b41b3288…), 실파일 대조 대상에 포함.",
    "origin": "new"
   },
   "tests/test_hort_finance_bc.py": {
@@ -240,12 +248,20 @@
    "note": "P7 policy B guard on paper/export/adopt/merge paths (A32-L1–L7 path matrix, lock-path binding race). P8: fruit_trees is registered — unknown-major coverage moved to an unregistered ID, the synthetic peer renamed probe_major, real fruit_trees checked on every writer and CLI (unsupported_output) and against a specialty binding (major_binding_mismatch). P9: hort_env_systems is registered — the unregistered sample moved to a synthetic ID that no real major will register. | P10: P7 policy B guard on paper/export/adopt/merge paths (A32-L1–L7 path matrix, lock-path binding race). P8: fruit_trees is registered — unknown-major coverage moved to an unregistered ID, the synthetic peer renamed probe_major, real fruit_trees checked on every writer and CLI (unsupported_output) and against a specialty binding (major_binding_mismatch). | P28: 평문 정책의 전공 바인딩 전후 전체 게이트 동일성 비교 유지(모든 전공 공통 기본 정책)",
    "origin": "new"
   },
+  "tests/test_office_relationships.py": {
+   "note": "P1-GUI: OOXML 외부 관계 분류·입력 baseline 허용, 17시트 전체 순서 일치 판정, 영수증 작업영역 상대경로 — 합성 zip만 사용",
+   "origin": "new"
+  },
   "tests/test_orchard_production.py": {
    "note": "P14 fruit_trees read-only production and batch inventory reconciliation: E-1 boundaries, value/unit/limit checks, plan window, move allowance table, time/attribute fixed point, indeterminate propagation, negative-then-recovered balances, exact fractions.",
    "origin": "new"
   },
   "tests/test_p1_core.py": {
    "note": "P1 core/CLI behavioral tests (A-owned): C3 record-id, C5 floor, C6 COM, H8 ladder, UTF-8 band.",
+   "origin": "new"
+  },
+  "tests/test_p1_gui_inherit.py": {
+   "note": "P1-GUI: JUDGE-A/JUDGE-B 올림 항목(빈 export 거절, 기계용 field_id 보류, n항 검산, paper body 어댑터·CLI, atomic 재시도, 명령 빈 대상 차단, doctor 의존성, build_docx 봉투·의존성·기본값) 시험",
    "origin": "new"
   },
   "tests/test_p1_outputs.py": {
@@ -296,6 +312,50 @@
    "note": "PR-3 X1 regression tests; root tests belong to validation layer per I precedent. | I8 PV1-02: finite bibliographic display characters and invalid six-table publication refusal (FIX3-3).",
    "origin": "new"
   },
+  "tests/test_skill_commands.py": {
+   "note": "P1-GUI 시험 이사(cb72ae1): 레거시 진입점의 정본 요구·빈 대상 차단·JSON 보고",
+   "origin": "new"
+  },
+  "tests/test_skill_docx_table_layout.py": {
+   "note": "P1-GUI 시험 이사(cb72ae1): 표 폭·글꼴 하한·값 불변",
+   "origin": "new"
+  },
+  "tests/test_skill_excel_fill.py": {
+   "note": "P1-GUI 시험 이사(cb72ae1): 셀 쓰기·수식/병합 보호·미응답 수치화 금지",
+   "origin": "new"
+  },
+  "tests/test_skill_excel_formula_patch.py": {
+   "note": "P1-GUI 시험 이사(cb72ae1): 수식 패치 사전조건·위험 수식 거절·전부 아니면 전무 발행",
+   "origin": "new"
+  },
+  "tests/test_skill_frontmatter.py": {
+   "note": "P1-GUI 시험 이사(cb72ae1): 앞머리 값·미확인 표시·날짜 비복제",
+   "origin": "new"
+  },
+  "tests/test_skill_frontmatter_layout.py": {
+   "note": "P1-GUI 시험 이사(cb72ae1): 학교 양식 밴드 렌더·넘침 거절·슬롯 없는 행 보존",
+   "origin": "new"
+  },
+  "tests/test_skill_guidelines.py": {
+   "note": "P1-GUI 시험 이사(cb72ae1): 지침 인벤토리 해시 결합·fail-closed 판정",
+   "origin": "new"
+  },
+  "tests/test_skill_kordoc.py": {
+   "note": "P1-GUI 시험 이사(cb72ae1): 가짜 CLI로 파싱·거절·캐시 소유권·프록시 자격 제거",
+   "origin": "new"
+  },
+  "tests/test_skill_school_paper.py": {
+   "note": "P1-GUI 시험 이사(cb72ae1): 5년 창·미확인 표시·표 고정 행 (frozen 생성기는 불변)",
+   "origin": "new"
+  },
+  "tests/test_skill_school_verify.py": {
+   "note": "P1-GUI 시험 이사(cb72ae1): 재계산 항등식·상환 스케줄·to_d 거절 (본체 price_assumptions 계약)",
+   "origin": "new"
+  },
+  "tests/test_skill_show_research.py": {
+   "note": "P1-GUI 시험 이사(cb72ae1): 정본 기반 근거 조회(별도 원장 미사용)",
+   "origin": "new"
+  },
   "tests/test_source_identities.py": {
    "note": "D4 P12 synthetic catalogue privacy, schema, duplicate-key and registry-bound identity tests. P13: privacy negative inputs are assembled during the test, with no student-number literal shipped. P16: empty-catalogue assertion moved to a synthetic empty list; shipped rows are checked per major, and the whole shipped catalogue must load and pass the CLI check.",
    "origin": "new"
@@ -313,8 +373,8 @@
    "origin": "new"
   },
   "tests/test_winpub_native.py": {
-   "origin": "new",
-   "note": "Actual native Windows lifecycle and negative tests; no POSIX skips added; independent P2-L09-native placeholder retained."
+   "note": "Actual native Windows lifecycle and negative tests; no POSIX skips added; independent P2-L09-native placeholder retained.",
+   "origin": "new"
   },
   "tests/test_workbook_c1b_correction.py": {
    "note": "P23 synthetic C1b spec, policy vectors, mutant rejection and per-source disposition counts; local originals remain in tests/local_real_sources.py.",
@@ -348,8 +408,8 @@
    "origin": "new"
   },
   "tools/run_native_publication.py": {
-   "origin": "new",
-   "note": "Native Windows publication runner: Python 3.10/3.14 only, nonempty unique complete test set and zero skipped/expected failures, candidate SHA and file hashes."
+   "note": "Native Windows publication runner: Python 3.10/3.14 only, nonempty unique complete test set and zero skipped/expected failures, candidate SHA and file hashes.",
+   "origin": "new"
   },
   "tools/run_validation.py": {
    "note": "P0-A: single-command validation runner; default mode runs check_bundle.py --root first, then the suite. --runtime-only is a dev-mode flag, unused by CI/final validation. repair-n1/N1: current-interpreter dependency preflight, verdict priority, full_validation_completed. P2-R2: complete unittest outcome accounting (one terminal entry per started parent, subtest events, fixture_events, framework reconciliation, wasSuccessful false never exit0), fail-closed P2-L09-native external gate, ok_platform_scoped verdict, and validation_scope/platform_validation_completed/pending_external_checks/approved_external_skips report fields. P2-R3: ALLOWED_NESTED_SKIP_IDS restored to the exact pinned 10 — the R2-added nested exemption for test_tampered_bundle_fails_run removed.",
@@ -361,66 +421,6 @@
   },
   "tools/validation-provenance.json": {
    "note": "This file; declares origins for the validation layer.",
-   "origin": "new"
-  },
-  "tests/test_p1_gui_inherit.py": {
-   "note": "P1-GUI: JUDGE-A/JUDGE-B 올림 항목(빈 export 거절, 기계용 field_id 보류, n항 검산, paper body 어댑터·CLI, atomic 재시도, 명령 빈 대상 차단, doctor 의존성, build_docx 봉투·의존성·기본값) 시험",
-   "origin": "new"
-  },
-  "tests/test_office_relationships.py": {
-   "note": "P1-GUI: OOXML 외부 관계 분류·입력 baseline 허용, 17시트 전체 순서 일치 판정, 영수증 작업영역 상대경로 — 합성 zip만 사용",
-   "origin": "new"
-  },
-  "tests/test_deps.py": {
-   "note": "P1-GUI: pip 요구 파일 ASCII와 pip 자식 UTF-8 환경 전달",
-   "origin": "new"
-  },
-  "tests/test_finance_unsupported.py": {
-   "note": "P1-GUI: 재무 생성기 거절 사유가 실제로 걸린 조건만 가리키는지",
-   "origin": "new"
-  },
-  "tests/test_skill_frontmatter.py": {
-   "note": "P1-GUI 시험 이사(cb72ae1): 앞머리 값·미확인 표시·날짜 비복제",
-   "origin": "new"
-  },
-  "tests/test_skill_frontmatter_layout.py": {
-   "note": "P1-GUI 시험 이사(cb72ae1): 학교 양식 밴드 렌더·넘침 거절·슬롯 없는 행 보존",
-   "origin": "new"
-  },
-  "tests/test_skill_docx_table_layout.py": {
-   "note": "P1-GUI 시험 이사(cb72ae1): 표 폭·글꼴 하한·값 불변",
-   "origin": "new"
-  },
-  "tests/test_skill_guidelines.py": {
-   "note": "P1-GUI 시험 이사(cb72ae1): 지침 인벤토리 해시 결합·fail-closed 판정",
-   "origin": "new"
-  },
-  "tests/test_skill_kordoc.py": {
-   "note": "P1-GUI 시험 이사(cb72ae1): 가짜 CLI로 파싱·거절·캐시 소유권·프록시 자격 제거",
-   "origin": "new"
-  },
-  "tests/test_skill_excel_formula_patch.py": {
-   "note": "P1-GUI 시험 이사(cb72ae1): 수식 패치 사전조건·위험 수식 거절·전부 아니면 전무 발행",
-   "origin": "new"
-  },
-  "tests/test_skill_commands.py": {
-   "note": "P1-GUI 시험 이사(cb72ae1): 레거시 진입점의 정본 요구·빈 대상 차단·JSON 보고",
-   "origin": "new"
-  },
-  "tests/test_skill_school_paper.py": {
-   "note": "P1-GUI 시험 이사(cb72ae1): 5년 창·미확인 표시·표 고정 행 (frozen 생성기는 불변)",
-   "origin": "new"
-  },
-  "tests/test_skill_excel_fill.py": {
-   "note": "P1-GUI 시험 이사(cb72ae1): 셀 쓰기·수식/병합 보호·미응답 수치화 금지",
-   "origin": "new"
-  },
-  "tests/test_skill_school_verify.py": {
-   "note": "P1-GUI 시험 이사(cb72ae1): 재계산 항등식·상환 스케줄·to_d 거절 (본체 price_assumptions 계약)",
-   "origin": "new"
-  },
-  "tests/test_skill_show_research.py": {
-   "note": "P1-GUI 시험 이사(cb72ae1): 정본 기반 근거 조회(별도 원장 미사용)",
    "origin": "new"
   }
  },
