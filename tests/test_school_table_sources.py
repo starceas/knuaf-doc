@@ -429,6 +429,6 @@ class SchoolTableSourcesTests(ContractCase):
         for table in after.tables[-6:]:
             caption = table._tbl.getprevious()
             self.assertTrue(caption.tag.endswith('}p'))
-            self.assertTrue(''.join(caption.xpath('.//w:t/text()')).endswith('(출처 : 합성 검증 기관)'))
+            self.assertTrue(''.join(caption.xpath('.//w:t/text()')).replace('\u00a0', ' ').endswith('(출처 : 합성 검증 기관)')); self.assertIn('(출처\u00a0:\u00a0합성\u00a0검증\u00a0기관)', ''.join(caption.xpath('.//w:t/text()')))
             sizes = caption.xpath('.//w:rPr/w:sz/@w:val')
-            self.assertEqual(set(sizes), {'24'})  # title and credit both 12 pt
+            self.assertEqual(set(sizes), {'22'}); self.assertTrue(all(int(size) < 24 for size in sizes))  # every title/credit run: exactly 11 pt, below 12 pt body
