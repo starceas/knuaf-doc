@@ -146,8 +146,11 @@ class RealTreeTests(ContractCase):
             # The skill-gaps integration declares two WP-4 reference
             # changes that the pinned baseline already ships
             # (cross-review.md, intake-selection.md): 210 + 2 = 212/162.
-            self.assertEqual(219, rc["verified"])
-            self.assertEqual(168, rc["new_count"])
+            # Body-writing assets on main: 212/162 -> 216/166.
+            # Plan-fit rules add two new runtime files (rules and method
+            # data): 216/166 -> 218/168.
+            self.assertEqual(221, rc["verified"])
+            self.assertEqual(170, rc["new_count"])
         else:
             self.assertNotEqual("ok", report["status"])
             self.assertIn("declared_missing", _codes(report))
@@ -181,10 +184,12 @@ class RealTreeTests(ContractCase):
         # changes (cross-review.md, intake-selection.md) and no new files:
         # 210/162/169 -> 212/162/169.
         # Counts are measured from runtime-changes.json after adding body-writing assets.
+        # Plan-fit rules add two new runtime files (rules and method data):
+        # 216/166/173 -> 218/168/175.
         # PR2 counts are measured from runtime-changes.json after adding the crop-label table and its test.
-        self.assertEqual(219, link["change_count"])
-        self.assertEqual(168, link["new_count"])
-        self.assertEqual(175, link["approved_new_files"])
+        self.assertEqual(221, link["change_count"])
+        self.assertEqual(170, link["new_count"])
+        self.assertEqual(177, link["approved_new_files"])
         self.assertEqual("P27", link["parent_candidate"]["stage"])
         self.assertEqual(233, link["parent_candidate"]["file_count"])
         self.assertEqual(
