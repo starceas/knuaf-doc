@@ -1,6 +1,6 @@
 {
  "files": {
-  "SKILL.md": "05c3878a346a04dad864dd642aba06d98a34bd268afa848a3f9220bc024e5196",
+  "SKILL.md": "5f5c4c026fc77c7bc993352a698768902a4e75b5aab811ac1aeaca26f26d339d",
   "references/benchmark-packs/aliases/crop-aliases.specialty_crops.json": "8e7abffc7b4244727b4732f558b722934dd8ea229c0057312d1ee7ea92c2df22",
   "references/benchmark-packs/aliases/major-aliases.json": "ad1e1e6c2296f93ef27beab8494e840b1578e0d61c6c9bd8e238c640e653c81b",
   "references/benchmark-packs/catalog.json": "8dcad598073ce3efcce6698dafd2fa81bd24453deeb90216648ff68d1e8f8e68",
@@ -103,7 +103,7 @@
   "references/thesis-level.md": "9bed1a4b25a80c40ddb04b7b209cf5fbadac157cda4414047efc2911bd64ff1f",
   "references/update.md": "43746a2d7709cd90be8b5a330847a12e433ef734245482cdeb43fe17536f50de",
   "references/workbook-reference-set.json": "10aa1aface5c4f4447aab5f5721a860cd5b4219b29c40dd4c19fc3849526ecaa",
-  "references/workflow-order.md": "77970342f64307ea9382406c5dc5c012adf57511bc9e57b11b4943268d04f274",
+  "references/workflow-order.md": "96a90fdef08a1ef51d317846c014832ffc0407184a1cee60b83fad789d35d86b",
   "scripts/build_docx.py": "c9fadbc996fe4c8aac0fcf99c4732550c7b6352ecb6ec7ce57e1f87f7f3d5250",
   "scripts/build_excel_finance_template.py": "0b701dedc53e83af6b2c1aa7fce93d5df9043c428c9b7630a80d7944af582441",
   "scripts/build_hwpx.py": "009ba267f7e956be5e63404f0d2a3139a73eac868b1f65c300e2ac873ac3bee1",
