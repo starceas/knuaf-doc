@@ -2,7 +2,7 @@
   "schema": "knuaf-official-price-series/v1",
   "purpose": "R1이 2026-10-07에 실제 조회한 공식 공표 수열만 수록한다. 미확인 값은 observations에 넣지 않고 unconfirmed_years에 '확인 불가'로 남긴다. 학생 작목 판매가는 번들에 없으므로 spec.price_sources로 같은 스키마의 수열을 학생이 직접 입력한다.",
   "retrieved_at": "2026-10-07",
-  "rate_rule": "일반물가·임금은 해당 관측 수열 CAGR. 판매 시작가는 작성연도 W 직전 5개 연도 명목가격 평균, 상승률은 동일 창 DT_1J22003 전국 연간 총지수의 4개 연간격 CAGR. 첫해 지수 0.",
+  "rate_rule": "일반물가·임금은 해당 관측 수열 CAGR. 단 특용작물 X01 임금은 교수님 양식 그대로 연도별 상승률의 산술평균(8. 노무비계획 AC38·AD38 =AVERAGE, Ⅳ장 노무비 각주도 같은 값). 판매 시작가는 작성연도 W 직전 5개 연도 명목가격 평균, 상승률은 동일 창 DT_1J22003 전국 연간 총지수의 4개 연간격 CAGR. 첫해 지수 0.",
   "series": [
     {
       "id": "official.kosis.cpi.total",

@@ -574,7 +574,7 @@
         "tests.test_template_wage_link.WageLinkTests.test_v1_06_registered_values_cannot_be_replaced_under_bundled_id",
         "tests.test_template_wage_link.WageLinkTests.test_v1_06_registration_and_null_basis_are_required_in_both_paths",
         "tests.test_template_wage_link.WageLinkTests.test_v1_06_invalid_registration_containers_and_rate_types_rejected",
-        "tests.test_template_wage_link.WageLinkTests.test_shared_check_rate_is_only_a_check_actual_cagr_is_applied",
+        "tests.test_template_wage_link.WageLinkTests.test_declared_wage_rate_refused_x01_mean_is_applied",
         "tests.test_template_wage_link.WageLinkTests.test_id_whitespace_is_rejected_by_shared_resolution_in_both_paths"
       ]
     },

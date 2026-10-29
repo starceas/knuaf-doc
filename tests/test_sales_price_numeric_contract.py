@@ -11,7 +11,7 @@ from unittest import mock
 from openpyxl import load_workbook
 
 from tests._harness import ContractCase, bind_major, runtime
-from tests.test_price_assumptions import _spec, _student_source
+from tests.test_price_assumptions import _spec, _student_source, legacy_workbook
 from tests.test_template_wage_link import fixture, assumptions, S5
 from tests.test_hort_price_contract import _fact, _project
 
@@ -159,7 +159,7 @@ class SalesNumericContract(ContractCase):
     def test_school_channels_and_conflicting_direct_value(self):
         root=self.make_project();bind_major(root);ctx=runtime("gg_major_contract").output_context(root,"specialty_crops")
         out=root/"sales.xlsx";spec=sales_spec()
-        runtime("gg_school_excel").school_workbook(spec,out,context=ctx)
+        legacy_workbook(spec,out,context=ctx)
         wb=load_workbook(out);sales=wb[" 5. 판매계획"]
         self.assertEqual("=AVERAGE(E7,G7,I7,K7,M7)",sales["O7"].value)
         self.assertEqual([100,200,300,400,500],[sales[c+"7"].value for c in "EGIKM"])
@@ -172,7 +172,7 @@ class SalesNumericContract(ContractCase):
         receipt=json.loads(out.with_suffix(".manifest.json").read_text())
         self.assertEqual(500,receipt["price_assumptions"]["sales"]["anchors"]["direct"]["base_price"])
         wb.close();spec["purchase_price"]="999"
-        with self.assertRaisesRegex(ValueError,"불일치"):runtime("gg_school_excel").school_workbook(spec,root/"bad.xlsx",context=ctx)
+        with self.assertRaisesRegex(ValueError,"불일치"):legacy_workbook(spec,root/"bad.xlsx",context=ctx)
         self.assertFalse((root/"bad.xlsx").exists())
 
     def test_school_valid_lower_grade_records_refused_before_output(self):
@@ -190,15 +190,15 @@ class SalesNumericContract(ContractCase):
                 self.assertEqual(grade,self.normalize(spec)["anchors"][key]["dimensions"]["grade"])
                 out=root/(key+grade+".xlsx")
                 with self.subTest(key=key,grade=grade),self.assertRaisesRegex(ValueError,"school.*grade"):
-                    school.school_workbook(spec,out,context=ctx)
+                    legacy_workbook(spec,out,context=ctx)
                 self.assertFalse(out.exists())
                 self.assertFalse(out.with_suffix(".manifest.json").exists())
                 # Refusal also preserves an already-existing output pair.
-                school.school_workbook(sales_spec(),out,context=ctx)
+                legacy_workbook(sales_spec(),out,context=ctx)
                 previous={p:p.read_bytes() for p in (out,out.with_suffix(".manifest.json"))}
                 before=copy.deepcopy(spec)
                 with self.assertRaisesRegex(ValueError,"school.*grade"):
-                    school.school_workbook(spec,out,context=ctx)
+                    legacy_workbook(spec,out,context=ctx)
                 self.assertEqual(before,spec)
                 self.assertEqual(previous,{p:p.read_bytes() for p in previous})
 
@@ -213,7 +213,7 @@ class SalesNumericContract(ContractCase):
             self.normalize(spec)  # shared contract still permits unknown grade
             before=copy.deepcopy(spec);out=root/(key+"-unknown.xlsx")
             with self.subTest(key=key),self.assertRaisesRegex(ValueError,"grade"):
-                runtime("gg_school_excel").school_workbook(spec,out,context=ctx)
+                legacy_workbook(spec,out,context=ctx)
             self.assertFalse(out.exists());self.assertFalse(out.with_suffix(".manifest.json").exists())
             self.assertEqual(before,spec)
 
@@ -224,7 +224,7 @@ class SalesNumericContract(ContractCase):
         for raw in spec["price_assumptions"]["sales"]["anchors"].values():
             raw["target_dimensions"].pop("grade")
         before=copy.deepcopy(spec);out=root/"known-product.xlsx"
-        runtime("gg_school_excel").school_workbook(spec,out,context=ctx)
+        legacy_workbook(spec,out,context=ctx)
         receipt=json.loads(out.with_suffix(".manifest.json").read_text())
         for a in receipt["price_assumptions"]["sales"]["anchors"].values():
             self.assertEqual("상품",a["dimensions"]["grade"])
@@ -245,7 +245,7 @@ class SalesNumericContract(ContractCase):
         raw["target_dimensions"].pop("grade")
         next(e for e in spec["price_sources"] if e["id"]==raw["source_id"])["dimensions"].pop("grade")
         before=copy.deepcopy(spec);out=root/"inactive-unknown.xlsx"
-        runtime("gg_school_excel").school_workbook(spec,out,context=ctx)
+        legacy_workbook(spec,out,context=ctx)
         book=runtime("gg_workbook_audit").Workbook.load(out)
         self.assertEqual(600,book.evaluate(S5,"D39"))
         self.assertEqual(0,book.evaluate(S5,"O10"))
@@ -267,7 +267,7 @@ class SalesNumericContract(ContractCase):
                 dims["등급"]=grade if dims is e["dimensions"] else [grade]
                 dims["단위"]="원/kg" if dims is e["dimensions"] else ["원/kg"]
         out=root/"aliases.xlsx"
-        runtime("gg_school_excel").school_workbook(spec,out,context=ctx)
+        legacy_workbook(spec,out,context=ctx)
         self.assertEqual(Decimal(800),runtime("gg_school_verify").calculate_school_expected(spec)["expected_years"][0]["revenue"])
 
     def test_school_valid_wrong_channel_or_unit_refused_without_conversion(self):
@@ -283,7 +283,7 @@ class SalesNumericContract(ContractCase):
             self.normalize(spec)
             out=root/(axis+"-mismatch.xlsx")
             with self.subTest(axis=axis),self.assertRaisesRegex(ValueError,"채널 불일치|원/kg"):
-                runtime("gg_school_excel").school_workbook(spec,out,context=ctx)
+                legacy_workbook(spec,out,context=ctx)
             self.assertFalse(out.exists());self.assertFalse(out.with_suffix(".manifest.json").exists())
 
     def test_fr01_swapped_source_and_target_rejected_before_output(self):
@@ -296,7 +296,7 @@ class SalesNumericContract(ContractCase):
         out=root/"swapped.xlsx"
         before=self._tree_bytes(root)
         with self.assertRaisesRegex(ValueError,"purchase.*수매.*채널 불일치"):
-            runtime("gg_school_excel").school_workbook(spec,out,context=ctx)
+            legacy_workbook(spec,out,context=ctx)
         self.assertFalse(out.exists());self.assertFalse(out.with_suffix(".manifest.json").exists())
         self.assertEqual(before,self._tree_bytes(root))
         with self.assertRaisesRegex(ValueError,"채널 불일치"):
@@ -308,7 +308,7 @@ class SalesNumericContract(ContractCase):
         spec=sales_spec();spec.pop("purchase_price");spec.pop("direct_price")
         spec.update(purchase_share="0.75",direct_share="0.25")
         out=root/"asymmetric.xlsx"
-        runtime("gg_school_excel").school_workbook(spec,out,context=ctx)
+        legacy_workbook(spec,out,context=ctx)
         book=runtime("gg_workbook_audit").Workbook.load(out)
         self.assertEqual(450,book.evaluate(" 5. 판매계획","D39"))
         self.assertEqual(250,book.evaluate(" 5. 판매계획","D40"))
@@ -324,7 +324,7 @@ class SalesNumericContract(ContractCase):
         spec=sales_spec();spec.pop("direct_price")
         spec.update(purchase_share="1",direct_share="0")
         before=copy.deepcopy(spec);out=root/"purchase-only.xlsx"
-        runtime("gg_school_excel").school_workbook(spec,out,context=ctx)
+        legacy_workbook(spec,out,context=ctx)
         expected=runtime("gg_school_verify").calculate_school_expected(spec)
         self.assertEqual(Decimal(600),expected["expected_years"][0]["revenue"])
         self.assertEqual(Decimal(0),expected["effective_direct_price"])
@@ -349,7 +349,7 @@ class SalesNumericContract(ContractCase):
                 self.assertIsNot(prices["sales"],prices["sales"]["anchors"][key])
                 json.dumps(prices)
                 out=root/(key+"-flat.xlsx")
-                runtime("gg_school_excel").school_workbook(spec,out,context=ctx)
+                legacy_workbook(spec,out,context=ctx)
                 self.assertTrue(out.exists());self.assertTrue(out.with_suffix(".manifest.json").is_file())
                 w=load_workbook(out);self.assertEqual(17,len(w.sheetnames));w.close()
                 manifest=json.loads(out.with_suffix(".manifest.json").read_text())

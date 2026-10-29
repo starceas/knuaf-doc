@@ -171,19 +171,29 @@ def merged_cells(root: ET.Element) -> tuple[set[str], set[str]]:
     return anchors, nonanchors
 
 
+def _validated_anchors(anchors) -> dict:
+    """The variant -> anchor-list map, or ``TemplateUnreadable``: an empty
+    or malformed anchor list can never classify a workbook."""
+    if (not isinstance(anchors, dict) or not anchors
+            or any(not isinstance(variant_anchors, list) or not variant_anchors
+                   or not all(_anchor_well_formed(a) for a in variant_anchors)
+                   for variant_anchors in anchors.values())):
+        raise TemplateUnreadable("layout identification config unreadable: "
+                                 "anchor list missing or malformed")
+    return anchors
+
+
 def _load_layout_anchors() -> dict:
-    """Shipped layout anchors keyed by variant ("x01"/"x02"); {} on any
-    problem — a missing or unreadable extract is "unknown", never a
-    guessed layout."""
+    """Shipped layout anchors keyed by variant ("x01"/"x02").  A missing,
+    unparsable or wrong-schema extract raises ``TemplateUnreadable``: a
+    workbook that cannot be identified is never "another form"."""
     try:
         doc = json.loads(LAYOUT_EXTRACT_PATH.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return {}
-    if not isinstance(doc, dict) \
-            or doc.get("schema") != "knuaf-common-workbook-extract/v1":
-        return {}
-    anchors = doc.get("layout_anchors")
-    return anchors if isinstance(anchors, dict) else {}
+    except (OSError, ValueError) as exc:
+        raise TemplateUnreadable(f"layout identification config unreadable: {exc}") from exc
+    if not isinstance(doc, dict) or doc.get("schema") != "knuaf-common-workbook-extract/v1":
+        raise TemplateUnreadable("layout identification config unreadable: schema mismatch")
+    return _validated_anchors(doc.get("layout_anchors"))
 
 
 def _anchor_well_formed(anchor) -> bool:
@@ -225,59 +235,225 @@ def _anchor_holds(expect, cell_state) -> bool:
     return False
 
 
+class TemplateUnreadable(ValueError):
+    """The workbook could not be opened or parsed.  Checks report it as a
+    read failure for a person to look at (``READ_FAILURE``); tools that
+    make a map or copy make nothing.  Never a pass, never "another form"."""
+
+
+# PR2 checks (label-check, labor-review, the shared read check) are advisory.
+ADVISORY_MEANING = ("보조 경고, 판정 근거 아님. 칸 이름 대조·일용 노무 성별 확인·읽기 공통 확인 결과는 "
+                    "확인 권장 사항이며 작성을 막지 않는다. 읽기 실패는 사람이 파일을 직접 확인한다.")
+READ_FAILURE = "읽기 실패 — 사람 확인"
+ADVISORY_WARNING = "확인 권장"
+NO_DIFFERENCE = "차이 없음"
+
+
+def read_failure_report(exc: Exception, **extra) -> dict:
+    """The output of a tool whose input failed the shared read check:
+    the read-failure message first, nothing produced."""
+    return {"message": READ_FAILURE, "status": "read_failed", "meaning": ADVISORY_MEANING,
+            "reason": str(exc), **extra}
+
+
+class TemplateRead:
+    """One parsed workbook: sheet order, every stored cell, layout.
+
+    ``cells[(sheet, ref)]`` holds ``kind`` (``f`` formula, ``n`` number,
+    ``s`` string, ``b``/``e``/``d``), the normalized ``value``, and for a
+    formula its stored ``formula`` text, ``fattrs`` (every ``<f>``
+    attribute) and ``resolved`` text (shared followers translated from
+    their anchor).  ``display`` is the cell as ``text_value`` reads it,
+    cached formula results included."""
+    __slots__ = ("path", "sheets", "cells", "layout")
+
+    def __init__(self, path, sheets, cells, layout):
+        self.path, self.sheets, self.cells, self.layout = path, sheets, cells, layout
+
+
+def _cell_record(cell: ET.Element, shared: list[str]) -> dict | None:
+    f = cell.find(local("f"))
+    display = text_value(cell, shared)
+    if f is not None:
+        return {"kind": "f", "value": None, "formula": f.text or "",
+                "fattrs": tuple(sorted(f.attrib.items())), "display": display}
+    t = cell.attrib.get("t", "n")
+    v = cell.find(local("v"))
+    if t == "inlineStr":
+        kind, value = "s", "".join(cell.itertext())
+    elif v is None or v.text is None:
+        return None
+    elif t == "s":
+        try:
+            kind, value = "s", shared[int(v.text)]
+        except (ValueError, IndexError):
+            raise TemplateUnreadable(f"shared string index unreadable: {cell.attrib.get('r')}")
+    elif t == "str":
+        kind, value = "s", v.text
+    elif t == "n":
+        try:
+            kind, value = "n", repr(float(v.text))
+        except ValueError:
+            raise TemplateUnreadable(f"number cell unreadable: {cell.attrib.get('r')}")
+    elif t in ("b", "e", "d"):
+        kind, value = t, v.text
+    else:
+        raise TemplateUnreadable(f"unknown cell type {t!r}: {cell.attrib.get('r')}")
+    if kind == "s" and value == "":
+        return None
+    return {"kind": kind, "value": value, "display": display}
+
+
+def _layout_of(cells: dict) -> str:
+    # An unreadable or malformed identification config raises: it is never
+    # "another form".
+    anchors = _validated_anchors(_load_layout_anchors())
+    for variant, variant_anchors in anchors.items():
+        states = []
+        for a in variant_anchors:
+            rec = cells.get((a["sheet"], a["cell"]))
+            states.append({} if rec is None else
+                          {"value": rec["display"], "formula": rec["kind"] == "f"})
+        if all(_anchor_holds(a["expect"], s) for a, s in zip(variant_anchors, states)):
+            return variant
+    return "unknown"
+
+
+def _opened_sheet_names(path: Path) -> list[str]:
+    """First check of the shared read: open the file with openpyxl, the
+    library the later checks read it with.  Any failure is unreadable."""
+    import warnings
+    import openpyxl
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            workbook = openpyxl.load_workbook(path)
+    except Exception as exc:  # openpyxl raises many parser types
+        raise TemplateUnreadable(f"workbook does not open: {path.name}: "
+                                 f"{type(exc).__name__}: {exc}") from exc
+    try:
+        return list(workbook.sheetnames)
+    finally:
+        workbook.close()
+
+
+_SHEET_ROOTS = {local("worksheet"), local("chartsheet")}
+_OFFICE_DOCUMENT = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"
+_SHARED_STRINGS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings"
+_REQUIRED_PARTS = (("[Content_Types].xml", "{http://schemas.openxmlformats.org/package/2006/content-types}Types"),
+                   ("_rels/.rels", f"{{{NS_PKG}}}Relationships"),
+                   ("xl/workbook.xml", local("workbook")),
+                   ("xl/_rels/workbook.xml.rels", f"{{{NS_PKG}}}Relationships"))
+
+
+def _part_root(z: zipfile.ZipFile, name: str, tag: str) -> ET.Element:
+    if name not in z.namelist():
+        raise TemplateUnreadable(f"package part missing: {name}")
+    try:
+        root = ET.fromstring(z.read(name))
+    except ET.ParseError as exc:
+        raise TemplateUnreadable(f"package part is not XML: {name}: {exc}") from exc
+    if root.tag != tag:
+        raise TemplateUnreadable(f"package part has the wrong root: {name}")
+    return root
+
+
+def _package_shared_strings(z: zipfile.ZipFile) -> list[str]:
+    """Package structure half of the first check (openpyxl opens files
+    whose ``_rels/.rels`` is missing or broken): the four required parts
+    exist and parse with their roots, the package relationship points at
+    ``xl/workbook.xml``, and a listed shared-string part exists and
+    parses.  Returns the shared strings."""
+    roots = {name: _part_root(z, name, tag) for name, tag in _REQUIRED_PARTS}
+    office = [r for r in roots["_rels/.rels"] if r.attrib.get("Type") == _OFFICE_DOCUMENT]
+    if len(office) != 1 or office[0].attrib.get("Target", "").lstrip("/") != "xl/workbook.xml":
+        raise TemplateUnreadable("package relationship does not point at xl/workbook.xml")
+    listed = [r for r in roots["xl/_rels/workbook.xml.rels"] if r.attrib.get("Type") == _SHARED_STRINGS]
+    if listed or "xl/sharedStrings.xml" in z.namelist():
+        root = _part_root(z, "xl/sharedStrings.xml", local("sst"))
+        return ["".join(si.itertext()) for si in root.findall(local("si"))]
+    return []
+
+
+def read_template(source: Path) -> TemplateRead:
+    """The shared read check every template tool runs first.
+
+    1. The file opens with openpyxl, and the package structure holds:
+       ``[Content_Types].xml``, ``_rels/.rels`` (pointing at the workbook),
+       ``xl/workbook.xml`` and ``xl/_rels/workbook.xml.rels`` exist and
+       parse with their roots; a listed ``xl/sharedStrings.xml`` exists and
+       parses; at least one sheet; every listed sheet part exists with a
+       worksheet (with ``sheetData``) or chartsheet root; the sheet list
+       equals the one openpyxl opened.
+    2. Every cell parses (``t="s"`` indices inside the shared-string
+       table) and every shared formula resolves.
+    3. The layout is identified with the shipped anchors.
+    Any failure — including an unreadable identification config — raises
+    ``TemplateUnreadable``.  ``layout == "unknown"`` therefore always
+    means "read and identified as another form"."""
+    from gg_workbook_audit import translate
+    try:
+        path = resolve_source(Path(source))
+    except FileNotFoundError as exc:
+        raise TemplateUnreadable(str(exc)) from exc
+    opened = _opened_sheet_names(path)
+    try:
+        with zipfile.ZipFile(path) as z:
+            shared = _package_shared_strings(z)
+            sheets = workbook_sheets(z)
+            if not sheets:
+                raise TemplateUnreadable("workbook lists no sheets")
+            if [name for name, _ in sheets] != opened:
+                raise TemplateUnreadable("sheet list differs from the opened workbook")
+            for name, target in sheets:
+                if target not in z.namelist():
+                    raise TemplateUnreadable(f"sheet part missing: {name!r} ({target})")
+            cells = {}
+            for name, target in sheets:
+                root = ET.fromstring(z.read(target))
+                if root.tag not in _SHEET_ROOTS or (
+                        root.tag == local("worksheet") and root.find(local("sheetData")) is None):
+                    raise TemplateUnreadable(f"sheet part is not a worksheet: {name!r} ({target})")
+                anchors, followers = {}, []
+                for c in root.iter(local("c")):
+                    ref = c.attrib.get("r")
+                    if not ref or not CELL_RE.match(ref):
+                        raise TemplateUnreadable(f"cell without a valid address in {name!r}")
+                    rec = _cell_record(c, shared)
+                    if rec is None:
+                        continue
+                    if rec["kind"] == "f":
+                        attrs = dict(rec["fattrs"])
+                        if attrs.get("t") == "shared" and not rec["formula"]:
+                            followers.append((ref, rec, attrs.get("si")))
+                        else:
+                            rec["resolved"] = rec["formula"]
+                            if attrs.get("t") == "shared":
+                                anchors[attrs.get("si")] = (ref, rec["formula"])
+                    cells[name, ref] = rec
+                for ref, rec, si in followers:
+                    if si not in anchors:
+                        raise TemplateUnreadable(f"shared formula anchor missing: {name}!{ref}")
+                    anchor, text = anchors[si]
+                    rec["resolved"] = translate(text, anchor, ref)
+    except TemplateUnreadable:
+        raise
+    except (OSError, KeyError, ValueError, IndexError, ET.ParseError, zipfile.BadZipFile) as exc:
+        raise TemplateUnreadable(f"workbook unreadable: {Path(source).name}: {exc}") from exc
+    return TemplateRead(path, [name for name, _ in sheets], cells, _layout_of(cells))
+
+
 def detect_layout(source: Path) -> str:
     """Classify the source as ``x01`` | ``x02`` | ``unknown`` by checking
     the shipped C1 ``layout_anchors`` against the source bytes.
 
     A variant is named only when every one of its anchors holds.  The
     column-J predicate is exclusive, so both variants can never hold
-    together.  Every variant must carry a non-empty list of
-    well-formed anchors (sheet str, cell matching ``CELL_RE``,
-    ``expect`` with exactly one known predicate) — an empty or
-    malformed anchor list can never satisfy ``all()`` silently.
-    Any malformed anchor or unreadable workbook returns ``unknown``
-    — fail closed."""
-    anchors = _load_layout_anchors()
-    if not anchors:
-        return "unknown"
-    if any(not isinstance(variant_anchors, list) or not variant_anchors
-           or not all(_anchor_well_formed(a) for a in variant_anchors)
-           for variant_anchors in anchors.values()):
-        return "unknown"
-    try:
-        with zipfile.ZipFile(resolve_source(source)) as z:
-            shared = load_shared(z)
-            sheets = dict(workbook_sheets(z))
-            needed = {a["sheet"]
-                      for variant_anchors in anchors.values()
-                      for a in variant_anchors}
-            cells = {}
-            for name in needed:
-                target = sheets.get(name)
-                if target is None:
-                    continue
-                root = ET.fromstring(z.read(target))
-                cells[name] = {
-                    c.attrib["r"]: {
-                        "value": text_value(c, shared),
-                        "formula": c.find(local("f")) is not None,
-                    }
-                    for c in root.findall(f".//{local('c')}")
-                    if c.attrib.get("r")
-                }
-    except (OSError, KeyError, ValueError, zipfile.BadZipFile,
-            FileNotFoundError):
-        return "unknown"
-    for variant, variant_anchors in anchors.items():
-        try:
-            if all(_anchor_holds(
-                    a["expect"],
-                    cells.get(a["sheet"], {}).get(a["cell"], {}))
-                    for a in variant_anchors):
-                return variant
-        except (KeyError, TypeError):
-            continue
-    return "unknown"
+    together.  An empty or malformed anchor list never classifies.
+    ``unknown`` means the workbook was read and is another form; a file
+    or identification config that cannot be read raises
+    ``TemplateUnreadable`` (callers block or protect, never pass)."""
+    return read_template(source).layout
 
 
 def _check_map_layout(map_data: dict, source: Path) -> None:
@@ -311,6 +487,8 @@ def _check_map_layout(map_data: dict, source: Path) -> None:
 
 def inspect_source(source: Path, out_map: Path | None, report: Path | None) -> dict:
     source = resolve_source(source).resolve()
+    # Shared read check first: an unreadable file stops here (blocked).
+    detected = read_template(source).layout
     if out_map and out_map.exists():
         raise FileExistsError(f"refusing to overwrite map: {out_map}")
     if report and report.exists():
@@ -340,7 +518,7 @@ def inspect_source(source: Path, out_map: Path | None, report: Path | None) -> d
                                     "cellCount": len(cells), "formulaCount": formulas})
             inventory.extend({"sheet": name, **c} for c in cells)
     entries = default_entries(inventory)
-    detected = detect_layout(source)
+    # ``detected`` comes from the shared read check above.
     result = {
         "schema": "gg-xlsx-template-map/v1",
         "source": {"path": str(source), "sha256": digest, "size": source.stat().st_size},
@@ -387,7 +565,7 @@ def wage_fill_map(source: Path) -> dict:
     The fill engine requires a complete, sourced six-year observation block.
     This map never grants permission to overwrite a formula.
     """
-    if detect_layout(source) != "x01":
+    if read_template(source).layout != "x01":
         raise ValueError("layout_variant_unsupported: wage observations require x01")
     return {"schema": "gg-xlsx-fill-map/v1",
             "template": {"sha256": sha256(source)},
@@ -858,6 +1036,300 @@ def blank_copy(source: Path, map_path: Path, out: Path, *, context=None) -> dict
     return receipt
 
 
+COMMON_WORKBOOKS_DIR = Path(__file__).resolve().parents[1] / "references" / "common-workbooks"
+CROP_LABELS_PATH = COMMON_WORKBOOKS_DIR / "x01-crop-labels.json"
+CROP_LABEL_SCHEMA = "knuaf-template-crop-labels/v2"
+FORMULA_AUDIT_SCHEMA = "knuaf-workbook-formula-audit/v1"
+# The X01/X02 wage observation block: observation preparation removes its
+# formulas and the wage fill writes sourced numbers there.
+OBSERVATION_BLOCK = ("8. 노무비계획", "X26:Z31")
+
+
+def _crop_label_table() -> dict:
+    table = _json_file(CROP_LABELS_PATH)
+    if table.get("schema") != CROP_LABEL_SCHEMA:
+        raise ValueError("crop label table schema mismatch")
+    return table
+
+
+def _json_file(path: Path) -> dict:
+    return json.loads(Path(path).read_text(encoding="utf-8"))
+
+
+def registered_audit(binding: dict) -> dict:
+    """The pinned formula audit of a registered template: the audit file
+    must hash to ``audit_sha256`` and describe the template ``sha256``."""
+    path = COMMON_WORKBOOKS_DIR / binding["audit_file"]
+    if sha256(path) != binding["audit_sha256"]:
+        raise ValueError(f"registered template audit hash differs: {binding['audit_file']}")
+    audit = _json_file(path)
+    if audit.get("schema") != FORMULA_AUDIT_SCHEMA or audit.get("source_sha256") != binding["sha256"]:
+        raise ValueError(f"registered template audit source differs: {binding['audit_file']}")
+    return audit
+
+
+def derivation_mismatches(read: TemplateRead, audit: dict, *, open_range=OBSERVATION_BLOCK) -> list[str]:
+    """Cell-by-cell proof that ``read`` is the audited template after only
+    the defined copy transforms.  Every audited formula must be present
+    with the same resolved text (a shared formula expanded to plain
+    formulas is the same formula), no other cell may hold a formula, and
+    the sheet set must match.  Only the observation block (``open_range``)
+    may have lost its formulas — prepared, or filled with numbers.  Value
+    and label cells are the fill path and are not compared here."""
+    out = []
+    if set(read.sheets) != set(audit.get("sheet_roles", {})):
+        out.append("sheet set differs: " + ", ".join(sorted(set(read.sheets) ^ set(audit.get("sheet_roles", {})))))
+    expected = {(row["sheet"], row["cell"]): row["formula"] for row in audit["inventory"]}
+    actual = {key: rec["resolved"] for key, rec in read.cells.items() if rec["kind"] == "f"}
+    sheet, refs = open_range
+    open_cells = {(sheet, ref) for ref in expand_ref(refs)}
+    for key in sorted(set(expected) | set(actual)):
+        want, got = expected.get(key), actual.get(key)
+        if want == got or (key in open_cells and want is not None and got is None):
+            continue
+        out.append(f"{key[0]}!{key[1]}: registered formula {want!r}, found {got!r}")
+    return out
+
+
+def registered_template(read: TemplateRead, bindings: dict) -> tuple[str, str]:
+    """``(ref, "registered"|"derived")`` for a workbook that is a registered
+    template or a copy of one after only the defined transforms; raises
+    ValueError naming the first differing cells otherwise."""
+    digest = sha256(read.path)
+    for ref, binding in bindings.items():
+        if digest == binding["sha256"]:
+            return ref, "registered"
+    problems = []
+    for ref, binding in bindings.items():
+        if read.layout != ref.lower():
+            problems.append(f"{ref}: layout {read.layout}")
+            continue
+        mismatches = derivation_mismatches(read, registered_audit(binding))
+        if not mismatches:
+            return ref, "derived"
+        problems.append(f"{ref}: {len(mismatches)} cells differ ({'; '.join(mismatches[:3])})")
+    raise ValueError("not a registered template or a copy derived from one by the defined "
+                     "transforms: " + " | ".join(problems))
+
+
+def crop_label_map(source: Path, category: str, choices: dict | None = None) -> tuple[dict, dict]:
+    """Fill map + values that rename only the template's crop-bound labels.
+
+    ``category`` is one of the table's crop categories (asked from the
+    student when the major/crop does not settle it).  ``choices`` picks a
+    listed alternative per ``"<sheet>!<cell>"``; the first listed label is
+    the default.  The source is the registered X01/X02 or a copy of it
+    whose every formula still matches the registered audit
+    (``registered_template``); each original label must still be there —
+    a template whose label moved needs the table re-aligned first."""
+    table = _crop_label_table()
+    if category not in table["categories"]:
+        raise ValueError(f"unknown crop category: {category!r}; "
+                         f"choose one of {sorted(table['categories'])}")
+    read = read_template(source)
+    try:
+        ref, admitted = registered_template(read, table["templates"])
+    except ValueError as exc:
+        raise ValueError("crop labels are aligned to registered X01/X02 only; "
+                         "re-align x01-crop-labels.json for a new template year — " + str(exc)) from exc
+    digest = sha256(read.path)
+    choices = dict(choices or {})
+    entries, values = [], []
+    for row in table["cells"]:
+        key = f"{row['sheet']}!{row['cell']}"
+        options = row["labels"][category]
+        label = choices.pop(key, options[0])
+        if label not in options:
+            raise ValueError(f"{key}: {label!r} is not a listed {category} label {options}")
+        stored = read.cells.get((row["sheet"], row["cell"]))
+        if stored is None or stored["kind"] != "s" or stored["value"] != row["original"]:
+            raise ValueError(f"{key}: expected original label {row['original']!r}")
+        if label == row["original"]:
+            continue
+        entries.append({"sheet": row["sheet"], "cell": row["cell"], "role": "label.crop_category",
+                        "period": None, "editable": True,
+                        "source_note": f"작목 분류 {category} 칸 이름; 원래 글자 {row['original']!r}"})
+        values.append({"sheet": row["sheet"], "cell": row["cell"], "value": label,
+                       "value_type": "string", "answer_state": "provided",
+                       "evidence_ref": {"source_id": "template.crop_labels", "revision": 1,
+                                        "locator": f"x01-crop-labels.json {key} {category}; "
+                                                   f"{ref} {admitted}",
+                                        "origin": "assumption"}})
+    if choices:
+        raise ValueError("choices name cells outside the label table: " + ", ".join(sorted(choices)))
+    fill_map = {"schema": "gg-xlsx-fill-map/v1", "template": {"sha256": digest}, "entries": entries}
+    fill_values = {"schema": "gg-xlsx-fill-values/v1", "values": values}
+    return fill_map, fill_values
+
+
+def _compared(rec: dict | None):
+    """What label-check compares: formulas by stored text, every ``<f>``
+    attribute (shared ``t``/``si``/``ref``) and resolved text; other cells
+    by kind and value — a number stored as text is a different cell."""
+    if rec is None:
+        return None
+    if rec["kind"] == "f":
+        return ("f", rec["formula"], rec["fattrs"], rec["resolved"])
+    return (rec["kind"], rec["value"])
+
+
+def crop_label_check(before: Path, after: Path) -> dict:
+    """Compare a relabelled copy with its source: only listed label cells
+    may change; every formula (text, attributes, resolved meaning), every
+    value and its type, and the sheet list stay identical.
+
+    Advisory (``ADVISORY_MEANING``): ``status`` is ``match`` (no
+    difference), ``warning`` (``ADVISORY_WARNING``, differences listed) or
+    ``read_failed`` (``READ_FAILURE``, a workbook failed the shared read
+    check — never a match).  None of them blocks writing."""
+    table = _crop_label_table()
+    allowed = {(r["sheet"], r["cell"]): r for r in table["cells"]}
+    try:
+        a, b = read_template(before), read_template(after)
+    except TemplateUnreadable as exc:
+        return read_failure_report(exc, labelsChanged=[], violations=[])
+    changed, violations = [], []
+    if a.sheets != b.sheets:
+        violations.append({"sheets": {"old": a.sheets, "new": b.sheets}})
+    for key in sorted(set(a.cells) | set(b.cells)):
+        old, new = _compared(a.cells.get(key)), _compared(b.cells.get(key))
+        if old == new:
+            continue
+        row = allowed.get(key)
+        ok = (row is not None and old == ("s", row["original"]) and new is not None
+              and new[0] == "s" and any(new[1] in v for v in row["labels"].values()))
+        (changed if ok else violations).append(
+            {"sheet": key[0], "cell": key[1], "old": old, "new": new})
+    return {"message": ADVISORY_WARNING if violations else NO_DIFFERENCE,
+            "status": "warning" if violations else "match", "meaning": ADVISORY_MEANING,
+            "labelsChanged": changed, "violations": violations,
+            "formulasCompared": sum(1 for v in a.cells.values() if v["kind"] == "f"),
+            "numbersCompared": sum(1 for v in a.cells.values() if v["kind"] == "n")}
+
+
+LABOR_SHEET = "8. 노무비계획"
+# X01 '8. 노무비계획': 고용 노동비 일용직 남(11행)·여(12행) 연도별 작업 일수 칸과
+# 작업별 산출근거(1년차 26~33행, 2년차 이후 40~47행)의 남자 O·여자 R 일수 칸.
+LABOR_SUMMARY_DAYS = {"남자": ("G11", "J11", "M11", "P11", "S11"),
+                      "여자": ("G12", "J12", "M12", "P12", "S12")}
+LABOR_TASK_BLOCKS = ((range(26, 34), "1년차"), (range(40, 48), "2년차 이후"))
+# 위 좌표가 X01 배치인지 확인하는 칸 이름(앞뒤 공백·칸 안 공백 무시).
+LABOR_LAYOUT_ANCHORS = (("C11", "일용직"), ("E11", "남"), ("E12", "여"),
+                        ("R24", "고용(여자)"), ("R38", "고용(여자)"),
+                        ("O25", "일수"), ("R25", "일수"), ("O39", "일수"), ("R39", "일수"))
+LABOR_MALE_HEADERS = ("고용(남자,단가동일)", "고용(남자)")
+
+
+def _labor_unchecked(code, reason, evidence):
+    # Advisory: the check could not be made.  A pending warning (never a
+    # pass and never a block) whose reason starts with the read-failure note.
+    return {"code": code, "status": "pending", "severity": "warning", "message": READ_FAILURE,
+            "reason": f"{READ_FAILURE}: {reason}",
+            "remedy": "보조 경고, 판정 근거 아님. 교수님 양식(X01) '8. 노무비계획' 배치인지 사람이 확인하고, "
+                      "엑셀에서 재계산·저장해 수식 캐시를 만든 뒤 다시 확인한다",
+            "evidence": evidence}
+
+
+def labor_review(path) -> list[dict]:
+    """Daily-labor gender review on a professor-template (X01) workbook —
+    an advisory check (``ADVISORY_MEANING``): every issue is a pending
+    warning and never blocks writing.
+
+    The shared read check (``read_template``) runs first: a file that is
+    missing or cannot be read gives ``LABOR_WORKBOOK_UNREADABLE`` with the
+    ``READ_FAILURE`` message.  A readable workbook not identified as X01
+    (another major's form, X02, unknown) is not in scope and yields no
+    issue.  On an X01 workbook, hired days only in the male column give
+    ``LABOR_HIRED_MALE_ONLY`` (``ADVISORY_WARNING``).  A missing sheet
+    (``LABOR_SHEET_MISSING``), a different labor layout
+    (``LABOR_LAYOUT_UNSUPPORTED``) or a days cell that cannot be read as a
+    number — text, or a formula without a cached value
+    (``LABOR_DAYS_UNREADABLE``) — gives the ``READ_FAILURE`` message, never
+    a silent pass.  Only a truly empty, formula-free cell counts as 0 days."""
+    path = Path(path)
+    try:
+        layout = read_template(path).layout
+    except TemplateUnreadable as exc:
+        return [_labor_unchecked("LABOR_WORKBOOK_UNREADABLE",
+                                 "통합문서를 열거나 읽지 못해 일용직 성별을 확인하지 못함",
+                                 {"workbook": path.name, "error": str(exc)})]
+    if layout != "x01":
+        return []
+    import openpyxl
+    try:
+        workbook = openpyxl.load_workbook(path, data_only=True)
+        formulas = openpyxl.load_workbook(path, data_only=False)
+    except Exception as exc:  # openpyxl raises many parser types
+        return [_labor_unchecked("LABOR_WORKBOOK_UNREADABLE",
+                                 "통합문서를 열거나 읽지 못해 일용직 성별을 확인하지 못함",
+                                 {"workbook": path.name, "error": f"{type(exc).__name__}: {exc}"})]
+    try:
+        return _labor_review_x01(workbook, formulas)
+    finally:
+        workbook.close()
+        formulas.close()
+
+
+def _labor_review_x01(workbook, formulas) -> list[dict]:
+    if LABOR_SHEET not in workbook.sheetnames:
+        return [_labor_unchecked("LABOR_SHEET_MISSING",
+                                 "'8. 노무비계획' 시트를 찾지 못해 일용직 성별을 확인하지 못함",
+                                 {"sheets": list(workbook.sheetnames)})]
+    ws, wf = workbook[LABOR_SHEET], formulas[LABOR_SHEET]
+    norm = lambda v: re.sub(r"\s+", "", v) if isinstance(v, str) else v
+    mismatched = [{"cell": ref, "expected": text, "found": ws[ref].value}
+                  for ref, text in LABOR_LAYOUT_ANCHORS if norm(ws[ref].value) != text]
+    mismatched += [{"cell": ref, "expected": list(LABOR_MALE_HEADERS), "found": ws[ref].value}
+                   for ref in ("O24", "O38") if norm(ws[ref].value) not in LABOR_MALE_HEADERS]
+    if mismatched:
+        return [_labor_unchecked("LABOR_LAYOUT_UNSUPPORTED",
+                                 "'8. 노무비계획' 칸 배치가 교수님 양식과 달라 남녀 고용 일수를 읽지 못함",
+                                 {"mismatched": mismatched})]
+    unreadable = []
+
+    def days(ref):
+        value = ws[ref].value
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            return value
+        source = wf[ref].value
+        if value is None and not (isinstance(source, str) and source.startswith("=")):
+            return 0
+        if isinstance(value, str) and not value.strip() and source == value:
+            return 0
+        unreadable.append({"cell": ref, "value": value, "formula": source
+                           if isinstance(source, str) and source.startswith("=") else None})
+        return 0
+
+    male = sum(days(r) for r in LABOR_SUMMARY_DAYS["남자"])
+    female = sum(days(r) for r in LABOR_SUMMARY_DAYS["여자"])
+    tasks = []
+    for rows, period in LABOR_TASK_BLOCKS:
+        for row in rows:
+            m, f = days(f"O{row}"), days(f"R{row}")
+            if m or f:
+                tasks.append({"period": period, "row": row, "task": ws[f"B{row}"].value,
+                              "male_days": m, "female_days": f})
+    if unreadable:
+        return [_labor_unchecked("LABOR_DAYS_UNREADABLE",
+                                 "고용 일수 칸을 숫자로 읽지 못함(글자이거나 수식 캐시 없음): "
+                                 + ", ".join(u["cell"] for u in unreadable),
+                                 {"cells": unreadable})]
+    task_male = sum(t["male_days"] for t in tasks)
+    task_female = sum(t["female_days"] for t in tasks)
+    if (male > 0 and female == 0) or (task_male > 0 and task_female == 0):
+        return [{
+            "code": "LABOR_HIRED_MALE_ONLY", "status": "pending", "severity": "warning",
+            "message": ADVISORY_WARNING,
+            "reason": "일용직 고용 일수가 남자 칸에만 있음(남 %s일·여 %s일, 작업별 남 %s일·여 %s일)"
+                      % (male, female, task_male, task_female),
+            "remedy": "보조 경고, 판정 근거 아님. 작업별(수확·선별·포장 등)로 남녀 누구를 고용하는지 "
+                      "학생에게 확인해 칸을 나누고, 근거 자료에 성별 구분이 없으면 작업 관행으로 정한 "
+                      "이유를 각주에 적는다",
+            "evidence": {"summary": {"male_days": male, "female_days": female}, "tasks": tasks},
+        }]
+    return []
+
+
 def cli(argv: list[str]) -> int:
     p = argparse.ArgumentParser(description="inspect and create a source-bound reusable XLSX template")
     sp = p.add_subparsers(dest="cmd", required=True)
@@ -868,6 +1340,17 @@ def cli(argv: list[str]) -> int:
     w = sp.add_parser("wage-map")
     w.add_argument("--source", required=True, type=Path)
     w.add_argument("--out-map", required=True, type=Path)
+    lm = sp.add_parser("label-map", help="작목 분류별 칸 이름 채우기 맵·값 생성")
+    lm.add_argument("--source", required=True, type=Path)
+    lm.add_argument("--category", required=True)
+    lm.add_argument("--choice", action="append", default=[], metavar="SHEET!CELL=LABEL")
+    lm.add_argument("--out-map", required=True, type=Path)
+    lm.add_argument("--out-values", required=True, type=Path)
+    lc = sp.add_parser("label-check", help="칸 이름 변경 뒤 수식·숫자 불변 확인")
+    lc.add_argument("--before", required=True, type=Path)
+    lc.add_argument("--after", required=True, type=Path)
+    lr = sp.add_parser("labor-review", help="일용직 성별 고용 일수 경고")
+    lr.add_argument("--workbook", required=True, type=Path)
     c = sp.add_parser("clear")
     c.add_argument("--source", required=True, type=Path)
     c.add_argument("--map", required=True, type=Path)
@@ -878,6 +1361,37 @@ def cli(argv: list[str]) -> int:
     c.add_argument("--major", default=None, help="명시 전공 ID")
     args = p.parse_args(argv)
     try:
+        if args.cmd == "label-map":
+            choices = {}
+            for item in args.choice:
+                key, sep, label = item.partition("=")
+                if not sep:
+                    raise ValueError(f"--choice needs SHEET!CELL=LABEL: {item!r}")
+                choices[key] = label
+            fill_map, fill_values = crop_label_map(args.source, args.category, choices)
+            for path, data in ((args.out_map, fill_map), (args.out_values, fill_values)):
+                path.parent.mkdir(parents=True, exist_ok=True)
+                with path.open("x", encoding="utf-8") as stream:
+                    json.dump(data, stream, ensure_ascii=False, indent=2)
+            print(json.dumps({"status": "mapped", "labels": len(fill_values["values"]),
+                              "map": str(args.out_map), "values": str(args.out_values)},
+                             ensure_ascii=False))
+            return 0
+        if args.cmd == "label-check":
+            # Advisory: always exit 0; the message field says what to do.
+            print(json.dumps(crop_label_check(args.before, args.after), ensure_ascii=False))
+            return 0
+        if args.cmd == "labor-review":
+            issues = labor_review(args.workbook)
+            if any(i.get("message") == READ_FAILURE for i in issues):
+                head = {"message": READ_FAILURE, "status": "read_failed"}
+            elif issues:
+                head = {"message": ADVISORY_WARNING, "status": "warning"}
+            else:
+                head = {"message": NO_DIFFERENCE, "status": "reviewed"}
+            print(json.dumps({**head, "meaning": ADVISORY_MEANING, "issues": issues},
+                             ensure_ascii=False))
+            return 0
         if args.cmd == "wage-map":
             result = wage_fill_map(resolve_source(args.source))
             args.out_map.parent.mkdir(parents=True, exist_ok=True)
@@ -940,6 +1454,11 @@ def cli(argv: list[str]) -> int:
                               "detail": str(exc),
                               "guidance": exc.detail.get("guidance")},
                              ensure_ascii=False))
+            return 2
+        if isinstance(exc, TemplateUnreadable):
+            # Nothing was produced from an input the shared read check
+            # could not read; say so first, for a person to check.
+            print(json.dumps(read_failure_report(exc, produced=[]), ensure_ascii=False))
             return 2
         if isinstance(exc, (OSError, ValueError, RuntimeError,
                             zipfile.BadZipFile)):

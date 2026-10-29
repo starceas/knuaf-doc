@@ -699,6 +699,11 @@ class TestFootnotes(unittest.TestCase):
                 line, err = ft._resolve_footnote(kind, cfg, {
                     "source_id": sid, "base_year": base, **({"writing_year":2026,"application_base_year":2027} if kind=="selling_price" else {}),
                     "target_dimensions": {**src["dimensions"], "unit": src["unit"]}}, registry)
+                if kind == "wage":
+                    # X01 AC38 방식: 연도별 상승률 산술평균(사이 연도 관측 필요).
+                    self.assertIsNone(line)
+                    self.assertIn("관측 연도 확인 불가", err)
+                    continue
                 self.assertIsNone(err)
                 if kind == 'selling_price':
                     self.assertIn('5년 평균 3200 원/kg [test.sales]', line)
@@ -708,13 +713,80 @@ class TestFootnotes(unittest.TestCase):
                     self.assertIn('통합문서에서 따로 확인해야 한다', line)
                     continue
                 basis = "지수 기준연도 %d" % base if base else "지수 기준연도 해당 없음"
+                rate, formula = resolved["rate"], "산식 r=(끝값/시작값)^(1/%d)-1" % resolved["interval_years"]
                 self.assertEqual(line, (
                     "* %s r=%.4f%%는 참고값이다 (출처: 국가데이터처(구 통계청) "
                     "시험통계 시험항목 [%s], %s, 관측기간 2020~%d년, "
-                    "산식 r=(끝값/시작값)^(1/%d)-1). 이 값이 위 표의 계산에 "
+                    "%s). 이 값이 위 표의 계산에 "
                     "쓰였는지는 통합문서에서 따로 확인해야 한다."
-                    % (cfg["label"], resolved["rate"] * 100, sid, basis,
-                       resolved["observation"]["end_year"], resolved["interval_years"])))
+                    % (cfg["label"], rate * 100, sid, basis,
+                       resolved["observation"]["end_year"], formula)))
+
+    def test_wage_footnote_matches_x01_arithmetic_mean(self):
+        # 각주 임금 r = 교수님 양식 '8. 노무비계획' AC38 =AVERAGE(AC26:AC37)
+        # 가 같은 관측표에서 계산하는 값(끝점 CAGR이 아님).
+        values = [100.0, 108.9, 122.9, 132.1, 135.8, 137.9]
+        src = copy.deepcopy(REGISTRY["test.wage"])
+        src["observations"] = [{"year": y, "value": v}
+                               for y, v in zip(range(2020, 2026), values)]
+        registry = {**REGISTRY, "test.wage": src}
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "x01-labor.xlsx"
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            for row, v in zip(range(26, 32), values):
+                ws["Y%d" % row] = v
+            for row in range(26, 31):
+                ws["AC%d" % row] = "=(Y%d-Y%d)/Y%d" % (row + 1, row, row)
+            ws["AC38"] = "=AVERAGE(AC26:AC37)"
+            wb.save(path)
+            import gg_workbook_audit
+            sheet = gg_workbook_audit.Workbook.load(path)
+            ac38 = sheet.evaluate(ws.title, "AC38")
+        line, err = ft._resolve_footnote(
+            "wage", MINI_MAP["footnote_kinds"]["wage"],
+            {"source_id": "test.wage", "base_year": 2020}, registry)
+        self.assertIsNone(err)
+        self.assertIn("임금 상승률 r=%.4f%%는 참고값이다" % (ac38 * 100), line)
+        self.assertIn("연도별 상승률의 산술평균(5개 연도", line)
+        cagr = pa.cagr(100.0, 137.9, 5)
+        self.assertNotEqual("%.4f" % (ac38 * 100), "%.4f" % (cagr * 100))
+        # 검산 r은 산술평균과 맞아야 하며 다른 값은 거부된다.
+        line, err = ft._resolve_footnote(
+            "wage", MINI_MAP["footnote_kinds"]["wage"],
+            {"source_id": "test.wage", "base_year": 2020, "rate": ac38}, registry)
+        self.assertIsNone(err)
+        line, err = ft._resolve_footnote(
+            "wage", MINI_MAP["footnote_kinds"]["wage"],
+            {"source_id": "test.wage", "base_year": 2020, "rate": ac38 + 0.01}, registry)
+        self.assertIsNone(line)
+        self.assertIn("산술평균", err)
+        # 일반물가는 기존 끝점 CAGR 그대로다.
+        line, _ = ft._resolve_footnote(
+            "general_price", MINI_MAP["footnote_kinds"]["general_price"],
+            {"source_id": "test.general", "base_year": 2020}, REGISTRY)
+        self.assertIn("r=%.4f%%" % (GENERAL_R * 100), line)
+
+    def test_wage_footnote_unreadable_window_is_refused_not_printed(self):
+        # 사이 연도 빠짐·창 길이 다름·0 시작값은 AC38과 같은 값을 만들 수 없다:
+        # 각주를 찍지 않고 footnote_invalid 사유를 남긴다.
+        cfg = MINI_MAP["footnote_kinds"]["wage"]
+        full = [{"year": y, "value": 100.0 + 5 * i} for i, y in enumerate(range(2020, 2026))]
+        cases = {
+            "gap": ([o for o in full if o["year"] != 2023], None, "확인 불가"),
+            "short_window": (full, {"start_year": 2023, "end_year": 2025}, "6개 연도"),
+            "zero_start": ([{**full[0], "value": 0.0}] + full[1:], None, "양수"),
+        }
+        for label, (obs, window, needle) in cases.items():
+            with self.subTest(case=label):
+                src = copy.deepcopy(REGISTRY["test.wage"])
+                src["observations"] = obs
+                info = {"source_id": "test.wage", "base_year": 2020}
+                if window:
+                    info["observation"] = window
+                line, err = ft._resolve_footnote("wage", cfg, info, {**REGISTRY, "test.wage": src})
+                self.assertIsNone(line)
+                self.assertIn(needle, err)
 
     def test_negative_observed_rate_is_reference(self):
         src = copy.deepcopy(REGISTRY["test.general"])

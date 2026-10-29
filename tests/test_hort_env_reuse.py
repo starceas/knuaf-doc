@@ -52,6 +52,8 @@ CAPTION_POLICY_ARTIFACTS = {
     ),
     "kim-wonseop-exemplar-pdf": ("references/exemplar-quality.md",),
     "kim-wonseop-exemplar-hwp": ("references/exemplar-quality.md",),
+    # Specialty workbook standard (professor template) rewrote this document.
+    "seo-minseo-finance-xlsx": ("references/excel-template.md",),
 }
 # These are the slots already included in BASELINE_SEMANTIC_DIGEST, not
 # expected current file bytes. Restore them only for the semantic projection
@@ -81,8 +83,9 @@ BASELINE_SEMANTIC_DIGEST = {
         "c06cfe899ce51ef899628472a41785b9831c0fb750c006e3f07b15cd58dee7d2",
     "kim-wonseop-exemplar-hwp":
         "9c8809363bfd3191d2fd360675d3cbee66c1608c187844ad2e45b52eb109ad13",
+    # Main record minus excel-template.md sha256/bytes (main and PR2 agree).
     "seo-minseo-finance-xlsx":
-        "5277a3d1eb731ac8953f550031f7b38493ce212678db1de1d5e2ff68f4bb65b5",
+        "b41b32884ba5038dccff8885dc5dacf3206af458dadd7fe7efd7f10d01a45e46",
     "specialty-grad-thesis-finance-xlsx":
         "c50902c5513fd5fb0d085983e1a9e001742cfa5e91100517d709d55123fda991",
 }

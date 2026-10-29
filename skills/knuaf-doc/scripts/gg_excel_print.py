@@ -185,6 +185,27 @@ def _style_wrap_cells(styles_doc, sheet_doc, cells, note_color=None, number_form
     return changes
 
 
+# 특용작물 X01의 '7. 영농자재소요계획'은 교수님 양식 인쇄 설정(인쇄 영역
+# B2:G61, 세로, 배율 85%, 행·열 나눔 없음)을 그대로 쓴다(사용자 결정
+# 2026-10-28). 인쇄 사본 도구가 이 시트의 쪽 맞춤·방향·나눔을 바꾸지 않게
+# 막는다. 다른 전공·다른 양식 경로는 그대로다.
+X01_MATERIAL_SHEET = '7. 영농자재소요계획'
+
+
+def _x01_material_sheet(source, authorization):
+    """Sheet name to keep untouched, or None when the rule does not apply.
+
+    An identified X01 copy is protected.  A read workbook whose layout is
+    another form (``unknown``) is protected too (it cannot be shown not to
+    be X01); an identified other layout (X02) is out of scope.  A file the
+    shared read check cannot read raises ``TemplateUnreadable`` and no
+    print copy is made."""
+    from gg_excel_template import detect_layout
+    if authorization.major_id != 'specialty_crops':
+        return None
+    return X01_MATERIAL_SHEET if detect_layout(source) in ('x01', 'unknown') else None
+
+
 def apply(source, map_path, out, receipt_path, *, context=None):
     """Write a print-layout copy and its receipt.  Policy B: the explicit
     major is authorized against the canonical binding before anything is
@@ -206,6 +227,7 @@ def apply(source, map_path, out, receipt_path, *, context=None):
         sheets = dict(workbook_sheets(z))
         book = _serialize_dom(z.read('xl/workbook.xml'), 'xl/workbook.xml')
         order = list(sheets)
+        x01_material = _x01_material_sheet(source, authorization)
         for plan in plans:
             if not isinstance(plan, dict): raise ValueError('sheet plans must be objects')
             unknown_keys = set(plan) - SUPPORTED_PLAN_KEYS
@@ -213,6 +235,10 @@ def apply(source, map_path, out, receipt_path, *, context=None):
             name = plan.get('sheet')
             if name not in sheets or name in seen: raise ValueError('missing or duplicate sheet')
             seen.add(name)
+            if name == x01_material:
+                raise ValueError(
+                    "'7. 영농자재소요계획' 인쇄 설정은 교수님 양식(X01) 그대로 둔다 "
+                    "(B2:G61, 세로, 배율 85%, 가로·세로 나눔 없음) — 이 시트를 맵에서 빼라")
             if not isinstance(plan.get('reason'), str) or not plan['reason'].strip(): raise ValueError('reason required')
             width, height = plan.get('fit_width'), plan.get('fit_height')
             if type(width) is not int or type(height) is not int or width < 1 or height < 0: raise ValueError('invalid fit counts')
@@ -394,6 +420,10 @@ def main(argv=None):
                           'guidance': e.detail.get('guidance')}, ensure_ascii=False))
         return 2
     except (ValueError, OSError, KeyError, zipfile.BadZipFile) as e:
+        from gg_excel_template import TemplateUnreadable, read_failure_report
+        if isinstance(e, TemplateUnreadable):
+            print(json.dumps(read_failure_report(e, produced=[]), ensure_ascii=False))
+            return 2
         print('BLOCK: ' + str(e), file=sys.stderr); return 2
 if __name__ == '__main__':
     for _stream in (sys.stdout, sys.stderr):
