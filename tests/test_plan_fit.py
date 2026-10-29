@@ -24,6 +24,20 @@ ASSET_BLOCKS = (  # (제목 행, 제목, 금액 열, 금액 머리글) — 학�
     (36, "(6) 현금 및 준현금", 5, "평가액(천원)"), (43, "(7) 재고생산자재", 6, "금액(천원)"),
     (49, "(8) 재고농산물", 6, "평가액(천원)"))
 YEARS = (2027, 2028, 2029, 2030, 2031)
+# Sheets the checker does not read; their B2 title and one key header identify
+# the school template (X01). Same cells as the template.
+X01_OTHER_SHEETS = (
+    ("목록", "작 성 양 식", "E8", "1. 기초재무상태조사"),
+    ("2. 중장기영농목표", "2. 중장기 영농목표", "B9", "구분"),
+    ("4. 원리금상환계획", "4. 원리금 상환계획", "B6", "연도"),
+    ("6. 생산계획", "6. 생산계획", "B6", "구분"),
+    ("7. 영농자재소요계획", "7. 영농자재 소요계획", "B4", "적용기준"),
+    ("9 .경비계획", "9. 경비계획", "B4", "항목"),
+    ("11. 생산원가계획", "11. 생산원가계획", "B4", "과목"),
+    ("13. 추정대차대조표", "13. 추정대차대조표", "B5", "과목"),
+    ("14. 현금흐름계획", "14. 현금흐름계획", "B5", "구분"),
+    ("15.추정소득분석", "15. 추정소득분석", "B4", "비목별"),
+)
 
 
 def plan_book(path, *, investments=(("비닐하우스", 50000), ("고설베드", 20000)),
@@ -132,6 +146,10 @@ def plan_book(path, *, investments=(("비닐하우스", 50000), ("고설베드",
     for c, value in enumerate(sga, start=3):
         pl.cell(13, c, value)
     pl["B15"] = "V. 영업이익"
+
+    for name, title, cell, head in X01_OTHER_SHEETS:
+        other = wb.create_sheet(name)
+        other["B2"], other[cell] = title, head
 
     for sheet, cell, formula in formula_cells:
         wb[sheet][cell] = formula
@@ -309,8 +327,9 @@ class PlanFitTests(_PlanFitCase):
         self.assertEqual(0, run(str(good), "--method", "고설수경")[0])
         code, out = run(str(bad), "--method", "고설수경")
         self.assertEqual((1, "fail"), (code, out["status"]))
-        self.assertEqual(2, run(str(good), "--method", "공중재배")[0])
-        self.assertEqual(2, run(str(good), "--allow", "이유없음")[0])
+        # 사용 오류(모르는 재배방식·이유 없는 --allow)는 확인 불가(2)와 다른 3이다.
+        self.assertEqual(3, run(str(good), "--method", "공중재배")[0])
+        self.assertEqual(3, run(str(good), "--allow", "이유없음")[0])
 
 
 class UnreadableIsNotPassTests(_PlanFitCase):
@@ -562,8 +581,8 @@ class SharedTableCheckTests(_PlanFitCase):
         self.assertBlockedOn(self.check(edit=_cells("8. 노무비계획", J26=3)), "8. 노무비계획")
 
     def test_table_to_the_right_of_a_gap_is_not_read(self):
-        # A separate table two empty columns to the right (like the wage
-        # observation block beside the labour table) is outside this table's range.
+        # The wage observation block (registered from the template at the
+        # '인건비 평균 상승률' title) is a known area outside the labour table.
         result = self.check(edit=_cells("8. 노무비계획", W26="자료집",
                                         X24="인건비 평균 상승률", Y26=117156))
         self.assertEqual("pass", result["status"], result["issues"])
@@ -571,6 +590,122 @@ class SharedTableCheckTests(_PlanFitCase):
     def test_value_right_after_last_header_column_blocks(self):
         self.assertBlockedOn(self.check(edit=_cells("8. 노무비계획", K24="자가 노동비", L26=3)),
                              "8. 노무비계획")
+
+    # --- residual-value cases from the fourth review ------------------------
+
+    def test_unnamed_depreciation_column_with_zero_money_rows_is_empty(self):
+        result = self.check(edit=_cells("10. 감가상각비계획 ", D6="대농기구", D8=0,
+                                        B9="감가상각비", D9=0))
+        self.assertEqual("pass", result["status"], result["issues"])
+
+    def test_unnamed_depreciation_column_with_residual_charge_blocks(self):
+        result = self.check(edit=_cells("10. 감가상각비계획 ", D6="대농기구", D8=0,
+                                        B9="감가상각비", D9=100))
+        self.assertBlockedOn(result, "10. 감가상각비계획")
+
+    def test_labour_value_one_empty_column_after_last_header_blocks(self):
+        result = self.check(edit=_cells("8. 노무비계획", K24="자가 노동비", M26=5))
+        self.assertBlockedOn(result, "8. 노무비계획")
+
+    def test_value_anywhere_outside_recognised_areas_blocks(self):
+        self.assertBlockedOn(self.check(edit=_cells("3.투자계획", Z40=1)), "3.투자계획")
+        self.assertBlockedOn(self.check(edit=_cells("12 손익계획", H13=500)), "12 손익계획")
+        self.assertBlockedOn(self.check(edit=_cells("1. 기초재무상태조사", J22="x")),
+                             "1. 기초재무상태조사")
+
+    def test_registered_template_leftover_cell_is_not_read(self):
+        result = self.check(edit=_cells("1. 기초재무상태조사", J21=" w"))
+        self.assertEqual("pass", result["status"], result["issues"])
+
+
+def _four_year_plan(wb):
+    """Drop the last plan year from every table the checker reads."""
+    sales = wb[" 5. 판매계획"]
+    for row in range(19, 30):
+        sales.cell(row, 12).value = sales.cell(row, 13).value = None
+    inv = wb["3.투자계획"]
+    last = max(r for r in range(19, inv.max_row + 1) if inv.cell(r, 2).value)
+    inv.cell(last, 2).value = inv.cell(last, 5).value = None
+    dep = wb["10. 감가상각비계획 "]
+    for ref in ("B52", "B54", "C54", "B56"):
+        dep[ref] = None
+    pl = wb["12 손익계획"]
+    pl["G4"] = pl["G13"] = None
+
+
+def _one_labour_table(wb):
+    labor = wb["8. 노무비계획"]
+    for ref in ("B36", "B38", "I38", "B41"):
+        labor[ref] = None
+
+
+class ScopeAndStateTests(_PlanFitCase):
+    """Workbooks that are not the school template are not checked; template
+    variants the checker does not support are 확인 불가 (blocked), never a plan
+    error; only contradictions in values actually read fail."""
+
+    def cli(self, path):
+        proc = subprocess.run([sys.executable, str(SCRIPTS / "gg_plan_fit.py"), str(path),
+                               "--method", "고설수경"],
+                              capture_output=True, text=True, encoding="utf-8")
+        return proc.returncode, json.loads(proc.stdout), proc.stderr.strip()
+
+    def other_book(self, name, build):
+        wb = Workbook()
+        build(wb)
+        path = self.dir / name
+        wb.save(path)
+        return path
+
+    def assertNotApplicable(self, path):
+        code, out, notice = self.cli(path)
+        self.assertEqual((0, "not_applicable"), (code, out["status"]))
+        self.assertEqual(["PLAN_FIT_NOT_APPLICABLE"], self.codes(out))
+        self.assertEqual(1, len(notice.splitlines()), notice)
+
+    def assertUnverified(self, result, sheets):
+        self.assertEqual("blocked", result["status"], result["issues"])
+        self.assertEqual([], self.codes(result, "error"))
+        blocked = {i["evidence"].get("sheet") for i in result["issues"] if i["status"] == "blocked"}
+        self.assertEqual(set(sheets), blocked)
+        self.assertTrue(all(i["severity"] == "unverified" for i in result["issues"]
+                            if i["status"] == "blocked"))
+
+    def test_other_workbook_is_not_applicable(self):
+        def build(wb):
+            wb.active.title = "사업계획"
+            wb.active["B2"] = "사업계획"
+        self.assertNotApplicable(self.other_book("other.xlsx", build))
+
+    def test_workbook_with_template_sheet_names_only_is_not_applicable(self):
+        def build(wb):
+            wb.active.title = "목록"
+            for name, *_ in X01_OTHER_SHEETS[1:]:
+                wb.create_sheet(name)
+            for name in ("1. 기초재무상태조사", "3.투자계획", " 5. 판매계획",
+                         "8. 노무비계획", "10. 감가상각비계획 ", "12 손익계획"):
+                wb.create_sheet(name)
+        self.assertNotApplicable(self.other_book("names-only.xlsx", build))
+
+    def test_four_year_plan_is_unverified_not_failed(self):
+        result = self.review(method="고설수경", edit=_four_year_plan)
+        # 판매관리비(12 손익계획)는 판매표를 읽은 뒤에만 본다. 판매표가 확인 불가라 읽지 않는다.
+        self.assertUnverified(result, {"3.투자계획", "5. 판매계획", "10. 감가상각비계획"})
+        path = self.dir / ("plan-%d.xlsx" % self.count)
+        code, out, notice = self.cli(path)
+        self.assertEqual((2, "blocked"), (code, out["status"]))
+        self.assertEqual(1, len(notice.splitlines()), notice)
+
+    def test_one_labour_table_is_unverified_not_failed(self):
+        self.assertUnverified(self.review(method="고설수경", edit=_one_labour_table),
+                              {"8. 노무비계획"})
+
+    def test_contradiction_in_read_values_fails_beside_unverified_table(self):
+        result = self.review(method="고설수경", edit=_one_labour_table,
+                             investments=(("관리기", 0),))
+        self.assertEqual("fail", result["status"])
+        self.assertIn("UNOWNED_ROW", self.codes(result, "error"))
+        self.assertIn("PLAN_FIT_TABLE_UNREADABLE", self.codes(result, "unverified"))
 
 
 def bare_notes():

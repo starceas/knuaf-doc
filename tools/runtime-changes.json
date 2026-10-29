@@ -206,7 +206,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/install-manifest.json": {
-   "after_sha256": "9cb47ef190cbdaf13ebccc021faef171140a6334528e30763112a1152261d42c",
+   "after_sha256": "83d7bf31385389e63aa0772fc9c0ddcb366c59e335239067c385e4d0210f27a5",
    "before_sha256": null,
    "first_changed": "P27",
    "last_changed": "P28",
@@ -825,12 +825,12 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/plan-fit-rules.md": {
-   "after_sha256": "09bb82bf996d75e8213ed299cd2b96e2dc13f1f1305404b220972f56e02abf47",
+   "after_sha256": "1fe2ae71ac7c4a71eaf18e4429ebdfa31b5e0c41c93eedd348f373bf4c5e9d72",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
    "owner": "P28",
-   "reason": "Plan-fit rules and check: cultivation-method equipment fit, removal of unowned asset rows, distinct grade and channel prices, channel-cost reflection notes | R2: unreadable tables and uncached price-history formulas block instead of passing | R3: partly unreadable tables, blocks, rows and sales columns block instead of hiding behind readable ones | R4: one shared table check (expected counts from the school layout, real column range) for every table",
+   "reason": "Plan-fit rules and check: cultivation-method equipment fit, removal of unowned asset rows, distinct grade and channel prices, channel-cost reflection notes | R2: unreadable tables and uncached price-history formulas block instead of passing | R3: partly unreadable tables, blocks, rows and sales columns block instead of hiding behind readable ones | R4: one shared table check (expected counts from the school layout, real column range) for every table | R5: states and exit codes, person-check procedure for unverified tables, registered template areas",
    "source": "new"
   },
   "skills/knuaf-doc/references/price-research-routes.md": {
@@ -1013,12 +1013,12 @@
    "source": "modified"
   },
   "skills/knuaf-doc/references/specialty-crops/finance-flow.md": {
-   "after_sha256": "2a53a59b05b140e29cc63b5141e25e4a9697a1d7efef5e079224a462cae6ceb6",
+   "after_sha256": "e1c9e63c230bf2a4b2d03b49ebdf6329af6fb51c457511c9ce9034fd080ef6d0",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
    "owner": "P28",
-   "reason": "P28: 특용작물 전용 이유림 Ⅳ장 재무표 전개 문서(전공 분리 설계) | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존 | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes. | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13. | Plan-fit rules and check: cultivation-method equipment fit, removal of unowned asset rows, distinct grade and channel prices, channel-cost reflection notes | Specialty wage growth follows the department template: arithmetic mean of yearly rates, not CAGR",
+   "reason": "P28: 특용작물 전용 이유림 Ⅳ장 재무표 전개 문서(전공 분리 설계) | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존 | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes. | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13. | Plan-fit rules and check: cultivation-method equipment fit, removal of unowned asset rows, distinct grade and channel prices, channel-cost reflection notes | Specialty wage growth follows the department template: arithmetic mean of yearly rates, not CAGR | R5: what to do after fail, unverified and not_applicable plan-fit results",
    "source": "new"
   },
   "skills/knuaf-doc/references/specialty-crops/finance-table-map.json": {
@@ -1435,12 +1435,12 @@
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_plan_fit.py": {
-   "after_sha256": "0f1d156468c1a145d3ca3ffc27372b026f3090a974c18333c28ef764638ca73c",
+   "after_sha256": "1b7eae1f0dd82723f616ec12b79b74d5a634dc5f2518c98ff71ed961c8d3eddd",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
    "owner": "P28",
-   "reason": "Plan-fit rules and check: cultivation-method equipment fit, removal of unowned asset rows, distinct grade and channel prices, channel-cost reflection notes | R2: unreadable tables and uncached price-history formulas block instead of passing | R3: partly unreadable tables, blocks, rows and sales columns block instead of hiding behind readable ones | R4: one shared table check (expected counts from the school layout, real column range) for every table",
+   "reason": "Plan-fit rules and check: cultivation-method equipment fit, removal of unowned asset rows, distinct grade and channel prices, channel-cost reflection notes | R2: unreadable tables and uncached price-history formulas block instead of passing | R3: partly unreadable tables, blocks, rows and sales columns block instead of hiding behind readable ones | R4: one shared table check (expected counts from the school layout, real column range) for every table | R5: not_applicable outside the school template, sheet-wide residual check against recognised areas, unverified state separate from fail",
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_price_assumptions.py": {
