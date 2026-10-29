@@ -624,10 +624,14 @@ class PlainPolicySources(ContractCase):
             assert "source_grade_forbidden" in found, grade
 
     def test_p6_allowed_grade(self):
-        root = self._project_with_source(grade=1, kind="official")
-        found, _ = self._source_ids(root)
-        assert "source_kind_forbidden" not in found
-        assert "source_grade_forbidden" not in found
+        for metadata in ({}, {"grade": 1}, {"grade": 2}):
+            with self.subTest(metadata=metadata):
+                root = self._project_with_source(kind="official", **metadata)
+                found, _ = self._source_ids(root)
+                assert "source_kind_forbidden" not in found
+                assert "source_grade_forbidden" not in found
+                record = core.load(root)["sources"]["answer"]
+                self.assertEqual(record.get("grade"), metadata.get("grade"))
 
     def test_legacy_source_untouched(self):
         # kind/grade가 없는 기존 기록은 계속 유효해야 한다.

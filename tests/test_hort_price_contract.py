@@ -352,6 +352,19 @@ class SourceContract(unittest.TestCase):
             with self.subTest(grade=grade):
                 h._check_fact_sources(QUOTE, fact, sources, policy)
 
+    def test_legacy_allowed_markers_preserve_fact_values(self):
+        for metadata in ({}, {"grade": 1}, {"grade": 2}):
+            source = {"revision": 1, "kind": "interview",
+                      "source_type": "author_survey", "source": "작성자 직접 조사", **metadata}
+            project = _project([_fact(QUOTE, 5000), _fact(SUM_MAT, "합성 근거")],
+                               sources={"s1": source})
+            before = copy.deepcopy(project)
+            with self.subTest(metadata=metadata):
+                values, _, _ = h._facts(project, self.params)
+                self.assertEqual(values[QUOTE], 5000)
+                self.assertEqual(values[SUM_MAT], "작성자 직접 조사")
+                self.assertEqual(project, before)
+
     def test_author_survey_interview_admissible(self):
         for source in ({"kind": "interview", "source_type": "author_survey"},
                        {"kind": "interview", "source": "작성자 직접 조사"}):
