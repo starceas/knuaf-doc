@@ -373,15 +373,33 @@ class SchoolTableSourcesTests(ContractCase):
         with self.assertRaises(ValueError):
             self.attach(entries=entries)
 
+    def test_registry_legacy_allowed_grade_markers_are_equivalent(self):
+        expected = self.original.replace(CAPTIONS[-1], CAPTIONS[-1] + ' (출처 : 합성 검증 기관)')
+        for registered, supplied in itertools.product((None, 1, 2), repeat=2):
+            record = dict(source(), id='synthetic-source', revision=2)
+            if registered is not None:
+                record['grade'] = registered
+            provided = {key: value for key, value in record.items() if key != 'grade'}
+            if supplied is not None:
+                provided['grade'] = supplied
+            with self.subTest(registered=registered, supplied=supplied):
+                actual = self.attach(entries={'swot': {'sources': [provided]}},
+                                     project={'sources': {'synthetic-source': record}})
+                self.assertEqual(actual, expected)
+
     def test_registry_optional_metadata_omission_is_not_a_conflict(self):
         record = dict(source(), id='synthetic-source', revision=2, grade=1,
                       url='https://example.test/data')
         provided = {k: v for k, v in record.items() if k not in {'grade', 'url'}}
         entries = {'swot': {'sources': [provided]}}
         self.assertIn('(출처 : 합성 검증 기관)', self.attach(entries=entries, project={'sources': {'synthetic-source': record}}))
-        for grade in (3, 4, '3', '4'):
-            with self.subTest(grade=grade), self.assertRaises(ValueError):
-                self.attach(entries=entries, project={'sources': {'synthetic-source': dict(record, grade=grade)}})
+        for grade, supplied in itertools.product((3, 4, '3', '4'), (None, 1, 2)):
+            provided = {key: value for key, value in entries['swot']['sources'][0].items() if key != 'grade'}
+            if supplied is not None:
+                provided['grade'] = supplied
+            with self.subTest(grade=grade, supplied=supplied), self.assertRaises(ValueError):
+                self.attach(entries={'swot': {'sources': [provided]}},
+                            project={'sources': {'synthetic-source': dict(record, grade=grade)}})
 
     def test_recovery_never_rerenders_and_new_spec_conflicts(self):
         value = self.publish()

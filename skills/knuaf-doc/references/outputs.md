@@ -100,7 +100,7 @@ SKILL.md "출력 지원 한계" 절의 상세다. 출력 생성·등록 경로�
 
 - **필수 및 선택 필드**:
   - 필수 필드: `kind`, `source_type`, `source`, `title`, `year`, `locator`
-  - 선택 필드: `url` (평문 HTTP/HTTPS만 허용), `grade` (1 또는 2만 허용, 3/4등급 금지), `survey_date`, `subject`, `verified`, `id`, `revision`
+  - 선택 필드: `url` (평문 HTTP/HTTPS만 허용), `grade` (기존 기록 호환용 메타데이터. 생략이 가능하고 1·2는 같은 허용 출처 표식이며 순위나 서지 충돌로 구분하지 않음. 3·4등급 및 무효 표식은 거부), `survey_date`, `subject`, `verified`, `id`, `revision`
   - 정본 출처 연결: `id`와 `revision`을 함께 지정하면 `project.sources` 레코드와 개정·종류·서지 충돌을 대조 검증한다.
 - **인용 필드 문자 허용 부류 및 실질 문자 요건 (`_plain`)**:
   - 인용 필드(`source`, `title`, `year`, `locator` 및 비-URL 서지 필드)는 유한한 허용 문자 부류만 통과한다: NFKC 정규화 후 글자(Unicode `L*`), 숫자(`N*`), 구두점(`P*`), 지정 일반 기호 16종(`_SYMBOLS`: `°©®±×÷−+=∼₩$¥€£¢`), 일반 ASCII 공백(` `)만 허용된다.

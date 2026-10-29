@@ -211,7 +211,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/install-manifest.json": {
-   "after_sha256": "5649af9d6b197ab36c6b96b425d36399c32d3d8f2023c74ef988acec28ae1721",
+   "after_sha256": "73e6a9a88b8edffac5be930203b5af476606807f39f10e9a4e0706a5aa00a150",
    "before_sha256": null,
    "first_changed": "P27",
    "last_changed": "P28",
@@ -830,7 +830,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/outputs.md": {
-   "after_sha256": "c2588407df39d5e1edb0432f3a488fa8e4947a0669dbd1561a8c7dc121c6ac4a",
+   "after_sha256": "6f869304e8918b55b5d280b2dfd9d0c4054a2b5fd781f4bbcc6471dfff59fe69",
    "before_sha256": null,
    "first_changed": "P27",
    "last_changed": "P28",
@@ -1045,7 +1045,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/source-intake.md": {
-   "after_sha256": "40fa4143db857084e386ce4932a30bd0645e72b09c5d6d7759117d74c4331fe0",
+   "after_sha256": "d26f1781b8954662a788de0adb94675b1e7655761c548e208a1500fe54743a1d",
    "before_sha256": "ebfcfe7e23ad5ed3bbc153db239f5f6b5e624d68a8087be255d57909bf18e5c6",
    "first_changed": "P5",
    "last_changed": "P28",
@@ -1199,7 +1199,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_core.py": {
-   "after_sha256": "cca02d10799f03f0c1364ade3d778d98f0b25325ea1e8e9374d5937ef8cb3a4d",
+   "after_sha256": "4f42e31c972c891dd0fd45fca47f121c590b7090c5199eb65824c0de1fe81fe9",
    "amended_in": "P1-S01,P2-R7,P2-R8,P3-C1,Lanes15-28",
    "before_sha256": "b3491a931add687328bf561e7e7cd2aed3edd7a7fee374a28092e771d9124cc5",
    "first_changed": "P1",
@@ -1379,7 +1379,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_hort_workbook.py": {
-   "after_sha256": "877c1f273b6c46c7732e51e36fcc1e63e31fb3779191bab23921e9aea9e6e0d6",
+   "after_sha256": "c36fa51e558191e886973240037c0dde27916b252a3004c93d6f1b4610fe526b",
    "before_sha256": null,
    "first_changed": "P20",
    "last_changed": "P28",
@@ -1603,7 +1603,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_school_table_sources.py": {
-   "after_sha256": "93f2fb2b715daa03469ed82a1f04fd2fb3fda29706cb13c2b4adc885e167630b",
+   "after_sha256": "591fc1842235b8747eef9bb6ca2d0ec4078d944e81dca046dd29be028f0434be",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",

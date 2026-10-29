@@ -77,8 +77,8 @@ _SOURCE_KIND_TYPES = {
     "school_material": "official_school", "textbook": "formal_textbook",
     "interview": "author_survey",
 }
-# grade is absent or the canonical int 1/2; the policy's forbidden 3/4 in
-# any other spelling ("３", " 3 ", "3") refuses instead of matching.
+# Optional legacy grade markers 1/2 have the same allowed-source meaning.
+# Existing forbidden and malformed marker checks remain independent of kind.
 _SOURCE_GRADES = (1, 2)
 _POLICY_PATH = HERE.parent / "references" / "plain-thesis-policy.json"
 # Disposed by the lane lead: coordinate registry, machine predicates and the
@@ -1481,10 +1481,11 @@ def _check_fact_sources(key, fact, sources, policy):
     _SOURCE_KIND_TYPES (same enum as outputs.md / gg_school_table_sources);
     the interview record additionally keeps the documented alternate
     marker source == "작성자 직접 조사" with no source_type, mirroring
-    gg_core.checks.  grade is absent or the canonical int 1/2.  Forbidden
-    kinds and grades, AI-generated kinds, external_* / forbidden-kind
-    source_types, unknown or variant kinds, and the generic "file" bucket
-    all refuse — nothing is normalized into acceptance.
+    gg_core.checks. Optional legacy integer grades 1/2 are equivalent;
+    neither ranks an allowed source. Forbidden kinds and grades,
+    AI-generated kinds, external_* / forbidden-kind source_types,
+    unknown or variant kinds, and the generic "file" bucket all refuse —
+    nothing is normalized into acceptance.
     """
     refs = fact.get("source_refs")
     if not isinstance(refs, list) or not refs or not isinstance(sources, dict):
