@@ -875,6 +875,10 @@ def cli(argv: list[str]) -> int:
                               "out": str(args.out)}, ensure_ascii=False))
             return 0
         except (OSError, ValueError, RuntimeError) as exc:
+            from gg_excel_template import TemplateUnreadable, read_failure_report
+            if isinstance(exc, TemplateUnreadable):
+                print(json.dumps(read_failure_report(exc, produced=[]), ensure_ascii=False))
+                return 2
             print(f"BLOCK: {exc}", file=sys.stderr)
             return 2
     parser = argparse.ArgumentParser(description=__doc__)
@@ -929,6 +933,10 @@ def cli(argv: list[str]) -> int:
                               "detail": str(exc),
                               "guidance": exc.detail.get("guidance")},
                              ensure_ascii=False))
+            return 2
+        from gg_excel_template import TemplateUnreadable, read_failure_report
+        if isinstance(exc, TemplateUnreadable):
+            print(json.dumps(read_failure_report(exc, produced=[]), ensure_ascii=False))
             return 2
         if isinstance(exc, (OSError, ValueError, RuntimeError,
                             zipfile.BadZipFile, ET.ParseError)):

@@ -1640,7 +1640,7 @@ def review_plan(workbook_path, *, declared_assets=None, area_declarations=None,
                 remedy="finance.area.<role> 사실로 면적을 선언한 뒤 본문·엑셀·표를 대조한다",
                 evidence={"workbook": areas}))
 
-        # 일용직 성별 확인(판정은 gg_excel_template.labor_review; 못 읽으면 blocked).
+        # 일용직 성별 확인(gg_excel_template.labor_review): 보조 경고, 판정 근거 아님 — 모두 pending/warning.
         from gg_excel_template import labor_review
         for item in labor_review(path):
             issues.append(_plan_issue(item["code"], status=item["status"],

@@ -114,7 +114,7 @@ class CropLabelTests(ContractCase):
         self.assertEqual(wb[S5]["D30"].value, "=100%-D25-D29")
         wb.close()
         result = self.tpl.crop_label_check(self.src, out)
-        self.assertEqual(result["status"], "pass")
+        self.assertEqual((result["status"], result["message"]), ("match", self.tpl.NO_DIFFERENCE))
         self.assertEqual(len(result["labelsChanged"]), 7)
 
     def test_woody_perennial_keeps_tree_terms(self):
@@ -159,7 +159,8 @@ class CropLabelTests(ContractCase):
                 wb.save(bad)
                 wb.close()
                 result = self.tpl.crop_label_check(self.src, bad)
-                self.assertEqual(result["status"], "fail")
+                self.assertEqual((result["status"], result["message"]),
+                                 ("warning", self.tpl.ADVISORY_WARNING))
                 self.assertTrue(result["violations"])
 
     def test_label_map_admits_copy_derived_from_registered_template_only(self):
@@ -192,19 +193,23 @@ class CropLabelTests(ContractCase):
                 with self.subTest(drift=label), self.assertRaisesRegex(ValueError, "registered X01/X02"):
                     self.tpl.crop_label_map(path, "herbaceous")
 
-    def test_check_unreadable_after_file_is_blocked_not_pass(self):
+    def test_check_unreadable_after_file_is_read_failure_not_match(self):
         import contextlib, io
+        tpl = self.tpl
         bad = self.root / "bad.xlsx"
         bad.write_bytes(b"not a workbook")
         for after in (bad, self.root / "missing.xlsx"):
             with self.subTest(after=after.name):
-                result = self.tpl.crop_label_check(self.src, after)
-                self.assertEqual(result["status"], "blocked")
+                result = tpl.crop_label_check(self.src, after)
+                self.assertEqual((result["message"], result["status"]), (tpl.READ_FAILURE, "read_failed"))
                 with contextlib.redirect_stdout(io.StringIO()) as out:
-                    code = self.tpl.cli(["label-check", "--before", str(self.src),
-                                         "--after", str(after)])
-                self.assertEqual(code, 2)
-                self.assertEqual(json.loads(out.getvalue())["status"], "blocked")
+                    code = tpl.cli(["label-check", "--before", str(self.src), "--after", str(after)])
+                # Advisory: exit 0, the read-failure message first.
+                self.assertEqual(code, 0)
+                printed = json.loads(out.getvalue())
+                self.assertEqual(next(iter(printed)), "message")
+                self.assertEqual(printed["message"], tpl.READ_FAILURE)
+                self.assertIn("판정 근거 아님", printed["meaning"])
 
     def test_check_fails_on_shared_formula_attribute_or_value_type_change(self):
         """R1-02: a shared follower re-pointed to another anchor (same empty
@@ -230,7 +235,7 @@ class CropLabelTests(ContractCase):
                     data = text.encode()
                 out.writestr(item, data)
         out = self.relabel_from(shared, "herbaceous")
-        self.assertEqual(self.tpl.crop_label_check(shared, out)["status"], "pass")
+        self.assertEqual(self.tpl.crop_label_check(shared, out)["status"], "match")
         cases = {"shared_si": ('<c r="I9"><f t="shared" si="0"/>', '<c r="I9"><f t="shared" si="1"/>'),
                  "number_as_text": ('<c r="H8" t="n">', '<c r="H8" t="str">')}
         for label, (old, new) in cases.items():
@@ -245,7 +250,7 @@ class CropLabelTests(ContractCase):
                             data = data.replace(old.encode(), new.encode(), 1)
                         w.writestr(item, data)
                 result = self.tpl.crop_label_check(shared, bad)
-                self.assertEqual(result["status"], "fail")
+                self.assertEqual(result["status"], "warning")
                 cell = "I9" if label == "shared_si" else "H8"
                 self.assertEqual([(v["sheet"], v["cell"]) for v in result["violations"]], [(S6, cell)])
 
@@ -308,25 +313,31 @@ class SharedReadCheckTests(ContractCase):
                     self.tpl.read_template(path)
                 with self.assertRaises(self.tpl.TemplateUnreadable):
                     self.tpl.detect_layout(path)
-                self.assertEqual([i["code"] for i in self.tpl.labor_review(path)],
-                                 ["LABOR_WORKBOOK_UNREADABLE"])
-                self.assertEqual(self.tpl.crop_label_check(self.good, path)["status"], "blocked")
-                self.assertEqual(self.tpl.crop_label_check(path, self.good)["status"], "blocked")
+                self.assertEqual([(i["code"], i["message"]) for i in self.tpl.labor_review(path)],
+                                 [("LABOR_WORKBOOK_UNREADABLE", self.tpl.READ_FAILURE)])
+                self.assertEqual(self.tpl.crop_label_check(self.good, path)["status"], "read_failed")
+                self.assertEqual(self.tpl.crop_label_check(path, self.good)["status"], "read_failed")
                 for tool in (lambda: self.tpl.crop_label_map(path, "herbaceous"),
                              lambda: self.patch.materialize_d8(path, prepare_observations=True),
                              lambda: self.tpl.wage_fill_map(path)):
                     with self.assertRaises(self.tpl.TemplateUnreadable):
                         tool()
+                # Producers make nothing from an unreadable input and say so first.
                 for cli, argv in (
                         (self.tpl.cli, ["label-map", "--source", str(path), "--category", "herbaceous",
                                         "--out-map", str(self.root / f"{label}.m"),
                                         "--out-values", str(self.root / f"{label}.v")]),
                         (self.patch.cli, ["materialize-d8", "--source", str(path),
-                                          "--out", str(self.root / f"{label}.d8")]),
-                        (self.tpl.cli, ["labor-review", "--workbook", str(path)])):
-                    with contextlib.redirect_stdout(io.StringIO()), \
+                                          "--out", str(self.root / f"{label}.d8")])):
+                    with contextlib.redirect_stdout(io.StringIO()) as out, \
                             contextlib.redirect_stderr(io.StringIO()):
                         self.assertEqual(cli(argv), 2, argv[0])
+                    self.assertEqual(json.loads(out.getvalue())["message"], self.tpl.READ_FAILURE)
+                    self.assertFalse([p for p in self.root.glob(f"{label}.*") if p.suffix in (".m", ".v", ".d8")])
+                # The labor check is advisory: exit 0 with the read-failure message.
+                with contextlib.redirect_stdout(io.StringIO()) as out:
+                    self.assertEqual(self.tpl.cli(["labor-review", "--workbook", str(path)]), 0)
+                self.assertEqual(json.loads(out.getvalue())["message"], self.tpl.READ_FAILURE)
 
     def test_readable_other_form_is_not_applicable_not_blocked(self):
         from openpyxl import Workbook
@@ -445,6 +456,8 @@ class PackageAndIdentificationFailureTests(ContractCase):
         return self.rewrite(base, name, lambda n, d, s: replacement if n == "xl/sharedStrings.xml" else d)
 
     def assert_blocked_everywhere(self, path, *, before=None):
+        """Checks report the read failure (advisory, exit 0, message first);
+        producers make nothing (exit 2, message first, no file)."""
         import contextlib, io
         before = before or self.x01
         tpl, patch = self.tpl, self.patch
@@ -455,30 +468,35 @@ class PackageAndIdentificationFailureTests(ContractCase):
                      lambda: tpl.inspect_source(path, None, None)):
             with self.assertRaises(tpl.TemplateUnreadable):
                 call()
-        self.assertEqual([(i["code"], i["status"]) for i in tpl.labor_review(path)],
-                         [("LABOR_WORKBOOK_UNREADABLE", "blocked")])
-        self.assertEqual(tpl.crop_label_check(before, path)["status"], "blocked")
-        self.assertEqual(tpl.crop_label_check(path, before)["status"], "blocked")
+        self.assertEqual([(i["code"], i["status"], i["message"]) for i in tpl.labor_review(path)],
+                         [("LABOR_WORKBOOK_UNREADABLE", "pending", tpl.READ_FAILURE)])
+        self.assertEqual(tpl.crop_label_check(before, path)["status"], "read_failed")
+        self.assertEqual(tpl.crop_label_check(path, before)["status"], "read_failed")
         n = len(list(self.root.iterdir()))
-        for cli, argv in (
-                (tpl.cli, ["labor-review", "--workbook", str(path)]),
-                (tpl.cli, ["label-check", "--before", str(before), "--after", str(path)]),
-                (tpl.cli, ["label-check", "--before", str(path), "--after", str(before)]),
-                (tpl.cli, ["label-map", "--source", str(path), "--category", "herbaceous",
-                           "--out-map", str(self.root / f"lm{n}.json"),
-                           "--out-values", str(self.root / f"lv{n}.json")]),
-                (tpl.cli, ["wage-map", "--source", str(path), "--out-map", str(self.root / f"wm{n}.json")]),
-                (tpl.cli, ["inspect", "--source", str(path), "--out-map", str(self.root / f"im{n}.json")]),
-                (patch.cli, ["materialize-d8", "--source", str(path), "--prepare-observations",
-                             "--out", str(self.root / f"d8{n}.json")])):
-            with self.subTest(cli=argv[0]), contextlib.redirect_stdout(io.StringIO()), \
-                    contextlib.redirect_stderr(io.StringIO()):
-                self.assertEqual(cli(argv), 2)
+        checks = ((tpl.cli, ["labor-review", "--workbook", str(path)]),
+                  (tpl.cli, ["label-check", "--before", str(before), "--after", str(path)]),
+                  (tpl.cli, ["label-check", "--before", str(path), "--after", str(before)]))
+        producers = ((tpl.cli, ["label-map", "--source", str(path), "--category", "herbaceous",
+                                "--out-map", str(self.root / f"lm{n}.json"),
+                                "--out-values", str(self.root / f"lv{n}.json")]),
+                     (tpl.cli, ["wage-map", "--source", str(path), "--out-map", str(self.root / f"wm{n}.json")]),
+                     (tpl.cli, ["inspect", "--source", str(path), "--out-map", str(self.root / f"im{n}.json")]),
+                     (patch.cli, ["materialize-d8", "--source", str(path), "--prepare-observations",
+                                  "--out", str(self.root / f"d8{n}.json")]))
+        for expected, calls in ((0, checks), (2, producers)):
+            for cli, argv in calls:
+                with self.subTest(cli=argv[0]), contextlib.redirect_stdout(io.StringIO()) as out, \
+                        contextlib.redirect_stderr(io.StringIO()):
+                    self.assertEqual(cli(argv), expected)
+                    printed = json.loads(out.getvalue())
+                    self.assertEqual((next(iter(printed)), printed["message"]),
+                                     ("message", tpl.READ_FAILURE))
         for out in ("lm", "lv", "wm", "im", "d8"):
             self.assertFalse(list(self.root.glob(f"{out}{n}.json")))
         with self.assertRaises(tpl.TemplateUnreadable):
             self.print_copy(path, f"p{n}")
         self.assertFalse((self.root / f"p{n}.xlsx").exists())
+        self.assertFalse((self.root / f"p{n}.json").exists())
 
     def print_copy(self, src, name):
         project = self.make_project()
@@ -533,13 +551,15 @@ class PackageAndIdentificationFailureTests(ContractCase):
             with self.subTest(workbook=path.name):
                 with contextlib.redirect_stdout(io.StringIO()) as out:
                     self.assertEqual(self.tpl.cli(["labor-review", "--workbook", str(path)]), 0)
-                self.assertEqual(json.loads(out.getvalue()), {"status": "reviewed", "issues": []})
+                printed = json.loads(out.getvalue())
+                self.assertEqual((printed["message"], printed["status"], printed["issues"]),
+                                 (self.tpl.NO_DIFFERENCE, "reviewed", []))
         for path in (self.x01, self.other):
             with self.subTest(workbook=path.name):
                 with contextlib.redirect_stdout(io.StringIO()) as out:
                     self.assertEqual(self.tpl.cli(["label-check", "--before", str(path),
                                                    "--after", str(path)]), 0)
-                self.assertEqual(json.loads(out.getvalue())["status"], "pass")
+                self.assertEqual(json.loads(out.getvalue())["status"], "match")
         with self.assertRaisesRegex(ValueError, "layout_variant_unsupported"):
             self.patch.materialize_d8(self.other, prepare_observations=True)
         self.assertEqual(self.tpl.inspect_source(self.other, None, None)["mapStatus"],
@@ -561,26 +581,31 @@ class LaborReviewTests(ContractCase):
         labor_book(path, **kw)
         return self.tpl.labor_review(path)
 
-    def test_missing_or_corrupt_file_is_blocked_not_reviewed(self):
-        """R1-03: a file that cannot be read is not 'another form'."""
+    def test_missing_or_corrupt_file_is_read_failure_not_reviewed(self):
+        """R1-03 (advisory since R4): a file that cannot be read is not
+        'another form' — the read-failure message, not a block."""
         import contextlib, io
+        tpl = self.tpl
         corrupt = self.root / "corrupt.xlsx"
         corrupt.write_bytes(b"not an xlsx")
         for path in (corrupt, self.root / "missing.xlsx"):
             with self.subTest(path=path.name):
-                issues = self.tpl.labor_review(path)
-                self.assertEqual([(i["code"], i["status"]) for i in issues],
-                                 [("LABOR_WORKBOOK_UNREADABLE", "blocked")])
+                issues = tpl.labor_review(path)
+                self.assertEqual([(i["code"], i["status"], i["severity"], i["message"]) for i in issues],
+                                 [("LABOR_WORKBOOK_UNREADABLE", "pending", "warning", tpl.READ_FAILURE)])
                 with contextlib.redirect_stdout(io.StringIO()) as out:
-                    code = self.tpl.cli(["labor-review", "--workbook", str(path)])
-                self.assertEqual(code, 2)
-                self.assertEqual(json.loads(out.getvalue())["status"], "blocked")
-        # A readable non-X01 workbook stays not-applicable with exit 0.
+                    code = tpl.cli(["labor-review", "--workbook", str(path)])
+                self.assertEqual(code, 0)
+                printed = json.loads(out.getvalue())
+                self.assertEqual((next(iter(printed)), printed["message"], printed["status"]),
+                                 ("message", tpl.READ_FAILURE, "read_failed"))
+                self.assertIn("판정 근거 아님", printed["meaning"])
+        # A readable non-X01 workbook stays not-applicable.
         other = self.root / "other.xlsx"
         labor_book(other, x01=False, male=(0, 60))
         with contextlib.redirect_stdout(io.StringIO()) as out:
-            self.assertEqual(self.tpl.cli(["labor-review", "--workbook", str(other)]), 0)
-        self.assertEqual(json.loads(out.getvalue()), {"status": "reviewed", "issues": []})
+            self.assertEqual(tpl.cli(["labor-review", "--workbook", str(other)]), 0)
+        self.assertEqual(json.loads(out.getvalue())["issues"], [])
 
     def test_male_only_hired_days_warn_with_task_list(self):
         issues = self.review(male=(0, 60, 60, 60, 60), female=(0, 0, 0, 0, 0),
@@ -604,7 +629,7 @@ class LaborReviewTests(ContractCase):
             with self.subTest(case=label):
                 self.assertEqual(self.review(**kw), [])
 
-    def test_unreadable_labor_sheet_is_blocked_not_a_pass(self):
+    def test_unreadable_labor_sheet_is_read_failure_not_a_pass(self):
         from openpyxl import Workbook, load_workbook
         path = self.root / "labor.xlsx"
         cases = {}
@@ -621,7 +646,9 @@ class LaborReviewTests(ContractCase):
         for label, (code, issues) in cases.items():
             with self.subTest(case=label):
                 self.assertEqual([i["code"] for i in issues], [code])
-                self.assertEqual(issues[0]["status"], "blocked")
+                self.assertEqual((issues[0]["status"], issues[0]["severity"], issues[0]["message"]),
+                                 ("pending", "warning", self.tpl.READ_FAILURE))
+                self.assertTrue(issues[0]["reason"].startswith(self.tpl.READ_FAILURE))
         # Header whitespace differences are the same layout, not unreadable.
         labor_book(path, female=(0, 60))
         wb = load_workbook(path); wb[S8]["R24"] = " 고용 (여자) "; wb.save(path)
@@ -645,7 +672,7 @@ class LaborReviewTests(ContractCase):
         self.assertEqual(self.tpl.detect_layout(path), "x02")
         self.assertEqual(self.tpl.labor_review(path), [])
 
-    def test_review_plan_surfaces_warning_and_unreadable(self):
+    def test_review_plan_surfaces_warning_and_read_failure_without_blocking(self):
         from tests.test_skillgaps_wp3_finance import plan_workbook
         from openpyxl import load_workbook
         review = runtime("gg_finance_tables").review_plan
@@ -657,7 +684,9 @@ class LaborReviewTests(ContractCase):
         x01_anchors(wb)
         wb.save(path)
         missing = next(i for i in review(path)["issues"] if i["code"] == "LABOR_SHEET_MISSING")
-        self.assertEqual(missing["status"], "blocked")
+        # Advisory: a pending warning with the read-failure reason, not a block.
+        self.assertEqual((missing["status"], missing["severity"]), ("pending", "warning"))
+        self.assertTrue(missing["reason"].startswith(self.tpl.READ_FAILURE))
         wb = load_workbook(path)
         labor_sheet(wb.create_sheet(S8), male=(0, 60, 60, 60, 60))
         wb.save(path)
@@ -667,7 +696,7 @@ class LaborReviewTests(ContractCase):
         self.assertEqual(item["check_id"], "finance_plan_review")
         self.assertEqual(item["severity"], "warning")
         self.assertFalse([i for i in plan["issues"] if i["code"].startswith("LABOR_")
-                          and i["status"] == "blocked"])
+                          and i["status"] != "pending"])
 
 
 class MaterialSheetPrintTests(ContractCase):

@@ -205,7 +205,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/install-manifest.json": {
-   "after_sha256": "fc6ff569f2e4c1f1f92f92ad46f306221c82c12b301edbe8398ed25ba0092cf8",
+   "after_sha256": "edc38444bf8da3575c85e82c9988e0065a6e7c550ba7a2872998cd52cd17b81a",
    "before_sha256": null,
    "first_changed": "P27",
    "last_changed": "P28",
@@ -386,7 +386,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/builtin-sources.json": {
-   "after_sha256": "fec8e9d3e928edd433afd6a47e07136277a3af54fd4a644a8d47821f094e6c54",
+   "after_sha256": "c1e9f1f0f1cb47ba7f2a89c65e719c043401767315439363108cc94246e747cb",
    "before_sha256": null,
    "first_changed": "P5",
    "last_changed": "P28",
@@ -493,7 +493,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/excel-template.md": {
-   "after_sha256": "73ee0ff3628bb80ba9e7e88c487f782d15fca18c2dc1e665b044804003604b69",
+   "after_sha256": "74261c05ade2971f906caed86457afc7605599061cdfe4cee2cd163608d17ac1",
    "before_sha256": "4513094e1754191edd810947789f2228fb3b15bfbe1a2531e1b18f6b144739e8",
    "first_changed": "P28",
    "last_changed": "P28",
@@ -1195,7 +1195,7 @@
    "source": "modified"
   },
   "skills/knuaf-doc/scripts/gg_excel_formula_patch.py": {
-   "after_sha256": "6c96516f8b48727c4b81900e48ba911e85c20cde8112eda47029ee79d27022fe",
+   "after_sha256": "0f51a3a1187638f92c0c6dd8eb162fe21a389d770a479599453d365fbd2de35e",
    "before_sha256": "d1e1e77dccf3cfcc8ddb7d25bab9c8e53dd77850d97ed019d8f33884a46250db",
    "first_changed": "P7",
    "last_changed": "P28",
@@ -1204,7 +1204,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_excel_print.py": {
-   "after_sha256": "1d08f6c5131105ffba31561f83f7220b7030c0b9058a2ed3e9935b3fa4d7ca59",
+   "after_sha256": "ff76f33b4d764fea8d4acaafe23ea6b7d3c9a307d7646731f2ed2c121459fb90",
    "before_sha256": "4332896806b8b4d44e8d76106d41221536edee470f6b56e7ddb88797bc55f2aa",
    "first_changed": "P1",
    "last_changed": "P27",
@@ -1213,7 +1213,7 @@
    "source": "adopted:PR2"
   },
   "skills/knuaf-doc/scripts/gg_excel_template.py": {
-   "after_sha256": "791c433c2a5b5780f2cbab83f860fed460f117764dd041e598150fe64239cfa0",
+   "after_sha256": "ae586a9e936789780acd2fe1fa045cd1c191154031e25766f4b3298332c16a55",
    "before_sha256": "70933a7abfc4bb9b86f20b05487c785c2abd77be60426089cb70b40741ca508f",
    "first_changed": "P1",
    "last_changed": "P28",
@@ -1248,7 +1248,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/scripts/gg_finance_tables.py": {
-   "after_sha256": "cca9c7a505ebb4610328806db98f08d8adc5f1d89d390bf42dafa2b85353b613",
+   "after_sha256": "642c09bfe9af218da48fee7a6e4c68fe78fa5153c64532e0ef098f422f6b7ef3",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
@@ -2049,7 +2049,7 @@
    "source": "new"
   },
   "tests/test_specialty_template_route.py": {
-   "after_sha256": "4344a68e742407cd50af5b38db6d0db26e2e3634a44ac71bdf9c8462f7e8a332",
+   "after_sha256": "eaee13b1c54a8f383c34c705dc177a0ab350202e5f6979619627039626bb6142",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",

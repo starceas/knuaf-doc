@@ -236,8 +236,24 @@ def _anchor_holds(expect, cell_state) -> bool:
 
 
 class TemplateUnreadable(ValueError):
-    """The workbook could not be opened or parsed.  Callers report this as
-    blocked — never as a pass and never as "not this template"."""
+    """The workbook could not be opened or parsed.  Checks report it as a
+    read failure for a person to look at (``READ_FAILURE``); tools that
+    make a map or copy make nothing.  Never a pass, never "another form"."""
+
+
+# PR2 checks (label-check, labor-review, the shared read check) are advisory.
+ADVISORY_MEANING = ("보조 경고, 판정 근거 아님. 칸 이름 대조·일용 노무 성별 확인·읽기 공통 확인 결과는 "
+                    "확인 권장 사항이며 작성을 막지 않는다. 읽기 실패는 사람이 파일을 직접 확인한다.")
+READ_FAILURE = "읽기 실패 — 사람 확인"
+ADVISORY_WARNING = "확인 권장"
+NO_DIFFERENCE = "차이 없음"
+
+
+def read_failure_report(exc: Exception, **extra) -> dict:
+    """The output of a tool whose input failed the shared read check:
+    the read-failure message first, nothing produced."""
+    return {"message": READ_FAILURE, "status": "read_failed", "meaning": ADVISORY_MEANING,
+            "reason": str(exc), **extra}
 
 
 class TemplateRead:
@@ -1158,16 +1174,20 @@ def _compared(rec: dict | None):
 
 
 def crop_label_check(before: Path, after: Path) -> dict:
-    """Prove a relabel changed only listed label cells: every formula
-    (text, attributes, resolved meaning), every value and its type, and
-    the sheet list stay identical.  A workbook that cannot be read is
-    ``blocked``, never a pass."""
+    """Compare a relabelled copy with its source: only listed label cells
+    may change; every formula (text, attributes, resolved meaning), every
+    value and its type, and the sheet list stay identical.
+
+    Advisory (``ADVISORY_MEANING``): ``status`` is ``match`` (no
+    difference), ``warning`` (``ADVISORY_WARNING``, differences listed) or
+    ``read_failed`` (``READ_FAILURE``, a workbook failed the shared read
+    check — never a match).  None of them blocks writing."""
     table = _crop_label_table()
     allowed = {(r["sheet"], r["cell"]): r for r in table["cells"]}
     try:
         a, b = read_template(before), read_template(after)
     except TemplateUnreadable as exc:
-        return {"status": "blocked", "reason": str(exc), "labelsChanged": [], "violations": []}
+        return read_failure_report(exc, labelsChanged=[], violations=[])
     changed, violations = [], []
     if a.sheets != b.sheets:
         violations.append({"sheets": {"old": a.sheets, "new": b.sheets}})
@@ -1180,7 +1200,8 @@ def crop_label_check(before: Path, after: Path) -> dict:
               and new[0] == "s" and any(new[1] in v for v in row["labels"].values()))
         (changed if ok else violations).append(
             {"sheet": key[0], "cell": key[1], "old": old, "new": new})
-    return {"status": "pass" if not violations else "fail",
+    return {"message": ADVISORY_WARNING if violations else NO_DIFFERENCE,
+            "status": "warning" if violations else "match", "meaning": ADVISORY_MEANING,
             "labelsChanged": changed, "violations": violations,
             "formulasCompared": sum(1 for v in a.cells.values() if v["kind"] == "f"),
             "numbersCompared": sum(1 for v in a.cells.values() if v["kind"] == "n")}
@@ -1199,34 +1220,39 @@ LABOR_LAYOUT_ANCHORS = (("C11", "일용직"), ("E11", "남"), ("E12", "여"),
 LABOR_MALE_HEADERS = ("고용(남자,단가동일)", "고용(남자)")
 
 
-def _labor_blocked(code, reason, evidence):
-    # Not a pass: blocked status, warning severity like the check it replaces.
-    return {"code": code, "status": "blocked", "severity": "warning", "reason": reason,
-            "remedy": "교수님 양식(X01) '8. 노무비계획' 배치인지 확인하고, 엑셀에서 재계산·저장해 "
-                      "수식 캐시를 만든 뒤 다시 검사한다",
+def _labor_unchecked(code, reason, evidence):
+    # Advisory: the check could not be made.  A pending warning (never a
+    # pass and never a block) whose reason starts with the read-failure note.
+    return {"code": code, "status": "pending", "severity": "warning", "message": READ_FAILURE,
+            "reason": f"{READ_FAILURE}: {reason}",
+            "remedy": "보조 경고, 판정 근거 아님. 교수님 양식(X01) '8. 노무비계획' 배치인지 사람이 확인하고, "
+                      "엑셀에서 재계산·저장해 수식 캐시를 만든 뒤 다시 확인한다",
             "evidence": evidence}
 
 
 def labor_review(path) -> list[dict]:
-    """Daily-labor gender review on a professor-template (X01) workbook.
+    """Daily-labor gender review on a professor-template (X01) workbook —
+    an advisory check (``ADVISORY_MEANING``): every issue is a pending
+    warning and never blocks writing.
 
     The shared read check (``read_template``) runs first: a file that is
-    missing or cannot be read is blocked (``LABOR_WORKBOOK_UNREADABLE``).
-    A readable workbook not identified as X01 (another major's form, X02,
-    unknown) is not in scope and yields no issue.  On an X01 workbook,
-    hired days only in the male column are a warning
-    (``LABOR_HIRED_MALE_ONLY``).  A missing sheet (``LABOR_SHEET_MISSING``),
-    a different labor layout (``LABOR_LAYOUT_UNSUPPORTED``) or a days cell
-    that cannot be read as a number — text, or a formula without a cached
-    value (``LABOR_DAYS_UNREADABLE``) — is blocked, never a silent pass.
-    Only a truly empty, formula-free cell counts as 0 days."""
+    missing or cannot be read gives ``LABOR_WORKBOOK_UNREADABLE`` with the
+    ``READ_FAILURE`` message.  A readable workbook not identified as X01
+    (another major's form, X02, unknown) is not in scope and yields no
+    issue.  On an X01 workbook, hired days only in the male column give
+    ``LABOR_HIRED_MALE_ONLY`` (``ADVISORY_WARNING``).  A missing sheet
+    (``LABOR_SHEET_MISSING``), a different labor layout
+    (``LABOR_LAYOUT_UNSUPPORTED``) or a days cell that cannot be read as a
+    number — text, or a formula without a cached value
+    (``LABOR_DAYS_UNREADABLE``) — gives the ``READ_FAILURE`` message, never
+    a silent pass.  Only a truly empty, formula-free cell counts as 0 days."""
     path = Path(path)
     try:
         layout = read_template(path).layout
     except TemplateUnreadable as exc:
-        return [_labor_blocked("LABOR_WORKBOOK_UNREADABLE",
-                               "통합문서를 열거나 읽지 못해 일용직 성별을 확인하지 못함",
-                               {"workbook": path.name, "error": str(exc)})]
+        return [_labor_unchecked("LABOR_WORKBOOK_UNREADABLE",
+                                 "통합문서를 열거나 읽지 못해 일용직 성별을 확인하지 못함",
+                                 {"workbook": path.name, "error": str(exc)})]
     if layout != "x01":
         return []
     import openpyxl
@@ -1234,9 +1260,9 @@ def labor_review(path) -> list[dict]:
         workbook = openpyxl.load_workbook(path, data_only=True)
         formulas = openpyxl.load_workbook(path, data_only=False)
     except Exception as exc:  # openpyxl raises many parser types
-        return [_labor_blocked("LABOR_WORKBOOK_UNREADABLE",
-                               "통합문서를 열거나 읽지 못해 일용직 성별을 확인하지 못함",
-                               {"workbook": path.name, "error": f"{type(exc).__name__}: {exc}"})]
+        return [_labor_unchecked("LABOR_WORKBOOK_UNREADABLE",
+                                 "통합문서를 열거나 읽지 못해 일용직 성별을 확인하지 못함",
+                                 {"workbook": path.name, "error": f"{type(exc).__name__}: {exc}"})]
     try:
         return _labor_review_x01(workbook, formulas)
     finally:
@@ -1246,9 +1272,9 @@ def labor_review(path) -> list[dict]:
 
 def _labor_review_x01(workbook, formulas) -> list[dict]:
     if LABOR_SHEET not in workbook.sheetnames:
-        return [_labor_blocked("LABOR_SHEET_MISSING",
-                               "'8. 노무비계획' 시트를 찾지 못해 일용직 성별을 확인하지 못함",
-                               {"sheets": list(workbook.sheetnames)})]
+        return [_labor_unchecked("LABOR_SHEET_MISSING",
+                                 "'8. 노무비계획' 시트를 찾지 못해 일용직 성별을 확인하지 못함",
+                                 {"sheets": list(workbook.sheetnames)})]
     ws, wf = workbook[LABOR_SHEET], formulas[LABOR_SHEET]
     norm = lambda v: re.sub(r"\s+", "", v) if isinstance(v, str) else v
     mismatched = [{"cell": ref, "expected": text, "found": ws[ref].value}
@@ -1256,9 +1282,9 @@ def _labor_review_x01(workbook, formulas) -> list[dict]:
     mismatched += [{"cell": ref, "expected": list(LABOR_MALE_HEADERS), "found": ws[ref].value}
                    for ref in ("O24", "O38") if norm(ws[ref].value) not in LABOR_MALE_HEADERS]
     if mismatched:
-        return [_labor_blocked("LABOR_LAYOUT_UNSUPPORTED",
-                               "'8. 노무비계획' 칸 배치가 교수님 양식과 달라 남녀 고용 일수를 읽지 못함",
-                               {"mismatched": mismatched})]
+        return [_labor_unchecked("LABOR_LAYOUT_UNSUPPORTED",
+                                 "'8. 노무비계획' 칸 배치가 교수님 양식과 달라 남녀 고용 일수를 읽지 못함",
+                                 {"mismatched": mismatched})]
     unreadable = []
 
     def days(ref):
@@ -1284,19 +1310,21 @@ def _labor_review_x01(workbook, formulas) -> list[dict]:
                 tasks.append({"period": period, "row": row, "task": ws[f"B{row}"].value,
                               "male_days": m, "female_days": f})
     if unreadable:
-        return [_labor_blocked("LABOR_DAYS_UNREADABLE",
-                               "고용 일수 칸을 숫자로 읽지 못함(글자이거나 수식 캐시 없음): "
-                               + ", ".join(u["cell"] for u in unreadable),
-                               {"cells": unreadable})]
+        return [_labor_unchecked("LABOR_DAYS_UNREADABLE",
+                                 "고용 일수 칸을 숫자로 읽지 못함(글자이거나 수식 캐시 없음): "
+                                 + ", ".join(u["cell"] for u in unreadable),
+                                 {"cells": unreadable})]
     task_male = sum(t["male_days"] for t in tasks)
     task_female = sum(t["female_days"] for t in tasks)
     if (male > 0 and female == 0) or (task_male > 0 and task_female == 0):
         return [{
             "code": "LABOR_HIRED_MALE_ONLY", "status": "pending", "severity": "warning",
+            "message": ADVISORY_WARNING,
             "reason": "일용직 고용 일수가 남자 칸에만 있음(남 %s일·여 %s일, 작업별 남 %s일·여 %s일)"
                       % (male, female, task_male, task_female),
-            "remedy": "작업별(수확·선별·포장 등)로 남녀 누구를 고용하는지 학생에게 확인해 칸을 나누고, "
-                      "근거 자료에 성별 구분이 없으면 작업 관행으로 정한 이유를 각주에 적는다",
+            "remedy": "보조 경고, 판정 근거 아님. 작업별(수확·선별·포장 등)로 남녀 누구를 고용하는지 "
+                      "학생에게 확인해 칸을 나누고, 근거 자료에 성별 구분이 없으면 작업 관행으로 정한 "
+                      "이유를 각주에 적는다",
             "evidence": {"summary": {"male_days": male, "female_days": female}, "tasks": tasks},
         }]
     return []
@@ -1350,15 +1378,20 @@ def cli(argv: list[str]) -> int:
                              ensure_ascii=False))
             return 0
         if args.cmd == "label-check":
-            result = crop_label_check(args.before, args.after)
-            print(json.dumps(result, ensure_ascii=False))
-            return {"pass": 0, "fail": 1}.get(result["status"], 2)
+            # Advisory: always exit 0; the message field says what to do.
+            print(json.dumps(crop_label_check(args.before, args.after), ensure_ascii=False))
+            return 0
         if args.cmd == "labor-review":
             issues = labor_review(args.workbook)
-            blocked = any(i["status"] == "blocked" for i in issues)
-            print(json.dumps({"status": "blocked" if blocked else "reviewed", "issues": issues},
+            if any(i.get("message") == READ_FAILURE for i in issues):
+                head = {"message": READ_FAILURE, "status": "read_failed"}
+            elif issues:
+                head = {"message": ADVISORY_WARNING, "status": "warning"}
+            else:
+                head = {"message": NO_DIFFERENCE, "status": "reviewed"}
+            print(json.dumps({**head, "meaning": ADVISORY_MEANING, "issues": issues},
                              ensure_ascii=False))
-            return 2 if blocked else 0
+            return 0
         if args.cmd == "wage-map":
             result = wage_fill_map(resolve_source(args.source))
             args.out_map.parent.mkdir(parents=True, exist_ok=True)
@@ -1421,6 +1454,11 @@ def cli(argv: list[str]) -> int:
                               "detail": str(exc),
                               "guidance": exc.detail.get("guidance")},
                              ensure_ascii=False))
+            return 2
+        if isinstance(exc, TemplateUnreadable):
+            # Nothing was produced from an input the shared read check
+            # could not read; say so first, for a person to check.
+            print(json.dumps(read_failure_report(exc, produced=[]), ensure_ascii=False))
             return 2
         if isinstance(exc, (OSError, ValueError, RuntimeError,
                             zipfile.BadZipFile)):

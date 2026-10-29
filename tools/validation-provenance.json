@@ -121,7 +121,7 @@
    "origin": "new"
   },
   "tests/test_excel_template_guard.py": {
-   "note": "P9 C6 layout-guard tests: detect_layout anchors, legacy/OK-edited map refusal, reviewed_custom variant match/mismatch on synthetic sources (no real bytes). | PR2 R3: 빈·잘못된 기준점 목록은 식별 설정을 못 읽은 것이라 detect_layout이 unknown 대신 TemplateUnreadable을 내고, 옛 맵 적용은 여전히 거부·출력 없음(같은 보호 역할).",
+   "note": "P9 C6 layout-guard tests: detect_layout anchors, legacy/OK-edited map refusal, reviewed_custom variant match/mismatch on synthetic sources (no real bytes). | PR2 R3: 빈·잘못된 기준점 목록은 식별 설정을 못 읽은 것이라 detect_layout이 unknown 대신 TemplateUnreadable을 내고, 옛 맵 적용은 여전히 거부·출력 없음(같은 보호 역할). | PR2 R4: 이 파일 기대값은 바꾸지 않음(식별 설정 실패는 TemplateUnreadable, 옛 맵 적용 거부·출력 없음 유지).",
    "origin": "new"
   },
   "tests/test_finance_gate.py": {

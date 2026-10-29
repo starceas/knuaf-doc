@@ -420,6 +420,10 @@ def main(argv=None):
                           'guidance': e.detail.get('guidance')}, ensure_ascii=False))
         return 2
     except (ValueError, OSError, KeyError, zipfile.BadZipFile) as e:
+        from gg_excel_template import TemplateUnreadable, read_failure_report
+        if isinstance(e, TemplateUnreadable):
+            print(json.dumps(read_failure_report(e, produced=[]), ensure_ascii=False))
+            return 2
         print('BLOCK: ' + str(e), file=sys.stderr); return 2
 if __name__ == '__main__':
     for _stream in (sys.stdout, sys.stderr):

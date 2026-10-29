@@ -274,17 +274,27 @@ do not add sheets to the submission form merely to satisfy a preferred model.
 | 8. 노무비계획 O24·O38 | 고용(남자, 단가 동일) | 고용(남자) | 고용(남자) | 고용(남자) |
 
 - 작목 분류는 전공·작목명으로 정하고, 모르면 학생에게 묻는다. 생산량을 포기 수가 아니라 면적으로 계산하는 계획이면 `재배면적`을 고른다.
-- 명령: `gg_excel_template.py label-map --source <사본> --category <분류> [--choice "6. 생산계획!B17=재배시설"] --out-map <맵> --out-values <값>` → `gg_excel_fill.py`로 새 사본에 적용 → `gg_excel_template.py label-check --before <사본> --after <새 사본>`. `label-check`는 표에 있는 칸이 원래 글자에서 허용 이름으로 바뀐 것만 허용한다. 수식은 글자·`<f>` 속성(공유수식 `t`·`si`·`ref`)·풀어 쓴 수식까지, 값은 자료형까지(숫자 6611과 글자 "6611"은 다르다) 비교해 하나라도 다르면 `fail`(종료 1)이다. 두 파일 중 하나라도 읽지 못하면 `blocked`(종료 2)다.
+- 명령: `gg_excel_template.py label-map --source <사본> --category <분류> [--choice "6. 생산계획!B17=재배시설"] --out-map <맵> --out-values <값>` → `gg_excel_fill.py`로 새 사본에 적용 → `gg_excel_template.py label-check --before <사본> --after <새 사본>`. `label-check`는 **보조 경고, 판정 근거 아님**이다. 표에 있는 칸이 원래 글자에서 허용 이름으로 바뀐 것 말고 다른 차이가 있으면 `message=확인 권장`, `status=warning`과 차이 목록을 낸다. 수식은 글자·`<f>` 속성(공유수식 `t`·`si`·`ref`)·풀어 쓴 수식까지, 값은 자료형까지(숫자 6611과 글자 "6611"은 다르다) 비교한다. 차이가 없으면 `차이 없음`/`match`, 두 파일 중 하나라도 읽지 못하면 `읽기 실패 — 사람 확인`/`read_failed`이다. 셋 다 종료 0이며 작성을 막지 않는다.
 - `label-map`의 원본은 등록 X01·X02 원본, 또는 모든 수식이 등록 감사와 칸마다 같은 사본(관측 준비·값 채우기를 거친 사본)이다. 원래 글자가 표와 다르거나 수식이 등록 감사와 다른 양식(새 연도 정본 등)은 거부한다. 표를 새 좌표·글자·감사로 다시 맞춘 뒤 쓴다.
-- 읽기 공통 확인: `label-map`·`label-check`·`labor-review`·`materialize-d8`·`wage-map`·`inspect`와 인쇄 사본(`gg_excel_print.py`)은 먼저 `gg_excel_template.read_template`을 지난다. 첫 확인은 두 가지를 함께 본다. (1) 뒤 검사가 쓰는 openpyxl로 파일 열기. (2) 패키지 구조 확인: `[Content_Types].xml`, `_rels/.rels`(통합문서를 가리킴), `xl/workbook.xml`, `xl/_rels/workbook.xml.rels`가 있고 XML로 읽히며 뿌리가 맞아야 한다. 공유 문자열 표가 목록에 있거나 파일로 있으면 `xl/sharedStrings.xml`이 있고 읽혀야 한다. 시트는 1개 이상이고, 시트 목록이 가리키는 모든 시트 부품이 있으며 worksheet(+`sheetData`)·chartsheet 뿌리여야 한다. 시트 목록은 openpyxl이 연 것과 같아야 한다. openpyxl은 `_rels/.rels`가 없거나 깨져도 열기 때문에 (2)를 같이 둔다. 그다음 모든 칸·공유수식을 읽고(`t="s"` 칸 번호가 공유 문자열 표 범위 안), 양식 식별 설정(`kang-finance-workbook.json` `layout_anchors`)으로 식별한다. 어느 단계든 실패하면 `TemplateUnreadable`이며 모든 도구에서 blocked(CLI 종료 2)다. 식별 설정이 없거나 깨진 경우도 같다. "다른 양식(`unknown`, 해당 없음)"은 열기·읽기·식별이 모두 성공하고 X01이 아님을 확인했을 때만 나온다. `detect_layout`도 읽기 실패를 `unknown`으로 바꾸지 않고 예외를 낸다.
+- 읽기 공통 확인(**보조 확인, 판정 근거 아님**): `label-map`·`label-check`·`labor-review`·`materialize-d8`·`wage-map`·`inspect`와 인쇄 사본(`gg_excel_print.py`)은 먼저 `gg_excel_template.read_template`을 지난다. 첫 확인은 두 가지를 함께 본다. (1) 뒤 검사가 쓰는 openpyxl로 파일 열기. (2) 패키지 구조 확인: `[Content_Types].xml`, `_rels/.rels`(통합문서를 가리킴), `xl/workbook.xml`, `xl/_rels/workbook.xml.rels`가 있고 XML로 읽히며 뿌리가 맞아야 한다. 공유 문자열 표가 목록에 있거나 파일로 있으면 `xl/sharedStrings.xml`이 있고 읽혀야 한다. 시트는 1개 이상이고, 시트 목록이 가리키는 모든 시트 부품이 있으며 worksheet(+`sheetData`)·chartsheet 뿌리여야 한다. 시트 목록은 openpyxl이 연 것과 같아야 한다. 그다음 모든 칸·공유수식을 읽고, 양식 식별 설정(`kang-finance-workbook.json` `layout_anchors`)으로 식별한다. 어느 단계든 실패하면 `TemplateUnreadable`이다.
+  - 검사(`label-check`·`labor-review`)는 `읽기 실패 — 사람 확인`을 출력 맨 앞에 쓰고 종료 0으로 끝난다. 작성을 막지 않는다.
+  - 맵·사본·인쇄본을 만드는 도구(`label-map`·`wage-map`·`materialize-d8`·`inspect`·`clear`·인쇄 사본, D8 맵을 쓰는 패치 적용)는 못 읽은 입력에서 아무것도 만들지 않는다. 출력 맨 앞에 `읽기 실패 — 사람 확인`과 이유를 쓰고 종료 2로 끝난다. 이것은 작성 판정이 아니라 "만들 결과물이 없음"이다.
+  - "다른 양식(`unknown`, 해당 없음)"은 열기·읽기·식별이 모두 성공하고 X01이 아님을 확인했을 때만 나온다. `detect_layout`도 읽기 실패를 `unknown`으로 바꾸지 않고 예외를 낸다.
+  - 이 확인은 엄격한 OOXML 검증이 아니다. 알려진 빈틈: 공유 문자열 번호가 음수(`-1` 등)이면 표 끝에서 세어 읽으므로 통과한다. 이 빈틈과 엄격 읽기는 다음 판에서 다룬다.
 - `1. 기초재무상태조사` (3) 대식물 표(주수·경제수령·식재년도)는 다년생 나무가 없으면 칸 이름을 바꾸지 않고 표 전체를 "해당 없음"으로 둔다. `7. 영농자재소요계획` 각주의 예시 묘목 단가 문장은 학생 자재 근거로 교체한다(값 채우기 경로).
 - 이름을 바꾼 칸이 칸 폭을 넘으면 칸 폭을 바꾸지 말고 렌더 검사에서 확인한다.
 
 #### 일용 노무 성별·작업별 확인
 
-`8. 노무비계획` 11행(남)·12행(여)의 연도별 작업 일수와 작업별 산출근거(1년차 26~33행, 2년차 이후 40~47행)의 남자 O열·여자 R열 일수를 학생 계획대로 나눈다. 작업별(수확·선별·포장 등)로 누구를 고용하는지 묻고([interview-guide](interview-guide.md#q2-4-투자자금-조달-iv장-전체)), 근거 자료에 성별 구분이 없으면 작업 관행으로 정한 이유를 각주에 적는다. `gg_excel_template.py labor-review --workbook <재계산본>`과 `gg.py check`의 `finance_plan_review`는 고용 일수가 남자 칸에만 있으면 `LABOR_HIRED_MALE_ONLY` 경고와 작업별 일수 목록을 낸다. 경고는 막지 않는다 — 실제로 남자만 고용하는 계획이면 그 근거를 본문·각주에 남긴다.
+`8. 노무비계획` 11행(남)·12행(여)의 연도별 작업 일수와 작업별 산출근거(1년차 26~33행, 2년차 이후 40~47행)의 남자 O열·여자 R열 일수를 학생 계획대로 나눈다. 작업별(수확·선별·포장 등)로 누구를 고용하는지 묻고([interview-guide](interview-guide.md#q2-4-투자자금-조달-iv장-전체)), 근거 자료에 성별 구분이 없으면 작업 관행으로 정한 이유를 각주에 적는다. `gg_excel_template.py labor-review --workbook <재계산본>`과 `gg.py check`의 `finance_plan_review`는 고용 일수가 남자 칸에만 있으면 `LABOR_HIRED_MALE_ONLY`(`확인 권장`) 경고와 작업별 일수 목록을 낸다. 이 확인은 **보조 경고, 판정 근거 아님**이며 막지 않는다 — 실제로 남자만 고용하는 계획이면 그 근거를 본문·각주에 남긴다.
 
-이 검사는 X01 배치로 식별된 통합문서에만 적용한다. 읽기 공통 확인을 통과하고 식별 결과가 X01이 아닌 통합문서(다른 전공 양식·X02 등)는 검사 대상이 아니라 이슈를 내지 않는다(종료 0). 파일이 없거나, openpyxl로 열리지 않거나, 패키지·시트·공유 문자열 부품이 없거나 깨졌거나, 양식 식별 설정을 못 읽으면 `LABOR_WORKBOOK_UNREADABLE`로 `blocked`(CLI `status: blocked`, 종료 2)다. X01인데 `8. 노무비계획` 시트가 없거나(`LABOR_SHEET_MISSING`), 칸 이름 배치가 다르거나(`LABOR_LAYOUT_UNSUPPORTED`), 일수 칸이 글자이거나 수식 캐시가 없으면(`LABOR_DAYS_UNREADABLE`) 통과가 아니라 `blocked`로 남는다. 엑셀에서 재계산·저장한 뒤 다시 검사한다. 빈 칸(수식 없음)만 0일로 본다.
+이 검사는 X01 배치로 식별된 통합문서에만 적용한다. 읽기 공통 확인을 통과하고 식별 결과가 X01이 아닌 통합문서(다른 전공 양식·X02 등)는 검사 대상이 아니라 이슈를 내지 않는다. 확인하지 못한 경우는 모두 `읽기 실패 — 사람 확인` 경고(`status: pending`, `severity: warning`)이고 종료 0이며, CLI 출력 맨 앞이 `message: 읽기 실패 — 사람 확인`이다.
+- 파일이 없거나, openpyxl로 열리지 않거나, 패키지·시트·공유 문자열 부품이 없거나 깨졌거나, 양식 식별 설정을 못 읽음: `LABOR_WORKBOOK_UNREADABLE`
+- X01인데 `8. 노무비계획` 시트가 없음: `LABOR_SHEET_MISSING`
+- 칸 이름 배치가 다름: `LABOR_LAYOUT_UNSUPPORTED`
+- 일수 칸이 글자이거나 수식 캐시가 없음: `LABOR_DAYS_UNREADABLE`
+
+엑셀에서 재계산·저장한 뒤 다시 확인한다. 빈 칸(수식 없음)만 0일로 본다.
 
 #### 7번 영농자재소요계획 인쇄 설정
 
