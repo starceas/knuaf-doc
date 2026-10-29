@@ -24,6 +24,8 @@ except ImportError as error:  # python-docx (or its layout helper) absent
     DOCX_IMPORT_ERROR = error
 from gg_document import parse, spans, SCI, FRONT, school_toc_range, school_frontmatter_plan, split_caption_credit
 from gg_core import digest, local
+from gg_document import photo_guide, photo_requests
+from gg_body_layout import NOTE, spacer_positions, review_requests
 
 FONT = "신명조"
 LEVEL_PT = {1: 20, 2: 18, 3: 16, 4: 14, 5: 13, 6: 13, 7: 13, 8: 13, 9: 13}
@@ -209,7 +211,8 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
 
     def render_node(n, allow_soft_wrap=False):
         nonlocal last_prose
-        prose = n["kind"] == "paragraph" and not n.get("list_item")
+        guide = photo_guide(n.get("text", ""))
+        prose = n["kind"] == "paragraph" and not n.get("list_item") and not guide
         if allow_soft_wrap and prose and n.get("soft_continue") and last_prose is not None:
             runs(last_prose, " " + n["text"], font, 12)
             return
@@ -266,12 +269,46 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
                 pf.alignment = (WD_ALIGN_PARAGRAPH.CENTER if n["label"] == "그림"
                                 else WD_ALIGN_PARAGRAPH.LEFT)
                 pf.first_line_indent = Pt(0)
-            runs(p, text, font, LEVEL_PT[n["level"]] if heading else 12, heading)
+                title, credit = split_caption_credit(text)
+                if credit is not None:
+                    text = title + " " + ("(출처 : " + credit + ")").replace(" ", "\u00a0")
+            if guide:
+                text = guide
+                pf.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                pf.first_line_indent = Pt(0)
+            runs(p, text, font,
+                 LEVEL_PT[n["level"]] if heading else (11 if n["kind"] == "caption" else 12),
+                 heading, (0, 0, 255) if guide else (0, 0, 0))
             if n.get("_bookmark"):
                 from gg_frontmatter_layout import bookmark
                 bookmark(p, n["_bookmark"], n["_bookmark_id"])
             if prose:
                 last_prose = p
+
+    def render_body(sequence):
+        nonlocal last_prose
+        gaps = spacer_positions(sequence)
+        for index, node in enumerate(sequence):
+            if index in gaps:
+                blank = doc.add_paragraph()
+                blank.paragraph_format.keep_with_next = False
+                blank.paragraph_format.line_spacing = 1.6
+                runs(blank, "", font, 12)
+                last_prose = None
+            render_node(node, allow_soft_wrap=True)
+            if (photo_guide(node.get("text", "")) and index + 1 < len(sequence)
+                    and sequence[index + 1]["kind"] == "caption"
+                    and sequence[index + 1]["label"] == "그림"):
+                doc.paragraphs[-1].paragraph_format.keep_with_next = True
+            if index + 1 < len(sequence) and NOTE.match(sequence[index + 1].get("text", "")):
+                if node["kind"] == "table":
+                    # Chain the final row to its explanation without forcing a
+                    # multi-page table onto a single page.
+                    for cell in doc.tables[-1].rows[-1].cells:
+                        for paragraph in cell.paragraphs:
+                            paragraph.paragraph_format.keep_with_next = True
+                elif node["kind"] in {"caption", "paragraph"}:
+                    doc.paragraphs[-1].paragraph_format.keep_with_next = True
 
     front_plan = school_frontmatter_plan(nodes)
     front_indices = front_plan["indices"] if front_plan else {}
@@ -285,8 +322,7 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
             update.set(qn("w:val"), "true")
             doc.settings.element.append(update)
             doc.add_page_break()
-        for n in nodes:
-            render_node(n, allow_soft_wrap=True)
+        render_body(nodes)
         return doc
 
     update = OxmlElement("w:updateFields")
@@ -518,8 +554,7 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
         field = OxmlElement('w:fldSimple'); field.set(qn('w:instr'), 'PAGE'); fp._p.append(field)
 
     # 6. Main Body
-    for n in nodes[i_body:]:
-        render_node(n, allow_soft_wrap=True)
+    render_body(nodes[i_body:])
 
     return doc
 
@@ -652,6 +687,8 @@ def main(argv=None):
             "toc_update": "not_run",
             "render": "not_run",
             "hwp": "not_run",
+            "layout_review": review_requests(parse(source_text)),
+            "photo_requests": photo_requests(parse(source_text)),
             "school_frontmatter": (
                 {
                     "layout": "forms_1_to_4" if parsed_plan.get("official_order") else "logical_legacy",

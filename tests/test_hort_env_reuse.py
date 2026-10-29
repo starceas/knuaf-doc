@@ -37,14 +37,34 @@ sys.path.insert(0, str(SCRIPTS))
 import gg_reuse  # noqa: E402
 
 # ---------------------------------------------------------------------------
-# Preserve the nine pre-existing source contracts, including authority,
-# coverage and lineage. Only the approved caption-policy document bytes may
-# change; their declared fingerprints are checked against the actual files.
+# Preserve the original semantic digests; only approved document fingerprint
+# slots may vary, and every such slot is checked against the shipped file.
 CAPTION_POLICY_ARTIFACTS = {
-    "official-writing-guide-pdf": "references/rules/F_format.md",
-    "official-writing-guide-hwp": "references/rules/F_format.md",
-    "kim-wonseop-exemplar-pdf": "references/exemplar-quality.md",
-    "kim-wonseop-exemplar-hwp": "references/exemplar-quality.md",
+    "official-writing-guide-pdf": (
+        "references/rules/F_format.md",
+        "references/rules/CH1_intro.md",
+        "references/rules/PRE_frontmatter.md",
+    ),
+    "official-writing-guide-hwp": (
+        "references/rules/F_format.md",
+        "references/rules/CH1_intro.md",
+        "references/rules/PRE_frontmatter.md",
+    ),
+    "kim-wonseop-exemplar-pdf": ("references/exemplar-quality.md",),
+    "kim-wonseop-exemplar-hwp": ("references/exemplar-quality.md",),
+}
+# These are the slots already included in BASELINE_SEMANTIC_DIGEST, not
+# expected current file bytes. Restore them only for the semantic projection
+# so expanding the approved path list does not require re-pinning any digest.
+ORIGINAL_WRITING_FINGERPRINTS = {
+    "references/rules/CH1_intro.md": {
+        "sha256": "5a90072799b984707ec995fbfa1750655160613c1ac202c33f24e1ca8012658b",
+        "bytes": 2288,
+    },
+    "references/rules/PRE_frontmatter.md": {
+        "sha256": "b1bbb41214e9d0117301cdd62c9ee99ddfe7348c283b43663a255c2ddfc839d1",
+        "bytes": 4056,
+    },
 }
 BASELINE_SEMANTIC_DIGEST = {
     "rda.income.national.2024":
@@ -249,13 +269,18 @@ class TestRegistryIntegrity(unittest.TestCase):
             with self.subTest(source_id=sid):
                 self.assertIn(sid, entries, "missing source contract")
                 entry = entries[sid]
-                mutable_path = CAPTION_POLICY_ARTIFACTS.get(sid)
+                mutable_paths = CAPTION_POLICY_ARTIFACTS.get(sid, ())
                 semantics = {
                     **entry,
                     "artifacts": [
-                        {key: value for key, value in artifact.items()
-                         if not (artifact["relative_path"] == mutable_path
-                                 and key in {"sha256", "bytes"})}
+                        {
+                            **{key: value for key, value in artifact.items()
+                               if not (artifact["relative_path"] in mutable_paths
+                                       and key in {"sha256", "bytes"})},
+                            **(ORIGINAL_WRITING_FINGERPRINTS.get(
+                                artifact["relative_path"], {})
+                               if artifact["relative_path"] in mutable_paths else {}),
+                        }
                         for artifact in entry["artifacts"]
                     ],
                 }
@@ -268,16 +293,17 @@ class TestRegistryIntegrity(unittest.TestCase):
     def test_caption_policy_artifacts_match_runtime(self):
         entries = {entry["source_id"]: entry
                    for entry in self.reg.document["entries"]}
-        for sid, relative_path in CAPTION_POLICY_ARTIFACTS.items():
-            with self.subTest(source_id=sid, artifact=relative_path):
-                artifacts = [artifact for artifact in entries[sid]["artifacts"]
-                             if artifact["relative_path"] == relative_path]
-                self.assertEqual(len(artifacts), 1)
-                artifact = artifacts[0]
-                actual = (self.reg.resolved_base / relative_path).read_bytes()
-                self.assertEqual(artifact["sha256"],
-                                 hashlib.sha256(actual).hexdigest())
-                self.assertEqual(artifact["bytes"], len(actual))
+        for sid, relative_paths in CAPTION_POLICY_ARTIFACTS.items():
+            for relative_path in relative_paths:
+                with self.subTest(source_id=sid, artifact=relative_path):
+                    artifacts = [artifact for artifact in entries[sid]["artifacts"]
+                                 if artifact["relative_path"] == relative_path]
+                    self.assertEqual(len(artifacts), 1)
+                    artifact = artifacts[0]
+                    actual = (self.reg.resolved_base / relative_path).read_bytes()
+                    self.assertEqual(artifact["sha256"],
+                                     hashlib.sha256(actual).hexdigest())
+                    self.assertEqual(artifact["bytes"], len(actual))
 
 
 
