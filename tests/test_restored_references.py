@@ -18,7 +18,7 @@ SKILL_MD = SKILL_DIR / "SKILL.md"
 
 RESTORED_DOCS = (
     "lessons-learned.md",
-    "kim-finance-bible.md",
+    "finance-bible.md",
     "open-questions.md",
     "rda-benchmark.md",
 )

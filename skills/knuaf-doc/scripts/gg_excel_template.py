@@ -34,7 +34,7 @@ RANGE_RE = re.compile(r"^([A-Z]+)([1-9][0-9]*)(?::([A-Z]+)([1-9][0-9]*))?$")
 
 LAYOUT_EXTRACT_PATH = (
     Path(__file__).resolve().parents[1] / "references"
-    / "common-workbooks" / "kang-finance-workbook.json"
+    / "common-workbooks" / "shared-finance-workbook.json"
 )
 
 

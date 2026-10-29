@@ -53,21 +53,21 @@ SOURCE_SHA = {
         "f60b58b7dcde86eab9f273dd50114ac296d009bd60abb940aaa866a54e866de2",
     "official-writing-guide-hwp":
         "efcbbc7fe261477ebd8628883733aacd4214fa365974617dced1304d99f6c631",
-    "kim-wonseop-exemplar-pdf":
+    "reference-narrative-02-pdf":
         "67c1eb5192f445d914d329748f1e3275bcb3ce5d4757c9d1ca9a6c3caccb4720",
-    "kim-wonseop-exemplar-hwp":
+    "reference-narrative-02-hwp":
         "906ad6ff04760f30feefad938e1b40a8dcbf7d9f62704784cdfe6cfe5504e13e",
-    "lee-yurim-exemplar-hwp":
+    "reference-narrative-01-hwp":
         "03a39a9e3eb9ef22e61de98b6c0a97aab94a14efe16c6cb82e0dc4c81ea26513",
-    "lee-yurim-exemplar-pdf":
+    "reference-narrative-01-pdf":
         "861ea3bc89cb70f6e3cf9b06c1e9e758ef6dec05119ac2ea63c1b3c351cf8e29",
-    "seo-minseo-finance-xlsx":
+    "reference-finance-01-xlsx":
         "457249255929275b3ee55383bdc36897274f08933af3536866a652b29346cd3a",
     "specialty-grad-thesis-finance-xlsx":
         "029f8107ec2fee318544799524f7f4317946666d323d30174c931d3469d02129",
-    "kang-finance-workbook-x01":
+    "shared-finance-workbook-x01":
         "5d19b6a2e5dcddccb70c68e39abee8f423bba005c008db7b64076326a17b9c80",
-    "kang-finance-workbook-x02":
+    "shared-finance-workbook-x02":
         "54d4e55cd57bcb1db0fbfaafe2ed42422767f1561959b8a4f3c673daf77d7e78",
     # hort_env_systems reference entries (identification-only except hx1)
     "hort-env-ht1-exemplar-pdf":
@@ -111,17 +111,17 @@ BASELINE_IDS = [
     "rda.income.national.2024", "rda.income.regional.2024",
     "rda.econ.2025", "mafra.specialty.production.2024",
     "official-writing-guide-pdf", "official-writing-guide-hwp",
-    "kim-wonseop-exemplar-pdf", "kim-wonseop-exemplar-hwp",
-    "seo-minseo-finance-xlsx", "specialty-grad-thesis-finance-xlsx",
-    "kang-finance-workbook-x01", "kang-finance-workbook-x02",
+    "reference-narrative-02-pdf", "reference-narrative-02-hwp",
+    "reference-finance-01-xlsx", "specialty-grad-thesis-finance-xlsx",
+    "shared-finance-workbook-x01", "shared-finance-workbook-x02",
 ]
 
-KIM_KEY = {"kind": "delimited",
-           "value": "kim-wonseop-exemplar:opening-narrative"}
-KIM_KEY2 = {"kind": "delimited",
-            "value": "kim-wonseop-exemplar:closing-narrative"}
-SEO_KEY = {"kind": "delimited",
-           "value": "seo-minseo-finance:workbook-structure"}
+NARRATIVE_KEY = {"kind": "delimited",
+           "value": "reference-narrative-02:opening-narrative"}
+NARRATIVE_KEY2 = {"kind": "delimited",
+            "value": "reference-narrative-02:closing-narrative"}
+FINANCE_KEY = {"kind": "delimited",
+           "value": "reference-finance-01:workbook-structure"}
 GUIDE_KEY = {"kind": "delimited",
              "value": "official-writing-guide:toc-rules"}
 
@@ -137,11 +137,11 @@ def key_catalog_extra(kind=None, ser=None, authority="verified"):
                                 "catalog_digest": None,
                                 "receipt_sha256": None}},
         "narrative_reference": {
-            KIM_KEY["value"]: {"authority": "verified",
+            NARRATIVE_KEY["value"]: {"authority": "verified",
                                "catalog_digest": None,
                                "receipt_sha256": None}},
         "template_structure": {
-            SEO_KEY["value"]: {"authority": "verified",
+            FINANCE_KEY["value"]: {"authority": "verified",
                                "catalog_digest": None,
                                "receipt_sha256": None}},
         "statistical_observation": {},
@@ -215,8 +215,8 @@ class TestContextBoundaries(unittest.TestCase):
     def test_missing_context_kwarg_typeerror(self):
         with self.assertRaises(TypeError):
             gg_reuse.resolve_reuse(
-                SOURCE_SHA["seo-minseo-finance-xlsx"],
-                {"kind": "template_structure", "keys": [SEO_KEY]})
+                SOURCE_SHA["reference-finance-01-xlsx"],
+                {"kind": "template_structure", "keys": [FINANCE_KEY]})
 
     def test_catalog_plain_dict_rejected(self):
         bad = ctx(self.reg, catalog={"entries": {}},
@@ -242,8 +242,8 @@ class TestContextBoundaries(unittest.TestCase):
                   catalog_digest="0" * 64)
         with self.assertRaises(ValueError) as cm:
             gg_reuse.resolve_reuse(
-                SOURCE_SHA["seo-minseo-finance-xlsx"],
-                {"kind": "template_structure", "keys": [SEO_KEY]},
+                SOURCE_SHA["reference-finance-01-xlsx"],
+                {"kind": "template_structure", "keys": [FINANCE_KEY]},
                 context=bad)
         self.assertIn("catalog", str(cm.exception))
 
@@ -251,8 +251,8 @@ class TestContextBoundaries(unittest.TestCase):
         bad = ctx(self.reg, registry=self.reg.document)
         with self.assertRaises(ValueError) as cm:
             gg_reuse.resolve_reuse(
-                SOURCE_SHA["seo-minseo-finance-xlsx"],
-                {"kind": "template_structure", "keys": [SEO_KEY]},
+                SOURCE_SHA["reference-finance-01-xlsx"],
+                {"kind": "template_structure", "keys": [FINANCE_KEY]},
                 context=bad)
         self.assertIn("registry", str(cm.exception))
 
@@ -274,8 +274,8 @@ class TestContextBoundaries(unittest.TestCase):
     def test_runtime_base_mismatch_is_verdict_not_valueerror(self):
         with tempfile.TemporaryDirectory() as td:
             v = gg_reuse.resolve_reuse(
-                SOURCE_SHA["seo-minseo-finance-xlsx"],
-                {"kind": "template_structure", "keys": [SEO_KEY]},
+                SOURCE_SHA["reference-finance-01-xlsx"],
+                {"kind": "template_structure", "keys": [FINANCE_KEY]},
                 context=ctx(self.reg, runtime_root=Path(td)))
             self.assertEqual(v["status"], "blocked")
             self.assertIn("runtime_base_mismatch", v["reasons"])
@@ -319,8 +319,8 @@ class TestI01Negatives(unittest.TestCase):
             reg = gg_reuse.load_registry(
                 dst / "references" / "builtin-sources.json")
             v = gg_reuse.resolve_reuse(
-                SOURCE_SHA["kim-wonseop-exemplar-pdf"],
-                {"kind": "narrative_reference", "keys": [KIM_KEY]},
+                SOURCE_SHA["reference-narrative-02-pdf"],
+                {"kind": "narrative_reference", "keys": [NARRATIVE_KEY]},
                 context=ctx(reg))
             self.assertNotEqual(v["status"], "reuse_ready")
             self.assertIn("runtime_hash_mismatch", v["reasons"])
@@ -333,9 +333,9 @@ class TestI01Negatives(unittest.TestCase):
             # the actionable route names that key and the tampered
             # artifact (no companion key borrows this route).
             self.assertIn("verification_absent", v["reasons"])
-            self.assertIn(KIM_KEY, v["unsatisfied"])
+            self.assertIn(NARRATIVE_KEY, v["unsatisfied"])
             ex = [e for e in v["needed_excerpt"]
-                  if e["key_ref"] == KIM_KEY]
+                  if e["key_ref"] == NARRATIVE_KEY]
             self.assertEqual(len(ex), 1)
             self.assertEqual(ex[0]["reason"], "verification_absent")
             self.assertEqual(ex[0]["artifact"],
@@ -360,11 +360,11 @@ class TestI01Negatives(unittest.TestCase):
             reg = gg_reuse.load_registry(
                 dst / "references" / "builtin-sources.json")
             kc = ctx(reg)["key_catalog"]
-            del kc["narrative_reference"][KIM_KEY["value"]]
+            del kc["narrative_reference"][NARRATIVE_KEY["value"]]
             target.write_bytes(pristine + b"x")
             v = gg_reuse.resolve_reuse(
-                SOURCE_SHA["kim-wonseop-exemplar-pdf"],
-                {"kind": "narrative_reference", "keys": [KIM_KEY]},
+                SOURCE_SHA["reference-narrative-02-pdf"],
+                {"kind": "narrative_reference", "keys": [NARRATIVE_KEY]},
                 context=ctx(reg, key_catalog=kc))
             self.assertEqual(v["status"], "blocked")
             self.assertEqual(v["exit"], 2)
@@ -372,7 +372,7 @@ class TestI01Negatives(unittest.TestCase):
             self.assertIn("authority_conflict", v["reasons"])
             self.assertIn("verification_absent", v["reasons"])
             ex = [e for e in v["needed_excerpt"]
-                  if e["key_ref"] == KIM_KEY]
+                  if e["key_ref"] == NARRATIVE_KEY]
             self.assertEqual(len(ex), 1)
             self.assertEqual(ex[0]["reason"], "verification_absent")
             self.assertEqual(ex[0]["artifact"],
@@ -381,19 +381,19 @@ class TestI01Negatives(unittest.TestCase):
             # declared again: tamper + verification-gap legs lift
             target.write_bytes(pristine)
             v2 = gg_reuse.resolve_reuse(
-                SOURCE_SHA["kim-wonseop-exemplar-pdf"],
-                {"kind": "narrative_reference", "keys": [KIM_KEY]},
+                SOURCE_SHA["reference-narrative-02-pdf"],
+                {"kind": "narrative_reference", "keys": [NARRATIVE_KEY]},
                 context=ctx(reg, key_catalog=kc))
             self.assertEqual(v2["status"], "blocked")
             self.assertEqual(v2["exit"], 2)
             self.assertEqual(v2["reasons"], ["authority_conflict"])
-            self.assertIn(KIM_KEY, v2["unsatisfied"])
+            self.assertIn(NARRATIVE_KEY, v2["unsatisfied"])
             self.assertFalse(v2["needed_excerpt"])
 
     def test_i01_3_wrong_role(self):
         v = gg_reuse.resolve_reuse(
             SOURCE_SHA["official-writing-guide-pdf"],
-            {"kind": "narrative_reference", "keys": [KIM_KEY]},
+            {"kind": "narrative_reference", "keys": [NARRATIVE_KEY]},
             context=ctx(self.reg))
         self.assertNotEqual(v["status"], "reuse_ready")
         self.assertIn("role_mismatch", v["reasons"])
@@ -401,22 +401,22 @@ class TestI01Negatives(unittest.TestCase):
 
     def test_i01_4_partial_coverage(self):
         v = gg_reuse.resolve_reuse(
-            SOURCE_SHA["kim-wonseop-exemplar-pdf"],
+            SOURCE_SHA["reference-narrative-02-pdf"],
             {"kind": "narrative_reference",
-             "keys": [KIM_KEY2, KIM_KEY]},   # canonical order
+             "keys": [NARRATIVE_KEY2, NARRATIVE_KEY]},   # canonical order
             context=ctx(self.reg))
         self.assertNotEqual(v["status"], "reuse_ready")
         self.assertIn("coverage_incomplete", v["reasons"])
-        self.assertIn(KIM_KEY, v["satisfied"])
-        self.assertIn(KIM_KEY2, v["unsatisfied"])
-        ex = [e for e in v["needed_excerpt"] if e["key_ref"] == KIM_KEY2]
+        self.assertIn(NARRATIVE_KEY, v["satisfied"])
+        self.assertIn(NARRATIVE_KEY2, v["unsatisfied"])
+        ex = [e for e in v["needed_excerpt"] if e["key_ref"] == NARRATIVE_KEY2]
         self.assertEqual(len(ex), 1)
         self.assertEqual(ex[0]["artifact"], "references/exemplar-quality.md")
 
     def test_i01_5_different_edition(self):
         v = gg_reuse.resolve_reuse(
             "a" * 64,
-            {"kind": "narrative_reference", "keys": [KIM_KEY]},
+            {"kind": "narrative_reference", "keys": [NARRATIVE_KEY]},
             context=ctx(self.reg))
         self.assertNotEqual(v["status"], "reuse_ready")
         self.assertEqual(v["status"], "unmapped")
@@ -430,15 +430,15 @@ class TestI01Negatives(unittest.TestCase):
                     "raw_line_sha256":
                         "298fba9503617abd2809e777f795d2008f88cc0aba287f4a90639caa6d89b344"}
         bads = [
-            {"kind": "bogus_kind", "keys": [KIM_KEY]},
+            {"kind": "bogus_kind", "keys": [NARRATIVE_KEY]},
             {"kind": "narrative_reference", "keys": []},
             {"kind": "narrative_reference",
              "keys": [{"kind": "delimited", "value": "UPPER:case"}]},
             {"kind": "narrative_reference",
-             "keys": [KIM_KEY, KIM_KEY2]},          # unsorted
+             "keys": [NARRATIVE_KEY, NARRATIVE_KEY2]},          # unsorted
             # ("opening" sorts after "closing")
             {"kind": "narrative_reference",
-             "keys": [KIM_KEY, KIM_KEY]},           # duplicate
+             "keys": [NARRATIVE_KEY, NARRATIVE_KEY]},           # duplicate
             # P5-domain violation: bool line number
             {"kind": "statistical_observation",
              "keys": [dict(base_key, physical_jsonl_line_1based=True)]},
@@ -453,7 +453,7 @@ class TestI01Negatives(unittest.TestCase):
         ]
         for bad in bads:
             v = gg_reuse.resolve_reuse(
-                SOURCE_SHA["kim-wonseop-exemplar-pdf"], bad,
+                SOURCE_SHA["reference-narrative-02-pdf"], bad,
                 context=ctx(self.reg))
             self.assertEqual(v["status"], "invalid_request",
                              "expected invalid_request for %r" % bad)
@@ -462,7 +462,7 @@ class TestI01Negatives(unittest.TestCase):
     def test_i01_7_unmapped(self):
         v = gg_reuse.resolve_reuse(
             "b" * 64,
-            {"kind": "narrative_reference", "keys": [KIM_KEY]},
+            {"kind": "narrative_reference", "keys": [NARRATIVE_KEY]},
             context=ctx(self.reg))
         self.assertEqual(v["status"], "unmapped")
         self.assertIn("source_unmatched", v["reasons"])
@@ -515,7 +515,7 @@ class TestI01Negatives(unittest.TestCase):
             reg, shared = self._collision_registry(td)
             v = gg_reuse.resolve_reuse(
                 shared,
-                {"kind": "narrative_reference", "keys": [KIM_KEY]},
+                {"kind": "narrative_reference", "keys": [NARRATIVE_KEY]},
                 context=ctx(reg, packs_dir=None))
             self.assertEqual(v["status"], "blocked")
             self.assertIn("duplicate_hash_collision", v["reasons"])
@@ -534,7 +534,7 @@ class TestI01Negatives(unittest.TestCase):
             reg2 = gg_reuse.load_registry(reg2_path)
             v = gg_reuse.resolve_reuse(
                 shared,
-                {"kind": "narrative_reference", "keys": [KIM_KEY]},
+                {"kind": "narrative_reference", "keys": [NARRATIVE_KEY]},
                 context=ctx(reg2, packs_dir=None))
             self.assertEqual(v["selected_entry"], "collide.alpha")
             self.assertEqual(v["disambiguator"], "role:narrative_exemplar")
@@ -543,8 +543,8 @@ class TestI01Negatives(unittest.TestCase):
         # hwp shares exemplar-quality.md with pdf but declares neither
         # coverage nor lineage -> nothing inherited
         v = gg_reuse.resolve_reuse(
-            SOURCE_SHA["kim-wonseop-exemplar-hwp"],
-            {"kind": "narrative_reference", "keys": [KIM_KEY]},
+            SOURCE_SHA["reference-narrative-02-hwp"],
+            {"kind": "narrative_reference", "keys": [NARRATIVE_KEY]},
             context=ctx(self.reg))
         self.assertNotEqual(v["status"], "reuse_ready")
         self.assertIn("coverage_incomplete", v["reasons"])
@@ -552,8 +552,8 @@ class TestI01Negatives(unittest.TestCase):
         # same artifact, sibling entry IS reusable — proves the artifact
         # itself is fine; coverage is per-entry
         vp = gg_reuse.resolve_reuse(
-            SOURCE_SHA["kim-wonseop-exemplar-pdf"],
-            {"kind": "narrative_reference", "keys": [KIM_KEY]},
+            SOURCE_SHA["reference-narrative-02-pdf"],
+            {"kind": "narrative_reference", "keys": [NARRATIVE_KEY]},
             context=ctx(self.reg))
         self.assertEqual(vp["status"], "reuse_ready")
 
@@ -576,36 +576,36 @@ class TestI02Positives(unittest.TestCase):
 
     def test_i02_1_exact_use_ready(self):
         v = gg_reuse.resolve_reuse(
-            SOURCE_SHA["seo-minseo-finance-xlsx"],
-            {"kind": "template_structure", "keys": [SEO_KEY]},
+            SOURCE_SHA["reference-finance-01-xlsx"],
+            {"kind": "template_structure", "keys": [FINANCE_KEY]},
             context=ctx(self.reg))
         self.assertEqual(v["status"], "reuse_ready")
         self.assertEqual(v["exit"], 0)
-        self.assertEqual(v["satisfied"], [SEO_KEY])
-        self.assertEqual(v["selected_entry"], "seo-minseo-finance-xlsx")
+        self.assertEqual(v["satisfied"], [FINANCE_KEY])
+        self.assertEqual(v["selected_entry"], "reference-finance-01-xlsx")
 
     def test_i02_1_exemplar_ready(self):
         v = gg_reuse.resolve_reuse(
-            SOURCE_SHA["kim-wonseop-exemplar-pdf"],
-            {"kind": "narrative_reference", "keys": [KIM_KEY]},
+            SOURCE_SHA["reference-narrative-02-pdf"],
+            {"kind": "narrative_reference", "keys": [NARRATIVE_KEY]},
             context=ctx(self.reg))
         self.assertEqual(v["status"], "reuse_ready")
-        self.assertEqual(v["satisfied"], [KIM_KEY])
+        self.assertEqual(v["satisfied"], [NARRATIVE_KEY])
 
     def test_i02_2_different_edition_not_ready(self):
         v = gg_reuse.resolve_reuse(
             "d" * 64,
-            {"kind": "template_structure", "keys": [SEO_KEY]},
+            {"kind": "template_structure", "keys": [FINANCE_KEY]},
             context=ctx(self.reg))
         self.assertNotEqual(v["status"], "reuse_ready")
 
     def test_i02_3_unrequested_use_not_ready(self):
         # a covered kind's other key is not covered
         v = gg_reuse.resolve_reuse(
-            SOURCE_SHA["seo-minseo-finance-xlsx"],
+            SOURCE_SHA["reference-finance-01-xlsx"],
             {"kind": "template_structure",
              "keys": [{"kind": "delimited",
-                       "value": "seo-minseo-finance:other-sheet"}]},
+                       "value": "reference-finance-01:other-sheet"}]},
             context=ctx(self.reg))
         self.assertNotEqual(v["status"], "reuse_ready")
         self.assertIn("coverage_incomplete", v["reasons"])
@@ -614,19 +614,19 @@ class TestI02Positives(unittest.TestCase):
         # the scanner path is later-lane scope; here the resolver must
         # never reach reuse_ready without a well-formed requested_use
         v = gg_reuse.resolve_reuse(
-            SOURCE_SHA["seo-minseo-finance-xlsx"], None,
+            SOURCE_SHA["reference-finance-01-xlsx"], None,
             context=ctx(self.reg))
         self.assertNotEqual(v["status"], "reuse_ready")
         self.assertEqual(v["status"], "invalid_request")
 
     def test_i02_5_partial_multikey_not_rounded_up(self):
         v = gg_reuse.resolve_reuse(
-            SOURCE_SHA["kim-wonseop-exemplar-pdf"],
+            SOURCE_SHA["reference-narrative-02-pdf"],
             {"kind": "narrative_reference",
-             "keys": [KIM_KEY2, KIM_KEY]},   # canonical order
+             "keys": [NARRATIVE_KEY2, NARRATIVE_KEY]},   # canonical order
             context=ctx(self.reg))
-        self.assertEqual(v["satisfied"], [KIM_KEY])
-        self.assertEqual(v["unsatisfied"], [KIM_KEY2])
+        self.assertEqual(v["satisfied"], [NARRATIVE_KEY])
+        self.assertEqual(v["unsatisfied"], [NARRATIVE_KEY2])
         self.assertEqual(len(v["needed_excerpt"]), 1)
 
     def test_i02_6_guideline_use_does_not_expand(self):
@@ -634,7 +634,7 @@ class TestI02Positives(unittest.TestCase):
         # grant — requesting template_structure on it mismatches role
         v = gg_reuse.resolve_reuse(
             SOURCE_SHA["official-writing-guide-pdf"],
-            {"kind": "template_structure", "keys": [SEO_KEY]},
+            {"kind": "template_structure", "keys": [FINANCE_KEY]},
             context=ctx(self.reg))
         self.assertNotEqual(v["status"], "reuse_ready")
         self.assertIn("role_mismatch", v["reasons"])
@@ -695,8 +695,8 @@ class TestI02Positives(unittest.TestCase):
         # a non-statistical entry is unaffected — its declared
         # relative_path already resolves under runtime_root
         v2 = gg_reuse.resolve_reuse(
-            SOURCE_SHA["kim-wonseop-exemplar-pdf"],
-            {"kind": "narrative_reference", "keys": [KIM_KEY]},
+            SOURCE_SHA["reference-narrative-02-pdf"],
+            {"kind": "narrative_reference", "keys": [NARRATIVE_KEY]},
             context=ctx(self.reg))
         self.assertEqual(v2["evidence"]["artifacts"][0]["path"],
                          "references/exemplar-quality.md")
@@ -942,16 +942,16 @@ class TestI01Matrix(unittest.TestCase):
         print(json.dumps(matrix, ensure_ascii=False, indent=1))
 
 
-class TestYurimExemplarRegistration(unittest.TestCase):
-    """The lee-yurim (산약) entries are registered as the primary
-    narrative benchmark but grant NO reuse: identification-only shape
-    (no runtime artifact, coverage or lineage) so a yurim hash never
-    inherits the kim entry's verified key (same boundary as
-    test_i01_9_shared_artifact_no_inheritance)."""
+class TestPrimaryExemplarRegistration(unittest.TestCase):
+    """Primary narrative benchmarks grant no reuse: identification only.
+    No runtime artifact, coverage or lineage is registered for these entries.
+    A primary hash never inherits the secondary example's verified key.
+    This retains the boundary exercised by
+    test_i01_9_shared_artifact_no_inheritance."""
 
-    YURIM_IDS = ("lee-yurim-exemplar-hwp", "lee-yurim-exemplar-pdf")
-    YURIM_KEY = {"kind": "delimited",
-                 "value": "lee-yurim-exemplar:finance-table-structure"}
+    PRIMARY_IDS = ("reference-narrative-01-hwp", "reference-narrative-01-pdf")
+    PRIMARY_KEY = {"kind": "delimited",
+                 "value": "reference-narrative-01:finance-table-structure"}
 
     def setUp(self):
         self.reg = registry()
@@ -959,7 +959,7 @@ class TestYurimExemplarRegistration(unittest.TestCase):
                         for e in self.reg.document["entries"]}
 
     def test_entries_registered_identification_only(self):
-        for sid in self.YURIM_IDS:
+        for sid in self.PRIMARY_IDS:
             e = self.entries[sid]
             self.assertEqual(e["role"], "narrative_exemplar", sid)
             self.assertEqual(e["class"], "specialty_exemplar", sid)
@@ -969,55 +969,54 @@ class TestYurimExemplarRegistration(unittest.TestCase):
             self.assertFalse(e["coverage"], sid)
             self.assertEqual(e["lineage"], [], sid)
 
-    def test_yurim_hashes_classify_to_own_entries(self):
-        for sid in self.YURIM_IDS:
+    def test_primary_hashes_classify_to_own_entries(self):
+        for sid in self.PRIMARY_IDS:
             hits = gg_reuse.classify_source(self.reg, SOURCE_SHA[sid])
             self.assertEqual([h["source_id"] for h in hits], [sid], sid)
 
-    def test_no_inheritance_of_kim_verification(self):
-        # The verified kim key requested on a yurim hash stays
+    def test_no_inheritance_of_secondary_verification(self):
+        # The secondary verified key requested on a primary hash stays
         # unsatisfied — coverage and lineage are per-entry claims.
-        for sid in self.YURIM_IDS:
+        for sid in self.PRIMARY_IDS:
             v = gg_reuse.resolve_reuse(
                 SOURCE_SHA[sid],
-                {"kind": "narrative_reference", "keys": [KIM_KEY]},
+                {"kind": "narrative_reference", "keys": [NARRATIVE_KEY]},
                 context=ctx(self.reg))
             self.assertNotEqual(v["status"], "reuse_ready", sid)
             self.assertEqual(v["selected_entry"], sid, sid)
             self.assertIn("coverage_incomplete", v["reasons"], sid)
             self.assertIn("lineage_missing", v["reasons"], sid)
-            self.assertIn(KIM_KEY, v["unsatisfied"], sid)
+            self.assertIn(NARRATIVE_KEY, v["unsatisfied"], sid)
 
-    def test_yurim_scoped_key_also_not_ready(self):
-        # Even a structure-pattern key scoped to the yurim source has
+    def test_primary_scoped_key_also_not_ready(self):
+        # Even a structure-pattern key scoped to the primary source has
         # no grant — the registration is identification-only.
-        for sid in self.YURIM_IDS:
+        for sid in self.PRIMARY_IDS:
             v = gg_reuse.resolve_reuse(
                 SOURCE_SHA[sid],
                 {"kind": "narrative_reference",
-                 "keys": [self.YURIM_KEY]},
+                 "keys": [self.PRIMARY_KEY]},
                 context=ctx(self.reg))
             self.assertNotEqual(v["status"], "reuse_ready", sid)
             self.assertIn("coverage_incomplete", v["reasons"], sid)
 
-    def test_kim_baseline_still_reuse_ready(self):
-        # The benchmark demotion is documentary: the kim record is
-        # source identity, role, coverage and lineage stay intact. P28
-        # refreshes the deployed artifact fingerprint; the verified key
-        # still resolves.
+    def test_secondary_baseline_still_reuse_ready(self):
+        # Documentary priority does not change the existing reuse grant.
+        # Content identity, role, coverage and lineage remain source-scoped.
+        # The deployed artifact still needs its independently verified key.
         v = gg_reuse.resolve_reuse(
-            SOURCE_SHA["kim-wonseop-exemplar-pdf"],
-            {"kind": "narrative_reference", "keys": [KIM_KEY]},
+            SOURCE_SHA["reference-narrative-02-pdf"],
+            {"kind": "narrative_reference", "keys": [NARRATIVE_KEY]},
             context=ctx(self.reg))
         self.assertEqual(v["status"], "reuse_ready")
-        self.assertEqual(v["satisfied"], [KIM_KEY])
+        self.assertEqual(v["satisfied"], [NARRATIVE_KEY])
 
 
 class TestCommonWorkbooks(unittest.TestCase):
-    """P9: common Kang X01/X02 registration.  P9-D3: the duplicated
-    hort-raw registry entry was removed; the H01 base identity lives in
-    the reference set's known_workbooks, and a hort module registers its
-    own workbook (F2 one-hash-one-entry invariant below)."""
+    """Shared X01/X02 registration and unique workbook identities.
+    The raw H01 base lives in the reference set's known_workbooks;
+    the major module registers the only source entry for that workbook.
+    """
 
     def setUp(self):
         self.reg = registry()
@@ -1032,12 +1031,12 @@ class TestCommonWorkbooks(unittest.TestCase):
         entries = {e["source_id"]: e
                    for e in self.reg.document["entries"]}
         for sid, sha, key in (
-                ("kang-finance-workbook-x01",
+                ("shared-finance-workbook-x01",
                  "5d19b6a2e5dcddccb70c68e39abee8f423bba005c008db7b64076326a17b9c80",
-                 "kang-finance-workbook:x01-structure"),
-                ("kang-finance-workbook-x02",
+                 "shared-finance-workbook:x01-structure"),
+                ("shared-finance-workbook-x02",
                  "54d4e55cd57bcb1db0fbfaafe2ed42422767f1561959b8a4f3c673daf77d7e78",
-                 "kang-finance-workbook:x02-structure")):
+                 "shared-finance-workbook:x02-structure")):
             e = entries[sid]
             self.assertEqual(e["source_sha256"], [sha])
             self.assertEqual(e["role"], "primary_finance_template")
@@ -1048,11 +1047,11 @@ class TestCommonWorkbooks(unittest.TestCase):
             self.assertEqual(
                 e["lineage"][0]["to"],
                 "references/common-workbooks/"
-                "kang-finance-workbook.json")
+                "shared-finance-workbook.json")
             self.assertEqual(e["lineage"][0]["verification"], "verified")
         # E1 (P9-D3): the hort module owns registering its own workbook —
         # the duplicated reference_only entry is gone
-        self.assertNotIn("hort-env-kang-raw-workbook", entries)
+        self.assertNotIn("hort-env-shared-raw-workbook", entries)
         # D-C rename: no student number in any id
         self.assertIn("specialty-grad-thesis-finance-xlsx", entries)
 
@@ -1072,21 +1071,21 @@ class TestCommonWorkbooks(unittest.TestCase):
                 names.extend([e["ref_id"], e["label"]])
         extract = json.loads(
             (KNUAF_DOC / "references" / "common-workbooks" /
-             "kang-finance-workbook.json").read_text(encoding="utf-8"))
+             "shared-finance-workbook.json").read_text(encoding="utf-8"))
         for e in extract["members"].values():
             names.extend([e["ref_id"], *e["labels"].values()])
         offenders = [n for n in names
                      if digit_run.search(separators.sub("", n))]
         self.assertEqual(offenders, [])
 
-    def test_kang_x01_and_x02_reuse_ready(self):
+    def test_shared_x01_and_x02_reuse_ready(self):
         for sid, sha, key in (
-                ("kang-finance-workbook-x01",
+                ("shared-finance-workbook-x01",
                  "5d19b6a2e5dcddccb70c68e39abee8f423bba005c008db7b64076326a17b9c80",
-                 "kang-finance-workbook:x01-structure"),
-                ("kang-finance-workbook-x02",
+                 "shared-finance-workbook:x01-structure"),
+                ("shared-finance-workbook-x02",
                  "54d4e55cd57bcb1db0fbfaafe2ed42422767f1561959b8a4f3c673daf77d7e78",
-                 "kang-finance-workbook:x02-structure")):
+                 "shared-finance-workbook:x02-structure")):
             kc = self._keys(key)
             v = gg_reuse.resolve_reuse(
                 sha,
@@ -1098,11 +1097,11 @@ class TestCommonWorkbooks(unittest.TestCase):
             self.assertEqual(
                 v["evidence"]["lineage"]["to"],
                 "references/common-workbooks/"
-                "kang-finance-workbook.json")
+                "shared-finance-workbook.json")
 
-    def test_kang_key_without_catalog_claim_conflicts(self):
+    def test_shared_key_without_catalog_claim_conflicts(self):
         key = {"kind": "delimited",
-               "value": "kang-finance-workbook:x01-structure"}
+               "value": "shared-finance-workbook:x01-structure"}
         v = gg_reuse.resolve_reuse(
             "5d19b6a2e5dcddccb70c68e39abee8f423bba005c008db7b64076326a17b9c80",
             {"kind": "template_structure", "keys": [key]},

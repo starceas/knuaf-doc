@@ -145,7 +145,7 @@ description: 한국농수산대학교 창업논문·영농계획서와 동반 �
 - 복구·대체·제외 색인: 공개 저장소의 [docs/missing-assets-index.md](https://github.com/starceas/knuaf-doc/blob/main/docs/missing-assets-index.md).
 - 진행·자료 부족: [workflow-order](references/workflow-order.md)
 - 반복 오류와 본문 전 재무 게이트 교훈: [lessons-learned](references/lessons-learned.md)
-- 재무 공식·판정 해석과 김성학 교수 자료 요약: [kim-finance-bible](references/kim-finance-bible.md)
+- 재무 공식·판정 해석과 기준 회계 강의·교재 요약: [finance-bible](references/finance-bible.md)
 - 미결 질문·확인할 조건 추적: [open-questions](references/open-questions.md)
 - 농촌진흥청 소득자료 비교·단위·가격 성격 확인: [rda-benchmark](references/rda-benchmark.md)
 - 정본·절·저장: [section-ledger](references/section-ledger.md)

@@ -50,8 +50,8 @@ SCRIPTS = KNUAF_DOC / "scripts"
 
 GUIDE_KEY = {"kind": "delimited",
              "value": "official-writing-guide:toc-rules"}
-KIM_KEY = {"kind": "delimited",
-           "value": "kim-wonseop-exemplar:opening-narrative"}
+NARRATIVE_KEY = {"kind": "delimited",
+           "value": "reference-narrative-02:opening-narrative"}
 CV = "p5-classifier/1"
 POLICY = {"classification_version": CV,
           "include": ["**/*"], "always_hash": ["**/*"],
@@ -70,7 +70,7 @@ def key_catalog():
                                  "catalog_digest": None,
                                  "receipt_sha256": None}},
         "narrative_reference": {
-            KIM_KEY["value"]: {"authority": "verified",
+            NARRATIVE_KEY["value"]: {"authority": "verified",
                                "catalog_digest": None,
                                "receipt_sha256": None}},
         "template_structure": {},

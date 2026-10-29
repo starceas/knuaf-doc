@@ -1,21 +1,21 @@
 {
   "schema": "knuaf-c1-correction-spec/v1",
   "design": ".common-work/design/DESIGN-D7-C1.md r5 + DESIGN-D8-C1B.md r3 (binding content: .common-work/design/C1-SPEC-TABLE.md + C1B-SPEC-TABLE.md)",
-  "note": "Copy-only formula corrections for the common X01/X02 workbooks and the specialty seo-minseo template. Originals are never edited; this file ships formulas, coordinates, digests, classes and assumption text only — no example values, receipts or corrected workbooks. Formula text is written with the leading '='; stored sheet XML omits it.",
+  "note": "Copy-only formula corrections for the common X01/X02 workbooks and the specialty reference-finance-01 template. Originals are never edited; this file ships formulas, coordinates, digests, classes and assumption text only — no example values, receipts or corrected workbooks. Formula text is written with the leading '='; stored sheet XML omits it.",
   "sources": {
     "X01": {
-      "source_id": "kang-finance-workbook-x01",
-      "label": "강동현 교수 공통 XLSX (일반)",
+      "source_id": "shared-finance-workbook-x01",
+      "label": "공통 기준 양식 XLSX (일반)",
       "sha256": "5d19b6a2e5dcddccb70c68e39abee8f423bba005c008db7b64076326a17b9c80"
     },
     "X02": {
-      "source_id": "kang-finance-workbook-x02",
-      "label": "강동현 교수 공통 XLSX (대식물)",
+      "source_id": "shared-finance-workbook-x02",
+      "label": "공통 기준 양식 XLSX (대식물)",
       "sha256": "54d4e55cd57bcb1db0fbfaafe2ed42422767f1561959b8a4f3c673daf77d7e78"
     },
-    "SEO": {
-      "source_id": "seo-minseo-finance-xlsx",
-      "label": "서민서 재무 작성예시 XLSX (특용작물 primary_finance_template)",
+    "F01": {
+      "source_id": "reference-finance-01-xlsx",
+      "label": "재무 예시 01 XLSX (특용작물 primary_finance_template)",
       "sha256": "457249255929275b3ee55383bdc36897274f08933af3536866a652b29346cd3a",
       "note": "Binds the 30 group-A formula_repoint rows; its XR-22 cells already carry prior-year formulas, so value_to_formula is a no-op for this source. The student example workbook is not bound."
     }
@@ -145,7 +145,7 @@
       {"finding_id": "XR-05", "sheet": "3.투자계획", "cell": "E28", "class": "formula_repoint", "expected_formula": "=SUM(F28:G28)", "new_formula": "=SUM(F28:H28)"},
       {"finding_id": "XR-05", "sheet": "3.투자계획", "cell": "E29", "class": "formula_repoint", "expected_formula": "=SUM(F29:G29)", "new_formula": "=SUM(F29:H29)"}
     ],
-    "SEO": [
+    "F01": [
       {"finding_id": "XR-02", "sheet": "11. 생산원가계획", "cell": "D25", "class": "formula_repoint", "expected_formula": "=SUM(C26:C27)", "new_formula": "=SUM(D26:D27)"},
       {"finding_id": "XR-02", "sheet": "11. 생산원가계획", "cell": "E25", "class": "formula_repoint", "expected_formula": "=SUM(C26:C27)", "new_formula": "=SUM(E26:E27)"},
       {"finding_id": "XR-02", "sheet": "11. 생산원가계획", "cell": "F25", "class": "formula_repoint", "expected_formula": "=SUM(C26:C27)", "new_formula": "=SUM(F26:F27)"},

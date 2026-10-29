@@ -245,8 +245,8 @@
         },
         {
           "relative_path": "references/rules/CH4_finance.md",
-          "sha256": "8eddb17b93e73adfa100a98b12814cd8bec2e97e49c21577b049316c8c83e9f1",
-          "bytes": 10330
+          "sha256": "8cacc34463a990f3453fa7eef47d4dc983d19e61a27ff1818812c22739180e73",
+          "bytes": 10338
         },
         {
           "relative_path": "references/rules/CH5_CH6_closing.md",
@@ -383,8 +383,8 @@
         },
         {
           "relative_path": "references/rules/CH4_finance.md",
-          "sha256": "8eddb17b93e73adfa100a98b12814cd8bec2e97e49c21577b049316c8c83e9f1",
-          "bytes": 10330
+          "sha256": "8cacc34463a990f3453fa7eef47d4dc983d19e61a27ff1818812c22739180e73",
+          "bytes": 10338
         },
         {
           "relative_path": "references/rules/CH5_CH6_closing.md",
@@ -476,7 +476,7 @@
       "build_allowlist_ref": "install-manifest.json"
     },
     {
-      "source_id": "kim-wonseop-exemplar-pdf",
+      "source_id": "reference-narrative-02-pdf",
       "class": "specialty_exemplar",
       "role": "narrative_exemplar",
       "source_sha256": [
@@ -487,8 +487,8 @@
       "artifacts": [
         {
           "relative_path": "references/exemplar-quality.md",
-          "sha256": "6f7431bf3f77b31d305d9a859d4ad70e72c30e1329f721fcbf44f276bb2f3606",
-          "bytes": 9288
+          "sha256": "844d38bf0ab3af9db9ae2f2f51cc5ecbe12f26e888fd07cdfa9592a159782aaa",
+          "bytes": 9316
         }
       ],
       "coverage": {
@@ -497,7 +497,7 @@
             {
               "key_ref": {
                 "kind": "delimited",
-                "value": "kim-wonseop-exemplar:opening-narrative"
+                "value": "reference-narrative-02:opening-narrative"
               },
               "authority": "verified",
               "catalog_digest": null,
@@ -518,7 +518,7 @@
       "build_allowlist_ref": null
     },
     {
-      "source_id": "kim-wonseop-exemplar-hwp",
+      "source_id": "reference-narrative-02-hwp",
       "class": "specialty_exemplar",
       "role": "narrative_exemplar",
       "source_sha256": [
@@ -529,8 +529,8 @@
       "artifacts": [
         {
           "relative_path": "references/exemplar-quality.md",
-          "sha256": "6f7431bf3f77b31d305d9a859d4ad70e72c30e1329f721fcbf44f276bb2f3606",
-          "bytes": 9288
+          "sha256": "844d38bf0ab3af9db9ae2f2f51cc5ecbe12f26e888fd07cdfa9592a159782aaa",
+          "bytes": 9316
         }
       ],
       "coverage": {},
@@ -538,7 +538,7 @@
       "build_allowlist_ref": null
     },
     {
-      "source_id": "lee-yurim-exemplar-hwp",
+      "source_id": "reference-narrative-01-hwp",
       "class": "specialty_exemplar",
       "role": "narrative_exemplar",
       "source_sha256": [
@@ -552,7 +552,7 @@
       "build_allowlist_ref": null
     },
     {
-      "source_id": "lee-yurim-exemplar-pdf",
+      "source_id": "reference-narrative-01-pdf",
       "class": "specialty_exemplar",
       "role": "narrative_exemplar",
       "source_sha256": [
@@ -566,17 +566,17 @@
       "build_allowlist_ref": null
     },
     {
-      "source_id": "kang-finance-workbook-x01",
+      "source_id": "shared-finance-workbook-x01",
       "class": "common_professor_workbook",
       "role": "primary_finance_template",
       "source_sha256": [
         "5d19b6a2e5dcddccb70c68e39abee8f423bba005c008db7b64076326a17b9c80"
       ],
-      "runtime": "references/common-workbooks/kang-finance-workbook.json",
+      "runtime": "references/common-workbooks/shared-finance-workbook.json",
       "runtime_present": true,
       "artifacts": [
         {
-          "relative_path": "references/common-workbooks/kang-finance-workbook.json",
+          "relative_path": "references/common-workbooks/shared-finance-workbook.json",
           "sha256": "750dbe4c7b0361811ed8291fde275ed3ae088eaaa82511eff1c5fbda25ebcece",
           "bytes": 12653
         }
@@ -587,7 +587,7 @@
             {
               "key_ref": {
                 "kind": "delimited",
-                "value": "kang-finance-workbook:x01-structure"
+                "value": "shared-finance-workbook:x01-structure"
               },
               "authority": "verified",
               "catalog_digest": null,
@@ -598,7 +598,7 @@
       },
       "lineage": [
         {
-          "to": "references/common-workbooks/kang-finance-workbook.json",
+          "to": "references/common-workbooks/shared-finance-workbook.json",
           "relationship": "derived_excerpt",
           "verification": "verified",
           "verifier": "common-xlsx-reuse-20260925",
@@ -608,17 +608,17 @@
       "build_allowlist_ref": null
     },
     {
-      "source_id": "kang-finance-workbook-x02",
+      "source_id": "shared-finance-workbook-x02",
       "class": "common_professor_workbook",
       "role": "primary_finance_template",
       "source_sha256": [
         "54d4e55cd57bcb1db0fbfaafe2ed42422767f1561959b8a4f3c673daf77d7e78"
       ],
-      "runtime": "references/common-workbooks/kang-finance-workbook.json",
+      "runtime": "references/common-workbooks/shared-finance-workbook.json",
       "runtime_present": true,
       "artifacts": [
         {
-          "relative_path": "references/common-workbooks/kang-finance-workbook.json",
+          "relative_path": "references/common-workbooks/shared-finance-workbook.json",
           "sha256": "750dbe4c7b0361811ed8291fde275ed3ae088eaaa82511eff1c5fbda25ebcece",
           "bytes": 12653
         }
@@ -629,7 +629,7 @@
             {
               "key_ref": {
                 "kind": "delimited",
-                "value": "kang-finance-workbook:x02-structure"
+                "value": "shared-finance-workbook:x02-structure"
               },
               "authority": "verified",
               "catalog_digest": null,
@@ -640,7 +640,7 @@
       },
       "lineage": [
         {
-          "to": "references/common-workbooks/kang-finance-workbook.json",
+          "to": "references/common-workbooks/shared-finance-workbook.json",
           "relationship": "derived_excerpt",
           "verification": "verified",
           "verifier": "common-xlsx-reuse-20260925",
@@ -650,7 +650,7 @@
       "build_allowlist_ref": null
     },
     {
-      "source_id": "seo-minseo-finance-xlsx",
+      "source_id": "reference-finance-01-xlsx",
       "class": "specialty_finance_template",
       "role": "primary_finance_template",
       "source_sha256": [
@@ -661,8 +661,8 @@
       "artifacts": [
         {
           "relative_path": "references/excel-template.md",
-          "sha256": "74261c05ade2971f906caed86457afc7605599061cdfe4cee2cd163608d17ac1",
-          "bytes": 55075
+          "sha256": "56a5e8cee7fb2a4c7afa4ce7d7921ac4609359d48aa4ae3d3f17df4c3622f1cb",
+          "bytes": 55079
         }
       ],
       "coverage": {
@@ -671,7 +671,7 @@
             {
               "key_ref": {
                 "kind": "delimited",
-                "value": "seo-minseo-finance:workbook-structure"
+                "value": "reference-finance-01:workbook-structure"
               },
               "authority": "verified",
               "catalog_digest": null,

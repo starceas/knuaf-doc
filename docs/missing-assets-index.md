@@ -16,7 +16,7 @@
 | `S0/references/excel-submission.md` | `f5b802c93c832392ac832415f51376993c4d1fb0ad60b070f2311ecd54c0b06c` | 개발 전용 | excel-template.md·outputs.md |
 | `S0/references/exemplar-guide.md` | `a3da3cb0e4b5286972eb0a59a0016bc7106778bfb3f1d338679c5d04c8d6be84` | 개발 전용 | exemplar-quality.md·narrative-expansion.md |
 | `S0/references/financial-feasibility-gate.md` | `73849f5a46bef2eacfc6d60d936ff4168baefaf8fd224643f83a5d20ec926be4` | 대체 | w5R 현행 재무 흐름; 옛 전역 BLOCK 문서 전체 복원 금지 |
-| `S0/references/kim-finance-bible.md` | `d24f1d904463d3d62854fe976e3163698e4fae40ada9a910237885f270a8cd93` | 배포(w5R) | w5R 담당 산출물(배포(w5R)) |
+| `S0/references/finance-bible.md` | `d24f1d904463d3d62854fe976e3163698e4fae40ada9a910237885f270a8cd93` | 배포(w5R) | w5R 담당 산출물(배포(w5R)) |
 | `S0/references/lessons-learned.md` | `d31d58983d116a0d9e639ca593b6b237cdb2b3d007cb33a51fc5cc88239bcc19` | 배포(w5R) | w5R 담당 산출물(배포(w5R)) |
 | `S0/references/official-toc.md` | `9c8285baf5be8887c8e9b3dc6322279e0997afb7ceb9ebd522e6f8a141bddac0` | 배포 | N1 복구 초안: references/official-toc.md |
 | `S0/references/open-questions.md` | `58545a533bd4b391af926cc81cd04a58d515ade2db40e13e81bbc1adff5f0b42` | 배포(w5R) | w5R 담당 산출물(배포(w5R)) |

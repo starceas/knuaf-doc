@@ -1,7 +1,7 @@
 {
   "basis": ".common-work/design/DESIGN-D7-C1.md r5; evidence for policy items: .common-work/research/TEXTBOOK-BASIS.md (candidate textbook sha256 661f7281ba270acd716b5106d263eae38e44c0ba88b78935649f89a51ce9a4b4 — course authority NOT established); policy items decided by owner 2026-09-27 — public-agency sources first (.common-work/research/POLICY-BASIS.md), required-course textbook second; design .common-work/design/DESIGN-D8-C1B.md r3, per-cell table C1B-SPEC-TABLE.md",
   "files": {
-    "SEO": {
+    "F01": {
       "findings": [
         {
           "audit_verdict": "not_audited_same_defects_measured",
@@ -20,7 +20,7 @@
         {
           "audit_verdict": "not_audited_same_defects_measured",
           "class": "formula_repoint",
-          "decision": "corrected: 영농잉여 블록이 같은 양식의 계(총수입) 행을 사용 (SEO E27:I27 repoint, F28:I28 분모 /F7)",
+          "decision": "corrected: 영농잉여 블록이 같은 양식의 계(총수입) 행을 사용 (F01 E27:I27 repoint, F28:I28 분모 /F7)",
           "disposition": "corrected",
           "evidence": "D8 r2-F1/r3: same-template internal consistency — 교수 본인 X01이 계(row7)를 영농잉여 분자로 사용; RDA 총수입은 부산물 가액을 포함(N 물리11/인쇄5, 물리13/인쇄7; R 물리9/인쇄5)하며 보조 근거로만 사용. 정정 범위는 15.추정소득분석 영농잉여 블록뿐(12!C26, 2!C12 미해당).",
           "held": [
@@ -53,11 +53,11 @@
         {
           "audit_verdict": "not_audited_same_defects_measured",
           "class": "formula_repoint",
-          "decision": "corrected (owner option A): later-year 계 = SUM(F:H) (SEO E25:E28)",
+          "decision": "corrected (owner option A): later-year 계 = SUM(F:H) (F01 E25:E28)",
           "disposition": "corrected",
           "evidence": "D8 r1 XR-05/r2-F5: 소유자 결정 option A(계=융자 포함 총액). 같은 시트 1년차 행이 이미 SUM(F:H)이고 선배 통합문서도 동일 — 내부 일관성. 공공자료·교재는 이 열 규칙을 정하지 않음(not_stated_in_either).",
           "held": [
-            "first-year stored investment cells (X01 E23, X02 E24, SEO E20/E22/E23)"
+            "first-year stored investment cells (X01 E23, X02 E24, F01 E20/E22/E23)"
           ],
           "id": "XR-05",
           "options": [
@@ -79,9 +79,9 @@
         {
           "audit_verdict": "not_audited_same_defects_measured",
           "class": "formula_repoint",
-          "decision": "corrected (residual-rate link only): annual = (cost-cost*rate)/life, rate = labelled 잔존가격율 input (SEO F,G,H)",
+          "decision": "corrected (residual-rate link only): annual = (cost-cost*rate)/life, rate = labelled 잔존가격율 input (F01 F,G,H)",
           "disposition": "corrected",
-          "evidence": "D8 r2-F2/F3: 잔존율 링크만 정정. N 물리11/인쇄5 정액법; 교재 T 물리187/인쇄183 감가상각대상금액=취득원가-잔존가치, 물리190/인쇄186 (취득원가-잔존가치)/내용연수. 라벨 잔존가격율 행이 있는 열만 대상. SEO F9/G9/H9 = 0.1 stored rate inputs — 기준값 변화 없음.",
+          "evidence": "D8 r2-F2/F3: 잔존율 링크만 정정. N 물리11/인쇄5 정액법; 교재 T 물리187/인쇄183 감가상각대상금액=취득원가-잔존가치, 물리190/인쇄186 (취득원가-잔존가치)/내용연수. 라벨 잔존가격율 행이 있는 열만 대상. F01 F9/G9/H9 = 0.1 stored rate inputs — 기준값 변화 없음.",
           "held": [
             "accumulated cap / expiry after useful life (blocks have accumulated rows 13/25/37/49/61 but a cap needs MIN which the evaluator lacks and start timing is unfixed — known limitation: the charge stays constant every plan year)",
             "depreciation columns without a residual term (e.g. X01 D-F =D8/D10; per-asset residual choice is student input)"
@@ -184,7 +184,7 @@
           "spec_cells": 5
         }
       ],
-      "note": "Same 30 group-A defective formulas measured at the same cells by the orchestrator (r5 P1); corrected via the same spec rows. XR-22 cells already carry prior-year formulas (no-op). C1b policy items XR-04/05/06/11 were measured at SEO's coordinates (33 cells) and corrected under the same owner-approved policy dispositions as X01/X02.",
+      "note": "Same 30 group-A defective formulas measured at the same cells by the orchestrator (r5 P1); corrected via the same spec rows. XR-22 cells already carry prior-year formulas (no-op). C1b policy items XR-04/05/06/11 were measured at F01's coordinates (33 cells) and corrected under the same owner-approved policy dispositions as X01/X02.",
       "source_sha256": "457249255929275b3ee55383bdc36897274f08933af3536866a652b29346cd3a"
     },
     "X01": {
@@ -214,7 +214,7 @@
         {
           "audit_verdict": "policy_dependent",
           "class": "value_to_formula",
-          "decision": "corrected: 영농잉여 블록이 같은 양식의 계(총수입) 행을 사용 (X02/SEO E27:I27 repoint, F28:I28 분모 /F7; X01 E7 value_to_formula)",
+          "decision": "corrected: 영농잉여 블록이 같은 양식의 계(총수입) 행을 사용 (X02/F01 E27:I27 repoint, F28:I28 분모 /F7; X01 E7 value_to_formula)",
           "disposition": "corrected",
           "evidence": "D8 r2-F1/r3: same-template internal consistency — 교수 본인 X01이 계(row7)를 영농잉여 분자로 사용; RDA 총수입은 부산물 가액을 포함(N 물리11/인쇄5, 물리13/인쇄7; R 물리9/인쇄5)하며 보조 근거로만 사용. 정정 범위는 15.추정소득분석 영농잉여 블록뿐(12!C26, 2!C12 미해당).",
           "held": [
@@ -247,11 +247,11 @@
         {
           "audit_verdict": "policy_dependent",
           "class": "formula_repoint",
-          "decision": "corrected (owner option A): later-year 계 = SUM(F:H) (X01/SEO E25:E28, X02 E26:E29)",
+          "decision": "corrected (owner option A): later-year 계 = SUM(F:H) (X01/F01 E25:E28, X02 E26:E29)",
           "disposition": "corrected",
           "evidence": "D8 r1 XR-05/r2-F5: 소유자 결정 option A(계=융자 포함 총액). 같은 시트 1년차 행이 이미 SUM(F:H)이고 선배 통합문서도 동일 — 내부 일관성. 공공자료·교재는 이 열 규칙을 정하지 않음(not_stated_in_either).",
           "held": [
-            "first-year stored investment cells (X01 E23, X02 E24, SEO E20/E22/E23)"
+            "first-year stored investment cells (X01 E23, X02 E24, F01 E20/E22/E23)"
           ],
           "id": "XR-05",
           "options": [
@@ -273,7 +273,7 @@
         {
           "audit_verdict": "policy_dependent",
           "class": "formula_repoint",
-          "decision": "corrected (residual-rate link only): annual = (cost-cost*rate)/life, rate = labelled 잔존가격율 input (X01 H; X02 H,J; SEO F,G,H)",
+          "decision": "corrected (residual-rate link only): annual = (cost-cost*rate)/life, rate = labelled 잔존가격율 input (X01 H; X02 H,J; F01 F,G,H)",
           "disposition": "corrected",
           "evidence": "D8 r2-F2/F3: 잔존율 링크만 정정. N 물리11/인쇄5 정액법; 교재 T 물리187/인쇄183 감가상각대상금액=취득원가-잔존가치, 물리190/인쇄186 (취득원가-잔존가치)/내용연수. 라벨 잔존가격율 행이 있는 열만 대상.",
           "held": [
@@ -630,7 +630,7 @@
         {
           "audit_verdict": "policy_dependent",
           "class": "formula_repoint",
-          "decision": "corrected: 영농잉여 블록이 같은 양식의 계(총수입) 행을 사용 (X02/SEO E27:I27 repoint, F28:I28 분모 /F7; X01 E7 value_to_formula)",
+          "decision": "corrected: 영농잉여 블록이 같은 양식의 계(총수입) 행을 사용 (X02/F01 E27:I27 repoint, F28:I28 분모 /F7; X01 E7 value_to_formula)",
           "disposition": "corrected",
           "evidence": "D8 r2-F1/r3: same-template internal consistency — 교수 본인 X01이 계(row7)를 영농잉여 분자로 사용; RDA 총수입은 부산물 가액을 포함(N 물리11/인쇄5, 물리13/인쇄7; R 물리9/인쇄5)하며 보조 근거로만 사용. 정정 범위는 15.추정소득분석 영농잉여 블록뿐(12!C26, 2!C12 미해당).",
           "held": [
@@ -663,11 +663,11 @@
         {
           "audit_verdict": "policy_dependent",
           "class": "formula_repoint",
-          "decision": "corrected (owner option A): later-year 계 = SUM(F:H) (X01/SEO E25:E28, X02 E26:E29)",
+          "decision": "corrected (owner option A): later-year 계 = SUM(F:H) (X01/F01 E25:E28, X02 E26:E29)",
           "disposition": "corrected",
           "evidence": "D8 r1 XR-05/r2-F5: 소유자 결정 option A(계=융자 포함 총액). 같은 시트 1년차 행이 이미 SUM(F:H)이고 선배 통합문서도 동일 — 내부 일관성. 공공자료·교재는 이 열 규칙을 정하지 않음(not_stated_in_either).",
           "held": [
-            "first-year stored investment cells (X01 E23, X02 E24, SEO E20/E22/E23)"
+            "first-year stored investment cells (X01 E23, X02 E24, F01 E20/E22/E23)"
           ],
           "id": "XR-05",
           "options": [
@@ -689,7 +689,7 @@
         {
           "audit_verdict": "policy_dependent",
           "class": "formula_repoint",
-          "decision": "corrected (residual-rate link only): annual = (cost-cost*rate)/life, rate = labelled 잔존가격율 input (X01 H; X02 H,J; SEO F,G,H)",
+          "decision": "corrected (residual-rate link only): annual = (cost-cost*rate)/life, rate = labelled 잔존가격율 input (X01 H; X02 H,J; F01 F,G,H)",
           "disposition": "corrected",
           "evidence": "D8 r2-F2/F3: 잔존율 링크만 정정. N 물리11/인쇄5 정액법; 교재 T 물리187/인쇄183 감가상각대상금액=취득원가-잔존가치, 물리190/인쇄186 (취득원가-잔존가치)/내용연수. 라벨 잔존가격율 행이 있는 열만 대상.",
           "held": [
@@ -1001,7 +1001,7 @@
     }
   },
   "policy": {
-    "authority_note": "Owner decision 2026-09-27: the course textbook (김성학) is the official required-course textbook; for the policy items the public-agency sources (농촌진흥청 N/R/E) are the FIRST basis and the textbook the SECOND; items neither states are reported to the owner. Design D8-C1B r3 is the binding disposition.",
+    "authority_note": "Owner decision 2026-09-27: the course textbook is the official required-course textbook; for the policy items the public-agency sources (농촌진흥청 N/R/E) are the FIRST basis and the textbook the SECOND; items neither states are reported to the owner. Design D8-C1B r3 is the binding disposition.",
     "baseline_value_changes": [
       {
         "item": "10. 감가상각비계획 J column",
@@ -1011,7 +1011,7 @@
       {
         "item": "XR-11 cash-outflow row and downstream balances",
         "reason": "imputed 자가 노동비 removed from cash spending; balance-sheet cash and retained lines absorb the difference",
-        "ref": "X01/X02/SEO"
+        "ref": "X01/X02/F01"
       }
     ],
     "decisions": {
@@ -1051,7 +1051,7 @@
       },
       {
         "item": "stored first-year investment cells",
-        "reason": "X01 E23, X02 E24, SEO E20/E22/E23 — stored values, not formulas"
+        "reason": "X01 E23, X02 E24, F01 E20/E22/E23 — stored values, not formulas"
       }
     ],
     "items": {

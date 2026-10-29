@@ -120,7 +120,7 @@
   "references/common-workbooks/formula-audit/x02.json": [
    "3594ce66eabb8ec746af3e945a42409f3ad800af37c04832cf322de1780b713d"
   ],
-  "references/common-workbooks/kang-finance-workbook.json": [
+  "references/common-workbooks/shared-finance-workbook.json": [
    "750dbe4c7b0361811ed8291fde275ed3ae088eaaa82511eff1c5fbda25ebcece"
   ],
   "references/cross-review.md": [
