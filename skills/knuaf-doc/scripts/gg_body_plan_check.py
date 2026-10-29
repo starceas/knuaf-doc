@@ -292,8 +292,9 @@ def main(argv=None):
     except (OSError, ValueError, KeyError, IndexError, TypeError, BadZipFile, InvalidFileException, SyntaxError) as error:
         result = {'status': 'blocked', 'message': '확인 불가', 'reason': str(error)}
     result['summary'] = {
-        'meaning': '보조 경고, 판정 근거 아님. 문장 숫자 대조 결과는 확인 권장 사항이며 '
-                   '본문의 맞음·틀림을 확정하거나 작성을 막지 않는다. 입력을 읽거나 검증하지 못한 경우만 확인 불가로 차단한다.',
+        'meaning': '보조 경고, 판정 근거 아님. 이 검사는 보조 경고이며, 손상된 파일을 다 걸러 낸다고 보장하지 않음. '
+                   '문장 숫자 대조 결과는 확인 권장 사항이며 본문의 맞음·틀림을 확정하거나 작성을 막지 않는다. '
+                   '현재 잡히는 입력 확인 실패는 읽기 실패 — 사람 확인이 필요한 확인 불가로 차단한다.',
         'comparison_count': len(result.get('comparisons', [])),
         'not_checked_count': sum(issue['status'] == 'not_checked' for issue in result.get('issues', [])),
     }
