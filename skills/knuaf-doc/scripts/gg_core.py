@@ -2631,12 +2631,16 @@ def _add_finance_plan_review(root, p, body, add, gate_state):
             status, severity = "pending", "warning"
             reason += " — 학생이 목표연도 적자를 확인하고 진행에 동의함"
             evidence["accepted"] = True
+        # 일용직 성별 확인(LABOR_*)은 보조 경고다 — pending이어도 remedy의
+        # "보조 경고, 판정 근거 아님" 표지를 최종 행까지 전한다. 차단 여부는
+        # status/severity가 정하며 바뀌지 않는다.
+        advisory = str(issue.get("code", "")).startswith("LABOR_")
         add(
             "finance_plan_review", "finance", reason,
             severity=severity,
             status=status,
             evidence=[evidence],
-            recovery=issue.get("remedy") if status == "blocked" else None,
+            recovery=issue.get("remedy") if status == "blocked" or advisory else None,
         )
 
 

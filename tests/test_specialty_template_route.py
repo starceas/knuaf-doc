@@ -699,6 +699,55 @@ class LaborReviewTests(ContractCase):
                           and i["status"] != "pending"])
 
 
+class LaborAdvisoryCheckOutputTests(ContractCase):
+    """R5: through review_plan -> core.checks -> ``gg.py check`` the final
+    finance_plan_review labor rows still carry "보조 경고, 판정 근거 아님"
+    and never block; other finance rows keep their behavior."""
+
+    def check_rows(self, edit):
+        import contextlib, io
+        from tests.test_skillgaps_integ_plan_review import FinancePlanReviewTests
+        case = FinancePlanReviewTests()
+        core, root = case._project(mutate=edit)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            runtime("gg").main(["check", str(root)])
+        report = json.loads(out.getvalue())
+        labor = [r for r in report if r["check_id"] == "finance_plan_review"
+                 and any(str(e.get("code", "")).startswith("LABOR_") for e in r.get("evidence", []))]
+        others = [r for r in report if r["check_id"] == "finance_plan_review" and r not in labor]
+        return core, labor, others
+
+    def test_final_labor_rows_keep_the_advisory_note_and_do_not_block(self):
+        from openpyxl import load_workbook
+        def mutate(kind):
+            def edit(path):
+                wb = load_workbook(path)
+                x01_anchors(wb)
+                if kind != "LABOR_SHEET_MISSING":
+                    male = (0, "60일") if kind == "LABOR_DAYS_UNREADABLE" else (0, 60)
+                    labor_sheet(wb.create_sheet(S8), male=male)
+                wb.save(path)
+                wb.close()
+            return edit
+        for code in ("LABOR_SHEET_MISSING", "LABOR_HIRED_MALE_ONLY", "LABOR_DAYS_UNREADABLE"):
+            with self.subTest(code=code):
+                core, labor, others = self.check_rows(mutate(code))
+                self.assertEqual([r["evidence"][0]["code"] for r in labor], [code])
+                row = labor[0]
+                self.assertEqual((row["status"], row["severity"]), ("pending", "warning"))
+                self.assertIn("보조 경고, 판정 근거 아님", row["recovery"])
+                self.assertFalse(core.blocks_skill_candidate(row))
+                if code != "LABOR_HIRED_MALE_ONLY":
+                    self.assertTrue(row["reason"].startswith("읽기 실패 — 사람 확인"))
+                # Other finance rows keep the old rule: a non-blocked row gets
+                # no recovery text (this fixture yields pending warnings).
+                self.assertTrue(others)
+                for r in others:
+                    if r["status"] != "blocked":
+                        self.assertNotIn("recovery", r)
+
+
 class MaterialSheetPrintTests(ContractCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
