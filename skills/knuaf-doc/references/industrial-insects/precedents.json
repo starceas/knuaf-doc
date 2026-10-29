@@ -42,7 +42,7 @@
       "physical_pages": 57,
       "authority": "example_observed",
       "title": "계약판매를 통한 쌍별귀뚜라미(Gryllus bimaculatus) 종충 생산 및 시스템 구축",
-      "author": "박진희",
+      "author": "reference-author-03",
       "title_basis": "page_1_render"
     },
     {
@@ -51,7 +51,7 @@
       "physical_pages": 60,
       "authority": "example_observed",
       "title": "우량종 쌍별귀뚜라미(Gryllus bimaculatus) 대량사육방법",
-      "author": "민장욱",
+      "author": "reference-author-04",
       "title_basis": "first_text_page"
     },
     {
@@ -60,7 +60,7 @@
       "physical_pages": 65,
       "authority": "example_observed",
       "title": "저온처리를 통한 여치(Gampsocleis sedakovii obscura) 연중 대량사육 및 판매",
-      "author": "이현승",
+      "author": "reference-author-05",
       "title_basis": "first_text_page"
     },
     {
@@ -69,7 +69,7 @@
       "physical_pages": 59,
       "authority": "example_observed",
       "title": null,
-      "author": "민경도",
+      "author": "reference-author-06",
       "title_basis": "not_present_in_source"
     }
   ],

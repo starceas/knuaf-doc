@@ -7,7 +7,7 @@
     {
       "ref": "HT1",
       "title": "고품질 완숙토마토 시설재배",
-      "author": "석록윤",
+      "author": "reference-author-01",
       "sha256": "f700bc9728b6131b89b3f11a97645cfee1bd2c5a3960e53c9c78814dbb4f45a4",
       "physical_pages": 211,
       "file_stage": "draft_1_by_filename",
@@ -385,7 +385,7 @@
     {
       "ref": "HT2",
       "title": "고품질 유럽상추 시설재배",
-      "author": "전영석",
+      "author": "reference-author-02",
       "sha256": "e5ca9ff33daa1fe8b3e7d56fbd1fff5a6bbba8c3d1e0368bbea1a36a0b3f8e4c",
       "physical_pages": 178,
       "file_stage": "unknown",

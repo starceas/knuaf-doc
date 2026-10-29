@@ -76,9 +76,9 @@ BASELINE_SEMANTIC_DIGEST = {
     "mafra.specialty.production.2024":
         "0b636815fa11a515929f4679a802d4d6756686096e37991fbf623fd5ff31c741",
     "official-writing-guide-pdf":
-        "7d1001a75b0c19e6659b79abae2e682165c4599f82ea96fcb13814b0aa028062",
+        "aac6d622b639499990d3d901f3def8e72d8dd5e575724333b955210dd24bc7b5",
     "official-writing-guide-hwp":
-        "914facd9d1d73436693251dbc45b239940054913ee1b992f03a304ac129d8a30",
+        "f5b116ce86f41bd14f7ac44d62f3993a8d525a88e1bed28c4ff30155fa5b42d0",
     "reference-narrative-02-pdf":
         "2db1ab85f996775660f6ff69f6f6c7ebb58b5f56d204aa834012422923015f81",
     "reference-narrative-02-hwp":
@@ -153,8 +153,8 @@ PROBE_KEY = {"kind": "delimited",
 # sha256 below).  The live file is re-measured inside the test -- the pin
 # only says what the registry SHOULD declare.
 PROFILE_DECLARED_SHA = (
-    "a4cc6051497a39b773313676b4ea3f743fa492a26be6728876ad05ff0e14af01")
-PROFILE_DECLARED_BYTES = 40378
+    "3951962e9df6f90d4bb884a360318e420ecd30b315d4d18d3b43c7e9be289587")
+PROFILE_DECLARED_BYTES = 40398
 
 
 def registry():

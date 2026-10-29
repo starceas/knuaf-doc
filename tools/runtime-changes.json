@@ -211,7 +211,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/install-manifest.json": {
-   "after_sha256": "7e1e33ee24993e25b2fe91b3c50c9605cee5602e5b30d1886e0b604f75e3ce00",
+   "after_sha256": "b087e817a0aff3c8d5f711d85d8d45a9227524abafa4b0106390727221375fa7",
    "before_sha256": null,
    "first_changed": "P27",
    "last_changed": "P28",
@@ -401,7 +401,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/builtin-sources.json": {
-   "after_sha256": "89d567f084b1aa5d3a1ce7b33cdeb2cfc3e89eab5483cf2061b27a9a3809f76f",
+   "after_sha256": "40eea41b8bb27f9205c70be179ba8aa7763bc5ba94146b5502f5cc2ed7eb04bd",
    "before_sha256": null,
    "first_changed": "P5",
    "last_changed": "P28",
@@ -651,7 +651,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/hort-env-systems/profile.json": {
-   "after_sha256": "a4cc6051497a39b773313676b4ea3f743fa492a26be6728876ad05ff0e14af01",
+   "after_sha256": "3951962e9df6f90d4bb884a360318e420ecd30b315d4d18d3b43c7e9be289587",
    "before_sha256": null,
    "first_changed": "P9",
    "last_changed": "P20",
@@ -669,7 +669,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/industrial-insects/precedents.json": {
-   "after_sha256": "8663b186ee13cd92489de2c7a82149e7ac70b24f1b5a051df35559baa630e544",
+   "after_sha256": "5ec7062a01838854d9f2130d95f2ffc78251e5d263a88910fd076f7b48047161",
    "before_sha256": null,
    "first_changed": "P12",
    "last_changed": "P12",
@@ -955,7 +955,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/rules/CH5_CH6_closing.md": {
-   "after_sha256": "a2ab7fd7022ccbabf89ba05650a1163c3603b969741192448d8de4111abe1f27",
+   "after_sha256": "d3356e87258d12e449bf4caadd53419de2c53ab6bc144c47e07a18c60dd629e2",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
@@ -991,7 +991,7 @@
    "source": "new"
   },
   "skills/knuaf-doc/references/rules/F_format.md": {
-   "after_sha256": "5e21a3aaf66fcf347291fb6883e39ea33b130f381ea45577888d54a835879eff",
+   "after_sha256": "a16513ea3ab8a45da9dac1ab8779c84e0c09a3d1ef301c0efcb7695cc0cf08cc",
    "before_sha256": null,
    "first_changed": "P28",
    "last_changed": "P28",
@@ -1036,7 +1036,7 @@
    "source": "modified"
   },
   "skills/knuaf-doc/references/source-identities.json": {
-   "after_sha256": "00bb47d3ebae970073b700e3a9019154322089bf18fa053b1366856b1a9da943",
+   "after_sha256": "8829c54497ab762f63a6c79f86e7d6caa59b82c683b4e5f1b049feb5e0ae2f2e",
    "before_sha256": null,
    "first_changed": "P13",
    "last_changed": "P16",

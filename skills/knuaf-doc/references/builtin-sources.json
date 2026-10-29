@@ -250,13 +250,13 @@
         },
         {
           "relative_path": "references/rules/CH5_CH6_closing.md",
-          "sha256": "a2ab7fd7022ccbabf89ba05650a1163c3603b969741192448d8de4111abe1f27",
-          "bytes": 5521
+          "sha256": "d3356e87258d12e449bf4caadd53419de2c53ab6bc144c47e07a18c60dd629e2",
+          "bytes": 5504
         },
         {
           "relative_path": "references/rules/F_format.md",
-          "sha256": "5e21a3aaf66fcf347291fb6883e39ea33b130f381ea45577888d54a835879eff",
-          "bytes": 11138
+          "sha256": "a16513ea3ab8a45da9dac1ab8779c84e0c09a3d1ef301c0efcb7695cc0cf08cc",
+          "bytes": 11326
         },
         {
           "relative_path": "references/rules/PRE_frontmatter.md",
@@ -388,13 +388,13 @@
         },
         {
           "relative_path": "references/rules/CH5_CH6_closing.md",
-          "sha256": "a2ab7fd7022ccbabf89ba05650a1163c3603b969741192448d8de4111abe1f27",
-          "bytes": 5521
+          "sha256": "d3356e87258d12e449bf4caadd53419de2c53ab6bc144c47e07a18c60dd629e2",
+          "bytes": 5504
         },
         {
           "relative_path": "references/rules/F_format.md",
-          "sha256": "5e21a3aaf66fcf347291fb6883e39ea33b130f381ea45577888d54a835879eff",
-          "bytes": 11138
+          "sha256": "a16513ea3ab8a45da9dac1ab8779c84e0c09a3d1ef301c0efcb7695cc0cf08cc",
+          "bytes": 11326
         },
         {
           "relative_path": "references/rules/PRE_frontmatter.md",
@@ -743,8 +743,8 @@
       "artifacts": [
         {
           "relative_path": "references/hort-env-systems/profile.json",
-          "sha256": "a4cc6051497a39b773313676b4ea3f743fa492a26be6728876ad05ff0e14af01",
-          "bytes": 40378
+          "sha256": "3951962e9df6f90d4bb884a360318e420ecd30b315d4d18d3b43c7e9be289587",
+          "bytes": 40398
         }
       ],
       "coverage": {
@@ -850,8 +850,8 @@
       "artifacts": [
         {
           "relative_path": "references/industrial-insects/precedents.json",
-          "sha256": "8663b186ee13cd92489de2c7a82149e7ac70b24f1b5a051df35559baa630e544",
-          "bytes": 35660
+          "sha256": "5ec7062a01838854d9f2130d95f2ffc78251e5d263a88910fd076f7b48047161",
+          "bytes": 35700
         }
       ],
       "coverage": {
@@ -874,7 +874,7 @@
           "to": "references/industrial-insects/precedents.json",
           "relationship": "derived_excerpt",
           "verification": "verified",
-          "verifier": "independent-verify-precedents-8663b186ee13",
+          "verifier": "independent-verify-precedents-5ec7062a0183",
           "receipt_sha256": "4d263a04e2b749e621d8ca6f7f7b2fe064348b4e26a6a3e5e9348cec04a1818e"
         }
       ],
@@ -892,8 +892,8 @@
       "artifacts": [
         {
           "relative_path": "references/industrial-insects/precedents.json",
-          "sha256": "8663b186ee13cd92489de2c7a82149e7ac70b24f1b5a051df35559baa630e544",
-          "bytes": 35660
+          "sha256": "5ec7062a01838854d9f2130d95f2ffc78251e5d263a88910fd076f7b48047161",
+          "bytes": 35700
         }
       ],
       "coverage": {
@@ -916,7 +916,7 @@
           "to": "references/industrial-insects/precedents.json",
           "relationship": "derived_excerpt",
           "verification": "verified",
-          "verifier": "independent-verify-precedents-8663b186ee13",
+          "verifier": "independent-verify-precedents-5ec7062a0183",
           "receipt_sha256": "4d263a04e2b749e621d8ca6f7f7b2fe064348b4e26a6a3e5e9348cec04a1818e"
         }
       ],
@@ -934,8 +934,8 @@
       "artifacts": [
         {
           "relative_path": "references/industrial-insects/precedents.json",
-          "sha256": "8663b186ee13cd92489de2c7a82149e7ac70b24f1b5a051df35559baa630e544",
-          "bytes": 35660
+          "sha256": "5ec7062a01838854d9f2130d95f2ffc78251e5d263a88910fd076f7b48047161",
+          "bytes": 35700
         }
       ],
       "coverage": {
@@ -958,7 +958,7 @@
           "to": "references/industrial-insects/precedents.json",
           "relationship": "derived_excerpt",
           "verification": "verified",
-          "verifier": "independent-verify-precedents-8663b186ee13",
+          "verifier": "independent-verify-precedents-5ec7062a0183",
           "receipt_sha256": "4d263a04e2b749e621d8ca6f7f7b2fe064348b4e26a6a3e5e9348cec04a1818e"
         }
       ],
@@ -976,8 +976,8 @@
       "artifacts": [
         {
           "relative_path": "references/industrial-insects/precedents.json",
-          "sha256": "8663b186ee13cd92489de2c7a82149e7ac70b24f1b5a051df35559baa630e544",
-          "bytes": 35660
+          "sha256": "5ec7062a01838854d9f2130d95f2ffc78251e5d263a88910fd076f7b48047161",
+          "bytes": 35700
         }
       ],
       "coverage": {
@@ -1000,7 +1000,7 @@
           "to": "references/industrial-insects/precedents.json",
           "relationship": "derived_excerpt",
           "verification": "verified",
-          "verifier": "independent-verify-precedents-8663b186ee13",
+          "verifier": "independent-verify-precedents-5ec7062a0183",
           "receipt_sha256": "4d263a04e2b749e621d8ca6f7f7b2fe064348b4e26a6a3e5e9348cec04a1818e"
         }
       ],
@@ -1018,8 +1018,8 @@
       "artifacts": [
         {
           "relative_path": "references/industrial-insects/precedents.json",
-          "sha256": "8663b186ee13cd92489de2c7a82149e7ac70b24f1b5a051df35559baa630e544",
-          "bytes": 35660
+          "sha256": "5ec7062a01838854d9f2130d95f2ffc78251e5d263a88910fd076f7b48047161",
+          "bytes": 35700
         }
       ],
       "coverage": {
@@ -1042,7 +1042,7 @@
           "to": "references/industrial-insects/precedents.json",
           "relationship": "derived_excerpt",
           "verification": "verified",
-          "verifier": "independent-verify-precedents-8663b186ee13",
+          "verifier": "independent-verify-precedents-5ec7062a0183",
           "receipt_sha256": "4d263a04e2b749e621d8ca6f7f7b2fe064348b4e26a6a3e5e9348cec04a1818e"
         }
       ],

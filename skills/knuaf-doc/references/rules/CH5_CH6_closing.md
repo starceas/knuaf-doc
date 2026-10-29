@@ -72,32 +72,32 @@
 3. 국문은 저자명 **가나다순**
 4. 동일 저자면 단독저작물 → 공동저작물 순 (공동은 공저자 가나다순)
 
-### 유형별 예시 (원문)
+### 유형별 예시 (원문 형식, 가상 인명)
 
     영문 학술지
-    Buckles, R.E. 1955. Tiglic and angelic acids. Chem. Rev. 55 : 659-677.
+    Hong, G.D. 1955. Tiglic and angelic acids. Chem. Rev. 55 : 659-677.
 
     영문 단행본
-    John, K. 1995. The Hiller gardener's guide to trees and shrubs. p. 380-383.
+    Kim, C. 1995. The Hong gardener's guide to trees and shrubs. p. 380-383.
     David & Charles Publishers, New York.
 
     영문 학술논문 (저자 3인 이상)
-    Loughrin, J.H., T.R. Hamiltonkemp, Anderson, R.A., and D.F., Hilderbrand. 1990.
+    Hong, G.D., C.S. Kim, Lee, M.R., and C.H., Sung. 1990.
     Volatiles from flowers of Nicotiana sylvestris. Phytochemistry 29 : 2473-2477.
 
     영문 학위논문
-    Leatherman, A.D. 1955. Ecological life-history of Lonicera japonica Thunb.
+    Lee, M.R. 1955. Ecological life-history of Lonicera japonica Hong.
     Ph. D. thesis. University of Tennessee : 97.
 
     국문 단행본
-    박권우. 1997. 「향신채의 재배와 이용론」. p. 36-42. 고려대학교 출판부, 서울.
+    홍길동. 1997. 「향신채의 재배와 이용론」. p. 36-42. 고려대학교 출판부, 서울.
 
     국문 학위논문
-    변재면. 2000. 자생 인동과 도입종 인동 꽃의 방향성 성분.
+    이몽룡. 2000. 자생 인동과 도입종 인동 꽃의 방향성 성분.
     고려대학교 석사학위논문 : 14-31.
 
     국문 학술논문
-    변재면ㆍ박천호. 1999. "우리 나라 향자원식물의 개발과 보건적 이용",
+    이몽룡ㆍ성춘향. 1999. "우리 나라 향자원식물의 개발과 보건적 이용",
     「한국식물ㆍ인간ㆍ환경학회지」. 2(2) : 17-26.
 
 국문 단행본·학술지명은 낫표(「 」)로 감싼다. 국문 논문 제목은 큰따옴표를 쓴다.
