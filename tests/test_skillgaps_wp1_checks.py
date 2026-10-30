@@ -404,12 +404,12 @@ class BibliographyJoinTests(ContractCase):
     def test_real_multi_author_without_separator_still_fails(self):
         self.assertIn(
             "bibliography_join",
-            self._ids("김정인 이명희. 2026. 「가락시장 깻잎」. KAMIS.\n"))
+            self._ids("홍길동 이몽룡. 2026. 「가락시장 깻잎」. KAMIS.\n"))
 
     def test_separator_and_year_inside_title_are_not_findings(self):
         self.assertNotIn(
             "bibliography_join",
-            self._ids("김정인ㆍ이명희. 2026. 「가락시장 깻잎」. KAMIS.\n"))
+            self._ids("홍길동ㆍ이몽룡. 2026. 「가락시장 깻잎」. KAMIS.\n"))
         self.assertNotIn(
             "bibliography_join",
             self._ids("한국농촌경제연구원. 「2020년 농업전망」. 2026.\n"))

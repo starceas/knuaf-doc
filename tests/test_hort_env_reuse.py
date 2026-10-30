@@ -50,10 +50,10 @@ CAPTION_POLICY_ARTIFACTS = {
         "references/rules/CH1_intro.md",
         "references/rules/PRE_frontmatter.md",
     ),
-    "kim-wonseop-exemplar-pdf": ("references/exemplar-quality.md",),
-    "kim-wonseop-exemplar-hwp": ("references/exemplar-quality.md",),
+    "reference-narrative-02-pdf": ("references/exemplar-quality.md",),
+    "reference-narrative-02-hwp": ("references/exemplar-quality.md",),
     # Specialty workbook standard (professor template) rewrote this document.
-    "seo-minseo-finance-xlsx": ("references/excel-template.md",),
+    "reference-finance-01-xlsx": ("references/excel-template.md",),
 }
 # These are the slots already included in BASELINE_SEMANTIC_DIGEST, not
 # expected current file bytes. Restore them only for the semantic projection
@@ -76,16 +76,16 @@ BASELINE_SEMANTIC_DIGEST = {
     "mafra.specialty.production.2024":
         "0b636815fa11a515929f4679a802d4d6756686096e37991fbf623fd5ff31c741",
     "official-writing-guide-pdf":
-        "e319037ec899ad3e1003624199558de47af06fa16fcd8ed82eb16d2c6462b5b9",
+        "aac6d622b639499990d3d901f3def8e72d8dd5e575724333b955210dd24bc7b5",
     "official-writing-guide-hwp":
-        "cf26c9af22bd03c2c53943ea7258eeb32c83b6d454316a57b4570d8d335f6c45",
-    "kim-wonseop-exemplar-pdf":
-        "c06cfe899ce51ef899628472a41785b9831c0fb750c006e3f07b15cd58dee7d2",
-    "kim-wonseop-exemplar-hwp":
-        "9c8809363bfd3191d2fd360675d3cbee66c1608c187844ad2e45b52eb109ad13",
+        "f5b116ce86f41bd14f7ac44d62f3993a8d525a88e1bed28c4ff30155fa5b42d0",
+    "reference-narrative-02-pdf":
+        "2db1ab85f996775660f6ff69f6f6c7ebb58b5f56d204aa834012422923015f81",
+    "reference-narrative-02-hwp":
+        "69041231b52aa8ebe5a5db37aa6ce833c14c3be18e3d4a0b2814975bc3cc8a46",
     # Main record minus excel-template.md sha256/bytes (main and PR2 agree).
-    "seo-minseo-finance-xlsx":
-        "b41b32884ba5038dccff8885dc5dacf3206af458dadd7fe7efd7f10d01a45e46",
+    "reference-finance-01-xlsx":
+        "6a335ece3fa03975b7bf5af4d962bb8487841d3548ddc3164bda8cc46511c951",
     "specialty-grad-thesis-finance-xlsx":
         "c50902c5513fd5fb0d085983e1a9e001742cfa5e91100517d709d55123fda991",
 }
@@ -153,8 +153,8 @@ PROBE_KEY = {"kind": "delimited",
 # sha256 below).  The live file is re-measured inside the test -- the pin
 # only says what the registry SHOULD declare.
 PROFILE_DECLARED_SHA = (
-    "a4cc6051497a39b773313676b4ea3f743fa492a26be6728876ad05ff0e14af01")
-PROFILE_DECLARED_BYTES = 40378
+    "3951962e9df6f90d4bb884a360318e420ecd30b315d4d18d3b43c7e9be289587")
+PROFILE_DECLARED_BYTES = 40398
 
 
 def registry():

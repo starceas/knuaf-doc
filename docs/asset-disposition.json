@@ -75,7 +75,7 @@
       "reason": "옛 전역 게이트 문서 전체 복원 금지, w5R가 기능 처분; K1: w5R 기능 복구 범위와 중복. 단일 작목·전역 중단 등 옛 문서 전체 복원 금지"
     },
     {
-      "path": "S0/references/kim-finance-bible.md",
+      "path": "S0/references/finance-bible.md",
       "sha256": "d24f1d904463d3d62854fe976e3163698e4fae40ada9a910237885f270a8cd93",
       "disposition": "배포(w5R)",
       "reason": "K1 담당 경계는 w5R; K1: PR #1 채택→공개 export 제외·payload 포함→공개 main 설치에서 누락. w5R"
@@ -359,7 +359,7 @@
       "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
     },
     {
-      "path": "S0/docs/KIM-FINANCE-BIBLE-ARCHITECTURE.md",
+      "path": "S0/docs/FINANCE-BIBLE-ARCHITECTURE.md",
       "sha256": "09786b7909afd88e563ece2b3d74b3d8f7f4f3024ca2db429f6d914437e2b7c6",
       "disposition": "개발 전용",
       "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
@@ -485,7 +485,7 @@
       "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
     },
     {
-      "path": "S0/docs/briefs/20260918-sonnet-kim-finance.md",
+      "path": "S0/docs/briefs/20260918-sonnet-finance.md",
       "sha256": "8232f0522eb5fe651d77ac951ed797110cc8e12c710c5013941e5465a037143d",
       "disposition": "개발 전용",
       "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
@@ -725,7 +725,7 @@
       "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"
     },
     {
-      "path": "S0/tests/test_kim_finance_bible.py",
+      "path": "S0/tests/test_finance_bible.py",
       "sha256": "0857e5e9cff3b3962d555ebf1a522230f0420692e246a1334da3af1308f64d88",
       "disposition": "개발 전용",
       "reason": "AUDIT 부록 E: 개발 증거 보존, 학생 설치 제외; 후계 동치 전수 미판정"

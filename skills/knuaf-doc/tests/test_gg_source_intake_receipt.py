@@ -25,8 +25,8 @@ import gg_source_intake as si  # noqa: E402
 KNUAF_DOC = Path(__file__).resolve().parents[1]
 REGISTRY_PATH = KNUAF_DOC / "references" / "builtin-sources.json"
 
-KIM_KEY = {"kind": "delimited",
-           "value": "kim-wonseop-exemplar:opening-narrative"}
+NARRATIVE_KEY = {"kind": "delimited",
+           "value": "reference-narrative-02:opening-narrative"}
 CV = "p5-classifier/1"
 
 
@@ -36,7 +36,7 @@ def registry():
 
 def key_catalog():
     return {"narrative_reference": {
-        KIM_KEY["value"]: {"authority": "verified",
+        NARRATIVE_KEY["value"]: {"authority": "verified",
                            "catalog_digest": None,
                            "receipt_sha256": None}}}
 

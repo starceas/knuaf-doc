@@ -184,7 +184,7 @@ class TestOrdering(unittest.TestCase):
             reg, "457249255929275b3ee55383bdc36897274f08933af3536866a652"
             "b29346cd3a")
         self.assertEqual([h["source_id"] for h in hits],
-                         ["seo-minseo-finance-xlsx"])
+                         ["reference-finance-01-xlsx"])
         self.assertEqual(gg_reuse.classify_source(reg, "0" * 64), [])
         with self.assertRaises(ValueError):
             gg_reuse.classify_source(reg, "nothex")

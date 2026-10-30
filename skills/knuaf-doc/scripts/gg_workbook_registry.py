@@ -23,7 +23,7 @@ carried in a handoff have no effect here.
 ``extract`` is the deterministic, read-only side lane: it measures
 structure (labels, tab colors, formula counts, layout anchors) from a
 real common workbook and emits the shipped
-``references/common-workbooks/kang-finance-workbook.json`` extract — no
+``references/common-workbooks/shared-finance-workbook.json`` extract — no
 example values, so the whole workbook is never shipped.  ``--check``
 re-measures and compares, which is how a maintainer re-verifies lineage
 without shipping bytes.
@@ -43,7 +43,7 @@ REFERENCE_SET_PATH = (
 )
 COMMON_EXTRACT_PATH = (
     Path(__file__).resolve().parents[1] / "references"
-    / "common-workbooks" / "kang-finance-workbook.json"
+    / "common-workbooks" / "shared-finance-workbook.json"
 )
 
 REFERENCE_SET_SCHEMA = "knuaf-workbook-reference-set/v2"
@@ -222,21 +222,21 @@ def _file_view(f, members, known=None):
         # may carry the same map coordinates.  It never makes a file
         # usable, never grants identity, never enables extract reuse
         # (student copies share the same 17-sheet list).
-        "layout_family": (kang_layout_family(f.get("sheets"), members)),
+        "layout_family": (shared_layout_family(f.get("sheets"), members)),
     }
 
 
-KANG_LAYOUT_FAMILY = "kang_finance_17"
+SHARED_LAYOUT_FAMILY = "shared_finance_17"
 
 
-def kang_layout_family(sheets, members):
-    """``kang_finance_17`` when the exact 17-name X01 sheet list matches,
+def shared_layout_family(sheets, members):
+    """``shared_finance_17`` when the exact 17-name X01 sheet list matches,
     else ``None``.  Callers must treat it as a hint, never as identity."""
     if not isinstance(sheets, list):
         return None
     x01 = (members or {}).get("X01")
     if x01 and sheets == x01["sheets"]:
-        return KANG_LAYOUT_FAMILY
+        return SHARED_LAYOUT_FAMILY
     return None
 
 
@@ -642,7 +642,7 @@ def _variant_delta(cell_maps):
 def build_common_extract(sources):
     """Deterministic extract for ``{ref_id: path}``.
 
-    The result is the committed ``kang-finance-workbook.json`` — labels,
+    The result is the committed ``shared-finance-workbook.json`` — labels,
     structure, tab roles, formula counts, variant delta and layout
     anchors only; never example numbers or cell contents."""
     members, cell_maps = {}, {}

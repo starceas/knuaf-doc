@@ -29,20 +29,20 @@ sys.path.insert(0, str(SCRIPTS))
 import gg_reuse  # noqa: E402
 import gg_rda_research as research  # noqa: E402
 
-SEO_SHA = ("457249255929275b3ee55383bdc36897274f08933af3536866a652b293"
+FINANCE_SHA = ("457249255929275b3ee55383bdc36897274f08933af3536866a652b293"
            "46cd3a")
 NAT_SHA = ("0bd85164ad387228e7034deb502f3f436a05336e1cf2c30326a5257f"
            "b3dff6ab")
-SEO_KEY = {"kind": "delimited",
-           "value": "seo-minseo-finance:workbook-structure"}
+FINANCE_KEY = {"kind": "delimited",
+           "value": "reference-finance-01:workbook-structure"}
 GUIDE_SHA = ("f60b58b7dcde86eab9f273dd50114ac296d009bd60abb940aaa866a5"
              "4e866de2")
 GUIDE_KEY = {"kind": "delimited",
              "value": "official-writing-guide:toc-rules"}
-KIM_SHA = ("67c1eb5192f445d914d329748f1e3275bcb3ce5d4757c9d1ca9a6c3cac"
+NARRATIVE_SHA = ("67c1eb5192f445d914d329748f1e3275bcb3ce5d4757c9d1ca9a6c3cac"
            "cb4720")
-KIM_KEY = {"kind": "delimited",
-           "value": "kim-wonseop-exemplar:opening-narrative"}
+NARRATIVE_KEY = {"kind": "delimited",
+           "value": "reference-narrative-02:opening-narrative"}
 NAT_KEY = {"kind": "audit_key", "pack_id": "rda.income.national.2024",
            "records_file_sha256":
            "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
@@ -75,7 +75,7 @@ def ctx(reg, **kw):
                                     "receipt_sha256": None}},
             "narrative_reference": {},
             "template_structure": {
-                SEO_KEY["value"]: {"authority": "verified",
+                FINANCE_KEY["value"]: {"authority": "verified",
                                    "catalog_digest": None,
                                    "receipt_sha256": None}},
             "statistical_observation": {},
@@ -137,8 +137,8 @@ class TestReasonClosure(unittest.TestCase):
 
     def test_reasons_closed_on_positive(self):
         v = gg_reuse.resolve_reuse(
-            SEO_SHA,
-            {"kind": "template_structure", "keys": [SEO_KEY]},
+            FINANCE_SHA,
+            {"kind": "template_structure", "keys": [FINANCE_KEY]},
             context=ctx(self.reg))
         self.assertEqual(v["status"], "reuse_ready")
         self.assertEqual(v["exit"], 0)
@@ -164,7 +164,7 @@ class TestReasonClosure(unittest.TestCase):
     def test_unmapped_exit_2(self):
         v = gg_reuse.resolve_reuse(
             "e" * 64,
-            {"kind": "template_structure", "keys": [SEO_KEY]},
+            {"kind": "template_structure", "keys": [FINANCE_KEY]},
             context=ctx(self.reg))
         self.assertEqual(v["status"], "unmapped")
         self.assertEqual(v["exit"], 2)
@@ -186,10 +186,10 @@ class TestReasonClosure(unittest.TestCase):
     def test_authority_conflict_blocked(self):
         # coverage-claimed key absent from the key catalog
         kc = ctx(self.reg)["key_catalog"]
-        del kc["template_structure"][SEO_KEY["value"]]
+        del kc["template_structure"][FINANCE_KEY["value"]]
         v = gg_reuse.resolve_reuse(
-            SEO_SHA,
-            {"kind": "template_structure", "keys": [SEO_KEY]},
+            FINANCE_SHA,
+            {"kind": "template_structure", "keys": [FINANCE_KEY]},
             context=ctx(self.reg, key_catalog=kc))
         self.assertEqual(v["status"], "blocked")
         self.assertIn("authority_conflict", v["reasons"])
@@ -203,16 +203,16 @@ class TestReasonClosure(unittest.TestCase):
         # fill the list; the measured byte/verification predicate, not
         # the desire for a route, must explain any extra reason.
         v = gg_reuse.resolve_reuse(
-            KIM_SHA,
-            {"kind": "narrative_reference", "keys": [KIM_KEY]},
+            NARRATIVE_SHA,
+            {"kind": "narrative_reference", "keys": [NARRATIVE_KEY]},
             context=ctx(self.reg))
         self.assertEqual(v["status"], "blocked")
         self.assertEqual(v["exit"], 2)
         self.assertEqual(v["reasons"], ["authority_conflict"])
-        self.assertIn(KIM_KEY, v["unsatisfied"])
+        self.assertIn(NARRATIVE_KEY, v["unsatisfied"])
         self.assertFalse(
             [e for e in v["needed_excerpt"]
-             if e["key_ref"] == KIM_KEY],
+             if e["key_ref"] == NARRATIVE_KEY],
             "conflict-only key must not fabricate an excerpt reason")
         # a mixed conflict+actual-gap key retains its genuine gap route:
         # the guide's artifact is absent at runtime (runtime_missing,
@@ -239,11 +239,11 @@ class TestReasonClosure(unittest.TestCase):
     def test_effective_authority_min(self):
         # key-catalog says unverified -> effective unverified -> gap
         kc = ctx(self.reg)["key_catalog"]
-        kc["template_structure"][SEO_KEY["value"]]["authority"] = \
+        kc["template_structure"][FINANCE_KEY["value"]]["authority"] = \
             "unverified"
         v = gg_reuse.resolve_reuse(
-            SEO_SHA,
-            {"kind": "template_structure", "keys": [SEO_KEY]},
+            FINANCE_SHA,
+            {"kind": "template_structure", "keys": [FINANCE_KEY]},
             context=ctx(self.reg, key_catalog=kc))
         self.assertEqual(v["status"], "needs_excerpt")
         self.assertIn("coverage_incomplete", v["reasons"])

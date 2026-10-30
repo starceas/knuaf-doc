@@ -187,13 +187,13 @@ class SpecShapeTests(unittest.TestCase):
 
     def test_schema_sources_and_row_counts(self):
         self.assertEqual(self.spec["schema"], "knuaf-c1-correction-spec/v1")
-        self.assertEqual(set(self.spec["sources"]), {"X01", "X02", "SEO"})
+        self.assertEqual(set(self.spec["sources"]), {"X01", "X02", "F01"})
         for meta in self.spec["sources"].values():
             self.assertEqual(len(meta["sha256"]), 64)
             int(meta["sha256"], 16)
         counts = {k: len(v) for k, v in self.spec["files"].items()}
         # C1 (30/30/30) + C1b policy items (15/28/33).
-        self.assertEqual(counts, {"X01": 49, "X02": 58, "SEO": 63})
+        self.assertEqual(counts, {"X01": 49, "X02": 58, "F01": 63})
 
     def test_rows_are_whitelisted_and_table_consistent(self):
         allowed = {"finding_id", "sheet", "cell", "class",
@@ -209,14 +209,14 @@ class SpecShapeTests(unittest.TestCase):
                     self.assertEqual(ref, "X01")
         # The 30 group-A rows must be identical across the three sources.
         base = self.spec["files"]["X01"][:30]
-        for ref in ("X02", "SEO"):
+        for ref in ("X02", "F01"):
             self.assertEqual(self.spec["files"][ref][:30], base)
         # Tail rows differ per source shape: X01 also carries the XR-22
         # carry-over rows; the C1b policy findings are XR-04/05/06/11.
         self.assertEqual(
             {r["finding_id"] for r in self.spec["files"]["X01"][30:]},
             {"XR-22", "XR-04", "XR-05", "XR-06", "XR-11"})
-        for ref in ("X02", "SEO"):
+        for ref in ("X02", "F01"):
             self.assertEqual(
                 {r["finding_id"] for r in self.spec["files"][ref][30:]},
                 {"XR-04", "XR-05", "XR-06", "XR-11"})

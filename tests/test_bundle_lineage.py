@@ -130,7 +130,7 @@ class RealTreeTests(ContractCase):
             rc = report["runtime_changes"]
             self.assertEqual(rc["declared_count"], rc["verified"])
             # P28 adds the plain-thesis policy gate (all majors by default),
-            # 이유림 exemplar registration and 문서 정본 changes on the P27 tree.
+            # primary exemplar registration and canonical document updates.
             # Restore v0.1.4 adds 16 runtime assets and five skill test files.
             # P28 sales-price integration declares five more test/fixture
             # paths; all five are new against the pinned baseline. The

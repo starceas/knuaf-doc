@@ -23,8 +23,8 @@ import gg_source_intake as si  # noqa: E402
 KNUAF_DOC = Path(__file__).resolve().parents[1]
 REGISTRY_PATH = KNUAF_DOC / "references" / "builtin-sources.json"
 
-KIM_KEY = {"kind": "delimited",
-           "value": "kim-wonseop-exemplar:opening-narrative"}
+NARRATIVE_KEY = {"kind": "delimited",
+           "value": "reference-narrative-02:opening-narrative"}
 
 
 def registry():
@@ -33,7 +33,7 @@ def registry():
 
 def key_catalog():
     return {"narrative_reference": {
-        KIM_KEY["value"]: {"authority": "verified",
+        NARRATIVE_KEY["value"]: {"authority": "verified",
                            "catalog_digest": None,
                            "receipt_sha256": None}}}
 
@@ -276,7 +276,7 @@ class TestInvalidRequests(TreeFixture):
             dict(scan_policy="nope"),
             dict(scan_policy=policy(classification_version="other/1")),
             dict(classification_version="other/1"),
-            dict(requested_use={"kind": "bogus", "keys": [KIM_KEY]}),
+            dict(requested_use={"kind": "bogus", "keys": [NARRATIVE_KEY]}),
             dict(requested_use={"kind": "narrative_reference",
                                 "keys": [{"kind": "delimited",
                                           "value": "UPPER:x"}]}),
@@ -383,22 +383,22 @@ class TestInvalidRequests(TreeFixture):
     def test_requested_use_validated_through_key_machinery(self):
         self.file("a.txt")
         f = run(self.root, requested_use={
-            "kind": "narrative_reference", "keys": [KIM_KEY]})
+            "kind": "narrative_reference", "keys": [NARRATIVE_KEY]})
         self.assertEqual("ok" if "scan_id" in f else f["status"], "ok")
         self.assertEqual({"kind": "narrative_reference",
-                          "keys": [KIM_KEY]},
+                          "keys": [NARRATIVE_KEY]},
                          f["sealed"]["requested_use"])
 
     def test_malformed_requested_use_is_invalid_request(self):
         self.file("a.txt")
         for bad in ({"kind": "narrative_reference", "keys": []},
                     {"kind": "narrative_reference",
-                     "keys": [KIM_KEY, KIM_KEY]},       # duplicate
+                     "keys": [NARRATIVE_KEY, NARRATIVE_KEY]},       # duplicate
                     {"kind": "narrative_reference",
-                     "keys": [KIM_KEY,
+                     "keys": [NARRATIVE_KEY,
                               {"kind": "delimited",
                                "value":
-                               "kim-wonseop-exemplar:closing-narrative"
+                               "reference-narrative-02:closing-narrative"
                                }]},                     # unsorted
                     {"kind": "statistical_observation",
                      "keys": [{"kind": "delimited",
@@ -738,14 +738,14 @@ class TestScanState(TreeFixture):
         doc["entries"][0]["source_sha256"] = [real]
         reg2 = _FakeResolution(reg, doc)
         f = run(self.root, reg=reg2, requested_use={
-            "kind": "narrative_reference", "keys": [KIM_KEY]})
+            "kind": "narrative_reference", "keys": [NARRATIVE_KEY]})
         self.assertEqual("reuse_candidate",
                          f["sealed"]["scan_state"])
 
     def test_requested_use_no_match_is_known_source(self):
         self.file("a.md", b"marker")
         f = run(self.root, requested_use={
-            "kind": "narrative_reference", "keys": [KIM_KEY]})
+            "kind": "narrative_reference", "keys": [NARRATIVE_KEY]})
         self.assertEqual("known_source", f["sealed"]["scan_state"])
 
     def test_scan_never_emits_reuse_ready(self):
@@ -756,7 +756,7 @@ class TestScanState(TreeFixture):
         doc["entries"][0]["source_sha256"] = [real]
         reg2 = _FakeResolution(reg, doc)
         f = run(self.root, reg=reg2, requested_use={
-            "kind": "narrative_reference", "keys": [KIM_KEY]})
+            "kind": "narrative_reference", "keys": [NARRATIVE_KEY]})
         self.assertIn(f["sealed"]["scan_state"],
                       ("known_source", "reuse_candidate"))
         self.assertNotEqual("reuse_ready", f["sealed"]["scan_state"])

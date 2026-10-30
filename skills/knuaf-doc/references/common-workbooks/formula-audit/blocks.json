@@ -1,6 +1,6 @@
 {
   "schema": "knuaf-workbook-audit-blocks/v1",
-  "source": "kang-finance-workbook.json sheet roles plus audited block headers",
+  "source": "shared-finance-workbook.json sheet roles plus audited block headers",
   "variants": {
     "X01": {"first_year_cash_expense": "D17", "first_year_cash_admin": "D18", "first_year_cash_principal": "D20", "later_loan": "H25", "later_grant": "G25"},
     "X02": {"first_year_cash_expense": "D18", "first_year_cash_admin": "D19", "first_year_cash_principal": "D21", "later_loan": "H26", "later_grant": "G26"}

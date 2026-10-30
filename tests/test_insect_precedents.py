@@ -119,15 +119,15 @@ class MapInvariantTests(_MapCase):
             "E1": (
                 "계약판매를 통한 쌍별귀뚜라미(Gryllus bimaculatus) "
                 "종충 생산 및 시스템 구축",
-                "박진희", "page_1_render"),
+                "reference-author-03", "page_1_render"),
             "E2": (
                 "우량종 쌍별귀뚜라미(Gryllus bimaculatus) 대량사육방법",
-                "민장욱", "first_text_page"),
+                "reference-author-04", "first_text_page"),
             "E3": (
                 "저온처리를 통한 여치(Gampsocleis sedakovii obscura) "
                 "연중 대량사육 및 판매",
-                "이현승", "first_text_page"),
-            "E4": (None, "민경도", "not_present_in_source"),
+                "reference-author-05", "first_text_page"),
+            "E4": (None, "reference-author-06", "not_present_in_source"),
         }
         for s in self.map["sources"]:
             title, author, basis = expected[s["id"]]

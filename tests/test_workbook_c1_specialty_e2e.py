@@ -1,6 +1,6 @@
 """End-to-end C1 specialty path on synthetic sources.
 
-Builds a synthetic workbook with the same 63 SEO correction targets,
+Builds a synthetic workbook with the same 63 F01 correction targets,
 binds a synthetic C1 spec to its bytes, runs materialize ->
 gg_excel_formula_patch under the real specialty_crops authorization path,
 and checks the receipt chain (source sha -> spec sha -> map sha ->
@@ -33,7 +33,7 @@ S3 = "3.투자계획"
 
 
 def build_workbook(path):
-    """Write a minimal xlsx holding SEO's defective 63 target formulas."""
+    """Write a minimal xlsx holding F01's defective 63 target formulas."""
     formulas = {
         S11: {
             "D25": "SUM(C26:C27)", "E25": "SUM(C26:C27)",
@@ -160,7 +160,7 @@ class SpecialtyChainTests(ContractCase):
 
     def assert_chain(self, source, spec_path, map_path, out, receipt_path,
                      project, expected_rows):
-        self.run_cli(AUDIT_CLI, "materialize-c1", "--ref", "SEO", "--source",
+        self.run_cli(AUDIT_CLI, "materialize-c1", "--ref", "F01", "--source",
                      source, "--spec", spec_path, "--out", map_path)
         persisted_map = json.loads(map_path.read_text(encoding="utf-8"))
         self.assertEqual(persisted_map["source"]["sha256"],
@@ -194,7 +194,7 @@ class SpecialtyChainTests(ContractCase):
             build_workbook(source)
             source_sha = hashlib.sha256(source.read_bytes()).hexdigest()
 
-            # Synthetic spec bound to the synthetic bytes, using SEO's
+            # Synthetic spec bound to the synthetic bytes, using F01's
             # precise 30-row target set and original formula preconditions.
             shipped = json.loads(
                 (Path(__file__).resolve().parents[1]
@@ -202,11 +202,11 @@ class SpecialtyChainTests(ContractCase):
                  "/corrections/c1-spec.json").read_text(encoding="utf-8"))
             spec = {
                 "schema": "knuaf-c1-correction-spec/v1",
-                "sources": {"SEO": {"source_id": "synthetic-c1-e2e",
+                "sources": {"F01": {"source_id": "synthetic-c1-e2e",
                                     "sha256": source_sha}},
-                "files": {"SEO": []},
+                "files": {"F01": []},
             }
-            spec["files"]["SEO"] = shipped["files"]["SEO"]
+            spec["files"]["F01"] = shipped["files"]["F01"]
             spec_path = tmp / "syn-spec.json"
             spec_path.write_text(json.dumps(spec, ensure_ascii=False),
                                  encoding="utf-8")

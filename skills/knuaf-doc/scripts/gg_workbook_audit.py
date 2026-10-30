@@ -1245,13 +1245,13 @@ def json_bytes(doc):
 C1_SPEC_SCHEMA = "knuaf-c1-correction-spec/v1"
 C1_DELTA = 7
 C1_AUDIT_REVISION = "knuaf-workbook-formula-audit/v1"
-# SEO shares the X01 calculation-area layout (no J block), so the analyzer
+# F01 shares the X01 calculation-area layout (no J block), so the analyzer
 # runs the X01 region/variant map against it.
-C1_ANALYZER_REF = {"X01": "X01", "X02": "X02", "SEO": "X01"}
+C1_ANALYZER_REF = {"X01": "X01", "X02": "X02", "F01": "X01"}
 C1_SOURCE_IDS = {
-    "X01": "kang-finance-workbook-x01",
-    "X02": "kang-finance-workbook-x02",
-    "SEO": "seo-minseo-finance-xlsx",
+    "X01": "shared-finance-workbook-x01",
+    "X02": "shared-finance-workbook-x02",
+    "F01": "reference-finance-01-xlsx",
 }
 _C1_CELL_XML = re.compile(
     rb'<c\b[^>]*\br="(?P<addr>[A-Z]+[0-9]+)"[^>]*?(?:/>|>.*?</c>)', re.DOTALL)
@@ -2133,12 +2133,12 @@ def main(argv=None):
     root = Path(__file__).resolve().parents[1]
     output_dir = root / "references/common-workbooks/formula-audit"
     blocks = json.loads((output_dir / "blocks.json").read_text(encoding="utf-8"))
-    extract = json.loads((root / "references/common-workbooks/kang-finance-workbook.json").read_text(encoding="utf-8"))
+    extract = json.loads((root / "references/common-workbooks/shared-finance-workbook.json").read_text(encoding="utf-8"))
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", nargs="?",
                         choices=("inventory", "audit", "materialize-c1",
                                  "verify-c1", "c1-check"))
-    parser.add_argument("--ref", choices=("X01", "X02", "SEO"))
+    parser.add_argument("--ref", choices=("X01", "X02", "F01"))
     parser.add_argument("--source", type=Path)
     parser.add_argument("--out", type=Path)
     parser.add_argument("--spec", type=Path,
@@ -2151,7 +2151,7 @@ def main(argv=None):
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--x01", type=Path)
     parser.add_argument("--x02", type=Path)
-    parser.add_argument("--seo", type=Path)
+    parser.add_argument("--f01", type=Path)
     args = parser.parse_args(argv)
     if args.check:
         if not args.x01 or not args.x02:
@@ -2172,10 +2172,10 @@ def main(argv=None):
         return 0
     if args.command == "c1-check":
         spec = c1_load_spec(args.spec)
-        provided = {"X01": args.x01, "X02": args.x02, "SEO": args.seo}
+        provided = {"X01": args.x01, "X02": args.x02, "F01": args.f01}
         provided = {k: v for k, v in provided.items() if v}
         if not provided:
-            parser.error("c1-check requires at least one of --x01/--x02/--seo")
+            parser.error("c1-check requires at least one of --x01/--x02/--f01")
         ok_all, summaries = True, {}
         for ref, source in provided.items():
             ok, summary = c1_check(spec, ref, source, blocks=blocks)

@@ -1,4 +1,4 @@
-# 김성학 농수산경영회계 해석 잣대
+# 농수산경영회계 해석 잣대
 
 ## 1. 역할
 
@@ -18,8 +18,8 @@
 
 | source_id | 역할 | 파일 | 규모 | SHA-256 |
 |---|---|---|---|---|
-| `kim-sunghak-farm-accounting-pptx` | 농장 강의 채점 잣대 1순위 | 농수산경영회계 PPTX | XML 슬라이드 142 | `c8dccab9ab615afc8708eb74f05fb34cf060009671dfb373a7eacdc5ce5fa452` |
-| `kim-sunghak-farm-finance-textbook-pdf` | 공식·현가표 이론 뒷받침만 | 기업·농업회계 및 재무분석 교재 PDF | 594쪽 | `661f7281ba270acd716b5106d263eae38e44c0ba88b78935649f89a51ce9a4b4` |
+| `reference-accounting-01-pptx` | 농장 강의 채점 잣대 1순위 | 농수산경영회계 PPTX | XML 슬라이드 142 | `c8dccab9ab615afc8708eb74f05fb34cf060009671dfb373a7eacdc5ce5fa452` |
+| `reference-finance-textbook-01-pdf` | 공식·현가표 이론 뒷받침만 | 기업·농업회계 및 재무분석 교재 PDF | 594쪽 | `661f7281ba270acd716b5106d263eae38e44c0ba88b78935649f89a51ce9a4b4` |
 
 원본은 저장소 바깥에 두는 사용자 제공 자료다(해시는 등록 시점 기록). 스킬
 패키지에는 이 문서의 요약 잣대만 들어가고 슬라이드·교재 원문은 반입하지

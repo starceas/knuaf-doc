@@ -47,8 +47,8 @@ import gg_rda_research as research  # noqa: E402
 
 GUIDE_KEY = {"kind": "delimited",
              "value": "official-writing-guide:toc-rules"}
-KIM_KEY = {"kind": "delimited",
-           "value": "kim-wonseop-exemplar:opening-narrative"}
+NARRATIVE_KEY = {"kind": "delimited",
+           "value": "reference-narrative-02:opening-narrative"}
 AUTHORITY = {
     "rda.income.national.2024":
         "accepted-catalog-20260921/rda.income.national.2024",
@@ -81,7 +81,7 @@ def key_catalog(**extra):
                                 "catalog_digest": None,
                                 "receipt_sha256": None}},
         "narrative_reference": {
-            KIM_KEY["value"]: {"authority": "verified",
+            NARRATIVE_KEY["value"]: {"authority": "verified",
                                "catalog_digest": None,
                                "receipt_sha256": None}},
         "template_structure": {},
@@ -146,7 +146,7 @@ def scanned_fixture(td, reg):
             classification_version="p5-classifier/1",
             registry=reg, key_catalog=kc, scan_policy=POLICY,
             requested_use={"kind": "narrative_reference",
-                           "keys": [KIM_KEY]})
+                           "keys": [NARRATIVE_KEY]})
         assert "sealed" in scan, scan
         gg_source_intake.write_scan_receipt(
             Path(td) / "ws", scan, capability=cap)
@@ -167,7 +167,7 @@ def scanned_fixture(td, reg):
         "files": files,
         "registry_digest": reg.registry_digest,
         "requested_use": {"kind": "narrative_reference",
-                          "keys": [KIM_KEY]},
+                          "keys": [NARRATIVE_KEY]},
         "excerpt": {"relative_id": "doc.md", "start_line": 1,
                     "end_line": 2},
         "external_identity": {

@@ -1,7 +1,7 @@
-"""Explicit local C1/C1b integration checks against three pinned originals.
+"""Explicit local C1/C1b integration checks against pinned X01/X02 originals.
 
 Run: python3 -m unittest tests.local_real_sources -v
-Exit 0: all PASS; 1: at least one FAIL; 2: at least one NOT_RUN.
+Exit 0: no FAIL (unavailable inputs are SKIP); 1: at least one FAIL.
 This module is intentionally outside unittest discovery's test*.py pattern.
 """
 import json
@@ -12,22 +12,22 @@ import sys
 import tempfile
 import unittest
 
-from tests._harness import ContractCase, bind_major
+from tests._harness import ContractCase
 from tests.test_workbook_audit_evaluator import audit_module
 from tests.test_workbook_c1_correction import (
     ROOT, SPEC_PATH, S3, S9, S10, S11, S14, S15, AUDIT_CLI)
-from tests.test_workbook_c1_specialty_e2e import SpecialtyChainTests
 
+SOURCE_ENV = {
+    "X01": "KNUAF_REAL_X01_XLSX",
+    "X02": "KNUAF_REAL_X02_XLSX",
+}
 REAL_SOURCES = {
-    "X01": Path("/Users/nara/Desktop/Storage/창업논문/창업논문 엑셀_강동현.xlsx"),
-    "X02": Path("/Users/nara/Desktop/Storage/창업논문/창업논문 엑셀_강동현_대식물.xlsx"),
-    "SEO": Path("/Users/nara/Desktop/Storage/진셍고트/restored/sources/originals/seo-minseo-finance.xlsx"),
+    ref: Path(value) if (value := os.environ.get(variable)) else None
+    for ref, variable in SOURCE_ENV.items()
 }
 
 
 class LocalRealSourceChecks(ContractCase):
-    run_cli = SpecialtyChainTests.run_cli
-    assert_chain = SpecialtyChainTests.assert_chain
 
     def setUp(self):
         self.a = audit_module()
@@ -123,7 +123,7 @@ class LocalRealSourceChecks(ContractCase):
                 self.assertFalse(report["ok"], name)
 
     def check_xr11_vectors(self, ref):
-        cash_row = {"X01": "17", "X02": "18", "SEO": "18"}[ref]
+        cash_row = {"X01": "17", "X02": "18"}[ref]
         with self.subTest(ref=ref):
             _, _, patched = self._book_rows(ref)
             for cash_col, y in zip("DEFGH", "CDEFG"):
@@ -238,15 +238,6 @@ class LocalRealSourceChecks(ContractCase):
                         f"exclusion XR-18 {S9}!{src} moved {S11}!{target}",
                         report["failures"])
 
-    def check_seo_chain(self, source):
-        with tempfile.TemporaryDirectory() as tmp:
-            tmp = Path(tmp)
-            project = self.make_project()
-            bind_major(project, "specialty_crops")
-            self.assert_chain(
-                source, SPEC_PATH, tmp / "seo-map.json",
-                tmp / "seo-patched.xlsx", tmp / "seo-receipt.json", project, 63)
-
     def check_source(self, ref):
         source = REAL_SOURCES[ref]
         self.check_mutants(ref, source)
@@ -256,18 +247,20 @@ class LocalRealSourceChecks(ContractCase):
         self.check_xr06_baseline_change(ref)
         self.check_candidate_cli(ref, source)
         self.check_materialize_accept(ref, source)
-        if ref == "SEO":
-            self.check_seo_chain(source)
 
 
 def load_tests(loader, tests, pattern):
-    """Make NOT_RUN a separate process outcome, never a passing test."""
+    """Report unavailable inputs as visible skips, never passing checks."""
     statuses = {}
     details = {}
     for ref, source in REAL_SOURCES.items():
+        if source is None:
+            statuses[ref] = "SKIP"
+            details[ref] = SOURCE_ENV[ref] + " is unset"
+            continue
         if not source.is_file():
-            statuses[ref] = "NOT_RUN"
-            details[ref] = "source absent"
+            statuses[ref] = "SKIP"
+            details[ref] = SOURCE_ENV[ref] + " file is absent"
             continue
         case = LocalRealSourceChecks('runTest')
         result = unittest.TestResult()
@@ -276,8 +269,7 @@ def load_tests(loader, tests, pattern):
         case.run(result)
         if result.wasSuccessful() and result.testsRun == 1:
             statuses[ref] = "PASS"
-            details[ref] = "pinned source, mutants, candidate CLI" + (
-                ", receipt chain" if ref == "SEO" else "")
+            details[ref] = "pinned source, mutants, candidate CLI"
         else:
             statuses[ref] = "FAIL"
             details[ref] = ((result.failures or result.errors)[0][1].splitlines()[-1]
@@ -286,11 +278,11 @@ def load_tests(loader, tests, pattern):
     print("SOURCE  STATUS    DETAIL")
     for ref in REAL_SOURCES:
         print(f"{ref:<6}  {statuses[ref]:<7}   {details[ref]}")
-    if "NOT_RUN" in statuses.values():
-        raise SystemExit(2)
     if "FAIL" in statuses.values():
         raise SystemExit(1)
     def require_pass(ref):
+        if statuses[ref] == "SKIP":
+            raise unittest.SkipTest(details[ref])
         if statuses[ref] != "PASS":
             raise AssertionError(f"{ref}: {statuses[ref]}")
     return unittest.TestSuite(

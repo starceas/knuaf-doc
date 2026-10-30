@@ -142,7 +142,7 @@ class DecisionTableTests(ContractCase):
                             common("x02", X02)])
         view = {v["file_id"]: v for v in out["candidate_roles"]}
         self.assertEqual(view["copy"]["layout_family"],
-                         "kang_finance_17")
+                         "shared_finance_17")
         self.assertFalse(view["copy"]["usable"])
         self.assertEqual(view["copy"]["identity_state"],
                          "common_mismatch")
@@ -150,7 +150,7 @@ class DecisionTableTests(ContractCase):
                  self.resolve([major("m", sheets=["s1", "s2 "])])
                  ["candidate_roles"]}
         self.assertEqual(view2["m"]["layout_family"],
-                         "kang_finance_17")
+                         "shared_finance_17")
         self.assertIsNone(self.resolve([major("m")])
                           ["candidate_roles"][0]["layout_family"])
 
@@ -197,7 +197,7 @@ class DecisionTableTests(ContractCase):
         self.assertEqual(out["authority_status"], "unverified")
 
     def test_roles_never_inferred_from_names(self):
-        f = major("강동현_교수_양식", declared_role="unclassified",
+        f = major("공식_기준_양식", declared_role="unclassified",
                   role_authority={"kind": "none", "ref": None})
         out = self.resolve([f])
         role = out["candidate_roles"][0]
