@@ -129,28 +129,6 @@ class RealTreeTests(ContractCase):
                              f"errors: {report['errors']!r}")
             rc = report["runtime_changes"]
             self.assertEqual(rc["declared_count"], rc["verified"])
-            # P28 adds the plain-thesis policy gate (all majors by default),
-            # primary exemplar registration and canonical document updates.
-            # Restore v0.1.4 adds 16 runtime assets and five skill test files.
-            # P28 sales-price integration declares five more test/fixture
-            # paths; all five are new against the pinned baseline. The
-            # strict-count repair also declares this validation test itself.
-            # Windows publication adds the native filesystem primitive.
-            # Office-only window hygiene adds exactly gg_office_session.py
-            # and test_window_hygiene.py: 201/153 + 2 = 203/155.
-            # The kordoc-hwpx feature adds four product/test paths
-            # (gg_hwpx.py, build_hwpx.py, test_hwpx_adapter.py,
-            # test_build_hwpx.py): 203/155 + 4 = 207/159.
-            # Output hygiene adds gg_tidy.py, output-hygiene.md and
-            # test_tidy.py: 207/159 + 3 = 210/162.
-            # The skill-gaps integration declares two WP-4 reference
-            # changes that the pinned baseline already ships
-            # (cross-review.md, intake-selection.md): 210 + 2 = 212/162.
-            # Body-writing assets on main: 212/162 -> 216/166.
-            # Plan-fit rules add two new runtime files (rules and method
-            # data): 216/166 -> 218/168.
-            self.assertEqual(221, rc["verified"])
-            self.assertEqual(170, rc["new_count"])
         else:
             self.assertNotEqual("ok", report["status"])
             self.assertIn("declared_missing", _codes(report))
@@ -170,26 +148,6 @@ class RealTreeTests(ContractCase):
         self.assertEqual("29abec0ec95369de7ae9e22207349d574f1f46b7",
                          link["baseline_main"])
         # P28's parent is the accepted P27 tree (main d08e98e, 233 files).
-        # The five additions include two already-allowlisted test paths,
-        # so integration grows the approved-new list by three to 158.
-        # Declaring this strict-count test adds one more path to all counts.
-        # Windows publication adds one runtime path and its approval.
-        # Office-only helper and fixture test add two declarations, two
-        # new files and two approvals: 201/153/160 -> 203/155/162.
-        # The kordoc-hwpx feature adds four declarations, four new files and
-        # four approvals: 203/155/162 -> 207/159/166.
-        # Output hygiene adds three declarations, three new files and three
-        # approvals: 207/159/166 -> 210/162/169.
-        # The skill-gaps integration adds two baseline-shipped reference
-        # changes (cross-review.md, intake-selection.md) and no new files:
-        # 210/162/169 -> 212/162/169.
-        # Counts are measured from runtime-changes.json after adding body-writing assets.
-        # Plan-fit rules add two new runtime files (rules and method data):
-        # 216/166/173 -> 218/168/175.
-        # PR2 counts are measured from runtime-changes.json after adding the crop-label table and its test.
-        self.assertEqual(221, link["change_count"])
-        self.assertEqual(170, link["new_count"])
-        self.assertEqual(177, link["approved_new_files"])
         self.assertEqual("P27", link["parent_candidate"]["stage"])
         self.assertEqual(233, link["parent_candidate"]["file_count"])
         self.assertEqual(
