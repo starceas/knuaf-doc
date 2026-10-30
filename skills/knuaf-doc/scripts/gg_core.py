@@ -168,7 +168,9 @@ def load(root):
 
 # Diagnostic identifiers are code-defined schema names, never caller IDs
 # or keys that merely look like identifiers.
-_DIAG_CODES = frozenset({"duplicate_path", "fact_metadata_invalid"})
+_DIAG_CODES = frozenset({
+    "duplicate_path", "fact_metadata_invalid", "fact_enum_invalid",
+})
 _DIAG_FIELDS = frozenset({
     # Output metadata and review records.
     "id", "path", "format", "file_hash", "target_refs",
@@ -179,7 +181,7 @@ _DIAG_FIELDS = frozenset({
     "report_hash", "input_revision",
     # Fact metadata accepted by validate_metadata.
     "meaning_id", "measure", "finance_role", "kind", "unit",
-    "currency", "denominator", "basis",
+    "currency", "denominator", "basis", "answer_state", "verification",
 })
 
 
@@ -748,7 +750,7 @@ def validate(p):
             or not s.get("path")
         ):
             raise ValueError("절 상태/순서/제목/경로 오류")
-    for f in p["facts"].values():
+    for index, f in enumerate(p["facts"].values()):
         for key in (
             "field_id",
             "kind",
@@ -763,12 +765,15 @@ def validate(p):
         ):
             if key not in f:
                 raise ValueError("사실 필드 누락: " + key)
-        if (
-            f["kind"] not in KINDS
-            or f["answer_state"] not in STATES
-            or f["verification"] not in VERIFY
+        for field, allowed in (
+            ("kind", KINDS), ("answer_state", STATES), ("verification", VERIFY),
         ):
-            raise ValueError("잘못된 사실 상태")
+            if not isinstance(f[field], str) or f[field] not in allowed:
+                raise _ChangeError(
+                    "잘못된 사실 %s: %r (허용: %s)"
+                    % (field, f[field], ", ".join(sorted(allowed))),
+                    {"code": "fact_enum_invalid", "field": field, "index": index},
+                )
         if f["answer_state"] == "provided" and f["value"] is None:
             raise ValueError("제공됨 상태에는 값 필요")
         if f["answer_state"] != "provided" and f["value"] is not None:
@@ -1471,6 +1476,240 @@ def apply(root, change, expected_revision):
             request_id,
         ),
     )
+
+
+def _history_snapshot(root, p, entry):
+    """Verify a snapshot against the current canonical history, not its name."""
+    revision = entry.get("revision")
+    if type(revision) is not int or not 0 <= revision < p["revision"]:
+        raise ValueError("history_revision_invalid")
+    rel = "migration/revision-%s.json" % revision
+    snap = json.loads(local(root, rel).read_text(encoding="utf-8"))
+    if not isinstance(snap, dict) or digest(snap) != entry.get("hash"):
+        raise ValueError("snapshot_hash_mismatch")
+    validate(snap)
+    _check_request_ledger(snap)
+    if snap["revision"] != revision:
+        raise ValueError("snapshot_revision_mismatch")
+    if snap.get("project_id") != p.get("project_id"):
+        raise ValueError("snapshot_project_mismatch")
+    return snap
+
+
+def history(root):
+    """Read-only canonical lineage; snapshot_ok includes schema/hash checks."""
+    p = load(root)
+    rows = []
+    for entry in p.get("history", []):
+        row = dict(entry, snapshot_path=None, snapshot_ok=False)
+        revision = entry.get("revision")
+        if type(revision) is int and 0 <= revision < p["revision"]:
+            row["snapshot_path"] = "migration/revision-%s.json" % revision
+        try:
+            _history_snapshot(root, p, entry)
+            row["snapshot_ok"] = True
+        except (OSError, ValueError, TypeError, KeyError, AttributeError):
+            pass
+        rows.append(row)
+    rows.append({
+        "revision": p["revision"], "hash": digest(p), "request_id": None,
+        "current": True, "snapshot_path": None, "snapshot_ok": None,
+    })
+    return rows
+
+
+@_op_boundary
+def restore(root, revision, expected_revision):
+    """Restore a verified ledger as a new guarded commit, never file rollback.
+
+    Requests/history and published outputs remain current. All restored
+    records get a new revision; old reviews/approvals/outputs cannot regain
+    freshness through a later no-op apply. File hashes are not refreshed.
+    """
+    root = Path(root)
+    if (
+        type(revision) is not int or revision < 0
+        or type(expected_revision) is not int or expected_revision < 0
+        or revision >= expected_revision
+    ):
+        raise _op("restore", "canonical", "not_committed", "invalid_revision")
+    request = "restore:%s->%s" % (expected_revision, revision)
+    chash = digest({"operation": "restore", "revision": revision,
+                    "expected_revision": expected_revision})
+    snapshot_rel = "migration/revision-%s.json" % expected_revision
+
+    def answer(committed_revision):
+        return dict(
+            _result("restore", "canonical", "committed", "restored",
+                    revision=committed_revision, request_id=request),
+            restored_from=revision, pre_restore_snapshot=snapshot_rel,
+            notice="정본만 복원. 절·원자료·build는 보존하며 검토·승인·출력은 재검증 필요.",
+        )
+
+    def body(capability):
+        _lock_mod().assert_held(capability, root)
+        p = load(root)
+        try:
+            _check_request_ledger(p)
+        except ValueError as error:
+            raise _op("restore", "canonical", "not_committed",
+                      "malformed_request_ledger") from error
+        entry = p["requests"].get(request)
+        if entry is not None:
+            if _ledger_effective_kind(entry, p["revision"]) != "apply" or entry["hash"] != chash:
+                raise _op("restore", "canonical", "not_committed",
+                          "request_id_conflict", request_id=request)
+            return answer(entry["revision"])
+        if _find_request(root, request, operation="restore"):
+            raise _op("restore", "canonical", "not_committed",
+                      "request_id_conflict", request_id=request)
+        if p["revision"] != expected_revision:
+            raise _op("restore", "canonical", "not_committed",
+                      "revision_conflict", revision=p["revision"])
+        entries = [h for h in p.get("history", []) if h.get("revision") == revision]
+        if len(entries) != 1:
+            raise _op("restore", "canonical", "not_committed",
+                      "history_revision_missing_or_ambiguous")
+        try:
+            snap = _history_snapshot(root, p, entries[0])
+        except (OSError, ValueError, TypeError, KeyError, AttributeError) as error:
+            raise _op("restore", "canonical", "not_committed",
+                      "snapshot_invalid", detail=str(error)) from error
+        new = copy.deepcopy(snap)
+        new["schema_version"] = 2
+        new["revision"] = expected_revision + 1
+        new["parent_hash"] = digest(p)
+        new["history"] = list(p["history"]) + [{
+            "revision": p["revision"], "hash": digest(p), "request_id": request,
+        }]
+        new["requests"] = dict(p["requests"])
+        new["requests"][request] = {"hash": chash, "revision": new["revision"]}
+        # Output receipts are immutable evidence, not restorable authorizations.
+        new["outputs"] = copy.deepcopy(p["outputs"])
+        for col in COLLECTIONS:
+            for record in new[col].values():
+                record["revision"] = new["revision"]
+                if col in ("reviews", "approvals", "outputs"):
+                    record["stale"] = True
+                if col == "tasks" and isinstance(record.get("execution"), dict):
+                    record["execution"]["status"] = "unknown"
+                # Preserve already-invalid refs rather than silently repairing.
+                for field, target in (
+                    ("source_refs", "sources"), ("input_refs", "facts"),
+                    ("depends_on", None),
+                ):
+                    for ref in record.get(field) or []:
+                        target_col = target or ref.get("collection")
+                        old = snap.get(target_col, {}).get(ref.get("id"))
+                        if old and ref.get("revision") == old["revision"]:
+                            ref["revision"] = new["revision"]
+                condition = record.get("applies_when")
+                if col == "rules" and isinstance(condition, dict):
+                    old = snap["facts"].get(condition.get("fact_id"))
+                    if old and condition.get("revision") == old["revision"]:
+                        condition["revision"] = new["revision"]
+        try:
+            validate(new)
+            _check_request_ledger(new)
+            path = local(root, snapshot_rel)
+            canonical = (root / "project.json").resolve()
+            if path == canonical:
+                raise ValueError("current_snapshot_not_independent")
+            if path.exists():
+                # A matching hash is not proof of a separate preserved file:
+                # symlink aliases and hard links can name the canonical inode.
+                if path.samefile(canonical):
+                    raise ValueError("current_snapshot_not_independent")
+                existing = json.loads(path.read_text(encoding="utf-8"))
+                if digest(existing) != digest(p):
+                    raise ValueError("current_snapshot_conflict")
+        except (OSError, ValueError, TypeError, KeyError) as error:
+            raise _op("restore", "canonical", "not_committed",
+                      "restore_preflight_failed", detail=str(error)) from error
+        try:
+            atomic(path, json.dumps(p, ensure_ascii=False, indent=2).encode())
+        except OSError as error:
+            raise _op("restore", "canonical", "not_committed",
+                      "history_write_failed", request_id=request) from error
+        _commit_canonical(
+            root, json.dumps(new, ensure_ascii=False, indent=2).encode(),
+            operation="restore", expect_revision=new["revision"],
+            request_id=request, preserved_paths=[snapshot_rel],
+        )
+        return answer(new["revision"])
+
+    return _guarded(
+        root, "restore", "canonical", body,
+        lambda: _recheck_canonical(root, expected_revision + 1, request),
+    )
+
+
+def doctor(root, *, probe=False):
+    """Local diagnostics, not rendering/calculation or submission approval.
+
+    Lock inspection is read-only by default; probe explicitly acquires and
+    releases the existing v2 guard. Dependencies use the project interpreter.
+    Kordoc's public diagnose contract only reads files/PATH (PR-D).
+    """
+    root = Path(root)
+    deps_notice = ""
+    try:
+        lock = _lock_mod()
+        lock_state = dict(lock.probe_lock(root) if probe else lock.inspect_lock(root))
+    except Exception as error:
+        lock_state = {
+            "structure": "unavailable", "lock_state": "unavailable",
+            "reason": type(error).__name__,
+        }
+    try:
+        import gg_deps
+
+        deps = gg_deps.doctor(root)
+        dependencies = {
+            row["import_name"]: row["status"] == "installed"
+            for row in deps["dependencies"]
+        }
+    except Exception as error:
+        # Preserve CLI fallback detection, explicitly distinguished from a
+        # successful project-interpreter probe.
+        import importlib.util
+
+        dependencies = {
+            name: bool(importlib.util.find_spec(name))
+            for name in ("docx", "openpyxl", "pypdf")
+        }
+        deps = {"status": "unavailable", "reason": type(error).__name__,
+                "selected_python": sys.executable}
+        deps_notice = " 의존성은 현재 CLI 인터프리터 기준."
+    try:
+        from gg_kordoc import diagnose
+
+        kordoc = diagnose()
+    except ImportError:
+        kordoc = {"status": "unavailable", "reason": "diagnose_api_unavailable",
+                  "capability_verified": False}
+    except Exception as error:
+        kordoc = {"status": "unavailable", "reason": type(error).__name__,
+                  "capability_verified": False}
+    try:
+        snapshots = history(root)
+    except (OSError, ValueError, TypeError, KeyError, AttributeError) as error:
+        snapshots = {"status": "unavailable", "reason": type(error).__name__}
+    return {
+        "python": sys.version,
+        "dependencies": dependencies, "deps": deps, "kordoc": kordoc,
+        "recalculation": "not_run", "render": "not_run", "hwp": "unsupported",
+        "web": "not_run", "model_calls": "disabled",
+        "lock_present": os.path.lexists(str(root / ".gg-lock")),
+        "lock": lock_state, "snapshots": snapshots,
+        "orphan_files": sorted(
+            str(path.relative_to(root))
+            for pattern in (".gg-tmp-*", ".gg-export-*", ".gg-import-*")
+            for path in root.rglob(pattern)
+        ),
+        "notice": "설치 탐지는 실행 검증이 아님. 채팅만 가능하면 초안과 원답변 인계, 제출 후보 불가."
+        + deps_notice,
+    }
 
 
 def _check_adopt_output_value(output_value):

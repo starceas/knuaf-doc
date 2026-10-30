@@ -30,4 +30,19 @@
 
 원답변은 파일로 먼저 보존한다. 사실에는 field_id, kind, value, value_type, unit, period, scope, answer_state, verification, source_refs를 기록한다. 상태는 not_provided/unknown/explicit_none/not_applicable/withheld/provided. 비제공 상태의 value는 null이며 없음·거부·N/A에는 사유와 원답변이 필요하다.
 
+세 enum은 서로 다른 축이다. 다른 축의 값이나 한국어 표시명을 대신 저장하지 않는다.
+
+| 필드 | 허용 값 | 의미 |
+|---|---|---|
+| `kind` | `reported_fact`, `observation`, `assumption`, `target`, `derived` | 원답변 사실·관측·가정·목표·계산값 구분 |
+| `answer_state` | `not_provided`, `unknown`, `explicit_none`, `not_applicable`, `withheld`, `provided` | 답변 제공 상태 |
+| `verification` | `unreviewed`, `source_located`, `claim_supported`, `disputed`, `superseded` | 출처·주장 검토 상태 |
+
+`validate`는 잘못된 필드와 허용 값을 구분해 안내한다. `apply` 거절 결과의
+`detail`은 `{"code":"fact_enum_invalid","field":"answer_state","index":0}`처럼
+고정 코드·필드와 정본 facts 순서의 0부터 시작하는 인덱스만 노출하며,
+사용자 값·사실 ID를 복사하지 않는다. enum만 맞아도 검증 완료가 아니다.
+원답변 참조·유한 십진 문자열·단위/기간/범위·계산 입력과 fact-semantics
+메타데이터 검사는 그대로 유지한다.
+
 수치 변경은 새 원답변을 등록하고 `apply --expected-revision`으로 반영한다. 변경 전 값은 개정 이력에 남는다. 사용자 목표·가정은 사실로 승격하지 않는다. 관련 계산과 검토가 stale이어도 무관한 소개·자료 정리는 계속한다.

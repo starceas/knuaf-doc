@@ -758,7 +758,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/mid-work-questions.md": {
-      "after_sha256": "eb2d5d2e7a737c234a166f5e03f0bf9a294b300fc9f19de7445d2a5097edda03",
+      "after_sha256": "bc5ddab2d4d1ab246fe4fd509bcfa09106d42d25ebf31ba0e3f55ed946ff030b",
       "before_sha256": "bfe7d61143b9fdfeadf00e84bc2dc3082ac962dabd4ab72d6b6efeba7db21ee8",
       "first_changed": "P11",
       "last_changed": "P28",
@@ -1018,7 +1018,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/section-ledger.md": {
-      "after_sha256": "7a3e46b9f459e6fce46829cae90d577a6c9a6819b7f5c4c0298e9e3e137e3b8a",
+      "after_sha256": "d85003fb08ec0220887ffe895bf0cf62ac98412b38e9562fdb9a6f0545ed9fd5",
       "before_sha256": "a6dab5f426090069f6b82d7bc716feebfca01d750ba1bee484ff686e54551072",
       "first_changed": "P3",
       "last_changed": "P27",
@@ -1162,7 +1162,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg.py": {
-      "after_sha256": "9d80955cf3ae2384b9f83df6178de5b3bceabc9ed172033fc6f060d7c46d7ddf",
+      "after_sha256": "3398340e4eba74dd225fa5460b367aaec620c31ee9e4f2a7ec9083f98456eab0",
       "before_sha256": "1e200103489c827c0b0ac60a7959045c02ecdae8bd8ae77e9b9a3d255554a0d7",
       "first_changed": "P1",
       "last_changed": "P28",
@@ -1199,7 +1199,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_core.py": {
-      "after_sha256": "4f42e31c972c891dd0fd45fca47f121c590b7090c5199eb65824c0de1fe81fe9",
+      "after_sha256": "e211855c54061a66ebaf678be51c561ff90be6f55961b06a67d97c5d118f7e80",
       "amended_in": "P1-S01,P2-R7,P2-R8,P3-C1,Lanes15-28",
       "before_sha256": "b3491a931add687328bf561e7e7cd2aed3edd7a7fee374a28092e771d9124cc5",
       "first_changed": "P1",
