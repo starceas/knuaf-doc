@@ -1,6 +1,10 @@
 """Runtime dependency plumbing: ASCII requirement files and a UTF-8 pip
 child environment (JUDGE-B P2-1/P2-2).
 """
+import contextlib
+import io
+import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -58,6 +62,34 @@ class PipEnvTests(ContractCase):
         self.assertEqual("utf-8", env["PYTHONIOENCODING"])
         # The rest of the parent environment still reaches pip.
         self.assertIn("PATH", env)
+
+
+class ImportProbeTests(ContractCase):
+    def test_unicode_import_under_ascii_parent_returns_version(self):
+        deps = runtime("gg_deps")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "unicode_probe.py").write_text(
+                "import sys\nsys.stderr.write('한글 import 진단')\n", encoding="utf-8")
+            metadata = root / "synthetic_probe-1.2.3.dist-info"
+            metadata.mkdir()
+            (metadata / "METADATA").write_text(
+                "Name: synthetic-probe\nVersion: 1.2.3\n", encoding="utf-8")
+            with mock.patch.dict(os.environ, {
+                    "PYTHONPATH": tmp, "PYTHONUTF8": "0", "PYTHONIOENCODING": "ascii"}):
+                self.assertEqual(deps._import_and_version(
+                    sys.executable, "unicode_probe", "synthetic-probe"), (True, "1.2.3"))
+
+    def test_subprocess_error_is_a_structured_cli_failure(self):
+        deps = runtime("gg_deps")
+        with tempfile.TemporaryDirectory() as tmp:
+            stdout = io.StringIO()
+            with mock.patch.object(deps.venv.EnvBuilder, "create",
+                    side_effect=subprocess.CalledProcessError(7, ["synthetic-venv"])), \
+                    contextlib.redirect_stdout(stdout):
+                code = deps.main(["ensure", tmp, "--no-index"])
+            self.assertEqual(code, 2)
+            self.assertEqual(json.loads(stdout.getvalue())["status"], "blocked")
 
 
 if __name__ == "__main__":

@@ -4,36 +4,64 @@
   "origin": "new"
  },
  "files": {
-  "skills/knuaf-doc/assets/templates/finance-template.xlsx": {
-   "note": "P0-2B U20: approved neutral value-cleared X01 derivative from app PR #41, copied unchanged; SHA-256 6d3c9fe5e5992108a8bab18c0098edb0d808f0d14c099878a53939b17de88c7d. Not original X01 bytes.",
-   "origin": "reused"
+  "skills/knuaf-doc/scripts/gg_core.py": {
+   "origin": "transformed",
+   "note": "P0-2 PR-C U06/U10/U11: field-specific fact enum diagnostics, guarded verified history/restore with new revisions and output invalidation, shared doctor using PR-D public diagnose. C-R1-01: reject pre-restore preservation paths resolving to or sharing file identity with the canonical before any product write."
   },
-  "skills/knuaf-doc/scripts/gg_excel_template.py": {
-   "note": "P0-2B U07/U20/U21/U22/Q02: app behavior reimplemented against current canonical major authorization, layout/read guards and source-hash contract; no obsolete app core copied.",
+  "skills/knuaf-doc/scripts/gg.py": {
+   "origin": "transformed",
+   "note": "P0-2 PR-C U11: CLI doctor delegates to the public core doctor; existing lock APIs remain in gg_lock."
+  },
+  "skills/knuaf-doc/references/mid-work-questions.md": {
+   "origin": "transformed",
+   "note": "P0-2 PR-C U06: document independent fact enums and sanitized field diagnostics without weakening fact-semantics."
+  },
+  "skills/knuaf-doc/references/section-ledger.md": {
+   "origin": "transformed",
+   "note": "P0-2 PR-C U10/U11: document verified restore, irreversible receipt preservation, diagnostic APIs and v2 lock callsite cutover. C-R1-01: require the pre-restore snapshot to be independent of the canonical."
+  },
+  "tests/test_core_history.py": {
+   "origin": "new",
+   "note": "P0-2 PR-C: synthetic enum rejection, read-only history, restore integrity/guard/conflict/retry and actual commit-state fault regressions. C-R1-01: symlink/hardlink canonical aliases preserve all bytes on rejection; matching independent snapshot supports commit, retry and recovery of latest-only data."
+  },
+  "tests/test_core_doctor.py": {
+   "origin": "new",
+   "note": "P0-2 PR-C: real lock inspection/probe and CLI safety; damaged/legacy controls remain untouched; project-probe failure preserves explicitly unavailable CLI-interpreter fallback detection."
+  },
+  "skills/knuaf-doc/references/outputs.md": {
+   "note": "P0-2 PR-D: Office safe-session activation, explicit jobs cleanup and pure Kordoc diagnosis contracts. | PR-D R1: D-R1-01: document guard-locked cleanup and immutable prior-run preservation.",
    "origin": "transformed"
   },
-  "skills/knuaf-doc/scripts/gg_excel_print.py": {
-   "note": "P0-2B U16/U17: preserve alignment on number-only changes and schema-order definedNames insertion; current X01 print protection and major guard retained.",
+  "skills/knuaf-doc/scripts/gg_deps.py": {
+   "note": "P0-2 PR-D: U12 POSIX symlink venv; U13 UTF-8 probes and structured subprocess errors.",
    "origin": "transformed"
   },
-  "skills/knuaf-doc/references/excel-template.md": {
-   "note": "P0-2B: source selection, copy receipt, review-only inventory map, explicit legacy/partial operations and print preservation contracts.",
+  "skills/knuaf-doc/scripts/gg_kordoc.py": {
+   "note": "P0-2 PR-D: U19 read-only capability-verified legacy cache reuse; U11 pure filesystem diagnosis.",
    "origin": "transformed"
   },
-  "skills/knuaf-doc/references/workbook-reference-set.json": {
-   "note": "P0-2B U20/Q02: separate derived_assets declaration without replacing original member hashes or major-specific H01 policy.",
+  "skills/knuaf-doc/scripts/gg_office.py": {
+   "note": "P0-2 PR-D: U18 explicit safe job cleanup; Q03/Q04 guarded Office activation and machine reason codes. | PR-D R1: D-R1-01: list and explicit cleanup consult the same session/app-guard permission; hold guard through deletion.",
    "origin": "transformed"
   },
-  "skills/knuaf-doc/references/builtin-sources.json": {
-   "note": "P0-2B owner-approved narrow repin: only reference-finance-01-xlsx artifact references/excel-template.md sha256/bytes updated to the B-owned document bytes; source identity, role, coverage, lineage and every other entry unchanged.",
+  "skills/knuaf-doc/scripts/gg_office_session.py": {
+   "note": "P0-2 PR-D: Q04 owned sole-workbook calculate/save/PDF, preserving existing-document and recovery guards. | PR-D R1: D-R1-01: rejected job reentry preserves durable prior unknown/preserved journal; only this run preflight may record never-opened; locked cleanup requires idle guard.",
    "origin": "transformed"
   },
-  "tests/test_excel_template_integration.py": {
-   "note": "P0-2B: synthetic regressions for student value preservation, exclusive copy, major/source selection, unapproved candidate maps, shared followers, missing-cell partial receipts, wrap preservation and definedNames ordering.",
-   "origin": "new"
+  "skills/knuaf-doc/scripts/gg_office_win.py": {
+   "note": "P0-2 PR-D: U14 private DispatchEx instances and zero-document Quit; U15 typed Excel errors.",
+   "origin": "transformed"
   },
-  "tests/test_specialty_template_route.py": {
-   "note": "P0-2B U21: existing fixed-X01 inspection scenarios explicitly request legacy_map; specialty template route and print guards retained.",
+  "skills/knuaf-doc/scripts/requirements-runtime.txt": {
+   "note": "P0-2 PR-D: Q03 Windows-only pywin32>=306 declaration.",
+   "origin": "transformed"
+  },
+  "skills/knuaf-doc/scripts/runtime-deps.json": {
+   "note": "P0-2 PR-D: Q03 Windows-only pywin32 manifest declaration.",
+   "origin": "transformed"
+  },
+  "tests/test_window_hygiene.py": {
+   "note": "P0-2 PR-D: Q03/Q04 Office preservation transitions, COM ownership/error cells and explicit safe cleanup. | PR-D R1: D-R1-01/02: timeout/preserved reentry and guard rejection chains; new never-opened cleanup; restored generated Word/Excel safety and calculation-order contracts; both review mutations caught.",
    "origin": "transformed"
   },
   ".github/workflows/validation.yml": {
@@ -129,7 +157,7 @@
    "origin": "new"
   },
   "tests/regression_inventory.json": {
-   "note": "P0-A: machine source of truth mapping each known defect to its test and owning gate (P1–P5/deferred). | PR-2: latest D8/D9 integration; I-01 only measured count constants adjusted in lineage test. Full pytest covers split public/skill test locations. | I2 appends V2-01 through V2-06 mappings and retains every existing entry. | I3 appends V3-01 through V3-04 mappings and retains every existing entry. | I4 appends V4-01 through V4-03 mappings and retains every existing entry. | I5 preserves all entries; Q-DESIGN-1 A superseded application-proof mappings rebind to existing reference regressions; V4-03, V1/V2 other guards and year completeness unchanged. | I6: all prior entries preserved, V6-01 seven new symbols mapped and AST checked; V6-02 documentation-only correction recorded without test mapping. | I8 adds PV1-01~04 mappings; preserves all existing inventory entries and 66 PR-3 mappings. | PR2: D8 임금 항목의 CAGR 적용 시험을 X01 산술평균 적용·직접 r 거부 시험(test_declared_wage_rate_refused_x01_mean_is_applied)으로 이름 교체.",
+   "note": "P0-A: machine source of truth mapping each known defect to its test and owning gate (P1–P5/deferred). | PR-2: latest D8/D9 integration; I-01 only measured count constants adjusted in lineage test. Full pytest covers split public/skill test locations. | I2 appends V2-01 through V2-06 mappings and retains every existing entry. | I3 appends V3-01 through V3-04 mappings and retains every existing entry. | I4 appends V4-01 through V4-03 mappings and retains every existing entry. | I5 preserves all entries; Q-DESIGN-1 A superseded application-proof mappings rebind to existing reference regressions; V4-03, V1/V2 other guards and year completeness unchanged. | I6: all prior entries preserved, V6-01 seven new symbols mapped and AST checked; V6-02 documentation-only correction recorded without test mapping. | I8 adds PV1-01~04 mappings; preserves all existing inventory entries and 66 PR-3 mappings. | PR2: D8 임금 항목의 CAGR 적용 시험을 X01 산술평균 적용·직접 r 거부 시험(test_declared_wage_rate_refused_x01_mean_is_applied)으로 이름 교체. | P0-2 PR-D: C6 block-policy tests retired; inventory now maps private-instance ownership and error-cell behavior tests (verdict C).",
    "origin": "new"
   },
   "tests/test_asset_disposition.py": {
@@ -142,7 +170,7 @@
    "p0_2b": "Owner-approved narrow deletion: five incidental declaration-count assertions and their comments only; hash, ancestry and tamper tests remain unchanged."
   },
   "tests/test_canonical_flow.py": {
-   "note": "P0-A: init/apply/check/export positive controls + C2–C6/H2/H3/H5 defect signatures; synthetic only.",
+   "note": "P0-A: init/apply/check/export positive controls + C2–C6/H2/H3/H5 defect signatures; synthetic only. | P0-2 PR-D: C6 block-policy tests retired; inventory now maps private-instance ownership and error-cell behavior tests (verdict C).",
    "origin": "new"
   },
   "tests/test_common_contract_flow.py": {
@@ -150,7 +178,7 @@
    "origin": "new"
   },
   "tests/test_deps.py": {
-   "note": "P1-GUI: pip 요구 파일 ASCII와 pip 자식 UTF-8 환경 전달",
+   "note": "P1-GUI: pip 요구 파일 ASCII와 pip 자식 UTF-8 환경 전달 | P0-2 PR-D: real child import under ASCII parent and structured subprocess failure boundary.",
    "origin": "new"
   },
   "tests/test_doc_contracts.py": {
@@ -167,7 +195,7 @@
    "origin": "new"
   },
   "tests/test_finance_profile_gate.py": {
-   "note": "P20: finance profile migration pre-staging negatives — writers and native boundary never reached on missing/unsupported profiles, synthetic only. | PR2: 특용작물 school_17_sheet_v1 생성기·래퍼 행렬은 이제 입구 차단(specialty_template_route_required) 확인으로 바뀜 — 생성기 본체·경제 검증 미도달 확인 유지, 다른 전공 행 그대로, 지원 프로필(single_annual_cash_v1)은 경제 검증 도달 확인 추가. | PR2: 특용작물 프로필 변형(없음·빈 값·대소문자·앞 공백)이 생성기에 닿지 않고 각 사유로 멈춤을 확인.",
+   "note": "P20: finance profile migration pre-staging negatives — writers and native boundary never reached on missing/unsupported profiles, synthetic only. | PR2: 특용작물 school_17_sheet_v1 생성기·래퍼 행렬은 이제 입구 차단(specialty_template_route_required) 확인으로 바뀜 — 생성기 본체·경제 검증 미도달 확인 유지, 다른 전공 행 그대로, 지원 프로필(single_annual_cash_v1)은 경제 검증 도달 확인 추가. | PR2: 특용작물 프로필 변형(없음·빈 값·대소문자·앞 공백)이 생성기에 닿지 않고 각 사유로 멈춤을 확인. | P0-2 PR-D: Q03: COM enabled; private instance constructor failures surface without attaching existing Office.",
    "origin": "new"
   },
   "tests/test_finance_scope.py": {
@@ -267,7 +295,7 @@
    "origin": "new"
   },
   "tests/test_kordoc_adapter.py": {
-   "note": "P27: kordoc 4.17.1 어댑터 — Node 20 하한, 버전 무관 캐시 루트, 버전 폴더 표식, 필수 플래그, 중첩/납작 사이드카(가짜 실행파일, 네트워크 없음)",
+   "note": "P27: kordoc 4.17.1 어댑터 — Node 20 하한, 버전 무관 캐시 루트, 버전 폴더 표식, 필수 플래그, 중첩/납작 사이드카(가짜 실행파일, 네트워크 없음) | P0-2 PR-D: U19 legacy capability checks and U11 side-effect-free diagnosis.",
    "origin": "new"
   },
   "tests/test_major_guard_contract.py": {
@@ -275,7 +303,7 @@
    "origin": "new"
   },
   "tests/test_major_guard_outputs.py": {
-   "note": "P7 policy B guard on finance/XLSX/DOCX/Office writers (A46-T1–T5 path matrix, publish-time reconfirm). P8: fruit_trees is registered — unknown-major coverage moved to an unregistered ID, the synthetic peer renamed probe_major, real fruit_trees checked on every writer and CLI (unsupported_output) and against a specialty binding (major_binding_mismatch). P9: hort_env_systems is registered — the unregistered sample moved to a synthetic ID that no real major will register. | P10: P7 policy B guard on finance/XLSX/DOCX/Office writers (A46-T1–T5 path matrix, publish-time reconfirm). P8: fruit_trees is registered — unknown-major coverage moved to an unregistered ID, the synthetic peer renamed probe_major, real fruit_trees checked on every writer and CLI (unsupported_output) and against a specialty binding (major_binding_mismatch). P9: synthetic source maps carry reviewed_custom layout so the C6 guard admits them unchanged. | PR-2: latest D8/D9 integration; I-01 only measured count constants adjusted in lineage test. Full pytest covers split public/skill test locations.",
+   "note": "P7 policy B guard on finance/XLSX/DOCX/Office writers (A46-T1–T5 path matrix, publish-time reconfirm). P8: fruit_trees is registered — unknown-major coverage moved to an unregistered ID, the synthetic peer renamed probe_major, real fruit_trees checked on every writer and CLI (unsupported_output) and against a specialty binding (major_binding_mismatch). P9: hort_env_systems is registered — the unregistered sample moved to a synthetic ID that no real major will register. | P10: P7 policy B guard on finance/XLSX/DOCX/Office writers (A46-T1–T5 path matrix, publish-time reconfirm). P8: fruit_trees is registered — unknown-major coverage moved to an unregistered ID, the synthetic peer renamed probe_major, real fruit_trees checked on every writer and CLI (unsupported_output) and against a specialty binding (major_binding_mismatch). P9: synthetic source maps carry reviewed_custom layout so the C6 guard admits them unchanged. | PR-2: latest D8/D9 integration; I-01 only measured count constants adjusted in lineage test. Full pytest covers split public/skill test locations. | P0-2 PR-D: Q04 macOS publish authorization covered without platform hold bypass.",
    "origin": "new"
   },
   "tests/test_major_guard_paper.py": {
@@ -299,11 +327,11 @@
    "origin": "new"
   },
   "tests/test_p1_outputs.py": {
-   "note": "P1 document/excel/Office behavioral tests (B-owned): fake-COM block, orientation, unrendered-node rejection, missing-cell rejection, forced-ASCII UTF-8 band. | P10: P1 document/excel/Office behavioral tests (B-owned): fake-COM block, orientation, unrendered-node rejection, missing-cell rejection, forced-ASCII UTF-8 band. P9: synthetic source maps carry reviewed_custom/unknown layout for the C6 guard.",
+   "note": "P1 document/excel/Office behavioral tests (B-owned): fake-COM block, orientation, unrendered-node rejection, missing-cell rejection, forced-ASCII UTF-8 band. | P10: P1 document/excel/Office behavioral tests (B-owned): fake-COM block, orientation, unrendered-node rejection, missing-cell rejection, forced-ASCII UTF-8 band. P9: synthetic source maps carry reviewed_custom/unknown layout for the C6 guard. | P0-2 PR-D: C6 block-policy tests retired; inventory now maps private-instance ownership and error-cell behavior tests (verdict C).",
    "origin": "new"
   },
   "tests/test_p27_small.py": {
-   "note": "P27: school_profile.major_id, 사유별 held 안내, pywin32 제거 doctor, runtime_present, CP949 CLI --help | Restore v0.1.4: synthetic regression and approved school-entry expectations.",
+   "note": "P27: school_profile.major_id, 사유별 held 안내, pywin32 제거 doctor, runtime_present, CP949 CLI --help | Restore v0.1.4: synthetic regression and approved school-entry expectations. | P0-2 PR-D: Q03: pywin32 Windows-only applicability and minimum supported version 306 behavior.",
    "origin": "new"
   },
   "tests/test_plain_policy.py": {
@@ -331,7 +359,7 @@
    "origin": "new"
   },
   "tests/test_runner_contract.py": {
-   "note": "repair-n1/N1 (new file): meta-tests asserting the N1 contract — dependency preflight semantics, verdict priority, JSON fields. P2-R2: extended subprocess controls (scoped verdict, external gate, tamper) and pure non-recursing accounting/classification tests for subtests, fixtures, expectedFailure/XPASS and gate mutations. P2-R3: bundle-tamper assertion folded into the pre-existing nested test_unexpected_failure_beats_incomplete — standalone method removed, no new nested exemption. | P27 K2-03: pywin32 선언 제거로 not_applicable 빈 목록",
+   "note": "repair-n1/N1 (new file): meta-tests asserting the N1 contract — dependency preflight semantics, verdict priority, JSON fields. P2-R2: extended subprocess controls (scoped verdict, external gate, tamper) and pure non-recursing accounting/classification tests for subtests, fixtures, expectedFailure/XPASS and gate mutations. P2-R3: bundle-tamper assertion folded into the pre-existing nested test_unexpected_failure_beats_incomplete — standalone method removed, no new nested exemption. | P27 K2-03: pywin32 선언 제거로 not_applicable 빈 목록 | P0-2 PR-D: Q03: platform exclusion of pywin32 on non-Windows, missing-dependency detection retained on Windows; nested runner and integrity contracts unchanged.",
    "origin": "new"
   },
   "tests/test_runner_negative_controls.py": {
@@ -458,6 +486,38 @@
   "tools/validation-provenance.json": {
    "note": "This file; declares origins for the validation layer.",
    "origin": "new"
+  },
+  "skills/knuaf-doc/assets/templates/finance-template.xlsx": {
+   "note": "P0-2B U20: approved neutral value-cleared X01 derivative from app PR #41, copied unchanged; SHA-256 6d3c9fe5e5992108a8bab18c0098edb0d808f0d14c099878a53939b17de88c7d. Not original X01 bytes.",
+   "origin": "reused"
+  },
+  "skills/knuaf-doc/scripts/gg_excel_template.py": {
+   "note": "P0-2B U07/U20/U21/U22/Q02: app behavior reimplemented against current canonical major authorization, layout/read guards and source-hash contract; no obsolete app core copied.",
+   "origin": "transformed"
+  },
+  "skills/knuaf-doc/scripts/gg_excel_print.py": {
+   "note": "P0-2B U16/U17: preserve alignment on number-only changes and schema-order definedNames insertion; current X01 print protection and major guard retained.",
+   "origin": "transformed"
+  },
+  "skills/knuaf-doc/references/excel-template.md": {
+   "note": "P0-2B: source selection, copy receipt, review-only inventory map, explicit legacy/partial operations and print preservation contracts.",
+   "origin": "transformed"
+  },
+  "skills/knuaf-doc/references/workbook-reference-set.json": {
+   "note": "P0-2B U20/Q02: separate derived_assets declaration without replacing original member hashes or major-specific H01 policy.",
+   "origin": "transformed"
+  },
+  "skills/knuaf-doc/references/builtin-sources.json": {
+   "note": "P0-2B owner-approved narrow repin: only reference-finance-01-xlsx artifact references/excel-template.md sha256/bytes updated to the B-owned document bytes; source identity, role, coverage, lineage and every other entry unchanged.",
+   "origin": "transformed"
+  },
+  "tests/test_excel_template_integration.py": {
+   "note": "P0-2B: synthetic regressions for student value preservation, exclusive copy, major/source selection, unapproved candidate maps, shared followers, missing-cell partial receipts, wrap preservation and definedNames ordering.",
+   "origin": "new"
+  },
+  "tests/test_specialty_template_route.py": {
+   "note": "P0-2B U21: existing fixed-X01 inspection scenarios explicitly request legacy_map; specialty template route and print guards retained.",
+   "origin": "transformed"
   }
  },
  "readme_policy": {

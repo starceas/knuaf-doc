@@ -70,21 +70,18 @@
     },
     {
       "applies_to_main": true,
-      "baseline_signature": "gg_office_win.py calls gencache.EnsureDispatch then unconditional Quit(); no pre-dispatch block",
-      "evidence_type": "static_source_check",
-      "fix": "gg_office_win.WINDOWS_COM_BLOCKED + run_word/run_excel _fail(code=2) before import pythoncom; gg_office.run_windows_com returns rc=2 without spawning; dormant EnsureDispatch/Quit retained below the guard pending native verification",
-      "fixed_in": "P1",
+      "baseline_signature": "gg_office_win.py attached with EnsureDispatch and unconditionally quit the user's Office instance",
+      "evidence_type": "synthetic_com_behavior",
+      "fix": "P0-2 PR-D verdict C: private DispatchEx instances; Quit only after document count reaches zero; typed Excel errors prevent PDF publication",
+      "fixed_in": "P0-2-D",
       "gate": "P1",
       "id": "C6",
       "status": "fixed",
-      "test": "tests.test_canonical_flow.EntryContractTests.test_office_automation_quit_blocked",
+      "test": "tests.test_window_hygiene.WindowsOfficeOwnershipTests.test_close_failure_or_foreign_document_prevents_quit",
       "tests": [
-        "tests.test_canonical_flow.EntryContractTests.test_office_automation_quit_blocked",
-        "tests.test_p1_outputs.WindowsComBlockTests.test_helper_run_word_blocks_before_com",
-        "tests.test_p1_outputs.WindowsComBlockTests.test_helper_run_excel_blocks_before_com",
-        "tests.test_p1_outputs.WindowsComBlockTests.test_wrapper_returns_block_without_spawning",
-        "tests.test_p1_outputs.WindowsComBlockTests.test_engine_dispatch_on_win32_returns_block",
-        "tests.test_p1_outputs.WindowsComBlockTests.test_macos_path_not_touched"
+        "tests.test_window_hygiene.WindowsOfficeOwnershipTests.test_success_uses_private_instance_and_closes_before_quit",
+        "tests.test_window_hygiene.WindowsOfficeOwnershipTests.test_close_failure_or_foreign_document_prevents_quit",
+        "tests.test_window_hygiene.WindowsOfficeOwnershipTests.test_excel_formula_error_prevents_pdf"
       ],
       "title": "Windows Office automation quits user's existing instance"
     },

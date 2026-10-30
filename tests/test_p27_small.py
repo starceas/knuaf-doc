@@ -180,30 +180,25 @@ class K302HeldGuidance(ContractCase):
 
 
 class K203RuntimeDeps(ContractCase):
-    """K2-03: pywin32 is out of the runtime dependency manifest."""
+    """Q03: pywin32 applies only on Windows and requires version >=306."""
 
-    def test_pywin32_removed_and_doctor_runs(self):
-        manifest = json.loads(
-            (SCRIPTS / "runtime-deps.json").read_text(encoding="utf-8"))
-        self.assertNotIn(
-            "pywin32", {d["dist"] for d in manifest["dependencies"]})
-        self.assertNotIn(
-            "pywin32",
-            (SCRIPTS / "requirements-runtime.txt").read_text(
-                encoding="utf-8"))
-        tmp = tempfile.TemporaryDirectory(prefix="knuaf-p27-deps-")
-        self.addCleanup(tmp.cleanup)
-        proc = _cli("gg_deps.py", "doctor", tmp.name)
-        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
-        report = json.loads(proc.stdout)
-        self.assertEqual(
-            {r["dist"] for r in report["dependencies"]},
-            {"openpyxl", "python-docx", "pypdf"})
-        for row in report["dependencies"]:
-            self.assertIn(
-                row["status"],
-                {"installed", "missing", "unsupported-version",
-                 "installed-version-unchecked"})
+    def test_pywin32_platform_and_supported_version(self):
+        from unittest import mock
+        deps = runtime("gg_deps")
+        with tempfile.TemporaryDirectory(prefix="knuaf-p27-deps-") as tmp:
+            for platform in ("darwin", "win32"):
+                for version in ("305", "306"):
+                    with self.subTest(platform=platform, version=version), \
+                            mock.patch.object(deps.sys, "platform", platform), \
+                            mock.patch.object(deps, "_import_and_version_current",
+                                              return_value=(True, version)):
+                        report = deps.doctor(tmp)
+                    rows = {row["dist"]: row for row in report["dependencies"]}
+                    if platform == "win32":
+                        self.assertEqual(rows["pywin32"]["status"],
+                            "unsupported-version" if version == "305" else "installed")
+                    else:
+                        self.assertNotIn("pywin32", rows)
 
 
 class K406BuiltinSources(ContractCase):

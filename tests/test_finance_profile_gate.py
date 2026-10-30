@@ -485,13 +485,23 @@ class FinanceGateTests(ContractCase):
             check.assert_called_once()
         self.assertFalse((root / "output.xlsx").exists())
 
-    def test_windows_direct_helper_stays_blocked_before_com_import(self):
+    def test_windows_private_instance_creation_failure_is_reported(self):
+        import contextlib
+        import io
         helper = runtime("gg_office_win")
-        with mock.patch.object(helper.sys, "platform", "win32"), \
-                mock.patch.dict(sys.modules, {"pythoncom": None}):
+        client = SimpleNamespace(DispatchEx=mock.Mock(
+            side_effect=RuntimeError("private_instance_unavailable")))
+        pythoncom = SimpleNamespace(CoInitialize=mock.Mock(), CoUninitialize=mock.Mock())
+        stderr = io.StringIO()
+        with mock.patch.dict(sys.modules, {
+                "pythoncom": pythoncom,
+                "win32com": SimpleNamespace(client=client), "win32com.client": client}), \
+                contextlib.redirect_stderr(stderr):
             with self.assertRaises(SystemExit) as caught:
                 helper.run_excel("synthetic.xlsx", "unused.pdf")
-        self.assertEqual(caught.exception.code, 2)
+        self.assertEqual(caught.exception.code, 1)
+        self.assertIn("private_instance_unavailable", stderr.getvalue())
+        pythoncom.CoUninitialize.assert_called_once()
 
 
 if __name__ == "__main__":
