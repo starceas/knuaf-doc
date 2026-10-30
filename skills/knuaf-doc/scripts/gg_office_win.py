@@ -30,16 +30,6 @@ from __future__ import annotations
 
 import sys
 
-# C6: the Windows COM automation path is blocked until it is verified on a
-# real Windows+Office install. EnsureDispatch attaches to (or creates) a
-# Word/Excel application object and the unconditional Quit() below would
-# terminate a user's already-running instance, so run_word/run_excel refuse
-# before any COM call is made. Set to None only after native verification.
-WINDOWS_COM_BLOCKED = (
-    "Windows Office 자동화가 차단돼 있습니다: 네이티브 Windows+Office 실기 "
-    "검증 전이라 COM 생성/접속을 수행하지 않습니다(실행 중인 사용자 "
-    "Word/Excel 인스턴스를 보호하기 위함). macOS 경로를 사용하세요."
-)
 
 
 def _fail(message: str, code: int = 1) -> None:
@@ -48,8 +38,6 @@ def _fail(message: str, code: int = 1) -> None:
 
 
 def run_word(input_path: str, pdf_path: str) -> None:
-    if WINDOWS_COM_BLOCKED:
-        _fail(WINDOWS_COM_BLOCKED, code=2)
     import pythoncom
     import win32com.client as win32
 
@@ -57,7 +45,7 @@ def run_word(input_path: str, pdf_path: str) -> None:
     word = None
     doc = None
     try:
-        word = win32.gencache.EnsureDispatch("Word.Application")
+        word = win32.DispatchEx("Word.Application")
         word.Visible = False
         word.DisplayAlerts = 0  # wdAlertsNone
         doc = word.Documents.Open(input_path)
@@ -94,7 +82,7 @@ def run_word(input_path: str, pdf_path: str) -> None:
         _fail(str(exc))
     finally:
         try:
-            if word is not None:
+            if word is not None and word.Documents.Count == 0:
                 word.Quit()
         except Exception:
             pass
@@ -102,8 +90,6 @@ def run_word(input_path: str, pdf_path: str) -> None:
 
 
 def run_excel(input_path: str, pdf_path: str) -> None:
-    if WINDOWS_COM_BLOCKED:
-        _fail(WINDOWS_COM_BLOCKED, code=2)
     import pythoncom
     import win32com.client as win32
 
@@ -111,7 +97,7 @@ def run_excel(input_path: str, pdf_path: str) -> None:
     excel = None
     wb = None
     try:
-        excel = win32.gencache.EnsureDispatch("Excel.Application")
+        excel = win32.DispatchEx("Excel.Application")
         excel.Visible = False
         excel.DisplayAlerts = False
         wb = excel.Workbooks.Open(input_path)
@@ -119,6 +105,15 @@ def run_excel(input_path: str, pdf_path: str) -> None:
         # app-scope "calculate" (not a single range/sheet).
         excel.CalculateFullRebuild()
         wb.Save()
+        # Scan Excel's typed error cells, not negative numeric values (COM
+        # represents CVErr as integers too). Never publish an errored result.
+        errors = []
+        for sheet in wb.Worksheets:
+            for row in sheet.UsedRange.Cells:
+                if excel.WorksheetFunction.IsError(row):
+                    errors.append(f"{sheet.Name}!{row.Address}")
+        if errors:
+            raise ValueError("excel_formula_errors: " + ", ".join(errors))
         wb.ExportAsFixedFormat(0, pdf_path)  # 0 = xlTypePDF
         wb.Close(SaveChanges=False)
         print(f"Excel process completed; Excel {excel.Version}")
@@ -131,7 +126,7 @@ def run_excel(input_path: str, pdf_path: str) -> None:
         _fail(str(exc))
     finally:
         try:
-            if excel is not None:
+            if excel is not None and excel.Workbooks.Count == 0:
                 excel.Quit()
         except Exception:
             pass

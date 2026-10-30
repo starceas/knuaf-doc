@@ -23,6 +23,21 @@ import sys
 import venv
 from pathlib import Path
 
+
+
+def _utf8_stdio():
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            try:
+                reconfigure(encoding="utf-8", errors="replace")
+            except (OSError, ValueError):
+                pass
+
+
+def _child_env():
+    return {**os.environ, "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"}
+
 HERE = Path(__file__).resolve().parent
 DEPS_JSON = HERE / "runtime-deps.json"
 REQUIREMENTS = HERE / "requirements-runtime.txt"
@@ -192,6 +207,8 @@ def _import_and_version(python, module, dist):
         capture_output=True,
         text=True,
         encoding="utf-8",
+        errors="replace",
+        env=_child_env(),
         timeout=60,
     )
     if proc.returncode != 0:
@@ -276,7 +293,7 @@ def ensure(project, find_links=None, no_index=False):
     vpy = venv_python(project)
     created = False
     if not vpy:
-        venv.EnvBuilder(with_pip=True).create(venv_dir)
+        venv.EnvBuilder(with_pip=True, symlinks=os.name != "nt").create(venv_dir)
         vpy = venv_python(project)
         created = True
     if not vpy:
@@ -304,11 +321,7 @@ def ensure(project, find_links=None, no_index=False):
         encoding="utf-8",
         errors="replace",
         timeout=600,
-        env={
-            **os.environ,
-            "PYTHONUTF8": "1",
-            "PYTHONIOENCODING": "utf-8",
-        },
+        env=_child_env(),
     )
     verified = {}
     versions = {}
@@ -340,6 +353,11 @@ def ensure(project, find_links=None, no_index=False):
 
 
 def main(argv=None):
+    _utf8_stdio()
+    if sys.version_info < (3, 10):
+        print(json.dumps({"status": "blocked", "reason": "Python 3.10 이상이 필요함"},
+                         ensure_ascii=False))
+        return 2
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("command", choices=["doctor", "ensure", "python"])
     ap.add_argument("folder", help="프로젝트 작업폴더")
@@ -366,12 +384,11 @@ def main(argv=None):
         )
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return code
-    except (ValueError, OSError, subprocess.TimeoutExpired) as e:
+    except (ValueError, OSError, subprocess.SubprocessError) as e:
         print(json.dumps({"status": "blocked", "reason": str(e)}, ensure_ascii=False))
         return 2
 
 
 if __name__ == "__main__":
-    for _stream in (sys.stdout, sys.stderr):
-        getattr(_stream, "reconfigure", lambda **_: None)(encoding="utf-8")
+    _utf8_stdio()
     sys.exit(main())

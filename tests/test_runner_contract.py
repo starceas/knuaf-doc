@@ -146,9 +146,15 @@ class RunnerContractTests(ContractCase):
         self.assertTrue(any("dependency not ready" in c
                             for c in rep["causes"]["incomplete"]),
                         rep["causes"])
-        # P27 K2-03: pywin32 left the declared list, so no platform-scoped
-        # dependency remains and nothing is reported as not_applicable.
-        self.assertEqual([], rep["dependency"]["not_applicable"])
+        # Windows-only COM support must never become a missing dependency
+        # on another platform, but Windows cannot silently exclude it.
+        excluded = {row["dist"]: row for row in rep["dependency"]["not_applicable"]}
+        if sys.platform == "win32":
+            self.assertIn("pywin32", missing)
+            self.assertNotIn("pywin32", excluded)
+        else:
+            self.assertNotIn("pywin32", missing)
+            self.assertEqual(excluded["pywin32"]["declared_platform"], "win32")
         # pure dependency failure (bundle check out of the way) maps to
         # incomplete/exit 3 — and the nested path is not exempt either.
         root2 = self._public_copy("knuaf-n1deps2-")
