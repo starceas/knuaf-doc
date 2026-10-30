@@ -31,6 +31,14 @@
    "used_by": [
     "scripts/gg_office.py"
    ]
+  },
+  {
+   "dist": "pywin32",
+   "spec": "pywin32>=306",
+   "import_name": "win32com.client",
+   "platform": "win32",
+   "purpose": "Windows 전용 Office COM 자동화",
+   "used_by": ["scripts/gg_office_win.py"]
   }
  ]
 }

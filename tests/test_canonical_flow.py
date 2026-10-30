@@ -330,39 +330,6 @@ class EntryContractTests(ContractCase):
             "H5: missing_wanted must raise before output",
         )
 
-    def test_office_automation_quit_blocked(self):
-        """C6 fixed in P1: Windows COM automation is blocked before any
-        COM creation/connection — run_word/run_excel exit code 2 before
-        `import pythoncom`, and the wrapper returns rc=2 without
-        spawning the helper.
-
-        Baseline signature (main 29abec0): EnsureDispatch then
-        unconditional Quit(). The dormant EnsureDispatch/Quit code below
-        the guard is intentionally retained until native Windows+Office
-        verification (see evidence/b/HANDOFF.md). Behavioural proof
-        with fake COM modules:
-        tests.test_p1_outputs.WindowsComBlockTests.
-        """
-        src = script_source("gg_office_win.py")
-        self.assertIn("WINDOWS_COM_BLOCKED", src)
-        for fn in ("def run_word", "def run_excel"):
-            body = src[src.find(fn):]
-            nxt = body.find("\ndef ", 4)
-            body = body[:nxt if nxt != -1 else len(body)]
-            guard = body.find("WINDOWS_COM_BLOCKED")
-            imp = body.find("import pythoncom")
-            self.assertNotEqual(-1, guard, f"{fn} lost the COM block")
-            self.assertNotEqual(-1, imp, f"{fn} lost the pythoncom import")
-            self.assertLess(
-                guard, imp,
-                f"{fn}: the block must run before `import pythoncom`")
-        wrap = script_source("gg_office.py")
-        wrap_body = wrap[wrap.find("def run_windows_com"):]
-        self.assertLess(
-            wrap_body.find("WINDOWS_COM_BLOCKED"),
-            wrap_body.find("res = subprocess.run("),
-            "C6: run_windows_com must check the block before spawning",
-        )
 
 
 class TextIoTests(ContractCase):

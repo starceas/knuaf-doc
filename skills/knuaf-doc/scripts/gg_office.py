@@ -21,6 +21,7 @@ import json
 import os
 from pathlib import Path, PureWindowsPath
 import posixpath
+import re
 import shutil
 import subprocess
 import sys
@@ -60,8 +61,61 @@ DEFAULT_GROUP_CONTAINER_DIR = _default_workspace_dir()
 
 from gg_office_session import (
     WORD_APPLESCRIPT_TEMPLATE, EXCEL_APPLESCRIPT_TEMPLATE, SESSION_MARKER,
-    run_session, read_session, retain_job, EXCEL_RECALCULATION_HOLD,
+    run_session, read_session, retain_job, cleanup_guard,
 )
+
+
+JOB_ID_RE = re.compile(r"job-[0-9a-f]{12}-[0-9]+")
+
+
+def list_jobs(workspace: str | Path | None = None) -> dict:
+    """Read-only inventory; never infer cleanup permission from job age."""
+    root = Path(workspace).resolve() if workspace else DEFAULT_GROUP_CONTAINER_DIR
+    jobs = []
+    for job in sorted(root.iterdir()) if root.exists() else []:
+        if not JOB_ID_RE.fullmatch(job.name) or job.is_symlink() or not job.is_dir():
+            continue
+        size, files = 0, 0
+        for base, dirs, names in os.walk(job, followlinks=False):
+            dirs[:] = [name for name in dirs if not (Path(base) / name).is_symlink()]
+            for name in names:
+                path = Path(base) / name
+                if path.is_file() and not path.is_symlink():
+                    size += path.stat().st_size
+                    files += 1
+        session = read_session(job)
+        with cleanup_guard(job) as cleanup_reason:
+            cleanup_allowed = cleanup_reason is None
+        jobs.append({"id": job.name, "bytes": size, "files": files,
+                     "created_epoch": int(job.name.rsplit("-", 1)[1]),
+                     "office_session": session,
+                     "cleanup_allowed": cleanup_allowed})
+    return {"status": "pass", "workspace": str(root), "count": len(jobs),
+            "bytes": sum(job["bytes"] for job in jobs), "jobs": jobs}
+
+
+def clean_jobs(job_ids: list[str], workspace: str | Path | None = None) -> dict:
+    """Delete only explicitly named, confirmed non-live staged jobs."""
+    root = Path(workspace).resolve() if workspace else DEFAULT_GROUP_CONTAINER_DIR
+    deleted, refused = [], []
+    for job_id in dict.fromkeys(job_ids):
+        job = root / job_id
+        reason = None
+        if not JOB_ID_RE.fullmatch(job_id):
+            reason = "invalid_job_id"
+        elif job.is_symlink() or not job.is_dir() or job.resolve().parent != root:
+            reason = "invalid_job_path"
+        else:
+            check_no_symlinks(job)
+            with cleanup_guard(job) as reason:
+                if reason is None:
+                    shutil.rmtree(job)
+                    deleted.append({"id": job_id})
+        if reason:
+            refused.append({"id": job_id, "reason": reason})
+            continue
+    return {"status": "pass" if not refused else "fail", "workspace": str(root),
+            "deleted": deleted, "refused": refused}
 
 
 def compute_sha256(data: bytes) -> str:
@@ -507,16 +561,13 @@ def run_windows_com(kind: str, args: list[str], timeout: int = 90) -> subprocess
     if not helper.is_file():
         raise ValueError(f"Windows COM 헬퍼 스크립트 누락: {helper}")
     cmd = [sys.executable, str(helper), kind] + [str(a) for a in args]
-    # C6: the Windows COM path stays blocked until it is verified on a real
-    # Windows+Office install — return the block before spawning the helper
-    # so no EnsureDispatch/Dispatch/Quit (and no user app instance) is ever
-    # touched. gg_office_win.py enforces the same block for direct calls.
-    import gg_office_win
-
-    if gg_office_win.WINDOWS_COM_BLOCKED:
-        return subprocess.CompletedProcess(
-            cmd, returncode=2, stdout="", stderr=gg_office_win.WINDOWS_COM_BLOCKED
-        )
+    # A killed/hung helper cannot prove document closure. Preserve staging.
+    job = Path(args[0]).parent.parent
+    evidence = {"schema": "gg-office-session/v1", "app": kind,
+                "cleanup": "unknown", "reason": "windows_com_inflight",
+                "app_quit": "private_instance_only"}
+    journal = job / "office_session.json"
+    journal.write_text(json.dumps(evidence), encoding="utf-8")
     try:
         res = subprocess.run(
             cmd,
@@ -525,6 +576,9 @@ def run_windows_com(kind: str, args: list[str], timeout: int = 90) -> subprocess
             timeout=timeout,
             check=False, encoding="utf-8",
         )
+        evidence.update(cleanup="closed" if res.returncode == 0 else "unknown",
+                        reason="closed_confirmed" if res.returncode == 0 else "windows_com_failed")
+        journal.write_text(json.dumps(evidence), encoding="utf-8")
         return res
     except subprocess.TimeoutExpired as exc:
         raise TimeoutError(f"Office Windows COM 실행 시간 초과 ({timeout}초)") from exc
@@ -821,6 +875,8 @@ def _write_failure_receipt(job_dir: Path, receipt: dict) -> None:
     session = read_session(job_dir)
     if session is not None:
         receipt["office_session"] = session
+        if session.get("reason") != "closed_confirmed":
+            receipt["reason"] = session.get("reason", "session_evidence_unreadable")
     (job_dir / "failure_receipt.json").write_text(
         json.dumps(receipt, ensure_ascii=False, indent=2), encoding="utf-8")
 
@@ -1299,7 +1355,7 @@ def process_excel(
     *,
     context=None,
 ) -> dict:
-    """Authorize/profile-check Excel input; macOS conversion is held before staging."""
+    """Authorize/profile-check input, then convert its isolated working copy."""
     import gg_major_contract as mc
 
     input_path = Path(input_file).absolute()
@@ -1321,8 +1377,6 @@ def process_excel(
     binding, finance_profile = _preflight_excel_profile(
         input_path, auths, context, spec=spec_for_guard,
         template_receipt=template_receipt)
-    if sys.platform == "darwin":
-        raise mc.OutputHeldError(EXCEL_RECALCULATION_HOLD)
     out_path = Path(out_dir).absolute()
     ws_root = Path(workspace).resolve() if workspace else DEFAULT_GROUP_CONTAINER_DIR
 
@@ -1598,7 +1652,7 @@ def process_batch(
                 or "-1743" in err
                 or res.get("office_session", {}).get("cleanup") in {"preserved", "unknown"}
                 or res.get("office_session", {}).get("reason") in {
-                    "existing_or_unknown_office_documents", "office_session_busy",
+                    "existing_documents", "office_inventory_unknown", "office_session_busy",
                     "previous_office_session_unknown", "office_guard_state_unreadable",
                 }
             ):
@@ -1677,7 +1731,7 @@ def main(argv=None):
     sp_w.add_argument("--json", action="store_true", help="JSON 출력")
 
     # excel subcommand
-    sp_e = sub.add_parser("excel", help="XLSX Office 변환(macOS 재계산·PDF 보류)")
+    sp_e = sub.add_parser("excel", help="XLSX 격리 재계산·저장 및 PDF 내보내기")
     sp_e.add_argument("input", help="입력 XLSX 파일 경로")
     sp_e.add_argument("--out-dir", "--out", dest="out_dir", required=True, help="새 대상 출력 디렉터리")
     sp_e.add_argument("--resources", nargs="*", default=[], help="동반 리소스 파일 목록")
@@ -1709,6 +1763,14 @@ def main(argv=None):
     sp_doc = sub.add_parser("doctor", help="Office 작업영역 및 의존성 진단")
     sp_doc.add_argument("--workspace", default=None, help="커스텀 Group Container 작업영역 경로")
     sp_doc.add_argument("--json", action="store_true", help="JSON 출력")
+
+    sp_jobs = sub.add_parser("jobs", help="남은 Office 작업 목록(조회만)")
+    sp_jobs.add_argument("--workspace", default=None)
+    sp_jobs.add_argument("--json", action="store_true")
+    sp_clean = sub.add_parser("clean", help="명시한 종료 확인 작업만 삭제")
+    sp_clean.add_argument("--job", nargs="+", required=True)
+    sp_clean.add_argument("--workspace", default=None)
+    sp_clean.add_argument("--json", action="store_true")
 
     a = ap.parse_args(argv)
     import gg_major_contract as mc
@@ -1749,6 +1811,10 @@ def main(argv=None):
             )
         elif a.command == "doctor":
             res = doctor(workspace=a.workspace)
+        elif a.command == "jobs":
+            res = list_jobs(workspace=a.workspace)
+        elif a.command == "clean":
+            res = clean_jobs(a.job, workspace=a.workspace)
         else:
             res = {"status": "fail", "reason": f"알 수 없는 명령: {a.command}"}
 

@@ -725,9 +725,7 @@ class OfficePublishGuardTests(_Base):
         try:
             with mock.patch.object(self.office, "_run_word_engine", word), \
                     mock.patch.object(self.office, "_run_excel_engine",
-                                      excel), \
-                    mock.patch.object(self.office, "sys",
-                        SimpleNamespace(platform="linux") if engine_kind == "excel" else sys):
+                                      excel):
                 if engine_kind == "word":
                     return (self.office.process_word(
                         self.docx_in, out, workspace=ws, context=ctx),

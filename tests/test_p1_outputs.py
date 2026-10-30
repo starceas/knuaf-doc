@@ -4,17 +4,13 @@ Every test exercises a produced artifact (DOCX/XLSX) or a fake-COM
 boundary — never source-string checks, real Office applications, real
 school templates, or user documents.
 """
-import contextlib
-import io
 import json
 import os
 import subprocess
 import sys
 import tempfile
-import types
 import unittest
 from pathlib import Path
-from unittest import mock
 
 from tests._harness import ContractCase, bind_major, runtime
 
@@ -28,95 +24,6 @@ def _bound_context(case):
         project, "specialty_crops")
 
 
-class WindowsComBlockTests(ContractCase):
-    """C6 (fixed in P1): the Windows COM path must refuse before any COM
-    call. Fake pythoncom/win32com modules count every entry point — all
-    counters must stay at zero. Baseline red: run_word/run_excel reached
-    EnsureDispatch/Quit on main 29abec0."""
-
-    @staticmethod
-    def _fake_com():
-        calls = {"CoInitialize": 0, "EnsureDispatch": 0,
-                 "Dispatch": 0, "Quit": 0}
-
-        def _app():
-            return types.SimpleNamespace(
-                Quit=lambda: calls.__setitem__("Quit", calls["Quit"] + 1))
-
-        pythoncom = types.ModuleType("pythoncom")
-        pythoncom.CoInitialize = lambda: calls.__setitem__(
-            "CoInitialize", calls["CoInitialize"] + 1)
-        pythoncom.CoUninitialize = lambda: None
-        client = types.ModuleType("win32com.client")
-        client.gencache = types.SimpleNamespace(
-            EnsureDispatch=lambda name: (
-                calls.__setitem__(
-                    "EnsureDispatch", calls["EnsureDispatch"] + 1),
-                _app())[1])
-        client.Dispatch = lambda name: (
-            calls.__setitem__("Dispatch", calls["Dispatch"] + 1),
-            _app())[1]
-        win32com = types.ModuleType("win32com")
-        win32com.client = client
-        return calls, {
-            "pythoncom": pythoncom,
-            "win32com": win32com,
-            "win32com.client": client,
-        }
-
-    def _assert_blocked_helper(self, fn):
-        calls, fakes = self._fake_com()
-        err = io.StringIO()
-        with mock.patch.dict(sys.modules, fakes), \
-                contextlib.redirect_stderr(err):
-            with self.assertRaises(SystemExit) as cm:
-                fn("in.docx", "out.pdf")
-        self.assertEqual(2, cm.exception.code)
-        self.assertIn("차단", err.getvalue())
-        self.assertEqual(
-            {"CoInitialize": 0, "EnsureDispatch": 0,
-             "Dispatch": 0, "Quit": 0},
-            calls, "a COM entry point was reached despite the block")
-
-    def test_helper_run_word_blocks_before_com(self):
-        win = runtime("gg_office_win")
-        self._assert_blocked_helper(win.run_word)
-
-    def test_helper_run_excel_blocks_before_com(self):
-        win = runtime("gg_office_win")
-        self._assert_blocked_helper(win.run_excel)
-
-    def test_wrapper_returns_block_without_spawning(self):
-        office = runtime("gg_office")
-        runtime("gg_office_win")
-        with mock.patch.object(subprocess, "run") as run_mock:
-            res = office.run_windows_com("word", ["a.docx", "b.pdf"])
-        run_mock.assert_not_called()
-        self.assertEqual(2, res.returncode)
-        self.assertIn("차단", res.stderr)
-
-    def test_engine_dispatch_on_win32_returns_block(self):
-        office = runtime("gg_office")
-        runtime("gg_office_win")
-        with mock.patch.object(sys, "platform", "win32"), \
-                mock.patch.object(subprocess, "run") as run_mock:
-            res_w = office._run_word_engine(Path("a.docx"), Path("b.pdf"))
-            res_x = office._run_excel_engine(Path("a.xlsx"), Path("b.pdf"))
-        run_mock.assert_not_called()
-        self.assertEqual(2, res_w.returncode)
-        self.assertEqual(2, res_x.returncode)
-
-    def test_macos_path_not_touched(self):
-        """The C6 block must not change the macOS dispatch branch."""
-        office = runtime("gg_office")
-        with mock.patch.object(sys, "platform", "darwin"), \
-                mock.patch.object(office, "ensure_word_foreground_session"), \
-                mock.patch.object(office, "run_osascript",
-                                  return_value=subprocess.CompletedProcess(
-                                      ["osascript"], 0, "", "")) as osh:
-            res = office._run_word_engine(Path("a.docx"), Path("b.pdf"))
-        osh.assert_called_once()
-        self.assertEqual(0, res.returncode)
 
 
 WIDE_TABLE_MD = """앞 문단이다.

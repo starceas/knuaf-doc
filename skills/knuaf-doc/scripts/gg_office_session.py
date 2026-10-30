@@ -13,6 +13,7 @@ refuses while another session still holds the lock.
 from __future__ import annotations
 
 import argparse
+from contextlib import contextmanager
 import json
 import os
 from pathlib import Path
@@ -23,19 +24,10 @@ import time
 
 SESSION_MARKER = "-- gg-office-owned-session-v1"
 SCHEMA = "gg-office-session/v1"
-EXCEL_RECALCULATION_HOLD = "owned_workbook_recalculation_unproven"
 AUDIT_NAME = "recovery-audit.jsonl"
 
 
 def _template(kind: str) -> str:
-    if kind == "excel":
-        # No exact-workbook dependency-graph calculation is proven. Even
-        # a direct template invocation must not enter Office operations.
-        return f'''{SESSION_MARKER}
-on run argv
-    error "{EXCEL_RECALCULATION_HOLD}" number -2700
-end run
-'''
     app = "Microsoft Word" if kind == "word" else "Microsoft Excel"
     noun = "document" if kind == "word" else "workbook"
     plural = "documents" if kind == "word" else "workbooks"
@@ -67,6 +59,19 @@ end run
                 set sessionStage to "saving"
                 {check}
                 save {target}
+"""
+    else:
+        operations = f"""
+                open workbook workbook file name jobHFS
+                set sessionStage to "updating"
+                {check}
+                calculate
+                set sessionStage to "saving"
+                {check}
+                save {target}
+                set sessionStage to "exporting"
+                {check}
+                save as worksheet 1 of {target} filename (item 2 of argv) file format PDF file format
 """
     return f"""{SESSION_MARKER}
 on requireOwned(jobHFS, jobPOSIX)
@@ -249,6 +254,49 @@ def retain_job(job_dir: Path) -> bool:
     return bool(data and data.get("cleanup") in {"preserved", "unknown"})
 
 
+@contextmanager
+def cleanup_guard(job_dir: Path):
+    """Hold the app guard while inspecting/deleting a confirmed-safe job."""
+    session = read_session(job_dir)
+    if not session or session.get("cleanup") not in {"closed", "not_attempted"}:
+        yield "office_session_not_closed"
+        return
+    guard_path = session.get("guard_path")
+    if not guard_path:
+        # Windows closed receipts have no POSIX app guard. A never-started
+        # macOS job needs its guard evidence before deletion is authorized.
+        yield None if session.get("cleanup") == "closed" else "office_guard_evidence_missing"
+        return
+    try:
+        import fcntl
+    except ImportError:
+        yield "office_guard_unavailable"
+        return
+    fd = None
+    reason = None
+    try:
+        fd = os.open(guard_path, os.O_RDWR | os.O_NOFOLLOW)
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            reason = "office_guard_not_regular"
+        else:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            if guard_record(os.read(fd, 65536)).get("state") != "idle":
+                reason = "office_guard_not_idle"
+            else:
+                # A session may have started between the first journal read
+                # and this lock acquisition. Its newer evidence wins.
+                current = read_session(job_dir)
+                if not current or current.get("cleanup") not in {"closed", "not_attempted"}:
+                    reason = "office_session_not_closed"
+    except (OSError, TypeError, ValueError):
+        reason = "office_guard_unavailable"
+    try:
+        yield reason
+    finally:
+        if fd is not None:
+            os.close(fd)
+
+
 def run_session(kind: str, script: str, args: list[str], timeout: int, *,
                 run_raw, prepare_word=None, guard_dir: Path | None = None):
     """Drive one freshly staged job under a per-user, per-app nonblocking lock.
@@ -257,10 +305,6 @@ def run_session(kind: str, script: str, args: list[str], timeout: int, *,
     directory. Production always uses one fixed guard directory independent
     of --workspace. Failed/unknown cleanup is never followed by compensation.
     """
-    if kind == "excel":
-        from gg_major_contract import OutputHeldError
-
-        raise OutputHeldError(EXCEL_RECALCULATION_HOLD)
     import fcntl  # Only called by the darwin dispatcher.
 
     work, pdf = (Path(a).absolute() for a in args)
@@ -276,7 +320,7 @@ def run_session(kind: str, script: str, args: list[str], timeout: int, *,
         (job / "office_session.json").write_text(
             json.dumps(evidence, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    def blocked(reason, recovery=None):
+    def blocked(reason, recovery=None, *, never_opened=False):
         # The command must land in the on-disk receipt, not only in the
         # returned object: a later flow that reads office_session.json
         # alone still has to find it.
@@ -286,15 +330,25 @@ def run_session(kind: str, script: str, args: list[str], timeout: int, *,
             text = (reason + "\n복구: " + recovery
                     + "\nOffice에 이 작업의 문서가 남아 있지 않은지 확인한 뒤 실행하세요. "
                       "이 명령은 문서를 닫거나 앱을 종료하거나 파일을 지우지 않습니다.")
-        record(reason, "not_attempted")
+        previous = None if never_opened else read_session(job)
+        if previous and previous.get("cleanup") not in {"closed", "not_attempted"}:
+            # A refusal is not a new cleanup result for an older run. Leave
+            # its durable unknown/preserved evidence untouched.
+            result_session = {**previous, "blocked_reason": reason}
+        else:
+            record(reason, "not_attempted")
+            result_session = dict(evidence)
         result = subprocess.CompletedProcess(["osascript"], 2, "", text)
-        result.office_session = dict(evidence)
+        result.office_session = result_session
         return result
 
     if (kind not in {"word", "excel"} or work.parent.name != "output"
             or not job.name.startswith("job-") or pdf.parent != work.parent
             or not work.is_file() or work.is_symlink() or pdf.exists()):
         raise ValueError("Office automation requires a fresh staged job/output copy")
+    previous_session = read_session(job)
+    if previous_session and previous_session.get("cleanup") not in {"closed", "not_attempted"}:
+        return blocked("previous_job_session_unclosed")
     guard_dir = guard_dir or default_guard_dir()
     guard_dir.mkdir(parents=True, exist_ok=True)
     lock_path = guard_dir / (kind + ".lock")
@@ -330,10 +384,14 @@ def run_session(kind: str, script: str, args: list[str], timeout: int, *,
         record("preflight", "unknown")
         try:
             preflight = run_raw(inventory_script(kind), [], timeout=min(timeout, 10))
-            if (preflight.returncode != 0 or
-                    preflight.stdout.strip() != "GG_OFFICE_INVENTORY|0"):
+            inventory = (preflight.stdout or "").strip()
+            if preflight.returncode != 0 or inventory != "GG_OFFICE_INVENTORY|0":
                 guard_state("idle")
-                return blocked("existing_or_unknown_office_documents")
+                count = inventory.removeprefix("GG_OFFICE_INVENTORY|")
+                reason = ("existing_documents" if preflight.returncode == 0
+                          and count.isdecimal() and int(count) > 0
+                          else "office_inventory_unknown")
+                return blocked(reason, never_opened=True)
             if kind == "word" and prepare_word is not None:
                 prepare_word()
             record("running", "unknown")
@@ -349,7 +407,11 @@ def run_session(kind: str, script: str, args: list[str], timeout: int, *,
                     record("close_or_event_result_unknown", "unknown")
                     guard_state("unknown")
                 else:
-                    record("engine_failed:" + stage, "preserved")
+                    message = detail.split("|", 1)[1] if "|" in detail else ""
+                    reason = ("existing_documents" if stage == "before_open"
+                              and message.startswith("existing_documents")
+                              else "engine_failed:" + stage)
+                    record(reason, "not_attempted" if stage == "before_open" else "preserved")
                     guard_state("idle")
             else:
                 record("engine_result_unconfirmed", "unknown")
