@@ -38,6 +38,8 @@ macOS Excel은 기존 전공 권한·재무 프로필 검증 뒤, 세션 가드 
 
 `scripts/gg_office.py jobs [--workspace <작업영역>]`는 `job-<12자리 hex>-<epoch>` 작업과 크기·파일 수·세션 상태·`cleanup_allowed`를 조회한다. `clean --job <작업ID> [<작업ID> ...] [--workspace <작업영역>]`는 지정한 작업만 삭제한다. `cleanup=closed|not_attempted` 증거가 있어야 하며 미기록·읽기 불가·preserved·unknown 세션, 심볼릭 링크, 외부 경로는 거절한다. 자동 청소·전체 삭제 옵션은 없다. `--recover word|excel`은 청소 승인이 아니며 보존된 작업은 그대로 남긴다.
 
+청소 판정은 작업 기록과 앱 가드를 함께 확인한다. macOS의 `not_attempted`는 **이번 정상 작업이 아직 열리지 않았음**을 뜻하며 앱 가드 증거가 없으면 청소를 허용하지 않는다. 가드가 busy·inflight·unknown·읽기 불가이면 목록은 `cleanup_allowed=false`, 청소는 거절한다. 청소 중에는 앱 가드 잠금을 유지한다. 이전 실행이 unknown·preserved로 남은 같은 작업의 재진입은 그 기록을 덮어쓰지 않으며, 재진입 거절이나 `--recover`만으로 이전 작업이 청소 가능해지지 않는다.
+
 ### 의존성·Kordoc 진단
 
 `gg_deps.py ensure`는 POSIX에서 실행 파일 symlink로 독립 Python의 상대 libpython 경로를 유지하고 Windows에서는 복사를 사용한다. pip 및 import/version probe는 부모·자식 UTF-8을 맞춘다.

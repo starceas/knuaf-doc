@@ -61,7 +61,7 @@ DEFAULT_GROUP_CONTAINER_DIR = _default_workspace_dir()
 
 from gg_office_session import (
     WORD_APPLESCRIPT_TEMPLATE, EXCEL_APPLESCRIPT_TEMPLATE, SESSION_MARKER,
-    run_session, read_session, retain_job,
+    run_session, read_session, retain_job, cleanup_guard,
 )
 
 
@@ -84,11 +84,12 @@ def list_jobs(workspace: str | Path | None = None) -> dict:
                     size += path.stat().st_size
                     files += 1
         session = read_session(job)
+        with cleanup_guard(job) as cleanup_reason:
+            cleanup_allowed = cleanup_reason is None
         jobs.append({"id": job.name, "bytes": size, "files": files,
                      "created_epoch": int(job.name.rsplit("-", 1)[1]),
                      "office_session": session,
-                     "cleanup_allowed": bool(session and session.get("cleanup")
-                                             in {"closed", "not_attempted"})})
+                     "cleanup_allowed": cleanup_allowed})
     return {"status": "pass", "workspace": str(root), "count": len(jobs),
             "bytes": sum(job["bytes"] for job in jobs), "jobs": jobs}
 
@@ -106,14 +107,13 @@ def clean_jobs(job_ids: list[str], workspace: str | Path | None = None) -> dict:
             reason = "invalid_job_path"
         else:
             check_no_symlinks(job)
-            session = read_session(job)
-            if not session or session.get("cleanup") not in {"closed", "not_attempted"}:
-                reason = "office_session_not_closed"
+            with cleanup_guard(job) as reason:
+                if reason is None:
+                    shutil.rmtree(job)
+                    deleted.append({"id": job_id})
         if reason:
             refused.append({"id": job_id, "reason": reason})
             continue
-        shutil.rmtree(job)
-        deleted.append({"id": job_id})
     return {"status": "pass" if not refused else "fail", "workspace": str(root),
             "deleted": deleted, "refused": refused}
 

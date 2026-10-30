@@ -98,13 +98,14 @@ class OfficeSessionTests(unittest.TestCase):
                  ("exporting", "owned_path_not_found")]
         for stage, reason in cases:
             with self.subTest(stage=stage, reason=reason):
+                work, pdf = self.job("failure-" + stage + "-" + reason)
                 raw = self.transport(self.result(rc=1, stdout="", stderr=
                     "execution error: GG_OFFICE_SESSION|" + stage + "|" + reason))
-                res = self.run_job(raw)
+                res = self.run_job(raw, work=work, pdf=pdf)
                 self.assertEqual(res.returncode, 1)
                 self.assertEqual(res.office_session["cleanup"], "preserved")
-                self.assertTrue(self.work.exists())
-                self.assertTrue(self.session.retain_job(self.work.parent.parent))
+                self.assertTrue(work.exists())
+                self.assertTrue(self.session.retain_job(work.parent.parent))
                 self.assert_no_compensation(raw)
 
     def test_close_error_is_unknown_and_blocks_next_workspace(self):
@@ -125,6 +126,7 @@ class OfficeSessionTests(unittest.TestCase):
             with self.subTest(when=when):
                 # Separate guard files for independent timeout scenarios.
                 self.guard = self.root / ("guards-" + when)
+                self.work, self.pdf = self.job("timeout-" + when)
                 replies = [TimeoutError("synthetic hung read")] if when == "preflight" else [
                     self.result("GG_OFFICE_INVENTORY|0"), TimeoutError("synthetic hung event")]
                 raw = mock.Mock(side_effect=replies)
@@ -285,6 +287,142 @@ class OfficeJobCleanupTests(unittest.TestCase):
             self.assertFalse((root / ids[0]).exists())
             for job_id in ids[1:]:
                 self.assertEqual((root / job_id / "payload").read_text(), "keep unless closed")
+
+    @unittest.skipUnless(fcntl is not None, "requires native POSIX Office guards")
+    def test_rejected_reentry_preserves_prior_session_and_refuses_cleanup(self):
+        office = runtime("gg_office")
+        session = runtime("gg_office_session")
+        for kind in ("word", "excel"):
+            for cleanup in ("unknown", "preserved"):
+                with self.subTest(kind=kind, cleanup=cleanup), tempfile.TemporaryDirectory() as tmp:
+                    root = Path(tmp).resolve()
+                    job = root / "job-0123456789ab-1"
+                    output = job / "output"
+                    output.mkdir(parents=True)
+                    work = output / ("synthetic.docx" if kind == "word" else "synthetic.xlsx")
+                    work.write_bytes(b"recovery copy")
+                    args = [str(work), str(output / "synthetic.pdf")]
+                    guard = root / "guards"
+                    template = (session.WORD_APPLESCRIPT_TEMPLATE if kind == "word"
+                                else session.EXCEL_APPLESCRIPT_TEMPLATE)
+                    outcome = (TimeoutError("synthetic timeout") if cleanup == "unknown" else
+                        subprocess.CompletedProcess([], 1, "", "GG_OFFICE_SESSION|saving|save_failed"))
+                    raw = mock.Mock(side_effect=[
+                        subprocess.CompletedProcess([], 0, "GG_OFFICE_INVENTORY|0", ""), outcome])
+                    if cleanup == "unknown":
+                        with self.assertRaises(TimeoutError):
+                            session.run_session(kind, template, args, 1, run_raw=raw, guard_dir=guard)
+                    else:
+                        session.run_session(kind, template, args, 1, run_raw=raw, guard_dir=guard)
+                    journal = job / "office_session.json"
+                    before = journal.read_bytes()
+                    retry_raw = mock.Mock(side_effect=AssertionError("Office must not execute"))
+                    retry = session.run_session(kind, template, args, 1,
+                                                run_raw=retry_raw, guard_dir=guard)
+                    self.assertEqual(retry.returncode, 2)
+                    self.assertEqual(retry.office_session["cleanup"], cleanup)
+                    self.assertEqual(journal.read_bytes(), before)
+                    retry_raw.assert_not_called()
+                    self.assertFalse(office.list_jobs(root)["jobs"][0]["cleanup_allowed"])
+                    self.assertEqual(office.clean_jobs([job.name], root)["status"], "fail")
+                    self.assertEqual(work.read_bytes(), b"recovery copy")
+
+    @unittest.skipUnless(fcntl is not None, "requires native POSIX Office guards")
+    def test_not_attempted_journal_cannot_override_unknown_or_busy_guard(self):
+        office = runtime("gg_office")
+        session = runtime("gg_office_session")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            job = root / "job-0123456789ab-1"
+            job.mkdir()
+            payload = job / "payload"
+            payload.write_bytes(b"recovery copy")
+            guard = root / "excel.lock"
+            (job / "office_session.json").write_text(json.dumps({
+                "schema": session.SCHEMA, "cleanup": "not_attempted", "guard_path": str(guard)}))
+            for state in ("unknown", "inflight"):
+                with self.subTest(state=state):
+                    guard.write_text(json.dumps({"state": state, "job_dir": str(job)}))
+                    self.assertFalse(office.list_jobs(root)["jobs"][0]["cleanup_allowed"])
+                    self.assertEqual(office.clean_jobs([job.name], root)["status"], "fail")
+                    self.assertEqual(payload.read_bytes(), b"recovery copy")
+            guard.write_text(json.dumps({"state": "idle", "job_dir": str(job)}))
+            with guard.open("r+") as handle:
+                fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                self.assertFalse(office.list_jobs(root)["jobs"][0]["cleanup_allowed"])
+                self.assertEqual(office.clean_jobs([job.name], root)["status"], "fail")
+            self.assertEqual(payload.read_bytes(), b"recovery copy")
+
+    @unittest.skipUnless(fcntl is not None, "requires native POSIX Office guards")
+    def test_new_never_opened_job_is_cleaned_under_its_idle_guard(self):
+        office = runtime("gg_office")
+        session = runtime("gg_office_session")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            job = root / "job-0123456789ab-1"
+            output = job / "output"
+            output.mkdir(parents=True)
+            work = output / "synthetic.xlsx"
+            work.write_bytes(b"never opened")
+            guard_dir = root / "guards"
+            raw = mock.Mock(return_value=subprocess.CompletedProcess([], 0, "GG_OFFICE_INVENTORY|1", ""))
+            result = session.run_session("excel", session.EXCEL_APPLESCRIPT_TEMPLATE,
+                [str(work), str(output / "synthetic.pdf")], 1, run_raw=raw, guard_dir=guard_dir)
+            self.assertEqual(result.office_session["cleanup"], "not_attempted")
+            self.assertTrue(office.list_jobs(root)["jobs"][0]["cleanup_allowed"])
+            remove = office.shutil.rmtree
+            def remove_under_guard(path):
+                with (guard_dir / "excel.lock").open("r+") as handle:
+                    with self.assertRaises(BlockingIOError):
+                        fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                remove(path)
+            with mock.patch.object(office.shutil, "rmtree", side_effect=remove_under_guard):
+                self.assertEqual(office.clean_jobs([job.name], root)["status"], "pass")
+            self.assertFalse(work.exists())
+
+
+class OfficeTemplateContractTests(unittest.TestCase):
+    def test_templates_use_path_for_every_write_and_no_error_cleanup(self):
+        session = runtime("gg_office_session")
+        for kind, template in (("word", session.WORD_APPLESCRIPT_TEMPLATE),
+                               ("excel", session.EXCEL_APPLESCRIPT_TEMPLATE)):
+            with self.subTest(kind=kind):
+                text = template.format(timeout=9)
+                noun = "document" if kind == "word" else "workbook"
+                plural = noun + "s"
+                target = (f"(first {noun} whose (full name is jobHFS or full name is jobPOSIX))"
+                          if kind == "word" else
+                          "(item 1 of (get workbooks whose (full name is jobHFS or full name is jobPOSIX)))")
+                self.assertNotIn("saving no", text)
+                self.assertNotIn("quit", text)
+                self.assertNotIn("active document", text)
+                self.assertNotIn("active workbook", text)
+                self.assertNotIn("document 1", text)
+                self.assertNotIn("workbook 1", text)
+                self.assertIn(f"if (count of {plural}) is not 0", text)
+                self.assertIn(f"if (count of {plural}) is not 1", text)
+                self.assertIn(f"get {plural} whose (full name is jobHFS or full name is jobPOSIX)", text)
+                self.assertIn(f"if read only of {target}", text)
+                writes = [line.strip() for line in text.splitlines()
+                          if line.strip().startswith(("repaginate ", "update field ", "save ", "close "))]
+                self.assertTrue(writes)
+                self.assertTrue(all(target in line for line in writes), writes)
+                self.assertIn("close " + target + " saving ask", text)
+                self.assertLess(text.index("if not (saved of " + target),
+                                text.index("close " + target))
+                error_handler = text.split("on error messageText", 1)[1]
+                for operation in ("close ", "save ", "calculate"):
+                    self.assertNotIn(operation, error_handler)
+                if kind == "excel":
+                    commands = [line.strip() for line in text.splitlines() if line.strip()]
+                    self.assertEqual(commands.count("calculate"), 1)
+                    calculation = commands.index("calculate")
+                    self.assertEqual(commands[calculation - 1], "my requireOwned(jobHFS, jobPOSIX)")
+                    self.assertLess(text.index('error "existing_documents"'), text.index("open workbook"))
+                    self.assertLess(text.index("open workbook"), text.index("                calculate\n"))
+                    self.assertLess(text.index("                calculate\n"), text.index("save " + target))
+                    self.assertLess(text.index("save " + target), text.index("save as worksheet 1 of " + target))
+                    self.assertIn("manual_calculation_not_supported", text)
 
 
 class WindowsOfficeOwnershipTests(unittest.TestCase):
