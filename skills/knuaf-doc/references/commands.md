@@ -1,7 +1,6 @@
 # 명령 목록
 
-**구현 파일을 열지 말 것.** `scripts/gg_core.py` 등 핵심 구현 파일은 수천 줄 분량이며 전체를 읽으면 컨텍스트 토큰이 가득 찬다.
-명령 표면과 JSON 계약은 이 문서가 전부 담는다. 여기에 명시되지 않은 옵션은 `--help`로 확인한다.
+`scripts/gg.py`의 명령·필수 인자·정본 쓰기 여부를 찾는 목차다. 출처·출력·정본 저장의 상세 형식은 각 행이 가리키는 계약 문서에 있다. 구현 파일(`scripts/gg_core.py` 등)은 수천 줄이라 전체를 읽으면 맥락이 가득 차므로 열지 않는다. 이 목차와 계약 문서에 없는 옵션은 `gg.py --help`로 확인한다.
 
 ## 실행 규칙
 
@@ -9,95 +8,156 @@
 <파이썬> <스킬>/scripts/gg.py <명령> <폴더> [옵션]
 ```
 
-- `<파이썬>`: `scripts/gg_deps.py python <폴더>` 또는 현재 환경의 Python 3.10+ 인터프리터. 3.9 이하면 `gg.py`가 차단 JSON을 출력하고 종료한다.
-- `<폴더>`: 대상 작업폴더의 경로.
-- 출력: 항상 JSON 한 덩어리(`indent=2`). 실패 시에도 JSON 형식으로 반환된다.
+- `<파이썬>`: `scripts/gg_deps.py python <폴더>` 또는 현재 환경의 Python 3.10+ 인터프리터. 3.9 이하면 `gg.py`가 차단 JSON을 출력하고 끝난다.
+- `<폴더>`: 대상 작업폴더. `rda-lookup`·`rda-propose`·`rda-apply`만 폴더 없이 실행한다.
+- 출력: 명령이 실행되면 JSON 한 덩어리다. 거절·보류도 JSON이며 `reason`에 사유가 있다. 명령 이름 오류 같은 인자 파싱 오류와 폴더 누락은 JSON이 아닌 오류 문장으로 끝난다.
 - 종료 코드:
-  - `0`: 정상 완료.
-  - `1`: `check`가 막는 항목(error 수준)을 찾음.
-  - `2`: 거절 또는 보류 (`{"status": "blocked"}` 또는 `{"status": "held"}`).
+  - `0`: 정상 완료(미리보기 포함).
+  - `1`: `check`가 막는 항목(error 수준)을 찾음. `source-refresh`가 미리보기·최신·재등록 외의 결과를 냄.
+  - `2`: 거절·보류(필수 인자 누락, 전공 보류, `not_committed` 등).
+  - `3`(`committed_cleanup_pending`): 그 연산의 대상(`target`)은 반영됐고 정리만 남았다. 대상이 정본이라는 뜻은 아니다.
+  - `4`(`indeterminate`): 그 연산의 대상이 반영됐는지 확정하지 못했다.
+
+3·4가 나오면 같은 명령을 바로 다시 실행하지 않는다. 결과 JSON의 `operation`·`target`·`request_id`·`reason`, 남은 정리(`cleanup_errors`), 보존된 경로(`preserved_paths`·`receipt_path`·`publication_state`)를 먼저 읽는다. 무엇을 확인할지는 `target`에 따라 다르다.
+
+| `target` | 대상 | 나오는 명령 | 확인할 것 |
+| --- | --- | --- | --- |
+| `canonical` | `project.json` | `init`, `apply`, `adopt-output`, `question`, `source-register`, `source-view`, `source-refresh` | `status`의 `revision`이 결과의 `revision`과 같고, 결과에 `request_id`가 있으면 `project.json`의 `requests`에 그 ID가 있어야 반영된 것이다. `init`은 `project.json`이 revision 0으로 있는지 본다. `source-register`·`source-view`의 `reason`이 `post_publish_verify_failed`·`committed_publication_missing`이면 정본이 아니라 `sources/registered/`의 등록 기록이나 `sources/generated/`의 뷰 파일이 확인 대상이다. |
+| `export` | 검토 산출물 발행 | `export` | 정본은 바뀌지 않는다. 정본 개정으로 판정하지 않는다. 발행 폴더 `build/<개정>/<kind>/`와 `cleanup_errors`의 경로를 확인한다. |
+| `requested_output` | 요청한 출력 경로 | `paper` | 정본은 바뀌지 않는다. `publication_state: managed_ready`이면 관리 사본은 `preserved_paths`에 있고 요청 경로에만 못 옮긴 것이다. |
+| `observation` | 검토 관측 기록 | `observe` | 정본은 바뀌지 않는다. `receipt_path`의 기록을 확인한다. |
+| `import_destination` | 새 작업폴더 | `import` | 원본 폴더는 바뀌지 않는다. `--out` 폴더와 `preserved_paths`를 확인한다. |
+
+`lock-upgrade`의 결과에는 `target`이 없다. `recovery_id`·`receipt_path`·`preserved_paths`를 확인하고, 이어서 진행할 때는 `--resume <recovery_id>`를 쓴다([locking](locking.md)). 남은 임시 파일·잠금·보존 사본은 자동으로 지우지 않는다.
 
 ## 전공 계약 (공용 규칙 B)
 
-논문 본문·재무 계산·산출물 출판(export, paper, build_hwpx 등)을 실행하는 모든 경로는 다음 두 조건이 모두 일치해야 한다:
-1. 명령 인자의 명시 전공 ID (`--major <전공ID>`)
+논문 본문·재무표·산출물을 만드는 경로(`export`, `paper`, `adopt-output`, `finance-tables`, `build_hwpx.py`, `build_docx.py`)는 다음 두 조건이 모두 맞아야 실행된다.
+
+1. 명령 인자의 명시 전공 ID(`--major <전공ID>`)
 2. 정본(`project.json`)의 유효한 `common.major_id` 사실 바인딩
 
-하나라도 누락되거나 불일치하면 실행되지 않고 `{"status": "held", "reason": "major_id_required"}` 등으로 보류된다.
+하나라도 없거나 다르면 아무것도 만들지 않고 exit 2로 멈춘다. `reason`은 `major_id_required`(`--major` 없음), `major_binding_required`(정본 바인딩 없음), `major_binding_mismatch`(둘이 다름) 등이다. 바인딩 등록은 아래 "apply 변경 JSON 계약"의 예제, 전공별 모듈 버전·지원 범위는 [majors](majors.md)를 따른다.
 
 ## gg.py 명령 표
 
-| 명령 | 주요 옵션 | 하는 일 · 반환 형식 |
-| --- | --- | --- |
-| `init` | — | `project.json`과 하위 폴더만 만든다. 기존 파일은 건드리지 않아 학생 자료가 든 폴더에도 그대로 쓴다. |
-| `doctor` | `[--probe]` | 설치·의존성·잠금 진단. `--probe`는 읽기 전용으로 잠금 상태 점유를 확인한다. |
-| `status` | — | `{revision, checks, tasks, completion, skill_ready, guideline_ready, user_finish_pending, professor_approval_pending}`. 한 번에 현재 상태를 본다. |
-| `next` | — | 다음에 할 작업 목록을 조회한다. |
-| `check` | `[--scope all\|submission]` | 검사 결과 배열을 반환한다. `submission`은 제출 관문(`gate`). 막는 항목이 있으면 종료 코드 1. |
-| `apply` | `--change <JSON경로>` `--expected-revision <N>` | 정본(`project.json`)을 수정하는 유일한 경로. 원자적 개정 증가를 보장한다. |
-| `export` | `[--kind draft\|review\|submission_candidate]` `--major <전공ID>` | 본문 검토 산출물을 생성한다. `{"status": "generated", "path": "...", "request_id": "..."}`. |
-| `question` | `--field <필드ID>` | 질문 상태 추적 `{action: ask\|help\|hold, field, notice}`. 질문 1회+도움 1회 후 해당 항목 보류. |
-| `bundle` | `--scope <절ID>` | 한 절의 검토 꾸러미(본문·원자료·사실·규칙·검토축)를 반환한다. |
-| `paper` | `--input <spec.json>` `[--out <경로>]` `[--body <본문MD>]` `--major <전공ID>` | 학교 양식 본문을 생성한다. |
-| `major-plan` | — | 전공별 질문·문서 계획·근거·재무 능력을 읽기 전용으로 조회한다. |
-| `adopt-output` | `--input <spec.json>` `--expected-revision <N>` `--major <전공ID>` | 생성·수정된 출력 파일(DOCX, XLSX 등)을 정본에 정식 산출물로 등록한다. |
-| `import` | `--out <새폴더>` `--offline-confirmed` | 기존 폴더의 마크다운/자료를 새 정본 작업폴더로 가져온다. |
-| `unlock` | — | 비정상 종료로 남은 잔여 잠금을 해제한다. |
-| `lock-upgrade` | — | 오프라인 전환 및 잠금 복구를 수행한다. |
-| `finance-tables` | `--xlsx <파일>` `[--out <경로>]` `--major specialty_crops` | 특용작물전공 Ⅳ장 재무표를 전개한다. |
-| `tidy` | `[--apply]` | 산출물 폴더 정리를 미리보기하거나 `--apply`로 실행한다. |
-| `source-scan` | — | 참고자료 폴더를 스캔하여 증거 목록을 만든다. |
-| `source-resolve` | `--source-hash <해시>` | 스캔된 출처의 서지·메타데이터를 확인한다. |
-| `source-register` | `--selection <JSON>` | 확인된 출처를 정본 출처로 등록한다. |
-| `source-refresh` | `--source <출처ID>` `[--reviewed]` `[--apply]` | 원자료 변경 시 미리보기 및 새 해시 재등록을 수행한다. |
-| `rda-lookup` | `--crop <작목>` `--region <지역>` | 농촌진흥청 농축산물 소득자료 지표를 조회한다. |
-| `rda-propose` | `--crop <작목>` | 소득자료 기반 시범값 대안을 생성한다. |
-| `rda-apply` | `--change <JSON>` | 소득자료 제안을 정본 사실로 반영한다. |
-| `rda-candidates` | `--crop <작목>` | 지원 전공·작목의 내장 통계 후보를 조회한다. |
+"정본 쓰기"는 `project.json`의 개정이 바뀌는지다. 산출물·수령증 파일만 쓰는 명령은 그 위치를 적었다.
+
+| 명령 | 필수 인자 | 선택 인자 | 정본 쓰기 | 하는 일 · 상세 |
+| --- | --- | --- | --- | --- |
+| `init` | — | — | 예 | `project.json`과 `.gg-lock`만 만든다. 폴더 안 기존 파일은 건드리지 않는다. 정본이 이미 있으면 `existing_canonical`로 거절한다. |
+| `import` | `--out <새폴더>` | `--offline-confirmed` | 새 폴더에만 | 기존 Markdown 폴더를 새 작업폴더로 옮긴다. 원본은 바꾸지 않는다. 잠금 프로토콜이 없는 구형 폴더는 `--offline-confirmed`가 있어야 한다. [section-ledger](section-ledger.md) |
+| `doctor` | — | `--probe` | 아니오 | 설치·의존성·잠금 진단. `--probe`는 잠금 점유를 읽기 전용으로 확인한다. [locking](locking.md) |
+| `status` | — | — | 아니오 | `{revision, checks, tasks, completion, skill_ready, guideline_ready, user_finish_pending, professor_approval_pending, professor_approval}` |
+| `next` | — | — | 아니오 | 다음 작업 목록 |
+| `check` | — | `--scope all\|submission` | 아니오 | 검사 결과 배열. `submission`은 제출 관문이다. 막는 항목이 있으면 exit 1. |
+| `apply` | `--change <JSON경로>` `--expected-revision <N>` | — | 예 | 정본 변경의 일반 경로. 형식은 아래 절과 [section-ledger](section-ledger.md#저장) |
+| `question` | `--field <필드ID>` | — | 예(질문 횟수) | `{action, field, notice}`. `action`은 `ask`·`help`·`deferred`·`reuse`다. `ask`·`help`면 질문 횟수를 정본에 기록한다. [mid-work-questions](mid-work-questions.md) |
+| `bundle` | `--scope <절ID>` | — | 아니오 | 한 절의 검토 꾸러미(본문·원자료·사실·규칙·검토축) |
+| `export` | `--major <전공ID>` | `--kind draft\|review\|submission_candidate`(기본 `review`) | 아니오(산출물 발행) | 검토 산출물을 발행한다. [outputs](outputs.md) |
+| `paper` | `--input <폴더 안 spec.json>` `--major <전공ID>` | `--out <폴더 안 경로>` `--body <폴더 안 본문MD>` | 아니오(산출물 발행) | 학교 양식 본문 생성. 기본 출력 `build/검토전_본문.md`. [outputs](outputs.md) |
+| `adopt-output` | `--input <폴더 안 spec.json>` `--expected-revision <N>` `--major <전공ID>` | `--request-id <ID>` | 예 | 출력 파일을 `outputs`에 등록하는 유일한 경로. [source-contract](source-contract.md#출력-등록adopt-output과-동반-파일) |
+| `observe` | `--input <폴더 안 관측JSON>` `--observer <어댑터ID>` | — | 아니오(관측 기록 발행) | 실행 어댑터의 검토 관측 기록을 남긴다. [section-ledger](section-ledger.md) |
+| `unlock` | — | — | 아니오 | 비정상 종료로 남은 잠금 소유 기록만 정리한다. [locking](locking.md) |
+| `lock-upgrade` | `--offline-confirmed` | `--resume <복구ID>` | 아니오(잠금 구조) | 구형 잠금의 오프라인 전환·복구. 편집 중인 프로세스가 없다고 사용자가 확인한 뒤에만 쓴다. [locking](locking.md) |
+| `major-plan` | — | `--major <전공ID>`(바인딩과 같아야 함) | 아니오 | 바인딩된 전공의 질문·문서 계획·근거·재무 능력. 바인딩이 없거나 무효면 exit 2와 `status: held`. [majors](majors.md) |
+| `insect-plan` | — | `--input <폴더 안 선택.json>` | 아니오 | 산업곤충 바인딩 프로젝트 전용. [industrial-insects](industrial-insects/README.md) |
+| `insect-evidence` | `--pdf <R0>` `--xlsx <R1>` | — | 아니오 | 산업곤충 공식 통계 원자료 근거 검토. [industrial-insects](industrial-insects/README.md) |
+| `rda-candidates` | `--crop <작목>` `--region <지역>` | `--rda-kind` `--year` `--form` `--unit` `--use-scope` `--audit-key <JSON>` | 아니오 | 정본 바인딩 전공의 승인 후보 조회(작성 경로). [rda-benchmark](rda-benchmark.md) |
+| `rda-lookup` | `--crop <작목>` `--region <지역>` (폴더 없음) | `--major` `--rda-kind` `--year` `--form` `--allow-web` `--audit-key <JSON>` | 아니오 | 원자료 감사용 조회. 본문 승인 경로가 아니다. [rda-benchmark](rda-benchmark.md) |
+| `rda-propose` | `--input <제안입력JSON경로>` (폴더 없음) | `--packs-dir` `--catalog` | 아니오 | 입력 JSON의 `pack_revision`·`target`·`selection`으로 연구 제안을 만든다. [rda-benchmark](rda-benchmark.md#6-연구-제안--정본-반영-propose--apply) |
+| `rda-apply` | `--input <제안JSON경로>` `--expected-revision <팩 개정>` `--target-current <대상JSON>` (폴더 없음) | `--packs-dir` | 아니오 | 제안을 다시 대조해 `ready`·`stale`·`rejected`를 판정한다. `ready`의 `fact`는 정본에 쓰이지 않으므로 반영하려면 `apply`로 따로 제출한다. `--expected-revision`은 정본 개정이 아니라 제안에 묶인 팩 개정이다. |
+| `source-scan` | `--root <자료폴더>` `--registry <경로>` `--key-catalog <경로>` `--policy <경로>` | `--requested-use <JSON>` | 아니오(`sources/intake/` 수령증) | 자료 폴더를 스캔해 봉인 수령증을 남긴다. 등록은 하지 않는다. [source-intake](source-intake.md#폴더-등록-방식) |
+| `source-resolve` | `--source-hash <sha256>` `--requested-use <JSON>` `--registry <경로>` `--key-catalog <경로>` | `--catalog` `--packs-dir` | 아니오 | 자료가 요청 용도에 쓸 수 있는지 판정한다. [source-intake](source-intake.md#폴더-등록-방식) |
+| `source-register` | `--selection <JSON>` `--expected-revision <N>` `--request-id <ID>` `--registry <경로>` `--key-catalog <경로>` | `--external-root`(`scanned_external`이면 필수) `--catalog` `--packs-dir` | 예 | 사용자가 고른 자료만 정본 출처로 등록한다. [source-intake](source-intake.md#폴더-등록-방식) |
+| `source-view` | `--request-id <ID>` | — | 아니오(`sources/generated/` 뷰) | 등록 요청의 출처 뷰를 발행한다. [source-intake](source-intake.md#폴더-등록-방식) |
+| `source-refresh` | `--source <출처ID>` | `--reviewed` `--apply` `--expected-revision <N>` `--request-id <ID>` | `--reviewed --apply`일 때만 | 원자료 바이트가 바뀐 출처의 미리보기와 재등록. SKILL.md "검사 차단 복구" |
+| `finance-tables` | `--xlsx <재계산 통합문서>` `--major specialty_crops` | `--input <폴더 안 각주.json>` `--out <폴더 안 경로>` | 아니오(산출물) | 특용작물 Ⅳ장 재무표 전개. 기본 출력 `build/finance-tables.md`, 기존 파일은 덮어쓰지 않는다. [specialty-crops/finance-flow](specialty-crops/finance-flow.md) |
+| `tidy` | — | `--apply` | 아니오(`--apply`는 `.gg-work` 정리) | 산출물 폴더 정리 미리보기. 사용자 확인 뒤에만 `--apply`. [output-hygiene](output-hygiene.md) |
+
+`--selection`·`--requested-use`·`--audit-key`·`--target-current`는 파일 경로가 아니라 JSON 문자열이다.
 
 ## apply 변경 JSON 계약
 
-정본을 수정할 때는 변경 명세 JSON 파일을 만들어 `gg.py apply <폴더> --change <JSON경로> --expected-revision <N>`으로 전달한다.
+변경 객체는 `request_id`와 `ops` 배열이다. 각 op는 `{"collection": <컬렉션>, "value": <레코드 객체>}`이며 레코드 ID는 `value.id`다. 컬렉션은 `sources`·`facts`·`sections`·`questions`·`tasks`·`reviews`·`rules`·`approvals`·`outputs`다. 같은 ID는 새 개정으로 갱신되고, 레코드 삭제 연산은 없다.
 
-### JSON 형식
+- `revision`은 서버가 매긴다. `value`에 적지 않는다.
+- `--expected-revision`이 현재 개정과 다르면 `revision_conflict`로 거절한다. 같은 `request_id`·같은 내용의 재실행은 개정을 바꾸지 않고 현재 정본을 돌려주며, 같은 `request_id`에 다른 내용은 `request_id_conflict`로 거절한다.
+- 성공하면 반영된 정본 전체를 JSON으로 출력한다. 거절은 exit 2와 `reason`을 가진 JSON이고 정본은 바뀌지 않는다.
+- `sources`는 `path` 파일의 해시를, `sections`는 DRAFT 경계 안 본문의 해시를 서버가 계산한다. 경로는 작업폴더 기준 상대경로다.
+- `outputs`는 새로 만들거나 고칠 수 없다(`adopt_output_required`). `adopt-output`을 쓴다. 기존 출력에 `superseded_by`만 처음 연결하는 갱신은 예외다.
+- 사실·규칙·검토·승인 레코드의 필드 조건은 [section-ledger](section-ledger.md), 출처 레코드는 [source-contract](source-contract.md#출처-레코드), 재무 사실은 [finance-semantics](finance-semantics.md)를 따른다.
+
+### 예제: 새 작업폴더에 전공 바인딩 등록
+
+학생 원답변 파일 `interview/major-answer.txt`(경로는 예시)가 작업폴더 안에 있다.
+
+```text
+전공: 특용작물전공 (specialty_crops)
+```
+
+변경 파일 `bind-major.json`:
 
 ```json
 {
-  "request_id": "고유_작업_식별자",
+  "request_id": "bind-major-specialty-crops",
   "ops": [
     {
-      "op": "set_fact",
-      "fact_id": "common.major_id",
-      "value": "specialty_crops",
-      "value_type": "text",
-      "unit": "",
-      "scope": "project",
-      "answer_state": "provided",
-      "verification": "claim_supported",
-      "source_refs": [
-        {
-          "id": "source-interview-01",
-          "revision": 1,
-          "locator": "q2-major"
+      "collection": "sources",
+      "value": {
+        "id": "major-answer",
+        "path": "interview/major-answer.txt",
+        "claims": {
+          "major": {
+            "field_id": "common.major_id",
+            "value": "specialty_crops",
+            "unit": "",
+            "period": null,
+            "scope": "project",
+            "answer_state": "provided",
+            "kind": "reported_fact",
+            "locator": "line 1",
+            "quote": "전공: 특용작물전공 (specialty_crops)"
+          }
         }
-      ]
+      }
+    },
+    {
+      "collection": "facts",
+      "value": {
+        "id": "selected_major",
+        "field_id": "common.major_id",
+        "kind": "reported_fact",
+        "value": "specialty_crops",
+        "value_type": "text",
+        "unit": "",
+        "period": null,
+        "scope": "project",
+        "answer_state": "provided",
+        "verification": "claim_supported",
+        "module_version": "1.0.0",
+        "source_refs": [
+          {"id": "major-answer", "revision": 1, "locator": "line 1", "claim_id": "major"}
+        ]
+      }
     }
   ]
 }
 ```
 
-### 주요 연산 종류 (`op`)
+새 폴더에서 실행한다. `apply`의 `--expected-revision`은 `init` 직후라 0이다.
 
-- `set_fact`: 사실(fact) 등록 또는 갱신. `fact_id`, `value`, `value_type`, `answer_state`, `verification`, `source_refs` 포함.
-- `set_source`: 원자료 출처(source) 등록. `id`, `kind`, `locator`, `sha256` 포함.
-- `set_section`: 본문 절(section) 등록 또는 갱신. `section_id`, `title`, `order`, `path`, `claims` 포함.
-- `set_rule`: 학교 지침 규칙(rule) 상태 연결. `rule_id`, `applicable`, `locations` 포함.
-- `set_task`: 작업 이력(task) 등록. `id`, `source_refs`, `target_refs` 포함.
-- `remove_fact` / `remove_source` / `remove_section`: 레코드 제거.
+```sh
+python3 <스킬>/scripts/gg.py init <폴더>
+python3 <스킬>/scripts/gg.py apply <폴더> --change bind-major.json --expected-revision 0
+python3 <스킬>/scripts/gg.py major-plan <폴더>
+```
+
+`major-plan`의 `binding.major_id`가 `specialty_crops`이면 바인딩된 것이다. `module_version`은 [majors](majors.md)의 해당 전공 모듈 버전과 같아야 한다. 사실의 `source_refs`는 원답변 출처의 현재 개정·위치·`claim_id`를 가리키고, 출처의 `claims`는 사실의 항목·값·단위·기간·범위·답변 상태·종류와 같아야 한다. 이 예제만으로는 `check`의 `claim_review` 차단이 남는다. 원문 대조 검토를 출처의 `claim_review`로 연결해야 풀리며, 그 검토 기록은 지어내지 않는다([finance-semantics](finance-semantics.md)).
 
 ## 주요 보조 스크립트
 
-- `python3 scripts/build_hwpx.py <폴더> --major <전공ID>`: HWPX 검토본 생성 (여백·쪽번호·신명조 후처리).
-- `python3 scripts/build_docx.py <폴더> --in <MD> --out <DOCX> --major <전공ID>`: DOCX 빌드.
-- `python3 scripts/gg_deps.py ensure <폴더>`: 독립 venv 및 런타임 의존성 확인.
-- `python3 scripts/gg_update.py auto`: 자체 업데이트 자동 확인 및 안전 복구.
+- `python3 scripts/build_hwpx.py <폴더> --major <전공ID>`: HWPX 검토본 생성(여백·쪽번호·신명조 후처리). [outputs](outputs.md)
+- `python3 scripts/build_docx.py <폴더> --in <MD> --out <DOCX> --major <전공ID>`: DOCX 검토본 빌드.
+- `python3 scripts/gg_deps.py ensure <폴더>`: 작업폴더 venv와 런타임 의존성 준비.
+- `python3 scripts/gg_update.py auto`: 업데이트 확인·적용·복구. [update](update.md)

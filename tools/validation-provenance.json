@@ -129,7 +129,7 @@
       "origin": "new"
     },
     "tests/test_doc_guide_contracts.py": {
-      "note": "P0-2 PR-A: contract tests for document and interview guidance (U01~U05).",
+      "note": "P0-2 PR-A: executable contract tests for the commands.md index (CLI surface, required flags, apply example), U01 init, and the #58 forbidden-identifier scan (digests only).",
       "origin": "new"
     },
     "tests/test_excel_template_guard.py": {
