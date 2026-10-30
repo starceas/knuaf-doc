@@ -562,9 +562,9 @@ class PackageAndIdentificationFailureTests(ContractCase):
                 self.assertEqual(json.loads(out.getvalue())["status"], "match")
         with self.assertRaisesRegex(ValueError, "layout_variant_unsupported"):
             self.patch.materialize_d8(self.other, prepare_observations=True)
-        self.assertEqual(self.tpl.inspect_source(self.other, None, None)["mapStatus"],
+        self.assertEqual(self.tpl.inspect_source(self.other, None, None, legacy_map=True)["mapStatus"],
                          "manual_map_required")
-        self.assertEqual(self.tpl.inspect_source(self.x01, None, None)["mapStatus"], "ok")
+        self.assertEqual(self.tpl.inspect_source(self.x01, None, None, legacy_map=True)["mapStatus"], "ok")
         receipt = self.print_copy(self.x01, "x01print")
         self.assertEqual(receipt["changes"][0]["sheet"], S6)
 

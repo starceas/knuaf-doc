@@ -4,9 +4,51 @@ Source identity, author/authority separation, physical sheet ranges, and task
 records follow [source-contract.md](source-contract.md). This page documents
 only the reusable CLI contract.
 
-`scripts/gg_excel_template.py` creates a local, source-bound blank copy of an
-existing school workbook. It does not generate a replacement workbook and does
-not correct legacy formulas.
+`scripts/gg_excel_template.py create` copies an existing workbook byte-for-byte;
+`inspect` prepares a source-bound investigation map; `clear` creates a reviewed
+blank copy. None generates a replacement workbook or repairs legacy formulas.
+
+## Source selection and the bundled X01 derivative
+
+An explicit `--source` always wins. Its values are preserved by `create`;
+a missing, damaged or unreadable selected file never triggers a bundled fallback.
+All workbook creation/clearing requires `--project` and an explicit `--major`
+matching the current canonical major binding. Unsupported major outputs remain held.
+
+Without `--source`, explicitly select `--template-ref X01` under the existing
+H01/X01/X02 contract. Specialty crops uses X01 unless the user needs X02's
+perennial-plant account. H01, X02 and an unresolved selection require a
+student-supplied form (`held/student_template_required`), not silent X01.
+Horticultural-environment systems keeps its H01 base even if X01 is requested.
+Other majors additionally need `--reference-inventory <JSON>`: the existing
+workbook registry's completed, verified survey must confirm no major XLSX.
+An incomplete survey or an existing major workbook does not establish absence.
+This selection never grants a major an unsupported workbook capability.
+
+The asset is `assets/templates/finance-template.xlsx`, registered separately in
+`workbook-reference-set.json` under `derived_assets`, not as original X01 bytes.
+Its SHA-256 is `6d3c9fe5e5992108a8bab18c0098edb0d808f0d14c099878a53939b17de88c7d`.
+It is the approved value-cleared app asset copied unchanged: 1,643 formula cells,
+1,175 explicit formula texts compared with X01 without differences, and 468
+unexpanded shared-formula followers. This is not recalculation or formula approval.
+
+```text
+python3 scripts/gg_excel_template.py create \
+  --project /path/to/project --major specialty_crops --template-ref X01 \
+  --out build/template-review/finance.xlsx
+
+python3 scripts/gg_excel_template.py create \
+  --project /path/to/project --major specialty_crops \
+  --source "/path/to/student.xlsx" --out build/template-review/student-copy.xlsx
+```
+
+`create` opens the destination exclusively (no overwrite, including an existing
+symlink). Its JSON receipt on stdout contains `status: template_copy`, `path`,
+`source.path/sha256/kind` (`student` or `bundled`), `output.sha256`, and
+`output.calculationStatus: not_verified`, plus the major authorization.
+Copying does not clear student inputs; inspection and clearing are separate.
+
+## Investigation and reviewed clearing
 
 ```text
 python3 scripts/gg_excel_template.py inspect \
@@ -14,17 +56,43 @@ python3 scripts/gg_excel_template.py inspect \
   --out-map build/template-review/source-map.json \
   --report build/template-review/inspect-report.json
 
+# Review the inventory map first, as described below; do not feed it straight to clear.
+
 python3 scripts/gg_excel_template.py clear \
   --source "/path/to/source.xlsx" \
   --map build/template-review/source-map.json \
   --out build/template-review/blank-v1.xlsx \
-  --receipt build/template-review/receipt-v1.json
+  --receipt build/template-review/receipt-v1.json \
+  --project /path/to/project --major specialty_crops
 ```
 
-`inspect` records the source SHA-256, all observed cells/formulas, sheet order,
-and an explicit per-sheet map. The map records `semanticField`, `reason`, and
-`action` (`clear` or `preserve`). `clear` refuses a source whose SHA-256 no
-longer matches the map and refuses to overwrite an existing output or receipt.
+`inspect` records the actual source SHA-256, stored cells/formulas and sheet
+order. By default, `entriesSource: inventory` / `layout.mapOrigin: inventory`
+is an investigation map with `mapStatus: manual_map_required`. Literal cells
+are unapproved `input_candidate` entries (`action: preserve`, `explicit: false`);
+formulas, including shared followers without formula text, and merged non-anchors
+are excluded. No language/column heuristic approves a literal as an input.
+
+Before `clear`, review every candidate, assign semantic fields/reasons and
+explicit `clear`/`preserve` actions, then save a separately reviewed map with
+`layout: {variant: <detected x01|x02|unknown>, mapOrigin: reviewed_custom}` and
+`mapStatus: ok`. Editing only the status never makes an inventory map executable.
+The map remains bound to the exact source hash and re-detected layout.
+
+`inspect --legacy-map` explicitly requests the existing fixed X01 map
+(`entriesSource: legacy`, `mapOrigin: default_x01`). It does not become an X02
+or H01 map: X02/unknown still returns `manual_map_required` and `clear` refuses
+the fixed X01 coordinates. Original hash and major guards remain in force.
+The inspect report includes layout, map status/reason and entry origin, not
+just cell counts. `clear` refuses stale source hashes and existing output/receipt.
+
+Missing mapped cell nodes fail by default, before any workbook or receipt is
+published. `clear --allow-missing` explicitly permits a review-only partial copy;
+the receipt lists every missing `sheet`/`cell` in `missingCells`, sets
+`output.status: partial` and `publicationReady: false`; stdout also reports
+`missing`. This includes mapped preserve cells. Missing sheets, conflicting
+actions, source-hash/layout errors and missing major authorization still fail.
+The flag neither approves a candidate map nor authorizes submission.
 
 The copy operation removes values only from mapped non-formula cells. Formula
 expressions, cell styles, merged ranges, sheet names/order, print settings,
@@ -454,6 +522,14 @@ this option with a legacy generated-workbook `--spec`.
 Native PDF inspection may reveal orphaned columns or split table blocks even when all cells and formulas are correct. Prepare a `gg-xlsx-print-map/v1` map bound to `source.sha256`, with explicit sheet names, `fit_width` (positive integer), `fit_height` (0 for unlimited or positive), optional orientation and existing print-area rectangle, optional `row_breaks` (unique positive row numbers; `fit_height: 0`) to keep complete table blocks together, and a reason for each change. Run `python3 scripts/gg_excel_print.py --source copy.xlsx --map print-map.json --out print-copy.xlsx --receipt print-receipt.json` before typed input filling. It changes only print settings in a new copy and records the change; render every final PDF page to judge readability. Do not shrink a long table to an unreadable page merely to reduce page count. An original exemplar footer, year, crop, source attribution or percentage is editable case data when it describes the previous author's case: explicitly replace it from current evidence and record provenance, instead of retaining a misleading example claim.
 
 A plan may also provide explicit `row_heights` and `wrap_cells` entries when a native preview exposes a local readability defect. `row_heights` is a list of `{ "row": <existing row number>, "height": <finite number> }`; heights must be greater than 0 and at most Excel's 409.5-point limit. `wrap_cells` is a list of exact existing cell references (for example `B6`). The utility rejects missing rows/cells, duplicate targets, out-of-range values, and merged non-anchor cells. Wrapping clones the selected cell's `xf`, appends a unique style record, and sets `alignment wrapText="1"`; it never mutates a shared style or cell value/formula. Receipts list row-height and style changes separately while `cell_changes` remains zero. No global row or column formatting is inferred. If `cellXfs` uses an `AlternateContent` with more than one effective `xf` branch (for example both `Choice` and `Fallback`), wrapping is refused because branch selection is application-dependent; no style is guessed.
+
+`number_formats` alone preserves the existing alignment, including explicit
+`wrapText=false`, `wrapText=true`, or no wrap attribute; it does not enable
+wrapping. Only `wrap_cells`/`source_note_cells` requests wrapping. For a
+number-only change the receipt's `wrap_text: null` means unchanged, not disabled.
+New print-title defined names are inserted in their OOXML `definedNames`
+container after predecessors such as `externalReferences` and before `calcPr`
+and later workbook elements. Existing names and X01 protected-sheet rules remain.
 
 ### Meaning and yearly references
 

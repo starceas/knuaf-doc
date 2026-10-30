@@ -78,7 +78,7 @@ class InspectLayoutTests(ContractCase):
         with tempfile.TemporaryDirectory() as tmp:
             src = Path(tmp) / "x01.xlsx"
             _workbook(src, variant="x01")
-            r = tpl.inspect_source(src, None, None)
+            r = tpl.inspect_source(src, None, None, legacy_map=True)
             self.assertEqual(r["layout"],
                              {"variant": "x01",
                               "mapOrigin": "default_x01"})
@@ -90,7 +90,7 @@ class InspectLayoutTests(ContractCase):
         with tempfile.TemporaryDirectory() as tmp:
             src = Path(tmp) / "x02.xlsx"
             _workbook(src, variant="x02")
-            r = tpl.inspect_source(src, None, None)
+            r = tpl.inspect_source(src, None, None, legacy_map=True)
             self.assertEqual(r["layout"]["variant"], "x02")
             self.assertEqual(r["mapStatus"], "manual_map_required")
             self.assertEqual(r["mapReason"], "layout_variant_unsupported")
