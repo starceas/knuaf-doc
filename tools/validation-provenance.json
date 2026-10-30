@@ -4,6 +4,30 @@
   "origin": "new"
  },
  "files": {
+  "skills/knuaf-doc/scripts/gg_core.py": {
+   "origin": "transformed",
+   "note": "P0-2 PR-C U06/U10/U11: field-specific fact enum diagnostics, guarded verified history/restore with new revisions and output invalidation, shared doctor using PR-D public diagnose."
+  },
+  "skills/knuaf-doc/scripts/gg.py": {
+   "origin": "transformed",
+   "note": "P0-2 PR-C U11: CLI doctor delegates to the public core doctor; existing lock APIs remain in gg_lock."
+  },
+  "skills/knuaf-doc/references/mid-work-questions.md": {
+   "origin": "transformed",
+   "note": "P0-2 PR-C U06: document independent fact enums and sanitized field diagnostics without weakening fact-semantics."
+  },
+  "skills/knuaf-doc/references/section-ledger.md": {
+   "origin": "transformed",
+   "note": "P0-2 PR-C U10/U11: document verified restore, irreversible receipt preservation, diagnostic APIs and v2 lock callsite cutover."
+  },
+  "tests/test_core_history.py": {
+   "origin": "new",
+   "note": "P0-2 PR-C: synthetic enum rejection, read-only history, restore integrity/guard/conflict/retry and actual commit-state fault regressions."
+  },
+  "tests/test_core_doctor.py": {
+   "origin": "new",
+   "note": "P0-2 PR-C: real lock inspection/probe and CLI safety; damaged/legacy controls remain untouched; project-probe failure preserves explicitly unavailable CLI-interpreter fallback detection."
+  },
   ".github/workflows/validation.yml": {
    "note": "Per-PR CI running the same integrity check and validation runner. repair-n1/N2: receipt path read via os.environ['RUNNER_TEMP'] inside the quoted heredoc. P2-R2: strict report consumer step enforces the ok_platform_scoped/default-scope contract (sole P2-L09-native pending gate, full=false, platform=true, no unexpected/unapproved skips). P2-R3: consumer hardened to independently recompute the report — strict JSON (duplicate keys/nonfinite rejected), present+typed fields, non-bool nonnegative integer counts, framework reconciliation (was_successful/outcomes/testsRun==tests_run==len(entries)/skipped==1), per-entry unique-id + category tally equal to counters with zero failed, declared H9-only known_baseline_defect pairs, fixture_events empty/failure_events 0, only parent-matched subtest_success events, and the exact approved-skip rule string — no trust in accounting.errors or top-level summaries. P2-R4: three consumer consistency holes closed — known_baseline_defect requires the exact (test, defect=H9, gate=P3) triple per regression_inventory (arbitrary nonempty gate rejected); subtest ids must match the complete emitted parent + ' (' + nonempty + ')' shape (unclosed/empty/wrong-prefix rejected, no repr parsing); the exact native withheld skip parent may carry no subtest events at all. All prior strict JSON/type/framework/entries/fixture/gate checks preserved. P2-R5: H9 required-presence invariant enforced independently of supplied totals — exact test id must occur exactly once carrying category known_baseline_defect + defect H9 + gate P3; runtime.known_baseline_defects pinned to integer 1; relabel/ missing/substitute/duplicate with favorable counters all reject. | Windows native publication: 3.10/3.14 lifecycle matrix and artifact reports; existing Ubuntu strict consumer and Windows structural preserved.",
    "origin": "new"

@@ -24,19 +24,69 @@
 
 현재 코어는 외부 편집 파일의 해시를 감지한다. 원문·DRAFT 파일 자체의 편집은 정본 트랜잭션과 별도이므로 단일 파일쓰기 주체를 유지하고 버전 파일을 먼저 저장해 등록한다. 불완전한 작업은 자동 승인하지 않는다.
 
-> 이력(구형 잠금 기록): 아래 두 단락은 잠금 프로토콜 도입 전의 보존 기록이다.
-> 현재 잠금 구조·점유 관측(`doctor --probe`)·해제 절차는
-> [locking.md](locking.md)를 따른다.
->
-> 잠금이 남으면 doctor와 실행 프로세스를 확인한다. 살아 있는 작성자의 잠금을 삭제하지 않는다. 임시파일·이전 개정·현재 정본을 대조하고 사용자의 원문을 보존한 뒤 복구한다. 자동 잠금 탈취는 하지 않는다.
->
-> S6 후보의 잠금은 PID뿐 아니라 호스트·획득별 토큰과 디렉터리 식별자를
-> 대조한다. 교체되거나 소유 기록이 불명확한 잠금은 보존한다. 소유 기록
-> 작성은 기존 원자적 쓰기를 사용하며 실패 시 자기 임시파일과 빈 잠금
-> 디렉터리를 정리한다. 소유 파일 해제는 획득한 디렉터리 핸들에 묶는다.
-> 강제종료 후 남은
-> 잠금은 자동 해제하지 않는다. 이 기록은 악의적인 동등 권한 사용자의
-> 파일 위조를 막는 인증 수단이 아니다.
+### 개정 조회·복원 API
+
+`gg_core.history(root) -> list[dict]`는 현재 정본의 history와 마지막 현재
+개정을 반환한다. 과거 행에는 `revision`, `hash`, `request_id`,
+`snapshot_path`, `snapshot_ok`가 있다. `snapshot_ok=true`는 정본에 기록된
+해시·스키마·개정·프로젝트 식별자·요청 원장 검사를 통과했다는 뜻이며
+내용 승인이나 전체 원자료 복구의 증거는 아니다. 현재 행은 `current=true`,
+`snapshot_path=null`, `snapshot_ok=null`이다. 조회는 파일을 쓰지 않는다.
+
+`gg_core.restore(root, revision, expected_revision) -> dict`는 현재보다
+앞선, 이력에 단 하나로 식별되고 검증된 정본 스냅샷만 받는다. 두 개정
+인자는 bool이 아닌 0 이상의 정수다. v2 guard를 실제로 보유한 동안
+최신 개정을 확인하고 현재 정본을 `migration/revision-N.json`에 보존한 뒤
+현행 커밋 경로로 **N+1 새 개정**을 저장한다. 같은 위치에 다른 스냅샷이
+있으면 덮어쓰지 않는다. 해시 불일치·이력 누락/중복·다른 프로젝트·개정
+충돌·진행 중인 복구는 거절한다.
+
+현재 요청 원장과 history는 되감지 않는다. 요청 ID는
+`restore:N->R`이며 동일 복원 재호출은 이미 저장한 결과를 반환하고 새
+개정을 만들지 않는다. 현행 두 필드 `{hash,revision}` 요청 형식을 사용하며
+출판 영수증과의 요청 ID 충돌도 거절한다.
+
+절 파일·원자료·build/·출판 영수증은 건드리지 않는다. 현재 출력 원장은
+보존하고 모든 검토·승인·출력을 stale로 만든다. 복원 레코드 개정과 유효한
+내부 참조 개정은 N+1로 올리며, 이전 검토 지문은 재작성하지 않는다.
+따라서 뒤의 빈 apply로 이전 검토를 다시 현재로 만들 수 없다. 이미
+어긋난 참조·파일 해시는 조용히 고치지 않으며 기존 검사에서 드러난다.
+복원된 외부 작업 execution은 `unknown`으로 바꾸고 자동 재발행하지 않는다.
+
+성공 결과는 `operation=restore`, `target=canonical`,
+`commit_state=committed`, `revision`, `request_id`, `restored_from`,
+`pre_restore_snapshot`을 포함한다. 비정상 커밋은 `OperationError.result`의
+`not_committed` / `committed_cleanup_pending` / `indeterminate`를 구분한다.
+정본 쓰기 뒤 예외는 디스크 재조회로 판정하며 `preserved_paths`에 보존된
+스냅샷을 알린다. 복원 CLI는 없으며 앱/독립 Python 호출이 이 API를 사용한다.
+
+### 공통 진단·잠금 공개 계약
+
+`gg_core.doctor(root, *, probe=False) -> dict`를
+`gg.py doctor <폴더> [--probe]`와 앱에서 공통으로 사용한다. 키는
+`python`, `dependencies`, `deps`, `kordoc`, `lock_present`, `lock`,
+`snapshots`, `orphan_files`, `recalculation`, `render`, `hwp`, `web`,
+`model_calls`, `notice`다. 의존성은 프로젝트 인터프리터의 실제 probe를
+재사용한다. probe 실패 시 기존 CLI처럼 현재 인터프리터 설치 탐지로
+fallback하되 `deps.status=unavailable`, `selected_python`과 notice로
+구분하며 프로젝트 probe 성공으로 표시하지 않는다. 손상된 정본도
+잠금 진단은 가능하며 snapshots는 `status=unavailable`과 원인 종류를 반환한다.
+orphan_files는 작업폴더 상대경로의 `.gg-tmp-*`, `.gg-export-*`,
+`.gg-import-*` 후보이며 자동 삭제하지 않는다.
+
+기본 lock은 `gg_lock.inspect_lock(root)`의 구조 관측이며 점유 여부는
+`unprobed`다. 명시적 `probe=True`만 `gg_lock.probe_lock(root)`의 일회
+비차단 획득/해제를 수행한다. `.gg-lock` 존재는 점유의 증거가 아니며
+free 관측도 다음 쓰기의 허가가 아니다. 잠금 RPC는 이 두 함수와
+`gg_lock.cleanup_owner(root)`로 옮긴다. 구 `gg_core.lock_info/unlock`을
+되살리지 않으며 guard/protocol 디렉터리를 삭제하지 않는다.
+
+Kordoc은 `gg_kordoc.diagnose()` 공개 함수만 호출한다. 설치 흔적·캐시 후보는
+실행 가능 판정이 아니며 `capability_verified=false`다. 설치·네트워크·
+Kordoc 실행·캐시 쓰기는 하지 않는다. 공개 함수가 없는 구 스킬 조합은
+`status=unavailable`, `reason=diagnose_api_unavailable`로 표시한다.
+진단은 render/recalculation/web 실행이나 제출 승인으로 승격하지 않는다.
+잠금의 명시 offline 전환·복구 절차는 [locking.md](locking.md)를 따른다.
 
 외부 작업 결과의 변경 객체에는 `result_of`를 기록한다. `task_id`는
 제품 작업 ID이며, `epoch`, `external_task_id`, `input_revision`은 해당

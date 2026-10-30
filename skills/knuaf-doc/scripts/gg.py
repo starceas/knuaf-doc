@@ -2,7 +2,6 @@
 """Local command interface; never calls model providers or web services."""
 
 import argparse
-import importlib.util
 import json
 from pathlib import Path
 import sys
@@ -160,62 +159,7 @@ def main(argv=None):
                 a.folder, a.out, offline_confirmed=a.offline_confirmed
             )
         elif a.command == "doctor":
-            try:
-                import gg_lock
-
-                lock_state = dict(
-                    gg_lock.probe_lock(a.folder)
-                    if a.probe
-                    else gg_lock.inspect_lock(a.folder)
-                )
-            except Exception as e:
-                lock_state = {
-                    "structure": "unavailable",
-                    "lock_state": "unavailable",
-                    "reason": str(e),
-                }
-            try:
-                import gg_deps
-
-                deps_report = gg_deps.doctor(a.folder)
-                dependencies = {
-                    row["import_name"]: row["status"] == "installed"
-                    for row in deps_report["dependencies"]
-                }
-                deps_detail = deps_report
-                deps_notice = ""
-            except Exception as e:
-                # The project venv probe is the truth; only when it cannot
-                # run do we fall back to this interpreter, and we say so.
-                dependencies = {
-                    m: bool(importlib.util.find_spec(m))
-                    for m in ("docx", "openpyxl", "pypdf")
-                }
-                deps_detail = {
-                    "status": "unavailable",
-                    "reason": str(e),
-                    "selected_python": sys.executable,
-                }
-                deps_notice = " 의존성은 현재 CLI 인터프리터 기준."
-            value = {
-                "python": sys.version,
-                "dependencies": dependencies,
-                "deps": deps_detail,
-                "recalculation": "not_run",
-                "render": "not_run",
-                "hwp": "unsupported",
-                "web": "not_run",
-                "model_calls": "disabled",
-                "lock_present": (Path(a.folder) / ".gg-lock").exists(),
-                "lock": lock_state,
-                "orphan_files": [
-                    str(p)
-                    for p in list(Path(a.folder).rglob(".gg-tmp-*"))
-                    + list(Path(a.folder).rglob(".gg-export-*"))
-                ],
-                "notice": "설치 탐지는 실행 검증이 아님. 채팅만 가능하면 초안과 원답변 인계, 제출 후보 불가."
-                + deps_notice,
-            }
+            value = core.doctor(a.folder, probe=a.probe)
         elif a.command == "unlock":
             import gg_lock
 
