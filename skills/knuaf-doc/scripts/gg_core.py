@@ -1612,7 +1612,14 @@ def restore(root, revision, expected_revision):
             validate(new)
             _check_request_ledger(new)
             path = local(root, snapshot_rel)
+            canonical = (root / "project.json").resolve()
+            if path == canonical:
+                raise ValueError("current_snapshot_not_independent")
             if path.exists():
+                # A matching hash is not proof of a separate preserved file:
+                # symlink aliases and hard links can name the canonical inode.
+                if path.samefile(canonical):
+                    raise ValueError("current_snapshot_not_independent")
                 existing = json.loads(path.read_text(encoding="utf-8"))
                 if digest(existing) != digest(p):
                     raise ValueError("current_snapshot_conflict")

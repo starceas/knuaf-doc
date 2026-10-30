@@ -6,7 +6,7 @@
  "files": {
   "skills/knuaf-doc/scripts/gg_core.py": {
    "origin": "transformed",
-   "note": "P0-2 PR-C U06/U10/U11: field-specific fact enum diagnostics, guarded verified history/restore with new revisions and output invalidation, shared doctor using PR-D public diagnose."
+   "note": "P0-2 PR-C U06/U10/U11: field-specific fact enum diagnostics, guarded verified history/restore with new revisions and output invalidation, shared doctor using PR-D public diagnose. C-R1-01: reject pre-restore preservation paths resolving to or sharing file identity with the canonical before any product write."
   },
   "skills/knuaf-doc/scripts/gg.py": {
    "origin": "transformed",
@@ -18,11 +18,11 @@
   },
   "skills/knuaf-doc/references/section-ledger.md": {
    "origin": "transformed",
-   "note": "P0-2 PR-C U10/U11: document verified restore, irreversible receipt preservation, diagnostic APIs and v2 lock callsite cutover."
+   "note": "P0-2 PR-C U10/U11: document verified restore, irreversible receipt preservation, diagnostic APIs and v2 lock callsite cutover. C-R1-01: require the pre-restore snapshot to be independent of the canonical."
   },
   "tests/test_core_history.py": {
    "origin": "new",
-   "note": "P0-2 PR-C: synthetic enum rejection, read-only history, restore integrity/guard/conflict/retry and actual commit-state fault regressions."
+   "note": "P0-2 PR-C: synthetic enum rejection, read-only history, restore integrity/guard/conflict/retry and actual commit-state fault regressions. C-R1-01: symlink/hardlink canonical aliases preserve all bytes on rejection; matching independent snapshot supports commit, retry and recovery of latest-only data."
   },
   "tests/test_core_doctor.py": {
    "origin": "new",

@@ -27,12 +27,12 @@ class FactEnumTests(ContractCase):
 
 
 class HistoryRestoreTests(ContractCase):
-    def seed(self):
+    def seed(self, latest="new"):
         core = runtime("gg_core")
         root = self.make_project()
         write_text(root, "answer.txt", "synthetic\n")
         core.apply(root, {"request_id": "seed", "ops": [source_op(), fact_op("f", "farm.name", "old", None)]}, 0)
-        fact = fact_op("f", "farm.name", "new", None)
+        fact = fact_op("f", "farm.name", latest, None)
         core.apply(root, {"request_id": "edit", "ops": [fact]}, 1)
         return core, root
 
@@ -137,6 +137,43 @@ class HistoryRestoreTests(ContractCase):
             core.restore(root, 1, 2)
         self.assertEqual("restore_preflight_failed", caught.exception.result["reason"])
         self.assertEqual(before, self._tree_bytes(root))
+
+    def test_pre_restore_snapshot_alias_of_canonical_is_rejected_before_write(self):
+        for link_kind in ("symlink", "hardlink"):
+            with self.subTest(link_kind=link_kind):
+                core, root = self.seed(latest="latest-only")
+                canonical = root / "project.json"
+                snapshot = root / "migration/revision-2.json"
+                if link_kind == "symlink":
+                    snapshot.symlink_to("../project.json")
+                else:
+                    snapshot.hardlink_to(canonical)
+                before = self._tree_bytes(root)
+                with self.assertRaises(core.OperationError) as caught:
+                    core.restore(root, 1, 2)
+                self.assertEqual("not_committed", caught.exception.result["commit_state"])
+                self.assertEqual("restore_preflight_failed", caught.exception.result["reason"])
+                self.assertEqual(before, self._tree_bytes(root))
+                self.assertTrue(snapshot.samefile(canonical))
+                self.assertEqual("latest-only", core.load(root)["facts"]["f"]["value"])
+
+    def test_matching_independent_snapshot_preserves_latest_and_retry(self):
+        core, root = self.seed(latest="latest-only")
+        canonical = root / "project.json"
+        snapshot = root / "migration/revision-2.json"
+        before = canonical.read_bytes()
+        snapshot.write_bytes(before)
+        self.assertFalse(snapshot.samefile(canonical))
+        result = core.restore(root, 1, 2)
+        self.assertEqual("committed", result["commit_state"])
+        self.assertEqual(before, snapshot.read_bytes())
+        self.assertFalse(snapshot.samefile(canonical))
+        self.assertTrue(core.history(root)[2]["snapshot_ok"])
+        committed = self._tree_bytes(root)
+        self.assertEqual(result, core.restore(root, 1, 2))
+        self.assertEqual(committed, self._tree_bytes(root))
+        core.restore(root, 2, 3)
+        self.assertEqual("latest-only", core.load(root)["facts"]["f"]["value"])
 
     def test_active_guard_and_recovery_block_restore(self):
         core, root = self.seed()
