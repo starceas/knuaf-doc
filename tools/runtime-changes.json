@@ -830,12 +830,12 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/outputs.md": {
-      "after_sha256": "7312330c4cecdd382aa534011c060830dc8f9be234f5ae0397ea918c3db5ce23",
+      "after_sha256": "5d13b761fd3ba5f8c96ffeb75b5c13a03bfccccad088bb743336cad1acd855d5",
       "before_sha256": null,
       "first_changed": "P27",
-      "last_changed": "P28",
+      "last_changed": "P0-2-D",
       "owner": "P28",
-      "reason": "P27: SKILL.md에서 옮긴 출력 명령·한계(뜻 불변) | Window-hygiene Office-only scope: refreshed reviewed bytes and strict +2 declaration/new/approval counts; no browser product reference or live Office validation. | PR41 P1: macOS Excel fail-closed before staging/transport; no native proof; synthetic Office contracts preserved. | W2b kordoc-hwpx: HWPX 절 추가(명령·결과물·보증 한계). | W2c: review R1-01..R1-07 반영(매니페스트 이름 <출력파일 전체이름>.manifest.json, gg_hwpx 라이브러리화, verify 실패 시 미발행, 표 수치 정확 비교, image_dir 기본=원문 폴더, 생성 스냅샷 해시). | P28 output hygiene: 최종본 고정 이름·.gg-work 작업 구역·tidy 미리보기/apply 규칙 | P1-GUI: 판정서 JUDGE-A/JUDGE-B 올림 항목 반영 | PR2: 특용작물 엑셀을 교수님 양식(X01·X02) 기준으로 — 레거시 생성기 입구 차단, 작목 분류별 칸 이름 층, 일용 노무 성별 경고, X01 임금 산술평균·7번 인쇄 설정 보존",
+      "reason": "P27: SKILL.md에서 옮긴 출력 명령·한계(뜻 불변) | Window-hygiene Office-only scope: refreshed reviewed bytes and strict +2 declaration/new/approval counts; no browser product reference or live Office validation. | PR41 P1: macOS Excel fail-closed before staging/transport; no native proof; synthetic Office contracts preserved. | W2b kordoc-hwpx: HWPX 절 추가(명령·결과물·보증 한계). | W2c: review R1-01..R1-07 반영(매니페스트 이름 <출력파일 전체이름>.manifest.json, gg_hwpx 라이브러리화, verify 실패 시 미발행, 표 수치 정확 비교, image_dir 기본=원문 폴더, 생성 스냅샷 해시). | P28 output hygiene: 최종본 고정 이름·.gg-work 작업 구역·tidy 미리보기/apply 규칙 | P1-GUI: 판정서 JUDGE-A/JUDGE-B 올림 항목 반영 | PR2: 특용작물 엑셀을 교수님 양식(X01·X02) 기준으로 — 레거시 생성기 입구 차단, 작목 분류별 칸 이름 층, 일용 노무 성별 경고, X01 임금 산술평균·7번 인쇄 설정 보존 | P0-2 PR-D: Office safe-session activation, explicit jobs cleanup and pure Kordoc diagnosis contracts.",
       "source": "new"
     },
     "skills/knuaf-doc/references/package-install.md": {
@@ -1210,12 +1210,12 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_deps.py": {
-      "after_sha256": "4b359300117e524860d3bce1f3a7d12a79d50d165253fcd146468a67449dbe6b",
+      "after_sha256": "c6443dfc86b136ca26b23be65083d6b8d7e596c8901154bd583795c61c619281",
       "before_sha256": "f3a4d3d1c2b45d67366e6f6f41ca64a8a89540f06e438862527e1efb41b9eb4e",
       "first_changed": "P1",
-      "last_changed": "P27",
+      "last_changed": "P0-2-D",
       "owner": "P27",
-      "reason": "C2: UTF-8 명시 I/O(read_text/subprocess ×2) | P27: K2-02: CLI 진입점 stdout·stderr UTF-8 재설정 | P1-GUI: 판정서 JUDGE-A/JUDGE-B 올림 항목 반영",
+      "reason": "C2: UTF-8 명시 I/O(read_text/subprocess ×2) | P27: K2-02: CLI 진입점 stdout·stderr UTF-8 재설정 | P1-GUI: 판정서 JUDGE-A/JUDGE-B 올림 항목 반영 | P0-2 PR-D: U12 POSIX symlink venv; U13 UTF-8 probes and structured subprocess errors.",
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_document.py": {
@@ -1433,12 +1433,12 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_kordoc.py": {
-      "after_sha256": "5d42c404b4652fee7a401ec629eec12c154af17f6cc19b3147accc722bfdf48c",
+      "after_sha256": "8e1d23c866d58b1702c368e50a4f3b8941163a2213d6db2de60c5faa85cef5f6",
       "before_sha256": "887df34c5a108abf016ae3fe79ace91990cfc572bdf5a748c4a4815506a47ae4",
       "first_changed": "P1",
-      "last_changed": "P28",
+      "last_changed": "P0-2-D",
       "owner": "P27",
-      "reason": "C2: subprocess.run UTF-8 | P27: kordoc 4.17.1·Node 20, 캐시 루트 표식 버전 무관, 4.17.1 중첩 사이드카 배치 지원, K2-02: CLI 진입점 stdout·stderr UTF-8 재설정 | W2/W2b kordoc-hwpx: ensure(need_generate) generate 능력 검사, Windows .cmd 셔임→node+cli.js, FAT/exFAT 발행 폴백, Windows 환경변수 허용목록(USERPROFILE·HOMEDRIVE·HOMEPATH·SYSTEMDRIVE·PROGRAMDATA·PROGRAMFILES(X86)·COMMONPROGRAMFILES) 추가. | F2: Windows 실기기 FAIL 수정 - pnpm 설치를 임시 폴더가 아니라 최종 폴더에서 바로 하고(정션 링크가 이름 바꾸기로 끊어지던 결함) 실패·고장 난 설치는 .failed-/.broken- 숨김 폴더로 치운다.",
+      "reason": "C2: subprocess.run UTF-8 | P27: kordoc 4.17.1·Node 20, 캐시 루트 표식 버전 무관, 4.17.1 중첩 사이드카 배치 지원, K2-02: CLI 진입점 stdout·stderr UTF-8 재설정 | W2/W2b kordoc-hwpx: ensure(need_generate) generate 능력 검사, Windows .cmd 셔임→node+cli.js, FAT/exFAT 발행 폴백, Windows 환경변수 허용목록(USERPROFILE·HOMEDRIVE·HOMEPATH·SYSTEMDRIVE·PROGRAMDATA·PROGRAMFILES(X86)·COMMONPROGRAMFILES) 추가. | F2: Windows 실기기 FAIL 수정 - pnpm 설치를 임시 폴더가 아니라 최종 폴더에서 바로 하고(정션 링크가 이름 바꾸기로 끊어지던 결함) 실패·고장 난 설치는 .failed-/.broken- 숨김 폴더로 치운다. | P0-2 PR-D: U19 read-only capability-verified legacy cache reuse; U11 pure filesystem diagnosis.",
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_lock.py": {
@@ -1459,29 +1459,29 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_office.py": {
-      "after_sha256": "ba6da6a8dcd35b663f8d516df9ae69a0d1233cb8d9724b7d7511d64a07e24bef",
+      "after_sha256": "aee4c3b5bb108cc8487a8f29b40bd2c94b4a6711928031282105e3f62e31a9d2",
       "before_sha256": "64b4f8790da95e583cfb06ba4e216999a932e4d570953ad2a681bca19d270a0a",
       "first_changed": "P1",
-      "last_changed": "P27",
+      "last_changed": "P0-2-D",
       "owner": "P27",
-      "reason": "C6: run_windows_com이 helper 생성 전 WINDOWS_COM_BLOCKED 반환. H15: visible 시트만 계수. C2: UTF-8 | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P20: spec JSON 엄격 파싱(중복키·비유한 수 거부), 공용 _preflight_excel_profile, hort transform 영수증 바인딩·계보 시작 스키마·native 영수증 finance_profile | P27: K2-02: CLI 진입점 stdout·stderr UTF-8 재설정 | Window-hygiene Office-only scope: refreshed reviewed bytes and strict +2 declaration/new/approval counts; no browser product reference or live Office validation. | PR41 P1: macOS Excel fail-closed before staging/transport; no native proof; synthetic Office contracts preserved. | P1-GUI: 판정서 JUDGE-A/JUDGE-B 올림 항목 반영 | P1-R1: 검토 지적 4건 수정(외부 관계 허용 범위 축소·본문 경계 줄 단위·절 ID 정확 비교·링크 실행 managed) | P1-R1b: 해석·디코딩 뒤 최종 경로에도 네트워크 경로 거절 적용(file:////host, 인코딩된 UNC)",
+      "reason": "C6: run_windows_com이 helper 생성 전 WINDOWS_COM_BLOCKED 반환. H15: visible 시트만 계수. C2: UTF-8 | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P20: spec JSON 엄격 파싱(중복키·비유한 수 거부), 공용 _preflight_excel_profile, hort transform 영수증 바인딩·계보 시작 스키마·native 영수증 finance_profile | P27: K2-02: CLI 진입점 stdout·stderr UTF-8 재설정 | Window-hygiene Office-only scope: refreshed reviewed bytes and strict +2 declaration/new/approval counts; no browser product reference or live Office validation. | PR41 P1: macOS Excel fail-closed before staging/transport; no native proof; synthetic Office contracts preserved. | P1-GUI: 판정서 JUDGE-A/JUDGE-B 올림 항목 반영 | P1-R1: 검토 지적 4건 수정(외부 관계 허용 범위 축소·본문 경계 줄 단위·절 ID 정확 비교·링크 실행 managed) | P1-R1b: 해석·디코딩 뒤 최종 경로에도 네트워크 경로 거절 적용(file:////host, 인코딩된 UNC) | P0-2 PR-D: U18 explicit safe job cleanup; Q03/Q04 guarded Office activation and machine reason codes.",
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_office_session.py": {
-      "after_sha256": "0717e6ab331fdaee31e9f4e121095caace31e00d52d5b2f94b1184511f325de4",
+      "after_sha256": "ba4cdca615d293b434828bc6d2c9366ff1447fed9bf9a2a57765f3b06121b17a",
       "before_sha256": null,
       "first_changed": "P28",
       "owner": "P27",
-      "reason": "Window-hygiene Office-only scope: exact owned-document path/saved-state preservation; fake transport and POSIX fixture tests only. Browser references excluded; no live Office/native support claim. | PR41 P1: macOS Excel fail-closed before staging/transport; no native proof; synthetic Office contracts preserved.",
+      "reason": "Window-hygiene Office-only scope: exact owned-document path/saved-state preservation; fake transport and POSIX fixture tests only. Browser references excluded; no live Office/native support claim. | PR41 P1: macOS Excel fail-closed before staging/transport; no native proof; synthetic Office contracts preserved. | P0-2 PR-D: Q04 owned sole-workbook calculate/save/PDF, preserving existing-document and recovery guards.",
       "source": "new; window-hygiene Office-only reviewed worktree bytes; fake transport/own fixtures, no browser reference"
     },
     "skills/knuaf-doc/scripts/gg_office_win.py": {
-      "after_sha256": "0a9c848baf04ea763a01bddbc868221b36256dbf055e0d4219e8bbe35efa3d52",
+      "after_sha256": "539007af5a58d7d68f353037f39e4c321cd588563f99f69407cc772ea55b1b49",
       "before_sha256": "1433829b252248c387777be7150e6586894a795b08ad0e1e563717beca4e4cf4",
       "first_changed": "P1",
-      "last_changed": "P27",
+      "last_changed": "P0-2-D",
       "owner": "P27",
-      "reason": "C6: WINDOWS_COM_BLOCKED — run_word/run_excel이 pythoncom import 전 차단(exit 2). from __future__ annotations(3.9 호환) | P27: K2-02: CLI 진입점 stdout·stderr UTF-8 재설정",
+      "reason": "C6: WINDOWS_COM_BLOCKED — run_word/run_excel이 pythoncom import 전 차단(exit 2). from __future__ annotations(3.9 호환) | P27: K2-02: CLI 진입점 stdout·stderr UTF-8 재설정 | P0-2 PR-D: U14 private DispatchEx instances and zero-document Quit; U15 typed Excel errors.",
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_orchard_production.py": {
@@ -1727,21 +1727,21 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/requirements-runtime.txt": {
-      "after_sha256": "4d95702c2860d05509d43bf3c987daa2be472c0a33dca3830edf053a357774ca",
+      "after_sha256": "689270adae6c5d0c02bd0d117011e013b7b748d897ff0b5a15794a2fa0e5f025",
       "before_sha256": "5cbc314a84901216a50705c7af4e189e4cfcbcdb7f92b05516031bcab08d94c5",
       "first_changed": "P27",
-      "last_changed": "P27",
+      "last_changed": "P0-2-D",
       "owner": "P27",
-      "reason": "P27: K2-03/D7: pywin32 필수 목록에서 제외 | P1-GUI: 판정서 JUDGE-A/JUDGE-B 올림 항목 반영",
+      "reason": "P27: K2-03/D7: pywin32 필수 목록에서 제외 | P1-GUI: 판정서 JUDGE-A/JUDGE-B 올림 항목 반영 | P0-2 PR-D: Q03 Windows-only pywin32>=306 declaration.",
       "source": "new"
     },
     "skills/knuaf-doc/scripts/runtime-deps.json": {
-      "after_sha256": "79afcf31da9de0f9c3c780de94d63a8f91b4802973db668ea8ca1436138fb979",
+      "after_sha256": "ef80f2f53c6bc40090f6467cc9102cb1623423e9970de65e023e99f7bdc50dfb",
       "before_sha256": "58b96a33e13fcddbc6a4a84af3d83fb35a1496731b958504c8c053543ade0f7d",
       "first_changed": "P27",
-      "last_changed": "P27",
+      "last_changed": "P0-2-D",
       "owner": "P27",
-      "reason": "P27: K2-03/D7: pywin32 선언 제거",
+      "reason": "P27: K2-03/D7: pywin32 선언 제거 | P0-2 PR-D: Q03 Windows-only pywin32 manifest declaration.",
       "source": "new"
     },
     "skills/knuaf-doc/scripts/show_research.py": {
@@ -1982,12 +1982,12 @@
       "source": "new"
     },
     "tests/test_major_guard_outputs.py": {
-      "after_sha256": "b84c49922de2c435f8805b558037266d2ad37f473d9328b128bfe11e317df14a",
+      "after_sha256": "31c291e398367c88ad2932b7aa2927c75ceac8fd191b93e1c54e8b5e4814ade1",
       "before_sha256": null,
       "first_changed": "P28",
-      "last_changed": "P28",
+      "last_changed": "P0-2-D",
       "owner": "P28",
-      "reason": "P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13. | PR41 P1: macOS Excel fail-closed before staging/transport; no native proof; synthetic Office contracts preserved. | PR2: 특용작물 엑셀을 교수님 양식(X01·X02) 기준으로 — 레거시 생성기 입구 차단, 작목 분류별 칸 이름 층, 일용 노무 성별 경고, X01 임금 산술평균·7번 인쇄 설정 보존",
+      "reason": "P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13. | PR41 P1: macOS Excel fail-closed before staging/transport; no native proof; synthetic Office contracts preserved. | PR2: 특용작물 엑셀을 교수님 양식(X01·X02) 기준으로 — 레거시 생성기 입구 차단, 작목 분류별 칸 이름 층, 일용 노무 성별 경고, X01 임금 산술평균·7번 인쇄 설정 보존 | P0-2 PR-D: Q04 macOS publish authorization covered without platform hold bypass.",
       "source": "new"
     },
     "tests/test_p2_core.py": {
@@ -2136,11 +2136,11 @@
       "source": "new"
     },
     "tests/test_window_hygiene.py": {
-      "after_sha256": "503571e58616d30228f56d55286b4177c8fc535a5bfb3f3b6f479c79dea6bf67",
+      "after_sha256": "01fe1980e14d0baf22e2fd1b4e5cd8510d5dd9f0a1325e3211e4fbade15c6da4",
       "before_sha256": null,
       "first_changed": "P28",
       "owner": "B",
-      "reason": "Window-hygiene Office-only scope: exact owned-document path/saved-state preservation; fake transport and POSIX fixture tests only. Browser references excluded; no live Office/native support claim. | PR41 P1: macOS Excel fail-closed before staging/transport; no native proof; synthetic Office contracts preserved.",
+      "reason": "Window-hygiene Office-only scope: exact owned-document path/saved-state preservation; fake transport and POSIX fixture tests only. Browser references excluded; no live Office/native support claim. | PR41 P1: macOS Excel fail-closed before staging/transport; no native proof; synthetic Office contracts preserved. | P0-2 PR-D: Q03/Q04 Office preservation transitions, COM ownership/error cells and explicit safe cleanup.",
       "source": "new; window-hygiene Office-only reviewed worktree bytes; fake transport/own fixtures, no browser reference"
     }
   },

@@ -18,21 +18,33 @@ SKILL.md "출력 지원 한계" 절의 상세다. 출력 생성·등록 경로�
 
 `scripts/gg_excel_template.py inspect|clear`가 제공된 제출 템플릿의 시트·입력 셀을 확인하고 복제한다. 특용작물전공은 교수님 양식(X01, 대식물 계정이 필요하면 X02)을 이 경로로 복제한다. 선배가 채운 재무 예시 01 XLSX는 비교 참고이며 틀이 아니다. 원본 형식·수식·병합·시트명을 보존하고 매핑된 명시적 입력 셀만 비운다. 빈 사본에 실제 값을 넣을 때는 [excel-template](excel-template.md)에 따라 `scripts/gg_excel_fill.py`를 사용한다. 복제 때 보존한 예시 연도·가격·비율도 현재 근거에 맞게 별도 쓰기 매핑으로 교체한다. 원본 예시의 수식 오류가 확인되면 `gg_excel_formula_patch.py`로 근거·기대 수식(또는 명시적으로 검토한 숫자 상수)·변경 수식을 기록해 사본만 수정한다. 교수님 양식 X01·X02에는 이미 검토된 C1 공통 정정 명세가 바인딩되어 있으므로 `scripts/gg_workbook_audit.py materialize-c1 --ref X01 --source <X01 원본> --out <로컬 맵>`(대식물 양식은 `--ref X02`)으로 로컬 패치 맵을 만든 뒤 그 맵으로 `gg_excel_formula_patch.py --project <정본 폴더> --major specialty_crops`를 적용한다(명세·처분: [common-workbooks/corrections/C1.md](common-workbooks/corrections/C1.md)). 같은 명세의 XR-11은 자가 노동비(8. 노무비계획 자가 노동비 소계)를 전액 미지급 평가액으로 보아 현금흐름 지출에서 제외하는 가정(option A, 소유자 결정 2026-09-27)에 의존한다. 실제 지급 여부는 인터뷰 가이드 Q2-2 가족사항 문항에서 한 번만 묻는다([interview-guide.md](interview-guide.md)). 경영주가 아닌 사람(가족 포함)에게 실제로 지급하는 노동은 고용 노동비로 입력하므로 수식 변경 없이 현금지출로 남는다. 경영주에게 지급·인출하는 금액은 기존 경영주 급여·가계비 규칙으로 처리하며, 동일 금액을 중복 반영하지 않는다. 경영주는 Q2-2의 기존 답변으로 판별한다. 이 가정이 거절되면 XR-11은 보류로 되돌린다. 표가 페이지 밖으로 갈라지면 `gg_excel_print.py`의 명시적 인쇄 지도에 따라 사본만 조정하고 실제 PDF에서 가독성을 확인한다. 입력 후 실제 앱 재계산과 본문 대조가 필요하며, 빈 사본 생성만으로 재무 완료를 표시하지 않는다. 특용작물전공에서는 이 생성기가 입구에서 막히고(`held/specialty_template_route_required`) 교수님 양식 경로로 안내한다. 다른 전공은 템플릿이 없을 때만 `build_excel_finance_template.py <폴더> --input <계산계약.json> --out <새.xlsx> --major <전공ID>` 레거시 생성기를 사용한다. 엑셀 템플릿 `clear`, `gg_excel_fill.py`, `gg_excel_formula_patch.py`, `gg_excel_print.py`는 모두 `--project <정본 폴더> --major <전공ID>`가 필요하며 영수증에 확인한 전공 권한(`majorAuthorization`)을 남긴다. [excel-template](excel-template.md)은 해시로 고정된 검증 스냅샷이라 명령 예시에 이 두 인자가 빠져 있으니 실행할 때 붙인다. `inspect`는 전공 없이 실행되지만 출력 권한을 주지 않는다. 원본 해시·X01/X02 선택은 파일 식별일 뿐 전공 확인이 아니다. 전공 전용 통합문서가 있으면 그쪽이 우선이다 — 원예환경시스템전공은 등록된 H01 통합문서가 기본이다. 전공 XLSX 부재가 확인되면 공통 XLSX가 채워 쓸 양식이다: X01은 일반 양식이고 X02는 대식물 계정을 추가한 같은 양식이며, `clear`는 레이아웃 앵커가 x01 형태로 확인될 때만 기본 입력 지도를 적용하고 대식물 배치(X02)는 전용 검토 지도가 있기 전 `manual_map_required`로 거절한다. `layout` 없이 직접 만든 지도는 기본 X01 지도로 취급해 X01이 아닌 배치에서는 거절하고, 이런 지도는 `layout`을 `{mapOrigin: reviewed_custom, variant: <감지된 배치>}`로 선언해야 한다. 레거시 생성물은 학교 제출 양식 대체나 엄격한 원본 양식 검증으로 표시하지 않는다. 두 경로 모두 학교 원문대로 기말 잔여 장부가를 수익에, 경영주 급여가 비용에 없으면 가계비를 투자 비용에 반영한다. 장부가는 시장 처분가격이 아니며 기존 사업 일부 투자에 전체 매출을 사용할 수 없다. 복합·다년생·공유시설·가공·보조금은 원계획을 유지하고 미지원 계산만 보류한다.
 
-## macOS Office 재계산·PDF
+## Office 재계산·PDF (macOS·Windows)
 
 세션 가드가 `unknown`·`inflight`로 남아 다음 변환이 `previous_office_session_unknown`(또는 `office_guard_state_unreadable`)로 막히면, 차단 메시지가 그대로 칠 수 있는 복구 명령을 함께 낸다: `python3 <스킬>/scripts/gg_office_session.py --recover word`(`--guard-dir`는 기본 가드 폴더가 아닐 때만 붙는다). 이 명령은 **가드 기록만 idle로** 바꾸고 Office 문서 닫기·앱 종료·잡 폴더/산출물 삭제를 하지 않는다. 다른 세션이 잠금을 잡고 있으면 `busy`로 아무것도 바꾸지 않으며, 복구 이력은 가드 폴더의 `recovery-audit.jsonl`에 남는다. Office에 이 작업의 문서가 남아 있지 않은지 사람이 확인한 뒤 실행한다. 현재 코드는 이번 실행의 작업 사본 경로와 실제 열린 문서의 정확한 대응·현재 저장 상태를 확인한 문서만 닫는다. 기존 사용자 문서·미저장 변경은 건드리지 않는다. 저장·닫기 실패, timeout·dirty·unknown에서는 후속 자동 close/quit 없이 보존 또는 결과 불명으로 기록하며 작업 사본을 유지한다. 닫힘이 이미 확인된 뒤 변환 검사·발행이 실패한 경우에는 확인된 닫힘과 실패 결과를 따로 기록한다. 앱 전체 quit은 없으며 Word/Excel 앱은 유지한다. 이 동작 설명은 실제 앱에서의 내용 보존·변환 성공을 보증하지 않는다.
 
 최신 UI 접근 오류 `-10005`의 진단·해결과 실제 앱 검증은 이번 단위 fixture 검사 범위에서 제외한다.
 
-**모든 macOS Excel 자동 변환은 보류한다.** 정확한 작업 통합문서 전체의 수식 의존성 계산을 지원한다는 근거가 없어, 기존 전공 권한·재무 프로필 확인 뒤 스테이징 전에 `owned_workbook_recalculation_unproven`으로 중단한다. 정상·단순·무수식 파일이나 명세·입력 영수증이 있는 파일도 같은 보류 대상이다. 앱 조회·열기·계산·저장·PDF·닫기 및 성공 발행에 진입하지 않으며, CLI는 `held`와 종료 코드 2를 반환한다. 시트별 used range 계산은 제거했고 앱 전체 계산·자동모드 변경·매크로·반복 계산으로 우회하지 않는다. 이는 변환 기능 복구가 아닌 의도적 기능 보류다.
+macOS Excel은 기존 전공 권한·재무 프로필 검증 뒤, 세션 가드 안에서 작업 사본 하나만 열고 `calculate` → 저장 → PDF 내보내기를 수행한다. 이미 열린 Word/Excel 문서가 있으면 해당 앱을 건드리지 않고 `reason: "existing_documents"`로 거절한다(실패 JSON과 `office_session.reason`에 기록). 호출자는 **“열려 있는 다른 Word/Excel 문서를 저장하고 닫은 뒤 다시 눌러 주세요”**로 안내할 수 있다. 문서 목록 확인 실패는 `office_inventory_unknown`으로 구분한다. 정확한 작업 경로·문서 수·읽기 전용·저장 상태를 계속 확인하며 수동 계산 모드는 `manual_calculation_not_supported`로 거부한다. 계산 모드를 바꾸거나 오류 시 강제 닫기·앱 종료를 하지 않는다.
 
-`scripts/gg_office.py word`는 macOS Office 샌드박스 파일 접근을 지원하기 위해 전용 그룹 컨테이너(`~/Library/Group Containers/UBF8T346G9.Office/ginseng-goat/`) 작업영역에서 원본을 불변으로 격리 스테이징하여 변환한다. **Word 변환은 macOS만 지원한다. macOS Excel 변환은 위 사유로 보류하며, Windows는 작성·검토본(DOCX·XLSX 생성, 검토)까지 지원하고 Office 자동 재계산·PDF 변환은 지원하지 않는다.**
+`scripts/gg_office.py word|excel`은 원본을 불변으로 격리 스테이징하여 변환한다. macOS는 Office 전용 그룹 컨테이너(`~/Library/Group Containers/UBF8T346G9.Office/ginseng-goat/`), Windows는 사용자 로컬 앱 데이터의 `ginseng-goat/office-jobs`를 사용한다. Windows는 `pywin32>=306`과 실제 데스크톱 Office가 필요하며 `DispatchEx` 전용 인스턴스만 사용한다. 자기 문서가 닫혀 해당 인스턴스의 문서 수가 0일 때만 종료한다. Excel 저장 후 오류 셀이 있으면 PDF를 발행하지 않는다. 타임아웃·COM 실패로 닫힘을 증명하지 못한 작업은 보존한다.
 
 - Word: `scripts/gg_office.py word <문서.docx> --out-dir .gg-work/<산출물>/<회차> --project <정본 폴더> --major <전공ID>` (인쇄 모양 목차/색인 필드 2회 갱신 및 PDF 동시 출력)
-- Excel: `scripts/gg_office.py excel <재무.xlsx> --out-dir .gg-work/<산출물>/<회차> --project <정본 폴더> --major <전공ID> [--spec <명세.json> 또는 --template-receipt <입력영수증.json>]` (macOS에서는 권한·프로필 확인 뒤 변환 보류, 새 XLSX/PDF·성공 영수증 생성 없음)
-- 일괄: `scripts/gg_office.py batch <파일1.docx> <파일2.docx> <파일1.xlsx> <파일2.xlsx> --out-dir .gg-work/<산출물>/<회차> --project <정본 폴더> --major <전공ID>` (macOS Excel 단계에서 전체 배치 중단. 뒤의 Word도 미처리하며 앞서 발행된 항목은 되돌리지 않음. 기존 전체 입력 권한·프로필 사전 확인 및 Word 권한/시간초과 중단 계약 유지)
+- Excel: `scripts/gg_office.py excel <재무.xlsx> --out-dir .gg-work/<산출물>/<회차> --project <정본 폴더> --major <전공ID> [--spec <명세.json> 또는 --template-receipt <입력영수증.json>]` (권한·프로필 확인 뒤 격리 재계산·저장·PDF, PDF 쪽수·수식/구조 검사 뒤에만 발행)
+- 일괄: `scripts/gg_office.py batch <파일1.docx> <파일2.docx> <파일1.xlsx> <파일2.xlsx> --out-dir .gg-work/<산출물>/<회차> --project <정본 폴더> --major <전공ID>` (전체 입력 권한·프로필 사전 확인 유지. 앱별 권한/시간초과·세션 보존 실패 뒤 해당 앱의 후속 변환은 중단)
 
 산출물은 새 목적지 폴더에만 무덮어쓰기로 발행되며, 원본은 유지된다. Office 변환 및 기계 검사 완료는 최종 교수 승인이 아니며 최종 제출 완료로 자동 승격되지 않는다.
+
+### 작업 조회·명시 청소
+
+`scripts/gg_office.py jobs [--workspace <작업영역>]`는 `job-<12자리 hex>-<epoch>` 작업과 크기·파일 수·세션 상태·`cleanup_allowed`를 조회한다. `clean --job <작업ID> [<작업ID> ...] [--workspace <작업영역>]`는 지정한 작업만 삭제한다. `cleanup=closed|not_attempted` 증거가 있어야 하며 미기록·읽기 불가·preserved·unknown 세션, 심볼릭 링크, 외부 경로는 거절한다. 자동 청소·전체 삭제 옵션은 없다. `--recover word|excel`은 청소 승인이 아니며 보존된 작업은 그대로 남긴다.
+
+### 의존성·Kordoc 진단
+
+`gg_deps.py ensure`는 POSIX에서 실행 파일 symlink로 독립 Python의 상대 libpython 경로를 유지하고 Windows에서는 복사를 사용한다. pip 및 import/version probe는 부모·자식 UTF-8을 맞춘다.
+
+`gg_kordoc.diagnose(*, cache_dir=None, node=None, kordoc=None)`는 파일·PATH만 읽는 공개 진단이다. 설치·네트워크·Kordoc 실행·캐시 쓰기를 하지 않는다. `installed`는 설치 흔적이며 실행/기능 검증 완료가 아니다(`capability_verified=false`, `reason=capability_unverified|not_installed`). `cache_dir`, `selected_cache_dir`, `cli_path`, `node_path`, `candidates`, `legacy_candidates`를 제공한다. `ensure`는 명시 캐시가 없을 때만 옛 이름/기본 위치의 캐시 후보를 찾고, 현행 고정 버전·소유 표식·패키지·실제 버전·파싱 플래그 및 필요한 generate 기능을 재검증한 후보만 읽기 전용 재사용한다. 구 버전 4.13.1을 현행 버전으로 가장하지 않는다.
+
+실기 Office 변환 성공은 이 단위의 대역 시험으로 증명하지 않는다. **v0.6.0 배포 전 macOS·Windows 각각 실제 Word·Excel로 1회씩 변환 확인이 필요하다.**
 
 ## 본문 재무 수치의 자동 대조
 

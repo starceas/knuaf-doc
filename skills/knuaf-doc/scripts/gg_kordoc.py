@@ -69,6 +69,59 @@ def _cache_root(value: str | os.PathLike[str] | None) -> Path:
     return (Path.home() / ".cache" / "ginseng-goat" / "kordoc").resolve()
 
 
+def _legacy_cache_roots() -> list[Path]:
+    """Read-only migration candidates; canonical cache naming stays unchanged."""
+    bases = [Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")).expanduser(),
+             Path.home() / ".cache"]
+    current = _cache_root(None)
+    roots = []
+    for base in bases:
+        for name in ("ginseng-goat", "knuaf-dev"):
+            root = (base / name / "kordoc").resolve()
+            if root != current and root not in roots:
+                roots.append(root)
+    return roots
+
+
+def _cache_metadata(version_root: Path, *, legacy=False) -> str:
+    """Inspect installation metadata only; never execute third-party code."""
+    _, package_json, cli = _package_paths(version_root)
+    marker = _read_json(version_root / ".gg-kordoc.json")
+    spec = _read_json(package_json)
+    owners = {OWNER, "knuaf-dev.gg_kordoc"} if legacy else {OWNER}
+    if not marker or marker.get("owner") not in owners:
+        return "cache_unowned"
+    if marker.get("version") != VERSION or marker.get("registry") != REGISTRY:
+        return "cache_version_or_registry_mismatch"
+    if not spec or spec.get("name") != PACKAGE or str(spec.get("version")) != VERSION:
+        return "package_mismatch"
+    return "metadata_present" if cli.is_file() else "cli_missing"
+
+
+def diagnose(*, cache_dir=None, node=None, kordoc=None) -> dict:
+    """Pure filesystem/PATH query. installed is presence, NOT capability proof.
+
+    No subprocess, installation, cache claiming, network or Kordoc execution.
+    ensure() remains responsible for validating a candidate before reuse.
+    """
+    root = _cache_root(cache_dir)
+    candidates = []
+    for candidate in [root] + (_legacy_cache_roots() if cache_dir is None else []):
+        reason = _cache_metadata(candidate / VERSION, legacy=candidate != root)
+        candidates.append({"cache_dir": str(candidate), "legacy": candidate != root,
+                           "installed": reason == "metadata_present", "reason": reason})
+    external = _runtime_path(kordoc, ("kordoc",))
+    selected = next((row for row in candidates if row["installed"]), None)
+    return {"installed": bool(external or selected), "cache_dir": str(root),
+            "selected_cache_dir": selected["cache_dir"] if selected else None,
+            "cli_path": external or (str(_package_paths(
+                Path(selected["cache_dir"]) / VERSION)[2]) if selected else None),
+            "node_path": _runtime_path(node, ("node",)),
+            "legacy_candidates": [row for row in candidates if row["legacy"]],
+            "candidates": candidates, "capability_verified": False,
+            "reason": "capability_unverified" if external or selected else "not_installed"}
+
+
 def _runtime_path(value: str | None, names: tuple[str, ...]) -> str | None:
     if value:
         candidate = Path(value).expanduser()
@@ -243,13 +296,10 @@ def _package_paths(version_root: Path):
     return package_root, package_root / "package.json", package_root / "dist" / "cli.js"
 
 
-def _validated_install(version_root: Path, node_path: str, *, need_generate: bool = False):
-    package_root, package_json, cli = _package_paths(version_root)
-    marker = _read_json(version_root / ".gg-kordoc.json")
-    spec = _read_json(package_json)
-    if not marker or marker.get("owner") != OWNER or marker.get("version") != VERSION or marker.get("registry") != REGISTRY:
-        return None
-    if not spec or spec.get("name") != PACKAGE or str(spec.get("version")) != VERSION:
+def _validated_install(version_root: Path, node_path: str, *, need_generate: bool = False,
+                       legacy: bool = False):
+    package_root, _, cli = _package_paths(version_root)
+    if _cache_metadata(version_root, legacy=legacy) != "metadata_present":
         return None
     if not cli.is_file():
         return None
@@ -541,8 +591,9 @@ def ensure(*, cache_dir=None, node=None, pnpm=None, kordoc=None, timeout=DEFAULT
             exc.details["rejected_candidates"] = rejected_candidates
         raise
     root = _cache_root(cache_dir)
-    _claim_cache(root)
     version_root = root / VERSION
+    if version_root.exists():
+        _claim_cache(root)
     cached = _validated_install(version_root, node_path, need_generate=need_generate) if version_root.exists() else None
     if cached:
         return _result(
@@ -560,6 +611,24 @@ def ensure(*, cache_dir=None, node=None, pnpm=None, kordoc=None, timeout=DEFAULT
             capability_verification=cached["capability"],
             rejected_candidates=rejected_candidates,
         )
+    if cache_dir is None:
+        for legacy_root in _legacy_cache_roots():
+            legacy = _validated_install(legacy_root / VERSION, node_path,
+                                       need_generate=need_generate, legacy=True)
+            if legacy:
+                candidate, evidence = _probe_external(
+                    [node_path, str(legacy["cli"])], path=str(legacy["cli"]),
+                    source_kind="legacy_cache", node_path=node_path,
+                    timeout=timeout, need_generate=need_generate)
+                if candidate and candidate["actual_version"] == VERSION:
+                    return _result("ready", action="reused_legacy", package=PACKAGE,
+                        version=VERSION, actual_version=VERSION, cache_dir=str(legacy_root),
+                        cli_path=candidate["cli_path"], cli_command=candidate["cli_command"],
+                        command=candidate["cli_command"], node_path=node_path,
+                        capability_verification=candidate["capability_verification"],
+                        rejected_candidates=rejected_candidates)
+                rejected_candidates.append(evidence)
+    _claim_cache(root)
     if version_root.exists():
         if _owned_but_broken(version_root, node_path):
             # 우리가 설치했지만 안쪽 링크가 끊긴 캐시(옛 방식이 설치 뒤 폴더 이름을 바꿔

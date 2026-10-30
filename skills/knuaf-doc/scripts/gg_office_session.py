@@ -23,19 +23,10 @@ import time
 
 SESSION_MARKER = "-- gg-office-owned-session-v1"
 SCHEMA = "gg-office-session/v1"
-EXCEL_RECALCULATION_HOLD = "owned_workbook_recalculation_unproven"
 AUDIT_NAME = "recovery-audit.jsonl"
 
 
 def _template(kind: str) -> str:
-    if kind == "excel":
-        # No exact-workbook dependency-graph calculation is proven. Even
-        # a direct template invocation must not enter Office operations.
-        return f'''{SESSION_MARKER}
-on run argv
-    error "{EXCEL_RECALCULATION_HOLD}" number -2700
-end run
-'''
     app = "Microsoft Word" if kind == "word" else "Microsoft Excel"
     noun = "document" if kind == "word" else "workbook"
     plural = "documents" if kind == "word" else "workbooks"
@@ -67,6 +58,19 @@ end run
                 set sessionStage to "saving"
                 {check}
                 save {target}
+"""
+    else:
+        operations = f"""
+                open workbook workbook file name jobHFS
+                set sessionStage to "updating"
+                {check}
+                calculate
+                set sessionStage to "saving"
+                {check}
+                save {target}
+                set sessionStage to "exporting"
+                {check}
+                save as worksheet 1 of {target} filename (item 2 of argv) file format PDF file format
 """
     return f"""{SESSION_MARKER}
 on requireOwned(jobHFS, jobPOSIX)
@@ -257,10 +261,6 @@ def run_session(kind: str, script: str, args: list[str], timeout: int, *,
     directory. Production always uses one fixed guard directory independent
     of --workspace. Failed/unknown cleanup is never followed by compensation.
     """
-    if kind == "excel":
-        from gg_major_contract import OutputHeldError
-
-        raise OutputHeldError(EXCEL_RECALCULATION_HOLD)
     import fcntl  # Only called by the darwin dispatcher.
 
     work, pdf = (Path(a).absolute() for a in args)
@@ -330,10 +330,14 @@ def run_session(kind: str, script: str, args: list[str], timeout: int, *,
         record("preflight", "unknown")
         try:
             preflight = run_raw(inventory_script(kind), [], timeout=min(timeout, 10))
-            if (preflight.returncode != 0 or
-                    preflight.stdout.strip() != "GG_OFFICE_INVENTORY|0"):
+            inventory = (preflight.stdout or "").strip()
+            if preflight.returncode != 0 or inventory != "GG_OFFICE_INVENTORY|0":
                 guard_state("idle")
-                return blocked("existing_or_unknown_office_documents")
+                count = inventory.removeprefix("GG_OFFICE_INVENTORY|")
+                reason = ("existing_documents" if preflight.returncode == 0
+                          and count.isdecimal() and int(count) > 0
+                          else "office_inventory_unknown")
+                return blocked(reason)
             if kind == "word" and prepare_word is not None:
                 prepare_word()
             record("running", "unknown")
@@ -349,7 +353,11 @@ def run_session(kind: str, script: str, args: list[str], timeout: int, *,
                     record("close_or_event_result_unknown", "unknown")
                     guard_state("unknown")
                 else:
-                    record("engine_failed:" + stage, "preserved")
+                    message = detail.split("|", 1)[1] if "|" in detail else ""
+                    reason = ("existing_documents" if stage == "before_open"
+                              and message.startswith("existing_documents")
+                              else "engine_failed:" + stage)
+                    record(reason, "not_attempted" if stage == "before_open" else "preserved")
                     guard_state("idle")
             else:
                 record("engine_result_unconfirmed", "unknown")
