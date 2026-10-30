@@ -93,7 +93,7 @@
    "origin": "new"
   },
   "tests/local_real_sources.py": {
-   "note": "P21 local integration check for pinned X01/X02/F01 originals; unconfigured or absent inputs are visible skips, never passing checks.",
+   "note": "P21 local integration check for pinned X01/X02 originals; unconfigured or absent inputs are visible skips, never passing checks.",
    "origin": "new"
   },
   "tests/regression_inventory.json": {

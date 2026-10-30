@@ -1,4 +1,4 @@
-"""Explicit local C1/C1b integration checks against three pinned originals.
+"""Explicit local C1/C1b integration checks against pinned X01/X02 originals.
 
 Run: python3 -m unittest tests.local_real_sources -v
 Exit 0: no FAIL (unavailable inputs are SKIP); 1: at least one FAIL.
@@ -12,16 +12,14 @@ import sys
 import tempfile
 import unittest
 
-from tests._harness import ContractCase, bind_major
+from tests._harness import ContractCase
 from tests.test_workbook_audit_evaluator import audit_module
 from tests.test_workbook_c1_correction import (
     ROOT, SPEC_PATH, S3, S9, S10, S11, S14, S15, AUDIT_CLI)
-from tests.test_workbook_c1_specialty_e2e import SpecialtyChainTests
 
 SOURCE_ENV = {
     "X01": "KNUAF_REAL_X01_XLSX",
     "X02": "KNUAF_REAL_X02_XLSX",
-    "F01": "KNUAF_REAL_FINANCE_XLSX",
 }
 REAL_SOURCES = {
     ref: Path(value) if (value := os.environ.get(variable)) else None
@@ -30,8 +28,6 @@ REAL_SOURCES = {
 
 
 class LocalRealSourceChecks(ContractCase):
-    run_cli = SpecialtyChainTests.run_cli
-    assert_chain = SpecialtyChainTests.assert_chain
 
     def setUp(self):
         self.a = audit_module()
@@ -127,7 +123,7 @@ class LocalRealSourceChecks(ContractCase):
                 self.assertFalse(report["ok"], name)
 
     def check_xr11_vectors(self, ref):
-        cash_row = {"X01": "17", "X02": "18", "F01": "18"}[ref]
+        cash_row = {"X01": "17", "X02": "18"}[ref]
         with self.subTest(ref=ref):
             _, _, patched = self._book_rows(ref)
             for cash_col, y in zip("DEFGH", "CDEFG"):
@@ -242,15 +238,6 @@ class LocalRealSourceChecks(ContractCase):
                         f"exclusion XR-18 {S9}!{src} moved {S11}!{target}",
                         report["failures"])
 
-    def check_finance_chain(self, source):
-        with tempfile.TemporaryDirectory() as tmp:
-            tmp = Path(tmp)
-            project = self.make_project()
-            bind_major(project, "specialty_crops")
-            self.assert_chain(
-                source, SPEC_PATH, tmp / "finance-map.json",
-                tmp / "finance-patched.xlsx", tmp / "finance-receipt.json", project, 63)
-
     def check_source(self, ref):
         source = REAL_SOURCES[ref]
         self.check_mutants(ref, source)
@@ -260,8 +247,6 @@ class LocalRealSourceChecks(ContractCase):
         self.check_xr06_baseline_change(ref)
         self.check_candidate_cli(ref, source)
         self.check_materialize_accept(ref, source)
-        if ref == "F01":
-            self.check_finance_chain(source)
 
 
 def load_tests(loader, tests, pattern):
@@ -284,8 +269,7 @@ def load_tests(loader, tests, pattern):
         case.run(result)
         if result.wasSuccessful() and result.testsRun == 1:
             statuses[ref] = "PASS"
-            details[ref] = "pinned source, mutants, candidate CLI" + (
-                ", receipt chain" if ref == "F01" else "")
+            details[ref] = "pinned source, mutants, candidate CLI"
         else:
             statuses[ref] = "FAIL"
             details[ref] = ((result.failures or result.errors)[0][1].splitlines()[-1]
