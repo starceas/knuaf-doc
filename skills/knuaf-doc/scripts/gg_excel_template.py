@@ -15,6 +15,7 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import sys
 import zipfile
 import unicodedata
@@ -28,6 +29,69 @@ NS_REL = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 NS_PKG = "http://schemas.openxmlformats.org/package/2006/relationships"
 NS_MC = "http://schemas.openxmlformats.org/markup-compatibility/2006"
 ET.register_namespace("", NS_MAIN)
+
+BUNDLED_TEMPLATE = Path(__file__).resolve().parents[1] / "assets" / "templates" / "finance-template.xlsx"
+BUNDLED_TEMPLATE_SHA256 = "6d3c9fe5e5992108a8bab18c0098edb0d808f0d14c099878a53939b17de88c7d"
+
+
+def select_source(source: Path | None, *, authorization=None,
+                  template_ref: str | None = None, reference_inventory: dict | None = None) -> Path:
+    """An explicit student path wins, including a missing/unreadable path.
+
+    No path means a deliberate X01 choice, not an inferred major or a failed
+    read. Non-specialty majors also need the existing verified absence policy.
+    """
+    if source is not None:
+        return resolve_source(source).resolve()
+    import gg_major_contract as mc
+    if authorization is None:
+        raise mc.OutputHeldError("output_context_required")
+    major = authorization.major_id
+    if template_ref != "X01" or major == "hort_env_systems":
+        raise mc.OutputHeldError("student_template_required",
+                                 "학생 양식 필요 — H01·X02·미선택을 X01로 대체하지 않음")
+    if major != "specialty_crops":
+        if reference_inventory is None:
+            raise mc.OutputHeldError("workbook_survey_required")
+        from gg_workbook_registry import resolve_workbook_references
+        decision = resolve_workbook_references(
+            major, reference_inventory, {"state": "absent", "file_id": None})
+        if decision["inventory_status"] != "confirmed_absent":
+            raise mc.OutputHeldError("workbook_survey_required",
+                                     decision["selection_reason"])
+    if sha256(BUNDLED_TEMPLATE) != BUNDLED_TEMPLATE_SHA256:
+        raise ValueError("bundled template hash mismatch")
+    return BUNDLED_TEMPLATE.resolve()
+
+
+def create_workbook(source: Path | None, out: Path, *, context=None,
+                    template_ref: str | None = None, reference_inventory: dict | None = None) -> dict:
+    """Byte-copy the chosen workbook without erasing student inputs."""
+    import gg_major_contract as mc
+    authorization = mc.authorize_output(mc.OUTPUT_SCHOOL_WORKBOOK, context)
+    source = select_source(source, authorization=authorization, template_ref=template_ref,
+                           reference_inventory=reference_inventory)
+    read_template(source)
+    digest = sha256(source)
+    if source == BUNDLED_TEMPLATE.resolve() and digest != BUNDLED_TEMPLATE_SHA256:
+        raise ValueError("bundled template hash mismatch")
+    if out.exists():
+        raise FileExistsError(f"refusing to overwrite output: {out}")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with source.open("rb") as original:
+        mc.reconfirm_output(authorization, context)
+        target = out.open("xb")
+        try:
+            with target:
+                shutil.copyfileobj(original, target)
+        except Exception:
+            out.unlink()
+            raise
+    return {"status": "template_copy", "path": str(out.resolve()),
+            "source": {"path": str(source), "sha256": digest,
+                       "kind": "bundled" if source == BUNDLED_TEMPLATE.resolve() else "student"},
+            "output": {"sha256": sha256(out), "calculationStatus": "not_verified"},
+            "majorAuthorization": authorization.to_dict()}
 
 CELL_RE = re.compile(r"^([A-Z]+)([1-9][0-9]*)$")
 RANGE_RE = re.compile(r"^([A-Z]+)([1-9][0-9]*)(?::([A-Z]+)([1-9][0-9]*))?$")
@@ -485,7 +549,8 @@ def _check_map_layout(map_data: dict, source: Path) -> None:
     raise ValueError("map_layout_invalid")
 
 
-def inspect_source(source: Path, out_map: Path | None, report: Path | None) -> dict:
+def inspect_source(source: Path, out_map: Path | None, report: Path | None,
+                   legacy_map: bool = False) -> dict:
     source = resolve_source(source).resolve()
     # Shared read check first: an unreadable file stops here (blocked).
     detected = read_template(source).layout
@@ -499,8 +564,10 @@ def inspect_source(source: Path, out_map: Path | None, report: Path | None) -> d
         sheets = workbook_sheets(z)
         inventory = []
         sheet_summaries = []
+        nonanchors_by_sheet = {}
         for idx, (name, target) in enumerate(sheets):
             root = ET.fromstring(z.read(target))
+            _, nonanchors_by_sheet[name] = merged_cells(root)
             cells = []
             formulas = 0
             for c in root.findall(f".//{local('c')}"):
@@ -517,20 +584,20 @@ def inspect_source(source: Path, out_map: Path | None, report: Path | None) -> d
             sheet_summaries.append({"name": name, "index": idx, "xml": target,
                                     "cellCount": len(cells), "formulaCount": formulas})
             inventory.extend({"sheet": name, **c} for c in cells)
-    entries = default_entries(inventory)
+    entries = default_entries(inventory) if legacy_map else inventory_entries(inventory, nonanchors_by_sheet)
     # ``detected`` comes from the shared read check above.
     result = {
         "schema": "gg-xlsx-template-map/v1",
+        "entriesSource": "legacy" if legacy_map else "inventory",
         "source": {"path": str(source), "sha256": digest, "size": source.stat().st_size},
         "createdAt": datetime.now(timezone.utc).isoformat(),
         "sheets": sheet_summaries,
         "entries": entries,
         "inventory": inventory,
-        "layout": {"variant": detected, "mapOrigin": "default_x01"},
-        "mapStatus": ("ok" if detected == "x01"
-                     else "manual_map_required"),
-        "mapReason": (None if detected == "x01"
-                      else "layout_variant_unsupported"),
+        "layout": {"variant": detected, "mapOrigin": "default_x01" if legacy_map else "inventory"},
+        "mapStatus": "ok" if legacy_map and detected == "x01" else "manual_map_required",
+        "mapReason": (None if legacy_map and detected == "x01" else
+                      "layout_variant_unsupported" if legacy_map else "inventory_review_required"),
         "policy": {
             "clearOnlyListed": True,
             "protectFormulas": True,
@@ -541,7 +608,7 @@ def inspect_source(source: Path, out_map: Path | None, report: Path | None) -> d
             "legacyErrorsPreserved": True,
             "unclassifiedTextDisclosed": True,
             "publicationReady": False,
-            "referenceSheetPreserved": "참고1. 모델농장분석",
+            "referenceSheetPreserved": "참고1. 모델농장분석" if legacy_map else None,
         },
     }
     if out_map:
@@ -549,7 +616,8 @@ def inspect_source(source: Path, out_map: Path | None, report: Path | None) -> d
         out_map.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     if report:
         report.parent.mkdir(parents=True, exist_ok=True)
-        report.write_text(json.dumps({k: result[k] for k in ("schema", "source", "sheets", "entries", "policy")},
+        report.write_text(json.dumps({k: result[k] for k in ("schema", "source", "sheets", "entries", "policy",
+                                                          "layout", "mapStatus", "mapReason", "entriesSource")},
                                      ensure_ascii=False, indent=2), encoding="utf-8")
     return result
 
@@ -557,6 +625,26 @@ def inspect_source(source: Path, out_map: Path | None, report: Path | None) -> d
 def e(sheet: str, refs: str, semantic: str, reason: str, action: str = "clear") -> dict:
     return {"sheet": sheet, "range": refs, "semanticField": semantic, "reason": reason,
             "action": action, "explicit": True}
+
+
+def inventory_entries(inventory: list[dict], nonanchors_by_sheet: dict[str, set[str]]) -> list[dict]:
+    """Observed literals are investigation candidates, never approved inputs.
+
+    Do not classify short names/labels with a language or column heuristic.
+    Every literal needs review; formulas (including shared followers) and
+    merged non-anchors are not candidates.
+    """
+    entries = []
+    for item in inventory:
+        if item.get("hasFormula") or item.get("formula") is not None:
+            continue
+        sheet, ref, value = item["sheet"], item["cell"], item.get("value")
+        if value is None or ref in nonanchors_by_sheet.get(sheet, set()):
+            continue
+        entries.append({"sheet": sheet, "range": ref, "semanticField": "input_candidate",
+                        "role": "input_candidate", "action": "preserve", "explicit": False,
+                        "reason": "observed literal; review action and semantic field before use"})
+    return entries
 
 
 def wage_fill_map(source: Path) -> dict:
@@ -868,7 +956,7 @@ def _serialize_dom(xml_bytes: bytes, source_name: str) -> minidom.Document:
     return document
 
 
-def blank_copy(source: Path, map_path: Path, out: Path, *, context=None) -> dict:
+def blank_copy(source: Path, map_path: Path, out: Path, allow_missing: bool = False, *, context=None) -> dict:
     import gg_major_contract as mc
 
     authorization = mc.authorize_output(mc.OUTPUT_SCHOOL_WORKBOOK, context)
@@ -913,7 +1001,8 @@ def blank_copy(source: Path, map_path: Path, out: Path, *, context=None) -> dict
                     "sha256": sha256(source), "size": source.stat().st_size},
                    "output": {"path": str(out.resolve())}, "cleared": [], "preserved": [],
                    "formulaCellsProtected": 0, "mergedCellsProtected": 0,
-                   "formulaCachesInvalidated": 0, "ambiguousCount": 0, "errors": []}
+                   "formulaCachesInvalidated": 0, "ambiguousCount": 0, "missingCells": [],
+                   "publicationReady": False, "errors": []}
         for name, target in sheets.items():
             sheet_bytes = zin.read(target)
             root = ET.fromstring(sheet_bytes)
@@ -928,7 +1017,7 @@ def blank_copy(source: Path, map_path: Path, out: Path, *, context=None) -> dict
             }
             anchors, nonanchors = merged_cells(root)
             wanted = by_sheet.get(name, set())
-            seen_wanted: set[str] = set()
+            seen_mapped: set[str] = set()
             for c in root.findall(f".//{local('c')}"):
                 ref = c.attrib.get("r")
                 if not ref:
@@ -936,8 +1025,8 @@ def blank_copy(source: Path, map_path: Path, out: Path, *, context=None) -> dict
                 dom_cell = dom_cells.get(ref)
                 if dom_cell is None:
                     raise ValueError(f"worksheet cell missing from namespace-preserving DOM: {target}!{ref}")
-                if ref in wanted:
-                    seen_wanted.add(ref)
+                if (name, ref) in action_by_cell:
+                    seen_mapped.add(ref)
                 formula = c.find(local("f"))
                 if formula is not None:
                     # Invalidate every formula cache in a blank template; keep f text.
@@ -962,17 +1051,12 @@ def blank_copy(source: Path, map_path: Path, out: Path, *, context=None) -> dict
                 old = text_value(c, shared)
                 _dom_clear_cell_value(dom_cell)
                 receipt["cleared"].append({"sheet": name, "cell": ref, "oldValue": old})
-            missing_wanted = wanted - seen_wanted
-            if missing_wanted:
-                # A map entry names a cell that has no <c> element in this
-                # source worksheet at all, so the loop above never inspected
-                # it. Silently accepting this risks masking a map generated
-                # against a different/stale copy of the source. Fail closed
-                # instead of treating "never seen" as "nothing to clear".
-                raise ValueError(
-                    "map references cell missing from source worksheet: "
-                    f"{name}!{sorted(missing_wanted)[0]}"
-                )
+            mapped = wanted | set(preserved_by_sheet.get(name, {}))
+            missing_wanted = sorted(mapped - seen_mapped)
+            if missing_wanted and not allow_missing:
+                raise ValueError("map references cell missing from source worksheet: "
+                                 f"{name}!{missing_wanted[0]}")
+            receipt["missingCells"].extend({"sheet": name, "cell": ref} for ref in missing_wanted)
             modified[target] = sheet_dom.toxml(encoding="utf-8")
         targeted = {(r["sheet"], r["cell"]) for r in receipt["cleared"]}
         preserved = {(r["sheet"], r["cell"]) for r in receipt["preserved"]}
@@ -1031,7 +1115,8 @@ def blank_copy(source: Path, map_path: Path, out: Path, *, context=None) -> dict
     # keeps the artifact review-only; the receipt must not call it publication-ready.
     retained_legacy = any("legacy" in reason.lower() or "reference" in reason.lower()
                           for reasons in preserved_by_sheet.values() for reason in reasons.values())
-    receipt["output"]["status"] = "partial" if (receipt["ambiguousCount"] or receipt.get("unclassifiedTextCells") or retained_legacy) else "blank_template"
+    receipt["output"]["status"] = "partial" if (receipt["ambiguousCount"] or receipt.get("unclassifiedTextCells")
+                                                or retained_legacy or receipt["missingCells"]) else "blank_template"
     receipt["output"]["calculationStatus"] = "recalculate_on_open; cached_formula_values_invalidated"
     return receipt
 
@@ -1333,10 +1418,14 @@ def _labor_review_x01(workbook, formulas) -> list[dict]:
 def cli(argv: list[str]) -> int:
     p = argparse.ArgumentParser(description="inspect and create a source-bound reusable XLSX template")
     sp = p.add_subparsers(dest="cmd", required=True)
+    make = sp.add_parser("create", help="copy the selected student workbook or an explicitly chosen X01 blank")
+    make.add_argument("--source", type=Path)
+    make.add_argument("--out", required=True, type=Path)
     i = sp.add_parser("inspect")
-    i.add_argument("--source", required=True, type=Path)
+    i.add_argument("--source", type=Path)
     i.add_argument("--out-map", required=True, type=Path)
     i.add_argument("--report", type=Path)
+    i.add_argument("--legacy-map", action="store_true", help="use the existing X01 map, not investigation candidates")
     w = sp.add_parser("wage-map")
     w.add_argument("--source", required=True, type=Path)
     w.add_argument("--out-map", required=True, type=Path)
@@ -1352,15 +1441,35 @@ def cli(argv: list[str]) -> int:
     lr = sp.add_parser("labor-review", help="일용직 성별 고용 일수 경고")
     lr.add_argument("--workbook", required=True, type=Path)
     c = sp.add_parser("clear")
-    c.add_argument("--source", required=True, type=Path)
+    c.add_argument("--source", type=Path)
     c.add_argument("--map", required=True, type=Path)
     c.add_argument("--out", required=True, type=Path)
     c.add_argument("--receipt", type=Path)
-    c.add_argument("--project", default=None, type=Path,
-                   help="프로젝트 정본 폴더")
-    c.add_argument("--major", default=None, help="명시 전공 ID")
+    c.add_argument("--allow-missing", action="store_true", help="record absent cells in a partial investigation copy")
+    for command in (make, i, c):
+        command.add_argument("--project", default=None, type=Path, help="프로젝트 정본 폴더")
+        command.add_argument("--major", default=None, help="명시 전공 ID")
+        command.add_argument("--template-ref", choices=("H01", "X01", "X02"),
+                             help="source 생략 시 전공 계약에 따라 선택한 양식")
+        command.add_argument("--reference-inventory", type=Path,
+                             help="다른 전공의 전공 XLSX 부재를 확인한 기존 registry inventory JSON")
     args = p.parse_args(argv)
     try:
+        if args.cmd in {"create", "inspect", "clear"}:
+            import gg_major_contract as mc
+            context = mc.output_context(args.project, args.major) if args.project is not None else None
+            reference_inventory = (_json_file(args.reference_inventory)
+                                   if args.source is None and args.reference_inventory else None)
+            if args.cmd == "create":
+                print(json.dumps(create_workbook(
+                    args.source, args.out, context=context, template_ref=args.template_ref,
+                    reference_inventory=reference_inventory), ensure_ascii=False))
+                return 0
+            authorization = (mc.authorize_output(mc.OUTPUT_SCHOOL_WORKBOOK, context)
+                             if args.source is None else None)
+            args.source = select_source(args.source, authorization=authorization,
+                                        template_ref=args.template_ref,
+                                        reference_inventory=reference_inventory)
         if args.cmd == "label-map":
             choices = {}
             for item in args.choice:
@@ -1399,8 +1508,9 @@ def cli(argv: list[str]) -> int:
                 json.dump(result, stream, ensure_ascii=False, indent=2)
             print(json.dumps({"status": "mapped", "map": str(args.out_map)}, ensure_ascii=False))
         elif args.cmd == "inspect":
-            r = inspect_source(args.source, args.out_map, args.report)
+            r = inspect_source(args.source, args.out_map, args.report, legacy_map=args.legacy_map)
             print(json.dumps({"status": "inspected", "source": r["source"], "entries": len(r["entries"]),
+                              "entries_source": r["entriesSource"],
                               "sheets": len(r["sheets"]), "map": str(args.out_map),
                               "layout": r["layout"]["variant"],
                               "mapStatus": r["mapStatus"]}, ensure_ascii=False))
@@ -1423,7 +1533,7 @@ def cli(argv: list[str]) -> int:
                 context = (mc.output_context(args.project, args.major)
                            if args.project is not None else None)
                 r = blank_copy(resolve_source(args.source).resolve(), args.map.resolve(), staged_out.resolve(),
-                               context=context)
+                               allow_missing=args.allow_missing, context=context)
                 r["output"]["path"] = str(args.out.resolve())
                 if staged_receipt:
                     staged_receipt.parent.mkdir(parents=True, exist_ok=True)
@@ -1445,7 +1555,8 @@ def cli(argv: list[str]) -> int:
                 raise
             print(json.dumps({"status": r["output"]["status"], "out": r["output"],
                               "cleared": len(r["cleared"]), "formulaProtected": r["formulaCellsProtected"],
-                              "formulaCachesInvalidated": r["formulaCachesInvalidated"]}, ensure_ascii=False))
+                              "formulaCachesInvalidated": r["formulaCachesInvalidated"],
+                              "missing": len(r["missingCells"])}, ensure_ascii=False))
         return 0
     except Exception as exc:
         import gg_major_contract as mc

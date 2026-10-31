@@ -77,7 +77,7 @@ def _direct_children(node, local_name):
             and child.namespaceURI == NS_MAIN and child.localName == local_name]
 
 
-def _style_wrap_cells(styles_doc, sheet_doc, cells, note_color=None, number_format=None):
+def _style_wrap_cells(styles_doc, sheet_doc, cells, note_color=None, number_format=None, wrap=True):
     if not cells:
         return []
     roots = _dom_elements(styles_doc, NS_MAIN, 'cellXfs')
@@ -154,35 +154,61 @@ def _style_wrap_cells(styles_doc, sheet_doc, cells, note_color=None, number_form
             font_roots[0].setAttribute('count', str(len(fonts) + 1))
             clone.setAttribute('fontId', str(len(fonts)))
             clone.setAttribute('applyFont', '1')
-        clone.setAttribute('applyAlignment', '1')
-        alignments = _direct_children(clone, 'alignment')
-        if alignments:
-            alignment = alignments[0]
-            for extra in alignments[1:]:
-                clone.removeChild(extra)
-        else:
-            prefix = clone.prefix or cell_xfs.prefix or styles_doc.documentElement.prefix
-            alignment = styles_doc.createElementNS(NS_MAIN, (prefix + ':' if prefix else '') + 'alignment')
-            protection = next((child for child in clone.childNodes
-                               if child.nodeType == child.ELEMENT_NODE
-                               and child.namespaceURI == NS_MAIN
-                               and child.localName in {'protection', 'extLst'}), None)
-            if protection is None:
-                clone.appendChild(alignment)
+        if wrap:
+            clone.setAttribute('applyAlignment', '1')
+            alignments = _direct_children(clone, 'alignment')
+            if alignments:
+                alignment = alignments[0]
+                for extra in alignments[1:]:
+                    clone.removeChild(extra)
             else:
-                clone.insertBefore(alignment, protection)
-        alignment.setAttribute('wrapText', '1')
+                prefix = clone.prefix or cell_xfs.prefix or styles_doc.documentElement.prefix
+                alignment = styles_doc.createElementNS(NS_MAIN, (prefix + ':' if prefix else '') + 'alignment')
+                protection = next((child for child in clone.childNodes
+                                   if child.nodeType == child.ELEMENT_NODE
+                                   and child.namespaceURI == NS_MAIN
+                                   and child.localName in {'protection', 'extLst'}), None)
+                if protection is None:
+                    clone.appendChild(alignment)
+                else:
+                    clone.insertBefore(alignment, protection)
+            alignment.setAttribute('wrapText', '1')
         new_style = len(xfs)
         cell_xfs.appendChild(clone)
         xfs.append(clone)
         cell.setAttribute('s', str(new_style))
-        changes.append({'cell': ref, 'old_style': style_id, 'new_style': new_style, 'wrap_text': True})
+        changes.append({'cell': ref, 'old_style': style_id, 'new_style': new_style, 'wrap_text': True if wrap else None})
         if note_color is not None:
             changes[-1]['font_color'] = note_color
         if number_format is not None:
             changes[-1]['number_format'] = number_format
     cell_xfs.setAttribute('count', str(len(xfs)))
     return changes
+
+
+# CT_Workbook successors of definedNames. externalReferences and the other
+# preceding elements must stay before a newly created container.
+_WORKBOOK_AFTER_DEFINED_NAMES = {
+    'calcPr', 'oleSize', 'customWorkbookViews', 'pivotCaches', 'smartTagPr',
+    'smartTagTypes', 'webPublishing', 'fileRecoveryPr', 'webPublishObjects', 'extLst',
+}
+
+
+def _defined_names_container(book):
+    root = book.documentElement
+    existing = _direct_children(root, 'definedNames')
+    if existing:
+        return existing[0]
+    container = qualified(book, root, 'definedNames')
+    successor = next((child for child in root.childNodes
+                      if child.nodeType == child.ELEMENT_NODE
+                      and child.namespaceURI == NS_MAIN
+                      and child.localName in _WORKBOOK_AFTER_DEFINED_NAMES), None)
+    if successor is None:
+        root.appendChild(container)
+    else:
+        root.insertBefore(container, successor)
+    return container
 
 
 # 특용작물 X01의 '7. 영농자재소요계획'은 교수님 양식 인쇄 설정(인쇄 영역
@@ -281,20 +307,7 @@ def apply(source, map_path, out, receipt_path, *, context=None):
                     dn.setAttribute('name', '_xlnm.Print_Titles')
                     dn.setAttribute('localSheetId', str(order.index(name)))
                     dn.appendChild(book.createTextNode(ref_str))
-                    # OOXML requires <definedName> to live inside a
-                    # <definedNames> container, not as a bare sibling of
-                    # <sheets>. Reuse the container if one already exists
-                    # (e.g. from an existing print_area); otherwise create
-                    # it in schema order, right after <sheets>.
-                    dnc_list = _dom_elements(broot, NS_MAIN, 'definedNames')
-                    if dnc_list:
-                        dnc_list[0].appendChild(dn)
-                    else:
-                        dnc = qualified(book, broot, 'definedNames')
-                        dnc.appendChild(dn)
-                        sheets_el = _dom_elements(broot, NS_MAIN, 'sheets')
-                        anchor = sheets_el[0] if sheets_el else broot.firstChild
-                        anchor.parentNode.insertBefore(dnc, anchor.nextSibling)
+                    _defined_names_container(book).appendChild(dn)
             row_heights = _row_heights(plan)
 
             wrap_cells = _wrap_cells(plan)
@@ -355,7 +368,7 @@ def apply(source, map_path, out, receipt_path, *, context=None):
                         raise ValueError('number format override requires cells and format')
                     cells = _wrap_cells({'wrap_cells': override['cells']})
                     wrap_changes.extend(_style_wrap_cells(
-                        styles_doc, doc, cells, number_format=override['format']
+                        styles_doc, doc, cells, number_format=override['format'], wrap=False
                     ))
                 style_changes.extend({'sheet': name, **item} for item in wrap_changes)
             else:

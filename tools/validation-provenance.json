@@ -166,7 +166,8 @@
   },
   "tests/test_bundle_lineage.py": {
    "note": "P1+P2 PACKAGE 계보 시험 — 실제 후보 정상 검증, 신규 파일 계약(allowlist·before=null·위장 거부) 포함 적대 합성 트리. P6: pin four new common-contract runtime files and the P5 parent tree. P9: hort_env_systems first bundle counts and parent P8 tree. | P10: P1+P2 PACKAGE 계보 시험 — 실제 후보 정상 검증, 신규 파일 계약(allowlist·before=null·위장 거부) 포함 적대 합성 트리. P6: pin four new common-contract runtime files and the P5 parent tree. P9: pins the P8 parent tree (a96a5bf, 154 files) and the common-workbook extract declared-new file. P10: parent P9 main 3c83f0c (161 files), combined 95 changes and 71 new files. | P11: P1+P2 PACKAGE 계보 시험 — 실제 후보 정상 검증, 신규 파일 계약(allowlist·before=null·위장 거부) 포함 적대 합성 트리. P6: pin four new common-contract runtime files and the P5 parent tree. P9: hort_env_systems first bundle counts and parent P8 tree. P10: 공용 인터뷰 규칙 묶음 재기준 counts and parent P9 tree. P11: parent P10 main ec8a2e8 (163 files), combined 99 changes and 72 new files. P12: pin the P11 parent tree (164 files) and check the ancestor list ends at the parent. P13: P12 parent main 955e880 (178 files), cumulative 109 changes and 82 new files; D4 identity catalogue retained with P12 industrial_insects. P14: fruit_trees second bundle counts and parent P13 tree. P15: rebased D5 lineage pins (P14 parent main f9c278c, 185 files; cumulative 113 changes and 86 new files; P15 stage label). P16: fruit identity rows on parent P15 tree; the D5 parent-tree pin is checked against the P14 lineage row. P18: pin the P17 parent tree (190 files) and check the ancestor list ends at the parent. | P20: pin the P19 parent tree (main db2a036, 199 files), stage P20; cumulative 125 changes and 98 new files — the hort finance bundle (four declared-new runtime files, I4-FIX evaluator/registry helpers, I5/I6-FIX rehashes) redeclared under P20; D5 P14 ancestor pin retained. P22: pin the P21 parent tree (main bb1570d, 217 files) and student-report stage counts (130 changes, 103 new, 104 approved). P24: accepted P23(main 99aedf5, 221 files) parent and unchanged 130 changes/103 declared-new files pinned. P26: main P25 clean export parent pin and combined U1/paid-labour counts. | PR-2: latest D8/D9 integration; I-01 only measured count constants adjusted in lineage test. Full pytest covers split public/skill test locations. | Restore v0.1.4: synthetic regression and approved school-entry expectations.",
-   "origin": "new"
+   "origin": "new",
+   "p0_2b": "Owner-approved narrow deletion: five incidental declaration-count assertions and their comments only; hash, ancestry and tamper tests remain unchanged."
   },
   "tests/test_canonical_flow.py": {
    "note": "P0-A: init/apply/check/export positive controls + C2–C6/H2/H3/H5 defect signatures; synthetic only. | P0-2 PR-D: C6 block-policy tests retired; inventory now maps private-instance ownership and error-cell behavior tests (verdict C).",
@@ -186,6 +187,7 @@
   },
   "tests/test_excel_template_guard.py": {
    "note": "P9 C6 layout-guard tests: detect_layout anchors, legacy/OK-edited map refusal, reviewed_custom variant match/mismatch on synthetic sources (no real bytes). | PR2 R3: 빈·잘못된 기준점 목록은 식별 설정을 못 읽은 것이라 detect_layout이 unknown 대신 TemplateUnreadable을 내고, 옛 맵 적용은 여전히 거부·출력 없음(같은 보호 역할). | PR2 R4: 이 파일 기대값은 바꾸지 않음(식별 설정 실패는 TemplateUnreadable, 옛 맵 적용 거부·출력 없음 유지).",
+   "p0_2b": "Fixed-X01 inspection scenarios explicitly opt into legacy_map; expected layout guards remain unchanged.",
    "origin": "new"
   },
   "tests/test_finance_gate.py": {
@@ -426,6 +428,7 @@
   },
   "tests/test_template_wage_link.py": {
    "note": " | PR-2: latest D8/D9 integration; I-01 only measured count constants adjusted in lineage test. Full pytest covers split public/skill test locations. | FIX-B2: V2-02 raw registered observations before wage conversion; 39 tests. | FIX-B3: V3-02 gender fencing, V3-03 canonical dimensions and V3-04 registered X01 observation formula; 46 tests. | FIX-B4: V4-03 15 significant digit formula serialization; 52 tests. | PR2 R2: 등록 원본에서 값만 채운 사본·관측 준비 사본도 칸 단위 수식 대조로 Z27 예외 허용, 수식 변경·추가·삭제·시트 추가는 거부; 감사 파일 변조 시험은 공용 감사 로더로 옮김.",
+   "p0_2b": "Wage observation scenarios explicitly opt into legacy_map; shared-follower protections remain unchanged.",
    "origin": "new"
   },
   "tests/test_update_check.py": {
@@ -442,6 +445,7 @@
   },
   "tests/test_workbook_registry.py": {
    "note": "P8 common reference-workbook decision table, X01/X02 identity with exact sheet names, read-only scan, no shipped originals or local paths. | P10: P8 common reference-workbook decision table, X01/X02 identity with exact sheet names, read-only scan, no shipped originals or local paths. P9: v2 reference-set load, extract/--check determinism, registry-extract identity path parser-call counts, resolver template_status keys. P9-D3: major_base_policy decision tests incl. shipped-catalog default path, explicit-selection precedence, unusable-base and duplicate-copy negatives.",
+   "p0_2b": "Original-document packaging prohibition permits only separately registered hash-pinned derived assets.",
    "origin": "new"
   },
   "tests/test_xlsx_structure.py": {
@@ -482,6 +486,38 @@
   "tools/validation-provenance.json": {
    "note": "This file; declares origins for the validation layer.",
    "origin": "new"
+  },
+  "skills/knuaf-doc/assets/templates/finance-template.xlsx": {
+   "note": "P0-2B U20: approved neutral value-cleared X01 derivative from app PR #41, copied unchanged; SHA-256 6d3c9fe5e5992108a8bab18c0098edb0d808f0d14c099878a53939b17de88c7d. Not original X01 bytes.",
+   "origin": "reused"
+  },
+  "skills/knuaf-doc/scripts/gg_excel_template.py": {
+   "note": "P0-2B U07/U20/U21/U22/Q02: app behavior reimplemented against current canonical major authorization, layout/read guards and source-hash contract; no obsolete app core copied.",
+   "origin": "transformed"
+  },
+  "skills/knuaf-doc/scripts/gg_excel_print.py": {
+   "note": "P0-2B U16/U17: preserve alignment on number-only changes and schema-order definedNames insertion; current X01 print protection and major guard retained.",
+   "origin": "transformed"
+  },
+  "skills/knuaf-doc/references/excel-template.md": {
+   "note": "P0-2B: source selection, copy receipt, review-only inventory map, explicit legacy/partial operations and print preservation contracts.",
+   "origin": "transformed"
+  },
+  "skills/knuaf-doc/references/workbook-reference-set.json": {
+   "note": "P0-2B U20/Q02: separate derived_assets declaration without replacing original member hashes or major-specific H01 policy.",
+   "origin": "transformed"
+  },
+  "skills/knuaf-doc/references/builtin-sources.json": {
+   "note": "P0-2B owner-approved narrow repin: only reference-finance-01-xlsx artifact references/excel-template.md sha256/bytes updated to the B-owned document bytes; source identity, role, coverage, lineage and every other entry unchanged.",
+   "origin": "transformed"
+  },
+  "tests/test_excel_template_integration.py": {
+   "note": "P0-2B: synthetic regressions for student value preservation, exclusive copy, major/source selection, unapproved candidate maps, shared followers, missing-cell partial receipts, wrap preservation and definedNames ordering.",
+   "origin": "new"
+  },
+  "tests/test_specialty_template_route.py": {
+   "note": "P0-2B U21: existing fixed-X01 inspection scenarios explicitly request legacy_map; specialty template route and print guards retained.",
+   "origin": "transformed"
   }
  },
  "readme_policy": {

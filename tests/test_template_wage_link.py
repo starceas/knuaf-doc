@@ -559,7 +559,7 @@ class WageLinkTests(ContractCase):
         self.assertFalse((self.root/'filled.xlsx').exists())
 
     def test_default_map_lists_observations_but_protects_shared_followers(self):
-        info = self.tpl.inspect_source(self.src, None, None)
+        info = self.tpl.inspect_source(self.src, None, None, legacy_map=True)
         listed = {e.get('range') for e in info['entries'] if e.get('semanticField') == 'wage_observation'}
         self.assertIn('X26', listed)
         self.assertIn('Y26', listed)
@@ -614,7 +614,7 @@ class WageLinkTests(ContractCase):
         parts[target] = E.tostring(root)
         with zipfile.ZipFile(self.src, 'w') as z:
             for n, raw in parts.items(): z.writestr(n, raw)
-        info = self.tpl.inspect_source(self.src, None, None)
+        info = self.tpl.inspect_source(self.src, None, None, legacy_map=True)
         self.assertFalse(any(e.get('semanticField') == 'wage_observation' and e.get('range') == 'X28' for e in info['entries']))
         out, rec = self.apply(self.patch.materialize_d8(self.src, prepare_observations=True))
         self.assertEqual(len(rec['expanded_shared_formulas']), 5)

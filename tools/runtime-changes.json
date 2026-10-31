@@ -1,5 +1,9 @@
 {
   "approved_new_files": [
+    "skills/knuaf-doc/assets/templates/finance-template.xlsx",
+    "tests/test_excel_template_guard.py",
+    "tests/test_excel_template_integration.py",
+    "tests/test_workbook_registry.py",
     "docs/asset-disposition.json",
     "docs/missing-assets-index.md",
     "docs/release-check.md",
@@ -182,6 +186,38 @@
   "baseline_spec": "tools/baseline-files.json",
   "baseline_spec_sha256": "094a062217f563cb62f79721c2eb6f1eac15574fe691ac4a6b72595a413f0392",
   "changes": {
+    "skills/knuaf-doc/assets/templates/finance-template.xlsx": {
+      "after_sha256": "6d3c9fe5e5992108a8bab18c0098edb0d808f0d14c099878a53939b17de88c7d",
+      "before_sha256": null,
+      "first_changed": "P28",
+      "owner": "B",
+      "reason": "U20: approved neutral X01-derived asset copied byte-for-byte from app PR #41, separately registered; no original workbook accessed.",
+      "source": "adopted:app-PR41"
+    },
+    "tests/test_excel_template_guard.py": {
+      "after_sha256": "a81d098f400061e517943bfbea5a1bdf3b6bfad7c8f4636894c14c13c86e50b8",
+      "before_sha256": null,
+      "first_changed": "P9",
+      "owner": "B",
+      "reason": "U21: existing fixed-X01 guard scenarios explicitly select legacy_map; guard expectations unchanged.",
+      "source": "new"
+    },
+    "tests/test_excel_template_integration.py": {
+      "after_sha256": "b9ffd8e921e4d3729c2a8e4ba2d5418c4bf7ca85012ae64d567b6235a7a20687",
+      "before_sha256": null,
+      "first_changed": "P28",
+      "owner": "B",
+      "reason": "U07/U16/U17/U20/U21/U22: synthetic consumer-visible copy, selection, candidate-map, missing-cell, alignment and definedNames ordering regressions.",
+      "source": "new"
+    },
+    "tests/test_workbook_registry.py": {
+      "after_sha256": "f3c1e9b2278bb0bc126d3b9563c6f606788ca76247207731310837f5654aeccd",
+      "before_sha256": null,
+      "first_changed": "P8",
+      "owner": "B",
+      "reason": "U20: original-document packaging prohibition retains hash-bound exception for separately registered derived asset.",
+      "source": "new"
+    },
     ".codex-plugin/plugin.json": {
       "after_sha256": "e75c91be73e66f6dc8c69486a768711353ed9b85327b6b92371b6dba03e5ca14",
       "before_sha256": "5b6c8ae48fa215f81f71b55feda736f167666cb6d66afe04b9337d8f4bc527cf",
@@ -401,12 +437,13 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/builtin-sources.json": {
-      "after_sha256": "40eea41b8bb27f9205c70be179ba8aa7763bc5ba94146b5502f5cc2ed7eb04bd",
+      "after_sha256": "4beced8de325d74d7038f1cfa6f728f8dbbf8edd77f1e2fcbab557324dbd4e52",
       "before_sha256": null,
       "first_changed": "P5",
       "last_changed": "P28",
       "owner": "P28",
       "reason": "accepted P5 reuse-registry@3 builtin source registry (frozen corrected A+B+C union) | P9: eight hort_env_systems entries appended (teaching workbook structure extract; exemplars and official sources identification-only); existing entries unchanged | P10: P9: register shared-finance-workbook x01/x02 (primary_finance_template) and hort-env raw workbook (reference_only); rename the student-numbered specialty exemplar id to specialty-grad-thesis-finance-xlsx (D-C) | P9-D3: removed the duplicated hort-env-shared-raw-workbook entry (one-hash-one-entry; the hort module registers its own workbook) | P12: nine industrial_insects entries (F0/E1-E4 locator map, E3/E4 HWP and R0/R1 identity-only) | P15: D5 useful-life physical-cell correction and dependent trust migration | P20: hort-env profile.json artifact hash re-pinned to the 0.2.0 profile | P27: K4-06: 배포되지 않는 official-toc.md 두 항목 runtime_present=false | P28: reference-narrative-01-hwp/pdf 식별 전용 등록(우선 벤치마크 역할, 재사용 권한 없음) | P28 R-all integration: 공통 수준 규칙 변경으로 exemplar-quality.md(서술 예시 02 PDF/HWP 두 항목)·excel-template.md(재무 예시 01)의 실제 배포 바이트 SHA-256·크기만 재측정해 artifact 핀 갱신; source_sha256·role·coverage·lineage는 보존 | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존 | I-02: PR-1 measured artifact repin precedent; only F01 excel-template.md artifact sha256 and bytes updated; source identity, key authority, coverage and lineage unchanged. | N1/N2: declare measured school artifacts and PDF/HWP reuse boundaries. | ORDER-I2: remeasured final 0.1.5 file bytes after preserving PR32 inputs. | PR2: 특용작물 엑셀을 교수님 양식(X01·X02) 기준으로 — 레거시 생성기 입구 차단, 작목 분류별 칸 이름 층, 일용 노무 성별 경고, X01 임금 산술평균·7번 인쇄 설정 보존",
+      "note": "P0-2B owner-approved narrow update: only reference-finance-01-xlsx artifact references/excel-template.md sha256/bytes re-pinned to the B-owned document bytes; other entries unchanged.",
       "source": "new"
     },
     "skills/knuaf-doc/references/common-workbooks/corrections/C1.md": {
@@ -517,12 +554,13 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/excel-template.md": {
-      "after_sha256": "56a5e8cee7fb2a4c7afa4ce7d7921ac4609359d48aa4ae3d3f17df4c3622f1cb",
+      "after_sha256": "e5c553a21f66edc1fcae86ee8fcfbb68f7b706fd386837abac35abffb3d78114",
       "before_sha256": "4513094e1754191edd810947789f2228fb3b15bfbe1a2531e1b18f6b144739e8",
       "first_changed": "P28",
       "last_changed": "P28",
-      "owner": "P28",
+      "owner": "B",
       "reason": "P28: 물가·노무비 분리 상승률 규칙 절 추가 (특용작물, 공식 통계 근거 필수) | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존 | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes. | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13. | P28 output hygiene: 최종본 고정 이름·.gg-work 작업 구역·tidy 미리보기/apply 규칙 | PR2: 특용작물 엑셀을 교수님 양식(X01·X02) 기준으로 — 레거시 생성기 입구 차단, 작목 분류별 칸 이름 층, 일용 노무 성별 경고, X01 임금 산술평균·7번 인쇄 설정 보존",
+      "note": "P0-2B: document create/selection, unapproved inventory investigation, explicit legacy and partial clear, wrap preservation and schema-order behavior.",
       "source": "new"
     },
     "skills/knuaf-doc/references/exemplar-quality.md": {
@@ -1108,12 +1146,13 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/workbook-reference-set.json": {
-      "after_sha256": "d41487d2e540540ffa168e62486bdac6562398271962fbe4fa5be44f0108af4a",
+      "after_sha256": "a131838a752de39ea73c64886624a6388ba2f3dc39b5cb8bf58a155a78233f6f",
       "before_sha256": null,
       "first_changed": "P8",
-      "last_changed": "P10",
-      "owner": "P10",
+      "last_changed": "P28",
+      "owner": "B",
       "reason": "P8 common X01/X02 identity (SHA-256, exact sheet names); no paths or original bytes | P10: P9: v2 — template_rule (D-A/D-B) replaces not-a-submission-template policy; known_workbooks H01 identity; loader accepts v2 only | P9-D3: H01 gains base_for_major=hort_env_systems; template_rule states major-specific precedence (D-F) | PR2: 특용작물 엑셀을 교수님 양식(X01·X02) 기준으로 — 레거시 생성기 입구 차단, 작목 분류별 칸 이름 층, 일용 노무 성별 경고, X01 임금 산술평균·7번 인쇄 설정 보존",
+      "note": "P0-2B U20/Q02: separate derived_assets entry; original X01/X02/H01 identities and major selection policy preserved.",
       "source": "new"
     },
     "skills/knuaf-doc/references/workflow-order.md": {
@@ -1264,21 +1303,23 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_excel_print.py": {
-      "after_sha256": "ff76f33b4d764fea8d4acaafe23ea6b7d3c9a307d7646731f2ed2c121459fb90",
+      "after_sha256": "d17bc535b6ad861d3e2fa2f10b3f94481210dc5ae060c50905117bcd44a66d7b",
       "before_sha256": "4332896806b8b4d44e8d76106d41221536edee470f6b56e7ddb88797bc55f2aa",
       "first_changed": "P1",
-      "last_changed": "P27",
-      "owner": "P27",
+      "last_changed": "P28",
+      "owner": "B",
       "reason": "H6: definedNames 컨테이너 재사용/생성(스키마 순서·localSheetId 유지). C2: UTF-8 | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P20: school_17_sheet_v1 프로필 고정 require_finance_profile | P27: K2-02: CLI 진입점 stdout·stderr UTF-8 재설정 | PR2: 특용작물 엑셀을 교수님 양식(X01·X02) 기준으로 — 레거시 생성기 입구 차단, 작목 분류별 칸 이름 층, 일용 노무 성별 경고, X01 임금 산술평균·7번 인쇄 설정 보존",
+      "note": "P0-2B U16/U17: number-format-only changes preserve alignment; definedNames follows all schema predecessors, including externalReferences.",
       "source": "adopted:PR2"
     },
     "skills/knuaf-doc/scripts/gg_excel_template.py": {
-      "after_sha256": "ab2c7f86b5c875482d4b881f57c42e9679a0818119d99f110c119499a4d11963",
+      "after_sha256": "6018abb7e74f89b16eb87d1c05d7fd001c03aafb8d7193540902682c3efc1d35",
       "before_sha256": "70933a7abfc4bb9b86f20b05487c785c2abd77be60426089cb70b40741ca508f",
       "first_changed": "P1",
       "last_changed": "P28",
-      "owner": "P28",
+      "owner": "B",
       "reason": "H5: map이 참조하는 미존재 셀을 발행 전 ValueError로 거부(seen_wanted) | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P10: P9: C6 layout guard — detect_layout from extract anchors, source-bytes re-detection at clear; X02 variant refused (layout_variant_unsupported) | P20: school_17_sheet_v1 프로필 고정 require_finance_profile | P27: K2-02: CLI 진입점 stdout·stderr UTF-8 재설정 | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes. | PR2: 특용작물 엑셀을 교수님 양식(X01·X02) 기준으로 — 레거시 생성기 입구 차단, 작목 분류별 칸 이름 층, 일용 노무 성별 경고, X01 임금 산술평균·7번 인쇄 설정 보존",
+      "note": "P0-2B U07/U20/U21/U22/Q02: exclusive byte-copy receipt, explicit major-safe X01 fallback, inventory review boundary, strict-by-default missing cells and partial receipt.",
       "source": "adopted:PR2"
     },
     "skills/knuaf-doc/scripts/gg_fact_semantics.py": {
@@ -1964,12 +2005,13 @@
       "source": "new"
     },
     "tests/test_bundle_lineage.py": {
-      "after_sha256": "f096ef7ea16e584bcf1f9d9f37d0445196a7b8528c9482c83a21d05edbdbfd33",
+      "after_sha256": "0381e0208b7c7ab6c743771de7a94ad17bba2aad6d1489abb3e428e7ab5a688a",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "P28",
-      "owner": "P28",
+      "owner": "B",
       "reason": "PR36 CI strict-count repair: preserve exact declaration counts and declare the changed validation test; integration adds five new declarations and three approvals, this test adds one further declaration/new/approval. | Window-hygiene Office-only scope: refreshed reviewed bytes and strict +2 declaration/new/approval counts; no browser product reference or live Office validation. | P28 kordoc-hwpx: runtime-changes 수치 고정 갱신(change_count 203→207, new_count 155→159, approved_new_files 162→166). | P28 output hygiene: tidy 신규 파일·설치/검증 번들 목록 갱신 | R6: strict counts remeasured after the plan-fit checker left this change (215/165/172 -> 214/164/171) | Merge: strict counts remeasured after merging main (216/166/173 on main plus two plan rule files) | PR2: 특용작물 엑셀을 교수님 양식(X01·X02) 기준으로 — 레거시 생성기 입구 차단, 작목 분류별 칸 이름 층, 일용 노무 성별 경고, X01 임금 산술평균·7번 인쇄 설정 보존",
+      "note": "P0-2B owner-approved narrow repair: delete only five incidental fixed-count assertions and their explanatory comments (4628d02 lines 132-153 and 173-192); retain all hash, ancestry and adversarial checks.",
       "source": "new"
     },
     "tests/test_hwpx_adapter.py": {
@@ -2109,21 +2151,23 @@
       "source": "new"
     },
     "tests/test_specialty_template_route.py": {
-      "after_sha256": "47652cd69fe5513e49ea3cb326b6f2ad8dbc89b7c7c2c21ebb3472cb726faabf",
+      "after_sha256": "b17e81ae7c56dc4a82c6bc77b399a88e2a043b690112ff7aa271644e9fa4c21b",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "P28",
-      "owner": "P28",
+      "owner": "B",
       "reason": "PR2: 특용작물 엑셀을 교수님 양식(X01·X02) 기준으로 — 레거시 생성기 입구 차단, 작목 분류별 칸 이름 층, 일용 노무 성별 경고, X01 임금 산술평균·7번 인쇄 설정 보존",
+      "note": "P0-2B U21: fixed-map route tests opt into legacy_map explicitly; specialty route safety unchanged.",
       "source": "new"
     },
     "tests/test_template_wage_link.py": {
-      "after_sha256": "d86426d19c882893564e97c850b4a8f3458ec3049dda78457c578d77c46325d4",
+      "after_sha256": "1599df3c3da1ba7307ae147144b537c5ca702dfb4d3d267da71bf0ebe27c411b",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "P28",
-      "owner": "P28",
+      "owner": "B",
       "reason": "P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13. | PR2: 특용작물 엑셀을 교수님 양식(X01·X02) 기준으로 — 레거시 생성기 입구 차단, 작목 분류별 칸 이름 층, 일용 노무 성별 경고, X01 임금 산술평균·7번 인쇄 설정 보존",
+      "note": "P0-2B U21: wage observation tests explicitly request the fixed X01 map; shared-formula protections unchanged.",
       "source": "new"
     },
     "tests/test_tidy.py": {
