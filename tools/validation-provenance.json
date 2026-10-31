@@ -100,6 +100,10 @@
    "note": " | PR-2: latest D8/D9 integration; I-01 only measured count constants adjusted in lineage test. Full pytest covers split public/skill test locations. | I-02: measured F01 artifact repin propagated; F01 canonical digest one-string propagation separately approved by I-03. | I2 gg_update.py manifest --write for FIX-A2/B2/C2b and W-D3 final inputs plus measured F01 artifact repin. | I3 gg_update.py manifest --write for FIX-B3/C3 and W-D4 final inputs plus measured F01 artifact repin. | I4 gg_update.py manifest --write for FIX-B4/C4 and W-D5 final inputs plus measured F01 artifact repin. | I5 gg_update.py manifest --write for FIX-C5 and W-D6 final inputs plus measured F01 artifact repin. | I6: gg_update.py manifest --write for FIX-C6 and W-D7; F01 artifact and canonical digest measured unchanged, no repin.",
    "origin": "new"
   },
+  "skills/knuaf-doc/references/commands.md": {
+   "note": "P0-2 PR-A: documented gg.py commands index and apply JSON contract.",
+   "origin": "new"
+  },
   "skills/knuaf-doc/references/common-workbooks/corrections/d8-spec.json": {
    "note": " | PR-2: latest D8/D9 integration; I-01 only measured count constants adjusted in lineage test. Full pytest covers split public/skill test locations.",
    "origin": "new"
@@ -183,6 +187,10 @@
   },
   "tests/test_doc_contracts.py": {
    "note": "P27: 문서에 적힌 명령(import --offline-confirmed, doctor --probe, adopt-output 직후 check, school_profile.major_id, 원예 0.2.0 major-plan)을 새 init 프로젝트에서 그대로 실행하는 계약 시험",
+   "origin": "new"
+  },
+  "tests/test_doc_guide_contracts.py": {
+   "note": "P0-2 PR-A: executable contract tests for the commands.md index (CLI surface, required flags, apply example), U01 init, and the #58 forbidden-identifier scan (digests only).",
    "origin": "new"
   },
   "tests/test_excel_template_guard.py": {

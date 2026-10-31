@@ -46,11 +46,11 @@ description: 한국농수산대학교 창업논문·영농계획서와 동반 �
 
 ## 시작·재개
 
-첫 자료 질문 전 [현재 작성물 선택](references/intake-selection.md)을 읽는다. 현재 원고·엑셀의 파일명/위치 또는 첨부를 먼저 받고(Q1a) 참고자료 폴더를 별도로 받는다(Q1b). 지정한 원고의 현재성·작목/주제·작성 목적을 짧게 확인한 뒤(Q1c) 그 기준으로 진행한다. 폴더 안 초안·엑셀·project.json이 있어도 현재 작성물을 임의 선택·이어쓰기하지 않고 이미 확인된 선택·없음 답변은 재사용한다.
+첫 자료 질문 전 [현재 작성물 선택](references/intake-selection.md)을 읽는다. 현재 원고·엑셀의 파일명/위치 또는 첨부를 먼저 받고(Q1a) 참고자료 폴더를 별도로 받는다(Q1b). 지정한 원고가 있으면 그 원고의 현재성·작목/주제·작성 목적을 짧게 확인한 뒤(Q1c) 그 기준으로 진행한다. **원고가 없으면(새로 시작) 작목·사업 주제를 먼저 묻지 않는다** — 기본 계획 인터뷰로 가서 **전공(학과 소속)부터** 묻는다. 전공은 늘 확정값이고 작목 후보를 좁히는 출발점이다([interview-guide](references/interview-guide.md) '여러 항목이 동시에 미정일 때'). 폴더 안 초안·엑셀·project.json이 있어도 현재 작성물을 임의 선택·이어쓰기하지 않고 이미 확인된 선택·없음 답변은 재사용한다.
 
 이미 요청받은 범위의 조사·근거 정리·본문 작성·검증·검토본 저장은 가능한 작업이 남아 있으면 같은 작업 흐름에서 이어간다. 조사 메모·비교안·장 초안과 진행 목록은 중간 산출물이며, 단위 작업을 마쳤다는 이유로 최종 답변을 내고 재개 명령을 요구하지 않는다. 진행 보고와 실제 승인·결정 질문을 구분한다. 사용자가 범위를 한정했으면 그 범위까지만 진행한다. 종료·보류 판단은 [workflow-order](references/workflow-order.md#요청받은-범위의-연속-진행)를 따른다. 중단된 세션을 사용자가 다시 여는 “이어서 하기” 명령은 유지하되 매 단계의 진행 조건으로 삼지 않는다.
 
-- “시작하기”: 사용자가 지정한 폴더를 우선한다. 새 빈 작업폴더에 `scripts/gg.py init <폴더>`를 실행한다. 원본 학교 지침·학생 답변은 읽기 전용으로 보존한다.
+- “시작하기”: 사용자가 지정한 폴더가 곧 작업폴더다. 그 안에 새 하위 폴더를 만들지 말고 지정한 폴더에 `scripts/gg.py init <폴더>`를 실행한다. `init`은 `project.json`과 자기 하위 폴더만 만들고 기존 파일에는 손대지 않으므로, 학생 자료가 이미 들어 있는 폴더에도 그대로 실행한다. 원본 학교 지침·학생 답변은 읽기 전용으로 보존한다. 정본이 이미 있으면 `init` 대신 “이어서 하기”로 간다.
 - “참고자료 폴더 등록”: [source-intake](references/source-intake.md)의 `source-scan`→`source-resolve`→`source-register`→`source-view` 흐름으로만 진행한다. 스캔은 증거만 만들고 명시적 선택만 등록된다. `source-identities.json` 등재 출처는 해시·서지정보만 기록하고 발췌·본문 스냅샷을 남기지 않는다.
 - “내장 학교 지침 등록”: 원 PDF가 이미 등록돼 있으면 기존 원문 바인딩을 유지한다. 원 PDF가 없는 설치본에서는 PDF 원천 해시의 `official-writing-guide:toc-rules` 재사용 판정과 내장 발췌의 실제 해시·계보를 확인하고, `official-toc.md` 사본을 새 `school_rule` 출처(`official-writing-guide-extract`)로 source-intake 흐름에 등록한다. `source-register`로 보존된 사본 경로를 확인한 뒤 `gg.py apply`로 `project.json.sources` 레코드를 만들고, 반환된 개정으로 profile을 연결한다. 출처 해시는 실제 발췌 사본 바이트이고 원 PDF 해시로 위장하지 않는다. 모든 내장 규칙·목록의 실제 해시, 원천 PDF ID·해시·물리 쪽수·계보를 출처 작업 기록에 연결한다. 공용 inventory는 보존하고 프로젝트용 사본의 `source.id`·`source.sha256`만 이 발췌 출처에 다시 묶는다. 원 `source`·공용 inventory 해시·계보 증거 해시는 `origin`에 보존하고 `requirements`·`conflicts`는 그대로 둔다. `page`는 원 PDF 물리 쪽수다. `rules.guideline_profile`에 사본의 실제 경로·해시, 발췌 출처의 현재 개정, 전체 요구 ID를 연결한다([guideline-tracking](references/guideline-tracking.md), [source-contract](references/source-contract.md)). `reuse_ready`는 해당 키의 로컬 재사용 가능성이고 원 PDF의 시각 검토·전량 대조·교수 승인은 미확인이다. 학생 적용·검토는 실제 자료로 새로 등록한다.
 - “전공 선택·계약”: 확인된 `common.major_id` 사실과 해당 모듈의 `module_version`을 원답변 출처와 함께 `gg.py apply`로 정본에 기록한다(사실: `answer_state: provided`, `verification: claim_supported`, `value_type: text`, `unit: ""`, `scope: project`, 원답변 claim의 `source_refs`). `gg.py major-plan <폴더>`는 전공별 질문·문서 계획·근거·재무 능력을 읽기 전용으로 보여 준다. 지원 범위·전용 명령·선례·재바인딩은 [majors](references/majors.md).
@@ -66,7 +66,7 @@ description: 한국농수산대학교 창업논문·영농계획서와 동반 �
 - 잠금 문제: 잠금 점유 확인은 `doctor <폴더> --probe`로 한다(기본 `doctor`는 구조만 읽기 전용 보고). 비정상 종료 잔여물은 `unlock <폴더>`, 오프라인 전환·복구는 사용자 확인 후 `lock-upgrade <폴더>`로만 진행하며 `.gg-lock` 디렉터리·수령증 파일을 직접 고치지 않는다. 상세 [locking](references/locking.md).
 - "업데이트해줘 / 업데이트 확인": [update](references/update.md)의 절차를 따르고 `scripts/gg_update.py auto`를 쓴다.
 
-명령은 이 스킬의 실제 `scripts/gg.py` 경로와 현재 Python 실행기를 쓰고 특정 홈 경로·다른 호스트 설치를 가정하지 않는다. `doctor <폴더>` 탐지는 기능 시험을 대신하지 않는다.
+**명령·필수 인자·정본 쓰기 여부와 `apply` 변경 JSON의 기본 형식은 [명령 목록](references/commands.md)에서 찾는다. 출처·출력·정본 레코드의 상세 형식은 그 표가 가리키는 계약 문서를 따른다. 구현 파일(`scripts/gg_core.py` 등)을 열어 확인하지 않는다** — 수천 줄인 구현 파일을 읽으면 맥락 토큰이 가득 찬다. 두 곳에 없으면 `--help`를 쓴다. 명령은 이 스킬의 실제 `scripts/gg.py` 경로와 현재 Python 실행기를 사용하며, 특정 홈 경로나 다른 호스트 설치를 가정하지 않는다. 먼저 `doctor <폴더>`로 설치 탐지 정보를 확인하되 탐지가 실제 기능 시험을 대신하지 않는다.
 
 ## 검사 차단 복구
 
@@ -167,6 +167,7 @@ description: 한국농수산대학교 창업논문·영농계획서와 동반 �
 - 원문 대조: [cross-review](references/cross-review.md)
 - 실행 주체·모델 배정: [model-routing](references/model-routing.md)
 - 인터뷰 문항·작문 전환: [interview-guide](references/interview-guide.md)
+- 명령 표면·인자·apply 변경 계약: [commands](references/commands.md)
 
 학교 원문이 최우선이다(출처별 역할·우선순위·판정 경계는 [source-contract](references/source-contract.md)). 선배 논문·엑셀 예시의 학생 정보·가격·비율·연도·이익률은 가져오지 않고, 이전 보조 문서의 모델 배치·상태 문자열·전역 중지 지시는 새 계약 근거가 아니다.
 

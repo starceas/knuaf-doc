@@ -32,6 +32,7 @@
     "skills/knuaf-doc/references/benchmark-packs/schema/record.schema.json",
     "skills/knuaf-doc/references/body-plan-check.md",
     "skills/knuaf-doc/references/builtin-sources.json",
+    "skills/knuaf-doc/references/commands.md",
     "skills/knuaf-doc/references/common-workbooks/corrections/C1.md",
     "skills/knuaf-doc/references/common-workbooks/corrections/c1-dispositions.json",
     "skills/knuaf-doc/references/common-workbooks/corrections/c1-spec.json",
@@ -160,6 +161,7 @@
     "tests/test_asset_disposition.py",
     "tests/test_build_hwpx.py",
     "tests/test_bundle_lineage.py",
+    "tests/test_doc_guide_contracts.py",
     "tests/test_hwpx_adapter.py",
     "tests/test_major_guard_outputs.py",
     "tests/test_p2_core.py",
@@ -238,21 +240,21 @@
       "source": "new"
     },
     "skills/knuaf-doc/SKILL.md": {
-      "after_sha256": "cbb2ed1e63014cce74c45f3fdaffeee63aed76cb2639f1cb0b6d2c51c18f7bd3",
+      "after_sha256": "f003831f9530c1e0c719b3d19fdb0b6afe171b9cadab1fd2782b3f940a448421",
       "before_sha256": "c0008fa5239cc16411fd4ef24b5bf901c7a8b9b50c6b621e2bdee3acf734ddc0",
       "first_changed": "P1",
       "last_changed": "P28",
       "owner": "P28",
-      "reason": "H11 문서 정정: 사용자 명시 모델도 임의 폴백·대체 금지 규칙 추가 | P5-D1 guidance sync: new '참고자료 폴더 등록' bullet documents the frozen source-scan→source-resolve→source-register→source-view lifecycle and 03_sources.md preservation | P6: document explicit major binding and current industrial insect capability boundary | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P8: fruit_trees plan-only capability and guidance link | P9: hort_env_systems plan-only capability and guidance link | P10: P9: common XLSX template rule + X02 layout guard sentence | P9-D3: major-specific workbook precedence sentence (hort_env_systems base = registered H01) | P11 공용 인터뷰 규칙: 전공별 핵심 전제 목록(C1), 동적 영향 순위(C2), '모르겠다' 도움(C3), 충돌 정리(C5), 미준비 전공 안내, 특용작물 probe 문서 | P12: industrial_insects plan/evidence commands and built-in reuse guidance | P13: D4 identity-catalogue-only precedence guidance | P14: fruit_trees read-only production and inventory check link | P17: rda-lookup verification-state guidance sentence (verified is observation confirmation, not approval; unverified/ambiguous/series and 옮기지 말 것 labels never copied) | P18: industrial_insects 0.2.0 product lines, plan without selection, rebinding guidance | P21 C1: reference-finance-01 template materialize-c1 --ref F01 + formula_patch application guidance | P22: 학생 오류·불편 신고 안내 한 줄과 신고 절 | P23: C1b option-A assumption and copy-only guidance merged with #22 student-report section | P25: option-A 실지급 확인을 interview-guide Q2-2 문항에 연결하고 경영주 예외(경영주 인출은 급여·가계비 규칙, 중복 반영 금지)를 명시하는 문장군 — FIX1 | P25: 중복된 경영주 급여 설명을 정리하고 기존 option-A 문장을 경영주 예외와 일치시킴 — FIX2 | P26: 첫 진입 알림·업데이트 경로·7단계 단위 보고 목록 | P26 F1: progress grouping is deterministic for consecutive finished and remaining stages | P26 F2: OS lock | P27: 진입 계약 재구성(22KB 이하, 절단 재읽기 규칙, 불변 조건 앞배치), 완전 자동 업데이트 첫 진입(auto·S1·S2), D5 A안 위임, D3 비공개 신고, D7 Windows 범위, import --offline-confirmed·doctor --probe 안내, 전공·출력 상세를 majors.md·outputs.md로 분리 | P27 검토 r1: 첫 진입 결과별 안내를 update.md 표와 1:1로, 0.1.x 업데이트 경로 구분(R1-05) | P27 검토 r2: user_files_in_skill 문구(원래 배포본과 다른 파일), install_manifest_invalid·legacy_reference_unavailable 첫 진입 안내 | P28: thesis-level/figure-photo-policy 링크 추가 (서술 예시 01 기준 전환·사진 정책) | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes. | PR-4 ORDER-A: 본문 전 재무 게이트 — 불변4의 적자 서술을 게이트 조건 아래로 묶고 복구 참고 문서 4개 링크; I remeasured final bytes. | N1-N5/X1: built-in guidance, extract source binding and restored tool links. | ORDER-I2: remeasured final 0.1.5 file bytes after preserving PR32 inputs. | AMEND-I2-1 R3: explain source-register snapshot then canonical sources apply and profile revision. | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13. | PR41 P1: macOS Excel fail-closed before staging/transport; no native proof; synthetic Office contracts preserved. | W2b kordoc-hwpx: 'HWPX 검토본 받기' 한 줄 추가(build_hwpx.py, 한글에서 사람이 마무리). | P28 output hygiene: 최종본 고정 이름·.gg-work 작업 구역·tidy 미리보기/apply 규칙 | P1-GUI: managed 표시(GUI 설치본 auto 차단) — 판정 기준 R1-05 | Continuation: requested writing scope continues without a resume command at each unit; progress block shows the next work | Plan adoption: stage 2 needs core plan choices linked to the student answers; partial drafts and not_computable are not adoption",
+      "reason": "H11 문서 정정: 사용자 명시 모델도 임의 폴백·대체 금지 규칙 추가 | P5-D1 guidance sync: new '참고자료 폴더 등록' bullet documents the frozen source-scan→source-resolve→source-register→source-view lifecycle and 03_sources.md preservation | P6: document explicit major binding and current industrial insect capability boundary | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P8: fruit_trees plan-only capability and guidance link | P9: hort_env_systems plan-only capability and guidance link | P10: P9: common XLSX template rule + X02 layout guard sentence | P9-D3: major-specific workbook precedence sentence (hort_env_systems base = registered H01) | P11 공용 인터뷰 규칙: 전공별 핵심 전제 목록(C1), 동적 영향 순위(C2), '모르겠다' 도움(C3), 충돌 정리(C5), 미준비 전공 안내, 특용작물 probe 문서 | P12: industrial_insects plan/evidence commands and built-in reuse guidance | P13: D4 identity-catalogue-only precedence guidance | P14: fruit_trees read-only production and inventory check link | P17: rda-lookup verification-state guidance sentence (verified is observation confirmation, not approval; unverified/ambiguous/series and 옮기지 말 것 labels never copied) | P18: industrial_insects 0.2.0 product lines, plan without selection, rebinding guidance | P21 C1: reference-finance-01 template materialize-c1 --ref F01 + formula_patch application guidance | P22: 학생 오류·불편 신고 안내 한 줄과 신고 절 | P23: C1b option-A assumption and copy-only guidance merged with #22 student-report section | P25: option-A 실지급 확인을 interview-guide Q2-2 문항에 연결하고 경영주 예외(경영주 인출은 급여·가계비 규칙, 중복 반영 금지)를 명시하는 문장군 — FIX1 | P25: 중복된 경영주 급여 설명을 정리하고 기존 option-A 문장을 경영주 예외와 일치시킴 — FIX2 | P26: 첫 진입 알림·업데이트 경로·7단계 단위 보고 목록 | P26 F1: progress grouping is deterministic for consecutive finished and remaining stages | P26 F2: OS lock | P27: 진입 계약 재구성(22KB 이하, 절단 재읽기 규칙, 불변 조건 앞배치), 완전 자동 업데이트 첫 진입(auto·S1·S2), D5 A안 위임, D3 비공개 신고, D7 Windows 범위, import --offline-confirmed·doctor --probe 안내, 전공·출력 상세를 majors.md·outputs.md로 분리 | P27 검토 r1: 첫 진입 결과별 안내를 update.md 표와 1:1로, 0.1.x 업데이트 경로 구분(R1-05) | P27 검토 r2: user_files_in_skill 문구(원래 배포본과 다른 파일), install_manifest_invalid·legacy_reference_unavailable 첫 진입 안내 | P28: thesis-level/figure-photo-policy 링크 추가 (서술 예시 01 기준 전환·사진 정책) | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes. | PR-4 ORDER-A: 본문 전 재무 게이트 — 불변4의 적자 서술을 게이트 조건 아래로 묶고 복구 참고 문서 4개 링크; I remeasured final bytes. | N1-N5/X1: built-in guidance, extract source binding and restored tool links. | ORDER-I2: remeasured final 0.1.5 file bytes after preserving PR32 inputs. | AMEND-I2-1 R3: explain source-register snapshot then canonical sources apply and profile revision. | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13. | PR41 P1: macOS Excel fail-closed before staging/transport; no native proof; synthetic Office contracts preserved. | W2b kordoc-hwpx: 'HWPX 검토본 받기' 한 줄 추가(build_hwpx.py, 한글에서 사람이 마무리). | P28 output hygiene: 최종본 고정 이름·.gg-work 작업 구역·tidy 미리보기/apply 규칙 | P1-GUI: managed 표시(GUI 설치본 auto 차단) — 판정 기준 R1-05 | Continuation: requested writing scope continues without a resume command at each unit; progress block shows the next work | Plan adoption: stage 2 needs core plan choices linked to the student answers; partial drafts and not_computable are not adoption | P0-2 PR-A: U01 folder init guidance, U02 major-before-crop intake rule, U03 commands index link | P0-2 PR-A R2: command index pointer defers detailed record formats to the contract documents",
       "source": "new"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "8d1c91da818ce04f8b260042e38014d8956c45c7a761d45c10763199b967ff17",
+      "after_sha256": "20353c106a003025bcb7a057c6488a39ff346e6fcfd071fdc7f40179ef528914",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "P28",
       "owner": "P28",
-      "reason": "P27: 설치본 배포 파일 목록(상대경로→sha256) — 자동 업데이트 보존 판정 기준 | P27 r3 재생성(legacy-release-hashes.json 포함 149항목) | P28: 재생성 — 신규 references 4건 포함 | P28 integration: gg_update.py manifest --write로 최신 배포 바이트 목록 재생성 | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존 | F2: V2 재확인 수용에 따라 같은 파서 계층의 첫 장/장 경계와 원문 span을 적용하고 명시적 외부 유형 충돌 거부·수동 신뢰 계약을 문서화; 설치 manifest 재생성. 기초 정본·단계·부모 계보·원본 source pin 보존 | F3: 전역 Markdown 유무 판정을 제거하고 prefix-only 공통 제목 규칙·요약 단일 종료·번호 공백 문법으로 통일; 설치 manifest 재생성. 원본/부모 계보·stage·source pin 보존 | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes. | PR-4 ORDER-I: install manifest regenerated for ORDER-A file bytes; I remeasured final bytes. | PR-4 ORDER-I: install manifest regenerated with restored references; I remeasured final bytes. | PR-4 ORDER-I: install manifest regenerated for 0.1.3 bytes; I remeasured final bytes. | F1: regenerate existing install-file fingerprints for reviewed findings. | F2 P1: refresh existing install fingerprints. | F3: refresh existing install fingerprints for the P2 patch. | Restore v0.1.4: regenerate all installed-file fingerprints with gg_update.py. | ORDER-I2: remeasured final 0.1.5 file bytes after preserving PR32 inputs. | AMEND-I2-1 regenerate installation fingerprints after R1-R3 amendments. | Windows native publication: handle identity, binary I/O, checked paths, owner cleanup and publication scope | Window-hygiene Office-only scope: refreshed reviewed bytes and strict +2 declaration/new/approval counts; no browser product reference or live Office validation. | PR41 P1: synchronized macOS Excel HOLD product hashes. | W2b kordoc-hwpx: gg_update.py manifest --write로 재생성(신규 gg_hwpx.py·build_hwpx.py 포함). | P28 output hygiene: tidy 신규 파일·설치/검증 번들 목록 갱신 | P28 output hygiene 검토 FAIL 수정: JSON 이스케이프 참조·열거 실패·회차명 경계 | P28 I1-01 마무리: 원시 바이트 참조 검사가 /·\\ 두 표기를 모든 인코딩에서 확인 | P28 outside scan: tidy 밖 정리 후보를 작성 폴더 하위까지 읽기 전용 보고 | P1-GUI: managed 표시(GUI 설치본 auto 차단) — 판정 기준 R1-05 | P1-GUI: 판정서 JUDGE-A/JUDGE-B 올림 항목 반영 | P1-R1: 검토 지적 4건 수정(외부 관계 허용 범위 축소·본문 경계 줄 단위·절 ID 정확 비교·링크 실행 managed) | P1-R1b: 해석·디코딩 뒤 최종 경로에도 네트워크 경로 거절 적용(file:////host, 인코딩된 UNC) | R-v0.2.0: v0.2.0 릴리즈 — 버전 두 곳과 install-manifest의 version.json 해시를 0.2.0으로 갱신 | Plan-fit: regenerated after adding the check and rule files and merging main | R6: regenerated after the plan-fit checker left this change | Merge: regenerated after merging main (body-writing assets) | PR2: 특용작물 엑셀을 교수님 양식(X01·X02) 기준으로 — 레거시 생성기 입구 차단, 작목 분류별 칸 이름 층, 일용 노무 성별 경고, X01 임금 산술평균·7번 인쇄 설정 보존 | Continuation: regenerated after the writing-continuation rules | Plan adoption: regenerated after the plan-adoption rules | Merge: regenerated after merging main (legacy source grades)",
+      "reason": "P27: 설치본 배포 파일 목록(상대경로→sha256) — 자동 업데이트 보존 판정 기준 | P27 r3 재생성(legacy-release-hashes.json 포함 149항목) | P28: 재생성 — 신규 references 4건 포함 | P28 integration: gg_update.py manifest --write로 최신 배포 바이트 목록 재생성 | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존 | F2: V2 재확인 수용에 따라 같은 파서 계층의 첫 장/장 경계와 원문 span을 적용하고 명시적 외부 유형 충돌 거부·수동 신뢰 계약을 문서화; 설치 manifest 재생성. 기초 정본·단계·부모 계보·원본 source pin 보존 | F3: 전역 Markdown 유무 판정을 제거하고 prefix-only 공통 제목 규칙·요약 단일 종료·번호 공백 문법으로 통일; 설치 manifest 재생성. 원본/부모 계보·stage·source pin 보존 | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes. | PR-4 ORDER-I: install manifest regenerated for ORDER-A file bytes; I remeasured final bytes. | PR-4 ORDER-I: install manifest regenerated with restored references; I remeasured final bytes. | PR-4 ORDER-I: install manifest regenerated for 0.1.3 bytes; I remeasured final bytes. | F1: regenerate existing install-file fingerprints for reviewed findings. | F2 P1: refresh existing install fingerprints. | F3: refresh existing install fingerprints for the P2 patch. | Restore v0.1.4: regenerate all installed-file fingerprints with gg_update.py. | ORDER-I2: remeasured final 0.1.5 file bytes after preserving PR32 inputs. | AMEND-I2-1 regenerate installation fingerprints after R1-R3 amendments. | Windows native publication: handle identity, binary I/O, checked paths, owner cleanup and publication scope | Window-hygiene Office-only scope: refreshed reviewed bytes and strict +2 declaration/new/approval counts; no browser product reference or live Office validation. | PR41 P1: synchronized macOS Excel HOLD product hashes. | W2b kordoc-hwpx: gg_update.py manifest --write로 재생성(신규 gg_hwpx.py·build_hwpx.py 포함). | P28 output hygiene: tidy 신규 파일·설치/검증 번들 목록 갱신 | P28 output hygiene 검토 FAIL 수정: JSON 이스케이프 참조·열거 실패·회차명 경계 | P28 I1-01 마무리: 원시 바이트 참조 검사가 /·\\ 두 표기를 모든 인코딩에서 확인 | P28 outside scan: tidy 밖 정리 후보를 작성 폴더 하위까지 읽기 전용 보고 | P1-GUI: managed 표시(GUI 설치본 auto 차단) — 판정 기준 R1-05 | P1-GUI: 판정서 JUDGE-A/JUDGE-B 올림 항목 반영 | P1-R1: 검토 지적 4건 수정(외부 관계 허용 범위 축소·본문 경계 줄 단위·절 ID 정확 비교·링크 실행 managed) | P1-R1b: 해석·디코딩 뒤 최종 경로에도 네트워크 경로 거절 적용(file:////host, 인코딩된 UNC) | R-v0.2.0: v0.2.0 릴리즈 — 버전 두 곳과 install-manifest의 version.json 해시를 0.2.0으로 갱신 | Plan-fit: regenerated after adding the check and rule files and merging main | R6: regenerated after the plan-fit checker left this change | Merge: regenerated after merging main (body-writing assets) | PR2: 특용작물 엑셀을 교수님 양식(X01·X02) 기준으로 — 레거시 생성기 입구 차단, 작목 분류별 칸 이름 층, 일용 노무 성별 경고, X01 임금 산술평균·7번 인쇄 설정 보존 | Continuation: regenerated after the writing-continuation rules | Plan adoption: regenerated after the plan-adoption rules | Merge: regenerated after merging main (legacy source grades) | P0-2 PR-A: regenerated install-manifest for PR-A guidance and commands.md changes | P0-2 PR-A R2: regenerated with gg_update.py manifest --write | P0-2 PR-A R3: regenerated with gg_update.py manifest --write",
       "source": "new"
     },
     "skills/knuaf-doc/references/benchmark-packs/aliases/crop-aliases.specialty_crops.json": {
@@ -446,6 +448,15 @@
       "note": "P0-2B owner-approved narrow update: only reference-finance-01-xlsx artifact references/excel-template.md sha256/bytes re-pinned to the B-owned document bytes; other entries unchanged.",
       "source": "new"
     },
+    "skills/knuaf-doc/references/commands.md": {
+      "after_sha256": "5c3c6c327fe381a444a93368d6a4a7fa70d6bf57dd32c6df008cc4269e4a17cb",
+      "before_sha256": null,
+      "first_changed": "P28",
+      "last_changed": "P28",
+      "owner": "P28",
+      "reason": "P0-2 PR-A: U03 gg CLI command index and apply JSON contract | P0-2 PR-A R2: rewritten against gg.py arguments and the apply collection/value contract; executable bind-major example | P0-2 PR-A R3: exit codes 3/4 describe the operation target; per-target confirmation table",
+      "source": "new"
+    },
     "skills/knuaf-doc/references/common-workbooks/corrections/C1.md": {
       "after_sha256": "82728725321edd132cb0b130f2cfe05e605c03ec6484267f2693d83fe025b587",
       "before_sha256": null,
@@ -635,12 +646,12 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/guideline-tracking.md": {
-      "after_sha256": "38551fe674b3f51c0c04261127744b11f62cf1012496cec28d1ab662cb735790",
+      "after_sha256": "b638dc77ae94cf5e16c520e46d0ef5cee7caffd370c42c0103cf90a97f10e0c2",
       "before_sha256": "f40585f5ad88cd1c6d7ad267ec7b5e7bd9815ce21f91a19ca3fb31c848a56e4b",
       "first_changed": "P28",
       "last_changed": "P28",
       "owner": "P28",
-      "reason": "N2: built-in guideline inventory and project-specific source binding.",
+      "reason": "N2: built-in guideline inventory and project-specific source binding. | P0-2 PR-A: U03 guidance tracking basis section from SKILL.md with anonymized reference identities | P0-2 PR-A R2: restore the built-in 2020 extract registration path and the comparison-only role of finance example 01",
       "source": "new"
     },
     "skills/knuaf-doc/references/hort-env-systems/README.md": {
@@ -725,29 +736,30 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/intake-selection.md": {
-      "after_sha256": "0f4a6fc8d0f509960575c04773eedb1fd7559677989b6004431d938e349ac679",
+      "after_sha256": "8a6e60234b4ab4e9813af06d4c0ce7788a32b6aa8ceea43e85602d1f40e25294",
       "before_sha256": "41fb622861d1dec95aaee03c6b916bd17a75ad9b9e916d0c7f3f4be87b7efb23",
       "first_changed": "P28",
       "owner": "P28",
-      "reason": "통합 단계(feat/skill-gaps-20261021, WP-4 산출): 장 간 서술 일관성·학교 지침 충돌·머리말 재사용·전공 범위·신체 제약·현장실습 인터뷰 규칙. first_changed/owner는 tests/test_bundle_lineage.py의 고정 단계 enum(P1~P28)에 이 단계 태그가 없어 마지막 수용 단계 값을 쓴다.",
-      "source": "new"
+      "reason": "통합 단계(feat/skill-gaps-20261021, WP-4 산출): 장 간 서술 일관성·학교 지침 충돌·머리말 재사용·전공 범위·신체 제약·현장실습 인터뷰 규칙. first_changed/owner는 tests/test_bundle_lineage.py의 고정 단계 enum(P1~P28)에 이 단계 태그가 없어 마지막 수용 단계 값을 쓴다. | P0-2 PR-A: U02 new paper intake asks major before crop",
+      "source": "new",
+      "last_changed": "P28"
     },
     "skills/knuaf-doc/references/interview-guide.md": {
-      "after_sha256": "15b403badf6673b06a46e03d2aa53d528b3f3d36e00cc96eb341dce939f26cde",
+      "after_sha256": "b234c21056fe3540353cd61be44a23c4409c779936f3a9fedb9c6129835108f3",
       "before_sha256": "8f00e8a2d4c5f530eb7aad4a82e2e1957547e14b54941c8f49bb338035b63f87",
       "first_changed": "P11",
       "last_changed": "P28",
       "owner": "P28",
-      "reason": "P11 공용 인터뷰 규칙: 전공별 핵심 전제 목록(C1), 동적 영향 순위(C2), '모르겠다' 도움(C3), 충돌 정리(C5), 미준비 전공 안내, 특용작물 probe 문서 | P25: Q2-2 가족사항 문항에 본인·가족 노동 실지급 확인(한 번만 묻고 미답·미확정 시 option A 기본값; 경영주 지급·인출은 경영주 급여·가계비 규칙으로 중복 반영 없이 처리, 경영주가 아닌 가족 지급만 고용 노동비 행 11–13)과 설명·재무 입력 분산 예시 추가 — FIX1: 경영주 본인 인출과 가계비의 이중 계상 방지 | P27: K1-09 배포 밖 필독 문서 제거, D5 배정 표현 정합, SKILL.md에서 옮긴 작문 상세 | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존 | F2: V2 재확인 수용에 따라 같은 파서 계층의 첫 장/장 경계와 원문 span을 적용하고 명시적 외부 유형 충돌 거부·수동 신뢰 계약을 문서화; 설치 manifest 재생성. 기초 정본·단계·부모 계보·원본 source pin 보존 | PR-4 ORDER-A: 되물음을 본문 전 필수 게이트로 연결; I remeasured final bytes. | N3/N5: DOI intake and approved built-in statistics before external research. | ORDER-I2: remeasured final 0.1.5 file bytes after preserving PR32 inputs. | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13. | PR2: 특용작물 엑셀을 교수님 양식(X01·X02) 기준으로 — 레거시 생성기 입구 차단, 작목 분류별 칸 이름 층, 일용 노무 성별 경고, X01 임금 산술평균·7번 인쇄 설정 보존 | Plan adoption: undecided prompts offer comparisons instead of filling defaults; derivation reuses only stated values",
+      "reason": "P11 공용 인터뷰 규칙: 전공별 핵심 전제 목록(C1), 동적 영향 순위(C2), '모르겠다' 도움(C3), 충돌 정리(C5), 미준비 전공 안내, 특용작물 probe 문서 | P25: Q2-2 가족사항 문항에 본인·가족 노동 실지급 확인(한 번만 묻고 미답·미확정 시 option A 기본값; 경영주 지급·인출은 경영주 급여·가계비 규칙으로 중복 반영 없이 처리, 경영주가 아닌 가족 지급만 고용 노동비 행 11–13)과 설명·재무 입력 분산 예시 추가 — FIX1: 경영주 본인 인출과 가계비의 이중 계상 방지 | P27: K1-09 배포 밖 필독 문서 제거, D5 배정 표현 정합, SKILL.md에서 옮긴 작문 상세 | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존 | F2: V2 재확인 수용에 따라 같은 파서 계층의 첫 장/장 경계와 원문 span을 적용하고 명시적 외부 유형 충돌 거부·수동 신뢰 계약을 문서화; 설치 manifest 재생성. 기초 정본·단계·부모 계보·원본 source pin 보존 | PR-4 ORDER-A: 되물음을 본문 전 필수 게이트로 연결; I remeasured final bytes. | N3/N5: DOI intake and approved built-in statistics before external research. | ORDER-I2: remeasured final 0.1.5 file bytes after preserving PR32 inputs. | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13. | PR2: 특용작물 엑셀을 교수님 양식(X01·X02) 기준으로 — 레거시 생성기 입구 차단, 작목 분류별 칸 이름 층, 일용 노무 성별 경고, X01 임금 산술평균·7번 인쇄 설정 보존 | Plan adoption: undecided prompts offer comparisons instead of filling defaults; derivation reuses only stated values | P0-2 PR-A: U04 multi-field Q2 presentation and U05 five separate finance questions | P0-2 PR-A R2: Q2-4 restores the hold-only-the-dependent-calculation boundary",
       "source": "new"
     },
     "skills/knuaf-doc/references/interview-ui.md": {
-      "after_sha256": "979f6cf6169f1129efb118c98fc255aa2378107a705276ded6b0bc2a0c7ea8a1",
+      "after_sha256": "396df20bcd0cc0c4d5501c8230dacecf44aef1151d5bf06faba5522bcb7129b8",
       "before_sha256": "0f84499b8648635b129b92687a31cc273aade9102d185b1c6a660a64f1dd5f7e",
       "first_changed": "P28",
       "last_changed": "P28",
       "owner": "P28",
-      "reason": "PR2: 특용작물 엑셀을 교수님 양식(X01·X02) 기준으로 — 레거시 생성기 입구 차단, 작목 분류별 칸 이름 층, 일용 노무 성별 경고, X01 임금 산술평균·7번 인쇄 설정 보존",
+      "reason": "PR2: 특용작물 엑셀을 교수님 양식(X01·X02) 기준으로 — 레거시 생성기 입구 차단, 작목 분류별 칸 이름 층, 일용 노무 성별 경고, X01 임금 산술평균·7번 인쇄 설정 보존 | P0-2 PR-A: U04 three question formats, numeric input without sub-items, two-level Q numbers",
       "source": "modified"
     },
     "skills/knuaf-doc/references/intro-story.md": {
@@ -814,12 +826,12 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/narrative-expansion.md": {
-      "after_sha256": "d68dec405a051a94d42d365ea1a3fa73ecf5928fbcd7453ec052659688f9d06e",
+      "after_sha256": "8830af4f6874fcd401b9be130fb594980720e940ecfadd961ed8c65940ba9166",
       "before_sha256": "e6798527cfcc2620d1acb999b0649a102b2ef1f35f61e7d442a66dba78fbcd9a",
       "first_changed": "P28",
       "last_changed": "P28",
       "owner": "P28",
-      "reason": "P28: 표·그림 적극 활용(서술 예시 01 수치), 사진 자리 표기, 특용작물 재무 지표 경계 | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존",
+      "reason": "P28: 표·그림 적극 활용(서술 예시 01 수치), 사진 자리 표기, 특용작물 재무 지표 경계 | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존 | P0-2 PR-A: U03 narrative expansion before/after writing section from SKILL.md",
       "source": "new"
     },
     "skills/knuaf-doc/references/official-guide-lineage.json": {
@@ -2010,8 +2022,17 @@
       "first_changed": "P28",
       "last_changed": "P28",
       "owner": "B",
-      "reason": "PR36 CI strict-count repair: preserve exact declaration counts and declare the changed validation test; integration adds five new declarations and three approvals, this test adds one further declaration/new/approval. | Window-hygiene Office-only scope: refreshed reviewed bytes and strict +2 declaration/new/approval counts; no browser product reference or live Office validation. | P28 kordoc-hwpx: runtime-changes 수치 고정 갱신(change_count 203→207, new_count 155→159, approved_new_files 162→166). | P28 output hygiene: tidy 신규 파일·설치/검증 번들 목록 갱신 | R6: strict counts remeasured after the plan-fit checker left this change (215/165/172 -> 214/164/171) | Merge: strict counts remeasured after merging main (216/166/173 on main plus two plan rule files) | PR2: 특용작물 엑셀을 교수님 양식(X01·X02) 기준으로 — 레거시 생성기 입구 차단, 작목 분류별 칸 이름 층, 일용 노무 성별 경고, X01 임금 산술평균·7번 인쇄 설정 보존",
+      "reason": "PR36 CI strict-count repair: preserve exact declaration counts and declare the changed validation test; integration adds five new declarations and three approvals, this test adds one further declaration/new/approval. | Window-hygiene Office-only scope: refreshed reviewed bytes and strict +2 declaration/new/approval counts; no browser product reference or live Office validation. | P28 kordoc-hwpx: runtime-changes 수치 고정 갱신(change_count 203→207, new_count 155→159, approved_new_files 162→166). | P28 output hygiene: tidy 신규 파일·설치/검증 번들 목록 갱신 | R6: strict counts remeasured after the plan-fit checker left this change (215/165/172 -> 214/164/171) | Merge: strict counts remeasured after merging main (216/166/173 on main plus two plan rule files) | PR2: 특용작물 엑셀을 교수님 양식(X01·X02) 기준으로 — 레거시 생성기 입구 차단, 작목 분류별 칸 이름 층, 일용 노무 성별 경고, X01 임금 산술평균·7번 인쇄 설정 보존 | P0-2 PR-A: remove 5 fixed count assertions per coordinator decision",
       "note": "P0-2B owner-approved narrow repair: delete only five incidental fixed-count assertions and their explanatory comments (4628d02 lines 132-153 and 173-192); retain all hash, ancestry and adversarial checks.",
+      "source": "new"
+    },
+    "tests/test_doc_guide_contracts.py": {
+      "after_sha256": "91941d6f31285dfc751e9550782a27f8aaf84dcb718583a3e8ed2a9cd0d1be43",
+      "before_sha256": null,
+      "first_changed": "P28",
+      "last_changed": "P28",
+      "owner": "P28",
+      "reason": "P0-2 PR-A: U01-U05 document and interview guidance contract tests | P0-2 PR-A R2: run the documented commands, required flags and apply example instead of matching prose | P0-2 PR-A R3: forbidden-identifier scan over the shipped skill tree using salted digests only",
       "source": "new"
     },
     "tests/test_hwpx_adapter.py": {
