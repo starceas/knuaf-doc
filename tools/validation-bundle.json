@@ -286,9 +286,9 @@
       "sha256": "7ebb00525e86f2e2291cfb0a29478672b2fa77d95d23aad2a14ea6810cb7800e"
     },
     "tests/test_p1_gui_inherit.py": {
-      "note": "P1-GUI: JUDGE-A/JUDGE-B 올림 항목(빈 export 거절, 기계용 field_id 보류, n항 검산, paper body 어댑터·CLI, atomic 재시도, 명령 빈 대상 차단, doctor 의존성, build_docx 봉투·의존성·기본값) 시험",
+      "note": "P1-GUI: JUDGE-A/JUDGE-B 올림 항목(빈 export 거절, 기계용 field_id 보류, n항 검산, paper body 어댑터·CLI, atomic 재시도, 명령 빈 대상 차단, doctor 의존성, build_docx 봉투·의존성·기본값) 시험 | P0-2 PR-E: CLI body publication/receipt, invalid-body JSON, missing-file JSON, numeric validation, body-only DOCX TOC and major guard regression tests.",
       "origin": "new",
-      "sha256": "05c1a4eff7121e101f59a755d5de4a6b1e16ec57af59e604abbf8e9e172caf5e"
+      "sha256": "96e9a509115921a334a0272903eef912f3e4fd69c50c216e80929b6b84ce0401"
     },
     "tests/test_p1_outputs.py": {
       "note": "P1 document/excel/Office behavioral tests (B-owned): fake-COM block, orientation, unrendered-node rejection, missing-cell rejection, forced-ASCII UTF-8 band. | P10: P1 document/excel/Office behavioral tests (B-owned): fake-COM block, orientation, unrendered-node rejection, missing-cell rejection, forced-ASCII UTF-8 band. P9: synthetic source maps carry reviewed_custom/unknown layout for the C6 guard. | P0-2 PR-D: C6 block-policy tests retired; inventory now maps private-instance ownership and error-cell behavior tests (verdict C).",
@@ -296,9 +296,9 @@
       "sha256": "a93ba4d6ad8137fcb74f63d287b6fa126babda53dac6418c59bcf6d87c2e2360"
     },
     "tests/test_p27_small.py": {
-      "note": "P27: school_profile.major_id, 사유별 held 안내, pywin32 제거 doctor, runtime_present, CP949 CLI --help | Restore v0.1.4: synthetic regression and approved school-entry expectations. | P0-2 PR-D: Q03: pywin32 Windows-only applicability and minimum supported version 306 behavior.",
+      "note": "P27: school_profile.major_id, 사유별 held 안내, pywin32 제거 doctor, runtime_present, CP949 CLI --help | Restore v0.1.4: synthetic regression and approved school-entry expectations. | P0-2 PR-D: Q03: pywin32 Windows-only applicability and minimum supported version 306 behavior. | P0-2 PR-E: explicit synthetic school in nested-major CLI fixture for current publication contract.",
       "origin": "new",
-      "sha256": "2f172297ce1236f346ac7cd728cc0be322fe2dd38c7d9ece533eef33f74adab8"
+      "sha256": "583ba9bd152804a1bd273aff6b0e90336d44ed689d6c16bc06c2d5ca2491f654"
     },
     "tests/test_plain_policy.py": {
       "note": "P28 R-all: 모든 전공·major_id 없음·미확인 입력의 금칙어·손익분기 상한·머리말 길이·캡션·객체 출처 표기·사진 자리·AI 이미지 공통 기본 정책 및 전공 override 격리 반례 잠금. 기존 P1~P6 반례 유지. | F: 첫 장 머리말/서론 제목 목록·로마/아라비아 표기와 1800/1801/2500/2501 경계, 본인 직접 조사 표시의 좁은 interview 예외와 외부/금지 등급 거부, ASCII 대소문자/라틴 토큰 경계, 본문·표셀·출력 캡션 6/7회 집계 반례를 추가. 기존 assertion·거부 사례 유지. | F2: 파서 동일 계층·요약 종료·실제 다음 1단계 경계, 영어 I 산문/level 2 행 보존, 원문 span/표 구분자와 1800/1801/2500/2501 경계·5전공, 직접 조사 표시와 external_*/금지 source_type 충돌 거부 및 원문 위장 자동 판별 제외 대조 6개 테스트 추가. 기존 assertion 및 거부 사례·핀 기대 상수 유지. | F3: 全文 Markdown 모드·lookahead 제거, 앞에서만 전이하는 공통 제목/요약 규칙 및 단일 번호 공백 문법. seed=20261007의 접미 생성·앞 노드/원문 길이 불변, 요약/번호 표기 동치와 첫 비서론 장 결정의 단조성 성질 테스트 4개 추가. 기존 모든 assertion·예상 상수 유지. | PR-3 X1-03: common-policy equality excludes major-specific structure contract results.",
@@ -341,9 +341,9 @@
       "sha256": "57f51eb4d16f26c161f025091fffd9ebee17462e0851767665b6f81b36c1c876"
     },
     "tests/test_school_table_sources.py": {
-      "note": "PR-3 X1 regression tests; root tests belong to validation layer per I precedent. | I8 PV1-02: finite bibliographic display characters and invalid six-table publication refusal (FIX3-3).",
+      "note": "PR-3 X1 regression tests; root tests belong to validation layer per I precedent. | I8 PV1-02: finite bibliographic display characters and invalid six-table publication refusal (FIX3-3). | P0-2 PR-E: remove whole-file implementation SHA assertion; retain direct renderer output and source behavior contract. | PR-E FIX1 E-R1-02: freeze full official/legacy UTF-8 output fingerprints generated from approved origin/main renderer 4b297c187b1ce91409cd4f0af60e78ff4b742a3d, independent of candidate-generated expectations.",
       "origin": "new",
-      "sha256": "bc1edaac3d62462d1af228c0c14d1fcb46a4cd1d1b9cfcb14825464c82d37536"
+      "sha256": "23378652bea7466643d3f87c8d0badd9c02bd86afa1762b6596b18506c363acd"
     },
     "tests/test_skill_commands.py": {
       "note": "P1-GUI 시험 이사(cb72ae1): 레거시 진입점의 정본 요구·빈 대상 차단·JSON 보고",
@@ -386,9 +386,9 @@
       "sha256": "625339792a2dca9d5b184ce65e98ed2ac6c3ae757d3af1493806519572bdc63f"
     },
     "tests/test_skill_school_paper.py": {
-      "note": "P1-GUI 시험 이사(cb72ae1): 5년 창·미확인 표시·표 고정 행 (frozen 생성기는 불변)",
+      "note": "P1-GUI 시험 이사(cb72ae1): 5년 창·미확인 표시·표 고정 행 (frozen 생성기는 불변) | P0-2 PR-E: clarify that the frozen generation logic, not the CLI module bytes, is unchanged.",
       "origin": "new",
-      "sha256": "7a1a3cf51a4f23ec984f44034ae48f7ec425585e8019a4ba8eb0c0cefc98abf9"
+      "sha256": "ee0d707b13c81f876c47732387e77ca8d3dabd6dd250b714c7ac6a71b8f6a69a"
     },
     "tests/test_skill_school_verify.py": {
       "note": "P1-GUI 시험 이사(cb72ae1): 재계산 항등식·상환 스케줄·to_d 거절 (본체 price_assumptions 계약)",
@@ -525,12 +525,12 @@
     "tools/runtime-changes.json": {
       "note": "누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py. P8 declares the fruit_trees first bundle (module registration, two common helper modules, fruit plan, reference-set data and guidance). P9 declares the hort_env_systems first bundle (module registration, hort plan, profile and guidance, reuse-registry entries). | P10: 누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py. P8 declares the fruit_trees first bundle (module registration, two common helper modules, fruit plan, reference-set data and guidance). P9 declares the common XLSX reuse bundle (one new runtime extract file + declared edits to registration, resolver, template guard, and reuse tests). P9-D3 declares the major-specific-precedence edits (registry dedupe, catalog base_for_major, resolver base policy, docs, tests) in the same stage. | P11: 누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py. P8 declares the fruit_trees first bundle (module registration, two common helper modules, fruit plan, reference-set data and guidance). P9 declares the hort_env_systems first bundle (module registration, hort plan, profile and guidance, reuse-registry entries). P10 declares the common interview rules bundle (SKILL.md re-touch, three baseline doc first-changes, specialty-crops premise-probes) re-based onto the P9 parent. P12 declares the industrial_insects first bundle (four read-only insect scripts, locator map, guide and premise probes as new files; nine reuse-registry entries and SKILL/gg.py updates). P13: D4 source identity catalogue, validator, tests and related guidance rebased on accepted P12. P15 declares the D5 useful-life bundle rebased onto accepted P14 (corrected pp133-135 cell mapping and regression test as new files; eight re-declared pack/registry/script/test entries; parent P14 lineage). P18 declares the industrial_insects second bundle (module 0.2.0 product-line question templates and read-only plan/evidence updates; no new runtime file). | PR-2: latest D8/D9 integration; I-01 only measured count constants adjusted in lineage test. Full pytest covers split public/skill test locations. | I2 refreshes after hashes for existing declarations; before hashes, baseline, lineage and allowlist preserved. | I3 refreshes after hashes for existing declarations; before hashes, baseline, lineage and allowlist preserved. | I4 refreshes after hashes for existing declarations; before hashes, baseline, lineage and allowlist preserved. | I5 refreshes only existing after hashes; before hashes, baseline, lineage and allowlist preserved. | I6: existing after hashes refreshed; baseline, before/source/owner/reason and all lineage/allowlist unchanged, counts 167/120/124. | I9: W-D10 문서5개 및 install-manifest after SHA만 갱신; PV2 FAIL 후 알려진 한계 문서화, 코드·테스트·계보·허용목록 불변.",
       "origin": "new",
-      "sha256": "8a2dde716d0a897213e0a703e95ede394d3446ee99aba5c6749182ac6fa6c391"
+      "sha256": "b0cda8480fcec6b1915cac733c81d950e331710c382a34b4570f7eeb5c8c7bee"
     },
     "tools/validation-provenance.json": {
       "note": "This file; declares origins for the validation layer.",
       "origin": "new",
-      "sha256": "264cbc7f8c3828ee2856673b8effdff9c8038d7369bbd023fbc230a3ecf0b952"
+      "sha256": "b05c4dedf012a058813aed9b4f135f13dc39c9f019d39e6bd8d4daca7946bee5"
     }
   },
   "generated_by": "tools/build_validation_bundle.py@3",
@@ -548,7 +548,7 @@
     "approved_new_files": 183,
     "baseline_main": "29abec0ec95369de7ae9e22207349d574f1f46b7",
     "change_count": 227,
-    "changes_sha256": "5460cfed3efd7f96c2a72fb97edde69e8fdf2e0762cb8db1aff8d7f46f2e050d",
+    "changes_sha256": "261f098436695f05e602909aea4be2ea250237f977562b028d280ae0cff3743a",
     "new_count": 176,
     "parent_candidate": {
       "file_count": 233,
@@ -557,7 +557,7 @@
     },
     "schema": "knuaf-doc/runtime-changes@2",
     "spec": "tools/runtime-changes.json",
-    "spec_sha256": "8a2dde716d0a897213e0a703e95ede394d3446ee99aba5c6749182ac6fa6c391",
+    "spec_sha256": "b0cda8480fcec6b1915cac733c81d950e331710c382a34b4570f7eeb5c8c7bee",
     "stage": "P28",
     "stage_lineage": [
       {
@@ -732,5 +732,5 @@
     "verified_count": 227
   },
   "schema": "knuaf-doc/validation-bundle@3",
-  "validation_tree_sha256": "c90f6701bccd348007ae5e546285d1e54cf84744f7ec7d2e96b0115994186808"
+  "validation_tree_sha256": "9dd6ba7bf2dc5152ad5078eff693e37e886a52b70d40979dbe33abdf1ab7fc67"
 }
