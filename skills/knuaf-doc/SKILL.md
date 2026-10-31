@@ -177,6 +177,6 @@ description: 한국농수산대학교 창업논문·영농계획서와 동반 �
 
 ## 출력 지원 한계
 
-DOCX 생성·XLSX 템플릿 복제·채우기·수식 보정·인쇄 조정·macOS Office 재계산·PDF 변환의 명령과 한계는 [outputs](references/outputs.md)를 따른다. Windows는 작성·검토본(DOCX·XLSX 생성·검토)까지 지원하고 Office 자동 변환은 macOS Word 경로만 지원하며 macOS Excel 자동 재계산·PDF 변환은 보류한다. 생성물은 사람이 확인하기 전까지 제출 완료로 표시하지 않는다.
+DOCX 생성·XLSX 템플릿 복제·채우기·수식 보정·인쇄 조정·Office 재계산·PDF 변환의 명령과 한계는 [outputs](references/outputs.md)를 따른다. Office 변환(`gg_office.py word|excel`)은 macOS Word·Excel과 Windows 데스크톱 Word·Excel(`pywin32` 필요)에서 전공 권한 확인 뒤 원본을 격리한 작업 사본으로 실행한다. macOS는 다른 Word/Excel 문서가 열려 있거나 이전 세션 상태를 확인할 수 없으면 실행하지 않고 멈춘다. Windows는 `DispatchEx` 전용 인스턴스만 쓴다. 실제 Word/Excel에서의 변환 결과는 아직 실기로 검증하지 않았다. 생성물은 사람이 확인하기 전까지 제출 완료로 표시하지 않는다.
 
 원본·개인 자료는 외부로 보내거나 패키지에 포함하지 않는다. 사용자 결정으로 공개된 내장 학교 규칙 12파일·공용 지침 목록·계보 메타데이터는 예외다([source-contract](references/source-contract.md)). 공개 배포·교수 전달·파서 준비 외 추가 설치는 별도 승인이며 문서 읽기용 Kordoc 전용 캐시 설치는 첫 사용 준비에 포함한다.
