@@ -88,7 +88,6 @@ import sys
 from pathlib import Path
 
 import gg_major_contract as mc
-from gg_core import local
 from gg_frontmatter import frontmatter_lines, normalize_school_profile
 
 PENDING = "[확인 필요]"
@@ -670,35 +669,26 @@ def main():
     ap.add_argument("--input", required=True)
     ap.add_argument("--out", default="build/검토전_본문.md")
     ap.add_argument("--major")
+    ap.add_argument("--body", help="Ⅰ. 머리말로 시작하는 병합 본문 Markdown 경로")
     a = ap.parse_args()
+    import gg_core as core
     try:
-        src = local(a.base, a.input)
-        out = local(a.base, a.out)
-        if out.exists():
-            raise ValueError("기존 산출물을 덮어쓰지 않음: 새 경로 지정")
-        spec = json.loads(src.read_text(encoding="utf-8"))
-        if not isinstance(spec, dict):
-            raise ValueError("논문 입력은 객체여야 함")
-        spec.setdefault("school_profile", {"mode": "school", "layout": "forms_1_to_4"})
-        # Policy B guard: authorize before mkdir/render; reconfirm just
-        # before the final write (the canonical record may have moved).
-        ctx = mc.output_context(a.base, a.major)
-        auth = mc.authorize_output(
-            mc.OUTPUT_SCHOOL_PAPER, ctx, spec=spec)
-        text = paper(spec, context=ctx)
-        mc.reconfirm_output(auth, ctx)
-        out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(text, encoding="utf-8")
-        print(str(out))
+        root = Path(a.base).resolve()
+        src = core.local(root, a.input)
+        spec_bytes = src.read_bytes()
+        body_text = None
+        if a.body:
+            body_text = core.local(root, a.body).read_text(encoding="utf-8-sig")
+        value = core.paper(
+            root, src.relative_to(root).as_posix(), spec_bytes, a.out,
+            major_id=a.major, body_markdown=body_text)
+        print(json.dumps(value, ensure_ascii=False, indent=2))
         return 0
-    except mc.OutputHeldError as e:
-        print(json.dumps(
-            {"status": "held", "reason": e.reason,
-             "detail": str(e), "guidance": e.detail.get("guidance")},
-            ensure_ascii=False))
-        return 2
+    except core.OperationError as e:
+        print(json.dumps(e.result, ensure_ascii=False, indent=2))
+        return core.COMMIT_EXIT.get(e.result.get("commit_state"), 4)
     except (ValueError, OSError, KeyError, TypeError) as e:
-        print(str(e))
+        print(json.dumps({"status": "blocked", "reason": str(e)}, ensure_ascii=False))
         return 2
 
 

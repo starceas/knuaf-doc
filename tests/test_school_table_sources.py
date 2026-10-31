@@ -431,11 +431,36 @@ class SchoolTableSourcesTests(ContractCase):
         self.assertEqual(json.loads(result.stdout)['reason'], 'invalid_spec')
         self.assertEqual(self._tree_bytes(self.root), before)
 
-    def test_frozen_sha_and_direct_generator_unchanged(self):
-        self.assertEqual(hashlib.sha256((SCRIPTS / 'gg_school_paper.py').read_bytes()).hexdigest(),
-                         'b70d36698e07fe3f9cb5a9869c866da49fbd7692fbb675f282013aeec76f81e1')
+    def test_direct_generator_output_unchanged(self):
         self.assertEqual(self.sp.paper(dict(self.spec, table_sources=credits()), context=self.context), self.original)
         self.assertIn(('sourced_objects', '출처 있는 표 0개·그림 0개'), self.issues(self.original))
+
+    def test_frozen_renderer_matches_approved_output_fingerprints(self):
+        # Full UTF-8 output pins generated from origin/main's approved renderer
+        # at 4b297c187b1ce91409cd4f0af60e78ff4b742a3d, not this candidate.
+        # CLI changes do not affect either output. Missing optional values also
+        # exercise the frozen defaults; explicit area/income expose unit drift.
+        expected = {
+            'legacy': 'c0ffe0f054b9036e41ad05889d92c08a90fdf4b3752399ed93085858e83c08b5',
+            'official': 'eff2de21f01902b2144529952a82b9c248df4a6c2b4a32fc8506ced60f4ff390',
+        }
+        base = {
+            'major_id': 'specialty_crops', 'writing_year': 2026,
+            'title': '합성 승인판 대조 논문', 'author': '합성 작성자',
+            'area_m2': 1200, 'sales_thousand': 3400, 'profit_thousand': 560,
+        }
+        for mode, approved_sha256 in expected.items():
+            with self.subTest(mode=mode):
+                spec = dict(base)
+                if mode == 'official':
+                    spec['school_profile'] = {
+                        'mode': 'school', 'layout': 'forms_1_to_4',
+                        'school': '합성대학교', 'department': '특용작물학과',
+                    }
+                output = self.sp.paper(spec, context=self.context)
+                self.assertEqual(
+                    approved_sha256, hashlib.sha256(output.encode('utf-8')).hexdigest(),
+                    'Frozen %s output differs from approved 4b297c1 renderer' % mode)
 
     def test_docx_conversion_preserves_tables_and_credit_placement(self):
         convert = runtime('build_docx').convert

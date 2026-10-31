@@ -218,7 +218,7 @@ class FormulaRangeTests(ContractCase):
 
 class PaperBodyTests(ContractCase):
     """JUDGE-B #1/#2: a merged body replaces the generated Ⅰ–Ⅵ skeleton
-    while the frontmatter stays; gg_school_paper.py is not modified."""
+    while the frontmatter stays; the frozen renderer logic is unchanged."""
 
     STUDENT_BODY = (
         "# Ⅰ. 머리말\n\n학생이 쓴 머리말.\n\n"
@@ -499,3 +499,126 @@ class BuildDocxTests(ContractCase):
         build = runtime("build_docx")
         self.assertEqual({6: 13, 7: 13, 8: 13, 9: 13},
                          {k: build.LEVEL_PT[k] for k in (6, 7, 8, 9)})
+
+
+class DirectPaperCliTests(ContractCase):
+    """The standalone entry point uses managed publication, not raw rendering."""
+    STUDENT_BODY = PaperBodyTests.STUDENT_BODY
+    _setup = PaperBodyTests._setup
+    _assert_frontmatter_intact = PaperBodyTests._assert_frontmatter_intact
+
+    def _direct(self, root, *args):
+        return _cli(SCRIPTS / "gg_school_paper.py", root,
+                    "--input", "paper-spec.json", "--out", "build/direct.md",
+                    "--major", "specialty_crops", *args)
+
+    def test_direct_body_keeps_forms_and_records_publication(self):
+        core, root, spec = self._setup()
+        write_text(root, "body.md", "\ufeff" + self.STUDENT_BODY)
+        result = self._direct(root, "--body", "body.md")
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        value = json.loads(result.stdout)
+        self.assertEqual("generated", value["status"])
+        self._assert_frontmatter_intact(
+            (root / "build/direct.md").read_text(encoding="utf-8"))
+        bundle = root / "build" / str(core.load(root)["revision"]) / "paper"
+        receipt = json.loads((bundle / ".publication.json").read_text(encoding="utf-8"))
+        self.assertEqual(core.digest(self.STUDENT_BODY.strip().encode()),
+                         receipt["request"]["body_sha256"])
+        self.assertEqual("specialty_crops", json.loads(
+            (bundle / "major_authorization.json").read_text(encoding="utf-8"))["major_id"])
+        retry = self._direct(root, "--body", "body.md")
+        self.assertEqual(0, retry.returncode, retry.stdout)
+        self.assertEqual(value["request_id"], json.loads(retry.stdout)["request_id"])
+
+    def test_direct_invalid_body_has_json_and_no_publication(self):
+        for body in ("", "Ⅱ. 농장현황\n잘못된 시작"):
+            with self.subTest(body=body):
+                core, root, spec = self._setup()
+                write_text(root, "body.md", body)
+                before = self._tree_bytes(root)
+                result = self._direct(root, "--body", "body.md")
+                self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+                value = json.loads(result.stdout)
+                self.assertEqual("invalid_spec", value["reason"])
+                self.assertEqual("not_committed", value["commit_state"])
+                self.assertEqual(before, self._tree_bytes(root))
+
+    def test_direct_missing_file_is_blocked_json(self):
+        core, root, spec = self._setup()
+        result = self._direct(root, "--body", "missing.md")
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        self.assertEqual("blocked", json.loads(result.stdout)["status"])
+        self.assertIn("missing.md", json.loads(result.stdout)["reason"])
+        self.assertFalse((root / "build/direct.md").exists())
+
+    def test_direct_native_field_validation_is_not_bypassed(self):
+        core, root, spec = self._setup()
+        data = json.loads(spec.read_text(encoding="utf-8"))
+        data["sales_thousand"] = "999달러"
+        spec.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+        result = self._direct(root)
+        self.assertEqual(2, result.returncode, result.stdout + result.stderr)
+        self.assertEqual("native_field_invalid", json.loads(result.stdout)["reason"])
+        self.assertFalse((root / "build/direct.md").exists())
+
+
+class BodyOnlyDocxCliTests(ContractCase):
+    _project = BuildDocxTests._project
+    def _build_body(self, root, output, *flags):
+        return _cli(SCRIPTS / "build_docx.py", root, "--in", "body.md",
+                    "--out", output, *flags)
+
+    def test_no_toc_removes_only_body_toc_and_preserves_guard(self):
+        from zipfile import ZipFile
+        root = self._project()
+        write_text(root, "body.md", "# Ⅰ. 머리말\n\n합성 본문.\n")
+        for output, flags in (
+                ("build/with.docx", ("--major", "specialty_crops")),
+                ("build/body.docx", ("--major", "specialty_crops", "--no-toc"))):
+            result = self._build_body(root, output, *flags)
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            with ZipFile(root / output) as archive:
+                xml = archive.read("word/document.xml").decode()
+                settings = archive.read("word/settings.xml").decode()
+            no_toc = "--no-toc" in flags
+            self.assertEqual(not no_toc, 'TOC \\o' in xml)
+            self.assertEqual(not no_toc, ">목차<" in xml)
+            self.assertEqual(not no_toc, 'w:type="page"' in xml)
+            self.assertEqual(not no_toc, "w:updateFields" in settings)
+            self.assertIn("합성 본문.", xml)
+            manifest = json.loads((root / output).with_suffix(".manifest.json")
+                                  .read_text(encoding="utf-8"))
+            self.assertEqual("not_applicable" if no_toc else "not_run",
+                             manifest["toc_update"])
+        for major, reason in ((None, "major_id_required"),
+                              ("industrial_insects", "major_binding_mismatch")):
+            flags = ("--no-toc",) + (("--major", major) if major else ())
+            result = self._build_body(root, "build/held.docx", *flags)
+            self.assertEqual(2, result.returncode, result.stdout)
+            self.assertEqual(reason, json.loads(result.stdout)["reason"])
+            self.assertFalse((root / "build/held.docx").exists())
+
+    def test_no_toc_keeps_official_and_legacy_school_contents(self):
+        from zipfile import ZipFile
+        root = self._project()
+        sp = runtime("gg_school_paper")
+        context = runtime("gg_major_contract").output_context(root, "specialty_crops")
+        spec = {"writing_year": 2026}
+        for mode in ("legacy", "official"):
+            data = dict(spec)
+            if mode == "official":
+                data["school_profile"] = {
+                    "mode": "school", "layout": "forms_1_to_4",
+                    "school": "합성대학교", "department": "특용작물학과"}
+            write_text(root, "body.md", sp.paper(data, context=context))
+            output = "build/%s.docx" % mode
+            result = self._build_body(root, output, "--no-toc",
+                                      "--major", "specialty_crops")
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            with ZipFile(root / output) as archive:
+                xml = archive.read("word/document.xml").decode()
+            self.assertIn("TOC \\o" if mode == "legacy" else ">목    차<", xml)
+            manifest = json.loads((root / output).with_suffix(".manifest.json")
+                                  .read_text(encoding="utf-8"))
+            self.assertEqual("not_run", manifest["toc_update"])

@@ -335,7 +335,7 @@
    "origin": "new"
   },
   "tests/test_p1_gui_inherit.py": {
-   "note": "P1-GUI: JUDGE-A/JUDGE-B 올림 항목(빈 export 거절, 기계용 field_id 보류, n항 검산, paper body 어댑터·CLI, atomic 재시도, 명령 빈 대상 차단, doctor 의존성, build_docx 봉투·의존성·기본값) 시험",
+   "note": "P1-GUI: JUDGE-A/JUDGE-B 올림 항목(빈 export 거절, 기계용 field_id 보류, n항 검산, paper body 어댑터·CLI, atomic 재시도, 명령 빈 대상 차단, doctor 의존성, build_docx 봉투·의존성·기본값) 시험 | P0-2 PR-E: CLI body publication/receipt, invalid-body JSON, missing-file JSON, numeric validation, body-only DOCX TOC and major guard regression tests.",
    "origin": "new"
   },
   "tests/test_p1_outputs.py": {
@@ -343,7 +343,7 @@
    "origin": "new"
   },
   "tests/test_p27_small.py": {
-   "note": "P27: school_profile.major_id, 사유별 held 안내, pywin32 제거 doctor, runtime_present, CP949 CLI --help | Restore v0.1.4: synthetic regression and approved school-entry expectations. | P0-2 PR-D: Q03: pywin32 Windows-only applicability and minimum supported version 306 behavior.",
+   "note": "P27: school_profile.major_id, 사유별 held 안내, pywin32 제거 doctor, runtime_present, CP949 CLI --help | Restore v0.1.4: synthetic regression and approved school-entry expectations. | P0-2 PR-D: Q03: pywin32 Windows-only applicability and minimum supported version 306 behavior. | P0-2 PR-E: explicit synthetic school in nested-major CLI fixture for current publication contract.",
    "origin": "new"
   },
   "tests/test_plain_policy.py": {
@@ -383,7 +383,7 @@
    "origin": "new"
   },
   "tests/test_school_table_sources.py": {
-   "note": "PR-3 X1 regression tests; root tests belong to validation layer per I precedent. | I8 PV1-02: finite bibliographic display characters and invalid six-table publication refusal (FIX3-3).",
+   "note": "PR-3 X1 regression tests; root tests belong to validation layer per I precedent. | I8 PV1-02: finite bibliographic display characters and invalid six-table publication refusal (FIX3-3). | P0-2 PR-E: remove whole-file implementation SHA assertion; retain direct renderer output and source behavior contract. | PR-E FIX1 E-R1-02: freeze full official/legacy UTF-8 output fingerprints generated from approved origin/main renderer 4b297c187b1ce91409cd4f0af60e78ff4b742a3d, independent of candidate-generated expectations.",
    "origin": "new"
   },
   "tests/test_skill_commands.py": {
@@ -419,7 +419,7 @@
    "origin": "new"
   },
   "tests/test_skill_school_paper.py": {
-   "note": "P1-GUI 시험 이사(cb72ae1): 5년 창·미확인 표시·표 고정 행 (frozen 생성기는 불변)",
+   "note": "P1-GUI 시험 이사(cb72ae1): 5년 창·미확인 표시·표 고정 행 (frozen 생성기는 불변) | P0-2 PR-E: clarify that the frozen generation logic, not the CLI module bytes, is unchanged.",
    "origin": "new"
   },
   "tests/test_skill_school_verify.py": {

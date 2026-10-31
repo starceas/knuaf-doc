@@ -196,7 +196,7 @@ WIDE_TABLE_MIN_COLS = 10
 
 
 def convert(md_text, font=FONT, base=".", table_reports=None, *,
-            context=None):
+            context=None, toc=True):
     """Render the paper markdown into a DOCX document.  Policy B: the
     explicit major must be authorized against the canonical binding
     (``context``) before anything is rendered."""
@@ -316,7 +316,7 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
 
     if not is_school_paper:
         # 표·그림만 있고 제목이 없는 문서에 빈 목차 페이지를 붙이지 않는다.
-        if any(n["kind"] == "heading" for n in nodes):
+        if toc and any(n["kind"] == "heading" for n in nodes):
             add_toc(doc, font)
             update = OxmlElement("w:updateFields")
             update.set(qn("w:val"), "true")
@@ -636,6 +636,8 @@ def main(argv=None):
     ap.add_argument("--out", default="build/검토전_논문.docx")
     ap.add_argument("--font", default=FONT)
     ap.add_argument("--major", default=None, help="명시 전공 ID")
+    ap.add_argument("--no-toc", dest="toc", action="store_false",
+                    help="앞머리 없는 본문의 목차 쪽만 생략(학교 양식 목차는 유지)")
     ap.add_argument("--rehash", metavar="DOCX",
                     help="후처리한 DOCX의 매니페스트 file_hash를 다시 계산한다")
     a = ap.parse_args(argv)
@@ -664,7 +666,7 @@ def main(argv=None):
             raise ValueError("내보낼 본문이 없음: 입력 파일이 비어 있음")
         table_reports = []
         doc = convert(source_text, a.font, base,
-                      table_reports=table_reports, context=context)
+                      table_reports=table_reports, context=context, toc=a.toc)
         mc.reconfirm_output(authorization, context)
         out.parent.mkdir(parents=True, exist_ok=True)
         doc.save(out)
@@ -684,7 +686,7 @@ def main(argv=None):
             "input_hash": digest(src.read_bytes()),
             "font": a.font,
             "font_available": "not_run",
-            "toc_update": "not_run",
+            "toc_update": "not_run" if (a.toc or parsed_plan) else "not_applicable",
             "render": "not_run",
             "hwp": "not_run",
             "layout_review": review_requests(parse(source_text)),

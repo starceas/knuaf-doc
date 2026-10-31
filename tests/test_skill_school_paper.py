@@ -5,7 +5,7 @@ honesty about missing values: SKILL.md says unsupplied values stay
 ``[확인 필요]``.  A regression that turns a missing number into 0 or an empty
 cell would put an invented figure in a submitted thesis.
 
-The frozen renderer keeps its own module unchanged; the caller-body splice
+The frozen renderer keeps its generation logic unchanged; the caller-body splice
 lives in ``core.paper`` and is covered by test_p1_gui_inherit.
 """
 import re

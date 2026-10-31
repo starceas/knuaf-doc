@@ -53,6 +53,7 @@ class K303SchoolProfileMajorId(ContractCase):
             "school_profile": {
                 "mode": "school",
                 "layout": "forms_1_to_4",
+                "school": "합성대학교",
                 "title": "도라지 신규 창업 — 합성 시험값",
                 "department": "특용작물전공",
             },
