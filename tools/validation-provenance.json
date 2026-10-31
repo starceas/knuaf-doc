@@ -60,6 +60,10 @@
    "note": "P0-2 PR-D: Q03 Windows-only pywin32 manifest declaration.",
    "origin": "transformed"
   },
+  "tests/test_install_manifest_current.py": {
+   "note": "P0-2 consistency: committed install-manifest.json must equal gg_update.build_install_manifest of the real skill tree and pass _check_new_tree_manifest (release update acceptance).",
+   "origin": "new"
+  },
   "tests/test_window_hygiene.py": {
    "note": "P0-2 PR-D: Q03/Q04 Office preservation transitions, COM ownership/error cells and explicit safe cleanup. | PR-D R1: D-R1-01/02: timeout/preserved reentry and guard rejection chains; new never-opened cleanup; restored generated Word/Excel safety and calculation-order contracts; both review mutations caught.",
    "origin": "transformed"
@@ -97,7 +101,7 @@
    "origin": "new"
   },
   "skills/knuaf-doc/install-manifest.json": {
-   "note": " | PR-2: latest D8/D9 integration; I-01 only measured count constants adjusted in lineage test. Full pytest covers split public/skill test locations. | I-02: measured F01 artifact repin propagated; F01 canonical digest one-string propagation separately approved by I-03. | I2 gg_update.py manifest --write for FIX-A2/B2/C2b and W-D3 final inputs plus measured F01 artifact repin. | I3 gg_update.py manifest --write for FIX-B3/C3 and W-D4 final inputs plus measured F01 artifact repin. | I4 gg_update.py manifest --write for FIX-B4/C4 and W-D5 final inputs plus measured F01 artifact repin. | I5 gg_update.py manifest --write for FIX-C5 and W-D6 final inputs plus measured F01 artifact repin. | I6: gg_update.py manifest --write for FIX-C6 and W-D7; F01 artifact and canonical digest measured unchanged, no repin.",
+   "note": " | PR-2: latest D8/D9 integration; I-01 only measured count constants adjusted in lineage test. Full pytest covers split public/skill test locations. | I-02: measured F01 artifact repin propagated; F01 canonical digest one-string propagation separately approved by I-03. | I2 gg_update.py manifest --write for FIX-A2/B2/C2b and W-D3 final inputs plus measured F01 artifact repin. | I3 gg_update.py manifest --write for FIX-B3/C3 and W-D4 final inputs plus measured F01 artifact repin. | I4 gg_update.py manifest --write for FIX-B4/C4 and W-D5 final inputs plus measured F01 artifact repin. | I5 gg_update.py manifest --write for FIX-C5 and W-D6 final inputs plus measured F01 artifact repin. | I6: gg_update.py manifest --write for FIX-C6 and W-D7; F01 artifact and canonical digest measured unchanged, no repin. | P0-2 consistency: gg_update.py manifest --write after the #59/#60/#61 merges.",
    "origin": "new"
   },
   "skills/knuaf-doc/references/commands.md": {
