@@ -418,14 +418,21 @@ class ReferenceIdentityTests(ContractCase):
 
 
 class PackagingTests(ContractCase):
-    """A06 — no originals, extracts or local paths in the shipped tree."""
+    """A06 — no original documents; only hash-pinned derived assets may ship."""
 
     def test_no_original_documents_shipped(self):
         skill = REPO_ROOT / "skills" / "knuaf-doc"
         banned = {".xlsx", ".xlsm", ".xls", ".hwpx", ".hwp", ".pdf"}
-        found = [p.relative_to(REPO_ROOT).as_posix()
-                 for p in skill.rglob("*") if p.suffix.lower() in banned]
-        self.assertEqual(found, [])
+        assets = json.loads((skill / "references" / "workbook-reference-set.json").read_text(
+            encoding="utf-8"))["derived_assets"]
+        approved = {asset["path"]: asset for asset in assets}
+        found = {p.relative_to(skill).as_posix(): p
+                 for p in skill.rglob("*") if p.suffix.lower() in banned}
+        self.assertEqual(set(found), set(approved))
+        for rel, path in found.items():
+            self.assertEqual(runtime("gg_excel_template").sha256(path), approved[rel]["sha256"])
+            self.assertNotEqual(approved[rel]["sha256"],
+                                runtime("gg_workbook_registry").load_reference_set()["X01"]["sha256"])
 
     def test_fruit_reference_text_has_no_local_paths(self):
         skill = REPO_ROOT / "skills" / "knuaf-doc"

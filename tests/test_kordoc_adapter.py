@@ -610,6 +610,64 @@ class KordocAdapterTests(unittest.TestCase):
         self.assertTrue(out.is_file())
 
 
+class CacheDiagnosisTests(unittest.TestCase):
+    setUp = KordocAdapterTests.setUp
+    _activate = KordocAdapterTests._activate
+    def test_legacy_reuse_requires_identity_version_parse_and_generate(self):
+        self._activate(cli_version="kordoc " + gk.VERSION)
+        legacy = self.root / "old-cache"
+        version = legacy / gk.VERSION
+        version.mkdir(parents=True)
+        self.fake._install(version)
+        (version / ".gg-kordoc.json").write_text(json.dumps({
+            "owner": "knuaf-dev.gg_kordoc", "version": gk.VERSION, "registry": gk.REGISTRY}))
+        before = {str(p.relative_to(legacy)): p.read_bytes()
+                  for p in legacy.rglob("*") if p.is_file()}
+        with mock.patch.object(gk, "_cache_root", return_value=self.cache), \
+                mock.patch.object(gk, "_legacy_cache_roots", return_value=[legacy]):
+            result = gk.ensure(need_generate=True)
+            self.assertEqual(result["action"], "reused_legacy")
+            self.assertEqual(result["cache_dir"], str(legacy))
+            self.assertFalse(self.cache.exists())
+            self.assertEqual(before, {str(p.relative_to(legacy)): p.read_bytes()
+                             for p in legacy.rglob("*") if p.is_file()})
+            self.fake.parse_help = "kordoc --help only"
+            with mock.patch.object(gk, "_claim_cache",
+                                   side_effect=gk.KordocBlocked("no_install_in_test")):
+                with self.assertRaises(gk.KordocBlocked):
+                    gk.ensure()
+
+    def test_diagnose_is_read_only_and_does_not_claim_capability(self):
+        self._activate()
+        with mock.patch.object(gk, "_run", side_effect=AssertionError("execution forbidden")), \
+                mock.patch.object(gk, "_legacy_cache_roots", return_value=[]):
+            report = gk.diagnose(cache_dir=self.cache, node=self.node)
+        self.assertFalse(report["installed"])
+        self.assertEqual(report["reason"], "not_installed")
+        self.assertFalse(report["capability_verified"])
+        self.assertFalse(self.cache.exists())
+        json.dumps(report)
+
+    def test_diagnose_reports_legacy_presence_without_executing_it(self):
+        legacy = self.root / "legacy"
+        version = legacy / gk.VERSION
+        version.mkdir(parents=True)
+        self.fake._install(version)
+        (version / ".gg-kordoc.json").write_text(json.dumps({
+            "owner": "knuaf-dev.gg_kordoc", "version": gk.VERSION, "registry": gk.REGISTRY}))
+        with mock.patch.object(gk, "_cache_root", return_value=self.cache), \
+                mock.patch.object(gk, "_legacy_cache_roots", return_value=[legacy]), \
+                mock.patch.object(gk.shutil, "which", return_value=None), \
+                mock.patch.object(gk, "_run", side_effect=AssertionError("execution forbidden")):
+            report = gk.diagnose()
+        self.assertTrue(report["installed"])
+        self.assertEqual(report["selected_cache_dir"], str(legacy))
+        self.assertEqual(report["legacy_candidates"][0]["reason"], "metadata_present")
+        self.assertEqual(report["reason"], "capability_unverified")
+        self.assertFalse(report["capability_verified"])
+        self.assertFalse(self.cache.exists())
+
+
 class EnvAllowlistTests(unittest.TestCase):
     """외부 프로세스 환경 허용목록 계약 (W2b)."""
 

@@ -27,5 +27,21 @@
       "role": "professor_reference",
       "authority": "user_statement"
     }
+  ],
+  "derived_assets": [
+    {
+      "asset_id": "finance-template-x01-blank",
+      "path": "assets/templates/finance-template.xlsx",
+      "sha256": "6d3c9fe5e5992108a8bab18c0098edb0d808f0d14c099878a53939b17de88c7d",
+      "derived_from": "X01",
+      "role": "value_cleared_template",
+      "formula_cells": 1643,
+      "explicit_formula_comparisons": 1175,
+      "explicit_formula_differences": 0,
+      "shared_formula_followers_unexpanded": 468,
+      "provenance": "Approved neutral bundled asset, copied byte-for-byte from app PR #41; source workbook not accessed.",
+      "identity_policy": "Separate derived bytes, not the original X01 hash or a formula-correction/recalculation approval.",
+      "selection_policy": "Explicit student path first; without a student file, require explicit X01 choice under the major contract. H01/X02 need a student-supplied form; other majors also require verified completed survey confirming no major XLSX."
+    }
   ]
 }
