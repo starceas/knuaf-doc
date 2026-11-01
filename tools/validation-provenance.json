@@ -4,6 +4,10 @@
   "origin": "new"
  },
  "files": {
+  "skills/knuaf-doc/tests/test_gg_source_intake_scan.py": {
+   "origin": "transformed",
+   "note": "F CI1: complete only the two synthetic filesystem fixtures' metadata lookups; order the real NFD file before the synthetic NFC collision so all content reads are real. Product behavior, hashing, assertions, expected boundary kinds and skip policy unchanged."
+  },
   "skills/knuaf-doc/tests/test_gg_rda_candidates.py": {
    "origin": "transformed",
    "note": "F-skill-tests: delete leaked dynamic TestCase loop alias after registration; keep every generated case and expectation while removing one duplicate execution."
@@ -99,7 +103,8 @@
   },
   "docs/validation/REGRESSIONS.md": {
    "note": "P0-A: human-readable regression inventory (R1–R7 + adopted C/H items); machine source of truth is tests/regression_inventory.json. repair-n1/N1: dependency-gate and allowed nested-skip list documented. P2-R2: verdict precedence, completion flags, external-gate rule and outcome-accounting semantics documented. P2-R3: exact-10 nested allowlist closure documented (tamper control folded into host method). | P27: runner 계약 §6 pywin32 예시 정정",
-   "origin": "new"
+   "origin": "new",
+   "transform": "F CI1: document coherent directory-entry and metadata simulation for normalization-collision fixtures; no new skip approval."
   },
   "docs/validation/d5-rda-useful-life.json": {
    "note": "D5 successor receipt for changed RDA useful-life bytes; historical P4 receipt retained. P15: rebaselined onto the accepted P14 parent (main f9c278c, 185 files).",
@@ -112,7 +117,7 @@
   "skills/knuaf-doc/install-manifest.json": {
    "note": " | PR-2: latest D8/D9 integration; I-01 only measured count constants adjusted in lineage test. Full pytest covers split public/skill test locations. | I-02: measured F01 artifact repin propagated; F01 canonical digest one-string propagation separately approved by I-03. | I2 gg_update.py manifest --write for FIX-A2/B2/C2b and W-D3 final inputs plus measured F01 artifact repin. | I3 gg_update.py manifest --write for FIX-B3/C3 and W-D4 final inputs plus measured F01 artifact repin. | I4 gg_update.py manifest --write for FIX-B4/C4 and W-D5 final inputs plus measured F01 artifact repin. | I5 gg_update.py manifest --write for FIX-C5 and W-D6 final inputs plus measured F01 artifact repin. | I6: gg_update.py manifest --write for FIX-C6 and W-D7; F01 artifact and canonical digest measured unchanged, no repin. | P0-2 consistency: gg_update.py manifest --write after the #59/#60/#61 merges.",
    "origin": "new",
-   "transform": "F-skill-tests: regenerate install manifest from a tracked-files-only copy after fixture repair."
+   "transform": "F-skill-tests: regenerate install manifest from a tracked-files-only copy after fixture repair. | F CI1: regenerate after completing source-intake simulated filesystem lookups."
   },
   "skills/knuaf-doc/references/commands.md": {
    "note": "P0-2 PR-A: documented gg.py commands index and apply JSON contract.",
