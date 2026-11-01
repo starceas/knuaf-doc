@@ -6,7 +6,7 @@ Usage:
 
 Default mode runs ``tools/check_bundle.py --root <repo root>`` as a
 subprocess, then verifies the declared runtime dependencies on THIS
-interpreter, then runs the runtime suite under ``tests/``.
+interpreter, then runs both ``tests/`` and ``skills/knuaf-doc/tests/``.
 ``--runtime-only`` is a development aid and is never the final or CI
 command; it always reports ``full_validation_completed=false`` and
 ``platform_validation_completed=false``.
@@ -62,11 +62,17 @@ External-gate rule (fail-closed, compiled in — not configurable): the
 exact test ``tests.test_p2_windows.WindowsBandCase.
 test_native_windows_two_process_contention`` skipping with the exact
 reason ``native Windows+NTFS required — withheld`` on darwin or linux is
-the sole approved external skip; it records the P2-L09-native pending
+the sole approved native external skip; it records the P2-L09-native pending
 gate.  The same test passing, failing, skipping with another reason,
 running on another platform, appearing twice, or being absent from a
 completed suite is never silently excused — it is an unexpected failure
 or unapproved skip as applicable.
+
+Skill tests have a separate finite ``ALLOWED_SKILL_SKIPS`` map: only the
+exact test ID and reason may skip for opt-in live Crossref access or an
+unshipped accepted-catalog fixture. These remain visible as skipped, not
+passed, in both runtime entries and ``approved_skill_skips``. Other skips,
+including missing installed runtime dependencies, remain incomplete.
 """
 import argparse
 import io
@@ -126,6 +132,69 @@ NATIVE_GATE = {
     "implementation": "placeholder_only",
     "rule": "P2-L09-native accepted external placeholder",
 }
+
+# Optional external inputs, not missing shipped payloads or dependencies.
+# No class/prefix matching: a new test or changed reason needs review.
+ALLOWED_SKILL_SKIPS = {
+    "test_gg_doi.LiveCall.test_real_doi":
+        "실제 Crossref 호출 — GG_DOI_LIVE=1일 때만",
+    **dict.fromkeys((
+        "test_gg_rda_research_integration.AcceptedCatalogRealPackTests."
+        "test_real_apply_roundtrip_on_fresh_bytes",
+        "test_gg_rda_research_integration.AcceptedCatalogRealPackTests."
+        "test_real_propose_promotes_only_verified",
+        "test_gg_rda_research_integration.AcceptedCatalogRealPackTests."
+        "test_real_verified_claim_verifies",
+        "test_gg_rda_research_integration.AcceptedCatalogRealPackTests."
+        "test_real_wrong_value_rejected",
+        "test_gg_rda_research_integration.AcceptedCatalogRealPackTests."
+        "test_scc1_copied_public_pin_cannot_mint_wrapper",
+        "test_gg_rda_research_integration.AcceptedCatalogRealPackTests."
+        "test_scc1_forged_real_key_rejected_via_public_accept",
+        "test_gg_rda_research_integration.AcceptedCatalogRealPackTests."
+        "test_scc1_post_acceptance_mutation_self_invalidates",
+    ), "accepted catalog tree not present"),
+    **dict.fromkeys((
+        "test_gg_reuse.TestCU7.test_cu7_negative_b_live_invalidation",
+        "test_gg_reuse.TestCU7.test_cu7_positive_control_paired",
+        "test_gg_reuse.TestI02Positives."
+        "test_i02_7_statistical_positive_via_accepted_catalog",
+        "test_gg_reuse_reasons.TestBoundaryDiscipline."
+        "test_audit_key_unresolved_is_needs_excerpt",
+        "test_gg_reuse_reasons.TestBoundaryDiscipline."
+        "test_catalog_digest_mismatch",
+        "test_gg_reuse_reasons.TestBoundaryDiscipline."
+        "test_loader_failure_raises_valueerror_not_verdict",
+        "test_gg_reuse_reasons.TestBoundaryDiscipline."
+        "test_loader_packs_dir_claim_mismatch_raises",
+        "test_gg_reuse_reasons.TestBoundaryDiscipline."
+        "test_verification_absent_quarantined_key",
+        "test_gg_source_i06_flow.TestI06Flow."
+        "test_i06_1_intake_lookup_propose_apply_register",
+        "test_gg_source_i06_flow.TestI06Flow."
+        "test_i06_2_answers_sources_units_linked",
+        "test_gg_source_i06_flow.TestI06Flow."
+        "test_i06_3_revision_change_stales_review",
+        "test_gg_source_i06_flow.TestI06Flow.test_i06_4_partial_progress",
+        "test_gg_source_i06_flow.TestI06Flow.test_i06_5_diagnostics_accuracy",
+        "test_gg_source_i06_flow.TestI06Flow.test_i06_6_no_synthetic_bypass",
+        "test_gg_source_register.TestAdmission."
+        "test_p4_combined_failure_check7_precedes_check8",
+        "test_gg_source_register.TestAdmission."
+        "test_p4_snapshot_requires_constructed_catalog",
+        "test_gg_source_register.TestArtifacts.test_p4_snapshot_registers",
+    ), "accepted g005 catalog tree not present"),
+}
+SKILL_SKIP_RULE = "optional skill external input (exact id and reason)"
+
+
+def _is_approved_skill_skip(entry):
+    return (
+        entry.get("category") == "skipped"
+        and entry.get("test") in ALLOWED_SKILL_SKIPS
+        and entry.get("detail") == ALLOWED_SKILL_SKIPS[entry["test"]]
+        and not entry.get("events")
+    )
 
 
 def _describe_exception(err):
@@ -527,8 +596,13 @@ def _dependency_preflight(root):
 def _run_runtime_tests(root):
     sys.path.insert(0, str(root))
     try:
-        loader = unittest.TestLoader()
-        suite = loader.discover(str(root / "tests"), top_level_dir=str(root))
+        skill_tests = root / "skills" / "knuaf-doc" / "tests"
+        suite = unittest.TestSuite()
+        # Separate loaders: discover caches top_level_dir. Skill tests are
+        # standalone modules, not a second package named ``tests``.
+        for start, top in ((root / "tests", root), (skill_tests, skill_tests)):
+            suite.addTests(unittest.TestLoader().discover(
+                str(start), pattern="test_*.py", top_level_dir=str(top)))
         stream = io.StringIO()
         runner = unittest.TextTestRunner(
             stream=stream, verbosity=2, resultclass=RecordingResult)
@@ -738,6 +812,7 @@ def main(argv=None):
     inventory_warnings.extend(gate_warnings)
     approved_ids = {s["test"] for s in approved_external_skips}
     pending_external_checks = _pending_external_checks(gate_observation)
+    approved_skill_skips = []
 
     for e in runtime["entries"]:
         if e.get("category") != "skipped":
@@ -745,6 +820,11 @@ def main(argv=None):
         if e["test"] in approved_ids:
             continue
         if nested_allowed and e["test"] in ALLOWED_NESTED_SKIP_IDS:
+            continue
+        if _is_approved_skill_skip(e):
+            approved_skill_skips.append({
+                "test": e["test"], "reason": e["detail"],
+                "rule": SKILL_SKIP_RULE})
             continue
         unapproved_skips.append({"test": e["test"],
                                  "reason": e.get("detail")})
@@ -889,6 +969,7 @@ def main(argv=None):
         "full_validation_completed": full_validation_completed,
         "pending_external_checks": pending_external_checks,
         "approved_external_skips": approved_external_skips,
+        "approved_skill_skips": approved_skill_skips,
         "causes": {"unexpected": unexpected_causes,
                    "incomplete": incomplete_causes},
         "python": {"version": sys.version.split()[0],
@@ -946,6 +1027,11 @@ def main(argv=None):
         summary.append(
             "approved external skips: " + "; ".join(
                 s["test"] for s in approved_external_skips))
+    if approved_skill_skips:
+        summary.append(
+            "approved skill skips: " + "; ".join(
+                "%s (%s)" % (s["test"], s["reason"])
+                for s in approved_skill_skips))
     if runtime["status"] == "not_run_dependency":
         summary.append("runtime=not_run_dependency (tests not executed)")
     if runtime.get("known_defect_records"):

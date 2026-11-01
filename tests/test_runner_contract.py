@@ -828,6 +828,32 @@ class RunnerAccountingTests(unittest.TestCase):
         self.assertEqual([], approved)
         self.assertEqual([], warnings)  # normal failure path, exit 1
 
+    def test_skill_external_input_skips_require_exact_id_and_reason(self):
+        for tid, reason in (
+            ("test_gg_doi.LiveCall.test_real_doi",
+             "실제 Crossref 호출 — GG_DOI_LIVE=1일 때만"),
+            ("test_gg_source_register.TestArtifacts.test_p4_snapshot_registers",
+             "accepted g005 catalog tree not present"),
+        ):
+            with self.subTest(test=tid):
+                entry = {"test": tid, "category": "skipped", "detail": reason}
+                self.assertTrue(self.rv._is_approved_skill_skip(entry))
+                self.assertFalse(self.rv._is_approved_skill_skip(
+                    dict(entry, test=tid + "_new")))
+                self.assertFalse(self.rv._is_approved_skill_skip(
+                    dict(entry, detail="missing required dependency")))
+                self.assertFalse(self.rv._is_approved_skill_skip(
+                    dict(entry, category="failed")))
+
+    def test_skill_skip_cannot_hide_subtest_outcomes(self):
+        entry = {
+            "test": "test_gg_doi.LiveCall.test_real_doi",
+            "category": "skipped",
+            "detail": "실제 Crossref 호출 — GG_DOI_LIVE=1일 때만",
+            "events": [{"type": "subtest_skip", "detail": "other input absent"}],
+        }
+        self.assertFalse(self.rv._is_approved_skill_skip(entry))
+
     # -- verdict / completion precedence (pure) ------------------------------
 
     def test_verdict_precedence_failure_over_incomplete(self):
