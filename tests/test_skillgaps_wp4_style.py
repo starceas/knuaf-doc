@@ -20,7 +20,8 @@ class StyleContract(unittest.TestCase):
         polishing = read("korean-polishing.md")
         self.assertIn("사용자 지정 문체가 이 문서의 기본 어투보다 우선한다", polishing)
         self.assertIn("지정이 없을 때의 기본값", polishing)
-        self.assertIn("00_interview.md", polishing)
+        self.assertIn("project.json.sources", polishing)
+        self.assertIn("gg.py apply", polishing)
         self.assertIn("Q4", polishing)
 
     def test_narrative_defers_to_polishing_default(self):

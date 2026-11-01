@@ -1119,12 +1119,13 @@ def workbook(spec, path, *, context=None):
     # 정확값 (column C) keeps the full Decimal string on one line (28 digits).
     inv.column_dimensions["C"].width = 34
     path = Path(path)
-    if path.exists():
-        raise ValueError("기존 XLSX 덮어쓰기 금지")
+    manifest_path = path.with_suffix(".manifest.json")
+    if any(item.exists() or item.is_symlink() for item in (path, manifest_path)):
+        raise ValueError("기존 XLSX·매니페스트 덮어쓰기 금지")
     mc.reconfirm_output(authorization, context)
     path.parent.mkdir(parents=True, exist_ok=True)
     wb.save(path)
-    path.with_suffix(".manifest.json").write_text(
+    manifest_path.write_text(
         json.dumps(
             dict(
                 result,
