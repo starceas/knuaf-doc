@@ -1,9 +1,9 @@
 """Lane B scan tests — frozen API.md section 2 + SCHEMA sections 7/10.
 
 Every assertion runs against the REAL module; no mock replaces product
-logic.  The only patched seams are os.scandir (NFC collision — APFS
-cannot hold two normalization-differing spellings) and a hashing hook
-for the deterministic instability trigger.
+logic. NFC collision fixtures simulate scandir and metadata lookups for
+the injected spelling (APFS cannot hold both names). A hashing hook
+provides the deterministic instability trigger.
 """
 
 import hashlib
@@ -138,19 +138,28 @@ class TestBoundaryRejections(TreeFixture):
         self._assert_boundary(f, "path_escape", "a.txt")
 
     def test_normalization_collision(self):
-        """Two distinct real paths NFC-equal -> normalization_collision.
-        APFS cannot hold both spellings, so scandir is patched to report
-        a second NFD-spelled entry; the NFC file is real on disk."""
-        self.file("café.txt")            # NFC — real
+        """Two simulated distinct paths NFC-equal -> normalization_collision.
+        The real NFD entry sorts first and is hashed from disk; the
+        injected NFC entry reaches the collision check before hashing."""
+        real_path = self.file("café.txt")  # NFD — real, sorts first
+        file_stat = os.lstat(real_path)
         fake = mock.Mock()
-        fake.name = "café.txt"     # NFD spelling
+        fake.name = "café.txt"      # NFC twin — collision before open
         real_scandir = os.scandir
+        real_lstat = os.lstat
+        fake_path = str(self.root / fake.name)
 
         def fake_scandir(path):
             entries = list(real_scandir(path))
             entries.append(fake)
             return entries
-        with mock.patch.object(si.os, "scandir", fake_scandir):
+
+        def fake_lstat(path, *args, **kwargs):
+            if os.fspath(path) == fake_path:
+                return file_stat
+            return real_lstat(path, *args, **kwargs)
+        with mock.patch.object(si.os, "scandir", fake_scandir), \
+                mock.patch.object(si.os, "lstat", fake_lstat):
             f = run(self.root)
         self._assert_boundary(f, "normalization_collision",
                               "café.txt")
@@ -159,32 +168,41 @@ class TestBoundaryRejections(TreeFixture):
         """SIMULATED — a path that is both a symlink and an NFC
         collision cannot exist on this host filesystem (APFS cannot
         hold two normalization-differing spellings of one name), so
-        scandir is patched to report a second NFC-equal spelling and
-        lstat is patched to report that spelling as a symlink.  SCHEMA
+        scandir and metadata lookups simulate a second NFC-equal file
+        symlink with an existing regular-file target. SCHEMA
         7.3 orders the symlink check (step 1) before the normalization
         collision check (step 3), so the boundary kind is the symlink
         kind, never normalization_collision.  This is a controlled
         simulation of filesystems permitting both spellings; it makes
         no native Windows/NTFS claim."""
-        self.file("café.txt")           # NFD on disk — real
+        target_path = self.file("café.txt")  # NFD on disk — real target
+        target_stat = os.stat(target_path)
         fake = mock.Mock()
         fake.name = "café.txt"          # NFC — NFC-equal twin,
                                         # sorts after the NFD entry
         real_scandir = os.scandir
         real_lstat = os.lstat
+        real_stat = os.stat
+        fake_path = str(self.root / fake.name)
 
         def fake_scandir(path):
             entries = list(real_scandir(path))
             entries.append(fake)
             return entries
 
-        def fake_lstat(path):
-            if os.path.basename(str(path)) == fake.name:
+        def fake_lstat(path, *args, **kwargs):
+            if os.fspath(path) == fake_path:
                 return os.stat_result(
                     (si._stat.S_IFLNK | 0o777,) + (0,) * 9)
-            return real_lstat(path)
+            return real_lstat(path, *args, **kwargs)
+
+        def fake_stat(path, *args, **kwargs):
+            if os.fspath(path) == fake_path:
+                return target_stat
+            return real_stat(path, *args, **kwargs)
         with mock.patch.object(si.os, "scandir", fake_scandir), \
-                mock.patch.object(si.os, "lstat", fake_lstat):
+                mock.patch.object(si.os, "lstat", fake_lstat), \
+                mock.patch.object(si.os, "stat", fake_stat):
             f = run(self.root)
         self._assert_boundary(f, "file_symlink", "café.txt")
 

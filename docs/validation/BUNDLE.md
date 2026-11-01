@@ -34,6 +34,37 @@ python3 tools/run_validation.py [--json out]  # 회귀 시험 한 명령
 JSON의 `full_validation_completed`는 실행 무결성 사실이며 제품 PASS가
 아니다.
 
+시험 수집 범위는 루트 `tests/`와 `skills/knuaf-doc/tests/` 모두다.
+스킬 시험은 독립 loader로 수집해 루트 `tests` 패키지와 이름이 충돌하지
+않게 하고, 동일한 결과 회계·실패 판정에 합산한다. W2 발행 워크플로는
+저장소 전체 사본의 루트에서 `python -m pytest -q skills/knuaf-doc/tests`로도
+스킬 시험을 실행한다. pytest는 W2 환경의 도구이며 기본 게이트 의존성은 아니다.
+
+스킬의 `CoreVerificationHookTests`와 snapshot fixture는 정본 스키마·전체
+컬렉션 외피·출처 `id`·사실 `revision`을 포함한다. 이 메타데이터 누락으로
+claim 복구 생성 전에 발생하던 `KeyError: 'id'`를 시험 입력에서 바로잡았으며,
+통계 근거의 값·단위·해시·위치·catalog 판정과 런타임 정본 검증은 바꾸지 않는다.
+동적 후보 시험의 등록 루프는 임시 클래스 별칭을 남기지 않는다. 마지막
+시험이 별칭으로 중복 수집되던 1회 실행만 제거해, 기존 598회 실행은
+동일한 검증 기대값을 가진 고유 597개 시험으로 정리했다. CI의 고유 ID
+검사는 완화하지 않는다.
+
+### 스킬 시험의 선택적 외부 입력
+
+`tools/run_validation.py:ALLOWED_SKILL_SKIPS`는 정확한 시험 ID와 사유를
+묶은 유한 목록이다. Crossref 실호출(`GG_DOI_LIVE` opt-in) 1건과 배포하지
+않는 저장소 밖 승인 catalog가 필요한 24건만 등록한다. 자료가 있으면
+해당 시험은 정상 실행되며 통과·실패를 그대로 기록한다. 다음은 승인하지 않는다:
+
+- 등록하지 않은 시험 ID, 같은 클래스에 새로 추가한 시험, 바뀐 skip 사유
+- 필수 런타임 의존성·배포 catalog·payload 누락
+- fixture skip 또는 subtest 이벤트를 동반한 skip
+
+승인된 결과도 `passed`로 바꾸지 않는다. `runtime.entries`에 원래
+`skipped`·사유를 보존하고 `approved_skill_skips`에 `{test, reason, rule}`을
+별도 기록한다. native pending 게이트·기존 nested skip 계약과는 분리된다.
+
+
 ## 무결성 모델
 
 - `tools/baseline-files.json` — 고정 main 스냅숏의 파일 해시 목록(입력 정본의
@@ -126,6 +157,8 @@ ubuntu 잡은 runner 뒤에 **엄격한 리포트 consumer**를 둔다(P2-R2). �
   빠지거나 추가되면 거부
 - `approved_external_skips` 정확히 1건(정확한 test_id·사유·gate_id·rule)
   그리고 runtime.entries에 `skipped` 원 기록이 그대로 보존
+- `approved_skill_skips`는 커밋된 유한 ID·사유 목록과 runtime.entries를
+  대조해 독립 재계산한다. 목록의 시험 ID가 suite에서 빠져도 거부한다.
 - `unapproved_skips`·`defect_tests_skipped`·`inventory_warnings`·
   `causes.unexpected`·`causes.incomplete` 전부 빈 값, `unexpected_failed=0`,
   `accounting.errors` 없음, `runtime.status=completed`·`tests_run>0`,
@@ -140,8 +173,8 @@ P2-R3에서 consumer는 요약 필드 신뢰를 버리고 리포트를 독립적
 - framework 회계: `runtime.accounting.framework` 객체 필수 —
   `was_successful`이 정확히 `true`, failures/errors/expectedFailures/
   unexpectedSuccesses 전부 정수 0, `testsRun`이 `runtime.tests_run`과
-  `len(entries)` 모두와 일치, framework `skipped`는 정확히 1(유일한
-  네이티브 skip).
+  `len(entries)` 모두와 일치, framework `skipped`는 네이티브 1건과
+  독립 확인한 선택적 스킬 skip 수의 합이다.
 - entries 재집계: 각 항목은 dict·비어 있지 않은 고유 `test` ID·인식된
   category를 가져야 하고, consumer가 직접 센 category 합계가
   `passed`/`known_baseline_defects`/`skipped`/`unexpected_failed`와
@@ -190,6 +223,8 @@ P2-R3에서 consumer는 요약 필드 신뢰를 버리고 리포트를 독립적
   실행 주장 아님).
 - `approved_external_skips`: 컴파일된 fail-closed 규칙이 승인한 정확한
   skip 기록 — `unapproved_skips`와 분리된다.
+- `approved_skill_skips`: 유한 ID·정확한 사유 규칙으로 승인된 선택적
+  스킬 외부 입력 skip. 여기에 없는 skip은 기존처럼 incomplete다.
 
 판정 우선순위: `unexpected_failures`(exit 1) > `incomplete`(exit 3) >
 `ok_platform_scoped`(exit 0, 기본 모드·pending 게이트 존재) > `ok`
