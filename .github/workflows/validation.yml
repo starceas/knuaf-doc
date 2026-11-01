@@ -62,7 +62,7 @@ jobs:
         if: always()
         run: |
           python - <<'PY'
-          import json, os, sys
+          import json, os, runpy, sys
           from pathlib import Path
 
           GATE = "P2-L09-native"
@@ -80,6 +80,11 @@ jobs:
           CATEGORIES = ("passed", "failed", "skipped",
                         "known_baseline_defect")
           SUCCESS_EVENTS = ("subtest_success",)
+          # Read the committed finite policy, never an allowlist supplied
+          # by the report. Reconcile observed skip entries independently.
+          skill_policy = runpy.run_path("tools/run_validation.py")
+          SKILL_SKIPS = skill_policy["ALLOWED_SKILL_SKIPS"]
+          SKILL_SKIP_RULE = skill_policy["SKILL_SKIP_RULE"]
 
           def die(msg):
               print("validation-report contract: REJECTED:", msg)
@@ -213,7 +218,7 @@ jobs:
           passed_n = need_int(rt.get("passed"), "runtime.passed", lo=0)
           known_n = need_int(rt.get("known_baseline_defects"),
                              "runtime.known_baseline_defects", eq=0)
-          skipped_n = need_int(rt.get("skipped"), "runtime.skipped", eq=1)
+          skipped_n = need_int(rt.get("skipped"), "runtime.skipped", lo=1)
           need_int(rt.get("unexpected_failed"), "runtime.unexpected_failed",
                    eq=0)
           need_int(rt.get("failure_events"), "runtime.failure_events",
@@ -241,6 +246,7 @@ jobs:
           tally = {c: 0 for c in CATEGORIES}
           gate_seen = 0
           h9_seen = 0
+          skill_skips = []
           for i, raw_e in enumerate(entries):
               e = need_dict(raw_e, "entries[%d]" % i)
               t = need_str(e.get("test"), "entries[%d].test" % i)
@@ -265,7 +271,12 @@ jobs:
                        "native withheld skip parent ran no subtests "
                        "and must carry no subtest events")
               elif cat == "skipped":
-                  die("non-gate skipped entry on success report: %s" % t)
+                  need(t in SKILL_SKIPS and e.get("detail") == SKILL_SKIPS[t],
+                       "unapproved skill skip id/reason: %s" % t)
+                  need(not e.get("events"),
+                       "optional external-input skip must carry no subtest events")
+                  skill_skips.append({
+                      "test": t, "reason": e["detail"], "rule": SKILL_SKIP_RULE})
               ev = e.get("events")
               if ev is not None:
                   need_list(ev, "entries[%d].events" % i)
@@ -293,6 +304,13 @@ jobs:
           need(h9_seen == 1,
                "fixed H9 test id must occur exactly once and pass, "
                "got %d" % h9_seen)
+          need(SKILL_SKIPS.keys() <= seen,
+               "declared optional skill tests missing from completed suite")
+          need(need_list(report.get("approved_skill_skips"),
+                         "approved_skill_skips") == skill_skips,
+               "approved_skill_skips must match independently checked entries")
+          need(skipped_n == 1 + len(skill_skips),
+               "skipped count must equal native plus exact optional skill skips")
           need(tally["passed"] == passed_n,
                "passed tally %d != runtime.passed %d"
                % (tally["passed"], passed_n))

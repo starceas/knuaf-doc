@@ -519,7 +519,8 @@ class CoreVerificationHookTests(unittest.TestCase):
             src_hash = hashlib.sha256(
                 fx.records_path.read_bytes()).hexdigest()
         fact = {
-            "id": "f1", "field_id": "income", "kind": "observation",
+            "id": "f1", "revision": 1,
+            "field_id": "income", "kind": "observation",
             "value": "400000", "unit": "원", "value_type": "decimal",
             "period": 2024, "scope": "전국", "answer_state": "provided",
             "verification": verification}
@@ -530,13 +531,12 @@ class CoreVerificationHookTests(unittest.TestCase):
         ref.update(ref_overrides or {})
         fact["source_refs"] = [ref]
         return {
-            "revision": 1,
+            "schema_version": 2, "revision": 1,
+            **{col: {} for col in core.COLLECTIONS},
             "sources": {"s1": {
-                "path": src_name, "hash": src_hash, "revision": 1,
+                "id": "s1", "path": src_name, "hash": src_hash, "revision": 1,
                 "claims": {}, "claim_review": True}},
             "facts": {"f1": fact},
-            "reviews": {}, "sections": {}, "rules": {},
-            "questions": {},
         }
 
     def _stat_issues(self, rows):
@@ -816,18 +816,19 @@ class SnapshotIndependenceTests(unittest.TestCase):
                                  "sha256": receipt.sha256},
         }
         fact = {
-            "id": "f1", "field_id": "income", "kind": "observation",
+            "id": "f1", "revision": 1,
+            "field_id": "income", "kind": "observation",
             "value": "400000", "unit": "원", "value_type": "decimal",
             "period": 2024, "scope": "전국", "answer_state": "provided",
             "verification": "claim_supported",
             "source_refs": [ref]}
         p = {
-            "revision": 1,
+            "schema_version": 2, "revision": 1,
+            **{col: {} for col in core.COLLECTIONS},
             "sources": {"s1": {
-                "path": name, "hash": receipt.sha256, "revision": 1,
+                "id": "s1", "path": name, "hash": receipt.sha256, "revision": 1,
                 "claims": {}, "claim_review": True}},
             "facts": {"f1": fact},
-            "reviews": {}, "sections": {}, "rules": {}, "questions": {},
         }
         rows = core.checks(root, p)
         stat = [r for r in rows

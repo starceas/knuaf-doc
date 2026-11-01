@@ -505,6 +505,7 @@ GateTests = [
 
 for _t in GateTests:
     globals()[_t.__name__] = _t
+del _t  # Do not collect the last registered TestCase a second time.
 
 
 class DistinctResultTests(GateFixtureMixin, unittest.TestCase):
