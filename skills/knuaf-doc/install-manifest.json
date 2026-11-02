@@ -199,7 +199,7 @@
   "tests/test_gg_source_register.py": "329cef6c78f14dcbab5224e269a756ea8c66c5795776d3b6dcd5103f2c419251",
   "tests/test_n5_guidance_link.py": "32462d60e2a3c7a40cffb6eecfb138f8046d382ad16bb15377b3490e3ddbb43a",
   "tests/test_official_guide_reuse.py": "2169e23583f04860fbeb77fe1fe802bed756efd5147156c294eddb3e9ba4d87c",
-  "version.json": "0f6a484dc5b9c97a11071a9e8eb5da42da07a935cf51f4e87838fcf7b5851a5a"
+  "version.json": "e039a0d611ab647a08da0a4ef2cc7d6566c14782192991e4d6f75e4b2f079e65"
  },
  "schema": "knuaf-doc/install-manifest@1"
 }
