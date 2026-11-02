@@ -4,6 +4,30 @@
   "origin": "new"
  },
  "files": {
+  "skills/knuaf-doc/scripts/build_docx.py": {
+   "origin": "transformed",
+   "note": "G R1-02/R1-03: refuse unrendered content in legacy as well as official frontmatter; preserve supported official summary and required TOC; reject DOCX/manifest collisions before output save."
+  },
+  "skills/knuaf-doc/scripts/gg_finance.py": {
+   "origin": "transformed",
+   "note": "G R1-03: no-overwrite preflight for annual XLSX and companion manifest; existing major/profile authorization and calculations unchanged."
+  },
+  "skills/knuaf-doc/references/korean-polishing.md": {
+   "origin": "transformed",
+   "note": "G: retire Markdown-ledger write instruction in favor of existing canonical fact/source records and an executable style-selection apply example."
+  },
+  "skills/knuaf-doc/references/interview-guide.md": {
+   "origin": "transformed",
+   "note": "G FIX1: canonicalize Q4 and interview storage/form instructions; source-linked facts/questions/tasks replace retired Markdown ledgers; preserve raw interview logs and read-only existing files."
+  },
+  "tests/test_skillgaps_wp4_style.py": {
+   "origin": "transformed",
+   "note": "G FIX1 / G-R1-02: keep user style precedence, fallback and Q4 contracts; replace obsolete ledger destination with canonical source registration and apply."
+  },
+  "tests/test_output_preservation.py": {
+   "origin": "new",
+   "note": "G: actual CLI/API byte-preservation regressions for unrendered legacy content, DOCX/XLSX manifest collisions and malformed claims/views, plus executable canonical style documentation; isolated original-function/document mutants detected. | G FIX1: inspect both polishing and linked interview guidance for retired write destinations, storage-table targets and authoring forms before executing the canonical example; read-only preservation notes remain valid."
+  },
   "skills/knuaf-doc/tests/test_gg_source_intake_scan.py": {
    "origin": "transformed",
    "note": "F CI1: complete only the two synthetic filesystem fixtures' metadata lookups; order the real NFD file before the synthetic NFC collision so all content reads are real. Product behavior, hashing, assertions, expected boundary kinds and skip policy unchanged."
@@ -18,6 +42,7 @@
   },
   "skills/knuaf-doc/scripts/gg_core.py": {
    "origin": "transformed",
+   "transform": "G R1-04: read-only structural diagnostics for malformed source claims/views and fail-closed finance-gate source lookup; no broad exception catch or commit-state changes.",
    "note": "P0-2 PR-C U06/U10/U11: field-specific fact enum diagnostics, guarded verified history/restore with new revisions and output invalidation, shared doctor using PR-D public diagnose. C-R1-01: reject pre-restore preservation paths resolving to or sharing file identity with the canonical before any product write."
   },
   "skills/knuaf-doc/scripts/gg.py": {
@@ -30,6 +55,7 @@
   },
   "skills/knuaf-doc/references/section-ledger.md": {
    "origin": "transformed",
+   "transform": "G: explain blocked inspection of malformed claims/views without rewriting student records.",
    "note": "P0-2 PR-C U10/U11: document verified restore, irreversible receipt preservation, diagnostic APIs and v2 lock callsite cutover. C-R1-01: require the pre-restore snapshot to be independent of the canonical."
   },
   "tests/test_core_history.py": {
@@ -42,7 +68,8 @@
   },
   "skills/knuaf-doc/references/outputs.md": {
    "note": "P0-2 PR-D: Office safe-session activation, explicit jobs cleanup and pure Kordoc diagnosis contracts. | PR-D R1: D-R1-01: document guard-locked cleanup and immutable prior-run preservation.",
-   "origin": "transformed"
+   "origin": "transformed",
+   "transform": "G: document unrendered frontmatter refusal and output/manifest pair collision preservation; clarify DOCX manifest filename."
   },
   "skills/knuaf-doc/scripts/gg_deps.py": {
    "note": "P0-2 PR-D: U12 POSIX symlink venv; U13 UTF-8 probes and structured subprocess errors.",
@@ -117,7 +144,7 @@
   "skills/knuaf-doc/install-manifest.json": {
    "note": " | PR-2: latest D8/D9 integration; I-01 only measured count constants adjusted in lineage test. Full pytest covers split public/skill test locations. | I-02: measured F01 artifact repin propagated; F01 canonical digest one-string propagation separately approved by I-03. | I2 gg_update.py manifest --write for FIX-A2/B2/C2b and W-D3 final inputs plus measured F01 artifact repin. | I3 gg_update.py manifest --write for FIX-B3/C3 and W-D4 final inputs plus measured F01 artifact repin. | I4 gg_update.py manifest --write for FIX-B4/C4 and W-D5 final inputs plus measured F01 artifact repin. | I5 gg_update.py manifest --write for FIX-C5 and W-D6 final inputs plus measured F01 artifact repin. | I6: gg_update.py manifest --write for FIX-C6 and W-D7; F01 artifact and canonical digest measured unchanged, no repin. | P0-2 consistency: gg_update.py manifest --write after the #59/#60/#61 merges.",
    "origin": "new",
-   "transform": "F-skill-tests: regenerate install manifest from a tracked-files-only copy after fixture repair. | F CI1: regenerate after completing source-intake simulated filesystem lookups."
+   "transform": "G: regenerate from tracked-files-only clean copy after original-preservation repairs. | G FIX1: regenerate after canonical interview storage corrections. | F-skill-tests: regenerate install manifest from a tracked-files-only copy after fixture repair. | F CI1: regenerate after completing source-intake simulated filesystem lookups."
   },
   "skills/knuaf-doc/references/commands.md": {
    "note": "P0-2 PR-A: documented gg.py commands index and apply JSON contract.",

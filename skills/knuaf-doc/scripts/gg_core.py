@@ -2257,7 +2257,10 @@ def _finance_gate_fact(p, field_id):
         return None
     for ref in f["source_refs"]:
         source = p.get("sources", {}).get(ref.get("id"), {})
-        claim = source.get("claims", {}).get(ref.get("claim_id"))
+        claims = source.get("claims", {})
+        if not isinstance(claims, dict):
+            return None
+        claim = claims.get(ref.get("claim_id"))
         if (ref.get("revision") != source.get("revision")
                 or not ref.get("locator") or not source.get("claim_review")
                 or not isinstance(claim, dict)
@@ -3855,6 +3858,27 @@ def checks(root, p):
         out.append(
             result(cid, target, status, reason, p["revision"], severity,
                    recovery=recovery, evidence=evidence))
+
+    # Inspect malformed containers without normalizing or rewriting the
+    # student's canonical data. Later semantic checks require these shapes.
+    for sid, source in p["sources"].items():
+        claims = source.get("claims", {})
+        if not isinstance(claims, dict) or any(
+                not isinstance(claim, dict) for claim in claims.values()):
+            add("source_claims_invalid", sid,
+                "출처 claims는 원문 대조값 객체의 사전이어야 함",
+                status="blocked")
+    views = p.get("views", {})
+    if not isinstance(views, dict):
+        add("view_invalid", "views", "views는 보기 메타데이터 객체여야 함",
+            status="blocked")
+    else:
+        for name, view in views.items():
+            if not isinstance(view, dict) or not isinstance(view.get("hash"), str):
+                add("view_invalid", name, "보기의 해시 메타데이터가 잘못됨",
+                    status="blocked")
+    if out:
+        return out
 
     gate_state = finance_gate(p)
     if gate_state["supported"]:

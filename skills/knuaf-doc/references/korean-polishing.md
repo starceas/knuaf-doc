@@ -2,13 +2,46 @@
 
 내용 확장과 사실·수치 대조 뒤, 출력 전에는 `epoko77-ai/im-not-ai`의 `humanize-korean`에서 문장 연결·어휘·리듬을 자연스럽게 다듬는 원칙만 차용한다. 설치된 스킬의 SKILL.md와 룰북을 읽되, 논문 화자·격식·의미 보존은 이 프로젝트 계약을 우선한다. 작문·윤문은 사용자 지정 모델·effort·허용 경로를 우선하며, 지정이 없으면 현재 메인 세션이 수행한다([model-routing.md](model-routing.md)). 졸업논문 눈높이 및 금칙 지표 경계는 [thesis-level.md](thesis-level.md)를 따르며, 모든 전공에 공통 기본값으로 적용된다([사용자 결정 2026-10-06 22:39]).
 
-사용자 지정 문체가 이 문서의 기본 어투보다 우선한다. 인터뷰 Q4([interview-guide.md](interview-guide.md))에서 학생이 고른 문체(선배 논문 참조 / 학부생 화법 / 별도 요청)는 `00_interview.md`에 기록하고 전 장과 윤문에 동일하게 적용한다. 아래 [사용자 결정 2026-09-09]의 격식 어투는 **지정이 없을 때의 기본값**이며, 지정된 문체를 이 기본값으로 되돌리지 않는다. 다만 어느 문체든 대화체로 낮추거나 사실·조건을 바꾸지 않는다.
+사용자 지정 문체가 이 문서의 기본 어투보다 우선한다. 인터뷰 Q4([interview-guide.md](interview-guide.md))에서 학생이 고른 문체(선배 논문 참조 / 학부생 화법 / 별도 요청)는 원답변 파일을 `project.json.sources`에 연결하고, 기존 문체 선택 fact/source ID와 작업 기록에 연결해 `gg.py apply`로 정본에 기록한다([section-ledger.md](section-ledger.md#저장)). 별도 Markdown 원장을 새로 쓰거나 생성 보기를 정본 대신 편집하지 않는다. 기록된 선택을 전 장과 윤문에 동일하게 적용한다. 아래 [사용자 결정 2026-09-09]의 격식 어투는 **지정이 없을 때의 기본값**이며, 지정된 문체를 이 기본값으로 되돌리지 않는다. 다만 어느 문체든 대화체로 낮추거나 사실·조건을 바꾸지 않는다.
 
 [사용자 결정 2026-09-09] 논문 본문은 ‘입니다·합니다·하고자 합니다’와 같은
 격식 있는 어투로 작성한다. ‘있어요·해요’ 등의 대화체로 낮추지 않는다.
 자연스러움은 구어체 전환이 아니라 문장 간 논리 연결과 불필요한 반복의
 정리로 확보한다. 스킬의 자체 등급이나 변경률을 맞추려고 문체를 바꾸지 않는다.
 인터뷰 원답변에 구어체가 있더라도 원답변은 보존하고 작성 본문만 이 기준을 따른다.
+
+### 문체 선택의 정본 저장 예제
+
+아래 원답변을 `interview/style-answer.txt`에 보존하고 출처 ID `style-answer`로
+먼저 등록한 예다. 출처의 현재 개정은 1이며 locator는 원답변의 문체 선택
+부분을 가리킨다. 실제 작업에서는 새 항목을 중복 생성하지 말고 기존
+fact/source ID·출처 개정·현재 프로젝트 개정을 사용한다.
+
+```text
+학부생 화법을 선택한다.
+```
+
+변경 JSON을 작업 폴더 안에 저장하고
+`gg.py apply <폴더> --change <변경.json> --expected-revision <현재 개정>`으로
+등록한다. 원자료 위치를 연결한 것만으로 주장 적합성을 검토 완료로
+승격하지 않으므로 예제의 verification은 `source_located`다.
+
+```json
+{
+  "request_id": "style-selection-example",
+  "ops": [{
+    "collection": "facts",
+    "value": {
+      "id": "writing-style", "field_id": "문체", "kind": "reported_fact",
+      "value": "학부생 화법", "value_type": "text", "unit": null,
+      "period": null, "scope": "project", "answer_state": "provided",
+      "verification": "source_located",
+      "source_refs": [{"id": "style-answer", "revision": 1, "locator": "문체 선택"}]
+    }
+  }]
+}
+```
+
 
 ## 윤문 대상 범위 — 표·그림·각주 전수 포함
 
