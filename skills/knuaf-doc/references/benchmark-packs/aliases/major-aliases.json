@@ -9,6 +9,7 @@
     "vegetables": {"label": "채소전공", "aliases": ["채소", "채소학과", "채소전공"], "status": "empty_slot"},
     "hort_env_systems": {"label": "원예환경시스템전공", "aliases": ["원예환경시스템", "원예환경", "원예환경시스템전공"], "status": "empty_slot"},
     "fruit_trees": {"label": "과수전공", "aliases": ["과수", "과수학과", "과수전공"], "status": "empty_slot"},
-    "industrial_insects": {"label": "산업곤충전공", "aliases": ["산업곤충", "곤충", "산업곤충학과", "산업곤충전공"], "status": "empty_slot"}
+    "industrial_insects": {"label": "산업곤충전공", "aliases": ["산업곤충", "곤충", "산업곤충학과", "산업곤충전공"], "status": "empty_slot"},
+    "dairy": {"label": "낙농전공", "aliases": ["낙농", "낙농전공"], "status": "empty_slot"}
   }
 }

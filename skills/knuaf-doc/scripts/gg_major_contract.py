@@ -836,6 +836,7 @@ KNOWN_MAJOR_MARKERS = MappingProxyType({
     "industrial_insects": ("곤충", "insect"),
     "hort_env_systems": ("원예환경",),
     "fruit_trees": ("과수", "fruit"),
+    "dairy": ("낙농",),
 })
 
 _MARKER_FIELDS = (
@@ -2411,8 +2412,140 @@ HORT_ENV_SYSTEMS_MODULE = declare_module(
     forbidden_terms=_HORT_ENV_FORBIDDEN,
 )
 
+_DAIRY_QUESTIONS = (
+    ("location", "위치(시군·읍면)", None),
+    ("plan_year", "계획 기준연도", None),
+    ("plan_period", "계획 기간", "년"),
+    ("operation_type", "승계·창업 형태", None),
+    ("land_area", "경지 면적", "㎡"),
+    ("barn_area", "축사 면적", "㎡"),
+    ("forage_self_production", "조사료 자가생산 여부·면적", "㎡"),
+    ("herd_size", "사육 규모", "두"),
+    ("investment_plan", "투자 계획", None),
+    ("labor", "노동력", None),
+    ("livestock_type", "축종(dairy_cattle 또는 hanwoo)", None),
+    ("operation_mode", "운영 방식(milking·breeding·fattening·integrated)", None),
+    ("milk_collector", "집유주체(젖소 축종일 때)", None),
+    ("quota_plan", "쿼터 보유·구입 계획(젖소 축종일 때)", None),
+    ("milk_test_records", "납유·검정 성적 보유(젖소 축종일 때)", None),
+    ("herd_stages", "단계별 두수(한우 축종일 때)", "두"),
+    ("shipment_target", "출하 월령·체중(한우 축종일 때)", None),
+    ("sales_channel", "판매처(한우 축종일 때)", None),
+)
+
+DAIRY_MODULE = declare_module(
+    major_id="dairy",
+    module_version="0.1.0",
+    capabilities={
+        "question": "supported", "document": "supported",
+        "evidence": "supported", "finance": "unsupported",
+    },
+    question_schema=tuple(
+        QuestionSpec(
+            "dairy." + field_id,
+            meaning,
+            unit=unit,
+            target=("dairy_cattle" if "젖소 축종" in meaning else
+                    "hanwoo" if "한우 축종" in meaning else None),
+        )
+        for field_id, meaning, unit in _DAIRY_QUESTIONS
+    ),
+    document_plan=tuple(
+        DocumentNodeSpec(
+            section_id, role, selectable=False, required=True,
+            rationale=rationale + (
+                "; 요약 Ⅴ·Ⅵ 확장은 지도교수 허용 원답변 확인·근거 연결 뒤 대안 적용"
+                if section_id == "summary_i_iv" else
+                "; 경영수지 생략·장 번호 당김은 지도교수 허용 원답변 확인·근거 연결 뒤 대안 적용"
+                if section_id == "chapter_10" else
+                "; 부록 생략은 지도교수 허용 원답변 확인·근거 연결 뒤 대안 적용"
+                if section_id.startswith("appendix_") else ""
+            ),
+        )
+        for section_id, role, rationale in (
+            ("cover", "cover", "작성요령 앞부분"),
+            ("approval", "approval", "작성요령 앞부분"),
+            ("parent_consent", "parent_consent", "작성요령 앞부분"),
+            ("summary_i_iv", "summary", "작성요령 요약 Ⅰ~Ⅳ"),
+            ("acknowledgements", "acknowledgements", "작성요령 앞부분"),
+            ("lists", "lists", "일반 목차·표 목차·그림 목차 포함"),
+            *tuple(
+                ("chapter_%02d" % n, "chapter",
+                 "학교 작성요령 본문 %d장; 목차 구조 유지; 축종별 내용은 젖소 기준 항목을 한우 대응 항목으로 치환하며 상세는 references/dairy/school-toc.md 참조" % n)
+                for n in range(1, 13)
+            ),
+            *tuple(
+                ("appendix_%02d" % n, "appendix",
+                 "학교 작성요령 부록 %d" % n)
+                for n in range(1, 11)
+            ),
+        )
+    ),
+    finance_capabilities=(
+        FinanceCapability("dairy_cattle_milk_cash", "unsupported",
+                          "낙농 재무 산식 미지원"),
+        FinanceCapability("hanwoo_herd_cash", "unsupported",
+                          "한우 재무 산식 미지원"),
+    ),
+    supported_outputs=("question_list", "document_plan", "evidence_review"),
+    packs=(),
+)
+
+
+def evaluate_dairy_switch(facts):
+    """Return the dairy livestock/mode gate state from canonical fact records."""
+    values = {}
+    for fact in (facts or {}).values():
+        if (not isinstance(fact, dict)
+                or fact.get("answer_state") != "provided"):
+            continue
+        field_id = fact.get("field_id")
+        if field_id in {"dairy.livestock_type", "dairy.operation_mode"}:
+            values[field_id.rsplit(".", 1)[1]] = fact.get("value")
+    livestock = values.get("livestock_type")
+    mode = values.get("operation_mode")
+    if livestock not in {"dairy_cattle", "hanwoo"}:
+        return "livestock_type_required"
+    if mode not in {"milking", "breeding", "fattening", "integrated"}:
+        return "operation_mode_required"
+    if (livestock == "dairy_cattle" and mode != "milking") or (
+        livestock == "hanwoo" and mode == "milking"
+    ):
+        return "mismatch"
+    return "ready"
+
+
+def dairy_question_fields(proposal, facts):
+    """Filter livestock-specific questions against the confirmed switch."""
+    switch = evaluate_dairy_switch(facts)
+    values = {
+        fact.get("field_id"): fact.get("value")
+        for fact in (facts or {}).values()
+        if isinstance(fact, dict)
+        and fact.get("answer_state") == "provided"
+        and fact.get("field_id") in {
+            "dairy.livestock_type", "dairy.operation_mode"
+        }
+    }
+    livestock = values.get("dairy.livestock_type")
+    fields = proposal.get("fields", [])
+    return {
+        **proposal,
+        "fields": [
+            item for item in fields
+            if item.get("target") not in {"dairy_cattle", "hanwoo"}
+            or (switch == "ready" and item.get("target") == livestock)
+        ],
+        "held_fields": [
+            item["field_id"] for item in fields
+            if item.get("target") in {"dairy_cattle", "hanwoo"}
+            and (switch != "ready" or item.get("target") != livestock)
+        ],
+    }
+
+
 MODULES = (SPECIALTY_CROPS_MODULE, INDUSTRIAL_INSECTS_MODULE,
-           FRUIT_TREES_MODULE, HORT_ENV_SYSTEMS_MODULE)
+           FRUIT_TREES_MODULE, HORT_ENV_SYSTEMS_MODULE, DAIRY_MODULE)
 
 
 def _default_packs_dir():

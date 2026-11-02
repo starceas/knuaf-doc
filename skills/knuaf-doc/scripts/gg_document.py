@@ -243,14 +243,14 @@ class _HeadingState:
     Markdown ##+ is always a subsection. No suffix or lookahead is read.
     """
 
-    def __init__(self):
+    def __init__(self, dairy_summary=False):
         self.summary = False
         self.summary_number = None
         self.body = False
         self.outline = None
         self.number = 0
         self.marked = False
-
+        self.dairy_summary = dairy_summary
     def read(self, line):
         text = line.strip()
         if re.match(r"^[-+*]\s+", text):
@@ -261,11 +261,17 @@ class _HeadingState:
             text = md[2]
         chapter = _numbered_heading(text)
         title = chapter[2] if chapter else text
+        summary_pattern = r"요\s*약|초록|abstract" if self.dairy_summary \
+            else r"요약|초록|abstract"
         if not self.body and level in (None, 1) and re.fullmatch(
-            r"요약|초록|abstract", title, re.IGNORECASE
+            summary_pattern, title, re.IGNORECASE
         ):
             self.summary = True
             return level or (1 if chapter else None), text
+        if (self.dairy_summary and self.summary and md and level == 1
+                and chapter and chapter[0] == "roman"):
+            self.summary_number = chapter[1]
+            return 2, text
         if md and level != 1:
             return level, text
         if md:
@@ -275,7 +281,10 @@ class _HeadingState:
             return 1, text
         if chapter:
             family, number, title, ascii_roman = chapter
-            if self.summary and ascii_roman and not _intro_title(title, ("머리말", "서론")):
+            if self.summary and (
+                ascii_roman or (self.dairy_summary and family == "roman"
+                                and not ascii_roman)
+            ) and not _intro_title(title, ("머리말", "서론")):
                 if self.summary_number is None or number != 1:
                     self.summary_number = number
                     return 2, text
@@ -991,7 +1000,8 @@ def _swot_placed(body_nodes):
     return False
 
 
-def parse(text, *, with_spans=False, _with_term_positions=False):
+def parse(text, *, with_spans=False, _with_term_positions=False,
+          major_id=None):
     raw, origin = _draft_region(text) if _with_term_positions else (draft(text), 0)
     lines, nodes, i = raw.splitlines(), [], 0
     line_offsets, offset = [], origin
@@ -1000,7 +1010,7 @@ def parse(text, *, with_spans=False, _with_term_positions=False):
             line_offsets.append(offset)
             offset += len(line)
     previous_prose = False
-    heading_state = _HeadingState()
+    heading_state = _HeadingState(dairy_summary=major_id == "dairy")
     def append(node, term_parts=()):
         if with_spans:
             node.update(start_line=start_line, end_line=i)
@@ -1180,10 +1190,12 @@ def _bibliography_entry(line):
     return year, line[:cut].strip().rstrip(".")
 
 def check(text, base, major_id=None):
-    nodes = parse(text, with_spans=True, _with_term_positions=True)
-    issues = []
     if major_id is None:
         major_id = _project_major(base)
+    nodes = parse(
+        text, with_spans=True, _with_term_positions=True, major_id=major_id
+    )
+    issues = []
     policy = plain_policy_check(text, issues, nodes, major_id)
     full = set()
     for n in nodes:
@@ -1262,7 +1274,7 @@ def check(text, base, major_id=None):
             except ValueError as e:
                 issues.append(("table_merge", str(e)))
             content = "\n".join(" ".join(r) for r in n["rows"])
-            if re.search(r"평균\s*기온", content):
+            if major_id != "dairy" and re.search(r"평균\s*기온", content):
                 # 각주 항목은 표 안쪽 라벨 행 또는 표 바로 아래 주·자료
                 # 문맥에서만 확인한다. 다른 표나 본문 요약이 누락을
                 # 덮지 않는다.
@@ -1290,7 +1302,9 @@ def check(text, base, major_id=None):
                             "학교 기상 필수항목 누락: " + ", ".join(missing),
                         )
                     )
-            if any(x in content for x in DISASTER_FREQ + DISASTER_TYPES):
+            if major_id != "dairy" and any(
+                x in content for x in DISASTER_FREQ + DISASTER_TYPES
+            ):
                 status = _disaster_frequency_status(n["rows"])
                 if status == "none":
                     issues.append(
@@ -1306,7 +1320,7 @@ def check(text, base, major_id=None):
                             "학교 재해 빈도표 유효 자료 행 없음",
                         )
                     )
-            if any(x in content for x in FARM_MARKERS):
+            if major_id != "dairy" and any(x in content for x in FARM_MARKERS):
                 missing = [
                     x
                     for x in (
