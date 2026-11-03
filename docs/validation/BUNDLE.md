@@ -64,6 +64,12 @@ claim 복구 생성 전에 발생하던 `KeyError: 'id'`를 시험 입력에서 
 `skipped`·사유를 보존하고 `approved_skill_skips`에 `{test, reason, rule}`을
 별도 기록한다. native pending 게이트·기존 nested skip 계약과는 분리된다.
 
+`WINDOW_ONLY_SKILL_SKIPS`는 이 선택적 입력 목록과 별개다. Windows에서
+제품 경로가 없는 `OfficeRecoveryTests`의 정확한 7개 시험 ID와 skip 사유만
+기록하며, `sys.platform == "win32"`일 때만 승인한다. Linux·macOS에서 같은
+시험이 skip되면 승인 밖으로 남아 검증을 incomplete로 한다. Windows에서도
+승인 결과는 skipped로 보존하며 passed로 승격하지 않는다.
+
 
 ## 무결성 모델
 

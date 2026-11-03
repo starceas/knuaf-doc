@@ -63,6 +63,7 @@ def _run_unnested(root, *, args=(), interpreter_flags=(), env_extra=None):
     env = dict(os.environ)
     env.pop(NESTED, None)
     env["PYTHONDONTWRITEBYTECODE"] = "1"
+
     if env_extra:
         env.update(env_extra)
     out = _report_path(root, "unnested-report.json")
@@ -844,6 +845,60 @@ class RunnerAccountingTests(unittest.TestCase):
                     dict(entry, detail="missing required dependency")))
                 self.assertFalse(self.rv._is_approved_skill_skip(
                     dict(entry, category="failed")))
+
+    def test_windows_only_skill_skips_are_approved_only_on_win32(self):
+        expected_ids = {
+            "tests.test_skillgaps_wp2_session.OfficeRecoveryTests."
+            "test_blocked_message_carries_runnable_recovery_command",
+            "tests.test_skillgaps_wp2_session.OfficeRecoveryTests."
+            "test_blocked_receipt_on_disk_carries_recovery_command",
+            "tests.test_skillgaps_wp2_session.OfficeRecoveryTests."
+            "test_non_object_guard_json_is_unreadable_and_recoverable",
+            "tests.test_skillgaps_wp2_session.OfficeRecoveryTests."
+            "test_cli_recovers_non_object_guard_as_json",
+            "tests.test_skillgaps_wp2_session.OfficeRecoveryTests."
+            "test_recovery_clears_record_without_touching_job_files",
+            "tests.test_skillgaps_wp2_session.OfficeRecoveryTests."
+            "test_recovery_refuses_while_a_session_holds_the_lock",
+            "tests.test_skillgaps_wp2_session.OfficeRecoveryTests."
+            "test_cli_recovery_is_json_and_exit_zero",
+        }
+        self.assertEqual(expected_ids, set(self.rv.WINDOW_ONLY_SKILL_SKIPS))
+        reason = (
+            "gg_office_session uses fcntl/AppleScript; Windows uses "
+            "gg_office_win without a session guard. These tests use a "
+            "mocked transport."
+        )
+        self.assertEqual(reason, self.rv.WINDOW_ONLY_SKILL_SKIP_REASON)
+
+        for test_id in expected_ids:
+            entry = {
+                "test": test_id, "category": "skipped", "detail": reason,
+            }
+            with mock.patch.object(sys, "platform", "win32"):
+                self.assertTrue(self.rv._is_approved_skill_skip(entry), test_id)
+                self.assertFalse(self.rv._is_approved_skill_skip(
+                    dict(entry, test=test_id + "_extra")))
+                self.assertFalse(self.rv._is_approved_skill_skip(
+                    dict(entry, detail=reason + " changed")))
+                self.assertFalse(self.rv._is_approved_skill_skip(
+                    dict(entry, events=[{"type": "subtest_skip"}])))
+            for platform in ("linux", "darwin"):
+                with self.subTest(test=test_id, platform=platform):
+                    with mock.patch.object(sys, "platform", platform):
+                        self.assertFalse(
+                            self.rv._is_approved_skill_skip(entry), test_id)
+
+    def test_unlisted_skip_with_none_reason_is_never_approved(self):
+        entry = {
+            "test": "tests.test_runner_contract.UnlistedNullSkip.test_skip",
+            "category": "skipped",
+            "detail": None,
+        }
+        for platform in ("win32", "linux", "darwin"):
+            with self.subTest(platform=platform):
+                with mock.patch.object(sys, "platform", platform):
+                    self.assertFalse(self.rv._is_approved_skill_skip(entry))
 
     def test_skill_skip_cannot_hide_subtest_outcomes(self):
         entry = {
