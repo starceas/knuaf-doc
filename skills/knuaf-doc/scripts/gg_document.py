@@ -111,7 +111,9 @@ POLICY_ADVISORY_CHECKS = frozenset({"photo_missing", "object_credit_position"})
 INFO_CHECKS = frozenset({"sourced_objects"})
 
 POLICY_PATH = (
-    Path(__file__).resolve().parents[1]
+    # absolute() does not consult getcwd for an absolute __file__, so
+    # importing this module with an unreadable cwd still works on Windows.
+    Path(__file__).absolute().parents[1]
     / "references"
     / "plain-thesis-policy.json"
 )

@@ -1295,7 +1295,12 @@ def _recovery_cleanup(root, rec_cap, ctx):
     try:
         gg_fs.fsync_dir(root)
     except gg_fs.FsError as error:
-        errors.append(error.detail)
+        # A platform that cannot fsync a directory is a durability-
+        # guarantee limit, not pending owner/temp cleanup: counting it
+        # here leaves every Windows recovery in committed_cleanup_pending
+        # (same rule as gg_fs.rename_noreplace).
+        if error.reason != "dir_fsync_unsupported":
+            errors.append(error.detail)
     return errors
 
 

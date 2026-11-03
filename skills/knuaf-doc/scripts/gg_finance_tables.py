@@ -1042,6 +1042,16 @@ def generate(workbook_path, *, major_id, footnotes=None, map_path=None,
     table_map = load_table_map(map_path)
     path = Path(workbook_path)
     wb_values = openpyxl.load_workbook(path, data_only=True, read_only=True)
+    try:
+        return _generate_with_workbook(
+            wb_values, path, table_map,
+            footnotes=footnotes, registry=registry)
+    finally:
+        wb_values.close()
+
+
+def _generate_with_workbook(wb_values, path, table_map, *,
+                            footnotes=None, registry=None):
     sheet_files = _sheet_files(path)
 
     sections = [map_section for map_section in table_map["sections"]]
@@ -1070,7 +1080,6 @@ def generate(workbook_path, *, major_id, footnotes=None, map_path=None,
 
     layout_id, failed_sigs = _check_layout(table_map, view_for)
     if failed_sigs:
-        wb_values.close()
         return {
             "status": "unsupported_layout",
             "layout": layout_id,
@@ -1238,7 +1247,6 @@ def generate(workbook_path, *, major_id, footnotes=None, map_path=None,
                 "table": tid,
                 "reason": skipped_reason.get(tid, "no_output"),
                 "sheet": table["sheet"]})
-    wb_values.close()
     return {
         "status": "generated",
         "layout": layout_id,

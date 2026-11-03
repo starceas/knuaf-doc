@@ -284,35 +284,49 @@ class PythonFloorTests(ContractCase):
 class Utf8IoTests(ContractCase):
     """C2: deployed runtime text I/O is UTF-8 regardless of locale.
 
-    Start with UTF-8 filenames, then force the text locale to ASCII with
+    Start with UTF-8 filenames, then force a non-UTF-8 text locale with
     UTF-8 mode disabled.  Linux also makes filenames ASCII when started
     in LC_ALL=C, which would fail on Korean paths before testing C2.
-    Implicit read/write negative controls verify the text band is active.
+    Implicit read/write negative controls verify the text band is active
+    where the locale cannot encode Korean; Windows ANSI code pages that
+    can encode it still run the explicit-UTF-8 product roundtrip.
     """
 
     DRIVER = r'''
-import json, locale, sys
+import json, locale, os, sys
 from pathlib import Path
 assert sys.flags.utf8_mode == 0
 assert sys.getfilesystemencoding().lower().replace("-", "") == "utf8"
-locale.setlocale(locale.LC_CTYPE, "C")
+if os.name != "nt":
+    locale.setlocale(locale.LC_CTYPE, "C")
 enc = locale.getpreferredencoding(False)
-assert any(t in enc.lower() for t in ("ascii", "ansi")), \
-    "band not active: " + enc
-probe = Path(sys.argv[2]) / "implicit.txt"
+assert "utf" not in enc.lower(), "band not active: " + enc
+# The negative control needs a non-UTF-8 locale that cannot encode
+# Korean (POSIX C / Windows cp1252).  A Windows ANSI code page such as
+# cp949 can encode it; the product roundtrip below still runs under a
+# non-UTF-8 default.
 try:
-    probe.write_text("한글")
+    "한글".encode(enc)
+    ascii_band = False
 except UnicodeEncodeError:
-    pass
-else:
-    raise AssertionError("implicit Korean text write must fail")
+    ascii_band = True
+probe = Path(sys.argv[2]) / "implicit.txt"
+if ascii_band:
+    try:
+        probe.write_text("한글")
+    except UnicodeEncodeError:
+        pass
+    else:
+        raise AssertionError("implicit Korean text write must fail")
 probe.write_text("한글", encoding="utf-8")
-try:
-    probe.read_text()
-except UnicodeDecodeError:
-    pass
-else:
-    raise AssertionError("implicit Korean text read must fail")
+if ascii_band:
+    try:
+        probe.read_text()
+    except UnicodeDecodeError:
+        pass
+    else:
+        raise AssertionError("implicit Korean text read must fail")
+assert probe.read_text(encoding="utf-8") == "한글"
 sys.path.insert(0, sys.argv[1])
 import gg_core as core
 
@@ -427,7 +441,7 @@ print("UTF8-BAND-OK")
         env["PYTHONDONTWRITEBYTECODE"] = "1"
         proc = subprocess.run(
             [sys.executable, "-X", "utf8=0", str(driver), str(SCRIPTS), str(d)],
-            capture_output=True, text=True, env=env)
+            capture_output=True, text=True, encoding="utf-8", env=env)
         self.assertEqual(0, proc.returncode,
                          "stdout=%r stderr=%r" % (proc.stdout, proc.stderr))
         self.assertIn("UTF8-BAND-OK", proc.stdout)

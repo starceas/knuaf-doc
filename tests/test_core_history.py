@@ -1,5 +1,6 @@
 """Public history/restore contracts; synthetic projects, no external tools."""
 import json
+import os
 from pathlib import Path
 from unittest import mock
 
@@ -145,9 +146,18 @@ class HistoryRestoreTests(ContractCase):
                 canonical = root / "project.json"
                 snapshot = root / "migration/revision-2.json"
                 if link_kind == "symlink":
-                    snapshot.symlink_to("../project.json")
+                    # Native separators only: CreateSymbolicLinkW does not
+                    # translate "/" in a *relative* target, so the POSIX
+                    # spelling "../project.json" is a broken link on
+                    # Windows and following it raises WinError 123
+                    # (bpo-13702).  The fixture must be a followable
+                    # alias on every host.
+                    snapshot.symlink_to(
+                        os.path.join("..", "project.json"))
                 else:
                     snapshot.hardlink_to(canonical)
+                self.assertTrue(snapshot.samefile(canonical),
+                                "fixture alias must resolve before restore")
                 before = self._tree_bytes(root)
                 with self.assertRaises(core.OperationError) as caught:
                     core.restore(root, 1, 2)

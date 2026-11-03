@@ -98,16 +98,27 @@ class ContractCase(unittest.TestCase):
         prove rejection/failure paths leave every persisted artifact
         (canonical, history/migration snapshots, ledger, evidence)
         byte-unchanged, not just the top-level project.json file."""
-        return {
-            str(p.relative_to(root)): p.read_bytes()
-            for p in sorted(Path(root).rglob("*")) if p.is_file()
-        }
+        out = {}
+        for p in sorted(Path(root).rglob("*")):
+            if not p.is_file():
+                continue
+            rel = p.relative_to(root).as_posix()
+            if rel == ".gg-lock/guard":
+                # The guard is a fixed 1-byte OS lock object: a second
+                # handle cannot read it while held (Windows byte-range
+                # lock), and its bytes are never rewritten after install.
+                # Record presence only so snapshots compare across lock
+                # states; byte integrity is covered by the lock tests.
+                out[rel] = None
+                continue
+            out[rel] = p.read_bytes()
+        return out
 
 
 def write_text(root, rel, text):
     path = Path(root) / rel
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text, encoding="utf-8")
+    path.write_text(text, encoding="utf-8", newline="")
     return path
 
 

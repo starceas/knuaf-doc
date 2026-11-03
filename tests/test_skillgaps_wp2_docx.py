@@ -185,8 +185,12 @@ class WorkingDirectoryTests(ContractCase):
 
     def test_absolute_folder_needs_no_cwd_lookup(self):
         with tempfile.TemporaryDirectory() as tmp:
+            # Resolve before the cwd patch: Windows realpath consults
+            # getcwd even for the fixture, which is not the lookup under
+            # test.
+            absolute = str(Path(tmp).resolve())
             resolved = self._without_cwd(
-                lambda: self.build.base_dir(str(Path(tmp).resolve())))
+                lambda: self.build.base_dir(absolute))
         self.assertTrue(Path(resolved).is_absolute())
 
     def test_relative_folder_falls_back_to_shell_pwd(self):

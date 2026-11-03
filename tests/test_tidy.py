@@ -5,10 +5,15 @@ import io
 import json
 import os
 from pathlib import Path
+import sys
 import tempfile
 import unittest
 
 from tests._harness import ContractCase, runtime
+
+# Windows byte-range locks report contention and denial with the same
+# errno, so gg_lock fails closed as unavailable there; POSIX reports busy.
+BUSY_STATE = "unavailable" if sys.platform == "win32" else "busy"
 
 
 class TidyTests(ContractCase):
@@ -223,7 +228,7 @@ class TidyTests(ContractCase):
         with self.lock.Lock(root):
             result = self.tidy.tidy(root, apply=True)
         self.assertEqual("blocked", result["status"])
-        self.assertEqual("busy", result["lock_state"])
+        self.assertEqual(BUSY_STATE, result["lock_state"])
         self.assertTrue((Path(root) / ".gg-work/finance/r001/trial.txt").is_file())
 
         after = self.tidy.tidy(root, apply=True)
@@ -374,14 +379,14 @@ class TidyTests(ContractCase):
 
     def test_names_outside_the_run_rule_are_preserved(self):
         root = self.make_project()
-        odd = Path(root) / ".gg-work" / "finance" / "r001\n"
+        odd = Path(root) / ".gg-work" / "finance" / "r001-extra"
         odd.mkdir(parents=True)
         (odd / "evidence.txt").write_text("must preserve")
         self._run(root, "finance", "r002")
         preview = self.tidy.tidy(root)
         self.assertEqual([], preview["candidates"])
         self.assertEqual(
-            "non_run", self._reasons(preview)[".gg-work/finance/r001\n"]
+            "non_run", self._reasons(preview)[".gg-work/finance/r001-extra"]
         )
         result = self.tidy.tidy(root, apply=True)
         self.assertEqual("applied", result["status"])

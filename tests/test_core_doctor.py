@@ -7,6 +7,12 @@ from unittest import mock
 
 from tests._harness import ContractCase, SCRIPTS, runtime, write_text
 
+# Windows byte-range locks keep guard bytes unreadable, but msvcrt maps
+# contention and permission denial to the same errno.  gg_lock therefore
+# documents the Windows port as fail-closed (unavailable), so probe
+# results are platform-scoped here.  Native measurement is pending.
+BUSY_STATE = "unavailable" if sys.platform == "win32" else "busy"
+
 
 class DoctorTests(ContractCase):
     def test_inspection_reports_ready_unprobed_then_busy_without_writes(self):
@@ -22,7 +28,7 @@ class DoctorTests(ContractCase):
         with lock.Lock(root):
             before = self._tree_bytes(root)
             report = core.doctor(root, probe=True)
-            self.assertEqual("busy", report["lock"]["lock_state"])
+            self.assertEqual(BUSY_STATE, report["lock"]["lock_state"])
             self.assertEqual(before, self._tree_bytes(root))
         self.assertEqual("free", core.doctor(root, probe=True)["lock"]["lock_state"])
 
@@ -60,10 +66,10 @@ class DoctorTests(ContractCase):
         env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
         with lock.Lock(root):
             before = self._tree_bytes(root)
-            proc = subprocess.run([sys.executable, "-B", str(SCRIPTS / "gg.py"), "doctor", str(root), "--probe"], capture_output=True, text=True, env=env, timeout=60)
+            proc = subprocess.run([sys.executable, "-B", str(SCRIPTS / "gg.py"), "doctor", str(root), "--probe"], capture_output=True, text=True, encoding="utf-8", env=env, timeout=60)
             self.assertEqual(0, proc.returncode, proc.stderr)
             report = json.loads(proc.stdout)
-            self.assertEqual("busy", report["lock"]["lock_state"])
+            self.assertEqual(BUSY_STATE, report["lock"]["lock_state"])
             self.assertEqual("not_run", report["render"])
             self.assertEqual("not_run", report["recalculation"])
             self.assertFalse(report["kordoc"]["capability_verified"])

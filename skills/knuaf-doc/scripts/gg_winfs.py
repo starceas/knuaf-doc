@@ -26,6 +26,18 @@ _OPEN_REPARSE = 0x00200000
 _BACKUP = 0x02000000
 
 
+class _InfoFailure(OSError):
+    """Identity refusal with the sanitized reason preserved.
+
+    ``gg_fs.identity`` reports this reason instead of collapsing every
+    Windows identity failure into one opaque ``windows_identity_failed``.
+    """
+
+    def __init__(self, reason):
+        super().__init__(reason)
+        self.reason = reason
+
+
 class _Info(ctypes.Structure):
     _fields_ = [("attributes", wintypes.DWORD),
                 ("creation", wintypes.FILETIME),
@@ -128,13 +140,13 @@ def _info(handle, kind):
     if not _api().GetFileInformationByHandle(handle, ctypes.byref(info)):
         raise ctypes.WinError(ctypes.get_last_error())
     if info.attributes & _REPARSE:
-        raise OSError("symlink_reparse")
+        raise _InfoFailure("symlink_reparse")
     is_dir = bool(info.attributes & _DIRECTORY)
     if is_dir != (kind == "directory"):
-        raise OSError("object kind mismatch")
+        raise _InfoFailure("object kind mismatch")
     inode = (info.index_high << 32) | info.index_low
     if not inode:
-        raise OSError("identity_unavailable")
+        raise _InfoFailure("identity_unavailable")
     return {"platform": "win32", "kind": kind,
             "device": info.volume, "inode": inode}
 
@@ -280,7 +292,7 @@ def lstat(path):
     with Directory(p.parent):
         st = os.lstat(_native(p))
         if getattr(st, "st_file_attributes", 0) & _REPARSE:
-            raise OSError("symlink_reparse")
+            raise _InfoFailure("symlink_reparse")
         return st
 
 

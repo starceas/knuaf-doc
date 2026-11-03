@@ -1291,7 +1291,8 @@ class RealPackVerificationTests(unittest.TestCase):
              "--crop", "사과", "--region", "전국",
              "--major", "fruit_trees", "--rda-kind", "useful_life",
              "--year", "2025", "--form", "왜성(M9/M26)"],
-            capture_output=True, text=True, cwd=str(REPO_ROOT))
+            capture_output=True, text=True, encoding="utf-8",
+            cwd=str(REPO_ROOT))
         self.assertEqual(got.returncode, 0, got.stderr)
         body = json.loads(got.stdout)
         self.assertEqual(body["status"], "unverified")
@@ -1339,7 +1340,8 @@ class MalformedManifestCLITests(unittest.TestCase):
                  "--region", "전국", "--rda-kind", first["kind"],
                  "--year", str(first["basis"]["year"]),
                  "--audit-key", json.dumps(key)],
-                capture_output=True, text=True, cwd=str(root),
+                capture_output=True, text=True, encoding="utf-8",
+                cwd=str(root),
                 env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1"))
         self.assertEqual(got.returncode, 0, got.stderr)
         body = json.loads(got.stdout)

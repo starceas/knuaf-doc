@@ -16,6 +16,12 @@ from tests._harness import (
     ContractCase, runtime, script_source, text_calls_without_encoding,
 )
 
+@unittest.skipUnless(
+    sys.platform == "darwin",
+    "gg_office_session guard/recovery is the macOS-only product path "
+    "(fcntl + AppleScript); Windows uses gg_office_win, which has no "
+    "session guard",
+)
 class OfficeRecoveryTests(ContractCase):
     """G3-09: state=unknown이 남으면 복구 명령이 없어 학생이 막혔다."""
 

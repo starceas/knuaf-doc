@@ -7,12 +7,48 @@ import json
 import tempfile
 from pathlib import Path
 import unittest
+from unittest import mock
 import zipfile
 import xml.etree.ElementTree as ET
 
 from tests._harness import ContractCase, bind_major, runtime
 
 NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+
+
+def _bad_number_workbook(path):
+    """A readable XLSX whose D50 raises ValueError on lazy read."""
+    from openpyxl import Workbook
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = " 5. 판매계획"
+    ws["D38"] = 2026
+    ws["D50"] = 1
+    wb.save(path)
+    wb.close()
+    tmp = path.with_suffix(".tmp.xlsx")
+    with zipfile.ZipFile(path) as src, zipfile.ZipFile(tmp, "w") as dst:
+        for name in src.namelist():
+            data = src.read(name)
+            if name == "xl/worksheets/sheet1.xml":
+                data = data.replace(b"<v>1</v>", b"<v>not-a-number</v>", 1)
+            dst.writestr(name, data)
+    tmp.replace(path)
+
+
+def _track_workbook_closes(opened):
+    import openpyxl
+
+    real = openpyxl.load_workbook
+
+    def track(*args, **kwargs):
+        wb = real(*args, **kwargs)
+        wb.close = mock.Mock(wraps=wb.close)
+        opened.append(wb)
+        return wb
+
+    return mock.patch.object(openpyxl, "load_workbook", side_effect=track)
 
 
 def _workbook(path, *, hidden=False, print_area=False):
@@ -111,6 +147,46 @@ class XlsxInspectTests(ContractCase):
             p = {"outputs": {"o": {"path": "plain.xlsx", "format": "xlsx"}}}
             issues = sheet.inspect_outputs(root, p)
             self.assertIsInstance(issues, list)
+
+
+class WorkbookCloseTests(ContractCase):
+    """Read-only workbooks close on lazy-read exceptions too (WIN2-01)."""
+
+    def test_crosscheck_closes_workbook_when_cell_read_raises(self):
+        sheet = runtime("gg_school_excel")
+        with tempfile.TemporaryDirectory(prefix="knuaf-xlsx-close-") as tmp:
+            path = Path(tmp) / "bad.xlsx"
+            _bad_number_workbook(path)
+            opened = []
+            with _track_workbook_closes(opened):
+                with self.assertRaises(ValueError):
+                    sheet.crosscheck_body_workbook("합성", path, "합성")
+        self.assertEqual(1, len(opened))
+        self.assertEqual(1, opened[0].close.call_count)
+        self.assertIsNone(opened[0]._archive.fp)
+
+    def test_finance_table_generate_closes_workbook_when_cell_read_raises(self):
+        tables = runtime("gg_finance_tables")
+        with tempfile.TemporaryDirectory(prefix="knuaf-xlsx-close-") as tmp:
+            root = Path(tmp)
+            path = root / "bad.xlsx"
+            _bad_number_workbook(path)
+            map_path = root / "map.json"
+            map_path.write_text(json.dumps({
+                "sections": [],
+                "layout": {"signatures": [
+                    {"sheet": " 5. 판매계획", "col": "D",
+                     "max_row": 50, "pattern": "x"}]},
+            }), encoding="utf-8")
+            opened = []
+            with _track_workbook_closes(opened):
+                with self.assertRaises(ValueError):
+                    tables.generate(
+                        path, major_id="specialty_crops",
+                        map_path=map_path)
+        self.assertEqual(1, len(opened))
+        self.assertEqual(1, opened[0].close.call_count)
+        self.assertIsNone(opened[0]._archive.fp)
 
 
 class PrintTitleTests(ContractCase):

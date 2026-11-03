@@ -453,7 +453,7 @@ class PublishDirectory(ContractCase):
         real_rename = gg_fs.rename_noreplace
 
         def flaky(src, dst, **kw):
-            if str(src).endswith("/stage"):
+            if Path(str(src)).name == "stage":
                 return gg_fs.FsWriteResult(
                     "unknown", "post_rename_unverifiable", dst)
             return real_rename(src, dst, **kw)

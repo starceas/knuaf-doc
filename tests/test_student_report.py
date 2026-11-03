@@ -173,7 +173,7 @@ class _ReportCase(ContractCase):
         mutate(doc)
         text = json.dumps(doc, ensure_ascii=False, indent=2,
                           sort_keys=True) + "\n"
-        path.write_text(text, encoding="utf-8")
+        path.write_text(text, encoding="utf-8", newline="")
         return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
     def _sha_of(self, path):
@@ -208,7 +208,7 @@ class _ReportCase(ContractCase):
         text = (json.dumps(draft, ensure_ascii=False, indent=2,
                            sort_keys=True) + "\n")
         path = self.tmp / ("%s.draft.json" % name)
-        path.write_text(text, encoding="utf-8")
+        path.write_text(text, encoding="utf-8", newline="")
         return path, hashlib.sha256(text.encode("utf-8")).hexdigest()
 
     def _legacy_private_draft(self, name="legacy-private", *,
@@ -235,7 +235,7 @@ class _ReportCase(ContractCase):
         text = (json.dumps(draft, ensure_ascii=False, indent=2,
                            sort_keys=True) + "\n")
         path = self.tmp / ("%s.draft.json" % name)
-        path.write_text(text, encoding="utf-8")
+        path.write_text(text, encoding="utf-8", newline="")
         return path, hashlib.sha256(text.encode("utf-8")).hexdigest()
 
     def _assert_fully_masked(self, text):

@@ -144,7 +144,7 @@ class TestReceiptPublication(WorkspaceFixture):
         self.assertFalse((self.ws / "03_sources.md").exists())
         # nothing outside sources/intake was created
         created = sorted(
-            str(p.relative_to(self.ws))
+            p.relative_to(self.ws).as_posix()
             for p in self.ws.rglob("*")
             if ".gg-lock" not in p.parts)
         self.assertEqual(

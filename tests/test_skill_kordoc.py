@@ -41,12 +41,24 @@ def write_exe(path, body):
     """Write a fake CLI this platform can execute.
 
     ``body`` is Python: Windows has neither ``#!`` nor an exec bit, so the
-    same fake is reached through a ``.cmd`` launcher there.
+    same fake is reached through a ``.cmd`` launcher there.  The v0.3.1
+    contract refuses to hand a ``.cmd`` to cmd.exe; it executes the
+    sibling ``node_modules/kordoc/dist/cli.js`` with Node instead, so the
+    Windows fake must publish that entry point too.
     """
     path = Path(path)
     impl = path.with_name(path.name + "-impl.py")
     impl.write_text(body, encoding="utf-8")
     if os.name == "nt":
+        cli_js = path.parent / "node_modules" / "kordoc" / "dist" / "cli.js"
+        cli_js.parent.mkdir(parents=True, exist_ok=True)
+        cli_js.write_text(
+            "const { spawnSync } = require('child_process');\n"
+            "const child = spawnSync(%s, [%s, ...process.argv.slice(2)],\n"
+            "                        { stdio: 'inherit' });\n"
+            "process.exit(child.status === null ? 1 : child.status);\n"
+            % (json.dumps(sys.executable), json.dumps(str(impl))),
+            encoding="utf-8")
         exe = path.with_name(path.name + ".cmd")
         exe.write_text('@"%s" "%s" %%*\r\n' % (sys.executable, impl),
                        encoding="utf-8")

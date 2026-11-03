@@ -429,6 +429,10 @@ class WorkbookReferenceTests(_PlanCase):
         outside = Path(tempfile.mkdtemp(prefix="knuaf-hort-out-"))
         self.addCleanup(lambda: None)
         (outside / "out.xlsx").write_bytes(WB_BYTES)
+        # The permission-failure fixture needs POSIX uid semantics: Windows
+        # has no geteuid and chmod does not deny reads.  Treat Windows as
+        # "not non-root" so the eight path checks still run.
+        nonroot = hasattr(os, "geteuid") and os.geteuid() != 0
 
         sources = [
             _source("s_abs", path=str(outside / "out.xlsx"), hash=WB_SHA),
@@ -445,7 +449,7 @@ class WorkbookReferenceTests(_PlanCase):
             _source("s_match", path="match.xlsx", hash=WB_SHA),
             _source("s_not_wb", path="excluded.xlsx", hash=NON_WB_SHA),
         ]
-        if os.geteuid() != 0:
+        if nonroot:
             sources.append(
                 _source("s_noperm", path="noperm.xlsx", hash=WB_SHA)
             )
@@ -457,10 +461,14 @@ class WorkbookReferenceTests(_PlanCase):
         (root / "dir.xlsx").mkdir()
         (root / "real_in").mkdir()
         (root / "real_in" / "inside.xlsx").write_bytes(WB_BYTES)
-        (root / "link_in.xlsx").symlink_to("real_in/inside.xlsx")
+        (root / "link_in.xlsx").symlink_to(
+            # Native separators: a relative symlink target with "/" is not
+            # translated by CreateSymbolicLinkW and is broken on Windows
+            # (bpo-13702), where following it raises WinError 123.
+            os.path.join("real_in", "inside.xlsx"))
         (root / "link_out.xlsx").symlink_to(outside / "out.xlsx")
         (root / "excluded.xlsx").write_bytes(WB_BYTES)
-        if os.geteuid() != 0:
+        if nonroot:
             (root / "noperm.xlsx").write_bytes(WB_BYTES)
             (root / "noperm.xlsx").chmod(0)
         else:
@@ -488,7 +496,7 @@ class WorkbookReferenceTests(_PlanCase):
             "s_empty": "path_invalid",
             "s_match": "match",
         }
-        if os.geteuid() != 0:
+        if nonroot:
             expected["s_noperm"] = "read_error"
         self.assertEqual(
             {sid: i["file_check"] for sid, i in items.items()}, expected

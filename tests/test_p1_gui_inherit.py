@@ -407,7 +407,11 @@ class DoctorDepsTests(ContractCase):
         self.assertIn("pypdf", value["dependencies"])
         self.assertIn("deps", value)
         rows = {row["import_name"]: row for row in value["deps"]["dependencies"]}
-        self.assertEqual({"docx", "openpyxl", "pypdf"}, set(rows))
+        deps = runtime("gg_deps")
+        declared = {
+            d["import_name"] for d in deps.load_manifest()
+            if d.get("platform") in (None, sys.platform)}
+        self.assertEqual(declared, set(rows))
         self.assertEqual(value["deps"]["selected_python"],
                          value["deps"]["current_python"])
 
