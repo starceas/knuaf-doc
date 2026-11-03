@@ -65,8 +65,8 @@
   "references/industrial-insects/precedents.json": "5ec7062a01838854d9f2130d95f2ffc78251e5d263a88910fd076f7b48047161",
   "references/industrial-insects/premise-probes.md": "352e66a34f25812920b67af85d1470527ee5f4e1c9d57aaaebedcb746bf32d81",
   "references/intake-selection.md": "8a6e60234b4ab4e9813af06d4c0ce7788a32b6aa8ceea43e85602d1f40e25294",
-  "references/interview-guide.md": "b25a60f5eeba0b2ab7875682fc069658d4f3e8cfb18e37f3c1cc641d036ee4e1",
-  "references/interview-ui.md": "396df20bcd0cc0c4d5501c8230dacecf44aef1151d5bf06faba5522bcb7129b8",
+  "references/interview-guide.md": "cd1862bc73899896cd22c8b6688e6cd84ecf12d64d27dc2002a8caa11ff6cccc",
+  "references/interview-ui.md": "77f79c3a961a74ff8c078f5cd2d833a30763e8d2bee3c23d14804ff7594ce734",
   "references/intro-story.md": "39453ba727cbf338859a5fd776bbe69446ed0e6baffb1f91067ea19ce3ec8d7d",
   "references/korean-polishing.md": "1c4b05593948898ad7d9a219b64aab2c9508136b8933f38a36cc545e4a9477d2",
   "references/lessons-learned.md": "70f613bdcabc89db616acb38ffae368e05c8c6050c366edde20fd078546aea5b",
@@ -88,7 +88,7 @@
   "references/price-research-routes.md": "b91b4d457b91d90565aec775527ad611d84de528d4548cb02cf99bf464c7ed9e",
   "references/rda-benchmark.md": "2417decb1e8b37fe0e990546f06208af8a06f34c7d607f23e97eaf90d9117645",
   "references/research-routing.md": "c888a16869f0756acef684431615607e6b553da4d8a4fb537001f2c2c9f0d04c",
-  "references/research-sources.md": "3bfc44eb8b3e6b656adf7088ca7be3fac2320e9be8bbec3acae8886249af4619",
+  "references/research-sources.md": "dff2001075abcfc6ee4aae963c7cd01a4f3f4a4b509c6ff8c2aa935b5eb8dc9f",
   "references/reuse-registry-schema.md": "5942baa34cd705df43d4fe1325d903cf29021392cd4bfc69bcd7c5b393f010e0",
   "references/rules/CH1_intro.md": "f55721ed1d1fd5fe438bc908127f5cd0fc4fd7985f6d3c01c911b6cdff4540f7",
   "references/rules/CH2_external.md": "4ef9642b1b7dfe161667f4fe9e94b8ae7232db64ffa18c7cc2ad28b7a39e31ba",
@@ -207,7 +207,7 @@
   "tests/test_gg_source_register.py": "329cef6c78f14dcbab5224e269a756ea8c66c5795776d3b6dcd5103f2c419251",
   "tests/test_n5_guidance_link.py": "32462d60e2a3c7a40cffb6eecfb138f8046d382ad16bb15377b3490e3ddbb43a",
   "tests/test_official_guide_reuse.py": "2169e23583f04860fbeb77fe1fe802bed756efd5147156c294eddb3e9ba4d87c",
-  "version.json": "0f6a484dc5b9c97a11071a9e8eb5da42da07a935cf51f4e87838fcf7b5851a5a"
+  "version.json": "6a57ad937f37dc01b1fa2ca78033c4204c67cdcfb36600c1c9e7a6191bcbc722"
  },
  "schema": "knuaf-doc/install-manifest@1"
 }
