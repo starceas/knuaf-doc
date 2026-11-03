@@ -257,7 +257,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "b58aaa2082f99d1c4c517bd4b76c15ec20b83e38283ddea012ba87cac357c770",
+      "after_sha256": "7e78bad902e871907f68960edfe2f169cbd989356ebdbfdfe3e19ecf8daf1f5c",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "F-CI1 / G-output-guards",
@@ -1517,12 +1517,12 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_major_contract.py": {
-      "after_sha256": "b5781e08ee41f8213c782cd11775f79ce4e0e0311d4a5b6840a036ca62e13c6c",
+      "after_sha256": "b285eb1636114fef99d8952b5fda33876dcaa57b670d8ba367cd3b0043050632",
       "before_sha256": null,
       "first_changed": "P6",
       "last_changed": "P27",
       "owner": "P27",
-      "reason": "Peer major declarations, explicit evidenced binding, and read-only proposal router | P6 review: equal-rank F0/E1-E4 example_observed roster and optional document nodes | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P8: fruit_trees peer module declaration and registration (guard algorithm unchanged) | P9: hort_env_systems peer module declaration, registration and cover marker (guard algorithm unchanged) | P14: fruit_trees module 0.2.0 — plan_end_year, cohort area/active-period/yield fields, batch and move templates (guard algorithm unchanged) | P18: industrial_insects 0.2.0: product-line and plan-year question templates, line declaration fields (guard algorithm unchanged) | P20: require_finance_profile 추가 — hort_env_systems 0.2.0 (영수증 게이트 hort_18_sheet_reconstructed_v1 supported, school_excel_workbook 출력) + specialty school_17_sheet_v1 capability | P27: K3-02: 사유별 held 안내, binding_invalid recorded/registered 버전 필드 | PR2: 특용작물 엑셀을 교수님 양식(X01·X02) 기준으로 — 레거시 생성기 입구 차단, 작목 분류별 칸 이름 층, 일용 노무 성별 경고, X01 임금 산술평균·7번 인쇄 설정 보존 | W3c V2-04: general TOC rationale and dairy-to-hanwoo chapter rationale with school-toc reference.",
+      "reason": "Peer major declarations, explicit evidenced binding, and read-only proposal router | P6 review: equal-rank F0/E1-E4 example_observed roster and optional document nodes | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P8: fruit_trees peer module declaration and registration (guard algorithm unchanged) | P9: hort_env_systems peer module declaration, registration and cover marker (guard algorithm unchanged) | P14: fruit_trees module 0.2.0 — plan_end_year, cohort area/active-period/yield fields, batch and move templates (guard algorithm unchanged) | P18: industrial_insects 0.2.0: product-line and plan-year question templates, line declaration fields (guard algorithm unchanged) | P20: require_finance_profile 추가 — hort_env_systems 0.2.0 (영수증 게이트 hort_18_sheet_reconstructed_v1 supported, school_excel_workbook 출력) + specialty school_17_sheet_v1 capability | P27: K3-02: 사유별 held 안내, binding_invalid recorded/registered 버전 필드 | PR2: 특용작물 엑셀을 교수님 양식(X01·X02) 기준으로 — 레거시 생성기 입구 차단, 작목 분류별 칸 이름 층, 일용 노무 성별 경고, X01 임금 산술평균·7번 인쇄 설정 보존 | W3c V2-04: general TOC rationale and dairy-to-hanwoo chapter rationale with school-toc reference. | PR69-R1: dairy switch ignores superseded answers; conflicting active answers return answer_conflict.",
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_office.py": {
@@ -2234,13 +2234,13 @@
       "reason": "W3 dairy empty-slot pack manifest; no fabricated statistical data."
     },
     "skills/knuaf-doc/references/dairy/README.md": {
-      "after_sha256": "97a02b6c4798f10f12be3d993ce54bf90b48c581a27c2d490961bd94ba5b214a",
+      "after_sha256": "96128881de2c49485cef4436bbf47fa42ccc4d86f75823f54d5c8185bf46b38a",
       "before_sha256": null,
       "first_changed": "dairy-0.1.0",
       "last_changed": "dairy-0.1.0",
       "owner": "dairy-0.1.0",
       "source": "new",
-      "reason": "W4 dairy module boundary and workflow guidance. | W4b: V2 documentation findings corrected."
+      "reason": "W4 dairy module boundary and workflow guidance. | W4b: V2 documentation findings corrected. | PR69-R1: answer_conflict state and superseded exclusion documented."
     },
     "skills/knuaf-doc/references/dairy/format.md": {
       "after_sha256": "16be8bcbb2ae06151e9fdb8557884fbe4351fc6a251353a173023f949ed2c5c9",
@@ -2288,13 +2288,13 @@
       "reason": "W4 dairy writing style rules. | W4b: V2-02 resolved."
     },
     "skills/knuaf-doc/tests/test_gg_dairy_module.py": {
-      "after_sha256": "bc6072dc343b8951bb144fb52b28d9bd9378ad91ccbf0f3504450e876b3a9275",
+      "after_sha256": "871a80fb280779a8e55353aef40d213013e5bff4f3d85150593f2b55b9cd4015",
       "before_sha256": null,
       "first_changed": "dairy-0.1.0",
       "last_changed": "dairy-0.1.0",
       "owner": "dairy-0.1.0",
       "source": "new",
-      "reason": "W3 synthetic module registration, switch, parser and CLI regressions. | W3c: assert general TOC and dairy-to-hanwoo chapter rationale/reference."
+      "reason": "W3 synthetic module registration, switch, parser and CLI regressions. | W3c: assert general TOC and dairy-to-hanwoo chapter rationale/reference. | PR69-R1: superseded/conflict switch regressions."
     }
   },
   "cumulative": true,

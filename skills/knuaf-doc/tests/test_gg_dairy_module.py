@@ -134,6 +134,63 @@ class DairyModuleTests(unittest.TestCase):
         self.assertNotIn("dairy_cattle", targets)
         self.assertIn("hanwoo", targets)
 
+    def test_switch_ignores_superseded_and_holds_conflicting_answers(self):
+        def fact(field, value, superseded=False):
+            record = {"field_id": "dairy." + field,
+                      "answer_state": "provided", "value": value}
+            if superseded:
+                record["verification"] = "superseded"
+            return record
+
+        proposal = mc.route(mc.default_registry(), "dairy", "question").proposal
+        # 옛 답(대체됨)이 사전 순서상 뒤에 와도 지금 답으로만 판정한다.
+        for old_first in (True, False):
+            for mode, expected in (("integrated", "ready"),
+                                   ("milking", "mismatch")):
+                pairs = [("a_old", fact("livestock_type", "dairy_cattle", True)),
+                         ("b_now", fact("livestock_type", "hanwoo"))]
+                if not old_first:
+                    pairs.reverse()
+                facts = dict(pairs)
+                facts["mode"] = fact("operation_mode", mode)
+                self.assertEqual(mc.evaluate_dairy_switch(facts), expected)
+                resolved = mc.dairy_question_fields(proposal, facts)
+                targets = {item.get("target") for item in resolved["fields"]}
+                self.assertNotIn("dairy_cattle", targets)
+                if expected == "ready":
+                    self.assertIn("hanwoo", targets)
+                else:
+                    self.assertNotIn("hanwoo", targets)
+        # 대체된 사육 형태도 판정에서 빠진다.
+        facts = {
+            "lt": fact("livestock_type", "hanwoo"),
+            "m_old": fact("operation_mode", "milking", True),
+            "m_now": fact("operation_mode", "fattening"),
+        }
+        self.assertEqual(mc.evaluate_dairy_switch(facts), "ready")
+        # 대체되지 않은 서로 다른 답이 둘이면 하나를 고르지 않고 보류한다.
+        conflict = {
+            "a": fact("livestock_type", "hanwoo"),
+            "b": fact("livestock_type", "dairy_cattle"),
+            "mode": fact("operation_mode", "milking"),
+        }
+        self.assertEqual(mc.evaluate_dairy_switch(conflict), "answer_conflict")
+        held = mc.dairy_question_fields(proposal, conflict)
+        self.assertFalse({item.get("target") for item in held["fields"]}
+                         & {"dairy_cattle", "hanwoo"})
+        self.assertIn("dairy.milk_collector", held["held_fields"])
+        # 같은 값의 중복 기록은 충돌이 아니다.
+        same = {
+            "a": fact("livestock_type", "hanwoo"),
+            "b": fact("livestock_type", "hanwoo"),
+            "mode": fact("operation_mode", "integrated"),
+        }
+        self.assertEqual(mc.evaluate_dairy_switch(same), "ready")
+        # 대체된 답만 남으면 미입력으로 본다.
+        only_old = {"a": fact("livestock_type", "hanwoo", True)}
+        self.assertEqual(mc.evaluate_dairy_switch(only_old),
+                         "livestock_type_required")
+
     def test_summary_unicode_chapters_and_dairy_table_exemptions(self):
         text = "# 요 약\n# Ⅰ. 사업의 목적\n# Ⅱ. 투자분석결과\n# Ⅲ. 손익계산서\n# Ⅳ. 자금운용계획\n# 1. 머리말\n# 2. 농업환경분석\n"
         parsed = gg_document.parse(text, major_id="dairy")

@@ -2492,42 +2492,59 @@ DAIRY_MODULE = declare_module(
 )
 
 
-def evaluate_dairy_switch(facts):
-    """Return the dairy livestock/mode gate state from canonical fact records."""
-    values = {}
+_DAIRY_SWITCH_FIELDS = ("dairy.livestock_type", "dairy.operation_mode")
+
+
+def _dairy_switch_values(facts):
+    """Active switch answers: field_id -> set of values.
+
+    Only ``provided`` answers count, and superseded (``verification:
+    "superseded"``) history is excluded so a replaced answer never decides
+    the switch.
+    """
+    values = {field_id: set() for field_id in _DAIRY_SWITCH_FIELDS}
     for fact in (facts or {}).values():
         if (not isinstance(fact, dict)
-                or fact.get("answer_state") != "provided"):
+                or fact.get("answer_state") != "provided"
+                or fact.get("verification") == "superseded"):
             continue
         field_id = fact.get("field_id")
-        if field_id in {"dairy.livestock_type", "dairy.operation_mode"}:
-            values[field_id.rsplit(".", 1)[1]] = fact.get("value")
-    livestock = values.get("livestock_type")
-    mode = values.get("operation_mode")
+        if field_id in values:
+            value = fact.get("value")
+            values[field_id].add(value if isinstance(value, str) else repr(value))
+    return values
+
+
+def _resolve_dairy_switch(facts):
+    """Return (state, livestock) from the active switch answers."""
+    values = _dairy_switch_values(facts)
+    if any(len(found) > 1 for found in values.values()):
+        return "answer_conflict", None
+    livestock = next(iter(values["dairy.livestock_type"]), None)
+    mode = next(iter(values["dairy.operation_mode"]), None)
     if livestock not in {"dairy_cattle", "hanwoo"}:
-        return "livestock_type_required"
+        return "livestock_type_required", None
     if mode not in {"milking", "breeding", "fattening", "integrated"}:
-        return "operation_mode_required"
+        return "operation_mode_required", livestock
     if (livestock == "dairy_cattle" and mode != "milking") or (
         livestock == "hanwoo" and mode == "milking"
     ):
-        return "mismatch"
-    return "ready"
+        return "mismatch", livestock
+    return "ready", livestock
+
+
+def evaluate_dairy_switch(facts):
+    """Return the dairy livestock/mode gate state from canonical fact records.
+
+    Superseded answers are ignored; two different active answers for the
+    same switch field return ``answer_conflict`` instead of picking one.
+    """
+    return _resolve_dairy_switch(facts)[0]
 
 
 def dairy_question_fields(proposal, facts):
     """Filter livestock-specific questions against the confirmed switch."""
-    switch = evaluate_dairy_switch(facts)
-    values = {
-        fact.get("field_id"): fact.get("value")
-        for fact in (facts or {}).values()
-        if isinstance(fact, dict)
-        and fact.get("answer_state") == "provided"
-        and fact.get("field_id") in {
-            "dairy.livestock_type", "dairy.operation_mode"
-        }
-    }
-    livestock = values.get("dairy.livestock_type")
+    switch, livestock = _resolve_dairy_switch(facts)
     fields = proposal.get("fields", [])
     return {
         **proposal,

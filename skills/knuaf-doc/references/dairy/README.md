@@ -7,7 +7,7 @@
 | 기능 | 상태 | 진입점 / 비고 |
 |---|---|---|
 | 전공 바인딩, 질문 목록 | 지원 | `gg.py major-plan <폴더>` (공통 및 축종별 질문) |
-| 축종 스위치 판정 | 지원 | `evaluate_dairy_switch()` (`ready`, `livestock_type_required`, `operation_mode_required`, `mismatch`) |
+| 축종 스위치 판정 | 지원 | `evaluate_dairy_switch()` (`ready`, `livestock_type_required`, `operation_mode_required`, `mismatch`, `answer_conflict`) |
 | 문서 계획 (작성요령 기준) | 지원 | `gg.py major-plan <폴더>` (앞부분, 본문 1~12장, 부록 1~10 기본) |
 | 축산 리서치 경로 검토 | 지원 | `references/dairy/research-routes.md` (R2 경로 원천 대조) |
 | 전공 핵심 전제 질문 (프로브) | 지원 | `references/dairy/premise-probes.md` |
@@ -39,6 +39,9 @@
 - **`livestock_type_required`**: 축종이 입력되지 않음.
 - **`operation_mode_required`**: 사육 형태가 입력되지 않음.
 - **`mismatch`**: 축종과 사육 형태가 불일치함 (예: 젖소 + 비육, 한우 + 착유).
+- **`answer_conflict`**: 같은 항목(축종 또는 사육 형태)에 서로 다른 답이 둘 이상 살아 있음. 하나를 임의로 고르지 않고 보류한다 — 옛 답을 대체됨(`superseded`)으로 정리해야 풀린다.
+
+판정에는 `answer_state: provided`이고 대체됨(`verification: superseded`)이 아닌 답만 쓴다. 대체된 옛 답은 판정에 섞이지 않는다.
 
 스위치가 `ready`가 아니면 축종 의존 질문, 문서 노드, 리서치 경로가 활성화되지 않고 보류 상태로 남는다.
 
