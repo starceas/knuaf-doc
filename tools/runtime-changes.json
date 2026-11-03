@@ -182,7 +182,15 @@
     "tests/test_tidy.py",
     "tests/test_window_hygiene.py",
     "tests/test_workbook_c1b_correction.py",
-    "tools/check_asset_disposition.py"
+    "tools/check_asset_disposition.py",
+    "skills/knuaf-doc/references/dairy/format.md",
+    "skills/knuaf-doc/references/dairy/school-toc.md",
+    "skills/knuaf-doc/tests/test_gg_dairy_module.py",
+    "skills/knuaf-doc/references/dairy/research-routes.md",
+    "skills/knuaf-doc/references/dairy/premise-probes.md",
+    "skills/knuaf-doc/references/dairy/writing-style.md",
+    "skills/knuaf-doc/references/benchmark-packs/majors/dairy/manifest.json",
+    "skills/knuaf-doc/references/dairy/README.md"
   ],
   "baseline_main": "29abec0ec95369de7ae9e22207349d574f1f46b7",
   "baseline_spec": "tools/baseline-files.json",
@@ -221,12 +229,12 @@
       "source": "new"
     },
     ".codex-plugin/plugin.json": {
-      "after_sha256": "a419c114fb12847f23ec9a1312d2bbcf20570580f06bad7c221b14f5ca4c2b50",
+      "after_sha256": "d427a17d4696bf0837cc4a3f9fe2eddad3dbe94ea6eec2bc7010d120f31de61a",
       "before_sha256": "5b6c8ae48fa215f81f71b55feda736f167666cb6d66afe04b9337d8f4bc527cf",
       "first_changed": "P26",
       "last_changed": "P28",
       "owner": "P28",
-      "reason": "P26: plugin metadata version 0.1.1 matches installed skill version | P27: 플러그인 메타데이터 버전 0.1.2 | PR-4 ORDER-I: plugin metadata version 0.1.3; I remeasured final bytes. | F3: align plugin version with 0.1.4. | Restore v0.1.4: version and built-in school guidance for the update path. | ORDER-I2: remeasured final 0.1.5 file bytes after preserving PR32 inputs. | R-v0.2.0: v0.2.0 릴리즈 — 버전 두 곳과 install-manifest의 version.json 해시를 0.2.0으로 갱신 | R-v0.3.0: v0.3.0 릴리즈 — 버전 두 곳과 install-manifest의 version.json 해시를 0.3.0으로 갱신 | R-v0.3.1: align plugin metadata with skill version 0.3.1",
+      "reason": "P26: plugin metadata version 0.1.1 matches installed skill version | P27: 플러그인 메타데이터 버전 0.1.2 | PR-4 ORDER-I: plugin metadata version 0.1.3; I remeasured final bytes. | F3: align plugin version with 0.1.4. | Restore v0.1.4: version and built-in school guidance for the update path. | ORDER-I2: remeasured final 0.1.5 file bytes after preserving PR32 inputs. | R-v0.2.0: v0.2.0 릴리즈 — 버전 두 곳과 install-manifest의 version.json 해시를 0.2.0으로 갱신 | R-v0.3.0: v0.3.0 릴리즈 — 버전 두 곳과 install-manifest의 version.json 해시를 0.3.0으로 갱신 | R-v0.3.1: align plugin metadata with skill version 0.3.1 | R-v0.4.0: v0.4.0 릴리즈 — 낙농전공 모듈 0.1.0, 버전 두 곳과 install-manifest 갱신",
       "source": "new"
     },
     "docs/validation/p4-lineage.json": {
@@ -240,7 +248,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/SKILL.md": {
-      "after_sha256": "ca37e53be4c761e095c47cd101cd4dc03769a2ec450ee904c3961e234648151d",
+      "after_sha256": "ecbf1c1211b31a4b7461aeba9284263ccc86ab40608d737f53daad42ff2357f6",
       "before_sha256": "c0008fa5239cc16411fd4ef24b5bf901c7a8b9b50c6b621e2bdee3acf734ddc0",
       "first_changed": "P1",
       "last_changed": "P28",
@@ -249,13 +257,13 @@
       "source": "new"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "5b479c677450b4fba9fda1e8d42202faeb14b34dd97b457e68acabfe27f1b45f",
+      "after_sha256": "7e78bad902e871907f68960edfe2f169cbd989356ebdbfdfe3e19ecf8daf1f5c",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "F-CI1 / G-output-guards",
       "owner": "P28",
       "note": "G-output-guards: regenerate installation fingerprints from a tracked-files-only copy after output-preservation fixes. | G FIX1: regenerate after aligning the linked interview guide with canonical fact/source/task storage. | F-skill-tests: regenerate in a tracked-files-only copy after canonical fixture metadata repair; no runtime relaxation. | F CI1: regenerate after host-independent source-intake collision fixtures.",
-      "reason": "P27: 설치본 배포 파일 목록(상대경로→sha256) — 자동 업데이트 보존 판정 기준 | P27 r3 재생성(legacy-release-hashes.json 포함 149항목) | P28: 재생성 — 신규 references 4건 포함 | P28 integration: gg_update.py manifest --write로 최신 배포 바이트 목록 재생성 | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존 | F2: V2 재확인 수용에 따라 같은 파서 계층의 첫 장/장 경계와 원문 span을 적용하고 명시적 외부 유형 충돌 거부·수동 신뢰 계약을 문서화; 설치 manifest 재생성. 기초 정본·단계·부모 계보·원본 source pin 보존 | F3: 전역 Markdown 유무 판정을 제거하고 prefix-only 공통 제목 규칙·요약 단일 종료·번호 공백 문법으로 통일; 설치 manifest 재생성. 원본/부모 계보·stage·source pin 보존 | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes. | PR-4 ORDER-I: install manifest regenerated for ORDER-A file bytes; I remeasured final bytes. | PR-4 ORDER-I: install manifest regenerated with restored references; I remeasured final bytes. | PR-4 ORDER-I: install manifest regenerated for 0.1.3 bytes; I remeasured final bytes. | F1: regenerate existing install-file fingerprints for reviewed findings. | F2 P1: refresh existing install fingerprints. | F3: refresh existing install fingerprints for the P2 patch. | Restore v0.1.4: regenerate all installed-file fingerprints with gg_update.py. | ORDER-I2: remeasured final 0.1.5 file bytes after preserving PR32 inputs. | AMEND-I2-1 regenerate installation fingerprints after R1-R3 amendments. | Windows native publication: handle identity, binary I/O, checked paths, owner cleanup and publication scope | Window-hygiene Office-only scope: refreshed reviewed bytes and strict +2 declaration/new/approval counts; no browser product reference or live Office validation. | PR41 P1: synchronized macOS Excel HOLD product hashes. | W2b kordoc-hwpx: gg_update.py manifest --write로 재생성(신규 gg_hwpx.py·build_hwpx.py 포함). | P28 output hygiene: tidy 신규 파일·설치/검증 번들 목록 갱신 | P28 output hygiene 검토 FAIL 수정: JSON 이스케이프 참조·열거 실패·회차명 경계 | P28 I1-01 마무리: 원시 바이트 참조 검사가 /·\\ 두 표기를 모든 인코딩에서 확인 | P28 outside scan: tidy 밖 정리 후보를 작성 폴더 하위까지 읽기 전용 보고 | P1-GUI: managed 표시(GUI 설치본 auto 차단) — 판정 기준 R1-05 | P1-GUI: 판정서 JUDGE-A/JUDGE-B 올림 항목 반영 | P1-R1: 검토 지적 4건 수정(외부 관계 허용 범위 축소·본문 경계 줄 단위·절 ID 정확 비교·링크 실행 managed) | P1-R1b: 해석·디코딩 뒤 최종 경로에도 네트워크 경로 거절 적용(file:////host, 인코딩된 UNC) | R-v0.2.0: v0.2.0 릴리즈 — 버전 두 곳과 install-manifest의 version.json 해시를 0.2.0으로 갱신 | R-v0.3.0: v0.3.0 릴리즈 — 버전 두 곳과 install-manifest의 version.json 해시를 0.3.0으로 갱신 | Plan-fit: regenerated after adding the check and rule files and merging main | R6: regenerated after the plan-fit checker left this change | Merge: regenerated after merging main (body-writing assets) | PR2: 특용작물 엑셀을 교수님 양식(X01·X02) 기준으로 — 레거시 생성기 입구 차단, 작목 분류별 칸 이름 층, 일용 노무 성별 경고, X01 임금 산술평균·7번 인쇄 설정 보존 | Continuation: regenerated after the writing-continuation rules | Plan adoption: regenerated after the plan-adoption rules | Merge: regenerated after merging main (legacy source grades) | P0-2 PR-A: regenerated install-manifest for PR-A guidance and commands.md changes | P0-2 PR-A R2: regenerated with gg_update.py manifest --write | P0-2 PR-A R3: regenerated with gg_update.py manifest --write | P0-2 consistency: regenerated with gg_update.py manifest --write after the #59/#60/#61 merges (17 stale hashes + finance-template.xlsx) | P0-2 PR-E: regenerate install manifest for U08/U09 and output documentation. | R-v0.3.0: v0.3.0 릴리즈 — version.json 0.3.0 해시를 반영해 설치 목록 재생성 | R-v0.3.1: regenerate installed-file hashes after canonical interview/research guidance and version 0.3.1 updates",
+      "reason": "P27: 설치본 배포 파일 목록(상대경로→sha256) — 자동 업데이트 보존 판정 기준 | P27 r3 재생성(legacy-release-hashes.json 포함 149항목) | P28: 재생성 — 신규 references 4건 포함 | P28 integration: gg_update.py manifest --write로 최신 배포 바이트 목록 재생성 | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존 | F2: V2 재확인 수용에 따라 같은 파서 계층의 첫 장/장 경계와 원문 span을 적용하고 명시적 외부 유형 충돌 거부·수동 신뢰 계약을 문서화; 설치 manifest 재생성. 기초 정본·단계·부모 계보·원본 source pin 보존 | F3: 전역 Markdown 유무 판정을 제거하고 prefix-only 공통 제목 규칙·요약 단일 종료·번호 공백 문법으로 통일; 설치 manifest 재생성. 원본/부모 계보·stage·source pin 보존 | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes. | PR-4 ORDER-I: install manifest regenerated for ORDER-A file bytes; I remeasured final bytes. | PR-4 ORDER-I: install manifest regenerated with restored references; I remeasured final bytes. | PR-4 ORDER-I: install manifest regenerated for 0.1.3 bytes; I remeasured final bytes. | F1: regenerate existing install-file fingerprints for reviewed findings. | F2 P1: refresh existing install fingerprints. | F3: refresh existing install fingerprints for the P2 patch. | Restore v0.1.4: regenerate all installed-file fingerprints with gg_update.py. | ORDER-I2: remeasured final 0.1.5 file bytes after preserving PR32 inputs. | AMEND-I2-1 regenerate installation fingerprints after R1-R3 amendments. | Windows native publication: handle identity, binary I/O, checked paths, owner cleanup and publication scope | Window-hygiene Office-only scope: refreshed reviewed bytes and strict +2 declaration/new/approval counts; no browser product reference or live Office validation. | PR41 P1: synchronized macOS Excel HOLD product hashes. | W2b kordoc-hwpx: gg_update.py manifest --write로 재생성(신규 gg_hwpx.py·build_hwpx.py 포함). | P28 output hygiene: tidy 신규 파일·설치/검증 번들 목록 갱신 | P28 output hygiene 검토 FAIL 수정: JSON 이스케이프 참조·열거 실패·회차명 경계 | P28 I1-01 마무리: 원시 바이트 참조 검사가 /·\\ 두 표기를 모든 인코딩에서 확인 | P28 outside scan: tidy 밖 정리 후보를 작성 폴더 하위까지 읽기 전용 보고 | P1-GUI: managed 표시(GUI 설치본 auto 차단) — 판정 기준 R1-05 | P1-GUI: 판정서 JUDGE-A/JUDGE-B 올림 항목 반영 | P1-R1: 검토 지적 4건 수정(외부 관계 허용 범위 축소·본문 경계 줄 단위·절 ID 정확 비교·링크 실행 managed) | P1-R1b: 해석·디코딩 뒤 최종 경로에도 네트워크 경로 거절 적용(file:////host, 인코딩된 UNC) | R-v0.2.0: v0.2.0 릴리즈 — 버전 두 곳과 install-manifest의 version.json 해시를 0.2.0으로 갱신 | R-v0.3.0: v0.3.0 릴리즈 — 버전 두 곳과 install-manifest의 version.json 해시를 0.3.0으로 갱신 | Plan-fit: regenerated after adding the check and rule files and merging main | R6: regenerated after the plan-fit checker left this change | Merge: regenerated after merging main (body-writing assets) | PR2: 특용작물 엑셀을 교수님 양식(X01·X02) 기준으로 — 레거시 생성기 입구 차단, 작목 분류별 칸 이름 층, 일용 노무 성별 경고, X01 임금 산술평균·7번 인쇄 설정 보존 | Continuation: regenerated after the writing-continuation rules | Plan adoption: regenerated after the plan-adoption rules | Merge: regenerated after merging main (legacy source grades) | P0-2 PR-A: regenerated install-manifest for PR-A guidance and commands.md changes | P0-2 PR-A R2: regenerated with gg_update.py manifest --write | P0-2 PR-A R3: regenerated with gg_update.py manifest --write | P0-2 consistency: regenerated with gg_update.py manifest --write after the #59/#60/#61 merges (17 stale hashes + finance-template.xlsx) | P0-2 PR-E: regenerate install manifest for U08/U09 and output documentation. | R-v0.3.0: v0.3.0 릴리즈 — version.json 0.3.0 해시를 반영해 설치 목록 재생성 | R-v0.3.1: regenerate installed-file hashes after canonical interview/research guidance and version 0.3.1 updates | W3c: regenerated after the V2-04 source/code/test corrections and W4b documentation changes. | R-v0.4.0: v0.4.0 릴리즈 — 낙농전공 모듈 0.1.0, 버전 두 곳과 install-manifest 갱신",
       "source": "new"
     },
     "skills/knuaf-doc/references/benchmark-packs/aliases/crop-aliases.specialty_crops.json": {
@@ -267,15 +275,15 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/benchmark-packs/aliases/major-aliases.json": {
-      "after_sha256": "ad1e1e6c2296f93ef27beab8494e840b1578e0d61c6c9bd8e238c640e653c81b",
+      "after_sha256": "ccf6b7d94690b0d7ed99618b3d649eb10755849d12f1922960a25bd14a419ea5",
       "before_sha256": null,
       "first_changed": "P4",
       "owner": "P4",
-      "reason": "accepted P4 benchmark-packs data (catalog/records/manifest/schema) from g005-p4-provenance-standalone-corrections-3",
+      "reason": "accepted P4 benchmark-packs data (catalog/records/manifest/schema) from g005-p4-provenance-standalone-corrections-3 | W3c: restored industrial_insects to empty_slot; dairy status remains empty_slot.",
       "source": "new"
     },
     "skills/knuaf-doc/references/benchmark-packs/catalog.json": {
-      "after_sha256": "8dcad598073ce3efcce6698dafd2fa81bd24453deeb90216648ff68d1e8f8e68",
+      "after_sha256": "2d0471ae74c3d6cf199f1379ef213a67bec379621596e7a4adb2cc1c49d3017f",
       "before_sha256": null,
       "first_changed": "P4",
       "owner": "P4",
@@ -450,7 +458,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/commands.md": {
-      "after_sha256": "5c3c6c327fe381a444a93368d6a4a7fa70d6bf57dd32c6df008cc4269e4a17cb",
+      "after_sha256": "69a66a631b73d42a7d3166beb41bd496bee3cc2227a55567b526946e2cc634ad",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "P28",
@@ -774,7 +782,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/korean-polishing.md": {
-      "after_sha256": "3a4c2ee036413cbc76002fb5e071a0f4b8548f260adbe677c46957f91ab113a3",
+      "after_sha256": "1c4b05593948898ad7d9a219b64aab2c9508136b8933f38a36cc545e4a9477d2",
       "before_sha256": "ede62c0b331e44dbc6f93e2c74e2f2d89b7d6098391c5630d22683b2cb1d3d35",
       "first_changed": "P28",
       "last_changed": "G-output-guards",
@@ -802,7 +810,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/majors.md": {
-      "after_sha256": "63517e5907f2f5e180b44bfb68391641e8d49e651e67b1ccf33dc433dfb6c51e",
+      "after_sha256": "1727b409f7cfb864bf9a341f318b980b6477a81a3a65cb75c07b77f1f5723e03",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "P27",
@@ -929,7 +937,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/price-research-routes.md": {
-      "after_sha256": "fbefccda2d4d9d75389f2581998462427f9498d4ec289cbc4c3e857d990fd34a",
+      "after_sha256": "b91b4d457b91d90565aec775527ad611d84de528d4548cb02cf99bf464c7ed9e",
       "before_sha256": "f89f038d5c767fd436a7a2c3b42c85f91d2b6a44186f9178fd6630b1438120f6",
       "first_changed": "P28",
       "last_changed": "P28",
@@ -938,7 +946,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/rda-benchmark.md": {
-      "after_sha256": "61ed9370d90999cc9ad714ff3165b959ec298450446c8208d0b12ea4b96bc346",
+      "after_sha256": "2417decb1e8b37fe0e990546f06208af8a06f34c7d607f23e97eaf90d9117645",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "P28",
@@ -947,7 +955,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/research-routing.md": {
-      "after_sha256": "25439ae76b25c4e8e23d3632b0b11d196dba5674cb263f84767966c2cb47733e",
+      "after_sha256": "c888a16869f0756acef684431615607e6b553da4d8a4fb537001f2c2c9f0d04c",
       "before_sha256": "99e2cabcbf814d8b97302880abd9f2effbe6a49d12ac0c1eb9f19e0ec54c99b1",
       "first_changed": "P27",
       "last_changed": "P28",
@@ -956,7 +964,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/research-sources.md": {
-      "after_sha256": "89ee0430818b955724c562275172aa7a03df1d48504e266f3e13f18f5be4b153",
+      "after_sha256": "dff2001075abcfc6ee4aae963c7cd01a4f3f4a4b509c6ff8c2aa935b5eb8dc9f",
       "before_sha256": "0f127da93011dcc7a9be3c56e4219098781307b66a1f781786301789623e46b2",
       "first_changed": "P28",
       "last_changed": "P28",
@@ -1219,7 +1227,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg.py": {
-      "after_sha256": "3398340e4eba74dd225fa5460b367aaec620c31ee9e4f2a7ec9083f98456eab0",
+      "after_sha256": "229ce5ecdb84dd9a6628ad48b223c3bbd6ed4e186db62d1f934994ca6d44dfb9",
       "before_sha256": "1e200103489c827c0b0ac60a7959045c02ecdae8bd8ae77e9b9a3d255554a0d7",
       "first_changed": "P1",
       "last_changed": "P28",
@@ -1276,7 +1284,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_document.py": {
-      "after_sha256": "8837a5f28c7fdae3932c29eb6f5753980eb1f5dc3276cd1d4ebee6df3653d5ad",
+      "after_sha256": "66c5dbe8f43b9fb7bdab70992cec399b45157dd2053efd52ce3b4ffb8e97f0d4",
       "before_sha256": "e83eee6a94393e407a727979c6e5f6e5545f17ca7291e745c68d66dcb835a8b3",
       "first_changed": "P1",
       "last_changed": "P28",
@@ -1509,12 +1517,12 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_major_contract.py": {
-      "after_sha256": "6a0e838dba3b692dfb362d894472c24e713caed6747224f7e5ad089e1a7f5a81",
+      "after_sha256": "b285eb1636114fef99d8952b5fda33876dcaa57b670d8ba367cd3b0043050632",
       "before_sha256": null,
       "first_changed": "P6",
       "last_changed": "P27",
       "owner": "P27",
-      "reason": "Peer major declarations, explicit evidenced binding, and read-only proposal router | P6 review: equal-rank F0/E1-E4 example_observed roster and optional document nodes | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P8: fruit_trees peer module declaration and registration (guard algorithm unchanged) | P9: hort_env_systems peer module declaration, registration and cover marker (guard algorithm unchanged) | P14: fruit_trees module 0.2.0 — plan_end_year, cohort area/active-period/yield fields, batch and move templates (guard algorithm unchanged) | P18: industrial_insects 0.2.0: product-line and plan-year question templates, line declaration fields (guard algorithm unchanged) | P20: require_finance_profile 추가 — hort_env_systems 0.2.0 (영수증 게이트 hort_18_sheet_reconstructed_v1 supported, school_excel_workbook 출력) + specialty school_17_sheet_v1 capability | P27: K3-02: 사유별 held 안내, binding_invalid recorded/registered 버전 필드 | PR2: 특용작물 엑셀을 교수님 양식(X01·X02) 기준으로 — 레거시 생성기 입구 차단, 작목 분류별 칸 이름 층, 일용 노무 성별 경고, X01 임금 산술평균·7번 인쇄 설정 보존",
+      "reason": "Peer major declarations, explicit evidenced binding, and read-only proposal router | P6 review: equal-rank F0/E1-E4 example_observed roster and optional document nodes | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P8: fruit_trees peer module declaration and registration (guard algorithm unchanged) | P9: hort_env_systems peer module declaration, registration and cover marker (guard algorithm unchanged) | P14: fruit_trees module 0.2.0 — plan_end_year, cohort area/active-period/yield fields, batch and move templates (guard algorithm unchanged) | P18: industrial_insects 0.2.0: product-line and plan-year question templates, line declaration fields (guard algorithm unchanged) | P20: require_finance_profile 추가 — hort_env_systems 0.2.0 (영수증 게이트 hort_18_sheet_reconstructed_v1 supported, school_excel_workbook 출력) + specialty school_17_sheet_v1 capability | P27: K3-02: 사유별 held 안내, binding_invalid recorded/registered 버전 필드 | PR2: 특용작물 엑셀을 교수님 양식(X01·X02) 기준으로 — 레거시 생성기 입구 차단, 작목 분류별 칸 이름 층, 일용 노무 성별 경고, X01 임금 산술평균·7번 인쇄 설정 보존 | W3c V2-04: general TOC rationale and dairy-to-hanwoo chapter rationale with school-toc reference. | PR69-R1: dairy switch ignores superseded answers; conflicting active answers return answer_conflict.",
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_office.py": {
@@ -1849,7 +1857,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/tests/test_gg_major_contract.py": {
-      "after_sha256": "ce3b230bc171cbebeac76c8826d0411929a7a8dc8603c9684b4144ef4f18284e",
+      "after_sha256": "5edbc8b1d43d87170187a7c32e1c9bde67504af109a6ef0bb10ca426701dfb2e",
       "before_sha256": null,
       "first_changed": "P6",
       "last_changed": "P18",
@@ -1998,12 +2006,12 @@
       "source": "new"
     },
     "skills/knuaf-doc/version.json": {
-      "after_sha256": "0facfce99b0b885de1713bddf6774e10f0914a2d2ef4665ead99f8b554c1d4fd",
+      "after_sha256": "6a57ad937f37dc01b1fa2ca78033c4204c67cdcfb36600c1c9e7a6191bcbc722",
       "before_sha256": null,
       "first_changed": "P26",
       "last_changed": "P28",
       "owner": "P28",
-      "reason": "P26: 엄격한 복사 설치 버전 원천 | P27: 버전 0.1.2 | PR-4 ORDER-I: version 0.1.3; I remeasured final bytes. | F3: patch release version 0.1.4. | Restore v0.1.4: version and built-in school guidance for the update path. | ORDER-I2: remeasured final 0.1.5 file bytes after preserving PR32 inputs. | R-v0.2.0: v0.2.0 릴리즈 — 버전 두 곳과 install-manifest의 version.json 해시를 0.2.0으로 갱신 | R-v0.3.0: v0.3.0 릴리즈 — 버전 두 곳과 install-manifest의 version.json 해시를 0.3.0으로 갱신 | R-v0.3.1: skill release version 0.3.1",
+      "reason": "P26: 엄격한 복사 설치 버전 원천 | P27: 버전 0.1.2 | PR-4 ORDER-I: version 0.1.3; I remeasured final bytes. | F3: patch release version 0.1.4. | Restore v0.1.4: version and built-in school guidance for the update path. | ORDER-I2: remeasured final 0.1.5 file bytes after preserving PR32 inputs. | R-v0.2.0: v0.2.0 릴리즈 — 버전 두 곳과 install-manifest의 version.json 해시를 0.2.0으로 갱신 | R-v0.3.0: v0.3.0 릴리즈 — 버전 두 곳과 install-manifest의 version.json 해시를 0.3.0으로 갱신 | R-v0.3.1: skill release version 0.3.1 | R-v0.4.0: v0.4.0 릴리즈 — 낙농전공 모듈 0.1.0, 버전 두 곳과 install-manifest 갱신",
       "source": "new"
     },
     "tests/fixtures/hort_finance/synthetic.py": {
@@ -2025,12 +2033,12 @@
       "source": "new"
     },
     "tests/test_bundle_lineage.py": {
-      "after_sha256": "0381e0208b7c7ab6c743771de7a94ad17bba2aad6d1489abb3e428e7ab5a688a",
+      "after_sha256": "96b759836abd0f58f0548e3428cc5a6cd62d8572e3f2ff89ad39da88f31348c5",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "P28",
       "owner": "B",
-      "reason": "PR36 CI strict-count repair: preserve exact declaration counts and declare the changed validation test; integration adds five new declarations and three approvals, this test adds one further declaration/new/approval. | Window-hygiene Office-only scope: refreshed reviewed bytes and strict +2 declaration/new/approval counts; no browser product reference or live Office validation. | P28 kordoc-hwpx: runtime-changes 수치 고정 갱신(change_count 203→207, new_count 155→159, approved_new_files 162→166). | P28 output hygiene: tidy 신규 파일·설치/검증 번들 목록 갱신 | R6: strict counts remeasured after the plan-fit checker left this change (215/165/172 -> 214/164/171) | Merge: strict counts remeasured after merging main (216/166/173 on main plus two plan rule files) | PR2: 특용작물 엑셀을 교수님 양식(X01·X02) 기준으로 — 레거시 생성기 입구 차단, 작목 분류별 칸 이름 층, 일용 노무 성별 경고, X01 임금 산술평균·7번 인쇄 설정 보존 | P0-2 PR-A: remove 5 fixed count assertions per coordinator decision",
+      "reason": "PR36 CI strict-count repair: preserve exact declaration counts and declare the changed validation test; integration adds five new declarations and three approvals, this test adds one further declaration/new/approval. | Window-hygiene Office-only scope: refreshed reviewed bytes and strict +2 declaration/new/approval counts; no browser product reference or live Office validation. | P28 kordoc-hwpx: runtime-changes 수치 고정 갱신(change_count 203→207, new_count 155→159, approved_new_files 162→166). | P28 output hygiene: tidy 신규 파일·설치/검증 번들 목록 갱신 | R6: strict counts remeasured after the plan-fit checker left this change (215/165/172 -> 214/164/171) | Merge: strict counts remeasured after merging main (216/166/173 on main plus two plan rule files) | PR2: 특용작물 엑셀을 교수님 양식(X01·X02) 기준으로 — 레거시 생성기 입구 차단, 작목 분류별 칸 이름 층, 일용 노무 성별 경고, X01 임금 산술평균·7번 인쇄 설정 보존 | P0-2 PR-A: remove 5 fixed count assertions per coordinator decision | W3c: accept the dairy-0.1.0 lineage label for the new dairy runtime declarations.",
       "note": "P0-2B owner-approved narrow repair: delete only five incidental fixed-count assertions and their explanatory comments (4628d02 lines 132-153 and 173-192); retain all hash, ancestry and adversarial checks.",
       "source": "new"
     },
@@ -2215,6 +2223,78 @@
       "owner": "B",
       "reason": "Window-hygiene Office-only scope: exact owned-document path/saved-state preservation; fake transport and POSIX fixture tests only. Browser references excluded; no live Office/native support claim. | PR41 P1: macOS Excel fail-closed before staging/transport; no native proof; synthetic Office contracts preserved. | P0-2 PR-D: Q03/Q04 Office preservation transitions, COM ownership/error cells and explicit safe cleanup. | PR-D R1: D-R1-01/02: timeout/preserved reentry and guard rejection chains; new never-opened cleanup; restored generated Word/Excel safety and calculation-order contracts; both review mutations caught.",
       "source": "new; window-hygiene Office-only reviewed worktree bytes; fake transport/own fixtures, no browser reference"
+    },
+    "skills/knuaf-doc/references/benchmark-packs/majors/dairy/manifest.json": {
+      "after_sha256": "15ed5c5b0cd9e45c9d75815d5be1232892fd916c138602086d0953accb0cee7b",
+      "before_sha256": null,
+      "first_changed": "dairy-0.1.0",
+      "last_changed": "dairy-0.1.0",
+      "owner": "dairy-0.1.0",
+      "source": "new",
+      "reason": "W3 dairy empty-slot pack manifest; no fabricated statistical data."
+    },
+    "skills/knuaf-doc/references/dairy/README.md": {
+      "after_sha256": "96128881de2c49485cef4436bbf47fa42ccc4d86f75823f54d5c8185bf46b38a",
+      "before_sha256": null,
+      "first_changed": "dairy-0.1.0",
+      "last_changed": "dairy-0.1.0",
+      "owner": "dairy-0.1.0",
+      "source": "new",
+      "reason": "W4 dairy module boundary and workflow guidance. | W4b: V2 documentation findings corrected. | PR69-R1: answer_conflict state and superseded exclusion documented."
+    },
+    "skills/knuaf-doc/references/dairy/format.md": {
+      "after_sha256": "16be8bcbb2ae06151e9fdb8557884fbe4351fc6a251353a173023f949ed2c5c9",
+      "before_sha256": null,
+      "first_changed": "dairy-0.1.0",
+      "last_changed": "dairy-0.1.0",
+      "owner": "dairy-0.1.0",
+      "source": "new",
+      "reason": "W4 school formatting guidance for dairy. | W4b: V2-05 separates school requirements from shared edit guidance."
+    },
+    "skills/knuaf-doc/references/dairy/premise-probes.md": {
+      "after_sha256": "6f0d2a831772bf9f99b55d07dbae8ca1df46d1b794900d43f36aa3592a5427bc",
+      "before_sha256": null,
+      "first_changed": "dairy-0.1.0",
+      "last_changed": "dairy-0.1.0",
+      "owner": "dairy-0.1.0",
+      "source": "new",
+      "reason": "W4 dairy premise probe reference. | W4b: V2-01 and V2-02 resolved."
+    },
+    "skills/knuaf-doc/references/dairy/research-routes.md": {
+      "after_sha256": "6ea88b1c6feed1c34f6beac101164cd391cc6b69aeb15e498175cfe561a2f2eb",
+      "before_sha256": null,
+      "first_changed": "dairy-0.1.0",
+      "last_changed": "dairy-0.1.0",
+      "owner": "dairy-0.1.0",
+      "source": "new",
+      "reason": "W4 dairy research routes derived from ROUTE-LIST-FINAL."
+    },
+    "skills/knuaf-doc/references/dairy/school-toc.md": {
+      "after_sha256": "aa62431e3223365c3b5cb7f3a7d7c754ce4e270d7c3aebf8ed487ab532ded3a5",
+      "before_sha256": null,
+      "first_changed": "dairy-0.1.0",
+      "last_changed": "dairy-0.1.0",
+      "owner": "dairy-0.1.0",
+      "source": "new",
+      "reason": "W4 dairy school outline and instructor-approved alternatives. | W4b: V2-02 and V2-03 resolved."
+    },
+    "skills/knuaf-doc/references/dairy/writing-style.md": {
+      "after_sha256": "fe5807ab22451839f23b71eee7827b23095b1c5d374aa3c6bcedef71504c87e8",
+      "before_sha256": null,
+      "first_changed": "dairy-0.1.0",
+      "last_changed": "dairy-0.1.0",
+      "owner": "dairy-0.1.0",
+      "source": "new",
+      "reason": "W4 dairy writing style rules. | W4b: V2-02 resolved."
+    },
+    "skills/knuaf-doc/tests/test_gg_dairy_module.py": {
+      "after_sha256": "871a80fb280779a8e55353aef40d213013e5bff4f3d85150593f2b55b9cd4015",
+      "before_sha256": null,
+      "first_changed": "dairy-0.1.0",
+      "last_changed": "dairy-0.1.0",
+      "owner": "dairy-0.1.0",
+      "source": "new",
+      "reason": "W3 synthetic module registration, switch, parser and CLI regressions. | W3c: assert general TOC and dairy-to-hanwoo chapter rationale/reference. | PR69-R1: superseded/conflict switch regressions."
     }
   },
   "cumulative": true,

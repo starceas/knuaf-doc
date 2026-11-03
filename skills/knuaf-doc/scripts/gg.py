@@ -214,15 +214,24 @@ def main(argv=None):
                 if a.major is not None and a.major != binding.major_id:
                     raise ValueError("--major와 정본의 전공 바인딩이 다름")
                 if a.command == "major-plan":
+                    proposals = {
+                        kind: proposal.to_dict()
+                        for kind, proposal in major_contract.capability_proposals(
+                            registry, binding.major_id).items()
+                    }
                     value = {
                         "binding": vars(binding),
                         "project_revision": project["revision"],
-                        "proposals": {
-                            kind: proposal.to_dict()
-                            for kind, proposal in major_contract.capability_proposals(
-                                registry, binding.major_id).items()
-                        },
+                        "proposals": proposals,
                     }
+                    if binding.major_id == "dairy":
+                        facts = project.get("facts") or {}
+                        switch = major_contract.evaluate_dairy_switch(facts)
+                        proposals["question"]["proposal"] = (
+                            major_contract.dairy_question_fields(
+                                proposals["question"]["proposal"], facts)
+                        )
+                        value["dairy_switch"] = switch
                 elif a.command == "insect-plan":
                     import gg_insect_document
 

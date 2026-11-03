@@ -37,7 +37,7 @@
 | 토양 조건 | 흙토람(토양환경정보) | soil.rda.go.kr | 불필요 |
 | 시설·기자재 단가 | 농자재 가격정보 · 조달청 나라장터 | g2b.go.kr | 불필요 |
 
-**소득·경영비를 조사하기 전 내장 RDA 자료를 먼저 조회한다.** 전공이 [majors.md](majors.md)에 명시된 조회 지원 범위에 있고 작목·지역을 확인했으면 `python scripts/gg.py rda-candidates <폴더> --crop <품목> --region <지역> --year <연도> --unit <단위> --use-scope <용도>`를 실행한다. 결과가 `status: approved`이고 `approved_candidates`에 해당 값이 있을 때만 승인 후보로 사용할 수 있다. `candidate`, `unverified`, `ambiguous`, `series`, `unapproved`, `not_found`는 확정 사실이나 사용 승인으로 취급하지 않는다. 후보만으로 학생의 실제 비용·수량·운영 조건을 확정하지 말고, 빠진 개인 조건은 인터뷰에서 확인한다. 후보가 승인되지 않거나 지원 전공 밖이면 그 상태를 기록하고 공식 외부 자료 조사로 이어간다.
+**소득·경영비를 조사하기 전 내장 RDA 자료를 먼저 조회한다.** 전공이 [majors.md](majors.md)에 명시된 조회 지원 범위에 있고 작목·지역을 확인했으면 `python scripts/gg.py rda-candidates <폴더> --crop <품목> --region <지역> --year <연도> --unit <단위> --use-scope <용도>`를 실행한다. 결과가 `status: approved`이고 `approved_candidates`에 해당 값이 있을 때만 승인 후보로 사용할 수 있다. `candidate`, `unverified`, `ambiguous`, `series`, `unapproved`, `not_found`는 확정 사실이나 사용 승인으로 취급하지 않는다. 후보만으로 학생의 실제 비용·수량·운영 조건을 확정하지 말고, 빠진 개인 조건은 인터뷰에서 확인한다. 후보가 승인되지 않거나 지원 전공 밖이면 그 상태를 기록하고 공식 외부 자료 조사로 이어간다. 단, 낙농(dairy, 젖소·한우) 전공은 작물 소득·경영비 경로를 오적용하지 않고 축산 전용 경로([dairy/research-routes.md](dairy/research-routes.md))를 따른다.
 
 ### 물가상승률 및 노무비 조사 원칙 (R1 권고 및 지적 6 반영)
 

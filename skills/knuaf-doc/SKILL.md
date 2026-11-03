@@ -154,6 +154,7 @@ description: 한국농수산대학교 창업논문·영농계획서와 동반 �
 - 출처 ID·해시·작업 기록·출력 등록·학교 원문 우선순위: [source-contract](references/source-contract.md)
 - 자료 투입·발췌·재검토: [source-intake](references/source-intake.md)
 - 전공별 지원 범위·전용 명령: [majors](references/majors.md)
+- 낙농전공 문서·경로·문체 모듈: [dairy/README](references/dairy/README.md) — 낙농전공(젖소·한우) 질문·문서 계획·근거 검토, 학교 작성요령 기본 목차 및 축종 치환, 낙농 고유 서식·문체(S1), 축산 공식 리서치 경로.
 - 출력 명령·형식별 한계·재무 양식: [outputs](references/outputs.md)
 - 특용·약용작물·생허브 가격 조사 및 공식 통계: [price-research-routes](references/price-research-routes.md) — 일반물가·자재·노무비·판매가 공식 통계 선택표(R1 권고), 판매 시작가는 작성연도 직전 5년 동일 작목·조건 가격 산술평균, 상승률은 같은 창 전국 연간 CPI 총지수 CAGR(4간격), 첫해 무인상·다음해부터 누적. W·S·지수 기준연도 분리, 가격/CPI 각각 5개 연도 완전성, 활성 채널·등급·월별 실제 단가 연결, 부족 자료 보류·실제 공식 후보·사람 선택·재검증 경계. 비용·임금의 독립 역할과 기존 관측 계약 보존, 계획 차원 권위 및 시작 가격 수열 전체 차원 일치 필수, 남녀 상승률 각각 맞는 성별 출처 필요(수식 패치 시 대상 열 성별 대조), 학생 직접 수열(`price_sources`)의 엄격 HTTPS 공식 URL 계약.
 - 재무 엑셀 템플릿 및 물가·노무비 반영: [excel-template](references/excel-template.md) — 템플릿 우선 경로(materialize-d8·wage-map) 및 레거시 경로(price_assumptions) 사용 절차. 패치 수식의 상승률 상수를 Excel 보존 정밀도인 유효숫자 15자리로 직렬화(`_excel_number`)하여 재저장 시 수식 문자열(토큰) 불변 보장, 패치 영수증에 원 계산값 `r`과 수식 표기값 `r_literal` 분리 보존(오차 1e-12 이내 정합), 등록 수열 원단위 값·연도 정확 일치 대조, 성별 없는 수열은 남녀 동일 관측, 성별 있는 수열은 단일 출처 블록에서 거부(남성 수치 여성 복제 금지), 남녀 상승률(`wage_male`·`wage_female`)은 각각 맞는 성별 출처만 허용, 판매가 작목은 문자열·목록·별칭 허용 및 임금 작목 불필요(지역만 가능), 등록 X01 원본 관측 수식 변형(Z27=Z28) 해시 묶음 허용(X01·FX 양쪽 관측 준비 동작), 명시 `unit_conversion` 없는 시간급 환산 불가, 역할별 허용 계약(`allowed_roles`).
