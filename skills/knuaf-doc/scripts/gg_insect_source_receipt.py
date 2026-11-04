@@ -108,7 +108,9 @@ def _read_pinned(path: str, expected_sha256: str,
         # any open, so a named pipe can never block the reader.
         raise ReceiptError("not_regular_file", source_id)
     try:
-        flags = os.O_RDONLY | os.O_NONBLOCK | getattr(os, "O_CLOEXEC", 0)
+        flags = (os.O_RDONLY | getattr(os, "O_NONBLOCK", 0)
+                 | getattr(os, "O_BINARY", 0)
+                 | getattr(os, "O_CLOEXEC", 0))
         if hasattr(os, "O_NOFOLLOW"):
             flags |= os.O_NOFOLLOW
         fd = os.open(path, flags)
@@ -375,8 +377,12 @@ def _extract_xlsx(blob: bytes) -> tuple[dict[str, Decimal], dict[str, str],
         # isolation so lazy reads cannot leak diagnostics (DESIGN 14.5).
         workbook = openpyxl.load_workbook(BytesIO(blob), read_only=True,
                                           data_only=True, keep_links=False)
-        formulas = openpyxl.load_workbook(BytesIO(blob), read_only=True,
-                                          data_only=False, keep_links=False)
+        try:
+            formulas = openpyxl.load_workbook(BytesIO(blob), read_only=True,
+                                              data_only=False, keep_links=False)
+        except BaseException:
+            workbook.close()
+            raise
         try:
             if SHEET not in workbook.sheetnames or SHEET not in formulas.sheetnames:
                 raise ReceiptError("xlsx_required_sheet_missing", "R1")

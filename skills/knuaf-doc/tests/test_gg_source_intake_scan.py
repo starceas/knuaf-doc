@@ -6,9 +6,11 @@ the injected spelling (APFS cannot hold both names). A hashing hook
 provides the deterministic instability trigger.
 """
 
+import contextlib
 import hashlib
 import json
 import os
+import stat
 import sys
 import tempfile
 import unittest
@@ -55,6 +57,39 @@ def run(root_path, reg=None, **kw):
                 key_catalog=key_catalog(), scan_policy=policy())
     args.update(kw)
     return si.run_source_scan(root_path, **args)
+
+
+@contextlib.contextmanager
+def non_regular_entry(path, *, real_fifo=None):
+    """Present a non-regular filesystem entry at ``path``.
+
+    POSIX uses a real FIFO.  Windows cannot create one inside a
+    directory and its other kinds (junctions, symlinks) are classified
+    as symlinks, so the entry is a placeholder file whose ``lstat``
+    result reports ``S_IFIFO`` for exactly that path — the classifier
+    branch under test is the same on both platforms.
+    """
+    path = Path(path)
+    if real_fifo is None:
+        real_fifo = hasattr(os, "mkfifo")
+    if real_fifo:
+        os.mkfifo(path)
+        yield
+        return
+    path.write_bytes(b"")
+    real_lstat = os.lstat
+    target = os.path.normcase(os.path.abspath(str(path)))
+
+    def fifo_lstat(candidate):
+        st = real_lstat(candidate)
+        if os.path.normcase(os.path.abspath(str(candidate))) == target:
+            values = list(st)
+            values[0] = stat.S_IFIFO | (st.st_mode & 0o7777)
+            return os.stat_result(values)
+        return st
+
+    with mock.patch.object(si.os, "lstat", fifo_lstat):
+        yield
 
 
 class TreeFixture(unittest.TestCase):
@@ -110,8 +145,8 @@ class TestBoundaryRejections(TreeFixture):
 
     def test_non_regular_entry(self):
         self.file("keep.txt")
-        os.mkfifo(self.root / "fifo")
-        f = run(self.root)
+        with non_regular_entry(self.root / "fifo"):
+            f = run(self.root)
         self._assert_boundary(f, "non_regular_entry", "fifo")
 
     def test_root_path_symlink(self):
@@ -313,13 +348,23 @@ class TestInvalidRequests(TreeFixture):
         """SCHEMA 10: current_draft is a workspace-relative path or
         null — an absolute path is rejected through the sole
         to_scan_failure conversion site as invalid_scan_request with
-        required_fields naming current_draft, exit 2."""
+        required_fields naming current_draft, exit 2.
+
+        Every root spelling is covered: Python 3.13 changed
+        ntpath.isabs() so a rooted path with no drive ("/abs", "\\abs")
+        is no longer absolute on Windows, while the request contract
+        never depended on the host's path flavour."""
         self.file("a.txt")
-        f = run(self.root, current_draft="/abs/not-relative")
-        self._assert_invalid(f, "invalid_scan_request",
-                             ["current_draft"])
-        self.assertEqual("", f["relative_id"])
-        self.assertIsNone(f["boundary_kind"])
+        for value in ("/abs/not-relative", "\\abs\\not-relative",
+                      "C:/abs/not-relative", "\\\\server\\share\\x",
+                      "C:foo", "C:", "c:folder\\draft.md"):
+            with self.subTest(current_draft=value):
+                f = run(self.root, current_draft=value)
+                self._assert_invalid(f, "invalid_scan_request",
+                                     ["current_draft"])
+                self.assertEqual("", f["relative_id"])
+                self.assertIsNone(f["boundary_kind"])
+                self.assertNotIn("sealed", f)
 
     def test_current_draft_null_and_relative_accepted(self):
         """null stays legal; a workspace-relative string is sealed
@@ -328,9 +373,12 @@ class TestInvalidRequests(TreeFixture):
         f = run(self.root)
         self.assertIn("scan_id", f)
         self.assertIsNone(f["sealed"]["current_draft"])
-        f = run(self.root, current_draft="drafts/d1.md")
-        self.assertIn("scan_id", f)
-        self.assertEqual("drafts/d1.md", f["sealed"]["current_draft"])
+        for value in ("drafts/d1.md", "drafts\\d1.md", "./drafts/d1.md",
+                      "초안 폴더/원고.md", "dir/name:tag.md"):
+            with self.subTest(current_draft=value):
+                f = run(self.root, current_draft=value)
+                self.assertIn("scan_id", f)
+                self.assertEqual(value, f["sealed"]["current_draft"])
 
     def test_missing_root_path(self):
         f = run(self.root.parent / "no-such-dir-xyz")
@@ -815,8 +863,8 @@ class TestTreeInventory(TreeFixture):
         self.file("a.md")
         self.file("d/b.bin")
         os.symlink("a.md", self.root / "lnk")
-        os.mkfifo(self.root / "fifo")
-        inv = si.tree_inventory(self.root)
+        with non_regular_entry(self.root / "fifo"):
+            inv = si.tree_inventory(self.root)
         self.assertEqual("p5-tree-inventory/1", inv["schema"])
         self.assertEqual("external_scan_root", inv["root_kind"])
         by_id = {e["relative_id"]: e for e in inv["entries"]}
@@ -836,6 +884,16 @@ class TestTreeInventory(TreeFixture):
         ids = [e["relative_id"] for e in inv["entries"]]
         self.assertIn("ldir", ids)
         self.assertNotIn("ldir/a.md", ids)
+
+    def test_emulated_non_regular_entry_is_typed_other(self):
+        """The Windows fallback of non_regular_entry (no FIFO primitive)
+        must drive the same classifier branch: a placeholder file whose
+        lstat reports S_IFIFO is typed "other" with no content hash."""
+        with non_regular_entry(self.root / "fifo", real_fifo=False):
+            inv = si.tree_inventory(self.root)
+        by_id = {e["relative_id"]: e for e in inv["entries"]}
+        self.assertEqual("other", by_id["fifo"]["type"])
+        self.assertIsNone(by_id["fifo"]["content_sha256"])
 
 
 if __name__ == "__main__":

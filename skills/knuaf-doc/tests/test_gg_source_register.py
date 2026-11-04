@@ -25,6 +25,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 TESTS = Path(__file__).resolve().parent
 KNUAF_DOC = TESTS.parent
@@ -678,13 +679,19 @@ class TestOutcomeMapping(unittest.TestCase):
             sp = (root / "sources" / "intake"
                   / ("request-%s.staging.json" % rid))
             sp.unlink()   # durable staging record absent -> reconcile
-            # will create+write it; make the write fail
-            sp.parent.chmod(0o555)
-            try:
+            # will create+write it; make that write fail.  A failing
+            # atomic replace is injected instead of chmod: directory
+            # permission bits do not deny writes on Windows.
+            real_atomic = gg_core.atomic
+
+            def fail_staging(path, data):
+                if Path(path).resolve() == sp.resolve():
+                    raise OSError("synthetic staging write fault")
+                return real_atomic(path, data)
+
+            with mock.patch.object(gg_core, "atomic", fail_staging):
                 with self.assertRaises(gg_core.OperationError) as cm:
                     register(root, sel, 0, "req-1")
-            finally:
-                sp.parent.chmod(0o755)
             r = op_error(cm, "committed_cleanup_pending",
                          "staged_release_failed")
             self.assertEqual(r.get("revision"), 1)

@@ -78,7 +78,7 @@ def _manifest_for_bytes(files):
 def _write_fixture_manifest(root):
     (root / "install-manifest.json").write_text(
         json.dumps(_manifest_for_bytes(_tree_bytes(root)), sort_keys=True),
-        encoding="utf-8")
+        encoding="utf-8", newline="")
 
 
 def _write_skill(root, *, version=None, repo="starceas/knuaf-doc",
@@ -89,17 +89,17 @@ def _write_skill(root, *, version=None, repo="starceas/knuaf-doc",
     (root / "scripts").mkdir(parents=True, exist_ok=True)
     text = SKILL_MD_MIN if name == "knuaf-doc" else SKILL_MD_MIN.replace(
         "name: knuaf-doc", "name: " + name)
-    (root / "SKILL.md").write_text(text, encoding="utf-8")
+    (root / "SKILL.md").write_text(text, encoding="utf-8", newline="")
     if version is not None:
         (root / "version.json").write_text(
             json.dumps(_version_doc(version, repo=repo)),
-            encoding="utf-8")
+            encoding="utf-8", newline="")
     if real_report:
         shutil.copy2(SCRIPTS_DIR / "gg_report.py",
                      root / "scripts" / "gg_report.py")
     elif marker:
         (root / "scripts" / "gg_report.py").write_text(
-            REPORT_STUB, encoding="utf-8")
+            REPORT_STUB, encoding="utf-8", newline="")
     if updater:
         shutil.copy2(UPDATE_SCRIPT, root / "scripts" / "gg_update.py")
         (root / "scripts" / "legacy-release-hashes.json").write_bytes(
@@ -113,7 +113,7 @@ def _write_skill(root, *, version=None, repo="starceas/knuaf-doc",
 
 def _tree_bytes(root):
     root = Path(root)
-    return {str(p.relative_to(root)): p.read_bytes()
+    return {p.relative_to(root).as_posix(): p.read_bytes()
             for p in sorted(root.rglob("*"))
             if p.is_file() and not p.is_symlink()}
 
@@ -480,7 +480,7 @@ class UpdateTests(_UpdateCase):
         plugin = json.loads(PLUGIN_JSON_PATH.read_text(encoding="utf-8"))
         self.assertEqual({"schema", "version", "repo"}, set(version))
         self.assertEqual(plugin["version"], version["version"])
-        self.assertEqual("0.4.0", version["version"])
+        self.assertEqual("0.4.1", version["version"])
         for raw in ('{"schema":"knuaf-doc/version@1","version":"0.1.1",'
                     '"repo":"starceas/knuaf-doc","repo":"starceas/knuaf-doc"}',
                     '{"schema":"bad","version":"0.1.1","repo":"starceas/knuaf-doc"}',
@@ -2426,6 +2426,16 @@ class PreservationR3Tests(_UpdateCase):
 
 class IoBoundaryTests(_UpdateCase):
     """R1-04: 예상 가능한 파일시스템 실패를 구조화된 failed로 닫는다."""
+
+    def test_helper_publication_preserves_source_bytes(self):
+        """Windows text-mode os.write would translate LF; the helper copy
+        must be byte-identical to its source."""
+        src = self.tmpdir("helper-src") / "gg_update-helper.py"
+        payload = b"x = 1\r\ny = 2\n"
+        src.write_bytes(payload)
+        dest = self.tmpdir("helper-bin") / "gg_update-copy.py"
+        self.gu._publish_helper_file(str(src), str(dest))
+        self.assertEqual(payload, dest.read_bytes())
 
     def _auto(self, mod):
         conn = _connect(302, [("Location", _loc("0.1.2"))])

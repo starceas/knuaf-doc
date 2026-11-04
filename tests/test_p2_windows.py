@@ -1,7 +1,7 @@
 """P2 lane B tests — Windows-semantics band (P2-L02-win-read,
-P2-L09-native placeholder, P2-P09 Windows no-replace).
+P2-L09-native host check, P2-P09 Windows no-replace).
 
-There is no native Windows host in this environment, so these tests
+There is no native Windows host in this environment, so the band tests
 run a STRICT byte-lock emulator: a port that enforces the real
 msvcrt.locking semantics — a second handle may not read a byte range
 locked by another handle. Under that band the old PR3 pattern (locking
@@ -9,23 +9,38 @@ the owner file bytes and reading them through a second handle) fails,
 while the candidate path (offset-0 lock on a separate 1-byte guard,
 owner I/O on a different file, guard bytes never read) works.
 
-These results are band observations only; native Windows support
-remains withheld until P2-L09-native runs on real Windows+NTFS.
+These band results are not native evidence. Native evidence is
+P2-L09-native, which runs only on a real Windows+NTFS host.
 """
 import errno
 import json
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
 
-from tests._harness import ContractCase, runtime, script_source
+from tests._harness import ContractCase, SCRIPTS, runtime, script_source
 
 gg_fs = runtime("gg_fs")
 gg_lock = runtime("gg_lock")
+
+# A real second process: it acquires the guard through the platform port,
+# reports READY, and holds until this process sends a newline.
+HOLDER = r"""
+import sys
+sys.path.insert(0, %r)
+import gg_lock
+with gg_lock.Lock(sys.argv[1]):
+    sys.stdout.write("READY\n")
+    sys.stdout.flush()
+    sys.stdin.readline()
+sys.stdout.write("RELEASED\n")
+sys.stdout.flush()
+""" % str(SCRIPTS)
 
 
 class StrictWindowsPort:
@@ -128,9 +143,10 @@ class WindowsBandCase(ContractCase):
         os.close(fd2)
 
     def test_ambiguous_contention_is_busy_or_denied(self):
-        """Windows cannot distinguish contention from permission
-        denial: EACCES maps to unavailable/busy_or_denied, never
-        guessed as stale or live-PID."""
+        """When the port cannot carry a Win32 lock-violation code (the
+        msvcrt wrapper reports EACCES for both contention and denial),
+        the state stays unavailable/busy_or_denied — never guessed as
+        stale or live-PID."""
 
         class DenyPort(StrictWindowsPort):
             def lock(self, fd):
@@ -152,6 +168,26 @@ class WindowsBandCase(ContractCase):
         self.assertEqual(result["status"], "completed", result)
         with gg_lock.Lock(self.root):
             pass
+
+    def test_recovery_dir_fsync_limit_is_not_cleanup_pending(self):
+        """A platform without directory fsync (Windows) must still finish
+        recovery: dir_fsync_unsupported is a durability-guarantee limit,
+        never pending cleanup — otherwise every Windows recovery stops
+        at committed_cleanup_pending."""
+        (self.root / "project.json").write_text("{}")
+        real_fsync = gg_fs.fsync_dir
+
+        def limited_fsync(path):
+            if Path(path) == self.root:
+                raise gg_fs.FsError(
+                    "dir_fsync_unsupported", code="unsupported",
+                    operation="fsync_dir", path=path)
+            return real_fsync(path)
+
+        with mock.patch.object(gg_fs, "fsync_dir", limited_fsync):
+            result = gg_lock.upgrade_offline(
+                self.root, offline_confirmed=True)
+        self.assertEqual(result["status"], "completed", result)
 
     def test_identity_unavailable_fails_closed(self):
         """When a filesystem cannot yield a stable inode the identity
@@ -193,9 +229,56 @@ class WindowsBandCase(ContractCase):
     @unittest.skipUnless(sys.platform == "win32",
                          "native Windows+NTFS required — withheld")
     def test_native_windows_two_process_contention(self):
-        """P2-L09-native: real Windows host only. Not run here; support
-        is withheld until this executes on native Windows+NTFS."""
-        self.fail("native Windows run not recorded")
+        """P2-L09-native on a real Windows host: while a separate process
+        holds the guard through the real msvcrt port, this process's
+        acquisition and owner cleanup are refused.  The port cannot tell
+        contention from permission denial, so the documented fail-closed
+        state is unavailable/busy_or_denied.  After the holder exits, a
+        fresh acquisition succeeds.
+
+        Native measurement (WIN-REPRO): byte-lock contention raises
+        PermissionError(errno 13) with no winerror, and probe_lock
+        reports unavailable/busy_or_denied while the guard is held."""
+        # setUp installs the strict emulator; this test needs the real
+        # native port and a real second OS process.
+        gg_lock._PORT = self._saved
+        gg_lock.install_new(self.root)
+        holder = subprocess.Popen(
+            [sys.executable, "-B", "-c", HOLDER, str(self.root)],
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE, text=True, encoding="utf-8")
+        try:
+            line = holder.stdout.readline()
+            self.assertEqual(line.strip(), "READY",
+                             "holder process did not acquire the guard")
+            with self.assertRaises(gg_lock.LockError) as caught:
+                with gg_lock.Lock(self.root):
+                    pass
+            self.assertEqual(caught.exception.status, "unavailable")
+            self.assertEqual(caught.exception.reason, "busy_or_denied")
+            # Owner cleanup is a guard acquisition too: it must refuse.
+            with self.assertRaises(gg_lock.LockError):
+                gg_lock.cleanup_owner(self.root)
+            probed = gg_lock.probe_lock(self.root)
+            self.assertEqual(probed["lock_state"], "unavailable")
+            self.assertEqual(probed["reason"], "busy_or_denied")
+        finally:
+            if holder.poll() is None:
+                try:
+                    holder.stdin.write("\n")
+                    holder.stdin.flush()
+                except OSError:
+                    pass
+            try:
+                _out, err = holder.communicate(timeout=60)
+            except subprocess.TimeoutExpired:
+                holder.kill()
+                _out, err = holder.communicate()
+                raise
+        self.assertEqual(holder.returncode, 0, err)
+        # The exited holder released the OS guard: acquisition works.
+        with gg_lock.Lock(self.root) as cap:
+            gg_lock.assert_held(cap, self.root)
 
 
 if __name__ == "__main__":

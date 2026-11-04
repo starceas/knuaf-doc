@@ -68,11 +68,11 @@ running on another platform, appearing twice, or being absent from a
 completed suite is never silently excused — it is an unexpected failure
 or unapproved skip as applicable.
 
-Skill tests have a separate finite ``ALLOWED_SKILL_SKIPS`` map: only the
-exact test ID and reason may skip for opt-in live Crossref access or an
-unshipped accepted-catalog fixture. These remain visible as skipped, not
-passed, in both runtime entries and ``approved_skill_skips``. Other skips,
-including missing installed runtime dependencies, remain incomplete.
+Skill tests use finite exact-ID/reason lists. ``ALLOWED_SKILL_SKIPS`` covers
+optional external inputs on every platform. ``WINDOW_ONLY_SKILL_SKIPS``
+covers only exact tests for a product path absent on Windows, and only
+when ``sys.platform == "win32"``. The latter remain unapproved on darwin
+and linux. Approved results remain visible as skipped, never passed.
 """
 import argparse
 import io
@@ -185,15 +185,50 @@ ALLOWED_SKILL_SKIPS = {
         "test_gg_source_register.TestArtifacts.test_p4_snapshot_registers",
     ), "accepted g005 catalog tree not present"),
 }
+
+# These seven mocked Office session tests exercise a POSIX fcntl/AppleScript
+# product path absent on Windows. Their exact skip is legitimate only on
+# win32; on darwin/linux the tests must run and a skip is incomplete.
+WINDOW_ONLY_SKILL_SKIP_REASON = (
+    "gg_office_session uses fcntl/AppleScript; Windows uses gg_office_win "
+    "without a session guard. These tests use a mocked transport."
+)
+WINDOW_ONLY_SKILL_SKIPS = dict.fromkeys((
+    "tests.test_skillgaps_wp2_session.OfficeRecoveryTests."
+    "test_blocked_message_carries_runnable_recovery_command",
+    "tests.test_skillgaps_wp2_session.OfficeRecoveryTests."
+    "test_blocked_receipt_on_disk_carries_recovery_command",
+    "tests.test_skillgaps_wp2_session.OfficeRecoveryTests."
+    "test_non_object_guard_json_is_unreadable_and_recoverable",
+    "tests.test_skillgaps_wp2_session.OfficeRecoveryTests."
+    "test_cli_recovers_non_object_guard_as_json",
+    "tests.test_skillgaps_wp2_session.OfficeRecoveryTests."
+    "test_recovery_clears_record_without_touching_job_files",
+    "tests.test_skillgaps_wp2_session.OfficeRecoveryTests."
+    "test_recovery_refuses_while_a_session_holds_the_lock",
+    "tests.test_skillgaps_wp2_session.OfficeRecoveryTests."
+    "test_cli_recovery_is_json_and_exit_zero",
+), WINDOW_ONLY_SKILL_SKIP_REASON)
+WINDOW_ONLY_SKILL_SKIP_RULE = "Windows-only product path (exact id and reason)"
+
+
 SKILL_SKIP_RULE = "optional skill external input (exact id and reason)"
 
 
 def _is_approved_skill_skip(entry):
+    if entry.get("category") != "skipped" or entry.get("events"):
+        return False
+    test_id = entry.get("test")
+    reason = entry.get("detail")
+    if (
+        test_id in ALLOWED_SKILL_SKIPS
+        and ALLOWED_SKILL_SKIPS[test_id] == reason
+    ):
+        return True
     return (
-        entry.get("category") == "skipped"
-        and entry.get("test") in ALLOWED_SKILL_SKIPS
-        and entry.get("detail") == ALLOWED_SKILL_SKIPS[entry["test"]]
-        and not entry.get("events")
+        sys.platform == "win32"
+        and test_id in WINDOW_ONLY_SKILL_SKIPS
+        and WINDOW_ONLY_SKILL_SKIPS[test_id] == reason
     )
 
 
@@ -822,9 +857,12 @@ def main(argv=None):
         if nested_allowed and e["test"] in ALLOWED_NESTED_SKIP_IDS:
             continue
         if _is_approved_skill_skip(e):
+            rule = (
+                WINDOW_ONLY_SKILL_SKIP_RULE
+                if e["test"] in WINDOW_ONLY_SKILL_SKIPS else SKILL_SKIP_RULE
+            )
             approved_skill_skips.append({
-                "test": e["test"], "reason": e["detail"],
-                "rule": SKILL_SKIP_RULE})
+                "test": e["test"], "reason": e["detail"], "rule": rule})
             continue
         unapproved_skips.append({"test": e["test"],
                                  "reason": e.get("detail")})

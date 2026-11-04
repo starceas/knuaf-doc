@@ -306,7 +306,8 @@ class FinanceGateTests(ContractCase):
                 mock.patch.object(self.office, "workbook_worksheet_count",
                                   return_value=1), \
                 mock.patch("openpyxl.load_workbook",
-                           return_value=SimpleNamespace(sheetnames=[])), \
+                           return_value=SimpleNamespace(
+                               sheetnames=[], close=lambda: None)), \
                 mock.patch.object(self.office, "_publish_outputs",
                                   side_effect=lambda **kw: kw["extra_validation"]):
             result = self.office.process_excel(

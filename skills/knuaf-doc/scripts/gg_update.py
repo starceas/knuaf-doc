@@ -680,6 +680,7 @@ def _publish_helper_file(source, dest):
     """기존 도우미·기준 파일은 덮어쓰지 않는다."""
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
     flags |= getattr(os, "O_NOFOLLOW", 0)
+    flags |= getattr(os, "O_BINARY", 0)
     try:
         fd = os.open(str(dest), flags, 0o644)
     except FileExistsError:

@@ -232,31 +232,42 @@ class Utf8IoTests(ContractCase):
         tpl = runtime("gg_excel_template")
         scripts = str(Path(tpl.__file__).resolve().parent)
         snippet = r"""
-import json, locale, sys
+import json, locale, os, sys
 from pathlib import Path
 sys.path.insert(0, sys.argv[1])
 assert sys.flags.utf8_mode == 0
 assert sys.getfilesystemencoding().lower().replace("-", "") == "utf8"
-locale.setlocale(locale.LC_CTYPE, "C")
+if os.name != "nt":
+    locale.setlocale(locale.LC_CTYPE, "C")
 enc = locale.getpreferredencoding(False)
 print("preferred:", enc)
-assert any(t in enc.lower() for t in ("ascii", "ansi")), \
-    "band not active: " + enc
+assert "utf" not in enc.lower(), "band not active: " + enc
+# See test_p1_core: the implicit-failure control applies only to a
+# non-UTF-8 locale that cannot encode Korean (C/cp1252); a Windows ANSI
+# code page such as cp949 still runs the explicit-UTF-8 product flow.
+try:
+    "한글".encode(enc)
+    ascii_band = False
+except UnicodeEncodeError:
+    ascii_band = True
 root = Path(sys.argv[2])
 probe = root / "implicit.txt"
-try:
-    probe.write_text("한글")
-except UnicodeEncodeError:
-    pass
-else:
-    raise AssertionError("implicit Korean text write must fail")
+if ascii_band:
+    try:
+        probe.write_text("한글")
+    except UnicodeEncodeError:
+        pass
+    else:
+        raise AssertionError("implicit Korean text write must fail")
 probe.write_text("한글", encoding="utf-8")
-try:
-    probe.read_text()
-except UnicodeDecodeError:
-    pass
-else:
-    raise AssertionError("implicit Korean text read must fail")
+if ascii_band:
+    try:
+        probe.read_text()
+    except UnicodeDecodeError:
+        pass
+    else:
+        raise AssertionError("implicit Korean text read must fail")
+assert probe.read_text(encoding="utf-8") == "한글"
 import gg_excel_template as tpl
 from openpyxl import Workbook
 src = root / "원본.xlsx"
@@ -294,7 +305,8 @@ print("PASS")
             res = subprocess.run(
                 [sys.executable, "-X", "utf8=0", str(driver), scripts, tmp,
                  str(project)],
-                capture_output=True, text=True, env=env, cwd=tmp)
+                capture_output=True, text=True, encoding="utf-8", env=env,
+                cwd=tmp)
         self.assertEqual(0, res.returncode,
                          f"stdout={res.stdout}\nstderr={res.stderr}")
         self.assertIn("PASS", res.stdout)

@@ -1,0 +1,33 @@
+name: windows-full
+
+on:
+  workflow_dispatch:
+
+jobs:
+  windows-full:
+    name: full suite (windows, py${{ matrix.python }})
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.10', '3.14']
+    env:
+      PYTHONUTF8: '1'
+      PYTHONIOENCODING: utf-8
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - name: Preserve published bytes before checkout
+        shell: bash
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install dependencies
+        run: python -m pip install -r requirements-validation.txt
+      - name: Repository tests
+        run: python -m unittest discover -s tests -t .
+      - name: Skill tests
+        run: python -m unittest discover -s skills/knuaf-doc/tests -t skills/knuaf-doc/tests

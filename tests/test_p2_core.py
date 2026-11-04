@@ -38,7 +38,8 @@ def _env():
 def _cli(root, *args, cwd=None):
     return subprocess.run(
         [sys.executable, "-B", str(SCRIPTS / "gg.py"), *args],
-        capture_output=True, text=True, env=_env(), cwd=cwd or root)
+        capture_output=True, text=True, encoding="utf-8", env=_env(),
+        cwd=cwd or root)
 
 
 def _seed(root):
@@ -220,7 +221,9 @@ class AdoptOutputContractTests(ContractCase):
         self.assertEqual("adopted", value["status"])
         managed = Path(value["path"])
         self.assertTrue(managed.is_file())
-        self.assertIn(".gg-artifacts/", value["path"])
+        self.assertTrue(
+            managed.resolve().relative_to(Path(root).resolve())
+            .as_posix().startswith(".gg-artifacts/"))
         p = core.load(root)
         entry = p["requests"]["adopt-1"]
         self.assertEqual("adopt_output", entry["kind"])
@@ -1427,12 +1430,6 @@ class CapabilityBoundaryTests(ContractCase):
                     core.export_locked(root, "draft", capability=forged)
         self.assertEqual(before, self._tree_bytes(root))
 
-    def _tree_bytes(self, root):
-        return {
-            str(p.relative_to(root)): p.read_bytes()
-            for p in sorted(root.rglob("*")) if p.is_file()
-        }
-
 
 class ImportPayloadTests(ContractCase):
     """P12 extras: the destination gets a fresh workspace identity —
@@ -1746,7 +1743,8 @@ class OperationDetailContractTests(ContractCase):
         root = Path("/w3/work")
         self.assertEqual(
             {"code": "duplicate_path", "field": "path", "index": 2,
-             "missing": ["format"], "path": "x/y.md"},
+             "missing": ["format"],
+             "path": str(Path("x") / "y.md")},
             core._diag_safe(root, {
                 "code": "duplicate_path", "field": "path", "index": 2,
                 "missing": ["format", "bad field"], "fact_id": "f1:x-y.z",

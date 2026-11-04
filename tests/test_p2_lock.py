@@ -17,13 +17,21 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from tests._harness import ContractCase, runtime, script_source
 
 gg_fs = runtime("gg_fs")
 gg_lock = runtime("gg_lock")
+gg_winfs = runtime("gg_winfs")
 
 SCRIPTS = gg_fs.__file__ and str(Path(gg_lock.__file__).parent)
+
+# The Windows byte-range port surfaces contention and permission denial
+# with the same errno, so gg_lock documents it as fail-closed:
+# unavailable/busy_or_denied (module contract, "ambiguous_contention").
+# The POSIX "busy" contract is therefore asserted on POSIX hosts.
+WIN32_LOCK_PORT = sys.platform == "win32"
 
 
 def _env():
@@ -144,6 +152,22 @@ class FsPrimitivesCase(ContractCase):
                 gg_fs.fd_identity(fd, kind="file"), ident))
         finally:
             os.close(fd)
+
+    def test_windows_identity_refusal_reason_is_preserved(self):
+        """gg_fs must report the Windows refusal that actually happened,
+        not collapse every identity failure into
+        windows_identity_failed (symlink_reparse is part of the
+        no-follow contract callers branch on)."""
+        for reason in ("symlink_reparse", "object kind mismatch",
+                       "identity_unavailable"):
+            with self.subTest(reason=reason), \
+                    mock.patch.object(gg_fs.sys, "platform", "win32"), \
+                    mock.patch.object(
+                        gg_fs.gg_winfs, "identity",
+                        side_effect=gg_winfs._InfoFailure(reason)):
+                with self.assertRaises(gg_fs.FsError) as caught:
+                    gg_fs.identity(self.root / "f.txt", kind="file")
+                self.assertEqual(caught.exception.reason, reason)
 
     def test_rename_noreplace_file_and_directory(self):
         src = self.root / "src.txt"
@@ -368,12 +392,16 @@ class LockAcquireCase(ContractCase):
         try:
             with self.assertRaises(gg_lock.LockError) as cm:
                 gg_lock.Lock(self.root).__enter__()
-            self.assertEqual(cm.exception.status, "busy")
+            expected = (("unavailable", "busy_or_denied") if WIN32_LOCK_PORT
+                        else ("busy", "guard_busy"))
+            self.assertEqual(
+                (cm.exception.status, cm.exception.reason), expected)
             # Candidate unlock cannot break a real held guard.
             with self.assertRaises(gg_lock.LockError):
                 gg_lock.cleanup_owner(self.root)
             self.assertEqual(
-                gg_lock.probe_lock(self.root)["lock_state"], "busy")
+                gg_lock.probe_lock(self.root)["lock_state"],
+                "unavailable" if WIN32_LOCK_PORT else "busy")
         finally:
             _release_holder(holder)
         # After release a new writer can enter.

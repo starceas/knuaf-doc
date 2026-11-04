@@ -6,13 +6,14 @@ the return-contract opinion of 14.8.  Every fixture is synthetic — no real
 R0/R1 bytes, no private paths.
 """
 
-from contextlib import redirect_stdout, redirect_stderr
+from contextlib import contextmanager, redirect_stdout, redirect_stderr
 from io import StringIO
 import hashlib
 import inspect
 import json
 import logging
 import os
+import stat
 from pathlib import Path
 import sys
 import tempfile
@@ -132,6 +133,35 @@ R1_BASE_CELLS = {
 }
 
 
+@contextmanager
+def non_regular_entry(path):
+    """Present a non-regular filesystem entry at ``path``.
+
+    POSIX uses a real FIFO.  Windows has no FIFO primitive, so the entry
+    is a placeholder file whose ``lstat`` result reports ``S_IFIFO`` for
+    exactly that path — the product's regular-file precheck still runs.
+    """
+    path = Path(path)
+    if hasattr(os, "mkfifo"):
+        os.mkfifo(path)
+        yield
+        return
+    path.write_bytes(b"")
+    real_lstat = os.lstat
+    target = os.path.normcase(os.path.abspath(str(path)))
+
+    def fifo_lstat(candidate):
+        st = real_lstat(candidate)
+        if os.path.normcase(os.path.abspath(str(candidate))) == target:
+            values = list(st)
+            values[0] = stat.S_IFIFO | (st.st_mode & 0o7777)
+            return os.stat_result(values)
+        return st
+
+    with mock.patch.object(receipt.os, "lstat", fifo_lstat):
+        yield
+
+
 class SourceReceiptTests(ContractCase):
     def setUp(self):
         temp = tempfile.TemporaryDirectory()
@@ -209,24 +239,52 @@ class SourceReceiptTests(ContractCase):
         self.assertEqual("gg-insect-source-receipt/2", receipt.SCHEMA)
         self.assertEqual("gg-insect-source-receipt/2", self._verify()["schema"])
 
+    def test_extract_closes_first_workbook_when_second_load_fails(self):
+        """A failure between the two read-only loads must not leak the first."""
+        class WorkbookStub:
+            closed = False
+
+            def close(self):
+                self.closed = True
+
+        first = WorkbookStub()
+        with mock.patch(
+                "openpyxl.load_workbook",
+                side_effect=[first, OSError("synthetic second load")]):
+            with self.assertRaises(receipt.ReceiptError) as caught:
+                receipt._extract_xlsx(b"synthetic")
+        self.assertEqual("xlsx_parse_failed", caught.exception.reason)
+        self.assertTrue(first.closed)
+
+    def test_pinned_read_returns_raw_crlf_bytes(self):
+        """Windows CRT text mode would translate CRLF on read; the pinned
+        audit compares byte counts and hashes, so the fd must be binary."""
+        path = self.root / "crlf-bytes.bin"
+        data = b"header\r\nrow\r\n"
+        path.write_bytes(data)
+        blob, digest = receipt._read_pinned(
+            str(path), hashlib.sha256(data).hexdigest(), "R1")
+        self.assertEqual(data, blob)
+        self.assertEqual(hashlib.sha256(data).hexdigest(), digest)
+
     def test_non_regular_inputs_refused_before_open(self):
         pins = self._pins()
         fifo = self.root / "fifo-source.pdf"
-        os.mkfifo(fifo)
         link = self.root / "linked.pdf"
         os.symlink(self.pdf, link)
-        for path in (fifo, self.root, link):
-            with self.subTest(path=path.name):
-                try:
-                    receipt._verify_with_pins(
-                        str(path), str(self.xlsx),
-                        expected_pdf_sha256="0" * 64,
-                        expected_xlsx_sha256=pins["expected_xlsx_sha256"])
-                except receipt.ReceiptError as error:
-                    self.assertIn(error.reason,
-                                  {"not_regular_file", "source_unreadable"})
-                else:
-                    self.fail("non-regular input accepted")
+        with non_regular_entry(fifo):
+            for path in (fifo, self.root, link):
+                with self.subTest(path=path.name):
+                    try:
+                        receipt._verify_with_pins(
+                            str(path), str(self.xlsx),
+                            expected_pdf_sha256="0" * 64,
+                            expected_xlsx_sha256=pins["expected_xlsx_sha256"])
+                    except receipt.ReceiptError as error:
+                        self.assertIn(error.reason,
+                                      {"not_regular_file", "source_unreadable"})
+                    else:
+                        self.fail("non-regular input accepted")
 
     def test_argparse_error_is_fixed_json_without_argv_echo(self):
         marker = self.root / "SECRET-MARKER" / "arg.pdf"

@@ -10,8 +10,12 @@ name: validation
 # - Dependencies are limited to the runtime requirements resolved through
 #   requirements-validation.txt. The validation layer adds no third-party
 #   packages.
-# - Ubuntu runs the full suite. Windows structural integrity is preserved;
-#   a separate native Windows publication job runs Python 3.10 and 3.14.
+# - Ubuntu runs the full suite through tools/run_validation.py. The full
+#   Windows suite is a separate workflow_dispatch-only workflow
+#   (windows-full.yml); it is intentionally absent from PR/push checks.
+#   Windows structural and native publication jobs remain PR gates. The
+#   run_validation policy wrapper remains Ubuntu-only until it learns the
+#   win32 external-gate policy.
 # - Native publication execution does not claim Office automation coverage.
 
 on:
@@ -405,3 +409,4 @@ jobs:
             ${{ runner.temp }}/native-bundle-report.json
             ${{ runner.temp }}/native-publication-report.json
           if-no-files-found: error
+

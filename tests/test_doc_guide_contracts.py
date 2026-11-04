@@ -109,7 +109,8 @@ def _env():
 def _cli(*args, cwd=None):
     return subprocess.run(
         [sys.executable, "-B", str(SCRIPTS / "gg.py"), *args],
-        capture_output=True, text=True, env=_env(), cwd=cwd)
+        capture_output=True, text=True, encoding="utf-8", env=_env(),
+        cwd=cwd)
 
 
 def _doc():
@@ -275,7 +276,7 @@ class ApplyExampleRunsAsDocumented(unittest.TestCase):
         for line in script.strip().splitlines():
             argv = self._argv(line, change_path)
             proc = subprocess.run(argv, capture_output=True, text=True,
-                                  env=_env(), cwd=self.tmp)
+                                  encoding="utf-8", env=_env(), cwd=self.tmp)
             self.assertEqual(0, proc.returncode,
                              line + "\n" + proc.stdout + proc.stderr)
             results[argv[3]] = _payload(proc)

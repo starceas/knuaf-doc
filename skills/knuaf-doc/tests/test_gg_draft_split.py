@@ -37,7 +37,7 @@ def run_gg(*args):
     env["PYTHONDONTWRITEBYTECODE"] = "1"
     return subprocess.run(
         [sys.executable, "-B", str(ROOT / "scripts" / "gg.py"), *args],
-        capture_output=True, text=True, env=env)
+        capture_output=True, text=True, encoding="utf-8", env=env)
 
 
 NORMAL = """표지 페이지

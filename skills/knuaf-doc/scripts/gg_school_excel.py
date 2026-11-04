@@ -1902,7 +1902,6 @@ def crosscheck_body_workbook(text, path, scope):
     contradicts it.  A missing or non-numeric cached value is reported as
     ``blocked`` so an unrecalculated workbook cannot masquerade as a mismatch.
     """
-    issues = []
     if not isinstance(text, str):
         return [{"location": "body", "status": "fail", "reason": "본문 텍스트 없음"}]
     scope = str(scope or "").strip()
@@ -1916,6 +1915,15 @@ def crosscheck_body_workbook(text, path, scope):
         ]
     from openpyxl import load_workbook
 
+    wb = load_workbook(path, read_only=True, data_only=True)
+    try:
+        return _crosscheck_with_workbook(wb, text, scope)
+    finally:
+        wb.close()
+
+
+def _crosscheck_with_workbook(wb, text, scope):
+    issues = []
     num_pattern = r"[+-]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?(?![\d.,])"
     scope_p = re.escape(scope)
     sentences = re.split(
@@ -1926,7 +1934,6 @@ def crosscheck_body_workbook(text, path, scope):
     for sent in sentences:
         clauses.extend(re.split(r",\s+(?=[^\d])", sent))
 
-    wb = load_workbook(path, read_only=True, data_only=True)
     for loc in A26_CLAIM_LOCATORS:
         label = loc["label"]
         v_sheet, v_cell = loc["value_ref"]
@@ -2213,35 +2220,41 @@ def inspect_outputs(root, p, lineage=None):
                 # Generic integrity gate: do not apply legacy coordinates or
                 # school-specific formulas to a supplied template.
                 wb_formula = load_workbook(path, read_only=True, data_only=False)
-                names = wb_formula.sheetnames
-                if len(names) != 17:
-                    raise ValueError("제공 템플릿 17시트 무결성 불일치")
-                error_tokens = re.compile(
-                    r"#(?:REF!|VALUE!|DIV/0!|N/A|NAME\?|NUM!|NULL!|SPILL!|CALC!|BLOCKED!|CONNECT!|UNKNOWN!)"
-                )
-                for ws in wb_formula.worksheets:
-                    for row in ws.iter_rows():
-                        for cell in row:
-                            value = cell.value
-                            if cell.data_type == "e" or (
-                                isinstance(value, str)
-                                and cell.data_type == "f"
-                                and error_tokens.search(value)
-                            ):
-                                raise ValueError(
-                                    f"native workbook error token: {ws.title}!{cell.coordinate}"
-                                )
-                wb_values = load_workbook(path, read_only=True, data_only=True)
-                for ws in wb_values.worksheets:
-                    for row in ws.iter_rows():
-                        for cell in row:
-                            value = cell.value
-                            if cell.data_type == "e" or (
-                                isinstance(value, str) and error_tokens.fullmatch(value.strip())
-                            ):
-                                raise ValueError(
-                                    f"native workbook cached error: {ws.title}!{cell.coordinate}"
-                                )
+                try:
+                    names = wb_formula.sheetnames
+                    if len(names) != 17:
+                        raise ValueError("제공 템플릿 17시트 무결성 불일치")
+                    error_tokens = re.compile(
+                        r"#(?:REF!|VALUE!|DIV/0!|N/A|NAME\?|NUM!|NULL!|SPILL!|CALC!|BLOCKED!|CONNECT!|UNKNOWN!)"
+                    )
+                    for ws in wb_formula.worksheets:
+                        for row in ws.iter_rows():
+                            for cell in row:
+                                value = cell.value
+                                if cell.data_type == "e" or (
+                                    isinstance(value, str)
+                                    and cell.data_type == "f"
+                                    and error_tokens.search(value)
+                                ):
+                                    raise ValueError(
+                                        f"native workbook error token: {ws.title}!{cell.coordinate}"
+                                    )
+                    wb_values = load_workbook(path, read_only=True, data_only=True)
+                    try:
+                        for ws in wb_values.worksheets:
+                            for row in ws.iter_rows():
+                                for cell in row:
+                                    value = cell.value
+                                    if cell.data_type == "e" or (
+                                        isinstance(value, str) and error_tokens.fullmatch(value.strip())
+                                    ):
+                                        raise ValueError(
+                                            f"native workbook cached error: {ws.title}!{cell.coordinate}"
+                                        )
+                    finally:
+                        wb_values.close()
+                finally:
+                    wb_formula.close()
             except (
                 OSError,
                 ValueError,
@@ -2264,7 +2277,11 @@ def inspect_outputs(root, p, lineage=None):
             continue
         try:
             path = local(root, output["path"])
-            names = load_workbook(path, read_only=True).sheetnames
+            names_book = load_workbook(path, read_only=True)
+            try:
+                names = names_book.sheetnames
+            finally:
+                names_book.close()
             if len(names) != 17 and not (set(names) & set(SCHOOL_SHEETS)):
                 continue
             for item in inspect_school_workbook(path):

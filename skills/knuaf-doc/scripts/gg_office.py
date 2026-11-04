@@ -1462,6 +1462,10 @@ def process_excel(
             from gg_school_excel import SCHOOL_SHEETS, inspect_school_workbook
 
             wb_temp = load_workbook(staged_work, read_only=True)
+            try:
+                wb_sheetnames = wb_temp.sheetnames
+            finally:
+                wb_temp.close()
 
             is_school_spec = False
             if spec_file:
@@ -1473,7 +1477,7 @@ def process_excel(
                     pass
 
             has_school_sheets = _legacy_school_check_applies(
-                wb_temp.sheetnames, is_school_spec, SCHOOL_SHEETS)
+                wb_sheetnames, is_school_spec, SCHOOL_SHEETS)
 
             if is_school_spec or has_school_sheets:
                 school_validation_status = "evaluated"

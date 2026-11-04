@@ -179,8 +179,10 @@ def identity(path, *, kind):
             raise FsError("stat_failed", code=errno.ENOENT,
                           operation="identity", path=path) from error
         except (OSError, ValueError) as error:
-            raise FsError("windows_identity_failed", code=getattr(error, "winerror", None),
-                          operation="identity", path=path) from error
+            raise FsError(
+                getattr(error, "reason", "windows_identity_failed"),
+                code=getattr(error, "winerror", None),
+                operation="identity", path=path) from error
     try:
         st = os.lstat(path)
     except OSError as error:
@@ -199,8 +201,10 @@ def fd_identity(fd, *, kind):
         try:
             return gg_winfs.fd_identity(fd, kind)
         except OSError as error:
-            raise FsError("windows_identity_failed", code=getattr(error, "winerror", None),
-                          operation="fd_identity", path=None) from error
+            raise FsError(
+                getattr(error, "reason", "windows_identity_failed"),
+                code=getattr(error, "winerror", None),
+                operation="fd_identity", path=None) from error
     try:
         st = os.fstat(fd)
     except OSError as error:

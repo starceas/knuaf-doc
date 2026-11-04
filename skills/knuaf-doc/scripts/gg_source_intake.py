@@ -45,6 +45,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import ntpath
 import os
 import platform
 import stat as _stat
@@ -52,7 +53,7 @@ import sys
 import time
 import unicodedata
 from datetime import datetime, timezone
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 import gg_fs
 import gg_lock
@@ -610,6 +611,27 @@ def tree_inventory(root_path):
 # site turns these into ScanFailure; they never escape run_source_scan)
 
 
+def _is_absolute_request_path(value):
+    """True for any value the request contract calls an absolute path.
+
+    ``os.path.isabs`` is host-dependent.  On Windows it is
+    ``ntpath.isabs``, which since Python 3.13 treats a rooted path with
+    no drive (``/abs``, ``\\abs``) as relative; the same string is
+    absolute on 3.10.  A workspace-relative request must never name a
+    root on any host, so check both spellings explicitly.
+
+    A drive prefix (``C:foo``, ``C:``) is also refused: on Windows it
+    names a location relative to that drive's current directory, not to
+    the workspace, and ``ntpath.isabs`` reports it as relative.  Only a
+    leading drive is rejected — a colon inside a relative component
+    (``dir/name:tag.md``) stays legal.
+    """
+    return (os.path.isabs(value)
+            or ntpath.isabs(value)
+            or bool(PureWindowsPath(value).drive)
+            or value[:1] in ("/", "\\"))
+
+
 def _validate_inputs(root_path, root, classification_version, registry,
                      key_catalog, requested_use):
     if not isinstance(registry, gg_reuse.RegistryResolution):
@@ -663,7 +685,7 @@ def scan_external_root(root_path, *, root, classification_version,
                               registry)
     if current_draft is not None and (
             not isinstance(current_draft, str)
-            or os.path.isabs(current_draft)):
+            or _is_absolute_request_path(current_draft)):
         raise ScanRequestError("invalid_scan_request", ["current_draft"],
                                "must be a workspace-relative path or null")
 

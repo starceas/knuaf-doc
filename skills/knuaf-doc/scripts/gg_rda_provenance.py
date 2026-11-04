@@ -673,7 +673,11 @@ def register_snapshot(resolved: ResolvedObservation, *,
                 f"snapshot {path} already holds different bytes — "
                 f"snapshots are immutable")
     else:
-        path.write_text(data, encoding="utf-8")
+        # Write the exact UTF-8 bytes: text mode translates "\n" to
+        # "\r\n" on Windows, and the re-registration comparison above
+        # reads raw bytes, so a translated snapshot would conflict with
+        # its own canonical content.
+        path.write_bytes(data.encode("utf-8"))
     return SnapshotReceipt(path=str(path), sha256=sha256_file(path),
                            audit_key=key,
                            written_utc=datetime.now(timezone.utc).isoformat())
