@@ -10,11 +10,12 @@ name: validation
 # - Dependencies are limited to the runtime requirements resolved through
 #   requirements-validation.txt. The validation layer adds no third-party
 #   packages.
-# - Ubuntu runs the full suite through tools/run_validation.py. Windows
-#   runs the same two test directories with the same unittest discovery
-#   under a UTF-8 environment (windows-full), plus the existing structural
-#   and native publication jobs. The run_validation policy wrapper remains
-#   Ubuntu-only until it learns the win32 external-gate policy.
+# - Ubuntu runs the full suite through tools/run_validation.py. The full
+#   Windows suite is a separate workflow_dispatch-only workflow
+#   (windows-full.yml); it is intentionally absent from PR/push checks.
+#   Windows structural and native publication jobs remain PR gates. The
+#   run_validation policy wrapper remains Ubuntu-only until it learns the
+#   win32 external-gate policy.
 # - Native publication execution does not claim Office automation coverage.
 
 on:
@@ -409,36 +410,3 @@ jobs:
             ${{ runner.temp }}/native-publication-report.json
           if-no-files-found: error
 
-  windows-full:
-    # The Ubuntu job runs both test directories with unittest discovery
-    # (inside tools/run_validation.py) under a UTF-8 environment.  This
-    # job runs the same discovery directly: the policy wrapper does not
-    # yet model the win32 external-gate outcome, and a Windows regression
-    # must still block the pull request.  Structural and publication
-    # checks stay in their own jobs.
-    name: full suite (windows, py${{ matrix.python }})
-    runs-on: windows-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python: ['3.10', '3.14']
-    env:
-      PYTHONUTF8: '1'
-      PYTHONIOENCODING: utf-8
-      PYTHONDONTWRITEBYTECODE: '1'
-    steps:
-      - name: Preserve published bytes before checkout
-        shell: bash
-        run: git config --global core.autocrlf false
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python }}
-      - name: Install dependencies
-        run: python -m pip install -r requirements-validation.txt
-      - name: Repository tests
-        run: python -m unittest discover -s tests -t .
-      - name: Skill tests
-        run: python -m unittest discover -s skills/knuaf-doc/tests -t skills/knuaf-doc/tests
