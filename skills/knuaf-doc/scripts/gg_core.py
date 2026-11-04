@@ -4342,7 +4342,7 @@ def checks(root, p):
             getattr(gg_document, "WARNING_CHECKS", ())
         ) | set(getattr(gg_document, "POLICY_ADVISORY_CHECKS", ()))
         for cid, reason in gg_document.check(
-            merged(root, p), root, major_id=plain_major
+            merged(root, p), root, major_id=plain_major, project_root=root
         ):
             if cid == "plain_policy_file":
                 continue  # 정책 파일 오류는 위 출처 블록이 한 번 낸다

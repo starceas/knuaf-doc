@@ -232,6 +232,9 @@ def main(argv=None):
                                 proposals["question"]["proposal"], facts)
                         )
                         value["dairy_switch"] = switch
+                        value["dairy_notices"] = (
+                            major_contract.dairy_notices(facts)
+                        )
                 elif a.command == "insect-plan":
                     import gg_insect_document
 

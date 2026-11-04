@@ -191,6 +191,110 @@ class DairyModuleTests(unittest.TestCase):
         self.assertEqual(mc.evaluate_dairy_switch(only_old),
                          "livestock_type_required")
 
+    def test_major_plan_reports_year_switch_and_livestock_notices(self):
+        def fact(record_id, field, value, superseded=False):
+            record = {
+                "id": record_id, "revision": 1,
+                "field_id": "dairy." + field, "kind": "reported_fact",
+                "value": value, "unit": None, "value_type": "text",
+                "period": None, "scope": "project",
+                "answer_state": "provided",
+                "verification": "claim_supported",
+                "source_refs": [{"id": "s1", "locator": "line 1",
+                                 "revision": 1}],
+            }
+            if superseded:
+                record["verification"] = "superseded"
+            return record
+
+        def plan(*records):
+            with tempfile.TemporaryDirectory() as temp:
+                gg_core.init(temp)
+                project_path = Path(temp) / "project.json"
+                project = json.loads(
+                    project_path.read_text(encoding="utf-8"))
+                (Path(temp) / "note.txt").write_text(
+                    "전공: 낙농\n", encoding="utf-8")
+                project["sources"] = {
+                    "s1": {"id": "s1", "revision": 1, "path": "note.txt",
+                           "claims": {}, "claim_review": "synthetic"}}
+                project["facts"] = {
+                    "major": {
+                        "id": "major", "revision": 1,
+                        "field_id": mc.COMMON_MAJOR_FIELD,
+                        "kind": "reported_fact", "value": "dairy",
+                        "unit": None, "value_type": "text",
+                        "period": None, "scope": "project",
+                        "answer_state": "provided",
+                        "verification": "claim_supported",
+                        "source_refs": [{"id": "s1", "locator": "line 1",
+                                         "revision": 1}],
+                        "module_version": "0.1.0"},
+                    **{record["id"]: record for record in records},
+                }
+                project_path.write_text(
+                    json.dumps(project), encoding="utf-8")
+                output, errors = io.StringIO(), io.StringIO()
+                with contextlib.redirect_stdout(output), \
+                        contextlib.redirect_stderr(errors):
+                    code = gg.main(["major-plan", temp, "--major", "dairy"])
+                self.assertEqual(code, 0, errors.getvalue())
+                return json.loads(output.getvalue())
+
+        # 2027 시작 + 한우 일관사육: 연도 이동 경고만.
+        result = plan(
+            fact("year", "plan_year", "2027년"),
+            fact("livestock", "livestock_type", "hanwoo"),
+            fact("mode", "operation_mode", "integrated"),
+        )
+        self.assertEqual(result["dairy_switch"], "ready")
+        self.assertEqual([notice["id"] for notice in result["dairy_notices"]],
+                         ["dairy_plan_year_shift"])
+        self.assertIn("2026~2031", result["dairy_notices"][0]["message"])
+
+        # 2026 시작 + 젖소 착유: 학교 엑셀이 한우 구조라는 경고만.
+        result = plan(
+            fact("year", "plan_year", 2026),
+            fact("livestock", "livestock_type", "dairy_cattle"),
+            fact("mode", "operation_mode", "milking"),
+        )
+        self.assertEqual(
+            [notice["id"] for notice in result["dairy_notices"]],
+            ["dairy_school_excel_hanwoo_only"])
+
+        # 축종 미정: 착수 전 확정 안내.
+        result = plan(fact("year", "plan_year", "2026년"))
+        self.assertEqual(
+            [notice["id"] for notice in result["dairy_notices"]],
+            ["dairy_switch_pending"])
+        self.assertIn("엑셀·본문 착수 전 축종 확정 필요",
+                      result["dairy_notices"][0]["message"])
+
+        # 대체된 2027 답은 연도 경고를 만들지 않는다.
+        result = plan(
+            fact("old-year", "plan_year", "2027년", superseded=True),
+            fact("year", "plan_year", "2026년"),
+            fact("livestock", "livestock_type", "hanwoo"),
+            fact("mode", "operation_mode", "fattening"),
+        )
+        self.assertEqual(result["dairy_notices"], [])
+
+    def test_dairy_notices_skip_unknown_and_ambiguous_years(self):
+        def fact(value):
+            return {"field_id": "dairy.plan_year",
+                    "answer_state": "provided", "value": value}
+
+        def year_notices(facts):
+            return [notice["id"] for notice in mc.dairy_notices(facts)
+                    if notice["id"] == "dairy_plan_year_shift"]
+
+        self.assertEqual(year_notices({}), [])
+        self.assertEqual(year_notices({"y": fact("계획 기간 5년")}), [])
+        self.assertEqual(
+            year_notices({"a": fact("2027년"), "b": fact("2028년")}), [])
+        self.assertEqual(year_notices({"y": fact("2027년")}),
+                         ["dairy_plan_year_shift"])
+
     def test_summary_unicode_chapters_and_dairy_table_exemptions(self):
         text = "# 요 약\n# Ⅰ. 사업의 목적\n# Ⅱ. 투자분석결과\n# Ⅲ. 손익계산서\n# Ⅳ. 자금운용계획\n# 1. 머리말\n# 2. 농업환경분석\n"
         parsed = gg_document.parse(text, major_id="dairy")

@@ -157,7 +157,8 @@ python3 <스킬>/scripts/gg.py major-plan <폴더>
 
 ## 주요 보조 스크립트
 
-- `python3 scripts/build_hwpx.py <폴더> --major <전공ID>`: HWPX 검토본 생성(여백·쪽번호·신명조 후처리). [outputs](outputs.md)
-- `python3 scripts/build_docx.py <폴더> --in <MD> --out <DOCX> --major <전공ID>`: DOCX 검토본 빌드.
+- `python3 scripts/build_hwpx.py <폴더> --major <전공ID>`: HWPX 검토본 생성(여백·쪽번호·신명조 후처리). 논문 HWPX는 이 경로로만 생성하며, kordoc `generate`의 보고서·기안문·계획서 프리셋은 공문서용이라 논문에 쓰지 않는다. [outputs](outputs.md)
+- `python3 scripts/build_docx.py <폴더> --in <MD> --out <DOCX> --major <전공ID>`: DOCX 검토본 빌드. 목차·표 목차·그림 목차 쪽번호는 필드(PAGEREF·TOC)와 `gg_office.py word` 재조판·필드 갱신으로만 채우며 손으로 적지 않는다. [outputs](outputs.md)
+- `python3 scripts/gg_toc_check.py <DOCX> --json <증거경로>`: DOCX 목차 필드 및 고정 쪽번호 검사 도구. 탭 뒤 일반 글자 고정 번호나 미갱신 필드(`?`)를 검출한다(결과 finding id: `TOC-PAGE-NUMBERS`). [outputs](outputs.md) · [cross-review](cross-review.md)
 - `python3 scripts/gg_deps.py ensure <폴더>`: 작업폴더 venv와 런타임 의존성 준비.
 - `python3 scripts/gg_update.py auto`: 업데이트 확인·적용·복구. [update](update.md)
