@@ -260,7 +260,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "c57c76e10f899b96317fc4f4363e8bf8e3b0183fd9e4633068fde32d05201766",
+      "after_sha256": "2d99dd0678f3170ee44fc5485c8e7a69fd0978431ea039ed48d114a29969e164",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "F-CI1 / G-output-guards",
@@ -1287,12 +1287,12 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_document.py": {
-      "after_sha256": "2a7f766b5ecc09f4c5df9bfb2a3b32b593aeeb30b1c21b08f7bffcaf57454c73",
+      "after_sha256": "36bb5cbc55b76d6b73be228c06ca92da3ef330f789fb040d217a73cb6bafc626",
       "before_sha256": "e83eee6a94393e407a727979c6e5f6e5545f17ca7291e745c68d66dcb835a8b3",
       "first_changed": "P1",
       "last_changed": "P28",
       "owner": "P28",
-      "reason": "H1: '<'·'^' 병합 계속 표식을 빈칸으로 분류(_filled_cell) | P28: plain_policy_check — 금칙어·제한 용어·머리말 길이·캡션·표/그림 출처 표기·사진 자리·AI 이미지 검사 | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존 | F2: V2 재확인 수용에 따라 같은 파서 계층의 첫 장/장 경계와 원문 span을 적용하고 명시적 외부 유형 충돌 거부·수동 신뢰 계약을 문서화; 설치 manifest 재생성. 기초 정본·단계·부모 계보·원본 source pin 보존 | F3: 전역 Markdown 유무 판정을 제거하고 prefix-only 공통 제목 규칙·요약 단일 종료·번호 공백 문법으로 통일; 설치 manifest 재생성. 원본/부모 계보·stage·source pin 보존 | R-v0.4.1: policy path no longer resolves cwd at import (Windows unreadable cwd) | F1 C2/CB/CA: display_precision·unit_conflict·sample_identity(error), sample_identity_unconfirmed·sample_trace_review(warning), check(project_root=None). | F1 V9-01/05: 다음 표 단위 선언 비귀속, 줄바꿈 학생 이름 먼저 완성. | V10: 이전 표 주석 줄을 다음 표 앞쪽 단위 선언으로 받지 않음.",
+      "reason": "H1: '<'·'^' 병합 계속 표식을 빈칸으로 분류(_filled_cell) | P28: plain_policy_check — 금칙어·제한 용어·머리말 길이·캡션·표/그림 출처 표기·사진 자리·AI 이미지 검사 | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존 | F2: V2 재확인 수용에 따라 같은 파서 계층의 첫 장/장 경계와 원문 span을 적용하고 명시적 외부 유형 충돌 거부·수동 신뢰 계약을 문서화; 설치 manifest 재생성. 기초 정본·단계·부모 계보·원본 source pin 보존 | F3: 전역 Markdown 유무 판정을 제거하고 prefix-only 공통 제목 규칙·요약 단일 종료·번호 공백 문법으로 통일; 설치 manifest 재생성. 원본/부모 계보·stage·source pin 보존 | R-v0.4.1: policy path no longer resolves cwd at import (Windows unreadable cwd) | F1 C2/CB/CA: display_precision·unit_conflict·sample_identity(error), sample_identity_unconfirmed·sample_trace_review(warning), check(project_root=None). | F1 V9-01/05: 다음 표 단위 선언 비귀속, 줄바꿈 학생 이름 먼저 완성. | V10: 이전 표 주석 줄을 다음 표 앞쪽 단위 선언으로 받지 않음. | PR71 리뷰: 굵게·기울임 강조된 금액 칸·머리칸도 숫자 검사.",
       "source": "adopted:PR2"
     },
     "skills/knuaf-doc/scripts/gg_doi.py": {

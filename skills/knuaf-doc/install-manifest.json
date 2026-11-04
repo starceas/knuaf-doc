@@ -124,7 +124,7 @@
   "scripts/gg_commands.py": "43d4fcd4ed0ee65cbfdfdf5cec4d18e591395496c8b80282db80fa4d514f4d07",
   "scripts/gg_core.py": "39fe1dfdf5d5d96fb786929a81528b6e809b283950a757bcc6ca8da9f17957dd",
   "scripts/gg_deps.py": "c6443dfc86b136ca26b23be65083d6b8d7e596c8901154bd583795c61c619281",
-  "scripts/gg_document.py": "2a7f766b5ecc09f4c5df9bfb2a3b32b593aeeb30b1c21b08f7bffcaf57454c73",
+  "scripts/gg_document.py": "36bb5cbc55b76d6b73be228c06ca92da3ef330f789fb040d217a73cb6bafc626",
   "scripts/gg_docx_table_layout.py": "dce52533be20ea6b46e8e6f41f3083af3e0ab20ca43dcb3b19cebf488f581921",
   "scripts/gg_doi.py": "158e1416390aed99d86808c9a075fc655a21adb1057204673b36ed35fd7c2d4b",
   "scripts/gg_draft_split.py": "3d81a1abf59ae0d8a33fb7596410e9f8ea75dec43147e091755faa1a836d7fda",

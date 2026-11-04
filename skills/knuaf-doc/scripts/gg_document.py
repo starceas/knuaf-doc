@@ -1208,11 +1208,19 @@ _CELL_NUMBER = re.compile(
 )
 
 
+def _plain_cell(text):
+    """Cell text without Markdown emphasis, so **12.34567원** is still checked."""
+    text = re.sub(r"\*\*|__", "", text).strip()
+    wrapped = re.fullmatch(r"([*_])(.+)\1", text, re.DOTALL)
+    return wrapped[2].strip() if wrapped else text
+
+
 def _header_unit(text):
     """None means absent; an empty string means explicit but uninterpretable.
 
     Compound/unknown units must not fall back to a money table declaration.
     """
+    text = _plain_cell(text)
     declarations = _UNIT_DECLARATION.findall(text)
     brackets = re.findall(r"[（(]([^()（）]+)[)）]", text)
     candidates = declarations or brackets
@@ -1294,7 +1302,8 @@ def _table_numeric_checks(nodes, issues):
         headers = [_header_unit(cell) for cell in node["rows"][0]]
         for row_index, row in enumerate(node["rows"][1:], 2):
             for column, cell in enumerate(row):
-                number = _CELL_NUMBER.fullmatch(cell.strip())
+                cell = _plain_cell(cell)
+                number = _CELL_NUMBER.fullmatch(cell)
                 if number is None:
                     continue  # Prose, quotes, identifiers and expressions stay intact.
                 explicit = number[3]

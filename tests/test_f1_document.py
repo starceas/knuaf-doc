@@ -54,6 +54,21 @@ class TableUnits(ContractCase):
         self.assertEqual([cid for cid, _ in findings(table(
             ["수량(kg)"], ["12.34567원"], "(단위: 천원)"))], ["display_precision"])
 
+    def test_markdown_emphasis_does_not_hide_cell_or_header_units(self):
+        for header, value in (("금액(원)", "**12.34567**"),
+                              ("금액", "**12.34567원**"),
+                              ("금액", "*12.34567원*"),
+                              ("금액", "__12.34567원__"),
+                              ("**금액(원)**", "12.34567"),
+                              ("**원**", "12.34567")):
+            with self.subTest(header=header, value=value):
+                self.assertEqual([cid for cid, _ in findings(table([header], [value]))],
+                                 ["display_precision"])
+        self.assertEqual([cid for cid, _ in findings(table(
+            ["금액"], ["**12원**"], "(단위: 천원)"))], ["unit_conflict"])
+        self.assertFalse(findings(table(["금액(원)"], ["**12.5**"])))
+        self.assertFalse(findings(table(["금액(원)"], ["**ID-12.34567**"])))
+
     def test_identifiers_quotes_and_unknown_units_are_not_money_values(self):
         for value in ("ID-12.34567", "원문 12.34567", "12.34567%", "12.34567개"):
             with self.subTest(value=value):
