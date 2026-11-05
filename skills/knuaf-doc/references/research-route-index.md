@@ -3,6 +3,12 @@
 - 최신성 경계: 2026-11-04 관찰 기준이며 오늘 최신성 확인 아님. 미확인 통계는 탐색 후보.
 - 기본 원칙: 선배 논문 수치·재배법 상속 금지. 외부 통계는 비교 벤치마크이며 학생 계획값으로 자동 승격하지 않음.
 - 원예환경시스템: [hort-env-systems/README.md](hort-env-systems/README.md) 안내문 연결만 제공하며, 신규 본문 작성 없음.
+- **모든 전공의 자료 역할·우선순위**: 작성요령이 선배 논문보다 우선한다. ① 작성 규칙·지침은 아래 A/B 구분으로 적용하는 출발 기준이다. ② 선배 본문은 흐름·구성의 참고 견본이며, 교수의 세부 확인이나 다른 형식의 허용을 입증하지 않는다. 선배에 있다는 이유로 작성요령과 다른 형식을 허용하지 않는다. ③ 재무 엑셀은 시트·수식 구조를 포함한 양식 자체가 정본이며 기존 내용·숫자는 학생 값으로 바꾼다.
+- **작성자와 내용의 구분**: 선배 본문과 엑셀의 작성자는 같을 수도, 다를 수도 있다. 같은 학생의 동일 계획이라고 가정하지 않으며, 견본끼리 이름·작목·숫자가 다르다는 이유로 충돌 보고·정정·숫자 맞추기를 하지 않는다.
+- **재무의 기초는 엑셀**: 제공 재무 엑셀의 시트·수식 구조를 보존하고 학생의 입력값(내용)만 바꾼다. 논문 견본의 숫자에 맞추려고 수식을 고치지 않는다. 수식 문제나 적용 한계가 발견되면 임의 수정 대신 근거와 한계를 알린다. 현재 미지원 출력·계산 범위는 그대로다.
+- **A — 형식 규칙은 준수·검사 대상**: 그림·표 제목 위치와 번호, 사진·자료 출처 표기, 참고문헌 양식, 띄어쓰기·줄바꿈·글꼴·글자 크기, 쪽번호, 단위·숫자 표기, 목차 형식은 지킨다. 어기면 수정하도록 알리며 “의도면 OK”로 면제하지 않는다.
+- **B — 내용·구성 규칙은 기준선**: 장·절에서 무엇을 얼마나 쓸지, 하위 항목 순서, 분량, 예시 문장은 사업에 맞게 조정할 수 있다. 차이는 “내용·구성이 기준과 다름 — 의도면 OK”로 알리고 의도를 확인한다. 선배와 다르다는 이유만으로 차단하지 않는다.
+- **판단 기준과 고정 규칙**: 독자가 ‘양식이 틀렸다’고 보면 A, ‘내용 구성이 다르다’고 보면 B다. 애매하면 A로 적용하고 형님이 명시적으로 풀어 준 경우에만 B로 바꾼다. 목차의 표기 형식(A)과 장·절의 내용 배치(B)를 혼동하지 않는다. 엑셀 구조·수식 유지, 재무의 엑셀 기준, 낙농 문체 등 형님 고정 규칙과 같은 학생의 본문/엑셀 검산·공식 통계 원문 확인은 유지한다.
 
 ---
 
@@ -11,9 +17,9 @@
 | 전공명 (ID) | 논문 목차 구조 및 기준 | 리서치 안내 문서 경로 | 주요 특징 및 주의사항 |
 |---|---|---|---|
 | **특용작물**<br>(`specialty_crops`) | 학교 2020 공식 6장 구조<br>(Ⅰ 머리말 ~ Ⅵ 참고문헌) | [specialty-crops/research-routes.md](specialty-crops/research-routes.md) | • 품목별 3대 분기 (일반 특용 vs 인삼 vs 임산물)<br>• 약용작물 건근 vs 생근 모집단 차이 확인<br>• 식품공전 원료 목록 탐색 절차 (단정 금지)<br>• Ⅳ장 재무는 [finance-flow.md](specialty-crops/finance-flow.md) 및 가격 계약 준수 |
-| **과수**<br>(`fruit_trees`) | 학교 과수 S01 논문양식 2026<br>(Ⅰ 서론 ~ Ⅳ 맺음말, 부록) | [fruit-trees/research-routes.md](fruit-trees/research-routes.md) | • **Ⅱ-4 SWOT 분석 고유 위치 유지**<br>• KOSIS 두 과실표 분리 (`DT_1ET0292` 전체 vs `DT_1ET0296` 성과수)<br>• 생산량 수학적 경계 (주수 기준 vs 면적 기준 택일, 미과수 제외)<br>• 계획·생산검산 지원, 본문·재무 미지원(`unsupported_output`) |
+| **과수**<br>(`fruit_trees`) | 학교 과수 S01 논문양식 2026<br>(Ⅰ 서론 ~ Ⅳ 맺음말, 부록) | [fruit-trees/research-routes.md](fruit-trees/research-routes.md) | • **Ⅱ-4 SWOT은 기준 위치, 의도한 배치 차이는 안내 후 수용**<br>• KOSIS 두 과실표 분리 (`DT_1ET0292` 전체 vs `DT_1ET0296` 성과수)<br>• 생산량 수학적 경계 (주수 기준 vs 면적 기준 택일, 미과수 제외)<br>• 계획·생산검산 지원, 본문·재무 미지원(`unsupported_output`) |
 | **산업곤충**<br>(`industrial_insects`) | 선례(F0, E1~E4) 관측 7개 역할 지도<br>(도입 ~ 재무 ~ 마무리) | [industrial-insects/research-routes.md](industrial-insects/research-routes.md) | • **선례는 동급 예시(`example_observed`), 목차 비강제**<br>• 제품 라인(`line_inventory`) 분기<br>• 법·용도 분기 탐색 (`종 × 용도 × 형태 × 행위`)<br>• 고시 제2019-67호 관찰 근거, R0/R1 농가수 충돌 보존<br>• 계획·질문 지원, 본문·재무 미지원(`unsupported_output`) |
-| **낙농**<br>(`dairy`) | 학교 공식 12개 장 체계<br>(1 머리말 ~ 12 참고문헌, 부록 1~10) | [dairy/research-chapters.md](dairy/research-chapters.md)<br>(정본: [dairy/research-routes.md](dairy/research-routes.md)) | • **4대 사업형태 스위치** (젖소 착유, 한우 번식, 한우 비육, 한우 일관)<br>• 젖소 기준 작성요령의 한우 1:1 치환 ([school-toc.md](dairy/school-toc.md))<br>• 10. 경영수지 포함 12장 기본 필수 (선배 11장 대안은 교수 승인 시 조건부)<br>• 정본 D01~D31, H01~H12 매핑 |
+| **낙농**<br>(`dairy`) | 학교 공식 12개 장 체계<br>(1 머리말 ~ 12 참고문헌, 부록 1~10) | [dairy/research-chapters.md](dairy/research-chapters.md)<br>(정본: [dairy/research-routes.md](dairy/research-routes.md)) | • **4대 사업형태 스위치** (젖소 착유, 한우 번식, 한우 비육, 한우 일관)<br>• 젖소 기준 작성요령의 한우 1:1 치환 ([school-toc.md](dairy/school-toc.md))<br>• 작성요령의 12장 목차 우선. 선배 11장 관찰은 형식 면제 근거 아님. 내용·분량(B)만 의도 확인 후 조정, 장 삭제는 자동 B 아님·애매하면 A<br>• 정본 D01~D31, H01~H12 매핑 |
 | **원예환경시스템**<br>(`hort_env_systems`) | 선배 논문(HT1·HT2) 프로필 계약<br>(Ⅲ-4 SWOT) | [hort-env-systems/README.md](hort-env-systems/README.md)<br>*(기존 모듈 안내 연결)* | • [hort-env-systems/README.md](hort-env-systems/README.md) 안내 연결 (신규 본문 작성 없음)<br>• 18시트 재구성 프로필 (`hort_18_sheet_reconstructed_v1`)<br>• 물가 통계 수열 계약 준수<br>• 전공 교재 엑셀 주의 목록 대조 |
 
 ---

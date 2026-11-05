@@ -266,7 +266,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "946879e651acd328840e2a92c0e40fb0a705f9caae3bea49cf02a393643e1868",
+      "after_sha256": "734ffd77f27cd91c8e700a0ca3a784bd65c1ae48c8bc5cb27da0a8a8e57b40ee",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "P28",
@@ -2333,7 +2333,7 @@
       "reason": "F1 C3: 손 입력·미갱신·여러 문단에 걸친 Word 목차 필드 시험. | V9-02~04: 나눔 단락 내용 검사, 번호 출처를 스캔 시점에 판정, 중첩 HYPERLINK 결과 상위 반영."
     },
     "skills/knuaf-doc/references/dairy/research-chapters.md": {
-      "after_sha256": "481a20e3e106289c04b9acdb28af66f14129e99e350793005ffac258c6c3e9cf",
+      "after_sha256": "9bf20dffd0f92eab69c18046e79588c5a4728cdded1cd2a93af0b5aad7041ca3",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "P28",
@@ -2342,7 +2342,7 @@
       "reason": "낙농전공 논문 12장·부록 흐름 및 젖소/한우 사업형태별 리서치 경로 안내."
     },
     "skills/knuaf-doc/references/figure-research-routes.md": {
-      "after_sha256": "5756141ac51dc0d8c91e10eb62c44754676b1a7dc7dc9e4acb97a3639afe8d45",
+      "after_sha256": "5eb7795f99a5dbc953469784d88107312b7cc486f93e97ff9a01c920b98937a5",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "P28",
@@ -2351,7 +2351,7 @@
       "reason": "전공·장별 시각자료 유형 판정, 탐색 조건, 수집·계보 증거 및 생성 이미지 경계 안내."
     },
     "skills/knuaf-doc/references/fruit-trees/research-routes.md": {
-      "after_sha256": "fc4a9af59cdfddad358cfdf3d57623b6659ea6630924d2f1b183b6acf41a46cf",
+      "after_sha256": "18058607227ef4b74dddf5d1d4698613483a6d096cdcd1318079560cb66cd375",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "P28",
@@ -2360,7 +2360,7 @@
       "reason": "과수전공 S01 양식 기반 장별 리서치 경로 및 성과수 통계 분리 안내."
     },
     "skills/knuaf-doc/references/industrial-insects/research-routes.md": {
-      "after_sha256": "9dbd44a75220c77239551028c7b9eabf5746c3b76942941a165ac7d4fca59aa8",
+      "after_sha256": "2bccd2c8c3002d532e355bad85cf1138b177abdeccc01e1fa3781b5ae038f454",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "P28",
@@ -2369,7 +2369,7 @@
       "reason": "산업곤충 선례 F0 기반 본문 역할별 리서치 경로 및 종×용도×형태×행위 분기 안내."
     },
     "skills/knuaf-doc/references/research-route-index.md": {
-      "after_sha256": "47e5d4a98bb716b7272475b6c8d31774806be3b63c770dcee489cd5f54e5b6fa",
+      "after_sha256": "8ff68044b052534dedfc6cb45e117546d99e5f6e79e7a4d255fbf5db3afc7aa9",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "P28",
@@ -2378,7 +2378,7 @@
       "reason": "전공별 리서치 경로 및 그림 탐색 안내 통합 색인."
     },
     "skills/knuaf-doc/references/specialty-crops/research-routes.md": {
-      "after_sha256": "f856c768df426848f87bf26e43e1dbf903ac7a8c4e5d8e097794beef739c5c92",
+      "after_sha256": "c4702befbb8133930954540a7cdcb56bd821b57ea05db64a8188fbbcfe4c8afa",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "P28",

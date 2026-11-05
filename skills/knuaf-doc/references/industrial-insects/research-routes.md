@@ -3,6 +3,7 @@
 - 최신성 경계: 2026-11-04 관찰 기준이며 오늘 최신성 확인 아님. 고시 제2019-67호 확인 외 세부 조문·경로는 탐색 후보.
 - 선례 권위 및 지원 경계: 선례 5건(F0, E1~E4)은 모두 **동급의 관측 예시(`example_observed`)**이며 강제 목차가 아님. 질문·계획 지원, **논문 본문·곤충 전용 XLSX·재무 계산은 미지원(`unsupported_output`)** 상태. 벤치마크 팩은 비어 있음(`empty_slot`).
 - 기본 원칙: 선배 논문 사육 수치·생존율·단가 상속 금지. 외부 통계는 비교 벤치마크이며 학생 계획값으로 자동 승격하지 않음.
+- 자료 역할: 작성 규칙·지침은 형식(A)은 준수·검사하고 내용·구성(B)은 의도 확인 후 조정하는 기준, 선배 본문은 흐름·구성의 실제 적용 견본(형식 면제 근거 아님), 재무 엑셀은 시트·수식 구조의 정본이다. 선배 본문과 엑셀의 작성자가 같다고 가정하거나 견본끼리 숫자를 맞추지 않는다. 재무는 제공 엑셀이 기초이며 구조·수식을 보존하고 학생 입력값만 바꾼다. 곤충 재무 미지원은 유지한다([전공 공통 원칙](../research-route-index.md)). 아래 R0/R1 수치 차이는 선배 견본 비교가 아니라 같은 공식 조사 자료의 관측 기록이다. 애매하면 A로 적용하며 형님이 풀어 준 때만 B로 처리한다. 낙농 문체 등 형님 고정 규칙은 유지한다.
 - 공통 계약: [research-routing.md](../research-routing.md), [research-sources.md](../research-sources.md), [source-contract.md](../source-contract.md), [price-research-routes.md](../price-research-routes.md), [figure-research-routes.md](../figure-research-routes.md) 참조.
 
 ---
