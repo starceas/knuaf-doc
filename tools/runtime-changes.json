@@ -251,7 +251,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/SKILL.md": {
-      "after_sha256": "e9668d41a0f5147eb00e423111269eb08b0a42e87d041df265891ae6da70ec2f",
+      "after_sha256": "db3a903db2ae25184de325d8120c9e893dab47f70ad2c03b56ccefd7704792fd",
       "before_sha256": "c0008fa5239cc16411fd4ef24b5bf901c7a8b9b50c6b621e2bdee3acf734ddc0",
       "first_changed": "P1",
       "last_changed": "P28",
@@ -260,7 +260,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "fe05bd6b02fa02aa90dc12ae4f6922fa58a9e42507d436d798ee2d03219da628",
+      "after_sha256": "5e0aaa16b10fccb1c878ccd7f8b6df3c52ffef247461f6e1efb9bb88989d9c2e",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "F-CI1 / G-output-guards",
@@ -748,7 +748,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/intake-selection.md": {
-      "after_sha256": "8c61d04429d1a48a9603ce19d38c95be5e04580f5ee68d52af479c3c6f0e26a1",
+      "after_sha256": "cd228548340678da6b88d6b4440bf0e56e3809a510811f22c9f8a93ccccc0e13",
       "before_sha256": "41fb622861d1dec95aaee03c6b916bd17a75ad9b9e916d0c7f3f4be87b7efb23",
       "first_changed": "P28",
       "owner": "P28",
@@ -757,7 +757,7 @@
       "last_changed": "P28"
     },
     "skills/knuaf-doc/references/interview-guide.md": {
-      "after_sha256": "64ddb2b30e29f90c226c69ea8557d976eb352e44ad149b801f9eef9a684321b8",
+      "after_sha256": "e894a117d19b5cbf9fa87568e83ceefdb4fa88a992abfd1f1a3a52b8c0e43e87",
       "before_sha256": "8f00e8a2d4c5f530eb7aad4a82e2e1957547e14b54941c8f49bb338035b63f87",
       "first_changed": "P11",
       "last_changed": "G-output-guards-FIX1",
@@ -767,7 +767,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/interview-ui.md": {
-      "after_sha256": "5bf5f40758c997f39bca0a57ef358ef34bec1c9cc47bf2de7faebfcfa63c006b",
+      "after_sha256": "76af002958058c91e2f9ac83e3a64089fa7469f861cd035bc6bcabb78a27d89d",
       "before_sha256": "0f84499b8648635b129b92687a31cc273aade9102d185b1c6a660a64f1dd5f7e",
       "first_changed": "P28",
       "last_changed": "P28",
@@ -822,7 +822,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/mid-work-questions.md": {
-      "after_sha256": "09051c52fb45a65aefc14974a2523920c18a472d07bef7e7b050004102f58dba",
+      "after_sha256": "0268b87fb4a624d0c5f79d0ef9443938ff16365f1939f9b3741c262e5cf34fd6",
       "before_sha256": "bfe7d61143b9fdfeadf00e84bc2dc3082ac962dabd4ab72d6b6efeba7db21ee8",
       "first_changed": "P11",
       "last_changed": "P28",
@@ -1184,7 +1184,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/workflow-order.md": {
-      "after_sha256": "4fbe83bcc37c06bbe95c068c49c3a0b33e65f14f4e71a9efba8575e0daf0704c",
+      "after_sha256": "5c3821e125f49ffdb4c1955b79167a6dff288ed0bcbd9884a357ca9e634f4f8d",
       "before_sha256": "8915cb0b75aa5abbf547a49afc08beae5a6e7ff58b7c8aa22f0c07444ad8a511",
       "first_changed": "P11",
       "last_changed": "P28",
