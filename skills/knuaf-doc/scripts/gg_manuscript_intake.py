@@ -231,9 +231,18 @@ def run(root, selected_file, input_path, expected_revision, request_id):
         published = fs.publish_bytes_noreplace(
             destination, raw, parent_identity=fs.identity(destination.parent, kind="directory"),
             existing_sha256=answer_hash)
-        if published["state"] != "installed":
-            _reject("answer_snapshot_conflict")
-        preserved.append(answer_path)
+        if published["state"] == "installed":
+            preserved.append(answer_path)
+        if published["state"] != "installed" or published["cleanup_errors"]:
+            # This target is the answer file, not the earlier canonical
+            # snapshot commit. Keep the filesystem evidence and stop before
+            # applying selection facts when publication is not clean.
+            result = dict(published, operation="publish_answer_snapshot",
+                          target="answer_snapshot", commit_state={
+                              "installed": "committed_cleanup_pending",
+                              "not_installed": "not_committed",
+                          }.get(published["state"], "indeterminate"))
+            raise core.OperationError(result)
         change, answer_id = _link_change(
             project, request_id, source_id, source_path, answer_path, answer_hash, claims)
         stage = "apply"
@@ -263,8 +272,8 @@ def run(root, selected_file, input_path, expected_revision, request_id):
         result = {"commit_state": "indeterminate" if stage == "verify" else "not_committed",
                   "reason": error.reason if isinstance(error, gg_lock.LockError)
                   else "intake_input_or_evidence_unreadable", "cleanup_errors": []}
-    result.update(operation="intake_manuscript", target="canonical", status="incomplete",
-                  stage=stage, request_id=request_id, completed_steps=steps,
+    result.update(operation="intake_manuscript", target=result.get("target", "canonical"),
+                  status="incomplete", stage=stage, request_id=request_id, completed_steps=steps,
                   registration_revision=registration_revision, resolution=resolution,
                   preserved_paths=list(dict.fromkeys(preserved + result.get("preserved_paths", []))))
     return result

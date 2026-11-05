@@ -89,7 +89,17 @@ python3 scripts/gg.py intake-manuscript /작업폴더 "원고.docx" \
 - 정본이 없을 때 `--expected-revision 0`으로 같은 작업폴더를 초기화한다. 있으면 현재 개정 `N`을 명시한다. 정상 경로는 snapshot 등록 `N+1`, 기존 `apply`로 출처·선택/목적 사실·원답변 task 연결 `N+2`다. raw answer와 원고 source 해시는 실제 보존 바이트이며 원본은 수정하지 않는다. 기존 선택/목적 fact ID는 재사용하고, 원고 본문 속 다른 주장·전공을 fact로 승격하지 않는다.
 - 실행 중인 설치본의 registry·일반 원고용 스캔 정책과 비어 있는 key catalog를 사용한다. 저수준 CLI의 명시 인자 계약은 바꾸지 않는다. `unmapped/source_unmatched`는 외부 학생 원고 보존을 막지 않지만 재사용 승인도 아니다. 다른 신뢰/해결 실패를 이 예외에 포함하지 않는다. 뷰는 기존 register 엔진이 발행한다.
 - 완료는 exit 0 + `status: registered` + `commit_state: committed`다. 반환값의 `source_path`·`source_hash`·`answer_path`·`answer_source_id`·`revision`을 확인한다. 문서 생성·전공 확인·제출 승인은 별도다.
-- 중간 실패는 `status: incomplete`, 실패 `stage`·`reason`·`completed_steps`·`registration_revision`·`preserved_paths`로 보고한다. `commit_state`는 실패한 단계의 기존 커밋 판정을 유지한다(exit 2/3/4). 예: `apply`의 개정 충돌은 `not_committed`여도 앞선 snapshot 등록은 `registration_revision`에 남는다. 수령증·기존 자료·이미 보존한 사본을 지우거나 접수 성공으로 바꾸지 않는다. 스캔 뒤 바이트 변경·잠금·개정 충돌을 무시하지 않으며, 자동 재시도/롤백 명령이 아니다. 현재 정본과 보존 경로를 점검해 실패 원인을 해결한다.
+- 중간 실패는 `status: incomplete`, 실패 `stage`·`reason`·`completed_steps`·`registration_revision`·`preserved_paths`로 보고한다. `commit_state`는 실패 대상(`target`)의 판정이다(exit 2/3/4). 예: `apply`의 개정 충돌은 `not_committed`여도 앞선 snapshot 등록은 `registration_revision`에 남는다. 수령증·기존 자료·이미 보존한 사본을 지우거나 접수 성공으로 바꾸지 않는다. 스캔 뒤 바이트 변경·잠금·개정 충돌을 무시하지 않으며, 자동 재시도/롤백 명령이 아니다. 현재 정본과 보존 경로를 점검해 실패 원인을 해결한다.
+
+원답변 사본 발행 오류는 `stage: answer_preservation`, `target: answer_snapshot`이다. 하위 발행 결과의 `state`·`reason`·`cleanup_errors`와 보존 경로를 유지하고, 선택 facts의 후속 `apply` 전에 멈춘다. 원답변 파일이 실제 존재해도 정리/I/O 오류가 있으면 깨끗한 접수 성공이 아니다. `installed`의 `reason`이 null일 수 있으므로 `cleanup_errors`의 원인·코드·경로도 확인한다. 이때의 커밋 판정은 원답변 파일 대상이며, 앞선 정본 snapshot 커밋은 `registration_revision`과 `preserved_paths`로 따로 확인한다.
+
+| 원답변 발행 결과 | `commit_state` | exit |
+|---|---|---|
+| `installed` + `cleanup_errors` 있음 | `committed_cleanup_pending` | 3 |
+| `not_installed` | `not_committed` | 2 |
+| `unknown` | `indeterminate` | 4 |
+
+`preserved_paths`에는 앞선 수령증·snapshot·뷰와 하위 발행기가 보고한 목적/임시 경로가 함께 남는다. 확인 불가 때의 경로는 존재 여부가 미확정인 후보도 포함하므로, 보고된 경로를 자동 삭제하거나 단순 목적지 충돌로 바꾸지 않는다.
 
 ## 1-1. 읽은 자료는 반드시 발췌본으로 남긴다
 

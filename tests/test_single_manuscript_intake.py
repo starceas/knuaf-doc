@@ -1,6 +1,9 @@
 """Single manuscript intake: real bytes/engines; synthetic student answers."""
+import contextlib
 import copy
+import errno
 import hashlib
+import io
 import json
 from pathlib import Path
 import subprocess
@@ -246,3 +249,110 @@ class SingleManuscriptIntakeTests(ContractCase):
         self.assertEqual(project["facts"]["old-current-record"]["revision"], 2)
         self.assertEqual([fid for fid, f in project["facts"].items()
                           if f["field_id"] == "intake.current_manuscript"], ["old-current-record"])
+
+    def _faulted_answer_cli(self, fault):
+        root = self.make_project().resolve()
+        self._old_evidence(root)
+        original, spec = self._input(root)
+        original_bytes = original.read_bytes()
+        answer_bytes = (root / spec["path"]).read_bytes()
+        destination = root / "sources/answers" / (
+            hashlib.sha256(answer_bytes).hexdigest() + ".txt")
+        fs = self.intake.fs
+        publish = fs.publish_bytes_noreplace
+        observed, before = {}, {}
+
+        def publish_with_fault(path, data, **kwargs):
+            if Path(path) != destination:
+                return publish(path, data, **kwargs)
+            before.update(self._tree_bytes(root))
+            # Exercise the real publisher; inject only its OS/fs boundary.
+            with fault(path):
+                result = publish(path, data, **kwargs)
+            observed.update(result)
+            return result
+
+        stream = io.StringIO()
+        cli = runtime("gg")
+        with mock.patch.object(fs, "publish_bytes_noreplace", publish_with_fault), \
+                contextlib.redirect_stdout(stream):
+            code = cli.main([
+                "intake-manuscript", str(root), original.name,
+                "--input", "answer-source.json", "--expected-revision", "1",
+                "--request-id", "publication-fault"])
+        value = json.loads(stream.getvalue())
+        self.assertNotEqual(code, 0)
+        self.assertEqual((value["status"], value["stage"], value["target"]),
+                         ("incomplete", "answer_preservation", "answer_snapshot"))
+        self.assertEqual(value["registration_revision"], 2)
+        self.assertNotIn("apply", value["completed_steps"])
+        project = self.core.load(root)
+        self.assertEqual(project["revision"], 2)
+        self.assertEqual(project["facts"], {})
+        self.assertEqual(set(project["sources"]), {"old"})
+        self.assertEqual(original.read_bytes(), original_bytes)
+        self.assertEqual((root / spec["path"]).read_bytes(), answer_bytes)
+        self.assertEqual([p.read_bytes() for p in (root / "sources/snapshots").rglob("*.docx")],
+                         [original_bytes])
+        after = self._tree_bytes(root)
+        self.assertLessEqual(before.keys(), after.keys())
+        for path, data in before.items():
+            self.assertEqual(after[path], data, path)
+        self.assertTrue(any((root / path).is_dir() and
+                            (root / path).parent == root / "sources/snapshots"
+                            for path in value["preserved_paths"]))
+        self.assertTrue(any((root / path).is_file() and
+                            (root / path).parent == root / "sources/intake"
+                            for path in value["preserved_paths"]))
+        for key in ("state", "reason", "cleanup_errors"):
+            self.assertEqual(value[key], observed[key], key)
+        self.assertLessEqual(set(observed["preserved_paths"]), set(value["preserved_paths"]))
+        return code, value, destination, answer_bytes
+
+    def test_answer_directory_sync_error_stops_cli_after_committed_snapshot(self):
+        fs = self.intake.fs
+
+        def fault(path):
+            return mock.patch.object(fs, "fsync_dir", side_effect=fs.FsError(
+                "io_error", code=errno.EIO, operation="fsync_dir", path=path.parent))
+
+        code, value, destination, answer_bytes = self._faulted_answer_cli(fault)
+        self.assertEqual((code, value["state"], value["commit_state"]),
+                         (3, "installed", "committed_cleanup_pending"))
+        self.assertEqual(destination.read_bytes(), answer_bytes)
+        self.assertIn("sources/answers/" + destination.name, value["preserved_paths"])
+        self.assertIn({"reason": "io_error", "code": errno.EIO, "operation": "fsync_dir",
+                       "path": str(destination.parent)}, value["cleanup_errors"])
+
+    def test_answer_temp_sync_error_reports_real_cause_and_preserved_temp(self):
+        fs = self.intake.fs
+
+        def fault(path):
+            return mock.patch.object(fs.os, "fsync",
+                                     side_effect=OSError(errno.EIO, "synthetic answer fsync error"))
+
+        code, value, destination, answer_bytes = self._faulted_answer_cli(fault)
+        self.assertEqual((code, value["state"], value["commit_state"], value["reason"]),
+                         (2, "not_installed", "not_committed", "temp_write_failed"))
+        self.assertFalse(destination.exists())
+        temp, = [Path(path) for path in value["preserved_paths"] if Path(path).suffix == ".tmp"]
+        self.assertEqual(temp.read_bytes(), answer_bytes)
+        self.assertIn({"reason": "temp_write_os_error", "code": errno.EIO,
+                       "operation": "temp_write", "path": str(temp)}, value["cleanup_errors"])
+
+    def test_answer_post_rename_unknown_keeps_destination_and_indeterminate_exit(self):
+        fs = self.intake.fs
+        identity = fs.identity
+
+        def fault(path):
+            def unreadable_destination(target, **kwargs):
+                if Path(target) == path:
+                    raise fs.FsError("io_error", code=errno.EIO, operation="identity", path=path)
+                return identity(target, **kwargs)
+            return mock.patch.object(fs, "identity", unreadable_destination)
+
+        code, value, destination, answer_bytes = self._faulted_answer_cli(fault)
+        self.assertEqual((code, value["state"], value["commit_state"], value["reason"]),
+                         (4, "unknown", "indeterminate", "post_rename_unverifiable"))
+        self.assertEqual(destination.read_bytes(), answer_bytes)
+        self.assertIn(str(destination), value["preserved_paths"])

@@ -10,7 +10,7 @@
 
 - `<파이썬>`: `scripts/gg_deps.py python <폴더>` 또는 현재 환경의 Python 3.10+ 인터프리터. 3.9 이하면 `gg.py`가 차단 JSON을 출력하고 끝난다.
 - `<폴더>`: 대상 작업폴더. `rda-lookup`·`rda-propose`·`rda-apply`만 폴더 없이 실행한다.
-- 출력: 명령이 실행되면 JSON 한 덩어리다. 거절·보류도 JSON이며 `reason`에 사유가 있다. 명령 이름 오류 같은 인자 파싱 오류와 폴더 누락은 JSON이 아닌 오류 문장으로 끝난다.
+- 출력: 명령이 실행되면 JSON 한 덩어리다. 거절·보류도 JSON이며 `reason`·`cleanup_errors`에서 사유를 확인한다. 명령 이름 오류 같은 인자 파싱 오류와 폴더 누락은 JSON이 아닌 오류 문장으로 끝난다.
 - 종료 코드:
   - `0`: 정상 완료(미리보기 포함).
   - `1`: `check`가 막는 항목(error 수준)을 찾음. `source-refresh`가 미리보기·최신·재등록 외의 결과를 냄.
@@ -22,11 +22,12 @@
 
 | `target` | 대상 | 나오는 명령 | 확인할 것 |
 | --- | --- | --- | --- |
-| `canonical` | `project.json` | `init`, `apply`, `adopt-output`, `question`, `source-register`, `source-view`, `source-refresh` | `status`의 `revision`이 결과의 `revision`과 같고, 결과에 `request_id`가 있으면 `project.json`의 `requests`에 그 ID가 있어야 반영된 것이다. `init`은 `project.json`이 revision 0으로 있는지 본다. `source-register`·`source-view`의 `reason`이 `post_publish_verify_failed`·`committed_publication_missing`이면 정본이 아니라 `sources/registered/`의 등록 기록이나 `sources/generated/`의 뷰 파일이 확인 대상이다. |
+| `canonical` | `project.json` | `init`, `apply`, `adopt-output`, `question`, `source-register`, `source-view`, `source-refresh`, `intake-manuscript` | `status`의 `revision`이 결과의 `revision`과 같고, 결과에 `request_id`가 있으면 `project.json`의 `requests`에 그 ID가 있어야 반영된 것이다. `init`은 `project.json`이 revision 0으로 있는지 본다. `source-register`·`source-view`의 `reason`이 `post_publish_verify_failed`·`committed_publication_missing`이면 정본이 아니라 `sources/registered/`의 등록 기록이나 `sources/generated/`의 뷰 파일이 확인 대상이다. |
 | `export` | 검토 산출물 발행 | `export` | 정본은 바뀌지 않는다. 정본 개정으로 판정하지 않는다. 발행 폴더 `build/<개정>/<kind>/`와 `cleanup_errors`의 경로를 확인한다. |
 | `requested_output` | 요청한 출력 경로 | `paper` | 정본은 바뀌지 않는다. `publication_state: managed_ready`이면 관리 사본은 `preserved_paths`에 있고 요청 경로에만 못 옮긴 것이다. |
 | `observation` | 검토 관측 기록 | `observe` | 정본은 바뀌지 않는다. `receipt_path`의 기록을 확인한다. |
 | `import_destination` | 새 작업폴더 | `import` | 원본 폴더는 바뀌지 않는다. `--out` 폴더와 `preserved_paths`를 확인한다. |
+| `answer_snapshot` | 원답변 보존 파일 | `intake-manuscript` | `state`·`reason`·`cleanup_errors`와 목적/임시 보존 경로를 확인한다. 발행 오류/불확실성이면 선택 facts apply 전 미완료이며 exit 2/3/4다. 앞선 정본 snapshot 등록은 `registration_revision`에 별도로 남는다. [source-intake](source-intake.md#원고-파일-하나-접수) |
 
 `lock-upgrade`의 결과에는 `target`이 없다. `recovery_id`·`receipt_path`·`preserved_paths`를 확인하고, 이어서 진행할 때는 `--resume <recovery_id>`를 쓴다([locking](locking.md)). 남은 임시 파일·잠금·보존 사본은 자동으로 지우지 않는다.
 
