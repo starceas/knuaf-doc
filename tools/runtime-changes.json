@@ -260,7 +260,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "171cd19dd59e01fb079ef39cdfe1f81b268fd71da5fad1da480ee4bfe8a01202",
+      "after_sha256": "2cdf70c89b03c6d45dcc77a668f4bc34e1515f2184adb05d04b1015b4c8d7d93",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "F-CI1 / G-output-guards",
@@ -667,7 +667,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/hort-env-systems/README.md": {
-      "after_sha256": "bbc12e33ffabe5ebbb8bd0d8e15a00a607ea4996a14fdd699ce3c797e0525d01",
+      "after_sha256": "438afcd8d00f709fee4ebc852497ed3bae7abb2520d4e16d8e5ac276c04bb7e7",
       "before_sha256": null,
       "first_changed": "P9",
       "last_changed": "P27",
