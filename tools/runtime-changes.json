@@ -260,7 +260,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "2d99dd0678f3170ee44fc5485c8e7a69fd0978431ea039ed48d114a29969e164",
+      "after_sha256": "dc157c73894069bf545a67d20232eace7eadfd0234fbed044dbe740a7f5c2830",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "F-CI1 / G-output-guards",
@@ -2237,13 +2237,13 @@
       "reason": "W3 dairy empty-slot pack manifest; no fabricated statistical data."
     },
     "skills/knuaf-doc/references/dairy/README.md": {
-      "after_sha256": "1e6251b0a8d106724e059e6054a4a8d585d7cffb3baaf31842084fadb9a4be99",
+      "after_sha256": "fe6be728cd9411cc0dea42651b64038e2382bbed834e9375b5de32e6b28472fe",
       "before_sha256": null,
       "first_changed": "dairy-0.1.0",
       "last_changed": "dairy-0.1.0",
       "owner": "dairy-0.1.0",
       "source": "new",
-      "reason": "W4 dairy module boundary and workflow guidance. | W4b: V2 documentation findings corrected. | PR69-R1: answer_conflict state and superseded exclusion documented. | F1 D1+: 학교 엑셀 한우 전용 주의·계획 연도 안내. | 설치본 패키징: 스킬 밖 survey/ 링크를 글자 근거 표기로."
+      "reason": "W4 dairy module boundary and workflow guidance. | W4b: V2 documentation findings corrected. | PR69-R1: answer_conflict state and superseded exclusion documented. | F1 D1+: 학교 엑셀 한우 전용 주의·계획 연도 안내. | 설치본 패키징: 스킬 밖 survey/ 링크를 글자 근거 표기로. | 자료 역할 3분류(작성요령=규칙 출발점, 선배=견본, 재무 엑셀=양식 정본·값만 변경), 규칙 A 형식(목차 구조 포함, 꼭 지킴)/B 장·절 안 내용·구성(기준선·알림) 구분, 작성요령이 선배 논문보다 우선."
     },
     "skills/knuaf-doc/references/dairy/format.md": {
       "after_sha256": "f1d5187be24e19ac636bd6cf7dd1edc3cec17e078bd15ed08b1f4d6a95f42a86",
@@ -2273,13 +2273,13 @@
       "reason": "W4 dairy research routes derived from ROUTE-LIST-FINAL."
     },
     "skills/knuaf-doc/references/dairy/school-toc.md": {
-      "after_sha256": "9b63de21ecfeff383a5247690a93d8aefbedf4ca0045a19a664dae9c7baf968e",
+      "after_sha256": "e6e37ee0edd7571d4e76115b2ce3ba652ca53bc01536afb6abba7dec892a69aa",
       "before_sha256": null,
       "first_changed": "dairy-0.1.0",
       "last_changed": "dairy-0.1.0",
       "owner": "dairy-0.1.0",
       "source": "new",
-      "reason": "W4 dairy school outline and instructor-approved alternatives. | W4b: V2-02 and V2-03 resolved. | 설치본 패키징: 스킬 밖 survey/ 링크를 글자 근거 표기로."
+      "reason": "W4 dairy school outline and instructor-approved alternatives. | W4b: V2-02 and V2-03 resolved. | 설치본 패키징: 스킬 밖 survey/ 링크를 글자 근거 표기로. | 목차 구조=A, 장·절 안 서술=B 안내 한 줄."
     },
     "skills/knuaf-doc/references/dairy/writing-style.md": {
       "after_sha256": "fe5807ab22451839f23b71eee7827b23095b1c5d374aa3c6bcedef71504c87e8",
