@@ -73,9 +73,12 @@
 | `source-view` | `--request-id <ID>` | — | 아니오(`sources/generated/` 뷰) | 등록 요청의 출처 뷰를 발행한다. [source-intake](source-intake.md#폴더-등록-방식) |
 | `source-refresh` | `--source <출처ID>` | `--reviewed` `--apply` `--expected-revision <N>` `--request-id <ID>` | `--reviewed --apply`일 때만 | 원자료 바이트가 바뀐 출처의 미리보기와 재등록. SKILL.md "검사 차단 복구" |
 | `finance-tables` | `--xlsx <재계산 통합문서>` `--major specialty_crops` | `--input <폴더 안 각주.json>` `--out <폴더 안 경로>` | 아니오(산출물) | 특용작물 Ⅳ장 재무표 전개. 기본 출력 `build/finance-tables.md`, 기존 파일은 덮어쓰지 않는다. [specialty-crops/finance-flow](specialty-crops/finance-flow.md) |
+| `delegate` | `--lane <research|writing|repeat|review>` `--task <작업>` `--output <출력 칸 아래 상대경로>`(반복 가능) `--company <claude|codex>` `--model <ID>` | `--input-ref <출처ID|폴더상대경로|대상절>`(각 값을 `|`로 구분, 반복 가능) `--effort <값>` `--job-id <ID>`; research 레인은 `--research-type` `--question <Qn|목표지표|조건=값;…>` `--route <문서|ID/이름|URL>`(반복 가능) `--keyword <검색어>`(반복 가능) `--output-file <출력 칸 아래 상대경로>` 필수. `--output-file`은 `--output` 하나와 글자 그대로 같아야 한다. 수신 검사: `--check-job <ID>` | 아니오(`.knuaf-gui/jobs/`) | 앱 계약 칸으로 주문서를 만들고, 입력 참조의 실재·SHA-256, 출력 상대경로와 담당 간 파일/부모·자식 출력 소유권 겹침을 쓰기 전에 검사한다. research 수신 검사는 주문 질문 상태·표 필수 칸·주문 경로 및 번호를 대조한다. [research-job](research-job.md) · [model-routing](model-routing.md) |
+| `lanes-propose` | `--lane-scope <once|continue>` `--quote <학생 원문>` `--lane-request <레인=main|회사:모델[:effort]>`(반복 가능; 바꿀 레인만 지정) | — | 아니오(`.knuaf-gui/lanes-request.json`) | 스킬 소유 schema 판을 붙인 배치안을 원자적으로 쓴다. 검토 레인 `main`과 공급자에 맞지 않는 model ID는 wire format으로 보존되어 앱이 거절 사유를 표시한다. [model-routing](model-routing.md#호스트가-배치를-준-경우-담당-모드) |
 | `tidy` | — | `--apply` | 아니오(`--apply`는 `.gg-work` 정리) | 산출물 폴더 정리 미리보기. 사용자 확인 뒤에만 `--apply`. [output-hygiene](output-hygiene.md) |
 
 `--selection`·`--requested-use`·`--audit-key`·`--target-current`는 파일 경로가 아니라 JSON 문자열이다.
+위임 명령은 실제 AI·웹 서비스 호출을 하지 않는다. 결과 JSON은 생성·제안 파일 경로와 schema 판을 반환한다. JobSpec과 LaneRequest의 schema 및 JobSpec `contractVersion`은 스킬 소유 `delegation.json`에서 읽는다.
 
 ## apply 변경 JSON 계약
 
