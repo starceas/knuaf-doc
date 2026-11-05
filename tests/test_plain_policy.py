@@ -41,6 +41,8 @@ _WARNING_IDS = {
     "front_matter_long",
     "caption_long",
     "photo_placeholder",
+    "sample_identity_unconfirmed",
+    "sample_trace_review",
 }
 
 

@@ -2560,6 +2560,88 @@ def dairy_question_fields(proposal, facts):
         ],
     }
 
+DAIRY_SCHOOL_EXCEL_START_YEAR = 2026
+DAIRY_SCHOOL_EXCEL_END_YEAR = 2031
+
+_DAIRY_SWITCH_GUIDANCE = {
+    "livestock_type_required":
+        "dairy.livestock_type 답이 필요함(젖소 dairy_cattle / 한우 hanwoo)",
+    "operation_mode_required":
+        "dairy.operation_mode 답이 필요함(착유 milking / 번식 breeding / "
+        "비육 fattening / 일관 integrated)",
+    "mismatch":
+        "축종과 운영 방식이 어긋남 — 젖소는 착유, 한우는 번식·비육·일관만 "
+        "유효함",
+    "answer_conflict":
+        "같은 항목에 살아 있는 답이 둘 이상 — 옛 답을 대체됨(superseded)으로 "
+        "정리해야 풀림",
+}
+
+def _dairy_field_answers(facts, field_id):
+    """Active answers (provided, not superseded) for one dairy field."""
+    values = []
+    for fact in (facts or {}).values():
+        if (not isinstance(fact, dict)
+                or fact.get("answer_state") != "provided"
+                or fact.get("verification") == "superseded"
+                or fact.get("field_id") != field_id):
+            continue
+        values.append(fact.get("value"))
+    return values
+
+def _dairy_plan_year(value):
+    """The four-digit plan year carried by an answer, else ``None``."""
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value if 1900 <= value <= 2200 else None
+    if isinstance(value, str):
+        match = re.search(r"(?<!\d)((?:19|20)\d{2})(?!\d)", value)
+        if match:
+            return int(match.group(1))
+    return None
+
+def dairy_notices(facts):
+    """Advisory next-step notices for the dairy ``major-plan`` output.
+
+    They only tell the student what to settle before starting the school
+    workbook or the body; they never unlock an unsupported output and never
+    change the school workbook.
+    """
+    switch, livestock = _resolve_dairy_switch(facts)
+    notices = []
+    if switch != "ready":
+        notices.append({
+            "id": "dairy_switch_pending",
+            "severity": "warning",
+            "message": "엑셀·본문 착수 전 축종 확정 필요 — "
+                       + _DAIRY_SWITCH_GUIDANCE.get(switch, switch),
+        })
+    if livestock == "dairy_cattle":
+        notices.append({
+            "id": "dairy_school_excel_hanwoo_only",
+            "severity": "warning",
+            "message": "학교 낙농 엑셀은 한우 번식·비육 구조라 젖소용 구조가 "
+                       "아님 — 원유 납유량·유대수입·쿼터·사양군별 사료비는 "
+                       "학생이 별도 설계해야 함",
+        })
+    years = {year for year in
+             (_dairy_plan_year(value) for value in
+              _dairy_field_answers(facts, "dairy.plan_year"))
+             if year is not None}
+    if len(years) == 1 and years != {DAIRY_SCHOOL_EXCEL_START_YEAR}:
+        year = next(iter(years))
+        notices.append({
+            "id": "dairy_plan_year_shift",
+            "severity": "warning",
+            "message": "계획 기준연도가 %d — 학교 엑셀 시트는 %d~%d 시작이므로 "
+                       "연도 이동 필요(시트명·수식 참조는 학생이 확인; 엑셀은 "
+                       "자동 수정하지 않음)"
+                       % (year, DAIRY_SCHOOL_EXCEL_START_YEAR,
+                          DAIRY_SCHOOL_EXCEL_END_YEAR),
+        })
+    return notices
+
 
 MODULES = (SPECIALTY_CROPS_MODULE, INDUSTRIAL_INSECTS_MODULE,
            FRUIT_TREES_MODULE, HORT_ENV_SYSTEMS_MODULE, DAIRY_MODULE)

@@ -100,6 +100,8 @@ WARNING_CHECKS = frozenset(
         "front_matter_long",
         "caption_long",
         "photo_placeholder",
+        "sample_identity_unconfirmed",
+        "sample_trace_review",
     }
 )
 
@@ -1191,13 +1193,264 @@ def _bibliography_entry(line):
         [start for start, _ in spans if start < year.start()] or [year.start()])
     return year, line[:cut].strip().rstrip(".")
 
-def check(text, base, major_id=None):
+_UNIT_DIMENSIONS = {
+    **dict.fromkeys(("원", "천원", "만원", "백만원"), "money"),
+    **dict.fromkeys(("g", "kg", "톤", "t"), "weight"),
+    **dict.fromkeys(("두", "마리"), "headcount"),
+    **dict.fromkeys(("㎡", "평", "ha"), "area"),
+}
+_UNIT_DECLARATION = re.compile(r"단위\s*[:：]\s*([^()（）\n]+)")
+_TABLE_NOTE = re.compile(
+    r"^\s*(?:주\s*\d*|비고|환산)(?=$|\s|[:：.)])|^\s*※"
+)
+_CELL_NUMBER = re.compile(
+    r"([+-]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d+))?)\s*([^\d\s].*?)?"
+)
+
+
+def _plain_cell(text):
+    """Cell text without Markdown emphasis, so **12.34567원** is still checked."""
+    text = re.sub(r"\*\*|__", "", text).strip()
+    wrapped = re.fullmatch(r"([*_])(.+)\1", text, re.DOTALL)
+    return wrapped[2].strip() if wrapped else text
+
+
+def _header_unit(text):
+    """None means absent; an empty string means explicit but uninterpretable.
+
+    Compound/unknown units must not fall back to a money table declaration.
+    """
+    text = _plain_cell(text)
+    declarations = _UNIT_DECLARATION.findall(text)
+    brackets = re.findall(r"[（(]([^()（）]+)[)）]", text)
+    candidates = declarations or brackets
+    if not candidates:
+        return text if text in _UNIT_DIMENSIONS else None
+    units = {value.strip() for value in candidates}
+    return next(iter(units)) if len(units) == 1 and units <= _UNIT_DIMENSIONS.keys() else ""
+
+
+def _table_unit_context(nodes, index):
+    """Only contiguous table metadata belongs to this table, never a section."""
+    before, after = [], []
+    captioned = False
+    for position in range(index - 1, -1, -1):
+        node = nodes[position]
+        text = node.get("text", "")
+        if node["kind"] == "caption" and node["label"] == "표":
+            if captioned:
+                break
+            captioned = True
+            before.append(text)
+        elif node["kind"] == "paragraph" and _TABLE_NOTE.match(text):
+            # A trailing table note is a boundary, even if it declares a unit.
+            # Only the preceding table's suffix scan may consume it.
+            break
+        elif node["kind"] == "paragraph" and _UNIT_DECLARATION.search(text):
+            before.append(text)
+        else:
+            if node["kind"] == "table" and not captioned:
+                before = []  # Between uncaptioned tables: ownership is unclear.
+            break
+    position = index + 1
+    while position < len(nodes):
+        node = nodes[position]
+        text = node.get("text", "")
+        if node["kind"] != "paragraph" or not (
+            _TABLE_NOTE.match(text) or _UNIT_DECLARATION.search(text)
+        ):
+            break
+        after.append(text)
+        position += 1
+    if position < len(nodes) and nodes[position]["kind"] in {"caption", "table"}:
+        # A declaration before the next caption belongs to that table;
+        # without a caption it is ambiguous, not a proven contradiction.
+        after = [text for text in after if _TABLE_NOTE.match(text)]
+    return before + after, after
+
+
+def _note_units(text):
+    # Match whole unit tokens, so 천원 is not also an occurrence of 원.
+    return set(re.findall(
+        r"(?<![A-Za-z가-힣])(?:백만원|천원|만원|원|kg|g|톤|t|마리|두|㎡|평|ha)"
+        r"(?![A-Za-z가-힣])", text
+    ))
+
+
+def _table_numeric_checks(nodes, issues):
+    """C2 and CB share the same cell > column > table unit precedence."""
+    for index, node in enumerate(nodes):
+        if node["kind"] != "table" or not node["rows"]:
+            continue
+        context, notes = _table_unit_context(nodes, index)
+        common = set()
+        for text in context:
+            common.update(value.strip() for value in _UNIT_DECLARATION.findall(text))
+        known = common & _UNIT_DIMENSIONS.keys()
+        for dimension in set(_UNIT_DIMENSIONS.values()):
+            units = {unit for unit in known if _UNIT_DIMENSIONS[unit] == dimension}
+            if len(units) > 1:
+                issues.append((
+                    "unit_conflict",
+                    "%d행 표 공통 단위 모순: %s"
+                    % (node["start_line"] + 1, ", ".join(sorted(units))),
+                ))
+        # Different dimensions or an unknown declaration cannot pick a
+        # single inherited unit for an otherwise unlabelled column.
+        table_unit = next(iter(known)) if len(common) == len(known) == 1 else None
+        note_units = [_note_units(text) for text in notes if _TABLE_NOTE.match(text)]
+        headers = [_header_unit(cell) for cell in node["rows"][0]]
+        for row_index, row in enumerate(node["rows"][1:], 2):
+            for column, cell in enumerate(row):
+                cell = _plain_cell(cell)
+                number = _CELL_NUMBER.fullmatch(cell)
+                if number is None:
+                    continue  # Prose, quotes, identifiers and expressions stay intact.
+                explicit = number[3]
+                if explicit is not None:
+                    bracket = re.fullmatch(r"[（(]\s*([^()（）]+?)\s*[)）]", explicit)
+                    if bracket:
+                        explicit = bracket[1]
+                inherited = headers[column] if column < len(headers) else ""
+                if inherited is None:
+                    inherited = table_unit
+                effective = explicit if explicit is not None else inherited
+                location = "%d행 표 %d행 %d열" % (
+                    node["start_line"] + 1, row_index, column + 1)
+                if (_UNIT_DIMENSIONS.get(effective) == "money"
+                        and number[2] is not None and len(number[2]) >= 4):
+                    issues.append(("display_precision", location + " 금액 소수 4자리 이상: " + cell))
+                if (explicit in _UNIT_DIMENSIONS and inherited in _UNIT_DIMENSIONS
+                        and explicit != inherited
+                        and _UNIT_DIMENSIONS[explicit] == _UNIT_DIMENSIONS[inherited]
+                        and not any({explicit, inherited} <= units for units in note_units)):
+                    issues.append((
+                        "unit_conflict",
+                        location + " 명시 단위 %s / 상속 단위 %s: %s"
+                        % (explicit, inherited, cell),
+                    ))
+
+
+_STUDENT_NAME_LABEL = re.compile(
+    r"(성\s*명|학생|작성자)\s*(?:[:：]\s*|\s+)(.*)", re.DOTALL
+)
+
+
+def _identity_name(value):
+    return re.sub(r"\s+", "", unicodedata.normalize("NFC", value))
+
+
+def _sample_identity_checks(nodes, project_root, issues):
+    """CA reads names from the canonical project, never from source files."""
+    if project_root is None or not (Path(project_root) / "project.json").is_file():
+        return
+    import gg_core as core_mod
+
+    project = core_mod.load(project_root)
+    authors = set()
+    for source in project["sources"].values():
+        names = source.get("author_names")
+        if (source.get("file_owner") not in ("other", "sample")
+                or not isinstance(names, list) or not names
+                or not all(isinstance(name, str) and _identity_name(name) for name in names)):
+            continue
+        authors.update(_identity_name(name) for name in names if any(c.isalpha() for c in name))
+    if not authors:
+        return
+    students = {
+        _identity_name(fact["value"]) if isinstance(fact.get("value"), str) else None
+        for fact in project["facts"].values()
+        if fact.get("field_id") == "common.student_name"
+        and fact.get("answer_state") == "provided"
+        and fact.get("verification") != "superseded"
+    }
+    student = next(iter(students)) if len(students) == 1 else None
+    continuation_names = authors | ({student} if student else set())
+    # Unheaded opening lines are front matter. Once a body/unknown
+    # heading starts, a student label alone cannot reopen that scope.
+    front, reference_level, traces = True, None, []
+    consumed = set()
+    for index, node in enumerate(nodes):
+        if index in consumed:
+            continue
+        text = node.get("text", "")
+        chapter = _numbered_heading(text)
+        title = _identity_name(chapter[2] if chapter else text)
+        level = node.get("level") or 1
+        is_reference = title.lower() in ("참고문헌", "출처", "출처목록", "references")
+        if node["kind"] == "heading" or is_reference or title in ("표지", "제출지", "인준지"):
+            if reference_level is not None and level <= reference_level:
+                reference_level = None
+            if is_reference:
+                reference_level = level
+            front = title in ("표지", "제출지")
+        if reference_level is not None:
+            continue
+        if node["kind"] == "paragraph":
+            label = _STUDENT_NAME_LABEL.fullmatch(text.replace("**", "").strip())
+            if label:
+                value = _identity_name(label[2])
+                # Resolve a soft-wrapped full name before accepting a shorter
+                # sample match. Other fields and paragraph boundaries stay out.
+                for following in range(index + 1, len(nodes)):
+                    if not any(name.startswith(value) and len(name) > len(value)
+                               for name in continuation_names):
+                        break
+                    extra = nodes[following]
+                    if extra["kind"] != "paragraph" or not extra.get("soft_continue"):
+                        break
+                    joined = value + _identity_name(extra["text"])
+                    if not any(name.startswith(joined) for name in continuation_names):
+                        break
+                    text += "\n" + extra["text"]
+                    value = joined
+                    consumed.add(following)
+        if node["kind"] == "table":
+            parts = [
+                (cell, "%d행 표 %d행 %d열" % (node["start_line"] + 1, row, col))
+                for row, cells in enumerate(node["rows"], 1)
+                for col, cell in enumerate(cells, 1)
+            ]
+        else:
+            parts = [(text, "%d행" % (node["start_line"] + 1))]
+        for part, location in parts:
+            if re.match(r"^\s*(?:출처|자료|참고)\s*[:：]", part):
+                continue
+            plain = re.sub(
+                r"[（(](?:출처|자료|참고)\s*[:：][^()（）]*[)）]", "",
+                part.replace("**", ""),
+            ).strip()
+            normalized = _identity_name(plain)
+            matches = {author for author in authors if author in normalized}
+            if not matches:
+                continue
+            label = _STUDENT_NAME_LABEL.fullmatch(plain)
+            if front and node["kind"] == "paragraph" and label:
+                value = _identity_name(label[2])
+                if value in matches:
+                    if student is None or value != student:
+                        issues.append((
+                            "sample_identity_unconfirmed" if student is None else "sample_identity",
+                            location + " 학생 성명 자리에 견본/타인 작성자명 일치"
+                            + (" (확인된 학생 성명 없음)" if student is None
+                               else " (확인된 학생 성명과 다름)"),
+                        ))
+                    matches.remove(value)
+            if matches:
+                traces.append(location)
+    if traces:
+        issues.append(("sample_trace_review", "견본/타인 이름 흔적 확인 필요: " + ", ".join(traces)))
+
+
+def check(text, base, major_id=None, project_root=None):
     if major_id is None:
         major_id = _project_major(base)
     nodes = parse(
         text, with_spans=True, _with_term_positions=True, major_id=major_id
     )
     issues = []
+    _table_numeric_checks(nodes, issues)
+    _sample_identity_checks(nodes, project_root, issues)
     policy = plain_policy_check(text, issues, nodes, major_id)
     full = set()
     for n in nodes:

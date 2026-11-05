@@ -32,6 +32,7 @@ def main(mode):
         if not path.is_dir() and not (root / "project.json").exists():
             root = root.parent if (root.parent / "project.json").exists() else root
         p = c.load(root) if (root / "project.json").exists() else None
+        project_root = root if p is not None else None
         if mode == "status":
             if not p:
                 raise ValueError(
@@ -95,7 +96,8 @@ def main(mode):
                     ),
                 )
                 for cid, reason in check(
-                    text, root, major_id=(project_major(p) if p else None) or a.major
+                    text, root, major_id=(project_major(p) if p else None) or a.major,
+                    project_root=project_root,
                 )
             ]
             if not rows:

@@ -58,7 +58,7 @@ description: 한국농수산대학교 창업논문·영농계획서와 동반 �
 - “이어서 하기”: `status <폴더>`·`next <폴더>`를 실행하고 현재 정본과 대상 절을 읽는다. 확인된 작성 폴더에 `project.json`이 없으면 원본을 두고 `import <기존폴더> --out <새폴더>`를 쓰되, 기존 폴더를 편집 중인 앱·프로세스가 없다고 확인한 뒤 `--offline-confirmed`를 붙인다(구형 폴더는 이 확인 없이 거부. 경과 시간·추정 금지). import는 인터뷰·가정표·증거·절 원본을 보존하고 수치·미결·중복·충돌을 `migration/inputs.json`에 기록한다. `migration-review`는 보존된 원답변부터 대조해 사실을 등록하고 재인터뷰·기존 검증 자동 승격은 하지 않는다.
 - “고칠 부분 보기”: `check <폴더>`의 위치별 결과와 내용검토 결과를 구분해 설명한다.
 - “검토본 받기”: `export <폴더> --kind review --major <전공ID>`. 생성된 실제 경로와 미검증 항목을 알려준다. 교수 승인으로 표시하지 않는다.
-- “HWPX 검토본 받기”: `scripts/build_hwpx.py <폴더> --major <전공ID>`(기본 `--in build/본문_통합.md --out build/검토전_논문.hwpx`). 여백·쪽번호·신명조 후처리와 `kordoc validate`·표 수치 대조를 거친다. 표지·제출면·목차의 쪽 나눔·정렬은 재현하지 않아 한글에서 사람이 마무리한다([outputs](references/outputs.md)).
+- “HWPX 검토본 받기”: `scripts/build_hwpx.py <폴더> --major <전공ID>`(기본 `--in build/본문_통합.md --out build/검토전_논문.hwpx`). 논문 HWPX는 이 경로로만 생성하며 kordoc 공문서 프리셋은 쓰지 않는다. 여백·쪽번호·신명조 후처리와 `kordoc validate`·표 수치 대조를 거친다. 표지·제출면·목차의 쪽 나눔·정렬은 재현하지 않아 한글에서 사람이 마무리한다(확인 항목: 목차 쪽 대조, [outputs](references/outputs.md)).
 - 산출물 등록: 생성·수정된 출력 파일을 정본에 등록하는 유일한 경로는 `adopt-output <폴더> --input <spec.json> --expected-revision <N> --major <전공ID>`다. spec 형식·동반 파일 판별·수령증 규칙은 [source-contract](references/source-contract.md)를 따른다.
 - 재무표 전개: 특용작물전공 Ⅳ장 재무표 전개는 학과 제공 템플릿(및 그 파생)을 대상으로 `gg.py finance-tables <폴더> --xlsx <재계산통합문서> [--input 각주.json] [--out 경로] --major specialty_crops` 명령으로 실행한다([specialty-crops/finance-flow](references/specialty-crops/finance-flow.md)).
 - “학교 논문 생성(특용작물)”: `gg.py paper <폴더> --input <spec.json> [--out <경로>] --major specialty_crops`. `table_sources`(표 ID 6개: `farm_overview`, `climate`, `disasters`, `shipping_markets`, `growth_targets`, `swot`)의 외부 기관명만 제목 끝 `(출처 : 기관명)`으로 표시한다. **모든 전공 공통**: 제목과 같은 글자 크기, 본인 작성·산출·촬영은 출처 없음(표기 시 `object_credit` 오류), 설명은 아래 `주 :`. 옛 별도 출처 줄은 권고이며 무출처 객체의 자체 작성 여부는 사람 검토다([outputs](references/outputs.md), [figure-photo-policy](references/figure-photo-policy.md)).
@@ -178,6 +178,6 @@ description: 한국농수산대학교 창업논문·영농계획서와 동반 �
 
 ## 출력 지원 한계
 
-DOCX 생성·XLSX 템플릿 복제·채우기·수식 보정·인쇄 조정·Office 재계산·PDF 변환의 명령과 한계는 [outputs](references/outputs.md)를 따른다. Office 변환(`gg_office.py word|excel`)은 macOS Word·Excel과 Windows 데스크톱 Word·Excel(`pywin32` 필요)에서 전공 권한 확인 뒤 원본을 격리한 작업 사본으로 실행한다. macOS는 다른 Word/Excel 문서가 열려 있거나 이전 세션 상태를 확인할 수 없으면 실행하지 않고 멈춘다. Windows는 `DispatchEx` 전용 인스턴스만 쓴다. 실제 Word/Excel에서의 변환 결과는 아직 실기로 검증하지 않았다. 생성물은 사람이 확인하기 전까지 제출 완료로 표시하지 않는다.
+DOCX 생성·XLSX 템플릿 복제·채우기·수식 보정·인쇄 조정·Office 재계산·PDF 변환의 명령과 한계는 [outputs](references/outputs.md)를 따른다. DOCX 목차 쪽번호는 필드(PAGEREF·TOC)와 `gg_office.py word` 갱신으로만 채우며 손으로 적거나 넣지 않고, 논문 HWPX는 `build_hwpx.py`로만 생성한다([outputs](references/outputs.md)). Office 변환(`gg_office.py word|excel`)은 macOS Word·Excel과 Windows 데스크톱 Word·Excel(`pywin32` 필요)에서 전공 권한 확인 뒤 원본을 격리한 작업 사본으로 실행한다. macOS는 다른 Word/Excel 문서가 열려 있거나 이전 세션 상태를 확인할 수 없으면 실행하지 않고 멈춘다. Windows는 `DispatchEx` 전용 인스턴스만 쓴다. 실제 Word/Excel에서의 변환 결과는 아직 실기로 검증하지 않았다. 생성물은 사람이 확인하기 전까지 제출 완료로 표시하지 않는다.
 
 원본·개인 자료는 외부로 보내거나 패키지에 포함하지 않는다. 사용자 결정으로 공개된 내장 학교 규칙 12파일·공용 지침 목록·계보 메타데이터는 예외다([source-contract](references/source-contract.md)). 공개 배포·교수 전달·파서 준비 외 추가 설치는 별도 승인이며 문서 읽기용 Kordoc 전용 캐시 설치는 첫 사용 준비에 포함한다.
