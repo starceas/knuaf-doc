@@ -260,7 +260,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "2d99dd0678f3170ee44fc5485c8e7a69fd0978431ea039ed48d114a29969e164",
+      "after_sha256": "457c99c642e7c9f7d7a3e30e271699b0bfff9ecdac24a793e80d8fe0951c3a26",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "F-CI1 / G-output-guards",
@@ -631,7 +631,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/fruit-trees/README.md": {
-      "after_sha256": "381ba8111e3c5679d316b6c058a3bf6cd0dea9194a8ec6d9d355d991e35bd07c",
+      "after_sha256": "2f97c62941edf3aa61d45f740ab04ce4c0ac4b1bca1726bc830f5204a87a3117",
       "before_sha256": null,
       "first_changed": "P8",
       "last_changed": "P16",
@@ -640,7 +640,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/fruit-trees/premise-probes.md": {
-      "after_sha256": "442950d11c3ceaf96059c488e89f5fa6da3e9d2bb380b53182f0ef3d2e1e5068",
+      "after_sha256": "475b254135cb6a1b85f1a47ead6a0a834583d91d1795678b3b72cd5c88f68924",
       "before_sha256": null,
       "first_changed": "P14",
       "last_changed": "P14",
