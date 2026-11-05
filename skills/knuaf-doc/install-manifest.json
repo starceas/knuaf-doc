@@ -1,6 +1,6 @@
 {
  "files": {
-  "SKILL.md": "fc1255a4d787820d41fcfc23a39bfddd3a16bf29dc40f2c7ebd700ceb9fa8507",
+  "SKILL.md": "47b89d18b23b6c458908282bc5621bf853c72b3080dcfb47e22df13e8fe23228",
   "assets/templates/finance-template.xlsx": "6d3c9fe5e5992108a8bab18c0098edb0d808f0d14c099878a53939b17de88c7d",
   "references/benchmark-packs/aliases/crop-aliases.specialty_crops.json": "8e7abffc7b4244727b4732f558b722934dd8ea229c0057312d1ee7ea92c2df22",
   "references/benchmark-packs/aliases/major-aliases.json": "ccf6b7d94690b0d7ed99618b3d649eb10755849d12f1922960a25bd14a419ea5",
@@ -72,7 +72,7 @@
   "references/lessons-learned.md": "70f613bdcabc89db616acb38ffae368e05c8c6050c366edde20fd078546aea5b",
   "references/locking.md": "8da00100e88e933b3064ee42505b56f25a90f81c81661bf3dd05b6a20674dff2",
   "references/majors.md": "1727b409f7cfb864bf9a341f318b980b6477a81a3a65cb75c07b77f1f5723e03",
-  "references/mid-work-questions.md": "0268b87fb4a624d0c5f79d0ef9443938ff16365f1939f9b3741c262e5cf34fd6",
+  "references/mid-work-questions.md": "5f229f8c1e5f2a2d886f55f21770ad400c071fe51754eb49e4816f1ac5aa9950",
   "references/model-routing.md": "966d503c90a062852706300f2b9297d1409cb681edc2a08f2efec07a374d58db",
   "references/narrative-expansion.md": "8830af4f6874fcd401b9be130fb594980720e940ecfadd961ed8c65940ba9166",
   "references/number-display.md": "af80c9e578904cf82f40323f8a5e5394bfc89bc42bd2992ccf2de7831541d654",

@@ -305,7 +305,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/SKILL.md": {
-      "after_sha256": "fc1255a4d787820d41fcfc23a39bfddd3a16bf29dc40f2c7ebd700ceb9fa8507",
+      "after_sha256": "47b89d18b23b6c458908282bc5621bf853c72b3080dcfb47e22df13e8fe23228",
       "before_sha256": "c0008fa5239cc16411fd4ef24b5bf901c7a8b9b50c6b621e2bdee3acf734ddc0",
       "first_changed": "P1",
       "last_changed": "P28",
@@ -314,7 +314,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "d8a6f14bb643ba04e05d82f83d422afb89e6bae2b4bd30da45cdcd01c8b3cd67",
+      "after_sha256": "dd4252500b3ede71e338e8aa432caf6068c23d55a36fc1fdf4640ff96c7f31f6",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "F-CI1 / G-output-guards",
@@ -876,7 +876,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/mid-work-questions.md": {
-      "after_sha256": "0268b87fb4a624d0c5f79d0ef9443938ff16365f1939f9b3741c262e5cf34fd6",
+      "after_sha256": "5f229f8c1e5f2a2d886f55f21770ad400c071fe51754eb49e4816f1ac5aa9950",
       "before_sha256": "bfe7d61143b9fdfeadf00e84bc2dc3082ac962dabd4ab72d6b6efeba7db21ee8",
       "first_changed": "P11",
       "last_changed": "P28",
