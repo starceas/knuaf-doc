@@ -260,7 +260,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "2d99dd0678f3170ee44fc5485c8e7a69fd0978431ea039ed48d114a29969e164",
+      "after_sha256": "171cd19dd59e01fb079ef39cdfe1f81b268fd71da5fad1da480ee4bfe8a01202",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "F-CI1 / G-output-guards",
@@ -667,7 +667,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/hort-env-systems/README.md": {
-      "after_sha256": "86eef1f034c8fa547385cff04859ff54aff058b60d923d3b3a507c838600bfba",
+      "after_sha256": "bbc12e33ffabe5ebbb8bd0d8e15a00a607ea4996a14fdd699ce3c797e0525d01",
       "before_sha256": null,
       "first_changed": "P9",
       "last_changed": "P27",
@@ -703,7 +703,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/hort-env-systems/premise-probes.md": {
-      "after_sha256": "84e053fb3d9285cfb0d5af83a22234a27d88d4b47b6c7b982f1624d1cdd20e24",
+      "after_sha256": "d5f4064c5e9cc31190611533e8f782544dc40e15df0d27ec5e98e65d743e6b99",
       "before_sha256": null,
       "first_changed": "P9",
       "last_changed": "P24",
