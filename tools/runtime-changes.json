@@ -251,7 +251,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/SKILL.md": {
-      "after_sha256": "b2f87ce31b4a7d939fa81656cedeef7a7942a00b085a754af6266b6ec94746ea",
+      "after_sha256": "b638ebb0c40b592c82c016456e7efa81c427ede768f127655749df9291e01a91",
       "before_sha256": "c0008fa5239cc16411fd4ef24b5bf901c7a8b9b50c6b621e2bdee3acf734ddc0",
       "first_changed": "P1",
       "last_changed": "P28",
@@ -260,7 +260,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "2d99dd0678f3170ee44fc5485c8e7a69fd0978431ea039ed48d114a29969e164",
+      "after_sha256": "d212598ff709607abb475af957747df9cea7d6e64f9064634d320b3e9db14bb0",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "F-CI1 / G-output-guards",
@@ -831,7 +831,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/model-routing.md": {
-      "after_sha256": "966d503c90a062852706300f2b9297d1409cb681edc2a08f2efec07a374d58db",
+      "after_sha256": "337897ee4ead96b6662b2cba13d25995299b8c52069844f963640d7aaf05050d",
       "before_sha256": "bda89a6d4cc6886fbf5feec441cfb0f10968e6ea90c1eb018a9205041d0a786b",
       "first_changed": "P1",
       "last_changed": "P28",
@@ -958,7 +958,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/research-routing.md": {
-      "after_sha256": "c888a16869f0756acef684431615607e6b553da4d8a4fb537001f2c2c9f0d04c",
+      "after_sha256": "f654124137a67969225c280269052bf0623755dd76c277a863088204124b8da6",
       "before_sha256": "99e2cabcbf814d8b97302880abd9f2effbe6a49d12ac0c1eb9f19e0ec54c99b1",
       "first_changed": "P27",
       "last_changed": "P28",
