@@ -7,10 +7,16 @@ the guard itself; the per-entry-point wiring is covered by
 ``test_major_guard_paper`` and ``test_major_guard_outputs``.
 """
 import copy
+import json
 from pathlib import Path
+import subprocess
+import sys
 import tempfile
 
-from tests._harness import ContractCase, bind_major, fact_op, runtime, source_op, write_text
+from tests._harness import (
+    ContractCase, SCRIPTS, bind_major, claim_of, fact_op, runtime, source_op,
+    write_text,
+)
 
 SPECIALTY = "specialty_crops"
 INSECTS = "industrial_insects"
@@ -196,6 +202,107 @@ class OutputGuardContractTests(ContractCase):
                 self._ctx(root, SPECIALTY), project=variant(
                     lambda p, f: f.update(answer_state="unknown")))
 
+    def test_document_sources_cannot_confirm_student_major(self):
+        root = self.make_project()
+        bind_major(root)
+        good = self.core.load(root)
+        for suffix in (".docx", ".xlsx", ".pdf", ".hwp", ".hwpx", ".DOCX"):
+            with self.subTest(suffix=suffix):
+                project = copy.deepcopy(good)
+                source = project["sources"]["major-answer"]
+                source["path"] = "sources/cover" + suffix
+                source["claims"]["major"]["quote"] = "전공: 특용작물전공"
+                for output in self.mc.OUTPUT_REQUIREMENTS:
+                    self._held("major_binding_invalid", output,
+                               self._ctx(root, SPECIALTY), project=project)
+        # A text extract of an owned manuscript is still a file source,
+        # even if a caller labels it as a student answer.
+        project = copy.deepcopy(good)
+        project["sources"]["major-answer"].update(
+            path="interview/answer.md", file_owner="self", student_answer=True)
+        for output in self.mc.OUTPUT_REQUIREMENTS:
+            self._held("major_binding_invalid", output,
+                       self._ctx(root, SPECIALTY), project=project)
+
+    def test_file_ownership_answer_cannot_confirm_student_major(self):
+        root = self.make_project()
+        bind_major(root)
+        project = self.core.load(root)
+        claim = project["sources"]["major-answer"]["claims"]["major"]
+        claim.update(field_id="intake.file_owner", value="self",
+                     quote="제 거 맞아요")
+        for output in self.mc.OUTPUT_REQUIREMENTS:
+            self._held("major_binding_invalid", output,
+                       self._ctx(root, SPECIALTY), project=project)
+
+    def test_major_answer_links_must_resolve_current_matching_claim(self):
+        root = self.make_project()
+        bind_major(root)
+        good = self.core.load(root)
+        mutations = {
+            "empty_source": lambda s, r: s.clear(),
+            "missing_claim": lambda s, r: s.update(claims={}),
+            "missing_claim_id": lambda s, r: r.pop("claim_id"),
+            "unknown_claim_id": lambda s, r: r.update(claim_id="gone"),
+            "stale_revision": lambda s, r: s.update(revision=2),
+            "missing_revision": lambda s, r: r.pop("revision"),
+            "empty_locator": lambda s, r: r.update(locator=""),
+            "wrong_locator": lambda s, r: s["claims"]["major"].update(
+                locator="line 9"),
+            "wrong_major": lambda s, r: s["claims"]["major"].update(
+                value=INSECTS),
+            "unprovided_claim": lambda s, r: s["claims"]["major"].update(
+                answer_state="unknown", value=None),
+            "non_claim_mapping": lambda s, r: s.update(claims=[]),
+            "malformed_ref": lambda s, r: r.update(id=[]),
+        }
+        for name, mutate in mutations.items():
+            project = copy.deepcopy(good)
+            fact = project["facts"]["selected_major"]
+            mutate(project["sources"]["major-answer"], fact["source_refs"][0])
+            for output in self.mc.OUTPUT_REQUIREMENTS:
+                with self.subTest(case=name, output=output):
+                    self._held("major_binding_invalid", output,
+                               self._ctx(root, SPECIALTY), project=project)
+
+    def test_interview_answer_apply_authorizes_all_supported_outputs(self):
+        root = self.make_project()
+        answer = "질문: 학생 본인의 전공은 무엇인가요?\n답변: 저는 특용작물전공이에요.\n"
+        write_text(root, "interview/intake-answer.txt", answer)
+        fact = fact_op(
+            "selected_major", "common.major_id", SPECIALTY, "",
+            scope="project", verification="claim_supported",
+            source_id="intake-answer", claim_id="major")
+        fact["value"]["module_version"] = (
+            self.mc.default_registry().resolve(SPECIALTY).module_version)
+        ref = fact["value"]["source_refs"][0]
+        ref["locator"] = "line 2"
+        claims = claim_of(fact["value"], "major")
+        claims["major"].update(
+            locator="line 2", quote="답변: 저는 특용작물전공이에요.")
+        src = source_op("interview/intake-answer.txt", claims=claims)
+        src["value"]["id"] = "intake-answer"
+        write_text(root, "major-selection.json", json.dumps({
+            "request_id": "interview-major", "ops": [src, fact],
+        }, ensure_ascii=False))
+        result = subprocess.run(
+            [sys.executable, "-B", str(SCRIPTS / "gg.py"), "apply", str(root),
+             "--change", str(root / "major-selection.json"),
+             "--expected-revision", "0"],
+            capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+        project = self.core.load(root)
+        self.assertEqual(project["sources"]["intake-answer"]["revision"], 1)
+        self.assertEqual((root / "interview/intake-answer.txt").read_text(
+            encoding="utf-8"), answer)
+        for output in self.mc.OUTPUT_REQUIREMENTS:
+            with self.subTest(output=output):
+                auth = self.mc.authorize_output(
+                    output, self._ctx(root, SPECIALTY))
+                self.assertEqual(auth.major_id, SPECIALTY)
+                self.assertEqual(auth.project_revision, project["revision"])
+                self.assertEqual(auth.binding_evidence, "facts:selected_major")
+
     def test_l6_explicit_id_without_binding_is_held(self):
         """A32-L6: an explicit specialty ID with no canonical binding is
         held for every output."""
@@ -316,9 +423,9 @@ class OutputGuardContractTests(ContractCase):
         write_text(root, "major-answer.txt", "전공 선택: " + PROBE + "\n")
         fact = fact_op("selected_major", "common.major_id", PROBE, "",
                        scope="project", verification="claim_supported",
-                       source_id="major-answer")
+                       source_id="major-answer", claim_id="major")
         fact["value"]["module_version"] = "0.0.1"
-        src = source_op("major-answer.txt")
+        src = source_op("major-answer.txt", claims=claim_of(fact["value"], "major"))
         src["value"]["id"] = "major-answer"
         self.core.apply(root, {"request_id": "fruit", "ops": [src, fact]}, 0)
         before = self._tree_bytes(root)
@@ -446,6 +553,7 @@ class OutputGuardContractTests(ContractCase):
                 ctx = self._ctx(root, SPECIALTY)
                 auth = mc.authorize_output(mc.OUTPUT_SCHOOL_PAPER, ctx)
                 fact = dict(self.core.load(root)["facts"]["selected_major"])
+                ops = []
                 if change == "unknown":
                     fact["answer_state"] = "unknown"
                     fact["value"] = None
@@ -453,11 +561,18 @@ class OutputGuardContractTests(ContractCase):
                     fact["value"] = INSECTS
                     fact["module_version"] = (
                         mc.INDUSTRIAL_INSECTS_MODULE.module_version)
+                    write_text(root, "changed-major.txt", "전공 변경: " + INSECTS + "\n")
+                    fact["source_refs"] = [{
+                        "id": "changed-major", "revision": 1,
+                        "locator": "line 1", "claim_id": "major"}]
+                    src = source_op(
+                        "changed-major.txt", claims=claim_of(fact, "major"))
+                    src["value"]["id"] = "changed-major"
+                    ops.append(src)
+                ops.append({"collection": "facts", "value": fact})
                 try:
                     self.core.apply(root, {"request_id": "swap:" + change,
-                                           "ops": [{"collection": "facts",
-                                                    "value": fact}]},
-                                    auth.project_revision)
+                                           "ops": ops}, auth.project_revision)
                 except Exception as error:  # pragma: no cover - diagnostic
                     self.fail("apply refused %s: %r" % (change, error))
                 with self.assertRaises(mc.OutputHeldError) as caught:

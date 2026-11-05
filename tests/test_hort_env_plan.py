@@ -16,7 +16,7 @@ import unicodedata
 from pathlib import Path
 from unittest import mock
 
-from tests._harness import ContractCase, SCRIPTS, runtime
+from tests._harness import ContractCase, SCRIPTS, claim_of, runtime
 
 
 MAJOR = "hort_env_systems"
@@ -155,9 +155,11 @@ def _base_project():
 
 
 def _binding_fact(major_id=MAJOR, module_version="0.2.0", fid="m0"):
-    return _fact(fid, "common.major_id", "provided", value=major_id,
+    fact = _fact(fid, "common.major_id", "provided", value=major_id,
                  scope="project", verification="claim_supported",
                  module_version=module_version)
+    fact["source_refs"][0]["claim_id"] = "major"
+    return fact
 
 
 def _all_keys(node):
@@ -186,6 +188,9 @@ class _PlanCase(ContractCase):
             p["facts"][fact["id"]] = fact
         for src in sources:
             p["sources"][src["id"]] = src
+        for fact in facts:
+            if fact["field_id"] == "common.major_id":
+                p["sources"]["s1"]["claims"] = claim_of(fact, "major")
         (root / "project.json").write_text(
             json.dumps(p, ensure_ascii=False), encoding="utf-8"
         )

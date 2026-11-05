@@ -49,7 +49,7 @@ from types import SimpleNamespace
 from unittest import mock
 
 from tests._harness import (
-    SCRIPTS, ContractCase, bind_major, runtime, write_text,
+    SCRIPTS, ContractCase, bind_major, claim_of, runtime, source_op, write_text,
 )
 
 SPECIALTY = "specialty_crops"
@@ -119,8 +119,14 @@ class _Base(ContractCase):
         fact = dict(self.core.load(root)["facts"]["selected_major"])
         fact.update(value=INSECTS,
                     module_version=self.mc.INDUSTRIAL_INSECTS_MODULE.module_version)
+        write_text(root, "changed-major.txt", "전공 변경: " + INSECTS + "\n")
+        fact["source_refs"] = [{
+            "id": "changed-major", "revision": 1,
+            "locator": "line 1", "claim_id": "major"}]
+        src = source_op("changed-major.txt", claims=claim_of(fact, "major"))
+        src["value"]["id"] = "changed-major"
         self.core.apply(root, {"request_id": "swap", "ops": [
-            {"collection": "facts", "value": fact}]},
+            src, {"collection": "facts", "value": fact}]},
             self.core.load(root)["revision"])
 
     def _xlsx(self, path, *, formula=False):

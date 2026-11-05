@@ -26,7 +26,7 @@ from pathlib import Path
 from unittest import mock
 
 from tests._harness import (
-    SCRIPTS, ContractCase, bind_major, fact_op, runtime, source_op, write_text,
+    SCRIPTS, ContractCase, bind_major, claim_of, fact_op, runtime, source_op, write_text,
 )
 
 SPECIALTY = "specialty_crops"
@@ -99,9 +99,17 @@ class _Base(ContractCase):
         fact = dict(self.core.load(root)["facts"]["selected_major"])
         fact.update(changes)
         revision = self.core.load(root)["revision"]
-        self.core.apply(root, {"request_id": "swap-binding",
-                               "ops": [{"collection": "facts",
-                                        "value": fact}]}, revision)
+        ops = []
+        if "value" in changes:
+            write_text(root, "changed-major.txt", "전공 변경: " + fact["value"] + "\n")
+            fact["source_refs"] = [{
+                "id": "changed-major", "revision": 1,
+                "locator": "line 1", "claim_id": "major"}]
+            src = source_op("changed-major.txt", claims=claim_of(fact, "major"))
+            src["value"]["id"] = "changed-major"
+            ops.append(src)
+        ops.append({"collection": "facts", "value": fact})
+        self.core.apply(root, {"request_id": "swap-binding", "ops": ops}, revision)
 
     def _probe_registry(self, outputs=("question_list", "document_plan")):
         mc = self.mc
@@ -126,9 +134,9 @@ class _Base(ContractCase):
         write_text(root, "major-answer.txt", "전공 선택: " + PROBE + "\n")
         fact = fact_op("selected_major", "common.major_id", PROBE,
                        "", scope="project", verification="claim_supported",
-                       source_id="major-answer")
+                       source_id="major-answer", claim_id="major")
         fact["value"]["module_version"] = "0.0.1"
-        src = source_op("major-answer.txt")
+        src = source_op("major-answer.txt", claims=claim_of(fact["value"], "major"))
         src["value"]["id"] = "major-answer"
         revision = self.core.load(root)["revision"]
         self.core.apply(root, {"request_id": "fruit", "ops": [src, fact]},
@@ -504,6 +512,7 @@ class PaperMigrationTests(_Base):
         fact = dict(approved["facts"]["selected_major"])
         fact["source_refs"] = [dict(fact["source_refs"][0],
                                     id="major-answer-2")]
+        src["value"]["claims"] = claim_of(fact, "major")
         self.core.apply(root, {"request_id": "rebind", "ops": [
             src, {"collection": "facts", "value": fact}]},
             approved["revision"])

@@ -536,14 +536,13 @@ def binding_from_project(registry, project):
     existing ``gg_core.apply`` path.
 
     A fact binds only when it is ``provided`` with a major_id ``value``,
-    carries ``claim_supported`` verification and ``source_refs`` that
-    resolve in ``project["sources"]``, and records a ``module_version``
-    equal to the registered module's version.  No provided fact ->
-    ``MissingMajorError`` (a missing major is never inferred and never
-    defaulted to specialty_crops); duplicate or conflicting provided
-    facts, verification short of ``claim_supported``, unresolved
-    source_refs, or a missing/mismatched module_version ->
-    ``BindingInvalidError``.
+    carries ``claim_supported`` verification, and records the registered
+    ``module_version``. Every source_ref must resolve at the current source
+    revision to a matching ``common.major_id`` reported-fact claim in a
+    preserved text interview answer, not an owned file or document cover.
+    This validates the recorded provenance, not the truth of model-written
+    interview content. No provided fact -> ``MissingMajorError``; duplicate,
+    conflicting, unconfirmed, or unresolved evidence -> ``BindingInvalidError``.
     """
     facts = project.get("facts") or {}
     provided = [
@@ -576,14 +575,15 @@ def binding_from_project(registry, project):
         raise BindingInvalidError("provided major fact has no major_id")
     module = registry.resolve(major_id)
     sources = project.get("sources") or {}
-    refs = fact.get("source_refs") or []
-    if not refs:
+    refs = fact.get("source_refs")
+    if not isinstance(refs, (list, tuple)) or not refs:
         raise BindingInvalidError("major fact has no source_refs")
-    missing = [r.get("id") for r in refs if r.get("id") not in sources]
+    if any(not isinstance(ref, dict) or not isinstance(ref.get("id"), str)
+           for ref in refs):
+        raise BindingInvalidError("major source_ref is malformed")
+    missing = [ref["id"] for ref in refs if ref["id"] not in sources]
     if missing:
-        raise BindingInvalidError(
-            "source_refs unresolved", missing=missing
-        )
+        raise BindingInvalidError("source_refs unresolved", missing=missing)
     recorded = fact.get("module_version")
     if not isinstance(recorded, str) or not recorded:
         raise BindingInvalidError("module_version not recorded")
@@ -593,6 +593,36 @@ def binding_from_project(registry, project):
             recorded=recorded,
             registered=module.module_version,
         )
+    if fact.get("kind") != "reported_fact" or fact.get("scope") != "project":
+        raise BindingInvalidError("major selection is not a reported project fact")
+    for ref in refs:
+        source = sources[ref["id"]]
+        if not isinstance(source, dict):
+            raise BindingInvalidError("major answer source is malformed")
+        path = source.get("path")
+        # The existing interview contract preserves raw answers as text.
+        # A manuscript's extracted text remains a file source when it has
+        # file_owner; neither its cover nor an answer flag confirms a major.
+        if (not isinstance(path, str)
+                or Path(path).suffix.lower() not in {".txt", ".md"}
+                or "file_owner" in source):
+            raise BindingInvalidError("major source is not a text interview answer")
+        revision = source.get("revision")
+        locator = ref.get("locator")
+        claims = source.get("claims")
+        claim_id = ref.get("claim_id")
+        claim = (claims.get(claim_id)
+                 if isinstance(claims, dict) and isinstance(claim_id, str)
+                 else None)
+        if (type(revision) is not int or revision < 1
+                or ref.get("revision") != revision
+                or not isinstance(locator, str) or not locator.strip()
+                or not isinstance(claim, dict)
+                or any(fact.get(key) != claim.get(key) for key in (
+                    "field_id", "value", "unit", "period", "scope",
+                    "answer_state", "kind"))
+                or ("locator" in claim and claim["locator"] != locator)):
+            raise BindingInvalidError("major answer claim does not resolve or match")
     return bind_major(
         registry,
         major_id,
