@@ -36,6 +36,61 @@
 5. **읽었으면 반드시 발췌본을 남긴다** (아래 1-1항). 읽고 넘어가지 않는다.
 6. 뷰에 있으나 어느 절에도 쓰이지 않은 자료는 lint WARN으로 보고한다.
 
+### 원고 파일 하나 접수
+
+```sh
+python3 scripts/gg.py intake-manuscript /작업폴더 "원고.docx" \
+  --input interview/answer-source.json --expected-revision 0 \
+  --request-id intake-manuscript-001
+```
+
+- 선택파일은 작업폴더 기준 상대경로 또는 절대경로 **하나**다. 폴더 전체 `import`를 하지 않는다. 형제 파일은 스캔 경계 검사 대상일 수 있지만 등록 목록에는 선택한 파일만 들어간다.
+- `--input`은 작업폴더 안 JSON 경로다. 기존 원답변 source의 `path`·`claims` 형식을 사용한다. `path`는 작업폴더 안 실제 UTF-8 TXT/MD 원답변 파일이다. 명령이 그 바이트를 `sources/answers/<sha256>.txt`(또는 `.md`)에 보존한다. 선택 파일의 표지·파일명으로 소유나 전공을 추정하지 않는다.
+- 필수 CLI 옵션이 빠지면 다른 `gg.py` 명령과 같이 exit 2·`status: blocked`로 빠진 옵션 이름을 알리고 접수를 시작하지 않는다. 옵션은 있지만 실제 원답변이 없거나 확인이 미정인 경우는 접수의 `incomplete`와 구분한다.
+- `claims`에는 파일 선택(`intake.current_manuscript`, 값은 선택 파일명), 자기 원고 확인(`intake.file_owner: self`), 현재 이어쓰기 목적(`intake.work_basis: resume`)이 각각 하나씩 있어야 한다. 모두 기존 `reported_fact`·`provided`·`text`·`scope: project` 계약이며 `unit: ""`, `period: null`이다. `locator: line N`과 `quote`는 원답변의 해당 줄 전체(양끝 공백 제외)와 일치해야 한다. 여러 의미를 한 줄로 답했으면 같은 줄을 연결해도 된다. 새 승인 플래그가 아니다.
+- 원답변의 의미를 해석해 기록하는 책임은 기존 인터뷰 규칙 그대로다. 명령은 한국어 키워드로 확인을 추정하지 않으며, 잘못 해석해 붙인 claim의 의미적 진실까지 판정한다고 주장하지 않는다. 없음·모름·거부·중복/모호한 확인이나 불일치 인용은 미완료다. 소유 확인만으로 선택·현재성·전공을 보충하지 않는다.
+
+예를 들어 원답변 `interview/answer.txt`가 다음이면:
+
+```text
+현재 원고는 원고.docx입니다.
+제 원고입니다.
+이 원고로 이어 쓸게요.
+```
+
+`interview/answer-source.json`은 다음과 같다(수치는 예시가 아니라 위 답의 위치):
+
+```json
+{
+  "path": "interview/answer.txt",
+  "claims": {
+    "selected": {
+      "field_id": "intake.current_manuscript", "value": "원고.docx",
+      "kind": "reported_fact", "value_type": "text", "unit": "", "period": null,
+      "scope": "project", "answer_state": "provided",
+      "locator": "line 1", "quote": "현재 원고는 원고.docx입니다."
+    },
+    "owner": {
+      "field_id": "intake.file_owner", "value": "self",
+      "kind": "reported_fact", "value_type": "text", "unit": "", "period": null,
+      "scope": "project", "answer_state": "provided",
+      "locator": "line 2", "quote": "제 원고입니다."
+    },
+    "purpose": {
+      "field_id": "intake.work_basis", "value": "resume",
+      "kind": "reported_fact", "value_type": "text", "unit": "", "period": null,
+      "scope": "project", "answer_state": "provided",
+      "locator": "line 3", "quote": "이 원고로 이어 쓸게요."
+    }
+  }
+}
+```
+
+- 정본이 없을 때 `--expected-revision 0`으로 같은 작업폴더를 초기화한다. 있으면 현재 개정 `N`을 명시한다. 정상 경로는 snapshot 등록 `N+1`, 기존 `apply`로 출처·선택/목적 사실·원답변 task 연결 `N+2`다. raw answer와 원고 source 해시는 실제 보존 바이트이며 원본은 수정하지 않는다. 기존 선택/목적 fact ID는 재사용하고, 원고 본문 속 다른 주장·전공을 fact로 승격하지 않는다.
+- 실행 중인 설치본의 registry·일반 원고용 스캔 정책과 비어 있는 key catalog를 사용한다. 저수준 CLI의 명시 인자 계약은 바꾸지 않는다. `unmapped/source_unmatched`는 외부 학생 원고 보존을 막지 않지만 재사용 승인도 아니다. 다른 신뢰/해결 실패를 이 예외에 포함하지 않는다. 뷰는 기존 register 엔진이 발행한다.
+- 완료는 exit 0 + `status: registered` + `commit_state: committed`다. 반환값의 `source_path`·`source_hash`·`answer_path`·`answer_source_id`·`revision`을 확인한다. 문서 생성·전공 확인·제출 승인은 별도다.
+- 중간 실패는 `status: incomplete`, 실패 `stage`·`reason`·`completed_steps`·`registration_revision`·`preserved_paths`로 보고한다. `commit_state`는 실패한 단계의 기존 커밋 판정을 유지한다(exit 2/3/4). 예: `apply`의 개정 충돌은 `not_committed`여도 앞선 snapshot 등록은 `registration_revision`에 남는다. 수령증·기존 자료·이미 보존한 사본을 지우거나 접수 성공으로 바꾸지 않는다. 스캔 뒤 바이트 변경·잠금·개정 충돌을 무시하지 않으며, 자동 재시도/롤백 명령이 아니다. 현재 정본과 보존 경로를 점검해 실패 원인을 해결한다.
+
 ## 1-1. 읽은 자료는 반드시 발췌본으로 남긴다
 
 원본을 한 번 읽고 지나가면 그 내용은 **대화 컨텍스트에만 존재한다.**
