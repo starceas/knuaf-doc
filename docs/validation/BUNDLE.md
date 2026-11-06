@@ -142,15 +142,98 @@ python3 tools/build_validation_bundle.py --root . --out <새_디렉터리> --rec
 
 ## CI
 
-`.github/workflows/validation.yml`은 모든 PR과 main push에서 같은 명령을
-실행한다. ubuntu 잡이 실제 시험을 수행하고, windows 잡은 **구조 검사만**
+`.github/workflows/validation.yml`은 시험 전체를 **5개 조각**(단위: 모듈 통째, 예외 두 모듈은 클래스·메서드)으로
+나눠 동시에 돌린다. 조각 한 개는 한 개 이상의 단위(대부분 unittest 모듈 통째)를 실행하므로
+클래스·모듈 setUp이 깨지지 않는다. Windows 잡은 여전히 **구조 검사만**
 수행한다 — Windows 런타임·바이트 잠금·Office 자동화의 네이티브 검증을
 주장하지 않는다. export 결정성 단계는 quoted heredoc 안에서
-`os.environ['RUNNER_TEMP']`로 receipt 경로를 읽는다(repair-n1/N2 —
-쉘 확장 없이 경로 공백도 안전).
+`os.environ['RUNNER_TEMP']`로 receipt 경로를 읽는다(쉘 확장 없이 경로 공백도 안전).
 
-ubuntu 잡은 runner 뒤에 **엄격한 리포트 consumer**를 둔다(P2-R2). 이
-단계는 `validation-report.json`을 읽어 다음을 요구한다 — 하나라도
+| 상황 | `suite (ubuntu, py3.10)` | `suite (ubuntu, py3.14)` |
+|---|---|---|
+| PR | 5개 조각 전체 시험 + 합친 보고서 contract 검사 | 빠른 확인(`tools/quick_validation.py`) |
+| main push · `workflow_dispatch` | 5개 조각 전체 시험 + contract 검사 | 5개 조각 전체 시험 + contract 검사 |
+
+필수 체크 이름(`suite (ubuntu, py3.10)`·`suite (ubuntu, py3.14)`·
+`structural only (windows)`)은 PR·main 모두 그대로 나온다. 두 `suite` 잡은
+조각 job을 기다리는 **마무리 job**이며 `if: always()`로 반드시 돈다 — 조각
+job이 실패·취소돼도 건너뛰지 않고, 조각 결과가 `success`가 아니면 첫 단계에서
+실패한다(건너뜀이 통과로 칠리는 일 방지). 마무리 job은 구조 검사·manifest
+결정성을 다시 하고, 조각 보고서를 `tools/run_validation.py --merge-shards`로
+합친 뒤 기존 contract 검사(`tools/check_validation_report.py`, 예전 인라인
+검사를 그대로 파일로 옮긴 것)를 통과해야 초록이다.
+
+### 조각 배정과 합치기
+
+- 두 시험 루트(`tests/`, `skills/knuaf-doc/tests/`)를 한 번에 discover해
+  **조각 단위(unit)**로 묶는다. 기본 단위는 모듈(파일) 전체다. 예외는 시험 안에서
+  저장소 사본으로 전체 시험을 다시 도는 중첩 실행을 하는 두 모듈
+  (`tests/test_runner_contract.py`, `tests/test_runner_negative_controls.py`,
+  중첩 실행 약 17회로 전체 시간의 대부분)뿐이다. 이 둘은 클래스로 나누고,
+  `setUpClass`/`tearDownClass`가 없는 클래스는 메서드 하나씩으로 더 나눈다.
+  `setUpClass`가 있는 클래스(`RunnerAccountingTests`)나 `setUpModule`/
+  `tearDownModule`이 있는 모듈은 통째로 한 단위다. 단위 이름은
+  `경로.py`, `경로.py::클래스`, `경로.py::클래스::메서드`다.
+- 쪼갠 두 모듈에 순서 의존이 없는 근거: ① 쪼개는 클래스에 class/module fixture가
+  없다(코드로 판별해 있으면 통째로 둠) ② 메서드마다 `copy_public_tree`/
+  `_copy_public`으로 자기 임시 사본을 만들고 보고서도 그 사본 옆에 쓴다 — 시험 간
+  공유 파일·고정 경로 없음 ③ 모듈 수준 가변 전역 상태 없음, `os.environ`·`cwd`·
+  `sys.path` 변경 없음(자식 프로세스 env는 호출마다 복사본), `mock.patch`는 `with`
+  범위 안(`RunnerAccountingTests`, 통째로 실행) ④ `KNOWN_DEFECTS`는 시험 id를 키로
+  쓴다. 그래도 나누기 전/후 결과가 시험 id별로 같은지는 전후 비교(아래)로 닫는다.
+- 단위를 가중치 큰 것부터 정렬(가중치 = 시험 수 + 중첩 실행 수 × 3000 — 중첩 실행 1회가
+  나머지 모듈 전체와 비슷한 시간), 경로 순으로 놓고 그때그때 가장 적게 쌓인 조각에
+  배정한다(동률이면 낮은 번호). 결정적이다. 중첩 실행 수는 `validation_sharding.py`의
+  `NESTED_RUNS`에 있으며 첫 CI 실행의 `module_timings_seconds`로 바꿀 임시 값이다.
+- 각 조각 보고서는 `shard`(번호·모듈 목록·discover한 ID·실행한 ID)와
+  `runtime.module_timings_seconds`(단위별 실행 시간, setUp 포함)를 남긴다.
+  다음 재배정은 이 시간을 보고 한다.
+- 합칠 때(`validation_sharding.merge_shard_reports`) 조각이 스스로 보고한
+  수를 믿지 않고 **저장소를 다시 discover**해서 대조한다: 조각 번호 중복·누락,
+  조각의 모듈 배정과 시험 ID 집합이 새 discover와 다름, 실행 ID가
+  보고서 entries와 다름, 조각 간 도구·파이썬·baseline 불일치, 합친 ID가
+  전체 discover와 다름(누락·중복) 중 하나라도 있으면 실패한다.
+- 시험은 삭제·skip 추가·내용 수정 없이 그대로다. 합친 보고서는 전체 실행과
+  같은 모양이어서 contract 검사가 바뀌지 않는다.
+
+### 전후 비교 (시험 ID별)
+
+```sh
+python tools/compare_validation_reports.py baseline-py3.10.json merged-py3.10.json
+python tools/compare_validation_reports.py baseline-py3.14.json merged-py3.14.json
+```
+
+baseline은 나누기 전 main CI의 `validation-reports-py3.10`/`py3.14`
+artifact(`validation-report.json`), merged는 이 PR을 main 기준으로 돌린 뒤의
+`validation-reports-py3.*` artifact다. 시험 ID 집합과 ID별 결과(category·
+detail·defect·gate·events)가 같으면 exit 0, 다르면 1, 읽기 실패는 2다.
+PR에서는 3.14가 빠른 확인이라 3.14 합친 보고서가 없다 — 3.14 비교는 main
+push 또는 `workflow_dispatch` 실행의 artifact로 한다.
+
+### Python 3.14 빠른 확인 (PR 전용)
+
+`tools/quick_validation.py`는 contract 검사 대상이 아니며 자체 판정 기준은 다음과
+같다. 하나라도 어긋나면 실패한다.
+
+- 구조 검사·manifest 결정성(마무리 job의 공통 단계)
+- 검증·시험 루트의 모든 `.py`가 3.14에서 컴파일됨
+- 모든 시험 모듈이 로더 오류 없이 import됨, 시험 ID 중복 없음
+- 고정된 스모크 시험 5개 ID와, zip/XML/xlsx를 다루는 빠른 모듈 3개
+  (`tests.test_xlsx_structure`·`test_build_hwpx`·`test_hwpx_adapter`)의 전체 시험이
+  전부 존재하고 skip·실패·오류 없이 실행됨 (합쳐서 수 초)
+
+3.14에서만 깨지는 문법·import·표준 라이브러리 변경을 싸게 잡는 용도이며, 3.14
+전체 시험은 main push에서 돈다.
+
+### main 실패 알림
+
+`notify-main-failure` job은 main push에서 `suite (ubuntu, py3.10)` 또는
+`(py3.14)`가 실패하면 "Main validation failed" 이슈를 열거나(이미 열려 있으면
+댓글) 실행 링크를 남긴다. `GITHUB_TOKEN`의 `issues: write`·`contents: read`만
+쓰고 외부 서비스·과금 경로는 쓰지 않는다.
+
+마무리 job은 합친 보고서에 **엄격한 리포트 consumer**를 적용한다(P2-R2; 지금은
+`tools/check_validation_report.py`). 이 단계는 합친 `validation-report.json`을 읽어 다음을 요구한다 — 하나라도
 어긋나면 잡 실패이며 `|| true`/반환 코드 무시/예외 면제는 없다:
 
 - `verdict=ok_platform_scoped`·`exit_code=0`·`mode=default`·
@@ -169,6 +252,8 @@ ubuntu 잡은 runner 뒤에 **엄격한 리포트 consumer**를 둔다(P2-R2). �
   `causes.unexpected`·`causes.incomplete` 전부 빈 값, `unexpected_failed=0`,
   `accounting.errors` 없음, `runtime.status=completed`·`tests_run>0`,
   bundle `pass`·dependency ready
+- (조각 나누기 이후 추가) `runtime.discovered_test_ids`가 저장소를 새로 discover한
+  ID 목록·순서와 정확히 같고 entries의 ID 집합과도 같을 것
 
 P2-R3에서 consumer는 요약 필드 신뢰를 버리고 리포트를 독립적으로
 재계산한다 — `accounting.errors`가 비어 있어도 아래 모순은 거부된다:

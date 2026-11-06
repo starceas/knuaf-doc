@@ -81,6 +81,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import time
 import unittest
 
 MIN_PYTHON = (3, 10)
@@ -270,6 +271,8 @@ class RecordingResult(unittest.TextTestResult):
         self.parent_terminal = {}    # id -> (kind, detail)
         self.parent_events = {}      # id -> [event dict]
         self.fixture_events = []     # [{test, type, detail}]
+        self.executed_modules = set()
+        self.module_timings_seconds = {}
         self._current = None
 
     # -- parent lifecycle -------------------------------------------------
@@ -628,27 +631,66 @@ def _dependency_preflight(root):
     return diag
 
 
-def _run_runtime_tests(root):
+try:
+    from validation_sharding import (
+        assign_modules, discover_modules, merge_shard_reports, parse_shard)
+except ImportError:
+    from tools.validation_sharding import (
+        assign_modules, discover_modules, merge_shard_reports, parse_shard)
+
+
+class ModuleTimingSuite(unittest.TestSuite):
+    """Run one complete module atomically and record fixture-inclusive time."""
+
+    def __init__(self, module, tests):
+        super().__init__(tests)
+        self.module = module
+
+    def run(self, result, debug=False):
+        started = time.perf_counter()
+        try:
+            return super().run(result, debug)
+        finally:
+            result.executed_modules.add(self.module)
+            result.module_timings_seconds[self.module] = round(
+                time.perf_counter() - started, 6)
+
+
+def _run_runtime_tests(root, shard=None):
+    root = Path(root).resolve()
     sys.path.insert(0, str(root))
     try:
-        skill_tests = root / "skills" / "knuaf-doc" / "tests"
+        modules, discovered_ids = discover_modules(root)
+        # Units (modules, or classes/methods of the two split modules) run in
+        # the order the shard report lists them.
+        selected_modules = list(modules)
+        if shard is not None:
+            index, count = shard
+            selected_modules = assign_modules(modules, count)[index]
         suite = unittest.TestSuite()
-        # Separate loaders: discover caches top_level_dir. Skill tests are
-        # standalone modules, not a second package named ``tests``.
-        for start, top in ((root / "tests", root), (skill_tests, skill_tests)):
-            suite.addTests(unittest.TestLoader().discover(
-                str(start), pattern="test_*.py", top_level_dir=str(top)))
-        stream = io.StringIO()
+        for module in selected_modules:
+            suite.addTest(ModuleTimingSuite(module, modules[module]))
         runner = unittest.TextTestRunner(
-            stream=stream, verbosity=2, resultclass=RecordingResult)
+            stream=io.StringIO(), verbosity=2, resultclass=RecordingResult)
         result = runner.run(suite)
-        # tests._harness was already imported by the suite; this is the same
-        # module object, so its KNOWN_DEFECTS registry is shared.
         import tests._harness as harness
-        known = harness.KNOWN_DEFECTS
+        runtime = _summarize_result(result, harness.KNOWN_DEFECTS)
+        runtime["executed_modules"] = sorted(result.executed_modules)
+        runtime["module_timings_seconds"] = dict(
+            sorted(result.module_timings_seconds.items()))
     finally:
         sys.path.remove(str(root))
-    return _summarize_result(result, known)
+    if shard is not None:
+        runtime["shard"] = {
+            "index": shard[0] + 1, "count": shard[1],
+            "modules": selected_modules,
+            "discovered_test_ids": [
+                test.id() for module in selected_modules for test in modules[module]],
+            "executed_test_ids": list(result.started)}
+        runtime["discovered_test_ids"] = runtime["shard"]["discovered_test_ids"]
+    else:
+        runtime["discovered_test_ids"] = discovered_ids
+    return runtime
 
 
 def _evaluate_external_gate(entries, suite_ran):
@@ -766,7 +808,17 @@ def main(argv=None):
     ap.add_argument("--runtime-only", action="store_true",
                     help="development aid: skip the bundle check; never the "
                          "final or CI command")
+    ap.add_argument("--shard", type=parse_shard, metavar="I/N",
+                    help="run one deterministic whole-module test shard")
+    ap.add_argument("--merge-shards", nargs="+", metavar="REPORT",
+                    help="merge shard JSON reports and run the final contract")
+    ap.add_argument("--shard-count", type=int,
+                    help="expected number of shard reports when merging")
     a = ap.parse_args(argv)
+    if a.shard is not None and a.merge_shards:
+        ap.error("--shard and --merge-shards are mutually exclusive")
+    if bool(a.merge_shards) != (a.shard_count is not None):
+        ap.error("--merge-shards requires --shard-count")
 
     if sys.version_info < MIN_PYTHON:
         print(
@@ -777,6 +829,33 @@ def main(argv=None):
 
     root = Path(__file__).resolve().parents[1]
     mode = "runtime_only" if a.runtime_only else "default"
+    shard_run = a.shard is not None
+    template = None
+    if a.merge_shards:
+        if a.runtime_only or a.shard_count < 1:
+            ap.error("--merge-shards needs a positive --shard-count and default mode")
+        try:
+            template, runtime = merge_shard_reports(
+                root, a.merge_shards, a.shard_count)
+            if template.get("root") != str(root):
+                raise ValueError("shard reports belong to another repository root")
+            if template.get("baseline_main") != BASELINE_MAIN:
+                raise ValueError("shard reports use another validation baseline")
+            version = template.get("python", {}).get("version", "").split(".")[:2]
+            if version != sys.version.split(".")[:2]:
+                raise ValueError("shard reports use a different Python version")
+            if template.get("tool") != "tools/run_validation.py":
+                raise ValueError("shard reports have an unknown producer")
+            bundle = template["bundle"]
+            dep = template["dependency"]
+        except (OSError, ValueError, KeyError, TypeError,
+                json.JSONDecodeError) as exc:
+            print("shard report merge failed: %s" % exc, file=sys.stderr)
+            return 1
+    else:
+        bundle = None
+        dep = None
+        runtime = None
 
     unexpected_causes = []   # -> verdict unexpected_failures, exit 1
     incomplete_causes = []   # -> verdict incomplete, exit 3
@@ -797,58 +876,95 @@ def main(argv=None):
         else:
             nested_allowed = True
 
-    # --- bundle check ----------------------------------------------------
-    if a.runtime_only:
-        bundle = {"status": "skipped_runtime_only",
-                  "note": "not the final/CI contract"}
-    else:
-        bundle = _run_bundle_check(root)
+    if template is None:
+        bundle = ({"status": "skipped_runtime_only",
+                  "note": "not the final/CI contract"} if a.runtime_only
+                 else _run_bundle_check(root))
         if bundle["status"] == "fail":
             unexpected_causes.append(
                 "bundle integrity check failed (see bundle.stdout_tail)")
         elif bundle["status"] == "incomplete":
             incomplete_causes.append(bundle["reason"])
+        dep = _dependency_preflight(root)
+        if not dep["ok"]:
+            if dep["manifest_error"]:
+                incomplete_causes.append(
+                    "dependency manifest/loader error: " + dep["manifest_error"])
+            for row in dep["failed"]:
+                incomplete_causes.append(
+                    "dependency not ready: {dist} spec={spec!r} "
+                    "status={status} imported={imported} version={version}".format(
+                        **row))
+            runtime = {
+                "status": "not_run_dependency", "tests_run": 0,
+                "passed": 0, "known_baseline_defects": 0,
+                "unexpected_failed": 0, "skipped": 0, "failure_events": 0,
+                "entries": [], "fixture_events": [],
+                "accounting": {"framework": None, "errors": []},
+                "suite_output_tail": "", "known_defect_records": {},
+                "executed_modules": [], "module_timings_seconds": {},
+                "discovered_test_ids": []}
+        else:
+            runtime = _run_runtime_tests(root, a.shard)
 
-    # --- dependency readiness (current interpreter) ----------------------
-    dep = _dependency_preflight(root)
-    if not dep["ok"]:
-        if dep["manifest_error"]:
-            incomplete_causes.append(
-                "dependency manifest/loader error: " + dep["manifest_error"])
-        for row in dep["failed"]:
-            incomplete_causes.append(
-                "dependency not ready: {dist} spec={spec!r} "
-                "status={status} imported={imported} version={version}".format(
-                    **row))
-        runtime = {
-            "status": "not_run_dependency",
-            "tests_run": 0, "passed": 0, "known_baseline_defects": 0,
-            "unexpected_failed": 0, "skipped": 0, "failure_events": 0,
-            "entries": [], "fixture_events": [],
-            "accounting": {"framework": None, "errors": []},
-            "suite_output_tail": "",
-            "known_defect_records": {},
+    shard_metadata = runtime.pop("shard", None) if shard_run else None
+    if shard_run and shard_metadata is None:
+        modules, _ = discover_modules(root)
+        index, count = a.shard
+        selected_modules = assign_modules(modules, count)[index]
+        shard_metadata = {
+            "index": index + 1, "count": count,
+            "modules": selected_modules,
+            "discovered_test_ids": [
+                test.id() for module in selected_modules
+                for test in modules[module]],
+            "executed_test_ids": runtime.get("discovered_test_ids", []),
         }
-    else:
-        runtime = _run_runtime_tests(root)
 
-    # --- classification vs inventory ------------------------------------
-    inventory = _load_inventory(root)
+    if shard_run:
+        if runtime["status"] != "completed":
+            incomplete_causes.append("shard runtime did not complete")
+        if runtime["tests_run"] != len(shard_metadata["executed_test_ids"]):
+            incomplete_causes.append("shard started test IDs do not match tests_run")
+        framework = runtime["accounting"]["framework"]
+        if not isinstance(framework, dict) or framework.get("was_successful") is not True:
+            incomplete_causes.append("shard framework reports unsuccessful")
+        if runtime["accounting"]["errors"]:
+            incomplete_causes.append("shard accounting contains errors")
+        if runtime["fixture_events"]:
+            incomplete_causes.append("shard contains fixture outcomes")
+        if runtime["unexpected_failed"]:
+            unexpected_causes.append("shard contains test failures")
+
+    inventory = _load_inventory(root) if a.merge_shards else (
+        None if shard_run else _load_inventory(root))
     not_applicable = []
     deferred = []
     fixed = []
     inventory_warnings = []
     skipped_defects = []
     unapproved_skips = []
-
     suite_ran = runtime["status"] == "completed"
-    approved_external_skips, gate_warnings, gate_observation = (
-        _evaluate_external_gate(runtime["entries"], suite_ran))
-    inventory_warnings.extend(gate_warnings)
-    approved_ids = {s["test"] for s in approved_external_skips}
+    if shard_run or a.merge_shards:
+        gate_present = any(entry.get("test") == NATIVE_GATE["test_id"]
+                           for entry in runtime["entries"])
+        approved_external_skips, gate_warnings, gate_observation = (
+            _evaluate_external_gate(runtime["entries"], gate_present))
+        if a.merge_shards:
+            inventory_warnings.extend(gate_warnings)
+            expected_ids = discover_modules(root)[1]
+            if runtime.get("discovered_test_ids") != expected_ids:
+                inventory_warnings.append(
+                    "merged discovered test IDs differ from fresh discover")
+        elif not gate_present:
+            gate_observation = None
+    else:
+        approved_external_skips, gate_warnings, gate_observation = (
+            _evaluate_external_gate(runtime["entries"], suite_ran))
+        inventory_warnings.extend(gate_warnings)
+    approved_ids = {skip["test"] for skip in approved_external_skips}
     pending_external_checks = _pending_external_checks(gate_observation)
     approved_skill_skips = []
-
     for e in runtime["entries"]:
         if e.get("category") != "skipped":
             continue
@@ -857,10 +973,9 @@ def main(argv=None):
         if nested_allowed and e["test"] in ALLOWED_NESTED_SKIP_IDS:
             continue
         if _is_approved_skill_skip(e):
-            rule = (
-                WINDOW_ONLY_SKILL_SKIP_RULE
-                if e["test"] in WINDOW_ONLY_SKILL_SKIPS else SKILL_SKIP_RULE
-            )
+            rule = (WINDOW_ONLY_SKILL_SKIP_RULE
+                    if e["test"] in WINDOW_ONLY_SKILL_SKIPS
+                    else SKILL_SKIP_RULE)
             approved_skill_skips.append({
                 "test": e["test"], "reason": e["detail"], "rule": rule})
             continue
@@ -945,7 +1060,7 @@ def main(argv=None):
                     "inventory defect %s was not reproduced by its "
                     "test" % entry["id"])
 
-    if runtime["status"] == "completed":
+    if runtime["status"] == "completed" and (not shard_run or a.merge_shards):
         if inventory is None:
             inventory_warnings.append(
                 "tests/regression_inventory.json missing")
@@ -958,24 +1073,19 @@ def main(argv=None):
                     inventory_warnings.append(
                         "reproduced defect %s is not in the inventory"
                         % defect)
-    else:
+    elif runtime["status"] != "completed" and inventory:
         # tests never ran: still expose the classification lists
-        if inventory:
-            for entry in inventory.get("defects", []):
-                status = _entry_status(entry)
-                if status == "not_applicable" or not entry.get(
-                        "applies_to_main"):
-                    not_applicable.append({
-                        "id": entry["id"], "gate": entry.get("gate"),
-                        "reason": entry.get("reason", "")})
-                elif status == "deferred":
-                    deferred.append({
-                        "id": entry["id"], "gate": entry.get("gate"),
-                        "reason": entry.get("reason", "")})
-                elif status == "fixed":
-                    fixed.append({"id": entry["id"],
-                                  "gate": entry.get("gate")})
-
+        for entry in inventory.get("defects", []):
+            status = _entry_status(entry)
+            if status == "not_applicable" or not entry.get("applies_to_main"):
+                not_applicable.append({
+                    "id": entry["id"], "gate": entry.get("gate"),
+                    "reason": entry.get("reason", "")})
+            elif status == "deferred":
+                deferred.append({"id": entry["id"], "gate": entry.get("gate"),
+                                 "reason": entry.get("reason", "")})
+            elif status == "fixed":
+                fixed.append({"id": entry["id"], "gate": entry.get("gate")})
     if runtime["unexpected_failed"]:
         unexpected_causes.append(
             "%d unexpected test failure/error/XPASS"
@@ -985,6 +1095,10 @@ def main(argv=None):
             "inventory mismatches: " + "; ".join(inventory_warnings))
     for acc_err in runtime["accounting"]["errors"]:
         unexpected_causes.append("accounting mismatch: " + acc_err)
+    if shard_run and (runtime["unexpected_failed"]
+                      or runtime["accounting"]["errors"]
+                      or runtime["fixture_events"]):
+        incomplete_causes.append("shard contains failed test or fixture outcomes")
 
     # --- verdict ----------------------------------------------------------
     verdict, code = _decide_verdict(
@@ -995,6 +1109,10 @@ def main(argv=None):
             unapproved_skips, inventory_warnings,
             incomplete_causes, unexpected_causes,
             pending_external_checks))
+
+    if shard_run:
+        platform_validation_completed = False
+        full_validation_completed = False
 
     report = {
         "tool": "tools/run_validation.py",
@@ -1033,6 +1151,21 @@ def main(argv=None):
                 "completion flags are run-integrity facts, not product "
                 "approval",
     }
+    if shard_metadata is not None:
+        report["shard"] = shard_metadata
+    if shard_run:
+        report["verdict"] = "shard_completed" if code == 0 else "shard_failed"
+        print("shard %d/%d: %d tests across %d modules; exit=%d"
+              % (shard_metadata["index"], shard_metadata["count"],
+                 runtime["tests_run"], len(shard_metadata["modules"]), code))
+    else:
+        print("module timings: %d modules reported" % len(
+            runtime.get("module_timings_seconds", {})))
+    report["runtime"]["executed_modules"] = runtime.get("executed_modules", [])
+    report["runtime"]["module_timings_seconds"] = runtime.get(
+        "module_timings_seconds", {})
+    report["runtime"]["discovered_test_ids"] = runtime.get(
+        "discovered_test_ids", [])
 
     summary = [
         "verdict=%s exit=%d" % (verdict, code),
