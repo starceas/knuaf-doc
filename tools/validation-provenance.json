@@ -75,6 +75,10 @@
    "note": "P0-2 PR-D: U12 POSIX symlink venv; U13 UTF-8 probes and structured subprocess errors.",
    "origin": "transformed"
   },
+  "skills/knuaf-doc/scripts/runtime-deps.json": {
+   "note": "P0-2 PR-D: Q03 Windows-only pywin32 manifest declaration. | ORDER-17: correct existing openpyxl, python-docx and pypdf first-read consumer metadata.",
+   "origin": "transformed"
+  },
   "skills/knuaf-doc/scripts/gg_kordoc.py": {
    "note": "P0-2 PR-D: U19 read-only capability-verified legacy cache reuse; U11 pure filesystem diagnosis.",
    "origin": "transformed"
@@ -93,10 +97,6 @@
   },
   "skills/knuaf-doc/scripts/requirements-runtime.txt": {
    "note": "P0-2 PR-D: Q03 Windows-only pywin32>=306 declaration.",
-   "origin": "transformed"
-  },
-  "skills/knuaf-doc/scripts/runtime-deps.json": {
-   "note": "P0-2 PR-D: Q03 Windows-only pywin32 manifest declaration.",
    "origin": "transformed"
   },
   "tests/test_install_manifest_current.py": {
@@ -142,9 +142,9 @@
    "origin": "new"
   },
   "skills/knuaf-doc/install-manifest.json": {
-   "note": " | PR-2: latest D8/D9 integration; I-01 only measured count constants adjusted in lineage test. Full pytest covers split public/skill test locations. | I-02: measured F01 artifact repin propagated; F01 canonical digest one-string propagation separately approved by I-03. | I2 gg_update.py manifest --write for FIX-A2/B2/C2b and W-D3 final inputs plus measured F01 artifact repin. | I3 gg_update.py manifest --write for FIX-B3/C3 and W-D4 final inputs plus measured F01 artifact repin. | I4 gg_update.py manifest --write for FIX-B4/C4 and W-D5 final inputs plus measured F01 artifact repin. | I5 gg_update.py manifest --write for FIX-C5 and W-D6 final inputs plus measured F01 artifact repin. | I6: gg_update.py manifest --write for FIX-C6 and W-D7; F01 artifact and canonical digest measured unchanged, no repin. | P0-2 consistency: gg_update.py manifest --write after the #59/#60/#61 merges.",
+   "note": " | PR-2: latest D8/D9 integration; I-01 only measured count constants adjusted in lineage test. Full pytest covers split public/skill test locations. | I-02: measured F01 artifact repin propagated; F01 canonical digest one-string propagation separately approved by I-03. | I2 gg_update.py manifest --write for FIX-A2/B2/C2b and W-D3 final inputs plus measured F01 artifact repin. | I3 gg_update.py manifest --write for FIX-B3/C3 and W-D4 final inputs plus measured F01 artifact repin. | I4 gg_update.py manifest --write for FIX-B4/C4 and W-D5 final inputs plus measured F01 artifact repin. | I5 gg_update.py manifest --write for FIX-C5 and W-D6 final inputs plus measured F01 artifact repin. | I6: gg_update.py manifest --write for FIX-C6 and W-D7; F01 artifact and canonical digest measured unchanged, no repin. | P0-2 consistency: gg_update.py manifest --write after the #59/#60/#61 merges. | ORDER-16: generated from staged checkout-index snapshot. | ORDER-17: regenerated with gg_update.py manifest --write after first-read guidance, reader, and dependency consumer metadata.",
    "origin": "new",
-   "transform": "G: regenerate from tracked-files-only clean copy after original-preservation repairs. | G FIX1: regenerate after canonical interview storage corrections. | F-skill-tests: regenerate install manifest from a tracked-files-only copy after fixture repair. | F CI1: regenerate after completing source-intake simulated filesystem lookups."
+   "transform": "G: regenerate from tracked-files-only clean copy after original-preservation repairs. | G FIX1: regenerate after canonical interview storage corrections. | F-skill-tests: regenerate install manifest from a tracked-files-only copy after fixture repair. | F CI1: regenerate after completing source-intake simulated filesystem lookups. | ORDER-17: regenerated with gg_update.py manifest --write after first-read guidance, reader, and dependency consumer metadata."
   },
   "skills/knuaf-doc/references/commands.md": {
    "note": "P0-2 PR-A: documented gg.py commands index and apply JSON contract.",
@@ -578,6 +578,14 @@
   "tests/test_f1_document.py": {
    "note": "F1 C2/CB/CA: 금액 소수·단위 모순·견본 작성자 이름 검사, project_root 배선, 제출 후보 차단/검토용 발행 경계(가상 이름).",
    "origin": "new"
+  },
+  "skills/knuaf-doc/scripts/gg_read.py": {
+   "origin": "new",
+   "note": "ORDER-17: local read-only DOCX/PDF/XLSX extraction with raw input/output hashes, non-overwrite receipt, explicit incomplete/blocked cases, and no OCR/Node/network fallback."
+  },
+  "tests/test_document_read.py": {
+   "origin": "new",
+   "note": "ORDER-17: synthetic DOCX/PDF/XLSX values and structure, input/output SHA-256 receipts, source preservation, image-only/corrupt/empty failures, missing runtime dependency, no-Node/Kordoc execution, and output-alias protection regressions."
   }
  },
  "readme_policy": {
