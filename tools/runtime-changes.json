@@ -274,7 +274,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "b58a9aece2e7de26c53981681547bf46f9562043bd70087cbecbf125cc7b7a91",
+      "after_sha256": "675c9432c31f75461888ceaf3440add83a9d3dc335a74a46e5ce35edf19f6983",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "first-read-python",
@@ -475,12 +475,12 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/commands.md": {
-      "after_sha256": "634c4a93dfb41a163cfc21a70a1a575aac89343f76e294163101becaf0146e73",
+      "after_sha256": "bfbf71e1cb6ae195fd643307d856ad5b31914766f3aae2000e9a50d6ea4fc9b6",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "P28",
       "owner": "P28",
-      "reason": "P0-2 PR-A: U03 gg CLI command index and apply JSON contract | P0-2 PR-A R2: rewritten against gg.py arguments and the apply collection/value contract; executable bind-major example | P0-2 PR-A R3: exit codes 3/4 describe the operation target; per-target confirmation table | F1 C3: gg_toc_check.py 사용법.",
+      "reason": "P0-2 PR-A: U03 gg CLI command index and apply JSON contract | P0-2 PR-A R2: rewritten against gg.py arguments and the apply collection/value contract; executable bind-major example | P0-2 PR-A R3: exit codes 3/4 describe the operation target; per-target confirmation table | F1 C3: gg_toc_check.py 사용법. | ORDER-17 통합: gg_read.py 첫 읽기 명령 한 줄 등재",
       "source": "new"
     },
     "skills/knuaf-doc/references/common-workbooks/corrections/C1.md": {

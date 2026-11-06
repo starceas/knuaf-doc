@@ -161,4 +161,5 @@ python3 <스킬>/scripts/gg.py major-plan <폴더>
 - `python3 scripts/build_docx.py <폴더> --in <MD> --out <DOCX> --major <전공ID>`: DOCX 검토본 빌드. 목차·표 목차·그림 목차 쪽번호는 필드(PAGEREF·TOC)와 `gg_office.py word` 재조판·필드 갱신으로만 채우며 손으로 적지 않는다. [outputs](outputs.md)
 - `python3 scripts/gg_toc_check.py <DOCX> --json <증거경로>`: DOCX 목차 필드 및 고정 쪽번호 검사 도구. 탭 뒤 일반 글자 고정 번호나 미갱신 필드(`?`)를 검출한다(결과 finding id: `TOC-PAGE-NUMBERS`). [outputs](outputs.md) · [cross-review](cross-review.md)
 - `python3 scripts/gg_deps.py ensure <폴더>`: 작업폴더 venv와 런타임 의존성 준비.
+- `<gg_deps.py python <폴더>가 돌려준 인터프리터> scripts/gg_read.py <파일> --out <폴더 안 새.md>`: DOCX·PDF·XLSX 첫 읽기(읽기 전용, 원본·기존 결과 불변). `status: read`만 성공이며 스캔·손상·복구된 PDF는 성공으로 보지 않는다. 연결된 읽기 도구가 없을 때 Kordoc·Node 준비보다 먼저 쓴다. [parser-setup](parser-setup.md)
 - `python3 scripts/gg_update.py auto`: 업데이트 확인·적용·복구. [update](update.md)
