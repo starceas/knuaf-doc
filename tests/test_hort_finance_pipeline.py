@@ -23,6 +23,7 @@ sys.path.insert(0, str(ROOT / "tests/fixtures/hort_finance"))
 import gg_hort_workbook as h
 import gg_major_contract as mc
 from synthetic import build, entries, R, P as PKG, C as CTYPES
+from tests._harness import claim_of
 
 TMP = Path(os.environ.get("HFIN_TEST_TMPDIR",
                           ROOT / ".hw-work/fin/lanes/I5-FIX/tmp"))
@@ -192,6 +193,8 @@ def _project(root):
                              scope="project", verification="claim_supported",
                              module_version="0.2.0")
     p["facts"]["m0"]["field_id"] = "common.major_id"
+    p["facts"]["m0"]["source_refs"][0]["claim_id"] = "major"
+    p["sources"]["s1"]["claims"] = claim_of(p["facts"]["m0"], "major")
     values = {"plan.start_year": 2027, "num": 7, "zero": 0,
               "loan.slot1.execution_year": 2027,
               "loan.slot1.principal_krw1000": 10,

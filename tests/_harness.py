@@ -173,14 +173,17 @@ def bind_major(root, major_id="specialty_crops", *, request_id=None):
     the new canonical revision."""
     core = runtime("gg_core")
     module = runtime("gg_major_contract").default_registry().resolve(major_id)
+    project = core.load(root)
     write_text(root, "major-answer.txt", "전공 선택: " + major_id + "\n")
     fact = fact_op("selected_major", "common.major_id", major_id, "",
                    scope="project", verification="claim_supported",
                    source_id="major-answer", claim_id="major")
     fact["value"]["module_version"] = module.module_version
+    fact["value"]["source_refs"][0]["revision"] = (
+        project["sources"].get("major-answer", {}).get("revision", 0) + 1)
     source = source_op("major-answer.txt", claims=claim_of(fact["value"], "major"))
     source["value"]["id"] = "major-answer"
-    revision = core.load(root)["revision"]
+    revision = project["revision"]
     core.apply(root, {"request_id": request_id or "bind-major:" + major_id,
                       "ops": [source, fact]}, revision)
     return core.load(root)["revision"]

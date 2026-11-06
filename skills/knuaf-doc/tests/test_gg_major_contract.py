@@ -555,7 +555,8 @@ class TestProjectBinding(unittest.TestCase):
 
     def major_fact(self, fid="f-major", value="specialty_crops", *,
                    answer_state="provided", verification="claim_supported",
-                   source_refs=({"id": "s1", "locator": "line 1"},),
+                   source_refs=({"id": "s1", "locator": "line 1",
+                                 "revision": 1, "claim_id": "major"},),
                    module_version="1.0.0"):
         f = {
             "field_id": mc.COMMON_MAJOR_FIELD,
@@ -573,9 +574,15 @@ class TestProjectBinding(unittest.TestCase):
             f["module_version"] = module_version
         return fid, f
 
+    def major_source(self, fact):
+        return {"id": "s1", "path": "interview/major-answer.txt", "revision": 1,
+                "claims": {"major": {key: fact[key] for key in (
+                    "field_id", "value", "unit", "period", "scope",
+                    "answer_state", "kind")}}}
+
     def test_binds_from_confirmed_fact(self):
         fid, fact = self.major_fact()
-        p = self.project(facts={fid: fact}, sources={"s1": {"id": "s1"}})
+        p = self.project(facts={fid: fact}, sources={"s1": self.major_source(fact)})
         b = mc.binding_from_project(self.reg, p)
         self.assertEqual(b.major_id, "specialty_crops")
         self.assertEqual(b.basis, "legacy_record")
@@ -667,7 +674,7 @@ class TestProjectBinding(unittest.TestCase):
 
     def test_read_only_leaves_project_unchanged(self):
         fid, fact = self.major_fact()
-        p = self.project(facts={fid: fact}, sources={"s1": {"id": "s1"}})
+        p = self.project(facts={fid: fact}, sources={"s1": self.major_source(fact)})
         before = json.dumps(p, sort_keys=True, ensure_ascii=False)
         mc.binding_from_project(self.reg, p)
         self.assertEqual(
@@ -687,7 +694,8 @@ class TestProjectBinding(unittest.TestCase):
             ops = [
                 {"collection": "sources", "value": {
                     "id": "s1", "path": "note.txt",
-                    "claims": {}, "claim_review": "synthetic"}},
+                    "claims": self.major_source(self.major_fact()[1])["claims"],
+                    "claim_review": "synthetic"}},
                 {"collection": "facts", "value": {
                     "id": "f-major", "field_id": mc.COMMON_MAJOR_FIELD,
                     "kind": "reported_fact", "value": "specialty_crops",
@@ -695,7 +703,7 @@ class TestProjectBinding(unittest.TestCase):
                     "scope": "project", "answer_state": "provided",
                     "verification": "claim_supported",
                     "source_refs": [{"id": "s1", "locator": "line 1",
-                                     "revision": 1}],
+                                     "revision": 1, "claim_id": "major"}],
                     "module_version": "1.0.0"}},
             ]
             gg_core.apply(root, {"request_id": "bind-1", "ops": ops}, 0)
