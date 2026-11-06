@@ -16,15 +16,15 @@
 
 ## 과수 (fruit_trees, 모듈 0.2.0)
 
-학교 과수 양식(S01) 구조의 작성계획과 물량 검산까지 지원한다: `scripts/gg_fruit_plan.py <폴더>`가 등록 원본·연구 전달물·구역/식재집단/수확 배치/물량 이동 답변·검토 상태를 읽기 전용으로 보여 주고, `scripts/gg_orchard_production.py <폴더>`가 학생 입력만으로 생산량·배치 재고(kg)를 읽기 전용으로 검산하며(금액 없음), 과수 본문·XLSX·재무 계산은 `unsupported_output`으로 멈춘다. 등록 순서·집단 field ID·참조 XLSX 규칙은 [fruit-trees](fruit-trees/README.md)를 따른다.
+학교 과수 양식(S01) 구조의 작성계획과 물량 검산까지 지원한다: `scripts/gg_fruit_plan.py <폴더>`가 등록 원본·연구 전달물·구역/식재집단/수확 배치/물량 이동 답변·검토 상태를 읽기 전용으로 보여 주고, `scripts/gg_orchard_production.py <폴더>`가 학생 입력만으로 생산량·배치 재고(kg)를 읽기 전용으로 검산한다(금액 계산은 하지 않음). 유효한 전공 바인딩이 있으면 [전공별 본문 초안(글)](major-body-draft.md)을 작성할 수 있다. 과수 서식 본문 파일(DOCX/HWPX/PDF), XLSX, 재무 계산은 `unsupported_output`으로 멈춘다. 등록 순서·집단 field ID·참조 XLSX 규칙은 [fruit-trees](fruit-trees/README.md)를 따른다.
 
 ## 원예환경시스템 (hort_env_systems, 모듈 0.2.0)
 
-질문·선택형 문서 계획·근거 규칙까지 지원한다: `scripts/gg_hort_plan.py --project <폴더>`가 원예 질문별 답변 상태(값 없음), 선배 전체논문의 장·부록 위치, 전공 교재 18시트 엑셀의 주의 목록(정본에 등록된 파일을 다시 해시해 일치할 때만)을 읽기 전용으로 보여 준다. 교재 엑셀은 공용 17시트 좌표와 호환되지 않으며 셀 값은 수업 예시다. 전용 18시트 재무 출력은 모듈 0.2.0 바인딩과 등록된 교재 원본 등 별도 조건에서만 열리며 경계와 근거 규칙은 [hort-env-systems](hort-env-systems/README.md)를 따른다. 조건이 안 맞으면 원예 본문·XLSX·재무 계산은 `unsupported_output`으로 멈춘다.
+질문·선택형 문서 계획·근거 규칙까지 지원한다: `scripts/gg_hort_plan.py --project <폴더>`가 원예 질문별 답변 상태(값 없음), 선배 전체논문의 장·부록 위치, 전공 교재 18시트 엑셀의 주의 목록(정본에 등록된 파일을 다시 해시해 일치할 때만)을 읽기 전용으로 보여 준다. 교재 엑셀은 공용 17시트 좌표와 호환되지 않으며 셀 값은 수업 예시다. 유효한 전공 바인딩이 있으면 [전공별 본문 초안(글)](major-body-draft.md)을 작성할 수 있다. 전용 18시트 재무 출력은 수신증이 있는 `hort_18_sheet_reconstructed_v1` 프로필과 등록된 단일 운반본·시트 정합성·금액 원천을 확인한 별도 조건에서만 열리며, 경계와 근거 규칙은 [hort-env-systems](hort-env-systems/README.md)를 따른다. 조건이 안 맞으면 원예 본문 파일·XLSX·재무 계산은 `unsupported_output`으로 멈춘다.
 
 ## 낙농 (dairy, 모듈 0.1.0)
 
-질문 목록·문서 계획·근거 검토까지 지원한다: `gg.py major-plan <폴더>`가 축종 스위치(`dairy_switch`: 젖소 착유 / 한우 번식·비육·일관), 학교 작성요령 기본 목차(앞부분, 본문 1~12장, 부록 1~10), 축종별 내용 치환을 읽기 전용으로 보여 준다. 낙농 본문(DOCX/HWP), 학교 28시트 엑셀 사본 채우기, 축산 재무 계산은 `unsupported_output`으로 멈추며 벤치마크 팩은 `empty_slot`이다. 목차 계약·축종 치환·서식·문체(S1)·리서치 경로는 [dairy](dairy/README.md)를 따른다.
+질문 목록·문서 계획·근거 검토까지 지원한다: `gg.py major-plan <폴더>`가 축종 스위치(`dairy_switch`: 젖소 착유 / 한우 번식·비육·일관), 학교 작성요령 기본 목차(앞부분, 본문 1~12장, 부록 1~10), 축종별 내용 치환을 읽기 전용으로 보여 준다. 유효한 전공 바인딩이 있으면 [전공별 본문 초안(글)](major-body-draft.md)을 장별로 작성할 수 있다. 본문 파일(DOCX/HWPX), 학교 28시트 엑셀 사본 채우기, 축산 재무 계산은 `unsupported_output`으로 멈추며 벤치마크 팩은 `empty_slot`이다. 목차 계약·축종 치환·서식·문체(S1)·리서치 경로는 [dairy](dairy/README.md)를 따른다.
 
 ## 미등록·미확정 전공
 
