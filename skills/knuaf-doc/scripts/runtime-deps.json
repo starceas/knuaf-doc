@@ -8,6 +8,7 @@
    "used_by": [
     "scripts/gg_finance.py",
     "scripts/gg_school_excel.py",
+    "scripts/gg_school_verify.py",
     "scripts/gg_office.py",
     "scripts/gg_excel_print.py",
     "scripts/gg_read.py"

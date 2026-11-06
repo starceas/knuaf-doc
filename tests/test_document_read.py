@@ -1,13 +1,17 @@
 """First-read contracts for synthetic DOCX, text PDF, and XLSX files."""
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
+from docx.oxml import OxmlElement
 from docx import Document
 from openpyxl import Workbook
 from pypdf import PdfReader, PdfWriter
@@ -84,6 +88,39 @@ class DocumentReadTests(unittest.TestCase):
         self.assertEqual(before, result["input"]["sha256_after_read"])
         self.assertEqual(_sha256(output), result["output"]["sha256"])
 
+    def test_docx_extracts_body_content_control_paragraph_in_order(self):
+        source = self.root / "내용 컨트롤.docx"
+        document = Document()
+        document.add_paragraph("앞 문단")
+        table = document.add_table(rows=1, cols=1)
+        table.cell(0, 0).text = "중간 표"
+        document.add_paragraph("뒤 문단")
+        sdt = OxmlElement("w:sdt")
+        sdt.append(OxmlElement("w:sdtPr"))
+        content = OxmlElement("w:sdtContent")
+        paragraph = OxmlElement("w:p")
+        run = OxmlElement("w:r")
+        text = OxmlElement("w:t")
+        text.text = "CONTENT_CONTROL_47381"
+        run.append(text)
+        paragraph.append(run)
+        content.append(paragraph)
+        sdt.append(content)
+        document.element.body.insert(1, sdt)
+        document.save(source)
+        output = self.root / "내용 컨트롤.md"
+
+        process, result = self.run_reader(source, output)
+
+        self.assertEqual(0, process.returncode)
+        self.assertEqual("read", result["status"])
+        self.assertEqual(3, result["details"]["paragraphs"])
+        rendered = output.read_text(encoding="utf-8")
+        self.assertIn("CONTENT_CONTROL_47381", rendered)
+        self.assertLess(rendered.index("앞 문단"), rendered.index("CONTENT_CONTROL_47381"))
+        self.assertLess(rendered.index("CONTENT_CONTROL_47381"), rendered.index("표 1"))
+        self.assertLess(rendered.index("표 1"), rendered.index("뒤 문단"))
+
     def test_text_pdf_reads_text_and_records_page_numbers(self):
         source = self.root / "텍스트.pdf"
         _text_pdf(source)
@@ -103,6 +140,26 @@ class DocumentReadTests(unittest.TestCase):
         self.assertIn("Readable PDF text", output.read_text(encoding="utf-8"))
         self.assertEqual(before, _sha256(source))
 
+
+    def test_damaged_xref_pdf_is_blocked_instead_of_repaired_as_success(self):
+        source = self.root / "xref 손상.pdf"
+        _text_pdf(source)
+        original = source.read_bytes()
+        matches = list(re.finditer(rb"(startxref\s*)\d+", original))
+        self.assertTrue(matches)
+        match = matches[-1]
+        source.write_bytes(original[:match.start()] + match.group(1) + b"1" + original[match.end():])
+        before = _sha256(source)
+        output = self.root / "손상 읽기.md"
+
+        process, result = self.run_reader(source, output)
+
+        self.assertEqual(2, process.returncode)
+        self.assertEqual("blocked", result["status"])
+        self.assertEqual("invalid_document", result["reason"])
+        self.assertEqual(before, result["input"]["sha256"])
+        self.assertFalse(result["output"]["written"])
+        self.assertFalse(output.exists())
 
     def test_image_only_pdf_is_incomplete_not_success(self):
         source = self.root / "스캔.pdf"
@@ -141,6 +198,7 @@ class DocumentReadTests(unittest.TestCase):
         self.assertEqual([1], result["details"]["pages_without_extractable_text"])
         self.assertEqual(before, _sha256(source))
         self.assertIn("읽을 수 있는 글자를 찾지 못했어요", output.read_text(encoding="utf-8"))
+
 
     def test_xlsx_reads_values_by_cell_and_leaves_formulas_unrecalculated(self):
         source = self.root / "자료.xlsx"
@@ -245,6 +303,34 @@ class DocumentReadTests(unittest.TestCase):
         self.assertEqual("incomplete", result["status"])
         self.assertEqual("no_extractable_content", result["reason"])
         self.assertEqual(0, result["details"]["nonempty_cells"])
+
+    def test_cleanup_failure_reports_saved_output_and_real_hash(self):
+        source = self.root / "unlink-fail.docx"
+        document = Document()
+        document.add_paragraph("정상 문서 내용")
+        document.save(source)
+        output = self.root / "unlink-fail.md"
+        before = _sha256(source)
+        spec = importlib.util.spec_from_file_location("gg_read_cleanup_test", READER)
+        reader = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(reader)
+        real_unlink = Path.unlink
+
+        def fail_temp_unlink(path, *args, **kwargs):
+            if path.name.startswith(f".{output.name}.") and path.suffix == ".tmp":
+                raise PermissionError(13, "injected cleanup failure", str(path))
+            return real_unlink(path, *args, **kwargs)
+
+        with mock.patch.object(reader.Path, "unlink", fail_temp_unlink):
+            receipt = reader.read_document(source, output)
+
+        self.assertEqual("incomplete", receipt["status"])
+        self.assertEqual("output_saved_cleanup_failed", receipt["reason"])
+        self.assertEqual({"path": str(output.resolve()), "sha256": _sha256(output), "written": True}, receipt["output"])
+        self.assertIn("정상 문서 내용", output.read_text(encoding="utf-8"))
+        self.assertEqual(before, _sha256(source))
+        self.assertEqual("failed", receipt["cleanup"]["status"])
+        self.assertTrue(Path(receipt["cleanup"]["path"]).exists())
 
     def test_hwp_is_out_of_scope_and_source_is_unchanged(self):
         source = self.root / "원문.hwp"

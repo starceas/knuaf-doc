@@ -206,6 +206,7 @@ class RealTreeTests(ContractCase):
                                "P20", "P21", "P22", "P23", "P24", "P25", "P26", "P27", "P28", "dairy-0.1.0", "dairy-f1"})
 
 
+
 class SyntheticLineageTests(ContractCase):
     def test_clean_synthetic_tree_passes(self):
         with tempfile.TemporaryDirectory(prefix="knuaf-lin-") as tmp:
@@ -217,6 +218,15 @@ class SyntheticLineageTests(ContractCase):
             self.assertEqual("declared_change",
                              report["baseline"]["states"]["a.py"])
             self.assertEqual("ok", report["baseline"]["states"]["b.py"])
+
+    def test_install_manifest_reason_preserves_809e925_history(self):
+        reason = json.loads((REPO_ROOT / "tools/runtime-changes.json").read_text(encoding="utf-8"))["changes"]["skills/knuaf-doc/install-manifest.json"]["reason"]
+        baseline_reason = reason.split(" | ORDER-17:", 1)[0]
+        self.assertEqual(
+            "d34b1ce8eb55e0458492b6bc27976205c61a004dc80727db579ac408fe8e1fac",
+            hashlib.sha256(baseline_reason.encode("utf-8")).hexdigest())
+        self.assertIn("Astra first-read follow-up:", reason)
+
 
     def test_false_before_sha_rejected(self):
         with tempfile.TemporaryDirectory(prefix="knuaf-lin-") as tmp:

@@ -54,7 +54,23 @@ def _read_docx(path: Path, emit) -> dict:
     try:
         document = Document(str(path))
         paragraphs = tables = nonempty_cells = 0
+
+        def control_blocks(container):
+            for child in container.iterchildren():
+                if child.tag.endswith("}p") or child.tag.endswith("}tbl"):
+                    yield child
+                else:
+                    yield from control_blocks(child)
+
+        body_blocks = []
         for block in document.element.body.iterchildren():
+            if block.tag.endswith("}p") or block.tag.endswith("}tbl"):
+                body_blocks.append(block)
+            elif block.tag.endswith("}sdt"):
+                for child in block.iterchildren():
+                    if child.tag.endswith("}sdtContent"):
+                        body_blocks.extend(control_blocks(child))
+        for block in body_blocks:
             if block.tag.endswith("}p"):
                 paragraph = Paragraph(block, document)
                 text = paragraph.text
@@ -90,7 +106,7 @@ def _read_pdf(path: Path, emit) -> dict:
 
     try:
         with path.open("rb") as source:
-            reader = PdfReader(source)
+            reader = PdfReader(source, strict=True)
             if reader.is_encrypted:
                 raise ReadError("encrypted_pdf")
             unreadable_pages = []
@@ -276,7 +292,16 @@ def read_document(source: Path, destination: Path) -> dict:
         elif no_content:
             result["reason"] = "no_extractable_content"
         os.link(temporary, destination)
-        temporary.unlink()
+        try:
+            temporary.unlink()
+        except OSError:
+            result["status"] = "incomplete"
+            result["reason"] = "output_saved_cleanup_failed"
+            result["message"] = "결과는 저장됐지만 임시 파일 정리에 실패했어요. 저장된 결과를 확인해 주세요."
+            result["output"] = {"path": str(destination), "sha256": _sha256(destination), "written": True}
+            result["cleanup"] = {"status": "failed", "path": str(temporary)}
+            temporary = None
+            return result
         temporary = None
         return result
     except FileExistsError:
