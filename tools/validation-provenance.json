@@ -593,7 +593,7 @@
     },
     "tests/test_skillgaps_wp4_interview.py": {
       "origin": "transformed",
-      "note": "W1: extend the existing interview-gap regression contracts for major-body text drafts and their file-output boundaries."
+      "note": "W1: extend the existing interview-gap regression contracts for major-body text drafts and their file-output boundaries. | W3: R1-01 stale body-support wording and R1-02 major-specific progress/completion criteria regression contracts."
     }
   },
   "readme_policy": {

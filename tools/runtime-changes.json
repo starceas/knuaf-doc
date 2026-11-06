@@ -268,16 +268,16 @@
       "source": "new"
     },
     "skills/knuaf-doc/SKILL.md": {
-      "after_sha256": "f81ffe152de533bd01e64ab5b30f800e44f2acf8b2a9cbcbd220a2389e59cf1d",
+      "after_sha256": "a5dad5fc134bdd2c62c08c1d5bfa1313238240060264c24e95d8fb082018949b",
       "before_sha256": "c0008fa5239cc16411fd4ef24b5bf901c7a8b9b50c6b621e2bdee3acf734ddc0",
       "first_changed": "P1",
       "last_changed": "P28",
       "owner": "P28",
-      "reason": "H11 문서 정정: 사용자 명시 모델도 임의 폴백·대체 금지 규칙 추가 | P5-D1 guidance sync: new '참고자료 폴더 등록' bullet documents the frozen source-scan→source-resolve→source-register→source-view lifecycle and 03_sources.md preservation | P6: document explicit major binding and current industrial insect capability boundary | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P8: fruit_trees plan-only capability and guidance link | P9: hort_env_systems plan-only capability and guidance link | P10: P9: common XLSX template rule + X02 layout guard sentence | P9-D3: major-specific workbook precedence sentence (hort_env_systems base = registered H01) | P11 공용 인터뷰 규칙: 전공별 핵심 전제 목록(C1), 동적 영향 순위(C2), '모르겠다' 도움(C3), 충돌 정리(C5), 미준비 전공 안내, 특용작물 probe 문서 | P12: industrial_insects plan/evidence commands and built-in reuse guidance | P13: D4 identity-catalogue-only precedence guidance | P14: fruit_trees read-only production and inventory check link | P17: rda-lookup verification-state guidance sentence (verified is observation confirmation, not approval; unverified/ambiguous/series and 옮기지 말 것 labels never copied) | P18: industrial_insects 0.2.0 product lines, plan without selection, rebinding guidance | P21 C1: reference-finance-01 template materialize-c1 --ref F01 + formula_patch application guidance | P22: 학생 오류·불편 신고 안내 한 줄과 신고 절 | P23: C1b option-A assumption and copy-only guidance merged with #22 student-report section | P25: option-A 실지급 확인을 interview-guide Q2-2 문항에 연결하고 경영주 예외(경영주 인출은 급여·가계비 규칙, 중복 반영 금지)를 명시하는 문장군 — FIX1 | P25: 중복된 경영주 급여 설명을 정리하고 기존 option-A 문장을 경영주 예외와 일치시킴 — FIX2 | P26: 첫 진입 알림·업데이트 경로·7단계 단위 보고 목록 | P26 F1: progress grouping is deterministic for consecutive finished and remaining stages | P26 F2: OS lock | P27: 진입 계약 재구성(22KB 이하, 절단 재읽기 규칙, 불변 조건 앞배치), 완전 자동 업데이트 첫 진입(auto·S1·S2), D5 A안 위임, D3 비공개 신고, D7 Windows 범위, import --offline-confirmed·doctor --probe 안내, 전공·출력 상세를 majors.md·outputs.md로 분리 | P27 검토 r1: 첫 진입 결과별 안내를 update.md 표와 1:1로, 0.1.x 업데이트 경로 구분(R1-05) | P27 검토 r2: user_files_in_skill 문구(원래 배포본과 다른 파일), install_manifest_invalid·legacy_reference_unavailable 첫 진입 안내 | P28: thesis-level/figure-photo-policy 링크 추가 (서술 예시 01 기준 전환·사진 정책) | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes. | PR-4 ORDER-A: 본문 전 재무 게이트 — 불변4의 적자 서술을 게이트 조건 아래로 묶고 복구 참고 문서 4개 링크; I remeasured final bytes. | N1-N5/X1: built-in guidance, extract source binding and restored tool links. | ORDER-I2: remeasured final 0.1.5 file bytes after preserving PR32 inputs. | AMEND-I2-1 R3: explain source-register snapshot then canonical sources apply and profile revision. | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13. | PR41 P1: macOS Excel fail-closed before staging/transport; no native proof; synthetic Office contracts preserved. | W2b kordoc-hwpx: 'HWPX 검토본 받기' 한 줄 추가(build_hwpx.py, 한글에서 사람이 마무리). | P28 output hygiene: 최종본 고정 이름·.gg-work 작업 구역·tidy 미리보기/apply 규칙 | P1-GUI: managed 표시(GUI 설치본 auto 차단) — 판정 기준 R1-05 | Continuation: requested writing scope continues without a resume command at each unit; progress block shows the next work | Plan adoption: stage 2 needs core plan choices linked to the student answers; partial drafts and not_computable are not adoption | P0-2 PR-A: U01 folder init guidance, U02 major-before-crop intake rule, U03 commands index link | P0-2 PR-A R2: command index pointer defers detailed record formats to the contract documents | P0-2 consistency: 출력 지원 한계 sentence follows the guarded macOS/Windows Office conversion in outputs.md; native conversion still unverified | F1 C3/C6: 목차 쪽번호 자동 검사 한 줄·HWPX 사람 대조 참조. | 전공별 리서치 경로 6문서 진입 안내 연결. | interview-cases(11-05): P0~P10 인터뷰 경우별 개선 | ORDER-17: connected-tool first, then bundled Python DOCX/PDF/XLSX before any Node/Kordoc setup; hide internal tool and runtime names from student-facing text. | ORDER-16 B: link the thin intake-manuscript command without changing student conversation rules; retain owner R3/R4/R7 guidance. | runs7 C03-2 resume routing: inspect project.json and actual records before status/next; route selected manuscript without old records to intake-manuscript; legacy folder-wide import alone retains offline confirmation. Derive sections/*.md from the existing converter and do not invent mandatory folder markers. Documentation only; engines and tests unchanged. | runs8 C03-5 final bounded repair: reuse resume intent plus a pointed manuscript and self-authored progress as ownership/currentness answers, preserve actual utterances and intake in the same turn; no duplicate Q1c. Other candidates/old-or-friend signals alone trigger clarification. No other-file adoption, engine or test changes. | PR80 P2: 학생 파일 출력 허용 경로를 공통 출력 게이트를 거치는 scripts 명령 전체(build_docx·gg_excel_*)로 바로잡음 | W1: chapter-wise text drafting enabled for fruit_trees, hort_env_systems, dairy; file generation and financial calculations remain unsupported.",
+      "reason": "H11 문서 정정: 사용자 명시 모델도 임의 폴백·대체 금지 규칙 추가 | P5-D1 guidance sync: new '참고자료 폴더 등록' bullet documents the frozen source-scan→source-resolve→source-register→source-view lifecycle and 03_sources.md preservation | P6: document explicit major binding and current industrial insect capability boundary | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P8: fruit_trees plan-only capability and guidance link | P9: hort_env_systems plan-only capability and guidance link | P10: P9: common XLSX template rule + X02 layout guard sentence | P9-D3: major-specific workbook precedence sentence (hort_env_systems base = registered H01) | P11 공용 인터뷰 규칙: 전공별 핵심 전제 목록(C1), 동적 영향 순위(C2), '모르겠다' 도움(C3), 충돌 정리(C5), 미준비 전공 안내, 특용작물 probe 문서 | P12: industrial_insects plan/evidence commands and built-in reuse guidance | P13: D4 identity-catalogue-only precedence guidance | P14: fruit_trees read-only production and inventory check link | P17: rda-lookup verification-state guidance sentence (verified is observation confirmation, not approval; unverified/ambiguous/series and 옮기지 말 것 labels never copied) | P18: industrial_insects 0.2.0 product lines, plan without selection, rebinding guidance | P21 C1: reference-finance-01 template materialize-c1 --ref F01 + formula_patch application guidance | P22: 학생 오류·불편 신고 안내 한 줄과 신고 절 | P23: C1b option-A assumption and copy-only guidance merged with #22 student-report section | P25: option-A 실지급 확인을 interview-guide Q2-2 문항에 연결하고 경영주 예외(경영주 인출은 급여·가계비 규칙, 중복 반영 금지)를 명시하는 문장군 — FIX1 | P25: 중복된 경영주 급여 설명을 정리하고 기존 option-A 문장을 경영주 예외와 일치시킴 — FIX2 | P26: 첫 진입 알림·업데이트 경로·7단계 단위 보고 목록 | P26 F1: progress grouping is deterministic for consecutive finished and remaining stages | P26 F2: OS lock | P27: 진입 계약 재구성(22KB 이하, 절단 재읽기 규칙, 불변 조건 앞배치), 완전 자동 업데이트 첫 진입(auto·S1·S2), D5 A안 위임, D3 비공개 신고, D7 Windows 범위, import --offline-confirmed·doctor --probe 안내, 전공·출력 상세를 majors.md·outputs.md로 분리 | P27 검토 r1: 첫 진입 결과별 안내를 update.md 표와 1:1로, 0.1.x 업데이트 경로 구분(R1-05) | P27 검토 r2: user_files_in_skill 문구(원래 배포본과 다른 파일), install_manifest_invalid·legacy_reference_unavailable 첫 진입 안내 | P28: thesis-level/figure-photo-policy 링크 추가 (서술 예시 01 기준 전환·사진 정책) | PR-2: D8/D9 implementation and latest documentation; I remeasured final file bytes. | PR-4 ORDER-A: 본문 전 재무 게이트 — 불변4의 적자 서술을 게이트 조건 아래로 묶고 복구 참고 문서 4개 링크; I remeasured final bytes. | N1-N5/X1: built-in guidance, extract source binding and restored tool links. | ORDER-I2: remeasured final 0.1.5 file bytes after preserving PR32 inputs. | AMEND-I2-1 R3: explain source-register snapshot then canonical sources apply and profile revision. | P28: 판매가 시작가를 작성연도 직전 5개 완결 연도 평균으로, 이후 연도를 공식 소비자물가 CAGR 누적(으)로 바꿈 — 교수님 지시·사용자 확정 2026-10-13. | PR41 P1: macOS Excel fail-closed before staging/transport; no native proof; synthetic Office contracts preserved. | W2b kordoc-hwpx: 'HWPX 검토본 받기' 한 줄 추가(build_hwpx.py, 한글에서 사람이 마무리). | P28 output hygiene: 최종본 고정 이름·.gg-work 작업 구역·tidy 미리보기/apply 규칙 | P1-GUI: managed 표시(GUI 설치본 auto 차단) — 판정 기준 R1-05 | Continuation: requested writing scope continues without a resume command at each unit; progress block shows the next work | Plan adoption: stage 2 needs core plan choices linked to the student answers; partial drafts and not_computable are not adoption | P0-2 PR-A: U01 folder init guidance, U02 major-before-crop intake rule, U03 commands index link | P0-2 PR-A R2: command index pointer defers detailed record formats to the contract documents | P0-2 consistency: 출력 지원 한계 sentence follows the guarded macOS/Windows Office conversion in outputs.md; native conversion still unverified | F1 C3/C6: 목차 쪽번호 자동 검사 한 줄·HWPX 사람 대조 참조. | 전공별 리서치 경로 6문서 진입 안내 연결. | interview-cases(11-05): P0~P10 인터뷰 경우별 개선 | ORDER-17: connected-tool first, then bundled Python DOCX/PDF/XLSX before any Node/Kordoc setup; hide internal tool and runtime names from student-facing text. | ORDER-16 B: link the thin intake-manuscript command without changing student conversation rules; retain owner R3/R4/R7 guidance. | runs7 C03-2 resume routing: inspect project.json and actual records before status/next; route selected manuscript without old records to intake-manuscript; legacy folder-wide import alone retains offline confirmation. Derive sections/*.md from the existing converter and do not invent mandatory folder markers. Documentation only; engines and tests unchanged. | runs8 C03-5 final bounded repair: reuse resume intent plus a pointed manuscript and self-authored progress as ownership/currentness answers, preserve actual utterances and intake in the same turn; no duplicate Q1c. Other candidates/old-or-friend signals alone trigger clarification. No other-file adoption, engine or test changes. | PR80 P2: 학생 파일 출력 허용 경로를 공통 출력 게이트를 거치는 scripts 명령 전체(build_docx·gg_excel_*)로 바로잡음 | W1: chapter-wise text drafting enabled for fruit_trees, hort_env_systems, dairy; file generation and financial calculations remain unsupported. | W3: R1-02 전공별 본문 장수와 미지원 재무·워드 단계의 진행 목록 분기.",
       "source": "new"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "d13e86094ce50864023ffbc38e465f6ebe53bfffd0ab22d6ba564a6cb071ee04",
+      "after_sha256": "4e51645ddb1fa0837c42b7bae6a652a2ca841e8890d9bec3437064a0e47d8e61",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "first-read-python",
@@ -2344,31 +2344,31 @@
       "reason": "F1 C3: 손 입력·미갱신·여러 문단에 걸친 Word 목차 필드 시험. | V9-02~04: 나눔 단락 내용 검사, 번호 출처를 스캔 시점에 판정, 중첩 HYPERLINK 결과 상위 반영."
     },
     "skills/knuaf-doc/references/dairy/research-chapters.md": {
-      "after_sha256": "9bf20dffd0f92eab69c18046e79588c5a4728cdded1cd2a93af0b5aad7041ca3",
+      "after_sha256": "28b39d6017bab5d3b60223f87d38b68c82e90ce263eebeef53348f0eb1e92ade",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "P28",
       "owner": "P28",
       "source": "new",
-      "reason": "낙농전공 논문 12장·부록 흐름 및 젖소/한우 사업형태별 리서치 경로 안내."
+      "reason": "낙농전공 논문 12장·부록 흐름 및 젖소/한우 사업형태별 리서치 경로 안내. | W3 R1-01: 본문 초안(글) 지원과 서식 본문 파일·재무 출력 미지원 구분."
     },
     "skills/knuaf-doc/references/figure-research-routes.md": {
-      "after_sha256": "5eb7795f99a5dbc953469784d88107312b7cc486f93e97ff9a01c920b98937a5",
+      "after_sha256": "35aa2ea1f1a33ed85f5883365f78b39198ac02441f541c349e6ccdd0632410f1",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "P28",
       "owner": "P28",
       "source": "new",
-      "reason": "전공·장별 시각자료 유형 판정, 탐색 조건, 수집·계보 증거 및 생성 이미지 경계 안내."
+      "reason": "전공·장별 시각자료 유형 판정, 탐색 조건, 수집·계보 증거 및 생성 이미지 경계 안내. | W3 R1-01: 초안 글과 파일·재무 출력의 지원 경계 분리."
     },
     "skills/knuaf-doc/references/fruit-trees/research-routes.md": {
-      "after_sha256": "18058607227ef4b74dddf5d1d4698613483a6d096cdcd1318079560cb66cd375",
+      "after_sha256": "83a8ab60be8f85ff93eb29d6fd5cb453c92b3cdb8be37b5349ab81f4f14ad280",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "P28",
       "owner": "P28",
       "source": "new",
-      "reason": "과수전공 S01 양식 기반 장별 리서치 경로 및 성과수 통계 분리 안내."
+      "reason": "과수전공 S01 양식 기반 장별 리서치 경로 및 성과수 통계 분리 안내. | W3 R1-01: 본문 초안(글) 지원과 서식 본문 파일·재무 출력 미지원 구분."
     },
     "skills/knuaf-doc/references/industrial-insects/research-routes.md": {
       "after_sha256": "2bccd2c8c3002d532e355bad85cf1138b177abdeccc01e1fa3781b5ae038f454",
@@ -2380,13 +2380,13 @@
       "reason": "산업곤충 선례 F0 기반 본문 역할별 리서치 경로 및 종×용도×형태×행위 분기 안내."
     },
     "skills/knuaf-doc/references/research-route-index.md": {
-      "after_sha256": "8ff68044b052534dedfc6cb45e117546d99e5f6e79e7a4d255fbf5db3afc7aa9",
+      "after_sha256": "25722ab3935ff3105018e7df4f2ddb08e7f6db8e424237e5adfab40439f95da6",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "P28",
       "owner": "P28",
       "source": "new",
-      "reason": "전공별 리서치 경로 및 그림 탐색 안내 통합 색인."
+      "reason": "전공별 리서치 경로 및 그림 탐색 안내 통합 색인. | W3 R1-01: 원예 본문 초안 범위를 학생 지원과 리서치 색인 범위로 명확화."
     },
     "skills/knuaf-doc/references/specialty-crops/research-routes.md": {
       "after_sha256": "c4702befbb8133930954540a7cdcb56bd821b57ea05db64a8188fbbcfe4c8afa",
@@ -2480,12 +2480,12 @@
       "reason": "ORDER-16 B: real CLI/source engines with synthetic DOCX and raw answers; exact preservation/linkage, mixed-file exclusion, incomplete answers, post-scan byte change and both CAS boundaries. Existing test files, assertions and fixtures unchanged. | Astra R3 I1: append three real gg.main OS/fs-boundary fault regressions (answer directory fsync, temp fsync, post-rename identity); retain all nine prior tests and assertions; verify canonical/snapshot/receipt/evidence and original bytes survive."
     },
     "skills/knuaf-doc/references/major-body-draft.md": {
-      "after_sha256": "2971026f5edbedb281e06afe20d515693833f578213bf765cc4cf780cbcc79db",
+      "after_sha256": "c8bb5ccf10f0f41a8f337faca0039490676421da203c8b94da26c14c4ae341dc",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "P28",
       "owner": "P28",
-      "reason": "W1: reviewed chapter-wise text-draft contract for fruit_trees, hort_env_systems, and dairy; limits guidance to student-provided values and existing major references.",
+      "reason": "W1: reviewed chapter-wise text-draft contract for fruit_trees, hort_env_systems, and dairy; limits guidance to student-provided values and existing major references. | W3: R1-02 과수 Ⅰ~Ⅳ·낙농 1~12·원예 채택 목차 기준과 미지원 단계 표시 정합.",
       "source": "new"
     }
   },

@@ -118,6 +118,41 @@ class MajorBodyDraftContract(unittest.TestCase):
                 self.assertIn("major-body-draft.md", body)
                 self.assertIn("본문 초안(글)", body)
                 self.assertIn("unsupported_output", body)
+    def test_linked_research_guides_distinguish_text_drafts_from_outputs(self):
+        checks = (
+            ("fruit-trees/research-routes.md", "본문 초안(글)", "서식 본문 파일", "질문·문서계획·생산검산(kg/주/㎡) 지원, **논문 본문·"),
+            ("dairy/research-chapters.md", "본문 초안(글)", "서식 본문 파일", "질문·계획·근거 검토만 지원하며, **논문 본문·"),
+            ("research-route-index.md", "본문 초안(글)", "major-body-draft.md", "신규 본문 작성 없음"),
+            ("figure-research-routes.md", "본문 초안(글)", "major-body-draft.md", "현재 본문·재무 출력이 미지원되는 전공"),
+        )
+        for name, supported, link, stale in checks:
+            with self.subTest(document=name):
+                body = read(name)
+                self.assertIn(supported, body)
+                self.assertIn(link, body)
+                self.assertNotIn(stale, body)
+                self.assertNotIn("본문 미지원", body)
+
+        readme = REF.parents[2] / "README.md"
+        fruit_row = next(line for line in readme.read_text(encoding="utf-8").splitlines()
+                         if line.startswith("| 과수 |"))
+        self.assertIn("본문 초안(글)", fruit_row)
+        self.assertIn("서식 본문 파일·XLSX·재무 계산은 미지원", fruit_row)
+        self.assertNotIn("본문·XLSX·재무 계산 미지원", fruit_row)
+
+    def test_progress_uses_each_major_toc_and_marks_unsupported_work(self):
+        skill = (REF.parent / "SKILL.md").read_text(encoding="utf-8")
+        progress = section(skill, "## 진행 목록")
+        for token in (
+                "특용작물 Ⅰ~Ⅵ", "과수 Ⅰ~Ⅳ", "낙농 1~12",
+                "원예환경시스템은 채택 목차 전체", "과수: Ⅰ~Ⅳ 네 장",
+                "낙농: 1~12 열두 장", "스킬의 남은 일로 표시하지 않는다",
+                "⚑ 학생 몫 — 스킬 미지원", "전용 18시트 조건부"):
+            with self.subTest(token=token):
+                self.assertIn(token, progress)
+        self.assertNotIn("Ⅰ~Ⅵ 여섯 장의 절 원고", progress)
+        self.assertIn("특용작물: 값 입력 + 실제 앱 재계산", progress)
+        self.assertIn("원예환경시스템: 기존 전용 18시트 프로필", progress)
     def test_dairy_json_command_does_not_claim_section_draft_saves_are_json(self):
         dairy = read("dairy/README.md")
         self.assertIn("낙농 전용 명령(예: `gg.py major-plan`)", dairy)
