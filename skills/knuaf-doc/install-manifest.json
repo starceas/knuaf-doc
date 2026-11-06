@@ -1,6 +1,6 @@
 {
  "files": {
-  "SKILL.md": "3b04dc406ac70c965cdd8fb86a0a033832f8a2e96ae74ad41303762dddc3ba21",
+  "SKILL.md": "52e5097fe19d6ee0ad71ce6d7f702bfadb23a635003be74604980f9333295021",
   "assets/templates/finance-template.xlsx": "6d3c9fe5e5992108a8bab18c0098edb0d808f0d14c099878a53939b17de88c7d",
   "references/benchmark-packs/aliases/crop-aliases.specialty_crops.json": "8e7abffc7b4244727b4732f558b722934dd8ea229c0057312d1ee7ea92c2df22",
   "references/benchmark-packs/aliases/major-aliases.json": "ccf6b7d94690b0d7ed99618b3d649eb10755849d12f1922960a25bd14a419ea5",
@@ -64,7 +64,7 @@
   "references/industrial-insects/README.md": "065294fbbf0dded1b7b3b4e07c09ed6fca79e80a62be049f7f3b6349cc9e853f",
   "references/industrial-insects/precedents.json": "5ec7062a01838854d9f2130d95f2ffc78251e5d263a88910fd076f7b48047161",
   "references/industrial-insects/premise-probes.md": "352e66a34f25812920b67af85d1470527ee5f4e1c9d57aaaebedcb746bf32d81",
-  "references/intake-selection.md": "434f718be21f6c3a84e981978617264e24392598c82363d107ab8df1fa548a39",
+  "references/intake-selection.md": "c156b76a4e8f44bc28080ba7acb6da1204ecabe99fe4375fc9e93b91ea15895b",
   "references/interview-guide.md": "e894a117d19b5cbf9fa87568e83ceefdb4fa88a992abfd1f1a3a52b8c0e43e87",
   "references/interview-ui.md": "76af002958058c91e2f9ac83e3a64089fa7469f861cd035bc6bcabb78a27d89d",
   "references/intro-story.md": "39453ba727cbf338859a5fd776bbe69446ed0e6baffb1f91067ea19ce3ec8d7d",
