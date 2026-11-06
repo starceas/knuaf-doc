@@ -29,6 +29,16 @@ def section(text, heading):
 class InterviewContract(unittest.TestCase):
     def setUp(self):
         self.text = read("interview-guide.md")
+    def test_start_year_question_accepts_a_direct_year_answer(self):
+        q28 = section(self.text, "### Q2-8.")
+        self.assertIn("번호로 답하거나", q28)
+        self.assertIn("직접 적어 주세요", q28)
+    def test_year_interview_questions_follow_each_other_in_order(self):
+        self.assertLess(self.text.index("### Q2-7."),
+                        self.text.index("### Q2-8."))
+
+
+
 
     def test_preface_only_reuse_mode_is_offered(self):
         intake = read("intake-selection.md")

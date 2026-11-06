@@ -26,7 +26,7 @@
     },
     "tests/test_output_preservation.py": {
       "origin": "new",
-      "note": "G: actual CLI/API byte-preservation regressions for unrendered legacy content, DOCX/XLSX manifest collisions and malformed claims/views, plus executable canonical style documentation; isolated original-function/document mutants detected. | G FIX1: inspect both polishing and linked interview guidance for retired write destinations, storage-table targets and authoring forms before executing the canonical example; read-only preservation notes remain valid."
+      "note": "G: actual CLI/API byte-preservation regressions for unrendered legacy content, DOCX/XLSX manifest collisions and malformed claims/views, plus executable canonical style documentation; isolated original-function/document mutants detected. | G FIX1: inspect both polishing and linked interview guidance for retired write destinations, storage-table targets and authoring forms before executing the canonical example; read-only preservation notes remain valid. | ORDER-30: invalid or missing confirmed start year preserves existing project/output bytes."
     },
     "skills/knuaf-doc/tests/test_gg_source_intake_scan.py": {
       "origin": "transformed",
@@ -142,7 +142,7 @@
       "origin": "new"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "note": " | PR-2: latest D8/D9 integration; I-01 only measured count constants adjusted in lineage test. Full pytest covers split public/skill test locations. | I-02: measured F01 artifact repin propagated; F01 canonical digest one-string propagation separately approved by I-03. | I2 gg_update.py manifest --write for FIX-A2/B2/C2b and W-D3 final inputs plus measured F01 artifact repin. | I3 gg_update.py manifest --write for FIX-B3/C3 and W-D4 final inputs plus measured F01 artifact repin. | I4 gg_update.py manifest --write for FIX-B4/C4 and W-D5 final inputs plus measured F01 artifact repin. | I5 gg_update.py manifest --write for FIX-C5 and W-D6 final inputs plus measured F01 artifact repin. | I6: gg_update.py manifest --write for FIX-C6 and W-D7; F01 artifact and canonical digest measured unchanged, no repin. | P0-2 consistency: gg_update.py manifest --write after the #59/#60/#61 merges. | ORDER-16: generated from staged checkout-index snapshot. | ORDER-17: regenerated with gg_update.py manifest --write after first-read guidance, reader, and dependency consumer metadata.",
+      "note": " | PR-2: latest D8/D9 integration; I-01 only measured count constants adjusted in lineage test. Full pytest covers split public/skill test locations. | I-02: measured F01 artifact repin propagated; F01 canonical digest one-string propagation separately approved by I-03. | I2 gg_update.py manifest --write for FIX-A2/B2/C2b and W-D3 final inputs plus measured F01 artifact repin. | I3 gg_update.py manifest --write for FIX-B3/C3 and W-D4 final inputs plus measured F01 artifact repin. | I4 gg_update.py manifest --write for FIX-B4/C4 and W-D5 final inputs plus measured F01 artifact repin. | I5 gg_update.py manifest --write for FIX-C5 and W-D6 final inputs plus measured F01 artifact repin. | I6: gg_update.py manifest --write for FIX-C6 and W-D7; F01 artifact and canonical digest measured unchanged, no repin. | P0-2 consistency: gg_update.py manifest --write after the #59/#60/#61 merges. | ORDER-16: generated from staged checkout-index snapshot. | ORDER-17: regenerated with gg_update.py manifest --write after first-read guidance, reader, and dependency consumer metadata. | ORDER-33 SY-01 CI follow-up: regenerated installation fingerprints after the narrow source artifact hash refresh. | ORDER-33 SY-01 CI follow-up: regenerated after the reference-finance-01-xlsx artifact hash and byte count refresh.",
       "origin": "new",
       "transform": "G: regenerate from tracked-files-only clean copy after original-preservation repairs. | G FIX1: regenerate after canonical interview storage corrections. | F-skill-tests: regenerate install manifest from a tracked-files-only copy after fixture repair. | F CI1: regenerate after completing source-intake simulated filesystem lookups. | ORDER-17: regenerated with gg_update.py manifest --write after first-read guidance, reader, and dependency consumer metadata."
     },
@@ -361,7 +361,7 @@
       "origin": "new"
     },
     "tests/test_major_guard_paper.py": {
-      "note": "P7 policy B guard on paper/export/adopt/merge paths (A32-L1–L7 path matrix, lock-path binding race). P8: fruit_trees is registered — unknown-major coverage moved to an unregistered ID, the synthetic peer renamed probe_major, real fruit_trees checked on every writer and CLI (unsupported_output) and against a specialty binding (major_binding_mismatch). P9: hort_env_systems is registered — the unregistered sample moved to a synthetic ID that no real major will register. | P10: P7 policy B guard on paper/export/adopt/merge paths (A32-L1–L7 path matrix, lock-path binding race). P8: fruit_trees is registered — unknown-major coverage moved to an unregistered ID, the synthetic peer renamed probe_major, real fruit_trees checked on every writer and CLI (unsupported_output) and against a specialty binding (major_binding_mismatch). | P28: 평문 정책의 전공 바인딩 전후 전체 게이트 동일성 비교 유지(모든 전공 공통 기본 정책)",
+      "note": "P7 policy B guard on paper/export/adopt/merge paths (A32-L1–L7 path matrix, lock-path binding race). P8: fruit_trees is registered — unknown-major coverage moved to an unregistered ID, the synthetic peer renamed probe_major, real fruit_trees checked on every writer and CLI (unsupported_output) and against a specialty binding (major_binding_mismatch). P9: hort_env_systems is registered — the unregistered sample moved to a synthetic ID that no real major will register. | P10: P7 policy B guard on paper/export/adopt/merge paths (A32-L1–L7 path matrix, lock-path binding race). P8: fruit_trees is registered — unknown-major coverage moved to an unregistered ID, the synthetic peer renamed probe_major, real fruit_trees checked on every writer and CLI (unsupported_output) and against a specialty binding (major_binding_mismatch). | P28: 평문 정책의 전공 바인딩 전후 전체 게이트 동일성 비교 유지(모든 전공 공통 기본 정책) | ORDER-30: fail-closed paper start-year regressions preserve output boundaries.",
       "origin": "new"
     },
     "tests/test_office_relationships.py": {
@@ -373,11 +373,11 @@
       "origin": "new"
     },
     "tests/test_p1_core.py": {
-      "note": "P1 core/CLI behavioral tests (A-owned): C3 record-id, C5 floor, C6 COM, H8 ladder, UTF-8 band.",
+      "note": "P1 core/CLI behavioral tests (A-owned): C3 record-id, C5 floor, C6 COM, H8 ladder, UTF-8 band. | ORDER-30: update existing paper consumer contracts for explicit confirmed start_year.",
       "origin": "new"
     },
     "tests/test_p1_gui_inherit.py": {
-      "note": "P1-GUI: JUDGE-A/JUDGE-B 올림 항목(빈 export 거절, 기계용 field_id 보류, n항 검산, paper body 어댑터·CLI, atomic 재시도, 명령 빈 대상 차단, doctor 의존성, build_docx 봉투·의존성·기본값) 시험 | P0-2 PR-E: CLI body publication/receipt, invalid-body JSON, missing-file JSON, numeric validation, body-only DOCX TOC and major guard regression tests.",
+      "note": "P1-GUI: JUDGE-A/JUDGE-B 올림 항목(빈 export 거절, 기계용 field_id 보류, n항 검산, paper body 어댑터·CLI, atomic 재시도, 명령 빈 대상 차단, doctor 의존성, build_docx 봉투·의존성·기본값) 시험 | P0-2 PR-E: CLI body publication/receipt, invalid-body JSON, missing-file JSON, numeric validation, body-only DOCX TOC and major guard regression tests. | ORDER-30: nested paper CLI passes explicit start_year and preserves the managed publication contract.",
       "origin": "new"
     },
     "tests/test_p1_outputs.py": {
@@ -385,7 +385,7 @@
       "origin": "new"
     },
     "tests/test_p27_small.py": {
-      "note": "P27: school_profile.major_id, 사유별 held 안내, pywin32 제거 doctor, runtime_present, CP949 CLI --help | Restore v0.1.4: synthetic regression and approved school-entry expectations. | P0-2 PR-D: Q03: pywin32 Windows-only applicability and minimum supported version 306 behavior. | P0-2 PR-E: explicit synthetic school in nested-major CLI fixture for current publication contract.",
+      "note": "P27: school_profile.major_id, 사유별 held 안내, pywin32 제거 doctor, runtime_present, CP949 CLI --help | Restore v0.1.4: synthetic regression and approved school-entry expectations. | P0-2 PR-D: Q03: pywin32 Windows-only applicability and minimum supported version 306 behavior. | P0-2 PR-E: explicit synthetic school in nested-major CLI fixture for current publication contract. | ORDER-30: nested-major paper fixture retains explicit confirmed start year.",
       "origin": "new"
     },
     "tests/test_plain_policy.py": {
@@ -397,7 +397,7 @@
       "origin": "new"
     },
     "tests/test_price_assumptions.py": {
-      "note": " | PR-2: latest D8/D9 integration; I-01 only measured count constants adjusted in lineage test. Full pytest covers split public/skill test locations. | FIX-A2: V2-01/03 official URL and authoritative plan dimensions; 77 tests.",
+      "note": " | PR-2: latest D8/D9 integration; I-01 only measured count constants adjusted in lineage test. Full pytest covers split public/skill test locations. | FIX-A2: V2-01/03 official URL and authoritative plan dimensions; 77 tests. | ORDER-30: confirmed S drives five-year finance horizon; price observation years remain tied to W.",
       "origin": "new"
     },
     "tests/test_question_gate.py": {
@@ -426,7 +426,7 @@
       "origin": "new"
     },
     "tests/test_school_table_sources.py": {
-      "note": "PR-3 X1 regression tests; root tests belong to validation layer per I precedent. | I8 PV1-02: finite bibliographic display characters and invalid six-table publication refusal (FIX3-3). | P0-2 PR-E: remove whole-file implementation SHA assertion; retain direct renderer output and source behavior contract. | PR-E FIX1 E-R1-02: freeze full official/legacy UTF-8 output fingerprints generated from approved origin/main renderer 4b297c187b1ce91409cd4f0af60e78ff4b742a3d, independent of candidate-generated expectations.",
+      "note": "PR-3 X1 regression tests; root tests belong to validation layer per I precedent. | I8 PV1-02: finite bibliographic display characters and invalid six-table publication refusal (FIX3-3). | P0-2 PR-E: remove whole-file implementation SHA assertion; retain direct renderer output and source behavior contract. | PR-E FIX1 E-R1-02: freeze full official/legacy UTF-8 output fingerprints generated from approved origin/main renderer 4b297c187b1ce91409cd4f0af60e78ff4b742a3d, independent of candidate-generated expectations. | ORDER-30: renderer smoke supplies explicit confirmed year; frozen output fingerprints remain unchanged.",
       "origin": "new"
     },
     "tests/test_skill_commands.py": {
@@ -462,11 +462,11 @@
       "origin": "new"
     },
     "tests/test_skill_school_paper.py": {
-      "note": "P1-GUI 시험 이사(cb72ae1): 5년 창·미확인 표시·표 고정 행 (frozen 생성기는 불변) | P0-2 PR-E: clarify that the frozen generation logic, not the CLI module bytes, is unchanged.",
+      "note": "P1-GUI 시험 이사(cb72ae1): 5년 창·미확인 표시·표 고정 행 (frozen 생성기는 불변) | P0-2 PR-E: clarify that the frozen generation logic, not the CLI module bytes, is unchanged. | ORDER-30: confirmed start_year drives paper years without writing_year+1 fallback.",
       "origin": "new"
     },
     "tests/test_skill_school_verify.py": {
-      "note": "P1-GUI 시험 이사(cb72ae1): 재계산 항등식·상환 스케줄·to_d 거절 (본체 price_assumptions 계약)",
+      "note": "P1-GUI 시험 이사(cb72ae1): 재계산 항등식·상환 스케줄·to_d 거절 (본체 price_assumptions 계약) | ORDER-30: financial verification fixtures use explicit plan start year.",
       "origin": "new"
     },
     "tests/test_skill_show_research.py": {
@@ -491,7 +491,7 @@
       "origin": "new"
     },
     "tests/test_winpub_native.py": {
-      "note": "Actual native Windows lifecycle and negative tests; no POSIX skips added; independent P2-L09-native placeholder retained.",
+      "note": "Actual native Windows lifecycle and negative tests; no POSIX skips added; independent P2-L09-native placeholder retained. | ORDER-30: publication lifecycle fixture supplies an explicit confirmed start_year; POSIX execution is regression evidence only.",
       "origin": "new"
     },
     "tests/test_workbook_c1b_correction.py": {
@@ -564,7 +564,7 @@
       "origin": "transformed"
     },
     "skills/knuaf-doc/references/builtin-sources.json": {
-      "note": "P0-2B owner-approved narrow repin: only reference-finance-01-xlsx artifact references/excel-template.md sha256/bytes updated to the B-owned document bytes; source identity, role, coverage, lineage and every other entry unchanged.",
+      "note": "P0-2B owner-approved narrow repin: only reference-finance-01-xlsx artifact references/excel-template.md sha256/bytes updated to the B-owned document bytes; source identity, role, coverage, lineage and every other entry unchanged. | ORDER-33 SY-01 CI follow-up: only reference-finance-01-xlsx artifact hash and byte count updated after semantic review; source identity, role, coverage, and lineage unchanged.",
       "origin": "transformed"
     },
     "tests/test_excel_template_integration.py": {
@@ -593,7 +593,31 @@
     },
     "tests/test_skillgaps_wp4_interview.py": {
       "origin": "transformed",
-      "note": "W1: extend the existing interview-gap regression contracts for major-body text drafts and their file-output boundaries. | W3: R1-01 stale body-support wording and R1-02 major-specific progress/completion criteria regression contracts. | W4: test HT2 format basis, student-confirmed year authority, and complete student notice with chapter-text alternative. | W5: assert the fixed ‘본문 Ⅰ~Ⅵ 초안’ phrase together with each major's existing chapter-count and progression guidance."
+      "note": "W1: extend the existing interview-gap regression contracts for major-body text drafts and their file-output boundaries. | W3: R1-01 stale body-support wording and R1-02 major-specific progress/completion criteria regression contracts. | W4: test HT2 format basis, student-confirmed year authority, and complete student notice with chapter-text alternative. | W5: assert the fixed ‘본문 Ⅰ~Ⅵ 초안’ phrase together with each major's existing chapter-count and progression guidance. | ORDER-30: regression on writing-year and start-year interview state transitions, unresolved choices, and direct alternate-year answers."
+    },
+    "tests/test_p2_core.py": {
+      "origin": "new",
+      "note": "ORDER-30: publication rejects absent confirmed S without project mutation and renders an alternate confirmed S."
+    },
+    "tests/test_p2_mutators.py": {
+      "origin": "new",
+      "note": "ORDER-30: mutation-path paper calls require explicit confirmed start year."
+    },
+    "tests/test_p3_flow.py": {
+      "origin": "new",
+      "note": "ORDER-30: paper runtime adapter rejects missing or malformed start_year before publication."
+    },
+    "skills/knuaf-doc/references/workflow-order.md": {
+      "origin": "transformed",
+      "note": "ORDER-30: ask for missing writing year W only when no current source exists; offer W+1 only when S remains unconfirmed; keep unsupported consumers blocked."
+    },
+    "skills/knuaf-doc/scripts/gg_school_excel.py": {
+      "origin": "transformed",
+      "note": "ORDER-30: drive the specialty financial five-year axis from the explicit confirmed start_year, without silently deriving it from writing_year."
+    },
+    "skills/knuaf-doc/scripts/gg_school_paper.py": {
+      "origin": "transformed",
+      "note": "ORDER-30: require explicit confirmed start_year and remove the implicit writing_year+1 publication fallback."
     }
   },
   "readme_policy": {

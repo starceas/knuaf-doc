@@ -145,6 +145,9 @@ color as approval for arbitrary formula changes. Investment analysis absent from
 the prescribed workbook can be verified in a separate calculation artifact;
 do not add sheets to the submission form merely to satisfy a preferred model.
 
+**공통 연도 입력 계약**: 작성연도 W와 영농 시작연도 S를 분리하고, 같은 사업의 본문·재무 소비자가 확인된 값을 공유한다. S가 없을 때 W+1은 인터뷰에서 확인받을 기본 제안일 뿐 확정 계획이 아니다. 기존 답변·계획에서 S가 이미 확정됐으면 보존한다. 전공별 필드 이름과 기간은 다르므로 해당 계획 시작연도 필드에만 매핑한다. Q2-7/Q2-8 질문 순서는 [interview-guide.md](interview-guide.md#q2-7-작성-기준연도-기준-연도가-필요할-때)를 따른다.
+확인된 작성·영농 시작 연도는 `gg_school_paper.py`의 `writing_year`·`start_year`, 학교 재무 경로의 해당 `start_year`, 판매가격 `application_base_year`, 과수의 `fruit_trees.business_start_year`, 원예 계획의 `plan.start_year`, 산업곤충 계획 연도 목록의 첫 연도에 각각 넣는다. 판매 관측 창은 S나 현재 날짜로 옮기지 않고 W−5…W−1로 유지한다. 낙농 `dairy.plan_year`는 계획 기준연도이며 28시트의 고정된 2026~2031 연도축과 같은 뜻이 아니므로 S를 대신 넣지 않는다. 원예의 `invest.slot*.service_start_year`도 자산별 사용 개시연도라서 사업 S를 대신하지 않는다. 필요한 소비자가 확인된 S를 입력받거나 보존할 수 없으면 그 소비자만 보류한다.
+
 ### Inflation and labor cost input rules (물가 및 노무비 반영 규칙)
 
 > ℹ️ **적용 범위**: 상승률 분리 규칙은 **모든 전공 공통 기본값**이다([사용자 결정 2026-10-06 22:39]). 입력 위치와 시트 수는 해당 전공 양식을 따른다.

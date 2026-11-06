@@ -130,7 +130,9 @@ def years(spec):
     writing = spec.get("writing_year")
     if type(writing) is not int or writing < 1900 or writing > 2100:
         raise ValueError("작성연도 정수 필요")
-    start = writing + 1
+    start = spec.get("start_year")
+    if type(start) is not int or start < 1900 or start > 9995:
+        raise ValueError("영농 시작연도 정수 필요")
     return writing, start, start + 4, [start + i for i in range(5)]
 
 
