@@ -263,12 +263,12 @@
       "source": "new"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "9b4fce222c61610948567bed6a6127aa20d7d91c1cb9c01e2031feb7a0c65b5c",
+      "after_sha256": "5b2120d6900393c4e45862df8c9127c9596c0edcd9b86f60b14a748372f496e6",
       "before_sha256": null,
       "first_changed": "P27",
-      "last_changed": "W8d",
+      "last_changed": "W8e",
       "owner": "W8",
-      "note": "G-output-guards: regenerate installation fingerprints from a tracked-files-only copy after output-preservation fixes. | G FIX1: regenerate after aligning the linked interview guide with canonical fact/source/task storage. | F-skill-tests: regenerate install manifest from a tracked-files-only copy after fixture repair; no runtime relaxation. | F CI1: regenerate after completing source-intake simulated filesystem lookups. | W8: regenerated after adding delegation.json, gg_delegation.py and test_gg_delegation.py. | W8b: regenerated after C6 publication-path and research-result validation corrections, then refreshed after documenting lanes-propose. | W8d: regenerate after FC-01/02/03 fixes and regression coverage.",
+      "note": "G-output-guards: regenerate installation fingerprints from a tracked-files-only copy after output-preservation fixes. | G FIX1: regenerate after aligning the linked interview guide with canonical fact/source/task storage. | F-skill-tests: regenerate install manifest from a tracked-files-only copy after fixture repair; no runtime relaxation. | F CI1: regenerate after completing source-intake simulated filesystem lookups. | W8: regenerated after adding delegation.json, gg_delegation.py and test_gg_delegation.py. | W8b: regenerated after C6 publication-path and research-result validation corrections, then refreshed after documenting lanes-propose. | W8d: regenerate after FC-01/02/03 fixes and regression coverage. | W8e: regenerated with gg_update.py manifest --write after F2-01/02 ownership checks, cleanup and revised POSIX risk documentation.",
       "reason": "P27: installed distribution file list. | P28 and later: regenerate after accepted skill changes. | W8: gg_update.py manifest --write after W8 skill command and contract changes. | W8b: gg_update.py manifest --write after C6 fixes and the final commands.md row. | W8d: gg_update.py manifest --write after FC-01/02/03 fixes and documentation.",
       "source": "new"
     },
@@ -464,12 +464,13 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/commands.md": {
-      "after_sha256": "9dc7ebcc57515380f45ff5e0363e47289b33a8535f3b4a3dbc74ae9e7fb764a2",
+      "after_sha256": "78150064cb057eeb60997a3228bd9ed2524933cd1a3bb9fec14be0c6f237c0f9",
       "before_sha256": null,
       "first_changed": "P28",
-      "last_changed": "W8d",
+      "last_changed": "W8e",
       "owner": "W8",
       "reason": "P0-2 PR-A: U03 gg CLI command index and apply JSON contract. | P0-2 PR-A R2: rewritten against gg.py arguments and the apply collection/value contract; executable bind-major example. | P0-2 PR-A R3: exit codes 3/4 describe the operation target; per-target confirmation table. | F1 C3: gg_toc_check.py usage. | W8: document delegate and lanes-propose CLI contracts, validation, and schema source. | W8b: document C6 path-pinned publication, cleanup, route ID matching, quantitative unit-row checks, and complete the lanes-propose CLI index row. | W8d: clarify state-linked quantitative unit rows and no-observation states; record the post-open write guard and remaining race bound.",
+      "note": "DECISION-W8e replaces the empty-temp-only bound with owned temp or published payload, including proposal replacement; cleanup or last-known-location reporting is required.",
       "source": "new"
     },
     "skills/knuaf-doc/delegation.json": {
@@ -1252,21 +1253,23 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_delegation.py": {
-      "after_sha256": "dce0a1f1d9c6e67fcb2f278d1fc2ddba8b69adbdb07542dfe060186cc49927e8",
+      "after_sha256": "ff6f48c9a3aba6a8b06a167da7e44078d646e93bd9b6e3a2d953125e3313e1ba",
       "before_sha256": null,
       "first_changed": "W8",
-      "last_changed": "W8d",
+      "last_changed": "W8e",
       "owner": "W8",
       "reason": "W8: validate skill-owned relay JobSpecs and LaneRequests; atomic proposal publication and research result receiver validation. | W8b C6-01/02/03/04: pin publication directories, clean owned partial temporaries, separate route IDs from URLs, require quantitative evidence unit rows. | W8d FC-01: revalidate pinned directory after temp open before writing any payload bytes. FC-02: restore route-status enum validation. FC-03: tie quantitative unit-row requirements to question final state rather than digits in free-text claims.",
+      "note": "W8e F2-01: compare no-follow temp identity to its open fd before payload writes. F2-02: retain POSIX owned fd through publication and clean matching temp/final names through pinned dir fd; missing or replaced names report cleanup_pending with handle-derived last location.",
       "source": "new"
     },
     "skills/knuaf-doc/tests/test_gg_delegation.py": {
-      "after_sha256": "734c928f66aa1cc1d298b417408c2c794570a0f8f825095daa5692b128e44711",
+      "after_sha256": "881171f44a3ad716c42cd87c39410e9b9c50e686e778813d086b63d86d366a2d",
       "before_sha256": null,
       "first_changed": "W8",
-      "last_changed": "W8d",
+      "last_changed": "W8e",
       "owner": "W8",
       "reason": "W8: synthetic CLI regressions for JobSpec and LaneRequest contract, validation boundaries, atomic preservation, and research-result route checks. | W8b C6-01/02/03/04: parent-swap publication race, partial-write cleanup, route ID in URL with mismatch rejection, measured/candidate/no-evidence quantitative unit-row semantics. | W8d FC-01: prove no payload bytes or residue when the directory moves before the post-open check in either command. FC-02: accept only success/failure route status values. FC-03: accept numeric-free narrative candidate claims with observation rows, reject missing candidate rows, allow 자료 없음/접근 실패 without observations, and reject stray unit rows for no-observation states.",
+      "note": "W8e F2-01: opened-temp move, missing/replaced/symlink names, zero payload and location reporting in both commands. F2-02: new delegate/new proposal/existing proposal replacement with cleanup success, denial, detached result and unrelated replacement preservation.",
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_body_layout.py": {

@@ -231,6 +231,38 @@ def _entry_stat(directory, name):
     return info
 
 
+def _entry_identity(directory, name):
+    info = _entry_stat(directory, name)
+    return (gg_fs._identity_from_stat(info, "file", directory.path / name)
+            if info is not None else None)
+
+
+def _fd_path(descriptor):
+    """Best-effort current handle path, used only to report failed cleanup."""
+    try:
+        if sys.platform == "darwin":
+            import fcntl
+            raw = fcntl.fcntl(descriptor, fcntl.F_GETPATH, bytes(1024))
+            return Path(os.fsdecode(raw.split(b"\0", 1)[0]))
+        if sys.platform.startswith("linux"):
+            return Path(os.readlink("/proc/self/fd/%d" % descriptor))
+    except (OSError, ValueError, AttributeError):
+        pass
+    return None
+
+
+def _cleanup_location(directory, name, descriptor):
+    path = _fd_path(descriptor) if descriptor is not None else None
+    if path is None:
+        parent = (_fd_path(directory.fd)
+                  if directory.windows is None else None)
+        path = (parent or directory.path) / name
+    try:
+        return path.relative_to(directory.root).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
 def _read_entry(directory, name):
     if directory.windows is not None:
         return gg_fs.read_bytes(directory.path / name)[0]
@@ -303,6 +335,7 @@ def _publish_bytes(directory, name, data, *, replace):
     published = False
     failure = None
     cleanup_failed = False
+    cleanup_location = None
     try:
         directory.check()
         existing = _entry_stat(directory, name)
@@ -322,6 +355,9 @@ def _publish_bytes(directory, name, data, *, replace):
             descriptor = os.open(temporary, flags, 0o600, dir_fd=directory.fd)
         temporary_identity = gg_fs.fd_identity(descriptor, kind="file")
         directory.check()
+        if not gg_fs.same_identity(temporary_identity,
+                                   _entry_identity(directory, temporary)):
+            _reject("delegation_write_verify_failed")
         view = memoryview(data)
         while view:
             written = os.write(descriptor, view)
@@ -329,8 +365,11 @@ def _publish_bytes(directory, name, data, *, replace):
                 raise OSError(errno.EIO, "short write")
             view = view[written:]
         os.fsync(descriptor)
-        os.close(descriptor)
-        descriptor = None
+        # POSIX keeps the owned inode pinned through publish and cleanup.
+        # Windows must release the file handle before renaming it.
+        if directory.windows is not None:
+            os.close(descriptor)
+            descriptor = None
 
         directory.check()
         current = _entry_stat(directory, name)
@@ -342,10 +381,7 @@ def _publish_bytes(directory, name, data, *, replace):
                     and not gg_fs.same_identity(original, current_identity))):
             _reject("lane_request_target_changed" if replace
                     else "job_id_exists")
-        temp_stat = _entry_stat(directory, temporary)
-        temp_identity = (gg_fs._identity_from_stat(
-            temp_stat, "file", directory.path / temporary)
-            if temp_stat is not None else None)
+        temp_identity = _entry_identity(directory, temporary)
         if not gg_fs.same_identity(temporary_identity, temp_identity):
             _reject("delegation_write_verify_failed")
         directory.check()
@@ -366,46 +402,56 @@ def _publish_bytes(directory, name, data, *, replace):
             _rename_noreplace_at(directory.fd, temporary, name)
         published = True
         directory.check()
-        saved_stat = _entry_stat(directory, name)
-        saved_identity = (gg_fs._identity_from_stat(
-            saved_stat, "file", directory.path / name)
-            if saved_stat is not None else None)
+        saved_identity = _entry_identity(directory, name)
         if not gg_fs.same_identity(temporary_identity, saved_identity):
             _reject("delegation_write_verify_failed")
         saved = _read_entry(directory, name)
         if hashlib.sha256(saved).digest() != hashlib.sha256(data).digest():
             _reject("delegation_write_verify_failed")
+        if descriptor is not None:
+            os.close(descriptor)
+            descriptor = None
     except DelegationError as error:
         failure = error
     except (gg_fs.FsError, OSError, ValueError, RuntimeError) as error:
         failure = error
     finally:
-        if descriptor is not None:
+        if directory.windows is not None and descriptor is not None:
             try:
                 os.close(descriptor)
-            except OSError:
+                descriptor = None
+            except OSError as error:
+                failure = failure or error
                 cleanup_failed = True
-        if temporary_identity is not None and not published:
+        if temporary_identity is not None and (failure is not None or not published):
+            owned_name = name if published else temporary
             try:
                 if directory.windows is not None:
                     directory.check()
-                temp_stat = _entry_stat(directory, temporary)
-                temp_identity = (gg_fs._identity_from_stat(
-                    temp_stat, "file", directory.path / temporary)
-                    if temp_stat is not None else None)
-                if gg_fs.same_identity(temporary_identity, temp_identity):
-                    if directory.windows is not None:
-                        gg_fs.unlink_file(directory.path / temporary,
-                                          expected_identity=temporary_identity)
-                    else:
-                        os.unlink(temporary, dir_fd=directory.fd)
+                owned_identity = _entry_identity(directory, owned_name)
+                if not gg_fs.same_identity(temporary_identity, owned_identity):
+                    # Missing or replaced is not proof that our inode is gone.
+                    cleanup_failed = True
+                elif directory.windows is not None:
+                    gg_fs.unlink_file(directory.path / owned_name,
+                                      expected_identity=temporary_identity)
+                else:
+                    os.unlink(owned_name, dir_fd=directory.fd)
             except (DelegationError, gg_fs.FsError, OSError, ValueError):
                 cleanup_failed = True
+            if cleanup_failed:
+                cleanup_location = _cleanup_location(directory, owned_name, descriptor)
+        if descriptor is not None:
+            try:
+                os.close(descriptor)
+            except OSError as error:
+                failure = failure or error
+                cleanup_failed = True
     if failure is not None:
-        if cleanup_failed and temporary_identity is not None and not published:
-            _reject("delegation_write_cleanup_pending:" +
-                    Path(*directory.path.relative_to(directory.root).parts,
-                         temporary).as_posix())
+        if cleanup_failed and temporary_identity is not None:
+            _reject("delegation_write_cleanup_pending:" + (cleanup_location or
+                    _cleanup_location(directory, name if published else temporary,
+                                      None)))
         if isinstance(failure, DelegationError):
             raise failure
         _reject("delegation_write_failed")

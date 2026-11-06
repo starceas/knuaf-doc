@@ -447,8 +447,8 @@ class TestDelegationCommands(unittest.TestCase):
                         self.assertTrue((gui / "jobs" / "job-1.json").is_file())
                     else:
                         self.assertEqual(swap_observation, [True])
-                        self.assertTrue((root / ".knuaf-gui-saved" / "jobs" /
-                                         "job-1.json").is_file())
+                        self.assertFalse((root / ".knuaf-gui-saved" / "jobs" /
+                                          "job-1.json").exists())
                     self.assertFalse((outside / "jobs" / "job-1.json").exists())
                 else:
                     (gui / "lanes-request.json").write_text(
@@ -481,15 +481,16 @@ class TestDelegationCommands(unittest.TestCase):
                     if sys.platform == "win32":
                         self.assertEqual(swap_observation, [False])
                         published = gui / "lanes-request.json"
+                        self.assertEqual(json.loads(published.read_text(encoding="utf-8")), {
+                            "schema": 1, "scope": "once", "quote": "검토만 Sonnet으로",
+                            "lanes": {"review": {
+                                "company": "claude", "model": "sonnet", "effort": "high",
+                            }},
+                        })
                     else:
                         self.assertEqual(swap_observation, [True])
-                        published = root / ".knuaf-gui-saved" / "lanes-request.json"
-                    self.assertEqual(json.loads(published.read_text(encoding="utf-8")), {
-                        "schema": 1, "scope": "once", "quote": "검토만 Sonnet으로",
-                        "lanes": {"review": {
-                            "company": "claude", "model": "sonnet", "effort": "high",
-                        }},
-                    })
+                        self.assertFalse((root / ".knuaf-gui-saved" /
+                                          "lanes-request.json").exists())
                     self.assertEqual((outside / "lanes-request.json").read_text(
                         encoding="utf-8"), "outside-sentinel")
 
@@ -550,6 +551,157 @@ class TestDelegationCommands(unittest.TestCase):
                 self.assertEqual(list(moved.rglob("*.tmp")), [])
                 self.assertFalse((moved / "jobs" / "job-1.json").exists())
                 self.assertFalse((moved / "lanes-request.json").exists())
+
+    @unittest.skipIf(sys.platform == "win32", "POSIX file-move race")
+    def test_opened_temp_moved_before_write_reports_pending_without_payload(self):
+        import gg_delegation as delegation
+        from unittest.mock import patch
+
+        real_open, real_write = os.open, os.write
+        for command in ("delegate", "lanes-propose"):
+            for replacement in ("missing", "file", "symlink"):
+                with self.subTest(command=command, replacement=replacement), \
+                        tempfile.TemporaryDirectory() as td:
+                    root = workspace(td)
+                    gui = root / ".knuaf-gui"
+                    target = gui / "jobs" if command == "delegate" else gui
+                    target.mkdir(parents=True)
+                    outside = Path(td) / "outside"
+                    outside.mkdir()
+                    sentinel = outside / "sentinel"
+                    sentinel.write_bytes(b"OUTSIDE")
+                    moved = outside / "moved.tmp"
+                    names, writes = [], []
+
+                    def move_after_open(path, flags, *args, **kwargs):
+                        fd = real_open(path, flags, *args, **kwargs)
+                        if isinstance(path, str) and path.endswith(".tmp"):
+                            original = target / path
+                            original.rename(moved)
+                            names.append(original)
+                            if replacement == "file":
+                                original.write_bytes(b"UNRELATED")
+                            elif replacement == "symlink":
+                                original.symlink_to(sentinel)
+                        return fd
+
+                    def record_write(fd, data):
+                        writes.append(bytes(data))
+                        return real_write(fd, data)
+
+                    with patch.object(delegation.os, "open", move_after_open), \
+                            patch.object(delegation.os, "write", record_write):
+                        with self.assertRaises(delegation.DelegationError) as caught:
+                            self._invoke_synthetic_delegation(command, root)
+                    self.assertEqual(writes, [])
+                    self.assertEqual(moved.read_bytes(), b"")
+                    self.assertEqual(sentinel.read_bytes(), b"OUTSIDE")
+                    self.assertEqual(str(caught.exception),
+                                     "delegation_write_cleanup_pending:" +
+                                     moved.resolve().as_posix())
+                    if replacement == "file":
+                        self.assertEqual(names[0].read_bytes(), b"UNRELATED")
+                    elif replacement == "symlink":
+                        self.assertTrue(names[0].is_symlink())
+                    else:
+                        self.assertFalse(names[0].exists())
+                    final = "job-1.json" if command == "delegate" else "lanes-request.json"
+                    self.assertFalse((target / final).exists())
+
+    def _invoke_synthetic_delegation(self, command, root):
+        import gg_delegation as delegation
+
+        if command == "delegate":
+            return delegation.delegate(root, {
+                "id": "job-1", "lane": "writing", "task": "SYNTHETIC-STUDENT-CONTENT",
+                "inputs": [], "outputs": ["draft.md"],
+                "company": "claude", "model": "sonnet", "effort": None,
+            })
+        return delegation.lanes_propose(root, {
+            "scope": "once", "quote": "SYNTHETIC-STUDENT-CONTENT",
+            "lanes": {"review": {"company": "claude", "model": "sonnet", "effort": "high"}},
+        })
+
+    def _assert_publish_move_cleanup(self, command, *, existing=False):
+        import gg_delegation as delegation
+        from unittest.mock import patch
+
+        real_publish = os.replace if existing else delegation._rename_noreplace_at
+        real_unlink = os.unlink
+        for cleanup in ("removed", "denied", "detached", "replaced"):
+            with self.subTest(command=command, existing=existing, cleanup=cleanup), \
+                    tempfile.TemporaryDirectory() as td:
+                root = workspace(td)
+                gui = root / ".knuaf-gui"
+                (gui / "jobs").mkdir(parents=True)
+                name = "job-1.json" if command == "delegate" else "lanes-request.json"
+                target = gui / "jobs" if command == "delegate" else gui
+                if existing:
+                    (target / name).write_bytes(b"ORIGINAL")
+                outside = Path(td) / "outside"
+                outside.mkdir()
+                sentinel = outside / name
+                sentinel.write_bytes(b"OUTSIDE")
+                moved = outside / "moved-gui"
+                published = moved / "jobs" / name if command == "delegate" else moved / name
+                detached = outside / "detached.json"
+                observed = []
+
+                def move_then_publish(*args, **kwargs):
+                    gui.rename(moved)
+                    gui.mkdir()
+                    if existing:
+                        self.assertEqual(published.read_bytes(), b"ORIGINAL")
+                    result = real_publish(*args, **kwargs)
+                    observed.append(json.loads(published.read_text(encoding="utf-8")))
+                    if cleanup in ("detached", "replaced"):
+                        published.rename(detached)
+                        if cleanup == "replaced":
+                            published.write_bytes(b"UNRELATED")
+                    return result
+
+                def deny_owned_unlink(path, *args, **kwargs):
+                    if cleanup == "denied" and path == name and "dir_fd" in kwargs:
+                        raise PermissionError("synthetic cleanup denied")
+                    return real_unlink(path, *args, **kwargs)
+
+                owner = delegation.os if existing else delegation
+                method = "replace" if existing else "_rename_noreplace_at"
+                with patch.object(owner, method, move_then_publish), \
+                        patch.object(delegation.os, "unlink", deny_owned_unlink):
+                    with self.assertRaises(delegation.DelegationError) as caught:
+                        self._invoke_synthetic_delegation(command, root)
+                field = "task" if command == "delegate" else "quote"
+                self.assertEqual([row[field] for row in observed], ["SYNTHETIC-STUDENT-CONTENT"])
+                self.assertEqual(sentinel.read_bytes(), b"OUTSIDE")
+                self.assertEqual(list(moved.rglob("*.tmp")), [])
+                self.assertEqual(list(gui.iterdir()), [])
+                if cleanup == "removed":
+                    self.assertEqual(str(caught.exception), "delegation_directory_unsafe")
+                    self.assertFalse(published.exists())
+                else:
+                    residual = published if cleanup == "denied" else detached
+                    self.assertEqual(str(caught.exception),
+                                     "delegation_write_cleanup_pending:" +
+                                     residual.resolve().as_posix())
+                    self.assertEqual(json.loads(residual.read_text(encoding="utf-8"))[field],
+                                     "SYNTHETIC-STUDENT-CONTENT")
+                    if cleanup == "replaced":
+                        self.assertEqual(published.read_bytes(), b"UNRELATED")
+                    elif cleanup == "detached":
+                        self.assertFalse(published.exists())
+
+    @unittest.skipIf(sys.platform == "win32", "POSIX directory-move race")
+    def test_delegate_publish_move_cleans_owned_result_or_reports_location(self):
+        self._assert_publish_move_cleanup("delegate")
+
+    @unittest.skipIf(sys.platform == "win32", "POSIX directory-move race")
+    def test_new_lane_publish_move_cleans_owned_result_or_reports_location(self):
+        self._assert_publish_move_cleanup("lanes-propose")
+
+    @unittest.skipIf(sys.platform == "win32", "POSIX directory-move race")
+    def test_existing_lane_replace_move_cleans_owned_result_or_reports_location(self):
+        self._assert_publish_move_cleanup("lanes-propose", existing=True)
 
     def test_research_result_rejects_route_status_outside_contract(self):
         with tempfile.TemporaryDirectory() as td:
