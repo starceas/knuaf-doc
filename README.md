@@ -60,8 +60,8 @@ pypdf>=6,<7
 |---|---|
 | 특용작물 | 질문 → 본문 Ⅰ~Ⅵ 작성·재무 XLSX·DOCX 검토본 |
 | 산업곤충 | 질문 목록·선택형 문서 계획·공식 통계 근거 검토 (본문·XLSX·재무 계산 미지원) |
-| 과수 | 학교 과수 양식(S01) 작성계획·물량 검산 (본문·XLSX·재무 계산 미지원) |
-| 원예환경시스템 | 질문·문서 계획·근거 규칙 (전용 18시트 조건이 충족될 때만 전용 재무 출력) |
+| 과수 | S01 작성계획·물량 검산·[본문 초안(글)](skills/knuaf-doc/references/major-body-draft.md) 지원; 서식 본문 파일·XLSX·재무 계산은 미지원 (`unsupported_output`) |
+| 원예환경시스템 | 질문·문서 계획·근거 규칙·[본문 초안(글)](skills/knuaf-doc/references/major-body-draft.md) 지원; 전용 18시트 출력은 기존 조건 충족 시에만 허용, 그 밖의 서식 파일·재무 계산은 미지원 |
 
 전공 상세는 `skills/knuaf-doc/references/majors.md`와 각 전공 README를 참고하세요. 미등록·미확정 전공은 전공 의존 작성을 보류합니다.
 
