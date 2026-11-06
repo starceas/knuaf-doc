@@ -1,6 +1,6 @@
 # 낙농전공 문서·근거 모듈 (모듈 0.1.0)
 
-`dairy` 전공 모듈은 공용 작성 계약(`gg_major_contract`)에 선언된 전공 모듈이다. 이 묶음은 **질문 목록·문서 계획·근거 검토** 단계까지 지원한다. 논문 본문 생성(DOCX/HWP), 학교 28시트 엑셀 사본 채우기, 축산 재무 계산은 공용 출력 규칙 B가 `unsupported_output`으로 거부한다.
+`dairy` 전공 모듈은 공용 작성 계약(`gg_major_contract`)에 선언된 전공 모듈이다. 이 묶음은 **질문 목록·문서 계획·근거 검토** 단계와 장별 논문 본문 초안(글)까지 지원한다. 서식 본문 파일(DOCX/HWPX), 학교 28시트 엑셀 사본 채우기, 축산 재무 계산은 공용 출력 규칙 B가 `unsupported_output`으로 거부한다.
 
 ## 1. 지원 경계
 
@@ -12,12 +12,12 @@
 | 축산 리서치 경로 검토 | 지원 | `references/dairy/research-routes.md` (R2 경로 원천 대조) |
 | 전공 핵심 전제 질문 (프로브) | 지원 | `references/dairy/premise-probes.md` |
 | 낙농전공 벤치마크 팩 | `empty_slot` | `references/benchmark-packs/majors/dairy/manifest.json` (승격 팩 없음) |
-| 논문 본문(DOCX/HWPX) 생성 | 미지원 | 공용 가드 B에서 `unsupported_output`으로 차단 |
+| 장별 논문 본문 초안(글) | 지원 | 유효한 전공 바인딩일 때; [작성 규칙](../major-body-draft.md) 참조 |
+| 서식 논문 본문 파일(DOCX/HWPX) 생성 | 미지원 | 공용 가드 B에서 `unsupported_output`으로 차단 |
 | 학교 28시트 엑셀 자동 작성·수식 보정 | 미지원 | 공용 가드 B에서 `unsupported_output`으로 차단 (학생 직접 작성 원칙) |
 | 축산 재무 계산 (`dairy_cattle_milk_cash`, `hanwoo_herd_cash`) | 미지원 | 공용 가드 B에서 `unsupported_output`으로 차단 |
 
-모든 지원 명령은 표준 출력으로 JSON만 내고 파일을 임의로 만들지 않는다.
-
+낙농 전용 명령(예: `gg.py major-plan`)은 표준 출력으로 JSON만 내고 파일을 임의로 만들지 않는다. 공용 본문 초안 저장은 [전공별 본문 초안(글)](../major-body-draft.md)의 DRAFT 경계가 있는 `sections/*.md`와 `apply` 절차로 구분한다.
 ---
 
 ## 2. 축종 갈래 및 스위치 계약

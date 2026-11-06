@@ -586,6 +586,14 @@
     "tests/test_document_read.py": {
       "origin": "new",
       "note": "ORDER-17: synthetic DOCX/PDF/XLSX values and structure, input/output SHA-256 receipts, source preservation, image-only/corrupt/empty failures, missing runtime dependency, no-Node/Kordoc execution, and output-alias protection regressions."
+    },
+    "skills/knuaf-doc/references/major-body-draft.md": {
+      "origin": "new",
+      "note": "W1: reviewed chapter-wise text-draft contract for fruit_trees, hort_env_systems, and dairy; confines output to DRAFT section saves, student-provided values, and existing major guidance."
+    },
+    "tests/test_skillgaps_wp4_interview.py": {
+      "origin": "transformed",
+      "note": "W1: extend the existing interview-gap regression contracts for major-body text drafts and their file-output boundaries."
     }
   },
   "readme_policy": {
