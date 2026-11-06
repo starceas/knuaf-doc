@@ -703,6 +703,118 @@ class TestDelegationCommands(unittest.TestCase):
     def test_existing_lane_replace_move_cleans_owned_result_or_reports_location(self):
         self._assert_publish_move_cleanup("lanes-propose", existing=True)
 
+    def _assert_cleanup_name_swap(self, command, *, published, existing=False,
+                                  stat_error=False):
+        import errno
+        import gg_delegation as delegation
+        from unittest.mock import patch
+
+        real_unlink, real_fsync, real_fstat = os.unlink, os.fsync, os.fstat
+        real_publish = os.replace if existing else delegation._rename_noreplace_at
+        with tempfile.TemporaryDirectory() as td:
+            root = workspace(td)
+            gui = root / ".knuaf-gui"
+            (gui / "jobs").mkdir(parents=True)
+            target = gui / "jobs" if command == "delegate" else gui
+            name = "job-1.json" if command == "delegate" else "lanes-request.json"
+            if existing:
+                (target / name).write_bytes(b"ORIGINAL")
+            outside = Path(td) / "outside"
+            outside.mkdir()
+            sentinel = outside / "sentinel"
+            sentinel.write_bytes(b"OUTSIDE")
+            unrelated = outside / "unrelated"
+            unrelated.write_bytes(b"PREEXISTING-UNRELATED")
+            detached = outside / ("detached.json" if published else "detached.tmp")
+            moved = outside / "moved-gui"
+            cleanup_target = (moved / "jobs" if command == "delegate" else moved
+                              ) if published else target
+            directory_identity = (root.stat().st_ino, gui.stat().st_ino,
+                                  target.stat().st_ino)
+            owned_fd = None
+            unlinked = False
+            swapped = []
+
+            def sync_or_fail(fd):
+                nonlocal owned_fd
+                owned_fd = fd
+                if not published:
+                    raise OSError(errno.EIO, "synthetic fsync failure")
+                return real_fsync(fd)
+
+            def move_then_publish(*args, **kwargs):
+                gui.rename(moved)
+                gui.mkdir()
+                return real_publish(*args, **kwargs)
+
+            def swap_then_unlink(path, *args, **kwargs):
+                nonlocal unlinked
+                if "dir_fd" in kwargs:
+                    owned = cleanup_target / path
+                    owned.rename(detached)
+                    unrelated.rename(owned)
+                    swapped.append((detached.stat().st_ino,
+                                    os.stat(path, dir_fd=kwargs["dir_fd"],
+                                            follow_symlinks=False).st_ino))
+                    result = real_unlink(path, *args, **kwargs)
+                    unlinked = True
+                    return result
+                return real_unlink(path, *args, **kwargs)
+
+            def check_or_fail(fd):
+                if stat_error and unlinked and fd == owned_fd:
+                    raise OSError(errno.EIO, "synthetic post-unlink fstat failure")
+                return real_fstat(fd)
+
+            owner = delegation.os if existing else delegation
+            method = "replace" if existing else "_rename_noreplace_at"
+            with patch.object(delegation.os, "fsync", sync_or_fail), \
+                    patch.object(owner, method, move_then_publish if published else real_publish), \
+                    patch.object(delegation.os, "unlink", swap_then_unlink), \
+                    patch.object(delegation.os, "fstat", check_or_fail):
+                with self.assertRaises(delegation.DelegationError) as caught:
+                    self._invoke_synthetic_delegation(command, root)
+            self.assertTrue(unlinked)
+            self.assertEqual(len(swapped), 1)
+            self.assertNotEqual(*swapped[0])
+            self.assertEqual(str(caught.exception),
+                             "delegation_write_cleanup_pending:" +
+                             detached.resolve().as_posix())
+            field = "task" if command == "delegate" else "quote"
+            self.assertEqual(json.loads(detached.read_text(encoding="utf-8"))[field],
+                             "SYNTHETIC-STUDENT-CONTENT")
+            self.assertEqual(detached.stat().st_nlink, 1)
+            self.assertEqual(sentinel.read_bytes(), b"OUTSIDE")
+            self.assertEqual(list(cleanup_target.glob("*.tmp")), [])
+            if not published:
+                self.assertEqual((root.stat().st_ino, gui.stat().st_ino,
+                                  target.stat().st_ino), directory_identity)
+                if existing:
+                    self.assertEqual((target / name).read_bytes(), b"ORIGINAL")
+                else:
+                    self.assertFalse((target / name).exists())
+
+    @unittest.skipIf(sys.platform == "win32", "POSIX cleanup name-swap race")
+    def test_published_cleanup_name_swap_reports_owned_result_location(self):
+        for command, existing in (("delegate", False), ("lanes-propose", False),
+                                  ("lanes-propose", True)):
+            with self.subTest(command=command, existing=existing):
+                self._assert_cleanup_name_swap(command, published=True, existing=existing)
+
+    @unittest.skipIf(sys.platform == "win32", "POSIX cleanup name-swap race")
+    def test_temporary_cleanup_name_swap_reports_owned_temp_location(self):
+        for command in ("delegate", "lanes-propose"):
+            with self.subTest(command=command):
+                self._assert_cleanup_name_swap(command, published=False,
+                                               existing=command == "lanes-propose")
+
+    @unittest.skipIf(sys.platform == "win32", "POSIX owned fd cleanup verification")
+    def test_post_unlink_stat_failure_reports_pending_owned_location(self):
+        for published in (False, True):
+            with self.subTest(published=published):
+                self._assert_cleanup_name_swap("delegate", published=published,
+                                               stat_error=True)
+
     def test_research_result_rejects_route_status_outside_contract(self):
         with tempfile.TemporaryDirectory() as td:
             root = workspace(td)

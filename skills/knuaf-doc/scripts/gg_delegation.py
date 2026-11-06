@@ -437,6 +437,10 @@ def _publish_bytes(directory, name, data, *, replace):
                                       expected_identity=temporary_identity)
                 else:
                     os.unlink(owned_name, dir_fd=directory.fd)
+                    # The name may have been swapped after its identity check.
+                    # Unlink success alone does not prove our inode is gone.
+                    if os.fstat(descriptor).st_nlink != 0:
+                        cleanup_failed = True
             except (DelegationError, gg_fs.FsError, OSError, ValueError):
                 cleanup_failed = True
             if cleanup_failed:
