@@ -4,32 +4,35 @@
    "dist": "openpyxl",
    "spec": "openpyxl>=3.1,<4",
    "import_name": "openpyxl",
-   "purpose": "XLSX 읽기·생성 — 재무 workbook·학교 양식 검사·출력 검증",
+   "purpose": "XLSX 읽기·생성 — 재무 workbook·학교 양식 검사·출력 검증·문서 첫 읽기",
    "used_by": [
     "scripts/gg_finance.py",
     "scripts/gg_school_excel.py",
     "scripts/gg_school_verify.py",
     "scripts/gg_office.py",
-    "scripts/gg_excel_print.py"
+    "scripts/gg_excel_print.py",
+    "scripts/gg_read.py"
    ]
   },
   {
    "dist": "python-docx",
    "spec": "python-docx>=1.1,<2",
    "import_name": "docx",
-   "purpose": "DOCX 생성 — 앞표지·본문 렌더",
+   "purpose": "DOCX 생성·읽기 — 앞표지·본문 렌더와 문서 첫 읽기",
    "used_by": [
     "scripts/build_docx.py",
-    "scripts/gg_frontmatter_layout.py"
+    "scripts/gg_frontmatter_layout.py",
+    "scripts/gg_read.py"
    ]
   },
   {
    "dist": "pypdf",
    "spec": "pypdf>=6,<7",
    "import_name": "pypdf",
-   "purpose": "PDF 구조 검증 — 보낸 PDF 페이지 확인",
+   "purpose": "PDF 읽기·구조 검증 — 문서 첫 읽기와 보낸 PDF 페이지 확인",
    "used_by": [
-    "scripts/gg_office.py"
+    "scripts/gg_office.py",
+    "scripts/gg_read.py"
    ]
   },
   {

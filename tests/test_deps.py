@@ -92,5 +92,11 @@ class ImportProbeTests(ContractCase):
             self.assertEqual(json.loads(stdout.getvalue())["status"], "blocked")
 
 
+class RuntimeDependencyConsumerTests(ContractCase):
+    def test_openpyxl_declares_school_verifier_consumer(self):
+        manifest = json.loads((SCRIPTS / "runtime-deps.json").read_text(encoding="utf-8"))
+        openpyxl = next(dep for dep in manifest["dependencies"] if dep["dist"] == "openpyxl")
+        self.assertIn("scripts/gg_school_verify.py", openpyxl["used_by"])
+
 if __name__ == "__main__":
     unittest.main()
