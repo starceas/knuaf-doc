@@ -60,6 +60,7 @@ def main(argv=None):
             "source-register",
             "source-view",
             "source-refresh",
+            "intake-manuscript",
             "finance-tables",
             "tidy",
         ],
@@ -150,6 +151,19 @@ def main(argv=None):
 
     try:
         code = 0
+        if a.command == "intake-manuscript":
+            if not a.input:
+                raise ValueError("--input 원답변 source JSON 경로 필요")
+            if a.expected_revision is None:
+                raise ValueError("--expected-revision 현재 개정 필요")
+            if not a.request_id:
+                raise ValueError("--request-id 접수 요청 ID 필요")
+            import gg_manuscript_intake
+
+            value = gg_manuscript_intake.run(
+                a.folder, a.file, a.input, a.expected_revision, a.request_id)
+            print(json.dumps(value, ensure_ascii=False, indent=2))
+            return core.COMMIT_EXIT.get(value["commit_state"], 4)
         if a.command == "init":
             value = core.init(a.folder)
         elif a.command == "import":
