@@ -76,6 +76,46 @@ class InterviewContract(unittest.TestCase):
         self.assertIn("버섯류는 별도 전공", section(self.text, "### Q2."))
 
 
+class DairyResumeRepairContract(unittest.TestCase):
+    def test_dairy_single_manuscript_is_intaken_before_resume_questions(self):
+        skill = (REF.parent / "SKILL.md").read_text(encoding="utf-8")
+        entry = section(skill, "## 시작·재개")
+        intake = entry.index("같은 답변 차례에 먼저 접수")
+        for later_question in ("작업 선택", "축종", "사육 형태", "예정지", "자금 질문"):
+            with self.subTest(question=later_question):
+                self.assertGreater(entry.index(later_question), intake)
+        self.assertLess(intake, entry.index("- “이어서 하기”"))
+
+    def test_manuscript_contents_remain_unconfirmed_candidates(self):
+        intake = read("intake-selection.md")
+        dairy_route = section((REF / "dairy" / "README.md").read_text(
+            encoding="utf-8"), "## 2. 축종 갈래 및 스위치 계약")
+        self.assertIn("후보일 뿐", intake)
+        self.assertIn("학생 확인", intake)
+        self.assertIn("낙농 README와 축종·사육 형태 질문은 접수보다 앞서지 않는다",
+                      intake)
+        self.assertIn("스위치가 `ready`가 아니면", dairy_route)
+
+    def test_dairy_support_notice_and_existing_question_cards_are_preserved(self):
+        skill = (REF.parent / "SKILL.md").read_text(encoding="utf-8")
+        entry = section(skill, "## 시작·재개")
+        intake = read("intake-selection.md")
+        majors = section(read("majors.md"), "## 낙농")
+        for token in ("학생 원답변으로 확인되면 이렇게 알린다", "질문·계획·근거 정리",
+                      "장별 글 초안", "완성된 논문 파일(DOCX/HWPX)",
+                      "학교 28시트 엑셀 채우기", "축산 돈 계산",
+                      "`[Qn-m]`", "`1)`"):
+            with self.subTest(token=token):
+                self.assertIn(token, entry)
+        for token in ("낙농전공이라고 학생이 직접 답한 뒤", "지원 범위",
+                      "`[Qn-m]`", "`1)`", "답 안내 형식"):
+            with self.subTest(route=token):
+                self.assertIn(token, intake)
+        for token in ("unsupported_output", "학교 28시트 엑셀",
+                      "축산 재무 계산", "전공별 본문 초안(글)"):
+            with self.subTest(source=token):
+                self.assertIn(token, majors)
+
 class MajorBodyDraftContract(unittest.TestCase):
     def test_skill_opens_only_text_drafts_for_three_bound_majors(self):
         skill = (REF.parent / "SKILL.md").read_text(encoding="utf-8")
