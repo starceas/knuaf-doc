@@ -493,6 +493,98 @@ class TestDelegationCommands(unittest.TestCase):
                     self.assertEqual((outside / "lanes-request.json").read_text(
                         encoding="utf-8"), "outside-sentinel")
 
+
+    def test_directory_moved_outside_before_write_leaves_no_payload(self):
+        import gg_delegation as delegation
+        from unittest.mock import patch
+
+        real_open = delegation.os.open
+        real_write = delegation.os.write
+        for command in ("delegate", "lanes-propose"):
+            with self.subTest(command=command), tempfile.TemporaryDirectory() as td:
+                root = workspace(td)
+                gui = root / ".knuaf-gui"
+                (gui / "jobs").mkdir(parents=True)
+                outside = Path(td) / "outside"
+                outside.mkdir()
+                moved = outside / "moved-gui"
+                observed_sizes = []
+                writes = []
+
+                def move_before_temp_open(path, flags, *args, **kwargs):
+                    if isinstance(path, str) and path.endswith(".tmp"):
+                        gui.rename(moved)
+                        gui.mkdir()
+                        fd = real_open(path, flags, *args, **kwargs)
+                        observed_sizes.append(os.fstat(fd).st_size)
+                        return fd
+                    return real_open(path, flags, *args, **kwargs)
+
+                def record_write(fd, data):
+                    writes.append(bytes(data))
+                    return real_write(fd, data)
+
+                request = {
+                    "id": "job-1", "lane": "writing", "task": "초안",
+                    "inputs": [], "outputs": ["draft.md"],
+                    "company": "claude", "model": "sonnet", "effort": None,
+                }
+                proposal = {
+                    "scope": "once", "quote": "검토만 Sonnet으로",
+                    "lanes": {"review": {
+                        "company": "claude", "model": "sonnet", "effort": "high",
+                    }},
+                }
+                with patch.object(delegation.os, "open", move_before_temp_open), \
+                        patch.object(delegation.os, "write", record_write):
+                    with self.assertRaisesRegex(
+                            delegation.DelegationError,
+                            "delegation_directory_unsafe"):
+                        if command == "delegate":
+                            delegation.delegate(root, request)
+                        else:
+                            delegation.lanes_propose(root, proposal)
+
+                self.assertEqual(observed_sizes, [0])
+                self.assertEqual(writes, [])
+                self.assertEqual(list(moved.rglob("*.tmp")), [])
+                self.assertFalse((moved / "jobs" / "job-1.json").exists())
+                self.assertFalse((moved / "lanes-request.json").exists())
+
+    def test_research_result_rejects_route_status_outside_contract(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = workspace(td)
+            created = run_gg(*research_args(root))
+            self.assertEqual(created.returncode, 0, created.stdout + created.stderr)
+            job_path = root / ".knuaf-gui" / "jobs" / "job-1.json"
+            spec = json.loads(job_path.read_text(encoding="utf-8"))
+            spec["status"] = "completed"
+            job_path.write_text(json.dumps(spec), encoding="utf-8")
+            out_dir = root / ".knuaf-gui" / "jobs" / "job-1" / "out"
+            out_dir.mkdir(parents=True)
+            result_file = out_dir / "result.md"
+
+            for route_status in ("성공", "실패"):
+                with self.subTest(route_status=route_status):
+                    result_file.write_text(research_result(route_rows=[[
+                        "Q1", "1", f"통계청 {ROUTE_NAME} {ROUTE_URL}",
+                        route_status, "경로 확인",
+                    ]]), encoding="utf-8")
+                    accepted = run_gg("delegate", str(root),
+                                      "--check-job", "job-1")
+                    self.assertEqual(accepted.returncode, 0,
+                                     accepted.stdout + accepted.stderr)
+                    self.assertEqual(json.loads(accepted.stdout)["status"],
+                                     "accepted")
+
+            result_file.write_text(research_result(route_rows=[[
+                "Q1", "1", f"통계청 {ROUTE_NAME} {ROUTE_URL}",
+                "미실행", "경로를 열지 않음",
+            ]]), encoding="utf-8")
+            rejected = run_gg("delegate", str(root), "--check-job", "job-1")
+            self.assertEqual(rejected.returncode, 2)
+            self.assertEqual(json.loads(rejected.stdout)["reason"],
+                             "research_result_route_status_invalid")
     def test_delegate_partial_write_failure_removes_owned_temporary(self):
         import errno
         import gg_delegation as delegation
@@ -584,20 +676,65 @@ class TestDelegationCommands(unittest.TestCase):
             self.assertEqual(accepted_candidate.returncode, 0,
                              accepted_candidate.stdout + accepted_candidate.stderr)
 
-            no_evidence = research_result(
+            candidate_without_numbers = research_result(
+                source_state="조건 불일치",
+                unit_rows=[["Q1", "톤", "해당 없음", "생산량", "전국 외", "100톤"]])
+            candidate_without_numbers = candidate_without_numbers.replace(
+                "2025년 사과 생산량은 100톤",
+                "전국 수치는 미공표이며 경북 생산량 후보만 확인")
+            result_file.write_text(candidate_without_numbers, encoding="utf-8")
+            accepted_candidate = run_gg(
+                "delegate", str(root), "--check-job", "job-1")
+            self.assertEqual(accepted_candidate.returncode, 0,
+                             accepted_candidate.stdout + accepted_candidate.stderr)
+            self.assertEqual(json.loads(accepted_candidate.stdout)["status"],
+                             "accepted")
+
+            candidate_without_unit_row = research_result(
+                source_state="조건 불일치", unit_rows=[]).replace(
+                    "2025년 사과 생산량은 100톤",
+                    "경북 사과 생산량은 백 톤")
+            result_file.write_text(candidate_without_unit_row, encoding="utf-8")
+            rejected_candidate = run_gg(
+                "delegate", str(root), "--check-job", "job-1")
+            self.assertEqual(rejected_candidate.returncode, 2)
+            self.assertEqual(json.loads(rejected_candidate.stdout)["reason"],
+                             "research_result_units_missing_for_evidence")
+            for state, reason in (
+                    ("자료 없음", "공식 경로와 별칭 2종에서 자료 없음"),
+                    ("접근 실패", "공식 경로 서버 오류로 접근 불가")):
+                with self.subTest(unconfirmed_state=state):
+                    no_evidence = research_result(
+                        source_present=False,
+                        unconfirmed_rows=[["Q1", "2025년 전국 사과 생산량",
+                                           state, reason]],
+                        unit_rows=[],
+                        route_rows=[["Q1", "1",
+                                     f"통계청 {ROUTE_NAME} {ROUTE_URL}",
+                                     "실패", reason]])
+                    result_file.write_text(no_evidence, encoding="utf-8")
+                    accepted_unconfirmed = run_gg(
+                        "delegate", str(root), "--check-job", "job-1")
+                    self.assertEqual(
+                        accepted_unconfirmed.returncode, 0,
+                        accepted_unconfirmed.stdout + accepted_unconfirmed.stderr)
+                    self.assertEqual(
+                        json.loads(accepted_unconfirmed.stdout)["status"],
+                        "accepted")
+            evidence_for_unobserved = research_result(
                 source_present=False,
                 unconfirmed_rows=[["Q1", "2025년 전국 사과 생산량", "자료 없음",
                                    "공식 경로와 별칭 2종에서 자료 없음"]],
-                unit_rows=[],
+                unit_rows=[["Q1", "톤", "해당 없음", "생산량", "전국", "미관측"]],
                 route_rows=[["Q1", "1", f"통계청 {ROUTE_NAME} {ROUTE_URL}",
                              "실패", "공식 자료에 없음"]])
-            result_file.write_text(no_evidence, encoding="utf-8")
-            accepted_unconfirmed = run_gg(
+            result_file.write_text(evidence_for_unobserved, encoding="utf-8")
+            rejected_unobserved = run_gg(
                 "delegate", str(root), "--check-job", "job-1")
-            self.assertEqual(accepted_unconfirmed.returncode, 0,
-                             accepted_unconfirmed.stdout + accepted_unconfirmed.stderr)
-            self.assertEqual(json.loads(accepted_unconfirmed.stdout)["status"],
-                             "accepted")
+            self.assertEqual(rejected_unobserved.returncode, 2)
+            self.assertEqual(
+                json.loads(rejected_unobserved.stdout)["reason"],
+                "research_result_units_question_invalid")
 
 if __name__ == "__main__":
     unittest.main()

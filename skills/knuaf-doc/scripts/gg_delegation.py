@@ -32,6 +32,7 @@ QUANTITATIVE_TYPES = (
 )
 SOURCE_STATES = frozenset({"증거 확보", "조건 불일치"})
 UNCONFIRMED_STATES = frozenset({"조건 불일치", "자료 없음", "접근 실패"})
+ROUTE_STATES = frozenset({"성공", "실패"})
 
 _SOURCE_COLUMNS = (
     "질문 ID", "주장 (확인 사실)", "질문 최종 상태", "확인한 원출처", "기준연도",
@@ -320,6 +321,7 @@ def _publish_bytes(directory, name, data, *, replace):
             flags |= getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
             descriptor = os.open(temporary, flags, 0o600, dir_fd=directory.fd)
         temporary_identity = gg_fs.fd_identity(descriptor, kind="file")
+        directory.check()
         view = memoryview(data)
         while view:
             written = os.write(descriptor, view)
@@ -888,17 +890,11 @@ def validate_research_result(text, research):
     if final_by_question.keys() != question_ids:
         _reject("research_result_question_status_missing")
     if _quantitative(research["research_type"]):
-        evidence_questions = {
-            row["질문 ID"] for row in source_rows
-            if row["질문 최종 상태"] == "증거 확보"
-        }
-        candidate_questions = {
-            row["질문 ID"] for row in source_rows
-            if row["질문 최종 상태"] == "조건 불일치"
-            and re.search(r"\d", row["주장 (확인 사실)"])
-        }
-        measured_questions = evidence_questions | candidate_questions
         unit_questions = {row["질문 ID"] for row in unit_rows}
+        measured_questions = {
+            identifier for identifier, state in final_by_question.items()
+            if state in SOURCE_STATES
+        }
         if not measured_questions.issubset(unit_questions):
             _reject("research_result_units_missing_for_evidence")
         if not unit_questions.issubset(measured_questions):
@@ -914,6 +910,8 @@ def validate_research_result(text, research):
             route_number = int(row["경로 번호"])
         except ValueError:
             _reject("research_result_route_number_invalid")
+        if row["경로 탐색 결과 (성공 / 실패)"] not in ROUTE_STATES:
+            _reject("research_result_route_status_invalid")
         path_text = row["열어본 경로 (기관·자료명·URL)"]
         route_urls = re.findall(r"https?://[^\s<>]+", path_text)
         identity_text = re.sub(r"https?://[^\s<>]+", "", path_text)

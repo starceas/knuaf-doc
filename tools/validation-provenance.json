@@ -155,11 +155,11 @@
    "origin": "new"
   },
   "skills/knuaf-doc/scripts/gg_delegation.py": {
-   "note": "W8: validated JobSpec and LaneRequest construction and research-result receive checks. | W8b C6-01/02/03/04: pinned directory publication, owned-temp cleanup, URL-independent route ID matching, and numeric evidence unit-row completeness.",
+   "note": "W8: validated JobSpec and LaneRequest construction and research-result receive checks. | W8b C6-01/02/03/04: pinned directory publication, owned-temp cleanup, URL-independent route ID matching, and numeric evidence unit-row completeness. | W8d FC-01/02/03: post-open directory identity revalidation before payload writes, route result enum validation, and final-state-linked quantitative unit-row validation.",
    "origin": "new"
   },
   "skills/knuaf-doc/tests/test_gg_delegation.py": {
-   "note": "W8: synthetic CLI contract and consumer-visible regression coverage. | W8b C6-01/02/03/04: directory-swap races, partial-write cleanup, route IDs in URLs, and measured/candidate/no-evidence unit-row regressions.",
+   "note": "W8: synthetic CLI contract and consumer-visible regression coverage. | W8b C6-01/02/03/04: directory-swap races, partial-write cleanup, route IDs in URLs, and measured/candidate/no-evidence unit-row regressions. | W8d FC-01/02/03: zero-payload outside-directory rejection in both commands, accepted/rejected route enum boundaries, narrative candidate claims with and without required observation rows, and no-evidence state behavior.",
    "origin": "new"
   },
   "skills/knuaf-doc/references/common-workbooks/corrections/d8-spec.json": {
