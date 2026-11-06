@@ -208,7 +208,8 @@ class CommonContractFlowTests(ContractCase):
 
         self._bind(root, "specialty_crops", "1.0.0")
         core = runtime("gg_core")
-        no_profile = {"writing_year": 2026, "major_id": "specialty_crops"}
+        no_profile = {"writing_year": 2026, "start_year": 2027,
+                      "major_id": "specialty_crops"}
         bound_before = self._tree_bytes(root)
         with self.assertRaises(core.OperationError) as caught:
             core.paper(root, "no-profile.json",
@@ -217,7 +218,7 @@ class CommonContractFlowTests(ContractCase):
                          "school_profile_required")
         self.assertEqual(self._tree_bytes(root), bound_before)
 
-        empty_profile = {"writing_year": 2026,
+        empty_profile = {"writing_year": 2026, "start_year": 2027,
                          "major_id": "specialty_crops",
                          "school_profile": {}}
         with self.assertRaises(core.OperationError) as caught:

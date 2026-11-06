@@ -2406,12 +2406,12 @@
       "reason": "ORDER-13: preserve all existing assertions; repeated bind_major fixture calls now reference the next actual raw-answer source revision instead of hardcoded revision 1."
     },
     "tests/test_common_contract_flow.py": {
-      "after_sha256": "a090750514ee3b4649302eff56eb2b3122bdf37ba14fad3a0cbd41552766c748",
+      "after_sha256": "a22cdc85aab39cfa7c6d36f50418320d2342fe87f13e8e6ea7735428b2eb9a47",
       "before_sha256": null,
       "first_changed": "P28",
       "owner": "P28",
       "source": "new",
-      "reason": "ORDER-13: preserve CLI success/held assertions; add project-scoped raw-answer major claim and reference to the binding fixture."
+      "reason": "ORDER-13: preserve CLI success/held assertions; add project-scoped raw-answer major claim and reference to the binding fixture. | ORDER-33 SY-01: preserve school_profile_required rejection and tree bytes with confirmed start_year=2027 in both missing and empty profile inputs."
     },
     "tests/test_hort_env_plan.py": {
       "after_sha256": "d6b1c2aa8b6916da48e96f621b7a2713abf935b12e06d826536978e42b1ef028",
