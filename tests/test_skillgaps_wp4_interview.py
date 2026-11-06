@@ -1,4 +1,5 @@
 """WP-4 인터뷰·전공 범위 문서 계약 (G2-02, G2-03, G2-04, G2-12, G1-04)."""
+import json
 import re
 from pathlib import Path
 import unittest
@@ -103,7 +104,7 @@ class MajorBodyDraftContract(unittest.TestCase):
         guide = read("major-body-draft.md")
         for token in (
                 "fruit_trees", "hort_env_systems", "dairy",
-                "산업곤충", "작성요령 > 선배 본문", "S01", "HT1·HT2",
+                "산업곤충", "작성요령 > 선배 본문", "S01", "HT2",
                 "1~12장", "[확인 필요:", "계산·추정·환산하지 않는다",
                 "시트와 셀 위치", "DRAFT", "`apply`", "검토용 초안",
                 "DOCX/HWPX", "재무 계산"):
@@ -160,6 +161,44 @@ class MajorBodyDraftContract(unittest.TestCase):
         self.assertIn("공용 본문 초안 저장", dairy)
         self.assertIn("`sections/*.md`와 `apply` 절차", dairy)
 
+
+    def test_horticulture_uses_designated_ht2_format_basis(self):
+        guide = read("major-body-draft.md")
+        horticulture = read("hort-env-systems/README.md")
+        profile = json.loads((REF / "hort-env-systems" / "profile.json")
+                             .read_text(encoding="utf-8"))
+        ht2 = next(item for item in profile["precedents"]
+                   if item["ref"] == "HT2")
+        for token in (
+                "원예 학교 작성요령은 등록되어 있지 않고",
+                "교수님이 틀 기준으로 지정한 HT2",
+                "형식 기준(A에 준해 지킨다)",
+                "HT1과 그 밖의 선배 논문은 내용·구성 참고(B)",
+                "작성요령이 등록되면 작성요령을 우선한다",
+                "해시로 HT2 확인"):
+            with self.subTest(token=token):
+                self.assertIn(token, guide)
+        self.assertIn("학교 작성요령 미등록, 교수 지정 기준 HT2 사용",
+                      guide)
+        self.assertIn("해시로 HT2 확인", horticulture)
+        self.assertEqual(
+            "e5ca9ff33daa1fe8b3e7d56fbd1fff5a6bbba8c3d1e0368bbea1a36a0b3f8e4c",
+            ht2["sha256"])
+        self.assertIn("학교 작성요령 미등록, 교수 지정 기준 HT2 사용",
+                      horticulture)
+
+    def test_draft_year_authority_and_full_student_notices_are_explicit(self):
+        guide = read("major-body-draft.md")
+        self.assertIn("본문에 쓰는 연도(영농 시작연도·계획 연도)", guide)
+        self.assertIn("정본·인터뷰 규칙에서 정해진 값만 쓰며 초안이 새로 정하지 않는다",
+                      guide)
+        self.assertIn("[확인 필요: 영농 시작연도]", guide)
+        self.assertIn("문구를 줄이지 말고 그대로 쓴다", guide)
+        self.assertIn(
+            "검토용 초안 — 교수 확인·한글 마무리 필요. 표 제목 위치·참고문헌 양식은 자동 검사가 얕으니 직접 확인",
+            guide)
+        self.assertIn("장별 본문 글을 대신 드릴 수 있다는 제안을 반드시 붙인다",
+                      guide)
 
     def test_draft_guidance_relative_links_resolve(self):
         path = REF / "major-body-draft.md"

@@ -70,6 +70,54 @@ def _read_docx(path: Path, emit) -> dict:
                 for child in block.iterchildren():
                     if child.tag.endswith("}sdtContent"):
                         body_blocks.extend(control_blocks(child))
+        seen_nested_cells = set()
+        seen_tables = set()
+
+        def render_table(table):
+            nonlocal tables, nonempty_cells
+            if table._tbl in seen_tables:
+                return
+            seen_tables.add(table._tbl)
+            tables += 1
+            emit(f"### 표 {tables}\n\n")
+            for row_number, row in enumerate(table.rows, start=1):
+                row_cells = []
+                row_has_nested_table = False
+                for column_number, cell in enumerate(row.cells, start=1):
+                    physical_cell = cell._tc
+                    contents = list(cell.iter_inner_content())
+                    paragraphs_in_cell = [content.text for content in contents
+                                          if isinstance(content, Paragraph)
+                                          and content.text.strip()]
+                    nested_tables_in_cell = [content for content in contents
+                                             if isinstance(content, Table)]
+                    if nested_tables_in_cell:
+                        if physical_cell in seen_nested_cells:
+                            continue
+                        seen_nested_cells.add(physical_cell)
+                    row_has_nested_table = row_has_nested_table or bool(nested_tables_in_cell)
+                    row_cells.append((column_number, contents, paragraphs_in_cell))
+                nonempty_cells += sum(bool(paragraphs_in_cell)
+                                      for _, _, paragraphs_in_cell in row_cells)
+                if not row_has_nested_table:
+                    values = ["\n".join(paragraphs_in_cell)
+                              for _, _, paragraphs_in_cell in row_cells]
+                    emit(f"행 {row_number}: "
+                         + " | ".join(_markdown_cell(value) for value in values) + "\n")
+                    continue
+
+                emit(f"행 {row_number}:\n")
+                for column_number, contents, _ in row_cells:
+                    for content in contents:
+                        if isinstance(content, Paragraph):
+                            if content.text.strip():
+                                emit(f"칸 {column_number}: {_markdown_cell(content.text)}\n")
+                        elif isinstance(content, Table):
+                            emit(f"칸 {column_number}:\n")
+                            render_table(content)
+            emit("\n")
+
+
         for block in body_blocks:
             if block.tag.endswith("}p"):
                 paragraph = Paragraph(block, document)
@@ -84,15 +132,7 @@ def _read_docx(path: Path, emit) -> dict:
                 else:
                     emit(f"{_markdown_cell(text)}\n\n")
             elif block.tag.endswith("}tbl"):
-                table = Table(block, document)
-                tables += 1
-                emit(f"### 표 {tables}\n\n")
-                for row_number, row in enumerate(table.rows, start=1):
-                    cells = [cell.text for cell in row.cells]
-                    nonempty_cells += sum(bool(value.strip()) for value in cells)
-                    values = [_markdown_cell(value) for value in cells]
-                    emit(f"행 {row_number}: " + " | ".join(values) + "\n")
-                emit("\n")
+                render_table(Table(block, document))
         return {"paragraphs": paragraphs, "tables": tables,
                 "nonempty_cells": nonempty_cells}
     except (OpcError, XMLSyntaxError, ParseError, ValueError, KeyError,

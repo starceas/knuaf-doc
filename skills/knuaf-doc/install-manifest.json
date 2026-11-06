@@ -26,7 +26,7 @@
   "references/benchmark-packs/schema/record.schema.json": "07b00c66649ef14c67ca8f308fc1680b49f3cd17a447067754a25f68e8b874a6",
   "references/body-plan-check.md": "8f332a9cd29775e44d18273893741364c225a76cd9105f1b4d9f17b360969f43",
   "references/builtin-sources.json": "4beced8de325d74d7038f1cfa6f728f8dbbf8edd77f1e2fcbab557324dbd4e52",
-  "references/commands.md": "0a6e12c1480312d53598bbc4104e457c170e46f82c30a456ea15bb5a003c0142",
+  "references/commands.md": "cd900d8b95fe3d463a95ab56dbea490b5f762a21b5f424628a8fd05bb267def5",
   "references/common-workbooks/corrections/C1.md": "82728725321edd132cb0b130f2cfe05e605c03ec6484267f2693d83fe025b587",
   "references/common-workbooks/corrections/c1-dispositions.json": "b6c7cbb21882b9ae38cc91312f209e3a9b518c7797f6278f57b460c1e2998482",
   "references/common-workbooks/corrections/c1-spec.json": "ba3c22a703a9f6a6f3fb2b7904143dac52e2b36defb8a2b2c6fc4a1e6d79f5f4",
@@ -58,7 +58,7 @@
   "references/fruit-trees/research-routes.md": "83a8ab60be8f85ff93eb29d6fd5cb453c92b3cdb8be37b5349ab81f4f14ad280",
   "references/guideline-inventory.json": "5067f07c348184d41f1f936d40327a2f92bb9d314974ca9aba6727f25733e4c5",
   "references/guideline-tracking.md": "b638dc77ae94cf5e16c520e46d0ef5cee7caffd370c42c0103cf90a97f10e0c2",
-  "references/hort-env-systems/README.md": "5da796d84b4cb5049de030e55a424db8d10579d7331ac98c3c001fe72279294e",
+  "references/hort-env-systems/README.md": "9e75530a848822b54e76f63665021bb2afb6b1f5d50d7e15c0c21ccf446231c8",
   "references/hort-env-systems/finance-params.json": "d4bbba59a1c1f1510f9660ac4c67ff9edef0d955fa4a02297d7ba7c60b642d78",
   "references/hort-env-systems/finance-transform.json": "06ba2dd33b7b111a5437e6041c506f144dac02ddd84047782f07864d2d3adb3d",
   "references/hort-env-systems/finance-verify-classes.json": "ace96677b0b861ba19c0b2d295a440ab0e1107c11b72bb6918887c59a38ba355",
@@ -75,7 +75,7 @@
   "references/korean-polishing.md": "1c4b05593948898ad7d9a219b64aab2c9508136b8933f38a36cc545e4a9477d2",
   "references/lessons-learned.md": "70f613bdcabc89db616acb38ffae368e05c8c6050c366edde20fd078546aea5b",
   "references/locking.md": "8da00100e88e933b3064ee42505b56f25a90f81c81661bf3dd05b6a20674dff2",
-  "references/major-body-draft.md": "c8bb5ccf10f0f41a8f337faca0039490676421da203c8b94da26c14c4ae341dc",
+  "references/major-body-draft.md": "8e823e3d767506dea8b4c2dbd875907607998bef871bfc7fbf9184652bc64473",
   "references/majors.md": "aca32fce29090df4a07f89eb3c92579fb3353fd9efb8cab20a37db52081e9151",
   "references/mid-work-questions.md": "5f229f8c1e5f2a2d886f55f21770ad400c071fe51754eb49e4816f1ac5aa9950",
   "references/model-routing.md": "966d503c90a062852706300f2b9297d1409cb681edc2a08f2efec07a374d58db",
@@ -88,7 +88,7 @@
   "references/output-hygiene.md": "cbab96b73e4c14b48713f886876e9fded2bac9da1d245a6c21048ef3fffaaff6",
   "references/outputs.md": "c5d167895c9e926a7e2c642a1aa947a2fa6c6f534d7e4a58da3bc3cab43e0b4b",
   "references/package-install.md": "ec98421637d74a682d7509fb567e7019ed51451a9080df4bd5e9306d6172c561",
-  "references/parser-setup.md": "b63e0d3e3d370aaf5b8d6a071d2627fa7b49d64c66caf98d7981b5cc436aa3cb",
+  "references/parser-setup.md": "663edf74336deb3cde0304916a20d29beeb572946509f8a2742ca7c944942cb9",
   "references/plain-thesis-policy.json": "275388305828ce94527979044cdf65cd62ae021ae995b39481de1de08ea2f8f6",
   "references/plan-fit-rules.md": "43450057776bf7faef137343f75e0e70b8f8a69a472fc3fdeac25a7a3df54f8d",
   "references/price-research-routes.md": "b91b4d457b91d90565aec775527ad611d84de528d4548cb02cf99bf464c7ed9e",
@@ -171,7 +171,7 @@
   "scripts/gg_rda_lookup.py": "f73cdd6f3a9220d1ac96514966178ea770b9e8f063a6a20d621eae386aac3a2f",
   "scripts/gg_rda_provenance.py": "441468fa2b7b4ede488cc4551db1d04dd31ad2630e0e8afbd57a74a19a5509a2",
   "scripts/gg_rda_research.py": "a01125bdd68afa6b79b42c06d1f88038c2a90d5b4a016e34fb8840dd233c0d34",
-  "scripts/gg_read.py": "cfcd5e398505587184b032b7febdd86186ac71c579d868c505bae268ceeb42d2",
+  "scripts/gg_read.py": "bab518e99758bc7a0c3e5d6717bff40f05c40590ab4f91e4870dd1376a39d338",
   "scripts/gg_report.py": "2c5ae779d2e583afd6781d5ee187db7da1849423e1805c6fa2afbac1153a804f",
   "scripts/gg_research_handoff.py": "92c06177bf313f6d50c604acdea5cc9b16a2b74a55b887025b213ae71f38a556",
   "scripts/gg_reuse.py": "724466d1d917cfc5218fd75672674dc46021db5c0e0b2bc7e698a1a919397241",
@@ -219,7 +219,7 @@
   "tests/test_gg_toc_check.py": "7589f6890fb4ed671c49c23e6942f67fe5632d96ee63f02f4863e7e3f35677b5",
   "tests/test_n5_guidance_link.py": "32462d60e2a3c7a40cffb6eecfb138f8046d382ad16bb15377b3490e3ddbb43a",
   "tests/test_official_guide_reuse.py": "2169e23583f04860fbeb77fe1fe802bed756efd5147156c294eddb3e9ba4d87c",
-  "version.json": "5b346c5cdd79bf8a0cab6ebfc6b142c684ab944ef4f36bb6891df2912d749e2a"
+  "version.json": "ea5ab03be8b17ff08351adcf23255d0fa643d270d83055e1cb10a0ab1e37ffd7"
  },
  "schema": "knuaf-doc/install-manifest@1"
 }
