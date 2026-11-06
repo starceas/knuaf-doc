@@ -61,6 +61,8 @@ def main(argv=None):
             "source-view",
             "source-refresh",
             "finance-tables",
+            "delegate",
+            "lanes-propose",
             "tidy",
         ],
     )
@@ -114,16 +116,48 @@ def main(argv=None):
     # 검사 차단 복구: 등록된 출처의 해시를 검토 뒤 다시 등록한다.
     ap.add_argument("--source")
     ap.add_argument("--reviewed", action="store_true")
+    ap.add_argument("--check-job", help="완료된 research 주문의 수신 검사")
+    ap.add_argument("--lane")
+    ap.add_argument("--task")
+    ap.add_argument("--input-ref", action="append")
+    ap.add_argument("--output", action="append")
+    ap.add_argument("--company")
+    ap.add_argument("--model")
+    ap.add_argument("--effort")
+    ap.add_argument("--job-id")
+    ap.add_argument("--research-type")
+    ap.add_argument("--question", action="append")
+    ap.add_argument("--route", action="append")
+    ap.add_argument("--keyword", action="append")
+    ap.add_argument("--output-file")
+    ap.add_argument("--lane-scope")
+    ap.add_argument("--quote")
+    ap.add_argument("--lane-request", action="append")
+
     a = ap.parse_args(argv)
+    delegation_option_names = (
+        "check_job", "lane", "task", "input_ref", "output", "company",
+        "model", "effort", "job_id", "research_type", "question", "route",
+        "keyword", "output_file", "lane_scope", "quote", "lane_request",
+    )
+    if a.command not in {"delegate", "lanes-propose"} and any(
+            getattr(a, name) is not None for name in delegation_option_names):
+        raise SystemExit("위임 옵션은 delegate·lanes-propose 전용")
+    if a.command == "delegate" and a.effort is not None and not a.effort.strip():
+        raise SystemExit("--effort 값이 비어 있음")
     p4_commands = {"rda-lookup", "rda-propose", "rda-apply"}
     p5_commands = {
         "source-scan", "source-resolve", "source-register", "source-view"
     }
+    delegation_commands = {"delegate", "lanes-propose"}
+    if a.command in delegation_commands and a.folder is None:
+        raise SystemExit("folder 필요")
     if a.command not in p4_commands and a.folder is None:
         raise SystemExit("folder 필요")
     root_resolved = Path(a.folder).resolve() if a.folder else None
-
     def rel(path):
+        if path is None:
+            return None
         return str(Path(path).resolve().relative_to(root_resolved))
 
     def insect_selection():
@@ -150,7 +184,42 @@ def main(argv=None):
 
     try:
         code = 0
-        if a.command == "init":
+        if a.command in {"delegate", "lanes-propose"}:
+            import gg_delegation
+
+            if a.command == "delegate":
+                if a.check_job is not None:
+                    if any(value is not None for value in (
+                            a.lane, a.task, a.input_ref, a.output, a.company,
+                            a.model, a.effort, a.job_id, a.research_type,
+                            a.question, a.route, a.keyword, a.output_file,
+                            a.lane_scope, a.quote, a.lane_request)):
+                        raise ValueError("--check-job과 주문 인자는 함께 쓸 수 없음")
+                    value = gg_delegation.delegate(a.folder, check_job=a.check_job)
+                else:
+                    if any(value is not None for value in (
+                            a.lane_scope, a.quote, a.lane_request)):
+                        raise ValueError("주문 생성과 배치안 인자는 함께 쓸 수 없음")
+                    request = gg_delegation.job_request_from_args(
+                        a.folder, lane=a.lane, task=a.task,
+                        input_refs=a.input_ref or [], outputs=a.output or [],
+                        company=a.company, model=a.model, effort=a.effort,
+                        job_id=a.job_id, research_type=a.research_type,
+                        questions=a.question or [], routes=a.route or [],
+                        keywords=a.keyword or [], output_file=a.output_file)
+                    value = gg_delegation.delegate(a.folder, request)
+            else:
+                if (a.check_job is not None or a.lane_scope is None
+                        or a.quote is None or not a.lane_request
+                        or any(value is not None for value in (
+                            a.lane, a.task, a.input_ref, a.output, a.company,
+                            a.model, a.effort, a.job_id, a.research_type,
+                            a.question, a.route, a.keyword, a.output_file))):
+                    raise ValueError("--lane-scope, --quote, --lane-request 필요")
+                request = gg_delegation.lane_request_from_args(
+                    a.lane_scope, a.quote, a.lane_request)
+                value = gg_delegation.lanes_propose(a.folder, request)
+        elif a.command == "init":
             value = core.init(a.folder)
         elif a.command == "import":
             if not a.out:
