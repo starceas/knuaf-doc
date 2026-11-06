@@ -41,16 +41,10 @@ def q(name):
     return "'" + name.replace("'", "''") + "'"
 
 
-def plan_years(writing_year):
-    if (
-        type(writing_year) is not int
-        or isinstance(writing_year, bool)
-        or writing_year < 1900
-        or writing_year > 2100
-    ):
-        raise ValueError("작성연도 정수 필요")
-    start = writing_year + 1
-    return [start + i for i in range(5)]
+def plan_years(start_year):
+    if type(start_year) is not int or isinstance(start_year, bool) or not 1900 <= start_year <= 9995:
+        raise ValueError("영농 시작연도 정수 필요")
+    return [start_year + i for i in range(5)]
 
 
 def check_unsupported(spec):
@@ -225,11 +219,7 @@ def validate(spec, *, resolver=None):
             for p in hist:
                 if num(str(p)) < 0:
                     raise ValueError(f"{hist_key} 가격은 0 이상 필요")
-    years = plan_years(spec["writing_year"])
-    if "start_year" in spec:
-        if type(spec["start_year"]) is not int or not 1900 <= spec["start_year"] <= 9995:
-            raise ValueError("start_year 정수 영농 시작연도 필요")
-        years = list(range(spec["start_year"], spec["start_year"] + 5))
+    years = plan_years(spec.get("start_year"))
     for key in ("grace", "term", "life"):
         if (
             type(spec.get(key)) is not int

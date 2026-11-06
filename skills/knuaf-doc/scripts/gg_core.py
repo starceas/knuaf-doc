@@ -5842,6 +5842,12 @@ def paper(root, spec_path, spec_bytes, requested_path, *, major_id=None,
     except ValueError as error:
         raise _op("paper", "requested_output", "not_committed",
                   "unsupported_major", detail=str(error)) from error
+    from gg_school_paper import years as paper_years
+    try:
+        paper_years(spec)
+    except (TypeError, ValueError) as error:
+        raise _op("paper", "requested_output", "not_committed",
+                  "invalid_spec", detail=str(error)) from error
     spec.setdefault(
         "school_profile",
         {"school": "경기대학교", "department": "일반대학원 한국어교육학과"},

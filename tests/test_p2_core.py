@@ -430,11 +430,49 @@ class PaperContractTests(ContractCase):
     def _spec(self, root):
         spec = root / "paper-spec.json"
         spec.write_text(json.dumps(
-            {"author": "합성", "writing_year": 2026, "years": 5,
+            {"author": "합성", "writing_year": 2026, "start_year": 2027,
+             "years": 5,
              "school_profile": {"mode": "school", "school": "합성대학교",
                                 "department": "특용작물학과"}},
             ensure_ascii=False), encoding="utf-8")
         return spec
+
+    def test_paper_requires_a_confirmed_start_year_before_publication(self):
+        core = runtime("gg_core")
+        root = self.make_project()
+        _seed(root)
+        bind_major(root)
+        spec = root / "paper-spec.json"
+        spec.write_text(json.dumps(
+            {"author": "합성", "writing_year": 2026,
+             "school_profile": {"mode": "school", "school": "합성대학교",
+                                "department": "특용작물학과"}},
+            ensure_ascii=False), encoding="utf-8")
+        before = self._tree_bytes(root)
+        with self.assertRaises(core.OperationError) as caught:
+            core.paper(root, "paper-spec.json", spec.read_bytes(),
+                       "build/paper-out.md", major_id="specialty_crops")
+        self.assertEqual("invalid_spec", caught.exception.result["reason"])
+        self.assertEqual("not_committed",
+                         caught.exception.result["commit_state"])
+        self.assertEqual(before, self._tree_bytes(root))
+
+    def test_paper_renders_the_confirmed_plan_year(self):
+        core = runtime("gg_core")
+        root = self.make_project()
+        _seed(root)
+        bind_major(root)
+        spec = root / "paper-spec.json"
+        spec.write_text(json.dumps(
+            {"author": "합성", "writing_year": 2026, "start_year": 2029,
+             "school_profile": {"mode": "school", "school": "합성대학교",
+                                "department": "특용작물학과"}},
+            ensure_ascii=False), encoding="utf-8")
+        value = core.paper(root, "paper-spec.json", spec.read_bytes(),
+                           "build/paper-out.md", major_id="specialty_crops")
+        self.assertEqual("generated", value["status"])
+        self.assertIn("5개년 목표: 2029~2033년, 작성연도 2026년",
+                      (root / "build/paper-out.md").read_text(encoding="utf-8"))
 
     def test_paper_publishes_requested_and_managed(self):
         core = runtime("gg_core")

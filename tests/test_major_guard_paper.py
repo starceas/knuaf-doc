@@ -41,7 +41,7 @@ PROBE = "probe_major"
 
 
 def _spec(**extra):
-    spec = {"author": "합성", "writing_year": 2026,
+    spec = {"author": "합성", "writing_year": 2026, "start_year": 2027,
             "school_profile": {"mode": "school", "school": "합성대학교",
                                "department": "특용작물학과"}}
     spec.update(extra)

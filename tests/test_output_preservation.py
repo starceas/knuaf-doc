@@ -32,7 +32,8 @@ class DocxPreservationTests(ContractCase):
             self.root, "specialty_crops")
 
     def school_markdown(self, official=False):
-        spec = {"writing_year": 2026, "title": "합성 영농계획"}
+        spec = {"writing_year": 2026, "start_year": 2027,
+                "title": "합성 영농계획"}
         if official:
             spec["school_profile"] = {
                 "mode": "school", "layout": "forms_1_to_4",

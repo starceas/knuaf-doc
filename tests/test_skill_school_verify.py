@@ -192,6 +192,16 @@ class SchoolVerifyTests(ContractCase):
 
     # --- the plan window --------------------------------------------------
 
+    def test_the_plan_preserves_a_confirmed_start_year(self):
+        spec = base_spec(start_year=2029)
+        spec["price_assumptions"]["general"]["application_base_year"] = 2029
+        spec["price_assumptions"]["wage"]["application_base_year"] = 2029
+        spec["price_assumptions"]["sales"]["application_base_year"] = 2029
+        result = self.sv.calculate_school_expected(spec)
+        self.assertEqual([2029, 2030, 2031, 2032, 2033], result["years"])
+        self.assertEqual(result["years"],
+                         [year["year"] for year in result["expected_years"]])
+
     def test_the_plan_covers_the_five_years_after_the_writing_year(self):
         r = self.sv.calculate_school_expected(base_spec())
         self.assertEqual([2027, 2028, 2029, 2030, 2031], r["years"])

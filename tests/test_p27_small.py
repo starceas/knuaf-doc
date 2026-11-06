@@ -48,6 +48,7 @@ class K303SchoolProfileMajorId(ContractCase):
             "crop": "도라지",
             "title": "도라지 신규 창업 — 합성 시험값",
             "writing_year": 2026,
+            "start_year": 2027,
             "business_form": "신규 창업",
             "region": "경북 봉화",
             "school_profile": {

@@ -146,7 +146,8 @@ class PublicationLifecycle(unittest.TestCase):
 
     def test_nested_korean_space_paper_receipt_replay_resume(self):
         self._seed()
-        spec = {"author": "합성", "writing_year": 2026, "years": 5,
+        spec = {"author": "합성", "writing_year": 2026, "start_year": 2027,
+                "years": 5,
                 "school_profile": {"mode": "school", "school": "합성대학교",
                                    "department": "특용작물학과"}}
         raw = fs.canonical_json_bytes(spec)

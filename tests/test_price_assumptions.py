@@ -158,6 +158,17 @@ class NormalizeValidationTests(ContractCase):
     def norm(self, spec):
         return self.pa.normalize_price_assumptions(spec, YEARS)
 
+    def test_finance_requires_confirmed_start_year(self):
+        for missing in (None, "2027", True):
+            spec = _spec()
+            if missing is None:
+                del spec["start_year"]
+            else:
+                spec["start_year"] = missing
+            with self.subTest(start_year=missing), self.assertRaisesRegex(
+                    ValueError, "영농 시작연도"):
+                self.sx.validate(spec)
+
     def test_missing_block_rejected(self):
         spec = _spec()
         del spec["price_assumptions"]
@@ -369,6 +380,37 @@ class SeparateRatesModelTests(ContractCase):
         self.assertNotAlmostEqual(
             float(exp["expected_years"][4]["labor"]),
             800 * ((1 + rw) * (1 + rg))**4, places=6)
+
+    def test_confirmed_start_year_drives_workbook_and_financial_axis(self):
+        spec = _spec(start_year=2029)
+        for role in ("general", "wage", "sales"):
+            spec["price_assumptions"][role]["application_base_year"] = 2029
+        expected = self.verify.calculate_school_expected(spec)
+        self.assertEqual([2029, 2030, 2031, 2032, 2033], expected["years"])
+        self.assertEqual([2029, 2030, 2031, 2032, 2033],
+                         [row["year"] for row in expected["expected_years"]])
+        root = self.make_project()
+        bind_major(root, "specialty_crops")
+        ctx = self.mc.output_context(root, "specialty_crops")
+        out = Path(root) / "shifted.xlsx"
+        legacy_workbook(spec, out, context=ctx)
+        wb = load_workbook(out, data_only=False)
+        self.assertEqual("가. 작성기간 : 5개년 계획(2029~2033)",
+                         wb["2. 중장기영농목표"]["B4"].value)
+        self.assertEqual(2029, wb["2. 중장기영농목표"]["C9"].value)
+        wb.close()
+        manifest = json.loads(out.with_suffix(".manifest.json").read_text())
+        self.assertEqual([2029, 2030, 2031, 2032, 2033],
+                         manifest["years"])
+
+    def test_start_year_does_not_move_writing_year_price_observations(self):
+        spec = _spec(start_year=2029)
+        for role in ("general", "wage", "sales"):
+            spec["price_assumptions"][role]["application_base_year"] = 2029
+        checked = self.sx.validate(spec)[2]
+        self.assertEqual([2021, 2022, 2023, 2024, 2025],
+                         [row["year"] for row in
+                          checked["sales"]["anchors"]["purchase"]["price_observations"]])
 
     def test_workbook_formulas_use_separate_rates(self):
         spec = self._divergent_spec()

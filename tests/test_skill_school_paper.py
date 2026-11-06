@@ -5,8 +5,10 @@ honesty about missing values: SKILL.md says unsupplied values stay
 ``[확인 필요]``.  A regression that turns a missing number into 0 or an empty
 cell would put an invented figure in a submitted thesis.
 
-The frozen renderer keeps its generation logic unchanged; the caller-body splice
-lives in ``core.paper`` and is covered by test_p1_gui_inherit.
+The renderer has no implicit start-year default. Public paper publication
+requires an explicitly confirmed ``start_year`` in ``core.paper`` and
+in the frozen renderer. ``core.paper`` also owns caller-body splicing and is
+covered by ``test_p1_gui_inherit``.
 """
 import re
 import unittest
@@ -15,7 +17,7 @@ from tests._harness import ContractCase, runtime
 
 MINIMAL = {"title": "테스트 논문", "student": "홍길동",
            "department": "특용작물전공", "advisor": "김교수",
-           "writing_year": 2026}
+           "writing_year": 2026, "start_year": 2027}
 
 
 class SchoolPaperTests(ContractCase):
@@ -38,8 +40,25 @@ class SchoolPaperTests(ContractCase):
 
     # --- years(): the 5-year plan window is derived, not supplied ---------
 
-    def test_years_derives_a_five_year_window_from_the_writing_year(self):
-        writing, start, end, span = self.sp.years({"writing_year": 2026})
+    def test_years_uses_confirmed_start_year_without_changing_writing_year(self):
+        writing, start, end, span = self.sp.years(
+            {"writing_year": 2026, "start_year": 2029})
+        self.assertEqual((2026, 2029, 2033), (writing, start, end))
+        self.assertEqual([2029, 2030, 2031, 2032, 2033], span)
+
+    def test_years_rejects_invalid_confirmed_start_year(self):
+        for bad in (None, "2029", 2029.0, True, 1899, 9996, {}):
+            with self.subTest(bad=bad):
+                with self.assertRaisesRegex(ValueError, "시작연도"):
+                    self.sp.years({"writing_year": 2026, "start_year": bad})
+
+    def test_years_requires_a_confirmed_start_year(self):
+        with self.assertRaisesRegex(ValueError, "영농 시작연도"):
+            self.sp.years({"writing_year": 2026})
+
+    def test_years_derives_a_five_year_window_from_confirmed_start_year(self):
+        writing, start, end, span = self.sp.years(
+            {"writing_year": 2026, "start_year": 2027})
         self.assertEqual((2026, 2027, 2031), (writing, start, end))
         self.assertEqual([2027, 2028, 2029, 2030, 2031], span)
 
@@ -65,6 +84,18 @@ class SchoolPaperTests(ContractCase):
 
     def test_need_accepts_a_bare_string_as_the_value(self):
         self.assertEqual("직접 값", self.sp.need("직접 값", "a"))
+    def test_paper_requires_a_confirmed_start_year(self):
+        with self.assertRaisesRegex(ValueError, "영농 시작연도"):
+            self.paper({k: v for k, v in MINIMAL.items()
+                        if k != "start_year"})
+
+    def test_paper_uses_confirmed_start_year_in_rendered_plan_period(self):
+        out = self.paper({**MINIMAL, "start_year": 2029})
+        self.assertIn("5개년 목표: 2029~2033년, 작성연도 2026년", out)
+        self.assertIn("5개년(2029~2033)", out)
+
+
+
 
     # --- the generated skeleton -------------------------------------------
 

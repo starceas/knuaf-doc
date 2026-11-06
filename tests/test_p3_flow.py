@@ -1281,7 +1281,7 @@ class PaperNativeFieldValidationTests(ContractCase):
     boundary (critic L12-A-001 correction of the Lane-12 reading)."""
 
     def _spec(self, root, **extra):
-        data = {"author": "합성", "writing_year": 2026,
+        data = {"author": "합성", "writing_year": 2026, "start_year": 2027,
                 "school_profile": {"mode": "school", "school": "합성대학교",
                                    "department": "특용작물학과"}}
         data.update(extra)
