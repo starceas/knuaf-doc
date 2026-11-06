@@ -11,9 +11,11 @@ in the frozen renderer. ``core.paper`` also owns caller-body splicing and is
 covered by ``test_p1_gui_inherit``.
 """
 import re
+import subprocess
+import sys
 import unittest
 
-from tests._harness import ContractCase, runtime
+from tests._harness import ContractCase, SCRIPTS, runtime
 
 MINIMAL = {"title": "테스트 논문", "student": "홍길동",
            "department": "특용작물전공", "advisor": "김교수",
@@ -61,6 +63,13 @@ class SchoolPaperTests(ContractCase):
             {"writing_year": 2026, "start_year": 2027})
         self.assertEqual((2026, 2027, 2031), (writing, start, end))
         self.assertEqual([2027, 2028, 2029, 2030, 2031], span)
+
+    def test_cli_help_exposes_start_year(self):
+        result = subprocess.run(
+            [sys.executable, str(SCRIPTS / "gg_school_paper.py"), "--help"],
+            capture_output=True, text=True, encoding="utf-8", timeout=30)
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn("start_year", result.stdout)
 
     def test_years_refuses_a_writing_year_it_cannot_trust(self):
         for bad in (None, "2026", 2026.0, True, 1899, 2101, {}):

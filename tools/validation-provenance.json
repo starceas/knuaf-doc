@@ -462,7 +462,7 @@
       "origin": "new"
     },
     "tests/test_skill_school_paper.py": {
-      "note": "P1-GUI 시험 이사(cb72ae1): 5년 창·미확인 표시·표 고정 행 (frozen 생성기는 불변) | P0-2 PR-E: clarify that the frozen generation logic, not the CLI module bytes, is unchanged. | ORDER-30: confirmed start_year drives paper years without writing_year+1 fallback.",
+      "note": "P1-GUI 시험 이사(cb72ae1): 5년 창·미확인 표시·표 고정 행 (frozen 생성기는 불변) | P0-2 PR-E: clarify that the frozen generation logic, not the CLI module bytes, is unchanged. | ORDER-30: confirmed start_year drives paper years without writing_year+1 fallback. | v0.4.5 SY-02: standalone --help must expose start_year.",
       "origin": "new"
     },
     "tests/test_skill_school_verify.py": {
