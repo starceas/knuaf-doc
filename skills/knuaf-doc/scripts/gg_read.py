@@ -70,6 +70,30 @@ def _read_docx(path: Path, emit) -> dict:
                 for child in block.iterchildren():
                     if child.tag.endswith("}sdtContent"):
                         body_blocks.extend(control_blocks(child))
+        def render_table(table):
+            nonlocal tables, nonempty_cells
+            tables += 1
+            emit(f"### 표 {tables}\n\n")
+            for row_number, row in enumerate(table.rows, start=1):
+                cells = []
+                nested_tables = []
+                for cell in row.cells:
+                    paragraphs_in_cell = []
+                    for content in cell.iter_inner_content():
+                        if isinstance(content, Paragraph):
+                            if content.text.strip():
+                                paragraphs_in_cell.append(content.text)
+                        else:
+                            nested_tables.append(content)
+                    cells.append("\n".join(paragraphs_in_cell))
+                nonempty_cells += sum(bool(value.strip()) for value in cells)
+                values = [_markdown_cell(value) for value in cells]
+                emit(f"행 {row_number}: " + " | ".join(values) + "\n")
+                for nested_table in nested_tables:
+                    render_table(nested_table)
+            emit("\n")
+
+
         for block in body_blocks:
             if block.tag.endswith("}p"):
                 paragraph = Paragraph(block, document)
@@ -84,15 +108,7 @@ def _read_docx(path: Path, emit) -> dict:
                 else:
                     emit(f"{_markdown_cell(text)}\n\n")
             elif block.tag.endswith("}tbl"):
-                table = Table(block, document)
-                tables += 1
-                emit(f"### 표 {tables}\n\n")
-                for row_number, row in enumerate(table.rows, start=1):
-                    cells = [cell.text for cell in row.cells]
-                    nonempty_cells += sum(bool(value.strip()) for value in cells)
-                    values = [_markdown_cell(value) for value in cells]
-                    emit(f"행 {row_number}: " + " | ".join(values) + "\n")
-                emit("\n")
+                render_table(Table(block, document))
         return {"paragraphs": paragraphs, "tables": tables,
                 "nonempty_cells": nonempty_cells}
     except (OpcError, XMLSyntaxError, ParseError, ValueError, KeyError,

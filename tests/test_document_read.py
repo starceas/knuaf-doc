@@ -88,6 +88,29 @@ class DocumentReadTests(unittest.TestCase):
         self.assertEqual(before, result["input"]["sha256_after_read"])
         self.assertEqual(_sha256(output), result["output"]["sha256"])
 
+    def test_docx_extracts_text_from_nested_table_cells(self):
+        source = self.root / "중첩 표.docx"
+        document = Document()
+        table = document.add_table(rows=1, cols=2)
+        table.cell(0, 0).text = "바깥 항목"
+        parent_cell = table.cell(0, 1)
+        parent_cell.text = "상위 셀"
+        nested = parent_cell.add_table(rows=1, cols=2)
+        nested.cell(0, 0).text = "NESTED_CELL_ALPHA_94827"
+        nested.cell(0, 1).text = "NESTED_CELL_BETA_61503"
+        document.save(source)
+        output = self.root / "중첩 표 읽기.md"
+
+        process, result = self.run_reader(source, output)
+
+        self.assertEqual(0, process.returncode)
+        self.assertEqual("read", result["status"])
+        self.assertEqual(2, result["details"]["tables"])
+        self.assertEqual(4, result["details"]["nonempty_cells"])
+        rendered = output.read_text(encoding="utf-8")
+        self.assertIn("NESTED_CELL_ALPHA_94827", rendered)
+        self.assertIn("NESTED_CELL_BETA_61503", rendered)
+
     def test_docx_extracts_body_content_control_paragraph_in_order(self):
         source = self.root / "내용 컨트롤.docx"
         document = Document()
