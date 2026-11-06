@@ -263,13 +263,13 @@
       "source": "new"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "7b28b4dec9f782a69908e6c6401cdf33621bbd65ef6c42d963daecaa85a8c81c",
+      "after_sha256": "3f3da00fbdd77c49bed23f378a237d567408dfd2d583b814f8c3dd6cd370e4f1",
       "before_sha256": null,
       "first_changed": "P27",
-      "last_changed": "W8",
+      "last_changed": "W8b",
       "owner": "W8",
-      "note": "G-output-guards: regenerate installation fingerprints from a tracked-files-only copy after output-preservation fixes. | G FIX1: regenerate after aligning the linked interview guide with canonical fact/source/task storage. | F-skill-tests: regenerate in a tracked-files-only copy after canonical fixture metadata repair; no runtime relaxation. | F CI1: regenerate after host-independent source-intake collision fixtures. | W8: regenerated after adding delegation.json, gg_delegation.py and test_gg_delegation.py.",
-      "reason": "P27: installed distribution file list. | P28 and later: regenerate after accepted skill changes. | W8: gg_update.py manifest --write after W8 skill command and contract changes.",
+      "note": "G-output-guards: regenerate installation fingerprints from a tracked-files-only copy after output-preservation fixes. | G FIX1: regenerate after aligning the linked interview guide with canonical fact/source/task storage. | F-skill-tests: regenerate install manifest from a tracked-files-only copy after fixture repair; no runtime relaxation. | F CI1: regenerate after completing source-intake simulated filesystem lookups. | W8: regenerated after adding delegation.json, gg_delegation.py and test_gg_delegation.py. | W8b: regenerated after C6 publication-path and research-result validation corrections, then refreshed after documenting lanes-propose.",
+      "reason": "P27: installed distribution file list. | P28 and later: regenerate after accepted skill changes. | W8: gg_update.py manifest --write after W8 skill command and contract changes. | W8b: gg_update.py manifest --write after C6 fixes and the final commands.md row.",
       "source": "new"
     },
     "skills/knuaf-doc/references/benchmark-packs/aliases/crop-aliases.specialty_crops.json": {
@@ -464,18 +464,19 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/commands.md": {
-      "after_sha256": "de25254324cce6236835a0874e5fd6edd51f5e036468161490755934792c6d04",
+      "after_sha256": "e9dffd3ada19ef93de37434fd6882525f49964993dee0c1e81d2aca803106a14",
       "before_sha256": null,
       "first_changed": "P28",
-      "last_changed": "W8",
+      "last_changed": "W8b",
       "owner": "W8",
-      "reason": "P0-2 PR-A: U03 gg CLI command index and apply JSON contract. | P0-2 PR-A R2: rewritten against gg.py arguments and the apply collection/value contract; executable bind-major example. | P0-2 PR-A R3: exit codes 3/4 describe the operation target; per-target confirmation table. | F1 C3: gg_toc_check.py usage. | W8: document delegate and lanes-propose CLI contracts, schema source, validation, and atomic lane proposal behavior.",
+      "reason": "P0-2 PR-A: U03 gg CLI command index and apply JSON contract. | P0-2 PR-A R2: rewritten against gg.py arguments and the apply collection/value contract; executable bind-major example. | P0-2 PR-A R3: exit codes 3/4 describe the operation target; per-target confirmation table. | F1 C3: gg_toc_check.py usage. | W8: document delegate and lanes-propose CLI contracts, validation, and schema source. | W8b: document C6 path-pinned publication, cleanup, route ID matching, quantitative unit-row checks, and complete the lanes-propose CLI index row.",
       "source": "new"
     },
     "skills/knuaf-doc/delegation.json": {
       "after_sha256": "b55a663d3585fa63aeb2b3899ae5a3078faf0d75957d1c6478ceb3f18ebf89bc",
       "before_sha256": null,
       "first_changed": "W8",
+      "last_changed": "W8b",
       "owner": "W8",
       "reason": "W8: skill-owned JobSpec, LaneRequest schema and contractVersion declaration.",
       "source": "new"
@@ -1251,19 +1252,21 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_delegation.py": {
-      "after_sha256": "3b873b00334dee06104af39c5415142606e7bd7eab2fe2e4b4b5f2055b184806",
+      "after_sha256": "84dbd8b72964be1eda293e271156a993dd609f3de21c555a76d14848d5faf6af",
       "before_sha256": null,
       "first_changed": "W8",
+      "last_changed": "W8b",
       "owner": "W8",
-      "reason": "W8: validate skill-owned relay JobSpecs and LaneRequests; atomic proposal publication and research result receiver validation.",
+      "reason": "W8: validate skill-owned relay JobSpecs and LaneRequests; atomic proposal publication and research result receiver validation. | W8b C6-01/02/03/04: pin publication directories, clean owned partial temporaries, separate route IDs from URLs, require quantitative evidence unit rows.",
       "source": "new"
     },
     "skills/knuaf-doc/tests/test_gg_delegation.py": {
-      "after_sha256": "6c028b9f712640170dbe8a0cbcac183a535f999dba7fafeeb936c58544381a7a",
+      "after_sha256": "0843f80412e14432a86d95d3aa37ba0172697b553e4c21b3f86813f5a09b5288",
       "before_sha256": null,
       "first_changed": "W8",
+      "last_changed": "W8b",
       "owner": "W8",
-      "reason": "W8: synthetic CLI regressions for JobSpec and LaneRequest contract, validation boundaries, atomic preservation, and research-result route checks.",
+      "reason": "W8: synthetic CLI regressions for JobSpec and LaneRequest contract, validation boundaries, atomic preservation, and research-result route checks. | W8b C6-01/02/03/04: parent-swap publication race, partial-write cleanup, route ID in URL with mismatch rejection, measured/candidate/no-evidence quantitative unit-row semantics.",
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_body_layout.py": {

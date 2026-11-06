@@ -142,12 +142,12 @@
    "origin": "new"
   },
   "skills/knuaf-doc/install-manifest.json": {
-   "note": " | PR-2: latest D8/D9 integration; I-01 only measured count constants adjusted in lineage test. Full pytest covers split public/skill test locations. | I-02: measured F01 artifact repin propagated; F01 canonical digest one-string propagation separately approved by I-03. | I2 gg_update.py manifest --write for FIX-A2/B2/C2b and W-D3 final inputs plus measured F01 artifact repin. | I3 gg_update.py manifest --write for FIX-B3/C3 and W-D4 final inputs plus measured F01 artifact repin. | I4 gg_update.py manifest --write for FIX-B4/C4 and W-D5 final inputs plus measured F01 artifact repin. | I5 gg_update.py manifest --write for FIX-C5 and W-D6 final inputs plus measured F01 artifact repin. | I6: gg_update.py manifest --write for FIX-C6 and W-D7; F01 artifact and canonical digest measured unchanged, no repin. | P0-2 consistency: gg_update.py manifest --write after the #59/#60/#61 merges.",
+   "note": " | PR-2: latest D8/D9 integration; I-01 only measured count constants adjusted in lineage test. Full pytest covers split public/skill test locations. | I-02: measured F01 artifact repin propagated; F01 canonical digest one-string propagation separately approved by I-03. | I2 gg_update.py manifest --write for FIX-A2/B2/C2b and W-D3 final inputs plus measured F01 artifact repin. | I3 gg_update.py manifest --write for FIX-B3/C3 and W-D4 final inputs plus measured F01 artifact repin. | I4 gg_update.py manifest --write for FIX-B4/C4 and W-D5 final inputs plus measured F01 artifact repin. | I5 gg_update.py manifest --write for FIX-C5 and W-D6 final inputs plus measured F01 artifact repin. | I6: gg_update.py manifest --write for FIX-C6 and W-D7; F01 artifact and canonical digest measured unchanged, no repin. | P0-2 consistency: gg_update.py manifest --write after the #59/#60/#61 merges. | W8b C6-01/02/03/04: regenerated from finalized skill command files after publication, cleanup, route and quantitative result fixes.",
    "origin": "new",
    "transform": "G: regenerate from tracked-files-only clean copy after original-preservation repairs. | G FIX1: regenerate after canonical interview storage corrections. | F-skill-tests: regenerate install manifest from a tracked-files-only copy after fixture repair. | F CI1: regenerate after completing source-intake simulated filesystem lookups."
   },
   "skills/knuaf-doc/references/commands.md": {
-   "note": "P0-2 PR-A command index and apply JSON contract; F1 C3 gg_toc_check usage. | W8: delegate and lanes-propose CLI contracts, validation, and schema source.",
+   "note": "P0-2 PR-A command index and apply JSON contract; F1 C3 gg_toc_check usage. | W8: delegate and lanes-propose CLI contracts, validation, and schema source. | W8b C6-01/04: path-pinned atomic output, failure cleanup, route identity and quantitative evidence unit-row requirements.",
    "origin": "new"
   },
   "skills/knuaf-doc/delegation.json": {
@@ -155,11 +155,11 @@
    "origin": "new"
   },
   "skills/knuaf-doc/scripts/gg_delegation.py": {
-   "note": "W8: validated JobSpec and LaneRequest construction and research-result receive checks.",
+   "note": "W8: validated JobSpec and LaneRequest construction and research-result receive checks. | W8b C6-01/02/03/04: pinned directory publication, owned-temp cleanup, URL-independent route ID matching, and numeric evidence unit-row completeness.",
    "origin": "new"
   },
   "skills/knuaf-doc/tests/test_gg_delegation.py": {
-   "note": "W8: synthetic CLI contract and consumer-visible regression coverage.",
+   "note": "W8: synthetic CLI contract and consumer-visible regression coverage. | W8b C6-01/02/03/04: directory-swap races, partial-write cleanup, route IDs in URLs, and measured/candidate/no-evidence unit-row regressions.",
    "origin": "new"
   },
   "skills/knuaf-doc/references/common-workbooks/corrections/d8-spec.json": {

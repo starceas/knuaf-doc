@@ -1,10 +1,15 @@
 """Validated skill-owned contracts for relay jobs and lane requests."""
 
+import ctypes
+import errno
 import hashlib
 import json
+import os
+from contextlib import contextmanager
 from pathlib import Path
 import re
 import stat
+import sys
 import uuid
 from urllib.parse import urlsplit
 
@@ -105,38 +110,303 @@ def _root(path):
         _reject("workspace_unavailable")
 
 
-def _directory(path, *, create):
-    path = Path(path)
-    try:
-        return gg_fs.identity(path, kind="directory")
-    except gg_fs.FsError as error:
-        if error.detail["code"] not in (2, "2"):
-            _reject("delegation_directory_unsafe")
-    except OSError:
-        _reject("delegation_directory_unsafe")
-    if not create:
-        _reject("delegation_directory_unavailable")
-    try:
-        return gg_fs.mkdir_directory(path)
-    except FileExistsError:
-        try:
-            return gg_fs.identity(path, kind="directory")
-        except (gg_fs.FsError, OSError):
-            _reject("delegation_directory_unsafe")
-    except (gg_fs.FsError, OSError, ValueError):
-        _reject("delegation_directory_unavailable")
+
+def _ensure_output_directory(root, parts):
+    with _pinned_directory(root, parts, create=True):
+        pass
+    return Path(root).joinpath(*parts)
+
 
 
 def _gui(root, *, create):
-    _directory(root, create=False)
-    _directory(root / GUI_DIR, create=create)
-    return root / GUI_DIR
+    if create:
+        with _pinned_directory(root, (GUI_DIR,), create=True):
+            pass
+    else:
+        with _pinned_directory(root, (GUI_DIR,), create=False):
+            pass
+    return Path(root) / GUI_DIR
 
 
 def _jobs(root, *, create):
-    gui = _gui(root, create=create)
-    _directory(gui / JOBS_DIR, create=create)
-    return gui / JOBS_DIR
+    if create:
+        with _pinned_directory(root, (GUI_DIR, JOBS_DIR), create=True):
+            pass
+    else:
+        with _pinned_directory(root, (GUI_DIR, JOBS_DIR), create=False):
+            pass
+    return Path(root) / GUI_DIR / JOBS_DIR
+class _PinnedDirectory:
+    """Pin the output directory chain for the complete publication."""
+
+    def __init__(self, root, parts, *, create):
+        self.root = Path(root)
+        self.path = self.root.joinpath(*parts)
+        self.fds = []
+        self.edges = []
+        self.windows = None
+        if sys.platform == "win32":
+            self.windows = gg_fs.gg_winfs.Directory(self.path, create=create)
+            self.identity = gg_fs.identity(self.path, kind="directory")
+            return
+        flags = (os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+                 | getattr(os, "O_NOFOLLOW", 0)
+                 | getattr(os, "O_CLOEXEC", 0))
+        try:
+            current = os.open(self.root.anchor or "/", flags)
+            self.fds.append(current)
+            for name in (*self.root.parts[1:], *parts):
+                try:
+                    child = os.open(name, flags, dir_fd=current)
+                except FileNotFoundError:
+                    if not create:
+                        raise
+                    try:
+                        os.mkdir(name, dir_fd=current)
+                    except FileExistsError:
+                        pass
+                    child = os.open(name, flags, dir_fd=current)
+                self.fds.append(child)
+                self.edges.append((current, name, child))
+                current = child
+            self.fd = current
+            self.check()
+        except BaseException:
+            self.close()
+            raise
+
+    def check(self):
+        if self.windows is not None:
+            gg_fs.assert_identity(self.path, self.identity)
+            return
+        for parent_fd, name, child_fd in self.edges:
+            named = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
+            opened = os.fstat(child_fd)
+            if (stat.S_ISLNK(named.st_mode) or not stat.S_ISDIR(named.st_mode)
+                    or named.st_dev != opened.st_dev
+                    or named.st_ino != opened.st_ino):
+                _reject("delegation_directory_unsafe")
+
+    def close(self):
+        if self.windows is not None:
+            self.windows.close()
+            self.windows = None
+        while self.fds:
+            os.close(self.fds.pop())
+
+
+@contextmanager
+def _pinned_directory(root, parts, *, create):
+    try:
+        directory = _PinnedDirectory(root, parts, create=create)
+    except DelegationError:
+        raise
+    except (gg_fs.FsError, OSError, ValueError, RuntimeError):
+        _reject("delegation_directory_unsafe")
+    try:
+        yield directory
+    finally:
+        directory.close()
+
+
+def _entry_stat(directory, name):
+    if directory.windows is not None:
+        path = directory.path / name
+        try:
+            info = gg_fs.gg_winfs.lstat(path)
+        except FileNotFoundError:
+            return None
+        except (OSError, ValueError):
+            _reject("delegation_directory_unsafe")
+    else:
+        try:
+            info = os.stat(name, dir_fd=directory.fd, follow_symlinks=False)
+        except FileNotFoundError:
+            return None
+        except OSError:
+            _reject("delegation_directory_unsafe")
+        if stat.S_ISLNK(info.st_mode):
+            _reject("delegation_directory_unsafe")
+    return info
+
+
+def _read_entry(directory, name):
+    if directory.windows is not None:
+        return gg_fs.read_bytes(directory.path / name)[0]
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
+    descriptor = os.open(name, flags, dir_fd=directory.fd)
+    try:
+        if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+            _reject("job_registry_unreadable")
+        chunks = []
+        while True:
+            chunk = os.read(descriptor, 1 << 20)
+            if not chunk:
+                break
+            chunks.append(chunk)
+        return b"".join(chunks)
+    finally:
+        os.close(descriptor)
+
+
+def _existing_outputs_pinned(directory):
+    owned = []
+    try:
+        names = (gg_fs.gg_winfs.names(directory.path)
+                 if directory.windows is not None else os.listdir(directory.fd))
+    except OSError:
+        _reject("job_registry_unreadable")
+    for name in sorted(names):
+        if not name.endswith(".json"):
+            continue
+        try:
+            raw = _read_entry(directory, name)
+            record = json.loads(raw.decode("utf-8"))
+        except (gg_fs.FsError, OSError, UnicodeError, json.JSONDecodeError):
+            _reject("job_registry_unreadable")
+        if not isinstance(record, dict):
+            _reject("job_registry_unreadable")
+        spec = record.get("spec", record)
+        if not isinstance(spec, dict) or not isinstance(spec.get("outputs"), list):
+            _reject("job_registry_unreadable")
+        outputs = spec["outputs"]
+        if not all(_relative_output(item) for item in outputs):
+            _reject("job_registry_unreadable")
+        owned.extend(outputs)
+    return owned
+
+
+def _rename_noreplace_at(directory_fd, source, destination):
+    libc = gg_fs._get_libc()
+    if sys.platform == "darwin":
+        function, flag = getattr(libc, "renameatx_np", None), gg_fs._RENAME_EXCL
+    elif sys.platform.startswith("linux"):
+        function, flag = getattr(libc, "renameat2", None), gg_fs._RENAME_NOREPLACE
+    else:
+        _reject("delegation_atomic_publish_unsupported")
+    if function is None:
+        _reject("delegation_atomic_publish_unsupported")
+    function.argtypes = [ctypes.c_int, ctypes.c_char_p,
+                         ctypes.c_int, ctypes.c_char_p, ctypes.c_uint]
+    function.restype = ctypes.c_int
+    if function(directory_fd, os.fsencode(source), directory_fd,
+                os.fsencode(destination), flag):
+        code = ctypes.get_errno()
+        raise OSError(code, os.strerror(code), destination)
+
+
+def _publish_bytes(directory, name, data, *, replace):
+    temporary = ".%s.%s.tmp" % (name, uuid.uuid4().hex)
+    temporary_identity = None
+    descriptor = None
+    published = False
+    failure = None
+    cleanup_failed = False
+    try:
+        directory.check()
+        existing = _entry_stat(directory, name)
+        if existing is not None:
+            if not stat.S_ISREG(existing.st_mode):
+                _reject("lane_request_target_unsafe" if replace
+                        else "job_id_exists")
+            if not replace:
+                _reject("job_id_exists")
+        original = (gg_fs._identity_from_stat(existing, "file", directory.path / name)
+                    if existing is not None else None)
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+        if directory.windows is not None:
+            descriptor = gg_fs._open_nofollow(directory.path / temporary, flags)
+        else:
+            flags |= getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
+            descriptor = os.open(temporary, flags, 0o600, dir_fd=directory.fd)
+        temporary_identity = gg_fs.fd_identity(descriptor, kind="file")
+        view = memoryview(data)
+        while view:
+            written = os.write(descriptor, view)
+            if written <= 0:
+                raise OSError(errno.EIO, "short write")
+            view = view[written:]
+        os.fsync(descriptor)
+        os.close(descriptor)
+        descriptor = None
+
+        directory.check()
+        current = _entry_stat(directory, name)
+        current_identity = (
+            gg_fs._identity_from_stat(current, "file", directory.path / name)
+            if current is not None else None)
+        if ((original is None) != (current_identity is None)
+                or (original is not None
+                    and not gg_fs.same_identity(original, current_identity))):
+            _reject("lane_request_target_changed" if replace
+                    else "job_id_exists")
+        temp_stat = _entry_stat(directory, temporary)
+        temp_identity = (gg_fs._identity_from_stat(
+            temp_stat, "file", directory.path / temporary)
+            if temp_stat is not None else None)
+        if not gg_fs.same_identity(temporary_identity, temp_identity):
+            _reject("delegation_write_verify_failed")
+        directory.check()
+        if directory.windows is not None:
+            source, target = directory.path / temporary, directory.path / name
+            if replace and original is not None:
+                os.replace(str(source), str(target))
+            elif replace:
+                os.rename(str(source), str(target))
+            else:
+                os.rename(str(source), str(target))
+        elif replace and original is not None:
+            os.replace(temporary, name, src_dir_fd=directory.fd,
+                       dst_dir_fd=directory.fd)
+        elif replace:
+            _rename_noreplace_at(directory.fd, temporary, name)
+        else:
+            _rename_noreplace_at(directory.fd, temporary, name)
+        published = True
+        directory.check()
+        saved_stat = _entry_stat(directory, name)
+        saved_identity = (gg_fs._identity_from_stat(
+            saved_stat, "file", directory.path / name)
+            if saved_stat is not None else None)
+        if not gg_fs.same_identity(temporary_identity, saved_identity):
+            _reject("delegation_write_verify_failed")
+        saved = _read_entry(directory, name)
+        if hashlib.sha256(saved).digest() != hashlib.sha256(data).digest():
+            _reject("delegation_write_verify_failed")
+    except DelegationError as error:
+        failure = error
+    except (gg_fs.FsError, OSError, ValueError, RuntimeError) as error:
+        failure = error
+    finally:
+        if descriptor is not None:
+            try:
+                os.close(descriptor)
+            except OSError:
+                cleanup_failed = True
+        if temporary_identity is not None and not published:
+            try:
+                if directory.windows is not None:
+                    directory.check()
+                temp_stat = _entry_stat(directory, temporary)
+                temp_identity = (gg_fs._identity_from_stat(
+                    temp_stat, "file", directory.path / temporary)
+                    if temp_stat is not None else None)
+                if gg_fs.same_identity(temporary_identity, temp_identity):
+                    if directory.windows is not None:
+                        gg_fs.unlink_file(directory.path / temporary,
+                                          expected_identity=temporary_identity)
+                    else:
+                        os.unlink(temporary, dir_fd=directory.fd)
+            except (DelegationError, gg_fs.FsError, OSError, ValueError):
+                cleanup_failed = True
+    if failure is not None:
+        if cleanup_failed and temporary_identity is not None and not published:
+            _reject("delegation_write_cleanup_pending:" +
+                    Path(*directory.path.relative_to(directory.root).parts,
+                         temporary).as_posix())
+        if isinstance(failure, DelegationError):
+            raise failure
+        _reject("delegation_write_failed")
 
 
 def _relative_output(value):
@@ -275,30 +545,6 @@ def _research(value, outputs):
     }
 
 
-def _existing_outputs(jobs_dir):
-    owned = []
-    try:
-        paths = sorted(jobs_dir.iterdir(), key=lambda item: item.name)
-    except OSError:
-        _reject("job_registry_unreadable")
-    for path in paths:
-        if path.suffix != ".json":
-            continue
-        try:
-            data, _identity = gg_fs.read_bytes(path)
-            record = json.loads(data.decode("utf-8"))
-        except (gg_fs.FsError, OSError, UnicodeError, json.JSONDecodeError):
-            _reject("job_registry_unreadable")
-        if not isinstance(record, dict):
-            _reject("job_registry_unreadable")
-        spec = record.get("spec", record)
-        if not isinstance(spec, dict) or not isinstance(spec.get("outputs"), list):
-            _reject("job_registry_unreadable")
-        outputs = spec["outputs"]
-        if not all(_relative_output(item) for item in outputs):
-            _reject("job_registry_unreadable")
-        owned.extend(outputs)
-    return owned
 
 def _outputs_overlap(left, right):
     return left == right or left.startswith(right + "/") or right.startswith(left + "/")
@@ -308,39 +554,26 @@ def _encode(value):
     return (json.dumps(value, ensure_ascii=False, indent=2, allow_nan=False) + "\n").encode("utf-8")
 
 
-def _publish_new(path, data):
-    parent_identity = _directory(path.parent, create=False)
+def _publish_new(root, path, data):
     try:
-        result = gg_fs.publish_bytes_noreplace(
-            path, data, parent_identity=parent_identity)
-    except (gg_fs.FsError, OSError, ValueError):
-        _reject("delegation_write_failed")
-    if result["state"] != "installed":
-        _reject("job_id_exists" if result["reason"] == "destination_exists"
-                else "delegation_write_failed")
-
-
-def _publish_replace(path, data):
-    parent_identity = _directory(path.parent, create=False)
-    try:
-        try:
-            target_identity = gg_fs.identity(path, kind="file")
-        except gg_fs.FsError as error:
-            if error.detail["code"] not in (2, "2"):
-                _reject("lane_request_target_unsafe")
-            target_identity = None
-        gg_fs.assert_identity(path.parent, parent_identity)
-        if target_identity is not None:
-            gg_fs.assert_identity(path, target_identity)
-        gg_core.atomic(path, data)
-        gg_fs.assert_identity(path.parent, parent_identity)
-        published, _identity = gg_fs.read_bytes(path)
+        with _pinned_directory(root, (GUI_DIR, JOBS_DIR),
+                               create=False) as directory:
+            _publish_bytes(directory, path.name, data, replace=False)
     except DelegationError:
         raise
-    except (gg_fs.FsError, OSError, ValueError):
+    except (OSError, ValueError, RuntimeError):
         _reject("delegation_write_failed")
-    if hashlib.sha256(published).digest() != hashlib.sha256(data).digest():
-        _reject("delegation_write_verify_failed")
+
+
+def _publish_replace(root, path, data):
+    try:
+        with _pinned_directory(root, (GUI_DIR,),
+                               create=False) as directory:
+            _publish_bytes(directory, path.name, data, replace=True)
+    except DelegationError:
+        raise
+    except (OSError, ValueError, RuntimeError):
+        _reject("delegation_write_failed")
 
 
 def _parse_tuple(raw, count, reason):
@@ -482,13 +715,13 @@ def _build_job(root, request, contract):
         _reject("research_contract_wrong_lane")
     research = _research(request["research"], outputs) if has_research else None
     jobs_dir = _jobs(root, create=True)
-    if any(_outputs_overlap(left, right) for left in outputs
-           for right in _existing_outputs(jobs_dir)):
-        _reject("job_output_already_owned")
-    target = jobs_dir / (identifier + ".json")
-    job_dir = jobs_dir / identifier
-    if target.exists() or target.is_symlink() or job_dir.exists() or job_dir.is_symlink():
-        _reject("job_id_exists")
+    with _pinned_directory(root, (GUI_DIR, JOBS_DIR), create=False) as directory:
+        if any(_outputs_overlap(left, right) for left in outputs
+               for right in _existing_outputs_pinned(directory)):
+            _reject("job_output_already_owned")
+        if (_entry_stat(directory, identifier + ".json") is not None
+                or _entry_stat(directory, identifier) is not None):
+            _reject("job_id_exists")
     job = {
         "schema": contract["jobSchema"], "id": identifier, "lane": lane,
         "task": request["task"].strip(), "inputs": inputs, "outputs": list(outputs),
@@ -654,6 +887,22 @@ def validate_research_result(text, research):
                 _reject("research_result_question_status_conflict")
     if final_by_question.keys() != question_ids:
         _reject("research_result_question_status_missing")
+    if _quantitative(research["research_type"]):
+        evidence_questions = {
+            row["질문 ID"] for row in source_rows
+            if row["질문 최종 상태"] == "증거 확보"
+        }
+        candidate_questions = {
+            row["질문 ID"] for row in source_rows
+            if row["질문 최종 상태"] == "조건 불일치"
+            and re.search(r"\d", row["주장 (확인 사실)"])
+        }
+        measured_questions = evidence_questions | candidate_questions
+        unit_questions = {row["질문 ID"] for row in unit_rows}
+        if not measured_questions.issubset(unit_questions):
+            _reject("research_result_units_missing_for_evidence")
+        if not unit_questions.issubset(measured_questions):
+            _reject("research_result_units_question_invalid")
     routes_by_pair = {(route["id_or_name"], route["url"]): index
                       for index, route in enumerate(research["routes"], start=1)}
     seen_routes = set()
@@ -665,12 +914,13 @@ def validate_research_result(text, research):
             route_number = int(row["경로 번호"])
         except ValueError:
             _reject("research_result_route_number_invalid")
-        if row["경로 탐색 결과 (성공 / 실패)"] not in {"성공", "실패"}:
-            _reject("research_result_route_status_invalid")
         path_text = row["열어본 경로 (기관·자료명·URL)"]
         route_urls = re.findall(r"https?://[^\s<>]+", path_text)
+        identity_text = re.sub(r"https?://[^\s<>]+", "", path_text)
+        identity_text = " ".join(identity_text.split())
         matches = [(pair, number) for pair, number in routes_by_pair.items()
-                   if path_text.count(pair[0]) == 1 and len(route_urls) == 1
+                   if len(route_urls) == 1
+                   and identity_text.count(pair[0]) == 1
                    and (route_urls[0] == pair[1]
                         or route_urls[0].rstrip(".,;:!?)]}") == pair[1])]
         if len(matches) != 1:
@@ -771,7 +1021,7 @@ def delegate(root, request=None, *, check_job=None, contract_path=None):
     contract = _load_contract(contract_path)
     job, jobs_dir = _build_job(root, request, contract)
     target = jobs_dir / (job["id"] + ".json")
-    _publish_new(target, _encode(job))
+    _publish_new(root, target, _encode(job))
     return {"status": "created", "job_id": job["id"],
             "path": str(target.relative_to(root)), "schema": job["schema"],
             "contractVersion": job["contractVersion"]}
@@ -783,6 +1033,6 @@ def lanes_propose(root, request, *, contract_path=None):
     proposal = _validate_lane_request(request, contract)
     gui = _gui(root, create=True)
     target = gui / LANES_REQUEST
-    _publish_replace(target, _encode(proposal))
+    _publish_replace(root, target, _encode(proposal))
     return {"status": "proposed", "path": str(target.relative_to(root)),
             "schema": proposal["schema"], "lanes": len(proposal["lanes"])}
