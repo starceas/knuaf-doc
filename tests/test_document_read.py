@@ -25,6 +25,11 @@ def _sha256(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
+def _docx_tokens(document):
+    return [node.text for node in document.element.body.iter()
+            if node.tag.endswith("}t") and node.text and node.text.startswith("TOKEN_")]
+
+
 def _text_pdf(path):
     writer = PdfWriter()
     page = writer.add_blank_page(width=300, height=300)
@@ -87,6 +92,172 @@ class DocumentReadTests(unittest.TestCase):
         self.assertEqual(before, _sha256(source))
         self.assertEqual(before, result["input"]["sha256_after_read"])
         self.assertEqual(_sha256(output), result["output"]["sha256"])
+
+    def test_docx_extracts_text_from_nested_table_cells(self):
+        source = self.root / "중첩 표.docx"
+        document = Document()
+        table = document.add_table(rows=1, cols=2)
+        table.cell(0, 0).text = "바깥 항목"
+        parent_cell = table.cell(0, 1)
+        parent_cell.text = "상위 셀"
+        nested = parent_cell.add_table(rows=1, cols=2)
+        nested.cell(0, 0).text = "NESTED_CELL_ALPHA_94827"
+        nested.cell(0, 1).text = "NESTED_CELL_BETA_61503"
+        document.save(source)
+        output = self.root / "중첩 표 읽기.md"
+
+        process, result = self.run_reader(source, output)
+
+        self.assertEqual(0, process.returncode)
+        self.assertEqual("read", result["status"])
+        self.assertEqual(2, result["details"]["tables"])
+        self.assertEqual(4, result["details"]["nonempty_cells"])
+        rendered = output.read_text(encoding="utf-8")
+        self.assertIn("NESTED_CELL_ALPHA_94827", rendered)
+        self.assertIn("NESTED_CELL_BETA_61503", rendered)
+
+    def test_docx_nested_table_blocks_follow_xml_order_within_each_cell(self):
+        source = self.root / "중첩 표 블록 순서.docx"
+        document = Document()
+        document.add_paragraph("TOKEN_BODY_BEFORE")
+        table = document.add_table(rows=1, cols=2)
+
+        left = table.cell(0, 0)
+        left.text = "TOKEN_LEFT_BEFORE"
+        first = left.add_table(rows=1, cols=1)
+        first.cell(0, 0).text = "TOKEN_LEFT_TABLE_ONE"
+        left.add_paragraph("TOKEN_LEFT_BETWEEN")
+        second = left.add_table(rows=1, cols=1)
+        second.cell(0, 0).text = "TOKEN_LEFT_TABLE_TWO"
+        left.add_paragraph("TOKEN_LEFT_AFTER")
+
+        right = table.cell(0, 1)
+        right.text = "TOKEN_RIGHT_BEFORE"
+        third = right.add_table(rows=1, cols=1)
+        third.cell(0, 0).text = "TOKEN_RIGHT_TABLE_ONE"
+        right.add_paragraph("TOKEN_RIGHT_BETWEEN")
+        fourth = right.add_table(rows=1, cols=1)
+        fourth.cell(0, 0).text = "TOKEN_RIGHT_TABLE_TWO"
+        right.add_paragraph("TOKEN_RIGHT_AFTER")
+        document.add_paragraph("TOKEN_BODY_AFTER")
+        document.save(source)
+        expected = _docx_tokens(Document(str(source)))
+        output = self.root / "중첩 표 블록 순서.md"
+
+        process, result = self.run_reader(source, output)
+
+        self.assertEqual(0, process.returncode)
+        self.assertEqual("read", result["status"])
+        self.assertEqual(5, result["details"]["tables"])
+        rendered = output.read_text(encoding="utf-8")
+        self.assertEqual(expected, re.findall(r"TOKEN_[A-Z0-9_]+", rendered))
+        self.assertIn("칸 1", rendered)
+        self.assertIn("칸 2", rendered)
+
+    def test_docx_horizontal_merge_visits_nested_table_once(self):
+        source = self.root / "가로 병합.docx"
+        document = Document()
+        table = document.add_table(rows=1, cols=2)
+        merged = table.cell(0, 0).merge(table.cell(0, 1))
+        merged.text = "TOKEN_HORIZONTAL_PARENT"
+        nested = merged.add_table(rows=1, cols=1)
+        nested.cell(0, 0).text = "TOKEN_HORIZONTAL_NESTED"
+        document.save(source)
+        expected = _docx_tokens(Document(str(source)))
+        output = self.root / "가로 병합.md"
+
+        process, result = self.run_reader(source, output)
+
+        self.assertEqual(0, process.returncode)
+        self.assertEqual("read", result["status"])
+        self.assertEqual(2, result["details"]["tables"])
+        rendered = output.read_text(encoding="utf-8")
+        self.assertEqual(expected, re.findall(r"TOKEN_[A-Z0-9_]+", rendered))
+        self.assertEqual(1, rendered.count("TOKEN_HORIZONTAL_NESTED"))
+
+    def test_docx_vertical_merge_visits_nested_table_once_across_rows(self):
+        source = self.root / "세로 병합.docx"
+        document = Document()
+        table = document.add_table(rows=2, cols=1)
+        merged = table.cell(0, 0).merge(table.cell(1, 0))
+        merged.text = "TOKEN_VERTICAL_PARENT"
+        nested = merged.add_table(rows=1, cols=1)
+        nested.cell(0, 0).text = "TOKEN_VERTICAL_NESTED"
+        document.save(source)
+        expected = _docx_tokens(Document(str(source)))
+        output = self.root / "세로 병합.md"
+
+        process, result = self.run_reader(source, output)
+
+        self.assertEqual(0, process.returncode)
+        self.assertEqual("read", result["status"])
+        self.assertEqual(2, result["details"]["tables"])
+        rendered = output.read_text(encoding="utf-8")
+        self.assertEqual(expected, re.findall(r"TOKEN_[A-Z0-9_]+", rendered))
+        self.assertEqual(1, rendered.count("TOKEN_VERTICAL_NESTED"))
+
+    def test_docx_rectangular_merge_visits_nested_table_once(self):
+        source = self.root / "직사각 병합.docx"
+        document = Document()
+        table = document.add_table(rows=2, cols=2)
+        merged = table.cell(0, 0).merge(table.cell(1, 1))
+        merged.text = "TOKEN_RECTANGULAR_PARENT"
+        nested = merged.add_table(rows=1, cols=1)
+        nested.cell(0, 0).text = "TOKEN_RECTANGULAR_NESTED"
+        document.save(source)
+        expected = _docx_tokens(Document(str(source)))
+        output = self.root / "직사각 병합.md"
+
+        process, result = self.run_reader(source, output)
+
+        self.assertEqual(0, process.returncode)
+        self.assertEqual("read", result["status"])
+        self.assertEqual(2, result["details"]["tables"])
+        rendered = output.read_text(encoding="utf-8")
+        self.assertEqual(expected, re.findall(r"TOKEN_[A-Z0-9_]+", rendered))
+        self.assertEqual(1, rendered.count("TOKEN_RECTANGULAR_NESTED"))
+
+    def test_docx_nested_rectangular_merge_visits_deep_table_once(self):
+        source = self.root / "중첩 직사각 병합.docx"
+        document = Document()
+        outer = document.add_table(rows=1, cols=1)
+        nested = outer.cell(0, 0).add_table(rows=2, cols=2)
+        merged = nested.cell(0, 0).merge(nested.cell(1, 1))
+        merged.text = "TOKEN_INNER_MERGED_PARENT"
+        deepest = merged.add_table(rows=1, cols=1)
+        deepest.cell(0, 0).text = "TOKEN_INNER_MERGED_NESTED"
+        document.save(source)
+        expected = _docx_tokens(Document(str(source)))
+        output = self.root / "중첩 직사각 병합.md"
+
+        process, result = self.run_reader(source, output)
+
+        self.assertEqual(0, process.returncode)
+        self.assertEqual("read", result["status"])
+        self.assertEqual(3, result["details"]["tables"])
+        rendered = output.read_text(encoding="utf-8")
+        self.assertEqual(expected, re.findall(r"TOKEN_[A-Z0-9_]+", rendered))
+        self.assertEqual(1, rendered.count("TOKEN_INNER_MERGED_NESTED"))
+
+    def test_docx_equal_text_in_distinct_cells_is_not_deduplicated(self):
+        source = self.root / "동일 문자열 별개 셀.docx"
+        document = Document()
+        table = document.add_table(rows=1, cols=2)
+        for cell in table.rows[0].cells:
+            nested = cell.add_table(rows=1, cols=1)
+            nested.cell(0, 0).text = "TOKEN_LEGIT_REPEAT"
+        document.save(source)
+        expected = _docx_tokens(Document(str(source)))
+        output = self.root / "동일 문자열 별개 셀.md"
+
+        process, result = self.run_reader(source, output)
+
+        self.assertEqual(0, process.returncode)
+        self.assertEqual("read", result["status"])
+        self.assertEqual(3, result["details"]["tables"])
+        rendered = output.read_text(encoding="utf-8")
+        self.assertEqual(["TOKEN_LEGIT_REPEAT", "TOKEN_LEGIT_REPEAT"], expected)
+        self.assertEqual(expected, re.findall(r"TOKEN_[A-Z0-9_]+", rendered))
 
     def test_docx_extracts_body_content_control_paragraph_in_order(self):
         source = self.root / "내용 컨트롤.docx"
