@@ -145,9 +145,10 @@ class MajorBodyDraftContract(unittest.TestCase):
         skill = (REF.parent / "SKILL.md").read_text(encoding="utf-8")
         progress = section(skill, "## 진행 목록")
         for token in (
-                "특용작물 Ⅰ~Ⅵ", "과수 Ⅰ~Ⅳ", "낙농 1~12",
-                "원예환경시스템은 채택 목차 전체", "과수: Ⅰ~Ⅳ 네 장",
-                "낙농: 1~12 열두 장", "스킬의 남은 일로 표시하지 않는다",
+                "본문 Ⅰ~Ⅵ 초안", "특용작물 기준", "과수는 Ⅰ~Ⅳ",
+                "낙농은 1~12", "원예환경시스템은 채택 목차 전체로 바꿔 표시",
+                "과수: Ⅰ~Ⅳ 네 장", "낙농: 1~12 열두 장",
+                "스킬의 남은 일로 표시하지 않는다",
                 "⚑ 학생 몫 — 스킬 미지원", "전용 18시트 조건부"):
             with self.subTest(token=token):
                 self.assertIn(token, progress)
