@@ -229,6 +229,34 @@ class PeerFrontmatterTests(ContractCase):
         self.assertEqual(pages[1].count("(인)"), 3)
         self.assertIn("목    차", pages[2])
 
+    def test_fruit_preliminary_numbers_continue_from_cover_and_body_restarts(self):
+        from docx.oxml.ns import qn
+        text = self.manuscript("fruit_trees").replace(
+            "# Ⅰ. 머리말", "요약\n\n합성 요약 산문\n\n# Ⅰ. 머리말")
+        doc = self.convert("fruit_trees", text)
+        first, preliminary, body = doc.sections
+        first_number = first._sectPr.find(qn("w:pgNumType"))
+        self.assertIsNotNone(first_number)
+        self.assertEqual("1", first_number.get(qn("w:start")))
+        self.assertEqual("lowerRoman", first_number.get(qn("w:fmt")))
+        self.assertNotIn("PAGE", first.footer._element.xml)
+        number = preliminary._sectPr.find(qn("w:pgNumType"))
+        self.assertEqual("lowerRoman", number.get(qn("w:fmt")))
+        self.assertIsNone(number.get(qn("w:start")))
+        self.assertIn("PAGE", preliminary.footer._element.xml)
+        number = body._sectPr.find(qn("w:pgNumType"))
+        self.assertEqual("decimal", number.get(qn("w:fmt")))
+        self.assertEqual("1", number.get(qn("w:start")))
+
+    def test_fruit_without_preliminary_pages_still_restarts_body_at_one(self):
+        from docx.oxml.ns import qn
+        doc = self.convert("fruit_trees")
+        self.assertEqual(2, len(doc.sections))
+        number = doc.sections[-1]._sectPr.find(qn("w:pgNumType"))
+        self.assertEqual("decimal", number.get(qn("w:fmt")))
+        self.assertEqual("1", number.get(qn("w:start")))
+        self.assertEqual(1, len(doc.sections[-1]._sectPr.findall(qn("w:pgNumType"))))
+
     def test_horticulture_ht2_two_covers_submission_approval_and_notice(self):
         pages = self.pages(self.convert("hort_env_systems"))
         for page in pages[:2]:

@@ -528,15 +528,28 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
         if figure_entries or dairy_lists: entries.append(('그림 목차','gg_figures',0))
         entries += [(n['text'],n['_bookmark'],n['level']) for n in body_nodes if n['kind']=='heading' and n['level']<=2]
         contents(doc,entries,font)
-        def new_numbered_section(number_format):
+        # S01 counts cover, shared forms and contents before the summary (iv
+        # with a one-page contents). Continue rather than pinning iv: an
+        # overflowing contents page must also count. Other majors stay unchanged.
+        count_fruit_front = authorization.major_id == 'fruit_trees'
+        if count_fruit_front:
+            pg = OxmlElement('w:pgNumType')
+            pg.set(qn('w:start'), '1'); pg.set(qn('w:fmt'), 'lowerRoman')
+            doc.sections[0]._sectPr.append(pg)
+        def new_numbered_section(number_format, start=1):
             sec=doc.add_section(WD_SECTION.NEW_PAGE)
-            pg=OxmlElement('w:pgNumType');pg.set(qn('w:start'),'1');pg.set(qn('w:fmt'),number_format);sec._sectPr.append(pg)
+            if count_fruit_front:
+                inherited = sec._sectPr.find(qn('w:pgNumType'))
+                if inherited is not None: sec._sectPr.remove(inherited)
+            pg=OxmlElement('w:pgNumType')
+            if start is not None: pg.set(qn('w:start'), str(start))
+            pg.set(qn('w:fmt'),number_format);sec._sectPr.append(pg)
             sec.footer.is_linked_to_previous=False
             p=sec.footer.paragraphs[0];p.alignment=WD_ALIGN_PARAGRAPH.CENTER
             field=OxmlElement('w:fldSimple');field.set(qn('w:instr'),'PAGE');p._p.append(field)
             return sec
         if prelim or table_entries or figure_entries or dairy_lists:
-            new_numbered_section('lowerRoman')
+            new_numbered_section('lowerRoman', None if count_fruit_front else 1)
             if prelim:
                 p=doc.add_paragraph();p.alignment=WD_ALIGN_PARAGRAPH.CENTER
                 runs(p,'요약',font,20,True);bookmark(p,'gg_summary',9001)
