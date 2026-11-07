@@ -18,9 +18,8 @@ Path x case matrix (every cell is a subTest in the named test):
 
 T1: insect binding (declared without the output) -> unsupported_output;
     an unregistered ID -> unknown_major; the registered fruit_trees module
-    (no deliverable output declared) -> unsupported_output, directly and
-    through every CLI; a fruit ID against a specialty binding ->
-    major_binding_mismatch.  No output,
+    rejects specialty-only workbook profiles -> unsupported_finance_profile;
+    a fruit ID against a specialty binding -> major_binding_mismatch. No output,
     receipt or staging file; inputs and canonical bytes unchanged.
 T2: no ID -> major_id_required; unbound -> major_binding_required; explicit
     null -> major_id_invalid; spec vs context/--major -> major_id_conflict
@@ -259,7 +258,7 @@ class WorkbookWriterCase(_Base):
             ("t1-insect", insect, INSECTS, "unsupported_output"),
             ("t1-unregistered", bound, UNREGISTERED, "unknown_major"),
             ("t1-fruit-mismatch", bound, FRUIT, "major_binding_mismatch"),
-            ("t1-fruit-registered", fruit, FRUIT, "unsupported_output"),
+            ("t1-fruit-registered", fruit, FRUIT, "unsupported_finance_profile"),
             ("t2-no-id", bound, None, "major_id_required"),
             ("t2-unbound", unbound, SPECIALTY, "major_binding_required"),
         )
@@ -456,6 +455,8 @@ class FinanceAndDocxGuardTests(_Base):
                 before = self._tree_bytes(root)
                 with self.subTest(case=label, entry="calculate"):
                     self._held(reason, finance.calculate, spec, context=ctx)
+                if major == FRUIT and root == fruit:
+                    reason = "unsupported_finance_profile"
                 with self.subTest(case=label, entry="workbook"):
                     self._held(reason, finance.workbook, spec,
                                Path(root) / "wb.xlsx", context=ctx)
@@ -569,8 +570,6 @@ class FinanceAndDocxGuardTests(_Base):
                 ("t1-insect", insect, INSECTS, "unsupported_output"),
                 ("t1-unregistered", bound, UNREGISTERED, "unknown_major"),
                 ("t1-fruit-mismatch", bound, FRUIT, "major_binding_mismatch"),
-                ("t1-fruit-registered", self._fruit_project(), FRUIT,
-                 "unsupported_output"),
                 ("t2-no-id", bound, None, "major_id_required"),
                 ("t2-unbound", self._project(None), SPECIALTY,
                  "major_binding_required")):
@@ -640,8 +639,6 @@ class OfficeGuardTests(_Base):
         cases = (("t1-insect", insect, INSECTS, "unsupported_output"),
                  ("t1-unregistered", bound, UNREGISTERED, "unknown_major"),
                  ("t1-fruit-mismatch", bound, FRUIT, "major_binding_mismatch"),
-                 ("t1-fruit-registered", self._fruit_project(), FRUIT,
-                  "unsupported_output"),
                  ("t2-no-id", bound, None, "major_id_required"),
                  ("t2-unbound", unbound, SPECIALTY,
                   "major_binding_required"))

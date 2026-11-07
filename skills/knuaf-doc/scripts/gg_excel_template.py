@@ -69,6 +69,9 @@ def create_workbook(source: Path | None, out: Path, *, context=None,
     """Byte-copy the chosen workbook without erasing student inputs."""
     import gg_major_contract as mc
     authorization = mc.authorize_output(mc.OUTPUT_SCHOOL_WORKBOOK, context)
+    # The bundled X01 is the specialty 17-sheet form. Fruit/dairy forms are
+    # not byte-copies of it and stay held on this route.
+    mc.require_workbook_profile(authorization, "school_17_sheet_v1")
     source = select_source(source, authorization=authorization, template_ref=template_ref,
                            reference_inventory=reference_inventory)
     read_template(source)
@@ -550,7 +553,7 @@ def _check_map_layout(map_data: dict, source: Path) -> None:
 
 
 def inspect_source(source: Path, out_map: Path | None, report: Path | None,
-                   legacy_map: bool = False) -> dict:
+                   legacy_map: bool = False, *, workbook_profile: str | None = None) -> dict:
     source = resolve_source(source).resolve()
     # Shared read check first: an unreadable file stops here (blocked).
     detected = read_template(source).layout
@@ -559,6 +562,10 @@ def inspect_source(source: Path, out_map: Path | None, report: Path | None,
     if report and report.exists():
         raise FileExistsError(f"refusing to overwrite report: {report}")
     digest = sha256(source)
+    if legacy_map and detected == "x01":
+        if workbook_profile not in (None, "school_17_sheet_v1"):
+            raise ValueError("legacy X01 map requires school_17_sheet_v1")
+        workbook_profile = "school_17_sheet_v1"
     with zipfile.ZipFile(source) as z:
         shared = load_shared(z)
         sheets = workbook_sheets(z)
@@ -588,6 +595,7 @@ def inspect_source(source: Path, out_map: Path | None, report: Path | None,
     # ``detected`` comes from the shared read check above.
     result = {
         "schema": "gg-xlsx-template-map/v1",
+        "workbook_profile": workbook_profile,
         "entriesSource": "legacy" if legacy_map else "inventory",
         "source": {"path": str(source), "sha256": digest, "size": source.stat().st_size},
         "createdAt": datetime.now(timezone.utc).isoformat(),
@@ -617,7 +625,8 @@ def inspect_source(source: Path, out_map: Path | None, report: Path | None,
     if report:
         report.parent.mkdir(parents=True, exist_ok=True)
         report.write_text(json.dumps({k: result[k] for k in ("schema", "source", "sheets", "entries", "policy",
-                                                          "layout", "mapStatus", "mapReason", "entriesSource")},
+                                                          "layout", "mapStatus", "mapReason", "entriesSource",
+                                                          "workbook_profile")},
                                      ensure_ascii=False, indent=2), encoding="utf-8")
     return result
 
@@ -656,6 +665,7 @@ def wage_fill_map(source: Path) -> dict:
     if read_template(source).layout != "x01":
         raise ValueError("layout_variant_unsupported: wage observations require x01")
     return {"schema": "gg-xlsx-fill-map/v1",
+            "workbook_profile": "school_17_sheet_v1",
             "template": {"sha256": sha256(source)},
             "entries": [{"sheet": "8. 노무비계획", "range": "X26:Z31",
                          "role": "wage.observation", "period": "observation",
@@ -956,16 +966,37 @@ def _serialize_dom(xml_bytes: bytes, source_name: str) -> minidom.Document:
     return document
 
 
+def require_map_workbook_profile(map_data: dict, authorization) -> str:
+    """A reviewed, hash-bound map declares the school form, not sheet count.
+
+    Only the pre-profile specialty maps retain their historical meaning.
+    An explicit null/empty profile is never a legacy declaration.
+    """
+    import gg_major_contract as mc
+
+    profile = map_data.get("workbook_profile")
+    if "workbook_profile" not in map_data and authorization.major_id == "specialty_crops":
+        profile = "school_17_sheet_v1"
+    mc.require_workbook_profile(authorization, profile)
+    return profile
+
+
 def blank_copy(source: Path, map_path: Path, out: Path, allow_missing: bool = False, *, context=None) -> dict:
     import gg_major_contract as mc
 
     authorization = mc.authorize_output(mc.OUTPUT_SCHOOL_WORKBOOK, context)
-    mc.require_finance_profile(authorization, "school_17_sheet_v1")
     if out.exists():
         raise FileExistsError(f"refusing to overwrite output: {out}")
     map_data = json.loads(map_path.read_text(encoding="utf-8"))
     entries, _ = map_entries_for_source(map_data, source)
     _check_map_layout(map_data, source)
+    workbook_profile = require_map_workbook_profile(map_data, authorization)
+    from gg_school_excel import require_profile_structure
+    try:
+        require_profile_structure(source, workbook_profile)
+    except ValueError as error:
+        raise mc.OutputHeldError("workbook_structure_mismatch",
+                                 str(error)) from error
     out.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(source, "r") as zin:
         sheets = dict(workbook_sheets(zin))
@@ -997,8 +1028,11 @@ def blank_copy(source: Path, map_path: Path, out: Path, allow_missing: bool = Fa
                 reason = ent.get("reason", "mapped preserve cell")
                 preserved_by_sheet.setdefault(ent["sheet"], {}).update({r: reason for r in expanded})
         modified: dict[str, bytes] = {}
-        receipt = {"schema": "gg-xlsx-template-receipt/v1", "source": {"path": str(source.resolve()),
-                    "sha256": sha256(source), "size": source.stat().st_size},
+        receipt = {"schema": "gg-xlsx-template-receipt/v1",
+                   "workbook_profile": workbook_profile,
+                   "map": {"path": str(map_path.resolve()), "sha256": sha256(map_path)},
+                   "source": {"path": str(source.resolve()),
+                              "sha256": sha256(source), "size": source.stat().st_size},
                    "output": {"path": str(out.resolve())}, "cleared": [], "preserved": [],
                    "formulaCellsProtected": 0, "mergedCellsProtected": 0,
                    "formulaCachesInvalidated": 0, "ambiguousCount": 0, "missingCells": [],
@@ -1242,7 +1276,8 @@ def crop_label_map(source: Path, category: str, choices: dict | None = None) -> 
                                         "origin": "assumption"}})
     if choices:
         raise ValueError("choices name cells outside the label table: " + ", ".join(sorted(choices)))
-    fill_map = {"schema": "gg-xlsx-fill-map/v1", "template": {"sha256": digest}, "entries": entries}
+    fill_map = {"schema": "gg-xlsx-fill-map/v1", "workbook_profile": "school_17_sheet_v1",
+                "template": {"sha256": digest}, "entries": entries}
     fill_values = {"schema": "gg-xlsx-fill-values/v1", "values": values}
     return fill_map, fill_values
 
@@ -1426,6 +1461,7 @@ def cli(argv: list[str]) -> int:
     i.add_argument("--out-map", required=True, type=Path)
     i.add_argument("--report", type=Path)
     i.add_argument("--legacy-map", action="store_true", help="use the existing X01 map, not investigation candidates")
+    i.add_argument("--workbook-profile", help="reviewed school form profile; does not approve inventory")
     w = sp.add_parser("wage-map")
     w.add_argument("--source", required=True, type=Path)
     w.add_argument("--out-map", required=True, type=Path)
@@ -1508,7 +1544,8 @@ def cli(argv: list[str]) -> int:
                 json.dump(result, stream, ensure_ascii=False, indent=2)
             print(json.dumps({"status": "mapped", "map": str(args.out_map)}, ensure_ascii=False))
         elif args.cmd == "inspect":
-            r = inspect_source(args.source, args.out_map, args.report, legacy_map=args.legacy_map)
+            r = inspect_source(args.source, args.out_map, args.report, legacy_map=args.legacy_map,
+                               workbook_profile=args.workbook_profile)
             print(json.dumps({"status": "inspected", "source": r["source"], "entries": len(r["entries"]),
                               "entries_source": r["entriesSource"],
                               "sheets": len(r["sheets"]), "map": str(args.out_map),

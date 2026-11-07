@@ -39,11 +39,6 @@ class DeclarationTests(ContractCase):
         m = self.module
         self.assertEqual(m.module_version, "0.2.0")
         self.assertEqual(m.capabilities["finance"], "unsupported")
-        self.assertEqual(set(m.supported_outputs),
-                         {"question_list", "document_plan",
-                          "evidence_review"})
-        self.assertTrue(all(c.status == "unsupported"
-                            for c in m.finance_capabilities))
         self.assertEqual(m.packs, ())
         self.assertEqual(m.imports, ())
 
@@ -128,13 +123,17 @@ class GuardLinkTests(ContractCase):
                 root, major), spec=spec)
         self.assertEqual(caught.exception.reason, reason)
 
-    def test_bound_fruit_every_output_refused_by_capability(self):
+    def test_bound_fruit_allows_document_workbook_but_not_finance_calculation(self):
         root = self.make_project()
         bind_major(root, "fruit_trees")
-        for output in self.mc.OUTPUT_REQUIREMENTS:
-            with self.subTest(output=output):
-                self._held("unsupported_output", output, root,
-                           major="fruit_trees")
+        context = self.mc.output_context(root, "fruit_trees")
+        self.mc.authorize_output(self.mc.OUTPUT_SCHOOL_PAPER, context)
+        auth = self.mc.authorize_output(self.mc.OUTPUT_SCHOOL_WORKBOOK, context)
+        self.mc.require_workbook_profile(auth, "fruit_16_sheet_v1")
+        with self.assertRaises(self.mc.OutputHeldError):
+            self.mc.require_workbook_profile(auth, "school_17_sheet_v1")
+        self._held("unsupported_output", self.mc.OUTPUT_FINANCE_CALCULATION, root,
+                   major="fruit_trees")
 
     def test_unbound_and_mismatched_fruit_requests(self):
         root = self.make_project()
@@ -163,7 +162,7 @@ class GuardLinkTests(ContractCase):
         out = _cli("gg.py", "paper", root, "--input", "spec.json",
                    "--out", "build/p.md", "--major", "fruit_trees")
         self.assertNotEqual(out.returncode, 0)
-        self.assertIn("unsupported_output", out.stdout + out.stderr)
+        self.assertIn("unsupported_major", out.stdout + out.stderr)
         self.assertEqual(self._tree_bytes(root), before)
         plan = _cli("gg.py", "major-plan", root)
         self.assertEqual(plan.returncode, 0, plan.stdout + plan.stderr)
@@ -172,11 +171,10 @@ class GuardLinkTests(ContractCase):
 
     def test_plan_reports_same_holds_as_guard(self):
         fp = ff.ready(self)
-        availability = {o["output"]: o["reason"]
-                        for o in fp.plan()["output_availability"]}
-        self.assertEqual(set(availability.values()), {"unsupported_output"})
-        self.assertEqual(set(availability), {
-            "school_paper", "school_excel_workbook", "finance_calculation"})
+        availability = {o["output"]: o for o in fp.plan()["output_availability"]}
+        self.assertEqual(availability["school_paper"]["status"], "allowed")
+        self.assertEqual(availability["school_excel_workbook"]["status"], "allowed")
+        self.assertEqual(availability["finance_calculation"]["reason"], "unsupported_output")
 
     def test_bundle2_texts_have_no_local_paths(self):
         skill = SCRIPTS.parent

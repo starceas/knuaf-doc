@@ -153,11 +153,11 @@ class K302HeldGuidance(ContractCase):
     def test_unsupported_output_guidance(self):
         mc = runtime("gg_major_contract")
         root = self.make_project()
-        bind_major(root, "fruit_trees")
+        bind_major(root, "industrial_insects")
         with self.assertRaises(mc.OutputHeldError) as caught:
             mc.authorize_output(
                 mc.OUTPUT_SCHOOL_PAPER,
-                mc.output_context(root, "fruit_trees"))
+                mc.output_context(root, "industrial_insects"))
         self.assertEqual(caught.exception.reason, "unsupported_output")
         self.assertEqual(caught.exception.detail["guidance"],
                          mc.OUTPUT_GUIDANCE_UNSUPPORTED)

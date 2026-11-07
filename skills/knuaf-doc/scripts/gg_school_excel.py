@@ -36,6 +36,84 @@ SCHOOL_SHEETS = (
 YEAR_LABELS = "가나다라마"
 EVIDENCE_KEYS = ("area", "seedlings", "yield", "growth", "commodity")
 
+WORKBOOK_REFERENCE_SET = (
+    Path(__file__).resolve().parents[1] / "references"
+    / "workbook-reference-set.json"
+)
+_SHA256 = re.compile(r"[0-9a-f]{64}\Z")
+
+def profile_structure(profile):
+    """Registered sheet structure for a workbook profile, or None.
+
+    Only profiles registered in the shipped reference set are
+    structure-bound. Horticulture keeps its dedicated transform receipt and
+    specialty crops keep the historical render route; neither is opened by
+    this common gate.
+    """
+    try:
+        data = json.loads(WORKBOOK_REFERENCE_SET.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as error:
+        raise ValueError("workbook reference set unreadable") from error
+    for entry in data.get("workbook_profiles") or []:
+        if not isinstance(entry, dict) or entry.get("profile") != profile:
+            continue
+        sheets = entry.get("sheets")
+        digest = entry.get("sha256")
+        formulas = entry.get("formula_fingerprints")
+        if (not isinstance(sheets, list) or not sheets
+                or any(not isinstance(name, str) or not name for name in sheets)
+                or not isinstance(digest, str) or not _SHA256.match(digest)
+                or not isinstance(formulas, dict) or set(formulas) != set(sheets)
+                or any(not isinstance(value, str) or not _SHA256.fullmatch(value)
+                       for value in formulas.values())):
+            raise ValueError("workbook profile structure invalid: " + str(profile))
+        return {"sha256": digest, "sheets": list(sheets),
+                "formula_fingerprints": dict(formulas), "label": entry.get("label")}
+    return None
+
+def formula_fingerprints(book):
+    """Hash sorted (address, expanded formula) pairs per sheet; ignore values."""
+    result = {}
+    for sheet in book:
+        formulas = sorted((cell.coordinate, cell.value)
+                          for row in sheet for cell in row if cell.data_type == "f")
+        raw = json.dumps(formulas, ensure_ascii=False, separators=(",", ":"))
+        result[sheet.title] = hashlib.sha256(raw.encode("utf-8")).hexdigest()
+    return result
+
+
+def require_profile_structure(path, profile):
+    """Open the real workbook and require its registered school form.
+
+    A caller-written profile label never substitutes for this check. Sheet
+    order and formula fingerprints must match; student values may differ.
+    Unregistered profiles are left to their own verifier.
+    """
+    expected = profile_structure(profile)
+    if expected is None:
+        return
+    from openpyxl import load_workbook
+
+    try:
+        book = load_workbook(path, read_only=True)
+    except Exception as error:
+        raise ValueError("workbook structure unreadable: %s" % error) from error
+    try:
+        observed = list(book.sheetnames)
+        if observed != expected["sheets"]:
+            raise ValueError(
+                "workbook structure mismatch for %s: %d sheets do not match "
+                "the registered %d-sheet school form"
+                % (profile, len(observed), len(expected["sheets"])))
+        fingerprints = formula_fingerprints(book)
+        changed = [name for name in observed
+                   if fingerprints[name] != expected["formula_fingerprints"][name]]
+        if changed:
+            raise ValueError("workbook formula fingerprint mismatch for %s: %s"
+                             % (profile, ", ".join(changed)))
+    finally:
+        book.close()
+
 
 def q(name):
     return "'" + name.replace("'", "''") + "'"
@@ -1885,13 +1963,16 @@ def _a26_year(raw):
     return int(m.group(1)) if m else None
 
 
-def crosscheck_body_workbook(text, path, scope):
+def crosscheck_body_workbook(text, path, scope, *, workbook_profile=None):
     """Crosscheck canonical body claims against recalculated workbook cells.
 
     Each issue names the body claim location and the workbook sheet!cell that
     contradicts it.  A missing or non-numeric cached value is reported as
     ``blocked`` so an unrecalculated workbook cannot masquerade as a mismatch.
     """
+    if workbook_profile != "school_17_sheet_v1":
+        return [{"location": "body", "status": "not_checked",
+                 "reason": "17시트 좌표 대조 미지원: school_17_sheet_v1 전용"}]
     if not isinstance(text, str):
         return [{"location": "body", "status": "fail", "reason": "본문 텍스트 없음"}]
     scope = str(scope or "").strip()
@@ -2125,6 +2206,17 @@ def inspect_outputs(root, p, lineage=None):
             continue
         if (lineage.get(oid) or {}).get("state") == "history":
             continue
+        profile = output.get("workbook_profile")
+        if profile != "school_17_sheet_v1":
+            issues.append(("school_excel_17_scope",
+                           "17시트 검사 미지원/미실행: " + str(profile or "프로필 근거 없음")))
+            if output.get("layout_kind") != "provided_template":
+                try:
+                    from gg_excel_template import read_template
+                    read_template(local(root, output["path"]))
+                except (OSError, ValueError, KeyError) as error:
+                    issues.append(("xlsx_integrity", str(error)))
+                continue
         try:
             from openpyxl import load_workbook
         except ImportError:
@@ -2212,8 +2304,8 @@ def inspect_outputs(root, p, lineage=None):
                 wb_formula = load_workbook(path, read_only=True, data_only=False)
                 try:
                     names = wb_formula.sheetnames
-                    if len(names) != 17:
-                        raise ValueError("제공 템플릿 17시트 무결성 불일치")
+                    if profile == "school_17_sheet_v1" and len(names) != 17:
+                        raise ValueError("school_17_sheet_v1 17시트 무결성 불일치")
                     error_tokens = re.compile(
                         r"#(?:REF!|VALUE!|DIV/0!|N/A|NAME\?|NUM!|NULL!|SPILL!|CALC!|BLOCKED!|CONNECT!|UNKNOWN!)"
                     )

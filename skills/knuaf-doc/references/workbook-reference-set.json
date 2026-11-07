@@ -28,6 +28,33 @@
       "authority": "user_statement"
     }
   ],
+  "workbook_profiles": [
+    {
+      "profile": "fruit_16_sheet_v1",
+      "major": "fruit_trees",
+      "label": "과수전공 2026 학교 엑셀 양식 (양식최종본)",
+      "sha256": "5f2896dd0c47d9b90a1ec3da30128ea0a9aa47f72aa79156a57bfd7bfd271374",
+      "formula_fingerprints": {
+        "1.재무상태": "8512564ca6414d6be0363b3247bfa798b79793fc7c9a237949128b48c8d6089a",
+        "2.영농목표": "bc5710f5bcb4ceb4d05932228430bd82d2882561cadf616cc954d09215c83df5",
+        "3.투자계획": "d9372e63539fdb07d0cfa3f1f4e491f59b5d1660494d11d869f82ec1f0ce518e",
+        "4.원리상환": "e7129c3c025faa87808a8c5f4a0b0bede455bf4e8454fc9c51530431ca0f5321",
+        "5.판매계획": "e25b824e1b4ce485942a7da4b4d670ea7b072adbcc01018ffaa76f5a78e6fc1f",
+        "6.생산계획": "198777e77e460d74662f7fa7eda96e3f3c36f377685179a9f8cdebdcf5b46a65",
+        "7.자재소요": "8ff6ff9b6b981ee15177f5332b2296fa0a027a28945ccc084742987d6f2dfe70",
+        "8.노무비계획": "e865dd7e6e96d764b6d81b37f32dc8c81d9a265a1c02bee49f3946961ecef549",
+        "9.경비계획": "24f8af4c953793510fb7245c5dedec090e94508620a8bd3fb93e447ade6be2a9",
+        "10.감가상각": "3c0f4965ffb8eefb32409913e8773a687cc3be839cfc9225e1ec5292e8ad7ae2",
+        "11.생산원가": "6de5abf9db6a27509c9cda9d6cc11420944236f7a4d802165e473d7cf5bff442",
+        "12.손익계획": "00b8da6628bdf2c37018755da51038bce8b5e4023f83fb2ebb3c1eefd008746c",
+        "13.대차대조": "61c923da199255af8208aba6997c4da146d78ff7a1500704b0b9e1a0d4b8e16c",
+        "14.현금흐름": "9baeea0cf99f732c210c812ae5601c88769f10859416a8f63b1130db3f9127f5",
+        "15.소득분석": "acca6a943bbc3cffea5c697121be4abab18e7c0b9b728a2c63164c11979fc1d9",
+        "_____data": "c05bbe762ddf1e0137ab11163c7f554a4f4bd85596eeacd095bf06325c320d94"
+      },
+      "sheets": ["1.재무상태", "2.영농목표", "3.투자계획", "4.원리상환", "5.판매계획", "6.생산계획", "7.자재소요", "8.노무비계획", "9.경비계획", "10.감가상각", "11.생산원가", "12.손익계획", "13.대차대조", "14.현금흐름", "15.소득분석", "_____data"]
+    }
+  ],
   "derived_assets": [
     {
       "asset_id": "finance-template-x01-blank",

@@ -160,7 +160,8 @@ class WorkbookCloseTests(ContractCase):
             opened = []
             with _track_workbook_closes(opened):
                 with self.assertRaises(ValueError):
-                    sheet.crosscheck_body_workbook("합성", path, "합성")
+                    sheet.crosscheck_body_workbook("합성", path, "합성",
+                                                  workbook_profile="school_17_sheet_v1")
         self.assertEqual(1, len(opened))
         self.assertEqual(1, opened[0].close.call_count)
         self.assertIsNone(opened[0]._archive.fp)

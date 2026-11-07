@@ -116,7 +116,7 @@ class OrchardTests(ContractCase):
         forbidden = ("price", "revenue", "cost", "amount", "sales")
         self.assertFalse(any(k in json.dumps(out).lower() for k in forbidden))
         mc = runtime("gg_major_contract")
-        for kind in ("school_paper", "school_excel_workbook", "finance_calculation"):
+        for kind in ("finance_calculation",):
             with self.assertRaises(mc.OutputHeldError) as caught:
                 mc.authorize_output(kind, mc.output_context(self.fp.root,
                                     "fruit_trees"))
