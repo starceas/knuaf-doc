@@ -2547,7 +2547,7 @@
       "last_changed": "WB6"
     },
     "tests/test_hort_body_docx.py": {
-      "after_sha256": "8a2d1afcce41854bffdb3633592beffb39f3a369ce529d824999fd241f66b2ad",
+      "after_sha256": "bf9284327a4747f1d9e5bb77789e334dfa3f688312f5f88b2fbe255a7baab9e9",
       "before_sha256": null,
       "first_changed": "P28",
       "owner": "P28",

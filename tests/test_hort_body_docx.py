@@ -56,6 +56,28 @@ FINANCE_SLOTS = (
 
 SUMMARY_FINANCE = "사업 규모는 " + FINANCE + "로 둔다."
 
+# HT2 부록 1–18. 엑셀 사실 등록 전에는 각 부록이 자리 표시 하나로만 선다.
+APPENDICES = (
+    "부록 1. 자산조사",
+    "부록 2. 중장기 영농목표",
+    "부록 3. 모델농장분석",
+    "부록 4. 투자계획",
+    "부록 5. 원리금 상환계획",
+    "부록 6. 시설계획",
+    "부록 7. 판매계획",
+    "부록 8. 생산계획",
+    "부록 9. 영농자재 구매계획",
+    "부록 10. 작부체계",
+    "부록 11. 인건비 계획",
+    "부록 12. 경비계획",
+    "부록 13. 감가상각비 계획",
+    "부록 14. 생산원가계획",
+    "부록 15. 손익계획",
+    "부록 16. 수익성 분석",
+    "부록 17. 추정대차대조표",
+    "부록 18. 현금흐름계획",
+)
+
 BODY = {heading: "합성 " + heading + " 문단이다." for heading in CHAPTERS}
 for heading in FINANCE_SLOTS:
     BODY[heading] = BODY[heading] + " 수치는 " + FINANCE + "로 둔다."
@@ -73,7 +95,8 @@ FIGURE_CAPTION = "그림 1. 합성 재배 도해"
 
 # 목차 첫 구역에 실려야 하는 항목. 그림 캡션이 하나 있으므로 그림 목차도
 # 표 목차 바로 뒤에 온다(HT2 순서). 후미 제목도 목차에 실린다.
-BACK_MATTER = ("참고문헌", "감사의 글")
+# HT2는 부록을 목차 한 줄로만 싣고, 부록 개별 제목은 목차에 넣지 않는다.
+BACK_MATTER = ("참고문헌", "감사의 글", "부록")
 CONTENTS = ["요약", "표 목차", "그림 목차"] + list(CHAPTERS) + list(BACK_MATTER)
 
 
@@ -96,7 +119,9 @@ def manuscript(fm, major="hort_env_systems", **metadata):
         if heading == "3. 생산기술 및 재배방법":
             out += ["", TABLE_CAPTION, ""] + list(TABLE)
     out += ["", "# 참고문헌", "", "가상기관. 합성 서지. 2024.",
-            "", "# 감사의 글", "", "합성 감사 문단이다."]
+            "", "# 감사의 글", "", "합성 감사 문단이다.", "", "# 부록"]
+    for title in APPENDICES:
+        out += ["", "### " + title, "", FINANCE]
     return "\n".join(out)
 
 
@@ -236,7 +261,27 @@ class HortBodyDocxTests(ContractCase):
         self.assertEqual(
             sum(text.count(FINANCE) for text in
                 (p.text for p in doc.paragraphs)),
-            len(FINANCE_SLOTS) + 1)
+            len(FINANCE_SLOTS) + 1 + len(APPENDICES))
+
+    def test_appendix_titles_and_placeholders_are_assembled(self):
+        doc = self.convert()
+        sections = self.sections(doc)
+        headings = [paragraph.text.strip() for paragraph in doc.paragraphs
+                    if paragraph.style is not None
+                    and paragraph.style.name.startswith("Heading")]
+        appendix_headings = [text for text in headings
+                             if re.fullmatch(r"부록 \d+\. .+", text)]
+        self.assertEqual(tuple(appendix_headings), APPENDICES)
+        for title in APPENDICES:
+            with self.subTest(appendix=title):
+                body = "\n".join(sections[title])
+                self.assertEqual(body.count(FINANCE), 1)
+                self.assertEqual(MONEY.findall(body), [])
+        self.assertEqual(headings.count("부록"), 1)
+        entries = self.contents_entries(doc)
+        self.assertEqual(entries[-1], "부록")
+        self.assertEqual([entry for entry in entries
+                          if re.fullmatch(r"부록 \d+\. .+", entry)], [])
 
     def test_another_major_marker_is_held(self):
         text = manuscript(self.fm, department="원예학부 과수전공")
