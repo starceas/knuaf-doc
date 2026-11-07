@@ -163,6 +163,66 @@ class OfficeRecoveryTests(ContractCase):
         self.assertIn("그대로", payload["note"])
 
 
+class ExcelCalculationModeTests(unittest.TestCase):
+    """Execute the generated run body's Excel operations against a tiny model.
+
+    No Office dependency: zero books reports missing, opening exposes the
+    workbook's mode. Native AppleScript execution is recorded separately.
+    """
+
+    def execute(self, mode, existing=0, owned=True):
+        script = runtime("gg_office_session").EXCEL_APPLESCRIPT_TEMPLATE
+        body = script.split("on run argv", 1)[1].split("on error messageText", 1)[0]
+        books = existing
+        events = []
+        for raw in body.splitlines():
+            line = raw.strip()
+            if line.startswith('if (count of workbooks) is not 0'):
+                if books:
+                    return "existing_documents", events, books
+            elif line.startswith("open workbook "):
+                books += 1
+                events.append("open")
+            elif line == "my requireOwned(jobHFS, jobPOSIX)":
+                if books != 1 or not owned:
+                    return "owned_path_not_found", events, books
+                events.append("owned")
+            elif line.startswith("if calculation is not calculation automatic"):
+                current = mode if books else None
+                events.append(("mode", current))
+                if current != "automatic":
+                    return "manual_calculation_not_supported", events, books
+            elif line == "calculate":
+                events.append("calculate")
+            elif line.startswith("save "):
+                events.append("save")
+            elif line.startswith("close "):
+                books -= 1
+                events.append("close")
+        return "closed", events, books
+
+    def test_zero_books_missing_mode_does_not_block_automatic_copy(self):
+        result, events, remaining = self.execute("automatic")
+        self.assertEqual("closed", result)
+        self.assertEqual(["open", "owned", ("mode", "automatic"), "owned",
+                          "calculate"], events[:5])
+        self.assertEqual(0, remaining)
+
+    def test_manual_or_missing_mode_preserves_open_copy_without_writes(self):
+        for mode in ("manual", None):
+            with self.subTest(mode=mode):
+                result, events, remaining = self.execute(mode)
+                self.assertEqual("manual_calculation_not_supported", result)
+                self.assertEqual(["open", "owned", ("mode", mode)], events)
+                self.assertEqual(1, remaining)
+
+    def test_foreign_books_are_not_opened_or_read_for_mode(self):
+        self.assertEqual(("existing_documents", [], 1),
+                         self.execute("automatic", existing=1))
+        self.assertEqual(("owned_path_not_found", ["open"], 1),
+                         self.execute("automatic", owned=False))
+
+
 class ConventionTests(unittest.TestCase):
     def test_text_io_and_execution_guards(self):
         source = script_source("gg_office_session.py")

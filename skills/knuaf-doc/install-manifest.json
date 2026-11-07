@@ -163,7 +163,7 @@
   "scripts/gg_major_contract.py": "157a0a3bc9b6cdf7f0b6d733ad8413e17e64edbdb14ed3d4a69b472f608db8c8",
   "scripts/gg_manuscript_intake.py": "d8c61627a320315729b24eb358d3433a6eb4c590cc72719b80aed5d96d85e1ac",
   "scripts/gg_office.py": "443bb8f74900a95137bbb48d804a9da06ef481570bcdebe5d3318d1d8dffad2b",
-  "scripts/gg_office_session.py": "a0809995452b79d9c2ab6f4a4eac83b4ad6fb258476e10c9b3f018e5c81ea41c",
+  "scripts/gg_office_session.py": "f492dc268d83f9337e3011bb894cfaef30ad5b7e5c752d370c3126fa05f8195f",
   "scripts/gg_office_win.py": "539007af5a58d7d68f353037f39e4c321cd588563f99f69407cc772ea55b1b49",
   "scripts/gg_orchard_production.py": "a66466e1ea91aedf4c9e1411c0a9e48bbe7cca279c68fff3e1ca760307af52d7",
   "scripts/gg_price_assumptions.py": "0ce493232cc03187ab45265b3b8276b751eb479c349023d46e7f9baee7958d4e",
