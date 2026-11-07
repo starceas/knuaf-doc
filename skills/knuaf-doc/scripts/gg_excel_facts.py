@@ -58,7 +58,9 @@ def build_registration(root, workbook, receipt, mapping, *, source_id, context):
 
     ``mapping`` is a gg-xlsx-fact-map/v1 object containing workbook.sha256,
     receipt.sha256, workbook_profile and nonempty cells. Each row declares
-    fact_id/field_id/sheet/cell/period/unit/scope. Monetary units are 원/천원.
+    fact_id/field_id/sheet/cell/period/unit/scope. Monetary units are 원/천원,
+    so every fact carries ``measure`` = monetary_total/KRW in that unit;
+    ``field_id`` stays the body label the crosscheck reads.
     Only native successful saved/recalculated Excel proof is accepted; an
     operation receipt, Python-generated caches or absent caches cannot stand
     in for a native run. This proves provenance, not formula correctness.
@@ -168,6 +170,14 @@ def build_registration(root, workbook, receipt, mapping, *, source_id, context):
             claims[fid] = claim
             facts.append({"collection": "facts", "value": {
                 "id": fid, **claim, "value_type": "decimal", "verification": "source_located",
+                # Every row this adapter admits is a 원/천원 cell, so the
+                # fact is a KRW monetary total.  Declaring the measure is
+                # what lets fact_semantics classify it; without it the fact
+                # is an unmetadated legacy fact and submission is refused
+                # even when the body crosscheck matches.  field_id stays the
+                # body label that crosscheck looks up.
+                "measure": {"kind": "monetary_total", "currency": "KRW",
+                            "unit": unit},
                 "source_refs": [{"id": source_id, "revision": source_revision,
                                  "claim_id": fid, "locator": locator}],
                 "excel_provenance": {"workbook_sha256": actual, "workbook_profile": profile,

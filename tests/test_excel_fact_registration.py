@@ -103,6 +103,31 @@ class ExcelFactRegistrationTests(ContractCase):
         self.assertTrue(any(row["check_id"] == "body_finance_crosscheck" and row["status"] == "fail"
                             for row in rows))
 
+    def test_registered_fact_carries_a_measure_that_satisfies_fact_semantics(self):
+        """W5b: a registered Excel amount declares its economic measure.
+
+        Without one the fact is an unmetadated legacy fact, so
+        ``fact_semantics`` reports it blocked and submission is refused even
+        though the body crosscheck matched.  The adapter admits only 원/천원
+        cells, so every fact it registers is a KRW monetary total; the
+        ``field_id`` stays the body label the crosscheck looks up."""
+        change = self.build()
+        self.core.apply(self.root, change, self.core.load(self.root)["revision"])
+        project = self.core.load(self.root)
+        self.assertEqual(
+            {"kind": "monetary_total", "currency": "KRW", "unit": "천원"},
+            project["facts"]["sales"]["measure"])
+        write_text(self.root, "sections/body.md", "합성농장 2026년 매출액은 250 천원이다.")
+        self.core.apply(self.root, {"request_id": "body", "ops": [
+            section_op("body", "계획", "sections/body.md")]}, project["revision"])
+        rows = self.core.checks(self.root, self.core.load(self.root))
+        self.assertEqual([], [row for row in rows
+                              if row["check_id"] == "fact_semantics"
+                              and row["target"] == "sales"])
+        self.assertEqual([], [row for row in rows
+                              if row["check_id"] == "body_finance_crosscheck"
+                              and row["target"] == "sales"])
+
     def test_absent_error_string_boolean_and_nonfinite_caches_are_held(self):
         for value, kind in ((None, None), ("#DIV/0!", "e"), ("250", "str"),
                             ("1", "b"), ("NaN", None), ("INF", None), ("not-a-number", None)):
