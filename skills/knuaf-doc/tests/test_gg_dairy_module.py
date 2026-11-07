@@ -42,7 +42,9 @@ class DairyModuleTests(unittest.TestCase):
             rationale = sections["chapter_%02d" % number]["rationale"]
             self.assertIn("한우 대응 항목으로 치환", rationale)
             self.assertIn("references/dairy/school-toc.md", rationale)
-        for output in ("paper", "export", "school_excel_workbook"):
+        workbook = mc.route(registry, "dairy", "document", output="school_excel_workbook")
+        self.assertEqual(workbook.major_id, "dairy")
+        for output in ("paper", "export"):
             with self.assertRaises(mc.UnsupportedOutputError):
                 mc.route(registry, "dairy", "document", output=output)
     def test_major_plan_reports_switch_and_filters_selected_questions(self):

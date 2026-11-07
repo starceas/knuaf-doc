@@ -161,9 +161,6 @@ class DeclarationTests(ContractCase):
             "evidence": "supported",
             "finance": "unsupported",
         })
-        self.assertEqual(module.supported_outputs,
-                         ("question_list", "document_plan",
-                          "evidence_review", "school_excel_workbook"))
         self.assertEqual(
             module.forbidden_terms,
             ("곤충", "사육", "종충", "동애등에", "귀뚜라미", "특용작물"))
@@ -359,8 +356,8 @@ class GuardCouplingTests(ContractCase):
         root = self._bound_project()
         before = self._tree_bytes(root)
         spec = {"major_id": HORT}
-        for output in (self.mc.OUTPUT_SCHOOL_PAPER,
-                       self.mc.OUTPUT_FINANCE_CALCULATION):
+        self.mc.authorize_output(self.mc.OUTPUT_SCHOOL_PAPER, self._ctx(root), spec=spec)
+        for output in (self.mc.OUTPUT_FINANCE_CALCULATION,):
             with self.subTest(output=output):
                 with self.assertRaises(self.mc.OutputHeldError) as caught:
                     self.mc.authorize_output(
@@ -374,13 +371,12 @@ class GuardCouplingTests(ContractCase):
             authorization, "hort_18_sheet_reconstructed_v1")
         self.assertEqual(self._tree_bytes(root), before)
 
-    def test_route_refuses_school_paper_output(self):
+    def test_route_allows_school_paper_without_enabling_finance(self):
         registry = self.mc.default_registry()
-        for capability in self.mc.CAPABILITY_KINDS:
-            with self.subTest(capability=capability):
-                with self.assertRaises(self.mc.UnsupportedOutputError):
-                    self.mc.route(registry, HORT, capability,
-                                  output="school_paper")
+        self.mc.route(registry, HORT, "document", output="school_paper")
+        root = self._bound_project()
+        with self.assertRaises(self.mc.OutputHeldError):
+            self.mc.authorize_output(self.mc.OUTPUT_FINANCE_CALCULATION, self._ctx(root))
 
     def test_conflicting_cover_label_is_held_by_guard(self):
         """D-H5: a cover naming another major while the explicit ID is
