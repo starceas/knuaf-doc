@@ -16,6 +16,7 @@ import unittest
 from dataclasses import replace
 from pathlib import Path
 from types import MappingProxyType
+from unittest import mock
 
 TESTS = Path(__file__).resolve().parent
 SCRIPTS = TESTS.parent / "scripts"
@@ -103,12 +104,126 @@ class TestStatesAndDeclarations(unittest.TestCase):
                 capabilities={},
             )
 
+
+
+class TestWorkbookProfileAuthorization(unittest.TestCase):
+    def setUp(self):
+        self.modules = mc.default_registry()
+
+    def _authorization(self, major_id, *, module_version=None,
+                       contract_version=None):
+        module = self.modules.resolve(major_id)
+        return mc.OutputAuthorization(
+            output=mc.OUTPUT_SCHOOL_WORKBOOK,
+            major_id=major_id,
+            module_version=module_version or module.module_version,
+            contract_version=contract_version or mc.CONTRACT_VERSION,
+            project_revision=1,
+            binding_evidence="synthetic",
+        )
+
+    def test_workbook_profile_declarations_are_immutable_and_major_specific(self):
+        expected = {
+            "specialty_crops": ("school_17_sheet_v1",),
+            "fruit_trees": ("fruit_16_sheet_v1",),
+            "hort_env_systems": (),
+            "dairy": ("dairy_hanwoo_28_sheet_v1",),
+        }
+        for major_id, profiles in expected.items():
+            with self.subTest(major_id=major_id):
+                declared = mc.workbook_profiles_for(
+                    self._authorization(major_id))
+                self.assertEqual(declared, profiles)
+                self.assertIsInstance(declared, tuple)
+                with self.assertRaises(AttributeError):
+                    declared.append("unauthorized")
+
+    def test_declared_workbook_profiles_require_matching_supported_capability(self):
+        allowed = {
+            "specialty_crops": "school_17_sheet_v1",
+            "fruit_trees": "fruit_16_sheet_v1",
+            "dairy": "dairy_hanwoo_28_sheet_v1",
+        }
+        for major_id, profile in allowed.items():
+            with self.subTest(major_id=major_id):
+                self.assertIsNone(mc.require_workbook_profile(
+                    self._authorization(major_id), profile))
+        for profile in (
+            "school_17_sheet_v1",
+            "hort_18_sheet_reconstructed_v1",
+        ):
+            with self.subTest(major_id="hort_env_systems", profile=profile):
+                with self.assertRaises(mc.OutputHeldError) as caught:
+                    mc.require_workbook_profile(
+                        self._authorization("hort_env_systems"), profile)
+                self.assertEqual(caught.exception.reason,
+                                 "unsupported_finance_profile")
+        with self.subTest(case="declared-but-unsupported"):
+            module = self.modules.resolve("fruit_trees")
+            authorization = self._authorization("fruit_trees")
+            changed = replace(module, finance_capabilities=tuple(
+                replace(capability, status="unsupported")
+                if capability.profile == "fruit_16_sheet_v1" else capability
+                for capability in module.finance_capabilities))
+            with mock.patch.object(mc, "default_registry",
+                                   return_value=mc.ModuleRegistry(
+                                       (changed,),
+                                       pack_owner=mc.load_pack_owner())):
+                with self.assertRaises(mc.OutputHeldError) as caught:
+                    mc.require_workbook_profile(
+                        authorization, "fruit_16_sheet_v1")
+            self.assertEqual(caught.exception.reason,
+                             "unsupported_finance_profile")
+        with self.subTest(case="capability-without-workbook-declaration"):
+            module = self.modules.resolve("specialty_crops")
+            changed = replace(module, workbook_profiles=())
+            authorization = self._authorization("specialty_crops")
+            with mock.patch.object(mc, "default_registry",
+                                   return_value=mc.ModuleRegistry(
+                                       (changed,),
+                                       pack_owner=mc.load_pack_owner())):
+                with self.assertRaises(mc.OutputHeldError) as caught:
+                    mc.require_workbook_profile(
+                        authorization, "school_17_sheet_v1")
+            self.assertEqual(caught.exception.reason,
+                             "unsupported_finance_profile")
+
+    def test_invalid_and_stale_workbook_authorizations_fail_closed(self):
+        with self.assertRaises(mc.OutputHeldError) as caught:
+            mc.workbook_profiles_for(None)
+        self.assertEqual(caught.exception.reason,
+                         "workbook_profile_authorization_required")
+        forged = replace(self._authorization("fruit_trees"),
+                         major_id="unregistered_probe_major")
+        with self.assertRaises(mc.OutputHeldError) as caught:
+            mc.workbook_profiles_for(forged)
+        self.assertEqual(caught.exception.reason,
+                         "workbook_profile_authorization_stale")
+        stale_module = self._authorization("fruit_trees",
+                                            module_version="0.0.0")
+        with self.assertRaises(mc.OutputHeldError) as caught:
+            mc.workbook_profiles_for(stale_module)
+        self.assertEqual(caught.exception.reason,
+                         "workbook_profile_authorization_stale")
+        stale_contract = self._authorization(
+            "fruit_trees", contract_version="stale-contract")
+        with self.assertRaises(mc.OutputHeldError) as caught:
+            mc.require_workbook_profile(stale_contract,
+                                        "fruit_16_sheet_v1")
+        self.assertEqual(caught.exception.reason,
+                         "workbook_profile_authorization_stale")
+        bad_profile = self._authorization("fruit_trees")
+        with self.assertRaises(mc.OutputHeldError) as caught:
+            mc.require_workbook_profile(bad_profile, "")
+        self.assertEqual(caught.exception.reason,
+                         "unsupported_finance_profile")
+
+
+class TestBindingAndRouting(unittest.TestCase):
     def test_empty_slot_preserved(self):
         ii = registry().resolve("industrial_insects")
         self.assertEqual(ii.packs, ())
 
-
-class TestBindingAndRouting(unittest.TestCase):
     def setUp(self):
         self.reg = registry()
 

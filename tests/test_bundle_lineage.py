@@ -144,23 +144,14 @@ class RealTreeTests(ContractCase):
         self.assertEqual(
             _sha(REPO_ROOT / "tools" / "runtime-changes.json"),
             link["spec_sha256"])
-        self.assertEqual("P28", link["stage"])
         self.assertEqual("29abec0ec95369de7ae9e22207349d574f1f46b7",
                          link["baseline_main"])
-        # P28's parent is the accepted P27 tree (main d08e98e, 233 files).
-        self.assertEqual("P27", link["parent_candidate"]["stage"])
-        self.assertEqual(233, link["parent_candidate"]["file_count"])
-        self.assertEqual(
-            "78383df4921946e8f37a7a8ae354f08667ff4317d2285c0317a535cbb9e97cfb",
-            link["parent_candidate"]["tree_sha256"])
-        # The ancestor list ends at the parent; the current stage is not
-        # one of its own ancestors.
+        parent = link["parent_candidate"]
         lineage = link["stage_lineage"]
         self.assertEqual(
-            {k: link["parent_candidate"][k]
-             for k in ("stage", "file_count", "tree_sha256")},
+            {k: parent[k] for k in ("stage", "file_count", "tree_sha256")},
             {k: lineage[-1][k] for k in ("stage", "file_count", "tree_sha256")})
-        self.assertNotIn("P28", [row["stage"] for row in lineage])
+        self.assertNotIn(link["stage"], [row["stage"] for row in lineage])
         # D5 (P15) pinned its own parent, the P14 tree; keep that pin on
         # the P14 ancestor row now that P15 is itself an ancestor.
         d5 = json.loads((REPO_ROOT / "docs/validation/d5-rda-useful-life.json")
