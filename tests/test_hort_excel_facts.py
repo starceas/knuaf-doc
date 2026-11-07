@@ -104,6 +104,22 @@ class HortExcelFactRegistrationTests(ContractCase):
         self.assertEqual(held.exception.reason, "hort_transform_receipt_invalid")
         self.assertEqual(before, self._tree_bytes(self.root))
 
+    def test_native_receipt_with_failure_flags_is_held(self):
+        # The shared profile check refuses a receipt that records an engine
+        # error, a nonzero exit or stderr; the horticulture chain must keep
+        # that refusal instead of trusting the success markers on top of it.
+        original = json.loads(self.chain.native_rec.read_text(encoding="utf-8"))
+        cases = {"error": "synthetic conversion failure",
+                 "returncode": 1,
+                 "engine_stderr": "synthetic Excel failure"}
+        for field, value in cases.items():
+            native = dict(original, **{field: value})
+            hashes = self.stage(native=native)
+            with self.subTest(field=field):
+                held = self._held(lambda: self.build(self.mapping(hashes)))
+                self.assertEqual(held.reason, "hort_transform_receipt_invalid")
+                self.assertIn("failed run", str(held))
+
     def test_foreign_transform_receipt_cannot_stand_in(self):
         native = json.loads(self.chain.native_rec.read_text(encoding="utf-8"))
         binding = dict(native["validation"]["template_receipt"])

@@ -86,7 +86,14 @@ def build_registration(root, workbook, receipt, mapping, *, source_id, context):
                "native_manifest": {"path": relative_receipt, "sha256": receipt_hash}}
     if authorization.major_id == "hort_env_systems":
         # The 18-sheet workbook declares no generic profile: it opens only
-        # through its own transform/native receipt chain.
+        # through its own transform/native receipt chain.  That chain checks
+        # structure and hashes but not the engine failure flags, so apply the
+        # same three refusals as _output_workbook_profile before accepting it.
+        if (native.get("error") or native.get("returncode") not in (None, 0)
+                or str(native.get("engine_stderr", "")).strip()):
+            raise mc.OutputHeldError(
+                "hort_transform_receipt_invalid",
+                "native Excel receipt records a failed run")
         profile = core._output_hort_profile(root, pointer, workbook, authorization)
     else:
         profile = core._output_workbook_profile(root, pointer)
