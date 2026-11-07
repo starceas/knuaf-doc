@@ -246,7 +246,7 @@ def _peer_frontmatter_lines(profile, artifacts):
         "감사의 글": [str(artifacts.get("thanks") or PENDING)],
     }
     if profile.get("advisor"):
-        target = "표제면" if "표제면" in spec.orders[-1] else "제출서"
+        target = "표제면" if spec.major_id == "fruit_trees" else "제출서"
         blocks[target].insert(0, "지도교수 " + value("advisor"))
     lines = []
     for marker in spec.orders[-1]:
