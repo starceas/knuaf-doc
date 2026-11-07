@@ -1596,7 +1596,7 @@ def check(text, base, major_id=None, project_root=None):
                             "학교 농장개요 필수항목 누락: " + ", ".join(missing),
                         )
                     )
-    toc_range = school_toc_range(nodes)
+    toc_range = school_toc_range(nodes, major_id)
     toc_start, body_start = toc_range if toc_range else (-1, -1)
     for i, n in enumerate(nodes):
         # These locations/content slots belong to the specialty-crop
@@ -1707,6 +1707,53 @@ def check(text, base, major_id=None, project_root=None):
     return issues
 
 
+from dataclasses import dataclass
+from types import MappingProxyType
+
+
+@dataclass(frozen=True)
+class SchoolFrontmatterSpec:
+    major_id: str
+    orders: tuple
+    physical_forms: tuple
+    degree: str
+    plan_label: str
+    department: str
+    cover_count: int
+    notices: tuple = ()
+    layout_confidence: str = "source_order"
+
+
+SCHOOL_FRONTMATTER = MappingProxyType({
+    "specialty_crops": SchoolFrontmatterSpec(
+        "specialty_crops",
+        (("겉표지", "인준서", "표제면", "제출서", "목차"),
+         ("겉표지", "표제면", "제출서", "인준서", "목차")),
+        (("겉표지",), ("표제면", "제출서"), ("인준서",)),
+        "농업전문학사 학위논문", "영농창업계획", "특용작물전공", 1,
+        layout_confidence="measured_bands"),
+    "fruit_trees": SchoolFrontmatterSpec(
+        "fruit_trees", (("겉표지", "표제면", "제출서", "인준서", "목차"),),
+        (("겉표지",), ("표제면", "제출서", "인준서")),
+        "농업전문학사 학위논문", "영농창업/승계 발전계획", "원예학부 과수전공", 1),
+    "hort_env_systems": SchoolFrontmatterSpec(
+        "hort_env_systems", (("겉표지", "표제면", "제출서", "인준서", "목차"),),
+        (("겉표지",), ("표제면",), ("제출서",), ("인준서",)),
+        "농업전문학사 학위논문", "", "원예환경시스템전공", 2,
+        ("신청서·추천서는 학교 서식으로 따로 제출",)),
+    "dairy": SchoolFrontmatterSpec(
+        "dairy", (("겉표지", "제출서", "인준서", "학부모 동의서", "요약", "감사의 글", "목차"),),
+        (("겉표지",), ("제출서",), ("인준서",), ("학부모 동의서",), ("요약",), ("감사의 글",)),
+        "농업전문학사 학위논문", "영농창업계획", "축산학부 낙농전공", 1,
+        ("학교 양식 확인 필요",), "unverified_common_defaults"),
+})
+
+
+def school_frontmatter_spec(major_id=None):
+    """No title-based inference; omitted IDs retain specialty compatibility."""
+    return SCHOOL_FRONTMATTER.get("specialty_crops" if major_id is None else major_id)
+
+
 FRONT = ("겉표지", "인준서", "표제면", "제출서", "목차")
 CHAPTERS = (
     (r"[ⅠI]\s*[\.．].*머리말", "머리말"),
@@ -1718,25 +1765,20 @@ CHAPTERS = (
 )
 
 
-def school_frontmatter_plan(nodes):
-    """Locate school logical front sections in either supported order.
-
-    Legacy drafts emitted approval before title/submission.  The official form
-    order is title/submission before approval.  Both are accepted so generic
-    Markdown exports remain compatible; callers can inspect ``order`` to choose
-    physical page composition.
-    """
+def school_frontmatter_plan(nodes, major_id=None):
+    """Locate exact logical markers using the explicitly selected major."""
+    spec = school_frontmatter_spec(major_id)
+    if spec is None:
+        return None
     front_indices = {}
+    required = spec.orders[0]
     for i, n in enumerate(nodes):
         t = n.get("text", "").strip()
-        if t in FRONT and t not in front_indices:
+        if t in required and t not in front_indices:
             front_indices[t] = i
-    if len(front_indices) != len(FRONT):
+    if len(front_indices) != len(required):
         return None
-    orders = (
-        ("겉표지", "인준서", "표제면", "제출서", "목차"),
-        ("겉표지", "표제면", "제출서", "인준서", "목차"),
-    )
+    orders = spec.orders
     order = next((candidate for candidate in orders if all(
         front_indices[candidate[i]] < front_indices[candidate[i + 1]]
         for i in range(len(candidate) - 1)
@@ -1755,7 +1797,8 @@ def school_frontmatter_plan(nodes):
                 break
         if i_body is None:
             for i in range(len(nodes) - 1, i_toc, -1):
-                if re.search(r"^[ⅠI]\s*[\.．].*머리말", nodes[i].get("text", "")):
+                if re.search(r"^1\s*[.．].*머리말" if spec.major_id == "dairy"
+                             else r"^[ⅠI]\s*[.．].*머리말", nodes[i].get("text", "")):
                     i_body = i
                     break
         if i_body is None:
@@ -1765,13 +1808,14 @@ def school_frontmatter_plan(nodes):
             "order": order,
             "toc": i_toc,
             "body": i_body,
-            "official_order": order == orders[1],
+            "official_order": order == orders[-1],
+            "spec": spec,
         }
     return None
 
 
-def school_toc_range(nodes):
-    plan = school_frontmatter_plan(nodes)
+def school_toc_range(nodes, major_id=None):
+    plan = school_frontmatter_plan(nodes, major_id)
     if plan:
         return plan["toc"], plan["body"]
     return None
@@ -1842,7 +1886,7 @@ def _check_peer_swot(body_nodes, paths, issues):
 def school_structure(text, issues, nodes=None, major_id=None):
     if nodes is None:
         nodes = parse(text)
-    toc_range = school_toc_range(nodes)
+    toc_range = school_toc_range(nodes, major_id)
     if toc_range:
         body_nodes = nodes[toc_range[1] :]
         body_text = "\n".join(n.get("text", "") for n in body_nodes)

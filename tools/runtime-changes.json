@@ -211,7 +211,9 @@
     "skills/knuaf-doc/scripts/gg_manuscript_intake.py",
     "tests/test_single_manuscript_intake.py",
     "skills/knuaf-doc/references/major-body-draft.md",
-    "skills/knuaf-doc/scripts/gg_excel_facts.py"
+    "skills/knuaf-doc/scripts/gg_excel_facts.py",
+    "tests/test_fruit_module.py",
+    "tests/test_skill_frontmatter_layout.py"
   ],
   "baseline_main": "29abec0ec95369de7ae9e22207349d574f1f46b7",
   "baseline_spec": "tools/baseline-files.json",
@@ -254,7 +256,7 @@
       "source": "adopted:app-PR41"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "254ec3eb4b1d67d99a5a8cdb9cabba646eb0bf54de991d6a0b5c227035bb4368",
+      "after_sha256": "977df6ec3459cf59911afe284da25ae8b4e20311d3ce74f20b14da223aff6dd0",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "W2g",
@@ -454,7 +456,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/builtin-sources.json": {
-      "after_sha256": "dceb0d1864cfc4429959f0be347955f169273a2f78db77ed3fe7c409d546cb0c",
+      "after_sha256": "15dfb0a41b02acb4419874b7fc28f93721d1dc37a7d448f94893508fcd298911",
       "before_sha256": null,
       "first_changed": "P5",
       "last_changed": "W2g",
@@ -1185,7 +1187,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/rules/PRE_frontmatter.md": {
-      "after_sha256": "518398e195a8480abed23596dcbe46c18fc033c345796d8b50ad0dadcd17baef",
+      "after_sha256": "65185186868c76a1e5073901c4a555b6cecc9c3da436413d900309397dc7e9fe",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "P28",
@@ -1322,7 +1324,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/build_docx.py": {
-      "after_sha256": "29776e0396442a6ec3d680383d115b0d7fa4191295fff34cc0da4fa20def8e0a",
+      "after_sha256": "2b57c341b91e56f536f8c826bf3e65cd38478303f1ab52eb62d43d7c90327b7b",
       "before_sha256": "b0ce58afc3f24b792843877bb6dc996d634dc12235bade53c34ecb5cdfad9912",
       "first_changed": "P1",
       "last_changed": "G-output-guards",
@@ -1416,7 +1418,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_document.py": {
-      "after_sha256": "36bb5cbc55b76d6b73be228c06ca92da3ef330f789fb040d217a73cb6bafc626",
+      "after_sha256": "4731b3253abb881886efafb16bf1f82cc9cdf9d3f0c3016f94205a058d2d454b",
       "before_sha256": "e83eee6a94393e407a727979c6e5f6e5545f17ca7291e745c68d66dcb835a8b3",
       "first_changed": "P1",
       "last_changed": "P28",
@@ -1524,7 +1526,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_frontmatter.py": {
-      "after_sha256": "29932a458c50ac709deffc5162d08dab6dbba81040f11426ba667199308de197",
+      "after_sha256": "7ed01341167e1d3624694cd3ed000ac1c7619e7b6bde07af314d0ee6109c69ba",
       "before_sha256": "c5186fc23618d90009ff28ba06507296bd7a848ad10589976c723f7cf7ca6d57",
       "first_changed": "P27",
       "last_changed": "P27",
@@ -2311,7 +2313,7 @@
       "source": "new"
     },
     "tests/test_major_guard_outputs.py": {
-      "after_sha256": "d1c355e9a5dc7aea913a7eaaea6bd20bfa809e1ce92e012b2840218616e702ae",
+      "after_sha256": "a05f368938645c6f833ea39cf68c2a74cf3619b2ebf9732dfc22caab9c00566f",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "P0-2-D",
@@ -2496,6 +2498,30 @@
       "first_changed": "P8",
       "owner": "B",
       "reason": "U20: original-document packaging prohibition retains hash-bound exception for separately registered derived asset.",
+      "source": "new"
+    },
+    "skills/knuaf-doc/scripts/gg_frontmatter_layout.py": {
+      "after_sha256": "dd24063725b06d9f981faab1c50e9c3b7bb5de32a9a6edf388c14bf432fead66",
+      "before_sha256": "13484701cfaaff81d1eb348f50586d11c55217acd855cc1364d715e38fe8a8d2",
+      "first_changed": "P28",
+      "owner": "P28",
+      "reason": "W1d: render source-ordered peer forms with shared defaults; specialty measured bands unchanged.",
+      "source": "adopted:baseline"
+    },
+    "tests/test_fruit_module.py": {
+      "after_sha256": "48535bf115453197a3db0aed1b2c86f45f86b466e525a6ea908f4bffb50b385a",
+      "before_sha256": null,
+      "first_changed": "P28",
+      "owner": "P28",
+      "reason": "W1d: retire obsolete plan-only expectations; paper authorization and calculation hold stay distinct.",
+      "source": "new"
+    },
+    "tests/test_skill_frontmatter_layout.py": {
+      "after_sha256": "2bf25ec087381f36d01a7f274d449f03bc544ac37dbf62ef2c7e8a4016ea7edd",
+      "before_sha256": null,
+      "first_changed": "P28",
+      "owner": "P28",
+      "reason": "W1d: synthetic peer DOCX reopen, page order, notices, data preservation and fail-closed form regressions.",
       "source": "new"
     }
   },

@@ -1,11 +1,9 @@
 """fruit_trees module declaration and its link to the common guard B.
 
 A01-P (S01 plan, no specialty inheritance), A30 (no example precedents),
-finance unsupported, and the fruit link of A32/A46: the real registered
-module is refused by capability on every deliverable path while plan and
-reading stay open.  The full path x case matrix lives in
-tests/test_major_guard_*.py (G-B, inherited); this file checks the fruit
-connection only.
+and the fruit link of the common output guard. Paper/workbook declarations
+are open; general finance calculations and the legacy paper generator remain
+unsupported. Workbook publication proof is enforced separately by A2.
 """
 import json
 import subprocess
