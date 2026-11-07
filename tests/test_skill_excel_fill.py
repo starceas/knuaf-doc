@@ -128,8 +128,30 @@ class ExcelFillTests(ContractCase):
             self.assertTrue(receipt[part]["path"])
         self.assertIs(True, receipt["recalcNeeded"])
 
+    def _profile_template(self, profile="fruit_16_sheet_v1"):
+        """The same cells on a workbook carrying the registered school sheets."""
+        names = runtime("gg_school_excel").profile_structure(profile)["sheets"]
+        wb = self.openpyxl.Workbook()
+        ws = wb.active
+        ws.title = names[0]
+        ws["B1"] = "면적(평):"
+        ws["C1"] = 600
+        ws["B2"] = "작목:"
+        ws["C2"] = "도라지"
+        ws["B3"] = "합계"
+        ws["C3"] = "=C1*2"
+        ws["B5"] = "병합 제목"
+        ws.merge_cells("B5:D5")
+        for name in names[1:]:
+            wb.create_sheet(name)
+        path = self.tmp / "과수 양식.xlsx"
+        wb.save(path)
+        return path, names[0]
+
     def test_declared_profile_survives_fill_without_changing_source(self):
-        m, v = self.files([self.entry("C1")], [self.value("C1", 700)])
+        self.template, sheet = self._profile_template()
+        m, v = self.files([self.entry("C1", sheet=sheet)],
+                          [self.value("C1", 700, sheet=sheet)])
         data = json.loads(m.read_text())
         data["workbook_profile"] = "fruit_16_sheet_v1"
         m.write_text(json.dumps(data))
@@ -142,8 +164,8 @@ class ExcelFillTests(ContractCase):
         self.assertEqual(self.template.read_bytes(), original)
         book = self.openpyxl.load_workbook(self.out())
         self.addCleanup(book.close)
-        self.assertEqual(book[SHEET]["C1"].value, 700)
-        self.assertEqual(book[SHEET]["C3"].value, "=C1*2")
+        self.assertEqual(book[sheet]["C1"].value, 700)
+        self.assertEqual(book[sheet]["C3"].value, "=C1*2")
 
     def test_profile_hold_precedes_fill_output_directory(self):
         m, v = self.files([self.entry("C1")], [self.value("C1", 700)])

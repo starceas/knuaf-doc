@@ -85,12 +85,18 @@ school form (`school_17_sheet_v1`, `fruit_16_sheet_v1`, or
 --workbook-profile fruit_16_sheet_v1` records that declaration with the source
 SHA but leaves inventory review mandatory. The common writers require both the
 major's `workbook_profiles` declaration and a supported finance capability for
-that same profile, before creating an output directory. An explicit null/empty
-profile is refused. Only old specialty-crop maps without the key keep their
-historical school-17 meaning. Calculation profiles do not authorize school-form
-clear/fill. Clear/fill receipts retain the profile and map hash.
+that same profile, before creating an output directory. A registered profile is
+also compared with the real workbook's sheet count, names and order from
+`references/workbook-reference-set.json` (currently `fruit_16_sheet_v1`; the
+dairy profile is closed until its school original structure is registered).
+The same real-byte check runs at Office staging, adoption and export. An
+explicit null/empty profile is refused. Only old specialty-crop maps without the
+key keep their historical school-17 meaning. Calculation profiles do not
+authorize school-form clear/fill. Clear/fill receipts retain the profile and
+map hash.
 
-Office `--spec` uses the same workbook-profile gate. `--template-receipt` accepts
+Office `--spec` uses the same workbook-profile gate and compares the staged
+input's real sheets with the registered form. `--template-receipt` accepts
 completed clear/fill operations only after input/map/output hash checks and
 profile agreement; the native manifest and template lineage retain that profile.
 Without evidence, only the historical specialty-crop render route remains open.

@@ -28,6 +28,15 @@
       "authority": "user_statement"
     }
   ],
+  "workbook_profiles": [
+    {
+      "profile": "fruit_16_sheet_v1",
+      "major": "fruit_trees",
+      "label": "과수전공 2026 학교 엑셀 양식 (양식최종본)",
+      "sha256": "5f2896dd0c47d9b90a1ec3da30128ea0a9aa47f72aa79156a57bfd7bfd271374",
+      "sheets": ["1.재무상태", "2.영농목표", "3.투자계획", "4.원리상환", "5.판매계획", "6.생산계획", "7.자재소요", "8.노무비계획", "9.경비계획", "10.감가상각", "11.생산원가", "12.손익계획", "13.대차대조", "14.현금흐름", "15.소득분석", "_____data"]
+    }
+  ],
   "derived_assets": [
     {
       "asset_id": "finance-template-x01-blank",

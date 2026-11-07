@@ -69,15 +69,21 @@ class WorkbookPublicationProfileTests(ContractCase):
                                       companion_files=companions, major_id="specialty_crops")
 
     def test_declared_output_and_caller_profile_do_not_authorize_workbook(self):
-        for profile in (None, "school_17_sheet_v1", "fruit_16_sheet_v1"):
+        # A caller-written label never substitutes for receipt evidence.
+        for profile in ("school_17_sheet_v1", "fruit_16_sheet_v1"):
             project, value, companions = self.output(receipt=False)
-            if profile is not None:
-                value["workbook_profile"] = profile
+            value["workbook_profile"] = profile
             before = self._tree_bytes(self.root)
             with self.assertRaises(self.core.OperationError) as held:
                 self.adopt(project, value, companions)
             self.assertEqual(held.exception.result["reason"], "finance_profile_evidence_invalid")
             self.assertEqual(self._tree_bytes(self.root), before)
+        # Specialty's historical receipt-less workbook route is restored.
+        project, value, companions = self.output(receipt=False)
+        result = self.adopt(project, value, companions)
+        self.assertEqual(result["status"], "adopted")
+        self.assertNotIn("workbook_profile",
+                         self.core.load(self.root)["outputs"]["workbook"])
 
     def test_adoption_persists_receipt_profile_and_rechecks_replay(self):
         project, value, companions = self.output()
@@ -181,3 +187,97 @@ class WorkbookPublicationProfileTests(ContractCase):
         from pathlib import Path
         exported = Path(result["path"]).with_suffix(".xlsx")
         self.assertEqual(self.core.digest(exported.read_bytes()), value["file_hash"])
+
+    def _native_output(self, root, path, profile, *, output_id="workbook"):
+        digest = self.core.digest(path.read_bytes())
+        manifest = {"status": "converted", "engine": "Microsoft Excel",
+                    "published_office_sha256": digest,
+                    "validation": {"workbook_profile": profile,
+                                   "finance_profile": profile,
+                                   "structure_issues": [], "school_issues": [],
+                                   "excel": {"valid": True, "sha256": digest}}}
+        raw = json.dumps(manifest).encode()
+        write_text(root, "native.json", raw.decode())
+        pointer = {"path": "native.json", "sha256": self.core.digest(raw)}
+        project = self.core.load(root)
+        refs = self.core.sort_target_refs(self.core._export_refs(project))
+        value = {"id": output_id, "path": path.name, "format": "xlsx",
+                 "file_hash": digest, "target_refs": refs,
+                 "input_fingerprint": self.core.fingerprint(root, project, refs),
+                 "native_manifest": pointer}
+        return project, value, [pointer]
+
+    def test_registered_profile_requires_the_real_school_sheets(self):
+        sheets = self.school.profile_structure("fruit_16_sheet_v1")["sheets"]
+        for titles, accepted in ((["Sheet"], False), (sheets, True)):
+            root = self.make_project()
+            bind_major(root, "fruit_trees")
+            book = Workbook()
+            book.active.title = titles[0]
+            book.active["A1"] = 10
+            for title in titles[1:]:
+                book.create_sheet(title)
+            path = root / "fruit.xlsx"
+            book.save(path)
+            book.close()
+            project, value, companions = self._native_output(
+                root, path, "fruit_16_sheet_v1", output_id="fruit")
+            if accepted:
+                result = self.core.adopt_output(
+                    root, value, project["revision"], "fruit",
+                    companion_files=companions, major_id="fruit_trees")
+                self.assertEqual(result["status"], "adopted")
+            else:
+                with self.assertRaises(self.core.OperationError) as held:
+                    self.core.adopt_output(
+                        root, value, project["revision"], "fruit",
+                        companion_files=companions, major_id="fruit_trees")
+                self.assertEqual(held.exception.result["reason"],
+                                 "finance_profile_evidence_invalid")
+
+    def test_horticulture_adoption_keeps_its_own_verifier(self):
+        # R1-4: the common workbook gate must not block horticulture; its
+        # dedicated 18-sheet transform path stays as it was at 217f10c.
+        root = self.make_project()
+        bind_major(root, "hort_env_systems")
+        book = Workbook()
+        book.active["A1"] = 1
+        path = root / "hort.xlsx"
+        book.save(path)
+        book.close()
+        project, value, companions = self._native_output(
+            root, path, "hort_18_sheet_reconstructed_v1", output_id="hort")
+        result = self.core.adopt_output(
+            root, value, project["revision"], "hort",
+            companion_files=companions, major_id="hort_env_systems")
+        self.assertEqual(result["status"], "adopted")
+
+    def test_pdf_needs_workbook_profile_evidence_and_matching_format(self):
+        pdf = self.root / "sheet.pdf"
+        pdf.write_bytes(b"%PDF-1.4\n%%EOF\n")
+        project = self.core.load(self.root)
+        refs = self.core.sort_target_refs(self.core._export_refs(project))
+        base = {"id": "sheet", "path": "sheet.pdf",
+                "file_hash": self.core.digest(pdf.read_bytes()),
+                "target_refs": refs,
+                "input_fingerprint": self.core.fingerprint(self.root, project, refs)}
+        with self.assertRaises(self.core.OperationError) as held:
+            self.core.adopt_output(self.root, dict(base, format="xlsx"),
+                                   project["revision"], "pdf",
+                                   major_id="specialty_crops")
+        self.assertEqual(held.exception.result["reason"], "output_format_mismatch")
+        with self.assertRaises(self.core.OperationError) as held:
+            self.core.adopt_output(self.root, dict(base, format="pdf"),
+                                   project["revision"], "pdf2",
+                                   major_id="specialty_crops")
+        self.assertEqual(held.exception.result["reason"],
+                         "finance_profile_evidence_invalid")
+
+    def test_export_rejects_format_that_disagrees_with_bytes(self):
+        (self.root / "sheet.pdf").write_bytes(b"%PDF-1.4\n%%EOF\n")
+        with self.assertRaises(self.core.OperationError) as held:
+            self.core._export_authorize(
+                self.root,
+                {self.mc.OUTPUT_SCHOOL_PAPER, self.mc.OUTPUT_SCHOOL_WORKBOOK},
+                self.context, outputs=({"path": "sheet.pdf", "format": "xlsx"},))
+        self.assertEqual(held.exception.result["reason"], "output_format_mismatch")

@@ -326,6 +326,12 @@ def fill_copy(template: Path, map_path: Path, values_path: Path, out: Path, *, c
         raise FileExistsError(f"refusing to overwrite output: {out}")
     map_data, values_data, entries, values, template_digest = _prepare(template, map_path, values_path)
     workbook_profile = require_map_workbook_profile(map_data, authorization)
+    from gg_school_excel import require_profile_structure
+    try:
+        require_profile_structure(template, workbook_profile)
+    except ValueError as error:
+        raise mc.OutputHeldError("workbook_structure_mismatch",
+                                 str(error)) from error
     out.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(template, "r") as zin:
         sheets = dict(workbook_sheets(zin))

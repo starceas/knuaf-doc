@@ -69,6 +69,9 @@ def create_workbook(source: Path | None, out: Path, *, context=None,
     """Byte-copy the chosen workbook without erasing student inputs."""
     import gg_major_contract as mc
     authorization = mc.authorize_output(mc.OUTPUT_SCHOOL_WORKBOOK, context)
+    # The bundled X01 is the specialty 17-sheet form. Fruit/dairy forms are
+    # not byte-copies of it and stay held on this route.
+    mc.require_workbook_profile(authorization, "school_17_sheet_v1")
     source = select_source(source, authorization=authorization, template_ref=template_ref,
                            reference_inventory=reference_inventory)
     read_template(source)
@@ -988,6 +991,12 @@ def blank_copy(source: Path, map_path: Path, out: Path, allow_missing: bool = Fa
     entries, _ = map_entries_for_source(map_data, source)
     _check_map_layout(map_data, source)
     workbook_profile = require_map_workbook_profile(map_data, authorization)
+    from gg_school_excel import require_profile_structure
+    try:
+        require_profile_structure(source, workbook_profile)
+    except ValueError as error:
+        raise mc.OutputHeldError("workbook_structure_mismatch",
+                                 str(error)) from error
     out.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(source, "r") as zin:
         sheets = dict(workbook_sheets(zin))

@@ -36,6 +36,63 @@ SCHOOL_SHEETS = (
 YEAR_LABELS = "가나다라마"
 EVIDENCE_KEYS = ("area", "seedlings", "yield", "growth", "commodity")
 
+WORKBOOK_REFERENCE_SET = (
+    Path(__file__).resolve().parents[1] / "references"
+    / "workbook-reference-set.json"
+)
+_SHA256 = re.compile(r"[0-9a-f]{64}\Z")
+
+def profile_structure(profile):
+    """Registered sheet structure for a workbook profile, or None.
+
+    Only profiles registered in the shipped reference set are
+    structure-bound. Horticulture keeps its dedicated transform receipt and
+    specialty crops keep the historical render route; neither is opened by
+    this common gate.
+    """
+    try:
+        data = json.loads(WORKBOOK_REFERENCE_SET.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as error:
+        raise ValueError("workbook reference set unreadable") from error
+    for entry in data.get("workbook_profiles") or []:
+        if not isinstance(entry, dict) or entry.get("profile") != profile:
+            continue
+        sheets = entry.get("sheets")
+        digest = entry.get("sha256")
+        if (not isinstance(sheets, list) or not sheets
+                or any(not isinstance(name, str) or not name for name in sheets)
+                or not isinstance(digest, str) or not _SHA256.match(digest)):
+            raise ValueError("workbook profile structure invalid: " + str(profile))
+        return {"sha256": digest, "sheets": list(sheets),
+                "label": entry.get("label")}
+    return None
+
+def require_profile_structure(path, profile):
+    """Open the real workbook and require its registered school form.
+
+    A caller-written profile label never substitutes for this check; a
+    workbook whose sheet names match the registered form passes. Unregistered
+    profiles are left to their own verifier.
+    """
+    expected = profile_structure(profile)
+    if expected is None:
+        return
+    from openpyxl import load_workbook
+
+    try:
+        book = load_workbook(path, read_only=True)
+    except Exception as error:
+        raise ValueError("workbook structure unreadable: %s" % error) from error
+    try:
+        observed = list(book.sheetnames)
+    finally:
+        book.close()
+    if observed != expected["sheets"]:
+        raise ValueError(
+            "workbook structure mismatch for %s: %d sheets do not match "
+            "the registered %d-sheet school form"
+            % (profile, len(observed), len(expected["sheets"])))
+
 
 def q(name):
     return "'" + name.replace("'", "''") + "'"

@@ -525,13 +525,16 @@ class WorkbookProfileGateTests(ContractCase):
 
     def artifacts(self, profile):
         from openpyxl import Workbook
+        expected = runtime("gg_school_excel").profile_structure(profile)
+        names = (expected["sheets"] if expected
+                 else ["입력"] + [f"합성{index}" for index in range(1, 16)])
         source = self.root / "synthetic.xlsx"
         book = Workbook()
-        book.active.title = "입력"
+        book.active.title = names[0]
         book.active["A1"] = 25
         book.active["B1"] = "=A1*2"
-        for index in range(1, 16):
-            book.create_sheet(f"합성{index}")
+        for name in names[1:]:
+            book.create_sheet(name)
         book.save(source)
         book.close()
         clear = self.root / "clear.json"
@@ -541,13 +544,13 @@ class WorkbookProfileGateTests(ContractCase):
         clear.write_text(json.dumps({"schema": "gg-xlsx-template-map/v1", **marker,
             "source": {"sha256": self.tpl.sha256(source)},
             "layout": {"variant": "unknown", "mapOrigin": "reviewed_custom"},
-            "entries": [{"sheet": "입력", "cell": "A1", "action": "clear"}]}))
+            "entries": [{"sheet": names[0], "cell": "A1", "action": "clear"}]}))
         fill.write_text(json.dumps({"schema": self.fill.MAP_SCHEMA, **marker,
             "template": {"sha256": self.tpl.sha256(source)},
-            "entries": [{"sheet": "입력", "cell": "A1", "role": "farm.area",
+            "entries": [{"sheet": names[0], "cell": "A1", "role": "farm.area",
                          "period": "2026", "editable": True, "source_note": "synthetic"}]}))
         values.write_text(json.dumps({"schema": self.fill.VALUES_SCHEMA,
-            "values": [{"sheet": "입력", "cell": "A1", "value": 40,
+            "values": [{"sheet": names[0], "cell": "A1", "value": 40,
                         "value_type": "integer", "answer_state": "provided",
                         "evidence_ref": {"source_id": "synthetic", "revision": 1,
                                          "locator": "A1", "origin": "synthetic"}}]}))

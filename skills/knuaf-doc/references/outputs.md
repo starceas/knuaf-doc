@@ -42,6 +42,11 @@ XLSX와 동반 `<출력.manifest.json>` 경로를 함께 검사한다. XLSX가 �
 함께 보존한다. 실제 XLSX 해시와 영수증의 프로필을 대조한 뒤
 `require_workbook_profile`을 호출하며, 정본에는 검증된 `workbook_profile`과
 관리 사본 영수증 경로를 남긴다. caller의 profile 문자열만으로는 열리지 않는다.
+등록된 프로필은 `references/workbook-reference-set.json`의 시트 수·시트명·순서를
+실제 통합문서 바이트와 대조한다(사본·Office 스테이징·채택·export). 현재 등록된
+것은 과수 `fruit_16_sheet_v1`이며, 낙농 프로필은 원본 구조 미등록으로 닫혀 있다.
+원예는 전용 변환 영수증 경로를 쓴다. `format`은 실제 바이트 종류와 일치해야 하며
+PDF를 `.xlsx`로 내보내지 않는다.
 채택 재호출과 제출 후보 export도 현재 계약·영수증 해시를 다시 검사한다.
 본문만 내보내는 draft/review는 이 XLSX 관문을 요구하지 않는다.
 

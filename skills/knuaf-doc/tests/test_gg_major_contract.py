@@ -142,12 +142,19 @@ class TestWorkbookProfileAuthorization(unittest.TestCase):
         allowed = {
             "specialty_crops": "school_17_sheet_v1",
             "fruit_trees": "fruit_16_sheet_v1",
-            "dairy": "dairy_hanwoo_28_sheet_v1",
         }
         for major_id, profile in allowed.items():
             with self.subTest(major_id=major_id):
                 self.assertIsNone(mc.require_workbook_profile(
                     self._authorization(major_id), profile))
+        # The dairy profile is declared but closed: its school original
+        # structure is not registered, so no output may claim it.
+        with self.subTest(major_id="dairy"):
+            with self.assertRaises(mc.OutputHeldError) as caught:
+                mc.require_workbook_profile(
+                    self._authorization("dairy"), "dairy_hanwoo_28_sheet_v1")
+            self.assertEqual(caught.exception.reason,
+                             "unsupported_finance_profile")
         for profile in (
             "school_17_sheet_v1",
             "hort_18_sheet_reconstructed_v1",

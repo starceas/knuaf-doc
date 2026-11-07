@@ -1081,6 +1081,16 @@ def _hort_transform_binding(input_path, receipt_path, authorization, context):
         raise mc.OutputHeldError("hort_transform_receipt_invalid") from error
 
 
+def _require_profile_structure(mc, path, profile):
+    """A declared profile must also match the registered school form."""
+    from gg_school_excel import require_profile_structure
+    try:
+        require_profile_structure(path, profile)
+    except ValueError as error:
+        raise mc.OutputHeldError("workbook_structure_mismatch",
+                                 str(error)) from error
+
+
 def _preflight_excel_profile(input_path, auths, context, *, spec=None,
                              template_receipt=None):
     """Profile and receipt gate shared by direct Excel and batch paths."""
@@ -1093,6 +1103,7 @@ def _preflight_excel_profile(input_path, auths, context, *, spec=None,
         mc.require_workbook_profile(authorization, spec.get("profile"))
         if authorization.major_id == "hort_env_systems":
             raise mc.OutputHeldError("hort_transform_receipt_required")
+        _require_profile_structure(mc, input_path, spec["profile"])
         return None, spec["profile"]
     if authorization.major_id == "hort_env_systems":
         mc.require_finance_profile(authorization,
@@ -1107,6 +1118,7 @@ def _preflight_excel_profile(input_path, auths, context, *, spec=None,
         if "workbook_profile" in binding:
             profile = binding["workbook_profile"]
             mc.require_workbook_profile(authorization, profile)
+            _require_profile_structure(mc, input_path, profile)
             return binding, profile
         if authorization.major_id != "specialty_crops":
             raise mc.OutputHeldError("finance_profile_evidence_required")
