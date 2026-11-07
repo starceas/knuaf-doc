@@ -7,12 +7,15 @@ engine); the native manifest is written by the fixture, not by Excel.
 """
 import json
 from pathlib import Path
+import zipfile
+from xml.etree import ElementTree as ET
 
 from tests._harness import ContractCase, runtime
 
 PROFILE = "hort_18_sheet_reconstructed_v1"
 SESSION = {"app": "excel", "reason": "closed_confirmed",
            "cleanup": "closed", "save_state": "saved"}
+NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
 
 class HortExcelFactRegistrationTests(ContractCase):
     def setUp(self):
@@ -71,7 +74,11 @@ class HortExcelFactRegistrationTests(ContractCase):
             context=self.mc.output_context(self.root, "hort_env_systems"))
 
     def test_native_chain_registers_horticulture_fact(self):
-        change = self.build(self.mapping(self.stage()))
+        hashes = self.stage()
+        mapping = self.mapping(hashes)
+        before = self._tree_bytes(self.root)
+        change = self.build(mapping)
+        self.assertEqual(before, self._tree_bytes(self.root))
         source, fact = change["ops"]
         self.assertEqual(source["value"]["workbook_profile"], PROFILE)
         self.assertEqual(fact["value"]["excel_provenance"]["workbook_profile"], PROFILE)
@@ -115,3 +122,110 @@ class HortExcelFactRegistrationTests(ContractCase):
                                     "fact_map_profile_mismatch"):
             self.build(self.mapping(hashes, profile="school_17_sheet_v1"))
         self.assertEqual(before, self._tree_bytes(self.root))
+
+    def _held(self, build):
+        before = self._tree_bytes(self.root)
+        with self.assertRaises(self.mc.OutputHeldError) as held:
+            build()
+        self.assertEqual(before, self._tree_bytes(self.root))
+        return held.exception
+
+    def test_native_authorization_must_match_the_current_grant(self):
+        # The dedicated chain is the replacement for require_workbook_profile,
+        # so it must reject a receipt whose recorded grant is absent or stale.
+        original = json.loads(self.chain.native_rec.read_text(encoding="utf-8"))
+        cases = {"missing": None,
+                 "other_module": dict(original["major_authorization"][0],
+                                      module_version="0.0.0")}
+        for label, recorded in cases.items():
+            native = dict(original)
+            if recorded is None:
+                native.pop("major_authorization")
+            else:
+                native["major_authorization"] = [recorded]
+            hashes = self.stage(native=native)
+            with self.subTest(label=label):
+                held = self._held(lambda: self.build(self.mapping(hashes)))
+                self.assertEqual(held.reason, "hort_transform_receipt_invalid")
+
+    def test_horticulture_artifacts_cannot_register_under_another_major(self):
+        hashes = self.stage()
+        with self.assertRaises(self.mc.OutputHeldError) as held:
+            self.facts.build_registration(
+                self.root, "recalc.xlsx", "native.json", self.mapping(hashes),
+                source_id="excel-plan",
+                context=self.mc.output_context(self.root, "fruit_trees"))
+        self.assertEqual(held.exception.reason, "major_binding_mismatch")
+
+    def test_receipt_from_another_project_cannot_stand_in(self):
+        # A genuine receipt issued by another project's transform run, with
+        # its own correct hash — not a corrupted copy of this one.
+        from tests.test_hort_finance_pipeline import Chain
+        foreign = Chain(methodName="test_full_chain_plan_transform_native_verify")
+        foreign.setUp()
+        self.addCleanup(foreign.doCleanups)
+        foreign._run_to_transform()
+        native = json.loads(self.chain.native_rec.read_text(encoding="utf-8"))
+        binding = dict(native["validation"]["template_receipt"])
+        transform = str(foreign.transform_rec.resolve())
+        binding.update(path=transform,
+                       sha256=self.core.digest(Path(transform).read_bytes()),
+                       input_sha256=self.core.digest(foreign.out.read_bytes()))
+        native["validation"] = dict(native["validation"],
+                                    template_receipt=binding,
+                                    previous_receipt_sha256=binding["sha256"])
+        native["input_file"] = str(foreign.out.resolve())
+        native["input_sha256"] = binding["input_sha256"]
+        hashes = self.stage(native=native)
+        held = self._held(lambda: self.build(self.mapping(hashes)))
+        self.assertEqual(held.reason, "hort_transform_receipt_invalid")
+        self.assertIn("project mismatch", str(held.__cause__))
+
+    def test_valid_receipt_cannot_bless_a_tampered_workbook(self):
+        # The map hash is refreshed to the altered file, so the front-door
+        # hash check passes and only the receipt/output binding can refuse.
+        hashes = self.stage()
+        workbook = self.root / "recalc.xlsx"
+        with zipfile.ZipFile(workbook) as archive:
+            parts = {name: archive.read(name) for name in archive.namelist()}
+        sheet = "xl/worksheets/sheet1.xml"
+        xml = ET.fromstring(parts[sheet])
+        xml.find(f".//{{{NS}}}c[@r='A1']/{{{NS}}}v").text = "999"
+        parts[sheet] = ET.tostring(xml)
+        with zipfile.ZipFile(workbook, "w") as archive:
+            for name, raw in parts.items():
+                archive.writestr(name, raw)
+        mapping = self.mapping(hashes)
+        mapping["workbook"]["sha256"] = self.core.digest(workbook.read_bytes())
+        held = self._held(lambda: self.build(mapping))
+        self.assertEqual(held.reason, "hort_transform_receipt_invalid")
+        self.assertIn("native_receipt_stale", str(held.__cause__))
+
+    def test_absent_transform_receipt_file_is_held(self):
+        hashes = self.stage()
+        self.chain.transform_rec.unlink()
+        held = self._held(lambda: self.build(self.mapping(hashes)))
+        self.assertEqual(held.reason, "hort_transform_receipt_invalid")
+
+    def test_missing_finance_capability_still_holds_the_chain(self):
+        # The dedicated chain ends in require_finance_profile; a module that
+        # withdraws the capability must not register through it.
+        from dataclasses import replace
+        from unittest import mock
+        registry = self.mc.default_registry()
+        module = registry.resolve("hort_env_systems")
+        modules = {major: registry.resolve(major) for major in registry.major_ids}
+        faulty = replace(module, finance_capabilities=tuple(
+            replace(cap, status="unsupported") if cap.profile == PROFILE else cap
+            for cap in module.finance_capabilities))
+        for patch in (mock.patch.object(registry, "resolve",
+                                        side_effect=lambda major:
+                                        faulty if major == "hort_env_systems"
+                                        else modules[major]),
+                      mock.patch.object(self.mc, "default_registry",
+                                        return_value=registry)):
+            patch.start()
+            self.addCleanup(patch.stop)
+        hashes = self.stage()
+        held = self._held(lambda: self.build(self.mapping(hashes)))
+        self.assertEqual(held.reason, "unsupported_finance_profile")
