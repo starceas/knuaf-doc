@@ -82,10 +82,15 @@ def build_registration(root, workbook, receipt, mapping, *, source_id, context):
         raise RegistrationHeld("fact_map_hash_mismatch")
     native = _object(receipt)
     relative_receipt = str(receipt.relative_to(root))
-    profile = core._output_workbook_profile(root, {
-        "path": str(workbook.relative_to(root)),
-        "native_manifest": {"path": relative_receipt, "sha256": receipt_hash}})
-    mc.require_workbook_profile(authorization, profile)
+    pointer = {"path": str(workbook.relative_to(root)),
+               "native_manifest": {"path": relative_receipt, "sha256": receipt_hash}}
+    if authorization.major_id == "hort_env_systems":
+        # The 18-sheet workbook declares no generic profile: it opens only
+        # through its own transform/native receipt chain.
+        profile = core._output_hort_profile(root, pointer, workbook, authorization)
+    else:
+        profile = core._output_workbook_profile(root, pointer)
+        mc.require_workbook_profile(authorization, profile)
     if mapping.get("workbook_profile") != profile:
         raise RegistrationHeld("fact_map_profile_mismatch")
     recorded = native.get("major_authorization")
