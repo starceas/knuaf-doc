@@ -227,11 +227,11 @@
       "source": "adopted:baseline"
     },
     "tests/test_skill_frontmatter_layout.py": {
-      "after_sha256": "2bf25ec087381f36d01a7f274d449f03bc544ac37dbf62ef2c7e8a4016ea7edd",
+      "after_sha256": "4b82aac0902441dc5b618584a33ea3a7b3fb4ef2e3456596e6909a0cc793248a",
       "before_sha256": null,
       "first_changed": "P28",
       "owner": "P28",
-      "reason": "W1d: synthetic peer DOCX reopen, page order, notices, data preservation and fail-closed form regressions.",
+      "reason": "W1d: synthetic peer DOCX reopen, page order, notices, data preservation and fail-closed form regressions. | W1e R1: advisor belongs to HT2 submission page; same-marker peer conflicts are held without interpreting titles as departments.",
       "source": "new"
     },
     "tests/test_fruit_module.py": {
@@ -303,7 +303,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "4ae3a567c4ed1e5e81e652b3c3e85b0ec62c8b3feda47ee8476f26c69cb02247",
+      "after_sha256": "0afe5bc79989a4c3e3e58942c4946ec467bb435f3166a73580eb6f73c98dd345",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "v0.4.5",
@@ -494,7 +494,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/builtin-sources.json": {
-      "after_sha256": "9e8e00e514d750b735a5a768f341d414ad0be2171ac6ef031ee59039fb7d858c",
+      "after_sha256": "d56ff4bd9561230773d43cf0973bf1b77b18af052612738ee601ca428e752a6d",
       "before_sha256": null,
       "first_changed": "P5",
       "last_changed": "P28",
@@ -1108,12 +1108,12 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/rules/PRE_frontmatter.md": {
-      "after_sha256": "65185186868c76a1e5073901c4a555b6cecc9c3da436413d900309397dc7e9fe",
+      "after_sha256": "55910a003312a8aee5f7c5cc1b1d56b21788001812c164ba57fe961a08728fbd",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "P28",
       "owner": "P28",
-      "reason": "N1: restore reviewed school writing extracts; EX files remain historical observations.",
+      "reason": "N1: restore reviewed school writing extracts; EX files remain historical observations. | W1e R1: document HT2 advisor role and explicit manuscript department conflict hold.",
       "source": "new"
     },
     "skills/knuaf-doc/references/rules/W_writing_spec.md": {
@@ -1330,11 +1330,12 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_document.py": {
-      "after_sha256": "4731b3253abb881886efafb16bf1f82cc9cdf9d3f0c3016f94205a058d2d454b",
+      "after_sha256": "a31940c23df091dc608084ad8375417b1999ad19e583bb2bd1e6eb8becc13927",
       "before_sha256": "e83eee6a94393e407a727979c6e5f6e5545f17ca7291e745c68d66dcb835a8b3",
       "first_changed": "P1",
       "last_changed": "P28",
       "owner": "P28",
+      "note": "W1e R1: compare frontmatter department identity slots with the explicit major using existing marker_conflicts; do not infer major from title or change the binding.",
       "reason": "H1: '<'·'^' 병합 계속 표식을 빈칸으로 분류(_filled_cell) | P28: plain_policy_check — 금칙어·제한 용어·머리말 길이·캡션·표/그림 출처 표기·사진 자리·AI 이미지 검사 | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존 | F2: V2 재확인 수용에 따라 같은 파서 계층의 첫 장/장 경계와 원문 span을 적용하고 명시적 외부 유형 충돌 거부·수동 신뢰 계약을 문서화; 설치 manifest 재생성. 기초 정본·단계·부모 계보·원본 source pin 보존 | F3: 전역 Markdown 유무 판정을 제거하고 prefix-only 공통 제목 규칙·요약 단일 종료·번호 공백 문법으로 통일; 설치 manifest 재생성. 원본/부모 계보·stage·source pin 보존 | R-v0.4.1: policy path no longer resolves cwd at import (Windows unreadable cwd) | F1 C2/CB/CA: display_precision·unit_conflict·sample_identity(error), sample_identity_unconfirmed·sample_trace_review(warning), check(project_root=None). | F1 V9-01/05: 다음 표 단위 선언 비귀속, 줄바꿈 학생 이름 먼저 완성. | V10: 이전 표 주석 줄을 다음 표 앞쪽 단위 선언으로 받지 않음. | PR71 리뷰: 굵게·기울임 강조된 금액 칸·머리칸도 숫자 검사.",
       "source": "adopted:PR2"
     },
@@ -1430,12 +1431,12 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_frontmatter.py": {
-      "after_sha256": "7ed01341167e1d3624694cd3ed000ac1c7619e7b6bde07af314d0ee6109c69ba",
+      "after_sha256": "cef929d863bd620f8d92739c60a77e619c06743b51a3c0a6157cd063a71d59ec",
       "before_sha256": "c5186fc23618d90009ff28ba06507296bd7a848ad10589976c723f7cf7ca6d57",
       "first_changed": "P27",
       "last_changed": "P27",
       "owner": "P27",
-      "reason": "P27: K3-03: school_profile.major_id 허용·최상위와 불일치 거절",
+      "reason": "P27: K3-03: school_profile.major_id 허용·최상위와 불일치 거절 | W1e R1: HT2 advisor on submission page rather than its second cover; fruit shared title/submission role preserved.",
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_fruit_plan.py": {

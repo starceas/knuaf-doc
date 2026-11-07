@@ -1785,6 +1785,38 @@ def school_frontmatter_plan(nodes, major_id=None):
     )), None)
     if order:
         i_toc = front_indices["목차"]
+        if major_id is not None:
+            import gg_major_contract as mc
+            # Read department slots, never titles or body prose. The cover's
+            # identity tail is graduation, school, department, author; notices
+            # follow it but are not part of that identity block.
+            notices = {notice for entry in SCHOOL_FRONTMATTER.values()
+                       for notice in entry.notices}
+            cover_end = min(index for marker, index in front_indices.items()
+                            if marker != "겉표지")
+            cover = [n.get("text", "").strip()
+                     for n in nodes[front_indices["겉표지"] + 1:cover_end]
+                     if n.get("text", "").strip() and n.get("text", "").strip() not in notices]
+            departments = [cover[-2]] if len(cover) >= 4 else []
+            # Submission/title pages repeat school → department → author.
+            # Inspect those explicit identity slots too, so a mixed cover and
+            # submission cannot hide behind the matching cover department.
+            for role in ("겉표지", "표제면", "제출서"):
+                if role not in front_indices:
+                    continue
+                start = front_indices[role] + 1
+                end = front_indices[order[order.index(role) + 1]]
+                block = [n.get("text", "").strip() for n in nodes[start:end]
+                         if n.get("text", "").strip() and n.get("text", "").strip() not in notices]
+                if len(block) >= 3 and block[-3].endswith(("대학교", "대학")):
+                    departments.append(block[-2])
+            conflicts = [conflict for department in departments
+                         for conflict in mc.marker_conflicts({"department": department}, major_id)]
+            if conflicts:
+                raise mc.OutputHeldError("major_marker_conflict",
+                                         "명시 major_id와 앞머리 전공 표기가 다름",
+                                         requested=major_id,
+                                         conflicts=sorted({other for _, other in conflicts}))
         # 본문은 목차 항목 뒤부터 시작한다. 목차의 마지막 항목(감사의 글)은 뒤에
         # 본문 절이 이어지고, 본문 끝의 감사의 글은 뒤가 비어 있어 둘을 구분한다.
         i_body = None

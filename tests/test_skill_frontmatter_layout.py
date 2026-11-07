@@ -186,12 +186,12 @@ class PeerFrontmatterTests(ContractCase):
         self.builder = runtime("build_docx")
         self.mc = runtime("gg_major_contract")
 
-    def manuscript(self, major):
+    def manuscript(self, major, **metadata):
         profile = self.fm.normalize_school_profile({
             "major_id": major,
             "school_profile": {
                 "title": "합성 영농계획", "author": "가상학생",
-                "submission_date": "2026년 12월", "graduation_date": "2027년 2월"}})
+                "submission_date": "2026년 12월", "graduation_date": "2027년 2월", **metadata}})
         lines = self.fm.frontmatter_lines(profile, artifacts={
             "parent_consent": "동의·날인 확인 대기", "summary": "합성 요약 내용",
             "thanks": "합성 감사 내용"})
@@ -243,6 +243,39 @@ class PeerFrontmatterTests(ContractCase):
         all_text = "\n".join(pages)
         self.assertNotIn("논문지도교수 신청서", all_text)
         self.assertNotIn("논문심사위원 추천서", all_text)
+
+    def test_horticulture_advisor_is_on_submission_not_second_cover(self):
+        text = self.manuscript("hort_env_systems", advisor="가상지도교수")
+        pages = self.pages(self.convert("hort_env_systems", text))
+        self.assertNotIn("가상지도교수", pages[0])
+        self.assertNotIn("가상지도교수", pages[1])
+        self.assertIn("지도교수 가상지도교수", pages[2])
+        self.assertIn("으로 제출함", pages[2])
+
+    def test_same_markers_do_not_allow_another_major_frontmatter(self):
+        for source, bound in (("fruit_trees", "hort_env_systems"),
+                              ("hort_env_systems", "fruit_trees"),
+                              ("fruit_trees", "specialty_crops"),
+                              ("specialty_crops", "hort_env_systems")):
+            with self.subTest(source=source, bound=bound):
+                text = self.manuscript(source, department=self.gd.school_frontmatter_spec(source).department)
+                with self.assertRaises(self.mc.OutputHeldError) as caught:
+                    self.convert(bound, text)
+                self.assertEqual(caught.exception.reason, "major_marker_conflict")
+
+    def test_title_naming_another_major_is_not_a_department(self):
+        text = self.manuscript("hort_env_systems", title="원예학부 과수전공")
+        pages = self.pages(self.convert("hort_env_systems", text))
+        self.assertIn("원예학부 과수전공", pages[0])
+        self.assertIn("원예환경시스템전공", pages[0])
+
+    def test_matching_cover_does_not_hide_conflicting_submission_department(self):
+        text = self.manuscript("hort_env_systems")
+        before, submission = text.split("제출서", 1)
+        submission = submission.replace("원예환경시스템전공", "원예학부 과수전공", 1)
+        with self.assertRaises(self.mc.OutputHeldError) as caught:
+            self.convert("hort_env_systems", before + "제출서" + submission)
+        self.assertEqual(caught.exception.reason, "major_marker_conflict")
 
     def test_dairy_keeps_preliminary_prose_before_contents_and_body(self):
         doc = self.convert("dairy")
