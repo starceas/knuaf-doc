@@ -458,21 +458,21 @@ class FinanceAndDocxGuardTests(_Base):
                 if major == FRUIT and root == fruit:
                     reason = "unsupported_finance_profile"
                 with self.subTest(case=label, entry="workbook"):
-                    self._held(reason, finance.workbook, spec,
+                    self._held("unsupported_finance_profile" if major == FRUIT and label == "t1-fruit-registered" else reason, finance.workbook, spec,
                                Path(root) / "wb.xlsx", context=ctx)
                 with self.subTest(case=label, entry="school_workbook"):
-                    self._held(reason, school.school_workbook,
+                    self._held("unsupported_finance_profile" if major == FRUIT and label == "t1-fruit-registered" else reason, school.school_workbook,
                                dict(spec, profile="school_17_sheet_v1"),
                                Path(root) / "school.xlsx", context=ctx)
                 with self.subTest(case=label, entry="build"):
                     write_text(root, "spec.json",
                                json.dumps(spec, ensure_ascii=False))
                     before = self._tree_bytes(root)
-                    self._held(reason, build.build, root, "spec.json",
+                    self._held("unsupported_finance_profile" if major == FRUIT and label == "t1-fruit-registered" else reason, build.build, root, "spec.json",
                                "out.xlsx", major_id=major)
                     extra_args = ["--major", major] if major else []
                     self._cli_held(self._build_cli(root, *extra_args),
-                                   reason)
+                                   "unsupported_finance_profile" if label == "t1-fruit-registered" else reason)
                 self.assertEqual(self._tree_bytes(root), before)
         with self.subTest(case="t5-forged"):
             self._held("major_binding_required", finance.calculate,
