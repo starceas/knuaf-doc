@@ -162,7 +162,7 @@
   "scripts/gg_major_contract.py": "e696d762a10eb4d648f212f073864203640422387b60691b190a48f962402c69",
   "scripts/gg_manuscript_intake.py": "d8c61627a320315729b24eb358d3433a6eb4c590cc72719b80aed5d96d85e1ac",
   "scripts/gg_office.py": "e84c2049808a77e52cbd224b15841bd90d9b279962e89ec453e32f7ae2af28ac",
-  "scripts/gg_office_session.py": "a0809995452b79d9c2ab6f4a4eac83b4ad6fb258476e10c9b3f018e5c81ea41c",
+  "scripts/gg_office_session.py": "f492dc268d83f9337e3011bb894cfaef30ad5b7e5c752d370c3126fa05f8195f",
   "scripts/gg_office_win.py": "539007af5a58d7d68f353037f39e4c321cd588563f99f69407cc772ea55b1b49",
   "scripts/gg_orchard_production.py": "a66466e1ea91aedf4c9e1411c0a9e48bbe7cca279c68fff3e1ca760307af52d7",
   "scripts/gg_price_assumptions.py": "0ce493232cc03187ab45265b3b8276b751eb479c349023d46e7f9baee7958d4e",
