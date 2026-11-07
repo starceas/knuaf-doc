@@ -405,7 +405,7 @@
     },
     "tests/test_skillgaps_wp2_session.py": {
       "origin": "new",
-      "sha256": "3e3c2c473cc90bf2e14545c0caab6811511faafd1f6d6959dbdbef432664f3db"
+      "sha256": "2a5f8d120f20d33e3a2bb397ad42facb14716ae4505e068b6ddfc5e9a8ae013f"
     },
     "tests/test_skillgaps_wp3_calcchain.py": {
       "origin": "new",
@@ -738,5 +738,5 @@
     "verified_count": 255
   },
   "schema": "knuaf-doc/validation-bundle@3",
-  "validation_tree_sha256": "306e71a402621b04ca01619a5a3e3b4b70d00f80dfdcb229091c95eb2f6cf3ca"
+  "validation_tree_sha256": "51d458d5dbaa2487eddf271854e798e8478ae35d31e5f69db5d36012efe5ea5f"
 }
