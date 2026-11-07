@@ -2320,11 +2320,11 @@
       "source": "new"
     },
     "tests/test_major_guard_paper.py": {
-      "after_sha256": "34777e42a68f7c40059fab8431f440b482141b5e788b7ac819c2ea3033914f3e",
+      "after_sha256": "0a5173d381d0b9ef1893a9661521ed9c112b405584ee37c6e8ba6a9ac365659c",
       "before_sha256": null,
       "first_changed": "P28",
       "owner": "P28",
-      "reason": "ORDER-13: preserve paper/adopt/race/professor-approval assertions; add major claims for synthetic peer, changed-major and reconfirmation answer fixtures. | ORDER-30: retain previously confirmed years, require confirmed S for paper/finance outputs, route S to the specialty financial axis, and keep CPI observations tied to W. | W2 A2 unit2: measured staged bytes for workbook profile contracts; retain prior reason, owner and ancestry.",
+      "reason": "ORDER-13: preserve paper/adopt/race/professor-approval assertions; add major claims for synthetic peer, changed-major and reconfirmation answer fixtures. | ORDER-30: retain previously confirmed years, require confirmed S for paper/finance outputs, route S to the specialty financial axis, and keep CPI observations tied to W. | W2 A2 unit2: measured staged bytes for workbook profile contracts; retain prior reason, owner and ancestry. | W1d: preserve paper-only draft/review exports for fruit, horticulture and dairy; generic workbook adoption/publication reproduced open and assigned to A2 without pinning the bypass as expected behavior.",
       "source": "new"
     },
     "tests/test_p2_core.py": {

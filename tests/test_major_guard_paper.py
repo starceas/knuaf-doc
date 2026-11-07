@@ -565,6 +565,30 @@ class ExportAdoptGuardTests(_Base):
         self._export_held(insect_root, "unsupported_output", INSECTS,
                           kinds=("draft",))
 
+    def test_peer_draft_review_exports_publish_paper_only(self):
+        """Workbook declarations must not add spreadsheets to paper exports.
+
+        Direct XLSX/companion adoption and submission export are a separate
+        A2 profile-gate boundary; W1d found those routes open without proof.
+        """
+        for major in ("fruit_trees", "hort_env_systems", "dairy"):
+            root = self.make_project()
+            bind_major(root, major)
+            self._seed_body(root)
+            for kind in ("draft", "review"):
+                with self.subTest(major=major, kind=kind):
+                    result = self.core.export(root, kind, major_id=major)
+                    output = Path(result["path"])
+                    self.assertIn("농장명은 행복농장이다.",
+                                  output.read_text(encoding="utf-8"))
+                    manifest = json.loads((output.parent / "manifest.json")
+                                          .read_text(encoding="utf-8"))
+                    self.assertEqual(
+                        [(a["major_id"], a["output"])
+                         for a in manifest["major_authorization"]],
+                        [(major, "school_paper")])
+                    self.assertEqual(list(output.parent.rglob("*.xlsx")), [])
+
     def test_merge_forwards_major(self):
         root = self.make_project()
         bind_major(root)
