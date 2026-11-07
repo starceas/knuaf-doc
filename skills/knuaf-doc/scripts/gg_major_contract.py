@@ -211,6 +211,7 @@ class MajorModule:
     finance_capabilities: tuple
     validation_rules: tuple
     supported_outputs: tuple
+    workbook_profiles: tuple = ()
     precedents: tuple = ()  # equal-rank PrecedentSpec roster
     packs: tuple = ()
     pack_refs: tuple = ()
@@ -428,6 +429,7 @@ def declare_module(
     finance_capabilities=(),
     validation_rules=(),
     supported_outputs=(),
+    workbook_profiles=(),
     packs=(),
     pack_refs=(),
     imports=(),
@@ -450,6 +452,7 @@ def declare_module(
         finance_capabilities=tuple(finance_capabilities),
         validation_rules=tuple(validation_rules),
         supported_outputs=tuple(supported_outputs),
+        workbook_profiles=tuple(workbook_profiles),
         packs=tuple(packs),
         pack_refs=tuple(pack_refs),
         imports=tuple(imports),
@@ -838,6 +841,44 @@ def require_finance_profile(authorization, profile: str) -> None:
         raise OutputHeldError("unsupported_finance_profile",
                               major_id=authorization.major_id,
                               profile=profile)
+
+
+def _authorized_workbook_module(authorization):
+    if not isinstance(authorization, OutputAuthorization):
+        raise OutputHeldError("workbook_profile_authorization_required")
+    try:
+        module = default_registry().resolve(authorization.major_id)
+    except MajorContractError as error:
+        raise OutputHeldError(
+            "workbook_profile_authorization_stale",
+            major_id=authorization.major_id,
+        ) from error
+    if (authorization.module_version != module.module_version
+            or authorization.contract_version != CONTRACT_VERSION):
+        raise OutputHeldError(
+            "workbook_profile_authorization_stale",
+            major_id=authorization.major_id,
+        )
+    return module
+
+
+def workbook_profiles_for(authorization) -> tuple:
+    """Return workbook profile declarations; this grants no output authority."""
+    return _authorized_workbook_module(authorization).workbook_profiles
+
+
+def require_workbook_profile(authorization, profile: str) -> None:
+    """Require a declared workbook profile and its matching finance capability."""
+    module = _authorized_workbook_module(authorization)
+    if not isinstance(profile, str) or not profile:
+        raise OutputHeldError("unsupported_finance_profile",
+                              major_id=module.major_id, profile=profile)
+    declared = profile in module.workbook_profiles
+    supported = any(cap.profile == profile and cap.status == "supported"
+                    for cap in module.finance_capabilities)
+    if not declared or not supported:
+        raise OutputHeldError("unsupported_finance_profile",
+                              major_id=module.major_id, profile=profile)
 
 
 def explicit_major_ids(spec):
@@ -1625,6 +1666,7 @@ SPECIALTY_CROPS_MODULE = declare_module(
         "school_excel_workbook",
         "finance_single_annual_cash_v1",
     ),
+    workbook_profiles=("school_17_sheet_v1",),
     packs=("mafra.specialty.production.2024",),
     forbidden_terms=_SPECIALTY_FORBIDDEN,
 )
@@ -2135,6 +2177,11 @@ FRUIT_TREES_MODULE = declare_module(
             status="unsupported",
             reason="5년·annual 전용 생성기 — 과수 10년 부록과 다름",
         ),
+        FinanceCapability(
+            profile="fruit_16_sheet_v1",
+            status="supported",
+            reason="과수 전공 학교 16시트 양식 프로필; A2 전용 경로에서만 사용",
+        ),
     ),
     validation_rules=(
         "namespace_fields",
@@ -2143,12 +2190,14 @@ FRUIT_TREES_MODULE = declare_module(
         "no_workbook_output",
         "instance_field_ids",
     ),
-    # Plan only: no paper generator, no workbook, no finance output yet.
     supported_outputs=(
         "question_list",
         "document_plan",
         "evidence_review",
+        "school_paper",
+        "school_excel_workbook",
     ),
+    workbook_profiles=("fruit_16_sheet_v1",),
     packs=(),  # empty_slot preserved — no fabricated orchard data
     forbidden_terms=_FRUIT_FORBIDDEN,
 )
@@ -2430,14 +2479,15 @@ HORT_ENV_SYSTEMS_MODULE = declare_module(
         "hort_workbook_receipt_required",
         "no_hort_calculation",
     ),
-    # Paper remains unsupported. Workbook output is receipt-gated by the
-    # dedicated horticulture converter at every public writer.
+    # Workbook output is receipt-gated by the dedicated horticulture converter.
     supported_outputs=(
         "question_list",
         "document_plan",
         "evidence_review",
+        "school_paper",
         "school_excel_workbook",
     ),
+    workbook_profiles=(),
     packs=(),  # empty_slot preserved — no fabricated horticulture data
     forbidden_terms=_HORT_ENV_FORBIDDEN,
 )
@@ -2516,8 +2566,12 @@ DAIRY_MODULE = declare_module(
                           "낙농 재무 산식 미지원"),
         FinanceCapability("hanwoo_herd_cash", "unsupported",
                           "한우 재무 산식 미지원"),
+        FinanceCapability("dairy_hanwoo_28_sheet_v1", "unsupported",
+                          "낙농 학교 원본 구조 미등록 — 프로필 닫음(R1 차단1)"),
     ),
-    supported_outputs=("question_list", "document_plan", "evidence_review"),
+    supported_outputs=("question_list", "document_plan", "evidence_review",
+                       "school_paper", "school_excel_workbook"),
+    workbook_profiles=("dairy_hanwoo_28_sheet_v1",),
     packs=(),
 )
 

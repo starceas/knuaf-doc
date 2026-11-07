@@ -36,6 +36,32 @@ XLSX와 동반 `<출력.manifest.json>` 경로를 함께 검사한다. XLSX가 �
 기존 manifest가 있으면 저장하지 않는다. 이 무덮어쓰기 검사가 전공·프로필
 권한 검사나 특용작물 교수님 템플릿 경로를 대신하지 않는다.
 
+학교 XLSX 채택은 출력 종류 선언만으로 허용하지 않는다. `adopt-output`의
+`output_value.native_manifest` 또는 `output_value.template_receipt`에
+`{path, sha256}` 포인터 하나를 두고, 해당 영수증을 같은 해시의 companion으로
+함께 보존한다. 실제 XLSX 해시와 영수증의 프로필을 대조한 뒤
+`require_workbook_profile`을 호출하며, 정본에는 검증된 `workbook_profile`과
+관리 사본 영수증 경로를 남긴다. caller의 profile 문자열만으로는 열리지 않는다.
+등록된 프로필은 `references/workbook-reference-set.json`의 시트 수·시트명·순서와
+시트별 수식 지문을 실제 통합문서 바이트와 대조한다(사본·채우기·Office 스테이징·채택·export).
+과수 `fruit_16_sheet_v1`의 지문은 등록 SHA256과 일치하는 학교 원본에서 추출했다.
+각 시트의 `(셀 주소, 확장된 수식 문자열)`을 정렬한 JSON(UTF-8, 공백 없는 구분자)의
+SHA256이며, 입력값 변경은 허용하고 수식 삭제·추가·이동·변경은 시트명을 남겨 거절한다.
+수식을 고친 사본의 예외 허용은 지원하지 않는다. 낙농은 원본 구조 미등록으로 닫혀 있다.
+원예 XLSX 본파일·동반 통합문서·PDF는 기존 전용 transform 검증이 필요하며,
+native XLSX/PDF는 전용 native 검증까지 통과해야 한다. 영수증 없는 파일과
+프로필 이름만 적은 native JSON은 거절한다. 채택 뒤 출력 등록만 추가된 revision은
+해시 검증된 과거 snapshot으로 재검증하지만, 사실·본문·바인딩 변경이나 no-op apply는
+낡은 영수증으로 거절한다. 원예 원본·변환·native 영수증 및 그 입력 파일은 보존해야 한다.
+`format`은 실제 바이트 종류와 일치해야 하며 PDF를 `.xlsx`로 내보내지 않는다.
+채택 재호출과 제출 후보 export도 현재 계약·영수증 해시를 다시 검사한다.
+본문만 내보내는 draft/review는 이 XLSX 관문을 요구하지 않는다.
+
+17시트 구조·고정 좌표·재무 계획 검사는 `school_17_sheet_v1` 전용이다.
+과수·낙농·프로필 없는 출력은 `school_excel_17_scope` 및
+`finance_plan_review_scope`에 `not_checked`를 남기며 17시트 검사 통과로 표시하지
+않는다. 제공 템플릿의 일반 무결성·native 보존 검사는 별도 유지한다.
+
 ## Office 재계산·PDF (macOS·Windows)
 
 세션 가드가 `unknown`·`inflight`로 남아 다음 변환이 `previous_office_session_unknown`(또는 `office_guard_state_unreadable`)로 막히면, 차단 메시지가 그대로 칠 수 있는 복구 명령을 함께 낸다: `python3 <스킬>/scripts/gg_office_session.py --recover word`(`--guard-dir`는 기본 가드 폴더가 아닐 때만 붙는다). 이 명령은 **가드 기록만 idle로** 바꾸고 Office 문서 닫기·앱 종료·잡 폴더/산출물 삭제를 하지 않는다. 다른 세션이 잠금을 잡고 있으면 `busy`로 아무것도 바꾸지 않으며, 복구 이력은 가드 폴더의 `recovery-audit.jsonl`에 남는다. Office에 이 작업의 문서가 남아 있지 않은지 사람이 확인한 뒤 실행한다. 현재 코드는 이번 실행의 작업 사본 경로와 실제 열린 문서의 정확한 대응·현재 저장 상태를 확인한 문서만 닫는다. 기존 사용자 문서·미저장 변경은 건드리지 않는다. 저장·닫기 실패, timeout·dirty·unknown에서는 후속 자동 close/quit 없이 보존 또는 결과 불명으로 기록하며 작업 사본을 유지한다. 닫힘이 이미 확인된 뒤 변환 검사·발행이 실패한 경우에는 확인된 닫힘과 실패 결과를 따로 기록한다. 앱 전체 quit은 없으며 Word/Excel 앱은 유지한다. 이 동작 설명은 실제 앱에서의 내용 보존·변환 성공을 보증하지 않는다.

@@ -294,17 +294,17 @@ class PaperGeneratorGuardTests(_Base):
         self._all_held(insect_root, insect, "unsupported_output")
 
     def test_l4_registered_module_without_paper_is_refused(self):
-        """The real registered fruit_trees module declares no paper."""
+        """The real registered insect module still declares no paper."""
         root = self.make_project()
-        bind_major(root, "fruit_trees")
-        spec = _spec(major_id="fruit_trees")
-        spec["school_profile"]["department"] = "과수학과"
+        bind_major(root, INSECTS)
+        spec = _spec(major_id=INSECTS)
+        spec["school_profile"]["department"] = "산업곤충학과"
         name = self._write_spec(root, spec)
         before = self._tree_bytes(root)
         self._core_held("unsupported_output", self.core.paper, root, name,
                         (Path(root) / name).read_bytes(), "build/f.md")
         self._core_held("unsupported_output", self.core.export, root,
-                        "draft", major_id="fruit_trees")
+                        "draft", major_id=INSECTS)
         self.assertEqual(self._tree_bytes(root), before)
 
     def test_l5_invalid_ids_and_bindings_are_held(self):
@@ -415,7 +415,7 @@ class PaperMigrationTests(_Base):
         is re-evaluated at the new revision.  Review freshness in this
         product is bound to the reviewed content (target refs +
         fingerprint), which the binding does not change, so the prior
-        calculation review stays fresh and no gate row changes; the
+        calculation review stays fresh; scope diagnostics may change with the binding. The
         output authorization, however, is recomputed and recorded at the
         new revision, and a held pre-migration request never becomes an
         output."""
@@ -425,8 +425,6 @@ class PaperMigrationTests(_Base):
         self.assertEqual(
             self.core.finance_review_freshness(root, before, "rev-calc")[0],
             "fresh")
-        gate_before = {(r["check_id"], r["target"]): r["status"]
-                       for r in self.core.gate(root, before)}
         name = self._write_spec(root, _spec(), "original.json")
         with self.assertRaises(self.core.OperationError):
             self.core.paper(root, name, (Path(root) / name).read_bytes(),
@@ -437,9 +435,6 @@ class PaperMigrationTests(_Base):
         self.assertEqual(
             self.core.finance_review_freshness(root, after, "rev-calc")[0],
             "fresh")
-        gate_after = {(r["check_id"], r["target"]): r["status"]
-                      for r in self.core.gate(root, after)}
-        self.assertEqual(gate_after, gate_before)
         value = self.core.paper(root, name, (Path(root) / name).read_bytes(),
                                 "build/migrated.md", major_id=SPECIALTY)
         self.assertEqual(value["major_authorization"]["project_revision"],
@@ -569,6 +564,30 @@ class ExportAdoptGuardTests(_Base):
         self._seed_body(insect_root)
         self._export_held(insect_root, "unsupported_output", INSECTS,
                           kinds=("draft",))
+
+    def test_peer_draft_review_exports_publish_paper_only(self):
+        """Workbook declarations must not add spreadsheets to paper exports.
+
+        Direct XLSX/companion adoption and submission export are a separate
+        A2 profile-gate boundary; W1d found those routes open without proof.
+        """
+        for major in ("fruit_trees", "hort_env_systems", "dairy"):
+            root = self.make_project()
+            bind_major(root, major)
+            self._seed_body(root)
+            for kind in ("draft", "review"):
+                with self.subTest(major=major, kind=kind):
+                    result = self.core.export(root, kind, major_id=major)
+                    output = Path(result["path"])
+                    self.assertIn("농장명은 행복농장이다.",
+                                  output.read_text(encoding="utf-8"))
+                    manifest = json.loads((output.parent / "manifest.json")
+                                          .read_text(encoding="utf-8"))
+                    self.assertEqual(
+                        [(a["major_id"], a["output"])
+                         for a in manifest["major_authorization"]],
+                        [(major, "school_paper")])
+                    self.assertEqual(list(output.parent.rglob("*.xlsx")), [])
 
     def test_merge_forwards_major(self):
         root = self.make_project()

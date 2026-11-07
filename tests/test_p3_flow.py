@@ -1047,9 +1047,25 @@ def _output_value_for(core, root, p, *, path="out.xlsx", data=BYTES,
         "target_refs": refs,
         "input_fingerprint": core.fingerprint(root, p, refs),
     }
+    native = {"status": "converted", "engine": "Microsoft Excel",
+              "published_office_sha256": core.digest(data),
+              "validation": {"workbook_profile": "school_17_sheet_v1",
+                             "finance_profile": "school_17_sheet_v1",
+                             "structure_issues": [], "school_issues": [],
+                             "excel": {"valid": True, "sha256": core.digest(data)}}}
+    receipt_path = Path(path).stem + ".native.json"
+    write_text(root, receipt_path, json.dumps(native))
+    ov["native_manifest"] = {"path": receipt_path,
+                             "sha256": core.digest((Path(root) / receipt_path).read_bytes())}
     if checks is not None:
         ov["checks"] = checks
     return ov
+
+
+def _adopt_profiled_output(core, root, value, revision, request_id, **kwargs):
+    """Economic fixtures still supply real hash-bound school-form evidence."""
+    return core.adopt_output(root, value, revision, request_id,
+                             companion_files=[value["native_manifest"]], **kwargs)
 
 
 class AdoptEconomicOutputTests(ContractCase):
@@ -1071,7 +1087,7 @@ class AdoptEconomicOutputTests(ContractCase):
         _write_xlsx(root, "out.xlsx", BYTES)
         ov = _output_value_for(core, root, p)
         with self.assertRaises(core.OperationError) as cm:
-            core.adopt_output(root, ov, p["revision"], "adopt-none", major_id="specialty_crops")
+            _adopt_profiled_output(core, root, ov, p["revision"], "adopt-none", major_id="specialty_crops")
         self.assertEqual(
             "economic_evidence_missing", cm.exception.result["reason"])
         self.assertEqual(
@@ -1083,7 +1099,7 @@ class AdoptEconomicOutputTests(ContractCase):
                      "evidence_hash": core.digest(
                          (Path(root) / "report.md").read_bytes())}])
         with self.assertRaises(core.OperationError) as cm:
-            core.adopt_output(root, ov, p["revision"], "adopt-bad", major_id="specialty_crops")
+            _adopt_profiled_output(core, root, ov, p["revision"], "adopt-bad", major_id="specialty_crops")
         self.assertEqual(
             "economic_evidence_missing", cm.exception.result["reason"])
         self.assertNotIn("out", core.load(root).get("outputs", {}))
@@ -1111,7 +1127,7 @@ class AdoptEconomicOutputTests(ContractCase):
             checks=[{"evidence_path": "report.json",
                      "evidence_hash": core.digest(
                          (Path(root) / "report.json").read_bytes())}])
-        result = core.adopt_output(root, ov, p["revision"], "adopt-ok", major_id="specialty_crops")
+        result = _adopt_profiled_output(core, root, ov, p["revision"], "adopt-ok", major_id="specialty_crops")
         self.assertEqual("adopted", result["status"])
         self.assertIn("out", core.load(root)["outputs"])
 
@@ -1138,7 +1154,7 @@ class AdoptEconomicOutputTests(ContractCase):
                      "evidence_hash": core.digest(
                          (Path(root) / "report.json").read_bytes())}])
         with self.assertRaises(core.OperationError) as cm:
-            core.adopt_output(root, ov, p["revision"], "adopt-foreign", major_id="specialty_crops")
+            _adopt_profiled_output(core, root, ov, p["revision"], "adopt-foreign", major_id="specialty_crops")
         self.assertEqual(
             "economic_evidence_missing", cm.exception.result["reason"])
         self.assertEqual(
@@ -1166,7 +1182,7 @@ class AdoptEconomicOutputTests(ContractCase):
                      "evidence_hash": core.digest(
                          (Path(root) / "report.json").read_bytes())}])
         with self.assertRaises(core.OperationError) as cm:
-            core.adopt_output(root, ov, p["revision"], "adopt-null", major_id="specialty_crops")
+            _adopt_profiled_output(core, root, ov, p["revision"], "adopt-null", major_id="specialty_crops")
         self.assertEqual(
             "economic_evidence_missing", cm.exception.result["reason"])
         self.assertNotIn("out", core.load(root).get("outputs", {}))
@@ -1196,7 +1212,7 @@ class AdoptEconomicOutputTests(ContractCase):
                      "evidence_hash": core.digest(
                          (Path(root) / "report.json").read_bytes())}])
         with self.assertRaises(core.OperationError) as cm:
-            core.adopt_output(root, ov, p["revision"], "adopt-missing", major_id="specialty_crops")
+            _adopt_profiled_output(core, root, ov, p["revision"], "adopt-missing", major_id="specialty_crops")
         self.assertEqual(
             "output_source_missing", cm.exception.result["reason"])
         self.assertNotIn(
@@ -1222,7 +1238,7 @@ class AdoptEconomicOutputTests(ContractCase):
                      "evidence_hash": core.digest(
                          (Path(root) / "report.json").read_bytes())}])
         with self.assertRaises(core.OperationError) as cm:
-            core.adopt_output(root, ov, p["revision"], "adopt-managed", major_id="specialty_crops")
+            _adopt_profiled_output(core, root, ov, p["revision"], "adopt-managed", major_id="specialty_crops")
         self.assertEqual(
             "invalid_output_metadata", cm.exception.result["reason"])
 
@@ -1236,7 +1252,7 @@ class AdoptEconomicOutputTests(ContractCase):
         _write_xlsx(root, "out.xlsx", BYTES)
         ov = _output_value_for(
             core, root, p, checks=["garbage", {"unrelated": 1}])
-        result = core.adopt_output(root, ov, p["revision"], "adopt-ne", major_id="specialty_crops")
+        result = _adopt_profiled_output(core, root, ov, p["revision"], "adopt-ne", major_id="specialty_crops")
         self.assertEqual("adopted", result["status"])
 
 
@@ -2256,9 +2272,7 @@ def _gate_econ_output_project(core, root, *, with_review):
          "evidence_path": "report.json",
          "evidence_hash": ev_hash}
         for cid in ("structure", "recalculation", "crosscheck", "render")]
-    core.adopt_output(
-        root, _output_value_for(core, root, p, checks=checks),
-        p["revision"], "adopt-x", major_id="specialty_crops")
+    _adopt_profiled_output(core, root, _output_value_for(core, root, p, checks=checks), p["revision"], "adopt-x", major_id="specialty_crops")
     return core.load(root)
 
 
@@ -2282,9 +2296,7 @@ def _gate_plain_output_project(core, root):
          "evidence_path": "ev.txt",
          "evidence_hash": core.digest(b"EVIDENCE")}
         for cid in ("structure", "recalculation", "crosscheck", "render")]
-    core.adopt_output(
-        root, _output_value_for(core, root, p, checks=checks),
-        p["revision"], "adopt-x", major_id="specialty_crops")
+    _adopt_profiled_output(core, root, _output_value_for(core, root, p, checks=checks), p["revision"], "adopt-x", major_id="specialty_crops")
     return core.load(root)
 
 
@@ -2496,12 +2508,9 @@ class EconomicOutputFreshnessGateTests(ContractCase):
                  (Path(root) / "report2.json").read_bytes())}
             for cid in
             ("structure", "recalculation", "crosscheck", "render")]
-        core.adopt_output(
-            root,
-            _output_value_for(
-                core, root, p, path="out2.xlsx", data=BYTES2,
-                checks=checks2),
-            p["revision"], "adopt-y", major_id="specialty_crops")
+        _adopt_profiled_output(core, root, _output_value_for(
+            core, root, p, path="out2.xlsx", data=BYTES2,
+            checks=checks2), p["revision"], "adopt-y", major_id="specialty_crops")
         return core.load(root)
 
     def test_apply_rejects_stale_metadata_only_terminal_link(self):
@@ -2884,7 +2893,7 @@ class StaleRegistryWriteAdmissionTests(ContractCase):
                          (Path(root) / "report.json").read_bytes())}])
         with _drifted_context(core):
             with self.assertRaises(core.OperationError) as cm:
-                core.adopt_output(root, ov, p["revision"], "adopt-stale", major_id="specialty_crops")
+                _adopt_profiled_output(core, root, ov, p["revision"], "adopt-stale", major_id="specialty_crops")
         self.assertEqual(
             "economic_evidence_missing", cm.exception.result["reason"])
         self.assertEqual(
@@ -2914,8 +2923,7 @@ class StaleRegistryWriteAdmissionTests(ContractCase):
             checks=[{"evidence_path": "report.json",
                      "evidence_hash": core.digest(
                          (Path(root) / "report.json").read_bytes())}])
-        result = core.adopt_output(
-            root, ov, p["revision"], "adopt-ok", major_id="specialty_crops")
+        result = _adopt_profiled_output(core, root, ov, p["revision"], "adopt-ok", major_id="specialty_crops")
         self.assertEqual("adopted", result["status"])
         self.assertIn("out", core.load(root)["outputs"])
 

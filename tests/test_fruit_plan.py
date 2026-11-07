@@ -62,8 +62,9 @@ class PlanBindingTests(ContractCase):
         self.assertNotIn("gg:draft", blob)
         for key in ("total_area", "production", "revenue", "yield"):
             self.assertNotIn('"%s"' % key, blob)
-        self.assertEqual({o["reason"] for o in plan["output_availability"]},
-                         {"unsupported_output"})
+        availability = {o["output"]: o for o in plan["output_availability"]}
+        self.assertEqual(availability["finance_calculation"]["reason"], "unsupported_output")
+        self.assertEqual(availability["school_excel_workbook"]["status"], "allowed")
 
     def test_cli_is_read_only(self):
         import subprocess

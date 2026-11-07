@@ -202,7 +202,7 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
     (``context``) before anything is rendered."""
     import gg_major_contract as mc
 
-    mc.authorize_output(mc.OUTPUT_SCHOOL_PAPER, context)
+    authorization = mc.authorize_output(mc.OUTPUT_SCHOOL_PAPER, context)
     doc = Document()
     setup_document(doc, font)
     nodes = parse(md_text)
@@ -310,9 +310,12 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
                 elif node["kind"] in {"caption", "paragraph"}:
                     doc.paragraphs[-1].paragraph_format.keep_with_next = True
 
-    front_plan = school_frontmatter_plan(nodes)
+    front_plan = school_frontmatter_plan(nodes, authorization.major_id)
     front_indices = front_plan["indices"] if front_plan else {}
     is_school_paper = front_plan is not None
+    if (not is_school_paper and authorization.major_id != "specialty_crops"
+            and any(n.get("text", "").strip() == "겉표지" for n in nodes)):
+        raise ValueError("전공 학교 앞머리 필수 항목 또는 순서 불일치")
 
     if not is_school_paper:
         # 표·그림만 있고 제목이 없는 문서에 빈 목차 페이지를 붙이지 않는다.
@@ -330,9 +333,9 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
     doc.settings.element.append(update)
 
     i_appr = front_indices["인준서"]
-    i_title = front_indices["표제면"]
+    i_title = front_indices.get("표제면")
     i_subm = front_indices["제출서"]
-    i_toc, i_body = school_toc_range(nodes)
+    i_toc, i_body = front_plan["toc"], front_plan["body"]
     official_forms_order = bool(front_plan.get("official_order"))
     if official_forms_order:
         from gg_frontmatter_layout import render_forms
@@ -371,7 +374,7 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
                     pf.space_before = Pt(100)
                 elif text in {"한국농수산대학교", "한국농수산대학"}:
                     pf.space_before = Pt(62)
-                elif text == "특용작물전공" or text.endswith("학과"):
+                elif text == front_plan["spec"].department or text.endswith("학과"):
                     pf.space_before = Pt(8)
                 else:
                     pf.space_before = Pt(8)
@@ -431,7 +434,7 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
                             pf.space_before = Pt(8)
                         elif text in {"한국농수산대학교", "한국농수산대학"}:
                             pf.space_before = Pt(95)
-                        elif text == "특용작물전공" or text.endswith("학과"):
+                        elif text == front_plan["spec"].department or text.endswith("학과"):
                             pf.space_before = Pt(18)
                         elif seen_plan and title_candidates < 2 and text not in {
                             "농업전문학사 학위논문", "영농창업계획", "이 논문을 농업전문학사 학위논문으로 제출함"
@@ -518,10 +521,11 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
                 n['_bookmark_id']=idx
         table_entries=[(split_caption_credit(n['text'])[0],n['_bookmark'],2) for n in body_nodes if n['kind']=='caption' and n.get('label')=='표']
         figure_entries=[(split_caption_credit(n['text'])[0],n['_bookmark'],2) for n in body_nodes if n['kind']=='caption' and n.get('label')=='그림']
+        dairy_lists = authorization.major_id == "dairy"
         entries=[]
         if prelim: entries.append(('요약','gg_summary',0))
-        if table_entries: entries.append(('표 목차','gg_tables',0))
-        if figure_entries: entries.append(('그림 목차','gg_figures',0))
+        if table_entries or dairy_lists: entries.append(('표 목차','gg_tables',0))
+        if figure_entries or dairy_lists: entries.append(('그림 목차','gg_figures',0))
         entries += [(n['text'],n['_bookmark'],n['level']) for n in body_nodes if n['kind']=='heading' and n['level']<=2]
         contents(doc,entries,font)
         def new_numbered_section(number_format):
@@ -531,17 +535,17 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
             p=sec.footer.paragraphs[0];p.alignment=WD_ALIGN_PARAGRAPH.CENTER
             field=OxmlElement('w:fldSimple');field.set(qn('w:instr'),'PAGE');p._p.append(field)
             return sec
-        if prelim or table_entries or figure_entries:
+        if prelim or table_entries or figure_entries or dairy_lists:
             new_numbered_section('lowerRoman')
             if prelim:
                 p=doc.add_paragraph();p.alignment=WD_ALIGN_PARAGRAPH.CENTER
                 runs(p,'요약',font,20,True);bookmark(p,'gg_summary',9001)
                 for n in prelim: render_node(n,allow_soft_wrap=True)
-            if table_entries:
+            if table_entries or dairy_lists:
                 if prelim: doc.add_page_break()
                 contents(doc,table_entries,font,'표 목차','gg_tables',9002)
-            if figure_entries:
-                if prelim or table_entries: doc.add_page_break()
+            if figure_entries or dairy_lists:
+                if prelim or table_entries or dairy_lists: doc.add_page_break()
                 contents(doc,figure_entries,font,'그림 목차','gg_figures',9003)
         new_numbered_section('decimal')
     else:
@@ -672,7 +676,7 @@ def main(argv=None):
         mc.reconfirm_output(authorization, context)
         out.parent.mkdir(parents=True, exist_ok=True)
         doc.save(out)
-        parsed_plan = school_frontmatter_plan(parse(source_text))
+        parsed_plan = school_frontmatter_plan(parse(source_text), authorization.major_id)
         infeasible = [r for r in table_reports
                       if r.get("applied") and r.get("feasible") is False]
         manifest = {
@@ -695,13 +699,20 @@ def main(argv=None):
             "photo_requests": photo_requests(parse(source_text)),
             "school_frontmatter": (
                 {
-                    "layout": "forms_1_to_4" if parsed_plan.get("official_order") else "logical_legacy",
+                    "layout": ("source_order_common_defaults" if authorization.major_id != "specialty_crops"
+                               else "forms_1_to_4" if parsed_plan.get("official_order") else "logical_legacy"),
                     "order": list(parsed_plan.get("order", ())),
                     "source_order_note": (
+                        "전공별 원문 순서; 미확인 물리 배치는 공용 기본값 사용"
+                        if authorization.major_id != "specialty_crops" else
                         "공식 지침 p4 논리 순서와 p6–9 시각 예시 순서가 달라 forms_1_to_4를 선택함"
                         if parsed_plan.get("official_order")
                         else "공식 지침 p4 논리 순서를 사용함; p6–9 시각 예시와 다를 수 있어 사용자 검토 필요"
                     ),
+                    "major_id": parsed_plan["spec"].major_id,
+                    "layout_confidence": parsed_plan["spec"].layout_confidence,
+                    "physical_forms": [list(roles) for roles in parsed_plan["spec"].physical_forms],
+                    "notices": list(parsed_plan["spec"].notices),
                 }
                 if parsed_plan
                 else None

@@ -1800,6 +1800,152 @@ def _publication_ref_for(root, receipt, receipt_rel):
     }
 
 
+def _output_workbook_profile(root, output, path=None, *, major_id=None,
+                             allow_legacy=False):
+    """Resolve a form only from a hash-bound native/operation receipt.
+
+    Caller-written profile strings and workbook shape grant no authority.
+    The pointer is retained with the managed output so export can recheck.
+    A registered profile is also compared with the real workbook's sheet
+    list, so a label alone never opens a school form. Specialty crops keep
+    their historical receipt-less workbook route (never for other bytes and
+    never when the caller supplies its own profile label).
+    """
+    mc = _major_contract_mod()
+    try:
+        workbook = Path(path) if path is not None else local(root, output["path"])
+        actual = digest(workbook.read_bytes())
+        kind = mc._sniff_kind(workbook)
+        native = output.get("native_manifest")
+        operation = output.get("template_receipt")
+        if bool(native) == bool(operation):
+            if (allow_legacy and major_id == "specialty_crops"
+                    and not native and not operation and kind == "workbook"
+                    and "workbook_profile" not in output):
+                return None
+            raise ValueError("one native manifest or operation receipt required")
+        pointer = native or operation
+        if not isinstance(pointer, dict) or not _check_sha256(pointer.get("sha256")):
+            raise ValueError("workbook receipt hash required")
+        receipt_path = local(root, pointer["path"])
+        raw = receipt_path.read_bytes()
+        if digest(raw) != pointer["sha256"]:
+            raise ValueError("workbook receipt hash mismatch")
+        data = json.loads(raw)
+        if not isinstance(data, dict):
+            raise ValueError("workbook receipt object required")
+        legacy = False
+        if native:
+            validation = data.get("validation", {})
+            if not isinstance(validation, dict):
+                raise ValueError("native Excel validation object required")
+            profile = validation.get("workbook_profile")
+            legacy = (profile is None
+                      and validation.get("finance_profile")
+                      == "legacy_unprofiled_render")
+            if (data.get("status") != "converted" or data.get("engine") != "Microsoft Excel"
+                    or data.get("published_office_sha256") != actual
+                    or data.get("error") or data.get("returncode") not in (None, 0)
+                    or str(data.get("engine_stderr", "")).strip()
+                    or validation.get("structure_issues") != []
+                    or validation.get("school_issues") != []
+                    or (not legacy
+                        and validation.get("finance_profile") != profile)):
+                raise ValueError("native Excel profile/output proof invalid")
+            excel = validation.get("excel", {})
+            if (not isinstance(excel, dict) or excel.get("valid") is not True
+                    or excel.get("sha256") != actual):
+                raise ValueError("native Excel artifact validation missing")
+        else:
+            from gg_office import template_receipt_binding
+            binding = template_receipt_binding(workbook, receipt_path)
+            profile = binding.get("workbook_profile")
+        if not isinstance(profile, str) or not profile:
+            if (legacy and allow_legacy and major_id == "specialty_crops"
+                    and kind == "workbook"):
+                return None
+            raise ValueError("workbook profile evidence required")
+        if "workbook_profile" in output and output["workbook_profile"] != profile:
+            raise ValueError("caller workbook profile differs from receipt")
+        if kind == "workbook":
+            from gg_school_excel import require_profile_structure
+            require_profile_structure(workbook, profile)
+        return profile
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        raise mc.OutputHeldError("finance_profile_evidence_invalid", str(error)) from error
+
+
+def _output_hort_profile(root, output, path, authorization):
+    """Require the dedicated transform/native chain for every workbook artifact."""
+    mc = _major_contract_mod()
+    try:
+        from dataclasses import replace
+        from gg_office import _hort_transform_binding
+        import gg_hort_workbook as hort
+        native = output.get("native_manifest")
+        operation = output.get("template_receipt")
+        if bool(native) == bool(operation):
+            raise ValueError("one horticulture receipt required")
+        pointer = native or operation
+        receipt = local(root, pointer["path"])
+        if digest(receipt.read_bytes()) != pointer["sha256"]:
+            raise ValueError("horticulture receipt hash mismatch")
+        if operation:
+            _hort_transform_binding(path, receipt, authorization,
+                                    mc.output_context(root, authorization.major_id),
+                                    allow_output_registration=True)
+        else:
+            data = json.loads(receipt.read_bytes())
+            binding = data["validation"]["template_receipt"]
+            transform = Path(binding["path"])
+            trec = hort.check_transform_receipt(transform, allow_output_registration=True)
+            _hort_transform_binding(trec["output_artifacts"][0]["path"], transform,
+                                    authorization, mc.output_context(root, authorization.major_id),
+                                    allow_output_registration=True)
+            project = load(root)
+            if project["revision"] != trec["project_revision"]:
+                entry = next(row for row in project["history"]
+                             if row["revision"] == trec["project_revision"])
+                project = _history_snapshot(root, project, entry)
+            auth = replace(authorization, project_revision=project["revision"])
+            native_receipt = receipt
+            if output.get("publication_ref"):
+                published = _publication_mod().verify_publication(
+                    root, publication_ref=output["publication_ref"])
+                original = published["request"]["output_value"]["native_manifest"]
+                native_receipt = local(root, original["path"])
+                if digest(native_receipt.read_bytes()) != pointer["sha256"]:
+                    raise ValueError("horticulture original native receipt hash mismatch")
+            _, workbook, pdf = hort._check_native_receipt(
+                native_receipt, trec, transform, project, trec["canonical_facts_sha256"], auth)
+            if digest(Path(path).read_bytes()) not in (
+                    digest(Path(workbook).read_bytes()), digest(Path(pdf).read_bytes())):
+                raise ValueError("horticulture native output hash mismatch")
+        mc.require_finance_profile(authorization, hort.PROFILE)
+        return hort.PROFILE
+    except mc.OutputHeldError:
+        raise
+    except (OSError, ValueError, KeyError, TypeError, StopIteration) as error:
+        raise mc.OutputHeldError("hort_transform_receipt_invalid", str(error)) from error
+
+
+_FORMAT_KINDS = {"xlsx": "workbook", "xlsm": "workbook", "xls": "workbook",
+                 "pdf": "pdf", "docx": "paper", "hwpx": "paper",
+                 "hwp": "paper", "md": "text", "txt": "text"}
+
+def _output_format_issue(mc, output, path):
+    """The declared ``format`` must name the bytes actually published."""
+    fmt = output.get("format")
+    expected = _FORMAT_KINDS.get(fmt.lower()) if isinstance(fmt, str) else None
+    if expected is None:
+        return "unknown_output", "unsupported output format %r" % (fmt,)
+    actual = mc._sniff_kind(path)
+    if actual != expected:
+        return "output_format_mismatch", (
+            "format %r does not match %s bytes" % (fmt, actual))
+    return None
+
+
 @_op_boundary
 def adopt_output(root, output_value, expected_revision, request_id,
                  companion_files=None, *, major_id=None):
@@ -1864,11 +2010,54 @@ def adopt_output(root, output_value, expected_revision, request_id,
 
     adopt_auth = {}
 
-    def adopt_guard(kinds, project=None):
+    def adopt_guard(kinds, project=None, stored=None):
         try:
             adopt_auth["value"] = mc.authorize_outputs(
                 sorted(kinds) if kinds else unknown_kinds, guard_ctx,
                 project=project)
+            if kinds and mc.OUTPUT_SCHOOL_WORKBOOK in kinds:
+                record = stored if stored is not None else meta
+                path = local(root, record["path"])
+                auth = next(a for a in adopt_auth["value"]
+                            if a.output == mc.OUTPUT_SCHOOL_WORKBOOK)
+                # Workbook authority: the declared format must name these
+                # bytes before any profile evidence is considered.
+                issue = _output_format_issue(mc, record, path)
+                if issue:
+                    reason, detail = issue
+                    raise mc.OutputHeldError(reason, detail)
+                if (path.is_file()
+                        and mc.OUTPUT_SCHOOL_WORKBOOK in mc.output_kinds_for_file(path)
+                        and auth.major_id == "hort_env_systems"):
+                    adopt_auth["workbook_profile"] = _output_hort_profile(
+                        root, record, path, auth)
+                elif (path.is_file()
+                      and mc.OUTPUT_SCHOOL_WORKBOOK in mc.output_kinds_for_file(path)):
+                    profile = _output_workbook_profile(
+                        root, record, path, major_id=auth.major_id,
+                        allow_legacy=True)
+                    if profile is not None:
+                        mc.require_workbook_profile(auth, profile)
+                        adopt_auth["workbook_profile"] = profile
+                for companion in companions:
+                    companion_path = (path.parent / "companions" / Path(companion["path"]).name
+                                      if stored is not None else local(root, companion["path"]))
+                    if not companion_path.is_file():
+                        continue
+                    if mc._sniff_kind(companion_path) == "text":
+                        continue
+                    if mc.OUTPUT_SCHOOL_WORKBOOK not in mc.companion_kinds(
+                            companion_path, kinds):
+                        continue
+                    if auth.major_id == "hort_env_systems":
+                        adopt_auth["workbook_profile"] = _output_hort_profile(
+                            root, record, companion_path, auth)
+                    else:
+                        profile = _output_workbook_profile(
+                            root, record, companion_path,
+                            major_id=auth.major_id, allow_legacy=True)
+                        if profile is not None:
+                            mc.require_workbook_profile(auth, profile)
         except mc.OutputHeldError as error:
             raise _op("adopt_output", "canonical", "not_committed",
                       error.reason, detail=str(error)) from error
@@ -1902,9 +2091,10 @@ def adopt_output(root, output_value, expected_revision, request_id,
         except (OSError, ValueError):
             p0 = {}
         if request_id in (p0.get("requests") or {}):
+            adopt_auth["retry"] = (p0.get("outputs") or {}).get(meta["id"], {})
             pre_kinds = stored_kinds(
                 (p0.get("outputs") or {}).get(meta["id"], {}))
-    adopt_guard(pre_kinds)
+    adopt_guard(pre_kinds, stored=adopt_auth.get("retry"))
 
     def body(capability):
         p = load(root)
@@ -1931,7 +2121,7 @@ def adopt_output(root, output_value, expected_revision, request_id,
             # Policy B: returning the stored result is an output too —
             # judged on the managed copy under the current binding, and
             # only when the adoption carries its persisted authorization.
-            adopt_guard(stored_kinds(stored), project=p)
+            adopt_guard(stored_kinds(stored), project=p, stored=stored)
             persisted = stored.get("major_authorization")
             if not isinstance(persisted, list) or not persisted or any(
                     not isinstance(a, dict) or a.get("major_id")
@@ -1949,6 +2139,18 @@ def adopt_output(root, output_value, expected_revision, request_id,
             raise _op("adopt_output", "canonical", "not_committed",
                       "revision_conflict", revision=p["revision"],
                       request_id=request_id)
+        # The declared format must name the bytes actually published: a PDF
+        # registered as .xlsx would be exported under a workbook name.
+        try:
+            declared_source = local(root, meta["path"])
+        except ValueError:
+            declared_source = None
+        if declared_source is not None and declared_source.is_file():
+            issue = _output_format_issue(mc, meta, declared_source)
+            if issue:
+                reason, detail = issue
+                raise _op("adopt_output", "canonical", "not_committed",
+                          reason, detail=detail)
         # Verify caller claims against actual files while holding the guard.
         if meta["input_fingerprint"] != fingerprint(root, p, meta["target_refs"]):
             raise _op("adopt_output", "canonical", "not_committed",
@@ -2078,6 +2280,12 @@ def adopt_output(root, output_value, expected_revision, request_id,
                       "output_source_missing", detail=meta["path"],
                       diag={"field": "path", "path": meta["path"]})
         adopt_guard(kinds, project=p)
+        if "workbook_profile" in adopt_auth:
+            pointer = meta.get("native_manifest") or meta.get("template_receipt")
+            if not any(c["path"] == pointer["path"] and c["sha256"] == pointer["sha256"]
+                       for c in companions):
+                raise _op("adopt_output", "canonical", "not_committed",
+                          "finance_profile_receipt_companion_required")
         # Resume check: same request_id already published but unregistered.
         publication_ref = None
         managed_path = None
@@ -2155,6 +2363,12 @@ def adopt_output(root, output_value, expected_revision, request_id,
         # record as an optional server-written field.
         registered = dict(meta, major_authorization=[
             a.to_dict() for a in adopt_auth["value"]])
+        if "workbook_profile" in adopt_auth:
+            registered["workbook_profile"] = adopt_auth["workbook_profile"]
+            key = "native_manifest" if meta.get("native_manifest") else "template_receipt"
+            pointer = meta[key]
+            registered[key] = dict(pointer, path=str(
+                Path(managed_path).parent / "companions" / Path(pointer["path"]).name))
         ctx = _register_adoption(
             capability=capability,
             root=root,
@@ -2729,6 +2943,9 @@ def _finance_plan_candidates(root, p):
     for source in p.get("sources", {}).values():
         path = source.get("path")
         if not isinstance(path, str) or not path.lower().endswith(".xlsx"):
+            continue
+        if ("workbook_profile" in source and
+                source["workbook_profile"] != _FINANCE_PLAN_PROFILE):
             continue
         try:
             if digest(local(root, path).read_bytes()) != source.get("hash"):
@@ -4429,13 +4646,19 @@ def checks(root, p):
         from gg_school_excel import inspect_outputs
 
         for cid, reason in inspect_outputs(root, p, lineage):
-            add(cid, "xlsx", reason)
+            add(cid, "xlsx", reason, severity="info" if cid == "school_excel_17_scope" else "error",
+                status="not_checked" if cid == "school_excel_17_scope" else "fail")
         body = merged(root, p)
         # WP-3 handoff: the 5-year plan / opening-asset / area review is
         # only meaningful for finance-supported majors and a hash-current
         # workbook source. blocked rows stay blocked (never a pass).
-        if gate_state["supported"] and _finance_plan_supported(p):
+        plan_supported = _finance_plan_supported(p)
+        if gate_state["supported"] and plan_supported:
             _add_finance_plan_review(root, p, body, add, gate_state)
+        elif not plan_supported:
+            add("finance_plan_review_scope", "finance",
+                "17시트 재무 계획 검사 미지원: school_17_sheet_v1 전용",
+                severity="info", status="not_checked")
         items, claims_block = _finance_check_items(p)
         if claims_block:
             add("body_finance_crosscheck", "body", claims_block, status="blocked")
@@ -5346,12 +5569,59 @@ def _export_output_kinds(root, p, kind, report):
     return kinds
 
 
-def _export_authorize(root, kinds, ctx, *, project=None):
+def _export_workbooks(project, kind, report):
+    if kind != "submission_candidate":
+        return ()
+    return tuple(project["outputs"][row["target"]] for row in report
+                 if row["check_id"].startswith("output_") and row["status"] == "pass")
+
+
+def _export_authorize(root, kinds, ctx, *, project=None, outputs=()):
     """Policy B authorization for export; hold codes become the pinned
     not_committed result."""
     mc = _major_contract_mod()
     try:
-        return mc.authorize_outputs(sorted(kinds), ctx, project=project)
+        authorizations = mc.authorize_outputs(sorted(kinds), ctx, project=project)
+        hort_companions = []
+        if authorizations and authorizations[0].major_id == "hort_env_systems":
+            for output in outputs:
+                path = local(root, output["path"])
+                if output.get("publication_ref"):
+                    receipt = _publication_mod().verify_publication(
+                        root, publication_ref=output["publication_ref"])
+                    paths = [path.parent / "companions" / Path(c["path"]).name
+                             for c in receipt["request"].get("companion_files", [])]
+                else:
+                    paths = [local(root, c["path"]) for c in output.get("companions", [])]
+                for cpath in paths:
+                    if (mc._sniff_kind(cpath) != "text"
+                            and mc.OUTPUT_SCHOOL_WORKBOOK in mc.companion_kinds(
+                                cpath, mc.output_kinds_for_file(path))):
+                        hort_companions.append((output, cpath))
+            if hort_companions:
+                auth = mc.authorize_output(mc.OUTPUT_SCHOOL_WORKBOOK, ctx, project=project)
+                for output, cpath in hort_companions:
+                    _output_hort_profile(root, output, cpath, auth)
+        for output in outputs:
+            path = local(root, output["path"])
+            issue = _output_format_issue(mc, output, path)
+            if issue:
+                reason, detail = issue
+                raise mc.OutputHeldError(reason, detail)
+        if mc.OUTPUT_SCHOOL_WORKBOOK in kinds:
+            auth = next(a for a in authorizations if a.output == mc.OUTPUT_SCHOOL_WORKBOOK)
+            for output in outputs:
+                path = local(root, output["path"])
+                if mc.OUTPUT_SCHOOL_WORKBOOK in mc.output_kinds_for_file(path):
+                    if auth.major_id == "hort_env_systems":
+                        _output_hort_profile(root, output, path, auth)
+                    else:
+                        profile = _output_workbook_profile(
+                            root, output, path, major_id=auth.major_id,
+                            allow_legacy=True)
+                        if profile is not None:
+                            mc.require_workbook_profile(auth, profile)
+        return authorizations
     except mc.OutputHeldError as error:
         raise _op("export", "export", "not_committed",
                   error.reason, detail=str(error)) from error
@@ -5372,9 +5642,10 @@ def export(root, kind, *, major_id=None):
     ctx = mc.output_context(root, major_id)
     try:
         p0 = load(root)
+        report0 = gate(root, p0)
         _export_authorize(
-            root, _export_output_kinds(root, p0, kind, gate(root, p0)),
-            ctx)
+            root, _export_output_kinds(root, p0, kind, report0), ctx,
+            outputs=_export_workbooks(p0, kind, report0))
     except (OSError, ValueError) as error:
         if isinstance(error, OperationError):
             raise
@@ -5422,7 +5693,8 @@ def export_locked(root, kind, *, capability, major_id=None):
     # lock — every exported file's kinds are covered.
     export_auths = _export_authorize(
         root, _export_output_kinds(root, p, kind, report),
-        _major_contract_mod().output_context(root, major_id), project=p)
+        _major_contract_mod().output_context(root, major_id), project=p,
+        outputs=_export_workbooks(p, kind, report))
     if kind == "submission_candidate":
         blocking = [x for x in report if blocks_skill_candidate(x)]
         if blocking:
@@ -5583,6 +5855,10 @@ def export_locked(root, kind, *, capability, major_id=None):
                     "input_changed_during_export",
                     detail="출력 중 입력 변경: 제출 후보 무효",
                 )
+            _export_authorize(
+                root, _export_output_kinds(root, p, kind, report),
+                _major_contract_mod().output_context(root, major_id), project=p,
+                outputs=_export_workbooks(p, kind, report))
         manifest_bytes = json.dumps(
             manifest, ensure_ascii=False, indent=2
         ).encode()
