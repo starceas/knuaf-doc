@@ -761,7 +761,7 @@
       "first_changed": "P9",
       "last_changed": "WB6",
       "owner": "P28",
-      "reason": "P9 hort_env_systems guidance: plan-only support boundary, teaching workbook role, source rights boundary | P20: module 0.2.0 — receipt-gated hort_18_sheet_reconstructed_v1 profile only, 0.1.0 explicit rebind and professor-reapproval boundary | P24: 근거 부족 16묶음 처분과 초안 표시 제거 설명 | P27: K1-04: 원예 모듈 0.2.0 바인딩과 전용 18시트 조건 | W1: chapter-wise body text draft guidance; existing conditional 18-sheet boundary preserved. | W4: 교수 지정 HT2를 형식 기준(A)으로 적용하고 HT1 등은 내용·구성 참고(B)로 분리, 작성요령 우선순위와 학생 안내 명시; 초안에서 영농 시작연도·계획 연도 임의 결정 금지.",
+      "reason": "P9 hort_env_systems guidance: plan-only support boundary, teaching workbook role, source rights boundary | P20: module 0.2.0 — receipt-gated hort_18_sheet_reconstructed_v1 profile only, 0.1.0 explicit rebind and professor-reapproval boundary | P24: 근거 부족 16묶음 처분과 초안 표시 제거 설명 | P27: K1-04: 원예 모듈 0.2.0 바인딩과 전용 18시트 조건 | W1: chapter-wise body text draft guidance; existing conditional 18-sheet boundary preserved. | W4: 교수 지정 HT2를 형식 기준(A)으로 적용하고 HT1 등은 내용·구성 참고(B)로 분리, 작성요령 우선순위와 학생 안내 명시; 초안에서 영농 시작연도·계획 연도 임의 결정 금지. | WB: 본문 DOCX 지원 경계와 HT2 집필 순서표 연결 안내 추가; 엑셀·재무 미지원 경계는 유지. | WB3: 책임자 판정(2026-11-08) 반영 — 2·3 소절은 계약이 아닌 권장 순서, 후미 부모님 동의서는 본문 DOCX에서 만들지 않고 학교 서식으로 따로 제출.",
       "source": "new"
     },
     "skills/knuaf-doc/references/hort-env-systems/finance-params.json": {
@@ -2534,7 +2534,7 @@
       "first_changed": "P28",
       "owner": "P28",
       "source": "new",
-      "reason": "",
+      "reason": "WB: HT2(교수 지정 틀기준) 목차 계약의 절·부록 노드를 집필 순서·질문 field_id·근거 범위·엑셀 시트로 잇는 작업 순서표. 재무 값은 엑셀 재계산 사실 등록 전까지 확인 필요로 둔다. WB3: 책임자 판정(2026-11-08) 절 추가 — 차이 1·4·5·6·7·9·10 계약 변경 없음, 2·3은 권장 소절 안내만, 8은 빌더 미생성·학교 서식 별도 제출. WB4: 절별 연결 열을 행마다 고정하고 재무 자리 표시 대상 목록을 시험으로 잠금.",
       "last_changed": "WB6"
     },
     "tests/test_hort_body_docx.py": {
@@ -2543,7 +2543,7 @@
       "first_changed": "P28",
       "owner": "P28",
       "source": "new",
-      "reason": "WB: 합성 원고를 학교 서식으로 조립한 출력의 앞머리·목차·캡션·재무 자리·부록을 검사한다.",
+      "reason": "WB3: 합성 원고를 학교 서식으로 조립했을 때 원예 앞머리 순서(두 표지·제출·인준·목차), HT2 목차 순서, 표 캡션 위치, 재무 자리 표시, 타전공 표기 차단, 3단계 SWOT 제목 검출을 확인한다. WB4: 목차 구역·절 구역·쪽 경계·캡션 인접을 직접 대상으로 바꿔 빈 목차·금액 대체·추가 쪽 나눔·동의서 생성·표 아래 캡션 변이를 실패시킨다. WB5: HT2 부록 1–18을 자리 표시로 조립하고 부록 제목·개별 자리 표시·금액 0을 잠근다.",
       "last_changed": "WB6"
     },
     "tests/test_hort_body_plan.py": {
@@ -2552,7 +2552,7 @@
       "first_changed": "P28",
       "owner": "P28",
       "source": "new",
-      "reason": "",
+      "reason": "WB: 집필 순서표가 HT2 노드·쪽·질문·근거·18시트를 빠짐없이 덮고 없는 field_id/use_scope/시트를 지어내지 않는지 검사한다.",
       "last_changed": "WB6"
     }
   },
