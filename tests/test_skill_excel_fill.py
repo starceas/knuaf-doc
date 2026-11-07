@@ -144,6 +144,8 @@ class ExcelFillTests(ContractCase):
         ws.merge_cells("B5:D5")
         for name in names[1:]:
             wb.create_sheet(name)
+        from tests.test_finance_profile_gate import register_synthetic_form
+        register_synthetic_form(self, wb)
         path = self.tmp / "과수 양식.xlsx"
         wb.save(path)
         return path, names[0]

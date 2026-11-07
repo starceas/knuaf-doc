@@ -53,6 +53,8 @@ class FinanceTemplateIntegrationTests(ContractCase):
         ws["C2"] = "=B2*2"
         for name in names[1:]:
             wb.create_sheet(name)
+        from tests.test_finance_profile_gate import register_synthetic_form
+        register_synthetic_form(self, wb)
         wb.save(path)
         return path, names[0]
 

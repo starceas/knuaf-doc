@@ -1,6 +1,7 @@
 """Hash-bound workbook publication authority and 17-sheet-only inspection."""
 from dataclasses import replace
 import json
+from pathlib import Path
 from unittest import mock
 
 from openpyxl import Workbook
@@ -207,26 +208,41 @@ class WorkbookPublicationProfileTests(ContractCase):
                  "native_manifest": pointer}
         return project, value, [pointer]
 
-    def test_registered_profile_requires_the_real_school_sheets(self):
+    def test_registered_profile_rejects_labels_and_changed_formulas(self):
+        from tests.test_finance_profile_gate import register_synthetic_form
+        book = Workbook()
         sheets = self.school.profile_structure("fruit_16_sheet_v1")["sheets"]
-        for titles, accepted in ((["Sheet"], False), (sheets, True)):
+        book.active.title = sheets[0]
+        book.active["B1"] = "=A1*2"
+        for title in sheets[1:]:
+            book.create_sheet(title)
+        register_synthetic_form(self, book)
+        for defect in ("none", "empty", "changed", "moved"):
             root = self.make_project()
             bind_major(root, "fruit_trees")
-            book = Workbook()
-            book.active.title = titles[0]
-            book.active["A1"] = 10
-            for title in titles[1:]:
-                book.create_sheet(title)
+            write_text(root, "body.md", "# synthetic\nstudent plan\n")
+            self.core.apply(root, {"request_id": "body", "ops": [
+                section_op("body", "synthetic", "body.md")]}, self.core.load(root)["revision"])
+            book.active["A1"] = 40
+            book.active["B1"] = "=A1*2" if defect == "none" else None
+            book.active["C1"] = None
+            if defect == "changed":
+                book.active["B1"] = "=A1*3"
+            if defect == "moved":
+                book.active["C1"] = "=A1*2"
             path = root / "fruit.xlsx"
             book.save(path)
-            book.close()
             project, value, companions = self._native_output(
                 root, path, "fruit_16_sheet_v1", output_id="fruit")
-            if accepted:
+            if defect == "none":
                 result = self.core.adopt_output(
                     root, value, project["revision"], "fruit",
                     companion_files=companions, major_id="fruit_trees")
                 self.assertEqual(result["status"], "adopted")
+                report = [{"check_id": "output_xlsx", "status": "pass", "target": "fruit"}]
+                with mock.patch.object(self.core, "gate", return_value=report):
+                    self.assertEqual(self.core.export(root, "submission_candidate",
+                                     major_id="fruit_trees")["status"], "generated")
             else:
                 with self.assertRaises(self.core.OperationError) as held:
                     self.core.adopt_output(
@@ -234,23 +250,125 @@ class WorkbookPublicationProfileTests(ContractCase):
                         companion_files=companions, major_id="fruit_trees")
                 self.assertEqual(held.exception.result["reason"],
                                  "finance_profile_evidence_invalid")
-
-    def test_horticulture_adoption_keeps_its_own_verifier(self):
-        # R1-4: the common workbook gate must not block horticulture; its
-        # dedicated 18-sheet transform path stays as it was at 217f10c.
-        root = self.make_project()
-        bind_major(root, "hort_env_systems")
-        book = Workbook()
-        book.active["A1"] = 1
-        path = root / "hort.xlsx"
-        book.save(path)
+                self.assertIn(sheets[0], str(held.exception))
         book.close()
-        project, value, companions = self._native_output(
-            root, path, "hort_18_sheet_reconstructed_v1", output_id="hort")
-        result = self.core.adopt_output(
-            root, value, project["revision"], "hort",
-            companion_files=companions, major_id="hort_env_systems")
+
+    def test_horticulture_rejects_unverified_workbook_companion_and_pdf(self):
+        for kind in ("xlsx", "companion", "pdf", "forged_native"):
+            root = self.make_project()
+            bind_major(root, "hort_env_systems")
+            book = Workbook()
+            path = root / "hort.xlsx"
+            book.save(path)
+            book.close()
+            project, value, companions = self._native_output(
+                root, path, "hort_18_sheet_reconstructed_v1", output_id="hort")
+            if kind != "forged_native":
+                value.pop("native_manifest")
+                companions = []
+            if kind == "companion":
+                companions.append({"path": path.name, "sha256": value["file_hash"]})
+                path = write_text(root, "paper.md", "# synthetic\n")
+                value.update(path=path.name, format="md", file_hash=self.core.digest(path.read_bytes()))
+            elif kind == "pdf":
+                path = root / "hort.pdf"
+                path.write_bytes(b"%PDF-1.4\n%%EOF\n")
+                value.update(path=path.name, format="pdf", file_hash=self.core.digest(path.read_bytes()))
+            with self.subTest(kind=kind), self.assertRaises(self.core.OperationError) as held:
+                self.core.adopt_output(root, value, project["revision"], "hort",
+                    companion_files=companions, major_id="hort_env_systems")
+            self.assertEqual(held.exception.result["reason"], "hort_transform_receipt_invalid")
+            context = self.mc.output_context(root, "hort_env_systems")
+            with self.assertRaises(self.core.OperationError):
+                self.core._export_authorize(root,
+                    {self.mc.OUTPUT_SCHOOL_PAPER, self.mc.OUTPUT_SCHOOL_WORKBOOK},
+                    context, outputs=(dict(value, companions=companions),))
+
+    def test_horticulture_transform_adoption_replay_export_and_staleness(self):
+        from tests.test_hort_finance_pipeline import Chain
+        chain = Chain(methodName="test_full_chain_plan_transform_native_verify")
+        chain.setUp()
+        self.addCleanup(chain.doCleanups)
+        canonical = (chain.root / "project.json").read_bytes()
+        chain.root = self.make_project()
+        (chain.root / "project.json").write_bytes(canonical)
+        write_text(chain.root, "answer.txt", "synthetic evidence\n")
+        write_text(chain.root, "body.md", "# synthetic\nstudent plan\n")
+        project = self.core.load(chain.root)
+        self.core.apply(chain.root, {"request_id": "body", "ops": [
+            section_op("body", "synthetic", "body.md")]}, project["revision"])
+        chain._run_to_transform()
+        root = chain.root
+        path = root / "hort.xlsx"
+        path.write_bytes(chain.out.read_bytes())
+        receipt = root / "transform.json"
+        receipt.write_bytes(chain.transform_rec.read_bytes())
+        pointer = {"path": receipt.name, "sha256": self.core.digest(receipt.read_bytes())}
+        project, value, _ = self._native_output(root, path, "unused", output_id="hort")
+        value.pop("native_manifest")
+        value["template_receipt"] = pointer
+        result = self.core.adopt_output(root, value, project["revision"], "hort",
+            companion_files=[pointer], major_id="hort_env_systems")
         self.assertEqual(result["status"], "adopted")
+        self.assertEqual(self.core.adopt_output(root, value, project["revision"], "hort",
+            companion_files=[pointer], major_id="hort_env_systems")["status"], "existing")
+        report = [{"check_id": "output_xlsx", "status": "pass", "target": "hort"}]
+        with mock.patch.object(self.core, "gate", return_value=report):
+            self.assertEqual(self.core.export(root, "submission_candidate",
+                             major_id="hort_env_systems")["status"], "generated")
+        from tests.test_hort_finance_pipeline import _native_workbook
+        import gg_hort_workbook as hort
+        _native_workbook(chain.native, chain.roster,
+                         chain.docs[hort.FILES[1]]["parameters"], chain.facts)
+        # Native proof was issued against the same pre-adoption project.
+        with mock.patch.object(hort, "_authorize", return_value=self.mc.authorize_output(
+                self.mc.OUTPUT_SCHOOL_WORKBOOK, self.mc.output_context(root, "hort_env_systems"),
+                project=project)):
+            native = chain._issue_native()
+        for key in ("published_office", "published_pdf"):
+            original = Path(native[key])
+            dest = root / original.name
+            dest.write_bytes(original.read_bytes())
+            native[key] = str(dest.resolve())
+        native_path = write_text(root, "native-proof.json", json.dumps(native))
+        native_pointer = {"path": native_path.name,
+                          "sha256": self.core.digest(native_path.read_bytes())}
+        for fmt, key in (("xlsx", "published_office"), ("pdf", "published_pdf")):
+            artifact = Path(native[key])
+            current = self.core.load(root)
+            refs = [{"collection": "sections", "id": "body"}]
+            native_value = {"id": "native_" + fmt, "path": artifact.name, "format": fmt,
+                "file_hash": self.core.digest(artifact.read_bytes()), "target_refs": refs,
+                "input_fingerprint": self.core.fingerprint(root, current, refs),
+                "native_manifest": native_pointer}
+            self.assertEqual(self.core.adopt_output(root, native_value, current["revision"],
+                "native_" + fmt, companion_files=[native_pointer],
+                major_id="hort_env_systems")["status"], "adopted")
+            native_report = [{"check_id": "output_native", "status": "pass", "target": "native_" + fmt}]
+            with mock.patch.object(self.core, "gate", return_value=native_report):
+                self.assertEqual(self.core.export(root, "submission_candidate",
+                                 major_id="hort_env_systems")["status"], "generated")
+        current = self.core.load(root)
+        paper = root / "companion-paper.md"
+        paper.write_text("# synthetic\nstudent plan\n", encoding="utf-8")
+        refs = [{"collection": "sections", "id": "body"}]
+        companion_value = {"id": "companion_paper", "path": paper.name, "format": "md",
+            "file_hash": self.core.digest(paper.read_bytes()), "target_refs": refs,
+            "input_fingerprint": self.core.fingerprint(root, current, refs),
+            "native_manifest": native_pointer}
+        workbook = root / Path(native["published_office"]).name
+        companion = {"path": workbook.name, "sha256": self.core.digest(workbook.read_bytes())}
+        self.assertEqual(self.core.adopt_output(root, companion_value, current["revision"],
+            "companion_paper", companion_files=[native_pointer, companion],
+            major_id="hort_env_systems")["status"], "adopted")
+        stored = self.core.load(root)["outputs"]["companion_paper"]
+        self.core._export_authorize(root, {self.mc.OUTPUT_SCHOOL_PAPER},
+            self.mc.output_context(root, "hort_env_systems"), outputs=(stored,))
+        current = self.core.load(root)
+        self.core.apply(root, {"request_id": "changed", "ops": []}, current["revision"])
+        with mock.patch.object(self.core, "gate", return_value=report):
+            with self.assertRaises(self.core.OperationError):
+                self.core.export(root, "submission_candidate", major_id="hort_env_systems")
 
     def test_pdf_needs_workbook_profile_evidence_and_matching_format(self):
         pdf = self.root / "sheet.pdf"

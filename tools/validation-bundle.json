@@ -133,7 +133,7 @@
     "tests/test_finance_profile_gate.py": {
       "note": "P20: finance profile migration pre-staging negatives — writers and native boundary never reached on missing/unsupported profiles, synthetic only. | PR2: 특용작물 school_17_sheet_v1 생성기·래퍼 행렬은 이제 입구 차단(specialty_template_route_required) 확인으로 바뀜 — 생성기 본체·경제 검증 미도달 확인 유지, 다른 전공 행 그대로, 지원 프로필(single_annual_cash_v1)은 경제 검증 도달 확인 추가. | PR2: 특용작물 프로필 변형(없음·빈 값·대소문자·앞 공백)이 생성기에 닿지 않고 각 사유로 멈춤을 확인. | P0-2 PR-D: Q03: COM enabled; private instance constructor failures surface without attaching existing Office.",
       "origin": "new",
-      "sha256": "6e0df2c3e49fd42fa6365999ad31e30059b94b0df718cb91aa14ac7c56054c06"
+      "sha256": "128df174fe46655f761c7598e9637610bf6fe7e4d7a16d49e3297a1a0418f06a"
     },
     "tests/test_finance_scope.py": {
       "note": "P0-A: finance crosscheck scope — non-financial positive control + H9/R6 under-check defect.",
@@ -349,7 +349,7 @@
     "tests/test_skill_excel_fill.py": {
       "note": "P1-GUI 시험 이사(cb72ae1): 셀 쓰기·수식/병합 보호·미응답 수치화 금지",
       "origin": "new",
-      "sha256": "3663ea4c5231884fc881bfa88fde4351aad42f8375325be29e2c070da67132fc"
+      "sha256": "e70211d841dbdd11a1859fa054de0d0c63d6c24f5bf873dd9ac90227bfd694d9"
     },
     "tests/test_skill_excel_formula_patch.py": {
       "note": "P1-GUI 시험 이사(cb72ae1): 수식 패치 사전조건·위험 수식 거절·전부 아니면 전무 발행",
@@ -479,7 +479,7 @@
     },
     "tests/test_workbook_publication_profile.py": {
       "origin": "new",
-      "sha256": "ccf3d970ba4b9a3b6819ed7203df2ae8d3794d945153a293b0925706ba4c21ad"
+      "sha256": "d2d10a2456e7d5caf864e6510adb46aa5b36d2eb5f86e7926a1125b5d66a4bc7"
     },
     "tests/test_xlsx_structure.py": {
       "note": "P0-A: synthetic XLSX contracts — merge markers, print_titles container, corrupt ZIP handling, visible-sheet count. repair-n1/N1: dependency skip removed so import/fixture errors surface as failure/error.",
@@ -535,7 +535,7 @@
     "tools/runtime-changes.json": {
       "note": "누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py. P8 declares the fruit_trees first bundle (module registration, two common helper modules, fruit plan, reference-set data and guidance). P9 declares the hort_env_systems first bundle (module registration, hort plan, profile and guidance, reuse-registry entries). | P10: 누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py. P8 declares the fruit_trees first bundle (module registration, two common helper modules, fruit plan, reference-set data and guidance). P9 declares the common XLSX reuse bundle (one new runtime extract file + declared edits to registration, resolver, template guard, and reuse tests). P9-D3 declares the major-specific-precedence edits (registry dedupe, catalog base_for_major, resolver base policy, docs, tests) in the same stage. | P11: 누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py. P8 declares the fruit_trees first bundle (module registration, two common helper modules, fruit plan, reference-set data and guidance). P9 declares the hort_env_systems first bundle (module registration, hort plan, profile and guidance, reuse-registry entries). P10 declares the common interview rules bundle (SKILL.md re-touch, three baseline doc first-changes, specialty-crops premise-probes) re-based onto the P9 parent. P12 declares the industrial_insects first bundle (four read-only insect scripts, locator map, guide and premise probes as new files; nine reuse-registry entries and SKILL/gg.py updates). P13: D4 source identity catalogue, validator, tests and related guidance rebased on accepted P12. P15 declares the D5 useful-life bundle rebased onto accepted P14 (corrected pp133-135 cell mapping and regression test as new files; eight re-declared pack/registry/script/test entries; parent P14 lineage). P18 declares the industrial_insects second bundle (module 0.2.0 product-line question templates and read-only plan/evidence updates; no new runtime file). | PR-2: latest D8/D9 integration; I-01 only measured count constants adjusted in lineage test. Full pytest covers split public/skill test locations. | I2 refreshes after hashes for existing declarations; before hashes, baseline, lineage and allowlist preserved. | I3 refreshes after hashes for existing declarations; before hashes, baseline, lineage and allowlist preserved. | I4 refreshes after hashes for existing declarations; before hashes, baseline, lineage and allowlist preserved. | I5 refreshes only existing after hashes; before hashes, baseline, lineage and allowlist preserved. | I6: existing after hashes refreshed; baseline, before/source/owner/reason and all lineage/allowlist unchanged, counts 167/120/124. | I9: W-D10 문서5개 및 install-manifest after SHA만 갱신; PV2 FAIL 후 알려진 한계 문서화, 코드·테스트·계보·허용목록 불변. | W4: restored P28 latest-change markers for four body-guidance files and recorded the previously omitted HT2-format, student-year-authority, and full-notice changes in horticulture and major-body test reasons. | W5: refreshed SKILL.md and installation-manifest hashes for CI-required body-progress wording; no major-specific progression semantics changed.",
       "origin": "new",
-      "sha256": "a67c371974312b5042218415c67585a500b36d4b5336a9a46d14f742304b9ed4"
+      "sha256": "5256157556e313d01e7deca4a90c150016505dfded6789f2024eb6ce957de33a"
     },
     "tools/validation-provenance.json": {
       "note": "This file; declares origins for the validation layer.",
@@ -562,7 +562,7 @@
     "approved_new_files": 212,
     "baseline_main": "29abec0ec95369de7ae9e22207349d574f1f46b7",
     "change_count": 256,
-    "changes_sha256": "b1b57dee40538f93d66804a993c356e62604ef9b81e55102ae6bbd023daaf842",
+    "changes_sha256": "4b2944b64d90d2cff019aefdbfede33e58327912838fbef598ae7c187d3a7ca1",
     "new_count": 205,
     "parent_candidate": {
       "file_count": 233,
@@ -571,7 +571,7 @@
     },
     "schema": "knuaf-doc/runtime-changes@2",
     "spec": "tools/runtime-changes.json",
-    "spec_sha256": "a67c371974312b5042218415c67585a500b36d4b5336a9a46d14f742304b9ed4",
+    "spec_sha256": "5256157556e313d01e7deca4a90c150016505dfded6789f2024eb6ce957de33a",
     "stage": "P28",
     "stage_lineage": [
       {
@@ -746,5 +746,5 @@
     "verified_count": 256
   },
   "schema": "knuaf-doc/validation-bundle@3",
-  "validation_tree_sha256": "dc5782d3ebf639d778ae0c8d30637dde2759a37fda259b856b63b41557de33e4"
+  "validation_tree_sha256": "85767e9f781b1afa4dea6bf5f7078c699c765bb8716943d1900309f25167445e"
 }

@@ -59,20 +59,35 @@ def profile_structure(profile):
             continue
         sheets = entry.get("sheets")
         digest = entry.get("sha256")
+        formulas = entry.get("formula_fingerprints")
         if (not isinstance(sheets, list) or not sheets
                 or any(not isinstance(name, str) or not name for name in sheets)
-                or not isinstance(digest, str) or not _SHA256.match(digest)):
+                or not isinstance(digest, str) or not _SHA256.match(digest)
+                or not isinstance(formulas, dict) or set(formulas) != set(sheets)
+                or any(not isinstance(value, str) or not _SHA256.fullmatch(value)
+                       for value in formulas.values())):
             raise ValueError("workbook profile structure invalid: " + str(profile))
         return {"sha256": digest, "sheets": list(sheets),
-                "label": entry.get("label")}
+                "formula_fingerprints": dict(formulas), "label": entry.get("label")}
     return None
+
+def formula_fingerprints(book):
+    """Hash sorted (address, expanded formula) pairs per sheet; ignore values."""
+    result = {}
+    for sheet in book:
+        formulas = sorted((cell.coordinate, cell.value)
+                          for row in sheet for cell in row if cell.data_type == "f")
+        raw = json.dumps(formulas, ensure_ascii=False, separators=(",", ":"))
+        result[sheet.title] = hashlib.sha256(raw.encode("utf-8")).hexdigest()
+    return result
+
 
 def require_profile_structure(path, profile):
     """Open the real workbook and require its registered school form.
 
-    A caller-written profile label never substitutes for this check; a
-    workbook whose sheet names match the registered form passes. Unregistered
-    profiles are left to their own verifier.
+    A caller-written profile label never substitutes for this check. Sheet
+    order and formula fingerprints must match; student values may differ.
+    Unregistered profiles are left to their own verifier.
     """
     expected = profile_structure(profile)
     if expected is None:
@@ -85,13 +100,19 @@ def require_profile_structure(path, profile):
         raise ValueError("workbook structure unreadable: %s" % error) from error
     try:
         observed = list(book.sheetnames)
+        if observed != expected["sheets"]:
+            raise ValueError(
+                "workbook structure mismatch for %s: %d sheets do not match "
+                "the registered %d-sheet school form"
+                % (profile, len(observed), len(expected["sheets"])))
+        fingerprints = formula_fingerprints(book)
+        changed = [name for name in observed
+                   if fingerprints[name] != expected["formula_fingerprints"][name]]
+        if changed:
+            raise ValueError("workbook formula fingerprint mismatch for %s: %s"
+                             % (profile, ", ".join(changed)))
     finally:
         book.close()
-    if observed != expected["sheets"]:
-        raise ValueError(
-            "workbook structure mismatch for %s: %d sheets do not match "
-            "the registered %d-sheet school form"
-            % (profile, len(observed), len(expected["sheets"])))
 
 
 def q(name):

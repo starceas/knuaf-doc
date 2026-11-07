@@ -1043,14 +1043,16 @@ def template_receipt_binding(input_path, receipt_path):
     return binding
 
 
-def _hort_transform_binding(input_path, receipt_path, authorization, context):
-    """Require I1's full transform proof before an Office job is staged."""
+def _hort_transform_binding(input_path, receipt_path, authorization, context, *,
+                            allow_output_registration=False):
+    """Require I1's full proof before staging or publishing a workbook."""
     import gg_major_contract as mc
 
     try:
         from gg_hort_workbook import check_transform_receipt
         path = Path(receipt_path).resolve()
-        data = check_transform_receipt(path)
+        data = (check_transform_receipt(path, allow_output_registration=True)
+                if allow_output_registration else check_transform_receipt(path))
         if not isinstance(data, dict):
             raise ValueError("transform receipt checker returned no record")
         expected_root = Path(mc._normalize_context(context).project_root).resolve()
@@ -1064,7 +1066,8 @@ def _hort_transform_binding(input_path, receipt_path, authorization, context):
                 or data.get("major_id") != authorization.major_id
                 or data.get("module_version") != authorization.module_version
                 or data.get("contract_version") != authorization.contract_version
-                or data.get("project_revision") != authorization.project_revision
+                or (not allow_output_registration
+                    and data.get("project_revision") != authorization.project_revision)
                 or data.get("binding_evidence") != authorization.binding_evidence):
             raise ValueError("transform receipt canonical binding mismatch")
         actual = compute_sha256(Path(input_path).read_bytes())

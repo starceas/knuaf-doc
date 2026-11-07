@@ -1875,6 +1875,60 @@ def _output_workbook_profile(root, output, path=None, *, major_id=None,
         raise mc.OutputHeldError("finance_profile_evidence_invalid", str(error)) from error
 
 
+def _output_hort_profile(root, output, path, authorization):
+    """Require the dedicated transform/native chain for every workbook artifact."""
+    mc = _major_contract_mod()
+    try:
+        from dataclasses import replace
+        from gg_office import _hort_transform_binding
+        import gg_hort_workbook as hort
+        native = output.get("native_manifest")
+        operation = output.get("template_receipt")
+        if bool(native) == bool(operation):
+            raise ValueError("one horticulture receipt required")
+        pointer = native or operation
+        receipt = local(root, pointer["path"])
+        if digest(receipt.read_bytes()) != pointer["sha256"]:
+            raise ValueError("horticulture receipt hash mismatch")
+        if operation:
+            _hort_transform_binding(path, receipt, authorization,
+                                    mc.output_context(root, authorization.major_id),
+                                    allow_output_registration=True)
+        else:
+            data = json.loads(receipt.read_bytes())
+            binding = data["validation"]["template_receipt"]
+            transform = Path(binding["path"])
+            trec = hort.check_transform_receipt(transform, allow_output_registration=True)
+            _hort_transform_binding(trec["output_artifacts"][0]["path"], transform,
+                                    authorization, mc.output_context(root, authorization.major_id),
+                                    allow_output_registration=True)
+            project = load(root)
+            if project["revision"] != trec["project_revision"]:
+                entry = next(row for row in project["history"]
+                             if row["revision"] == trec["project_revision"])
+                project = _history_snapshot(root, project, entry)
+            auth = replace(authorization, project_revision=project["revision"])
+            native_receipt = receipt
+            if output.get("publication_ref"):
+                published = _publication_mod().verify_publication(
+                    root, publication_ref=output["publication_ref"])
+                original = published["request"]["output_value"]["native_manifest"]
+                native_receipt = local(root, original["path"])
+                if digest(native_receipt.read_bytes()) != pointer["sha256"]:
+                    raise ValueError("horticulture original native receipt hash mismatch")
+            _, workbook, pdf = hort._check_native_receipt(
+                native_receipt, trec, transform, project, trec["canonical_facts_sha256"], auth)
+            if digest(Path(path).read_bytes()) not in (
+                    digest(Path(workbook).read_bytes()), digest(Path(pdf).read_bytes())):
+                raise ValueError("horticulture native output hash mismatch")
+        mc.require_finance_profile(authorization, hort.PROFILE)
+        return hort.PROFILE
+    except mc.OutputHeldError:
+        raise
+    except (OSError, ValueError, KeyError, TypeError, StopIteration) as error:
+        raise mc.OutputHeldError("hort_transform_receipt_invalid", str(error)) from error
+
+
 _FORMAT_KINDS = {"xlsx": "workbook", "xlsm": "workbook", "xls": "workbook",
                  "pdf": "pdf", "docx": "paper", "hwpx": "paper",
                  "hwp": "paper", "md": "text", "txt": "text"}
@@ -1972,27 +2026,33 @@ def adopt_output(root, output_value, expected_revision, request_id,
                 if issue:
                     reason, detail = issue
                     raise mc.OutputHeldError(reason, detail)
-                # Horticulture keeps its dedicated transform verifier and
-                # does not enter this common workbook gate.
-                if (auth.major_id != "hort_env_systems" and path.is_file()
-                        and mc.OUTPUT_SCHOOL_WORKBOOK in mc.output_kinds_for_file(path)):
+                if (path.is_file()
+                        and mc.OUTPUT_SCHOOL_WORKBOOK in mc.output_kinds_for_file(path)
+                        and auth.major_id == "hort_env_systems"):
+                    adopt_auth["workbook_profile"] = _output_hort_profile(
+                        root, record, path, auth)
+                elif (path.is_file()
+                      and mc.OUTPUT_SCHOOL_WORKBOOK in mc.output_kinds_for_file(path)):
                     profile = _output_workbook_profile(
                         root, record, path, major_id=auth.major_id,
                         allow_legacy=True)
                     if profile is not None:
                         mc.require_workbook_profile(auth, profile)
                         adopt_auth["workbook_profile"] = profile
-                if auth.major_id != "hort_env_systems":
-                    for companion in companions:
-                        companion_path = (path.parent / "companions" / Path(companion["path"]).name
-                                          if stored is not None else local(root, companion["path"]))
-                        if not companion_path.is_file():
-                            continue
-                        if mc._sniff_kind(companion_path) == "text":
-                            continue
-                        if mc.OUTPUT_SCHOOL_WORKBOOK not in mc.companion_kinds(
-                                companion_path, kinds):
-                            continue
+                for companion in companions:
+                    companion_path = (path.parent / "companions" / Path(companion["path"]).name
+                                      if stored is not None else local(root, companion["path"]))
+                    if not companion_path.is_file():
+                        continue
+                    if mc._sniff_kind(companion_path) == "text":
+                        continue
+                    if mc.OUTPUT_SCHOOL_WORKBOOK not in mc.companion_kinds(
+                            companion_path, kinds):
+                        continue
+                    if auth.major_id == "hort_env_systems":
+                        adopt_auth["workbook_profile"] = _output_hort_profile(
+                            root, record, companion_path, auth)
+                    else:
                         profile = _output_workbook_profile(
                             root, record, companion_path,
                             major_id=auth.major_id, allow_legacy=True)
@@ -5522,6 +5582,26 @@ def _export_authorize(root, kinds, ctx, *, project=None, outputs=()):
     mc = _major_contract_mod()
     try:
         authorizations = mc.authorize_outputs(sorted(kinds), ctx, project=project)
+        hort_companions = []
+        if authorizations and authorizations[0].major_id == "hort_env_systems":
+            for output in outputs:
+                path = local(root, output["path"])
+                if output.get("publication_ref"):
+                    receipt = _publication_mod().verify_publication(
+                        root, publication_ref=output["publication_ref"])
+                    paths = [path.parent / "companions" / Path(c["path"]).name
+                             for c in receipt["request"].get("companion_files", [])]
+                else:
+                    paths = [local(root, c["path"]) for c in output.get("companions", [])]
+                for cpath in paths:
+                    if (mc._sniff_kind(cpath) != "text"
+                            and mc.OUTPUT_SCHOOL_WORKBOOK in mc.companion_kinds(
+                                cpath, mc.output_kinds_for_file(path))):
+                        hort_companions.append((output, cpath))
+            if hort_companions:
+                auth = mc.authorize_output(mc.OUTPUT_SCHOOL_WORKBOOK, ctx, project=project)
+                for output, cpath in hort_companions:
+                    _output_hort_profile(root, output, cpath, auth)
         for output in outputs:
             path = local(root, output["path"])
             issue = _output_format_issue(mc, output, path)
@@ -5530,16 +5610,17 @@ def _export_authorize(root, kinds, ctx, *, project=None, outputs=()):
                 raise mc.OutputHeldError(reason, detail)
         if mc.OUTPUT_SCHOOL_WORKBOOK in kinds:
             auth = next(a for a in authorizations if a.output == mc.OUTPUT_SCHOOL_WORKBOOK)
-            if auth.major_id != "hort_env_systems":
-                for output in outputs:
-                    path = local(root, output["path"])
-                    if mc.OUTPUT_SCHOOL_WORKBOOK not in mc.output_kinds_for_file(path):
-                        continue
-                    profile = _output_workbook_profile(
-                        root, output, path, major_id=auth.major_id,
-                        allow_legacy=True)
-                    if profile is not None:
-                        mc.require_workbook_profile(auth, profile)
+            for output in outputs:
+                path = local(root, output["path"])
+                if mc.OUTPUT_SCHOOL_WORKBOOK in mc.output_kinds_for_file(path):
+                    if auth.major_id == "hort_env_systems":
+                        _output_hort_profile(root, output, path, auth)
+                    else:
+                        profile = _output_workbook_profile(
+                            root, output, path, major_id=auth.major_id,
+                            allow_legacy=True)
+                        if profile is not None:
+                            mc.require_workbook_profile(auth, profile)
         return authorizations
     except mc.OutputHeldError as error:
         raise _op("export", "export", "not_committed",

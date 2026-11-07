@@ -42,11 +42,18 @@ XLSX와 동반 `<출력.manifest.json>` 경로를 함께 검사한다. XLSX가 �
 함께 보존한다. 실제 XLSX 해시와 영수증의 프로필을 대조한 뒤
 `require_workbook_profile`을 호출하며, 정본에는 검증된 `workbook_profile`과
 관리 사본 영수증 경로를 남긴다. caller의 profile 문자열만으로는 열리지 않는다.
-등록된 프로필은 `references/workbook-reference-set.json`의 시트 수·시트명·순서를
-실제 통합문서 바이트와 대조한다(사본·Office 스테이징·채택·export). 현재 등록된
-것은 과수 `fruit_16_sheet_v1`이며, 낙농 프로필은 원본 구조 미등록으로 닫혀 있다.
-원예는 전용 변환 영수증 경로를 쓴다. `format`은 실제 바이트 종류와 일치해야 하며
-PDF를 `.xlsx`로 내보내지 않는다.
+등록된 프로필은 `references/workbook-reference-set.json`의 시트 수·시트명·순서와
+시트별 수식 지문을 실제 통합문서 바이트와 대조한다(사본·채우기·Office 스테이징·채택·export).
+과수 `fruit_16_sheet_v1`의 지문은 등록 SHA256과 일치하는 학교 원본에서 추출했다.
+각 시트의 `(셀 주소, 확장된 수식 문자열)`을 정렬한 JSON(UTF-8, 공백 없는 구분자)의
+SHA256이며, 입력값 변경은 허용하고 수식 삭제·추가·이동·변경은 시트명을 남겨 거절한다.
+수식을 고친 사본의 예외 허용은 지원하지 않는다. 낙농은 원본 구조 미등록으로 닫혀 있다.
+원예 XLSX 본파일·동반 통합문서·PDF는 기존 전용 transform 검증이 필요하며,
+native XLSX/PDF는 전용 native 검증까지 통과해야 한다. 영수증 없는 파일과
+프로필 이름만 적은 native JSON은 거절한다. 채택 뒤 출력 등록만 추가된 revision은
+해시 검증된 과거 snapshot으로 재검증하지만, 사실·본문·바인딩 변경이나 no-op apply는
+낡은 영수증으로 거절한다. 원예 원본·변환·native 영수증 및 그 입력 파일은 보존해야 한다.
+`format`은 실제 바이트 종류와 일치해야 하며 PDF를 `.xlsx`로 내보내지 않는다.
 채택 재호출과 제출 후보 export도 현재 계약·영수증 해시를 다시 검사한다.
 본문만 내보내는 draft/review는 이 XLSX 관문을 요구하지 않는다.
 

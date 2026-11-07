@@ -86,9 +86,13 @@ school form (`school_17_sheet_v1`, `fruit_16_sheet_v1`, or
 SHA but leaves inventory review mandatory. The common writers require both the
 major's `workbook_profiles` declaration and a supported finance capability for
 that same profile, before creating an output directory. A registered profile is
-also compared with the real workbook's sheet count, names and order from
-`references/workbook-reference-set.json` (currently `fruit_16_sheet_v1`; the
-dairy profile is closed until its school original structure is registered).
+also compared with the real workbook's sheet count, names, order and per-sheet
+formula fingerprints from `references/workbook-reference-set.json` (currently
+`fruit_16_sheet_v1`; dairy remains closed until its original is registered).
+Fingerprints hash UTF-8 compact JSON of sorted `(address, expanded formula)`
+pairs from the SHA256-verified school original. Values may change; moved,
+missing, added or edited formulas are held with the differing sheet names.
+There is no exception for corrected fruit formulas in this gate.
 The same real-byte check runs at Office staging, adoption and export. An
 explicit null/empty profile is refused. Only old specialty-crop maps without the
 key keep their historical school-17 meaning. Calculation profiles do not
@@ -101,9 +105,13 @@ completed clear/fill operations only after input/map/output hash checks and
 profile agreement; the native manifest and template lineage retain that profile.
 Without evidence, only the historical specialty-crop render route remains open.
 Batch inputs without per-file evidence therefore cannot open fruit/dairy forms.
-Horticulture still requires its dedicated validated transform receipt and does
-not enter this common workbook gate. Passing a profile is not financial-content
-approval or proof of native recalculation.
+Horticulture requires its dedicated validated transform receipt at staging,
+adoption (including workbook companions), and export; native XLSX/PDF also
+require the existing native receipt verifier. Keep original chain files.
+Only output registrations may follow the receipt revision: a verified history
+snapshot preserves replay/export without accepting changed facts or body text.
+It does not enter the common gate. A profile is not content approval or proof
+of native recalculation.
 
 `inspect --legacy-map` explicitly requests the existing fixed X01 map
 (`entriesSource: legacy`, `mapOrigin: default_x01`). It does not become an X02

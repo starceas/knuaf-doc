@@ -506,6 +506,28 @@ class FinanceGateTests(ContractCase):
         pythoncom.CoUninitialize.assert_called_once()
 
 
+def register_synthetic_form(case, book):
+    """Isolate the school reference registry, never weaken the runtime gate."""
+    import hashlib
+    import tempfile
+    school = runtime("gg_school_excel")
+    data = json.loads(school.WORKBOOK_REFERENCE_SET.read_text(encoding="utf-8"))
+    entry = data["workbook_profiles"][0]
+    entry["sheets"] = book.sheetnames
+    entry["formula_fingerprints"] = {
+        sheet.title: hashlib.sha256(json.dumps(sorted(
+            (cell.coordinate, cell.value) for row in sheet for cell in row
+            if cell.data_type == "f"), ensure_ascii=False,
+            separators=(",", ":")).encode()).hexdigest() for sheet in book}
+    temp = tempfile.TemporaryDirectory()
+    case.addCleanup(temp.cleanup)
+    path = Path(temp.name) / "reference.json"
+    path.write_text(json.dumps(data), encoding="utf-8")
+    patch = mock.patch.object(school, "WORKBOOK_REFERENCE_SET", path)
+    patch.start()
+    case.addCleanup(patch.stop)
+
+
 class WorkbookProfileGateTests(ContractCase):
     """Exercise real major contracts; isolate only the native staging boundary."""
 
@@ -535,6 +557,8 @@ class WorkbookProfileGateTests(ContractCase):
         book.active["B1"] = "=A1*2"
         for name in names[1:]:
             book.create_sheet(name)
+        if expected:
+            register_synthetic_form(self, book)
         book.save(source)
         book.close()
         clear = self.root / "clear.json"

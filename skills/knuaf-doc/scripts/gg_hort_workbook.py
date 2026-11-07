@@ -2075,8 +2075,8 @@ def _write_receipt(path, obj):
                       encoding="utf-8")
 
 
-def check_transform_receipt(path):
-    """I2 boundary: validate schema, authority, fresh contracts and file SHA chain."""
+def check_transform_receipt(path, *, allow_output_registration=False):
+    """Validate the chain; publication may add only canonical output records."""
     if not PIPELINE_READY:
         raise Held("i1_design_disposition_required")
     rec = _json(path)
@@ -2113,10 +2113,31 @@ def check_transform_receipt(path):
     import gg_core
     project = gg_core.load(project_root)
     if project["revision"] != rec.get("project_revision"):
-        raise Held("transform_receipt_stale")
+        if not allow_output_registration:
+            raise Held("transform_receipt_stale")
+        entries = [entry for entry in project.get("history", [])
+                   if entry.get("revision") == rec.get("project_revision")]
+        if len(entries) != 1:
+            raise Held("transform_receipt_stale")
+        snapshot = gg_core._history_snapshot(project_root, project, entries[0])
+        publication_fields = {"revision", "parent_hash", "history", "requests", "outputs"}
+        if ({k: v for k, v in snapshot.items() if k not in publication_fields}
+                != {k: v for k, v in project.items() if k not in publication_fields}):
+            raise Held("transform_receipt_stale")
+        # A no-op apply/restore is not an output registration.
+        for request in project["requests"].values():
+            if (request["revision"] > snapshot["revision"]
+                    and request.get("kind") != "adopt_output"):
+                raise Held("transform_receipt_stale")
+        project = snapshot
     if _fact_snapshot(project)[1] != rec.get("canonical_facts_sha256"):
         raise Held("transform_receipt_stale")
-    if _authorize(project_root).to_dict() != rec.get("major_authorization"):
+    import gg_major_contract as mc
+    auth = mc.authorize_output(mc.OUTPUT_SCHOOL_WORKBOOK,
+                               mc.OutputContext(project_root, "hort_env_systems"),
+                               project=project)
+    mc.require_finance_profile(auth, PROFILE)
+    if auth.to_dict() != rec.get("major_authorization"):
         raise Held("transform_receipt_stale")
     outputs = rec.get("output_artifacts")
     if (not isinstance(outputs, list) or len(outputs) != 1
