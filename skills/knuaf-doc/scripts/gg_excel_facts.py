@@ -97,6 +97,13 @@ def build_registration(root, workbook, receipt, mapping, *, source_id, context):
                 "hort_transform_receipt_invalid",
                 "native Excel receipt records a failed run")
         profile = core._output_hort_profile(root, pointer, workbook, authorization)
+        # The cache read below cannot tell a money row from a ratio row, so the
+        # reviewed map itself is checked here: excluded ranges and registry units.
+        import gg_hort_workbook as hort
+        try:
+            hort.check_fact_map(mapping, hort.contracts()[hort.FILES[1]]["parameters"])
+        except hort.Held as error:
+            raise RegistrationHeld(error.code) from error
     else:
         profile = core._output_workbook_profile(root, pointer)
         mc.require_workbook_profile(authorization, profile)
