@@ -6,6 +6,7 @@
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 import tempfile
@@ -163,64 +164,350 @@ class OfficeRecoveryTests(ContractCase):
         self.assertIn("그대로", payload["note"])
 
 
-class ExcelCalculationModeTests(unittest.TestCase):
-    """Execute the generated run body's Excel operations against a tiny model.
+class _ScriptError(Exception):
+    def __init__(self, message, number=-2700):
+        super().__init__(message)
+        self.message = message
+        self.number = number
 
-    No Office dependency: zero books reports missing, opening exposes the
-    workbook's mode. Native AppleScript execution is recorded separately.
+
+class _Unmodeled(Exception):
+    """The script used a statement this model cannot check.
+
+    Fail closed: an unrecognized statement must fail the test instead of
+    being skipped, or a new side effect could pass the suite unnoticed.
     """
 
-    def execute(self, mode, existing=0, owned=True):
-        script = runtime("gg_office_session").EXCEL_APPLESCRIPT_TEMPLATE
-        body = script.split("on run argv", 1)[1].split("on error messageText", 1)[0]
-        books = existing
-        events = []
-        for raw in body.splitlines():
-            line = raw.strip()
-            if line.startswith('if (count of workbooks) is not 0'):
-                if books:
-                    return "existing_documents", events, books
-            elif line.startswith("open workbook "):
-                books += 1
-                events.append("open")
-            elif line == "my requireOwned(jobHFS, jobPOSIX)":
-                if books != 1 or not owned:
-                    return "owned_path_not_found", events, books
-                events.append("owned")
-            elif line.startswith("if calculation is not calculation automatic"):
-                current = mode if books else None
-                events.append(("mode", current))
-                if current != "automatic":
-                    return "manual_calculation_not_supported", events, books
-            elif line == "calculate":
-                events.append("calculate")
-            elif line.startswith("save "):
-                events.append("save")
-            elif line.startswith("close "):
-                books -= 1
-                events.append("close")
-        return "closed", events, books
 
-    def test_zero_books_missing_mode_does_not_block_automatic_copy(self):
-        result, events, remaining = self.execute("automatic")
-        self.assertEqual("closed", result)
-        self.assertEqual(["open", "owned", ("mode", "automatic"), "owned",
-                          "calculate"], events[:5])
-        self.assertEqual(0, remaining)
+class _ExcelRun:
+    """Run the generated Excel `on run argv` body, including `on error`.
+
+    Models only the statements this template uses; anything else raises
+    _Unmodeled. Excel itself is not started.
+    """
+
+    def __init__(self, template, mode, *, existing=0, owned=True,
+                 read_only=False):
+        self.mode = mode
+        self.books = existing
+        self.owned = owned
+        self.read_only = read_only
+        self.saved = True
+        self.stage = None
+        self.events = []
+        self.error_stage = None
+        self.error_message = None
+        self.returned = None
+        self._active_error = None
+        main, handler = template.split("on run argv", 1)[1].split(
+            "on error messageText number errorNumber", 1)
+        self._main = main.splitlines()
+        self._handler = handler.split("end try", 1)[0].splitlines()
+
+    def run(self):
+        try:
+            self._run_lines(self._main)
+        except _ScriptError as error:
+            self.error_stage = self.stage
+            self._run_handler(error)
+        return self
+
+    def _run_lines(self, lines):
+        for raw in lines:
+            line = raw.strip()
+            if self._structural(line):
+                continue
+            if self._statement(line):
+                break
+
+    def _run_handler(self, error):
+        self._active_error = error
+        for raw in self._handler:
+            line = raw.strip()
+            if not line or line.startswith("--") or line == "end try":
+                continue
+            try:
+                if self._statement(line):
+                    break
+            except _ScriptError as raised:
+                self.error_message = self._message_of(raised.message)
+                self.events.append(
+                    ("error", self.error_stage, self.error_message))
+                return
+
+    @staticmethod
+    def _message_of(envelope):
+        prefix = "GG_OFFICE_SESSION|"
+        if envelope.startswith(prefix):
+            return envelope.split("|", 2)[2]
+        return envelope
+
+    @staticmethod
+    def _structural(line):
+        return (not line or line.startswith("--")
+                or line in {"try", "end try", "end tell", "end timeout",
+                            "end run", 'tell application "Microsoft Excel"'}
+                or line.startswith("with timeout of ")
+                or line.startswith("set jobPOSIX to ")
+                or line.startswith("set jobHFS to "))
+
+    def _owned_count(self):
+        return 1 if self.books == 1 and self.owned else 0
+
+    def _condition(self, text):
+        text = " ".join(text.split())
+        if text == "calculation is not calculation automatic":
+            # Excel reports missing value when no workbook is open.
+            current = self.mode if self.books else None
+            self.events.append(("mode", current))
+            return current != "automatic"
+        if text == "(count of workbooks) is not 0":
+            return self.books != 0
+        if text == ("(count of (get workbooks whose "
+                    "(full name is jobHFS or full name is jobPOSIX))) is not 0"):
+            return self._owned_count() != 0
+        if text == ("not (saved of "
+                    "(item 1 of (get workbooks whose "
+                    "(full name is jobHFS or full name is jobPOSIX))))"):
+            return not self.saved
+        raise _Unmodeled("condition: " + text)
+
+    def _value(self, expression):
+        parts = [part.strip() for part in expression.split(" & ")]
+        values = [self._atom(part) for part in parts]
+        if len(values) == 1:
+            return values[0]
+        return "".join(str(value) for value in values)
+
+    def _atom(self, text):
+        if text.startswith("(") and text.endswith(")"):
+            return self._atom(text[1:-1].strip())
+        if text.startswith('"') and text.endswith('"'):
+            return text[1:-1]
+        if text == "version":
+            return "16.114.1"
+        if text in {"sessionStage", "messageText", "errorNumber"}:
+            if self._active_error is None:
+                raise _Unmodeled("value outside error handler: " + text)
+            return {"sessionStage": self.error_stage,
+                    "messageText": self._active_error.message,
+                    "errorNumber": self._active_error.number}[text]
+        if re.fullmatch(r"-?\d+", text):
+            return int(text)
+        raise _Unmodeled("value: " + text)
+
+    def _require_owned(self):
+        if self.books != 1:
+            raise _ScriptError("foreign_or_missing_document")
+        if self._owned_count() != 1:
+            raise _ScriptError("owned_path_not_found")
+        if self.read_only:
+            raise _ScriptError("owned_document_read_only")
+        self.events.append("owned")
+
+    def _statement(self, line):
+        if line.startswith("if ") and " then " in line:
+            condition, action = line[3:].split(" then ", 1)
+            if self._condition(condition):
+                return self._statement(action.strip())
+            return False
+        if line == "open workbook workbook file name jobHFS":
+            self.books += 1
+            self.saved = True
+            self.events.append("open")
+            return False
+        if line == "my requireOwned(jobHFS, jobPOSIX)":
+            self._require_owned()
+            return False
+        if line == "calculate":
+            self.events.append(("calculate", self.stage))
+            self.saved = False
+            return False
+        if line.startswith("set calculation to "):
+            mode = line[len("set calculation to "):].replace("calculation ", "")
+            self.mode = mode
+            self.events.append(("set_calculation", mode))
+            return False
+        if line.startswith("set sessionStage to "):
+            self.stage = self._value(line[len("set sessionStage to "):])
+            return False
+        if line.startswith("save as "):
+            self.events.append(("save_as_pdf", self.stage))
+            self.saved = True
+            return False
+        if line.startswith("save "):
+            self.events.append(("save", self.stage))
+            self.saved = True
+            return False
+        if line.startswith("close every workbook saving no"):
+            self.events.append(("close", "no"))
+            self.books = 0
+            self.saved = True
+            return False
+        if line.startswith("close ") and line.endswith("saving ask"):
+            self.events.append(("close", "ask"))
+            self.books -= 1
+            self.saved = True
+            return False
+        if line.startswith("close ") and line.endswith("saving no"):
+            self.events.append(("close", "no"))
+            self.books -= 1
+            self.saved = True
+            return False
+        if line == "quit":
+            self.events.append(("quit",))
+            self.books = 0
+            return False
+        if line.startswith("return "):
+            self.returned = self._value(line[len("return "):])
+            self.events.append(("return", self.returned))
+            return True
+        if line.startswith("error "):
+            match = re.fullmatch(r"error (.+?) number (.+)", line)
+            if not match:
+                raise _Unmodeled(line)
+            raise _ScriptError(self._value(match.group(1)),
+                               int(self._value(match.group(2))))
+        raise _Unmodeled(line)
+
+
+class ExcelCalculationModeTests(unittest.TestCase):
+    """Execute the generated Excel body, including its error handler.
+
+    The model fails closed on unmodeled statements, so adding a calculation
+    assignment, weakening the mode check, or saving/closing/quitting from
+    `on error` cannot pass silently. Excel itself is not started.
+    """
+
+    def execute(self, mode, template=None, **kwargs):
+        template = template or runtime(
+            "gg_office_session").EXCEL_APPLESCRIPT_TEMPLATE
+        return _ExcelRun(template, mode, **kwargs).run()
+
+    def manual_contract_violations(self, template):
+        """Return the observable breaches of the manual/missing-mode contract."""
+        run = self.execute("manual", template=template)
+        expected = ["open", "owned", ("mode", "manual"),
+                    ("error", "updating", "manual_calculation_not_supported")]
+        violations = []
+        if run.error_message != "manual_calculation_not_supported":
+            violations.append(("error_message", run.error_message))
+        if run.error_stage != "updating":
+            violations.append(("error_stage", run.error_stage))
+        if run.books != 1:
+            violations.append(("open_books", run.books))
+        if run.events != expected:
+            violations.append(("events", run.events))
+        if run.returned is not None:
+            violations.append(("returned", run.returned))
+        return violations
+
+    def test_automatic_mode_calculates_one_owned_copy_and_closes_it(self):
+        run = self.execute("automatic")
+        self.assertEqual(0, run.books)
+        self.assertEqual("GG_OFFICE_SESSION|closed|saved|16.114.1", run.returned)
+        self.assertEqual([
+            "open", "owned", ("mode", "automatic"), "owned",
+            ("calculate", "updating"), "owned", ("save", "saving"), "owned",
+            ("save_as_pdf", "exporting"), "owned", ("close", "ask"),
+            ("return", "GG_OFFICE_SESSION|closed|saved|16.114.1"),
+        ], run.events)
 
     def test_manual_or_missing_mode_preserves_open_copy_without_writes(self):
         for mode in ("manual", None):
             with self.subTest(mode=mode):
-                result, events, remaining = self.execute(mode)
-                self.assertEqual("manual_calculation_not_supported", result)
-                self.assertEqual(["open", "owned", ("mode", mode)], events)
-                self.assertEqual(1, remaining)
+                run = self.execute(mode)
+                self.assertEqual("manual_calculation_not_supported",
+                                 run.error_message)
+                self.assertEqual("updating", run.error_stage)
+                self.assertEqual(1, run.books)
+                self.assertEqual(["open", "owned", ("mode", mode),
+                                  ("error", "updating",
+                                   "manual_calculation_not_supported")],
+                                 run.events)
 
-    def test_foreign_books_are_not_opened_or_read_for_mode(self):
-        self.assertEqual(("existing_documents", [], 1),
-                         self.execute("automatic", existing=1))
-        self.assertEqual(("owned_path_not_found", ["open"], 1),
-                         self.execute("automatic", owned=False))
+    def test_foreign_or_unowned_documents_are_rejected_before_mode_read(self):
+        existing = self.execute("automatic", existing=1)
+        self.assertEqual(("before_open", "existing_documents"),
+                         (existing.error_stage, existing.error_message))
+        self.assertEqual([("error", "before_open", "existing_documents")],
+                         existing.events)
+        self.assertEqual(1, existing.books)
+
+        unowned = self.execute("automatic", owned=False)
+        self.assertEqual(("updating", "owned_path_not_found"),
+                         (unowned.error_stage, unowned.error_message))
+        self.assertEqual(["open", ("error", "updating",
+                                   "owned_path_not_found")], unowned.events)
+        self.assertEqual(1, unowned.books)
+
+        read_only = self.execute("automatic", read_only=True)
+        self.assertEqual(("updating", "owned_document_read_only"),
+                         (read_only.error_stage, read_only.error_message))
+        self.assertEqual(["open", ("error", "updating",
+                                   "owned_document_read_only")],
+                         read_only.events)
+
+    def test_contract_rejects_calculation_mode_assignment(self):
+        template = runtime("gg_office_session").EXCEL_APPLESCRIPT_TEMPLATE
+        mutated = template.replace(
+            "                my requireOwned(jobHFS, jobPOSIX)\n"
+            "                -- Excel reports",
+            "                my requireOwned(jobHFS, jobPOSIX)\n"
+            "                set calculation to calculation automatic\n"
+            "                -- Excel reports", 1)
+        self.assertNotEqual(template, mutated)
+        run = self.execute("manual", template=mutated)
+        self.assertIn(("set_calculation", "automatic"), run.events)
+        self.assertIsNone(run.error_message)
+        self.assertEqual(0, run.books)
+        self.assertTrue(self.manual_contract_violations(mutated))
+
+    def test_contract_rejects_mode_check_that_stops_raising(self):
+        template = runtime("gg_office_session").EXCEL_APPLESCRIPT_TEMPLATE
+        mutated = template.replace(
+            'if calculation is not calculation automatic then error '
+            '"manual_calculation_not_supported" number -2700',
+            'if calculation is not calculation automatic then '
+            'return "mode-check-skipped"', 1)
+        self.assertNotEqual(template, mutated)
+        run = self.execute("manual", template=mutated)
+        self.assertEqual("mode-check-skipped", run.returned)
+        self.assertIsNone(run.error_message)
+        self.assertTrue(self.manual_contract_violations(mutated))
+
+    def test_contract_rejects_mode_check_before_the_owned_copy_opens(self):
+        # With no workbook open Excel reports missing value, so reading the
+        # mode before opening would refuse every automatic copy.
+        check = ('if calculation is not calculation automatic then error '
+                 '"manual_calculation_not_supported" number -2700')
+        template = runtime("gg_office_session").EXCEL_APPLESCRIPT_TEMPLATE
+        mutated = template.replace(check + "\n", "", 1).replace(
+            "open workbook workbook file name jobHFS",
+            check + "\n                open workbook workbook file name jobHFS",
+            1)
+        self.assertNotEqual(template, mutated)
+        run = self.execute("automatic", template=mutated)
+        self.assertEqual(("opening", "manual_calculation_not_supported"),
+                         (run.error_stage, run.error_message))
+        self.assertEqual([("mode", None),
+                          ("error", "opening",
+                           "manual_calculation_not_supported")], run.events)
+
+    def test_contract_rejects_error_handler_that_closes_or_quits(self):
+        template = runtime("gg_office_session").EXCEL_APPLESCRIPT_TEMPLATE
+        failure = ('error "GG_OFFICE_SESSION|" & sessionStage & "|" '
+                   '& messageText number errorNumber')
+        for line in ("close every workbook saving no", "quit"):
+            with self.subTest(line=line):
+                mutated = template.replace(failure, line, 1)
+                self.assertNotEqual(template, mutated)
+                run = self.execute("manual", template=mutated)
+                self.assertEqual(0, run.books)
+                self.assertIn("close" if "close" in line else "quit",
+                              [event[0] if isinstance(event, tuple) else event
+                               for event in run.events])
+                self.assertTrue(self.manual_contract_violations(mutated))
 
 
 class ConventionTests(unittest.TestCase):

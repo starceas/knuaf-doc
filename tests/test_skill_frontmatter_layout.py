@@ -248,6 +248,23 @@ class PeerFrontmatterTests(ContractCase):
         self.assertEqual("decimal", number.get(qn("w:fmt")))
         self.assertEqual("1", number.get(qn("w:start")))
 
+    def test_fruit_page_number_elements_keep_schema_order(self):
+        from docx.oxml.ns import qn
+        text = self.manuscript("fruit_trees").replace(
+            "# Ⅰ. 머리말", "요약\n\n합성 요약 산문\n\n# Ⅰ. 머리말")
+        doc = self.convert("fruit_trees", text)
+        self.assertEqual(3, len(doc.sections))
+        for index, section in enumerate(doc.sections):
+            children = [child.tag for child in section._sectPr]
+            numbers = [tag for tag in children if tag == qn("w:pgNumType")]
+            self.assertEqual(1, len(numbers), f"section {index}: {children}")
+            position = children.index(qn("w:pgNumType"))
+            for successor in ("w:cols", "w:docGrid"):
+                tag = qn(successor)
+                if tag in children:
+                    self.assertLess(position, children.index(tag),
+                                    f"section {index}: {children}")
+
     def test_fruit_without_preliminary_pages_still_restarts_body_at_one(self):
         from docx.oxml.ns import qn
         doc = self.convert("fruit_trees")

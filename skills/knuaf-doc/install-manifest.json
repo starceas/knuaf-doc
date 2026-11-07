@@ -121,7 +121,7 @@
   "references/update.md": "43746a2d7709cd90be8b5a330847a12e433ef734245482cdeb43fe17536f50de",
   "references/workbook-reference-set.json": "b1bd4b0a6c0f976e082208a0c94f0eab7250e66422ef9adc151e42cd22f9b677",
   "references/workflow-order.md": "734ca49c771f45e8934240f5fa3c0dc4105f694de1ce60d67bb42e7ade631804",
-  "scripts/build_docx.py": "74a1feff506e2b48ef3e44dda32ada794803f64d6b6d9fdba03e1ea502990a28",
+  "scripts/build_docx.py": "5ccad0b1b53642000a0ac7f84fa70fbfa2a4617fcdda6fa2f0e4f4fad60d035c",
   "scripts/build_excel_finance_template.py": "0b701dedc53e83af6b2c1aa7fce93d5df9043c428c9b7630a80d7944af582441",
   "scripts/build_hwpx.py": "009ba267f7e956be5e63404f0d2a3139a73eac868b1f65c300e2ac873ac3bee1",
   "scripts/build_status.py": "d97a4338604ce75b5ed483ac3ff76784040b5b201b4561457c860bc8f3aa21b9",

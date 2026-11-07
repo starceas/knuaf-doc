@@ -532,10 +532,21 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
         # with a one-page contents). Continue rather than pinning iv: an
         # overflowing contents page must also count. Other majors stay unchanged.
         count_fruit_front = authorization.major_id == 'fruit_trees'
+        # CT_SectPr requires pgNumType before cols/docGrid. Fruit inserts it
+        # in schema order; other majors keep their historical append bytes.
+        sectpr_after_pgnum = (
+            'w:cols', 'w:formProt', 'w:vAlign', 'w:noEndnote', 'w:titlePg',
+            'w:textDirection', 'w:bidi', 'w:rtlGutter', 'w:docGrid',
+            'w:printerSettings', 'w:sectPrChange')
+        def place_page_number(sec, pg):
+            if count_fruit_front:
+                sec._sectPr.insert_element_before(pg, *sectpr_after_pgnum)
+            else:
+                sec._sectPr.append(pg)
         if count_fruit_front:
             pg = OxmlElement('w:pgNumType')
             pg.set(qn('w:start'), '1'); pg.set(qn('w:fmt'), 'lowerRoman')
-            doc.sections[0]._sectPr.append(pg)
+            place_page_number(doc.sections[0], pg)
         def new_numbered_section(number_format, start=1):
             sec=doc.add_section(WD_SECTION.NEW_PAGE)
             if count_fruit_front:
@@ -543,7 +554,7 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
                 if inherited is not None: sec._sectPr.remove(inherited)
             pg=OxmlElement('w:pgNumType')
             if start is not None: pg.set(qn('w:start'), str(start))
-            pg.set(qn('w:fmt'),number_format);sec._sectPr.append(pg)
+            pg.set(qn('w:fmt'),number_format);place_page_number(sec, pg)
             sec.footer.is_linked_to_previous=False
             p=sec.footer.paragraphs[0];p.alignment=WD_ALIGN_PARAGRAPH.CENTER
             field=OxmlElement('w:fldSimple');field.set(qn('w:instr'),'PAGE');p._p.append(field)
