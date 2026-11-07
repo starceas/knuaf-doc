@@ -1800,6 +1800,60 @@ def _publication_ref_for(root, receipt, receipt_rel):
     }
 
 
+def _output_workbook_profile(root, output, path=None):
+    """Resolve a form only from a hash-bound native/operation receipt.
+
+    Caller-written profile strings and workbook shape grant no authority.
+    The pointer is retained with the managed output so export can recheck.
+    """
+    mc = _major_contract_mod()
+    try:
+        workbook = Path(path) if path is not None else local(root, output["path"])
+        actual = digest(workbook.read_bytes())
+        native = output.get("native_manifest")
+        operation = output.get("template_receipt")
+        if bool(native) == bool(operation):
+            raise ValueError("one native manifest or operation receipt required")
+        pointer = native or operation
+        if not isinstance(pointer, dict) or not _check_sha256(pointer.get("sha256")):
+            raise ValueError("workbook receipt hash required")
+        receipt_path = local(root, pointer["path"])
+        raw = receipt_path.read_bytes()
+        if digest(raw) != pointer["sha256"]:
+            raise ValueError("workbook receipt hash mismatch")
+        data = json.loads(raw)
+        if not isinstance(data, dict):
+            raise ValueError("workbook receipt object required")
+        if native:
+            validation = data.get("validation", {})
+            if not isinstance(validation, dict):
+                raise ValueError("native Excel validation object required")
+            profile = validation.get("workbook_profile")
+            if (data.get("status") != "converted" or data.get("engine") != "Microsoft Excel"
+                    or data.get("published_office_sha256") != actual
+                    or data.get("error") or data.get("returncode") not in (None, 0)
+                    or str(data.get("engine_stderr", "")).strip()
+                    or validation.get("finance_profile") != profile
+                    or validation.get("structure_issues") != []
+                    or validation.get("school_issues") != []):
+                raise ValueError("native Excel profile/output proof invalid")
+            excel = validation.get("excel", {})
+            if (not isinstance(excel, dict) or excel.get("valid") is not True
+                    or excel.get("sha256") != actual):
+                raise ValueError("native Excel artifact validation missing")
+        else:
+            from gg_office import template_receipt_binding
+            binding = template_receipt_binding(workbook, receipt_path)
+            profile = binding.get("workbook_profile")
+        if not isinstance(profile, str) or not profile:
+            raise ValueError("workbook profile evidence required")
+        if "workbook_profile" in output and output["workbook_profile"] != profile:
+            raise ValueError("caller workbook profile differs from receipt")
+        return profile
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        raise mc.OutputHeldError("finance_profile_evidence_invalid", str(error)) from error
+
+
 @_op_boundary
 def adopt_output(root, output_value, expected_revision, request_id,
                  companion_files=None, *, major_id=None):
@@ -1864,11 +1918,28 @@ def adopt_output(root, output_value, expected_revision, request_id,
 
     adopt_auth = {}
 
-    def adopt_guard(kinds, project=None):
+    def adopt_guard(kinds, project=None, stored=None):
         try:
             adopt_auth["value"] = mc.authorize_outputs(
                 sorted(kinds) if kinds else unknown_kinds, guard_ctx,
                 project=project)
+            if kinds and mc.OUTPUT_SCHOOL_WORKBOOK in kinds:
+                record = stored if stored is not None else meta
+                path = local(root, record["path"])
+                if path.is_file() and mc._sniff_kind(path) == "workbook":
+                    profile = _output_workbook_profile(root, record, path)
+                    auth = next(a for a in adopt_auth["value"]
+                                if a.output == mc.OUTPUT_SCHOOL_WORKBOOK)
+                    mc.require_workbook_profile(auth, profile)
+                    adopt_auth["workbook_profile"] = profile
+                for companion in companions:
+                    companion_path = (path.parent / "companions" / Path(companion["path"]).name
+                                      if stored is not None else local(root, companion["path"]))
+                    if companion_path.is_file() and mc._sniff_kind(companion_path) == "workbook":
+                        profile = _output_workbook_profile(root, record, companion_path)
+                        auth = next(a for a in adopt_auth["value"]
+                                    if a.output == mc.OUTPUT_SCHOOL_WORKBOOK)
+                        mc.require_workbook_profile(auth, profile)
         except mc.OutputHeldError as error:
             raise _op("adopt_output", "canonical", "not_committed",
                       error.reason, detail=str(error)) from error
@@ -1902,9 +1973,10 @@ def adopt_output(root, output_value, expected_revision, request_id,
         except (OSError, ValueError):
             p0 = {}
         if request_id in (p0.get("requests") or {}):
+            adopt_auth["retry"] = (p0.get("outputs") or {}).get(meta["id"], {})
             pre_kinds = stored_kinds(
                 (p0.get("outputs") or {}).get(meta["id"], {}))
-    adopt_guard(pre_kinds)
+    adopt_guard(pre_kinds, stored=adopt_auth.get("retry"))
 
     def body(capability):
         p = load(root)
@@ -1931,7 +2003,7 @@ def adopt_output(root, output_value, expected_revision, request_id,
             # Policy B: returning the stored result is an output too —
             # judged on the managed copy under the current binding, and
             # only when the adoption carries its persisted authorization.
-            adopt_guard(stored_kinds(stored), project=p)
+            adopt_guard(stored_kinds(stored), project=p, stored=stored)
             persisted = stored.get("major_authorization")
             if not isinstance(persisted, list) or not persisted or any(
                     not isinstance(a, dict) or a.get("major_id")
@@ -2078,6 +2150,12 @@ def adopt_output(root, output_value, expected_revision, request_id,
                       "output_source_missing", detail=meta["path"],
                       diag={"field": "path", "path": meta["path"]})
         adopt_guard(kinds, project=p)
+        if "workbook_profile" in adopt_auth:
+            pointer = meta.get("native_manifest") or meta.get("template_receipt")
+            if not any(c["path"] == pointer["path"] and c["sha256"] == pointer["sha256"]
+                       for c in companions):
+                raise _op("adopt_output", "canonical", "not_committed",
+                          "finance_profile_receipt_companion_required")
         # Resume check: same request_id already published but unregistered.
         publication_ref = None
         managed_path = None
@@ -2155,6 +2233,12 @@ def adopt_output(root, output_value, expected_revision, request_id,
         # record as an optional server-written field.
         registered = dict(meta, major_authorization=[
             a.to_dict() for a in adopt_auth["value"]])
+        if "workbook_profile" in adopt_auth:
+            registered["workbook_profile"] = adopt_auth["workbook_profile"]
+            key = "native_manifest" if meta.get("native_manifest") else "template_receipt"
+            pointer = meta[key]
+            registered[key] = dict(pointer, path=str(
+                Path(managed_path).parent / "companions" / Path(pointer["path"]).name))
         ctx = _register_adoption(
             capability=capability,
             root=root,
@@ -2729,6 +2813,9 @@ def _finance_plan_candidates(root, p):
     for source in p.get("sources", {}).values():
         path = source.get("path")
         if not isinstance(path, str) or not path.lower().endswith(".xlsx"):
+            continue
+        if ("workbook_profile" in source and
+                source["workbook_profile"] != _FINANCE_PLAN_PROFILE):
             continue
         try:
             if digest(local(root, path).read_bytes()) != source.get("hash"):
@@ -4429,13 +4516,19 @@ def checks(root, p):
         from gg_school_excel import inspect_outputs
 
         for cid, reason in inspect_outputs(root, p, lineage):
-            add(cid, "xlsx", reason)
+            add(cid, "xlsx", reason, severity="info" if cid == "school_excel_17_scope" else "error",
+                status="not_checked" if cid == "school_excel_17_scope" else "fail")
         body = merged(root, p)
         # WP-3 handoff: the 5-year plan / opening-asset / area review is
         # only meaningful for finance-supported majors and a hash-current
         # workbook source. blocked rows stay blocked (never a pass).
-        if gate_state["supported"] and _finance_plan_supported(p):
+        plan_supported = _finance_plan_supported(p)
+        if gate_state["supported"] and plan_supported:
             _add_finance_plan_review(root, p, body, add, gate_state)
+        elif not plan_supported:
+            add("finance_plan_review_scope", "finance",
+                "17시트 재무 계획 검사 미지원: school_17_sheet_v1 전용",
+                severity="info", status="not_checked")
         items, claims_block = _finance_check_items(p)
         if claims_block:
             add("body_finance_crosscheck", "body", claims_block, status="blocked")
@@ -5346,12 +5439,26 @@ def _export_output_kinds(root, p, kind, report):
     return kinds
 
 
-def _export_authorize(root, kinds, ctx, *, project=None):
+def _export_workbooks(project, kind, report):
+    if kind != "submission_candidate":
+        return ()
+    return tuple(project["outputs"][row["target"]] for row in report
+                 if row["check_id"].startswith("output_") and row["status"] == "pass")
+
+
+def _export_authorize(root, kinds, ctx, *, project=None, outputs=()):
     """Policy B authorization for export; hold codes become the pinned
     not_committed result."""
     mc = _major_contract_mod()
     try:
-        return mc.authorize_outputs(sorted(kinds), ctx, project=project)
+        authorizations = mc.authorize_outputs(sorted(kinds), ctx, project=project)
+        if mc.OUTPUT_SCHOOL_WORKBOOK in kinds:
+            auth = next(a for a in authorizations if a.output == mc.OUTPUT_SCHOOL_WORKBOOK)
+            for output in outputs:
+                path = local(root, output["path"])
+                if mc._sniff_kind(path) == "workbook":
+                    mc.require_workbook_profile(auth, _output_workbook_profile(root, output, path))
+        return authorizations
     except mc.OutputHeldError as error:
         raise _op("export", "export", "not_committed",
                   error.reason, detail=str(error)) from error
@@ -5372,9 +5479,10 @@ def export(root, kind, *, major_id=None):
     ctx = mc.output_context(root, major_id)
     try:
         p0 = load(root)
+        report0 = gate(root, p0)
         _export_authorize(
-            root, _export_output_kinds(root, p0, kind, gate(root, p0)),
-            ctx)
+            root, _export_output_kinds(root, p0, kind, report0), ctx,
+            outputs=_export_workbooks(p0, kind, report0))
     except (OSError, ValueError) as error:
         if isinstance(error, OperationError):
             raise
@@ -5422,7 +5530,8 @@ def export_locked(root, kind, *, capability, major_id=None):
     # lock — every exported file's kinds are covered.
     export_auths = _export_authorize(
         root, _export_output_kinds(root, p, kind, report),
-        _major_contract_mod().output_context(root, major_id), project=p)
+        _major_contract_mod().output_context(root, major_id), project=p,
+        outputs=_export_workbooks(p, kind, report))
     if kind == "submission_candidate":
         blocking = [x for x in report if blocks_skill_candidate(x)]
         if blocking:
@@ -5583,6 +5692,10 @@ def export_locked(root, kind, *, capability, major_id=None):
                     "input_changed_during_export",
                     detail="출력 중 입력 변경: 제출 후보 무효",
                 )
+            _export_authorize(
+                root, _export_output_kinds(root, p, kind, report),
+                _major_contract_mod().output_context(root, major_id), project=p,
+                outputs=_export_workbooks(p, kind, report))
         manifest_bytes = json.dumps(
             manifest, ensure_ascii=False, indent=2
         ).encode()

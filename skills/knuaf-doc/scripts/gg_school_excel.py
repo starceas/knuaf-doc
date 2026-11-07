@@ -1885,13 +1885,16 @@ def _a26_year(raw):
     return int(m.group(1)) if m else None
 
 
-def crosscheck_body_workbook(text, path, scope):
+def crosscheck_body_workbook(text, path, scope, *, workbook_profile=None):
     """Crosscheck canonical body claims against recalculated workbook cells.
 
     Each issue names the body claim location and the workbook sheet!cell that
     contradicts it.  A missing or non-numeric cached value is reported as
     ``blocked`` so an unrecalculated workbook cannot masquerade as a mismatch.
     """
+    if workbook_profile != "school_17_sheet_v1":
+        return [{"location": "body", "status": "not_checked",
+                 "reason": "17시트 좌표 대조 미지원: school_17_sheet_v1 전용"}]
     if not isinstance(text, str):
         return [{"location": "body", "status": "fail", "reason": "본문 텍스트 없음"}]
     scope = str(scope or "").strip()
@@ -2125,6 +2128,17 @@ def inspect_outputs(root, p, lineage=None):
             continue
         if (lineage.get(oid) or {}).get("state") == "history":
             continue
+        profile = output.get("workbook_profile")
+        if profile != "school_17_sheet_v1":
+            issues.append(("school_excel_17_scope",
+                           "17시트 검사 미지원/미실행: " + str(profile or "프로필 근거 없음")))
+            if output.get("layout_kind") != "provided_template":
+                try:
+                    from gg_excel_template import read_template
+                    read_template(local(root, output["path"]))
+                except (OSError, ValueError, KeyError) as error:
+                    issues.append(("xlsx_integrity", str(error)))
+                continue
         try:
             from openpyxl import load_workbook
         except ImportError:
@@ -2212,8 +2226,8 @@ def inspect_outputs(root, p, lineage=None):
                 wb_formula = load_workbook(path, read_only=True, data_only=False)
                 try:
                     names = wb_formula.sheetnames
-                    if len(names) != 17:
-                        raise ValueError("제공 템플릿 17시트 무결성 불일치")
+                    if profile == "school_17_sheet_v1" and len(names) != 17:
+                        raise ValueError("school_17_sheet_v1 17시트 무결성 불일치")
                     error_tokens = re.compile(
                         r"#(?:REF!|VALUE!|DIV/0!|N/A|NAME\?|NUM!|NULL!|SPILL!|CALC!|BLOCKED!|CONNECT!|UNKNOWN!)"
                     )
