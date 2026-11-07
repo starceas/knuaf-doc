@@ -2529,12 +2529,12 @@
       "last_changed": "W3m"
     },
     "tests/test_hort_excel_facts.py": {
-      "after_sha256": "590b61f6d54899d444aafdc80c8a44c2247864e09fbdd0320fd216918d0267e7",
+      "after_sha256": "f15d4365ea01df6e73c626e2e0769db02fcd832be4da7954a87893ceb21bd1cf",
       "before_sha256": null,
       "first_changed": "P28",
-      "last_changed": "W4b",
+      "last_changed": "W4c",
       "owner": "P28",
-      "reason": "W4b: hort native chain registers a fact through the common adapter; missing/foreign transform receipts stay held; a generic school profile label is refused. Synthetic receipts only, no Excel execution.",
+      "reason": "W4b: hort native chain registers a fact through the common adapter; missing/foreign transform receipts stay held; a generic school profile label is refused. Synthetic receipts only, no Excel execution. | W4c: negative coverage for the branch that replaced require_workbook_profile — absent/stale recorded grant, another major's context, a genuine foreign-project transform receipt with its own correct hash, a tampered workbook with a refreshed map hash, an absent transform receipt file, and a withdrawn finance capability all stay held with the project tree byte-unchanged; the success path now snapshots before build().",
       "source": "new"
     }
   },
