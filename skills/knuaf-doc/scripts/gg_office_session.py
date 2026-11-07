@@ -65,6 +65,10 @@ def _template(kind: str) -> str:
                 open workbook workbook file name jobHFS
                 set sessionStage to "updating"
                 {check}
+                -- Excel reports missing value with no workbook open.
+                -- Read the mode only after resolving the owned copy; never set it.
+                if calculation is not calculation automatic then error "manual_calculation_not_supported" number -2700
+                {check}
                 calculate
                 set sessionStage to "saving"
                 {check}
@@ -95,7 +99,6 @@ on run argv
         tell application "{app}"
             try
                 if (count of {plural}) is not 0 then error "existing_documents" number -2700
-                {('if calculation is not calculation automatic then error "manual_calculation_not_supported" number -2700') if kind == 'excel' else ''}
                 set sessionStage to "opening"
 {operations}
                 set sessionStage to "checking_saved"
