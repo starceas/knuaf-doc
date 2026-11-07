@@ -2438,12 +2438,12 @@
       "reason": "ORDER-13: reject document, ownership-only and unresolved/stale/mismatched major evidence; exercise interview-answer file through CLI apply; preserve peer/reconfirm assertions with valid answer fixtures."
     },
     "tests/test_major_guard_paper.py": {
-      "after_sha256": "49fc91acd7b34e515202eb4fa30f71d006da2f99f1752c408cfe7f58c4a45fab",
+      "after_sha256": "248980b4a414c4714075f1dd0468404671b41401c849b606f98c0131cab6f97b",
       "before_sha256": null,
       "first_changed": "P28",
       "owner": "P28",
       "source": "new",
-      "reason": "ORDER-13: preserve paper/adopt/race/professor-approval assertions; add major claims for synthetic peer, changed-major and reconfirmation answer fixtures. | ORDER-30: retain previously confirmed years, require confirmed S for paper/finance outputs, route S to the specialty financial axis, and keep CPI observations tied to W."
+      "reason": "ORDER-13: preserve paper/adopt/race/professor-approval assertions; add major claims for synthetic peer, changed-major and reconfirmation answer fixtures. | ORDER-30: retain previously confirmed years, require confirmed S for paper/finance outputs, route S to the specialty financial axis, and keep CPI observations tied to W. | W1d: preserve paper-only draft/review exports for fruit, horticulture and dairy; generic workbook adoption/publication reproduced open and assigned to A2 without pinning the bypass as expected behavior."
     },
     "skills/knuaf-doc/scripts/gg_read.py": {
       "after_sha256": "bab518e99758bc7a0c3e5d6717bff40f05c40590ab4f91e4870dd1376a39d338",
