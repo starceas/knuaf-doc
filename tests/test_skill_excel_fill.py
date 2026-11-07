@@ -128,6 +128,34 @@ class ExcelFillTests(ContractCase):
             self.assertTrue(receipt[part]["path"])
         self.assertIs(True, receipt["recalcNeeded"])
 
+    def test_declared_profile_survives_fill_without_changing_source(self):
+        m, v = self.files([self.entry("C1")], [self.value("C1", 700)])
+        data = json.loads(m.read_text())
+        data["workbook_profile"] = "fruit_16_sheet_v1"
+        m.write_text(json.dumps(data))
+        original = self.template.read_bytes()
+        project = self.make_project()
+        bind_major(project, "fruit_trees")
+        context = runtime("gg_major_contract").output_context(project, "fruit_trees")
+        receipt = self.fill.fill_copy(self.template, m, v, self.out(), context=context)
+        self.assertEqual(receipt["workbook_profile"], "fruit_16_sheet_v1")
+        self.assertEqual(self.template.read_bytes(), original)
+        book = self.openpyxl.load_workbook(self.out())
+        self.addCleanup(book.close)
+        self.assertEqual(book[SHEET]["C1"].value, 700)
+        self.assertEqual(book[SHEET]["C3"].value, "=C1*2")
+
+    def test_profile_hold_precedes_fill_output_directory(self):
+        m, v = self.files([self.entry("C1")], [self.value("C1", 700)])
+        data = json.loads(m.read_text())
+        data["workbook_profile"] = "fruit_16_sheet_v1"
+        m.write_text(json.dumps(data))
+        out = self.tmp / "not-created" / "held.xlsx"
+        mc = runtime("gg_major_contract")
+        with self.assertRaises(mc.OutputHeldError):
+            self.fill.fill_copy(self.template, m, v, out, context=self.ctx())
+        self.assertFalse(out.parent.exists())
+
     def test_a_mapped_cell_with_no_value_is_left_alone(self):
         self.run_fill([self.entry("C1"), self.entry("C2", role="crop")],
                       [self.value("C1", 700)])

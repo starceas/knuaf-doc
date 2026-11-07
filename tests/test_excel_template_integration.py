@@ -91,11 +91,10 @@ class FinanceTemplateIntegrationTests(ContractCase):
         inventory = {"survey": {"scope_label": "fruit", "scope_id": "/synthetic/fruit",
                                  "status": "complete", "evidence": {
                                      "verified": True, "basis": "user_attested"}}, "files": []}
-        with self.assertRaises(self.mc.OutputHeldError) as raised:
-            self.tpl.create_workbook(None, out, context=context, template_ref="X01",
-                                     reference_inventory=inventory)
-        self.assertEqual(raised.exception.reason, "unsupported_output")
-        self.assertFalse(out.exists())
+        receipt = self.tpl.create_workbook(None, out, context=context, template_ref="X01",
+                                           reference_inventory=inventory)
+        self.assertEqual(receipt["source"]["kind"], "bundled")
+        self.assertEqual(self.tpl.sha256(out), self.tpl.BUNDLED_TEMPLATE_SHA256)
 
     def test_inventory_is_not_promoted_by_editing_status_alone(self):
         source = self.workbook()
@@ -113,6 +112,46 @@ class FinanceTemplateIntegrationTests(ContractCase):
         with self.assertRaisesRegex(ValueError, "map_layout_invalid"):
             self.tpl.blank_copy(source, path, out, context=self.context)
         self.assertFalse(out.exists())
+
+    def test_inspection_records_explicit_profile_without_approving_inventory(self):
+        source = self.workbook()
+        data = self.tpl.inspect_source(source, None, None,
+                                       workbook_profile="fruit_16_sheet_v1")
+        self.assertEqual(data["workbook_profile"], "fruit_16_sheet_v1")
+        self.assertEqual(data["source"]["sha256"], self.tpl.sha256(source))
+        self.assertEqual(data["mapStatus"], "manual_map_required")
+        self.assertIsNone(self.tpl.inspect_source(source, None, None)["workbook_profile"])
+
+    def test_clear_profile_is_checked_before_output_directory_creation(self):
+        source = self.workbook()
+        path = self.write_map(source, [{"sheet": "Student", "cell": "B2", "action": "clear"}])
+        data = json.loads(path.read_text())
+        data["workbook_profile"] = "fruit_16_sheet_v1"
+        path.write_text(json.dumps(data))
+        out = self.folder / "not-created" / "held.xlsx"
+        with self.assertRaises(self.mc.OutputHeldError):
+            self.tpl.blank_copy(source, path, out, context=self.context)
+        self.assertFalse(out.parent.exists())
+
+    def test_clear_preserves_declared_profile_and_source(self):
+        source = self.workbook()
+        original = source.read_bytes()
+        path = self.write_map(source, [{"sheet": "Student", "cell": "B2", "action": "clear"}])
+        data = json.loads(path.read_text())
+        data["workbook_profile"] = "fruit_16_sheet_v1"
+        path.write_text(json.dumps(data))
+        out = self.folder / "fruit.xlsx"
+        project = self.make_project()
+        bind_major(project, "fruit_trees")
+        context = self.mc.output_context(project, "fruit_trees")
+        receipt = self.tpl.blank_copy(source, path, out, context=context)
+        self.assertEqual(receipt["workbook_profile"], "fruit_16_sheet_v1")
+        self.assertEqual(receipt["map"]["sha256"], self.tpl.sha256(path))
+        book = load_workbook(out)
+        self.addCleanup(book.close)
+        self.assertIsNone(book["Student"]["B2"].value)
+        self.assertEqual(book["Student"]["C2"].value, "=B2*2")
+        self.assertEqual(source.read_bytes(), original)
 
     def test_shared_formula_followers_are_not_literal_candidates(self):
         inventory = [{"sheet": "s", "cell": "A1", "value": 4,

@@ -79,6 +79,26 @@ explicit `clear`/`preserve` actions, then save a separately reviewed map with
 `mapStatus: ok`. Editing only the status never makes an inventory map executable.
 The map remains bound to the exact source hash and re-detected layout.
 
+New clear and fill maps declare top-level `workbook_profile` from the reviewed
+school form (`school_17_sheet_v1`, `fruit_16_sheet_v1`, or
+`dairy_hanwoo_28_sheet_v1`); never infer it from sheet count. `inspect
+--workbook-profile fruit_16_sheet_v1` records that declaration with the source
+SHA but leaves inventory review mandatory. The common writers require both the
+major's `workbook_profiles` declaration and a supported finance capability for
+that same profile, before creating an output directory. An explicit null/empty
+profile is refused. Only old specialty-crop maps without the key keep their
+historical school-17 meaning. Calculation profiles do not authorize school-form
+clear/fill. Clear/fill receipts retain the profile and map hash.
+
+Office `--spec` uses the same workbook-profile gate. `--template-receipt` accepts
+completed clear/fill operations only after input/map/output hash checks and
+profile agreement; the native manifest and template lineage retain that profile.
+Without evidence, only the historical specialty-crop render route remains open.
+Batch inputs without per-file evidence therefore cannot open fruit/dairy forms.
+Horticulture still requires its dedicated validated transform receipt and does
+not enter this common workbook gate. Passing a profile is not financial-content
+approval or proof of native recalculation.
+
 `inspect --legacy-map` explicitly requests the existing fixed X01 map
 (`entriesSource: legacy`, `mapOrigin: default_x01`). It does not become an X02
 or H01 map: X02/unknown still returns `manual_map_required` and `clear` refuses

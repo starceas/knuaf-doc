@@ -26,6 +26,7 @@ from gg_excel_template import (
     expand_ref,
     merged_cells,
     sha256,
+    require_map_workbook_profile,
     text_value,
     workbook_sheets,
     load_shared,
@@ -321,10 +322,10 @@ def fill_copy(template: Path, map_path: Path, values_path: Path, out: Path, *, c
     import gg_major_contract as mc
 
     authorization = mc.authorize_output(mc.OUTPUT_SCHOOL_WORKBOOK, context)
-    mc.require_finance_profile(authorization, "school_17_sheet_v1")
     if out.exists():
         raise FileExistsError(f"refusing to overwrite output: {out}")
     map_data, values_data, entries, values, template_digest = _prepare(template, map_path, values_path)
+    workbook_profile = require_map_workbook_profile(map_data, authorization)
     out.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(template, "r") as zin:
         sheets = dict(workbook_sheets(zin))
@@ -401,6 +402,7 @@ def fill_copy(template: Path, map_path: Path, values_path: Path, out: Path, *, c
         modified: dict[str, bytes] = {}
         receipt = {
             "schema": "gg-xlsx-fill-receipt/v1",
+            "workbook_profile": workbook_profile,
             "template": {"path": str(template.resolve()), "sha256": template_digest, "size": template.stat().st_size},
             "map": {"path": str(map_path.resolve()), "sha256": sha256(map_path)},
             "values": {"path": str(values_path.resolve()), "sha256": sha256(values_path)},

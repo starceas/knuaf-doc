@@ -9,6 +9,7 @@ import zipfile
 from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
+from dataclasses import replace
 
 from tests._harness import ContractCase, bind_major, runtime
 
@@ -47,7 +48,7 @@ class FinanceGateTests(ContractCase):
         for major in MAJORS:
             for profile in profiles:
                 with self.subTest(major=major, profile=profile):
-                    if major in ("fruit_trees", "industrial_insects"):
+                    if major == "industrial_insects":
                         with self.assertRaises(self.mc.OutputHeldError):
                             self.authorization(major)
                         continue
@@ -118,7 +119,7 @@ class FinanceGateTests(ContractCase):
             receipt.write_text('{"schema":"wrong"}', encoding="utf-8")
             with self.subTest(major=major), mock.patch.object(
                     self.office, "stage_job") as stage:
-                if major == "specialty_crops":
+                if major in ("specialty_crops", "fruit_trees"):
                     with self.assertRaises(ValueError):
                         self.office.process_excel(
                             source, self.roots[major] / "out",
@@ -140,7 +141,7 @@ class FinanceGateTests(ContractCase):
             with self.subTest(major=major), mock.patch.object(
                     self.office, "stage_job",
                     side_effect=AssertionError("STAGE_REACHED")) as stage:
-                if major == "specialty_crops":
+                if major != "industrial_insects":
                     with self.assertRaisesRegex(AssertionError,
                                                 "STAGE_REACHED"):
                         self.office.process_word(
@@ -157,7 +158,7 @@ class FinanceGateTests(ContractCase):
                     mock.patch.object(self.office, "stage_job",
                                       side_effect=AssertionError(
                                           "STAGE_REACHED")) as stage:
-                if major == "specialty_crops":
+                if major != "industrial_insects":
                     result = self.office.process_batch(
                         [source], self.roots[major] / "out",
                         context=self.context(major))
@@ -328,8 +329,6 @@ class FinanceGateTests(ContractCase):
 
     def test_direct_template_writers_four_major_matrix(self):
         calls = (
-            ("gg_excel_template", "blank_copy", 3),
-            ("gg_excel_fill", "fill_copy", 4),
             ("gg_excel_formula_patch", "patch_copy", 3),
             ("gg_excel_print", "apply", 4),
         )
@@ -434,6 +433,8 @@ class FinanceGateTests(ContractCase):
                 self.assertEqual(held.exception.reason, reason)
                 self.assertFalse((root / "v.xlsx").exists())
 
+
+
     def test_build_wrapper_holds_hort_before_economic_validation(self):
         wrapper = runtime("build_excel_finance_template")
         major = "hort_env_systems"
@@ -504,6 +505,183 @@ class FinanceGateTests(ContractCase):
         self.assertIn("private_instance_unavailable", stderr.getvalue())
         pythoncom.CoUninitialize.assert_called_once()
 
+
+class WorkbookProfileGateTests(ContractCase):
+    """Exercise real major contracts; isolate only the native staging boundary."""
+
+    def setUp(self):
+        self.mc = runtime("gg_major_contract")
+        self.office = runtime("gg_office")
+        self.tpl = runtime("gg_excel_template")
+        self.fill = runtime("gg_excel_fill")
+        self.root = self.make_project()
+        bind_major(self.root)
+        self.context = self.mc.output_context(self.root, "specialty_crops")
+        self.auth = self.mc.authorize_output(self.mc.OUTPUT_SCHOOL_WORKBOOK, self.context)
+        self.fruit_root = self.make_project()
+        bind_major(self.fruit_root, "fruit_trees")
+        self.fruit_context = self.mc.output_context(self.fruit_root, "fruit_trees")
+        self.fruit_auth = self.mc.authorize_output(self.mc.OUTPUT_SCHOOL_WORKBOOK, self.fruit_context)
+
+    def artifacts(self, profile):
+        from openpyxl import Workbook
+        source = self.root / "synthetic.xlsx"
+        book = Workbook()
+        book.active.title = "입력"
+        book.active["A1"] = 25
+        book.active["B1"] = "=A1*2"
+        for index in range(1, 16):
+            book.create_sheet(f"합성{index}")
+        book.save(source)
+        book.close()
+        clear = self.root / "clear.json"
+        fill = self.root / "fill.json"
+        values = self.root / "values.json"
+        marker = {} if profile is None else {"workbook_profile": profile}
+        clear.write_text(json.dumps({"schema": "gg-xlsx-template-map/v1", **marker,
+            "source": {"sha256": self.tpl.sha256(source)},
+            "layout": {"variant": "unknown", "mapOrigin": "reviewed_custom"},
+            "entries": [{"sheet": "입력", "cell": "A1", "action": "clear"}]}))
+        fill.write_text(json.dumps({"schema": self.fill.MAP_SCHEMA, **marker,
+            "template": {"sha256": self.tpl.sha256(source)},
+            "entries": [{"sheet": "입력", "cell": "A1", "role": "farm.area",
+                         "period": "2026", "editable": True, "source_note": "synthetic"}]}))
+        values.write_text(json.dumps({"schema": self.fill.VALUES_SCHEMA,
+            "values": [{"sheet": "입력", "cell": "A1", "value": 40,
+                        "value_type": "integer", "answer_state": "provided",
+                        "evidence_ref": {"source_id": "synthetic", "revision": 1,
+                                         "locator": "A1", "origin": "synthetic"}}]}))
+        return source, clear, fill, values
+
+    def test_clear_and_fill_contract_matrix_before_writer(self):
+        cases = (("specialty_crops", "school_17_sheet_v1", True),
+                 ("specialty_crops", None, True),
+                 ("fruit_trees", "fruit_16_sheet_v1", True),
+                 ("fruit_trees", None, False),
+                 ("fruit_trees", "school_17_sheet_v1", False),
+                 ("fruit_trees", "single_annual_cash_v1", False),
+                 ("hort_env_systems", "fruit_16_sheet_v1", False))
+        for index, (major, profile, allowed) in enumerate(cases):
+            source, clear, fill, values = self.artifacts(profile)
+            if major == "specialty_crops":
+                context = self.context
+            elif major == "fruit_trees":
+                context = self.fruit_context
+            else:
+                root = self.make_project()
+                bind_major(root, major)
+                context = self.mc.output_context(root, major)
+            with self.subTest(major=major, profile=profile):
+                for operation in ("clear", "fill"):
+                    out = self.root / str(index) / operation / "copy.xlsx"
+                    call = (lambda: self.tpl.blank_copy(source, clear, out, context=context)
+                            ) if operation == "clear" else (
+                            lambda: self.fill.fill_copy(source, fill, values, out, context=context))
+                    if allowed:
+                        receipt = call()
+                        self.assertEqual(receipt["workbook_profile"], profile or "school_17_sheet_v1")
+                        self.assertEqual(receipt["output"]["sha256"], self.tpl.sha256(out))
+                    else:
+                        with self.assertRaises(self.mc.OutputHeldError) as held:
+                            call()
+                        self.assertEqual(held.exception.reason, "unsupported_finance_profile")
+                        self.assertFalse(out.parent.exists())
+
+    def test_declared_but_unsupported_capability_and_calculation_only_hold(self):
+        registry = self.mc.default_registry()
+        module = registry.resolve("fruit_trees")
+        for declared, unsupported in ((("fruit_16_sheet_v1",), True),
+                                     (("single_annual_cash_v1",), False)):
+            changed = replace(module, workbook_profiles=declared,
+                              finance_capabilities=tuple(
+                                  replace(cap, status="unsupported") if unsupported and
+                                  cap.profile == "fruit_16_sheet_v1" else cap
+                                  for cap in module.finance_capabilities))
+            source, clear, fill, values = self.artifacts("fruit_16_sheet_v1")
+            with mock.patch.object(registry, "resolve", side_effect=lambda major:
+                                   changed if major == "fruit_trees" else self.mc.SPECIALTY_CROPS_MODULE), \
+                    mock.patch.object(self.mc, "default_registry", return_value=registry):
+                for op in (lambda: self.tpl.blank_copy(source, clear, self.root / "held" / "c.xlsx",
+                                                       context=self.fruit_context),
+                           lambda: self.fill.fill_copy(source, fill, values, self.root / "held" / "f.xlsx",
+                                                       context=self.fruit_context)):
+                    with self.assertRaises(self.mc.OutputHeldError):
+                        op()
+                with self.assertRaises(self.mc.OutputHeldError):
+                    self.office._preflight_excel_profile(source, [self.fruit_auth], self.fruit_context,
+                                                          spec={"profile": "fruit_16_sheet_v1"})
+            self.assertFalse((self.root / "held").exists())
+
+    @mock.patch.object(sys, "platform", "linux")
+    def test_office_spec_holds_wrong_profile_before_stage(self):
+        source, *_ = self.artifacts("fruit_16_sheet_v1")
+        for profile in ("fruit_16_sheet_v1", "single_annual_cash_v1", None, "school_17_sheet_v1"):
+            spec = self.root / "spec.json"
+            spec.write_text(json.dumps({"profile": profile}))
+            with mock.patch.object(self.office, "stage_job", side_effect=RuntimeError("stage reached")) as stage:
+                if profile == "fruit_16_sheet_v1":
+                    with self.assertRaisesRegex(RuntimeError, "stage reached"):
+                        self.office.process_excel(source, self.root / "out", spec_file=spec,
+                                                  context=self.fruit_context)
+                else:
+                    with self.assertRaises(self.mc.OutputHeldError):
+                        self.office.process_excel(source, self.root / "out", spec_file=spec,
+                                                  context=self.fruit_context)
+                    stage.assert_not_called()
+
+    def test_receipt_profile_hash_and_lineage_are_bound(self):
+        source, clear, fill, values = self.artifacts("fruit_16_sheet_v1")
+        auth = self.fruit_auth
+        output = self.root / "filled.xlsx"
+        data = self.fill.fill_copy(source, fill, values, output, context=self.fruit_context)
+        receipt = self.root / "receipt.json"
+        receipt.write_text(json.dumps(data))
+        binding, profile = self.office._preflight_excel_profile(
+            output, [auth], self.context, template_receipt=receipt)
+        self.assertEqual(profile, "fruit_16_sheet_v1")
+        self.assertEqual(binding["input_sha256"], self.tpl.sha256(output))
+        lineage = self.office.verify_template_lineage(output, [receipt])
+        self.assertEqual(lineage["workbook_profile"], profile)
+        for changed in ({"workbook_profile": "school_17_sheet_v1"},
+                        {"output": dict(data["output"], sha256="0" * 64)}):
+            receipt.write_text(json.dumps(dict(data, **changed)))
+            with self.assertRaises(ValueError):
+                self.office._preflight_excel_profile(output, [auth], self.context,
+                                                      template_receipt=receipt)
+
+    def test_batch_without_profile_evidence_holds_before_any_stage(self):
+        source, *_ = self.artifacts("fruit_16_sheet_v1")
+        with mock.patch.object(self.office, "stage_job") as stage:
+            with self.assertRaises(self.mc.OutputHeldError):
+                self.office.process_batch([source, source], self.root / "out",
+                                          context=self.fruit_context)
+            stage.assert_not_called()
+
+    def test_clear_receipt_profile_and_native_lineage_agree(self):
+        source, clear, _, _ = self.artifacts("fruit_16_sheet_v1")
+        auth = self.fruit_auth
+        output = self.root / "blank.xlsx"
+        data = self.tpl.blank_copy(source, clear, output, context=self.fruit_context)
+        receipt = self.root / "clear-receipt.json"
+        receipt.write_text(json.dumps(data))
+        binding, profile = self.office._preflight_excel_profile(
+            output, [auth], self.context, template_receipt=receipt)
+        pdf = self.root / "native.pdf"
+        pdf.write_bytes(b"%PDF-1.4 synthetic")
+        native = {"status": "converted", "engine": "Microsoft Excel",
+                  "input_sha256": self.tpl.sha256(output),
+                  "published_office": str(output), "published_office_sha256": self.tpl.sha256(output),
+                  "published_pdf": str(pdf), "published_pdf_sha256": self.tpl.sha256(pdf),
+                  "validation": {"structure_issues": [], "template_receipt": binding,
+                                 "workbook_profile": profile, "finance_profile": profile}}
+        native_path = self.root / "native.json"
+        native_path.write_text(json.dumps(native))
+        self.assertEqual(self.office.verify_template_lineage(output, [receipt, native_path])[
+            "workbook_profile"], "fruit_16_sheet_v1")
+        native["validation"]["workbook_profile"] = "school_17_sheet_v1"
+        native_path.write_text(json.dumps(native))
+        with self.assertRaisesRegex(ValueError, "profile differs"):
+            self.office.verify_template_lineage(output, [receipt, native_path])
 
 if __name__ == "__main__":
     import unittest

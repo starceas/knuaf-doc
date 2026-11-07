@@ -978,6 +978,11 @@ def template_receipt_binding(input_path, receipt_path):
         ):
             raise ValueError("template receipt must record a completed fill operation")
         input_parts = ("template", "map", "values")
+    elif schema == "gg-xlsx-template-receipt/v1":
+        if (data.get("output", {}).get("status") not in {"partial", "blank_template"}
+                or not isinstance(data.get("cleared"), list)):
+            raise ValueError("template receipt must record a completed clear operation")
+        input_parts = ("source", "map") if "map" in data else ("source",)
     elif schema == "gg-xlsx-formula-patch-receipt/v1":
         if (
             data.get("output", {}).get("status") != "patched"
@@ -1018,8 +1023,24 @@ def template_receipt_binding(input_path, receipt_path):
     actual = compute_sha256(Path(input_path).read_bytes())
     if data.get("output", {}).get("sha256") != actual:
         raise ValueError("template receipt output hash does not match input workbook")
-    return {"path": str(path), "sha256": compute_sha256(path.read_bytes()),
-            "input_sha256": actual, "authority": "operation_receipt_only"}
+    binding = {"path": str(path), "sha256": compute_sha256(path.read_bytes()),
+               "input_sha256": actual, "authority": "operation_receipt_only"}
+    if "workbook_profile" in data:
+        binding["workbook_profile"] = data["workbook_profile"]
+        if ("map" not in input_parts or "path" not in data.get("map", {})):
+            raise ValueError("profiled template receipt requires hash-bound map path")
+    if "map" in input_parts and "path" in data["map"]:
+        map_path = Path(data["map"]["path"])
+        if not map_path.is_absolute():
+            map_path = path.parent / map_path
+        mapped = json.loads(map_path.read_text(encoding="utf-8"))
+        if ("workbook_profile" in mapped and
+                mapped["workbook_profile"] != data.get("workbook_profile")):
+            raise ValueError("template receipt workbook profile differs from map")
+        if (data.get("workbook_profile") not in (None, "school_17_sheet_v1")
+                and mapped.get("workbook_profile") != data["workbook_profile"]):
+            raise ValueError("template receipt requires explicit map workbook profile")
+    return binding
 
 
 def _hort_transform_binding(input_path, receipt_path, authorization, context):
@@ -1069,7 +1090,7 @@ def _preflight_excel_profile(input_path, auths, context, *, spec=None,
     if spec is not None and template_receipt is not None:
         raise mc.OutputHeldError("finance_profile_evidence_conflict")
     if spec is not None:
-        mc.require_finance_profile(authorization, spec.get("profile"))
+        mc.require_workbook_profile(authorization, spec.get("profile"))
         if authorization.major_id == "hort_env_systems":
             raise mc.OutputHeldError("hort_transform_receipt_required")
         return None, spec["profile"]
@@ -1082,9 +1103,17 @@ def _preflight_excel_profile(input_path, auths, context, *, spec=None,
                                         authorization, context),
                 "hort_18_sheet_reconstructed_v1")
     if template_receipt is not None:
-        return (template_receipt_binding(input_path, template_receipt),
-                "legacy_unprofiled_render")
+        binding = template_receipt_binding(input_path, template_receipt)
+        if "workbook_profile" in binding:
+            profile = binding["workbook_profile"]
+            mc.require_workbook_profile(authorization, profile)
+            return binding, profile
+        if authorization.major_id != "specialty_crops":
+            raise mc.OutputHeldError("finance_profile_evidence_required")
+        mc.require_workbook_profile(authorization, "school_17_sheet_v1")
+        return binding, "legacy_unprofiled_render"
     if authorization.major_id == "specialty_crops":
+        mc.require_workbook_profile(authorization, "school_17_sheet_v1")
         return None, "legacy_unprofiled_render"
     raise mc.OutputHeldError("finance_profile_evidence_required")
 
@@ -1139,6 +1168,7 @@ def verify_template_lineage(input_file, receipt_paths):
     seen = set()
     previous_output = None
     previous_receipt = None
+    workbook_profile = None
     for receipt_path in receipt_paths:
         path = Path(receipt_path).resolve()
         if path in seen:
@@ -1172,6 +1202,7 @@ def verify_template_lineage(input_file, receipt_paths):
             source_hash = artifact_hash(data.get("source"), path.parent)
             output_hash = artifact_hash(data.get("output"), path.parent)
             operation_status = data["output"]["status"]
+            template_receipt_binding(path.parent / data["output"]["path"], path)
         elif schema in operations:
             for part in operations[schema]:
                 artifact_hash(data.get(part), path.parent)
@@ -1193,6 +1224,11 @@ def verify_template_lineage(input_file, receipt_paths):
                         or validation.get("template_receipt", {}).get("authority") !=
                         "hort_transform_receipt"):
                     raise ValueError("hort native receipt lacks transform profile")
+            if (workbook_profile is not None and
+                    (validation.get("workbook_profile") != workbook_profile
+                     or validation.get("finance_profile") != workbook_profile
+                     or validation.get("template_receipt", {}).get("workbook_profile") != workbook_profile)):
+                raise ValueError("native receipt workbook profile differs from lineage")
             source_hash = data.get("input_sha256")
             output_hash = artifact_hash({
                 "path": data.get("published_office"),
@@ -1206,6 +1242,16 @@ def verify_template_lineage(input_file, receipt_paths):
             schema = "native_excel"
         else:
             raise ValueError("unsupported template lineage receipt")
+        profile = data.get("workbook_profile")
+        if schema != "native_excel" and profile is not None:
+            if not isinstance(profile, str) or not profile:
+                raise ValueError("invalid lineage workbook profile")
+            if workbook_profile is not None and profile != workbook_profile:
+                raise ValueError("workbook profile changed within lineage")
+            workbook_profile = profile
+        elif (schema != "native_excel" and workbook_profile not in
+              (None, "school_17_sheet_v1")):
+            raise ValueError("workbook profile missing within lineage")
         if previous_output is not None and source_hash != previous_output:
             raise ValueError("template lineage input does not match preceding output")
         previous_output = output_hash
@@ -1222,6 +1268,7 @@ def verify_template_lineage(input_file, receipt_paths):
                                       "knuaf-hort-finance-receipt/v1"
                                       else "operation_lineage_only"),
         "output_sha256": previous_output, "receipts": rows,
+        "workbook_profile": workbook_profile,
     }
 
 
@@ -1383,6 +1430,10 @@ def process_excel(
     job_dir, staged_in, staged_work, staged_pdf, orig_sha = stage_job(
         input_path, ws_root, resources
     )
+    if binding and binding["authority"] == "operation_receipt_only":
+        if (orig_sha != binding["input_sha256"] or
+                template_receipt_binding(input_path, template_receipt) != binding):
+            raise mc.OutputHeldError("finance_profile_evidence_stale")
 
     if binding and binding["authority"] == "hort_transform_receipt":
         if (orig_sha != binding["input_sha256"] or
@@ -1479,7 +1530,8 @@ def process_excel(
             has_school_sheets = _legacy_school_check_applies(
                 wb_sheetnames, is_school_spec, SCHOOL_SHEETS)
 
-            if is_school_spec or has_school_sheets:
+            if (finance_profile in {"school_17_sheet_v1", "legacy_unprofiled_render"}
+                    and (is_school_spec or has_school_sheets)):
                 school_validation_status = "evaluated"
                 structure_issues = inspect_school_workbook(staged_work)
             else:
@@ -1511,9 +1563,9 @@ def process_excel(
 
                 school_issues = verify_school_recalculated(spec_data, staged_work)
             else:
-                from gg_finance import verify_recalculated
-
-                school_issues = verify_recalculated(spec_data, staged_work)
+                # This path accepts school forms, not the annual calculator.
+                # Other declared forms have no 17-sheet coordinate verifier.
+                school_issues = []
         except Exception as e:
             school_issues = [{"status": "fail", "reason": f"학교 검증기 실행 오류: {e}"}]
 
@@ -1537,12 +1589,15 @@ def process_excel(
         "school_validation": school_validation_status,
         "template_receipt": binding,
         "finance_profile": finance_profile,
+        "workbook_profile": (finance_profile if finance_profile != "legacy_unprofiled_render" else None),
         "previous_receipt_sha256": (binding["sha256"] if binding and
                                      binding["authority"] == "hort_transform_receipt"
                                      else None),
         "financial_content_validation": ("not_run" if binding or
                                          finance_profile == "legacy_unprofiled_render"
-                                         else "see_school_issues_and_spec"),
+                                         else "see_school_issues_and_spec" if
+                                         finance_profile == "school_17_sheet_v1"
+                                         else "not_checked_unsupported_profile"),
         "preservation_scope": ["sheet_order", "sheet_visibility", "merged_ranges", "print_ranges", "formulas", "nonblank_values"] if binding else None,
         "template_format_changes": template_format_changes,
         "number_format_validation": "changes_reported_for_visual_review" if binding else None,
@@ -1557,6 +1612,9 @@ def process_excel(
         if _hort_transform_binding(input_path, template_receipt,
                                    auths[0], context) != binding:
             raise mc.OutputHeldError("hort_transform_receipt_stale")
+    if binding and binding["authority"] == "operation_receipt_only":
+        if template_receipt_binding(input_path, template_receipt) != binding:
+            raise mc.OutputHeldError("finance_profile_evidence_stale")
     recorded = _reconfirm_office(auths, context, staged_pdf, "workbook",
                                  job_dir)
     receipt = _publish_outputs(
