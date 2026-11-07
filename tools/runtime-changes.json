@@ -2538,7 +2538,7 @@
       "last_changed": "WB6"
     },
     "tests/test_hort_body_plan.py": {
-      "after_sha256": "7b6b779c9c15fb462182f4db8ad854dd2789f773892f15cf1b93cc89d8afc5dd",
+      "after_sha256": "2c3d05127e5cefaff5784275bd3cc9baade30833d01ffb8058e1784b74cffedb",
       "before_sha256": null,
       "first_changed": "P28",
       "owner": "P28",
@@ -2547,12 +2547,13 @@
       "last_changed": "WB6"
     },
     "tests/test_hort_body_docx.py": {
-      "after_sha256": "d446174c29e19e0de4dcfd50dc48fe1954b674aecaf0ff21e017d95ab6ea43aa",
+      "after_sha256": "8a2d1afcce41854bffdb3633592beffb39f3a369ce529d824999fd241f66b2ad",
       "before_sha256": null,
       "first_changed": "P28",
       "owner": "P28",
       "source": "new",
-      "reason": "WB: 합성 원고를 학교 서식으로 조립한 출력의 앞머리·목차·캡션·재무 자리·부록을 검사한다."
+      "reason": "WB: 합성 원고를 학교 서식으로 조립한 출력의 앞머리·목차·캡션·재무 자리·부록을 검사한다.",
+      "last_changed": "WB6"
     }
   },
   "cumulative": true,
