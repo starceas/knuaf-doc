@@ -618,6 +618,14 @@
     "skills/knuaf-doc/scripts/gg_school_paper.py": {
       "origin": "transformed",
       "note": "ORDER-30: require explicit confirmed start_year and remove the implicit writing_year+1 publication fallback."
+    },
+    "skills/knuaf-doc/references/hort-env-systems/body-plan.md": {
+      "origin": "new",
+      "note": "WB: HT2 outline nodes as a writing-order table with question/evidence/sheet links; financial values stay pending until the workbook recalculation is registered."
+    },
+    "tests/test_hort_body_plan.py": {
+      "origin": "new",
+      "note": "WB: body-plan table must consume every HT2 node once and use only declared field_ids, use_scopes and workbook sheets."
     }
   },
   "readme_policy": {
