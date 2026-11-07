@@ -22,7 +22,7 @@ class FruitExcelMapTests(ContractCase):
         mc = runtime("gg_major_contract")
         self.context = mc.output_context(self.root, "fruit_trees")
 
-    def synthetic_source(self):
+    def synthetic_source(self, extras=None):
         book = Workbook()
         book.remove(book.active)
         sheets = self.school.profile_structure("fruit_16_sheet_v1")["sheets"]
@@ -30,6 +30,8 @@ class FruitExcelMapTests(ContractCase):
             book.create_sheet(name)
         for entry in self.mapping["entries"]:
             book[entry["sheet"]][entry["range"]] = "synthetic input" if entry["action"] == "clear" else "synthetic structure"
+        for sheet, coordinate, value in extras or ():
+            book[sheet][coordinate] = value
         # Formula and merge follower protection remain a writer responsibility.
         book[sheets[0]]["A100"] = "=1+2"
         book[sheets[0]].merge_cells("A101:B101")
@@ -107,8 +109,36 @@ class FruitExcelMapTests(ContractCase):
                     ("12.손익계획", "C22")):
             self.assertEqual(actions[key], "clear")
         for key in (("1.재무상태", "B6"), ("1.재무상태", "AL46"),
-                    ("9.경비계획", "B12"), ("9.경비계획", "O15")):
+                    ("9.경비계획", "B12"), ("9.경비계획", "O15"),
+                    ("5.판매계획", "AZ6")):
             self.assertEqual(actions[key], "preserve")
+
+    def test_fixed_two_kg_price_basis_survives_clear_with_its_formulas(self):
+        source, mapping = self.synthetic_source((
+            ("5.판매계획", "AZ6", "2kg 기준"),
+            ("5.판매계획", "AZ7", "=AR7*2"),
+            ("5.판매계획", "AZ8", "=AR8*2")))
+        entry = next(e for e in mapping["entries"]
+                     if (e["sheet"], e["range"]) == ("5.판매계획", "AZ6"))
+        # C-R1-01: the fixed 2x conversion formula below needs its unit
+        # label; clearing it would let a 2kg price read as a per-kg price.
+        self.assertEqual(entry["action"], "preserve")
+        self.assertNotEqual(entry["role"], "sales.price_basis")
+        self.assertIn("2kg", entry["reason"])
+        path = self.root / "map.json"
+        path.write_text(json.dumps(mapping))
+        output = self.root / "blank.xlsx"
+        receipt = self.tpl.blank_copy(source, path, output, context=self.context)
+        book = load_workbook(output)
+        sheet = book["5.판매계획"]
+        self.assertEqual(sheet["AZ6"].value, "2kg 기준")
+        self.assertEqual(sheet["AZ7"].value, "=AR7*2")
+        self.assertEqual(sheet["AZ8"].value, "=AR8*2")
+        book.close()
+        self.assertNotIn(("5.판매계획", "AZ6"),
+                         {(item["sheet"], item["cell"]) for item in receipt["cleared"]})
+        preserved = {(item["sheet"], item["cell"]) for item in receipt["preserved"]}
+        self.assertIn(("5.판매계획", "AZ6"), preserved)
 
     def test_fact_draft_cannot_be_mistaken_for_native_registration(self):
         mapping = json.loads((REFERENCE / "fruit-finance-fact-map.draft.json").read_text())

@@ -134,7 +134,7 @@ flowchart LR
 
 ### 과수 16시트 입력 지도와 계산 사실 준비
 
-`fruit_16_sheet_v1` 전용 [입력 지도](fruit-finance-input-map.json)는 원본 해시에 묶인 1,961개 리터럴 후보를 검토해 clear 340개/preserve 1,621개로 분류한다. 공통 clear/fill 관문 아래에서 사용하는 구조 자료이며, 학교 17시트 지도가 아니다. [셀↔사실 구조 초안](fruit-finance-fact-map.draft.json)은 native 재계산·해시 바인딩 전이므로 사실 등록용으로 사용할 수 없다. [검토·보류 기준과 20수식 산식 비교](finance-map-review.md)를 함께 읽는다. 입력 지도 검토 완료가 Excel 실기·PDF 출력·재무 정당성 검증을 뜻하지 않으며, 수식 변경이나 Python 재무 계산을 허용하지 않는다.
+`fruit_16_sheet_v1` 전용 [입력 지도](fruit-finance-input-map.json)는 원본 해시에 묶인 1,961개 리터럴 후보를 검토해 clear 339개/preserve 1,622개로 분류한다. 공통 clear/fill 관문 아래에서 사용하는 구조 자료이며, 학교 17시트 지도가 아니다. [셀↔사실 구조 초안](fruit-finance-fact-map.draft.json)은 native 재계산·해시 바인딩 전이므로 사실 등록용으로 사용할 수 없다. [검토·보류 기준과 20수식 산식 비교](finance-map-review.md)를 함께 읽는다. 입력 지도 검토 완료가 Excel 실기·PDF 출력·재무 정당성 검증을 뜻하지 않으며, 수식 변경이나 Python 재무 계산을 허용하지 않는다.
 
 
 ## 자료 등록 순서 (기존 `gg.py apply`만 사용)

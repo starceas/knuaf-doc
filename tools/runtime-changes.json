@@ -260,7 +260,7 @@
       "source": "adopted:app-PR41"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "29fba8ad908030004acaa1b272e41769c0e3dda4e115eb3b255c55ba969424a0",
+      "after_sha256": "b5af1eb2dd76d2c95a175b93eab7c3f54f8a10aeeafec4a246466c1485adcf1b",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "W2g",
@@ -712,7 +712,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/fruit-trees/README.md": {
-      "after_sha256": "6415cbaa05d0d738dba208b04bceed20857e211ab2a213132e62cc146b8419a4",
+      "after_sha256": "89d3589a77e677ae5018107dee6649ffbd4e3d8b8376d0ba0ee37bc3f9c19a21",
       "before_sha256": null,
       "first_changed": "P8",
       "last_changed": "P28",
@@ -2529,7 +2529,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/fruit-trees/fruit-finance-input-map.json": {
-      "after_sha256": "876de0ef8cdeb3877533f088db0ea84364fd266bef6fb242c5e47cfbbdee9afc",
+      "after_sha256": "308197227ad9712ad29284f8a3e0b40810fb1a9c8e6601b7210b23350a5712bb",
       "before_sha256": null,
       "first_changed": "P28",
       "owner": "C",
@@ -2545,7 +2545,7 @@
       "source": "new; reviewed cell structure only; no source values or private workbook"
     },
     "skills/knuaf-doc/references/fruit-trees/finance-map-review.md": {
-      "after_sha256": "f036c9e85fcb879c79c1790f7f10ac946cd29344849baa6902933fdddcbb566a",
+      "after_sha256": "81c78ff20703132c8e24b9adf446d1f67f19494ebb0a2e6f1a31ffefd931b639",
       "before_sha256": null,
       "first_changed": "P28",
       "owner": "C",
@@ -2553,7 +2553,7 @@
       "source": "new; reviewed cell structure only; no source values or private workbook"
     },
     "tests/test_fruit_excel_map.py": {
-      "after_sha256": "eebe503618e08ed641e121a2dd9ce1a9e4b15ae1f027ec476deba22c5c3a98aa",
+      "after_sha256": "29e6efe4307225be8459bb8948200942de0f31afeade193f1ebda07cf8f56393",
       "before_sha256": null,
       "first_changed": "P28",
       "owner": "C",
