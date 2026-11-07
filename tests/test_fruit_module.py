@@ -1,11 +1,9 @@
 """fruit_trees module declaration and its link to the common guard B.
 
 A01-P (S01 plan, no specialty inheritance), A30 (no example precedents),
-finance unsupported, and the fruit link of A32/A46: the real registered
-module is refused by capability on every deliverable path while plan and
-reading stay open.  The full path x case matrix lives in
-tests/test_major_guard_*.py (G-B, inherited); this file checks the fruit
-connection only.
+and the fruit link of the common output guard. Paper/workbook declarations
+are open; general finance calculations and the legacy paper generator remain
+unsupported. Workbook publication proof is enforced separately by A2.
 """
 import json
 import subprocess
@@ -35,17 +33,6 @@ class DeclarationTests(ContractCase):
         self.mc = runtime("gg_major_contract")
         self.module = self.mc.default_registry().resolve("fruit_trees")
 
-    def test_registered_with_plan_only_outputs(self):
-        m = self.module
-        self.assertEqual(m.module_version, "0.2.0")
-        self.assertEqual(m.capabilities["finance"], "unsupported")
-        self.assertEqual(set(m.supported_outputs),
-                         {"question_list", "document_plan",
-                          "evidence_review"})
-        self.assertTrue(all(c.status == "unsupported"
-                            for c in m.finance_capabilities))
-        self.assertEqual(m.packs, ())
-        self.assertEqual(m.imports, ())
 
     def test_s01_document_plan_without_specialty_inheritance(self):
         """A01-P."""
@@ -128,13 +115,14 @@ class GuardLinkTests(ContractCase):
                 root, major), spec=spec)
         self.assertEqual(caught.exception.reason, reason)
 
-    def test_bound_fruit_every_output_refused_by_capability(self):
+    def test_bound_fruit_paper_allowed_but_calculation_refused(self):
         root = self.make_project()
         bind_major(root, "fruit_trees")
-        for output in self.mc.OUTPUT_REQUIREMENTS:
-            with self.subTest(output=output):
-                self._held("unsupported_output", output, root,
-                           major="fruit_trees")
+        authorization = self.mc.authorize_output(
+            "school_paper", self.mc.output_context(root, "fruit_trees"))
+        self.assertEqual(authorization.major_id, "fruit_trees")
+        self._held("unsupported_output", "finance_calculation", root,
+                   major="fruit_trees")
 
     def test_unbound_and_mismatched_fruit_requests(self):
         root = self.make_project()
@@ -163,20 +151,13 @@ class GuardLinkTests(ContractCase):
         out = _cli("gg.py", "paper", root, "--input", "spec.json",
                    "--out", "build/p.md", "--major", "fruit_trees")
         self.assertNotEqual(out.returncode, 0)
-        self.assertIn("unsupported_output", out.stdout + out.stderr)
+        self.assertIn("unsupported_major", out.stdout + out.stderr)
         self.assertEqual(self._tree_bytes(root), before)
         plan = _cli("gg.py", "major-plan", root)
         self.assertEqual(plan.returncode, 0, plan.stdout + plan.stderr)
         self.assertEqual(json.loads(plan.stdout)["binding"]["major_id"],
                          "fruit_trees")
 
-    def test_plan_reports_same_holds_as_guard(self):
-        fp = ff.ready(self)
-        availability = {o["output"]: o["reason"]
-                        for o in fp.plan()["output_availability"]}
-        self.assertEqual(set(availability.values()), {"unsupported_output"})
-        self.assertEqual(set(availability), {
-            "school_paper", "school_excel_workbook", "finance_calculation"})
 
     def test_bundle2_texts_have_no_local_paths(self):
         skill = SCRIPTS.parent

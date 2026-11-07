@@ -64,6 +64,8 @@ def _texts(nodes,start,end):
 
 
 def render_forms(doc,nodes,plan,font):
+    if plan.get('spec') and plan['spec'].major_id != 'specialty_crops':
+        return _render_peer_forms(doc, nodes, plan, font)
     ix=plan['indices']
     cover=_texts(nodes,ix['겉표지']+1,ix['표제면'])
     submission=_texts(nodes,ix['표제면']+1,ix['제출서'])
@@ -136,6 +138,38 @@ def render_forms(doc,nodes,plan,font):
         inner.rows[0].height=Mm(9);inner.rows[0].height_rule=WD_ROW_HEIGHT_RULE.EXACTLY
         tail=cell.paragraphs[-1];tail.paragraph_format.line_spacing=Pt(1);tail.paragraph_format.space_after=Pt(0)
     _break(doc)
+
+
+def _render_peer_forms(doc, nodes, plan, font):
+    """Source page grouping, common flowing layout; never claim measured bands."""
+    spec = plan['spec']
+    indices = plan['indices']
+    ordered = plan['order']
+    # Preserve authored preamble rather than silently dropping it.
+    if any(n.get('text', '').strip() for n in nodes[:indices[ordered[0]]]):
+        raise ValueError('학교 앞머리 앞에 배정되지 않은 내용이 있습니다')
+    for roles in spec.physical_forms:
+        for role in roles:
+            start = indices[role]
+            next_role = ordered[ordered.index(role) + 1]
+            end = indices[next_role]
+            if role in {'학부모 동의서', '요약', '감사의 글'}:
+                doc.add_paragraph(role, style='Heading 1')
+            for node in nodes[start + 1:end]:
+                if node.get('kind') not in {'paragraph', 'heading'}:
+                    raise ValueError('학교 앞머리에는 문단만 지원: ' + role)
+                p = doc.add_paragraph(node.get('text', ''))
+                # Common defaults are not measurements of a peer's school form.
+                if spec.layout_confidence != 'unverified_common_defaults':
+                    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                for run in p.runs:
+                    _font(run, font, 12)
+        if roles == spec.physical_forms[0]:
+            present = {n.get('text', '').strip() for n in nodes[:plan['toc']]}
+            for notice in spec.notices:
+                if notice not in present:
+                    doc.add_paragraph(notice)
+        _break(doc)
 
 
 def bookmark(p,name,num):

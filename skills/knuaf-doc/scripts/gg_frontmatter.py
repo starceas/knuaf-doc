@@ -79,6 +79,11 @@ def normalize_school_profile(spec: Mapping[str, Any]) -> dict[str, Any]:
     if nested_major is not None and top_major is not None \
             and nested_major != top_major:
         raise ValueError("school_profile.major_id와 major_id 불일치")
+    from gg_document import school_frontmatter_spec
+    major_id = nested_major or top_major
+    front_spec = school_frontmatter_spec(major_id)
+    if front_spec is None:
+        raise ValueError("지원하지 않는 학교 앞머리 전공: " + major_id)
 
     committee = raw.get("committee")
     if committee is None:
@@ -118,16 +123,19 @@ def normalize_school_profile(spec: Mapping[str, Any]) -> dict[str, Any]:
         "mode": mode,
         "layout": layout,
         "source_order_note": (
+            "전공별 원문 순서; 미확인 물리 배치는 공용 기본값 사용"
+            if major_id not in {None, "specialty_crops"} else
             "공식 지침 p4 논리 순서와 p6–9 시각 예시 순서가 달라 forms_1_to_4를 선택함"
             if layout == "forms_1_to_4"
             else "공식 지침 p4 논리 순서를 선택함; p6–9 시각 예시와 순서가 다를 수 있어 사용자 검토 필요"
         ),
-        "degree": _first(raw, spec, "degree") or "농업전문학사 학위논문",
-        "plan_label": _first(raw, spec, "plan_label") or "영농창업계획",
+        "degree": _first(raw, spec, "degree") or front_spec.degree,
+        "plan_label": _first(raw, spec, "plan_label") or front_spec.plan_label,
         "title": _first(raw, spec, "title"),
         "subtitle": _first(raw, spec, "subtitle"),
         "school": _first(raw, spec, "school") or "한국농수산대학교",
-        "department": _first(raw, spec, "department", "major"),
+        "department": _first(raw, spec, "department", "major") or (
+            front_spec.department if major_id not in {None, "specialty_crops"} else None),
         "author": _first(raw, spec, "author", "student"),
         "advisor": _first(raw, spec, "advisor"),
         "submission_date": _first(raw, spec, "submission_date", "submitted"),
@@ -135,7 +143,7 @@ def normalize_school_profile(spec: Mapping[str, Any]) -> dict[str, Any]:
         "graduation_date": _first(raw, spec, "graduation_date"),
         "committee": {"chair": chair, "members": members_list},
         "unknown_policy": policy,
-        "major_id": nested_major or top_major,
+        "major_id": major_id,
     }
 
 
@@ -160,6 +168,8 @@ def frontmatter_lines(profile: Mapping[str, Any], *, artifacts: Mapping[str, Any
 
     if not profile.get("enabled"):
         raise ValueError("frontmatter_lines에는 활성 학교 프로필이 필요")
+    if profile.get("major_id") not in {None, "specialty_crops"}:
+        return _peer_frontmatter_lines(profile, artifacts or {})
     author = display(profile.get("author"), profile)
     title = display(profile.get("title"), profile)
     department = display(profile.get("department"), profile)
@@ -200,4 +210,49 @@ def frontmatter_lines(profile: Mapping[str, Any], *, artifacts: Mapping[str, Any
         for key, label in (("summary", "요약"), ("table_list", "표 목차"), ("figure_list", "그림 목차")):
             if artifacts.get(key):
                 lines.append(label)
+    return lines
+
+
+def _peer_frontmatter_lines(profile, artifacts):
+    """Keep source form roles separate; do not synthesize consent or approval."""
+    from gg_document import school_frontmatter_spec
+    spec = school_frontmatter_spec(profile["major_id"])
+    value = lambda key: display(profile.get(key), profile)
+    author, degree = value("author"), value("degree")
+    title = [degree] + ([value("plan_label")] if profile.get("plan_label") else []) + [value("title")]
+    if profile.get("subtitle"):
+        title.append(value("subtitle"))
+    identity = [value("school"), value("department"), author]
+    # S01 spells out 학위 논문 in its submission statement.
+    submission_degree = "농업전문학사 학위 논문" if spec.major_id == "fruit_trees" else degree
+    submission = ["이 논문을 " + submission_degree + "으로 제출함",
+                  value("submission_date")] + identity
+    committee = profile["committee"]
+    members = committee.get("members", [])
+    if spec.major_id != "dairy":
+        if any(members[2:]):
+            raise ValueError("전공 인준서 위원은 위원장 외 2명까지 지원")
+        members = members[:2]
+    approval = [author + "의 " + degree + "을 인준함", value("submission_date"),
+                "위원장 " + display(committee.get("chair"), profile, blank=True) + " (인)"]
+    approval += ["위  원 " + display(name, profile, blank=True) + " (인)" for name in members]
+    blocks = {
+        "겉표지": title + [value("graduation_date")] + identity,
+        "표제면": title + ([value("graduation_date")] + identity if spec.cover_count == 2 else []),
+        "제출서": (title + submission if spec.cover_count == 2 or spec.major_id == "dairy" else submission),
+        "인준서": approval,
+        "학부모 동의서": [str(artifacts.get("parent_consent") or PENDING)],
+        "요약": [str(artifacts.get("summary") or PENDING)],
+        "감사의 글": [str(artifacts.get("thanks") or PENDING)],
+    }
+    if profile.get("advisor"):
+        target = "표제면" if "표제면" in spec.orders[-1] else "제출서"
+        blocks[target].insert(0, "지도교수 " + value("advisor"))
+    lines = []
+    for marker in spec.orders[-1]:
+        lines += [marker] + blocks.get(marker, []) + [""]
+        if marker == "겉표지":
+            lines += list(spec.notices) + [""]
+    if spec.major_id == "dairy":
+        lines += ["표 목차", "그림 목차"]
     return lines

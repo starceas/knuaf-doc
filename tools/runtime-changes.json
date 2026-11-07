@@ -205,6 +205,8 @@
     "tests/test_hort_finance_pipeline.py",
     "tests/test_major_guard_contract.py",
     "tests/test_major_guard_paper.py",
+    "tests/test_fruit_module.py",
+    "tests/test_skill_frontmatter_layout.py",
     "tests/_harness.py",
     "skills/knuaf-doc/scripts/gg_read.py",
     "tests/test_document_read.py",
@@ -216,6 +218,30 @@
   "baseline_spec": "tools/baseline-files.json",
   "baseline_spec_sha256": "094a062217f563cb62f79721c2eb6f1eac15574fe691ac4a6b72595a413f0392",
   "changes": {
+    "skills/knuaf-doc/scripts/gg_frontmatter_layout.py": {
+      "after_sha256": "dd24063725b06d9f981faab1c50e9c3b7bb5de32a9a6edf388c14bf432fead66",
+      "before_sha256": "13484701cfaaff81d1eb348f50586d11c55217acd855cc1364d715e38fe8a8d2",
+      "first_changed": "P28",
+      "owner": "P28",
+      "reason": "W1d: render source-ordered peer forms with shared defaults; specialty measured bands unchanged.",
+      "source": "adopted:baseline"
+    },
+    "tests/test_skill_frontmatter_layout.py": {
+      "after_sha256": "2bf25ec087381f36d01a7f274d449f03bc544ac37dbf62ef2c7e8a4016ea7edd",
+      "before_sha256": null,
+      "first_changed": "P28",
+      "owner": "P28",
+      "reason": "W1d: synthetic peer DOCX reopen, page order, notices, data preservation and fail-closed form regressions.",
+      "source": "new"
+    },
+    "tests/test_fruit_module.py": {
+      "after_sha256": "288b31889d511c7e112f8ee30742d0b8bf1ed5bb2fa850e56ca75068a92f6128",
+      "before_sha256": null,
+      "first_changed": "P28",
+      "owner": "P28",
+      "reason": "W1d: retire obsolete plan-only expectations; paper authorization and calculation hold stay distinct.",
+      "source": "new"
+    },
     "skills/knuaf-doc/assets/templates/finance-template.xlsx": {
       "after_sha256": "6d3c9fe5e5992108a8bab18c0098edb0d808f0d14c099878a53939b17de88c7d",
       "before_sha256": null,
@@ -277,7 +303,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "86323d7f2aa9bbac0e84367778e5edff0041c9ec09c10ee1f16cab30cbe829a8",
+      "after_sha256": "4ae3a567c4ed1e5e81e652b3c3e85b0ec62c8b3feda47ee8476f26c69cb02247",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "v0.4.5",
@@ -468,7 +494,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/builtin-sources.json": {
-      "after_sha256": "d9766300acd462f31bb21668b6f1e33f1d23bff780f08253393377aeb202d3ce",
+      "after_sha256": "9e8e00e514d750b735a5a768f341d414ad0be2171ac6ef031ee59039fb7d858c",
       "before_sha256": null,
       "first_changed": "P5",
       "last_changed": "P28",
@@ -1082,7 +1108,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/rules/PRE_frontmatter.md": {
-      "after_sha256": "518398e195a8480abed23596dcbe46c18fc033c345796d8b50ad0dadcd17baef",
+      "after_sha256": "65185186868c76a1e5073901c4a555b6cecc9c3da436413d900309397dc7e9fe",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "P28",
@@ -1210,7 +1236,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/build_docx.py": {
-      "after_sha256": "29776e0396442a6ec3d680383d115b0d7fa4191295fff34cc0da4fa20def8e0a",
+      "after_sha256": "2b57c341b91e56f536f8c826bf3e65cd38478303f1ab52eb62d43d7c90327b7b",
       "before_sha256": "b0ce58afc3f24b792843877bb6dc996d634dc12235bade53c34ecb5cdfad9912",
       "first_changed": "P1",
       "last_changed": "G-output-guards",
@@ -1304,7 +1330,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_document.py": {
-      "after_sha256": "36bb5cbc55b76d6b73be228c06ca92da3ef330f789fb040d217a73cb6bafc626",
+      "after_sha256": "4731b3253abb881886efafb16bf1f82cc9cdf9d3f0c3016f94205a058d2d454b",
       "before_sha256": "e83eee6a94393e407a727979c6e5f6e5545f17ca7291e745c68d66dcb835a8b3",
       "first_changed": "P1",
       "last_changed": "P28",
@@ -1404,7 +1430,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_frontmatter.py": {
-      "after_sha256": "29932a458c50ac709deffc5162d08dab6dbba81040f11426ba667199308de197",
+      "after_sha256": "7ed01341167e1d3624694cd3ed000ac1c7619e7b6bde07af314d0ee6109c69ba",
       "before_sha256": "c5186fc23618d90009ff28ba06507296bd7a848ad10589976c723f7cf7ca6d57",
       "first_changed": "P27",
       "last_changed": "P27",
@@ -2081,7 +2107,7 @@
       "source": "new"
     },
     "tests/test_major_guard_outputs.py": {
-      "after_sha256": "6484578c75385e9dca42ae6f5376d0adce0d9921f5ae3d859b0d5d09660cafa1",
+      "after_sha256": "cdf0418a1dcd35e13ea59d177333bf387aed464c35150243b1da463bac5731ac",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "P0-2-D",
