@@ -187,6 +187,7 @@
     "tests/test_excel_template_guard.py",
     "tests/test_excel_template_integration.py",
     "tests/test_fruit_module.py",
+    "tests/test_hort_body_docx.py",
     "tests/test_hort_body_plan.py",
     "tests/test_hort_env_plan.py",
     "tests/test_hort_finance_pipeline.py",
@@ -2544,6 +2545,14 @@
       "source": "new",
       "reason": "",
       "last_changed": "WB6"
+    },
+    "tests/test_hort_body_docx.py": {
+      "after_sha256": "d446174c29e19e0de4dcfd50dc48fe1954b674aecaf0ff21e017d95ab6ea43aa",
+      "before_sha256": null,
+      "first_changed": "P28",
+      "owner": "P28",
+      "source": "new",
+      "reason": "WB: 합성 원고를 학교 서식으로 조립한 출력의 앞머리·목차·캡션·재무 자리·부록을 검사한다."
     }
   },
   "cumulative": true,
