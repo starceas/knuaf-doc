@@ -3,7 +3,9 @@
 
 Spec schema and contract:
 - Frontmatter & Metadata:
-  - writing_year: int (required, e.g. 2026)
+  - writing_year: int (required, 1900–2100 inclusive, e.g. 2026)
+  - start_year: int (required, confirmed by the student, 1900–9995 inclusive)
+  - writing_year+1 is only a proposal; do not use it as start_year until the student confirms it.
   - title: str (optional)
   - author: str (optional)
   - major: str (optional)

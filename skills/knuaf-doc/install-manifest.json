@@ -86,7 +86,7 @@
   "references/official-toc.md": "87fa7a502aff42d735d44579d9e68fe1491ce26ac242ac7a25c661b719ca552f",
   "references/open-questions.md": "97e8ac9e3bfbc5a01f25c4a949b565fcf2cdd4e022bf3f499c3c3067179493b0",
   "references/output-hygiene.md": "cbab96b73e4c14b48713f886876e9fded2bac9da1d245a6c21048ef3fffaaff6",
-  "references/outputs.md": "c5d167895c9e926a7e2c642a1aa947a2fa6c6f534d7e4a58da3bc3cab43e0b4b",
+  "references/outputs.md": "1753c7f323b3eb6ce8e894abb8717ace0b50e62a2a49e425bcf828a2146a6d83",
   "references/package-install.md": "ec98421637d74a682d7509fb567e7019ed51451a9080df4bd5e9306d6172c561",
   "references/parser-setup.md": "663edf74336deb3cde0304916a20d29beeb572946509f8a2742ca7c944942cb9",
   "references/plain-thesis-policy.json": "275388305828ce94527979044cdf65cd62ae021ae995b39481de1de08ea2f8f6",
@@ -177,7 +177,7 @@
   "scripts/gg_reuse.py": "724466d1d917cfc5218fd75672674dc46021db5c0e0b2bc7e698a1a919397241",
   "scripts/gg_school_excel.py": "95871b670f72c114a7496f2fdf1f6ebcc569039d35726b4cecbb7a4c0d115c23",
   "scripts/gg_school_format.py": "7b7504ccb9c466ab8eb9fe36e4c8acb6465236a5aa7b2b70f0f976a8eef79b8e",
-  "scripts/gg_school_paper.py": "cc1a1e132ba64596dafaa95ab0b43633fd0f439dd12dbe6538d7678fda69f68d",
+  "scripts/gg_school_paper.py": "eba74abcd0eb6fe1a509339046fcc6e8a7f8fef2006b1181e2103d841458c825",
   "scripts/gg_school_table_sources.py": "591fc1842235b8747eef9bb6ca2d0ec4078d944e81dca046dd29be028f0434be",
   "scripts/gg_school_verify.py": "2c16f421e612598e043e9e4f43a60791ca87dc7e9651ac6fccba0e0da06268bb",
   "scripts/gg_source_identity.py": "d7f64e8fe3c081d7fbaaa62f0fb98132941895f700868aa924c98f3dbcf200f4",
@@ -219,7 +219,7 @@
   "tests/test_gg_toc_check.py": "7589f6890fb4ed671c49c23e6942f67fe5632d96ee63f02f4863e7e3f35677b5",
   "tests/test_n5_guidance_link.py": "32462d60e2a3c7a40cffb6eecfb138f8046d382ad16bb15377b3490e3ddbb43a",
   "tests/test_official_guide_reuse.py": "2169e23583f04860fbeb77fe1fe802bed756efd5147156c294eddb3e9ba4d87c",
-  "version.json": "ea5ab03be8b17ff08351adcf23255d0fa643d270d83055e1cb10a0ab1e37ffd7"
+  "version.json": "3378980a239aaaaa1f2f15fa2695ac61ba152dbb7ee3b837a30182a98b25e7a7"
  },
  "schema": "knuaf-doc/install-manifest@1"
 }
