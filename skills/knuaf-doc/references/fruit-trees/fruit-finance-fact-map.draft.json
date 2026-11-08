@@ -1,7 +1,8 @@
 {
   "schema": "gg-xlsx-fact-map-draft/v1",
   "workbook_profile": "fruit_16_sheet_v1",
-  "status": "structure_only_not_registration_ready",
+  "status": "superseded_by_registration_map",
+  "superseded_by": "fruit-finance-fact-map.json",
   "source": {
     "sha256": "5f2896dd0c47d9b90a1ec3da30128ea0a9aa47f72aa79156a57bfd7bfd271374"
   },

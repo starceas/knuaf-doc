@@ -1,0 +1,794 @@
+{
+  "schema": "gg-xlsx-fact-map/v1",
+  "workbook_profile": "fruit_16_sheet_v1",
+  "status": "rows_reviewed_binding_pending_native_run",
+  "source": {
+    "sha256": "5f2896dd0c47d9b90a1ec3da30128ea0a9aa47f72aa79156a57bfd7bfd271374"
+  },
+  "workbook": {
+    "path": "",
+    "sha256": ""
+  },
+  "receipt": {
+    "path": "",
+    "sha256": ""
+  },
+  "binding": [
+    "Fill workbook.path/sha256 and receipt.path/sha256 from the native Excel run: the recalculated 16-sheet fruit workbook and the gg_office manifest that proves it.",
+    "Paths are project-relative; the adapter refuses any other hash, profile or schema.",
+    "Register with gg_excel_facts.build_registration(root, workbook, receipt, this_map, ...)."
+  ],
+  "periods": {
+    "column_year": "12.손익계획 and 11.생산원가 columns C:L are 2027~2036; 14.현금흐름 columns D:M and 15.소득분석 columns E:N carry the same years one column later.",
+    "unit": "Every row is 천원 as printed on its source sheet; a 만원 body figure needs an explicit 천원→만원 conversion, never a relabel."
+  },
+  "held_notice": [
+    "지금 보이는 숫자는 합성 시험 사본의 값이라 본문에 쓸 수 없다(학생 계획값이 아니다).",
+    "실제 입력은 검토된 입력 지도(fruit-finance-input-map.json)가 가리키는 칸에 학생 계획값으로 하고, 그 사본을 Excel로 재계산한 뒤 바인딩한다.",
+    "남는 #DIV/0!·학교 양식 내부 충돌은 수식을 고치지 않고 사실로 등록하지 않으며, 교수님께는 원문 문구만 인용해 묻는다."
+  ],
+  "cells": [
+    {
+      "fact_id": "fruit-body-revenue-2027",
+      "field_id": "매출액",
+      "sheet": "12.손익계획",
+      "cell": "C6",
+      "period": "2027",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "매출액"
+    },
+    {
+      "fact_id": "fruit-body-revenue-2028",
+      "field_id": "매출액",
+      "sheet": "12.손익계획",
+      "cell": "D6",
+      "period": "2028",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "매출액"
+    },
+    {
+      "fact_id": "fruit-body-revenue-2029",
+      "field_id": "매출액",
+      "sheet": "12.손익계획",
+      "cell": "E6",
+      "period": "2029",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "매출액"
+    },
+    {
+      "fact_id": "fruit-body-revenue-2030",
+      "field_id": "매출액",
+      "sheet": "12.손익계획",
+      "cell": "F6",
+      "period": "2030",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "매출액"
+    },
+    {
+      "fact_id": "fruit-body-revenue-2031",
+      "field_id": "매출액",
+      "sheet": "12.손익계획",
+      "cell": "G6",
+      "period": "2031",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "매출액"
+    },
+    {
+      "fact_id": "fruit-body-revenue-2032",
+      "field_id": "매출액",
+      "sheet": "12.손익계획",
+      "cell": "H6",
+      "period": "2032",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "매출액"
+    },
+    {
+      "fact_id": "fruit-body-revenue-2033",
+      "field_id": "매출액",
+      "sheet": "12.손익계획",
+      "cell": "I6",
+      "period": "2033",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "매출액"
+    },
+    {
+      "fact_id": "fruit-body-revenue-2034",
+      "field_id": "매출액",
+      "sheet": "12.손익계획",
+      "cell": "J6",
+      "period": "2034",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "매출액"
+    },
+    {
+      "fact_id": "fruit-body-revenue-2035",
+      "field_id": "매출액",
+      "sheet": "12.손익계획",
+      "cell": "K6",
+      "period": "2035",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "매출액"
+    },
+    {
+      "fact_id": "fruit-body-revenue-2036",
+      "field_id": "매출액",
+      "sheet": "12.손익계획",
+      "cell": "L6",
+      "period": "2036",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "매출액"
+    },
+    {
+      "fact_id": "fruit-body-netprofit-2027",
+      "field_id": "당기순이익",
+      "sheet": "12.손익계획",
+      "cell": "C34",
+      "period": "2027",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "당기순이익"
+    },
+    {
+      "fact_id": "fruit-body-netprofit-2028",
+      "field_id": "당기순이익",
+      "sheet": "12.손익계획",
+      "cell": "D34",
+      "period": "2028",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "당기순이익"
+    },
+    {
+      "fact_id": "fruit-body-netprofit-2029",
+      "field_id": "당기순이익",
+      "sheet": "12.손익계획",
+      "cell": "E34",
+      "period": "2029",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "당기순이익"
+    },
+    {
+      "fact_id": "fruit-body-netprofit-2030",
+      "field_id": "당기순이익",
+      "sheet": "12.손익계획",
+      "cell": "F34",
+      "period": "2030",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "당기순이익"
+    },
+    {
+      "fact_id": "fruit-body-netprofit-2031",
+      "field_id": "당기순이익",
+      "sheet": "12.손익계획",
+      "cell": "G34",
+      "period": "2031",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "당기순이익"
+    },
+    {
+      "fact_id": "fruit-body-netprofit-2032",
+      "field_id": "당기순이익",
+      "sheet": "12.손익계획",
+      "cell": "H34",
+      "period": "2032",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "당기순이익"
+    },
+    {
+      "fact_id": "fruit-body-netprofit-2033",
+      "field_id": "당기순이익",
+      "sheet": "12.손익계획",
+      "cell": "I34",
+      "period": "2033",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "당기순이익"
+    },
+    {
+      "fact_id": "fruit-body-netprofit-2034",
+      "field_id": "당기순이익",
+      "sheet": "12.손익계획",
+      "cell": "J34",
+      "period": "2034",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "당기순이익"
+    },
+    {
+      "fact_id": "fruit-body-netprofit-2035",
+      "field_id": "당기순이익",
+      "sheet": "12.손익계획",
+      "cell": "K34",
+      "period": "2035",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "당기순이익"
+    },
+    {
+      "fact_id": "fruit-body-netprofit-2036",
+      "field_id": "당기순이익",
+      "sheet": "12.손익계획",
+      "cell": "L34",
+      "period": "2036",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "당기순이익"
+    },
+    {
+      "fact_id": "fruit-body-prodcost-2027",
+      "field_id": "생산원가",
+      "sheet": "11.생산원가",
+      "cell": "C29",
+      "period": "2027",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "당기총생산원가"
+    },
+    {
+      "fact_id": "fruit-body-prodcost-2028",
+      "field_id": "생산원가",
+      "sheet": "11.생산원가",
+      "cell": "D29",
+      "period": "2028",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "당기총생산원가"
+    },
+    {
+      "fact_id": "fruit-body-prodcost-2029",
+      "field_id": "생산원가",
+      "sheet": "11.생산원가",
+      "cell": "E29",
+      "period": "2029",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "당기총생산원가"
+    },
+    {
+      "fact_id": "fruit-body-prodcost-2030",
+      "field_id": "생산원가",
+      "sheet": "11.생산원가",
+      "cell": "F29",
+      "period": "2030",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "당기총생산원가"
+    },
+    {
+      "fact_id": "fruit-body-prodcost-2031",
+      "field_id": "생산원가",
+      "sheet": "11.생산원가",
+      "cell": "G29",
+      "period": "2031",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "당기총생산원가"
+    },
+    {
+      "fact_id": "fruit-body-prodcost-2032",
+      "field_id": "생산원가",
+      "sheet": "11.생산원가",
+      "cell": "H29",
+      "period": "2032",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "당기총생산원가"
+    },
+    {
+      "fact_id": "fruit-body-prodcost-2033",
+      "field_id": "생산원가",
+      "sheet": "11.생산원가",
+      "cell": "I29",
+      "period": "2033",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "당기총생산원가"
+    },
+    {
+      "fact_id": "fruit-body-prodcost-2034",
+      "field_id": "생산원가",
+      "sheet": "11.생산원가",
+      "cell": "J29",
+      "period": "2034",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "당기총생산원가"
+    },
+    {
+      "fact_id": "fruit-body-prodcost-2035",
+      "field_id": "생산원가",
+      "sheet": "11.생산원가",
+      "cell": "K29",
+      "period": "2035",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "당기총생산원가"
+    },
+    {
+      "fact_id": "fruit-body-prodcost-2036",
+      "field_id": "생산원가",
+      "sheet": "11.생산원가",
+      "cell": "L29",
+      "period": "2036",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "당기총생산원가"
+    },
+    {
+      "fact_id": "fruit-body-opprofit-2027",
+      "field_id": "영업이익",
+      "sheet": "12.손익계획",
+      "cell": "C19",
+      "period": "2027",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "영업이익"
+    },
+    {
+      "fact_id": "fruit-body-opprofit-2028",
+      "field_id": "영업이익",
+      "sheet": "12.손익계획",
+      "cell": "D19",
+      "period": "2028",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "영업이익"
+    },
+    {
+      "fact_id": "fruit-body-opprofit-2029",
+      "field_id": "영업이익",
+      "sheet": "12.손익계획",
+      "cell": "E19",
+      "period": "2029",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "영업이익"
+    },
+    {
+      "fact_id": "fruit-body-opprofit-2030",
+      "field_id": "영업이익",
+      "sheet": "12.손익계획",
+      "cell": "F19",
+      "period": "2030",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "영업이익"
+    },
+    {
+      "fact_id": "fruit-body-opprofit-2031",
+      "field_id": "영업이익",
+      "sheet": "12.손익계획",
+      "cell": "G19",
+      "period": "2031",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "영업이익"
+    },
+    {
+      "fact_id": "fruit-body-opprofit-2032",
+      "field_id": "영업이익",
+      "sheet": "12.손익계획",
+      "cell": "H19",
+      "period": "2032",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "영업이익"
+    },
+    {
+      "fact_id": "fruit-body-opprofit-2033",
+      "field_id": "영업이익",
+      "sheet": "12.손익계획",
+      "cell": "I19",
+      "period": "2033",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "영업이익"
+    },
+    {
+      "fact_id": "fruit-body-opprofit-2034",
+      "field_id": "영업이익",
+      "sheet": "12.손익계획",
+      "cell": "J19",
+      "period": "2034",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "영업이익"
+    },
+    {
+      "fact_id": "fruit-body-opprofit-2035",
+      "field_id": "영업이익",
+      "sheet": "12.손익계획",
+      "cell": "K19",
+      "period": "2035",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "영업이익"
+    },
+    {
+      "fact_id": "fruit-body-opprofit-2036",
+      "field_id": "영업이익",
+      "sheet": "12.손익계획",
+      "cell": "L19",
+      "period": "2036",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "영업이익"
+    },
+    {
+      "fact_id": "fruit-body-annual-balance-2027",
+      "field_id": "수지균형",
+      "sheet": "14.현금흐름",
+      "cell": "D21",
+      "period": "2027",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "수지균형"
+    },
+    {
+      "fact_id": "fruit-body-annual-balance-2028",
+      "field_id": "수지균형",
+      "sheet": "14.현금흐름",
+      "cell": "E21",
+      "period": "2028",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "수지균형"
+    },
+    {
+      "fact_id": "fruit-body-annual-balance-2029",
+      "field_id": "수지균형",
+      "sheet": "14.현금흐름",
+      "cell": "F21",
+      "period": "2029",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "수지균형"
+    },
+    {
+      "fact_id": "fruit-body-annual-balance-2030",
+      "field_id": "수지균형",
+      "sheet": "14.현금흐름",
+      "cell": "G21",
+      "period": "2030",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "수지균형"
+    },
+    {
+      "fact_id": "fruit-body-annual-balance-2031",
+      "field_id": "수지균형",
+      "sheet": "14.현금흐름",
+      "cell": "H21",
+      "period": "2031",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "수지균형"
+    },
+    {
+      "fact_id": "fruit-body-annual-balance-2032",
+      "field_id": "수지균형",
+      "sheet": "14.현금흐름",
+      "cell": "I21",
+      "period": "2032",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "수지균형"
+    },
+    {
+      "fact_id": "fruit-body-annual-balance-2033",
+      "field_id": "수지균형",
+      "sheet": "14.현금흐름",
+      "cell": "J21",
+      "period": "2033",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "수지균형"
+    },
+    {
+      "fact_id": "fruit-body-annual-balance-2034",
+      "field_id": "수지균형",
+      "sheet": "14.현금흐름",
+      "cell": "K21",
+      "period": "2034",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "수지균형"
+    },
+    {
+      "fact_id": "fruit-body-annual-balance-2035",
+      "field_id": "수지균형",
+      "sheet": "14.현금흐름",
+      "cell": "L21",
+      "period": "2035",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "수지균형"
+    },
+    {
+      "fact_id": "fruit-body-annual-balance-2036",
+      "field_id": "수지균형",
+      "sheet": "14.현금흐름",
+      "cell": "M21",
+      "period": "2036",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "수지균형"
+    },
+    {
+      "fact_id": "fruit-body-cum-balance-2027",
+      "field_id": "누적수지균형",
+      "sheet": "14.현금흐름",
+      "cell": "D22",
+      "period": "2027",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "누적수지균형"
+    },
+    {
+      "fact_id": "fruit-body-cum-balance-2028",
+      "field_id": "누적수지균형",
+      "sheet": "14.현금흐름",
+      "cell": "E22",
+      "period": "2028",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "누적수지균형"
+    },
+    {
+      "fact_id": "fruit-body-cum-balance-2029",
+      "field_id": "누적수지균형",
+      "sheet": "14.현금흐름",
+      "cell": "F22",
+      "period": "2029",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "누적수지균형"
+    },
+    {
+      "fact_id": "fruit-body-cum-balance-2030",
+      "field_id": "누적수지균형",
+      "sheet": "14.현금흐름",
+      "cell": "G22",
+      "period": "2030",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "누적수지균형"
+    },
+    {
+      "fact_id": "fruit-body-cum-balance-2031",
+      "field_id": "누적수지균형",
+      "sheet": "14.현금흐름",
+      "cell": "H22",
+      "period": "2031",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "누적수지균형"
+    },
+    {
+      "fact_id": "fruit-body-cum-balance-2032",
+      "field_id": "누적수지균형",
+      "sheet": "14.현금흐름",
+      "cell": "I22",
+      "period": "2032",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "누적수지균형"
+    },
+    {
+      "fact_id": "fruit-body-cum-balance-2033",
+      "field_id": "누적수지균형",
+      "sheet": "14.현금흐름",
+      "cell": "J22",
+      "period": "2033",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "누적수지균형"
+    },
+    {
+      "fact_id": "fruit-body-cum-balance-2034",
+      "field_id": "누적수지균형",
+      "sheet": "14.현금흐름",
+      "cell": "K22",
+      "period": "2034",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "누적수지균형"
+    },
+    {
+      "fact_id": "fruit-body-cum-balance-2035",
+      "field_id": "누적수지균형",
+      "sheet": "14.현금흐름",
+      "cell": "L22",
+      "period": "2035",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "누적수지균형"
+    },
+    {
+      "fact_id": "fruit-body-cum-balance-2036",
+      "field_id": "누적수지균형",
+      "sheet": "14.현금흐름",
+      "cell": "M22",
+      "period": "2036",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "누적수지균형"
+    },
+    {
+      "fact_id": "fruit-body-income-2027",
+      "field_id": "소득",
+      "sheet": "15.소득분석",
+      "cell": "E26",
+      "period": "2027",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "소득"
+    },
+    {
+      "fact_id": "fruit-body-income-2028",
+      "field_id": "소득",
+      "sheet": "15.소득분석",
+      "cell": "F26",
+      "period": "2028",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "소득"
+    },
+    {
+      "fact_id": "fruit-body-income-2029",
+      "field_id": "소득",
+      "sheet": "15.소득분석",
+      "cell": "G26",
+      "period": "2029",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "소득"
+    },
+    {
+      "fact_id": "fruit-body-income-2030",
+      "field_id": "소득",
+      "sheet": "15.소득분석",
+      "cell": "H26",
+      "period": "2030",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "소득"
+    },
+    {
+      "fact_id": "fruit-body-income-2031",
+      "field_id": "소득",
+      "sheet": "15.소득분석",
+      "cell": "I26",
+      "period": "2031",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "소득"
+    },
+    {
+      "fact_id": "fruit-body-income-2032",
+      "field_id": "소득",
+      "sheet": "15.소득분석",
+      "cell": "J26",
+      "period": "2032",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "소득"
+    },
+    {
+      "fact_id": "fruit-body-income-2033",
+      "field_id": "소득",
+      "sheet": "15.소득분석",
+      "cell": "K26",
+      "period": "2033",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "소득"
+    },
+    {
+      "fact_id": "fruit-body-income-2034",
+      "field_id": "소득",
+      "sheet": "15.소득분석",
+      "cell": "L26",
+      "period": "2034",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "소득"
+    },
+    {
+      "fact_id": "fruit-body-income-2035",
+      "field_id": "소득",
+      "sheet": "15.소득분석",
+      "cell": "M26",
+      "period": "2035",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "소득"
+    },
+    {
+      "fact_id": "fruit-body-income-2036",
+      "field_id": "소득",
+      "sheet": "15.소득분석",
+      "cell": "N26",
+      "period": "2036",
+      "scope": "계획",
+      "unit": "천원",
+      "body_label": "소득"
+    }
+  ],
+  "excluded_series": [
+    {
+      "sheet": "13.대차대조",
+      "range": "C4:M35",
+      "reason": "Eleven year columns (2027~2037) against ten everywhere else; professor confirmation required before any balance-sheet fact"
+    },
+    {
+      "sheet": "11.생산원가",
+      "range": "C36:L36",
+      "reason": "kg당 생산원가(원/kg)이며 원·천원 금액 사실이 아니다"
+    },
+    {
+      "sheet": "9.경비계획",
+      "range": "J15:J16",
+      "reason": "2020 고정 물가 지수 수식 (연도-2020) 종속 셀; 기준연도 확인 전 본문 확정값 금지"
+    },
+    {
+      "sheet": "9.경비계획",
+      "range": "J34:J35",
+      "reason": "2020 고정 물가 지수 수식 (연도-2020) 종속 셀; 기준연도 확인 전 본문 확정값 금지"
+    },
+    {
+      "sheet": "9.경비계획",
+      "range": "J53:J54",
+      "reason": "2020 고정 물가 지수 수식 (연도-2020) 종속 셀; 기준연도 확인 전 본문 확정값 금지"
+    },
+    {
+      "sheet": "9.경비계획",
+      "range": "J72:J73",
+      "reason": "2020 고정 물가 지수 수식 (연도-2020) 종속 셀; 기준연도 확인 전 본문 확정값 금지"
+    },
+    {
+      "sheet": "9.경비계획",
+      "range": "J91:J92",
+      "reason": "2020 고정 물가 지수 수식 (연도-2020) 종속 셀; 기준연도 확인 전 본문 확정값 금지"
+    },
+    {
+      "sheet": "9.경비계획",
+      "range": "J110:J111",
+      "reason": "2020 고정 물가 지수 수식 (연도-2020) 종속 셀; 기준연도 확인 전 본문 확정값 금지"
+    },
+    {
+      "sheet": "9.경비계획",
+      "range": "J129:J130",
+      "reason": "2020 고정 물가 지수 수식 (연도-2020) 종속 셀; 기준연도 확인 전 본문 확정값 금지"
+    },
+    {
+      "sheet": "9.경비계획",
+      "range": "J148:J149",
+      "reason": "2020 고정 물가 지수 수식 (연도-2020) 종속 셀; 기준연도 확인 전 본문 확정값 금지"
+    },
+    {
+      "sheet": "9.경비계획",
+      "range": "J167:J168",
+      "reason": "2020 고정 물가 지수 수식 (연도-2020) 종속 셀; 기준연도 확인 전 본문 확정값 금지"
+    },
+    {
+      "sheet": "9.경비계획",
+      "range": "J186:J187",
+      "reason": "2020 고정 물가 지수 수식 (연도-2020) 종속 셀; 기준연도 확인 전 본문 확정값 금지"
+    }
+  ]
+}
