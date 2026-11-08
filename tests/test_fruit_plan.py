@@ -63,8 +63,12 @@ class PlanBindingTests(ContractCase):
         for key in ("total_area", "production", "revenue", "yield"):
             self.assertNotIn('"%s"' % key, blob)
         availability = {o["output"]: o for o in plan["output_availability"]}
-        self.assertEqual(availability["finance_calculation"]["reason"], "unsupported_output")
-        self.assertEqual(availability["school_excel_workbook"]["status"], "allowed")
+        for kind in ("school_paper", "school_excel_workbook"):
+            self.assertEqual(availability[kind]["status"], "allowed")
+        self.assertEqual(availability["finance_calculation"], {
+            "output": "finance_calculation", "status": "held",
+            "reason": "unsupported_output",
+        })
 
     def test_cli_is_read_only(self):
         import subprocess
