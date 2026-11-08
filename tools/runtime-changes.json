@@ -219,7 +219,11 @@
     "tests/test_skill_frontmatter_layout.py",
     "tests/test_hort_excel_facts.py",
     "skills/knuaf-doc/references/hort-env-systems/finance-fact-map.json",
-    "tests/test_hort_fact_map.py"
+    "tests/test_hort_fact_map.py",
+    "skills/knuaf-doc/references/fruit-trees/finance-map-review.md",
+    "skills/knuaf-doc/references/fruit-trees/fruit-finance-fact-map.draft.json",
+    "skills/knuaf-doc/references/fruit-trees/fruit-finance-input-map.json",
+    "tests/test_fruit_excel_map.py"
   ],
   "baseline_main": "29abec0ec95369de7ae9e22207349d574f1f46b7",
   "baseline_spec": "tools/baseline-files.json",
@@ -262,7 +266,7 @@
       "source": "adopted:app-PR41"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "ce35f09d8859ca0168b6dd7dac4f81462de3f45a005e5123c95d5b0931e18ec1",
+      "after_sha256": "762a86a0c3dab1d455fa43811ed07c212398cefbce729ded739b6ca74fb52e01",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "P28",
@@ -714,7 +718,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/fruit-trees/README.md": {
-      "after_sha256": "55af5f00e6b72c27626dca54e1754b1f5a5ec6b875d37b57ec7a5db22a6093a6",
+      "after_sha256": "6415cbaa05d0d738dba208b04bceed20857e211ab2a213132e62cc146b8419a4",
       "before_sha256": null,
       "first_changed": "P8",
       "last_changed": "P28",
@@ -2586,6 +2590,38 @@
       "owner": "P28",
       "reason": "WC3: 지도 파일 형식(스키마·시트·셀·단위·노드)과 해시/프로필/중복 셀/비화폐 단위 보류 경로 시험 | WC4: 정상 등록 20행의 (fact_id,sheet,cell,value) 독립 기대표, 셀 교환·행 누락 변이, 캐시가 있는 비율 셀 위장 거부, 통합문서·영수증 해시 정확 일치, 원예 사슬 누락·타 프로젝트 사슬 거부 시험 | WC5: 등록 경로가 캐시가 있는 비율 셀(G27 제외 범위, F39 RATIO 파라미터)을 거부하는 시험 2건",
       "source": "new"
+    },
+    "skills/knuaf-doc/references/fruit-trees/finance-map-review.md": {
+      "after_sha256": "f036c9e85fcb879c79c1790f7f10ac946cd29344849baa6902933fdddcbb566a",
+      "before_sha256": null,
+      "first_changed": "P28",
+      "owner": "C",
+      "reason": "WC fruit16 reviewed structural maps, algebra-only year audit and native-independent clear/preserve consumer tests; no native recalculation claim",
+      "source": "new; reviewed cell structure only; no source values or private workbook"
+    },
+    "skills/knuaf-doc/references/fruit-trees/fruit-finance-fact-map.draft.json": {
+      "after_sha256": "9496eba3b0b741bd8ae405091e05f2352b66ca4d20a8279a9edffd889b2a36be",
+      "before_sha256": null,
+      "first_changed": "P28",
+      "owner": "C",
+      "reason": "WC fruit16 reviewed structural maps, algebra-only year audit and native-independent clear/preserve consumer tests; no native recalculation claim",
+      "source": "new; reviewed cell structure only; no source values or private workbook"
+    },
+    "skills/knuaf-doc/references/fruit-trees/fruit-finance-input-map.json": {
+      "after_sha256": "876de0ef8cdeb3877533f088db0ea84364fd266bef6fb242c5e47cfbbdee9afc",
+      "before_sha256": null,
+      "first_changed": "P28",
+      "owner": "C",
+      "reason": "WC fruit16 reviewed structural maps, algebra-only year audit and native-independent clear/preserve consumer tests; no native recalculation claim",
+      "source": "new; reviewed cell structure only; no source values or private workbook"
+    },
+    "tests/test_fruit_excel_map.py": {
+      "after_sha256": "eebe503618e08ed641e121a2dd9ce1a9e4b15ae1f027ec476deba22c5c3a98aa",
+      "before_sha256": null,
+      "first_changed": "P28",
+      "owner": "C",
+      "reason": "WC fruit16 reviewed structural maps, algebra-only year audit and native-independent clear/preserve consumer tests; no native recalculation claim",
+      "source": "new; reviewed cell structure only; no source values or private workbook"
     }
   },
   "cumulative": true,
