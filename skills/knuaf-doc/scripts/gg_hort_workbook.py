@@ -2969,8 +2969,15 @@ def transform(project_root, source, plan_receipt, out, receipt_path):
         raise Held("i1_design_disposition_required")
     docs, project, auth, values, derivations, fact_sha = _load_context(project_root, source)
     prior = _json(plan_receipt)
-    expected = _receipt("plan", project, auth, source, docs, fact_sha, values,
-                        project_root=project_root)
+    # Receipts are written with default=str, so a Decimal derivation is stored
+    # as text.  Compare the freshly computed plan in that same stored form;
+    # comparing the raw objects rejects every plan that derived a Decimal.
+    stored = json.loads(json.dumps(
+        {"receipt": _receipt("plan", project, auth, source, docs, fact_sha,
+                             values, project_root=project_root),
+         "derivations": derivations},
+        ensure_ascii=False, sort_keys=True, default=str))
+    expected, derivations = stored["receipt"], stored["derivations"]
     compare = ("schema", "status", "stage", "profile", "major_id", "module_version",
                "project_revision", "source_sha256", "transform_map_sha256",
                "param_registry_sha256", "params_sha256", "canonical_facts_sha256",
