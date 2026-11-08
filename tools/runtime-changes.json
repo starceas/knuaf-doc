@@ -270,7 +270,7 @@
       "source": "adopted:app-PR41"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "931245a5693b4b2153039b3912f3f12efb614c035f677231e1f0633e4704ca9e",
+      "after_sha256": "7213fada367a6dae01cbcaf5fa9d822782e1deec93415ab7b65e4ca66d0f469c",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "P28",
@@ -722,7 +722,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/fruit-trees/README.md": {
-      "after_sha256": "1b403b26a57604f7dea63f5bf8c5edb061d282b7fd32f846f8f78f21a45e7fac",
+      "after_sha256": "972ce18d6e972001402e1da1fdd37ab06eecfb7093a6e86f6657322d5c915d5e",
       "before_sha256": null,
       "first_changed": "P8",
       "last_changed": "P28",
@@ -2612,7 +2612,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/fruit-trees/finance-map-review.md": {
-      "after_sha256": "2be9ae33d96b31c0dac18d3d0ea13987c9b42b4fcb2ea22f3db1710e29a73e6b",
+      "after_sha256": "df7f0276fc03dfd27ae1f6725da976d809ecc021b93349086b3b3bddfdd83142",
       "before_sha256": null,
       "first_changed": "P28",
       "owner": "C",
@@ -2645,18 +2645,18 @@
     },
     "skills/knuaf-doc/references/fruit-trees/fruit-finance-fact-map.json": {
       "before_sha256": null,
-      "after_sha256": "acdc453a9aff0c84dcdb467f3d45d8909b6675f69c38e4d109cd045920552ec1",
+      "after_sha256": "cacdeb61bc5e08184925e71249d28d66b81e8f686e1535d19b70cc4560649e5a",
       "first_changed": "P28",
       "owner": "P28",
-      "reason": "WF WF fruit 16-sheet registration fact map (gg-xlsx-fact-map/v1, 70 reviewed rows); hashes stay blank until a native run binds them",
+      "reason": "WF fruit 16-sheet registration fact map (gg-xlsx-fact-map/v1, 70 reviewed rows); hashes stay blank until a native run binds them",
       "source": "new; row addresses from the reviewed draft and WC5 native run; no source values"
     },
     "tests/test_fruit_fact_map.py": {
       "before_sha256": null,
-      "after_sha256": "aa19dd4cde39e0c7e15c1029614352dbd2dabf054c340fb9951e7bfeae6041df",
+      "after_sha256": "d1becdd2b3bd5a92ab008b5ec881c467dfce5943570a38f19d7d4b333266a3f6",
       "first_changed": "P28",
       "owner": "P28",
-      "reason": "WF WF locks the reviewed fruit fact rows, per-row cell binding, refused error caches and hash/profile binding",
+      "reason": "WF locks the reviewed fruit fact rows, per-row cell binding, refused error caches and hash/profile binding",
       "source": "new; synthetic workbook and receipt fixtures only"
     }
   },

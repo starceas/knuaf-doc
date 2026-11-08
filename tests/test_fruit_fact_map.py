@@ -1,15 +1,14 @@
 """과수 재무 사실 지도가 등록용(`gg-xlsx-fact-map/v1`)임을 잠근다.
 
-지도는 본문 Ⅴ장 재무 핵심 금액 70행(7계열×10년)과 각 값이 오는 16시트 셀·기간·
-단위를 적는다. 시험은 네 가지를 잠근다: 검토된 (fact_id, sheet, cell, period,
-field_id) 70행 동결표, 행마다 제 캐시를 읽는 실제 등록, 오류 셀(`#DIV/0!`)·비율
-셀을 등록하지 않는 어댑터 동작, 그리고 해시·프로필 바인딩 거부.
+지도는 2027~2036 재무 7계열 70행을 적지만, 원본 사본의 수식 선행 관계를 추적한
+결과 60행이 `excluded_series`(2020 고정 물가 지수 20셀 등)에 수식으로 종속되어
+`held_cells`로 빠졌다. 시험은 다섯을 잠근다: 등록 경로 `cells` 10행 동결, 보류
+60행·행별 의존 구간 동결, `excluded_series` 12구간 원문 동결, 숫자·오류가 섞인
+지도의 전체 거부, 그리고 해시·프로필 바인딩 거부.
 
 native 영수증은 합성 fixture이며 Excel 실행이 아니다. 실제 재계산은 저장소 밖
 에서 한다. `fruit-finance-fact-map.draft.json`은 대체된 옛 초안으로 남는다.
 """
-import copy
-import hashlib
 import json
 import re
 import sys
@@ -48,25 +47,53 @@ FIRST_COLUMN = {"매출액": "C", "당기순이익": "C", "생산원가": "C",
                 "영업이익": "C", "수지균형": "D", "누적수지균형": "D",
                 "소득": "E"}
 
-# 검토된 70행을 파일과 독립적으로 동결한다. 파일이 스스로 일관돼도 행이 바뀌면
-# 이 표와 어긋나 실패한다.
+SERIES = (
+    ("매출액", "12.손익계획", 6),
+    ("당기순이익", "12.손익계획", 34),
+    ("생산원가", "11.생산원가", 29),
+    ("영업이익", "12.손익계획", 19),
+    ("수지균형", "14.현금흐름", 21),
+    ("누적수지균형", "14.현금흐름", 22),
+    ("소득", "15.소득분석", 26),
+)
+YEARS = tuple(range(2027, 2037))
+
+# 원본 `9.경비계획` 2020 고정 물가 지수 20셀 = 연도별 한 쌍. 위에서부터 19행씩.
+YEAR_SPAN = {year: f"J{15 + 19 * index}:J{16 + 19 * index}"
+             for index, year in enumerate(YEARS)}
+PRICE_INDEX_REASON = "2020 고정 물가 지수 수식 (연도-2020) 종속 셀; 기준연도 확인 전 본문 확정값 금지"
+EXCLUDED_SERIES = (
+    ("13.대차대조", "C4:M35",
+     "Eleven year columns (2027~2037) against ten everywhere else; professor confirmation required before any balance-sheet fact"),
+    ("11.생산원가", "C36:L36",
+     "kg당 생산원가(원/kg)이며 원·천원 금액 사실이 아니다"),
+) + tuple(("9.경비계획", YEAR_SPAN[year], PRICE_INDEX_REASON) for year in YEARS)
+
+
 def _column(letter, offset):
     return chr(ord(letter) + offset)
 
 
-EXPECTED_ROWS = tuple(
-    (f"fruit-body-{LABELS[label]}-{year}", label, sheet,
-     f"{_column(FIRST_COLUMN[label], year - 2027)}{row}", str(year))
-    for label, sheet, row in (
-        ("매출액", "12.손익계획", 6),
-        ("당기순이익", "12.손익계획", 34),
-        ("생산원가", "11.생산원가", 29),
-        ("영업이익", "12.손익계획", 19),
-        ("수지균형", "14.현금흐름", 21),
-        ("누적수지균형", "14.현금흐름", 22),
-        ("소득", "15.소득분석", 26),
-    )
-    for year in range(2027, 2037)
+def _row(label, sheet, row, year):
+    return (f"fruit-body-{LABELS[label]}-{year}", label, sheet,
+            f"{_column(FIRST_COLUMN[label], year - 2027)}{row}", str(year))
+
+
+# 등록 경로: 수식 의존 실측에서 시드에 닿지 않은 10행(매출액)만 남는다.
+EXPECTED_ROWS = tuple(_row("매출액", "12.손익계획", 6, year) for year in YEARS)
+
+# 보류 경로: 나머지 6계열 60행. 단일 연도 계열은 제 연도 한 쌍, 누적수지균형은
+# 이전 연도 경비를 누적하므로 2027~해당 연도의 모든 쌍에 닿는다.
+EXPECTED_HELD_ROWS = tuple(
+    _row(label, sheet, row, year) + (spans,)
+    for label, sheet, row in SERIES if label != "매출액"
+    for year in YEARS
+    for spans in ((
+        tuple(f"9.경비계획!{YEAR_SPAN[prior]}"
+              for prior in YEARS if prior <= year)
+        if label == "누적수지균형"
+        else (f"9.경비계획!{YEAR_SPAN[year]}",)
+    ),)
 )
 
 # 행마다 다른 캐시값: 두 행이 바뀌면 두 값이 함께 바뀐다.
@@ -147,19 +174,50 @@ class MapFileTests(ContractCase):
         self.assertTrue(any("build_registration" in line
                             for line in self.map["binding"]))
 
-    def test_map_is_exactly_the_reviewed_row_set(self):
+    def test_registration_path_is_exactly_the_ten_undependent_rows(self):
         shipped = {(row["fact_id"], row["field_id"], row["sheet"], row["cell"],
                     row["period"])
                    for row in self.map["cells"]}
         self.assertEqual(set(EXPECTED_ROWS), shipped)
-        self.assertEqual(len(self.map["cells"]), 70)
+        self.assertEqual(len(self.map["cells"]), 10)
+
+    def test_held_rows_carry_their_dependency_span_and_stay_out_of_cells(self):
+        shipped = {(row["fact_id"], row["field_id"], row["sheet"], row["cell"],
+                    row["period"], tuple(row["held_by"]))
+                   for row in self.map["held_cells"]}
+        self.assertEqual(set(EXPECTED_HELD_ROWS), shipped)
+        self.assertEqual(len(self.map["held_cells"]), 60)
+        registered = {row["fact_id"] for row in self.map["cells"]}
+        self.assertFalse(registered & {row["fact_id"] for row in self.map["held_cells"]})
+        registered_cells = {(row["sheet"], row["cell"]) for row in self.map["cells"]}
+        self.assertFalse(registered_cells
+                         & {(row["sheet"], row["cell"]) for row in self.map["held_cells"]})
+        for row in self.map["held_cells"]:
+            with self.subTest(row=row["fact_id"]):
+                self.assertTrue(row["held_by"])
+                self.assertTrue(row["reason"].strip())
+                self.assertIn(row["held_by"][0], row["reason"])
+
+    def test_every_held_span_is_a_declared_excluded_series(self):
+        excluded = {f"{row['sheet']}!{row['range']}"
+                    for row in self.map["excluded_series"]}
+        for row in self.map["held_cells"]:
+            with self.subTest(row=row["fact_id"]):
+                self.assertTrue(set(row["held_by"]) <= excluded)
+                for span in row["held_by"]:
+                    self.assertIn(span, excluded)
+
+    def test_excluded_series_are_frozen_verbatim(self):
+        shipped = tuple((row["sheet"], row["range"], row["reason"])
+                        for row in self.map["excluded_series"])
+        self.assertEqual(EXCLUDED_SERIES, shipped)
 
     def test_rows_name_real_sheets_and_body_labels(self):
         roster = self.school.profile_structure(PROFILE)["sheets"]
-        cells = self.map["cells"]
-        self.assertEqual(len({row["fact_id"] for row in cells}), len(cells))
-        self.assertEqual(len({(row["sheet"], row["cell"]) for row in cells}), len(cells))
-        for row in cells:
+        rows = self.map["cells"] + self.map["held_cells"]
+        self.assertEqual(len({row["fact_id"] for row in rows}), len(rows))
+        self.assertEqual(len({(row["sheet"], row["cell"]) for row in rows}), len(rows))
+        for row in rows:
             with self.subTest(row=row["fact_id"]):
                 self.assertTrue(CELL.fullmatch(row["cell"]))
                 self.assertIn(row["sheet"], roster)
@@ -169,10 +227,7 @@ class MapFileTests(ContractCase):
                 self.assertTrue(row["body_label"].strip())
 
     def test_reviewed_cells_never_inside_an_excluded_series(self):
-        excluded = {(row["sheet"], row["range"]) for row in self.map["excluded_series"]}
-        self.assertIn(("13.대차대조", "C4:M35"), excluded)
-        self.assertIn(("11.생산원가", "C36:L36"), excluded)
-        for row in self.map["cells"]:
+        for row in self.map["cells"] + self.map["held_cells"]:
             for span in self.map["excluded_series"]:
                 if span["sheet"] != row["sheet"]:
                     continue
@@ -183,7 +238,9 @@ class MapFileTests(ContractCase):
         notice = self.map["held_notice"]
         self.assertEqual(len(notice), 3)
         self.assertIn("합성 시험 사본", notice[0])
-        self.assertIn("fruit-finance-input-map.json", notice[1])
+        self.assertIn("clear로 분류한 칸에만", notice[1])
+        self.assertIn("preserve 칸", notice[1])
+        self.assertIn("`held_cells` 60행", notice[2])
         self.assertIn("수식을 고치지 않고", notice[2])
 
     def test_draft_stays_a_different_schema_and_is_marked_replaced(self):
@@ -286,38 +343,38 @@ class RegistrationTests(_Chain):
         want = {fact_id: (sheet, cell, str(EXPECTED_VALUES[fact_id]))
                 for fact_id, _label, sheet, cell, _period in EXPECTED_ROWS}
         self.assertEqual(want, got)
-        self.assertEqual(len(change["ops"]), 71)
+        self.assertEqual(len(change["ops"]), 11)
 
     def test_registered_facts_carry_the_body_label_and_measure(self):
         hashes = self.issue_native(self.caches(EXPECTED_VALUES))
         change = self.build(self.bound(hashes))
         facts = {op["value"]["id"]: op["value"]
                  for op in change["ops"] if op["collection"] == "facts"}
-        fact = facts["fruit-body-prodcost-2027"]
-        self.assertEqual(fact["field_id"], "생산원가")
+        fact = facts["fruit-body-revenue-2027"]
+        self.assertEqual(fact["field_id"], "매출액")
         self.assertEqual(fact["period"], "2027")
         self.assertEqual(fact["scope"], "계획")
         self.assertEqual(fact["measure"], {"kind": "monetary_total",
                                            "currency": "KRW", "unit": "천원"})
-        self.assertEqual(fact["excel_provenance"]["cell"], "C29")
+        self.assertEqual(fact["excel_provenance"]["cell"], "C6")
 
     def test_swapped_rows_register_the_value_of_the_cell_the_map_names(self):
         hashes = self.issue_native(self.caches(EXPECTED_VALUES))
         mapping = self.bound(hashes)
         rows = mapping["cells"]
         first = next(index for index, row in enumerate(rows)
-                     if row["fact_id"] == "fruit-body-prodcost-2027")
+                     if row["fact_id"] == "fruit-body-revenue-2027")
         second = next(index for index, row in enumerate(rows)
-                      if row["fact_id"] == "fruit-body-prodcost-2028")
+                      if row["fact_id"] == "fruit-body-revenue-2028")
         rows[first]["cell"], rows[second]["cell"] = (rows[second]["cell"],
                                                      rows[first]["cell"])
         got = self.registered(self.build(mapping))
-        self.assertEqual(got["fruit-body-prodcost-2027"][2],
-                         str(EXPECTED_VALUES["fruit-body-prodcost-2028"]))
-        self.assertNotEqual(got["fruit-body-prodcost-2027"][2],
-                            str(EXPECTED_VALUES["fruit-body-prodcost-2027"]))
+        self.assertEqual(got["fruit-body-revenue-2027"][2],
+                         str(EXPECTED_VALUES["fruit-body-revenue-2028"]))
+        self.assertNotEqual(got["fruit-body-revenue-2027"][2],
+                            str(EXPECTED_VALUES["fruit-body-revenue-2027"]))
 
-    def test_error_cache_cells_are_never_registered(self):
+    def test_error_cache_row_never_registers(self):
         # 12.손익계획!C6은 빈 입력에서 #DIV/0! 로 남는다(WC2 ⑤). Excel은 이를
         # t="e" + "#DIV/0!" 캐시로 저장하므로 어댑터는 값을 만들지 않고 거부해야
         # 한다. 지도 행이 있다는 사실이 오류 셀 등록을 허용하지 않는다.
@@ -329,13 +386,25 @@ class RegistrationTests(_Chain):
                             if row["fact_id"] == "fruit-body-revenue-2027"]
         self.held(mapping, "numeric_cache_required")
 
+    def test_mixed_numeric_and_error_map_is_rejected_whole(self):
+        # 실제 사용 상태: 9행은 숫자, 마지막 2036행은 오류. 어댑터는 앞선 숫자 행을
+        # ops로 만들다가 오류 행에서 멈추고 아무것도 반환하지 않는다 — 일부 등록이
+        # 아니라 전체 거부이고 정본은 바이트 그대로다.
+        caches = self.caches(EXPECTED_VALUES)
+        caches[("12.손익계획", "L6")] = ("#DIV/0!", "e")
+        hashes = self.issue_native(caches)
+        mapping = self.bound(hashes)
+        self.assertEqual(len(mapping["cells"]), 10)
+        self.assertEqual("L6", mapping["cells"][-1]["cell"])
+        self.held(mapping, "numeric_cache_required")
+
     def test_text_cache_is_never_read_as_an_amount(self):
         caches = self.caches(EXPECTED_VALUES)
-        caches[("14.현금흐름", "D21")] = ("계획", "str")
+        caches[("12.손익계획", "C6")] = ("계획", "str")
         hashes = self.issue_native(caches)
         mapping = self.bound(hashes)
         mapping["cells"] = [row for row in mapping["cells"]
-                            if row["fact_id"] == "fruit-body-annual-balance-2027"]
+                            if row["fact_id"] == "fruit-body-revenue-2027"]
         self.held(mapping, "numeric_cache_required")
 
 
@@ -344,11 +413,11 @@ class BodyCrosscheckTests(_Chain):
 
     def register_one(self, value):
         caches = self.caches({})
-        caches[("11.생산원가", "C29")] = (value, None)
+        caches[("12.손익계획", "C6")] = (value, None)
         hashes = self.issue_native(caches)
         mapping = self.bound(hashes)
         mapping["cells"] = [row for row in mapping["cells"]
-                            if row["fact_id"] == "fruit-body-prodcost-2027"]
+                            if row["fact_id"] == "fruit-body-revenue-2027"]
         change = self.build(mapping)
         self.core.apply(self.root, change, self.core.load(self.root)["revision"])
         return self.core.load(self.root)
@@ -358,13 +427,13 @@ class BodyCrosscheckTests(_Chain):
         items, blocked = self.core._finance_check_items(project)
         self.assertIsNone(blocked)
         self.assertEqual(self.school.crosscheck_body(
-            "계획 2027 생산원가는 14,473.44천원이다.", items), [])
+            "계획 2027 매출액은 14,473.44천원이다.", items), [])
 
     def test_body_sentence_with_another_amount_fails(self):
         project = self.register_one("14473.44")
         items, _ = self.core._finance_check_items(project)
         self.assertTrue(self.school.crosscheck_body(
-            "계획 2027 생산원가는 15,000천원이다.", items))
+            "계획 2027 매출액은 15,000천원이다.", items))
 
 
 class BindingTests(_Chain):

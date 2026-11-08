@@ -135,7 +135,7 @@ flowchart LR
 
 ### 과수 16시트 입력 지도와 계산 사실 준비
 
-`fruit_16_sheet_v1` 전용 [입력 지도](fruit-finance-input-map.json)는 원본 해시에 묶인 1,961개 리터럴 후보를 검토해 clear 339개/preserve 1,622개로 분류한다. 공통 clear/fill 관문 아래에서 사용하는 구조 자료이며, 학교 17시트 지도가 아니다. [등록용 사실 지도](fruit-finance-fact-map.json)는 `gg-xlsx-fact-map/v1`이며 2027~2036 재무 70행의 시트·셀·기간·단위를 적는다. `workbook`/`receipt` 해시가 빈칸인 동안에는 어댑터가 등록을 거부하므로, 학생이 실제로 채운 사본을 Excel로 재계산하고 그 파일·영수증 해시를 바인딩한 뒤 `gg_excel_facts.build_registration`으로 등록한다. 옛 [셀↔사실 구조 초안](fruit-finance-fact-map.draft.json)은 위 파일로 대체됐다(`status: superseded_by_registration_map`). [검토·보류 기준과 20수식 산식 비교](finance-map-review.md)를 함께 읽는다. 입력 지도 검토 완료가 Excel 실기·PDF 출력·재무 정당성 검증을 뜻하지 않으며, 수식 변경이나 Python 재무 계산을 허용하지 않는다.
+`fruit_16_sheet_v1` 전용 [입력 지도](fruit-finance-input-map.json)는 원본 해시에 묶인 1,961개 리터럴 후보를 검토해 clear 339개/preserve 1,622개로 분류한다. 공통 clear/fill 관문 아래에서 사용하는 구조 자료이며, 학교 17시트 지도가 아니다. [등록용 사실 지도](fruit-finance-fact-map.json)는 `gg-xlsx-fact-map/v1`이며 2027~2036 재무 70행의 시트·셀·기간·단위를 적는다. 등록 경로 `cells`에는 수식 의존 실측에서 2020 고정 물가 지수 20셀(`9.경비계획!J15:J16` 등 10쌍)과 `excluded_series` 구간에 이어지지 않은 10행(매출액 `12.손익계획!C6:L6`)만 남기고, 수식으로 종속된 60행은 `held_cells`로 옮겨 행마다 의존 구간(`held_by`)과 이유를 남겼다. 학생 입력은 입력 지도가 clear로 분류한 칸에만 하고 preserve 칸(항목명·단위·연도·산출기준 등)은 그대로 둔다. `workbook`/`receipt` 해시가 빈칸인 동안에는 어댑터가 등록을 거부하므로, 학생이 실제로 채운 사본을 Excel로 재계산하고 그 파일·영수증 해시를 바인딩한 뒤 `gg_excel_facts.build_registration`으로 등록한다. 숫자 행과 `#DIV/0!` 행이 섞인 지도는 어댑터가 오류 행에서 보류하므로 숫자 행도 등록되지 않는다(전체 거부, 정본 무변경) — 오류 행을 뺀 지도로 다시 검토한다. 옛 [셀↔사실 구조 초안](fruit-finance-fact-map.draft.json)은 위 파일로 대체됐다(`status: superseded_by_registration_map`). [검토·보류 기준과 20수식 산식 비교](finance-map-review.md)를 함께 읽는다. 입력 지도 검토 완료가 Excel 실기·PDF 출력·재무 정당성 검증을 뜻하지 않으며, 수식 변경이나 Python 재무 계산을 허용하지 않는다.
 
 
 ## 자료 등록 순서 (기존 `gg.py apply`만 사용)
