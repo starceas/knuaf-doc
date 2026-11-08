@@ -2930,6 +2930,98 @@ def verify(project_root, source, transform_receipt, native_receipt, receipt_path
     return rec
 
 
+_MAP_SCHEMA = "gg-xlsx-fact-map/v1"
+_MAP_CELL = re.compile(r"^([A-Z]{1,3})([1-9][0-9]*)$")
+_MAP_RANGE = re.compile(r"^([A-Z]{1,3})([1-9][0-9]*)(?::([A-Z]{1,3})([1-9][0-9]*))?$")
+_MAP_UNITS = {"원", "천원"}
+_MAP_MONETARY_UNITS = {"KRW_1000": "천원"}
+
+def _map_span(text, loc):
+    match = _MAP_RANGE.fullmatch(text) if isinstance(text, str) else None
+    if not match:
+        raise Held("fact_map_range_invalid", loc)
+    first_col, first_row, last_col, last_row = match.groups()
+    if last_col is None:
+        last_col, last_row = first_col, first_row
+    if len(first_col) != len(last_col):
+        raise Held("fact_map_range_invalid", loc)
+    low, high = sorted((first_col, last_col))
+    rows = sorted((int(first_row), int(last_row)))
+    return low, high, rows[0], rows[1]
+
+def _map_contains(span, cell):
+    match = _MAP_CELL.fullmatch(cell)
+    if not match:
+        return False
+    col, row = match.group(1), int(match.group(2))
+    low, high, first, last = span
+    return len(col) == len(low) and low <= col <= high and first <= row <= last
+
+def check_fact_map(mapping, params=None):
+    """Validate the reviewed cell map for the 18-sheet workbook.
+
+    The adapter proves provenance: it reads a numeric cache at whatever cell
+    the map names and refuses only non-monetary units, duplicates and absent
+    caches.  It cannot tell a ratio row from a money row, and it never looks
+    at ``excluded_series``.  This check is the review gate for the map file
+    itself: every row must name a sheet of the school form, a plain A1 cell
+    that no excluded series covers, and — when the cell is a registry
+    parameter — the unit that parameter declares.  A ratio cell disguised as
+    천원 therefore refuses on its unit even though a numeric cache exists.
+
+    Returns the rows unchanged; raises ``Held`` with a machine code.
+    """
+    if not isinstance(mapping, dict) or mapping.get("schema") != _MAP_SCHEMA:
+        raise Held("fact_map_schema_invalid")
+    profile = _json(REF / "profile.json")
+    roster = set(profile["workbook_reference"]["sheets"])
+    nodes = {section.get("item") for section in profile["precedents"][1]["sections"]}
+    excluded = {}
+    for item in mapping.get("excluded_series") or ():
+        if not isinstance(item, dict) or item.get("sheet") not in roster:
+            raise Held("fact_map_range_invalid", "excluded_series")
+        excluded.setdefault(item["sheet"], []).append(
+            _map_span(item.get("range"), f"{item['sheet']}!{item.get('range')}"))
+    by_cell = {}
+    if params:
+        for key, spec in params.items():
+            cell = spec.get("canonical_cell")
+            if isinstance(cell, str) and "!" in cell:
+                by_cell.setdefault(tuple(cell.split("!", 1)), []).append(key)
+    rows = mapping.get("cells")
+    if not isinstance(rows, list) or not rows:
+        raise Held("cell_mapping_required")
+    seen_facts, seen_cells = set(), set()
+    for row in rows:
+        if not isinstance(row, dict):
+            raise Held("mapping_object_required")
+        for field in ("fact_id", "field_id", "sheet", "cell", "period", "scope", "unit"):
+            if not isinstance(row.get(field), str) or not row[field].strip():
+                raise Held("mapping_" + field + "_required")
+        fact_id, sheet, cell = row["fact_id"], row["sheet"], row["cell"]
+        if sheet not in roster:
+            raise Held("fact_map_sheet_unknown", sheet)
+        if not _MAP_CELL.fullmatch(cell):
+            raise Held("fact_map_cell_invalid", f"{sheet}!{cell}")
+        if row["unit"] not in _MAP_UNITS:
+            raise Held("fact_map_unit_invalid", f"{fact_id}:{row['unit']}")
+        if not re.fullmatch(r"[0-9]{4}", row["period"]):
+            raise Held("fact_map_period_invalid", f"{fact_id}:{row['period']}")
+        if "node" in row and row["node"] not in nodes:
+            raise Held("fact_map_node_unknown", f"{fact_id}:{row['node']}")
+        if fact_id in seen_facts or (sheet, cell) in seen_cells:
+            raise Held("fact_map_row_conflict", f"{sheet}!{cell}")
+        seen_facts.add(fact_id)
+        seen_cells.add((sheet, cell))
+        for span in excluded.get(sheet, ()):
+            if _map_contains(span, cell):
+                raise Held("fact_map_excluded_cell", f"{sheet}!{cell}")
+        for key in by_cell.get((sheet, cell), ()):
+            want = _MAP_MONETARY_UNITS.get(params[key].get("unit_code"))
+            if want != row["unit"]:
+                raise Held("fact_map_unit_mismatch", f"{fact_id}:{key}")
+    return rows
+
 def _authorize(project_root):
     import gg_major_contract as mc
     context = mc.OutputContext(project_root, "hort_env_systems")
