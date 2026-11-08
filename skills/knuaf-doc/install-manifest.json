@@ -136,7 +136,7 @@
   "scripts/gg_docx_table_layout.py": "dce52533be20ea6b46e8e6f41f3083af3e0ab20ca43dcb3b19cebf488f581921",
   "scripts/gg_doi.py": "158e1416390aed99d86808c9a075fc655a21adb1057204673b36ed35fd7c2d4b",
   "scripts/gg_draft_split.py": "3d81a1abf59ae0d8a33fb7596410e9f8ea75dec43147e091755faa1a836d7fda",
-  "scripts/gg_excel_facts.py": "372f73dedf78cebeb5c64aa0456886769a2e3f93f646ba9d67f1a6ba918bb13c",
+  "scripts/gg_excel_facts.py": "dc8a1f5de86f2cba90c9ff83605d1a58091583774f7189099951e3f885b6588e",
   "scripts/gg_excel_fill.py": "0a9e91051ffceed3bc78230f8d48c793c5b71adfce0c150bc8272c0df1b065d2",
   "scripts/gg_excel_formula_patch.py": "0f51a3a1187638f92c0c6dd8eb162fe21a389d770a479599453d365fbd2de35e",
   "scripts/gg_excel_print.py": "d17bc535b6ad861d3e2fa2f10b3f94481210dc5ae060c50905117bcd44a66d7b",
