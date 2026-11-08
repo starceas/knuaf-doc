@@ -24,6 +24,8 @@
 - 재무 XLSX는 `fruit_16_sheet_v1` 프로필에 한해 열린다: 원본 sha256과 시트 순서·시트별 수식 지문이 실바이트에서 일치해야 사본 생성(`gg_excel_template.py clear`, 지도 `gg-xlsx-template-map/v1`)이 된다. 값 채우기(`gg_excel_fill.py`)는 **다른 스키마**(`gg-xlsx-fill-map/v1` + `template.sha256`)와 항목별 `role`·`period`·`source_note`·`editable is true`를 요구한다. 재계산값 금액 사실 등록(`gg_excel_facts.py`)은 native 재계산 영수증과 `gg-xlsx-fact-map/v1` 지도를 요구한다. 배포된 [등록용 사실 지도](fruit-trees/fruit-finance-fact-map.json)는 `gg-xlsx-fact-map/v1` 70행 중 매출액 계열 10행만 등록 경로(`cells`)에 두고, 2020 고정 물가 지수 구간에 수식으로 종속된 60행은 `held_cells`로 보류했다. `workbook`·`receipt` 해시는 저장소에서 비어 있어(`status: rows_reviewed_binding_pending_native_run`) native 재계산 실행 때 결속해야 한다. 본문 숫자를 등록된 엑셀값과 자동 대조하는 기능은 아직 과수 본문에서 쓸 수 없다.
 - **아직 안 되는 것**: 배포된 셀 지도는 사본 생성용이다 — 1,961건(clear 339 / preserve 1,622)은 clear/preserve 분류까지만 검토됐고 `period`·`editable`·`source_note`가 없어 값 채우기 지도로 쓸 수 없다. 등록용 사실 지도는 매출액 계열 10행만 열려 있고 나머지 60행은 경비 연도 정정을 기다린다. 본문 숫자 자동 대조는 아직 불가하다. 파이썬 재무 계산은 지원하지 않는다. 등록 순서·집단 field ID·참조 XLSX 규칙은 [fruit-trees](fruit-trees/README.md)를 따른다.
 
+유효한 전공 바인딩이 있으면 [전공별 본문 초안(글)](major-body-draft.md)을 작성할 수 있다.
+
 ## 원예환경시스템 (hort_env_systems, 모듈 0.2.0)
 
 질문·선택형 문서 계획·근거 규칙과 **본문 DOCX·PDF·HWPX 검토본**을 지원한다:
@@ -34,6 +36,8 @@
 - 엑셀 재계산값은 사실로 등록되고 학교 서식 본문 DOCX·PDF까지 만들어진다. 다만 본문 숫자를 등록된 엑셀값과 자동 대조하는 기능은 아직 원예 본문에서 쓸 수 없다(등록 이름이 기계용이라 대조 대상이 막힘 — 알려진 한계, 다음 판에서 표 전개 방식으로 연다).
 - **아직 안 되는 것**: 일반(17시트) XLSX 사본·채우기, 파이썬 재무 계산. 경계와 근거 규칙은 [hort-env-systems](hort-env-systems/README.md)를 따른다.
 
+유효한 전공 바인딩이 있으면 [전공별 본문 초안(글)](major-body-draft.md)을 작성할 수 있다.
+
 ## 낙농 (dairy, 모듈 0.1.0)
 
 질문 목록·문서 계획·근거 검토와 **본문 DOCX·PDF·HWPX 검토본**을 지원한다:
@@ -41,6 +45,8 @@
 - `build_docx.py <폴더> --major dairy`가 학교 작성요령 앞부분 순서(겉표지 → 제출서 → 인준서 → 학부모 동의서 → 요약 → 감사의 글 → 목차, 이어서 표 목차·그림 목차)를 적용해 검토 전 DOCX를 만든다. 공식 물리 배치가 확인되지 않아 공용 기본값을 쓰고 가운데 정렬을 생략하며 "학교 양식 확인 필요" 안내를 넣는다.
 - `gg_office.py word`(macOS Word 설치 시)로 PDF를, `build_hwpx.py <폴더> --major dairy`로 HWPX를 만든다. HWPX는 쪽 나눔·정렬·목차 실제 쪽번호를 한글에서 사람이 확인해야 하며, 매니페스트의 앞머리 감지(`school_frontmatter`)는 낙농에서 `null`로 기록된다.
 - **아직 안 되는 것**: 학교 28시트 XLSX는 출력 종류는 선언돼 있지만 `dairy_hanwoo_28_sheet_v1`의 finance capability가 unsupported("낙농 학교 원본 구조 미등록 — 프로필 닫음")라 `unsupported_finance_profile`로 닫힌다. 축산 재무 계산도 지원하지 않는다. 벤치마크 팩은 `empty_slot`이다. 목차 계약·축종 치환·서식·문체(S1)·리서치 경로는 [dairy](dairy/README.md)를 따른다.
+
+유효한 전공 바인딩이 있으면 [전공별 본문 초안(글)](major-body-draft.md)을 장별로 작성할 수 있다.
 
 ## 미등록·미확정 전공
 

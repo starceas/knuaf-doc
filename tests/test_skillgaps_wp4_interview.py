@@ -138,16 +138,19 @@ class MajorBodyDraftContract(unittest.TestCase):
                         "fruit_16_sheet_v1",
                         "매출액 계열 10행",
                         "파이썬 재무 계산은 지원하지 않는다",
-                        "[fruit-trees](fruit-trees/README.md)"),
+                        "[fruit-trees](fruit-trees/README.md)",
+                        "[전공별 본문 초안(글)](major-body-draft.md)"),
             "## 원예환경시스템": ("본문 DOCX·PDF·HWPX 검토본",
                                   "hort_18_sheet_reconstructed_v1",
                                   "일반(17시트) XLSX 사본·채우기",
                                   "파이썬 재무 계산",
-                                  "[hort-env-systems](hort-env-systems/README.md)"),
+                                  "[hort-env-systems](hort-env-systems/README.md)",
+                                  "[전공별 본문 초안(글)](major-body-draft.md)"),
             "## 낙농": ("본문 DOCX·PDF·HWPX 검토본",
                         "unsupported_finance_profile",
                         "축산 재무 계산",
-                        "[dairy](dairy/README.md)"),
+                        "[dairy](dairy/README.md)",
+                        "[전공별 본문 초안(글)](major-body-draft.md)"),
         }
         for heading, tokens in expected.items():
             body = section(majors, heading)
