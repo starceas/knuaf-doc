@@ -414,9 +414,9 @@
       "sha256": "66e0e0ea22ce6d17d12e8bd4e30933dad2f9cc57d6e5ff3e11d76f10360412fb"
     },
     "tests/test_skillgaps_wp4_interview.py": {
-      "note": "W1: extend the existing interview-gap regression contracts for major-body text drafts and their file-output boundaries. | W3: R1-01 stale body-support wording and R1-02 major-specific progress/completion criteria regression contracts. | W4: test HT2 format basis, student-confirmed year authority, and complete student notice with chapter-text alternative. | W5: assert the fixed ‘본문 Ⅰ~Ⅵ 초안’ phrase together with each major's existing chapter-count and progression guidance. | ORDER-30: regression on writing-year and start-year interview state transitions, unresolved choices, and direct alternate-year answers. | ORDER-37: same-turn dairy manuscript intake precedes dairy switch questions; unconfirmed manuscript facts remain candidates; confirmed dairy support boundaries and existing choice/value card formats are stated.",
+      "note": "W1: extend the existing interview-gap regression contracts for major-body text drafts and their file-output boundaries. | W3: R1-01 stale body-support wording and R1-02 major-specific progress/completion criteria regression contracts. | W4: test HT2 format basis, student-confirmed year authority, and complete student notice with chapter-text alternative. | W5: assert the fixed ‘본문 Ⅰ~Ⅵ 초안’ phrase together with each major's existing chapter-count and progression guidance. | ORDER-30: regression on writing-year and start-year interview state transitions, unresolved choices, and direct alternate-year answers. | ORDER-37: same-turn dairy manuscript intake precedes dairy switch questions; unconfirmed manuscript facts remain candidates; confirmed dairy support boundaries and existing choice/value card formats are stated. | W8: 0.4.7 support-scope re-pin — fruit 16-sheet copy + 10/70 registered fact rows, hort receipt-chain profile, major body DOCX/PDF/HWPX limits, dairy `unsupported_finance_profile`.",
       "origin": "transformed",
-      "sha256": "785d2556f7d9c0d685e1842c57c22cd02d5e2432168cf89a74d746e16db74aa1"
+      "sha256": "765330572b4428c33167bc68887423a22069ad0d32c0c4a94111af913cafbde2"
     },
     "tests/test_skillgaps_wp4_review.py": {
       "origin": "new",
@@ -525,12 +525,12 @@
     "tools/runtime-changes.json": {
       "note": "누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py. P8 declares the fruit_trees first bundle (module registration, two common helper modules, fruit plan, reference-set data and guidance). P9 declares the hort_env_systems first bundle (module registration, hort plan, profile and guidance, reuse-registry entries). | P10: 누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py. P8 declares the fruit_trees first bundle (module registration, two common helper modules, fruit plan, reference-set data and guidance). P9 declares the common XLSX reuse bundle (one new runtime extract file + declared edits to registration, resolver, template guard, and reuse tests). P9-D3 declares the major-specific-precedence edits (registry dedupe, catalog base_for_major, resolver base policy, docs, tests) in the same stage. | P11: 누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py. P8 declares the fruit_trees first bundle (module registration, two common helper modules, fruit plan, reference-set data and guidance). P9 declares the hort_env_systems first bundle (module registration, hort plan, profile and guidance, reuse-registry entries). P10 declares the common interview rules bundle (SKILL.md re-touch, three baseline doc first-changes, specialty-crops premise-probes) re-based onto the P9 parent. P12 declares the industrial_insects first bundle (four read-only insect scripts, locator map, guide and premise probes as new files; nine reuse-registry entries and SKILL/gg.py updates). P13: D4 source identity catalogue, validator, tests and related guidance rebased on accepted P12. P15 declares the D5 useful-life bundle rebased onto accepted P14 (corrected pp133-135 cell mapping and regression test as new files; eight re-declared pack/registry/script/test entries; parent P14 lineage). P18 declares the industrial_insects second bundle (module 0.2.0 product-line question templates and read-only plan/evidence updates; no new runtime file). | PR-2: latest D8/D9 integration; I-01 only measured count constants adjusted in lineage test. Full pytest covers split public/skill test locations. | I2 refreshes after hashes for existing declarations; before hashes, baseline, lineage and allowlist preserved. | I3 refreshes after hashes for existing declarations; before hashes, baseline, lineage and allowlist preserved. | I4 refreshes after hashes for existing declarations; before hashes, baseline, lineage and allowlist preserved. | I5 refreshes only existing after hashes; before hashes, baseline, lineage and allowlist preserved. | I6: existing after hashes refreshed; baseline, before/source/owner/reason and all lineage/allowlist unchanged, counts 167/120/124. | I9: W-D10 문서5개 및 install-manifest after SHA만 갱신; PV2 FAIL 후 알려진 한계 문서화, 코드·테스트·계보·허용목록 불변. | W4: restored P28 latest-change markers for four body-guidance files and recorded the previously omitted HT2-format, student-year-authority, and full-notice changes in horticulture and major-body test reasons. | W5: refreshed SKILL.md and installation-manifest hashes for CI-required body-progress wording; no major-specific progression semantics changed.",
       "origin": "new",
-      "sha256": "e0d2bd41ad75e28d71902f814deffc1b991a05e0aebc6602db7db3e52c96306a"
+      "sha256": "df09fe0a54079da1b58c171d1b6a68b123637d51f67a7c5e0bc656a339915b60"
     },
     "tools/validation-provenance.json": {
       "note": "This file; declares origins for the validation layer.",
       "origin": "new",
-      "sha256": "499b16d111af13e3660558c931d294a147ffd121c5f38d44875ba8607947cdba"
+      "sha256": "9b04529f32f63a312bc1f1df6881510bc998d8032bf483057d1565b16f36c3dd"
     },
     "tools/validation_sharding.py": {
       "origin": "new",
@@ -552,7 +552,7 @@
     "approved_new_files": 228,
     "baseline_main": "29abec0ec95369de7ae9e22207349d574f1f46b7",
     "change_count": 273,
-    "changes_sha256": "8bf77ff68ed6c8ac16b652d83f50689ea9203d7343e5cbeee938b8f6d1bdafec",
+    "changes_sha256": "35590ffba8678f3059454da6cb85cc7d850bfa61f42922d97d498185b558a074",
     "new_count": 221,
     "parent_candidate": {
       "file_count": 233,
@@ -561,7 +561,7 @@
     },
     "schema": "knuaf-doc/runtime-changes@2",
     "spec": "tools/runtime-changes.json",
-    "spec_sha256": "e0d2bd41ad75e28d71902f814deffc1b991a05e0aebc6602db7db3e52c96306a",
+    "spec_sha256": "df09fe0a54079da1b58c171d1b6a68b123637d51f67a7c5e0bc656a339915b60",
     "stage": "P28",
     "stage_lineage": [
       {
@@ -736,5 +736,5 @@
     "verified_count": 273
   },
   "schema": "knuaf-doc/validation-bundle@3",
-  "validation_tree_sha256": "577ceed395393a74051db6a64fdbce5ed9cd824ec2948304d5dc319aeca382d9"
+  "validation_tree_sha256": "eef89abf20d26a01dab765c9fcd0e78e0a410ebe45cee479b222b52bc9f86d63"
 }

@@ -102,7 +102,7 @@ class DairyResumeRepairContract(unittest.TestCase):
         intake = read("intake-selection.md")
         majors = section(read("majors.md"), "## 낙농")
         for token in ("학생 원답변으로 확인되면 이렇게 알린다", "질문·계획·근거 정리",
-                      "장별 글 초안", "완성된 논문 파일(DOCX/HWPX)",
+                      "장별 글 초안", "학교 작성요령 순서를 적용한 본문 DOCX 초안",
                       "학교 28시트 엑셀 채우기", "축산 돈 계산",
                       "`[Qn-m]`", "`1)`"):
             with self.subTest(token=token):
@@ -111,8 +111,8 @@ class DairyResumeRepairContract(unittest.TestCase):
                       "`[Qn-m]`", "`1)`", "답 안내 형식"):
             with self.subTest(route=token):
                 self.assertIn(token, intake)
-        for token in ("unsupported_output", "학교 28시트 엑셀",
-                      "축산 재무 계산", "전공별 본문 초안(글)"):
+        for token in ("unsupported_finance_profile", "학교 28시트 XLSX",
+                      "축산 재무 계산", "(dairy/README.md)"):
             with self.subTest(source=token):
                 self.assertIn(token, majors)
 
@@ -131,14 +131,29 @@ class MajorBodyDraftContract(unittest.TestCase):
         self.assertEqual(1, scope.count("제출 대행은 하지 않는다"))
 
 
-    def test_major_sections_preserve_file_output_guard(self):
+    def test_major_sections_state_supported_and_unsupported_outputs(self):
         majors = read("majors.md")
-        for heading in ("## 과수", "## 원예환경시스템", "## 낙농"):
+        expected = {
+            "## 과수": ("본문 DOCX·PDF·HWPX 검토본",
+                        "fruit_16_sheet_v1",
+                        "매출액 계열 10행",
+                        "파이썬 재무 계산은 지원하지 않는다",
+                        "[fruit-trees](fruit-trees/README.md)"),
+            "## 원예환경시스템": ("본문 DOCX·PDF·HWPX 검토본",
+                                  "hort_18_sheet_reconstructed_v1",
+                                  "일반(17시트) XLSX 사본·채우기",
+                                  "파이썬 재무 계산",
+                                  "[hort-env-systems](hort-env-systems/README.md)"),
+            "## 낙농": ("본문 DOCX·PDF·HWPX 검토본",
+                        "unsupported_finance_profile",
+                        "축산 재무 계산",
+                        "[dairy](dairy/README.md)"),
+        }
+        for heading, tokens in expected.items():
+            body = section(majors, heading)
             with self.subTest(major=heading):
-                body = section(majors, heading)
-                self.assertIn("major-body-draft.md", body)
-                self.assertIn("unsupported_output", body)
-                self.assertIn("파일", body)
+                for token in tokens:
+                    self.assertIn(token, body)
     def test_fruit_and_horticulture_boundary_sentences_are_complete(self):
         majors = read("majors.md")
         fruit = section(majors, "## 과수")
@@ -161,14 +176,20 @@ class MajorBodyDraftContract(unittest.TestCase):
             with self.subTest(token=token):
                 self.assertIn(token, guide)
 
-    def test_major_readmes_link_text_draft_without_claiming_file_support(self):
-        for name in ("fruit-trees/README.md", "hort-env-systems/README.md",
-                     "dairy/README.md"):
+    def test_major_readmes_link_text_draft_and_keep_unsupported_limits(self):
+        expected = {
+            "fruit-trees/README.md": ("| 파이썬 재무 계산(다년생·연간 모두) | 미지원",
+                                      "| 값 채우기(빈칸 입력) | 미지원"),
+            "hort-env-systems/README.md": ("unsupported_output",),
+            "dairy/README.md": ("unsupported_output",),
+        }
+        for name, tokens in expected.items():
             body = read(name)
             with self.subTest(major=name):
                 self.assertIn("major-body-draft.md", body)
                 self.assertIn("본문 초안(글)", body)
-                self.assertIn("unsupported_output", body)
+                for token in tokens:
+                    self.assertIn(token, body)
     def test_linked_research_guides_distinguish_text_drafts_from_outputs(self):
         checks = (
             ("fruit-trees/research-routes.md", "본문 초안(글)", "서식 본문 파일", "질문·문서계획·생산검산(kg/주/㎡) 지원, **논문 본문·"),
@@ -187,8 +208,10 @@ class MajorBodyDraftContract(unittest.TestCase):
         readme = REF.parents[2] / "README.md"
         fruit_row = next(line for line in readme.read_text(encoding="utf-8").splitlines()
                          if line.startswith("| 과수 |"))
-        self.assertIn("본문 초안(글)", fruit_row)
-        self.assertIn("서식 본문 파일·XLSX·재무 계산은 미지원", fruit_row)
+        self.assertIn("본문 DOCX·PDF·HWPX 검토본", fruit_row)
+        self.assertIn("매출액 계열 10행", fruit_row)
+        self.assertIn("값 채우기 지도는 아직 없고", fruit_row)
+        self.assertIn("파이썬 재무 계산은 미지원", fruit_row)
         self.assertNotIn("본문·XLSX·재무 계산 미지원", fruit_row)
 
     def test_progress_uses_each_major_toc_and_marks_unsupported_work(self):
@@ -199,12 +222,15 @@ class MajorBodyDraftContract(unittest.TestCase):
                 "낙농은 1~12", "원예환경시스템은 채택 목차 전체로 바꿔 표시",
                 "과수: Ⅰ~Ⅳ 네 장", "낙농: 1~12 열두 장",
                 "스킬의 남은 일로 표시하지 않는다",
-                "⚑ 학생 몫 — 스킬 미지원", "전용 18시트 조건부"):
+                "⚑ 학생 몫 — 스킬 미지원", "전용 18시트 영수증 사슬 조건부",
+                "매출액 10행", "본문 숫자 자동 대조 불가"):
             with self.subTest(token=token):
                 self.assertIn(token, progress)
         self.assertNotIn("Ⅰ~Ⅵ 여섯 장의 절 원고", progress)
         self.assertIn("특용작물: 값 입력 + 실제 앱 재계산", progress)
-        self.assertIn("원예환경시스템: 기존 전용 18시트 프로필", progress)
+        self.assertIn("원예환경시스템: 전용 18시트 프로필·영수증 사슬", progress)
+        self.assertIn("본문 숫자를 등록된 엑셀값과 자동 대조하는 기능은 아직 원예 본문에서 쓸 수 없다",
+                      progress)
     def test_dairy_json_command_does_not_claim_section_draft_saves_are_json(self):
         dairy = read("dairy/README.md")
         self.assertIn("낙농 전용 명령(예: `gg.py major-plan`)", dairy)

@@ -1,6 +1,6 @@
 # 과수전공(fruit_trees) 안내 (모듈 0.2.0)
 
-과수 모듈은 **자료를 읽고 학교 과수 양식(S01)에 맞춰 부족한 자료와 작성 계획을 보여 주는 단계**와 **학생이 입력한 물량으로 생산·재고를 검산하는 단계**까지 지원한다. 유효한 전공 바인딩이 있으면 [전공별 본문 초안(글)](../major-body-draft.md)을 장별로 작성하고 `build_docx.py --major fruit_trees`로 검토 전 DOCX를 조립할 수 있다. S01 앞머리 순서를 적용하되 물리 배치는 공용 기본값이므로 학교 최종 서식 적합 판정은 별도다. HWPX/PDF 직접 생성, 학교 재무 XLSX, 재무 계산, 교수 XLSX 사본 채우기는 이 안내의 지원 범위에 포함하지 않는다. 과수 통계 팩은 비어 있다(`empty_slot`).
+과수 모듈은 **자료를 읽고 학교 과수 양식(S01)에 맞춰 부족한 자료와 작성 계획을 보여 주는 단계**, **학생이 입력한 물량으로 생산·재고를 검산하는 단계**, **S01 앞머리 순서를 적용한 본문 DOCX·PDF·HWPX 조립 단계**까지 지원한다. 유효한 전공 바인딩이 있으면 [전공별 본문 초안(글)](../major-body-draft.md)을 장별로 작성하고 `build_docx.py <폴더> --major fruit_trees`로 검토 전 DOCX를 조립할 수 있다. S01 앞머리 순서를 적용하되 물리 배치는 공용 기본값이므로 학교 최종 서식 적합 판정은 별도다. 재무 XLSX는 `fruit_16_sheet_v1` 전용 경로만 열려 있다: 원본 해시·시트 순서·수식 지문이 일치하는 사본에 한해 clear/preserve 지도(`gg-xlsx-template-map/v1`)로 사본을 만들고, 값 채우기는 다른 스키마(`gg-xlsx-fill-map/v1` + `template.sha256`)와 항목별 `period`·`source_note`·`editable`이 필요하며, 재계산값 금액 사실 등록은 native 영수증과 `gg-xlsx-fact-map/v1` 지도가 필요하다. 배포된 [등록용 사실 지도](fruit-finance-fact-map.json)는 70행 중 매출액 계열 10행만 등록 경로에 두고 60행은 경비 연도 정정 대기로 보류했으며, 본문 숫자 자동 대조는 아직 불가하다. 값 채우기는 채우기 지도(`gg-xlsx-fill-map/v1`)가 아직 없어 쓸 수 없다. PDF는 `gg_office.py word`(macOS Word 설치 시), HWPX는 `build_hwpx.py <폴더> --major fruit_trees`로 만들되 쪽 나눔·정렬·목차 쪽번호는 한글에서 사람이 마무리한다. 파이썬 재무 계산은 이 안내의 지원 범위에 포함하지 않는다. 과수 통계 팩은 비어 있다(`empty_slot`).
 
 ## 지원 경계
 
@@ -12,9 +12,12 @@
 | `references/fruit-trees/premise-probes.md` 핵심 전제 질문 | 지원 (공용 인터뷰 형식) |
 | 논문 본문 초안(글) | 지원 (유효한 전공 바인딩일 때, 장별) |
 | 논문 본문 DOCX | 지원 (전공 바인딩·명시 전공 필요, 검토 전 조립; Word 목차 갱신·PDF 렌더 확인 별도) |
-| 논문 본문 HWPX/PDF 직접 생성 | 이 안내의 지원 범위 밖 |
-| 학교 17시트·XLSX·템플릿 복제/채우기/수식 보정/인쇄 조정 | 미지원 → `unsupported_output` |
-| 재무 계산(다년생·연간 모두) | 미지원 → `unsupported_output` |
+| 논문 본문 HWPX/PDF | 지원 — PDF는 `gg_office.py word`(macOS Word 설치 시), HWPX는 `build_hwpx.py <폴더> --major fruit_trees`로 만들고 쪽 나눔·정렬·목차 쪽번호는 한글에서 사람이 마무리 |
+| 학교 16시트 XLSX 사본 생성(clear/preserve 지도) | 지원 — `fruit_16_sheet_v1` 원본 해시·시트 순서·수식 지문 일치 필요 (`gg_excel_template.py clear`) |
+| 값 채우기(빈칸 입력) | 미지원 — 배포 지도는 사본용(`gg-xlsx-template-map/v1`)이고, 채우기는 `gg-xlsx-fill-map/v1` + `template.sha256` + 항목별 `period`·`source_note`·`editable`을 요구 (`gg_excel_fill.py`) |
+| 재계산값 금액 사실 등록 | 지원 — 등록용 지도(`gg-xlsx-fact-map/v1`) 70행 중 매출액 계열 10행이 등록 경로(`cells`), 나머지 60행은 경비 연도 정정 대기(`held_cells`); native 재계산 영수증·해시 바인딩 필요 (`gg_excel_facts.py`). 본문 숫자 자동 대조는 아직 불가 |
+| 수식 보정·인쇄 조정 | 미지원 — 수식이 바뀌면 수식 지문 불일치로 사본 생성부터 막힘 |
+| 파이썬 재무 계산(다년생·연간 모두) | 미지원 — `perennial_orchard_cash`·`single_annual_cash_v1` 모두 unsupported, 학교 엑셀 재계산값만 근거로 쓴다 |
 
 ## 문서 계획
 
