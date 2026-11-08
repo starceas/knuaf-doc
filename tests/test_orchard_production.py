@@ -116,11 +116,14 @@ class OrchardTests(ContractCase):
         forbidden = ("price", "revenue", "cost", "amount", "sales")
         self.assertFalse(any(k in json.dumps(out).lower() for k in forbidden))
         mc = runtime("gg_major_contract")
-        for kind in ("finance_calculation",):
-            with self.assertRaises(mc.OutputHeldError) as caught:
-                mc.authorize_output(kind, mc.output_context(self.fp.root,
-                                    "fruit_trees"))
-            self.assertEqual(caught.exception.reason, "unsupported_output")
+        context = mc.output_context(self.fp.root, "fruit_trees")
+        for kind in ("school_paper", "school_excel_workbook"):
+            authorized = mc.authorize_output(kind, context)
+            self.assertEqual((authorized.output, authorized.major_id),
+                             (kind, "fruit_trees"))
+        with self.assertRaises(mc.OutputHeldError) as caught:
+            mc.authorize_output("finance_calculation", context)
+        self.assertEqual(caught.exception.reason, "unsupported_output")
 
     def test_e1_unbound_and_other_major(self):
         for major in (None, "specialty_crops"):
