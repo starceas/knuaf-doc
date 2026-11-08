@@ -354,6 +354,31 @@ class BindingTests(_ChainCase):
         self.held(self.bound(hashes, workbook_profile="school_17_sheet_v1"),
                   "fact_map_profile_mismatch")
 
+    def test_registration_refuses_a_ratio_cell_with_a_numeric_cache(self):
+        # 16!G27 is 농가수익률; a real 0.25 cache sits there, the row claims
+        # 천원 and the hashes are rebound, so only the map gate inside the
+        # registration path can refuse it.
+        caches = {(row[1], row[2]): EXPECTED_VALUES[row[0]] for row in EXPECTED_ROWS}
+        caches[("16. 수익성분석", "G27")] = 0.25
+        hashes = self.issue_native(caches)
+        mapping = self.bound(hashes)
+        next(row for row in mapping["cells"]
+             if row["fact_id"] == "hort-net-income-2027")["cell"] = "G27"
+        self.held(mapping, "fact_map_excluded_cell")
+
+    def test_registration_refuses_a_registry_ratio_cell(self):
+        # 5!F39 is loan.slot1.annual_rate (RATIO in the registry); the row
+        # claims 천원 and a numeric cache 0.015 sits in the cell.
+        caches = {(row[1], row[2]): EXPECTED_VALUES[row[0]] for row in EXPECTED_ROWS}
+        caches[("5. 원리금상환계획", "F39")] = 0.015
+        hashes = self.issue_native(caches)
+        mapping = self.bound(hashes)
+        mapping["cells"] = [{"fact_id": "hort-loan-rate", "field_id": "finance.rate",
+                             "sheet": "5. 원리금상환계획", "cell": "F39", "period": "2027",
+                             "scope": "student_farm", "unit": "천원"},
+                            *mapping["cells"]]
+        self.held(mapping, "fact_map_unit_mismatch")
+
     def test_wrong_workbook_hash_is_held(self):
         caches = {(row[1], row[2]): EXPECTED_VALUES[row[0]] for row in EXPECTED_ROWS}
         hashes = self.issue_native(caches)
