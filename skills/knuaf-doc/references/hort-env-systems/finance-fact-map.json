@@ -1,0 +1,299 @@
+{
+  "schema": "gg-xlsx-fact-map/v1",
+  "workbook_profile": "hort_18_sheet_reconstructed_v1",
+  "status": "rows_reviewed_binding_pending_native_run",
+  "source": {
+    "sha256": "e3c9defe376fa74413641408900f6bb656017a389fb9745d9dac221a10951c1c"
+  },
+  "workbook": {
+    "path": "",
+    "sha256": ""
+  },
+  "receipt": {
+    "path": "",
+    "sha256": ""
+  },
+  "binding": [
+    "Fill workbook.path/sha256 and receipt.path/sha256 from the native Excel run: the recalculated 18-sheet workbook and the gg_office manifest that proves it.",
+    "Paths are project-relative; the adapter refuses any other hash, profile or schema.",
+    "Register with gg_excel_facts.build_registration(root, workbook, receipt, this_map, ...)."
+  ],
+  "periods": {
+    "column_year": "The workbook's year columns start at the plan start year; row 8 of 5. 원리금상환계획 and 4.투자계획 B8:B12 carry the same axis.",
+    "opening": "17. 추정대차대조표 column C is the base date (start year - 1)."
+  },
+  "cells": [
+    {
+      "fact_id": "hort-invest-total",
+      "field_id": "finance.invest_total",
+      "sheet": "4.투자계획",
+      "cell": "C13",
+      "period": "2027",
+      "scope": "student_farm",
+      "unit": "천원",
+      "body_label": "총투자비 합계",
+      "node": "ch5_sec1"
+    },
+    {
+      "fact_id": "hort-invest-year1",
+      "field_id": "finance.invest_need",
+      "sheet": "4.투자계획",
+      "cell": "C8",
+      "period": "2027",
+      "scope": "student_farm",
+      "unit": "천원",
+      "body_label": "1차년도 투자 소요액",
+      "node": "ch5_sec1"
+    },
+    {
+      "fact_id": "hort-loan-principal-2027",
+      "field_id": "finance.loan_principal",
+      "sheet": "5. 원리금상환계획",
+      "cell": "D8",
+      "period": "2027",
+      "scope": "student_farm",
+      "unit": "천원",
+      "body_label": "원금상환액",
+      "node": "ch5_sec1"
+    },
+    {
+      "fact_id": "hort-loan-interest-2027",
+      "field_id": "finance.loan_interest",
+      "sheet": "5. 원리금상환계획",
+      "cell": "E8",
+      "period": "2027",
+      "scope": "student_farm",
+      "unit": "천원",
+      "body_label": "이자상환액",
+      "node": "ch5_sec1"
+    },
+    {
+      "fact_id": "hort-facility-construction",
+      "field_id": "finance.facility_construction",
+      "sheet": "6.시설계획",
+      "cell": "C76",
+      "period": "2027",
+      "scope": "student_farm",
+      "unit": "천원",
+      "body_label": "시설 총 시공비",
+      "node": "ch5_sec2"
+    },
+    {
+      "fact_id": "hort-sales-2027",
+      "field_id": "finance.sales_revenue",
+      "sheet": " 7. 판매계획",
+      "cell": "O25",
+      "period": "2027",
+      "scope": "student_farm",
+      "unit": "천원",
+      "body_label": "판매금액",
+      "node": "ch5_sec3"
+    },
+    {
+      "fact_id": "hort-sales-2028",
+      "field_id": "finance.sales_revenue",
+      "sheet": " 7. 판매계획",
+      "cell": "O34",
+      "period": "2028",
+      "scope": "student_farm",
+      "unit": "천원",
+      "body_label": "판매금액",
+      "node": "ch5_sec3"
+    },
+    {
+      "fact_id": "hort-sales-2029",
+      "field_id": "finance.sales_revenue",
+      "sheet": " 7. 판매계획",
+      "cell": "O43",
+      "period": "2029",
+      "scope": "student_farm",
+      "unit": "천원",
+      "body_label": "판매금액",
+      "node": "ch5_sec3"
+    },
+    {
+      "fact_id": "hort-sales-2030",
+      "field_id": "finance.sales_revenue",
+      "sheet": " 7. 판매계획",
+      "cell": "O52",
+      "period": "2030",
+      "scope": "student_farm",
+      "unit": "천원",
+      "body_label": "판매금액",
+      "node": "ch5_sec3"
+    },
+    {
+      "fact_id": "hort-sales-2031",
+      "field_id": "finance.sales_revenue",
+      "sheet": " 7. 판매계획",
+      "cell": "O61",
+      "period": "2031",
+      "scope": "student_farm",
+      "unit": "천원",
+      "body_label": "판매금액",
+      "node": "ch5_sec3"
+    },
+    {
+      "fact_id": "hort-material-2027",
+      "field_id": "finance.material_cost",
+      "sheet": "9. 영농자재구매계획",
+      "cell": "G15",
+      "period": "2027",
+      "scope": "student_farm",
+      "unit": "천원",
+      "body_label": "영농자재비",
+      "node": "ch5_sec4"
+    },
+    {
+      "fact_id": "hort-labor-2027",
+      "field_id": "finance.labor_cost",
+      "sheet": "11. 인건비계획",
+      "cell": "I17",
+      "period": "2027",
+      "scope": "student_farm",
+      "unit": "천원",
+      "body_label": "인건비 계",
+      "node": "ch5_sec4"
+    },
+    {
+      "fact_id": "hort-overhead-2027",
+      "field_id": "finance.overhead_cost",
+      "sheet": "12 .경비계획",
+      "cell": "C26",
+      "period": "2027",
+      "scope": "student_farm",
+      "unit": "천원",
+      "body_label": "경비 계",
+      "node": "ch5_sec4"
+    },
+    {
+      "fact_id": "hort-depreciation-2027",
+      "field_id": "finance.depreciation",
+      "sheet": "13. 감가상각비계획 ",
+      "cell": "E12",
+      "period": "2027",
+      "scope": "student_farm",
+      "unit": "천원",
+      "body_label": "시설 감가상각비",
+      "node": "ch5_sec4"
+    },
+    {
+      "fact_id": "hort-expense-2027",
+      "field_id": "finance.operating_expense",
+      "sheet": "14. 생산원가계획",
+      "cell": "C12",
+      "period": "2027",
+      "scope": "student_farm",
+      "unit": "천원",
+      "body_label": "경비 합계",
+      "node": "ch5_sec4"
+    },
+    {
+      "fact_id": "hort-production-cost-2027",
+      "field_id": "finance.production_cost",
+      "sheet": "14. 생산원가계획",
+      "cell": "C25",
+      "period": "2027",
+      "scope": "student_farm",
+      "unit": "천원",
+      "body_label": "총생산원가",
+      "node": "ch5_sec4"
+    },
+    {
+      "fact_id": "hort-revenue-2027",
+      "field_id": "finance.income_statement_revenue",
+      "sheet": "15. 손익계획",
+      "cell": "C6",
+      "period": "2027",
+      "scope": "student_farm",
+      "unit": "천원",
+      "body_label": "매출액",
+      "node": "ch5_sec4"
+    },
+    {
+      "fact_id": "hort-income-2027",
+      "field_id": "finance.income",
+      "sheet": "16. 수익성분석",
+      "cell": "G23",
+      "period": "2027",
+      "scope": "student_farm",
+      "unit": "천원",
+      "body_label": "소득",
+      "node": "ch5_sec4"
+    },
+    {
+      "fact_id": "hort-net-income-2027",
+      "field_id": "finance.net_income",
+      "sheet": "16. 수익성분석",
+      "cell": "G24",
+      "period": "2027",
+      "scope": "student_farm",
+      "unit": "천원",
+      "body_label": "순수익",
+      "node": "ch5_sec4"
+    },
+    {
+      "fact_id": "hort-assets-opening",
+      "field_id": "finance.total_assets",
+      "sheet": "17. 추정대차대조표",
+      "cell": "C30",
+      "period": "2026",
+      "scope": "student_farm",
+      "unit": "천원",
+      "body_label": "자산총계",
+      "node": "ch3_sec1"
+    }
+  ],
+  "excluded_series": [
+    {
+      "sheet": "16. 수익성분석",
+      "range": "G27:K27",
+      "reason": "농가수익률은 비율(0%)이며 금액 사실이 아니다"
+    },
+    {
+      "sheet": "14. 생산원가계획",
+      "range": "C28:G28",
+      "reason": "kg당 생산원가는 원/kg 단위로 원·천원 사실이 아니다"
+    },
+    {
+      "sheet": " 7. 판매계획",
+      "range": "O26",
+      "reason": "상품화율은 비율이며 금액 사실이 아니다"
+    },
+    {
+      "sheet": " 7. 판매계획",
+      "range": "O35",
+      "reason": "상품화율은 비율이며 금액 사실이 아니다"
+    },
+    {
+      "sheet": " 7. 판매계획",
+      "range": "O44",
+      "reason": "상품화율은 비율이며 금액 사실이 아니다"
+    },
+    {
+      "sheet": " 7. 판매계획",
+      "range": "O53",
+      "reason": "상품화율은 비율이며 금액 사실이 아니다"
+    },
+    {
+      "sheet": " 7. 판매계획",
+      "range": "O62",
+      "reason": "상품화율은 비율이며 금액 사실이 아니다"
+    },
+    {
+      "sheet": "5. 원리금상환계획",
+      "range": "B70:F160",
+      "reason": "2021~2024년으로 표기된 옛 계산 블록은 현재 계획 기간 밖"
+    },
+    {
+      "sheet": "15. 손익계획",
+      "range": "C16:G17",
+      "reason": "포장비·운반비가 E열 연도 블록을 참조하는 학교 수식 불일치 — 검토 전 제외"
+    },
+    {
+      "sheet": "17. 추정대차대조표",
+      "range": "H42",
+      "reason": "H42만 세전순익(G30)을 참조 — 나머지 열과 다른 원천, 검토 전 제외"
+    }
+  ]
+}
