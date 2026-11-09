@@ -247,6 +247,25 @@ class FactMapTests(ContractCase):
             self.assertEqual(sheet, SHEET)
             self.assertIn(sheet + "!" + first, corrected)
             self.assertIn(sheet + "!" + last, corrected)
+        # 행마다: 보류 사유가 정정된 20칸으로만 풀리는지, 다른 시트·다른 사유가
+        # 섞여 있지 않은지 확인한다. 독립 사유가 하나라도 남으면 그 행은
+        # 계속 보류여야 한다(여기서는 전부 경비계획 물가지수뿐임을 고정).
+        for row in self.base["held_cells"]:
+            with self.subTest(fact_id=row["fact_id"]):
+                self.assertTrue(row["held_by"])
+                for token in row["held_by"]:
+                    sheet, cells = token.split("!")
+                    self.assertEqual(sheet, SHEET)
+                    first, last = cells.split(":")
+                    column = first[0]
+                    self.assertEqual(last[0], column)
+                    for number in range(int(first[1:]), int(last[1:]) + 1):
+                        self.assertIn(f"{sheet}!{column}{number}", corrected)
+                # 사유 문구도 2020 고정 지수 하나만 말해야 한다.
+                self.assertIn("2020", row["reason"])
+                for other in ("13.대차대조", "11.생산원가", "5.판매계획"):
+                    self.assertNotIn(other, row["reason"])
+                self.assertEqual(row["reason"].count("종속"), 1)
 
     def test_only_the_two_unrelated_exclusions_remain(self):
         remaining = [("13.대차대조", "C4:M35"), ("11.생산원가", "C36:L36")]

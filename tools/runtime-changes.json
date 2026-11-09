@@ -2691,7 +2691,7 @@
     },
     "tests/test_fruit_fy2_entry.py": {
       "before_sha256": null,
-      "after_sha256": "625439ec7dd45416d70b529924841c41783f4c2558349be5e00a9fe3e2b95fef",
+      "after_sha256": "496ad2feb6f3798b2a58c02e3ea5f53e3239b627c3ec09d09304f96efe092000",
       "first_changed": "P28",
       "owner": "P28",
       "reason": "FY2: frozen 21-cell spec, unpinnable spec path, base/fy1 fingerprint gate, receipt-chain transition and the public-entry refusal",
