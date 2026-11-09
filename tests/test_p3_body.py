@@ -451,6 +451,31 @@ class ScopePossessiveAndYearSuffixTests(ContractCase):
             gse.crosscheck_body("합성농장 2026년 매출액은 251 천원이다.", items))
 
 
+class RohPeriodAndAmountRangeTests(ContractCase):
+    """W-D2 @Roh 중요①: period/amount ranges and parallel second amounts
+    must FAIL (the 4a32d0c baseline rejects them)."""
+
+    def _vals(self):
+        return [{"fact_id": "f1", "field_id": "매출액", "value": 50000,
+                 "unit": "천원", "period": "2027", "scope": "농장A"}]
+
+    def assertFail(self, text):
+        gse = runtime("gg_school_excel")
+        self.assertTrue(gse.crosscheck_body(text, self._vals()), text)
+
+    def test_period_range_is_not_the_single_period(self):
+        self.assertFail("농장A 2026~2027년 매출액은 50,000천원이다.")
+        self.assertFail("2026~2027년 농장A 매출액은 50,000천원이다.")
+        self.assertFail("농장A의 2026~2027년 매출액은 50,000천원이다.")
+
+    def test_amount_range_is_not_the_single_amount(self):
+        self.assertFail("농장A 2027년 매출액은 50,000천원~60,000천원이다.")
+        self.assertFail("2027년 농장A 매출액은 50,000천원~60,000천원이다.")
+
+    def test_two_amounts_are_not_one_amount(self):
+        self.assertFail("농장A 2027년 매출액은 50,000천원과 60,000천원이다.")
+
+
 class TableContextReuseTests(ContractCase):
     def test_spaced_note_belongs_only_to_preceding_table(self):
         text = ("표 1. 첫 계획\n|항목|값|\n|---|---|\n|수입|1|\n"

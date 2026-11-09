@@ -309,5 +309,62 @@ class ClaimsPartialBlockTests(ContractCase):
             rows[0]["reason"])
 
 
+class RohContextAmountTests(ContractCase):
+    """W-D2 @Roh 중요②: reference (context) amounts are not required body
+    claims — they stay checkable when claimed, but omitting them from
+    claims must NOT block. The plan-only partial block still blocks."""
+
+    @staticmethod
+    def _fact(value="1000", field_id="매출액", **over):
+        fact = {"field_id": field_id, "answer_state": "provided",
+                "value": value, "unit": "천원", "period": "2026년",
+                "scope": "농장 전체"}
+        fact.update(over)
+        return fact
+
+    def _project(self, claimed, extra_facts=None):
+        facts = {
+            "plan1": self._fact("50000", finance_role="plan"),
+            "ctx1": self._fact("30000", field_id="전년 매출액",
+                               finance_role="context"),
+        }
+        facts.update(extra_facts or {})
+        return {
+            "facts": facts,
+            "sections": {"fin": {"claims": [
+                {"fact_id": fid} for fid in claimed]}},
+        }
+
+    def test_plan_claimed_and_context_omitted_does_not_block(self):
+        core = runtime("gg_core")
+        items, blocked = core._finance_check_items(self._project(["plan1"]))
+        self.assertIsNone(blocked)
+        self.assertEqual(["plan1"], [i["fact_id"] for i in items])
+
+    def test_claimed_context_amount_stays_checkable(self):
+        core = runtime("gg_core")
+        items, blocked = core._finance_check_items(
+            self._project(["plan1", "ctx1"]))
+        self.assertIsNone(blocked)
+        self.assertEqual(["plan1", "ctx1"], [i["fact_id"] for i in items])
+
+    def test_plan_partial_block_still_blocks(self):
+        core = runtime("gg_core")
+        items, blocked = core._finance_check_items(
+            self._project(["plan1"], extra_facts={
+                "plan2": self._fact("70000", field_id="소득",
+                                    finance_role="plan")}))
+        self.assertEqual([], items)
+        self.assertEqual(
+            core._CLAIMS_PARTIAL_BLOCK.format(n=2, m=1, k=1), blocked)
+
+    def test_context_only_and_empty_claims_is_silent(self):
+        core = runtime("gg_core")
+        p = {"facts": {"ctx1": self._fact("30000", field_id="전년 매출액",
+                                          finance_role="context")},
+             "sections": {"fin": {"claims": []}}}
+        self.assertEqual(([], None), core._finance_check_items(p))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -110,7 +110,28 @@ MAJOR_EXPECTATIONS = (
 #: ``native_field_invalid`` 표의 행. 칸 이름(모델용)은 백틱 목록, 오른쪽은
 #: 학생에게 그대로 보여 줄 말이다.
 NATIVE_FIELD_ROW = re.compile(
-    r"^\|\s*(?:`[a-z0-9_]+`(?:,\s*`[a-z0-9_]+`)*)\s*\|\s*([^|]+?)\s*\|\s*$")
+    r"^\|\s*((?:`[a-z0-9_]+`\s*(?:,\s*`[a-z0-9_]+`\s*)*))\s*\|\s*([^|]+?)\s*\|\s*$")
+
+#: W-D2 @Roh 권고2: 표의 키↔문구 쌍. 순서와 키 집합까지 고정해
+#: 시작/목표 면적의 키를 서로 바꾸는 돌연변이를 잡는다.
+NATIVE_FIELD_PAIRS = (
+    (("start_area_m2", "area_m2"), "시작 면적(㎡)"),
+    (("target_area_m2", "goal_area_m2"), "목표 면적(㎡)"),
+    (("start_sales_thousand", "sales_thousand"), "시작 매출액(천원)"),
+    (("target_sales_thousand", "goal_sales_thousand"), "목표 매출액(천원)"),
+    (("start_profit_thousand", "profit_thousand"), "시작 소득(천원)"),
+    (("target_profit_thousand", "goal_profit_thousand"), "목표 소득(천원)"),
+)
+
+#: W-D2 @Roh 권고2: 검색어 규칙의 '써도 됨' 쪽에 고정해 둘 말.
+#: 금지 예시를 허용 쪽에 끼워 넣는 돌연변이를 잡는다.
+SEARCH_ALLOW_WORDINGS = (
+    "시·군 단위 지역",
+    "연령대",
+    "작목·품종",
+    "재배 면적 규모",
+    "통계·제도 이름",
+)
 
 #: 표가 학생에게 매핑해야 하는 말 6개(DESIGN §5-5). 표와 블록이 같이
 #: 틀어지는 것을 막으려고 기대값을 여기에 고정한다.
@@ -187,8 +208,25 @@ def _majors_in(body):
 
 def _native_field_rows():
     text = (SKILL_ROOT / "references" / "outputs.md").read_text(encoding="utf-8")
-    rows = [NATIVE_FIELD_ROW.match(line) for line in text.splitlines()]
-    return [match.group(1) for match in rows if match]
+    rows = []
+    for line in text.splitlines():
+        match = NATIVE_FIELD_ROW.match(line)
+        if match:
+            rows.append(match.group(2))
+    return rows
+
+
+def _native_field_pairs():
+    """(key tuple, wording) per row — keys in written order."""
+    text = (SKILL_ROOT / "references" / "outputs.md").read_text(encoding="utf-8")
+    pairs = []
+    for line in text.splitlines():
+        match = NATIVE_FIELD_ROW.match(line)
+        if not match:
+            continue
+        keys = tuple(re.findall(r"`([a-z0-9_]+)`", match.group(1)))
+        pairs.append((keys, match.group(2)))
+    return pairs
 
 
 def _first_line(body):
@@ -307,6 +345,12 @@ class NativeFieldWordingTests(unittest.TestCase):
                     any(wording in body for body in blocks),
                     "표의 학생 말 %r 이 학생화면 블록에 없다" % (wording,))
 
+    def test_native_field_key_pairs_are_pinned_in_order(self):
+        """W-D2 @Roh 권고2: 키 집합과 문구의 쌍까지 고정한다. 시작/목표
+        면적의 키를 서로 바꾸는 돌연변이는 이 시험에서 실패해야 한다."""
+        self.assertEqual(list(NATIVE_FIELD_PAIRS), _native_field_pairs(),
+                         "outputs.md: 칸 이름↔학생 말 쌍이 바뀌었다")
+
 
 class OptionCardTests(unittest.TestCase):
     def test_option_lists_use_numbered_cards_with_a_question_header(self):
@@ -362,6 +406,28 @@ class SearchPrivacyTests(unittest.TestCase):
             for example in self.FORBIDDEN_EXAMPLES:
                 # example이 허용 쪽에만 나타나면 allow 키워드 검사를 우회할 수 있다
                 self.assertIn(example, deny)
+
+    def test_allow_side_wordings_are_pinned(self):
+        """W-D2 @Roh 권고2: 허용 쪽 목록을 고정한다. 학생 이름을 허용
+        쪽에 추가하는 돌연변이(또는 금지 예시를 허용 쪽으로 옮기는
+        돌연변이)는 이 시험에서 실패해야 한다."""
+        for ln in self._rule_text():
+            allow, _, _ = ln.partition("쓰지 않음")
+            for wording in SEARCH_ALLOW_WORDINGS:
+                with self.subTest(wording=wording):
+                    self.assertIn(wording, allow,
+                                  "%r — 규칙의 '써도 됨' 쪽에 고정된 문구가 없다" % wording)
+            # Tokenize the allow list by its own separators so '이름'
+            # inside '제도 이름' is not a token (W-D2 @Roh 권고2).
+            allow_tokens = [t.strip().rstrip(".") for t in allow.split(",")]
+            for example in self.FORBIDDEN_EXAMPLES:
+                with self.subTest(forbidden=example):
+                    self.assertFalse(
+                        any(example == tok or tok.startswith(example + " ")
+                            or tok.endswith(" " + example)
+                            and tok != "통계·제도 이름"
+                            for tok in allow_tokens),
+                        "%r — 금지 예시가 '써도 됨' 쪽에 섞였다" % (example,))
 
 
 if __name__ == "__main__":

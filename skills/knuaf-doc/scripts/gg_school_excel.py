@@ -1757,6 +1757,21 @@ def _table_claim_verdict(rows, context, label, expected_d, unit, period_keys, sc
 
 _MACHINE_FIELD_ID = re.compile(r"^[A-Za-z][A-Za-z0-9]*(?:[._][A-Za-z0-9]+)+$")
 
+_SECOND_AMOUNT = re.compile(
+    r"\s*(?:~|–|—|∼|과|와)\s*[+-]?"
+    r"(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?(?![\d.,])"
+)
+
+
+def _has_second_amount(clause, amount_end, unit_match):
+    """A matching `50,000천원` must not head `50,000천원~60,000천원` /
+    `50,000천원과 60,000천원` and still pass (W-D2 @Roh 중요①)."""
+    after = clause[amount_end:].lstrip()
+    if unit_match is not None:
+        after = after[len(unit_match.group()):]
+    return _SECOND_AMOUNT.match(after) is not None
+
+
 def crosscheck_body(text, values):
     """Check explicit scope/period/metric/amount/unit claims, not arbitrary prose.
 
@@ -1856,6 +1871,14 @@ def crosscheck_body(text, values):
         # numeric-only period: appending it to `2026년`/`1년차` would accept
         # the non-word `2026년년`.  `(?<!\w)` still guards both orderings, so
         # `농장A`/`12027` cannot masquerade as `농장`/`2027`.
+        # W-D2 @Roh 중요①: the widened regex must not swallow a period or
+        # amount RANGE as a single occurrence, and must not let a first
+        # matching amount silence a second, different one in the same
+        # clause. Guard with the leading/trailing boundaries the old
+        # exact-match semantics guaranteed: reject the sentence when the
+        # matched period is embedded in a range (`2026~2027` on either
+        # side) or the matched amount is followed by a range/parallel
+        # second amount (`50,000~60,000`, `50,000과 60,000`).
         scope_part = scope + r"(?:의)?"
         period_part = period + (r"(?:년)?" if expected_period.isdigit() else "")
         claim_pattern = re.compile(
@@ -1891,6 +1914,16 @@ def crosscheck_body(text, values):
                 )
                 if not valid_occurrence:
                     continue
+                # Period is part of a range ('2026~2027') — a range
+                # occurrence is not the single declared period.
+                # Check the period window only, so an unrelated later
+                # range in the same clause does not false-positive.
+                window_start = max(0, claim.start() - 12)
+                window_end = min(len(clause), claim.end() + 12)
+                window = clause[window_start:window_end]
+                if re.search(r"\d\s*[~–—∼]\s*\d", window):
+                    conflicting_claim = True
+                    continue
                 amount = num_pattern.match(clause, claim.end())
                 if amount is None:
                     conflicting_claim = True
@@ -1905,6 +1938,8 @@ def crosscheck_body(text, values):
                 else:
                     target = _round_half_up(expected_d, decl)
                 if unit is None or target is None or actual != target:
+                    conflicting_claim = True
+                elif _has_second_amount(clause, amount.end(), unit):
                     conflicting_claim = True
                 else:
                     found_match = True
