@@ -125,7 +125,7 @@ class TestWorkbookProfileAuthorization(unittest.TestCase):
     def test_workbook_profile_declarations_are_immutable_and_major_specific(self):
         expected = {
             "specialty_crops": ("school_17_sheet_v1",),
-            "fruit_trees": ("fruit_16_sheet_v1",),
+            "fruit_trees": ("fruit_16_sheet_v1", "fruit_16_sheet_v1_fy1"),
             "hort_env_systems": (),
             "dairy": ("dairy_hanwoo_28_sheet_v1",),
         }
