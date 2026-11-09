@@ -53,6 +53,85 @@ def _text(record, key):
     return value
 
 
+def _hort_legacy_fact(fact):
+    """A fact written by a v0.4.7 horticulture registration.
+
+    That adapter wrote the machine identifier (``finance.…``) and the literal
+    ``student_farm`` placeholder instead of the body label and the student's
+    farm name, so such a fact can never equal what this map claims.
+    """
+    return (str(fact.get("field_id", "")).startswith("finance.")
+            or fact.get("scope") == "student_farm")
+
+
+def _legacy_hort_conflict(project, authorization, rows):
+    """Whether the map would re-register a fact a v0.4.7 run already wrote.
+
+    Checked before the transform-receipt chain and before the farm-name
+    demand.  A real second registration in the same folder changed the
+    canonical revision, so the old receipt is stale first, and a v0.4.7
+    project predates the farm-name requirement; either refusal would hide
+    the reason the student needs (design §4-3).
+
+    Only a difference the row already proves is reported.  v0.4.7 wrote the
+    machine identifier (``finance.…``) and the literal placeholder, while this
+    map claims the body label and the farm name, so the field label alone
+    already differs.  The placeholder also never survives a claim: it becomes
+    the farm name, or registration stops for want of one.  A row whose claim
+    could still equal the previous fact stays with the row loop, which
+    compares the cached value, so this never refuses a match.
+    """
+    if authorization.major_id != "hort_env_systems":
+        return False
+    facts = project.get("facts", {})
+    farm = facts.get("farm_name")
+    farm_value = farm.get("value") if isinstance(farm, dict) else None
+    if not isinstance(farm_value, str) or not farm_value.strip():
+        farm_value = None
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        previous = facts.get(row.get("fact_id"))
+        if not isinstance(previous, dict) or not _hort_legacy_fact(previous):
+            continue
+        for key in ("field_id", "period", "unit"):
+            declared = row.get(key)
+            if isinstance(declared, str) and declared != previous.get(key):
+                return True
+        scope = row.get("scope")
+        if isinstance(scope, str):
+            if scope != "student_farm":
+                if scope != previous.get("scope"):
+                    return True
+            elif previous.get("scope") == "student_farm":
+                # The claim never keeps the placeholder: a name replaces it,
+                # or registration is refused for want of one.
+                return True
+            elif farm_value is not None and farm_value.strip() != previous.get("scope"):
+                return True
+    return False
+
+
+def _student_farm_scope(project, authorization):
+    """The student's own farm name, which the map's scope placeholder means.
+
+    Rows of the horticulture finance map carry the literal placeholder
+    ``student_farm``; the prose they are checked against names the farm.  The
+    project fact ``farm_name`` is the single source, so a missing, withheld or
+    blank name stops registration instead of writing a placeholder the body
+    can never contain.  Another major's map keeps its literal scope, so the
+    placeholder means nothing there and no farm name is demanded.
+    """
+    if authorization.major_id != "hort_env_systems":
+        return None
+    fact = project.get("facts", {}).get("farm_name")
+    value = fact.get("value") if isinstance(fact, dict) else None
+    if (not isinstance(fact, dict) or fact.get("answer_state") != "provided"
+            or not isinstance(value, str) or not value.strip()):
+        raise RegistrationHeld("farm_name_required")
+    return value.strip()
+
+
 def build_registration(root, workbook, receipt, mapping, *, source_id, context):
     """Return a complete gg_core.apply change, after validating every row.
 
@@ -86,6 +165,7 @@ def build_registration(root, workbook, receipt, mapping, *, source_id, context):
     relative_receipt = str(receipt.relative_to(root))
     pointer = {"path": str(workbook.relative_to(root)),
                "native_manifest": {"path": relative_receipt, "sha256": receipt_hash}}
+    rows = mapping.get("cells")
     if authorization.major_id == "hort_env_systems":
         # The 18-sheet workbook declares no generic profile: it opens only
         # through its own transform/native receipt chain.  That chain checks
@@ -96,14 +176,22 @@ def build_registration(root, workbook, receipt, mapping, *, source_id, context):
             raise mc.OutputHeldError(
                 "hort_transform_receipt_invalid",
                 "native Excel receipt records a failed run")
-        profile = core._output_hort_profile(root, pointer, workbook, authorization)
         # The cache read below cannot tell a money row from a ratio row, so the
-        # reviewed map itself is checked here: excluded ranges and registry units.
+        # reviewed map itself is checked here: excluded ranges and registry
+        # units.  This and the legacy scan come before the receipt chain: a
+        # folder whose earlier run already registered a fact has a changed
+        # revision, and the stale receipt would otherwise be the only thing
+        # reported (design §4-3).  ``check_fact_map`` also owns the
+        # missing/empty ``cells`` refusal, so ``rows`` is a non-empty list of
+        # dicts from here on.
         import gg_hort_workbook as hort
         try:
             hort.check_fact_map(mapping, hort.contracts()[hort.FILES[1]]["parameters"])
         except hort.Held as error:
             raise RegistrationHeld(error.code) from error
+        if _legacy_hort_conflict(project, authorization, rows):
+            raise RegistrationHeld("legacy_hort_fact_conflict")
+        profile = core._output_hort_profile(root, pointer, workbook, authorization)
     else:
         profile = core._output_workbook_profile(root, pointer)
         mc.require_workbook_profile(authorization, profile)
@@ -127,12 +215,15 @@ def build_registration(root, workbook, receipt, mapping, *, source_id, context):
                      and bool(result.removeprefix("Excel process completed; Excel ").strip()))
     if not (mac_saved or windows_saved):
         raise RegistrationHeld("native_recalculation_proof_required")
-    rows = mapping.get("cells")
     if not isinstance(rows, list) or not rows:
         raise RegistrationHeld("cell_mapping_required")
     facts = []
     claims = {}
     seen_cells = set()
+    farm_scope = None
+    if any(isinstance(row, dict) and row.get("scope") == "student_farm"
+           for row in rows):
+        farm_scope = _student_farm_scope(project, authorization)
     source_revision = project.get("sources", {}).get(source_id, {}).get("revision", 0) + 1
     with zipfile.ZipFile(workbook) as archive:
         sheets = dict(workbook_sheets(archive))
@@ -145,6 +236,8 @@ def build_registration(root, workbook, receipt, mapping, *, source_id, context):
             field = _text(row, "field_id")
             sheet, cell = _text(row, "sheet"), _text(row, "cell")
             period, scope, unit = (_text(row, key) for key in ("period", "scope", "unit"))
+            if farm_scope is not None and scope == "student_farm":
+                scope = farm_scope
             if unit not in {"원", "천원"}:
                 raise RegistrationHeld("monetary_unit_required")
             if (not CELL.fullmatch(cell) or sheet not in sheets
@@ -173,7 +266,15 @@ def build_registration(root, workbook, receipt, mapping, *, source_id, context):
                      "unit": unit, "period": period, "scope": scope, "answer_state": "provided"}
             previous = project.get("facts", {}).get(fid)
             if previous is not None and any(previous.get(key) != value for key, value in claim.items()):
-                raise RegistrationHeld("existing_fact_conflict")
+                # A v0.4.7 horticulture registration wrote the machine
+                # identifier and the literal placeholder, so its value can
+                # never match the new claim.  Say so, instead of reporting an
+                # ordinary edit the student could simply redo.
+                legacy = (authorization.major_id == "hort_env_systems"
+                          and _hort_legacy_fact(previous))
+                raise RegistrationHeld(
+                    "legacy_hort_fact_conflict" if legacy
+                    else "existing_fact_conflict")
             claims[fid] = claim
             facts.append({"collection": "facts", "value": {
                 "id": fid, **claim, "value_type": "decimal", "verification": "source_located",
