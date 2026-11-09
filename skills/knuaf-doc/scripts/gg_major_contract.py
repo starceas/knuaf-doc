@@ -2182,6 +2182,11 @@ FRUIT_TREES_MODULE = declare_module(
             status="supported",
             reason="과수 전공 학교 16시트 양식 프로필; A2 전용 경로에서만 사용",
         ),
+        FinanceCapability(
+            profile="fruit_16_sheet_v1_fy1",
+            status="supported",
+            reason="과수 16시트 양식의 경비계획 연도·물가 기준연도 정정 사본 프로필; 원본 양식은 fruit_16_sheet_v1로 남는다",
+        ),
     ),
     validation_rules=(
         "namespace_fields",
@@ -2197,7 +2202,7 @@ FRUIT_TREES_MODULE = declare_module(
         "school_paper",
         "school_excel_workbook",
     ),
-    workbook_profiles=("fruit_16_sheet_v1",),
+    workbook_profiles=("fruit_16_sheet_v1", "fruit_16_sheet_v1_fy1"),
     packs=(),  # empty_slot preserved — no fabricated orchard data
     forbidden_terms=_FRUIT_FORBIDDEN,
 )
