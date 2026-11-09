@@ -186,7 +186,7 @@
   "scripts/gg_report.py": "2c5ae779d2e583afd6781d5ee187db7da1849423e1805c6fa2afbac1153a804f",
   "scripts/gg_research_handoff.py": "92c06177bf313f6d50c604acdea5cc9b16a2b74a55b887025b213ae71f38a556",
   "scripts/gg_reuse.py": "724466d1d917cfc5218fd75672674dc46021db5c0e0b2bc7e698a1a919397241",
-  "scripts/gg_school_excel.py": "203054cb3a4fac8316fb16e507eba57299af8fa0260827d971b13c7d99ec8e41",
+  "scripts/gg_school_excel.py": "78254c0c84600207b12e58b5d27328ea92836f5a8ee89798cc7ce04e20b84d58",
   "scripts/gg_school_format.py": "7b7504ccb9c466ab8eb9fe36e4c8acb6465236a5aa7b2b70f0f976a8eef79b8e",
   "scripts/gg_school_paper.py": "eba74abcd0eb6fe1a509339046fcc6e8a7f8fef2006b1181e2103d841458c825",
   "scripts/gg_school_table_sources.py": "591fc1842235b8747eef9bb6ca2d0ec4078d944e81dca046dd29be028f0434be",
