@@ -232,7 +232,9 @@
     "skills/knuaf-doc/references/fruit-trees/fruit-finance-fact-map.fy1.json",
     "skills/knuaf-doc/scripts/gg_fruit_correction.py",
     "tests/test_fruit_fy2_entry.py",
-    "tests/local_real_fruit.py"
+    "tests/local_real_fruit.py",
+    "tests/test_paper_diag_contract.py",
+    "tests/test_v048_body_e2e.py"
   ],
   "baseline_main": "29abec0ec95369de7ae9e22207349d574f1f46b7",
   "baseline_spec": "tools/baseline-files.json",
@@ -258,7 +260,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/SKILL.md": {
-      "after_sha256": "78a2f6278673170863d2fe4e9a3f27e2ce037860d65fb57db48e934b2011c878",
+      "after_sha256": "036961757670d62e9beef82c85cf13e43a6e2f300ab9ab54e2152f167d4232a5",
       "before_sha256": "c0008fa5239cc16411fd4ef24b5bf901c7a8b9b50c6b621e2bdee3acf734ddc0",
       "first_changed": "P1",
       "last_changed": "P28",
@@ -275,7 +277,7 @@
       "source": "adopted:app-PR41"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "9fffa22eb41a764be6bee30f6501b3a920499e79579aa3d2964cbba338d62ca1",
+      "after_sha256": "ce2879a95f2dfdb01e6851d93283871d27b0d90f9518c5857834ed5c972c486e",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "P28",
@@ -485,7 +487,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/commands.md": {
-      "after_sha256": "cd900d8b95fe3d463a95ab56dbea490b5f762a21b5f424628a8fd05bb267def5",
+      "after_sha256": "d3c6ced572fdacccb07e3f64154dc2ddb07c8ff81aec9b47e91db4a2b303e5d0",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "P28",
@@ -871,7 +873,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/interview-guide.md": {
-      "after_sha256": "26f3ae877035dfe29daa8b28e852a5d7f8b8dd59914be39e16705b751289e4c1",
+      "after_sha256": "34e9ce0080d15d5337529ea53b8963a517c3d8e642125f2afc7057478dbc833f",
       "before_sha256": "8f00e8a2d4c5f530eb7aad4a82e2e1957547e14b54941c8f49bb338035b63f87",
       "first_changed": "P11",
       "last_changed": "G-output-guards-FIX1",
@@ -881,7 +883,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/interview-ui.md": {
-      "after_sha256": "76af002958058c91e2f9ac83e3a64089fa7469f861cd035bc6bcabb78a27d89d",
+      "after_sha256": "a6f902e3bafe6f824ec1d822d6d5251bf1f9fe6055de5c8340fe55446b1e9844",
       "before_sha256": "0f84499b8648635b129b92687a31cc273aade9102d185b1c6a660a64f1dd5f7e",
       "first_changed": "P28",
       "last_changed": "P28",
@@ -1026,7 +1028,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/outputs.md": {
-      "after_sha256": "2d5fe64ea2eac6f1d826f2461ac966871567275047e4192041ea67ca001bde7a",
+      "after_sha256": "0b2740afac05aedd5d58f7dd4130cb16a17518dcea09229f50a75cec399c2b42",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "W2g",
@@ -1334,7 +1336,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/workflow-order.md": {
-      "after_sha256": "734ca49c771f45e8934240f5fa3c0dc4105f694de1ce60d67bb42e7ade631804",
+      "after_sha256": "781d08c719d40a7787ce97919a1adfc7477e6c979f3114828674756d20b1632c",
       "before_sha256": "8915cb0b75aa5abbf547a49afc08beae5a6e7ff58b7c8aa22f0c07444ad8a511",
       "first_changed": "P11",
       "last_changed": "P28",
@@ -1417,7 +1419,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_core.py": {
-      "after_sha256": "a8ab556f1585897636dac34d4c8b0eca5a5a254e8f591ef0a65f5dba5e8f2994",
+      "after_sha256": "faa8ee8509bf6e874e25f8d5c7269b2fc7d077a64d27bede5e11b96ad339022d",
       "amended_in": "P1-S01,P2-R7,P2-R8,P3-C1,Lanes15-28",
       "before_sha256": "b3491a931add687328bf561e7e7cd2aed3edd7a7fee374a28092e771d9124cc5",
       "first_changed": "P1",
@@ -1464,7 +1466,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_excel_facts.py": {
-      "after_sha256": "6701637f9c3d5bbd67d20a2238bfd4efeffabbe8117a97389322d9f6b9c45485",
+      "after_sha256": "ed5b7195d2fc19bfbadc8e4a8a98915946d7cdd55ed2a97044b8e86c8a294b69",
       "before_sha256": null,
       "first_changed": "P28",
       "owner": "B",
@@ -1822,7 +1824,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_school_excel.py": {
-      "after_sha256": "d07a4256a2ac8e7e7aece5c3fe83cd52c60a4a47780a3e75b9aa11271508e664",
+      "after_sha256": "ebb214714cb216f692e766c115ee2bffa1c1617fe97cdbd1caa150e727159da9",
       "before_sha256": "4bee13020358819f168c13a91c4895d1e50d3def7f9ea72d557423182d2b483a",
       "first_changed": "P1",
       "last_changed": "W2g",
@@ -2408,7 +2410,7 @@
       "source": "new"
     },
     "tests/test_p3_body.py": {
-      "after_sha256": "bb90761ef30d6db19020f6aea7c495128f2496f9ddeeb08eeff984faed87dfc2",
+      "after_sha256": "508cce6ccae7bec9120f2e443dd25491a8f98e686c51f380718f79c3cc139b81",
       "before_sha256": null,
       "first_changed": "P3",
       "owner": "B",
@@ -2416,7 +2418,7 @@
       "source": "new"
     },
     "tests/test_p3_flow.py": {
-      "after_sha256": "54987fc1e557dca66e3c288eed1dda36c78aad9c024798779677be1cd5c06498",
+      "after_sha256": "5fb621cb7a15e728c21a715d27efccd1508f9956fd92c79585146f5828d13433",
       "amended_in": "P3-C1,Lanes15-29",
       "before_sha256": null,
       "first_changed": "P3",
@@ -2547,7 +2549,7 @@
       "last_changed": "W3m"
     },
     "skills/knuaf-doc/references/hort-env-systems/body-plan.md": {
-      "after_sha256": "1779b175adf088a24dc175fa30c436fbe95b764aafb73b7e5266eeb51f8dd952",
+      "after_sha256": "b1ee7fa015c4e0380ac05f5f2e3c43e55c24e634d0c83c208fa837cbd7d93eff",
       "before_sha256": null,
       "first_changed": "P28",
       "owner": "P28",
@@ -2584,7 +2586,7 @@
     },
     "skills/knuaf-doc/references/hort-env-systems/finance-fact-map.json": {
       "before_sha256": null,
-      "after_sha256": "25dbf28dfa35179aa70a4b115c2603b4faea88fc5d85b9ef5cd48a65ef43feeb",
+      "after_sha256": "202ff0704fbf9d8c15ea3ea1dedc55b908f62266f9906bf861294a5c733df1aa",
       "first_changed": "P28",
       "last_changed": "P28",
       "owner": "P28",
@@ -2593,7 +2595,7 @@
     },
     "tests/test_hort_fact_map.py": {
       "before_sha256": null,
-      "after_sha256": "cd2ff7ee79f00fc1dfa6ad6eb04b69e8ebc9f1480795fecfb8c8e40183dea573",
+      "after_sha256": "4c539868a4fdee6641e06f5a186715d720ff719eebfae0900596f2cccc5be37e",
       "first_changed": "P28",
       "last_changed": "P28",
       "owner": "P28",
@@ -2704,6 +2706,28 @@
       "owner": "P28",
       "reason": "FY2: gated local check against the pinned private school copy — base fingerprints, one corrected sheet, 21 patched cells, second correction refused",
       "source": "new; reads a local copy under KNUAF_REAL_FRUIT_XLSX only; no workbook values"
+    },
+    "tests/test_paper_diag_contract.py": {
+      "after_sha256": "249bd10e556591a6c39ce4f1d96a040b4b567a582ec10c41729fc0c7963979cb",
+      "before_sha256": null,
+      "first_changed": "P27",
+      "last_changed": "P27",
+      "note": "v0.4.8 신규 시험 (W-A/W-D)",
+      "stage": "v0.4.8",
+      "reason": "v0.4.8 ⑫: paper 거절 JSON에 spec_field_invalid/native_field_invalid 고정 코드로 detail 노출 — 계약 시험 (W-A)",
+      "source": "W-A: gg_core _DIAG 허용목록 확장·paper()/validate_paper_native_fields 진단 배선",
+      "owner": "P27"
+    },
+    "tests/test_v048_body_e2e.py": {
+      "after_sha256": "f157fd7f30bab8c226e0966e43de829037b6e6648858827abc722a1d6eaed426",
+      "before_sha256": null,
+      "first_changed": "P27",
+      "last_changed": "P27",
+      "note": "v0.4.8 신규 시험 (W-A/W-D)",
+      "stage": "v0.4.8",
+      "reason": "v0.4.8 W-D 통합 시험: 원예·과수·특용작물 종단 간 body crosscheck (§7-1) — gg.py check 실제 경로",
+      "source": "W-D: DESIGN §7-1 통합 시험 신규",
+      "owner": "P27"
     }
   },
   "cumulative": true,
