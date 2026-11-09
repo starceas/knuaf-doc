@@ -1905,44 +1905,45 @@ def crosscheck_body(text, values):
             # Split sentence into clauses
             clauses = re.split(r",\s+(?=[^\d])", sent)
             for clause in clauses:
-                claim = claim_pattern.search(clause)
-                if claim is None:
-                    continue
-                label_start = claim.start("label")
-                valid_occurrence = any(
-                    m.start() == label_start for m in re.finditer(re.escape(label), clause)
-                )
-                if not valid_occurrence:
-                    continue
-                # Period is part of a range ('2026~2027') — a range
-                # occurrence is not the single declared period.
-                # Check the period window only, so an unrelated later
-                # range in the same clause does not false-positive.
-                window_start = max(0, claim.start() - 12)
-                window_end = min(len(clause), claim.end() + 12)
-                window = clause[window_start:window_end]
-                if re.search(r"\d\s*[~–—∼]\s*\d", window):
-                    conflicting_claim = True
-                    continue
-                amount = num_pattern.match(clause, claim.end())
-                if amount is None:
-                    conflicting_claim = True
-                    continue
-                unit = unit_pattern.match(clause[amount.end() :].lstrip())
-                actual = Decimal(amount.group().replace(",", ""))
-                decl = _display_places(clause, expected_unit)
-                if decl is None:
-                    target = expected_d
-                elif decl == "conflict":
-                    target = None
-                else:
-                    target = _round_half_up(expected_d, decl)
-                if unit is None or target is None or actual != target:
-                    conflicting_claim = True
-                elif _has_second_amount(clause, amount.end(), unit):
-                    conflicting_claim = True
-                else:
-                    found_match = True
+                # W-D3 @Roh 중요①: every claim in the clause must be
+                # checked, not just the first — a first correct amount
+                # must not silence a second, different one.
+                for claim in claim_pattern.finditer(clause):
+                    label_start = claim.start("label")
+                    valid_occurrence = any(
+                        m.start() == label_start for m in re.finditer(re.escape(label), clause)
+                    )
+                    if not valid_occurrence:
+                        continue
+                    # Period is part of a range ('2026~2027') — a range
+                    # occurrence is not the single declared period.
+                    # Check the period window only, so an unrelated later
+                    # range in the same clause does not false-positive.
+                    window_start = max(0, claim.start() - 12)
+                    window_end = min(len(clause), claim.end() + 12)
+                    window = clause[window_start:window_end]
+                    if re.search(r"\d\s*[~–—∼]\s*\d", window):
+                        conflicting_claim = True
+                        continue
+                    amount = num_pattern.match(clause, claim.end())
+                    if amount is None:
+                        conflicting_claim = True
+                        continue
+                    unit = unit_pattern.match(clause[amount.end() :].lstrip())
+                    actual = Decimal(amount.group().replace(",", ""))
+                    decl = _display_places(clause, expected_unit)
+                    if decl is None:
+                        target = expected_d
+                    elif decl == "conflict":
+                        target = None
+                    else:
+                        target = _round_half_up(expected_d, decl)
+                    if unit is None or target is None or actual != target:
+                        conflicting_claim = True
+                    elif _has_second_amount(clause, amount.end(), unit):
+                        conflicting_claim = True
+                    else:
+                        found_match = True
 
         for rows, context in tables:
             matched, conflicted = _table_claim_verdict(

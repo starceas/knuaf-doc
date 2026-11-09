@@ -616,6 +616,43 @@ class RepeatedLabelConsumerTests(_ChainCase):
         self.assertEqual({issue["fact_id"] for issue in issues}, set(self.YEARS))
 
 
+class RepeatedClaimInClauseTests(_ChainCase):
+    """One clause restates the same claim twice (W-D3 @Roh 중요①).
+
+    Every claim in the clause must be checked: a first correct amount must
+    not silence a second, different one, while restating the same amount
+    still passes.
+    """
+
+    FACT = "hort-sales-2027"
+
+    def register(self):
+        mapping = self.single_row(fact_id=self.FACT)
+        self.core.apply(self.root, self.build(mapping),
+                        self.core.load(self.root)["revision"])
+        items, blocked = self.core._finance_check_items(self.core.load(self.root))
+        self.assertIsNone(blocked)
+        return [item for item in items if item["fact_id"] == self.FACT]
+
+    def prose(self, first, second):
+        return (f"합성농장의 2027년 판매금액은 {first:,}천원이고 "
+                f"합성농장의 2027년 판매금액은 {second:,}천원이다.\n")
+
+    def test_second_different_amount_in_same_clause_fails(self):
+        items = self.register()
+        good = EXPECTED_VALUES[self.FACT]
+        text = self.prose(good, good + 10_000)
+        issues = runtime("gg_school_excel").crosscheck_body(text, items)
+        self.assertEqual({issue["fact_id"] for issue in issues}, {self.FACT})
+
+    def test_same_amount_restated_in_same_clause_passes(self):
+        items = self.register()
+        good = EXPECTED_VALUES[self.FACT]
+        text = self.prose(good, good)
+        self.assertEqual(runtime("gg_school_excel").crosscheck_body(text, items),
+                         [])
+
+
 class LegacyConflictTests(_ChainCase):
     """A v0.4.7 registration is told apart from an ordinary value change."""
 
