@@ -309,6 +309,148 @@ class UnitTests(ContractCase):
         self.assertFalse(b.unit_price_matches(won_per_600g, won_per_kg))
 
 
+class ScopePossessiveAndYearSuffixTests(ContractCase):
+    """v0.4.8 ⓑ: the sentence crosscheck accepts the natural possessive
+    `의` after the scope and a `년` suffix after a numeric-only period.
+
+    The scope/period/label/amount/unit comparison itself is unchanged —
+    only the boundary between scope, period and label widens.  The A26
+    workbook path (``crosscheck_body_workbook`` /
+    ``_crosscheck_with_workbook``) is NOT routed through this regex
+    (measured on 970dded: it keeps its own ``scope\\s+(\\d{4}년|\\d+년차)``
+    pattern), so the two A26 test modules stay unmodified regressions.
+    """
+
+    LABEL = "1차년도 투자 소요액"
+
+    def _items(self, *, period="2027", scope="합성학생농장",
+               value="50000", unit="천원", label=None):
+        return [{"fact_id": "hort-invest-year1",
+                 "field_id": label or self.LABEL,
+                 "value": value, "unit": unit, "period": period,
+                 "scope": scope}]
+
+    def assertPass(self, text, **kw):
+        gse = runtime("gg_school_excel")
+        self.assertEqual([], gse.crosscheck_body(text, self._items(**kw)),
+                         text)
+
+    def assertFail(self, text, **kw):
+        gse = runtime("gg_school_excel")
+        issues = gse.crosscheck_body(text, self._items(**kw))
+        self.assertTrue(issues, text)
+
+    def test_scope_possessive_and_year_suffix_pass(self):
+        """Design §1 rows 1, 2 and 4 flip from FAIL to PASS."""
+        for text in (
+            "합성학생농장의 2027년 1차년도 투자 소요액은 50,000천원이다.",
+            "합성학생농장 2027년 1차년도 투자 소요액은 50,000천원이다.",
+            "2027년 합성학생농장의 1차년도 투자 소요액은 50,000천원이다.",
+            "2027년 합성학생농장 1차년도 투자 소요액은 50,000천원이다.",
+        ):
+            with self.subTest(text=text):
+                self.assertPass(text)
+
+    def test_existing_bare_form_still_passes(self):
+        """Design §1 row 3 stays PASS (unchanged behavior)."""
+        self.assertPass("합성학생농장 2027 1차년도 투자 소요액은 50,000천원이다.")
+
+    def test_widened_boundary_never_accepts_a_wrong_value(self):
+        self.assertFail("합성학생농장의 2027년 1차년도 투자 소요액은 99,999천원이다.")
+        self.assertFail("2027년 합성학생농장의 1차년도 투자 소요액은 99,999천원이다.")
+
+    def test_widened_boundary_never_accepts_a_wrong_unit(self):
+        self.assertFail("합성학생농장의 2027년 1차년도 투자 소요액은 50,000만원이다.")
+
+    def test_widened_boundary_never_accepts_a_wrong_year(self):
+        self.assertFail("합성학생농장의 2028년 1차년도 투자 소요액은 50,000천원이다.")
+        self.assertFail("2028년 합성학생농장의 1차년도 투자 소요액은 50,000천원이다.")
+
+    def test_doubled_year_suffix_does_not_match(self):
+        """A numeric period accepts exactly one `년`; `2027년년` is not a
+        claim position."""
+        self.assertFail("합성학생농장의 2027년년 1차년도 투자 소요액은 50,000천원이다.")
+        self.assertFail("2027년년 합성학생농장의 1차년도 투자 소요액은 50,000천원이다.")
+
+    def test_year_suffix_with_other_trailing_josa_does_not_match(self):
+        """`2027년도`/`2027년경` are not the declared period either."""
+        self.assertFail("합성학생농장의 2027년도 1차년도 투자 소요액은 50,000천원이다.")
+        self.assertFail("합성학생농장의 2027년경 1차년도 투자 소요액은 50,000천원이다.")
+
+    def test_numeric_period_is_not_matched_as_a_substring(self):
+        """`20270` right after the scope and `120270` before it must not
+        be read as the declared 2027."""
+        self.assertFail("합성학생농장의 20270 1차년도 투자 소요액은 50,000천원이다.")
+        self.assertFail("합성학생농장의 120270 1차년도 투자 소요액은 50,000천원이다.")
+        self.assertFail("120270 합성학생농장의 1차년도 투자 소요액은 50,000천원이다.")
+        self.assertFail("20270 합성학생농장의 1차년도 투자 소요액은 50,000천원이다.")
+
+    def test_scope_is_not_matched_inside_a_longer_word(self):
+        """Boundary check in isolation: the scope must start a word, so
+        `합성농장` never supplies the scope `농장` (both orderings).
+
+        The label is stated explicitly on every row: with the default
+        label the sentence has no claim position at all and the negative
+        assertion would hold for the wrong reason.
+        """
+        self.assertFail("합성농장의 2027년 매출액은 50,000천원이다.",
+                        scope="농장", value="50000", label="매출액")
+        self.assertFail("2027년 합성농장의 매출액은 50,000천원이다.",
+                        scope="농장", value="50000", label="매출액")
+        self.assertFail("2027년 합성농장 매출액은 50,000천원이다.",
+                        scope="농장", value="50000", label="매출액")
+        self.assertPass("2027년 농장 매출액은 50,000천원이다.",
+                        scope="농장", value="50000", label="매출액")
+
+    def test_scope_followed_by_a_non_space_does_not_match(self):
+        """`농장A의 …` is not the scope `농장`: the widened scope boundary
+        accepts only `의` or whitespace, never another word character.
+
+        The exact-scope row is the positive control: it proves the claim
+        position in the failing rows is otherwise detectable, so the
+        negative rows fail on the boundary and not on the sentence shape.
+        """
+        self.assertPass("농장 2027년 매출액은 50,000천원이다.",
+                        scope="농장", value="50000", label="매출액")
+        self.assertFail("농장A의 2027년 매출액은 50,000천원이다.",
+                        scope="농장", value="50000", label="매출액")
+        self.assertFail("농장A 2027년 매출액은 50,000천원이다.",
+                        scope="농장", value="50000", label="매출액")
+
+    def test_possessive_is_not_swallowed_by_another_word(self):
+        """The optional `의` must be the possessive, not the head of
+        `…의견`; otherwise a different word would open the claim."""
+        self.assertFail("합성학생농장의견 2027년 1차년도 투자 소요액은 50,000천원이다.")
+        self.assertFail("2027년 합성학생농장의견 1차년도 투자 소요액은 50,000천원이다.")
+
+    def test_korean_ending_period_takes_no_year_suffix(self):
+        """`2026년` and `1년차` already end in a Korean letter; a `년`
+        tail would accept the non-word `2026년년`."""
+        self.assertPass("합성농장 2026년 매출액은 250 천원이다.",
+                        period="2026년", scope="합성농장",
+                        value="250", label="매출액")
+        self.assertFail("합성농장 2026년년 매출액은 250 천원이다.",
+                        period="2026년", scope="합성농장",
+                        value="250", label="매출액")
+        self.assertPass("농장A 1년차 매출액은 1,000 천원이다.",
+                        period="1년차", scope="농장A",
+                        value="1000", label="매출액")
+        self.assertFail("농장A 1년차년 매출액은 1,000 천원이다.",
+                        period="1년차", scope="농장A",
+                        value="1000", label="매출액")
+
+    def test_specialty_crop_sentence_unchanged(self):
+        """Design §1-1 #2/#3: the specialty-crop shape (period
+        `2026년`, scope `합성농장`) keeps its exact-match semantics."""
+        gse = runtime("gg_school_excel")
+        items = [{"field_id": "매출액", "value": "250", "unit": "천원",
+                  "period": "2026년", "scope": "합성농장"}]
+        self.assertEqual(
+            [], gse.crosscheck_body("합성농장 2026년 매출액은 250 천원이다.", items))
+        self.assertTrue(
+            gse.crosscheck_body("합성농장 2026년 매출액은 251 천원이다.", items))
+
+
 class TableContextReuseTests(ContractCase):
     def test_spaced_note_belongs_only_to_preceding_table(self):
         text = ("표 1. 첫 계획\n|항목|값|\n|---|---|\n|수입|1|\n"

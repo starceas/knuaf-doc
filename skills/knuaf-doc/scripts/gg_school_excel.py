@@ -1849,15 +1849,24 @@ def crosscheck_body(text, values):
 
         scope = re.escape(expected_scope)
         period = re.escape(expected_period)
+        # v0.4.8 ⓑ: a natural Korean sentence writes the owner with 의
+        # (합성학생농장의 2027년 …) and a bare year as 2027년.  The unit of
+        # comparison (scope/period/label/value/unit) is untouched — only
+        # these two boundaries widen.  A `년` tail is added ONLY to a
+        # numeric-only period: appending it to `2026년`/`1년차` would accept
+        # the non-word `2026년년`.  `(?<!\w)` still guards both orderings, so
+        # `농장A`/`12027` cannot masquerade as `농장`/`2027`.
+        scope_part = scope + r"(?:의)?"
+        period_part = period + (r"(?:년)?" if expected_period.isdigit() else "")
         claim_pattern = re.compile(
             r"(?<!\w)(?:"
-            + scope
+            + scope_part
             + r"\s+"
-            + period
+            + period_part
             + "|"
-            + period
+            + period_part
             + r"\s+"
-            + scope
+            + scope_part
             + r")\s+"
             + r"(?P<label>"
             + re.escape(label)
