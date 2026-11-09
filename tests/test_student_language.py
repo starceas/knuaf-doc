@@ -322,5 +322,47 @@ class OptionCardTests(unittest.TestCase):
                         "보기 카드에 [Qn-m] 제목이 없다")
 
 
+class SearchPrivacyTests(unittest.TestCase):
+    """검색어 개인정보 규칙 (ORDER-W-D 추가 절, 형님 결정 ts 1794230407).
+
+    앱 AI 인터넷 검색(v0.6.2)은 학생 허락 없이 허용한다. 대신 검색어에
+    넣지 말아야 할 개인정보를 SKILL.md에 명시하고, 금지 예시가 '써도 됨'
+    쪽에 빠지지 않게 잠근다.
+    """
+
+    # 금지 예시: 이름·생년월일/정확한 나이·읍면 이하 주소·지번·연락처·
+    # 학번·학생 본인을 식별하는 농장 상호. 규칙 문장에 그대로 있어야 한다.
+    FORBIDDEN_EXAMPLES = (
+        "이름", "생년월일", "정확한 나이", "읍면 이하 주소", "지번",
+        "연락처", "학번", "농장 상호",
+    )
+
+    def _rule_text(self):
+        skill = (SKILL_ROOT / "SKILL.md").read_text(encoding="utf-8")
+        hits = [ln for ln in skill.splitlines() if "인터넷 검색은" in ln]
+        self.assertTrue(hits, "검색어 개인정보 규칙 문장이 없다")
+        return hits
+
+    def test_search_privacy_rule_exists_with_allow_and_deny_lists(self):
+        for ln in self._rule_text():
+            self.assertIn("써도 됨", ln)
+            self.assertIn("쓰지 않음", ln)
+            self.assertIn("시·군", ln)
+            self.assertIn("연령대", ln)
+
+    def test_forbidden_examples_sit_on_the_deny_side(self):
+        for ln in self._rule_text():
+            allow, _, deny = ln.partition("쓰지 않음")
+            self.assertTrue(deny, "'쓰지 않음' 구분자 없음")
+            for example in self.FORBIDDEN_EXAMPLES:
+                with self.subTest(example=example):
+                    self.assertIn(example, deny,
+                                  "%r — 규칙의 '쓰지 않음' 쪽에 있어야 한다" % example)
+            # 허용 쪽 키워드만 세고 금지 예시가 '이름'을 포함하진 않음
+            for example in self.FORBIDDEN_EXAMPLES:
+                # example이 허용 쪽에만 나타나면 allow 키워드 검사를 우회할 수 있다
+                self.assertIn(example, deny)
+
+
 if __name__ == "__main__":
     unittest.main()
