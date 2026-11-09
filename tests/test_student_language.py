@@ -12,6 +12,7 @@
 """
 
 from pathlib import Path
+import re
 import unittest
 
 SKILL_ROOT = Path(__file__).resolve().parents[1] / "skills" / "knuaf-doc"
@@ -22,6 +23,8 @@ FENCE_CLOSE = "```"
 #: 학생에게 보이는 글에 쓰면 안 되는 말.
 #: 앞 8개는 기존 금지 목록(SKILL.md·interview-ui.md), 다음 8개는 형님 맥
 #: 실사례에서 새로 확인된 말, 나머지는 결과 코드·검사 이름·도구 이름이다.
+#: 결과 코드는 v0.4.8에서 새로 문서화한 것까지 모두 넣는다 — 코드명이 학생
+#: 안내 앞에 그대로 붙으면 이 시험이 막는다.
 FORBIDDEN_STUDENT_TERMS = (
     # 기존 목록
     "정본",
@@ -46,6 +49,12 @@ FORBIDDEN_STUDENT_TERMS = (
     "native_field_invalid",
     "invalid_spec",
     "body_finance_crosscheck",
+    "body_finance_crosscheck_scope",
+    "finance_plan_review_scope",
+    "school_excel_17_scope",
+    "farm_name_required",
+    "legacy_hort_fact_conflict",
+    "existing_fact_conflict",
     "fact ID",
     "사실 ID",
     # 도구·실행환경 이름
@@ -56,9 +65,68 @@ FORBIDDEN_STUDENT_TERMS = (
     "gg_excel_facts",
 )
 
-#: 한 학생 보고에 함께 나오면 안 되는 전공 이름 묶음.
-#: ``원예`` 가 ``원예환경시스템`` 을 포함하므로 긴 이름을 따로 두지 않는다.
-MAJOR_GROUPS = ("특용작물", "과수", "낙농", "원예", "산업곤충")
+#: v0.4.8에서 새로 학생에게 보일 수 있는 결과 코드. 금지 목록에 하나라도
+#: 빠지면 학생 안내 앞에 코드명이 그대로 남을 수 있다.
+V048_RESULT_CODES = (
+    "farm_name_required",
+    "legacy_hort_fact_conflict",
+    "existing_fact_conflict",
+    "body_finance_crosscheck_scope",
+    "finance_plan_review_scope",
+    "school_excel_17_scope",
+)
+
+#: 전공 이름(학과 소속)으로 인식할 낱말. 등록 전공 밖의 학과 이름도 넣는다 —
+#: 학생 보고에 이 학생 전공이 아닌 학과 이름이 붙으면 잡아야 하기 때문이다.
+#: ``원예`` 가 ``원예환경시스템`` 을 포함하므로 겹치는 이름은 아래
+#: ``_majors_in`` 이 긴 이름 하나로 합쳐 센다.
+KNOWN_MAJOR_NAMES = (
+    "특용작물",
+    "원예환경시스템",
+    "원예",
+    "과수",
+    "낙농",
+    "산업곤충",
+    "채소",
+    "화훼",
+    "식량작물",
+    "조경",
+    "축산",
+    "말산업",
+    "수산",
+    "산림",
+)
+
+#: 전공 이름이 나오는 학생 블록과 그 블록이 말해야 하는 전공.
+#: (문서, 블록을 찾는 표지 문장, 기대 전공). 표지가 사라지거나 다른 전공이
+#: 섞이면 실패한다. 전공 이름이 있는데 이 표에 없는 블록도 실패한다 —
+#: 그래야 ``채소전공`` 같은 목록 밖 학과 이름을 끼워 넣는 오염이 막힌다.
+MAJOR_EXPECTATIONS = (
+    ("references/interview-guide.md",
+     "특용작물전공 / 도라지로 확인했습니다.",
+     "특용작물"),
+)
+
+#: ``native_field_invalid`` 표의 행. 칸 이름(모델용)은 백틱 목록, 오른쪽은
+#: 학생에게 그대로 보여 줄 말이다.
+NATIVE_FIELD_ROW = re.compile(
+    r"^\|\s*(?:`[a-z0-9_]+`(?:,\s*`[a-z0-9_]+`)*)\s*\|\s*([^|]+?)\s*\|\s*$")
+
+#: 표가 학생에게 매핑해야 하는 말 6개(DESIGN §5-5). 표와 블록이 같이
+#: 틀어지는 것을 막으려고 기대값을 여기에 고정한다.
+NATIVE_FIELD_WORDINGS = (
+    "시작 면적(㎡)",
+    "목표 면적(㎡)",
+    "시작 매출액(천원)",
+    "목표 매출액(천원)",
+    "시작 소득(천원)",
+    "목표 소득(천원)",
+)
+
+#: 학생 보기의 글자 접미(A)·B))와 숫자 보기(1)).
+LETTER_OPTION = re.compile(r"(?m)^\s*[A-Z][\).]\s")
+DIGIT_OPTION = re.compile(r"(?m)^\s*\d\)\s")
+QUESTION_HEADER = re.compile(r"^\[Q\d+(?:-\d+)?\]\s+\S")
 
 #: 울타리 블록이 있어야 하는 문서와 문서별 최소 개수. 블록을 지워서
 #: 통과하는 것을 막는다(개수를 줄이려면 이 표와 문서를 같이 고쳐야 한다).
@@ -67,7 +135,7 @@ MIN_BLOCKS_BY_FILE = {
     "SKILL.md": 1,
     "references/interview-ui.md": 5,
     "references/interview-guide.md": 30,
-    "references/outputs.md": 9,
+    "references/outputs.md": 14,
 }
 MIN_BLOCKS_TOTAL = sum(MIN_BLOCKS_BY_FILE.values())
 
@@ -110,6 +178,23 @@ def _hits(body, terms):
     return [term for term in terms if term.lower() in lowered]
 
 
+def _majors_in(body):
+    """블록이 말하는 전공 이름을 돌려준다. 긴 이름이 이기는 방식으로 센다."""
+    found = [name for name in KNOWN_MAJOR_NAMES if name in body]
+    return [name for name in found
+            if not any(name != other and name in other for other in found)]
+
+
+def _native_field_rows():
+    text = (SKILL_ROOT / "references" / "outputs.md").read_text(encoding="utf-8")
+    rows = [NATIVE_FIELD_ROW.match(line) for line in text.splitlines()]
+    return [match.group(1) for match in rows if match]
+
+
+def _first_line(body):
+    return next((line.strip() for line in body.splitlines() if line.strip()), "")
+
+
 class ForbiddenTermConstantTests(unittest.TestCase):
     def test_constant_is_a_flat_sequence_of_terms(self):
         self.assertIsInstance(FORBIDDEN_STUDENT_TERMS, tuple)
@@ -122,6 +207,12 @@ class ForbiddenTermConstantTests(unittest.TestCase):
     def test_constant_has_no_duplicates(self):
         lowered = [term.lower() for term in FORBIDDEN_STUDENT_TERMS]
         self.assertEqual(len(lowered), len(set(lowered)))
+
+    def test_every_v048_result_code_is_forbidden(self):
+        lowered = [term.lower() for term in FORBIDDEN_STUDENT_TERMS]
+        for code in V048_RESULT_CODES:
+            with self.subTest(code=code):
+                self.assertIn(code.lower(), lowered)
 
 
 class StudentBlockTests(unittest.TestCase):
@@ -146,21 +237,89 @@ class StudentBlockTests(unittest.TestCase):
                     % (name, counts.get(name, 0), minimum))
         self.assertGreaterEqual(sum(counts.values()), MIN_BLOCKS_TOTAL)
 
-    def test_progress_example_names_only_its_own_major(self):
-        found = _all_blocks()
-        self.assertTrue(found, "학생화면 블록이 하나도 없다")
-        checked = 0
-        for name, line, body in found:
-            present = [group for group in MAJOR_GROUPS if group in body]
+
+class MajorExampleTests(unittest.TestCase):
+    """"이 학생의 전공만 쓴다"를 문서 안에서 실제로 대조한다."""
+
+    def test_major_bearing_blocks_match_their_expected_major(self):
+        blocks = _all_blocks()
+        self.assertTrue(blocks, "학생화면 블록이 하나도 없다")
+        by_file = {}
+        for name, line, body in blocks:
+            if _majors_in(body):
+                by_file.setdefault(name, []).append((line, body))
+        covered = set()
+        for name, anchor, expected in MAJOR_EXPECTATIONS:
+            candidates = [(line, body)
+                          for line, body in by_file.get(name, ())
+                          if anchor in body]
+            self.assertEqual(
+                1, len(candidates),
+                "%s: 표지 %r 블록을 찾지 못했다" % (name, anchor))
+            line, body = candidates[0]
+            with self.subTest(file=name, line=line, major=expected):
+                self.assertEqual([expected], _majors_in(body),
+                                 "이 전공 예시에 다른 전공이 섞였다")
+            covered.add((name, line))
+        for name, entries in by_file.items():
+            for line, body in entries:
+                if (name, line) in covered:
+                    continue
+                self.fail("%s:%d: 전공 이름 %s 이(가) 있는데 기대 전공 표에 없다"
+                          % (name, line, _majors_in(body)))
+
+    def test_no_block_names_two_majors(self):
+        for name, line, body in _all_blocks():
+            majors = _majors_in(body)
             with self.subTest(file=name, line=line):
                 self.assertLessEqual(
-                    len(present), 1,
-                    "한 학생 보고에 전공이 섞였다: %s" % (present,))
-            checked += 1 if present else 0
-        self.assertGreaterEqual(checked, 2, "전공 이름이 있는 학생 예시가 2개 미만")
-        self.assertTrue(
-            any("원예" in body for _, _, body in found),
-            "원예환경시스템 학생 보고 예시가 없다")
+                    len(majors), 1,
+                    "한 학생 보고에 전공이 섞였다: %s" % (majors,))
+
+
+class ProgressTitleTests(unittest.TestCase):
+    """앱 1단계 파서가 제목 줄을 그대로 읽는다 — 전공 이름을 끼우지 않는다."""
+
+    TITLE = re.compile(r"^\*\*창업논문 진행 목록\*\* · 7단계 중 \d+단계")
+
+    def test_progress_title_matches_the_app_parser(self):
+        titles = [(name, line, _first_line(body))
+                  for name, line, body in _all_blocks()
+                  if "창업논문 진행 목록" in _first_line(body)]
+        self.assertTrue(titles, "진행 목록 제목 예시가 없다")
+        for name, line, title in titles:
+            with self.subTest(file=name, line=line):
+                self.assertRegex(title, self.TITLE)
+                self.assertNotIn("(", title.split("·")[0])
+
+
+class NativeFieldWordingTests(unittest.TestCase):
+    """코드→학생 말 표의 학생 말은 모두 검사되는 블록 안에 있어야 한다."""
+
+    def test_native_field_wording_lives_in_a_student_block(self):
+        rows = _native_field_rows()
+        self.assertEqual(list(NATIVE_FIELD_WORDINGS), rows,
+                         "outputs.md: 칸 이름 표의 학생 말 6행이 바뀌었다")
+        blocks = [body for _, _, body in _all_blocks()]
+        for wording in rows:
+            with self.subTest(wording=wording):
+                self.assertTrue(
+                    any(wording in body for body in blocks),
+                    "표의 학생 말 %r 이 학생화면 블록에 없다" % (wording,))
+
+
+class OptionCardTests(unittest.TestCase):
+    def test_option_lists_use_numbered_cards_with_a_question_header(self):
+        for name, line, body in _all_blocks():
+            with self.subTest(file=name, line=line, format="letter"):
+                self.assertEqual(
+                    [], LETTER_OPTION.findall(body),
+                    "학생 보기에 A)·B) 글자 보기를 썼다")
+            if DIGIT_OPTION.search(body):
+                with self.subTest(file=name, line=line, format="header"):
+                    self.assertRegex(
+                        _first_line(body), QUESTION_HEADER,
+                        "보기 카드에 [Qn-m] 제목이 없다")
 
 
 if __name__ == "__main__":
