@@ -416,7 +416,7 @@
     "tests/test_skillgaps_wp4_interview.py": {
       "note": "W1: extend the existing interview-gap regression contracts for major-body text drafts and their file-output boundaries. | W3: R1-01 stale body-support wording and R1-02 major-specific progress/completion criteria regression contracts. | W4: test HT2 format basis, student-confirmed year authority, and complete student notice with chapter-text alternative. | W5: assert the fixed ‘본문 Ⅰ~Ⅵ 초안’ phrase together with each major's existing chapter-count and progression guidance. | ORDER-30: regression on writing-year and start-year interview state transitions, unresolved choices, and direct alternate-year answers. | ORDER-37: same-turn dairy manuscript intake precedes dairy switch questions; unconfirmed manuscript facts remain candidates; confirmed dairy support boundaries and existing choice/value card formats are stated. | W8: 0.4.7 support-scope re-pin — fruit 16-sheet copy + 10/70 registered fact rows, hort receipt-chain profile, major body DOCX/PDF/HWPX limits, dairy `unsupported_finance_profile`. | W8 fix1: re-assert the major-body-draft link in every major section after the review found the link and its assertion were dropped together.",
       "origin": "transformed",
-      "sha256": "8cc92fe9eaa42fdaf8e325a7a542095a7412a7ab38f089cbf22a5be40b77b75b"
+      "sha256": "ccc37b224d9bafc61ccbbf076e23a4b66158f62b7e7b4f4f43a5b0bc78949d0f"
     },
     "tests/test_skillgaps_wp4_review.py": {
       "origin": "new",
@@ -740,5 +740,5 @@
     "verified_count": 280
   },
   "schema": "knuaf-doc/validation-bundle@3",
-  "validation_tree_sha256": "849e4b4c219f9a776f6d14fea5adac42954be393f51c0f5c8ee7e603dd207428"
+  "validation_tree_sha256": "c0538fc7edd1380415a8073695b68e41142090c4d0122cecca7d813ab0f8f91c"
 }
