@@ -1,6 +1,6 @@
 {
  "files": {
-  "SKILL.md": "31e97f1fc2ec006b52a4dc5e0db2a4ed81c5f2a18ea07090fcbf0d5a7c6e3a16",
+  "SKILL.md": "78a2f6278673170863d2fe4e9a3f27e2ce037860d65fb57db48e934b2011c878",
   "assets/templates/finance-template.xlsx": "6d3c9fe5e5992108a8bab18c0098edb0d808f0d14c099878a53939b17de88c7d",
   "references/benchmark-packs/aliases/crop-aliases.specialty_crops.json": "8e7abffc7b4244727b4732f558b722934dd8ea229c0057312d1ee7ea92c2df22",
   "references/benchmark-packs/aliases/major-aliases.json": "ccf6b7d94690b0d7ed99618b3d649eb10755849d12f1922960a25bd14a419ea5",
@@ -53,7 +53,7 @@
   "references/figure-research-routes.md": "35aa2ea1f1a33ed85f5883365f78b39198ac02441f541c349e6ccdd0632410f1",
   "references/finance-bible.md": "f83b99878f695e01c51b7a8a85a185a0969003aba0650028f7d501bd374de4c4",
   "references/finance-semantics.md": "4e8f5e1f60a18ab0d67794d797ff6f99aeb229660dfa61c3b21451f4fdb9860c",
-  "references/fruit-trees/README.md": "972ce18d6e972001402e1da1fdd37ab06eecfb7093a6e86f6657322d5c915d5e",
+  "references/fruit-trees/README.md": "df5d470972747fdd5909d13b5e5b196d925365cf619cc34b7867f66919ef3d19",
   "references/fruit-trees/finance-map-review.md": "df7f0276fc03dfd27ae1f6725da976d809ecc021b93349086b3b3bddfdd83142",
   "references/fruit-trees/fruit-finance-fact-map.draft.json": "306ddbe83750f57295e7069713a6daac37e1b5b3f01e3de7b5b431b650cfb4e7",
   "references/fruit-trees/fruit-finance-fact-map.json": "cacdeb61bc5e08184925e71249d28d66b81e8f686e1535d19b70cc4560649e5a",
@@ -83,7 +83,7 @@
   "references/lessons-learned.md": "70f613bdcabc89db616acb38ffae368e05c8c6050c366edde20fd078546aea5b",
   "references/locking.md": "8da00100e88e933b3064ee42505b56f25a90f81c81661bf3dd05b6a20674dff2",
   "references/major-body-draft.md": "8e823e3d767506dea8b4c2dbd875907607998bef871bfc7fbf9184652bc64473",
-  "references/majors.md": "aca32fce29090df4a07f89eb3c92579fb3353fd9efb8cab20a37db52081e9151",
+  "references/majors.md": "659756ca1745155c64af18d429061f485fc1ca91aea893a6c7e500ff04e98b31",
   "references/mid-work-questions.md": "5f229f8c1e5f2a2d886f55f21770ad400c071fe51754eb49e4816f1ac5aa9950",
   "references/model-routing.md": "966d503c90a062852706300f2b9297d1409cb681edc2a08f2efec07a374d58db",
   "references/narrative-expansion.md": "8830af4f6874fcd401b9be130fb594980720e940ecfadd961ed8c65940ba9166",

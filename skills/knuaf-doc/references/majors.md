@@ -16,15 +16,37 @@
 
 ## 과수 (fruit_trees, 모듈 0.2.0)
 
-학교 과수 양식(S01) 구조의 작성계획과 물량 검산까지 지원한다: `scripts/gg_fruit_plan.py <폴더>`가 등록 원본·연구 전달물·구역/식재집단/수확 배치/물량 이동 답변·검토 상태를 읽기 전용으로 보여 주고, `scripts/gg_orchard_production.py <폴더>`가 학생 입력만으로 생산량·배치 재고(kg)를 읽기 전용으로 검산한다(금액 계산은 하지 않음). 유효한 전공 바인딩이 있으면 [전공별 본문 초안(글)](major-body-draft.md)을 작성할 수 있다. 과수 서식 본문 파일(DOCX/HWPX/PDF), XLSX, 재무 계산은 `unsupported_output`으로 멈춘다. 등록 순서·집단 field ID·참조 XLSX 규칙은 [fruit-trees](fruit-trees/README.md)를 따른다.
+학교 과수 양식(S01) 구조의 작성계획·물량 검산·**본문 DOCX·PDF·HWPX 검토본**을 지원한다:
+- `scripts/gg_fruit_plan.py <폴더>`가 등록 원본·연구 전달물·구역/식재집단/수확 배치/물량 이동 답변·검토 상태를 읽기 전용으로 보여 준다.
+- `scripts/gg_orchard_production.py <폴더>`가 학생 입력만으로 생산량·배치 재고(kg)를 읽기 전용으로 검산한다(금액 계산은 하지 않음).
+- `build_docx.py <폴더> --major fruit_trees`가 S01 앞머리 순서(겉표지 → 표제면·제출서·인준서 → 목차)를 적용해 검토 전 DOCX를 만든다. 앞머리 역할은 표제면·제출서·인준서가 한 묶음이고, 물리 배치는 공용 기본값이라 학교 최종 서식 적합 판정은 별도다.
+- `gg_office.py word`(macOS Word 설치 시)로 PDF를, `build_hwpx.py <폴더> --major fruit_trees`로 HWPX를 만든다. HWPX는 쪽 나눔·가운데 정렬·목차 실제 쪽번호·표 폭·장 시작 쪽을 한글에서 사람이 확인해야 한다.
+- 재무 XLSX는 `fruit_16_sheet_v1` 프로필에 한해 열린다: 원본 sha256과 시트 순서·시트별 수식 지문이 실바이트에서 일치해야 사본 생성(`gg_excel_template.py clear`, 지도 `gg-xlsx-template-map/v1`)이 된다. 값 채우기(`gg_excel_fill.py`)는 **다른 스키마**(`gg-xlsx-fill-map/v1` + `template.sha256`)와 항목별 `role`·`period`·`source_note`·`editable is true`를 요구한다. 재계산값 금액 사실 등록(`gg_excel_facts.py`)은 native 재계산 영수증과 `gg-xlsx-fact-map/v1` 지도를 요구한다. 배포된 [등록용 사실 지도](fruit-trees/fruit-finance-fact-map.json)는 `gg-xlsx-fact-map/v1` 70행 중 매출액 계열 10행만 등록 경로(`cells`)에 두고, 2020 고정 물가 지수 구간에 수식으로 종속된 60행은 `held_cells`로 보류했다. `workbook`·`receipt` 해시는 저장소에서 비어 있어(`status: rows_reviewed_binding_pending_native_run`) native 재계산 실행 때 결속해야 한다. 본문 숫자를 등록된 엑셀값과 자동 대조하는 기능은 아직 과수 본문에서 쓸 수 없다.
+- **아직 안 되는 것**: 배포된 셀 지도는 사본 생성용이다 — 1,961건(clear 339 / preserve 1,622)은 clear/preserve 분류까지만 검토됐고 `period`·`editable`·`source_note`가 없어 값 채우기 지도로 쓸 수 없다. 등록용 사실 지도는 매출액 계열 10행만 열려 있고 나머지 60행은 경비 연도 정정을 기다린다. 본문 숫자 자동 대조는 아직 불가하다. 파이썬 재무 계산은 지원하지 않는다. 등록 순서·집단 field ID·참조 XLSX 규칙은 [fruit-trees](fruit-trees/README.md)를 따른다.
+
+유효한 전공 바인딩이 있으면 [전공별 본문 초안(글)](major-body-draft.md)을 작성할 수 있다.
 
 ## 원예환경시스템 (hort_env_systems, 모듈 0.2.0)
 
-질문·선택형 문서 계획·근거 규칙까지 지원한다: `scripts/gg_hort_plan.py --project <폴더>`가 원예 질문별 답변 상태(값 없음), 선배 전체논문의 장·부록 위치, 전공 교재 18시트 엑셀의 주의 목록(정본에 등록된 파일을 다시 해시해 일치할 때만)을 읽기 전용으로 보여 준다. 교재 엑셀은 공용 17시트 좌표와 호환되지 않으며 셀 값은 수업 예시다. 유효한 전공 바인딩이 있으면 [전공별 본문 초안(글)](major-body-draft.md)을 작성할 수 있다. 전용 18시트 재무 출력은 수신증이 있는 `hort_18_sheet_reconstructed_v1` 프로필과 등록된 단일 운반본·시트 정합성·금액 원천을 확인한 별도 조건에서만 열리며, 경계와 근거 규칙은 [hort-env-systems](hort-env-systems/README.md)를 따른다. 조건이 안 맞으면 원예 본문 파일·XLSX·재무 계산은 `unsupported_output`으로 멈춘다.
+질문·선택형 문서 계획·근거 규칙과 **본문 DOCX·PDF·HWPX 검토본**을 지원한다:
+- `scripts/gg_hort_plan.py --project <폴더>`가 원예 질문별 답변 상태(값 없음), 선배 전체논문의 장·부록 위치, 전공 교재 18시트 엑셀의 주의 목록(정본에 등록된 파일을 다시 해시해 일치할 때만)을 읽기 전용으로 보여 준다. 교재 엑셀은 공용 17시트 좌표와 호환되지 않으며 셀 값은 수업 예시다.
+- `build_docx.py <폴더> --major hort_env_systems`가 HT2 앞머리를 적용해 검토 전 DOCX를 만든다: 겉표지·표제면 두 장 뒤에 제출서·인준서·목차가 각각 별도 쪽으로 오고, 논문지도교수 신청서·심사위원 추천서는 본문에 넣지 않고 "신청서·추천서는 학교 서식으로 따로 제출" 안내를 넣는다. 지도교수는 제출서에 들어간다. 표지에는 계획명 줄이 없고(공백), 물리 배치는 공용 기본값이라 학교 최종 서식 적합 판정은 별도다.
+- `gg_office.py word`(macOS Word 설치 시)로 PDF를, `build_hwpx.py <폴더> --major hort_env_systems`로 HWPX를 만든다. HWPX는 쪽 나눔·가운데 정렬·목차 실제 쪽번호·표 폭·장 시작 쪽을 한글에서 사람이 확인해야 한다.
+- 재무 엑셀은 전용 18시트 경로만 열린다: `hort_18_sheet_reconstructed_v1`은 finance capability가 supported이고, 변환 영수증·native 영수증 사슬과 등록된 단일 운반본·시트 정합성·금액 원천을 확인해야 채택·내보내기가 된다. 공용 프로필 목록(`workbook_profiles`)이 비어 있어 일반 사본·채우기 경로는 없다.
+- 엑셀 재계산값은 사실로 등록되고 학교 서식 본문 DOCX·PDF까지 만들어진다. 다만 본문 숫자를 등록된 엑셀값과 자동 대조하는 기능은 아직 원예 본문에서 쓸 수 없다(등록 이름이 기계용이라 대조 대상이 막힘 — 알려진 한계, 다음 판에서 표 전개 방식으로 연다).
+- **아직 안 되는 것**: 일반(17시트) XLSX 사본·채우기, 파이썬 재무 계산. 경계와 근거 규칙은 [hort-env-systems](hort-env-systems/README.md)를 따른다.
+
+유효한 전공 바인딩이 있으면 [전공별 본문 초안(글)](major-body-draft.md)을 작성할 수 있다.
 
 ## 낙농 (dairy, 모듈 0.1.0)
 
-질문 목록·문서 계획·근거 검토까지 지원한다: `gg.py major-plan <폴더>`가 축종 스위치(`dairy_switch`: 젖소 착유 / 한우 번식·비육·일관), 학교 작성요령 기본 목차(앞부분, 본문 1~12장, 부록 1~10), 축종별 내용 치환을 읽기 전용으로 보여 준다. 유효한 전공 바인딩이 있으면 [전공별 본문 초안(글)](major-body-draft.md)을 장별로 작성할 수 있다. 본문 파일(DOCX/HWPX), 학교 28시트 엑셀 사본 채우기, 축산 재무 계산은 `unsupported_output`으로 멈추며 벤치마크 팩은 `empty_slot`이다. 목차 계약·축종 치환·서식·문체(S1)·리서치 경로는 [dairy](dairy/README.md)를 따른다.
+질문 목록·문서 계획·근거 검토와 **본문 DOCX·PDF·HWPX 검토본**을 지원한다:
+- `gg.py major-plan <폴더>`가 축종 스위치(`dairy_switch`: 젖소 착유 / 한우 번식·비육·일관), 학교 작성요령 기본 목차(앞부분, 본문 1~12장, 부록 1~10), 축종별 내용 치환을 읽기 전용으로 보여 준다.
+- `build_docx.py <폴더> --major dairy`가 학교 작성요령 앞부분 순서(겉표지 → 제출서 → 인준서 → 학부모 동의서 → 요약 → 감사의 글 → 목차, 이어서 표 목차·그림 목차)를 적용해 검토 전 DOCX를 만든다. 공식 물리 배치가 확인되지 않아 공용 기본값을 쓰고 가운데 정렬을 생략하며 "학교 양식 확인 필요" 안내를 넣는다.
+- `gg_office.py word`(macOS Word 설치 시)로 PDF를, `build_hwpx.py <폴더> --major dairy`로 HWPX를 만든다. HWPX는 쪽 나눔·정렬·목차 실제 쪽번호를 한글에서 사람이 확인해야 하며, 매니페스트의 앞머리 감지(`school_frontmatter`)는 낙농에서 `null`로 기록된다.
+- **아직 안 되는 것**: 학교 28시트 XLSX는 출력 종류는 선언돼 있지만 `dairy_hanwoo_28_sheet_v1`의 finance capability가 unsupported("낙농 학교 원본 구조 미등록 — 프로필 닫음")라 `unsupported_finance_profile`로 닫힌다. 축산 재무 계산도 지원하지 않는다. 벤치마크 팩은 `empty_slot`이다. 목차 계약·축종 치환·서식·문체(S1)·리서치 경로는 [dairy](dairy/README.md)를 따른다.
+
+유효한 전공 바인딩이 있으면 [전공별 본문 초안(글)](major-body-draft.md)을 장별로 작성할 수 있다.
 
 ## 미등록·미확정 전공
 
