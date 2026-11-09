@@ -1146,6 +1146,75 @@ def _reject_json_constant(value):
     raise ValueError("nonfinite spec number")
 
 
+def _correction_profile_transition(data, previous_profile):
+    """True only for a registered cell-bound correction that follows its base.
+
+    A formula-patch receipt may move a lineage from the base profile to a
+    corrected profile when the shipped reference set links the two and the
+    receipt's hash-bound map is that profile's registered correction spec.
+    The receipt must also record the spec hash and exactly the registered
+    cells, so a receipt that merely names the profile cannot pass.  Every
+    other profile change is still refused.
+    """
+    if (data.get("schema") != "gg-xlsx-formula-patch-receipt/v1"
+            or data.get("base_profile") != previous_profile
+            or data.get("workbook_profile") in (None, previous_profile)):
+        return False
+    try:
+        from gg_school_excel import WORKBOOK_REFERENCE_SET
+        data_set = json.loads(Path(WORKBOOK_REFERENCE_SET).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    entry = next((row for row in data_set.get("workbook_profiles") or []
+                  if isinstance(row, dict)
+                  and row.get("profile") == data["workbook_profile"]), None)
+    correction = (entry or {}).get("correction_spec")
+    if (not isinstance(correction, dict)
+            or entry.get("base_profile") != previous_profile):
+        return False
+    declared_map = data.get("map")
+    if not isinstance(declared_map, dict) or not isinstance(declared_map.get("path"), str):
+        return False
+    map_path = Path(declared_map["path"])
+    if not map_path.is_file():
+        return False
+    # The declared map hash, the bytes on disk and the registered spec must
+    # be one value: the receipt cannot point at a different map.
+    spec_hash = correction.get("sha256")
+    if (compute_sha256(map_path.read_bytes()) != spec_hash
+            or declared_map.get("sha256") != spec_hash):
+        return False
+    recorded = data.get("corrections")
+    if (not isinstance(recorded, dict)
+            or not isinstance(recorded.get("spec"), dict)
+            or recorded["spec"].get("sha256") != spec_hash
+            or recorded.get("cells") != correction.get("cells")):
+        return False
+    try:
+        mapped = json.loads(map_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    if not (isinstance(mapped, dict)
+            and mapped.get("workbook_profile") == data["workbook_profile"]
+            and mapped.get("base_profile") == previous_profile
+            and isinstance(mapped.get("source"), dict)
+            and mapped["source"].get("binding") == "cells"):
+        return False
+    # Exactly the registered cells, with the registered formulas.
+    registered = {(row.get("sheet"), row.get("cell"), row.get("new_formula"))
+                  for row in mapped.get("patches") or []
+                  if isinstance(row, dict)}
+    patched = data.get("patched")
+    if not isinstance(patched, list) or len(patched) != len(registered):
+        return False
+    bare = lambda value: (value[1:] if isinstance(value, str)
+                          and value.startswith("=") else value)
+    observed = {(row.get("sheet"), row.get("cell"), bare(row.get("new_formula")))
+                for row in patched if isinstance(row, dict)}
+    return observed == {(sheet, cell, bare(formula))
+                        for sheet, cell, formula in registered}
+
+
 def verify_template_lineage(input_file, receipt_paths):
     """Verify local operation ancestry, never financial or human approval."""
     if not receipt_paths:
@@ -1261,7 +1330,8 @@ def verify_template_lineage(input_file, receipt_paths):
         if schema != "native_excel" and profile is not None:
             if not isinstance(profile, str) or not profile:
                 raise ValueError("invalid lineage workbook profile")
-            if workbook_profile is not None and profile != workbook_profile:
+            if (workbook_profile is not None and profile != workbook_profile
+                    and not _correction_profile_transition(data, workbook_profile)):
                 raise ValueError("workbook profile changed within lineage")
             workbook_profile = profile
         elif (schema != "native_excel" and workbook_profile not in
@@ -1274,6 +1344,9 @@ def verify_template_lineage(input_file, receipt_paths):
         rows.append({
             "path": str(path), "sha256": previous_receipt, "schema": schema,
             "operation_status": operation_status, "output_sha256": output_hash,
+            # The profile in force after this receipt; a registered correction
+            # changes it here, and every later row keeps the new value.
+            "workbook_profile": workbook_profile,
         })
     if compute_sha256(Path(input_file).read_bytes()) != previous_output:
         raise ValueError("template lineage does not reach the current workbook")
