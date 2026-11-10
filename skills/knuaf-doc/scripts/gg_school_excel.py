@@ -1882,9 +1882,14 @@ def _classify_figure_head(head, unit):
         return "new_claim"
     match = _CLAIM_HEAD.search(tail)
     if match is not None and match.group("label") != unit:
+        label = match.group("label")
         before = tail[: match.start("label")]
+        # The stem alone decides: `내지` is a connector whatever particle
+        # follows it (`내지는`, `내지가`), and `또한`/`정도` likewise.  Only
+        # a stem outside the connector set can open a real claim.
         if (not before or before[-1] not in "0123456789.,") and (
             match.group().strip() not in _NON_CLAIM_WORDS
+            and label not in _NON_CLAIM_WORDS
         ):
             return "new_claim"
     return "conflict"

@@ -707,6 +707,25 @@ class RivalSecondAmountTests(ContractCase):
                 found = gse.find_rival_amounts(text, "천원", expected=50000)
                 self.assertEqual(["conflict"], [f["kind"] for f in found], found)
 
+    def test_connector_with_particle_is_not_a_claim_head(self):
+        """`내지는` / `또한은` — a connector plus a particle is still a connector.
+
+        Checking only the whole head word let every particle-suffixed
+        connector through (`내지|는` reads as label+particle).  The stem is
+        what decides.  Control before this fix: 126 of 147 shapes passed.
+        """
+        heads = ("내지는", "또한은", "정도는", "그리고는", "내지가", "혹은도",
+                 "또는은", "대략은", "아마도는", "같이는", "많이는", "무려는",
+                 "비슷하게는", "및은")
+        signs = ("", "+", "-", "\u2212", "\uFF0B", "\uFF0D", "\u00B1")
+        amounts = ("60,000천원", "60000천원", "60,000 천원")
+        for head in heads:
+            for sign in signs:
+                for amount in amounts:
+                    text = self.BASE + " " + head + " " + sign + amount + "이다."
+                    with self.subTest(head=head, sign=sign, amount=amount):
+                        self.assertTrue(self.crosscheck(text), text)
+
     def test_two_syllable_labels_stay_claim_heads(self):
         # The 2-syllable rule must not start rejecting real labels.
         for label in ("비용은", "경영비는", "총수입은", "판매비는", "인건비가",
