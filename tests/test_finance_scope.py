@@ -366,5 +366,28 @@ class RohContextAmountTests(ContractCase):
         self.assertEqual(([], None), core._finance_check_items(p))
 
 
+
+
+    def test_context_claimed_plan_omitted_blocks(self):
+        """W-D4: when only context amount is claimed and required plan is omitted -> blocked.
+
+        발주서 요구: ①참고 금액만 주장 + 필수 누락 → 고치기 전 통과·고친 뒤 blocked
+        ctx1(finance_role=context)만 claimed하고 plan1(finance_role=plan)은 누락.
+        _finance_check_items 결과: blocked with _CLAIMS_PARTIAL_BLOCK.format(n=1, m=0, k=1).
+        gg_core.py:3678 fix confirmed: claimed=True (ctx1 is claimed), 
+        missing_required=[plan1] -> blocked."""
+        core = runtime("gg_core")
+        p = {
+            "facts": {
+                "plan1": self._fact("50000", finance_role="plan"),
+                "ctx1": self._fact("30000", field_id="전년 매출액",
+                                   finance_role="context"),
+            },
+            "sections": {"fin": {"claims": [{"fact_id": "ctx1"}]}}}
+        items, blocked = core._finance_check_items(p)
+        # 발주서: expected blocked with _CLAIMS_PARTIAL_BLOCK.format(n=1, m=0, k=1)
+        # n=1: 1 required fact (plan1); m=0: 0 claimed from required (ctx1 is context, not plan); k=1: plan1 missing
+        expected = core._CLAIMS_PARTIAL_BLOCK.format(n=1, m=0, k=1)
+        self.assertEqual(blocked, expected)
 if __name__ == "__main__":
     unittest.main()
