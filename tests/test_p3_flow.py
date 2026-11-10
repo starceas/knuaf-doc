@@ -1953,10 +1953,13 @@ class BodyCrosscheckSectionsWiringTests(ContractCase):
         self.assertIn("필수 필드 누락: period", v2[0]["reason"])
 
     def test_unclaimed_required_fact_is_claim_plan_missing(self):
-        """The 'checked set shrinks to claimed subset' defect fixed:
-        with two required plan facts but claims covering only 'sales',
-        the legacy path stays silent on 'profit' (it only ever checks
-        claimed facts) while the v2 path reports CLAIM_PLAN_MISSING."""
+        """Two required plan facts but claims covering only 'sales'.
+
+        v0.4.8 ⓒ flips the legacy path here from silent to blocked: a
+        claims set naming only part of the eligible monetary facts no
+        longer shrinks the checked set, so the omitted 'profit' cannot
+        pass unnoticed.  The v2 path's CLAIM_PLAN_MISSING finding is
+        unchanged — both report the same omission at different levels."""
         core = runtime("gg_core")
         root = self.make_project()
         claims = [_plan_claim("sales", "매출액", "매출액은 1,000천원",
@@ -1964,7 +1967,16 @@ class BodyCrosscheckSectionsWiringTests(ContractCase):
         p = _seed_plan_sections(root, claims)
         report = core.checks(root, p)
         ids = {(r["check_id"], r["target"]) for r in report}
-        # legacy path verified silent on the omitted fact — the defect.
+        # legacy path: one blocked body row naming the real counts, and
+        # never a per-fact row (it did not check anything).
+        legacy = [r for r in report
+                  if r["check_id"] == "body_finance_crosscheck"]
+        self.assertEqual(1, len(legacy), legacy)
+        self.assertEqual("body", legacy[0]["target"])
+        self.assertEqual("blocked", legacy[0]["status"])
+        self.assertEqual(
+            core._CLAIMS_PARTIAL_BLOCK.format(n=2, m=1, k=1),
+            legacy[0]["reason"])
         self.assertNotIn(("body_finance_crosscheck", "profit"), ids)
         v2 = [r for r in report
               if r["check_id"] == "body_finance_crosscheck_v2"]

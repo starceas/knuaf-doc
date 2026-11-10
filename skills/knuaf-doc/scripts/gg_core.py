@@ -170,6 +170,8 @@ def load(root):
 # or keys that merely look like identifiers.
 _DIAG_CODES = frozenset({
     "duplicate_path", "fact_metadata_invalid", "fact_enum_invalid",
+    # v0.4.8 ⑫: paper() spec rejections name the offending field.
+    "spec_field_invalid", "native_field_invalid",
 })
 _DIAG_FIELDS = frozenset({
     # Output metadata and review records.
@@ -182,6 +184,15 @@ _DIAG_FIELDS = frozenset({
     # Fact metadata accepted by validate_metadata.
     "meaning_id", "measure", "finance_role", "kind", "unit",
     "currency", "denominator", "basis", "answer_state", "verification",
+    # Paper spec fields a rejection may name, including every spelling
+    # ``_NATIVE_FIELD_ALIASES`` accepts (a refused key is reported as the
+    # student wrote it).
+    "writing_year", "start_year",
+    "start_area_m2", "area_m2", "target_area_m2", "goal_area_m2",
+    "start_sales_thousand", "sales_thousand",
+    "target_sales_thousand", "goal_sales_thousand",
+    "start_profit_thousand", "profit_thousand",
+    "target_profit_thousand", "goal_profit_thousand",
 })
 
 
@@ -3562,13 +3573,23 @@ def _economic_output_fresh(root, p, output):
     return False
 
 
+_CLAIMS_PARTIAL_BLOCK = (
+    "본문 숫자 확인 보류: 엑셀에서 가져온 금액 {n}개 중 {m}개만 "
+    "본문 확인 대상으로 정해져 있음(빠진 금액 {k}개). "
+    "빠진 금액도 확인 대상에 넣어야 숫자 확인을 할 수 있음"
+)
+
+
 def _finance_check_items(p):
     """Select provided monetary facts for the body crosscheck.
 
     ``sections[].claims`` selects the checked facts only when every section
     carries an explicit claims list; a mixed or unregistered project falls
     back to checking all facts so nothing is dropped silently.  An
-    all-empty claims set cannot switch the check off — it blocks instead.
+    all-empty claims set cannot switch the check off — it blocks instead,
+    and so does a claims set that covers only part of the eligible
+    monetary facts: a shortened set would hide every omitted amount
+    behind a green check.
     ``sources[].claims`` are source claims, not body claims, and are never
     consulted here.  Returns (items, blocked_reason).
 
@@ -3583,6 +3604,28 @@ def _finance_check_items(p):
     this check). Signature and legacy '천원'-only behavior for values
     already passing the old predicate are preserved unchanged.
     """
+    def required_body_fid(fid):
+        """Whether this fact is a REQUIRED body claim (must be claimed or
+        the check blocks).
+
+        W-D2 @Roh 중요②: reference amounts (`finance_role == "context"`,
+        e.g. 전년 매출액) are NOT required body claims — the baseline
+        (4a32d0c) never forced them and ``_body_check_items`` already
+        treats them as non-required. Context facts stay CHECKABLE: if a
+        context fact is claimed, it is still crosschecked (a wrong
+        claimed value still fails). Only the FINANCE_GATE_PROFIT copy
+        stays fully excluded from the body path — that is interview
+        context, not a body amount.
+        """
+        f = p["facts"][fid]
+        if f.get("finance_role") == "context":
+            return False
+        return (
+            f.get("answer_state") == "provided"
+            and f.get("unit") in _finance_body_mod()._MONETARY_UNITS
+            and f.get("value") is not None
+        )
+
     def eligible(fid):
         f = p["facts"][fid]
         return (
@@ -3612,6 +3655,7 @@ def _finance_check_items(p):
         isinstance(s.get("claims"), list) for s in sections.values()
     )
     eligible_ids = [fid for fid in p["facts"] if eligible(fid)]
+    required_ids = [fid for fid in eligible_ids if required_body_fid(fid)]
     if not complete:
         return [item(fid) for fid in eligible_ids], None
     claimed = list(
@@ -3623,10 +3667,20 @@ def _finance_check_items(p):
         )
     )
     if not claimed:
-        if eligible_ids:
+        if required_ids:
             return [], "모든 절의 본문 주장(claims)이 빈 목록: 재무 본문 대조 불가"
         return [], None
-    return [item(fid) for fid in claimed if eligible(fid)], None
+    # W-D2 @Roh 중요②: only required (plan) amounts are forced into
+    # claims. A context amount claimed by the author stays checkable
+    # below; an unclaimed context amount does NOT block.
+    claimed_required = [fid for fid in claimed if fid in required_ids]
+    missing_required = [fid for fid in required_ids if fid not in claimed]
+    if claimed and missing_required:
+        return [], _CLAIMS_PARTIAL_BLOCK.format(
+            n=len(required_ids), m=len(claimed_required),
+            k=len(missing_required))
+    claimed_eligible = [fid for fid in claimed if eligible(fid)]
+    return [item(fid) for fid in claimed_eligible], None
 
 
 def _body_check_items(p, *, registry):
@@ -6008,6 +6062,9 @@ def validate_paper_native_fields(spec):
             "severity": "error",
             "fact_id": None,
             "consumer_id": None,
+            # v0.4.8 ⑫: the refused spec key, so the caller can report it
+            # without parsing the prose reason.
+            "field": key,
             "location": {
                 "path": None, "section_id": None, "line": None,
                 "column": None, "table": None, "row": None, "cell": None,
@@ -6122,8 +6179,17 @@ def paper(root, spec_path, spec_bytes, requested_path, *, major_id=None,
     try:
         paper_years(spec)
     except (TypeError, ValueError) as error:
+        # v0.4.8 ⑫: name WHICH declared year field failed, mirroring the
+        # checks in ``gg_school_paper.years`` (that module is frozen) —
+        # only the field name is exposed, never the supplied value.
+        writing = spec.get("writing_year")
+        field = ("start_year"
+                 if type(writing) is int and 1900 <= writing <= 2100
+                 else "writing_year")
         raise _op("paper", "requested_output", "not_committed",
-                  "invalid_spec", detail=str(error)) from error
+                  "invalid_spec", detail=str(error),
+                  diag={"code": "spec_field_invalid", "field": field}
+                  ) from error
     spec.setdefault(
         "school_profile",
         {"school": "경기대학교", "department": "일반대학원 한국어교육학과"},
@@ -6134,12 +6200,17 @@ def paper(root, spec_path, spec_bytes, requested_path, *, major_id=None,
     # §9: the validator lives in this module as an external adapter on
     # core.paper — gg_school_paper.py is frozen.
     native_issues = validate_paper_native_fields(spec)
-    if any(i["status"] == "fail" for i in native_issues):
+    failed_native = [i for i in native_issues if i["status"] == "fail"]
+    if failed_native:
+        # v0.4.8 ⑫: the result carries the refused spec keys as an
+        # allowlisted diagnostic — the ``issues=`` list is not a result
+        # key, so it would otherwise never reach the caller.
         raise _op("paper", "requested_output", "not_committed",
                   "native_field_invalid",
                   detail="native 숫자 필드 형식 오류: " + "; ".join(
-                      i["reason"] for i in native_issues
-                      if i["status"] == "fail"),
+                      i["reason"] for i in failed_native),
+                  diag={"code": "native_field_invalid",
+                        "missing": [i["field"] for i in failed_native]},
                   issues=native_issues)
     try:
         body_override = _custom_paper_body(body_markdown)

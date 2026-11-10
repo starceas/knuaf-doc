@@ -1757,6 +1757,213 @@ def _table_claim_verdict(rows, context, label, expected_d, unit, period_keys, sc
 
 _MACHINE_FIELD_ID = re.compile(r"^[A-Za-z][A-Za-z0-9]*(?:[._][A-Za-z0-9]+)+$")
 
+_SECOND_AMOUNT = re.compile(
+    r"\s*(?:~|–|—|∼|과|와|및|또는|혹은|내지|,|/|-)\s*"
+    r"(?P<sign>[+\-\u2212\u00B1])?"
+    r"(?P<num>(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?)(?![\d.,])(?!\s*년)"
+    # W-D8: `, 3개 품목 기준` / `, -5℃ 저장` are counts and measures, not a
+    # second amount.  A bare number after a connector (`및 60,000`) still
+    # blocks; only a following non-money unit clears it.
+    r"(?!\s*(?:개|품목|작목|포기|그루|주|명|회|건|톤|kg|Kg|KG|g|㎏|ha|㎡|평|"
+    r"℃|°C|%|리터|L|ℓ|시간|분|초|년|월|일|차|배|번|미터|m|cm|mm))"
+)
+
+
+def _has_second_amount(clause, amount_end, unit_match, amount_text=None):
+    """A matching `50,000천원` must not head `50,000천원~60,000천원` /
+    `50,000천원과 60,000천원` / `50,000천원 및 60,000천원` and still pass
+    (W-D2 @Roh 중요①, W-D6 @PR#111 P2).
+
+    The connector set covers ranges, parallels and enumerations (`및`,
+    `또는`, `혹은`, `내지`, comma, slash, hyphen).  A thousands separator
+    inside one amount (`50,000`) never reaches this check — the first
+    amount is consumed whole before ``amount_end`` — and a trailing
+    `년` keeps a year (`, 2028년 매출액은 …`) from reading as a second
+    amount.
+
+    This gate now only covers what the value scan cannot judge: a figure
+    that carries no unit at all (`및 60,000`) and a verbatim duplicate of
+    the checked figure (`, 50,000천원` twice, pinned since W-D7).  Every
+    other figure goes to :func:`find_rival_amounts`, which compares the
+    signed decimal — so `50,000.0천원` (same value, different spelling)
+    passes while `50,000.1천원` and `-50,000천원` fail (Roh confirm5)."""
+    after = clause[amount_end:].lstrip()
+    if unit_match is not None:
+        after = after[len(unit_match.group()):]
+    match = _SECOND_AMOUNT.match(after)
+    if match is None:
+        return False
+    rest = after[match.end():].lstrip()
+    if unit_match is not None:
+        has_unit = rest.startswith(unit_match.group())
+    else:
+        has_unit = bool(rest)
+    if not has_unit:
+        return True
+    if amount_text is None:
+        return True
+    plain = lambda value: fold_amount_text(value).replace(" ", "")
+    written = plain((match.group("sign") or "") + match.group("num"))
+    return written == plain(amount_text)
+
+
+# W-D8: a second amount may be joined by any glyph the writer likes.  The
+# connector list approach kept leaking (range → repeated claim → `및` →
+# comma with blanks/sign), so the scan below looks for the *same unit*
+# instead of a typographic join, and classifies what stands in front of the
+# figure.  `crosscheck_body` blocks only the `conflict` class; a figure that
+# a new claim head or a period introduces stays a separate claim.
+_AMOUNT_FOLD = str.maketrans(
+    {
+        "\uFF0C": ",",  # ，full-width comma
+        "\u3001": ",",  # 、ideographic comma
+        "\uFF1B": ";",  # ；
+        "\uFF1A": ":",  # ：
+        "\u3000": " ",  # ideographic space
+        "\u00A0": " ",  # no-break space
+        "\uFF0B": "+",  # ＋
+        "\uFF0D": "-",  # －
+        "\u2212": "-",  # −
+        "\u2010": "-",
+        "\u2011": "-",
+        "\u2012": "-",
+        "\u2013": "-",
+        "\u2014": "-",
+    }
+)
+
+# `비용은` / `매출액이` / `총수입도` — a label carrying a topic/subject
+# particle opens its own claim.  The label needs two or more syllables: a
+# one-syllable stem in front of a particle is a connector or an adverb that
+# happens to end in the same glyph (`또|는`, `혹|은`, `정|도`), never a claim.
+_CLAIM_HEAD = re.compile(r"(?P<label>[가-힣A-Za-z][가-힣A-Za-z0-9]+)(?:은|는|이|가|도)\s*$")
+# Connective and adverbial words that end in a particle shape but introduce
+# no claim of their own (`아마도`, `가까이`, `같이`, …).
+_NON_CLAIM_WORDS = frozenset(
+    (
+        # connectors
+        "또는", "혹은", "및", "내지", "그리고", "또한", "그러나", "하지만",
+        "따라서", "그런데", "즉", "예컨대",
+        # degree / approximation
+        "정도", "대략", "약간", "거의", "모두", "대개", "대체로", "대강",
+        # adverbs and manner words
+        "아마도", "가까이", "같이", "많이", "조금", "매우", "아주", "특히",
+        "더욱", "훨씬", "계속", "다시", "먼저", "함께", "서로", "스스로",
+        "마침", "이미", "아직", "반드시", "결국", "과연", "혹시", "비록",
+        "이처럼", "그처럼", "비슷하게", "마찬가지로", "무려", "겨우",
+    )
+)
+# `비용:` / `매출액 =` — a delimiter opens a claim only behind a label; a
+# bare `50,000천원:` is a juxtaposition, not a new claim.
+_DELIM_HEAD = re.compile(r"(?P<label>[가-힣A-Za-z][가-힣A-Za-z0-9]+)\s*[:=]\s*$")
+# `2028년` / `2년차` — a period in front of a figure starts a new claim.
+_PERIOD_TAIL = re.compile(r"\d\s*년(?:차)?\s*$")
+# `2028년 매출액은 …` — the period opens the tail itself.
+_PERIOD_HEAD = re.compile(r"^(?:19|20)\d{2}\s*년")
+
+
+def fold_amount_text(text):
+    """Fold full-width punctuation, odd spaces and dash variants for scanning.
+
+    Only the scan copies are folded; the caller's text is untouched, so
+    ``claim`` strings and offsets reported elsewhere keep the author's
+    glyphs.
+    """
+    return str(text or "").translate(_AMOUNT_FOLD)
+
+
+def _unit_amount_re(unit):
+    return re.compile(
+        # A figure may follow `,` (`50,000천원, 60,000천원`), but must not
+        # start inside a longer number: no digit immediately before, and no
+        # `,`/`.` followed by a digit (`1,234,567` is consumed whole).
+        r"(?<!\d)(?<![.,]\d)"
+        r"(?P<sign>[+\-\u00B1])?\s*"
+        # The fraction belongs to the value: `50,000.1천원` is not
+        # `50,000천원` (Roh confirm5 중요①).
+        r"(?P<num>(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?)\s*"
+        + re.escape(unit)
+        + r"(?![A-Za-z0-9/\u33A1])"
+    )
+
+
+def _classify_figure_head(head, unit):
+    """Why a figure stands where it does: ``conflict``, ``new_claim``, ``year``.
+
+    ``new_claim`` needs a real label in front of the particle — a topic or
+    subject particle glued to the previous amount's unit (`50,000천원이
+    60,000천원`) is a contradiction, not a new claim, so the label must not
+    itself follow a digit, and the unit word itself (`천원:` /
+    `천원 =`) is not a label.  The figure may sit right after a comma
+    (`50,000천원, 비용은 30,000천원`), so the tail up to the last clause
+    break is what gets classified.
+    """
+    tail = re.split(r"[,;]\s*", head)[-1].strip()
+    if _PERIOD_TAIL.search(tail) or _PERIOD_HEAD.match(tail):
+        return "year"
+    match = _DELIM_HEAD.search(tail)
+    if match is not None and match.group("label") != unit:
+        return "new_claim"
+    match = _CLAIM_HEAD.search(tail)
+    if match is not None and match.group("label") != unit:
+        label = match.group("label")
+        before = tail[: match.start("label")]
+        # The stem alone decides: `내지` is a connector whatever particle
+        # follows it (`내지는`, `내지가`), and `또한`/`정도` likewise.  Only
+        # a stem outside the connector set can open a real claim.
+        if (not before or before[-1] not in "0123456789.,") and (
+            match.group().strip() not in _NON_CLAIM_WORDS
+            and label not in _NON_CLAIM_WORDS
+        ):
+            return "new_claim"
+    return "conflict"
+
+
+def find_rival_amounts(text, unit, *, expected=None):
+    """Same-unit figures after a checked amount, with their standing.
+
+    Returns one entry per figure whose value differs from ``expected`` (pass
+    ``expected=None`` to keep every figure)::
+
+        {"text": "60,000천원", "value": "60000", "start": 30, "end": 39,
+         "kind": "conflict"}
+
+    The comparison is on the whole signed decimal, so `50,000.0천원` equals
+    `50,000천원` while `50,000.1천원` does not, and `-50,000천원` is a
+    different figure from `50,000천원` (Roh confirm5 중요①).  A `±` figure
+    is never equal to a plain one — it states two values at once.
+
+    ``kind`` is ``conflict`` when nothing separates the figure from the
+    claim it follows, ``new_claim`` when a label+particle or ``:``/``=``
+    introduces it, and ``year`` when a period introduces it.  Callers
+    decide the policy (block vs warn); this helper only reports.
+    """
+    folded = fold_amount_text(text)
+    pattern = _unit_amount_re(unit)
+    want = None
+    if expected is not None:
+        want = Decimal(str(expected).replace(",", ""))
+    found = []
+    for match in pattern.finditer(folded):
+        sign = match.group("sign")
+        value = Decimal(match.group("num").replace(",", ""))
+        if sign == "-":
+            value = -value
+        if want is not None and sign != "\u00B1" and value == want:
+            continue
+        head = folded[: match.start()].rstrip()
+        found.append(
+            {
+                "text": match.group().strip(),
+                "value": str(value),
+                "start": match.start(),
+                "end": match.end(),
+                "kind": _classify_figure_head(head, unit),
+            }
+        )
+    return found
+
+
 def crosscheck_body(text, values):
     """Check explicit scope/period/metric/amount/unit claims, not arbitrary prose.
 
@@ -1842,22 +2049,51 @@ def crosscheck_body(text, values):
         expected_scope = str(scope_req).strip()
 
         # Split text into lines/sentences
-        sentences = re.split(
-            r"(?:\r?\n)+|(?<=[^\d])\.(?:\s+|$)|(?<=\d)\.(?=[^\d\s]|\s+[^\d])|[;•·]+",
-            text,
+        _sentence_split = re.compile(
+            r"(?:\r?\n)+|(?<=[^\d])\.(?:\s+|$)|(?<=\d)\.(?=[^\d\s]|\s+[^\d])|[;•·]+"
         )
+        # W-D8: `;`/`·` break a sentence for claim matching but do not end
+        # the run a rival amount can hide in — `50,000천원;60,000천원` is one
+        # statement.  The rival scan below therefore uses the enclosing run,
+        # which stops only at a full stop or a line break.
+        _run_split = re.compile(
+            r"(?:\r?\n)+|(?<=[^\d])\.(?:\s+|$)|(?<=\d)\.(?=[^\d\s]|\s+[^\d])"
+        )
+        sentences = []
+        scans = []
+        for run in _run_split.split(text):
+            for sent in _sentence_split.split(run):
+                sentences.append(sent)
+                scans.append(run)
 
         scope = re.escape(expected_scope)
         period = re.escape(expected_period)
+        # v0.4.8 ⓑ: a natural Korean sentence writes the owner with 의
+        # (합성학생농장의 2027년 …) and a bare year as 2027년.  The unit of
+        # comparison (scope/period/label/value/unit) is untouched — only
+        # these two boundaries widen.  A `년` tail is added ONLY to a
+        # numeric-only period: appending it to `2026년`/`1년차` would accept
+        # the non-word `2026년년`.  `(?<!\w)` still guards both orderings, so
+        # `농장A`/`12027` cannot masquerade as `농장`/`2027`.
+        # W-D2 @Roh 중요①: the widened regex must not swallow a period or
+        # amount RANGE as a single occurrence, and must not let a first
+        # matching amount silence a second, different one in the same
+        # clause. Guard with the leading/trailing boundaries the old
+        # exact-match semantics guaranteed: reject the sentence when the
+        # matched period is embedded in a range (`2026~2027` on either
+        # side) or the matched amount is followed by a range/parallel
+        # second amount (`50,000~60,000`, `50,000과 60,000`).
+        scope_part = scope + r"(?:의)?"
+        period_part = period + (r"(?:년)?" if expected_period.isdigit() else "")
         claim_pattern = re.compile(
             r"(?<!\w)(?:"
-            + scope
+            + scope_part
             + r"\s+"
-            + period
+            + period_part
             + "|"
-            + period
+            + period_part
             + r"\s+"
-            + scope
+            + scope_part
             + r")\s+"
             + r"(?P<label>"
             + re.escape(label)
@@ -1866,39 +2102,125 @@ def crosscheck_body(text, values):
         unit_pattern = re.compile(re.escape(expected_unit) + r"(?![A-Za-z0-9/㎡])")
         found_match = False
         conflicting_claim = False
-        for sent in sentences:
+        rival_amount = False
+        for sent, scan in zip(sentences, scans):
             if label not in sent:
                 continue
 
-            # Split sentence into clauses
-            clauses = re.split(r",\s+(?=[^\d])", sent)
+            # Split sentence into clauses. A comma may open a new claim
+            # (`, 비용은 …`) but never a second amount of the amount in
+            # front of it: `,  60,000` / `, +60,000` must stay inside the
+            # clause so `_has_second_amount` sees the juxtaposition
+            # (W-D7 @Roh confirm4). Any run of blanks is consumed here,
+            # so the lookahead sees the amount's sign or digit, not a
+            # leftover space.
+            clauses = re.split(r",\s+(?=[^\d\s+\-\u2212])", sent)
             for clause in clauses:
-                claim = claim_pattern.search(clause)
-                if claim is None:
-                    continue
-                label_start = claim.start("label")
-                valid_occurrence = any(
-                    m.start() == label_start for m in re.finditer(re.escape(label), clause)
-                )
-                if not valid_occurrence:
-                    continue
-                amount = num_pattern.match(clause, claim.end())
-                if amount is None:
-                    conflicting_claim = True
-                    continue
-                unit = unit_pattern.match(clause[amount.end() :].lstrip())
-                actual = Decimal(amount.group().replace(",", ""))
-                decl = _display_places(clause, expected_unit)
-                if decl is None:
-                    target = expected_d
-                elif decl == "conflict":
-                    target = None
-                else:
-                    target = _round_half_up(expected_d, decl)
-                if unit is None or target is None or actual != target:
-                    conflicting_claim = True
-                else:
-                    found_match = True
+                # W-D3 @Roh 중요①: every claim in the clause must be
+                # checked, not just the first — a first correct amount
+                # must not silence a second, different one.
+                for claim in claim_pattern.finditer(clause):
+                    label_start = claim.start("label")
+                    valid_occurrence = any(
+                        m.start() == label_start for m in re.finditer(re.escape(label), clause)
+                    )
+                    if not valid_occurrence:
+                        continue
+                    # Period is part of a range ('2026~2027') — a range
+                    # occurrence is not the single declared period.
+                    # Check the period window only, so an unrelated later
+                    # range in the same clause does not false-positive.
+                    window_start = max(0, claim.start() - 12)
+                    window_end = min(len(clause), claim.end() + 12)
+                    window = clause[window_start:window_end]
+                    if re.search(r"\d\s*[~–—∼]\s*\d", window):
+                        conflicting_claim = True
+                        continue
+                    amount = num_pattern.match(clause, claim.end())
+                    if amount is None:
+                        conflicting_claim = True
+                        continue
+                    unit_tail = clause[amount.end() :].lstrip()
+                    unit = unit_pattern.match(unit_tail)
+                    if unit is None:
+                        # A same-unit figure may hide behind a slash the
+                        # unit lookahead rejects (`50,000천원/60,000천원`);
+                        # read the unit as matched so the ordinary rival
+                        # rules below judge it (책임자 확인5-2).  Only a
+                        # figure that carries the same unit counts: a slash
+                        # opening a compound unit (`천원/㎡`, `천원/10a`)
+                        # leaves `unit` unmatched and stays a plain unit
+                        # mismatch, including `/10a` whose digits alone
+                        # would otherwise look like an amount.
+                        if re.match(
+                            re.escape(expected_unit)
+                            + r"\s*/\s*[+\-\u2212\u00B1]?"
+                            r"(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?\s*"
+                            + re.escape(expected_unit),
+                            fold_amount_text(unit_tail),
+                        ):
+                            unit = re.match(re.escape(expected_unit), unit_tail)
+                    actual = Decimal(amount.group().replace(",", ""))
+                    decl = _display_places(clause, expected_unit)
+                    if decl is None:
+                        target = expected_d
+                    elif decl == "conflict":
+                        target = None
+                    else:
+                        target = _round_half_up(expected_d, decl)
+                    if unit is None or target is None or actual != target:
+                        # A rival figure can be glued to the unit with no
+                        # blank (`50,000천원50,000.1천원`); the unit lookahead
+                        # rejects the digit that follows, so that shape would
+                        # otherwise fail without the student hint (Roh
+                        # confirm5 중요①③).
+                        glued = re.match(
+                            re.escape(expected_unit)
+                            + r"(?=\s*[+\-\u2212\u00B1]?\d)",
+                            fold_amount_text(clause[amount.end() :]).lstrip(),
+                        )
+                        if (
+                            glued is not None
+                            and target is not None
+                            and actual == target
+                            and any(
+                                f["kind"] == "conflict"
+                                for f in find_rival_amounts(
+                                    scan, expected_unit, expected=target
+                                )
+                            )
+                        ):
+                            rival_amount = True
+                        conflicting_claim = True
+                    elif _has_second_amount(
+                        clause, amount.end(), unit, amount.group()
+                    ):
+                        # The connector gate still catches a figure with no
+                        # unit (`및 60,000`) and a verbatim repeat; every
+                        # other rival is judged by value below.
+                        conflicting_claim = True
+                        rival_amount = True
+                    else:
+                        # W-D8: one correct amount must not excuse a rival
+                        # same-unit figure elsewhere in the same sentence.
+                        # The check is sentence-wide because a comma may
+                        # split the rival into another clause, and the join
+                        # may be any glyph (`，`, `->`, ` = `, ` 약 `…).
+                        # `;`/`·` also separate claims without ending one,
+                        # so the scan covers the run those glyphs join and
+                        # stops only at a full stop or a line break.  A
+                        # figure a new claim head (`비용은`) or a period
+                        # (`2028년`) introduces is a separate claim.
+                        rival = [
+                            f for f in find_rival_amounts(
+                                scan, expected_unit, expected=target)
+                            if f["kind"] == "conflict"
+                        ]
+                        if rival:
+                            conflicting_claim = True
+                            rival_amount = True
+                        else:
+                            found_match = True
 
         for rows, context in tables:
             matched, conflicted = _table_claim_verdict(
@@ -1914,7 +2236,16 @@ def crosscheck_body(text, values):
             conflicting_claim = conflicting_claim or conflicted
 
         if not found_match or conflicting_claim:
-            issue["reason"] = "기간·단위·범위·출력 반올림 값 불일치"
+            # Keep the original reason verbatim — existing readers, tests and
+            # the app parser match it — and append the student's fix hint
+            # only when a rival same-unit amount is what blocked the claim.
+            reason = "기간·단위·범위·출력 반올림 값 불일치"
+            if rival_amount:
+                reason += (
+                    " · 같은 문장에 다른 금액이 함께 있습니다. "
+                    "그 금액이 전년·목표·일부 금액이면 문장을 나눠 쓰세요"
+                )
+            issue["reason"] = reason
             issues.append(issue)
 
     return issues

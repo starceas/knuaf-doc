@@ -25,7 +25,7 @@
   "cells": [
     {
       "fact_id": "hort-invest-total",
-      "field_id": "finance.invest_total",
+      "field_id": "총투자비 합계",
       "sheet": "4.투자계획",
       "cell": "C13",
       "period": "2027",
@@ -36,7 +36,7 @@
     },
     {
       "fact_id": "hort-invest-year1",
-      "field_id": "finance.invest_need",
+      "field_id": "1차년도 투자 소요액",
       "sheet": "4.투자계획",
       "cell": "C8",
       "period": "2027",
@@ -47,7 +47,7 @@
     },
     {
       "fact_id": "hort-loan-principal-2027",
-      "field_id": "finance.loan_principal",
+      "field_id": "원금상환액",
       "sheet": "5. 원리금상환계획",
       "cell": "D8",
       "period": "2027",
@@ -58,7 +58,7 @@
     },
     {
       "fact_id": "hort-loan-interest-2027",
-      "field_id": "finance.loan_interest",
+      "field_id": "이자상환액",
       "sheet": "5. 원리금상환계획",
       "cell": "E8",
       "period": "2027",
@@ -69,7 +69,7 @@
     },
     {
       "fact_id": "hort-facility-construction",
-      "field_id": "finance.facility_construction",
+      "field_id": "시설 총 시공비",
       "sheet": "6.시설계획",
       "cell": "C76",
       "period": "2027",
@@ -80,7 +80,7 @@
     },
     {
       "fact_id": "hort-sales-2027",
-      "field_id": "finance.sales_revenue",
+      "field_id": "판매금액",
       "sheet": " 7. 판매계획",
       "cell": "O25",
       "period": "2027",
@@ -91,7 +91,7 @@
     },
     {
       "fact_id": "hort-sales-2028",
-      "field_id": "finance.sales_revenue",
+      "field_id": "판매금액",
       "sheet": " 7. 판매계획",
       "cell": "O34",
       "period": "2028",
@@ -102,7 +102,7 @@
     },
     {
       "fact_id": "hort-sales-2029",
-      "field_id": "finance.sales_revenue",
+      "field_id": "판매금액",
       "sheet": " 7. 판매계획",
       "cell": "O43",
       "period": "2029",
@@ -113,7 +113,7 @@
     },
     {
       "fact_id": "hort-sales-2030",
-      "field_id": "finance.sales_revenue",
+      "field_id": "판매금액",
       "sheet": " 7. 판매계획",
       "cell": "O52",
       "period": "2030",
@@ -124,7 +124,7 @@
     },
     {
       "fact_id": "hort-sales-2031",
-      "field_id": "finance.sales_revenue",
+      "field_id": "판매금액",
       "sheet": " 7. 판매계획",
       "cell": "O61",
       "period": "2031",
@@ -135,7 +135,7 @@
     },
     {
       "fact_id": "hort-material-2027",
-      "field_id": "finance.material_cost",
+      "field_id": "영농자재비",
       "sheet": "9. 영농자재구매계획",
       "cell": "G15",
       "period": "2027",
@@ -146,7 +146,7 @@
     },
     {
       "fact_id": "hort-labor-2027",
-      "field_id": "finance.labor_cost",
+      "field_id": "인건비 계",
       "sheet": "11. 인건비계획",
       "cell": "I17",
       "period": "2027",
@@ -157,7 +157,7 @@
     },
     {
       "fact_id": "hort-overhead-2027",
-      "field_id": "finance.overhead_cost",
+      "field_id": "경비 계",
       "sheet": "12 .경비계획",
       "cell": "C26",
       "period": "2027",
@@ -168,7 +168,7 @@
     },
     {
       "fact_id": "hort-depreciation-2027",
-      "field_id": "finance.depreciation",
+      "field_id": "시설 감가상각비",
       "sheet": "13. 감가상각비계획 ",
       "cell": "E12",
       "period": "2027",
@@ -179,7 +179,7 @@
     },
     {
       "fact_id": "hort-expense-2027",
-      "field_id": "finance.operating_expense",
+      "field_id": "경비 합계",
       "sheet": "14. 생산원가계획",
       "cell": "C12",
       "period": "2027",
@@ -190,7 +190,7 @@
     },
     {
       "fact_id": "hort-production-cost-2027",
-      "field_id": "finance.production_cost",
+      "field_id": "총생산원가",
       "sheet": "14. 생산원가계획",
       "cell": "C25",
       "period": "2027",
@@ -201,7 +201,7 @@
     },
     {
       "fact_id": "hort-revenue-2027",
-      "field_id": "finance.income_statement_revenue",
+      "field_id": "매출액",
       "sheet": "15. 손익계획",
       "cell": "C6",
       "period": "2027",
@@ -212,7 +212,7 @@
     },
     {
       "fact_id": "hort-income-2027",
-      "field_id": "finance.income",
+      "field_id": "소득",
       "sheet": "16. 수익성분석",
       "cell": "G23",
       "period": "2027",
@@ -223,7 +223,7 @@
     },
     {
       "fact_id": "hort-net-income-2027",
-      "field_id": "finance.net_income",
+      "field_id": "순수익",
       "sheet": "16. 수익성분석",
       "cell": "G24",
       "period": "2027",
@@ -234,7 +234,7 @@
     },
     {
       "fact_id": "hort-assets-opening",
-      "field_id": "finance.total_assets",
+      "field_id": "자산총계",
       "sheet": "17. 추정대차대조표",
       "cell": "C30",
       "period": "2026",

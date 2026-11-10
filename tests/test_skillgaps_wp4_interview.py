@@ -226,13 +226,13 @@ class MajorBodyDraftContract(unittest.TestCase):
                 "과수: Ⅰ~Ⅳ 네 장", "낙농: 1~12 열두 장",
                 "스킬의 남은 일로 표시하지 않는다",
                 "⚑ 학생 몫 — 스킬 미지원", "전용 18시트 영수증 사슬 조건부",
-                "매출액 10행", "본문 숫자 자동 대조 불가"):
+                "매출액 10행"):
             with self.subTest(token=token):
                 self.assertIn(token, progress)
         self.assertNotIn("Ⅰ~Ⅵ 여섯 장의 절 원고", progress)
         self.assertIn("특용작물: 값 입력 + 실제 앱 재계산", progress)
         self.assertIn("원예환경시스템: 전용 18시트 프로필·영수증 사슬", progress)
-        self.assertIn("본문 숫자를 등록된 엑셀값과 자동 대조하는 기능은 아직 원예 본문에서 쓸 수 없다",
+        self.assertIn("본문 숫자는 등록된 엑셀값과 자동 대조할 수 있다",
                       progress)
     def test_dairy_json_command_does_not_claim_section_draft_saves_are_json(self):
         dairy = read("dairy/README.md")

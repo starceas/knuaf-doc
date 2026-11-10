@@ -31,6 +31,19 @@
 
 `lock-upgrade`의 결과에는 `target`이 없다. `recovery_id`·`receipt_path`·`preserved_paths`를 확인하고, 이어서 진행할 때는 `--resume <recovery_id>`를 쓴다([locking](locking.md)). 남은 임시 파일·잠금·보존 사본은 자동으로 지우지 않는다.
 
+## 결과 `detail` 코드 (v0.4.8)
+
+`paper`가 입력값 형식 때문에 exit 2로 멈출 때 결과 JSON의 `detail`에 어느 칸이 문제인지 담는다. `detail`은 아래 고정 코드와 고정 필드 이름만 남기고, 원문 문자열·경로·학생이 쓴 값은 담지 않는다. 이 절은 v0.4.8 결과 계약이며, `detail`이 없는 결과를 받으면 `reason`만으로 판단한다.
+
+| `detail.code` | `detail`의 나머지 키 | 뜻 |
+| --- | --- | --- |
+| `spec_field_invalid` | `field`: `start_year` 또는 `writing_year` | 그 연도 칸이 정수가 아니다(문자열·소수·범위 밖) |
+| `native_field_invalid` | `missing`: 형식이 틀린 칸 이름 목록 | 숫자만 받는 경제 칸에 글자·단위가 섞였다 |
+
+`native_field_invalid`의 `missing`은 시작·목표 × 면적·매출·소득의 12개 이름(`start_area_m2`/`area_m2`, `target_area_m2`/`goal_area_m2`, `start_sales_thousand`/`sales_thousand`, `target_sales_thousand`/`goal_sales_thousand`, `start_profit_thousand`/`profit_thousand`, `target_profit_thousand`/`goal_profit_thousand`) 중 학생이 실제로 쓴 키만 담는다. 목록에 없는 이름은 지우고, 남는 이름이 없으면 `missing` 키 자체를 넣지 않는다. 여러 칸이 틀리면 위 순서로 담는다.
+
+칸을 특정할 수 없는 `invalid_spec`는 `detail`이 붙지 않는다(결과 `reason` 값이다). 코드별로 학생에게 할 말은 [검사 결과를 학생 말로](outputs.md#검사-결과를-학생-말로)를 쓴다.
+
 ## 전공 계약 (공용 규칙 B)
 
 논문 본문·재무표·산출물을 만드는 경로(`export`, `paper`, `adopt-output`, `finance-tables`, `build_hwpx.py`, `build_docx.py`)는 다음 두 조건이 모두 맞아야 실행된다.
