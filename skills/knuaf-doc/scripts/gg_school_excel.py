@@ -1758,7 +1758,7 @@ def _table_claim_verdict(rows, context, label, expected_d, unit, period_keys, sc
 _MACHINE_FIELD_ID = re.compile(r"^[A-Za-z][A-Za-z0-9]*(?:[._][A-Za-z0-9]+)+$")
 
 _SECOND_AMOUNT = re.compile(
-    r"\s*(?:~|–|—|∼|과|와|및|또는|혹은|내지|,|/|-)\s*[+-]?"
+    r"\s*(?:~|–|—|∼|과|와|및|또는|혹은|내지|,|/|-)\s*[+\-\u2212]?"
     r"(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?(?![\d.,])(?!\s*년)"
 )
 
@@ -1910,8 +1910,14 @@ def crosscheck_body(text, values):
             if label not in sent:
                 continue
 
-            # Split sentence into clauses
-            clauses = re.split(r",\s+(?=[^\d])", sent)
+            # Split sentence into clauses. A comma may open a new claim
+            # (`, 비용은 …`) but never a second amount of the amount in
+            # front of it: `,  60,000` / `, +60,000` must stay inside the
+            # clause so `_has_second_amount` sees the juxtaposition
+            # (W-D7 @Roh confirm4). Any run of blanks is consumed here,
+            # so the lookahead sees the amount's sign or digit, not a
+            # leftover space.
+            clauses = re.split(r",\s+(?=[^\d\s+\-\u2212])", sent)
             for clause in clauses:
                 # W-D3 @Roh 중요①: every claim in the clause must be
                 # checked, not just the first — a first correct amount

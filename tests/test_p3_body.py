@@ -541,6 +541,60 @@ class SecondAmountConnectorTests(ContractCase):
         self.assertEqual(self.crosscheck(text), [])
 
 
+class SecondAmountAfterCommaTests(ContractCase):
+    """W-D7 @Roh confirm4: a comma joined second amount.
+
+    The clause split `",\\s+(?=[^\\d])"` backtracked the blank run, so
+    `,  60,000` / `, +60,000` split into a new clause and the second
+    amount was never compared with the first (W-D2).  Every blanks(0-3)
+    x sign(none, +, -, U+2212) combination must fail; a comma that opens
+    a genuinely new claim, a thousands separator and the 4a32d0c
+    baseline sentences must keep passing.
+    """
+
+    SIGNS = ("", "+", "-", "\u2212")
+
+    def _vals(self, value=50000):
+        return [{"fact_id": "f1", "field_id": "매출액", "value": value,
+                 "unit": "천원", "period": "2027", "scope": "농장A"}]
+
+    def crosscheck(self, text, **kw):
+        return runtime("gg_school_excel").crosscheck_body(text, self._vals(**kw))
+
+    def test_roh_two_sentences_fail(self):
+        for text in (
+            "농장A의 2027년 매출액은 50,000천원,  60,000천원이다.",
+            "농장A의 2027년 매출액은 50,000천원, +60,000천원이다.",
+        ):
+            with self.subTest(text=text):
+                self.assertTrue(self.crosscheck(text), text)
+
+    def test_blanks_times_sign_combinations_all_fail(self):
+        # Control group (bcdf891, before W-D7): passes incorrectly —
+        # blanks 0 + U+2212, blanks 1 with any sign, blanks 2-3 either way.
+        # Only blanks 0 with no sign / `+` / `-` was blocked.
+        for blanks in range(0, 4):
+            for sign in self.SIGNS:
+                text = ("농장A의 2027년 매출액은 50,000천원,"
+                        + " " * blanks + sign + "60,000천원이다.")
+                with self.subTest(blanks=blanks, sign=sign, text=text):
+                    self.assertTrue(self.crosscheck(text), text)
+
+    def test_thousands_separator_still_passes(self):
+        self.assertEqual(
+            self.crosscheck("농장A의 2027년 매출액은 1,234,567천원이다.",
+                            value=1234567), [])
+
+    def test_comma_opening_a_new_claim_still_passes(self):
+        for text in (
+            "농장A의 2027년 매출액은 50,000천원, 비용은 30,000천원이다.",
+            "농장A의 2027년 매출액은 50,000천원,  비용은 30,000천원이다.",
+            "농장A의 2027년 매출액은 50,000천원,  2028년 매출액은 50,000천원이다.",
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(self.crosscheck(text), [], text)
+
+
 class TableContextReuseTests(ContractCase):
     def test_spaced_note_belongs_only_to_preceding_table(self):
         text = ("표 1. 첫 계획\n|항목|값|\n|---|---|\n|수입|1|\n"
