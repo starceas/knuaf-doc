@@ -373,9 +373,15 @@ class ScopePossessiveAndYearSuffixTests(ContractCase):
         self.assertFail("2027년년 합성학생농장의 1차년도 투자 소요액은 50,000천원이다.")
 
     def test_year_suffix_with_other_trailing_josa_does_not_match(self):
-        """`2027년도`/`2027년경` are not the declared period either."""
-        self.assertFail("합성학생농장의 2027년도 1차년도 투자 소요액은 50,000천원이다.")
+        """`2027년경`/`2027년쯤` are hedged periods, not the declared one.
+
+        W-H C1 flipped `2027년도` from FAIL to PASS: it is the same period
+        as `2027`/`2027년` (release-note known limit C1), so only a suffix
+        that changes the meaning of the period still blocks.
+        """
+        self.assertPass("합성학생농장의 2027년도 1차년도 투자 소요액은 50,000천원이다.")
         self.assertFail("합성학생농장의 2027년경 1차년도 투자 소요액은 50,000천원이다.")
+        self.assertFail("합성학생농장의 2027년쯤 1차년도 투자 소요액은 50,000천원이다.")
 
     def test_numeric_period_is_not_matched_as_a_substring(self):
         """`20270` right after the scope and `120270` before it must not
@@ -943,6 +949,206 @@ class RivalSecondAmountTests(ContractCase):
         ):
             with self.subTest(text=text):
                 self.assertEqual(self.crosscheck(text), [], text)
+
+
+class KnownLimitFixesTests(ContractCase):
+    """v0.4.8 release-note limits: stop blocking correct sentences and stop
+    missing wrong amounts.  See DESIGN-W-H.md for the decisions and the
+    normal sentences each fix must keep passing.
+    """
+
+    BASE = "농장A의 2027년 매출액은 50,000천원"
+    MESSAGE = ("같은 문장에 다른 금액이 함께 있습니다. "
+               "그 금액이 전년·목표·일부 금액이면 문장을 나눠 쓰세요")
+
+    def _vals(self, value=50000, period="2027", unit="천원"):
+        return [{"fact_id": "f1", "field_id": "매출액", "value": value,
+                 "unit": unit, "period": period, "scope": "농장A"}]
+
+    def crosscheck(self, text, **kw):
+        return runtime("gg_school_excel").crosscheck_body(text, self._vals(**kw))
+
+    # (가1) a year written without 년 뒤의 금액은 그 해 주장이지 두 번째 금액이 아니다.
+    def test_year_without_suffix_opens_its_own_claim(self):
+        for text in (
+            self.BASE + ", 2028 매출액은 60,000천원이다.",
+            self.BASE + ", 2028년도 매출액은 60,000천원이다.",
+            self.BASE + ", 2028년 매출액은 60,000천원이다.",
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(self.crosscheck(text), [], text)
+
+    def test_year_without_suffix_does_not_excuse_a_rival_of_the_same_year(self):
+        # The year-less form must not weaken the real check: a different
+        # figure in the same 2027 claim still fails.
+        text = self.BASE + " 60,000천원, 2028 매출액은 60,000천원이다."
+        self.assertTrue(self.crosscheck(text), text)
+
+    # (가2) one-syllable item names open their own claim.
+    def test_one_syllable_label_opens_a_claim(self):
+        for text in (
+            self.BASE + ", 값은 30,000천원이다.",
+            self.BASE + ", 값: 30,000천원이다.",
+            self.BASE + ", 값 = 30,000천원이다.",
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(self.crosscheck(text), [], text)
+
+    def test_one_syllable_connectors_still_block(self):
+        # The connector words are decided by word, not syllable count.
+        for head in ("또는", "혹은", "및", "내지는"):
+            text = self.BASE + " " + head + " 60,000천원이다."
+            with self.subTest(head=head):
+                self.assertTrue(self.crosscheck(text), text)
+
+    # (나1) a correction phrase re-states the same fact with another value.
+    def test_correction_phrase_blocks_a_different_amount(self):
+        for text in (
+            self.BASE + "인데 실제는 60,000천원이다.",
+            self.BASE + ", 실제로는 60,000천원이다.",
+            self.BASE + ", 사실은 60,000천원이다.",
+        ):
+            with self.subTest(text=text):
+                rows = self.crosscheck(text)
+                self.assertTrue(rows, text)
+                self.assertIn(self.MESSAGE, rows[0]["reason"], text)
+
+    def test_correction_phrase_with_the_same_amount_passes(self):
+        for text in (
+            self.BASE + "인데 실제로 50,000천원이다.",
+            self.BASE + ", 실제 매출액은 50,000천원이다.",
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(self.crosscheck(text), [], text)
+
+    # (나2) a figure on the next line is still the same statement.
+    def test_line_break_does_not_hide_a_rival(self):
+        for text in (
+            self.BASE + "\n60,000천원이다.",
+            self.BASE + "\n+60,000천원이다.",
+            self.BASE + "\n\u221260,000천원이다.",
+        ):
+            with self.subTest(text=text):
+                rows = self.crosscheck(text)
+                self.assertTrue(rows, text)
+                self.assertIn(self.MESSAGE, rows[0]["reason"], text)
+
+    def test_line_break_between_label_and_value_passes(self):
+        text = "농장A의 2027년 매출액은\n50,000천원이다."
+        self.assertEqual(self.crosscheck(text), [], text)
+
+    def test_blank_line_and_word_led_lines_stay_separate_claims(self):
+        for text in (
+            self.BASE + "이다.\n\n60,000천원은 전년도 매출액이다.",
+            self.BASE + "이다.\n60,000천원은 전년도 매출액이다.",
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(self.crosscheck(text), [], text)
+
+    # (나3) 만원·억원·백만원 rivals are compared by value.
+    def test_won_scale_rival_with_a_different_value_blocks(self):
+        for text in (
+            self.BASE + "(6,000만원)이다.",
+            self.BASE + ", 실제는 6,000만원이다.",
+            self.BASE + " (6억원)이다.",
+            self.BASE + " (6,000백만원)이다.",
+        ):
+            with self.subTest(text=text):
+                rows = self.crosscheck(text)
+                self.assertTrue(rows, text)
+                self.assertIn(self.MESSAGE, rows[0]["reason"], text)
+
+    def test_won_scale_rival_with_the_same_value_passes(self):
+        for text in (
+            self.BASE + "(5,000만원)이다.",
+            self.BASE + " (5,000만원)이다.",
+            self.BASE + " (50백만원)이다.",
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(self.crosscheck(text), [], text)
+
+    def test_won_scale_per_unit_figures_are_not_rivals(self):
+        for text in (
+            self.BASE + ", kg당 3,000원이다.",
+            self.BASE + ", 50만원/평이다.",
+            self.BASE + ", 3개 품목 기준이다.",
+            self.BASE + ", 1인당 200만원이다.",
+            self.BASE + ", 2명당 200만원이다.",
+            self.BASE + ", 3,000천원/평이다.",
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(self.crosscheck(text), [], text)
+
+    def test_won_scale_claim_unit_still_fails_without_the_hint(self):
+        # Writing the checked amount itself in 만원 is a unit mismatch, not
+        # a rival figure, so the sentence keeps the bare reason.
+        rows = self.crosscheck("농장A의 2027년 매출액은 5,000만원이다.")
+        self.assertTrue(rows)
+        self.assertEqual("기간·단위·범위·출력 반올림 값 불일치", rows[0]["reason"])
+
+    def test_won_scale_edges_that_must_keep_passing(self):
+        for text in (
+            self.BASE + ", 60,000원당 1개다.",
+            self.BASE + ", 2028년 목표는 6,000만원이다.",
+            self.BASE + " (5,000만원)이다.",
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(self.crosscheck(text), [], text)
+
+    def test_won_scale_rival_across_a_line_break_blocks(self):
+        for text in (
+            self.BASE + "\n6,000만원이다.",
+            self.BASE + "\n6억원이다.",
+        ):
+            with self.subTest(text=text):
+                rows = self.crosscheck(text)
+                self.assertTrue(rows, text)
+                self.assertIn(self.MESSAGE, rows[0]["reason"], text)
+
+    # C1: 년도 forms are the same period.
+    def test_year_do_forms_name_the_same_period(self):
+        for text in (
+            "농장A 2027년도 매출액은 50,000천원이다.",
+            "농장A 2027년도의 매출액은 50,000천원이다.",
+            "농장A의 2027년도 매출액은 50,000천원이다.",
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(self.crosscheck(text), [], text)
+
+    def test_year_do_form_with_a_wrong_amount_fails(self):
+        for text in (
+            "농장A 2027년도 매출액은 60,000천원이다.",
+            "농장A 2027년도의 매출액은 60,000천원이다.",
+        ):
+            with self.subTest(text=text):
+                self.assertTrue(self.crosscheck(text), text)
+
+    def test_year_do_in_another_section_is_not_missed(self):
+        text = ("계획 2027 매출액은 50,000천원이다.\n\n"
+                "계획 2027년도 매출액은 60,000천원이다.\n")
+        self.assertTrue(self.crosscheck(text, period="2027", value=50000,
+                                        unit="천원"), text)
+
+    def test_nth_year_forms_name_the_same_period(self):
+        for text in (
+            "농장A 1년차 매출액은 50,000천원이다.",
+            "농장A 1차년도 매출액은 50,000천원이다.",
+            "농장A 1차년 매출액은 50,000천원이다.",
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(self.crosscheck(text, period="1년차"), [], text)
+        self.assertTrue(self.crosscheck("농장A 1차년도 매출액은 60,000천원이다.",
+                                        period="1년차"))
+
+    def test_year_do_is_not_a_table_header_miss(self):
+        text = ("농장A의 판매계획은 표 1과 같다.\n\n"
+                "표 1. 판매계획\n\n"
+                "| 항목 | 2027년도 |\n|---|---|\n"
+                "| 매출액 | 60,000 |\n\n"
+                "주) 단위: 천원.\n")
+        self.assertTrue(self.crosscheck(text), text)
+        good = text.replace("60,000", "50,000")
+        self.assertEqual(self.crosscheck(good), [], good)
 
 
 if __name__ == "__main__":

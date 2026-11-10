@@ -1407,14 +1407,40 @@ def inspect_school_workbook(path):
     return issues
 
 
+def _period_forms(period):
+    """Regex alternation for every accepted spelling of a fact period.
+
+    W-H C1: `2027년도` was not read at all, so a wrong amount in that
+    sentence passed silently.  A registered `2027`/`2027년` accepts `2027`,
+    `2027년`, `2027년도` (each optionally with `의`); a registered `1년차`
+    accepts `1년차`, `1차년`, `1차년도`.  A calendar year is never crossed
+    with an ordinal (`2027` ≠ `1차년도`): the ordinal needs the farm's start
+    year, which this check does not receive.
+    """
+    s = str(period or "").strip()
+    forms = []
+    m = re.fullmatch(r"(\d{4})\s*(?:년도?)?", s)
+    if m:
+        year = m.group(1)
+        forms = [year + "년도", year + "년", year]
+    else:
+        m = re.fullmatch(r"(\d+)\s*(?:년차|차년도?)", s)
+        if m:
+            n = m.group(1)
+            forms = [n + "년차", n + "차년도", n + "차년"]
+    if not forms:
+        return None
+    return "(?:" + "|".join(re.escape(f) for f in forms) + r")(?:의)?"
+
+
 def _period_keys(period):
     """Canonical keys a table header may carry for a fact period."""
     s = str(period or "").strip()
     keys = set()
-    m = re.fullmatch(r"(\d{4})\s*년?", s)
+    m = re.fullmatch(r"(\d{4})\s*(?:년도?)?", s)
     if m:
         keys.add(("year", int(m.group(1))))
-    m = re.fullmatch(r"(\d+)\s*년차", s)
+    m = re.fullmatch(r"(\d+)\s*(?:년차|차년도?)", s)
     if m:
         keys.add(("nth", int(m.group(1))))
     return keys
@@ -1425,7 +1451,7 @@ def _header_period_keys(cell):
     keys = set()
     for m in re.finditer(r"(?<!\d)(\d{4})\s*년", s):
         keys.add(("year", int(m.group(1))))
-    for m in re.finditer(r"(?<!\d)(\d+)\s*년차", s):
+    for m in re.finditer(r"(?<!\d)(\d+)\s*(?:년차|차년도?)", s):
         keys.add(("nth", int(m.group(1))))
     return keys
 
@@ -1760,7 +1786,11 @@ _MACHINE_FIELD_ID = re.compile(r"^[A-Za-z][A-Za-z0-9]*(?:[._][A-Za-z0-9]+)+$")
 _SECOND_AMOUNT = re.compile(
     r"\s*(?:~|–|—|∼|과|와|및|또는|혹은|내지|,|/|-)\s*"
     r"(?P<sign>[+\-\u2212\u00B1])?"
-    r"(?P<num>(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?)(?![\d.,])(?!\s*년)"
+    r"(?P<num>(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?)(?![\d.,])(?!\s*년도?)"
+    # W-H (나3): `, 1인당 200만원` — the figure in front of `…당` counts
+    # people/units, and the money after it is a per-unit rate, not a second
+    # amount of this claim.
+    r"(?!\s*[가-힣]{0,2}당)"
     # W-D8: `, 3개 품목 기준` / `, -5℃ 저장` are counts and measures, not a
     # second amount.  A bare number after a connector (`및 60,000`) still
     # blocks; only a following non-money unit clears it.
@@ -1799,6 +1829,20 @@ def _has_second_amount(clause, amount_end, unit_match, amount_text=None):
     else:
         has_unit = bool(rest)
     if not has_unit:
+        # W-H (가1): `, 2028 매출액은 …` — a four-digit calendar year in
+        # front of a Korean word names the next period, not a second amount
+        # of this claim.  A four-digit amount keeps blocking because it
+        # carries the checked unit (`2028천원`) or a non-word tail.
+        if (
+            re.fullmatch(r"(?:19|20)\d{2}", match.group("num"))
+            and re.match(r"[가-힣]", rest)
+        ):
+            return False
+        # W-H (나3): a `만원`/`백만원`/`억원` figure is compared by value in
+        # :func:`find_rival_amounts` — deciding here would block a same-value
+        # restatement (`50,000천원, 5,000만원이다`).
+        if _won_scale_head(rest) is not None:
+            return False
         return True
     if amount_text is None:
         return True
@@ -1832,11 +1876,16 @@ _AMOUNT_FOLD = str.maketrans(
     }
 )
 
-# `비용은` / `매출액이` / `총수입도` — a label carrying a topic/subject
-# particle opens its own claim.  The label needs two or more syllables: a
-# one-syllable stem in front of a particle is a connector or an adverb that
-# happens to end in the same glyph (`또|는`, `혹|은`, `정|도`), never a claim.
-_CLAIM_HEAD = re.compile(r"(?P<label>[가-힣A-Za-z][가-힣A-Za-z0-9]+)(?:은|는|이|가|도)\s*$")
+# `비용은` / `매출액이` / `총수입도` / `값은` — a label carrying a topic/subject
+# particle opens its own claim.  A one-syllable label is legal (W-H 가2: `값은
+# 30,000천원` used to block); the connector set below decides the words that
+# end in a particle shape but introduce no claim (`또는`, `혹은`, `정도`).
+_CLAIM_HEAD = re.compile(r"(?P<label>[가-힣A-Za-z][가-힣A-Za-z0-9]*)(?:은|는|이|가|도)\s*$")
+# W-H (나1): a correction phrase re-states the same fact with another value.
+# `50,000천원인데 실제는 60,000천원이다` is one statement, not two claims, so it
+# blocks.  `실제 매출액은 …` names an item and stays a new claim (the label is
+# `매출액`, not `실제`).
+_CORRECTION_WORDS = frozenset(("실제", "실제로", "사실", "정정", "정확히"))
 # Connective and adverbial words that end in a particle shape but introduce
 # no claim of their own (`아마도`, `가까이`, `같이`, …).
 _NON_CLAIM_WORDS = frozenset(
@@ -1853,13 +1902,16 @@ _NON_CLAIM_WORDS = frozenset(
         "이처럼", "그처럼", "비슷하게", "마찬가지로", "무려", "겨우",
     )
 )
-# `비용:` / `매출액 =` — a delimiter opens a claim only behind a label; a
+# `값:` / `비용 =` — a delimiter opens a claim only behind a label; a
 # bare `50,000천원:` is a juxtaposition, not a new claim.
-_DELIM_HEAD = re.compile(r"(?P<label>[가-힣A-Za-z][가-힣A-Za-z0-9]+)\s*[:=]\s*$")
-# `2028년` / `2년차` — a period in front of a figure starts a new claim.
-_PERIOD_TAIL = re.compile(r"\d\s*년(?:차)?\s*$")
-# `2028년 매출액은 …` — the period opens the tail itself.
-_PERIOD_HEAD = re.compile(r"^(?:19|20)\d{2}\s*년")
+_DELIM_HEAD = re.compile(r"(?P<label>[가-힣A-Za-z][가-힣A-Za-z0-9]*)\s*[:=]\s*$")
+# `2028년` / `2년차` / `2027년도` / `1차년도` — a period in front of a figure
+# starts a new claim (W-H C1: the `년도` forms were not read at all).
+_PERIOD_TAIL = re.compile(
+    r"(?:\d\s*년(?:차|도)?|\d+\s*차\s*년도?)\s*(?:의)?\s*$"
+)
+# `2028년 매출액은 …` / `2028년도 매출액은 …` — the period opens the tail itself.
+_PERIOD_HEAD = re.compile(r"^(?:19|20)\d{2}\s*년(?:도)?\s*(?:의)?")
 
 
 def fold_amount_text(text):
@@ -1870,6 +1922,68 @@ def fold_amount_text(text):
     glyphs.
     """
     return str(text or "").translate(_AMOUNT_FOLD)
+
+
+# W-H (나3): a rival figure may be written in `만원`/`백만원`/`억원` while the
+# checked fact is registered in `원`/`천원`.  Those are money amounts, so they
+# are compared by value; a per-unit figure (`1인당 200만원`, `50만원/평`) is a
+# rate, not a second amount of this claim, and stays out.
+_WON_SCALE = {"억원": Decimal(100000000), "백만원": Decimal(1000000),
+              "만원": Decimal(10000)}
+_UNIT_KRW = {"원": Decimal(1), "천원": Decimal(1000)}
+_WON_SCALE_RE = re.compile(r"(억원|백만원|만원)")
+_PER_UNIT_HEAD = re.compile(r"[가-힣A-Za-z0-9㎡]*당\s*$")
+_WON_SCALE_AMOUNT = re.compile(
+    r"(?<!\d)(?<![.,]\d)(?P<sign>[+\-\u00B1])?\s*"
+    r"(?P<num>(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?)\s*"
+    r"(?:억원|백만원|만원)(?!\s*(?:/|당|씩))"
+)
+
+
+def _won_scale_head(rest):
+    """The won-scale word a figure carries (`만원`, `억원`), or None."""
+    match = _WON_SCALE_RE.match(rest or "")
+    return match.group(1) if match is not None else None
+
+
+def _won_scale_amounts(text, unit):
+    """`만원`/`백만원`/`억원` figures converted into ``unit``.
+
+    Entries carry the same shape as :func:`find_rival_amounts` plus the
+    ``sign`` the caller needs to honour `±` (which never equals a plain
+    figure).  A non-money ``unit`` yields nothing: `kg`/`㎡` claims have no
+    won-scale spelling.
+    """
+    unit_krw = _UNIT_KRW.get(unit)
+    if unit_krw is None:
+        return []
+    found = []
+    for match in _WON_SCALE_AMOUNT.finditer(text):
+        head = text[: match.start()].rstrip()
+        if _PER_UNIT_HEAD.search(head):
+            continue
+        token = match.group()
+        scale = None
+        for word in ("백만원", "억원", "만원"):
+            if token.endswith(word):
+                scale = _WON_SCALE[word]
+                break
+        if scale is None:
+            continue
+        value = Decimal(match.group("num").replace(",", "")) * scale / unit_krw
+        if match.group("sign") == "-":
+            value = -value
+        found.append(
+            {
+                "text": token.strip(),
+                "value": str(value),
+                "start": match.start(),
+                "end": match.end(),
+                "sign": match.group("sign"),
+                "kind": _classify_figure_head(head, unit),
+            }
+        )
+    return found
 
 
 def _unit_amount_re(unit):
@@ -1901,6 +2015,12 @@ def _classify_figure_head(head, unit):
     tail = re.split(r"[,;]\s*", head)[-1].strip()
     if _PERIOD_TAIL.search(tail) or _PERIOD_HEAD.match(tail):
         return "year"
+    # W-H (나1): `…인데 실제는 60,000천원` / `, 실제로는 …` re-states the same
+    # fact with a corrected value, so it is one claim and blocks.  Checked
+    # before the generic head rule, which would read `실제` as a new item.
+    claim = _CLAIM_HEAD.search(tail)
+    if claim is not None and claim.group("label") in _CORRECTION_WORDS:
+        return "conflict"
     match = _DELIM_HEAD.search(tail)
     if match is not None and match.group("label") != unit:
         return "new_claim"
@@ -1961,6 +2081,17 @@ def find_rival_amounts(text, unit, *, expected=None):
                 "kind": _classify_figure_head(head, unit),
             }
         )
+    # W-H (나3): `6,000만원`/`6억원`/`6,000백만원` beside a `50,000천원`
+    # claim is the same money in another spelling, so it is compared by
+    # value here.  Per-unit rates (`1인당 200만원`, `50만원/평`) and `원`
+    # prices stay out (`_won_scale_amounts`), as does a non-money unit.
+    for entry in _won_scale_amounts(folded, unit):
+        value = Decimal(entry["value"])
+        if want is not None and entry["sign"] != "\u00B1" and value == want:
+            continue
+        entry.pop("sign", None)
+        found.append(entry)
+    found.sort(key=lambda entry: entry["start"])
     return found
 
 
@@ -2048,16 +2179,23 @@ def crosscheck_body(text, values):
         expected_period = str(period_req).strip()
         expected_scope = str(scope_req).strip()
 
-        # Split text into lines/sentences
+        # Split text into lines/sentences.
+        # W-H (나2): a line break does not end a statement when the next
+        # line opens with a figure (`…50,000천원\n60,000천원이다`), so that
+        # rival stays in the same run and the value scan judges it.  A
+        # blank line, or a line that opens with a word, is a new statement
+        # — and a full stop before the break already ended the sentence.
+        line_break = r"\r?\n[ \t]*(?![+\-\u2212\u00B1]?[ \t]*\d)"
         _sentence_split = re.compile(
-            r"(?:\r?\n)+|(?<=[^\d])\.(?:\s+|$)|(?<=\d)\.(?=[^\d\s]|\s+[^\d])|[;•·]+"
+            line_break
+            + r"|(?<=[^\d])\.(?:\s+|$)|(?<=\d)\.(?=[^\d\s]|\s+[^\d])|[;•·]+"
         )
         # W-D8: `;`/`·` break a sentence for claim matching but do not end
         # the run a rival amount can hide in — `50,000천원;60,000천원` is one
         # statement.  The rival scan below therefore uses the enclosing run,
         # which stops only at a full stop or a line break.
         _run_split = re.compile(
-            r"(?:\r?\n)+|(?<=[^\d])\.(?:\s+|$)|(?<=\d)\.(?=[^\d\s]|\s+[^\d])"
+            line_break + r"|(?<=[^\d])\.(?:\s+|$)|(?<=\d)\.(?=[^\d\s]|\s+[^\d])"
         )
         sentences = []
         scans = []
@@ -2084,7 +2222,11 @@ def crosscheck_body(text, values):
         # side) or the matched amount is followed by a range/parallel
         # second amount (`50,000~60,000`, `50,000과 60,000`).
         scope_part = scope + r"(?:의)?"
-        period_part = period + (r"(?:년)?" if expected_period.isdigit() else "")
+        # W-H C1: every accepted spelling of the period (`2027`, `2027년`,
+        # `2027년도`, `1년차`, `1차년도`) is one period.  A period this check
+        # does not recognise keeps the exact spelling, so behaviour for any
+        # other format is unchanged.
+        period_part = _period_forms(expected_period) or period
         claim_pattern = re.compile(
             r"(?<!\w)(?:"
             + scope_part
