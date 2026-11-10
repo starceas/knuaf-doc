@@ -1758,14 +1758,22 @@ def _table_claim_verdict(rows, context, label, expected_d, unit, period_keys, sc
 _MACHINE_FIELD_ID = re.compile(r"^[A-Za-z][A-Za-z0-9]*(?:[._][A-Za-z0-9]+)+$")
 
 _SECOND_AMOUNT = re.compile(
-    r"\s*(?:~|–|—|∼|과|와)\s*[+-]?"
-    r"(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?(?![\d.,])"
+    r"\s*(?:~|–|—|∼|과|와|및|또는|혹은|내지|,|/|-)\s*[+-]?"
+    r"(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?(?![\d.,])(?!\s*년)"
 )
 
 
 def _has_second_amount(clause, amount_end, unit_match):
     """A matching `50,000천원` must not head `50,000천원~60,000천원` /
-    `50,000천원과 60,000천원` and still pass (W-D2 @Roh 중요①)."""
+    `50,000천원과 60,000천원` / `50,000천원 및 60,000천원` and still pass
+    (W-D2 @Roh 중요①, W-D6 @PR#111 P2).
+
+    The connector set covers ranges, parallels and enumerations (`및`,
+    `또는`, `혹은`, `내지`, comma, slash, hyphen).  A thousands separator
+    inside one amount (`50,000`) never reaches this check — the first
+    amount is consumed whole before ``amount_end`` — and a trailing
+    `년` keeps a year (`, 2028년 매출액은 …`) from reading as a second
+    amount."""
     after = clause[amount_end:].lstrip()
     if unit_match is not None:
         after = after[len(unit_match.group()):]

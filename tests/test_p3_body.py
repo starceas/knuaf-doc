@@ -476,6 +476,71 @@ class RohPeriodAndAmountRangeTests(ContractCase):
         self.assertFail("농장A 2027년 매출액은 50,000천원과 60,000천원이다.")
 
 
+class SecondAmountConnectorTests(ContractCase):
+    """W-D6 @PR#111 P2: a second amount joined by ``및`` and its peers.
+
+    The W-D2 guard only knew ranges (`~`) and the parallels `과`/`와`, so
+    `50,000천원 및 60,000천원` passed while the 4a32d0c baseline rejected a
+    wrong value.  Every connector that can open a second amount must fail;
+    a single amount, its thousands separator, a repeated correct claim and
+    a table claim keep passing.
+    """
+
+    CONNECTORS = ("및", "또는", "혹은", "내지", ",", "/", "-")
+
+    def _vals(self, value=50000):
+        return [{"fact_id": "f1", "field_id": "매출액", "value": value,
+                 "unit": "천원", "period": "2027", "scope": "농장A"}]
+
+    def crosscheck(self, text, **kw):
+        return runtime("gg_school_excel").crosscheck_body(text, self._vals(**kw))
+
+    def test_each_connector_joining_a_different_amount_fails(self):
+        for connector in self.CONNECTORS:
+            text = (f"농장A의 2027년 매출액은 50,000천원{connector} "
+                    "60,000천원이다.")
+            with self.subTest(connector=connector, text=text):
+                self.assertTrue(self.crosscheck(text), text)
+
+    def test_connector_without_spaces_still_fails(self):
+        for text in ("농장A의 2027년 매출액은 50,000천원및 60,000천원이다.",
+                     "농장A의 2027년 매출액은 50,000천원/60,000천원이다.",
+                     "농장A의 2027년 매출액은 50,000천원-60,000천원이다."):
+            with self.subTest(text=text):
+                self.assertTrue(self.crosscheck(text), text)
+
+    def test_single_amount_keeps_passing(self):
+        self.assertEqual(
+            self.crosscheck("농장A의 2027년 매출액은 50,000천원이다."), [])
+
+    def test_thousands_separator_is_not_a_connector(self):
+        self.assertEqual(
+            self.crosscheck("농장A의 2027년 매출액은 50,000천원이다."), [])
+        self.assertEqual(
+            self.crosscheck("농장A의 2027년 매출액은 1,234,567천원이다.",
+                            value=1234567), [])
+
+    def test_same_amount_restated_passes(self):
+        text = ("농장A의 2027년 매출액은 50,000천원이고 "
+                "농장A의 2027년 매출액은 50,000천원이다.")
+        self.assertEqual(self.crosscheck(text), [])
+
+    def test_comma_before_a_year_is_not_a_second_amount(self):
+        """A comma may start a new year's claim; only `년`-less numbers are
+        read as a second amount of the amount in front of them."""
+        text = ("농장A의 2027년 매출액은 50,000천원, "
+                "2028년 매출액은 60,000천원이다.")
+        self.assertEqual(self.crosscheck(text), [])
+
+    def test_table_body_still_passes(self):
+        text = ("농장A의 판매계획은 표 1과 같다.\n\n"
+                "표 1. 판매계획\n\n"
+                "| 항목 | 2027년 |\n|---|---|\n"
+                "| 매출액 | 50,000 |\n\n"
+                "주) 단위: 천원.\n")
+        self.assertEqual(self.crosscheck(text), [])
+
+
 class TableContextReuseTests(ContractCase):
     def test_spaced_note_belongs_only_to_preceding_table(self):
         text = ("표 1. 첫 계획\n|항목|값|\n|---|---|\n|수입|1|\n"
