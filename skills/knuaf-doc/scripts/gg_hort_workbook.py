@@ -3134,6 +3134,155 @@ def main(argv=None):
     return 0
 
 
+# --- 학생 알림(notice) 단일 데이터 원천 -------------------------------------
+# 이 블록이 알림 묶음·종류·학생 말의 **유일한** 정의다. 문서 숫자도 여기서
+# 세고, 코드 다른 곳에 목록을 복제하지 않는다.
+SCHOOL_FORM_NOTICES = (
+    # (묶음키, kind, [칸], 학생 말)
+    ("invest_subtotal_2027", "typo",
+     ["4.투자계획!E24", "4.투자계획!F24", "4.투자계획!G24", "4.투자계획!H24"],
+     "2027년 투자 소계가 한 행을 빼고 더하고 있어서, 다섯 행 모두 더하도록 바로잡았어요"),
+    ("invest_subtotal_2028_2031", "typo",
+     ["4.투자계획!E29", "4.투자계획!F29", "4.투자계획!G29", "4.투자계획!H29"],
+     "2028~2031년 투자 소계가 한 줄만 더하고 있어서, 네 해 모두 더하도록 바로잡았어요"),
+    ("invest_total_missing", "typo",
+     ["4.투자계획!E25"],
+     "2028년 투자 합계 칸에 수식이 없어 합계 수식을 넣었어요"),
+    ("invest_item_cells_cleared", "typo",
+     ["4.투자계획!C26", "4.투자계획!D26", "4.투자계획!C27",
+      "4.투자계획!D27", "4.투자계획!C28", "4.투자계획!D28"],
+     "투자 항목·규격 칸에 합계 수식이 잘못 들어가 있어 지웠어요"),
+    ("sales_commercialization_rate", "method",
+     [" 7. 판매계획!O35", " 7. 판매계획!O44", " 7. 판매계획!O53", " 7. 판매계획!O62"],
+     "해마다 다른 상품화율을 보도록 고쳤어요(첫해 값을 그대로 쓰고 있었어요)"),
+    ("production_area", "method",
+     ["8. 생산계획!C11", "8. 생산계획!G11", "8. 생산계획!K11",
+      "8. 생산계획!O11", "8. 생산계획!S11"],
+     "생산량 계산에 박혀 있던 1,340리터 대신 확인된 재배면적을 쓰도록 고쳤어요"),
+    ("production_avg_price", "method",
+     ["8. 생산계획!C14", "8. 생산계획!G14", "8. 생산계획!K14",
+      "8. 생산계획!O14", "8. 생산계획!S14"],
+     "해마다 그 해 평균가격을 보도록 고쳤어요(첫해 가격에 묶여 있었어요)"),
+    ("material_textbook_growth_removed", "method",
+     ["9. 영농자재구매계획!F%d" % row
+      for row in (20, 21, 22, 23, 24, 25, 31, 32, 33, 34, 35, 36,
+                  42, 43, 44, 45, 46, 47, 53, 54, 55, 56, 57, 58)],
+     "교재 예시 상승률(1.05)을 빼고, 학생이 적은 단가나 근거 있는 상승률을 쓰도록 고쳤어요"),
+    ("depreciation_grant_net", "method",
+     ["13. 감가상각비계획 !D8", "13. 감가상각비계획 !F8", "13. 감가상각비계획 !G8",
+      "13. 감가상각비계획 !D19", "13. 감가상각비계획 !F19", "13. 감가상각비계획 !G19",
+      "13. 감가상각비계획 !D30", "13. 감가상각비계획 !F30", "13. 감가상각비계획 !G30",
+      "13. 감가상각비계획 !D41", "13. 감가상각비계획 !F41", "13. 감가상각비계획 !G41",
+      "13. 감가상각비계획 !D52", "13. 감가상각비계획 !F52", "13. 감가상각비계획 !G52"],
+     "시설·농기계 장부가를 보조금을 뺀 값으로 계산하도록 고쳤어요"),
+    ("balance_last_year_profit", "typo",
+     ["17. 추정대차대조표!H42"],
+     "2031년 순이익이 다른 해와 다른 줄을 보고 있어서 세후 순익을 보도록 바로잡았어요"),
+    ("balance_opening_capital", "typo",
+     ["17. 추정대차대조표!C44"],
+     "기초 자본이 자산 총계 그대로여서 부채를 빼도록 바로잡았어요"),
+    ("balance_last_year_land", "typo",
+     ["17. 추정대차대조표!H27"],
+     "2031년 논밭 자산이 그 해 투자가 아니라 전년도 자기자금을 더하고 있어서 바로잡았어요"),
+    ("balance_loan_by_year", "method",
+     ["17. 추정대차대조표!D36", "17. 추정대차대조표!E36", "17. 추정대차대조표!F36",
+      "17. 추정대차대조표!G36", "17. 추정대차대조표!H36"],
+     "융자금이 투자계획 금액을 보거나 1차년도 값을 이어받고 있어, 연도별 상환계획 값을 보도록 바로잡았어요"),
+    ("balance_equity_paid_in", "method",
+     ["17. 추정대차대조표!D44", "17. 추정대차대조표!E44", "17. 추정대차대조표!F44",
+      "17. 추정대차대조표!G44", "17. 추정대차대조표!H44"],
+     "자본 총계에 그 해 추가로 납입한 자본을 더하도록 고쳤어요"),
+    ("cashflow_facility_equipment", "method",
+     ["18. 현금흐름계획!D16", "18. 현금흐름계획!H17"],
+     "시설·농기계 투자 지출을 투자 분류별로 연결했어요"),
+    ("income_double_conversion", "method",
+     ["15. 손익계획!C41", "15. 손익계획!C46"],
+     "출하량을 두 번 환산하던 것을 한 번만 하도록 고쳤어요"),
+)
+
+# 과수 fy1 정정 21칸(연도 1 + 물가 20) — 학생 말 2묶음.
+# 근거: references/fruit-trees/corrections/fy1-spec.json
+FRUIT_FY1_NOTICES = (
+    ("fy1_year_basis", "typo",
+     ["9.경비계획!B12"],
+     "경비계획 연도칸이 2025로 박혀 있어서 창업 첫해를 보도록 고쳤어요"),
+    ("fy1_price_index_basis", "typo",
+     ["9.경비계획!J15", "9.경비계획!J16", "9.경비계획!J26", "9.경비계획!J27",
+      "9.경비계획!J37", "9.경비계획!J38", "9.경비계획!J48", "9.경비계획!J49",
+      "9.경비계획!K15", "9.경비계획!K16", "9.경비계획!K26", "9.경비계획!K27",
+      "9.경비계획!K37", "9.경비계획!K38", "9.경비계획!K48", "9.경비계획!K49",
+      "9.경비계획!L15", "9.경비계획!L16", "9.경비계획!L26", "9.경비계획!L27"],
+     "물가 지수가 2020년 기준으로 계산되어 있어서 창업 첫해 기준으로 고쳤어요"),
+)
+
+
+def notice_groups(kind=None, *, fruit=False):
+    """알림 묶음 목록. ``kind``로 거르고, 없으면 전체."""
+    groups = FRUIT_FY1_NOTICES if fruit else SCHOOL_FORM_NOTICES
+    if kind is None:
+        return [{"key": key, "kind": k, "cells": list(cells), "text": text}
+                for key, k, cells, text in groups]
+    return [{"key": key, "kind": k, "cells": list(cells), "text": text}
+            for key, k, cells, text in groups if k == kind]
+
+
+def notice_counts(*, fruit=False):
+    """(typo 묶음 수, typo 칸 수, method 묶음 수, method 칸 수)."""
+    out = {"typo": [0, 0], "method": [0, 0]}
+    for key, kind, cells, _text in (FRUIT_FY1_NOTICES if fruit else SCHOOL_FORM_NOTICES):
+        out.setdefault(kind, [0, 0])
+        out[kind][0] += 1
+        out[kind][1] += len(cells)
+    return out
+
+
+def notice_title(typo_n, method_n):
+    """두 범주 완성 문장. 0인 범주는 뺀다. 둘 다 0이면 None(행 없음).
+
+    숫자는 인자로만 받는다 — 문서·코드에 박지 않는다.
+    """
+    if not typo_n and not method_n:
+        return None
+    if typo_n and method_n:
+        return ("학교 재무 양식의 수식 오류 %d곳을 바로잡았어요 / "
+                "%d곳은 계산 방식을 다르게 했어요" % (typo_n, method_n))
+    if typo_n:
+        return "학교 재무 양식의 수식 오류 %d곳을 바로잡았어요" % typo_n
+    return "학교 재무 양식에서 계산 방식을 다르게 한 곳이 %d곳 있어요" % method_n
+
+
+def notice_identity(*, project_id, kind, profile, form_identity, groups):
+    """같은 정정인지 가르는 값. 학생 파일 해시·값·경로·시각을 넣지 않는다."""
+    payload = {
+        "project_id": project_id,
+        "kind": kind,
+        "profile": profile,
+        "form_identity": form_identity,
+        "patched": sorted((g["key"], g["kind"], tuple(sorted(g["cells"])))
+                          for g in groups),
+    }
+    return digest(json.dumps(payload, ensure_ascii=False, sort_keys=True,
+                             separators=(",", ":")).encode())
+
+
+def notice_items(groups, *, source, in_school_form=False):
+    """[자세히] 목록. 묶음 단위(같은 이유의 칸을 한 줄로)."""
+    return [
+        {"key": g["key"], "kind": g["kind"], "what": g["text"],
+         "cells": list(g["cells"]), "source": source,
+         "in_school_form": bool(in_school_form)}
+        for g in groups
+    ]
+
+
+def notice_group_cells(groups):
+    """묶음들에 든 칸 좌표 집합 — 명세 대조용."""
+    flat = set()
+    for g in groups:
+        flat.update(g["cells"])
+    return flat
+
+
 if __name__ == "__main__":
     for _stream in (sys.stdout, sys.stderr):
         getattr(_stream, "reconfigure", lambda **_: None)(encoding="utf-8")
