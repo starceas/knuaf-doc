@@ -40,6 +40,24 @@ class FinanceTemplateIntegrationTests(ContractCase):
         wb.save(path)
         return path
 
+    def fruit_workbook(self):
+        """A synthetic workbook carrying the registered fruit school sheets."""
+        from gg_school_excel import profile_structure
+        names = profile_structure("fruit_16_sheet_v1")["sheets"]
+        path = self.folder / "fruit-source.xlsx"
+        wb = Workbook()
+        ws = wb.active
+        ws.title = names[0]
+        ws["A1"] = "합성표제"
+        ws["B2"] = 123
+        ws["C2"] = "=B2*2"
+        for name in names[1:]:
+            wb.create_sheet(name)
+        from tests.test_finance_profile_gate import register_synthetic_form
+        register_synthetic_form(self, wb)
+        wb.save(path)
+        return path, names[0]
+
     def write_map(self, source, entries):
         path = self.folder / "map.json"
         path.write_text(json.dumps({
@@ -80,7 +98,10 @@ class FinanceTemplateIntegrationTests(ContractCase):
         self.assertEqual(self.tpl.sha256(out), self.tpl.BUNDLED_TEMPLATE_SHA256)
 
     def test_other_majors_never_silently_fall_back_to_x01(self):
-        for major in ("hort_env_systems", "fruit_trees"):
+        inventory = {"survey": {"scope_label": "fruit", "scope_id": "/synthetic/fruit",
+                                 "status": "complete", "evidence": {
+                                     "verified": True, "basis": "user_attested"}}, "files": []}
+        for major in ("hort_env_systems", "fruit_trees", "dairy"):
             project = self.make_project()
             bind_major(project, major)
             context = self.mc.output_context(project, major)
@@ -88,14 +109,10 @@ class FinanceTemplateIntegrationTests(ContractCase):
             with self.assertRaises(self.mc.OutputHeldError):
                 self.tpl.create_workbook(None, out, context=context, template_ref="X01")
             self.assertFalse(out.exists())
-        inventory = {"survey": {"scope_label": "fruit", "scope_id": "/synthetic/fruit",
-                                 "status": "complete", "evidence": {
-                                     "verified": True, "basis": "user_attested"}}, "files": []}
-        with self.assertRaises(self.mc.OutputHeldError) as raised:
-            self.tpl.create_workbook(None, out, context=context, template_ref="X01",
-                                     reference_inventory=inventory)
-        self.assertEqual(raised.exception.reason, "unsupported_output")
-        self.assertFalse(out.exists())
+            with self.assertRaises(self.mc.OutputHeldError):
+                self.tpl.create_workbook(None, out, context=context, template_ref="X01",
+                                         reference_inventory=inventory)
+            self.assertFalse(out.exists())
 
     def test_inventory_is_not_promoted_by_editing_status_alone(self):
         source = self.workbook()
@@ -113,6 +130,46 @@ class FinanceTemplateIntegrationTests(ContractCase):
         with self.assertRaisesRegex(ValueError, "map_layout_invalid"):
             self.tpl.blank_copy(source, path, out, context=self.context)
         self.assertFalse(out.exists())
+
+    def test_inspection_records_explicit_profile_without_approving_inventory(self):
+        source = self.workbook()
+        data = self.tpl.inspect_source(source, None, None,
+                                       workbook_profile="fruit_16_sheet_v1")
+        self.assertEqual(data["workbook_profile"], "fruit_16_sheet_v1")
+        self.assertEqual(data["source"]["sha256"], self.tpl.sha256(source))
+        self.assertEqual(data["mapStatus"], "manual_map_required")
+        self.assertIsNone(self.tpl.inspect_source(source, None, None)["workbook_profile"])
+
+    def test_clear_profile_is_checked_before_output_directory_creation(self):
+        source = self.workbook()
+        path = self.write_map(source, [{"sheet": "Student", "cell": "B2", "action": "clear"}])
+        data = json.loads(path.read_text())
+        data["workbook_profile"] = "fruit_16_sheet_v1"
+        path.write_text(json.dumps(data))
+        out = self.folder / "not-created" / "held.xlsx"
+        with self.assertRaises(self.mc.OutputHeldError):
+            self.tpl.blank_copy(source, path, out, context=self.context)
+        self.assertFalse(out.parent.exists())
+
+    def test_clear_preserves_declared_profile_and_source(self):
+        source, sheet = self.fruit_workbook()
+        original = source.read_bytes()
+        path = self.write_map(source, [{"sheet": sheet, "cell": "B2", "action": "clear"}])
+        data = json.loads(path.read_text())
+        data["workbook_profile"] = "fruit_16_sheet_v1"
+        path.write_text(json.dumps(data))
+        out = self.folder / "fruit.xlsx"
+        project = self.make_project()
+        bind_major(project, "fruit_trees")
+        context = self.mc.output_context(project, "fruit_trees")
+        receipt = self.tpl.blank_copy(source, path, out, context=context)
+        self.assertEqual(receipt["workbook_profile"], "fruit_16_sheet_v1")
+        self.assertEqual(receipt["map"]["sha256"], self.tpl.sha256(path))
+        book = load_workbook(out)
+        self.addCleanup(book.close)
+        self.assertIsNone(book[sheet]["B2"].value)
+        self.assertEqual(book[sheet]["C2"].value, "=B2*2")
+        self.assertEqual(source.read_bytes(), original)
 
     def test_shared_formula_followers_are_not_literal_candidates(self):
         inventory = [{"sheet": "s", "cell": "A1", "value": 4,

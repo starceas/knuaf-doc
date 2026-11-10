@@ -509,7 +509,7 @@ class BodyFinanceGateTests(ContractCase):
                 self.assertEqual("missing", self.core.finance_gate(bad)["state"])
 
     def test_unsupported_finance_majors_are_nonblocking(self):
-        for major in ("fruit_trees", "industrial_insects"):
+        for major in ("industrial_insects",):
             with self.subTest(major=major):
                 self.root = self.make_project()
                 bind_major(self.root, major)

@@ -40,7 +40,8 @@ def _seed(root):
 def _spec(root):
     spec = root / "paper-spec.json"
     spec.write_text(json.dumps(
-        {"author": "합성", "writing_year": 2026, "years": 5,
+        {"author": "합성", "writing_year": 2026, "start_year": 2027,
+         "years": 5,
          "school_profile": {"mode": "school", "school": "합성대학교",
                             "department": "특용작물학과"}},
         ensure_ascii=False), encoding="utf-8")

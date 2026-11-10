@@ -237,8 +237,8 @@ class PaperBodyTests(ContractCase):
             profile["title"] = title
         spec = root / "paper-spec.json"
         spec.write_text(json.dumps(
-            {"author": "합성", "writing_year": 2026, "years": 5,
-             "school_profile": profile},
+            {"author": "합성", "writing_year": 2026, "start_year": 2027,
+             "years": 5, "school_profile": profile},
             ensure_ascii=False), encoding="utf-8")
         return core, root, spec
 
@@ -486,7 +486,8 @@ class BuildDocxTests(ContractCase):
         root = self._project()
         spec = root / "paper-spec.json"
         spec.write_text(json.dumps(
-            {"author": "합성", "writing_year": 2026, "years": 5,
+            {"author": "합성", "writing_year": 2026, "start_year": 2027,
+             "years": 5,
              "school_profile": {"mode": "school", "school": "합성대학교",
                                 "department": "특용작물학과"}},
             ensure_ascii=False), encoding="utf-8")
@@ -608,7 +609,7 @@ class BodyOnlyDocxCliTests(ContractCase):
         root = self._project()
         sp = runtime("gg_school_paper")
         context = runtime("gg_major_contract").output_context(root, "specialty_crops")
-        spec = {"writing_year": 2026}
+        spec = {"writing_year": 2026, "start_year": 2027}
         for mode in ("legacy", "official"):
             data = dict(spec)
             if mode == "official":

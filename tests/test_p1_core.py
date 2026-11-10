@@ -409,8 +409,8 @@ assert manifest["file_hash"]
 import gg
 spec_json = root / "paper-spec.json"
 spec_json.write_text(json.dumps(
-    {"author": "합성", "writing_year": 2026, "years": 5,
-     "major_id": "specialty_crops",
+    {"author": "합성", "writing_year": 2026, "start_year": 2027,
+     "years": 5, "major_id": "specialty_crops",
      "school_profile": {"mode": "school", "school": "합성대학교",
                         "department": "특용작물학과"}},
     ensure_ascii=False), encoding="utf-8")
