@@ -3675,7 +3675,7 @@ def _finance_check_items(p):
     # below; an unclaimed context amount does NOT block.
     claimed_required = [fid for fid in claimed if fid in required_ids]
     missing_required = [fid for fid in required_ids if fid not in claimed]
-    if claimed_required and missing_required:
+    if claimed and missing_required:
         return [], _CLAIMS_PARTIAL_BLOCK.format(
             n=len(required_ids), m=len(claimed_required),
             k=len(missing_required))
