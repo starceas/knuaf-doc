@@ -1811,11 +1811,29 @@ _AMOUNT_FOLD = str.maketrans(
 )
 
 # `비용은` / `매출액이` / `총수입도` — a label carrying a topic/subject
-# particle opens its own claim.
-_CLAIM_HEAD = re.compile(r"(?P<label>[가-힣A-Za-z][가-힣A-Za-z0-9]*)(?:은|는|이|가|도)\s*$")
+# particle opens its own claim.  The label needs two or more syllables: a
+# one-syllable stem in front of a particle is a connector or an adverb that
+# happens to end in the same glyph (`또|는`, `혹|은`, `정|도`), never a claim.
+_CLAIM_HEAD = re.compile(r"(?P<label>[가-힣A-Za-z][가-힣A-Za-z0-9]+)(?:은|는|이|가|도)\s*$")
+# Connective and adverbial words that end in a particle shape but introduce
+# no claim of their own (`아마도`, `가까이`, `같이`, …).
+_NON_CLAIM_WORDS = frozenset(
+    (
+        # connectors
+        "또는", "혹은", "및", "내지", "그리고", "또한", "그러나", "하지만",
+        "따라서", "그런데", "즉", "예컨대",
+        # degree / approximation
+        "정도", "대략", "약간", "거의", "모두", "대개", "대체로", "대강",
+        # adverbs and manner words
+        "아마도", "가까이", "같이", "많이", "조금", "매우", "아주", "특히",
+        "더욱", "훨씬", "계속", "다시", "먼저", "함께", "서로", "스스로",
+        "마침", "이미", "아직", "반드시", "결국", "과연", "혹시", "비록",
+        "이처럼", "그처럼", "비슷하게", "마찬가지로", "무려", "겨우",
+    )
+)
 # `비용:` / `매출액 =` — a delimiter opens a claim only behind a label; a
 # bare `50,000천원:` is a juxtaposition, not a new claim.
-_DELIM_HEAD = re.compile(r"(?P<label>[가-힣A-Za-z][가-힣A-Za-z0-9]*)\s*[:=]\s*$")
+_DELIM_HEAD = re.compile(r"(?P<label>[가-힣A-Za-z][가-힣A-Za-z0-9]+)\s*[:=]\s*$")
 # `2028년` / `2년차` — a period in front of a figure starts a new claim.
 _PERIOD_TAIL = re.compile(r"\d\s*년(?:차)?\s*$")
 # `2028년 매출액은 …` — the period opens the tail itself.
@@ -1865,7 +1883,9 @@ def _classify_figure_head(head, unit):
     match = _CLAIM_HEAD.search(tail)
     if match is not None and match.group("label") != unit:
         before = tail[: match.start("label")]
-        if not before or before[-1] not in "0123456789.,":
+        if (not before or before[-1] not in "0123456789.,") and (
+            match.group().strip() not in _NON_CLAIM_WORDS
+        ):
             return "new_claim"
     return "conflict"
 

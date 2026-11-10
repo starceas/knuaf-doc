@@ -677,6 +677,44 @@ class RivalSecondAmountTests(ContractCase):
         self.assertEqual("60000", found[0]["value"])
         self.assertEqual("conflict", found[0]["kind"])
 
+    def test_connector_with_sign_and_amount_forms_all_fail(self):
+        """A connector plus a sign used to slip past both checks.
+
+        `_SECOND_AMOUNT` allowed only ASCII `+ -`, and its `−`; the wide
+        forms `＋ － ±` fell through.  `_CLAIM_HEAD` then read `또|는`,
+        `혹|은`, `정|도` as a label plus particle — a new claim head — so
+        the rival was excused.  Control at the commit before this fix:
+        39 of 126 shapes passed silently.
+        """
+        connectors = (" 및 ", " 또는 ", " 혹은 ", " 내지 ", " 그리고 ", " 정도 ")
+        signs = ("", "+", "-", "\u2212", "\uFF0B", "\uFF0D", "\u00B1")
+        amounts = ("60,000천원", "60000천원", "60,000 천원")
+        for connector in connectors:
+            for sign in signs:
+                for amount in amounts:
+                    text = self.BASE + connector + sign + amount + "이다."
+                    with self.subTest(connector=connector, sign=sign,
+                                      amount=amount):
+                        self.assertTrue(self.crosscheck(text), text)
+
+    def test_connector_and_adverb_words_are_not_claim_heads(self):
+        gse = runtime("gg_school_excel")
+        for word in ("또는", "혹은", "정도", "아마도", "가까이", "같이",
+                     "많이", "대략", "무려", "비슷하게"):
+            text = self.BASE + " " + word + " 60,000천원이다."
+            with self.subTest(word=word):
+                self.assertTrue(self.crosscheck(text), text)
+                found = gse.find_rival_amounts(text, "천원", expected=50000)
+                self.assertEqual(["conflict"], [f["kind"] for f in found], found)
+
+    def test_two_syllable_labels_stay_claim_heads(self):
+        # The 2-syllable rule must not start rejecting real labels.
+        for label in ("비용은", "경영비는", "총수입은", "판매비는", "인건비가",
+                      "조수입도", "소득은", "원가도"):
+            text = self.BASE + ", " + label + " 30,000천원이다."
+            with self.subTest(label=label):
+                self.assertEqual(self.crosscheck(text), [], text)
+
     def test_helper_folds_full_width_signs_and_punctuation(self):
         gse = runtime("gg_school_excel")
         for sep in ("\uFF0C", "\u3001", "\uFF1B", "\uFF1A", "\u3000"):
