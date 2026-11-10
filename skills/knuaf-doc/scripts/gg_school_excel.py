@@ -1758,8 +1758,9 @@ def _table_claim_verdict(rows, context, label, expected_d, unit, period_keys, sc
 _MACHINE_FIELD_ID = re.compile(r"^[A-Za-z][A-Za-z0-9]*(?:[._][A-Za-z0-9]+)+$")
 
 _SECOND_AMOUNT = re.compile(
-    r"\s*(?:~|–|—|∼|과|와|및|또는|혹은|내지|,|/|-)\s*[+\-\u2212]?"
-    r"(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?(?![\d.,])(?!\s*년)"
+    r"\s*(?:~|–|—|∼|과|와|및|또는|혹은|내지|,|/|-)\s*"
+    r"(?P<sign>[+\-\u2212\u00B1])?"
+    r"(?P<num>(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?)(?![\d.,])(?!\s*년)"
     # W-D8: `, 3개 품목 기준` / `, -5℃ 저장` are counts and measures, not a
     # second amount.  A bare number after a connector (`및 60,000`) still
     # blocks; only a following non-money unit clears it.
@@ -1768,7 +1769,7 @@ _SECOND_AMOUNT = re.compile(
 )
 
 
-def _has_second_amount(clause, amount_end, unit_match):
+def _has_second_amount(clause, amount_end, unit_match, amount_text=None):
     """A matching `50,000천원` must not head `50,000천원~60,000천원` /
     `50,000천원과 60,000천원` / `50,000천원 및 60,000천원` and still pass
     (W-D2 @Roh 중요①, W-D6 @PR#111 P2).
@@ -1778,11 +1779,32 @@ def _has_second_amount(clause, amount_end, unit_match):
     inside one amount (`50,000`) never reaches this check — the first
     amount is consumed whole before ``amount_end`` — and a trailing
     `년` keeps a year (`, 2028년 매출액은 …`) from reading as a second
-    amount."""
+    amount.
+
+    This gate now only covers what the value scan cannot judge: a figure
+    that carries no unit at all (`및 60,000`) and a verbatim duplicate of
+    the checked figure (`, 50,000천원` twice, pinned since W-D7).  Every
+    other figure goes to :func:`find_rival_amounts`, which compares the
+    signed decimal — so `50,000.0천원` (same value, different spelling)
+    passes while `50,000.1천원` and `-50,000천원` fail (Roh confirm5)."""
     after = clause[amount_end:].lstrip()
     if unit_match is not None:
         after = after[len(unit_match.group()):]
-    return _SECOND_AMOUNT.match(after) is not None
+    match = _SECOND_AMOUNT.match(after)
+    if match is None:
+        return False
+    rest = after[match.end():].lstrip()
+    if unit_match is not None:
+        has_unit = rest.startswith(unit_match.group())
+    else:
+        has_unit = bool(rest)
+    if not has_unit:
+        return True
+    if amount_text is None:
+        return True
+    plain = lambda value: fold_amount_text(value).replace(" ", "")
+    written = plain((match.group("sign") or "") + match.group("num"))
+    return written == plain(amount_text)
 
 
 # W-D8: a second amount may be joined by any glyph the writer likes.  The
@@ -1857,7 +1879,9 @@ def _unit_amount_re(unit):
         # `,`/`.` followed by a digit (`1,234,567` is consumed whole).
         r"(?<!\d)(?<![.,]\d)"
         r"(?P<sign>[+\-\u00B1])?\s*"
-        r"(?P<num>\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?\s*"
+        # The fraction belongs to the value: `50,000.1천원` is not
+        # `50,000천원` (Roh confirm5 중요①).
+        r"(?P<num>(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?)\s*"
         + re.escape(unit)
         + r"(?![A-Za-z0-9/\u33A1])"
     )
@@ -1898,11 +1922,16 @@ def _classify_figure_head(head, unit):
 def find_rival_amounts(text, unit, *, expected=None):
     """Same-unit figures after a checked amount, with their standing.
 
-    Returns one entry per figure whose absolute value differs from
-    ``expected`` (pass ``expected=None`` to keep every figure)::
+    Returns one entry per figure whose value differs from ``expected`` (pass
+    ``expected=None`` to keep every figure)::
 
         {"text": "60,000천원", "value": "60000", "start": 30, "end": 39,
          "kind": "conflict"}
+
+    The comparison is on the whole signed decimal, so `50,000.0천원` equals
+    `50,000천원` while `50,000.1천원` does not, and `-50,000천원` is a
+    different figure from `50,000천원` (Roh confirm5 중요①).  A `±` figure
+    is never equal to a plain one — it states two values at once.
 
     ``kind`` is ``conflict`` when nothing separates the figure from the
     claim it follows, ``new_claim`` when a label+particle or ``:``/``=``
@@ -1913,13 +1942,14 @@ def find_rival_amounts(text, unit, *, expected=None):
     pattern = _unit_amount_re(unit)
     want = None
     if expected is not None:
-        want = abs(Decimal(str(expected).replace(",", "")))
+        want = Decimal(str(expected).replace(",", ""))
     found = []
     for match in pattern.finditer(folded):
+        sign = match.group("sign")
         value = Decimal(match.group("num").replace(",", ""))
-        if match.group("sign") == "-":
+        if sign == "-":
             value = -value
-        if want is not None and abs(value) == want:
+        if want is not None and sign != "\u00B1" and value == want:
             continue
         head = folded[: match.start()].rstrip()
         found.append(
@@ -2120,9 +2150,37 @@ def crosscheck_body(text, values):
                     else:
                         target = _round_half_up(expected_d, decl)
                     if unit is None or target is None or actual != target:
+                        # A rival figure can be glued to the unit with no
+                        # blank (`50,000천원50,000.1천원`); the unit lookahead
+                        # rejects the digit that follows, so that shape would
+                        # otherwise fail without the student hint (Roh
+                        # confirm5 중요①③).
+                        glued = re.match(
+                            re.escape(expected_unit)
+                            + r"(?=\s*[+\-\u2212\u00B1]?\d)",
+                            clause[amount.end():].lstrip(),
+                        )
+                        if (
+                            glued is not None
+                            and target is not None
+                            and actual == target
+                            and any(
+                                f["kind"] == "conflict"
+                                for f in find_rival_amounts(
+                                    scan, expected_unit, expected=target
+                                )
+                            )
+                        ):
+                            rival_amount = True
                         conflicting_claim = True
-                    elif _has_second_amount(clause, amount.end(), unit):
+                    elif _has_second_amount(
+                        clause, amount.end(), unit, amount.group()
+                    ):
+                        # The connector gate still catches a figure with no
+                        # unit (`및 60,000`) and a verbatim repeat; every
+                        # other rival is judged by value below.
                         conflicting_claim = True
+                        rival_amount = True
                     else:
                         # W-D8: one correct amount must not excuse a rival
                         # same-unit figure elsewhere in the same sentence.

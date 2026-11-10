@@ -697,6 +697,77 @@ class RivalSecondAmountTests(ContractCase):
                                       amount=amount):
                         self.assertTrue(self.crosscheck(text), text)
 
+    def test_roh_confirm5_fraction_and_sign_are_compared(self):
+        """Roh confirm5 중요①: the fraction and the sign belong to the value.
+
+        Control at 9c3dbd0: both Roh sentences passed silently.  On the
+        8×7×3 grid below, 108 of 168 differing-fraction shapes leaked and
+        60 blocked without the hint; 10 of the 16 `.0` shapes were wrongly
+        blocked.
+        """
+        for text in (
+            self.BASE + "이고 50,000.1천원이다.",
+            self.BASE + " (－50,000천원)이다.",
+        ):
+            with self.subTest(text=text):
+                rows = self.crosscheck(text)
+                self.assertTrue(rows, text)
+                self.assertIn(self.MESSAGE, rows[0]["reason"])
+
+    def test_fraction_forms_differ_unless_zero(self):
+        connectors = ("이고", "이며", " 및 ", " 또는 ", " 혹은 ", " 내지 ",
+                      " 그리고 ", ", ")
+        signs = ("", "+", "-", "\u2212", "\uFF0B", "\uFF0D", "\u00B1")
+        for connector in connectors:
+            for sign in signs:
+                for fraction in (".1", ".01", ".5"):
+                    text = (self.BASE + connector + sign + "50,000"
+                            + fraction + "천원이다.")
+                    with self.subTest(connector=connector, sign=sign,
+                                      fraction=fraction):
+                        self.assertTrue(self.crosscheck(text), text)
+                # `.0` is the same value in another spelling, so only a
+                # minus or `±` sign may block it.
+                text = self.BASE + connector + sign + "50,000.0천원이다."
+                with self.subTest(connector=connector, sign=sign,
+                                  fraction=".0"):
+                    blocked = bool(self.crosscheck(text))
+                    self.assertEqual(sign in ("-", "\u2212", "\uFF0D", "\u00B1"),
+                                     blocked, text)
+
+    def test_negative_expectation_compares_sign(self):
+        negative = self._vals(value=-5000)
+        crosscheck = lambda text: runtime("gg_school_excel").crosscheck_body(
+            text, negative)
+        base = "농장A의 2027년 매출액은 -5,000천원"
+        for text in (base + "이다.", base + "이고 -5,000천원이다.",
+                     base + "이고 -5,000.0천원이다.",
+                     base + ", 비용은 -3,000천원이다."):
+            with self.subTest(text=text):
+                self.assertEqual([], crosscheck(text), text)
+        for text in (base + "이고 5,000천원이다.",
+                     base + " (5,000천원)이다.",
+                     base + "이고 +5,000천원이다."):
+            with self.subTest(text=text):
+                rows = crosscheck(text)
+                self.assertTrue(rows, text)
+                self.assertIn(self.MESSAGE, rows[0]["reason"])
+
+    def test_every_second_amount_path_carries_the_hint(self):
+        # Roh confirm5 중요①③: a comma case blocked without the fix hint,
+        # because the glued-unit and connector paths skipped it.
+        for text in (
+            self.BASE + "50,000.1천원이다.",
+            self.BASE + ", 50,000천원이다.",
+            self.BASE + " 및 50,000천원이다.",
+            self.BASE + " 및 60,000이다.",
+            self.BASE + ", 60,000천원이다.",
+        ):
+            with self.subTest(text=text):
+                rows = self.crosscheck(text)
+                self.assertTrue(rows, text)
+                self.assertIn(self.MESSAGE, rows[0]["reason"], rows[0])
+
     def test_connector_and_adverb_words_are_not_claim_heads(self):
         gse = runtime("gg_school_excel")
         for word in ("또는", "혹은", "정도", "아마도", "가까이", "같이",
