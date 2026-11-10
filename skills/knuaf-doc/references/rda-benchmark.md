@@ -31,10 +31,10 @@ CLI: `python3 scripts/gg.py rda-lookup` / `rda-candidates` / `rda-propose` / `rd
   웹 조사([research-sources.md](research-sources.md))에 앞서 내장 팩을 1차 조회한다.
 - 학생이 이미 값을 답한 대상은 덮어쓰지 않는다 — `gg_rda_research`는 제안·
   적용 양쪽에서 대상 상태를 확인한다(§6).
-- 전공 팩이 채워진 것은 `specialty_crops`(특용작물전공)뿐이다. 나머지 전공(낙농 `dairy` 포함)은
+- 전공 팩이 채워진 것은 `specialty_crops`(특용작물전공)뿐이다. 나머지 전공(낙농 `dairy`, 식량작물 `food_crops` 포함)은
   `references/benchmark-packs/majors/<major>/manifest.json`만 있고
   `status=empty_slot`이라 조회 시 `not_found`(`reason=major_pack_empty` 또는
-  `pack_not_promoted`)가 나오고 기존 웹 조사 흐름으로 넘어간다(낙농은 축산 전용 경로 [dairy/research-routes.md](dairy/research-routes.md) 준수).
+  `pack_not_promoted`)가 나오고 기존 웹 조사 흐름으로 넘어간다(낙농은 축산 전용 경로 [dairy/research-routes.md](dairy/research-routes.md), 식량작물은 [food-crops/research-routes.md](food-crops/research-routes.md) 준수).
 - 작성 경로는 `rda-candidates <폴더>`다 — 정본의 `common.major_id` 바인딩에서
   전공을 읽는다. `rda-lookup`은 전공을 선택 인자로 받는 원자료 감사용 조회다.
 

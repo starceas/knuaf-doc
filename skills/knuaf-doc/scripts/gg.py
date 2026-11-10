@@ -249,6 +249,18 @@ def main(argv=None):
                         value["dairy_notices"] = (
                             major_contract.dairy_notices(facts)
                         )
+                    elif binding.major_id == "food_crops":
+                        facts = project.get("facts") or {}
+                        switch = major_contract.evaluate_food_crops_switch(
+                            facts)
+                        proposals["question"]["proposal"] = (
+                            major_contract.food_crops_question_fields(
+                                proposals["question"]["proposal"], facts)
+                        )
+                        value["food_crops_switch"] = switch
+                        value["food_crops_notices"] = (
+                            major_contract.food_crops_notices(facts)
+                        )
                 elif a.command == "insect-plan":
                     import gg_insect_document
 

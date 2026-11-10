@@ -908,6 +908,7 @@ KNOWN_MAJOR_MARKERS = MappingProxyType({
     "hort_env_systems": ("원예환경",),
     "fruit_trees": ("과수", "fruit"),
     "dairy": ("낙농",),
+    "food_crops": ("식량작물",),
 })
 
 _MARKER_FIELDS = (
@@ -2732,8 +2733,339 @@ def dairy_notices(facts):
     return notices
 
 
+_FOOD_CROPS_QUESTIONS = (
+    ("entry_mode", "영농 시작 형태(succession 승계 / startup 창업)", None),
+    ("cropping_system", "작부 형태(single 단작 / double 이모작·2작목)", None),
+    ("crops", "재배 작목(첫째 작목, 이모작이면 둘째 작목까지)", None),
+    ("location", "농장 위치(시군·읍면) 또는 창업 예정지", None),
+    ("plan_year", "계획 첫해(기본: 작성연도+1)", None),
+    ("plan_period", "계획 기간", "년"),
+    ("farm_manager", "경영주(승계 예정이면 현재 경영주)", None),
+    ("family_labor", "영농에 참여하는 가족과 참여 정도", None),
+    ("land_owned", "소유 농지 면적(논·밭)", "m2"),
+    ("land_leased", "임차 농지 면적과 확보 방법", "m2"),
+    ("varieties", "품종", None),
+    ("second_crop_schedule", "둘째 작목의 파종·수확 시기와 앞 작목과의 이음", None),
+    ("site_conditions", "기상·지형·토양·수리·경지정리·재해 이력", None),
+    ("market_distance", "출하처와 거리", "km"),
+    ("sales_channel", "판매처·판매 방법(수매·RPC·계약재배·직거래 등)", None),
+    ("price_basis", "가격 근거(어느 가격 자료를 쓸지)", None),
+    ("five_year_targets", "5년 매출·규모 목표", None),
+    ("machinery_plan", "농기계·시설 구입·교체·임대 계획", None),
+    ("funding_plan", "자부담·보조·융자 계획", None),
+    ("hired_labor", "고용 노동 계획", None),
+    ("existing_assets", "지금 보유한 자산(토지·건물·농기계·현금)과 부채", None),
+    ("past_results", "최근 생산·매출 실적(승계일 때)", None),
+    ("parent_support", "부모·가족 지원(있으면), 승계면 경영 이양 계획", None),
+    ("farm_founding_date", "농장 설립 예정일(창업일 때)", None),
+    ("land_acquisition", "농지 확보 방법(임차·매입·농지은행 등, 창업일 때)", None),
+    ("startup_fund", "착수 자금(준비금)과 정착 지원 신청 계획(창업일 때)", None),
+    ("farm_contacts", "농장명, 홈페이지·e-mail(있으면)", None),
+    ("certifications", "인증·수상·특허(있으면)", None),
+)
+
+
+def _food_crops_question_target(field_id):
+    """Gating tag for branch-only questions (``QUESTION-IDS.md`` 갈래 열)."""
+    return {
+        "past_results": "succession",
+        "farm_founding_date": "startup",
+        "land_acquisition": "startup",
+        "startup_fund": "startup",
+        "second_crop_schedule": "double",
+    }.get(field_id)
+
+
+FOOD_CROPS_MODULE = declare_module(
+    major_id="food_crops",
+    module_version="0.1.0",
+    capabilities={
+        "question": "supported", "document": "supported",
+        "evidence": "supported", "finance": "unsupported",
+    },
+    question_schema=tuple(
+        QuestionSpec(
+            "food_crops." + field_id,
+            meaning,
+            unit=unit,
+            target=_food_crops_question_target(field_id),
+        )
+        for field_id, meaning, unit in _FOOD_CROPS_QUESTIONS
+    ),
+    document_plan=tuple(
+        DocumentNodeSpec(
+            section_id, role, selectable=False, required=True,
+            rationale=rationale,
+        )
+        for section_id, role, rationale in (
+            ("cover", "cover", "작성방법 앞부분 겉표지·속표지"),
+            ("approval", "approval", "작성방법 앞부분 제출서·인준서"),
+            ("summary_1_5", "summary",
+             "요약 아라비아 1~5(농장 개요·시장전망·재배기술·투자금액·매출 및 이익)"),
+            ("acknowledgements", "acknowledgements", "작성방법 앞부분"),
+            ("lists", "lists", "일반 목차·표 목차·그림 목차 포함"),
+            ("chapter_01", "chapter",
+             "양식 본문 골격 1장 머리말; references/food-crops/school-toc.md"),
+            ("chapter_02", "chapter",
+             "양식 본문 골격 2장 영농환경 분석 + 마. 뒤 제목 없는 SWOT 표"),
+            ("chapter_03", "chapter",
+             "양식 본문 골격 3장 영농계획 수립(가~바)"),
+            ("chapter_04", "chapter",
+             "양식 본문 골격 4장 재무계획(가~바); 숫자는 학생 제공 값만"),
+            ("conclusion", "conclusion",
+             "맺음말 및 발전방향 — 장 번호 없음"),
+            ("references", "references", "참고문헌 6유형·정렬 규칙"),
+            ("parent_consent", "parent_consent",
+             "학부모 동의서 — 문서 맨 끝(낙농과 위치 다름)"),
+        )
+    ),
+    finance_capabilities=(
+        FinanceCapability("food_crops_16_sheet_v1", "unsupported",
+                          "식량작물 학교 원본 구조 미등록 — 프로필 닫음"),
+    ),
+    supported_outputs=("question_list", "document_plan", "evidence_review",
+                       "school_paper"),
+    workbook_profiles=("food_crops_16_sheet_v1",),
+    packs=(),
+)
+
+
+_FOOD_CROPS_SWITCH_FIELDS = (
+    "food_crops.entry_mode", "food_crops.cropping_system", "food_crops.crops",
+)
+_FOOD_CROPS_ENTRY_MODES = ("succession", "startup")
+_FOOD_CROPS_CROPPING_SYSTEMS = ("single", "double")
+
+
+def _food_crops_switch_values(facts):
+    """Active switch answers: field_id -> set of values.
+
+    Same rule as the dairy switch: only ``provided`` answers count and
+    superseded history never decides a branch.
+    """
+    values = {field_id: set() for field_id in _FOOD_CROPS_SWITCH_FIELDS}
+    for fact in (facts or {}).values():
+        if (not isinstance(fact, dict)
+                or fact.get("answer_state") != "provided"
+                or fact.get("verification") == "superseded"):
+            continue
+        field_id = fact.get("field_id")
+        if field_id in values:
+            value = fact.get("value")
+            values[field_id].add(
+                value if isinstance(value, str) else repr(value))
+    return values
+
+
+def _food_crops_crop_names(value):
+    """Crop names carried by one ``crops`` answer (list or delimited text)."""
+    if isinstance(value, (list, tuple)):
+        raw = [item for item in value if isinstance(item, str)]
+    elif isinstance(value, str):
+        raw = re.split(r"[,+/·ㆍ]|그리고", value)
+    else:
+        return []
+    return [name.strip() for name in raw if name.strip()]
+
+
+def _food_crops_crop_count(facts):
+    """(crop count, crop names) from the active ``crops`` answers."""
+    names = []
+    for value in _food_crops_field_answers(facts, "food_crops.crops"):
+        names.extend(_food_crops_crop_names(value))
+    return len(names), names
+
+
+def _resolve_food_crops_switch(facts):
+    """Return (state, entry_mode) from the active branch answers.
+
+    ``food_crops_crop_count_mismatch`` behaves like an unsettled branch
+    (DESIGN §12-3 ⓒ): the crop count must be fixed before crop-by-crop
+    body writing, so the state is not ``ready``.
+    """
+    values = _food_crops_switch_values(facts)
+    if any(len(found) > 1 for found in values.values()):
+        return "answer_conflict", None
+    entry_mode = next(iter(values["food_crops.entry_mode"]), None)
+    cropping_system = next(
+        iter(values["food_crops.cropping_system"]), None)
+    count, names = _food_crops_crop_count(facts)
+    if entry_mode not in _FOOD_CROPS_ENTRY_MODES:
+        return "entry_mode_required", None
+    if cropping_system not in _FOOD_CROPS_CROPPING_SYSTEMS:
+        return "cropping_system_required", entry_mode
+    if not names:
+        return "crops_required", entry_mode
+    if (
+        (cropping_system == "single" and count != 1)
+        or (cropping_system == "double" and count != 2)
+    ):
+        return "crop_count_mismatch", entry_mode
+    return "ready", entry_mode
+
+
+def evaluate_food_crops_switch(facts):
+    """Return the food-crops branch gate state from canonical fact records."""
+    return _resolve_food_crops_switch(facts)[0]
+
+
+def food_crops_question_fields(proposal, facts):
+    """Filter branch-only questions against the confirmed branch."""
+    switch, entry_mode = _resolve_food_crops_switch(facts)
+    values = _food_crops_switch_values(facts)
+    double = next(
+        iter(values["food_crops.cropping_system"]), None) == "double"
+    selected = {
+        "succession": switch == "ready" and entry_mode == "succession",
+        "startup": switch == "ready" and entry_mode == "startup",
+        "double": switch == "ready" and double,
+    }
+    targets = set(selected)
+    fields = proposal.get("fields", [])
+    return {
+        **proposal,
+        "fields": [
+            item for item in fields
+            if item.get("target") not in targets
+            or selected[item.get("target")]
+        ],
+        "held_fields": [
+            item["field_id"] for item in fields
+            if item.get("target") in targets
+            and not selected[item.get("target")]
+        ],
+    }
+
+
+_FOOD_CROPS_SWITCH_GUIDANCE = {
+    "entry_mode_required":
+        "food_crops.entry_mode 답이 필요함(승계 succession / 창업 startup)",
+    "cropping_system_required":
+        "food_crops.cropping_system 답이 필요함(단작 single / 이모작 double)",
+    "crops_required":
+        "food_crops.crops 답이 필요함(재배 작목 1~2개)",
+    "crop_count_mismatch":
+        "작부 형태와 작목 수가 어긋남 — 단작은 1작목, 이모작은 2작목으로 "
+        "답을 바로잡아야 함(작목별 본문 착수 보류)",
+    "answer_conflict":
+        "같은 항목에 살아 있는 답이 둘 이상 — 옛 답을 대체됨(superseded)으로 "
+        "정리해야 풀림",
+}
+
+# Format-value years (표지 2027년 2월, 제출서 2026년 12월) are examples and
+# never a default plan year.  The plan year default is 작성연도+1.
+_FOOD_CROPS_DEFAULT_PLAN_YEAR_NOTE = (
+    "학교 엑셀은 시트마다 기준연도가 다름(계획 첫해·기초 연도·감가상각 시트) — "
+    "계획 첫해가 다르면 학생이 시트별로 옮겨야 하며 규칙집은 엑셀을 고치지 않음"
+    "(재무 엑셀 미지원)"
+)
+
+# 벼·맥류·두류·서류·잡곡 (식량작물 범위).  Unmatched crop names only raise
+# an advisory notice — they never block writing.
+_FOOD_CROPS_CROP_KEYWORDS = (
+    "벼", "쌀", "현미", "찰벼", "맥류", "밀", "보리", "귀리", "호밀", "라밀",
+    "두류", "콩", "팥", "녹두", "완두", "동부", "땅콩", "서류", "감자",
+    "고구마", "카사바", "잡곡", "조", "기장", "수수", "메밀", "옥수수",
+    "율무", "피",
+)
+
+
+def _food_crops_field_answers(facts, field_id):
+    """Active answers (provided, not superseded) for one food-crops field."""
+    values = []
+    for fact in (facts or {}).values():
+        if (not isinstance(fact, dict)
+                or fact.get("answer_state") != "provided"
+                or fact.get("verification") == "superseded"
+                or fact.get("field_id") != field_id):
+            continue
+        values.append(fact.get("value"))
+    return values
+
+
+def _food_crops_plan_year(value):
+    """The four-digit plan year carried by an answer, else ``None``."""
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value if 1900 <= value <= 2200 else None
+    if isinstance(value, str):
+        match = re.search(r"(?<!\d)((?:19|20)\d{2})(?!\d)", value)
+        if match:
+            return int(match.group(1))
+    return None
+
+
+def food_crops_default_plan_year(today=None):
+    """Default plan first year: 작성연도+1."""
+    import datetime
+
+    return (today or datetime.date.today()).year + 1
+
+
+def food_crops_notices(facts):
+    """Advisory notices for the food-crops ``major-plan`` output.
+
+    They only tell the student what to settle before the body; they never
+    unlock the closed school-workbook profile and never edit a workbook.
+    """
+    switch, entry_mode = _resolve_food_crops_switch(facts)
+    notices = []
+    if switch != "ready":
+        notices.append({
+            "id": "food_crops_switch_pending",
+            "severity": "warning",
+            "message": "본문 착수 전 갈래 확정 필요 — "
+                       + _FOOD_CROPS_SWITCH_GUIDANCE.get(switch, switch),
+        })
+    if switch == "crop_count_mismatch":
+        count, _ = _food_crops_crop_count(facts)
+        notices.append({
+            "id": "food_crops_crop_count_mismatch",
+            "severity": "warning",
+            "message": "작부 형태와 작목 수가 어긋남(작목 %d개) — 단작은 "
+                       "1작목, 이모작은 2작목으로 답을 바로잡은 뒤 작목별 "
+                       "본문 작성" % count,
+        })
+    if entry_mode == "startup":
+        notices.append({
+            "id": "food_crops_startup_form",
+            "severity": "warning",
+            "message": "학교 양식·엑셀은 승계 농가 기준 — 기존 보유 자산·가족 "
+                       "노동·경영 이양 칸은 창업 계획에 맞게 바꿔 쓰거나 비움"
+                       "(references/food-crops/startup-path.md)",
+        })
+    years = {year for year in
+             (_food_crops_plan_year(value) for value in
+              _food_crops_field_answers(facts, "food_crops.plan_year"))
+             if year is not None}
+    if len(years) == 1 and years != {food_crops_default_plan_year()}:
+        notices.append({
+            "id": "food_crops_plan_year_shift",
+            "severity": "warning",
+            "message": "계획 첫해가 %d — 기본값(작성연도+1)과 다름. %s"
+                       % (next(iter(years)),
+                          _FOOD_CROPS_DEFAULT_PLAN_YEAR_NOTE),
+        })
+    _, names = _food_crops_crop_count(facts)
+    outside = [name for name in names
+               if not any(keyword in name
+                          for keyword in _FOOD_CROPS_CROP_KEYWORDS)]
+    if outside:
+        notices.append({
+            "id": "food_crops_non_food_crop",
+            "severity": "warning",
+            "message": "식량작물(벼·맥류·두류·서류·잡곡) 밖으로 보이는 작목: "
+                       + ", ".join(outside)
+                       + " — 양식 골격은 그대로 쓰되 작목별 세부 항목은 "
+                       "지도교수 확인 필요(작성은 막지 않음)",
+        })
+    return notices
+
+
 MODULES = (SPECIALTY_CROPS_MODULE, INDUSTRIAL_INSECTS_MODULE,
-           FRUIT_TREES_MODULE, HORT_ENV_SYSTEMS_MODULE, DAIRY_MODULE)
+           FRUIT_TREES_MODULE, HORT_ENV_SYSTEMS_MODULE, DAIRY_MODULE,
+           FOOD_CROPS_MODULE)
 
 
 def _default_packs_dir():
