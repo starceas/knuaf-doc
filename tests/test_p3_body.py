@@ -626,5 +626,154 @@ class TableContextReuseTests(ContractCase):
             b.crosscheck_body(text, values))
 
 
+class RivalSecondAmountTests(ContractCase):
+    """W-D8: same unit, different value in one claim sentence must fail.
+
+    The four earlier leaks (range → repeated claim → `및` → comma plus
+    blanks/sign) all came from enumerating the glyph that joins the two
+    figures.  The rule is now unit based: any same-unit figure in the same
+    statement whose value differs from the checked amount fails, whatever
+    joins them, unless a new claim head (`비용은`, `매출액 =`) or a period
+    (`2028년`) introduces it.
+
+    Control group at 6cda938 (before this fix): 684 of the 714 shapes below
+    passed silently.  Every one must fail now.
+    """
+
+    BASE = "농장A의 2027년 매출액은 50,000천원"
+    SEPS = ("", " ", "  ", "  ", "\t", "\uFF0C", "\u3001", "\uFF1B", "\uFF1A",
+            ";", ":", "(", ")", "->", " = ", ", 약 ", " ~ 약 ", " 또는 약 ")
+    SIGNS = ("", "+", "-", "\u2212", "\uFF0B", "\uFF0D", "\u00B1")
+    AMOUNTS = ("60,000천원이다.", "60000천원이다.", "60,000천원",
+               "60,000 천원이다.", "60,000.0천원이다.",
+               "60,000천원으로 늘었다.")
+
+    MESSAGE = ("같은 문장에 다른 금액이 함께 있습니다. "
+               "그 금액이 전년·목표·일부 금액이면 문장을 나눠 쓰세요")
+
+    def _vals(self, value=50000):
+        return [{"fact_id": "f1", "field_id": "매출액", "value": value,
+                 "unit": "천원", "period": "2027", "scope": "농장A"}]
+
+    def crosscheck(self, text, **kw):
+        return runtime("gg_school_excel").crosscheck_body(text, self._vals(**kw))
+
+    def test_every_join_sign_and_amount_shape_fails(self):
+        shapes = 0
+        for sep in self.SEPS:
+            for sign in self.SIGNS:
+                for amount in self.AMOUNTS:
+                    text = self.BASE + sep + sign + amount
+                    shapes += 1
+                    with self.subTest(sep=sep, sign=sign, amount=amount):
+                        self.assertTrue(self.crosscheck(text), text)
+        self.assertGreaterEqual(shapes, 700)
+
+    def test_helper_reports_the_rival_figure(self):
+        gse = runtime("gg_school_excel")
+        text = self.BASE + "\uFF0C\uFF0B60,000천원이다."
+        found = gse.find_rival_amounts(text, "천원", expected=50000)
+        self.assertEqual(1, len(found), found)
+        self.assertEqual("60000", found[0]["value"])
+        self.assertEqual("conflict", found[0]["kind"])
+
+    def test_helper_folds_full_width_signs_and_punctuation(self):
+        gse = runtime("gg_school_excel")
+        for sep in ("\uFF0C", "\u3001", "\uFF1B", "\uFF1A", "\u3000"):
+            text = self.BASE + sep + "60,000천원이다."
+            with self.subTest(sep=sep):
+                found = gse.find_rival_amounts(text, "천원", expected=50000)
+                self.assertEqual(["conflict"], [f["kind"] for f in found], found)
+
+    def test_helper_leaves_a_new_claim_and_a_period_alone(self):
+        gse = runtime("gg_school_excel")
+        cases = (
+            ("농장A의 2027년 매출액은 50,000천원, 비용은 30,000천원이다.",
+             "new_claim"),
+            ("농장A의 2027년 매출액은 50,000천원, 매출액 = 30,000천원이다.",
+             "new_claim"),
+            ("농장A의 2027년 매출액은 50,000천원, 2028년 매출액은 60,000천원이다.",
+             "year"),
+        )
+        for text, kind in cases:
+            with self.subTest(text=text):
+                found = gse.find_rival_amounts(text, "천원", expected=50000)
+                self.assertEqual([kind], [f["kind"] for f in found], found)
+
+    def test_helper_skips_the_checked_value_itself(self):
+        gse = runtime("gg_school_excel")
+        self.assertEqual(
+            [], gse.find_rival_amounts(self.BASE + "이다.", "천원", expected=50000))
+
+    def test_same_value_repeated_still_fails(self):
+        # W-D7 behaviour: a repeat of the same figure inside one statement
+        # was already blocked by the connector check; it stays blocked.
+        self.assertTrue(self.crosscheck(
+            "농장A의 2027년 매출액은 50,000천원, 50,000천원이다."))
+
+    def test_new_claim_comma_and_new_year_still_pass(self):
+        for text in (
+            "농장A의 2027년 매출액은 50,000천원, 비용은 30,000천원이다.",
+            "농장A의 2027년 매출액은 50,000천원\uFF0C비용은 30,000천원이다.",
+            "농장A의 2027년 매출액은 50,000천원, 2028년 매출액은 60,000천원이다.",
+            "농장A의 2027년 매출액은 50,000천원이며 2028년 매출액은 70,000천원이다.",
+            "농장A의 2027년 매출액은 50,000천원 (2027년 기준)이다.",
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(self.crosscheck(text), [], text)
+
+    def test_student_message_is_appended_and_original_reason_kept(self):
+        original = "기간·단위·범위·출력 반올림 값 불일치"
+        for text in (
+            self.BASE + "\uFF0C\uFF0B60,000천원이다.",
+            self.BASE + "->60,000천원이다.",
+            self.BASE + ";60,000천원이다.",
+        ):
+            with self.subTest(text=text):
+                rows = self.crosscheck(text)
+                self.assertTrue(rows, text)
+                reason = rows[0]["reason"]
+                self.assertTrue(reason.startswith(original), reason)
+                self.assertIn(self.MESSAGE, reason)
+
+    def test_student_message_names_no_internal_term(self):
+        from tests.test_student_language import FORBIDDEN_STUDENT_TERMS
+        reason = self.crosscheck(self.BASE + "\uFF0C60,000천원이다.")[0]["reason"]
+        lowered = reason.lower()
+        for term in FORBIDDEN_STUDENT_TERMS:
+            with self.subTest(term=term):
+                self.assertNotIn(term.lower(), lowered, reason)
+
+    def test_other_failures_keep_the_bare_reason(self):
+        # A wrong amount is not a rival-amount failure, so the hint must not
+        # leak into unrelated reasons.
+        rows = self.crosscheck("농장A의 2027년 매출액은 7,000천원이다.")
+        self.assertTrue(rows)
+        self.assertEqual("기간·단위·범위·출력 반올림 값 불일치", rows[0]["reason"])
+
+    def test_known_limitation_previous_year_amount_blocks(self):
+        """Accepted limitation (responsible manager's ruling).
+
+        A rival figure behind a bare word with no particle (`전년
+        40,000천원보다`) is not a claim head, so it blocks.  A student
+        splits the sentence to pass.  Pinned here so the behaviour is a
+        stated limit, not a surprise."""
+        self.assertTrue(self.crosscheck(
+            "농장A의 2027년 매출액은 50,000천원, 전년 40,000천원보다 늘었다."))
+        self.assertEqual(self.crosscheck(
+            "농장A의 2027년 매출액은 50,000천원이다. "
+            "전년 매출액은 40,000천원이었다."), [])
+
+    def test_count_and_measure_after_comma_pass(self):
+        # W-D6 false blocks: a count/measure is not a second amount.
+        for text in (
+            "농장A의 2027년 매출액은 50,000천원, 3개 품목 기준이다.",
+            "농장A의 2027년 매출액은 50,000천원, -5℃ 저장 기준이다.",
+            "농장A의 2027년 매출액은 50,000천원, 1,200kg 출하 기준이다.",
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(self.crosscheck(text), [], text)
+
+
 if __name__ == "__main__":
     unittest.main()
