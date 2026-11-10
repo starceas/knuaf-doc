@@ -138,7 +138,7 @@
   "scripts/gg_body_layout.py": "4f8df680d3ccb1ede862a34788ef8f3c3e9e6f3c683e86ce65ee36cb92696a10",
   "scripts/gg_body_plan_check.py": "11789c978c76293beb5a40dcbc05ed5683d78937b220b024fa20cc1e314549d5",
   "scripts/gg_commands.py": "43d4fcd4ed0ee65cbfdfdf5cec4d18e591395496c8b80282db80fa4d514f4d07",
-  "scripts/gg_core.py": "732630d441a20aed5c4970a427e97ec7c39be2e84c796eb1ace8744bc818cfd0",
+  "scripts/gg_core.py": "da971fba2595a39729a5007c5393879dc5ae44358fbc36014a10354ae249cbba",
   "scripts/gg_deps.py": "c6443dfc86b136ca26b23be65083d6b8d7e596c8901154bd583795c61c619281",
   "scripts/gg_document.py": "a31940c23df091dc608084ad8375417b1999ad19e583bb2bd1e6eb8becc13927",
   "scripts/gg_docx_table_layout.py": "dce52533be20ea6b46e8e6f41f3083af3e0ab20ca43dcb3b19cebf488f581921",
