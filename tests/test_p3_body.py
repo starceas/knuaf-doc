@@ -797,6 +797,48 @@ class RivalSecondAmountTests(ContractCase):
                     with self.subTest(head=head, sign=sign, amount=amount):
                         self.assertTrue(self.crosscheck(text), text)
 
+    def test_slash_second_amount_carries_the_hint(self):
+        """책임자 확인5-2: `/` before a same-unit figure is a second amount.
+
+        The unit lookahead rejects `/` (it opens compound units such as
+        `천원/㎡`), so `50,000천원/60,000천원` failed as a plain unit
+        mismatch with no student hint.  Control at 798aabf: 105 of 175
+        shapes below blocked without the hint.  A slash whose figure does
+        not carry the same unit stays a compound unit and keeps the bare
+        mismatch, so `/10a` (digits, then a measure) must not gain the
+        hint.
+        """
+        signs = ("", "+", "-", "\u2212", "\uFF0B", "\uFF0D", "\u00B1")
+        amounts = ("60,000천원", "60000천원", "60,000 천원",
+                   "50,000.1천원", "52,000천원")
+        for sep in ("/", " / ", "/ ", " /", "/\t"):
+            for sign in signs:
+                for amount in amounts:
+                    text = self.BASE + sep + sign + amount + "이다."
+                    with self.subTest(sep=sep, sign=sign, amount=amount):
+                        rows = self.crosscheck(text)
+                        self.assertTrue(rows, text)
+                        self.assertIn(self.MESSAGE, rows[0]["reason"], text)
+
+    def test_slash_same_value_passes_and_compound_units_stay_bare(self):
+        # `.0` is the same value in another spelling, so only a minus or
+        # `±` sign blocks it — the slash path must agree with the comma path.
+        for sign in ("", "+", "-", "\u2212", "\uFF0B", "\uFF0D", "\u00B1"):
+            text = self.BASE + "/" + sign + "50,000.0천원이다."
+            with self.subTest(sign=sign):
+                blocked = bool(self.crosscheck(text))
+                self.assertEqual(sign in ("-", "\u2212", "\uFF0D", "\u00B1"),
+                                 blocked, text)
+        # A slash that opens a compound unit is not a second amount: the
+        # figure after it carries a measure, not the checked unit.
+        for unit in ("㎡", "10a", "10a 기준", "3개", "kg", "ha", "톤", "%",
+                     "1,000㎡", "2.5ha"):
+            text = self.BASE + "/" + unit + "이다."
+            with self.subTest(unit=unit):
+                rows = self.crosscheck(text)
+                self.assertTrue(rows, text)
+                self.assertNotIn(self.MESSAGE, rows[0]["reason"], text)
+
     def test_two_syllable_labels_stay_claim_heads(self):
         # The 2-syllable rule must not start rejecting real labels.
         for label in ("비용은", "경영비는", "총수입은", "판매비는", "인건비가",

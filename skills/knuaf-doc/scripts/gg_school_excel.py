@@ -2140,7 +2140,26 @@ def crosscheck_body(text, values):
                     if amount is None:
                         conflicting_claim = True
                         continue
-                    unit = unit_pattern.match(clause[amount.end() :].lstrip())
+                    unit_tail = clause[amount.end() :].lstrip()
+                    unit = unit_pattern.match(unit_tail)
+                    if unit is None:
+                        # A same-unit figure may hide behind a slash the
+                        # unit lookahead rejects (`50,000천원/60,000천원`);
+                        # read the unit as matched so the ordinary rival
+                        # rules below judge it (책임자 확인5-2).  Only a
+                        # figure that carries the same unit counts: a slash
+                        # opening a compound unit (`천원/㎡`, `천원/10a`)
+                        # leaves `unit` unmatched and stays a plain unit
+                        # mismatch, including `/10a` whose digits alone
+                        # would otherwise look like an amount.
+                        if re.match(
+                            re.escape(expected_unit)
+                            + r"\s*/\s*[+\-\u2212\u00B1]?"
+                            r"(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?\s*"
+                            + re.escape(expected_unit),
+                            fold_amount_text(unit_tail),
+                        ):
+                            unit = re.match(re.escape(expected_unit), unit_tail)
                     actual = Decimal(amount.group().replace(",", ""))
                     decl = _display_places(clause, expected_unit)
                     if decl is None:
@@ -2158,7 +2177,7 @@ def crosscheck_body(text, values):
                         glued = re.match(
                             re.escape(expected_unit)
                             + r"(?=\s*[+\-\u2212\u00B1]?\d)",
-                            clause[amount.end():].lstrip(),
+                            fold_amount_text(clause[amount.end() :]).lstrip(),
                         )
                         if (
                             glued is not None
