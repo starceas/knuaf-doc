@@ -7,6 +7,7 @@ including the P2 new-file allowlist (before_sha256=null) rules.
 """
 import hashlib
 import json
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -523,6 +524,82 @@ def _write_manifest_silent(root):
                         "baseline": {}, "runtime_changes": {},
                         "files": {}, "readme_policy": {}}),
             encoding="utf-8")
+
+
+class WiringIgnoreTests(ContractCase):
+    """Per-worktree harness wiring must never enter the ledger.
+
+    ``.githooks/`` (three symlinks) and ``.harness.conf`` are created by
+    harness-init inside each worktree and kept out of git through the
+    worktree's own ``info/exclude``. Before this fix the ledger read them as
+    repository files: ``--write-manifest`` produced 116 entries instead of
+    112, and a test run in a wired worktree failed with ``undeclared_file``.
+    """
+
+    def _tree(self, tmp):
+        """A synthetic tree with baseline files plus branch-local wiring."""
+        _synth_tree(tmp)
+        root = Path(tmp)
+        (root / ".githooks").mkdir()
+        for name in ("commit-msg", "pre-commit", "pre-push"):
+            (root / ".githooks" / name).write_text("#!/bin/sh\n",
+                                                   encoding="utf-8")
+        (root / ".harness.conf").write_text('PROJECT_NAME="x"\n',
+                                            encoding="utf-8")
+        return root
+
+    def test_wiring_is_absent_from_ledger_and_scan(self):
+        """Wiring files never reach the bundle nor the undeclared scan."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._tree(tmp)
+            listed = check_bundle.disk_files(root)
+            self.assertNotIn(".harness.conf", listed)
+            for name in ("commit-msg", "pre-commit", "pre-push"):
+                self.assertNotIn(".githooks/" + name, listed)
+            # The ledger built over the same tree is hook-free.
+            _write_manifest(root)
+            manifest = json.loads(
+                (root / "tools/validation-bundle.json").read_text(
+                    encoding="utf-8"))
+            names = set(manifest["files"])
+            self.assertNotIn(".harness.conf", names)
+            self.assertFalse([n for n in names if n.startswith(".githooks/")])
+            self.assertEqual("ok", check_bundle.check(root)["status"])
+
+    def test_tracked_file_with_the_same_name_is_kept(self):
+        """A repository that really tracks ``.harness.conf`` still lists it."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._tree(tmp)
+            # git-track the wiring name: the ignore must yield to reality.
+            subprocess.run(["git", "init", "-q", str(root)], check=True,
+                           capture_output=True)
+            subprocess.run(["git", "-C", str(root), "add", "-f",
+                            ".harness.conf", ".githooks/pre-commit"],
+                           check=True, capture_output=True)
+            listed = check_bundle.disk_files(root)
+            self.assertIn(".harness.conf", listed)
+            self.assertIn(".githooks/pre-commit", listed)
+
+    def test_partial_tree_without_wiring_stays_clean(self):
+        """A tree that has no wiring behaves exactly as before."""
+        with tempfile.TemporaryDirectory() as tmp:
+            _synth_tree(tmp)
+            root = Path(tmp)
+            self.assertEqual(sorted(check_bundle.disk_files(root)),
+                             sorted(n for n in check_bundle.disk_files(root)
+                                    if not n.startswith(".")))
+
+    def test_ignore_stays_narrow(self):
+        """Only the wiring names are ignored — not every dotted file."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._tree(tmp)
+            for name in (".env", ".ruff_cache/x", ".github/workflows/ci.yml"):
+                path = root / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("x\n", encoding="utf-8")
+            listed = check_bundle.disk_files(root)
+            self.assertIn(".env", listed)
+            self.assertIn(".github/workflows/ci.yml", listed)
 
 
 if __name__ == "__main__":

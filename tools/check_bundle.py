@@ -42,6 +42,7 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+import subprocess
 import sys
 
 import check_asset_disposition
@@ -61,6 +62,50 @@ _SHA256_HEX = set("0123456789abcdef")
 # Interpreter/VCS noise only. A plantable payload must never match these.
 IGNORED_NAMES = {".git", ".DS_Store", "__pycache__"}
 IGNORED_SUFFIXES = (".pyc", ".pyo")
+# Per-worktree harness wiring, created by `harness-init` and kept in the
+# worktree's own info/exclude — it is never part of the repository, so the
+# ledger (and the undeclared-file scan that reads the same listing) must not
+# see it. Narrow on purpose: only these two names, at the repository root.
+# A repository that really tracks them keeps working — see
+# TRACKED_WIRING_PATHS below.
+IGNORED_WIRING = {".harness.conf"}
+IGNORED_WIRING_DIRS = {".githooks"}
+
+
+def _tracked(root, relpaths):
+    """``relpaths`` among ``root`` that git actually tracks.
+
+    Absent git, or a non-repository tree (the tests run ``check()`` on plain
+    temp trees), yields an empty set: nothing is tracked, so the wiring
+    ignore applies. Returns an empty set on any git failure rather than
+    guessing — a missing answer must not silently hide a real file.
+    """
+    names = sorted(relpaths)
+    if not names:
+        return set()
+    try:
+        proc = subprocess.run(
+            ["git", "-C", str(root), "ls-files", "-z", "--"] + names,
+            capture_output=True, timeout=30)
+    except (OSError, subprocess.SubprocessError):
+        return set()
+    if proc.returncode != 0:
+        return set()
+    out = proc.stdout.decode("utf-8", "surrogateescape")
+    return {name for name in out.split("\0") if name}
+
+
+def wiring_ignored(root, relpath):
+    """True when ``relpath`` is branch-local harness wiring, not a repo file."""
+    parts = Path(relpath).parts
+    if not parts:
+        return False
+    top = parts[0]
+    if top in IGNORED_WIRING_DIRS:
+        return not _tracked(root, [relpath])
+    if relpath in IGNORED_WIRING:
+        return not _tracked(root, [relpath])
+    return False
 
 
 def sha256_file(path):
@@ -77,11 +122,15 @@ def tree_digest(files):
     return hashlib.sha256(("\n".join(lines) + "\n").encode("utf-8")).hexdigest()
 
 
-def ignored(relpath):
+def ignored(relpath, root=None):
     parts = Path(relpath).parts
     if any(part in IGNORED_NAMES for part in parts):
         return True
-    return relpath.endswith(IGNORED_SUFFIXES)
+    if relpath.endswith(IGNORED_SUFFIXES):
+        return True
+    if root is None:
+        return False
+    return wiring_ignored(root, relpath)
 
 
 def disk_files(root):
@@ -91,7 +140,7 @@ def disk_files(root):
         if not path.is_file():
             continue
         rel = path.relative_to(root).as_posix()
-        if ignored(rel):
+        if ignored(rel, root):
             continue
         found[rel] = path
     return found
