@@ -124,10 +124,15 @@ def _repo_root(root):
       genuinely tracked file from the ledger (C-01).
     * ``.git`` present and ``rev-parse --show-toplevel`` is exactly ``root`` —
       a repository of its own; its index answers tracking questions.
+    * ``.git`` present but ``rev-parse --show-toplevel`` resolves elsewhere
+      (``core.worktree`` pointing at another directory, say) —
+      :class:`TrackingUnavailable` as well. The repository at ``root`` cannot
+      say what is tracked *under this root*, and answering ``False`` would
+      resume the scan as if no repository existed, dropping files (C-01).
 
-    The toplevel comparison is what keeps a ``.git``-less export copy from
-    inheriting the index of whatever repository happens to contain it: such a
-    copy must fall back to the non-repository case and keep its wiring visible.
+    A ``.git``-less export copy never reaches that case: it has no ``.git`` of
+    its own, so the first branch catches it and the outer repository's index
+    is never consulted for it.
     """
     root = Path(root)
     if not (root / ".git").exists():
@@ -145,7 +150,11 @@ def _repo_root(root):
     text = proc.stdout.decode("utf-8", "surrogateescape").strip()
     if not text:
         raise TrackingUnavailable("git rev-parse가 최상위 경로를 주지 않음")
-    return Path(text).resolve() == root.resolve()
+    toplevel = Path(text).resolve()
+    if toplevel != root.resolve():
+        raise TrackingUnavailable(
+            "git 최상위 경로가 검사 루트와 다름: " + str(toplevel))
+    return True
 
 
 def tracked_names(root):

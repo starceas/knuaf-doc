@@ -790,6 +790,37 @@ class WiringIgnoreTests(ContractCase):
             self.assertEqual(before,
                              (root / "tools/validation-bundle.json").read_bytes())
 
+    def test_worktree_elsewhere_refuses_the_ledger(self):
+        """``core.worktree``가 다른 곳을 가리키면 장부를 만들지 않는다 (C-01).
+
+        실제 저장소의 ``.git``은 멀쩡하고 ``rev-parse --show-toplevel``도
+        exit 0으로 끝나지만, 돌려준 경로가 검사 루트가 아니다. 그 경로의
+        색인은 이 루트 아래 무엇이 추적되는지 답하지 못하므로, 종전처럼
+        ``False``를 돌려 스캔을 이어 가면 파일이 조용히 빠질 수 있다.
+        멈추고 exit 1로 끝나며 기존 장부는 바이트 그대로다.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._tree(tmp)
+            elsewhere = Path(tmp) / "elsewhere"
+            elsewhere.mkdir()
+            self._git(root, "init", "-q")
+            self._git(root, "add", "-A", "--", "a.py", "b.py", "tools",
+                      "tests")
+            _write_manifest(root)
+            before = (root / "tools/validation-bundle.json").read_bytes()
+            self._git(root, "config", "core.worktree", str(elsewhere))
+            with self.assertRaises(check_bundle.TrackingUnavailable):
+                check_bundle.disk_files(root)
+            proc = subprocess.run(
+                [sys.executable, str(REPO_ROOT / "tools"
+                                      / "build_validation_bundle.py"),
+                 "--root", str(root), "--write-manifest"],
+                capture_output=True, text=True)
+            self.assertEqual(1, proc.returncode, proc.stderr)
+            self.assertIn("추적 여부를 확인할 수 없어", proc.stderr)
+            self.assertEqual(before,
+                             (root / "tools/validation-bundle.json").read_bytes())
+
     def test_export_copy_inside_another_repository_keeps_wiring_visible(self):
         """남의 저장소 안에 놓인 ``.git`` 없는 사본은 그 색인을 물려받지 않는다.
 
