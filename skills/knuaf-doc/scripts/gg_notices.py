@@ -192,6 +192,11 @@ def choose(root, identity, value):
     except ValueError as error:
         return {"status": "rejected", "reason": _reason_of(error)}
     written = write_notices(root)
+    # 선택 저장은 성공했지만 알림 파일 갱신이 실패했으면 그것을 덮지 않는다
+    # (I4-b). 새 키를 만들지 않고 status 값만 바꾼다 — 기존 error 키는 그대로.
+    if written.get("status") == "failed":
+        written.update(status="chosen_notice_failed", choice=value)
+        return written
     written.update(status="chosen", choice=value)
     return written
 
@@ -275,6 +280,7 @@ def main(argv=None):
                          ensure_ascii=False))
         return 2
     print(json.dumps(value, ensure_ascii=False))
+    # 알림 파일 갱신 실패는 성공이 아니다 — 앱·스크립트가 알 수 있게 0이 아닌 코드.
     return 0 if value.get("status") in {"written", "chosen"} else 1
 
 

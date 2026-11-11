@@ -4159,13 +4159,17 @@ _WORKBOOK_ADVICE_PROFILES = {
 def _advice_major_id(p):
     """원예/과수 판정은 major_id 문자열로(능력 플래그는 둘을 구별 못 함).
 
-    ``common.major_id`` 사실을 읽는 공개 헬퍼를 쓴다. 미확정·중복·근거
-    불일치는 예외이므로 이 경우 판정 불가(None)로 본다.
+    ``common.major_id`` 사실을 읽는 공개 헬퍼를 쓴다.
+
+    **예상된 판정 불가만 ``None``**이다 — 전공 미확정·중복·근거 불일치
+    (``MajorContractError`` 계열). 그 밖의 예상 밖 오류는 알림이 필요 없어서
+    가 아니라 **알림을 만들다 실패한 것**이므로 그대로 올려보낸다(I4-a).
+    여기서 삼키면 빈 파일이 '성공'으로 보고되고 기존 알림이 지워진다.
     """
+    import gg_major_contract as mc
     try:
-        import gg_major_contract as mc
         auth = mc.binding_from_project(mc.default_registry(), p)
-    except Exception:
+    except mc.MajorContractError:
         return None
     return getattr(auth, "major_id", None)
 

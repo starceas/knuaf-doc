@@ -389,6 +389,47 @@ class NoticesFileTests(ContractCase):
         # 다른 identity면 없음
         self.assertIsNone(self.core._advice_choice_fact(saved, "f" * 64))
 
+    def test_choice_reports_notice_failure_without_undoing_choice(self):
+        """선택 저장 성공 + 알림 갱신 실패 → chosen_notice_failed, 선택은 유지 (I4-b).
+
+        `choose`가 write_notices의 failed를 chosen으로 덮으면 앱·스크립트가
+        성공으로 오인한다. 상태 값만 바꾸고(새 키 없음) 선택은 되돌리지 않는다.
+        """
+        project = self._project_with_notice()
+        rows = [r for r in self.core.checks(self.root, project)
+                if r.get("check_id") == "finance_workbook_notice"]
+        identity = rows[0]["notice_identity"]
+        target = Path(self.root) / ".knuaf-notices.json"
+        target.write_bytes(b'{"schema": "knuaf.notices/1", "sentinel": 1}\n')
+        before = target.read_bytes()
+        # choose 는 이 함수를 두 번 부른다 — 처음(identity 확인)은 성공하고
+        # 두 번째(파일 쓰기)만 실패해야 '선택 저장은 성공'이 된다.
+        calls = {"n": 0}
+
+        def second_fails(root):
+            calls["n"] += 1
+            if calls["n"] == 1:
+                return rows, None
+            return [], "RuntimeError: boom"
+
+        with mock.patch.object(self.notices, "notice_rows_or_error",
+                               side_effect=second_fails):
+            result = self.notices.choose(self.root, identity, "footnote")
+        self.assertEqual("chosen_notice_failed", result["status"])
+        self.assertEqual("footnote", result["choice"])
+        self.assertIn("error", result)              # 기존 실패 표시 유지
+        self.assertEqual(before, target.read_bytes())
+        # 선택은 정본에 남아 있다(되돌리지 않는다).
+        saved = self.core.load(self.root)
+        self.assertEqual(
+            "footnote",
+            saved["questions"]["finance.workbook.accounting_notice.choice"]["choice"])
+        # CLI는 성공(0)으로 끝나면 안 된다.
+        code = self.notices.main(
+            ["choose", str(self.root), "--identity", identity,
+             "--value", "footnote"])
+        self.assertNotEqual(0, code)
+
     def test_identity_unchanged_before_and_after_choice(self):
         """같은 프로젝트에서 선택 전·후 알림 식별값이 같다(엔드투엔드)."""
         project = self._project_with_notice()
@@ -668,6 +709,27 @@ class NoticeAutoWriteTests(ContractCase):
         self.assertEqual("adopted", result["status"])
         self.assertEqual("failed", result["notices_write"]["status"])
         self.assertEqual(before, target.read_bytes())
+
+    def test_major_lookup_crash_is_reported_not_written(self):
+        """전공 판정의 **예상 밖** 오류는 '알림 필요 없음'이 아니라 실패다 (I4-a).
+
+        정의된 판정 불가(MajorContractError 계열)만 None이고, 그 밖의 예외가
+        None으로 바뀌면 빈 파일이 성공으로 보고되고 기존 알림이 지워진다.
+        """
+        project, value, companions = self._adoptable_fruit(
+            profile="fruit_16_sheet_v1_fy1")
+        target = Path(self.fruit_root) / ".knuaf-notices.json"
+        target.write_bytes(b'{"schema": "knuaf.notices/1", "sentinel": 1}\n')
+        before = target.read_bytes()
+        with mock.patch.object(
+                self.core, "_advice_major_id",
+                side_effect=RuntimeError("major lookup boom")):
+            result = self.core.adopt_output(
+                self.fruit_root, value, project["revision"], "req-major",
+                companion_files=companions, major_id="fruit_trees")
+        self.assertEqual("adopted", result["status"])          # 채택 유지
+        self.assertEqual("failed", result["notices_write"]["status"])
+        self.assertEqual(before, target.read_bytes())          # 기존 파일 보존
 
     def test_write_failure_keeps_adoption_and_reports(self):
         """(다) 쓰기 실패 → 접수 성공 + 내부 필드로 표시(조용히 삼키지 않음)."""
