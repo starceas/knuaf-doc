@@ -2932,6 +2932,13 @@ def _finance_tables_mod():
     import gg_finance_tables
     return gg_finance_tables
 
+def _finance_amounts_mod():
+    """W-E2 integration point (gg_finance_amounts.detect_amount_gaps).
+    Lazily imported so the module loads only when the body crosscheck
+    actually runs; gg_finance_amounts never imports gg_core."""
+    import gg_finance_amounts
+    return gg_finance_amounts
+
 _FINANCE_ASSET_ROLES = (
     "land", "building", "plants", "animals", "machines", "cash",
     "materials", "produce")
@@ -4986,12 +4993,37 @@ def checks(root, p):
         elif items:
             from gg_school_excel import crosscheck_body
 
-            for item in crosscheck_body(body, items):
+            legacy_rows = list(crosscheck_body(body, items))
+            for item in legacy_rows:
                 add(
                     "body_finance_crosscheck",
                     item.get("fact_id") or item["location"],
                     item["reason"],
                     status=item.get("status", "fail"),
+                )
+            # W-E2: 같은 (항목, 연도, 범위) 금액이 서로 다른 목차 절에
+            # 다르게 적혀 있으면 잡는다. 절 순서(order)를 그대로 넘겨
+            # 모듈의 index가 학생 문구 '본문 N번째 절'과 맞게 한다.
+            amount_sections = [
+                {
+                    "section_id": sid,
+                    "path": s.get("path"),
+                    "title": s.get("title"),
+                    "text": draft(
+                        local(root, s["path"]).read_text(
+                            encoding="utf-8")),
+                }
+                for sid, s in sorted(p["sections"].items(),
+                                     key=lambda kv: kv[1]["order"])
+            ]
+            for issue in _finance_amounts_mod().detect_amount_gaps(
+                    amount_sections, items, legacy_issues=legacy_rows):
+                add(
+                    "body_finance_crosscheck",
+                    issue["location"],
+                    issue["reason"],
+                    severity=issue.get("severity", "error"),
+                    status=issue.get("status", "fail"),
                 )
         else:
             # G3-03: 비교 대상이 없으면 이 검사는 아무것도 보지 않는다.
