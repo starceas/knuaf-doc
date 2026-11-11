@@ -216,6 +216,43 @@ class FoodCropsTableCaptionTests(unittest.TestCase):
                                  gg_document.POLICY_ADVISORY_CHECKS)
 
 
+class FoodCropsTableUnitLineTests(unittest.TestCase):
+    """Roh C1 중요3: 캡션과 표 사이의 표 밖 단위줄은 정상 원고다."""
+
+    TABLE = "| 가상 항목 | 가상 값 |\n| --- | --- |\n| 하나 | 둘 |\n"
+
+    def codes(self, text, major="food_crops"):
+        return [cid for cid, _ in gg_document.check(text, None, major_id=major)]
+
+    def test_a_unit_line_between_caption_and_table_is_not_missing_object(self):
+        text = ("1. 머리말\n\n표 1은 비용이다.\n\n표 1. 가상 비용\n\n"
+                "(단위: 천 원)\n\n" + self.TABLE)
+        codes = self.codes(text)
+        self.assertNotIn("missing_object", codes)
+        self.assertNotIn("table_caption_optional", codes)
+
+    def test_an_unrelated_line_between_caption_and_table_still_errors(self):
+        text = ("1. 머리말\n\n표 1은 비용이다.\n\n표 1. 가상 비용\n\n"
+                "가상 잡문 한 줄\n\n" + self.TABLE)
+        self.assertIn("missing_object", self.codes(text))
+
+    def test_the_unit_line_still_declares_the_table_unit(self):
+        text = ("1. 머리말\n\n표 1은 비용이다.\n\n표 1. 가상 비용\n\n"
+                "(단위: 천원)\n\n| 가상 항목 | 가상 값 |\n| --- | --- |\n"
+                "| 하나 | 200원 |\n")
+        self.assertIn("unit_conflict", self.codes(text))
+
+    def test_other_majors_keep_their_previous_result(self):
+        # 다른 전공은 단위를 제목 괄호 안에 쓰므로 이 허용을 넓히지 않는다.
+        text = ("1. 머리말\n\n표 1은 비용이다.\n\n표 1. 가상 비용\n\n"
+                "(단위: 천 원)\n\n" + self.TABLE)
+        for major in ("dairy", "fruit_trees", "hort_env_systems", None):
+            with self.subTest(major=major):
+                self.assertEqual(["missing_object"],
+                                 [cid for cid in self.codes(text, major)
+                                  if cid == "missing_object"])
+
+
 class FoodCropsTemplatePlaceholderTests(unittest.TestCase):
     """양식 원본 자리표시가 원고에 남으면 오류(식량작물만)."""
 

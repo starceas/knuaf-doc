@@ -122,6 +122,21 @@ class FoodCropsBuildTests(ContractCase):
         self.assertEqual("학부모 동의서", chapters[-1])
         self.assertNotIn("학부모 동의서", chapters[:-1])
 
+    def test_chapter_breaks_without_frontmatter_still_start_a_new_page(self):
+        # Roh C1 중요2: 앞머리 없는 정상 DOCX 경로에서도 장·마무리 제목은
+        # 새 쪽에서 시작해야 한다.
+        text = "\n\n".join(["# 1. 머리말", "합성 본문", "# 2. 영농환경 분석",
+                            "합성 본문", "# 맺음말 및 발전방향", "합성 본문",
+                            "# 참고문헌", "합성 본문", "# 학부모 동의서",
+                            "합성 본문"])
+        doc = self.convert(text=text)
+        self.assertEqual(
+            ["2. 영농환경 분석", "맺음말 및 발전방향", "참고문헌", "학부모 동의서"],
+            [p.text for p in doc.paragraphs
+             if p.paragraph_format.page_break_before])
+        first = next(p for p in doc.paragraphs if p.text == "1. 머리말")
+        self.assertFalse(first.paragraph_format.page_break_before)
+
     def test_other_majors_get_no_chapter_page_breaks(self):
         # 산업곤충은 `school_paper` 출력을 지원하지 않아 빌더에 닿지 않는다.
         for major in ("specialty_crops", "fruit_trees",

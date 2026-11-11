@@ -254,6 +254,25 @@ class FoodCropsSwitchTests(unittest.TestCase):
         self.assertEqual(mc.evaluate_food_crops_switch(empty_slot),
                          "entry_mode_required")
 
+    def test_the_same_crop_recorded_twice_counts_once(self):
+        # Roh C1 중요1: 같은 작목 답이 활성 사실에 두 번 기록되면 작목 수를
+        # 잘못 세어 단작은 보류되고 이모작은 잘못 통과했다.
+        twice = _branch("succession", "single", ["벼"])
+        twice["again"] = _fact("crops", ["벼"])
+        self.assertEqual(mc.evaluate_food_crops_switch(twice), "ready")
+        self.assertEqual(
+            mc.evaluate_food_crops_switch(_branch("succession", "single",
+                                                 "벼, 벼")), "ready")
+        # 공백만 다른 같은 작목 둘은 이모작의 2작목이 아니다.
+        self.assertEqual(
+            mc.evaluate_food_crops_switch(
+                _branch("startup", "double", "벼,  벼")),
+            "crop_count_mismatch")
+        # 서로 다른 작목이면 표기 공백은 개수에 영향이 없다.
+        self.assertEqual(
+            mc.evaluate_food_crops_switch(
+                _branch("startup", "double", "벼 ,  보리")), "ready")
+
     def test_crops_answer_accepts_text_and_list_shapes(self):
         for crops in (["벼", "보리"], ["벼"], ["감자"]):
             with self.subTest(crops=crops):

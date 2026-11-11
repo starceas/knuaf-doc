@@ -1220,6 +1220,10 @@ _UNIT_DIMENSIONS = {
     **dict.fromkeys(("㎡", "평", "ha"), "area"),
 }
 _UNIT_DECLARATION = re.compile(r"단위\s*[:：]\s*([^()（）\n]+)")
+# 표 밖 단위줄: 문단 전체가 단위 선언 하나뿐인 경우만(`(단위: 천 원)`).
+_UNIT_LINE_ONLY = re.compile(
+    r"^[ \t]*[（(]?[ \t]*단위[ \t]*[:：][^()（）\n]+?[ \t]*[)）]?[ \t]*$"
+)
 _TABLE_NOTE = re.compile(
     r"^\s*(?:주\s*\d*|비고|환산)(?=$|\s|[:：.)])|^\s*※"
 )
@@ -1519,9 +1523,49 @@ def check(text, base, major_id=None, project_root=None):
         for m in re.finditer(r"(?<![가-힣A-Za-z0-9])" + label + r"\s*(\d+)", prose):
             if int(m[1]) not in numbers:
                 issues.append(("missing_caption", m[0] + " 참조의 캡션 없음"))
+    def _unit_line_steps(nodes, index, step):
+        """Step over 표 밖 단위줄 문단 between a caption and its table.
+
+        식량작물 양식은 단위를 표 밖 별도 문단으로도 쓴다
+        (references/food-crops/format.md 4.1).  Only a paragraph that is
+        nothing but the declaration is skipped; any other line keeps the
+        object/caption gap an error (Roh C1 중요3).  Other majors write the
+        unit inside the caption parentheses and are not touched.
+        """
+        position = index
+        if major_id != "food_crops":
+            return position
+        while 0 <= position < len(nodes):
+            node = nodes[position]
+            if (node["kind"] != "paragraph"
+                    or not _UNIT_LINE_ONLY.match(node.get("text", ""))):
+                break
+            position += step
+        return position
+
+    def _table_object_at(nodes, caption_index):
+        """Index of the table a 표 caption introduces, or None."""
+        position = _unit_line_steps(nodes, caption_index + 1, 1)
+        if 0 <= position < len(nodes) and nodes[position]["kind"] == "table":
+            return position
+        return None
+
+    def _caption_before_table(nodes, table_index):
+        """Index of the 표 caption introducing this table, or None."""
+        position = _unit_line_steps(nodes, table_index - 1, -1)
+        if (0 <= position < len(nodes) and nodes[position]["kind"] == "caption"
+                and nodes[position]["label"] == "표"):
+            return position
+        return None
+
     for i, n in enumerate(nodes):
         if n["kind"] == "caption":
-            j = i + 1 if n["label"] == "표" else i - 1
+            if n["label"] == "표":
+                # 정상 배치 확인용 — 아래 객체 확인과 같은 규칙을 쓴다.
+                object_index = _table_object_at(nodes, i)
+                j = object_index if object_index is not None else i + 1
+            else:
+                j = i - 1
             kind = "table" if n["label"] == "표" else "image"
             if j < 0 or j >= len(nodes) or nodes[j]["kind"] != kind:
                 pending_photo = (
@@ -1547,11 +1591,7 @@ def check(text, base, major_id=None, project_root=None):
             ):
                 issues.append(("missing_image", n["path"]))
         if n["kind"] == "table":
-            if (
-                i == 0
-                or nodes[i - 1]["kind"] != "caption"
-                or nodes[i - 1]["label"] != "표"
-            ):
+            if _caption_before_table(nodes, i) is None:
                 # 식량작물 양식은 2장 SWOT처럼 제목 없는 표를 정상으로 쓴다
                 # (참고 문서 format.md 4.1). 오류 대신 '의도면 OK' 알림.
                 if major_id == "food_crops":

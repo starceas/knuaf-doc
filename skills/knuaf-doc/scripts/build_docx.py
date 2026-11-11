@@ -195,6 +195,21 @@ def add_table(doc, rows, font):
 WIDE_TABLE_MIN_COLS = 10
 
 
+def chapter_break_node_ids(sequence, major_id):
+    """Level-1 headings that must start a new page (식량작물 only).
+
+    The first heading is excluded: it already starts a fresh section (school
+    paper) or follows the contents page break.  Both DOCX body paths call this
+    one function, so a chapter/closer title cannot lose its page break when
+    the frontmatter is absent (Roh C1 중요2).  Other majors are unchanged.
+    """
+    if major_id != "food_crops":
+        return set()
+    headings = [n for n in sequence
+                if n["kind"] == "heading" and n.get("level") == 1]
+    return {id(n) for n in headings[1:]}
+
+
 def convert(md_text, font=FONT, base=".", table_reports=None, *,
             context=None, toc=True):
     """Render the paper markdown into a DOCX document.  Policy B: the
@@ -332,6 +347,8 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
             update.set(qn("w:val"), "true")
             doc.settings.element.append(update)
             doc.add_page_break()
+        chapter_break_nodes.update(
+            chapter_break_node_ids(nodes, authorization.major_id))
         render_body(nodes)
         return doc
 
@@ -480,10 +497,9 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
     body_nodes=nodes[i_body:]
     # 식량작물: 본문 첫 장은 아래 새 구역이 이미 새 쪽이라, 나머지 장/맺음말/
     # 참고문헌/학부모 동의서 제목만 page_break_before로 새 쪽에서 시작한다.
-    if authorization.major_id == "food_crops":
-        body_headings = [n for n in body_nodes if n['kind'] == 'heading'
-                         and n.get('level') == 1]
-        chapter_break_nodes.update(id(n) for n in body_headings[1:])
+    # 판정은 앞머리 없는 경로와 같은 함수(chapter_break_node_ids)를 쓴다.
+    chapter_break_nodes.update(
+        chapter_break_node_ids(body_nodes, authorization.major_id))
     candidates=nodes[i_toc+1:i_body]
     summary_start=next((i for i,n in enumerate(candidates) if n.get('text','').strip()=='요약'),None)
 

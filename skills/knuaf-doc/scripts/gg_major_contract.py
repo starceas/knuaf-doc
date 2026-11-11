@@ -2869,10 +2869,22 @@ def _food_crops_crop_names(value):
 
 
 def _food_crops_crop_count(facts):
-    """(crop count, crop names) from the active ``crops`` answers."""
-    names = []
+    """(crop count, crop names) from the active ``crops`` answers.
+
+    One crop can reach this point twice — the same answer recorded under two
+    fact ids, or a name repeated inside one answer — so names are compared
+    after whitespace normalisation and counted once.  Otherwise a single-crop
+    plan is held as a count mismatch while a two-crop plan passes with one
+    crop (Roh C1 중요1).
+    """
+    names, seen = [], set()
     for value in _food_crops_field_answers(facts, "food_crops.crops"):
-        names.extend(_food_crops_crop_names(value))
+        for name in _food_crops_crop_names(value):
+            key = " ".join(name.split())
+            if key in seen:
+                continue
+            seen.add(key)
+            names.append(name)
     return len(names), names
 
 
