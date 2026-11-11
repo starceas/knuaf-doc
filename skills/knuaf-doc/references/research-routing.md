@@ -4,6 +4,7 @@
 
 이 문서는 **누구에게 맡기는가**를 정한다.
 **어느 사이트부터 여는가**는 [research-sources.md](research-sources.md)를 따른다.
+조사 담당의 순서 고정 절차와 결과 서식은 [research-job.md](research-job.md)를 따른다.
 위임 프롬프트에는 관련 범위만 함께 넣는다. 전공별 논문 흐름 기반 리서치 경로와 장별 근거 인계는 [research-route-index.md](research-route-index.md)를, 시각자료 탐색 및 권리 확인은 [figure-research-routes.md](figure-research-routes.md)를 따른다. 특용·약용작물·생허브 가격은 [price-research-routes.md](price-research-routes.md)의 목적별 경로와 작업 계약을 우선 참조한다. 낙농(젖소·한우) 리서치 경로는 [dairy/research-routes.md](dairy/research-routes.md) 및 [dairy/research-chapters.md](dairy/research-chapters.md)를 따른다. 식량작물(벼·맥류·두류·서류·잡곡) 리서치 경로는 [food-crops/research-routes.md](food-crops/research-routes.md) 및 [food-crops/research-chapters.md](food-crops/research-chapters.md)를 따른다. 현재 모델 배정은 [model-routing.md](model-routing.md)가 정본이다.
 
 ## 0. 사용자 지정 대상 우선
