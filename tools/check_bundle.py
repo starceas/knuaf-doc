@@ -66,9 +66,10 @@ IGNORED_SUFFIXES = (".pyc", ".pyo")
 # Per-worktree harness wiring, created by `harness-init` and kept in the
 # worktree's own info/exclude — it is never part of the repository, so the
 # ledger (and the undeclared-file scan that reads the same listing) must not
-# see it. Narrow on purpose: only these two names, at the repository root.
-# A repository that really tracks them keeps working — see
-# TRACKED_WIRING_PATHS below.
+# see it. Narrow on purpose: only these two names, at the repository root,
+# and only the *children* of ``.githooks`` (a plain file with that name is
+# out of scope and stays visible). A repository that really tracks them keeps
+# working — see :func:`wiring_status`.
 IGNORED_WIRING = {".harness.conf"}
 IGNORED_WIRING_DIRS = {".githooks"}
 
@@ -107,22 +108,44 @@ def _git_env():
 
 
 def _repo_root(root):
-    """``root`` when it is a work tree/git dir of its own, else ``None``.
+    """True when ``root`` is the top of a repository of its own.
 
-    A tree with no repository of its own (an exported copy, a plain temp
-    directory) is **not** a repository: the wiring filter is switched off
-    there and the files are listed like any other, which is the pre-fix
-    behaviour — loud ``undeclared_file`` rather than a silent omission.
+    The three states are decided from the tree itself, never from git's exit
+    code alone:
+
+    * no ``.git`` entry at ``root`` — an exported copy or a plain temp
+      directory. No tracking question can be answered there, so the wiring
+      filter is switched off and the files are listed like any other
+      (pre-fix behaviour: a loud ``undeclared_file`` rather than a silent
+      omission).
+    * ``.git`` present but the repository cannot be queried (git missing,
+      non-zero exit, empty or undecodable output) — :class:`TrackingUnavailable`.
+      Stopping is the only honest answer: guessing "untracked" would drop a
+      genuinely tracked file from the ledger (C-01).
+    * ``.git`` present and ``rev-parse --show-toplevel`` is exactly ``root`` —
+      a repository of its own; its index answers tracking questions.
+
+    The toplevel comparison is what keeps a ``.git``-less export copy from
+    inheriting the index of whatever repository happens to contain it: such a
+    copy must fall back to the non-repository case and keep its wiring visible.
     """
+    root = Path(root)
+    if not (root / ".git").exists():
+        return False
     try:
         proc = subprocess.run(
-            ["git", "-C", str(root), "rev-parse", "--is-inside-work-tree"],
+            ["git", "-C", str(root), "rev-parse", "--show-toplevel"],
             capture_output=True, env=_git_env(), timeout=30)
     except (OSError, subprocess.SubprocessError) as error:
         raise TrackingUnavailable(
             "git 실행 실패: " + type(error).__name__) from error
-    # `rev-parse` fails outside a repository; that is a normal answer.
-    return proc.returncode == 0 and proc.stdout.strip() == b"true"
+    if proc.returncode != 0:
+        raise TrackingUnavailable(
+            "git rev-parse 실패(exit %d)" % proc.returncode)
+    text = proc.stdout.decode("utf-8", "surrogateescape").strip()
+    if not text:
+        raise TrackingUnavailable("git rev-parse가 최상위 경로를 주지 않음")
+    return Path(text).resolve() == root.resolve()
 
 
 def tracked_names(root):
@@ -162,12 +185,23 @@ def wiring_status(root, relpath, tracked=None):
     return TRACK_TRACKED if relpath in tracked else TRACK_UNTRACKED
 
 
-def wiring_ignored(root, relpath, tracked=None):
-    """True when ``relpath`` is branch-local harness wiring, not a repo file."""
+def _is_wiring_candidate(relpath):
+    """True for the narrow harness-wiring names, before tracking is known."""
     parts = Path(relpath).parts
     if not parts:
         return False
-    if parts[0] not in IGNORED_WIRING_DIRS and relpath not in IGNORED_WIRING:
+    return (len(parts) >= 2 and parts[0] in IGNORED_WIRING_DIRS) \
+        or relpath in IGNORED_WIRING
+
+
+def wiring_ignored(root, relpath, tracked=None):
+    """True when ``relpath`` is branch-local harness wiring, not a repo file.
+
+    Scope is exactly ``.harness.conf`` at the root and the children of a
+    ``.githooks`` directory. A plain *file* named ``.githooks`` is a repository
+    file the harness never creates, so it stays visible.
+    """
+    if not _is_wiring_candidate(relpath):
         return False
     status = wiring_status(root, relpath, tracked)
     return status == TRACK_UNTRACKED
@@ -213,9 +247,7 @@ def disk_files(root):
             continue
         rel = path.relative_to(root).as_posix()
         candidates.append(rel)
-        parts = Path(rel).parts
-        if parts and (parts[0] in IGNORED_WIRING_DIRS
-                      or rel in IGNORED_WIRING):
+        if _is_wiring_candidate(rel):
             wiring.add(rel)
     filter_off = False
     tracked = None
