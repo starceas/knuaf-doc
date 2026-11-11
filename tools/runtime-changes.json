@@ -277,7 +277,7 @@
       "source": "adopted:app-PR41"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "626e168703458daad1304f9a257c441d9ac6ae993e28bf967f58474418263293",
+      "after_sha256": "7140068490faa1e15eb15b910472234dc379db476fb849e5f0a4ff6135a14659",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "W-D8",
@@ -1419,7 +1419,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_core.py": {
-      "after_sha256": "bc7085dd5c87d8841209a99d70035554c95e59a26019090d19057b94ad1a3784",
+      "after_sha256": "3067a12d5049832803dd57b0ec5b3b610970ec8d9240491ed0d09b3c03483250",
       "amended_in": "P1-S01,P2-R7,P2-R8,P3-C1,Lanes15-28",
       "before_sha256": "b3491a931add687328bf561e7e7cd2aed3edd7a7fee374a28092e771d9124cc5",
       "first_changed": "P1",
@@ -1610,7 +1610,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_hort_workbook.py": {
-      "after_sha256": "80feea5b8d792b9bffeee6ece46b23b1840978d2b556ca9f3a331326c781c401",
+      "after_sha256": "92932a9f11f5187f510a992ed83b99afcecdbc46f78aa1bbea9438eb83440c02",
       "before_sha256": null,
       "first_changed": "P20",
       "last_changed": "P28",

@@ -3202,23 +3202,58 @@ SCHOOL_FORM_NOTICES = (
 
 # 과수 fy1 정정 21칸(연도 1 + 물가 20) — 학생 말 2묶음.
 # 근거: references/fruit-trees/corrections/fy1-spec.json
-FRUIT_FY1_NOTICES = (
-    ("fy1_year_basis", "typo",
-     ["9.경비계획!B12"],
-     "경비계획 연도칸이 2025로 박혀 있어서 창업 첫해를 보도록 고쳤어요"),
-    ("fy1_price_index_basis", "typo",
-     ["9.경비계획!J15", "9.경비계획!J16", "9.경비계획!J26", "9.경비계획!J27",
-      "9.경비계획!J37", "9.경비계획!J38", "9.경비계획!J48", "9.경비계획!J49",
-      "9.경비계획!K15", "9.경비계획!K16", "9.경비계획!K26", "9.경비계획!K27",
-      "9.경비계획!K37", "9.경비계획!K38", "9.경비계획!K48", "9.경비계획!K49",
-      "9.경비계획!L15", "9.경비계획!L16", "9.경비계획!L26", "9.경비계획!L27"],
-     "물가 지수가 2020년 기준으로 계산되어 있어서 창업 첫해 기준으로 고쳤어요"),
-)
+#
+# 좌표를 **손으로 적지 않는다**(I2). 손으로 적은 목록은 실제 정정 칸과
+# 21칸 중 18칸이 어긋났고, 그 오답이 알림 정체성(notice_identity)까지
+# 들어갔다. 아래는 명세에서 **도출**하므로 명세가 바뀌면 알림도 따라간다.
+#
+# **적재 시점에 읽지 않는다.** 명세가 없거나 해시가 어긋나면 이 모듈을
+# 부르는 모든 명령이 죽는다 — 알림 하나 때문에 원예·과수 전체가 멈추면
+# 안 된다. 알림을 만들 때 그 안에서 읽고, 실패는 I4 경로(생성 실패 →
+# notices_write failed, 채택 유지, 기존 파일 보존)로 흘려보낸다.
+_FY1_YEAR_KEYS = ("fy1_year_basis",)
+_FY1_PRICE_KEYS = ("fy1_price_index_basis",)
+_FY1_TEXTS = {
+    "fy1_year_basis":
+        "경비계획 연도칸이 2025로 박혀 있어서 창업 첫해를 보도록 고쳤어요",
+    "fy1_price_index_basis":
+        "물가 지수가 2020년 기준으로 계산되어 있어서 창업 첫해 기준으로 고쳤어요",
+}
+
+
+def fy1_registered_groups():
+    """등록 명세의 정정 칸을 학생 말 묶음으로 묶는다 — **호출 시점 읽기**.
+
+    ``gg_fruit_correction.load_spec()``은 해시로 등록본임을 증명하고,
+    ``registered_cells()``는 ``(sheet, cell, new_formula)``를 명세 순서로
+    돌려준다. 연도 칸은 1개, 나머지는 물가 묶음이다.
+
+    명세를 읽지 못하면 ``ValueError``를 올린다 — 여기서 삼키지 않는다.
+    호출부(``gg_core._workbook_notice_row``)가 이를 '생성 실패'로 분류해
+    채택을 유지한 채 ``notices_write.status="failed"``로 보고한다(I4).
+    """
+    from gg_fruit_correction import (YEAR_CELL, YEAR_FORMULA, load_spec,
+                                     registered_cells)
+    entries = registered_cells(load_spec())
+    year, price = [], []
+    for sheet, cell, formula in entries:
+        text = f"{sheet}!{cell}"
+        if cell == YEAR_CELL and formula == YEAR_FORMULA:
+            year.append(text)
+        else:
+            price.append(text)
+    groups = []
+    if year:
+        groups.append([_FY1_YEAR_KEYS[0], "typo", year, _FY1_TEXTS[_FY1_YEAR_KEYS[0]]])
+    if price:
+        groups.append([_FY1_PRICE_KEYS[0], "typo", price,
+                       _FY1_TEXTS[_FY1_PRICE_KEYS[0]]])
+    return tuple(tuple(g) for g in groups)
 
 
 def notice_groups(kind=None, *, fruit=False):
     """알림 묶음 목록. ``kind``로 거르고, 없으면 전체."""
-    groups = FRUIT_FY1_NOTICES if fruit else SCHOOL_FORM_NOTICES
+    groups = fy1_registered_groups() if fruit else SCHOOL_FORM_NOTICES
     if kind is None:
         return [{"key": key, "kind": k, "cells": list(cells), "text": text}
                 for key, k, cells, text in groups]
@@ -3229,7 +3264,8 @@ def notice_groups(kind=None, *, fruit=False):
 def notice_counts(*, fruit=False):
     """(typo 묶음 수, typo 칸 수, method 묶음 수, method 칸 수)."""
     out = {"typo": [0, 0], "method": [0, 0]}
-    for key, kind, cells, _text in (FRUIT_FY1_NOTICES if fruit else SCHOOL_FORM_NOTICES):
+    for key, kind, cells, _text in (fy1_registered_groups() if fruit
+                                    else SCHOOL_FORM_NOTICES):
         out.setdefault(kind, [0, 0])
         out[kind][0] += 1
         out[kind][1] += len(cells)

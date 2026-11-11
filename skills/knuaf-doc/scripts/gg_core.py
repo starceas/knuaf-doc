@@ -4147,10 +4147,12 @@ _SUPPORTED_OPS = (
 
 # --- 학생 알림: 엑셀 점검 '안내만' (v0.4.9) --------------------------------
 # 차단 0. 이 블록이 만드는 행은 모두 severity="info"다.
+# 역할: "hort" = 원예 변환본, "fruit_fy1" = **FY1 정정을 실제 적용한** 과수본.
+# 일반 과수(fruit_16_sheet_v1)는 이 표에 없다 — FY1 정정을 하지 않았으므로
+# "21곳을 바로잡았어요" 안내를 낼 수 없다(I1). 지원 프로필이지만 알림 0건이다.
 _WORKBOOK_ADVICE_PROFILES = {
     "hort_18_sheet_reconstructed_v1": "hort",
-    "fruit_16_sheet_v1": "fruit",
-    "fruit_16_sheet_v1_fy1": "fruit",
+    "fruit_16_sheet_v1_fy1": "fruit_fy1",
 }
 
 
@@ -4223,17 +4225,50 @@ def _advice_project_id(root):
         return None
 
 
-def _advice_choice_fact(p):
-    """이미 고른 값(있으면). 없으면 None."""
-    for fact in (p.get("facts") or {}).values():
-        if not isinstance(fact, dict):
-            continue
-        if fact.get("field_id") != "finance.workbook.accounting_notice.choice":
-            continue
-        value = fact.get("value")
+def _advice_choice_record(p):
+    """선택이 저장된 질문 레코드(있으면). 없으면 None.
+
+    선택은 **질문 결정 기록에만** 둔다. 일반 재무 사실(facts)로 저장하면
+    ``checks()``가 claim_missing을, ``gate()``가 fact_unreviewed를 새로
+    붙여 **선택이 곧 제출 차단**이 된다(C1). 질문 레코드는 두 검사의
+    순회 대상이 아니다.
+    """
+    record = (p.get("questions") or {}).get(
+        "finance.workbook.accounting_notice.choice")
+    return record if isinstance(record, dict) else None
+
+
+def _advice_choice_value(record):
+    """레코드의 선택 값(있으면). ``choice``가 정본, 옛 ``answer``도 읽는다."""
+    for key in ("choice", "answer"):
+        value = record.get(key)
         if value in ("direct_tell", "footnote"):
             return value
     return None
+
+
+def _advice_choice_fact(p, identity=None):
+    """이미 고른 값(있으면). 없거나 identity가 다르면 None.
+
+    ``identity``가 주어지면 **그 알림의 선택만** 인정한다(R2) — 정정 칸
+    집합이 바뀌어 알림 정체성이 바뀌면 이전 선택은 따라오지 않는다.
+    """
+    record = _advice_choice_record(p)
+    if record is None:
+        return None
+    if identity is not None:
+        stored = record.get("notice_identity")
+        if stored != identity:
+            return None
+    return _advice_choice_value(record)
+
+
+class _NoticeNotNeeded(Exception):
+    """알림이 **필요 없는** 경우(지원 전공 아님·대상 산출물 없음·알림 0종).
+
+    실패가 아니다. ``_workbook_notice_row_for_project``가 이 예외로
+    "행 없음"을 알리고, 호출부는 빈 목록(**성공**)으로 본다.
+    """
 
 
 def _workbook_notice_row_for_project(root, p):
@@ -4242,6 +4277,13 @@ def _workbook_notice_row_for_project(root, p):
     ``_advice_output`` + ``_workbook_notice_row`` 만 쓰므로 엑셀을 열지 않고
     본문 대조도 하지 않는다. 전체 ``checks()``와 **같은 행**을 내는 것은
     시험 ``write_matches_full_checks``가 잠근다.
+
+    돌려주는 값:
+    - 행 dict — 알림 있음
+    - ``None`` — 알림이 필요 없음(지원 전공 아님·대상 산출물 없음)
+    - 예외를 **밖으로 던지지 않는다**: 예상 밖 오류는 ``_NoticeNotNeeded``와
+      구분해 ``RuntimeError``로 다시 던진다(I4). 여기서 삼키면 빈 파일이
+      '성공'으로 보고된다.
     """
     try:
         if _advice_major_id(p) not in ("hort_env_systems", "fruit_trees"):
@@ -4252,15 +4294,20 @@ def _workbook_notice_row_for_project(root, p):
         role = _WORKBOOK_ADVICE_PROFILES.get(output.get("workbook_profile") or "")
         if role is None:
             return None
-        return _workbook_notice_row(root, p, oid, output, role == "fruit")
-    except Exception:
-        return None
+        return _workbook_notice_row(root, p, oid, output, role)
+    except (_NoticeNotNeeded, RuntimeError):
+        # 이미 분류된 '필요 없음'은 그대로, 실패 신호는 올려보낸다.
+        raise
+    except Exception as error:      # 예상 밖 오류 = 실패(성공으로 바꾸지 않는다)
+        raise RuntimeError(
+            "notice row assembly failed: " + type(error).__name__) from error
 
 
-def _workbook_notice_row(root, p, oid, output, fruit):
+def _workbook_notice_row(root, p, oid, output, role):
     """계약 행 1개. 알림이 필요 없으면 None."""
     from gg_hort_workbook import (notice_counts, notice_groups,
                                   notice_identity, notice_items, notice_title)
+    fruit = role == "fruit_fy1"
     counts = notice_counts(fruit=fruit)
     typo_n, method_n = counts["typo"][1], counts["method"][1]
     title = notice_title(typo_n, method_n)
@@ -4271,17 +4318,16 @@ def _workbook_notice_row(root, p, oid, output, fruit):
     pointer_path, pointer_sha = _advice_receipt_pointer(output)
     row = result("finance_workbook_notice", "xlsx", "check_needed",
                  title, p["revision"], severity="info", required_for=[])
+    identity = notice_identity(
+        project_id=project_id,
+        kind="fruit_fy1" if fruit else "transform",
+        profile=output.get("workbook_profile"),
+        form_identity=_advice_form_identity(fruit),
+        groups=groups)
     row.update({
         "title": title,
-        "items": notice_items(groups,
-                              source="fruit_fy1" if fruit else "transform",
-                              in_school_form=True),
-        "notice_identity": notice_identity(
-            project_id=project_id,
-            kind="fruit_fy1" if fruit else "transform",
-            profile=output.get("workbook_profile"),
-            form_identity=_advice_form_identity(fruit),
-            groups=groups),
+        "items": notice_items(groups, source=role, in_school_form=True),
+        "notice_identity": identity,
         "receipt_path": _advice_receipt_path(root, pointer_path, pointer_sha),
         "record_refs": ([{"collection": "outputs", "id": oid}] if oid else []),
         "typo_count": typo_n,
@@ -4296,7 +4342,7 @@ def _workbook_notice_row(root, p, oid, output, fruit):
             {"value": "direct_tell", "label": "교수님께 직접 말씀드릴게요"},
             {"value": "footnote", "label": "논문에 각주로 적을게요"},
         ]
-        row["choice"] = _advice_choice_fact(p)
+        row["choice"] = _advice_choice_fact(p, identity)
         row["choice_hint"] = (
             "교수님께 이렇게 말씀하시면 됩니다: 학교 재무 엑셀 양식과 계산 방식이 "
             "다른 부분이 있어서, 계산 방식을 바로잡아 작성했다고 말씀드리세요. "
@@ -4305,6 +4351,7 @@ def _workbook_notice_row(root, p, oid, output, fruit):
 
 
 def _advice_form_identity(fruit):
+    """알림 정체성에 넣는 양식 지문. FY1은 정정 뒤 양식이므로 기본 해시."""
     import gg_hort_workbook as hort
     return "5f2896dd0c47d9b9" if fruit else hort.SOURCE_SHA
 
@@ -4326,7 +4373,7 @@ def _add_finance_workbook_advice(root, p, lineage, out):
         role = _WORKBOOK_ADVICE_PROFILES.get(output.get("workbook_profile") or "")
         if role is None:
             return
-        row = _workbook_notice_row(root, p, oid, output, role == "fruit")
+        row = _workbook_notice_row(root, p, oid, output, role)
         if row is not None:
             out.append(row)
     except Exception:

@@ -1,5 +1,6 @@
 """v0.4.9: 엑셀 점검 '안내만'(차단 0) + 알림 계약 + 알림 파일/선택."""
 import json
+import unittest
 from pathlib import Path
 from unittest import mock
 
@@ -306,10 +307,87 @@ class NoticesFileTests(ContractCase):
         self.assertEqual("footnote", result["choice"])
 
         saved = self.core.load(self.root)
-        fact = saved["facts"].get("finance.workbook.accounting_notice.choice")
-        self.assertIsNotNone(fact)
-        self.assertEqual("footnote", fact["value"])
-        self.assertIn("finance.workbook.accounting_notice.choice", saved["questions"])
+        record = saved["questions"]["finance.workbook.accounting_notice.choice"]
+        self.assertEqual("footnote", record["choice"])
+        self.assertEqual(identity, record["notice_identity"])
+        # 선택은 재무 사실을 만들지 않는다 — 만들면 제출 차단이 생긴다(C1).
+        self.assertNotIn("finance.workbook.accounting_notice.choice",
+                         saved["facts"])
+
+    def test_choice_adds_no_submission_block(self):
+        """선택 전·후 전체 gate에서 **늘어난 차단 0개** (C1).
+
+        선택을 재무 사실로 저장하던 판은 claim_missing·fact_unreviewed를
+        새로 만들어 제출을 막았다. 질문 기록에만 두면 두 검사가 그 레코드를
+        순회하지 않으므로 차단이 늘지 않는다.
+        """
+        project = self._project_with_notice()
+        rows = [r for r in self.core.checks(self.root, project)
+                if r.get("check_id") == "finance_workbook_notice"]
+        identity = rows[0]["notice_identity"]
+
+        def blocked(reloaded):
+            return {(c["check_id"], str(c.get("target")))
+                    for c in self.core.gate(self.root, reloaded)
+                    if c.get("status") == "blocked"}
+
+        before = blocked(project)
+        with mock.patch.object(self.notices, "notice_rows", return_value=rows):
+            result = self.notices.choose(self.root, identity, "direct_tell")
+        self.assertEqual("chosen", result["status"])
+        after = blocked(self._project_with_notice())
+        self.assertEqual(set(), after - before)
+        # 두 오류 이름이 직접 나오지 않는지도 확인한다.
+        names = {name for name, _ in after - before}
+        self.assertNotIn("claim_missing", names)
+        self.assertNotIn("fact_unreviewed", names)
+
+    def test_choice_cycle_a_b_a_is_allowed(self):
+        """A→B→A 세 번째 선택이 거절되지 않는다 (I3)."""
+        project = self._project_with_notice()
+        rows = [r for r in self.core.checks(self.root, project)
+                if r.get("check_id") == "finance_workbook_notice"]
+        identity = rows[0]["notice_identity"]
+        with mock.patch.object(self.notices, "notice_rows", return_value=rows):
+            first = self.notices.choose(self.root, identity, "direct_tell")
+            second = self.notices.choose(self.root, identity, "footnote")
+            third = self.notices.choose(self.root, identity, "direct_tell")
+        self.assertEqual("chosen", first["status"])
+        self.assertEqual("chosen", second["status"])
+        self.assertEqual("chosen", third["status"])     # 되돌아가기도 통과
+        saved = self.core.load(self.root)
+        record = saved["questions"]["finance.workbook.accounting_notice.choice"]
+        self.assertEqual("direct_tell", record["choice"])
+
+    def test_choice_resend_is_idempotent(self):
+        """같은 값 재전송은 오류가 아니라 같은 결과다 (I3)."""
+        project = self._project_with_notice()
+        rows = [r for r in self.core.checks(self.root, project)
+                if r.get("check_id") == "finance_workbook_notice"]
+        identity = rows[0]["notice_identity"]
+        with mock.patch.object(self.notices, "notice_rows", return_value=rows):
+            first = self.notices.choose(self.root, identity, "footnote")
+            again = self.notices.choose(self.root, identity, "footnote")
+        self.assertEqual("chosen", first["status"])
+        self.assertEqual("chosen", again["status"])
+        self.assertEqual("footnote", again["choice"])
+
+    def test_choice_dropped_when_notice_identity_changes(self):
+        """알림 정체성이 바뀌면 이전 선택이 따라오지 않는다 (R2)."""
+        project = self._project_with_notice()
+        rows = [r for r in self.core.checks(self.root, project)
+                if r.get("check_id") == "finance_workbook_notice"]
+        old_identity = rows[0]["notice_identity"]
+        with mock.patch.object(self.notices, "notice_rows", return_value=rows):
+            self.assertEqual(
+                "chosen",
+                self.notices.choose(self.root, old_identity, "footnote")["status"])
+        saved = self.core.load(self.root)
+        # 같은 identity면 유지
+        self.assertEqual("footnote",
+                         self.core._advice_choice_fact(saved, old_identity))
+        # 다른 identity면 없음
+        self.assertIsNone(self.core._advice_choice_fact(saved, "f" * 64))
 
     def test_identity_unchanged_before_and_after_choice(self):
         """같은 프로젝트에서 선택 전·후 알림 식별값이 같다(엔드투엔드)."""
@@ -342,12 +420,12 @@ class NoticesFileTests(ContractCase):
             second = self.notices.choose(self.root, identity, "footnote")
         self.assertEqual("chosen", second["status"])
         saved = self.core.load(self.root)
-        self.assertEqual(
-            "footnote",
-            saved["facts"]["finance.workbook.accounting_notice.choice"]["value"])
         question = saved["questions"]["finance.workbook.accounting_notice.choice"]
+        self.assertEqual("footnote", question["choice"])
         self.assertEqual(2, question["decision_revision"])
         self.assertEqual("user_change", question["resume_reason"])
+        self.assertNotIn("finance.workbook.accounting_notice.choice",
+                         saved["facts"])
         self.assertIn(question["source_ref"]["id"], saved["sources"])
 
 
@@ -364,10 +442,12 @@ class NoticeAutoWriteTests(ContractCase):
         self.root = self.make_project()
         bind_major(self.root, "hort_env_systems")
 
-    def _adoptable_fruit(self, root=None):
+    def _adoptable_fruit(self, root=None, *, profile="fruit_16_sheet_v1"):
         """과수 16시트 합성 양식 + native 영수증으로 **실제 채택 가능한** 메타.
 
         과수 채택이므로 이 시험 전용 프로젝트를 **과수로 바인딩**해 쓴다.
+        ``profile``로 일반 과수와 FY1 정정본을 구분한다 — FY1 알림은
+        FY1 프로필에만 나야 한다(I1).
         """
         from openpyxl import Workbook
         from tests.test_finance_profile_gate import register_synthetic_form
@@ -377,12 +457,12 @@ class NoticeAutoWriteTests(ContractCase):
             self.fruit_root = root
         school = runtime("gg_school_excel")
         book = Workbook()
-        sheets = school.profile_structure("fruit_16_sheet_v1")["sheets"]
+        sheets = school.profile_structure(profile)["sheets"]
         book.active.title = sheets[0]
         book.active["B1"] = "=A1*2"
         for title in sheets[1:]:
             book.create_sheet(title)
-        register_synthetic_form(self, book)
+        register_synthetic_form(self, book, profile)
         book.active["A1"] = 40
         book.active["B1"] = "=A1*2"
         write_text(root, "body.md", "# synthetic\nstudent plan\n")
@@ -394,8 +474,8 @@ class NoticeAutoWriteTests(ContractCase):
         digest = self.core.digest(path.read_bytes())
         manifest = {"status": "converted", "engine": "Microsoft Excel",
                     "published_office_sha256": digest,
-                    "validation": {"workbook_profile": "fruit_16_sheet_v1",
-                                   "finance_profile": "fruit_16_sheet_v1",
+                    "validation": {"workbook_profile": profile,
+                                   "finance_profile": profile,
                                    "structure_issues": [], "school_issues": [],
                                    "excel": {"valid": True, "sha256": digest}}}
         raw = json.dumps(manifest).encode()
@@ -409,22 +489,23 @@ class NoticeAutoWriteTests(ContractCase):
                  "native_manifest": pointer}
         return project, value, [pointer]
 
-    def _store_fruit_output(self):
+    def _store_fruit_output(self, *, profile="fruit_16_sheet_v1"):
         """메모리 정본에 과수 산출물을 얹는다(채택 경로 미호출)."""
         project = self.core.load(self.fruit_root)
         project.setdefault("outputs", {})["fruit"] = {
             "id": "fruit", "path": "fruit.xlsx", "format": "xlsx",
             "file_hash": "0" * 64, "target_refs": [],
             "input_fingerprint": "0" * 64, "revision": 1,
-            "workbook_profile": "fruit_16_sheet_v1",
+            "workbook_profile": profile,
             "native_manifest": {"path": "native.json", "sha256": "0" * 64},
         }
         return project
 
     def test_thin_path_equals_full_checks_byte_for_byte(self):
         """얇은 경로가 전체 checks와 같은 알림 행을 낸다(바이트 비교)."""
-        project, _value, _c = self._adoptable_fruit()
-        project = self._store_fruit_output()
+        project, _value, _c = self._adoptable_fruit(
+            profile="fruit_16_sheet_v1_fy1")
+        project = self._store_fruit_output(profile="fruit_16_sheet_v1_fy1")
         full = [r for r in self.core.checks(self.fruit_root, project)
                 if r.get("check_id") == "finance_workbook_notice"]
         thin = self.core._workbook_notice_row_for_project(self.fruit_root, project)
@@ -436,8 +517,8 @@ class NoticeAutoWriteTests(ContractCase):
 
     def test_write_notices_matches_checks_rows(self):
         """write_notices 결과가 checks()의 알림 행과 같다."""
-        self._adoptable_fruit()
-        project = self._store_fruit_output()
+        self._adoptable_fruit(profile="fruit_16_sheet_v1_fy1")
+        project = self._store_fruit_output(profile="fruit_16_sheet_v1_fy1")
         from unittest import mock
         with mock.patch.object(self.core, "load", return_value=project):
             doc = self.notices.notices_document(
@@ -450,8 +531,9 @@ class NoticeAutoWriteTests(ContractCase):
         self.assertEqual(full[0]["title"], doc["notices"][0]["title"])
 
     def test_adoption_writes_notice_file(self):
-        """(가) 채택 → 알림 파일 생성 → 계약 꼴 일치."""
-        project, value, companions = self._adoptable_fruit()
+        """(가) FY1 채택 → 알림 파일 생성 → 계약 꼴 일치."""
+        project, value, companions = self._adoptable_fruit(
+            profile="fruit_16_sheet_v1_fy1")
         result = self.core.adopt_output(
             self.fruit_root, value, project["revision"], "req-1",
             companion_files=companions, major_id="fruit_trees")
@@ -514,6 +596,79 @@ class NoticeAutoWriteTests(ContractCase):
         self.assertEqual("knuaf.notices/1", doc["schema"])
         self.assertEqual([], doc["notices"])
 
+    def test_plain_fruit_adoption_reports_no_fy1_notice(self):
+        """일반 과수(정정 미적용) 채택 → FY1 알림 **0건** (I1).
+
+        FY1 21칸을 고치지 않았는데 "바로잡았어요"라고 알리면 거짓 안내다.
+        일반 과수는 지원 프로필이지만 알림이 필요 없는 경우다.
+        """
+        project, value, companions = self._adoptable_fruit()
+        result = self.core.adopt_output(
+            self.fruit_root, value, project["revision"], "req-plain",
+            companion_files=companions, major_id="fruit_trees")
+        self.assertEqual("adopted", result["status"])
+        self.assertEqual("written", result["notices_write"]["status"])
+        doc = json.loads((Path(self.fruit_root) / ".knuaf-notices.json")
+                         .read_text(encoding="utf-8"))
+        self.assertEqual([], doc["notices"])
+        loaded = self.core.load(self.fruit_root)
+        self.assertIsNone(
+            self.core._workbook_notice_row_for_project(self.fruit_root, loaded))
+        rows = [r for r in self.core.checks(self.fruit_root, loaded)
+                if r.get("check_id") == "finance_workbook_notice"]
+        self.assertEqual([], rows)
+
+    def test_notice_assembly_failure_is_reported_not_written(self):
+        """행 생성 예외 → failed, 기존 파일 바이트 보존, 채택 유지 (I4)."""
+        from unittest import mock
+        project, value, companions = self._adoptable_fruit(
+            profile="fruit_16_sheet_v1_fy1")
+        target = Path(self.fruit_root) / ".knuaf-notices.json"
+        target.write_bytes(b'{"schema": "knuaf.notices/1", "sentinel": 1}\n')
+        before = target.read_bytes()
+        boom = mock.patch.object(
+            self.core, "_workbook_notice_row",
+            side_effect=RuntimeError("assembly boom"))
+        with boom:
+            result = self.core.adopt_output(
+                self.fruit_root, value, project["revision"], "req-boom",
+                companion_files=companions, major_id="fruit_trees")
+        self.assertEqual("adopted", result["status"])          # 채택은 유지
+        self.assertEqual("failed", result["notices_write"]["status"])
+        self.assertEqual(before, target.read_bytes())          # 기존 파일 보존
+
+    def test_spec_read_failure_is_reported_not_written(self):
+        """정정 명세를 못 읽어도 모듈·채택은 살고 알림만 실패로 보고된다.
+
+        좌표를 명세에서 도출하므로 명세가 깨지면 알림을 만들 수 없다. 그
+        실패가 **적재 시점**에 터지면 gg_hort_workbook을 쓰는 모든 명령이
+        죽는다 — 알림 하나 때문에 원예·과수 전체가 멈추면 안 된다. 그래서
+        읽기는 알림을 만들 때이고, 실패는 I4 경로(채택 유지 + failed +
+        기존 파일 보존)로 흘러야 한다.
+        """
+        project, value, companions = self._adoptable_fruit(
+            profile="fruit_16_sheet_v1_fy1")
+        target = Path(self.fruit_root) / ".knuaf-notices.json"
+        target.write_bytes(b'{"schema": "knuaf.notices/1", "sentinel": 1}\n')
+        before = target.read_bytes()
+        hort = runtime("gg_hort_workbook")
+        with mock.patch.object(
+                hort, "fy1_registered_groups",
+                side_effect=ValueError("correction spec unreadable")):
+            row = self.core._workbook_notice_row_for_project(
+                self.fruit_root, self.core.load(self.fruit_root))
+        self.assertIsNone(row)          # 필요 없음이 아니라 '실패'로 분류된다
+        # 실제 채택 경로에서도 실패로 보고되고 파일·채택은 그대로다.
+        with mock.patch.object(
+                hort, "fy1_registered_groups",
+                side_effect=ValueError("correction spec unreadable")):
+            result = self.core.adopt_output(
+                self.fruit_root, value, project["revision"], "req-spec",
+                companion_files=companions, major_id="fruit_trees")
+        self.assertEqual("adopted", result["status"])
+        self.assertEqual("failed", result["notices_write"]["status"])
+        self.assertEqual(before, target.read_bytes())
+
     def test_write_failure_keeps_adoption_and_reports(self):
         """(다) 쓰기 실패 → 접수 성공 + 내부 필드로 표시(조용히 삼키지 않음)."""
         project, value, companions = self._adoptable_fruit()
@@ -529,3 +684,39 @@ class NoticeAutoWriteTests(ContractCase):
         self.assertEqual("OSError", write["error"])
         self.assertIn("disk full", write["detail"])
         self.assertEqual("fruit", self.core.load(self.fruit_root)["outputs"]["fruit"]["id"])
+
+
+class FruitFy1CellSetTests(ContractCase):
+    """FY1 알림 좌표가 등록 정정 명세와 **완전히 같다** (I2).
+
+    손으로 적은 목록은 21칸 중 18칸이 실제 정정 칸과 달랐고, 그 오답이
+    상세 목록과 알림 정체성에 함께 들어갔다. 이제 명세에서 도출한다.
+    """
+
+    def test_notice_cells_equal_registered_correction_cells(self):
+        hort = runtime("gg_hort_workbook")
+        fruit = runtime("gg_fruit_correction")
+        registered = {(sheet, cell)
+                      for sheet, cell, _formula in
+                      fruit.registered_cells(fruit.load_spec())}
+        noticed = set()
+        for name in hort.notice_group_cells(hort.notice_groups(fruit=True)):
+            sheet, _, cell = name.partition("!")
+            noticed.add((sheet, cell))
+        self.assertEqual(21, len(registered))
+        self.assertEqual(21, len(noticed))
+        self.assertEqual(registered, noticed)
+
+    def test_registered_spec_pins_the_specificity_the_notice_claims(self):
+        """알림이 말하는 정정 대상(연도칸 + 물가칸)이 실제로 그 칸이다."""
+        hort = runtime("gg_hort_workbook")
+        hort_cells = runtime("gg_fruit_correction")
+        counts = hort.notice_counts(fruit=True)
+        self.assertEqual(2, counts["typo"][0])
+        self.assertEqual(21, counts["typo"][1])
+        self.assertEqual(0, counts["method"][1])
+        self.assertEqual(hort_cells.CELL_COUNT, 21)
+
+
+if __name__ == "__main__":
+    unittest.main()

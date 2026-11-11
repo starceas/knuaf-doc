@@ -50,6 +50,19 @@ def notice_rows(root):
     return [row] if row is not None else []
 
 
+def notice_rows_or_error(root):
+    """(행 목록, 오류) — '알림 필요 없음'과 '생성 실패'를 나눈다(I4).
+
+    행 생성이 예상 밖 예외로 죽으면 빈 목록을 '성공'으로 보고하면 안 된다.
+    호출부가 실패를 표시하고 기존 알림 파일을 보존할 수 있도록 오류를
+    함께 돌려준다. 필요 없음은 ``([], None)``이다.
+    """
+    try:
+        return notice_rows(root), None
+    except Exception as error:      # 실패 — 빈 목록으로 바꾸지 않는다
+        return [], type(error).__name__ + ": " + str(error)[:200]
+
+
 def _is_relative_inside(path):
     """문자열이 상대 경로이고 ``..`` 로 빠져나가지 않을 때만 True."""
     if not isinstance(path, str) or not path.strip():
@@ -108,9 +121,16 @@ def digest_project(root):
 
 
 def write_notices(root):
-    """알림 파일을 원자적으로 교체한다. 반환: 계약 JSON."""
+    """알림 파일을 원자적으로 교체한다. 반환: 계약 JSON.
+
+    알림 생성이 실패하면 **파일을 건드리지 않는다**(기존 알림 보존, I4).
+    돌려주는 값은 ``status="failed"`` + ``error``다.
+    """
     root = Path(root)
-    rows = notice_rows(root)
+    rows, error = notice_rows_or_error(root)
+    if error is not None:
+        return {"status": "failed", "path": NOTICES_NAME, "error": error,
+                "notices": None}
     document = notices_document(root, rows)
     target = root / NOTICES_NAME
     handle, temp_name = tempfile.mkstemp(dir=str(root), prefix=".knuaf-notices-",
@@ -134,23 +154,37 @@ def write_notices(root):
 
 
 def choose(root, identity, value):
-    """선택을 정본에 기록하고 알림 파일을 다시 쓴다."""
+    """선택을 정본에 기록하고 알림 파일을 다시 쓴다.
+
+    선택은 **질문 결정 기록 한 레코드**에만 둔다(C1). 일반 재무 사실로
+    저장하면 ``checks()``의 ``claim_missing``과 ``gate()``의
+    ``fact_unreviewed``가 붙어 **선택이 곧 제출 차단**이 된다. 질문
+    레코드는 두 검사의 순회 대상이 아니다.
+
+    request ID는 **선택 이벤트마다** 다르다(I3). 값과 결정 개정을 함께
+    넣으므로, 같은 값으로 되돌아가도(A→B→A) 새 이벤트로 기록되고,
+    같은 이벤트를 그대로 다시 보내면 멱등이다.
+    """
     core = _core()
     root = Path(root)
     if value not in CHOICE_VALUES:
         return {"status": "rejected", "reason": "choice_value_invalid"}
-    rows = notice_rows(root)
+    rows, error = notice_rows_or_error(root)
+    if error is not None:
+        return {"status": "failed", "reason": "notice_rows_unavailable",
+                "error": error}
     match = next((r for r in rows if r.get("notice_identity") == identity), None)
     if match is None:
         return {"status": "rejected", "reason": "notice_identity_unknown"}
     if not match.get("choices"):
         return {"status": "rejected", "reason": "choice_not_offered"}
     project = core.load(root)
-    ops = _choice_ops(project, value)
+    existing = (project.get("questions") or {}).get(CHOICE_FIELD)
+    ops = _choice_ops(project, value, identity)
     if ops is None:
         return {"status": "rejected", "reason": "source_ref_missing"}
     change = {
-        "request_id": "notice:%s:%s" % (identity[:16], value),
+        "request_id": _choice_request_id(identity, value, existing),
         "ops": ops,
     }
     try:
@@ -162,6 +196,18 @@ def choose(root, identity, value):
     return written
 
 
+def _choice_request_id(identity, value, existing):
+    """선택 **이벤트**의 request ID(I3).
+
+    결정 개정까지 넣는다. 같은 값으로 돌아오면 개정이 이미 올라가 있어
+    새 ID가 되고, 같은 상태에서 같은 값을 다시 보내면 같은 ID라 멱등이다.
+    """
+    revision = 1
+    if isinstance(existing, dict):
+        revision = int(existing.get("decision_revision", 1)) + 1
+    return "notice:%s:%s:%d" % (identity[:16], value, revision)
+
+
 def _reason_of(error):
     text = str(error)
     if "개정 불일치" in text or "revision" in text:
@@ -169,28 +215,17 @@ def _reason_of(error):
     return "apply_rejected"
 
 
-def _choice_ops(project, value):
-    """questions+facts 기록 op. 재선택이면 source_ref 계약을 채운다."""
-    existing = project.get("questions", {}).get(CHOICE_FIELD)
+def _choice_ops(project, value, identity):
+    """선택 질문 레코드 op.
+
+    사실(facts)은 만들지 않는다(C1). 질문 레코드에 선택 값·알림
+    정체성을 함께 적어, 알림이 바뀌면 이전 선택이 따라오지 않게 한다(R2).
+    """
+    existing = (project.get("questions") or {}).get(CHOICE_FIELD)
     ref_id = _registered_source_id(project)
     if ref_id is None:
         return None
     source = project["sources"][ref_id]
-    fact = {
-        "id": CHOICE_FIELD,
-        "revision": 0,
-        "field_id": CHOICE_FIELD,
-        "kind": "reported_fact",
-        "value": value,
-        "unit": "TEXT",
-        "value_type": "text",
-        "period": None,
-        "scope": "project",
-        "answer_state": "provided",
-        "verification": "source_located",
-        "source_refs": [{"id": ref_id, "locator": "notice_choice",
-                         "revision": int(source.get("revision", 0))}],
-    }
     question = dict(existing) if isinstance(existing, dict) else {
         "id": CHOICE_FIELD,
         "field_id": CHOICE_FIELD,
@@ -198,6 +233,8 @@ def _choice_ops(project, value):
         "decision_revision": 1,
     }
     question["attempts"] = int(question.get("attempts", 0)) + 1
+    question["choice"] = value
+    question["notice_identity"] = identity
     if isinstance(existing, dict):
         # 재선택: decision_revision +1, resume_reason + 등록된 source_ref 필요.
         question["decision_revision"] = int(
@@ -205,10 +242,7 @@ def _choice_ops(project, value):
         question["resume_reason"] = "user_change"
         question["source_ref"] = {"id": ref_id, "locator": "notice_choice",
                                   "quote": value}
-    return [
-        {"collection": "questions", "value": question},
-        {"collection": "facts", "value": fact},
-    ]
+    return [{"collection": "questions", "value": question}]
 
 
 def _registered_source_id(project):
