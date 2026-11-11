@@ -1,6 +1,6 @@
 {
  "files": {
-  "SKILL.md": "21a0f436a7705e278eddd4e9b9ab6a60245d294263f6a7132b24acf89ee8d840",
+  "SKILL.md": "8b535b5c09ca68cb7d6495b2c245ececdcbedb166669768a28e5889369ea1022",
   "assets/templates/finance-template.xlsx": "6d3c9fe5e5992108a8bab18c0098edb0d808f0d14c099878a53939b17de88c7d",
   "references/benchmark-packs/aliases/crop-aliases.specialty_crops.json": "8e7abffc7b4244727b4732f558b722934dd8ea229c0057312d1ee7ea92c2df22",
   "references/benchmark-packs/aliases/major-aliases.json": "ccf6b7d94690b0d7ed99618b3d649eb10755849d12f1922960a25bd14a419ea5",
@@ -87,7 +87,7 @@
   "references/major-body-draft.md": "8e823e3d767506dea8b4c2dbd875907607998bef871bfc7fbf9184652bc64473",
   "references/majors.md": "659756ca1745155c64af18d429061f485fc1ca91aea893a6c7e500ff04e98b31",
   "references/mid-work-questions.md": "5f229f8c1e5f2a2d886f55f21770ad400c071fe51754eb49e4816f1ac5aa9950",
-  "references/model-routing.md": "966d503c90a062852706300f2b9297d1409cb681edc2a08f2efec07a374d58db",
+  "references/model-routing.md": "337897ee4ead96b6662b2cba13d25995299b8c52069844f963640d7aaf05050d",
   "references/narrative-expansion.md": "8830af4f6874fcd401b9be130fb594980720e940ecfadd961ed8c65940ba9166",
   "references/number-display.md": "af80c9e578904cf82f40323f8a5e5394bfc89bc42bd2992ccf2de7831541d654",
   "references/official-guide-lineage.json": "a6d8df96f1553fc1e819a047177f440fe8b2fa10ea20e2b8e25385403a00aff7",
@@ -102,8 +102,9 @@
   "references/plan-fit-rules.md": "43450057776bf7faef137343f75e0e70b8f8a69a472fc3fdeac25a7a3df54f8d",
   "references/price-research-routes.md": "b91b4d457b91d90565aec775527ad611d84de528d4548cb02cf99bf464c7ed9e",
   "references/rda-benchmark.md": "2417decb1e8b37fe0e990546f06208af8a06f34c7d607f23e97eaf90d9117645",
+  "references/research-job.md": "26441d7992276c0bfbe48c31234ab57fa76f29c4382fdc8217b05c7621039432",
   "references/research-route-index.md": "25722ab3935ff3105018e7df4f2ddb08e7f6db8e424237e5adfab40439f95da6",
-  "references/research-routing.md": "6e830a4af370a8a535cc9f4f39244993d2546c3fc077e2a8ef73d870bce6c648",
+  "references/research-routing.md": "f76d1048dd18d9ea056eed83b65a5a7e88fee73142f107f171d5afc83b3c3168",
   "references/research-sources.md": "238a5d2d18751e2cc2224eaef5352c3ccc8efbd7a19b332e9f19e3fbc0910e6e",
   "references/reuse-registry-schema.md": "5942baa34cd705df43d4fe1325d903cf29021392cd4bfc69bcd7c5b393f010e0",
   "references/rules/CH1_intro.md": "f55721ed1d1fd5fe438bc908127f5cd0fc4fd7985f6d3c01c911b6cdff4540f7",
