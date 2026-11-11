@@ -354,3 +354,178 @@ class NoticesFileTests(ContractCase):
 def self_mock_checks(case, project):
     """(미사용) 이전 시도 흔적."""
     return None
+
+class NoticeAutoWriteTests(ContractCase):
+    """채택 직후 알림 파일 자동 쓰기 (A안)."""
+
+    def setUp(self):
+        self.core = runtime("gg_core")
+        self.notices = runtime("gg_notices")
+        self.root = self.make_project()
+        bind_major(self.root, "hort_env_systems")
+
+    def _adoptable_fruit(self, root=None):
+        """과수 16시트 합성 양식 + native 영수증으로 **실제 채택 가능한** 메타.
+
+        과수 채택이므로 이 시험 전용 프로젝트를 **과수로 바인딩**해 쓴다.
+        """
+        from openpyxl import Workbook
+        from tests.test_finance_profile_gate import register_synthetic_form
+        if root is None:
+            root = self.make_project()
+            bind_major(root, "fruit_trees")
+            self.fruit_root = root
+        school = runtime("gg_school_excel")
+        book = Workbook()
+        sheets = school.profile_structure("fruit_16_sheet_v1")["sheets"]
+        book.active.title = sheets[0]
+        book.active["B1"] = "=A1*2"
+        for title in sheets[1:]:
+            book.create_sheet(title)
+        register_synthetic_form(self, book)
+        book.active["A1"] = 40
+        book.active["B1"] = "=A1*2"
+        write_text(root, "body.md", "# synthetic\nstudent plan\n")
+        self.core.apply(root, {"request_id": "body", "ops": [
+            section_op("body", "synthetic", "body.md")]},
+            self.core.load(root)["revision"])
+        path = Path(root) / "fruit.xlsx"
+        book.save(path)
+        digest = self.core.digest(path.read_bytes())
+        manifest = {"status": "converted", "engine": "Microsoft Excel",
+                    "published_office_sha256": digest,
+                    "validation": {"workbook_profile": "fruit_16_sheet_v1",
+                                   "finance_profile": "fruit_16_sheet_v1",
+                                   "structure_issues": [], "school_issues": [],
+                                   "excel": {"valid": True, "sha256": digest}}}
+        raw = json.dumps(manifest).encode()
+        write_text(root, "native.json", raw.decode())
+        pointer = {"path": "native.json", "sha256": self.core.digest(raw)}
+        project = self.core.load(root)
+        refs = self.core.sort_target_refs(self.core._export_refs(project))
+        value = {"id": "fruit", "path": path.name, "format": "xlsx",
+                 "file_hash": digest, "target_refs": refs,
+                 "input_fingerprint": self.core.fingerprint(root, project, refs),
+                 "native_manifest": pointer}
+        return project, value, [pointer]
+
+    def _store_fruit_output(self):
+        """메모리 정본에 과수 산출물을 얹는다(채택 경로 미호출)."""
+        project = self.core.load(self.fruit_root)
+        project.setdefault("outputs", {})["fruit"] = {
+            "id": "fruit", "path": "fruit.xlsx", "format": "xlsx",
+            "file_hash": "0" * 64, "target_refs": [],
+            "input_fingerprint": "0" * 64, "revision": 1,
+            "workbook_profile": "fruit_16_sheet_v1",
+            "native_manifest": {"path": "native.json", "sha256": "0" * 64},
+        }
+        return project
+
+    def test_thin_path_equals_full_checks_byte_for_byte(self):
+        """얇은 경로가 전체 checks와 같은 알림 행을 낸다(바이트 비교)."""
+        project, _value, _c = self._adoptable_fruit()
+        project = self._store_fruit_output()
+        full = [r for r in self.core.checks(self.fruit_root, project)
+                if r.get("check_id") == "finance_workbook_notice"]
+        thin = self.core._workbook_notice_row_for_project(self.fruit_root, project)
+        self.assertEqual(1, len(full))
+        self.assertIsNotNone(thin)
+        self.assertEqual(
+            json.dumps(full[0], ensure_ascii=False, sort_keys=True),
+            json.dumps(thin, ensure_ascii=False, sort_keys=True))
+
+    def test_write_notices_matches_checks_rows(self):
+        """write_notices 결과가 checks()의 알림 행과 같다."""
+        self._adoptable_fruit()
+        project = self._store_fruit_output()
+        from unittest import mock
+        with mock.patch.object(self.core, "load", return_value=project):
+            doc = self.notices.notices_document(
+                self.fruit_root, self.notices.notice_rows(self.fruit_root))
+        full = [r for r in self.core.checks(self.fruit_root, project)
+                if r.get("check_id") == "finance_workbook_notice"]
+        self.assertEqual(1, len(full))
+        self.assertEqual(full[0]["notice_identity"],
+                         doc["notices"][0]["notice_identity"])
+        self.assertEqual(full[0]["title"], doc["notices"][0]["title"])
+
+    def test_adoption_writes_notice_file(self):
+        """(가) 채택 → 알림 파일 생성 → 계약 꼴 일치."""
+        project, value, companions = self._adoptable_fruit()
+        result = self.core.adopt_output(
+            self.fruit_root, value, project["revision"], "req-1",
+            companion_files=companions, major_id="fruit_trees")
+        self.assertEqual("adopted", result["status"])
+        self.assertEqual("written", result["notices_write"]["status"])
+        path = Path(self.fruit_root) / ".knuaf-notices.json"
+        self.assertTrue(path.is_file())
+        doc = json.loads(path.read_text(encoding="utf-8"))
+        self.assertEqual("knuaf.notices/1", doc["schema"])
+        self.assertEqual({"schema", "written_at", "project_id", "notices"}, set(doc))
+        self.assertEqual(1, len(doc["notices"]))
+        notice = doc["notices"][0]
+        for key in ("check_id", "title", "items", "notice_identity",
+                    "receipt_path", "record_refs", "typo_count",
+                    "method_count", "dismissible", "redisplay_rule",
+                    "project_id"):
+            self.assertIn(key, notice)
+        self.assertEqual("finance_workbook_notice", notice["check_id"])
+        self.assertIsInstance(notice["title"], str)
+        self.assertNotIn("\n", notice["title"])
+        self.assertEqual(2, len(notice["items"]))       # 과수 fy1 = 2묶음
+        self.assertEqual(21, notice["typo_count"])
+        self.assertEqual(0, notice["method_count"])
+        self.assertNotIn("choices", notice)             # 과수는 선택 없음
+        self.assertEqual([{"collection": "outputs", "id": "fruit"}],
+                         notice["record_refs"])
+        self.assertIsNotNone(notice["receipt_path"])
+        self.assertFalse(notice["receipt_path"].startswith("/"))
+        self.assertFalse(self.core.blocks_skill_candidate(
+            {"status": "check_needed", "severity": "info", "owner": "skill"}))
+
+    def test_adoption_without_notice_target_writes_empty_list(self):
+        """(나) 알림 대상이 아닌 채택 → notices 빈 배열, 파일 꼴은 계약대로."""
+        other = self.make_project()
+        bind_major(other, "specialty_crops")
+        # 실제 xlsx 바이트여야 한다 — adopt_output은 파일 내용으로 형식을
+        # 판별하므로 텍스트를 .xlsx로 두면 unknown_output으로 거절된다.
+        from openpyxl import Workbook
+        (Path(other) / "out").mkdir(parents=True, exist_ok=True)
+        book = Workbook()
+        book.active["A1"] = "v"
+        book.save(Path(other) / "out/w.xlsx")
+        project = self.core.load(other)
+        refs = self.core.sort_target_refs(self.core._export_refs(project))
+        value = {
+            "id": "wb2", "path": "out/w.xlsx", "format": "xlsx",
+            "file_hash": self.core.digest(
+                (Path(other) / "out/w.xlsx").read_bytes()),
+            "target_refs": refs,
+            # 64자 sha256이어야 한다(_check_sha256) — 그리고 실제 입력
+            # 지문과 같아야 input_fingerprint_mismatch에 걸리지 않는다.
+            "input_fingerprint": self.core.fingerprint(other, project, refs),
+        }
+        result = self.core.adopt_output(
+            other, value, project["revision"], "req-2",
+            major_id="specialty_crops")
+        self.assertEqual("adopted", result["status"])
+        self.assertEqual("written", result["notices_write"]["status"])
+        doc = json.loads((Path(other) / ".knuaf-notices.json").read_text(encoding="utf-8"))
+        self.assertEqual("knuaf.notices/1", doc["schema"])
+        self.assertEqual([], doc["notices"])
+
+    def test_write_failure_keeps_adoption_and_reports(self):
+        """(다) 쓰기 실패 → 접수 성공 + 내부 필드로 표시(조용히 삼키지 않음)."""
+        project, value, companions = self._adoptable_fruit()
+        from unittest import mock
+        with mock.patch.object(self.notices, "write_notices",
+                               side_effect=OSError("disk full")):
+            result = self.core.adopt_output(
+                self.fruit_root, value, project["revision"], "req-3",
+                companion_files=companions, major_id="fruit_trees")
+        self.assertEqual("adopted", result["status"])
+        write = result["notices_write"]
+        self.assertEqual("failed", write["status"])
+        self.assertEqual("OSError", write["error"])
+        self.assertIn("disk full", write["detail"])
+        self.assertEqual("fruit", self.core.load(self.fruit_root)["outputs"]["fruit"]["id"])

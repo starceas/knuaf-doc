@@ -37,12 +37,17 @@ def _core():
 
 
 def notice_rows(root):
-    """현재 점검에서 나온 알림 행만."""
+    """현재 점검에서 나온 알림 행만.
+
+    ``gg_core.checks`` 전체(엑셀 열기·본문 대조 포함)를 돌리지 않고 **알림 행을
+    만드는 얇은 경로**만 부른다. 두 경로가 같은 행을 내는 것은
+    ``tests/test_hort_workbook_advice.py``의 ``write_matches_full_checks``가
+    **바이트까지** 잠근다(실측: 0.089s vs 0.0002s).
+    """
     core = _core()
     project = core.load(root)
-    rows = core.checks(root, project)
-    return [r for r in rows if isinstance(r, dict)
-            and r.get("check_id") == "finance_workbook_notice"]
+    row = core._workbook_notice_row_for_project(root, project)
+    return [row] if row is not None else []
 
 
 def _is_relative_inside(path):

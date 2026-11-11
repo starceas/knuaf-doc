@@ -1,6 +1,6 @@
 {
  "files": {
-  "SKILL.md": "21a0f436a7705e278eddd4e9b9ab6a60245d294263f6a7132b24acf89ee8d840",
+  "SKILL.md": "50bc7574aa9ae28dd0a4a15986636e877b3fc6df9aae9db12ea1829cf4dd5a33",
   "assets/templates/finance-template.xlsx": "6d3c9fe5e5992108a8bab18c0098edb0d808f0d14c099878a53939b17de88c7d",
   "references/benchmark-packs/aliases/crop-aliases.specialty_crops.json": "8e7abffc7b4244727b4732f558b722934dd8ea229c0057312d1ee7ea92c2df22",
   "references/benchmark-packs/aliases/major-aliases.json": "ccf6b7d94690b0d7ed99618b3d649eb10755849d12f1922960a25bd14a419ea5",
@@ -138,7 +138,7 @@
   "scripts/gg_body_layout.py": "4f8df680d3ccb1ede862a34788ef8f3c3e9e6f3c683e86ce65ee36cb92696a10",
   "scripts/gg_body_plan_check.py": "11789c978c76293beb5a40dcbc05ed5683d78937b220b024fa20cc1e314549d5",
   "scripts/gg_commands.py": "43d4fcd4ed0ee65cbfdfdf5cec4d18e591395496c8b80282db80fa4d514f4d07",
-  "scripts/gg_core.py": "6d6678ebce27bb121b4f822c40b2431aaab8ab11a145cc32eb71615d7d8ba47d",
+  "scripts/gg_core.py": "bc7085dd5c87d8841209a99d70035554c95e59a26019090d19057b94ad1a3784",
   "scripts/gg_deps.py": "c6443dfc86b136ca26b23be65083d6b8d7e596c8901154bd583795c61c619281",
   "scripts/gg_document.py": "a31940c23df091dc608084ad8375417b1999ad19e583bb2bd1e6eb8becc13927",
   "scripts/gg_docx_table_layout.py": "dce52533be20ea6b46e8e6f41f3083af3e0ab20ca43dcb3b19cebf488f581921",
@@ -172,7 +172,7 @@
   "scripts/gg_lock.py": "a455ca7231c67dcab83e910cbdd82499d86f16190b5d88dee9e5ceaade4cc6b2",
   "scripts/gg_major_contract.py": "9f236787c299c0a3961b815e230cde3fd4007077ae9ca79ebb5f5b2e75f019b8",
   "scripts/gg_manuscript_intake.py": "d8c61627a320315729b24eb358d3433a6eb4c590cc72719b80aed5d96d85e1ac",
-  "scripts/gg_notices.py": "a552407b3072ca36a043a6065a96119a61f74a4f39c2f63008f383405c5c39cb",
+  "scripts/gg_notices.py": "a49c6b043921cf5d0f4a76ad76ca7b7bc40861bcf1cea6bfcc5c32878867e594",
   "scripts/gg_office.py": "ea67bf7c1bae41c11d5707124e315554160ccbf5c8064074ee5242f86a022e53",
   "scripts/gg_office_session.py": "f492dc268d83f9337e3011bb894cfaef30ad5b7e5c752d370c3126fa05f8195f",
   "scripts/gg_office_win.py": "539007af5a58d7d68f353037f39e4c321cd588563f99f69407cc772ea55b1b49",
@@ -187,7 +187,7 @@
   "scripts/gg_report.py": "2c5ae779d2e583afd6781d5ee187db7da1849423e1805c6fa2afbac1153a804f",
   "scripts/gg_research_handoff.py": "92c06177bf313f6d50c604acdea5cc9b16a2b74a55b887025b213ae71f38a556",
   "scripts/gg_reuse.py": "724466d1d917cfc5218fd75672674dc46021db5c0e0b2bc7e698a1a919397241",
-  "scripts/gg_school_excel.py": "126312e11ce34b0b226f8d7508cab7845ed81b0ece45bcd1b69d5ce5b56dfaee",
+  "scripts/gg_school_excel.py": "e2db51749339730ae2bd0b47441a397aaebff01967110d127922f2aa1fb81f56",
   "scripts/gg_school_format.py": "7b7504ccb9c466ab8eb9fe36e4c8acb6465236a5aa7b2b70f0f976a8eef79b8e",
   "scripts/gg_school_paper.py": "eba74abcd0eb6fe1a509339046fcc6e8a7f8fef2006b1181e2103d841458c825",
   "scripts/gg_school_table_sources.py": "591fc1842235b8747eef9bb6ca2d0ec4078d944e81dca046dd29be028f0434be",
@@ -231,7 +231,7 @@
   "tests/test_gg_toc_check.py": "7589f6890fb4ed671c49c23e6942f67fe5632d96ee63f02f4863e7e3f35677b5",
   "tests/test_n5_guidance_link.py": "32462d60e2a3c7a40cffb6eecfb138f8046d382ad16bb15377b3490e3ddbb43a",
   "tests/test_official_guide_reuse.py": "2169e23583f04860fbeb77fe1fe802bed756efd5147156c294eddb3e9ba4d87c",
-  "version.json": "e9c86bccb5d19cfbeb14725d69d8cb5bbdaf51c39afbfe7d227ecc689f45b9a0"
+  "version.json": "ad243947d6b655df9660447237cc51fd607fc948b2c338e63d58b0cc04a5e5b3"
  },
  "schema": "knuaf-doc/install-manifest@1"
 }

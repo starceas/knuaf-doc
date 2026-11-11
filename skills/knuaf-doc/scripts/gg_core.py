@@ -2420,7 +2420,33 @@ def adopt_output(root, output_value, expected_revision, request_id,
         value = dict(value,
                      major_authorization=adopt_auth.get("stored", current),
                      major_authorization_current=current)
+    if isinstance(value, dict):
+        # v0.4.9: 엑셀 채택 직후 알림 파일을 다시 쓴다(락 밖). 쓰기가 실패해도
+        # 접수는 성공이며, 실패 사실은 내부 필드로 남긴다(조용히 삼키지 않음).
+        value["notices_write"] = _write_notices_after_adoption(root)
     return value
+
+
+_NOTICES_WRITE_OK = "written"
+_NOTICES_WRITE_SKIPPED = "skipped_not_target"
+_NOTICES_WRITE_FAILED = "failed"
+
+
+def _write_notices_after_adoption(root):
+    """채택 뒤 알림 파일을 다시 쓴다. 실패는 표시만 하고 접수를 깨지 않는다."""
+    try:
+        import gg_notices
+        outcome = gg_notices.write_notices(root)
+    except Exception as error:  # 접수는 이미 커밋됐다 — 부수 산출물만 실패
+        return {"status": _NOTICES_WRITE_FAILED,
+                "error": type(error).__name__,
+                "detail": str(error)[:200]}
+    if outcome.get("status") != "written":
+        return {"status": _NOTICES_WRITE_FAILED,
+                "error": "unexpected", "detail": str(outcome)[:200]}
+    return {"status": _NOTICES_WRITE_OK,
+            "path": outcome.get("path"),
+            "notices": outcome.get("notices")}
 
 def question(p, field_id):
     facts = [f for f in p["facts"].values() if f["field_id"] == field_id]
@@ -4208,6 +4234,27 @@ def _advice_choice_fact(p):
         if value in ("direct_tell", "footnote"):
             return value
     return None
+
+
+def _workbook_notice_row_for_project(root, p):
+    """알림 행 하나 — 얇은 경로. ``checks()`` 전체를 돌리지 않는다.
+
+    ``_advice_output`` + ``_workbook_notice_row`` 만 쓰므로 엑셀을 열지 않고
+    본문 대조도 하지 않는다. 전체 ``checks()``와 **같은 행**을 내는 것은
+    시험 ``write_matches_full_checks``가 잠근다.
+    """
+    try:
+        if _advice_major_id(p) not in ("hort_env_systems", "fruit_trees"):
+            return None
+        oid, output = _advice_output(p, output_lineage(p))
+        if output is None:
+            return None
+        role = _WORKBOOK_ADVICE_PROFILES.get(output.get("workbook_profile") or "")
+        if role is None:
+            return None
+        return _workbook_notice_row(root, p, oid, output, role == "fruit")
+    except Exception:
+        return None
 
 
 def _workbook_notice_row(root, p, oid, output, fruit):
