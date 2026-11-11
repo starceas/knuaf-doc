@@ -944,7 +944,8 @@ class TestShippedCatalog(unittest.TestCase):
         self.assertEqual(fr.packs, ())
         self.assertEqual(reg.major_ids,
                          ("specialty_crops", "industrial_insects",
-                          "fruit_trees", "hort_env_systems", "dairy"))
+                          "fruit_trees", "hort_env_systems", "dairy",
+                          "food_crops"))
 
 
 if __name__ == "__main__":

@@ -122,17 +122,24 @@ def rewrite_table_widths(section_xml, width):
     return _TBL_RE.sub(fix_table, section_xml), changed
 
 _CHAPTER_RE = re.compile(r"^\s*([ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ])\s*[.．]")
+# 식량작물 본문은 아라비아 장 번호를 쓰고, 맺음말·참고문헌·학부모 동의서는
+# 번호 없는 제목으로 새 쪽에서 시작한다.
+_FOOD_CROPS_CHAPTER_RE = re.compile(
+    r"^\s*(?:[1-9]\s*[.．]\s*\S|맺음말\s*및\s*발전방향|참고문헌|학부모\s*동의서)")
 _P_RE = re.compile(r"<hp:p\b[^>]*>.*?</hp:p>", re.S)
 _T_RE = re.compile(r"<hp:t\b[^>]*>(.*?)</hp:t>", re.S)
 
-def add_chapter_breaks(section_xml, heading_para_ref="1"):
+def add_chapter_breaks(section_xml, heading_para_ref="1", major_id=None):
     """장(Ⅰ~Ⅵ) 제목 문단에 쪽 나눔을 넣는다(이미 있으면 그대로).
 
     kordoc `--plain` 산출물에는 장 시작 쪽 나눔이 없어 Ⅰ장이 표지 다음
     쪽에서 이어졌다. 제목 스타일(paraPrIDRef)이 장 제목 문단에만 붙는 것을
     확인하고 그 문단에만 pageBreak="1"을 준다(재무제표 주석의 Ⅰ. 항목은
-    본문 스타일이라 대상이 아니다).
+    본문 스타일이라 대상이 아니다). 식량작물은 아라비아 장 번호를 쓰므로
+    ``major_id``가 그 전공일 때만 번호 체계를 바꾼다.
     """
+    chapter_re = (_FOOD_CROPS_CHAPTER_RE if major_id == "food_crops"
+                  else _CHAPTER_RE)
     chapters = []
 
     def fix(match):
@@ -141,7 +148,7 @@ def add_chapter_breaks(section_xml, heading_para_ref="1"):
         if 'paraPrIDRef="' + heading_para_ref + '"' not in head:
             return para
         text = "".join(_T_RE.findall(para)).strip()
-        if not _CHAPTER_RE.match(text):
+        if not chapter_re.match(text):
             return para
         chapters.append(text)
         if 'pageBreak="' in head:
@@ -150,7 +157,7 @@ def add_chapter_breaks(section_xml, heading_para_ref="1"):
 
     return _P_RE.sub(fix, section_xml), chapters
 
-def apply_layout(data, *, margins_mm=None):
+def apply_layout(data, *, margins_mm=None, major_id=None):
     """생성된 HWPX 바이트에 표 폭·장 쪽 나눔을 적용한다(순수 바이트 변환)."""
     width = body_width_units(margins_mm)
     report = {"body_width": width, "tables": 0, "previous_widths": [],
@@ -169,7 +176,8 @@ def apply_layout(data, *, margins_mm=None):
             if gg_hwpx.SECTION_RE.fullmatch(info.filename):
                 text = member.decode("utf-8")
                 updated, widths = rewrite_table_widths(text, width)
-                updated, chapters = add_chapter_breaks(updated)
+                updated, chapters = add_chapter_breaks(
+                    updated, major_id=major_id)
                 if updated != text:
                     report["tables"] += len(widths)
                     report["previous_widths"] += sorted(set(widths))
@@ -240,7 +248,8 @@ def export(base, inp, out, *, font=FONT, context=None, cli_command=None,
             page_numbers=page_numbers, image_dir=image_dir, verify=verify,
         )
         generated = staging.read_bytes()
-        published_bytes, layout = apply_layout(generated)
+        published_bytes, layout = apply_layout(
+            generated, major_id=authorization.major_id)
         verification = result["verification"]
         if published_bytes != generated:
             if verify:

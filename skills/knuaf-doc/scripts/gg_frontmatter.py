@@ -105,9 +105,11 @@ def normalize_school_profile(spec: Mapping[str, Any]) -> dict[str, Any]:
         members_list = [_text(x) for x in members]
     else:
         raise TypeError("school_profile.committee.members는 목록이어야 함")
-    if len(members_list) > 3:
-        raise ValueError("위원은 위원장 포함 4명 형식이므로 위원 3명까지 허용")
-    members_list.extend([None] * (3 - len(members_list)))
+    member_limit = 4 if major_id == "food_crops" else 3
+    if len(members_list) > member_limit:
+        raise ValueError("위원은 위원장 포함 4명 형식이므로 위원 3명까지 허용"
+                         if member_limit == 3 else "식량작물 인준서 위원은 4명까지 허용")
+    members_list.extend([None] * (member_limit - len(members_list)))
 
     policy = _text(raw.get("unknown_policy")) or "mark"
     if policy != "mark":
@@ -229,7 +231,7 @@ def _peer_frontmatter_lines(profile, artifacts):
                   value("submission_date")] + identity
     committee = profile["committee"]
     members = committee.get("members", [])
-    if spec.major_id != "dairy":
+    if spec.major_id not in ("dairy", "food_crops"):
         if any(members[2:]):
             raise ValueError("전공 인준서 위원은 위원장 외 2명까지 지원")
         members = members[:2]
@@ -246,13 +248,13 @@ def _peer_frontmatter_lines(profile, artifacts):
         "감사의 글": [str(artifacts.get("thanks") or PENDING)],
     }
     if profile.get("advisor"):
-        target = "표제면" if spec.major_id == "fruit_trees" else "제출서"
+        target = "표제면" if spec.major_id in ("fruit_trees", "food_crops") else "제출서"
         blocks[target].insert(0, "지도교수 " + value("advisor"))
     lines = []
     for marker in spec.orders[-1]:
         lines += [marker] + blocks.get(marker, []) + [""]
         if marker == "겉표지":
             lines += list(spec.notices) + [""]
-    if spec.major_id == "dairy":
+    if spec.major_id in ("dairy", "food_crops"):
         lines += ["표 목차", "그림 목차"]
     return lines
