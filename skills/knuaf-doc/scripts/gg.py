@@ -60,6 +60,7 @@ def main(argv=None):
             "source-register",
             "source-view",
             "source-refresh",
+            "intake-manuscript",
             "finance-tables",
             "delegate",
             "lanes-propose",
@@ -184,6 +185,19 @@ def main(argv=None):
 
     try:
         code = 0
+        if a.command == "intake-manuscript":
+            if not a.input:
+                raise ValueError("--input 원답변 source JSON 경로 필요")
+            if a.expected_revision is None:
+                raise ValueError("--expected-revision 현재 개정 필요")
+            if not a.request_id:
+                raise ValueError("--request-id 접수 요청 ID 필요")
+            import gg_manuscript_intake
+
+            value = gg_manuscript_intake.run(
+                a.folder, a.file, a.input, a.expected_revision, a.request_id)
+            print(json.dumps(value, ensure_ascii=False, indent=2))
+            return core.COMMIT_EXIT.get(value["commit_state"], 4)
         if a.command in {"delegate", "lanes-propose"}:
             import gg_delegation
 
@@ -303,6 +317,18 @@ def main(argv=None):
                         value["dairy_switch"] = switch
                         value["dairy_notices"] = (
                             major_contract.dairy_notices(facts)
+                        )
+                    elif binding.major_id == "food_crops":
+                        facts = project.get("facts") or {}
+                        switch = major_contract.evaluate_food_crops_switch(
+                            facts)
+                        proposals["question"]["proposal"] = (
+                            major_contract.food_crops_question_fields(
+                                proposals["question"]["proposal"], facts)
+                        )
+                        value["food_crops_switch"] = switch
+                        value["food_crops_notices"] = (
+                            major_contract.food_crops_notices(facts)
                         )
                 elif a.command == "insect-plan":
                     import gg_insect_document

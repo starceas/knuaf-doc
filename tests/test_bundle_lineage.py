@@ -198,12 +198,14 @@ class RealTreeTests(ContractCase):
                 self.assertIn(meta["first_changed"],
                               {"P2", "P3", "P4", "P5", "P6", "P8", "P9",
                                "P10", "P11", "P12", "P13", "P14", "P15",
-                               "P17", "P18", "P19", "P20", "P21", "P22", "P25", "P26", "P27", "P28", "dairy-0.1.0", "dairy-f1", "W8"})
+                               "P17", "P18", "P19", "P20", "P21", "P22", "P25", "P26", "P27", "P28", "dairy-0.1.0", "dairy-f1",
+                               "food-crops-0.1.0", "W8"})
                 self.assertIn(meta["owner"],
                               {"A", "B", "C", "S", "P4", "P5", "P6", "P7",
                                "P8", "P9", "P10", "P11", "P12", "P13",
                                "P14", "P15", "P16", "P17", "P18", "P19",
-                               "P20", "P21", "P22", "P23", "P24", "P25", "P26", "P27", "P28", "dairy-0.1.0", "dairy-f1", "W8"})
+                               "P20", "P21", "P22", "P23", "P24", "P25", "P26", "P27", "P28", "dairy-0.1.0", "dairy-f1",
+                               "food-crops-0.1.0", "W8"})
 
 
 class SyntheticLineageTests(ContractCase):
@@ -217,6 +219,72 @@ class SyntheticLineageTests(ContractCase):
             self.assertEqual("declared_change",
                              report["baseline"]["states"]["a.py"])
             self.assertEqual("ok", report["baseline"]["states"]["b.py"])
+
+    # sha256[:16] of each " | " part of the install-manifest reason at 809e925,
+    # in order. Later merges may insert or append parts; history must survive.
+    _REASON_809E925_PARTS = (
+            "28bd990c0b5fb2e8",
+            "c895920786e852a1",
+            "91d0938417ff74e8",
+            "e2714bbeefbfd2d4",
+            "2af241bc2769a182",
+            "e9e3bec4ec5ad428",
+            "0cbbe954c28a6437",
+            "cff08819bcdb7e11",
+            "34839dac7ca80d7b",
+            "e13cf1e5a0095a1e",
+            "af00296b62be5f05",
+            "d7a822c4c3afa0b6",
+            "884ca1074174e94d",
+            "fa7a641f7637656a",
+            "aae0f1f268dcdbda",
+            "34a8a3f742b2e1db",
+            "529a6f6e2f0584b5",
+            "36e1b0f361c4cc6f",
+            "ebc198819fa2dd47",
+            "b130ce65e6a9254a",
+            "241fa7d6ee0a0960",
+            "9dd9a3fc0ecdd216",
+            "88e9bf2e441ddcb7",
+            "24b237bd4d6a3e16",
+            "b5e79a98697ce884",
+            "4b20485d12de0623",
+            "70fbaec2fc12fd35",
+            "0daf746665d5fdaa",
+            "b2d115ffd383a0c0",
+            "3c6b24e74554d5ba",
+            "8c5973eeefa239be",
+            "c4c6e3185bb00f4b",
+            "22a4c6afc76e3517",
+            "495a8a134d376c25",
+            "4d1d983e0030120a",
+            "eb88d4397969a25a",
+            "0457b93e3b6ab19c",
+            "8b7429c9d14152c8",
+            "7c20cd6834db9522",
+            "62774aaf92b29004",
+            "cb99d9626b616a93",
+            "b543caf0e0a8db0c",
+            "a9b7e333e2a363f5",
+            "e60877097a698b4e",
+            "19b2f4620926b5c0",
+            "3773375bfe9fe291",
+            "08e08034d20e75eb",
+            "9d4601113f5e3415",
+            "ba087ceda6dc04c0",
+            "6a8d163a81f793c7",
+    )
+
+    def test_install_manifest_reason_preserves_809e925_history(self):
+        reason = json.loads((REPO_ROOT / "tools/runtime-changes.json").read_text(encoding="utf-8"))["changes"]["skills/knuaf-doc/install-manifest.json"]["reason"]
+        current = [hashlib.sha256(part.encode("utf-8")).hexdigest()[:16]
+                   for part in reason.split(" | ")]
+        it = iter(current)
+        missing = [h for h in self._REASON_809E925_PARTS if h not in it]
+        self.assertEqual([], missing,
+                         "809e925 install-manifest reason parts lost or reordered")
+        self.assertIn("Astra first-read follow-up:", reason)
+
 
     def test_false_before_sha_rejected(self):
         with tempfile.TemporaryDirectory(prefix="knuaf-lin-") as tmp:

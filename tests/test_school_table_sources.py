@@ -446,8 +446,9 @@ class SchoolTableSourcesTests(ContractCase):
         }
         base = {
             'major_id': 'specialty_crops', 'writing_year': 2026,
-            'title': '합성 승인판 대조 논문', 'author': '합성 작성자',
-            'area_m2': 1200, 'sales_thousand': 3400, 'profit_thousand': 560,
+            'start_year': 2027, 'title': '합성 승인판 대조 논문',
+            'author': '합성 작성자', 'area_m2': 1200,
+            'sales_thousand': 3400, 'profit_thousand': 560,
         }
         for mode, approved_sha256 in expected.items():
             with self.subTest(mode=mode):

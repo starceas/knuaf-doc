@@ -220,6 +220,29 @@ blank workbook과 채운 재무 workbook은 XLSX 산출물이므로 각각 주 �
 증거 파일로 보존한다. 출력 상태를 바꾸려면 실제 파일·해시·검사 결과를
 확인한 새 adopt-output 등록과 `superseded_by` 연결이 필요하다.
 
+## Excel 재계산 셀의 금액 사실 등록
+
+`scripts/gg_excel_facts.py <정본폴더> --workbook <상대경로.xlsx>
+--receipt <상대경로.office.manifest.json> --map <검토한 셀지도.json>
+--source-id <출처ID> --major <전공ID>`는 `gg_core.apply`용 change JSON을 stdout에
+낸다. 직접 정본·파일을 쓰지 않는다. 출력한 change를 검토한 뒤 현재 revision으로
+`gg.py apply`한다. 실제 Excel이 저장한 통합문서와 native 영수증을 작업폴더 안에
+보존해야 하며 clear/fill receipt만으로는 금액 사실을 만들 수 없다.
+
+셀지도 스키마는 `gg-xlsx-fact-map/v1`: top-level `workbook.sha256`,
+`receipt.sha256`, `workbook_profile`, `cells`가 필요하다. 각 셀은
+`fact_id`, 본문에 사용하는 `field_id`(예: 매출액), `sheet`, `cell`, `period`,
+`unit`(원/천원), `scope`를 명시한다. 기간·단위는 셀 표시에서 추정하지 않고
+사람이 학교 양식과 대조한다. 중복 셀·fact ID 및 기존 사실과 다른 값은 거절한다.
+프로필·정본 authorization·native 저장 완료 증거·출력 해시가 일치하고 선택한
+셀의 숫자 캐시가 유한수일 때만 observation/decimal/provided 사실이 나온다.
+캐시 누락·Excel 오류·문자/boolean·NaN/Infinity·재계산 근거 누락은 보류한다.
+
+출처에는 실제 재계산 XLSX 해시와 영수증 해시, 사실 locator에는
+`sheet!cell`, 기간, 단위, 파일 해시가 남는다. 본문의 범용 금액 사실 대조에
+연결되며 17시트 좌표를 사용하지 않는다. Python은 재무 수식이나 대체 값을
+계산하지 않는다. 캐시 provenance 통과는 상속 수식의 정확성 승인과 다르다.
+
 ## 보존·검증 경계
 
 - 원본 PDF/XLSX와 학생 답변은 읽기 전용으로 보존한다. 발췌본은 `sources/extracts/`에 추가하고 원본을 덮어쓰지 않는다.

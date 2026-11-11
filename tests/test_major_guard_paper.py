@@ -26,7 +26,7 @@ from pathlib import Path
 from unittest import mock
 
 from tests._harness import (
-    SCRIPTS, ContractCase, bind_major, fact_op, runtime, source_op, write_text,
+    SCRIPTS, ContractCase, bind_major, claim_of, fact_op, runtime, source_op, write_text,
 )
 
 SPECIALTY = "specialty_crops"
@@ -41,7 +41,7 @@ PROBE = "probe_major"
 
 
 def _spec(**extra):
-    spec = {"author": "합성", "writing_year": 2026,
+    spec = {"author": "합성", "writing_year": 2026, "start_year": 2027,
             "school_profile": {"mode": "school", "school": "합성대학교",
                                "department": "특용작물학과"}}
     spec.update(extra)
@@ -99,9 +99,17 @@ class _Base(ContractCase):
         fact = dict(self.core.load(root)["facts"]["selected_major"])
         fact.update(changes)
         revision = self.core.load(root)["revision"]
-        self.core.apply(root, {"request_id": "swap-binding",
-                               "ops": [{"collection": "facts",
-                                        "value": fact}]}, revision)
+        ops = []
+        if "value" in changes:
+            write_text(root, "changed-major.txt", "전공 변경: " + fact["value"] + "\n")
+            fact["source_refs"] = [{
+                "id": "changed-major", "revision": 1,
+                "locator": "line 1", "claim_id": "major"}]
+            src = source_op("changed-major.txt", claims=claim_of(fact, "major"))
+            src["value"]["id"] = "changed-major"
+            ops.append(src)
+        ops.append({"collection": "facts", "value": fact})
+        self.core.apply(root, {"request_id": "swap-binding", "ops": ops}, revision)
 
     def _probe_registry(self, outputs=("question_list", "document_plan")):
         mc = self.mc
@@ -126,9 +134,9 @@ class _Base(ContractCase):
         write_text(root, "major-answer.txt", "전공 선택: " + PROBE + "\n")
         fact = fact_op("selected_major", "common.major_id", PROBE,
                        "", scope="project", verification="claim_supported",
-                       source_id="major-answer")
+                       source_id="major-answer", claim_id="major")
         fact["value"]["module_version"] = "0.0.1"
-        src = source_op("major-answer.txt")
+        src = source_op("major-answer.txt", claims=claim_of(fact["value"], "major"))
         src["value"]["id"] = "major-answer"
         revision = self.core.load(root)["revision"]
         self.core.apply(root, {"request_id": "fruit", "ops": [src, fact]},
@@ -286,17 +294,17 @@ class PaperGeneratorGuardTests(_Base):
         self._all_held(insect_root, insect, "unsupported_output")
 
     def test_l4_registered_module_without_paper_is_refused(self):
-        """The real registered fruit_trees module declares no paper."""
+        """The real registered insect module still declares no paper."""
         root = self.make_project()
-        bind_major(root, "fruit_trees")
-        spec = _spec(major_id="fruit_trees")
-        spec["school_profile"]["department"] = "과수학과"
+        bind_major(root, INSECTS)
+        spec = _spec(major_id=INSECTS)
+        spec["school_profile"]["department"] = "산업곤충학과"
         name = self._write_spec(root, spec)
         before = self._tree_bytes(root)
         self._core_held("unsupported_output", self.core.paper, root, name,
                         (Path(root) / name).read_bytes(), "build/f.md")
         self._core_held("unsupported_output", self.core.export, root,
-                        "draft", major_id="fruit_trees")
+                        "draft", major_id=INSECTS)
         self.assertEqual(self._tree_bytes(root), before)
 
     def test_l5_invalid_ids_and_bindings_are_held(self):
@@ -407,7 +415,7 @@ class PaperMigrationTests(_Base):
         is re-evaluated at the new revision.  Review freshness in this
         product is bound to the reviewed content (target refs +
         fingerprint), which the binding does not change, so the prior
-        calculation review stays fresh and no gate row changes; the
+        calculation review stays fresh; scope diagnostics may change with the binding. The
         output authorization, however, is recomputed and recorded at the
         new revision, and a held pre-migration request never becomes an
         output."""
@@ -417,8 +425,6 @@ class PaperMigrationTests(_Base):
         self.assertEqual(
             self.core.finance_review_freshness(root, before, "rev-calc")[0],
             "fresh")
-        gate_before = {(r["check_id"], r["target"]): r["status"]
-                       for r in self.core.gate(root, before)}
         name = self._write_spec(root, _spec(), "original.json")
         with self.assertRaises(self.core.OperationError):
             self.core.paper(root, name, (Path(root) / name).read_bytes(),
@@ -429,9 +435,6 @@ class PaperMigrationTests(_Base):
         self.assertEqual(
             self.core.finance_review_freshness(root, after, "rev-calc")[0],
             "fresh")
-        gate_after = {(r["check_id"], r["target"]): r["status"]
-                      for r in self.core.gate(root, after)}
-        self.assertEqual(gate_after, gate_before)
         value = self.core.paper(root, name, (Path(root) / name).read_bytes(),
                                 "build/migrated.md", major_id=SPECIALTY)
         self.assertEqual(value["major_authorization"]["project_revision"],
@@ -504,6 +507,7 @@ class PaperMigrationTests(_Base):
         fact = dict(approved["facts"]["selected_major"])
         fact["source_refs"] = [dict(fact["source_refs"][0],
                                     id="major-answer-2")]
+        src["value"]["claims"] = claim_of(fact, "major")
         self.core.apply(root, {"request_id": "rebind", "ops": [
             src, {"collection": "facts", "value": fact}]},
             approved["revision"])
@@ -560,6 +564,30 @@ class ExportAdoptGuardTests(_Base):
         self._seed_body(insect_root)
         self._export_held(insect_root, "unsupported_output", INSECTS,
                           kinds=("draft",))
+
+    def test_peer_draft_review_exports_publish_paper_only(self):
+        """Workbook declarations must not add spreadsheets to paper exports.
+
+        Direct XLSX/companion adoption and submission export are a separate
+        A2 profile-gate boundary; W1d found those routes open without proof.
+        """
+        for major in ("fruit_trees", "hort_env_systems", "dairy"):
+            root = self.make_project()
+            bind_major(root, major)
+            self._seed_body(root)
+            for kind in ("draft", "review"):
+                with self.subTest(major=major, kind=kind):
+                    result = self.core.export(root, kind, major_id=major)
+                    output = Path(result["path"])
+                    self.assertIn("농장명은 행복농장이다.",
+                                  output.read_text(encoding="utf-8"))
+                    manifest = json.loads((output.parent / "manifest.json")
+                                          .read_text(encoding="utf-8"))
+                    self.assertEqual(
+                        [(a["major_id"], a["output"])
+                         for a in manifest["major_authorization"]],
+                        [(major, "school_paper")])
+                    self.assertEqual(list(output.parent.rglob("*.xlsx")), [])
 
     def test_merge_forwards_major(self):
         root = self.make_project()

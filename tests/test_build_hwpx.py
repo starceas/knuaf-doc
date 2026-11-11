@@ -14,8 +14,8 @@ import zipfile
 from unittest import mock
 
 from tests._harness import (
-    SCRIPTS, ContractCase, bind_major, runtime, script_source,
-    text_calls_without_encoding,
+    SCRIPTS, ContractCase, bind_major, claim_of, runtime, script_source,
+    source_op, text_calls_without_encoding, write_text,
 )
 
 build_hwpx = runtime("build_hwpx")
@@ -153,8 +153,14 @@ class _Base(ContractCase):
         fact = dict(self.core.load(root)["facts"]["selected_major"])
         fact.update(value=major,
                     module_version=self.mc.INDUSTRIAL_INSECTS_MODULE.module_version)
+        write_text(root, "changed-major.txt", "전공 변경: " + major + "\n")
+        fact["source_refs"] = [{
+            "id": "changed-major", "revision": 1,
+            "locator": "line 1", "claim_id": "major"}]
+        src = source_op("changed-major.txt", claims=claim_of(fact, "major"))
+        src["value"]["id"] = "changed-major"
         self.core.apply(root, {"request_id": "swap-" + major,
-                               "ops": [{"collection": "facts", "value": fact}]},
+                               "ops": [src, {"collection": "facts", "value": fact}]},
                         self.core.load(root)["revision"])
 
     def _held(self, reason, fn, *args, **kw):

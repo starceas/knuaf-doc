@@ -16,6 +16,7 @@ import unittest
 from dataclasses import replace
 from pathlib import Path
 from types import MappingProxyType
+from unittest import mock
 
 TESTS = Path(__file__).resolve().parent
 SCRIPTS = TESTS.parent / "scripts"
@@ -103,12 +104,133 @@ class TestStatesAndDeclarations(unittest.TestCase):
                 capabilities={},
             )
 
+
+
+class TestWorkbookProfileAuthorization(unittest.TestCase):
+    def setUp(self):
+        self.modules = mc.default_registry()
+
+    def _authorization(self, major_id, *, module_version=None,
+                       contract_version=None):
+        module = self.modules.resolve(major_id)
+        return mc.OutputAuthorization(
+            output=mc.OUTPUT_SCHOOL_WORKBOOK,
+            major_id=major_id,
+            module_version=module_version or module.module_version,
+            contract_version=contract_version or mc.CONTRACT_VERSION,
+            project_revision=1,
+            binding_evidence="synthetic",
+        )
+
+    def test_workbook_profile_declarations_are_immutable_and_major_specific(self):
+        expected = {
+            "specialty_crops": ("school_17_sheet_v1",),
+            "fruit_trees": ("fruit_16_sheet_v1", "fruit_16_sheet_v1_fy1"),
+            "hort_env_systems": (),
+            "dairy": ("dairy_hanwoo_28_sheet_v1",),
+        }
+        for major_id, profiles in expected.items():
+            with self.subTest(major_id=major_id):
+                declared = mc.workbook_profiles_for(
+                    self._authorization(major_id))
+                self.assertEqual(declared, profiles)
+                self.assertIsInstance(declared, tuple)
+                with self.assertRaises(AttributeError):
+                    declared.append("unauthorized")
+
+    def test_declared_workbook_profiles_require_matching_supported_capability(self):
+        allowed = {
+            "specialty_crops": "school_17_sheet_v1",
+            "fruit_trees": "fruit_16_sheet_v1",
+        }
+        for major_id, profile in allowed.items():
+            with self.subTest(major_id=major_id):
+                self.assertIsNone(mc.require_workbook_profile(
+                    self._authorization(major_id), profile))
+        # The dairy profile is declared but closed: its school original
+        # structure is not registered, so no output may claim it.
+        with self.subTest(major_id="dairy"):
+            with self.assertRaises(mc.OutputHeldError) as caught:
+                mc.require_workbook_profile(
+                    self._authorization("dairy"), "dairy_hanwoo_28_sheet_v1")
+            self.assertEqual(caught.exception.reason,
+                             "unsupported_finance_profile")
+        for profile in (
+            "school_17_sheet_v1",
+            "hort_18_sheet_reconstructed_v1",
+        ):
+            with self.subTest(major_id="hort_env_systems", profile=profile):
+                with self.assertRaises(mc.OutputHeldError) as caught:
+                    mc.require_workbook_profile(
+                        self._authorization("hort_env_systems"), profile)
+                self.assertEqual(caught.exception.reason,
+                                 "unsupported_finance_profile")
+        with self.subTest(case="declared-but-unsupported"):
+            module = self.modules.resolve("fruit_trees")
+            authorization = self._authorization("fruit_trees")
+            changed = replace(module, finance_capabilities=tuple(
+                replace(capability, status="unsupported")
+                if capability.profile == "fruit_16_sheet_v1" else capability
+                for capability in module.finance_capabilities))
+            with mock.patch.object(mc, "default_registry",
+                                   return_value=mc.ModuleRegistry(
+                                       (changed,),
+                                       pack_owner=mc.load_pack_owner())):
+                with self.assertRaises(mc.OutputHeldError) as caught:
+                    mc.require_workbook_profile(
+                        authorization, "fruit_16_sheet_v1")
+            self.assertEqual(caught.exception.reason,
+                             "unsupported_finance_profile")
+        with self.subTest(case="capability-without-workbook-declaration"):
+            module = self.modules.resolve("specialty_crops")
+            changed = replace(module, workbook_profiles=())
+            authorization = self._authorization("specialty_crops")
+            with mock.patch.object(mc, "default_registry",
+                                   return_value=mc.ModuleRegistry(
+                                       (changed,),
+                                       pack_owner=mc.load_pack_owner())):
+                with self.assertRaises(mc.OutputHeldError) as caught:
+                    mc.require_workbook_profile(
+                        authorization, "school_17_sheet_v1")
+            self.assertEqual(caught.exception.reason,
+                             "unsupported_finance_profile")
+
+    def test_invalid_and_stale_workbook_authorizations_fail_closed(self):
+        with self.assertRaises(mc.OutputHeldError) as caught:
+            mc.workbook_profiles_for(None)
+        self.assertEqual(caught.exception.reason,
+                         "workbook_profile_authorization_required")
+        forged = replace(self._authorization("fruit_trees"),
+                         major_id="unregistered_probe_major")
+        with self.assertRaises(mc.OutputHeldError) as caught:
+            mc.workbook_profiles_for(forged)
+        self.assertEqual(caught.exception.reason,
+                         "workbook_profile_authorization_stale")
+        stale_module = self._authorization("fruit_trees",
+                                            module_version="0.0.0")
+        with self.assertRaises(mc.OutputHeldError) as caught:
+            mc.workbook_profiles_for(stale_module)
+        self.assertEqual(caught.exception.reason,
+                         "workbook_profile_authorization_stale")
+        stale_contract = self._authorization(
+            "fruit_trees", contract_version="stale-contract")
+        with self.assertRaises(mc.OutputHeldError) as caught:
+            mc.require_workbook_profile(stale_contract,
+                                        "fruit_16_sheet_v1")
+        self.assertEqual(caught.exception.reason,
+                         "workbook_profile_authorization_stale")
+        bad_profile = self._authorization("fruit_trees")
+        with self.assertRaises(mc.OutputHeldError) as caught:
+            mc.require_workbook_profile(bad_profile, "")
+        self.assertEqual(caught.exception.reason,
+                         "unsupported_finance_profile")
+
+
+class TestBindingAndRouting(unittest.TestCase):
     def test_empty_slot_preserved(self):
         ii = registry().resolve("industrial_insects")
         self.assertEqual(ii.packs, ())
 
-
-class TestBindingAndRouting(unittest.TestCase):
     def setUp(self):
         self.reg = registry()
 
@@ -555,7 +677,8 @@ class TestProjectBinding(unittest.TestCase):
 
     def major_fact(self, fid="f-major", value="specialty_crops", *,
                    answer_state="provided", verification="claim_supported",
-                   source_refs=({"id": "s1", "locator": "line 1"},),
+                   source_refs=({"id": "s1", "locator": "line 1",
+                                 "revision": 1, "claim_id": "major"},),
                    module_version="1.0.0"):
         f = {
             "field_id": mc.COMMON_MAJOR_FIELD,
@@ -573,9 +696,15 @@ class TestProjectBinding(unittest.TestCase):
             f["module_version"] = module_version
         return fid, f
 
+    def major_source(self, fact):
+        return {"id": "s1", "path": "interview/major-answer.txt", "revision": 1,
+                "claims": {"major": {key: fact[key] for key in (
+                    "field_id", "value", "unit", "period", "scope",
+                    "answer_state", "kind")}}}
+
     def test_binds_from_confirmed_fact(self):
         fid, fact = self.major_fact()
-        p = self.project(facts={fid: fact}, sources={"s1": {"id": "s1"}})
+        p = self.project(facts={fid: fact}, sources={"s1": self.major_source(fact)})
         b = mc.binding_from_project(self.reg, p)
         self.assertEqual(b.major_id, "specialty_crops")
         self.assertEqual(b.basis, "legacy_record")
@@ -667,7 +796,7 @@ class TestProjectBinding(unittest.TestCase):
 
     def test_read_only_leaves_project_unchanged(self):
         fid, fact = self.major_fact()
-        p = self.project(facts={fid: fact}, sources={"s1": {"id": "s1"}})
+        p = self.project(facts={fid: fact}, sources={"s1": self.major_source(fact)})
         before = json.dumps(p, sort_keys=True, ensure_ascii=False)
         mc.binding_from_project(self.reg, p)
         self.assertEqual(
@@ -687,7 +816,8 @@ class TestProjectBinding(unittest.TestCase):
             ops = [
                 {"collection": "sources", "value": {
                     "id": "s1", "path": "note.txt",
-                    "claims": {}, "claim_review": "synthetic"}},
+                    "claims": self.major_source(self.major_fact()[1])["claims"],
+                    "claim_review": "synthetic"}},
                 {"collection": "facts", "value": {
                     "id": "f-major", "field_id": mc.COMMON_MAJOR_FIELD,
                     "kind": "reported_fact", "value": "specialty_crops",
@@ -695,7 +825,7 @@ class TestProjectBinding(unittest.TestCase):
                     "scope": "project", "answer_state": "provided",
                     "verification": "claim_supported",
                     "source_refs": [{"id": "s1", "locator": "line 1",
-                                     "revision": 1}],
+                                     "revision": 1, "claim_id": "major"}],
                     "module_version": "1.0.0"}},
             ]
             gg_core.apply(root, {"request_id": "bind-1", "ops": ops}, 0)
@@ -814,7 +944,8 @@ class TestShippedCatalog(unittest.TestCase):
         self.assertEqual(fr.packs, ())
         self.assertEqual(reg.major_ids,
                          ("specialty_crops", "industrial_insects",
-                          "fruit_trees", "hort_env_systems", "dairy"))
+                          "fruit_trees", "hort_env_systems", "dairy",
+                          "food_crops"))
 
 
 if __name__ == "__main__":

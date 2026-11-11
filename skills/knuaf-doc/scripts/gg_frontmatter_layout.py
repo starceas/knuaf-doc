@@ -64,6 +64,8 @@ def _texts(nodes,start,end):
 
 
 def render_forms(doc,nodes,plan,font):
+    if plan.get('spec') and plan['spec'].major_id != 'specialty_crops':
+        return _render_peer_forms(doc, nodes, plan, font)
     ix=plan['indices']
     cover=_texts(nodes,ix['겉표지']+1,ix['표제면'])
     submission=_texts(nodes,ix['표제면']+1,ix['제출서'])
@@ -136,6 +138,96 @@ def render_forms(doc,nodes,plan,font):
         inner.rows[0].height=Mm(9);inner.rows[0].height_rule=WD_ROW_HEIGHT_RULE.EXACTLY
         tail=cell.paragraphs[-1];tail.paragraph_format.line_spacing=Pt(1);tail.paragraph_format.space_after=Pt(0)
     _break(doc)
+
+
+def _roman_front_section(doc):
+    """Open the food-crops front-matter section: upper-Roman page numbers.
+
+    The school form numbers 요약 through 목차/표 목차/그림 목차 with upper-Roman
+    page numbers in the 아래 가운데 footer, then restarts the body at Arabic 1.
+    """
+    from docx.enum.section import WD_SECTION
+    sec = doc.add_section(WD_SECTION.NEW_PAGE)
+    inherited = sec._sectPr.find(qn('w:pgNumType'))
+    if inherited is not None:
+        sec._sectPr.remove(inherited)
+    pg = OxmlElement('w:pgNumType')
+    pg.set(qn('w:start'), '1')
+    pg.set(qn('w:fmt'), 'upperRoman')
+    sec._sectPr.append(pg)
+    sec.footer.is_linked_to_previous = False
+    p = sec.footer.paragraphs[0]
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    field = OxmlElement('w:fldSimple')
+    field.set(qn('w:instr'), 'PAGE')
+    p._p.append(field)
+    return sec
+
+
+def _black_runs(paragraph, font, size):
+    """식량작물 앞부분 제목의 글자색만 검정으로 고정한다.
+
+    문서 스타일(Heading 1)은 다른 전공·본문이 함께 쓰므로 건드리지 않고,
+    이 문단에 실제로 만들어진 run의 색만 바꾼다. run이 없으면 하나 만든다.
+    """
+    if not paragraph.runs:
+        paragraph.add_run(paragraph.text or '')
+    for run in paragraph.runs:
+        run.font.name = font
+        run.font.size = Pt(size)
+        run.font.color.rgb = RGBColor(0, 0, 0)
+
+
+def _render_peer_forms(doc, nodes, plan, font):
+    """Source page grouping, common flowing layout; never claim measured bands."""
+    spec = plan['spec']
+    indices = plan['indices']
+    ordered = plan['order']
+    forms = spec.physical_forms
+    roman_front = spec.major_id == 'food_crops'
+    # Preserve authored preamble rather than silently dropping it.
+    if any(n.get('text', '').strip() for n in nodes[:indices[ordered[0]]]):
+        raise ValueError('학교 앞머리 앞에 배정되지 않은 내용이 있습니다')
+    for position, roles in enumerate(forms):
+        # 식량작물: 요약 묶음 앞에서 로마 대문자 쪽번호 구역을 연다.
+        if roman_front and position and '요약' in roles:
+            _roman_front_section(doc)
+        for role in roles:
+            start = indices[role]
+            next_role = ordered[ordered.index(role) + 1]
+            end = indices[next_role]
+            if role in {'학부모 동의서', '요약', '감사의 글'}:
+                title = doc.add_paragraph(role, style='Heading 1')
+                if roman_front:
+                    # 양식 검정 제목. 문서 스타일은 건드리지 않고 이 두 문단만.
+                    _black_runs(title, font, 20)
+            if roman_front and role == '요약':
+                bookmark(title, 'gg_summary', 9001)
+            if roman_front and role == '감사의 글':
+                bookmark(title, 'gg_thanks', 9004)
+            for node in nodes[start + 1:end]:
+                if node.get('kind') not in {'paragraph', 'heading'}:
+                    raise ValueError('학교 앞머리에는 문단만 지원: ' + role)
+                p = doc.add_paragraph(node.get('text', ''))
+                # Common defaults are not measurements of a peer's school form.
+                # 식량작물 요약·감사의 글은 줄글이라 양쪽 맞춤을 쓴다
+                # (앞부분 표지·제출서·인준서는 학교 양식대로 가운데).
+                if roman_front and role in {'요약', '감사의 글'}:
+                    p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+                elif spec.layout_confidence != 'unverified_common_defaults':
+                    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                for run in p.runs:
+                    _font(run, font, 12)
+        if roles == forms[0]:
+            present = {n.get('text', '').strip() for n in nodes[:plan['toc']]}
+            for notice in spec.notices:
+                if notice not in present:
+                    doc.add_paragraph(notice)
+        # The 요약 section break already starts a new page; a page break here
+        # would leave an empty page between 인준서 and 요약.
+        if roman_front and position + 1 < len(forms) and '요약' in forms[position + 1]:
+            continue
+        _break(doc)
 
 
 def bookmark(p,name,num):

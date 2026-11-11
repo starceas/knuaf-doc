@@ -260,8 +260,8 @@
         },
         {
           "relative_path": "references/rules/PRE_frontmatter.md",
-          "sha256": "518398e195a8480abed23596dcbe46c18fc033c345796d8b50ad0dadcd17baef",
-          "bytes": 6057
+          "sha256": "55910a003312a8aee5f7c5cc1b1d56b21788001812c164ba57fe961a08728fbd",
+          "bytes": 8051
         },
         {
           "relative_path": "references/guideline-inventory.json",
@@ -398,8 +398,8 @@
         },
         {
           "relative_path": "references/rules/PRE_frontmatter.md",
-          "sha256": "518398e195a8480abed23596dcbe46c18fc033c345796d8b50ad0dadcd17baef",
-          "bytes": 6057
+          "sha256": "55910a003312a8aee5f7c5cc1b1d56b21788001812c164ba57fe961a08728fbd",
+          "bytes": 8051
         },
         {
           "relative_path": "references/guideline-inventory.json",
@@ -661,8 +661,8 @@
       "artifacts": [
         {
           "relative_path": "references/excel-template.md",
-          "sha256": "e5c553a21f66edc1fcae86ee8fcfbb68f7b706fd386837abac35abffb3d78114",
-          "bytes": 59678
+          "sha256": "4f18918d0b22d986b7e5e142f79f76eeafc1b19b1ccfdbccb5f63b453631099c",
+          "bytes": 63381
         }
       ],
       "coverage": {

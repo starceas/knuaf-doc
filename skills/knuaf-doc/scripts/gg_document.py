@@ -108,9 +108,21 @@ WARNING_CHECKS = frozenset(
 # 차단은 아니지만 통과로 넘기면 안 되는 확인 항목. WARNING_CHECKS와
 # 분리해 둔 이유는 그 집합이 기존 시험에 고정돼 있어서다. 코어와 명령
 # 어댑터는 두 집합을 함께 warning으로 집계한다.
-POLICY_ADVISORY_CHECKS = frozenset({"photo_missing", "object_credit_position"})
+POLICY_ADVISORY_CHECKS = frozenset(
+    {"photo_missing", "object_credit_position", "table_caption_optional"}
+)
 
 INFO_CHECKS = frozenset({"sourced_objects"})
+
+# 식량작물 양식 원본에 남아 있는 자리표시. 산출물에 그대로 남으면 완성본이
+# 아니다(양식 예시 연도·`표 ??`·`○○○`·작성방법 상자). 다른 전공 양식은
+# 이 표를 쓰지 않는다.
+FOOD_CROPS_TEMPLATE_PLACEHOLDERS = (
+    ("표 ??", r"표\s*\?\?"),
+    ("그림 ??", r"그림\s*\?\?"),
+    ("○○○", r"○\s*○\s*○"),
+    ("<작성방법>", r"<\s*작성방법\s*>"),
+)
 
 POLICY_PATH = (
     # absolute() does not consult getcwd for an absolute __file__, so
@@ -247,7 +259,7 @@ class _HeadingState:
     Markdown ##+ is always a subsection. No suffix or lookahead is read.
     """
 
-    def __init__(self, dairy_summary=False):
+    def __init__(self, dairy_summary=False, arabic_summary=False):
         self.summary = False
         self.summary_number = None
         self.body = False
@@ -255,6 +267,7 @@ class _HeadingState:
         self.number = 0
         self.marked = False
         self.dairy_summary = dairy_summary
+        self.arabic_summary = arabic_summary
     def read(self, line):
         text = line.strip()
         if re.match(r"^[-+*]\s+", text):
@@ -265,7 +278,8 @@ class _HeadingState:
             text = md[2]
         chapter = _numbered_heading(text)
         title = chapter[2] if chapter else text
-        summary_pattern = r"요\s*약|초록|abstract" if self.dairy_summary \
+        summary_pattern = r"요\s*약|초록|abstract" \
+            if (self.dairy_summary or self.arabic_summary) \
             else r"요약|초록|abstract"
         if not self.body and level in (None, 1) and re.fullmatch(
             summary_pattern, title, re.IGNORECASE
@@ -274,6 +288,11 @@ class _HeadingState:
             return level or (1 if chapter else None), text
         if (self.dairy_summary and self.summary and md and level == 1
                 and chapter and chapter[0] == "roman"):
+            self.summary_number = chapter[1]
+            return 2, text
+        if (self.arabic_summary and self.summary and chapter
+                and chapter[0] == "arabic" and (not md or level == 1)
+                and not _intro_title(chapter[2], ("머리말", "서론"))):
             self.summary_number = chapter[1]
             return 2, text
         if md and level != 1:
@@ -1014,7 +1033,8 @@ def parse(text, *, with_spans=False, _with_term_positions=False,
             line_offsets.append(offset)
             offset += len(line)
     previous_prose = False
-    heading_state = _HeadingState(dairy_summary=major_id == "dairy")
+    heading_state = _HeadingState(dairy_summary=major_id == "dairy",
+                                  arabic_summary=major_id == "food_crops")
     def append(node, term_parts=()):
         if with_spans:
             node.update(start_line=start_line, end_line=i)
@@ -1200,6 +1220,10 @@ _UNIT_DIMENSIONS = {
     **dict.fromkeys(("㎡", "평", "ha"), "area"),
 }
 _UNIT_DECLARATION = re.compile(r"단위\s*[:：]\s*([^()（）\n]+)")
+# 표 밖 단위줄: 문단 전체가 단위 선언 하나뿐인 경우만(`(단위: 천 원)`).
+_UNIT_LINE_ONLY = re.compile(
+    r"^[ \t]*[（(]?[ \t]*단위[ \t]*[:：][^()（）\n]+?[ \t]*[)）]?[ \t]*$"
+)
 _TABLE_NOTE = re.compile(
     r"^\s*(?:주\s*\d*|비고|환산)(?=$|\s|[:：.)])|^\s*※"
 )
@@ -1449,6 +1473,15 @@ def check(text, base, major_id=None, project_root=None):
         text, with_spans=True, _with_term_positions=True, major_id=major_id
     )
     issues = []
+    if major_id == "food_crops":
+        # 양식 원본의 자리표시가 원고에 남아 있으면 오류다. 제목·성명처럼
+        # 학생이 채우는 자리는 이 검사 대상이 아니다(양식 표기만 본다).
+        for label, pattern in FOOD_CROPS_TEMPLATE_PLACEHOLDERS:
+            if re.search(pattern, text):
+                issues.append(
+                    ("template_placeholder_left",
+                     "양식 자리표시가 남음: " + label)
+                )
     _table_numeric_checks(nodes, issues)
     _sample_identity_checks(nodes, project_root, issues)
     policy = plain_policy_check(text, issues, nodes, major_id)
@@ -1490,9 +1523,49 @@ def check(text, base, major_id=None, project_root=None):
         for m in re.finditer(r"(?<![가-힣A-Za-z0-9])" + label + r"\s*(\d+)", prose):
             if int(m[1]) not in numbers:
                 issues.append(("missing_caption", m[0] + " 참조의 캡션 없음"))
+    def _unit_line_steps(nodes, index, step):
+        """Step over 표 밖 단위줄 문단 between a caption and its table.
+
+        식량작물 양식은 단위를 표 밖 별도 문단으로도 쓴다
+        (references/food-crops/format.md 4.1).  Only a paragraph that is
+        nothing but the declaration is skipped; any other line keeps the
+        object/caption gap an error (Roh C1 중요3).  Other majors write the
+        unit inside the caption parentheses and are not touched.
+        """
+        position = index
+        if major_id != "food_crops":
+            return position
+        while 0 <= position < len(nodes):
+            node = nodes[position]
+            if (node["kind"] != "paragraph"
+                    or not _UNIT_LINE_ONLY.match(node.get("text", ""))):
+                break
+            position += step
+        return position
+
+    def _table_object_at(nodes, caption_index):
+        """Index of the table a 표 caption introduces, or None."""
+        position = _unit_line_steps(nodes, caption_index + 1, 1)
+        if 0 <= position < len(nodes) and nodes[position]["kind"] == "table":
+            return position
+        return None
+
+    def _caption_before_table(nodes, table_index):
+        """Index of the 표 caption introducing this table, or None."""
+        position = _unit_line_steps(nodes, table_index - 1, -1)
+        if (0 <= position < len(nodes) and nodes[position]["kind"] == "caption"
+                and nodes[position]["label"] == "표"):
+            return position
+        return None
+
     for i, n in enumerate(nodes):
         if n["kind"] == "caption":
-            j = i + 1 if n["label"] == "표" else i - 1
+            if n["label"] == "표":
+                # 정상 배치 확인용 — 아래 객체 확인과 같은 규칙을 쓴다.
+                object_index = _table_object_at(nodes, i)
+                j = object_index if object_index is not None else i + 1
+            else:
+                j = i - 1
             kind = "table" if n["label"] == "표" else "image"
             if j < 0 or j >= len(nodes) or nodes[j]["kind"] != kind:
                 pending_photo = (
@@ -1518,12 +1591,15 @@ def check(text, base, major_id=None, project_root=None):
             ):
                 issues.append(("missing_image", n["path"]))
         if n["kind"] == "table":
-            if (
-                i == 0
-                or nodes[i - 1]["kind"] != "caption"
-                or nodes[i - 1]["label"] != "표"
-            ):
-                issues.append(("missing_caption", "표 객체의 캡션 없음"))
+            if _caption_before_table(nodes, i) is None:
+                # 식량작물 양식은 2장 SWOT처럼 제목 없는 표를 정상으로 쓴다
+                # (참고 문서 format.md 4.1). 오류 대신 '의도면 OK' 알림.
+                if major_id == "food_crops":
+                    issues.append(
+                        ("table_caption_optional", "표 제목 없음 — 의도면 OK")
+                    )
+                else:
+                    issues.append(("missing_caption", "표 객체의 캡션 없음"))
             try:
                 spans(n["rows"])
             except ValueError as e:
@@ -1596,7 +1672,7 @@ def check(text, base, major_id=None, project_root=None):
                             "학교 농장개요 필수항목 누락: " + ", ".join(missing),
                         )
                     )
-    toc_range = school_toc_range(nodes)
+    toc_range = school_toc_range(nodes, major_id)
     toc_start, body_start = toc_range if toc_range else (-1, -1)
     for i, n in enumerate(nodes):
         # These locations/content slots belong to the specialty-crop
@@ -1707,6 +1783,58 @@ def check(text, base, major_id=None, project_root=None):
     return issues
 
 
+from dataclasses import dataclass
+from types import MappingProxyType
+
+
+@dataclass(frozen=True)
+class SchoolFrontmatterSpec:
+    major_id: str
+    orders: tuple
+    physical_forms: tuple
+    degree: str
+    plan_label: str
+    department: str
+    cover_count: int
+    notices: tuple = ()
+    layout_confidence: str = "source_order"
+
+
+SCHOOL_FRONTMATTER = MappingProxyType({
+    "specialty_crops": SchoolFrontmatterSpec(
+        "specialty_crops",
+        (("겉표지", "인준서", "표제면", "제출서", "목차"),
+         ("겉표지", "표제면", "제출서", "인준서", "목차")),
+        (("겉표지",), ("표제면", "제출서"), ("인준서",)),
+        "농업전문학사 학위논문", "영농창업계획", "특용작물전공", 1,
+        layout_confidence="measured_bands"),
+    "fruit_trees": SchoolFrontmatterSpec(
+        "fruit_trees", (("겉표지", "표제면", "제출서", "인준서", "목차"),),
+        (("겉표지",), ("표제면", "제출서", "인준서")),
+        "농업전문학사 학위논문", "영농창업/승계 발전계획", "원예학부 과수전공", 1),
+    "hort_env_systems": SchoolFrontmatterSpec(
+        "hort_env_systems", (("겉표지", "표제면", "제출서", "인준서", "목차"),),
+        (("겉표지",), ("표제면",), ("제출서",), ("인준서",)),
+        "농업전문학사 학위논문", "", "원예환경시스템전공", 2,
+        ("신청서·추천서는 학교 서식으로 따로 제출",)),
+    "dairy": SchoolFrontmatterSpec(
+        "dairy", (("겉표지", "제출서", "인준서", "학부모 동의서", "요약", "감사의 글", "목차"),),
+        (("겉표지",), ("제출서",), ("인준서",), ("학부모 동의서",), ("요약",), ("감사의 글",)),
+        "농업전문학사 학위논문", "영농창업계획", "축산학부 낙농전공", 1,
+        ("학교 양식 확인 필요",), "unverified_common_defaults"),
+    "food_crops": SchoolFrontmatterSpec(
+        "food_crops",
+        (("겉표지", "표제면", "제출서", "인준서", "요약", "감사의 글", "목차"),),
+        (("겉표지",), ("표제면",), ("제출서",), ("인준서",), ("요약", "감사의 글")),
+        "농업전문학사 학위논문", "영농창업계획", "식량작물학과", 2),
+})
+
+
+def school_frontmatter_spec(major_id=None):
+    """No title-based inference; omitted IDs retain specialty compatibility."""
+    return SCHOOL_FRONTMATTER.get("specialty_crops" if major_id is None else major_id)
+
+
 FRONT = ("겉표지", "인준서", "표제면", "제출서", "목차")
 CHAPTERS = (
     (r"[ⅠI]\s*[\.．].*머리말", "머리말"),
@@ -1718,31 +1846,58 @@ CHAPTERS = (
 )
 
 
-def school_frontmatter_plan(nodes):
-    """Locate school logical front sections in either supported order.
-
-    Legacy drafts emitted approval before title/submission.  The official form
-    order is title/submission before approval.  Both are accepted so generic
-    Markdown exports remain compatible; callers can inspect ``order`` to choose
-    physical page composition.
-    """
+def school_frontmatter_plan(nodes, major_id=None):
+    """Locate exact logical markers using the explicitly selected major."""
+    spec = school_frontmatter_spec(major_id)
+    if spec is None:
+        return None
     front_indices = {}
+    required = spec.orders[0]
     for i, n in enumerate(nodes):
         t = n.get("text", "").strip()
-        if t in FRONT and t not in front_indices:
+        if t in required and t not in front_indices:
             front_indices[t] = i
-    if len(front_indices) != len(FRONT):
+    if len(front_indices) != len(required):
         return None
-    orders = (
-        ("겉표지", "인준서", "표제면", "제출서", "목차"),
-        ("겉표지", "표제면", "제출서", "인준서", "목차"),
-    )
+    orders = spec.orders
     order = next((candidate for candidate in orders if all(
         front_indices[candidate[i]] < front_indices[candidate[i + 1]]
         for i in range(len(candidate) - 1)
     )), None)
     if order:
         i_toc = front_indices["목차"]
+        if major_id is not None:
+            import gg_major_contract as mc
+            # Read department slots, never titles or body prose. The cover's
+            # identity tail is graduation, school, department, author; notices
+            # follow it but are not part of that identity block.
+            notices = {notice for entry in SCHOOL_FRONTMATTER.values()
+                       for notice in entry.notices}
+            cover_end = min(index for marker, index in front_indices.items()
+                            if marker != "겉표지")
+            cover = [n.get("text", "").strip()
+                     for n in nodes[front_indices["겉표지"] + 1:cover_end]
+                     if n.get("text", "").strip() and n.get("text", "").strip() not in notices]
+            departments = [cover[-2]] if len(cover) >= 4 else []
+            # Submission/title pages repeat school → department → author.
+            # Inspect those explicit identity slots too, so a mixed cover and
+            # submission cannot hide behind the matching cover department.
+            for role in ("겉표지", "표제면", "제출서"):
+                if role not in front_indices:
+                    continue
+                start = front_indices[role] + 1
+                end = front_indices[order[order.index(role) + 1]]
+                block = [n.get("text", "").strip() for n in nodes[start:end]
+                         if n.get("text", "").strip() and n.get("text", "").strip() not in notices]
+                if len(block) >= 3 and block[-3].endswith(("대학교", "대학")):
+                    departments.append(block[-2])
+            conflicts = [conflict for department in departments
+                         for conflict in mc.marker_conflicts({"department": department}, major_id)]
+            if conflicts:
+                raise mc.OutputHeldError("major_marker_conflict",
+                                         "명시 major_id와 앞머리 전공 표기가 다름",
+                                         requested=major_id,
+                                         conflicts=sorted({other for _, other in conflicts}))
         # 본문은 목차 항목 뒤부터 시작한다. 목차의 마지막 항목(감사의 글)은 뒤에
         # 본문 절이 이어지고, 본문 끝의 감사의 글은 뒤가 비어 있어 둘을 구분한다.
         i_body = None
@@ -1755,7 +1910,9 @@ def school_frontmatter_plan(nodes):
                 break
         if i_body is None:
             for i in range(len(nodes) - 1, i_toc, -1):
-                if re.search(r"^[ⅠI]\s*[\.．].*머리말", nodes[i].get("text", "")):
+                if re.search(r"^1\s*[.．].*머리말"
+                             if spec.major_id in ("dairy", "food_crops")
+                             else r"^[ⅠI]\s*[.．].*머리말", nodes[i].get("text", "")):
                     i_body = i
                     break
         if i_body is None:
@@ -1765,13 +1922,14 @@ def school_frontmatter_plan(nodes):
             "order": order,
             "toc": i_toc,
             "body": i_body,
-            "official_order": order == orders[1],
+            "official_order": order == orders[-1],
+            "spec": spec,
         }
     return None
 
 
-def school_toc_range(nodes):
-    plan = school_frontmatter_plan(nodes)
+def school_toc_range(nodes, major_id=None):
+    plan = school_frontmatter_plan(nodes, major_id)
     if plan:
         return plan["toc"], plan["body"]
     return None
@@ -1842,7 +2000,7 @@ def _check_peer_swot(body_nodes, paths, issues):
 def school_structure(text, issues, nodes=None, major_id=None):
     if nodes is None:
         nodes = parse(text)
-    toc_range = school_toc_range(nodes)
+    toc_range = school_toc_range(nodes, major_id)
     if toc_range:
         body_nodes = nodes[toc_range[1] :]
         body_text = "\n".join(n.get("text", "") for n in body_nodes)

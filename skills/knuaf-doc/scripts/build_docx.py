@@ -195,6 +195,21 @@ def add_table(doc, rows, font):
 WIDE_TABLE_MIN_COLS = 10
 
 
+def chapter_break_node_ids(sequence, major_id):
+    """Level-1 headings that must start a new page (식량작물 only).
+
+    The first heading is excluded: it already starts a fresh section (school
+    paper) or follows the contents page break.  Both DOCX body paths call this
+    one function, so a chapter/closer title cannot lose its page break when
+    the frontmatter is absent (Roh C1 중요2).  Other majors are unchanged.
+    """
+    if major_id != "food_crops":
+        return set()
+    headings = [n for n in sequence
+                if n["kind"] == "heading" and n.get("level") == 1]
+    return {id(n) for n in headings[1:]}
+
+
 def convert(md_text, font=FONT, base=".", table_reports=None, *,
             context=None, toc=True):
     """Render the paper markdown into a DOCX document.  Policy B: the
@@ -202,12 +217,17 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
     (``context``) before anything is rendered."""
     import gg_major_contract as mc
 
-    mc.authorize_output(mc.OUTPUT_SCHOOL_PAPER, context)
+    authorization = mc.authorize_output(mc.OUTPUT_SCHOOL_PAPER, context)
     doc = Document()
     setup_document(doc, font)
-    nodes = parse(md_text)
+    # 식량작물 요약은 아라비아 `1.`~`5.`라 요약과 본문을 가르는 전공 지식이
+    # 필요하다. 다른 전공은 지금까지처럼 전공 없이 읽어 출력을 바꾸지 않는다.
+    nodes = parse(md_text, major_id=(
+        "food_crops" if authorization.major_id == "food_crops" else None))
 
     last_prose = None
+    # 식량작물 장 시작 쪽 나눔 대상(본문 첫 장은 새 구역이라 뺀다).
+    chapter_break_nodes = set()
 
     def render_node(n, allow_soft_wrap=False):
         nonlocal last_prose
@@ -256,6 +276,8 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
             )
             pf.widow_control = True
             pf.space_after = Pt(6 if heading else 0)
+            if heading and id(n) in chapter_break_nodes:
+                pf.page_break_before = True
             text = n["text"]
             if list_item:
                 pf.left_indent = Pt(24)
@@ -310,9 +332,12 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
                 elif node["kind"] in {"caption", "paragraph"}:
                     doc.paragraphs[-1].paragraph_format.keep_with_next = True
 
-    front_plan = school_frontmatter_plan(nodes)
+    front_plan = school_frontmatter_plan(nodes, authorization.major_id)
     front_indices = front_plan["indices"] if front_plan else {}
     is_school_paper = front_plan is not None
+    if (not is_school_paper and authorization.major_id != "specialty_crops"
+            and any(n.get("text", "").strip() == "겉표지" for n in nodes)):
+        raise ValueError("전공 학교 앞머리 필수 항목 또는 순서 불일치")
 
     if not is_school_paper:
         # 표·그림만 있고 제목이 없는 문서에 빈 목차 페이지를 붙이지 않는다.
@@ -322,6 +347,8 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
             update.set(qn("w:val"), "true")
             doc.settings.element.append(update)
             doc.add_page_break()
+        chapter_break_nodes.update(
+            chapter_break_node_ids(nodes, authorization.major_id))
         render_body(nodes)
         return doc
 
@@ -330,9 +357,9 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
     doc.settings.element.append(update)
 
     i_appr = front_indices["인준서"]
-    i_title = front_indices["표제면"]
+    i_title = front_indices.get("표제면")
     i_subm = front_indices["제출서"]
-    i_toc, i_body = school_toc_range(nodes)
+    i_toc, i_body = front_plan["toc"], front_plan["body"]
     official_forms_order = bool(front_plan.get("official_order"))
     if official_forms_order:
         from gg_frontmatter_layout import render_forms
@@ -371,7 +398,7 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
                     pf.space_before = Pt(100)
                 elif text in {"한국농수산대학교", "한국농수산대학"}:
                     pf.space_before = Pt(62)
-                elif text == "특용작물전공" or text.endswith("학과"):
+                elif text == front_plan["spec"].department or text.endswith("학과"):
                     pf.space_before = Pt(8)
                 else:
                     pf.space_before = Pt(8)
@@ -431,7 +458,7 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
                             pf.space_before = Pt(8)
                         elif text in {"한국농수산대학교", "한국농수산대학"}:
                             pf.space_before = Pt(95)
-                        elif text == "특용작물전공" or text.endswith("학과"):
+                        elif text == front_plan["spec"].department or text.endswith("학과"):
                             pf.space_before = Pt(18)
                         elif seen_plan and title_candidates < 2 and text not in {
                             "농업전문학사 학위논문", "영농창업계획", "이 논문을 농업전문학사 학위논문으로 제출함"
@@ -468,6 +495,11 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
         doc.add_page_break()
 
     body_nodes=nodes[i_body:]
+    # 식량작물: 본문 첫 장은 아래 새 구역이 이미 새 쪽이라, 나머지 장/맺음말/
+    # 참고문헌/학부모 동의서 제목만 page_break_before로 새 쪽에서 시작한다.
+    # 판정은 앞머리 없는 경로와 같은 함수(chapter_break_node_ids)를 쓴다.
+    chapter_break_nodes.update(
+        chapter_break_node_ids(body_nodes, authorization.major_id))
     candidates=nodes[i_toc+1:i_body]
     summary_start=next((i for i,n in enumerate(candidates) if n.get('text','').strip()=='요약'),None)
 
@@ -518,30 +550,65 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
                 n['_bookmark_id']=idx
         table_entries=[(split_caption_credit(n['text'])[0],n['_bookmark'],2) for n in body_nodes if n['kind']=='caption' and n.get('label')=='표']
         figure_entries=[(split_caption_credit(n['text'])[0],n['_bookmark'],2) for n in body_nodes if n['kind']=='caption' and n.get('label')=='그림']
+        dairy_lists = authorization.major_id in ("dairy", "food_crops")
         entries=[]
-        if prelim: entries.append(('요약','gg_summary',0))
-        if table_entries: entries.append(('표 목차','gg_tables',0))
-        if figure_entries: entries.append(('그림 목차','gg_figures',0))
+        if authorization.major_id == "food_crops":
+            # 양식 목차 순서: 요약 · 감사의 글 · 표 목차 · 그림 목차 · 본문.
+            # 두 제목은 앞부분(_render_peer_forms)에서 이미 그려졌고,
+            # 거기서 단 책갈피를 그대로 가리켜 실제 쪽번호를 받는다.
+            entries.append(('요약','gg_summary',0))
+            entries.append(('감사의 글','gg_thanks',0))
+        elif prelim: entries.append(('요약','gg_summary',0))
+        if table_entries or dairy_lists: entries.append(('표 목차','gg_tables',0))
+        if figure_entries or dairy_lists: entries.append(('그림 목차','gg_figures',0))
         entries += [(n['text'],n['_bookmark'],n['level']) for n in body_nodes if n['kind']=='heading' and n['level']<=2]
         contents(doc,entries,font)
-        def new_numbered_section(number_format):
+        # S01 counts cover, shared forms and contents before the summary (iv
+        # with a one-page contents). Continue rather than pinning iv: an
+        # overflowing contents page must also count. Other majors stay unchanged.
+        count_fruit_front = authorization.major_id == 'fruit_trees'
+        # CT_SectPr requires pgNumType before cols/docGrid. Fruit inserts it
+        # in schema order; other majors keep their historical append bytes.
+        sectpr_after_pgnum = (
+            'w:cols', 'w:formProt', 'w:vAlign', 'w:noEndnote', 'w:titlePg',
+            'w:textDirection', 'w:bidi', 'w:rtlGutter', 'w:docGrid',
+            'w:printerSettings', 'w:sectPrChange')
+        def place_page_number(sec, pg):
+            if count_fruit_front:
+                sec._sectPr.insert_element_before(pg, *sectpr_after_pgnum)
+            else:
+                sec._sectPr.append(pg)
+        if count_fruit_front:
+            pg = OxmlElement('w:pgNumType')
+            pg.set(qn('w:start'), '1'); pg.set(qn('w:fmt'), 'lowerRoman')
+            place_page_number(doc.sections[0], pg)
+        def new_numbered_section(number_format, start=1):
             sec=doc.add_section(WD_SECTION.NEW_PAGE)
-            pg=OxmlElement('w:pgNumType');pg.set(qn('w:start'),'1');pg.set(qn('w:fmt'),number_format);sec._sectPr.append(pg)
+            if count_fruit_front or authorization.major_id == "food_crops":
+                inherited = sec._sectPr.find(qn('w:pgNumType'))
+                if inherited is not None: sec._sectPr.remove(inherited)
+            pg=OxmlElement('w:pgNumType')
+            if start is not None: pg.set(qn('w:start'), str(start))
+            pg.set(qn('w:fmt'),number_format);place_page_number(sec, pg)
             sec.footer.is_linked_to_previous=False
             p=sec.footer.paragraphs[0];p.alignment=WD_ALIGN_PARAGRAPH.CENTER
             field=OxmlElement('w:fldSimple');field.set(qn('w:instr'),'PAGE');p._p.append(field)
             return sec
-        if prelim or table_entries or figure_entries:
-            new_numbered_section('lowerRoman')
+        if prelim or table_entries or figure_entries or dairy_lists:
+            if authorization.major_id == "food_crops":
+                # 요약~그림 목차는 앞부분 서식에서 연 로마 대문자 구역을 이어 쓴다.
+                doc.add_page_break()
+            else:
+                new_numbered_section('lowerRoman', None if count_fruit_front else 1)
             if prelim:
                 p=doc.add_paragraph();p.alignment=WD_ALIGN_PARAGRAPH.CENTER
                 runs(p,'요약',font,20,True);bookmark(p,'gg_summary',9001)
                 for n in prelim: render_node(n,allow_soft_wrap=True)
-            if table_entries:
+            if table_entries or dairy_lists:
                 if prelim: doc.add_page_break()
                 contents(doc,table_entries,font,'표 목차','gg_tables',9002)
-            if figure_entries:
-                if prelim or table_entries: doc.add_page_break()
+            if figure_entries or dairy_lists:
+                if prelim or table_entries or dairy_lists: doc.add_page_break()
                 contents(doc,figure_entries,font,'그림 목차','gg_figures',9003)
         new_numbered_section('decimal')
     else:
@@ -672,7 +739,7 @@ def main(argv=None):
         mc.reconfirm_output(authorization, context)
         out.parent.mkdir(parents=True, exist_ok=True)
         doc.save(out)
-        parsed_plan = school_frontmatter_plan(parse(source_text))
+        parsed_plan = school_frontmatter_plan(parse(source_text), authorization.major_id)
         infeasible = [r for r in table_reports
                       if r.get("applied") and r.get("feasible") is False]
         manifest = {
@@ -695,13 +762,20 @@ def main(argv=None):
             "photo_requests": photo_requests(parse(source_text)),
             "school_frontmatter": (
                 {
-                    "layout": "forms_1_to_4" if parsed_plan.get("official_order") else "logical_legacy",
+                    "layout": ("source_order_common_defaults" if authorization.major_id != "specialty_crops"
+                               else "forms_1_to_4" if parsed_plan.get("official_order") else "logical_legacy"),
                     "order": list(parsed_plan.get("order", ())),
                     "source_order_note": (
+                        "전공별 원문 순서; 미확인 물리 배치는 공용 기본값 사용"
+                        if authorization.major_id != "specialty_crops" else
                         "공식 지침 p4 논리 순서와 p6–9 시각 예시 순서가 달라 forms_1_to_4를 선택함"
                         if parsed_plan.get("official_order")
                         else "공식 지침 p4 논리 순서를 사용함; p6–9 시각 예시와 다를 수 있어 사용자 검토 필요"
                     ),
+                    "major_id": parsed_plan["spec"].major_id,
+                    "layout_confidence": parsed_plan["spec"].layout_confidence,
+                    "physical_forms": [list(roles) for roles in parsed_plan["spec"].physical_forms],
+                    "notices": list(parsed_plan["spec"].notices),
                 }
                 if parsed_plan
                 else None

@@ -1,0 +1,287 @@
+{
+  "schema": "gg-xlsx-formula-patch-map/v1",
+  "design": "DESIGN-FY1-경비연도정정.md (형님 결정 B, 형님 ts 1794136263.269159·1794136342.062229)",
+  "note": "과수 16시트 학교 양식의 경비계획 연도·물가 지수 기준연도 정정 21칸. 원본은 고치지 않고 clear/fill 뒤 사본에서만 적용한다. 파일 해시가 아니라 셀별 현재 수식/값과 시트 지문으로 묶으므로 학생 사본마다 파일 해시가 달라도 된다. 수식은 앞 '='를 붙여 적고 저장 XML은 뺀다.",
+  "source": {
+    "sha256": "5f2896dd0c47d9b90a1ec3da30128ea0a9aa47f72aa79156a57bfd7bfd271374",
+    "binding": "cells",
+    "label": "과수전공 2026 학교 엑셀 양식 (양식최종본)"
+  },
+  "workbook_profile": "fruit_16_sheet_v1_fy1",
+  "base_profile": "fruit_16_sheet_v1",
+  "patches": [
+    {
+      "sheet": "9.경비계획",
+      "cell": "B12",
+      "class": "value_to_formula",
+      "expected_value": 2025,
+      "new_formula": "='12.손익계획'!C4",
+      "reason": "경비계획 연도칸이 2025 리터럴이라 다른 시트의 창업 첫해(2027)와 어긋난다 — 창업 첫해 칸(12.손익계획!C4)을 참조해 같은 해에서 시작한다",
+      "evidence_ref": {
+        "source_id": "owner-year-basis-decision",
+        "revision": "1794136263.269159",
+        "locator": "형님 원문 ts 1794136263.269159; 오모냥 B 권고 승인 ts 1794136342.062229; DESIGN-FY1-경비연도정정.md §2"
+      }
+    },
+    {
+      "sheet": "9.경비계획",
+      "cell": "J15",
+      "class": "formula_repoint",
+      "expected_formula": "=SUM('10.감가상각'!L7)*$U$6*(1+$U$10)^(B12-2020)",
+      "new_formula": "=SUM('10.감가상각'!L7)*$U$6*(1+$U$10)^(B12-$B$12)",
+      "reason": "2020 고정 물가 지수 수식 — 기준연도를 창업 첫해 칸($B$12)으로 바꿔 첫해 지수를 0부터 쌓는다",
+      "evidence_ref": {
+        "source_id": "owner-year-basis-decision",
+        "revision": "1794136263.269159",
+        "locator": "형님 원문 ts 1794136263.269159; 오모냥 B 권고 승인 ts 1794136342.062229; DESIGN-FY1-경비연도정정.md §2"
+      }
+    },
+    {
+      "sheet": "9.경비계획",
+      "cell": "J16",
+      "class": "formula_repoint",
+      "expected_formula": "=SUM('10.감가상각'!H7)*$U$7*(1+$U$10)^(B12-2020)",
+      "new_formula": "=SUM('10.감가상각'!H7)*$U$7*(1+$U$10)^(B12-$B$12)",
+      "reason": "2020 고정 물가 지수 수식 — 기준연도를 창업 첫해 칸($B$12)으로 바꿔 첫해 지수를 0부터 쌓는다",
+      "evidence_ref": {
+        "source_id": "owner-year-basis-decision",
+        "revision": "1794136263.269159",
+        "locator": "형님 원문 ts 1794136263.269159; 오모냥 B 권고 승인 ts 1794136342.062229; DESIGN-FY1-경비연도정정.md §2"
+      }
+    },
+    {
+      "sheet": "9.경비계획",
+      "cell": "J34",
+      "class": "formula_repoint",
+      "expected_formula": "=SUM('10.감가상각'!L18)*$U$6*(1+$U$10)^(B31-2020)",
+      "new_formula": "=SUM('10.감가상각'!L18)*$U$6*(1+$U$10)^(B31-$B$12)",
+      "reason": "2020 고정 물가 지수 수식 — 기준연도를 창업 첫해 칸($B$12)으로 바꿔 첫해 지수를 0부터 쌓는다",
+      "evidence_ref": {
+        "source_id": "owner-year-basis-decision",
+        "revision": "1794136263.269159",
+        "locator": "형님 원문 ts 1794136263.269159; 오모냥 B 권고 승인 ts 1794136342.062229; DESIGN-FY1-경비연도정정.md §2"
+      }
+    },
+    {
+      "sheet": "9.경비계획",
+      "cell": "J35",
+      "class": "formula_repoint",
+      "expected_formula": "=SUM('10.감가상각'!H18)*$U$7*(1+$U$10)^(B31-2020)",
+      "new_formula": "=SUM('10.감가상각'!H18)*$U$7*(1+$U$10)^(B31-$B$12)",
+      "reason": "2020 고정 물가 지수 수식 — 기준연도를 창업 첫해 칸($B$12)으로 바꿔 첫해 지수를 0부터 쌓는다",
+      "evidence_ref": {
+        "source_id": "owner-year-basis-decision",
+        "revision": "1794136263.269159",
+        "locator": "형님 원문 ts 1794136263.269159; 오모냥 B 권고 승인 ts 1794136342.062229; DESIGN-FY1-경비연도정정.md §2"
+      }
+    },
+    {
+      "sheet": "9.경비계획",
+      "cell": "J53",
+      "class": "formula_repoint",
+      "expected_formula": "=SUM('10.감가상각'!L29)*$U$6*(1+$U$10)^(B50-2020)",
+      "new_formula": "=SUM('10.감가상각'!L29)*$U$6*(1+$U$10)^(B50-$B$12)",
+      "reason": "2020 고정 물가 지수 수식 — 기준연도를 창업 첫해 칸($B$12)으로 바꿔 첫해 지수를 0부터 쌓는다",
+      "evidence_ref": {
+        "source_id": "owner-year-basis-decision",
+        "revision": "1794136263.269159",
+        "locator": "형님 원문 ts 1794136263.269159; 오모냥 B 권고 승인 ts 1794136342.062229; DESIGN-FY1-경비연도정정.md §2"
+      }
+    },
+    {
+      "sheet": "9.경비계획",
+      "cell": "J54",
+      "class": "formula_repoint",
+      "expected_formula": "=SUM('10.감가상각'!H29)*$U$7*(1+$U$10)^(B50-2020)",
+      "new_formula": "=SUM('10.감가상각'!H29)*$U$7*(1+$U$10)^(B50-$B$12)",
+      "reason": "2020 고정 물가 지수 수식 — 기준연도를 창업 첫해 칸($B$12)으로 바꿔 첫해 지수를 0부터 쌓는다",
+      "evidence_ref": {
+        "source_id": "owner-year-basis-decision",
+        "revision": "1794136263.269159",
+        "locator": "형님 원문 ts 1794136263.269159; 오모냥 B 권고 승인 ts 1794136342.062229; DESIGN-FY1-경비연도정정.md §2"
+      }
+    },
+    {
+      "sheet": "9.경비계획",
+      "cell": "J72",
+      "class": "formula_repoint",
+      "expected_formula": "=SUM('10.감가상각'!L40)*$U$6*(1+$U$10)^(B69-2020)",
+      "new_formula": "=SUM('10.감가상각'!L40)*$U$6*(1+$U$10)^(B69-$B$12)",
+      "reason": "2020 고정 물가 지수 수식 — 기준연도를 창업 첫해 칸($B$12)으로 바꿔 첫해 지수를 0부터 쌓는다",
+      "evidence_ref": {
+        "source_id": "owner-year-basis-decision",
+        "revision": "1794136263.269159",
+        "locator": "형님 원문 ts 1794136263.269159; 오모냥 B 권고 승인 ts 1794136342.062229; DESIGN-FY1-경비연도정정.md §2"
+      }
+    },
+    {
+      "sheet": "9.경비계획",
+      "cell": "J73",
+      "class": "formula_repoint",
+      "expected_formula": "=SUM('10.감가상각'!H40)*$U$7*(1+$U$10)^(B69-2020)",
+      "new_formula": "=SUM('10.감가상각'!H40)*$U$7*(1+$U$10)^(B69-$B$12)",
+      "reason": "2020 고정 물가 지수 수식 — 기준연도를 창업 첫해 칸($B$12)으로 바꿔 첫해 지수를 0부터 쌓는다",
+      "evidence_ref": {
+        "source_id": "owner-year-basis-decision",
+        "revision": "1794136263.269159",
+        "locator": "형님 원문 ts 1794136263.269159; 오모냥 B 권고 승인 ts 1794136342.062229; DESIGN-FY1-경비연도정정.md §2"
+      }
+    },
+    {
+      "sheet": "9.경비계획",
+      "cell": "J91",
+      "class": "formula_repoint",
+      "expected_formula": "=SUM('10.감가상각'!L51)*$U$6*(1+$U$10)^(B88-2020)",
+      "new_formula": "=SUM('10.감가상각'!L51)*$U$6*(1+$U$10)^(B88-$B$12)",
+      "reason": "2020 고정 물가 지수 수식 — 기준연도를 창업 첫해 칸($B$12)으로 바꿔 첫해 지수를 0부터 쌓는다",
+      "evidence_ref": {
+        "source_id": "owner-year-basis-decision",
+        "revision": "1794136263.269159",
+        "locator": "형님 원문 ts 1794136263.269159; 오모냥 B 권고 승인 ts 1794136342.062229; DESIGN-FY1-경비연도정정.md §2"
+      }
+    },
+    {
+      "sheet": "9.경비계획",
+      "cell": "J92",
+      "class": "formula_repoint",
+      "expected_formula": "=SUM('10.감가상각'!H51)*$U$7*(1+$U$10)^(B88-2020)",
+      "new_formula": "=SUM('10.감가상각'!H51)*$U$7*(1+$U$10)^(B88-$B$12)",
+      "reason": "2020 고정 물가 지수 수식 — 기준연도를 창업 첫해 칸($B$12)으로 바꿔 첫해 지수를 0부터 쌓는다",
+      "evidence_ref": {
+        "source_id": "owner-year-basis-decision",
+        "revision": "1794136263.269159",
+        "locator": "형님 원문 ts 1794136263.269159; 오모냥 B 권고 승인 ts 1794136342.062229; DESIGN-FY1-경비연도정정.md §2"
+      }
+    },
+    {
+      "sheet": "9.경비계획",
+      "cell": "J110",
+      "class": "formula_repoint",
+      "expected_formula": "=SUM('10.감가상각'!L62)*$U$6*(1+$U$10)^(B107-2020)",
+      "new_formula": "=SUM('10.감가상각'!L62)*$U$6*(1+$U$10)^(B107-$B$12)",
+      "reason": "2020 고정 물가 지수 수식 — 기준연도를 창업 첫해 칸($B$12)으로 바꿔 첫해 지수를 0부터 쌓는다",
+      "evidence_ref": {
+        "source_id": "owner-year-basis-decision",
+        "revision": "1794136263.269159",
+        "locator": "형님 원문 ts 1794136263.269159; 오모냥 B 권고 승인 ts 1794136342.062229; DESIGN-FY1-경비연도정정.md §2"
+      }
+    },
+    {
+      "sheet": "9.경비계획",
+      "cell": "J111",
+      "class": "formula_repoint",
+      "expected_formula": "=SUM('10.감가상각'!H62)*$U$7*(1+$U$10)^(B107-2020)",
+      "new_formula": "=SUM('10.감가상각'!H62)*$U$7*(1+$U$10)^(B107-$B$12)",
+      "reason": "2020 고정 물가 지수 수식 — 기준연도를 창업 첫해 칸($B$12)으로 바꿔 첫해 지수를 0부터 쌓는다",
+      "evidence_ref": {
+        "source_id": "owner-year-basis-decision",
+        "revision": "1794136263.269159",
+        "locator": "형님 원문 ts 1794136263.269159; 오모냥 B 권고 승인 ts 1794136342.062229; DESIGN-FY1-경비연도정정.md §2"
+      }
+    },
+    {
+      "sheet": "9.경비계획",
+      "cell": "J129",
+      "class": "formula_repoint",
+      "expected_formula": "=SUM('10.감가상각'!L73)*$U$6*(1+$U$10)^(B126-2020)",
+      "new_formula": "=SUM('10.감가상각'!L73)*$U$6*(1+$U$10)^(B126-$B$12)",
+      "reason": "2020 고정 물가 지수 수식 — 기준연도를 창업 첫해 칸($B$12)으로 바꿔 첫해 지수를 0부터 쌓는다",
+      "evidence_ref": {
+        "source_id": "owner-year-basis-decision",
+        "revision": "1794136263.269159",
+        "locator": "형님 원문 ts 1794136263.269159; 오모냥 B 권고 승인 ts 1794136342.062229; DESIGN-FY1-경비연도정정.md §2"
+      }
+    },
+    {
+      "sheet": "9.경비계획",
+      "cell": "J130",
+      "class": "formula_repoint",
+      "expected_formula": "=SUM('10.감가상각'!H73)*$U$7*(1+$U$10)^(B126-2020)",
+      "new_formula": "=SUM('10.감가상각'!H73)*$U$7*(1+$U$10)^(B126-$B$12)",
+      "reason": "2020 고정 물가 지수 수식 — 기준연도를 창업 첫해 칸($B$12)으로 바꿔 첫해 지수를 0부터 쌓는다",
+      "evidence_ref": {
+        "source_id": "owner-year-basis-decision",
+        "revision": "1794136263.269159",
+        "locator": "형님 원문 ts 1794136263.269159; 오모냥 B 권고 승인 ts 1794136342.062229; DESIGN-FY1-경비연도정정.md §2"
+      }
+    },
+    {
+      "sheet": "9.경비계획",
+      "cell": "J148",
+      "class": "formula_repoint",
+      "expected_formula": "=SUM('10.감가상각'!L84)*$U$6*(1+$U$10)^(B145-2020)",
+      "new_formula": "=SUM('10.감가상각'!L84)*$U$6*(1+$U$10)^(B145-$B$12)",
+      "reason": "2020 고정 물가 지수 수식 — 기준연도를 창업 첫해 칸($B$12)으로 바꿔 첫해 지수를 0부터 쌓는다",
+      "evidence_ref": {
+        "source_id": "owner-year-basis-decision",
+        "revision": "1794136263.269159",
+        "locator": "형님 원문 ts 1794136263.269159; 오모냥 B 권고 승인 ts 1794136342.062229; DESIGN-FY1-경비연도정정.md §2"
+      }
+    },
+    {
+      "sheet": "9.경비계획",
+      "cell": "J149",
+      "class": "formula_repoint",
+      "expected_formula": "=SUM('10.감가상각'!H84)*$U$7*(1+$U$10)^(B145-2020)",
+      "new_formula": "=SUM('10.감가상각'!H84)*$U$7*(1+$U$10)^(B145-$B$12)",
+      "reason": "2020 고정 물가 지수 수식 — 기준연도를 창업 첫해 칸($B$12)으로 바꿔 첫해 지수를 0부터 쌓는다",
+      "evidence_ref": {
+        "source_id": "owner-year-basis-decision",
+        "revision": "1794136263.269159",
+        "locator": "형님 원문 ts 1794136263.269159; 오모냥 B 권고 승인 ts 1794136342.062229; DESIGN-FY1-경비연도정정.md §2"
+      }
+    },
+    {
+      "sheet": "9.경비계획",
+      "cell": "J167",
+      "class": "formula_repoint",
+      "expected_formula": "=SUM('10.감가상각'!L95)*$U$6*(1+$U$10)^(B164-2020)",
+      "new_formula": "=SUM('10.감가상각'!L95)*$U$6*(1+$U$10)^(B164-$B$12)",
+      "reason": "2020 고정 물가 지수 수식 — 기준연도를 창업 첫해 칸($B$12)으로 바꿔 첫해 지수를 0부터 쌓는다",
+      "evidence_ref": {
+        "source_id": "owner-year-basis-decision",
+        "revision": "1794136263.269159",
+        "locator": "형님 원문 ts 1794136263.269159; 오모냥 B 권고 승인 ts 1794136342.062229; DESIGN-FY1-경비연도정정.md §2"
+      }
+    },
+    {
+      "sheet": "9.경비계획",
+      "cell": "J168",
+      "class": "formula_repoint",
+      "expected_formula": "=SUM('10.감가상각'!H95)*$U$7*(1+$U$10)^(B164-2020)",
+      "new_formula": "=SUM('10.감가상각'!H95)*$U$7*(1+$U$10)^(B164-$B$12)",
+      "reason": "2020 고정 물가 지수 수식 — 기준연도를 창업 첫해 칸($B$12)으로 바꿔 첫해 지수를 0부터 쌓는다",
+      "evidence_ref": {
+        "source_id": "owner-year-basis-decision",
+        "revision": "1794136263.269159",
+        "locator": "형님 원문 ts 1794136263.269159; 오모냥 B 권고 승인 ts 1794136342.062229; DESIGN-FY1-경비연도정정.md §2"
+      }
+    },
+    {
+      "sheet": "9.경비계획",
+      "cell": "J186",
+      "class": "formula_repoint",
+      "expected_formula": "=SUM('10.감가상각'!L106)*$U$6*(1+$U$10)^(B183-2020)",
+      "new_formula": "=SUM('10.감가상각'!L106)*$U$6*(1+$U$10)^(B183-$B$12)",
+      "reason": "2020 고정 물가 지수 수식 — 기준연도를 창업 첫해 칸($B$12)으로 바꿔 첫해 지수를 0부터 쌓는다",
+      "evidence_ref": {
+        "source_id": "owner-year-basis-decision",
+        "revision": "1794136263.269159",
+        "locator": "형님 원문 ts 1794136263.269159; 오모냥 B 권고 승인 ts 1794136342.062229; DESIGN-FY1-경비연도정정.md §2"
+      }
+    },
+    {
+      "sheet": "9.경비계획",
+      "cell": "J187",
+      "class": "formula_repoint",
+      "expected_formula": "=SUM('10.감가상각'!H106)*$U$7*(1+$U$10)^(B183-2020)",
+      "new_formula": "=SUM('10.감가상각'!H106)*$U$7*(1+$U$10)^(B183-$B$12)",
+      "reason": "2020 고정 물가 지수 수식 — 기준연도를 창업 첫해 칸($B$12)으로 바꿔 첫해 지수를 0부터 쌓는다",
+      "evidence_ref": {
+        "source_id": "owner-year-basis-decision",
+        "revision": "1794136263.269159",
+        "locator": "형님 원문 ts 1794136263.269159; 오모냥 B 권고 승인 ts 1794136342.062229; DESIGN-FY1-경비연도정정.md §2"
+      }
+    }
+  ]
+}

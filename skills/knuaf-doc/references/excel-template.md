@@ -79,6 +79,40 @@ explicit `clear`/`preserve` actions, then save a separately reviewed map with
 `mapStatus: ok`. Editing only the status never makes an inventory map executable.
 The map remains bound to the exact source hash and re-detected layout.
 
+New clear and fill maps declare top-level `workbook_profile` from the reviewed
+school form (`school_17_sheet_v1`, `fruit_16_sheet_v1`, or
+`dairy_hanwoo_28_sheet_v1`); never infer it from sheet count. `inspect
+--workbook-profile fruit_16_sheet_v1` records that declaration with the source
+SHA but leaves inventory review mandatory. The common writers require both the
+major's `workbook_profiles` declaration and a supported finance capability for
+that same profile, before creating an output directory. A registered profile is
+also compared with the real workbook's sheet count, names, order and per-sheet
+formula fingerprints from `references/workbook-reference-set.json` (currently
+`fruit_16_sheet_v1`; dairy remains closed until its original is registered).
+Fingerprints hash UTF-8 compact JSON of sorted `(address, expanded formula)`
+pairs from the SHA256-verified school original. Values may change; moved,
+missing, added or edited formulas are held with the differing sheet names.
+There is no exception for corrected fruit formulas in this gate.
+The same real-byte check runs at Office staging, adoption and export. An
+explicit null/empty profile is refused. Only old specialty-crop maps without the
+key keep their historical school-17 meaning. Calculation profiles do not
+authorize school-form clear/fill. Clear/fill receipts retain the profile and
+map hash.
+
+Office `--spec` uses the same workbook-profile gate and compares the staged
+input's real sheets with the registered form. `--template-receipt` accepts
+completed clear/fill operations only after input/map/output hash checks and
+profile agreement; the native manifest and template lineage retain that profile.
+Without evidence, only the historical specialty-crop render route remains open.
+Batch inputs without per-file evidence therefore cannot open fruit/dairy forms.
+Horticulture requires its dedicated validated transform receipt at staging,
+adoption (including workbook companions), and export; native XLSX/PDF also
+require the existing native receipt verifier. Keep original chain files.
+Only output registrations may follow the receipt revision: a verified history
+snapshot preserves replay/export without accepting changed facts or body text.
+It does not enter the common gate. A profile is not content approval or proof
+of native recalculation.
+
 `inspect --legacy-map` explicitly requests the existing fixed X01 map
 (`entriesSource: legacy`, `mapOrigin: default_x01`). It does not become an X02
 or H01 map: X02/unknown still returns `manual_map_required` and `clear` refuses
@@ -144,6 +178,9 @@ use the reviewed formula-correction workflow below on a copy. Do not treat tab
 color as approval for arbitrary formula changes. Investment analysis absent from
 the prescribed workbook can be verified in a separate calculation artifact;
 do not add sheets to the submission form merely to satisfy a preferred model.
+
+**공통 연도 입력 계약**: 작성연도 W와 영농 시작연도 S를 분리하고, 같은 사업의 본문·재무 소비자가 확인된 값을 공유한다. S가 없을 때 W+1은 인터뷰에서 확인받을 기본 제안일 뿐 확정 계획이 아니다. 기존 답변·계획에서 S가 이미 확정됐으면 보존한다. 전공별 필드 이름과 기간은 다르므로 해당 계획 시작연도 필드에만 매핑한다. Q2-7/Q2-8 질문 순서는 [interview-guide.md](interview-guide.md#q2-7-작성-기준연도-기준-연도가-필요할-때)를 따른다.
+확인된 작성·영농 시작 연도는 `gg_school_paper.py`의 `writing_year`·`start_year`, 학교 재무 경로의 해당 `start_year`, 판매가격 `application_base_year`, 과수의 `fruit_trees.business_start_year`, 원예 계획의 `plan.start_year`, 산업곤충 계획 연도 목록의 첫 연도에 각각 넣는다. 판매 관측 창은 S나 현재 날짜로 옮기지 않고 W−5…W−1로 유지한다. 낙농 `dairy.plan_year`는 계획 기준연도이며 28시트의 고정된 2026~2031 연도축과 같은 뜻이 아니므로 S를 대신 넣지 않는다. 원예의 `invest.slot*.service_start_year`도 자산별 사용 개시연도라서 사업 S를 대신하지 않는다. 필요한 소비자가 확인된 S를 입력받거나 보존할 수 없으면 그 소비자만 보류한다.
 
 ### Inflation and labor cost input rules (물가 및 노무비 반영 규칙)
 

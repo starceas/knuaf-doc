@@ -15,13 +15,22 @@ import gg_major_contract as mc  # noqa: E402
 
 
 class DairyModuleTests(unittest.TestCase):
+    @staticmethod
+    def _major_answer(project, fact_id):
+        fact = project["facts"][fact_id]
+        fact["source_refs"][0]["claim_id"] = "major"
+        project["sources"]["s1"]["claims"]["major"] = {
+            key: fact[key] for key in (
+                "field_id", "value", "unit", "period", "scope",
+                "answer_state", "kind")}
+
     def test_registry_marker_plan_and_unsupported_outputs(self):
         registry = mc.default_registry()
         module = registry.resolve("dairy")
         self.assertEqual(module.module_version, "0.1.0")
         self.assertEqual(module.packs, ())
         self.assertEqual(mc.KNOWN_MAJOR_MARKERS["dairy"], ("낙농",))
-        self.assertEqual(registry.major_ids[-1], "dairy")
+        self.assertEqual(registry.major_ids[-2:], ("dairy", "food_crops"))
         document = mc.route(registry, "dairy", "document").proposal
         self.assertEqual(len(document["sections"]), 28)
         self.assertEqual(len(document["mandated_sections"]), 28)
@@ -33,7 +42,9 @@ class DairyModuleTests(unittest.TestCase):
             rationale = sections["chapter_%02d" % number]["rationale"]
             self.assertIn("한우 대응 항목으로 치환", rationale)
             self.assertIn("references/dairy/school-toc.md", rationale)
-        for output in ("paper", "export", "school_excel_workbook"):
+        workbook = mc.route(registry, "dairy", "document", output="school_excel_workbook")
+        self.assertEqual(workbook.major_id, "dairy")
+        for output in ("paper", "export"):
             with self.assertRaises(mc.UnsupportedOutputError):
                 mc.route(registry, "dairy", "document", output=output)
     def test_major_plan_reports_switch_and_filters_selected_questions(self):
@@ -80,6 +91,7 @@ class DairyModuleTests(unittest.TestCase):
                                      "revision": 1}],
                 },
             }
+            self._major_answer(project, "major-fact")
             project_path.write_text(
                 json.dumps(project), encoding="utf-8")
             output, errors = io.StringIO(), io.StringIO()
@@ -232,6 +244,7 @@ class DairyModuleTests(unittest.TestCase):
                         "module_version": "0.1.0"},
                     **{record["id"]: record for record in records},
                 }
+                self._major_answer(project, "major")
                 project_path.write_text(
                     json.dumps(project), encoding="utf-8")
                 output, errors = io.StringIO(), io.StringIO()

@@ -430,14 +430,11 @@ class BuildTests(ContractCase):
 
     def test_build_rejects_wrong_output_authorization(self):
         # R1-02 남은 반례: 다른 출력 종류(엑셀)의 유효한 권한으로는 논문을 발행하지
-        # 않는다. 원예환경시스템전공은 school_excel_workbook만 지원한다.
+        # 않는다. 원예 paper가 지원돼도 workbook 권한은 paper 권한이 아니다.
         self._control(markdown=SAMPLE_MD)
         other = self.make_project()
         bind_major(other, "hort_env_systems")
         other_context = self.mc.output_context(other, "hort_env_systems")
-        with self.assertRaises(self.mc.OutputHeldError) as held:
-            self.mc.authorize_output(self.mc.OUTPUT_SCHOOL_PAPER, other_context)
-        self.assertEqual("unsupported_output", held.exception.reason)
         workbook = self.mc.authorize_output(
             self.mc.OUTPUT_SCHOOL_WORKBOOK, other_context)
         self.assertEqual(self.mc.OUTPUT_SCHOOL_WORKBOOK, workbook.output)

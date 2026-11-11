@@ -8,7 +8,10 @@ import json
 import subprocess
 import sys
 
-from tests._harness import ContractCase, SCRIPTS, bind_major, fact_op, runtime, source_op, write_text
+from tests._harness import (
+    ContractCase, SCRIPTS, bind_major, claim_of, fact_op, runtime, source_op,
+    write_text,
+)
 
 
 class CommonContractFlowTests(ContractCase):
@@ -22,13 +25,14 @@ class CommonContractFlowTests(ContractCase):
         write_text(root, "answer.txt", "전공 선택: " + major_id + "\n")
         selected = fact_op(
             "selected_major", "common.major_id", major_id, None,
-            verification="claim_supported",
+            scope="project", verification="claim_supported", claim_id="major",
         )
         selected["value"]["module_version"] = module_version
         core = runtime("gg_core")
         core.apply(
             root,
-            {"request_id": "major-selection", "ops": [source_op(), selected]},
+            {"request_id": "major-selection",
+             "ops": [source_op(claims=claim_of(selected["value"], "major")), selected]},
             0,
         )
 
@@ -204,7 +208,8 @@ class CommonContractFlowTests(ContractCase):
 
         self._bind(root, "specialty_crops", "1.0.0")
         core = runtime("gg_core")
-        no_profile = {"writing_year": 2026, "major_id": "specialty_crops"}
+        no_profile = {"writing_year": 2026, "start_year": 2027,
+                      "major_id": "specialty_crops"}
         bound_before = self._tree_bytes(root)
         with self.assertRaises(core.OperationError) as caught:
             core.paper(root, "no-profile.json",
@@ -213,7 +218,7 @@ class CommonContractFlowTests(ContractCase):
                          "school_profile_required")
         self.assertEqual(self._tree_bytes(root), bound_before)
 
-        empty_profile = {"writing_year": 2026,
+        empty_profile = {"writing_year": 2026, "start_year": 2027,
                          "major_id": "specialty_crops",
                          "school_profile": {}}
         with self.assertRaises(core.OperationError) as caught:
