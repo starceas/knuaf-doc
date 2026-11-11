@@ -151,6 +151,7 @@
   "scripts/gg_excel_template.py": "f300619b70af0b60fe7fcca07df781bffd1dde8e306371791a1892b09d0ec3d2",
   "scripts/gg_fact_semantics.py": "ba2f2aee005013a9f015e9094e34614ea7854d2bea71a6564cd5249b3ac7fb28",
   "scripts/gg_finance.py": "88199b662e86adf1a9263f424e9bf5ba1cc386e3e4e8d514831d03a00ddf96e9",
+  "scripts/gg_finance_amounts.py": "6e1bcd5ac7f8b3407aaf3dfa24ed3ecc6d982aad6b0d75ac1d2fa1d7d43d4d5c",
   "scripts/gg_finance_body.py": "3fdae56b16f362600b03f705b01d79a9ddebb5f7e27260dc4f4b7a16e21eba9a",
   "scripts/gg_finance_tables.py": "30d0d1a06a40ee73ec418018b422fce3c21bbca6457731b0707a3989da471d5a",
   "scripts/gg_frontmatter.py": "cef929d863bd620f8d92739c60a77e619c06743b51a3c0a6157cd063a71d59ec",
