@@ -1783,6 +1783,12 @@ def _table_claim_verdict(rows, context, label, expected_d, unit, period_keys, sc
 
 _MACHINE_FIELD_ID = re.compile(r"^[A-Za-z][A-Za-z0-9]*(?:[._][A-Za-z0-9]+)+$")
 
+# A copula/ending after a year-shaped figure makes that figure a value
+# (`50,000천원 및 2028이다`), not the label of the next period (W-H 코드1회 ①).
+_COPULA_TAIL = re.compile(
+    r"(?:입(?:니다|니까)|이(?:다|며|고|지|면|므로|었)|임(?![가-힣])|였)"
+)
+
 _SECOND_AMOUNT = re.compile(
     r"\s*(?:~|–|—|∼|과|와|및|또는|혹은|내지|,|/|-)\s*"
     r"(?P<sign>[+\-\u2212\u00B1])?"
@@ -1836,6 +1842,7 @@ def _has_second_amount(clause, amount_end, unit_match, amount_text=None):
         if (
             re.fullmatch(r"(?:19|20)\d{2}", match.group("num"))
             and re.match(r"[가-힣]", rest)
+            and _COPULA_TAIL.match(rest) is None
         ):
             return False
         # W-H (나3): a `만원`/`백만원`/`억원` figure is compared by value in
@@ -1893,6 +1900,9 @@ _NON_CLAIM_WORDS = frozenset(
         # connectors
         "또는", "혹은", "및", "내지", "그리고", "또한", "그러나", "하지만",
         "따라서", "그런데", "즉", "예컨대",
+        # demonstrative pronouns: `이는 60,000천원이다` restates the same
+        # amount, it does not name a second item (W-H 코드1회 ②).
+        "이", "그", "저",
         # degree / approximation
         "정도", "대략", "약간", "거의", "모두", "대개", "대체로", "대강",
         # adverbs and manner words
@@ -1912,6 +1922,28 @@ _PERIOD_TAIL = re.compile(
 )
 # `2028년 매출액은 …` / `2028년도 매출액은 …` — the period opens the tail itself.
 _PERIOD_HEAD = re.compile(r"^(?:19|20)\d{2}\s*년(?:도)?\s*(?:의)?")
+# `2026년도~2027년도` / `2026년부터 2027년까지` — a year range is not the
+# single declared period.  The digits are separated by a year word, so the
+# plain `\d~\d` range test cannot see it (W-H 코드1회 ④).
+_YEAR_RANGE = re.compile(
+    r"(?:19|20)\d{2}\s*년(?:도)?\s*(?:[~–—∼～－]|부터)\s*(?:19|20)\d{2}"
+)
+
+
+def _range_covers(clause, claim):
+    """True when a year range overlaps this claim's own period.
+
+    `2026년도~2027년도 농장A의 …` puts the first year of the range before the
+    claim and the second year inside it, and `농장A의 2026년~2027년 매출액은 …`
+    puts it inside the claim, so in both the claim's period is one end of a
+    range rather than the single declared period.  A range that merely
+    precedes the claim (`2026년~2027년 계획 대비 2027년 매출액은 …`) does not
+    overlap and must not blame it (W-H 코드1회 ④).
+    """
+    for hit in _YEAR_RANGE.finditer(clause):
+        if hit.start() < claim.end() and hit.end() > claim.start():
+            return True
+    return False
 
 
 def fold_amount_text(text):
@@ -1932,7 +1964,9 @@ _WON_SCALE = {"억원": Decimal(100000000), "백만원": Decimal(1000000),
               "만원": Decimal(10000)}
 _UNIT_KRW = {"원": Decimal(1), "천원": Decimal(1000)}
 _WON_SCALE_RE = re.compile(r"(억원|백만원|만원)")
-_PER_UNIT_HEAD = re.compile(r"[가-힣A-Za-z0-9㎡]*당\s*$")
+# `평당 약 50만원` / `1인당 대략 200만원` — an approximation word between the
+# per-unit head and the figure keeps the figure a rate (W-H 코드1회 ③).
+_PER_UNIT_HEAD = re.compile(r"[가-힣A-Za-z0-9㎡]*당\s*(?:약|대략|정도|쯤)?\s*$")
 _WON_SCALE_AMOUNT = re.compile(
     r"(?<!\d)(?<![.,]\d)(?P<sign>[+\-\u00B1])?\s*"
     r"(?P<num>(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?)\s*"
@@ -1944,6 +1978,31 @@ def _won_scale_head(rest):
     """The won-scale word a figure carries (`만원`, `억원`), or None."""
     match = _WON_SCALE_RE.match(rest or "")
     return match.group(1) if match is not None else None
+
+
+# One figure may look back this far for the words that classify it.  Every
+# rule in :func:`_classify_figure_head` and `_PER_UNIT_HEAD` is anchored to
+# the figure, so only the nearby tail matters; the cap keeps a long run of
+# figures linear (W-H 코드1회 ⑤).
+_HEAD_WINDOW = 64
+
+
+def _figure_head(text, start):
+    """The clause tail in front of a figure, bounded in length.
+
+    :func:`_classify_figure_head` only reads the piece after the last
+    ``','``/``';'``, so cutting there changes nothing; the cap then bounds
+    the work one figure can demand, because a run of thousands of figures
+    with no comma would otherwise re-scan the whole prefix for each of them
+    (W-H 코드1회 ⑤).  The cap moves forward to the next word start, so a
+    partial word is never handed to the head rules.
+    """
+    cut = max(text.rfind(",", 0, start), text.rfind(";", 0, start)) + 1
+    if start - cut > _HEAD_WINDOW:
+        cut = start - _HEAD_WINDOW
+        while cut < start and not text[cut].isspace():
+            cut += 1
+    return text[cut:start].rstrip()
 
 
 def _won_scale_amounts(text, unit):
@@ -1959,7 +2018,7 @@ def _won_scale_amounts(text, unit):
         return []
     found = []
     for match in _WON_SCALE_AMOUNT.finditer(text):
-        head = text[: match.start()].rstrip()
+        head = _figure_head(text, match.start())
         if _PER_UNIT_HEAD.search(head):
             continue
         token = match.group()
@@ -2022,7 +2081,13 @@ def _classify_figure_head(head, unit):
     if claim is not None and claim.group("label") in _CORRECTION_WORDS:
         return "conflict"
     match = _DELIM_HEAD.search(tail)
-    if match is not None and match.group("label") != unit:
+    if (
+        match is not None
+        and match.group("label") != unit
+        # `즉:` / `따라서:` introduce a restatement, not a second item, so
+        # the connector rule applies to `:`/`=` heads as well (W-H 코드1회 ②).
+        and match.group("label") not in _NON_CLAIM_WORDS
+    ):
         return "new_claim"
     match = _CLAIM_HEAD.search(tail)
     if match is not None and match.group("label") != unit:
@@ -2071,7 +2136,7 @@ def find_rival_amounts(text, unit, *, expected=None):
             value = -value
         if want is not None and sign != "\u00B1" and value == want:
             continue
-        head = folded[: match.start()].rstrip()
+        head = _figure_head(folded, match.start())
         found.append(
             {
                 "text": match.group().strip(),
@@ -2275,7 +2340,9 @@ def crosscheck_body(text, values):
                     window_start = max(0, claim.start() - 12)
                     window_end = min(len(clause), claim.end() + 12)
                     window = clause[window_start:window_end]
-                    if re.search(r"\d\s*[~–—∼]\s*\d", window):
+                    if re.search(r"\d\s*[~–—∼]\s*\d", window) or _range_covers(
+                        clause, claim
+                    ):
                         conflicting_claim = True
                         continue
                     amount = num_pattern.match(clause, claim.end())

@@ -277,7 +277,7 @@
       "source": "adopted:app-PR41"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "1cffd0b103445e21d024e6b9d2b1b5bf090aa16ca1dd33203ffd4b341c9ad522",
+      "after_sha256": "284b8970be0053f0a7b63fa4a2bc653661e1dc3a5ed9be9a5502d6aabc83d368",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "W-H",
@@ -1824,7 +1824,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_school_excel.py": {
-      "after_sha256": "b08e3f93f00df1eb32e33743c66ba330963d308443fb5f26867fb682810acfb5",
+      "after_sha256": "7ce52a29cb2f760f650ea1fadf8653487439011a8240c78e2ee15d19b4d16b64",
       "before_sha256": "4bee13020358819f168c13a91c4895d1e50d3def7f9ea72d557423182d2b483a",
       "first_changed": "P1",
       "last_changed": "W-H",
@@ -2410,7 +2410,7 @@
       "source": "new"
     },
     "tests/test_p3_body.py": {
-      "after_sha256": "e8cb98b6057413d6e3664ad919124669cbd655521eeeb82986db22f194b118f2",
+      "after_sha256": "943dc791d20b14c2c25e7cab5936a338ea05059e81e283e33b14f5f9aa9e0722",
       "before_sha256": null,
       "first_changed": "P3",
       "last_changed": "W-H",

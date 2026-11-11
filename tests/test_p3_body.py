@@ -1150,6 +1150,108 @@ class KnownLimitFixesTests(ContractCase):
         good = text.replace("60,000", "50,000")
         self.assertEqual(self.crosscheck(good), [], good)
 
+    # Roh 코드 1회 ①: a year-shaped figure in front of a copula (`및 2028이다`)
+    # is a second amount of this claim, not the next period.  Only a real
+    # claim head (`2028 매출액은`) opens a new period claim.
+    def test_year_shaped_second_amount_before_a_copula_blocks(self):
+        for text in (
+            self.BASE + " 및 2028이다.",
+            self.BASE + ", 2028이다.",
+            self.BASE + ", 2028이다",
+        ):
+            with self.subTest(text=text):
+                rows = self.crosscheck(text)
+                self.assertTrue(rows, text)
+                self.assertIn(self.MESSAGE, rows[0]["reason"], text)
+
+    # Roh 코드 1회 ②: a connective/adverb in front of a delimiter or particle
+    # introduces no claim, so the figure after it is still the same claim.
+    def test_connective_head_does_not_excuse_a_rival(self):
+        for text in (
+            self.BASE + ", 즉: 60,000천원이다.",
+            self.BASE + ", 이는 60,000천원이다.",
+            self.BASE + ", 즉 60,000천원이다.",
+            self.BASE + ", 따라서 60,000천원이다.",
+        ):
+            with self.subTest(text=text):
+                rows = self.crosscheck(text)
+                self.assertTrue(rows, text)
+                self.assertIn(self.MESSAGE, rows[0]["reason"], text)
+
+    # Roh 코드 1회 ③: an approximation word between the per-unit head and the
+    # figure keeps it a rate, not a second total amount.
+    def test_approximation_word_after_a_per_unit_head_passes(self):
+        for text in (
+            self.BASE + ", 평당 약 50만원이다.",
+            self.BASE + ", 평당 대략 50만원이다.",
+            self.BASE + ", 평당 50만원 정도다.",
+            self.BASE + ", 1인당 약 200만원이다.",
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(self.crosscheck(text), [], text)
+
+    # Roh 코드 1회 ④: a period that is one end of a range is not the single
+    # declared period, whichever spelling (`년`/`년도`) and order it takes.
+    def test_year_range_is_not_the_single_period(self):
+        for text in (
+            "2026년도~2027년도 농장A의 매출액은 50,000천원이다.",
+            "2026년도~ 2027년도 농장A의 매출액은 50,000천원이다.",
+            "2026년~2027년 농장A의 매출액은 50,000천원이다.",
+            "2026년~ 2027년 농장A의 매출액은 50,000천원이다.",
+            "2026년～2027년 농장A의 매출액은 50,000천원이다.",
+            "농장A 2026년도~2027년도 매출액은 50,000천원이다.",
+            "농장A의 2026년~2027년 매출액은 50,000천원이다.",
+        ):
+            with self.subTest(text=text):
+                self.assertTrue(self.crosscheck(text), text)
+
+    # Roh 코드 1회 권고①: the range guard reads the claim's own window only,
+    # so a range elsewhere in the sentence keeps the single period passing.
+    def test_single_period_next_to_a_range_elsewhere_passes(self):
+        for text in (
+            "농장A의 2027년 매출액은 50,000천원이다. 수확량은 10~12톤이다.",
+            "농장A의 2027년 매출액은 50,000천원이고 수확량은 10~12톤이다.",
+            # A year range in front of the claim is not this claim's range:
+            # only a range that overlaps the claim's own period counts.
+            "2026년~2027년 농장A의 2027년 매출액은 50,000천원이다.",
+            "2026년~2027년 계획 대비 농장A의 2027년 매출액은 50,000천원이다.",
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(self.crosscheck(text), [], text)
+
+    # Roh 코드 1회 ⑤: the per-unit head search walks the whole text in front of
+    # every won-scale figure, so a long unbroken run costs O(n²) per figure.
+    # The bound is relative: four times the figures must not cost four times
+    # the time of half the figures.
+    def test_per_unit_head_search_stays_linear_on_a_long_run(self):
+        import time
+
+        gse = runtime("gg_school_excel")
+
+        def run(count):
+            text = self.BASE + "이다 " + "50만원" * count
+            start = time.perf_counter()
+            gse.crosscheck_body(text, self._vals())
+            return time.perf_counter() - start
+
+        small = run(250)
+        large = run(500)
+        self.assertLess(large, small * 4 + 0.01, (small, large))
+
+    # Roh 코드 1회 권고②: the line-break tests all carry a full stop, so the
+    # break itself is not isolated.  Without one, the two lines are one run.
+    # A blank line plus a word-led next line stays a separate claim: excusing
+    # it would need a second rule for that shape alone, so it is a known
+    # limit (W-H 코드1회 권고②).
+    def test_line_break_without_a_full_stop_keeps_the_rival(self):
+        for text in (
+            self.BASE + "이다\n60,000천원이다.",
+        ):
+            with self.subTest(text=text):
+                rows = self.crosscheck(text)
+                self.assertTrue(rows, text)
+                self.assertIn(self.MESSAGE, rows[0]["reason"], text)
+
 
 if __name__ == "__main__":
     unittest.main()
