@@ -62,6 +62,7 @@ def main(argv=None):
             "source-refresh",
             "intake-manuscript",
             "finance-tables",
+            "input-readback",
             "tidy",
         ],
     )
@@ -612,6 +613,16 @@ def main(argv=None):
                 a.folder, a.xlsx, major_id=a.major,
                 input_path=a.input,
                 out=a.out or "build/finance-tables.md")
+        elif a.command == "input-readback":
+            if not a.xlsx:
+                raise ValueError("--xlsx 채운 학교 엑셀 경로 필요")
+            import gg_hort_input_readback
+
+            value, code = gg_hort_input_readback.run(
+                a.folder, a.xlsx, a.out)
+            for line in gg_hort_input_readback.summary_lines(value):
+                print(line)
+            return code
         elif a.command == "paper":
             if not a.input:
                 raise ValueError("--input 논문 입력 JSON 필요")
