@@ -304,7 +304,7 @@ def _text_fixture(root):
 
 def _progress(root):
     runtime("gg_progress").write_progress(root)
-    return json.loads((Path(root) / ".knuaf-progress.json").read_text())
+    return json.loads((Path(root) / ".knuaf-progress.json").read_text(encoding="utf-8"))
 
 
 def _states(payload):
@@ -419,11 +419,11 @@ class AtomicityTests(EconomicCase):
         project_path = Path(self.root) / "project.json"
         before = project_path.read_bytes()
         first = json.loads(
-            (Path(self.root) / ".knuaf-progress.json").read_text())
+            (Path(self.root) / ".knuaf-progress.json").read_text(encoding="utf-8"))
         cg = runtime("gg_progress")
         cg.write_progress(self.root)
         second = json.loads(
-            (Path(self.root) / ".knuaf-progress.json").read_text())
+            (Path(self.root) / ".knuaf-progress.json").read_text(encoding="utf-8"))
         self.assertEqual(project_path.read_bytes(), before)
         self.assertEqual(list(Path(self.root).glob(".gg-tmp-*")), [])
         self.assertEqual(second["revision"], first["revision"])
@@ -787,7 +787,7 @@ class ShowCommandTests(th.ContractCase):
     def _run(self, root, *args):
         return subprocess.run(
             [sys.executable, "-B", str(SCRIPT), "show", *args],
-            capture_output=True, text=True, cwd=str(root))
+            capture_output=True, text=True, encoding="utf-8", cwd=str(root))
 
     def test_with_file(self):
         root = self.make_project()
@@ -824,7 +824,7 @@ class ShowCommandTests(th.ContractCase):
         self.assertTrue(
             proc.stderr.startswith("진행 파일을 읽을 수 없음: "), proc.stderr)
         self.assertEqual(
-            (Path(root) / ".knuaf-progress.json").read_text(), "{oops")
+            (Path(root) / ".knuaf-progress.json").read_text(encoding="utf-8"), "{oops")
 
     def test_non_object_json(self):
         root = self.make_project()
@@ -883,7 +883,7 @@ class NoWriteCommandTests(th.ContractCase):
         absent = Path(root) / "새폴더"
         proc = subprocess.run(
             [sys.executable, "-B", str(SCRIPT), "write", str(absent)],
-            capture_output=True, text=True, cwd=str(root))
+            capture_output=True, text=True, encoding="utf-8", cwd=str(root))
         self.assertEqual(proc.returncode, 2)
         self.assertIn("invalid choice: 'write'", proc.stderr)
         self.assertIn("choose from", proc.stderr)
@@ -896,7 +896,7 @@ class NoWriteCommandTests(th.ContractCase):
         root = self.make_project()
         proc = subprocess.run(
             [sys.executable, "-B", str(SCRIPT), "show"],
-            capture_output=True, text=True, cwd=str(root))
+            capture_output=True, text=True, encoding="utf-8", cwd=str(root))
         self.assertEqual(proc.returncode, 2)
         self.assertIn("required", proc.stderr)
 

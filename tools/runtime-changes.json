@@ -306,7 +306,7 @@
       "source": "adopted:app-PR41"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "298b1e46b888980b66c974af478ba3e0648205ad6c1553b285dc829b68402707",
+      "after_sha256": "2f6ff89eb3db637ff9e93ca02f7e8ae279f17f9688f07de03bfc8fb379f2b269",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "W-P",
@@ -3034,7 +3034,7 @@
     },
     "skills/knuaf-doc/tests/test_gg_progress.py": {
       "before_sha256": null,
-      "after_sha256": "e5ceb4a3e0c6e677d480757533d66e59e575829d31619ea536f46c39e68c8142",
+      "after_sha256": "ae786dffb95a7eedf79a6e989b2c02b96a445bd396c664d40ce47be97897f7f5",
       "first_changed": "P28",
       "last_changed": "W-P",
       "owner": "P28",
