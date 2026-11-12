@@ -26,6 +26,7 @@ from gg_document import parse, spans, SCI, FRONT, school_toc_range, school_front
 from gg_core import digest, local
 from gg_document import photo_guide, photo_requests
 from gg_body_layout import NOTE, spacer_positions, review_requests
+import gg_figure_docx
 
 FONT = "신명조"
 LEVEL_PT = {1: 20, 2: 18, 3: 16, 4: 14, 5: 13, 6: 13, 7: 13, 8: 13, 9: 13}
@@ -256,13 +257,24 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
                 if table_reports is not None:
                     table_reports.append(rep)
         elif n["kind"] == "image":
-            p = (Path(base) / n["path"]).resolve()
-            if not p.is_relative_to(Path(base).resolve()) or not p.is_file():
-                raise ValueError("그림 파일 없음/외부 경로: " + n["path"])
-            doc.add_picture(str(p), width=Mm(145))
-            picture_paragraph = doc.paragraphs[-1]
-            picture_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            picture_paragraph.paragraph_format.keep_with_next = True
+            if gg_figure_docx.is_placeholder(n["path"]):
+                # 앱 밖 빌드: 토큰을 풀 수 없다 — 자리 표시 문단(알려진 한계).
+                note = doc.add_paragraph(gg_figure_docx.PLACEHOLDER)
+                note.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                note.paragraph_format.keep_with_next = True
+            else:
+                target, issue = gg_figure_docx.node_target(n["path"])
+                if issue:
+                    raise ValueError("blocked: " + issue)
+                p = target if target is not None else (Path(base) / n["path"]).resolve()
+                if target is None and not p.is_relative_to(Path(base).resolve()):
+                    raise ValueError("그림 파일 없음/외부 경로: " + n["path"])
+                if not p.is_file():
+                    raise ValueError("그림 파일 없음/외부 경로: " + n["path"])
+                doc.add_picture(str(p), width=Mm(145))
+                picture_paragraph = doc.paragraphs[-1]
+                picture_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                picture_paragraph.paragraph_format.keep_with_next = True
         else:
             heading = n["kind"] == "heading"
             list_item = n.get("list_item", False)
@@ -760,6 +772,8 @@ def main(argv=None):
             "hwp": "not_run",
             "layout_review": review_requests(parse(source_text)),
             "photo_requests": photo_requests(parse(source_text)),
+            "figures": gg_figure_docx.build_report(
+                [n["path"] for n in parse(source_text) if n["kind"] == "image"]),
             "school_frontmatter": (
                 {
                     "layout": ("source_order_common_defaults" if authorization.major_id != "specialty_crops"
