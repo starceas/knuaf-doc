@@ -506,13 +506,22 @@ class FinanceGateTests(ContractCase):
         pythoncom.CoUninitialize.assert_called_once()
 
 
-def register_synthetic_form(case, book):
-    """Isolate the school reference registry, never weaken the runtime gate."""
+def register_synthetic_form(case, book, profile=None):
+    """Isolate the school reference registry, never weaken the runtime gate.
+
+    ``profile``을 주면 그 등록 프로필의 지문을 합성 양식에 맞춘다. 주지
+    않으면 첫 항목(일반 과수)이다 — FY1처럼 두 번째 프로필을 시험하려면
+    이름으로 골라야 한다.
+    """
     import hashlib
     import tempfile
     school = runtime("gg_school_excel")
     data = json.loads(school.WORKBOOK_REFERENCE_SET.read_text(encoding="utf-8"))
-    entry = data["workbook_profiles"][0]
+    if profile is None:
+        entry = data["workbook_profiles"][0]
+    else:
+        entry = next(e for e in data["workbook_profiles"]
+                     if e.get("profile") == profile)
     entry["sheets"] = book.sheetnames
     entry["formula_fingerprints"] = {
         sheet.title: hashlib.sha256(json.dumps(sorted(
