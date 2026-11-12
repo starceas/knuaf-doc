@@ -228,7 +228,7 @@ class LocalRealSourceChecks(ContractCase):
                     [sys.executable, str(AUDIT_CLI), "verify-c1", "--ref",
                      ref, "--source", str(source), option, str(path)],
                     cwd=ROOT, env=os.environ.copy(), capture_output=True,
-                    text=True, check=False)
+                    text=True, encoding="utf-8", check=False)
                 self.assertEqual(result.returncode, 1, result.stderr[-1000:])
                 report = json.loads(result.stdout)
                 self.assertFalse(report["ok"])

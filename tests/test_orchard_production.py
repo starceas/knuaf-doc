@@ -109,7 +109,7 @@ class OrchardTests(ContractCase):
         self.assertEqual(out["status"], "presented")
         self.assertEqual((out["derived"], out["persisted"]), (True, False))
         cli = subprocess.run([sys.executable, str(SCRIPTS / "gg_orchard_production.py"),
-                              str(self.fp.root)], capture_output=True, text=True)
+                              str(self.fp.root)], capture_output=True, text=True, encoding="utf-8")
         self.assertEqual(cli.returncode, 0, cli.stderr)
         self.assertEqual(json.loads(cli.stdout), out)
         self.assertEqual(before, self._tree_bytes(self.fp.root))
@@ -136,7 +136,7 @@ class OrchardTests(ContractCase):
                 self.assertEqual(value["status"], "held")
                 cli = subprocess.run([sys.executable, str(SCRIPTS /
                     "gg_orchard_production.py"), str(root)],
-                    capture_output=True, text=True)
+                    capture_output=True, text=True, encoding="utf-8")
                 self.assertEqual(cli.returncode, 2)
                 self.assertEqual(json.loads(cli.stdout), value)
                 self.assertEqual(before, self._tree_bytes(root))

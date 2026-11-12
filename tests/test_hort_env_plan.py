@@ -943,7 +943,7 @@ class CliSubprocessTests(_PlanCase):
         env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
         return subprocess.run(
             [sys.executable, str(SCRIPTS / "gg_hort_plan.py"), *args],
-            capture_output=True, text=True, env=env)
+            capture_output=True, text=True, encoding="utf-8", env=env)
 
     def test_exit_0_on_bound_project(self):
         root = self._project(facts=[_binding_fact()])

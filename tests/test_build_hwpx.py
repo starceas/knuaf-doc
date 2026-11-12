@@ -132,7 +132,7 @@ def make_fake_cli(root, **control):
 def _cli(*args):
     return subprocess.run(
         [sys.executable, "-B", str(SCRIPTS / "build_hwpx.py"), *map(str, args)],
-        capture_output=True, text=True)
+        capture_output=True, text=True, encoding="utf-8")
 
 
 class _Base(ContractCase):

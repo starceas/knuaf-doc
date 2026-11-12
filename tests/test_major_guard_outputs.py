@@ -63,7 +63,7 @@ UNREGISTERED = "unregistered_probe_major"
 def _cli(script, *args):
     return subprocess.run(
         [sys.executable, "-B", str(SCRIPTS / script), *map(str, args)],
-        capture_output=True, text=True)
+        capture_output=True, text=True, encoding="utf-8")
 
 
 def _finance_spec(**over):

@@ -82,7 +82,7 @@ class RehashTests(ContractCase):
             [sys.executable, "-B",
              str(runtime("build_docx").__file__), str(self.root),
              "--in", "body.md", "--out", out, "--major", "specialty_crops"],
-            capture_output=True, text=True)
+            capture_output=True, text=True, encoding="utf-8")
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
         return (Path(self.root) / out,
                 (Path(self.root) / out).with_suffix(".manifest.json"))
@@ -119,7 +119,7 @@ class RehashTests(ContractCase):
         result = subprocess.run(
             [sys.executable, "-B", str(runtime("build_docx").__file__),
              str(self.root), "--rehash", "out.docx"],
-            capture_output=True, text=True)
+            capture_output=True, text=True, encoding="utf-8")
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
         payload = json.loads(result.stdout)
         self.assertEqual("rehashed", payload["status"])
@@ -138,8 +138,8 @@ class RehashTests(ContractCase):
         self._post_process(target)
         script = [sys.executable, "-B", str(runtime("build_docx").__file__),
                   str(self.root), "--rehash", "out.docx"]
-        first = subprocess.run(script, capture_output=True, text=True)
-        second = subprocess.run(script, capture_output=True, text=True)
+        first = subprocess.run(script, capture_output=True, text=True, encoding="utf-8")
+        second = subprocess.run(script, capture_output=True, text=True, encoding="utf-8")
         self.assertEqual(0, first.returncode, first.stderr)
         self.assertEqual("rehashed", json.loads(first.stdout)["status"])
         self.assertEqual("unchanged", json.loads(second.stdout)["status"])
@@ -152,7 +152,7 @@ class RehashTests(ContractCase):
         missing = subprocess.run(
             [sys.executable, "-B", str(runtime("build_docx").__file__),
              str(self.root), "--rehash", "other.docx"],
-            capture_output=True, text=True)
+            capture_output=True, text=True, encoding="utf-8")
         self.assertEqual(2, missing.returncode)
         self.assertIn("매니페스트 없음", missing.stdout)
 
@@ -161,7 +161,7 @@ class RehashTests(ContractCase):
         foreign = subprocess.run(
             [sys.executable, "-B", str(runtime("build_docx").__file__),
              str(self.root), "--rehash", "other.docx"],
-            capture_output=True, text=True)
+            capture_output=True, text=True, encoding="utf-8")
         self.assertEqual(2, foreign.returncode)
         self.assertIn("매니페스트가 아님", foreign.stdout)
         self.assertEqual({"kind": "other"},
@@ -224,7 +224,7 @@ class WorkingDirectoryTests(ContractCase):
         )
         env = dict(os.environ, PWD=str(root))
         result = subprocess.run([sys.executable, "-B", "-c", code],
-                                cwd=root, capture_output=True, text=True,
+                                cwd=root, capture_output=True, text=True, encoding="utf-8",
                                 env=env)
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
         self.assertTrue((Path(root) / "rel.docx").is_file())

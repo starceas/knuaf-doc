@@ -153,7 +153,7 @@ class SpecialtyChainTests(ContractCase):
 
     def run_cli(self, script, *args):
         result = subprocess.run([sys.executable, str(script), *map(str, args)],
-                                cwd=ROOT, capture_output=True, text=True,
+                                cwd=ROOT, capture_output=True, text=True, encoding="utf-8",
                                 env=os.environ.copy(), check=False)
         self.assertEqual(result.returncode, 0, result.stderr[-2000:])
         return result

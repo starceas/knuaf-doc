@@ -245,12 +245,12 @@ class EntryContractTests(ContractCase):
         env.pop("PYTHONHOME", None)
         missing = subprocess.run(
             [sys.executable, str(gg), "status", str(root / "missing")],
-            capture_output=True, text=True, env=env)
+            capture_output=True, text=True, encoding="utf-8", env=env)
         self.assertEqual(missing.returncode, 2)
         self.assertEqual(json.loads(missing.stdout)["status"], "blocked")
         ready = subprocess.run(
             [sys.executable, str(gg), "status", str(root)],
-            capture_output=True, text=True, env=env)
+            capture_output=True, text=True, encoding="utf-8", env=env)
         self.assertEqual(ready.returncode, 0)
         payload = json.loads(ready.stdout)
         for key in ("skill_ready", "user_finish_pending",
