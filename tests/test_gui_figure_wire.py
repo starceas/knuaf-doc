@@ -16,6 +16,8 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+from docx import Document
+
 from tests._harness import ContractCase, SCRIPTS, bind_major, runtime, write_text
 
 PNG = (b"\x89PNG\r\n\x1a\n" + b"\x00\x00\x00\rIHDR" + b"\x00\x00\x00\x01"
@@ -137,19 +139,15 @@ class GuiFigureWireTests(ContractCase):
         result = subprocess.run(
             [sys.executable, "-B", str(SCRIPTS / "gg.py"), "figure", "place",
              str(self.root), "--slot", "s1", "--heading", "가. 품종 선택"],
-            capture_output=True, text=True, encoding="utf-8", cwd=self.root)
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            env=self.cli_base_env(), cwd=self.root)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads(result.stdout)["status"], "needs_photo")
 
     def test_manifest_carries_figures_report(self):
-        with self.at_home(self.app_home()):
-            write_text(self.root, "body.md", FIGURE)
-            result = subprocess.run(
-                [sys.executable, "-B", str(SCRIPTS / "build_docx.py"),
-                 str(self.root), "--in", "body.md", "--out", "build/f.docx",
-                 "--major", "specialty_crops"],
-                capture_output=True, text=True, encoding="utf-8", cwd=self.root)
+        result = self.build_cli(FIGURE, "build/f.docx", self.app_home())
         self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.cli_pictures(self.root / "build" / "f.docx"), 1)
         manifest = json.loads((self.root / "build" / "f.manifest.json").read_text(
             encoding="utf-8"))
         self.assertEqual([item["kind"] for item in manifest["figures"]["images"]],
@@ -157,17 +155,46 @@ class GuiFigureWireTests(ContractCase):
         self.assertEqual(manifest["figures"]["student_count"], 0)
         self.assertEqual(manifest["figures"]["blocked"], [])
 
-    # --- 웹 검토 R-01/R-02 -------------------------------------------------
+    # --- 웹 검토 R-01/R-02 ------------------------------------------------
+
+    def cli_base_env(self):
+        """자식 프로세스 공통 환경 — 출력 인코딩을 못 박는다.
+
+        부모가 `PYTHONIOENCODING=ascii` 같은 값으로 떠 있어도 자식이 한글을
+        뱉다 죽지 않게 한다(윈도 CI 거짓 실패 방지). `KNUAF_FIGURE_HOME`은
+        건드리지 않는다.
+        """
+        env = dict(os.environ)
+        env["PYTHONUTF8"] = "1"
+        env["PYTHONIOENCODING"] = "utf-8"
+        env["PYTHONDONTWRITEBYTECODE"] = "1"
+        env.pop("PYTHONPATH", None)
+        env.pop("PYTHONHOME", None)
+        return env
+
+    def cli_env(self, home):
+        """공통 환경 + `KNUAF_FIGURE_HOME` — None이면 앱 밖(빈 문자열)."""
+        env = self.cli_base_env()
+        env["KNUAF_FIGURE_HOME"] = str(home) if home else ""
+        return env
 
     def build_cli(self, manuscript, out, home):
         """build_docx.py를 진짜 CLI로 돌린다 — 앱이 받는 JSON 봉투 그대로."""
         write_text(self.root, "body.md", manuscript)
-        with self.at_home(home):
-            return subprocess.run(
-                [sys.executable, "-B", str(SCRIPTS / "build_docx.py"),
-                 str(self.root), "--in", "body.md", "--out", out,
-                 "--major", "specialty_crops"],
-                capture_output=True, text=True, encoding="utf-8", cwd=self.root)
+        return subprocess.run(
+            [sys.executable, "-B", str(SCRIPTS / "build_docx.py"),
+             str(self.root), "--in", "body.md", "--out", out,
+             "--major", "specialty_crops"],
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            env=self.cli_env(home), cwd=self.root)
+
+    def cli_pictures(self, path):
+        """CLI가 만든 docx를 **다시 열어** 박힌 그림 개수를 센다.
+
+        매니페스트는 앱이 읽는 요약일 뿐이라, 파일 자체에 그림이 들어갔는지는
+        따로 확인해야 한다(웹 검토 3번).
+        """
+        return len(Document(str(path)).inline_shapes)
 
     def test_cli_reports_unverified_token_as_blocked_json_and_exit_2(self):
         """R-01: 앱이 미승인 토큰을 넘기면 CLI가 JSON으로 거절하고 종료코드 2를
@@ -195,6 +222,8 @@ class GuiFigureWireTests(ContractCase):
         self.assertNotIn(self.gd.PLACEHOLDER, [p.text for p in doc.paragraphs])
         result = self.build_cli(text, "build/student.docx", None)
         self.assertEqual(result.returncode, 0, result.stderr)
+        # 매니페스트가 아니라 만들어진 파일을 다시 열어 확인한다.
+        self.assertEqual(self.cli_pictures(self.root / "build" / "student.docx"), 1)
         manifest = json.loads(
             (self.root / "build" / "student.manifest.json").read_text(
                 encoding="utf-8"))
@@ -206,15 +235,35 @@ class GuiFigureWireTests(ContractCase):
         self.assertEqual(figures["blocked"], [])
 
     def test_outside_paths_are_rejected_by_check_and_build(self):
-        """R-02②: 폴더 밖 상대경로·절대경로는 문서 검사가 missing_image로 잡고
-        빌드는 '그림 파일 없음/외부 경로'로 거절한다 — 경로 이탈 우회 없음.
-        두 경로 모두 실제로 존재하는 파일이라 '없어서' 막히는 게 아니다."""
-        tmp = tempfile.TemporaryDirectory(prefix="knuaf-outside-")
+        """R-02②: 폴더 밖 경로는 문서 검사가 missing_image로 잡고 빌드는
+        '그림 파일 없음/외부 경로'로 거절한다 — 경로 이탈 우회 없음.
+
+        원고에 적히는 **문자열 그대로**(슬래시 `/` 표기)를 쓴다. `os.path.relpath`
+        는 윈도에서 역슬래시를 내놓는데, 그건 POSIX에서 파일 이름 일부라
+        '폴더 밖'이 아니라 '없는 파일'로 통과해 버린다(거짓 통과).
+        같은 이름의 파일을 폴더 **안**에도 두어, 거절이 이름이 아니라
+        위치 때문임을 대조로 못 박는다.
+        """
+        tmp = tempfile.TemporaryDirectory(prefix="knuaf-outside-",
+                                          dir=str(self.root.parent))
         self.addCleanup(tmp.cleanup)
         outside = Path(tmp.name) / "밖.png"
         outside.write_bytes(PNG)
-        for index, ref in enumerate(
-                (os.path.relpath(outside, self.root), str(outside))):
+        inside = self.root / "figures" / "public" / "밖.png"
+        inside.parent.mkdir(parents=True)
+        inside.write_bytes(PNG)
+
+        with self.at_home(None):
+            # 대조: 같은 이름, 폴더 안 → 통과해야 한다.
+            control = FIGURE.replace("app-figure:" + SHA, "figures/public/밖.png")
+            self.assertEqual(self.missing_image(control), [])
+            built = self.build_cli(control, "build/inside.docx", None)
+            self.assertEqual(built.returncode, 0, built.stderr)
+            self.assertEqual(self.cli_pictures(self.root / "build" / "inside.docx"),
+                             1)
+
+        refs = ("../%s/밖.png" % Path(tmp.name).name, outside.as_posix())
+        for index, ref in enumerate(refs):
             with self.subTest(ref=ref):
                 text = FIGURE.replace("app-figure:" + SHA, ref)
                 with self.at_home(None):

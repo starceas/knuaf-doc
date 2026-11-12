@@ -3021,12 +3021,12 @@
       "source": "new"
     },
     "tests/test_gui_figure_wire.py": {
-      "after_sha256": "35a72d1e553a66cc49bc19d2a717b5b882b64e9d4b6dda0aa9ebfc02f4405016",
+      "after_sha256": "ed9e57b16621f3e61087dab9dea79010b46d2afd68acdfd4b1dc745bcb2e2af2",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "P28",
       "owner": "P28",
-      "reason": "GF2: 규칙집 그림 명령(gg.py figure)·docx 그림 검사(gg_document)·그림 삽입과 manifest(build_docx) 배선 잠금 — §4 네 경우(승인/미증명/앱 밖/일반 없는 파일)와 CLI 위임을 고정한다. | WT2: R-01(미승인 토큰 CLI JSON 거절·종료코드 2)·R-02(학생 로컬 그림 삽입·집계, 폴더 밖 상대/절대 경로 거절) 회귀 시험 추가.",
+      "reason": "GF2: 규칙집 그림 명령(gg.py figure)·docx 그림 검사(gg_document)·그림 삽입과 manifest(build_docx) 배선 잠금 — §4 네 경우(승인/미증명/앱 밖/일반 없는 파일)와 CLI 위임을 고정한다. | WT2: R-01(미승인 토큰 CLI JSON 거절·종료코드 2)·R-02(학생 로컬 그림 삽입·집계, 폴더 밖 상대/절대 경로 거절) 회귀 시험 추가. | WT2-B: R-01/R-02 보강 — 자식 프로세스 인코딩 고정(cli_env: PYTHONUTF8/PYTHONIOENCODING, errors=replace), 폴더 밖 경로를 마크다운 문자열 그대로(../밖.png·절대경로) 쓰고 거절 사유를 명시 검증 + 같은 이름 안쪽 대조군, CLI가 만든 docx를 다시 열어 그림 개수 확인(매니페스트만 믿지 않음).",
       "source": "new"
     }
   },
