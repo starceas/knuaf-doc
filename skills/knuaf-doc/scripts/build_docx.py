@@ -195,6 +195,21 @@ def add_table(doc, rows, font):
 WIDE_TABLE_MIN_COLS = 10
 
 
+def chapter_break_node_ids(sequence, major_id):
+    """Level-1 headings that must start a new page (식량작물 only).
+
+    The first heading is excluded: it already starts a fresh section (school
+    paper) or follows the contents page break.  Both DOCX body paths call this
+    one function, so a chapter/closer title cannot lose its page break when
+    the frontmatter is absent (Roh C1 중요2).  Other majors are unchanged.
+    """
+    if major_id != "food_crops":
+        return set()
+    headings = [n for n in sequence
+                if n["kind"] == "heading" and n.get("level") == 1]
+    return {id(n) for n in headings[1:]}
+
+
 def convert(md_text, font=FONT, base=".", table_reports=None, *,
             context=None, toc=True):
     """Render the paper markdown into a DOCX document.  Policy B: the
@@ -205,9 +220,14 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
     authorization = mc.authorize_output(mc.OUTPUT_SCHOOL_PAPER, context)
     doc = Document()
     setup_document(doc, font)
-    nodes = parse(md_text)
+    # 식량작물 요약은 아라비아 `1.`~`5.`라 요약과 본문을 가르는 전공 지식이
+    # 필요하다. 다른 전공은 지금까지처럼 전공 없이 읽어 출력을 바꾸지 않는다.
+    nodes = parse(md_text, major_id=(
+        "food_crops" if authorization.major_id == "food_crops" else None))
 
     last_prose = None
+    # 식량작물 장 시작 쪽 나눔 대상(본문 첫 장은 새 구역이라 뺀다).
+    chapter_break_nodes = set()
 
     def render_node(n, allow_soft_wrap=False):
         nonlocal last_prose
@@ -256,6 +276,8 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
             )
             pf.widow_control = True
             pf.space_after = Pt(6 if heading else 0)
+            if heading and id(n) in chapter_break_nodes:
+                pf.page_break_before = True
             text = n["text"]
             if list_item:
                 pf.left_indent = Pt(24)
@@ -325,6 +347,8 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
             update.set(qn("w:val"), "true")
             doc.settings.element.append(update)
             doc.add_page_break()
+        chapter_break_nodes.update(
+            chapter_break_node_ids(nodes, authorization.major_id))
         render_body(nodes)
         return doc
 
@@ -471,6 +495,11 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
         doc.add_page_break()
 
     body_nodes=nodes[i_body:]
+    # 식량작물: 본문 첫 장은 아래 새 구역이 이미 새 쪽이라, 나머지 장/맺음말/
+    # 참고문헌/학부모 동의서 제목만 page_break_before로 새 쪽에서 시작한다.
+    # 판정은 앞머리 없는 경로와 같은 함수(chapter_break_node_ids)를 쓴다.
+    chapter_break_nodes.update(
+        chapter_break_node_ids(body_nodes, authorization.major_id))
     candidates=nodes[i_toc+1:i_body]
     summary_start=next((i for i,n in enumerate(candidates) if n.get('text','').strip()=='요약'),None)
 
@@ -521,9 +550,15 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
                 n['_bookmark_id']=idx
         table_entries=[(split_caption_credit(n['text'])[0],n['_bookmark'],2) for n in body_nodes if n['kind']=='caption' and n.get('label')=='표']
         figure_entries=[(split_caption_credit(n['text'])[0],n['_bookmark'],2) for n in body_nodes if n['kind']=='caption' and n.get('label')=='그림']
-        dairy_lists = authorization.major_id == "dairy"
+        dairy_lists = authorization.major_id in ("dairy", "food_crops")
         entries=[]
-        if prelim: entries.append(('요약','gg_summary',0))
+        if authorization.major_id == "food_crops":
+            # 양식 목차 순서: 요약 · 감사의 글 · 표 목차 · 그림 목차 · 본문.
+            # 두 제목은 앞부분(_render_peer_forms)에서 이미 그려졌고,
+            # 거기서 단 책갈피를 그대로 가리켜 실제 쪽번호를 받는다.
+            entries.append(('요약','gg_summary',0))
+            entries.append(('감사의 글','gg_thanks',0))
+        elif prelim: entries.append(('요약','gg_summary',0))
         if table_entries or dairy_lists: entries.append(('표 목차','gg_tables',0))
         if figure_entries or dairy_lists: entries.append(('그림 목차','gg_figures',0))
         entries += [(n['text'],n['_bookmark'],n['level']) for n in body_nodes if n['kind']=='heading' and n['level']<=2]
@@ -549,7 +584,7 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
             place_page_number(doc.sections[0], pg)
         def new_numbered_section(number_format, start=1):
             sec=doc.add_section(WD_SECTION.NEW_PAGE)
-            if count_fruit_front:
+            if count_fruit_front or authorization.major_id == "food_crops":
                 inherited = sec._sectPr.find(qn('w:pgNumType'))
                 if inherited is not None: sec._sectPr.remove(inherited)
             pg=OxmlElement('w:pgNumType')
@@ -560,7 +595,11 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
             field=OxmlElement('w:fldSimple');field.set(qn('w:instr'),'PAGE');p._p.append(field)
             return sec
         if prelim or table_entries or figure_entries or dairy_lists:
-            new_numbered_section('lowerRoman', None if count_fruit_front else 1)
+            if authorization.major_id == "food_crops":
+                # 요약~그림 목차는 앞부분 서식에서 연 로마 대문자 구역을 이어 쓴다.
+                doc.add_page_break()
+            else:
+                new_numbered_section('lowerRoman', None if count_fruit_front else 1)
             if prelim:
                 p=doc.add_paragraph();p.alignment=WD_ALIGN_PARAGRAPH.CENTER
                 runs(p,'요약',font,20,True);bookmark(p,'gg_summary',9001)

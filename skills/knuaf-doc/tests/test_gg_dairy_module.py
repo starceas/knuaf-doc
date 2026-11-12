@@ -30,7 +30,7 @@ class DairyModuleTests(unittest.TestCase):
         self.assertEqual(module.module_version, "0.1.0")
         self.assertEqual(module.packs, ())
         self.assertEqual(mc.KNOWN_MAJOR_MARKERS["dairy"], ("낙농",))
-        self.assertEqual(registry.major_ids[-1], "dairy")
+        self.assertEqual(registry.major_ids[-2:], ("dairy", "food_crops"))
         document = mc.route(registry, "dairy", "document").proposal
         self.assertEqual(len(document["sections"]), 28)
         self.assertEqual(len(document["mandated_sections"]), 28)

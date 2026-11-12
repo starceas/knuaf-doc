@@ -74,7 +74,7 @@
 | `observe` | `--input <폴더 안 관측JSON>` `--observer <어댑터ID>` | — | 아니오(관측 기록 발행) | 실행 어댑터의 검토 관측 기록을 남긴다. [section-ledger](section-ledger.md) |
 | `unlock` | — | — | 아니오 | 비정상 종료로 남은 잠금 소유 기록만 정리한다. [locking](locking.md) |
 | `lock-upgrade` | `--offline-confirmed` | `--resume <복구ID>` | 아니오(잠금 구조) | 구형 잠금의 오프라인 전환·복구. 편집 중인 프로세스가 없다고 사용자가 확인한 뒤에만 쓴다. [locking](locking.md) |
-| `major-plan` | — | `--major <전공ID>`(바인딩과 같아야 함) | 아니오 | 바인딩된 전공의 질문·문서 계획·근거·재무 능력. 바인딩이 없거나 무효면 exit 2와 `status: held`. 낙농(dairy)은 축종 스위치(dairy_switch) 상태를 포함한다. [majors](majors.md) · [dairy](dairy/README.md) |
+| `major-plan` | — | `--major <전공ID>`(바인딩과 같아야 함) | 아니오 | 바인딩된 전공의 질문·문서 계획·근거·재무 능력. 바인딩이 없거나 무효면 exit 2와 `status: held`. 낙농(dairy)은 축종 스위치(dairy_switch) 상태를, 식량작물(food_crops)은 갈래 스위치(entry_mode, cropping_system) 상태를 포함한다. [majors](majors.md) · [dairy](dairy/README.md) · [food-crops](food-crops/README.md) |
 | `insect-plan` | — | `--input <폴더 안 선택.json>` | 아니오 | 산업곤충 바인딩 프로젝트 전용. [industrial-insects](industrial-insects/README.md) |
 | `insect-evidence` | `--pdf <R0>` `--xlsx <R1>` | — | 아니오 | 산업곤충 공식 통계 원자료 근거 검토. [industrial-insects](industrial-insects/README.md) |
 | `rda-candidates` | `--crop <작목>` `--region <지역>` | `--rda-kind` `--year` `--form` `--unit` `--use-scope` `--audit-key <JSON>` | 아니오 | 정본 바인딩 전공의 승인 후보 조회(작성 경로). [rda-benchmark](rda-benchmark.md) |

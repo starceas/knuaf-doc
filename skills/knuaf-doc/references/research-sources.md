@@ -100,11 +100,12 @@ DBpia(dbpia.co.kr)는 기관 인증이 필요하다. **KCI·ScienceON을 먼저 
 | 임산물(산나물·산림버섯·약용식물) | 산림임업통계포털 | kfss.forest.go.kr |
 | 필지 단위 기상재해 예보 | 농업기상재해 조기경보시스템 | agmet.kr |
 | 관측지점 농업기상 | 농업날씨365 | weather.rda.go.kr |
+| 식량작물(벼·맥류·두류·서류·잡곡) | 국립식량과학원·농사로 | nics.go.kr · nongsaro.go.kr |
 | 그 외 일반 작목 | 농사로 | nongsaro.go.kr |
 
 **임산물로 분류되는 작목은 KOSIS에 통계가 없을 수 있다.** 산림임업통계포털을 확인한다.
 
-다른 전공이 이 스킬을 쓰면 이 표에 줄을 추가한다. 2항 공통 출처는 그대로 유효하며, 전공별 상세 리서치 안내는 [research-route-index.md](research-route-index.md)의 전공별 경로([특용작물](specialty-crops/research-routes.md), [과수](fruit-trees/research-routes.md), [산업곤충](industrial-insects/research-routes.md), [낙농](dairy/research-chapters.md), [원예](hort-env-systems/README.md))를 따른다.
+다른 전공이 이 스킬을 쓰면 이 표에 줄을 추가한다. 2항 공통 출처는 그대로 유효하며, 전공별 상세 리서치 안내는 [research-route-index.md](research-route-index.md)의 전공별 경로([특용작물](specialty-crops/research-routes.md), [과수](fruit-trees/research-routes.md), [산업곤충](industrial-insects/research-routes.md), [낙농](dairy/research-chapters.md), [원예](hort-env-systems/README.md), [식량작물](food-crops/research-chapters.md))를 따른다.
 
 ## 4. 작물명 별칭 확인 (조사 전 필수)
 

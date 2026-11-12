@@ -21,6 +21,7 @@
 | **산업곤충**<br>(`industrial_insects`) | 선례(F0, E1~E4) 관측 7개 역할 지도<br>(도입 ~ 재무 ~ 마무리) | [industrial-insects/research-routes.md](industrial-insects/research-routes.md) | • **선례는 동급 예시(`example_observed`), 목차 비강제**<br>• 제품 라인(`line_inventory`) 분기<br>• 법·용도 분기 탐색 (`종 × 용도 × 형태 × 행위`)<br>• 고시 제2019-67호 관찰 근거, R0/R1 농가수 충돌 보존<br>• 계획·질문 지원, 본문·재무 미지원(`unsupported_output`) |
 | **낙농**<br>(`dairy`) | 학교 공식 12개 장 체계<br>(1 머리말 ~ 12 참고문헌, 부록 1~10) | [dairy/research-chapters.md](dairy/research-chapters.md)<br>(정본: [dairy/research-routes.md](dairy/research-routes.md)) | • **4대 사업형태 스위치** (젖소 착유, 한우 번식, 한우 비육, 한우 일관)<br>• 젖소 기준 작성요령의 한우 1:1 치환 ([school-toc.md](dairy/school-toc.md))<br>• 작성요령의 12장 목차 우선. 선배 11장 관찰은 형식 면제 근거 아님. 내용·분량(B)만 의도 확인 후 조정, 장 삭제는 자동 B 아님·애매하면 A<br>• 정본 D01~D31, H01~H12 매핑<br>• [본문 초안(글)](major-body-draft.md) 지원; 서식 본문 파일·학교 재무 엑셀·재무 계산은 미지원 (`unsupported_output`)
 | **원예환경시스템**<br>(`hort_env_systems`) | 선배 논문(HT1·HT2) 프로필 계약<br>(Ⅲ-4 SWOT) | [hort-env-systems/README.md](hort-env-systems/README.md)<br>*(기존 모듈 안내 연결)* | • [본문 초안(글)](major-body-draft.md) 지원; 이 색인은 README 안내와 리서치 경로만 연결<br>• 18시트 재구성 프로필 (`hort_18_sheet_reconstructed_v1`)<br>• 물가 통계 수열 계약 준수<br>• 전공 교재 엑셀 주의 목록 대조 |
+| **식량작물**<br>(`food_crops`) | 학교 공식 본문 골격<br>(1 머리말 ~ 4 재무계획, 맺음말, 참고문헌, 학부모동의서) | [food-crops/research-chapters.md](food-crops/research-chapters.md)<br>(정본: [food-crops/research-routes.md](food-crops/research-routes.md)) | • **승계/창업 및 단작/이모작 스위치**<br>• 학교 양식 본문 골격(2장 5절+SWOT, 3장 6절, 4장 6절) 기준<br>• 창업농 승계 전제 자리(15곳) 대체 안내 ([startup-path.md](food-crops/startup-path.md))<br>• 정본 리서치 경로 59행 매핑<br>• [본문 초안(글)](major-body-draft.md) 지원; 재무 엑셀 사본 생성·계산은 미지원 (`unsupported`) |
 
 ---
 
@@ -30,7 +31,7 @@
 - **공통 기관 메뉴**: [research-sources.md](research-sources.md) — 조사 유형별 공통 조사 기관 메뉴 및 적용 조건.
 - **출처 등록**: [source-contract.md](source-contract.md) — 학교 지침, 선례, 공공 통계, 학생 사실 분리.
 - **가격 계약**: [price-research-routes.md](price-research-routes.md) — 공통 가격 및 물가상승률 계약.
-- **공식 목차**: [official-toc.md](official-toc.md), [majors.md](majors.md) — 등록 5전공 목차 및 출력 지원 경계.
+- **공식 목차**: [official-toc.md](official-toc.md), [majors.md](majors.md) — 등록 6전공 목차 및 출력 지원 경계.
 
 ---
 
