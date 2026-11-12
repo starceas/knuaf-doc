@@ -631,6 +631,12 @@ def patch_copy(source: Path, map_path: Path, out: Path, *, context=None,
     patch route past the major's closed default and is refused.  A registered
     workbook profile is checked against the source's real sheet structure and
     formula fingerprints, so a declared profile never stands in for the form.
+
+    That structure check is scoped by the reference set, not by this call: a
+    profile without a registered structure (today ``school_17_sheet_v1``, the
+    specialty and default name) is left to its own verifier.  Fruit trees never
+    reach the check — their default is that 17-sheet name, which
+    ``require_finance_profile`` refuses before the source is opened.
     """
     import gg_major_contract as mc
 

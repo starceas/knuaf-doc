@@ -180,6 +180,63 @@ class RouteTests(ContractCase):
                              "unsupported_finance_profile")
             self.assertFalse(refused.exists())
 
+    def test_the_structure_gate_binds_only_registered_profiles(self):
+        """N-I-01: the gate reaches exactly one profile, so no other major's
+        patch answer moved.
+
+        ``profile_structure`` answers for the reference set only. Registered
+        today: ``fruit_16_sheet_v1``, ``fruit_16_sheet_v1_fy1``,
+        ``food_crops_16_sheet_v1``. ``school_17_sheet_v1`` — the specialty and
+        the fallback default — is not there, so ``require_profile_structure``
+        returns before opening the source and specialty crops keep their
+        pre-existing route. Fruit trees do not reach the check either: their
+        default is that unregistered 17-sheet name, and policy B refuses it
+        before the source is read.
+
+        Measured against ``389a445`` on this same non-workbook source, the
+        patch answer is unchanged for both: fruit ``unsupported_finance_profile``
+        and specialty falling through to the map read (``FileNotFoundError``
+        here, since the map is absent). Only food crops gained a refusal, and
+        it is the structural one.
+        """
+        school = runtime("gg_school_excel")
+        self.assertIsNone(school.profile_structure(SCHOOL_PROFILE))
+        self.assertIsNotNone(school.profile_structure(FOOD_PROFILE))
+        reference_set = json.loads(
+            (school.WORKBOOK_REFERENCE_SET).read_text(encoding="utf-8"))
+        self.assertEqual(
+            {entry["profile"] for entry in reference_set["workbook_profiles"]},
+            {FRUIT_PROFILE, "fruit_16_sheet_v1_fy1", FOOD_PROFILE})
+        self.assertNotIn(SCHOOL_PROFILE,
+                         {entry["profile"]
+                          for entry in reference_set["workbook_profiles"]})
+
+        answers = {}
+        for major in (FRUIT, SPECIALTY, FOOD):
+            root = self.make_project()
+            bind_major(root, major)
+            context = self.mc.output_context(root, major)
+            with tempfile.TemporaryDirectory() as temp:
+                source = Path(temp) / "not-a-workbook.xlsx"
+                source.write_bytes(b"not a zip archive")
+                out = Path(temp) / "answered.xlsx"
+                with self.assertRaises(Exception) as caught:
+                    self.patch.patch_copy(source, Path(temp) / "map.json", out,
+                                          context=context)
+                answers[major] = (type(caught.exception).__name__,
+                                  getattr(caught.exception, "reason", None))
+                self.assertFalse(out.exists())
+
+        # Unchanged from 389a445: the profile hold precedes the source.
+        self.assertEqual(answers[FRUIT],
+                         ("OutputHeldError", "unsupported_finance_profile"))
+        # No structure gate on the unregistered 17-sheet form: the call clears
+        # every workbook check and fails later, reading the absent map.
+        self.assertEqual(answers[SPECIALTY], ("FileNotFoundError", None))
+        # The one new refusal, and it is the structural one.
+        self.assertEqual(answers[FOOD],
+                         ("OutputHeldError", "workbook_structure_mismatch"))
+
     def test_the_patch_entry_refuses_to_overwrite_and_makes_no_folder(self):
         """Every refusal lands before a write: the source itself, an existing
         file, and (through the CLI) a folder that does not exist yet."""
@@ -219,6 +276,53 @@ class RouteTests(ContractCase):
             self.assertEqual(json.loads(refused.stdout)["reason"],
                              "workbook_structure_mismatch")
             self.assertFalse(out.parent.exists())
+
+    def test_the_patch_cli_refuses_an_existing_final_out_before_staging(self):
+        """I-03: the CLI's own output check runs before the engine stages, so
+        an existing final ``--out`` (or receipt) is refused with every byte
+        where it was — the source, the file already there, and no staging
+        leftovers next to it."""
+        from tests.test_finance_profile_gate import register_synthetic_form
+        from openpyxl import load_workbook
+        root = self.make_project()
+        bind_major(root, FOOD)
+        with tempfile.TemporaryDirectory() as temp:
+            source = self._synthetic(temp)
+            mapping = self._patch_map(temp, source)
+            book = load_workbook(source)
+            register_synthetic_form(self, book, profile=FOOD_PROFILE)
+            book.close()
+            before = source.read_bytes()
+
+            existing_out = Path(temp) / "already-here.xlsx"
+            existing_out.write_bytes(b"sentinel out")
+            existing_receipt = Path(temp) / "already-here.receipt.json"
+            existing_receipt.write_bytes(b"sentinel receipt")
+            free_out = Path(temp) / "free.xlsx"
+            free_receipt = Path(temp) / "free.receipt.json"
+            cases = (
+                ("out", existing_out, free_receipt),
+                ("receipt", free_out, existing_receipt),
+            )
+            for label, out, receipt in cases:
+                with self.subTest(taken=label):
+                    result = _cli("gg_excel_formula_patch.py", "--source", source,
+                                  "--map", mapping, "--out", out,
+                                  "--receipt", receipt,
+                                  "--project", root, "--major", FOOD)
+                    self.assertEqual(result.returncode, 2,
+                                     result.stdout + result.stderr)
+                    self.assertIn("refusing to overwrite", result.stderr)
+                    self.assertEqual(source.read_bytes(), before)
+                    self.assertEqual(existing_out.read_bytes(), b"sentinel out")
+                    self.assertEqual(existing_receipt.read_bytes(),
+                                     b"sentinel receipt")
+                    self.assertEqual(
+                        sorted(p.name for p in Path(temp).iterdir()
+                               if ".tmp-" in p.name), [])
+                    for unused in (free_out, free_receipt):
+                        if unused is not existing_out and unused is not existing_receipt:
+                            self.assertFalse(unused.exists())
 
     def test_filling_values_stays_closed_for_food_crops(self):
         """Only the blank copy is open; filling values is refused at the

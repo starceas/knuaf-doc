@@ -41,6 +41,13 @@ ENTRY_COUNT = 161
 # even with the same counts and no duplicates — fails this.
 REVIEWED_COORDINATES_SHA256 = (
     "36f8b3fdc8ab392366ae286d4d082ac69d77b7a65d3a4ad8538c93ac8bf15119")
+# Reviewed classification, frozen the same way but with the verdict in it:
+# sorted "\t".join((sheet, cell, action, role)) per line, sha256. Coordinates
+# alone cannot see a swapped verdict — moving E19's ``clear`` onto B7 and
+# B7's ``preserve`` onto E19 keeps every coordinate and every count — so the
+# decision at each cell, plan years included, is pinned here.
+REVIEWED_CLASSIFICATION_SHA256 = (
+    "7d44d072efdf8c2adecf58141b68fe611e3fbb54e65c446280c75371259312c8")
 # The three example-number memos R-01 moved out of the preserved notes.
 CLEARED_EXAMPLE_MEMOS = ((" 5. 판매계획", "B26"),
                          ("6. 생산계획", "B9"),
@@ -162,6 +169,47 @@ class FoodCropsClearMapTests(ContractCase):
         years = [e for e in self.map["entries"]
                  if e["role"] == "structure.period_year"]
         self.assertTrue(all(e["action"] == "preserve" for e in years))
+
+    def _classification(self, entries):
+        """Sorted (sheet, cell, action, role) lines for a map's entries."""
+        rows = sorted((entry["sheet"], cell, entry["action"], entry["role"])
+                      for entry in entries
+                      for cell in self._expanded(entry))
+        return rows, hashlib.sha256(
+            "\n".join("\t".join(row) for row in rows).encode("utf-8")).hexdigest()
+
+    def test_the_map_classification_is_frozen(self):
+        """The verdict at each cell is pinned, not just its address.
+
+        The coordinate hash above cannot see a decision moved between two
+        cells: swapping the ``clear`` at `` 5. 판매계획!E19`` with the
+        ``preserve`` at ``B7`` leaves every coordinate, every count and the
+        coordinate hash identical. The classification hash covers the action
+        and role as well, so that swap — the reviewed failure case — and any
+        moved plan-year cell fail here.
+        """
+        rows, digest = self._classification(self.map["entries"])
+        self.assertEqual(len(rows), PRESERVED_CELLS + CLEARED_CELLS)
+        self.assertEqual(digest, REVIEWED_CLASSIFICATION_SHA256)
+
+        swapped = copy.deepcopy(self.map["entries"])
+        by_cell = {(entry["sheet"], entry["range"]): entry for entry in swapped}
+        cleared = by_cell[(" 5. 판매계획", "E19")]
+        preserved = by_cell[(" 5. 판매계획", "B7")]
+        self.assertEqual((cleared["action"], cleared["role"]),
+                         ("clear", "input.student_estimate"))
+        self.assertEqual((preserved["action"], preserved["role"]),
+                         ("preserve", "structure.source_note"))
+        for field in ("action", "role"):
+            cleared[field], preserved[field] = preserved[field], cleared[field]
+
+        swapped_rows, swapped_digest = self._classification(swapped)
+        self.assertEqual(sorted((sheet, cell) for sheet, cell, _, _ in swapped_rows),
+                         sorted((sheet, cell) for sheet, cell, _, _ in rows))
+        self.assertEqual({action: sum(1 for row in swapped_rows if row[2] == action)
+                          for action in ("clear", "preserve")},
+                         {"clear": CLEARED_CELLS, "preserve": PRESERVED_CELLS})
+        self.assertNotEqual(swapped_digest, digest)
 
     # -- the writer ------------------------------------------------------
     def test_blank_copy_clears_396_and_keeps_79(self):

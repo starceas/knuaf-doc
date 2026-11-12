@@ -157,7 +157,7 @@
   "scripts/gg_draft_split.py": "3d81a1abf59ae0d8a33fb7596410e9f8ea75dec43147e091755faa1a836d7fda",
   "scripts/gg_excel_facts.py": "ed5b7195d2fc19bfbadc8e4a8a98915946d7cdd55ed2a97044b8e86c8a294b69",
   "scripts/gg_excel_fill.py": "b1bbf23bfc9c2946dc3c3670095a9a108eb16bf32adbda3f934fb922c2594e19",
-  "scripts/gg_excel_formula_patch.py": "148c6a18fa8afefd6fde7d8b31280fff11c27c8589c0b7fd7ab5655797988cb4",
+  "scripts/gg_excel_formula_patch.py": "98899585e79ee8d0f0bcc5bf5467ec10269de32fa8b738e360bf836986c83258",
   "scripts/gg_excel_print.py": "d17bc535b6ad861d3e2fa2f10b3f94481210dc5ae060c50905117bcd44a66d7b",
   "scripts/gg_excel_template.py": "e0fda0d3872a49da796c602bb3053eca9c21e84a3f34e880f5794a14781833d7",
   "scripts/gg_fact_semantics.py": "ba2f2aee005013a9f015e9094e34614ea7854d2bea71a6564cd5249b3ac7fb28",
