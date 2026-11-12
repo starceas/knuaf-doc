@@ -10,7 +10,7 @@
     ".github/workflows/validation.yml": {
       "note": "Per-PR CI running the same integrity check and validation runner. repair-n1/N2: receipt path read via os.environ['RUNNER_TEMP'] inside the quoted heredoc. P2-R2: strict report consumer step enforces the ok_platform_scoped/default-scope contract (sole P2-L09-native pending gate, full=false, platform=true, no unexpected/unapproved skips). P2-R3: consumer hardened to independently recompute the report — strict JSON (duplicate keys/nonfinite rejected), present+typed fields, non-bool nonnegative integer counts, framework reconciliation (was_successful/outcomes/testsRun==tests_run==len(entries)/skipped==1), per-entry unique-id + category tally equal to counters with zero failed, declared H9-only known_baseline_defect pairs, fixture_events empty/failure_events 0, only parent-matched subtest_success events, and the exact approved-skip rule string — no trust in accounting.errors or top-level summaries. P2-R4: three consumer consistency holes closed — known_baseline_defect requires the exact (test, defect=H9, gate=P3) triple per regression_inventory (arbitrary nonempty gate rejected); subtest ids must match the complete emitted parent + ' (' + nonempty + ')' shape (unclosed/empty/wrong-prefix rejected, no repr parsing); the exact native withheld skip parent may carry no subtest events at all. All prior strict JSON/type/framework/entries/fixture/gate checks preserved. P2-R5: H9 required-presence invariant enforced independently of supplied totals — exact test id must occur exactly once carrying category known_baseline_defect + defect H9 + gate P3; runtime.known_baseline_defects pinned to integer 1; relabel/ missing/substitute/duplicate with favorable counters all reject. | Windows native publication: 3.10/3.14 lifecycle matrix and artifact reports; existing Ubuntu strict consumer and Windows structural preserved.",
       "origin": "new",
-      "sha256": "03b9599aa67a16b601c47f5e1b7abc7c053b7a2cac35a2ed47b66ae4965c096a",
+      "sha256": "52b7d20f9534f7f53904dd6b36ccb9a2629e35b8c2794052be2e03748319666c",
       "transform": "F-skill-tests: independently reconcile exact optional skill skip IDs/reasons and approved_skill_skips against runtime entries, preserving native pending-gate and accounting checks."
     },
     ".github/workflows/windows-full.yml": {
@@ -35,7 +35,7 @@
     "docs/validation/BUNDLE.md": {
       "note": "Bundle/manifest/CI 계약 문서 — @3 manifest·@2 change list·신규 파일 allowlist 계약 포함. | N1/N2: document restored school requirements and source-binding boundaries. | Restore v0.1.4: document actual skill test payload and disposition failure codes; historical evidence stays scoped. | ORDER-I2: align restore release/version expectation with 0.1.5 on main 9210ca0. | F-skill-tests: document both discovery roots, fixture repair, W2 pytest and finite optional external-input skip contract.",
       "origin": "new",
-      "sha256": "cf0b2d88fde0df6f8f775912d23ecd2b862b095cf3255c16eebc65eee7e4d2a1"
+      "sha256": "0f2b2693fe4f173976ad7342e669b9a3102bd50b544b8f0b970c5317cb8cea54"
     },
     "docs/validation/REGRESSIONS.md": {
       "note": "P0-A: human-readable regression inventory (R1–R7 + adopted C/H items); machine source of truth is tests/regression_inventory.json. repair-n1/N1: dependency-gate and allowed nested-skip list documented. P2-R2: verdict precedence, completion flags, external-gate rule and outcome-accounting semantics documented. P2-R3: exact-10 nested allowlist closure documented (tamper control folded into host method). | P27: runner 계약 §6 pywin32 예시 정정",
@@ -95,6 +95,10 @@
       "note": "P0-A: init/apply/check/export positive controls + C2–C6/H2/H3/H5 defect signatures; synthetic only. | P0-2 PR-D: C6 block-policy tests retired; inventory now maps private-instance ownership and error-cell behavior tests (verdict C).",
       "origin": "new",
       "sha256": "92f6dbaed855e6e913914fbeaab5450989589d3ea4c93e75b778a5e595006f59"
+    },
+    "tests/test_ci_scope.py": {
+      "origin": "new",
+      "sha256": "88c5b0d3c4ed2f7cc0615c4fba4a3f172a27ee1a3615fd892a92e16f669cf35c"
     },
     "tests/test_core_doctor.py": {
       "note": "P0-2 PR-C: real lock inspection/probe and CLI safety; damaged/legacy controls remain untouched; project-probe failure preserves explicitly unavailable CLI-interpreter fallback detection.",
@@ -445,6 +449,10 @@
       "origin": "new",
       "sha256": "9c362822dd86fde52b07fec48b5c2b707765a8c37d4c8e9be77a355e56b86168"
     },
+    "tests/test_validation_sharding.py": {
+      "origin": "new",
+      "sha256": "ad601fbf618c0b7bb55eb61d1c0034bc9bbd6ff58263d4340747f458301a2611"
+    },
     "tests/test_winpub_native.py": {
       "note": "Actual native Windows lifecycle and negative tests; no POSIX skips added; independent P2-L09-native placeholder retained. | ORDER-30: publication lifecycle fixture supplies an explicit confirmed start_year; POSIX execution is regression evidence only.",
       "origin": "new",
@@ -505,7 +513,11 @@
     },
     "tools/check_validation_report.py": {
       "origin": "new",
-      "sha256": "1d1a70d977649b28e42a1777e08bb1bead4635cdb5687a1fdb06fc4ae2a35708"
+      "sha256": "7fc02b9efc150c82bd4cef6e25bef1518ce6950401657b7cf2f93603211ab087"
+    },
+    "tools/ci_scope.py": {
+      "origin": "new",
+      "sha256": "77e300fefe7fff37c3c0dc535a9052cd58e34af26d1fea53c4b1f97a6c2744e9"
     },
     "tools/compare_validation_reports.py": {
       "origin": "new",
@@ -523,13 +535,13 @@
     "tools/run_validation.py": {
       "note": "P0-A: single-command validation runner; default mode runs check_bundle.py --root first, then the suite. --runtime-only is a dev-mode flag, unused by CI/final validation. repair-n1/N1: current-interpreter dependency preflight, verdict priority, full_validation_completed. P2-R2: complete unittest outcome accounting (one terminal entry per started parent, subtest events, fixture_events, framework reconciliation, wasSuccessful false never exit0), fail-closed P2-L09-native external gate, ok_platform_scoped verdict, and validation_scope/platform_validation_completed/pending_external_checks/approved_external_skips report fields. P2-R3: ALLOWED_NESTED_SKIP_IDS restored to the exact pinned 10 — the R2-added nested exemption for test_tampered_bundle_fails_run removed.",
       "origin": "new",
-      "sha256": "6d703d8ff1859779480a1a9bc2fbcf9165011e0c82387b54eb9d0ad40c18baeb",
+      "sha256": "209c28f724d962868257b91a028089f92bec7255cd9f2bccc81feb16c8776e4e",
       "transform": "F-skill-tests: discover root and skill suites using separate loaders; approve only finite exact skill skip IDs/reasons; preserve skipped outcomes and report approved_skill_skips."
     },
     "tools/runtime-changes.json": {
       "note": "누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py. P8 declares the fruit_trees first bundle (module registration, two common helper modules, fruit plan, reference-set data and guidance). P9 declares the hort_env_systems first bundle (module registration, hort plan, profile and guidance, reuse-registry entries). | P10: 누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py. P8 declares the fruit_trees first bundle (module registration, two common helper modules, fruit plan, reference-set data and guidance). P9 declares the common XLSX reuse bundle (one new runtime extract file + declared edits to registration, resolver, template guard, and reuse tests). P9-D3 declares the major-specific-precedence edits (registry dedupe, catalog base_for_major, resolver base policy, docs, tests) in the same stage. | P11: 누적 runtime 변경 선언 @2 — baseline 수정 19건 (first_changed=P1) + 승인 신규 10건 (first_changed=P2, before_sha256=null, approved_new_files로 한정). stage_lineage로 P0→P1 부모 계보 유지. P6 adds four isolated common-contract runtime files and two declared baseline updates. P7 declares the policy B output guard changes and the first change of gg_excel_formula_patch.py. P8 declares the fruit_trees first bundle (module registration, two common helper modules, fruit plan, reference-set data and guidance). P9 declares the hort_env_systems first bundle (module registration, hort plan, profile and guidance, reuse-registry entries). P10 declares the common interview rules bundle (SKILL.md re-touch, three baseline doc first-changes, specialty-crops premise-probes) re-based onto the P9 parent. P12 declares the industrial_insects first bundle (four read-only insect scripts, locator map, guide and premise probes as new files; nine reuse-registry entries and SKILL/gg.py updates). P13: D4 source identity catalogue, validator, tests and related guidance rebased on accepted P12. P15 declares the D5 useful-life bundle rebased onto accepted P14 (corrected pp133-135 cell mapping and regression test as new files; eight re-declared pack/registry/script/test entries; parent P14 lineage). P18 declares the industrial_insects second bundle (module 0.2.0 product-line question templates and read-only plan/evidence updates; no new runtime file). | PR-2: latest D8/D9 integration; I-01 only measured count constants adjusted in lineage test. Full pytest covers split public/skill test locations. | I2 refreshes after hashes for existing declarations; before hashes, baseline, lineage and allowlist preserved. | I3 refreshes after hashes for existing declarations; before hashes, baseline, lineage and allowlist preserved. | I4 refreshes after hashes for existing declarations; before hashes, baseline, lineage and allowlist preserved. | I5 refreshes only existing after hashes; before hashes, baseline, lineage and allowlist preserved. | I6: existing after hashes refreshed; baseline, before/source/owner/reason and all lineage/allowlist unchanged, counts 167/120/124. | I9: W-D10 문서5개 및 install-manifest after SHA만 갱신; PV2 FAIL 후 알려진 한계 문서화, 코드·테스트·계보·허용목록 불변. | W4: restored P28 latest-change markers for four body-guidance files and recorded the previously omitted HT2-format, student-year-authority, and full-notice changes in horticulture and major-body test reasons. | W5: refreshed SKILL.md and installation-manifest hashes for CI-required body-progress wording; no major-specific progression semantics changed.",
       "origin": "new",
-      "sha256": "aac6de55aecafffebe48069de2c0c942130527420508bfbccb637d81a3c08835"
+      "sha256": "d8e42eaf609f6a4ed7e7bb8c3255e6c499e43319f5d8d2c0a054415aa20cd395"
     },
     "tools/validation-provenance.json": {
       "note": "This file; declares origins for the validation layer.",
@@ -538,7 +550,7 @@
     },
     "tools/validation_sharding.py": {
       "origin": "new",
-      "sha256": "39e2c6e83a7dc7360d83787f356e59993910cb401b176f105b26c663bb736ed7"
+      "sha256": "4b1d539e9c67fba269a359834b360e27aa24439e21f34c472d25cae7210b32f2"
     }
   },
   "generated_by": "tools/build_validation_bundle.py@3",
@@ -553,11 +565,11 @@
     ]
   },
   "runtime_changes": {
-    "approved_new_files": 262,
+    "approved_new_files": 264,
     "baseline_main": "29abec0ec95369de7ae9e22207349d574f1f46b7",
-    "change_count": 307,
-    "changes_sha256": "6e3cbd7069e1efe83770037e97529cf500cd9cf20ddc1a585130e15f362bb3dd",
-    "new_count": 255,
+    "change_count": 309,
+    "changes_sha256": "bd5b200441a63cabe62e45e62f95856d7e942ca00fe77128abcdcc0a0acd3879",
+    "new_count": 257,
     "parent_candidate": {
       "file_count": 233,
       "stage": "P27",
@@ -565,7 +577,7 @@
     },
     "schema": "knuaf-doc/runtime-changes@2",
     "spec": "tools/runtime-changes.json",
-    "spec_sha256": "aac6de55aecafffebe48069de2c0c942130527420508bfbccb637d81a3c08835",
+    "spec_sha256": "d8e42eaf609f6a4ed7e7bb8c3255e6c499e43319f5d8d2c0a054415aa20cd395",
     "stage": "P28",
     "stage_lineage": [
       {
@@ -737,8 +749,8 @@
         "tree_sha256": "78383df4921946e8f37a7a8ae354f08667ff4317d2285c0317a535cbb9e97cfb"
       }
     ],
-    "verified_count": 307
+    "verified_count": 309
   },
   "schema": "knuaf-doc/validation-bundle@3",
-  "validation_tree_sha256": "eedcbd4b86e3195872d73ab4a5053218d8b72af46144cc346b1890f39efc1313"
+  "validation_tree_sha256": "3bab76f7df3d0b190f0f2b400194497b210e5c0c98ecccd5d9e42533d0d07daf"
 }

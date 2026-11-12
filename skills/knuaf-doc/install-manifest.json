@@ -1,6 +1,6 @@
 {
  "files": {
-  "SKILL.md": "0bf4574a1d091f354b322fef54c21c7905731e10194f88fa5547d2e0ddf5e08b",
+  "SKILL.md": "5fddf5fc7f314c0814ab99bcd2275eeaddebaf68254630cd748a4e1c7ad5bc40",
   "assets/templates/finance-template.xlsx": "6d3c9fe5e5992108a8bab18c0098edb0d808f0d14c099878a53939b17de88c7d",
   "references/benchmark-packs/aliases/crop-aliases.specialty_crops.json": "8e7abffc7b4244727b4732f558b722934dd8ea229c0057312d1ee7ea92c2df22",
   "references/benchmark-packs/aliases/major-aliases.json": "ccf6b7d94690b0d7ed99618b3d649eb10755849d12f1922960a25bd14a419ea5",
@@ -26,7 +26,7 @@
   "references/benchmark-packs/schema/record.schema.json": "07b00c66649ef14c67ca8f308fc1680b49f3cd17a447067754a25f68e8b874a6",
   "references/body-plan-check.md": "8f332a9cd29775e44d18273893741364c225a76cd9105f1b4d9f17b360969f43",
   "references/builtin-sources.json": "9d4ee2b754cd9046ccb8d7a28edc2322e163f24305d9617defdb0337f32578ff",
-  "references/commands.md": "c436d1d249722223434c7cc9141da70f3db99670b9b8a6d4c22003314decce7d",
+  "references/commands.md": "46339baca516dbb9a0d06702d230ed0da7cf8a276cc35228bd6af9d141c7ba16",
   "references/common-workbooks/corrections/C1.md": "82728725321edd132cb0b130f2cfe05e605c03ec6484267f2693d83fe025b587",
   "references/common-workbooks/corrections/c1-dispositions.json": "b6c7cbb21882b9ae38cc91312f209e3a9b518c7797f6278f57b460c1e2998482",
   "references/common-workbooks/corrections/c1-spec.json": "ba3c22a703a9f6a6f3fb2b7904143dac52e2b36defb8a2b2c6fc4a1e6d79f5f4",
@@ -192,6 +192,7 @@
   "scripts/gg_office_win.py": "539007af5a58d7d68f353037f39e4c321cd588563f99f69407cc772ea55b1b49",
   "scripts/gg_orchard_production.py": "a66466e1ea91aedf4c9e1411c0a9e48bbe7cca279c68fff3e1ca760307af52d7",
   "scripts/gg_price_assumptions.py": "0ce493232cc03187ab45265b3b8276b751eb479c349023d46e7f9baee7958d4e",
+  "scripts/gg_progress.py": "b0a062cc603c69d3e52c57ff6c28ebeab0c1af6ee6f6722b9e3fface2e0ed3dd",
   "scripts/gg_publication.py": "3d6dde553101c2d6ca4f6b0e3b08cbd2bd12aca60e0bf43f0a8156d910957796",
   "scripts/gg_rda_candidates.py": "3657bb30681b954755e3e4bf469afb0b7eede5ed84ed4cabf595e0e9eea4ce59",
   "scripts/gg_rda_lookup.py": "f73cdd6f3a9220d1ac96514966178ea770b9e8f063a6a20d621eae386aac3a2f",
@@ -236,6 +237,7 @@
   "tests/test_gg_food_crops_document.py": "100863a90fcc5d412fe5edfa34e8889eefbb69be8cd0d8708df2ad6af74340a7",
   "tests/test_gg_food_crops_module.py": "a7649e41e7ae2c2a63aafc574a7104e08831cf8b1fc0b958fcdb70db5e1010cf",
   "tests/test_gg_major_contract.py": "f3dce7ee8a849da262216d4b1c88222ebdfacf6fe6e9ff2901ca24010b6ee963",
+  "tests/test_gg_progress.py": "ae786dffb95a7eedf79a6e989b2c02b96a445bd396c664d40ce47be97897f7f5",
   "tests/test_gg_rda_candidates.py": "a159a90f8a1831d85e388cbb08b42b1b1970ba8dc565c4577881ae61678dbc3b",
   "tests/test_gg_rda_d5_useful_life.py": "8a6fc65ad71a61fe907f17b73c82a4b342f51a3985c7f94bdc3d3d017f8f5495",
   "tests/test_gg_rda_lookup_audit_key.py": "7def244447919959bb5ad6a722493d48068b8f05f487aaba5f0bd0ec2c0ee510",

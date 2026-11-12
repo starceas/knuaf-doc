@@ -633,10 +633,12 @@ def _dependency_preflight(root):
 
 try:
     from validation_sharding import (
-        assign_modules, discover_modules, merge_shard_reports, parse_shard)
+        PR_SCOPES, assign_modules, discover_modules, expected_ids,
+        expected_ids_for, merge_shard_reports, parse_shard, scoped_modules)
 except ImportError:
     from tools.validation_sharding import (
-        assign_modules, discover_modules, merge_shard_reports, parse_shard)
+        PR_SCOPES, assign_modules, discover_modules, expected_ids,
+        expected_ids_for, merge_shard_reports, parse_shard, scoped_modules)
 
 
 class ModuleTimingSuite(unittest.TestSuite):
@@ -656,11 +658,13 @@ class ModuleTimingSuite(unittest.TestSuite):
                 time.perf_counter() - started, 6)
 
 
-def _run_runtime_tests(root, shard=None):
+def _run_runtime_tests(root, shard=None, scope="full"):
     root = Path(root).resolve()
     sys.path.insert(0, str(root))
     try:
-        modules, discovered_ids = discover_modules(root)
+        modules, all_ids = discover_modules(root)
+        modules = scoped_modules(modules, scope)
+        discovered_ids = expected_ids(modules, all_ids, scope)
         # Units (modules, or classes/methods of the two split modules) run in
         # the order the shard report lists them.
         selected_modules = list(modules)
@@ -794,6 +798,100 @@ def _completion_flags(mode, bundle_status, dep_ok, runtime,
         platform_done and not pending_external_checks)
 
 
+def entry_status(entry):
+    """Inventory status of one defect entry; explicit status wins."""
+    if entry.get("status"):
+        return entry["status"]
+    if not entry.get("applies_to_main"):
+        return "not_applicable"
+    if entry.get("gate") == "deferred":
+        return "deferred"
+    return "open"
+
+
+def verify_inventory(runtime, inventory, unapproved_skips=()):
+    """Classify every inventory entry against one completed runtime result.
+
+    Behaviour-identical extraction of the layer that used to be nested in
+    ``main`` (design §7④): returns the classification lists and the warnings,
+    and never raises — a mismatch is a warning that ``main`` promotes into
+    ``unexpected_causes``.  ``runtime`` must be a completed result; the
+    "tests never ran" classification stays in ``main`` because it makes no
+    claim about outcomes.
+    """
+    not_applicable, deferred, fixed = [], [], []
+    skipped_defects, warnings = [], []
+    defect_entries = [e for e in runtime["entries"]
+                      if e.get("category") == "known_baseline_defect"]
+    reproduced = {e["defect"] for e in defect_entries}
+    reproduced_tests = {e["test"] for e in defect_entries}
+    passed_tests = {e["test"] for e in runtime["entries"]
+                    if e.get("category") == "passed"}
+    ran_tests = {e["test"] for e in runtime["entries"]}
+
+    def _verify_entry(entry):
+        status = entry_status(entry)
+        if status == "not_applicable" or not entry.get("applies_to_main"):
+            not_applicable.append({
+                "id": entry["id"], "gate": entry.get("gate"),
+                "reason": entry.get("reason", "")})
+            return
+        if status == "deferred":
+            deferred.append({
+                "id": entry["id"], "gate": entry.get("gate"),
+                "reason": entry.get("reason", "")})
+            return
+        if status == "fixed":
+            fixed.append({"id": entry["id"], "gate": entry.get("gate")})
+            tests = entry.get("tests") or (
+                [entry["test"]] if entry.get("test") else [])
+            if not tests:
+                warnings.append(
+                    "fixed defect %s has no regression test mapping"
+                    % entry["id"])
+            for tid in tests:
+                if tid not in ran_tests:
+                    warnings.append(
+                        "fixed defect %s regression test did not run: %s"
+                        % (entry["id"], tid))
+                elif tid not in passed_tests:
+                    warnings.append(
+                        "fixed defect %s regression test did not pass: %s"
+                        % (entry["id"], tid))
+            if entry["id"] in reproduced or entry.get("test") in (
+                    reproduced_tests):
+                warnings.append(
+                    "fixed defect %s still reproduced its baseline "
+                    "signature" % entry["id"])
+            return
+        # open: the exact documented signature must still reproduce
+        if entry.get("test") and not (
+            entry["id"] in reproduced
+            or entry["test"] in reproduced_tests
+        ):
+            if any(s["test"] == entry["test"]
+                   for s in unapproved_skips):
+                skipped_defects.append({
+                    "id": entry["id"], "test": entry["test"],
+                    "reason": "defect test skipped — unapproved, "
+                              "counted as incomplete not defect"})
+            else:
+                warnings.append(
+                    "inventory defect %s was not reproduced by its "
+                    "test" % entry["id"])
+
+    for entry in inventory.get("defects", []):
+        _verify_entry(entry)
+    known_ids = {e["id"] for e in inventory.get("defects", [])}
+    for defect in reproduced:
+        if defect not in known_ids:
+            warnings.append(
+                "reproduced defect %s is not in the inventory" % defect)
+    return {"not_applicable": not_applicable, "deferred": deferred,
+            "fixed": fixed, "skipped_defects": skipped_defects,
+            "warnings": warnings}
+
+
 def _load_inventory(root):
     path = root / "tests" / "regression_inventory.json"
     if not path.is_file():
@@ -814,6 +912,10 @@ def main(argv=None):
                     help="merge shard JSON reports and run the final contract")
     ap.add_argument("--shard-count", type=int,
                     help="expected number of shard reports when merging")
+    ap.add_argument("--pr-scope", choices=sorted(PR_SCOPES), default="full",
+                    help="test scope: full runs every unit; code defers the "
+                         "nested runner units to the main-branch run "
+                         "(design §2.1). The workflow decides it once")
     a = ap.parse_args(argv)
     if a.shard is not None and a.merge_shards:
         ap.error("--shard and --merge-shards are mutually exclusive")
@@ -836,7 +938,7 @@ def main(argv=None):
             ap.error("--merge-shards needs a positive --shard-count and default mode")
         try:
             template, runtime = merge_shard_reports(
-                root, a.merge_shards, a.shard_count)
+                root, a.merge_shards, a.shard_count, scope=a.pr_scope)
             if template.get("root") != str(root):
                 raise ValueError("shard reports belong to another repository root")
             if template.get("baseline_main") != BASELINE_MAIN:
@@ -905,11 +1007,12 @@ def main(argv=None):
                 "executed_modules": [], "module_timings_seconds": {},
                 "discovered_test_ids": []}
         else:
-            runtime = _run_runtime_tests(root, a.shard)
+            runtime = _run_runtime_tests(root, a.shard, scope=a.pr_scope)
 
     shard_metadata = runtime.pop("shard", None) if shard_run else None
     if shard_run and shard_metadata is None:
         modules, _ = discover_modules(root)
+        modules = scoped_modules(modules, a.pr_scope)
         index, count = a.shard
         selected_modules = assign_modules(modules, count)[index]
         shard_metadata = {
@@ -944,6 +1047,8 @@ def main(argv=None):
     inventory_warnings = []
     skipped_defects = []
     unapproved_skips = []
+    reproduced = {e["defect"] for e in runtime["entries"]
+                  if e.get("category") == "known_baseline_defect"}
     suite_ran = runtime["status"] == "completed"
     if shard_run or a.merge_shards:
         gate_present = any(entry.get("test") == NATIVE_GATE["test_id"]
@@ -952,8 +1057,8 @@ def main(argv=None):
             _evaluate_external_gate(runtime["entries"], gate_present))
         if a.merge_shards:
             inventory_warnings.extend(gate_warnings)
-            expected_ids = discover_modules(root)[1]
-            if runtime.get("discovered_test_ids") != expected_ids:
+            if runtime.get("discovered_test_ids") != expected_ids_for(
+                    root, a.pr_scope):
                 inventory_warnings.append(
                     "merged discovered test IDs differ from fresh discover")
         elif not gate_present:
@@ -991,92 +1096,21 @@ def main(argv=None):
             "unapproved test skips: " + "; ".join(
                 f"{s['test']} ({s['reason']})" for s in unapproved_skips))
 
-    defect_entries = [e for e in runtime["entries"]
-                      if e.get("category") == "known_baseline_defect"]
-    reproduced = {e["defect"] for e in defect_entries}
-    reproduced_tests = {e["test"] for e in defect_entries}
-    passed_tests = {e["test"] for e in runtime["entries"]
-                    if e.get("category") == "passed"}
-    ran_tests = {e["test"] for e in runtime["entries"]}
-
-    def _entry_status(entry):
-        # explicit status wins; derive one for inventories that predate it
-        if entry.get("status"):
-            return entry["status"]
-        if not entry.get("applies_to_main"):
-            return "not_applicable"
-        if entry.get("gate") == "deferred":
-            return "deferred"
-        return "open"
-
-    def _verify_entry(entry):
-        status = _entry_status(entry)
-        if status == "not_applicable" or not entry.get("applies_to_main"):
-            not_applicable.append({
-                "id": entry["id"], "gate": entry.get("gate"),
-                "reason": entry.get("reason", "")})
-            return
-        if status == "deferred":
-            deferred.append({
-                "id": entry["id"], "gate": entry.get("gate"),
-                "reason": entry.get("reason", "")})
-            return
-        if status == "fixed":
-            fixed.append({"id": entry["id"], "gate": entry.get("gate")})
-            tests = entry.get("tests") or (
-                [entry["test"]] if entry.get("test") else [])
-            if not tests:
-                inventory_warnings.append(
-                    "fixed defect %s has no regression test mapping"
-                    % entry["id"])
-            for tid in tests:
-                if tid not in ran_tests:
-                    inventory_warnings.append(
-                        "fixed defect %s regression test did not run: %s"
-                        % (entry["id"], tid))
-                elif tid not in passed_tests:
-                    inventory_warnings.append(
-                        "fixed defect %s regression test did not pass: %s"
-                        % (entry["id"], tid))
-            if entry["id"] in reproduced or entry.get("test") in (
-                    reproduced_tests):
-                inventory_warnings.append(
-                    "fixed defect %s still reproduced its baseline "
-                    "signature" % entry["id"])
-            return
-        # open: the exact documented signature must still reproduce
-        if entry.get("test") and not (
-            entry["id"] in reproduced
-            or entry["test"] in reproduced_tests
-        ):
-            if any(s["test"] == entry["test"]
-                   for s in unapproved_skips):
-                skipped_defects.append({
-                    "id": entry["id"], "test": entry["test"],
-                    "reason": "defect test skipped — unapproved, "
-                              "counted as incomplete not defect"})
-            else:
-                inventory_warnings.append(
-                    "inventory defect %s was not reproduced by its "
-                    "test" % entry["id"])
-
     if runtime["status"] == "completed" and (not shard_run or a.merge_shards):
         if inventory is None:
             inventory_warnings.append(
                 "tests/regression_inventory.json missing")
         else:
-            for entry in inventory.get("defects", []):
-                _verify_entry(entry)
-            known_ids = {e["id"] for e in inventory.get("defects", [])}
-            for defect in reproduced:
-                if defect not in known_ids:
-                    inventory_warnings.append(
-                        "reproduced defect %s is not in the inventory"
-                        % defect)
+            layer = verify_inventory(runtime, inventory, unapproved_skips)
+            not_applicable.extend(layer["not_applicable"])
+            deferred.extend(layer["deferred"])
+            fixed.extend(layer["fixed"])
+            skipped_defects.extend(layer["skipped_defects"])
+            inventory_warnings.extend(layer["warnings"])
     elif runtime["status"] != "completed" and inventory:
         # tests never ran: still expose the classification lists
         for entry in inventory.get("defects", []):
-            status = _entry_status(entry)
+            status = entry_status(entry)
             if status == "not_applicable" or not entry.get("applies_to_main"):
                 not_applicable.append({
                     "id": entry["id"], "gate": entry.get("gate"),

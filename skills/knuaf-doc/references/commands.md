@@ -70,6 +70,7 @@
 | `bundle` | `--scope <절ID>` | — | 아니오 | 한 절의 검토 꾸러미(본문·원자료·사실·규칙·검토축) |
 | `export` | `--major <전공ID>` | `--kind draft\|review\|submission_candidate`(기본 `review`) | 아니오(산출물 발행) | 검토 산출물을 발행한다. [outputs](outputs.md) |
 | `paper` | `--input <폴더 안 spec.json>` `--major <전공ID>` | `--out <폴더 안 경로>` `--body <폴더 안 본문MD>` | 아니오(산출물 발행) | 학교 양식 본문 생성. 기본 출력 `build/검토전_본문.md`. [outputs](outputs.md) |
+| `gg_progress.py show` | `<폴더>` | — | 아니오 | `.knuaf-progress.json`의 단계 요약을 읽기 전용으로 출력한다. 파일이 없으면 exit 1, 있으면 exit 0. 쓰기 서브커맨드는 없다. |
 | `adopt-output` | `--input <폴더 안 spec.json>` `--expected-revision <N>` `--major <전공ID>` | `--request-id <ID>` | 예 | 출력 파일을 `outputs`에 등록하는 유일한 경로. [source-contract](source-contract.md#출력-등록adopt-output과-동반-파일) |
 | `observe` | `--input <폴더 안 관측JSON>` `--observer <어댑터ID>` | — | 아니오(관측 기록 발행) | 실행 어댑터의 검토 관측 기록을 남긴다. [section-ledger](section-ledger.md) |
 | `unlock` | — | — | 아니오 | 비정상 종료로 남은 잠금 소유 기록만 정리한다. [locking](locking.md) |
