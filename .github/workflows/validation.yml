@@ -281,10 +281,14 @@ jobs:
       # Korean), while the test process decodes the pipes with the locale
       # code page. Any subprocess call that omits encoding= then fails here
       # exactly as it does on a Windows box without UTF-8 mode.
+      # Temp dir on the repository's drive: a temp dir on another drive makes
+      # gg_reuse relpath die (separate Windows defect, rules side).
       - name: Skill tests with UTF-8 mode off (no skips)
         if: ${{ matrix.python == '3.10' }}
         env:
           PYTHONUTF8: '0'
+          TMP: ${{ runner.temp }}
+          TEMP: ${{ runner.temp }}
         run: python -m unittest discover -s skills/knuaf-doc/tests -t skills/knuaf-doc/tests
       - name: Upload native publication reports
         if: always()
