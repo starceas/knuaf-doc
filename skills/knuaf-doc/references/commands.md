@@ -88,6 +88,7 @@
 | `source-view` | `--request-id <ID>` | — | 아니오(`sources/generated/` 뷰) | 등록 요청의 출처 뷰를 발행한다. [source-intake](source-intake.md#폴더-등록-방식) |
 | `source-refresh` | `--source <출처ID>` | `--reviewed` `--apply` `--expected-revision <N>` `--request-id <ID>` | `--reviewed --apply`일 때만 | 원자료 바이트가 바뀐 출처의 미리보기와 재등록. SKILL.md "검사 차단 복구" |
 | `finance-tables` | `--xlsx <재계산 통합문서>` `--major specialty_crops` | `--input <폴더 안 각주.json>` `--out <폴더 안 경로>` | 아니오(산출물) | 특용작물 Ⅳ장 재무표 전개. 기본 출력 `build/finance-tables.md`, 기존 파일은 덮어쓰지 않는다. [specialty-crops/finance-flow](specialty-crops/finance-flow.md) |
+| `input-readback` | `--xlsx <학생이 채운 .xlsx>` | `--out <폴더 안 경로>` | 아니오(산출물) | 원예: 학교 원본 엑셀에 적은 값을 읽어 251칸을 15상태로 분류한 JSON. 기본 출력 `build/hort-input-readback.json`, 기존 파일은 덮어쓰지 않는다. [hort-env-systems](hort-env-systems/README.md#학교-엑셀에-적은-값-읽어-오기-v050) |
 | `tidy` | — | `--apply` | 아니오(`--apply`는 `.gg-work` 정리) | 산출물 폴더 정리 미리보기. 사용자 확인 뒤에만 `--apply`. [output-hygiene](output-hygiene.md) |
 
 `--selection`·`--requested-use`·`--audit-key`·`--target-current`는 파일 경로가 아니라 JSON 문자열이다.
