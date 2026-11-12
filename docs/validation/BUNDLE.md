@@ -151,7 +151,8 @@ python3 tools/build_validation_bundle.py --root . --out <새_디렉터리> --rec
 
 | 상황 | `suite (ubuntu, py3.10)` | `suite (ubuntu, py3.14)` |
 |---|---|---|
-| PR | 5개 조각 전체 시험 + 합친 보고서 contract 검사 | 빠른 확인(`tools/quick_validation.py`) |
+| PR (코드 변경) | 5개 조각 **코드 스코프** 시험 + 합친 보고서 contract 검사 | 빠른 확인(`tools/quick_validation.py`) |
+| PR (버전 파일 변경) | 5개 조각 전체 시험 + 합친 보고서 contract 검사 | 빠른 확인(`tools/quick_validation.py`) |
 | main push · `workflow_dispatch` | 5개 조각 전체 시험 + contract 검사 | 5개 조각 전체 시험 + contract 검사 |
 
 필수 체크 이름(`suite (ubuntu, py3.10)`·`suite (ubuntu, py3.14)`·
@@ -162,6 +163,45 @@ job이 실패·취소돼도 건너뛰지 않고, 조각 결과가 `success`가 �
 결정성을 다시 하고, 조각 보고서를 `tools/run_validation.py --merge-shards`로
 합친 뒤 기존 contract 검사(`tools/check_validation_report.py`, 예전 인라인
 검사를 그대로 파일로 옮긴 것)를 통과해야 초록이다.
+
+### PR 스코프 (full / code)
+
+`scope` 잡이 PR마다 **한 번** 판정해 `needs.scope.outputs.scope`로 샤드·merge에
+넘긴다. 스코프를 다시 계산하는 곳은 없다 — 실행·병합·최종 보고서가 모두
+`validation_sharding.expected_ids_for(root, scope)` 하나에서 ID 집합을 얻는다.
+
+| 바뀐 경로 | 스코프 | 도는 단위 |
+|---|---|---|
+| `skills/knuaf-doc/version.json` 또는 `.codex-plugin/plugin.json` | `full` | 전체 |
+| 그 외 전부(생성물 3종 제외 후) | `code` | 중첩 runner 10단위 제외 |
+| 판정 불가(빈 diff·git 오류·잘못된 rev·공통 조상 없음/여럿) | `full` | 전체 |
+| main push · `workflow_dispatch` | `full`(명시) | 전체 |
+
+- 바뀐 경로는 **공통 조상 기준**이다: `git merge-base --all base head`가 정확히
+  하나를 내면 `<공통 조상>..head`를 diff한다. `--all`을 쓰는 이유는 criss-cross
+  이력에서 조상이 둘 이상일 수 있어서다(그때는 판정 불가). PR base
+  (`pull_request.base.sha`)는 main의 끝이라, 두 끝을 직접 비교하면 분기 뒤
+  main만 바꾼 버전 파일이 PR 변경으로 잡혀 불필요한 `full`이 되고, 양쪽이 같게
+  바꾼 버전 파일은 차이에서 사라져 `full`이어야 할 PR이 `code`가 된다. 공통
+  조상이 없거나 여럿이면 판정 불가로 `full`이다.
+
+- `tools/ci_scope.py`는 값(`full`/`code`)만 stdout에 쓴다. `scope=` 형식과
+  `$GITHUB_OUTPUT` 기록은 워크플로가 한다 — 쓰는 곳이 한 군데뿐이다.
+- 생성물 3종(`tools/validation-bundle.json`·`runtime-changes.json`·
+  `validation-provenance.json`)만 바뀐 diff는 `full`이다. 무결성은 어차피
+  모든 잡이 `check_bundle.py`·`build_validation_bundle.py --check`로 검사한다.
+- 규칙 2가 catch-all이라 새 경로·모르는 경로는 `code`이며, 전체에서 빠지는
+  것은 `PR_DEFERRED_UNITS`(= `NESTED_RUNS`) 뿐이다. 스코프가 gate·skip·
+  고정 결함 판정을 풀지 않는지는 `tools/check_validation_report.py --pr-scope`가
+  같은 ID 집합으로 대조한다.
+- 보고서의 `validation_scope`는 플랫폼 범위(`current_platform`)이지 PR
+  스코프가 아니다. PR 스코프는 보고서에 저장하지 않고 merge·최종 검사에
+  `--pr-scope`로 따로 전달한다. 한 스코프로 만든 조각 집합을 다른 스코프로
+  합치면 ID 합집합이 맞지 않아 `merge_shard_reports`가 실패한다(교차 차단).
+- 계약 시험은 `tests/test_ci_scope.py`(판정·출력 계약)와
+  `tests/test_validation_sharding.py`(스코프 집합·병합 9변형·최종 보고서·
+  inventory 계층·XPASS 집계·판정 우선순위)다. 두 파일 모두 `code` 스코프에
+  들어가므로 PR에서 항상 돈다.
 
 ### 조각 배정과 합치기
 
