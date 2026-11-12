@@ -229,7 +229,6 @@ def _render_peer_forms(doc, nodes, plan, font):
                 bookmark(title, 'gg_summary', 9001)
             if roman_front and role == '감사의 글':
                 bookmark(title, 'gg_thanks', 9004)
-            summary_subheading = role == '요약'
             for node in nodes[start + 1:end]:
                 if node.get('kind') not in {'paragraph', 'heading'}:
                     raise ValueError('학교 앞머리에는 문단만 지원: ' + role)
@@ -244,10 +243,10 @@ def _render_peer_forms(doc, nodes, plan, font):
                     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
                 size, bold = 12, False
                 if roman_front:
-                    if summary_subheading and re.match(r'^\d+\s*\.', text):
-                        # 요약 소제목(`1. 농장 개요`)만 16pt 굵게, 나머지 요약 본문은 12pt.
+                    if role == '요약' and re.match(r'^\d+\s*\.', text):
+                        # 요약의 번호형 소제목(`1. 농장 개요`, `2. …`)은 전부 16pt 굵게,
+                        # 나머지 요약 본문은 12pt. HWPX `_front_charpr_targets`와 같은 규칙.
                         size, bold = 16, True
-                        summary_subheading = False
                     elif role not in {'요약', '감사의 글'}:
                         size, bold = _peer_form_text_size(text, spec)
                 for run in p.runs:

@@ -125,6 +125,62 @@ if __name__ == "__main__":
 """
 
 
+def _normalized_manifest(value, root):
+    """실행 환경마다 달라지는 경로·인터프리터를 기준 dict의 자리표시자로 바꾼다."""
+    text = json.dumps(value, ensure_ascii=False, sort_keys=True)
+    root = Path(root)
+    paths = {str(root), str(root.resolve())}
+    # macOS의 /var → /private/var 심볼릭 링크처럼 두 표기가 섞여도 같게 본다.
+    for raw in sorted(paths, key=len, reverse=True):
+        text = text.replace(json.dumps(raw)[1:-1], "<ROOT>")
+    return json.loads(text.replace(json.dumps(sys.executable)[1:-1], "<PYTHON>"))
+
+
+# 5488bd2(식량작물 모듈 이전) 트리에서 `BODY_MD`·`make_fake_cli`·specialty_crops로
+# 뽑은 HWPX 매니페스트. 경로·인터프리터는 실행 환경에 맞춰 치환해 비교한다.
+REFERENCE_HWPX_MANIFEST = {
+    "font": "신명조",
+    "font_available": "not_run",
+    "hwp": "not_run",
+    "hwpx": {
+        "images": {"dir": "<ROOT>", "referenced": []},
+        "kordoc": {
+            "cli_command": ["<PYTHON>", "<ROOT>/fake/fake_kordoc.py"],
+            "source": "injected",
+            "version": None,
+        },
+        "layout": {"body_width": 42520, "chapter_breaks": [],
+                   "previous_widths": [], "tables": 0},
+        "margins_mm": {"bottom": 15, "footer": 15, "gutter": 0, "header": 15,
+                       "left": 30, "right": 30, "top": 20},
+        "page_numbers": True,
+        "post_processing": {
+            "font": ["Contents/header.xml"],
+            "margins": ["Contents/section0.xml"],
+            "page_numbers": ["Contents/section0.xml"],
+        },
+        "reparse": {"ok": True},
+        "table_numbers": {"count": 6, "match": True},
+        "validate": {"entry_count": 4, "issues": [], "process_ok": True,
+                     "returncode": 0, "status": "ok"},
+        "verify": True,
+    },
+    "input_hash": "fb8a210f0beec11404b6e3fbcbf3e5d031c9d3c87cf183a54a4a020b1116b393",
+    "kind": "draft",
+    "major_authorization": {
+        "binding_evidence": "facts:selected_major",
+        "contract_version": "knuaf-major-contract/1",
+        "major_id": "specialty_crops",
+        "module_version": "1.0.0",
+        "output": "school_paper",
+        "project_revision": 1,
+    },
+    "notice": "저수준 미검증 출력. kordoc validate(구조)와 HWPX 재파싱 표 수치 대조를 통과했다. 한글 프로그램에서 열어 (1) 글꼴 신명조 (2) 여백 위20/아래15/머리15/꼬리15/좌30/우30/제본0 mm (3) 쪽번호를 확인한다. 표지·제출면·인준서의 쪽 나눔·가운데 정렬과 목차의 실제 쪽번호는 사람이 마무리한다. 이 항목들은 자동 통과하지 않는다.",
+    "render": "not_run",
+    "school_frontmatter": None,
+}
+
+
 # --- 식량작물 3구역 fixture ------------------------------------------------
 # `gg_document.parse`가 50개 노드로 읽고 앞머리 표지 7개가 모두 계획에 잡히는
 # 원고. HWPX fixture는 이 문단 목록을 그대로 옮겨 노드↔문단 색인을 맞춘다.
@@ -392,6 +448,20 @@ class ExportTests(_Base):
         self.assertIn('left="8504" right="8504" top="5669" bottom="4252"', section)
         self.assertIn("<hp:pageNum", section)
         self.assertIn('face="신명조"', header)
+
+    def test_other_major_manifest_matches_the_reference_dict(self):
+        # C-01: 식량작물 전용 키(`charpr`)가 다른 전공 매니페스트에 새어
+        # 들어가면 안 된다. 5488bd2(식량작물 모듈 이전)에서 같은 입력·같은
+        # 가짜 CLI로 뽑은 매니페스트 전체를 기준으로 둔다. 파일 해시는 ZIP
+        # 타임스탬프 때문에 실행마다 달라지므로 뺀다.
+        cli = make_fake_cli(self.root, markdown=BODY_MD)
+        value = build_hwpx.export(self.root, "body.md", "out.hwpx",
+                                  cli_command=cli,
+                                  context=self._ctx(self.root, SPECIALTY))
+        manifest = dict(value["manifest"])
+        manifest.pop("file_hash")
+        self.assertEqual(REFERENCE_HWPX_MANIFEST,
+                         _normalized_manifest(manifest, self.root))
 
     def test_export_preserves_sibling_docx_receipt(self):
         # R1-01: 같은 basename의 DOCX 영수증(out.manifest.json)은 건드리지 않는다.
@@ -671,18 +741,44 @@ class _FoodCropsTests(_Base):
             self.assertEqual(1, xml.count("<hp:newNum"))
 
     def test_split_rejects_missing_or_duplicate_anchors(self):
-        cases = {
-            "missing-paragraph": list(FOOD_CROPS_PARAGRAPHS[:-1]),
-            "duplicate-summary": (list(FOOD_CROPS_PARAGRAPHS[:32]) + ["요약"]
-                                  + list(FOOD_CROPS_PARAGRAPHS[32:])),
-        }
-        for label, paragraphs in cases.items():
-            with self.subTest(case=label):
-                with self.assertRaises(gh.HwpxBlocked) as caught:
-                    self._transform(hwpx_section(paragraphs))
-                self.assertEqual("section_split_node_map_mismatch",
-                                 caught.exception.reason,
-                                 caught.exception.details)
+        # 원고와 HWPX를 **같은** 결함으로 맞춰 둔다. 문단 수만 어긋나게 하면
+        # node_map_mismatch가 먼저 걸려 정작 앵커 판정은 시험되지 않는다.
+        summary_at = list(FOOD_CROPS_PARAGRAPHS).index("요약")
+
+        missing = list(FOOD_CROPS_PARAGRAPHS)
+        missing[summary_at] = "요약 아님"
+        # `요약` 앵커가 원고·HWPX 양쪽에서 사라졌다: 앞머리 표지가 일부만 남은
+        # 것으로 보여 분할 전에 거절해야 한다.
+        with self.subTest(case="missing-summary"):
+            markdown = "\n\n".join(missing) + "\n"
+            nodes, plan = food_crops_plan(markdown)
+            self.assertIsNone(plan)
+            with self.assertRaises(gh.HwpxBlocked) as caught:
+                gh.transform_hwpx(
+                    food_crops_zip(hwpx_section(missing)),
+                    section_formats=gh.FOOD_CROPS_SECTION_FORMATS,
+                    nodes=nodes, plan=plan)
+            self.assertEqual("section_split_front_matter_partial",
+                             caught.exception.reason, caught.exception.details)
+            self.assertIn("요약", caught.exception.details["missing"])
+
+        # `요약` 앵커가 둘이다. 문단 수는 원고와 같으므로 노드 대조로는 잡히지
+        # 않고, 첫 번째만 계획에 잡혀 둘째가 요약 본문으로 조용히 들어간다.
+        duplicated = (list(FOOD_CROPS_PARAGRAPHS[:summary_at]) + ["요약"]
+                      + list(FOOD_CROPS_PARAGRAPHS[summary_at:]))
+        with self.subTest(case="duplicate-summary"):
+            markdown = "\n\n".join(duplicated) + "\n"
+            nodes, plan = food_crops_plan(markdown)
+            self.assertIsNotNone(plan)
+            with self.assertRaises(gh.HwpxBlocked) as caught:
+                gh.transform_hwpx(
+                    food_crops_zip(hwpx_section(duplicated)),
+                    section_formats=gh.FOOD_CROPS_SECTION_FORMATS,
+                    nodes=nodes, plan=plan)
+            self.assertEqual("section_split_anchor_ambiguous",
+                             caught.exception.reason, caught.exception.details)
+            self.assertEqual("요약", caught.exception.details["anchor"])
+            self.assertEqual(2, len(caught.exception.details["occurrences"]))
 
     def test_split_strips_existing_controls_before_insert(self):
         numbers = ('<hp:ctrl><hp:pageNum pos="TOP_CENTER" formatType="DIGIT"'

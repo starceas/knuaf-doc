@@ -47,6 +47,33 @@ def _rewrite(members, path):
     return path
 
 
+def _corrupt_crc(data, name="Contents/header.xml"):
+    """항목 payload 한 바이트를 뒤집어 CRC가 맞지 않는 ZIP을 만든다.
+
+    `writestr`는 payload로 CRC를 새로 계산하므로, 만든 뒤 로컬 헤더를 따라가
+    payload 바이트를 직접 건드려야 `ZipFile.read`가 BadZipFile을 낸다.
+    """
+    members = read_zip(data)
+    buffer = BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_STORED) as archive:
+        for member, payload in members.items():
+            archive.writestr(member, payload)
+    raw = bytearray(buffer.getvalue())
+    offset = 0
+    while True:
+        offset = raw.find(b"PK\x03\x04", offset)
+        if offset < 0:
+            raise AssertionError("ZIP 로컬 헤더를 찾지 못함: " + name)
+        name_len = int.from_bytes(raw[offset + 26:offset + 28], "little")
+        found = bytes(raw[offset + 30:offset + 30 + name_len]).decode("utf-8")
+        if found == name:
+            extra_len = int.from_bytes(raw[offset + 28:offset + 30], "little")
+            start = offset + 30 + name_len + extra_len
+            raw[start] ^= 0xFF
+            return bytes(raw)
+        offset += 4
+
+
 class ProbeTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -215,6 +242,129 @@ class ProbeTests(unittest.TestCase):
         self.assertEqual("blocked", result["status"])
         self.assertTrue(self.codes(result))
 
+    def test_crc_corrupted_member_is_blocked_not_raised(self):
+        # ZIP 구조는 멀쩡한데 항목 payload와 CRC가 어긋나면 archive.read()가
+        # BadZipFile을 낸다. 예외로 죽지 않고 package 차단으로 닫혀야 한다.
+        path = pathlib.Path(self.tmp.name) / "crc.hwpx"
+        path.write_bytes(_corrupt_crc(self.output))
+        with zipfile.ZipFile(path) as archive:
+            with self.assertRaises(zipfile.BadZipFile):
+                archive.read("Contents/header.xml")
+        result = probe.check(path)
+        self.assertEqual("blocked", result["status"])
+        self.assertEqual(["food_crops.format.package"], self.codes(result))
+
+    def test_numbered_contents_entry_is_not_blocked(self):
+        # 목차 항목도 `1. 머리말`처럼 숫자·마침표로 시작하지만 12 pt 보통이다.
+        # 번호형 규칙을 요약 구간에만 적용해야 이 문단이 오탐되지 않는다.
+        path = _write(self.tmp.name, self.output, "toc-entry.hwpx")
+        members = read_zip(self.output)
+        entry = ('<hp:p paraPrIDRef="0" styleIDRef="0">'
+                 '<hp:run charPrIDRef="2"><hp:t>1. 머리말</hp:t></hp:run></hp:p>')
+        members["Contents/section1.xml"] = members["Contents/section1.xml"].replace(
+            b"</hs:sec>", entry.encode("utf-8") + b"</hs:sec>", 1)
+        _rewrite(members, path)
+        result = probe.check(path)
+        self.assertEqual([], result["violations"])
+        self.assertEqual("pass", result["checks"]["charpr"]["status"])
+
+    def test_numbered_summary_subheading_is_still_sixteen(self):
+        # 요약 구간 안의 번호형 소제목은 그대로 16 pt 굵게여야 한다.
+        path = _write(self.tmp.name, self.output, "summary-subheading.hwpx")
+        members = read_zip(self.output)
+        xml = members["Contents/section1.xml"].decode("utf-8")
+        mutated = xml.replace('<hp:run charPrIDRef="5"><hp:t>1. 농장 개요',
+                              '<hp:run charPrIDRef="2"><hp:t>1. 농장 개요', 1)
+        self.assertNotEqual(xml, mutated)
+        members["Contents/section1.xml"] = mutated.encode("utf-8")
+        _rewrite(members, path)
+        result = probe.check(path)
+        self.assertIn("food_crops.format.charpr.front", self.codes(result))
+
+    def test_reparse_failure_with_kordoc_is_blocked(self):
+        # 실행 파일은 있는데 재파싱이 실패하면 검사 불가가 아니라 실패다.
+        cli = self.fake_kordoc(
+            "kordoc-reparse-fail",
+            validate={"ok": True, "issues": []}, reparse="", reparse_exit=3)
+        result = probe.check(self.path, cli_command=cli)
+        self.assertEqual("blocked", result["status"])
+        self.assertIn("food_crops.format.reparse", self.codes(result))
+        self.assertEqual("failed", result["checks"]["reparse"]["status"])
+        self.assertEqual(3, result["checks"]["reparse"]["returncode"])
+
+    def test_version_xml_only_failure_is_a_pre_existing_defect(self):
+        # kordoc은 version.xml 부재만으로도 ok:false를 낸다. 그 항목만 있으면
+        # 1판·양식 원본과 같은 사전 결함이므로 통과시킨다.
+        measured, _ = probe.measure(self.path)
+        texts = [text for section in measured.sections
+                 for text in section["texts"] if text]
+        cli = self.fake_kordoc(
+            "kordoc-version-only",
+            validate={"ok": False,
+                      "issues": [{"message": "version.xml is missing"}]},
+            reparse="\n\n".join(texts) + "\n")
+        result = probe.check(self.path, cli_command=cli)
+        self.assertEqual([], result["violations"])
+        self.assertEqual("ok", result["checks"]["structure"]["status"])
+        self.assertFalse(result["checks"]["structure"]["kordoc_ok"])
+        self.assertEqual(1, result["checks"]["structure"]["pre_existing"])
+
+    def test_failure_without_any_reported_issue_is_still_blocked(self):
+        # ok:false인데 문제를 하나도 보고하지 않으면 그 false의 근거를 이
+        # 검사기가 확인할 수 없다. 통과시키지 않는다.
+        measured, _ = probe.measure(self.path)
+        texts = [text for section in measured.sections
+                 for text in section["texts"] if text]
+        cli = self.fake_kordoc(
+            "kordoc-silent-failure",
+            validate={"ok": False, "issues": []},
+            reparse="\n\n".join(texts) + "\n")
+        result = probe.check(self.path, cli_command=cli)
+        self.assertEqual("blocked", result["status"])
+        self.assertIn("food_crops.format.structure", self.codes(result))
+
+    def test_reparse_with_reordered_paragraphs_is_reported(self):
+        measured, _ = probe.measure(self.path)
+        texts = [text for section in measured.sections
+                 for text in section["texts"] if text]
+        swapped = list(texts)
+        swapped[8], swapped[9] = swapped[9], swapped[8]
+        cli = self.fake_kordoc(
+            "kordoc-reordered",
+            validate={"ok": True, "issues": []},
+            reparse="\n\n".join(swapped) + "\n")
+        result = probe.check(self.path, cli_command=cli)
+        self.assertIn("food_crops.format.reparse.order", self.codes(result))
+        self.assertGreaterEqual(
+            result["checks"]["reparse"]["out_of_order_count"], 1)
+
+    def test_reparse_missing_a_repeated_paragraph_is_reported(self):
+        # 반복 문단이 하나로 접히면 포함 여부만 보는 대조는 통과한다.
+        # 개수 하한을 걸어야 잡힌다.
+        measured, _ = probe.measure(self.path)
+        texts = [text for section in measured.sections
+                 for text in section["texts"] if text]
+        counts = {}
+        for text in texts:
+            wanted = probe._normalize_text(text)
+            counts[wanted] = counts.get(wanted, 0) + 1
+        full = probe._normalize_text("\n\n".join(texts) + "\n")
+        # 다른 문단의 부분 문자열인 문단은 개수 대조가 흔들리므로, 온전한
+        # 재파싱에서 기대 개수와 실제 개수가 이미 같은 반복 문단만 고른다.
+        repeated = next(text for text in texts
+                        if counts[probe._normalize_text(text)] > 1
+                        and full.count(probe._normalize_text(text))
+                        == counts[probe._normalize_text(text)])
+        index = len(texts) - texts[::-1].index(repeated) - 1
+        cli = self.fake_kordoc(
+            "kordoc-collapsed",
+            validate={"ok": True, "issues": []},
+            reparse="\n\n".join(texts[:index] + texts[index + 1:]) + "\n")
+        result = probe.check(self.path, cli_command=cli)
+        self.assertIn("food_crops.format.reparse.count", self.codes(result))
+        self.assertGreaterEqual(
+            result["checks"]["reparse"]["count_shortfall_count"], 1)
+
     def test_not_a_zip_is_blocked(self):
         path = pathlib.Path(self.tmp.name) / "plain.hwpx"
         path.write_bytes(b"not a zip")
@@ -285,8 +435,12 @@ class ProbeTests(unittest.TestCase):
         self.assertIn("refusing overwrite", process.stderr)
         self.assertEqual(before, target.read_bytes())
 
-    def fake_kordoc(self, name, *, validate, reparse):
-        """kordoc 대역 — 같은 폴더의 validate.json/reparse.md를 그대로 낸다."""
+    def fake_kordoc(self, name, *, validate, reparse, reparse_exit=0):
+        """kordoc 대역 — 같은 폴더의 validate.json/reparse.md를 그대로 낸다.
+
+        `reparse_exit`가 0이 아니면 재파싱 호출에서 파일을 쓰지 않고 그 코드로
+        끝난다(실행 파일은 있는데 재파싱이 실패하는 경우).
+        """
         root = pathlib.Path(self.tmp.name) / name
         root.mkdir()
         (root / "validate.json").write_text(
@@ -301,6 +455,9 @@ class ProbeTests(unittest.TestCase):
             "if args and args[0] == 'validate':\n"
             "    sys.stdout.write((here / 'validate.json').read_text(encoding='utf-8'))\n"
             "    sys.exit(0 if '\"ok\": true' in (here / 'validate.json').read_text(encoding='utf-8') else 1)\n"
+            f"if {int(reparse_exit)}:\n"
+            f"    print('reparse exploded', file=sys.stderr)\n"
+            f"    sys.exit({int(reparse_exit)})\n"
             "target = pathlib.Path(args[args.index('-o') + 1])\n"
             "target.write_text((here / 'reparse.md').read_text(encoding='utf-8'), encoding='utf-8')\n",
             encoding="utf-8")

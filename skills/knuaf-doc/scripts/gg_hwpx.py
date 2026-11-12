@@ -400,6 +400,19 @@ def split_sections_by_plan(section_xml: str, *, nodes, plan,
             action="앞머리 표지가 일부만 있어 구역을 나눌 수 없습니다.",
         )
 
+    # 앞부분 앵커 `요약`은 문서에 한 번만 있어야 한다. 계획은 첫 번째 것만
+    # 잡으므로, 원고·HWPX 양쪽에 `요약`이 둘이면 문단 수가 맞아도 둘째가
+    # 조용히 요약 본문(12 pt)으로 들어간다. `감사의 글`은 목차 항목과 본문
+    # 끝 제목 두 번 나오는 것이 정상이므로 중복 검사에서 뺀다.
+    summary_hits = [index for index, node in enumerate(nodes)
+                    if _normalize_space(node.get("text", "")) == "요약"]
+    if len(summary_hits) != 1:
+        raise HwpxBlocked(
+            "section_split_anchor_ambiguous",
+            anchor="요약", occurrences=summary_hits, nodes=len(nodes),
+            action="앞부분 앵커 `요약`이 문서에 정확히 한 번 있어야 합니다.",
+        )
+
     anchors = (("cover", 0),
                ("front", plan["indices"]["요약"]),
                ("body", plan["body"]))
@@ -872,7 +885,11 @@ def transform_hwpx(data: bytes, *, font: str = SCHOOL_FONT,
     (`split_sections_by_plan`) 그 뒤에 구역별 여백·쪽번호를 적용한다.
     반환: (새 바이트, 적용 내역 dict).
     """
-    applied = {"margins": [], "font": [], "page_numbers": [], "charpr": []}
+    applied = {"margins": [], "font": [], "page_numbers": []}
+    if section_formats is not None:
+        # 앞부분 글자 모양 기록은 구역 서식(식량작물) 전용이다. 다른 전공
+        # 매니페스트에 키가 생기면 post_processing 직렬화가 바뀐다.
+        applied["charpr"] = []
     source = io.BytesIO(data)
     target = io.BytesIO()
     with zipfile.ZipFile(source, "r") as zin, zipfile.ZipFile(target, "w") as zout:

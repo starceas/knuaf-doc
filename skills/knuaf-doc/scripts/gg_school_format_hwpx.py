@@ -221,30 +221,35 @@ def measure(path: Path):
     except (zipfile.BadZipFile, OSError) as exc:
         return None, f"ZIP을 열 수 없음: {exc}"
     with archive:
-        names = set(archive.namelist())
-        measured.names = sorted(names)
-        missing = [name for name in SECTION_NAMES if name not in names]
-        if missing:
-            measured.notes.append({"missing_sections": missing})
-        for name, role in zip(SECTION_NAMES, ROLES):
-            if name not in names:
-                continue
-            record = _read_section(archive, name, role)
-            if record is None:
-                measured.notes.append({"invalid_xml": name})
-                continue
-            measured.sections.append(record)
-        charprs, sec_cnt = _read_charprs(archive)
-        if charprs is None:
-            measured.notes.append({"invalid_xml": HEADER_NAME})
-        else:
-            measured.charprs = charprs
-            measured.front_charpr_ids = _appended_charpr_ids(charprs)
-        measured.sec_cnt = sec_cnt
-        measured.manifest = _read_manifest(archive, names)
-        if measured.manifest is None:
-            measured.notes.append({"invalid_xml": MANIFEST_NAME})
-        measured.version_xml_present = "version.xml" in names
+        # ZIP 항목 자체가 손상되면(CRC 불일치 등) archive.read()가 BadZipFile을
+        # 낸다. 일부만 읽고 통과시키지 않고 측정 불가로 닫아 package 차단으로 보낸다.
+        try:
+            names = set(archive.namelist())
+            measured.names = sorted(names)
+            missing = [name for name in SECTION_NAMES if name not in names]
+            if missing:
+                measured.notes.append({"missing_sections": missing})
+            for name, role in zip(SECTION_NAMES, ROLES):
+                if name not in names:
+                    continue
+                record = _read_section(archive, name, role)
+                if record is None:
+                    measured.notes.append({"invalid_xml": name})
+                    continue
+                measured.sections.append(record)
+            charprs, sec_cnt = _read_charprs(archive)
+            if charprs is None:
+                measured.notes.append({"invalid_xml": HEADER_NAME})
+            else:
+                measured.charprs = charprs
+                measured.front_charpr_ids = _appended_charpr_ids(charprs)
+            measured.sec_cnt = sec_cnt
+            measured.manifest = _read_manifest(archive, names)
+            if measured.manifest is None:
+                measured.notes.append({"invalid_xml": MANIFEST_NAME})
+            measured.version_xml_present = "version.xml" in names
+        except zipfile.BadZipFile as exc:
+            return None, f"ZIP 항목을 읽을 수 없음: {exc}"
     return measured, None
 
 
@@ -509,12 +514,19 @@ def _check_charpr(measured, violations):
         else:
             report("food_crops.format.charpr.front", front, index,
                    front["texts"][index], wanted)
+    # 번호형 소제목(`1. 농장 개요`)은 요약 구간에만 16 pt 굵게다. 목차 항목도
+    # `1. 서론 …… 1`처럼 숫자와 마침표로 시작하지만 12 pt 보통이므로, 요약
+    # 경계(요약 다음 ~ 감사의 글/목차 앞) 안에서만 번호형 규칙을 적용한다.
+    # 생성기 `_front_charpr_targets`가 bounds["요약"]으로 자르는 것과 같은 경계다.
+    summary_end = min([value for value in (thanks, contents) if value is not None],
+                      default=len(front["texts"]))
     for index, text in enumerate(front["texts"]):
         if not text or index in (summary, thanks, contents):
             continue
+        in_summary = summary is not None and summary < index < summary_end
         if text.replace(" ", "") in ("표목차", "그림목차"):
             report("food_crops.format.charpr.front", front, index, text, (20, False))
-        elif text[:1].isdigit() and "." in text[:4]:
+        elif in_summary and text[:1].isdigit() and "." in text[:4]:
             report("food_crops.format.charpr.front", front, index, text, (16, True))
         else:
             report("food_crops.format.charpr.front", front, index, text, (12, False))
@@ -647,7 +659,13 @@ def _check_structure(cli_command, path, violations):
                          if "version.xml" not in json.dumps(issue, ensure_ascii=False)]
             report["issues"] = remaining
             report["pre_existing"] = len(issues) - len(remaining)
-            report["status"] = "ok" if parsed.get("ok") and not remaining else "failed"
+            report["kordoc_ok"] = parsed.get("ok")
+            # kordoc은 version.xml 부재만으로도 `ok: false`를 낸다. 남은 문제가
+            # version.xml뿐이면 1판·양식 원본에도 있는 사전 결함이므로 통과다.
+            # 다만 `ok: false`인데 문제를 하나도 보고하지 않은 경우는 그 false의
+            # 근거를 이 검사기가 확인할 수 없으므로 통과시키지 않는다.
+            report["status"] = "ok" if not remaining and (
+                parsed.get("ok") is True or issues) else "failed"
     if report["status"] != "ok":
         violations.bad(
             "food_crops.format.structure", (), "kordoc validate",
@@ -686,31 +704,85 @@ def _check_reparse(cli_command, path, measured, violations):
     process = _run(list(cli_command) + [
         str(path), "-o", str(out_md), "--format", "markdown", "--silent",
         "--keep-empty-cols", "--keep-empty-paragraphs"])
-    if not isinstance(process, subprocess.CompletedProcess) or process.returncode != 0 \
-            or not out_md.is_file():
-        return {"status": "skipped", "reason": "kordoc reparse failed",
+    if not isinstance(process, subprocess.CompletedProcess):
+        # kordoc이 없으면 재파싱을 할 수 없다. 이건 skip이지 결함이 아니다.
+        return {"status": "skipped", "reason": "kordoc not runnable",
                 "returncode": getattr(process, "returncode", None)}
+    if process.returncode != 0 or not out_md.is_file():
+        # 실행 파일은 있는데 재파싱이 실패한 경우는 검사 불가가 아니라 실패다.
+        # skip으로 넘기면 재파싱이 통째로 망가진 산출물이 통과한다.
+        result = {"status": "failed", "reason": "kordoc reparse failed",
+                  "returncode": process.returncode,
+                  "stderr": (process.stderr or "")[-400:]}
+        violations.bad(
+            "food_crops.format.reparse", (), "kordoc reparse",
+            {"status": "ok"}, {"status": "failed",
+                               "returncode": process.returncode},
+            "kordoc 재파싱이 실패해 문단 보존을 판정할 수 없음")
+        return result
     text = out_md.read_text(encoding="utf-8", errors="replace")
     haystack = _normalize_text(text)
-    missing = []
+    missing, wanted_texts = [], []
     for section in measured.sections:
         for paragraph in section["texts"]:
             # 정규화 후 빈 문자열이 되는 문단(장식 문자만 있는 줄)은 대조할
             # 글자가 없으므로 판정에서 뺀다. 빈 문자열은 항상 포함으로 잡힌다.
             wanted = _normalize_text(paragraph) if paragraph else ""
-            if wanted and wanted not in haystack:
+            if not wanted:
+                continue
+            wanted_texts.append((section["name"], paragraph, wanted))
+            if wanted not in haystack:
                 missing.append({"section": section["name"], "text": paragraph})
-    # 그림 폴더 이름 차이는 문단 텍스트가 아니라 그림 참조에만 나타나므로
-    # 여기서는 문단 텍스트가 전부 살아 있는지만 본다.
-    result = {"status": "ok" if not missing else "failed",
-              "paragraphs": sum(len([p for p in s["texts"] if p])
-                                for s in measured.sections),
-              "missing": missing[:5], "missing_count": len(missing)}
+
+    # 순서·중복 대조. 포함 여부만 보면 문단이 뒤섞이거나 하나가 둘로
+    # 복제된 재파싱도 통과한다. 원본 문단을 문서 순서대로 훑으며 그 문단이
+    # 나올 수 있는 가장 이른 자리를 찾는다(탐욕). 원본 순서가 정상이면 이
+    # 자리는 언제나 존재하므로 오탐이 없고, 실제로 뒤집힌 경우만 걸린다.
+    out_of_order = []
+    cursor = 0
+    for name, paragraph, wanted in wanted_texts:
+        found = haystack.find(wanted, cursor)
+        if found < 0:
+            if haystack.find(wanted) >= 0:
+                out_of_order.append({"section": name, "text": paragraph})
+            continue
+        cursor = found
+    shortfall = []
+    expected_counts = {}
+    for _, _, wanted in wanted_texts:
+        expected_counts[wanted] = expected_counts.get(wanted, 0) + 1
+    for wanted, expected in expected_counts.items():
+        actual = haystack.count(wanted)
+        if actual < expected:
+            shortfall.append({"text": wanted[:40], "expected": expected,
+                              "actual": actual})
+
+    result = {"status": "ok" if not (missing or out_of_order or shortfall)
+              else "failed",
+              "paragraphs": len(wanted_texts),
+              "missing": missing[:5], "missing_count": len(missing),
+              "out_of_order": out_of_order[:5],
+              "out_of_order_count": len(out_of_order),
+              "count_shortfalls": shortfall[:5],
+              "count_shortfall_count": len(shortfall)}
     if missing:
         violations.bad(
             "food_crops.format.reparse", (), "kordoc reparse",
             {"missing_paragraphs": 0}, {"missing_count": len(missing)},
             "재파싱 텍스트에 사라진 문단이 있음")
+    if out_of_order:
+        violations.bad(
+            "food_crops.format.reparse.order", (), "kordoc reparse",
+            {"out_of_order_paragraphs": 0},
+            {"out_of_order_count": len(out_of_order),
+             "first": out_of_order[0]["text"][:40]},
+            "재파싱 텍스트에서 문단 순서가 원본과 다름")
+    if shortfall:
+        violations.bad(
+            "food_crops.format.reparse.count", (), "kordoc reparse",
+            {"paragraph_count_shortfalls": 0},
+            {"count_shortfall_count": len(shortfall), "first": shortfall[0]},
+            "재파싱 텍스트에서 문단이 원본보다 적게 남음(중복 문단 소실)")
     return result
 
 

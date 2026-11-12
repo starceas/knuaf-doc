@@ -165,6 +165,50 @@ class MajorNoticeIsolationTests(ContractCase):
         return json.loads((root / out).with_suffix(".manifest.json")
                           .read_text(encoding="utf-8"))
 
+    # 5488bd2(식량작물 모듈 이전) 트리에서 같은 입력·같은 전공으로 뽑은
+    # build_docx 매니페스트. `file_hash`만 뺀다(ZIP 타임스탬프 때문에 실행마다
+    # 달라진다).
+    REFERENCE_DOCX_MANIFEST = {
+        "file_hash_stage": "build",
+        "font": "신명조",
+        "font_available": "not_run",
+        "hwp": "not_run",
+        "input_hash": "850c8e3a169514bf7f8d641c33051966f44da90b3e5fca350bfdb88316cb6408",
+        "kind": "draft",
+        "layout_review": {
+            "authority": "actual Word PDF render; HWPX requires native Hancom render",
+            "checks": [
+                "Widen long-text columns before reducing table text one point at a time.",
+                "Inspect every table page for broken words, isolated punctuation and stranded header characters.",
+                "Keep table notes attached; inspect the preceding page for new large gaps.",
+                "Shrink a displaced figure only while its legend and embedded text remain readable.",
+            ],
+            "figures": [],
+            "status": "not_run",
+            "tables": [],
+        },
+        "major_authorization": {
+            "binding_evidence": "facts:selected_major",
+            "contract_version": "knuaf-major-contract/1",
+            "major_id": "specialty_crops",
+            "module_version": "1.0.0",
+            "output": "school_paper",
+            "project_revision": 1,
+        },
+        "notice": DOCX_NOTICE,
+        "photo_requests": [],
+        "render": "not_run",
+        "school_frontmatter": None,
+        "table_layout": {"infeasible_count": 0, "reports": [], "status": "ok",
+                         "wide_tables_checked": 0},
+        "toc_update": "not_run",
+    }
+
+    def test_other_major_docx_manifest_matches_the_reference_dict(self):
+        manifest = self.build("specialty_crops")
+        manifest.pop("file_hash")
+        self.assertEqual(self.REFERENCE_DOCX_MANIFEST, manifest)
+
     def test_food_crops_notice_does_not_leak_to_other_majors(self):
         for major in ("specialty_crops", "fruit_trees", "hort_env_systems"):
             with self.subTest(major=major, surface="docx-manifest"):

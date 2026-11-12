@@ -123,6 +123,68 @@ class SchoolFormatProbeTests(ContractCase):
                       [v["code"] for v in report["violations"]])
         self.assertTrue(report["food_crops_format"])
 
+    def test_duplicate_page_number_element_is_reported(self):
+        # `find`는 첫 pgNumType만 본다. 둘이면 Word는 둘째를 적용해 화면이
+        # 달라지므로, 개수까지 재서 위반으로 낸다.
+        import zipfile
+        path = self.docx("food_crops")
+        with zipfile.ZipFile(path) as archive:
+            members = {info.filename: archive.read(info.filename)
+                       for info in archive.infolist()}
+        document = members["word/document.xml"].decode("utf-8")
+        marker = '<w:pgNumType w:start="1" w:fmt="upperRoman"/>'
+        self.assertEqual(1, document.count(marker))
+        patched = document.replace(marker, marker + marker, 1)
+        members["word/document.xml"] = patched.encode("utf-8")
+        target = Path(self.root) / "duplicate-number.docx"
+        with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as archive:
+            for name, payload in members.items():
+                archive.writestr(name, payload)
+        result = self.probe.check(target, major_id="food_crops")
+        found = [value for value in result["violations"]
+                 if value["code"] == "food_crops.format.page_number.front"]
+        self.assertEqual(1, len(found), self.food_crops_codes(result))
+        self.assertEqual(2, found[0]["actual"]["count"])
+        self.assertEqual(1, found[0]["expected"]["count"])
+
+    def test_duplicate_page_field_in_footer_is_reported(self):
+        # 바닥글 PAGE 필드가 둘이면 쪽번호가 두 번 찍힌다. 개수 대조가 잡는다.
+        import zipfile
+        path = self.docx("food_crops")
+        with zipfile.ZipFile(path) as archive:
+            members = {info.filename: archive.read(info.filename)
+                       for info in archive.infolist()}
+        footer = members["word/footer1.xml"].decode("utf-8")
+        marker = '<w:fldSimple w:instr="PAGE"/>'
+        self.assertEqual(1, footer.count(marker))
+        members["word/footer1.xml"] = footer.replace(
+            marker, marker + marker, 1).encode("utf-8")
+        target = Path(self.root) / "duplicate-field.docx"
+        with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as archive:
+            for name, payload in members.items():
+                archive.writestr(name, payload)
+        result = self.probe.check(target, major_id="food_crops")
+        found = [value for value in result["violations"]
+                 if value["code"] == "food_crops.format.footer.front"]
+        self.assertEqual(1, len(found), self.food_crops_codes(result))
+        self.assertEqual(2, found[0]["actual"]["page_fields"])
+        self.assertEqual(1, found[0]["expected"]["page_fields"])
+
+    def test_corrupt_docx_is_blocked_with_json_and_exit_2(self):
+        # 손상 입력에 사람용 `BLOCK:`만 내면 자동 호출자가 상태를 못 읽는다.
+        # 기계가 읽을 JSON을 stdout에 내고 종료 2는 그대로 둔다.
+        path = Path(self.root) / "corrupt.docx"
+        path.write_bytes(b"not a zip")
+        run = subprocess.run(
+            [sys.executable, "-B", str(SCRIPTS / "gg_school_format.py"),
+             str(path), "--major", "food_crops"],
+            capture_output=True, text=True, encoding="utf-8", cwd=str(self.root))
+        self.assertEqual(2, run.returncode, run.stderr)
+        payload = json.loads(run.stdout)
+        self.assertEqual("blocked", payload["status"])
+        self.assertEqual(str(path), payload["input"]["path"])
+        self.assertIn("BLOCK:", run.stderr)
+
     def test_docx_probe_dispatch_forwards_major(self):
         # gg_commands.main("docx-probe")가 --major를 gg_school_format까지
         # 넘기는지 본다. 넘기지 않으면 식량작물 대조가 통째로 사라진다.

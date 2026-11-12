@@ -179,6 +179,38 @@ class FoodCropsBuildTests(ContractCase):
         prose = one("합성 본문 1. 머리말")
         self.assertEqual(12.0, round(prose.runs[0].font.size.pt, 1))
 
+    def test_every_numbered_summary_subheading_is_sixteen(self):
+        # 요약의 번호형 소제목은 첫 번째만이 아니라 전부 16 pt 굵게다.
+        # 나머지 요약 본문은 12 pt 그대로다.
+        profile = self.fm.normalize_school_profile({
+            "major_id": "food_crops",
+            "school_profile": {
+                "title": "합성 영농계획", "author": "가상학생",
+                "submission_date": "2026년 12월", "graduation_date": "2027년 2월"}})
+        lines = self.fm.frontmatter_lines(profile, artifacts={
+            "summary": ("1. 농장 개요\n\n합성 요약 첫 본문"
+                        "\n\n2. 두 번째 소제목\n\n합성 요약 둘째 본문"),
+            "thanks": "합성 감사 내용"})
+        body = []
+        for chapter in CHAPTERS + CLOSERS:
+            body += [chapter, "합성 본문 " + chapter[2:]]
+        doc = self.convert(text="\n\n".join(lines + body))
+        paragraphs = doc.paragraphs
+
+        def one(text):
+            return next(p for p in paragraphs if p.text.strip() == text)
+
+        for heading in ("1. 농장 개요", "2. 두 번째 소제목"):
+            with self.subTest(heading=heading):
+                paragraph = one(heading)
+                self.assertEqual(16.0, round(paragraph.runs[0].font.size.pt, 1))
+                self.assertTrue(paragraph.runs[0].bold)
+        for prose in ("합성 요약 첫 본문", "합성 요약 둘째 본문"):
+            with self.subTest(prose=prose):
+                paragraph = one(prose)
+                self.assertEqual(12.0, round(paragraph.runs[0].font.size.pt, 1))
+                self.assertFalse(paragraph.runs[0].bold)
+
     def test_each_chapter_and_closer_starts_a_new_page(self):
         doc = self.convert()
         breaks = [p.text for p in doc.paragraphs

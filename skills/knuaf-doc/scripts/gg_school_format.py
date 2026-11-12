@@ -243,7 +243,7 @@ def footer_record(archive, names, targets, sect_pr, cache, inherited):
     if part not in cache:
         try:
             root = ET.fromstring(archive.read(part))
-        except ET.ParseError as e:
+        except (BadZipFile, ET.ParseError) as e:
             raise ProbeError(f"invalid footer OOXML {part}: {e}") from e
         cache[part] = sum(1 for field in root.iter(QN("fldSimple"))
                           if (attr(field, "instr") or "").strip().upper().startswith("PAGE"))
@@ -296,9 +296,12 @@ def food_crops_violations(sections):
                 bad(f"food_crops.format.margin.{role}_{key}", [MARGIN_RELATED[key]],
                     place, want["pg_mar"][key], section["pg_mar"][key],
                     f"{role} 구역 {key} 여백이 양식 값과 다름")
-        if section["pg_num_type"] != want["pg_num_type"]:
+        want_count = 0 if want["pg_num_type"] is None else 1
+        got_count = section.get("pg_num_type_count", want_count)
+        if section["pg_num_type"] != want["pg_num_type"] or got_count != want_count:
             bad(f"food_crops.format.page_number.{role}", PAGE_NUMBER_RELATED, place,
-                want["pg_num_type"], section["pg_num_type"],
+                dict(want["pg_num_type"] or {}, count=want_count),
+                dict(section["pg_num_type"] or {}, count=got_count),
                 f"{role} 구역 pgNumType이 양식 값(start·fmt·개수)과 다름")
         footer = section["footer"]
         if want["footer"]["has_reference"] != footer["has_reference"]:
@@ -336,7 +339,10 @@ def check(path: Path, *, output_json: Path | None = None, major_id: str | None =
             seen_footer = False
             for si, sp in enumerate(doc.findall(".//" + QN("sectPr")), 1):
                 mar = sp.find(QN("pgMar"))
-                num = sp.find(QN("pgNumType"))
+                # `find`는 첫 요소만 본다. pgNumType이 둘이면 둘째가 첫째를
+                # 덮어써 Word 화면은 다르게 보이므로 개수도 함께 잰다.
+                nums = sp.findall(QN("pgNumType"))
+                num = nums[0] if nums else None
                 footer = footer_record(z, names, targets, sp, footer_cache, seen_footer)
                 seen_footer = seen_footer or footer["has_reference"]
                 measured_sections.append({
@@ -344,6 +350,7 @@ def check(path: Path, *, output_json: Path | None = None, major_id: str | None =
                     "pg_mar": {key: attr(mar, key) for key in PAGE_MAR_KEYS},
                     "pg_num_type": (None if num is None else
                                     {"start": attr(num, "start"), "fmt": attr(num, "fmt")}),
+                    "pg_num_type_count": len(nums),
                     "footer": footer,
                 })
     except (BadZipFile, ET.ParseError) as e:
@@ -492,7 +499,15 @@ def main(argv=None):
     ap.add_argument("--major",default=None,help="전공 id (예: food_crops) — 주어지면 그 전공 양식도 대조")
     ns=ap.parse_args(argv)
     try: result=check(ns.docx,output_json=ns.out,major_id=ns.major)
-    except (ProbeError,OSError) as e: print(f"BLOCK: {e}",file=sys.stderr); return 2
+    except (ProbeError,OSError,BadZipFile) as e:
+        # 사람용 `BLOCK:` 문구만 내면 자동 호출자가 상태를 못 읽는다. 기계가
+        # 읽을 JSON을 stdout에 내고 종료 2는 그대로 둔다(호출 계약 불변).
+        print(json.dumps({"status":"blocked","reason":str(e),
+                          "input":{"path":str(ns.docx)},
+                          "out":str(ns.out) if ns.out else None},
+                         ensure_ascii=False))
+        print(f"BLOCK: {e}",file=sys.stderr)
+        return 2
     print(json.dumps({"status":result["status"],"sha256":result["input"]["sha256"],"violations":len(result["violations"]),"out":str(ns.out) if ns.out else None},ensure_ascii=False))
     return 1 if result["status"]=="blocked" else 0
 if __name__ == "__main__":
