@@ -1,7 +1,8 @@
 """원예: 채운 학교 엑셀의 251칸을 상태 하나씩 읽어 분류하는 시험 (v0.5.0).
 
 원본 `H-X1`은 저장소에 없다. 그래서 이 파일은 원본 사본이 있을 때만 돈다 —
-없거나 지문이 다르면 통과가 아니라 **보이는 SKIP**으로 보고한다(`load_tests`).
+없거나 지문이 다르면 통과가 아니라, 탐색(`unittest discover`)에서는 시험을
+하나도 모으지 않고 이름으로 직접 부르면 **보이는 SKIP**으로 보고한다.
 학교 원본은 읽기만 하고, 고친 사본은 임시 폴더에만 만든다(zip 재작성).
 Excel·Word는 띄우지 않는다. 학생 실명·개인정보는 쓰지 않는다.
 
@@ -72,10 +73,16 @@ def _source_problem():
 
 
 def load_tests(loader, tests, pattern):
-    """원본이 없으면 통과가 아니라 보이는 SKIP으로 보고한다."""
-    problem = _source_problem()
-    if problem is not None:
-        raise unittest.SkipTest(problem)
+    """탐색은 원본이 없으면 빈 스위트, 이름 호출은 `setUp`의 보이는 SKIP.
+
+    `load_tests`에서 `SkipTest`를 올리면 unittest는 skip이 아니라 모듈 로딩
+    실패(`unittest.loader._FailedTest.<module>`)로 만들어, CI가 이를 미승인
+    skip·import 계약 위반으로 판정한다. 그래서 탐색(`pattern` 지정)에서는
+    시험을 하나도 모으지 않고, 이름으로 직접 부를 때(`pattern is None`)만
+    `setUp`의 `skipTest`가 사유를 보이는 SKIP으로 보고한다.
+    """
+    if pattern is not None and _source_problem() is not None:
+        return unittest.TestSuite()
     return tests
 
 
