@@ -277,6 +277,15 @@ jobs:
         run: python tools/build_validation_bundle.py --root . --check
       - name: Native init apply publication replay cleanup (no skips)
         run: python tools/run_native_publication.py --json "$env:RUNNER_TEMP/native-publication-report.json"
+      # UTF-8 mode off: children keep PYTHONIOENCODING=utf-8 (they print
+      # Korean), while the test process decodes the pipes with the locale
+      # code page. Any subprocess call that omits encoding= then fails here
+      # exactly as it does on a Windows box without UTF-8 mode.
+      - name: Skill tests with UTF-8 mode off (no skips)
+        if: ${{ matrix.python == '3.10' }}
+        env:
+          PYTHONUTF8: '0'
+        run: python -m unittest discover -s skills/knuaf-doc/tests -t skills/knuaf-doc/tests
       - name: Upload native publication reports
         if: always()
         uses: actions/upload-artifact@v4

@@ -73,7 +73,7 @@ except gg_lock.LockError as e:
 def _contender_result(root):
     out = subprocess.run(
         [sys.executable, "-B", "-c", CONTENDER, str(root)],
-        capture_output=True, env=_env(), text=True, timeout=30)
+        capture_output=True, env=_env(), text=True, encoding="utf-8", timeout=30)
     return out.stdout.strip()
 
 
@@ -94,7 +94,7 @@ def _spawn_holder(root):
     proc = subprocess.Popen(
         [sys.executable, "-B", "-c", HOLDER, str(root)],
         stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-        env=_env(), text=True,
+        env=_env(), text=True, encoding="utf-8",
     )
     assert proc.stdout.readline().strip() == "READY"
     return proc
@@ -575,7 +575,7 @@ class ForkExecCase(ContractCase):
     def test_exec_does_not_carry_fd(self):
         proc = subprocess.Popen(
             [sys.executable, "-B", "-c", EXEC_HOLDER, str(self.root)],
-            stdout=subprocess.PIPE, env=_env(), text=True)
+            stdout=subprocess.PIPE, env=_env(), text=True, encoding="utf-8")
         self.assertEqual(proc.stdout.readline().strip(), "READY")
         # The holder exec'd a sleeper: its CLOEXEC guard fd is gone, so
         # the lock is released at exec boundary.

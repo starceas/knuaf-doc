@@ -78,7 +78,7 @@ class CatalogueTests(unittest.TestCase):
         env["PYTHONDONTWRITEBYTECODE"] = "1"
         completed = subprocess.run(
             [sys.executable, "-B", str(Path(identities.__file__)), "check"],
-            env=env, text=True, capture_output=True, timeout=30, check=False)
+            env=env, text=True, encoding="utf-8", capture_output=True, timeout=30, check=False)
         self.assertEqual(0, completed.returncode, completed.stderr)
         self.assertEqual({"status": "ok", "entries": len(rows)},
                          json.loads(completed.stdout))
@@ -317,7 +317,7 @@ class CatalogueTests(unittest.TestCase):
             env["PYTHONDONTWRITEBYTECODE"] = "1"
             completed = subprocess.run(
                 [sys.executable, "-B", str(scripts / "gg_source_identity.py"),
-                 "check"], cwd=tmp, env=env, text=True, capture_output=True,
+                 "check"], cwd=tmp, env=env, text=True, encoding="utf-8", capture_output=True,
                 timeout=15, check=False)
             self.assertEqual(2, completed.returncode)
             self.assertEqual("", completed.stdout)

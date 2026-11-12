@@ -100,7 +100,7 @@ class FoodCropsRefusalTests(unittest.TestCase):
                  str(SCRIPTS / "build_excel_finance_template.py"), temp,
                  "--input", "spec.json", "--out", "build/x.xlsx",
                  "--major", MAJOR],
-                capture_output=True, text=True)
+                capture_output=True, text=True, encoding="utf-8")
             self.assertEqual(result.returncode, 2,
                              result.stdout + result.stderr)
             self.assertEqual(json.loads(result.stdout)["reason"],

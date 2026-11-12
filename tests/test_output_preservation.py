@@ -21,7 +21,7 @@ def cli(root, script, *args):
                    else [str(root), *args])
     return subprocess.run(
         [sys.executable, "-B", str(SCRIPTS / script), *script_args],
-        capture_output=True, text=True, cwd=root)
+        capture_output=True, text=True, encoding="utf-8", cwd=root)
 
 
 class DocxPreservationTests(ContractCase):

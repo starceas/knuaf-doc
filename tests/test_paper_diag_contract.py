@@ -40,7 +40,7 @@ def _cli_paper(root, *, spec_name="paper-spec.json"):
         [sys.executable, "-B", str(SCRIPTS / "gg.py"), "paper", str(root),
          "--input", spec_name, "--out", "build/paper.md",
          "--major", "specialty_crops"],
-        capture_output=True, text=True)
+        capture_output=True, text=True, encoding="utf-8")
 
 
 class PaperDiagnosticContractTests(ContractCase):

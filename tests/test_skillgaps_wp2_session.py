@@ -106,7 +106,7 @@ class OfficeRecoveryTests(ContractCase):
                 result = subprocess.run(
                     [sys.executable, "-B", str(Path(self.session.__file__)),
                      "--recover", "word", "--guard-dir", str(self.guard)],
-                    capture_output=True, text=True)
+                    capture_output=True, text=True, encoding="utf-8")
                 self.assertEqual(0, result.returncode,
                                  result.stdout + result.stderr)
                 self.assertNotIn("Traceback", result.stderr)
@@ -156,7 +156,7 @@ class OfficeRecoveryTests(ContractCase):
         result = subprocess.run(
             [sys.executable, "-B", str(Path(self.session.__file__)),
              "--recover", "word", "--guard-dir", str(self.guard)],
-            capture_output=True, text=True)
+            capture_output=True, text=True, encoding="utf-8")
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
         payload = json.loads(result.stdout)
         self.assertEqual("recovered", payload["status"])
