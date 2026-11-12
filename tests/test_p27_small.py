@@ -19,7 +19,7 @@ REFERENCES = SCRIPTS.parent / "references"
 def _cli(script, *args, env=None):
     return subprocess.run(
         [sys.executable, "-B", str(SCRIPTS / script), *map(str, args)],
-        capture_output=True, text=True, env=env)
+        capture_output=True, text=True, encoding="utf-8", env=env)
 
 
 def _bind_major_version(root, major_id, module_version):
@@ -264,7 +264,7 @@ class K202Utf8Entry(ContractCase):
         env = self._cp949_env()
         probe = subprocess.run(
             [sys.executable, "-B", "-c", self._CP949_PROBE],
-            capture_output=True, text=True, env=env)
+            capture_output=True, text=True, encoding="utf-8", env=env)
         # The reconfigure really drops the pipe band to cp949 —
         # otherwise this leg proves nothing and must not silently pass.
         self.assertEqual(probe.stdout.strip(), "cp949 cp949",
@@ -274,7 +274,7 @@ class K202Utf8Entry(ContractCase):
                 proc = subprocess.run(
                     [sys.executable, "-B", "-c", self._CP949_RUN,
                      str(SCRIPTS / script), "--help"],
-                    capture_output=True, text=True, env=env)
+                    capture_output=True, text=True, encoding="utf-8", env=env)
                 self.assertIn("cp949 cp949", proc.stderr)
                 self.assertEqual(
                     proc.returncode, 0,

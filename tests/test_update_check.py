@@ -811,7 +811,7 @@ class UpdateTests(_UpdateCase):
                 self.assertFalse(target.exists())
                 cmd = shlex.split(out["recover"])
                 recovered = subprocess.run(cmd, cwd=str(self.root),
-                                           capture_output=True, text=True, check=True)
+                                           capture_output=True, text=True, encoding="utf-8", check=True)
                 self.assertEqual("recovered_old", json.loads(
                     recovered.stdout)["status"])
                 self.assertEqual(before, _tree_bytes(target))
@@ -832,14 +832,14 @@ class UpdateTests(_UpdateCase):
                                        str(src / "scripts" / "gg_update.py"),
                                        "adopt", cut, str(src), str(target)],
                                       cwd=str(self.root), capture_output=True,
-                                      text=True, check=True)
+                                      text=True, encoding="utf-8", check=True)
                 self.assertEqual("", proc.stdout)
                 helpers = list((home / "knuaf-doc-update" / "bin").glob("gg_update-*.py"))
                 self.assertEqual(1, len(helpers))
                 cmd = [sys.executable, str(helpers[0]), "recover", "--home",
                        str(home), "--confirm"]
                 result = subprocess.run(cmd, cwd=str(self.root),
-                                        capture_output=True, text=True, check=True)
+                                        capture_output=True, text=True, encoding="utf-8", check=True)
                 self.assertEqual(expected, json.loads(result.stdout)["status"])
                 self.assertTrue((home / "knuaf-doc-update" / "lock").is_file())
                 self.assertFalse((home / "knuaf-doc-update" / "journal.json").exists())
@@ -997,7 +997,7 @@ class UpdateTests(_UpdateCase):
         result = subprocess.run([sys.executable, str(helper), "recover",
                                  "--home", str(home), "--confirm"],
                                 cwd=str(self.root), capture_output=True,
-                                text=True, check=True)
+                                text=True, encoding="utf-8", check=True)
         out = json.loads(result.stdout)
         self.assertEqual("completed", out["status"])
         self.assertEqual("skipped", out["cleanup"])
@@ -1037,7 +1037,7 @@ class UpdateTests(_UpdateCase):
         first = subprocess.Popen([sys.executable, str(driver),
             str(src / "scripts" / "gg_update.py"), "adopt", str(home),
             str(src), str(target), str(ready), str(go)],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8")
         try:
             _wait_signal(ready, first)
             before = (state / "journal.json").read_bytes()
@@ -1059,7 +1059,7 @@ class UpdateTests(_UpdateCase):
         home, _, target = self.make_target()
         cli = subprocess.run([sys.executable, str(src / "scripts" / "gg_update.py"),
                               "unlock", "--home", str(home), "--confirm"],
-                             capture_output=True, text=True)
+                             capture_output=True, text=True, encoding="utf-8")
         self.assertEqual(2, cli.returncode)
         self.assertEqual({"status": "error", "reason": "usage_error"},
                          json.loads(cli.stdout))
@@ -1135,7 +1135,7 @@ class UpdateTests(_UpdateCase):
         self.assertEqual("backup_preserved_target_missing", out["state"])
         self.assertEqual(out["recover_argv"], shlex.split(out["recover"]))
         proc = subprocess.run(shlex.split(out["recover"]), capture_output=True,
-                              text=True, check=True)
+                              text=True, encoding="utf-8", check=True)
         self.assertEqual("recovered_old", json.loads(proc.stdout)["status"])
         self.assertEqual(before, _tree_bytes(target))
 
@@ -1147,7 +1147,7 @@ class UpdateTests(_UpdateCase):
         (target / "version.json").write_bytes(b"\xff")
         cli = subprocess.run([sys.executable, str(src / "scripts" / "gg_update.py"),
                               "adopt", "--source", str(src), "--target",
-                              str(target), "--confirm"], capture_output=True, text=True)
+                              str(target), "--confirm"], capture_output=True, text=True, encoding="utf-8")
         self.assertEqual(0, cli.returncode)
         self.assertEqual("target_version_invalid", json.loads(cli.stdout)["reason"])
         self.assertEqual(1, len(cli.stdout.splitlines()))
@@ -1195,7 +1195,7 @@ class UpdateTests(_UpdateCase):
         helper = next((state2 / "bin").glob("gg_update-*.py"))
         proc = subprocess.run([sys.executable, str(helper), "recover", "--home",
                                str(home2), "--confirm"], capture_output=True,
-                              text=True, check=True)
+                              text=True, encoding="utf-8", check=True)
         self.assertEqual("not_started", json.loads(proc.stdout)["status"])
         self.assertEqual(old, _tree_bytes(target2))
         self.assertFalse((state2 / "journal.json").exists())
@@ -1243,7 +1243,7 @@ class UpdateTests(_UpdateCase):
         first = subprocess.Popen([sys.executable, str(driver),
             str(src / "scripts" / "gg_update.py"), "recover", str(home),
             str(src), str(target), str(ready), str(go)],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8")
         try:
             held = _wait_signal(ready, first)
             self.assertEqual(old["txid"], held["txid"])
@@ -1331,7 +1331,7 @@ class UpdateTests(_UpdateCase):
             competitor = subprocess.run([sys.executable, str(driver),
                 str(src / "scripts" / "gg_update.py"), "lock", str(home),
                 str(src), str(target), str(ready), str(go)],
-                capture_output=True, text=True)
+                capture_output=True, text=True, encoding="utf-8")
             self.assertNotEqual(0, competitor.returncode)
             self.assertIn("locked", competitor.stderr)
         finally:
@@ -1360,7 +1360,7 @@ class UpdateTests(_UpdateCase):
         parent = subprocess.Popen([sys.executable, str(driver),
             str(src / "scripts" / "gg_update.py"), "parent_with_child", str(home),
             str(src), str(target), str(ready), str(go)],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8")
         try:
             row = _wait_signal(ready, parent)
             child_pid = row.get("child")
@@ -1432,7 +1432,7 @@ class UpdateTests(_UpdateCase):
         result = subprocess.run([sys.executable, str(skill / "scripts" / "gg_report.py"),
                                  "draft", "--input", str(request), "--out",
                                  str(output)], cwd=str(root), capture_output=True,
-                                text=True)
+                                text=True, encoding="utf-8")
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertTrue(output.exists())
         self.assertNotIn("Traceback", result.stderr)
@@ -2191,7 +2191,7 @@ class ManifestTests(_UpdateCase):
         src = self.make_incoming()
         script = src / "scripts" / "gg_update.py"
         proc = subprocess.run([sys.executable, str(script), "manifest",
-                               "--write"], capture_output=True, text=True)
+                               "--write"], capture_output=True, text=True, encoding="utf-8")
         self.assertEqual(0, proc.returncode, proc.stderr)
         self.assertEqual(1, len(proc.stdout.splitlines()))
         out = json.loads(proc.stdout)
@@ -2204,7 +2204,7 @@ class ManifestTests(_UpdateCase):
                          doc["files"]["scripts/gg_update.py"])
         self.assertNotIn("install-manifest.json", doc["files"])
         proc = subprocess.run([sys.executable, str(script), "manifest"],
-                              capture_output=True, text=True)
+                              capture_output=True, text=True, encoding="utf-8")
         self.assertEqual(0, proc.returncode, proc.stderr)
         out = json.loads(proc.stdout)
         self.assertEqual("knuaf-doc/install-manifest@1", out["schema"])
@@ -2596,7 +2596,7 @@ class IoBoundaryTests(_UpdateCase):
                 [sys.executable, str(driver),
                  str(target / "scripts" / "gg_update.py"),
                  str(target), stage],
-                capture_output=True, text=True)
+                capture_output=True, text=True, encoding="utf-8")
 
         def fired_count(proc):
             marker = [line for line in proc.stderr.splitlines()

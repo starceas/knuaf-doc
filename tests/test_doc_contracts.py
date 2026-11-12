@@ -41,7 +41,7 @@ def _env():
 def _cli(*args, cwd=None):
     return subprocess.run(
         [sys.executable, "-B", str(SCRIPTS / "gg.py"), *args],
-        capture_output=True, text=True, env=_env(), cwd=cwd)
+        capture_output=True, text=True, encoding="utf-8", env=_env(), cwd=cwd)
 
 
 def _seed(core, root):

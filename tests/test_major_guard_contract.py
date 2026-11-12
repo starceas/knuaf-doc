@@ -289,7 +289,7 @@ class OutputGuardContractTests(ContractCase):
             [sys.executable, "-B", str(SCRIPTS / "gg.py"), "apply", str(root),
              "--change", str(root / "major-selection.json"),
              "--expected-revision", "0"],
-            capture_output=True, text=True)
+            capture_output=True, text=True, encoding="utf-8")
         self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
         project = self.core.load(root)
         self.assertEqual(project["sources"]["intake-answer"]["revision"], 1)

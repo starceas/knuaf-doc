@@ -1,0 +1,15 @@
+{
+  "v": 1,
+  "rules": [
+    {
+      "id": "nongsaro-curation",
+      "host": "www.nongsaro.go.kr",
+      "org": "농사로(농촌진흥청)",
+      "pagePath": "^/portal/ps/psv/psvr/psvre/curationDtl\\.ps$",
+      "imagePath": "^/ps/img/curation/.+",
+      "rule": "page_kogl_applies_to_body_images",
+      "evidence": "https://www.nongsaro.go.kr/portal/ps/psv/psvr/psvre/curationDtl.ps?menuId=PS03352&srchCurationNo=1941",
+      "note": "2026-11-11 실측: 이용조건 페이지(위 evidence) HTML에서 본문 이미지는 <div id=cntntsArea>에 없고, POST /portal/ps/psv/psvr/psvre/curationContentDtl.ps(srchCurationNo+srchCntntsSnn) 응답 JSON의 rstData.cntntsInfoHtml에만 있다. 그 조각의 img src는 /ps/img/curation/… 이므로 imagePath는 조각을 푼 뒤에만 실제로 걸린다. 판독 마크는 정적 요소 openGradeImg(src=/ps/img/cmmImg_2020/common/open_mark2.png, title='제2유형:…')와 openGradeTitle('본 저작물은 공공누리 제2유형:출처표시+상업적 이용금지')이며 둘 다 페이지 HTML 주석 안에 있다(그래서 마크 판독은 'kogl 마크를 담은 주석'을 보존해야 한다). 같은 페이지 <script> 안에 제1~제4유형 표(CNTNTS_OTHBC_GRAD_CODE 004001~004003 → open_mark1..4.png)가 있으므로 <script> 본문은 마크 판독에서 제외해야 한다. 파일명 icon_openN.gif는 유형 N이 아니다(실측: icon_open1.gif가 제2유형 페이지에 붙음) — 파일명으로 유형을 추정하지 않는다. 페이지·이미지 호스트가 같은 www.nongsaro.go.kr이다(2026-11-11 실측: /ps/img/curation/20240209/images/image02.jpg 200, image/jpeg, 152691 B, sha256 50c305b3acf43ca7b1eaa5f9d42fa9f834aac3b50fb302454fb7e3df5f60ef3f)."
+    }
+  ]
+}
