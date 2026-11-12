@@ -157,6 +157,78 @@ class GuiFigureWireTests(ContractCase):
         self.assertEqual(manifest["figures"]["student_count"], 0)
         self.assertEqual(manifest["figures"]["blocked"], [])
 
+    # --- 웹 검토 R-01/R-02 -------------------------------------------------
+
+    def build_cli(self, manuscript, out, home):
+        """build_docx.py를 진짜 CLI로 돌린다 — 앱이 받는 JSON 봉투 그대로."""
+        write_text(self.root, "body.md", manuscript)
+        with self.at_home(home):
+            return subprocess.run(
+                [sys.executable, "-B", str(SCRIPTS / "build_docx.py"),
+                 str(self.root), "--in", "body.md", "--out", out,
+                 "--major", "specialty_crops"],
+                capture_output=True, text=True, encoding="utf-8", cwd=self.root)
+
+    def test_cli_reports_unverified_token_as_blocked_json_and_exit_2(self):
+        """R-01: 앱이 미승인 토큰을 넘기면 CLI가 JSON으로 거절하고 종료코드 2를
+        낸다 — 앱이 traceback 줄을 파싱하지 않도록. 문서는 만들지 않는다."""
+        result = self.build_cli(FIGURE, "build/f.docx",
+                                self.app_home(verdict="ambiguous"))
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["status"], "blocked")
+        self.assertIn("figure_unverified", payload["reason"])
+        self.assertNotIn("Traceback", result.stderr)
+        self.assertFalse((self.root / "build" / "f.docx").exists())
+
+    def test_student_local_figure_is_inserted_and_counted(self):
+        """R-02①: 앱 밖에서 학생이 넣은 프로젝트 안 그림은 그대로 들어가고
+        학생 그림 1건으로 집계된다 — 자리 표시·차단으로 새지 않는다."""
+        picture = self.root / "figures" / "public" / "ok.png"
+        picture.parent.mkdir(parents=True)
+        picture.write_bytes(PNG)
+        text = FIGURE.replace("app-figure:" + SHA, "figures/public/ok.png")
+        with self.at_home(None):
+            self.assertEqual(self.missing_image(text), [])
+            doc = self.convert(text)
+        self.assertEqual(len(doc.inline_shapes), 1)
+        self.assertNotIn(self.gd.PLACEHOLDER, [p.text for p in doc.paragraphs])
+        result = self.build_cli(text, "build/student.docx", None)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        manifest = json.loads(
+            (self.root / "build" / "student.manifest.json").read_text(
+                encoding="utf-8"))
+        figures = manifest["figures"]
+        self.assertEqual([item["kind"] for item in figures["images"]],
+                         ["student"])
+        self.assertEqual(figures["student_count"], 1)
+        self.assertEqual(figures["placeholders"], [])
+        self.assertEqual(figures["blocked"], [])
+
+    def test_outside_paths_are_rejected_by_check_and_build(self):
+        """R-02②: 폴더 밖 상대경로·절대경로는 문서 검사가 missing_image로 잡고
+        빌드는 '그림 파일 없음/외부 경로'로 거절한다 — 경로 이탈 우회 없음.
+        두 경로 모두 실제로 존재하는 파일이라 '없어서' 막히는 게 아니다."""
+        tmp = tempfile.TemporaryDirectory(prefix="knuaf-outside-")
+        self.addCleanup(tmp.cleanup)
+        outside = Path(tmp.name) / "밖.png"
+        outside.write_bytes(PNG)
+        for index, ref in enumerate(
+                (os.path.relpath(outside, self.root), str(outside))):
+            with self.subTest(ref=ref):
+                text = FIGURE.replace("app-figure:" + SHA, ref)
+                with self.at_home(None):
+                    self.assertEqual(self.missing_image(text),
+                                     [("missing_image", ref)])
+                result = self.build_cli(text, "build/out%d.docx" % index, None)
+                self.assertEqual(result.returncode, 2, result.stdout)
+                payload = json.loads(result.stdout)
+                self.assertEqual(payload["status"], "blocked")
+                self.assertIn("그림 파일 없음/외부 경로: " + ref,
+                              payload["reason"])
+                self.assertFalse(
+                    (self.root / "build" / ("out%d.docx" % index)).exists())
+
 
 if __name__ == "__main__":
     unittest.main()

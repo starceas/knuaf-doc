@@ -3021,12 +3021,12 @@
       "source": "new"
     },
     "tests/test_gui_figure_wire.py": {
-      "after_sha256": "f2aeb5349036e0ee1737d50589420bee5af1d3aed2a687104f7945c0c37f813a",
+      "after_sha256": "35a72d1e553a66cc49bc19d2a717b5b882b64e9d4b6dda0aa9ebfc02f4405016",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "P28",
       "owner": "P28",
-      "reason": "GF2: 규칙집 그림 명령(gg.py figure)·docx 그림 검사(gg_document)·그림 삽입과 manifest(build_docx) 배선 잠금 — §4 네 경우(승인/미증명/앱 밖/일반 없는 파일)와 CLI 위임을 고정한다.",
+      "reason": "GF2: 규칙집 그림 명령(gg.py figure)·docx 그림 검사(gg_document)·그림 삽입과 manifest(build_docx) 배선 잠금 — §4 네 경우(승인/미증명/앱 밖/일반 없는 파일)와 CLI 위임을 고정한다. | WT2: R-01(미승인 토큰 CLI JSON 거절·종료코드 2)·R-02(학생 로컬 그림 삽입·집계, 폴더 밖 상대/절대 경로 거절) 회귀 시험 추가.",
       "source": "new"
     }
   },
