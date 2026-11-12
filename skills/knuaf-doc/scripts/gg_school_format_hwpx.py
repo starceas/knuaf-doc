@@ -17,7 +17,9 @@
         [--kordoc /path/to/kordoc]
 
 `--kordoc`이 없으면 `structure`(kordoc validate)·`reparse`(재파싱 대조)는
-`skipped`로 기록하고 나머지만 본다.
+`skipped`로 기록하고 나머지만 본다. 반대로 `--kordoc`을 지정했는데 그 명령을
+실행할 수 없으면(파일 없음·타임아웃·OSError) 두 검사 모두 `failed`와 위반으로
+닫는다 — 검사를 요청한 산출물을 판정 없이 통과시키지 않는다.
 """
 from __future__ import annotations
 
@@ -641,7 +643,17 @@ def _check_structure(cli_command, path, violations):
         return {"status": "skipped", "reason": "no kordoc"}
     process = _run(list(cli_command) + ["validate", str(path), "--json"])
     if not isinstance(process, subprocess.CompletedProcess):
-        return {"status": "skipped", "reason": str(process)}
+        # `--kordoc`로 지정한 명령이 없거나 시간 안에 끝나지 않았다. 검사를
+        # 요청해 놓고 판정 없이 통과시키면 구조 검증이 빠진 산출물이
+        # pass_with_notes로 나가므로, skip이 아니라 실패로 닫는다.
+        violations.bad(
+            "food_crops.format.structure", (), "kordoc validate",
+            {"status": "ok"},
+            {"status": "failed", "error": type(process).__name__,
+             "detail": str(process)[-400:]},
+            "지정된 kordoc 구조 검증을 실행하지 못함(파일 없음·타임아웃·OSError)")
+        return {"status": "failed", "reason": "kordoc not runnable",
+                "error": type(process).__name__}
     text = process.stdout or ""
     start, end = text.find("{"), text.rfind("}")
     report = {"status": "failed", "returncode": process.returncode,
@@ -705,9 +717,16 @@ def _check_reparse(cli_command, path, measured, violations):
         str(path), "-o", str(out_md), "--format", "markdown", "--silent",
         "--keep-empty-cols", "--keep-empty-paragraphs"])
     if not isinstance(process, subprocess.CompletedProcess):
-        # kordoc이 없으면 재파싱을 할 수 없다. 이건 skip이지 결함이 아니다.
-        return {"status": "skipped", "reason": "kordoc not runnable",
-                "returncode": getattr(process, "returncode", None)}
+        # 구조 검사와 같은 계약: `--kordoc`을 지정했는데 실행할 수 없으면
+        # 재파싱 판정을 못 한 것이므로 skip이 아니라 실패다.
+        violations.bad(
+            "food_crops.format.reparse", (), "kordoc reparse",
+            {"status": "ok"},
+            {"status": "failed", "error": type(process).__name__,
+             "detail": str(process)[-400:]},
+            "지정된 kordoc 재파싱을 실행하지 못함(파일 없음·타임아웃·OSError)")
+        return {"status": "failed", "reason": "kordoc not runnable",
+                "error": type(process).__name__}
     if process.returncode != 0 or not out_md.is_file():
         # 실행 파일은 있는데 재파싱이 실패한 경우는 검사 불가가 아니라 실패다.
         # skip으로 넘기면 재파싱이 통째로 망가진 산출물이 통과한다.

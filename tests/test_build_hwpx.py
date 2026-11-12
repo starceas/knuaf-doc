@@ -625,6 +625,41 @@ class ExportTests(_Base):
         self.assertIsNone(value["manifest"]["school_frontmatter"])
 
 
+class OtherMajorHwpxByteTests(_Base):
+    """R-N01: 다른 전공 4개의 HWPX 멤버 바이트가 `5488bd2`와 같다.
+
+    기준은 `5488bd2`(식량작물 모듈 이전) 트리에서 `BODY_MD`·`make_fake_cli`·
+    각 전공으로 뽑은 산출물의 압축 해제 바이트다. ZIP 시각은 실행마다
+    달라지므로 멤버 단위로 비교한다. 4전공이 모두 같은 해시를 내므로 기준
+    dict 하나를 공유한다.
+    """
+
+    MEMBERS = {
+        'mimetype': '5ab5230b5af04f78947736bf8dd1a269aa684e234f7f4a392efb85289d1655c2',
+        'META-INF/container.xml': '1feb165533a201fbe460cf9fdbe756b271e3d4aad056d52049c57da7efd7f0de',
+        'Contents/header.xml': 'e2656e9c06d85ce67f04b71cdef8548afeff76323b1fe301bcb68df4e58c3fa4',
+        'Contents/section0.xml': '3ba717e5fa8f7f782379b6ed3eabeffc87c55e2ff66826e78fe8ccced7e574c0',
+    }
+
+    def test_other_majors_reproduce_the_reference_bytes(self):
+        import hashlib
+        for major in ("specialty_crops", "fruit_trees", "hort_env_systems",
+                      "dairy"):
+            with self.subTest(major=major):
+                root = self._project(major)
+                (Path(root) / "body.md").write_text(BODY_MD, encoding="utf-8")
+                cli = make_fake_cli(root, markdown=BODY_MD)
+                build_hwpx.export(root, "body.md", "out.hwpx",
+                                  cli_command=cli,
+                                  context=self._ctx(root, major))
+                with zipfile.ZipFile(Path(root) / "out.hwpx") as archive:
+                    digests = {info.filename:
+                               hashlib.sha256(archive.read(info.filename)).hexdigest()
+                               for info in archive.infolist()}
+                self.assertEqual(sorted(self.MEMBERS), sorted(digests))
+                self.assertEqual(self.MEMBERS, digests)
+
+
 class CliTests(_Base):
     def setUp(self):
         super().setUp()
@@ -779,6 +814,22 @@ class _FoodCropsTests(_Base):
                              caught.exception.reason, caught.exception.details)
             self.assertEqual("요약", caught.exception.details["anchor"])
             self.assertEqual(2, len(caught.exception.details["occurrences"]))
+
+    def test_body_summary_paragraph_is_not_an_ambiguous_anchor(self):
+        # N-I01: 중복 검사는 앞부분 구간만 본다. 본문에 독립 `요약` 문단이
+        # 있어도 그것은 앞부분 앵커가 아니므로 분할을 막으면 안 된다. 원고와
+        # HWPX는 같은 문단 목록을 쓴다(노드↔문단 대응 유지).
+        paragraphs = list(FOOD_CROPS_PARAGRAPHS)
+        body_at = paragraphs.index("1. 머리말") + 1
+        paragraphs.insert(body_at, "요약")
+        data, applied = self._transform(
+            hwpx_section(paragraphs),
+            markdown="\n\n".join(paragraphs) + "\n")
+        self.assertEqual(["Contents/section%d.xml" % i for i in range(3)],
+                         applied["sections"])
+        body = paragraphs_of(
+            read_zip(data)["Contents/section2.xml"].decode("utf-8"))
+        self.assertIn("요약", ["".join(node.itertext()) for node in body])
 
     def test_split_strips_existing_controls_before_insert(self):
         numbers = ('<hp:ctrl><hp:pageNum pos="TOP_CENTER" formatType="DIGIT"'

@@ -502,10 +502,17 @@ def main(argv=None):
     except (ProbeError,OSError,BadZipFile) as e:
         # 사람용 `BLOCK:` 문구만 내면 자동 호출자가 상태를 못 읽는다. 기계가
         # 읽을 JSON을 stdout에 내고 종료 2는 그대로 둔다(호출 계약 불변).
-        print(json.dumps({"status":"blocked","reason":str(e),
-                          "input":{"path":str(ns.docx)},
-                          "out":str(ns.out) if ns.out else None},
-                         ensure_ascii=False))
+        report={"status":"blocked","reason":str(e),
+                "input":{"path":str(ns.docx)},
+                "out":str(ns.out) if ns.out else None}
+        # `--out`을 준 호출자는 그 파일을 읽는다. 정상 경로만 보고서를 쓰면
+        # 손상 입력에서 파일이 아예 생기지 않아 호출자가 '보고서 없음'과
+        # '검사 안 함'을 구분하지 못한다. 단 `--out`이 입력과 같은 경로면
+        # 쓰지 않는다(손상된 원본을 덮어쓰게 된다).
+        if ns.out and ns.out.resolve()!=ns.docx.resolve():
+            ns.out.parent.mkdir(parents=True,exist_ok=True)
+            ns.out.write_text(json.dumps(report,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
+        print(json.dumps(report,ensure_ascii=False))
         print(f"BLOCK: {e}",file=sys.stderr)
         return 2
     print(json.dumps({"status":result["status"],"sha256":result["input"]["sha256"],"violations":len(result["violations"]),"out":str(ns.out) if ns.out else None},ensure_ascii=False))

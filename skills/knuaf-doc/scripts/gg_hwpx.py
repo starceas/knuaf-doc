@@ -400,11 +400,14 @@ def split_sections_by_plan(section_xml: str, *, nodes, plan,
             action="앞머리 표지가 일부만 있어 구역을 나눌 수 없습니다.",
         )
 
-    # 앞부분 앵커 `요약`은 문서에 한 번만 있어야 한다. 계획은 첫 번째 것만
-    # 잡으므로, 원고·HWPX 양쪽에 `요약`이 둘이면 문단 수가 맞아도 둘째가
-    # 조용히 요약 본문(12 pt)으로 들어간다. `감사의 글`은 목차 항목과 본문
-    # 끝 제목 두 번 나오는 것이 정상이므로 중복 검사에서 뺀다.
-    summary_hits = [index for index, node in enumerate(nodes)
+    # 앞부분 앵커 `요약`은 **앞부분 구간에서** 한 번만 있어야 한다. 계획은
+    # 첫 번째 것만 잡으므로, 원고·HWPX 양쪽에 `요약`이 둘이면 문단 수가 맞아도
+    # 둘째가 조용히 요약 본문(12 pt)으로 들어간다. `감사의 글`은 목차 항목과
+    # 본문 끝 제목 두 번 나오는 것이 정상이므로 중복 검사에서 뺀다.
+    # 본문·목차의 독립 `요약` 문단은 앵커가 아니므로 세지 않는다(문서 전체를
+    # 세면 정상 원고가 section_split_anchor_ambiguous로 막힌다).
+    body_start = plan["body"]
+    summary_hits = [index for index, node in enumerate(nodes[:body_start])
                     if _normalize_space(node.get("text", "")) == "요약"]
     if len(summary_hits) != 1:
         raise HwpxBlocked(

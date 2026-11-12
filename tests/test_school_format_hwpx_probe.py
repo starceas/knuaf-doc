@@ -12,6 +12,7 @@ import tempfile
 import unittest
 import zipfile
 from io import BytesIO
+from unittest import mock
 
 from tests._harness import runtime
 from tests.test_build_hwpx import (FOOD_CROPS_PARAGRAPHS, food_crops_plan,
@@ -543,9 +544,37 @@ class ProbeTests(unittest.TestCase):
         self.assertNotIn("food_crops.format.manifest.items", self.codes(result))
         self.assertEqual([], result["violations"])
 
-    def test_absent_kordoc_never_blocks(self):
+    def test_unrunnable_kordoc_blocks_both_checks(self):
+        # I-04: `--kordoc`으로 명령을 지정했으면 그 검사를 실제로 해야 한다.
+        # 파일이 없어 실행하지 못한 경우 `skipped`로 넘기면 검증이 빠진
+        # 산출물이 `pass_with_notes`로 나간다. 두 검사 모두 위반 + failed다.
         result = probe.check(
             self.path, cli_command=[str(pathlib.Path(self.tmp.name) / "no-such-kordoc")])
+        self.assertEqual("blocked", result["status"])
+        self.assertEqual(["food_crops.format.structure", "food_crops.format.reparse"],
+                         [value["code"] for value in result["violations"]])
+        self.assertEqual("failed", result["checks"]["structure"]["status"])
+        self.assertEqual("failed", result["checks"]["reparse"]["status"])
+        self.assertEqual("FileNotFoundError",
+                         result["checks"]["structure"]["error"])
+
+    def test_kordoc_timeout_blocks_both_checks(self):
+        # 같은 계약의 타임아웃 경로. `_run`이 TimeoutExpired를 그대로 돌려주는
+        # 현 구조를 대역으로 재현한다(180초를 실제로 기다리지 않는다).
+        expired = subprocess.TimeoutExpired(cmd=["kordoc"], timeout=180)
+        with mock.patch.object(probe, "_run", return_value=expired):
+            result = probe.check(
+                self.path, cli_command=[str(pathlib.Path(self.tmp.name) / "slow-kordoc")])
+        self.assertEqual("blocked", result["status"])
+        self.assertEqual(["food_crops.format.structure", "food_crops.format.reparse"],
+                         [value["code"] for value in result["violations"]])
+        self.assertEqual("TimeoutExpired",
+                         result["checks"]["reparse"]["error"])
+
+    def test_absent_kordoc_is_skipped(self):
+        # `--kordoc`을 아예 넘기지 않은 경우만 skip이다(호출자가 검사를
+        # 요청하지 않았다).
+        result = probe.check(self.path)
         self.assertEqual([], result["violations"])
         self.assertEqual("skipped", result["checks"]["structure"]["status"])
         self.assertEqual("skipped", result["checks"]["reparse"]["status"])

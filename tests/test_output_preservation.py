@@ -4,6 +4,7 @@ These live in root tests/ because it is the default validation discovery
 root, independently of the separate skill-test gate change.
 """
 import copy
+import hashlib
 import json
 from pathlib import Path
 import re
@@ -235,6 +236,55 @@ class MajorNoticeIsolationTests(ContractCase):
             self.FRONT_MATTER_MD, "food_crops")
         self.assertEqual(list(self.HUMAN_FINISH) + list(self.FOOD_CROPS_FINISH),
                          summary["human_finish_required"])
+
+
+class OtherMajorDocxByteTests(ContractCase):
+    """R-N01: 다른 전공 4개의 DOCX 멤버 바이트가 `5488bd2`와 같다.
+
+    기준은 `5488bd2`(식량작물 모듈 이전) 트리에서 같은 입력·같은 명령으로
+    뽑은 산출물의 압축 해제 바이트다. ZIP 시각(타임스탬프·external_attr)은
+    실행마다 달라지므로 멤버 단위로 비교한다. 4전공이 모두 같은 해시를
+    내므로 기준 dict 하나를 공유한다.
+    """
+
+    BODY = "# 1. 머리말\n\n합성 본문.\n"
+    MEMBERS = {
+        '[Content_Types].xml': '66c84fb7a6aa3c4ead49f895e4a7044df1fb57de1ed76d09b2686e91f5bed5b4',
+        '_rels/.rels': 'a9ae57efe9186f07d48303bcac5d54c7e359bf3f503939c03ad2954e5c59a5c4',
+        'docProps/core.xml': 'd14be8284e406d14dc2a576b19f15e7f637b955f9e27a3d9ed871ec99606f7ba',
+        'docProps/app.xml': 'be664981c3141cddfc59362beb287ebf20d0773660e2dd6faac5968a5930a081',
+        'word/document.xml': 'a1db6487186ca7880bf84198aff6a69ef56bd9dc73b52bbab15ff1780b79f444',
+        'word/_rels/document.xml.rels': '1e7f0eb144a98e199249314f61ff32a8de2a27e56d8e9ee6b524e1c6b235d377',
+        'word/styles.xml': 'f017756fb397531264418c33ec44516d5431db2864caf720f7b140abf9701988',
+        'word/stylesWithEffects.xml': '463ae0928cf0d84775dbf8cf18d6c3029f6707c81bf590f6d6dd8757a5e93f15',
+        'word/settings.xml': '86c73de844b13fc27c417004b8fc5a7fdf76224ea4f5bdd0fb3996abedf5c6bb',
+        'word/webSettings.xml': '349d36de7434d09f86987ff671d8814964a0588c1e630c06e562cda7e75e9f95',
+        'word/fontTable.xml': '79385fb7f60247507ecaffc292e9ebd52ea0657b8634f629ba6fccc54011d6bb',
+        'word/theme/theme1.xml': 'e3a8ab7db9ca7afca56f5f2820a56e8b660016c647773555b060b0a02ac76941',
+        'customXml/item1.xml': 'a86086ffc5d8e83ebd6c71a55d1d2efaa31b137977f5f3a752366e1023612144',
+        'customXml/_rels/item1.xml.rels': '1ca6c9a64edcebe24ee703a54403611b322d96da33371779e742d2d3f7ed7a6c',
+        'customXml/itemProps1.xml': 'c542307b13ec29a8b546217bb37936ab4822e044b265d2952985ec3d6afed24e',
+        'word/numbering.xml': '70976f19cbcd896e51890859fe6ecb3467a5a7ad0c040160fedc5a1993cb09ce',
+        'docProps/thumbnail.jpeg': '96367138dc44ce09bf2c8f0f8e49348a1478d2c5c0af69bbc2bbc38b63cdcead',
+    }
+
+    def test_other_majors_reproduce_the_reference_bytes(self):
+        for major in ("specialty_crops", "fruit_trees", "hort_env_systems",
+                      "dairy"):
+            with self.subTest(major=major):
+                root = self.make_project()
+                bind_major(root, major)
+                write_text(root, "body.md", self.BODY)
+                out = "build/%s.docx" % major
+                proc = cli(root, "build_docx.py", "--in", "body.md",
+                           "--out", out, "--major", major)
+                self.assertEqual(0, proc.returncode, proc.stdout + proc.stderr)
+                with zipfile.ZipFile(root / out) as archive:
+                    digests = {info.filename:
+                               hashlib.sha256(archive.read(info.filename)).hexdigest()
+                               for info in archive.infolist()}
+                self.assertEqual(sorted(self.MEMBERS), sorted(digests))
+                self.assertEqual(self.MEMBERS, digests)
 
 
 class FinanceSavePreservationTests(ContractCase):

@@ -185,6 +185,39 @@ class SchoolFormatProbeTests(ContractCase):
         self.assertEqual(str(path), payload["input"]["path"])
         self.assertIn("BLOCK:", run.stderr)
 
+    def test_corrupt_docx_writes_blocked_report_to_out(self):
+        # N-I02: `--out`을 준 호출자는 그 파일을 읽는다. 손상 입력에서도 같은
+        # 자리에 blocked 보고서가 남아야 '보고서 없음'과 '검사 안 함'을
+        # 구분할 수 있다. 형식은 정상 경로의 기록과 같다(indent 2 + 개행).
+        path = Path(self.root) / "corrupt-out.docx"
+        path.write_bytes(b"not a zip")
+        out = Path(self.root) / "nested" / "blocked.json"
+        run = subprocess.run(
+            [sys.executable, "-B", str(SCRIPTS / "gg_school_format.py"),
+             str(path), "--out", str(out), "--major", "food_crops"],
+            capture_output=True, text=True, encoding="utf-8", cwd=str(self.root))
+        self.assertEqual(2, run.returncode, run.stderr)
+        text = out.read_text(encoding="utf-8")
+        self.assertTrue(text.endswith("}\n"))
+        payload = json.loads(text)
+        self.assertEqual("blocked", payload["status"])
+        self.assertEqual(str(path), payload["input"]["path"])
+        self.assertEqual(str(out), payload["out"])
+        self.assertIn("invalid DOCX OOXML", payload["reason"])
+        self.assertEqual(json.loads(run.stdout), payload)
+
+    def test_corrupt_docx_refuses_to_overwrite_the_input(self):
+        # `--out`이 입력과 같으면 보고서를 쓰지 않는다 — 손상된 원본을
+        # 덮어쓰면 증거가 사라진다.
+        path = Path(self.root) / "corrupt-same.docx"
+        path.write_bytes(b"not a zip")
+        run = subprocess.run(
+            [sys.executable, "-B", str(SCRIPTS / "gg_school_format.py"),
+             str(path), "--out", str(path)],
+            capture_output=True, text=True, encoding="utf-8", cwd=str(self.root))
+        self.assertEqual(2, run.returncode, run.stderr)
+        self.assertEqual(b"not a zip", path.read_bytes())
+
     def test_docx_probe_dispatch_forwards_major(self):
         # gg_commands.main("docx-probe")가 --major를 gg_school_format까지
         # 넘기는지 본다. 넘기지 않으면 식량작물 대조가 통째로 사라진다.
