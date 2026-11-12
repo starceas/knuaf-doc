@@ -77,6 +77,12 @@ class FoodCropsBuildTests(ContractCase):
 
     # --- DOCX -------------------------------------------------------------
 
+    def margins(self, section):
+        from docx.oxml.ns import qn
+        mar = section._sectPr.find(qn("w:pgMar"))
+        keys = ("top", "right", "bottom", "left", "header", "footer", "gutter")
+        return {key: mar.get(qn("w:" + key)) for key in keys}
+
     def test_front_matter_from_summary_uses_upper_roman_page_numbers(self):
         from docx.oxml.ns import qn
         doc = self.convert()
@@ -88,6 +94,9 @@ class FoodCropsBuildTests(ContractCase):
         self.assertEqual("upperRoman", number.get(qn("w:fmt")))
         self.assertIn("PAGE", front.footer._element.xml)
         self.assertEqual(1, len(front._sectPr.findall(qn("w:pgNumType"))))
+        self.assertFalse(front.footer.is_linked_to_previous)
+        self.assertEqual(1, len(front.footer._element.findall(
+            ".//" + qn("w:fldSimple"))))
 
     def test_body_restarts_at_arabic_one(self):
         from docx.oxml.ns import qn
@@ -96,6 +105,79 @@ class FoodCropsBuildTests(ContractCase):
         self.assertEqual("decimal", number.get(qn("w:fmt")))
         self.assertEqual("1", number.get(qn("w:start")))
         self.assertEqual(1, len(doc.sections[-1]._sectPr.findall(qn("w:pgNumType"))))
+        self.assertFalse(doc.sections[-1].footer.is_linked_to_previous)
+        self.assertEqual(1, len(doc.sections[-1].footer._element.findall(
+            ".//" + qn("w:fldSimple"))))
+        self.assertEqual(
+            {"top": "1701", "right": "1701", "bottom": "1701",
+             "left": "1701", "header": "0", "footer": "567", "gutter": "0"},
+            self.margins(doc.sections[-1]))
+
+    def test_food_crops_cover_and_front_section_margins(self):
+        # 양식 원본 실측(sec0/겉표지 20/20/10, sec2/앞부분 30/30/30)을
+        # twips로 잠근다. 아래 10 mm는 겉표지 첫 쪽 값이다.
+        doc = self.convert()
+        cover, front, _ = doc.sections
+        self.assertEqual(
+            {"top": "1134", "right": "1134", "bottom": "567",
+             "left": "1134", "header": "0", "footer": "567", "gutter": "0"},
+            self.margins(cover))
+        expected = {"top": "1701", "right": "1701", "bottom": "1701",
+                    "left": "1701", "header": "0", "footer": "567",
+                    "gutter": "0"}
+        self.assertEqual(expected, self.margins(front))
+
+    def test_food_crops_cover_has_no_page_number_field(self):
+        # 겉표지~인준서 구역에는 바닥글 참조도 PAGE 필드도 없어야 한다.
+        from docx.oxml.ns import qn
+        doc = self.convert()
+        cover = doc.sections[0]
+        self.assertIsNone(cover._sectPr.find(qn("w:footerReference")))
+        self.assertNotIn("PAGE</w:instr>", cover.footer._element.xml)
+
+    def test_food_crops_title_sizes_on_cover_and_consent(self):
+        # 양식 §2.3 실측: 겉표지 계획명 32, 학위논문 18, 앞부분 제목 22/20,
+        # 동의서 제목 20·본문 14 굵게·`※` 10. 일반 본문 문단은 12 그대로.
+        doc = self.convert(
+            text=self.manuscript() + "\n\n※ 단, 합성 주석이다.")
+        paragraphs = doc.paragraphs
+
+        def one(text):
+            return next(p for p in paragraphs if p.text.strip() == text)
+
+        def size(text, last=False):
+            matches = [p for p in paragraphs if p.text.strip() == text]
+            # 표 목차·그림 목차는 목차 목록 항목(12pt)과 구역 제목(20pt)이
+            # 같은 글자라, 제목은 목록 뒤에 오는 문단을 잰다.
+            run = (matches[-1] if last else matches[0]).runs[0]
+            return round(run.font.size.pt, 1)
+
+        self.assertEqual(32.0, size("영농창업계획"))
+        self.assertEqual(18.0, size("농업전문학사 학위논문"))
+        self.assertTrue(one("영농창업계획").runs[0].bold)
+        self.assertEqual(22.0, size("요약"))
+        self.assertEqual(16.0, size("1. 농장 개요"))
+        self.assertTrue(one("1. 농장 개요").runs[0].bold)
+        self.assertEqual(20.0, size("감사의 글"))
+        self.assertEqual(22.0, size("목    차"))
+        self.assertEqual(20.0, size("표 목차", last=True))
+        self.assertEqual(20.0, size("그림 목차", last=True))
+        self.assertEqual(12.0, size("표 목차"))
+        self.assertEqual(12.0, size("그림 목차"))
+        self.assertEqual(20.0, size("학부모 동의서", last=True))
+        consent_title = next(p for p in paragraphs
+                            if p.text.strip() == "학부모 동의서"
+                            and p.style.name == "Heading 1")
+        self.assertEqual(20.0, round(consent_title.runs[0].font.size.pt, 1))
+        self.assertTrue(consent_title.runs[0].bold)
+        consent = one("합성 본문 학부모 동의서")
+        self.assertEqual(14.0, round(consent.runs[0].font.size.pt, 1))
+        self.assertTrue(consent.runs[0].bold)
+        note = one("※ 단, 합성 주석이다.")
+        self.assertEqual(10.0, round(note.runs[0].font.size.pt, 1))
+        self.assertFalse(note.runs[0].bold)
+        prose = one("합성 본문 1. 머리말")
+        self.assertEqual(12.0, round(prose.runs[0].font.size.pt, 1))
 
     def test_each_chapter_and_closer_starts_a_new_page(self):
         doc = self.convert()

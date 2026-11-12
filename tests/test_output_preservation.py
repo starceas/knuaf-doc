@@ -24,6 +24,9 @@ def cli(root, script, *args):
         capture_output=True, text=True, encoding="utf-8", cwd=root)
 
 
+build_hwpx = runtime("build_hwpx")
+
+
 class DocxPreservationTests(ContractCase):
     def setUp(self):
         self.root = self.make_project()
@@ -111,6 +114,83 @@ class DocxPreservationTests(ContractCase):
         self.assertFalse(out.exists())
         self.assertTrue(manifest.is_symlink())
         self.assertFalse(missing.exists())
+
+
+class MajorNoticeIsolationTests(ContractCase):
+    """F1: 식량작물 안내문·사람 확인 항목이 다른 전공 산출물로 새지 않는다.
+
+    1판 문자열을 그대로 못 박는다. 공용 상수를 고치면 다른 전공 매니페스트가
+    같이 움직이므로, 여기서는 스크립트 상수를 인용하지 않고 원문을 적는다.
+    """
+
+    # 1판 build_docx 매니페스트 notice.
+    DOCX_NOTICE = (
+        "저수준 미검증 출력. 목차 필드 갱신·전체 페이지·학교 원문·학명·그림·표·"
+        "머리행 검토 필요. 한글에서 글꼴 신명조·여백(위20/아래15/머리15/꼬리15/"
+        "좌30/우30/제본0 mm)·페이지 번호를 확인한다. 이 세 가지는 스킬 작성 완료를 "
+        "막지 않으며 자동 통과하지 않는다. file_hash는 빌드 직후 파일 기준이다. "
+        "쪽 나눔·여백 등 후처리로 파일을 다시 저장했다면 --rehash로 매니페스트 "
+        "해시를 갱신한다."
+    )
+    # 1판 build_hwpx notice(verify=True).
+    HWPX_NOTICE = (
+        "저수준 미검증 출력. kordoc validate(구조)와 HWPX 재파싱 표 수치 대조를 "
+        "통과했다. 한글 프로그램에서 열어 (1) 글꼴 신명조 (2) 여백 "
+        "위20/아래15/머리15/꼬리15/좌30/우30/제본0 mm (3) 쪽번호를 확인한다. "
+        "표지·제출면·인준서의 쪽 나눔·가운데 정렬과 목차의 실제 쪽번호는 사람이 "
+        "마무리한다. 이 항목들은 자동 통과하지 않는다."
+    )
+    # 1판 HUMAN_FINISH 5개.
+    HUMAN_FINISH = (
+        "표지·제출면·인준서의 쪽 나눔과 가운데 정렬",
+        "목차의 실제 쪽번호",
+        "표·그림 목차(있으면)",
+        "표 폭이 본문 폭(150 mm)인지 확인 — 자동으로 맞췄지만 한글에서 확인한다",
+        "장(Ⅰ~Ⅵ) 시작이 새 쪽인지 확인 — 자동으로 쪽 나눔을 넣었지만 한글에서 확인한다",
+    )
+    FOOD_CROPS_FINISH = (
+        "요약이 Ⅰ부터, 본문이 1부터인지 확인 — 자동으로 맞췄지만 한글에서 확인한다",
+    )
+    FRONT_MATTER_MD = ("겉표지\n\n표제면\n\n제출서\n\n인준서\n\n요약\n\n감사의 글\n\n"
+                       "목차\n\n1. 머리말\n")
+
+    def build(self, major):
+        root = self.make_project()
+        bind_major(root, major)
+        write_text(root, "body.md", "# 1. 머리말\n\n합성 본문.\n")
+        out = "build/" + major + ".docx"
+        proc = cli(root, "build_docx.py", "--in", "body.md",
+                   "--out", out, "--major", major)
+        self.assertEqual(0, proc.returncode, proc.stdout + proc.stderr)
+        return json.loads((root / out).with_suffix(".manifest.json")
+                          .read_text(encoding="utf-8"))
+
+    def test_food_crops_notice_does_not_leak_to_other_majors(self):
+        for major in ("specialty_crops", "fruit_trees", "hort_env_systems"):
+            with self.subTest(major=major, surface="docx-manifest"):
+                self.assertEqual(self.DOCX_NOTICE, self.build(major)["notice"])
+            with self.subTest(major=major, surface="hwpx-notice"):
+                self.assertEqual(self.HWPX_NOTICE, build_hwpx.notice(True, major))
+            with self.subTest(major=major, surface="hwpx-human-finish"):
+                summary = build_hwpx.school_frontmatter_summary(
+                    self.FRONT_MATTER_MD, major)
+                self.assertEqual(list(self.HUMAN_FINISH),
+                                 summary["human_finish_required"])
+        # 산업곤충은 앞머리 계획이 없어 요약이 None이다 — 그래도 안내문은 1판 그대로.
+        self.assertEqual(self.HWPX_NOTICE, build_hwpx.notice(True, "industrial_insects"))
+        self.assertIsNone(build_hwpx.school_frontmatter_summary(
+            self.FRONT_MATTER_MD, "industrial_insects"))
+
+        # 식량작물만 새 문구를 고르고, 1판 여백 문구는 남지 않는다.
+        self.assertIn("위30/아래30/머리0/꼬리10", self.build("food_crops")["notice"])
+        food_crops_notice = build_hwpx.notice(True, "food_crops")
+        self.assertIn("요약은 Ⅰ부터, 본문은 1부터", food_crops_notice)
+        self.assertNotIn("위20/아래15", food_crops_notice)
+        self.assertNotIn("위20/아래15", self.build("food_crops")["notice"])
+        summary = build_hwpx.school_frontmatter_summary(
+            self.FRONT_MATTER_MD, "food_crops")
+        self.assertEqual(list(self.HUMAN_FINISH) + list(self.FOOD_CROPS_FINISH),
+                         summary["human_finish_required"])
 
 
 class FinanceSavePreservationTests(ContractCase):

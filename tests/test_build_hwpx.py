@@ -5,11 +5,14 @@ kordoc 없이 돈다. skip은 두지 않는다 — 실물 kordoc end-to-end와 D
 동등성은 일회성 수동 검증으로 대체했다(RESULT-W1b/W1c 참조).
 """
 
+import io
 import json
 from pathlib import Path
+import re
 import subprocess
 import sys
 import unittest
+import xml.etree.ElementTree as ET
 import zipfile
 from unittest import mock
 
@@ -59,7 +62,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 CONTROL = json.loads((HERE / "control.json").read_text(encoding="utf-8"))
-SECTION = (
+SECTION = CONTROL.get("section") or (
     '<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>'
     '<hs:sec xmlns:hp="http://www.hancom.co.kr/hwpml/2011/paragraph"><hp:p><hp:run>'
     '<hp:secPr><hp:pagePr landscape="WIDELY" width="59528" height="84188" '
@@ -68,13 +71,14 @@ SECTION = (
     '<hp:ctrl><hp:colPr id="" type="NEWSPAPER" layout="LEFT" colCount="1" '
     'sameSz="1" sameGap="0"/></hp:ctrl><hp:t>본문</hp:t></hp:run></hp:p></hs:sec>'
 )
-HEADER = (
+HEADER = CONTROL.get("header") or (
     '<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>'
     '<hh:head xmlns:hh="http://www.hancom.co.kr/hwpml/2011/head">'
     '<hh:fontfaces itemCnt="1"><hh:fontface lang="HANGUL" fontCnt="1">'
     '<hh:font id="0" face="함초롬바탕" type="TTF" isEmbedded="0"/></hh:fontface>'
     '</hh:fontfaces></hh:head>'
 )
+HPF = CONTROL.get("hpf")
 
 
 def write_hwpx(path):
@@ -83,6 +87,8 @@ def write_hwpx(path):
         info.compress_type = zipfile.ZIP_STORED
         archive.writestr(info, b"application/hwp+zip")
         archive.writestr("META-INF/container.xml", "<container/>")
+        if HPF is not None:
+            archive.writestr("Contents/content.hpf", HPF)
         archive.writestr("Contents/header.xml", HEADER)
         archive.writestr("Contents/section0.xml", SECTION)
 
@@ -117,6 +123,116 @@ def main(argv):
 if __name__ == "__main__":
     sys.exit(main(sys.argv))
 """
+
+
+# --- 식량작물 3구역 fixture ------------------------------------------------
+# `gg_document.parse`가 50개 노드로 읽고 앞머리 표지 7개가 모두 계획에 잡히는
+# 원고. HWPX fixture는 이 문단 목록을 그대로 옮겨 노드↔문단 색인을 맞춘다.
+
+FOOD_CROPS_PARAGRAPHS = (
+    "겉표지", "농업전문학사 학위논문", "영농창업계획", "합성 논문 제목",
+    "2027년 2월", "한국농수산대학교", "식량작물학과", "가상학생",
+    "표제면", "지도교수 가상교수", "농업전문학사 학위논문", "영농창업계획",
+    "합성 논문 제목", "2027년 2월", "한국농수산대학교", "식량작물학과", "가상학생",
+    "제출서", "학위논문", "영농창업계획", "합성 논문 제목",
+    "이 논문을 농업전문학사 학위논문으로 제출함", "2026년 12월",
+    "한국농수산대학교", "식량작물학과", "가상학생",
+    "인준서", "가상학생의 농업전문학사 학위논문을 인준함", "2026년 12월",
+    "위원장 가상위원 (인)", "위 원 가상위원 (인)",
+    "요약", "1. 농장 개요", "합성 요약 내용이다.",
+    "감사의 글", "합성 감사 내용이다.",
+    "목차", "표 목차", "그림 목차",
+    "1. 머리말", "합성 본문이다.",
+    "2. 영농환경 분석", "합성 본문이다.",
+    "맺음말 및 발전방향", "합성 맺음말이다.",
+    "참고문헌", "가상 문헌",
+    "학부모 동의서", "합성 동의 내용이다.",
+    "※ 단, 합성 주석이다.",
+)
+
+FOOD_CROPS_MD = "\n\n".join(FOOD_CROPS_PARAGRAPHS) + "\n"
+
+FOOD_CROPS_SECPR = (
+    '<hp:secPr><hp:pagePr landscape="WIDELY" width="59528" height="84188"'
+    ' gutterType="LEFT_ONLY"><hp:margin header="2835" footer="2835" gutter="0"'
+    ' left="5670" right="4252" top="8504" bottom="4252"/></hp:pagePr></hp:secPr>'
+)
+FOOD_CROPS_COLPR = (
+    '<hp:ctrl><hp:colPr id="" type="NEWSPAPER" layout="LEFT" colCount="1"'
+    ' sameSz="1" sameGap="0"/></hp:ctrl>'
+)
+
+FOOD_CROPS_HPF = (
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>'
+    '<opf:package xmlns:opf="http://www.idpf.org/2007/opf/"'
+    ' xmlns:hpf="http://www.hancom.co.kr/schema/2011/hpf/">'
+    '<opf:manifest>'
+    '<opf:item id="header" href="Contents/header.xml" media-type="application/xml"/>'
+    '<opf:item id="section0" href="Contents/section0.xml" media-type="application/xml"/>'
+    '</opf:manifest>'
+    '<opf:spine>'
+    '<opf:itemref idref="header" linear="no"/>'
+    '<opf:itemref idref="section0" linear="yes"/>'
+    '</opf:spine></opf:package>'
+)
+
+FOOD_CROPS_HEADER = (
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>'
+    '<hh:head xmlns:hh="http://www.hancom.co.kr/hwpml/2011/head" secCnt="1">'
+    '<hh:fontfaces itemCnt="1"><hh:fontface lang="HANGUL" fontCnt="1">'
+    '<hh:font id="0" face="' + gh.SCHOOL_FONT + '" type="TTF" isEmbedded="0"/>'
+    '</hh:fontface></hh:fontfaces>'
+    '<hh:charProperties itemCnt="1">'
+    '<hh:charPr id="0" height="1000" textColor="#000000" shadeColor="none"'
+    ' useFontSpace="0" useKerning="0" symMark="NONE" borderFillIDRef="1">'
+    '<hh:fontRef hangul="0" latin="0" hanja="0" japanese="0" other="0"'
+    ' symbol="0" user="0"/></hh:charPr>'
+    '</hh:charProperties></hh:head>'
+)
+
+
+def hwpx_para(text, controls=""):
+    return ('<hp:p paraPrIDRef="0" styleIDRef="0"><hp:run charPrIDRef="0">'
+            + controls + '<hp:t>' + text + '</hp:t></hp:run></hp:p>')
+
+
+def hwpx_section(paragraphs, *, extra=None):
+    """최상위 `<hp:p>` 목록을 hs/hp 두 접두사를 선언한 `<hs:sec>`로 감싼다."""
+    extra = extra or {}
+    body = "".join(
+        hwpx_para(text, FOOD_CROPS_SECPR + FOOD_CROPS_COLPR
+                  if index == 0 else extra.get(index, ""))
+        for index, text in enumerate(paragraphs))
+    return ('<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>'
+            '<hs:sec xmlns:hs="http://www.hancom.co.kr/hwpml/2011/section"'
+            ' xmlns:hp="http://www.hancom.co.kr/hwpml/2011/paragraph">'
+            + body + '</hs:sec>')
+
+
+def food_crops_zip(section_xml, *, header=FOOD_CROPS_HEADER, hpf=FOOD_CROPS_HPF):
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        info = zipfile.ZipInfo("mimetype")
+        info.compress_type = zipfile.ZIP_STORED
+        archive.writestr(info, b"application/hwp+zip")
+        archive.writestr("META-INF/container.xml", "<container/>")
+        if hpf is not None:
+            archive.writestr("Contents/content.hpf", hpf)
+        archive.writestr("Contents/header.xml", header)
+        archive.writestr("Contents/section0.xml", section_xml)
+    return buffer.getvalue()
+
+
+def food_crops_plan(markdown=FOOD_CROPS_MD):
+    gd = runtime("gg_document")
+    nodes = gd.parse(markdown, major_id="food_crops")
+    return nodes, gd.school_frontmatter_plan(nodes, "food_crops")
+
+
+def read_zip(data):
+    with zipfile.ZipFile(io.BytesIO(data)) as archive:
+        return {info.filename: archive.read(info.filename)
+                for info in archive.infolist()}
 
 
 def make_fake_cli(root, **control):
@@ -459,6 +575,247 @@ class CliTests(_Base):
         result = _cli(self.root, "--in", "body.md", "--out", "out.hwpx")
         self.assertEqual(2, result.returncode, result.stdout + result.stderr)
         self.assertEqual("major_id_required", json.loads(result.stdout)["reason"])
+
+
+_HP = "http://www.hancom.co.kr/hwpml/2011/paragraph"
+_HH = "http://www.hancom.co.kr/hwpml/2011/head"
+_OPF = "http://www.idpf.org/2007/opf/"
+
+
+def paragraphs_of(xml):
+    """최상위 `<hp:p>` 요소 목록(ElementTree)."""
+    return [node for node in ET.fromstring(xml) if node.tag == "{%s}p" % _HP]
+
+
+def ctrl_items(paragraph, name):
+    """``<hp:ctrl>`` 바로 아래의 ``<hp:name>`` 요소 목록."""
+    return [child for ctrl in paragraph.iter("{%s}ctrl" % _HP)
+            for child in ctrl if child.tag == "{%s}%s" % (_HP, name)]
+
+
+def first_run(paragraph):
+    return next(node for node in paragraph if node.tag == "{%s}run" % _HP)
+
+
+def opf_nodes(xml, name):
+    return [node for node in ET.fromstring(xml).iter()
+            if node.tag == "{%s}%s" % (_OPF, name)]
+
+
+class _FoodCropsTests(_Base):
+    """식량작물 3구역 분할·구역별 쪽번호·앞부분 글자 크기(설계 §4.1~§4.3)."""
+
+    COVER_MARGIN = ('header="0" footer="2835" gutter="0" left="5669"'
+                    ' right="5669" top="5669" bottom="2835"')
+    FRONT_MARGIN = ('header="0" footer="2835" gutter="0" left="8504"'
+                    ' right="8504" top="8504" bottom="8504"')
+
+    def _transform(self, section_xml, *, markdown=FOOD_CROPS_MD,
+                   header=FOOD_CROPS_HEADER, **kw):
+        nodes, plan = food_crops_plan(markdown)
+        return gh.transform_hwpx(
+            food_crops_zip(section_xml, header=header),
+            section_formats=gh.FOOD_CROPS_SECTION_FORMATS,
+            nodes=nodes, plan=plan, **kw)
+
+    def test_split_hwpx_sections_are_three_and_wellformed(self):
+        data, applied = self._transform(
+            hwpx_section(list(FOOD_CROPS_PARAGRAPHS)))
+        self.assertEqual(["Contents/section%d.xml" % i for i in range(3)],
+                         applied["sections"])
+        members = read_zip(data)
+        for index in range(3):
+            xml = members["Contents/section%d.xml" % index].decode("utf-8")
+            self.assertTrue(paragraphs_of(xml), index)
+            expected = self.COVER_MARGIN if index == 0 else self.FRONT_MARGIN
+            self.assertIn(expected, xml)
+        header = members["Contents/header.xml"].decode("utf-8")
+        self.assertIn('secCnt="3"', header)
+        manifest = members["Contents/content.hpf"].decode("utf-8")
+        items = {node.get("id"): node.get("href")
+                 for node in opf_nodes(manifest, "item")}
+        refs = [node.get("idref") for node in opf_nodes(manifest, "itemref")]
+        self.assertEqual(["section0", "section1", "section2"],
+                         [ref for ref in refs if ref.startswith("section")])
+        for index in range(3):
+            self.assertEqual("Contents/section%d.xml" % index,
+                             items["section%d" % index])
+            self.assertIn("Contents/section%d.xml" % index, members)
+        for href in items.values():
+            self.assertIn(href, members)
+
+    def test_food_crops_page_number_formats_per_section(self):
+        data, _ = self._transform(hwpx_section(list(FOOD_CROPS_PARAGRAPHS)))
+        members = read_zip(data)
+        sections = [paragraphs_of(
+            members["Contents/section%d.xml" % index].decode("utf-8"))
+            for index in range(3)]
+        # 겉표지는 제어 요소를 넣지 않는다(pos NONE → 삽입 생략).
+        self.assertEqual([], ctrl_items(sections[0][0], "pageNum"))
+        self.assertEqual([], ctrl_items(sections[0][0], "newNum"))
+        for index, fmt in ((1, "ROMAN_CAPITAL"), (2, "DIGIT")):
+            first = sections[index][0]
+            numbers = ctrl_items(first, "pageNum")
+            self.assertEqual(1, len(numbers), index)
+            self.assertEqual(fmt, numbers[0].get("formatType"))
+            self.assertEqual("BOTTOM_CENTER", numbers[0].get("pos"))
+            restarts = ctrl_items(first, "newNum")
+            self.assertEqual(1, len(restarts), index)
+            self.assertEqual("PAGE", restarts[0].get("numType"))
+            self.assertEqual("1", restarts[0].get("num"))
+            run = first_run(first)
+            self.assertTrue([node for node in run.iter("{%s}newNum" % _HP)],
+                            "newNum이 구역 첫 문단 첫 run 밖에 있다")
+            xml = members["Contents/section%d.xml" % index].decode("utf-8")
+            self.assertEqual(1, xml.count("<hp:pageNum"))
+            self.assertEqual(1, xml.count("<hp:newNum"))
+
+    def test_split_rejects_missing_or_duplicate_anchors(self):
+        cases = {
+            "missing-paragraph": list(FOOD_CROPS_PARAGRAPHS[:-1]),
+            "duplicate-summary": (list(FOOD_CROPS_PARAGRAPHS[:32]) + ["요약"]
+                                  + list(FOOD_CROPS_PARAGRAPHS[32:])),
+        }
+        for label, paragraphs in cases.items():
+            with self.subTest(case=label):
+                with self.assertRaises(gh.HwpxBlocked) as caught:
+                    self._transform(hwpx_section(paragraphs))
+                self.assertEqual("section_split_node_map_mismatch",
+                                 caught.exception.reason,
+                                 caught.exception.details)
+
+    def test_split_strips_existing_controls_before_insert(self):
+        numbers = ('<hp:ctrl><hp:pageNum pos="TOP_CENTER" formatType="DIGIT"'
+                   ' sideChar="-"/></hp:ctrl>')
+        extra = {
+            5: FOOD_CROPS_SECPR + numbers + gh.NEW_NUM_CONTROL,
+            40: numbers,
+        }
+        data, applied = self._transform(
+            hwpx_section(list(FOOD_CROPS_PARAGRAPHS), extra=extra))
+        self.assertEqual(
+            [{"secPr": 1, "colPr": 1, "pageNum": 0, "newNum": 0},
+             {"secPr": 1, "colPr": 1, "pageNum": 1, "newNum": 1},
+             {"secPr": 1, "colPr": 1, "pageNum": 1, "newNum": 1}],
+            applied["section_controls"])
+        members = read_zip(data)
+        for index in range(3):
+            xml = members["Contents/section%d.xml" % index].decode("utf-8")
+            self.assertEqual(1, xml.count("<hp:secPr"), index)
+            self.assertEqual(1, xml.count("<hp:colPr"), index)
+            self.assertEqual(0 if index == 0 else 1, xml.count("<hp:pageNum"))
+            self.assertEqual(0 if index == 0 else 1, xml.count("<hp:newNum"))
+            self.assertNotIn('pos="TOP_CENTER"', xml)
+
+    def test_split_is_noop_without_front_matter(self):
+        # 앞머리 표지 7개가 하나도 없는 본문-only 입력은 유일하게 허용된 no-op.
+        # 분할 단계만 보므로 여백·쪽번호 재작성은 끈다(그 둘은 별도 단계다).
+        markdown = "본문이다.\n\n두 번째 문단.\n"
+        data = food_crops_zip(hwpx_section(["본문이다.", "두 번째 문단."]))
+        nodes, plan = food_crops_plan(markdown)
+        self.assertIsNone(plan)
+        out, applied = gh.transform_hwpx(
+            data, margins_mm=None, page_numbers=False,
+            section_formats=gh.FOOD_CROPS_SECTION_FORMATS,
+            nodes=nodes, plan=plan)
+        self.assertEqual(data, out)
+        self.assertEqual("not_applicable", applied["sections"])
+        self.assertEqual({}, applied["section_controls"])
+        self.assertEqual([], applied["margins"])
+        self.assertEqual([], applied["page_numbers"])
+        self.assertEqual([], applied["charpr"])
+
+    def test_split_rejects_partial_front_matter(self):
+        cases = {
+            "no-cover": list(FOOD_CROPS_PARAGRAPHS[1:]),
+            "only-summary-and-contents": ["요약", "1. 농장 개요",
+                                          "목차", "1. 머리말"],
+        }
+        for label, paragraphs in cases.items():
+            with self.subTest(case=label):
+                markdown = "\n\n".join(paragraphs) + "\n"
+                nodes, plan = food_crops_plan(markdown)
+                self.assertIsNone(plan)
+                with self.assertRaises(gh.HwpxBlocked) as caught:
+                    gh.transform_hwpx(
+                        food_crops_zip(hwpx_section(paragraphs)),
+                        section_formats=gh.FOOD_CROPS_SECTION_FORMATS,
+                        nodes=nodes, plan=plan)
+                self.assertEqual("section_split_front_matter_partial",
+                                 caught.exception.reason,
+                                 caught.exception.details)
+
+    def test_final_file_has_exactly_one_page_number_per_section(self):
+        root = self._project("food_crops")
+        (Path(root) / "body.md").write_text(FOOD_CROPS_MD, encoding="utf-8")
+        # 글꼴 단계가 실제로 값을 바꿔야 발행을 통과한다(원본 face가 이미 학교
+        # 글꼴이면 applied["font"]가 비어 format_not_applied로 막힌다).
+        header = FOOD_CROPS_HEADER.replace(gh.SCHOOL_FONT, "함초롬바탕")
+        cli = make_fake_cli(root, markdown=FOOD_CROPS_MD,
+                            section=hwpx_section(list(FOOD_CROPS_PARAGRAPHS)),
+                            header=header, hpf=FOOD_CROPS_HPF)
+        value = build_hwpx.export(
+            root, "body.md", "out.hwpx", cli_command=cli,
+            context=self._ctx(root, "food_crops"))
+        members = read_zip((Path(root) / "out.hwpx").read_bytes())
+        measured = []
+        for index in range(3):
+            xml = members["Contents/section%d.xml" % index].decode("utf-8")
+            measured.append({"pageNum": xml.count("<hp:pageNum"),
+                             "newNum": xml.count("<hp:newNum")})
+            first = paragraphs_of(xml)[0]
+            self.assertEqual(measured[-1]["pageNum"],
+                             len(ctrl_items(first, "pageNum")))
+            self.assertEqual(measured[-1]["newNum"],
+                             len(ctrl_items(first, "newNum")))
+        self.assertEqual(
+            [{"pageNum": 0, "newNum": 0},
+             {"pageNum": 1, "newNum": 1},
+             {"pageNum": 1, "newNum": 1}], measured)
+        applied = value["manifest"]["hwpx"]["post_processing"]
+        self.assertEqual(
+            [{"section": "Contents/section%d.xml" % index, **measured[index]}
+             for index in range(3)], applied["page_numbers"])
+        self.assertIn('face="신명조"',
+                      members["Contents/header.xml"].decode("utf-8"))
+        # 안내문은 식량작물 전용 문구를 고른다(공용 상수는 그대로).
+        self.assertEqual(list(build_hwpx.FOOD_CROPS_HUMAN_FINISH),
+                         value["manifest"]["school_frontmatter"]
+                         ["human_finish_required"])
+        self.assertIn("요약은 Ⅰ부터, 본문은 1부터",
+                      value["manifest"]["notice"])
+        self.assertNotIn(build_hwpx.FINISH_NOTICE, value["manifest"]["notice"])
+        self.assertEqual(
+            ["겉표지", "표제면", "제출서", "인준서", "요약", "감사의 글", "목차"],
+            value["manifest"]["school_frontmatter"]["sections"])
+
+
+    def test_appended_front_charprs_keep_header_parseable(self):
+        # 템플릿 header.xml은 한 줄이다. 끝 태그 앞에 줄바꿈이 없을 때 예전
+        # 구현은 XML 선언 앞에 charPr를 붙여 파싱 불가 파일을 만들었다.
+        data, applied = self._transform(
+            hwpx_section(list(FOOD_CROPS_PARAGRAPHS)))
+        xml = read_zip(data)["Contents/header.xml"].decode("utf-8")
+        self.assertTrue(xml.startswith("<?xml"), xml[:40])
+        root = ET.fromstring(xml)
+        self.assertEqual("{%s}head" % _HH, root.tag)
+        self.assertEqual("3", root.get("secCnt"))
+        properties = root.find("{%s}charProperties" % _HH)
+        self.assertEqual("15", properties.get("itemCnt"))
+        charprs = {"%s" % node.get("id"): node
+                   for node in properties.findall("{%s}charPr" % _HH)}
+        self.assertEqual(["0"] + [str(index) for index in range(1, 15)],
+                         sorted(charprs, key=int))
+        self.assertEqual(list(gh._FRONT_CHARPR_SPECS),
+                         [(int(charprs[str(index)].get("height")) // 100,
+                           charprs[str(index)].get("bold") == "1")
+                          for index in range(1, 15)])
+        for index in (3, 5, 7, 9, 11, 13):
+            self.assertIsNotNone(
+                charprs[str(index)].find("{%s}bold" % _HH), index)
+        # 붙인 id가 세 구역 모두의 planned 문단에 실제로 걸린다.
+        self.assertEqual(["Contents/section%d.xml" % index for index in range(3)],
+                         sorted(applied["charpr"]))
 
 
 class ConventionTests(unittest.TestCase):
