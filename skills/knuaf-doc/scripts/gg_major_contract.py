@@ -709,6 +709,18 @@ _UNSUPPORTED_OUTPUT_REASONS = frozenset({
 # 이 결정과 무관하다.
 LEGACY_GENERATOR_CLOSED_MAJORS = frozenset({"specialty_crops"})
 
+# 전공별 학교 엑셀 프로필: 16시트 식량작물 양식은 자기 원본 구조를 쓰고,
+# 표에 없는 전공은 지금까지의 17시트 공용 양식 문자열 그대로다(바이트 불변).
+MODULE_WORKBOOK_PROFILE = MappingProxyType({
+    "food_crops": "food_crops_16_sheet_v1",
+})
+
+
+def default_workbook_profile(authorization) -> str:
+    """The workbook profile a major's tools use when the caller names none."""
+    return MODULE_WORKBOOK_PROFILE.get(
+        getattr(authorization, "major_id", None), "school_17_sheet_v1")
+
 OUTPUT_GUIDANCE_TEMPLATE_ROUTE = (
     "특용작물전공 엑셀은 교수님 양식(X01, 대식물 계정이 필요하면 X02) 기준입니다. "
     "17시트를 새로 만드는 생성기는 쓰지 않습니다. 양식 원본을 복제해 값만 채우세요: "
@@ -2781,7 +2793,7 @@ FOOD_CROPS_MODULE = declare_module(
     module_version="0.1.0",
     capabilities={
         "question": "supported", "document": "supported",
-        "evidence": "supported", "finance": "unsupported",
+        "evidence": "supported", "finance": "supported",
     },
     question_schema=tuple(
         QuestionSpec(
@@ -2820,11 +2832,15 @@ FOOD_CROPS_MODULE = declare_module(
         )
     ),
     finance_capabilities=(
-        FinanceCapability("food_crops_16_sheet_v1", "unsupported",
-                          "식량작물 학교 원본 구조 미등록 — 프로필 닫음"),
+        FinanceCapability(
+            profile="food_crops_16_sheet_v1",
+            status="supported",
+            reason="학과에서 받은 16시트 원본을 복제(clear)·채우는 경로; "
+            "원본 지문은 참조집합, 칸 지도는 references/food-crops",
+        ),
     ),
     supported_outputs=("question_list", "document_plan", "evidence_review",
-                       "school_paper"),
+                       "school_paper", "school_excel_workbook"),
     workbook_profiles=("food_crops_16_sheet_v1",),
     packs=(),
 )

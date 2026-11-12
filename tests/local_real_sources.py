@@ -1,8 +1,12 @@
-"""Explicit local C1/C1b integration checks against pinned X01/X02 originals.
+"""Explicit local checks against pinned X01/X02 and food-crops originals.
 
 Run: python3 -m unittest tests.local_real_sources -v
 Exit 0: no FAIL (unavailable inputs are SKIP); 1: at least one FAIL.
 This module is intentionally outside unittest discovery's test*.py pattern.
+
+The food-crops section is the 2판 `clear` receipt measured on the school's
+own 16-sheet form. The file is never copied into the repository: point
+``KNUAF_REAL_FOOD_CROPS_XLSX`` at it for the run.
 """
 import json
 import os
@@ -11,8 +15,10 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import zipfile
+from xml.etree import ElementTree as ET
 
-from tests._harness import ContractCase
+from tests._harness import ContractCase, bind_major, runtime
 from tests.test_workbook_audit_evaluator import audit_module
 from tests.test_workbook_c1_correction import (
     ROOT, SPEC_PATH, S3, S9, S10, S11, S14, S15, AUDIT_CLI)
@@ -249,6 +255,83 @@ class LocalRealSourceChecks(ContractCase):
         self.check_materialize_accept(ref, source)
 
 
+FOOD_CROPS_ENV = "KNUAF_REAL_FOOD_CROPS_XLSX"
+FOOD_CROPS_SOURCE = (Path(value) if (value := os.environ.get(FOOD_CROPS_ENV))
+                     else None)
+FOOD_MAP = (ROOT / "skills/knuaf-doc/references/food-crops"
+            / "corrections/fc-clear-map.json")
+FOOD_CLEARED = 393
+FOOD_PRESERVED = 82
+
+
+def _formula_records(path):
+    """Every ``<f>`` in the package: text plus attributes, sheet by sheet."""
+    main = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
+    records, cached = set(), 0
+    with zipfile.ZipFile(path) as archive:
+        for name in archive.namelist():
+            if not name.startswith("xl/worksheets/sheet"):
+                continue
+            root = ET.fromstring(archive.read(name))
+            for cell in root.iter(main + "c"):
+                formula = cell.find(main + "f")
+                if formula is None:
+                    continue
+                records.add((name, cell.get("r"), formula.text,
+                             tuple(sorted(formula.attrib.items()))))
+                value = cell.find(main + "v")
+                if value is not None and value.text is not None:
+                    cached += 1
+    return records, cached
+
+
+class FoodCropsRealSourceChecks(ContractCase):
+    """The 2판 clear receipt on the school's real 16-sheet form."""
+
+    def test_the_real_form_produces_the_reviewed_blank_copy(self):
+        source = FOOD_CROPS_SOURCE
+        self.assertTrue(source.is_file(), "food-crops source absent")
+        tpl = runtime("gg_excel_template")
+        school = runtime("gg_school_excel")
+        mc = runtime("gg_major_contract")
+        profile = school.profile_structure("food_crops_16_sheet_v1")
+        self.assertEqual(tpl.sha256(source), profile["sha256"])
+        self.assertEqual(len(profile["sheets"]), 16)
+        original = source.read_bytes()
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            runtime("gg_core").init(root)
+            bind_major(root, "food_crops")
+            out = root / "blank.xlsx"
+            receipt = tpl.blank_copy(source, FOOD_MAP, out,
+                                     context=mc.output_context(root, "food_crops"))
+            self.assertEqual(receipt["workbook_profile"],
+                             "food_crops_16_sheet_v1")
+            self.assertEqual(len(receipt["cleared"]), FOOD_CLEARED)
+            self.assertEqual(len(receipt["preserved"]), FOOD_PRESERVED)
+            self.assertEqual(receipt["unclassifiedNumericCells"], 0)
+            self.assertEqual(receipt["unclassifiedTextCells"], 0)
+            self.assertEqual(receipt["formulaCellsProtected"], 0)
+            self.assertEqual(receipt["missingCells"], [])
+            self.assertEqual(receipt["output"]["status"], "blank_template")
+            # Only the reviewed structure survives: plan years and the
+            # form's own source notes, nothing a student typed earlier.
+            self.assertTrue(all(entry["reason"].startswith("검토된")
+                                for entry in receipt["preserved"]))
+            self.assertEqual(
+                {entry["sheet"] for entry in receipt["preserved"]} - set(profile["sheets"]),
+                set())
+            self.assertEqual(source.read_bytes(), original)
+
+            before, cached_before = _formula_records(source)
+            after, cached_after = _formula_records(out)
+            self.assertEqual(len(before), 1256)
+            self.assertEqual(after, before)
+            self.assertEqual(cached_before, 1256)
+            self.assertEqual(cached_after, 0)
+
+
 def load_tests(loader, tests, pattern):
     """Report unavailable inputs as visible skips, never passing checks."""
     statuses = {}
@@ -274,9 +357,29 @@ def load_tests(loader, tests, pattern):
             statuses[ref] = "FAIL"
             details[ref] = ((result.failures or result.errors)[0][1].splitlines()[-1]
                             if result.failures or result.errors else "check did not run")
+    # The food-crops original is a separate form with its own journey; it is
+    # reported on its own row so a missing school file never hides a C1 result.
+    if FOOD_CROPS_SOURCE is None:
+        statuses["FC"] = "SKIP"
+        details["FC"] = FOOD_CROPS_ENV + " is unset"
+    elif not FOOD_CROPS_SOURCE.is_file():
+        statuses["FC"] = "SKIP"
+        details["FC"] = FOOD_CROPS_ENV + " file is absent"
+    else:
+        case = FoodCropsRealSourceChecks('runTest')
+        result = unittest.TestResult()
+        case.runTest = lambda case=case: case.test_the_real_form_produces_the_reviewed_blank_copy()
+        case.run(result)
+        if result.wasSuccessful() and result.testsRun == 1:
+            statuses["FC"] = "PASS"
+            details["FC"] = "16-sheet form, 393/82, formula records intact"
+        else:
+            statuses["FC"] = "FAIL"
+            details["FC"] = ((result.failures or result.errors)[0][1].splitlines()[-1]
+                             if result.failures or result.errors else "check did not run")
     print("C1 local real-source checks")
     print("SOURCE  STATUS    DETAIL")
-    for ref in REAL_SOURCES:
+    for ref in statuses:
         print(f"{ref:<6}  {statuses[ref]:<7}   {details[ref]}")
     if "FAIL" in statuses.values():
         raise SystemExit(1)
@@ -288,7 +391,7 @@ def load_tests(loader, tests, pattern):
     return unittest.TestSuite(
         unittest.FunctionTestCase(lambda ref=ref: require_pass(ref),
                                   description=f"{ref} local original")
-        for ref in REAL_SOURCES)
+        for ref in statuses)
 
 
 if __name__ == "__main__":

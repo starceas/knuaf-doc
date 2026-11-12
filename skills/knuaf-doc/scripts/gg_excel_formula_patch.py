@@ -621,13 +621,16 @@ def _expand_targeted_shared(root, dom, dom_cells, patches, sheet):
     return expanded
 
 
-def patch_copy(source: Path, map_path: Path, out: Path, *, context=None) -> dict:
+def patch_copy(source: Path, map_path: Path, out: Path, *, context=None,
+               profile: str | None = None) -> dict:
     """Guarded public entry: authorize before any write, then run the
-    existing patch engine (policy B)."""
+    existing patch engine (policy B).  ``profile`` defaults to the bound
+    major's own workbook profile."""
     import gg_major_contract as mc
 
     authorization = mc.authorize_output(mc.OUTPUT_SCHOOL_WORKBOOK, context)
-    mc.require_finance_profile(authorization, "school_17_sheet_v1")
+    mc.require_finance_profile(
+        authorization, profile or mc.default_workbook_profile(authorization))
     return _patch_copy(source, map_path, out,
                        _authorization=authorization, _context=context)
 
@@ -889,6 +892,8 @@ def cli(argv: list[str]) -> int:
     parser.add_argument("--project", default=None, type=Path,
                         help="프로젝트 정본 폴더")
     parser.add_argument("--major", default=None, help="명시 전공 ID")
+    parser.add_argument("--profile", default=None,
+                        help="재무 프로필 이름(기본: 전공별 학교 양식 프로필)")
     args = parser.parse_args(argv)
     source, out, receipt_path = args.source.resolve(), args.out.resolve(), args.receipt.resolve()
     if len({source, out, receipt_path}) != 3:
@@ -906,7 +911,7 @@ def cli(argv: list[str]) -> int:
         mc.authorize_output(mc.OUTPUT_SCHOOL_WORKBOOK, context)
         out.parent.mkdir(parents=True, exist_ok=True)
         result = patch_copy(source, args.map.resolve(), staged_out,
-                            context=context)
+                            context=context, profile=args.profile)
         result["output"]["path"] = str(out)
         staged_receipt.parent.mkdir(parents=True, exist_ok=True)
         staged_receipt.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")

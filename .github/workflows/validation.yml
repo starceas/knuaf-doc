@@ -283,7 +283,7 @@ jobs:
       # exactly as it does on a Windows box without UTF-8 mode.
       # Temp dir on the repository's drive: a temp dir on another drive makes
       # gg_reuse relpath die (separate Windows defect, rules side).
-      - name: Skill tests with UTF-8 mode off (no skips)
+      - name: Skill tests with UTF-8 mode off
         if: ${{ matrix.python == '3.10' }}
         env:
           PYTHONUTF8: '0'

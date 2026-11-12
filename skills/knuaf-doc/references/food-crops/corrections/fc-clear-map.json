@@ -1,0 +1,1295 @@
+{
+  "schema": "gg-xlsx-template-map/v1",
+  "workbook_profile": "food_crops_16_sheet_v1",
+  "source": {
+    "sha256": "3e92fa5193838697d02c7f444ae17b38e75ba9591438f1ca89fe5660b9ea3416",
+    "size": 105222
+  },
+  "layout": {
+    "variant": "unknown",
+    "mapOrigin": "reviewed_custom"
+  },
+  "mapStatus": "ok",
+  "policy": {
+    "scope": "reviewed_numeric_inputs",
+    "cleared": "학생이 자기 근거로 다시 적는 숫자 입력 칸(양식 예시값)",
+    "preserved_years": "계획연도 칸 — 표 구조라 지우지 않는다",
+    "preserved_notes": "'*'로 시작하는 출처·적용 기준 주석 — 양식 지침이라 지운다면 지침이 사라진다",
+    "formulas": "수식 칸과 수식 안 상수는 지도에 넣지 않는다(도구가 자동 보존)",
+    "unlisted_cells": "지도 밖 칸은 보존하고 영수증에 공개한다"
+  },
+  "entries": [
+    {
+      "sheet": " 5. 판매계획",
+      "range": "D13:D14",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": " 5. 판매계획",
+      "range": "E19",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": " 5. 판매계획",
+      "range": "E23",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": " 5. 판매계획",
+      "range": "E6",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": " 5. 판매계획",
+      "range": "F13:F14",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": " 5. 판매계획",
+      "range": "G19",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": " 5. 판매계획",
+      "range": "G23",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": " 5. 판매계획",
+      "range": "G6",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": " 5. 판매계획",
+      "range": "H13:H14",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": " 5. 판매계획",
+      "range": "I19",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": " 5. 판매계획",
+      "range": "I23",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": " 5. 판매계획",
+      "range": "I6",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": " 5. 판매계획",
+      "range": "J13:J14",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": " 5. 판매계획",
+      "range": "K19",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": " 5. 판매계획",
+      "range": "K23",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": " 5. 판매계획",
+      "range": "K6",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": " 5. 판매계획",
+      "range": "L13:L14",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": " 5. 판매계획",
+      "range": "M19",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": " 5. 판매계획",
+      "range": "M23",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": " 5. 판매계획",
+      "range": "M6",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "1. 기초재무상태조사",
+      "range": "D19",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "1. 기초재무상태조사",
+      "range": "D24:D25",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "1. 기초재무상태조사",
+      "range": "D47:D48",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "1. 기초재무상태조사",
+      "range": "E24:E25",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "1. 기초재무상태조사",
+      "range": "E47:E48",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "1. 기초재무상태조사",
+      "range": "F24:F25",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "1. 기초재무상태조사",
+      "range": "F47:F48",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "1. 기초재무상태조사",
+      "range": "G24:G25",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "1. 기초재무상태조사",
+      "range": "G47:G48",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "1. 기초재무상태조사",
+      "range": "L47:L57",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "1. 기초재무상태조사",
+      "range": "M47:M57",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "1. 기초재무상태조사",
+      "range": "N47:N57",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "1. 기초재무상태조사",
+      "range": "O47:O57",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "10. 감가상각비계획 ",
+      "range": "C15",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "10. 감가상각비계획 ",
+      "range": "C27",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "10. 감가상각비계획 ",
+      "range": "C3",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "10. 감가상각비계획 ",
+      "range": "C39",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "10. 감가상각비계획 ",
+      "range": "C51",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "10. 감가상각비계획 ",
+      "range": "D20:E20",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "10. 감가상각비계획 ",
+      "range": "D32:E32",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "10. 감가상각비계획 ",
+      "range": "D44:E44",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "10. 감가상각비계획 ",
+      "range": "D56:E56",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "10. 감가상각비계획 ",
+      "range": "D8:E8",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "10. 감가상각비계획 ",
+      "range": "G20:Q20",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "10. 감가상각비계획 ",
+      "range": "G32:Q32",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "10. 감가상각비계획 ",
+      "range": "G44:Q44",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "10. 감가상각비계획 ",
+      "range": "G56:Q56",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "10. 감가상각비계획 ",
+      "range": "G8:Q8",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "12 손익계획",
+      "range": "C14:C16",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "12 손익계획",
+      "range": "C24:G24",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "12 손익계획",
+      "range": "C32:G32",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "12 손익계획",
+      "range": "D14:D16",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "12 손익계획",
+      "range": "E14:E16",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "12 손익계획",
+      "range": "F14:F16",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "12 손익계획",
+      "range": "G14:G16",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "13. 추정대차대조표",
+      "range": "C18:C19",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "13. 추정대차대조표",
+      "range": "C6:H6",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "13. 추정대차대조표",
+      "range": "C9:C13",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "13. 추정대차대조표",
+      "range": "D18:D19",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "13. 추정대차대조표",
+      "range": "D9:D13",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "13. 추정대차대조표",
+      "range": "E18:E19",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "13. 추정대차대조표",
+      "range": "E9:E13",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "13. 추정대차대조표",
+      "range": "F18:F19",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "13. 추정대차대조표",
+      "range": "F9:F13",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "13. 추정대차대조표",
+      "range": "G18:G19",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "13. 추정대차대조표",
+      "range": "G9:G13",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "13. 추정대차대조표",
+      "range": "H18:H19",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "13. 추정대차대조표",
+      "range": "H9:H13",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "13. 추정대차대조표",
+      "range": "I15:I20",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "13. 추정대차대조표",
+      "range": "I24:I25",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "13. 추정대차대조표",
+      "range": "I28",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "13. 추정대차대조표",
+      "range": "I30:I31",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "13. 추정대차대조표",
+      "range": "I33",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "13. 추정대차대조표",
+      "range": "I38",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "13. 추정대차대조표",
+      "range": "I6:I13",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "14. 현금흐름계획",
+      "range": "D12",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "14. 현금흐름계획",
+      "range": "D15:D16",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "14. 현금흐름계획",
+      "range": "D18:H18",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "14. 현금흐름계획",
+      "range": "D20:H20",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "14. 현금흐름계획",
+      "range": "D9:D10",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "14. 현금흐름계획",
+      "range": "E14:E16",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "14. 현금흐름계획",
+      "range": "E9:E12",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "14. 현금흐름계획",
+      "range": "F14:F16",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "14. 현금흐름계획",
+      "range": "F9:F12",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "14. 현금흐름계획",
+      "range": "G14:G16",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "14. 현금흐름계획",
+      "range": "G9:G12",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "14. 현금흐름계획",
+      "range": "H14:H16",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "14. 현금흐름계획",
+      "range": "H9:H12",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "15.추정소득분석",
+      "range": "E12:I12",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "15.추정소득분석",
+      "range": "E6:I6",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "3.투자계획",
+      "range": "D18",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "3.투자계획",
+      "range": "D7",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "3.투자계획",
+      "range": "E21:E24",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "3.투자계획",
+      "range": "F18:G18",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "3.투자계획",
+      "range": "F21:F24",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "3.투자계획",
+      "range": "F7",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "3.투자계획",
+      "range": "G21:G24",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "3.투자계획",
+      "range": "H21:H24",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "4. 원리금상환계획",
+      "range": "D33",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "4. 원리금상환계획",
+      "range": "F33",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "6. 생산계획",
+      "range": "E17:E18",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "6. 생산계획",
+      "range": "H18",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "6. 생산계획",
+      "range": "H6",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "6. 생산계획",
+      "range": "K18",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "6. 생산계획",
+      "range": "N18",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "6. 생산계획",
+      "range": "Q18",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "6. 생산계획",
+      "range": "T18",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "7. 영농자재소요계획",
+      "range": "C11:C13",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "7. 영농자재소요계획",
+      "range": "C23:C25",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "7. 영농자재소요계획",
+      "range": "C35:C37",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "7. 영농자재소요계획",
+      "range": "C47:C49",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "7. 영농자재소요계획",
+      "range": "C4:G4",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "7. 영농자재소요계획",
+      "range": "C59:C61",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "8. 노무비계획",
+      "range": "F20:T20",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "8. 노무비계획",
+      "range": "H36:H38",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "8. 노무비계획",
+      "range": "I36:I38",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "8. 노무비계획",
+      "range": "J36:J38",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "8. 노무비계획",
+      "range": "K36:K38",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "8. 노무비계획",
+      "range": "L36:L38",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "8. 노무비계획",
+      "range": "M36:M38",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "8. 노무비계획",
+      "range": "N36:N38",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "8. 노무비계획",
+      "range": "P34:R34",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 학생 입력 영역: 예시 숫자를 지우고 학생 근거로 다시 입력"
+    },
+    {
+      "sheet": "4. 원리금상환계획",
+      "range": "B38:B57",
+      "role": "structure.period_year",
+      "action": "preserve",
+      "explicit": true,
+      "reason": "검토된 계획연도 칸: 표 구조라 보존"
+    },
+    {
+      "sheet": "4. 원리금상환계획",
+      "range": "B7:B26",
+      "role": "structure.period_year",
+      "action": "preserve",
+      "explicit": true,
+      "reason": "검토된 계획연도 칸: 표 구조라 보존"
+    },
+    {
+      "sheet": " 5. 판매계획",
+      "range": "B26",
+      "role": "structure.source_note",
+      "action": "preserve",
+      "explicit": true,
+      "reason": "검토된 출처·적용 기준 주석: 양식 지침이라 보존"
+    },
+    {
+      "sheet": " 5. 판매계획",
+      "range": "B7",
+      "role": "structure.source_note",
+      "action": "preserve",
+      "explicit": true,
+      "reason": "검토된 출처·적용 기준 주석: 양식 지침이라 보존"
+    },
+    {
+      "sheet": " 5. 판매계획",
+      "range": "Q11",
+      "role": "structure.source_note",
+      "action": "preserve",
+      "explicit": true,
+      "reason": "검토된 출처·적용 기준 주석: 양식 지침이라 보존"
+    },
+    {
+      "sheet": "11. 생산원가계획",
+      "range": "B40",
+      "role": "structure.source_note",
+      "action": "preserve",
+      "explicit": true,
+      "reason": "검토된 출처·적용 기준 주석: 양식 지침이라 보존"
+    },
+    {
+      "sheet": "12 손익계획",
+      "range": "B35",
+      "role": "structure.source_note",
+      "action": "preserve",
+      "explicit": true,
+      "reason": "검토된 출처·적용 기준 주석: 양식 지침이라 보존"
+    },
+    {
+      "sheet": "14. 현금흐름계획",
+      "range": "B24",
+      "role": "structure.source_note",
+      "action": "preserve",
+      "explicit": true,
+      "reason": "검토된 출처·적용 기준 주석: 양식 지침이라 보존"
+    },
+    {
+      "sheet": "6. 생산계획",
+      "range": "B9",
+      "role": "structure.source_note",
+      "action": "preserve",
+      "explicit": true,
+      "reason": "검토된 출처·적용 기준 주석: 양식 지침이라 보존"
+    },
+    {
+      "sheet": "7. 영농자재소요계획",
+      "range": "B5",
+      "role": "structure.source_note",
+      "action": "preserve",
+      "explicit": true,
+      "reason": "검토된 출처·적용 기준 주석: 양식 지침이라 보존"
+    },
+    {
+      "sheet": "8. 노무비계획",
+      "range": "B13",
+      "role": "structure.source_note",
+      "action": "preserve",
+      "explicit": true,
+      "reason": "검토된 출처·적용 기준 주석: 양식 지침이라 보존"
+    },
+    {
+      "sheet": "8. 노무비계획",
+      "range": "B28:B30",
+      "role": "structure.source_note",
+      "action": "preserve",
+      "explicit": true,
+      "reason": "검토된 출처·적용 기준 주석: 양식 지침이라 보존"
+    },
+    {
+      "sheet": "9 .경비계획",
+      "range": "D10",
+      "role": "structure.source_note",
+      "action": "preserve",
+      "explicit": true,
+      "reason": "검토된 출처·적용 기준 주석: 양식 지침이라 보존"
+    },
+    {
+      "sheet": "9 .경비계획",
+      "range": "D12",
+      "role": "structure.source_note",
+      "action": "preserve",
+      "explicit": true,
+      "reason": "검토된 출처·적용 기준 주석: 양식 지침이라 보존"
+    },
+    {
+      "sheet": "9 .경비계획",
+      "range": "D16",
+      "role": "structure.source_note",
+      "action": "preserve",
+      "explicit": true,
+      "reason": "검토된 출처·적용 기준 주석: 양식 지침이라 보존"
+    },
+    {
+      "sheet": "9 .경비계획",
+      "range": "D19:D20",
+      "role": "structure.source_note",
+      "action": "preserve",
+      "explicit": true,
+      "reason": "검토된 출처·적용 기준 주석: 양식 지침이라 보존"
+    },
+    {
+      "sheet": "9 .경비계획",
+      "range": "D28",
+      "role": "structure.source_note",
+      "action": "preserve",
+      "explicit": true,
+      "reason": "검토된 출처·적용 기준 주석: 양식 지침이라 보존"
+    },
+    {
+      "sheet": "9 .경비계획",
+      "range": "D30",
+      "role": "structure.source_note",
+      "action": "preserve",
+      "explicit": true,
+      "reason": "검토된 출처·적용 기준 주석: 양식 지침이라 보존"
+    },
+    {
+      "sheet": "9 .경비계획",
+      "range": "D32",
+      "role": "structure.source_note",
+      "action": "preserve",
+      "explicit": true,
+      "reason": "검토된 출처·적용 기준 주석: 양식 지침이라 보존"
+    },
+    {
+      "sheet": "9 .경비계획",
+      "range": "D36",
+      "role": "structure.source_note",
+      "action": "preserve",
+      "explicit": true,
+      "reason": "검토된 출처·적용 기준 주석: 양식 지침이라 보존"
+    },
+    {
+      "sheet": "9 .경비계획",
+      "range": "D39:D40",
+      "role": "structure.source_note",
+      "action": "preserve",
+      "explicit": true,
+      "reason": "검토된 출처·적용 기준 주석: 양식 지침이라 보존"
+    },
+    {
+      "sheet": "9 .경비계획",
+      "range": "D48",
+      "role": "structure.source_note",
+      "action": "preserve",
+      "explicit": true,
+      "reason": "검토된 출처·적용 기준 주석: 양식 지침이라 보존"
+    },
+    {
+      "sheet": "9 .경비계획",
+      "range": "D50",
+      "role": "structure.source_note",
+      "action": "preserve",
+      "explicit": true,
+      "reason": "검토된 출처·적용 기준 주석: 양식 지침이라 보존"
+    },
+    {
+      "sheet": "9 .경비계획",
+      "range": "D52",
+      "role": "structure.source_note",
+      "action": "preserve",
+      "explicit": true,
+      "reason": "검토된 출처·적용 기준 주석: 양식 지침이라 보존"
+    },
+    {
+      "sheet": "9 .경비계획",
+      "range": "D56",
+      "role": "structure.source_note",
+      "action": "preserve",
+      "explicit": true,
+      "reason": "검토된 출처·적용 기준 주석: 양식 지침이라 보존"
+    },
+    {
+      "sheet": "9 .경비계획",
+      "range": "D59:D60",
+      "role": "structure.source_note",
+      "action": "preserve",
+      "explicit": true,
+      "reason": "검토된 출처·적용 기준 주석: 양식 지침이라 보존"
+    },
+    {
+      "sheet": "9 .경비계획",
+      "range": "D68",
+      "role": "structure.source_note",
+      "action": "preserve",
+      "explicit": true,
+      "reason": "검토된 출처·적용 기준 주석: 양식 지침이라 보존"
+    },
+    {
+      "sheet": "9 .경비계획",
+      "range": "D70",
+      "role": "structure.source_note",
+      "action": "preserve",
+      "explicit": true,
+      "reason": "검토된 출처·적용 기준 주석: 양식 지침이라 보존"
+    },
+    {
+      "sheet": "9 .경비계획",
+      "range": "D72",
+      "role": "structure.source_note",
+      "action": "preserve",
+      "explicit": true,
+      "reason": "검토된 출처·적용 기준 주석: 양식 지침이라 보존"
+    },
+    {
+      "sheet": "9 .경비계획",
+      "range": "D76",
+      "role": "structure.source_note",
+      "action": "preserve",
+      "explicit": true,
+      "reason": "검토된 출처·적용 기준 주석: 양식 지침이라 보존"
+    },
+    {
+      "sheet": "9 .경비계획",
+      "range": "D79:D80",
+      "role": "structure.source_note",
+      "action": "preserve",
+      "explicit": true,
+      "reason": "검토된 출처·적용 기준 주석: 양식 지침이라 보존"
+    },
+    {
+      "sheet": "9 .경비계획",
+      "range": "D8",
+      "role": "structure.source_note",
+      "action": "preserve",
+      "explicit": true,
+      "reason": "검토된 출처·적용 기준 주석: 양식 지침이라 보존"
+    },
+    {
+      "sheet": "9 .경비계획",
+      "range": "D88",
+      "role": "structure.source_note",
+      "action": "preserve",
+      "explicit": true,
+      "reason": "검토된 출처·적용 기준 주석: 양식 지침이라 보존"
+    },
+    {
+      "sheet": "9 .경비계획",
+      "range": "D90",
+      "role": "structure.source_note",
+      "action": "preserve",
+      "explicit": true,
+      "reason": "검토된 출처·적용 기준 주석: 양식 지침이라 보존"
+    },
+    {
+      "sheet": "9 .경비계획",
+      "range": "D92",
+      "role": "structure.source_note",
+      "action": "preserve",
+      "explicit": true,
+      "reason": "검토된 출처·적용 기준 주석: 양식 지침이라 보존"
+    },
+    {
+      "sheet": "9 .경비계획",
+      "range": "D96",
+      "role": "structure.source_note",
+      "action": "preserve",
+      "explicit": true,
+      "reason": "검토된 출처·적용 기준 주석: 양식 지침이라 보존"
+    },
+    {
+      "sheet": "9 .경비계획",
+      "range": "D99:D100",
+      "role": "structure.source_note",
+      "action": "preserve",
+      "explicit": true,
+      "reason": "검토된 출처·적용 기준 주석: 양식 지침이라 보존"
+    }
+  ]
+}

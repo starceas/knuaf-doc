@@ -53,7 +53,8 @@
 질문 목록·문서 계획·근거 검토와 **본문 DOCX·PDF·HWPX 검토본**을 지원한다:
 - `gg.py major-plan <폴더>`가 갈래 스위치(영농 시작 형태 `food_crops.entry_mode`: 승계/창업, 작부 형태 `food_crops.cropping_system`: 단작/이모작), 학교 양식 본문 골격 기준 목차(앞부분, 본문 1~4장, 맺음말, 참고문헌, 학부모동의서), 승계 전제 자리 창업농 대체 안내를 읽기 전용으로 보여 준다.
 - `build_docx.py <폴더> --major food_crops` 및 `build_hwpx.py <폴더> --major food_crops`가 양식 골격을 적용해 검토 전 DOCX·HWPX를 만든다: 요약 대항목은 아라비아 번호(1~5), 본문은 `1. 머리말`로 시작하며 쪽번호가 1부터 다시 시작하고, 맺음말은 장 번호가 없으며, 학부모동의서는 문서 맨 끝에 위치한다.
-- **아직 안 되는 것**: 학교 16시트 재무 엑셀은 1판에서 프로필을 닫고 사본 생성과 파이썬 재무 계산을 지원하지 않는다(`unsupported_finance_profile`, 2판으로 넘김). 벤치마크 팩은 `empty_slot`이다. 목차 계약·창업농 경로·서식·리서치 경로는 [food-crops](food-crops/README.md)를 따른다.
+- **학교 16시트 재무 엑셀 빈 사본**: 2판에서 열었다. `gg_excel_template.py clear --project <폴더> --major food_crops --source <학교 원본> --map references/food-crops/corrections/fc-clear-map.json --out <사본>`은 원본을 복제해 입력 칸 393개만 비우고 연도 40칸과 양식 주석 42칸은 남긴다(`blank_template`, 원본 해시 불변). 원본 경로는 매번 지정해야 한다(번들 양식은 17시트). 지도·`#DIV/0!` 안내는 [corrections/FC-CLEAR.md](food-crops/corrections/FC-CLEAR.md).
+- **아직 안 되는 것**: 사본을 대신 채우거나 파이썬으로 재무를 계산하는 일은 여전히 미지원이다(`unsupported_output`). 벤치마크 팩은 `empty_slot`이다. 목차 계약·창업농 경로·서식·리서치 경로는 [food-crops](food-crops/README.md)를 따른다.
 
 유효한 전공 바인딩이 있으면 [전공별 본문 초안(글)](major-body-draft.md)을 장별로 작성할 수 있다.
 
