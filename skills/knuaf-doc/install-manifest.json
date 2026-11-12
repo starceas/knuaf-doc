@@ -161,7 +161,7 @@
   "scripts/gg_excel_print.py": "d17bc535b6ad861d3e2fa2f10b3f94481210dc5ae060c50905117bcd44a66d7b",
   "scripts/gg_excel_template.py": "f300619b70af0b60fe7fcca07df781bffd1dde8e306371791a1892b09d0ec3d2",
   "scripts/gg_fact_semantics.py": "ba2f2aee005013a9f015e9094e34614ea7854d2bea71a6564cd5249b3ac7fb28",
-  "scripts/gg_figure.py": "1434e819912198c00a9ae4de37f1336e216ddbfb41e72ff5433f390e4678e4b3",
+  "scripts/gg_figure.py": "50610bb46f56615128580d9b0ca1ddcb963b9b050dc8b99940f68c185467990c",
   "scripts/gg_figure_docx.py": "5758ae869a9fce806ab5e85c8dcb59a30d01fcdfc418ae2bfaea2a956eda1440",
   "scripts/gg_finance.py": "88199b662e86adf1a9263f424e9bf5ba1cc386e3e4e8d514831d03a00ddf96e9",
   "scripts/gg_finance_amounts.py": "6e1bcd5ac7f8b3407aaf3dfa24ed3ecc6d982aad6b0d75ac1d2fa1d7d43d4d5c",

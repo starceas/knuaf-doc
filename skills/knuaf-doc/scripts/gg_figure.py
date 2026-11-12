@@ -954,7 +954,7 @@ def _verdict_one(folder, rule, html, final_page, mark_type, url, record, *,
     except FigureError as exc:
         record.update(verdict="rejected", reason=exc.reason, sha256=None)
         return
-    record["path"] = str(dest.relative_to(Path(folder).resolve()))
+    record["path"] = dest.relative_to(Path(folder).resolve()).as_posix()
     record["verdict"] = "approved"
     record["reason"] = "ok"
 
@@ -1218,7 +1218,7 @@ def place(folder, slot, heading, *, choose=None, title=None, org=None,
             candidate = (folder / rel).resolve()
             if not candidate.is_relative_to(folder.resolve()) or not candidate.is_file():
                 return _blocked("image_missing", rel)
-            refs.append({"path": str(candidate.relative_to(folder.resolve())),
+            refs.append({"path": candidate.relative_to(folder.resolve()).as_posix(),
                          "sha256": digest_file(candidate)})
         result = {"status": "done", "slot": slot, "images": [
             {"n": index, "url": ref["path"], "finalUrl": ref["path"],
