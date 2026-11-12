@@ -86,7 +86,7 @@ PINNED_CATALOG_AUTHORITIES = {
     "accepted-catalog-20260921/rda.income.national.2024":
         "555719cf2565b21b5d4321eeaba7433d60807c280e995e7ed319064fb103adb4",
     "accepted-catalog-20260921/rda.income.regional.2024":
-        "95b11de2b55399a3d9ebef50f513ffc31a7003b6e2cb80a3ed756fad9158d30b",
+        "ba4239f65d8ee6402a4bebfac32216895866a1376d1ecdf34dc1789a9fd5f40f",
 }
 
 
