@@ -52,7 +52,7 @@ def _run(root, *, args=(), interpreter_flags=(), env_extra=None):
         [sys.executable, *interpreter_flags,
          str(Path(root) / "tools" / "run_validation.py"),
          *args, "--json", str(out)],
-        cwd=root, capture_output=True, text=True, env=env)
+        cwd=root, capture_output=True, text=True, encoding="utf-8", env=env)
     report = (json.loads(out.read_text(encoding="utf-8"))
               if out.exists() else None)
     return proc, report
@@ -71,7 +71,7 @@ def _run_unnested(root, *, args=(), interpreter_flags=(), env_extra=None):
         [sys.executable, *interpreter_flags,
          str(Path(root) / "tools" / "run_validation.py"),
          *args, "--json", str(out)],
-        cwd=root, capture_output=True, text=True, env=env)
+        cwd=root, capture_output=True, text=True, encoding="utf-8", env=env)
     report = (json.loads(out.read_text(encoding="utf-8"))
               if out.exists() else None)
     return proc, report
@@ -86,7 +86,7 @@ def _refresh_manifest(root):
         [sys.executable, "-B",
          str(Path(root) / "tools" / "build_validation_bundle.py"),
          "--root", str(root), "--write-manifest"],
-        cwd=root, capture_output=True, text=True, env=env)
+        cwd=root, capture_output=True, text=True, encoding="utf-8", env=env)
 
 
 def _runner_module():

@@ -43,7 +43,7 @@ def _cli(*args):
     return subprocess.run(
         [sys.executable, "-B",
          str(SCRIPTS / "gg_insect_precedent_check.py"), *map(str, args)],
-        capture_output=True, text=True)
+        capture_output=True, text=True, encoding="utf-8")
 
 
 def _minimal_pdf():

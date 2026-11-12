@@ -45,7 +45,7 @@ def _run_nested(root, env_extra=None):
     proc = subprocess.run(
         [sys.executable, str(root / "tools" / "run_validation.py"),
          "--runtime-only", "--json", str(out)],
-        cwd=root, capture_output=True, text=True, env=env)
+        cwd=root, capture_output=True, text=True, encoding="utf-8", env=env)
     report = json.loads(out.read_text(encoding="utf-8")) if out.exists() else None
     return proc, report
 

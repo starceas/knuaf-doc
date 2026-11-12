@@ -169,6 +169,6 @@ class FruitPlanShapeTests(ContractCase):
                          "held")
         script = Path(runtime("gg_fruit_plan").__file__)
         out = subprocess.run([sys.executable, "-B", str(script), str(root)],
-                             capture_output=True, text=True)
+                             capture_output=True, text=True, encoding="utf-8")
         self.assertEqual(out.returncode, 2, out.stderr)
         self.assertEqual(json.loads(out.stdout)["status"], "held")
