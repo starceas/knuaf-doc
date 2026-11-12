@@ -369,6 +369,152 @@ class Apply(unittest.TestCase):
         self.assertEqual(code, 2)
 
 
+class ApplyImages(unittest.TestCase):
+    """분할된 절의 그림 목적지는 작업 폴더 기준 상대 경로로 다시 쓴다.
+
+    목적지 기준 폴더는 두 단계다 — 원고 옆, 없으면 작업 폴더 뿌리.
+    """
+
+    PNG = b"\x89PNG\r\n\x1a\n"
+
+    def setUp(self):
+        self.toc = load_toc()
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.work = Path(self._tmp.name) / "work"
+        (self.work / "sections").mkdir(parents=True)
+
+    def _apply(self, body, name="draft.md"):
+        text = "Ⅰ. 머리말\n본문 문장.\n%s\n" % body
+        src = write_src(self._tmp.name, name, text)
+        plan = split.build_plan(text.splitlines(), self.toc,
+                                src_path=src, fmt="text",
+                                workdir=self.work)
+        return split.apply_plan(self.work, plan, text.splitlines(),
+                                source_path=src)
+
+    def _apply_below_build(self, body):
+        """원고를 build/ 아래에 두고, 그림은 원고 옆에 둔다(kordoc 변환본 꼴)."""
+        (self.work / "build").mkdir(parents=True, exist_ok=True)
+        text = "Ⅰ. 머리말\n본문 문장.\n%s\n" % body
+        src = write_src(self.work / "build", "본문.md", text)
+        plan = split.build_plan(text.splitlines(), self.toc,
+                                src_path=src, fmt="text",
+                                workdir=self.work)
+        return split.apply_plan(self.work, plan, text.splitlines(),
+                                source_path=src)
+
+    def _figure(self, rel="sources/figs/farm photo.png"):
+        path = self.work / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(self.PNG)
+        return path
+
+    def test_destination_is_rewritten_root_relative(self):
+        self._figure()
+        result = self._apply(
+            "![밭 사진](work/sources/figs/farm%20photo.png)")
+        self.assertEqual(result["skipped"], [])
+        self.assertEqual(result["written"], ["sections/I.md"])
+        body = (self.work / "sections" / "I.md").read_text(encoding="utf-8")
+        # 대체텍스트는 그대로 두고 목적지만 뿌리 기준으로 바꾼다.
+        self.assertIn("![밭 사진](sources/figs/farm%20photo.png)", body)
+        self.assertNotIn("work/sources/figs", body)
+
+    def test_angle_destination_with_a_space_is_percent_encoded(self):
+        """``<...>``는 원문 그대로 두고 안쪽 목적지만 퍼센트 인코딩한다."""
+        self._figure()
+        result = self._apply(
+            "![밭 사진](<work/sources/figs/farm photo.png>)")
+        self.assertEqual(result["skipped"], [])
+        body = (self.work / "sections" / "I.md").read_text(encoding="utf-8")
+        self.assertIn("![밭 사진](<sources/figs/farm%20photo.png>)", body)
+
+    def test_destination_title_and_alt_survive_the_rewrite(self):
+        """I-01: 대체텍스트·제목·따옴표는 바이트 그대로 두고 목적지만 고친다."""
+        self._figure("gg-assets/x y.png")
+        result = self._apply(
+            '![사진](<work/gg-assets/x y.png> "현장사진")')
+        self.assertEqual(result["skipped"], [])
+        body = (self.work / "sections" / "I.md").read_text(encoding="utf-8")
+        self.assertIn('![사진](<gg-assets/x%20y.png> "현장사진")', body)
+
+    def test_kordoc_destination_beside_the_converted_manuscript_is_kept(self):
+        """kordoc 변환본은 그림을 변환 파일 옆 gg-assets/에 쓴다."""
+        (self.work / "build" / "gg-assets-0001" / "images").mkdir(
+            parents=True, exist_ok=True)
+        (self.work / "build" / "gg-assets-0001" / "images" / "a.png"
+         ).write_bytes(self.PNG)
+        result = self._apply_below_build(
+            "![](gg-assets-0001/images/a.png)")
+        self.assertEqual(result["skipped"], [])
+        body = (self.work / "sections" / "I.md").read_text(encoding="utf-8")
+        # 원고 옆 기준으로 풀었으므로 뿌리 기준 상대 경로로 다시 쓴다.
+        self.assertIn("![](build/gg-assets-0001/images/a.png)", body)
+
+    def test_root_relative_destination_is_found_when_manuscript_is_below_build(self):
+        """그림 넣기(gg_figure)는 뿌리 기준으로 쓰고 원고는 build/에 있다."""
+        self._figure("figures/public/deadbeef.png")
+        result = self._apply_below_build("![](figures/public/deadbeef.png)")
+        self.assertEqual(result["skipped"], [], result["skipped"])
+        body = (self.work / "sections" / "I.md").read_text(encoding="utf-8")
+        self.assertIn("![](figures/public/deadbeef.png)", body)
+
+    def test_same_destination_resolving_to_two_files_is_ambiguous(self):
+        """두 기준 폴더에 같은 이름의 다른 그림이 있으면 고르지 않고 멈춘다."""
+        self._figure("sources/figs/farm photo.png")
+        (self.work / "build" / "sources" / "figs").mkdir(parents=True)
+        (self.work / "build" / "sources" / "figs" / "farm photo.png"
+         ).write_bytes(self.PNG + b"different")
+        result = self._apply_below_build(
+            "![](sources/figs/farm%20photo.png)")
+        self.assertEqual(result["written"], [])
+        self.assertFalse((self.work / "sections" / "I.md").exists())
+        self.assertEqual(result["skipped"], [{
+            "section_id": "I",
+            "reason": "image_ambiguous",
+            "path": "sources/figs/farm%20photo.png",
+            "images": ["sources/figs/farm%20photo.png"],
+            "candidates": ["build/sources/figs/farm photo.png",
+                           "sources/figs/farm photo.png"]}])
+
+    def test_missing_image_blocks_that_section_only(self):
+        self._figure()
+        result = self._apply("![](work/sources/figs/gone.png)")
+        self.assertEqual(result["written"], [])
+        self.assertFalse((self.work / "sections" / "I.md").exists())
+        self.assertEqual(result["skipped"], [{
+            "section_id": "I",
+            "reason": "image_unresolved",
+            "path": "work/sources/figs/gone.png",
+            "images": ["work/sources/figs/gone.png"]}])
+
+    def test_outside_root_image_blocks_that_section_only(self):
+        outside = Path(self._tmp.name) / "outside.png"
+        outside.write_bytes(self.PNG)
+        result = self._apply("![](../outside.png)")
+        self.assertEqual(result["written"], [])
+        self.assertFalse((self.work / "sections" / "I.md").exists())
+        self.assertEqual(result["skipped"], [{
+            "section_id": "I",
+            "reason": "image_unresolved",
+            "path": "../outside.png",
+            "images": ["../outside.png"]}])
+
+    def test_app_figure_token_passes_through_untouched(self):
+        """앱 그림 토큰은 파일 경로가 아니다 — 다시 쓰지도, 찾지도 않고 그대로 둔다."""
+        token = "app-figure:" + "ab" * 32
+        # 그 밖의 scheme: 꼴은 지금처럼 미해결이다(토큰이 아니므로).
+        other = self._apply("![](foo:bar.png)")
+        self.assertEqual(other["written"], [])
+        self.assertEqual(other["skipped"][0]["reason"], "image_unresolved")
+        result = self._apply("![](%s)\n\n그림 1. 토양 (출처 : 농촌진흥청)" % token)
+        self.assertEqual(result["skipped"], [], result["skipped"])
+        self.assertEqual(result["written"], ["sections/I.md"])
+        body = (self.work / "sections" / "I.md").read_text(encoding="utf-8")
+        self.assertIn("![](%s)" % token, body)
+
+
 class Input(unittest.TestCase):
     def test_hwp_blocked(self):
         with tempfile.TemporaryDirectory() as d:
