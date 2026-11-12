@@ -904,8 +904,11 @@ _PAGE_BREAK_ATTR_RE = re.compile(
 def _set_page_break(paragraph: str) -> str:
     """문단 헤드의 `pageBreak`를 1로 만든다(속성이 없으면 넣는다)."""
     head = _PARAGRAPH_HEAD_RE.match(paragraph).group(0)
-    new_head = _PAGE_BREAK_ATTR_RE.sub('pageBreak="1"', head, count=1)
-    if new_head == head:
+    # 존재 판정은 **매치 개수**로 한다. 치환 결과 비교로 판정하면 이미
+    # `pageBreak="1"`인 헤드는 결과가 입력과 같아져 "속성 없음"으로 오판하고
+    # 같은 속성을 하나 더 붙인다(웹 r2 중요 02).
+    new_head, found = _PAGE_BREAK_ATTR_RE.subn('pageBreak="1"', head, count=1)
+    if not found:
         closing = "/>" if head.endswith("/>") else ">"
         new_head = head[:-len(closing)] + ' pageBreak="1"' + closing
     return new_head + paragraph[len(head):]

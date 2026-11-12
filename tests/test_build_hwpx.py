@@ -919,8 +919,11 @@ class _FoodCropsTests(_Base):
     def test_page_break_handles_existing_attribute_in_any_quote(self):
         # 웹 r1 중요 02: 존재 판정이 `pageBreak="` 문자열 검사라 작은따옴표를
         # 놓쳐 같은 이름의 속성을 하나 더 붙였다(중복 속성 → XML 파싱 실패).
+        # 웹 r2: 치환 결과 비교(`new_head == head`)로 바꾼 고침이 이미 값이
+        # "1"인 헤드에서 같은 회귀를 냈다 — 매치 개수로 판정해야 한다.
         cases = {
             "double-quoted": 'pageBreak="0"',
+            "already-one": 'pageBreak="1"',
             "absent": None,
             "single-quoted": "pageBreak='0'",
         }
@@ -937,11 +940,40 @@ class _FoodCropsTests(_Base):
                     index for index, paragraph in enumerate(paragraphs)
                     if paragraph.get("pageBreak") == "1"])
                 head = paragraph_head(xml, 8)
-                self.assertEqual(1, head.count("pageBreak"))
+                self.assertEqual(1, len(re.findall(r"\bpageBreak\s*=", head)))
                 self.assertIn('pageBreak="1"', head)
                 # 헤드의 나머지 속성은 그대로 남는다.
                 self.assertIn('paraPrIDRef="0"', head)
                 self.assertIn('styleIDRef="0"', head)
+
+    def test_set_page_break_accepts_every_head_shape(self):
+        # `_set_page_break` 단독 계약(웹 r2 추가): 다섯 경우 모두 결과가 XML로
+        # 읽히고 `pageBreak` 속성이 정확히 하나, 값은 "1". 자기닫힘 헤드는
+        # 문단 글자가 없어 구역 분할 계약(문단 수 1:1)을 통과할 수 없으므로
+        # 함수 단위로만 잠근다.
+        tail = ('<hp:run charPrIDRef="0"><hp:t>표제면</hp:t></hp:run>'
+                '</hp:p>')
+        cases = {
+            "already-one": '<hp:p paraPrIDRef="0" pageBreak="1">',
+            "zero": '<hp:p paraPrIDRef="0" pageBreak="0">',
+            "single-quoted-zero": "<hp:p paraPrIDRef='0' pageBreak='0'>",
+            "absent": '<hp:p paraPrIDRef="0">',
+            "self-closing-head": '<hp:p paraPrIDRef="0"/>',
+        }
+        for label, head in cases.items():
+            with self.subTest(case=label):
+                paragraph = head + ("" if head.endswith("/>") else tail)
+                out = gh._set_page_break(paragraph)
+                root = ET.fromstring('<r xmlns:hp="%s">%s</r>' % (_HP, out))
+                element = root[0]
+                self.assertEqual("1", element.get("pageBreak"))
+                self.assertEqual(1, len(re.findall(r"\bpageBreak\s*=", out)))
+                self.assertEqual("0", element.get("paraPrIDRef"))
+                if not head.endswith("/>"):
+                    self.assertTrue(out.endswith(tail), out)
+                else:
+                    self.assertTrue(out.startswith(
+                        '<hp:p paraPrIDRef="0" pageBreak="1"/>'), out)
 
     def test_self_closing_t_mixed_with_text_is_hidden_and_parses(self):
         # 권고 01: 자기닫힘 `<hp:t/>`가 일반 글자와 섞여도 글자만 비우고
