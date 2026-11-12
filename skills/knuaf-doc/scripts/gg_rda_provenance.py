@@ -105,7 +105,7 @@ PINNED_PACKS = {
     "rda.income.regional.2024": {
         "pack_revision": "2024",
         "records_file_sha256":
-            "0b8dee9b7be599f91e34340c2e7b28e2445da89e32c8e42341134b08290ae9c9",
+            "91751f56d08db77653fd9c3f15ec002ad478a88f84b07156d10cd0b3497626fc",
         "record_lines": 365,
         "relpath": "common/rda-income-regional-2024/records.jsonl",
     },
