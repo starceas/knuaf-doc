@@ -193,7 +193,8 @@ class RealTreeTests(ContractCase):
                 self.assertIn(meta["owner"],
                               {"A", "B", "C", "P4", "D", "P6", "P7", "P8",
                                "P9", "P10", "P11", "P12", "P13", "P14", "P15",
-                               "P16", "P17", "P18", "P20", "P21", "P22", "P23", "P24", "P25", "P26", "P27", "P28"})
+                               "P16", "P17", "P18", "P20", "P21", "P22", "P23", "P24", "P25", "P26", "P27", "P28",
+                               "IMG-path"})
             else:
                 # New files require the pre-declared allowlist.
                 self.assertIn(name, approved)
@@ -208,7 +209,7 @@ class RealTreeTests(ContractCase):
                                "P8", "P9", "P10", "P11", "P12", "P13",
                                "P14", "P15", "P16", "P17", "P18", "P19",
                                "P20", "P21", "P22", "P23", "P24", "P25", "P26", "P27", "P28", "dairy-0.1.0", "dairy-f1",
-                               "food-crops-0.1.0"})
+                               "food-crops-0.1.0", "IMG-path"})
 
 
 
