@@ -420,13 +420,13 @@ class SchoolTableSourcesTests(ContractCase):
         write_text(self.root, 'cli.json', raw)
         args = [sys.executable, '-B', str(SCRIPTS / 'gg.py'), 'paper', str(self.root),
                 '--input', 'cli.json', '--out', 'build/cli.md']
-        result = subprocess.run(args, capture_output=True, text=True)
+        result = subprocess.run(args, capture_output=True, text=True, encoding="utf-8")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual((self.root / 'build/cli.md').read_text(encoding='utf-8').count('(출처 : '), 6)
         raw = raw.replace('"kind": "stat"', '"kind": "blog", "kind": "stat"', 1)
         write_text(self.root, 'cli.json', raw)
         before = self._tree_bytes(self.root)
-        result = subprocess.run(args, capture_output=True, text=True)
+        result = subprocess.run(args, capture_output=True, text=True, encoding="utf-8")
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(json.loads(result.stdout)['reason'], 'invalid_spec')
         self.assertEqual(self._tree_bytes(self.root), before)

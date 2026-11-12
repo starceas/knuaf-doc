@@ -79,14 +79,14 @@ class PlanBindingTests(ContractCase):
         # not patched there, so only the structure/exit code is checked.
         out = subprocess.run([sys.executable, "-B", str(
             Path(runtime("gg_fruit_plan").__file__)), str(fp.root)],
-            capture_output=True, text=True)
+            capture_output=True, text=True, encoding="utf-8")
         self.assertEqual(out.returncode, 0, out.stderr)
         self.assertEqual(json.loads(out.stdout)["status"], "presented")
         self.assertEqual(self._tree_bytes(fp.root), before)
         unbound = self.make_project()
         out = subprocess.run([sys.executable, "-B", str(
             Path(runtime("gg_fruit_plan").__file__)), str(unbound)],
-            capture_output=True, text=True)
+            capture_output=True, text=True, encoding="utf-8")
         self.assertEqual(out.returncode, 2)
 
 
@@ -315,7 +315,7 @@ class InstanceTests(ContractCase):
             subprocess.run([sys.executable, "-B", str(gg), "question",
                             str(fp.root), "--field",
                             "fruit_trees.cohort.b.tree_count"],
-                           capture_output=True, text=True, check=True)
+                           capture_output=True, text=True, encoding="utf-8", check=True)
         plan = fp.plan()
         q = {x["field_id"]: x["action"] for x in plan["questions"]}
         self.assertEqual(q["fruit_trees.cohort.b.tree_count"], "deferred")

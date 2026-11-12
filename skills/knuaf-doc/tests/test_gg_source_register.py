@@ -910,7 +910,7 @@ class TestCli(unittest.TestCase):
                    PYTHONIOENCODING="utf-8")
         return subprocess.run(
             [sys.executable, "-B", str(GG)] + args,
-            capture_output=True, text=True, env=env, cwd=cwd)
+            capture_output=True, text=True, encoding="utf-8", env=env, cwd=cwd)
 
     def test_source_register_and_view_cli(self):
         with tempfile.TemporaryDirectory() as td:

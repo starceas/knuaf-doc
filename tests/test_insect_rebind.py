@@ -17,7 +17,7 @@ from tests._harness import SCRIPTS, ContractCase, bind_major, runtime, \
 def _gg(*args):
     return subprocess.run(
         [sys.executable, "-B", str(SCRIPTS / "gg.py"), *map(str, args)],
-        capture_output=True, text=True)
+        capture_output=True, text=True, encoding="utf-8")
 
 
 class InsectRebindTests(ContractCase):

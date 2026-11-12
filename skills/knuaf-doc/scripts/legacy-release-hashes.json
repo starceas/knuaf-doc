@@ -48,10 +48,12 @@
    "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0"
   ],
   "references/benchmark-packs/common/rda-income-regional-2024/manifest.json": [
-   "3ff92cc170b80a80e4f2f3d4f4076a02b95cbdd2d992f06a7b81dcee27e80267"
+   "3ff92cc170b80a80e4f2f3d4f4076a02b95cbdd2d992f06a7b81dcee27e80267",
+   "bd6d8bda9de84b818f98914e175d8941007b74cd99bbe2bd1a76d95919c8cae0"
   ],
   "references/benchmark-packs/common/rda-income-regional-2024/records.jsonl": [
-   "c7e38281ccfaaaf40c63ab0880ca5f3ddb1ae18aaa89438ffb7f6da43c87c6df"
+   "c7e38281ccfaaaf40c63ab0880ca5f3ddb1ae18aaa89438ffb7f6da43c87c6df",
+   "0b8dee9b7be599f91e34340c2e7b28e2445da89e32c8e42341134b08290ae9c9"
   ],
   "references/benchmark-packs/majors/food_crops/manifest.json": [
    "f32813aae8bc6b262af5fd83eead9ff8b736fdff88824e9fa6d8d004bb6983cb"
