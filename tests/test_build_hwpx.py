@@ -831,6 +831,45 @@ class _FoodCropsTests(_Base):
             read_zip(data)["Contents/section2.xml"].decode("utf-8"))
         self.assertIn("요약", ["".join(node.itertext()) for node in body])
 
+    def test_front_markers_hidden_and_pages_broken(self):
+        # 구분 이름은 관리용 줄이라 글자를 비우고, 앞부분 제목마다 쪽을 나눈다.
+        data, applied = self._transform(hwpx_section(list(FOOD_CROPS_PARAGRAPHS)))
+        members = read_zip(data)
+        sections = [members["Contents/section%d.xml" % index].decode("utf-8")
+                    for index in range(3)]
+        texts = "".join("".join(paragraph.itertext())
+                        for xml in sections for paragraph in paragraphs_of(xml))
+        for role in ("겉표지", "표제면", "제출서", "인준서"):
+            self.assertNotIn(role, texts)
+        # 검사기가 글자로 찾는 제목은 남긴다.
+        for title in ("요약", "감사의 글", "목차", "표 목차", "그림 목차"):
+            self.assertIn(title, texts)
+        # 은닉은 글자만 비운다(겉표지 구역 제어 요소·구조 불변).
+        first = paragraphs_of(sections[0])[0]
+        self.assertEqual([], ctrl_items(first, "pageNum"))
+        self.assertEqual([], ctrl_items(first, "newNum"))
+        self.assertEqual(1, sections[0].count("<hp:secPr"))
+        self.assertEqual(1, sections[0].count("<hp:colPr"))
+        self.assertEqual([8, 17, 26], [
+            index for index, paragraph in enumerate(paragraphs_of(sections[0]))
+            if paragraph.get("pageBreak") == "1"])
+        self.assertEqual([5, 6, 7], [
+            index for index, paragraph in enumerate(paragraphs_of(sections[1]))
+            if paragraph.get("pageBreak") == "1"])
+        self.assertEqual([], [
+            index for index, paragraph in enumerate(paragraphs_of(sections[2]))
+            if paragraph.get("pageBreak") == "1"])
+        self.assertEqual(
+            [{"section": "Contents/section0.xml",
+              "roles": ["겉표지", "표제면", "제출서", "인준서"],
+              "paragraphs": [0, 8, 17, 26]}],
+            applied["front_hidden"])
+        self.assertEqual(
+            {"Contents/section0.xml": [8, 17, 26],
+             "Contents/section1.xml": [5, 6, 7]},
+            {entry["section"]: entry["paragraphs"]
+             for entry in applied["front_breaks"]})
+
     def test_split_strips_existing_controls_before_insert(self):
         numbers = ('<hp:ctrl><hp:pageNum pos="TOP_CENTER" formatType="DIGIT"'
                    ' sideChar="-"/></hp:ctrl>')
@@ -871,6 +910,8 @@ class _FoodCropsTests(_Base):
         self.assertEqual([], applied["margins"])
         self.assertEqual([], applied["page_numbers"])
         self.assertEqual([], applied["charpr"])
+        self.assertEqual([], applied["front_hidden"])
+        self.assertEqual([], applied["front_breaks"])
 
     def test_split_rejects_partial_front_matter(self):
         cases = {

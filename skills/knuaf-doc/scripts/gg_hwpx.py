@@ -677,6 +677,19 @@ def _peer_block_targets(nodes, start, end, spec, *, cover=False):
     return targets
 
 
+def _front_role_bounds(plan):
+    """역할별 본문 구간 ``{역할: (시작, 끝)}`` — 역할 이름 문단 **다음**부터."""
+    indices = plan["indices"]
+    order = list(plan["order"])
+    bounds = {}
+    for position, role in enumerate(order):
+        start = indices[role] + 1
+        end = (indices[order[position + 1]] if position + 1 < len(order)
+               else plan["body"])
+        bounds[role] = (start, end)
+    return bounds
+
+
 def _front_charpr_targets(nodes, plan):
     """계획 색인으로 대상 문단을 찾아 {(문단 색인): (크기, 굵기)}를 낸다.
 
@@ -684,14 +697,8 @@ def _front_charpr_targets(nodes, plan):
     """
     spec = plan["spec"]
     indices = plan["indices"]
-    order = list(plan["order"])
     targets = {}
-    bounds = {}
-    for position, role in enumerate(order):
-        start = indices[role] + 1
-        end = (indices[order[position + 1]] if position + 1 < len(order)
-               else plan["body"])
-        bounds[role] = (start, end)
+    bounds = _front_role_bounds(plan)
 
     for role in ("겉표지", "표제면", "제출서", "인준서"):
         if role in bounds:
@@ -773,6 +780,110 @@ def _apply_front_charpr(section_xml: str, *, nodes, plan, ids, start=0, end=None
         changed += 1
     pieces.append(section_xml[cursor:])
     return "".join(pieces), changed
+
+
+# 구분 이름(`겉표지`·`표제면`·`제출서`·`인준서`)은 우리 문서 계획이 만든 관리용
+# 줄이다. 한글판은 이 줄을 화면에 그대로 내보내므로 문단은 남기고 글자만 비운다
+# (문단을 지우면 구역 분할의 문단 수 1:1 계약이 깨진다). `요약`·`감사의 글`·
+# `목차`·`표 목차`·`그림 목차`는 학교 서식 검사기가 **글자로 찾으므로** 비우지
+# 않는다(`gg_school_format_hwpx._check_charpr`).
+_HIDDEN_FRONT_ROLES = ("겉표지", "표제면", "제출서", "인준서")
+_TOC_ROLE = "목차"
+_TOC_SUB_HEADS = ("표 목차", "그림 목차")
+# 쪽을 나누는 역할: 표제면·제출서·인준서와 목차류. `겉표지`는 구역 첫 문단,
+# `요약`은 구역 시작 자체가 쪽 나눔, `감사의 글`은 Word판에도 나눔이 없다.
+_FRONT_BREAK_ROLES = ("표제면", "제출서", "인준서")
+_T_SELF_CLOSING_RE = re.compile(r"<hp:t\b[^>]*/>")
+
+
+def _blank_paragraph_text(paragraph: str) -> str:
+    """문단의 모든 `<hp:t>` 글자만 비운다(제어 요소·`linesegarray` 보존)."""
+    # 자기닫힘(`<hp:t/>`)을 먼저 바꾼다. 그러지 않으면 `_T_ELEMENT_RE`가
+    # 자기닫힘 태그에서 시작해 뒤 문단 글자까지 한 덩이로 삼킬 수 있다.
+    paragraph = _T_SELF_CLOSING_RE.sub("<hp:t></hp:t>", paragraph)
+    return _T_ELEMENT_RE.sub("<hp:t></hp:t>", paragraph)
+
+
+def _front_paragraph_spans(section_xml: str, para_start: int, para_end: int):
+    """구역 문단 구간과 원고 노드 수가 맞는지 확인하고 spans를 낸다."""
+    spans = top_level_paragraph_spans(section_xml)
+    if len(spans) != para_end - para_start:
+        raise HwpxBlocked(
+            "section_split_node_map_mismatch",
+            paragraphs=len(spans), nodes=para_end - para_start,
+            action="HWPX 문단 수와 원고 노드 수가 다릅니다.",
+        )
+    return spans
+
+
+def _hide_front_markers(section_xml: str, *, nodes, plan,
+                        para_start: int, para_end: int):
+    """이 구역이 맡는 구분 이름 문단의 글자를 비운다.
+
+    반환: ``(새 구역 XML, None)`` 또는
+    ``(새 구역 XML, {"roles": […], "paragraphs": [구역 로컬 색인…]})``.
+    """
+    if plan is None:
+        return section_xml, None
+    indices = plan["indices"]
+    targets = {indices[role]: role for role in _HIDDEN_FRONT_ROLES
+               if role in indices and para_start <= indices[role] < para_end}
+    if not targets:
+        return section_xml, None
+    spans = _front_paragraph_spans(section_xml, para_start, para_end)
+    pieces, cursor = [], 0
+    for index in sorted(targets):
+        start, end = spans[index - para_start]
+        pieces.append(section_xml[cursor:start])
+        pieces.append(_blank_paragraph_text(section_xml[start:end]))
+        cursor = end
+    pieces.append(section_xml[cursor:])
+    return "".join(pieces), {
+        "roles": [targets[index] for index in sorted(targets)],
+        "paragraphs": [index - para_start for index in sorted(targets)],
+    }
+
+
+def _set_page_break(paragraph: str) -> str:
+    """문단 헤드의 `pageBreak`를 1로 만든다(속성이 없으면 넣는다)."""
+    head = re.match(r"<hp:p\b[^>]*>", paragraph).group(0)
+    if 'pageBreak="' in head:
+        return re.sub(r'pageBreak="[^"]*"', 'pageBreak="1"', paragraph, count=1)
+    return head[:-1] + ' pageBreak="1">' + paragraph[len(head):]
+
+
+def _break_front_pages(section_xml: str, *, nodes, plan,
+                       para_start: int, para_end: int):
+    """쪽을 나누는 앞부분 제목 문단에 `pageBreak="1"`을 준다.
+
+    대상은 노드 색인으로만 고른다: `표제면`·`제출서`·`인준서` + `목차`와 목차
+    블록 안의 `표 목차`·`그림 목차`(`_front_charpr_targets`와 같은 구간·비교).
+    """
+    if plan is None:
+        return section_xml, None
+    indices = plan["indices"]
+    targets = {indices[role] for role in _FRONT_BREAK_ROLES
+               if role in indices and para_start <= indices[role] < para_end}
+    if _TOC_ROLE in indices and para_start <= indices[_TOC_ROLE] < para_end:
+        targets.add(indices[_TOC_ROLE])
+        toc_start, toc_end = _front_role_bounds(plan)[_TOC_ROLE]
+        for index in range(toc_start, min(toc_end, len(nodes))):
+            if not para_start <= index < para_end:
+                continue
+            if _normalize_space(nodes[index].get("text", "")) in _TOC_SUB_HEADS:
+                targets.add(index)
+    if not targets:
+        return section_xml, None
+    spans = _front_paragraph_spans(section_xml, para_start, para_end)
+    pieces, cursor = [], 0
+    for index in sorted(targets):
+        start, end = spans[index - para_start]
+        pieces.append(section_xml[cursor:start])
+        pieces.append(_set_page_break(section_xml[start:end]))
+        cursor = end
+    pieces.append(section_xml[cursor:])
+    return "".join(pieces), {
+        "paragraphs": [index - para_start for index in sorted(targets)]}
 
 
 def normalize_markdown(data: bytes) -> str:
@@ -893,6 +1004,8 @@ def transform_hwpx(data: bytes, *, font: str = SCHOOL_FONT,
         # 앞부분 글자 모양 기록은 구역 서식(식량작물) 전용이다. 다른 전공
         # 매니페스트에 키가 생기면 post_processing 직렬화가 바뀐다.
         applied["charpr"] = []
+        applied["front_hidden"] = []
+        applied["front_breaks"] = []
     source = io.BytesIO(data)
     target = io.BytesIO()
     with zipfile.ZipFile(source, "r") as zin, zipfile.ZipFile(target, "w") as zout:
@@ -970,6 +1083,18 @@ def transform_hwpx(data: bytes, *, font: str = SCHOOL_FONT,
                             ids=charpr_ids, start=bounds[0], end=bounds[1])
                         if changed:
                             applied["charpr"].append(info.filename)
+                        updated, hidden = _hide_front_markers(
+                            updated, nodes=nodes or [], plan=plan,
+                            para_start=bounds[0], para_end=bounds[1])
+                        if hidden:
+                            applied["front_hidden"].append(
+                                {"section": info.filename, **hidden})
+                        updated, breaks = _break_front_pages(
+                            updated, nodes=nodes or [], plan=plan,
+                            para_start=bounds[0], para_end=bounds[1])
+                        if breaks:
+                            applied["front_breaks"].append(
+                                {"section": info.filename, **breaks})
                 member = updated.encode("utf-8")
             elif info.filename == HEADER_NAME:
                 text = member.decode("utf-8")
