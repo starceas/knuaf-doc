@@ -707,6 +707,36 @@ def opf_nodes(xml, name):
             if node.tag == "{%s}%s" % (_OPF, name)]
 
 
+def replace_paragraph(section_xml, index, paragraph):
+    """`index`번째 최상위 문단을 다른 문자열로 바꾼다."""
+    start, end = gh.top_level_paragraph_spans(section_xml)[index]
+    return section_xml[:start] + paragraph + section_xml[end:]
+
+
+def add_head_attrs(section_xml, index, attrs):
+    """`index`번째 문단의 `<hp:p …>` 헤드에 속성 문자열을 덧붙인다."""
+    start, end = gh.top_level_paragraph_spans(section_xml)[index]
+    head = re.match(r"<hp:p\b[^>]*>", section_xml[start:end]).group(0)
+    if head.endswith("/>"):
+        new_head = head[:-2] + " " + attrs + "/>"
+    else:
+        new_head = head[:-1] + " " + attrs + ">"
+    return section_xml[:start] + new_head + section_xml[start + len(head):]
+
+
+def paragraph_head(xml, index):
+    start, end = gh.top_level_paragraph_spans(xml)[index]
+    return re.match(r"<hp:p\b[^>]*>", xml[start:end]).group(0)
+
+
+_TEXT_ELEMENT_RE = re.compile(r"<hp:t\b[^>]*>.*?</hp:t>|<hp:t\b[^>]*/>", re.S)
+
+
+def without_text(paragraph):
+    """문단에서 `<hp:t>` 요소만 걷어낸 나머지 문자열."""
+    return _TEXT_ELEMENT_RE.sub("", paragraph)
+
+
 class _FoodCropsTests(_Base):
     """식량작물 3구역 분할·구역별 쪽번호·앞부분 글자 크기(설계 §4.1~§4.3)."""
 
@@ -869,6 +899,142 @@ class _FoodCropsTests(_Base):
              "Contents/section1.xml": [5, 6, 7]},
             {entry["section"]: entry["paragraphs"]
              for entry in applied["front_breaks"]})
+
+    def test_front_marker_text_mismatch_blocks_hiding(self):
+        # 웹 r1 중요 01: 문단 수만 맞고 글자가 다른 경우(노드↔문단 어긋남)에는
+        # 제목 같은 실제 내용을 지우지 말고 멈춘다. 색인 8(`표제면`)은 분할
+        # 앵커가 아니므로 은닉 단계까지 도달한다.
+        paragraphs = list(FOOD_CROPS_PARAGRAPHS)
+        paragraphs[8] = "합성 논문 제목"
+        with self.assertRaises(gh.HwpxBlocked) as caught:
+            self._transform(hwpx_section(paragraphs))
+        self.assertEqual("front_marker_text_mismatch",
+                         caught.exception.reason)
+        details = caught.exception.details
+        self.assertEqual("표제면", details["role"])
+        self.assertEqual(8, details["paragraph"])
+        self.assertEqual("표제면", details["expected"])
+        self.assertEqual("합성 논문 제목", details["actual"])
+
+    def test_page_break_handles_existing_attribute_in_any_quote(self):
+        # 웹 r1 중요 02: 존재 판정이 `pageBreak="` 문자열 검사라 작은따옴표를
+        # 놓쳐 같은 이름의 속성을 하나 더 붙였다(중복 속성 → XML 파싱 실패).
+        cases = {
+            "double-quoted": 'pageBreak="0"',
+            "absent": None,
+            "single-quoted": "pageBreak='0'",
+        }
+        for label, attrs in cases.items():
+            with self.subTest(case=label):
+                section = hwpx_section(list(FOOD_CROPS_PARAGRAPHS))
+                if attrs is not None:
+                    section = add_head_attrs(section, 8, attrs)
+                data, _ = self._transform(section)
+                xml = read_zip(data)["Contents/section0.xml"].decode("utf-8")
+                paragraphs = paragraphs_of(xml)
+                self.assertEqual("1", paragraphs[8].get("pageBreak"))
+                self.assertEqual([8, 17, 26], [
+                    index for index, paragraph in enumerate(paragraphs)
+                    if paragraph.get("pageBreak") == "1"])
+                head = paragraph_head(xml, 8)
+                self.assertEqual(1, head.count("pageBreak"))
+                self.assertIn('pageBreak="1"', head)
+                # 헤드의 나머지 속성은 그대로 남는다.
+                self.assertIn('paraPrIDRef="0"', head)
+                self.assertIn('styleIDRef="0"', head)
+
+    def test_self_closing_t_mixed_with_text_is_hidden_and_parses(self):
+        # 권고 01: 자기닫힘 `<hp:t/>`가 일반 글자와 섞여도 글자만 비우고
+        # XML은 그대로 유효해야 한다.
+        section = hwpx_section(list(FOOD_CROPS_PARAGRAPHS))
+        section = replace_paragraph(
+            section, 8,
+            '<hp:p paraPrIDRef="0" styleIDRef="0"><hp:run charPrIDRef="0">'
+            '<hp:t/><hp:t>표제면</hp:t><hp:t/></hp:run></hp:p>')
+        data, applied = self._transform(section)
+        self.assertEqual([0, 8, 17, 26],
+                         applied["front_hidden"][0]["paragraphs"])
+        xml = read_zip(data)["Contents/section0.xml"].decode("utf-8")
+        paragraphs = paragraphs_of(xml)
+        self.assertNotIn("표제면",
+                         "".join("".join(node.itertext())
+                                 for node in paragraphs))
+        self.assertEqual(3, len(list(paragraphs[8].iter("{%s}t" % _HP))))
+        self.assertEqual([""] * 3,
+                         ["".join(node.itertext())
+                          for node in paragraphs[8].iter("{%s}t" % _HP)])
+
+    def test_body_toc_subhead_does_not_get_page_break(self):
+        # 권고 01: 본문에 같은 `표 목차` 글자가 있어도 목차 블록 밖이면
+        # 쪽을 나누지 않는다.
+        paragraphs = list(FOOD_CROPS_PARAGRAPHS)
+        paragraphs.insert(paragraphs.index("1. 머리말") + 1, "표 목차")
+        data, applied = self._transform(
+            hwpx_section(paragraphs),
+            markdown="\n\n".join(paragraphs) + "\n")
+        self.assertEqual(
+            {"Contents/section0.xml": [8, 17, 26],
+             "Contents/section1.xml": [5, 6, 7]},
+            {entry["section"]: entry["paragraphs"]
+             for entry in applied["front_breaks"]})
+        body = read_zip(data)["Contents/section2.xml"].decode("utf-8")
+        self.assertEqual([], [
+            index for index, paragraph in enumerate(paragraphs_of(body))
+            if paragraph.get("pageBreak") == "1"])
+        self.assertIn("표 목차", ["".join(node.itertext())
+                                  for node in paragraphs_of(body)])
+
+    def test_hidden_paragraph_preserves_controls_byte_for_byte(self):
+        # 권고 01: 은닉은 글자만 비운다. 은닉 문단의 secPr·colPr·linesegarray는
+        # 변환 전과 문자열 그대로 같아야 한다.
+        lineseg = ('<hp:linesegarray><hp:lineseg textpos="0" vertpos="0"'
+                   ' vertsize="1000" textheight="1000" baseline="850"'
+                   ' spacing="600" horzsize="42520"/></hp:linesegarray>')
+        control = '<hp:ctrl><hp:bookmark name="표제면"/></hp:ctrl>'
+        section = hwpx_section(list(FOOD_CROPS_PARAGRAPHS))
+        section = replace_paragraph(
+            section, 8,
+            '<hp:p paraPrIDRef="0" styleIDRef="0"><hp:run charPrIDRef="0">'
+            + control + '<hp:t>표제면</hp:t>' + lineseg
+            + '</hp:run></hp:p>')
+        before = section[slice(*gh.top_level_paragraph_spans(section)[8])]
+        data, _ = self._transform(section)
+        xml = read_zip(data)["Contents/section0.xml"].decode("utf-8")
+        hid = xml[slice(*gh.top_level_paragraph_spans(xml)[8])]
+        self.assertEqual(without_text(before[before.index("<hp:run"):]),
+                         without_text(hid[hid.index("<hp:run"):]))
+        self.assertEqual([lineseg], re.findall(
+            r"<hp:linesegarray>.*?</hp:linesegarray>", hid))
+        self.assertEqual([control], re.findall(
+            r'<hp:ctrl><hp:bookmark name="표제면"/></hp:ctrl>', hid))
+        hid_paragraph = paragraphs_of(xml)[8]
+        self.assertEqual([""], ["".join(node.itertext())
+                                for node in hid_paragraph.iter("{%s}t" % _HP)])
+        # `secPr`·`colPr`는 분할 단계가 모든 문단에서 걷어내 첫 문단에만 다시
+        # 넣으므로, 색인 8이 아니라 색인 0(`겉표지`)에서 보존을 잠근다. 색인 0도
+        # 은닉 대상이면서 두 제어 요소를 달고 있는 유일한 문단이다.
+        cover = xml[slice(*gh.top_level_paragraph_spans(xml)[0])]
+        self.assertIn(FOOD_CROPS_COLPR, cover)
+        self.assertEqual(1, cover.count("<hp:secPr>"))
+        self.assertEqual("", "".join(paragraphs_of(xml)[0].itertext()))
+
+    def test_hide_step_changes_only_text(self):
+        # 은닉 함수 하나만 떼어 본 불변식: 입력과 출력은 `<hp:t>` 안쪽에서만
+        # 다르다. 여백·쪽번호 단계가 앞서 secPr 값(여백)을 바꾸므로 전체 변환
+        # 결과로는 이 불변식을 잠글 수 없다.
+        nodes, plan = food_crops_plan()
+        section = hwpx_section(list(FOOD_CROPS_PARAGRAPHS))
+        hidden, info = gh._hide_front_markers(
+            section, nodes=nodes, plan=plan,
+            para_start=0, para_end=len(nodes))
+        self.assertEqual(["겉표지", "표제면", "제출서", "인준서"], info["roles"])
+        self.assertEqual([0, 8, 17, 26], info["paragraphs"])
+        self.assertEqual(without_text(section), without_text(hidden))
+        self.assertIn(FOOD_CROPS_SECPR, hidden)
+        self.assertIn(FOOD_CROPS_COLPR, hidden)
+        for text in ("겉표지", "표제면", "제출서", "인준서"):
+            self.assertNotIn(text, hidden)
+        self.assertEqual(len(nodes), len(paragraphs_of(hidden)))
 
     def test_split_strips_existing_controls_before_insert(self):
         numbers = ('<hp:ctrl><hp:pageNum pos="TOP_CENTER" formatType="DIGIT"'

@@ -796,6 +796,40 @@ _FRONT_BREAK_ROLES = ("표제면", "제출서", "인준서")
 _T_SELF_CLOSING_RE = re.compile(r"<hp:t\b[^>]*/>")
 
 
+def _root_open_tag(section_xml: str):
+    """구역 XML 루트 요소의 (열림 태그 문자열, 접두사 붙은 이름)."""
+    for start, end, name, kind in _iter_xml_tags(section_xml):
+        if kind == "start":
+            token = section_xml[start:end]
+            return token, token[1:].split(None, 1)[0].rstrip("/>")
+    raise HwpxBlocked(
+        "section_split_node_map_mismatch",
+        action="구역 XML에서 루트 요소를 찾지 못했습니다.",
+    )
+
+
+def _fragment_text(paragraph: str, root_open: str) -> str:
+    """문단 조각 하나의 `<hp:t>` 글자를 모아 공백을 정규화한다.
+
+    조각은 구역 루트에서 잘라 낸 것이라 자기 `xmlns:` 선언이 없다. 루트 열림
+    태그를 그대로 재사용해 감싸면 접두사·엔티티가 원문과 같은 뜻으로 읽힌다
+    (`_paragraph_texts`와 같은 ElementTree 경로).
+    """
+    import xml.etree.ElementTree as ET
+
+    wrapped = "%s%s</%s>" % (root_open[0], paragraph, root_open[1])
+    try:
+        root = ET.fromstring(wrapped)
+    except ET.ParseError as exc:
+        raise HwpxBlocked(
+            "front_marker_text_mismatch",
+            actual=None, parse_error=str(exc),
+            action="구분 이름 문단을 XML로 읽지 못해 은닉 여부를 확인할 수 없습니다.",
+        ) from exc
+    return _normalize_space("".join(node.text or ""
+                                    for node in root.iter(_TEXT_TAG)))
+
+
 def _blank_paragraph_text(paragraph: str) -> str:
     """문단의 모든 `<hp:t>` 글자만 비운다(제어 요소·`linesegarray` 보존)."""
     # 자기닫힘(`<hp:t/>`)을 먼저 바꾼다. 그러지 않으면 `_T_ELEMENT_RE`가
@@ -831,6 +865,22 @@ def _hide_front_markers(section_xml: str, *, nodes, plan,
     if not targets:
         return section_xml, None
     spans = _front_paragraph_spans(section_xml, para_start, para_end)
+    # 비우기 전에 그 자리 글자가 정말 기대 구분 이름인지 본다. 노드↔문단
+    # 대응이 어긋나도 문단 수만 맞으면 제목 같은 실제 내용을 지워 버리기
+    # 때문이다(웹 r1 중요 01). 하나라도 다르면 아무것도 비우지 않고 멈춘다.
+    root_open = None
+    for index in sorted(targets):
+        start, end = spans[index - para_start]
+        if root_open is None:
+            root_open = _root_open_tag(section_xml)
+        text = _fragment_text(section_xml[start:end], root_open)
+        if text != targets[index]:
+            raise HwpxBlocked(
+                "front_marker_text_mismatch",
+                role=targets[index], index=index, paragraph=index - para_start,
+                expected=targets[index], actual=text,
+                action="구분 이름 문단 자리에 다른 글자가 있어 은닉할 수 없습니다.",
+            )
     pieces, cursor = [], 0
     for index in sorted(targets):
         start, end = spans[index - para_start]
@@ -844,12 +894,21 @@ def _hide_front_markers(section_xml: str, *, nodes, plan,
     }
 
 
+_PARAGRAPH_HEAD_RE = re.compile(r"<hp:p\b[^>]*>")
+# 속성값은 큰따옴표·작은따옴표 둘 다 XML에서 허용된다. 작은따옴표를 못 보면
+# 같은 이름의 속성을 하나 더 붙여 XML이 깨진다(웹 r1 중요 02).
+_PAGE_BREAK_ATTR_RE = re.compile(
+    r"""(?<![\w:.\-])pageBreak\s*=\s*(?:"[^"]*"|'[^']*')""")
+
+
 def _set_page_break(paragraph: str) -> str:
     """문단 헤드의 `pageBreak`를 1로 만든다(속성이 없으면 넣는다)."""
-    head = re.match(r"<hp:p\b[^>]*>", paragraph).group(0)
-    if 'pageBreak="' in head:
-        return re.sub(r'pageBreak="[^"]*"', 'pageBreak="1"', paragraph, count=1)
-    return head[:-1] + ' pageBreak="1">' + paragraph[len(head):]
+    head = _PARAGRAPH_HEAD_RE.match(paragraph).group(0)
+    new_head = _PAGE_BREAK_ATTR_RE.sub('pageBreak="1"', head, count=1)
+    if new_head == head:
+        closing = "/>" if head.endswith("/>") else ">"
+        new_head = head[:-len(closing)] + ' pageBreak="1"' + closing
+    return new_head + paragraph[len(head):]
 
 
 def _break_front_pages(section_xml: str, *, nodes, plan,
