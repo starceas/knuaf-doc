@@ -1,7 +1,8 @@
 """Explicit local checks against pinned X01/X02 and food-crops originals.
 
 Run: python3 -m unittest tests.local_real_sources -v
-Exit 0: no FAIL (unavailable inputs are SKIP); 1: at least one FAIL.
+Exit 0: no FAIL (unavailable inputs are SKIP — SKIP is not PASS);
+1: at least one FAIL.
 This module is intentionally outside unittest discovery's test*.py pattern.
 
 The food-crops section is the 2판 `clear` receipt measured on the school's
@@ -260,8 +261,8 @@ FOOD_CROPS_SOURCE = (Path(value) if (value := os.environ.get(FOOD_CROPS_ENV))
                      else None)
 FOOD_MAP = (ROOT / "skills/knuaf-doc/references/food-crops"
             / "corrections/fc-clear-map.json")
-FOOD_CLEARED = 393
-FOOD_PRESERVED = 82
+FOOD_CLEARED = 396
+FOOD_PRESERVED = 79
 
 
 def _formula_records(path):
@@ -339,11 +340,12 @@ def load_tests(loader, tests, pattern):
     for ref, source in REAL_SOURCES.items():
         if source is None:
             statuses[ref] = "SKIP"
-            details[ref] = SOURCE_ENV[ref] + " is unset"
+            details[ref] = "SKIP — PASS 아님: " + SOURCE_ENV[ref] + " is unset"
             continue
         if not source.is_file():
             statuses[ref] = "SKIP"
-            details[ref] = SOURCE_ENV[ref] + " file is absent"
+            details[ref] = ("SKIP — PASS 아님: " + SOURCE_ENV[ref]
+                            + " file is absent")
             continue
         case = LocalRealSourceChecks('runTest')
         result = unittest.TestResult()
@@ -361,10 +363,10 @@ def load_tests(loader, tests, pattern):
     # reported on its own row so a missing school file never hides a C1 result.
     if FOOD_CROPS_SOURCE is None:
         statuses["FC"] = "SKIP"
-        details["FC"] = FOOD_CROPS_ENV + " is unset"
+        details["FC"] = "SKIP — PASS 아님: " + FOOD_CROPS_ENV + " is unset"
     elif not FOOD_CROPS_SOURCE.is_file():
         statuses["FC"] = "SKIP"
-        details["FC"] = FOOD_CROPS_ENV + " file is absent"
+        details["FC"] = "SKIP — PASS 아님: " + FOOD_CROPS_ENV + " file is absent"
     else:
         case = FoodCropsRealSourceChecks('runTest')
         result = unittest.TestResult()
@@ -372,12 +374,13 @@ def load_tests(loader, tests, pattern):
         case.run(result)
         if result.wasSuccessful() and result.testsRun == 1:
             statuses["FC"] = "PASS"
-            details["FC"] = "16-sheet form, 393/82, formula records intact"
+            details["FC"] = "16-sheet form, 396/79, formula records intact"
         else:
             statuses["FC"] = "FAIL"
             details["FC"] = ((result.failures or result.errors)[0][1].splitlines()[-1]
                              if result.failures or result.errors else "check did not run")
-    print("C1 local real-source checks")
+    print("C1 local real-source checks (SKIP means the input was absent: "
+          "not a pass)")
     print("SOURCE  STATUS    DETAIL")
     for ref in statuses:
         print(f"{ref:<6}  {statuses[ref]:<7}   {details[ref]}")

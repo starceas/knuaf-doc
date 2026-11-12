@@ -150,7 +150,7 @@ class OtherMajorsLockedTests(ContractCase):
 
     def test_food_crops_cannot_reuse_the_17_sheet_map(self):
         """The new profile is a different form, so the old map is refused
-        rather than clearing the wrong cells."""
+        rather than clearing the wrong cells — both ways in."""
         ctx = self._context("food_crops")
         with tempfile.TemporaryDirectory() as temp:
             clear_map, patch_map = self._fixtures(temp)
@@ -161,13 +161,33 @@ class OtherMajorsLockedTests(ContractCase):
                              "unsupported_finance_profile")
             self.assertFalse(blank.exists())
 
-            # The patch engine has no layout guard; the profile gate is what
-            # keeps food crops on its own form, and the 17-sheet copy the
-            # student already holds still works through its own name.
-            patched = Path(temp) / "food-patch.xlsx"
-            receipt = self.patch.patch_copy(self.bundled, patch_map, patched,
-                                            context=ctx,
-                                            profile="food_crops_16_sheet_v1")
-            self.assertEqual(_sha(patched), SPECIALTY_PATCH)
-            self.assertEqual(receipt["majorAuthorization"]["major_id"],
-                             "food_crops")
+            # The public patch entry checks the source's real structure, not
+            # just its own profile label: the 17-sheet bundle is not the
+            # registered 16-sheet school form, with or without the name.
+            for label, extra in (("default", {}),
+                                 ("named", {"profile": "food_crops_16_sheet_v1"})):
+                patched = Path(temp) / ("food-patch-%s.xlsx" % label)
+                with self.subTest(call=label):
+                    with self.assertRaises(self.mc.OutputHeldError) as held:
+                        self.patch.patch_copy(self.bundled, patch_map, patched,
+                                              context=ctx, **extra)
+                    self.assertEqual(held.exception.reason,
+                                     "workbook_structure_mismatch")
+                    self.assertFalse(patched.exists())
+
+            # Nothing but this major's own default profile is accepted: a
+            # named profile never reopens another major's patch route.
+            for major, named in (("fruit_trees", "fruit_16_sheet_v1"),
+                                 ("specialty_crops", "food_crops_16_sheet_v1"),
+                                 ("food_crops", "school_17_sheet_v1")):
+                fresh = self.make_project()
+                bind_major(fresh, major)
+                named_ctx = self.mc.output_context(fresh, major)
+                refused = Path(temp) / ("named-%s.xlsx" % major)
+                with self.subTest(major=major, profile=named):
+                    with self.assertRaises(self.mc.OutputHeldError) as held:
+                        self.patch.patch_copy(self.bundled, patch_map, refused,
+                                             context=named_ctx, profile=named)
+                    self.assertEqual(held.exception.reason,
+                                     "unsupported_finance_profile")
+                    self.assertFalse(refused.exists())

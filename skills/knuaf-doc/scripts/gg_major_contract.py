@@ -698,10 +698,21 @@ OUTPUT_GUIDANCE_UNSUPPORTED = (
     "해당 전공의 지원 출력인지 확인한 뒤 지원되는 출력으로 다시 요청하세요."
 )
 
+OUTPUT_GUIDANCE_FILL_CLOSED = (
+    "식량작물 재무 엑셀은 빈 사본까지만 지원합니다. 학교 원본을 "
+    "gg_excel_template.py clear로 복제해 입력 칸만 비우고, 값은 학생이 "
+    "자기 엑셀에서 직접 넣습니다. 채우기·파이썬 계산은 지원하지 않습니다."
+)
+
 _UNSUPPORTED_OUTPUT_REASONS = frozenset({
     "unsupported_output",
     "unsupported_finance_profile",
 })
+
+# 식량작물 2판은 빈 사본까지만 연다(책임자 결정 2026-11-12): 계약상 채우기와
+# 파이썬 계산은 미지원이므로 값 채우기 입구에서 거절한다. 표에 없는 전공의
+# 채우기 경로는 그대로다.
+FILL_CLOSED_MAJORS = frozenset({"food_crops"})
 
 # 특용작물전공 제출 엑셀은 교수님 양식(X01, 대식물 계정이 필요하면 X02)을
 # 틀로 복제해 값만 채운다(사용자 결정 2026-10-28). 스펙에서 17시트를 새로
@@ -761,6 +772,8 @@ def held_guidance(reason, error=None):
         )
     if str(reason) in _UNSUPPORTED_OUTPUT_REASONS:
         return OUTPUT_GUIDANCE_UNSUPPORTED
+    if str(reason) == "fill_unsupported_for_major":
+        return OUTPUT_GUIDANCE_FILL_CLOSED
     if str(reason) == "specialty_template_route_required":
         return OUTPUT_GUIDANCE_TEMPLATE_ROUTE
     return OUTPUT_GUIDANCE
@@ -2835,7 +2848,9 @@ FOOD_CROPS_MODULE = declare_module(
         FinanceCapability(
             profile="food_crops_16_sheet_v1",
             status="supported",
-            reason="학과에서 받은 16시트 원본을 복제(clear)·채우는 경로; "
+            reason="학과에서 받은 16시트 원본을 복제(clear)해 입력 칸만 비우는 "
+            "빈 사본 만들기만 지원한다. 값 채우기(gg_excel_fill)와 파이썬 "
+            "재무 계산은 미지원이며 입구에서 거절한다(fill_unsupported_for_major). "
             "원본 지문은 참조집합, 칸 지도는 references/food-crops",
         ),
     ),

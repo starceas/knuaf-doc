@@ -109,6 +109,16 @@ major whose own school form differs needs an explicit `--source`; the bundled
 food-crops clearing map and its receipt contract are
 [food-crops/corrections/FC-CLEAR.md](food-crops/corrections/FC-CLEAR.md).
 
+`gg_excel_formula_patch.patch_copy` resolves the same default and refuses a
+named `profile` that differs from it (`unsupported_finance_profile`), then
+checks the source against that profile's registered structure
+(`workbook_structure_mismatch`). All refusals land before any directory is
+created: the source path itself is refused (`ValueError`), an existing output
+file is refused (`FileExistsError`), and output outside the project stays
+allowed because the student chooses where to save. `gg_excel_fill.fill_copy`
+stays closed for `food_crops` only (`fill_unsupported_for_major`); the 17-sheet
+majors keep filling and calculating as before.
+
 Office `--spec` uses the same workbook-profile gate and compares the staged
 input's real sheets with the registered form. `--template-receipt` accepts
 completed clear/fill operations only after input/map/output hash checks and

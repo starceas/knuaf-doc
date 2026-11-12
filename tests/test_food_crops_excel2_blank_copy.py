@@ -1,13 +1,14 @@
 """식량작물 엑셀 2판 — N3 `clear` 지도가 16시트 사본을 만드는 방식.
 
-지도(`references/food-crops/corrections/fc-clear-map.json`)는 159개 런으로
-393칸을 지우고 82칸(계획연도 40 + 출처 주석 42)을 남긴다. 이 시험은 학교
+지도(`references/food-crops/corrections/fc-clear-map.json`)는 161개 런으로
+396칸을 지우고 79칸(계획연도 40 + 출처 주석 39)을 남긴다. 이 시험은 학교
 원본 대신 같은 16개 시트 이름·같은 지도 좌표를 가진 합성 통합문서를 쓰고,
 참조 세트는 시험 안에서만 합성 지문으로 바꾼다. 실제 원본 실측은
 `tests/local_real_sources.py`(KNUAF_REAL_FOOD_CROPS_XLSX)가 맡는다.
 
-고정하는 것: 지도 좌표·역할·칸 수, clear 뒤 남는 값 0, preserve 값 불변,
-수식·병합·숨김 시트·셀 스타일 보존, 원본 바이트 불변, 프로필 이름이 다르면
+고정하는 것: 지도 좌표·역할·칸 수, 정렬한 좌표 목록의 해시(합성 입력과
+분리된 독립 상수), clear 뒤 남는 값 0, preserve 값 불변, 수식·병합·숨김
+시트·셀 스타일 보존, 원본 바이트 불변, 프로필 이름이 다르면
 `unsupported_finance_profile`, 지문이 다르면 `workbook_structure_mismatch`.
 Excel은 실행하지 않는다.
 """
@@ -30,10 +31,20 @@ SCHOOL_PROFILE = "school_17_sheet_v1"
 MAP_PATH = (REPO_ROOT / "skills/knuaf-doc/references/food-crops"
             / "corrections/fc-clear-map.json")
 SHEET_COUNT = 16
-CLEARED_CELLS = 393
-PRESERVED_CELLS = 82
+CLEARED_CELLS = 396
+PRESERVED_CELLS = 79
 YEAR_CELLS = 40
-NOTE_CELLS = 42
+NOTE_CELLS = 39
+ENTRY_COUNT = 161
+# Reviewed coordinates, frozen here rather than derived from the map: sorted
+# "\t".join((sheet, cell)) per line, sha256. A coordinate moved in the map —
+# even with the same counts and no duplicates — fails this.
+REVIEWED_COORDINATES_SHA256 = (
+    "36f8b3fdc8ab392366ae286d4d082ac69d77b7a65d3a4ad8538c93ac8bf15119")
+# The three example-number memos R-01 moved out of the preserved notes.
+CLEARED_EXAMPLE_MEMOS = ((" 5. 판매계획", "B26"),
+                         ("6. 생산계획", "B9"),
+                         ("8. 노무비계획", "B29"))
 
 
 def _json(path):
@@ -115,7 +126,7 @@ class FoodCropsClearMapTests(ContractCase):
                          {"variant": "unknown", "mapOrigin": "reviewed_custom"})
         self.assertEqual(self.map["source"]["sha256"],
                          self.school.profile_structure(PROFILE)["sha256"])
-        self.assertEqual(len(self.map["entries"]), 159)
+        self.assertEqual(len(self.map["entries"]), ENTRY_COUNT)
         counts = {"clear": {}, "preserve": {}}
         for entry in self.map["entries"]:
             self.assertIn(entry["action"], ("clear", "preserve"))
@@ -129,7 +140,22 @@ class FoodCropsClearMapTests(ContractCase):
         self.assertEqual(counts["clear"], {"input.student_estimate": CLEARED_CELLS})
         self.assertEqual(counts["preserve"], {"structure.period_year": YEAR_CELLS,
                                               "structure.source_note": NOTE_CELLS})
-        # A preserved note is the form's own instruction, not prose to keep.
+
+        # The reviewed coordinate set, frozen independently of this map.
+        coordinates = sorted({(entry["sheet"], cell)
+                              for entry in self.map["entries"]
+                              for cell in self._expanded(entry)})
+        listing = "\n".join("\t".join(pair) for pair in coordinates)
+        self.assertEqual(hashlib.sha256(listing.encode("utf-8")).hexdigest(),
+                         REVIEWED_COORDINATES_SHA256)
+
+        # R-01: a memo holding an example number the student must replace is
+        # cleared; the form's own source/applicability notes stay.
+        cleared = {(e["sheet"], e["range"]) for e in self.map["entries"]
+                   if e["action"] == "clear"}
+        for sheet, cell in CLEARED_EXAMPLE_MEMOS:
+            with self.subTest(sheet=sheet, cell=cell):
+                self.assertIn((sheet, cell), cleared)
         notes = [e for e in self.map["entries"]
                  if e["role"] == "structure.source_note"]
         self.assertTrue(all(e["action"] == "preserve" for e in notes))
@@ -138,7 +164,7 @@ class FoodCropsClearMapTests(ContractCase):
         self.assertTrue(all(e["action"] == "preserve" for e in years))
 
     # -- the writer ------------------------------------------------------
-    def test_blank_copy_clears_393_and_keeps_82(self):
+    def test_blank_copy_clears_396_and_keeps_79(self):
         source, map_path, _ = self.synthetic_source()
         original = source.read_bytes()
         before = load_workbook(source)

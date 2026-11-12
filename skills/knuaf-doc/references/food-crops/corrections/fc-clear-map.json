@@ -1014,10 +1014,10 @@
     {
       "sheet": " 5. 판매계획",
       "range": "B26",
-      "role": "structure.source_note",
-      "action": "preserve",
+      "role": "input.student_estimate",
+      "action": "clear",
       "explicit": true,
-      "reason": "검토된 출처·적용 기준 주석: 양식 지침이라 보존"
+      "reason": "검토된 예시 수치 메모: 학생이 자기 값으로 바꿔야 하는 예시라 지운다"
     },
     {
       "sheet": " 5. 판매계획",
@@ -1062,10 +1062,10 @@
     {
       "sheet": "6. 생산계획",
       "range": "B9",
-      "role": "structure.source_note",
-      "action": "preserve",
+      "role": "input.student_estimate",
+      "action": "clear",
       "explicit": true,
-      "reason": "검토된 출처·적용 기준 주석: 양식 지침이라 보존"
+      "reason": "검토된 예시 수치 메모: 학생이 자기 값으로 바꿔야 하는 예시라 지운다"
     },
     {
       "sheet": "7. 영농자재소요계획",
@@ -1085,7 +1085,23 @@
     },
     {
       "sheet": "8. 노무비계획",
-      "range": "B28:B30",
+      "range": "B28",
+      "role": "structure.source_note",
+      "action": "preserve",
+      "explicit": true,
+      "reason": "검토된 출처·적용 기준 주석: 양식 지침이라 보존"
+    },
+    {
+      "sheet": "8. 노무비계획",
+      "range": "B29",
+      "role": "input.student_estimate",
+      "action": "clear",
+      "explicit": true,
+      "reason": "검토된 예시 수치 메모: 학생이 자기 값으로 바꿔야 하는 예시라 지운다"
+    },
+    {
+      "sheet": "8. 노무비계획",
+      "range": "B30",
       "role": "structure.source_note",
       "action": "preserve",
       "explicit": true,

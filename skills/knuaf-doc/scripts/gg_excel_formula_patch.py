@@ -623,14 +623,39 @@ def _expand_targeted_shared(root, dom, dom_cells, patches, sheet):
 
 def patch_copy(source: Path, map_path: Path, out: Path, *, context=None,
                profile: str | None = None) -> dict:
-    """Guarded public entry: authorize before any write, then run the
-    existing patch engine (policy B).  ``profile`` defaults to the bound
-    major's own workbook profile."""
+    """Guarded public entry: authorize, then the declared school form, then
+    the output path — every refusal happens before the engine writes.
+
+    ``profile`` may only repeat the bound major's own default
+    (``default_workbook_profile``); naming any other profile would widen the
+    patch route past the major's closed default and is refused.  A registered
+    workbook profile is checked against the source's real sheet structure and
+    formula fingerprints, so a declared profile never stands in for the form.
+    """
     import gg_major_contract as mc
 
     authorization = mc.authorize_output(mc.OUTPUT_SCHOOL_WORKBOOK, context)
-    mc.require_finance_profile(
-        authorization, profile or mc.default_workbook_profile(authorization))
+    resolved = profile or mc.default_workbook_profile(authorization)
+    if not isinstance(resolved, str) or not resolved:
+        raise mc.OutputHeldError("unsupported_finance_profile",
+                                 major_id=authorization.major_id,
+                                 profile=profile)
+    if resolved != mc.default_workbook_profile(authorization):
+        raise mc.OutputHeldError("unsupported_finance_profile",
+                                 major_id=authorization.major_id,
+                                 profile=profile)
+    mc.require_finance_profile(authorization, resolved)
+    mc.require_workbook_profile(authorization, resolved)
+    from gg_school_excel import require_profile_structure
+    try:
+        require_profile_structure(source, resolved)
+    except ValueError as error:
+        raise mc.OutputHeldError("workbook_structure_mismatch",
+                                 str(error)) from error
+    if source.resolve() == out.resolve():
+        raise ValueError(f"refusing to write over the source workbook: {out}")
+    if out.exists():
+        raise FileExistsError(f"refusing to overwrite output: {out}")
     return _patch_copy(source, map_path, out,
                        _authorization=authorization, _context=context)
 
@@ -909,9 +934,9 @@ def cli(argv: list[str]) -> int:
                    if args.project is not None else None)
         # Policy B pre-check before any directory/staging is created.
         mc.authorize_output(mc.OUTPUT_SCHOOL_WORKBOOK, context)
-        out.parent.mkdir(parents=True, exist_ok=True)
         result = patch_copy(source, args.map.resolve(), staged_out,
                             context=context, profile=args.profile)
+        out.parent.mkdir(parents=True, exist_ok=True)
         result["output"]["path"] = str(out)
         staged_receipt.parent.mkdir(parents=True, exist_ok=True)
         staged_receipt.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")

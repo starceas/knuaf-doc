@@ -108,12 +108,20 @@ class RouteTests(ContractCase):
                     SCHOOL_PROFILE)
 
     def test_patch_copy_defaults_to_the_majors_own_profile(self):
+        from tests.test_finance_profile_gate import register_synthetic_form
         food_root = self.make_project()
         bind_major(food_root, FOOD)
         food_ctx = self.mc.output_context(food_root, FOOD)
         with tempfile.TemporaryDirectory() as temp:
             source = self._synthetic(temp)
             mapping = self._patch_map(temp, source)
+            # A registered profile is structure-bound, so the one-sheet
+            # synthetic book only patches once its fingerprints are the
+            # registered ones. This isolates the registry, not the check.
+            from openpyxl import load_workbook
+            book = load_workbook(source)
+            register_synthetic_form(self, book, profile=FOOD_PROFILE)
+            book.close()
             out = Path(temp) / "food-patched.xlsx"
             receipt = self.patch.patch_copy(source, mapping, out,
                                             context=food_ctx)
@@ -142,19 +150,24 @@ class RouteTests(ContractCase):
             self.assertEqual(receipt["majorAuthorization"]["major_id"],
                              SPECIALTY)
 
-    def test_the_patch_cli_exposes_the_profile_switch(self):
+    def test_the_patch_cli_checks_the_form_before_making_the_folder(self):
+        """The CLI cannot reach the patch engine with a workbook that is not
+        the registered 16-sheet form, and a refusal leaves no folder behind."""
         root = self.make_project()
         bind_major(root, FOOD)
         with tempfile.TemporaryDirectory() as temp:
             source = self._synthetic(temp)
             mapping = self._patch_map(temp, source)
-            out = Path(temp) / "cli-patched.xlsx"
+            out = Path(temp) / "not-yet" / "cli-patched.xlsx"
             good = _cli("gg_excel_formula_patch.py", "--source", source,
                         "--map", mapping, "--out", out,
                         "--receipt", str(out) + ".receipt.json",
                         "--project", root, "--major", FOOD)
-            self.assertEqual(good.returncode, 0, good.stdout + good.stderr)
-            self.assertTrue(out.exists())
+            self.assertEqual(good.returncode, 2, good.stdout + good.stderr)
+            self.assertEqual(json.loads(good.stdout)["reason"],
+                             "workbook_structure_mismatch")
+            self.assertFalse(out.exists())
+            self.assertFalse(out.parent.exists())
 
             refused = Path(temp) / "cli-refused.xlsx"
             bad = _cli("gg_excel_formula_patch.py", "--source", source,
@@ -166,6 +179,86 @@ class RouteTests(ContractCase):
             self.assertEqual(json.loads(bad.stdout)["reason"],
                              "unsupported_finance_profile")
             self.assertFalse(refused.exists())
+
+    def test_the_patch_entry_refuses_to_overwrite_and_makes_no_folder(self):
+        """Every refusal lands before a write: the source itself, an existing
+        file, and (through the CLI) a folder that does not exist yet."""
+        from tests.test_finance_profile_gate import register_synthetic_form
+        from openpyxl import load_workbook
+        root = self.make_project()
+        bind_major(root, FOOD)
+        context = self.mc.output_context(root, FOOD)
+        with tempfile.TemporaryDirectory() as temp:
+            source = self._synthetic(temp)
+            mapping = self._patch_map(temp, source)
+            book = load_workbook(source)
+            register_synthetic_form(self, book, profile=FOOD_PROFILE)
+            book.close()
+
+            before = source.read_bytes()
+            with self.assertRaisesRegex(ValueError,
+                                        "refusing to write over the source"):
+                self.patch.patch_copy(source, mapping, source, context=context)
+            self.assertEqual(source.read_bytes(), before)
+
+            existing = Path(temp) / "already-here.xlsx"
+            existing.write_bytes(b"sentinel")
+            with self.assertRaises(FileExistsError):
+                self.patch.patch_copy(source, mapping, existing, context=context)
+            self.assertEqual(existing.read_bytes(), b"sentinel")
+
+        with tempfile.TemporaryDirectory() as temp:
+            source = self._synthetic(temp)
+            mapping = self._patch_map(temp, source)
+            out = Path(temp) / "two" / "deep" / "cli.xlsx"
+            refused = _cli("gg_excel_formula_patch.py", "--source", source,
+                           "--map", mapping, "--out", out,
+                           "--receipt", str(out) + ".receipt.json",
+                           "--project", root, "--major", FOOD)
+            self.assertEqual(refused.returncode, 2, refused.stdout + refused.stderr)
+            self.assertEqual(json.loads(refused.stdout)["reason"],
+                             "workbook_structure_mismatch")
+            self.assertFalse(out.parent.exists())
+
+    def test_filling_values_stays_closed_for_food_crops(self):
+        """Only the blank copy is open; filling values is refused at the
+        entry point, before any output exists."""
+        fill = runtime("gg_excel_fill")
+        root = self.make_project()
+        bind_major(root, FOOD)
+        context = self.mc.output_context(root, FOOD)
+        with tempfile.TemporaryDirectory() as temp:
+            source = self._synthetic(temp)
+            fill_map = Path(temp) / "fill-map.json"
+            fill_map.write_text(json.dumps({
+                "schema": "gg-xlsx-fill-map/v1",
+                "template": {"sha256": self.tpl.sha256(source)},
+                "entries": [{"sheet": "Visible", "cell": "B2", "role": "input",
+                             "period": "2030년", "source_note": "합성",
+                             "editable": True}]}, ensure_ascii=False),
+                encoding="utf-8")
+            values = Path(temp) / "values.json"
+            values.write_text(json.dumps(
+                {"schema": "gg-xlsx-fill-values/v1", "values": []}),
+                encoding="utf-8")
+
+            out = Path(temp) / "filled.xlsx"
+            with self.assertRaises(self.mc.OutputHeldError) as caught:
+                fill.fill_copy(source, fill_map, values, out, context=context)
+            self.assertEqual(caught.exception.reason,
+                             "fill_unsupported_for_major")
+            self.assertFalse(out.exists())
+
+            receipt = Path(temp) / "filled.receipt.json"
+            result = _cli("gg_excel_fill.py", "--template", source,
+                          "--map", fill_map, "--values", values,
+                          "--out", out, "--receipt", receipt,
+                          "--project", root, "--major", FOOD)
+            self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+            self.assertEqual(json.loads(result.stdout)["reason"],
+                             "fill_unsupported_for_major")
+            self.assertFalse(out.exists())
+            self.assertFalse(receipt.exists())
 
     def test_create_copies_an_explicit_food_crops_source(self):
         root = self.make_project()
