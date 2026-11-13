@@ -93,9 +93,9 @@ PINNED_CATALOG_AUTHORITIES = {
     # above byte-for-byte).  Accepted on the PR's independent review plus
     # the D3 printed-page image check, not by the pack author.
     "accepted-catalog-20261114/rda.income.national.2025":
-        "cee62f6cd3d71b7212be8311a8476ae60c7b5d7cca0e77eff841158ab0a2683d",
+        "c5ecb6189271c33d8dd41e5d14621dd4f034ee68c560d182b6dcdd6f37bf2587",
     "accepted-catalog-20261114/rda.income.regional.2025":
-        "7bbfad83d281b1cef44e7dfddee53e4d0d387783e742fba964cf39c3c6b48405",
+        "3d82ad98932d4e8b7c4aca1b4710258a101a7fba738016a43b84a536b3c74298",
 }
 
 

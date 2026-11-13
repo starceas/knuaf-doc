@@ -179,6 +179,80 @@ class RealPackIdentityTests(unittest.TestCase):
             total += len(idx)
         self.assertEqual(total, 6315)
 
+    def test_manifest_audit_chain_matches_record_bytes(self):
+        # Every pinned pack's manifest must describe the records.jsonl bytes
+        # it ships beside: file hash == pin == actual bytes, and the rows'
+        # audit keys == the index built from those bytes.  Catches a record
+        # edit (e.g. a field rename) whose manifest hashes were not rebuilt.
+        for pack_id, pin in prov.PINNED_PACKS.items():
+            with self.subTest(pack=pack_id):
+                records = PACKS / pin["relpath"]
+                manifest = json.loads(
+                    (records.parent / "manifest.json").read_text(
+                        encoding="utf-8"))
+                actual = hashlib.sha256(records.read_bytes()).hexdigest()
+                self.assertEqual(manifest["records_file_sha256"], actual)
+                self.assertEqual(pin["records_file_sha256"], actual)
+                idx = prov.build_audit_index(records, pack_id, actual)
+                rows = manifest["rows"]
+                self.assertEqual(len(rows), len(idx))
+                keys = set()
+                for row in rows:
+                    key = prov.normalize_audit_key(row["audit_key"])
+                    self.assertEqual(row["raw_line_sha256"], key[3])
+                    keys.add(key)
+                self.assertEqual(keys, set(idx))
+
+    def test_builtin_sources_pack_artifacts_match_disk(self):
+        # builtin-sources.json artifacts[] for benchmark packs must equal
+        # the shipped bytes (sha256 and size) — a rebuilt manifest whose
+        # registry artifact hash was not refreshed fails here.
+        registry = json.loads((KN_UAF_DOC / "references" /
+                               "builtin-sources.json").read_text(
+                                   encoding="utf-8"))
+        seen = []
+
+        def walk(node):
+            if isinstance(node, dict):
+                for art in node.get("artifacts") or []:
+                    rel = art.get("relative_path") \
+                        if isinstance(art, dict) else None
+                    if isinstance(rel, str) and rel.startswith("common/"):
+                        seen.append((rel, art))
+                for value in node.values():
+                    walk(value)
+            elif isinstance(node, list):
+                for value in node:
+                    walk(value)
+
+        walk(registry)
+        self.assertTrue(seen)
+        for rel, art in seen:
+            with self.subTest(artifact=rel):
+                data = (PACKS / rel).read_bytes()
+                self.assertEqual(art["sha256"],
+                                 hashlib.sha256(data).hexdigest())
+                self.assertEqual(art["bytes"], len(data))
+
+    def test_catalog_authority_pins_reproduce_from_real_manifests(self):
+        # Every pinned accepted-catalog authority that names a pinned pack
+        # must reproduce from that pack's shipped manifest rows; a manifest
+        # rebuilt without re-pinning (or the reverse) fails here.
+        import gg_rda_research as research
+        for auth, digest in research.PINNED_CATALOG_AUTHORITIES.items():
+            pack_id = auth.rsplit("/", 1)[-1]
+            pin = prov.PINNED_PACKS.get(pack_id)
+            if pin is None:
+                continue
+            with self.subTest(authority=auth):
+                manifest = json.loads(
+                    (PACKS / pin["relpath"]).parent.joinpath(
+                        "manifest.json").read_text(encoding="utf-8"))
+                entries = {prov.normalize_audit_key(r["audit_key"]): r
+                           for r in manifest["rows"]}
+                self.assertEqual(
+                    research.catalog_content_digest(entries), digest)
+
     def test_econ_byte_identical_lines_keep_distinct_keys(self):
         pin = prov.PINNED_PACKS["rda.econ.2025"]
         idx = prov.build_audit_index(PACKS / pin["relpath"],

@@ -326,7 +326,7 @@
       "source": "adopted:app-PR41"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "b31fe946c73caef95f9c5557c5a720d8d0b20b9015bdb4db605267125ea1386b",
+      "after_sha256": "6a1fa1b52c0af5daaa88639c4c48519c8e142d6b1a75c36b31dc0d694511d2fa",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "P28",
@@ -532,7 +532,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/builtin-sources.json": {
-      "after_sha256": "533b8f4028e88cc5618b60ece6a381ddb324d2ac7bdbc166aaf24f70b138f8e2",
+      "after_sha256": "12301f423593d2f358b2b3bbd61492fc4d79940f865d5558d79d775eb47b9895",
       "before_sha256": null,
       "first_changed": "P5",
       "last_changed": "P28",
@@ -1839,7 +1839,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_rda_research.py": {
-      "after_sha256": "4fc65238bf937ce3523ee825823df64349bf4a87052eb83842a955d540e64bd1",
+      "after_sha256": "4858eb1f5a60e36fc2c3f1091ca92aab902ed296f70d608f8156000ab7eedef5",
       "before_sha256": null,
       "first_changed": "P4",
       "last_changed": "P28",
@@ -2153,12 +2153,12 @@
       "source": "new"
     },
     "skills/knuaf-doc/tests/test_gg_rda_provenance.py": {
-      "after_sha256": "533d460cb0be0fd9625ef30e5ddb9e9d564a8d271c80f160eaf4869132273a44",
+      "after_sha256": "92d148119ce640dd8f8b1d87427a2cd2705e2eddeb2b342e05fc16205ce6019b",
       "before_sha256": null,
       "first_changed": "P4",
       "last_changed": "P28",
       "owner": "P15",
-      "reason": "accepted provenance lane test (carried over verbatim) | P15: D5 useful-life physical-cell correction and dependent trust migration | W-2025: 2025 소득 팩 등록에 따른 갱신 — 팩 총 행수 계약 상수 6,162 → 6,315(2025 팩 153행 추가).",
+      "reason": "accepted provenance lane test (carried over verbatim) | P15: D5 useful-life physical-cell correction and dependent trust migration | W-2025: 2025 소득 팩 등록에 따른 갱신 — 팩 총 행수 계약 상수 6,162 → 6,315(2025 팩 153행 추가); 웹 W-01 후속으로 실팩 manifest 감사 체인(파일 해시·행 해시·audit_key)과 accepted-catalog 핀 재현·builtin-sources 팩 artifact 해시 시험 3개 추가.",
       "source": "new"
     },
     "skills/knuaf-doc/tests/test_gg_rda_research_integration.py": {
@@ -3227,7 +3227,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/benchmark-packs/common/rda-income-national-2025/manifest.json": {
-      "after_sha256": "7745020cb1b22e251c35d7e2498a10bbb29e8982fddf324b335fbcdde367ac41",
+      "after_sha256": "516fc26643e0e0ee505c3b7d47f8b5cf7313eb05cdc40e0aa3f178b70d3a75ed",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "P28",
@@ -3245,7 +3245,7 @@
       "reason": "W-2025: 2025 소득자료집(농촌진흥청, 2026-10 발간) 정식 등록 — 전국 104행 + 지역 49행. 값은 W-1A 후보(농사로 OpenAPI 전 행 대조 137건 일치, pypdf 칸 단위 재독 1,082칸 불일치 0)에서 왔고, 지역 49행의 비목 키는 지역 팩 계약 이름으로 맞췄다. 전국 과수 11건에 orchard_establishment (과수원조성비)를 원문 인쇄면 값으로 넣었다."
     },
     "skills/knuaf-doc/references/benchmark-packs/common/rda-income-regional-2025/manifest.json": {
-      "after_sha256": "c96527257f56741658bb33b9e1c96ed43f1849665ab83d5c9f9ba32994d47c9a",
+      "after_sha256": "43735201044dfac9aa7e8497b4323f5e3048e4da4238e488cddc946d82ff14d7",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "P28",
