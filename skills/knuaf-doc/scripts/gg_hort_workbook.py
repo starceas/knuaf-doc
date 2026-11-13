@@ -3209,8 +3209,8 @@ SCHOOL_FORM_NOTICES = (
 #
 # **적재 시점에 읽지 않는다.** 명세가 없거나 해시가 어긋나면 이 모듈을
 # 부르는 모든 명령이 죽는다 — 알림 하나 때문에 원예·과수 전체가 멈추면
-# 안 된다. 알림을 만들 때 그 안에서 읽고, 실패는 I4 경로(생성 실패 →
-# notices_write failed, 채택 유지, 기존 파일 보존)로 흘려보낸다.
+# 안 된다. 알림을 만들 때 그 안에서 읽고, 실패는 채택을 유지한 채
+# 공통 장 §3 경로로 간다(알림 제거·stderr 한 줄).
 _FY1_YEAR_KEYS = ("fy1_year_basis",)
 _FY1_PRICE_KEYS = ("fy1_price_index_basis",)
 _FY1_TEXTS = {
@@ -3229,8 +3229,8 @@ def fy1_registered_groups():
     돌려준다. 연도 칸은 1개, 나머지는 물가 묶음이다.
 
     명세를 읽지 못하면 ``ValueError``를 올린다 — 여기서 삼키지 않는다.
-    호출부(``gg_core._workbook_notice_row``)가 이를 '생성 실패'로 분류해
-    채택을 유지한 채 ``notices_write.status="failed"``로 보고한다(I4).
+    호출부(``gg_core._workbook_notice_row``)가 이를 '생성 실패'로 분류한다.
+    채택을 유지하고, 알림 갱신 실패는 공통 장 §3이 처리한다(제거·stderr).
     """
     from gg_fruit_correction import (YEAR_CELL, YEAR_FORMULA, load_spec,
                                      registered_cells)
