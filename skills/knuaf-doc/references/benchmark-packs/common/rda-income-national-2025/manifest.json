@@ -1,0 +1,2561 @@
+{
+  "schema": "knuaf-doc-benchmark-pack-manifest/1",
+  "pack_id": "rda.income.national.2025",
+  "pack_revision": "1.0.0",
+  "records_file": "records.jsonl",
+  "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+  "total_physical_rows": 104,
+  "status_summary": {
+    "verified_observation_count": 104,
+    "exploratory_count": 0,
+    "quarantined_count": 0
+  },
+  "source_pdf": "rda-income-2025-national.pdf",
+  "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+  "source_note": "2025년판(2026-10 발간) Ⅱ-1 총괄표와 Ⅲ장 비목별 표에서 읽은 값. 쌀·콩(전국)과 지역 쌀은 같은 책 별지의 국가데이터처 농축산물생산비조사 인용분이라 조사 주체·비목 정의가 다르다 — 레코드마다 source.survey로 구분하고 서로 다른 조사는 합산하지 않는다. 원자료 PDF의 SHA-256을 manifest에 적는다. 2024년 값은 기존 rda.income.*.2024 팩에 있으므로 넣지 않는다.",
+  "source_surveys": [
+    {
+      "aggregation_group": "rda.income.2025",
+      "publisher": "농촌진흥청",
+      "survey": "rda.income",
+      "survey_label": "농산물소득조사",
+      "data_year": 2025,
+      "published": "2026-10",
+      "document": "농산물소득자료집(2025년산)",
+      "sections": [
+        "Ⅲ. 작목별 경영비 및 소득 - 식량작물",
+        "Ⅲ. 작목별 경영비 및 소득 - 노지채소",
+        "Ⅲ. 작목별 경영비 및 소득 - 시설채소",
+        "Ⅲ. 작목별 경영비 및 소득 - 노지과수",
+        "Ⅲ. 작목별 경영비 및 소득 - 시설과수",
+        "Ⅲ. 작목별 경영비 및 소득 - 화훼",
+        "Ⅲ. 작목별 경영비 및 소득 - 특용약용작물",
+        "Ⅱ-1 총괄표 식량작물",
+        "Ⅱ-1 총괄표 노지채소",
+        "Ⅱ-1 총괄표 시설채소",
+        "Ⅱ-1 총괄표 노지과수",
+        "Ⅱ-1 총괄표 시설과수",
+        "Ⅱ-1 총괄표 화훼",
+        "Ⅱ-1 총괄표 특용약용작물"
+      ],
+      "record_count": 102,
+      "record_ids": [
+        "rda.income.national.2025.detail.식량작물.겉보리",
+        "rda.income.national.2025.detail.식량작물.쌀보리",
+        "rda.income.national.2025.detail.식량작물.밀",
+        "rda.income.national.2025.detail.식량작물.노지풋옥수수",
+        "rda.income.national.2025.detail.식량작물.고구마",
+        "rda.income.national.2025.detail.식량작물.봄감자",
+        "rda.income.national.2025.detail.식량작물.가을감자",
+        "rda.income.national.2025.detail.노지채소.노지수박",
+        "rda.income.national.2025.detail.노지채소.노지가을무",
+        "rda.income.national.2025.detail.노지채소.노지고랭지무",
+        "rda.income.national.2025.detail.노지채소.노지당근",
+        "rda.income.national.2025.detail.노지채소.노지봄배추",
+        "rda.income.national.2025.detail.노지채소.노지가을배추",
+        "rda.income.national.2025.detail.노지채소.노지고랭지배추",
+        "rda.income.national.2025.detail.노지채소.노지시금치",
+        "rda.income.national.2025.detail.노지채소.노지양배추",
+        "rda.income.national.2025.detail.노지채소.노지대파",
+        "rda.income.national.2025.detail.노지채소.노지쪽파",
+        "rda.income.national.2025.detail.노지채소.노지생강",
+        "rda.income.national.2025.detail.시설채소.시설수박",
+        "rda.income.national.2025.detail.시설채소.시설참외",
+        "rda.income.national.2025.detail.시설채소.시설딸기",
+        "rda.income.national.2025.detail.시설채소.시설딸기(수경)",
+        "rda.income.national.2025.detail.시설채소.시설오이",
+        "rda.income.national.2025.detail.시설채소.시설호박",
+        "rda.income.national.2025.detail.시설채소.시설토마토",
+        "rda.income.national.2025.detail.시설채소.시설토마토(수경)",
+        "rda.income.national.2025.detail.시설채소.시설방울토마토",
+        "rda.income.national.2025.detail.시설채소.시설방울토마토(수경)",
+        "rda.income.national.2025.detail.시설채소.시설가지",
+        "rda.income.national.2025.detail.시설채소.시설파프리카(착색단고추)",
+        "rda.income.national.2025.detail.시설채소.시설시금치",
+        "rda.income.national.2025.detail.시설채소.시설상추",
+        "rda.income.national.2025.detail.시설채소.시설부추",
+        "rda.income.national.2025.detail.시설채소.시설고추",
+        "rda.income.national.2025.detail.시설채소.시설멜론",
+        "rda.income.national.2025.detail.노지과수.사과",
+        "rda.income.national.2025.detail.노지과수.배",
+        "rda.income.national.2025.detail.노지과수.복숭아",
+        "rda.income.national.2025.detail.노지과수.노지포도",
+        "rda.income.national.2025.detail.노지과수.노지감귤",
+        "rda.income.national.2025.detail.노지과수.단감",
+        "rda.income.national.2025.detail.노지과수.키위(참다래)",
+        "rda.income.national.2025.detail.노지과수.블루베리",
+        "rda.income.national.2025.detail.노지과수.자두",
+        "rda.income.national.2025.detail.시설과수.시설포도",
+        "rda.income.national.2025.detail.화훼.시설장미",
+        "rda.income.national.2025.detail.특용약용작물.참깨",
+        "rda.income.national.2025.detail.특용약용작물.인삼",
+        "rda.income.national.2025.detail.특용약용작물.오미자",
+        "rda.income.national.2025.detail.특용약용작물.들깨",
+        "rda.income.national.2025.summary.식량작물.겉보리",
+        "rda.income.national.2025.summary.식량작물.쌀보리",
+        "rda.income.national.2025.summary.식량작물.밀",
+        "rda.income.national.2025.summary.식량작물.노지풋옥수수",
+        "rda.income.national.2025.summary.식량작물.고구마",
+        "rda.income.national.2025.summary.식량작물.봄감자",
+        "rda.income.national.2025.summary.식량작물.가을감자",
+        "rda.income.national.2025.summary.노지채소.노지수박",
+        "rda.income.national.2025.summary.노지채소.노지가을무",
+        "rda.income.national.2025.summary.노지채소.노지고랭지무",
+        "rda.income.national.2025.summary.노지채소.노지당근",
+        "rda.income.national.2025.summary.노지채소.노지봄배추",
+        "rda.income.national.2025.summary.노지채소.노지가을배추",
+        "rda.income.national.2025.summary.노지채소.노지고랭지배추",
+        "rda.income.national.2025.summary.노지채소.노지시금치",
+        "rda.income.national.2025.summary.노지채소.노지양배추",
+        "rda.income.national.2025.summary.노지채소.노지대파",
+        "rda.income.national.2025.summary.노지채소.노지쪽파",
+        "rda.income.national.2025.summary.노지채소.노지생강",
+        "rda.income.national.2025.summary.시설채소.시설수박",
+        "rda.income.national.2025.summary.시설채소.시설참외",
+        "rda.income.national.2025.summary.시설채소.시설딸기",
+        "rda.income.national.2025.summary.시설채소.시설딸기(수경)",
+        "rda.income.national.2025.summary.시설채소.시설오이",
+        "rda.income.national.2025.summary.시설채소.시설호박",
+        "rda.income.national.2025.summary.시설채소.시설토마토",
+        "rda.income.national.2025.summary.시설채소.시설토마토(수경)",
+        "rda.income.national.2025.summary.시설채소.시설방울토마토",
+        "rda.income.national.2025.summary.시설채소.시설방울토마토(수경)",
+        "rda.income.national.2025.summary.시설채소.시설가지",
+        "rda.income.national.2025.summary.시설채소.시설파프리카(착색단고추)",
+        "rda.income.national.2025.summary.시설채소.시설시금치",
+        "rda.income.national.2025.summary.시설채소.시설상추",
+        "rda.income.national.2025.summary.시설채소.시설부추",
+        "rda.income.national.2025.summary.시설채소.시설고추",
+        "rda.income.national.2025.summary.시설채소.시설멜론",
+        "rda.income.national.2025.summary.노지과수.사과",
+        "rda.income.national.2025.summary.노지과수.배",
+        "rda.income.national.2025.summary.노지과수.복숭아",
+        "rda.income.national.2025.summary.노지과수.노지포도",
+        "rda.income.national.2025.summary.노지과수.노지감귤",
+        "rda.income.national.2025.summary.노지과수.단감",
+        "rda.income.national.2025.summary.노지과수.키위(참다래)",
+        "rda.income.national.2025.summary.노지과수.블루베리",
+        "rda.income.national.2025.summary.노지과수.자두",
+        "rda.income.national.2025.summary.시설과수.시설포도",
+        "rda.income.national.2025.summary.화훼.시설장미",
+        "rda.income.national.2025.summary.특용약용작물.참깨",
+        "rda.income.national.2025.summary.특용약용작물.인삼",
+        "rda.income.national.2025.summary.특용약용작물.오미자",
+        "rda.income.national.2025.summary.특용약용작물.들깨"
+      ]
+    },
+    {
+      "aggregation_group": "kostat.production_cost.2025",
+      "publisher": "국가데이터처",
+      "survey": "kostat.production_cost",
+      "survey_label": "농축산물생산비조사(총괄·작목별 비목표)",
+      "data_year": 2025,
+      "published": "2026-10",
+      "document": "농산물소득자료집(2025년산)",
+      "sections": [
+        "별지 1. 국가데이터처 농축산물생산비조사"
+      ],
+      "record_count": 2,
+      "record_ids": [
+        "rda.income.national.2025.detail.식량작물.쌀",
+        "rda.income.national.2025.detail.식량작물.콩"
+      ]
+    }
+  ],
+  "source_mix_warning": "이 팩 안에 조사 체계가 다른 레코드가 섞여 있다. 농촌진흥청 농산물소득조사 102건 / 국가데이터처 농축산물생산비조사(총괄·작목별 비목표) 2건 — source.aggregation_group가 다른 레코드는 합산·평균하지 않는다.",
+  "aggregation_rule": "source.aggregation_group가 다른 레코드는 합산·평균·순위 비교의 같은 행에 묶지 않는다. 표시 계층은 레코드마다 source.survey_label과 source.publisher를 노출해야 하며, 조사 체계를 감춘 채 하나의 '소득' 열로 합치면 안 된다.",
+  "rows": [
+    {
+      "physical_line": 1,
+      "raw_line_sha256": "05151804d1341f964298c23cb89b60e57cabd763b2485b0160afa17bc1afa75f",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 1,
+        "raw_line_sha256": "05151804d1341f964298c23cb89b60e57cabd763b2485b0160afa17bc1afa75f"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.식량작물.겉보리",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 2,
+      "raw_line_sha256": "a7416b475195a2d6dde2c1aff61a2d5669fd48fe2108a1037d793ac96b265b35",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 2,
+        "raw_line_sha256": "a7416b475195a2d6dde2c1aff61a2d5669fd48fe2108a1037d793ac96b265b35"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.식량작물.쌀보리",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 3,
+      "raw_line_sha256": "9941ca14dbd58bc118a56955c51244b985a67fba8ab8ffa0c9c4744f298d50d8",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 3,
+        "raw_line_sha256": "9941ca14dbd58bc118a56955c51244b985a67fba8ab8ffa0c9c4744f298d50d8"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.식량작물.밀",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 4,
+      "raw_line_sha256": "a7273c56bb18ed50733ab7458e5c00a18534d39b59f229c356541752350f58e1",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 4,
+        "raw_line_sha256": "a7273c56bb18ed50733ab7458e5c00a18534d39b59f229c356541752350f58e1"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.식량작물.노지풋옥수수",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 5,
+      "raw_line_sha256": "ce99384652c216bdd5918f77b47de3a7d05598251f109644bad2da553af9f7c2",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 5,
+        "raw_line_sha256": "ce99384652c216bdd5918f77b47de3a7d05598251f109644bad2da553af9f7c2"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.식량작물.고구마",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 6,
+      "raw_line_sha256": "3465f59c021c0e5a9ad1f105f69e0519d5e2aa0bd0706f169e850afc8be95ac8",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 6,
+        "raw_line_sha256": "3465f59c021c0e5a9ad1f105f69e0519d5e2aa0bd0706f169e850afc8be95ac8"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.식량작물.봄감자",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 7,
+      "raw_line_sha256": "4e9b8de9a4bd3ef69f473053d07da3c52433fff26a1f664778c191d5223de491",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 7,
+        "raw_line_sha256": "4e9b8de9a4bd3ef69f473053d07da3c52433fff26a1f664778c191d5223de491"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.식량작물.가을감자",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 8,
+      "raw_line_sha256": "e01135cfe14e6876e793fbe721acb65b4a952b01adc713da373a67d39916c931",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 8,
+        "raw_line_sha256": "e01135cfe14e6876e793fbe721acb65b4a952b01adc713da373a67d39916c931"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.노지채소.노지수박",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 9,
+      "raw_line_sha256": "275bb6d42f0981deaa95c5e9a61d5d119f0e349061133f58a6be34c49e1da939",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 9,
+        "raw_line_sha256": "275bb6d42f0981deaa95c5e9a61d5d119f0e349061133f58a6be34c49e1da939"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.노지채소.노지가을무",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 10,
+      "raw_line_sha256": "9c4bd050c4e48bf1c26f026b16c7de47ca5a83e8cd8f92a5aebb5b1ef0e43f7d",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 10,
+        "raw_line_sha256": "9c4bd050c4e48bf1c26f026b16c7de47ca5a83e8cd8f92a5aebb5b1ef0e43f7d"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.노지채소.노지고랭지무",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 11,
+      "raw_line_sha256": "5b3b611994cd26cbc088d8bfd5ff5fc3bd532e72cbe269ec9fd580c33e6fc2f2",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 11,
+        "raw_line_sha256": "5b3b611994cd26cbc088d8bfd5ff5fc3bd532e72cbe269ec9fd580c33e6fc2f2"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.노지채소.노지당근",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 12,
+      "raw_line_sha256": "0b04c7294aa4297daff8bf967854ada79eab554a64e182376134f7d4903999ad",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 12,
+        "raw_line_sha256": "0b04c7294aa4297daff8bf967854ada79eab554a64e182376134f7d4903999ad"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.노지채소.노지봄배추",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 13,
+      "raw_line_sha256": "c278b5d0e128a3abbd3f4edf1afc557cfb2300cdaaa8373172b81fde5f3640ed",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 13,
+        "raw_line_sha256": "c278b5d0e128a3abbd3f4edf1afc557cfb2300cdaaa8373172b81fde5f3640ed"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.노지채소.노지가을배추",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 14,
+      "raw_line_sha256": "46d8c3585825385282db20ae618f07577656ceeacd30f685688cbfc1630db57d",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 14,
+        "raw_line_sha256": "46d8c3585825385282db20ae618f07577656ceeacd30f685688cbfc1630db57d"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.노지채소.노지고랭지배추",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 15,
+      "raw_line_sha256": "c1874c87c8ad108d40d55a7cba2de417d1a4256100961db453cc073a0fe691ff",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 15,
+        "raw_line_sha256": "c1874c87c8ad108d40d55a7cba2de417d1a4256100961db453cc073a0fe691ff"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.노지채소.노지시금치",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 16,
+      "raw_line_sha256": "483a512d5372e1b7ba6078f149c678980dcac8f77c5a3cea2eb3ee5c6a07421c",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 16,
+        "raw_line_sha256": "483a512d5372e1b7ba6078f149c678980dcac8f77c5a3cea2eb3ee5c6a07421c"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.노지채소.노지양배추",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 17,
+      "raw_line_sha256": "9506fb83a5cfd2761799c58be64092c1539e8f5b49c24703e6f3e2b42d245f87",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 17,
+        "raw_line_sha256": "9506fb83a5cfd2761799c58be64092c1539e8f5b49c24703e6f3e2b42d245f87"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.노지채소.노지대파",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 18,
+      "raw_line_sha256": "b43e7fff6909fbe35d42040b0b2a11f3844a1c2c0b4941443456a9c82390d70b",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 18,
+        "raw_line_sha256": "b43e7fff6909fbe35d42040b0b2a11f3844a1c2c0b4941443456a9c82390d70b"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.노지채소.노지쪽파",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 19,
+      "raw_line_sha256": "22e6f22f775c45cb6fc11d885e19c93e428f6d6137fcb2de70c52664a2b365c8",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 19,
+        "raw_line_sha256": "22e6f22f775c45cb6fc11d885e19c93e428f6d6137fcb2de70c52664a2b365c8"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.노지채소.노지생강",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 20,
+      "raw_line_sha256": "a277e34e1e39a6078a0e9fd5b6b3eeb348f6600d355f6f1956fc356c819e65cd",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 20,
+        "raw_line_sha256": "a277e34e1e39a6078a0e9fd5b6b3eeb348f6600d355f6f1956fc356c819e65cd"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.시설채소.시설수박",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 21,
+      "raw_line_sha256": "83f9e305ee10d3e59af22604e515a00909714fc29b6bf27b4b30203de847277b",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 21,
+        "raw_line_sha256": "83f9e305ee10d3e59af22604e515a00909714fc29b6bf27b4b30203de847277b"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.시설채소.시설참외",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 22,
+      "raw_line_sha256": "452de780d497073d978c8a9af1ff6aac2d0835a06dd1c2f260d52130055ad687",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 22,
+        "raw_line_sha256": "452de780d497073d978c8a9af1ff6aac2d0835a06dd1c2f260d52130055ad687"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.시설채소.시설딸기",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 23,
+      "raw_line_sha256": "24d540e442f0c38afc92fc867719b391955b4be54ecaad0f08050ca1eceb62ed",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 23,
+        "raw_line_sha256": "24d540e442f0c38afc92fc867719b391955b4be54ecaad0f08050ca1eceb62ed"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.시설채소.시설딸기(수경)",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 24,
+      "raw_line_sha256": "b2d58dbb8b91a172c04b2cdf5c56634e9e901a0eb94b9916c2b35e29e3728c19",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 24,
+        "raw_line_sha256": "b2d58dbb8b91a172c04b2cdf5c56634e9e901a0eb94b9916c2b35e29e3728c19"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.시설채소.시설오이",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 25,
+      "raw_line_sha256": "26dd9b5e168c7da61876bf6a97c244c501356fe0116cfdd93b449f9ac70451ef",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 25,
+        "raw_line_sha256": "26dd9b5e168c7da61876bf6a97c244c501356fe0116cfdd93b449f9ac70451ef"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.시설채소.시설호박",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 26,
+      "raw_line_sha256": "80b8daa9bbd390146c9884e066629e01197ea690ffb05fba1f1600e58f9bfc24",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 26,
+        "raw_line_sha256": "80b8daa9bbd390146c9884e066629e01197ea690ffb05fba1f1600e58f9bfc24"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.시설채소.시설토마토",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 27,
+      "raw_line_sha256": "c63acb3a39843ce5077f4c1aa3d5170332e00d52b96732e32229c803aa44e538",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 27,
+        "raw_line_sha256": "c63acb3a39843ce5077f4c1aa3d5170332e00d52b96732e32229c803aa44e538"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.시설채소.시설토마토(수경)",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 28,
+      "raw_line_sha256": "ac0780a1bbcfdb4d08ae5f33317e0006a8c714abc639555705f513746692948d",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 28,
+        "raw_line_sha256": "ac0780a1bbcfdb4d08ae5f33317e0006a8c714abc639555705f513746692948d"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.시설채소.시설방울토마토",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 29,
+      "raw_line_sha256": "b66229c9de3003905e025ccd17d0d2d4d9e05c3c71bcd902122628213a46be18",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 29,
+        "raw_line_sha256": "b66229c9de3003905e025ccd17d0d2d4d9e05c3c71bcd902122628213a46be18"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.시설채소.시설방울토마토(수경)",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 30,
+      "raw_line_sha256": "ffd5b6066bbfd04d85db6d89bae8006106d637c04cd93e5112256b442dd1f4d6",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 30,
+        "raw_line_sha256": "ffd5b6066bbfd04d85db6d89bae8006106d637c04cd93e5112256b442dd1f4d6"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.시설채소.시설가지",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 31,
+      "raw_line_sha256": "408b83036f54387668dadec226be1a148cd427d8fc3b2abc313f62cb9d9aec58",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 31,
+        "raw_line_sha256": "408b83036f54387668dadec226be1a148cd427d8fc3b2abc313f62cb9d9aec58"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.시설채소.시설파프리카(착색단고추)",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 32,
+      "raw_line_sha256": "c3866b896cd29c4bb6fbdcccf20bf43cef650774e4260ed22a6e8acbbc298939",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 32,
+        "raw_line_sha256": "c3866b896cd29c4bb6fbdcccf20bf43cef650774e4260ed22a6e8acbbc298939"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.시설채소.시설시금치",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 33,
+      "raw_line_sha256": "10d60550defd0a43fd2f1f02bee328d75b74724f3e51ccc917544686f6f476a5",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 33,
+        "raw_line_sha256": "10d60550defd0a43fd2f1f02bee328d75b74724f3e51ccc917544686f6f476a5"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.시설채소.시설상추",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 34,
+      "raw_line_sha256": "093b6d4bd318f480535b84e2b0b1c21fbe6b301f1f017150292fb9dcc7db93de",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 34,
+        "raw_line_sha256": "093b6d4bd318f480535b84e2b0b1c21fbe6b301f1f017150292fb9dcc7db93de"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.시설채소.시설부추",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 35,
+      "raw_line_sha256": "320156030c377a14815eceb38026c1017943c3770bb466637bf546fb20eee5ea",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 35,
+        "raw_line_sha256": "320156030c377a14815eceb38026c1017943c3770bb466637bf546fb20eee5ea"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.시설채소.시설고추",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 36,
+      "raw_line_sha256": "e6da97e6d4e7dbb2a092411edb5f407b147d42b53afddbe9c7c4f207a3d2a063",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 36,
+        "raw_line_sha256": "e6da97e6d4e7dbb2a092411edb5f407b147d42b53afddbe9c7c4f207a3d2a063"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.시설채소.시설멜론",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 37,
+      "raw_line_sha256": "d8976dd2dfc809986a26c120adeb64e8e9ded0e615e7c08712b0d9f0d40e6be8",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 37,
+        "raw_line_sha256": "d8976dd2dfc809986a26c120adeb64e8e9ded0e615e7c08712b0d9f0d40e6be8"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.노지과수.사과",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 38,
+      "raw_line_sha256": "33437f2d3c3a57b38b7e772ce1ae2bc023325ee1bf3d7fcde8a8c120b0fbbef1",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 38,
+        "raw_line_sha256": "33437f2d3c3a57b38b7e772ce1ae2bc023325ee1bf3d7fcde8a8c120b0fbbef1"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.노지과수.배",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 39,
+      "raw_line_sha256": "49dda4d0e1e1f69467b33065cf4bb5597e9e7d64f8f5a324207ec5298a6ebf7f",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 39,
+        "raw_line_sha256": "49dda4d0e1e1f69467b33065cf4bb5597e9e7d64f8f5a324207ec5298a6ebf7f"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.노지과수.복숭아",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 40,
+      "raw_line_sha256": "fa138f5b6145227a1eaff4a65eaa195c68f43d82eb61169db526da4161282afb",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 40,
+        "raw_line_sha256": "fa138f5b6145227a1eaff4a65eaa195c68f43d82eb61169db526da4161282afb"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.노지과수.노지포도",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 41,
+      "raw_line_sha256": "e286d56bbdd1b7c107d0027591c571973fc8f180b48feda50ff32f4acf57f854",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 41,
+        "raw_line_sha256": "e286d56bbdd1b7c107d0027591c571973fc8f180b48feda50ff32f4acf57f854"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.노지과수.노지감귤",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 42,
+      "raw_line_sha256": "7ec7a3b518c3978c46d56de727ddba231b7ecfaedcd749d70f3085979ca11af4",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 42,
+        "raw_line_sha256": "7ec7a3b518c3978c46d56de727ddba231b7ecfaedcd749d70f3085979ca11af4"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.노지과수.단감",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 43,
+      "raw_line_sha256": "6dc20ca9f3b37cfef26c641307a4720a91b64342e076c5f1c92e8bb5ea8b1d94",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 43,
+        "raw_line_sha256": "6dc20ca9f3b37cfef26c641307a4720a91b64342e076c5f1c92e8bb5ea8b1d94"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.노지과수.키위(참다래)",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 44,
+      "raw_line_sha256": "415472a31e06e0e2220ff0be979bdaf1ae12d7470065144f594f4e8d7f9c18d9",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 44,
+        "raw_line_sha256": "415472a31e06e0e2220ff0be979bdaf1ae12d7470065144f594f4e8d7f9c18d9"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.노지과수.블루베리",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 45,
+      "raw_line_sha256": "b3883c622c89109592f8f068dc2d06ec78c98e649d95303cfa266f388f3f224b",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 45,
+        "raw_line_sha256": "b3883c622c89109592f8f068dc2d06ec78c98e649d95303cfa266f388f3f224b"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.노지과수.자두",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 46,
+      "raw_line_sha256": "51cdeaa595c062d0ecde045f594935df59f895ddfeb93d0774765fcae40660d7",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 46,
+        "raw_line_sha256": "51cdeaa595c062d0ecde045f594935df59f895ddfeb93d0774765fcae40660d7"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.시설과수.시설포도",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 47,
+      "raw_line_sha256": "1851ccd144ad08b340f5a6107c6e43c3e049aafd100a9acfa30c985e962f1634",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 47,
+        "raw_line_sha256": "1851ccd144ad08b340f5a6107c6e43c3e049aafd100a9acfa30c985e962f1634"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.화훼.시설장미",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 48,
+      "raw_line_sha256": "49c627d12e9696994858ad5a506a99d2991daf9a4cc6580b6dfa503aa3c2f438",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 48,
+        "raw_line_sha256": "49c627d12e9696994858ad5a506a99d2991daf9a4cc6580b6dfa503aa3c2f438"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.특용약용작물.참깨",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 49,
+      "raw_line_sha256": "53a0e1b88ae7070c0d7f4754e9eba57ff9e638acafafe5ea240cff8cbbe81ce9",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 49,
+        "raw_line_sha256": "53a0e1b88ae7070c0d7f4754e9eba57ff9e638acafafe5ea240cff8cbbe81ce9"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.특용약용작물.인삼",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 50,
+      "raw_line_sha256": "a1df4f3513e543b0b209de6d880f21c0bba9e1bbe664c3e1c64bae19727079a3",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 50,
+        "raw_line_sha256": "a1df4f3513e543b0b209de6d880f21c0bba9e1bbe664c3e1c64bae19727079a3"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.특용약용작물.오미자",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 51,
+      "raw_line_sha256": "b403bb07d9808a4ab8a8aae11c6ae4948ad181efa4d036a2dffca2af04bb977a",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 51,
+        "raw_line_sha256": "b403bb07d9808a4ab8a8aae11c6ae4948ad181efa4d036a2dffca2af04bb977a"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.detail.특용약용작물.들깨",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 52,
+      "raw_line_sha256": "d9dba61e76c0ebae80a9087759acfc626968eb6cfa885389609092950a91532e",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 52,
+        "raw_line_sha256": "d9dba61e76c0ebae80a9087759acfc626968eb6cfa885389609092950a91532e"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.식량작물.겉보리",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 53,
+      "raw_line_sha256": "2d78ffa7cfa33742881dbfb890c19f04f6598e031938d5255e85c3b855742823",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 53,
+        "raw_line_sha256": "2d78ffa7cfa33742881dbfb890c19f04f6598e031938d5255e85c3b855742823"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.식량작물.쌀보리",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 54,
+      "raw_line_sha256": "1762fcef3f7c17c45c9c4c110660aa115d033b6f64fcd08d18f9a6448caf48c8",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 54,
+        "raw_line_sha256": "1762fcef3f7c17c45c9c4c110660aa115d033b6f64fcd08d18f9a6448caf48c8"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.식량작물.밀",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 55,
+      "raw_line_sha256": "2188e9279def4791a361a1d52bf1ecff81b531cb74ef11096d655186f8e5809f",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 55,
+        "raw_line_sha256": "2188e9279def4791a361a1d52bf1ecff81b531cb74ef11096d655186f8e5809f"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.식량작물.노지풋옥수수",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 56,
+      "raw_line_sha256": "dec19ac3f189959957496c23918ac26d0fd691dd2a6317a12dafdf0ef6826714",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 56,
+        "raw_line_sha256": "dec19ac3f189959957496c23918ac26d0fd691dd2a6317a12dafdf0ef6826714"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.식량작물.고구마",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 57,
+      "raw_line_sha256": "af92cb758eedb02fa877a2cd71218521a7d555b31481efc59af9a2b59c923084",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 57,
+        "raw_line_sha256": "af92cb758eedb02fa877a2cd71218521a7d555b31481efc59af9a2b59c923084"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.식량작물.봄감자",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 58,
+      "raw_line_sha256": "871b6bb24ce9739b3f6ec63ef2f1a561b919526d42b9e5459d5ad23ffc772390",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 58,
+        "raw_line_sha256": "871b6bb24ce9739b3f6ec63ef2f1a561b919526d42b9e5459d5ad23ffc772390"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.식량작물.가을감자",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 59,
+      "raw_line_sha256": "5c795556db53ca30dad12934edb3081104de7ebdbf1f64440ecb7834481b900d",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 59,
+        "raw_line_sha256": "5c795556db53ca30dad12934edb3081104de7ebdbf1f64440ecb7834481b900d"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.노지채소.노지수박",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 60,
+      "raw_line_sha256": "0bae5c045d29b0d7e79b72f68b951db46d0fb6d77144f54362536e8055759b64",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 60,
+        "raw_line_sha256": "0bae5c045d29b0d7e79b72f68b951db46d0fb6d77144f54362536e8055759b64"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.노지채소.노지가을무",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 61,
+      "raw_line_sha256": "76e3f8b621f840b2e3141599e6f5f8802d183123790a99ee417bc62c3537ae9c",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 61,
+        "raw_line_sha256": "76e3f8b621f840b2e3141599e6f5f8802d183123790a99ee417bc62c3537ae9c"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.노지채소.노지고랭지무",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 62,
+      "raw_line_sha256": "162634a8a02eceb3960fadb4029359fc3ae63c815e6d6352f6ff1085e5cd7a99",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 62,
+        "raw_line_sha256": "162634a8a02eceb3960fadb4029359fc3ae63c815e6d6352f6ff1085e5cd7a99"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.노지채소.노지당근",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 63,
+      "raw_line_sha256": "f3e11c236e9e89ad0d96e5d7fd06ddeb9349a143640c9c800ab592f689435ec2",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 63,
+        "raw_line_sha256": "f3e11c236e9e89ad0d96e5d7fd06ddeb9349a143640c9c800ab592f689435ec2"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.노지채소.노지봄배추",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 64,
+      "raw_line_sha256": "f86edf475d1ace321f945a4cca71a5e432fd221bfccd933ce04328f656d047b3",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 64,
+        "raw_line_sha256": "f86edf475d1ace321f945a4cca71a5e432fd221bfccd933ce04328f656d047b3"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.노지채소.노지가을배추",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 65,
+      "raw_line_sha256": "94c31a52a0e32fab11696f8d9bff2d3c369944dac9f6f8a14ec5e0e5c33d7b70",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 65,
+        "raw_line_sha256": "94c31a52a0e32fab11696f8d9bff2d3c369944dac9f6f8a14ec5e0e5c33d7b70"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.노지채소.노지고랭지배추",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 66,
+      "raw_line_sha256": "8bb3e8ab01ed3080518b1f5cef62cedda8d8bfb45d43f15c4187fb65b3b8d890",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 66,
+        "raw_line_sha256": "8bb3e8ab01ed3080518b1f5cef62cedda8d8bfb45d43f15c4187fb65b3b8d890"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.노지채소.노지시금치",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 67,
+      "raw_line_sha256": "658fdf25230b0304049e5b9fc6cf575c5dc96ad0c7b855e11a9716f4edf05d37",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 67,
+        "raw_line_sha256": "658fdf25230b0304049e5b9fc6cf575c5dc96ad0c7b855e11a9716f4edf05d37"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.노지채소.노지양배추",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 68,
+      "raw_line_sha256": "d133ae0d813b1e66e85ffb647a1ea2dc68581dcb63bd5fa2acc1c3ef1ba12afd",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 68,
+        "raw_line_sha256": "d133ae0d813b1e66e85ffb647a1ea2dc68581dcb63bd5fa2acc1c3ef1ba12afd"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.노지채소.노지대파",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 69,
+      "raw_line_sha256": "039ba7e084e114813db34e13b337bc48f3a7b5482a536819ddec55e735e8c4b7",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 69,
+        "raw_line_sha256": "039ba7e084e114813db34e13b337bc48f3a7b5482a536819ddec55e735e8c4b7"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.노지채소.노지쪽파",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 70,
+      "raw_line_sha256": "39538e1734236a05ce38827b7db7044b525ac7097fd44ee5c2c84cc89afb19d7",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 70,
+        "raw_line_sha256": "39538e1734236a05ce38827b7db7044b525ac7097fd44ee5c2c84cc89afb19d7"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.노지채소.노지생강",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 71,
+      "raw_line_sha256": "5dd10a9b62f978bc036aaacc29fefb1924e614f53ac6b619415ed6c7ee3305c3",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 71,
+        "raw_line_sha256": "5dd10a9b62f978bc036aaacc29fefb1924e614f53ac6b619415ed6c7ee3305c3"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.시설채소.시설수박",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 72,
+      "raw_line_sha256": "a3ebea92f4b9310c1718a301436a20c8dd096e1e26aa7220d97312210234a957",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 72,
+        "raw_line_sha256": "a3ebea92f4b9310c1718a301436a20c8dd096e1e26aa7220d97312210234a957"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.시설채소.시설참외",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 73,
+      "raw_line_sha256": "12a4eedf68d8a6bf56f7dcc09ab45dbf012ddde570f1acdb07bf533b1d21709b",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 73,
+        "raw_line_sha256": "12a4eedf68d8a6bf56f7dcc09ab45dbf012ddde570f1acdb07bf533b1d21709b"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.시설채소.시설딸기",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 74,
+      "raw_line_sha256": "78767f54863e060140cccb165c169c238b618246d4079f8160a63e01cac0243b",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 74,
+        "raw_line_sha256": "78767f54863e060140cccb165c169c238b618246d4079f8160a63e01cac0243b"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.시설채소.시설딸기(수경)",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 75,
+      "raw_line_sha256": "1335ea9645b3fa8f91a9f79f066b8194542d1431aa4f8e049ae104286a743c32",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 75,
+        "raw_line_sha256": "1335ea9645b3fa8f91a9f79f066b8194542d1431aa4f8e049ae104286a743c32"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.시설채소.시설오이",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 76,
+      "raw_line_sha256": "28f3681d37f5f95ca5372bff808c839b2502d3bc4cf86f01150672e58a6005bd",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 76,
+        "raw_line_sha256": "28f3681d37f5f95ca5372bff808c839b2502d3bc4cf86f01150672e58a6005bd"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.시설채소.시설호박",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 77,
+      "raw_line_sha256": "5e5d11bb2662aa5f72681cc67b97755642afbbcf4113544fba0745c1058034d6",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 77,
+        "raw_line_sha256": "5e5d11bb2662aa5f72681cc67b97755642afbbcf4113544fba0745c1058034d6"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.시설채소.시설토마토",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 78,
+      "raw_line_sha256": "ab288e672dc54334f03e9af047214dd42c42b93ba2808539b06c168219e3dfb0",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 78,
+        "raw_line_sha256": "ab288e672dc54334f03e9af047214dd42c42b93ba2808539b06c168219e3dfb0"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.시설채소.시설토마토(수경)",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 79,
+      "raw_line_sha256": "18fa4557b2ff071a48b8d366495e062a8eeb855a18c33f06b95fc4cecfba1afe",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 79,
+        "raw_line_sha256": "18fa4557b2ff071a48b8d366495e062a8eeb855a18c33f06b95fc4cecfba1afe"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.시설채소.시설방울토마토",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 80,
+      "raw_line_sha256": "6e3c3864e295d02a85e8e135fa8df9a5511413f085463b5f0a29e746f8fde536",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 80,
+        "raw_line_sha256": "6e3c3864e295d02a85e8e135fa8df9a5511413f085463b5f0a29e746f8fde536"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.시설채소.시설방울토마토(수경)",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 81,
+      "raw_line_sha256": "c6e0b400c62bb3702fd696ed07ac770317580682fa229f0a4b0a95451645c789",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 81,
+        "raw_line_sha256": "c6e0b400c62bb3702fd696ed07ac770317580682fa229f0a4b0a95451645c789"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.시설채소.시설가지",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 82,
+      "raw_line_sha256": "0b37d9aefee392714dce561031515f9af465095d3dfceed9e8665d696c8ba14f",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 82,
+        "raw_line_sha256": "0b37d9aefee392714dce561031515f9af465095d3dfceed9e8665d696c8ba14f"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.시설채소.시설파프리카(착색단고추)",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 83,
+      "raw_line_sha256": "f11595bc9b9dd5bb08a5a63278bbfbc99a1dc00c9d0d5b696dff0e012b15f5d0",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 83,
+        "raw_line_sha256": "f11595bc9b9dd5bb08a5a63278bbfbc99a1dc00c9d0d5b696dff0e012b15f5d0"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.시설채소.시설시금치",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 84,
+      "raw_line_sha256": "b8ece5af33efe566ecbb5411845ee4a74f36c84f8fb6915ef48b899895f581ec",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 84,
+        "raw_line_sha256": "b8ece5af33efe566ecbb5411845ee4a74f36c84f8fb6915ef48b899895f581ec"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.시설채소.시설상추",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 85,
+      "raw_line_sha256": "3035ad98eefb5066d302190f81c133a22788e6f3950063b54f9b4e0edfbba556",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 85,
+        "raw_line_sha256": "3035ad98eefb5066d302190f81c133a22788e6f3950063b54f9b4e0edfbba556"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.시설채소.시설부추",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 86,
+      "raw_line_sha256": "6bd8b53289a6024435ea13a880a2e564b13271369fc9ec60ebbf300a47ff7dee",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 86,
+        "raw_line_sha256": "6bd8b53289a6024435ea13a880a2e564b13271369fc9ec60ebbf300a47ff7dee"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.시설채소.시설고추",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 87,
+      "raw_line_sha256": "3d47c0adb6ffb074848ceac29fa7c684160ecc64e53a168607ece37799d8d3b6",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 87,
+        "raw_line_sha256": "3d47c0adb6ffb074848ceac29fa7c684160ecc64e53a168607ece37799d8d3b6"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.시설채소.시설멜론",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 88,
+      "raw_line_sha256": "947fc6c03b3e7e9d47f01225d220599e07c4a63b8dcfcd2042b5aa3bb56a2cdf",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 88,
+        "raw_line_sha256": "947fc6c03b3e7e9d47f01225d220599e07c4a63b8dcfcd2042b5aa3bb56a2cdf"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.노지과수.사과",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 89,
+      "raw_line_sha256": "0b0d01d2a7bcb4c3dcf7a606741156ff8f97b9c7456a964bf09c1c5f94fba7de",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 89,
+        "raw_line_sha256": "0b0d01d2a7bcb4c3dcf7a606741156ff8f97b9c7456a964bf09c1c5f94fba7de"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.노지과수.배",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 90,
+      "raw_line_sha256": "18ee086f9882318c5687f064888f58403636b816b198c8a469d0dfaad0d434f7",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 90,
+        "raw_line_sha256": "18ee086f9882318c5687f064888f58403636b816b198c8a469d0dfaad0d434f7"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.노지과수.복숭아",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 91,
+      "raw_line_sha256": "9e6ffbf2a7e69918957f5480398fc5d14abd41f694008168dda20723cd68b104",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 91,
+        "raw_line_sha256": "9e6ffbf2a7e69918957f5480398fc5d14abd41f694008168dda20723cd68b104"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.노지과수.노지포도",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 92,
+      "raw_line_sha256": "33e27f226c31c229ef7e483461d6f8a8ccd3e1d20fa794472e8ea663a3fd4c23",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 92,
+        "raw_line_sha256": "33e27f226c31c229ef7e483461d6f8a8ccd3e1d20fa794472e8ea663a3fd4c23"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.노지과수.노지감귤",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 93,
+      "raw_line_sha256": "4b2c6481a61e615fb8cbf81eff6f4f573e790315b77f055d636459eae0923a72",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 93,
+        "raw_line_sha256": "4b2c6481a61e615fb8cbf81eff6f4f573e790315b77f055d636459eae0923a72"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.노지과수.단감",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 94,
+      "raw_line_sha256": "884044148947a930f89978520d86e2bc8002913949da7a998691125c67b72669",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 94,
+        "raw_line_sha256": "884044148947a930f89978520d86e2bc8002913949da7a998691125c67b72669"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.노지과수.키위(참다래)",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 95,
+      "raw_line_sha256": "7a58f37709a493028d8dce1679d0caad8868576d51b1c0a64e00528db43bc930",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 95,
+        "raw_line_sha256": "7a58f37709a493028d8dce1679d0caad8868576d51b1c0a64e00528db43bc930"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.노지과수.블루베리",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 96,
+      "raw_line_sha256": "4fb221ace9ec1a6137d53d0eff6c7fda2f3590d60c7999a75ea65a96fb742fef",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 96,
+        "raw_line_sha256": "4fb221ace9ec1a6137d53d0eff6c7fda2f3590d60c7999a75ea65a96fb742fef"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.노지과수.자두",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 97,
+      "raw_line_sha256": "82b9b095840b46e7359e659631f2d1c53b477eb6bd18c22d7d76d020cfbc2949",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 97,
+        "raw_line_sha256": "82b9b095840b46e7359e659631f2d1c53b477eb6bd18c22d7d76d020cfbc2949"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.시설과수.시설포도",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 98,
+      "raw_line_sha256": "fc53fdeef8d71c756369ca426bee8efd064cf0a7b9ba10e792ab28718a9b3ad3",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 98,
+        "raw_line_sha256": "fc53fdeef8d71c756369ca426bee8efd064cf0a7b9ba10e792ab28718a9b3ad3"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.화훼.시설장미",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 99,
+      "raw_line_sha256": "99bcf18c804133719050397e59eec88b92349e8be7ae841f31576be66914845b",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 99,
+        "raw_line_sha256": "99bcf18c804133719050397e59eec88b92349e8be7ae841f31576be66914845b"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.특용약용작물.참깨",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 100,
+      "raw_line_sha256": "ca97b696e0d0e38394f2f5ed96a3aa86df73c2f7a71bbf3e5074748590f34e22",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 100,
+        "raw_line_sha256": "ca97b696e0d0e38394f2f5ed96a3aa86df73c2f7a71bbf3e5074748590f34e22"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.특용약용작물.인삼",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 101,
+      "raw_line_sha256": "39f8d1a2f7ae5533bd85adf76c8845f4f7b1622d9e13f62623d25f0eab7724f2",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 101,
+        "raw_line_sha256": "39f8d1a2f7ae5533bd85adf76c8845f4f7b1622d9e13f62623d25f0eab7724f2"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.특용약용작물.오미자",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 102,
+      "raw_line_sha256": "8878b796491b4f7c9c2923ec7d3518640ba16a0474795936c516f0ec00b8646e",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 102,
+        "raw_line_sha256": "8878b796491b4f7c9c2923ec7d3518640ba16a0474795936c516f0ec00b8646e"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/nongsaro.json#rda.income.national.2025.summary.특용약용작물.들깨",
+        "aggregation_group": "rda.income.2025",
+        "survey_label": "농산물소득조사"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": null
+    },
+    {
+      "physical_line": 103,
+      "raw_line_sha256": "894704cb4842ccadce4146652ca043a8070d937e1c2fac8c90bc695a30950aff",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 103,
+        "raw_line_sha256": "894704cb4842ccadce4146652ca043a8070d937e1c2fac8c90bc695a30950aff"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/pypdf.json#rda.income.national.2025.detail.식량작물.쌀",
+        "aggregation_group": "kostat.production_cost.2025",
+        "survey_label": "농축산물생산비조사(총괄·작목별 비목표)"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": "농사로 소득정보 API 코드표에 쌀 없음(별지1 쌀은 국가데이터처 생산비조사 인용) — pypdf 쪽 대조로 대체"
+    },
+    {
+      "physical_line": 104,
+      "raw_line_sha256": "94bb1cecbca0850bae86279d253e8bfb5abd3ab5061a6c052dea2dfe800f37c6",
+      "audit_key": {
+        "pack_id": "rda.income.national.2025",
+        "records_file_sha256": "a7109993c148be631920fa90527aebf10a098376a24663cde71b9250dff4000b",
+        "physical_jsonl_line_1based": 104,
+        "raw_line_sha256": "94bb1cecbca0850bae86279d253e8bfb5abd3ab5061a6c052dea2dfe800f37c6"
+      },
+      "catalog_status": "verified_observation",
+      "source_observation": {
+        "observation_status": "verified_observation",
+        "source_pdf_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8",
+        "prep_receipt_ref": "evidence/2025/pypdf.json#rda.income.national.2025.detail.식량작물.콩",
+        "aggregation_group": "kostat.production_cost.2025",
+        "survey_label": "농축산물생산비조사(총괄·작목별 비목표)"
+      },
+      "duplicate_link": {
+        "is_primary": true,
+        "primary_audit_key": null
+      },
+      "gap_evidence": "농사로 코드 696017(콩) 2025년 응답 없음 — pypdf 쪽 대조로 대체"
+    }
+  ]
+}

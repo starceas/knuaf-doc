@@ -87,6 +87,15 @@ PINNED_CATALOG_AUTHORITIES = {
         "1aa7fe6819ab2dc562bfe30e575aec3b54c858d66d2406211b4c68f8a9592c94",
     "accepted-catalog-20260921/rda.income.regional.2024":
         "1f6eb7ea5744bba36cc6d897a9f5e69411bb6630fda19afd48df3ca88ba3379c",
+    # 2025 RDA income packs (PR② 2025 register).  Same derivation as the
+    # 2024 pins (manifest ``rows`` -> normalize_audit_key -> this module's
+    # catalog_content_digest; that derivation reproduces both 2024 pins
+    # above byte-for-byte).  Accepted on the PR's independent review plus
+    # the D3 printed-page image check, not by the pack author.
+    "accepted-catalog-20261114/rda.income.national.2025":
+        "cee62f6cd3d71b7212be8311a8476ae60c7b5d7cca0e77eff841158ab0a2683d",
+    "accepted-catalog-20261114/rda.income.regional.2025":
+        "7bbfad83d281b1cef44e7dfddee53e4d0d387783e742fba964cf39c3c6b48405",
 }
 
 

@@ -1215,6 +1215,60 @@
         }
       ],
       "build_allowlist_ref": "install-manifest.json"
+    },
+    {
+      "source_id": "rda.income.national.2025",
+      "class": "common_public_book",
+      "role": "statistical_pack",
+      "source_sha256": [
+        "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8"
+      ],
+      "runtime": "references/benchmark-packs/common/rda-income-national-2025/",
+      "runtime_present": true,
+      "artifacts": [
+        {
+          "relative_path": "common/rda-income-national-2025/manifest.json",
+          "sha256": "7745020cb1b22e251c35d7e2498a10bbb29e8982fddf324b335fbcdde367ac41",
+          "bytes": 117150
+        },
+        {
+          "relative_path": "common/rda-income-national-2025/records.jsonl",
+          "sha256": "a52b5b09e18b7f102449ffe4cda922e7689ec64725111a702a018d540b2fbe96",
+          "bytes": 261867
+        }
+      ],
+      "coverage": {
+        "statistical_observation": {
+          "keys": []
+        }
+      }
+    },
+    {
+      "source_id": "rda.income.regional.2025",
+      "class": "common_public_book",
+      "role": "statistical_pack",
+      "source_sha256": [
+        "532e48400a54b6f1a8eb046cd15874ac2977305ba9735026d3198aec770cdefb"
+      ],
+      "runtime": "references/benchmark-packs/common/rda-income-regional-2025/",
+      "runtime_present": true,
+      "artifacts": [
+        {
+          "relative_path": "common/rda-income-regional-2025/manifest.json",
+          "sha256": "c96527257f56741658bb33b9e1c96ed43f1849665ab83d5c9f9ba32994d47c9a",
+          "bytes": 57046
+        },
+        {
+          "relative_path": "common/rda-income-regional-2025/records.jsonl",
+          "sha256": "406ac11feb62641a756de171c2c70af2ed2a89026be8c533568232bf98c41ab3",
+          "bytes": 139475
+        }
+      ],
+      "coverage": {
+        "statistical_observation": {
+          "keys": []
+        }
+      }
     }
   ],
   "p4_trust": {
@@ -1238,6 +1292,14 @@
       "mafra.specialty.production.2024": {
         "records_relpath": "majors/specialty_crops/mafra-specialty-production-2024/records.jsonl",
         "records_file_sha256": "fc1c0b35d63a67dc5a794128f873272d72f0850e6d6470e7d9501270eafdd4be"
+      },
+      "rda.income.national.2025": {
+        "records_relpath": "common/rda-income-national-2025/records.jsonl",
+        "records_file_sha256": "a52b5b09e18b7f102449ffe4cda922e7689ec64725111a702a018d540b2fbe96"
+      },
+      "rda.income.regional.2025": {
+        "records_relpath": "common/rda-income-regional-2025/records.jsonl",
+        "records_file_sha256": "406ac11feb62641a756de171c2c70af2ed2a89026be8c533568232bf98c41ab3"
       }
     }
   }

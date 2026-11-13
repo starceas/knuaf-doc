@@ -124,6 +124,20 @@ PINNED_PACKS = {
         "relpath": "majors/specialty_crops/"
                   "mafra-specialty-production-2024/records.jsonl",
     },
+    "rda.income.national.2025": {
+        "pack_revision": "2025",
+        "records_file_sha256":
+            "a52b5b09e18b7f102449ffe4cda922e7689ec64725111a702a018d540b2fbe96",
+        "record_lines": 104,
+        "relpath": "common/rda-income-national-2025/records.jsonl",
+    },
+    "rda.income.regional.2025": {
+        "pack_revision": "2025",
+        "records_file_sha256":
+            "406ac11feb62641a756de171c2c70af2ed2a89026be8c533568232bf98c41ab3",
+        "record_lines": 49,
+        "relpath": "common/rda-income-regional-2025/records.jsonl",
+    },
 }
 
 TOTAL_PINNED_ROWS = sum(p["record_lines"] for p in PINNED_PACKS.values())
