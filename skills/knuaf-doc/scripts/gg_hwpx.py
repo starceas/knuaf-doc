@@ -55,6 +55,40 @@ PAGE_NUMBER_CONTROL = (
     'sideChar="-"/></hp:ctrl>'
 )
 
+# 식량작물 양식 원본 실측(sec0/겉표지, sec2/앞부분, sec3/본문 시작)을 구역
+# 순서대로 적은 값. 이 표를 쓰는 빌더는 food_crops 하나뿐이고, 다른 전공은
+# None 경로를 그대로 타서 바이트가 변하지 않는다.
+FOOD_CROPS_SECTION_FORMATS = (
+    {
+        "role": "cover",
+        "margin_mm": {
+            "header": 0, "footer": 10, "gutter": 0, "left": 20,
+            "right": 20, "top": 20, "bottom": 10,
+        },
+        "page_number": {"pos": "NONE", "format": "DIGIT", "restart": None},
+    },
+    {
+        "role": "front",
+        "margin_mm": {
+            "header": 0, "footer": 10, "gutter": 0, "left": 30,
+            "right": 30, "top": 30, "bottom": 30,
+        },
+        "page_number": {
+            "pos": "BOTTOM_CENTER", "format": "ROMAN_CAPITAL", "restart": 1,
+        },
+    },
+    {
+        "role": "body",
+        "margin_mm": {
+            "header": 0, "footer": 10, "gutter": 0, "left": 30,
+            "right": 30, "top": 30, "bottom": 30,
+        },
+        "page_number": {
+            "pos": "BOTTOM_CENTER", "format": "DIGIT", "restart": 1,
+        },
+    },
+)
+
 GENERATE_DEFAULT_ARGS = ("--plain", "--paper", "A4")
 DEFAULT_TIMEOUT = 180
 MIMETYPE = "mimetype"
@@ -87,8 +121,17 @@ _MARGIN_ATTR_RE = re.compile(r'([A-Za-z][A-Za-z0-9]*)="([^"]*)"')
 _MARGIN_ORDER = ("header", "footer", "gutter", "left", "right", "top", "bottom")
 
 
-def rewrite_margins(section_xml: str, margins_mm=SCHOOL_MARGINS_MM) -> str:
-    """section0.xml의 <hp:margin/> 여백을 학교 규격(mm→HWPUNIT)으로 덮어쓴다."""
+def rewrite_margins(section_xml: str, margins_mm=SCHOOL_MARGINS_MM, *,
+                    override=None) -> str:
+    """section0.xml의 <hp:margin/> 여백을 학교 규격(mm→HWPUNIT)으로 덮어쓴다.
+
+    ``override``(구역 서식 dict)가 있으면 그 구역 값이 ``margins_mm``보다
+    우선한다. 둘 다 None이면 아무것도 바꾸지 않는다.
+    """
+    if override is not None:
+        margins_mm = override.get("margin_mm", margins_mm)
+    if margins_mm is None:
+        return section_xml
 
     def rebuild(match):
         attrs = dict(_MARGIN_ATTR_RE.findall(match.group(0)))
@@ -116,9 +159,30 @@ def rewrite_fonts(header_xml: str, font: str = SCHOOL_FONT) -> str:
 _COLPR_CTRL_RE = re.compile(r"<hp:ctrl>\s*<hp:colPr\b[^>]*/>\s*</hp:ctrl>")
 
 
-def inject_page_numbers(section_xml: str,
-                        control: str = PAGE_NUMBER_CONTROL) -> str:
-    """section의 첫 단 정의 뒤에 쪽번호 컨트롤을 넣는다(이미 있으면 그대로)."""
+def _page_number_pos(override) -> str:
+    """구역 서식 dict에서 page_number.pos를 꺼낸다(중첩·평면 둘 다 허용)."""
+    spec = override.get("page_number", override) if isinstance(override, dict) else {}
+    return str(spec.get("pos", "BOTTOM_CENTER"))
+
+
+def inject_page_numbers(section_xml: str, control: str = PAGE_NUMBER_CONTROL,
+                        *, override=None) -> str:
+    """section의 첫 단 정의 뒤에 쪽번호 컨트롤을 넣는다(이미 있으면 그대로).
+
+    ``override``(식량작물 구역 서식)가 주어지면 **아무것도 넣지 않는다** —
+    구역 분할 단계(§4.1 3단계)가 이미 넣었으므로 구역마다 하나만 있어야 한다.
+    이때는 개수만 확인한다: ``pos == "NONE"``(겉표지)은 0개, 나머지는 1개.
+    """
+    if override is not None:
+        expected = 0 if _page_number_pos(override) == "NONE" else 1
+        found = section_xml.count("<hp:pageNum")
+        if found != expected:
+            raise HwpxBlocked(
+                "page_number_control_count",
+                expected=expected, found=found,
+                action="구역 분할이 쪽번호 컨트롤을 정확히 넣지 못했습니다.",
+            )
+        return section_xml
     if "<hp:pageNum" in section_xml:
         return section_xml
     match = _COLPR_CTRL_RE.search(section_xml)
@@ -127,19 +191,709 @@ def inject_page_numbers(section_xml: str,
     return section_xml[:match.end()] + control + section_xml[match.end():]
 
 
+NEW_NUM_CONTROL = '<hp:ctrl><hp:newNum num="1" numType="PAGE"/></hp:ctrl>'
+
+_PAGE_NUM_CTRL_RE = re.compile(
+    r"<hp:ctrl\b[^>]*>\s*<hp:pageNum\b[^>]*/>\s*</hp:ctrl>")
+_NEW_NUM_CTRL_RE = re.compile(
+    r"<hp:ctrl\b[^>]*>\s*<hp:newNum\b[^>]*/>\s*</hp:ctrl>")
+_RUN_OPEN_RE = re.compile(r"<hp:run\b[^>]*>")
+_T_ELEMENT_RE = re.compile(r"<hp:t\b[^>]*>.*?</hp:t>", re.S)
+_SEC_TAG = "{http://www.hancom.co.kr/hwpml/2011/section}sec"
+_PARA_TAG = "{http://www.hancom.co.kr/hwpml/2011/paragraph}p"
+_TEXT_TAG = "{http://www.hancom.co.kr/hwpml/2011/paragraph}t"
+_SPACE_RE = re.compile(r"\s+")
+
+
+def _local_name(name: str) -> str:
+    """`hp:secPr` → `secPr` (접두사 무관)."""
+    return name.rsplit(":", 1)[-1]
+
+
+def _iter_xml_tags(xml: str):
+    """`<...>` 토큰을 (시작, 끝, 지역이름, 종류)로 낸다.
+
+    종류: start / end / empty / comment / cdata / pi / decl. 속성값 안의 `>`
+    (드물지만 XML에서 합법)를 태그 끝으로 오인하지 않도록 따옴표를 추적한다.
+    """
+    i, n = 0, len(xml)
+    while True:
+        i = xml.find("<", i)
+        if i < 0:
+            return
+        if xml.startswith("<!--", i):
+            end = xml.find("-->", i + 4)
+            if end < 0:
+                return
+            yield (i, end + 3, None, "comment")
+            i = end + 3
+            continue
+        if xml.startswith("<![CDATA[", i):
+            end = xml.find("]]>", i + 9)
+            if end < 0:
+                return
+            yield (i, end + 3, None, "cdata")
+            i = end + 3
+            continue
+        if xml.startswith("<?", i):
+            end = xml.find("?>", i + 2)
+            if end < 0:
+                return
+            yield (i, end + 2, None, "pi")
+            i = end + 2
+            continue
+        j, quote_ch = i + 1, None
+        while j < n:
+            ch = xml[j]
+            if quote_ch is not None:
+                if ch == quote_ch:
+                    quote_ch = None
+            elif ch in "\"'":
+                quote_ch = ch
+            elif ch == ">":
+                break
+            j += 1
+        if j >= n:
+            return
+        token = xml[i:j + 1]
+        if token.startswith("<!"):
+            kind, name = "decl", None
+        elif token.startswith("</"):
+            kind = "end"
+            name = _local_name(token[2:-1].strip())
+        elif token.endswith("/>"):
+            kind = "empty"
+            name = _local_name(token[1:-2].split(None, 1)[0])
+        else:
+            kind = "start"
+            name = _local_name(token[1:-1].split(None, 1)[0])
+        yield (i, j + 1, name, kind)
+        i = j + 1
+
+
+def _element_spans(xml: str, local: str):
+    """지역이름이 ``local``인 요소의 (시작, 끝) 바이트 구간 목록."""
+    stack, spans = [], []
+    for start, end, name, kind in _iter_xml_tags(xml):
+        if kind in ("comment", "cdata", "pi", "decl"):
+            continue
+        if kind == "empty":
+            if name == local:
+                spans.append((start, end))
+            continue
+        if kind == "start":
+            stack.append((name, start))
+            continue
+        if not stack:
+            continue
+        open_name, open_start = stack.pop()
+        if open_name == local and name == local:
+            spans.append((open_start, end))
+    return spans
+
+
+def _cut_spans(xml: str, spans) -> str:
+    """구간들을 뒤에서부터 잘라낸다(앞 구간 오프셋이 밀리지 않게)."""
+    for start, end in sorted(spans, reverse=True):
+        xml = xml[:start] + xml[end:]
+    return xml
+
+
+def top_level_paragraph_spans(section_xml: str):
+    """최상위 `<hp:p>` 요소의 (시작, 끝) 구간. 표 안 문단은 세지 않는다."""
+    spans, depth, open_at = [], 0, None
+    for start, end, name, kind in _iter_xml_tags(section_xml):
+        if kind in ("comment", "cdata", "pi", "decl"):
+            continue
+        if kind == "start":
+            if depth == 1 and name == "p":
+                open_at = start
+            depth += 1
+        elif kind == "end":
+            depth -= 1
+            if depth == 1 and name == "p" and open_at is not None:
+                spans.append((open_at, end))
+                open_at = None
+        elif depth == 1 and name == "p":
+            spans.append((start, end))
+    return spans
+
+
+def _normalize_space(text: str) -> str:
+    return _SPACE_RE.sub(" ", text or "").strip()
+
+
+def _paragraph_texts(section_xml: str):
+    """최상위 문단 텍스트 목록(ElementTree, 문서 순서)."""
+    import xml.etree.ElementTree as ET
+
+    root = ET.fromstring(section_xml)
+    return [_normalize_space("".join(t.text or "" for t in para.iter(_TEXT_TAG)))
+            for para in root if para.tag == _PARA_TAG]
+
+
+def _strip_header_controls(para: str, *, keep_colpr: bool):
+    """한 문단에서 secPr·pageNum·newNum·colPr 제어 요소를 걷어낸다."""
+    para = _cut_spans(para, _element_spans(para, "secPr"))
+    para = _PAGE_NUM_CTRL_RE.sub("", para)
+    para = _NEW_NUM_CTRL_RE.sub("", para)
+    match = _COLPR_CTRL_RE.search(para) if keep_colpr else None
+    return _COLPR_CTRL_RE.sub("", para), (match.group(0) if match else None)
+
+
+def _insert_run_prefix(para: str, fragment: str) -> str:
+    match = _RUN_OPEN_RE.search(para)
+    if match is None:
+        raise HwpxBlocked(
+            "section_split_control_count",
+            action="구역 첫 문단에 run이 없어 제어 요소를 넣을 수 없습니다.",
+        )
+    return para[:match.end()] + fragment + para[match.end():]
+
+
+def _insert_after_run_text(para: str, fragment: str) -> str:
+    runs = _element_spans(para, "run")
+    if not runs:
+        raise HwpxBlocked(
+            "section_split_control_count",
+            action="앵커 문단에 run이 없어 쪽번호 재시작을 넣을 수 없습니다.",
+        )
+    start, end = runs[0]
+    match = _T_ELEMENT_RE.search(para, start, end)
+    at = match.end() if match else para.rfind("</hp:run>", start, end)
+    if at < 0:
+        raise HwpxBlocked(
+            "section_split_control_count",
+            action="앵커 문단 첫 run의 끝을 찾지 못했습니다.",
+        )
+    return para[:at] + fragment + para[at:]
+
+
+def _page_num_control(fmt):
+    pos = str(fmt.get("pos", "BOTTOM_CENTER"))
+    if pos == "NONE":
+        return ""
+    return ('<hp:ctrl><hp:pageNum pos="%s" formatType="%s" sideChar="-"/>'
+            '</hp:ctrl>' % (pos, fmt.get("format", "DIGIT")))
+
+
+def split_sections_by_plan(section_xml: str, *, nodes, plan,
+                           section_formats=FOOD_CROPS_SECTION_FORMATS):
+    """단일 구역 section0.xml을 겉표지/앞부분/본문 3구역으로 자른다.
+
+    분할 지점은 문서 계획의 노드 색인이다(텍스트 탐색 없음). 절차는
+    지우기 → 나누기 → 넣기 → 세기 순서를 지킨다. 계획이 없으면 앞머리
+    표지가 하나도 없을 때만 유예하고(`not_applicable`), 하나라도 있으면
+    거절한다.
+
+    반환: ``(sections, info)`` — ``sections``는 3개 문자열(유예면 None),
+    ``info``는 ``{"status", "names", "controls"}``.
+    """
+    names = ["Contents/section%d.xml" % i for i in range(3)]
+    if plan is None:
+        present = _front_matter_markers(nodes)
+        if not present:
+            return None, {"status": "not_applicable", "names": []}
+        markers = set(_front_markers())
+        raise HwpxBlocked(
+            "section_split_front_matter_partial",
+            missing=sorted(markers - present), present=sorted(present),
+            action="앞머리 표지가 일부만 있어 구역을 나눌 수 없습니다.",
+        )
+
+    # 앞부분 앵커 `요약`은 **앞부분 구간에서** 한 번만 있어야 한다. 계획은
+    # 첫 번째 것만 잡으므로, 원고·HWPX 양쪽에 `요약`이 둘이면 문단 수가 맞아도
+    # 둘째가 조용히 요약 본문(12 pt)으로 들어간다. `감사의 글`은 목차 항목과
+    # 본문 끝 제목 두 번 나오는 것이 정상이므로 중복 검사에서 뺀다.
+    # 본문·목차의 독립 `요약` 문단은 앵커가 아니므로 세지 않는다(문서 전체를
+    # 세면 정상 원고가 section_split_anchor_ambiguous로 막힌다).
+    body_start = plan["body"]
+    summary_hits = [index for index, node in enumerate(nodes[:body_start])
+                    if _normalize_space(node.get("text", "")) == "요약"]
+    if len(summary_hits) != 1:
+        raise HwpxBlocked(
+            "section_split_anchor_ambiguous",
+            anchor="요약", occurrences=summary_hits, nodes=len(nodes),
+            action="앞부분 앵커 `요약`이 문서에 정확히 한 번 있어야 합니다.",
+        )
+
+    anchors = (("cover", 0),
+               ("front", plan["indices"]["요약"]),
+               ("body", plan["body"]))
+    indices = [index for _, index in anchors]
+    if (len(set(indices)) != 3 or sorted(indices) != indices
+            or not 0 <= indices[0] < indices[1] < indices[2] < len(nodes)):
+        raise HwpxBlocked(
+            "section_split_anchor_ambiguous",
+            anchors={role: index for role, index in anchors},
+            nodes=len(nodes),
+            action="앞부분 앵커 색인이 서로 다르고 증가하지 않습니다.",
+        )
+
+    texts = _paragraph_texts(section_xml)
+    if len(texts) != len(nodes):
+        raise HwpxBlocked(
+            "section_split_node_map_mismatch",
+            paragraphs=len(texts), nodes=len(nodes),
+            action="HWPX 문단 수와 원고 노드 수가 다릅니다.",
+        )
+    spans = top_level_paragraph_spans(section_xml)
+    if len(spans) != len(nodes):
+        raise HwpxBlocked(
+            "section_split_node_map_mismatch",
+            paragraphs=len(spans), nodes=len(nodes),
+            action="최상위 문단 스캔 결과가 원고 노드 수와 다릅니다.",
+        )
+    for role, index in anchors:
+        expected = _normalize_space(nodes[index].get("text", ""))
+        if texts[index] != expected:
+            raise HwpxBlocked(
+                "section_split_node_map_mismatch",
+                role=role, index=index,
+                node=expected, paragraph=texts[index],
+                action="앵커 문단 텍스트가 원고 노드와 다릅니다.",
+            )
+
+    # 문단 사이 구분자·머리·꼬리는 문단 밖에 살아 있으므로 미리 떼어 둔다.
+    prefix = section_xml[:spans[0][0]]
+    suffix = section_xml[spans[-1][1]:]
+    separators = [section_xml[spans[i][1]:spans[i + 1][0]]
+                  for i in range(len(spans) - 1)]
+    raw = [section_xml[start:end] for start, end in spans]
+
+    cleaned, colpr = [], None
+    for i, para in enumerate(raw):
+        para, kept = _strip_header_controls(para, keep_colpr=(i == 0))
+        if kept is not None:
+            colpr = kept
+        cleaned.append(para)
+    if colpr is None:
+        raise HwpxBlocked(
+            "section_split_control_count",
+            action="원본 첫 문단에 colPr 제어 요소가 없습니다.",
+        )
+
+    starts = indices + [len(cleaned)]
+    sections, controls = [], []
+    for order in range(3):
+        group = cleaned[starts[order]:starts[order + 1]]
+        if not group:
+            raise HwpxBlocked(
+                "section_split_anchor_ambiguous",
+                role=anchors[order][0], empty_group=True,
+                action="구역에 문단이 하나도 없습니다.",
+            )
+        fmt = dict(section_formats[order]) if section_formats else {}
+        sec_pr = _element_spans(raw[0], "secPr")
+        if not sec_pr:
+            raise HwpxBlocked(
+                "section_split_control_count",
+                action="원본 첫 문단에 secPr가 없습니다.",
+            )
+        secpr_xml = raw[0][sec_pr[0][0]:sec_pr[0][1]]
+        group[0] = _insert_run_prefix(
+            group[0], secpr_xml + colpr + _page_num_control(fmt.get("page_number", {})))
+        restart = (fmt.get("page_number") or {}).get("restart")
+        if restart is not None:
+            group[0] = _insert_after_run_text(group[0], NEW_NUM_CONTROL)
+        body = group[0]
+        for offset, para in enumerate(group[1:]):
+            body += separators[starts[order] + offset] + para
+        sections.append(prefix + body + suffix)
+
+    info = {"status": "split", "names": names,
+            "controls": _count_section_controls(sections, section_formats)}
+    return sections, info
+
+
+def _front_markers():
+    import gg_document as gd
+
+    return gd.school_frontmatter_spec("food_crops").orders[0]
+
+
+def _front_matter_markers(nodes):
+    markers = set(_front_markers())
+    return {text for text in
+            (_normalize_space(n.get("text", "")) for n in nodes)
+            if text in markers}
+
+
+def _expected_page_numbers(index, section_formats):
+    fmt = (section_formats or FOOD_CROPS_SECTION_FORMATS)[index]
+    page = fmt.get("page_number") or {}
+    restart = page.get("restart")
+    return {
+        "secPr": 1,
+        "colPr": 1,
+        "pageNum": 0 if str(page.get("pos", "NONE")) == "NONE" else 1,
+        "newNum": 0 if restart is None else 1,
+    }
+
+
+def _count_section_controls(sections, section_formats):
+    """구역별 제어 요소 개수를 세고 기대값과 다르면 거절한다."""
+    measured = []
+    for index, section in enumerate(sections):
+        counts = {
+            "secPr": len(_element_spans(section, "secPr")),
+            "colPr": len(_element_spans(section, "colPr")),
+            "pageNum": len(_element_spans(section, "pageNum")),
+            "newNum": len(_element_spans(section, "newNum")),
+        }
+        expected = _expected_page_numbers(index, section_formats)
+        if counts != expected:
+            raise HwpxBlocked(
+                "section_split_control_count",
+                section=index, expected=expected, found=counts,
+                action="구역 분할 뒤 제어 요소 개수가 기대와 다릅니다.",
+            )
+        spans = top_level_paragraph_spans(section)
+        first = section[spans[0][0]:spans[0][1]] if spans else ""
+        run = _RUN_OPEN_RE.search(first)
+        if run is None or not first[run.end():].startswith("<hp:secPr"):
+            raise HwpxBlocked(
+                "section_split_control_count",
+                section=index, secpr_direct_child=False,
+                action="secPr가 구역 첫 문단 첫 run의 직속 자식이 아닙니다.",
+            )
+        measured.append(counts)
+    return measured
+
+
+# --- 앞부분·동의서 전용 글자 모양(§4.3) ----------------------------------
+
+# (포인트, 굵기) — 1판 header.xml에 없는 크기만 만든다. id0(10pt) 형태를
+# 그대로 복제하고 id는 기존 itemCnt부터 이어 붙인다. 본문 문단은 건드리지
+# 않으므로 본문 charPr 히스토그램이 그대로 남는다.
+_FRONT_CHARPR_SPECS = (
+    (10, False),
+    (12, False),
+    (14, True), (14, False),
+    (16, True), (16, False),
+    (18, True), (18, False),
+    (20, True), (20, False),
+    (22, True), (22, False),
+    (32, True), (32, False),
+)
+
+_CHARPR_ITEM_CNT_RE = re.compile(
+    r'(<hh:charProperties\b[^>]*\bitemCnt=")(\d+)(")')
+_CHARPR_END_TAG = "</hh:charProperties>"
+_CHARPR_TEMPLATE = (
+    '      <hh:charPr id="%d" height="%d" textColor="#000000" shadeColor="none"'
+    ' useFontSpace="0" useKerning="0" symMark="NONE" borderFillIDRef="1"%s>\n'
+    '        <hh:fontRef hangul="0" latin="0" hanja="0" japanese="0"'
+    ' other="0" symbol="0" user="0"/>\n'
+    '        <hh:ratio hangul="100" latin="100" hanja="100" japanese="100"'
+    ' other="100" symbol="100" user="100"/>\n'
+    '        <hh:spacing hangul="0" latin="0" hanja="0" japanese="0"'
+    ' other="0" symbol="0" user="0"/>\n'
+    '        <hh:relSz hangul="100" latin="100" hanja="100" japanese="100"'
+    ' other="100" symbol="100" user="100"/>\n'
+    '        <hh:offset hangul="0" latin="0" hanja="0" japanese="0"'
+    ' other="0" symbol="0" user="0"/>%s\n'
+    '      </hh:charPr>'
+)
+
+
+def _append_front_charprs(header_xml: str):
+    """앞부분·동의서 전용 charPr를 header.xml 끝에 덧붙인다.
+
+    반환: ``(새 header.xml, {(포인트, 굵기): charPr id})``. 기존 charPr는
+    하나도 고치지 않는다(본문 참조가 그대로 살아남는다).
+    """
+    match = _CHARPR_ITEM_CNT_RE.search(header_xml)
+    if match is None or _CHARPR_END_TAG not in header_xml:
+        raise HwpxBlocked(
+            "charpr_properties_missing",
+            has_item_cnt=match is not None,
+            has_end_tag=_CHARPR_END_TAG in header_xml,
+            action="header.xml에 charProperties가 없어 글자 모양을 더할 수 없습니다.",
+        )
+    first = int(match.group(2))
+    ids, entries = {}, []
+    for offset, (size, bold) in enumerate(_FRONT_CHARPR_SPECS):
+        cid = first + offset
+        entries.append(_CHARPR_TEMPLATE % (
+            cid, size * 100,
+            ' bold="1"' if bold else '',
+            "<hh:bold/>" if bold else ''))
+        ids[(size, bold)] = cid
+    end = header_xml.index(_CHARPR_END_TAG)
+    line_start = header_xml.rfind("\n", 0, end) + 1
+    # 한 줄로 압축된 header.xml(`rfind`가 -1)에서는 줄 시작이 0이라 그대로
+    # 넣으면 XML 선언 앞에 charPr가 붙어 파싱 불가 파일이 된다. 끝 태그
+    # 앞에 공백만 있는지로 판정하고, 아니면 끝 태그 바로 앞에 넣는다.
+    at = line_start if not header_xml[line_start:end].strip() else end
+    updated = (header_xml[:at] + "\n" + "\n".join(entries) + "\n"
+               + header_xml[at:])
+    updated = _CHARPR_ITEM_CNT_RE.sub(
+        lambda m: m.group(1) + str(first + len(_FRONT_CHARPR_SPECS)) + m.group(3),
+        updated, count=1)
+    return updated, ids
+
+
+def _rewrite_run_charpr(paragraph: str, cid: int) -> str:
+    """한 문단의 모든 run charPrIDRef를 ``cid``로 바꾼다."""
+    replacement = 'charPrIDRef="%d"' % cid
+
+    def rebuild(match):
+        tag = match.group(0)
+        if 'charPrIDRef="' in tag:
+            return re.sub(r'charPrIDRef="[^"]*"', replacement, tag)
+        return tag[:-1] + " " + replacement + ">"
+
+    return _RUN_OPEN_RE.sub(rebuild, paragraph)
+
+
+def _peer_block_targets(nodes, start, end, spec, *, cover=False):
+    """겉표지·표제면·제출서·인준서 블록의 문단별 (크기, 굵기)를 정한다.
+
+    계획 제목 문단은 `spec.plan_label`과 같은 글자를 먼저 찾고, 없으면
+    학위논문 표기 바로 다음 문단을 제목으로 본다(원고 제목은 자유 문구라
+    양식 라벨과 다를 수 있다).
+    """
+    items = [(index, _normalize_space(nodes[index].get("text", "")))
+             for index in range(start, end)]
+    items = [(index, text) for index, text in items if text]
+    targets = {}
+    plan_at = next((k for k, (_, text) in enumerate(items)
+                    if text == spec.plan_label), None)
+    degree_at = next((k for k, (_, text) in enumerate(items)
+                      if text == spec.degree), None)
+    if plan_at is None and degree_at is not None and degree_at + 1 < len(items):
+        plan_at = degree_at + 1
+    for k, (index, text) in enumerate(items):
+        if k == plan_at:
+            targets[index] = (32, True)
+        elif (text == spec.degree
+              or text.startswith(("이 논문을", "지도교수 ", "위원장", "위 원"))
+              or text.endswith(("인준함", "인준함."))):
+            targets[index] = (18, True)
+        elif plan_at is not None and k == plan_at + 1:
+            targets[index] = (20, cover)
+        else:
+            targets[index] = (20, False)
+    return targets
+
+
+def _front_charpr_targets(nodes, plan):
+    """계획 색인으로 대상 문단을 찾아 {(문단 색인): (크기, 굵기)}를 낸다.
+
+    본문 구역(`plan["body"]`)은 손대지 않고, 동의서만 따로 잠근다.
+    """
+    spec = plan["spec"]
+    indices = plan["indices"]
+    order = list(plan["order"])
+    targets = {}
+    bounds = {}
+    for position, role in enumerate(order):
+        start = indices[role] + 1
+        end = (indices[order[position + 1]] if position + 1 < len(order)
+               else plan["body"])
+        bounds[role] = (start, end)
+
+    for role in ("겉표지", "표제면", "제출서", "인준서"):
+        if role in bounds:
+            start, end = bounds[role]
+            targets.update(_peer_block_targets(
+                nodes, start, end, spec, cover=role == "겉표지"))
+
+    if "요약" in indices:
+        targets[indices["요약"]] = (22, True)
+        start, end = bounds["요약"]
+        for index in range(start, end):
+            text = _normalize_space(nodes[index].get("text", ""))
+            if not text:
+                continue
+            targets[index] = (16, True) if re.match(r"^\d+\s*\.", text) else (12, False)
+
+    if "감사의 글" in indices:
+        targets[indices["감사의 글"]] = (20, True)
+        start, end = bounds["감사의 글"]
+        for index in range(start, end):
+            if _normalize_space(nodes[index].get("text", "")):
+                targets[index] = (12, False)
+
+    if "목차" in indices:
+        targets[indices["목차"]] = (22, True)
+        start, end = bounds["목차"]
+        for index in range(start, end):
+            text = _normalize_space(nodes[index].get("text", ""))
+            if not text:
+                continue
+            targets[index] = (20, False) if text in ("표 목차", "그림 목차") else (12, False)
+
+    consent = next((index for index in range(plan["body"], len(nodes))
+                    if _normalize_space(nodes[index].get("text", "")) == "학부모 동의서"),
+                   None)
+    if consent is not None:
+        targets[consent] = (20, True)
+        for index in range(consent + 1, len(nodes)):
+            text = _normalize_space(nodes[index].get("text", ""))
+            if not text:
+                continue
+            targets[index] = (10, False) if text.startswith("※") else (14, True)
+    return targets
+
+
+def _apply_front_charpr(section_xml: str, *, nodes, plan, ids, start=0, end=None):
+    """대상 문단 run의 charPrIDRef만 새 charPr로 바꾼다.
+
+    ``start``/``end``는 이 구역이 맡는 전체 문단 색인 구간이다(구역 분할
+    뒤에는 구역마다 다르다). 반환: ``(새 구역 XML, 바꾼 문단 수)``.
+    """
+    end = len(nodes) if end is None else end
+    targets = {index - start: spec
+               for index, spec in _front_charpr_targets(nodes, plan).items()
+               if start <= index < end}
+    if not targets:
+        return section_xml, 0
+    spans = top_level_paragraph_spans(section_xml)
+    if len(spans) != end - start:
+        raise HwpxBlocked(
+            "section_split_node_map_mismatch",
+            paragraphs=len(spans), nodes=end - start,
+            action="HWPX 문단 수와 원고 노드 수가 다릅니다.",
+        )
+    pieces, cursor, changed = [], 0, 0
+    for index, (start, end) in enumerate(spans):
+        spec = targets.get(index)
+        if spec is None:
+            continue
+        cid = ids.get(spec)
+        if cid is None:
+            raise HwpxBlocked(
+                "charpr_properties_missing", size=spec[0], bold=spec[1],
+                action="필요한 글자 크기의 charPr를 만들지 못했습니다.",
+            )
+        pieces.append(section_xml[cursor:start])
+        pieces.append(_rewrite_run_charpr(section_xml[start:end], cid))
+        cursor = end
+        changed += 1
+    pieces.append(section_xml[cursor:])
+    return "".join(pieces), changed
+
+
 def normalize_markdown(data: bytes) -> str:
     """UTF-8(BOM 허용) 바이트 → BOM 제거·개행 LF 정규화 문자열."""
     return data.decode("utf-8-sig").replace("\r\n", "\n").replace("\r", "\n")
 
 
+_SEC_CNT_RE = re.compile(r'(<hh:head\b[^>]*\bsecCnt=")(\d+)(")')
+_HAS_HEAD_RE = re.compile(r"<hh:head\b")
+
+
+def _new_section_info(source_info, name):
+    info = zipfile.ZipInfo(name, date_time=source_info.date_time)
+    info.compress_type = source_info.compress_type
+    info.external_attr = source_info.external_attr
+    return info
+
+
+def _split_zip_rank(name):
+    """분할 산출물의 ZIP 항목 순서(한글·kordoc이 읽는 검증된 순서)."""
+    if name == MIMETYPE:
+        return (0, 0)
+    if name == "META-INF/":
+        return (1, 0)
+    if name == "META-INF/container.xml":
+        return (1, 1)
+    if name == "Contents/":
+        return (2, 0)
+    if name == "Contents/content.hpf":
+        return (3, 0)
+    if name == "Contents/section1.xml":
+        return (4, 0)
+    if name == "Contents/section2.xml":
+        return (4, 1)
+    if name == "BinData/":
+        return (5, 0)
+    if name.startswith("BinData/"):
+        return (5, 1)
+    if name == HEADER_NAME:
+        return (6, 0)
+    if name == "Contents/section0.xml":
+        return (7, 0)
+    if name == "Preview/":
+        return (8, 0)
+    if name.startswith("Preview/"):
+        return (8, 1)
+    return (9, 0)
+
+
+def _bump_section_count(header_xml):
+    """`header.xml`의 `secCnt`를 3으로 올린다."""
+    match = _SEC_CNT_RE.search(header_xml)
+    if match is None:
+        raise HwpxBlocked(
+            "section_split_header_missing",
+            has_head=bool(_HAS_HEAD_RE.search(header_xml)),
+            action="header.xml에서 secCnt 속성을 찾지 못해 구역 수를 고칠 수 없습니다.",
+        )
+    return _SEC_CNT_RE.sub(lambda m: m.group(1) + "3" + m.group(3),
+                           header_xml, count=1)
+
+
+def _extend_manifest(hpf_xml):
+    """`content.hpf`에 section1·section2 항목과 spine 참조를 넣는다."""
+    item0 = re.search(r'<opf:item\b[^>]*\bid="section0"[^>]*/>', hpf_xml)
+    ref0 = re.search(r'<opf:itemref\b[^>]*\bidref="section0"[^>]*/>', hpf_xml)
+    if item0 is None or ref0 is None:
+        raise HwpxBlocked(
+            "section_split_manifest_missing",
+            has_item=item0 is not None, has_itemref=ref0 is not None,
+            action="content.hpf에 section0 항목이 없어 구역을 더할 수 없습니다.",
+        )
+    indent = re.match(r"[ \t]*", hpf_xml[hpf_xml.rfind("\n", 0, item0.start()) + 1:]).group(0)
+    items = "".join(
+        '\n%s<opf:item id="section%d" href="Contents/section%d.xml"'
+        ' media-type="application/xml"/>' % (indent, i, i) for i in (1, 2))
+    refs = "".join(
+        '\n%s<opf:itemref idref="section%d" linear="yes"/>' % (indent, i)
+        for i in (1, 2))
+    hpf_xml = hpf_xml[:item0.end()] + items + hpf_xml[item0.end():]
+    ref0 = re.search(r'<opf:itemref\b[^>]*\bidref="section0"[^>]*/>', hpf_xml)
+    return hpf_xml[:ref0.end()] + refs + hpf_xml[ref0.end():]
+
+
+def _section_format_for(name, section_formats):
+    match = re.fullmatch(r"Contents/section(\d)\.xml", name)
+    if match is None or section_formats is None:
+        return None
+    index = int(match.group(1))
+    return section_formats[index] if index < len(section_formats) else None
+
+
+def _section_node_range(name, plan):
+    """분할된 구역 파일이 맡는 전체 문단 색인 구간 ``(시작, 끝)``."""
+    match = re.fullmatch(r"Contents/section(\d)\.xml", name)
+    if match is None or plan is None:
+        return None
+    starts = (0, plan["indices"]["요약"], plan["body"])
+    index = int(match.group(1))
+    if index >= len(starts):
+        return None
+    end = starts[index + 1] if index + 1 < len(starts) else None
+    return starts[index], end
+
+
 def transform_hwpx(data: bytes, *, font: str = SCHOOL_FONT,
-                   margins_mm=SCHOOL_MARGINS_MM, page_numbers: bool = True):
+                   margins_mm=SCHOOL_MARGINS_MM, page_numbers: bool = True,
+                   section_formats=None, nodes=None, plan=None):
     """kordoc HWPX 바이트를 학교 규격으로 다시 쓴다.
 
     mimetype을 첫 항목·무압축으로 보존하고 나머지 항목은 순서대로 다시 쓴다.
+    ``section_formats``가 있으면(식량작물) 맨 앞에서 구역을 3개로 나누고
+    (`split_sections_by_plan`) 그 뒤에 구역별 여백·쪽번호를 적용한다.
     반환: (새 바이트, 적용 내역 dict).
     """
     applied = {"margins": [], "font": [], "page_numbers": []}
+    if section_formats is not None:
+        # 앞부분 글자 모양 기록은 구역 서식(식량작물) 전용이다. 다른 전공
+        # 매니페스트에 키가 생기면 post_processing 직렬화가 바뀐다.
+        applied["charpr"] = []
     source = io.BytesIO(data)
     target = io.BytesIO()
     with zipfile.ZipFile(source, "r") as zin, zipfile.ZipFile(target, "w") as zout:
@@ -150,26 +904,73 @@ def transform_hwpx(data: bytes, *, font: str = SCHOOL_FONT,
                 "hwpx_missing_mimetype",
                 action="kordoc 산출물이 HWPX 구조가 아닙니다. generate 출력을 확인하세요.",
             )
+        members = {info.filename: zin.read(info.filename) for info in infos}
         mimetype = next(info for info in infos if info.filename == MIMETYPE)
         stored = zipfile.ZipInfo(MIMETYPE, date_time=mimetype.date_time)
         stored.compress_type = zipfile.ZIP_STORED
         stored.external_attr = mimetype.external_attr
-        zout.writestr(stored, zin.read(MIMETYPE) or MIMETYPE_BYTES)
+        zout.writestr(stored, members[MIMETYPE] or MIMETYPE_BYTES)
+
+        formats = None
+        if section_formats is not None:
+            built = members.get("Contents/section0.xml")
+            sections, info = split_sections_by_plan(
+                built.decode("utf-8") if built is not None else "",
+                nodes=nodes or [], plan=plan, section_formats=section_formats,
+            )
+            if sections is None:
+                applied["sections"] = info["status"]
+                applied["section_controls"] = {}
+            else:
+                formats = section_formats
+                applied["sections"] = info["names"]
+                applied["section_controls"] = info["controls"]
+                for index, section in enumerate(sections):
+                    members["Contents/section%d.xml" % index] = section.encode("utf-8")
+                if HEADER_NAME in members:
+                    members[HEADER_NAME] = _bump_section_count(
+                        members[HEADER_NAME].decode("utf-8")).encode("utf-8")
+                if "Contents/content.hpf" in members:
+                    members["Contents/content.hpf"] = _extend_manifest(
+                        members["Contents/content.hpf"].decode("utf-8")).encode("utf-8")
+                for index in (1, 2):
+                    infos.append(_new_section_info(
+                        next(i for i in infos if i.filename == "Contents/section0.xml"),
+                        "Contents/section%d.xml" % index))
+            if formats is not None:
+                infos.sort(key=lambda info: _split_zip_rank(info.filename))
+
+        charpr_ids = None
+        if formats is not None and plan is not None and HEADER_NAME in members:
+            header_text = members[HEADER_NAME].decode("utf-8")
+            if _CHARPR_ITEM_CNT_RE.search(header_text) and _CHARPR_END_TAG in header_text:
+                header_text, charpr_ids = _append_front_charprs(header_text)
+                members[HEADER_NAME] = header_text.encode("utf-8")
+
         for info in infos:
             if info.filename == MIMETYPE:
                 continue
-            member = zin.read(info.filename)
+            member = members[info.filename]
+            override = _section_format_for(info.filename, formats)
             if SECTION_RE.fullmatch(info.filename):
                 text = member.decode("utf-8")
-                updated = (rewrite_margins(text, margins_mm)
-                           if margins_mm is not None else text)
+                updated = (rewrite_margins(text, margins_mm, override=override)
+                           if margins_mm is not None or override is not None else text)
                 if updated != text:
                     applied["margins"].append(info.filename)
                 if page_numbers:
-                    numbered = inject_page_numbers(updated)
+                    numbered = inject_page_numbers(updated, override=override)
                     if numbered != updated:
                         applied["page_numbers"].append(info.filename)
                     updated = numbered
+                if charpr_ids is not None and formats is not None:
+                    bounds = _section_node_range(info.filename, plan)
+                    if bounds is not None:
+                        updated, changed = _apply_front_charpr(
+                            updated, nodes=nodes or [], plan=plan,
+                            ids=charpr_ids, start=bounds[0], end=bounds[1])
+                        if changed:
+                            applied["charpr"].append(info.filename)
                 member = updated.encode("utf-8")
             elif info.filename == HEADER_NAME:
                 text = member.decode("utf-8")
@@ -181,21 +982,50 @@ def transform_hwpx(data: bytes, *, font: str = SCHOOL_FONT,
     return target.getvalue(), applied
 
 
-def missing_format_steps(applied, *, font, margins_mm, page_numbers):
+def missing_format_steps(applied, *, font, margins_mm, page_numbers,
+                         section_formats=None):
     """요청한 서식 변환 중 하나도 적용되지 않은 항목 목록.
 
     kordoc 산출물의 네임스페이스 접두사·비자기닫힘 요소·colPr 부재 등으로
     정규식이 아무것도 못 바꿨는데도 그대로 발행해 매니페스트가 적용된 것처럼
     적는 일을 막는다. None/False인 항목은 요청하지 않은 것으로 본다.
+    ``section_formats``가 있으면 구역 분할·구역별 제어 요소·앞부분 글자
+    모양까지 실제로 붙었는지 함께 본다.
     """
     requested = []
     if margins_mm is not None:
         requested.append("margins")
     if font is not None:
         requested.append("font")
-    if page_numbers:
+    # 구역 분할 경로에서는 쪽번호를 구역 첫 문단의 pageNum/newNum이 맡는다
+    # (inject_page_numbers는 확인만 한다). 그래서 아래 section_controls로 본다.
+    if page_numbers and section_formats is None:
         requested.append("page_numbers")
-    return [name for name in requested if not applied.get(name)]
+    missing = [name for name in requested if not applied.get(name)]
+    if section_formats is None:
+        return missing
+    # 앞머리 표지가 하나도 없는 본문-only 입력은 설계가 유일하게 허용한
+    # no-op이다. 이때는 구역 분할 검사를 요구하지 않는다.
+    if applied.get("sections") == "not_applicable":
+        return missing
+    names = applied.get("sections")
+    expected = ["Contents/section%d.xml" % i for i in range(len(section_formats))]
+    if names != expected:
+        missing.append("sections")
+    controls = applied.get("section_controls")
+    wanted = [{key: value[key] for key in ("pageNum", "newNum")}
+              for value in (_expected_page_numbers(index, section_formats)
+                            for index in range(len(section_formats)))]
+    if isinstance(controls, list):
+        measured = [{key: (item.get(key) if isinstance(item, dict) else item)
+                     for key in ("pageNum", "newNum")} for item in controls]
+    else:
+        measured = []
+    if measured != wanted:
+        missing.append("section_controls")
+    if not applied.get("charpr"):
+        missing.append("charpr")
+    return missing
 
 
 # --- 외부 프로세스 -------------------------------------------------------
@@ -717,6 +1547,7 @@ def build(markdown, out, *, context, authorization, cli_command=None,
           cache_dir=None, node=None, pnpm=None, kordoc=None,
           timeout=DEFAULT_TIMEOUT, font=SCHOOL_FONT,
           margins_mm=SCHOOL_MARGINS_MM, page_numbers=True,
+          section_formats=None, nodes=None, plan=None,
           generate_args=GENERATE_DEFAULT_ARGS, image_dir=None,
           verify=True, before_publish=None) -> dict:
     """마크다운 한 파일을 학교 규격 HWPX 한 파일로 만든다.
@@ -837,9 +1668,16 @@ def build(markdown, out, *, context, authorization, cli_command=None,
             raise HwpxBlocked("empty_output",
                               action="kordoc가 HWPX를 만들지 않았습니다. 발행하지 않았습니다.")
 
+        if section_formats is not None and (nodes is None or plan is None):
+            import gg_document as gd
+
+            nodes = gd.parse(text, major_id="food_crops")
+            plan = gd.school_frontmatter_plan(nodes, "food_crops")
+
         transformed, applied = transform_hwpx(
             raw_path.read_bytes(), font=font, margins_mm=margins_mm,
-            page_numbers=page_numbers,
+            page_numbers=page_numbers, section_formats=section_formats,
+            nodes=nodes, plan=plan,
         )
         pictures = embedded_picture_count(transformed)
         if pictures < len(references):
@@ -849,7 +1687,7 @@ def build(markdown, out, *, context, authorization, cli_command=None,
                        "발행하지 않았습니다. 그림 경로 표기를 단순하게 고쳐 보세요.")
         missing = missing_format_steps(
             applied, font=font, margins_mm=margins_mm,
-            page_numbers=page_numbers)
+            page_numbers=page_numbers, section_formats=section_formats)
         if missing:
             raise HwpxBlocked(
                 "format_not_applied", missing=missing, applied=applied,

@@ -27,6 +27,7 @@ import gg_major_contract as mc
 
 
 FONT = gg_hwpx.SCHOOL_FONT
+FOOD_CROPS_SECTION_FORMATS = gg_hwpx.FOOD_CROPS_SECTION_FORMATS
 DEFAULT_IN = "build/본문_통합.md"
 DEFAULT_OUT = "build/검토전_논문.hwpx"
 PAGE_WIDTH_MM = 210
@@ -46,26 +47,42 @@ FINISH_NOTICE = (
     "정렬과 목차의 실제 쪽번호는 사람이 마무리한다. 이 항목들은 자동 통과하지 않는다."
 )
 
+# 식량작물 전용 안내문. 공용 상수는 다른 전공이 그대로 쓰므로 손대지 않고,
+# 이 전공에서만 아래 문구를 고른다(안내문까지 전공 격리를 닫는다).
+FOOD_CROPS_FINISH_NOTICE = (
+    "저수준 미검증 출력. 목차 필드 갱신·전체 페이지·학교 원문·학명·그림·표·"
+    "머리행 검토 필요. 한글에서 글꼴 신명조·여백(위30/아래30/머리0/꼬리10/"
+    "좌30/우30/제본0 mm)·쪽 번호(요약은 Ⅰ부터, 본문은 1부터)를 확인한다. "
+    "이 세 가지는 스킬 작성 완료를 막지 않으며 자동 통과하지 않는다. "
+    "file_hash는 빌드 직후 파일 기준이다. 쪽 나눔·여백 등 후처리로 파일을 "
+    "다시 저장했다면 --rehash로 매니페스트 해시를 갱신한다."
+)
+FOOD_CROPS_HUMAN_FINISH = HUMAN_FINISH + (
+    "요약이 Ⅰ부터, 본문이 1부터인지 확인 — 자동으로 맞췄지만 한글에서 확인한다",
+)
 
-def notice(verify):
+
+def notice(verify, major_id=None):
     """실제로 실행되어 통과한 검사만 열거한다(검증 생략이면 사실대로)."""
     return " ".join([
         "저수준 미검증 출력.",
         VERIFIED_NOTICE if verify else SKIPPED_NOTICE,
-        FINISH_NOTICE,
+        FOOD_CROPS_FINISH_NOTICE if major_id == "food_crops" else FINISH_NOTICE,
     ])
 
 
-def school_frontmatter_summary(md_text):
+def school_frontmatter_summary(md_text, major_id=None):
     """학교 앞부분(표지·제출면·인준서·목차) 감지 요약. 없으면 None."""
-    plan = gg_document.school_frontmatter_plan(gg_document.parse(md_text))
+    plan = gg_document.school_frontmatter_plan(
+        gg_document.parse(md_text, major_id=major_id), major_id)
     if plan is None:
         return None
     return {
         "detected": True,
         "layout": "plain_markdown",
         "sections": list(plan.get("order", ())),
-        "human_finish_required": list(HUMAN_FINISH),
+        "human_finish_required": list(
+            FOOD_CROPS_HUMAN_FINISH if major_id == "food_crops" else HUMAN_FINISH),
     }
 
 
@@ -217,6 +234,43 @@ def verify_layout(data, command, source_text, *, timeout):
     return {"validate": validation, "reparse": {"ok": True},
             "table_numbers": comparison}
 
+def recount_page_numbers(data, section_formats, applied):
+    """후처리까지 끝난 최종 ZIP에서 구역별 `pageNum`·`newNum` 개수를 다시 센다.
+
+    분할 시점 검사만으로는 뒤 단계가 쪽번호 컨트롤을 다시 넣은 경우를 못
+    잡는다. 개수가 기대(cover 0/0, front 1/1, body 1/1)와 다르면 발행하지
+    않고, 맞으면 `applied["page_numbers"]`에 구역별 실측값을 남긴다.
+    """
+    measured = []
+    if applied.get("sections") == "not_applicable":
+        return dict(applied)
+    with zipfile.ZipFile(io.BytesIO(data), "r") as archive:
+        names = set(archive.namelist())
+        for index in range(len(section_formats)):
+            name = "Contents/section%d.xml" % index
+            if name not in names:
+                raise gg_hwpx.HwpxBlocked(
+                    "page_number_count_after_postprocess", missing=name,
+                    action="후처리 뒤 구역 파일이 사라졌습니다. 발행하지 않았습니다.")
+            text = archive.read(name).decode("utf-8")
+            counts = {"pageNum": text.count("<hp:pageNum"),
+                      "newNum": text.count("<hp:newNum")}
+            expected = gg_hwpx._expected_page_numbers(index, section_formats)
+            if (counts["pageNum"] != expected["pageNum"]
+                    or counts["newNum"] != expected["newNum"]):
+                raise gg_hwpx.HwpxBlocked(
+                    "page_number_count_after_postprocess", section=name,
+                    expected={"pageNum": expected["pageNum"],
+                              "newNum": expected["newNum"]},
+                    found=counts,
+                    action="후처리 뒤 구역별 쪽번호 개수가 기대와 다릅니다. "
+                           "발행하지 않았습니다.")
+            measured.append({"section": name, **counts})
+    updated = dict(applied)
+    updated["page_numbers"] = measured
+    return updated
+
+
 def export(base, inp, out, *, font=FONT, context=None, cli_command=None,
            cache_dir=None, node=None, pnpm=None, kordoc=None,
            timeout=gg_hwpx.DEFAULT_TIMEOUT, page_numbers=True, image_dir=None,
@@ -237,6 +291,9 @@ def export(base, inp, out, *, font=FONT, context=None, cli_command=None,
     if manifest_path.exists():
         raise ValueError("기존 매니페스트를 덮어쓰지 않음: 새 경로 지정")
     source_text = source.read_text(encoding="utf-8")
+    food_crops = authorization.major_id == "food_crops"
+    section_formats = FOOD_CROPS_SECTION_FORMATS if food_crops else None
+    margins_mm = section_formats[2]["margin_mm"] if food_crops else None
     staging = target.with_name("." + target.name + ".layout-staging")
     if staging.exists():
         raise ValueError("임시 후처리 파일이 남아 있음: " + str(staging))
@@ -246,10 +303,15 @@ def export(base, inp, out, *, font=FONT, context=None, cli_command=None,
             cli_command=cli_command, cache_dir=cache_dir, node=node, pnpm=pnpm,
             kordoc=kordoc, timeout=timeout, font=font,
             page_numbers=page_numbers, image_dir=image_dir, verify=verify,
+            **(dict(margins_mm=margins_mm, section_formats=section_formats)
+               if food_crops else {}),
         )
         generated = staging.read_bytes()
         published_bytes, layout = apply_layout(
-            generated, major_id=authorization.major_id)
+            generated, margins_mm=margins_mm, major_id=authorization.major_id)
+        if food_crops:
+            result["applied"] = recount_page_numbers(
+                published_bytes, section_formats, result["applied"])
         verification = result["verification"]
         if published_bytes != generated:
             if verify:
@@ -292,8 +354,9 @@ def export(base, inp, out, *, font=FONT, context=None, cli_command=None,
             "reparse": verification["reparse"],
             "table_numbers": verification["table_numbers"],
         },
-        "school_frontmatter": school_frontmatter_summary(source_text),
-        "notice": notice(verify),
+        "school_frontmatter": school_frontmatter_summary(
+            source_text, authorization.major_id),
+        "notice": notice(verify, authorization.major_id),
     }
     data = json.dumps(manifest, ensure_ascii=False, indent=2).encode("utf-8")
     identity = gg_fs.identity(target.parent, kind="directory")
