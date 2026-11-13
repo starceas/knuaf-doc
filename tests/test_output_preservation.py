@@ -4,6 +4,7 @@ These live in root tests/ because it is the default validation discovery
 root, independently of the separate skill-test gate change.
 """
 import copy
+import hashlib
 import json
 from pathlib import Path
 import re
@@ -22,6 +23,9 @@ def cli(root, script, *args):
     return subprocess.run(
         [sys.executable, "-B", str(SCRIPTS / script), *script_args],
         capture_output=True, text=True, encoding="utf-8", cwd=root)
+
+
+build_hwpx = runtime("build_hwpx")
 
 
 class DocxPreservationTests(ContractCase):
@@ -111,6 +115,176 @@ class DocxPreservationTests(ContractCase):
         self.assertFalse(out.exists())
         self.assertTrue(manifest.is_symlink())
         self.assertFalse(missing.exists())
+
+
+class MajorNoticeIsolationTests(ContractCase):
+    """F1: 식량작물 안내문·사람 확인 항목이 다른 전공 산출물로 새지 않는다.
+
+    1판 문자열을 그대로 못 박는다. 공용 상수를 고치면 다른 전공 매니페스트가
+    같이 움직이므로, 여기서는 스크립트 상수를 인용하지 않고 원문을 적는다.
+    """
+
+    # 1판 build_docx 매니페스트 notice.
+    DOCX_NOTICE = (
+        "저수준 미검증 출력. 목차 필드 갱신·전체 페이지·학교 원문·학명·그림·표·"
+        "머리행 검토 필요. 한글에서 글꼴 신명조·여백(위20/아래15/머리15/꼬리15/"
+        "좌30/우30/제본0 mm)·페이지 번호를 확인한다. 이 세 가지는 스킬 작성 완료를 "
+        "막지 않으며 자동 통과하지 않는다. file_hash는 빌드 직후 파일 기준이다. "
+        "쪽 나눔·여백 등 후처리로 파일을 다시 저장했다면 --rehash로 매니페스트 "
+        "해시를 갱신한다."
+    )
+    # 1판 build_hwpx notice(verify=True).
+    HWPX_NOTICE = (
+        "저수준 미검증 출력. kordoc validate(구조)와 HWPX 재파싱 표 수치 대조를 "
+        "통과했다. 한글 프로그램에서 열어 (1) 글꼴 신명조 (2) 여백 "
+        "위20/아래15/머리15/꼬리15/좌30/우30/제본0 mm (3) 쪽번호를 확인한다. "
+        "표지·제출면·인준서의 쪽 나눔·가운데 정렬과 목차의 실제 쪽번호는 사람이 "
+        "마무리한다. 이 항목들은 자동 통과하지 않는다."
+    )
+    # 1판 HUMAN_FINISH 5개.
+    HUMAN_FINISH = (
+        "표지·제출면·인준서의 쪽 나눔과 가운데 정렬",
+        "목차의 실제 쪽번호",
+        "표·그림 목차(있으면)",
+        "표 폭이 본문 폭(150 mm)인지 확인 — 자동으로 맞췄지만 한글에서 확인한다",
+        "장(Ⅰ~Ⅵ) 시작이 새 쪽인지 확인 — 자동으로 쪽 나눔을 넣었지만 한글에서 확인한다",
+    )
+    FOOD_CROPS_FINISH = (
+        "요약이 Ⅰ부터, 본문이 1부터인지 확인 — 자동으로 맞췄지만 한글에서 확인한다",
+    )
+    FRONT_MATTER_MD = ("겉표지\n\n표제면\n\n제출서\n\n인준서\n\n요약\n\n감사의 글\n\n"
+                       "목차\n\n1. 머리말\n")
+
+    def build(self, major):
+        root = self.make_project()
+        bind_major(root, major)
+        write_text(root, "body.md", "# 1. 머리말\n\n합성 본문.\n")
+        out = "build/" + major + ".docx"
+        proc = cli(root, "build_docx.py", "--in", "body.md",
+                   "--out", out, "--major", major)
+        self.assertEqual(0, proc.returncode, proc.stdout + proc.stderr)
+        return json.loads((root / out).with_suffix(".manifest.json")
+                          .read_text(encoding="utf-8"))
+
+    # 5488bd2(식량작물 모듈 이전) 트리에서 같은 입력·같은 전공으로 뽑은
+    # build_docx 매니페스트. `file_hash`만 뺀다(ZIP 타임스탬프 때문에 실행마다
+    # 달라진다).
+    REFERENCE_DOCX_MANIFEST = {
+        "file_hash_stage": "build",
+        "font": "신명조",
+        "font_available": "not_run",
+        "hwp": "not_run",
+        "input_hash": "850c8e3a169514bf7f8d641c33051966f44da90b3e5fca350bfdb88316cb6408",
+        "kind": "draft",
+        "layout_review": {
+            "authority": "actual Word PDF render; HWPX requires native Hancom render",
+            "checks": [
+                "Widen long-text columns before reducing table text one point at a time.",
+                "Inspect every table page for broken words, isolated punctuation and stranded header characters.",
+                "Keep table notes attached; inspect the preceding page for new large gaps.",
+                "Shrink a displaced figure only while its legend and embedded text remain readable.",
+            ],
+            "figures": [],
+            "status": "not_run",
+            "tables": [],
+        },
+        "major_authorization": {
+            "binding_evidence": "facts:selected_major",
+            "contract_version": "knuaf-major-contract/1",
+            "major_id": "specialty_crops",
+            "module_version": "1.0.0",
+            "output": "school_paper",
+            "project_revision": 1,
+        },
+        "notice": DOCX_NOTICE,
+        "photo_requests": [],
+        "render": "not_run",
+        "school_frontmatter": None,
+        "table_layout": {"infeasible_count": 0, "reports": [], "status": "ok",
+                         "wide_tables_checked": 0},
+        "toc_update": "not_run",
+    }
+
+    def test_other_major_docx_manifest_matches_the_reference_dict(self):
+        manifest = self.build("specialty_crops")
+        manifest.pop("file_hash")
+        self.assertEqual(self.REFERENCE_DOCX_MANIFEST, manifest)
+
+    def test_food_crops_notice_does_not_leak_to_other_majors(self):
+        for major in ("specialty_crops", "fruit_trees", "hort_env_systems"):
+            with self.subTest(major=major, surface="docx-manifest"):
+                self.assertEqual(self.DOCX_NOTICE, self.build(major)["notice"])
+            with self.subTest(major=major, surface="hwpx-notice"):
+                self.assertEqual(self.HWPX_NOTICE, build_hwpx.notice(True, major))
+            with self.subTest(major=major, surface="hwpx-human-finish"):
+                summary = build_hwpx.school_frontmatter_summary(
+                    self.FRONT_MATTER_MD, major)
+                self.assertEqual(list(self.HUMAN_FINISH),
+                                 summary["human_finish_required"])
+        # 산업곤충은 앞머리 계획이 없어 요약이 None이다 — 그래도 안내문은 1판 그대로.
+        self.assertEqual(self.HWPX_NOTICE, build_hwpx.notice(True, "industrial_insects"))
+        self.assertIsNone(build_hwpx.school_frontmatter_summary(
+            self.FRONT_MATTER_MD, "industrial_insects"))
+
+        # 식량작물만 새 문구를 고르고, 1판 여백 문구는 남지 않는다.
+        self.assertIn("위30/아래30/머리0/꼬리10", self.build("food_crops")["notice"])
+        food_crops_notice = build_hwpx.notice(True, "food_crops")
+        self.assertIn("요약은 Ⅰ부터, 본문은 1부터", food_crops_notice)
+        self.assertNotIn("위20/아래15", food_crops_notice)
+        self.assertNotIn("위20/아래15", self.build("food_crops")["notice"])
+        summary = build_hwpx.school_frontmatter_summary(
+            self.FRONT_MATTER_MD, "food_crops")
+        self.assertEqual(list(self.HUMAN_FINISH) + list(self.FOOD_CROPS_FINISH),
+                         summary["human_finish_required"])
+
+
+class OtherMajorDocxByteTests(ContractCase):
+    """R-N01: 다른 전공 4개의 DOCX 멤버 바이트가 `5488bd2`와 같다.
+
+    기준은 `5488bd2`(식량작물 모듈 이전) 트리에서 같은 입력·같은 명령으로
+    뽑은 산출물의 압축 해제 바이트다. ZIP 시각(타임스탬프·external_attr)은
+    실행마다 달라지므로 멤버 단위로 비교한다. 4전공이 모두 같은 해시를
+    내므로 기준 dict 하나를 공유한다.
+    """
+
+    BODY = "# 1. 머리말\n\n합성 본문.\n"
+    MEMBERS = {
+        '[Content_Types].xml': '66c84fb7a6aa3c4ead49f895e4a7044df1fb57de1ed76d09b2686e91f5bed5b4',
+        '_rels/.rels': 'a9ae57efe9186f07d48303bcac5d54c7e359bf3f503939c03ad2954e5c59a5c4',
+        'docProps/core.xml': 'd14be8284e406d14dc2a576b19f15e7f637b955f9e27a3d9ed871ec99606f7ba',
+        'docProps/app.xml': 'be664981c3141cddfc59362beb287ebf20d0773660e2dd6faac5968a5930a081',
+        'word/document.xml': 'a1db6487186ca7880bf84198aff6a69ef56bd9dc73b52bbab15ff1780b79f444',
+        'word/_rels/document.xml.rels': '1e7f0eb144a98e199249314f61ff32a8de2a27e56d8e9ee6b524e1c6b235d377',
+        'word/styles.xml': 'f017756fb397531264418c33ec44516d5431db2864caf720f7b140abf9701988',
+        'word/stylesWithEffects.xml': '463ae0928cf0d84775dbf8cf18d6c3029f6707c81bf590f6d6dd8757a5e93f15',
+        'word/settings.xml': '86c73de844b13fc27c417004b8fc5a7fdf76224ea4f5bdd0fb3996abedf5c6bb',
+        'word/webSettings.xml': '349d36de7434d09f86987ff671d8814964a0588c1e630c06e562cda7e75e9f95',
+        'word/fontTable.xml': '79385fb7f60247507ecaffc292e9ebd52ea0657b8634f629ba6fccc54011d6bb',
+        'word/theme/theme1.xml': 'e3a8ab7db9ca7afca56f5f2820a56e8b660016c647773555b060b0a02ac76941',
+        'customXml/item1.xml': 'a86086ffc5d8e83ebd6c71a55d1d2efaa31b137977f5f3a752366e1023612144',
+        'customXml/_rels/item1.xml.rels': '1ca6c9a64edcebe24ee703a54403611b322d96da33371779e742d2d3f7ed7a6c',
+        'customXml/itemProps1.xml': 'c542307b13ec29a8b546217bb37936ab4822e044b265d2952985ec3d6afed24e',
+        'word/numbering.xml': '70976f19cbcd896e51890859fe6ecb3467a5a7ad0c040160fedc5a1993cb09ce',
+        'docProps/thumbnail.jpeg': '96367138dc44ce09bf2c8f0f8e49348a1478d2c5c0af69bbc2bbc38b63cdcead',
+    }
+
+    def test_other_majors_reproduce_the_reference_bytes(self):
+        for major in ("specialty_crops", "fruit_trees", "hort_env_systems",
+                      "dairy"):
+            with self.subTest(major=major):
+                root = self.make_project()
+                bind_major(root, major)
+                write_text(root, "body.md", self.BODY)
+                out = "build/%s.docx" % major
+                proc = cli(root, "build_docx.py", "--in", "body.md",
+                           "--out", out, "--major", major)
+                self.assertEqual(0, proc.returncode, proc.stdout + proc.stderr)
+                with zipfile.ZipFile(root / out) as archive:
+                    digests = {info.filename:
+                               hashlib.sha256(archive.read(info.filename)).hexdigest()
+                               for info in archive.infolist()}
+                self.assertEqual(sorted(self.MEMBERS), sorted(digests))
+                self.assertEqual(self.MEMBERS, digests)
 
 
 class FinanceSavePreservationTests(ContractCase):
