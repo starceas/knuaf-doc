@@ -185,6 +185,16 @@ ALLOWED_SKILL_SKIPS = {
         "test_p4_snapshot_requires_constructed_catalog",
         "test_gg_source_register.TestArtifacts.test_p4_snapshot_registers",
     ), "accepted g005 catalog tree not present"),
+    # W-L fix1: R-01's 22-coordinate error footprint and the public-document
+    # leak audit both read the private FD-A source workbook, which stays
+    # off-repo. Two entries, not one dict.fromkeys group: the reasons differ
+    # and _is_approved_skill_skip compares them with ==.
+    "tests.test_hort_finance_pipeline.LandErrorRegression."
+    "test_error_footprint_is_scenario_independent":
+        "private FD-A source workbook absent (off-repo optional input)",
+    "tests.test_hort_finance_contract.PublicContract."
+    "test_real_h01_audit_reports_no_leak":
+        "real H01 workbook not present (local-only FD-A step)",
 }
 
 # These seven mocked Office session tests exercise a POSIX fcntl/AppleScript

@@ -122,14 +122,14 @@ def contracts(base=REF):
     tr, params, verify_classes = docs[FILES[0]], docs[FILES[1]], docs[FILES[2]]
     entries = tr.get("entries")
     registry = verify_classes.get("registry")
-    if (not isinstance(entries, list) or tr.get("entry_count") != 4103
-            or len(entries) != 4103 or len({(e.get("sheet"), e.get("cell")) for e in entries}) != 4103
-            or params.get("param_count") != 1379
-            or len(params.get("parameters", {})) != 1379
+    if (not isinstance(entries, list) or tr.get("entry_count") != 4107
+            or len(entries) != 4107 or len({(e.get("sheet"), e.get("cell")) for e in entries}) != 4107
+            or params.get("param_count") != 1380
+            or len(params.get("parameters", {})) != 1380
             or not isinstance(registry, list)
-            or verify_classes.get("registry_count") != 5466
-            or len(registry) != 5466
-            or len({(r.get("sheet"), r.get("cell")) for r in registry}) != 5466):
+            or verify_classes.get("registry_count") != 5467
+            or len(registry) != 5467
+            or len({(r.get("sheet"), r.get("cell")) for r in registry}) != 5467):
         raise Held("public_contract_invalid")
     return docs
 
@@ -719,7 +719,12 @@ _ALLOWED_CONSTANTS = {str(i): ("Excel structural index or period bound" if i els
                                "zero branch and derived absence") for i in range(26)}
 _ALLOWED_CONSTANTS.update({"31": "December month end", "1000": "KRW to KRW_1000",
                            "0.0": "TEXT numeric format", "0.00": "TEXT numeric format"})
-_ALLOWED_FORMULA_STRINGS = {"부지", "시설", "재배", "해당 없음", ""}
+# Contract-defined land control words. These are allowed answers the student
+# picks from, not teaching text copied out of the source workbook, so the
+# string audit below admits them at the paths that own them.
+_LAND_KINDS = ("논", "밭")
+_ASSET_KINDS = ("시설", "농기계", "토지")
+_ALLOWED_FORMULA_STRINGS = {"부지", "시설", "재배", "해당 없음", "", *_LAND_KINDS}
 _BEFORE = {"absent", "blank_node", "number", "shared_string", "inline_string",
            "formula_normal", "formula_shared_anchor", "formula_shared_member",
            "array_member", "bool", "error"}
@@ -980,7 +985,7 @@ def audit_public_documents(docs, source, expected_sha=SOURCE_SHA):
     # These are contract-defined control words, not copied teaching text.
     # The exception is path-specific: arbitrary values nested under these
     # fields still pass through the source-string/numeric/digest audit.
-    condition_literals = {"부지", "시설", "재배", "해당 없음"}
+    condition_literals = {"부지", "시설", "재배", "해당 없음", *_ASSET_KINDS}
     for name, doc in docs.items():
         for path, field, value in _walk(doc):
             loc = name + "." + ".".join(str(x) for x in path)
@@ -994,12 +999,20 @@ def audit_public_documents(docs, source, expected_sha=SOURCE_SHA):
             approved_control = False
             if name == FILES[1] and len(path) >= 3 and path[0] == "parameters":
                 key = path[1]
-                if path[-1] == "allowed_values" and isinstance(field, int):
+                # _walk yields list indices as the final path element, so the
+                # owning field name is one level up. Reading path[-1] made both
+                # predicates below unreachable.
+                field_name = path[-2] if isinstance(path[-1], int) else path[-1]
+                if field_name == "allowed_values" and isinstance(path[-1], int):
                     approved = ({"hired", "self"} if key.endswith(".labor_kind")
                                 else {"confirmed_absent"} if key.startswith("category_absence.")
+                                else set(_LAND_KINDS) if key in ("opening.land_kind",
+                                                                 "opening.land_extra_kind")
+                                else set(_LAND_KINDS) if key.endswith(".land_class")
+                                else set(_ASSET_KINDS) if key.endswith(".asset_class")
                                 else set())
                     approved_control = value in approved
-                elif (path[-1] == "key_equals" and field == 1
+                elif (field_name == "key_equals" and path[-1] == 1
                       and ("required_if" in path or "forbidden_if" in path)):
                     approved_control = value in condition_literals
             if approved_control:
@@ -1200,8 +1213,8 @@ def _eval_cond(node, params, present, resolved, spec):
     if op == "group_active":
         return _group_active(params, present, resolved, arg)
     if op == "method_is":
-        return (spec.get("method_tag") == arg) if isinstance(arg, str) else arg in (
-            spec.get("method_tag"),)
+        return (spec.get("method_tag") == arg) if isinstance(arg, str) else (
+            spec.get("method_tag") in arg)
     raise Held("condition_tree_invalid")
 
 
@@ -1232,7 +1245,7 @@ def _cond_tree_check(node, params, path, add, depth=0):
             return
         value = arg[1]
         allowed = _ALLOWED_FORMULA_STRINGS | set(_LABOR_KINDS) | {_CATEGORY_VALUE} | {
-            "area_unit", "asset_rate", "tax_base_rate", "direct"}
+            "area_unit", "asset_rate", "tax_base_rate", "direct"} | set(_ASSET_KINDS)
         if isinstance(value, str) and value not in allowed:
             add("condition_value_unapproved", path)
         return
