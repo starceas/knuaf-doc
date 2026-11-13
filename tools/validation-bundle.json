@@ -10,7 +10,7 @@
     ".github/workflows/validation.yml": {
       "note": "Per-PR CI running the same integrity check and validation runner. repair-n1/N2: receipt path read via os.environ['RUNNER_TEMP'] inside the quoted heredoc. P2-R2: strict report consumer step enforces the ok_platform_scoped/default-scope contract (sole P2-L09-native pending gate, full=false, platform=true, no unexpected/unapproved skips). P2-R3: consumer hardened to independently recompute the report — strict JSON (duplicate keys/nonfinite rejected), present+typed fields, non-bool nonnegative integer counts, framework reconciliation (was_successful/outcomes/testsRun==tests_run==len(entries)/skipped==1), per-entry unique-id + category tally equal to counters with zero failed, declared H9-only known_baseline_defect pairs, fixture_events empty/failure_events 0, only parent-matched subtest_success events, and the exact approved-skip rule string — no trust in accounting.errors or top-level summaries. P2-R4: three consumer consistency holes closed — known_baseline_defect requires the exact (test, defect=H9, gate=P3) triple per regression_inventory (arbitrary nonempty gate rejected); subtest ids must match the complete emitted parent + ' (' + nonempty + ')' shape (unclosed/empty/wrong-prefix rejected, no repr parsing); the exact native withheld skip parent may carry no subtest events at all. All prior strict JSON/type/framework/entries/fixture/gate checks preserved. P2-R5: H9 required-presence invariant enforced independently of supplied totals — exact test id must occur exactly once carrying category known_baseline_defect + defect H9 + gate P3; runtime.known_baseline_defects pinned to integer 1; relabel/ missing/substitute/duplicate with favorable counters all reject. | Windows native publication: 3.10/3.14 lifecycle matrix and artifact reports; existing Ubuntu strict consumer and Windows structural preserved.",
       "origin": "new",
-      "sha256": "52b7d20f9534f7f53904dd6b36ccb9a2629e35b8c2794052be2e03748319666c",
+      "sha256": "8b93aee0bfe1b3745ec0a977282b5c8933cbf7a41f69c3ebf0d763ab4cfa9d5e",
       "transform": "F-skill-tests: independently reconcile exact optional skill skip IDs/reasons and approved_skill_skips against runtime entries, preserving native pending-gate and accounting checks."
     },
     ".github/workflows/windows-full.yml": {
@@ -35,12 +35,12 @@
     "docs/validation/BUNDLE.md": {
       "note": "Bundle/manifest/CI 계약 문서 — @3 manifest·@2 change list·신규 파일 allowlist 계약 포함. | N1/N2: document restored school requirements and source-binding boundaries. | Restore v0.1.4: document actual skill test payload and disposition failure codes; historical evidence stays scoped. | ORDER-I2: align restore release/version expectation with 0.1.5 on main 9210ca0. | F-skill-tests: document both discovery roots, fixture repair, W2 pytest and finite optional external-input skip contract.",
       "origin": "new",
-      "sha256": "0f2b2693fe4f173976ad7342e669b9a3102bd50b544b8f0b970c5317cb8cea54"
+      "sha256": "6024539da2685782f622b9083e8fce5e9e28730533521d1b1793c0293ec27893"
     },
     "docs/validation/REGRESSIONS.md": {
       "note": "P0-A: human-readable regression inventory (R1–R7 + adopted C/H items); machine source of truth is tests/regression_inventory.json. repair-n1/N1: dependency-gate and allowed nested-skip list documented. P2-R2: verdict precedence, completion flags, external-gate rule and outcome-accounting semantics documented. P2-R3: exact-10 nested allowlist closure documented (tamper control folded into host method). | P27: runner 계약 §6 pywin32 예시 정정",
       "origin": "new",
-      "sha256": "e1345c137df78e5e20602ac5ae7ab40c921de81e0ac77002b35daf5d42d2095b",
+      "sha256": "8bc228f9e99e9fdeacc1ceb33bc37c79dfadbc4a70909ea6b4725e0b6d84d914",
       "transform": "F CI1: document coherent directory-entry and metadata simulation for normalization-collision fixtures; no new skip approval."
     },
     "docs/validation/d5-rda-useful-life.json": {
@@ -321,7 +321,7 @@
     "tests/test_runner_contract.py": {
       "note": "repair-n1/N1 (new file): meta-tests asserting the N1 contract — dependency preflight semantics, verdict priority, JSON fields. P2-R2: extended subprocess controls (scoped verdict, external gate, tamper) and pure non-recursing accounting/classification tests for subtests, fixtures, expectedFailure/XPASS and gate mutations. P2-R3: bundle-tamper assertion folded into the pre-existing nested test_unexpected_failure_beats_incomplete — standalone method removed, no new nested exemption. | P27 K2-03: pywin32 선언 제거로 not_applicable 빈 목록 | P0-2 PR-D: Q03: platform exclusion of pywin32 on non-Windows, missing-dependency detection retained on Windows; nested runner and integrity contracts unchanged.",
       "origin": "new",
-      "sha256": "47c3f3ca1ff8e2e9b9fea0996b5568a3f08e04bc672e555cefb75222cc454ebf",
+      "sha256": "961bbb2b4c79649b3412fe573a43acc2328c966aae658407c69668e87a5e6632",
       "transform": "F-skill-tests: reject unknown skip IDs, changed reasons, failed outcomes and hidden subtest events for optional skill inputs."
     },
     "tests/test_runner_negative_controls.py": {
@@ -756,5 +756,5 @@
     "verified_count": 309
   },
   "schema": "knuaf-doc/validation-bundle@3",
-  "validation_tree_sha256": "a8b1b4f741e19db525fff40e29ce75d55e2b00ac66ead69557f88cb93fecb750"
+  "validation_tree_sha256": "16c1a8de4e7bc794a143d7f8fdf8c32511d1dd5e53c9be93fc6ab9426d0a7daa"
 }

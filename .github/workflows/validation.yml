@@ -90,6 +90,20 @@ jobs:
             ${{ runner.temp }}/check-bundle-report.json
             ${{ runner.temp }}/shard-report.json
           if-no-files-found: error
+      - name: Resolve temp dir
+        if: always()
+        id: tmpdir
+        shell: bash
+        run: printf 'path=%s\n' "$(python3 -c 'import tempfile;print(tempfile.gettempdir())')" >> "$GITHUB_OUTPUT"
+      - name: Upload nested run reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-nested-reports-py3.10-${{ matrix.shard }}
+          path: |
+            ${{ steps.tmpdir.outputs.path }}/knuaf-nested-reports/*.json
+            ${{ steps.tmpdir.outputs.path }}/knuaf-nested-reports/*.stderr
+          if-no-files-found: warn
 
   validate-py310:
     name: suite (ubuntu, py3.10)
@@ -261,6 +275,20 @@ jobs:
             ${{ runner.temp }}/check-bundle-report.json
             ${{ runner.temp }}/shard-report.json
           if-no-files-found: error
+      - name: Resolve temp dir
+        if: always()
+        id: tmpdir
+        shell: bash
+        run: printf 'path=%s\n' "$(python3 -c 'import tempfile;print(tempfile.gettempdir())')" >> "$GITHUB_OUTPUT"
+      - name: Upload nested run reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-nested-reports-py3.14-${{ matrix.shard }}
+          path: |
+            ${{ steps.tmpdir.outputs.path }}/knuaf-nested-reports/*.json
+            ${{ steps.tmpdir.outputs.path }}/knuaf-nested-reports/*.stderr
+          if-no-files-found: warn
 
   windows-structural:
     name: structural only (windows)
