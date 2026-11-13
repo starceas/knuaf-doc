@@ -58,8 +58,10 @@ native XLSX/PDF는 전용 native 검증까지 통과해야 한다. 영수증 없
 본문만 내보내는 draft/review는 이 XLSX 관문을 요구하지 않는다.
 
 17시트 구조·고정 좌표·재무 계획 검사는 `school_17_sheet_v1` 전용이다.
-과수·낙농·프로필 없는 출력은 `school_excel_17_scope` 및
+과수·낙농·식량작물·프로필 없는 출력은 `school_excel_17_scope` 및
 `finance_plan_review_scope`에 `not_checked`를 남기며 17시트 검사 통과로 표시하지
+않는다. 식량작물은 16시트 양식만 선언되어 있고 재무 계산 능력이 전부 미지원이라,
+재무 검사 자리에 안내 알림(`finance_unsupported_notice`)만 남고 아무것도 막지
 않는다. 제공 템플릿의 일반 무결성·native 보존 검사는 별도 유지한다.
 
 ## Office 재계산·PDF (macOS·Windows)
