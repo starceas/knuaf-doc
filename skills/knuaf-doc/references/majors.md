@@ -44,7 +44,8 @@
 - `gg.py major-plan <폴더>`가 축종 스위치(`dairy_switch`: 젖소 착유 / 한우 번식·비육·일관), 학교 작성요령 기본 목차(앞부분, 본문 1~12장, 부록 1~10), 축종별 내용 치환을 읽기 전용으로 보여 준다.
 - `build_docx.py <폴더> --major dairy`가 학교 작성요령 앞부분 순서(겉표지 → 제출서 → 인준서 → 학부모 동의서 → 요약 → 감사의 글 → 목차, 이어서 표 목차·그림 목차)를 적용해 검토 전 DOCX를 만든다. 공식 물리 배치가 확인되지 않아 공용 기본값을 쓰고 가운데 정렬을 생략하며 "학교 양식 확인 필요" 안내를 넣는다.
 - `gg_office.py word`(macOS Word 설치 시)로 PDF를, `build_hwpx.py <폴더> --major dairy`로 HWPX를 만든다. HWPX는 쪽 나눔·정렬·목차 실제 쪽번호를 한글에서 사람이 확인해야 하며, 매니페스트의 앞머리 감지(`school_frontmatter`)는 낙농에서 `null`로 기록된다.
-- **아직 안 되는 것**: 학교 28시트 XLSX는 출력 종류는 선언돼 있지만 `dairy_hanwoo_28_sheet_v1`의 finance capability가 unsupported("낙농 학교 원본 구조 미등록 — 프로필 닫음")라 `unsupported_finance_profile`로 닫힌다. 축산 재무 계산도 지원하지 않는다. 벤치마크 팩은 `empty_slot`이다. 목차 계약·축종 치환·서식·문체(S1)·리서치 경로는 [dairy](dairy/README.md)를 따른다.
+- **학교 28시트 재무 엑셀 빈 사본**: 2판에서 열었다. `gg_excel_template.py clear --project <폴더> --major dairy --source <학교 원본> --map references/dairy/corrections/dairy-clear-map.json --out <사본>`은 원본을 복제해 입력 칸 1,070개만 비우고 표 구조·참조 기준값 5,463칸은 남긴다(`blank_template`, 원본 해시 불변). 원본 경로는 매번 지정해야 한다(번들 양식은 17시트, 식량작물 양식은 16시트). 지도 규칙·수식 안 상수·예상 `#DIV/0!`·시세 칸 안내는 [corrections/DAIRY-CLEAR.md](dairy/corrections/DAIRY-CLEAR.md).
+- **아직 안 되는 것**: 엑셀 값 채우기(`gg_excel_fill`)는 `fill_unsupported_for_major`로, 축산 재무 계산(`dairy_cattle_milk_cash`·`hanwoo_herd_cash`)은 `unsupported`로 계속 닫힌다. 벤치마크 팩은 `empty_slot`이다. 목차 계약·축종 치환·서식·문체(S1)·리서치 경로는 [dairy](dairy/README.md)를 따른다.
 
 유효한 전공 바인딩이 있으면 [전공별 본문 초안(글)](major-body-draft.md)을 장별로 작성할 수 있다.
 

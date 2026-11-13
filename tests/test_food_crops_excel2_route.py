@@ -23,6 +23,7 @@ FOOD = "food_crops"
 SPECIALTY = "specialty_crops"
 FRUIT = "fruit_trees"
 FOOD_PROFILE = "food_crops_16_sheet_v1"
+DAIRY_PROFILE = "dairy_hanwoo_28_sheet_v1"
 SCHOOL_PROFILE = "school_17_sheet_v1"
 FRUIT_PROFILE = "fruit_16_sheet_v1"
 
@@ -100,8 +101,11 @@ class RouteTests(ContractCase):
         self.assertEqual(
             self.mc.default_workbook_profile(self._authorization(FOOD)),
             FOOD_PROFILE)
+        self.assertEqual(
+            self.mc.default_workbook_profile(self._authorization("dairy")),
+            DAIRY_PROFILE)
         for major in (SPECIALTY, FRUIT, "hort_env_systems",
-                      "industrial_insects", "dairy"):
+                      "industrial_insects"):
             with self.subTest(major=major):
                 self.assertEqual(
                     self.mc.default_workbook_profile(self._authorization(major)),
@@ -186,7 +190,8 @@ class RouteTests(ContractCase):
 
         ``profile_structure`` answers for the reference set only. Registered
         today: ``fruit_16_sheet_v1``, ``fruit_16_sheet_v1_fy1``,
-        ``food_crops_16_sheet_v1``. ``school_17_sheet_v1`` — the specialty and
+        ``food_crops_16_sheet_v1``, ``dairy_hanwoo_28_sheet_v1``.
+        ``school_17_sheet_v1`` — the specialty and
         the fallback default — is not there, so ``require_profile_structure``
         returns before opening the source and specialty crops keep their
         pre-existing route. Fruit trees do not reach the check either: their
@@ -206,13 +211,14 @@ class RouteTests(ContractCase):
             (school.WORKBOOK_REFERENCE_SET).read_text(encoding="utf-8"))
         self.assertEqual(
             {entry["profile"] for entry in reference_set["workbook_profiles"]},
-            {FRUIT_PROFILE, "fruit_16_sheet_v1_fy1", FOOD_PROFILE})
+            {FRUIT_PROFILE, "fruit_16_sheet_v1_fy1", FOOD_PROFILE,
+             DAIRY_PROFILE})
         self.assertNotIn(SCHOOL_PROFILE,
                          {entry["profile"]
                           for entry in reference_set["workbook_profiles"]})
 
         answers = {}
-        for major in (FRUIT, SPECIALTY, FOOD):
+        for major in (FRUIT, SPECIALTY, FOOD, "dairy"):
             root = self.make_project()
             bind_major(root, major)
             context = self.mc.output_context(root, major)
@@ -233,8 +239,12 @@ class RouteTests(ContractCase):
         # No structure gate on the unregistered 17-sheet form: the call clears
         # every workbook check and fails later, reading the absent map.
         self.assertEqual(answers[SPECIALTY], ("FileNotFoundError", None))
-        # The one new refusal, and it is the structural one.
+        # The new refusals, and they are the structural one: each major's own
+        # form is registered with its fingerprints, so the 17-sheet bundle is
+        # refused by structure rather than left to the map read.
         self.assertEqual(answers[FOOD],
+                         ("OutputHeldError", "workbook_structure_mismatch"))
+        self.assertEqual(answers["dairy"],
                          ("OutputHeldError", "workbook_structure_mismatch"))
 
     def test_the_patch_entry_refuses_to_overwrite_and_makes_no_folder(self):

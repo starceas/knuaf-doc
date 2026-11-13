@@ -1,0 +1,161 @@
+{
+ "schema": "gg-dairy-div0-expected/v1",
+ "workbook_profile": "dairy_hanwoo_28_sheet_v1",
+ "source_sha256": "632fccabf6f1bd3af340c4d1357a6a3e171a2e4ccf4a99aee87e9177c6462509",
+ "note": "빈 사본에서 #DIV/0! 로 보일 것으로 예상하는 수식 칸(자체 재계산기 결과). 원본과 빈 사본(지도 clear 칸=공란)을 같은 재계산기로 계산해 빈 사본에서만 #DIV/0! 가 되는 칸을 모았다. 실제 수식(<f>) 22,828칸 전부에서 원본 계산값이 엑셀 저장 캐시값과 일치한다('='만 적힌 텍스트 칸 1개는 수식이 아니라 따로 셈). 분모가 clear 칸에 전이적으로 기대는 나눗셈 후보 50개 중 실제로 0이 되는 것은 이 29개뿐. 엑셀 화면 확인은 아니다. 수식은 고치지 않는다.",
+ "method": {
+  "evaluator": "self_recalc_not_excel",
+  "xml_formula_cells": 22828,
+  "text_cells_starting_with_equals": 1,
+  "recalc_cache_agreement": 22828,
+  "transitive_candidates": 50,
+  "measured": 29
+ },
+ "cells": [
+  {
+   "sheet": "16.투자분석★★★★",
+   "cell": "E28",
+   "kind": "recalculated"
+  },
+  {
+   "sheet": "2.연차별 사육두수 확대계획",
+   "cell": "E23",
+   "kind": "recalculated"
+  },
+  {
+   "sheet": "2.연차별 사육두수 확대계획",
+   "cell": "E24",
+   "kind": "recalculated"
+  },
+  {
+   "sheet": "2.연차별 사육두수 확대계획",
+   "cell": "E25",
+   "kind": "recalculated"
+  },
+  {
+   "sheet": "2.연차별 사육두수 확대계획",
+   "cell": "F23",
+   "kind": "recalculated"
+  },
+  {
+   "sheet": "2.연차별 사육두수 확대계획",
+   "cell": "F24",
+   "kind": "recalculated"
+  },
+  {
+   "sheet": "2.연차별 사육두수 확대계획",
+   "cell": "F25",
+   "kind": "recalculated"
+  },
+  {
+   "sheet": "2.연차별 사육두수 확대계획",
+   "cell": "G23",
+   "kind": "recalculated"
+  },
+  {
+   "sheet": "2.연차별 사육두수 확대계획",
+   "cell": "G24",
+   "kind": "recalculated"
+  },
+  {
+   "sheet": "2.연차별 사육두수 확대계획",
+   "cell": "G25",
+   "kind": "recalculated"
+  },
+  {
+   "sheet": "2.연차별 사육두수 확대계획",
+   "cell": "H23",
+   "kind": "recalculated"
+  },
+  {
+   "sheet": "2.연차별 사육두수 확대계획",
+   "cell": "H24",
+   "kind": "recalculated"
+  },
+  {
+   "sheet": "2.연차별 사육두수 확대계획",
+   "cell": "H25",
+   "kind": "recalculated"
+  },
+  {
+   "sheet": "2.연차별 사육두수 확대계획",
+   "cell": "I23",
+   "kind": "recalculated"
+  },
+  {
+   "sheet": "2.연차별 사육두수 확대계획",
+   "cell": "I24",
+   "kind": "recalculated"
+  },
+  {
+   "sheet": "2.연차별 사육두수 확대계획",
+   "cell": "I25",
+   "kind": "recalculated"
+  },
+  {
+   "sheet": "2.연차별 사육두수 확대계획",
+   "cell": "J23",
+   "kind": "recalculated"
+  },
+  {
+   "sheet": "2.연차별 사육두수 확대계획",
+   "cell": "J24",
+   "kind": "recalculated"
+  },
+  {
+   "sheet": "2.연차별 사육두수 확대계획",
+   "cell": "J25",
+   "kind": "recalculated"
+  },
+  {
+   "sheet": "지표",
+   "cell": "E14",
+   "kind": "recalculated"
+  },
+  {
+   "sheet": "지표",
+   "cell": "E9",
+   "kind": "recalculated"
+  },
+  {
+   "sheet": "지표",
+   "cell": "F14",
+   "kind": "recalculated"
+  },
+  {
+   "sheet": "지표",
+   "cell": "F9",
+   "kind": "recalculated"
+  },
+  {
+   "sheet": "지표",
+   "cell": "G14",
+   "kind": "recalculated"
+  },
+  {
+   "sheet": "지표",
+   "cell": "G9",
+   "kind": "recalculated"
+  },
+  {
+   "sheet": "지표",
+   "cell": "H14",
+   "kind": "recalculated"
+  },
+  {
+   "sheet": "지표",
+   "cell": "H9",
+   "kind": "recalculated"
+  },
+  {
+   "sheet": "지표",
+   "cell": "I14",
+   "kind": "recalculated"
+  },
+  {
+   "sheet": "지표",
+   "cell": "I9",
+   "kind": "recalculated"
+  }
+ ]
+}

@@ -24,7 +24,7 @@ SPECIALTY_PATCH = "5c8f0951c47532d9045d7c5ed3e625052a07d8e9dd9025a5a05fc6127be64
 SPECIALTY_PATCH_CACHES = 1643
 SPECIALTY_BLANK_UNCLASSIFIED_TEXT = 12
 SALES = " 5. 판매계획"
-HELD_MAJORS = ("fruit_trees", "hort_env_systems", "dairy")
+HELD_MAJORS = ("fruit_trees", "hort_env_systems")
 
 
 def _sha(path):
@@ -129,6 +129,50 @@ class OtherMajorsLockedTests(ContractCase):
                         self.assertEqual(caught.exception.reason,
                                          "unsupported_finance_profile")
                         self.assertFalse(out.exists())
+
+    def test_dairy_refuses_the_17_sheet_form_as_a_different_workbook(self):
+        """Dairy's school form is 28 sheets, so the bundled 17-sheet file is
+        refused on structure before anything is written — never copied as if
+        it were the dairy form, and never silently cleared with its map.
+
+        This is the dairy counterpart of the food-crops case below: the
+        profile is now registered, so the refusal is the structural one and
+        the source is read to prove it, instead of the old policy-B hold that
+        only had to know the profile was unregistered.
+        """
+        ctx = self._context("dairy")
+        with tempfile.TemporaryDirectory() as temp:
+            clear_map, patch_map = self._fixtures(temp)
+            for label, extra in (("default", {}),
+                                 ("own-profile",
+                                  {"profile": "dairy_hanwoo_28_sheet_v1"})):
+                patched = Path(temp) / ("dairy-patch-%s.xlsx" % label)
+                with self.subTest(call=label):
+                    with self.assertRaises(self.mc.OutputHeldError) as held:
+                        self.patch.patch_copy(self.bundled, patch_map, patched,
+                                              context=ctx, **extra)
+                    self.assertEqual(held.exception.reason,
+                                     "workbook_structure_mismatch")
+                    self.assertIn("28", str(held.exception))
+                    self.assertFalse(patched.exists())
+
+            # A 17-sheet label is another major's form, not a narrower choice.
+            for label in ("school_17_sheet_v1", "food_crops_16_sheet_v1"):
+                refused = Path(temp) / ("dairy-named-%s.xlsx" % label)
+                with self.subTest(call=label):
+                    with self.assertRaises(self.mc.OutputHeldError) as held:
+                        self.patch.patch_copy(self.bundled, patch_map, refused,
+                                              context=ctx, profile=label)
+                    self.assertEqual(held.exception.reason,
+                                     "unsupported_finance_profile")
+                    self.assertFalse(refused.exists())
+
+            blank = Path(temp) / "dairy-blank.xlsx"
+            with self.assertRaises(self.mc.OutputHeldError) as held:
+                self.tpl.blank_copy(self.bundled, clear_map, blank, context=ctx)
+            self.assertEqual(held.exception.reason,
+                             "unsupported_finance_profile")
+            self.assertFalse(blank.exists())
 
     def test_the_insect_major_has_no_school_workbook_output_at_all(self):
         ctx = self._context("industrial_insects")

@@ -467,14 +467,16 @@ class UnsupportedMajorTests(th.ContractCase):
         _add_section(root)
         return root
 
-    def test_dairy_without_reviews(self):
-        root = self._fixture("dairy")
+    # 낙농은 #139부터 빈 사본 전공(식량작물과 같은 쪽)이라, 미지원 전공
+    # 사례는 산업곤충전공으로 본다. 낙농은 아래 BlankCopyMajorTests.
+    def test_unsupported_without_reviews(self):
+        root = self._fixture("industrial_insects")
         payload = _progress(root)
         self.assertEqual(_states(payload),
                          ["done", "unknown", "done", "done", "unknown",
                           "now", "todo"])
         notes = _notes(payload)
-        self.assertEqual(notes[1], "낙농전공으로 등록됨")
+        self.assertEqual(notes[1], "산업곤충전공으로 등록됨")
         self.assertEqual(notes[2], "재무 계산을 할 수 없어요")
         self.assertEqual(notes[5], "이 전공은 재무 엑셀을 지원하지 않아요")
         self.assertEqual(notes[6], "남은 검토를 마저 해요")
@@ -484,8 +486,8 @@ class UnsupportedMajorTests(th.ContractCase):
         self.assertEqual(finance["state"], "not_computable")
         self.assertIs(finance["supported"], False)
 
-    def test_dairy_with_six_reviews(self):
-        root = self._fixture("dairy")
+    def test_unsupported_with_six_reviews(self):
+        root = self._fixture("industrial_insects")
         refs = _target_refs(root)
         for kind in REVIEW_KINDS:
             _bind_plain(root, kind, refs, "rev-" + kind)
@@ -513,6 +515,35 @@ class UnsupportedMajorTests(th.ContractCase):
         self.assertEqual(_notes(payload)[1], "산업곤충전공으로 등록됨")
         self.assertEqual(_notes(payload)[5],
                          "이 전공은 재무 엑셀을 지원하지 않아요")
+
+
+class BlankCopyMajorTests(th.ContractCase):
+    """빈 사본 전공(식량작물·낙농)은 미지원 표시 없이 같은 진행 상태를 낸다."""
+
+    def _fixture(self, major):
+        root = self.make_project()
+        _seed(root, major)
+        _add_section(root)
+        return root
+
+    def test_dairy_matches_food_crops(self):
+        core = runtime("gg_core")
+        seen = {}
+        for major in ("food_crops", "dairy"):
+            with self.subTest(major=major):
+                root = self._fixture(major)
+                payload = _progress(root)
+                notes = _notes(payload)
+                self.assertNotIn("unknown", _states(payload))
+                self.assertNotEqual(notes[5],
+                                    "이 전공은 재무 엑셀을 지원하지 않아요")
+                finance = core.finance_gate(core.load(root))
+                self.assertIs(finance["supported"], True)
+                seen[major] = (_states(payload),
+                               [notes[i] for i in (2, 5, 6, 7)])
+        self.assertEqual(seen["dairy"], seen["food_crops"])
+        self.assertEqual(_notes(_progress(self._fixture("dairy")))[1],
+                         "낙농전공으로 등록됨")
 
 
 def _native_manifest(core, workbook):
