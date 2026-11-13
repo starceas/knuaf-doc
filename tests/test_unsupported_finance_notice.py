@@ -353,6 +353,41 @@ class BlankCopyFinanceTests(UnsupportedFinanceCase):
         self.assertEqual(0, self.notices.write_notices(root)["notices"])
         self.assertEqual([], self.document(root)["notices"])
 
+    def test_rebinding_swaps_blank_and_unsupported_notice(self):
+        """식량작물 → 낙농 → 식량작물: 단계마다 checks()·알림 파일의 안내 종류가 바뀐다."""
+        root = self.project("food_crops")
+        for step, (major_id, expected) in enumerate((
+                ("food_crops", BLANK_COPY_ID),
+                ("dairy", CHECK_ID),
+                ("food_crops", BLANK_COPY_ID))):
+            with self.subTest(step=step, major=major_id):
+                if step:
+                    # 바인딩 커밋이 파일을 다시 쓴다. 같은 전공 재바인딩은
+                    # 기본 request_id가 겹치므로 단계별로 준다.
+                    bind_major(root, major_id,
+                               request_id=f"rebind-{step}-{major_id}")
+                project = self.core.load(root)
+                kinds = [row["check_id"]
+                         for row in self.core.checks(root, project)
+                         if row.get("check_id") in (CHECK_ID, BLANK_COPY_ID)]
+                self.assertEqual([expected], kinds)
+                self.assertEqual([expected], [
+                    notice["check_id"]
+                    for notice in self.document(root)["notices"]])
+
+    def test_blank_row_is_in_gate_and_blocks_nothing(self):
+        """빈 사본 안내는 게이트에 실리되 차단 집합엔 없고 CLI 종료코드는 미지원 전공과 같다."""
+        root = self.project("food_crops")
+        gate_rows = self.core.gate(root, self.core.load(root))
+        self.assertIn(BLANK_COPY_ID, [row.get("check_id") for row in gate_rows])
+        self.assertNotIn(BLANK_COPY_ID, [
+            row.get("check_id") for row in gate_rows
+            if self.core.blocks_skill_candidate(row)])
+        # 미지원 안내 시험(③)과 같은 기대값 — `check`의 1은 `school_profile` 몫.
+        cli = RowPresenceTests._cli
+        self.assertEqual(0, cli(self, "status", root))
+        self.assertEqual(1, cli(self, "check", root))
+
 
 class CommitDrivenWriteTests(UnsupportedFinanceCase):
     """⑬ 앱이 아니라 커밋이 파일을 다시 쓴다."""

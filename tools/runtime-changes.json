@@ -3123,12 +3123,12 @@
       "source": "new"
     },
     "tests/test_unsupported_finance_notice.py": {
-      "after_sha256": "3a0c395a8d5a15431ad606a6cb5eb11f3ff9b1fd6b1d2294a3137d8d4cad2e62",
+      "after_sha256": "b9c86bb7f7d9b7f9ada1b9d745538d5125f8efa0d0481998c144ad9c59a52627",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "food-crops-0.1.0",
       "owner": "P28",
-      "reason": "W-N: 미지원 전공 재무 안내 시험 15건 — 행 존재·모양·학생 문구·식별값·배타성·커밋 구동 쓰기 | food-crops-0.1.0 W-N 연결: food_crops를 지원 쪽으로 옮기고 빈 사본 안내 시험 6건(미지원 0행+빈 사본 1행, 꼴, 앱 필수 3필드, 얇은 경로 바이트 동일, 대체 식별값, 배타) 추가",
+      "reason": "W-N: 미지원 전공 재무 안내 시험 15건 — 행 존재·모양·학생 문구·식별값·배타성·커밋 구동 쓰기 | food-crops-0.1.0 W-N 연결: food_crops를 지원 쪽으로 옮기고 빈 사본 안내 시험 6건(미지원 0행+빈 사본 1행, 꼴, 앱 필수 3필드, 얇은 경로 바이트 동일, 대체 식별값, 배타) 추가 | food-crops-0.1.0 N-01·N-02(#125 웹 메모): 식량작물→낙농→식량작물 재바인딩 때 안내 종류 전환, 빈 사본 안내 게이트 포함·비차단·CLI 종료코드 시험 2건",
       "source": "new"
     },
     "skills/knuaf-doc/scripts/docx_probe.py": {
