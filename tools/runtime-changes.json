@@ -2303,12 +2303,12 @@
       "last_changed": "H1"
     },
     "tests/test_doc_guide_contracts.py": {
-      "after_sha256": "5ab9033337cbcad93df5f301a24fe025e29c519a9d22ed85266ff356bbfc57ee",
+      "after_sha256": "958b0a611dfb8f60139eca09f08a633798b30e20d07e8e17f04785648b7e54eb",
       "before_sha256": null,
       "first_changed": "P28",
-      "last_changed": "P28",
+      "last_changed": "W-N",
       "owner": "P28",
-      "reason": "P0-2 PR-A: U01-U05 document and interview guidance contract tests | P0-2 PR-A R2: run the documented commands, required flags and apply example instead of matching prose | P0-2 PR-A R3: forbidden-identifier scan over the shipped skill tree using salted digests only | R-v0.4.1: explicit UTF-8 for CLI subprocess",
+      "reason": "P0-2 PR-A: U01-U05 document and interview guidance contract tests | P0-2 PR-A R2: run the documented commands, required flags and apply example instead of matching prose | P0-2 PR-A R3: forbidden-identifier scan over the shipped skill tree using salted digests only | R-v0.4.1: explicit UTF-8 for CLI subprocess | W-N: init 폴더 목록 단언에 곁파일 .knuaf-notices.json 반영(등록부 도입으로 init도 쓴다)",
       "source": "new"
     },
     "tests/test_document_read.py": {
