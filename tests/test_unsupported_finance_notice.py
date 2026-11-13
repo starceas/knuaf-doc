@@ -4,11 +4,11 @@
 기존 알림 시험(`tests/test_hort_workbook_advice.py`)은 워크북 경로를 보고,
 등록부·호출기·CLI 잠금은 `tests/test_sidecar_registry.py`가 본다.
 
-**설계 문면과 실측이 갈린 곳 하나**: §5-2 표 2행의 `food_crops` 기대는
-"0행(`UnknownMajorError`)"이었으나, 바탕 트리 `a54ca04`에 식량작물 모듈팩이
-이미 들어와(`f730467`·`f33bb30`) 바인딩이 성공하고 재무 능력이 전부
-`unsupported`다. 그래서 1행이다 — 설계가 말한 "모듈이 등록되면 코드 수정 없이
-켜진다"가 그대로 일어난 것이고, 시험은 실측을 잠근다.
+**식량작물**: W-N 당시 식량작물은 재무 능력이 전부 `unsupported`라 이 안내
+1행을 받았다. 엑셀 2판(PR #125)이 재무를 `supported`(학교 엑셀 빈 사본까지만,
+``FILL_CLOSED_MAJORS``)로 바꾼 뒤로는 지원 쪽이다 — 미지원 안내 0행, 대신
+빈 사본 안내(`finance_blank_copy_notice`) 1행. 그 행은 아래 `BlankCopy*` 시험이
+같은 꼴·같은 배타 규칙으로 잠근다.
 
 14항 중 ⑭(기존 3모듈 97/97·`test_p2_core` 81/81·스냅샷 39/39)은 다른 시험
 묶음을 돌리는 일이라 여기 넣지 않는다. 그 항은 그 묶음을 직접 실행해 확인한다.
@@ -34,8 +34,13 @@ DOCUMENT_KEYS = {
     "reason", "receipt_path", "record_refs", "redisplay_rule",
     "required_for", "severity", "status", "target", "title",
 }
-UNSUPPORTED = ("industrial_insects", "dairy", "food_crops")
-SUPPORTED = ("specialty_crops", "fruit_trees", "hort_env_systems")
+UNSUPPORTED = ("industrial_insects", "dairy")
+SUPPORTED = ("specialty_crops", "fruit_trees", "hort_env_systems", "food_crops")
+BLANK_COPY_ID = "finance_blank_copy_notice"
+BLANK_COPY = ("food_crops",)
+BLANK_COPY_TITLE = "지금은 빈 사본만 만들어 드려요. 숫자 확인은 교수님과 함께 하세요."
+# 앱(notice.ts readNotice)은 이 셋 중 하나라도 비면 알림을 버린다.
+APP_REQUIRED = ("title", "notice_identity", "project_id")
 
 
 class UnsupportedFinanceCase(ContractCase):
@@ -51,10 +56,10 @@ class UnsupportedFinanceCase(ContractCase):
             bind_major(root, major_id)
         return root
 
-    def rows(self, root):
+    def rows(self, root, check_id=CHECK_ID):
         project = self.core.load(root)
         return [row for row in self.core.checks(root, project)
-                if row.get("check_id") == CHECK_ID]
+                if row.get("check_id") == check_id]
 
     def document(self, root):
         return json.loads((Path(root) / NOTICES).read_text(encoding="utf-8"))
@@ -64,7 +69,7 @@ class RowPresenceTests(UnsupportedFinanceCase):
     """①②③ 판별 — 누가 안내를 받고, 누가 안 받으며, 막지는 않는가."""
 
     def test_unsupported_majors_get_exactly_one_row(self):
-        """① 미지원 3전공 1행·지원 3전공 0행(실측 보정: `food_crops`도 1행)."""
+        """① 미지원 2전공 1행·지원 4전공 0행(식량작물은 #125부터 지원 쪽)."""
         for major_id in UNSUPPORTED:
             with self.subTest(major=major_id):
                 self.assertEqual(1, len(self.rows(self.project(major_id))))
@@ -244,6 +249,105 @@ class ExclusivityTests(UnsupportedFinanceCase):
     def test_rebinding_to_supported_major_empties_the_file(self):
         """⑪ 1행 → 지원 전공 재바인딩 → 0행."""
         root = self.project("industrial_insects")
+        self.assertEqual(1, self.notices.write_notices(root)["notices"])
+        bind_major(root, "specialty_crops")
+        self.assertEqual(0, self.notices.write_notices(root)["notices"])
+        self.assertEqual([], self.document(root)["notices"])
+
+
+class BlankCopyFinanceTests(UnsupportedFinanceCase):
+    """빈 사본까지만 지원하는 전공(식량작물) — 미지원 행 대신 빈 사본 행 1개."""
+
+    def test_blank_copy_major_gets_blank_row_and_no_unsupported_row(self):
+        """식량작물: 미지원 0행 + 빈 사본 1행. 다른 5전공: 빈 사본 0행."""
+        for major_id in BLANK_COPY:
+            with self.subTest(major=major_id):
+                root = self.project(major_id)
+                self.assertEqual(0, len(self.rows(root)))
+                self.assertEqual(1, len(self.rows(root, BLANK_COPY_ID)))
+        for major_id in UNSUPPORTED + tuple(
+                m for m in SUPPORTED if m not in BLANK_COPY):
+            with self.subTest(major=major_id):
+                self.assertEqual(
+                    0, len(self.rows(self.project(major_id), BLANK_COPY_ID)))
+        self.assertEqual(0, len(self.rows(self.project(None), BLANK_COPY_ID)))
+
+    def test_blank_row_shape_and_app_required_fields(self):
+        """행 꼴은 미지원 행과 같고, 앱 필수 3필드가 비어 있지 않다."""
+        root = self.project("food_crops")
+        row = self.rows(root, BLANK_COPY_ID)[0]
+        self.assertEqual(BLANK_COPY_TITLE, row["title"])
+        self.assertEqual("info", row["severity"])
+        self.assertEqual([], row["required_for"])
+        self.assertEqual("not_checked", row["status"])
+        self.assertEqual("finance", row["target"])
+        self.assertEqual([], row["items"])
+        self.assertIsNone(row["receipt_path"])
+        self.assertEqual([], row["record_refs"])
+        self.assertIs(True, row["dismissible"])
+        self.assertEqual("identity_changed", row["redisplay_rule"])
+        self.assertIs(False, self.core.blocks_skill_candidate(row))
+        for field in APP_REQUIRED:
+            with self.subTest(field=field):
+                self.assertIsInstance(row.get(field), str)
+                self.assertTrue(row[field].strip())
+
+    def test_blank_notice_file_has_one_row_with_app_required_fields(self):
+        """알림 파일: 빈 사본 1행, 18키, 앱 필수 3필드 비어 있지 않음."""
+        root = self.project("food_crops")
+        self.assertEqual("written", self.notices.write_notices(root)["status"])
+        notices = self.document(root)["notices"]
+        self.assertEqual([BLANK_COPY_ID], [n["check_id"] for n in notices])
+        notice = notices[0]
+        self.assertEqual(DOCUMENT_KEYS, set(notice))
+        self.assertRegex(notice["notice_identity"], r"^[0-9a-f]{64}$")
+        for field in APP_REQUIRED:
+            with self.subTest(field=field):
+                self.assertIsInstance(notice.get(field), str)
+                self.assertTrue(notice[field].strip())
+        title = notice["title"]
+        self.assertNotIn("\n", title)
+        self.assertLessEqual(len(title), 50, title)
+        lowered = title.lower()
+        self.assertEqual([], [term for term in FORBIDDEN_STUDENT_TERMS
+                              if term.lower() in lowered])
+        self.assertEqual([], _majors_in(title))
+
+    def test_blank_thin_path_equals_checks_row(self):
+        """알림 파일 경로 == `checks()` 행(바이트 동일)."""
+        root = self.project("food_crops")
+        thin = self.core._blank_copy_finance_notice_row_for_project(
+            root, self.core.load(root))
+        full = self.rows(root, BLANK_COPY_ID)[0]
+        self.assertEqual(
+            json.dumps(full, sort_keys=True, ensure_ascii=False),
+            json.dumps(thin, sort_keys=True, ensure_ascii=False))
+
+    def test_blank_identity_import_failure_matches_normal_path(self):
+        """대체 계산 == 정상 계산, 그리고 미지원 행 식별값과는 다르다."""
+        root = self.project("food_crops")
+        normal = self.rows(root, BLANK_COPY_ID)[0]["notice_identity"]
+        with mock.patch.dict(sys.modules, {"gg_hort_workbook": None}):
+            row = self.core._blank_copy_finance_notice_row_for_project(
+                root, self.core.load(root))
+        self.assertEqual(normal, row["notice_identity"])
+        from gg_hort_workbook import notice_identity
+        other_kind = notice_identity(
+            project_id=self.core._advice_project_id(root),
+            kind="unsupported_finance", profile=None,
+            form_identity="food_crops", groups=[])
+        self.assertNotEqual(normal, other_kind)
+
+    def test_blank_and_other_notices_never_coexist(self):
+        """식량작물 알림 행은 빈 사본 1개뿐, 지원 전공 재바인딩 → 0행."""
+        root = self.project("food_crops")
+        project = self.core.load(root)
+        self.assertIsNone(
+            self.core._workbook_notice_row_for_project(root, project))
+        self.assertIsNone(
+            self.core._unsupported_finance_notice_row_for_project(root, project))
+        self.assertEqual([BLANK_COPY_ID], [
+            row["check_id"] for row in self.notices.notice_rows(root)])
         self.assertEqual(1, self.notices.write_notices(root)["notices"])
         bind_major(root, "specialty_crops")
         self.assertEqual(0, self.notices.write_notices(root)["notices"])

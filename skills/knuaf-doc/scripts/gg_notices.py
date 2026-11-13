@@ -47,7 +47,8 @@ def notice_rows(root):
     core = _core()
     project = core.load(root)
     rows = [core._workbook_notice_row_for_project(root, project),
-            core._unsupported_finance_notice_row_for_project(root, project)]
+            core._unsupported_finance_notice_row_for_project(root, project),
+            core._blank_copy_finance_notice_row_for_project(root, project)]
     return [row for row in rows if row is not None]
 
 

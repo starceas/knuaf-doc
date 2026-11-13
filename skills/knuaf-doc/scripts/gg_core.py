@@ -4480,6 +4480,68 @@ def _unsupported_finance_notice_row_for_project(root, p):
     return _unsupported_finance_notice_row(root, p, finance_gate(p))
 
 
+# --- 학생 알림: 재무 엑셀 빈 사본까지만 지원하는 전공 ------------------------
+# 차단 0. 재무 능력은 supported라 위 미지원 안내는 뜨지 않지만, 이 전공은 학교
+# 엑셀을 빈 사본으로만 만들어 주고 숫자는 확인하지 않는다(gg_major_contract
+# ``FILL_CLOSED_MAJORS``). 그 사실을 같은 모양의 info 행으로 알린다. 지원
+# 여부가 서로 반대라 미지원 행과는 함께 나오지 않는다.
+_BLANK_COPY_FINANCE_TITLE = (
+    "지금은 빈 사본만 만들어 드려요. 숫자 확인은 교수님과 함께 하세요."
+)
+
+
+def _blank_copy_finance_notice_row(root, p, gate_state):
+    """빈 사본까지만 지원하는 전공의 안내 행 1개. 그 밖에는 None.
+
+    지원 여부는 ``finance_gate`` 결과를 그대로 쓰고, '빈 사본까지만' 판정은
+    ``gg_major_contract.FILL_CLOSED_MAJORS``를 쓴다. 전공 ID는 이미 만들어진
+    기본 레지스트리에서 확정 사실만 읽는다(모듈을 다시 풀지 않는다).
+    """
+    if not gate_state.get("supported"):
+        return None
+    import gg_major_contract as mc
+
+    try:
+        binding = mc.binding_from_project(mc.default_registry(), p)
+    except mc.MajorContractError:
+        return None
+    major_id = binding.major_id
+    if major_id not in mc.FILL_CLOSED_MAJORS:
+        return None
+    project_id = _advice_project_id(root)
+    row = result("finance_blank_copy_notice", "finance", "not_checked",
+                 "재무 엑셀 빈 사본만 지원: 안내만 하고 막지 않음",
+                 p["revision"], severity="info", required_for=[])
+    row.update({
+        "title": _BLANK_COPY_FINANCE_TITLE,
+        "items": [],
+        "receipt_path": None,
+        "record_refs": [],
+        "dismissible": True,
+        "redisplay_rule": "identity_changed",
+        "project_id": project_id,
+    })
+    # 식별값 재료·대체 계산은 미지원 행과 같은 규칙(공통 장 §8-1), kind만 다르다.
+    try:
+        from gg_hort_workbook import notice_identity
+
+        row["notice_identity"] = notice_identity(
+            project_id=project_id, kind="blank_copy_finance", profile=None,
+            form_identity=major_id, groups=[])
+    except (ImportError, OSError, ValueError, KeyError, TypeError):
+        payload = {"project_id": project_id, "kind": "blank_copy_finance",
+                   "profile": None, "form_identity": major_id, "patched": []}
+        row["notice_identity"] = digest(json.dumps(
+            payload, ensure_ascii=False, sort_keys=True,
+            separators=(",", ":")).encode())
+    return row
+
+
+def _blank_copy_finance_notice_row_for_project(root, p):
+    """알림 파일용 얇은 경로 — ``checks()`` 전체를 돌리지 않는다."""
+    return _blank_copy_finance_notice_row(root, p, finance_gate(p))
+
+
 def _add_finance_workbook_advice(root, p, lineage, out):
     """안내 행을 ``out``에 직접 붙인다. 예외를 밖으로 내보내지 않는다."""
     try:
@@ -4540,6 +4602,9 @@ def checks(root, p):
     unsupported = _unsupported_finance_notice_row(root, p, gate_state)
     if unsupported is not None:
         out.append(unsupported)
+    blank_copy = _blank_copy_finance_notice_row(root, p, gate_state)
+    if blank_copy is not None:
+        out.append(blank_copy)
     if gate_state["supported"]:
         has_body = False
         for section in p["sections"].values():

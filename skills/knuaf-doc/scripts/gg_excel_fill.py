@@ -322,6 +322,11 @@ def fill_copy(template: Path, map_path: Path, values_path: Path, out: Path, *, c
     import gg_major_contract as mc
 
     authorization = mc.authorize_output(mc.OUTPUT_SCHOOL_WORKBOOK, context)
+    if authorization.major_id in mc.FILL_CLOSED_MAJORS:
+        # The 2nd-edition contract opens the blank copy only; filling values
+        # and Python-side finance stay unsupported for this major.
+        raise mc.OutputHeldError("fill_unsupported_for_major",
+                                 major_id=authorization.major_id)
     if out.exists():
         raise FileExistsError(f"refusing to overwrite output: {out}")
     map_data, values_data, entries, values, template_digest = _prepare(template, map_path, values_path)

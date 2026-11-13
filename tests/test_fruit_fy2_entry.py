@@ -183,12 +183,11 @@ class SpecTests(ContractCase):
 
     def test_the_public_patch_entry_cannot_carry_a_fruit_profile(self):
         fp = runtime("gg_excel_formula_patch")
-        source = inspect.getsource(fp.patch_copy)
-        self.assertIn(
-            'require_finance_profile(authorization, "school_17_sheet_v1")', source)
+        mc = runtime("gg_major_contract")
+        # The public entry keeps the 17-sheet default for a major whose own
+        # form is not the specialty 17-sheet one; fruit uses its own module.
         root = self.make_project()
         bind_major(root, "fruit_trees")
-        mc = runtime("gg_major_contract")
         with self.assertRaisesRegex(mc.OutputHeldError,
                                     "unsupported_finance_profile"):
             fp.patch_copy(SPEC_PATH, SPEC_PATH,

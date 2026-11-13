@@ -80,15 +80,17 @@ explicit `clear`/`preserve` actions, then save a separately reviewed map with
 The map remains bound to the exact source hash and re-detected layout.
 
 New clear and fill maps declare top-level `workbook_profile` from the reviewed
-school form (`school_17_sheet_v1`, `fruit_16_sheet_v1`, or
-`dairy_hanwoo_28_sheet_v1`); never infer it from sheet count. `inspect
+school form (`school_17_sheet_v1`, `fruit_16_sheet_v1`,
+`food_crops_16_sheet_v1`, or `dairy_hanwoo_28_sheet_v1`); never infer it from
+sheet count. `inspect
 --workbook-profile fruit_16_sheet_v1` records that declaration with the source
 SHA but leaves inventory review mandatory. The common writers require both the
 major's `workbook_profiles` declaration and a supported finance capability for
 that same profile, before creating an output directory. A registered profile is
 also compared with the real workbook's sheet count, names, order and per-sheet
 formula fingerprints from `references/workbook-reference-set.json` (currently
-`fruit_16_sheet_v1`; dairy remains closed until its original is registered).
+`fruit_16_sheet_v1` and `food_crops_16_sheet_v1`; dairy remains closed until its
+original is registered).
 Fingerprints hash UTF-8 compact JSON of sorted `(address, expanded formula)`
 pairs from the SHA256-verified school original. Values may change; moved,
 missing, added or edited formulas are held with the differing sheet names.
@@ -98,6 +100,24 @@ explicit null/empty profile is refused. Only old specialty-crop maps without the
 key keep their historical school-17 meaning. Calculation profiles do not
 authorize school-form clear/fill. Clear/fill receipts retain the profile and
 map hash.
+
+The profile a workbook tool requests when the caller names none comes from the
+bound major (`food_crops` → `food_crops_16_sheet_v1`, every other major →
+`school_17_sheet_v1`), so specialty/fruit/dairy byte output is unchanged. A
+major whose own school form differs needs an explicit `--source`; the bundled
+17-sheet asset cannot stand in for the 16-sheet food-crops form. The reviewed
+food-crops clearing map and its receipt contract are
+[food-crops/corrections/FC-CLEAR.md](food-crops/corrections/FC-CLEAR.md).
+
+`gg_excel_formula_patch.patch_copy` resolves the same default and refuses a
+named `profile` that differs from it (`unsupported_finance_profile`), then
+checks the source against that profile's registered structure
+(`workbook_structure_mismatch`). All refusals land before any directory is
+created: the source path itself is refused (`ValueError`), an existing output
+file is refused (`FileExistsError`), and output outside the project stays
+allowed because the student chooses where to save. `gg_excel_fill.fill_copy`
+stays closed for `food_crops` only (`fill_unsupported_for_major`); the 17-sheet
+majors keep filling and calculating as before.
 
 Office `--spec` uses the same workbook-profile gate and compares the staged
 input's real sheets with the registered form. `--template-receipt` accepts
@@ -540,8 +560,11 @@ with `source.sha256` and `patches`: exact `sheet`, `cell`, `expected_formula`,
 `new_formula`, `reason`, and `evidence_ref` (`source_id`, `revision`, `locator`).
 Ordinary existing formulas use `expected_formula`. An explicitly reviewed numeric constant can instead use `expected_value` (finite number, exact decimal match) to restore a missing calculation; this must never be an implicit conversion. The receipt records the original numeric text and `value_to_formula` operation. For a shared-formula target, the utility materializes only its complete rectangular shared group using the unique anchor and relative/absolute reference translation, then checks the exact effective `expected_formula`. The receipt lists every materialized member in `expanded_shared_formulas`; unrequested members must retain their effective formulas. Missing or ambiguous anchors/ranges, incomplete groups, array formulas and unsafe translations are refused. Materialization is not permission to alter unrequested formulas. The source is preserved and mismatched formulas,
 external formulas, duplicate targets and overwrite attempts are refused.
-Both old/new formulas are recorded and caches are invalidated. A patch receipt
-is an execution record; independent arithmetic and native checks still apply.
+Both old/new formulas are recorded and caches are invalidated. The gate uses
+the bound major's default workbook profile; `--profile <name>` may name one
+explicitly (the food-crops form's map has no layout check on this route). A
+patch receipt is an execution record; independent arithmetic and native checks
+still apply.
 Update the fill map hash to the patched copy before filling it.
 
 For native output from a supplied template, use `gg_office.py excel filled.xlsx
