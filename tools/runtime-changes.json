@@ -2355,14 +2355,14 @@
       "last_changed": "H1"
     },
     "tests/test_hort_finance_pipeline.py": {
-      "after_sha256": "5b91b4c218c691b6b712594224393094ae46bc45b1f29ba9b5c4f11626c2aa71",
+      "after_sha256": "e31a2a52ee6c36c3b8569998e80c035719a8b26e905d18f78f0c0630711c5bd2",
       "before_sha256": null,
       "first_changed": "P28",
       "owner": "P28",
       "reason": "ORDER-13: preserve finance pipeline assertions; link the synthetic major binding to its raw-answer claim.",
       "source": "new",
       "last_changed": "W-L",
-      "note": "W-L: land-row regression tests plus a fixed-literal workbook skip reason; re-hashed on the rebased tree."
+      "note": "W-L: land-row regression tests plus a fixed-literal workbook skip reason. W-L subtest id fix: the two positional subTest arguments became keyword arguments so the report contract sees '<test> (...)' identities; no assertion or case changed."
     },
     "tests/test_hwpx_adapter.py": {
       "after_sha256": "cd2b2f489823721a446a1d9dd0f5f4a0abcadab127b7c913b9b3bcd19d8e4723",

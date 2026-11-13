@@ -1014,7 +1014,7 @@ class LandGatePaths(unittest.TestCase):
                  "value only": (("opening.land_extra_value_krw1000", 500),)}
 
         for label, facts in cases.items():
-            with self.subTest(label):
+            with self.subTest(label=label):
                 chain.out = d / f"out-{label}.xlsx"
                 chain.transform_rec = d / f"transform-{label}.json"
                 chain.native = d / f"native-{label}.xlsx"
@@ -1541,7 +1541,7 @@ class LandErrorRegression(unittest.TestCase):
         self.assertEqual(len(expected), 22)
 
         for name in ("blank_second", "invest_one", "invest_two_late"):
-            with self.subTest(name):
+            with self.subTest(name=name):
                 after = scan(docs, inputs(name))
                 before = scan(arm, inputs(name))
                 self.assertEqual(len(before), 863)
