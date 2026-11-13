@@ -200,8 +200,12 @@ class PublicationLifecycle(unittest.TestCase):
             return real_read(path)
         with lock.Lock(self.root):
             with mock.patch.object(Path, "read_bytes", payload_read):
-                self.assertEqual(core._import_inventory(self.root),
-                                 {"project.json": core.digest(canonical)})
+                # 곁파일은 payload 색인에 **포함**된다(설계 §6-1 ①) — 빠지면
+                # 발행 대조가 불일치한다. `_control_files()`에 넣는 것도 금지다.
+                inventory = core._import_inventory(self.root)
+                self.assertEqual({"project.json", ".knuaf-notices.json"},
+                                 set(inventory))
+                self.assertEqual(core.digest(canonical), inventory["project.json"])
         source = self.parent / "legacy source"
         (source / "sections").mkdir(parents=True)
         data = "# 개요\n본문\n".encode("utf-8")

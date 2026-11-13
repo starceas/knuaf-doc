@@ -228,6 +228,15 @@ job이 실패·취소돼도 건너뛰지 않고, 조각 결과가 `success`가 �
   `sys.path` 변경 없음(자식 프로세스 env는 호출마다 복사본), `mock.patch`는 `with`
   범위 안(`RunnerAccountingTests`, 통째로 실행) ④ `KNOWN_DEFECTS`는 시험 id를 키로
   쓴다. 그래도 나누기 전/후 결과가 시험 id별로 같은지는 전후 비교(아래)로 닫는다.
+- 중첩 실행을 막으려고 사본의 메타 시험 파일을 덮어쓸 때는 **모양을 보존**해야
+  한다: `tests/test_runner_contract.py`는 `validation_sharding.NESTED_RUNS`의
+  `RunnerContractTests` 단위마다 같은 이름의 no-op 메서드를 가진 같은 이름의
+  클래스를 쓰고(모듈 상수 `_STUB_SOURCE` 하나를 세 곳이 공유), 메서드 이름은
+  `sorted()`로 고정한다. 사본 안의 discovery가 `PR_DEFERRED_UNITS` 10단위를
+  그대로 담아야 `code`/`full` 집합 차이가 정확히 그 10단위가 되기 때문이다 —
+  이름 하나짜리 불투명 스텁은 7단위를 지워 `tests/test_validation_sharding.py`의
+  불변식(`PR_DEFERRED_UNITS <= set(modules)`)을 깨고, `full` 스코프(main push)의
+  중첩 실행을 3건 실패로 만든다(2026-11-13 main 실패).
 - 단위를 가중치 큰 것부터 정렬(가중치 = 시험 수 + 중첩 실행 수 × 3000 — 중첩 실행 1회가
   나머지 모듈 전체와 비슷한 시간), 경로 순으로 놓고 그때그때 가장 적게 쌓인 조각에
   배정한다(동률이면 낮은 번호). 결정적이다. 중첩 실행 수는 `validation_sharding.py`의
@@ -242,6 +251,22 @@ job이 실패·취소돼도 건너뛰지 않고, 조각 결과가 `success`가 �
   전체 discover와 다름(누락·중복) 중 하나라도 있으면 실패한다.
 - 시험은 삭제·skip 추가·내용 수정 없이 그대로다. 합친 보고서는 전체 실행과
   같은 모양이어서 contract 검사가 바뀌지 않는다.
+- 중첩 실행이 남기는 산출물(진단용): 두 메타 시험 모듈은 자기 안에서 저장소
+  사본을 만들어 전체 실행을 다시 돌리고, 그 보고서·stderr를 사본 트리 **밖**의
+  고정 디렉터리(`<시스템 임시 디렉터리>/knuaf-nested-reports/`)에 쓴다. 사본
+  트리 안에 쓰면 사본에 대한 이후 bundle 검사에서 undeclared 파일이 되고, 사본을
+  소유한 `TemporaryDirectory`가 시험 끝에 지워지므로 그 옆에 써도 CI 업로드
+  시점에는 없다. 파일 이름은 `<사본 임시 디렉터리 이름>-<report>`라 실행끼리
+  섞이지 않는다. 위치가 `$RUNNER_TEMP`가 아니라 `tempfile.gettempdir()`(호스티드
+  러너 기본 `/tmp`)인 것도 그래서다. 조각 job은 `validation-shard-py3.*-N`
+  (조각 보고서·bundle 보고서)와 별도로 `validation-nested-reports-py3.*-N`
+  artifact를 하나 더 올린다 — 경로는 `python3 -c 'import tempfile;print(tempfile.gettempdir())'`로
+  구한 접두 아래 `knuaf-nested-reports/*.json`(중첩·비중첩 보고서)과
+  `knuaf-nested-reports/*.stderr`(두 실행의 stderr, 빈 경우에도 파일로 남김)다.
+  `${{ runner.temp }}/../..`를 쓰면 `/home/runner/work`가 되어 잡히지 않는다.
+  `code` 스코프 PR은 중첩 단위를 아예 돌리지 않으므로 이 artifact가 비어 있을 수
+  있어 `if-no-files-found: warn`이고, 조각 보고서 artifact의 `error`는 그대로다.
+  마무리 job은 이 artifact를 읽지 않는다(사람이 실패를 진단할 때만 쓴다).
 
 ### 전후 비교 (시험 ID별)
 

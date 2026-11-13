@@ -84,9 +84,9 @@ PINNED_CATALOG_AUTHORITIES = {
     "accepted-catalog-20260921/rda.econ.2025":
         "0d2d0b1cfeceb2a7fb4b12f2c10e10882f6c1957404ff1834a6d1a41e19eca44",
     "accepted-catalog-20260921/rda.income.national.2024":
-        "555719cf2565b21b5d4321eeaba7433d60807c280e995e7ed319064fb103adb4",
+        "1aa7fe6819ab2dc562bfe30e575aec3b54c858d66d2406211b4c68f8a9592c94",
     "accepted-catalog-20260921/rda.income.regional.2024":
-        "ba4239f65d8ee6402a4bebfac32216895866a1376d1ecdf34dc1789a9fd5f40f",
+        "1f6eb7ea5744bba36cc6d897a9f5e69411bb6630fda19afd48df3ca88ba3379c",
 }
 
 
