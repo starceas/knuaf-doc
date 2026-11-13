@@ -234,6 +234,37 @@ class RealPackIdentityTests(unittest.TestCase):
                                  hashlib.sha256(data).hexdigest())
                 self.assertEqual(art["bytes"], len(data))
 
+    def test_source_aggregation_group_contract(self):
+        # record.schema.json common_envelope.source: aggregation_group is
+        # survey + "." + data_year, and a pack whose records span more than
+        # one group must carry the manifest's no-mixing rule text.
+        required = {"publisher", "survey", "survey_label",
+                    "aggregation_group", "data_year", "document"}
+        checked = 0
+        for pack_id, pin in prov.PINNED_PACKS.items():
+            records = PACKS / pin["relpath"]
+            groups = set()
+            for line in records.read_text(encoding="utf-8").splitlines():
+                rec = json.loads(line)
+                src = rec.get("source")
+                if src is None:
+                    continue
+                with self.subTest(record=rec.get("record_id")):
+                    self.assertTrue(required <= set(src), sorted(src))
+                    self.assertEqual(
+                        src["aggregation_group"],
+                        "%s.%d" % (src["survey"], src["data_year"]))
+                    self.assertNotIn("aggregation_key", src)
+                groups.add(src["aggregation_group"])
+                checked += 1
+            if len(groups) > 1:
+                manifest = json.loads(records.parent.joinpath(
+                    "manifest.json").read_text(encoding="utf-8"))
+                with self.subTest(pack=pack_id):
+                    self.assertIn("aggregation_group",
+                                  manifest.get("aggregation_rule", ""))
+        self.assertEqual(checked, 153)
+
     def test_catalog_authority_pins_reproduce_from_real_manifests(self):
         # Every pinned accepted-catalog authority that names a pinned pack
         # must reproduce from that pack's shipped manifest rows; a manifest

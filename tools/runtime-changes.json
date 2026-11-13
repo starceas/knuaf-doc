@@ -326,7 +326,7 @@
       "source": "adopted:app-PR41"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "6a1fa1b52c0af5daaa88639c4c48519c8e142d6b1a75c36b31dc0d694511d2fa",
+      "after_sha256": "e43227da7ca338792abc5a8bd792e0460288a672228332386ee2ca7589b285c2",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "P28",
@@ -514,11 +514,11 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/benchmark-packs/schema/record.schema.json": {
-      "after_sha256": "037e222a0e271c3a3a7fc2e51c1ae40b0437a609aeda5b33273f73d4262a68f0",
+      "after_sha256": "806f8ffe37b1b15913e525231d8614fd53e2d805b8c99b24e2b175ed665bb1e4",
       "before_sha256": null,
       "first_changed": "P4",
       "owner": "P28",
-      "reason": "accepted P4 benchmark-packs data (catalog/records/manifest/schema) from g005-p4-provenance-standalone-corrections-3 | W-2024: PINNED_PACKS / legacy-release-hashes / record.schema.json cost_items 서술 / install-manifest를 2024 작형·세목 보강 뒤 바이트에 재고정(records national e469c7c7…·regional 06aa0ec1…). | W-2024 fix1: I-02(스키마 cost_items_warning 합산 안내 정정)·I-01(builtin-sources key_ref raw_line_sha256 3곳 재고정) 반영 뒤 바이트에 재고정. | W-2025: 2025 소득 팩 등록에 따른 갱신 — cost_items 서술에 2025 원문 인쇄 키 추가(지역 5키·전국 kostat 2키).",
+      "reason": "accepted P4 benchmark-packs data (catalog/records/manifest/schema) from g005-p4-provenance-standalone-corrections-3 | W-2024: PINNED_PACKS / legacy-release-hashes / record.schema.json cost_items 서술 / install-manifest를 2024 작형·세목 보강 뒤 바이트에 재고정(records national e469c7c7…·regional 06aa0ec1…). | W-2024 fix1: I-02(스키마 cost_items_warning 합산 안내 정정)·I-01(builtin-sources key_ref raw_line_sha256 3곳 재고정) 반영 뒤 바이트에 재고정. | W-2025: 2025 소득 팩 등록에 따른 갱신 — cost_items 서술에 2025 원문 인쇄 키 추가(지역 5키·전국 kostat 2키); 웹 W-03·W-05 후속으로 common_envelope에 source·cell_provenance·crosscheck 계약 서술, 지역 5키 적용 범위 문구 정정.",
       "source": "new",
       "last_changed": "P28"
     },
@@ -2153,12 +2153,12 @@
       "source": "new"
     },
     "skills/knuaf-doc/tests/test_gg_rda_provenance.py": {
-      "after_sha256": "92d148119ce640dd8f8b1d87427a2cd2705e2eddeb2b342e05fc16205ce6019b",
+      "after_sha256": "0be8d65d9df2bf8fdefde8213e51f1e820acd30fc18539fcef89323e4c529bdd",
       "before_sha256": null,
       "first_changed": "P4",
       "last_changed": "P28",
       "owner": "P15",
-      "reason": "accepted provenance lane test (carried over verbatim) | P15: D5 useful-life physical-cell correction and dependent trust migration | W-2025: 2025 소득 팩 등록에 따른 갱신 — 팩 총 행수 계약 상수 6,162 → 6,315(2025 팩 153행 추가); 웹 W-01 후속으로 실팩 manifest 감사 체인(파일 해시·행 해시·audit_key)과 accepted-catalog 핀 재현·builtin-sources 팩 artifact 해시 시험 3개 추가.",
+      "reason": "accepted provenance lane test (carried over verbatim) | P15: D5 useful-life physical-cell correction and dependent trust migration | W-2025: 2025 소득 팩 등록에 따른 갱신 — 팩 총 행수 계약 상수 6,162 → 6,315(2025 팩 153행 추가); 웹 W-01 후속으로 실팩 manifest 감사 체인(파일 해시·행 해시·audit_key)과 accepted-catalog 핀 재현·builtin-sources 팩 artifact 해시 시험 3개, 웹 W-03 후속 source.aggregation_group 계약 시험 1개 추가.",
       "source": "new"
     },
     "skills/knuaf-doc/tests/test_gg_rda_research_integration.py": {
