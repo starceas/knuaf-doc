@@ -497,13 +497,18 @@ class ProbeTests(unittest.TestCase):
     def test_reparse_losing_a_paragraph_is_reported(self):
         measured, _ = probe.measure(self.path)
         texts = [text for section in measured.sections for text in section["texts"] if text]
+        # 구분 이름을 은닉하면 같은 글자가 여러 문단에 나온다(예: 학위논문 표기).
+        # '사라진 문단' 판정을 보려면 다른 문단의 부분 문자열이 아닌 문단을 골라야
+        # 한다. 앞에서부터 고르면 어떤 문단이 은닉되느냐에 따라 시험이 흔들린다.
+        lost = next(text for text in texts
+                    if sum(text in other for other in texts) == 1)
         cli = self.fake_kordoc(
             "kordoc-lossy",
             validate={"ok": True, "issues": [{"message": "version.xml is missing"}]},
-            reparse="\n\n".join(texts[1:]) + "\n")
+            reparse="\n\n".join(text for text in texts if text != lost) + "\n")
         result = probe.check(self.path, cli_command=cli)
         self.assertIn("food_crops.format.reparse", self.codes(result))
-        self.assertEqual(texts[0], result["checks"]["reparse"]["missing"][0]["text"])
+        self.assertEqual(lost, result["checks"]["reparse"]["missing"][0]["text"])
 
     def test_reparse_tolerates_markdown_escaping_and_collapsed_spaces(self):
         # kordoc은 `*`를 `\*`로 이스케이프하고 연속 공백을 하나로 줄인다.
