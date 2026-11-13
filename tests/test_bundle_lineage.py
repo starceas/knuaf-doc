@@ -7,6 +7,9 @@ including the P2 new-file allowlist (before_sha256=null) rules.
 """
 import hashlib
 import json
+import os
+import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -190,7 +193,8 @@ class RealTreeTests(ContractCase):
                 self.assertIn(meta["owner"],
                               {"A", "B", "C", "P4", "D", "P6", "P7", "P8",
                                "P9", "P10", "P11", "P12", "P13", "P14", "P15",
-                               "P16", "P17", "P18", "P20", "P21", "P22", "P23", "P24", "P25", "P26", "P27", "P28"})
+                               "P16", "P17", "P18", "P20", "P21", "P22", "P23", "P24", "P25", "P26", "P27", "P28",
+                               "IMG-path"})
             else:
                 # New files require the pre-declared allowlist.
                 self.assertIn(name, approved)
@@ -199,13 +203,13 @@ class RealTreeTests(ContractCase):
                               {"P2", "P3", "P4", "P5", "P6", "P8", "P9",
                                "P10", "P11", "P12", "P13", "P14", "P15",
                                "P17", "P18", "P19", "P20", "P21", "P22", "P25", "P26", "P27", "P28", "dairy-0.1.0", "dairy-f1",
-                               "food-crops-0.1.0"})
+                               "food-crops-0.1.0", "dairy-excel-blank"})
                 self.assertIn(meta["owner"],
                               {"A", "B", "C", "S", "P4", "P5", "P6", "P7",
                                "P8", "P9", "P10", "P11", "P12", "P13",
                                "P14", "P15", "P16", "P17", "P18", "P19",
                                "P20", "P21", "P22", "P23", "P24", "P25", "P26", "P27", "P28", "dairy-0.1.0", "dairy-f1",
-                               "food-crops-0.1.0"})
+                               "food-crops-0.1.0", "IMG-path", "dairy-excel-blank"})
 
 
 
@@ -525,6 +529,336 @@ def _write_manifest_silent(root):
                         "baseline": {}, "runtime_changes": {},
                         "files": {}, "readme_policy": {}}),
             encoding="utf-8")
+
+
+class WiringIgnoreTests(ContractCase):
+    """Per-worktree harness wiring must never enter the ledger.
+
+    ``.githooks/`` (three symlinks) and ``.harness.conf`` are created by
+    harness-init inside each worktree and kept out of git through the
+    worktree's own ``info/exclude``. Before this fix the ledger read them as
+    repository files: ``--write-manifest`` produced 116 entries instead of
+    112, and a test run in a wired worktree failed with ``undeclared_file``.
+    """
+
+    def _tree(self, tmp):
+        """A synthetic tree with baseline files plus branch-local wiring."""
+        _synth_tree(tmp)
+        root = Path(tmp)
+        (root / ".githooks").mkdir()
+        for name in ("commit-msg", "pre-commit", "pre-push"):
+            (root / ".githooks" / name).write_text("#!/bin/sh\n",
+                                                   encoding="utf-8")
+        (root / ".harness.conf").write_text('PROJECT_NAME="x"\n',
+                                            encoding="utf-8")
+        return root
+
+    def test_wiring_is_absent_from_ledger_and_scan(self):
+        """Wiring files never reach the bundle nor the undeclared scan.
+
+        The filter applies inside a repository (that is where "tracked" has a
+        meaning); the fixture is therefore initialised and the wiring is left
+        untracked, exactly like ``harness-init`` leaves it.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._tree(tmp)
+            self._git(root, "init", "-q")
+            # Only the fixture's own files are tracked; the wiring stays
+            # untracked exactly as harness-init leaves it.
+            self._git(root, "add", "-A", "--", "a.py", "b.py", "tools",
+                      "tests")
+            listed = check_bundle.disk_files(root)
+            self.assertNotIn(".harness.conf", listed)
+            for name in ("commit-msg", "pre-commit", "pre-push"):
+                self.assertNotIn(".githooks/" + name, listed)
+            # The ledger built over the same tree is hook-free.
+            _write_manifest(root)
+            manifest = json.loads(
+                (root / "tools/validation-bundle.json").read_text(
+                    encoding="utf-8"))
+            names = set(manifest["files"])
+            self.assertNotIn(".harness.conf", names)
+            self.assertFalse([n for n in names if n.startswith(".githooks/")])
+            self.assertEqual("ok", check_bundle.check(root)["status"])
+
+    def test_tracked_file_with_the_same_name_is_kept(self):
+        """A repository that really tracks ``.harness.conf`` still lists it."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._tree(tmp)
+            # git-track the wiring name: the ignore must yield to reality.
+            subprocess.run(["git", "init", "-q", str(root)], check=True,
+                           capture_output=True)
+            subprocess.run(["git", "-C", str(root), "add", "-f",
+                            ".harness.conf", ".githooks/pre-commit"],
+                           check=True, capture_output=True)
+            listed = check_bundle.disk_files(root)
+            self.assertIn(".harness.conf", listed)
+            self.assertIn(".githooks/pre-commit", listed)
+
+    def test_partial_tree_without_wiring_stays_clean(self):
+        """A tree that has no wiring behaves exactly as before."""
+        with tempfile.TemporaryDirectory() as tmp:
+            _synth_tree(tmp)
+            root = Path(tmp)
+            self.assertEqual(sorted(check_bundle.disk_files(root)),
+                             sorted(n for n in check_bundle.disk_files(root)
+                                    if not n.startswith(".")))
+
+    def _git(self, root, *args):
+        """Run git in ``root`` with the same clean environment the tool uses."""
+        return subprocess.run(["git", "-C", str(root)] + list(args),
+                              capture_output=True, check=True)
+
+    def test_git_unavailable_stops_instead_of_hiding(self):
+        """Git 조회가 불가능하면 **추측하지 않고 멈춘다** (C-01).
+
+        추적 여부를 '안 됨'으로 단정하면 실제 추적 파일이 장부에서 조용히
+        빠진다. 검토자가 재현한 세 경우(실행 불가·비저장소·빈 대체 인덱스)
+        중 '실행 불가'를 잠근다.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._tree(tmp)
+            self._git(root, "init", "-q")
+            self._git(root, "add", "-f", ".harness.conf")
+            real = os.environ.get("PATH", "")
+            os.environ["PATH"] = str(Path(tmp) / "empty-bin")
+            try:
+                with self.assertRaises(check_bundle.TrackingUnavailable):
+                    check_bundle.disk_files(root)
+            finally:
+                os.environ["PATH"] = real
+
+    def test_inherited_index_variable_does_not_hide_tracked_files(self):
+        """상속된 ``GIT_INDEX_FILE``이 추적 판정을 흔들지 않는다 (C-01).
+
+        훅 안에서는 Git이 임시 인덱스를 가리키는 ``GIT_INDEX_FILE``을 준다.
+        그대로 물려받으면 추적 파일이 '비추적'으로 보인다 — 걷어내고 이
+        트리의 인덱스로 답한다.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._tree(tmp)
+            self._git(root, "init", "-q")
+            self._git(root, "add", "-f", ".harness.conf", ".githooks/pre-commit")
+            before = check_bundle.disk_files(root)
+            self.assertIn(".harness.conf", before)
+            real = os.environ.get("GIT_INDEX_FILE")
+            os.environ["GIT_INDEX_FILE"] = str(Path(tmp) / "nonexistent-index")
+            try:
+                after = check_bundle.disk_files(root)
+            finally:
+                if real is None:
+                    os.environ.pop("GIT_INDEX_FILE", None)
+                else:
+                    os.environ["GIT_INDEX_FILE"] = real
+            self.assertEqual(sorted(before), sorted(after))
+            self.assertIn(".harness.conf", after)
+
+    def test_non_repository_tree_keeps_wiring_visible(self):
+        """저장소가 아닌 사본에서는 필터를 끈다 — 조용히 숨기지 않는다 (C-01).
+
+        .git 없는 내보내기 사본에서 배선을 숨기면 '추적 정보 상실'이 된다.
+        대신 일반 파일로 세어 undeclared_file로 **시끄럽게** 실패한다.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._tree(tmp)
+            listed = check_bundle.disk_files(root)     # git 저장소 아님
+            self.assertIn(".harness.conf", listed)
+            self.assertIn(".githooks/pre-commit", listed)
+
+    def test_pathspec_metacharacters_do_not_match_other_files(self):
+        """파일명의 pathspec 문자를 리터럴로 다룬다 (I-01).
+
+        ``.githooks/pre1``만 추적하고 ``.githooks/pre[1]``은 비추적일 때,
+        패턴으로 물으면 전자를 후자로 오인해 비추적 파일을 장부에 넣는다.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._tree(tmp)
+            (root / ".githooks" / "pre1").write_text("x\n", encoding="utf-8")
+            (root / ".githooks" / "pre[1]").write_text("y\n", encoding="utf-8")
+            self._git(root, "init", "-q")
+            self._git(root, "add", "-f", ".githooks/pre1")
+            listed = check_bundle.disk_files(root)
+            self.assertIn(".githooks/pre1", listed)        # 추적됨 — 보존
+            self.assertNotIn(".githooks/pre[1]", listed)   # 비추적 — 제외
+
+    def test_partially_tracked_githooks_keeps_only_tracked(self):
+        """``.githooks`` 일부만 추적되면 추적된 것만 남는다 (R-01)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._tree(tmp)
+            self._git(root, "init", "-q")
+            self._git(root, "add", "-f", ".githooks/pre-commit")
+            listed = check_bundle.disk_files(root)
+            self.assertIn(".githooks/pre-commit", listed)
+            self.assertNotIn(".githooks/commit-msg", listed)
+            self.assertNotIn(".githooks/pre-push", listed)
+
+    def test_githooks_as_a_file_is_out_of_scope_and_visible(self):
+        """``.githooks``가 **파일**이면 필터 대상이 아니다 (R-01).
+
+        harness-init이 만드는 것은 ``.githooks/`` **디렉터리 아래**의 훅뿐이다.
+        같은 이름의 일반 파일은 저장소 파일이므로 추적 여부와 무관하게 목록에
+        남는다 — 무시 범위를 넓히면 진짜 파일이 조용히 사라진다.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._tree(tmp)
+            shutil.rmtree(root / ".githooks")
+            (root / ".githooks").write_text("not a directory\n", encoding="utf-8")
+            self._git(root, "init", "-q")
+            self._git(root, "add", "-f", "a.py", "b.py", "tools", "tests")
+            self.assertIn(".githooks", check_bundle.disk_files(root))
+            self._git(root, "add", "-f", ".githooks")
+            self.assertIn(".githooks", check_bundle.disk_files(root))
+
+    def test_real_symlinked_wiring_stays_out_of_the_ledger(self):
+        """harness-init과 같은 **심링크** 배선으로 장부를 만든다 (C-01 재현).
+
+        앞 시험은 배선을 일반 파일로 만들었다. 실제 워크트리는
+        ``.githooks/*``가 harness 코어를 가리키는 심링크이므로, 그 모양
+        그대로 장부에서 빠지는지 잠근다.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._tree(tmp)
+            shutil.rmtree(root / ".githooks")
+            core = Path(tmp) / "core"
+            core.mkdir()
+            (root / ".githooks").mkdir()
+            for name in ("commit-msg", "pre-commit", "pre-push"):
+                (core / name).write_text("#!/bin/sh\n", encoding="utf-8")
+                (root / ".githooks" / name).symlink_to(core / name)
+            self._git(root, "init", "-q")
+            self._git(root, "add", "-A", "--", "a.py", "b.py", "tools", "tests")
+            _write_manifest(root)
+            names = set(json.loads(
+                (root / "tools/validation-bundle.json").read_text(
+                    encoding="utf-8"))["files"])
+            self.assertFalse([n for n in names if n.startswith(".githooks/")])
+            self.assertNotIn(".harness.conf", names)
+            self.assertEqual("ok", check_bundle.check(root)["status"])
+
+    def test_unqueryable_repository_refuses_the_ledger_via_cli(self):
+        """저장소가 있는데 조회가 실패하면 CLI가 멈추고 장부를 안 건드린다.
+
+        검토자 반례 A: ``.git``이 있어도 ``rev-parse``가 128로 죽는 트리.
+        종전에는 이것을 '저장소 아님'으로 읽어 배선을 제외했다 — 추적 파일이
+        조용히 빠질 수 있다. 이제 exit 1이고 기존 장부 바이트는 그대로다.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._tree(tmp)
+            _write_manifest(root)
+            before = (root / "tools/validation-bundle.json").read_bytes()
+            # A real repository directory whose gitdir pointer dangles:
+            # git exists, rev-parse exits 128.
+            (root / ".git").write_text("gitdir: /nonexistent\n",
+                                       encoding="utf-8")
+            proc = subprocess.run(
+                [sys.executable, str(REPO_ROOT / "tools"
+                                      / "build_validation_bundle.py"),
+                 "--root", str(root), "--write-manifest"],
+                capture_output=True, text=True)
+            self.assertEqual(1, proc.returncode, proc.stderr)
+            self.assertIn("추적 여부를 확인할 수 없어", proc.stderr)
+            self.assertEqual(before,
+                             (root / "tools/validation-bundle.json").read_bytes())
+
+    def test_fake_git_exit_128_on_a_real_repository_refuses_the_ledger(self):
+        """실제 저장소인데 git이 128로 죽어도 장부를 만들지 않는다 (C-01 A).
+
+        처분서가 요구한 (a) 그대로다: ``.git``이 멀쩡히 있는 진짜 저장소에
+        ``rev-parse``가 128로 끝나는 가짜 git을 물린다. 종전 판정은 이 종료
+        코드를 '저장소 아님'으로 읽어 배선을 제외했고, 그 순간 추적되는
+        파일도 함께 사라질 수 있었다.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._tree(tmp)
+            self._git(root, "init", "-q")
+            self._git(root, "add", "-A", "--", "a.py", "b.py", "tools",
+                      "tests")
+            _write_manifest(root)
+            before = (root / "tools/validation-bundle.json").read_bytes()
+            fake_bin = Path(tmp) / "fake-bin"
+            fake_bin.mkdir()
+            fake_git = fake_bin / "git"
+            fake_git.write_text("#!/bin/sh\nexit 128\n", encoding="utf-8")
+            fake_git.chmod(0o755)
+            env = dict(os.environ)
+            env["PATH"] = str(fake_bin) + os.pathsep + env.get("PATH", "")
+            proc = subprocess.run(
+                [sys.executable, str(REPO_ROOT / "tools"
+                                      / "build_validation_bundle.py"),
+                 "--root", str(root), "--write-manifest"],
+                capture_output=True, text=True, env=env)
+            self.assertEqual(1, proc.returncode, proc.stderr)
+            self.assertIn("추적 여부를 확인할 수 없어", proc.stderr)
+            self.assertIn("exit 128", proc.stderr)
+            self.assertEqual(before,
+                             (root / "tools/validation-bundle.json").read_bytes())
+
+    def test_worktree_elsewhere_refuses_the_ledger(self):
+        """``core.worktree``가 다른 곳을 가리키면 장부를 만들지 않는다 (C-01).
+
+        실제 저장소의 ``.git``은 멀쩡하고 ``rev-parse --show-toplevel``도
+        exit 0으로 끝나지만, 돌려준 경로가 검사 루트가 아니다. 그 경로의
+        색인은 이 루트 아래 무엇이 추적되는지 답하지 못하므로, 종전처럼
+        ``False``를 돌려 스캔을 이어 가면 파일이 조용히 빠질 수 있다.
+        멈추고 exit 1로 끝나며 기존 장부는 바이트 그대로다.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._tree(tmp)
+            elsewhere = Path(tmp) / "elsewhere"
+            elsewhere.mkdir()
+            self._git(root, "init", "-q")
+            self._git(root, "add", "-A", "--", "a.py", "b.py", "tools",
+                      "tests")
+            _write_manifest(root)
+            before = (root / "tools/validation-bundle.json").read_bytes()
+            self._git(root, "config", "core.worktree", str(elsewhere))
+            with self.assertRaises(check_bundle.TrackingUnavailable):
+                check_bundle.disk_files(root)
+            proc = subprocess.run(
+                [sys.executable, str(REPO_ROOT / "tools"
+                                      / "build_validation_bundle.py"),
+                 "--root", str(root), "--write-manifest"],
+                capture_output=True, text=True)
+            self.assertEqual(1, proc.returncode, proc.stderr)
+            self.assertIn("추적 여부를 확인할 수 없어", proc.stderr)
+            self.assertEqual(before,
+                             (root / "tools/validation-bundle.json").read_bytes())
+
+    def test_export_copy_inside_another_repository_keeps_wiring_visible(self):
+        """남의 저장소 안에 놓인 ``.git`` 없는 사본은 그 색인을 물려받지 않는다.
+
+        검토자 반례 B: 사본의 ``rev-parse --show-toplevel``은 바깥 저장소를
+        돌려준다. 그것을 근거로 배선을 숨기면 사본의 파일이 사라진다.
+        최상위 경로가 ``root``와 정확히 같을 때만 색인을 신뢰한다.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            outer = Path(tmp) / "outer"
+            outer.mkdir()
+            self._git(outer, "init", "-q")
+            (outer / "README").write_text("x\n", encoding="utf-8")
+            self._git(outer, "add", "-A", "--", "README")
+            export = outer / "untracked-copy"
+            export.mkdir()
+            _synth_tree(export)
+            (export / ".githooks").mkdir()
+            (export / ".githooks" / "pre-commit").write_text(
+                "#!/bin/sh\n", encoding="utf-8")
+            (export / ".harness.conf").write_text('x="1"\n', encoding="utf-8")
+            listed = check_bundle.disk_files(export)
+            self.assertIn(".harness.conf", listed)
+            self.assertIn(".githooks/pre-commit", listed)
+
+    def test_ignore_stays_narrow(self):
+        """Only the wiring names are ignored — not every dotted file."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self._tree(tmp)
+            for name in (".env", ".ruff_cache/x", ".github/workflows/ci.yml"):
+                path = root / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("x\n", encoding="utf-8")
+            listed = check_bundle.disk_files(root)
+            self.assertIn(".env", listed)
+            self.assertIn(".github/workflows/ci.yml", listed)
 
 
 if __name__ == "__main__":

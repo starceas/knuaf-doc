@@ -111,8 +111,9 @@ class DairyResumeRepairContract(unittest.TestCase):
                       "`[Qn-m]`", "`1)`", "답 안내 형식"):
             with self.subTest(route=token):
                 self.assertIn(token, intake)
-        for token in ("unsupported_finance_profile", "학교 28시트 XLSX",
-                      "축산 재무 계산", "(dairy/README.md)"):
+        for token in ("학교 28시트 재무 엑셀 빈 사본",
+                      "fill_unsupported_for_major", "축산 재무 계산",
+                      "(dairy/README.md)"):
             with self.subTest(source=token):
                 self.assertIn(token, majors)
 
@@ -147,7 +148,8 @@ class MajorBodyDraftContract(unittest.TestCase):
                                   "[hort-env-systems](hort-env-systems/README.md)",
                                   "[전공별 본문 초안(글)](major-body-draft.md)"),
             "## 낙농": ("본문 DOCX·PDF·HWPX 검토본",
-                        "unsupported_finance_profile",
+                        "학교 28시트 재무 엑셀 빈 사본",
+                        "fill_unsupported_for_major",
                         "축산 재무 계산",
                         "[dairy](dairy/README.md)",
                         "[전공별 본문 초안(글)](major-body-draft.md)"),

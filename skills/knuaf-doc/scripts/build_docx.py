@@ -27,9 +27,21 @@ from gg_core import digest, local
 from gg_document import photo_guide, photo_requests
 from gg_body_layout import NOTE, spacer_positions, review_requests
 import gg_figure_docx
+from gg_hwpx import FOOD_CROPS_SECTION_FORMATS
 
 FONT = "신명조"
 LEVEL_PT = {1: 20, 2: 18, 3: 16, 4: 14, 5: 13, 6: 13, 7: 13, 8: 13, 9: 13}
+# 식량작물 매니페스트 안내문. 공용 문구는 다른 전공이 그대로 쓰므로 손대지
+# 않고, 이 전공에서만 아래 문구를 고른다(안내문까지 전공 격리를 닫는다).
+FOOD_CROPS_FINISH_NOTICE = (
+    "저수준 미검증 출력. 목차 필드 갱신·전체 페이지·학교 원문·학명·그림·표·"
+    "머리행 검토 필요. 한글에서 글꼴 신명조·여백(위30/아래30/머리0/꼬리10/"
+    "좌30/우30/제본0 mm)·쪽 번호(요약은 Ⅰ부터, 본문은 1부터)를 확인한다. "
+    "이 세 가지는 스킬 작성 완료를 막지 않으며 자동 통과하지 않는다. "
+    "file_hash는 빌드 직후 파일 기준이다. 쪽 나눔·여백 등 후처리로 파일을 "
+    "다시 저장했다면 --rehash로 매니페스트 해시를 갱신한다."
+)
+
 
 
 def set_font(run, name, size_pt, bold=False, color=(0, 0, 0)):
@@ -124,17 +136,31 @@ def _bottom_border(p):
     borders.append(bottom)
 
 
-def setup_document(doc, font):
+def _apply_section_margins(section, margin_mm):
+    section.top_margin, section.bottom_margin = Mm(margin_mm["top"]), Mm(margin_mm["bottom"])
+    section.left_margin, section.right_margin = Mm(margin_mm["left"]), Mm(margin_mm["right"])
+    section.header_distance = Mm(margin_mm["header"])
+    section.footer_distance = Mm(margin_mm["footer"])
+    section.gutter = Mm(margin_mm["gutter"])
+
+
+def setup_document(doc, font, *, section_formats=None):
     normal = doc.styles["Normal"]
     normal.font.name, normal.font.size = font, Pt(12)
     normal.font.color.rgb = RGBColor(0, 0, 0)
     normal.paragraph_format.line_spacing = 1.6
     normal.paragraph_format.space_after = Pt(0)
-    for s in doc.sections:
+    for index, s in enumerate(doc.sections):
         s.page_width, s.page_height = Mm(210), Mm(297)
-        s.top_margin, s.bottom_margin = Mm(20), Mm(15)
-        s.left_margin, s.right_margin = Mm(30), Mm(30)
-        s.header_distance, s.footer_distance = Mm(15), Mm(15)
+        if section_formats is None:
+            s.top_margin, s.bottom_margin = Mm(20), Mm(15)
+            s.left_margin, s.right_margin = Mm(30), Mm(30)
+            s.header_distance, s.footer_distance = Mm(15), Mm(15)
+        else:
+            # 구역 순서대로 쪽별 여백을 덮는다. add_section()이 앞 구역
+            # sectPr를 복제하므로 클론을 고쳐도 그 구역만 바뀐다.
+            _apply_section_margins(s, section_formats[index]["margin_mm"])
+
 
 
 def add_table(doc, rows, font):
@@ -211,6 +237,36 @@ def chapter_break_node_ids(sequence, major_id):
     return {id(n) for n in headings[1:]}
 
 
+def _apply_consent_formatting(doc, font):
+    """학부모 동의서(마지막 1단계 제목) 뒤 문단 서식을 양식 실측에 맞춘다.
+
+    본문 경로가 만든 동의서 제목은 20pt 굵게, 본문은 14pt 굵게, `※` 주석은
+    10pt 보통으로 잠근다. 다음 1단계 제목을 만나면 멈춰 다른 장은 건드리지
+    않는다(§2.3, r2: I-03).
+    """
+    paragraphs = doc.paragraphs
+    last_heading = None
+    for index, paragraph in enumerate(paragraphs):
+        if paragraph.style.name == "Heading 1":
+            last_heading = index
+    if last_heading is None:
+        return
+    title = paragraphs[last_heading]
+    if title.text.strip() != "학부모 동의서":
+        return
+    for run in title.runs or [title.add_run(title.text or "")]:
+        set_font(run, font, 20, True)
+    for paragraph in paragraphs[last_heading + 1:]:
+        if paragraph.style.name == "Heading 1":
+            break
+        text = paragraph.text.strip()
+        if not text:
+            continue
+        note = text.startswith("※")
+        for run in paragraph.runs or [paragraph.add_run(paragraph.text or "")]:
+            set_font(run, font, 10 if note else 14, not note)
+
+
 def convert(md_text, font=FONT, base=".", table_reports=None, *,
             context=None, toc=True):
     """Render the paper markdown into a DOCX document.  Policy B: the
@@ -219,8 +275,10 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
     import gg_major_contract as mc
 
     authorization = mc.authorize_output(mc.OUTPUT_SCHOOL_PAPER, context)
+    food_crops = authorization.major_id == "food_crops"
+    section_formats = FOOD_CROPS_SECTION_FORMATS if food_crops else None
     doc = Document()
-    setup_document(doc, font)
+    setup_document(doc, font, section_formats=section_formats)
     # 식량작물 요약은 아라비아 `1.`~`5.`라 요약과 본문을 가르는 전공 지식이
     # 필요하다. 다른 전공은 지금까지처럼 전공 없이 읽어 출력을 바꾸지 않는다.
     nodes = parse(md_text, major_id=(
@@ -574,7 +632,7 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
         if table_entries or dairy_lists: entries.append(('표 목차','gg_tables',0))
         if figure_entries or dairy_lists: entries.append(('그림 목차','gg_figures',0))
         entries += [(n['text'],n['_bookmark'],n['level']) for n in body_nodes if n['kind']=='heading' and n['level']<=2]
-        contents(doc,entries,font)
+        contents(doc,entries,font,title_size=22 if food_crops else 20)
         # S01 counts cover, shared forms and contents before the summary (iv
         # with a one-page contents). Continue rather than pinning iv: an
         # overflowing contents page must also count. Other majors stay unchanged.
@@ -594,8 +652,10 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
             pg = OxmlElement('w:pgNumType')
             pg.set(qn('w:start'), '1'); pg.set(qn('w:fmt'), 'lowerRoman')
             place_page_number(doc.sections[0], pg)
-        def new_numbered_section(number_format, start=1):
+        def new_numbered_section(number_format, start=1, margin_mm=None):
             sec=doc.add_section(WD_SECTION.NEW_PAGE)
+            if margin_mm is not None:
+                _apply_section_margins(sec, margin_mm)
             if count_fruit_front or authorization.major_id == "food_crops":
                 inherited = sec._sectPr.find(qn('w:pgNumType'))
                 if inherited is not None: sec._sectPr.remove(inherited)
@@ -618,11 +678,14 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
                 for n in prelim: render_node(n,allow_soft_wrap=True)
             if table_entries or dairy_lists:
                 if prelim: doc.add_page_break()
-                contents(doc,table_entries,font,'표 목차','gg_tables',9002)
+                contents(doc,table_entries,font,'표 목차','gg_tables',9002,
+                         title_size=20)
             if figure_entries or dairy_lists:
                 if prelim or table_entries or dairy_lists: doc.add_page_break()
-                contents(doc,figure_entries,font,'그림 목차','gg_figures',9003)
-        new_numbered_section('decimal')
+                contents(doc,figure_entries,font,'그림 목차','gg_figures',9003,
+                         title_size=20)
+        new_numbered_section('decimal', margin_mm=(
+            section_formats[2]['margin_mm'] if food_crops else None))
     else:
         add_toc(doc,font)
         # 본문은 새 구역에서 1쪽부터 아라비아 숫자 쪽번호를 매긴다.
@@ -635,6 +698,9 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
 
     # 6. Main Body
     render_body(nodes[i_body:])
+
+    if food_crops:
+        _apply_consent_formatting(doc, font)
 
     return doc
 
@@ -795,7 +861,9 @@ def main(argv=None):
                 else None
             ),
             "major_authorization": authorization.to_dict(),
-            "notice": "저수준 미검증 출력. 목차 필드 갱신·전체 페이지·학교 원문·학명·그림·표·머리행 검토 필요. 한글에서 글꼴 신명조·여백(위20/아래15/머리15/꼬리15/좌30/우30/제본0 mm)·페이지 번호를 확인한다. 이 세 가지는 스킬 작성 완료를 막지 않으며 자동 통과하지 않는다. file_hash는 빌드 직후 파일 기준이다. 쪽 나눔·여백 등 후처리로 파일을 다시 저장했다면 --rehash로 매니페스트 해시를 갱신한다.",
+            "notice": (FOOD_CROPS_FINISH_NOTICE
+                       if authorization.major_id == "food_crops" else
+                       "저수준 미검증 출력. 목차 필드 갱신·전체 페이지·학교 원문·학명·그림·표·머리행 검토 필요. 한글에서 글꼴 신명조·여백(위20/아래15/머리15/꼬리15/좌30/우30/제본0 mm)·페이지 번호를 확인한다. 이 세 가지는 스킬 작성 완료를 막지 않으며 자동 통과하지 않는다. file_hash는 빌드 직후 파일 기준이다. 쪽 나눔·여백 등 후처리로 파일을 다시 저장했다면 --rehash로 매니페스트 해시를 갱신한다."),
         }
         manifest_path.write_text(
             json.dumps(manifest, ensure_ascii=False, indent=2),

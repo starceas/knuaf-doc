@@ -139,7 +139,7 @@ class GuiFigureWireTests(ContractCase):
         result = subprocess.run(
             [sys.executable, "-B", str(SCRIPTS / "gg.py"), "figure", "place",
              str(self.root), "--slot", "s1", "--heading", "가. 품종 선택"],
-            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            capture_output=True, text=True, encoding="utf-8",
             env=self.cli_base_env(), cwd=self.root)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads(result.stdout)["status"], "needs_photo")
@@ -185,7 +185,7 @@ class GuiFigureWireTests(ContractCase):
             [sys.executable, "-B", str(SCRIPTS / "build_docx.py"),
              str(self.root), "--in", "body.md", "--out", out,
              "--major", "specialty_crops"],
-            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            capture_output=True, text=True, encoding="utf-8",
             env=self.cli_env(home), cwd=self.root)
 
     def cli_pictures(self, path):

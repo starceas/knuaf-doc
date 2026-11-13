@@ -46,8 +46,10 @@ def notice_rows(root):
     """
     core = _core()
     project = core.load(root)
-    row = core._workbook_notice_row_for_project(root, project)
-    return [row] if row is not None else []
+    rows = [core._workbook_notice_row_for_project(root, project),
+            core._unsupported_finance_notice_row_for_project(root, project),
+            core._blank_copy_finance_notice_row_for_project(root, project)]
+    return [row for row in rows if row is not None]
 
 
 def notice_rows_or_error(root):
@@ -123,7 +125,10 @@ def digest_project(root):
 def write_notices(root):
     """알림 파일을 원자적으로 교체한다. 반환: 계약 JSON.
 
-    알림 생성이 실패하면 **파일을 건드리지 않는다**(기존 알림 보존, I4).
+    정본 잠금은 호출자가 쥔다 — 이 함수는 잠그지 않는다. CLI ``write``는
+    호출 전에 ``core.Lock(root)``를 잡고, 커밋 훅은 이미 잠금 안이다(공통 장
+    §4-5). 알림 생성이 실패하면 이 함수는 파일을 건드리지 않는다. 등록부
+    호출기가 ``failed`` 반환을 실패로 보고 기존 알림을 지운다(공통 장 §3).
     돌려주는 값은 ``status="failed"`` + ``error``다.
     """
     root = Path(root)
@@ -154,7 +159,7 @@ def write_notices(root):
 
 
 def choose(root, identity, value):
-    """선택을 정본에 기록하고 알림 파일을 다시 쓴다.
+    """선택을 정본에 기록한다. 알림 파일은 정본 커밋 훅이 다시 쓴다.
 
     선택은 **질문 결정 기록 한 레코드**에만 둔다(C1). 일반 재무 사실로
     저장하면 ``checks()``의 ``claim_missing``과 ``gate()``의
@@ -191,14 +196,12 @@ def choose(root, identity, value):
         core.apply(root, change, project["revision"])
     except ValueError as error:
         return {"status": "rejected", "reason": _reason_of(error)}
-    written = write_notices(root)
-    # 선택 저장은 성공했지만 알림 파일 갱신이 실패했으면 그것을 덮지 않는다
-    # (I4-b). 새 키를 만들지 않고 status 값만 바꾼다 — 기존 error 키는 그대로.
-    if written.get("status") == "failed":
-        written.update(status="chosen_notice_failed", choice=value)
-        return written
-    written.update(status="chosen", choice=value)
-    return written
+    # 정본 커밋 훅(_rewrite_sidecars)이 이미 알림 파일을 다시 썼다. 여기서 한 번
+    # 더 쓰면 잠금 밖에서 같은 값을 다시 쓰는 일이고, 그 사이 커밋이 끼면 낡은
+    # 스냅숏이 최신 파일을 덮는다(공통 장 §4). 갱신 실패는 훅의 stderr 한 줄이다.
+    n = root / NOTICES_NAME
+    return {"status": "chosen", "choice": value, "path": NOTICES_NAME,
+            "notices_exists": n.exists()}
 
 
 def _choice_request_id(identity, value, existing):
@@ -272,7 +275,11 @@ def main(argv=None):
     args = parser.parse_args(argv)
     try:
         if args.command == "write":
-            value = write_notices(Path(args.folder))
+            # 정본과 같은 잠금(공통 장 §4-5). 잠금 밖에서 조립한 알림이 새
+            # revision 커밋 뒤에 남는 창을 막는다. LOCK_NB라 경쟁 시 즉시
+            # busy로 거절하고, 재시도는 사람이 한다.
+            with _core().Lock(Path(args.folder)):
+                value = write_notices(Path(args.folder))
         else:
             value = choose(Path(args.folder), args.identity, args.value)
     except Exception as error:  # 실행 오류는 exit 2

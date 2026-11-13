@@ -2,7 +2,7 @@
  "schema": "knuaf-hort-finance-transform/v2",
  "source_id": "H01",
  "source_sha256": "e3c9defe376fa74413641408900f6bb656017a389fb9745d9dac221a10951c1c",
- "entry_count": 4103,
+ "entry_count": 4107,
  "entries": [
   {
    "sheet": "2. 중장기영농목표",
@@ -35452,7 +35452,7 @@
    "cell": "D27",
    "action": "formula",
    "before_state": "formula_normal",
-   "after_formula": "='1. 자산조사'!E8+SUMIFS('13. 감가상각비계획 '!$N$67:$N$75,'13. 감가상각비계획 '!$C$67:$C$75,RIGHT('17. 추정대차대조표'!$B$26,2),'13. 감가상각비계획 '!$V$67:$V$75,'1. 자산조사'!$B$8)",
+   "after_formula": "=IF('1. 자산조사'!$B$8=\"논\",'1. 자산조사'!E8,0)+IF('1. 자산조사'!$B$9=\"논\",'1. 자산조사'!E9,0)+SUMIFS('13. 감가상각비계획 '!$N$67:$N$75,'13. 감가상각비계획 '!$C$67:$C$75,RIGHT('17. 추정대차대조표'!$B$26,2),'13. 감가상각비계획 '!$V$67:$V$75,\"논\")",
    "map_source": "params-v3.2",
    "reason": "T-PUB: fixed class selectors read retained H01 labels by coordinate, no source literal in public map"
   },
@@ -35461,7 +35461,7 @@
    "cell": "E27",
    "action": "formula",
    "before_state": "formula_normal",
-   "after_formula": "='1. 자산조사'!E8+SUMIFS('13. 감가상각비계획 '!$O$67:$O$75,'13. 감가상각비계획 '!$C$67:$C$75,RIGHT('17. 추정대차대조표'!$B$26,2),'13. 감가상각비계획 '!$V$67:$V$75,'1. 자산조사'!$B$8)",
+   "after_formula": "=IF('1. 자산조사'!$B$8=\"논\",'1. 자산조사'!E8,0)+IF('1. 자산조사'!$B$9=\"논\",'1. 자산조사'!E9,0)+SUMIFS('13. 감가상각비계획 '!$O$67:$O$75,'13. 감가상각비계획 '!$C$67:$C$75,RIGHT('17. 추정대차대조표'!$B$26,2),'13. 감가상각비계획 '!$V$67:$V$75,\"논\")",
    "map_source": "params-v3.2",
    "reason": "T-PUB: fixed class selectors read retained H01 labels by coordinate, no source literal in public map"
   },
@@ -35470,7 +35470,7 @@
    "cell": "F27",
    "action": "formula",
    "before_state": "formula_normal",
-   "after_formula": "='1. 자산조사'!E8+SUMIFS('13. 감가상각비계획 '!$P$67:$P$75,'13. 감가상각비계획 '!$C$67:$C$75,RIGHT('17. 추정대차대조표'!$B$26,2),'13. 감가상각비계획 '!$V$67:$V$75,'1. 자산조사'!$B$8)",
+   "after_formula": "=IF('1. 자산조사'!$B$8=\"논\",'1. 자산조사'!E8,0)+IF('1. 자산조사'!$B$9=\"논\",'1. 자산조사'!E9,0)+SUMIFS('13. 감가상각비계획 '!$P$67:$P$75,'13. 감가상각비계획 '!$C$67:$C$75,RIGHT('17. 추정대차대조표'!$B$26,2),'13. 감가상각비계획 '!$V$67:$V$75,\"논\")",
    "map_source": "params-v3.2",
    "reason": "T-PUB: fixed class selectors read retained H01 labels by coordinate, no source literal in public map"
   },
@@ -35479,7 +35479,7 @@
    "cell": "G27",
    "action": "formula",
    "before_state": "formula_normal",
-   "after_formula": "='1. 자산조사'!E8+SUMIFS('13. 감가상각비계획 '!$Q$67:$Q$75,'13. 감가상각비계획 '!$C$67:$C$75,RIGHT('17. 추정대차대조표'!$B$26,2),'13. 감가상각비계획 '!$V$67:$V$75,'1. 자산조사'!$B$8)",
+   "after_formula": "=IF('1. 자산조사'!$B$8=\"논\",'1. 자산조사'!E8,0)+IF('1. 자산조사'!$B$9=\"논\",'1. 자산조사'!E9,0)+SUMIFS('13. 감가상각비계획 '!$Q$67:$Q$75,'13. 감가상각비계획 '!$C$67:$C$75,RIGHT('17. 추정대차대조표'!$B$26,2),'13. 감가상각비계획 '!$V$67:$V$75,\"논\")",
    "map_source": "params-v3.2",
    "reason": "T-PUB: fixed class selectors read retained H01 labels by coordinate, no source literal in public map"
   },
@@ -35488,7 +35488,7 @@
    "cell": "H27",
    "action": "formula",
    "before_state": "formula_normal",
-   "after_formula": "='1. 자산조사'!E8+SUMIFS('13. 감가상각비계획 '!$R$67:$R$75,'13. 감가상각비계획 '!$C$67:$C$75,RIGHT('17. 추정대차대조표'!$B$26,2),'13. 감가상각비계획 '!$V$67:$V$75,'1. 자산조사'!$B$8)",
+   "after_formula": "=IF('1. 자산조사'!$B$8=\"논\",'1. 자산조사'!E8,0)+IF('1. 자산조사'!$B$9=\"논\",'1. 자산조사'!E9,0)+SUMIFS('13. 감가상각비계획 '!$R$67:$R$75,'13. 감가상각비계획 '!$C$67:$C$75,RIGHT('17. 추정대차대조표'!$B$26,2),'13. 감가상각비계획 '!$V$67:$V$75,\"논\")",
    "map_source": "params-v3.2",
    "reason": "T-PUB: fixed class selectors read retained H01 labels by coordinate, no source literal in public map"
   },
@@ -35497,7 +35497,7 @@
    "cell": "D28",
    "action": "formula",
    "before_state": "formula_normal",
-   "after_formula": "='1. 자산조사'!E9+SUMIFS('13. 감가상각비계획 '!$N$67:$N$75,'13. 감가상각비계획 '!$C$67:$C$75,RIGHT('17. 추정대차대조표'!$B$26,2),'13. 감가상각비계획 '!$V$67:$V$75,\"밭\")",
+   "after_formula": "=IF('1. 자산조사'!$B$8=\"밭\",'1. 자산조사'!E8,0)+IF('1. 자산조사'!$B$9=\"밭\",'1. 자산조사'!E9,0)+SUMIFS('13. 감가상각비계획 '!$N$67:$N$75,'13. 감가상각비계획 '!$C$67:$C$75,RIGHT('17. 추정대차대조표'!$B$26,2),'13. 감가상각비계획 '!$V$67:$V$75,\"밭\")",
    "map_source": "params-v3.2",
    "reason": "T-PUB: fixed class selectors read retained H01 labels by coordinate, no source literal in public map"
   },
@@ -35506,7 +35506,7 @@
    "cell": "E28",
    "action": "formula",
    "before_state": "formula_normal",
-   "after_formula": "='1. 자산조사'!E9+SUMIFS('13. 감가상각비계획 '!$O$67:$O$75,'13. 감가상각비계획 '!$C$67:$C$75,RIGHT('17. 추정대차대조표'!$B$26,2),'13. 감가상각비계획 '!$V$67:$V$75,\"밭\")",
+   "after_formula": "=IF('1. 자산조사'!$B$8=\"밭\",'1. 자산조사'!E8,0)+IF('1. 자산조사'!$B$9=\"밭\",'1. 자산조사'!E9,0)+SUMIFS('13. 감가상각비계획 '!$O$67:$O$75,'13. 감가상각비계획 '!$C$67:$C$75,RIGHT('17. 추정대차대조표'!$B$26,2),'13. 감가상각비계획 '!$V$67:$V$75,\"밭\")",
    "map_source": "params-v3.2",
    "reason": "T-PUB: fixed class selectors read retained H01 labels by coordinate, no source literal in public map"
   },
@@ -35515,7 +35515,7 @@
    "cell": "F28",
    "action": "formula",
    "before_state": "formula_normal",
-   "after_formula": "='1. 자산조사'!E9+SUMIFS('13. 감가상각비계획 '!$P$67:$P$75,'13. 감가상각비계획 '!$C$67:$C$75,RIGHT('17. 추정대차대조표'!$B$26,2),'13. 감가상각비계획 '!$V$67:$V$75,\"밭\")",
+   "after_formula": "=IF('1. 자산조사'!$B$8=\"밭\",'1. 자산조사'!E8,0)+IF('1. 자산조사'!$B$9=\"밭\",'1. 자산조사'!E9,0)+SUMIFS('13. 감가상각비계획 '!$P$67:$P$75,'13. 감가상각비계획 '!$C$67:$C$75,RIGHT('17. 추정대차대조표'!$B$26,2),'13. 감가상각비계획 '!$V$67:$V$75,\"밭\")",
    "map_source": "params-v3.2",
    "reason": "T-PUB: fixed class selectors read retained H01 labels by coordinate, no source literal in public map"
   },
@@ -35524,7 +35524,7 @@
    "cell": "G28",
    "action": "formula",
    "before_state": "formula_normal",
-   "after_formula": "='1. 자산조사'!E9+SUMIFS('13. 감가상각비계획 '!$Q$67:$Q$75,'13. 감가상각비계획 '!$C$67:$C$75,RIGHT('17. 추정대차대조표'!$B$26,2),'13. 감가상각비계획 '!$V$67:$V$75,\"밭\")",
+   "after_formula": "=IF('1. 자산조사'!$B$8=\"밭\",'1. 자산조사'!E8,0)+IF('1. 자산조사'!$B$9=\"밭\",'1. 자산조사'!E9,0)+SUMIFS('13. 감가상각비계획 '!$Q$67:$Q$75,'13. 감가상각비계획 '!$C$67:$C$75,RIGHT('17. 추정대차대조표'!$B$26,2),'13. 감가상각비계획 '!$V$67:$V$75,\"밭\")",
    "map_source": "params-v3.2",
    "reason": "T-PUB: fixed class selectors read retained H01 labels by coordinate, no source literal in public map"
   },
@@ -35533,7 +35533,7 @@
    "cell": "H28",
    "action": "formula",
    "before_state": "formula_normal",
-   "after_formula": "='1. 자산조사'!E9+SUMIFS('13. 감가상각비계획 '!$R$67:$R$75,'13. 감가상각비계획 '!$C$67:$C$75,RIGHT('17. 추정대차대조표'!$B$26,2),'13. 감가상각비계획 '!$V$67:$V$75,\"밭\")",
+   "after_formula": "=IF('1. 자산조사'!$B$8=\"밭\",'1. 자산조사'!E8,0)+IF('1. 자산조사'!$B$9=\"밭\",'1. 자산조사'!E9,0)+SUMIFS('13. 감가상각비계획 '!$R$67:$R$75,'13. 감가상각비계획 '!$C$67:$C$75,RIGHT('17. 추정대차대조표'!$B$26,2),'13. 감가상각비계획 '!$V$67:$V$75,\"밭\")",
    "map_source": "params-v3.2",
    "reason": "T-PUB: fixed class selectors read retained H01 labels by coordinate, no source literal in public map"
   },
@@ -36228,7 +36228,7 @@
    "cell": "E9",
    "action": "formula",
    "before_state": "blank_node",
-   "after_formula": "=IF(ISNUMBER(M9),M9,NA())",
+   "after_formula": "=IF(M9=\"\",\"\",IF(ISNUMBER(M9),M9,NA()))",
    "map_source": "params-v3.2",
    "reason": "verified opening fact outside print area; source teaching content cleared"
   },
@@ -38568,6 +38568,42 @@
    "reason": "제거된 교재 그림 자리에 학생 첨부 안내 라벨을 둠.",
    "action": "label_template",
    "after_value": "학생 시설 도면·견적서 첨부"
+  },
+  {
+   "sheet": "1. 자산조사",
+   "cell": "B9",
+   "action": "input_param",
+   "param_key": "opening.land_extra_kind",
+   "before_state": "blank_node",
+   "map_source": "params-v3.2",
+   "reason": "두 번째 필지 종류를 학생 입력으로 받는다; 금액이나 면적이 없으면 공란."
+  },
+  {
+   "sheet": "1. 자산조사",
+   "cell": "D10",
+   "action": "formula",
+   "after_formula": "=SUM(D8:D9)",
+   "before_state": "formula_normal",
+   "map_source": "params-v3.2",
+   "reason": "빈 두 번째 필지(D9=\"\")에서 D8+D9 가 #VALUE! 가 되어 SUM 으로 바꾼다"
+  },
+  {
+   "sheet": "17. 추정대차대조표",
+   "cell": "C27",
+   "action": "formula",
+   "after_formula": "=IF('1. 자산조사'!$B$8=\"논\",'1. 자산조사'!E8,0)+IF('1. 자산조사'!$B$9=\"논\",'1. 자산조사'!E9,0)",
+   "before_state": "formula_normal",
+   "map_source": "params-v3.2",
+   "reason": "두 번째 필지와 투자 토지를 땅 종류(논·밭)별로 합산한다"
+  },
+  {
+   "sheet": "17. 추정대차대조표",
+   "cell": "C28",
+   "action": "formula",
+   "after_formula": "=IF('1. 자산조사'!$B$8=\"밭\",'1. 자산조사'!E8,0)+IF('1. 자산조사'!$B$9=\"밭\",'1. 자산조사'!E9,0)",
+   "before_state": "formula_normal",
+   "map_source": "params-v3.2",
+   "reason": "두 번째 필지와 투자 토지를 땅 종류(논·밭)별로 합산한다"
   }
  ]
 }

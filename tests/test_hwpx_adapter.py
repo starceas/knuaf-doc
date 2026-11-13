@@ -193,6 +193,25 @@ class PureTransformTests(unittest.TestCase):
     def test_inject_page_numbers_without_colpr_is_noop(self):
         self.assertEqual("<hs:sec/>", gh.inject_page_numbers("<hs:sec/>"))
 
+    def test_app_figure_token_only_exact_producer_shape(self):
+        # R-04: 토큰 판정은 생산자(gg_figure._block_for)가 내는 꼴
+        # app-figure:<소문자 hex 64>만 인정한다. 앞뒤 공백을 벗겨 인정하지
+        # 않으므로 < app-figure:… >는 일반 경로로 남아 미해결이 된다.
+        token = "app-figure:" + "ab" * 32
+        self.assertTrue(gh.is_app_figure_token(token))
+        self.assertTrue(gh.is_app_figure_token(token.replace(":", "%3A")))
+        self.assertFalse(gh.is_app_figure_token(" " + token))
+        self.assertFalse(gh.is_app_figure_token(token + " "))
+        self.assertFalse(gh.is_app_figure_token("app-figure:" + "AB" * 32))
+        self.assertFalse(gh.is_app_figure_token("foo:bar"))
+        with tempfile.TemporaryDirectory(prefix="hwpx-img-") as tmp:
+            padded = " " + token
+            referenced, missing = gh.resolve_images("![](< %s>)\n" % token,
+                                                    Path(tmp))
+        # 공백이 붙은 꼴은 토큰이 아니라 일반 경로다 — 파일이 없으니 미해결.
+        self.assertEqual([padded], referenced)
+        self.assertEqual([padded], missing)
+
     def test_normalize_markdown_strips_bom_and_normalizes_newlines(self):
         raw = b"\xef\xbb\xbfa\r\nb\rc"
         self.assertEqual("a\nb\nc", gh.normalize_markdown(raw))
@@ -576,32 +595,41 @@ class BuildTests(ContractCase):
         self.assertIsNone(result["verification"]["validate"])
         self.assertIsNone(result["verification"]["table_numbers"])
 
-    def test_image_dir_defaults_to_source_folder(self):
-        # R1-05: 기본 호출도 원문 폴더를 --image-dir로 넘겨 상대 경로 그림을 보존한다.
-        folder = self.root / "src"
-        folder.mkdir()
-        (folder / "picture.png").write_bytes(b"\x89PNG\r\n\x1a\n")
-        md = folder / "in.md"
+    def test_image_dir_defaults_to_project_root(self):
+        # R1-05: 기본 호출은 작업 폴더를 --image-dir로 넘겨 상대 경로 그림을 보존한다.
+        (self.root / "picture.png").write_bytes(b"\x89PNG\r\n\x1a\n")
+        md = self.root / "img-source.md"
         md.write_text("![그림](picture.png)\n", encoding="utf-8")
         self._control(markdown="")
-        target = self.root / "img.hwpx"
+        target = self.root / "out" / "img.hwpx"
         gh.build(md, target, context=self.context,
                  authorization=self.authorization, cli_command=self.cli)
         argv = self._argv("generate")
         self.assertIn("--image-dir", argv)
-        self.assertEqual(str(folder.resolve()),
+        self.assertEqual(str(self.root.resolve()),
                          argv[argv.index("--image-dir") + 1])
+
+    def test_image_below_project_root_is_found(self):
+        # 하위 폴더 그림도 작업 폴더 기준 상대 경로로만 찾는다(kordoc 산출물과 같은 기준).
+        folder = self.root / "sources"
+        folder.mkdir()
+        (folder / "picture.png").write_bytes(b"\x89PNG\r\n\x1a\n")
+        md = self.root / "sub-image.md"
+        md.write_text("![그림](sources/picture.png)\n", encoding="utf-8")
+        self._control(markdown="")
+        target = self.root / "out" / "sub.hwpx"
+        gh.build(md, target, context=self.context,
+                 authorization=self.authorization, cli_command=self.cli)
+        self.assertEqual(1, gh.embedded_picture_count(target.read_bytes()))
 
     def test_image_destinations_are_normalized_for_the_generator(self):
         # R5-01: 우리 파서가 읽는 <...> 표기를 생성기가 그림으로 못 읽어 그림 없는
         # HWPX가 발행되던 문제. 생성기에는 단순한 퍼센트 인코딩 표기로 넘긴다.
-        folder = self.root / "src2"
-        folder.mkdir()
-        (folder / "farm photo.png").write_bytes(b"\x89PNG\r\n\x1a\n")
-        md = folder / "in.md"
+        (self.root / "farm photo.png").write_bytes(b"\x89PNG\r\n\x1a\n")
+        md = self.root / "norm-source.md"
         md.write_text('![농장](<farm photo.png> "제목")\n', encoding="utf-8")
         self._control(markdown="")
-        target = self.root / "norm.hwpx"
+        target = self.root / "out" / "norm.hwpx"
         gh.build(md, target, context=self.context,
                  authorization=self.authorization, cli_command=self.cli)
         sent = (self.root / "input-md.txt").read_text(encoding="utf-8")
@@ -609,10 +637,8 @@ class BuildTests(ContractCase):
         self.assertEqual(1, gh.embedded_picture_count(target.read_bytes()))
 
     def test_images_not_embedded_blocks_publish(self):
-        folder = self.root / "src3"
-        folder.mkdir()
-        (folder / "picture.png").write_bytes(b"\x89PNG\r\n\x1a\n")
-        md = folder / "in.md"
+        (self.root / "picture.png").write_bytes(b"\x89PNG\r\n\x1a\n")
+        md = self.root / "lost-source.md"
         md.write_text("![그림](picture.png)\n", encoding="utf-8")
         self._control(markdown="", drop_pictures=True)
         target = self.root / "lost.hwpx"
@@ -622,6 +648,31 @@ class BuildTests(ContractCase):
         self.assertEqual("images_not_embedded", ctx.exception.reason)
         self.assertFalse(target.exists())
 
+    def test_app_figure_not_embedded_blocks_hwpx(self):
+        """A-01: 앱 그림 토큰은 HWPX가 풀 수 없다 — 개수 검사로 흘리지 않고 거절한다.
+
+        생성기가 그림을 버리는(drop_pictures) 경우에도 거절 이유가 '그림이 빠졌다'가
+        아니라 'HWPX는 앱 그림을 못 넣는다'여야 학생이 DOCX로 갈 수 있다.
+        """
+        token = "app-figure:" + "ab" * 32
+        md = self.root / "app-source.md"
+        md.write_text("![](%s)\n\n그림 1. 토양 (출처 : 농촌진흥청)\n" % token,
+                      encoding="utf-8")
+        self._control(markdown="", drop_pictures=True)
+        target = self.root / "app.hwpx"
+        with self.assertRaises(gh.HwpxBlocked) as ctx:
+            gh.build(md, target, context=self.context,
+                     authorization=self.authorization, cli_command=self.cli)
+        self.assertEqual("app_figure_unsupported", ctx.exception.reason)
+        self.assertEqual([token], ctx.exception.details["images"])
+        self.assertEqual([1], ctx.exception.details["lines"])
+        self.assertEqual(gh.APP_FIGURE_HWPX_ACTION, ctx.exception.details["action"])
+        self.assertIn("앱에서 받은 그림은 아직 한글(HWPX) 파일에 넣지 못합니다",
+                      ctx.exception.details["action"])
+        self.assertFalse(target.exists())
+        self.assertFalse((self.root / "argv-generate.json").exists(),
+                         "생성기를 부르기 전에 거절해야 한다")
+
     def test_margins_none_returns_normally(self):
         # R5-03: 여백을 요청하지 않는 호출이 발행 뒤 예외로 끝나면 재시도가 막힌다.
         self._control(markdown=SAMPLE_MD)
@@ -629,6 +680,48 @@ class BuildTests(ContractCase):
         self.assertEqual("ready", result["status"])
         self.assertIsNone(result["margins_mm"])
         self.assertTrue(target.is_file())
+
+    def test_image_beside_the_manuscript_is_accepted(self):
+        """I-02: 원고 옆 그림은 예전처럼 받아들인다(호환성 회귀 금지).
+
+        생성기에는 원고 옆 경로를 그대로 주지 않고 작업 폴더 기준 상대 경로로
+        다시 써서 넘긴다. --image-dir는 하나뿐이고 그 값은 작업 폴더 뿌리다.
+        """
+        folder = self.root / "build"
+        folder.mkdir()
+        (folder / "farm photo.png").write_bytes(b"\x89PNG\r\n\x1a\n")
+        md = folder / "본문.md"
+        md.write_text("![밭](<farm photo.png>)\n", encoding="utf-8")
+        self._control(markdown="")
+        target = self.root / "out" / "beside.hwpx"
+        gh.build(md, target, context=self.context,
+                 authorization=self.authorization, cli_command=self.cli)
+        argv = self._argv("generate")
+        self.assertEqual(1, argv.count("--image-dir"))
+        self.assertEqual(str(self.root.resolve()),
+                         argv[argv.index("--image-dir") + 1])
+        sent = (self.root / "input-md.txt").read_text(encoding="utf-8")
+        self.assertEqual("![밭](build/farm%20photo.png)\n", sent)
+        self.assertEqual(1, gh.embedded_picture_count(target.read_bytes()))
+
+    def test_same_destination_in_two_places_is_ambiguous(self):
+        """두 기준 폴더에 같은 이름의 다른 그림이 있으면 고르지 않고 멈춘다."""
+        folder = self.root / "build"
+        folder.mkdir()
+        (folder / "farm photo.png").write_bytes(b"\x89PNG\r\n\x1a\n")
+        (self.root / "farm photo.png").write_bytes(b"\x89PNG\r\n\x1a\nX")
+        md = folder / "본문.md"
+        md.write_text("![밭](<farm photo.png>)\n", encoding="utf-8")
+        self._control(markdown="")
+        target = self.root / "amb.hwpx"
+        with self.assertRaises(gh.HwpxBlocked) as ctx:
+            gh.build(md, target, context=self.context,
+                     authorization=self.authorization, cli_command=self.cli)
+        self.assertEqual("image_ambiguous", ctx.exception.reason)
+        self.assertEqual(["build/farm photo.png", "farm photo.png"],
+                         ctx.exception.details["candidates"])
+        self.assertEqual(["farm photo.png"], ctx.exception.details["images"])
+        self.assertFalse(target.exists())
 
     def test_missing_image_blocks_before_generate(self):
         # R1-05: 해결되지 않는 그림은 조용히 1×1로 만들지 않고 거절한다.

@@ -4,7 +4,9 @@ import json
 import re
 import unicodedata
 from pathlib import Path
+from urllib.parse import unquote
 from gg_core import draft, START, END
+from gg_hwpx import find_images
 
 # 학명 이탤릭은 이명법(속명+종소명)+명명자/등급 표지가 함께 나오는 경우만
 # 적용한다. 종소명 자리의 영어 기능어(전치사·접속사·관사·조동사·대명사·흔한
@@ -31,7 +33,6 @@ SCI = re.compile(
     + r")\b)[a-z]{3,})(?=\s+(?:[A-Z][a-z]*\.?|var\.|subsp\.|f\.|ex\b|×))"
 )
 CAPTION = re.compile(r"^\s*(표|그림)\s*(\d+)\s*\.\s*(.+)$")
-IMAGE = re.compile(r"^!\[([^\]]*)\]\(([^)]+)\)$")
 
 # Printed photo guides remain unresolved requests, just like authoring markers.
 PHOTO_GUIDE = re.compile(r"^※\s*이 자리에\s+.+?사진 추가 필요(?:[（(].*[)）])?\s*$")
@@ -1023,6 +1024,39 @@ def _swot_placed(body_nodes):
     return False
 
 
+def _destination_start(text, alt_end, next_index):
+    """``![alt](`` 뒤 목적지의 첫 실제 글자 위치를 낸다.
+
+    gg_hwpx._parse_image_destination과 같은 문법을 전제로, 여는 괄호와 앞
+    공백, ``<…>`` 목적지의 ``<``를 건너뛴다.
+    """
+    index = alt_end + 2
+    while index < next_index and text[index] in " \t\n":
+        index += 1
+    if index < next_index and text[index] == "<":
+        index += 1
+    return index
+
+
+def _image_segments(text, hits):
+    """그림 참조를 사이에 둔 한 줄을 (본문|그림) 조각으로 나눈다.
+
+    원문 좌표를 함께 내서 용어 위치(term_parts)를 원본 그대로 잘라 쓸 수 있게
+    한다. 그림 조각은 (종류, 대체텍스트 또는 본문, 원문 목적지, 대체텍스트
+    시작, 목적지 시작)이다. 목적지 시작은 괄호·앞 공백·``<``를 건너뛴 첫 실제
+    글자다 — 용어 위치가 경로 글자를 정확히 가리켜야 한다.
+    """
+    cursor = 0
+    for open_at, alt_end, next_index, path in hits:
+        if open_at > cursor:
+            yield ("prose", text[cursor:open_at], cursor)
+        yield ("image", text[open_at + 2:alt_end], path, open_at + 2,
+               _destination_start(text, alt_end, next_index))
+        cursor = next_index
+    if cursor < len(text):
+        yield ("prose", text[cursor:], cursor)
+
+
 def parse(text, *, with_spans=False, _with_term_positions=False,
           major_id=None):
     raw, origin = _draft_region(text) if _with_term_positions else (draft(text), 0)
@@ -1072,16 +1106,105 @@ def parse(text, *, with_spans=False, _with_term_positions=False,
                     source_start = line_offsets[i] + len(lines[i]) - len(lines[i].lstrip())
                 i += 1
             append({"kind": "table", "rows": rows}, term_parts)
-        elif IMAGE.fullmatch(s):
-            m = IMAGE.fullmatch(s)
-            append({"kind": "image", "alt": m[1], "path": m[2]},
-                   [(m[1], source_start + m.start(1)), (m[2], source_start + m.start(2))])
-        elif CAPTION.fullmatch(s):
-            m = CAPTION.fullmatch(s)
-            append(
-                {"kind": "caption", "label": m[1], "number": int(m[2]), "text": s}
-            )
         else:
+            hits, broken = find_images(s)
+            if broken:
+                at, end = broken[0]
+                raise ValueError("그림 경로를 읽을 수 없음: " + s[at:end].strip()[:80])
+            caption = CAPTION.fullmatch(s)
+            if caption and any(caption.start(3) <= h[0] < caption.end()
+                               for h in hits):
+                # 캡션 줄 안에 그림 참조가 있으면 조용히 떨어뜨리지 않고 멈춘다.
+                hit = next(h for h in hits
+                           if caption.start(3) <= h[0] < caption.end())
+                raise ValueError(
+                    "캡션 줄 안에 그림이 있음: 그림과 캡션은 서로 다른 줄에 둔다: "
+                    + s[hit[0]:hit[2]][:80])
+            if hits:
+                for position, segment in enumerate(_image_segments(s, hits)):
+                    if segment[0] == "image":
+                        _, alt, path, alt_offset, path_offset = segment
+                        append({"kind": "image", "alt": alt,
+                                "path": unquote(path)},
+                               [(alt, source_start + alt_offset),
+                                (path, source_start + path_offset)])
+                        # 그림은 문단 경계다 — 다음 줄 본문을 앞 문단에 잇지 않는다.
+                        previous_prose = False
+                        continue
+                    _, chunk, offset = segment
+                    prose_text = chunk.strip()
+                    if not prose_text:
+                        continue
+                    text_start = source_start + offset + len(chunk) - len(chunk.lstrip())
+                    if position:
+                        # 그림 뒤 본문은 단락일 뿐 제목·소제목이 아니다.
+                        if (
+                            prose_text.startswith(("```", "<table", "<script", "> "))
+                            or re.search(r"\[[^\]]+\]\([^)]+\)", prose_text)
+                            or re.search(
+                                r"`|~~|__|<\/?[A-Za-z][^>]*>|^#{7,}\s|(?<!\w)_[^_]+_",
+                                prose_text,
+                            )
+                        ):
+                            raise ValueError("미지원 Markdown 요소: " + prose_text[:80])
+                        append({"kind": "paragraph", "text": prose_text},
+                               [(prose_text, text_start)])
+                        previous_prose = True
+                        continue
+                    md = re.match(r"^(#{1,6})\s+(.+)$", prose_text)
+                    level, prose_text = heading_state.read(prose_text)
+                    if md:
+                        text_start += md.start(2)
+                    list_item = False
+                    bullet = re.match(r"^[-+*]\s+", prose_text)
+                    if bullet:
+                        list_item = True
+                        prose_text = re.sub(r"^[-+*]\s+", "", prose_text)
+                        text_start += bullet.end()
+                    if (
+                        prose_text.startswith(("```", "<table", "<script", "> "))
+                        or re.search(r"\[[^\]]+\]\([^)]+\)", prose_text)
+                        or re.search(
+                            r"`|~~|__|<\/?[A-Za-z][^>]*>|^#{7,}\s|(?<!\w)_[^_]+_",
+                            prose_text,
+                        )
+                    ):
+                        raise ValueError("미지원 Markdown 요소: " + prose_text[:80])
+                    tail = None
+                    if level and not list_item:
+                        m = re.search(r"\S:\s+(\S.*)$", prose_text)
+                        if m:
+                            head = prose_text[: m.start() + 1].rstrip()
+                            rest = m.group(1).strip()
+                            if head and rest:
+                                tail_start = text_start + m.start(1)
+                                prose_text, tail = head, rest
+                    node = {"kind": "heading" if (level and not list_item)
+                            else "paragraph", "text": prose_text}
+                    if level:
+                        node["level"] = level
+                    if list_item:
+                        node["list_item"] = True
+                    prose = node["kind"] == "paragraph" and not list_item
+                    if prose and previous_prose:
+                        node["soft_continue"] = True
+                    append(node, [(prose_text, text_start)])
+                    previous_prose = prose
+                    if tail:
+                        append({"kind": "paragraph", "text": tail},
+                               [(tail, tail_start)])
+                        previous_prose = True
+                # A Markdown hard break terminates this line's paragraph boundary.
+                if lines[i - 1].endswith("  "):
+                    previous_prose = False
+                continue
+            if caption:
+                append(
+                    {"kind": "caption", "label": caption[1],
+                     "number": int(caption[2]), "text": s}
+                )
+                previous_prose = False
+                continue
             md = re.match(r"^(#{1,6})\s+(.+)$", s)
             level, s = heading_state.read(s)
             if md:
