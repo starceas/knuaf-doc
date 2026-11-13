@@ -53,8 +53,15 @@ claim 복구 생성 전에 발생하던 `KeyError: 'id'`를 시험 입력에서 
 
 `tools/run_validation.py:ALLOWED_SKILL_SKIPS`는 정확한 시험 ID와 사유를
 묶은 유한 목록이다. Crossref 실호출(`GG_DOI_LIVE` opt-in) 1건과 배포하지
-않는 저장소 밖 승인 catalog가 필요한 24건만 등록한다. 자료가 있으면
-해당 시험은 정상 실행되며 통과·실패를 그대로 기록한다. 다음은 승인하지 않는다:
+않는 저장소 밖 승인 catalog가 필요한 24건, 그리고 저장소 밖 비공개 FD-A
+원본 통합문서가 필요한 2건만 등록한다. 그 2건은 R-01 오류 흔적 대조
+(`tests.test_hort_finance_pipeline.LandErrorRegression.
+test_error_footprint_is_scenario_independent`)와 공개문서 누출 감사
+(`tests.test_hort_finance_contract.PublicContract.
+test_real_h01_audit_reports_no_leak`)이며, 22좌표 잠금과 누출 감사는 그
+통합문서 없이는 재현되지 않으므로 시험을 지우거나 입력을 합성으로 바꾸지
+않는다. 자료가 있으면 해당 시험은 정상 실행되며 통과·실패를 그대로 기록한다.
+다음은 승인하지 않는다:
 
 - 등록하지 않은 시험 ID, 같은 클래스에 새로 추가한 시험, 바뀐 skip 사유
 - 필수 런타임 의존성·배포 catalog·payload 누락
