@@ -98,14 +98,14 @@ PINNED_PACKS = {
     "rda.income.national.2024": {
         "pack_revision": "2024",
         "records_file_sha256":
-            "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+            "e469c7c73c94ed27e08d13d4950d1664ab5eb34cff5f0816ef2daade1d87cd6a",
         "record_lines": 102,
         "relpath": "common/rda-income-national-2024/records.jsonl",
     },
     "rda.income.regional.2024": {
         "pack_revision": "2024",
         "records_file_sha256":
-            "91751f56d08db77653fd9c3f15ec002ad478a88f84b07156d10cd0b3497626fc",
+            "06aa0ec1287bcb307750fe8fafe70bc281cd3d169479ee525928c5201cf73dca",
         "record_lines": 365,
         "relpath": "common/rda-income-regional-2024/records.jsonl",
     },

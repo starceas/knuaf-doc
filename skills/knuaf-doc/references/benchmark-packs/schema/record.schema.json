@@ -24,7 +24,7 @@
     "category": "문자열. 원문 표의 분류명 (예: 식량작물, 유지작물, 부산물 비율 — kind에 따라 표 이름을 그대로 담기도 한다).",
     "major_ids": "문자열 배열. 이 작목이 속하는 전공 ID 목록. 비어 있을 수 있다."
   },
-  "cost_items_warning": "national 소득자료집(crop_income_cost_breakdown)과 regional 지역별자료(crop_income_regional)는 개념이 같은 항목도 키 이름이 다르다 (예: fertilizer_inorganic vs fertilizer_mineral, hired_labor vs labor_hired). gg_rda_lookup.py는 cost_items를 불투명 통과(passthrough) 딕셔너리로만 다루고 키 이름을 하드코딩해 두 팩을 섞지 않는다.",
+  "cost_items_warning": "national 소득자료집(crop_income_cost_breakdown)과 regional 지역별자료(crop_income_regional)는 개념이 같은 항목도 키 이름이 다르다 (예: fertilizer_inorganic vs fertilizer_mineral, hired_labor vs labor_hired). gg_rda_lookup.py는 cost_items를 불투명 통과(passthrough) 딕셔너리로만 다루고 키 이름을 하드코딩해 두 팩을 섞지 않는다. orchard_establishment·mushroom_spawn·mushroom_substrate·disinfectant·bee_colony·bee_feed·beekeeping_transport_overwinter·bee_disease_control은 원문 표에만 있고 팩에 칸이 없던 행을 2026-11-13에 세목으로 추가한 키다. 모두 이미 인쇄된 중간재 계 안에 들어 있던 금액이므로 중간재 계(intermediate_cost_total)·경영비·소득 값은 추가 전과 같다. 새 키를 세목 합에 넣어 계와 맞출 때는 작목군별로 나눠 더한다: 과수 전용 집합(RDA_INTERMEDIATE_FRUIT)에는 orchard_establishment만 더하고, 버섯 3키(mushroom_spawn·mushroom_substrate·disinfectant)와 양봉 4키(bee_colony·bee_feed·beekeeping_transport_overwinter·bee_disease_control)는 해당 작목의 중간재 합산 규칙에 포함한다. 값이 \"-\"인 칸은 수치 0이 아니라 비수치 결측 표기이므로 합산·비교에서 제외한다.",
   "basis_by_kind_family": {
     "income_family_and_production_stat": "crop_income, crop_income_cost_breakdown, crop_income_regional, production_stat: {year, area_unit, quantity_unit, currency, crops_per_year}",
     "official_market_price": "위와 같은 모양이지만 대부분 null: {year, area_unit:null, quantity_unit, currency, crops_per_year:null}",
@@ -41,13 +41,13 @@
     "crop_income_cost_breakdown": {
       "출처": "소득자료집 작목별 경영비 상세",
       "metrics": "main_product_value, byproduct_value, value_added, value_added_rate_pct, farmgate_price 등",
-      "cost_items": "약 20개 키: seed_seedling, fertilizer_inorganic, fertilizer_organic, pesticide, utilities_power, other_materials, small_tools, large_machinery_depreciation, farming_facility_depreciation, repair_maintenance, other_costs, intermediate_cost_total, machinery_facility_rent, land_rent, consigned_farming, hired_labor, unpaid_family_labor, working_capital_interest, fixed_capital_interest, land_capital_interest, production_cost_total"
+      "cost_items": "약 22개 키: orchard_establishment(과수원조성비, 원문 표에 그 행이 있을 때만), seed_seedling, fertilizer_inorganic, fertilizer_organic, pesticide, utilities_power, other_materials, small_tools, large_machinery_depreciation, farming_facility_depreciation, repair_maintenance, other_costs, intermediate_cost_total, machinery_facility_rent, land_rent, consigned_farming, hired_labor, unpaid_family_labor, working_capital_interest, fixed_capital_interest, land_capital_interest, production_cost_total"
     },
     "crop_income_regional": {
       "출처": "지역별 소득자료",
       "region.level": "provincial, sido 필수",
       "metrics": "crop_income_cost_breakdown과 유사하나 quantity_unit이 metrics 안에도 중복 기재될 수 있음",
-      "cost_items": "약 18개 키, national과 이름 다름: main_product_value, byproduct_value, seed_and_seedling, fertilizer_mineral, fertilizer_organic, pesticide, utilities_fuel, other_materials, small_tools, depreciation_large_tools, depreciation_facilities, repair_maintenance, other_costs, rent_machinery_facility, rent_land, consigned_farming, labor_hired, labor_own",
+      "cost_items": "약 28개 키, national과 이름 다름: main_product_value, byproduct_value, orchard_establishment(과수원조성비), seed_and_seedling, fertilizer_mineral, fertilizer_organic, pesticide, utilities_fuel, vehicle, other_materials, small_tools, depreciation_large_tools, depreciation_facilities, repair_maintenance, production_management, other_costs, rent_machinery_facility, rent_land, consigned_farming, labor_hired, labor_own. 작목별 조건부 키: mushroom_spawn(종균비), mushroom_substrate(배지원료비), disinfectant(소독비) — 버섯 레코드, bee_colony(봉군비), bee_feed(사료비), beekeeping_transport_overwinter(이동사육및월동비), bee_disease_control(꿀벌방역비) — 양봉 레코드. conditional 키는 해당 작목에만 나타난다.",
       "caveats_필수": "통계적 유의성 없음 계열 문구 포함"
     },
     "wholesale_price_series": {
