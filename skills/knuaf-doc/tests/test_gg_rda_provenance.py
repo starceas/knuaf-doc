@@ -418,13 +418,42 @@ WSUM_PACK_OVER_TOLERANCE = frozenset({
     "rda.income.regional.2024.jeonnam.crop.느타리버섯_균상",
 })
 
+#: Records that carry cost_items, per pinned pack.  A record that silently
+#: loses its 세목 would otherwise drop out of the W-SUM scan unnoticed.
+WSUM_RECORDS_WITH_COST_ITEMS = {
+    "rda.income.national.2024": 51,
+    "rda.income.regional.2024": 365,
+    "rda.econ.2025": 0,
+    "mafra.specialty.production.2024": 0,
+    "rda.income.national.2025": 53,
+    "rda.income.regional.2025": 49,
+}
+
+#: Which pack column holds each printed 계 line ('경영비·생산비' pages print one
+#: figure for both; the pack stores it as 경영비).
+WSUM_PACK_TOTAL_FIELD = {
+    "경영비": ("metrics", "operating_cost"),
+    "경영비·생산비": ("metrics", "operating_cost"),
+    "중간재 계": ("cost_items", "intermediate_cost_total"),
+    "생산비": ("cost_items", "production_cost_total"),
+}
+
 
 def cost_section_sums(cost_items):
     """Return ``(intermediate, operating, production)`` sums over 세목 only —
     계 lines, revenue columns and non-numeric (``"-"``) cells excluded."""
     totals = dict.fromkeys(("intermediate", "operating", "production"), 0)
     for key, value in cost_items.items():
-        if key in COST_TOTAL_KEYS or value in (None, "-"):
+        if key in COST_TOTAL_KEYS:
+            continue
+        if not (key in COST_SECTION_INTERMEDIATE
+                or key in COST_SECTION_OPERATING_EXTRA
+                or key in COST_SECTION_PRODUCTION_EXTRA):
+            # a new cost key needs a section — fail loudly even when its
+            # cell is "-" or None, so it can never slip in unclassified
+            raise AssertionError("cost_items key %r has no printed section"
+                                 % key)
+        if value in (None, "-"):
             continue
         amount = int(value)
         if key in COST_SECTION_INTERMEDIATE:
@@ -434,11 +463,8 @@ def cost_section_sums(cost_items):
         elif key in COST_SECTION_OPERATING_EXTRA:
             totals["operating"] += amount
             totals["production"] += amount
-        elif key in COST_SECTION_PRODUCTION_EXTRA:
+        else:
             totals["production"] += amount
-        else:  # a new cost key needs a section — fail loudly, not silently
-            raise AssertionError("cost_items key %r has no printed section"
-                                 % key)
     return tuple(totals[k] for k in ("intermediate", "operating",
                                      "production"))
 
@@ -462,6 +488,11 @@ class CostItemSumTests(unittest.TestCase):
     def test_unknown_cost_key_is_rejected(self):
         with self.assertRaises(AssertionError):
             cost_section_sums({"seed_and_seedling": "1", "mystery_row": "2"})
+        # an unclassified key is rejected even with a blank/dash cell
+        for blank in ("-", None):
+            with self.subTest(value=blank):
+                with self.assertRaises(AssertionError):
+                    cost_section_sums({"mystery_row": blank})
 
     def test_over_tolerance_records_are_whitelisted_printed_defects(self):
         # 세목 합이 팩이 실제로 담고 있는 계와 ±3 넘게 어긋나는 레코드는 원문
@@ -469,8 +500,10 @@ class CostItemSumTests(unittest.TestCase):
         # 실패하고, 허용 목록 레코드가 고쳐져 차이가 사라져도 실패한다(그때는
         # WSUM_PACK_OVER_TOLERANCE와 WSUM_PRINTED_DEFECTS를 같이 고친다).
         observed = set()
+        with_items = {}
         for pack_id, pin in prov.PINNED_PACKS.items():
             path = PACKS / pin["relpath"]
+            with_items[pack_id] = 0
             for line in path.read_text(encoding="utf-8").splitlines():
                 if not line.strip():
                     continue
@@ -478,6 +511,7 @@ class CostItemSumTests(unittest.TestCase):
                 items = record.get("cost_items")
                 if not items:
                     continue
+                with_items[pack_id] += 1
                 worst = max(self._carried_deltas(record, items).values(),
                             key=abs)
                 if abs(worst) > WSUM_TOLERANCE:
@@ -485,6 +519,8 @@ class CostItemSumTests(unittest.TestCase):
         self.assertEqual(
             observed, set(WSUM_PACK_OVER_TOLERANCE),
             "±%d 초과 레코드가 허용 목록과 다르다" % WSUM_TOLERANCE)
+        # 세목이 통째로 사라진 레코드가 검사망에서 빠지지 않게 팩별 수 고정.
+        self.assertEqual(with_items, WSUM_RECORDS_WITH_COST_ITEMS)
         # 허용 목록은 13건 고정 — 2024 지역 12 + 전국 1 (RESULT-WSUM §9).
         self.assertEqual(len(WSUM_PRINTED_DEFECTS), 13)
         self.assertTrue(set(WSUM_PACK_OVER_TOLERANCE)
@@ -493,7 +529,14 @@ class CostItemSumTests(unittest.TestCase):
     def _carried_deltas(self, record, items):
         """세목 합 − 계, 팩이 그 계를 실제로 담고 있을 때만."""
         int_sum, op_sum, prod_sum = cost_section_sums(items)
-        deltas = {"경영비": op_sum - int(record["metrics"]["operating_cost"])}
+        metric_op = int(record["metrics"]["operating_cost"])
+        item_op = items.get("operating_cost")
+        if item_op not in (None, "-"):
+            # 경영비 계가 두 자리에 있으면 같은 값이어야 하고, 둘 다 잰다.
+            self.assertEqual(int(item_op), metric_op,
+                             "%s: cost_items.operating_cost != "
+                             "metrics.operating_cost" % record["record_id"])
+        deltas = {"경영비": op_sum - metric_op}
         for line_name, key, total in (
                 ("중간재 계", "intermediate_cost_total", int_sum),
                 ("생산비", "production_cost_total", prod_sum)):
@@ -531,6 +574,23 @@ class CostItemSumTests(unittest.TestCase):
                        "경영비·생산비": op_sum}[expect["printed_line"]]
                 self.assertEqual(got, expect["pack_rows_sum"])
                 self.assertEqual(got - expect["printed"], expect["pack_delta"])
+                # 원문 쪽 동결값끼리의 산술(page_rows_sum은 원문 쪽 세목 합,
+                # pack_rows_sum은 팩 세목만의 합 — 10건은 팩에 없는 행이
+                # 있어 둘이 다르다).
+                self.assertEqual(expect["printed"] - expect["page_rows_sum"],
+                                 expect["page_delta"])
+                # 팩이 그 계 칸을 담고 있으면 그 값이 동결된 인쇄값과 같아야
+                # 한다 — 결함값이 다른 결함값으로 바뀌는 것도 잡는다.
+                # 담고 있지 않으면(지역 2024 중간재·생산비 계) 없음을 잠근다.
+                where, field = WSUM_PACK_TOTAL_FIELD[expect["printed_line"]]
+                carried_total = (record.get(where) or {}).get(field)
+                if record_id in WSUM_PACK_OVER_TOLERANCE:
+                    self.assertIsNotNone(carried_total)
+                    self.assertEqual(int(carried_total), expect["printed"])
+                else:
+                    self.assertIn(carried_total, (None, "-"),
+                                  "팩에 그 계 칸이 생겼다 — 허용 목록 두 층을 "
+                                  "다시 나눠라")
                 # 허용 목록에 있으면서 ±3 안인 10건은 팩에 그 계 칸이 없어서
                 # (지역 2024 팩은 중간재·생산비 계를 담지 않는다) 팩 쪽
                 # 검사가 볼 수 없는 원문 결함이다 — 그 사실을 함께 잠근다.
@@ -575,10 +635,47 @@ class KeyRefBindingTests(unittest.TestCase):
         walk(registry)
         return refs
 
+    #: The registry's audit_key refs, by owning entry: (source_id, pack_id,
+    #: physical line).  Pinned so a ref silently re-pointed at another valid
+    #: row (hashes would still match) or dropped/duplicated is caught.
+    EXPECTED_KEY_REFS = sorted([
+        ("rda.income.national.2024", "rda.income.national.2024", 1),
+        ("rda.income.national.2024", "rda.income.national.2024", 52),
+        ("rda.income.regional.2024", "rda.income.regional.2024", 1),
+        ("rda.econ.2025", "rda.econ.2025", 19),
+        ("rda.econ.2025", "rda.econ.2025", 1),
+        ("mafra.specialty.production.2024",
+         "mafra.specialty.production.2024", 1),
+        ("mafra.specialty.production.2024",
+         "mafra.specialty.production.2024", 1441),
+    ])
+
+    def test_key_refs_point_at_the_expected_rows(self):
+        registry = json.loads((KN_UAF_DOC / "references" /
+                               "builtin-sources.json").read_text(
+                                   encoding="utf-8"))
+        got = []
+        for entry in registry["entries"]:
+            def walk(node):
+                if isinstance(node, dict):
+                    ref = node.get("key_ref")
+                    if isinstance(ref, dict) and \
+                            ref.get("kind") == "audit_key":
+                        got.append((entry["source_id"], ref["pack_id"],
+                                    ref["physical_jsonl_line_1based"]))
+                    for value in node.values():
+                        walk(value)
+                elif isinstance(node, list):
+                    for value in node:
+                        walk(value)
+            walk(entry)
+        self.assertEqual(sorted(got), self.EXPECTED_KEY_REFS)
+
     def test_every_key_ref_matches_current_pack_bytes(self):
         refs = self._key_refs()
-        # 7 audit_key refs ship today (4 packs × 2 rows, regional 2024 × 1);
-        # the count is pinned so a generator that drops refs is caught too.
+        # 7 audit_key refs ship today (national 2024 ×2, regional 2024 ×1,
+        # econ ×2, mafra ×2); which rows exactly is pinned in
+        # test_key_refs_point_at_the_expected_rows.
         self.assertEqual(len(refs), 7)
         for ref in refs:
             pack_id = ref["pack_id"]

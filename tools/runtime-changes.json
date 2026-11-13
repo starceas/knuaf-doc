@@ -326,7 +326,7 @@
       "source": "adopted:app-PR41"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "39a9e51a12d243cfb3af8d4b67de8210b2c290a4755ebb4d8400387f760d7d4f",
+      "after_sha256": "1ac1d311428037bf07df1c2d3bad02203e72531b011651137c5dec38acde59bd",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "P28",
@@ -2153,12 +2153,12 @@
       "source": "new"
     },
     "skills/knuaf-doc/tests/test_gg_rda_provenance.py": {
-      "after_sha256": "904406405b4c57f0734d0a9e750acf97718d83afb0836012cc7e02ea961a9d11",
+      "after_sha256": "a701a156e650f91ca29057fb02251870e39c3509b83a6a924b4149ea74a93433",
       "before_sha256": null,
       "first_changed": "P4",
       "last_changed": "P28",
       "owner": "P15",
-      "reason": "accepted provenance lane test (carried over verbatim) | P15: D5 useful-life physical-cell correction and dependent trust migration | W-2025: 2025 소득 팩 등록에 따른 갱신 — 팩 총 행수 계약 상수 6,162 → 6,315(2025 팩 153행 추가); 웹 W-01 후속으로 실팩 manifest 감사 체인(파일 해시·행 해시·audit_key)과 accepted-catalog 핀 재현·builtin-sources 팩 artifact 해시 시험 3개, 웹 W-03 후속 source.aggregation_group 계약 시험 1개 추가. | W-TEST: PR① 후속 회귀시험 2개 추가 — (1) W-SUM 원문 인쇄 결함 13건 허용 목록(CostItemSumTests: 세목 합·계 ±3 대조, 허용 목록 밖 새 차이와 허용 레코드 값 변화를 모두 잡는다), (2) builtin-sources.json key_ref 줄 참조 결속(KeyRefBindingTests: 7개 audit_key 참조의 records_file_sha256·raw_line_sha256을 지금 팩 바이트로 재계산). 시험만 바뀌고 실행 코드·팩·builtin-sources는 그대로다.",
+      "reason": "accepted provenance lane test (carried over verbatim) | P15: D5 useful-life physical-cell correction and dependent trust migration | W-2025: 2025 소득 팩 등록에 따른 갱신 — 팩 총 행수 계약 상수 6,162 → 6,315(2025 팩 153행 추가); 웹 W-01 후속으로 실팩 manifest 감사 체인(파일 해시·행 해시·audit_key)과 accepted-catalog 핀 재현·builtin-sources 팩 artifact 해시 시험 3개, 웹 W-03 후속 source.aggregation_group 계약 시험 1개 추가. | W-TEST: PR① 후속 회귀시험 2개 추가 — (1) W-SUM 원문 인쇄 결함 13건 허용 목록(CostItemSumTests: 세목 합·계 ±3 대조, 허용 목록 밖 새 차이와 허용 레코드 값 변화를 모두 잡는다), (2) builtin-sources.json key_ref 줄 참조 결속(KeyRefBindingTests: 7개 audit_key 참조의 records_file_sha256·raw_line_sha256을 지금 팩 바이트로 재계산). 시험만 바뀌고 실행 코드·팩·builtin-sources는 그대로다. 웹1 FAIL 처분(WTEST-01~06): 허용 레코드 계=동결 인쇄값·계 칸 없음 잠금, cost_items.operating_cost=metrics, 원문 쪽 산술, key_ref 대상 7건 고정, 팩별 세목 레코드 수 고정, 미분류 키는 \"-\"여도 거부.",
       "source": "new"
     },
     "skills/knuaf-doc/tests/test_gg_rda_research_integration.py": {
