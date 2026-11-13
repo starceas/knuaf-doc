@@ -168,16 +168,121 @@ class IntegrityGateTests(unittest.TestCase):
 
 
 class RealPackIdentityTests(unittest.TestCase):
-    """D01: all 6,055 physical rows preserved with immutable audit keys."""
+    """D01: all 6,315 physical rows preserved with immutable audit keys."""
 
-    def test_all_four_packs_index_to_6162_physical_keys(self):
+    def test_all_pinned_packs_index_to_6315_physical_keys(self):
         total = 0
         for pack_id, pin in prov.PINNED_PACKS.items():
             idx = prov.build_audit_index(PACKS / pin["relpath"], pack_id,
                                          pin["records_file_sha256"])
             self.assertEqual(len(idx), pin["record_lines"])
             total += len(idx)
-        self.assertEqual(total, 6162)
+        self.assertEqual(total, 6315)
+
+    def test_manifest_audit_chain_matches_record_bytes(self):
+        # Every pinned pack's manifest must describe the records.jsonl bytes
+        # it ships beside: file hash == pin == actual bytes, and the rows'
+        # audit keys == the index built from those bytes.  Catches a record
+        # edit (e.g. a field rename) whose manifest hashes were not rebuilt.
+        for pack_id, pin in prov.PINNED_PACKS.items():
+            with self.subTest(pack=pack_id):
+                records = PACKS / pin["relpath"]
+                manifest = json.loads(
+                    (records.parent / "manifest.json").read_text(
+                        encoding="utf-8"))
+                actual = hashlib.sha256(records.read_bytes()).hexdigest()
+                self.assertEqual(manifest["records_file_sha256"], actual)
+                self.assertEqual(pin["records_file_sha256"], actual)
+                idx = prov.build_audit_index(records, pack_id, actual)
+                rows = manifest["rows"]
+                self.assertEqual(len(rows), len(idx))
+                keys = set()
+                for row in rows:
+                    key = prov.normalize_audit_key(row["audit_key"])
+                    self.assertEqual(row["raw_line_sha256"], key[3])
+                    keys.add(key)
+                self.assertEqual(keys, set(idx))
+
+    def test_builtin_sources_pack_artifacts_match_disk(self):
+        # builtin-sources.json artifacts[] for benchmark packs must equal
+        # the shipped bytes (sha256 and size) — a rebuilt manifest whose
+        # registry artifact hash was not refreshed fails here.
+        registry = json.loads((KN_UAF_DOC / "references" /
+                               "builtin-sources.json").read_text(
+                                   encoding="utf-8"))
+        seen = []
+
+        def walk(node):
+            if isinstance(node, dict):
+                for art in node.get("artifacts") or []:
+                    rel = art.get("relative_path") \
+                        if isinstance(art, dict) else None
+                    if isinstance(rel, str) and rel.startswith("common/"):
+                        seen.append((rel, art))
+                for value in node.values():
+                    walk(value)
+            elif isinstance(node, list):
+                for value in node:
+                    walk(value)
+
+        walk(registry)
+        self.assertTrue(seen)
+        for rel, art in seen:
+            with self.subTest(artifact=rel):
+                data = (PACKS / rel).read_bytes()
+                self.assertEqual(art["sha256"],
+                                 hashlib.sha256(data).hexdigest())
+                self.assertEqual(art["bytes"], len(data))
+
+    def test_source_aggregation_group_contract(self):
+        # record.schema.json common_envelope.source: aggregation_group is
+        # survey + "." + data_year, and a pack whose records span more than
+        # one group must carry the manifest's no-mixing rule text.
+        required = {"publisher", "survey", "survey_label",
+                    "aggregation_group", "data_year", "document"}
+        checked = 0
+        for pack_id, pin in prov.PINNED_PACKS.items():
+            records = PACKS / pin["relpath"]
+            groups = set()
+            for line in records.read_text(encoding="utf-8").splitlines():
+                rec = json.loads(line)
+                src = rec.get("source")
+                if src is None:
+                    continue
+                with self.subTest(record=rec.get("record_id")):
+                    self.assertTrue(required <= set(src), sorted(src))
+                    self.assertEqual(
+                        src["aggregation_group"],
+                        "%s.%d" % (src["survey"], src["data_year"]))
+                    self.assertNotIn("aggregation_key", src)
+                groups.add(src["aggregation_group"])
+                checked += 1
+            if len(groups) > 1:
+                manifest = json.loads(records.parent.joinpath(
+                    "manifest.json").read_text(encoding="utf-8"))
+                with self.subTest(pack=pack_id):
+                    self.assertIn("aggregation_group",
+                                  manifest.get("aggregation_rule", ""))
+        self.assertEqual(checked, 153)
+
+    def test_catalog_authority_pins_reproduce_from_real_manifests(self):
+        # Every pinned accepted-catalog authority that names a pinned pack
+        # must reproduce from that pack's shipped manifest rows; a manifest
+        # rebuilt without re-pinning (or the reverse) fails here.
+        import gg_rda_research as research
+        for auth, digest in research.PINNED_CATALOG_AUTHORITIES.items():
+            pack_id = auth.rsplit("/", 1)[-1]
+            pin = prov.PINNED_PACKS.get(pack_id)
+            if pin is None:
+                continue
+            with self.subTest(authority=auth):
+                manifest = json.loads(
+                    (PACKS / pin["relpath"]).parent.joinpath(
+                        "manifest.json").read_text(encoding="utf-8"))
+                entries = {prov.normalize_audit_key(r["audit_key"]): r
+                           for r in manifest["rows"]}
+                self.assertEqual(
+                    research.catalog_content_digest(entries), digest)
 
     def test_econ_byte_identical_lines_keep_distinct_keys(self):
         pin = prov.PINNED_PACKS["rda.econ.2025"]
