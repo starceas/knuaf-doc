@@ -252,10 +252,6 @@
     "tests/test_body_amount_wiring.py",
     "skills/knuaf-doc/scripts/gg_notices.py",
     "tests/test_hort_workbook_advice.py",
-    "skills/knuaf-doc/scripts/docx_probe.py",
-    "skills/knuaf-doc/scripts/gg_school_format_hwpx.py",
-    "tests/test_school_format_hwpx_probe.py",
-    "tests/test_school_format_probe.py",
     "skills/knuaf-doc/references/food-crops/corrections/FC-CLEAR.md",
     "skills/knuaf-doc/references/food-crops/corrections/fc-clear-map.json",
     "tests/test_excel_other_majors_bytes_locked.py",
@@ -275,6 +271,10 @@
     "skills/knuaf-doc/tests/test_gg_progress.py",
     "tests/test_sidecar_registry.py",
     "tests/test_unsupported_finance_notice.py",
+    "skills/knuaf-doc/scripts/docx_probe.py",
+    "skills/knuaf-doc/scripts/gg_school_format_hwpx.py",
+    "tests/test_school_format_hwpx_probe.py",
+    "tests/test_school_format_probe.py",
     "skills/knuaf-doc/references/dairy/corrections/DAIRY-CLEAR.md",
     "skills/knuaf-doc/references/dairy/corrections/dairy-clear-map.json",
     "skills/knuaf-doc/references/dairy/corrections/dairy-div0-expected.json",
@@ -2960,42 +2960,6 @@
       "source": "new",
       "stage": "v0.4.8"
     },
-    "skills/knuaf-doc/scripts/docx_probe.py": {
-      "after_sha256": "d02860166c0539b107ac6b95fc903770cc0bc09853891f210006825f203097cc",
-      "before_sha256": null,
-      "first_changed": "P28",
-      "last_changed": "F1",
-      "owner": "P28",
-      "reason": "F1: 학교 서식 양식 DOCX 검사 진입점 — 산출물의 쪽 여백·글자 크기·문단 간격을 실측해 위반 목록을 낸다",
-      "source": "new"
-    },
-    "skills/knuaf-doc/scripts/gg_school_format_hwpx.py": {
-      "after_sha256": "a22b36619c98a4a197c78ded46c808ec19b8dd9e7c8c2f7fd6d7fae629fce45c",
-      "before_sha256": null,
-      "first_changed": "P28",
-      "last_changed": "F1-r3",
-      "owner": "P28",
-      "reason": "F1: HWPX 서식 실측 모듈 — 앞부분 로마 쪽번호·본문 아라비아 쪽번호 3구역과 쪽별 여백·글자 크기를 charPr 단위로 잰다 | F1-r2: F1 웹 검토 FAIL 11건 고침 — C-01 다른 전공 HWPX 매니페스트 charpr 키 누출, I-01 요약 번호형 소제목 첫 개만 16pt, I-02 ZIP 항목 손상이 예외로 죽음, I-03 번호형 목차 항목 오탐, I-04 kordoc 재파싱 실패가 skipped 통과, I-05 쪽번호 제어 요소 중복 미검출, I-06 앵커 시험의 가짜 결함, R-01 version.xml-only ok=false 통과, R-02 재파싱 문단 순서·개수 미대조. | F1-r3: I-04: `--kordoc`을 지정했는데 실행할 수 없으면(파일 없음·타임아웃·OSError) structure·reparse를 skipped가 아니라 failed로 닫아 blocked.",
-      "source": "new"
-    },
-    "tests/test_school_format_hwpx_probe.py": {
-      "after_sha256": "e1dc20ebe867bb36dd68b84143f60d6ece2d79f094746be659356f3f97fd3d10",
-      "before_sha256": null,
-      "first_changed": "P28",
-      "last_changed": "F1b-r2",
-      "owner": "P28",
-      "reason": "F1: HWPX 서식 실측 시험 27건 — 3구역 쪽번호, charPr 기반 글자 크기, 여백 위반 검출 | F1-r2: F1 웹 검토 FAIL 11건 고침 — C-01 다른 전공 HWPX 매니페스트 charpr 키 누출, I-01 요약 번호형 소제목 첫 개만 16pt, I-02 ZIP 항목 손상이 예외로 죽음, I-03 번호형 목차 항목 오탐, I-04 kordoc 재파싱 실패가 skipped 통과, I-05 쪽번호 제어 요소 중복 미검출, I-06 앵커 시험의 가짜 결함, R-01 version.xml-only ok=false 통과, R-02 재파싱 문단 순서·개수 미대조. | F1-r3: I-04 시험 교체: 지정 kordoc 실행 불가·타임아웃 → blocked, `--kordoc` 미지정만 skipped. | F1b: 재파싱 소실 문단 대상 선택을 유일 문자열 기준으로 수정(기대값 재고정 아님). | F1b-r2: 은닉 대상 글자 대조 강화에 따른 재파싱 시험 회귀 없음 확인 | F1b-r2: 은닉 대상 글자 대조 강화에 따른 재파싱 시험 회귀 없음 확인 | F1b-r2: 은닉 대상 글자 대조 강화에 따른 재파싱 시험 회귀 없음 확인",
-      "source": "new"
-    },
-    "tests/test_school_format_probe.py": {
-      "after_sha256": "f0f7c9f2e5c335de6050ff8f574e49ccb9b3a147e6d8ca8f7b202669f52ac5df",
-      "before_sha256": null,
-      "first_changed": "P28",
-      "last_changed": "F1-r3",
-      "owner": "P28",
-      "reason": "F1: DOCX 서식 실측 시험 7건 — 여백·글자 크기 위반 검출과 통과 케이스 | F1-r2: F1 웹 검토 FAIL 11건 고침 — C-01 다른 전공 HWPX 매니페스트 charpr 키 누출, I-01 요약 번호형 소제목 첫 개만 16pt, I-02 ZIP 항목 손상이 예외로 죽음, I-03 번호형 목차 항목 오탐, I-04 kordoc 재파싱 실패가 skipped 통과, I-05 쪽번호 제어 요소 중복 미검출, I-06 앵커 시험의 가짜 결함, R-01 version.xml-only ok=false 통과, R-02 재파싱 문단 순서·개수 미대조. | F1-r3: N-I02 시험: 손상 DOCX `--out` blocked 보고서 기록, 입력 경로 덮어쓰기 거부.",
-      "source": "new"
-    },
     "skills/knuaf-doc/references/food-crops/corrections/FC-CLEAR.md": {
       "after_sha256": "4f3c062b99b5b13d90a9378595f02fa20a3059acc14a1f53f79f8639dea2fb8b",
       "before_sha256": null,
@@ -3164,12 +3128,48 @@
       "source": "new"
     },
     "tests/test_unsupported_finance_notice.py": {
-      "after_sha256": "f1eba2c78d8cec7e447faf1b13a2720de60bc0d85cbfdddea798c4cbe1e7dd9c",
+      "after_sha256": "89646ea4a4cd976658d2a2f5db494387f797734a4a183738bab004e8078b77e7",
       "before_sha256": null,
       "first_changed": "P28",
-      "last_changed": "dairy-excel-blank",
+      "last_changed": "food-crops-0.1.0",
       "owner": "P28",
-      "reason": "W-N: 미지원 전공 재무 안내 시험 15건 — 행 존재·모양·학생 문구·식별값·배타성·커밋 구동 쓰기 | food-crops-0.1.0 W-N 연결: food_crops를 지원 쪽으로 옮기고 빈 사본 안내 시험 6건(미지원 0행+빈 사본 1행, 꼴, 앱 필수 3필드, 얇은 경로 바이트 동일, 대체 식별값, 배타) 추가",
+      "reason": "W-N: 미지원 전공 재무 안내 시험 15건 — 행 존재·모양·학생 문구·식별값·배타성·커밋 구동 쓰기 | food-crops-0.1.0 W-N 연결: food_crops를 지원 쪽으로 옮기고 빈 사본 안내 시험 6건(미지원 0행+빈 사본 1행, 꼴, 앱 필수 3필드, 얇은 경로 바이트 동일, 대체 식별값, 배타) 추가 | food-crops-0.1.0 N-01·N-02(#125 웹 메모): 식량작물→산업곤충→식량작물 재바인딩(#139 뒤 낙농은 빈 사본 쪽) 때 안내 종류 전환, 빈 사본 안내 게이트 포함·비차단·CLI 종료코드 시험 2건",
+      "source": "new"
+    },
+    "skills/knuaf-doc/scripts/docx_probe.py": {
+      "after_sha256": "d02860166c0539b107ac6b95fc903770cc0bc09853891f210006825f203097cc",
+      "before_sha256": null,
+      "first_changed": "P28",
+      "last_changed": "F1",
+      "owner": "P28",
+      "reason": "F1: 학교 서식 양식 DOCX 검사 진입점 — 산출물의 쪽 여백·글자 크기·문단 간격을 실측해 위반 목록을 낸다",
+      "source": "new"
+    },
+    "skills/knuaf-doc/scripts/gg_school_format_hwpx.py": {
+      "after_sha256": "a22b36619c98a4a197c78ded46c808ec19b8dd9e7c8c2f7fd6d7fae629fce45c",
+      "before_sha256": null,
+      "first_changed": "P28",
+      "last_changed": "F1-r3",
+      "owner": "P28",
+      "reason": "F1: HWPX 서식 실측 모듈 — 앞부분 로마 쪽번호·본문 아라비아 쪽번호 3구역과 쪽별 여백·글자 크기를 charPr 단위로 잰다 | F1-r2: F1 웹 검토 FAIL 11건 고침 — C-01 다른 전공 HWPX 매니페스트 charpr 키 누출, I-01 요약 번호형 소제목 첫 개만 16pt, I-02 ZIP 항목 손상이 예외로 죽음, I-03 번호형 목차 항목 오탐, I-04 kordoc 재파싱 실패가 skipped 통과, I-05 쪽번호 제어 요소 중복 미검출, I-06 앵커 시험의 가짜 결함, R-01 version.xml-only ok=false 통과, R-02 재파싱 문단 순서·개수 미대조. | F1-r3: I-04: `--kordoc`을 지정했는데 실행할 수 없으면(파일 없음·타임아웃·OSError) structure·reparse를 skipped가 아니라 failed로 닫아 blocked.",
+      "source": "new"
+    },
+    "tests/test_school_format_hwpx_probe.py": {
+      "after_sha256": "e1dc20ebe867bb36dd68b84143f60d6ece2d79f094746be659356f3f97fd3d10",
+      "before_sha256": null,
+      "first_changed": "P28",
+      "last_changed": "F1b-r2",
+      "owner": "P28",
+      "reason": "F1: HWPX 서식 실측 시험 27건 — 3구역 쪽번호, charPr 기반 글자 크기, 여백 위반 검출 | F1-r2: F1 웹 검토 FAIL 11건 고침 — C-01 다른 전공 HWPX 매니페스트 charpr 키 누출, I-01 요약 번호형 소제목 첫 개만 16pt, I-02 ZIP 항목 손상이 예외로 죽음, I-03 번호형 목차 항목 오탐, I-04 kordoc 재파싱 실패가 skipped 통과, I-05 쪽번호 제어 요소 중복 미검출, I-06 앵커 시험의 가짜 결함, R-01 version.xml-only ok=false 통과, R-02 재파싱 문단 순서·개수 미대조. | F1-r3: I-04 시험 교체: 지정 kordoc 실행 불가·타임아웃 → blocked, `--kordoc` 미지정만 skipped. | F1b: 재파싱 소실 문단 대상 선택을 유일 문자열 기준으로 수정(기대값 재고정 아님). | F1b-r2: 은닉 대상 글자 대조 강화에 따른 재파싱 시험 회귀 없음 확인 | F1b-r2: 은닉 대상 글자 대조 강화에 따른 재파싱 시험 회귀 없음 확인 | F1b-r2: 은닉 대상 글자 대조 강화에 따른 재파싱 시험 회귀 없음 확인",
+      "source": "new"
+    },
+    "tests/test_school_format_probe.py": {
+      "after_sha256": "f0f7c9f2e5c335de6050ff8f574e49ccb9b3a147e6d8ca8f7b202669f52ac5df",
+      "before_sha256": null,
+      "first_changed": "P28",
+      "last_changed": "F1-r3",
+      "owner": "P28",
+      "reason": "F1: DOCX 서식 실측 시험 7건 — 여백·글자 크기 위반 검출과 통과 케이스 | F1-r2: F1 웹 검토 FAIL 11건 고침 — C-01 다른 전공 HWPX 매니페스트 charpr 키 누출, I-01 요약 번호형 소제목 첫 개만 16pt, I-02 ZIP 항목 손상이 예외로 죽음, I-03 번호형 목차 항목 오탐, I-04 kordoc 재파싱 실패가 skipped 통과, I-05 쪽번호 제어 요소 중복 미검출, I-06 앵커 시험의 가짜 결함, R-01 version.xml-only ok=false 통과, R-02 재파싱 문단 순서·개수 미대조. | F1-r3: N-I02 시험: 손상 DOCX `--out` blocked 보고서 기록, 입력 경로 덮어쓰기 거부.",
       "source": "new"
     },
     "skills/knuaf-doc/references/dairy/corrections/DAIRY-CLEAR.md": {
