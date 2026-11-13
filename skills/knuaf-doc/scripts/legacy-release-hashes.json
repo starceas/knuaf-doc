@@ -42,16 +42,24 @@
    "a5dbf6db2aed41254d2a05460d1950a3cdc2a8db51c0d54e82d035d91bd2253a"
   ],
   "references/benchmark-packs/common/rda-income-national-2024/manifest.json": [
-   "b1ec5b7d59b8813175d2ccbb75272fb3a23062774379708921d16bdd75fe380b"
+   "b1ec5b7d59b8813175d2ccbb75272fb3a23062774379708921d16bdd75fe380b",
+   "0ddf83030ad03a8d6d49de928d48b94aaae5dd91ad1dea6ec66dd2b440b452b8"
   ],
   "references/benchmark-packs/common/rda-income-national-2024/records.jsonl": [
-   "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0"
+   "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+   "e469c7c73c94ed27e08d13d4950d1664ab5eb34cff5f0816ef2daade1d87cd6a"
   ],
   "references/benchmark-packs/common/rda-income-regional-2024/manifest.json": [
-   "3ff92cc170b80a80e4f2f3d4f4076a02b95cbdd2d992f06a7b81dcee27e80267"
+   "3ff92cc170b80a80e4f2f3d4f4076a02b95cbdd2d992f06a7b81dcee27e80267",
+   "bd6d8bda9de84b818f98914e175d8941007b74cd99bbe2bd1a76d95919c8cae0",
+   "836807949149dd707533f792aa70a138455a408245267b32497dbb7003d5b41b",
+   "980dd79380bf807b242f3c8b420dda91aa2e64f092b39af1ab338d3292a28e9e"
   ],
   "references/benchmark-packs/common/rda-income-regional-2024/records.jsonl": [
-   "c7e38281ccfaaaf40c63ab0880ca5f3ddb1ae18aaa89438ffb7f6da43c87c6df"
+   "c7e38281ccfaaaf40c63ab0880ca5f3ddb1ae18aaa89438ffb7f6da43c87c6df",
+   "0b8dee9b7be599f91e34340c2e7b28e2445da89e32c8e42341134b08290ae9c9",
+   "91751f56d08db77653fd9c3f15ec002ad478a88f84b07156d10cd0b3497626fc",
+   "06aa0ec1287bcb307750fe8fafe70bc281cd3d169479ee525928c5201cf73dca"
   ],
   "references/benchmark-packs/majors/food_crops/manifest.json": [
    "f32813aae8bc6b262af5fd83eead9ff8b736fdff88824e9fa6d8d004bb6983cb"
@@ -574,6 +582,10 @@
   "version.json": [
    "b85da1781dad6458936bdafba9748fa4f44af5834d683c7d5011e6de2a2290e0"
   ]
+ },
+ "notes": {
+  "references/benchmark-packs/common/rda-income-regional-2024/records.jsonl": "W-RICE7 (2026-11-13): 경기·강원·충남·전북·전남·경북·경남 쌀 레코드에 vehicle·production_management·rent_land 세목 추가(2024 지역별 농산물소득자료 PDF 물리쪽 425·426·428~432)로 records.jsonl 91751f56…·manifest.json 83680794… 해시가 추가됨; 직전 해시들은 충북 정정(#118)에서 온 값. W-2024 (2026-11-13): 2024 전국·지역 소득 팩에 원문 표제로 crop.form(작형) 386건을 채우고(A 258·B 128, C 40건은 근거 없어 null 유지), 원문에만 있고 칸이 없던 세목 8키를 넣었다(orchard_establishment 93 = 지역 82·전국 11, mushroom_spawn·mushroom_substrate·disinfectant 각 5, bee_colony·bee_feed·beekeeping_transport_overwinter·bee_disease_control 각 3; 삽입 120건). 합계·지표·기존 키는 바뀌지 않았다. records.jsonl·manifest.json 해시가 national e469c7c7…·0ddf8303…, regional 06aa0ec1…·980dd793…로 추가됨.",
+  "references/benchmark-packs/common/rda-income-national-2024/records.jsonl": "W-2024 (2026-11-13): 2024 전국·지역 소득 팩에 원문 표제로 crop.form(작형) 386건을 채우고(A 258·B 128, C 40건은 근거 없어 null 유지), 원문에만 있고 칸이 없던 세목 8키를 넣었다(orchard_establishment 93 = 지역 82·전국 11, mushroom_spawn·mushroom_substrate·disinfectant 각 5, bee_colony·bee_feed·beekeeping_transport_overwinter·bee_disease_control 각 3; 삽입 120건). 합계·지표·기존 키는 바뀌지 않았다. records.jsonl·manifest.json 해시가 national e469c7c7…·0ddf8303…, regional 06aa0ec1…·980dd793…로 추가됨."
  },
  "schema": "knuaf-doc/legacy-release-hashes@1",
  "source": "first-parent main history of starceas/knuaf-doc up to v0.1.1 (335b3d7f3cbf56d60c0be613eb5ea1af6f596a8f)"

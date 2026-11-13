@@ -21,13 +21,13 @@
       "artifacts": [
         {
           "relative_path": "common/rda-income-national-2024/manifest.json",
-          "sha256": "b1ec5b7d59b8813175d2ccbb75272fb3a23062774379708921d16bdd75fe380b",
+          "sha256": "0ddf83030ad03a8d6d49de928d48b94aaae5dd91ad1dea6ec66dd2b440b452b8",
           "bytes": 103741
         },
         {
           "relative_path": "common/rda-income-national-2024/records.jsonl",
-          "sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
-          "bytes": 151561
+          "sha256": "e469c7c73c94ed27e08d13d4950d1664ab5eb34cff5f0816ef2daade1d87cd6a",
+          "bytes": 152344
         }
       ],
       "coverage": {
@@ -37,21 +37,21 @@
               "key_ref": {
                 "kind": "audit_key",
                 "pack_id": "rda.income.national.2024",
-                "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+                "records_file_sha256": "e469c7c73c94ed27e08d13d4950d1664ab5eb34cff5f0816ef2daade1d87cd6a",
                 "physical_jsonl_line_1based": 1,
-                "raw_line_sha256": "298fba9503617abd2809e777f795d2008f88cc0aba287f4a90639caa6d89b344"
+                "raw_line_sha256": "e5644375e2cf09ade307b76fca56007b2d6c5ffd78b51e3b09aa88af5e13027b"
               },
               "authority": "verified",
-              "catalog_digest": "555719cf2565b21b5d4321eeaba7433d60807c280e995e7ed319064fb103adb4",
+              "catalog_digest": "1aa7fe6819ab2dc562bfe30e575aec3b54c858d66d2406211b4c68f8a9592c94",
               "receipt_sha256": null
             },
             {
               "key_ref": {
                 "kind": "audit_key",
                 "pack_id": "rda.income.national.2024",
-                "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0",
+                "records_file_sha256": "e469c7c73c94ed27e08d13d4950d1664ab5eb34cff5f0816ef2daade1d87cd6a",
                 "physical_jsonl_line_1based": 52,
-                "raw_line_sha256": "b14793e18c7e6fe8bd34b8102dfc14f6e4f2376b640e21069d863f74ce98de07"
+                "raw_line_sha256": "5229ce9ee7b01871d63c27a6d7bfb54701980c0bcedc78af3a833265d8c2e9f6"
               },
               "authority": "unverified",
               "catalog_digest": null,
@@ -75,13 +75,13 @@
       "artifacts": [
         {
           "relative_path": "common/rda-income-regional-2024/manifest.json",
-          "sha256": "3ff92cc170b80a80e4f2f3d4f4076a02b95cbdd2d992f06a7b81dcee27e80267",
+          "sha256": "980dd79380bf807b242f3c8b420dda91aa2e64f092b39af1ab338d3292a28e9e",
           "bytes": 434713
         },
         {
           "relative_path": "common/rda-income-regional-2024/records.jsonl",
-          "sha256": "c7e38281ccfaaaf40c63ab0880ca5f3ddb1ae18aaa89438ffb7f6da43c87c6df",
-          "bytes": 569359
+          "sha256": "06aa0ec1287bcb307750fe8fafe70bc281cd3d169479ee525928c5201cf73dca",
+          "bytes": 574779
         }
       ],
       "coverage": {
@@ -91,9 +91,9 @@
               "key_ref": {
                 "kind": "audit_key",
                 "pack_id": "rda.income.regional.2024",
-                "records_file_sha256": "c7e38281ccfaaaf40c63ab0880ca5f3ddb1ae18aaa89438ffb7f6da43c87c6df",
+                "records_file_sha256": "06aa0ec1287bcb307750fe8fafe70bc281cd3d169479ee525928c5201cf73dca",
                 "physical_jsonl_line_1based": 1,
-                "raw_line_sha256": "2dfbe78b665a85f3f7339297ec01db40dd11fc2b9f2e30b41b26c10fe2665c4e"
+                "raw_line_sha256": "cfbe4aac19e71ea95493d7a4e9ca8059e6da8adc751c30244002ebdf0a8d4fec"
               },
               "authority": "unverified",
               "catalog_digest": null,
@@ -661,8 +661,8 @@
       "artifacts": [
         {
           "relative_path": "references/excel-template.md",
-          "sha256": "4f18918d0b22d986b7e5e142f79f76eeafc1b19b1ccfdbccb5f63b453631099c",
-          "bytes": 63381
+          "sha256": "4fc5dfc03d830f059a12f3f3eeb2aa28d3a81fcd20627a12bab5b3bc4c86b4ce",
+          "bytes": 64762
         }
       ],
       "coverage": {
@@ -1225,11 +1225,11 @@
     "packs": {
       "rda.income.national.2024": {
         "records_relpath": "common/rda-income-national-2024/records.jsonl",
-        "records_file_sha256": "6feec51322ab6ffeacd8131a03165ba06f2f8a64d75058010f4f36a50b1527b0"
+        "records_file_sha256": "e469c7c73c94ed27e08d13d4950d1664ab5eb34cff5f0816ef2daade1d87cd6a"
       },
       "rda.income.regional.2024": {
         "records_relpath": "common/rda-income-regional-2024/records.jsonl",
-        "records_file_sha256": "c7e38281ccfaaaf40c63ab0880ca5f3ddb1ae18aaa89438ffb7f6da43c87c6df"
+        "records_file_sha256": "06aa0ec1287bcb307750fe8fafe70bc281cd3d169479ee525928c5201cf73dca"
       },
       "rda.econ.2025": {
         "records_relpath": "common/rda-econ-2025/records.jsonl",

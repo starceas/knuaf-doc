@@ -69,9 +69,10 @@ def create_workbook(source: Path | None, out: Path, *, context=None,
     """Byte-copy the chosen workbook without erasing student inputs."""
     import gg_major_contract as mc
     authorization = mc.authorize_output(mc.OUTPUT_SCHOOL_WORKBOOK, context)
-    # The bundled X01 is the specialty 17-sheet form. Fruit/dairy forms are
-    # not byte-copies of it and stay held on this route.
-    mc.require_workbook_profile(authorization, "school_17_sheet_v1")
+    # The bundled X01 is the specialty 17-sheet form; a major with its own
+    # school form (food_crops) declares that profile and passes --source.
+    mc.require_workbook_profile(
+        authorization, mc.default_workbook_profile(authorization))
     source = select_source(source, authorization=authorization, template_ref=template_ref,
                            reference_inventory=reference_inventory)
     read_template(source)

@@ -29,6 +29,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+from typing import NamedTuple
 from urllib.parse import quote, unquote
 import zipfile
 
@@ -1369,6 +1370,31 @@ def compare_table_numbers(source_text: str, parsed_text: str) -> dict:
 # 글자 그대로라서 Windows 경로(``figs\\a.png``)의 역슬래시를 지우면 안 된다.
 _ASCII_PUNCT = frozenset("!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~")
 
+# 앱이 받은 그림의 손잡이(gg_figure._block_for). 파일 경로가 아니라 sha256이고,
+# 나중에 gg_figure_docx.token_sha가 증명과 대조해 푼다 — 경로로 풀거나 존재를
+# 검사하면 안 된다(토큰이라 늘 '없는 파일'이 되어 그 절이 통째로 빠진다).
+_APP_FIGURE_TOKEN = re.compile(r"app-figure:[0-9a-f]{64}")
+
+# HWPX는 앱 그림을 풀 수단이 없다 — gg_figure_docx가 DOCX 전용이기 때문이다.
+# 조용히 빼면 그림이 빠진 채 발행되므로(A-01) 발행 경로는 이 문장으로 거절한다.
+APP_FIGURE_HWPX_ACTION = (
+    "앱에서 받은 그림은 아직 한글(HWPX) 파일에 넣지 못합니다 — "
+    "Word(DOCX)로 만들어 주세요")
+
+
+def is_app_figure_token(destination) -> bool:
+    """목적지가 앱 그림 토큰(``app-figure:<sha256>``)인가.
+
+    경로 표기와 똑같이 퍼센트 인코딩을 한 번 풀어서 본다(``%3A``도 ``:``).
+    생산자(``gg_figure._block_for``)가 내는 정확한 꼴만 통과시킨다 — 앞뒤
+    공백을 벗겨 인정하지 않으므로 ``< app-figure:… >`` 같은 비정규 표기는
+    일반 경로로 남아 미해결이 된다(R-04). ``app-figure:``에 길이·글자가
+    어긋나거나 다른 ``scheme:`` 꼴도 통과시키지 않는다.
+    """
+    if not isinstance(destination, str):
+        return False
+    return _APP_FIGURE_TOKEN.fullmatch(unquote(destination)) is not None
+
 
 def _image_alt_end(text: str, start: int) -> int:
     """``![`` 뒤 대체텍스트의 닫는 ``]`` 위치(이스케이프 무시). 없으면 -1."""
@@ -1384,18 +1410,36 @@ def _image_alt_end(text: str, start: int) -> int:
     return -1
 
 
+class _Destination(NamedTuple):
+    """파싱한 그림 목적지 — 해석한 값과 원문에서 차지한 자리.
+
+    ``start``·``end``는 원문 목적지 글자의 반열린 구간이다(``<``·``>``와
+    앞뒤 공백은 뺀다). 해석값 ``raw``와 달리 원문 표기(이스케이프·퍼센트
+    인코딩)를 그대로 담으므로, 목적지만 갈아 끼울 때 쓴다.
+    """
+
+    raw: str
+    next_index: int
+    start: int
+    end: int
+
+
 def _parse_image_destination(text: str, open_index: int):
-    """``(`` 다음부터 목적지와 닫는 ``)`` 뒤 위치를 파싱한다(실패 시 (None, None)).
+    """``(`` 다음부터 목적지를 파싱한다(실패 시 None).
 
     ``<...>``로 감싼 목적지(공백 허용)·괄호 균형·뒤따르는 "제목" 문자열을
-    이해한다. 백슬래시 이스케이프는 여기서 푼다.
+    이해한다. 백슬래시 이스케이프는 여기서 푼다. 성공하면 해석한 값과
+    원문 구간(``start``·``end``)을 함께 내서 목적지만 다시 쓸 수 있게 한다.
     """
     length = len(text)
     index = open_index + 1
     while index < length and text[index] in " \t\n":
         index += 1
-    if index < length and text[index] == "<":
+    angled = index < length and text[index] == "<"
+    if angled:
         index += 1
+    start = index
+    if angled:
         chars = []
         while index < length and text[index] not in ">\n":
             if text[index] == "\\" and index + 1 < length and text[index + 1] in _ASCII_PUNCT:
@@ -1405,7 +1449,8 @@ def _parse_image_destination(text: str, open_index: int):
             chars.append(text[index])
             index += 1
         if index >= length or text[index] != ">":
-            return None, None
+            return None
+        end = index
         index += 1
         destination = "".join(chars)
     else:
@@ -1427,6 +1472,7 @@ def _parse_image_destination(text: str, open_index: int):
                 depth -= 1
             chars.append(char)
             index += 1
+        end = index
         destination = "".join(chars)
     while index < length and text[index] in " \t\n":
         index += 1
@@ -1439,17 +1485,34 @@ def _parse_image_destination(text: str, open_index: int):
                 continue
             index += 1
         if index >= length:
-            return None, None
+            return None
         index += 1
         while index < length and text[index] in " \t\n":
             index += 1
     if index >= length or text[index] != ")":
-        return None, None
-    return destination, index + 1
+        return None
+    return _Destination(destination, index + 1, start, end)
 
 
 def _scan_images(text: str):
-    """그림 참조마다 (대체텍스트 끝 ``]`` 위치, 닫는 ``)`` 뒤 위치, 해석된 경로)를 낸다."""
+    """그림 참조마다 (``![`` 위치, 대체텍스트 끝 ``]`` 위치, 닫는 ``)`` 뒤 위치,
+    해석된 경로)를 낸다."""
+    for row in _scan_raw(text):
+        if row[4]:
+            continue
+        yield row[0], row[1], row[2], unquote(row[3])
+
+
+def _scan_raw(text: str):
+    """그림 참조마다 원문 목적지와 그 자리까지 낸다(퍼센트 인코딩 풀기 전).
+
+    ``(``![`` 위치, 대체텍스트 끝 ``]`` 위치, 닫는 ``)`` 뒤 위치, 해석된
+    목적지, 깨짐 여부, 목적지 시작 위치, 목적지 끝 위치)``다. 목적지 자리는
+    원문에서 ``<``·``>``와 앞뒤 공백을 뺀 반열린 구간이라, 목적지만 갈아
+    끼워도 대체텍스트·제목·이스케이프가 그대로 남는다. 깨진 참조는
+    ``![대체텍스트](``까지는 있으나 목적지를 해석할 수 없는 조각이다(학생
+    원고 오류) — 두 위치는 None이다.
+    """
     search = 0
     length = len(text)
     while True:
@@ -1461,12 +1524,32 @@ def _scan_images(text: str):
                 or text[alt_end + 1] != "("):
             search = open_at + 2
             continue
-        destination, next_index = _parse_image_destination(text, alt_end + 1)
-        if destination is None:
+        parsed = _parse_image_destination(text, alt_end + 1)
+        if parsed is None:
+            yield open_at, alt_end, None, None, True, None, None
             search = open_at + 2
             continue
-        yield open_at, alt_end, next_index, unquote(destination)
-        search = next_index
+        yield (open_at, alt_end, parsed.next_index, parsed.raw, False,
+               parsed.start, parsed.end)
+        search = parsed.next_index
+
+
+def find_images(text: str):
+    """(그림 참조, 깨진 그림 참조). 마크다운 전문을 한 번만 스캔한다.
+
+    그림 참조는 ``(``![`` 위치, 대체텍스트 끝 ``]`` 위치, 닫는 ``)`` 뒤 위치,
+    목적지)``이고 목적지는 퍼센트 인코딩을 풀기 전 원문이다. 깨진 참조는
+    ``![대체텍스트](``까지는 있으나 목적지를 해석할 수 없는 조각
+    ``(``![`` 위치, 조각 끝 위치)``의 목록이다.
+    """
+    hits, broken = [], []
+    for row in _scan_raw(text):
+        if row[4]:
+            end = text.find("\n", row[0])
+            broken.append((row[0], len(text) if end == -1 else end))
+            continue
+        hits.append((row[0], row[1], row[2], row[3]))
+    return hits, broken
 
 
 def image_references(text: str):
@@ -1485,10 +1568,16 @@ def normalize_image_destinations(text: str) -> str:
     우리 파서가 읽는 표기(``<...>``·이스케이프·제목)를 kordoc 생성기도 그림으로
     읽는다는 보장이 없어서(``<farm photo.png>``는 그림이 빠진 채 발행됐다), 경로
     해석에 쓴 값 그대로를 생성기가 읽는 단순 표기로 다시 쓴다.
+
+    앱 그림 토큰(``app-figure:<sha256>``)은 경로가 아니므로 그대로 둔다 —
+    ``:``를 퍼센트 인코딩하면 토큰이 깨져 나중에 풀 수 없다
+    (``is_app_figure_token``).
     """
     out = []
     cursor = 0
     for open_at, alt_end, next_index, path in _scan_images(text):
+        if is_app_figure_token(path):
+            continue
         out.append(text[cursor:alt_end + 1])
         out.append("(" + quote(path, safe="/") + ")")
         cursor = next_index
@@ -1506,19 +1595,129 @@ def embedded_picture_count(data: bytes) -> int:
     return count
 
 
-def resolve_images(text: str, image_dir):
+class _NotFound(NamedTuple):
+    """그림 목적지를 풀지 못했다 — 없거나, 기준 폴더 밖이거나, 후보가 둘 이상."""
+
+    reference: str
+    candidates: list | None  # 뿌리 기준 상대 경로들, 원고 옆이 먼저. 모호할 때만 찬다.
+
+
+def reference_search_roots(base, root):
+    """그림 목적지를 풀 기준 폴더 순서. 원고 옆(base)이 먼저, 뿌리(root)가 다음.
+
+    ``root``가 없으면 base 하나만 쓴다(명시한 ``--image-dir`` 하나로 푸는 기존
+    동작). 파일이 실제로 있는지를 넘어 어디에 쓸 수 있는지까지 맞추려면 뿌리가
+    필요하므로, 호출자는 뿌리 밖 후보를 거절한다.
+    """
+    roots = [Path(base).expanduser().resolve()]
+    if root is not None:
+        extra = Path(root).expanduser().resolve()
+        if extra not in roots:
+            roots.append(extra)
+    return roots
+
+
+def _resolve_image(reference, roots, root):
+    """목적지를 기준 폴더들 순서로 푼다. 경로 또는 ``_NotFound``를 낸다.
+
+    뿌리 밖으로 풀린 후보는 없는 것으로 친다(DOCX 빌더와 같은 경계이며, 뿌리
+    기준 상대 경로로 다시 쓸 수 있는 그림만 생성기에 넘길 수 있다). 둘 이상의
+    서로 다른 파일이 걸리면 고르지 않고 후보 목록과 함께 ``_NotFound``다.
+    """
+    root = Path(root).expanduser().resolve()
+    decoded = Path(unquote(reference)).expanduser()
+    found = []
+    for base in roots:
+        candidate = decoded
+        try:
+            resolved = (candidate if candidate.is_absolute() else base / candidate)
+            resolved = resolved.resolve()
+        except OSError:
+            continue
+        if not resolved.is_relative_to(root) or not resolved.is_file():
+            continue
+        if resolved not in found:
+            found.append(resolved)
+    if not found:
+        return _NotFound(reference, None)
+    if len(found) > 1:
+        return _NotFound(reference,
+                         [path.relative_to(root).as_posix() for path in found])
+    return found[0]
+
+
+def rewrite_image_destinations(text: str, base, root):
+    """그림 목적지를 뿌리 기준 상대 경로(퍼센트 인코딩)로 다시 쓴다.
+
+    목적지 기준 폴더는 두 단계다 — 원고 옆(base) 먼저, 없으면 뿌리(root).
+    kordoc 변환본은 변환 파일 옆에 gg-assets 폴더를 만들고 그림 넣기
+    (gg_figure)는 뿌리 기준으로 쓰므로, 둘 다 받아야 원고 위치에 따라 그림이
+    사라지지 않는다. 두 기준 모두 유효하지만 다른 파일이면 고르지 않고 모호로
+    남긴다.
+
+    바꾸는 것은 목적지 글자뿐이다 — 대체텍스트·``<...>``·뒤따르는 제목·
+    백슬래시 이스케이프는 원문 그대로 둔다(I-01). 반환은 (고친 본문,
+    [(원래 목적지, 후보들)]). 후보들이 있으면 그 목적지는 그대로 두고 호출자가
+    모호로 멈춘다. 후보가 없으면 없는 파일이다.
+
+    앱 그림 토큰(``app-figure:<sha256>``)은 경로가 아니므로 손대지 않고 그대로
+    지나간다 — 다시 쓰지도, 있는지 묻지도 않는다(``is_app_figure_token``).
+    """
+    root = Path(root).expanduser().resolve()
+    roots = reference_search_roots(base, root)
+    out, problems, cursor = [], [], 0
+    for row in _scan_raw(text):
+        open_at, alt_end, next_index, destination, is_broken, start, end = row
+        if is_broken:
+            problems.append((text[open_at:alt_end + 1], None))
+            continue
+        if is_app_figure_token(destination):
+            continue
+        resolved = _resolve_image(destination, roots, root)
+        if isinstance(resolved, _NotFound):
+            problems.append((resolved.reference, resolved.candidates))
+            continue
+        out.append(text[cursor:start])
+        out.append(quote(resolved.relative_to(root).as_posix(), safe="/"))
+        cursor = end
+    out.append(text[cursor:])
+    return "".join(out), problems
+
+
+def resolve_images(text: str, image_dir, project_root=None):
     """(참조 목록, 미해결 목록). 미해결은 image_dir 밖을 가리키거나 없는 파일이다.
 
     DOCX 빌더가 작업 폴더 밖 그림 경로를 거부하는 것과 같은 경계를 쓴다.
+    ``project_root``를 주면 원고 옆(image_dir)에서 먼저 찾고 그 뿌리에서 한 번
+    더 찾는다 — 분할본이 쓰는 두 단계 규칙과 같다. 그래도 없거나 image_dir 밖,
+    또는 같은 이름의 서로 다른 파일이면 미해결로 낸다.
+
+    앱 그림 토큰(``app-figure:<sha256>``)은 HWPX가 풀 수 없다 — 앱 그림 해석은
+    ``gg_figure_docx``(DOCX 전용)에만 있다. 그래서 토큰이 하나라도 있으면
+    조용히 빼지 않고 ``HwpxBlocked('app_figure_unsupported')``로 거절한다.
+    빼 버리면 ``build()``의 그림 개수 대조가 토큰 수만큼 비어도 통과해, 앱
+    그림이 빠진 HWPX가 발행된다(A-01). 거절 문장과 토큰 줄을 함께 낸다.
     """
     base = Path(image_dir).expanduser().resolve()
-    references = image_references(text)
-    missing = []
-    for reference in references:
-        candidate = Path(reference).expanduser()
-        resolved = (candidate if candidate.is_absolute() else base / candidate).resolve()
-        if not resolved.is_relative_to(base) or not resolved.is_file():
+    roots = reference_search_roots(base, project_root)
+    boundary = base if project_root is None else roots[-1]
+    references, missing, tokens = [], [], []
+    for row in _scan_raw(text):
+        if row[4]:
+            continue
+        if is_app_figure_token(row[3]):
+            tokens.append((row[3], text.count("\n", 0, row[0]) + 1))
+            continue
+        reference = unquote(row[3])
+        references.append(reference)
+        if isinstance(_resolve_image(row[3], roots, boundary), _NotFound):
             missing.append(reference)
+    if tokens:
+        raise HwpxBlocked(
+            "app_figure_unsupported",
+            images=[token for token, _ in tokens],
+            lines=[line for _, line in tokens],
+            action=APP_FIGURE_HWPX_ACTION)
     return references, missing
 
 
@@ -1549,9 +1748,15 @@ def build(markdown, out, *, context, authorization, cli_command=None,
 
     cli_command(list[str])를 주면 그대로 쓰고, 없으면 gg_kordoc.ensure()로 kordoc
     실행 명령을 얻는다(need_generate=True로 generate 능력을 함께 확인). 출력은 배타
-    발행으로 덮어쓰지 않는다. ``image_dir``을 주지 않으면 입력 마크다운이 있는 폴더를
-    쓴다(상대 경로 그림 보존). ``verify=True``면 구조 검증 프로세스가 성공하고 결과가
-    'ok'이고, 재파싱이 성공하고, 표 대조가 일치할 때만 발행한다.
+    발행으로 덮어쓰지 않는다. ``image_dir``을 주지 않으면 작업 폴더
+    (``context.project_root``)를 쓴다. 그림 목적지는 원고 옆에서 먼저 찾고
+    없으면 그 폴더에서 찾은 뒤(분할본과 같은 두 단계 규칙) 작업 폴더 기준
+    상대 경로로 다시 써서 kordoc에 넘긴다 — 생성기에 ``--image-dir``은 하나만
+    준다. 앱 그림 토큰(``app-figure:<sha256>``)은 HWPX가 풀 수 없으므로
+    (``gg_figure_docx``는 DOCX 전용) 생성기를 부르기 전에
+    ``app_figure_unsupported``로 거절한다 — 그림이 빠진 HWPX를 발행하지 않는다.
+    ``verify=True``면 구조 검증 프로세스가 성공하고 결과가 'ok'이고,
+    재파싱이 성공하고, 표 대조가 일치할 때만 발행한다.
     """
     import gg_major_contract as mc
 
@@ -1576,18 +1781,40 @@ def build(markdown, out, *, context, authorization, cli_command=None,
     if target.exists():
         raise HwpxBlocked("output_exists", output=str(target),
                           action="기존 파일을 덮어쓰지 않습니다. 새 경로를 지정하세요.")
+    project_root = (context.get("project_root")
+                    if isinstance(context, dict)
+                    else getattr(context, "project_root", None))
+    if image_dir is None and project_root is None:
+        raise HwpxBlocked(
+            "output_context_required",
+            action="그림 기준 폴더를 정하려면 context.project_root 또는 "
+                   "--image-dir가 필요합니다.")
     image_dir = (Path(image_dir).expanduser().resolve()
-                 if image_dir is not None else source.parent)
+                 if image_dir is not None
+                 else Path(project_root).expanduser().resolve())
 
     source_bytes = source.read_bytes()
     input_sha = hashlib.sha256(source_bytes).hexdigest()
     text = normalize_markdown(source_bytes)
+    text, problems = rewrite_image_destinations(text, source.parent, image_dir)
+    ambiguous = [row for row in problems if row[1]]
+    if ambiguous:
+        raise HwpxBlocked(
+            "image_ambiguous", images=[path for path, _ in ambiguous],
+            candidates=ambiguous[0][1], image_dir=str(image_dir),
+            action="원고 옆과 이미지 폴더 모두에 같은 이름의 다른 그림이 있어 "
+                   "고르지 않았습니다. 그림 경로를 폴더까지 적어 구분하세요.")
+    if problems:
+        raise HwpxBlocked(
+            "image_unresolved", images=[path for path, _ in problems],
+            image_dir=str(image_dir),
+            action="입력이 가리키는 그림을 원고 옆이나 이미지 폴더 안에서 찾지 "
+                   "못했습니다. 그림 경로를 고치거나 --image-dir를 지정하세요.")
     references, unresolved = resolve_images(text, image_dir)
     if unresolved:
         raise HwpxBlocked(
             "image_unresolved", images=unresolved, image_dir=str(image_dir),
-            action="입력이 가리키는 그림을 이미지 폴더 안에서 찾지 못했습니다. "
-                   "그림 경로를 고치거나 --image-dir를 지정하세요.")
+            action="다시 쓴 그림 경로를 이미지 폴더 안에서 찾지 못했습니다.")
 
     target.parent.mkdir(parents=True, exist_ok=True)
     work = Path(tempfile.mkdtemp(prefix=".gg-hwpx-", dir=str(target.parent)))

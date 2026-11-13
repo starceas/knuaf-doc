@@ -41,7 +41,9 @@ regenerates it deterministically to compare bytes.
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
+import subprocess
 import sys
 
 import check_asset_disposition
@@ -61,6 +63,157 @@ _SHA256_HEX = set("0123456789abcdef")
 # Interpreter/VCS noise only. A plantable payload must never match these.
 IGNORED_NAMES = {".git", ".DS_Store", "__pycache__"}
 IGNORED_SUFFIXES = (".pyc", ".pyo")
+# Per-worktree harness wiring, created by `harness-init` and kept in the
+# worktree's own info/exclude — it is never part of the repository, so the
+# ledger (and the undeclared-file scan that reads the same listing) must not
+# see it. Narrow on purpose: only these two names, at the repository root,
+# and only the *children* of ``.githooks`` (a plain file with that name is
+# out of scope and stays visible). A repository that really tracks them keeps
+# working — see :func:`wiring_status`.
+IGNORED_WIRING = {".harness.conf"}
+IGNORED_WIRING_DIRS = {".githooks"}
+
+#: Git's context variables. Inside a hook (or a partial commit) Git exports
+#: ``GIT_INDEX_FILE`` pointing at a temporary index, and an inherited
+#: ``GIT_DIR`` can name a different repository. Tracking questions must be
+#: answered from the tree's own index, not the caller's.
+_GIT_CONTEXT_VARS = (
+    "GIT_ALT_ODB", "GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_COMMON_DIR",
+    "GIT_CONFIG", "GIT_CONFIG_COUNT", "GIT_CONFIG_PARAMETERS",
+    "GIT_DIR", "GIT_GRAFT_FILE", "GIT_IMPLICIT_WORK_TREE",
+    "GIT_INDEX_FILE", "GIT_NO_REPLACE_OBJECTS", "GIT_OBJECT_DIRECTORY",
+    "GIT_PREFIX", "GIT_REPLACE_REF_BASE", "GIT_SHALLOW_FILE",
+    "GIT_WORK_TREE",
+)
+
+TRACK_TRACKED = "tracked"
+TRACK_UNTRACKED = "untracked"
+TRACK_UNKNOWN = "unknown"
+
+
+class TrackingUnavailable(RuntimeError):
+    """Tracking status could not be established.
+
+    Raised instead of guessing. Silently treating an unanswerable question as
+    "untracked" is what hides a real repository file from the ledger (C-01);
+    treating it as "tracked" is what puts branch wiring back into the ledger.
+    Neither guess is acceptable, so the caller must stop.
+    """
+
+
+def _git_env():
+    """Environment with Git's caller context removed (see ``_GIT_CONTEXT_VARS``)."""
+    return {key: value for key, value in os.environ.items()
+            if key not in _GIT_CONTEXT_VARS}
+
+
+def _repo_root(root):
+    """True when ``root`` is the top of a repository of its own.
+
+    The three states are decided from the tree itself, never from git's exit
+    code alone:
+
+    * no ``.git`` entry at ``root`` — an exported copy or a plain temp
+      directory. No tracking question can be answered there, so the wiring
+      filter is switched off and the files are listed like any other
+      (pre-fix behaviour: a loud ``undeclared_file`` rather than a silent
+      omission).
+    * ``.git`` present but the repository cannot be queried (git missing,
+      non-zero exit, empty or undecodable output) — :class:`TrackingUnavailable`.
+      Stopping is the only honest answer: guessing "untracked" would drop a
+      genuinely tracked file from the ledger (C-01).
+    * ``.git`` present and ``rev-parse --show-toplevel`` is exactly ``root`` —
+      a repository of its own; its index answers tracking questions.
+    * ``.git`` present but ``rev-parse --show-toplevel`` resolves elsewhere
+      (``core.worktree`` pointing at another directory, say) —
+      :class:`TrackingUnavailable` as well. The repository at ``root`` cannot
+      say what is tracked *under this root*, and answering ``False`` would
+      resume the scan as if no repository existed, dropping files (C-01).
+
+    A ``.git``-less export copy never reaches that case: it has no ``.git`` of
+    its own, so the first branch catches it and the outer repository's index
+    is never consulted for it.
+    """
+    root = Path(root)
+    if not (root / ".git").exists():
+        return False
+    try:
+        proc = subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "--show-toplevel"],
+            capture_output=True, env=_git_env(), timeout=30)
+    except (OSError, subprocess.SubprocessError) as error:
+        raise TrackingUnavailable(
+            "git 실행 실패: " + type(error).__name__) from error
+    if proc.returncode != 0:
+        raise TrackingUnavailable(
+            "git rev-parse 실패(exit %d)" % proc.returncode)
+    text = proc.stdout.decode("utf-8", "surrogateescape").strip()
+    if not text:
+        raise TrackingUnavailable("git rev-parse가 최상위 경로를 주지 않음")
+    toplevel = Path(text).resolve()
+    if toplevel != root.resolve():
+        raise TrackingUnavailable(
+            "git 최상위 경로가 검사 루트와 다름: " + str(toplevel))
+    return True
+
+
+def tracked_names(root):
+    """Every path Git tracks under ``root`` — read once, exact names.
+
+    One ``git ls-files`` call instead of one per candidate: fewer processes,
+    and the answer is a set of literal names so a filename containing
+    pathspec metacharacters (``pre[1]``) can never match a different file
+    (I-01).
+    """
+    try:
+        proc = subprocess.run(
+            ["git", "-C", str(root), "ls-files", "-z"],
+            capture_output=True, env=_git_env(), timeout=120)
+    except (OSError, subprocess.SubprocessError) as error:
+        raise TrackingUnavailable(
+            "git 실행 실패: " + type(error).__name__) from error
+    if proc.returncode != 0:
+        raise TrackingUnavailable(
+            "git ls-files 실패(exit %d)" % proc.returncode)
+    text = proc.stdout.decode("utf-8", "surrogateescape")
+    return {name for name in text.split("\0") if name}
+
+
+def wiring_status(root, relpath, tracked=None):
+    """``TRACK_TRACKED`` / ``TRACK_UNTRACKED`` / ``TRACK_UNKNOWN`` for wiring.
+
+    Only the two wiring names are ever asked about; everything else is
+    reported by :func:`ignored` before this is reached.
+    """
+    if tracked is None:
+        if not _repo_root(root):
+            # Not a repository of its own: no tracking question can be
+            # answered, and the filter does not apply (pre-fix behaviour).
+            return TRACK_UNKNOWN
+        tracked = tracked_names(root)
+    return TRACK_TRACKED if relpath in tracked else TRACK_UNTRACKED
+
+
+def _is_wiring_candidate(relpath):
+    """True for the narrow harness-wiring names, before tracking is known."""
+    parts = Path(relpath).parts
+    if not parts:
+        return False
+    return (len(parts) >= 2 and parts[0] in IGNORED_WIRING_DIRS) \
+        or relpath in IGNORED_WIRING
+
+
+def wiring_ignored(root, relpath, tracked=None):
+    """True when ``relpath`` is branch-local harness wiring, not a repo file.
+
+    Scope is exactly ``.harness.conf`` at the root and the children of a
+    ``.githooks`` directory. A plain *file* named ``.githooks`` is a repository
+    file the harness never creates, so it stays visible.
+    """
+    if not _is_wiring_candidate(relpath):
+        return False
+    status = wiring_status(root, relpath, tracked)
+    return status == TRACK_UNTRACKED
 
 
 def sha256_file(path):
@@ -77,23 +230,50 @@ def tree_digest(files):
     return hashlib.sha256(("\n".join(lines) + "\n").encode("utf-8")).hexdigest()
 
 
-def ignored(relpath):
+def ignored(relpath, root=None, tracked=None):
     parts = Path(relpath).parts
     if any(part in IGNORED_NAMES for part in parts):
         return True
-    return relpath.endswith(IGNORED_SUFFIXES)
+    if relpath.endswith(IGNORED_SUFFIXES):
+        return True
+    if root is None:
+        return False
+    return wiring_ignored(root, relpath, tracked)
 
 
 def disk_files(root):
-    """All files under root as posix relpaths, minus the ignore list."""
-    found = {}
+    """All files under root as posix relpaths, minus the ignore list.
+
+    Raises :class:`TrackingUnavailable` when a wiring name is present but its
+    tracking status cannot be established — the caller must stop rather than
+    publish a ledger that may hide a real repository file (C-01).
+    """
+    root = Path(root)
+    candidates = []
+    wiring = set()
     for path in sorted(root.rglob("*")):
         if not path.is_file():
             continue
         rel = path.relative_to(root).as_posix()
-        if ignored(rel):
+        candidates.append(rel)
+        if _is_wiring_candidate(rel):
+            wiring.add(rel)
+    filter_off = False
+    tracked = None
+    if wiring:
+        if not _repo_root(root):
+            # Not a repository of its own: no tracking question can be
+            # answered, so the wiring filter is switched off entirely and the
+            # files are listed like any other (pre-fix behaviour: a loud
+            # undeclared_file rather than a silent omission).
+            filter_off = True
+        else:
+            tracked = tracked_names(root)
+    found = {}
+    for rel in candidates:
+        if ignored(rel, None if filter_off else root, tracked):
             continue
-        found[rel] = path
+        found[rel] = root / rel
     return found
 
 

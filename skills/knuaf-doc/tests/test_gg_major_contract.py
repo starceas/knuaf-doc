@@ -128,6 +128,7 @@ class TestWorkbookProfileAuthorization(unittest.TestCase):
             "fruit_trees": ("fruit_16_sheet_v1", "fruit_16_sheet_v1_fy1"),
             "hort_env_systems": (),
             "dairy": ("dairy_hanwoo_28_sheet_v1",),
+            "food_crops": ("food_crops_16_sheet_v1",),
         }
         for major_id, profiles in expected.items():
             with self.subTest(major_id=major_id):
@@ -142,6 +143,7 @@ class TestWorkbookProfileAuthorization(unittest.TestCase):
         allowed = {
             "specialty_crops": "school_17_sheet_v1",
             "fruit_trees": "fruit_16_sheet_v1",
+            "food_crops": "food_crops_16_sheet_v1",
         }
         for major_id, profile in allowed.items():
             with self.subTest(major_id=major_id):
