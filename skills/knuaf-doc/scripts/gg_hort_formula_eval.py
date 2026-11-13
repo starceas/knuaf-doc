@@ -156,7 +156,13 @@ def normalize_ref(raw, sheet):
 
 
 def _number(value):
-    if value is None or value == '':
+    """Excel arithmetic coercion.
+
+    A truly blank cell is 0, but a formula that yields "" is text: Excel raises
+    #VALUE! the moment arithmetic consumes it (`=D8+D9` with D9="" is #VALUE!).
+    SUM/SUMIF still skip such text, which is why `_sum_number` swallows this.
+    """
+    if value is None:
         return 0.0
     if isinstance(value, bool):
         return float(value)
@@ -227,6 +233,7 @@ class Evaluator:
         self.defaults = defaults or {}
         self.stack = set()
         self.cache = {}
+        self.errors = {}
 
     def cell(self, sheet, cell):
         key = (sheet, cell.upper())
@@ -234,6 +241,8 @@ class Evaluator:
             return self.inputs[key]
         if key in self.cache:
             return self.cache[key]
+        if key in self.errors:
+            raise self.errors[key]
         if key in self.stack:
             raise UnsupportedError('circular reference')
         if key not in self.formulas:
@@ -249,6 +258,12 @@ class Evaluator:
                 result = 0.0
             self.cache[key] = result
             return result
+        except (FormulaError, UnsupportedError, RecursionError, ZeroDivisionError) as exc:
+            # The workbook and the inputs are fixed for one run, so a failure is
+            # deterministic. Caching it keeps a failing chain linear instead of
+            # exponential (a single error otherwise re-evaluates on every path).
+            self.errors[key] = exc
+            raise
         finally:
             self.stack.remove(key)
 

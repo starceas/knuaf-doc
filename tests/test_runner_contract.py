@@ -26,17 +26,39 @@ import unittest
 from unittest import mock
 
 from tests._harness import ContractCase, REPO_ROOT, copy_public_tree
+from tools import validation_sharding
 
 NESTED = "GG_VALIDATION_NESTED"
 NATIVE_TID = ("tests.test_p2_windows.WindowsBandCase."
               "test_native_windows_two_process_contention")
 NATIVE_REASON = "native Windows+NTFS required — withheld"
 
+# Stub written over the copy's own meta-test file so a nested run cannot
+# recurse.  It keeps this module's *shape*: the class and one no-op method per
+# unit in validation_sharding.PR_DEFERRED_UNITS, so a discovery inside the copy
+# still contains those units (the PR-scope invariant compares against them).
+# Opaque one-method stubs made them vanish and broke main's full runs.
+_STUB_PREFIX = "tests/test_runner_contract.py::RunnerContractTests::"
+_STUB_SOURCE = (
+    "import unittest\n\n\n"
+    "class RunnerContractTests(unittest.TestCase):\n"
+    + "".join(
+        f"    def {unit[len(_STUB_PREFIX):]}(self):\n        pass\n"
+        for unit in sorted(unit for unit in validation_sharding.NESTED_RUNS
+                           if unit.startswith(_STUB_PREFIX))))
+
+
+# Diagnostic sink for the nested runs, deliberately OUTSIDE the disposable
+# copy tree and outside the TemporaryDirectory that owns it: a file inside the
+# copy is an undeclared file for any later bundle check, and the TemporaryDirectory
+# is deleted at test end, so a report written beside the copy would never reach
+# CI's artifact upload.  The workflow uploads <tempdir>/knuaf-nested-reports/*.
+_REPORT_ROOT = Path(tempfile.gettempdir()) / "knuaf-nested-reports"
+
 
 def _report_path(root, name):
-    # Reports live NEXT TO the copied root: writing inside the copy would
-    # turn into an undeclared file for any later bundle check on it.
-    return Path(root).parent / name
+    _REPORT_ROOT.mkdir(parents=True, exist_ok=True)
+    return _REPORT_ROOT / f"{Path(root).parent.name}-{name}"
 
 
 def _run(root, *, args=(), interpreter_flags=(), env_extra=None):
@@ -53,6 +75,10 @@ def _run(root, *, args=(), interpreter_flags=(), env_extra=None):
          str(Path(root) / "tools" / "run_validation.py"),
          *args, "--json", str(out)],
         cwd=root, capture_output=True, text=True, encoding="utf-8", env=env)
+    # Always written, even when empty: CI uploads these next to the report so
+    # a failing nested run leaves its stderr behind (the copy itself is gone).
+    _report_path(root, "nested-report.stderr").write_text(
+        proc.stderr or "", encoding="utf-8")
     report = (json.loads(out.read_text(encoding="utf-8"))
               if out.exists() else None)
     return proc, report
@@ -72,6 +98,10 @@ def _run_unnested(root, *, args=(), interpreter_flags=(), env_extra=None):
          str(Path(root) / "tools" / "run_validation.py"),
          *args, "--json", str(out)],
         cwd=root, capture_output=True, text=True, encoding="utf-8", env=env)
+    # Always written, even when empty: CI uploads these next to the report so
+    # a failing nested run leaves its stderr behind (the copy itself is gone).
+    _report_path(root, "unnested-report.stderr").write_text(
+        proc.stderr or "", encoding="utf-8")
     report = (json.loads(out.read_text(encoding="utf-8"))
               if out.exists() else None)
     return proc, report
@@ -467,10 +497,7 @@ class InjectedSubtest(unittest.TestCase):
         # would be an incomplete cause by contract).
         root3 = self._public_copy("knuaf-r2scoped-")
         (root3 / "tests" / "test_runner_contract.py").write_text(
-            "import unittest\n\n\n"
-            "class MetaStub(unittest.TestCase):\n"
-            "    def test_placeholder(self):\n"
-            "        pass\n", encoding="utf-8")
+            _STUB_SOURCE, encoding="utf-8")
         self._freshen(root3)
         proc3, rep3 = _run_unnested(root3)
         self.assertIsNotNone(rep3, proc3.stderr)
@@ -512,10 +539,7 @@ class InjectedSubtest(unittest.TestCase):
         (root4 / "tests" / "test_injected_subtest.py").write_text(
             subfail, encoding="utf-8")
         (root4 / "tests" / "test_runner_contract.py").write_text(
-            "import unittest\n\n\n"
-            "class MetaStub(unittest.TestCase):\n"
-            "    def test_placeholder(self):\n"
-            "        pass\n", encoding="utf-8")
+            _STUB_SOURCE, encoding="utf-8")
         self._freshen(root4)
         proc4, rep4 = _run_unnested(root4)
         self.assertIsNotNone(rep4, proc4.stderr)
@@ -541,10 +565,7 @@ class InjectedSubtest(unittest.TestCase):
         # recurse (no NESTED allowed in default mode); do NOT refresh
         # the manifest — stub + tamper both stay detectable.
         (root5 / "tests" / "test_runner_contract.py").write_text(
-            "import unittest\n\n\n"
-            "class MetaStub(unittest.TestCase):\n"
-            "    def test_placeholder(self):\n"
-            "        pass\n", encoding="utf-8")
+            _STUB_SOURCE, encoding="utf-8")
         victim = root5 / "tests" / "test_question_gate.py"
         src5 = victim.read_text(encoding="utf-8")
         victim.write_text(src5 + "\n# scratch tamper byte\n",
