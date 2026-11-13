@@ -321,7 +321,7 @@
       "source": "adopted:app-PR41"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "747fce78f411b17ab7be9820a2cb60260aa10820a1c99fa6c52181662f043d69",
+      "after_sha256": "4eda774528cee77c42b6c62005beae1c56110d3b2fe9477bf6442f934fd3ce21",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "dairy-excel-blank",
@@ -3110,9 +3110,9 @@
     },
     "skills/knuaf-doc/tests/test_gg_progress.py": {
       "before_sha256": null,
-      "after_sha256": "ae786dffb95a7eedf79a6e989b2c02b96a445bd396c664d40ce47be97897f7f5",
+      "after_sha256": "78871fe6016f39180784e9638457affd777815f9fd49c55d4f6840c2028ec67e",
       "first_changed": "P28",
-      "last_changed": "W-P",
+      "last_changed": "dairy-excel-blank",
       "owner": "P28",
       "reason": "new; synthetic canonical fixtures only (no student workbooks); covers DESIGN-W-P §7 items 1-7, 11, 13 through the real gate() plus FIX1 regressions: internal and outside symlinked slots for write/remove, the three major-note branches, and six invalid-document shapes for show | main 0.4.9 재기준화: expected skill_version을 version.json 판독값으로 계산(리터럴 0.4.8 고정 제거)",
       "source": "new"
@@ -3127,10 +3127,10 @@
       "source": "new"
     },
     "tests/test_unsupported_finance_notice.py": {
-      "after_sha256": "3a0c395a8d5a15431ad606a6cb5eb11f3ff9b1fd6b1d2294a3137d8d4cad2e62",
+      "after_sha256": "f1eba2c78d8cec7e447faf1b13a2720de60bc0d85cbfdddea798c4cbe1e7dd9c",
       "before_sha256": null,
       "first_changed": "P28",
-      "last_changed": "food-crops-0.1.0",
+      "last_changed": "dairy-excel-blank",
       "owner": "P28",
       "reason": "W-N: 미지원 전공 재무 안내 시험 15건 — 행 존재·모양·학생 문구·식별값·배타성·커밋 구동 쓰기 | food-crops-0.1.0 W-N 연결: food_crops를 지원 쪽으로 옮기고 빈 사본 안내 시험 6건(미지원 0행+빈 사본 1행, 꼴, 앱 필수 3필드, 얇은 경로 바이트 동일, 대체 식별값, 배타) 추가",
       "source": "new"

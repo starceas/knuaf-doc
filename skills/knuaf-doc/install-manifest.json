@@ -244,7 +244,7 @@
   "tests/test_gg_food_crops_document.py": "100863a90fcc5d412fe5edfa34e8889eefbb69be8cd0d8708df2ad6af74340a7",
   "tests/test_gg_food_crops_module.py": "3617b6768d4e655780f1ac728be1880f3c947ab60fba1eddfece799d2a38aa45",
   "tests/test_gg_major_contract.py": "470a3fb41c2835eb9a539c4db1778a01652a796270744acae9e3471916bd14b1",
-  "tests/test_gg_progress.py": "ae786dffb95a7eedf79a6e989b2c02b96a445bd396c664d40ce47be97897f7f5",
+  "tests/test_gg_progress.py": "78871fe6016f39180784e9638457affd777815f9fd49c55d4f6840c2028ec67e",
   "tests/test_gg_rda_candidates.py": "a159a90f8a1831d85e388cbb08b42b1b1970ba8dc565c4577881ae61678dbc3b",
   "tests/test_gg_rda_d5_useful_life.py": "8a6fc65ad71a61fe907f17b73c82a4b342f51a3985c7f94bdc3d3d017f8f5495",
   "tests/test_gg_rda_lookup_audit_key.py": "7def244447919959bb5ad6a722493d48068b8f05f487aaba5f0bd0ec2c0ee510",
