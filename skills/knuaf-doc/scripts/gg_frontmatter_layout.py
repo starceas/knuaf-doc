@@ -6,6 +6,8 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
+from gg_major_format import front_title, profile_for
+
 
 def _font(run, font, size, bold=False):
     run.font.name, run.font.size, run.bold = font, Pt(size), bold
@@ -197,18 +199,29 @@ def _peer_form_text_size(text, spec):
     return 20, False
 
 
+# 프로필 표에 값이 없을 때 쓰는 식량작물 현행 제목 크기. 프로필을 읽되 값이
+# 비면 여기로 돌아간다(바이트 불변 기준선).
+_LEGACY_TITLE_PT = {'요약': 22, '감사의 글': 20, '학부모 동의서': 20}
+
+# 이 파일이 프로필 표를 읽는 전공. `build_docx.DOCX_PROFILE_MAJORS`와 같은
+# 게이트를 여기서 따로 적는다(순환 import 회피). 켜는 단위에서 둘을 함께 고친다.
+_FRONTMATTER_PROFILE_MAJORS = ('food_crops',)
+
+
 def _render_peer_forms(doc, nodes, plan, font):
     """Source page grouping, common flowing layout; never claim measured bands."""
     spec = plan['spec']
     indices = plan['indices']
     ordered = plan['order']
     forms = spec.physical_forms
-    roman_front = spec.major_id == 'food_crops'
+    profile = (profile_for(spec.major_id)
+               if spec.major_id in _FRONTMATTER_PROFILE_MAJORS else None)
+    roman_front = bool(profile is not None and profile.roman_front)
     front_margin_mm = None
     if roman_front:
-        from gg_hwpx import FOOD_CROPS_SECTION_FORMATS
-        front_margin_mm = FOOD_CROPS_SECTION_FORMATS[1]['margin_mm']
-    title_sizes = {'요약': 22, '감사의 글': 20, '학부모 동의서': 20}
+        front_margin_mm = profile.section_formats[1]['margin_mm']
+    title_sizes = {role: front_title(profile, role, _LEGACY_TITLE_PT[role])[0]
+                   for role in _LEGACY_TITLE_PT}
     # Preserve authored preamble rather than silently dropping it.
     if any(n.get('text', '').strip() for n in nodes[:indices[ordered[0]]]):
         raise ValueError('학교 앞머리 앞에 배정되지 않은 내용이 있습니다')
