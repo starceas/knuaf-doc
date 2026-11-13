@@ -1,8 +1,11 @@
 name: validation
 
-# Pull requests run every test on the declared minimum Python 3.10 in five
-# shards (whole modules; the two nested-run modules split by class/method,
-# see docs/validation/BUNDLE.md). Python 3.14 keeps the required check name with a fast
+# Pull requests run the code-scope suite on the declared minimum Python 3.10 in
+# five shards (whole modules; the two nested-run modules split by class/method,
+# see docs/validation/BUNDLE.md). The scope is decided once by the `scope` job:
+# a version-file change runs everything (full), every other change runs the code
+# scope, which defers the ten units that start whole nested validation runs to
+# the main-branch run. Python 3.14 keeps the required check name with a fast
 # import/compile/smoke lane; main pushes and manual runs use full shards on both.
 on:
   pull_request:
@@ -14,8 +17,36 @@ permissions:
   contents: read
 
 jobs:
+  scope:
+    name: validation scope
+    runs-on: ubuntu-latest
+    outputs:
+      scope: ${{ steps.detect.outputs.scope }}
+    steps:
+      - name: Preserve published bytes before checkout
+        shell: bash
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0        # full history: this is the only job that diffs
+      - id: detect
+        name: Decide full or code
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          B: ${{ github.event.pull_request.base.sha }}
+          H: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+              s=$(python3 tools/ci_scope.py --base "$B" --head "$H") || exit 1
+          else
+              s=full
+          fi
+          printf 'scope=%s\n' "$s" >> "$GITHUB_OUTPUT"
+
   suite-shards-py310:
     name: validation shard (py3.10, ${{ matrix.shard }}/5)
+    needs: [scope]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -49,7 +80,7 @@ jobs:
           assert a['tree_sha256'] == b['tree_sha256'], 'export not deterministic'
           PY
       - name: Validation shard
-        run: python tools/run_validation.py --shard "${{ matrix.shard }}/5" --json "$RUNNER_TEMP/shard-report.json"
+        run: python tools/run_validation.py --shard "${{ matrix.shard }}/5" --pr-scope "${{ needs.scope.outputs.scope }}" --json "$RUNNER_TEMP/shard-report.json"
       - name: Upload shard report
         if: always()
         uses: actions/upload-artifact@v4
@@ -59,11 +90,25 @@ jobs:
             ${{ runner.temp }}/check-bundle-report.json
             ${{ runner.temp }}/shard-report.json
           if-no-files-found: error
+      - name: Resolve temp dir
+        if: always()
+        id: tmpdir
+        shell: bash
+        run: printf 'path=%s\n' "$(python3 -c 'import tempfile;print(tempfile.gettempdir())')" >> "$GITHUB_OUTPUT"
+      - name: Upload nested run reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-nested-reports-py3.10-${{ matrix.shard }}
+          path: |
+            ${{ steps.tmpdir.outputs.path }}/knuaf-nested-reports/*.json
+            ${{ steps.tmpdir.outputs.path }}/knuaf-nested-reports/*.stderr
+          if-no-files-found: warn
 
   validate-py310:
     name: suite (ubuntu, py3.10)
     if: ${{ always() }}
-    needs: [suite-shards-py310]
+    needs: [scope, suite-shards-py310]
     runs-on: ubuntu-latest
     steps:
       - name: Preserve published bytes before checkout
@@ -104,9 +149,9 @@ jobs:
           PY
       - name: Merge shard reports
         shell: bash
-        run: python tools/run_validation.py --merge-shards "$RUNNER_TEMP"/shards/**/shard-report.json --shard-count 5 --json "$RUNNER_TEMP/validation-report.json"
+        run: python tools/run_validation.py --merge-shards "$RUNNER_TEMP"/shards/**/shard-report.json --shard-count 5 --pr-scope "${{ needs.scope.outputs.scope }}" --json "$RUNNER_TEMP/validation-report.json"
       - name: Validation report contract
-        run: python tools/check_validation_report.py "$RUNNER_TEMP/validation-report.json"
+        run: python tools/check_validation_report.py --pr-scope "${{ needs.scope.outputs.scope }}" "$RUNNER_TEMP/validation-report.json"
       - name: Upload full-suite reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -121,7 +166,7 @@ jobs:
   validate-py314:
     name: suite (ubuntu, py3.14)
     if: ${{ always() }}
-    needs: [suite-shards-py314]
+    needs: [scope, suite-shards-py314]
     runs-on: ubuntu-latest
     steps:
       - name: Preserve published bytes before checkout
@@ -186,6 +231,7 @@ jobs:
   suite-shards-py314:
     name: validation shard (py3.14, ${{ matrix.shard }}/5)
     if: ${{ github.event_name != 'pull_request' }}
+    needs: [scope]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -219,7 +265,7 @@ jobs:
           assert a['tree_sha256'] == b['tree_sha256'], 'export not deterministic'
           PY
       - name: Validation shard
-        run: python tools/run_validation.py --shard "${{ matrix.shard }}/5" --json "$RUNNER_TEMP/shard-report.json"
+        run: python tools/run_validation.py --shard "${{ matrix.shard }}/5" --pr-scope "${{ needs.scope.outputs.scope }}" --json "$RUNNER_TEMP/shard-report.json"
       - name: Upload shard report
         if: always()
         uses: actions/upload-artifact@v4
@@ -229,6 +275,20 @@ jobs:
             ${{ runner.temp }}/check-bundle-report.json
             ${{ runner.temp }}/shard-report.json
           if-no-files-found: error
+      - name: Resolve temp dir
+        if: always()
+        id: tmpdir
+        shell: bash
+        run: printf 'path=%s\n' "$(python3 -c 'import tempfile;print(tempfile.gettempdir())')" >> "$GITHUB_OUTPUT"
+      - name: Upload nested run reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-nested-reports-py3.14-${{ matrix.shard }}
+          path: |
+            ${{ steps.tmpdir.outputs.path }}/knuaf-nested-reports/*.json
+            ${{ steps.tmpdir.outputs.path }}/knuaf-nested-reports/*.stderr
+          if-no-files-found: warn
 
   windows-structural:
     name: structural only (windows)
