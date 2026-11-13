@@ -6,18 +6,23 @@ Exit 0: no FAIL (unavailable inputs are SKIP — SKIP is not PASS);
 This module is intentionally outside unittest discovery's test*.py pattern.
 
 The food-crops section is the 2판 `clear` receipt measured on the school's
-own 16-sheet form. The file is never copied into the repository: point
-``KNUAF_REAL_FOOD_CROPS_XLSX`` at it for the run.
+own 16-sheet form. The dairy section does the same for the school's 28-sheet
+hanwoo form. Neither file is copied into the repository: point
+``KNUAF_REAL_FOOD_CROPS_XLSX`` / ``KNUAF_REAL_DAIRY_XLSX`` at them for the run.
 """
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 import tempfile
 import unittest
 import zipfile
 from xml.etree import ElementTree as ET
+
+import openpyxl
+from openpyxl.utils import get_column_letter, range_boundaries
 
 from tests._harness import ContractCase, bind_major, runtime
 from tests.test_workbook_audit_evaluator import audit_module
@@ -264,6 +269,49 @@ FOOD_MAP = (ROOT / "skills/knuaf-doc/references/food-crops"
 FOOD_CLEARED = 396
 FOOD_PRESERVED = 79
 
+DAIRY_ENV = "KNUAF_REAL_DAIRY_XLSX"
+DAIRY_SOURCE = (Path(value) if (value := os.environ.get(DAIRY_ENV))
+                else None)
+DAIRY_MAP = (ROOT / "skills/knuaf-doc/references/dairy"
+             / "corrections/dairy-clear-map.json")
+DAIRY_CLEARED = 1070
+DAIRY_PRESERVED = 5463
+DAIRY_FORMULAS = 22828
+DAIRY_MERGED_RANGES = 2114
+DAIRY_CLEARED_MERGE_TOP_LEFT = 86
+# Every function the 28-sheet form calls, and how many formulas call it.
+# None of them can distinguish an empty cell from a 0, which is why the map
+# may blank the 681 zero cells it clears: SUM adds a blank as 0, and
+# ROUNDUP/ROUNDDOWN/PMT/LOG treat a blank argument as 0.
+DAIRY_FORMULA_FUNCTIONS = {"SUM": 3181, "ROUNDUP": 72, "ROUNDDOWN": 72,
+                           "PMT": 4, "LOG": 2, "AVERAGE": 1}
+
+
+def _cells_of(rng):
+    c1, r1, c2, r2 = range_boundaries(rng)
+    for r in range(r1, r2 + 1):
+        for c in range(c1, c2 + 1):
+            yield f"{get_column_letter(c)}{r}"
+
+
+def _formula_usage(path):
+    """Called functions and ``""`` comparisons across every formula."""
+    functions = {}
+    empty_compare = 0
+    book = openpyxl.load_workbook(path)
+    for ws in book.worksheets:
+        for row in ws.iter_rows():
+            for cell in row:
+                value = cell.value
+                if not (isinstance(value, str) and value.startswith("=")):
+                    continue
+                if '""' in value:
+                    empty_compare += 1
+                for name in re.findall(r"([A-Z][A-Z0-9.]*)\(", value.upper()):
+                    functions[name] = functions.get(name, 0) + 1
+    book.close()
+    return functions, empty_compare
+
 
 def _formula_records(path):
     """Every ``<f>`` in the package: text plus attributes, sheet by sheet."""
@@ -333,6 +381,126 @@ class FoodCropsRealSourceChecks(ContractCase):
             self.assertEqual(cached_after, 0)
 
 
+class DairyRealSourceChecks(ContractCase):
+    """The dairy clear receipt on the school's real 28-sheet hanwoo form.
+
+    The synthetic test proves the writer; this one proves the reviewed map
+    addresses the real workbook — that every one of the 1,070 cleared cells
+    exists in the form, that the 5,463 kept cells keep their value, and that
+    all 22,828 formulas come through untouched with their cached answers
+    dropped so Excel cannot show stale numbers.
+    """
+
+    def test_the_real_form_produces_the_reviewed_blank_copy(self):
+        source = DAIRY_SOURCE
+        self.assertTrue(source.is_file(), "dairy source absent")
+        tpl = runtime("gg_excel_template")
+        school = runtime("gg_school_excel")
+        mc = runtime("gg_major_contract")
+        profile = school.profile_structure("dairy_hanwoo_28_sheet_v1")
+        self.assertEqual(tpl.sha256(source), profile["sha256"])
+        self.assertEqual(len(profile["sheets"]), 28)
+        original = source.read_bytes()
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            runtime("gg_core").init(root)
+            bind_major(root, "dairy")
+            out = root / "blank.xlsx"
+            receipt = tpl.blank_copy(source, DAIRY_MAP, out,
+                                     context=mc.output_context(root, "dairy"))
+            self.assertEqual(receipt["workbook_profile"],
+                             "dairy_hanwoo_28_sheet_v1")
+            self.assertEqual(len(receipt["cleared"]), DAIRY_CLEARED)
+            self.assertEqual(len(receipt["preserved"]), DAIRY_PRESERVED)
+            self.assertEqual(receipt["formulaCellsProtected"], 0)
+            self.assertEqual(receipt["mergedCellsProtected"], 0)
+            self.assertEqual(receipt["unclassifiedNumericCells"], 0)
+            self.assertEqual(receipt["unclassifiedTextCells"], 0)
+            self.assertEqual(receipt["missingCells"], [])
+            self.assertEqual(receipt["output"]["status"], "blank_template")
+            self.assertIn("cached_formula_values_invalidated",
+                          receipt["output"]["calculationStatus"])
+            self.assertEqual(source.read_bytes(), original)
+
+            # Only the reviewed structure and the owner's kept reference
+            # values survive: the receipt echoes the map's own preserve
+            # sentences, and each cleared cell reports the sample it dropped.
+            mapping = json.loads(DAIRY_MAP.read_text(encoding="utf-8"))
+            reviewed = {entry["reason"] for entry in mapping["entries"]
+                        if entry["action"] == "preserve"}
+            reasons = {entry["reason"] for entry in receipt["preserved"]}
+            self.assertEqual(reasons, reviewed)
+            self.assertEqual(len(reasons), 13)
+            self.assertEqual(
+                {entry["sheet"] for entry in receipt["preserved"]},
+                set(profile["sheets"]))
+            self.assertTrue(all("oldValue" in entry
+                                for entry in receipt["cleared"]))
+            price = [entry for entry in receipt["preserved"]
+                     if "시세" in entry["reason"]]
+            self.assertEqual(len(price), 72)
+
+            before, cached_before = _formula_records(source)
+            after, cached_after = _formula_records(out)
+            self.assertEqual(len(before), DAIRY_FORMULAS)
+            self.assertEqual(after, before)
+            self.assertEqual(cached_before, DAIRY_FORMULAS)
+            self.assertEqual(cached_after, 0)
+
+            # R-01: every address the student table lists still holds a
+            # formula with a numeric literal in it, on the form and the copy.
+            from tests.test_dairy_blank_copy import FORMULA_CONSTANT_ADDRESSES
+            self.assertEqual(receipt["notices"],
+                             list(tpl.BLANK_COPY_NOTICES["dairy_hanwoo_28_sheet_v1"]))
+            const_book = openpyxl.load_workbook(out)
+            for sheet, cell in FORMULA_CONSTANT_ADDRESSES:
+                with self.subTest(constant=f"{sheet}!{cell}"):
+                    value = const_book[sheet][cell].value
+                    self.assertIsInstance(value, str)
+                    self.assertTrue(value.startswith("="))
+                    self.assertRegex(value, r"[^A-Z$]\d")
+            const_book.close()
+
+            # Structure the writer must reproduce exactly: merged ranges,
+            # sheet order and visibility, and the merge top-lefts whose sample
+            # text the map clears.
+            src_book = openpyxl.load_workbook(source)
+            out_book = openpyxl.load_workbook(out)
+            self.assertEqual(out_book.sheetnames, src_book.sheetnames)
+            self.assertEqual(
+                [ws.sheet_state for ws in out_book.worksheets],
+                [ws.sheet_state for ws in src_book.worksheets])
+            merged = 0
+            cleared_top_left = 0
+            clear_cells = {(e["sheet"], cell)
+                           for e in mapping["entries"] if e["action"] == "clear"
+                           for cell in _cells_of(e.get("range") or e["cell"])}
+            for name in src_book.sheetnames:
+                src_ranges = sorted(str(r) for r in
+                                    src_book[name].merged_cells.ranges)
+                out_ranges = sorted(str(r) for r in
+                                    out_book[name].merged_cells.ranges)
+                self.assertEqual(out_ranges, src_ranges, name)
+                merged += len(src_ranges)
+                for rng in src_ranges:
+                    c1, r1, _, _ = range_boundaries(rng)
+                    top = f"{get_column_letter(c1)}{r1}"
+                    if (name, top) in clear_cells:
+                        cleared_top_left += 1
+                        self.assertIsNone(out_book[name][top].value)
+            self.assertEqual(merged, DAIRY_MERGED_RANGES)
+            self.assertEqual(cleared_top_left, DAIRY_CLEARED_MERGE_TOP_LEFT)
+            src_book.close()
+            out_book.close()
+
+            # Why a 0 and a blank calculate the same here: the form uses no
+            # function that can tell them apart, and no "" comparison.
+            functions, empty_compare = _formula_usage(source)
+            self.assertEqual(functions, DAIRY_FORMULA_FUNCTIONS)
+            self.assertEqual(empty_compare, 0)
+
+
 def load_tests(loader, tests, pattern):
     """Report unavailable inputs as visible skips, never passing checks."""
     statuses = {}
@@ -379,6 +547,25 @@ def load_tests(loader, tests, pattern):
             statuses["FC"] = "FAIL"
             details["FC"] = ((result.failures or result.errors)[0][1].splitlines()[-1]
                              if result.failures or result.errors else "check did not run")
+    if DAIRY_SOURCE is None:
+        statuses["DAIRY"] = "SKIP"
+        details["DAIRY"] = "SKIP — PASS 아님: " + DAIRY_ENV + " is unset"
+    elif not DAIRY_SOURCE.is_file():
+        statuses["DAIRY"] = "SKIP"
+        details["DAIRY"] = "SKIP — PASS 아님: " + DAIRY_ENV + " file is absent"
+    else:
+        case = DairyRealSourceChecks('runTest')
+        result = unittest.TestResult()
+        case.runTest = lambda case=case: case.test_the_real_form_produces_the_reviewed_blank_copy()
+        case.run(result)
+        if result.wasSuccessful() and result.testsRun == 1:
+            statuses["DAIRY"] = "PASS"
+            details["DAIRY"] = ("28-sheet form, 1070/5463, "
+                                "22828 formula records intact")
+        else:
+            statuses["DAIRY"] = "FAIL"
+            details["DAIRY"] = ((result.failures or result.errors)[0][1].splitlines()[-1]
+                                if result.failures or result.errors else "check did not run")
     print("C1 local real-source checks (SKIP means the input was absent: "
           "not a pass)")
     print("SOURCE  STATUS    DETAIL")

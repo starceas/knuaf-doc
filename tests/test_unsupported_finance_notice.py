@@ -34,10 +34,11 @@ DOCUMENT_KEYS = {
     "reason", "receipt_path", "record_refs", "redisplay_rule",
     "required_for", "severity", "status", "target", "title",
 }
-UNSUPPORTED = ("industrial_insects", "dairy")
-SUPPORTED = ("specialty_crops", "fruit_trees", "hort_env_systems", "food_crops")
+UNSUPPORTED = ("industrial_insects",)
+SUPPORTED = ("specialty_crops", "fruit_trees", "hort_env_systems", "food_crops",
+             "dairy")
 BLANK_COPY_ID = "finance_blank_copy_notice"
-BLANK_COPY = ("food_crops",)
+BLANK_COPY = ("food_crops", "dairy")
 BLANK_COPY_TITLE = "지금은 빈 사본만 만들어 드려요. 숫자 확인은 교수님과 함께 하세요."
 # 앱(notice.ts readNotice)은 이 셋 중 하나라도 비면 알림을 버린다.
 APP_REQUIRED = ("title", "notice_identity", "project_id")
@@ -69,7 +70,7 @@ class RowPresenceTests(UnsupportedFinanceCase):
     """①②③ 판별 — 누가 안내를 받고, 누가 안 받으며, 막지는 않는가."""
 
     def test_unsupported_majors_get_exactly_one_row(self):
-        """① 미지원 2전공 1행·지원 4전공 0행(식량작물은 #125부터 지원 쪽)."""
+        """① 미지원 1전공 1행·지원 5전공 0행(식량작물은 #125, 낙농은 #139부터 지원 쪽)."""
         for major_id in UNSUPPORTED:
             with self.subTest(major=major_id):
                 self.assertEqual(1, len(self.rows(self.project(major_id))))
@@ -150,7 +151,7 @@ class StudentWordingTests(UnsupportedFinanceCase):
 
     def test_write_keeps_one_row_and_no_temp_files(self):
         """⑤ 파일 1행·`items` 빈 배열·임시파일 잔여 0."""
-        root = self.project("dairy")
+        root = self.project("industrial_insects")
         result = self.notices.write_notices(root)
         self.assertEqual("written", result["status"])
         self.assertEqual(1, result["notices"])
@@ -187,8 +188,11 @@ class StudentWordingTests(UnsupportedFinanceCase):
                             ensure_ascii=False)
         self.assertEqual(first, second)
         before = self.rows(root)[0]["notice_identity"]
+        # 미지원 전공이 하나뿐이라(낙농은 #139부터 빈 사본 쪽) 빈 사본 전공으로
+        # 바꿔 본다: 미지원 행은 사라지고 재무 안내 식별값은 달라진다.
         bind_major(root, "dairy")
-        after = self.rows(root)[0]["notice_identity"]
+        self.assertEqual([], self.rows(root))
+        after = self.rows(root, BLANK_COPY_ID)[0]["notice_identity"]
         self.assertNotEqual(before, after)
 
 
@@ -197,7 +201,7 @@ class IdentityTests(UnsupportedFinanceCase):
 
     def test_identity_import_failure_matches_normal_path(self):
         """⑧ 대체 계산 == 정상 계산. 옛 dict 요리법은 다른 값(음성 통제)."""
-        for major_id in ("industrial_insects", "dairy"):
+        for major_id in UNSUPPORTED:
             with self.subTest(major=major_id):
                 root = self.project(major_id)
                 normal = self.rows(root)[0]["notice_identity"]
@@ -256,10 +260,10 @@ class ExclusivityTests(UnsupportedFinanceCase):
 
 
 class BlankCopyFinanceTests(UnsupportedFinanceCase):
-    """빈 사본까지만 지원하는 전공(식량작물) — 미지원 행 대신 빈 사본 행 1개."""
+    """빈 사본까지만 지원하는 전공(식량작물·낙농) — 미지원 행 대신 빈 사본 행 1개."""
 
     def test_blank_copy_major_gets_blank_row_and_no_unsupported_row(self):
-        """식량작물: 미지원 0행 + 빈 사본 1행. 다른 5전공: 빈 사본 0행."""
+        """식량작물·낙농: 미지원 0행 + 빈 사본 1행. 다른 4전공: 빈 사본 0행."""
         for major_id in BLANK_COPY:
             with self.subTest(major=major_id):
                 root = self.project(major_id)
