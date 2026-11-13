@@ -89,8 +89,7 @@ major's `workbook_profiles` declaration and a supported finance capability for
 that same profile, before creating an output directory. A registered profile is
 also compared with the real workbook's sheet count, names, order and per-sheet
 formula fingerprints from `references/workbook-reference-set.json` (currently
-`fruit_16_sheet_v1` and `food_crops_16_sheet_v1`; dairy remains closed until its
-original is registered).
+`fruit_16_sheet_v1`, `food_crops_16_sheet_v1` and `dairy_hanwoo_28_sheet_v1`).
 Fingerprints hash UTF-8 compact JSON of sorted `(address, expanded formula)`
 pairs from the SHA256-verified school original. Values may change; moved,
 missing, added or edited formulas are held with the differing sheet names.
@@ -102,12 +101,14 @@ authorize school-form clear/fill. Clear/fill receipts retain the profile and
 map hash.
 
 The profile a workbook tool requests when the caller names none comes from the
-bound major (`food_crops` → `food_crops_16_sheet_v1`, every other major →
-`school_17_sheet_v1`), so specialty/fruit/dairy byte output is unchanged. A
-major whose own school form differs needs an explicit `--source`; the bundled
-17-sheet asset cannot stand in for the 16-sheet food-crops form. The reviewed
-food-crops clearing map and its receipt contract are
-[food-crops/corrections/FC-CLEAR.md](food-crops/corrections/FC-CLEAR.md).
+bound major (`food_crops` → `food_crops_16_sheet_v1`, `dairy` →
+`dairy_hanwoo_28_sheet_v1`, every other major → `school_17_sheet_v1`), so
+specialty/fruit byte output is unchanged. A major whose own school form differs
+needs an explicit `--source`; neither the bundled 17-sheet asset nor the
+16-sheet food-crops form stands in for the 28-sheet dairy form. The reviewed
+clearing maps and their receipt contracts are
+[food-crops/corrections/FC-CLEAR.md](food-crops/corrections/FC-CLEAR.md) and
+[dairy/corrections/DAIRY-CLEAR.md](dairy/corrections/DAIRY-CLEAR.md).
 
 `gg_excel_formula_patch.patch_copy` resolves the same default and refuses a
 named `profile` that differs from it (`unsupported_finance_profile`), then
@@ -116,8 +117,8 @@ checks the source against that profile's registered structure
 created: the source path itself is refused (`ValueError`), an existing output
 file is refused (`FileExistsError`), and output outside the project stays
 allowed because the student chooses where to save. `gg_excel_fill.fill_copy`
-stays closed for `food_crops` only (`fill_unsupported_for_major`); the 17-sheet
-majors keep filling and calculating as before.
+stays closed for `food_crops` and `dairy` (`fill_unsupported_for_major`); the
+17-sheet majors keep filling and calculating as before.
 
 Office `--spec` uses the same workbook-profile gate and compares the staged
 input's real sheets with the registered form. `--template-receipt` accepts

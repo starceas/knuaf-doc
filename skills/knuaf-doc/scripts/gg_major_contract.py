@@ -699,7 +699,7 @@ OUTPUT_GUIDANCE_UNSUPPORTED = (
 )
 
 OUTPUT_GUIDANCE_FILL_CLOSED = (
-    "식량작물 재무 엑셀은 빈 사본까지만 지원합니다. 학교 원본을 "
+    "재무 엑셀은 빈 사본까지만 지원합니다. 학교 원본을 "
     "gg_excel_template.py clear로 복제해 입력 칸만 비우고, 값은 학생이 "
     "자기 엑셀에서 직접 넣습니다. 채우기·파이썬 계산은 지원하지 않습니다."
 )
@@ -709,10 +709,10 @@ _UNSUPPORTED_OUTPUT_REASONS = frozenset({
     "unsupported_finance_profile",
 })
 
-# 식량작물 2판은 빈 사본까지만 연다(책임자 결정 2026-11-12): 계약상 채우기와
-# 파이썬 계산은 미지원이므로 값 채우기 입구에서 거절한다. 표에 없는 전공의
-# 채우기 경로는 그대로다.
-FILL_CLOSED_MAJORS = frozenset({"food_crops"})
+# 식량작물(2026-11-12)·낙농(2026-11-13) 2판은 빈 사본까지만 연다: 계약상
+# 채우기와 파이썬 계산은 미지원이므로 값 채우기 입구에서 거절한다. 표에 없는
+# 전공의 채우기 경로는 그대로다.
+FILL_CLOSED_MAJORS = frozenset({"food_crops", "dairy"})
 
 # 특용작물전공 제출 엑셀은 교수님 양식(X01, 대식물 계정이 필요하면 X02)을
 # 틀로 복제해 값만 채운다(사용자 결정 2026-10-28). 스펙에서 17시트를 새로
@@ -720,10 +720,12 @@ FILL_CLOSED_MAJORS = frozenset({"food_crops"})
 # 이 결정과 무관하다.
 LEGACY_GENERATOR_CLOSED_MAJORS = frozenset({"specialty_crops"})
 
-# 전공별 학교 엑셀 프로필: 16시트 식량작물 양식은 자기 원본 구조를 쓰고,
-# 표에 없는 전공은 지금까지의 17시트 공용 양식 문자열 그대로다(바이트 불변).
+# 전공별 학교 엑셀 프로필: 16시트 식량작물·28시트 낙농 양식은 자기 원본
+# 구조를 쓰고, 표에 없는 전공은 지금까지의 17시트 공용 양식 문자열
+# 그대로다(바이트 불변).
 MODULE_WORKBOOK_PROFILE = MappingProxyType({
     "food_crops": "food_crops_16_sheet_v1",
+    "dairy": "dairy_hanwoo_28_sheet_v1",
 })
 
 
@@ -2597,8 +2599,13 @@ DAIRY_MODULE = declare_module(
                           "낙농 재무 산식 미지원"),
         FinanceCapability("hanwoo_herd_cash", "unsupported",
                           "한우 재무 산식 미지원"),
-        FinanceCapability("dairy_hanwoo_28_sheet_v1", "unsupported",
-                          "낙농 학교 원본 구조 미등록 — 프로필 닫음(R1 차단1)"),
+        FinanceCapability(
+            "dairy_hanwoo_28_sheet_v1", "supported",
+            "학교 28시트 한우 양식 빈 사본 전용 — 교수님 원본을 복제(clear)해 "
+            "입력 칸만 비운다. 값 채우기(gg_excel_fill)와 파이썬 재무 계산은 "
+            "미지원이며 입구에서 거절한다(fill_unsupported_for_major). 원본 "
+            "지문은 참조집합, 칸 지도는 references/dairy/corrections",
+        ),
     ),
     supported_outputs=("question_list", "document_plan", "evidence_review",
                        "school_paper", "school_excel_workbook"),
