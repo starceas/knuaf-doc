@@ -170,6 +170,16 @@ class MajorNoticeIsolationTests(ContractCase):
     # build_docx 매니페스트. `file_hash`만 뺀다(ZIP 타임스탬프 때문에 실행마다
     # 달라진다).
     REFERENCE_DOCX_MANIFEST = {
+        # GF2(#128): 그림 없는 원고에도 빈 그림 보고서가 붙는다(DOCX 바이트는 그대로).
+        "figures": {
+            "images": [],
+            "student": [],
+            "student_count": 0,
+            "student_notice": "학생이 넣은 그림 0장 — 출처·권리는 학생 확인",
+            "placeholders": [],
+            "placeholder_text": "앱에서 받은 그림",
+            "blocked": [],
+        },
         "file_hash_stage": "build",
         "font": "신명조",
         "font_available": "not_run",

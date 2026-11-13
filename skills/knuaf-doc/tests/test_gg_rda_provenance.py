@@ -168,16 +168,121 @@ class IntegrityGateTests(unittest.TestCase):
 
 
 class RealPackIdentityTests(unittest.TestCase):
-    """D01: all 6,055 physical rows preserved with immutable audit keys."""
+    """D01: all 6,315 physical rows preserved with immutable audit keys."""
 
-    def test_all_four_packs_index_to_6162_physical_keys(self):
+    def test_all_pinned_packs_index_to_6315_physical_keys(self):
         total = 0
         for pack_id, pin in prov.PINNED_PACKS.items():
             idx = prov.build_audit_index(PACKS / pin["relpath"], pack_id,
                                          pin["records_file_sha256"])
             self.assertEqual(len(idx), pin["record_lines"])
             total += len(idx)
-        self.assertEqual(total, 6162)
+        self.assertEqual(total, 6315)
+
+    def test_manifest_audit_chain_matches_record_bytes(self):
+        # Every pinned pack's manifest must describe the records.jsonl bytes
+        # it ships beside: file hash == pin == actual bytes, and the rows'
+        # audit keys == the index built from those bytes.  Catches a record
+        # edit (e.g. a field rename) whose manifest hashes were not rebuilt.
+        for pack_id, pin in prov.PINNED_PACKS.items():
+            with self.subTest(pack=pack_id):
+                records = PACKS / pin["relpath"]
+                manifest = json.loads(
+                    (records.parent / "manifest.json").read_text(
+                        encoding="utf-8"))
+                actual = hashlib.sha256(records.read_bytes()).hexdigest()
+                self.assertEqual(manifest["records_file_sha256"], actual)
+                self.assertEqual(pin["records_file_sha256"], actual)
+                idx = prov.build_audit_index(records, pack_id, actual)
+                rows = manifest["rows"]
+                self.assertEqual(len(rows), len(idx))
+                keys = set()
+                for row in rows:
+                    key = prov.normalize_audit_key(row["audit_key"])
+                    self.assertEqual(row["raw_line_sha256"], key[3])
+                    keys.add(key)
+                self.assertEqual(keys, set(idx))
+
+    def test_builtin_sources_pack_artifacts_match_disk(self):
+        # builtin-sources.json artifacts[] for benchmark packs must equal
+        # the shipped bytes (sha256 and size) — a rebuilt manifest whose
+        # registry artifact hash was not refreshed fails here.
+        registry = json.loads((KN_UAF_DOC / "references" /
+                               "builtin-sources.json").read_text(
+                                   encoding="utf-8"))
+        seen = []
+
+        def walk(node):
+            if isinstance(node, dict):
+                for art in node.get("artifacts") or []:
+                    rel = art.get("relative_path") \
+                        if isinstance(art, dict) else None
+                    if isinstance(rel, str) and rel.startswith("common/"):
+                        seen.append((rel, art))
+                for value in node.values():
+                    walk(value)
+            elif isinstance(node, list):
+                for value in node:
+                    walk(value)
+
+        walk(registry)
+        self.assertTrue(seen)
+        for rel, art in seen:
+            with self.subTest(artifact=rel):
+                data = (PACKS / rel).read_bytes()
+                self.assertEqual(art["sha256"],
+                                 hashlib.sha256(data).hexdigest())
+                self.assertEqual(art["bytes"], len(data))
+
+    def test_source_aggregation_group_contract(self):
+        # record.schema.json common_envelope.source: aggregation_group is
+        # survey + "." + data_year, and a pack whose records span more than
+        # one group must carry the manifest's no-mixing rule text.
+        required = {"publisher", "survey", "survey_label",
+                    "aggregation_group", "data_year", "document"}
+        checked = 0
+        for pack_id, pin in prov.PINNED_PACKS.items():
+            records = PACKS / pin["relpath"]
+            groups = set()
+            for line in records.read_text(encoding="utf-8").splitlines():
+                rec = json.loads(line)
+                src = rec.get("source")
+                if src is None:
+                    continue
+                with self.subTest(record=rec.get("record_id")):
+                    self.assertTrue(required <= set(src), sorted(src))
+                    self.assertEqual(
+                        src["aggregation_group"],
+                        "%s.%d" % (src["survey"], src["data_year"]))
+                    self.assertNotIn("aggregation_key", src)
+                groups.add(src["aggregation_group"])
+                checked += 1
+            if len(groups) > 1:
+                manifest = json.loads(records.parent.joinpath(
+                    "manifest.json").read_text(encoding="utf-8"))
+                with self.subTest(pack=pack_id):
+                    self.assertIn("aggregation_group",
+                                  manifest.get("aggregation_rule", ""))
+        self.assertEqual(checked, 153)
+
+    def test_catalog_authority_pins_reproduce_from_real_manifests(self):
+        # Every pinned accepted-catalog authority that names a pinned pack
+        # must reproduce from that pack's shipped manifest rows; a manifest
+        # rebuilt without re-pinning (or the reverse) fails here.
+        import gg_rda_research as research
+        for auth, digest in research.PINNED_CATALOG_AUTHORITIES.items():
+            pack_id = auth.rsplit("/", 1)[-1]
+            pin = prov.PINNED_PACKS.get(pack_id)
+            if pin is None:
+                continue
+            with self.subTest(authority=auth):
+                manifest = json.loads(
+                    (PACKS / pin["relpath"]).parent.joinpath(
+                        "manifest.json").read_text(encoding="utf-8"))
+                entries = {prov.normalize_audit_key(r["audit_key"]): r
+                           for r in manifest["rows"]}
+                self.assertEqual(
+                    research.catalog_content_digest(entries), digest)
 
     def test_econ_byte_identical_lines_keep_distinct_keys(self):
         pin = prov.PINNED_PACKS["rda.econ.2025"]
@@ -193,6 +298,412 @@ class RealPackIdentityTests(unittest.TestCase):
         self.assertEqual(len(dup_groups), 7)
         for group in dup_groups:
             self.assertEqual(len({k[2] for k in group}), len(group))
+
+
+# --- W-SUM: cost-item sums vs the printed 계 lines -------------------------
+#
+# Appendix A of the W-SUM audit (``wsum/RESULT-WSUM.md`` §9, out of tree)
+# lists pages whose *printed* figures disagree with the sum of the rows
+# printed on the same page.  Those are source defects: the pack is not to be
+# "fixed" against them (patching the pack would make it disagree with its own
+# source).  ``WSUM_PRINTED_DEFECTS`` freezes each one so that
+#   - a new |세목 합 − 계| > 3 anywhere else fails, and
+#   - a whitelisted record that gets corrected (or drifts) is reported
+#     instead of silently disappearing from the tolerance budget.
+#
+# Section membership follows the printed table, not the key's name:
+#   중간재  = every intermediate row (기타비용 included — it is printed inside
+#             the 중간재 block; adding it again to get 경영비 double-counts)
+#   경영비  = 중간재 + 임차료(농기계·시설 / 토지) + 위탁영농비 + 고용노력비
+#   생산비  = 경영비 + 자가노동비 + 유동/고정/토지 자본용역비
+COST_SECTION_INTERMEDIATE = frozenset({
+    "seed_and_seedling", "seed_seedling", "fertilizer_mineral",
+    "fertilizer_inorganic", "fertilizer_organic", "pesticide",
+    "utilities_fuel", "utilities_power", "vehicle", "other_materials",
+    "small_tools", "depreciation_large_tools", "large_machinery_depreciation",
+    "depreciation_facilities", "farming_facility_depreciation",
+    "repair_maintenance", "production_management", "other_costs",
+    # 2026-11-13 additions: rows printed on the source page that had no pack
+    # key; the money was already inside the printed 중간재 total.
+    "orchard_establishment", "bee_colony", "bee_feed",
+    "beekeeping_transport_overwinter", "bee_disease_control",
+    "mushroom_spawn", "mushroom_substrate", "disinfectant",
+})
+COST_SECTION_OPERATING_EXTRA = frozenset({
+    "rent_machinery_facility", "machinery_facility_rent", "rent_land",
+    "land_rent", "consigned_farming", "labor_hired", "hired_labor",
+})
+COST_SECTION_PRODUCTION_EXTRA = frozenset({
+    "labor_own", "unpaid_family_labor", "working_capital_interest",
+    "fixed_capital_interest", "land_capital_interest",
+})
+# Totals and revenue columns — never summed as 세목.
+COST_TOTAL_KEYS = frozenset({
+    "intermediate_cost_total", "operating_cost", "production_cost_total",
+    "main_product_value", "byproduct_value",
+})
+#: Printed-figure defects from RESULT-WSUM §9 — 12 regional + 1 national 2024.
+#: ``printed`` is the value printed on the page for ``printed_line``;
+#: ``page_rows_sum`` is the sum of the rows printed on that same page, so
+#: ``page_delta`` is purely a source inconsistency.  ``pack_rows_sum`` is the
+#: same sum recomputed from the pack's cost_items and ``pack_delta`` its
+#: distance from the printed figure — the pack-side number the tolerance
+#: check reports.  Correcting any of these records must edit this table.
+WSUM_PRINTED_DEFECTS = {
+    "rda.income.national.2024.detail.식량작물.봄감자":
+        {"pdf_page": 78, "printed_page": "72", "printed_line": "경영비·생산비",
+         "printed": 1443511, "page_rows_sum": 1442469, "page_delta": 1042,
+         "pack_rows_sum": 1442469, "pack_delta": -1042},
+    "rda.income.regional.2024.chungnam.crop.느타리버섯_균상":
+        {"pdf_page": 166, "printed_page": "162", "printed_line": "생산비",
+         "printed": 21280422, "page_rows_sum": 21381119, "page_delta": -100697,
+         "pack_rows_sum": 20396454, "pack_delta": -883968},
+    "rda.income.regional.2024.chungnam.crop.양송이버섯":
+        {"pdf_page": 167, "printed_page": "163", "printed_line": "생산비",
+         "printed": 73601822, "page_rows_sum": 73704228, "page_delta": -102406,
+         "pack_rows_sum": 71715773, "pack_delta": -1886049},
+    "rda.income.regional.2024.gangwon.crop.봄감자":
+        {"pdf_page": 66, "printed_page": "62", "printed_line": "경영비·생산비",
+         "printed": 1175498, "page_rows_sum": 1168951, "page_delta": 6547,
+         "pack_rows_sum": 1168951, "pack_delta": -6547},
+    "rda.income.regional.2024.gyeonggi.crop.노지가을무":
+        {"pdf_page": 30, "printed_page": "26", "printed_line": "생산비",
+         "printed": 2890241, "page_rows_sum": 2890245, "page_delta": -4,
+         "pack_rows_sum": 2666684, "pack_delta": -223557},
+    "rda.income.regional.2024.gyeonggi.crop.느타리버섯_병재배":
+        {"pdf_page": 60, "printed_page": "56", "printed_line": "생산비",
+         "printed": 604379, "page_rows_sum": 605488, "page_delta": -1109,
+         "pack_rows_sum": 580915, "pack_delta": -23464},
+    "rda.income.regional.2024.gyeonggi.crop.쌀":
+        {"pdf_page": 425, "printed_page": "421", "printed_line": "생산비",
+         "printed": 881865, "page_rows_sum": 881861, "page_delta": 4,
+         "pack_rows_sum": 749901, "pack_delta": -131964},
+    "rda.income.regional.2024.gyeongnam.crop.시설장미":
+        {"pdf_page": 362, "printed_page": "358", "printed_line": "생산비",
+         "printed": 34908584, "page_rows_sum": 34908588, "page_delta": -4,
+         "pack_rows_sum": 33464157, "pack_delta": -1444427},
+    "rda.income.regional.2024.jeonbuk.crop.느타리버섯_균상":
+        {"pdf_page": 208, "printed_page": "204", "printed_line": "생산비",
+         "printed": 18503358, "page_rows_sum": 18690160, "page_delta": -186802,
+         "pack_rows_sum": 18159583, "pack_delta": -343775},
+    "rda.income.regional.2024.jeonbuk.crop.오미자":
+        {"pdf_page": 206, "printed_page": "202", "printed_line": "생산비",
+         "printed": 6141077, "page_rows_sum": 6141081, "page_delta": -4,
+         "pack_rows_sum": 5672355, "pack_delta": -468722},
+    "rda.income.regional.2024.jeonnam.crop.가을감자":
+        {"pdf_page": 221, "printed_page": "217", "printed_line": "중간재 계",
+         "printed": 9763783, "page_rows_sum": 976384, "page_delta": 8787399,
+         "pack_rows_sum": 976384, "pack_delta": -8787399},
+    "rda.income.regional.2024.jeonnam.crop.느타리버섯_균상":
+        {"pdf_page": 267, "printed_page": "263", "printed_line": "경영비·생산비",
+         "printed": 17343459, "page_rows_sum": 17351312, "page_delta": -7853,
+         "pack_rows_sum": 17351312, "pack_delta": 7853},
+    "rda.income.regional.2024.jeonnam.crop.수국":
+        {"pdf_page": 261, "printed_page": "257", "printed_line": "생산비",
+         "printed": 33786995, "page_rows_sum": 33786999, "page_delta": -4,
+         "pack_rows_sum": 31719497, "pack_delta": -2067498},
+}
+
+#: Print rounding: the source notes that row sums may miss the total by a
+#: sub-unit amount, measured never above 3 (RESULT-WSUM §1).
+WSUM_TOLERANCE = 3
+
+#: Records whose packed 세목 sum misses a 계 line **the pack carries** by more
+#: than the tolerance. Only 3 of the 13 printed defects land here: the regional
+#: 2024 pack stores no 중간재/생산비 total, so the other 10 defects are invisible
+#: to a pack-side check and are frozen from the source side instead.
+WSUM_PACK_OVER_TOLERANCE = frozenset({
+    "rda.income.national.2024.detail.식량작물.봄감자",
+    "rda.income.regional.2024.gangwon.crop.봄감자",
+    "rda.income.regional.2024.jeonnam.crop.느타리버섯_균상",
+})
+
+#: Records that carry cost_items, per pinned pack.  A record that silently
+#: loses its 세목 would otherwise drop out of the W-SUM scan unnoticed.
+WSUM_RECORDS_WITH_COST_ITEMS = {
+    "rda.income.national.2024": 51,
+    "rda.income.regional.2024": 365,
+    "rda.econ.2025": 0,
+    "mafra.specialty.production.2024": 0,
+    "rda.income.national.2025": 53,
+    "rda.income.regional.2025": 49,
+}
+
+#: Which pack column holds each printed 계 line ('경영비·생산비' pages print one
+#: figure for both; the pack stores it as 경영비).
+WSUM_PACK_TOTAL_FIELD = {
+    "경영비": ("metrics", "operating_cost"),
+    "경영비·생산비": ("metrics", "operating_cost"),
+    "중간재 계": ("cost_items", "intermediate_cost_total"),
+    "생산비": ("cost_items", "production_cost_total"),
+}
+
+
+def cost_section_sums(cost_items):
+    """Return ``(intermediate, operating, production)`` sums over 세목 only —
+    계 lines, revenue columns and non-numeric (``"-"``) cells excluded."""
+    totals = dict.fromkeys(("intermediate", "operating", "production"), 0)
+    for key, value in cost_items.items():
+        if key in COST_TOTAL_KEYS:
+            continue
+        if not (key in COST_SECTION_INTERMEDIATE
+                or key in COST_SECTION_OPERATING_EXTRA
+                or key in COST_SECTION_PRODUCTION_EXTRA):
+            # a new cost key needs a section — fail loudly even when its
+            # cell is "-" or None, so it can never slip in unclassified
+            raise AssertionError("cost_items key %r has no printed section"
+                                 % key)
+        if value in (None, "-"):
+            continue
+        amount = int(value)
+        if key in COST_SECTION_INTERMEDIATE:
+            totals["intermediate"] += amount
+            totals["operating"] += amount
+            totals["production"] += amount
+        elif key in COST_SECTION_OPERATING_EXTRA:
+            totals["operating"] += amount
+            totals["production"] += amount
+        else:
+            totals["production"] += amount
+    return tuple(totals[k] for k in ("intermediate", "operating",
+                                     "production"))
+
+
+class CostItemSumTests(unittest.TestCase):
+    """W-SUM: 세목 합 vs 계 stays inside ±3 except the 13 source defects."""
+
+    def test_cost_section_sums_follow_printed_sections(self):
+        # 기타비용 sits inside the 중간재 block; counting it again for 경영비
+        # would double it (the mistake that made 111 national rows look
+        # wrong).  자가노동비/자본용역비 reach 생산비 only.
+        int_sum, op_sum, prod_sum = cost_section_sums({
+            "seed_and_seedling": "100", "other_costs": "50",
+            "rent_land": "20", "labor_hired": "30",
+            "labor_own": "40", "working_capital_interest": "10",
+            "intermediate_cost_total": "999999", "operating_cost": "999999",
+            "main_product_value": "999999", "consigned_farming": "-",
+        })
+        self.assertEqual((int_sum, op_sum, prod_sum), (150, 200, 250))
+
+    def test_unknown_cost_key_is_rejected(self):
+        with self.assertRaises(AssertionError):
+            cost_section_sums({"seed_and_seedling": "1", "mystery_row": "2"})
+        # an unclassified key is rejected even with a blank/dash cell
+        for blank in ("-", None):
+            with self.subTest(value=blank):
+                with self.assertRaises(AssertionError):
+                    cost_section_sums({"mystery_row": blank})
+
+    def test_over_tolerance_records_are_whitelisted_printed_defects(self):
+        # 세목 합이 팩이 실제로 담고 있는 계와 ±3 넘게 어긋나는 레코드는 원문
+        # 인쇄 결함 허용 목록 안에만 있어야 한다. 목록 밖에서 새 차이가 생기면
+        # 실패하고, 허용 목록 레코드가 고쳐져 차이가 사라져도 실패한다(그때는
+        # WSUM_PACK_OVER_TOLERANCE와 WSUM_PRINTED_DEFECTS를 같이 고친다).
+        observed = set()
+        with_items = {}
+        for pack_id, pin in prov.PINNED_PACKS.items():
+            path = PACKS / pin["relpath"]
+            with_items[pack_id] = 0
+            for line in path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                record = json.loads(line)
+                items = record.get("cost_items")
+                if not items:
+                    continue
+                with_items[pack_id] += 1
+                worst = max(self._carried_deltas(record, items).values(),
+                            key=abs)
+                if abs(worst) > WSUM_TOLERANCE:
+                    observed.add(record["record_id"])
+        self.assertEqual(
+            observed, set(WSUM_PACK_OVER_TOLERANCE),
+            "±%d 초과 레코드가 허용 목록과 다르다" % WSUM_TOLERANCE)
+        # 세목이 통째로 사라진 레코드가 검사망에서 빠지지 않게 팩별 수 고정.
+        self.assertEqual(with_items, WSUM_RECORDS_WITH_COST_ITEMS)
+        # 허용 목록은 13건 고정 — 2024 지역 12 + 전국 1 (RESULT-WSUM §9).
+        self.assertEqual(len(WSUM_PRINTED_DEFECTS), 13)
+        self.assertTrue(set(WSUM_PACK_OVER_TOLERANCE)
+                        <= set(WSUM_PRINTED_DEFECTS))
+
+    def _carried_deltas(self, record, items):
+        """세목 합 − 계, 팩이 그 계를 실제로 담고 있을 때만."""
+        int_sum, op_sum, prod_sum = cost_section_sums(items)
+        metric_op = int(record["metrics"]["operating_cost"])
+        item_op = items.get("operating_cost")
+        if item_op not in (None, "-"):
+            # 경영비 계가 두 자리에 있으면 같은 값이어야 하고, 둘 다 잰다.
+            self.assertEqual(int(item_op), metric_op,
+                             "%s: cost_items.operating_cost != "
+                             "metrics.operating_cost" % record["record_id"])
+        deltas = {"경영비": op_sum - metric_op}
+        for line_name, key, total in (
+                ("중간재 계", "intermediate_cost_total", int_sum),
+                ("생산비", "production_cost_total", prod_sum)):
+            printed = items.get(key)
+            if printed not in (None, "-"):
+                deltas[line_name] = total - int(printed)
+        return deltas
+
+    def test_whitelisted_defects_reproduce_their_pack_sum(self):
+        # 허용 목록은 면죄부가 아니라 동결이다: 13건 각각이 기록된 쪽·인쇄
+        # 값·팩 쪽 세목 합을 그대로 재현해야 한다. 허용 목록 아래에서 값이
+        # 조용히 바뀌면 여기서 걸린다.
+        by_id = {}
+        for pack_id, pin in prov.PINNED_PACKS.items():
+            path = PACKS / pin["relpath"]
+            for line in path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                record = json.loads(line)
+                by_id[record["record_id"]] = record
+        for record_id, expect in WSUM_PRINTED_DEFECTS.items():
+            with self.subTest(record=record_id):
+                record = by_id.get(record_id)
+                self.assertIsNotNone(record, "허용 목록 레코드가 팩에 없다")
+                self.assertEqual(record["locator"]["pdf_page"],
+                                 expect["pdf_page"])
+                self.assertEqual(record["locator"]["printed_page"],
+                                 expect["printed_page"])
+                int_sum, op_sum, prod_sum = cost_section_sums(
+                    record["cost_items"])
+                # '경영비·생산비'는 두 계가 같은 값으로 잘못 찍힌 쪽이라
+                # 경영비 쪽 세목 합으로 잰다.
+                got = {"중간재 계": int_sum, "경영비": op_sum,
+                       "생산비": prod_sum,
+                       "경영비·생산비": op_sum}[expect["printed_line"]]
+                self.assertEqual(got, expect["pack_rows_sum"])
+                self.assertEqual(got - expect["printed"], expect["pack_delta"])
+                # 원문 쪽 동결값끼리의 산술(page_rows_sum은 원문 쪽 세목 합,
+                # pack_rows_sum은 팩 세목만의 합 — 10건은 팩에 없는 행이
+                # 있어 둘이 다르다).
+                self.assertEqual(expect["printed"] - expect["page_rows_sum"],
+                                 expect["page_delta"])
+                # 팩이 그 계 칸을 담고 있으면 그 값이 동결된 인쇄값과 같아야
+                # 한다 — 결함값이 다른 결함값으로 바뀌는 것도 잡는다.
+                # 담고 있지 않으면(지역 2024 중간재·생산비 계) 없음을 잠근다.
+                where, field = WSUM_PACK_TOTAL_FIELD[expect["printed_line"]]
+                carried_total = (record.get(where) or {}).get(field)
+                if record_id in WSUM_PACK_OVER_TOLERANCE:
+                    self.assertIsNotNone(carried_total)
+                    self.assertEqual(int(carried_total), expect["printed"])
+                else:
+                    self.assertIn(carried_total, (None, "-"),
+                                  "팩에 그 계 칸이 생겼다 — 허용 목록 두 층을 "
+                                  "다시 나눠라")
+                # 허용 목록에 있으면서 ±3 안인 10건은 팩에 그 계 칸이 없어서
+                # (지역 2024 팩은 중간재·생산비 계를 담지 않는다) 팩 쪽
+                # 검사가 볼 수 없는 원문 결함이다 — 그 사실을 함께 잠근다.
+                carried = self._carried_deltas(record, record["cost_items"])
+                if record_id in WSUM_PACK_OVER_TOLERANCE:
+                    self.assertGreater(max(map(abs, carried.values())),
+                                       WSUM_TOLERANCE)
+                else:
+                    self.assertLessEqual(
+                        max(map(abs, carried.values())), WSUM_TOLERANCE,
+                        "팩이 그 계를 담고 있으면 팩 쪽 검사가 잡아야 한다")
+
+
+class KeyRefBindingTests(unittest.TestCase):
+    """I-01: every builtin-sources ``key_ref`` line reference is bound to the
+    pack bytes shipped next to it.
+
+    The pack pins (``PINNED_PACKS``), the manifest audit chain and the
+    registry ``artifacts[]`` hashes are all covered elsewhere; the registry's
+    per-row ``key_ref`` (records_file_sha256 + physical line + raw line hash)
+    was not, so a pack rebuilt without re-pointing the references kept
+    passing.  These tests recompute both hashes from the bytes on disk.
+    """
+
+    def _key_refs(self):
+        registry = json.loads((KN_UAF_DOC / "references" /
+                               "builtin-sources.json").read_text(
+                                   encoding="utf-8"))
+        refs = []
+
+        def walk(node):
+            if isinstance(node, dict):
+                ref = node.get("key_ref")
+                if isinstance(ref, dict) and ref.get("kind") == "audit_key":
+                    refs.append(ref)
+                for value in node.values():
+                    walk(value)
+            elif isinstance(node, list):
+                for value in node:
+                    walk(value)
+
+        walk(registry)
+        return refs
+
+    #: The registry's audit_key refs, by owning entry: (source_id, pack_id,
+    #: physical line).  Pinned so a ref silently re-pointed at another valid
+    #: row (hashes would still match) or dropped/duplicated is caught.
+    EXPECTED_KEY_REFS = sorted([
+        ("rda.income.national.2024", "rda.income.national.2024", 1),
+        ("rda.income.national.2024", "rda.income.national.2024", 52),
+        ("rda.income.regional.2024", "rda.income.regional.2024", 1),
+        ("rda.econ.2025", "rda.econ.2025", 19),
+        ("rda.econ.2025", "rda.econ.2025", 1),
+        ("mafra.specialty.production.2024",
+         "mafra.specialty.production.2024", 1),
+        ("mafra.specialty.production.2024",
+         "mafra.specialty.production.2024", 1441),
+    ])
+
+    def test_key_refs_point_at_the_expected_rows(self):
+        registry = json.loads((KN_UAF_DOC / "references" /
+                               "builtin-sources.json").read_text(
+                                   encoding="utf-8"))
+        got = []
+        for entry in registry["entries"]:
+            def walk(node):
+                if isinstance(node, dict):
+                    ref = node.get("key_ref")
+                    if isinstance(ref, dict) and \
+                            ref.get("kind") == "audit_key":
+                        got.append((entry["source_id"], ref["pack_id"],
+                                    ref["physical_jsonl_line_1based"]))
+                    for value in node.values():
+                        walk(value)
+                elif isinstance(node, list):
+                    for value in node:
+                        walk(value)
+            walk(entry)
+        self.assertEqual(sorted(got), self.EXPECTED_KEY_REFS)
+
+    def test_every_key_ref_matches_current_pack_bytes(self):
+        refs = self._key_refs()
+        # 7 audit_key refs ship today (national 2024 ×2, regional 2024 ×1,
+        # econ ×2, mafra ×2); which rows exactly is pinned in
+        # test_key_refs_point_at_the_expected_rows.
+        self.assertEqual(len(refs), 7)
+        for ref in refs:
+            pack_id = ref["pack_id"]
+            with self.subTest(pack=pack_id,
+                              line=ref["physical_jsonl_line_1based"]):
+                pin = prov.PINNED_PACKS[pack_id]
+                data = (PACKS / pin["relpath"]).read_bytes()
+                self.assertEqual(ref["records_file_sha256"],
+                                 hashlib.sha256(data).hexdigest())
+                lines = data.splitlines(keepends=True)
+                line_no = ref["physical_jsonl_line_1based"]
+                self.assertLessEqual(line_no, len(lines))
+                self.assertEqual(ref["raw_line_sha256"],
+                                 prov.raw_line_sha256(lines[line_no - 1]))
+
+    def test_key_ref_lines_resolve_in_the_audit_index(self):
+        # The reference must also point at a key the pack actually indexes:
+        # same line, same raw hash, same file hash — otherwise a reordered
+        # pack keeps the hashes but loses the row.
+        for ref in self._key_refs():
+            pack_id = ref["pack_id"]
+            pin = prov.PINNED_PACKS[pack_id]
+            with self.subTest(pack=pack_id,
+                              line=ref["physical_jsonl_line_1based"]):
+                idx = prov.build_audit_index(PACKS / pin["relpath"], pack_id,
+                                             pin["records_file_sha256"])
+                self.assertIn(prov.normalize_audit_key(ref), idx)
+
 
 
 class ResolveReferenceTests(unittest.TestCase):

@@ -1704,15 +1704,21 @@ def check(text, base, major_id=None, project_root=None):
                 or nodes[i + 1]["label"] != "그림"
             ):
                 issues.append(("missing_caption", "그림 객체의 캡션 없음"))
-            p = Path(n["path"])
-            if (
-                p.is_absolute()
-                or "://" in str(p)
-                or base is None
-                or not (Path(base) / p).is_file()
-                or not (Path(base) / p).resolve().is_relative_to(Path(base).resolve())
-            ):
-                issues.append(("missing_image", n["path"]))
+            import gg_figure_docx
+
+            handled, token_issue = gg_figure_docx.image_check(n["path"])
+            if token_issue:
+                issues.append(("missing_image", n["path"] + ": " + token_issue))
+            elif not handled:
+                p = Path(n["path"])
+                if (
+                    p.is_absolute()
+                    or "://" in str(p)
+                    or base is None
+                    or not (Path(base) / p).is_file()
+                    or not (Path(base) / p).resolve().is_relative_to(Path(base).resolve())
+                ):
+                    issues.append(("missing_image", n["path"]))
         if n["kind"] == "table":
             if _caption_before_table(nodes, i) is None:
                 # 식량작물 양식은 2장 SWOT처럼 제목 없는 표를 정상으로 쓴다
