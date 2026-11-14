@@ -247,7 +247,12 @@ class RealPackIdentityTests(unittest.TestCase):
             for line in records.read_text(encoding="utf-8").splitlines():
                 rec = json.loads(line)
                 src = rec.get("source")
-                if src is None:
+                # 소득 팩(rda-income-*)은 전 행 필수 — 건너뛰지 않는다.
+                # 다른 팩은 아직 source가 선택 사항이므로 건너뛴다.
+                if "rda-income" in pin["relpath"]:
+                    self.assertIsNotNone(
+                        src, "%s: source 없음" % rec.get("record_id"))
+                elif src is None:
                     continue
                 with self.subTest(record=rec.get("record_id")):
                     self.assertTrue(required <= set(src), sorted(src))
@@ -263,7 +268,7 @@ class RealPackIdentityTests(unittest.TestCase):
                 with self.subTest(pack=pack_id):
                     self.assertIn("aggregation_group",
                                   manifest.get("aggregation_rule", ""))
-        self.assertEqual(checked, 153)
+        self.assertEqual(checked, 620)
 
     def test_catalog_authority_pins_reproduce_from_real_manifests(self):
         # Every pinned accepted-catalog authority that names a pinned pack
@@ -357,11 +362,11 @@ WSUM_PRINTED_DEFECTS = {
     "rda.income.regional.2024.chungnam.crop.느타리버섯_균상":
         {"pdf_page": 166, "printed_page": "162", "printed_line": "생산비",
          "printed": 21280422, "page_rows_sum": 21381119, "page_delta": -100697,
-         "pack_rows_sum": 20396454, "pack_delta": -883968},
+         "pack_rows_sum": 21381119, "pack_delta": 100697},
     "rda.income.regional.2024.chungnam.crop.양송이버섯":
         {"pdf_page": 167, "printed_page": "163", "printed_line": "생산비",
          "printed": 73601822, "page_rows_sum": 73704228, "page_delta": -102406,
-         "pack_rows_sum": 71715773, "pack_delta": -1886049},
+         "pack_rows_sum": 73704228, "pack_delta": 102406},
     "rda.income.regional.2024.gangwon.crop.봄감자":
         {"pdf_page": 66, "printed_page": "62", "printed_line": "경영비·생산비",
          "printed": 1175498, "page_rows_sum": 1168951, "page_delta": 6547,
@@ -369,27 +374,27 @@ WSUM_PRINTED_DEFECTS = {
     "rda.income.regional.2024.gyeonggi.crop.노지가을무":
         {"pdf_page": 30, "printed_page": "26", "printed_line": "생산비",
          "printed": 2890241, "page_rows_sum": 2890245, "page_delta": -4,
-         "pack_rows_sum": 2666684, "pack_delta": -223557},
+         "pack_rows_sum": 2890245, "pack_delta": 4},
     "rda.income.regional.2024.gyeonggi.crop.느타리버섯_병재배":
         {"pdf_page": 60, "printed_page": "56", "printed_line": "생산비",
          "printed": 604379, "page_rows_sum": 605488, "page_delta": -1109,
-         "pack_rows_sum": 580915, "pack_delta": -23464},
+         "pack_rows_sum": 605488, "pack_delta": 1109},
     "rda.income.regional.2024.gyeonggi.crop.쌀":
         {"pdf_page": 425, "printed_page": "421", "printed_line": "생산비",
          "printed": 881865, "page_rows_sum": 881861, "page_delta": 4,
-         "pack_rows_sum": 749901, "pack_delta": -131964},
+         "pack_rows_sum": 881861, "pack_delta": -4},
     "rda.income.regional.2024.gyeongnam.crop.시설장미":
         {"pdf_page": 362, "printed_page": "358", "printed_line": "생산비",
          "printed": 34908584, "page_rows_sum": 34908588, "page_delta": -4,
-         "pack_rows_sum": 33464157, "pack_delta": -1444427},
+         "pack_rows_sum": 34908588, "pack_delta": 4},
     "rda.income.regional.2024.jeonbuk.crop.느타리버섯_균상":
         {"pdf_page": 208, "printed_page": "204", "printed_line": "생산비",
          "printed": 18503358, "page_rows_sum": 18690160, "page_delta": -186802,
-         "pack_rows_sum": 18159583, "pack_delta": -343775},
+         "pack_rows_sum": 18690160, "pack_delta": 186802},
     "rda.income.regional.2024.jeonbuk.crop.오미자":
         {"pdf_page": 206, "printed_page": "202", "printed_line": "생산비",
          "printed": 6141077, "page_rows_sum": 6141081, "page_delta": -4,
-         "pack_rows_sum": 5672355, "pack_delta": -468722},
+         "pack_rows_sum": 6141081, "pack_delta": 4},
     "rda.income.regional.2024.jeonnam.crop.가을감자":
         {"pdf_page": 221, "printed_page": "217", "printed_line": "중간재 계",
          "printed": 9763783, "page_rows_sum": 976384, "page_delta": 8787399,
@@ -401,7 +406,7 @@ WSUM_PRINTED_DEFECTS = {
     "rda.income.regional.2024.jeonnam.crop.수국":
         {"pdf_page": 261, "printed_page": "257", "printed_line": "생산비",
          "printed": 33786995, "page_rows_sum": 33786999, "page_delta": -4,
-         "pack_rows_sum": 31719497, "pack_delta": -2067498},
+         "pack_rows_sum": 33786999, "pack_delta": 4},
 }
 
 #: Print rounding: the source notes that row sums may miss the total by a
@@ -409,13 +414,22 @@ WSUM_PRINTED_DEFECTS = {
 WSUM_TOLERANCE = 3
 
 #: Records whose packed 세목 sum misses a 계 line **the pack carries** by more
-#: than the tolerance. Only 3 of the 13 printed defects land here: the regional
-#: 2024 pack stores no 중간재/생산비 total, so the other 10 defects are invisible
-#: to a pack-side check and are frozen from the source side instead.
+#: than the tolerance. The regional 2024 pack now carries the five 계 keys, so
+#: all 13 printed defects are visible to the pack-side check too.
 WSUM_PACK_OVER_TOLERANCE = frozenset({
     "rda.income.national.2024.detail.식량작물.봄감자",
+    "rda.income.regional.2024.chungnam.crop.느타리버섯_균상",
+    "rda.income.regional.2024.chungnam.crop.양송이버섯",
     "rda.income.regional.2024.gangwon.crop.봄감자",
+    "rda.income.regional.2024.gyeonggi.crop.노지가을무",
+    "rda.income.regional.2024.gyeonggi.crop.느타리버섯_병재배",
+    "rda.income.regional.2024.gyeonggi.crop.쌀",
+    "rda.income.regional.2024.gyeongnam.crop.시설장미",
+    "rda.income.regional.2024.jeonbuk.crop.느타리버섯_균상",
+    "rda.income.regional.2024.jeonbuk.crop.오미자",
+    "rda.income.regional.2024.jeonnam.crop.가을감자",
     "rda.income.regional.2024.jeonnam.crop.느타리버섯_균상",
+    "rda.income.regional.2024.jeonnam.crop.수국",
 })
 
 #: Records that carry cost_items, per pinned pack.  A record that silently
@@ -427,6 +441,56 @@ WSUM_RECORDS_WITH_COST_ITEMS = {
     "mafra.specialty.production.2024": 0,
     "rda.income.national.2025": 53,
     "rda.income.regional.2025": 49,
+}
+
+#: N-01: every 계 the pack carries for the 13 defect records, frozen —
+#: (operating_cost, intermediate_cost_total, production_cost_total).
+#: A total newly appearing, vanishing or changing on a whitelisted record
+#: fails even when the printed_line total is untouched.
+WSUM_DEFECT_PACK_TOTALS = {
+    "rda.income.national.2024.detail.식량작물.봄감자":
+        (1443511, 971319, 2386378),
+    "rda.income.regional.2024.gyeonggi.crop.노지가을무":
+        (1600661, 1197865, 2890241),
+    "rda.income.regional.2024.gyeonggi.crop.느타리버섯_병재배":
+        (391719, 350626, 604379),
+    "rda.income.regional.2024.gangwon.crop.봄감자":
+        (1175498, 865403, 2226360),
+    "rda.income.regional.2024.chungnam.crop.느타리버섯_균상":
+        (11654674, 10181966, 21280422),
+    "rda.income.regional.2024.chungnam.crop.양송이버섯":
+        (46479882, 41514435, 73601822),
+    "rda.income.regional.2024.jeonbuk.crop.오미자":
+        (2030156, 1637572, 6141077),
+    "rda.income.regional.2024.jeonbuk.crop.느타리버섯_균상":
+        (10244317, 10007608, 18503358),
+    "rda.income.regional.2024.jeonnam.crop.가을감자":
+        (1652273, 9763783, 1946638),
+    "rda.income.regional.2024.jeonnam.crop.수국":
+        (17839831, 17632699, 33786995),
+    "rda.income.regional.2024.jeonnam.crop.느타리버섯_균상":
+        (17343459, 14688705, 25526302),
+    "rda.income.regional.2024.gyeongnam.crop.시설장미":
+        (25374426, 22198315, 34908584),
+    "rda.income.regional.2024.gyeonggi.crop.쌀":
+        (559475, None, 881865),
+}
+
+#: N-02: sha256 of the sorted record_ids that carry cost_items, per pack —
+#: a swap that keeps the count but changes which records carry 세목 fails.
+WSUM_RECORD_IDS_WITH_COST_ITEMS_SHA256 = {
+    "rda.income.national.2024":
+        "ea32177777337f0568f2f726d51f0330c9e795e1b1a3fbbf69c6fb159d71623b",
+    "rda.income.regional.2024":
+        "0b274bc55a44023f0f31c2ced4741390da1021d8d32a22753145a6a62dff5893",
+    "rda.econ.2025":
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "mafra.specialty.production.2024":
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "rda.income.national.2025":
+        "bbfd0858e085ea4b5ce59f06cbe115547a059558a03162a42732a644b45b33b2",
+    "rda.income.regional.2025":
+        "0d4a728e32c3372ce1ea8093329d14dae82a36f595d1d72973f32159349b4afb",
 }
 
 #: Which pack column holds each printed 계 line ('경영비·생산비' pages print one
@@ -525,6 +589,44 @@ class CostItemSumTests(unittest.TestCase):
         self.assertEqual(len(WSUM_PRINTED_DEFECTS), 13)
         self.assertTrue(set(WSUM_PACK_OVER_TOLERANCE)
                         <= set(WSUM_PRINTED_DEFECTS))
+
+    def _records_by_pack(self):
+        for pack_id, pin in prov.PINNED_PACKS.items():
+            path = PACKS / pin["relpath"]
+            for line in path.read_text(encoding="utf-8").splitlines():
+                if line.strip():
+                    yield pack_id, json.loads(line)
+
+    def test_defect_records_carry_exactly_their_frozen_totals(self):
+        # N-01: all three 계 the pack carries on a whitelisted record are
+        # frozen, not only the one named by printed_line.
+        seen = {}
+        for _pack, record in self._records_by_pack():
+            rid = record["record_id"]
+            if rid in WSUM_DEFECT_PACK_TOTALS:
+                items = record.get("cost_items") or {}
+                seen[rid] = (
+                    (record.get("metrics") or {}).get("operating_cost"),
+                    items.get("intermediate_cost_total"),
+                    items.get("production_cost_total"))
+        self.assertEqual(set(WSUM_DEFECT_PACK_TOTALS),
+                         set(WSUM_PRINTED_DEFECTS))
+        for rid, frozen in WSUM_DEFECT_PACK_TOTALS.items():
+            with self.subTest(record=rid):
+                want = tuple(None if v is None else str(v) for v in frozen)
+                self.assertEqual(seen.get(rid), want)
+
+    def test_records_with_cost_items_are_the_frozen_set(self):
+        # N-02: which records carry 세목 is pinned, not only how many.
+        got = {}
+        for pack, record in self._records_by_pack():
+            got.setdefault(pack, [])
+            if record.get("cost_items"):
+                got[pack].append(record["record_id"])
+        digests = {pack: hashlib.sha256(
+            "\n".join(sorted(ids)).encode("utf-8")).hexdigest()
+            for pack, ids in got.items()}
+        self.assertEqual(digests, WSUM_RECORD_IDS_WITH_COST_ITEMS_SHA256)
 
     def _carried_deltas(self, record, items):
         """세목 합 − 계, 팩이 그 계를 실제로 담고 있을 때만."""
@@ -650,6 +752,19 @@ class KeyRefBindingTests(unittest.TestCase):
          "mafra.specialty.production.2024", 1441),
     ])
 
+    #: Same refs in registry document order (entries, then keys[]).
+    EXPECTED_KEY_REFS_IN_ORDER = [
+        ("rda.income.national.2024", "rda.income.national.2024", 1),
+        ("rda.income.national.2024", "rda.income.national.2024", 52),
+        ("rda.income.regional.2024", "rda.income.regional.2024", 1),
+        ("rda.econ.2025", "rda.econ.2025", 19),
+        ("rda.econ.2025", "rda.econ.2025", 1),
+        ("mafra.specialty.production.2024",
+         "mafra.specialty.production.2024", 1),
+        ("mafra.specialty.production.2024",
+         "mafra.specialty.production.2024", 1441),
+    ]
+
     def test_key_refs_point_at_the_expected_rows(self):
         registry = json.loads((KN_UAF_DOC / "references" /
                                "builtin-sources.json").read_text(
@@ -670,6 +785,9 @@ class KeyRefBindingTests(unittest.TestCase):
                         walk(value)
             walk(entry)
         self.assertEqual(sorted(got), self.EXPECTED_KEY_REFS)
+        # N-03: document order too — swapping two refs inside one entry
+        # keeps the sorted list but changes which key each slot names.
+        self.assertEqual(got, self.EXPECTED_KEY_REFS_IN_ORDER)
 
     def test_every_key_ref_matches_current_pack_bytes(self):
         refs = self._key_refs()
