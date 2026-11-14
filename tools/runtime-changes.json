@@ -331,7 +331,7 @@
       "source": "adopted:app-PR41"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "16db953c711dab3d91a221382d508051fa77f79fe2ca3f2ec90d85e381de959e",
+      "after_sha256": "f93211d09be0ec18e45e6b577e10501746fdfa217dc6d817399b7ab5875fa80a",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "v0.5.1",
@@ -3039,7 +3039,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_figure.py": {
-      "after_sha256": "50610bb46f56615128580d9b0ca1ddcb963b9b050dc8b99940f68c185467990c",
+      "after_sha256": "d98cc6579ff4dc91a7a4c24a35807484520f119ca4ed8a5f66fed0614246471c",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "P28",
@@ -3048,10 +3048,10 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_figure_docx.py": {
-      "after_sha256": "7bb42101629c395db26832a1ed7bc713f344bf8e0aff08a48312e707bf8aaf81",
+      "after_sha256": "4eb2f83b861e9216ce01f545b0a57e60e99a1d2cfa2bc66861f81f9e3cff31fa",
       "before_sha256": null,
       "first_changed": "P28",
-      "last_changed": "M-02",
+      "last_changed": "P28",
       "owner": "P28",
       "reason": "GF1: 원고 DOCX 승인 그림 삽입과 자리 표기 검사 | M-02: 그림 목적지 해석을 DOCX·원고 검사·HWPX 세 입구에서 같은 규칙(gg_hwpx.resolve_figure: 원고 옆 → 작업 폴더 뿌리, 모호하면 학생 안내 문장으로 멈춤)으로 통일",
       "source": "new"
@@ -3093,7 +3093,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/tests/test_gg_figure.py": {
-      "after_sha256": "57696b1cc2d4b119bc6ea24bb6b41a18c1bbb7f60916e3e8aad69ef8c8c44cc3",
+      "after_sha256": "dcf5cc74a6d590f1dd19bfaf9bbf4ed5a5ca468402a8129e6512b60b2d637208",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "P28",
@@ -3138,7 +3138,7 @@
       "source": "new"
     },
     "tests/test_unsupported_finance_notice.py": {
-      "after_sha256": "89646ea4a4cd976658d2a2f5db494387f797734a4a183738bab004e8078b77e7",
+      "after_sha256": "9c724e2b82b5283fd30e703c044d5f05c8a089aaa664af9da8d25a7402413bd8",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "food-crops-0.1.0",
