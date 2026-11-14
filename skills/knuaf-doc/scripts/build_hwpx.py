@@ -24,6 +24,7 @@ import gg_document
 import gg_fs
 import gg_hwpx
 import gg_major_contract as mc
+from gg_major_format import profile_for
 
 
 FONT = gg_hwpx.SCHOOL_FONT
@@ -49,6 +50,9 @@ FINISH_NOTICE = (
 
 # 식량작물 전용 안내문. 공용 상수는 다른 전공이 그대로 쓰므로 손대지 않고,
 # 이 전공에서만 아래 문구를 고른다(안내문까지 전공 격리를 닫는다).
+# 값의 출처는 이제 `gg_major_format.FOOD_CROPS_PROFILE`이다 — 아래 세 상수는
+# 그 표의 기준선(옛 하드코딩 원본)으로만 남긴다. 빌더는 이 상수를 읽지 않으므로
+# 문구를 고칠 때는 프로필을 고치고, 이 상수는 대조용으로만 맞춰 둔다.
 FOOD_CROPS_FINISH_NOTICE = (
     "저수준 미검증 출력. 목차 필드 갱신·전체 페이지·학교 원문·학명·그림·표·"
     "머리행 검토 필요. 한글에서 글꼴 신명조·여백(위30/아래30/머리0/꼬리10/"
@@ -61,13 +65,24 @@ FOOD_CROPS_HUMAN_FINISH = HUMAN_FINISH + (
     "요약이 Ⅰ부터, 본문이 1부터인지 확인 — 자동으로 맞췄지만 한글에서 확인한다",
 )
 
+# HWPX 빌더가 프로필 표를 읽는 전공. 낙농(`dairy`)은 표에 값이 있지만 이
+# 단위는 식량작물 치환만 다루므로 여기서 막는다 — 켜는 커밋에서 이 줄만
+# 고치면 된다. 목록에 없는 전공은 지금까지의 기본 경로를 그대로 탄다.
+HWPX_PROFILE_MAJORS = ("food_crops",)
+
+
+def hwpx_profile(major_id):
+    """HWPX 빌더가 읽을 전공 서식 프로필(없으면 None = 기본 경로)."""
+    return profile_for(major_id) if major_id in HWPX_PROFILE_MAJORS else None
+
 
 def notice(verify, major_id=None):
     """실제로 실행되어 통과한 검사만 열거한다(검증 생략이면 사실대로)."""
+    profile = hwpx_profile(major_id)
     return " ".join([
         "저수준 미검증 출력.",
         VERIFIED_NOTICE if verify else SKIPPED_NOTICE,
-        FOOD_CROPS_FINISH_NOTICE if major_id == "food_crops" else FINISH_NOTICE,
+        profile.finish_notice if profile is not None else FINISH_NOTICE,
     ])
 
 
@@ -77,12 +92,13 @@ def school_frontmatter_summary(md_text, major_id=None):
         gg_document.parse(md_text, major_id=major_id), major_id)
     if plan is None:
         return None
+    profile = hwpx_profile(major_id)
     return {
         "detected": True,
         "layout": "plain_markdown",
         "sections": list(plan.get("order", ())),
         "human_finish_required": list(
-            FOOD_CROPS_HUMAN_FINISH if major_id == "food_crops" else HUMAN_FINISH),
+            profile.human_finish if profile is not None else HUMAN_FINISH),
     }
 
 
@@ -155,8 +171,10 @@ def add_chapter_breaks(section_xml, heading_para_ref="1", major_id=None):
     본문 스타일이라 대상이 아니다). 식량작물은 아라비아 장 번호를 쓰므로
     ``major_id``가 그 전공일 때만 번호 체계를 바꾼다.
     """
-    chapter_re = (_FOOD_CROPS_CHAPTER_RE if major_id == "food_crops"
-                  else _CHAPTER_RE)
+    chapter_re = _CHAPTER_RE
+    profile = hwpx_profile(major_id)
+    if profile is not None and profile.hwpx_chapter_re is not None:
+        chapter_re = profile.hwpx_chapter_re
     chapters = []
 
     def fix(match):
@@ -291,9 +309,9 @@ def export(base, inp, out, *, font=FONT, context=None, cli_command=None,
     if manifest_path.exists():
         raise ValueError("기존 매니페스트를 덮어쓰지 않음: 새 경로 지정")
     source_text = source.read_text(encoding="utf-8")
-    food_crops = authorization.major_id == "food_crops"
-    section_formats = FOOD_CROPS_SECTION_FORMATS if food_crops else None
-    margins_mm = section_formats[2]["margin_mm"] if food_crops else None
+    profile = hwpx_profile(authorization.major_id)
+    section_formats = profile.section_formats if profile is not None else None
+    margins_mm = section_formats[2]["margin_mm"] if profile is not None else None
     staging = target.with_name("." + target.name + ".layout-staging")
     if staging.exists():
         raise ValueError("임시 후처리 파일이 남아 있음: " + str(staging))
@@ -304,12 +322,12 @@ def export(base, inp, out, *, font=FONT, context=None, cli_command=None,
             kordoc=kordoc, timeout=timeout, font=font,
             page_numbers=page_numbers, image_dir=image_dir, verify=verify,
             **(dict(margins_mm=margins_mm, section_formats=section_formats)
-               if food_crops else {}),
+               if profile is not None else {}),
         )
         generated = staging.read_bytes()
         published_bytes, layout = apply_layout(
             generated, margins_mm=margins_mm, major_id=authorization.major_id)
-        if food_crops:
+        if profile is not None:
             result["applied"] = recount_page_numbers(
                 published_bytes, section_formats, result["applied"])
         verification = result["verification"]

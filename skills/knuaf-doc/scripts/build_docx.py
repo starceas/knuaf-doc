@@ -27,20 +27,31 @@ from gg_core import digest, local
 from gg_document import photo_guide, photo_requests
 from gg_body_layout import NOTE, spacer_positions, review_requests
 import gg_figure_docx
-from gg_hwpx import FOOD_CROPS_SECTION_FORMATS
+from gg_major_format import profile_for, front_title
 
 FONT = "신명조"
 LEVEL_PT = {1: 20, 2: 18, 3: 16, 4: 14, 5: 13, 6: 13, 7: 13, 8: 13, 9: 13}
-# 식량작물 매니페스트 안내문. 공용 문구는 다른 전공이 그대로 쓰므로 손대지
-# 않고, 이 전공에서만 아래 문구를 고른다(안내문까지 전공 격리를 닫는다).
-FOOD_CROPS_FINISH_NOTICE = (
+
+# DOCX 빌더가 프로필 표를 읽는 전공. 낙농(`dairy`)은 표에 값이 있지만 이
+# 단위는 식량작물 치환만 다루므로 여기서 막는다 — 켜는 커밋에서 이 줄만
+# 고치면 된다. 목록에 없는 전공은 지금까지의 기본 경로를 그대로 탄다.
+DOCX_PROFILE_MAJORS = ("food_crops",)
+
+
+def docx_profile(major_id):
+    """DOCX 빌더가 읽을 전공 서식 프로필(없으면 None = 기본 경로)."""
+    return profile_for(major_id) if major_id in DOCX_PROFILE_MAJORS else None
+
+
+# 프로필 표에 없는 전공(원예·특용·과수 등)이 쓰는 공용 안내문. 전공별
+# 문구는 `gg_major_format` 프로필의 `finish_notice`가 정한다.
+COMMON_FINISH_NOTICE = (
     "저수준 미검증 출력. 목차 필드 갱신·전체 페이지·학교 원문·학명·그림·표·"
-    "머리행 검토 필요. 한글에서 글꼴 신명조·여백(위30/아래30/머리0/꼬리10/"
-    "좌30/우30/제본0 mm)·쪽 번호(요약은 Ⅰ부터, 본문은 1부터)를 확인한다. "
-    "이 세 가지는 스킬 작성 완료를 막지 않으며 자동 통과하지 않는다. "
-    "file_hash는 빌드 직후 파일 기준이다. 쪽 나눔·여백 등 후처리로 파일을 "
-    "다시 저장했다면 --rehash로 매니페스트 해시를 갱신한다."
-)
+    "머리행 검토 필요. 한글에서 글꼴 신명조·여백(위20/아래15/머리15/꼬리15/"
+    "좌30/우30/제본0 mm)·페이지 번호를 확인한다. 이 세 가지는 스킬 작성 완료를 "
+    "막지 않으며 자동 통과하지 않는다. file_hash는 빌드 직후 파일 기준이다. "
+    "쪽 나눔·여백 등 후처리로 파일을 다시 저장했다면 --rehash로 매니페스트 "
+    "해시를 갱신한다.")
 
 
 
@@ -223,26 +234,29 @@ WIDE_TABLE_MIN_COLS = 10
 
 
 def chapter_break_node_ids(sequence, major_id):
-    """Level-1 headings that must start a new page (식량작물 only).
+    """Level-1 headings that must start a new page (프로필 전공 only).
 
     The first heading is excluded: it already starts a fresh section (school
     paper) or follows the contents page break.  Both DOCX body paths call this
     one function, so a chapter/closer title cannot lose its page break when
-    the frontmatter is absent (Roh C1 중요2).  Other majors are unchanged.
+    the frontmatter is absent (Roh C1 중요2).  Majors without a profile (or
+    whose profile does not ask for it) are unchanged.
     """
-    if major_id != "food_crops":
+    profile = docx_profile(major_id)
+    if profile is None or not profile.chapter_break_nodes:
         return set()
     headings = [n for n in sequence
                 if n["kind"] == "heading" and n.get("level") == 1]
     return {id(n) for n in headings[1:]}
 
 
-def _apply_consent_formatting(doc, font):
-    """학부모 동의서(마지막 1단계 제목) 뒤 문단 서식을 양식 실측에 맞춘다.
+def _apply_consent_formatting(doc, font, profile):
+    """학부모 동의서(마지막 1단계 제목) 뒤 문단 서식을 프로필 값으로 잠근다.
 
-    본문 경로가 만든 동의서 제목은 20pt 굵게, 본문은 14pt 굵게, `※` 주석은
-    10pt 보통으로 잠근다. 다음 1단계 제목을 만나면 멈춰 다른 장은 건드리지
-    않는다(§2.3, r2: I-03).
+    본문 경로가 만든 동의서 제목은 `front_titles['학부모 동의서']`, 본문은
+    `consent_body_pt`, `※` 주석은 `consent_note_pt`를 쓴다(식량작물 실측
+    20/14/10). 다음 1단계 제목을 만나면 멈춰 다른 장은 건드리지 않는다
+    (§2.3, r2: I-03).
     """
     paragraphs = doc.paragraphs
     last_heading = None
@@ -254,8 +268,11 @@ def _apply_consent_formatting(doc, font):
     title = paragraphs[last_heading]
     if title.text.strip() != "학부모 동의서":
         return
+    title_pt, title_bold = front_title(profile, "학부모 동의서")
+    body_pt, body_bold = profile.consent_body_pt
+    note_pt, note_bold = profile.consent_note_pt
     for run in title.runs or [title.add_run(title.text or "")]:
-        set_font(run, font, 20, True)
+        set_font(run, font, title_pt, title_bold)
     for paragraph in paragraphs[last_heading + 1:]:
         if paragraph.style.name == "Heading 1":
             break
@@ -263,8 +280,9 @@ def _apply_consent_formatting(doc, font):
         if not text:
             continue
         note = text.startswith("※")
+        size, bold = (note_pt, note_bold) if note else (body_pt, body_bold)
         for run in paragraph.runs or [paragraph.add_run(paragraph.text or "")]:
-            set_font(run, font, 10 if note else 14, not note)
+            set_font(run, font, size, bold)
 
 
 def convert(md_text, font=FONT, base=".", table_reports=None, *,
@@ -275,14 +293,16 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
     import gg_major_contract as mc
 
     authorization = mc.authorize_output(mc.OUTPUT_SCHOOL_PAPER, context)
-    food_crops = authorization.major_id == "food_crops"
-    section_formats = FOOD_CROPS_SECTION_FORMATS if food_crops else None
+    major_id = authorization.major_id
+    profile = docx_profile(major_id)
+    section_formats = profile.section_formats if profile else None
+    level_pt = profile.level_pt if profile else LEVEL_PT
     doc = Document()
     setup_document(doc, font, section_formats=section_formats)
-    # 식량작물 요약은 아라비아 `1.`~`5.`라 요약과 본문을 가르는 전공 지식이
-    # 필요하다. 다른 전공은 지금까지처럼 전공 없이 읽어 출력을 바꾸지 않는다.
-    nodes = parse(md_text, major_id=(
-        "food_crops" if authorization.major_id == "food_crops" else None))
+    # 프로필 전공은 요약·본문 경계 판정에 전공 지식이 필요하다(식량작물 요약은
+    # 아라비아 `1.`~`5.`, 낙농은 로마 `Ⅰ.`). 프로필이 없으면 지금까지처럼
+    # 전공 없이 읽어 출력을 바꾸지 않는다.
+    nodes = parse(md_text, major_id=major_id if profile else None)
 
     last_prose = None
     # 식량작물 장 시작 쪽 나눔 대상(본문 첫 장은 새 구역이라 뺀다).
@@ -369,7 +389,7 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
                 pf.alignment = WD_ALIGN_PARAGRAPH.CENTER
                 pf.first_line_indent = Pt(0)
             runs(p, text, font,
-                 LEVEL_PT[n["level"]] if heading else (11 if n["kind"] == "caption" else 12),
+                 level_pt[n["level"]] if heading else (11 if n["kind"] == "caption" else 12),
                  heading, (0, 0, 255) if guide else (0, 0, 0))
             if n.get("_bookmark"):
                 from gg_frontmatter_layout import bookmark
@@ -620,9 +640,11 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
                 n['_bookmark_id']=idx
         table_entries=[(split_caption_credit(n['text'])[0],n['_bookmark'],2) for n in body_nodes if n['kind']=='caption' and n.get('label')=='표']
         figure_entries=[(split_caption_credit(n['text'])[0],n['_bookmark'],2) for n in body_nodes if n['kind']=='caption' and n.get('label')=='그림']
+        # 표·그림 목차는 프로필 전공과 낙농이 함께 나열한다. 낙농은 이 단위
+        # 에서 아직 프로필 경로를 타지 않으므로(바이트 고정) 이름으로 남긴다.
         dairy_lists = authorization.major_id in ("dairy", "food_crops")
         entries=[]
-        if authorization.major_id == "food_crops":
+        if profile and profile.roman_front:
             # 양식 목차 순서: 요약 · 감사의 글 · 표 목차 · 그림 목차 · 본문.
             # 두 제목은 앞부분(_render_peer_forms)에서 이미 그려졌고,
             # 거기서 단 책갈피를 그대로 가리켜 실제 쪽번호를 받는다.
@@ -632,7 +654,8 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
         if table_entries or dairy_lists: entries.append(('표 목차','gg_tables',0))
         if figure_entries or dairy_lists: entries.append(('그림 목차','gg_figures',0))
         entries += [(n['text'],n['_bookmark'],n['level']) for n in body_nodes if n['kind']=='heading' and n['level']<=2]
-        contents(doc,entries,font,title_size=22 if food_crops else 20)
+        contents(doc,entries,font,title_size=(
+            profile.toc_title_pt if profile else 20))
         # S01 counts cover, shared forms and contents before the summary (iv
         # with a one-page contents). Continue rather than pinning iv: an
         # overflowing contents page must also count. Other majors stay unchanged.
@@ -656,7 +679,7 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
             sec=doc.add_section(WD_SECTION.NEW_PAGE)
             if margin_mm is not None:
                 _apply_section_margins(sec, margin_mm)
-            if count_fruit_front or authorization.major_id == "food_crops":
+            if count_fruit_front or profile:
                 inherited = sec._sectPr.find(qn('w:pgNumType'))
                 if inherited is not None: sec._sectPr.remove(inherited)
             pg=OxmlElement('w:pgNumType')
@@ -667,8 +690,9 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
             field=OxmlElement('w:fldSimple');field.set(qn('w:instr'),'PAGE');p._p.append(field)
             return sec
         if prelim or table_entries or figure_entries or dairy_lists:
-            if authorization.major_id == "food_crops":
+            if profile and profile.roman_front:
                 # 요약~그림 목차는 앞부분 서식에서 연 로마 대문자 구역을 이어 쓴다.
+                # 프로필 전공은 여기서 로마 구역을 새로 열지 않는다(I-03).
                 doc.add_page_break()
             else:
                 new_numbered_section('lowerRoman', None if count_fruit_front else 1)
@@ -685,7 +709,7 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
                 contents(doc,figure_entries,font,'그림 목차','gg_figures',9003,
                          title_size=20)
         new_numbered_section('decimal', margin_mm=(
-            section_formats[2]['margin_mm'] if food_crops else None))
+            profile.section_formats[2]['margin_mm'] if profile else None))
     else:
         add_toc(doc,font)
         # 본문은 새 구역에서 1쪽부터 아라비아 숫자 쪽번호를 매긴다.
@@ -699,8 +723,8 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
     # 6. Main Body
     render_body(nodes[i_body:])
 
-    if food_crops:
-        _apply_consent_formatting(doc, font)
+    if profile and profile.consent_in_body:
+        _apply_consent_formatting(doc, font, profile)
 
     return doc
 
@@ -861,9 +885,9 @@ def main(argv=None):
                 else None
             ),
             "major_authorization": authorization.to_dict(),
-            "notice": (FOOD_CROPS_FINISH_NOTICE
-                       if authorization.major_id == "food_crops" else
-                       "저수준 미검증 출력. 목차 필드 갱신·전체 페이지·학교 원문·학명·그림·표·머리행 검토 필요. 한글에서 글꼴 신명조·여백(위20/아래15/머리15/꼬리15/좌30/우30/제본0 mm)·페이지 번호를 확인한다. 이 세 가지는 스킬 작성 완료를 막지 않으며 자동 통과하지 않는다. file_hash는 빌드 직후 파일 기준이다. 쪽 나눔·여백 등 후처리로 파일을 다시 저장했다면 --rehash로 매니페스트 해시를 갱신한다."),
+            "notice": (docx_profile(authorization.major_id).finish_notice
+                       if docx_profile(authorization.major_id)
+                       else COMMON_FINISH_NOTICE),
         }
         manifest_path.write_text(
             json.dumps(manifest, ensure_ascii=False, indent=2),

@@ -29,6 +29,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+from collections.abc import Mapping
 from typing import NamedTuple
 from urllib.parse import quote, unquote
 import zipfile
@@ -160,8 +161,12 @@ _COLPR_CTRL_RE = re.compile(r"<hp:ctrl>\s*<hp:colPr\b[^>]*/>\s*</hp:ctrl>")
 
 
 def _page_number_pos(override) -> str:
-    """구역 서식 dict에서 page_number.pos를 꺼낸다(중첩·평면 둘 다 허용)."""
-    spec = override.get("page_number", override) if isinstance(override, dict) else {}
+    """구역 서식 dict에서 page_number.pos를 꺼낸다(중첩·평면 둘 다 허용).
+
+    구역 서식 행은 `gg_major_format`에서 `MappingProxyType`으로 얼려 오므로
+    `dict`만 보면 겉표지 `pos="NONE"`을 놓쳐 기본값(BOTTOM_CENTER)으로 되돌아간다.
+    """
+    spec = override.get("page_number", override) if isinstance(override, Mapping) else {}
     return str(spec.get("pos", "BOTTOM_CENTER"))
 
 
@@ -378,7 +383,8 @@ def _page_num_control(fmt):
 
 
 def split_sections_by_plan(section_xml: str, *, nodes, plan,
-                           section_formats=FOOD_CROPS_SECTION_FORMATS):
+                           section_formats=FOOD_CROPS_SECTION_FORMATS,
+                           major_id=None):
     """단일 구역 section0.xml을 겉표지/앞부분/본문 3구역으로 자른다.
 
     분할 지점은 문서 계획의 노드 색인이다(텍스트 탐색 없음). 절차는
@@ -388,13 +394,17 @@ def split_sections_by_plan(section_xml: str, *, nodes, plan,
 
     반환: ``(sections, info)`` — ``sections``는 3개 문자열(유예면 None),
     ``info``는 ``{"status", "names", "controls"}``.
+
+    ``major_id``는 계획이 없을 때 쓸 앞머리 구분 이름의 출처다. 구분 이름은
+    전공마다 다르므로 이 경로를 타는 빌더는 넘겨받은 전공 ID를 넘긴다
+    (생략하면 식량작물 — 이 경로를 열어 준 1판과 같은 값).
     """
     names = ["Contents/section%d.xml" % i for i in range(3)]
     if plan is None:
-        present = _front_matter_markers(nodes)
+        present = _front_matter_markers(nodes, major_id)
         if not present:
             return None, {"status": "not_applicable", "names": []}
-        markers = set(_front_markers())
+        markers = set(_front_markers(major_id))
         raise HwpxBlocked(
             "section_split_front_matter_partial",
             missing=sorted(markers - present), present=sorted(present),
@@ -506,14 +516,15 @@ def split_sections_by_plan(section_xml: str, *, nodes, plan,
     return sections, info
 
 
-def _front_markers():
+def _front_markers(major_id=None):
+    """이 전공의 앞머리 구분 이름 순서. 전공 미지정이면 식량작물(옛 값)."""
     import gg_document as gd
 
-    return gd.school_frontmatter_spec("food_crops").orders[0]
+    return gd.school_frontmatter_spec(major_id or "food_crops").orders[0]
 
 
-def _front_matter_markers(nodes):
-    markers = set(_front_markers())
+def _front_matter_markers(nodes, major_id=None):
+    markers = set(_front_markers(major_id))
     return {text for text in
             (_normalize_space(n.get("text", "")) for n in nodes)
             if text in markers}
@@ -1054,7 +1065,8 @@ def _section_node_range(name, plan):
 
 def transform_hwpx(data: bytes, *, font: str = SCHOOL_FONT,
                    margins_mm=SCHOOL_MARGINS_MM, page_numbers: bool = True,
-                   section_formats=None, nodes=None, plan=None):
+                   section_formats=None, nodes=None, plan=None,
+                   major_id=None):
     """kordoc HWPX 바이트를 학교 규격으로 다시 쓴다.
 
     mimetype을 첫 항목·무압축으로 보존하고 나머지 항목은 순서대로 다시 쓴다.
@@ -1092,6 +1104,7 @@ def transform_hwpx(data: bytes, *, font: str = SCHOOL_FONT,
             sections, info = split_sections_by_plan(
                 built.decode("utf-8") if built is not None else "",
                 nodes=nodes or [], plan=plan, section_formats=section_formats,
+                major_id=major_id,
             )
             if sections is None:
                 applied["sections"] = info["status"]
@@ -1204,7 +1217,7 @@ def missing_format_steps(applied, *, font, margins_mm, page_numbers,
               for value in (_expected_page_numbers(index, section_formats)
                             for index in range(len(section_formats)))]
     if isinstance(controls, list):
-        measured = [{key: (item.get(key) if isinstance(item, dict) else item)
+        measured = [{key: (item.get(key) if isinstance(item, Mapping) else item)
                      for key in ("pageNum", "newNum")} for item in controls]
     else:
         measured = []
@@ -1858,13 +1871,14 @@ def build(markdown, out, *, context, authorization, cli_command=None,
         if section_formats is not None and (nodes is None or plan is None):
             import gg_document as gd
 
-            nodes = gd.parse(text, major_id="food_crops")
-            plan = gd.school_frontmatter_plan(nodes, "food_crops")
+            major_id = authorization.major_id
+            nodes = gd.parse(text, major_id=major_id)
+            plan = gd.school_frontmatter_plan(nodes, major_id)
 
         transformed, applied = transform_hwpx(
             raw_path.read_bytes(), font=font, margins_mm=margins_mm,
             page_numbers=page_numbers, section_formats=section_formats,
-            nodes=nodes, plan=plan,
+            nodes=nodes, plan=plan, major_id=authorization.major_id,
         )
         pictures = embedded_picture_count(transformed)
         if pictures < len(references):
