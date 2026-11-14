@@ -253,6 +253,30 @@ def profile_for(major_id):
     return MAJOR_FORMAT_PROFILES.get(major_id)
 
 
+# 어느 전공이 학교 서식 프로필을 쓰는가 — 빌더 셋(본문 DOCX·앞부분 DOCX·
+# HWPX)이 함께 보는 유일한 게이트. 값이 표에 있어도 여기 없으면 기본 경로를
+# 탄다. 낙농(`dairy`)은 표에 값이 있지만 아직 여기 없다 — 이 줄 하나를 고치면
+# 세 빌더가 함께 프로필 경로로 넘어간다. 목록에 없는 전공은 지금까지의 기본
+# 경로를 그대로 탄다.
+ENABLED_FORMAT_MAJORS = ("food_crops",)
+
+
+def format_enabled(major_id, majors=None):
+    """이 전공이 게이트 안인가.
+
+    빌더는 자기 모듈의 옛 이름(`DOCX_PROFILE_MAJORS` 등)을 `majors`로
+    넘긴다 — 값은 이 파일의 상수와 같은 객체이고, 기존 시험이 그 이름을
+    패치해 게이트를 여는 통로가 그대로 살아 있다.
+    """
+    return bool(major_id) and major_id in (
+        ENABLED_FORMAT_MAJORS if majors is None else majors)
+
+
+def enabled_profile(major_id, majors=None):
+    """게이트가 켠 전공의 서식 프로필. 게이트 밖이면 None(기본 경로)."""
+    return profile_for(major_id) if format_enabled(major_id, majors) else None
+
+
 def front_title(profile, role, default_pt=20):
     """앞부분 제목의 (pt, 굵기). 표에 없으면 보통 굵기 기본값."""
     if profile is None:
