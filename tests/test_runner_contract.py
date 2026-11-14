@@ -927,6 +927,28 @@ class RunnerAccountingTests(unittest.TestCase):
                         self.assertFalse(
                             self.rv._is_approved_skill_skip(entry), test_id)
 
+    def test_windows_skill_tests_skip_is_approved_only_off_win32(self):
+        test_id = ("test_gg_delegation.TestDelegationCommands."
+                   "test_windows_pinned_directory_rename_denied_during_publish")
+        reason = "Windows pinned-directory share mode"
+        self.assertEqual({test_id: reason},
+                         self.rv.POSIX_SKIPPED_WINDOWS_SKILL_TESTS)
+        entry = {"test": test_id, "category": "skipped", "detail": reason}
+        for platform in ("linux", "darwin"):
+            with self.subTest(platform=platform):
+                with mock.patch.object(sys, "platform", platform):
+                    self.assertTrue(self.rv._is_approved_skill_skip(entry))
+                    self.assertFalse(self.rv._is_approved_skill_skip(
+                        dict(entry, test=test_id + "_extra")))
+                    self.assertFalse(self.rv._is_approved_skill_skip(
+                        dict(entry, detail=reason + " changed")))
+                    self.assertFalse(self.rv._is_approved_skill_skip(
+                        dict(entry, events=[{"type": "subtest_skip"}])))
+                    self.assertFalse(self.rv._is_approved_skill_skip(
+                        dict(entry, category="failed")))
+        with mock.patch.object(sys, "platform", "win32"):
+            self.assertFalse(self.rv._is_approved_skill_skip(entry))
+
     def test_unlisted_skip_with_none_reason_is_never_approved(self):
         entry = {
             "test": "tests.test_runner_contract.UnlistedNullSkip.test_skip",

@@ -327,9 +327,9 @@
       "sha256": "d1f1a96572e3355aa050d3eb9873d0ffe611a1a41866b01f7701edb7f0f95ab6"
     },
     "tests/test_runner_contract.py": {
-      "note": "repair-n1/N1 (new file): meta-tests asserting the N1 contract — dependency preflight semantics, verdict priority, JSON fields. P2-R2: extended subprocess controls (scoped verdict, external gate, tamper) and pure non-recursing accounting/classification tests for subtests, fixtures, expectedFailure/XPASS and gate mutations. P2-R3: bundle-tamper assertion folded into the pre-existing nested test_unexpected_failure_beats_incomplete — standalone method removed, no new nested exemption. | P27 K2-03: pywin32 선언 제거로 not_applicable 빈 목록 | P0-2 PR-D: Q03: platform exclusion of pywin32 on non-Windows, missing-dependency detection retained on Windows; nested runner and integrity contracts unchanged.",
+      "note": "repair-n1/N1 (new file): meta-tests asserting the N1 contract — dependency preflight semantics, verdict priority, JSON fields. P2-R2: extended subprocess controls (scoped verdict, external gate, tamper) and pure non-recursing accounting/classification tests for subtests, fixtures, expectedFailure/XPASS and gate mutations. P2-R3: bundle-tamper assertion folded into the pre-existing nested test_unexpected_failure_beats_incomplete — standalone method removed, no new nested exemption. | P27 K2-03: pywin32 선언 제거로 not_applicable 빈 목록 | P0-2 PR-D: Q03: platform exclusion of pywin32 on non-Windows, missing-dependency detection retained on Windows; nested runner and integrity contracts unchanged. | W8g: the Windows-only skill test skip is approved only on linux/darwin with exact id and reason, never on win32.",
       "origin": "new",
-      "sha256": "75e1ea66b09c9bf313e73e531365b1b3085fd6e4fb4b9351ccc9c9c3bcd30fb2",
+      "sha256": "1836f9ee80d43849c43aa0f07a96579e38f6ed234c109463e8c452786d8b8111",
       "transform": "F-skill-tests: reject unknown skip IDs, changed reasons, failed outcomes and hidden subtest events for optional skill inputs."
     },
     "tests/test_runner_negative_controls.py": {
@@ -549,9 +549,9 @@
       "sha256": "3f5f07294dc97d4c717992b57d4adfec31d1d4ca8d6ccb6cfe32dadd83c0c99b"
     },
     "tools/run_validation.py": {
-      "note": "P0-A: single-command validation runner; default mode runs check_bundle.py --root first, then the suite. --runtime-only is a dev-mode flag, unused by CI/final validation. repair-n1/N1: current-interpreter dependency preflight, verdict priority, full_validation_completed. P2-R2: complete unittest outcome accounting (one terminal entry per started parent, subtest events, fixture_events, framework reconciliation, wasSuccessful false never exit0), fail-closed P2-L09-native external gate, ok_platform_scoped verdict, and validation_scope/platform_validation_completed/pending_external_checks/approved_external_skips report fields. P2-R3: ALLOWED_NESTED_SKIP_IDS restored to the exact pinned 10 — the R2-added nested exemption for test_tampered_bundle_fails_run removed.",
+      "note": "P0-A: single-command validation runner; default mode runs check_bundle.py --root first, then the suite. --runtime-only is a dev-mode flag, unused by CI/final validation. repair-n1/N1: current-interpreter dependency preflight, verdict priority, full_validation_completed. P2-R2: complete unittest outcome accounting (one terminal entry per started parent, subtest events, fixture_events, framework reconciliation, wasSuccessful false never exit0), fail-closed P2-L09-native external gate, ok_platform_scoped verdict, and validation_scope/platform_validation_completed/pending_external_checks/approved_external_skips report fields. P2-R3: ALLOWED_NESTED_SKIP_IDS restored to the exact pinned 10 — the R2-added nested exemption for test_tampered_bundle_fails_run removed. | W8g: POSIX_SKIPPED_WINDOWS_SKILL_TESTS — exact id/reason registry for Windows-only skill tests, approved only off win32.",
       "origin": "new",
-      "sha256": "80d0667176d23e8ceb4c1f3e2cd52affdff90c7f13c2b848c29c37775a5347a7",
+      "sha256": "60cac874ae0d51ddea6409498a4aff0410d3d0802bc871a11050e63e14f3c123",
       "transform": "F-skill-tests: discover root and skill suites using separate loaders; approve only finite exact skill skip IDs/reasons; preserve skipped outcomes and report approved_skill_skips."
     },
     "tools/runtime-changes.json": {
@@ -562,7 +562,7 @@
     "tools/validation-provenance.json": {
       "note": "This file; declares origins for the validation layer.",
       "origin": "new",
-      "sha256": "be2bcdf7239a07aaaed10d6cadebdeef05a2dd1619cbf009481c9684ce6ec11e"
+      "sha256": "92a74890a1037bbdbacdc64ff94e3cfed3055d7e676c753a253e7a4720324abd"
     },
     "tools/validation_sharding.py": {
       "origin": "new",
@@ -768,5 +768,5 @@
     "verified_count": 338
   },
   "schema": "knuaf-doc/validation-bundle@3",
-  "validation_tree_sha256": "e403395b6c00ec10f586fe21db54c72f1313638706f1c7cefefa1def6b9af5a9"
+  "validation_tree_sha256": "6bf6b64c43b6e8a77b7c050f98ac78853e15af93e2a60415e990039f14538d3d"
 }
