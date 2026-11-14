@@ -14,7 +14,7 @@ from openpyxl.utils import get_column_letter
 
 from gg_finance import num
 from gg_price_assumptions import multiplier_d as price_multiplier_d
-from gg_school_excel import SCHOOL_SHEETS, check_unsupported, validate
+from gg_school_excel import SCHOOL_SHEETS, cashflow_layout, check_unsupported, validate
 
 D = Decimal
 TOLERANCE = Decimal("0.05")
@@ -41,7 +41,16 @@ def calculate_school_expected(spec):
     repair_equipment_rate = v["repair_equipment_rate"]
     utility_per_10a = v["utility_per_10a"]
     area_m2 = v["area_m2"]
-    production_kg = v["production_kg"]
+    # v1은 총 생산량 하나를 5년 내내 쓰고, v2는 해마다 10a당 목표가 다르므로
+    # 총량도 해마다 다르다. 어느 쪽이든 연도별 kg 목록 하나로 맞춘 뒤 계산한다.
+    production_kg = v.get("production_kg")
+    if production_kg is None:
+        production_kg_by_year = [
+            target * area_m2 / D(1000) for target in v["production_yield"]]
+    else:
+        production_kg_by_year = [production_kg] * 5
+    if len(production_kg_by_year) != len(years):
+        raise ValueError("생산량 연도 수 불일치")
     purchase_price = v["purchase_price"]
     direct_price = v["direct_price"]
     purchase_share = v["purchase_share"]
@@ -91,8 +100,6 @@ def calculate_school_expected(spec):
     mult_s = [price_multiplier_d(price["sales"], y) for y in years]
 
     opening_cash = equity
-    purchase_rev = (production_kg * purchase_share * effective_purchase_price) / D(1000)
-    direct_rev = (production_kg * direct_share * effective_direct_price) / D(1000)
     fac_dep_annual = (facility - salvage) / life if life > 0 else D(0)
     eq_dep_annual = equipment / life if life > 0 else D(0)
 
@@ -131,8 +138,12 @@ def calculate_school_expected(spec):
         yr_util = utility * mult_g[i]
         yr_rep = repair_fac + repair_eq
 
-        yr_purchase_rev = purchase_rev * mult_s[i]
-        yr_direct_rev = direct_rev * mult_s[i]
+        # 판매량 × 단가 × 물가배율. 판매량이 해마다 다르므로 곱셈은 루프 안.
+        volume = production_kg_by_year[i]
+        yr_purchase_rev = (volume * purchase_share
+                           * effective_purchase_price * mult_s[i]) / D(1000)
+        yr_direct_rev = (volume * direct_share
+                         * effective_direct_price * mult_s[i]) / D(1000)
         rev = yr_purchase_rev + yr_direct_rev
 
         prod_cash_cost = yr_mat + yr_lab + yr_util + yr_rep
@@ -832,7 +843,17 @@ def verify_school_recalculated(spec, path):
                 {"status": "fail", "reason": f"독립계산 불가/비수치 캐시: {e}"}
             )
     # 5.5 Cash Flow Schedule & Rollforward
-    if cf and base:
+    # 행 번호는 양식마다 한 줄 어긋난다(X01 정본 21/22/23/24, 3줄 투자 양식
+    # 22/23/24/25). 프로필 이름으로는 못 가르므로 라벨로 읽는다.
+    cf_rows = None
+    if cf is not None:
+        try:
+            cf_rows = cashflow_layout(cf)
+        except ValueError as error:
+            issues.append(
+                {"cell": "14. 현금흐름계획", "status": "fail", "reason": str(error)}
+            )
+    if cf and base and cf_rows:
         try:
             prev_cum_cf = D(0)
             base_cash = to_d(base["C9"].value, "1. 기초재무상태조사!C9")
@@ -844,22 +865,26 @@ def verify_school_recalculated(spec, path):
                 exp_yr = expected["expected_years"][t]
 
                 cf_in = to_d(
-                    cf.cell(14, col_idx).value, f"14. 현금흐름계획!{col_letter}14"
+                    cf.cell(cf_rows["in"], col_idx).value,
+                    f"14. 현금흐름계획!{col_letter}{cf_rows['in']}",
                 )
                 cf_out = to_d(
-                    cf.cell(22, col_idx).value, f"14. 현금흐름계획!{col_letter}22"
+                    cf.cell(cf_rows["out"], col_idx).value,
+                    f"14. 현금흐름계획!{col_letter}{cf_rows['out']}",
                 )
                 cf_net = to_d(
-                    cf.cell(23, col_idx).value, f"14. 현금흐름계획!{col_letter}23"
+                    cf.cell(cf_rows["net"], col_idx).value,
+                    f"14. 현금흐름계획!{col_letter}{cf_rows['net']}",
                 )
                 cf_cum = to_d(
-                    cf.cell(24, col_idx).value, f"14. 현금흐름계획!{col_letter}24"
+                    cf.cell(cf_rows["cum"], col_idx).value,
+                    f"14. 현금흐름계획!{col_letter}{cf_rows['cum']}",
                 )
 
                 if abs(cf_net - (cf_in - cf_out)) > TOLERANCE:
                     issues.append(
                         {
-                            "cell": f"14. 현금흐름계획!{col_letter}23",
+                            "cell": f"14. 현금흐름계획!{col_letter}{cf_rows['net']}",
                             "status": "fail",
                             "reason": "현금수지균형(유입-유출) 산식 불일치",
                         }
@@ -869,7 +894,7 @@ def verify_school_recalculated(spec, path):
                     if abs(cf_cum - cf_net) > TOLERANCE:
                         issues.append(
                             {
-                                "cell": f"14. 현금흐름계획!{col_letter}24",
+                                "cell": f"14. 현금흐름계획!{col_letter}{cf_rows['cum']}",
                                 "status": "fail",
                                 "reason": "1년차 누적현금수지 불일치",
                             }
@@ -878,7 +903,7 @@ def verify_school_recalculated(spec, path):
                     if abs(cf_cum - (prev_cum_cf + cf_net)) > TOLERANCE:
                         issues.append(
                             {
-                                "cell": f"14. 현금흐름계획!{col_letter}24",
+                                "cell": f"14. 현금흐름계획!{col_letter}{cf_rows['cum']}",
                                 "status": "fail",
                                 "reason": "누적현금수지 롤포워드 불일치",
                             }
@@ -887,7 +912,7 @@ def verify_school_recalculated(spec, path):
                 if abs(cf_net - exp_yr["net_cf"]) > TOLERANCE:
                     issues.append(
                         {
-                            "cell": f"14. 현금흐름계획!{col_letter}23",
+                            "cell": f"14. 현금흐름계획!{col_letter}{cf_rows['net']}",
                             "status": "fail",
                             "reason": "당해 현금수지 독립계산 불일치",
                         }
@@ -895,7 +920,7 @@ def verify_school_recalculated(spec, path):
                 if abs(cf_cum - exp_yr["cum_cf"]) > TOLERANCE:
                     issues.append(
                         {
-                            "cell": f"14. 현금흐름계획!{col_letter}24",
+                            "cell": f"14. 현금흐름계획!{col_letter}{cf_rows['cum']}",
                             "status": "fail",
                             "reason": "누적 현금수지 독립계산 불일치",
                         }
@@ -1005,11 +1030,11 @@ def verify_school_recalculated(spec, path):
                     )
 
                 # Cash connection between Cash Flow and Balance Sheet
-                if cf:
+                if cf and cf_rows:
                     try:
                         cf_net_yr = to_d(
-                            cf.cell(23, 4 + t).value,
-                            f"14. 현금흐름계획!{get_column_letter(4+t)}23",
+                            cf.cell(cf_rows["net"], 4 + t).value,
+                            f"14. 현금흐름계획!{get_column_letter(4+t)}{cf_rows['net']}",
                         )
                         if abs(bs_cash - (prev_bs_cash + cf_net_yr)) > TOLERANCE:
                             issues.append(

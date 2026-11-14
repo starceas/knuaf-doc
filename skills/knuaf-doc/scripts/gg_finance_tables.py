@@ -35,7 +35,8 @@ import gg_price_assumptions as pa
 
 MAJOR_ID = "specialty_crops"
 MISSING = "확인 불가"
-FINANCE_PROFILE = "school_17_sheet_v1"
+# 재무 표는 판 이름을 고정하지 않는다 — 표 생성은 라벨로 줄을 찾으므로
+# 3줄 투자 양식(v2)도 같은 코드가 읽는다. 게이트는 지원 판 전체를 본다.
 
 _DEFAULT_MAP = (
     Path(__file__).resolve().parent.parent
@@ -1495,10 +1496,14 @@ def review_plan(workbook_path, *, declared_assets=None, area_declarations=None,
         _loan_row, loan_inflow = _series(cash, lambda label: label == "융자금", cash_cols, 3)
         _invest_row, facility_invest = _series(cash, lambda label: label == "시설투자", cash_cols, 3)
         _machine_row, machine_invest = _series(cash, lambda label: label == "농기계투자", cash_cols, 3)
+        # 토지구입 줄은 3줄 투자 양식에만 있다. 2줄 정본(X01)에서는 줄이
+        # 없으므로 None이 오고, 합계는 지금처럼 시설+농기계다.
+        _land_row, land_invest = _series(cash, lambda label: label == "토지구입", cash_cols, 3)
         investment = [
-            (a or 0) + (b or 0)
-            for a, b in zip(facility_invest or [None] * len(years),
-                            machine_invest or [None] * len(years))
+            (a or 0) + (b or 0) + (c or 0)
+            for a, b, c in zip(facility_invest or [None] * len(years),
+                               machine_invest or [None] * len(years),
+                               land_invest or [None] * len(years))
         ] or None
         depreciation_sheet = _find_sheet(workbook, "10. 감가상각비계획 ")
         depreciation = (_depreciation_series(depreciation_sheet, len(years))
@@ -1772,7 +1777,8 @@ def run(base, xlsx, *, major_id=None, input_path=None, out="build/finance-tables
     try:
         ctx = mc.output_context(base, major_id)
         auth = mc.authorize_output(mc.OUTPUT_SCHOOL_PAPER, ctx)
-        mc.require_finance_profile(auth, FINANCE_PROFILE)
+        from gg_school_excel import PROFILES
+        mc.require_any_workbook_profile(auth, PROFILES)
     except mc.OutputHeldError as e:
         return {
             "status": "held",

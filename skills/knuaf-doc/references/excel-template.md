@@ -25,12 +25,31 @@ workbook registry's completed, verified survey must confirm no major XLSX.
 An incomplete survey or an existing major workbook does not establish absence.
 This selection never grants a major an unsupported workbook capability.
 
-The asset is `assets/templates/finance-template.xlsx`, registered separately in
-`workbook-reference-set.json` under `derived_assets`, not as original X01 bytes.
-Its SHA-256 is `6d3c9fe5e5992108a8bab18c0098edb0d808f0d14c099878a53939b17de88c7d`.
-It is the approved value-cleared app asset copied unchanged: 1,643 formula cells,
-1,175 explicit formula texts compared with X01 without differences, and 468
-unexpanded shared-formula followers. This is not recalculation or formula approval.
+Two assets are registered separately in `workbook-reference-set.json` under
+`derived_assets`, neither as original X01 bytes:
+
+- `assets/templates/finance-template.xlsx` (v1),
+  SHA-256 `6d3c9fe5e5992108a8bab18c0098edb0d808f0d14c099878a53939b17de88c7d`:
+  the approved value-cleared app asset copied unchanged — 1,643 formula cells,
+  1,175 explicit formula texts compared with X01 without differences, and 468
+  unexpanded shared-formula followers.
+- `assets/templates/finance-template-v2.xlsx` (v2, 특용작물 A·B·C 묶음과 함께 배포),
+  SHA-256 `76300305fdaf165bcce54fc3de2b476c91f4e8e368bc0455a8c69aa3eee9cd1d`:
+  v1's bytes with the three 2026-11 professor corrections applied — a
+  `토지구입` row in `14. 현금흐름계획`, blank amount cells for unheld assets, and
+  10a target-yield inputs in `6. 생산계획` — and `<xl/calcChain.xml>` dropped.
+  1,644 formula cells, same 1,175 explicit comparisons, same 468 unexpanded
+  followers.
+
+Each is a separate identity bound to its own hash: v1 stays byte-identical and
+keeps the papers already written on it; v2 is the edition new papers declare and
+is what the professor's corrected form is. The bundled `create --template-ref
+X01` copy hands out v2, so a new paper reaches the corrected form through the
+ordinary route. A paper already written on v1 keeps working by handing that
+file in with `--source`: the patch engine reads the edition from the file's own
+formula lineage rather than from the major's default, so the old file is checked
+against v1 and stays patchable. Neither asset is recalculation or formula
+approval.
 
 ```text
 python3 scripts/gg_excel_template.py create \
@@ -80,30 +99,42 @@ explicit `clear`/`preserve` actions, then save a separately reviewed map with
 The map remains bound to the exact source hash and re-detected layout.
 
 New clear and fill maps declare top-level `workbook_profile` from the reviewed
-school form (`school_17_sheet_v1`, `fruit_16_sheet_v1`,
-`food_crops_16_sheet_v1`, or `dairy_hanwoo_28_sheet_v1`); never infer it from
-sheet count. `inspect
+school form (`school_17_sheet_v1`, `school_17_sheet_v2`,
+`fruit_16_sheet_v1`, `food_crops_16_sheet_v1`, or `dairy_hanwoo_28_sheet_v1`);
+never infer it from sheet count. The specialty form has two editions and both
+are declared: `school_17_sheet_v1` is the form papers already written started
+from, `school_17_sheet_v2` is the current one. A workbook's own sheet order and
+formula fingerprints decide which edition it is; an edition handed in under the
+other's name is refused, and a profile no edition matches is refused as a
+fingerprint mismatch. `inspect
 --workbook-profile fruit_16_sheet_v1` records that declaration with the source
 SHA but leaves inventory review mandatory. The common writers require both the
 major's `workbook_profiles` declaration and a supported finance capability for
 that same profile, before creating an output directory. A registered profile is
 also compared with the real workbook's sheet count, names, order and per-sheet
 formula fingerprints from `references/workbook-reference-set.json` (currently
-`fruit_16_sheet_v1`, `food_crops_16_sheet_v1` and `dairy_hanwoo_28_sheet_v1`).
+`fruit_16_sheet_v1`, `food_crops_16_sheet_v1`, `dairy_hanwoo_28_sheet_v1` and
+`school_17_sheet_v2`).
 Fingerprints hash UTF-8 compact JSON of sorted `(address, expanded formula)`
 pairs from the SHA256-verified school original. Values may change; moved,
 missing, added or edited formulas are held with the differing sheet names.
 There is no exception for corrected fruit formulas in this gate.
 The same real-byte check runs at Office staging, adoption and export. An
-explicit null/empty profile is refused. Only old specialty-crop maps without the
-key keep their historical school-17 meaning. Calculation profiles do not
-authorize school-form clear/fill. Clear/fill receipts retain the profile and
+explicit null/empty profile is refused. An old specialty-crop map without the
+key takes the edition of the workbook it is applied to — read from that file's
+own bytes, so one reviewed map clears or fills either edition while the
+structure gate still refuses a copy of the other edition — and a source that
+names no edition keeps the historical school-17 answer. Calculation profiles do
+not authorize school-form clear/fill. Clear/fill receipts retain the profile and
 map hash.
 
 The profile a workbook tool requests when the caller names none comes from the
 bound major (`food_crops` → `food_crops_16_sheet_v1`, `dairy` →
-`dairy_hanwoo_28_sheet_v1`, every other major → `school_17_sheet_v1`), so
-specialty/fruit byte output is unchanged. A major whose own school form differs
+`dairy_hanwoo_28_sheet_v1`, `specialty_crops` → `school_17_sheet_v2`, every
+other major → `school_17_sheet_v1`). Patching an existing workbook is the
+exception: the patch engine reads the edition from the file's own formula
+lineage first, so a paper written on v1 is checked as v1 and keeps working.
+A major whose own school form differs
 needs an explicit `--source`; neither the bundled 17-sheet asset nor the
 16-sheet food-crops form stands in for the 28-sheet dairy form. The reviewed
 clearing maps and their receipt contracts are
@@ -232,7 +263,7 @@ do not add sheets to the submission form merely to satisfy a preferred model.
 
 #### 특용작물 엑셀 경로: 교수님 양식(X01·X02) 기준
 
-특용작물전공 제출 엑셀은 교수님 양식(X01, 대식물 계정이 필요하면 X02)을 틀로 복제해 값만 채운다([사용자 결정 2026-10-28]). 선배가 채운 통합문서는 규칙 원본이 아니라 비교 참고다. 스펙에서 17시트를 새로 조립하는 레거시 생성기(`build_excel_finance_template.py`, `gg_school_excel.school_workbook`, `gg_finance.workbook`의 `school_17_sheet_v1`)는 특용작물에서 입구에서 `held/specialty_template_route_required`로 멈추고 아래 경로 1로 안내한다. 다른 전공의 경로는 바뀌지 않는다.
+특용작물전공 제출 엑셀은 교수님 양식(X01, 대식물 계정이 필요하면 X02)을 틀로 복제해 값만 채운다([사용자 결정 2026-10-28]). 선배가 채운 통합문서는 규칙 원본이 아니라 비교 참고다. 스펙에서 17시트를 새로 조립하는 레거시 생성기(`build_excel_finance_template.py`, `gg_school_excel.school_workbook`, `gg_finance.workbook`의 `school_17_sheet_v1`)는 특용작물에서 입구에서 `held/specialty_template_route_required`로 멈추고 아래 경로 1로 안내한다. `school_workbook`은 `output_profile`로 `school_17_sheet_v1`(기존 논문)과 `school_17_sheet_v2`(새 논문, 10a당 목표 입력·`토지구입` 행·미보유 자산 빈칸)를 모두 만들 수 있지만 특용작물 출구는 닫혀 있으므로 이 생성기는 계속 쓰지 않는다. 다른 전공의 경로는 바뀌지 않는다.
 
 ##### 경로 1. 학과 원본 템플릿 우선 경로 (W-B 패치·채우기 계약)
 

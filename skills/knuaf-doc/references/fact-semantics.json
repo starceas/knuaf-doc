@@ -19,7 +19,7 @@
   ],
   "derived_contract": {},
   "economic_profiles": [
-    "single_annual_cash_v1", "school_17_sheet_v1", "school_paper_v1",
-    "workbook_map_v1"
+    "single_annual_cash_v1", "school_17_sheet_v1", "school_17_sheet_v2",
+    "school_paper_v1", "workbook_map_v1"
   ]
 }

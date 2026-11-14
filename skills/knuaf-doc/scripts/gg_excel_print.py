@@ -77,6 +77,50 @@ def _direct_children(node, local_name):
             and child.namespaceURI == NS_MAIN and child.localName == local_name]
 
 
+# Builtin ids never move. A custom code is looked up in numFmts and appended
+# when absent, so two sheets asking for the same code share one id.
+_BUILTIN_NUMBER_FORMATS = {'#,##0': '3', '0': '1', '0.00%': '10', '#,##0.00': '4'}
+_CUSTOM_NUMBER_FORMATS = frozenset({'#,##0_);[Red]\\(#,##0\\);'})
+FIRST_CUSTOM_NUMBER_FORMAT_ID = 164
+
+
+def _number_format_id(styles_doc, code):
+    """numFmtId for ``code``, adding it to numFmts when it is not there yet."""
+    if code in _BUILTIN_NUMBER_FORMATS:
+        return _BUILTIN_NUMBER_FORMATS[code]
+    if code not in _CUSTOM_NUMBER_FORMATS:
+        raise ValueError('unsupported number format: ' + repr(code))
+    roots = _dom_elements(styles_doc, NS_MAIN, 'numFmts')
+    if len(roots) > 1:
+        raise ValueError('ambiguous numFmts collections')
+    entries = _dom_elements(roots[0], NS_MAIN, 'numFmt') if roots else []
+    for entry in entries:
+        if entry.getAttribute('formatCode') == code:
+            return entry.getAttribute('numFmtId')
+    used = [int(entry.getAttribute('numFmtId')) for entry in entries
+            if entry.getAttribute('numFmtId').isdigit()]
+    new_id = max(used + [FIRST_CUSTOM_NUMBER_FORMAT_ID - 1]) + 1
+    if roots:
+        container = roots[0]
+    else:
+        container = qualified(styles_doc, styles_doc.documentElement, 'numFmts')
+        successor = next((child for child in styles_doc.documentElement.childNodes
+                          if child.nodeType == child.ELEMENT_NODE
+                          and child.namespaceURI == NS_MAIN
+                          and child.localName != 'numFmts'), None)
+        if successor is None:
+            styles_doc.documentElement.appendChild(container)
+        else:
+            styles_doc.documentElement.insertBefore(container, successor)
+        container.setAttribute('count', '0')
+    entry = qualified(styles_doc, container, 'numFmt')
+    entry.setAttribute('numFmtId', str(new_id))
+    entry.setAttribute('formatCode', code)
+    container.appendChild(entry)
+    container.setAttribute('count', str(len(entries) + 1))
+    return str(new_id)
+
+
 def _style_wrap_cells(styles_doc, sheet_doc, cells, note_color=None, number_format=None, wrap=True):
     if not cells:
         return []
@@ -123,16 +167,7 @@ def _style_wrap_cells(styles_doc, sheet_doc, cells, note_color=None, number_form
             raise ValueError(f'style index outside cellXfs on {ref}: {style_id}')
         clone = xfs[style_id].cloneNode(deep=True)
         if number_format is not None:
-            if number_format == '#,##0':
-                clone.setAttribute('numFmtId', '3')
-            elif number_format == '0':
-                clone.setAttribute('numFmtId', '1')
-            elif number_format == '0.00%':
-                clone.setAttribute('numFmtId', '10')
-            elif number_format == '#,##0.00':
-                clone.setAttribute('numFmtId', '4')
-            else:
-                raise ValueError('only #,##0, 0, 0.00% and #,##0.00 formats are supported')
+            clone.setAttribute('numFmtId', _number_format_id(styles_doc, number_format))
             clone.setAttribute('applyNumberFormat', '1')
         if note_color is not None:
             if cell.getAttribute('t') not in {'s', 'inlineStr'} or _dom_elements(cell, NS_MAIN, 'f'):
@@ -238,7 +273,10 @@ def apply(source, map_path, out, receipt_path, *, context=None):
     read or staged, and reconfirmed just before publication."""
     import gg_major_contract as mc
     authorization = mc.authorize_output(mc.OUTPUT_SCHOOL_WORKBOOK, context)
-    mc.require_finance_profile(authorization, "school_17_sheet_v1")
+    # 인쇄 사본은 어느 학과 양식이든 같은 코드가 처리한다. 판 이름 하나를
+    # 요구하면 새 양식이 붙을 때 게이트가 이유 없이 막는다.
+    from gg_school_excel import PROFILES
+    mc.require_any_workbook_profile(authorization, PROFILES)
     source, map_path, out, receipt_path = map(Path, (source, map_path, out, receipt_path))
     paths = [p.resolve() for p in (source, map_path, out, receipt_path)]
     if len(set(paths)) != 4: raise ValueError('source, map, output, and receipt must be different')
