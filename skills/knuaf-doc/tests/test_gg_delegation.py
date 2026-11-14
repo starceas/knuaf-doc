@@ -551,6 +551,13 @@ class TestDelegationCommands(unittest.TestCase):
                 self.assertFalse(moved.exists())
                 self.assertTrue(published.is_file())
                 self.assertEqual(list(gui.rglob("*.tmp")), [])
+                # Control: once publication released its pinned handles the
+                # same move succeeds, so the refusal above came from the pin
+                # (not from ACLs or a foreign handle on this directory).
+                gui.rename(moved)
+                self.assertTrue(moved.is_dir())
+                self.assertFalse(gui.exists())
+                moved.rename(gui)
 
     @unittest.skipIf(sys.platform == "win32",
                      "POSIX directory-move race; Windows pins the directory "

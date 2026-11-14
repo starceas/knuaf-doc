@@ -335,7 +335,7 @@
       "source": "adopted:app-PR41"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "388d091bf89b7cf452068b56bd2227f5295f8b302f35d71db3558cef9674a4a3",
+      "after_sha256": "3cbed0db22bde1d88a0ebbac43b16eb6796973b2b500eadb2dfff9070732e4e1",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "W8g",
@@ -3352,13 +3352,13 @@
       "source": "new"
     },
     "skills/knuaf-doc/tests/test_gg_delegation.py": {
-      "after_sha256": "3f7feaa8e8267ccf953b7c2544e84393dbf5f57affaf47b21a7ed3d8e25bc0b4",
+      "after_sha256": "04c424126824c09fc627d43462090a516d7cd02988f4cff27fb4fade71b71e64",
       "before_sha256": null,
       "first_changed": "W8",
       "last_changed": "W8g",
       "owner": "W8",
       "reason": "W8: synthetic CLI regressions for JobSpec and LaneRequest contract, validation boundaries, atomic preservation, and research-result route checks. | W8b C6-01/02/03/04: parent-swap publication race, partial-write cleanup, route ID in URL with mismatch rejection, measured/candidate/no-evidence quantitative unit-row semantics. | W8d FC-01: prove no payload bytes or residue when the directory moves before the post-open check in either command. FC-02: accept only success/failure route status values. FC-03: accept numeric-free narrative candidate claims with observation rows, reject missing candidate rows, allow 자료 없음/접근 실패 without observations, and reject stray unit rows for no-observation states.",
-      "note": "W8e F2-01: opened-temp move, missing/replaced/symlink names, zero payload and location reporting in both commands. F2-02: new delegate/new proposal/existing proposal replacement with cleanup success, denial, detached result and unrelated replacement preservation. | W8f F3-01: cleanup name swaps after publication and fsync failure, accurate residual locations, preserved outside sentinel and existing proposal, plus failed post-unlink stat reporting; retain all prior 24 tests. | W8g: Windows CI (UTF-8 mode off, py3.10) first ran this file; the os.open directory-move race test is POSIX-only like its six sibling race tests and gains the same win32 skip, plus a Windows-only test that the pinned directory chain refuses rename (PermissionError) during publication and the payload lands only in place.",
+      "note": "W8e F2-01: opened-temp move, missing/replaced/symlink names, zero payload and location reporting in both commands. F2-02: new delegate/new proposal/existing proposal replacement with cleanup success, denial, detached result and unrelated replacement preservation. | W8f F3-01: cleanup name swaps after publication and fsync failure, accurate residual locations, preserved outside sentinel and existing proposal, plus failed post-unlink stat reporting; retain all prior 24 tests. | W8g: Windows CI (UTF-8 mode off, py3.10) first ran this file; the os.open directory-move race test is POSIX-only like its six sibling race tests and gains the same win32 skip, plus a Windows-only test that the pinned directory chain refuses rename (PermissionError) during publication and the payload lands only in place. | W8g N1: the Windows test also moves the directory after publication released its handles, attributing the refusal to the pin.",
       "source": "new"
     }
   },
