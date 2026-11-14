@@ -331,7 +331,7 @@
       "source": "adopted:app-PR41"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "b4e5325e118ea01f6cf7993dbdaa5c40a423e00c423a21dc2e3f5e34a9e2ec01",
+      "after_sha256": "34c84db7457b702e256defb2859e90ac4a4500affa9bf50934d0828719b15e5c",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "dairy-f2",
@@ -3039,7 +3039,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_figure.py": {
-      "after_sha256": "50610bb46f56615128580d9b0ca1ddcb963b9b050dc8b99940f68c185467990c",
+      "after_sha256": "d98cc6579ff4dc91a7a4c24a35807484520f119ca4ed8a5f66fed0614246471c",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "P28",
@@ -3048,7 +3048,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_figure_docx.py": {
-      "after_sha256": "5758ae869a9fce806ab5e85c8dcb59a30d01fcdfc418ae2bfaea2a956eda1440",
+      "after_sha256": "b2a43af336ed308cb38b8014713a5d68be770dff60511226f18611ae8a51c1d1",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "P28",
@@ -3093,7 +3093,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/tests/test_gg_figure.py": {
-      "after_sha256": "57696b1cc2d4b119bc6ea24bb6b41a18c1bbb7f60916e3e8aad69ef8c8c44cc3",
+      "after_sha256": "dcf5cc74a6d590f1dd19bfaf9bbf4ed5a5ca468402a8129e6512b60b2d637208",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "P28",
@@ -3138,7 +3138,7 @@
       "source": "new"
     },
     "tests/test_unsupported_finance_notice.py": {
-      "after_sha256": "89646ea4a4cd976658d2a2f5db494387f797734a4a183738bab004e8078b77e7",
+      "after_sha256": "9c724e2b82b5283fd30e703c044d5f05c8a089aaa664af9da8d25a7402413bd8",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "food-crops-0.1.0",
