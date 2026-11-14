@@ -321,7 +321,7 @@
     "tests/test_runner_contract.py": {
       "note": "repair-n1/N1 (new file): meta-tests asserting the N1 contract — dependency preflight semantics, verdict priority, JSON fields. P2-R2: extended subprocess controls (scoped verdict, external gate, tamper) and pure non-recursing accounting/classification tests for subtests, fixtures, expectedFailure/XPASS and gate mutations. P2-R3: bundle-tamper assertion folded into the pre-existing nested test_unexpected_failure_beats_incomplete — standalone method removed, no new nested exemption. | P27 K2-03: pywin32 선언 제거로 not_applicable 빈 목록 | P0-2 PR-D: Q03: platform exclusion of pywin32 on non-Windows, missing-dependency detection retained on Windows; nested runner and integrity contracts unchanged.",
       "origin": "new",
-      "sha256": "961bbb2b4c79649b3412fe573a43acc2328c966aae658407c69668e87a5e6632",
+      "sha256": "75e1ea66b09c9bf313e73e531365b1b3085fd6e4fb4b9351ccc9c9c3bcd30fb2",
       "transform": "F-skill-tests: reject unknown skip IDs, changed reasons, failed outcomes and hidden subtest events for optional skill inputs."
     },
     "tests/test_runner_negative_controls.py": {
@@ -756,5 +756,5 @@
     "verified_count": 334
   },
   "schema": "knuaf-doc/validation-bundle@3",
-  "validation_tree_sha256": "bb179c971714453c36c18a9842e1ef0409cd6b2a37b65fab143d4f5c3b43636c"
+  "validation_tree_sha256": "5a5bc2aa1fba6a8850287a0c0374a229fc7786ab9ad6bafbeb218bdac4a30d05"
 }

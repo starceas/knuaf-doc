@@ -14,6 +14,7 @@ its purpose are documented in docs/validation/REGRESSIONS.md and the
 runner docstring.  An ``-S`` interpreter flag is used to simulate a
 dependency-less environment without installing or removing anything.
 """
+from concurrent.futures import ThreadPoolExecutor
 import importlib.util
 import io
 import json
@@ -444,15 +445,6 @@ class InjectedBad(unittest.TestCase):
         (root / "tests" / "test_injected_bad.py").write_text(
             injected, encoding="utf-8")
         self._freshen(root)
-        proc, rep = _run(root, args=("--runtime-only",))
-        self.assertIsNotNone(rep, proc.stderr)
-        self.assertEqual(1, proc.returncode, proc.stdout)
-        self.assertEqual("unexpected_failures", rep["verdict"])
-        self.assertTrue(rep["causes"]["unexpected"])
-        self.assertTrue(rep["causes"]["incomplete"])
-        skipped = {s["test"] for s in rep["unapproved_skips"]}
-        self.assertIn(
-            "tests.test_injected_bad.InjectedBad.test_skips", skipped)
 
         # R2 regression for the observed recorder blindness: a failed
         # subTest must surface as a failed parent entry — R1's runner
@@ -472,7 +464,69 @@ class InjectedSubtest(unittest.TestCase):
         (root2 / "tests" / "test_injected_subtest.py").write_text(
             subfail, encoding="utf-8")
         self._freshen(root2)
-        proc2, rep2 = _run(root2, args=("--runtime-only",))
+
+        # R2 scoped default run: refresh the copy's manifest (scratch
+        # lineage only) so the bundle gate exercises real behaviour —
+        # the edited runner file is otherwise stale vs the committed pin.
+        # The copy's meta-test file is stubbed so the inner DEFAULT run
+        # cannot recurse (NESTED cannot be set in default mode — that
+        # would be an incomplete cause by contract).
+        root3 = self._public_copy("knuaf-r2scoped-")
+        (root3 / "tests" / "test_runner_contract.py").write_text(
+            _STUB_SOURCE, encoding="utf-8")
+        self._freshen(root3)
+
+        # injected subtest failure PLUS the pending native skip in
+        # default mode: failure wins (exit 1), both flags false, the
+        # pending fact stays visible — never a repeat of R1's 0.
+        root4 = self._public_copy("knuaf-r2subd-")
+        (root4 / "tests" / "test_injected_subtest.py").write_text(
+            subfail, encoding="utf-8")
+        (root4 / "tests" / "test_runner_contract.py").write_text(
+            _STUB_SOURCE, encoding="utf-8")
+        self._freshen(root4)
+
+        # R3: bundle tamper control — folded in here so the nested-skip
+        # allowlist stays at its original ten IDs (a separate method
+        # would need an eleventh).  A byte-level change to a declared
+        # file without re-pinning is bundle tamper: the default run must
+        # report bundle=fail and verdict unexpected_failures (exit 1).
+        root5 = self._public_copy("knuaf-r3tamper-")
+        # stub the meta-test file so the inner default run cannot
+        # recurse (no NESTED allowed in default mode); do NOT refresh
+        # the manifest — stub + tamper both stay detectable.
+        (root5 / "tests" / "test_runner_contract.py").write_text(
+            _STUB_SOURCE, encoding="utf-8")
+        victim = root5 / "tests" / "test_question_gate.py"
+        src5 = victim.read_text(encoding="utf-8")
+        victim.write_text(src5 + "\n# scratch tamper byte\n",
+                          encoding="utf-8")
+
+        # All five copies are prepared above; their runs are independent
+        # (separate disposable roots, uniquely named report files), so they
+        # execute concurrently.  Run sequentially they held one CI shard for
+        # 88-108 minutes.  Every assertion below is unchanged and checked in
+        # the original order.  KNUAF_NESTED_WORKERS caps the concurrency on a
+        # shared workstation (results are identical; only wall time changes).
+        workers = int(os.environ.get("KNUAF_NESTED_WORKERS", "5"))
+        with ThreadPoolExecutor(max_workers=max(1, min(5, workers))) as pool:
+            jobs = [pool.submit(_run, root, args=("--runtime-only",)),
+                    pool.submit(_run, root2, args=("--runtime-only",)),
+                    pool.submit(_run_unnested, root3),
+                    pool.submit(_run_unnested, root4),
+                    pool.submit(_run_unnested, root5)]
+            ((proc, rep), (proc2, rep2), (proc3, rep3), (proc4, rep4),
+             (proc5, rep5)) = [job.result() for job in jobs]
+
+        self.assertIsNotNone(rep, proc.stderr)
+        self.assertEqual(1, proc.returncode, proc.stdout)
+        self.assertEqual("unexpected_failures", rep["verdict"])
+        self.assertTrue(rep["causes"]["unexpected"])
+        self.assertTrue(rep["causes"]["incomplete"])
+        skipped = {s["test"] for s in rep["unapproved_skips"]}
+        self.assertIn(
+            "tests.test_injected_bad.InjectedBad.test_skips", skipped)
+
         self.assertIsNotNone(rep2, proc2.stderr)
         self.assertEqual(1, proc2.returncode, proc2.stdout)
         self.assertEqual("unexpected_failures", rep2["verdict"])
@@ -489,17 +543,6 @@ class InjectedSubtest(unittest.TestCase):
         self.assertGreaterEqual(rep2["runtime"]["failure_events"], 1)
         self.assertFalse(rep2["runtime"]["accounting"]["errors"])
 
-        # R2 scoped default run: refresh the copy's manifest (scratch
-        # lineage only) so the bundle gate exercises real behaviour —
-        # the edited runner file is otherwise stale vs the committed pin.
-        # The copy's meta-test file is stubbed so the inner DEFAULT run
-        # cannot recurse (NESTED cannot be set in default mode — that
-        # would be an incomplete cause by contract).
-        root3 = self._public_copy("knuaf-r2scoped-")
-        (root3 / "tests" / "test_runner_contract.py").write_text(
-            _STUB_SOURCE, encoding="utf-8")
-        self._freshen(root3)
-        proc3, rep3 = _run_unnested(root3)
         self.assertIsNotNone(rep3, proc3.stderr)
         self.assertEqual("ok_platform_scoped", rep3["verdict"],
                          proc3.stdout)
@@ -532,16 +575,6 @@ class InjectedSubtest(unittest.TestCase):
                if e["test"] == NATIVE_TID}
         self.assertEqual("skipped", nat[NATIVE_TID]["category"])
 
-        # injected subtest failure PLUS the pending native skip in
-        # default mode: failure wins (exit 1), both flags false, the
-        # pending fact stays visible — never a repeat of R1's 0.
-        root4 = self._public_copy("knuaf-r2subd-")
-        (root4 / "tests" / "test_injected_subtest.py").write_text(
-            subfail, encoding="utf-8")
-        (root4 / "tests" / "test_runner_contract.py").write_text(
-            _STUB_SOURCE, encoding="utf-8")
-        self._freshen(root4)
-        proc4, rep4 = _run_unnested(root4)
         self.assertIsNotNone(rep4, proc4.stderr)
         self.assertEqual("unexpected_failures", rep4["verdict"])
         self.assertEqual(1, proc4.returncode, proc4.stdout)
@@ -555,22 +588,6 @@ class InjectedSubtest(unittest.TestCase):
             ["P2-L09-native"],
             [p["gate_id"] for p in rep4["pending_external_checks"]])
 
-        # R3: bundle tamper control — folded in here so the nested-skip
-        # allowlist stays at its original ten IDs (a separate method
-        # would need an eleventh).  A byte-level change to a declared
-        # file without re-pinning is bundle tamper: the default run must
-        # report bundle=fail and verdict unexpected_failures (exit 1).
-        root5 = self._public_copy("knuaf-r3tamper-")
-        # stub the meta-test file so the inner default run cannot
-        # recurse (no NESTED allowed in default mode); do NOT refresh
-        # the manifest — stub + tamper both stay detectable.
-        (root5 / "tests" / "test_runner_contract.py").write_text(
-            _STUB_SOURCE, encoding="utf-8")
-        victim = root5 / "tests" / "test_question_gate.py"
-        src5 = victim.read_text(encoding="utf-8")
-        victim.write_text(src5 + "\n# scratch tamper byte\n",
-                          encoding="utf-8")
-        proc5, rep5 = _run_unnested(root5)
         self.assertIsNotNone(rep5, proc5.stderr)
         self.assertEqual("default", rep5["mode"])
         self.assertEqual("fail", rep5["bundle"]["status"], rep5["bundle"])
