@@ -3,6 +3,10 @@
 - `gg.py figure …` — argparse 전에 gg_figure로 넘긴다.
 - `gg_document.check` — `app-figure:<sha256>` 토큰을 파일 없음으로 오판하지 않는다.
 - `build_docx` — 토큰을 실제 그림으로 넣고, 증명이 없으면 빌드를 멈춘다.
+- M-02: 그림 목적지를 푸는 기준(원고 옆 → 작업 폴더 뿌리)을 DOCX·검사·HWPX
+  세 입구가 `gg_hwpx.resolve_figure` 하나로 공유한다 — 뿌리 기준 경로는 예전과
+  같고, 원고 옆에만 있는 그림도 셋이 같이 찾으며, 같은 이름의 다른 그림이 두
+  곳에 있으면 셋 다 같은 안내 문장으로 멈춘다.
 """
 import contextlib
 import hashlib
@@ -13,6 +17,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import zipfile
 from pathlib import Path
 from unittest import mock
 
@@ -29,7 +34,9 @@ CAPTION = "그림 1. 재배 기술 (출처 : 농촌진흥청)"
 FIGURE = "## 가. 절\n\n![%s](app-figure:%s)\n\n%s\n" % (CAPTION, SHA, CAPTION)
 
 
-class GuiFigureWireTests(ContractCase):
+class FigureCase(ContractCase):
+    """그림 시험 공통 대역 — 프로젝트·런타임 모듈·가짜 앱 저장고."""
+
     def setUp(self):
         super().setUp()
         self.root = self.make_project()
@@ -39,8 +46,6 @@ class GuiFigureWireTests(ContractCase):
         self.builder = runtime("build_docx")
         self.docmod = runtime("gg_document")
         self.gd = runtime("gg_figure_docx")
-
-    # --- 대역 앱 저장고 ---------------------------------------------------
 
     def app_home(self, verdict="approved", body=PNG):
         tmp = tempfile.TemporaryDirectory(prefix="knuaf-figure-")
@@ -65,14 +70,20 @@ class GuiFigureWireTests(ContractCase):
         return mock.patch.dict(os.environ,
                                {"KNUAF_FIGURE_HOME": str(home) if home else ""})
 
-    def convert(self, text):
-        return self.builder.convert(text, base=str(self.root),
-                                    context=self.context)
+    def convert(self, text, base=None, root=None):
+        return self.builder.convert(text, base=str(base or self.root),
+                                    context=self.context,
+                                    root=None if root is None else str(root))
 
-    def missing_image(self, text):
-        return [i for i in self.docmod.check(text, str(self.root))
+    def missing_image(self, text, base=None):
+        """검사 입구 — `base`는 원고가 있는 폴더, 뿌리는 늘 프로젝트 폴더다."""
+        return [i for i in self.docmod.check(
+                    text, str(base or self.root),
+                    project_root=str(self.root))
                 if i[0] == "missing_image"]
 
+
+class GuiFigureWireTests(FigureCase):
     # --- §4 네 경우 -------------------------------------------------------
 
     def test_verified_app_token_is_inserted_and_passes_check(self):
@@ -277,6 +288,222 @@ class GuiFigureWireTests(ContractCase):
                               payload["reason"])
                 self.assertFalse(
                     (self.root / "build" / ("out%d.docx" % index)).exists())
+
+
+def manuscript(ref, caption="그림 1. 밭 전경 (출처 : 농촌진흥청)"):
+    """그림 한 줄 + 캡션. 캡션이 없으면 검사기가 missing_caption을 함께 낸다."""
+    return "## 가. 절\n\n![밭](%s)\n\n%s\n" % (ref, caption)
+
+
+class FigurePathResolveTests(FigureCase):
+    """M-02: 그림 목적지를 푸는 기준이 입구마다 같은가.
+
+    원고가 `build/` 아래에 있을 때 그림이 (a) 작업 폴더 뿌리 (b) 원고 옆 (c) 두
+    곳 모두에 있는 세 경우를 `gg_document.check`(검사) · `build_docx`(DOCX) ·
+    `gg_hwpx`(HWPX) 세 입구에 같은 원고로 넣고 결론을 맞춘다.
+
+    계약: 그림 목적지는 원고 옆 → 작업 폴더 뿌리 순서로 찾고(`gg_hwpx.resolve_figure`
+    하나를 세 입구가 함께 쓴다), 찾은 경로를 뿌리 기준 상대 경로로 다시 쓴다.
+    두 곳에 같은 이름의 **다른** 그림이 있으면 어느 입구도 고르지 않고 같은 안내
+    문장으로 멈춘다 — 틀린 그림이 조용히 들어가지 않는다(M-02).
+
+    토큰(`app-figure:<sha256>`)은 경로가 아니므로 위치와 무관하게 앱 저장고에서만
+    풀려야 한다.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.mc = runtime("gg_major_contract")
+        self.authorization = self.mc.authorize_output(
+            self.mc.OUTPUT_SCHOOL_PAPER, self.context)
+        self.gh = runtime("gg_hwpx")
+        self.split = runtime("gg_draft_split")
+
+    # --- 대역 ------------------------------------------------------------
+
+    def picture(self, rel, body=PNG):
+        path = self.root / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(body)
+        return path
+
+    def fake_kordoc(self):
+        """kordoc 없이 HWPX 발행 경로를 끝까지 돌리는 가짜 CLI.
+
+        어댑터 시험의 것을 그대로 쓴다 — 받은 마크다운은 `input-md.txt`,
+        generate argv는 `argv-generate.json`으로 프로젝트 뿌리에 남는다.
+        """
+        from tests.test_hwpx_adapter import FAKE_CLI
+
+        script = self.root / "fake_kordoc.py"
+        script.write_text(FAKE_CLI, encoding="utf-8")
+        (self.root / "control.json").write_text(
+            json.dumps({"markdown": ""}), encoding="utf-8")
+        return [sys.executable, str(script)]
+
+    def build_hwpx(self, out="out/검토.hwpx"):
+        return self.gh.build(
+            self.root / "build/본문.md", self.root / out,
+            context=self.context, authorization=self.authorization,
+            cli_command=self.fake_kordoc())
+
+    def sent_markdown(self):
+        return (self.root / "input-md.txt").read_text(encoding="utf-8")
+
+    def generate_argv(self):
+        return json.loads(
+            (self.root / "argv-generate.json").read_text(encoding="utf-8"))
+
+    def media(self, doc, name):
+        """DOCX를 저장해 `word/media/*`를 꺼낸다 — 어떤 바이트가 박혔는지 본다."""
+        path = self.root / name
+        doc.save(str(path))
+        with zipfile.ZipFile(path) as archive:
+            return [archive.read(entry) for entry in archive.namelist()
+                    if entry.startswith("word/media/")]
+
+    # --- 셋이 같은 결론인 경우 --------------------------------------------
+
+    def test_root_relative_figure_agrees_across_check_docx_and_hwpx(self):
+        """(a) 뿌리에만 있는 그림: 셋 다 찾는다 — 경로도 그대로다.
+
+        HWPX는 원고 옆(`build/`)에 없다가 뿌리에서 찾고, 목적지를 뿌리 기준
+        그대로(`figures/public/farm.png`) 다시 쓴다. 생성기에 주는 `--image-dir`은
+        작업 폴더 뿌리 하나뿐이다.
+        """
+        self.picture("figures/public/farm.png")
+        text = manuscript("figures/public/farm.png")
+        write_text(self.root, "build/본문.md", text)
+
+        self.assertEqual(self.missing_image(text), [])
+        doc = self.convert(text)
+        self.assertEqual(len(doc.inline_shapes), 1)
+        self.assertIn(PNG, self.media(doc, "root-only.docx"))
+
+        self.assertEqual("ready", self.build_hwpx()["status"])
+        argv = self.generate_argv()
+        self.assertEqual(1, argv.count("--image-dir"))
+        self.assertEqual(str(self.root.resolve()),
+                         argv[argv.index("--image-dir") + 1])
+        self.assertIn("![밭](figures/public/farm.png)", self.sent_markdown())
+        self.assertEqual(1, self.gh.embedded_picture_count(
+            (self.root / "out/검토.hwpx").read_bytes()))
+
+    def test_split_rewrite_leaves_root_relative_paths_untouched(self):
+        """분할이 고쳐 둔 뿌리 기준 경로는 한 번 더 돌아도 그대로다(멱등).
+
+        재작성이 값을 바꾸면 분할 뒤 발행에서 경로가 흔들린다 — HWPX가 받는
+        경로가 곧 분할이 쓴 경로임을 못 박는다.
+        """
+        self.picture("figures/public/farm.png")
+        body = manuscript("figures/public/farm.png")
+        rewritten, problems = self.split._rewrite_images(
+            body, self.root, self.root / "build")
+        self.assertEqual((rewritten, problems), (body, []))
+        write_text(self.root, "build/본문.md", rewritten)
+        self.assertEqual("ready", self.build_hwpx()["status"])
+        self.assertIn("![밭](figures/public/farm.png)", self.sent_markdown())
+
+    def test_split_rewrite_roots_beside_manuscript_figure(self):
+        """원고 옆에만 있는 그림은 분할이 뿌리 기준(`build/farm.png`)으로 고친다.
+
+        고친 경로는 발행에서 원고 옆(`build/` + `build/farm.png` = 없음)이 아니라
+        뿌리에서 찾힌다 — 분할과 발행이 같은 그림을 가리킨다.
+        """
+        self.picture("build/farm.png")
+        rewritten, problems = self.split._rewrite_images(
+            manuscript("farm.png"), self.root, self.root / "build")
+        self.assertEqual(problems, [])
+        self.assertIn("![밭](build/farm.png)", rewritten)
+        write_text(self.root, "build/본문.md", rewritten)
+        # 분할을 거친 뒤에는 두 입구가 같은 결론이다 — 고친 경로가 뿌리 기준이라
+        # DOCX·검사도 찾고, HWPX는 원고 옆 후보가 사라져 모호도 아니다.
+        self.assertEqual(self.missing_image(rewritten), [])
+        self.assertEqual(len(self.convert(rewritten).inline_shapes), 1)
+        self.assertEqual("ready", self.build_hwpx()["status"])
+        self.assertEqual(1, self.gh.embedded_picture_count(
+            (self.root / "out/검토.hwpx").read_bytes()))
+
+    # --- 세 입구가 같은 그림을 고르는가(M-02 고침) ------------------------
+
+    def test_beside_manuscript_figure_is_found_by_check_docx_and_hwpx(self):
+        """(b) 원고 옆에만 있는 그림: 셋 다 찾는 ー 검사 통과·DOCX 삽입·HWPX 발행.
+
+        그림 목적지는 원고 옆 -> 뿌리 순서로 푼다(#131이 HWPX에 넣은 규칙을
+        `gg_hwpx.resolve_figure` 하나로 모아 DOCX·검사도 같은 함수를 쓴다).
+        """
+        beside = self.picture("build/farm.png")
+        text = manuscript("farm.png")
+        write_text(self.root, "build/본문.md", text)
+        manuscript_dir = self.root / "build"
+
+        self.assertEqual(self.missing_image(text, base=manuscript_dir), [])
+        doc = self.convert(text, base=manuscript_dir, root=self.root)
+        self.assertEqual(len(doc.inline_shapes), 1)
+        self.assertIn(beside.read_bytes(), self.media(doc, "beside.docx"))
+
+        self.assertEqual("ready", self.build_hwpx()["status"])
+        self.assertIn("![밭](build/farm.png)", self.sent_markdown())
+        self.assertEqual(1, self.gh.embedded_picture_count(
+            (self.root / "out/검토.hwpx").read_bytes()))
+
+    def test_two_candidates_stop_check_docx_and_hwpx_with_the_same_sentence(self):
+        """(c) 두 곳에 같은 이름의 다른 그림: 셋 다 멈추고 같은 문장을 보여 준다.
+
+        뿌리 그림을 조용히 고르지 않는다(M-02). 세 입구가 같은 후보 순서
+        (원고 옆 먼저)와 같은 안내 문장을 쓴다.
+        """
+        self.picture("figures/public/farm.png")
+        self.picture("build/figures/public/farm.png", PNG + b"other")
+        text = manuscript("figures/public/farm.png")
+        write_text(self.root, "build/본문.md", text)
+        manuscript_dir = self.root / "build"
+        sentence = self.gh.ambiguous_image_message(
+            ["build/figures/public/farm.png", "figures/public/farm.png"])
+
+        self.assertEqual(self.missing_image(text, base=manuscript_dir),
+                         [("missing_image",
+                           "figures/public/farm.png: " + sentence)])
+        with self.assertRaises(ValueError) as caught:
+            self.convert(text, base=manuscript_dir, root=self.root)
+        self.assertEqual(str(caught.exception), sentence)
+
+        with self.assertRaises(self.gh.HwpxBlocked) as ctx:
+            self.build_hwpx()
+        self.assertEqual("image_ambiguous", ctx.exception.reason)
+        self.assertEqual(["build/figures/public/farm.png",
+                          "figures/public/farm.png"],
+                         ctx.exception.details["candidates"])
+        self.assertEqual(sentence, ctx.exception.details["action"])
+        self.assertFalse((self.root / "out/검토.hwpx").exists())
+        self.assertFalse((self.root / "argv-generate.json").exists(),
+                         "모호하면 생성기를 부르기 전에 멈춘다")
+
+    # --- 앱 그림 토큰은 위치와 무관하게 저장고에서만 ----------------------
+
+    def test_app_token_resolves_from_the_store_not_from_the_manuscript_folder(self):
+        """원고가 `build/` 아래에 있어도 토큰은 저장고에서 풀린다(위치 무관).
+
+        검사·DOCX는 토큰을 통과시키고 저장고 바이트를 넣는다(HWPX는 토큰을 풀
+        수 없어 거절하므로 여기서 부르지 않는다 — 아래 시험과 어댑터 시험이
+        잠근다).
+        """
+        text = manuscript("app-figure:" + SHA)
+        write_text(self.root, "build/본문.md", text)
+        with self.at_home(self.app_home()):
+            self.assertEqual(self.missing_image(text), [])
+            doc = self.convert(text)
+        self.assertEqual(len(doc.inline_shapes), 1)
+        self.assertEqual([PNG], self.media(doc, "token.docx"))
+
+    def test_app_token_from_subfolder_still_blocks_hwpx(self):
+        """원고가 하위 폴더에 있어도 토큰은 HWPX에서 거절된다(생성기 호출 전)."""
+        write_text(self.root, "build/본문.md", manuscript("app-figure:" + SHA))
+        with self.assertRaises(self.gh.HwpxBlocked) as ctx:
+            self.build_hwpx()
+        self.assertEqual("app_figure_unsupported", ctx.exception.reason)
+        self.assertEqual(["app-figure:" + SHA], ctx.exception.details["images"])
+        self.assertFalse((self.root / "argv-generate.json").exists())
 
 
 if __name__ == "__main__":
