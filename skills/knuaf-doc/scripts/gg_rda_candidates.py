@@ -570,9 +570,17 @@ def _source_reason(record):
 
     ``None`` = the row declares a well-formed source.  A missing source
     dict, a missing key, or an empty string is ``source_unknown``; a
-    present value of the wrong type, or ``aggregation_group !=
-    survey + "." + str(data_year)``, is ``source_invalid``.  No default
-    source (``rda`` or otherwise) is ever substituted."""
+    present value of the wrong type, ``aggregation_group !=
+    survey + "." + str(data_year)``, or a ``data_year`` that disagrees
+    with the row's observation year, is ``source_invalid``.  No default
+    source (``rda`` or otherwise) is ever substituted.
+
+    The year cross-check is the PR4 E2 contract: a record's ``data_year``
+    IS the year it observes (a series record carries the table's last
+    year), so a source attached to another year's row is a mis-mounted
+    receipt, not a lead.  Only two INTEGER years can disagree — a
+    missing/non-integer ``basis.year`` is left to the ``year_unknown``
+    branch of :func:`_default_year` instead of being reported twice."""
     src = (record or {}).get("source")
     if not isinstance(src, dict):
         return "source_unknown"
@@ -588,6 +596,10 @@ def _source_reason(record):
     if isinstance(data_year, bool) or not isinstance(data_year, int):
         return "source_invalid"
     if group != survey + "." + str(data_year):
+        return "source_invalid"
+    observed = ((record or {}).get("basis") or {}).get("year")
+    if isinstance(observed, int) and not isinstance(observed, bool) \
+            and observed != data_year:
         return "source_invalid"
     return None
 
