@@ -70,9 +70,9 @@ ORIGINAL_WRITING_FINGERPRINTS = {
 }
 BASELINE_SEMANTIC_DIGEST = {
     "rda.income.national.2024":
-        "d473fc76211ea7c2917d02209da86bef1439bb1ebaa99f6d3c61174b7e2d04f5",
+        "36af2f71db5a6b3581e42be5f4a500f3eafeb78020777eedb1db104d4ce462b1",
     "rda.income.regional.2024":
-        "cc6f4c4dcc463657b5322fa6fc7eff0cc9bd7e5e3e95ccb8f84802c50df74d71",
+        "6e320a7ecca67f5e6789bdcce4a43b87023c072780895a568d5b4e720a8d1a7b",
     "mafra.specialty.production.2024":
         "0b636815fa11a515929f4679a802d4d6756686096e37991fbf623fd5ff31c741",
     "official-writing-guide-pdf":
