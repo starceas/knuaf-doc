@@ -193,6 +193,7 @@ class PublicationLifecycle(unittest.TestCase):
 
     def test_import_core_inventory_replay_source_and_foreign_preserved(self):
         canonical = (self.root / "project.json").read_bytes()
+        notices = (self.root / ".knuaf-notices.json").read_bytes()
         real_read = Path.read_bytes
         def payload_read(path):
             if path.relative_to(self.root).parts[0] in core._control_files():
@@ -205,7 +206,12 @@ class PublicationLifecycle(unittest.TestCase):
                 inventory = core._import_inventory(self.root)
                 self.assertEqual({"project.json", ".knuaf-notices.json"},
                                  set(inventory))
-                self.assertEqual(core.digest(canonical), inventory["project.json"])
+                # 값이 **그 파일의 실제 해시**여야 색인이 증거가 된다. 존재만
+                # 확인하면 다른 바이트를 해시한 색인도 통과한다.
+                self.assertEqual(hashlib.sha256(canonical).hexdigest(),
+                                 inventory["project.json"])
+                self.assertEqual(hashlib.sha256(notices).hexdigest(),
+                                 inventory[".knuaf-notices.json"])
         source = self.parent / "legacy source"
         (source / "sections").mkdir(parents=True)
         data = "# 개요\n본문\n".encode("utf-8")

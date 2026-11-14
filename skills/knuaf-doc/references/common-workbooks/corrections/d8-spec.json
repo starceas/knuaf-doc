@@ -32,6 +32,14 @@
       "sheet": "8. 노무비계획",
       "cell": "Z27",
       "formula": "Z28"
+    },
+    {
+      "source_sha256": "76300305fdaf165bcce54fc3de2b476c91f4e8e368bc0455a8c69aa3eee9cd1d",
+      "audit_file": "formula-audit/school_17_sheet_v2.json",
+      "audit_sha256": "1b76232f89f70ffa12ecc05289787d4c63e226b3b230601fa30ca77d117bce5a",
+      "sheet": "8. 노무비계획",
+      "cell": "Z27",
+      "formula": "Z28"
     }
   ],
   "sales_sheet": " 5. 판매계획",

@@ -6,7 +6,7 @@ import unicodedata
 from pathlib import Path
 from urllib.parse import unquote
 from gg_core import draft, START, END
-from gg_hwpx import find_images
+from gg_hwpx import find_images, resolve_figure, ambiguous_image_message
 
 # 학명 이탤릭은 이명법(속명+종소명)+명명자/등급 표지가 함께 나오는 경우만
 # 적용한다. 종소명 자리의 영어 기능어(전치사·접속사·관사·조동사·대명사·흔한
@@ -1591,7 +1591,8 @@ def _sample_identity_checks(nodes, project_root, issues):
 
 def check(text, base, major_id=None, project_root=None):
     if major_id is None:
-        major_id = _project_major(base)
+        major_id = _project_major(
+            project_root if project_root is not None else base)
     nodes = parse(
         text, with_spans=True, _with_term_positions=True, major_id=major_id
     )
@@ -1711,14 +1712,23 @@ def check(text, base, major_id=None, project_root=None):
                 issues.append(("missing_image", n["path"] + ": " + token_issue))
             elif not handled:
                 p = Path(n["path"])
-                if (
-                    p.is_absolute()
-                    or "://" in str(p)
-                    or base is None
-                    or not (Path(base) / p).is_file()
-                    or not (Path(base) / p).resolve().is_relative_to(Path(base).resolve())
-                ):
+                if p.is_absolute() or "://" in str(p) or base is None:
+                    # 절대 경로·URL은 원고에 적지 않는다(다른 컴퓨터에서 열리지
+                    # 않는다) — 이 판정은 M-02 이전 그대로다.
                     issues.append(("missing_image", n["path"]))
+                else:
+                    # 원고 옆(base) → 작업 폴더 뿌리(project_root) 두 단계.
+                    # HWPX 발행·DOCX 빌드와 같은 해석기를 쓴다(M-02).
+                    found, candidates = resolve_figure(
+                        n["path"], base,
+                        project_root if project_root is not None else base)
+                    if candidates:
+                        issues.append(
+                            ("missing_image",
+                             n["path"] + ": "
+                             + ambiguous_image_message(candidates)))
+                    elif found is None:
+                        issues.append(("missing_image", n["path"]))
         if n["kind"] == "table":
             if _caption_before_table(nodes, i) is None:
                 # 식량작물 양식은 2장 SWOT처럼 제목 없는 표를 정상으로 쓴다

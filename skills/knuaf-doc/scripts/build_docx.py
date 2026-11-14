@@ -24,6 +24,7 @@ except ImportError as error:  # python-docx (or its layout helper) absent
     DOCX_IMPORT_ERROR = error
 from gg_document import parse, spans, SCI, FRONT, school_toc_range, school_frontmatter_plan, split_caption_credit
 from gg_core import digest, local
+import gg_hwpx
 from gg_document import photo_guide, photo_requests
 from gg_body_layout import NOTE, spacer_positions, review_requests
 import gg_figure_docx
@@ -286,10 +287,16 @@ def _apply_consent_formatting(doc, font, profile):
 
 
 def convert(md_text, font=FONT, base=".", table_reports=None, *,
-            context=None, toc=True):
+            context=None, toc=True, root=None):
     """Render the paper markdown into a DOCX document.  Policy B: the
     explicit major must be authorized against the canonical binding
-    (``context``) before anything is rendered."""
+    (``context``) before anything is rendered.
+
+    ``base``은 원고가 있는 폴더, ``root``는 작업 폴더 뿌리다. 그림 목적지는
+    원고 옆(``base``)에서 먼저 찾고 없으면 ``root``에서 한 번 더 찾는다 —
+    HWPX 발행·원고 검사와 같은 규칙(``gg_hwpx.resolve_figure``)이다. ``root``가
+    None이면 ``base`` 하나만 보는 기존 동작 그대로다.
+    """
     import gg_major_contract as mc
 
     authorization = mc.authorize_output(mc.OUTPUT_SCHOOL_PAPER, context)
@@ -344,12 +351,17 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
                 target, issue = gg_figure_docx.node_target(n["path"])
                 if issue:
                     raise ValueError("blocked: " + issue)
-                p = target if target is not None else (Path(base) / n["path"]).resolve()
-                if target is None and not p.is_relative_to(Path(base).resolve()):
+                if target is None:
+                    # 학생 그림: 원고 옆(base) → 작업 폴더 뿌리(root) 두 단계.
+                    # HWPX 발행·원고 검사와 같은 해석기 하나를 쓴다(M-02).
+                    target, candidates = gg_hwpx.resolve_figure(
+                        n["path"], base, root)
+                    if candidates:
+                        raise ValueError(
+                            gg_hwpx.ambiguous_image_message(candidates))
+                if target is None:
                     raise ValueError("그림 파일 없음/외부 경로: " + n["path"])
-                if not p.is_file():
-                    raise ValueError("그림 파일 없음/외부 경로: " + n["path"])
-                doc.add_picture(str(p), width=Mm(145))
+                doc.add_picture(str(target), width=Mm(145))
                 picture_paragraph = doc.paragraphs[-1]
                 picture_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
                 picture_paragraph.paragraph_format.keep_with_next = True
@@ -844,8 +856,11 @@ def main(argv=None):
         if not source_text.strip():
             raise ValueError("내보낼 본문이 없음: 입력 파일이 비어 있음")
         table_reports = []
-        doc = convert(source_text, a.font, base,
-                      table_reports=table_reports, context=context, toc=a.toc)
+        # 그림 목적지는 원고 옆(src.parent) → 작업 폴더 뿌리(base) 순서로 푼다
+        # (M-02). HWPX 발행(build_hwpx)과 같은 두 단계 규칙이다.
+        doc = convert(source_text, a.font, src.parent,
+                      table_reports=table_reports, context=context, toc=a.toc,
+                      root=base)
         mc.reconfirm_output(authorization, context)
         out.parent.mkdir(parents=True, exist_ok=True)
         doc.save(out)

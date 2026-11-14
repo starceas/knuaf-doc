@@ -65,6 +65,8 @@ class _Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.0"
 
     def do_GET(self):
+        self.server.seen[self.path] = {
+            key.lower(): value for key, value in self.headers.items()}
         route = self.server.routes.get(self.path)
         if route is None:
             self.send_error(404)
@@ -82,6 +84,33 @@ class _Handler(BaseHTTPRequestHandler):
 
     def log_message(self, *args):
         pass
+
+
+class TestVersion(unittest.TestCase):
+    """판 문자열은 ``version.json`` 하나에서 온다 — 상수로 박지 않는다."""
+
+    def test_version_matches_the_deployed_version_file(self):
+        doc = json.loads((SCRIPTS.parent / "version.json")
+                         .read_text(encoding="utf-8"))
+        self.assertEqual(doc["version"], gg_figure.VERSION)
+
+    def test_unreadable_version_file_falls_back_to_unknown(self):
+        """판독 불가는 그림 기능을 막지 않는다 — UA 판만 ``unknown``이 된다."""
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "version.json"
+            for text in ("{}", '{"schema": "knuaf-doc/version@1"}',
+                         '{"schema": "wrong", "version": "1.2.3", '
+                         '"repo": "starceas/knuaf-doc"}',
+                         '{"schema": "knuaf-doc/version@1", "version": "1.2", '
+                         '"repo": "starceas/knuaf-doc"}',
+                         "not json"):
+                path.write_text(text, encoding="utf-8")
+                with self.subTest(text=text):
+                    with mock.patch.object(gg_figure, "VERSION_FILE", path):
+                        self.assertEqual("unknown", gg_figure.skill_version())
+            absent = Path(temp) / "absent.json"
+            with mock.patch.object(gg_figure, "VERSION_FILE", absent):
+                self.assertEqual("unknown", gg_figure.skill_version())
 
 
 class TestMarks(unittest.TestCase):
@@ -183,6 +212,7 @@ class _ServerCase(unittest.TestCase):
         context.load_cert_chain(str(cert), str(key))
         cls.server.socket = context.wrap_socket(cls.server.socket, server_side=True)
         cls.server.routes = {}
+        cls.server.seen = {}
         cls.thread = threading.Thread(target=cls.server.serve_forever, daemon=True)
         cls.thread.start()
         cls.tls = ssl.create_default_context(cafile=str(cert))
@@ -219,6 +249,16 @@ class _ServerCase(unittest.TestCase):
 class TestHttp(_ServerCase):
     def setUp(self):
         self.server.routes.clear()
+        self.server.seen.clear()
+
+    def test_user_agent_carries_the_deployed_version(self):
+        """UA의 판은 ``version.json``에서 온다 — 상수로 박으면 판마다 손대야 한다."""
+        self.route(DETAIL_PATH, b"ok")
+        self.get("https://" + HOST + DETAIL_PATH)
+        doc = json.loads((SCRIPTS.parent / "version.json")
+                         .read_text(encoding="utf-8"))
+        self.assertEqual("knuaf-doc/" + doc["version"],
+                         self.server.seen[DETAIL_PATH]["user-agent"])
 
     def test_fetches_page_and_image(self):
         self.route(DETAIL_PATH, https_page("nongsaro-1941-license.html").encode())

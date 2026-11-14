@@ -3003,7 +3003,8 @@ _FINANCE_AREA_ROLES = (
     "facility_m2", "cultivation_m2", "bed_m2", "management_m2")
 # review_plan은 학과 17시트 통합문서 전용 검사다. 다른 재무 프로필
 # (예: 원예 18시트)에 돌리면 없는 시트를 결함으로 오판한다(INTEG-R1-02).
-_FINANCE_PLAN_PROFILE = "school_17_sheet_v1"
+# 어느 판이 17시트인지는 gg_school_excel.profile_supports가 정한다 —
+# 여기에 이름을 적으면 새 양식이 붙을 때 조용히 검사 밖으로 빠진다.
 # 12 손익계획·1. 기초재무상태조사 금액 단위는 천원이고, 재무 게이트의
 # 목표연도 손익 사실은 원 단위다(INTEG-R1-03 반례).
 _FINANCE_PLAN_WON_PER_UNIT = 1000.0
@@ -3016,6 +3017,7 @@ def _finance_plan_supported(p):
     전공 계약을 깨뜨린다.
     """
     import gg_major_contract as mc
+    from gg_school_excel import profile_supports
 
     try:
         registry = mc.default_registry()
@@ -3024,7 +3026,7 @@ def _finance_plan_supported(p):
     except mc.MajorContractError:
         return False
     return any(
-        c.status == "supported" and c.profile == _FINANCE_PLAN_PROFILE
+        c.status == "supported" and profile_supports(c.profile)
         for c in module.finance_capabilities)
 
 def _finance_gate_target(p):
@@ -3045,9 +3047,11 @@ def _finance_plan_candidates(root, p):
         path = source.get("path")
         if not isinstance(path, str) or not path.lower().endswith(".xlsx"):
             continue
-        if ("workbook_profile" in source and
-                source["workbook_profile"] != _FINANCE_PLAN_PROFILE):
-            continue
+        if "workbook_profile" in source:
+            from gg_school_excel import profile_supports
+
+            if not profile_supports(source["workbook_profile"]):
+                continue
         try:
             if digest(local(root, path).read_bytes()) != source.get("hash"):
                 continue
@@ -5166,7 +5170,7 @@ def checks(root, p):
             _add_finance_plan_review(root, p, body, add, gate_state)
         elif not plan_supported:
             add("finance_plan_review_scope", "finance",
-                "17시트 재무 계획 검사 미지원: school_17_sheet_v1 전용",
+                "17시트 재무 계획 검사 미지원: 학과 17시트 양식 전용",
                 severity="info", status="not_checked")
         items, claims_block = _finance_check_items(p)
         if claims_block:

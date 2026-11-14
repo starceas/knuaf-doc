@@ -33,7 +33,26 @@ import time
 import urllib.parse
 from pathlib import Path
 
-VERSION = "0.4.11"
+import gg_update
+
+# 판 문자열은 배포된 ``version.json`` 하나에서 온다. 예전에는 이 자리에
+# ``"0.4.11"`` 고정 문자열이 있어 v0.5.0 판까지 낡은 채로 user-agent 에
+# 실렸다(사람이 판마다 손으로 고쳐야 했다). 판독 규칙은 ``gg_update`` 정본
+# 하나만 쓴다 — 여기서 다시 적으면 두 규칙이 갈린다. 읽기는 import 한 번뿐이고
+# 실패는 ``"unknown"``으로 닫는다(그림 기능 자체를 막지 않는다).
+VERSION_FILE = Path(__file__).resolve().parent.parent / "version.json"
+
+
+def skill_version():
+    """배포된 ``version.json``의 판 문자열. 실패는 ``"unknown"``(예외 없음)."""
+    try:
+        return gg_update.format_version(
+            gg_update.read_version_file(VERSION_FILE))
+    except (OSError, gg_update.VersionUnreadable):
+        return "unknown"
+
+
+VERSION = skill_version()
 
 HEARTBEAT_STALE_MS = 15_000
 POLL_SECONDS = 60.0
