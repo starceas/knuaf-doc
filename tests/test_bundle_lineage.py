@@ -204,14 +204,14 @@ class RealTreeTests(ContractCase):
                                "P10", "P11", "P12", "P13", "P14", "P15",
                                "P17", "P18", "P19", "P20", "P21", "P22", "P25", "P26", "P27", "P28", "dairy-0.1.0", "dairy-f1",
                                "food-crops-0.1.0", "dairy-excel-blank",
-                               "specialty-abc-0.1.0"})
+                               "specialty-abc-0.1.0", "W8"})
                 self.assertIn(meta["owner"],
                               {"A", "B", "C", "S", "P4", "P5", "P6", "P7",
                                "P8", "P9", "P10", "P11", "P12", "P13",
                                "P14", "P15", "P16", "P17", "P18", "P19",
                                "P20", "P21", "P22", "P23", "P24", "P25", "P26", "P27", "P28", "dairy-0.1.0", "dairy-f1",
                                "food-crops-0.1.0", "IMG-path", "dairy-excel-blank",
-                               "specialty-abc-0.1.0"})
+                               "specialty-abc-0.1.0", "W8"})
 
 
 
