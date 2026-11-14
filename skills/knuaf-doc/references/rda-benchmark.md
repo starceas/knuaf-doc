@@ -66,6 +66,33 @@ aggregation_group·data_year…)를 갖는다 — `rda.income` 602행,
 기준으로 기본값이 붙는 소득 그룹 146개는 관측 판정이 `ambiguous`→`unique`로
 풀리고, 사용 승인 상태는 그대로 `unapproved`다(연도 선택은 승인이 아니다).
 
+**144 vs 146 — 같은 측정의 두 분모 (W3G-02).** 두 수는 모순이 아니라 그룹
+묶음 축과 모집단이 다르다. 한 스크립트는 지역을 `level + sido`로, 다른
+스크립트는 `region.name`으로 묶고, 후자는 작목명·지역명이 없는 행(도매
+시세 시계열 등)을 먼저 버린다. 광역시 표기가 연도별로 갈린 2그룹이
+전자에서만 연도별로 쪼개진다.
+
+| 측정 | 그룹 축 | 모집단 행 | 다년 그룹 | 기본값 적용 |
+|---|---|---:|---:|---:|
+| `measure-g3.py` | `kind + crop.name + region.level/sido + crop.form` | 6,315 | 422 | 144 |
+| `entry_trans.py` | `kind + crop.name + region.name + crop.form` | 4,041 | 395 | 146 |
+| 차 | — | −2,274 | −27 | **+2** |
+
+갈린 2그룹(2024·2025 소득 지역 팩 실측):
+
+| 작목 | form | 지역 | 2024 `region.level` | 2025 `region.level` | 연도 |
+|---|---|---|---|---|---|
+| 고구마 | 노지 | 인천 | `metropolitan` | `provincial` | 2024·2025 |
+| 밀 | 노지 | 광주 | `metropolitan` | `provincial` | 2024·2025 |
+
+`region.name`으로 묶으면 같은 지역의 두 해가 한 그룹이 되고(다년 → 기본값
+적용), `level`까지 묶으면 연도별로 다른 level 때문에 각각 1년짜리 두
+그룹이 되어 기본값이 붙지 않는다 — 그래서 적용 수가 144 대 146으로 갈린다.
+조회 코드는 두 표기를 같게 다루므로(`gg_rda_lookup._region_matches`가
+`provincial`·`metropolitan`을 함께 처리하고, `gg_rda_candidates._record_region`도
+sido만 비교한다) 진입점 결과에는 차이가 없다 — 갈리는 것은 **측정 분모뿐**이다.
+2024 팩의 `metropolitan` 표기는 PR4 데이터 단계에서 `provincial`로 고친다.
+
 `catalog.json.gaps[]`(현재 4건)은 팩이 덮지 못하는 범위를 누적으로 기록한 목록이다.
 확인된 공백 — 시설비·인건비·종묘비·비료·농약비·관수·전기·수선유지·공공요금·재배기술·
 인건비 단가(작업별)·재배시설 시공비 등. 누락 시 `not_found`로 돌아가고
@@ -136,10 +163,16 @@ aggregation_group·data_year…)를 갖는다 — `rda.income` 602행,
 | reason | 조건 |
 |---|---|
 | `source_unknown` | 후보 중 하나라도 `source` 없음 / `survey`·`data_year`·`aggregation_group` 없음·빈 값 |
-| `source_invalid` | 값 형식 위반 또는 `aggregation_group != survey + "." + data_year` |
+| `source_invalid` | 값 형식 위반, `aggregation_group != survey + "." + data_year`, 또는 `source.data_year != basis.year` |
 | `survey_mixed` | 후보에 `source.survey`가 둘 이상 — **승인상태·연도 비교보다 먼저** 검사한다 |
 | `group_unresolved` | 호출자가 안 준 `kind`·`form` 축에 값이 둘 이상(예: 노지·시설) |
 | `year_unknown` | 고를 등급 안에 정수 연도가 없다 |
+
+출처 연도는 관측 연도와 같아야 한다 — 행이 대표하는 기준 연도가 곧
+`source.data_year`이고, 여러 해를 한 레코드에 담은 시계열은 표의 마지막
+연도가 그 값이다. 어긋난 출처는 다른 해 표에 붙은 영수증이므로
+`source_invalid`로 막는다. `basis.year`가 정수가 아니면 이 검사는 걸지
+않고 아래 순서의 `year_unknown`에 맡긴다(같은 결함을 두 번 보고하지 않는다).
 
 순서: 출처 검사 → survey 혼합 → 그룹 유일성 → (최고 `catalog_status` 등급
 → 그 등급 안 최대 연도). **어떤 경우에도 출처를 지어내지 않는다.** 명시
