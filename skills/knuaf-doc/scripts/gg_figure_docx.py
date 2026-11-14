@@ -77,8 +77,6 @@ import os
 import re
 from pathlib import Path
 
-VERSION = "0.4.11"
-
 TOKEN = re.compile(r"^app-figure:([0-9a-f]{64})$")
 PLACEHOLDER = "앱에서 받은 그림"
 STUDENT_NOTICE = "학생이 넣은 그림 %d장 — 출처·권리는 학생 확인"
