@@ -24,7 +24,7 @@ import gg_document
 import gg_fs
 import gg_hwpx
 import gg_major_contract as mc
-from gg_major_format import profile_for
+from gg_major_format import ENABLED_FORMAT_MAJORS, enabled_profile
 
 
 FONT = gg_hwpx.SCHOOL_FONT
@@ -65,15 +65,15 @@ FOOD_CROPS_HUMAN_FINISH = HUMAN_FINISH + (
     "요약이 Ⅰ부터, 본문이 1부터인지 확인 — 자동으로 맞췄지만 한글에서 확인한다",
 )
 
-# HWPX 빌더가 프로필 표를 읽는 전공. 낙농(`dairy`)은 표에 값이 있지만 이
-# 단위는 식량작물 치환만 다루므로 여기서 막는다 — 켜는 커밋에서 이 줄만
-# 고치면 된다. 목록에 없는 전공은 지금까지의 기본 경로를 그대로 탄다.
-HWPX_PROFILE_MAJORS = ("food_crops",)
+# HWPX 빌더가 프로필 표를 읽는 전공. 값은 `gg_major_format.ENABLED_FORMAT_MAJORS`
+# 한 곳이 정한다 — 게이트를 켜는 것은 그 상수 한 줄이다. 이 이름은 기존
+# 시험이 패치하는 통로라 별칭으로 남긴다(값이 아니라 같은 튜플 객체).
+HWPX_PROFILE_MAJORS = ENABLED_FORMAT_MAJORS
 
 
 def hwpx_profile(major_id):
     """HWPX 빌더가 읽을 전공 서식 프로필(없으면 None = 기본 경로)."""
-    return profile_for(major_id) if major_id in HWPX_PROFILE_MAJORS else None
+    return enabled_profile(major_id, HWPX_PROFILE_MAJORS)
 
 
 def notice(verify, major_id=None):
@@ -162,7 +162,24 @@ _FOOD_CROPS_CHAPTER_RE = re.compile(
 _P_RE = re.compile(r"<hp:p\b[^>]*>.*?</hp:p>", re.S)
 _T_RE = re.compile(r"<hp:t\b[^>]*>(.*?)</hp:t>", re.S)
 
-def add_chapter_breaks(section_xml, heading_para_ref="1", major_id=None):
+def chapter_break_texts(md_text, major_id=None):
+    """HWPX 장 새 쪽 판정에 쓸 본문 1단계 제목 글자 목록(첫째는 뺀다).
+
+    워드의 `build_docx.chapter_break_node_ids`와 같은 규칙이다: 앞부분 계획이
+    있으면 `["body"]` 이후, 없으면 전체 노드에서 1단계 제목을 모으고 첫째를
+    뺀다(첫 장은 표지 다음 새 쪽/목차 쪽 나눔으로 이미 새 쪽에서 시작한다).
+    글자로 돌려주는 이유는 HWPX가 원고 노드가 아니라 문단 XML이기 때문이다.
+    """
+    nodes = gg_document.parse(md_text, major_id=major_id)
+    plan = gg_document.school_frontmatter_plan(nodes, major_id)
+    body = nodes[plan["body"]:] if plan is not None else nodes
+    headings = [node.get("text", "").strip() for node in body
+                if node.get("kind") == "heading" and node.get("level") == 1]
+    return headings[1:]
+
+
+def add_chapter_breaks(section_xml, heading_para_ref="1", major_id=None,
+                       chapter_texts=None):
     """장(Ⅰ~Ⅵ) 제목 문단에 쪽 나눔을 넣는다(이미 있으면 그대로).
 
     kordoc `--plain` 산출물에는 장 시작 쪽 나눔이 없어 Ⅰ장이 표지 다음
@@ -170,20 +187,39 @@ def add_chapter_breaks(section_xml, heading_para_ref="1", major_id=None):
     확인하고 그 문단에만 pageBreak="1"을 준다(재무제표 주석의 Ⅰ. 항목은
     본문 스타일이라 대상이 아니다). 식량작물은 아라비아 장 번호를 쓰므로
     ``major_id``가 그 전공일 때만 번호 체계를 바꾼다.
+
+    ``chapter_texts``가 None이 아니면 정규식 대신 **글자가 그 목록에 있는지**로
+    판정한다. 낙농 원고의 장 번호는 Ⅰ.일 수도 1.일 수도 있어 정규식으로는
+    가를 수 없고, 마크다운 1단계 제목(노드)으로 이미 정해진 목록을 그대로 쓴다.
+
+    목록 방식에서는 문단 모양(`paraPrIDRef`) 게이트를 쓰지 않는다. kordoc이
+    장 제목에 붙이는 모양 번호는 원고에 따라 다르다(실측: `#` 제목이 있는
+    원고는 `1`, 제목 표시 없는 낙농 원고는 `7` 또는 로마 번호 장이면 `0`).
+    모양 번호를 고정하면 낙농 HWPX에 쪽 나눔이 하나도 안 들어간다. 대신 목록
+    자체가 이미 그 원고의 1단계 제목에서 나왔으므로 글자 일치만으로 충분하다.
+
+    이 갈래는 게이트가 낙농을 막고 있는 동안 **닿지 않는다**(`chapter_texts`는
+    `hwpx_chapter == "nodes"`인 프로필, 곧 게이트 안 전공에만 계산된다).
+    그래서 이 묶음의 출력은 안 바뀌고, 다음 판에서 게이트 한 줄만 켜도
+    장 쪽 나눔이 살아 있다(떼어 내면 그 함정이 그대로 되살아난다).
     """
     chapter_re = _CHAPTER_RE
     profile = hwpx_profile(major_id)
     if profile is not None and profile.hwpx_chapter_re is not None:
         chapter_re = profile.hwpx_chapter_re
+    chapter_set = None if chapter_texts is None else set(chapter_texts)
     chapters = []
 
     def fix(match):
         para = match.group(0)
         head = re.match(r"<hp:p\b[^>]*>", para).group(0)
-        if 'paraPrIDRef="' + heading_para_ref + '"' not in head:
-            return para
         text = "".join(_T_RE.findall(para)).strip()
-        if not chapter_re.match(text):
+        if chapter_set is None:
+            if 'paraPrIDRef="' + heading_para_ref + '"' not in head:
+                return para
+            if not chapter_re.match(text):
+                return para
+        elif text not in chapter_set:
             return para
         chapters.append(text)
         if 'pageBreak="' in head:
@@ -192,11 +228,65 @@ def add_chapter_breaks(section_xml, heading_para_ref="1", major_id=None):
 
     return _P_RE.sub(fix, section_xml), chapters
 
-def apply_layout(data, *, margins_mm=None, major_id=None):
-    """생성된 HWPX 바이트에 표 폭·장 쪽 나눔을 적용한다(순수 바이트 변환)."""
+# header.xml의 문단 모양 하나를 통째로 잡는 정규식. 프로필의 제목 여백은
+# `type="OUTLINE"`(개요) 모양에만 걸어야 한다 — 본문(`type="NONE"`) 여백이
+# 따라 바뀌면 학교 규격 본문이 무너진다.
+_HEADER_PARA_PR_RE = re.compile(
+    r"<hh:paraPr\b(?![^>]*/>)[^>]*>.*?</hh:paraPr>", re.S)
+_HEADER_PARA_PR_ID_RE = re.compile(r'<hh:paraPr\b[^>]*?\sid="(\d+)"')
+_OUTLINE_HEADING_RE = re.compile(r'<hh:heading\b[^>]*type="OUTLINE"')
+_HC_PREV_RE = re.compile(r'(<hc:prev\b[^>]*?value=")(\d+)(")')
+_HC_NEXT_RE = re.compile(r'(<hc:next\b[^>]*?value=")(\d+)(")')
+
+def set_heading_margins(header_xml, prev, next_):
+    """제목(개요) 문단 모양의 위·아래 여백을 바꾼다(순수 문자열 변환).
+
+    `<hh:heading type="OUTLINE" …/>`을 가진 문단 모양의 `hc:prev`·`hc:next`
+    값만 그 값으로 바꾼다. 0 이하인 값은 그대로 둔다(프로필 기본값 0 =
+    미적용). 두 값이 모두 0 이하이거나 바뀔 곳이 없으면 입력 문자열을
+    그대로 돌려준다(바이트 불변).
+    반환: (새 header.xml, 바꾼 문단 모양 id 목록).
+    """
+    prev = int(prev or 0)
+    next_ = int(next_ or 0)
+    if prev <= 0 and next_ <= 0:
+        return header_xml, []
+    changed = []
+
+    def fix(match):
+        para = match.group(0)
+        if not _OUTLINE_HEADING_RE.search(para):
+            return para
+        updated = para
+        if prev > 0:
+            updated = _HC_PREV_RE.sub(
+                lambda m: m.group(1) + str(prev) + m.group(3),
+                updated, count=1)
+        if next_ > 0:
+            updated = _HC_NEXT_RE.sub(
+                lambda m: m.group(1) + str(next_) + m.group(3),
+                updated, count=1)
+        if updated == para:
+            return para
+        found = _HEADER_PARA_PR_ID_RE.match(para)
+        if found:
+            changed.append(found.group(1))
+        return updated
+
+    return _HEADER_PARA_PR_RE.sub(fix, header_xml), changed
+
+def apply_layout(data, *, margins_mm=None, major_id=None, chapter_texts=None):
+    """생성된 HWPX 바이트에 표 폭·장 쪽 나눔·제목 여백을 적용한다.
+
+    순수 바이트 변환이다 — 입력 바이트는 건드리지 않고 새 ZIP 바이트를 낸다.
+    ``chapter_texts``가 None이 아니면 장 새 쪽을 정규식 대신 그 글자 목록으로
+    판정한다(노드 방식 프로필).
+    """
     width = body_width_units(margins_mm)
     report = {"body_width": width, "tables": 0, "previous_widths": [],
               "chapter_breaks": []}
+    # 프로필이 없거나 여백 값이 0이면 header.xml은 손대지 않는다(바이트 불변).
+    profile = hwpx_profile(major_id)
     source = io.BytesIO(data)
     target = io.BytesIO()
     with zipfile.ZipFile(source, "r") as zin, zipfile.ZipFile(target, "w") as zout:
@@ -212,12 +302,22 @@ def apply_layout(data, *, margins_mm=None, major_id=None):
                 text = member.decode("utf-8")
                 updated, widths = rewrite_table_widths(text, width)
                 updated, chapters = add_chapter_breaks(
-                    updated, major_id=major_id)
+                    updated, major_id=major_id, chapter_texts=chapter_texts)
                 if updated != text:
                     report["tables"] += len(widths)
                     report["previous_widths"] += sorted(set(widths))
                     report["chapter_breaks"] += chapters
                 member = updated.encode("utf-8")
+            elif (info.filename == gg_hwpx.HEADER_NAME and profile is not None
+                  and (profile.heading_prev_hwpunit > 0
+                       or profile.heading_next_hwpunit > 0)):
+                text = member.decode("utf-8")
+                updated, headings = set_heading_margins(
+                    text, profile.heading_prev_hwpunit,
+                    profile.heading_next_hwpunit)
+                if updated != text:
+                    report["heading_margins"] = headings
+                    member = updated.encode("utf-8")
             zout.writestr(info, member)
     report["previous_widths"] = sorted(set(report["previous_widths"]))
     return target.getvalue(), report
@@ -312,6 +412,12 @@ def export(base, inp, out, *, font=FONT, context=None, cli_command=None,
     profile = hwpx_profile(authorization.major_id)
     section_formats = profile.section_formats if profile is not None else None
     margins_mm = section_formats[2]["margin_mm"] if profile is not None else None
+    # 장 새 쪽 판정: 프로필이 노드 방식을 요구할 때만 마크다운 1단계 제목으로
+    # 목록을 만든다. 그 밖(정규식 프로필·프로필 없음)은 None = 옛 정규식.
+    chapter_texts = None
+    if profile is not None and profile.hwpx_chapter == "nodes":
+        chapter_texts = chapter_break_texts(
+            source_text, authorization.major_id)
     staging = target.with_name("." + target.name + ".layout-staging")
     if staging.exists():
         raise ValueError("임시 후처리 파일이 남아 있음: " + str(staging))
@@ -326,7 +432,8 @@ def export(base, inp, out, *, font=FONT, context=None, cli_command=None,
         )
         generated = staging.read_bytes()
         published_bytes, layout = apply_layout(
-            generated, margins_mm=margins_mm, major_id=authorization.major_id)
+            generated, margins_mm=margins_mm,
+            major_id=authorization.major_id, chapter_texts=chapter_texts)
         if profile is not None:
             result["applied"] = recount_page_numbers(
                 published_bytes, section_formats, result["applied"])

@@ -27,20 +27,20 @@ from gg_core import digest, local
 from gg_document import photo_guide, photo_requests
 from gg_body_layout import NOTE, spacer_positions, review_requests
 import gg_figure_docx
-from gg_major_format import profile_for, front_title
+from gg_major_format import ENABLED_FORMAT_MAJORS, enabled_profile, front_title
 
 FONT = "신명조"
 LEVEL_PT = {1: 20, 2: 18, 3: 16, 4: 14, 5: 13, 6: 13, 7: 13, 8: 13, 9: 13}
 
-# DOCX 빌더가 프로필 표를 읽는 전공. 낙농(`dairy`)은 표에 값이 있지만 이
-# 단위는 식량작물 치환만 다루므로 여기서 막는다 — 켜는 커밋에서 이 줄만
-# 고치면 된다. 목록에 없는 전공은 지금까지의 기본 경로를 그대로 탄다.
-DOCX_PROFILE_MAJORS = ("food_crops",)
+# DOCX 빌더가 프로필 표를 읽는 전공. 값은 `gg_major_format.ENABLED_FORMAT_MAJORS`
+# 한 곳이 정한다 — 게이트를 켜는 것은 그 상수 한 줄이다. 이 이름은 기존
+# 시험이 패치하는 통로라 별칭으로 남긴다(값이 아니라 같은 튜플 객체).
+DOCX_PROFILE_MAJORS = ENABLED_FORMAT_MAJORS
 
 
 def docx_profile(major_id):
     """DOCX 빌더가 읽을 전공 서식 프로필(없으면 None = 기본 경로)."""
-    return profile_for(major_id) if major_id in DOCX_PROFILE_MAJORS else None
+    return enabled_profile(major_id, DOCX_PROFILE_MAJORS)
 
 
 # 프로필 표에 없는 전공(원예·특용·과수 등)이 쓰는 공용 안내문. 전공별
@@ -365,7 +365,11 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
                 n["kind"] == "caption" and n["label"] == "표"
             )
             pf.widow_control = True
-            pf.space_after = Pt(6 if heading else 0)
+            if heading and profile and profile.heading_spacing_pt > 0:
+                pf.space_before = Pt(profile.heading_spacing_pt)
+                pf.space_after = Pt(profile.heading_spacing_pt)
+            else:
+                pf.space_after = Pt(6 if heading else 0)
             if heading and id(n) in chapter_break_nodes:
                 pf.page_break_before = True
             text = n["text"]
@@ -686,8 +690,10 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
             if start is not None: pg.set(qn('w:start'), str(start))
             pg.set(qn('w:fmt'),number_format);place_page_number(sec, pg)
             sec.footer.is_linked_to_previous=False
-            p=sec.footer.paragraphs[0];p.alignment=WD_ALIGN_PARAGRAPH.CENTER
-            field=OxmlElement('w:fldSimple');field.set(qn('w:instr'),'PAGE');p._p.append(field)
+            # 쪽번호 꾸밈은 프로필 `page_label`이 정한다. 없으면 지금까지처럼
+            # `PAGE` 필드 하나뿐(바이트 불변), 있으면 `- 1 -` 꼴 9pt.
+            from gg_frontmatter_layout import page_number_field
+            page_number_field(sec.footer.paragraphs[0], profile, font)
             return sec
         if prelim or table_entries or figure_entries or dairy_lists:
             if profile and profile.roman_front:
@@ -717,8 +723,10 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
         pg = OxmlElement('w:pgNumType'); pg.set(qn('w:start'), '1'); pg.set(qn('w:fmt'), 'decimal')
         sec._sectPr.append(pg)
         sec.footer.is_linked_to_previous = False
-        fp = sec.footer.paragraphs[0]; fp.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        field = OxmlElement('w:fldSimple'); field.set(qn('w:instr'), 'PAGE'); fp._p.append(field)
+        # 쪽번호 꾸밈은 위 경로와 같은 함수가 정한다: 프로필 `page_label`이
+        # 없으면 `PAGE` 필드 하나(바이트 불변), 있으면 `- 1 -` 꼴.
+        from gg_frontmatter_layout import page_number_field
+        page_number_field(sec.footer.paragraphs[0], profile, font)
 
     # 6. Main Body
     render_body(nodes[i_body:])

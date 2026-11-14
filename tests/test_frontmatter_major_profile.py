@@ -145,6 +145,170 @@ class FrontmatterMajorProfileTests(ContractCase):
         self.assertEqual(self.builder.Mm(30).twips,
                          self.margins(doc.sections[1])["top"])
 
+    # --- 앞부분 줄 크기: 식량작물은 옛 값, 낙농은 프로필 값 -----------------
+
+    def spec(self, major):
+        return runtime("gg_document").school_frontmatter_spec(major)
+
+    # F8 이전 `_peer_form_text_size`에 박혀 있던 (pt, 굵기). 줄 글자로만
+    # 종류를 가른 그 함수의 결과를 그대로 옮겼다.
+    LEGACY_COVER_TEXT = {
+        "농업전문학사 학위논문": (18, True),      # spec.degree
+        "영농창업계획": (32, True),              # spec.plan_label
+        "이 논문을 농업전문학사 학위논문으로 제출함": (18, True),  # 이 논문을 …
+        "가상학생의 농업전문학사 학위논문을 인준함": (18, True),   # … 인준함
+        "위원장 박교수 (인)": (18, True),         # 위원장
+        "위  원 이교수 (인)": (18, True),         # 위  원
+        "지도교수 김교수": (18, True),            # 지도교수
+        "가상학생": (20, False),                 # 그 밖
+    }
+
+    def test_food_crops_cover_text_keeps_the_hardcoded_sizes(self):
+        spec = self.spec("food_crops")
+        profile = self.gmf.profile_for("food_crops")
+        for text, expected in self.LEGACY_COVER_TEXT.items():
+            with self.subTest(text=text):
+                self.assertEqual(expected,
+                                 self.layout._peer_form_text_size(
+                                     text, spec, None))
+                self.assertEqual(expected,
+                                 self.layout._peer_form_text_size(
+                                     text, spec, profile))
+
+    def test_dairy_cover_text_comes_from_its_profile(self):
+        """낙농은 굵기가 False다 — 매핑이 틀리면 여기서 걸린다."""
+        spec = self.spec("dairy")
+        profile = self.gmf.profile_for("dairy")
+        for text in ("농업전문학사 학위논문", "이 논문을 농업전문학사 학위논문으로 제출함",
+                     "가상학생의 농업전문학사 학위논문을 인준함",
+                     "위원장 박교수 (인)", "지도교수 김교수"):
+            with self.subTest(text=text):
+                self.assertEqual((18, False),
+                                 self.layout._peer_form_text_size(
+                                     text, spec, profile))
+        self.assertEqual((32, True),
+                         self.layout._peer_form_text_size(
+                             "영농창업계획", spec, profile))
+        self.assertEqual((20, False),
+                         self.layout._peer_form_text_size(
+                             "가상학생", spec, profile))
+
+    # --- 요약 번호형 소제목: `summary_item_pt` ------------------------------
+
+    def summary_item(self, doc, text="1. 농장 개요"):
+        paragraph = next(p for p in doc.paragraphs if p.text.strip() == text)
+        return (round(paragraph.runs[0].font.size.pt, 1),
+                bool(paragraph.runs[0].bold))
+
+    def test_summary_item_size_comes_from_the_profile(self):
+        self.assertEqual((16.0, True), self.summary_item(self.convert()))
+        with self.patched(summary_item_pt=(14, False)):
+            self.assertEqual((14.0, False), self.summary_item(self.convert()))
+
+    def test_dairy_summary_item_uses_its_own_value(self):
+        profile = replace(self.gmf.DAIRY_PROFILE, summary_item_pt=(15, False))
+        with mock.patch.object(self.layout, "profile_for",
+                               lambda major_id: profile
+                               if major_id == "dairy" else None), \
+                mock.patch.object(self.layout, "_FRONTMATTER_PROFILE_MAJORS",
+                                  ("food_crops", "dairy")):
+            self.assertEqual((15.0, False),
+                             self.summary_item(self.convert("dairy")))
+
+    # --- 바닥글 쪽번호 꾸밈: `page_label` ------------------------------------
+
+    def page_fields(self, paragraph):
+        from docx.oxml.ns import qn
+        return paragraph._p.findall(qn("w:fldSimple"))
+
+    def test_food_crops_footers_keep_the_bare_page_field(self):
+        """`page_label=None`이면 바닥글은 지금까지처럼 `PAGE` 필드 하나뿐이다.
+
+        글자 run이 하나라도 붙으면 쪽번호에 `- `·` -`가 딸려 나온다는 뜻이라
+        여기서 걸린다. 앞부분(로마)·본문(아라비아) 두 구역만 본다 — 겉표지는
+        바닥글 참조 자체가 없어야 하므로 `footer`에 손대지 않는다.
+        """
+        from docx.oxml.ns import qn
+
+        doc = self.convert()
+        for section in (doc.sections[1], doc.sections[-1]):
+            paragraph = section.footer.paragraphs[0]
+            self.assertEqual([], [run.text for run in paragraph.runs])
+            self.assertEqual(["PAGE"],
+                             [f.get(qn("w:instr"))
+                              for f in self.page_fields(paragraph)])
+
+    def test_absent_page_label_writes_the_legacy_footer_xml(self):
+        """도우미의 `None` 경로는 옛 손코딩과 XML 한 글자까지 같다."""
+        from docx import Document
+        from docx.oxml import OxmlElement
+        from docx.oxml.ns import qn
+        from docx.enum.text import WD_ALIGN_PARAGRAPH
+
+        doc = Document()
+        legacy = doc.add_paragraph()
+        legacy.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        field = OxmlElement("w:fldSimple")
+        field.set(qn("w:instr"), "PAGE")
+        legacy._p.append(field)
+
+        fresh = doc.add_paragraph()
+        self.layout.page_number_field(fresh, None)
+
+        self.assertEqual(legacy._p.xml, fresh._p.xml)
+
+    def test_page_label_writes_prefix_suffix_at_its_size(self):
+        """낙농 프로필을 직접 넘기면 `- `·` -` run과 9pt가 들어간다."""
+        from docx import Document
+        from docx.oxml.ns import qn
+
+        profile = self.gmf.DAIRY_PROFILE
+        paragraph = Document().add_paragraph()
+        self.layout.page_number_field(paragraph, profile)
+
+        self.assertEqual(["- ", " -"], [run.text for run in paragraph.runs])
+        self.assertEqual([9.0, 9.0],
+                         [run.font.size.pt for run in paragraph.runs])
+        fields = self.page_fields(paragraph)
+        self.assertEqual(["PAGE"], [f.get(qn("w:instr")) for f in fields])
+        # 필드 안 결과 run도 같은 크기를 들고 있어야 Word가 9pt로 그린다.
+        inner = fields[0].findall(qn("w:r"))
+        self.assertEqual(1, len(inner))
+        self.assertEqual(18, int(inner[0].find(qn("w:rPr")).find(qn("w:sz"))
+                                 .get(qn("w:val"))))
+
+    def test_body_footer_reads_the_label_from_the_docx_profile(self):
+        """빌더가 프로필을 바닥글까지 넘기는지 — 값을 바꾸면 출력이 따라온다."""
+        labeled = replace(self.gmf.FOOD_CROPS_PROFILE,
+                          page_label=self.gmf._freeze(
+                              {"prefix": "[", "suffix": "]", "pt": 8}))
+        with mock.patch.object(self.builder, "docx_profile",
+                               lambda major_id: labeled
+                               if major_id == "food_crops" else None):
+            doc = self.convert()
+        body = doc.sections[-1].footer.paragraphs[0]
+        self.assertEqual(["[", "]"], [run.text for run in body.runs])
+        self.assertEqual([8.0, 8.0],
+                         [run.font.size.pt for run in body.runs])
+
+    def test_bare_manuscript_has_no_footer_section(self):
+        """학교 앞부분이 없는 원고 경로는 바닥글을 만들지 않는다.
+
+        쪽번호 꾸밈(`page_label`)을 프로필에서 읽는 곳은 학교 서식 경로의 두
+        구역(`new_numbered_section`·본문 구역)뿐이다. 앞부분 계획이 서지 않는
+        원고는 그 전에도 지금도 바닥글 문단을 만들지 않으므로, 이 경로에는
+        `- 1 -` 글자 run도 `PAGE` 필드도 붙지 않는다(범위 경계).
+        """
+        root = self.make_project()
+        bind_major(root, "dairy")
+        doc = self.builder.convert(
+            "# 1. 머리말\n\n합성 본문.\n",
+            context=self.mc.output_context(root, "dairy"))
+        self.assertEqual([], [run.text
+                              for run in doc.sections[-1].footer.paragraphs[0].runs])
+        # 쪽번호 필드도 붙지 않는다: 쪽번호를 매기는 구역 자체가 없다.
+        self.assertEqual([], self.page_fields(doc.sections[-1].footer.paragraphs[0]))
+
 
 if __name__ == "__main__":
     unittest.main()
