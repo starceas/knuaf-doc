@@ -331,7 +331,7 @@
       "source": "adopted:app-PR41"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "b4e5325e118ea01f6cf7993dbdaa5c40a423e00c423a21dc2e3f5e34a9e2ec01",
+      "after_sha256": "e7c20649ea9b3b8d6fa3263592ab9153bb0566249f67826c3786a07581cff3eb",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "dairy-f2",
@@ -547,12 +547,12 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/commands.md": {
-      "after_sha256": "e05e2f6438abbd405294b65c09c588798fc91b81f7f5b32a7ea8e600c12d7f70",
+      "after_sha256": "7e50d4bebc1bd7696a6fa3c32f19f6c7e92530fe76ae6bce3d9ef69375728988",
       "before_sha256": null,
       "first_changed": "P28",
-      "last_changed": "IMG-path",
+      "last_changed": "M-02",
       "owner": "IMG-path",
-      "reason": "P0-2 PR-A: U03 gg CLI command index and apply JSON contract | P0-2 PR-A R2: rewritten against gg.py arguments and the apply collection/value contract; executable bind-major example | P0-2 PR-A R3: exit codes 3/4 describe the operation target; per-target confirmation table | F1 C3: gg_toc_check.py 사용법. | ORDER-17 통합: gg_read.py 첫 읽기 명령 한 줄 등재 | ORDER-16 B: document the single selected file, raw-answer source input, expected revision and partial outcomes. | Astra R3 I1: document answer_snapshot target, nullable filesystem reason with cleanup diagnostics, and prior canonical registration as separate evidence. | v0.4.4: clarify that only PDFs needing structural repair are refused as successfully read. | P0-2 PR-A: U03 gg CLI command index and apply JSON contract | P0-2 PR-A R2: rewritten against gg.py arguments and the apply collection/value contract; executable bind-major example | P0-2 PR-A R3: exit codes 3/4 describe the operation target; per-target confirmation table | F1 C3: gg_toc_check.py 사용법. | ORDER-17 통합: gg_read.py 첫 읽기 명령 한 줄 등재 | ORDER-16 B: document the single selected file, raw-answer source input, expected revision and partial outcomes. | Astra R3 I1: document answer_snapshot target, nullable filesystem reason with cleanup diagnostics, and prior canonical registration as separate evidence. | W-P 1부: gg_progress.py show 읽기 전용 행 추가(쓰기 서브커맨드 없음) | IMG-path: 분할기의 그림 목적지 기준 폴더를 원고 옆 → 작업 뿌리 두 단계로 풀고, 두 기준 모두 유효하지만 다른 파일이면 image_ambiguous로 그 절만 멈춘다. #123 그림 넣기(뿌리 기준 figures/public/…)가 원고가 build/에 있을 때 분할에서 통째로 빠지던 결함을 잠갔다. install-manifest.json은 gg_update.py manifest --write 재생성. | IMG-path r1: 공용 그림 경로 해석기(gg_hwpx) 한 곳으로 통일 — 두 단계 탐색(원고 옆→작업 폴더 뿌리), 모호하면 image_ambiguous로 중단, 목적지만 다시 쓰고 대체텍스트·꺾쇠·제목 보존, 캡션 줄 안 그림은 거절(C-01), 용어 원문 좌표(R-03). | IMG-path r2(A-01·R-04): HWPX 발행 경로(resolve_images)가 app-figure 토큰을 조용히 빼지 않고 app_figure_unsupported로 거절(학생 문장 + 토큰 줄), 토큰 판정은 생산자 꼴만 인정(strip 제거 — 공백 붙은 꼴은 일반 경로로 미해결). 분할기 통과는 그대로.",
+      "reason": "P0-2 PR-A: U03 gg CLI command index and apply JSON contract | P0-2 PR-A R2: rewritten against gg.py arguments and the apply collection/value contract; executable bind-major example | P0-2 PR-A R3: exit codes 3/4 describe the operation target; per-target confirmation table | F1 C3: gg_toc_check.py 사용법. | ORDER-17 통합: gg_read.py 첫 읽기 명령 한 줄 등재 | ORDER-16 B: document the single selected file, raw-answer source input, expected revision and partial outcomes. | Astra R3 I1: document answer_snapshot target, nullable filesystem reason with cleanup diagnostics, and prior canonical registration as separate evidence. | v0.4.4: clarify that only PDFs needing structural repair are refused as successfully read. | P0-2 PR-A: U03 gg CLI command index and apply JSON contract | P0-2 PR-A R2: rewritten against gg.py arguments and the apply collection/value contract; executable bind-major example | P0-2 PR-A R3: exit codes 3/4 describe the operation target; per-target confirmation table | F1 C3: gg_toc_check.py 사용법. | ORDER-17 통합: gg_read.py 첫 읽기 명령 한 줄 등재 | ORDER-16 B: document the single selected file, raw-answer source input, expected revision and partial outcomes. | Astra R3 I1: document answer_snapshot target, nullable filesystem reason with cleanup diagnostics, and prior canonical registration as separate evidence. | W-P 1부: gg_progress.py show 읽기 전용 행 추가(쓰기 서브커맨드 없음) | IMG-path: 분할기의 그림 목적지 기준 폴더를 원고 옆 → 작업 뿌리 두 단계로 풀고, 두 기준 모두 유효하지만 다른 파일이면 image_ambiguous로 그 절만 멈춘다. #123 그림 넣기(뿌리 기준 figures/public/…)가 원고가 build/에 있을 때 분할에서 통째로 빠지던 결함을 잠갔다. install-manifest.json은 gg_update.py manifest --write 재생성. | IMG-path r1: 공용 그림 경로 해석기(gg_hwpx) 한 곳으로 통일 — 두 단계 탐색(원고 옆→작업 폴더 뿌리), 모호하면 image_ambiguous로 중단, 목적지만 다시 쓰고 대체텍스트·꺾쇠·제목 보존, 캡션 줄 안 그림은 거절(C-01), 용어 원문 좌표(R-03). | IMG-path r2(A-01·R-04): HWPX 발행 경로(resolve_images)가 app-figure 토큰을 조용히 빼지 않고 app_figure_unsupported로 거절(학생 문장 + 토큰 줄), 토큰 판정은 생산자 꼴만 인정(strip 제거 — 공백 붙은 꼴은 일반 경로로 미해결). 분할기 통과는 그대로. | M-02: 그림 목적지 해석을 DOCX·원고 검사·HWPX 세 입구에서 같은 규칙(gg_hwpx.resolve_figure: 원고 옆 → 작업 폴더 뿌리, 모호하면 학생 안내 문장으로 멈춤)으로 통일",
       "source": "new"
     },
     "skills/knuaf-doc/references/common-workbooks/corrections/C1.md": {
@@ -1408,13 +1408,13 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/build_docx.py": {
-      "after_sha256": "8f41e4246742e2801c78e4aac96726dfc629864ed666d4b854b1d5a69b588b92",
+      "after_sha256": "b89e684e7d92d38ea80bc606bc366fc09d8159e1252be8e7efb4322c87500e39",
       "before_sha256": "b0ce58afc3f24b792843877bb6dc996d634dc12235bade53c34ecb5cdfad9912",
       "first_changed": "P1",
-      "last_changed": "dairy-f2",
+      "last_changed": "M-02",
       "note": "G R1-02/R1-03: share TOC/body omission checks across legacy/official order and reject existing DOCX or companion manifest before saving; frozen paper renderer unchanged.",
       "owner": "P27",
-      "reason": "H2: fit_table allow_landscape=False(official 경로). H3: 목차↔본문 미렌더 node ValueError+진단. C2: UTF-8 | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P27: K2-02: CLI 진입점 stdout·stderr UTF-8 재설정 | P1-GUI: 판정서 JUDGE-A/JUDGE-B 올림 항목 반영 | P0-2 PR-E U08: body-only --no-toc; school contents and major authorization retained. | W3m: 최신 main 병합 — 과수 S01 쪽번호 두 수정을 유지하고 계산 모드 수정은 main 바이트를 그대로 받음. | F1: 식량작물 쪽별 여백·글자 크기·HWPX 앞부분 로마 쪽번호 3구역 + 서식 기계 검사(§4.3 charPr·§6 probe); 최종 바이트 재측정 | GF2: 그림 토큰은 승인 시 실제 그림 삽입, 앱 밖이면 자리 표시 문단, 미증명 토큰은 ValueError(figure_unverified)로 중단; manifest figures 보고 추가. | 낙농 쪽별 서식 1차(리팩터, 동작 변경 0): 식량작물 전용 서식 분기를 전공 서식 프로필 표(gg_major_format.MajorFormatProfile)로 옮김. 낙농은 게이트(food_crops만)로 아직 끔. 식량작물 DOCX·HWPX ZIP 멤버 해시 기준선과 동일. / 낙농 쪽별 서식 2차 배선(F7~F9d): 게이트 한 곳(ENABLED_FORMAT_MAJORS)·표지 크기·요약 소제목·워드 쪽번호 꾸밈·제목 위아래 간격·한글 제목 여백·한글 장 새 쪽 노드 판정. 낙농 게이트는 끈 채 — main 빌더 대비 식량작물 3원고·낙농 c1 ZIP 멤버 차이 0.",
+      "reason": "H2: fit_table allow_landscape=False(official 경로). H3: 목차↔본문 미렌더 node ValueError+진단. C2: UTF-8 | P7: policy B common major output guard (G-B) — explicit major_id + canonical binding before any paper/finance/XLSX/DOCX/PDF output | P27: K2-02: CLI 진입점 stdout·stderr UTF-8 재설정 | P1-GUI: 판정서 JUDGE-A/JUDGE-B 올림 항목 반영 | P0-2 PR-E U08: body-only --no-toc; school contents and major authorization retained. | W3m: 최신 main 병합 — 과수 S01 쪽번호 두 수정을 유지하고 계산 모드 수정은 main 바이트를 그대로 받음. | F1: 식량작물 쪽별 여백·글자 크기·HWPX 앞부분 로마 쪽번호 3구역 + 서식 기계 검사(§4.3 charPr·§6 probe); 최종 바이트 재측정 | GF2: 그림 토큰은 승인 시 실제 그림 삽입, 앱 밖이면 자리 표시 문단, 미증명 토큰은 ValueError(figure_unverified)로 중단; manifest figures 보고 추가. | 낙농 쪽별 서식 1차(리팩터, 동작 변경 0): 식량작물 전용 서식 분기를 전공 서식 프로필 표(gg_major_format.MajorFormatProfile)로 옮김. 낙농은 게이트(food_crops만)로 아직 끔. 식량작물 DOCX·HWPX ZIP 멤버 해시 기준선과 동일. / 낙농 쪽별 서식 2차 배선(F7~F9d): 게이트 한 곳(ENABLED_FORMAT_MAJORS)·표지 크기·요약 소제목·워드 쪽번호 꾸밈·제목 위아래 간격·한글 제목 여백·한글 장 새 쪽 노드 판정. 낙농 게이트는 끈 채 — main 빌더 대비 식량작물 3원고·낙농 c1 ZIP 멤버 차이 0. | M-02: 그림 목적지 해석을 DOCX·원고 검사·HWPX 세 입구에서 같은 규칙(gg_hwpx.resolve_figure: 원고 옆 → 작업 폴더 뿌리, 모호하면 학생 안내 문장으로 멈춤)으로 통일",
       "source": "adopted:PR2"
     },
     "skills/knuaf-doc/scripts/build_excel_finance_template.py": {
@@ -1502,12 +1502,12 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_document.py": {
-      "after_sha256": "3be128d4f6e5227c126cb6ee722a12fc1cacb6192f83d78eafa1a49363715b3b",
+      "after_sha256": "e40264446e54ad00303162a11e67ecabe7acbf89ff1c8b7519790deeffafd628",
       "before_sha256": "e83eee6a94393e407a727979c6e5f6e5545f17ca7291e745c68d66dcb835a8b3",
       "first_changed": "P1",
-      "last_changed": "IMG-path",
+      "last_changed": "M-02",
       "owner": "IMG-path",
-      "reason": "H1: '<'·'^' 병합 계속 표식을 빈칸으로 분류(_filled_cell) | P28: plain_policy_check — 금칙어·제한 용어·머리말 길이·캡션·표/그림 출처 표기·사진 자리·AI 이미지 검사 | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존 | F2: V2 재확인 수용에 따라 같은 파서 계층의 첫 장/장 경계와 원문 span을 적용하고 명시적 외부 유형 충돌 거부·수동 신뢰 계약을 문서화; 설치 manifest 재생성. 기초 정본·단계·부모 계보·원본 source pin 보존 | F3: 전역 Markdown 유무 판정을 제거하고 prefix-only 공통 제목 규칙·요약 단일 종료·번호 공백 문법으로 통일; 설치 manifest 재생성. 원본/부모 계보·stage·source pin 보존 | R-v0.4.1: policy path no longer resolves cwd at import (Windows unreadable cwd) | F1 C2/CB/CA: display_precision·unit_conflict·sample_identity(error), sample_identity_unconfirmed·sample_trace_review(warning), check(project_root=None). | F1 V9-01/05: 다음 표 단위 선언 비귀속, 줄바꿈 학생 이름 먼저 완성. | V10: 이전 표 주석 줄을 다음 표 앞쪽 단위 선언으로 받지 않음. | PR71 리뷰: 굵게·기울임 강조된 금액 칸·머리칸도 숫자 검사. | IMG-path: 분할기의 그림 목적지 기준 폴더를 원고 옆 → 작업 뿌리 두 단계로 풀고, 두 기준 모두 유효하지만 다른 파일이면 image_ambiguous로 그 절만 멈춘다. #123 그림 넣기(뿌리 기준 figures/public/…)가 원고가 build/에 있을 때 분할에서 통째로 빠지던 결함을 잠갔다. install-manifest.json은 gg_update.py manifest --write 재생성. | IMG-path r1: 공용 그림 경로 해석기(gg_hwpx) 한 곳으로 통일 — 두 단계 탐색(원고 옆→작업 폴더 뿌리), 모호하면 image_ambiguous로 중단, 목적지만 다시 쓰고 대체텍스트·꺾쇠·제목 보존, 캡션 줄 안 그림은 거절(C-01), 용어 원문 좌표(R-03). | GF2: image 노드에서 gg_figure_docx.image_check로 앱 토큰을 먼저 판정 — 승인 토큰은 missing_image 오판 없음, 미증명 토큰은 사유 포함 보고.",
+      "reason": "H1: '<'·'^' 병합 계속 표식을 빈칸으로 분류(_filled_cell) | P28: plain_policy_check — 금칙어·제한 용어·머리말 길이·캡션·표/그림 출처 표기·사진 자리·AI 이미지 검사 | F: Astra V-review 수용 처분에 따른 정책·검사·배포 문서 정정 및 실제 artifact 재핀/설치 manifest 재생성; 단계·기초 정본·부모 계보 보존 | F2: V2 재확인 수용에 따라 같은 파서 계층의 첫 장/장 경계와 원문 span을 적용하고 명시적 외부 유형 충돌 거부·수동 신뢰 계약을 문서화; 설치 manifest 재생성. 기초 정본·단계·부모 계보·원본 source pin 보존 | F3: 전역 Markdown 유무 판정을 제거하고 prefix-only 공통 제목 규칙·요약 단일 종료·번호 공백 문법으로 통일; 설치 manifest 재생성. 원본/부모 계보·stage·source pin 보존 | R-v0.4.1: policy path no longer resolves cwd at import (Windows unreadable cwd) | F1 C2/CB/CA: display_precision·unit_conflict·sample_identity(error), sample_identity_unconfirmed·sample_trace_review(warning), check(project_root=None). | F1 V9-01/05: 다음 표 단위 선언 비귀속, 줄바꿈 학생 이름 먼저 완성. | V10: 이전 표 주석 줄을 다음 표 앞쪽 단위 선언으로 받지 않음. | PR71 리뷰: 굵게·기울임 강조된 금액 칸·머리칸도 숫자 검사. | IMG-path: 분할기의 그림 목적지 기준 폴더를 원고 옆 → 작업 뿌리 두 단계로 풀고, 두 기준 모두 유효하지만 다른 파일이면 image_ambiguous로 그 절만 멈춘다. #123 그림 넣기(뿌리 기준 figures/public/…)가 원고가 build/에 있을 때 분할에서 통째로 빠지던 결함을 잠갔다. install-manifest.json은 gg_update.py manifest --write 재생성. | IMG-path r1: 공용 그림 경로 해석기(gg_hwpx) 한 곳으로 통일 — 두 단계 탐색(원고 옆→작업 폴더 뿌리), 모호하면 image_ambiguous로 중단, 목적지만 다시 쓰고 대체텍스트·꺾쇠·제목 보존, 캡션 줄 안 그림은 거절(C-01), 용어 원문 좌표(R-03). | GF2: image 노드에서 gg_figure_docx.image_check로 앱 토큰을 먼저 판정 — 승인 토큰은 missing_image 오판 없음, 미증명 토큰은 사유 포함 보고. | M-02: 그림 목적지 해석을 DOCX·원고 검사·HWPX 세 입구에서 같은 규칙(gg_hwpx.resolve_figure: 원고 옆 → 작업 폴더 뿌리, 모호하면 학생 안내 문장으로 멈춤)으로 통일",
       "source": "adopted:PR2"
     },
     "skills/knuaf-doc/scripts/gg_doi.py": {
@@ -1684,12 +1684,12 @@
       "note": "W-L: land-row transform/verify wiring; re-hashed on the rebased tree."
     },
     "skills/knuaf-doc/scripts/gg_hwpx.py": {
-      "after_sha256": "9a29cad2f711f415477b5a690ddcef77f021e0da1ade4321f22cf0617ddf0146",
+      "after_sha256": "f81a6b664ed714f6ecabf3703cd7fdeb76f36ced0ef64d12a2a34edf9a7026f3",
       "before_sha256": null,
       "first_changed": "P28",
-      "last_changed": "dairy-f1",
+      "last_changed": "M-02",
       "owner": "IMG-path",
-      "reason": "W1/W1b kordoc-hwpx: 마크다운→HWPX 어댑터(kordoc generate, 학교 여백·글꼴·쪽번호 후처리, validate·표 수치 대조, before_publish 재확인 훅). | W2c: review R1-01..R1-07 반영(매니페스트 이름 <출력파일 전체이름>.manifest.json, gg_hwpx 라이브러리화, verify 실패 시 미발행, 표 수치 정확 비교, image_dir 기본=원문 폴더, 생성 스냅샷 해시). | W2d: review2 R1-02/R1-03 수정(build()가 필수 context+authorization로 발행 직전 reconfirm, validate는 process_ok+returncode==0+status=='ok'). | W2e: review3 R1-02 반례 수정(build()가 authorization.output==OUTPUT_SCHOOL_PAPER를 발행 전 확인). | F1: 리뷰 P2 3건(서식 미적용이면 format_not_applied로 발행 차단, 표 수치를 (표·행·칸) 좌표까지 비교, 그림 목적지 파서 - 공백·<>·퍼센트·이스케이프, Windows 역슬래시 경로 보존). | IMG-path: 분할기의 그림 목적지 기준 폴더를 원고 옆 → 작업 뿌리 두 단계로 풀고, 두 기준 모두 유효하지만 다른 파일이면 image_ambiguous로 그 절만 멈춘다. #123 그림 넣기(뿌리 기준 figures/public/…)가 원고가 build/에 있을 때 분할에서 통째로 빠지던 결함을 잠갔다. install-manifest.json은 gg_update.py manifest --write 재생성. | IMG-path r1: 공용 그림 경로 해석기(gg_hwpx) 한 곳으로 통일 — 두 단계 탐색(원고 옆→작업 폴더 뿌리), 모호하면 image_ambiguous로 중단, 목적지만 다시 쓰고 대체텍스트·꺾쇠·제목 보존, 캡션 줄 안 그림은 거절(C-01), 용어 원문 좌표(R-03). | IMG-path r1b: 앱 그림 손잡이 app-figure:<sha256>는 파일 경로가 아니므로 rewrite_image_destinations·resolve_images·normalize_image_destinations 세 곳 모두 다시 쓰지도, 존재를 묻지도 않고 그대로 통과시킨다(책임자 발견 — 전에는 늘 없는 파일이 되어 그 절이 통째로 빠졌다). 그 밖의 scheme: 꼴은 지금처럼 image_unresolved. 분할본은 gg_hwpx.rewrite_image_destinations를 그대로 부르므로 함께 고쳐진다. | IMG-path r2(A-01·R-04): HWPX 발행 경로(resolve_images)가 app-figure 토큰을 조용히 빼지 않고 app_figure_unsupported로 거절(학생 문장 + 토큰 줄), 토큰 판정은 생산자 꼴만 인정(strip 제거 — 공백 붙은 꼴은 일반 경로로 미해결). 분할기 통과는 그대로. | F1: 식량작물 쪽별 여백·글자 크기·HWPX 앞부분 로마 쪽번호 3구역 + 서식 기계 검사(§4.3 charPr·§6 probe); 최종 바이트 재측정 | F1-r2: F1 웹 검토 FAIL 11건 고침 — C-01 다른 전공 HWPX 매니페스트 charpr 키 누출, I-01 요약 번호형 소제목 첫 개만 16pt, I-02 ZIP 항목 손상이 예외로 죽음, I-03 번호형 목차 항목 오탐, I-04 kordoc 재파싱 실패가 skipped 통과, I-05 쪽번호 제어 요소 중복 미검출, I-06 앵커 시험의 가짜 결함, R-01 version.xml-only ok=false 통과, R-02 재파싱 문단 순서·개수 미대조. | F1-r3: N-I01: 앞부분 앵커 `요약` 중복 검사를 plan['body'] 이전 구간으로 한정 — 본문·목차의 독립 `요약` 문단은 앵커가 아니므로 분할을 막지 않는다. | F1b: 한글판 앞부분 구분 이름 은닉·쪽 나눔(`_hide_front_markers`/`_break_front_pages`) — 문단 수 보존, `applied` 새 키는 식량작물 분기에서만. | F1b-r2: 웹 r1 중요 01/02 고침 — 구분 이름 은닉 전에 문단 글자를 원고 노드와 대조(front_marker_text_mismatch), pageBreak 존재 판정을 따옴표 무관 정규식으로 바꿔 중복 속성 제거 | F1b-r2: 웹 r1 중요 01/02 고침 — 구분 이름 은닉 전에 문단 글자를 원고 노드와 대조(front_marker_text_mismatch), pageBreak 존재 판정을 따옴표 무관 정규식으로 바꿔 중복 속성 제거 | F1b-r2: 웹 r1 중요 01/02 고침 — 구분 이름 은닉 전에 문단 글자를 원고 노드와 대조(front_marker_text_mismatch), pageBreak 존재 판정을 따옴표 무관 정규식으로 바꿔 중복 속성 제거 | F1b-r3: 웹 r2 중요 02 — `_set_page_break`의 속성 존재 판정을 치환 결과 비교에서 `subn` 매치 개수로 바꿔, 이미 `pageBreak=\"1\"`인 헤드에 속성을 중복으로 붙이던 회귀 제거 | 낙농 쪽별 서식 1차(리팩터, 동작 변경 0): 식량작물 전용 서식 분기를 전공 서식 프로필 표(gg_major_format.MajorFormatProfile)로 옮김. 낙농은 게이트(food_crops만)로 아직 끔. 식량작물 DOCX·HWPX ZIP 멤버 해시 기준선과 동일.",
+      "reason": "W1/W1b kordoc-hwpx: 마크다운→HWPX 어댑터(kordoc generate, 학교 여백·글꼴·쪽번호 후처리, validate·표 수치 대조, before_publish 재확인 훅). | W2c: review R1-01..R1-07 반영(매니페스트 이름 <출력파일 전체이름>.manifest.json, gg_hwpx 라이브러리화, verify 실패 시 미발행, 표 수치 정확 비교, image_dir 기본=원문 폴더, 생성 스냅샷 해시). | W2d: review2 R1-02/R1-03 수정(build()가 필수 context+authorization로 발행 직전 reconfirm, validate는 process_ok+returncode==0+status=='ok'). | W2e: review3 R1-02 반례 수정(build()가 authorization.output==OUTPUT_SCHOOL_PAPER를 발행 전 확인). | F1: 리뷰 P2 3건(서식 미적용이면 format_not_applied로 발행 차단, 표 수치를 (표·행·칸) 좌표까지 비교, 그림 목적지 파서 - 공백·<>·퍼센트·이스케이프, Windows 역슬래시 경로 보존). | IMG-path: 분할기의 그림 목적지 기준 폴더를 원고 옆 → 작업 뿌리 두 단계로 풀고, 두 기준 모두 유효하지만 다른 파일이면 image_ambiguous로 그 절만 멈춘다. #123 그림 넣기(뿌리 기준 figures/public/…)가 원고가 build/에 있을 때 분할에서 통째로 빠지던 결함을 잠갔다. install-manifest.json은 gg_update.py manifest --write 재생성. | IMG-path r1: 공용 그림 경로 해석기(gg_hwpx) 한 곳으로 통일 — 두 단계 탐색(원고 옆→작업 폴더 뿌리), 모호하면 image_ambiguous로 중단, 목적지만 다시 쓰고 대체텍스트·꺾쇠·제목 보존, 캡션 줄 안 그림은 거절(C-01), 용어 원문 좌표(R-03). | IMG-path r1b: 앱 그림 손잡이 app-figure:<sha256>는 파일 경로가 아니므로 rewrite_image_destinations·resolve_images·normalize_image_destinations 세 곳 모두 다시 쓰지도, 존재를 묻지도 않고 그대로 통과시킨다(책임자 발견 — 전에는 늘 없는 파일이 되어 그 절이 통째로 빠졌다). 그 밖의 scheme: 꼴은 지금처럼 image_unresolved. 분할본은 gg_hwpx.rewrite_image_destinations를 그대로 부르므로 함께 고쳐진다. | IMG-path r2(A-01·R-04): HWPX 발행 경로(resolve_images)가 app-figure 토큰을 조용히 빼지 않고 app_figure_unsupported로 거절(학생 문장 + 토큰 줄), 토큰 판정은 생산자 꼴만 인정(strip 제거 — 공백 붙은 꼴은 일반 경로로 미해결). 분할기 통과는 그대로. | F1: 식량작물 쪽별 여백·글자 크기·HWPX 앞부분 로마 쪽번호 3구역 + 서식 기계 검사(§4.3 charPr·§6 probe); 최종 바이트 재측정 | F1-r2: F1 웹 검토 FAIL 11건 고침 — C-01 다른 전공 HWPX 매니페스트 charpr 키 누출, I-01 요약 번호형 소제목 첫 개만 16pt, I-02 ZIP 항목 손상이 예외로 죽음, I-03 번호형 목차 항목 오탐, I-04 kordoc 재파싱 실패가 skipped 통과, I-05 쪽번호 제어 요소 중복 미검출, I-06 앵커 시험의 가짜 결함, R-01 version.xml-only ok=false 통과, R-02 재파싱 문단 순서·개수 미대조. | F1-r3: N-I01: 앞부분 앵커 `요약` 중복 검사를 plan['body'] 이전 구간으로 한정 — 본문·목차의 독립 `요약` 문단은 앵커가 아니므로 분할을 막지 않는다. | F1b: 한글판 앞부분 구분 이름 은닉·쪽 나눔(`_hide_front_markers`/`_break_front_pages`) — 문단 수 보존, `applied` 새 키는 식량작물 분기에서만. | F1b-r2: 웹 r1 중요 01/02 고침 — 구분 이름 은닉 전에 문단 글자를 원고 노드와 대조(front_marker_text_mismatch), pageBreak 존재 판정을 따옴표 무관 정규식으로 바꿔 중복 속성 제거 | F1b-r2: 웹 r1 중요 01/02 고침 — 구분 이름 은닉 전에 문단 글자를 원고 노드와 대조(front_marker_text_mismatch), pageBreak 존재 판정을 따옴표 무관 정규식으로 바꿔 중복 속성 제거 | F1b-r2: 웹 r1 중요 01/02 고침 — 구분 이름 은닉 전에 문단 글자를 원고 노드와 대조(front_marker_text_mismatch), pageBreak 존재 판정을 따옴표 무관 정규식으로 바꿔 중복 속성 제거 | F1b-r3: 웹 r2 중요 02 — `_set_page_break`의 속성 존재 판정을 치환 결과 비교에서 `subn` 매치 개수로 바꿔, 이미 `pageBreak=\"1\"`인 헤드에 속성을 중복으로 붙이던 회귀 제거 | 낙농 쪽별 서식 1차(리팩터, 동작 변경 0): 식량작물 전용 서식 분기를 전공 서식 프로필 표(gg_major_format.MajorFormatProfile)로 옮김. 낙농은 게이트(food_crops만)로 아직 끔. 식량작물 DOCX·HWPX ZIP 멤버 해시 기준선과 동일. | M-02: 그림 목적지 해석을 DOCX·원고 검사·HWPX 세 입구에서 같은 규칙(gg_hwpx.resolve_figure: 원고 옆 → 작업 폴더 뿌리, 모호하면 학생 안내 문장으로 멈춤)으로 통일",
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_insect_document.py": {
@@ -3048,12 +3048,12 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_figure_docx.py": {
-      "after_sha256": "5758ae869a9fce806ab5e85c8dcb59a30d01fcdfc418ae2bfaea2a956eda1440",
+      "after_sha256": "7bb42101629c395db26832a1ed7bc713f344bf8e0aff08a48312e707bf8aaf81",
       "before_sha256": null,
       "first_changed": "P28",
-      "last_changed": "P28",
+      "last_changed": "M-02",
       "owner": "P28",
-      "reason": "GF1: 원고 DOCX 승인 그림 삽입과 자리 표기 검사",
+      "reason": "GF1: 원고 DOCX 승인 그림 삽입과 자리 표기 검사 | M-02: 그림 목적지 해석을 DOCX·원고 검사·HWPX 세 입구에서 같은 규칙(gg_hwpx.resolve_figure: 원고 옆 → 작업 폴더 뿌리, 모호하면 학생 안내 문장으로 멈춤)으로 통일",
       "source": "new"
     },
     "skills/knuaf-doc/tests/fixtures/nongsaro-1941-detail.html": {
@@ -3223,12 +3223,12 @@
       "source": "new"
     },
     "tests/test_gui_figure_wire.py": {
-      "after_sha256": "206609c35bb0acb665303c08e236cf15e5e04e6d28d4a81428085013a2c1ed88",
+      "after_sha256": "91e8895cea93f2fe1b125252cfe24187464900d05d7698ad81a8c37da2701ff6",
       "before_sha256": null,
       "first_changed": "P28",
-      "last_changed": "P28",
+      "last_changed": "M-02",
       "owner": "P28",
-      "reason": "GF2: 규칙집 그림 명령(gg.py figure)·docx 그림 검사(gg_document)·그림 삽입과 manifest(build_docx) 배선 잠금 — §4 네 경우(승인/미증명/앱 밖/일반 없는 파일)와 CLI 위임을 고정한다. | WT2: R-01(미승인 토큰 CLI JSON 거절·종료코드 2)·R-02(학생 로컬 그림 삽입·집계, 폴더 밖 상대/절대 경로 거절) 회귀 시험 추가. | WT2-B: R-01/R-02 보강 — 자식 프로세스 인코딩 고정(cli_env: PYTHONUTF8/PYTHONIOENCODING, errors=replace), 폴더 밖 경로를 마크다운 문자열 그대로(../밖.png·절대경로) 쓰고 거절 사유를 명시 검증 + 같은 이름 안쪽 대조군, CLI가 만든 docx를 다시 열어 그림 개수 확인(매니페스트만 믿지 않음). | N-01: 자식 출력 디코딩에서 errors=\"replace\" 제거 — 잘못된 UTF-8을 엄격 모드로 검출",
+      "reason": "GF2: 규칙집 그림 명령(gg.py figure)·docx 그림 검사(gg_document)·그림 삽입과 manifest(build_docx) 배선 잠금 — §4 네 경우(승인/미증명/앱 밖/일반 없는 파일)와 CLI 위임을 고정한다. | WT2: R-01(미승인 토큰 CLI JSON 거절·종료코드 2)·R-02(학생 로컬 그림 삽입·집계, 폴더 밖 상대/절대 경로 거절) 회귀 시험 추가. | WT2-B: R-01/R-02 보강 — 자식 프로세스 인코딩 고정(cli_env: PYTHONUTF8/PYTHONIOENCODING, errors=replace), 폴더 밖 경로를 마크다운 문자열 그대로(../밖.png·절대경로) 쓰고 거절 사유를 명시 검증 + 같은 이름 안쪽 대조군, CLI가 만든 docx를 다시 열어 그림 개수 확인(매니페스트만 믿지 않음). | N-01: 자식 출력 디코딩에서 errors=\"replace\" 제거 — 잘못된 UTF-8을 엄격 모드로 검출 | M-02: 그림 목적지 해석을 DOCX·원고 검사·HWPX 세 입구에서 같은 규칙(gg_hwpx.resolve_figure: 원고 옆 → 작업 폴더 뿌리, 모호하면 학생 안내 문장으로 멈춤)으로 통일",
       "source": "new"
     },
     "skills/knuaf-doc/references/benchmark-packs/common/rda-income-national-2025/manifest.json": {

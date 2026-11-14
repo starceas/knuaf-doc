@@ -174,7 +174,7 @@ python3 <스킬>/scripts/gg.py major-plan <폴더>
 ## 주요 보조 스크립트
 
 - `python3 scripts/build_hwpx.py <폴더> --major <전공ID>`: HWPX 검토본 생성(여백·쪽번호·신명조 후처리). 논문 HWPX는 이 경로로만 생성하며, kordoc `generate`의 보고서·기안문·계획서 프리셋은 공문서용이라 논문에 쓰지 않는다. [outputs](outputs.md) 그림 목적지는 원고 옆에서 먼저 찾고 없으면 `build_hwpx.py --image-dir`(기본: 작업 폴더 뿌리)에서 한 번 더 찾는다 — 분할본이 그 두 단계로 경로를 고쳐 두기 때문이다. 두 곳에 같은 이름의 다른 그림이 있으면 고르지 않고 `image_ambiguous`(후보 목록 포함), 어디에도 없거나 작업 폴더 밖이면 발행 전 `image_unresolved`로 멈춘다. 생성기에는 목적지를 작업 폴더 기준 상대 경로(퍼센트 인코딩)로 다시 써서 넘기고 기준 폴더 인자는 하나만 준다. 앱이 받은 그림 토큰(`app-figure:<sha256>`)은 HWPX가 풀 수 없으므로(해석은 DOCX 전용) 생성기를 부르기 전에 `app_figure_unsupported`로 거절한다 — 그런 원고는 DOCX로 만든다. 분할기는 그림 경로만 다시 쓰므로 토큰을 그대로 넘긴다.
-- `python3 scripts/build_docx.py <폴더> --in <MD> --out <DOCX> --major <전공ID>`: DOCX 검토본 빌드. 목차·표 목차·그림 목차 쪽번호는 필드(PAGEREF·TOC)와 `gg_office.py word` 재조판·필드 갱신으로만 채우며 손으로 적지 않는다. [outputs](outputs.md)
+- `python3 scripts/build_docx.py <폴더> --in <MD> --out <DOCX> --major <전공ID>`: DOCX 검토본 빌드. 목차·표 목차·그림 목차 쪽번호는 필드(PAGEREF·TOC)와 `gg_office.py word` 재조판·필드 갱신으로만 채우며 손으로 적지 않는다. 그림 목적지는 HWPX와 **같은 규칙**으로 푼다 — 원고 옆(`--in` 파일이 있는 폴더) 먼저, 없으면 작업 폴더 뿌리(`gg_hwpx.resolve_figure`). 두 곳에 같은 이름의 다른 그림이 있으면 뿌리 그림을 조용히 고르지 않고 학생 안내 문장 하나로 멈춘다(M-02). [outputs](outputs.md)
 - `python3 scripts/gg_toc_check.py <DOCX> --json <증거경로>`: DOCX 목차 필드 및 고정 쪽번호 검사 도구. 탭 뒤 일반 글자 고정 번호나 미갱신 필드(`?`)를 검출한다(결과 finding id: `TOC-PAGE-NUMBERS`). [outputs](outputs.md) · [cross-review](cross-review.md)
 - `python3 scripts/gg_deps.py ensure <폴더>`: 작업폴더 venv와 런타임 의존성 준비.
 - `<gg_deps.py python <폴더>가 돌려준 인터프리터> scripts/gg_read.py <파일> --out <폴더 안 새.md>`: DOCX·PDF·XLSX 첫 읽기(읽기 전용, 원본·기존 결과 불변). `status: read`만 성공이며 스캔·손상 복구가 필요한 PDF는 성공으로 보지 않는다. 연결된 읽기 도구가 없을 때 Kordoc·Node 준비보다 먼저 쓴다. [parser-setup](parser-setup.md)
