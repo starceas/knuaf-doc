@@ -844,7 +844,9 @@ def workbook(spec, path, *, context=None):
 
     if not isinstance(spec, dict):
         raise mc.OutputHeldError("finance_profile_evidence_required")
-    if spec.get("profile") == "school_17_sheet_v1":
+    from gg_school_excel import profile_supports
+
+    if profile_supports(spec.get("profile")):
         from gg_school_excel import school_workbook
 
         return school_workbook(spec, path, context=context)
@@ -1141,7 +1143,9 @@ def workbook(spec, path, *, context=None):
 
 
 def verify_recalculated(spec, path):
-    if spec.get("profile") == "school_17_sheet_v1":
+    from gg_school_excel import profile_supports
+
+    if profile_supports(spec.get("profile")):
         from gg_school_verify import verify_school_recalculated
 
         return verify_school_recalculated(spec, path)

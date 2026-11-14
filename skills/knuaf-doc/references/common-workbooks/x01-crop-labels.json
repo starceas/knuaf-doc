@@ -7,7 +7,11 @@
             "audit_sha256": "785c2a157b8a774421624aa49d86f347ffc4c533051959cc822746bc6ebaecf5"},
     "X02": {"sha256": "54d4e55cd57bcb1db0fbfaafe2ed42422767f1561959b8a4f3c673daf77d7e78",
             "audit_file": "formula-audit/x02.json",
-            "audit_sha256": "3594ce66eabb8ec746af3e945a42409f3ad800af37c04832cf322de1780b713d"}
+            "audit_sha256": "3594ce66eabb8ec746af3e945a42409f3ad800af37c04832cf322de1780b713d"},
+    "school_17_sheet_v2": {"sha256": "76300305fdaf165bcce54fc3de2b476c91f4e8e368bc0455a8c69aa3eee9cd1d",
+            "audit_file": "formula-audit/school_17_sheet_v2.json",
+            "audit_sha256": "1b76232f89f70ffa12ecc05289787d4c63e226b3b230601fa30ca77d117bce5a",
+            "layout": "x01"}
   },
   "categories": {
     "woody_perennial": "묘목을 심어 여러 해 수확하는 나무·관목 작목",

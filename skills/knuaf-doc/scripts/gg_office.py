@@ -1037,7 +1037,19 @@ def template_receipt_binding(input_path, receipt_path):
         if ("workbook_profile" in mapped and
                 mapped["workbook_profile"] != data.get("workbook_profile")):
             raise ValueError("template receipt workbook profile differs from map")
-        if (data.get("workbook_profile") not in (None, "school_17_sheet_v1")
+        # A map reviewed before the second edition declares no edition, and
+        # the copy engine accepts it by reading the source. The receipt must
+        # agree: re-read the edition from the output bytes it bound and
+        # require that edition to be the one the receipt recorded. Refusing
+        # every keyless map here would pass the copy and stop the workbook at
+        # the receipt; accepting it without a check would let one edition's
+        # bytes ride under the other's label.
+        if (data.get("workbook_profile") is not None
+                and mapped.get("workbook_profile") is None):
+            from gg_school_excel import edition_of_workbook
+            if edition_of_workbook(input_path) != data["workbook_profile"]:
+                raise ValueError("template receipt requires explicit map workbook profile")
+        elif (data.get("workbook_profile") is not None
                 and mapped.get("workbook_profile") != data["workbook_profile"]):
             raise ValueError("template receipt requires explicit map workbook profile")
     return binding
@@ -1125,10 +1137,12 @@ def _preflight_excel_profile(input_path, auths, context, *, spec=None,
             return binding, profile
         if authorization.major_id != "specialty_crops":
             raise mc.OutputHeldError("finance_profile_evidence_required")
-        mc.require_workbook_profile(authorization, "school_17_sheet_v1")
+        from gg_school_excel import PROFILES
+        mc.require_any_workbook_profile(authorization, PROFILES)
         return binding, "legacy_unprofiled_render"
     if authorization.major_id == "specialty_crops":
-        mc.require_workbook_profile(authorization, "school_17_sheet_v1")
+        from gg_school_excel import PROFILES
+        mc.require_any_workbook_profile(authorization, PROFILES)
         return None, "legacy_unprofiled_render"
     raise mc.OutputHeldError("finance_profile_evidence_required")
 
@@ -1216,6 +1230,7 @@ def _correction_profile_transition(data, previous_profile):
 
 
 def verify_template_lineage(input_file, receipt_paths):
+    from gg_school_excel import profile_supports  # noqa: F401 (used below)
     """Verify local operation ancestry, never financial or human approval."""
     if not receipt_paths:
         raise ValueError("template lineage requires receipts")
@@ -1334,9 +1349,12 @@ def verify_template_lineage(input_file, receipt_paths):
                     and not _correction_profile_transition(data, workbook_profile)):
                 raise ValueError("workbook profile changed within lineage")
             workbook_profile = profile
-        elif (schema != "native_excel" and workbook_profile not in
-              (None, "school_17_sheet_v1")):
-            raise ValueError("workbook profile missing within lineage")
+        elif (schema != "native_excel" and workbook_profile is not None
+              and not profile_supports(workbook_profile)):
+            # 미선언(None)은 판 이전 시대 영수증이라 그대로 두고, 이름이 있는데
+            # 지원하지 않는 판만 거부한다.
+            raise ValueError("workbook profile unknown within lineage: "
+                             + repr(workbook_profile))
         if previous_output is not None and source_hash != previous_output:
             raise ValueError("template lineage input does not match preceding output")
         previous_output = output_hash
@@ -1610,7 +1628,8 @@ def process_excel(
             if spec_file:
                 try:
                     spec_preview = json.loads(Path(spec_file).read_text(encoding="utf-8"))
-                    if spec_preview.get("profile") == "school_17_sheet_v1":
+                    from gg_school_excel import profile_supports
+                    if profile_supports(spec_preview.get("profile")):
                         is_school_spec = True
                 except Exception:
                     pass
@@ -1618,7 +1637,9 @@ def process_excel(
             has_school_sheets = _legacy_school_check_applies(
                 wb_sheetnames, is_school_spec, SCHOOL_SHEETS)
 
-            if (finance_profile in {"school_17_sheet_v1", "legacy_unprofiled_render"}
+            from gg_school_excel import profile_supports
+            if ((profile_supports(finance_profile)
+                 or finance_profile == "legacy_unprofiled_render")
                     and (is_school_spec or has_school_sheets)):
                 school_validation_status = "evaluated"
                 structure_issues = inspect_school_workbook(staged_work)
@@ -1641,19 +1662,27 @@ def process_excel(
         return fail_receipt
 
     school_issues = []
+    from gg_school_excel import profile_supports
     if spec_file:
         spec_p = Path(spec_file).resolve()
         try:
             spec_data = json.loads(spec_p.read_text(encoding="utf-8"))
             profile = spec_data.get("profile", "")
-            if profile == "school_17_sheet_v1":
+            if profile_supports(profile):
                 from gg_school_verify import verify_school_recalculated
 
                 school_issues = verify_school_recalculated(spec_data, staged_work)
-            else:
-                # This path accepts school forms, not the annual calculator.
-                # Other declared forms have no 17-sheet coordinate verifier.
+            elif profile == "single_annual_cash_v1":
+                # 연간 현금 계산기는 17시트 좌표 검증기와 무관하다 — 별도 검증기가
+                # 이미 끝났고(spec 경로), 여기서는 검사 대상이 아니다.
                 school_issues = []
+            else:
+                # 지원하지 않는 판을 조용히 통과시키지 않는다. 검증기가 없는데
+                # 통과로 적으면 재무 수치 오류가 영수증에 초록으로 남는다.
+                school_issues = [{
+                    "status": "fail",
+                    "reason": "재무 판 검증기 없음: " + repr(profile),
+                }]
         except Exception as e:
             school_issues = [{"status": "fail", "reason": f"학교 검증기 실행 오류: {e}"}]
 
@@ -1684,7 +1713,7 @@ def process_excel(
         "financial_content_validation": ("not_run" if binding or
                                          finance_profile == "legacy_unprofiled_render"
                                          else "see_school_issues_and_spec" if
-                                         finance_profile == "school_17_sheet_v1"
+                                         profile_supports(finance_profile)
                                          else "not_checked_unsupported_profile"),
         "preservation_scope": ["sheet_order", "sheet_visibility", "merged_ranges", "print_ranges", "formulas", "nonblank_values"] if binding else None,
         "template_format_changes": template_format_changes,

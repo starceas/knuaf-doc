@@ -721,11 +721,13 @@ FILL_CLOSED_MAJORS = frozenset({"food_crops", "dairy"})
 LEGACY_GENERATOR_CLOSED_MAJORS = frozenset({"specialty_crops"})
 
 # 전공별 학교 엑셀 프로필: 16시트 식량작물·28시트 낙농 양식은 자기 원본
-# 구조를 쓰고, 표에 없는 전공은 지금까지의 17시트 공용 양식 문자열
-# 그대로다(바이트 불변).
+# 구조를 쓰고, 특용작물은 17시트 양식 2판이 기본이다(새 논문). 1판은 이미 쓴
+# 논문이 `--source`로 그 파일을 대는 경로로 남고, 표에 없는 전공은 지금까지의
+# 17시트 공용 양식 문자열 그대로다(바이트 불변).
 MODULE_WORKBOOK_PROFILE = MappingProxyType({
     "food_crops": "food_crops_16_sheet_v1",
     "dairy": "dairy_hanwoo_28_sheet_v1",
+    "specialty_crops": "school_17_sheet_v2",
 })
 
 
@@ -741,6 +743,13 @@ OUTPUT_GUIDANCE_TEMPLATE_ROUTE = (
     "(절차: references/excel-template.md '경로 1. 학과 원본 템플릿 우선 경로')."
 )
 
+# 학생이 올린 재무 엑셀이 학교 양식과 모양이 다를 때. 무엇이 문제이고 무엇을
+# 하면 되는지만 말한다 — 내부 이름(프로필·감사·지문·판)은 쓰지 않는다.
+OUTPUT_GUIDANCE_STRUCTURE_MISMATCH = (
+    "올린 재무 엑셀이 학교 양식과 모양이 달라 이어서 고칠 수 없어요. "
+    "학교에서 받은 원본 재무 엑셀을 새로 받아, 값만 옮겨 적은 뒤 다시 해 주세요."
+)
+
 
 def require_template_route(authorization, profile) -> None:
     """Refuse the legacy 17-sheet generator (``school_17_sheet_v1`` spec
@@ -751,7 +760,11 @@ def require_template_route(authorization, profile) -> None:
     validation or write.  Other profiles and other majors are unchanged."""
     if not isinstance(authorization, OutputAuthorization):
         raise OutputHeldError("finance_profile_authorization_required")
-    if (profile == "school_17_sheet_v1"
+    # 양식 판이 늘어도 규칙은 같다 — 학과 제출본은 교수님 양식 복제여야 하고,
+    # 17시트를 새로 쓰는 생성기는 어느 판이든 입구에서 막는다.
+    from gg_school_excel import profile_supports
+
+    if (profile_supports(profile)
             and authorization.major_id in LEGACY_GENERATOR_CLOSED_MAJORS):
         raise OutputHeldError("specialty_template_route_required",
                               major_id=authorization.major_id)
@@ -778,6 +791,8 @@ def held_guidance(reason, error=None):
         return OUTPUT_GUIDANCE_FILL_CLOSED
     if str(reason) == "specialty_template_route_required":
         return OUTPUT_GUIDANCE_TEMPLATE_ROUTE
+    if str(reason) == "workbook_structure_mismatch":
+        return OUTPUT_GUIDANCE_STRUCTURE_MISMATCH
     return OUTPUT_GUIDANCE
 
 
@@ -906,6 +921,25 @@ def require_workbook_profile(authorization, profile: str) -> None:
     if not declared or not supported:
         raise OutputHeldError("unsupported_finance_profile",
                               major_id=module.major_id, profile=profile)
+
+
+def require_any_workbook_profile(authorization, profiles) -> str:
+    """Require the major to declare and support at least one of ``profiles``.
+
+    Tools that work on whatever school form the caller hands them (print
+    layout, formula patch) cannot name one profile: the same code serves
+    every form the major declares.  The returned name is the first match in
+    ``profiles`` order.  This grants no output authority.
+    """
+    module = _authorized_workbook_module(authorization)
+    for profile in profiles:
+        declared = profile in module.workbook_profiles
+        supported = any(cap.profile == profile and cap.status == "supported"
+                        for cap in module.finance_capabilities)
+        if declared and supported:
+            return profile
+    raise OutputHeldError("unsupported_finance_profile",
+                          major_id=module.major_id, profile=list(profiles))
 
 
 def explicit_major_ids(spec):
@@ -1675,6 +1709,12 @@ SPECIALTY_CROPS_MODULE = declare_module(
             "스펙으로 17시트를 새로 만드는 레거시 생성기는 입구에서 막음",
         ),
         FinanceCapability(
+            profile="school_17_sheet_v2",
+            status="supported",
+            reason="새 양식(투자 3줄·연도별 10a당 목표) 복제·채우기·검증 경로; "
+            "레거시 생성기도 v2 출력을 내고 입구에서 막힘",
+        ),
+        FinanceCapability(
             profile="composite_multi_crop",
             status="unsupported",
             reason="복합·가공·보조금 산식은 기존 계약상 미지원",
@@ -1694,7 +1734,7 @@ SPECIALTY_CROPS_MODULE = declare_module(
         "school_excel_workbook",
         "finance_single_annual_cash_v1",
     ),
-    workbook_profiles=("school_17_sheet_v1",),
+    workbook_profiles=("school_17_sheet_v1", "school_17_sheet_v2"),
     packs=("mafra.specialty.production.2024",),
     forbidden_terms=_SPECIALTY_FORBIDDEN,
 )

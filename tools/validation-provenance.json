@@ -626,6 +626,11 @@
     "tests/test_hort_body_plan.py": {
       "origin": "new",
       "note": "WB: body-plan table must consume every HT2 node once and use only declared field_ids, use_scopes and workbook sheets."
+    },
+    "skills/knuaf-doc/assets/templates/finance-template-v2.xlsx": {
+      "origin": "transformed",
+      "note": "특용작물 A·B·C 묶음용 17시트 파생본. assets/templates/finance-template.xlsx(v1, SHA-256 6d3c9fe5e5992108a8bab18c0098edb0d808f0d14c099878a53939b17de88c7d)를 바이트로 열어 10개 파트만 고치고(14. 현금흐름계획 17행 토지구입 삽입·소계/수지/누적 +1행, 6. 생산계획 10a당 목표 생산량 입력, 미보유 자산 금액 칸 numFmt) 낡은 <xl/calcChain.xml>을 뺀 재포장본. 원천 통합문서·학생 파일은 열지 않았다. v1 파일은 바이트 불변.",
+      "transform": "sandbox/v2/{a_surgery.py,c_surgery.py,pack.py}"
     }
   },
   "readme_policy": {

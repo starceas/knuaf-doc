@@ -184,8 +184,9 @@ class SpecTests(ContractCase):
     def test_the_public_patch_entry_cannot_carry_a_fruit_profile(self):
         fp = runtime("gg_excel_formula_patch")
         mc = runtime("gg_major_contract")
-        # The public entry keeps the 17-sheet default for a major whose own
-        # form is not the specialty 17-sheet one; fruit uses its own module.
+        # The public entry keeps the 17-sheet editions for a major whose own
+        # form is not one of them; fruit declares its own profile and its own
+        # module, so a fruit context still lands on an undeclared form here.
         root = self.make_project()
         bind_major(root, "fruit_trees")
         with self.assertRaisesRegex(mc.OutputHeldError,

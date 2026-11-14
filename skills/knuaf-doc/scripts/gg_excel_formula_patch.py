@@ -24,6 +24,7 @@ from gg_excel_template import (
     _dom_elements,
     _dom_invalidate_formula_cache,
     _serialize_dom,
+    detect_source_profile,
     merged_cells,
     sha256,
     check_wage_gender,
@@ -241,8 +242,14 @@ def _reviewed_observation_formulas(source: Path, spec: dict) -> dict:
         if not any(all(row.get(k) == entry[k] for k in ("sheet", "cell", "formula"))
                    for row in audit.get("inventory", [])):
             raise ValueError("reviewed observation audit source/formula differs")
-        reviewed[entry["sheet"], entry["cell"]] = {
-            **entry, "admitted": "registered" if registered else "derived"}
+        key = (entry["sheet"], entry["cell"])
+        admitted = "registered" if registered else "derived"
+        # Two editions may bind the same cell (today only the wage chain):
+        # the stronger admission wins, so the answer does not depend on the
+        # order the spec lists them in.
+        if reviewed.get(key, {}).get("admitted") == "registered":
+            continue
+        reviewed[key] = {**entry, "admitted": admitted}
     return reviewed
 
 
@@ -641,20 +648,57 @@ def patch_copy(source: Path, map_path: Path, out: Path, *, context=None,
     import gg_major_contract as mc
 
     authorization = mc.authorize_output(mc.OUTPUT_SCHOOL_WORKBOOK, context)
-    resolved = profile or mc.default_workbook_profile(authorization)
-    if not isinstance(resolved, str) or not resolved:
+    # Two rules meet here. The bound major's own default profile is the closed
+    # default a named ``profile`` must repeat; the 17-sheet form itself has two
+    # published editions and the same engine patches both, so a declared edition
+    # is accepted too. Nothing here widens a major's set: a form the major never
+    # declared still fails ``unsupported_finance_profile``.
+    from gg_school_excel import PROFILES, require_profile_structure
+    accepted = tuple(dict.fromkeys(
+        (mc.default_workbook_profile(authorization),) + PROFILES))
+    if profile is not None and (not isinstance(profile, str) or not profile):
         raise mc.OutputHeldError("unsupported_finance_profile",
                                  major_id=authorization.major_id,
                                  profile=profile)
-    if resolved != mc.default_workbook_profile(authorization):
+    if profile is not None and profile not in accepted:
         raise mc.OutputHeldError("unsupported_finance_profile",
                                  major_id=authorization.major_id,
                                  profile=profile)
+    # Which edition the file is decides the default, not which edition the
+    # major starts new papers on: an existing paper keeps its own form.
+    # Only a major that declares the 17-sheet editions reads its edition from
+    # the file; every other major's own registered form is its default, and
+    # its own profile gate answers for it (fruit, for one, never reaches the
+    # source: its default is the 17-sheet name policy B refuses).
+    declared = mc.workbook_profiles_for(authorization)
+    if profile is not None:
+        resolved = profile
+    elif any(name in PROFILES for name in declared):
+        resolved = detect_source_profile(source)
+        if resolved is None:
+            resolved = _unidentified_school_form(source, declared)
+            if resolved is None:
+                raise mc.OutputHeldError(
+                    "workbook_structure_mismatch",
+                    "workbook edition undetermined: the file is neither a "
+                    "registered template nor a copy of one, and its formula "
+                    "skeleton does not name a single edition")
+    else:
+        resolved = mc.default_workbook_profile(authorization)
     mc.require_finance_profile(authorization, resolved)
     mc.require_workbook_profile(authorization, resolved)
-    from gg_school_excel import require_profile_structure
+    from gg_school_excel import FormulaDrift, require_profile_edition, require_profile_structure
     try:
         require_profile_structure(source, resolved)
+    except FormulaDrift:
+        # This route rewrites formulas by design, so its own output no longer
+        # carries the registered fingerprints; it must still be the declared
+        # edition's form and move that edition's cells.
+        try:
+            require_profile_edition(source, resolved)
+        except ValueError as error:
+            raise mc.OutputHeldError("workbook_structure_mismatch",
+                                     str(error)) from error
     except ValueError as error:
         raise mc.OutputHeldError("workbook_structure_mismatch",
                                  str(error)) from error
@@ -662,8 +706,31 @@ def patch_copy(source: Path, map_path: Path, out: Path, *, context=None,
         raise ValueError(f"refusing to write over the source workbook: {out}")
     if out.exists():
         raise FileExistsError(f"refusing to overwrite output: {out}")
-    return _patch_copy(source, map_path, out,
-                       _authorization=authorization, _context=context)
+    receipt = _patch_copy(source, map_path, out,
+                          _authorization=authorization, _context=context)
+    # The patched workbook keeps its edition, and says so: a receipt that only
+    # named the hash left the next step to re-derive the edition from formulas
+    # this route just rewrote.
+    receipt["workbook_profile"] = resolved
+    return receipt
+
+
+def _unidentified_school_form(source: Path, declared):
+    """Main's historical answer for a file that is *not* the school form.
+
+    An edition that cannot be read is refused only when the file really is
+    the 17-sheet form: a second-edition paper whose markers were all
+    overwritten must not be relabelled as the first.  Anything else — a
+    one-sheet fixture, a file that is not a workbook at all — is not the
+    school form, so it keeps the historical 17-sheet name where the major
+    still declares it and its own verifier answers, exactly as before this
+    change.  This names no edition of a school-form workbook: ``None`` there.
+    """
+    from gg_school_excel import is_school_form
+
+    if is_school_form(source):
+        return None
+    return "school_17_sheet_v1" if "school_17_sheet_v1" in declared else None
 
 
 def _patch_copy(source: Path, map_path: Path, out: Path, *,
