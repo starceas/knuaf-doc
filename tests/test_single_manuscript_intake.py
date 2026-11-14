@@ -67,7 +67,7 @@ class SingleManuscriptIntakeTests(ContractCase):
             sys.executable, "-B", str(SCRIPTS / "gg.py"), "intake-manuscript",
             str(root), original.name, "--input", "answer-source.json",
             "--expected-revision", "0", "--request-id", "cli-intake"],
-            capture_output=True, text=True)
+            capture_output=True, text=True, encoding="utf-8")
         self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
         value = json.loads(result.stdout)
         project = self.core.load(root)

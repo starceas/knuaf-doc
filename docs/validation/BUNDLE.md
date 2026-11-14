@@ -53,8 +53,15 @@ claim 복구 생성 전에 발생하던 `KeyError: 'id'`를 시험 입력에서 
 
 `tools/run_validation.py:ALLOWED_SKILL_SKIPS`는 정확한 시험 ID와 사유를
 묶은 유한 목록이다. Crossref 실호출(`GG_DOI_LIVE` opt-in) 1건과 배포하지
-않는 저장소 밖 승인 catalog가 필요한 24건만 등록한다. 자료가 있으면
-해당 시험은 정상 실행되며 통과·실패를 그대로 기록한다. 다음은 승인하지 않는다:
+않는 저장소 밖 승인 catalog가 필요한 24건, 그리고 저장소 밖 비공개 FD-A
+원본 통합문서가 필요한 2건만 등록한다. 그 2건은 R-01 오류 흔적 대조
+(`tests.test_hort_finance_pipeline.LandErrorRegression.
+test_error_footprint_is_scenario_independent`)와 공개문서 누출 감사
+(`tests.test_hort_finance_contract.PublicContract.
+test_real_h01_audit_reports_no_leak`)이며, 22좌표 잠금과 누출 감사는 그
+통합문서 없이는 재현되지 않으므로 시험을 지우거나 입력을 합성으로 바꾸지
+않는다. 자료가 있으면 해당 시험은 정상 실행되며 통과·실패를 그대로 기록한다.
+다음은 승인하지 않는다:
 
 - 등록하지 않은 시험 ID, 같은 클래스에 새로 추가한 시험, 바뀐 skip 사유
 - 필수 런타임 의존성·배포 catalog·payload 누락
@@ -151,7 +158,8 @@ python3 tools/build_validation_bundle.py --root . --out <새_디렉터리> --rec
 
 | 상황 | `suite (ubuntu, py3.10)` | `suite (ubuntu, py3.14)` |
 |---|---|---|
-| PR | 5개 조각 전체 시험 + 합친 보고서 contract 검사 | 빠른 확인(`tools/quick_validation.py`) |
+| PR (코드 변경) | 5개 조각 **코드 스코프** 시험 + 합친 보고서 contract 검사 | 빠른 확인(`tools/quick_validation.py`) |
+| PR (버전 파일 변경) | 5개 조각 전체 시험 + 합친 보고서 contract 검사 | 빠른 확인(`tools/quick_validation.py`) |
 | main push · `workflow_dispatch` | 5개 조각 전체 시험 + contract 검사 | 5개 조각 전체 시험 + contract 검사 |
 
 필수 체크 이름(`suite (ubuntu, py3.10)`·`suite (ubuntu, py3.14)`·
@@ -162,6 +170,45 @@ job이 실패·취소돼도 건너뛰지 않고, 조각 결과가 `success`가 �
 결정성을 다시 하고, 조각 보고서를 `tools/run_validation.py --merge-shards`로
 합친 뒤 기존 contract 검사(`tools/check_validation_report.py`, 예전 인라인
 검사를 그대로 파일로 옮긴 것)를 통과해야 초록이다.
+
+### PR 스코프 (full / code)
+
+`scope` 잡이 PR마다 **한 번** 판정해 `needs.scope.outputs.scope`로 샤드·merge에
+넘긴다. 스코프를 다시 계산하는 곳은 없다 — 실행·병합·최종 보고서가 모두
+`validation_sharding.expected_ids_for(root, scope)` 하나에서 ID 집합을 얻는다.
+
+| 바뀐 경로 | 스코프 | 도는 단위 |
+|---|---|---|
+| `skills/knuaf-doc/version.json` 또는 `.codex-plugin/plugin.json` | `full` | 전체 |
+| 그 외 전부(생성물 3종 제외 후) | `code` | 중첩 runner 10단위 제외 |
+| 판정 불가(빈 diff·git 오류·잘못된 rev·공통 조상 없음/여럿) | `full` | 전체 |
+| main push · `workflow_dispatch` | `full`(명시) | 전체 |
+
+- 바뀐 경로는 **공통 조상 기준**이다: `git merge-base --all base head`가 정확히
+  하나를 내면 `<공통 조상>..head`를 diff한다. `--all`을 쓰는 이유는 criss-cross
+  이력에서 조상이 둘 이상일 수 있어서다(그때는 판정 불가). PR base
+  (`pull_request.base.sha`)는 main의 끝이라, 두 끝을 직접 비교하면 분기 뒤
+  main만 바꾼 버전 파일이 PR 변경으로 잡혀 불필요한 `full`이 되고, 양쪽이 같게
+  바꾼 버전 파일은 차이에서 사라져 `full`이어야 할 PR이 `code`가 된다. 공통
+  조상이 없거나 여럿이면 판정 불가로 `full`이다.
+
+- `tools/ci_scope.py`는 값(`full`/`code`)만 stdout에 쓴다. `scope=` 형식과
+  `$GITHUB_OUTPUT` 기록은 워크플로가 한다 — 쓰는 곳이 한 군데뿐이다.
+- 생성물 3종(`tools/validation-bundle.json`·`runtime-changes.json`·
+  `validation-provenance.json`)만 바뀐 diff는 `full`이다. 무결성은 어차피
+  모든 잡이 `check_bundle.py`·`build_validation_bundle.py --check`로 검사한다.
+- 규칙 2가 catch-all이라 새 경로·모르는 경로는 `code`이며, 전체에서 빠지는
+  것은 `PR_DEFERRED_UNITS`(= `NESTED_RUNS`) 뿐이다. 스코프가 gate·skip·
+  고정 결함 판정을 풀지 않는지는 `tools/check_validation_report.py --pr-scope`가
+  같은 ID 집합으로 대조한다.
+- 보고서의 `validation_scope`는 플랫폼 범위(`current_platform`)이지 PR
+  스코프가 아니다. PR 스코프는 보고서에 저장하지 않고 merge·최종 검사에
+  `--pr-scope`로 따로 전달한다. 한 스코프로 만든 조각 집합을 다른 스코프로
+  합치면 ID 합집합이 맞지 않아 `merge_shard_reports`가 실패한다(교차 차단).
+- 계약 시험은 `tests/test_ci_scope.py`(판정·출력 계약)와
+  `tests/test_validation_sharding.py`(스코프 집합·병합 9변형·최종 보고서·
+  inventory 계층·XPASS 집계·판정 우선순위)다. 두 파일 모두 `code` 스코프에
+  들어가므로 PR에서 항상 돈다.
 
 ### 조각 배정과 합치기
 
@@ -181,6 +228,15 @@ job이 실패·취소돼도 건너뛰지 않고, 조각 결과가 `success`가 �
   `sys.path` 변경 없음(자식 프로세스 env는 호출마다 복사본), `mock.patch`는 `with`
   범위 안(`RunnerAccountingTests`, 통째로 실행) ④ `KNOWN_DEFECTS`는 시험 id를 키로
   쓴다. 그래도 나누기 전/후 결과가 시험 id별로 같은지는 전후 비교(아래)로 닫는다.
+- 중첩 실행을 막으려고 사본의 메타 시험 파일을 덮어쓸 때는 **모양을 보존**해야
+  한다: `tests/test_runner_contract.py`는 `validation_sharding.NESTED_RUNS`의
+  `RunnerContractTests` 단위마다 같은 이름의 no-op 메서드를 가진 같은 이름의
+  클래스를 쓰고(모듈 상수 `_STUB_SOURCE` 하나를 세 곳이 공유), 메서드 이름은
+  `sorted()`로 고정한다. 사본 안의 discovery가 `PR_DEFERRED_UNITS` 10단위를
+  그대로 담아야 `code`/`full` 집합 차이가 정확히 그 10단위가 되기 때문이다 —
+  이름 하나짜리 불투명 스텁은 7단위를 지워 `tests/test_validation_sharding.py`의
+  불변식(`PR_DEFERRED_UNITS <= set(modules)`)을 깨고, `full` 스코프(main push)의
+  중첩 실행을 3건 실패로 만든다(2026-11-13 main 실패).
 - 단위를 가중치 큰 것부터 정렬(가중치 = 시험 수 + 중첩 실행 수 × 3000 — 중첩 실행 1회가
   나머지 모듈 전체와 비슷한 시간), 경로 순으로 놓고 그때그때 가장 적게 쌓인 조각에
   배정한다(동률이면 낮은 번호). 결정적이다. 중첩 실행 수는 `validation_sharding.py`의
@@ -195,6 +251,22 @@ job이 실패·취소돼도 건너뛰지 않고, 조각 결과가 `success`가 �
   전체 discover와 다름(누락·중복) 중 하나라도 있으면 실패한다.
 - 시험은 삭제·skip 추가·내용 수정 없이 그대로다. 합친 보고서는 전체 실행과
   같은 모양이어서 contract 검사가 바뀌지 않는다.
+- 중첩 실행이 남기는 산출물(진단용): 두 메타 시험 모듈은 자기 안에서 저장소
+  사본을 만들어 전체 실행을 다시 돌리고, 그 보고서·stderr를 사본 트리 **밖**의
+  고정 디렉터리(`<시스템 임시 디렉터리>/knuaf-nested-reports/`)에 쓴다. 사본
+  트리 안에 쓰면 사본에 대한 이후 bundle 검사에서 undeclared 파일이 되고, 사본을
+  소유한 `TemporaryDirectory`가 시험 끝에 지워지므로 그 옆에 써도 CI 업로드
+  시점에는 없다. 파일 이름은 `<사본 임시 디렉터리 이름>-<report>`라 실행끼리
+  섞이지 않는다. 위치가 `$RUNNER_TEMP`가 아니라 `tempfile.gettempdir()`(호스티드
+  러너 기본 `/tmp`)인 것도 그래서다. 조각 job은 `validation-shard-py3.*-N`
+  (조각 보고서·bundle 보고서)와 별도로 `validation-nested-reports-py3.*-N`
+  artifact를 하나 더 올린다 — 경로는 `python3 -c 'import tempfile;print(tempfile.gettempdir())'`로
+  구한 접두 아래 `knuaf-nested-reports/*.json`(중첩·비중첩 보고서)과
+  `knuaf-nested-reports/*.stderr`(두 실행의 stderr, 빈 경우에도 파일로 남김)다.
+  `${{ runner.temp }}/../..`를 쓰면 `/home/runner/work`가 되어 잡히지 않는다.
+  `code` 스코프 PR은 중첩 단위를 아예 돌리지 않으므로 이 artifact가 비어 있을 수
+  있어 `if-no-files-found: warn`이고, 조각 보고서 artifact의 `error`는 그대로다.
+  마무리 job은 이 artifact를 읽지 않는다(사람이 실패를 진단할 때만 쓴다).
 
 ### 전후 비교 (시험 ID별)
 

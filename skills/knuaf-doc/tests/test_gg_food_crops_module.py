@@ -1,7 +1,8 @@
 """Food-crops (식량작물전공) module contract.
 
-Covers DESIGN-v1 §12-1's refusal table (school workbook unsupported at
-every entry point), the four branch combinations plus the undecided /
+Covers DESIGN-E3 §5's N1 (school workbook opened for the 16-sheet food
+crops form; other majors stay closed), the four branch combinations plus
+the undecided /
 conflict / crop-count-mismatch states (§11-2), the 12-node document plan
 order, and the advisory notices (plan-year shift, startup form, non-food
 crop).
@@ -47,19 +48,35 @@ def _branch(entry_mode=None, cropping_system=None, crops=None):
 
 
 class FoodCropsRefusalTests(unittest.TestCase):
-    """§12-1: no school workbook, decided by omission from the outputs."""
+    """DESIGN-E3 N1: the 16-sheet school workbook is open here and only here."""
 
-    def test_route_rejects_school_excel_workbook_for_every_capability(self):
+    def test_route_accepts_the_school_excel_workbook_here_only(self):
         registry = mc.default_registry()
         for capability in mc.CAPABILITY_KINDS:
             with self.subTest(capability=capability):
-                with self.assertRaises(mc.UnsupportedOutputError):
-                    mc.route(registry, MAJOR, capability,
-                             output="school_excel_workbook")
+                proposal = mc.route(registry, MAJOR, capability,
+                                    output="school_excel_workbook")
+                self.assertEqual(proposal.major_id, MAJOR)
+        # A peer that never declares the workbook output still refuses it.
+        with self.assertRaises(mc.UnsupportedOutputError):
+            mc.route(registry, "industrial_insects", "finance",
+                     output="school_excel_workbook")
+        # Every other major refuses this form's profile even where the
+        # workbook output itself is declared (fruit/hort/dairy own forms).
+        peer = registry.resolve("hort_env_systems")
+        authorization = mc.OutputAuthorization(
+            output=mc.OUTPUT_SCHOOL_WORKBOOK, major_id=peer.major_id,
+            module_version=peer.module_version,
+            contract_version=mc.CONTRACT_VERSION,
+            project_revision=1, binding_evidence="synthetic")
+        with self.assertRaises(mc.OutputHeldError) as caught:
+            mc.require_finance_profile(authorization, "food_crops_16_sheet_v1")
+        self.assertEqual(caught.exception.reason, "unsupported_finance_profile")
 
-    def test_document_proposal_with_workbook_claim_rejected(self):
-        module = mc.default_registry().resolve(MAJOR)
-        for claim in ({"workbook": "school_17_sheet_v1"},
+    def test_workbook_claim_is_accepted_here_and_still_refused_for_a_peer(self):
+        registry = mc.default_registry()
+        module = registry.resolve(MAJOR)
+        for claim in ({"workbook": "food_crops_16_sheet_v1"},
                       {"sheets": ["생산계획"]}):
             with self.subTest(claim=claim):
                 proposal = mc.ModuleProposal(
@@ -70,20 +87,32 @@ class FoodCropsRefusalTests(unittest.TestCase):
                     status="supported",
                     proposal=mc._freeze(claim),
                 )
-                with self.assertRaises(mc.ProposalInvalidError):
-                    mc.validate_proposal(module, proposal)
+                mc.validate_proposal(module, proposal)
+        # A major that declares no workbook output still refuses the claim.
+        peer = registry.resolve("industrial_insects")
+        claim = {"sheets": ["생산계획"]}
+        proposal = mc.ModuleProposal(
+            major_id=peer.major_id,
+            module_version=peer.module_version,
+            contract_version=mc.CONTRACT_VERSION,
+            capability="document",
+            status="supported",
+            proposal=mc._freeze(claim),
+        )
+        with self.assertRaises(mc.ProposalInvalidError):
+            mc.validate_proposal(peer, proposal)
 
-    def test_finance_capability_is_unsupported(self):
+    def test_finance_capability_is_supported_for_the_16_sheet_form(self):
         module = mc.default_registry().resolve(MAJOR)
-        self.assertEqual(module.capabilities["finance"], "unsupported")
+        self.assertEqual(module.capabilities["finance"], "supported")
         self.assertEqual(
             [(cap.profile, cap.status) for cap in module.finance_capabilities],
-            [("food_crops_16_sheet_v1", "unsupported")])
+            [("food_crops_16_sheet_v1", "supported")])
         proposal = mc.route(mc.default_registry(), MAJOR, "finance")
-        self.assertEqual(proposal.status, "unsupported")
+        self.assertEqual(proposal.status, "supported")
         self.assertEqual(
             [cap["status"] for cap in proposal.proposal["capabilities"]],
-            ["unsupported"])
+            ["supported"])
         self.assertFalse(proposal.proposal["blocks_document"])
 
     def test_cli_workbook_request_refused_and_no_file_written(self):
@@ -100,29 +129,28 @@ class FoodCropsRefusalTests(unittest.TestCase):
                  str(SCRIPTS / "build_excel_finance_template.py"), temp,
                  "--input", "spec.json", "--out", "build/x.xlsx",
                  "--major", MAJOR],
-                capture_output=True, text=True)
+                capture_output=True, text=True, encoding="utf-8")
             self.assertEqual(result.returncode, 2,
                              result.stdout + result.stderr)
             self.assertEqual(json.loads(result.stdout)["reason"],
-                             "unsupported_output")
+                             "unsupported_finance_profile")
             self.assertFalse((Path(temp) / "build").exists())
             after = sorted(
                 p.relative_to(temp).as_posix()
                 for p in Path(temp).rglob("*") if p.is_file())
             self.assertEqual(before, after)
 
-    def test_major_plan_reports_finance_unsupported(self):
+    def test_major_plan_reports_finance_supported(self):
         result = _major_plan()
         self.assertEqual(
-            result["proposals"]["finance"]["status"], "unsupported")
+            result["proposals"]["finance"]["status"], "supported")
         self.assertEqual(
             {cap["status"]
              for cap in result["proposals"]["finance"]["proposal"][
                  "capabilities"]},
-            {"unsupported"})
-        self.assertNotIn("school_excel_workbook", json.dumps(result))
+            {"supported"})
         module = mc.default_registry().resolve(MAJOR)
-        self.assertNotIn("school_excel_workbook", module.supported_outputs)
+        self.assertIn("school_excel_workbook", module.supported_outputs)
         self.assertEqual(module.workbook_profiles,
                          ("food_crops_16_sheet_v1",))
         self.assertIn("school_paper", module.supported_outputs)

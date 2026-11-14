@@ -565,7 +565,7 @@ class BodyFinanceGateTests(ContractCase):
                     before = (self.root / "project.json").read_bytes()
                     proc = subprocess.run([sys.executable, "-B", str(SCRIPTS / "gg.py"),
                                            command, str(self.root)],
-                                          capture_output=True, text=True)
+                                          capture_output=True, text=True, encoding="utf-8")
                     # check returns 1 for any error (the fixture deliberately
                     # has no school rules); status/next are read reports.
                     self.assertEqual(1 if command == "check" else 0,

@@ -18,7 +18,7 @@ class CommonContractFlowTests(ContractCase):
     def _run(self, root, command, *args):
         return subprocess.run(
             [sys.executable, "-B", str(SCRIPTS / "gg.py"), command, str(root), *args],
-            capture_output=True, text=True,
+            capture_output=True, text=True, encoding="utf-8",
         )
 
     def _bind(self, root, major_id, module_version):
@@ -69,6 +69,18 @@ class CommonContractFlowTests(ContractCase):
         self.assertEqual(candidates["counts"]["candidates"], 1)
         self.assertEqual(candidates["counts"]["approved"], 0)
         self.assertNotEqual(candidates["status"], "approved")
+        # explicit year: the G3 default-year resolver stays out of the way
+        self.assertIsNone(candidates["year_default"])
+
+        yearless = self._run(
+            root, "rda-candidates", "--crop", "유지작물계", "--region", "전국",
+            "--rda-kind", "production_stat",
+            "--unit", "kg", "--use-scope", "plan_input",
+        )
+        self.assertEqual(yearless.returncode, 0, yearless.stderr)
+        yearless_body = json.loads(yearless.stdout)
+        self.assertIn("year_default", yearless_body)
+        self.assertEqual(yearless_body["query"]["year"], None)
 
         raw = self._run(
             root, "rda-lookup", "--crop", "유지작물계", "--region", "전국",

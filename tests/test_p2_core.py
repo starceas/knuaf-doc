@@ -1964,7 +1964,7 @@ sys.exit(gg.main())
              "--expected-revision", str(p["revision"]),
              "--request-id", "adoption-key-probe",
              "--major", "specialty_crops"],
-            capture_output=True, text=True, env=_env(), cwd=root)
+            capture_output=True, text=True, encoding="utf-8", env=_env(), cwd=root)
         self.assertEqual(2, proc.returncode, proc.stderr + proc.stdout)
         self.assertNotIn("SYNTHETIC-KEY", proc.stdout)
         payload = json.loads(proc.stdout)

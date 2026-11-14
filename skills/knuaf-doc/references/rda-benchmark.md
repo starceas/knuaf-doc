@@ -38,19 +38,33 @@ CLI: `python3 scripts/gg.py rda-lookup` / `rda-candidates` / `rda-propose` / `rd
 - 작성 경로는 `rda-candidates <폴더>`다 — 정본의 `common.major_id` 바인딩에서
   전공을 읽는다. `rda-lookup`은 전공을 선택 인자로 받는 원자료 감사용 조회다.
 
-## 2. 승격된 팩 (`references/benchmark-packs/catalog.json` 기준, 2026-09-29 실측)
+## 2. 승격된 팩 (`references/benchmark-packs/catalog.json` 기준, 2026-11-14 실측)
 
 | 팩 | ID | record 수 | 출처 |
 |---|---|---|---|
-| 전국 농가소득 2024 (rda.income.national.2024) | `rda.income.national.2024` | 102 | rda-income.xlsx — 전국 평균 |
-| 시도별 농가소득 2024 (rda.income.regional.2024) | `rda.income.regional.2024` | 365 | rda-income.xlsx — 도별 평균 |
-| 농업경영조사 2025 (rda.econ.2025) | `rda.econ.2025` | 2,707 | farm-management.xlsx — 시트·행·셀 단위 |
-| 특용작물 생산실적 2024 (mafra.specialty.production.2024) | `mafra.specialty.production.2024` | 2,988 | mafra-specialty-production-2024.json — 특용·약용작물 전국·시도·시장 |
+| 전국 농가소득 2024 | `rda.income.national.2024` | 102 | rda-income.xlsx — 전국 평균 |
+| 시도별 농가소득 2024 | `rda.income.regional.2024` | 365 | rda-income.xlsx — 도별 평균 |
+| 농업경영조사 2025 | `rda.econ.2025` | 2,707 | farm-management.xlsx — 시트·행·셀 단위 |
+| 특용작물 생산실적 2024 | `mafra.specialty.production.2024` | 2,988 | mafra-specialty-production-2024.json — 특용·약용작물 전국·시도·시장 |
+| 전국 농가소득 2025 | `rda.income.national.2025` | 104 | 농산물소득자료집(2025년산) — 인용 색인 경유 |
+| 시도별 농가소득 2025 | `rda.income.regional.2025` | 49 | 농산물소득자료집(2025년산) — 인용 색인 경유 |
 
-4개 팩 합계 6,162건 (기존 카탈로그의 `record_count`와 무관 — 실제 레코드 수).
+6개 팩 합계 6,315건 (기존 카탈로그의 `record_count`와 무관 — 실제 레코드 수).
 공통 소득표(전국·시도)는 소득·가계비·자가노동비용 계열이고,
 특용작물 팩은 생산실적·공식시장가격·관측가격을, econ 팩은 농업경영 비용·
 가격·시계열을 담는다. 학교 양식 입력칸으로의 매핑은 없다 — 이 조회는 답변 보조다.
+
+**행별 출처(`source`) 상태 (2026-11-14, main 5f132a5 실측).** 소득 팩 4개
+(2024·2025 전국·지역, 620행)는 전 행이 `source`(publisher·survey·survey_label·
+aggregation_group·data_year…)를 갖는다 — `rda.income` 602행,
+`kostat.production_cost` 18행. `rda.econ.2025`(2,707행)·
+`mafra.specialty.production.2024`(2,988행)는 아직 `source`가 없어 연도 기본값이
+`source_unknown`으로 막힌다(§4.1) — 그 팩들은 기존 조회 결과가 그대로이고(실측:
+10,659질의 결과 바이트 동일), 출처 채우기는 다음 데이터 PR에서 한다.
+실측 분포: 다년 4축 그룹 422개 중 기본값 적용 144·막힘 278(전부 econ·mafra
+`source_unknown`), 한 그룹에 survey가 둘 이상인 경우 0. `rda-candidates` 진입점
+기준으로 기본값이 붙는 소득 그룹 146개는 관측 판정이 `ambiguous`→`unique`로
+풀리고, 사용 승인 상태는 그대로 `unapproved`다(연도 선택은 승인이 아니다).
 
 `catalog.json.gaps[]`(현재 4건)은 팩이 덮지 못하는 범위를 누적으로 기록한 목록이다.
 확인된 공백 — 시설비·인건비·종묘비·비료·농약비·관수·전기·수선유지·공공요금·재배기술·
@@ -101,6 +115,52 @@ CLI: `python3 scripts/gg.py rda-lookup` / `rda-candidates` / `rda-propose` / `rd
 `verification_summary`는 결과 레코드들의 검증 상태 합계다.
 `web` 필드는 `kind=input_price` + `allow_web=True`일 때 스텁
 (`miss`/`web_not_implemented_in_mvp`)을 보고할 뿐 실제 웹 호출을 하지 않는다.
+
+### 4.1 연도 기본값 (연도를 안 준 `rda-candidates`)
+
+`rda-lookup`(원시 계약)은 **바뀌지 않았다** — 연도를 안 주면 지금도
+`ambiguous`/`series`/`not_found`다. 기본 연도는 그 위 `rda-candidates`
+진입점에서만, `year is None and audit_key is None`일 때만 해석한다.
+
+결과에 `year_default` 키가 붙는다:
+
+| status | 의미 |
+|---|---|
+| `applied` | 한 연도를 골랐다. `year`·`form`·`kind`·`survey`·`aggregation_group`·`catalog_status`가 채워지고, 원시 조회가 그 연도로 다시 돈다 |
+| `blocked` | 고르지 않았다. 사유는 `year_default.reason`에만 있고, 원시 조회는 연도 없이 그대로 돈다 — 최상위 `status`·`reason`·후보 목록은 연도 기본값이 없던 때와 똑같다 |
+| `not_attempted` | 후보가 0건이라 시도하지 않았다 |
+| `null` | 이 요청은 대상이 아니다(명시 `year`·`audit_key`) |
+
+`blocked` 사유:
+
+| reason | 조건 |
+|---|---|
+| `source_unknown` | 후보 중 하나라도 `source` 없음 / `survey`·`data_year`·`aggregation_group` 없음·빈 값 |
+| `source_invalid` | 값 형식 위반 또는 `aggregation_group != survey + "." + data_year` |
+| `survey_mixed` | 후보에 `source.survey`가 둘 이상 — **승인상태·연도 비교보다 먼저** 검사한다 |
+| `group_unresolved` | 호출자가 안 준 `kind`·`form` 축에 값이 둘 이상(예: 노지·시설) |
+| `year_unknown` | 고를 등급 안에 정수 연도가 없다 |
+
+순서: 출처 검사 → survey 혼합 → 그룹 유일성 → (최고 `catalog_status` 등급
+→ 그 등급 안 최대 연도). **어떤 경우에도 출처를 지어내지 않는다.** 명시
+`year`는 대체하지 않고(`not_found` 유지), `audit_key` 조회에는 연도를
+주입하지 않는다. 고른 행이 `exploratory`·`quarantined`여도 승인 상태를
+올리지 않는다 — `rda-candidates`의 `approved` 판정은 그대로다.
+
+### 4.2 여러 레코드를 함께 쓰는 경로의 계약
+
+합산·평균·순위처럼 **여러 레코드를 한 숫자로 합치는** 코드는 `source`가
+같은 조사 묶음인지 먼저 확인해야 한다. 계약 함수는
+`gg_rda_candidates.require_single_aggregation_group(rows)`다 — 같은
+`aggregation_group`이면 그 문자열을, 다르면
+`AggregationGroupError(reason="aggregation_group_mixed")`, 행에 출처가
+없으면 `source_unknown`, 형식이 틀리면 `source_invalid`로 거부한다.
+빈 목록은 호출자 오류(`ValueError`)다.
+
+한 연도의 대표 관측 **한 건**을 고르는 것(위 4.1)은 이 계약의 대상이
+아니다 — "한 건 선택"과 "여러 해를 섞어 합치기"는 다르다. 현재 코드에
+합산·평균 경로는 없고(실측: `gg_rda_candidates.py`의 `sum`은 자격 후보
+개수 세기), 새로 생기는 경로는 이 함수를 거친다.
 
 ## 5. 사용 예 — Python (2026-10-10 실측 출력)
 
@@ -167,6 +227,7 @@ python3 scripts/gg.py rda-lookup --crop 인삼 --region 전국 --rda-kind produc
 python3 scripts/gg.py rda-lookup --crop 참깨 --region 전국 --rda-kind official_market_price --audit-key '<json>'
 
 # 작성 경로 — 정본 바인딩 기준 후보 목록 + missing
+# (연도를 안 주면 연도 기본값이 붙는다 — §4.1)
 python3 scripts/gg.py rda-candidates <프로젝트폴더>
 
 # 연구 제안·적용 (검토 흐름 — reviews/rda-check.json과 함께)
@@ -193,6 +254,7 @@ python3 scripts/gg.py rda-apply ...
 - `allow_web` 기본값은 False — 조회는 웹을 타지 않는다.
 - `ambiguous`·`series`·`unverified`·"옮기지 말 것" 라벨 값을 본문·표에 옮기지 않는다. `unique`도 승인이 아니다(§4).
 - 학생이 답한 대상을 조회값으로 덮어쓰지 않는다 — propose/apply가 대상 상태를 재확인한다(§6).
+- 연도 기본값은 **한 연도를 고르는 일**이지 출처·승인 상태를 만드는 일이 아니다 — `survey_mixed`·`source_unknown`·`group_unresolved`로 막히면 그대로 두고 사유를 보고한다(§4.1).
 - `explicit_assumption`은 사용자 승인 없이 만들지 않는다.
 
 ## 10. 관련 파일

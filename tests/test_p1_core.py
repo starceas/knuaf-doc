@@ -252,7 +252,7 @@ class PythonFloorTests(ContractCase):
              "sys.version_info = (3, 9, 18)\n"
              "sys.argv = ['gg.py', 'doctor', 'x']\n"
              "runpy.run_path('gg.py', run_name='__main__')\n"],
-            cwd=d, capture_output=True, text=True, env=env)
+            cwd=d, capture_output=True, text=True, encoding="utf-8", env=env)
         self.assertEqual(2, proc.returncode,
                          "stdout=%r stderr=%r" % (proc.stdout, proc.stderr))
         payload = json.loads(proc.stdout)
@@ -275,7 +275,7 @@ class PythonFloorTests(ContractCase):
         env["PYTHONDONTWRITEBYTECODE"] = "1"
         proc = subprocess.run(
             [sys.executable, str(SCRIPTS / "gg.py"), "status", str(root)],
-            capture_output=True, text=True, env=env)
+            capture_output=True, text=True, encoding="utf-8", env=env)
         self.assertEqual(0, proc.returncode,
                          "stdout=%r stderr=%r" % (proc.stdout, proc.stderr))
         self.assertIn("skill_ready", json.loads(proc.stdout))

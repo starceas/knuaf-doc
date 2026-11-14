@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "updated": "2026-09-18",
+  "updated": "2026-11-13",
   "mvp_major": "specialty_crops",
   "majors": [
     "food_crops",
@@ -45,6 +45,22 @@
       "rank": 2,
       "relpath": "majors/specialty_crops/mafra-specialty-production-2024/records.jsonl",
       "source_sha256": "0974c3d30aa5c1abd795be0af453f4de3bd4e569285c250537897b820d2aa1d5"
+    },
+    {
+      "pack_id": "rda.income.national.2025",
+      "kind": "common",
+      "major_id": null,
+      "rank": 1,
+      "relpath": "common/rda-income-national-2025/records.jsonl",
+      "source_sha256": "af7af2206083dc9e12fea6224cf9c60e9f32bd1455e21d8784f31dc2ed4928f8"
+    },
+    {
+      "pack_id": "rda.income.regional.2025",
+      "kind": "common",
+      "major_id": null,
+      "rank": 1,
+      "relpath": "common/rda-income-regional-2025/records.jsonl",
+      "source_sha256": "532e48400a54b6f1a8eb046cd15874ac2977305ba9735026d3198aec770cdefb"
     }
   ],
   "gaps": [

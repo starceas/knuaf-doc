@@ -450,6 +450,9 @@ def _commit_canonical(root, data, *, operation, expect_revision,
     """Single canonical commit point with post-attempt recheck."""
     try:
         atomic(Path(root) / "project.json", data)
+        # 정본이 확정된 뒤, 같은 락 안에서 곁파일을 맞춘다. 여기서 나는 예외는
+        # 삼키지 않고 _rewrite_sidecars가 스스로 처리한다(커밋은 이미 성공).
+        _rewrite_sidecars(root)
     except OSError as error:
         state, extra = _recheck_canonical(root, expect_revision, request_id)
         raise _op(
@@ -726,6 +729,84 @@ def _control_files():
         ".gg-recovery-active.json",
         ".gg-import-publication.json",
     }
+
+
+# 정본 커밋 직후 다시 쓰는 곁파일 등록부 (공통 장 DESIGN-SIDECAR-REGISTRY §2).
+# 한 줄 = (모듈, 함수, 자기 파일 이름, 계약, 실패 정책). 술어 없이 모든
+# 커밋에서 다시 쓴다 — 술어를 두면 파일이 ``checks()``와 어긋난 채 남는다.
+# W-P 2부가 진행 파일 행 한 줄을 여기에 더한다(알림 → 진행 순서).
+_SIDECAR_WRITERS = (
+    ("gg_notices", "write_notices", ".knuaf-notices.json", "dict", "remove"),
+)
+
+
+def _sidecar_ok(value, contract):
+    """writer 반환으로 성공을 판정한다(공통 장 §3-1).
+
+    ``"dict"``: ``status=="written"`` 만 성공 — ``failed``·모르는 status·
+    dict 아님은 실패다. ``"none"``: 정상 반환이 ``None``, 그 밖의 반환은
+    계약 위반이라 실패다.
+    """
+    if contract == "dict":
+        return isinstance(value, dict) and value.get("status") == "written"
+    return value is None
+
+
+def _rewrite_sidecars(root):
+    """정본 커밋 직후 곁파일을 다시 쓴다. 커밋을 깨지 않고 실패는 관측한다.
+
+    호출자는 이미 정본 잠금을 쥐고 있다 — 여기서 잠그면 자기 교착이다.
+    ``except BaseException``: ``SystemExit``·``KeyboardInterrupt``도 정본
+    커밋 뒤에는 훅 안에서 닫는다(밖으로 새면 커밋 성공이 실패로 보인다).
+    실패 줄은 ``BLOCK:``으로 시작하지 않는다 — 앱은 그 접두만 차단으로 읽고,
+    곁파일 실패는 커밋 성공 뒤의 부수 실패다(공통 장 §4-3 ①). 그 줄은 한 줄로
+    접고(예외 메시지의 줄바꿈 포함) 출력 실패도 삼킨다 — 진단이 커밋 성공을
+    오류 응답으로 바꾸면 안 된다(I-01).
+    """
+    import importlib
+
+    for module_name, func_name, name, contract, on_failure in _SIDECAR_WRITERS:
+        detail = None
+        try:
+            value = getattr(importlib.import_module(module_name), func_name)(root)
+            if not _sidecar_ok(value, contract):
+                detail = "unexpected_return: %r" % (value,)
+        except BaseException as error:      # 커밋은 이미 성공 — 밖으로 내보내지 않는다
+            detail = "%s: %s" % (type(error).__name__, error)
+        if detail is None:
+            continue
+        if on_failure == "remove":
+            try:
+                path = Path(root, name)
+                # ``exists()``는 링크를 따라가므로 대상이 없는 링크를 놓친다.
+                # 곁파일 자리 자체(링크 포함)를 지운다 — I-02.
+                if path.is_symlink() or path.exists():
+                    path.unlink()
+            except OSError as error:
+                detail += " | unlink_refused: %s" % error
+        _sidecar_report(_sidecar_line(name, module_name, func_name, detail))
+
+
+def _sidecar_text(value):
+    """진단에 넣는 문자열을 한 줄로 접는다 — 줄바꿈·CR·비출력은 공백."""
+    return "".join(" " if ch in "\r\n\t" or not ch.isprintable() else ch
+                   for ch in str(value))
+
+
+def _sidecar_line(name, module_name, func_name, detail):
+    """앱 진단 한 줄. 고정 접두 ``sidecar ``가 먼저라 ``BLOCK:``으로 못 시작한다."""
+    return "sidecar %s failed (%s.%s) - %s\n" % (
+        _sidecar_text(name), _sidecar_text(module_name),
+        _sidecar_text(func_name), _sidecar_text(detail))
+
+
+def _sidecar_report(line):
+    """진단 출력은 커밋 반환 경로로 새지 않는다(닫힌 stderr 파이프 포함)."""
+    try:
+        sys.stderr.write(line)
+        sys.stderr.flush()
+    except BaseException:                   # 출력 실패는 커밋 성공을 못 바꾼다
+        pass
 
 
 def validate(p):
@@ -2422,6 +2503,7 @@ def adopt_output(root, output_value, expected_revision, request_id,
                      major_authorization_current=current)
     return value
 
+
 def question(p, field_id):
     facts = [f for f in p["facts"].values() if f["field_id"] == field_id]
     if any(
@@ -2513,7 +2595,8 @@ def finance_gate(p):
                 "reason": "전공 미확인: 기존 전공 확인 경로를 따름"}
     if not any(c.status == "supported" for c in module.finance_capabilities):
         return {"state": "not_computable", "supported": False,
-                "reason": "재무 계산 미지원 전공: 수치 의존 부분만 보류"}
+                "reason": "재무 계산 미지원 전공: 수치 의존 부분만 보류",
+                "unsupported_major": True, "major_id": binding.major_id}
     state = _finance_gate_fact(p, FINANCE_GATE_STATE)
     profit = _finance_gate_fact(p, FINANCE_GATE_PROFIT)
     if state is None or state.get("value") not in {
@@ -2905,6 +2988,13 @@ def _finance_tables_mod():
     imported; gg_finance_tables never imports gg_core."""
     import gg_finance_tables
     return gg_finance_tables
+
+def _finance_amounts_mod():
+    """W-E2 integration point (gg_finance_amounts.detect_amount_gaps).
+    Lazily imported so the module loads only when the body crosscheck
+    actually runs; gg_finance_amounts never imports gg_core."""
+    import gg_finance_amounts
+    return gg_finance_amounts
 
 _FINANCE_ASSET_ROLES = (
     "land", "building", "plants", "animals", "machines", "cash",
@@ -4119,6 +4209,363 @@ _SUPPORTED_OPS = (
 )
 
 
+# --- 학생 알림: 엑셀 점검 '안내만' (v0.4.9) --------------------------------
+# 차단 0. 이 블록이 만드는 행은 모두 severity="info"다.
+# 역할: "hort" = 원예 변환본, "fruit_fy1" = **FY1 정정을 실제 적용한** 과수본.
+# 일반 과수(fruit_16_sheet_v1)는 이 표에 없다 — FY1 정정을 하지 않았으므로
+# "21곳을 바로잡았어요" 안내를 낼 수 없다(I1). 지원 프로필이지만 알림 0건이다.
+_WORKBOOK_ADVICE_PROFILES = {
+    "hort_18_sheet_reconstructed_v1": "hort",
+    "fruit_16_sheet_v1_fy1": "fruit_fy1",
+}
+
+
+def _advice_major_id(p):
+    """원예/과수 판정은 major_id 문자열로(능력 플래그는 둘을 구별 못 함).
+
+    ``common.major_id`` 사실을 읽는 공개 헬퍼를 쓴다.
+
+    **예상된 판정 불가만 ``None``**이다 — 전공 미확정·중복·근거 불일치
+    (``MajorContractError`` 계열). 그 밖의 예상 밖 오류는 알림이 필요 없어서
+    가 아니라 **알림을 만들다 실패한 것**이므로 그대로 올려보낸다(I4-a).
+    여기서 삼키면 빈 파일이 '성공'으로 보고되고 기존 알림이 지워진다.
+    """
+    import gg_major_contract as mc
+    try:
+        auth = mc.binding_from_project(mc.default_registry(), p)
+    except mc.MajorContractError:
+        return None
+    return getattr(auth, "major_id", None)
+
+
+def _advice_output(p, lineage):
+    """알림 대상 채택 산출물 1건. (oid, output) 또는 (None, None)."""
+    best = None
+    for oid, output in (p.get("outputs") or {}).items():
+        if not isinstance(output, dict):
+            continue
+        if (lineage.get(oid) or {}).get("state") != "current":
+            continue
+        if output.get("workbook_profile") not in _WORKBOOK_ADVICE_PROFILES:
+            continue
+        if not (output.get("native_manifest") or output.get("template_receipt")):
+            continue
+        if best is None or oid > best:
+            best = oid
+    if best is None:
+        return None, None
+    return best, p["outputs"][best]
+
+
+def _advice_receipt_pointer(output):
+    """native_manifest 또는 template_receipt 중 **있는 쪽**."""
+    for key in ("native_manifest", "template_receipt"):
+        pointer = output.get(key)
+        if isinstance(pointer, dict) and isinstance(pointer.get("path"), str):
+            return pointer["path"], pointer.get("sha256")
+    return None, None
+
+
+def _advice_receipt_path(root, pointer_path, pointer_sha):
+    """프로젝트 안·존재·해시 일치일 때만 상대 경로. 아니면 None."""
+    if not isinstance(pointer_path, str) or not pointer_path.strip():
+        return None
+    try:
+        resolved = local(root, pointer_path)
+    except (ValueError, OSError):
+        return None
+    if not resolved.is_file():
+        return None
+    if isinstance(pointer_sha, str) and pointer_sha:
+        try:
+            if digest(resolved.read_bytes()) != pointer_sha:
+                return None
+        except OSError:
+            return None
+    return pointer_path
+
+
+def _advice_project_id(root):
+    """알림 저장 범위 — 정규화한 프로젝트 절대 경로의 해시(설계 확정)."""
+    try:
+        return digest(str(Path(root).resolve()).encode("utf-8"))
+    except OSError:
+        return None
+
+
+def _advice_choice_record(p):
+    """선택이 저장된 질문 레코드(있으면). 없으면 None.
+
+    선택은 **질문 결정 기록에만** 둔다. 일반 재무 사실(facts)로 저장하면
+    ``checks()``가 claim_missing을, ``gate()``가 fact_unreviewed를 새로
+    붙여 **선택이 곧 제출 차단**이 된다(C1). 질문 레코드는 두 검사의
+    순회 대상이 아니다.
+    """
+    record = (p.get("questions") or {}).get(
+        "finance.workbook.accounting_notice.choice")
+    return record if isinstance(record, dict) else None
+
+
+def _advice_choice_value(record):
+    """레코드의 선택 값(있으면). ``choice``가 정본, 옛 ``answer``도 읽는다."""
+    for key in ("choice", "answer"):
+        value = record.get(key)
+        if value in ("direct_tell", "footnote"):
+            return value
+    return None
+
+
+def _advice_choice_fact(p, identity=None):
+    """이미 고른 값(있으면). 없거나 identity가 다르면 None.
+
+    ``identity``가 주어지면 **그 알림의 선택만** 인정한다(R2) — 정정 칸
+    집합이 바뀌어 알림 정체성이 바뀌면 이전 선택은 따라오지 않는다.
+    """
+    record = _advice_choice_record(p)
+    if record is None:
+        return None
+    if identity is not None:
+        stored = record.get("notice_identity")
+        if stored != identity:
+            return None
+    return _advice_choice_value(record)
+
+
+class _NoticeNotNeeded(Exception):
+    """알림이 **필요 없는** 경우(지원 전공 아님·대상 산출물 없음·알림 0종).
+
+    실패가 아니다. ``_workbook_notice_row_for_project``가 이 예외로
+    "행 없음"을 알리고, 호출부는 빈 목록(**성공**)으로 본다.
+    """
+
+
+def _workbook_notice_row_for_project(root, p):
+    """알림 행 하나 — 얇은 경로. ``checks()`` 전체를 돌리지 않는다.
+
+    ``_advice_output`` + ``_workbook_notice_row`` 만 쓰므로 엑셀을 열지 않고
+    본문 대조도 하지 않는다. 전체 ``checks()``와 **같은 행**을 내는 것은
+    시험 ``write_matches_full_checks``가 잠근다.
+
+    돌려주는 값:
+    - 행 dict — 알림 있음
+    - ``None`` — 알림이 필요 없음(지원 전공 아님·대상 산출물 없음)
+    - 예외를 **밖으로 던지지 않는다**: 예상 밖 오류는 ``_NoticeNotNeeded``와
+      구분해 ``RuntimeError``로 다시 던진다(I4). 여기서 삼키면 빈 파일이
+      '성공'으로 보고된다.
+    """
+    try:
+        if _advice_major_id(p) not in ("hort_env_systems", "fruit_trees"):
+            return None
+        oid, output = _advice_output(p, output_lineage(p))
+        if output is None:
+            return None
+        role = _WORKBOOK_ADVICE_PROFILES.get(output.get("workbook_profile") or "")
+        if role is None:
+            return None
+        return _workbook_notice_row(root, p, oid, output, role)
+    except (_NoticeNotNeeded, RuntimeError):
+        # 이미 분류된 '필요 없음'은 그대로, 실패 신호는 올려보낸다.
+        raise
+    except Exception as error:      # 예상 밖 오류 = 실패(성공으로 바꾸지 않는다)
+        raise RuntimeError(
+            "notice row assembly failed: " + type(error).__name__) from error
+
+
+def _workbook_notice_row(root, p, oid, output, role):
+    """계약 행 1개. 알림이 필요 없으면 None."""
+    from gg_hort_workbook import (notice_counts, notice_groups,
+                                  notice_identity, notice_items, notice_title)
+    fruit = role == "fruit_fy1"
+    counts = notice_counts(fruit=fruit)
+    typo_n, method_n = counts["typo"][1], counts["method"][1]
+    title = notice_title(typo_n, method_n)
+    if title is None:
+        return None
+    groups = notice_groups(fruit=fruit)
+    project_id = _advice_project_id(root)
+    pointer_path, pointer_sha = _advice_receipt_pointer(output)
+    row = result("finance_workbook_notice", "xlsx", "check_needed",
+                 title, p["revision"], severity="info", required_for=[])
+    identity = notice_identity(
+        project_id=project_id,
+        kind="fruit_fy1" if fruit else "transform",
+        profile=output.get("workbook_profile"),
+        form_identity=_advice_form_identity(fruit),
+        groups=groups)
+    row.update({
+        "title": title,
+        "items": notice_items(groups, source=role, in_school_form=True),
+        "notice_identity": identity,
+        "receipt_path": _advice_receipt_path(root, pointer_path, pointer_sha),
+        "record_refs": ([{"collection": "outputs", "id": oid}] if oid else []),
+        "typo_count": typo_n,
+        "method_count": method_n,
+        "dismissible": True,
+        "redisplay_rule": "identity_changed",
+        "project_id": project_id,
+    })
+    # 선택 2개는 '계산 방식을 바꾼 묶음'이 있을 때만, 알림 한 건에 한 번.
+    if not fruit and method_n:
+        row["choices"] = [
+            {"value": "direct_tell", "label": "교수님께 직접 말씀드릴게요"},
+            {"value": "footnote", "label": "논문에 각주로 적을게요"},
+        ]
+        row["choice"] = _advice_choice_fact(p, identity)
+        row["choice_hint"] = (
+            "교수님께 이렇게 말씀하시면 됩니다: 학교 재무 엑셀 양식과 계산 방식이 "
+            "다른 부분이 있어서, 계산 방식을 바로잡아 작성했다고 말씀드리세요. "
+            "왜 그렇게 했는지는 논문 각주에도 적어 두면 좋습니다.")
+    return row
+
+
+def _advice_form_identity(fruit):
+    """알림 정체성에 넣는 양식 지문. FY1은 정정 뒤 양식이므로 기본 해시."""
+    import gg_hort_workbook as hort
+    return "5f2896dd0c47d9b9" if fruit else hort.SOURCE_SHA
+
+
+# --- 학생 알림: 재무 검사 미지원 전공 (W-N) ------------------------------
+# 차단 0. 이 블록이 만드는 행은 severity="info"다. 미지원 전공은 뒤따르는
+# finance_gate가 아무것도 막지 않으므로, 안내가 사라지면 화면은 "모두 통과"로
+# 읽힌다. 그래서 행은 예외로 사라지지 않고, 식별값만 선택적으로 붙는다.
+_UNSUPPORTED_FINANCE_TITLE = (
+    "이 전공은 재무 검사를 해 드리지 않아요. "
+    "재무 계획과 숫자 확인은 교수님과 함께 하세요."
+)
+
+
+def _unsupported_finance_notice_row(root, p, gate_state):
+    """미지원 전공 안내 행 1개. 그 밖에는 None.
+
+    판별은 ``finance_gate``가 이미 한 것을 그대로 쓴다(``unsupported_major``) —
+    레지스트리를 두 번 풀지 않고, 미확인 갈래와도 갈린다.
+    """
+    if not gate_state.get("unsupported_major"):
+        return None
+    major_id = gate_state.get("major_id")
+    project_id = _advice_project_id(root)
+    row = result("finance_unsupported_notice", "finance", "not_checked",
+                 "재무 검사 미지원 전공: 안내만 하고 막지 않음",
+                 p["revision"], severity="info", required_for=[])
+    row.update({
+        "title": _UNSUPPORTED_FINANCE_TITLE,
+        "items": [],
+        "receipt_path": None,
+        "record_refs": [],
+        "dismissible": True,
+        "redisplay_rule": "identity_changed",
+        "project_id": project_id,
+    })
+    # 식별값 재료는 전공 ID다. 모듈 버전을 쓰면 무관한 패치마다 다시 뜬다.
+    # 식별값 계산이 실패해도 행은 남는다 — 대체 계산은 재료·구분자를 정상
+    # 경로와 똑같이 맞춰 **같은 값**을 내야 한다(공통 장 §8-1). 값이 다르면
+    # 닫은 안내가 import 실패 한 번으로 다시 뜬다.
+    try:
+        from gg_hort_workbook import notice_identity
+
+        row["notice_identity"] = notice_identity(
+            project_id=project_id, kind="unsupported_finance", profile=None,
+            form_identity=major_id, groups=[])
+    except (ImportError, OSError, ValueError, KeyError, TypeError):
+        payload = {"project_id": project_id, "kind": "unsupported_finance",
+                   "profile": None, "form_identity": major_id, "patched": []}
+        row["notice_identity"] = digest(json.dumps(
+            payload, ensure_ascii=False, sort_keys=True,
+            separators=(",", ":")).encode())
+    return row
+
+
+def _unsupported_finance_notice_row_for_project(root, p):
+    """알림 파일용 얇은 경로 — ``checks()`` 전체를 돌리지 않는다."""
+    return _unsupported_finance_notice_row(root, p, finance_gate(p))
+
+
+# --- 학생 알림: 재무 엑셀 빈 사본까지만 지원하는 전공 ------------------------
+# 차단 0. 재무 능력은 supported라 위 미지원 안내는 뜨지 않지만, 이 전공은 학교
+# 엑셀을 빈 사본으로만 만들어 주고 숫자는 확인하지 않는다(gg_major_contract
+# ``FILL_CLOSED_MAJORS``). 그 사실을 같은 모양의 info 행으로 알린다. 지원
+# 여부가 서로 반대라 미지원 행과는 함께 나오지 않는다.
+_BLANK_COPY_FINANCE_TITLE = (
+    "지금은 빈 사본만 만들어 드려요. 숫자 확인은 교수님과 함께 하세요."
+)
+
+
+def _blank_copy_finance_notice_row(root, p, gate_state):
+    """빈 사본까지만 지원하는 전공의 안내 행 1개. 그 밖에는 None.
+
+    지원 여부는 ``finance_gate`` 결과를 그대로 쓰고, '빈 사본까지만' 판정은
+    ``gg_major_contract.FILL_CLOSED_MAJORS``를 쓴다. 전공 ID는 이미 만들어진
+    기본 레지스트리에서 확정 사실만 읽는다(모듈을 다시 풀지 않는다).
+    """
+    if not gate_state.get("supported"):
+        return None
+    import gg_major_contract as mc
+
+    try:
+        binding = mc.binding_from_project(mc.default_registry(), p)
+    except mc.MajorContractError:
+        return None
+    major_id = binding.major_id
+    if major_id not in mc.FILL_CLOSED_MAJORS:
+        return None
+    project_id = _advice_project_id(root)
+    row = result("finance_blank_copy_notice", "finance", "not_checked",
+                 "재무 엑셀 빈 사본만 지원: 안내만 하고 막지 않음",
+                 p["revision"], severity="info", required_for=[])
+    row.update({
+        "title": _BLANK_COPY_FINANCE_TITLE,
+        "items": [],
+        "receipt_path": None,
+        "record_refs": [],
+        "dismissible": True,
+        "redisplay_rule": "identity_changed",
+        "project_id": project_id,
+    })
+    # 식별값 재료·대체 계산은 미지원 행과 같은 규칙(공통 장 §8-1), kind만 다르다.
+    try:
+        from gg_hort_workbook import notice_identity
+
+        row["notice_identity"] = notice_identity(
+            project_id=project_id, kind="blank_copy_finance", profile=None,
+            form_identity=major_id, groups=[])
+    except (ImportError, OSError, ValueError, KeyError, TypeError):
+        payload = {"project_id": project_id, "kind": "blank_copy_finance",
+                   "profile": None, "form_identity": major_id, "patched": []}
+        row["notice_identity"] = digest(json.dumps(
+            payload, ensure_ascii=False, sort_keys=True,
+            separators=(",", ":")).encode())
+    return row
+
+
+def _blank_copy_finance_notice_row_for_project(root, p):
+    """알림 파일용 얇은 경로 — ``checks()`` 전체를 돌리지 않는다."""
+    return _blank_copy_finance_notice_row(root, p, finance_gate(p))
+
+
+def _add_finance_workbook_advice(root, p, lineage, out):
+    """안내 행을 ``out``에 직접 붙인다. 예외를 밖으로 내보내지 않는다."""
+    try:
+        if _advice_major_id(p) not in ("hort_env_systems", "fruit_trees"):
+            return
+        oid, output = _advice_output(p, lineage)
+        if output is None:
+            if p.get("sections"):
+                out.append(result(
+                    "finance_workbook_not_checked", "xlsx", "check_needed",
+                    "재무 엑셀 점검을 아직 안 거쳤어요. 엑셀을 붙이고 점검을 "
+                    "마치면 대차까지 확인해 드려요.",
+                    p["revision"], severity="info", required_for=[]))
+            return
+        role = _WORKBOOK_ADVICE_PROFILES.get(output.get("workbook_profile") or "")
+        if role is None:
+            return
+        row = _workbook_notice_row(root, p, oid, output, role)
+        if row is not None:
+            out.append(row)
+    except Exception:
+        return
+
+
 def checks(root, p):
     from gg_document import parse
 
@@ -4152,6 +4599,12 @@ def checks(root, p):
         return out
 
     gate_state = finance_gate(p)
+    unsupported = _unsupported_finance_notice_row(root, p, gate_state)
+    if unsupported is not None:
+        out.append(unsupported)
+    blank_copy = _blank_copy_finance_notice_row(root, p, gate_state)
+    if blank_copy is not None:
+        out.append(blank_copy)
     if gate_state["supported"]:
         has_body = False
         for section in p["sections"].values():
@@ -4702,6 +5155,8 @@ def checks(root, p):
         for cid, reason in inspect_outputs(root, p, lineage):
             add(cid, "xlsx", reason, severity="info" if cid == "school_excel_17_scope" else "error",
                 status="not_checked" if cid == "school_excel_17_scope" else "fail")
+        # v0.4.9: 엑셀 점검은 '안내만'(차단 0). 실패해도 점검을 깨지 않는다.
+        _add_finance_workbook_advice(root, p, lineage, out)
         body = merged(root, p)
         # WP-3 handoff: the 5-year plan / opening-asset / area review is
         # only meaningful for finance-supported majors and a hash-current
@@ -4719,12 +5174,37 @@ def checks(root, p):
         elif items:
             from gg_school_excel import crosscheck_body
 
-            for item in crosscheck_body(body, items):
+            legacy_rows = list(crosscheck_body(body, items))
+            for item in legacy_rows:
                 add(
                     "body_finance_crosscheck",
                     item.get("fact_id") or item["location"],
                     item["reason"],
                     status=item.get("status", "fail"),
+                )
+            # W-E2: 같은 (항목, 연도, 범위) 금액이 서로 다른 목차 절에
+            # 다르게 적혀 있으면 잡는다. 절 순서(order)를 그대로 넘겨
+            # 모듈의 index가 학생 문구 '본문 N번째 절'과 맞게 한다.
+            amount_sections = [
+                {
+                    "section_id": sid,
+                    "path": s.get("path"),
+                    "title": s.get("title"),
+                    "text": draft(
+                        local(root, s["path"]).read_text(
+                            encoding="utf-8")),
+                }
+                for sid, s in sorted(p["sections"].items(),
+                                     key=lambda kv: kv[1]["order"])
+            ]
+            for issue in _finance_amounts_mod().detect_amount_gaps(
+                    amount_sections, items, legacy_issues=legacy_rows):
+                add(
+                    "body_finance_crosscheck",
+                    issue["location"],
+                    issue["reason"],
+                    severity=issue.get("severity", "error"),
+                    status=issue.get("status", "fail"),
                 )
         else:
             # G3-03: 비교 대상이 없으면 이 검사는 아무것도 보지 않는다.
@@ -6904,7 +7384,15 @@ def migrate_staged(dest, inventory, *, capability):
     receipt_ids, field_values = {}, {}
     # Index verbatim originals, never treat old 'verified' strings as new approval.
     # Free-form interviews/assumptions stay source records until explicit field mapping.
+    # 곁파일(§_SIDECAR_WRITERS)은 정본에서 파생된 사본이라 '원자료'가 아니다.
+    # 색인하면 스테이징 첫 커밋의 재작성이 곧 '원자료 변경'이 되어 이관이
+    # 거절된다(실측: 42B→187B, ValueError 원본 바이트 보존 대조 실패). payload
+    # 에는 그대로 실리므로 발행 대조는 유지된다.
+    derived = {name for _mod, _func, name, _contract, _on_failure
+               in _SIDECAR_WRITERS}
     for name, original_hash in sorted(inventory.items()):
+        if name in derived:
+            continue
         path = local(dest, name)
         section = Path(name).parent == Path("sections") and path.suffix == ".md"
         source_path = "migration/original-sections/" + path.name if section else name

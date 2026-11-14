@@ -254,7 +254,7 @@ class SampleIdentity(IdentityFixture):
                 self.assertTrue(core.completion(root, core.load(root), rows)["skill_ready"])
                 result = subprocess.run(
                     [sys.executable, str(SCRIPTS / "lint_format.py"), str(path), "--json"],
-                    text=True, capture_output=True, check=False)
+                    text=True, encoding="utf-8", capture_output=True, check=False)
                 self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
                 cli = [row for row in json.loads(result.stdout) if row["check_id"] in F1_IDS]
                 self.assertEqual([(row["check_id"], row["severity"]) for row in cli],
@@ -329,7 +329,7 @@ class SampleIdentity(IdentityFixture):
             with self.subTest(target=target.name):
                 completed = subprocess.run(
                     [sys.executable, str(SCRIPTS / "lint_format.py"), str(target), "--json"],
-                    text=True, capture_output=True, check=False)
+                    text=True, encoding="utf-8", capture_output=True, check=False)
                 self.assertEqual(completed.returncode, 1, completed.stderr)
                 rows = [row for row in json.loads(completed.stdout)
                         if row["check_id"] in F1_IDS]

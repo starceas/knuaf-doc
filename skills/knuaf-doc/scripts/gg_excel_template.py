@@ -22,6 +22,7 @@ import unicodedata
 from xml.dom import minidom
 from datetime import datetime, timezone
 from pathlib import Path
+from types import MappingProxyType
 from xml.etree import ElementTree as ET
 
 NS_MAIN = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
@@ -59,6 +60,16 @@ def select_source(source: Path | None, *, authorization=None,
         if decision["inventory_status"] != "confirmed_absent":
             raise mc.OutputHeldError("workbook_survey_required",
                                      decision["selection_reason"])
+    # The bundled X01 is the 17-sheet specialist form. A major whose school
+    # form is a different workbook gets its own file, never this one: a
+    # verified "the school form is absent" survey does not make the bundled
+    # 17 sheets that major's form.
+    own_profile = mc.default_workbook_profile(authorization)
+    if own_profile != "school_17_sheet_v1":
+        raise mc.OutputHeldError(
+            "student_template_required",
+            f"학생 양식 필요 — 이 전공의 학교 양식은 {own_profile}이고 번들 X01은 "
+            "17시트 별도 양식이라 대신하지 못함. --source로 학교 원본을 준다")
     if sha256(BUNDLED_TEMPLATE) != BUNDLED_TEMPLATE_SHA256:
         raise ValueError("bundled template hash mismatch")
     return BUNDLED_TEMPLATE.resolve()
@@ -69,9 +80,10 @@ def create_workbook(source: Path | None, out: Path, *, context=None,
     """Byte-copy the chosen workbook without erasing student inputs."""
     import gg_major_contract as mc
     authorization = mc.authorize_output(mc.OUTPUT_SCHOOL_WORKBOOK, context)
-    # The bundled X01 is the specialty 17-sheet form. Fruit/dairy forms are
-    # not byte-copies of it and stay held on this route.
-    mc.require_workbook_profile(authorization, "school_17_sheet_v1")
+    # The bundled X01 is the specialty 17-sheet form; a major with its own
+    # school form (food_crops) declares that profile and passes --source.
+    mc.require_workbook_profile(
+        authorization, mc.default_workbook_profile(authorization))
     source = select_source(source, authorization=authorization, template_ref=template_ref,
                            reference_inventory=reference_inventory)
     read_template(source)
@@ -981,6 +993,26 @@ def require_map_workbook_profile(map_data: dict, authorization) -> str:
     return profile
 
 
+# Student-facing notices a blank copy carries for a registered profile. The map
+# cannot clear what lives inside formulas, and a blank form shows its empty
+# inputs as errors; the copy must say so first instead of looking finished.
+# Other profiles get no notices key, so their receipts stay byte-identical.
+BLANK_COPY_NOTICES = MappingProxyType({
+    "dairy_hanwoo_28_sheet_v1": (
+        "수식 안에 양식의 예시 가정(벼 판매단가 80,000·상환기간 2·3·20년·세율·"
+        "송아지 350만원 등)이 그대로 남아 있습니다. 빈 사본은 계산을 학생 계획에 "
+        "맞춘 것이 아닙니다. 자기 계획과 다르면 그 칸의 수식 안 숫자를 직접 "
+        "고치세요(목록: references/dairy/corrections/DAIRY-CLEAR.md 2절).",
+        "자체 재계산 검사로는 빈 사본에서 29칸(2.연차별 사육두수 확대계획 "
+        "E23:J25, 지표 E9:I9·E14:I14, 16.투자분석 E28)에 #DIV/0!가 예상됩니다. "
+        "두수·손익을 채우면 사라져야 합니다. 엑셀에서 실제로 보이는 오류 위치는 "
+        "열어서 재계산한 뒤 확인하고, 이 밖의 칸에 오류가 보이면 따로 확인하세요.",
+        "2026 시트 E열 첫해 두수가 6년 계산의 출발점입니다. 시세 칸(가축평가액·"
+        "지육단가 등)과 기준표 값은 양식 값이 남아 있으니 자기 값으로 바꾸세요.",
+    ),
+})
+
+
 def blank_copy(source: Path, map_path: Path, out: Path, allow_missing: bool = False, *, context=None) -> dict:
     import gg_major_contract as mc
 
@@ -1152,6 +1184,9 @@ def blank_copy(source: Path, map_path: Path, out: Path, allow_missing: bool = Fa
     receipt["output"]["status"] = "partial" if (receipt["ambiguousCount"] or receipt.get("unclassifiedTextCells")
                                                 or retained_legacy or receipt["missingCells"]) else "blank_template"
     receipt["output"]["calculationStatus"] = "recalculate_on_open; cached_formula_values_invalidated"
+    notices = BLANK_COPY_NOTICES.get(workbook_profile)
+    if notices:
+        receipt["notices"] = list(notices)
     return receipt
 
 
@@ -1590,7 +1625,8 @@ def cli(argv: list[str]) -> int:
                 if published_out and args.out.exists():
                     args.out.unlink()
                 raise
-            print(json.dumps({"status": r["output"]["status"], "out": r["output"],
+            head = {"notices": r["notices"]} if r.get("notices") else {}
+            print(json.dumps({**head, "status": r["output"]["status"], "out": r["output"],
                               "cleared": len(r["cleared"]), "formulaProtected": r["formulaCellsProtected"],
                               "formulaCachesInvalidated": r["formulaCachesInvalidated"],
                               "missing": len(r["missingCells"])}, ensure_ascii=False))

@@ -316,7 +316,7 @@ class SourceReceiptTests(ContractCase):
             proc = subprocess.run(
                 [sys.executable, "-B",
                  str(SCRIPTS / "gg_insect_source_receipt.py"), *argv],
-                capture_output=True, text=True)
+                capture_output=True, text=True, encoding="utf-8")
             self.assertEqual(2, proc.returncode)
             self.assertNotIn("SECRET-MARKER", proc.stdout)
             self.assertNotIn("SECRET-MARKER", proc.stderr)

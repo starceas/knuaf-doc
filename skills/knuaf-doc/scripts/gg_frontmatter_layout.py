@@ -6,6 +6,8 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
+from gg_major_format import front_title, profile_for
+
 
 def _font(run, font, size, bold=False):
     run.font.name, run.font.size, run.bold = font, Pt(size), bold
@@ -140,7 +142,7 @@ def render_forms(doc,nodes,plan,font):
     _break(doc)
 
 
-def _roman_front_section(doc):
+def _roman_front_section(doc, margin_mm=None):
     """Open the food-crops front-matter section: upper-Roman page numbers.
 
     The school form numbers 요약 through 목차/표 목차/그림 목차 with upper-Roman
@@ -148,6 +150,12 @@ def _roman_front_section(doc):
     """
     from docx.enum.section import WD_SECTION
     sec = doc.add_section(WD_SECTION.NEW_PAGE)
+    if margin_mm is not None:
+        sec.top_margin, sec.bottom_margin = Mm(margin_mm['top']), Mm(margin_mm['bottom'])
+        sec.left_margin, sec.right_margin = Mm(margin_mm['left']), Mm(margin_mm['right'])
+        sec.header_distance = Mm(margin_mm['header'])
+        sec.footer_distance = Mm(margin_mm['footer'])
+        sec.gutter = Mm(margin_mm['gutter'])
     inherited = sec._sectPr.find(qn('w:pgNumType'))
     if inherited is not None:
         sec._sectPr.remove(inherited)
@@ -178,20 +186,49 @@ def _black_runs(paragraph, font, size):
         run.font.color.rgb = RGBColor(0, 0, 0)
 
 
+def _peer_form_text_size(text, spec):
+    """식량작물 양식 실측 크기(§2.3). 굵기와 함께 (size, bold)를 돌려준다."""
+    if text == spec.degree:
+        return 18, True
+    if spec.plan_label and text == spec.plan_label:
+        return 32, True
+    if (text.startswith('이 논문을') or text.endswith('인준함')
+            or text.startswith('위원장') or text.startswith('위  원')
+            or text.startswith('지도교수 ')):
+        return 18, True
+    return 20, False
+
+
+# 프로필 표에 값이 없을 때 쓰는 식량작물 현행 제목 크기. 프로필을 읽되 값이
+# 비면 여기로 돌아간다(바이트 불변 기준선).
+_LEGACY_TITLE_PT = {'요약': 22, '감사의 글': 20, '학부모 동의서': 20}
+
+# 이 파일이 프로필 표를 읽는 전공. `build_docx.DOCX_PROFILE_MAJORS`와 같은
+# 게이트를 여기서 따로 적는다(순환 import 회피). 켜는 단위에서 둘을 함께 고친다.
+_FRONTMATTER_PROFILE_MAJORS = ('food_crops',)
+
+
 def _render_peer_forms(doc, nodes, plan, font):
     """Source page grouping, common flowing layout; never claim measured bands."""
     spec = plan['spec']
     indices = plan['indices']
     ordered = plan['order']
     forms = spec.physical_forms
-    roman_front = spec.major_id == 'food_crops'
+    profile = (profile_for(spec.major_id)
+               if spec.major_id in _FRONTMATTER_PROFILE_MAJORS else None)
+    roman_front = bool(profile is not None and profile.roman_front)
+    front_margin_mm = None
+    if roman_front:
+        front_margin_mm = profile.section_formats[1]['margin_mm']
+    title_sizes = {role: front_title(profile, role, _LEGACY_TITLE_PT[role])[0]
+                   for role in _LEGACY_TITLE_PT}
     # Preserve authored preamble rather than silently dropping it.
     if any(n.get('text', '').strip() for n in nodes[:indices[ordered[0]]]):
         raise ValueError('학교 앞머리 앞에 배정되지 않은 내용이 있습니다')
     for position, roles in enumerate(forms):
         # 식량작물: 요약 묶음 앞에서 로마 대문자 쪽번호 구역을 연다.
         if roman_front and position and '요약' in roles:
-            _roman_front_section(doc)
+            _roman_front_section(doc, front_margin_mm)
         for role in roles:
             start = indices[role]
             next_role = ordered[ordered.index(role) + 1]
@@ -200,7 +237,7 @@ def _render_peer_forms(doc, nodes, plan, font):
                 title = doc.add_paragraph(role, style='Heading 1')
                 if roman_front:
                     # 양식 검정 제목. 문서 스타일은 건드리지 않고 이 두 문단만.
-                    _black_runs(title, font, 20)
+                    _black_runs(title, font, title_sizes[role])
             if roman_front and role == '요약':
                 bookmark(title, 'gg_summary', 9001)
             if roman_front and role == '감사의 글':
@@ -208,6 +245,7 @@ def _render_peer_forms(doc, nodes, plan, font):
             for node in nodes[start + 1:end]:
                 if node.get('kind') not in {'paragraph', 'heading'}:
                     raise ValueError('학교 앞머리에는 문단만 지원: ' + role)
+                text = node.get('text', '').strip()
                 p = doc.add_paragraph(node.get('text', ''))
                 # Common defaults are not measurements of a peer's school form.
                 # 식량작물 요약·감사의 글은 줄글이라 양쪽 맞춤을 쓴다
@@ -216,8 +254,17 @@ def _render_peer_forms(doc, nodes, plan, font):
                     p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
                 elif spec.layout_confidence != 'unverified_common_defaults':
                     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                size, bold = 12, False
+                if roman_front:
+                    if role == '요약' and re.match(r'^\d+\s*\.', text):
+                        # 요약의 번호형 소제목(`1. 농장 개요`, `2. …`)은 전부 16pt 굵게,
+                        # 나머지 요약 본문은 12pt. HWPX `_front_charpr_targets`와 같은 규칙.
+                        size, bold = 16, True
+                    elif role not in {'요약', '감사의 글'}:
+                        size, bold = _peer_form_text_size(text, spec)
                 for run in p.runs:
-                    _font(run, font, 12)
+                    _font(run, font, size, bold)
+
         if roles == forms[0]:
             present = {n.get('text', '').strip() for n in nodes[:plan['toc']]}
             for notice in spec.notices:
@@ -242,11 +289,11 @@ def page_reference(p,name,font,size=12):
     txt=OxmlElement('w:t');txt.text='?';run.append(txt);field.append(run);p._p.append(field)
 
 
-def contents(doc,entries,font,title='목    차',anchor=None,num=9000):
+def contents(doc,entries,font,title='목    차',anchor=None,num=9000,*,title_size=20):
     from docx.enum.text import WD_TAB_ALIGNMENT, WD_TAB_LEADER
     p=doc.add_paragraph();p.alignment=WD_ALIGN_PARAGRAPH.CENTER
     p.paragraph_format.space_before=Mm(18);p.paragraph_format.space_after=Mm(12)
-    _font(p.add_run(title),font,20)
+    _font(p.add_run(title),font,title_size)
     if anchor: bookmark(p,anchor,num)
     for label,name,level in entries:
         p=doc.add_paragraph();f=p.paragraph_format

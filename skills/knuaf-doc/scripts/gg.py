@@ -27,6 +27,14 @@ def main(argv=None):
             _stream.reconfigure(encoding="utf-8")
         except (AttributeError, ValueError, OSError):
             pass
+    # 그림 명령은 `--slot`/`--heading` 등 자기 플래그를 쓴다 — argparse가
+    # `figure`를 거부하기 전에 gg_figure로 넘긴다(CONTRACT §9).
+    if argv is None:
+        argv = sys.argv[1:]
+    if argv and argv[0] == "figure":
+        import gg_figure
+
+        return gg_figure.main(argv[1:])
     import gg_core as core
 
     ap = argparse.ArgumentParser(description="논문 정본·검사·검토본 관리")

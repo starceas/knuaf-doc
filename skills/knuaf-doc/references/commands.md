@@ -70,6 +70,7 @@
 | `bundle` | `--scope <절ID>` | — | 아니오 | 한 절의 검토 꾸러미(본문·원자료·사실·규칙·검토축) |
 | `export` | `--major <전공ID>` | `--kind draft\|review\|submission_candidate`(기본 `review`) | 아니오(산출물 발행) | 검토 산출물을 발행한다. [outputs](outputs.md) |
 | `paper` | `--input <폴더 안 spec.json>` `--major <전공ID>` | `--out <폴더 안 경로>` `--body <폴더 안 본문MD>` | 아니오(산출물 발행) | 학교 양식 본문 생성. 기본 출력 `build/검토전_본문.md`. [outputs](outputs.md) |
+| `gg_progress.py show` | `<폴더>` | — | 아니오 | `.knuaf-progress.json`의 단계 요약을 읽기 전용으로 출력한다. 파일이 없으면 exit 1, 있으면 exit 0. 쓰기 서브커맨드는 없다. |
 | `adopt-output` | `--input <폴더 안 spec.json>` `--expected-revision <N>` `--major <전공ID>` | `--request-id <ID>` | 예 | 출력 파일을 `outputs`에 등록하는 유일한 경로. [source-contract](source-contract.md#출력-등록adopt-output과-동반-파일) |
 | `observe` | `--input <폴더 안 관측JSON>` `--observer <어댑터ID>` | — | 아니오(관측 기록 발행) | 실행 어댑터의 검토 관측 기록을 남긴다. [section-ledger](section-ledger.md) |
 | `unlock` | — | — | 아니오 | 비정상 종료로 남은 잠금 소유 기록만 정리한다. [locking](locking.md) |
@@ -179,7 +180,7 @@ python3 <스킬>/scripts/gg.py major-plan <폴더>
 
 ## 주요 보조 스크립트
 
-- `python3 scripts/build_hwpx.py <폴더> --major <전공ID>`: HWPX 검토본 생성(여백·쪽번호·신명조 후처리). 논문 HWPX는 이 경로로만 생성하며, kordoc `generate`의 보고서·기안문·계획서 프리셋은 공문서용이라 논문에 쓰지 않는다. [outputs](outputs.md)
+- `python3 scripts/build_hwpx.py <폴더> --major <전공ID>`: HWPX 검토본 생성(여백·쪽번호·신명조 후처리). 논문 HWPX는 이 경로로만 생성하며, kordoc `generate`의 보고서·기안문·계획서 프리셋은 공문서용이라 논문에 쓰지 않는다. [outputs](outputs.md) 그림 목적지는 원고 옆에서 먼저 찾고 없으면 `build_hwpx.py --image-dir`(기본: 작업 폴더 뿌리)에서 한 번 더 찾는다 — 분할본이 그 두 단계로 경로를 고쳐 두기 때문이다. 두 곳에 같은 이름의 다른 그림이 있으면 고르지 않고 `image_ambiguous`(후보 목록 포함), 어디에도 없거나 작업 폴더 밖이면 발행 전 `image_unresolved`로 멈춘다. 생성기에는 목적지를 작업 폴더 기준 상대 경로(퍼센트 인코딩)로 다시 써서 넘기고 기준 폴더 인자는 하나만 준다. 앱이 받은 그림 토큰(`app-figure:<sha256>`)은 HWPX가 풀 수 없으므로(해석은 DOCX 전용) 생성기를 부르기 전에 `app_figure_unsupported`로 거절한다 — 그런 원고는 DOCX로 만든다. 분할기는 그림 경로만 다시 쓰므로 토큰을 그대로 넘긴다.
 - `python3 scripts/build_docx.py <폴더> --in <MD> --out <DOCX> --major <전공ID>`: DOCX 검토본 빌드. 목차·표 목차·그림 목차 쪽번호는 필드(PAGEREF·TOC)와 `gg_office.py word` 재조판·필드 갱신으로만 채우며 손으로 적지 않는다. [outputs](outputs.md)
 - `python3 scripts/gg_toc_check.py <DOCX> --json <증거경로>`: DOCX 목차 필드 및 고정 쪽번호 검사 도구. 탭 뒤 일반 글자 고정 번호나 미갱신 필드(`?`)를 검출한다(결과 finding id: `TOC-PAGE-NUMBERS`). [outputs](outputs.md) · [cross-review](cross-review.md)
 - `python3 scripts/gg_deps.py ensure <폴더>`: 작업폴더 venv와 런타임 의존성 준비.

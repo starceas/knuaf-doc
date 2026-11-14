@@ -25,7 +25,7 @@ MARKER = "SECRET-MARKER-7f3a"
 def _gg(*args):
     return subprocess.run(
         [sys.executable, "-B", str(SCRIPTS / "gg.py"), *map(str, args)],
-        capture_output=True, text=True)
+        capture_output=True, text=True, encoding="utf-8")
 
 
 def _walk_keys(value, out):

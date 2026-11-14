@@ -256,7 +256,7 @@ class BodyPlanCheckTests(unittest.TestCase):
                 body.write_text(claim, encoding='utf-8')
                 locator.write_text(json.dumps(mapping, ensure_ascii=False), encoding='utf-8')
                 result = subprocess.run([sys.executable, str(SCRIPTS / 'gg_body_plan_check.py'), '--body', str(body),
-                                         '--xlsx', str(self.xlsx), '--map', str(locator)], capture_output=True, text=True)
+                                         '--xlsx', str(self.xlsx), '--map', str(locator)], capture_output=True, text=True, encoding="utf-8")
                 self.assertEqual(result.returncode, code, result.stderr)
                 payload = json.loads(result.stdout)
                 self.assertEqual(payload['status'], status)
@@ -300,7 +300,7 @@ class BodyPlanCheckTests(unittest.TestCase):
         locator = self.root / 'map.json'
         locator.write_text(json.dumps(self.mapping, ensure_ascii=False), encoding='utf-8')
         result = subprocess.run([sys.executable, str(SCRIPTS / 'gg_body_plan_check.py'), '--body', str(body),
-                                 '--xlsx', str(self.xlsx), '--map', str(locator)], capture_output=True, text=True)
+                                 '--xlsx', str(self.xlsx), '--map', str(locator)], capture_output=True, text=True, encoding="utf-8")
         self.assertEqual(result.returncode, 0, result.stderr)
         payload = json.loads(result.stdout)
         self.assertEqual(payload['status'], 'warning')
@@ -316,7 +316,7 @@ class BodyPlanCheckTests(unittest.TestCase):
                 body.write_text(text + '\n2041년 직거래 15%', encoding='utf-8')
                 result = subprocess.run([sys.executable, str(SCRIPTS / 'gg_body_plan_check.py'),
                                          '--body', str(body), '--xlsx', str(self.xlsx),
-                                         '--map', str(locator)], capture_output=True, text=True)
+                                         '--map', str(locator)], capture_output=True, text=True, encoding="utf-8")
                 self.assertEqual(result.returncode, 0, result.stderr)
                 payload = json.loads(result.stdout)
                 self.assertEqual(payload['status'], 'warning')
@@ -336,7 +336,7 @@ class BodyPlanCheckTests(unittest.TestCase):
                 body.write_text(claim, encoding='utf-8')
                 result = subprocess.run([sys.executable, str(SCRIPTS / 'gg_body_plan_check.py'),
                                          '--body', str(body), '--xlsx', str(self.xlsx),
-                                         '--map', str(locator)], capture_output=True, text=True)
+                                         '--map', str(locator)], capture_output=True, text=True, encoding="utf-8")
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertEqual(json.loads(result.stdout)['status'], 'warning')
 
@@ -381,7 +381,7 @@ class BodyPlanCheckTests(unittest.TestCase):
             with self.subTest(label=label):
                 result = subprocess.run([sys.executable, str(SCRIPTS / 'gg_body_plan_check.py'),
                                          '--body', str(body_path), '--xlsx', str(xlsx),
-                                         '--map', str(map_path)], capture_output=True, text=True)
+                                         '--map', str(map_path)], capture_output=True, text=True, encoding="utf-8")
                 self.assertEqual(result.returncode, 2, result.stderr)
                 payload = json.loads(result.stdout)
                 self.assertEqual((payload['status'], payload['message']), ('blocked', '확인 불가'))
@@ -446,7 +446,7 @@ class BodyPlanCheckTests(unittest.TestCase):
                 path = self._write_package(f'shared-{label}.xlsx', changed)
                 result = subprocess.run([sys.executable, str(SCRIPTS / 'gg_body_plan_check.py'),
                                          '--body', str(body), '--xlsx', str(path),
-                                         '--map', str(locator)], capture_output=True, text=True)
+                                         '--map', str(locator)], capture_output=True, text=True, encoding="utf-8")
                 self.assertEqual(result.returncode, 2, result.stderr)
                 payload = json.loads(result.stdout)
                 self.assertEqual((payload['status'], payload['message']), ('blocked', '확인 불가'))
@@ -499,7 +499,7 @@ class BodyPlanCheckTests(unittest.TestCase):
                 path = self._write_package(f'unmapped-{label}.xlsx', changed)
                 result = subprocess.run([sys.executable, str(SCRIPTS / 'gg_body_plan_check.py'),
                                          '--body', str(body), '--xlsx', str(path),
-                                         '--map', str(locator)], capture_output=True, text=True)
+                                         '--map', str(locator)], capture_output=True, text=True, encoding="utf-8")
                 self.assertEqual(result.returncode, 2, result.stderr)
                 payload = json.loads(result.stdout)
                 self.assertEqual((payload['status'], payload['message']), ('blocked', '확인 불가'))

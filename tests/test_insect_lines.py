@@ -863,7 +863,7 @@ class NoInputCliTests(ContractCase):
         return subprocess.run(
             [sys.executable, "-B", str(SCRIPTS / "gg.py"),
              *map(str, args)],
-            capture_output=True, text=True)
+            capture_output=True, text=True, encoding="utf-8")
 
     def test_insect_plan_without_input_lists_lines(self):
         core = runtime("gg_core")

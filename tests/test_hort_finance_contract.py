@@ -94,10 +94,10 @@ class FormulaContract(unittest.TestCase):
 
     def _enumerate_optional_key_dependency(self):
         params = self.params['parameters']
-        self.assertEqual(len(params),1379)
+        self.assertEqual(len(params),1380)
         by_coord={tuple(v['canonical_cell'].split('!',1)):(k,v) for k,v in params.items()
                   if '!' in (v.get('canonical_cell') or '')}
-        self.assertEqual(len(by_coord),1348)
+        self.assertEqual(len(by_coord),1349)
         pairs=0; optional_keys=set(); unused_pairs=0; failures=[]
         for action in self.formula_entries:
             refs=referenced_cells(action['after_formula'],action['sheet'])
@@ -193,7 +193,7 @@ class FormulaContract(unittest.TestCase):
 
     def test_T_REQ_3a_optional_branch_enumeration(self):
         pairs, keys, unused, _ = self._enumerate_optional_key_dependency()
-        self.assertEqual((pairs, keys, unused), (2972, 1013, 2163))
+        self.assertEqual((pairs, keys, unused), (2999, 1015, 2163))
 
     def test_T_REQ_3b_optional_branch_formula_evaluation(self):
         _, _, _, failures = self._enumerate_optional_key_dependency()
@@ -405,6 +405,16 @@ class PublicContract(unittest.TestCase):
     # The audit against the real H01 is a local-only step (FD-A): run
     # `gg_hort_workbook.py audit-public --source <H01>` where the workbook
     # exists.  CI has no H01, so the suite tests the auditor on synthetic docs.
+
+    def test_real_h01_audit_reports_no_leak(self):
+        """The shipped contracts must not leak a single source value, string or
+        formula into the public docs. Skipped where the workbook is absent."""
+        workbook = WORKBOOK or (ROOT / '../scratch/src/original-finance.xlsx')
+        if not workbook.is_file():
+            self.skipTest('real H01 workbook not present (local-only FD-A step)')
+        self.assertEqual(h.file_digest(workbook), SHA)
+        docs = {name: h._json(h.REF / name) for name in h.FILES}
+        self.assertEqual(h.audit_public_documents(docs, str(workbook), SHA), [])
 
 
 if __name__ == "__main__":
