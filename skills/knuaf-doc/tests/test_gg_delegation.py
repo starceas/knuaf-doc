@@ -495,6 +495,66 @@ class TestDelegationCommands(unittest.TestCase):
                         encoding="utf-8"), "outside-sentinel")
 
 
+    @unittest.skipUnless(sys.platform == "win32",
+                         "Windows pinned-directory share mode")
+    def test_windows_pinned_directory_rename_denied_during_publish(self):
+        # Windows opens the temporary through CreateFileW, not os.open, and
+        # pins every directory of the output chain without FILE_SHARE_DELETE.
+        # A move of the output directory during publication must be refused
+        # by the OS, and the payload must land only in the original place.
+        import gg_delegation as delegation
+        import gg_fs
+        from unittest.mock import patch
+
+        real_open_nofollow = gg_fs._open_nofollow
+        for command in ("delegate", "lanes-propose"):
+            with self.subTest(command=command), tempfile.TemporaryDirectory() as td:
+                root = workspace(td)
+                gui = root / ".knuaf-gui"
+                (gui / "jobs").mkdir(parents=True)
+                outside = Path(td) / "outside"
+                outside.mkdir()
+                moved = outside / "moved-gui"
+                denied = []
+
+                def move_before_temp_open(path, flags, *args, **kwargs):
+                    if str(path).endswith(".tmp"):
+                        try:
+                            gui.rename(moved)
+                        except PermissionError as error:
+                            denied.append(type(error).__name__)
+                        else:
+                            denied.append("renamed")
+                    return real_open_nofollow(path, flags, *args, **kwargs)
+
+                request = {
+                    "id": "job-1", "lane": "writing", "task": "초안",
+                    "inputs": [], "outputs": ["draft.md"],
+                    "company": "claude", "model": "sonnet", "effort": None,
+                }
+                proposal = {
+                    "scope": "once", "quote": "검토만 Sonnet으로",
+                    "lanes": {"review": {
+                        "company": "claude", "model": "sonnet", "effort": "high",
+                    }},
+                }
+                with patch.object(delegation.gg_fs, "_open_nofollow",
+                                  move_before_temp_open):
+                    if command == "delegate":
+                        delegation.delegate(root, request)
+                        published = gui / "jobs" / "job-1.json"
+                    else:
+                        delegation.lanes_propose(root, proposal)
+                        published = gui / "lanes-request.json"
+
+                self.assertEqual(denied, ["PermissionError"])
+                self.assertFalse(moved.exists())
+                self.assertTrue(published.is_file())
+                self.assertEqual(list(gui.rglob("*.tmp")), [])
+
+    @unittest.skipIf(sys.platform == "win32",
+                     "POSIX directory-move race; Windows pins the directory "
+                     "chain without delete sharing (see the Windows test above)")
     def test_directory_moved_outside_before_write_leaves_no_payload(self):
         import gg_delegation as delegation
         from unittest.mock import patch
