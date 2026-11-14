@@ -57,8 +57,8 @@ OUT_SHA = hashlib.sha256(b"synthetic parser output").hexdigest()
 
 def _record(rid, name, *, form="생체", year=2024, kind="test_kind",
             metrics=None, region_level="national", sido=None,
-            quantity_unit="kg"):
-    return {
+            quantity_unit="kg", source=None):
+    rec = {
         "record_id": rid,
         "pack_id": TEST_PACK,
         "kind": kind,
@@ -77,6 +77,23 @@ def _record(rid, name, *, form="생체", year=2024, kind="test_kind",
         # is_verified_observation predicate requires status "extracted"
         "extraction": {"status": "extracted"},
     }
+    if source is not None:
+        rec["source"] = source
+    return rec
+
+
+def _source(survey="rda.income", data_year=2024, **over):
+    """Record-level survey metadata (``common_envelope.source``)."""
+    src = {
+        "publisher": "농촌진흥청",
+        "survey": survey,
+        "survey_label": "농산물소득조사",
+        "aggregation_group": "%s.%d" % (survey, data_year),
+        "data_year": data_year,
+        "document": "농산물소득자료집(%d년산)" % data_year,
+    }
+    src.update(over)
+    return src
 
 
 def _evidence_for(rec):
@@ -103,7 +120,7 @@ def _evidence_for(rec):
             "species": [crop["name"]],
             "products": [crop["form"] or "생체"],
             "regions": ["national"],
-            "periods": [2024],
+            "periods": [(rec.get("basis") or {}).get("year") or 2024],
             "units": ["kg"],
             "population": "시험 모집단",
             "use_scope": ["plan_input", "market_context"],
@@ -680,6 +697,361 @@ class AuditKeyBypassTests(SyntheticFixtureMixin, unittest.TestCase):
             **dict(GOOD_QUERY, form="건품"))
         self.assertEqual(got["status"], "not_found")
         self.assertEqual(got["candidates"], [])
+
+
+class DefaultYearResolutionTests(unittest.TestCase):
+    """G3 (DESIGN-PR3-G3 E1–E3): a year-less query resolves ONE default
+    year — or refuses and leaves the year-less verdict standing.
+
+    Every test enters through ``lookup_approved_candidates`` and asserts
+    the FINAL result + reason, never an internal helper alone.  The
+    fixture writes records that carry the real packs' survey metadata
+    (``common_envelope.source``): the mixing guard is about record data,
+    so the records must have it."""
+
+    def _fixture(self, specs):
+        """Mount ``specs`` as the pinned pack; returns the raw lookup of
+        every audit key in physical order."""
+        td = tempfile.TemporaryDirectory(prefix="gg-cand-year-")
+        self.addCleanup(td.cleanup)
+        packs_dir, file_sha, keys, entries = _build(td.name, specs)
+        self._base = lookup.BASE_DIR
+        lookup.BASE_DIR = packs_dir
+        lookup._CACHE.clear()
+        self._pin = dict(prov.PINNED_PACKS)
+        prov.PINNED_PACKS[TEST_PACK] = {
+            "pack_revision": TEST_REV,
+            "records_file_sha256": file_sha,
+            "record_lines": len(specs),
+            "relpath": "common/test-pack/records.jsonl",
+        }
+        self._auth = dict(research.PINNED_CATALOG_AUTHORITIES)
+        research.PINNED_CATALOG_AUTHORITIES[TEST_AUTHORITY] = \
+            research.catalog_content_digest(entries)
+
+        def restore():
+            lookup.BASE_DIR = self._base
+            lookup._CACHE.clear()
+            prov.PINNED_PACKS.clear()
+            prov.PINNED_PACKS.update(self._pin)
+            research.PINNED_CATALOG_AUTHORITIES.clear()
+            research.PINNED_CATALOG_AUTHORITIES.update(self._auth)
+        self.addCleanup(restore)
+        return keys
+
+    # --- helpers -----------------------------------------------------
+    def _yearless(self, crop="감자", **kw):
+        """A year-less, audit-key-less query (the only path G3 acts on)."""
+        q = dict(unit="kg", use_scope="plan_input")
+        q.update(kw)
+        return cand.lookup_approved_candidates(crop, "전국", "특용작물", **q)
+
+    def _two_year_survey(self, surveys=("rda.income", "rda.income"),
+                         years=(2024, 2025)):
+        """Two records of one crop, one per year; ``surveys`` picks the
+        survey system of each (same by default)."""
+        specs = []
+        for i, (survey, year) in enumerate(zip(surveys, years)):
+            rec = _record("test.candidate.감자.%d" % year, "감자",
+                          year=year,
+                          source=_source(survey=survey, data_year=year))
+            specs.append({"record": rec, "evidence": _evidence_for(rec)})
+        return self._fixture(specs)
+
+    # --- E3-3 mixing (the reason this PR exists) ----------------------
+    def test_2024_rda_plus_2025_kostat_is_survey_mixed(self):
+        """Two survey systems in one year-less query: no default, and the
+        mixed set never reaches approval."""
+        self._two_year_survey(
+            surveys=("rda.income", "kostat.production_cost"))
+        got = self._yearless()
+        self.assertEqual(got["observation"]["status"], "ambiguous")
+        self.assertEqual(got["status"], "unapproved")
+        self.assertEqual(got["approved_candidates"], [])
+        self.assertEqual(got["year_default"]["reason"], "survey_mixed")
+        self.assertEqual(got["year_default"]["status"], "blocked")
+        self.assertEqual(got["year_default"]["reason"], "survey_mixed")
+        self.assertIsNone(got["year_default"]["year"])
+
+    def test_same_survey_two_years_selects_the_latest(self):
+        """One survey system, two years: the newest year is selected and
+        the raw lookup is re-run with it (E2)."""
+        self._two_year_survey()
+        got = self._yearless()
+        self.assertEqual(got["year_default"]["status"], "applied")
+        self.assertEqual(got["year_default"]["year"], 2025)
+        self.assertEqual(got["query"]["year"], 2025)
+        self.assertEqual(got["observation"]["status"], "unique")
+        self.assertEqual(len(got["candidates"]), 1)
+        self.assertEqual(
+            got["candidates"][0]["record"]["basis"]["year"], 2025)
+        # the default is a selection, never a promotion: the 2025 row is
+        # fully declared here, so approval comes from the rows' axes
+        self.assertEqual(got["status"], "approved")
+
+    def test_status_grade_beats_a_newer_year(self):
+        """E2 order: catalog status first, newest year second — a
+        quarantined 2025 row never displaces a verified 2024 row."""
+        old = _record("test.candidate.감자.2024", "감자", year=2024,
+                      source=_source(data_year=2024))
+        new = _record("test.candidate.감자.2025", "감자", year=2025,
+                      source=_source(data_year=2025))
+        self._fixture([
+            {"record": old, "evidence": _evidence_for(old)},
+            {"record": new, "evidence": _evidence_for(new),
+             "catalog_status": "quarantined"},
+        ])
+        got = self._yearless()
+        self.assertEqual(got["year_default"]["year"], 2024)
+        self.assertEqual(got["year_default"]["catalog_status"],
+                         "verified_observation")
+        self.assertEqual(got["observation"]["status"], "unique")
+        self.assertEqual(
+            got["candidates"][0]["record"]["basis"]["year"], 2024)
+        # the selected row's own status is NOT upgraded by having been
+        # chosen as the default (E3-8)
+        self.assertEqual(got["candidates"][0]["observation_status"],
+                         "verified_observation")
+
+    def test_selected_exploratory_row_is_not_promoted(self):
+        """E3-8: a default year landing on an exploratory row keeps that
+        status — approval stays denied."""
+        old = _record("test.candidate.감자.2024", "감자", year=2024,
+                      source=_source(data_year=2024))
+        new = _record("test.candidate.감자.2025", "감자", year=2025,
+                      source=_source(data_year=2025))
+        self._fixture([
+            {"record": old, "evidence": _evidence_for(old),
+             "catalog_status": "quarantined"},
+            {"record": new, "evidence": _evidence_for(new),
+             "catalog_status": "exploratory"},
+        ])
+        got = self._yearless()
+        self.assertEqual(got["year_default"]["year"], 2025)
+        self.assertEqual(got["status"], "unapproved")
+        c = got["candidates"][0]
+        self.assertEqual(c["observation_status"], "exploratory")
+        self.assertIn("observation_not_verified", c["rejections"])
+        self.assertFalse(c["approved"])
+
+    # --- E3-1/E3-4 form axis ------------------------------------------
+    def test_unresolved_form_leaves_the_default_off(self):
+        """Two 형(노지·시설) in one survey and year: refuse, never invent
+        one (E3-4 ``group_unresolved``)."""
+        specs = []
+        for form in ("노지", "시설"):
+            rec = _record("test.candidate.감자.%s" % form, "감자",
+                          form=form, year=2025,
+                          source=_source(data_year=2025))
+            specs.append({"record": rec, "evidence": _evidence_for(rec)})
+        self._fixture(specs)
+        got = self._yearless()
+        self.assertEqual(got["year_default"]["reason"], "group_unresolved")
+        self.assertEqual(got["year_default"]["status"], "blocked")
+        self.assertIsNone(got["year_default"]["year"])
+        self.assertIsNone(got["query"]["year"])
+        self.assertEqual(got["observation"]["status"], "ambiguous")
+        self.assertEqual(got["status"], "unapproved")
+
+    def test_form_supplied_resolves_the_axis(self):
+        """Supplying the form collapses the group — the caller's axis is
+        a filter, not something to invent."""
+        specs = []
+        for form in ("노지", "시설"):
+            rec = _record("test.candidate.감자.%s" % form, "감자",
+                          form=form, year=2025,
+                          source=_source(data_year=2025))
+            specs.append({"record": rec, "evidence": _evidence_for(rec)})
+        self._fixture(specs)
+        got = self._yearless(form="시설")
+        self.assertEqual(got["year_default"]["status"], "applied")
+        self.assertEqual(got["year_default"]["year"], 2025)
+        self.assertEqual(got["query"]["form"], "시설")
+        self.assertEqual(got["observation"]["status"], "unique")
+        self.assertEqual(got["candidates"][0]["record"]["crop"]["form"],
+                         "시설")
+
+    def test_form_none_and_empty_stay_distinct(self):
+        """``form=None`` (no filter) vs ``form=""`` (the row whose form is
+        empty) keep their existing raw semantics — the default passes the
+        selected row's own form, which may legitimately be ``""``."""
+        rec = _record("test.candidate.감자", "감자", form="", year=2025,
+                      source=_source(data_year=2025))
+        self._fixture([{"record": rec, "evidence": _evidence_for(rec)}])
+        got = self._yearless()
+        self.assertEqual(got["year_default"]["status"], "applied")
+        self.assertEqual(got["year_default"]["form"], "")
+        self.assertIs(got["query"]["form"], "")
+        self.assertEqual(got["observation"]["status"], "unique")
+
+    # --- E3-2 source check -------------------------------------------
+    def test_missing_source_blocks_the_default(self):
+        rec = _record("test.candidate.감자", "감자", year=2025)
+        self._fixture([{"record": rec, "evidence": _evidence_for(rec)}])
+        got = self._yearless()
+        self.assertEqual(got["year_default"]["reason"], "source_unknown")
+        self.assertEqual(got["year_default"]["status"], "blocked")
+        self.assertIsNone(got["year_default"]["year"])
+        self.assertIsNone(got["query"]["year"])
+        self.assertEqual(got["status"], "unapproved")
+
+    def test_empty_survey_blocks_the_default(self):
+        rec = _record("test.candidate.감자", "감자", year=2025,
+                      source=_source(data_year=2025, survey="  "))
+        self._fixture([{"record": rec, "evidence": _evidence_for(rec)}])
+        got = self._yearless()
+        self.assertEqual(got["year_default"]["reason"], "source_unknown")
+        self.assertEqual(got["year_default"]["status"], "blocked")
+
+    def test_mismatched_aggregation_group_is_invalid(self):
+        rec = _record("test.candidate.감자", "감자", year=2025,
+                      source=_source(data_year=2025,
+                                     aggregation_group="rda.income.2024"))
+        self._fixture([{"record": rec, "evidence": _evidence_for(rec)}])
+        got = self._yearless()
+        self.assertEqual(got["year_default"]["reason"], "source_invalid")
+        self.assertEqual(got["year_default"]["status"], "blocked")
+
+    def test_non_integer_data_year_is_invalid(self):
+        rec = _record("test.candidate.감자", "감자", year=2025,
+                      source=_source(data_year=2025))
+        rec["source"]["data_year"] = "2025"
+        self._fixture([{"record": rec, "evidence": _evidence_for(rec)}])
+        got = self._yearless()
+        self.assertEqual(got["year_default"]["reason"], "source_invalid")
+
+    # --- top-level verdict untouched by a blocked default --------------
+    _BLOCK_CODES = {"source_unknown", "source_invalid", "survey_mixed",
+                    "group_unresolved", "year_unknown"}
+
+    def _assert_reason_as_before(self, got):
+        """A blocked default must leave the top-level ``reason`` exactly as
+        the year-less lookup always produced it (main behaviour): the text
+        derived from the raw observation status — never a block code."""
+        self.assertEqual(got["year_default"]["status"], "blocked")
+        self.assertNotIn(got["reason"], self._BLOCK_CODES)
+        self.assertEqual(
+            got["reason"],
+            cand._UNAPPROVED_REASONS.get(
+                got["observation"]["status"],
+                "no candidate passed every approval axis — raw verdict is "
+                "not use permission"))
+
+    def test_survey_mixed_block_keeps_the_top_level_reason(self):
+        self._two_year_survey(
+            surveys=("rda.income", "kostat.production_cost"))
+        got = self._yearless()
+        self.assertEqual(got["year_default"]["reason"], "survey_mixed")
+        self._assert_reason_as_before(got)
+
+    def test_source_unknown_block_keeps_the_top_level_reason(self):
+        rec = _record("test.candidate.감자", "감자", year=2025)
+        self._fixture([{"record": rec, "evidence": _evidence_for(rec)}])
+        got = self._yearless()
+        self.assertEqual(got["year_default"]["reason"], "source_unknown")
+        self._assert_reason_as_before(got)
+
+    # --- E1 guard rails ----------------------------------------------
+    def test_explicit_year_is_never_substituted(self):
+        """An explicit year is a filter: no default, no fallback, and the
+        raw ``not_found`` stands (E3-6)."""
+        self._two_year_survey()
+        got = self._yearless(year=2019)
+        self.assertIsNone(got["year_default"])
+        self.assertEqual(got["query"]["year"], 2019)
+        self.assertEqual(got["status"], "not_found")
+        self.assertEqual(got["observation"]["status"], "not_found")
+
+    def test_audit_key_never_receives_an_injected_year(self):
+        """An audit-key query resolves that row and nothing else (E3-6)."""
+        keys = self._two_year_survey()
+        got = cand.lookup_approved_candidates(
+            "감자", "전국", "특용작물", audit_key=prov.audit_key_dict(keys[0]),
+            unit="kg", use_scope="plan_input")
+        self.assertIsNone(got["year_default"])
+        self.assertEqual(got["observation"]["status"], "unique")
+        self.assertEqual(got["candidates"][0]["record"]["basis"]["year"],
+                         2024)
+
+    # --- E3-5 same-year ties -----------------------------------------
+    def test_two_rows_in_the_selected_year_stay_ambiguous(self):
+        """The default picks the YEAR, not the row: two physical rows in
+        that year remain an ambiguous raw verdict."""
+        specs = []
+        for i, value in enumerate(("100", "200")):
+            rec = _record("test.candidate.감자.2025.%d" % i, "감자",
+                          year=2025, metrics={"value": value},
+                          source=_source(data_year=2025))
+            specs.append({"record": rec, "evidence": _evidence_for(rec)})
+        self._fixture(specs)
+        got = self._yearless()
+        self.assertEqual(got["year_default"]["year"], 2025)
+        self.assertEqual(got["observation"]["status"], "ambiguous")
+        self.assertEqual(got["status"], "unapproved")
+        self.assertEqual(len(got["candidates"]), 2)
+
+    # --- series kinds -------------------------------------------------
+    def test_series_kind_keeps_its_series_verdict(self):
+        """A default year never turns a series row into a scalar: the
+        selected row is still ``series`` and unapproved."""
+        rec = _record("test.candidate.감자.series", "감자", form=None,
+                      year=2025, kind="wholesale_price_series",
+                      metrics={"m1": "100", "m2": "110"},
+                      source=_source(data_year=2025))
+        ev = _evidence_for(rec)
+        ev["applicability"]["products"] = ["생체"]
+        self._fixture([{"record": rec, "evidence": ev}])
+        got = self._yearless(kind="wholesale_price_series")
+        self.assertEqual(got["year_default"]["year"], 2025)
+        self.assertEqual(got["observation"]["status"], "series")
+        self.assertEqual(got["status"], "unapproved")
+        self.assertIn("series_period_unspecified",
+                      got["candidates"][0]["rejections"])
+
+
+class AggregationGroupContractTests(unittest.TestCase):
+    """E3-7: ``require_single_aggregation_group`` is the contract every
+    multi-row consumption path (sum·mean·rank) must pass.  These tests
+    cover the function directly — the entrypoint tests above cover the
+    single-row default-year path, which is deliberately NOT this
+    contract."""
+
+    def test_same_group_passes(self):
+        rows = [_record("a", "감자", year=2025,
+                        source=_source(data_year=2025)),
+                _record("b", "감자", year=2025,
+                        source=_source(data_year=2025))]
+        self.assertEqual(cand.require_single_aggregation_group(rows),
+                         "rda.income.2025")
+
+    def test_distinct_groups_are_refused(self):
+        rows = [_record("a", "감자", year=2024,
+                        source=_source(data_year=2024)),
+                _record("b", "감자", year=2025,
+                        source=_source(data_year=2025))]
+        with self.assertRaises(cand.AggregationGroupError) as ctx:
+            cand.require_single_aggregation_group(rows)
+        self.assertEqual(ctx.exception.reason, "aggregation_group_mixed")
+
+    def test_a_row_without_source_is_unknown(self):
+        rows = [_record("a", "감자", year=2025,
+                        source=_source(data_year=2025)),
+                _record("b", "감자", year=2025)]
+        with self.assertRaises(cand.AggregationGroupError) as ctx:
+            cand.require_single_aggregation_group(rows)
+        self.assertEqual(ctx.exception.reason, "source_unknown")
+
+    def test_a_row_with_a_bad_group_is_invalid(self):
+        rows = [_record("a", "감자", year=2025,
+                        source=_source(data_year=2025,
+                                       aggregation_group="rda.income.2024"))]
+        with self.assertRaises(cand.AggregationGroupError) as ctx:
+            cand.require_single_aggregation_group(rows)
+        self.assertEqual(ctx.exception.reason, "source_invalid")
+
+    def test_empty_operand_is_a_caller_error(self):
+        with self.assertRaises(ValueError):
+            cand.require_single_aggregation_group([])
 
 
 class InputGuardTests(unittest.TestCase):

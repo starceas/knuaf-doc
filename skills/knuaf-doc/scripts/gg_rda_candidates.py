@@ -521,6 +521,7 @@ def _empty_result(status, query, reason):
         "reason": reason,
         "major_id": query.get("major_id"),
         "query": query,
+        "year_default": None,
         "observation": {"status": None, "rank_used": None, "pack_id": None,
                         "reason": reason, "web": None,
                         "candidate_count": 0},
@@ -528,6 +529,177 @@ def _empty_result(status, query, reason):
         "approved_candidates": [],
         "counts": {"candidates": 0, "eligible": 0, "approved": 0},
     }
+
+
+# ---------------------------------------------------------------------------
+# G3 default-year resolution (DESIGN-PR3-G3 E1–E3) + aggregation contract
+#
+# A query that names no year must not silently pick one when the candidates
+# come from different survey systems.  The resolution below runs only for
+# ``year is None and audit_key is None`` (E1) and either selects ONE
+# observation year (E2) or refuses, leaving the raw year-less verdict in
+# place and reporting a reason (E3).  Nothing here relaxes an approval
+# gate: the selected year merely re-enters the unchanged raw lookup.
+
+# catalog_status precedence for the default year (E2 step 1).  An
+# unauthenticated/absent manifest entry carries no status and ranks last.
+_STATUS_RANK = {
+    _prov.CatalogStatus.VERIFIED_OBSERVATION.value: 3,
+    _prov.CatalogStatus.EXPLORATORY.value: 2,
+    _prov.CatalogStatus.QUARANTINED.value: 1,
+}
+
+_SOURCE_KEYS = ("survey", "data_year", "aggregation_group")
+
+
+class AggregationGroupError(ValueError):
+    """A multi-record consumption refused by the aggregation contract.
+
+    ``reason`` is one of ``source_unknown`` (a row declares no source),
+    ``source_invalid`` (shape/identity violation) or
+    ``aggregation_group_mixed`` (rows span several aggregation groups)."""
+
+    def __init__(self, reason, detail=""):
+        super().__init__(detail or reason)
+        self.reason = reason
+        self.detail = detail
+
+
+def _source_reason(record):
+    """Source check for one physical row (E3-2, N-01).
+
+    ``None`` = the row declares a well-formed source.  A missing source
+    dict, a missing key, or an empty string is ``source_unknown``; a
+    present value of the wrong type, or ``aggregation_group !=
+    survey + "." + str(data_year)``, is ``source_invalid``.  No default
+    source (``rda`` or otherwise) is ever substituted."""
+    src = (record or {}).get("source")
+    if not isinstance(src, dict):
+        return "source_unknown"
+    for key in _SOURCE_KEYS:
+        value = src.get(key)
+        if value is None:
+            return "source_unknown"
+        if isinstance(value, str) and not _norm(value):
+            return "source_unknown"
+    survey, data_year, group = (src[k] for k in _SOURCE_KEYS)
+    if not isinstance(survey, str) or not isinstance(group, str):
+        return "source_invalid"
+    if isinstance(data_year, bool) or not isinstance(data_year, int):
+        return "source_invalid"
+    if group != survey + "." + str(data_year):
+        return "source_invalid"
+    return None
+
+
+def require_single_aggregation_group(rows):
+    """Contract for ANY path that consumes several rows together
+    (sum, average, ranking — E3-7).
+
+    Returns the single ``source.aggregation_group`` the rows share.
+    Raises :class:`AggregationGroupError` with ``source_unknown`` /
+    ``source_invalid`` (a row's own source check fails) or
+    ``aggregation_group_mixed`` (rows come from more than one group).
+
+    ``rows`` must be non-empty — an empty operand list is a caller error
+    (``ValueError``), not a mixing verdict.  Selecting ONE representative
+    observation across years (the default-year path) is NOT this
+    contract: one row per result stays allowed."""
+    rows = list(rows or [])
+    if not rows:
+        raise ValueError("require_single_aggregation_group: rows 필요")
+    groups = set()
+    for row in rows:
+        reason = _source_reason(row)
+        if reason:
+            raise AggregationGroupError(reason, "행 출처 없음·불일치")
+        groups.add(row["source"]["aggregation_group"])
+    if len(groups) > 1:
+        raise AggregationGroupError(
+            "aggregation_group_mixed",
+            "서로 다른 조사 묶음 %d개: %s" % (len(groups),
+                                              ", ".join(sorted(groups))))
+    return groups.pop()
+
+
+def _axis_values(records, extract):
+    """Normalized value set for one grouping axis — a missing value ("")
+    is its own value, distinct from any real label."""
+    values = set()
+    for rec in records:
+        value = extract(rec)
+        values.add(_norm(value) if isinstance(value, str) else "")
+    return values
+
+
+def _default_year(records, *, kind, form):
+    """E3 steps 2–5 over the related candidates of a year-less query.
+
+    Returns ``{"status": "applied"|"blocked", "reason": str|None,
+    "year": int|None, "kind": ..., "form": ..., "survey": ...,
+    "aggregation_group": ..., "catalog_status": ..., "candidate_count": n}``.
+    Callers pass ``records`` filtered by the axes the QUERY supplied; the
+    axes it did not supply are only accepted when they carry one value."""
+    detail = {"status": "blocked", "reason": None, "year": None,
+              "kind": kind if kind is not None else None,
+              "form": form, "survey": None, "aggregation_group": None,
+              "catalog_status": None,
+              "candidate_count": len(records)}
+
+    # E3-2 source check — every candidate must declare its own origin.
+    for rec in records:
+        reason = _source_reason(rec)
+        if reason:
+            detail["reason"] = reason
+            return detail
+
+    # E3-3 survey mixing — checked before any status/year comparison.
+    surveys = _axis_values(records,
+                           lambda r: r["source"].get("survey"))
+    if len(surveys) > 1:
+        detail["reason"] = "survey_mixed"
+        return detail
+    detail["survey"] = sorted(surveys)[0]
+
+    # E3-4 group uniqueness on the axes the query left open.
+    if kind is None:
+        kinds = _axis_values(records, lambda r: r.get("kind"))
+        if len(kinds) > 1:
+            detail["reason"] = "group_unresolved"
+            return detail
+    if form is None:
+        forms = _axis_values(records,
+                             lambda r: (r.get("crop") or {}).get("form"))
+        if len(forms) > 1:
+            detail["reason"] = "group_unresolved"
+            return detail
+
+    # E2 selection — 1 highest catalog_status grade, 2 max year in it.
+    def grade(rec):
+        bundle = rec.get("verification") or {}
+        return _STATUS_RANK.get(bundle.get("catalog_status"), 0)
+
+    best = max(grade(rec) for rec in records)
+    graded = [rec for rec in records if grade(rec) == best]
+    years = [(rec.get("basis") or {}).get("year") for rec in graded]
+    years = [y for y in years if isinstance(y, int) and not isinstance(y, bool)]
+    if not years:
+        detail["reason"] = "year_unknown"
+        return detail
+    year = max(years)
+    pick = next(rec for rec in graded
+                if (rec.get("basis") or {}).get("year") == year)
+
+    detail.update({
+        "status": "applied",
+        "year": year,
+        "kind": pick.get("kind"),
+        "form": (pick.get("crop") or {}).get("form") or "",
+        "aggregation_group": pick["source"].get("aggregation_group"),
+        "catalog_status": (pick.get("verification") or {}).get(
+            "catalog_status"),
+    })
+    return detail
 
 
 _UNAPPROVED_REASONS = {
@@ -585,6 +757,32 @@ def lookup_approved_candidates(crop, region, major, *, kind=None, year=None,
         return _empty_result("major_unresolved", query,
                              major_error or "전공 식별 실패")
 
+    # --- G3 default year (E1: year-less AND audit_key-less queries only).
+    # The probe runs the unchanged raw lookup with the axes the caller
+    # supplied; the default only ever re-enters that same lookup, so an
+    # explicit year, an audit key, or a blocked resolution changes nothing.
+    year_default = None
+    if year is None and audit_key is None:
+        probe = _lookup.lookup_rda_data(
+            crop, region, major=major, kind=kind, year=None, form=form)
+        probe_records = probe.get("records") or []
+        if probe_records:
+            year_default = _default_year(probe_records, kind=kind, form=form)
+            if year_default["status"] == "applied":
+                year = year_default["year"]
+                form = year_default["form"]
+                if kind is None:
+                    kind = year_default["kind"]
+                # ``query`` records what actually ran, not what was asked
+                query["year"] = year
+                query["form"] = form
+                query["kind"] = kind
+        else:
+            year_default = {"status": "not_attempted", "reason": None,
+                            "year": None, "kind": kind, "form": form,
+                            "survey": None, "aggregation_group": None,
+                            "catalog_status": None, "candidate_count": 0}
+
     raw = _lookup.lookup_rda_data(
         crop, region, major=major, kind=kind, year=year, form=form,
         audit_key=audit_key)
@@ -625,12 +823,16 @@ def lookup_approved_candidates(crop, region, major, *, kind=None, year=None,
             raw_status,
             "no candidate passed every approval axis — raw verdict is "
             "not use permission")
+    # A blocked default leaves the top-level verdict and ``reason`` exactly as
+    # the yearless lookup produced them; the block code lives only in
+    # ``year_default["reason"]`` (no new status values, no rewritten reason).
     return {
         "schema": SCHEMA,
         "status": status,
         "reason": reason,
         "major_id": major_id,
         "query": query,
+        "year_default": year_default,
         "observation": {
             "status": raw_status,
             "rank_used": raw.get("rank_used"),
