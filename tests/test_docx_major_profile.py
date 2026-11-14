@@ -19,6 +19,17 @@ CHAPTERS = ("# 1. 머리말", "# 2. 영농환경 분석", "# 3. 영농계획 수
 CLOSERS = ("# 맺음말 및 발전방향", "# 참고문헌", "# 학부모 동의서")
 
 
+def spaced(doc, needle, style):
+    """문단 XML의 `w:spacing` 위·아래 값(twips). 없으면 None."""
+    from docx.oxml.ns import qn
+    paragraph = next(p for p in doc.paragraphs
+                     if p.style.name == style and needle in p.text)
+    sp = paragraph._p.get_or_add_pPr().find(qn("w:spacing"))
+    return tuple(None if sp is None or sp.get(qn("w:" + key)) is None
+                 else int(sp.get(qn("w:" + key)))
+                 for key in ("before", "after"))
+
+
 def margins(section):
     from docx.oxml.ns import qn
     mar = section._sectPr.find(qn("w:pgMar"))
@@ -62,6 +73,17 @@ class DocxMajorProfileTests(ContractCase):
         return mock.patch.object(
             self.builder, "docx_profile",
             lambda major_id: profile if major_id == "food_crops" else None)
+
+    def dairy_convert(self, text="# 1. 머리말\n\n합성 본문.\n"):
+        """낙농 빌드. 게이트는 끈 채로 이 빌드만 낙농 프로필을 보게 한다."""
+        root = self.make_project()
+        bind_major(root, "dairy")
+        with mock.patch.object(
+                self.builder, "docx_profile",
+                lambda major_id: self.gmf.DAIRY_PROFILE
+                if major_id == "dairy" else None):
+            return self.builder.convert(
+                text, context=self.mc.output_context(root, "dairy"))
 
     # --- 값 표가 옛 하드코딩과 같다 ---------------------------------------
 
@@ -118,6 +140,26 @@ class DocxMajorProfileTests(ContractCase):
                  8: 13, 9: 13})):
             self.assertEqual(26.0, heading_pt(self.convert(), "1. 머리말"))
 
+    # --- 본문 제목 위아래 1행은 프로필 값이 정한다 -------------------------
+
+    def test_heading_spacing_is_off_for_a_profile_that_asks_for_nothing(self):
+        # 식량작물(heading_spacing_pt=0.0): 위 간격 없음·아래 6pt, 종전 그대로.
+        self.assertEqual(0.0, self.gmf.FOOD_CROPS_PROFILE.heading_spacing_pt)
+        self.assertEqual((None, 120),
+                         spaced(self.convert(), "1. 머리말", "Heading 1"))
+
+    def test_heading_spacing_comes_from_the_profile(self):
+        # 19.2pt = 384 twips. 낙농 프로필을 넘긴 빌드의 제목만 이 값을 쓴다.
+        self.assertEqual((384, 384),
+                         spaced(self.dairy_convert(), "1. 머리말", "Heading 1"))
+
+    def test_heading_spacing_leaves_body_paragraphs_alone(self):
+        # 제목만이다. 본문 문단 간격은 낙농 프로필에서도 종전 그대로.
+        self.assertEqual(
+            (None, 0),
+            spaced(self.dairy_convert("# 1. 머리말\n\n합성 본문.\n"),
+                    "합성 본문.", "Normal"))
+
     def test_contents_title_size_comes_from_the_profile(self):
         def toc_pt(doc):
             paragraph = next(p for p in doc.paragraphs
@@ -169,6 +211,41 @@ class DocxMajorProfileTests(ContractCase):
              "header": self.builder.Mm(15).twips,
              "footer": self.builder.Mm(15).twips, "gutter": 0},
             margins(doc.sections[0]))
+
+
+class SharedFormatGateTests(ContractCase):
+    """N-01: 세 빌더가 같은 게이트를 본다(값이 아니라 한 객체)."""
+
+    def setUp(self):
+        self.gmf = runtime("gg_major_format")
+        self.builder = runtime("build_docx")
+        self.hwpx = runtime("build_hwpx")
+        self.layout = runtime("gg_frontmatter_layout")
+
+    def test_the_three_builders_read_one_gate_object(self):
+        # 게이트 값은 `gg_major_format` 한 곳이 정한다. 어느 빌더가 자기
+        # 리터럴을 다시 적으면 동일성(`is`)이 깨져 여기서 잡힌다.
+        self.assertIs(self.gmf.ENABLED_FORMAT_MAJORS,
+                      self.builder.DOCX_PROFILE_MAJORS)
+        self.assertIs(self.gmf.ENABLED_FORMAT_MAJORS,
+                      self.hwpx.HWPX_PROFILE_MAJORS)
+        self.assertIs(self.gmf.ENABLED_FORMAT_MAJORS,
+                      self.layout._FRONTMATTER_PROFILE_MAJORS)
+        self.assertEqual(("food_crops",),
+                         tuple(self.gmf.ENABLED_FORMAT_MAJORS))
+
+    def test_the_three_builders_agree_on_every_major(self):
+        # 값 조회도 한 함수가 정한다: 표에 값이 있어도 게이트 밖이면 None.
+        for major in ("food_crops", "dairy", "specialty_crops", "", None):
+            expected = self.gmf.enabled_profile(major)
+            self.assertIs(expected, self.builder.docx_profile(major),
+                          major)
+            self.assertIs(expected, self.hwpx.hwpx_profile(major),
+                          major)
+        self.assertIs(self.gmf.FOOD_CROPS_PROFILE,
+                      self.builder.docx_profile("food_crops"))
+        self.assertIsNone(self.builder.docx_profile("dairy"))
+        self.assertIsNone(self.gmf.enabled_profile("specialty_crops"))
 
 
 if __name__ == "__main__":

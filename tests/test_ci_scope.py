@@ -13,6 +13,7 @@ silently shrink the suite.  Fixtures are throwaway git repositories.
 """
 import ast
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -26,6 +27,50 @@ import ci_scope  # noqa: E402
 
 SCRIPT = ROOT / "tools" / "ci_scope.py"
 WORKFLOW = ROOT / ".github" / "workflows" / "validation.yml"
+
+_STEP = re.compile(r"^      - ")
+_JOB = re.compile(r"^  [A-Za-z0-9_-]+:\s*$")
+_UPLOAD_STEP = "Upload nested run reports"
+_TEMPDIR_STEP = "Resolve temp dir"
+
+
+def _steps(text):
+    """Workflow steps as ``(job, name, block)`` — indentation-aware, no YAML lib.
+
+    ``name`` is the step's ``- name:`` value, or ``None`` when the step starts
+    with something else (``uses:``). A step's block runs to the next step
+    marker or job header, so an assertion on the block cannot accidentally
+    match a neighbouring step.
+    """
+    found = []
+    job = None
+    current = None
+    in_jobs = False
+    for line in text.splitlines():
+        if line.rstrip() == "jobs:":
+            in_jobs = True
+            continue
+        if in_jobs and _JOB.match(line):
+            job = line.strip()[:-1]
+            if current is not None:
+                found.append(current)
+            current = None
+            continue
+        if _STEP.match(line):
+            if current is not None:
+                found.append(current)
+            current = [job, line, [line]]
+            continue
+        if current is not None:
+            current[2].append(line)
+    if current is not None:
+        found.append(current)
+    out = []
+    for job_name, first, lines in found:
+        match = re.match(r"^      - name: (.+)$", first)
+        out.append((job_name, match.group(1).strip() if match else None,
+                    "\n".join(lines).rstrip()))
+    return out
 
 
 def _git(root, *args):
@@ -276,6 +321,79 @@ class WorkflowContractTest(unittest.TestCase):
         code = "\n".join(ast.unparse(node) for node in body)
         self.assertNotIn("GITHUB_OUTPUT", code)
         self.assertNotIn("outputs", code)
+
+
+class NestedReportUploadContractTest(unittest.TestCase):
+    """The whole-shard nested-run reports survive a failing shard.
+
+    Ten units start whole nested validation runs and write their per-run
+    report next to the temporary dir (``knuaf-nested-reports/``). A shard that
+    fails must still publish them, otherwise the run leaves nothing to
+    diagnose. The upload is therefore pinned step by step: the temp dir is
+    resolved inside the job, the upload ignores the job's own failure, and it
+    keeps the run index plus the ``.stderr`` of each run.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.steps = _steps(WORKFLOW.read_text(encoding="utf-8"))
+
+    def _upload(self, job):
+        blocks = [(name, block) for job_name, name, block in self.steps
+                  if job_name == job and name == _UPLOAD_STEP]
+        self.assertEqual(1, len(blocks), f"{job}: exactly one {_UPLOAD_STEP}")
+        return blocks[0][1]
+
+    def test_both_shard_jobs_publish_nested_reports(self):
+        uploads = {job for job, name, _block in self.steps
+                   if name == _UPLOAD_STEP}
+        self.assertEqual({"suite-shards-py310", "suite-shards-py314"}, uploads)
+
+    def test_temp_dir_step_is_shared_and_always_runs(self):
+        for job in ("suite-shards-py310", "suite-shards-py314"):
+            with self.subTest(job=job):
+                blocks = [block for job_name, name, block in self.steps
+                          if job_name == job and name == _TEMPDIR_STEP]
+                self.assertEqual(1, len(blocks), job)
+                block = blocks[0]
+                self.assertIn("if: always()", block)
+                self.assertIn("id: tmpdir", block)
+                self.assertIn("shell: bash", block)
+                self.assertIn('printf \'path=%s\\n\'', block)
+                self.assertIn('>> "$GITHUB_OUTPUT"', block)
+                # The upload reads steps.tmpdir, so the resolve step must
+                # come first in the same job.
+                names = [name for job_name, name, _block in self.steps
+                         if job_name == job]
+                self.assertLess(names.index(_TEMPDIR_STEP),
+                                names.index(_UPLOAD_STEP), job)
+
+    def test_upload_runs_after_a_failed_shard_and_keeps_both_kinds(self):
+        for job in ("suite-shards-py310", "suite-shards-py314"):
+            with self.subTest(job=job):
+                block = self._upload(job)
+                self.assertIn("if: always()", block)
+                self.assertIn("uses: actions/upload-artifact@v4", block)
+                # Path comes from the job's own resolved temp dir, never from
+                # ``runner.temp`` inline: the reports live under tempfile's
+                # dir, which on the runner is not guaranteed to be the same
+                # expression (Windows shards resolve it themselves).
+                self.assertIn("${{ steps.tmpdir.outputs.path }}", block)
+                self.assertIn("/knuaf-nested-reports/*.json", block)
+                self.assertIn("/knuaf-nested-reports/*.stderr", block)
+                # Missing reports (no nested unit ran) must not fail the job.
+                self.assertIn("if-no-files-found: warn", block)
+                self.assertNotIn("if-no-files-found: error", block)
+
+    def test_artifact_names_are_unique_per_python_and_shard(self):
+        for job, version in (("suite-shards-py310", "py3.10"),
+                             ("suite-shards-py314", "py3.14")):
+            with self.subTest(job=job):
+                block = self._upload(job)
+                # No f-string here: ``{{``/``}}`` are escapes in one, and the
+                # workflow text really contains two braces.
+                self.assertIn("name: validation-nested-reports-" + version
+                              + "-${{ matrix.shard }}", block)
 
 
 if __name__ == "__main__":

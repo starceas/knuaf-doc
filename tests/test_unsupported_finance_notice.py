@@ -193,7 +193,37 @@ class StudentWordingTests(UnsupportedFinanceCase):
         bind_major(root, "dairy")
         self.assertEqual([], self.rows(root))
         after = self.rows(root, BLANK_COPY_ID)[0]["notice_identity"]
+        # 종류까지 달라진 값이다 — 식별값이 전공만의 함수라는 증거는 못 된다.
         self.assertNotEqual(before, after)
+
+    def test_identity_tracks_the_major_within_one_kind(self):
+        """⑦ 같은 종류·같은 프로젝트에서 전공만 바꾸면 식별값이 바뀐다.
+
+        #139 고침이 ⑦을 '미지원 → 빈 사본'(종류 변경)으로 바꾸면서, 식별값이
+        ``kind``·``form_identity`` 둘 다에 걸린다는 사실이 가려졌다. 빈 사본
+        전공이 둘이라(``FILL_CLOSED_MAJORS``) 같은 종류 안에서 전공만 바꾼
+        대조가 가능하다 — 재료가 전공이라는 것을 이 대조가 **빈 사본 종류에서**
+        잠근다. 원래 ⑦의 대상인 미지원 종류는 미지원 전공이 하나뿐이라 같은
+        종류 안 대조가 불가능해 직접 검증하지 않는다(가능한 범위의 복원).
+        """
+        first, second = BLANK_COPY
+        root = self.project(first)
+        before = self.rows(root, BLANK_COPY_ID)[0]["notice_identity"]
+        bind_major(root, second)
+        rows = self.rows(root, BLANK_COPY_ID)
+        self.assertEqual(1, len(rows))
+        after = rows[0]["notice_identity"]
+        self.assertNotEqual(before, after)
+        # 값은 (프로젝트, 종류, 전공)의 함수다 — 재계산이 행과 같아야 한다.
+        identity = runtime("gg_hort_workbook").notice_identity
+        project_id = rows[0]["project_id"]
+
+        def recompute(major_id):
+            return identity(project_id=project_id, kind="blank_copy_finance",
+                            profile=None, form_identity=major_id, groups=[])
+
+        self.assertEqual(after, recompute(second))
+        self.assertEqual(before, recompute(first))
 
 
 class IdentityTests(UnsupportedFinanceCase):

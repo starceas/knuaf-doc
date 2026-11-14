@@ -2,7 +2,7 @@
 
 build_docx가 그림 노드를 docx에 넣기 전에 이 모듈 하나만 부르면 된다.
 
-연결 줄 1 — 원고 검사 `gg_document.check`(그림 노드 가지, 현재 1504~1519행):
+연결 줄 1 — 원고 검사 `gg_document.check`(그림 노드 가지):
 
     import gg_figure_docx
 
@@ -10,12 +10,12 @@ build_docx가 그림 노드를 docx에 넣기 전에 이 모듈 하나만 부르
     if token_issue:
         issues.append(("missing_image", n["path"] + ": " + token_issue))
     elif not handled:
-        p = Path(n["path"])
-        if (... 기존 절대경로/폴더 밖/없음 검사 ...):
-            issues.append(("missing_image", n["path"]))
+        # 절대 경로·URL·base 없음은 그대로 missing_image.
+        # 아니면 gg_hwpx.resolve_figure(원고 옆 → 뿌리)가 판정한다(M-02).
 
-연결 줄 2 — `build_docx.py` 그림 루프(238~245행 `elif n["kind"] == "image":`
-가지, `p = (Path(base) / n["path"]).resolve()` 자리).
+연결 줄 2 — `build_docx.py` 그림 루프(`elif n["kind"] == "image":` 가지,
+옛 `p = (Path(base) / n["path"]).resolve()` 자리 — 지금은 `gg_hwpx.resolve_figure`).
+이 모듈과 같은 이유로 `import gg_hwpx`도 **모듈 수준**에 둔다.
 
 **먼저 모듈 수준 import 한 줄**을 `from gg_body_layout import …` 바로 아래에
 넣는다. 아래 가지 안에서 import하면 같은 함수 뒤쪽(연결 줄 3)에서 그 이름이
@@ -34,12 +34,14 @@ build_docx가 그림 노드를 docx에 넣기 전에 이 모듈 하나만 부르
         target, issue = gg_figure_docx.node_target(n["path"])
         if issue:
             raise ValueError("blocked: " + issue)
-        p = target if target is not None else (Path(base) / n["path"]).resolve()
-        if target is None and not p.is_relative_to(Path(base).resolve()):
+        if target is None:
+            # 학생 그림: 원고 옆(base) → 작업 폴더 뿌리(root) 두 단계.
+            target, candidates = gg_hwpx.resolve_figure(n["path"], base, root)
+            if candidates:
+                raise ValueError(gg_hwpx.ambiguous_image_message(candidates))
+        if target is None:
             raise ValueError("그림 파일 없음/외부 경로: " + n["path"])
-        if not p.is_file():
-            raise ValueError("그림 파일 없음/외부 경로: " + n["path"])
-        doc.add_picture(str(p), width=Mm(145))
+        doc.add_picture(str(target), width=Mm(145))
         picture_paragraph = doc.paragraphs[-1]
         picture_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
         picture_paragraph.paragraph_format.keep_with_next = True
@@ -76,8 +78,6 @@ import json
 import os
 import re
 from pathlib import Path
-
-VERSION = "0.4.11"
 
 TOKEN = re.compile(r"^app-figure:([0-9a-f]{64})$")
 PLACEHOLDER = "앱에서 받은 그림"

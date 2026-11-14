@@ -31,8 +31,17 @@ NS_PKG = "http://schemas.openxmlformats.org/package/2006/relationships"
 NS_MC = "http://schemas.openxmlformats.org/markup-compatibility/2006"
 ET.register_namespace("", NS_MAIN)
 
-BUNDLED_TEMPLATE = Path(__file__).resolve().parents[1] / "assets" / "templates" / "finance-template.xlsx"
-BUNDLED_TEMPLATE_SHA256 = "6d3c9fe5e5992108a8bab18c0098edb0d808f0d14c099878a53939b17de88c7d"
+# The bundled X01 is the edition new papers start from: the professor's
+# corrected 17-sheet form (A·B·C).  The first edition stays shipped and
+# byte-identical for the papers already written on it; a student picks it by
+# handing that file in with ``--source``.
+BUNDLED_EDITION = "school_17_sheet_v2"
+BUNDLED_TEMPLATE = (Path(__file__).resolve().parents[1] / "assets" / "templates"
+                    / f"finance-template-v2.xlsx")
+BUNDLED_TEMPLATE_SHA256 = "76300305fdaf165bcce54fc3de2b476c91f4e8e368bc0455a8c69aa3eee9cd1d"
+# The first edition, still bound to its own hash: the value-cleared original.
+LEGACY_TEMPLATE = Path(__file__).resolve().parents[1] / "assets" / "templates" / "finance-template.xlsx"
+LEGACY_TEMPLATE_SHA256 = "6d3c9fe5e5992108a8bab18c0098edb0d808f0d14c099878a53939b17de88c7d"
 
 
 def select_source(source: Path | None, *, authorization=None,
@@ -63,9 +72,11 @@ def select_source(source: Path | None, *, authorization=None,
     # The bundled X01 is the 17-sheet specialist form. A major whose school
     # form is a different workbook gets its own file, never this one: a
     # verified "the school form is absent" survey does not make the bundled
-    # 17 sheets that major's form.
+    # 17 sheets that major's form. Both published editions of that same form
+    # are this family — the bundle carries the current one.
+    from gg_school_excel import PROFILES
     own_profile = mc.default_workbook_profile(authorization)
-    if own_profile != "school_17_sheet_v1":
+    if own_profile not in PROFILES:
         raise mc.OutputHeldError(
             "student_template_required",
             f"학생 양식 필요 — 이 전공의 학교 양식은 {own_profile}이고 번들 X01은 "
@@ -80,10 +91,16 @@ def create_workbook(source: Path | None, out: Path, *, context=None,
     """Byte-copy the chosen workbook without erasing student inputs."""
     import gg_major_contract as mc
     authorization = mc.authorize_output(mc.OUTPUT_SCHOOL_WORKBOOK, context)
-    # The bundled X01 is the specialty 17-sheet form; a major with its own
-    # school form (food_crops) declares that profile and passes --source.
-    mc.require_workbook_profile(
-        authorization, mc.default_workbook_profile(authorization))
+    # Two rules meet here and neither may override the other. A major with its
+    # own school form declares that profile (food_crops) and passes --source;
+    # the 17-sheet form itself has two published editions (v1 legacy, v2
+    # current) and a major that uses it declares both. So the accepted set is
+    # the major's own default form plus the 17-sheet editions — the declared,
+    # supported one decides, and a form the major never declared still fails.
+    from gg_school_excel import PROFILES
+    accepted = tuple(dict.fromkeys(
+        PROFILES + (mc.default_workbook_profile(authorization),)))
+    mc.require_any_workbook_profile(authorization, accepted)
     source = select_source(source, authorization=authorization, template_ref=template_ref,
                            reference_inventory=reference_inventory)
     read_template(source)
@@ -672,12 +689,15 @@ def wage_fill_map(source: Path) -> dict:
     """Value-only map; formula observations must first be explicitly prepared.
 
     The fill engine requires a complete, sourced six-year observation block.
-    This map never grants permission to overwrite a formula.
+    This map never grants permission to overwrite a formula.  The declared
+    profile follows the source's formula lineage, because the two editions of
+    the 17-sheet form share the x01 layout and differ only in rows.
     """
-    if read_template(source).layout != "x01":
+    read = read_template(source)
+    if read.layout != "x01":
         raise ValueError("layout_variant_unsupported: wage observations require x01")
     return {"schema": "gg-xlsx-fill-map/v1",
-            "workbook_profile": "school_17_sheet_v1",
+            "workbook_profile": _source_profile(read),
             "template": {"sha256": sha256(source)},
             "entries": [{"sheet": "8. 노무비계획", "range": "X26:Z31",
                          "role": "wage.observation", "period": "observation",
@@ -978,17 +998,52 @@ def _serialize_dom(xml_bytes: bytes, source_name: str) -> minidom.Document:
     return document
 
 
-def require_map_workbook_profile(map_data: dict, authorization) -> str:
+def require_map_workbook_profile(map_data: dict, authorization,
+                                 source: Path | None = None) -> str:
     """A reviewed, hash-bound map declares the school form, not sheet count.
 
-    Only the pre-profile specialty maps retain their historical meaning.
+    A specialty map written before the second edition has no declaration, and
+    the form has two editions: the source bytes decide which one, so the same
+    reviewed map covers a workbook of either edition and a copy of the second
+    is not held against the first.  Only a file that *is* the 17-sheet form is
+    asked which edition it is; a synthetic or other-major form keeps the
+    historical answer (the 17-sheet name for the specialty, no profile for
+    another major, whose own refusal then answers).
     An explicit null/empty profile is never a legacy declaration.
     """
     import gg_major_contract as mc
 
     profile = map_data.get("workbook_profile")
-    if "workbook_profile" not in map_data and authorization.major_id == "specialty_crops":
-        profile = "school_17_sheet_v1"
+    if "workbook_profile" not in map_data:
+        from gg_school_excel import PROFILES, is_readable_workbook, is_school_form
+        declared = mc.workbook_profiles_for(authorization)
+        if not any(name in PROFILES for name in declared):
+            # Another major's form: nothing here names a school edition, so
+            # the map's own (absent) declaration stands and that major's
+            # profile check answers.
+            profile = None
+        elif source is None or not is_readable_workbook(Path(source)):
+            # No bytes to read, or bytes that are not a workbook at all: no
+            # edition can be named, and the first edition is not substituted
+            # for the unknown one.
+            raise mc.OutputHeldError(
+                "workbook_structure_mismatch",
+                "workbook edition undetermined: a map that declares no "
+                "workbook_profile needs a readable source workbook to name it")
+        else:
+            profile = detect_source_profile(Path(source))
+            if profile is None:
+                if is_school_form(Path(source)):
+                    raise mc.OutputHeldError(
+                        "workbook_structure_mismatch",
+                        "workbook edition undetermined: the source is the "
+                        "17-sheet school form but its formula skeleton names "
+                        "no single edition")
+                # Readable and not the school form at all (a reviewed custom
+                # layout): the historical specialty answer stands, as it did
+                # before the second edition existed.
+                profile = ("school_17_sheet_v1"
+                           if "school_17_sheet_v1" in declared else None)
     mc.require_workbook_profile(authorization, profile)
     return profile
 
@@ -1022,7 +1077,7 @@ def blank_copy(source: Path, map_path: Path, out: Path, allow_missing: bool = Fa
     map_data = json.loads(map_path.read_text(encoding="utf-8"))
     entries, _ = map_entries_for_source(map_data, source)
     _check_map_layout(map_data, source)
-    workbook_profile = require_map_workbook_profile(map_data, authorization)
+    workbook_profile = require_map_workbook_profile(map_data, authorization, source)
     from gg_school_excel import require_profile_structure
     try:
         require_profile_structure(source, workbook_profile)
@@ -1255,7 +1310,10 @@ def registered_template(read: TemplateRead, bindings: dict) -> tuple[str, str]:
             return ref, "registered"
     problems = []
     for ref, binding in bindings.items():
-        if read.layout != ref.lower():
+        # The binding key is the form's profile name, which is not the layout
+        # variant: the second edition of the 17-sheet form keeps the x01
+        # layout and only moves rows, so it declares ``layout`` explicitly.
+        if read.layout != binding.get("layout", ref.lower()):
             problems.append(f"{ref}: layout {read.layout}")
             continue
         mismatches = derivation_mismatches(read, registered_audit(binding))
@@ -1264,6 +1322,66 @@ def registered_template(read: TemplateRead, bindings: dict) -> tuple[str, str]:
         problems.append(f"{ref}: {len(mismatches)} cells differ ({'; '.join(mismatches[:3])})")
     raise ValueError("not a registered template or a copy derived from one by the defined "
                      "transforms: " + " | ".join(problems))
+
+
+def detect_source_profile(source: Path) -> str | None:
+    """Which registered edition a workbook file is, read from its own bytes.
+
+    ``None`` means the file names no edition of the 17-sheet form: it is
+    neither registered nor a copy derived from one by the defined
+    transforms, and its formula addresses carry neither edition's markers.
+    Callers refuse that answer instead of substituting the first edition —
+    an unlabelled second-edition paper must not be relabelled as the first.
+    An unreadable file is also ``None`` — reading it is the caller's later
+    step, and its failure belongs there.
+
+    A formula *patch* is not one of those transforms: it rewrites formulas, so
+    the audit lineage ends there and the registered read fails.  The two
+    17-sheet editions still move different rows, so the formula addresses the
+    file holds name its edition even after such a patch — without them a
+    patched second-edition copy would fall back to the first edition and the
+    caller would relabel a paper that is not that edition.
+    """
+    try:
+        read = read_template(source)
+        ref, _ = registered_template(read, _crop_label_table()["templates"])
+    except (OSError, ValueError):
+        from gg_school_excel import edition_of_workbook
+        return edition_of_workbook(source)
+    return _template_profile(ref)
+
+
+def _template_profile(ref: str) -> str:
+    """The workbook profile named by a registered template or its copy."""
+    return "school_17_sheet_v2" if ref == "school_17_sheet_v2" else "school_17_sheet_v1"
+
+
+def _source_profile(read: TemplateRead) -> str:
+    """The profile of a source, read from its formula lineage.
+
+    A school-form source that is neither registered nor a copy of a
+    registered template (a workbook whose formula lineage was broken) has no
+    readable edition: this raises instead of naming the first one, because
+    naming the first would label a second-edition workbook as the first and
+    hand it the older form's rows.  A file that is not the school form at all
+    keeps the historical 17-sheet name: it is not one of the two editions, so
+    there is no edition to get wrong.
+    """
+    try:
+        ref, _ = registered_template(read, _crop_label_table()["templates"])
+    except ValueError:
+        from gg_school_excel import edition_marker, is_school_form
+        marker = edition_marker({key for key, rec in read.cells.items()
+                                 if rec["kind"] == "f"})
+        if marker is None:
+            if is_school_form(read.path):
+                raise ValueError(
+                    "workbook edition undetermined: the file is the 17-sheet "
+                    "school form but its formula skeleton names no single "
+                    "edition")
+            return "school_17_sheet_v1"
+        return marker
+    return _template_profile(ref)
 
 
 def crop_label_map(source: Path, category: str, choices: dict | None = None) -> tuple[dict, dict]:
@@ -1311,7 +1429,8 @@ def crop_label_map(source: Path, category: str, choices: dict | None = None) -> 
                                         "origin": "assumption"}})
     if choices:
         raise ValueError("choices name cells outside the label table: " + ", ".join(sorted(choices)))
-    fill_map = {"schema": "gg-xlsx-fill-map/v1", "workbook_profile": "school_17_sheet_v1",
+    fill_map = {"schema": "gg-xlsx-fill-map/v1",
+                "workbook_profile": _template_profile(ref),
                 "template": {"sha256": digest}, "entries": entries}
     fill_values = {"schema": "gg-xlsx-fill-values/v1", "values": values}
     return fill_map, fill_values

@@ -38,6 +38,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 KNUAF_DOC = Path(__file__).resolve().parents[1]
 SCRIPTS = KNUAF_DOC / "scripts"
@@ -920,9 +921,38 @@ class DefaultYearResolutionTests(unittest.TestCase):
         got = self._yearless()
         self.assertEqual(got["year_default"]["reason"], "source_invalid")
 
+    # --- W3G-01: data_year must BE the observed year ------------------
+    def test_source_year_must_match_the_observed_year(self):
+        """PR4 E2 contract: ``source.data_year`` IS ``basis.year``.  A
+        source mounted on another year's row is invalid — the default must
+        not pick a year whose receipt describes a different one."""
+        rec = _record("test.candidate.감자", "감자", year=2025,
+                      source=_source(data_year=2024))
+        self._fixture([{"record": rec, "evidence": _evidence_for(rec)}])
+        got = self._yearless()
+        self.assertEqual(got["year_default"]["reason"], "source_invalid")
+        self.assertEqual(got["year_default"]["status"], "blocked")
+        self.assertIsNone(got["year_default"]["year"])
+        self.assertIsNone(got["query"]["year"])
+        self.assertEqual(got["status"], "unapproved")
+
+    def test_missing_observation_year_is_year_unknown_not_invalid(self):
+        """The cross-check only fires when BOTH years are integers; a row
+        with no observation year keeps the existing ``year_unknown``
+        verdict instead of being reported twice."""
+        rec = _record("test.candidate.감자", "감자", year=None,
+                      source=_source(data_year=2024))
+        self._fixture([{"record": rec, "evidence": _evidence_for(rec)}])
+        got = self._yearless()
+        self.assertEqual(got["year_default"]["reason"], "year_unknown")
+        self.assertEqual(got["year_default"]["status"], "blocked")
+
     # --- top-level verdict untouched by a blocked default --------------
     _BLOCK_CODES = {"source_unknown", "source_invalid", "survey_mixed",
                     "group_unresolved", "year_unknown"}
+
+    _BLOCKED_FIELDS = ("status", "reason", "observation", "candidates",
+                       "approved_candidates")
 
     def _assert_reason_as_before(self, got):
         """A blocked default must leave the top-level ``reason`` exactly as
@@ -937,19 +967,75 @@ class DefaultYearResolutionTests(unittest.TestCase):
                 "no candidate passed every approval axis — raw verdict is "
                 "not use permission"))
 
-    def test_survey_mixed_block_keeps_the_top_level_reason(self):
-        self._two_year_survey(
-            surveys=("rda.income", "kostat.production_cost"))
-        got = self._yearless()
-        self.assertEqual(got["year_default"]["reason"], "survey_mixed")
-        self._assert_reason_as_before(got)
+    def _without_default(self, crop="감자", **kw):
+        """The result as main produces it: the same query with the G3 step
+        turned off (an explicit year/audit_key would change the filters,
+        so the step is neutralised instead)."""
+        stub = {"status": "blocked", "reason": "no_default_attempted",
+                "year": None, "kind": kw.get("kind"), "form": kw.get("form"),
+                "survey": None, "aggregation_group": None,
+                "catalog_status": None, "candidate_count": None}
+        with mock.patch.object(cand, "_default_year",
+                               return_value=dict(stub)):
+            return self._yearless(crop, **kw)
 
-    def test_source_unknown_block_keeps_the_top_level_reason(self):
-        rec = _record("test.candidate.감자", "감자", year=2025)
-        self._fixture([{"record": rec, "evidence": _evidence_for(rec)}])
-        got = self._yearless()
-        self.assertEqual(got["year_default"]["reason"], "source_unknown")
-        self._assert_reason_as_before(got)
+    # One pack, one crop per block reason — each crop's own rows make its
+    # year-less query block with exactly that reason.
+    _BLOCK_CROPS = {
+        "source_unknown": "감자",
+        "source_invalid": "고구마",
+        "survey_mixed": "밀",
+        "group_unresolved": "보리",
+        "year_unknown": "콩",
+    }
+
+    def _all_block_reasons_fixture(self):
+        specs = []
+
+        def add(rec):
+            specs.append({"record": rec, "evidence": _evidence_for(rec)})
+
+        # source_unknown — no source dict at all
+        add(_record("test.candidate.감자", "감자", year=2025))
+        # source_invalid — a 2024 receipt mounted on a 2025 row
+        add(_record("test.candidate.고구마", "고구마", year=2025,
+                    source=_source(data_year=2024)))
+        # survey_mixed — two survey systems across two years
+        for survey, year in (("rda.income", 2024),
+                             ("kostat.production_cost", 2025)):
+            add(_record("test.candidate.밀.%d" % year, "밀", year=year,
+                        source=_source(survey=survey, data_year=year)))
+        # group_unresolved — one year, two forms, no form supplied
+        for form in ("노지", "시설"):
+            add(_record("test.candidate.보리.%s" % form, "보리", form=form,
+                        year=2025, source=_source(data_year=2025)))
+        # year_unknown — a well-formed source on a row with no year
+        add(_record("test.candidate.콩", "콩", year=None,
+                    source=_source(data_year=2024)))
+        self._fixture(specs)
+
+    def test_every_block_reason_leaves_the_result_untouched(self):
+        """W3G-04: ALL five block reasons — not just two — must leave the
+        year-less result identical to what main produced.  The default step
+        is additive: ``status``·``reason``·``observation``·``candidates``·
+        ``approved_candidates`` stay exactly as the year-less lookup made
+        them, and the block code lives in ``year_default.reason`` only.
+
+        ``before`` is produced by the same entry point with the resolution
+        step neutralised (main had no resolution step at all), so the
+        comparison isolates the one thing this PR added."""
+        self._all_block_reasons_fixture()
+        for reason in sorted(self._BLOCK_CODES):
+            crop = self._BLOCK_CROPS[reason]
+            with self.subTest(reason=reason):
+                got = self._yearless(crop)
+                before = self._without_default(crop)
+                self.assertEqual(got["year_default"]["reason"], reason)
+                for field in self._BLOCKED_FIELDS:
+                    self.assertEqual(got[field], before[field],
+                                     "%s: %s가 기본값 시도 전과 다르다"
+                                     % (reason, field))
+                self._assert_reason_as_before(got)
 
     # --- E1 guard rails ----------------------------------------------
     def test_explicit_year_is_never_substituted(self):
@@ -1073,6 +1159,30 @@ class InputGuardTests(unittest.TestCase):
 class RealPackTests(unittest.TestCase):
     """Current packs lack the evidence axes — real records stay
     unapproved even when the raw verdict is ``unique``."""
+
+    def test_sourced_real_rows_all_pass_the_year_cross_check(self):
+        """W3G-01 on real data: every sourced row of the four income packs
+        declares ``data_year == basis.year``, so the new cross-check must
+        block none of them.  A row that starts failing here means a pack's
+        source was mounted on the wrong year's row."""
+        sourced = 0
+        bad = []
+        for pack_id, pin in sorted(prov.PINNED_PACKS.items()):
+            path = lookup.BASE_DIR / pin["relpath"]
+            if not path.exists():
+                continue
+            for line in path.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                rec = json.loads(line)
+                if not isinstance(rec.get("source"), dict):
+                    continue
+                sourced += 1
+                reason = cand._source_reason(rec)
+                if reason is not None:
+                    bad.append((pack_id, rec.get("record_id"), reason))
+        self.assertEqual(sourced, 620)
+        self.assertEqual(bad, [])
 
     def test_unique_raw_verdict_is_not_permission(self):
         got = cand.lookup_approved_candidates(

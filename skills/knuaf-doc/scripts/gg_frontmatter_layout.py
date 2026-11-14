@@ -6,7 +6,8 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
-from gg_major_format import front_title, profile_for
+from gg_major_format import (ENABLED_FORMAT_MAJORS, format_enabled, profile_for,
+                            front_title)
 
 
 def _font(run, font, size, bold=False):
@@ -142,11 +143,45 @@ def render_forms(doc,nodes,plan,font):
     _break(doc)
 
 
-def _roman_front_section(doc, margin_mm=None):
-    """Open the food-crops front-matter section: upper-Roman page numbers.
+def page_number_field(paragraph, profile=None, font='신명조'):
+    """바닥글 쪽번호 문단: 가운데 정렬 + `PAGE` 필드.
+
+    프로필 `page_label`이 없으면 지금까지와 똑같이 `PAGE` 필드 하나만 넣는다
+    (식량작물과 프로필 밖 전공의 바이트 고정). 있으면 `prefix` 글자 →
+    `PAGE` → `suffix` 글자를 넣고 셋 다 같은 크기(`pt`)로 맞춘다. 낙농이
+    쓰는 `- 1 -` 꼴이다. 필드 안 run은 빈 껍데기이되 `rPr`을 들고 있어
+    Word가 필드를 갱신할 때 숫자도 그 크기로 그린다.
+    """
+    paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    label = getattr(profile, 'page_label', None)
+    if not label:
+        field = OxmlElement('w:fldSimple')
+        field.set(qn('w:instr'), 'PAGE')
+        paragraph._p.append(field)
+        return paragraph
+    size = label.get('pt', 9)
+    prefix = label.get('prefix') or ''
+    if prefix:
+        _font(paragraph.add_run(prefix), font, size)
+    field = OxmlElement('w:fldSimple')
+    field.set(qn('w:instr'), 'PAGE')
+    holder = paragraph.add_run('')
+    _font(holder, font, size)
+    field.append(holder._r)
+    paragraph._p.append(field)
+    suffix = label.get('suffix') or ''
+    if suffix:
+        _font(paragraph.add_run(suffix), font, size)
+    return paragraph
+
+
+def _roman_front_section(doc, margin_mm=None, profile=None, font='신명조'):
+    """Open the profile front-matter section: upper-Roman page numbers.
 
     The school form numbers 요약 through 목차/표 목차/그림 목차 with upper-Roman
     page numbers in the 아래 가운데 footer, then restarts the body at Arabic 1.
+    바닥글 꾸밈(`- Ⅰ -`)은 프로필 `page_label`이 정한다 — 없으면 `PAGE`
+    필드 하나만(지금까지 바이트 그대로).
     """
     from docx.enum.section import WD_SECTION
     sec = doc.add_section(WD_SECTION.NEW_PAGE)
@@ -164,11 +199,7 @@ def _roman_front_section(doc, margin_mm=None):
     pg.set(qn('w:fmt'), 'upperRoman')
     sec._sectPr.append(pg)
     sec.footer.is_linked_to_previous = False
-    p = sec.footer.paragraphs[0]
-    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    field = OxmlElement('w:fldSimple')
-    field.set(qn('w:instr'), 'PAGE')
-    p._p.append(field)
+    page_number_field(sec.footer.paragraphs[0], profile, font)
     return sec
 
 
@@ -186,26 +217,62 @@ def _black_runs(paragraph, font, size):
         run.font.color.rgb = RGBColor(0, 0, 0)
 
 
-def _peer_form_text_size(text, spec):
-    """식량작물 양식 실측 크기(§2.3). 굵기와 함께 (size, bold)를 돌려준다."""
+def _cover_text_key(text, spec):
+    """앞부분 한 줄이 `cover_text`의 어느 종류인가.
+
+    판정 순서는 식량작물 시절 함수의 `if` 순서 그대로다. 줄 글자로만
+    가른다: 학위논문 이름(degree), 계획명(plan), 제출 문구(statement),
+    인준 문구(approval), 서명 줄(advisor), 그 밖(default).
+    """
     if text == spec.degree:
-        return 18, True
+        return 'degree'
     if spec.plan_label and text == spec.plan_label:
-        return 32, True
-    if (text.startswith('이 논문을') or text.endswith('인준함')
-            or text.startswith('위원장') or text.startswith('위  원')
+        return 'plan'
+    if text.startswith('이 논문을'):
+        return 'statement'
+    if text.endswith('인준함'):
+        return 'approval'
+    if (text.startswith('위원장') or text.startswith('위  원')
             or text.startswith('지도교수 ')):
-        return 18, True
-    return 20, False
+        return 'advisor'
+    return 'default'
+
+
+def _profile_pt(profile, name, legacy):
+    """프로필의 (pt, 굵기) 한 칸. 프로필이 없으면 식량작물 현행값."""
+    if profile is None:
+        return legacy
+    size, bold = getattr(profile, name, legacy)
+    return size, bool(bold)
+
+
+def _peer_form_text_size(text, spec, profile=None):
+    """양식 실측 크기(§2.3). 굵기와 함께 (size, bold)를 돌려준다.
+
+    프로필이 있으면 `cover_text`가 종류별 값을 정한다. 없으면 식량작물
+    실측값 그대로다(바이트 불변 기준선).
+    """
+    key = _cover_text_key(text, spec)
+    if profile is not None:
+        size, bold = profile.cover_text.get(key, _LEGACY_COVER_TEXT[key])
+        return size, bool(bold)
+    return _LEGACY_COVER_TEXT[key]
 
 
 # 프로필 표에 값이 없을 때 쓰는 식량작물 현행 제목 크기. 프로필을 읽되 값이
 # 비면 여기로 돌아간다(바이트 불변 기준선).
 _LEGACY_TITLE_PT = {'요약': 22, '감사의 글': 20, '학부모 동의서': 20}
 
-# 이 파일이 프로필 표를 읽는 전공. `build_docx.DOCX_PROFILE_MAJORS`와 같은
-# 게이트를 여기서 따로 적는다(순환 import 회피). 켜는 단위에서 둘을 함께 고친다.
-_FRONTMATTER_PROFILE_MAJORS = ('food_crops',)
+# 같은 이유의 앞부분 줄 크기·요약 번호형 소제목. 식량작물 프로필 값과 같다.
+_LEGACY_COVER_TEXT = {
+    'degree': (18, True), 'plan': (32, True), 'statement': (18, True),
+    'approval': (18, True), 'advisor': (18, True), 'default': (20, False),
+}
+_LEGACY_SUMMARY_ITEM = (16, True)
+
+# 이 파일이 프로필 표를 읽는 전공. 값은 `gg_major_format.ENABLED_FORMAT_MAJORS`
+# 한 곳이 정한다(별칭이라 세 빌더가 같은 튜플 객체를 본다).
+_FRONTMATTER_PROFILE_MAJORS = ENABLED_FORMAT_MAJORS
 
 
 def _render_peer_forms(doc, nodes, plan, font):
@@ -215,7 +282,8 @@ def _render_peer_forms(doc, nodes, plan, font):
     ordered = plan['order']
     forms = spec.physical_forms
     profile = (profile_for(spec.major_id)
-               if spec.major_id in _FRONTMATTER_PROFILE_MAJORS else None)
+               if format_enabled(spec.major_id, _FRONTMATTER_PROFILE_MAJORS)
+               else None)
     roman_front = bool(profile is not None and profile.roman_front)
     front_margin_mm = None
     if roman_front:
@@ -228,7 +296,7 @@ def _render_peer_forms(doc, nodes, plan, font):
     for position, roles in enumerate(forms):
         # 식량작물: 요약 묶음 앞에서 로마 대문자 쪽번호 구역을 연다.
         if roman_front and position and '요약' in roles:
-            _roman_front_section(doc, front_margin_mm)
+            _roman_front_section(doc, front_margin_mm, profile, font)
         for role in roles:
             start = indices[role]
             next_role = ordered[ordered.index(role) + 1]
@@ -257,11 +325,13 @@ def _render_peer_forms(doc, nodes, plan, font):
                 size, bold = 12, False
                 if roman_front:
                     if role == '요약' and re.match(r'^\d+\s*\.', text):
-                        # 요약의 번호형 소제목(`1. 농장 개요`, `2. …`)은 전부 16pt 굵게,
-                        # 나머지 요약 본문은 12pt. HWPX `_front_charpr_targets`와 같은 규칙.
-                        size, bold = 16, True
+                        # 요약의 번호형 소제목(`1. 농장 개요`, `2. …`)은 전부
+                        # `summary_item_pt`(식량작물 16pt 굵게), 나머지 요약
+                        # 본문은 12pt. HWPX `_front_charpr_targets`와 같은 규칙.
+                        size, bold = _profile_pt(
+                            profile, 'summary_item_pt', _LEGACY_SUMMARY_ITEM)
                     elif role not in {'요약', '감사의 글'}:
-                        size, bold = _peer_form_text_size(text, spec)
+                        size, bold = _peer_form_text_size(text, spec, profile)
                 for run in p.runs:
                     _font(run, font, size, bold)
 

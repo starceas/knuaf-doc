@@ -1630,15 +1630,20 @@ def reference_search_roots(base, root):
     return roots
 
 
-def _resolve_image(reference, roots, root):
+def _resolve_image(reference, roots, root, *, decode=True):
     """목적지를 기준 폴더들 순서로 푼다. 경로 또는 ``_NotFound``를 낸다.
+
+    ``decode``가 참이면 목적지의 퍼센트 인코딩을 먼저 푼다(원문 목적지를 그대로
+    받는 HWPX 쪽). 원고 파서를 이미 지난 경로(``parse``가 ``unquote``한 값)는
+    ``decode=False``로 넘긴다 — 두 번 풀면 ``%2541`` 같은 이름이 다른 파일이
+    된다.
 
     뿌리 밖으로 풀린 후보는 없는 것으로 친다(DOCX 빌더와 같은 경계이며, 뿌리
     기준 상대 경로로 다시 쓸 수 있는 그림만 생성기에 넘길 수 있다). 둘 이상의
     서로 다른 파일이 걸리면 고르지 않고 후보 목록과 함께 ``_NotFound``다.
     """
     root = Path(root).expanduser().resolve()
-    decoded = Path(unquote(reference)).expanduser()
+    decoded = Path(unquote(reference) if decode else reference).expanduser()
     found = []
     for base in roots:
         candidate = decoded
@@ -1657,6 +1662,47 @@ def _resolve_image(reference, roots, root):
         return _NotFound(reference,
                          [path.relative_to(root).as_posix() for path in found])
     return found[0]
+
+
+# 모호할 때(원고 옆·뿌리 모두에 같은 이름의 다른 그림) 학생에게 그대로 보여
+# 주는 문장. HWPX 발행·DOCX 빌드·원고 검사가 **같은 말**을 쓴다 — 세 입구의
+# 문구가 갈리면 같은 그림 문제에 학생이 다른 답을 받는다.
+AMBIGUOUS_IMAGE_SENTENCE = (
+    "같은 이름의 그림이 두 곳에 있어요: {paths} — 넣을 그림 하나만 남기거나 "
+    "원고에 폴더까지 적어 주세요.")
+
+
+def ambiguous_image_message(candidates):
+    """모호 문장 하나 — 후보 경로(뿌리 기준, 원고 옆이 먼저)를 그대로 나열한다."""
+    return AMBIGUOUS_IMAGE_SENTENCE.format(paths=", ".join(candidates))
+
+
+def resolve_figure(reference, base, root=None, *, decode=False):
+    """그림 목적지를 원고 옆(base) → 뿌리(root) 순서로 푼다.
+
+    반환은 ``(경로 또는 None, 후보 목록 또는 None)`` — 후보가 둘 이상의 서로
+    다른 파일이면 고르지 않고 ``(None, [뿌리 기준 상대 경로…])``이다. ``root``가
+    없으면 base 하나만 보고 base가 경계다(지정한 폴더 하나로 푸는 기존 동작).
+
+    ``reference``는 **이미 파싱된 경로**를 받는다(원고 파서가 ``unquote``한 값) —
+    그래서 기본 ``decode=False``다. 원문 목적지를 그대로 넘기는 호출자는
+    ``decode=True``로 퍼센트 인코딩을 먼저 푼다.
+
+    ``decode=False``(원고 경로)에서는 절대 경로를 받지 않는다 — 원고에는 뿌리
+    기준 상대 경로만 적을 수 있고(`gg_document.check`의 규칙), 다른 컴퓨터에서
+    열리지 않는 경로를 조용히 DOCX에 박지 않는다.
+
+    HWPX 발행(``rewrite_image_destinations``)·DOCX 빌드·원고 검사가 이 함수
+    하나를 쓴다 — 세 입구가 같은 규칙으로 같은 그림을 찾는다(M-02).
+    """
+    if not decode and Path(reference).is_absolute():
+        return None, None
+    boundary = base if root is None else root
+    found = _resolve_image(reference, reference_search_roots(base, root),
+                           boundary, decode=decode)
+    if isinstance(found, _NotFound):
+        return None, found.candidates
+    return found, None
 
 
 def rewrite_image_destinations(text: str, base, root):
@@ -1815,8 +1861,7 @@ def build(markdown, out, *, context, authorization, cli_command=None,
         raise HwpxBlocked(
             "image_ambiguous", images=[path for path, _ in ambiguous],
             candidates=ambiguous[0][1], image_dir=str(image_dir),
-            action="원고 옆과 이미지 폴더 모두에 같은 이름의 다른 그림이 있어 "
-                   "고르지 않았습니다. 그림 경로를 폴더까지 적어 구분하세요.")
+            action=ambiguous_image_message(ambiguous[0][1]))
     if problems:
         raise HwpxBlocked(
             "image_unresolved", images=[path for path, _ in problems],
