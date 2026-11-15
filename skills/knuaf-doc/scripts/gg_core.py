@@ -3725,6 +3725,7 @@ def _finance_check_items(p):
         f = p["facts"][fid]
         return (
             f.get("answer_state") == "provided"
+            and isinstance(f.get("unit"), str)
             and f.get("unit") in _finance_body_mod()._MONETARY_UNITS
             and f.get("value") is not None
             # Copied gate result is interview context, not a second

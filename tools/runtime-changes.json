@@ -342,7 +342,7 @@
       "source": "adopted:app-PR41"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "49eced4c8681978574f3247a58dd8294625a5645483078545d4a97242778e00b",
+      "after_sha256": "c0c59eda676b20d80973dcd34fe4d68640ebb6be952ef60287933dda524a16da",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "progress-fmt",
@@ -1497,7 +1497,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_core.py": {
-      "after_sha256": "ec451a50f384ae748381a2a6f588e34ea0ad11a3b14e26b0197290bac8400c23",
+      "after_sha256": "5a84473c890d35c0c06db1eb0c25fc20c7c91c337423a91bd12bfb47dae7a9e9",
       "amended_in": "P1-S01,P2-R7,P2-R8,P3-C1,Lanes15-28",
       "before_sha256": "b3491a931add687328bf561e7e7cd2aed3edd7a7fee374a28092e771d9124cc5",
       "first_changed": "P1",
@@ -2352,12 +2352,12 @@
       "last_changed": "G3"
     },
     "tests/test_doc_guide_contracts.py": {
-      "after_sha256": "958b0a611dfb8f60139eca09f08a633798b30e20d07e8e17f04785648b7e54eb",
+      "after_sha256": "32ce911279db84dcdef247808314c6c9d780983bd6a79bdc49e20bf26ac4a19b",
       "before_sha256": null,
       "first_changed": "P28",
-      "last_changed": "W-N",
+      "last_changed": "progress-fmt",
       "owner": "P28",
-      "reason": "P0-2 PR-A: U01-U05 document and interview guidance contract tests | P0-2 PR-A R2: run the documented commands, required flags and apply example instead of matching prose | P0-2 PR-A R3: forbidden-identifier scan over the shipped skill tree using salted digests only | R-v0.4.1: explicit UTF-8 for CLI subprocess | W-N: init 폴더 목록 단언에 곁파일 .knuaf-notices.json 반영(등록부 도입으로 init도 쓴다)",
+      "reason": "P0-2 PR-A: U01-U05 document and interview guidance contract tests | P0-2 PR-A R2: run the documented commands, required flags and apply example instead of matching prose | P0-2 PR-A R3: forbidden-identifier scan over the shipped skill tree using salted digests only | R-v0.4.1: explicit UTF-8 for CLI subprocess | W-N: init 폴더 목록 단언에 곁파일 .knuaf-notices.json 반영(등록부 도입으로 init도 쓴다) | PFMT: 진행 목록 형식을 앱 파서 문법('▶ 3 이름 — 메모', '끝남', ▶ 하나)에 맞추고 진행 파일을 init부터 자동 기록(곁파일 등록부) + gg_progress.py write 추가.",
       "source": "new"
     },
     "tests/test_document_read.py": {
