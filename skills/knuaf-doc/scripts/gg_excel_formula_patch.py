@@ -646,6 +646,7 @@ def patch_copy(source: Path, map_path: Path, out: Path, *, context=None,
     ``require_finance_profile`` refuses before the source is opened.
     """
     import gg_major_contract as mc
+    import gg_formula_cell_notice as fcn
 
     authorization = mc.authorize_output(mc.OUTPUT_SCHOOL_WORKBOOK, context)
     # Two rules meet here. The bound major's own default profile is the closed
@@ -706,11 +707,21 @@ def patch_copy(source: Path, map_path: Path, out: Path, *, context=None,
         raise ValueError(f"refusing to write over the source workbook: {out}")
     if out.exists():
         raise FileExistsError(f"refusing to overwrite output: {out}")
-    receipt = _patch_copy(source, map_path, out,
-                          _authorization=authorization, _context=context)
-    # The patched workbook keeps its edition, and says so: a receipt that only
-    # named the hash left the next step to re-derive the edition from formulas
-    # this route just rewrote.
+    if not fcn.is_school_snapshot(source):
+        # The notice is not a new reader or hash policy for other workbooks.
+        receipt = _patch_copy(source, map_path, out,
+                              _authorization=authorization, _context=context)
+    else:
+        raw = source.read_bytes()
+        with fcn.snapshot(raw) as frozen:
+            data = _json(map_path)
+            verdict = fcn.prepare(fcn.context_root(context), input_bytes=raw, input_path=source,
+                                  snapshot_path=frozen, profile=resolved, kind="patch", patches=_patches(data))
+            receipt = _patch_copy(frozen, map_path, out,
+                                  _authorization=authorization, _context=context)
+        receipt["source"]["path"] = str(source.resolve())
+        fcn.attach(receipt, verdict)
+        fcn.register_output(fcn.context_root(context), receipt, out, input_sha256=fcn._hash(raw))
     receipt["workbook_profile"] = resolved
     return receipt
 
@@ -1005,10 +1016,10 @@ def cli(argv: list[str]) -> int:
         import gg_major_contract as mc
         context = (mc.output_context(args.project, args.major)
                    if args.project is not None else None)
-        # Policy B pre-check before any directory/staging is created.
-        mc.authorize_output(mc.OUTPUT_SCHOOL_WORKBOOK, context)
         result = patch_copy(source, args.map.resolve(), staged_out,
                             context=context, profile=args.profile)
+        import gg_formula_cell_notice as fcn
+        verdict = result.pop("formula_cell_notice_verdict", None)
         out.parent.mkdir(parents=True, exist_ok=True)
         result["output"]["path"] = str(out)
         staged_receipt.parent.mkdir(parents=True, exist_ok=True)
@@ -1024,6 +1035,7 @@ def cli(argv: list[str]) -> int:
         except Exception:
             if published and out.exists(): out.unlink()
             raise
+        fcn.complete_published(fcn.context_root(context), verdict, result, out, receipt_path)
         print(json.dumps({"status": "patched", "out": result["output"], "patched": len(result["patched"]),
                           "formulaCachesInvalidated": result["formulaCachesInvalidated"]}, ensure_ascii=False))
         return 0
@@ -1033,7 +1045,7 @@ def cli(argv: list[str]) -> int:
         import gg_major_contract as mc
         if isinstance(exc, mc.OutputHeldError):
             print(json.dumps({"status": "held", "reason": exc.reason,
-                              "detail": str(exc),
+                              "detail": exc.detail,
                               "guidance": exc.detail.get("guidance")},
                              ensure_ascii=False))
             return 2
