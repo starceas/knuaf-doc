@@ -1067,5 +1067,55 @@ class TestDelegationCommands(unittest.TestCase):
                 json.loads(rejected_unobserved.stdout)["reason"],
                 "research_result_units_question_invalid")
 
+
+class TestIdentitySourcesAgree(unittest.TestCase):
+    """Name-based and handle-based identity of one file must be equal.
+
+    Windows reports a 64-bit st_dev from os.stat on Python 3.12+ while the
+    handle API keeps BY_HANDLE_FILE_INFORMATION's 32-bit volume serial, so
+    the two sources only line up when the stat side is narrowed.  A
+    delegation write compares exactly these two (knuaf-dev #135).
+    """
+
+    def test_name_and_fd_identity_of_one_file_agree(self):
+        import gg_fs
+        with tempfile.TemporaryDirectory() as td:
+            target = Path(td) / "payload.txt"
+            target.write_text("합성 파일\n", encoding="utf-8")
+            named = gg_fs.identity(target, kind="file")
+            listed = gg_fs._identity_from_stat(
+                os.lstat(target), "file", target)
+            descriptor = gg_fs._open_nofollow(target, os.O_RDONLY)
+            try:
+                opened = gg_fs.fd_identity(descriptor, kind="file")
+            finally:
+                os.close(descriptor)
+            self.assertTrue(gg_fs.same_identity(named, opened),
+                            "%r != %r" % (named, opened))
+            self.assertTrue(gg_fs.same_identity(listed, opened),
+                            "%r != %r" % (listed, opened))
+
+    def test_win32_stat_device_is_narrowed_to_the_handle_width(self):
+        import gg_fs
+        import stat as stat_module
+        from types import SimpleNamespace
+        from unittest.mock import patch
+
+        reference = {"platform": "win32", "kind": "file",
+                     "device": 0xB0A5731A, "inode": 0x1A2B3C4D}
+        wide = SimpleNamespace(st_mode=stat_module.S_IFREG | 0o644,
+                               st_dev=0xC4B0A579B0A5731A,
+                               st_ino=0x1A2B3C4D)
+        fake_sys = SimpleNamespace(platform="win32")
+        with patch.object(gg_fs, "sys", fake_sys):
+            named = gg_fs._identity_from_stat(wide, "file", "fake")
+        self.assertEqual(named, reference)
+        self.assertTrue(gg_fs.same_identity(named, reference))
+        self.assertEqual(
+            gg_fs._comparable_device(0xC4B0A579B0A5731A, "darwin"),
+            0xC4B0A579B0A5731A,
+            "only win32 identities are narrowed")
+
+
 if __name__ == "__main__":
     unittest.main()

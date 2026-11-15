@@ -140,6 +140,25 @@ def validate_relative_path(value):
     return value
 
 
+_WIN32_DEVICE_MASK = 0xFFFFFFFF
+
+
+def _comparable_device(device, platform):
+    """Volume id as wide as the narrowest identity source reports it.
+
+    On Windows the handle API yields BY_HANDLE_FILE_INFORMATION's 32-bit
+    dwVolumeSerialNumber, while os.stat from Python 3.12 on reports a
+    64-bit st_dev (volume serial plus HighPart).  Both describe the same
+    volume, so comparing the raw values marks one file as two; truncating
+    the stat side to the low 32 bits makes name-based and handle-based
+    identity agree on every Python version, at exactly the precision the
+    handle source can offer.  Other platforms report one width already.
+    """
+    if platform == "win32":
+        return device & _WIN32_DEVICE_MASK
+    return device
+
+
 def _identity_from_stat(st, kind, path):
     if kind == "file":
         if not stat.S_ISREG(st.st_mode):
@@ -164,7 +183,7 @@ def _identity_from_stat(st, kind, path):
     return {
         "platform": sys.platform,
         "kind": kind,
-        "device": st.st_dev,
+        "device": _comparable_device(st.st_dev, sys.platform),
         "inode": inode,
     }
 
