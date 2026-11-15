@@ -33,9 +33,9 @@
       "sha256": "549cc2b4bf9d0c4b7b54b06d1ae99db0269b25585c5c5f34d388d0b17cb1924b"
     },
     "docs/validation/BUNDLE.md": {
-      "note": "Bundle/manifest/CI 계약 문서 — @3 manifest·@2 change list·신규 파일 allowlist 계약 포함. | N1/N2: document restored school requirements and source-binding boundaries. | Restore v0.1.4: document actual skill test payload and disposition failure codes; historical evidence stays scoped. | ORDER-I2: align restore release/version expectation with 0.1.5 on main 9210ca0. | F-skill-tests: document both discovery roots, fixture repair, W2 pytest and finite optional external-input skip contract.",
+      "note": "Bundle/manifest/CI 계약 문서 — @3 manifest·@2 change list·신규 파일 allowlist 계약 포함. | N1/N2: document restored school requirements and source-binding boundaries. | Restore v0.1.4: document actual skill test payload and disposition failure codes; historical evidence stays scoped. | ORDER-I2: align restore release/version expectation with 0.1.5 on main 9210ca0. | F-skill-tests: document both discovery roots, fixture repair, W2 pytest and finite optional external-input skip contract. | W8h: POSIX_SKIPPED_WINDOWS_SKILL_TESTS — reverse Windows-only skill skip list, also read by check_validation_report.py.",
       "origin": "new",
-      "sha256": "c84e4b3d12942fedb0621701cfd79f947215b3113af2fcbcb80e580e7f354874"
+      "sha256": "a1d4011dbca0770d9f72591b6dcccea426f2b9e875e9a7db44f8f5891e633419"
     },
     "docs/validation/REGRESSIONS.md": {
       "note": "P0-A: human-readable regression inventory (R1–R7 + adopted C/H items); machine source of truth is tests/regression_inventory.json. repair-n1/N1: dependency-gate and allowed nested-skip list documented. P2-R2: verdict precedence, completion flags, external-gate rule and outcome-accounting semantics documented. P2-R3: exact-10 nested allowlist closure documented (tamper control folded into host method). | P27: runner 계약 §6 pywin32 예시 정정",
@@ -463,7 +463,7 @@
     },
     "tests/test_validation_sharding.py": {
       "origin": "new",
-      "sha256": "ad601fbf618c0b7bb55eb61d1c0034bc9bbd6ff58263d4340747f458301a2611"
+      "sha256": "a259761224445728a7b947b48c8721347d7fc27787d998d6471c985fffb793d3"
     },
     "tests/test_winpub_native.py": {
       "note": "Actual native Windows lifecycle and negative tests; no POSIX skips added; independent P2-L09-native placeholder retained. | ORDER-30: publication lifecycle fixture supplies an explicit confirmed start_year; POSIX execution is regression evidence only.",
@@ -529,7 +529,7 @@
     },
     "tools/check_validation_report.py": {
       "origin": "new",
-      "sha256": "7fc02b9efc150c82bd4cef6e25bef1518ce6950401657b7cf2f93603211ab087"
+      "sha256": "3bc46da1b1840b012179b7215d45d0afe625fa3ffe15d685b0bc04cbdd0caaa4"
     },
     "tools/ci_scope.py": {
       "origin": "new",
@@ -562,7 +562,7 @@
     "tools/validation-provenance.json": {
       "note": "This file; declares origins for the validation layer.",
       "origin": "new",
-      "sha256": "92a74890a1037bbdbacdc64ff94e3cfed3055d7e676c753a253e7a4720324abd"
+      "sha256": "254ce10b14dae9e74b7269beb3764e1aff47f4513e3a4249564530eb7be1def9"
     },
     "tools/validation_sharding.py": {
       "origin": "new",
@@ -768,5 +768,5 @@
     "verified_count": 338
   },
   "schema": "knuaf-doc/validation-bundle@3",
-  "validation_tree_sha256": "6bf6b64c43b6e8a77b7c050f98ac78853e15af93e2a60415e990039f14538d3d"
+  "validation_tree_sha256": "243ba63bb4aab04675a640d645a0cd13961ac7e52b369999c7010720d4e9a658"
 }
