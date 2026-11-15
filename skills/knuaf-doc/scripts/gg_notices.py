@@ -49,7 +49,8 @@ def notice_rows(root):
     rows = [core._workbook_notice_row_for_project(root, project),
             core._unsupported_finance_notice_row_for_project(root, project),
             core._blank_copy_finance_notice_row_for_project(root, project)]
-    return [row for row in rows if row is not None]
+    return ([row for row in rows if row is not None]
+            + core._formula_cell_notice_rows_for_project(root, project))
 
 
 def notice_rows_or_error(root):
@@ -83,7 +84,7 @@ def _sanitize_row(row):
     items = clean.get("items")
     if not isinstance(items, list):
         items = []
-    if len(items) > ITEMS_MAX:
+    if len(items) > ITEMS_MAX and clean.get("check_id") != "finance_formula_cell_notice":
         extra = len(items) - ITEMS_MAX
         items = (items[:ITEMS_MAX]
                  + [{"key": "more", "kind": "more",
@@ -272,6 +273,13 @@ def main(argv=None):
     pick.add_argument("--identity", required=True)
     pick.add_argument("--value", required=True, choices=CHOICE_VALUES)
     pick.add_argument("--json", action="store_true")
+    confirm = sub.add_parser("confirm", help="바뀐 계산 칸 확인을 기록한다")
+    confirm.add_argument("folder")
+    confirm.add_argument("--identity", required=True)
+    origin = confirm.add_mutually_exclusive_group()
+    origin.add_argument("--by", choices=("app_click",))
+    origin.add_argument("--relayed-quote")
+    confirm.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
     try:
         if args.command == "write":
@@ -280,6 +288,11 @@ def main(argv=None):
             # busy로 거절하고, 재시도는 사람이 한다.
             with _core().Lock(Path(args.folder)):
                 value = write_notices(Path(args.folder))
+        elif args.command == "confirm":
+            import gg_formula_cell_notice
+            value = gg_formula_cell_notice.confirm(
+                Path(args.folder), args.identity, relayed_quote=args.relayed_quote,
+                by="relayed" if args.relayed_quote is not None else args.by)
         else:
             value = choose(Path(args.folder), args.identity, args.value)
     except Exception as error:  # 실행 오류는 exit 2
@@ -288,7 +301,7 @@ def main(argv=None):
         return 2
     print(json.dumps(value, ensure_ascii=False))
     # 알림 파일 갱신 실패는 성공이 아니다 — 앱·스크립트가 알 수 있게 0이 아닌 코드.
-    return 0 if value.get("status") in {"written", "chosen"} else 1
+    return 0 if value.get("status") in {"written", "chosen", "acknowledged"} else 1
 
 
 if __name__ == "__main__":

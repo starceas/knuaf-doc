@@ -1068,22 +1068,56 @@ BLANK_COPY_NOTICES = MappingProxyType({
 })
 
 
-def blank_copy(source: Path, map_path: Path, out: Path, allow_missing: bool = False, *, context=None) -> dict:
+def blank_copy(source: Path, map_path: Path, out: Path, allow_missing: bool = False, *, context=None,
+               _defer_provenance=False) -> dict:
+    import gg_major_contract as mc
+    import gg_formula_cell_notice as fcn
+    authorization = mc.authorize_output(mc.OUTPUT_SCHOOL_WORKBOOK, context)
+    if out.exists():
+        raise FileExistsError(f"refusing to overwrite output: {out}")
+    if not fcn.is_school_snapshot(source):
+        return _blank_copy_snapshot(source, map_path, out, allow_missing, context=context,
+                                    input_path=source, input_bytes=None, authorization=authorization)
+    raw = source.read_bytes()
+    with fcn.snapshot(raw) as frozen:
+        receipt = _blank_copy_snapshot(frozen, map_path, out, allow_missing,
+                                       context=context, input_path=source, input_bytes=raw,
+                                       authorization=authorization)
+    receipt["source"]["path"] = str(source.resolve())
+    if not _defer_provenance:
+        fcn.register_output(fcn.context_root(context), receipt, out,
+                            input_sha256=fcn._hash(raw))
+    return receipt
+
+
+def _blank_copy_snapshot(source: Path, map_path: Path, out: Path, allow_missing=False, *, context=None,
+                         input_path, input_bytes, authorization) -> dict:
     import gg_major_contract as mc
 
-    authorization = mc.authorize_output(mc.OUTPUT_SCHOOL_WORKBOOK, context)
     if out.exists():
         raise FileExistsError(f"refusing to overwrite output: {out}")
     map_data = json.loads(map_path.read_text(encoding="utf-8"))
     entries, _ = map_entries_for_source(map_data, source)
     _check_map_layout(map_data, source)
     workbook_profile = require_map_workbook_profile(map_data, authorization, source)
-    from gg_school_excel import require_profile_structure
+    from gg_school_excel import FormulaDrift, require_profile_edition, require_profile_structure
     try:
         require_profile_structure(source, workbook_profile)
+    except FormulaDrift as error:
+        from gg_school_excel import PROFILES
+        if workbook_profile not in PROFILES:
+            raise mc.OutputHeldError("workbook_structure_mismatch", str(error)) from error
+        try:
+            require_profile_edition(source, workbook_profile)
+        except ValueError as edition_error:
+            raise mc.OutputHeldError("workbook_structure_mismatch", str(edition_error)) from edition_error
     except ValueError as error:
         raise mc.OutputHeldError("workbook_structure_mismatch",
                                  str(error)) from error
+    import gg_formula_cell_notice as fcn
+    verdict = (fcn.prepare(fcn.context_root(context), input_bytes=input_bytes, input_path=input_path,
+                           snapshot_path=source, profile=workbook_profile, kind="blank")
+               if input_bytes is not None else None)
     out.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(source, "r") as zin:
         sheets = dict(workbook_sheets(zin))
@@ -1242,7 +1276,7 @@ def blank_copy(source: Path, map_path: Path, out: Path, allow_missing: bool = Fa
     notices = BLANK_COPY_NOTICES.get(workbook_profile)
     if notices:
         receipt["notices"] = list(notices)
-    return receipt
+    return fcn.attach(receipt, verdict)
 
 
 COMMON_WORKBOOKS_DIR = Path(__file__).resolve().parents[1] / "references" / "common-workbooks"
@@ -1724,7 +1758,9 @@ def cli(argv: list[str]) -> int:
                 context = (mc.output_context(args.project, args.major)
                            if args.project is not None else None)
                 r = blank_copy(resolve_source(args.source).resolve(), args.map.resolve(), staged_out.resolve(),
-                               allow_missing=args.allow_missing, context=context)
+                               allow_missing=args.allow_missing, context=context, _defer_provenance=True)
+                import gg_formula_cell_notice as fcn
+                verdict = r.pop("formula_cell_notice_verdict", None)
                 r["output"]["path"] = str(args.out.resolve())
                 if staged_receipt:
                     staged_receipt.parent.mkdir(parents=True, exist_ok=True)
@@ -1744,6 +1780,11 @@ def cli(argv: list[str]) -> int:
                 if published_out and args.out.exists():
                     args.out.unlink()
                 raise
+            fcn.register_output(fcn.context_root(context), r, args.out,
+                                input_sha256=r["source"]["sha256"])
+            if args.receipt and r.get("formula_cell_provenance_error"):
+                fcn.persist_receipt_diagnostics(r, args.receipt, "formula_cell_provenance_error")
+            fcn.complete_published(fcn.context_root(context), verdict, r, args.out, args.receipt)
             head = {"notices": r["notices"]} if r.get("notices") else {}
             print(json.dumps({**head, "status": r["output"]["status"], "out": r["output"],
                               "cleared": len(r["cleared"]), "formulaProtected": r["formulaCellsProtected"],
@@ -1754,7 +1795,7 @@ def cli(argv: list[str]) -> int:
         import gg_major_contract as mc
         if isinstance(exc, mc.OutputHeldError):
             print(json.dumps({"status": "held", "reason": exc.reason,
-                              "detail": str(exc),
+                              "detail": exc.detail,
                               "guidance": exc.detail.get("guidance")},
                              ensure_ascii=False))
             return 2

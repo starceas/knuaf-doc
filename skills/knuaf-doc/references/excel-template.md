@@ -579,6 +579,49 @@ parenthesized negatives — there they still need an explicit `-` sign.
 Fullwidth parentheses and other notations are unsupported.
 
 
+## 학생이 바꾼 계산 칸: 먼저 알리고 확인받기
+
+학교 17시트 두 판의 정정 사본(`patch_copy`)·빈 사본(`blank_copy`)은 등록 감사의
+계산 칸과 현재 파일을 비교한다. 숫자·글자 덮어쓰기, 다른 식, 지워진 식이 있으면
+첫 요청은 `formula_cells_changed`로 멈추며 출력·영수증을 만들지 않는다.
+학생 입력 칸과 임금 관측 블록(`8. 노무비계획!X26:Z31`)은 이 비교 대상이 아니다.
+이번 지도의 고친 뒤 식과 같은 칸, 또는 정본에 기록된 도구 출력/패치 영수증의
+출력 바이트와 일치하는 파일에서 그 도구가 고친 칸도 제외한다.
+
+- 앱에서는 학생이 알림의 확인 단추를 누른 뒤 같은 요청을 실행한다. 도우미가
+  같은 명령만 재실행하는 것은 확인이 아니므로 계속 멈춘다.
+- 앱 없는 CLI는 학생 답을 받은 뒤에만
+  `python3 skills/knuaf-doc/scripts/gg_notices.py confirm <프로젝트폴더> --identity <알림식별값> --relayed-quote "<학생 답>"`
+  를 부른다. 전달 확인은 학생 본인 인증이 아닌 호출자의 선언으로 기록된다.
+  출처 없는 confirm은 거절한다. 앱 사이드카는 `--by app_click`을 명시한다.
+  이 표시는 앱 통로용이며 실제 클릭의 인증은 아니다(셸에서 같은 플래그를 넣는 것은 막지 못함).
+  확인이 정본에 커밋된 뒤 곁파일·잠금 정리만 실패하면 확인 성공과 `cleanup_warning`을 함께 낸다.
+- 확인할 때 원본을 다시 읽는다. 파일 삭제·계보 변경·계산 칸 변경이면
+  `notice_stale`로 거절한다. 확인 후 다시 변경해도 새 알림으로 멈춘다.
+- 정정 지도가 쓰는 계산 칸을 학생이 바꿨으면 `formula_cell_conflict`다. 확인으로
+  풀리지 않으며 원래 식으로 되돌려야 한다. 같은 파일의 빈 사본은 확인 흐름을 쓴다.
+- 감사 묶음을 검증하지 못하면 `formula_audit_unavailable`, 확인 기록을 못 쓰면
+  `formula_cell_notice_record`로 멈춘다. 식량작물·낙농·과수의 기존 경로는 그대로다.
+- `.knuaf-notices.json`과 `checks()`는 같은 안내 행을 낸다. 제출 차단 검사는 아니다.
+  `gg_notices.py write`는 엑셀을 열지 않고 정본의 확인 기록만 읽는다.
+
+이번 실행의 비교·출력은 한 번 읽은 원본 바이트에서 만든다. `questions`에는
+계보마다 확인 주기를 쌓고, 입력값만 바뀐 등록 재무 파일은 같은 주기를 쓴다.
+다른 재무 파일로 바꿀 때는 다시 등록해야 한다. 새 등록이 `(사실 개정,id)` 최댓값의
+활성 재무 사실로 선택될 때만 계보가 바뀐다. 실제 앱 재등록 writer의 ID·개정 정책은 미확인이다.
+등록하지 않고 덮어쓴 파일의 변경 칸 위치·종류·식이 같으면 기존 확인과 구별할 수 없다.
+
+`completed`는 CLI가 출력과 영수증을 올린 직후 출력 해시를 대조하고 기록한
+상태다. 뒤 검사의 통과나 파일이 지금도 남아 있음을 뜻하지 않는다. Python 사본
+함수만 호출하거나 빈 사본 CLI에 `--receipt`를 주지 않으면 완료 기록은 쓰지 않는다.
+완료 기록만 실패하면 사본은 유지하며 영수증에 `formula_cell_notice_error`를 적는다.
+프로젝트 폴더가 있으면 사본 함수가 출력 직후 도구의 수정 칸·새 식·출력 해시를
+별도 정본 근거로 자동 기록한다. 이전에 도구가 고친 칸은 다음 고침에서도 학생 변경으로
+오인하지 않는다. 학생이 확인한 미수정 칸은 이 근거에 넣지 않는다. 자동 기록 실패는
+사본을 취소하지 않고 영수증의 `formula_cell_provenance_error`에 남긴다.
+변경 칸이 없으면 알림 주기·알림 영수증 필드는 만들지 않는다(도구 출력 근거는 별도).
+'다시 묻지 않기' 설정은 없다.
+
 ## Correct a verified formula defect in a copy
 
 Preserving formulas during blanking/filling does not certify the example's

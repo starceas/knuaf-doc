@@ -4546,6 +4546,12 @@ def _blank_copy_finance_notice_row_for_project(root, p):
     return _blank_copy_finance_notice_row(root, p, finance_gate(p))
 
 
+def _formula_cell_notice_rows_for_project(root, p):
+    """정본 기록만 읽는 공용 계산 칸 알림 경로."""
+    import gg_formula_cell_notice
+    return gg_formula_cell_notice.notice_rows(root, p)
+
+
 def _add_finance_workbook_advice(root, p, lineage, out):
     """안내 행을 ``out``에 직접 붙인다. 예외를 밖으로 내보내지 않는다."""
     try:
@@ -4609,6 +4615,7 @@ def checks(root, p):
     blank_copy = _blank_copy_finance_notice_row(root, p, gate_state)
     if blank_copy is not None:
         out.append(blank_copy)
+    out.extend(_formula_cell_notice_rows_for_project(root, p))
     if gate_state["supported"]:
         has_body = False
         for section in p["sections"].values():
