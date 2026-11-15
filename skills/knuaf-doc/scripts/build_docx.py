@@ -892,7 +892,8 @@ def main(argv=None):
             "layout_review": review_requests(parse(source_text)),
             "photo_requests": photo_requests(parse(source_text)),
             "figures": gg_figure_docx.build_report(
-                [n["path"] for n in parse(source_text) if n["kind"] == "image"]),
+                [n["path"] for n in parse(source_text) if n["kind"] == "image"],
+                root=base, base=src.parent),
             "school_frontmatter": (
                 {
                     "layout": ("source_order_common_defaults" if authorization.major_id != "specialty_crops"
