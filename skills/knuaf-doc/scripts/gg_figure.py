@@ -27,6 +27,7 @@ import re
 import secrets
 import socket
 import ssl
+import stat
 import sys
 import threading
 import time
@@ -162,6 +163,8 @@ def _figure_home(environ=None):
 
 def _blocked(reason, detail=""):
     out = {"status": "blocked", "reason": reason}
+    if reason == "slot_record_failed":
+        out["notice"] = SLOT_LOCK_RETRY_NOTICE
     if detail:
         out["detail"] = detail
     return out
@@ -1032,7 +1035,7 @@ ASCII_SPACE = " \t\n\r\f"
 CANDIDATE_CHARS = frozenset(
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
     "-._~/?=&%:@!$'()*+,;")
-TAG_START = re.compile(r"<(/?)([A-Za-z][A-Za-z0-9:-]*)(?=[\s/>])", re.ASCII)
+TAG_START = re.compile(r"<(/?)([A-Za-z][^\t\n\r\f />]*)(?=[\t\n\r\f />])", re.ASCII)
 ENTITY = re.compile(r"&(?:#[^;]*|[A-Za-z][A-Za-z0-9]*);")
 BAD_PERCENT = re.compile(r"%(?![0-9A-Fa-f]{2})")
 
@@ -1143,9 +1146,13 @@ def _candidate_url(value, page, rule):
     if not _candidate_value_ok(value):
         return None
     try:
-        absolute = re.match(r"[A-Za-z][A-Za-z0-9+.-]*:", value) or value.startswith("//")
-        if absolute and any(part in (".", "..")
-                            for part in urllib.parse.urlsplit(value).path.split("/")):
+        # impl-1 I-01: 해석 전에 거절. urljoin/WHATWG가 다른 자원으로 접지 못하게 한다.
+        if value.endswith("?") or "?#" in value or value.startswith("///"):
+            return None
+        raw_path = urllib.parse.urlsplit(value).path
+        if "//" in raw_path or any(
+                re.sub(r"%2e", ".", part, flags=re.I) in (".", "..")
+                for part in raw_path.split("/")):
             return None
         parts = urllib.parse.urlsplit(urllib.parse.urljoin(page, value))
         if (parts.scheme not in ("http", "https") or not parts.hostname
@@ -1531,6 +1538,71 @@ def _slot_record_path(folder, slot):
     return path
 
 
+SLOT_LOCK_STALE_SECONDS = 10 * 60
+SLOT_LOCK_RETRY_NOTICE = "그림 요청 기록을 사용 중이거나 쓸 수 없습니다. 잠시 뒤 다시 시도해 주세요."
+
+
+def _recover_slot_lock(path):
+    """같은 stale inode의 회수자 하나만 rename한다. 실패하면 재시도하지 않는다."""
+    named = path.lstat()
+    if not stat.S_ISREG(named.st_mode) or time.time() - named.st_mtime <= SLOT_LOCK_STALE_SECONDS:
+        raise OSError("slot lock still fresh or not a regular file")
+    if os.name == "nt":
+        import gg_winfs
+        fd = gg_winfs.open_file(path, os.O_RDWR, share_delete=True)
+    else:
+        fd = os.open(path, os.O_RDWR | getattr(os, "O_NOFOLLOW", 0))
+    try:
+        # 기존 플랫폼별 비차단 잠금 관례 재사용. 늦은 회수자가 새 lock을 옮기지 못한다.
+        gg_update._os_lock(fd)
+        try:
+            opened, named = os.fstat(fd), path.lstat()
+            if (not stat.S_ISREG(named.st_mode)
+                    or (opened.st_dev, opened.st_ino) != (named.st_dev, named.st_ino)
+                    or time.time() - named.st_mtime <= SLOT_LOCK_STALE_SECONDS):
+                raise OSError("slot lock changed or still fresh")
+            claimed = path.with_name(path.name + ".stale-" + secrets.token_hex(16))
+            path.rename(claimed)
+            claimed.unlink()
+        finally:
+            gg_update._os_unlock(fd)
+    finally:
+        os.close(fd)
+
+
+def _acquire_slot_lock(folder, slot):
+    """O_EXCL 슬롯 잠금. 10분 초과 mtime만 죽은 잠금으로 자동 회수한다.
+
+    회수자는 stale inode를 비차단 잠금·identity 재검사 후 고유 이름으로 rename해
+    삭제하고 O_EXCL을 딱 한 번 다시 시도한다. rename 실패/10분 이내/경합은
+    기다리지 않고 일반 실패. 학생에게 파일 삭제를 요구하지 않는다.
+    """
+    record = _slot_record_path(folder, slot)
+    record.parent.mkdir(parents=True, exist_ok=True)
+    path = record.with_name(record.name + ".lock")
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    try:
+        fd = os.open(path, flags, 0o600)
+    except FileExistsError:
+        _recover_slot_lock(path)
+        fd = os.open(path, flags, 0o600)
+    return path, fd
+
+
+def _release_slot_lock(lock):
+    path, fd = lock
+    try:
+        owned = os.fstat(fd)
+        try:
+            current = path.lstat()
+        except FileNotFoundError:
+            return
+        if (current.st_dev, current.st_ino) == (owned.st_dev, owned.st_ino):
+            path.unlink()
+    finally:
+        os.close(fd)
+
+
 def _begin_fetch(folder, slot, images, list_mode, mode, now):
     """형식 검사 뒤, 어떤 채널·규칙 읽기·전송보다 먼저 일반 슬롯을 선기록."""
     if not SLOT.fullmatch(slot or ""):
@@ -1556,7 +1628,11 @@ def _write_request(folder, slot, req_id, mode, now=None):
         raise FigureError("invalid_id", str(req_id))
     payload = {"v": 1, "slot": slot, "reqId": req_id, "mode": mode,
                "at": _now_ms(now)}
-    _write_json_atomic(_slot_record_path(folder, slot), payload)
+    lock = _acquire_slot_lock(folder, slot)
+    try:
+        _write_json_atomic(_slot_record_path(folder, slot), payload)
+    finally:
+        _release_slot_lock(lock)
     return payload
 
 
@@ -1667,10 +1743,50 @@ def _section_text(text, heading):
     return "\n".join(lines[start:end])
 
 
+def _slot_photo(folder, slot, heading, manuscript, notice=None):
+    try:
+        path = _manuscript(folder, manuscript)
+    except FigureError as exc:
+        return _blocked(exc.reason, exc.detail)
+    result = _photo_placeholder(folder, path, heading,
+                                path.read_text(encoding="utf-8"), slot)
+    if notice:
+        result["notice"] = notice
+    return result
+
+
 def place(folder, slot, heading, *, choose=None, title=None, org=None,
           manuscript="build/검토전_본문.md", environ=None, images=None,
           direct=None, home=None):
-    """그 절의 승인 그림 수로 분기(1장 즉시·2장↑ 고르기·0장 사진 자리)."""
+    if not SLOT.fullmatch(slot or ""):
+        return _blocked("invalid_slot", str(slot))
+    options = dict(choose=choose, title=title, org=org, manuscript=manuscript,
+                   environ=environ, images=images, direct=direct, home=home)
+    if images:
+        return _place(folder, slot, heading, **options)
+    initial = _read_request(folder, slot)
+    if initial is None:
+        return _slot_photo(folder, slot, heading, manuscript)
+    try:
+        lock = _acquire_slot_lock(folder, slot)
+    except OSError:
+        return _slot_photo(folder, slot, heading, manuscript,
+                           SLOT_LOCK_RETRY_NOTICE + " 사진 자리로 남깁니다.")
+    try:
+        current = _read_request(folder, slot)
+        if current is None or current["reqId"] != initial["reqId"]:
+            return _slot_photo(folder, slot, heading, manuscript,
+                               "새 그림 요청이 시작됐습니다. 새 요청 결과를 기다려 주세요.")
+        # usedAt 재쓰기부터 원고 삽입까지 잠금을 유지한다.
+        return _place(folder, slot, heading, request=current, **options)
+    finally:
+        _release_slot_lock(lock)
+
+
+def _place(folder, slot, heading, *, choose=None, title=None, org=None,
+           manuscript="build/검토전_본문.md", environ=None, images=None,
+           direct=None, home=None, request=None):
+    """직접 그림 또는 잠금 안에서 확인된 슬롯의 승인 결과만 원고에 넣는다."""
     if not SLOT.match(slot or ""):
         return _blocked("invalid_slot", str(slot))
     folder = Path(folder)
@@ -1702,7 +1818,7 @@ def place(folder, slot, heading, *, choose=None, title=None, org=None,
         direct = True
     else:
         env_home = home if home is not None else _figure_home(environ)
-        req = _read_request(folder, slot)
+        req = request
         if req is None:
             return _photo_placeholder(folder, path, heading, text, slot)
         try:

@@ -1781,6 +1781,29 @@ class TestListResultValidation(unittest.TestCase):
         with self.assertRaises(gg_figure.FigureError):
             self.read(list_result(), "fetch")
 
+    def test_shared_expected_app_results_pass_real_reader_and_next_request(self):
+        # 양쪽 추출 시험이 같은 벡터 기대값을 사용한다. 완성 결과 봉투째 읽는다.
+        selected = candidate_rule()
+        for _html, page, urls, truncated, note in candidate_vectors()["vectors"]:
+            with self.subTest(note=note):
+                credit = "credit" if note in ("credit in alt", "credit adjacent") else "none"
+                result = list_result(candidates=[{"url": url, "credit": credit} for url in urls],
+                                     candidatesTruncated=truncated)
+                self.assertEqual(self.read(result), result)
+                for url in urls:
+                    request = gg_figure.request_payload("abcdefgh", "t", "s1", page, [url])
+                    self.assertEqual(request["images"], [url])
+                    self.assertEqual(gg_figure.normalize_url(url, host=selected["host"],
+                        path_pattern=selected["imagePath"]), url)
+
+    def test_ambiguous_app_candidate_spellings_are_rejected(self):
+        for path in ("/files/a.png?", "/files/a.png?#", "/files/x/%2e%2e/a.png",
+                     "/files/%2E/a.png", "/files/.%2e/a.png", "/files/x//a.png"):
+            with self.subTest(path=path), self.assertRaises(gg_figure.FigureError) as caught:
+                self.read(list_result(candidates=[{
+                    "url": "https://example.gov" + path, "credit": "none"}]))
+            self.assertEqual(caught.exception.reason, "invalid_result")
+
     def test_invalid_urls(self):
         for url in ("https://", "https://other.gov/files/a.png",
                     "https://example.gov/other/a.png", "https://example.gov:8443/files/a.png",
@@ -2145,6 +2168,162 @@ class TestP11Slots(unittest.TestCase):
                 self.assertEqual([p.read_bytes() for p in paths], old)
                 self.assertEqual(self.manuscript.read_bytes(), before)
                 self.assertEqual(self.place()["status"], "placed")
+
+
+class TestP11SlotLock(unittest.TestCase):
+    setUp = TestPlace.setUp
+    request_file = TestPlace.request_file
+    result_file = TestPlace.result_file
+    app_result = TestPlace.app_result
+    approved = TestPlace.approved
+    old_success = TestP11Slots.old_success
+    place = TestP11Slots.place
+
+    def test_new_fetch_between_initial_read_and_lock_never_restores_old_id(self):
+        before = self.old_success()
+        acquire = gg_figure._acquire_slot_lock
+        latest = {}
+        def interleave(folder, slot):
+            # 잠금 획득 직전 새 받기를 끝내어 보고된 순서를 결정적으로 고정한다.
+            with mock.patch.object(gg_figure, "_acquire_slot_lock", side_effect=acquire):
+                latest["result"] = gg_figure.fetch_app(folder, PAGE_URL, [IMAGE02], slot, environ={})
+                latest["record"] = gg_figure._read_request(folder, slot)
+            return acquire(folder, slot)
+        with mock.patch.object(gg_figure, "_acquire_slot_lock", side_effect=interleave):
+            result = self.place()
+        self.assertEqual(latest["result"]["reason"], "no_channel")
+        self.assertNotEqual(latest["record"]["reqId"], "req-0001")
+        self.assertEqual(gg_figure._read_request(self.folder, "s1"), latest["record"])
+        self.assertEqual(result["status"], "needs_photo")
+        self.assertIn("새 요청 결과", result["notice"])
+        self.assertNotIn("app-figure:" + "a" * 64, self.manuscript.read_text())
+        self.assertIn("app-figure:" + "c" * 64, self.manuscript.read_text())
+        self.assertNotEqual(self.manuscript.read_bytes(), before)
+        self.assertFalse(gg_figure._request_record_path(self.folder, "s1").with_suffix(".json.lock").exists())
+
+    def test_used_at_write_and_insertion_hold_lock_against_competing_fetch(self):
+        self.old_success()
+        write = gg_figure._write_json_atomic
+        competing = []
+        def interleave(path, payload):
+            if "usedAt" in payload:
+                competing.append(gg_figure.fetch_app(self.folder, PAGE_URL, [IMAGE02], "s1", environ={}))
+            return write(path, payload)
+        with mock.patch.object(gg_figure, "_write_json_atomic", side_effect=interleave), \
+                mock.patch.object(gg_figure, "channel_state") as channel:
+            result = self.place()
+        # place가 먼저 잠금을 잡음: 새 fetch는 선기록/전송 없이 명시 실패한다.
+        self.assertEqual(competing[0]["reason"], "slot_record_failed")
+        channel.assert_not_called()
+        self.assertEqual(result["status"], "placed")
+        self.assertEqual(gg_figure._read_request(self.folder, "s1")["reqId"], "req-0001")
+        newest = gg_figure.fetch_app(self.folder, PAGE_URL, [IMAGE02], "s1", environ={})
+        self.assertEqual(newest["reason"], "no_channel")
+        self.assertNotEqual(gg_figure._read_request(self.folder, "s1")["reqId"], "req-0001")
+
+    def test_nine_minute_lock_closes_both_paths_with_retry_notice(self):
+        before = self.old_success()
+        record = gg_figure._request_record_path(self.folder, "s1")
+        lock = record.with_name(record.name + ".lock")
+        lock.write_bytes(b"recent owner")
+        os.utime(lock, (1000, 1000))
+        old_record = record.read_bytes()
+        with mock.patch.object(gg_figure.time, "time", return_value=1540), \
+                mock.patch.object(gg_figure, "channel_state") as channel:
+            fetched = gg_figure.fetch_app(self.folder, PAGE_URL, [IMAGE02], "s1", environ={})
+            self.assertEqual(fetched["reason"], "slot_record_failed")
+            self.assertIn("잠시 뒤 다시 시도", fetched["notice"])
+            self.assertEqual(self.manuscript.read_bytes(), before)
+            placed = self.place()
+        channel.assert_not_called()
+        self.assertEqual(placed["status"], "needs_photo")
+        self.assertIn("잠시 뒤 다시 시도", placed["notice"])
+        self.assertEqual(record.read_bytes(), old_record)
+        self.assertEqual(lock.read_bytes(), b"recent owner")
+        self.assertEqual(lock.stat().st_mtime_ns, 1_000_000_000_000)
+        self.assertNotIn("app-figure:" + "a" * 64, self.manuscript.read_text())
+        self.assertFalse((self.folder / ".knuaf-gui").exists())
+
+    def test_eleven_minute_lock_is_recovered_for_fetch_and_place(self):
+        for action in ("fetch", "place"):
+            with self.subTest(action=action):
+                self.old_success()
+                record = gg_figure._request_record_path(self.folder, "s1")
+                lock = record.with_name(record.name + ".lock")
+                lock.write_bytes(b"dead owner")
+                os.utime(lock, (1000, 1000))
+                with mock.patch.object(gg_figure.time, "time", return_value=1660):
+                    if action == "fetch":
+                        result = gg_figure.fetch_app(self.folder, PAGE_URL, [IMAGE02], "s1", environ={})
+                        self.assertEqual(result["reason"], "no_channel")
+                        self.assertNotEqual(gg_figure._read_request(self.folder, "s1")["reqId"], "req-0001")
+                    else:
+                        self.assertEqual(self.place()["status"], "placed")
+                self.assertFalse(lock.exists())
+                self.assertEqual(list(record.parent.glob("*.stale-*")), [])
+
+    def test_two_stale_recoverers_only_one_acquires(self):
+        self.old_success()
+        record = gg_figure._request_record_path(self.folder, "s1")
+        path = record.with_name(record.name + ".lock")
+        path.write_bytes(b"dead owner")
+        os.utime(path, (1000, 1000))
+        rename = Path.rename
+        attempts = []
+        held = set()
+        def os_lock(fd):
+            if held:
+                raise BlockingIOError("other reclaimer holds stale inode")
+            held.add(fd)
+        def race(source, target):
+            # 둘 다 stale 이름을 연 시점에 두 번째 회수자를 진입시킨다.
+            with self.assertRaises(OSError):
+                gg_figure._acquire_slot_lock(self.folder, "s1")
+            attempts.append("loser")
+            return rename(source, target)
+        with mock.patch.object(gg_figure.time, "time", return_value=1660), \
+                mock.patch.object(gg_figure.gg_update, "_os_lock", side_effect=os_lock), \
+                mock.patch.object(gg_figure.gg_update, "_os_unlock", side_effect=held.remove), \
+                mock.patch.object(Path, "rename", autospec=True, side_effect=race) as moved:
+            winner = gg_figure._acquire_slot_lock(self.folder, "s1")
+        try:
+            self.assertEqual(attempts, ["loser"])
+            self.assertEqual(moved.call_count, 1)
+            self.assertEqual(path.stat().st_ino, os.fstat(winner[1]).st_ino)
+            with self.assertRaises(OSError):
+                gg_figure._acquire_slot_lock(self.folder, "s1")
+        finally:
+            gg_figure._release_slot_lock(winner)
+        self.assertFalse(path.exists())
+
+    def test_stale_rename_failure_does_not_retry_creation(self):
+        self.old_success()
+        path = gg_figure._request_record_path(self.folder, "s1").with_suffix(".json.lock")
+        path.write_bytes(b"dead owner")
+        os.utime(path, (1000, 1000))
+        with mock.patch.object(gg_figure.time, "time", return_value=1660), \
+                mock.patch.object(Path, "rename", side_effect=FileNotFoundError) as moved, \
+                mock.patch.object(gg_figure.os, "open", wraps=os.open) as opened:
+            with self.assertRaises(OSError):
+                gg_figure._acquire_slot_lock(self.folder, "s1")
+        moved.assert_called_once()
+        self.assertEqual(sum(bool(call.args[1] & os.O_EXCL) for call in opened.call_args_list), 1)
+        self.assertEqual(path.read_bytes(), b"dead owner")
+
+    def test_write_error_releases_lock_and_different_slot_is_independent(self):
+        self.old_success()
+        lock = gg_figure._acquire_slot_lock(self.folder, "s1")
+        try:
+            result = gg_figure.fetch_app(self.folder, PAGE_URL, [IMAGE02], "s2", environ={})
+            self.assertEqual(result["reason"], "no_channel")
+            self.assertEqual(gg_figure._read_request(self.folder, "s2")["slot"], "s2")
+        finally:
+            gg_figure._release_slot_lock(lock)
+        with mock.patch.object(gg_figure, "_write_json_atomic", side_effect=OSError):
+            result = gg_figure.fetch_app(self.folder, PAGE_URL, [IMAGE02], "s1", environ={})
+        self.assertEqual(result["reason"], "slot_record_failed")
+        self.assertFalse(lock[0].exists())
+        self.assertEqual(gg_figure._read_request(self.folder, "s1")["reqId"], "req-0001")
 
 
 if __name__ == "__main__":
