@@ -325,7 +325,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/SKILL.md": {
-      "after_sha256": "7661dd80fb002166e47260398d024d99c29cf8b8fa091d0a6e15e6e8cbe7c1bb",
+      "after_sha256": "1a5ebf4e817748804c0adb1f1290702572f7cdd126ced7e7cf1968490757ebdd",
       "before_sha256": "c0008fa5239cc16411fd4ef24b5bf901c7a8b9b50c6b621e2bdee3acf734ddc0",
       "first_changed": "P1",
       "last_changed": "progress-fmt",
@@ -342,7 +342,7 @@
       "source": "adopted:app-PR41"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "0fe3b0c26def9e31b8d8001bb2cccaec40cf3311011141eb6a44ba4ac39a1393",
+      "after_sha256": "1c012c78a0e13296ea53a38a898aca2e2bd80701a081aa91992f1a1c5c1be402",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "progress-fmt",
