@@ -342,7 +342,9 @@ def _request_backlog():
 # --------------------------------------------------------------------------
 RULE_PAGE = "page_kogl_applies_to_body_images"
 RULE_PAGE_QUERY = "page_query_kogl_applies_to_body_images"
-RULE_KINDS = (RULE_PAGE, RULE_PAGE_QUERY)
+RULE_PAGE_QUERY_ORG = "page_query_kogl_org_applies_to_body_images"
+QUERY_KINDS = (RULE_PAGE_QUERY, RULE_PAGE_QUERY_ORG)
+RULE_KINDS = (RULE_PAGE,) + QUERY_KINDS
 RULE_FIELDS = ("id", "host", "org", "pagePath", "imagePath", "rule")
 # 꼴 검사는 `fullmatch`와 같은 뜻이어야 한다 — `$`는 끝 줄바꿈 앞에서도 맞아
 # 앱(JS `$`)과 답이 갈린다.
@@ -395,8 +397,61 @@ def _query_spec(value):
     return None
 
 
-def _load_rule(item):
-    """I1~I7. 버리는 항목은 None."""
+def _hangul_syllable(char):
+    return 0xAC00 <= ord(char) <= 0xD7A3
+
+
+def _org_shape(value, shape):
+    """RDA-I01: 코드 포인트 범위만 검사한다. 다듬기·유니코드 분류 없음."""
+    if not isinstance(value, str):
+        return False
+    # RDA-X1: 한 글자 법인/단위 기호만 예외. 일반 낱말은 2~40자 그대로.
+    if shape == "term" and len(value) == 1:
+        return 0x3200 <= ord(value) <= 0x33FF
+    low, high = {"hangul": (2, 20), "term": (2, 40),
+                 "latin": (2, 20), "marker": (8, 200)}[shape]
+    if not low <= len(value) <= high:
+        return False
+    for char in value:
+        code = ord(char)
+        if shape == "hangul":
+            ok = 0xAC00 <= code <= 0xD7A3
+        elif shape == "term":
+            ok = (0x21 <= code <= 0x7E or 0x3001 <= code <= 0x33FF
+                  or 0xAC00 <= code <= 0xD7A3 or 0xFF01 <= code <= 0xFF5E)
+        elif shape == "latin":
+            ok = 0x41 <= code <= 0x5A
+        else:
+            ok = 0x20 <= code <= 0x7E
+        if not ok:
+            return False
+    return True
+
+
+def _org_list(value, shape, minimum, maximum):
+    return (isinstance(value, list) and minimum <= len(value) <= maximum
+            and all(_org_shape(word, shape) for word in value)
+            and len(set(value)) == len(value))
+
+
+def _org_lists(data):
+    """T1~T3: 하나라도 틀리면 셋째 rule 값만 전부 버린다."""
+    if not (_org_list(data.get("orgTerms"), "term", 1, 300)
+            and _org_list(data.get("creditWords"), "hangul", 1, 40)
+            and _org_list(data.get("latinOk"), "latin", 0, 300)):
+        return None
+    return {"orgTerms": tuple(data["orgTerms"]),
+            "creditWords": tuple(data["creditWords"]),
+            "latinOk": frozenset(data["latinOk"])}
+
+
+def _sorted_aliases(aliases):
+    # sorted는 안정 정렬 — 길이가 같으면 파일에 적힌 순서다.
+    return sorted(aliases, key=len, reverse=True)
+
+
+def _load_rule(item, org_lists=None):
+    """I1~I9. 버리는 항목은 None."""
     if not isinstance(item, dict):
         return None
     for key in RULE_FIELDS:
@@ -406,6 +461,23 @@ def _load_rule(item):
     kind = item["rule"]
     if kind not in RULE_KINDS:
         return None
+    org_fields = ("orgAliases", "bodyStart", "bodyEnd")
+    if kind != RULE_PAGE_QUERY_ORG and any(key in item for key in org_fields):
+        return None
+    if kind == RULE_PAGE_QUERY_ORG:
+        if org_lists is None:
+            return None
+        aliases = item.get("orgAliases")
+        if (not _org_list(aliases, "hangul", 1, 4)
+                or aliases[0] != item["org"]
+                or any(word in alias for alias in aliases
+                       for key in ("orgTerms", "creditWords")
+                       for word in org_lists[key])):
+            return None
+        start, end = item.get("bodyStart"), item.get("bodyEnd")
+        if (not _org_shape(start, "marker") or not _org_shape(end, "marker")
+                or start in end or end in start):
+            return None
     if not _host_shape_ok(item["host"]):
         return None
     try:
@@ -429,7 +501,7 @@ def _load_rule(item):
             if parsed is None:
                 return None
             query[name] = parsed
-    return {
+    parsed = {
         "id": item["id"],
         "host": item["host"],
         "org": item["org"],
@@ -438,6 +510,10 @@ def _load_rule(item):
         "rule": kind,
         "pageQuery": query,
     }
+    if kind == RULE_PAGE_QUERY_ORG:
+        parsed.update(org_lists)
+        parsed.update(orgAliases=_sorted_aliases(aliases), bodyStart=start, bodyEnd=end)
+    return parsed
 
 
 def _one_kind_per_host(items):
@@ -484,8 +560,9 @@ def load_rules(path=None):
     if not _one_kind_per_host(rules):
         return []
     out = []
+    org_lists = _org_lists(data)
     for item in rules:
-        parsed = _load_rule(item)
+        parsed = _load_rule(item, org_lists)
         if parsed is not None:
             out.append(parsed)
     ids = [rule["id"] for rule in out]
@@ -550,7 +627,7 @@ def select_page_rule(raw, rules):
     """PQ-8: 규칙집 순서로 처음 맞는 항목 하나 → (항목, 보낼 주소) 또는 None."""
     strict = _strict_page(raw)
     for rule in rules:
-        if rule.get("rule") == RULE_PAGE_QUERY:
+        if rule.get("rule") in QUERY_KINDS:
             if strict is None or strict[0] != rule["host"]:
                 continue
             if rule["pagePath"].fullmatch(strict[1]) is None:
@@ -759,7 +836,7 @@ def http_get(url, *, rule, kind, resolver=None, allow_loopback=False,
     if limit.get("deadline") is None:
         limit["deadline"] = time.monotonic() + TIMEOUT_REQUEST_SECONDS
     pattern = rule["pagePath"] if kind == "page" else rule["imagePath"]
-    if kind == "page" and rule.get("rule") == RULE_PAGE_QUERY:
+    if kind == "page" and rule.get("rule") in QUERY_KINDS:
         # 엄격한 꼴을 통과한 주소는 해석기가 바꿀 것이 없다 — 그대로 보낸다.
         target = url
     else:
@@ -1133,17 +1210,162 @@ def _candidate_tags(html):
             yield start, pos, src
 
 
-def _candidate_value_ok(value):
-    return (bool(value) and len(value) <= 2048
-            and not ENTITY.search(value) and not BAD_PERCENT.search(value)
-            and all(char in CANDIDATE_CHARS or ord(char) >= 128 for char in value))
+# RDA §3-2: 문자참조를 풀지 않는다. 글자를 만들지 않는 기호만 허용한다.
+ORG_ENTITY_NAMES = (
+    "lt", "gt", "amp", "quot", "apos", "nbsp", "middot", "times", "divide",
+    "bull", "hellip", "ndash", "mdash", "lsquo", "rsquo", "ldquo", "rdquo",
+    "larr", "rarr", "uarr", "darr", "deg", "plusmn")
+ORG_SYMBOL_RANGES = (
+    (0x00A0, 0x00BF), (0x00D7, 0x00D7), (0x00F7, 0x00F7),
+    (0x2010, 0x205E), (0x2190, 0x23FF), (0x2460, 0x249B),
+    (0x24EA, 0x24FF), (0x2500, 0x27BF), (0x2900, 0x2BFF), (0x3000, 0x303F))
+ORG_FENCE = "\"'<>\n\r"
+ORG_URL_END = " \t\n\r\"'<>"
+HEX_CHARS = frozenset("0123456789ABCDEFabcdef")
+
+
+def _body_region(html, rule):
+    """§3-1: 표지 둘이 각각 한 번이고 순서가 맞을 때만 안쪽 범위."""
+    start, end = rule["bodyStart"], rule["bodyEnd"]
+    if html.count(start) != 1 or html.count(end) != 1:
+        return None
+    inside = html.find(start) + len(start)
+    finish = html.find(end)
+    return (inside, finish) if inside <= finish else None
+
+
+def _org_entities_ok(text):
+    pos = text.find("&")
+    while pos >= 0:
+        if not any(text.startswith("&" + name + ";", pos)
+                   for name in ORG_ENTITY_NAMES):
+            if not text.startswith("&#", pos):
+                return False
+            end = pos + 2
+            while end < len(text) and "0" <= text[end] <= "9":
+                end += 1
+            if (not 1 <= end - pos - 2 <= 7 or end == len(text)
+                    or text[end] != ";"):
+                return False
+            code = int(text[pos + 2:end])
+            if not any(low <= code <= high for low, high in ORG_SYMBOL_RANGES):
+                return False
+        pos = text.find("&", pos + 1)
+    return True
+
+
+def _foreign_mark_in(text, rule):
+    """§3-2 ①~⑦ 순서 고정. 정규식·공백/대소문자 정규화 없음."""
+    if not _org_entities_ok(text):
+        return True
+    for char in text:
+        code = ord(char)
+        if (0x1100 <= code <= 0x1112 or 0x1161 <= code <= 0x1175
+                or 0x11A8 <= code <= 0x11C2):
+            return True
+    # ③ r1.1: 표현의 양끝이 울타리여야 한다. 빈칸/쉼표는 울타리가 아니다.
+    for alias in rule["orgAliases"]:
+        for word in rule["creditWords"]:
+            for phrase in (alias + word, alias + " " + word, word + alias,
+                           word + " " + alias, word + ":" + alias,
+                           word + ": " + alias, word + " : " + alias):
+                pos = text.find(phrase)
+                while pos >= 0:
+                    end = pos + len(phrase)
+                    if ((pos == 0 or text[pos - 1] in ORG_FENCE)
+                            and (end == len(text) or text[end] in ORG_FENCE)):
+                        text = text[:pos] + " " + text[end:]
+                        pos = text.find(phrase, pos + 1)
+                    else:
+                        pos = text.find(phrase, end)
+    # ④ 별칭 앞에 한글이 붙었으면 더 긴 남의 이름일 수 있다.
+    for alias in rule["orgAliases"]:
+        pos = text.find(alias)
+        while pos >= 0:
+            if pos > 0 and _hangul_syllable(text[pos - 1]):
+                return True
+            text = text[:pos] + " " + text[pos + len(alias):]
+            pos = text.find(alias, pos + 1)
+    if any(word in text for word in rule["orgTerms"]):
+        return True
+    for word in rule["creditWords"]:
+        pos = text.find(word)
+        while pos >= 0:
+            end = pos + len(word)
+            if end == len(text) or not _hangul_syllable(text[end]):
+                return True
+            pos = text.find(word, pos + 1)
+    # ⑦만 주소·%XX를 지운 사본에 적용한다. ①~⑥은 주소 속 글도 검사했다.
+    acronym_text = text
+    pos = 0
+    while pos < len(acronym_text):
+        if (acronym_text.startswith("http://", pos)
+                or acronym_text.startswith("https://", pos)):
+            end = pos
+            while end < len(acronym_text) and acronym_text[end] not in ORG_URL_END:
+                end += 1
+            acronym_text = acronym_text[:pos] + " " + acronym_text[end:]
+        pos += 1
+    pos = 0
+    while pos < len(acronym_text):
+        if (acronym_text[pos] == "%" and pos + 2 < len(acronym_text)
+                and acronym_text[pos + 1] in HEX_CHARS
+                and acronym_text[pos + 2] in HEX_CHARS):
+            acronym_text = acronym_text[:pos] + " " + acronym_text[pos + 3:]
+        pos += 1
+    pos = 0
+    while pos < len(acronym_text):
+        if "A" <= acronym_text[pos] <= "Z":
+            end = pos + 1
+            while end < len(acronym_text) and "A" <= acronym_text[end] <= "Z":
+                end += 1
+            if end - pos >= 2 and acronym_text[pos:end] not in rule["latinOk"]:
+                return True
+            pos = end
+        else:
+            pos += 1
+    return False
+
+
+def _org_reading(html, final_image_url, page_url, rule):
+    """§3-1: (none|hit|unknown, 구역 글). 기존 권리 정규식은 호출부 몫."""
+    region = _body_region(html, rule)
+    if region is None:
+        return "unknown", None
+    found = False
+    for start, end, src in _candidate_tags(html):
+        if src is None:
+            continue
+        try:
+            resolved = urllib.parse.urljoin(page_url, src.strip(ASCII_SPACE))
+        except ValueError:
+            continue
+        if not _same_reference(resolved, final_image_url):
+            continue
+        found = True
+        if start < region[0] or end > region[1]:
+            return "unknown", None
+    if not found:
+        return "unknown", None
+    text = html[region[0]:region[1]]
+    return ("hit" if _foreign_mark_in(text, rule) else "none"), text
+
+
+def _candidate_value_ok(value, *, raw=False):
+    if (not value or len(value) > 2048 or ENTITY.search(value)
+            or BAD_PERCENT.search(value)):
+        return False
+    query = value.find("?")
+    return all(char in CANDIDATE_CHARS or ord(char) >= 128
+               or (raw and char in "[]" and (query < 0 or index < query))
+               for index, char in enumerate(value))
 
 
 def _candidate_url(value, page, rule):
     if value is None:
         return None
     value = value.strip(ASCII_SPACE).replace("&amp;", "&")
-    if not _candidate_value_ok(value):
+    if not _candidate_value_ok(value, raw=True):
         return None
     try:
         # impl-1 I-01: 해석 전에 거절. urljoin/WHATWG가 다른 자원으로 접지 못하게 한다.
@@ -1173,6 +1395,12 @@ def _candidate_url(value, page, rule):
 def extract_candidates(html, page, rule):
     """문서 순서의 {url, credit} 최대 30개와 잘림 여부. 승인 판정은 아니다."""
     candidates, seen = [], set()
+    org_rule = rule.get("rule") == RULE_PAGE_QUERY_ORG
+    region = _body_region(html, rule) if org_rule else None
+    body_credit = False
+    if region is not None:
+        text = html[region[0]:region[1]]
+        body_credit = bool(THIRD_PARTY.search(text)) or _foreign_mark_in(text, rule)
     for start, end, src in _candidate_tags(html):
         url = _candidate_url(src, page, rule)
         if url is None or url in seen:
@@ -1180,8 +1408,12 @@ def extract_candidates(html, page, rule):
         if len(candidates) == 30:
             return candidates, True
         seen.add(url)
-        candidates.append({"url": url, "credit": (
-            "credit" if _third_party_near(html, (start, end)) else "none")})
+        if org_rule:
+            credit = (region is None or start < region[0] or end > region[1]
+                      or body_credit)
+        else:
+            credit = bool(_third_party_near(html, (start, end)))
+        candidates.append({"url": url, "credit": "credit" if credit else "none"})
     return candidates, False
 
 
@@ -1379,6 +1611,19 @@ def _verdict_one(folder, rule, html, final_page, mark_type, url, record, *,
         record.update(verdict="ambiguous", reason="third_party_mark:" + third,
                       sha256=None)
         return
+    if rule.get("rule") == RULE_PAGE_QUERY_ORG:
+        reading, text = _org_reading(html, image_final, final_page, rule)
+        if reading == "unknown":
+            record.update(verdict="ambiguous", reason="third_party_unknown", sha256=None)
+            return
+        body_third = THIRD_PARTY.search(text)
+        if body_third:
+            record.update(verdict="ambiguous",
+                          reason="third_party_mark:" + body_third.group(0), sha256=None)
+            return
+        if reading == "hit":
+            record.update(verdict="ambiguous", reason="third_party_org", sha256=None)
+            return
     if mark_type is None:
         record.update(verdict="ambiguous", reason="kogl_ambiguous", sha256=None)
         return
@@ -1428,7 +1673,7 @@ def fetch_direct(folder, page, images, slot, environ=None, *,
             page_norm, rule=rule, kind="page", resolver=resolver,
             allow_loopback=allow_loopback, tls_context=tls_context,
             limiter=limiter,
-            follow_redirects=rule.get("rule") != RULE_PAGE_QUERY)
+            follow_redirects=rule.get("rule") not in QUERY_KINDS)
     except FigureError as exc:
         return _blocked(exc.reason, exc.detail)
     page_sha = sha256_bytes(page_body)
@@ -1730,7 +1975,42 @@ def _manuscript(folder, rel):
     return resolved
 
 
-def _block_for(item, number, title, org, direct):
+def _source_url_ok(url):
+    return (isinstance(url, str) and url.startswith("https://")
+            and len(url) <= 300 and all(char in STRICT_CHARS for char in url))
+
+
+def _source_url(mode, result, item, home):
+    """슬롯 mode로만 고른다. 앱 주소는 요청·그림이 같은 마지막 승인 증명에서 온다."""
+    url = None
+    if mode == "direct":
+        page = result.get("page")
+        if isinstance(page, dict):
+            url = page.get("finalUrl")
+    elif mode == "app" and home is not None:
+        try:
+            with (Path(home) / "receipts.jsonl").open(encoding="utf-8") as stream:
+                for line in stream:
+                    try:
+                        receipt = json.loads(line)
+                    except ValueError:
+                        continue
+                    if not isinstance(receipt, dict):
+                        continue
+                    image = receipt.get("image")
+                    if (receipt.get("reqId") != result.get("id")
+                            or not isinstance(image, dict)
+                            or image.get("sha256") != item.get("sha256")
+                            or image.get("verdict") != "approved"):
+                        continue
+                    page = receipt.get("page")
+                    url = page.get("url") if isinstance(page, dict) else None
+        except (OSError, UnicodeError):
+            return None
+    return url if _source_url_ok(url) else None
+
+
+def _block_for(item, number, title, org, direct, source_url=None):
     if direct:
         image_line = "![그림 %d. %s (출처 : %s)](%s)" % (
             number, title, org, item["path"])
@@ -1739,7 +2019,10 @@ def _block_for(item, number, title, org, direct):
         image_line = "![](app-figure:%s)" % item["sha256"]
         ref = "app-figure:" + item["sha256"]
     caption = "그림 %d. %s (출처 : %s)" % (number, title, org)
-    return [image_line, "", caption], ref
+    block = [image_line, "", caption]
+    if source_url is not None:
+        block.extend(["", "주 : 원문 주소 " + source_url])
+    return block, ref
 
 
 def _section_text(text, heading):
@@ -1801,6 +2084,8 @@ def _place(folder, slot, heading, *, choose=None, title=None, org=None,
         return _blocked(exc.reason, exc.detail)
     text = path.read_text(encoding="utf-8")
 
+    env_home = home if home is not None else _figure_home(environ)
+    mode = None
     if images:
         if direct is None:
             direct = not _is_app_mode(environ)
@@ -1822,7 +2107,7 @@ def _place(folder, slot, heading, *, choose=None, title=None, org=None,
             "needsChoice": len(refs) >= 2}
         direct = True
     else:
-        env_home = home if home is not None else _figure_home(environ)
+        mode = request["mode"] if request is not None else None
         req = request
         if req is None:
             return _photo_placeholder(folder, path, heading, text, slot)
@@ -1854,14 +2139,15 @@ def _place(folder, slot, heading, *, choose=None, title=None, org=None,
             return _needs_choice(slot, result, approved, choice)
         return _place_chosen(folder, path, heading, text, slot, choose, result,
                              approved, choice, title, org, direct,
-                             app_mode=_is_app_mode(environ))
+                             app_mode=_is_app_mode(environ), home=env_home, mode=mode)
 
     item = approved[0]
     return _place_one(folder, path, heading, text, slot, item,
-                      result, title, org, direct)
+                      result, title, org, direct, home=env_home, mode=mode)
 
 
-def _place_one(folder, path, heading, text, slot, item, result, title, org, direct):
+def _place_one(folder, path, heading, text, slot, item, result, title, org, direct,
+               home=None, mode=None):
     org = org or item.get("org") or (result.get("page") or {}).get("org") or ""
     if not org:
         return _blocked("no_org", "승인 그림에 기관명 없음")
@@ -1872,13 +2158,23 @@ def _place_one(folder, path, heading, text, slot, item, result, title, org, dire
     if ref in section:
         return {"status": "already_placed", "slot": slot, "ref": ref,
                 "line": block[0]}
+    source_url = None
+    if mode is not None:
+        source_url = _source_url(mode, result, item, home)
+        if source_url is None:
+            return dict(_photo_placeholder(folder, path, heading, text, slot),
+                        note="source_url_missing")
+        block, ref = _block_for(item, number, title_text, org, direct, source_url)
     try:
         updated = _insert_block(text, heading, block)
     except FigureError as exc:
         return _blocked(exc.reason, exc.detail)
     path.write_text(updated, encoding="utf-8")
-    return {"status": "placed", "slot": slot, "number": number,
-            "ref": ref, "line": block[0], "caption": block[-1]}
+    placed = {"status": "placed", "slot": slot, "number": number,
+              "ref": ref, "line": block[0], "caption": block[2]}
+    if source_url is not None:
+        placed["sourceNote"] = block[4]
+    return placed
 
 
 def _needs_choice(slot, result, approved, choice):
@@ -1908,7 +2204,7 @@ def _needs_choice(slot, result, approved, choice):
 
 
 def _place_chosen(folder, path, heading, text, slot, choose, result, approved,
-                  choice, title, org, direct, *, app_mode=True):
+                  choice, title, org, direct, *, app_mode=True, home=None, mode=None):
     """CONTRACT §9: 앱 안은 학생 메시지 일치, 앱 밖은 라벨만 맞으면 통과."""
     labels = [item.get("label") for item in approved]
     picked = (choose or "").strip()
@@ -1936,7 +2232,7 @@ def _place_chosen(folder, path, heading, text, slot, choose, result, approved,
             return _blocked("candidate_mismatch", "후보표와 승인 그림 해시 불일치")
     item = next(entry for entry in approved if entry.get("label") == picked)
     return _place_one(folder, path, heading, text, slot, item, result, title,
-                      org, direct)
+                      org, direct, home=home, mode=mode)
 
 
 def _photo_placeholder(folder, path, heading, text, slot):
