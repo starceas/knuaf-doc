@@ -851,6 +851,7 @@ class UpdateTests(_UpdateCase):
                     self.assertEqual("0.1.2", json.loads((target / "version.json")
                         .read_text(encoding="utf-8"))["version"])
 
+
     def test_skill_guidance_required_phrases(self):
         raw = SKILL_MD_PATH.read_text(encoding="utf-8")
         self.assertIn(("> knuaf-doc · 창업논문 작성 도우미\n"
@@ -869,9 +870,9 @@ class UpdateTests(_UpdateCase):
             'question이 reuse(제공 거부)·deferred(도움 소진)인 사실은 다시 묻거나 자료를 요구하지 않는다',
             'user_finish 전체',
             '독립 내용검토 전',
-            '연속한 ✓ 단계가 2개 이상이면 `✓ 1–2단계 끝`처럼, 연속한 ○ 단계가 2개 이상이면 `○ 5–7단계 남음`처럼 항상 한 줄로 묶는다',
         ):
             self.assertIn(sentence, raw)
+        # 변경된 범위 문법은 test_student_language의 실제 예시로 검증한다.
         for phrase in ("prod. 특용작물전공 24학번 김대욱", "최종 답변 맨 앞",
                        "스레드마다 한 번", "references/update.md", "자료·전공 확인",
                        "계획 인터뷰", "조사·근거 정리", "본문 Ⅰ~Ⅵ 초안",

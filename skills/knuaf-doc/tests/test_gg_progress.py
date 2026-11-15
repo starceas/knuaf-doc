@@ -1,7 +1,7 @@
 """gg_progress 오프라인 시험 — 합성 정본만 쓴다(학생 원고 아님).
 
-DESIGN-W-P §7의 1·2·3·4·5·6·7·11·13을 실제 ``gate()``로 검사한다
-(mock 없음). 8·9·10·12는 곁파일 배선(2부) 몫이라 여기서 다루지 않는다.
+정본에서 단계 계산·곁파일 자동 갱신·명시 갱신 CLI를 검사한다.
+원본 학생 자료와 실제 앱·Office 실행은 사용하지 않는다.
 
 정본은 전부 ``tests/_harness``가 만든 임시 폴더 안에만 생기고, 검토
 보고서도 합성 Markdown/JSON이다.
@@ -15,6 +15,7 @@ import subprocess
 import sys
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import openpyxl
 from docx import Document
@@ -693,6 +694,7 @@ class ProgressLinkTests(th.ContractCase):
         _add_section(root)
         write_text(root, "memo.txt", "건드리면 안 되는 내부 파일\n")
         link = Path(root) / name
+        link.unlink(missing_ok=True)
         link.symlink_to(target)
         before = {rel: (Path(root) / rel).read_bytes()
                   for rel in ("project.json", "memo.txt")}
@@ -725,7 +727,9 @@ class ProgressLinkTests(th.ContractCase):
         outside = Path(root).parent / "outside-progress.json"
         outside.write_text("밖\n", encoding="utf-8")
         self.addCleanup(outside.unlink)
-        (Path(root) / ".knuaf-progress.json").symlink_to(outside)
+        link = Path(root) / ".knuaf-progress.json"
+        link.unlink(missing_ok=True)
+        link.symlink_to(outside)
         with self.assertRaises(runtime("gg_progress").ProgressLinkError):
             runtime("gg_progress").write_progress(root)
         self.assertEqual(outside.read_text(encoding="utf-8"), "밖\n")
@@ -840,6 +844,7 @@ class ShowCommandTests(th.ContractCase):
 
     def test_without_file(self):
         root = self.make_project()
+        (Path(root) / ".knuaf-progress.json").unlink(missing_ok=True)
         proc = self._run(root, str(root))
         self.assertEqual(proc.returncode, 1)
         self.assertEqual(proc.stdout, "")
@@ -906,22 +911,113 @@ class ShowCommandTests(th.ContractCase):
         self._broken(lambda payload: payload["steps"][0].update(n=8))
 
 
-class NoWriteCommandTests(th.ContractCase):
-    """§7-13 — `write` 서브커맨드는 잘린 채로 유지된다(C4)."""
+class AutomaticProgressTests(th.ContractCase):
+    """초기화·변경 성공이 진행 파일을 만들고 곁파일 실패와 분리된다."""
 
-    def test_write_is_argument_error(self):
+    def test_init_writes_progress_before_any_followup_mutation(self):
+        root = self.make_project()
+        payload = json.loads((Path(root) / ".knuaf-progress.json").read_text(
+            encoding="utf-8"))
+        self.assertEqual(payload["revision"], 0)
+        self.assertEqual(payload["steps"][0]["state"], "now")
+        self.assertEqual(runtime("gg_core").load(root)["revision"], 0)
+
+    def test_major_commit_refreshes_progress_automatically(self):
+        root = self.make_project()
+        _seed(root, "specialty_crops")
+        payload = json.loads((Path(root) / ".knuaf-progress.json").read_text(
+            encoding="utf-8"))
+        self.assertEqual(payload["revision"], runtime("gg_core").load(root)["revision"])
+        self.assertEqual(payload["steps"][0]["state"], "done")
+        self.assertEqual(payload["steps"][1]["state"], "now")
+
+    def test_failed_progress_writer_keeps_canonical_commit(self):
+        for failure in (OSError("합성 쓰기 실패"), {"status": "failed"}):
+            with self.subTest(failure=failure):
+                root = self.make_project()
+                target = Path(root) / ".knuaf-progress.json"
+                self.assertTrue(target.is_file())
+                core = runtime("gg_core")
+                writer = runtime("gg_progress")
+                effect = ({"side_effect": failure} if isinstance(failure, Exception)
+                          else {"return_value": failure})
+                stderr = io.StringIO()
+                with mock.patch.object(writer, "write_progress", **effect):
+                    with contextlib.redirect_stderr(stderr):
+                        bind_major(root, "specialty_crops")
+                self.assertEqual(core.load(root)["revision"], 1)
+                self.assertIn("selected_major", core.load(root)["facts"])
+                self.assertFalse(target.exists(), "낡은 진행 파일이 남았다")
+                lines = stderr.getvalue().splitlines()
+                self.assertEqual(len(lines), 1, stderr.getvalue())
+                self.assertTrue(lines[0].startswith(
+                    "sidecar .knuaf-progress.json failed (gg_progress.write_progress)"))
+
+
+class WriteCommandTests(th.ContractCase):
+    """정본 변경 0회인 재개 대화도 진행 파일을 복구하며 정본은 보존한다."""
+
+    def _run(self, root):
+        return subprocess.run(
+            [sys.executable, "-B", str(SCRIPT), "write", str(root)],
+            capture_output=True, text=True, encoding="utf-8")
+
+    def test_creates_progress_without_canonical_change(self):
+        root = self.make_project()
+        target = Path(root) / ".knuaf-progress.json"
+        target.unlink(missing_ok=True)
+        before = (Path(root) / "project.json").read_bytes()
+        proc = self._run(root)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        payload = json.loads(target.read_text(encoding="utf-8"))
+        self.assertEqual(payload["schema"], "knuaf.progress/1")
+        self.assertEqual(payload["revision"], 0)
+        self.assertEqual(payload["steps"][0]["state"], "now")
+        self.assertEqual([s["n"] for s in payload["steps"]], list(range(1, 8)))
+        self.assertEqual((Path(root) / "project.json").read_bytes(), before)
+
+    def test_refreshes_from_current_major_without_new_revision(self):
+        root = self.make_project()
+        self.assertEqual(self._run(root).returncode, 0)
+        _seed(root, "specialty_crops")
+        before = (Path(root) / "project.json").read_bytes()
+        proc = self._run(root)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        payload = json.loads((Path(root) / ".knuaf-progress.json").read_text(
+            encoding="utf-8"))
+        self.assertEqual(payload["steps"][0]["state"], "done")
+        self.assertEqual(payload["steps"][1]["state"], "now")
+        self.assertEqual(payload["revision"], json.loads(before)["revision"])
+        self.assertEqual((Path(root) / "project.json").read_bytes(), before)
+
+    def test_busy_keeps_previous_progress_unchanged(self):
+        root = self.make_project()
+        self.assertEqual(self._run(root).returncode, 0)
+        before = self._tree_bytes(root)
+        with runtime("gg_core").Lock(root):
+            proc = self._run(root)
+        self.assertEqual(proc.returncode, 2, proc.stderr)
+        self.assertIn("busy", proc.stderr)
+        self.assertEqual(self._tree_bytes(root), before)
+
+    def test_missing_canonical_does_not_create_folder(self):
         root = self.make_project()
         absent = Path(root) / "새폴더"
-        proc = subprocess.run(
-            [sys.executable, "-B", str(SCRIPT), "write", str(absent)],
-            capture_output=True, text=True, encoding="utf-8", cwd=str(root))
+        proc = self._run(absent)
         self.assertEqual(proc.returncode, 2)
-        self.assertIn("invalid choice: 'write'", proc.stderr)
-        self.assertIn("choose from", proc.stderr)
-        self.assertIn("show", proc.stderr)
-        self.assertNotIn("write", proc.stderr.split("choose from", 1)[1])
         self.assertFalse(absent.exists())
-        self.assertFalse((Path(root) / ".knuaf-progress.json").exists())
+
+    def test_failed_refresh_drops_link_not_canonical(self):
+        root = self.make_project()
+        target = Path(root) / ".knuaf-progress.json"
+        target.unlink(missing_ok=True)
+        target.symlink_to("project.json")
+        before = (Path(root) / "project.json").read_bytes()
+        proc = self._run(root)
+        self.assertEqual(proc.returncode, 2)
+        self.assertFalse(target.is_symlink())
+        self.assertFalse(target.exists())
+        self.assertEqual((Path(root) / "project.json").read_bytes(), before)
 
     def test_show_requires_target(self):
         root = self.make_project()
@@ -942,6 +1038,7 @@ class RemoveProgressTests(th.ContractCase):
     def test_directory_in_place_falls_back_to_empty_object(self):
         root = self.make_project()
         blocked = Path(root) / ".knuaf-progress.json"
+        blocked.unlink(missing_ok=True)
         blocked.mkdir()
         stderr = io.StringIO()
         with contextlib.redirect_stderr(stderr):
