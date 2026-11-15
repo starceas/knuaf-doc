@@ -1121,8 +1121,8 @@ class TestReviewFixes(_ServerCase):
         self.assertEqual(result["status"], "needs_choice")
         self.assertNotIn("낡은 표", [item["desc"] for item in result["candidates"]])
 
-    def test_rejected_new_request_clears_the_old_slot_record(self):
-        """I-3: 새 요청이 거절되면 옛 reqId 기록을 지워 옛 그림이 들어가지 않는다."""
+    def test_rejected_new_request_replaces_the_old_slot_record(self):
+        """I-04 r5: 거절돼도 슬롯은 새 reqId를 유지해 옛 그림을 쓰지 않는다."""
         home = Path(tempfile.mkdtemp(prefix="gg-home-"))
         self.addCleanup(shutil.rmtree, home, True)
         old_path = self.folder / ".gg-work" / "figure-requests" / "s1.json"
@@ -1160,7 +1160,8 @@ class TestReviewFixes(_ServerCase):
         payload = json.loads(out.getvalue().strip())
         self.assertEqual(code, 2)
         self.assertEqual(payload["id"], "bbbbbbbbbbbbbbbb")
-        self.assertIsNone(gg_figure._read_request(self.folder, "s1"))
+        self.assertEqual(gg_figure._read_request(self.folder, "s1")["reqId"],
+                         "bbbbbbbbbbbbbbbb")
 
         placed = gg_figure.place(self.folder, "s1", "가. 품종 선택",
                                  home=home, environ={})
@@ -1349,8 +1350,8 @@ class TestReviewFixes(_ServerCase):
                    fixture("nongsaro-image02.jpg"))
         result = self.fetch(PAGE_URL, [IMAGE02])
         self.assertEqual(result["status"], "blocked")
-        self.assertEqual(result["reason"], "store_symlink")
-        self.assertEqual(result["detail"], ".gg-work")
+        self.assertEqual(result["reason"], "slot_record_failed")
+        self.assertIn(".gg-work", result["detail"])
         self.assertEqual(list(outside.iterdir()), [])
 
     def test_daily_file_quota(self):
@@ -1580,7 +1581,7 @@ class TestPageQuerySelect(unittest.TestCase):
     def test_real_rule_file_loads(self):
         path = SCRIPTS.parent / "references" / "figure-sources.json"
         ids = [rule["id"] for rule in gg_figure.load_rules(path)]
-        self.assertEqual(ids, ["nongsaro-curation"])
+        self.assertEqual(ids, [])
 
 
 class TestPageQueryFlow(_ServerCase):
@@ -1706,6 +1707,623 @@ class TestPageQueryFlow(_ServerCase):
             self.assertEqual(result["status"], "blocked")
             self.assertEqual(result["reason"], "no_rule")
             self.assertEqual(self.server.hits, [])
+
+
+def candidate_vectors():
+    return _vector_expand(json.loads(
+        (FIXTURES / "candidates-vectors.json").read_text(encoding="utf-8")))
+
+
+def candidate_rule():
+    return gg_figure._load_rule(candidate_vectors()["rule"])
+
+
+def list_result(req_id="abcdefgh", **changes):
+    data = {"v": 1, "id": req_id, "status": "done", "slot": "s1",
+            "needsChoice": False, "images": [], "kogl": 2, "org": "시험 기관",
+            "candidates": [{"url": "https://example.gov/files/a.png", "credit": "none"}],
+            "candidatesTruncated": False}
+    data.update(changes)
+    return data
+
+
+class TestCandidateVectors(unittest.TestCase):
+    def test_shared_vectors(self):
+        data = candidate_vectors()
+        selected = gg_figure._load_rule(data["rule"])
+        for html, page, urls, truncated, note in data["vectors"]:
+            with self.subTest(note=note):
+                candidates, cut = gg_figure.extract_candidates(html, page, selected)
+                self.assertEqual([item["url"] for item in candidates], urls)
+                self.assertEqual(cut, truncated)
+                credit = "credit" if note in ("credit in alt", "credit adjacent") else "none"
+                self.assertEqual(candidates, [{"url": url, "credit": credit} for url in urls])
+                dumped = json.dumps(candidates, ensure_ascii=False)
+                for word in ("이전 지시", "사이트 지시", "\u202e", "😀"):
+                    self.assertNotIn(word, dumped)
+
+    def test_real_distribution_excludes_nongsaro(self):
+        path = SCRIPTS.parent / "references" / "figure-sources.json"
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        for item in raw["rules"]:
+            self.assertNotEqual(item["id"], "nongsaro-curation")
+            self.assertNotEqual(item["host"], HOST)
+            self.assertNotIn("fragment", item)
+            self.assertNotIn("grade", item)
+        with tempfile.TemporaryDirectory() as temp:
+            p = Path(temp) / "rules.json"
+            without = dict(raw)
+            without.pop("removed", None)
+            p.write_text(json.dumps(without), encoding="utf-8")
+            self.assertEqual(gg_figure.load_rules(path), gg_figure.load_rules(p))
+            with mock.patch.object(gg_figure, "http_get") as get:
+                result = gg_figure.fetch_direct(temp, PAGE_URL, [IMAGE02], "s1")
+            self.assertIn(result["reason"], ("no_rules", "no_rule"))
+            get.assert_not_called()
+
+
+class TestListResultValidation(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.home = Path(self.temp.name)
+        (self.home / "res").mkdir()
+
+    def read(self, data, mode="list"):
+        (self.home / "res" / "abcdefgh.res.json").write_text(
+            json.dumps(data), encoding="utf-8")
+        return gg_figure.read_result(self.home, "abcdefgh", mode, rule=candidate_rule())
+
+    def test_valid_and_rejected_and_fetch_mode(self):
+        self.assertEqual(self.read(list_result()), list_result())
+        rejected = self.read(list_result(status="rejected", reason="rule_missing"))
+        self.assertEqual(rejected, {"status": "blocked", "reason": "rule_missing"})
+        with self.assertRaises(gg_figure.FigureError):
+            self.read(list_result(), "fetch")
+
+    def test_shared_expected_app_results_pass_real_reader_and_next_request(self):
+        # 양쪽 추출 시험이 같은 벡터 기대값을 사용한다. 완성 결과 봉투째 읽는다.
+        selected = candidate_rule()
+        for _html, page, urls, truncated, note in candidate_vectors()["vectors"]:
+            with self.subTest(note=note):
+                credit = "credit" if note in ("credit in alt", "credit adjacent") else "none"
+                result = list_result(candidates=[{"url": url, "credit": credit} for url in urls],
+                                     candidatesTruncated=truncated)
+                self.assertEqual(self.read(result), result)
+                for url in urls:
+                    request = gg_figure.request_payload("abcdefgh", "t", "s1", page, [url])
+                    self.assertEqual(request["images"], [url])
+                    self.assertEqual(gg_figure.normalize_url(url, host=selected["host"],
+                        path_pattern=selected["imagePath"]), url)
+
+    def test_ambiguous_app_candidate_spellings_are_rejected(self):
+        for path in ("/files/a.png?", "/files/a.png?#", "/files/x/%2e%2e/a.png",
+                     "/files/%2E/a.png", "/files/.%2e/a.png", "/files/x//a.png"):
+            with self.subTest(path=path), self.assertRaises(gg_figure.FigureError) as caught:
+                self.read(list_result(candidates=[{
+                    "url": "https://example.gov" + path, "credit": "none"}]))
+            self.assertEqual(caught.exception.reason, "invalid_result")
+
+    def test_invalid_urls(self):
+        for url in ("https://", "https://other.gov/files/a.png",
+                    "https://example.gov/other/a.png", "https://example.gov:8443/files/a.png",
+                    "https://example.gov:443/files/a.png", "https://127.0.0.1/files/a.png",
+                    "https://example.gov/files/" + "a" * 2049,
+                    "https://example.gov/files/a b.png", "https://example.gov/files/한글.png",
+                    "https://example.gov/files/%zz", "http://example.gov/files/a.png",
+                    "https://EXAMPLE.GOV/files/a.png", "https://example.gov/files/a.png#x"):
+            with self.subTest(url=url), self.assertRaises(gg_figure.FigureError) as caught:
+                self.read(list_result(candidates=[{"url": url, "credit": "none"}]))
+            self.assertEqual(caught.exception.reason, "invalid_result")
+
+    def test_invalid_schemas(self):
+        good = list_result()
+        bad = [{key: value for key, value in good.items() if key != missing}
+               for missing in ("candidates", "org", "kogl")]
+        bad += [list_result(**{key: value}) for key, value in (
+            ("candidates", good["candidates"] * 31),
+            ("candidates", good["candidates"] * 2),
+            ("candidates", [dict(good["candidates"][0], alt="site prose")]),
+            ("candidates", [dict(good["candidates"][0], credit="unknown")]),
+            ("candidates", None), ("kogl", 0), ("kogl", 5), ("kogl", "2"),
+            ("kogl", True), ("candidatesTruncated", "false"),
+            ("images", [{"url": IMAGE02}]), ("needsChoice", True),
+            ("status", "pending"), ("slot", None), ("id", "different"), ("v", 2))]
+        for data in bad:
+            with self.subTest(data=data), self.assertRaises(gg_figure.FigureError) as caught:
+                self.read(data)
+            self.assertEqual(caught.exception.reason, "invalid_result")
+
+    def test_empty_request_only_in_list_mode(self):
+        self.assertEqual(gg_figure.request_payload(
+            "abcdefgh", "t1", "s1", PAGE_URL, [], "list")["images"], [])
+        for images in (None, [], [IMAGE02] * 4):
+            with self.subTest(images=images), self.assertRaises(gg_figure.FigureError):
+                gg_figure.request_payload("abcdefgh", "t1", "s1", PAGE_URL, images)
+        with self.assertRaises(gg_figure.FigureError):
+            gg_figure.request_payload("abcdefgh", "t1", "s1", PAGE_URL, [IMAGE02], "list")
+
+
+class TestDirectLists(unittest.TestCase):
+    def test_page_only_and_work_bytes_unchanged(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            work = root / ".gg-work"
+            work.mkdir()
+            (work / "keep").write_bytes(b"old work")
+            before = {p.relative_to(root): p.read_bytes() for p in root.rglob("*") if p.is_file()}
+            for mark, expected in (("open_mark4.png", 4), ("", None),
+                                   ("open_mark1.png open_mark2.png", None)):
+                html = (mark + "<img src='/files/포스터_vf.png'>").encode()
+                with mock.patch.object(gg_figure, "http_get", return_value=(
+                        "https://example.gov/files/article/page.html", 200, {}, html)) as get, \
+                        mock.patch.object(gg_figure, "_guard_work_paths", side_effect=AssertionError):
+                    result = gg_figure.fetch_direct(root,
+                        "https://example.gov/files/article/page.html", [], "s1",
+                        rules=[candidate_rule()], list_mode=True)
+                self.assertEqual(result["kogl"], expected)
+                self.assertEqual(set(result), {"v", "id", "status", "slot", "needsChoice",
+                    "images", "kogl", "org", "candidates", "candidatesTruncated"})
+                self.assertEqual(get.call_count, 1)
+                self.assertEqual(get.call_args.kwargs["kind"], "page")
+                self.assertEqual(before, {p.relative_to(root): p.read_bytes()
+                    for p in root.rglob("*") if p.is_file()})
+
+    def test_list_url_passes_normal_fetch_and_approval(self):
+        for filename in ("a.png", "포스터_vf.png"):
+            with self.subTest(filename=filename), tempfile.TemporaryDirectory() as temp:
+                selected = candidate_rule()
+                page = "https://example.gov/files/article/page.html"
+                html = ("open_mark2.png<img src='/files/" + filename + "'>").encode()
+                def transport(url, **kwargs):
+                    body = html if kwargs["kind"] == "page" else fixture("nongsaro-image02.jpg")
+                    return url, 200, {}, body
+                with mock.patch.object(gg_figure, "http_get", side_effect=transport):
+                    listed = gg_figure.fetch_direct(temp, page, [], "s1",
+                        rules=[selected], list_mode=True)
+                    url = listed["candidates"][0]["url"]
+                    payload = gg_figure.request_payload("abcdefgh", "t", "s1", page, [url])
+                    fetched = gg_figure.fetch_direct(temp, page, payload["images"], "s1",
+                        rules=[selected])
+                self.assertEqual(fetched["images"][0]["verdict"], "approved")
+                self.assertNotIn("candidates", fetched)
+
+    def test_cli_rejects_mixed_and_missing_modes_without_network(self):
+        with tempfile.TemporaryDirectory() as temp, \
+                mock.patch.dict(os.environ, {"KNUAF_GUI": ""}), \
+                mock.patch.object(gg_figure, "http_get") as get:
+            for extra in ([], ["--list", "--image", IMAGE02]):
+                out = io.StringIO()
+                with mock.patch("sys.stdout", out):
+                    code = gg_figure.main(["fetch", temp, "--slot", "s1", "--page", PAGE_URL] + extra)
+                self.assertEqual(code, 2)
+                self.assertEqual(json.loads(out.getvalue())["reason"], "invalid_images")
+            get.assert_not_called()
+
+
+class TestP11Channel(unittest.TestCase):
+    setUp = TestChannel.setUp
+    beat = TestChannel.beat
+    turn = TestChannel.turn
+
+    def fetch(self, *, list_mode=False, sleep=lambda _: None, poll_seconds=0):
+        return gg_figure.fetch_app(self.folder, PAGE_URL, [] if list_mode else [IMAGE02],
+            "s1", environ={"KNUAF_FIGURE_HOME": str(self.home)}, list_mode=list_mode,
+            sleep=sleep, poll_seconds=poll_seconds)
+
+    def test_app_list_reads_candidates_with_selected_local_rule(self):
+        self.beat()
+        self.turn()
+        page = "https://example.gov/files/article/page.html"
+        url = "https://example.gov/files/%ED%8F%AC.png"
+        def respond(_):
+            request = next((self.folder / ".knuaf-gui" / "figure-requests").glob("*.req.json"))
+            payload = json.loads(request.read_text(encoding="utf-8"))
+            self.assertEqual(payload["images"], [])
+            (self.home / "res").mkdir(exist_ok=True)
+            (self.home / "res" / (payload["id"] + ".res.json")).write_text(json.dumps(
+                list_result(payload["id"], candidates=[{"url": url, "credit": "none"}])))
+        with mock.patch.object(gg_figure, "load_rules", return_value=[candidate_rule()]):
+            result = gg_figure.fetch_app(self.folder, page, [], "s1", list_mode=True,
+                environ={"KNUAF_FIGURE_HOME": str(self.home)}, sleep=respond)
+        self.assertEqual(result["candidates"], [{"url": url, "credit": "none"}])
+        self.assertEqual(gg_figure.request_payload("abcdefgh", "turn-1", "s1", page,
+            [result["candidates"][0]["url"]])["images"], [url])
+
+    def test_turn_change_and_removal_cancel_before_timeout(self):
+        self.beat()
+        for remove in (False, True):
+            with self.subTest(remove=remove):
+                self.turn()
+                def change(_):
+                    path = self.home / "turn.json"
+                    if remove:
+                        path.unlink()
+                    else:
+                        data = json.loads(path.read_text(encoding="utf-8"))
+                        data["turnId"] = "next-turn"
+                        path.write_text(json.dumps(data), encoding="utf-8")
+                result = self.fetch(list_mode=True, sleep=change, poll_seconds=60)
+                self.assertEqual(result["reason"], "cancelled")
+
+    def test_app_list_request_empty_and_preserves_work(self):
+        self.beat()
+        self.turn()
+        work = self.folder / ".gg-work"
+        work.mkdir()
+        (work / "keep").write_bytes(b"old result")
+        with mock.patch.object(gg_figure, "load_rules", return_value=[rule()]):
+            result = self.fetch(list_mode=True)
+        self.assertEqual(result["reason"], "timeout")
+        request = next((self.folder / ".knuaf-gui" / "figure-requests").glob("*.req.json"))
+        self.assertEqual(json.loads(request.read_text(encoding="utf-8"))["images"], [])
+        self.assertEqual(list(work.iterdir()), [work / "keep"])
+        self.assertEqual((work / "keep").read_bytes(), b"old result")
+
+    def test_backlog_199_accepts_200_rejects_without_deletion(self):
+        self.beat()
+        self.turn()
+        directory = self.folder / ".knuaf-gui" / "figure-requests"
+        directory.mkdir(parents=True)
+        for n in range(197):
+            path = directory / (str(n) + ".req.json")
+            path.write_bytes(b"other program old record")
+            os.utime(path, (1, 1))
+        (directory / "directory.req.json").mkdir()
+        (directory / "link.req.json").symlink_to(self.home / "never-open-target")
+        before = {p.name: (p.lstat().st_mtime_ns,
+            p.read_bytes() if p.is_file() and not p.is_symlink() else None)
+            for p in directory.iterdir()}
+        self.assertEqual(self.fetch(list_mode=True)["reason"], "timeout")
+        self.assertEqual(len(list(directory.iterdir())), 200)
+        for list_mode in (False, True):
+            with self.subTest(list_mode=list_mode):
+                result = self.fetch(list_mode=list_mode)
+                self.assertEqual(result["reason"], "request_backlog")
+                self.assertIn("200건", result["notice"])
+                self.assertEqual(len(list(directory.iterdir())), 200)
+        after = {p.name: (p.lstat().st_mtime_ns,
+            p.read_bytes() if p.is_file() and not p.is_symlink() else None)
+            for p in directory.iterdir() if p.name in before}
+        self.assertEqual(before, after)
+
+    def test_backlog_unreadable_directory(self):
+        self.beat()
+        self.turn()
+        with mock.patch.object(gg_figure.os, "scandir", side_effect=PermissionError):
+            result = self.fetch(list_mode=True)
+        self.assertEqual(result["reason"], "request_backlog")
+        self.assertEqual(list((self.folder / ".knuaf-gui" / "figure-requests").iterdir()), [])
+
+
+class TestP11Slots(unittest.TestCase):
+    setUp = TestPlace.setUp
+    request_file = TestPlace.request_file
+    result_file = TestPlace.result_file
+    app_result = TestPlace.app_result
+    approved = TestPlace.approved
+
+    def old_success(self):
+        self.manuscript.write_text(MANUSCRIPT + "\n![](app-figure:" + "c" * 64 + ")\n",
+                                   encoding="utf-8")
+        self.result_file(self.app_result([self.approved("a" * 64)]))
+        return self.manuscript.read_bytes()
+
+    def place(self):
+        return gg_figure.place(self.folder, "s1", "가. 품종 선택", home=self.home, environ={})
+
+    def channel(self):
+        (self.home / "figure-channel.json").write_text(json.dumps(
+            {"v": 1, "updatedAt": int(time.time() * 1000)}))
+        (self.home / "turn.json").write_text(json.dumps(
+            {"v": 1, "turnId": "t", "folder": str(self.folder), "startedAt": 0}))
+
+    def test_each_failure_replaces_old_success_before_place(self):
+        for failure in ("no_rules", "no_rule", "no_channel", "stale_heartbeat",
+                        "timeout", "rejected", "exception"):
+            with self.subTest(failure=failure):
+                before = self.old_success()
+                self.channel()
+                env = {"KNUAF_FIGURE_HOME": str(self.home)}
+                with mock.patch.object(gg_figure.secrets, "token_hex", return_value="bbbbbbbbbbbbbbbb"):
+                    if failure in ("no_rules", "no_rule"):
+                        result = gg_figure.fetch_direct(self.folder, PAGE_URL, [IMAGE02], "s1",
+                            rules=[] if failure == "no_rules" else [candidate_rule()])
+                    else:
+                        if failure == "no_channel":
+                            env = {}
+                        if failure == "stale_heartbeat":
+                            (self.home / "figure-channel.json").write_text(json.dumps(
+                                {"v": 1, "updatedAt": 0}))
+                        if failure == "rejected":
+                            (self.home / "res" / "bbbbbbbbbbbbbbbb.res.json").write_text(json.dumps(
+                                {"v": 1, "id": "bbbbbbbbbbbbbbbb", "slot": "s1",
+                                 "status": "rejected", "reason": "rule_missing", "images": []}))
+                        if failure == "exception":
+                            with mock.patch.object(gg_figure, "channel_state", side_effect=RuntimeError), \
+                                    self.assertRaises(RuntimeError):
+                                gg_figure.fetch_app(self.folder, PAGE_URL, [IMAGE02], "s1", environ=env)
+                            result = None
+                        else:
+                            result = gg_figure.fetch_app(self.folder, PAGE_URL, [IMAGE02], "s1",
+                                environ=env, poll_seconds=0)
+                    if result is not None:
+                        self.assertNotEqual(result["status"], "done")
+                req = gg_figure._read_request(self.folder, "s1")
+                self.assertNotEqual(req["reqId"], "req-0001")
+                self.assertEqual(self.manuscript.read_bytes(), before)
+                self.assertEqual(self.place()["status"], "needs_photo")
+                self.assertNotIn("app-figure:" + "a" * 64, self.manuscript.read_text(encoding="utf-8"))
+                self.assertIn("app-figure:" + "c" * 64, self.manuscript.read_text(encoding="utf-8"))
+                (self.home / "res" / "bbbbbbbbbbbbbbbb.res.json").unlink(missing_ok=True)
+
+    def test_slot_written_before_channel_rules_request_and_get(self):
+        self.old_success()
+        self.channel()
+        def check(*args, **kwargs):
+            self.assertNotEqual(gg_figure._read_request(self.folder, "s1")["reqId"], "req-0001")
+        original = gg_figure._write_json_atomic
+        def write(path, data):
+            if str(path).endswith(".req.json"):
+                check()
+            return original(path, data)
+        with mock.patch.object(gg_figure, "channel_state", side_effect=lambda *a: (check(), (True, ""))[1]), \
+                mock.patch.object(gg_figure, "_write_json_atomic", side_effect=write):
+            gg_figure.fetch_app(self.folder, PAGE_URL, [IMAGE02], "s1",
+                environ={"KNUAF_FIGURE_HOME": str(self.home)}, poll_seconds=0)
+        self.old_success()
+        def get(*args, **kwargs):
+            check()
+            raise gg_figure.FigureError("timeout")
+        with mock.patch.object(gg_figure, "load_rules", side_effect=lambda *a: (check(), [rule()])[1]), \
+                mock.patch.object(gg_figure, "http_get", side_effect=get):
+            gg_figure.fetch_direct(self.folder, PAGE_URL, [IMAGE02], "s1")
+
+    def test_write_failure_persists_blocks_place_and_recovery_exposes_known_gap(self):
+        before = self.old_success()
+        with mock.patch.object(gg_figure, "_write_json_atomic", side_effect=OSError), \
+                mock.patch.object(gg_figure, "http_get") as get:
+            result = gg_figure.fetch_direct(self.folder, PAGE_URL, [IMAGE02], "s1", rules=[rule()])
+            self.assertEqual(result["reason"], "slot_record_failed")
+            app_result = gg_figure.fetch_app(self.folder, PAGE_URL, [IMAGE02], "s1",
+                environ={"KNUAF_FIGURE_HOME": str(self.home)}, poll_seconds=0)
+            self.assertEqual(app_result["reason"], "slot_record_failed")
+            self.assertEqual(self.manuscript.read_bytes(), before)
+            self.assertEqual(self.place()["status"], "needs_photo")
+            get.assert_not_called()
+        self.assertFalse((self.folder / ".knuaf-gui").exists())
+        self.manuscript.write_bytes(before)
+        self.assertEqual(self.place()["status"], "placed")  # r6가 명시한 일시 실패 틈.
+        req = gg_figure._read_request(self.folder, "s1")
+        self.assertEqual((req["reqId"], req["mode"]), ("req-0001", "app"))
+        self.assertIsInstance(req["usedAt"], int)
+
+    def test_slot_directory_and_link_are_treated_as_absent(self):
+        manuscript = self.old_success()
+        path = gg_figure._request_record_path(self.folder, "s1")
+        old = path.read_bytes()
+        path.unlink()
+        path.mkdir()
+        self.assertEqual(self.place()["status"], "needs_photo")
+        self.assertIsNone(gg_figure._read_request(self.folder, "s1"))
+        self.assertNotIn("app-figure:" + "a" * 64, self.manuscript.read_text(encoding="utf-8"))
+        path.rmdir()
+        # 각 비정상 기록을 사진 자리 없는 같은 원고에서 독립적으로 검사한다.
+        self.manuscript.write_bytes(manuscript)
+        target = self.home / "old-slot.json"
+        target.write_bytes(old)
+        path.symlink_to(target)
+        self.assertEqual(self.place()["status"], "needs_photo")
+        self.assertEqual(target.read_bytes(), old)
+        self.assertIsNone(gg_figure._read_request(self.folder, "s1"))
+        text = self.manuscript.read_text(encoding="utf-8")
+        self.assertIn("※ 이 자리에 품종 선택 사진 추가 필요", text)
+        self.assertNotIn("app-figure:" + "a" * 64, text)
+        self.assertIn("app-figure:" + "c" * 64, text)
+
+    def test_done_slot_is_not_rewritten_at_dispatch_end(self):
+        self.old_success()
+        def get(url, **kwargs):
+            body = ('open_mark2.png<img src="' + IMAGE02 + '">').encode() \
+                if kwargs["kind"] == "page" else fixture("nongsaro-image02.jpg")
+            return url, 200, {}, body
+        original = gg_figure._write_request
+        with mock.patch.object(gg_figure, "_write_request", wraps=original) as record, \
+                mock.patch.object(gg_figure, "load_rules", return_value=[rule()]), \
+                mock.patch.object(gg_figure, "http_get", side_effect=get), \
+                mock.patch.dict(os.environ, {"KNUAF_GUI": ""}), mock.patch("sys.stdout"):
+            code = gg_figure.main(["fetch", str(self.folder), "--slot", "s1", "--page", PAGE_URL,
+                                   "--image", IMAGE02])
+        self.assertEqual(code, 0)
+        self.assertEqual(record.call_count, 1)
+        req = gg_figure._read_request(self.folder, "s1")
+        self.assertTrue(req["reqId"].startswith("direct-"))
+        self.assertNotIn("usedAt", req)
+        self.assertEqual(self.place()["status"], "placed")
+        self.assertEqual(gg_figure._read_request(self.folder, "s1")["reqId"], req["reqId"])
+
+    def test_lists_all_outcomes_preserve_slot_results_and_manuscript(self):
+        for outcome in ("done", "rejected", "timeout", "cancelled"):
+            with self.subTest(outcome=outcome):
+                before = self.old_success()
+                self.channel()
+                paths = [gg_figure._request_record_path(self.folder, "s1"),
+                         self.home / "res" / "req-0001.res.json"]
+                old = [p.read_bytes() for p in paths]
+                def result(*args, **kwargs):
+                    if outcome == "done":
+                        return list_result()
+                    if outcome == "rejected":
+                        return gg_figure._blocked("rule_missing")
+                    return None
+                def sleep(_):
+                    (self.home / "turn.json").unlink()
+                with mock.patch.object(gg_figure, "read_result", side_effect=result):
+                    fetched = gg_figure.fetch_app(self.folder, PAGE_URL, [], "s1", list_mode=True,
+                        environ={"KNUAF_FIGURE_HOME": str(self.home)},
+                        poll_seconds=60 if outcome == "cancelled" else 0, sleep=sleep)
+                self.assertEqual(fetched.get("reason", fetched["status"]),
+                    {"done": "done", "rejected": "rule_missing", "timeout": "timeout",
+                     "cancelled": "cancelled"}[outcome])
+                self.assertEqual([p.read_bytes() for p in paths], old)
+                self.assertEqual(self.manuscript.read_bytes(), before)
+                self.assertEqual(self.place()["status"], "placed")
+
+
+class TestP11SlotLock(unittest.TestCase):
+    setUp = TestPlace.setUp
+    request_file = TestPlace.request_file
+    result_file = TestPlace.result_file
+    app_result = TestPlace.app_result
+    approved = TestPlace.approved
+    old_success = TestP11Slots.old_success
+    place = TestP11Slots.place
+
+    def test_new_fetch_between_initial_read_and_lock_never_restores_old_id(self):
+        before = self.old_success()
+        acquire = gg_figure._acquire_slot_lock
+        latest = {}
+        def interleave(folder, slot):
+            # 잠금 획득 직전 새 받기를 끝내어 보고된 순서를 결정적으로 고정한다.
+            with mock.patch.object(gg_figure, "_acquire_slot_lock", side_effect=acquire):
+                latest["result"] = gg_figure.fetch_app(folder, PAGE_URL, [IMAGE02], slot, environ={})
+                latest["record"] = gg_figure._read_request(folder, slot)
+            return acquire(folder, slot)
+        with mock.patch.object(gg_figure, "_acquire_slot_lock", side_effect=interleave):
+            result = self.place()
+        self.assertEqual(latest["result"]["reason"], "no_channel")
+        self.assertNotEqual(latest["record"]["reqId"], "req-0001")
+        self.assertEqual(gg_figure._read_request(self.folder, "s1"), latest["record"])
+        self.assertEqual(result["status"], "needs_photo")
+        self.assertIn("새 요청 결과", result["notice"])
+        self.assertNotIn("app-figure:" + "a" * 64, self.manuscript.read_text(encoding="utf-8"))
+        self.assertIn("app-figure:" + "c" * 64, self.manuscript.read_text(encoding="utf-8"))
+        self.assertNotEqual(self.manuscript.read_bytes(), before)
+        self.assertFalse(gg_figure._request_record_path(self.folder, "s1").with_suffix(".json.lock").exists())
+
+    def test_used_at_write_and_insertion_hold_lock_against_competing_fetch(self):
+        self.old_success()
+        write = gg_figure._write_json_atomic
+        competing = []
+        def interleave(path, payload):
+            if "usedAt" in payload:
+                competing.append(gg_figure.fetch_app(self.folder, PAGE_URL, [IMAGE02], "s1", environ={}))
+            return write(path, payload)
+        with mock.patch.object(gg_figure, "_write_json_atomic", side_effect=interleave), \
+                mock.patch.object(gg_figure, "channel_state") as channel:
+            result = self.place()
+        # place가 먼저 잠금을 잡음: 새 fetch는 선기록/전송 없이 명시 실패한다.
+        self.assertEqual(competing[0]["reason"], "slot_record_failed")
+        channel.assert_not_called()
+        self.assertEqual(result["status"], "placed")
+        self.assertEqual(gg_figure._read_request(self.folder, "s1")["reqId"], "req-0001")
+        newest = gg_figure.fetch_app(self.folder, PAGE_URL, [IMAGE02], "s1", environ={})
+        self.assertEqual(newest["reason"], "no_channel")
+        self.assertNotEqual(gg_figure._read_request(self.folder, "s1")["reqId"], "req-0001")
+
+    def test_nine_minute_lock_closes_both_paths_with_retry_notice(self):
+        before = self.old_success()
+        record = gg_figure._request_record_path(self.folder, "s1")
+        lock = record.with_name(record.name + ".lock")
+        lock.write_bytes(b"recent owner")
+        os.utime(lock, (1000, 1000))
+        old_record = record.read_bytes()
+        with mock.patch.object(gg_figure.time, "time", return_value=1540), \
+                mock.patch.object(gg_figure, "channel_state") as channel:
+            fetched = gg_figure.fetch_app(self.folder, PAGE_URL, [IMAGE02], "s1", environ={})
+            self.assertEqual(fetched["reason"], "slot_record_failed")
+            self.assertIn("잠시 뒤 다시 시도", fetched["notice"])
+            self.assertEqual(self.manuscript.read_bytes(), before)
+            placed = self.place()
+        channel.assert_not_called()
+        self.assertEqual(placed["status"], "needs_photo")
+        self.assertIn("잠시 뒤 다시 시도", placed["notice"])
+        self.assertEqual(record.read_bytes(), old_record)
+        self.assertEqual(lock.read_bytes(), b"recent owner")
+        self.assertEqual(lock.stat().st_mtime_ns, 1_000_000_000_000)
+        self.assertNotIn("app-figure:" + "a" * 64, self.manuscript.read_text(encoding="utf-8"))
+        self.assertFalse((self.folder / ".knuaf-gui").exists())
+
+    def test_eleven_minute_lock_is_recovered_for_fetch_and_place(self):
+        for action in ("fetch", "place"):
+            with self.subTest(action=action):
+                self.old_success()
+                record = gg_figure._request_record_path(self.folder, "s1")
+                lock = record.with_name(record.name + ".lock")
+                lock.write_bytes(b"dead owner")
+                os.utime(lock, (1000, 1000))
+                with mock.patch.object(gg_figure.time, "time", return_value=1660):
+                    if action == "fetch":
+                        result = gg_figure.fetch_app(self.folder, PAGE_URL, [IMAGE02], "s1", environ={})
+                        self.assertEqual(result["reason"], "no_channel")
+                        self.assertNotEqual(gg_figure._read_request(self.folder, "s1")["reqId"], "req-0001")
+                    else:
+                        self.assertEqual(self.place()["status"], "placed")
+                self.assertFalse(lock.exists())
+                self.assertEqual(list(record.parent.glob("*.stale-*")), [])
+
+    def test_two_stale_recoverers_only_one_acquires(self):
+        self.old_success()
+        record = gg_figure._request_record_path(self.folder, "s1")
+        path = record.with_name(record.name + ".lock")
+        path.write_bytes(b"dead owner")
+        os.utime(path, (1000, 1000))
+        rename = Path.rename
+        attempts = []
+        held = set()
+        def os_lock(fd):
+            if held:
+                raise BlockingIOError("other reclaimer holds stale inode")
+            held.add(fd)
+        def race(source, target):
+            # 둘 다 stale 이름을 연 시점에 두 번째 회수자를 진입시킨다.
+            with self.assertRaises(OSError):
+                gg_figure._acquire_slot_lock(self.folder, "s1")
+            attempts.append("loser")
+            return rename(source, target)
+        with mock.patch.object(gg_figure.time, "time", return_value=1660), \
+                mock.patch.object(gg_figure.gg_update, "_os_lock", side_effect=os_lock), \
+                mock.patch.object(gg_figure.gg_update, "_os_unlock", side_effect=held.remove), \
+                mock.patch.object(Path, "rename", autospec=True, side_effect=race) as moved:
+            winner = gg_figure._acquire_slot_lock(self.folder, "s1")
+        try:
+            self.assertEqual(attempts, ["loser"])
+            self.assertEqual(moved.call_count, 1)
+            self.assertEqual(path.stat().st_ino, os.fstat(winner[1]).st_ino)
+            with self.assertRaises(OSError):
+                gg_figure._acquire_slot_lock(self.folder, "s1")
+        finally:
+            gg_figure._release_slot_lock(winner)
+        self.assertFalse(path.exists())
+
+    def test_stale_rename_failure_does_not_retry_creation(self):
+        self.old_success()
+        path = gg_figure._request_record_path(self.folder, "s1").with_suffix(".json.lock")
+        path.write_bytes(b"dead owner")
+        os.utime(path, (1000, 1000))
+        with mock.patch.object(gg_figure.time, "time", return_value=1660), \
+                mock.patch.object(Path, "rename", side_effect=FileNotFoundError) as moved, \
+                mock.patch.object(gg_figure.os, "open", wraps=os.open) as opened:
+            with self.assertRaises(OSError):
+                gg_figure._acquire_slot_lock(self.folder, "s1")
+        moved.assert_called_once()
+        self.assertEqual(sum(bool(call.args[1] & os.O_EXCL) for call in opened.call_args_list), 1)
+        self.assertEqual(path.read_bytes(), b"dead owner")
+
+    def test_write_error_releases_lock_and_different_slot_is_independent(self):
+        self.old_success()
+        lock = gg_figure._acquire_slot_lock(self.folder, "s1")
+        try:
+            result = gg_figure.fetch_app(self.folder, PAGE_URL, [IMAGE02], "s2", environ={})
+            self.assertEqual(result["reason"], "no_channel")
+            self.assertEqual(gg_figure._read_request(self.folder, "s2")["slot"], "s2")
+        finally:
+            gg_figure._release_slot_lock(lock)
+        with mock.patch.object(gg_figure, "_write_json_atomic", side_effect=OSError):
+            result = gg_figure.fetch_app(self.folder, PAGE_URL, [IMAGE02], "s1", environ={})
+        self.assertEqual(result["reason"], "slot_record_failed")
+        self.assertFalse(lock[0].exists())
+        self.assertEqual(gg_figure._read_request(self.folder, "s1")["reqId"], "req-0001")
 
 
 if __name__ == "__main__":
