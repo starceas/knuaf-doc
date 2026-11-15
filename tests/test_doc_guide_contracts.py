@@ -344,7 +344,10 @@ class InitUsesSelectedFolder(unittest.TestCase):
 
         proc = _cli("init", str(root))
         self.assertEqual(0, proc.returncode, proc.stdout + proc.stderr)
-        self.assertEqual({"원고.md", "자료", "project.json", ".gg-lock"},
+        # init은 곁파일 `.knuaf-notices.json`까지 쓴다(등록부 §_SIDECAR_WRITERS).
+        # 목록을 그대로 못박아 두면 예상 밖 파일이 생길 때 여기서 걸린다.
+        self.assertEqual({"원고.md", "자료", "project.json", ".gg-lock",
+                          ".knuaf-notices.json"},
                          {p.name for p in root.iterdir()})
         for rel, text in files.items():
             self.assertEqual(text, (root / rel).read_text(encoding="utf-8"))

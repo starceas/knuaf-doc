@@ -1,6 +1,8 @@
 # 낙농전공 문서·근거 모듈 (모듈 0.1.0)
 
-`dairy` 전공 모듈은 공용 작성 계약(`gg_major_contract`)에 선언된 전공 모듈이다. 이 묶음은 **질문 목록·문서 계획·근거 검토** 단계와 장별 논문 본문 초안(글)까지 지원한다. 서식 본문 파일(DOCX/HWPX), 학교 28시트 엑셀 사본 채우기, 축산 재무 계산은 공용 출력 규칙 B가 `unsupported_output`으로 거부한다.
+`dairy` 전공 모듈은 공용 작성 계약(`gg_major_contract`)에 선언된 전공 모듈이다. 이 묶음은 **질문 목록·문서 계획·근거 검토** 단계와 장별 논문 본문 초안(글)까지 지원한다. 학교 28시트 엑셀은 **원본을 복제해 입력 칸만 비우는 빈 사본**까지 연다(2판). 서식 본문 파일(DOCX/HWPX), 엑셀 값 채우기, 축산 재무 계산은 공용 출력 규칙 B가 `unsupported_output`으로 거부한다.
+
+> 이 28시트 양식은 **한우(번식·비육·일관) 견본**이다. 젖소(착유) 학생의 학교 양식은 원본이 없어 지원하지 않는다.
 
 ## 1. 지원 경계
 
@@ -14,7 +16,9 @@
 | 낙농전공 벤치마크 팩 | `empty_slot` | `references/benchmark-packs/majors/dairy/manifest.json` (승격 팩 없음) |
 | 장별 논문 본문 초안(글) | 지원 | 유효한 전공 바인딩일 때; [작성 규칙](../major-body-draft.md) 참조 |
 | 서식 논문 본문 파일(DOCX/HWPX) 생성 | 미지원 | 공용 가드 B에서 `unsupported_output`으로 차단 |
+| 학교 28시트 엑셀 **빈 사본** | 지원 | `gg_excel_template.py clear --major dairy --source <학교 원본>` + [corrections/DAIRY-CLEAR.md](corrections/DAIRY-CLEAR.md). 원본 수식·병합은 그대로, 입력 칸 1,070개만 비운다(`blank_template`) |
 | 학교 28시트 엑셀 자동 작성·수식 보정 | 미지원 | 공용 가드 B에서 `unsupported_output`으로 차단 (학생 직접 작성 원칙) |
+| 학교 28시트 엑셀 값 채우기(`gg_excel_fill`) | 미지원 | `FILL_CLOSED_MAJORS`에 `dairy` — 입구에서 `fill_unsupported_for_major`, 출력 없음 |
 | 축산 재무 계산 (`dairy_cattle_milk_cash`, `hanwoo_herd_cash`) | 미지원 | 공용 가드 B에서 `unsupported_output`으로 차단 |
 
 낙농 전용 명령(예: `gg.py major-plan`)은 표준 출력으로 JSON만 내고 파일을 임의로 만들지 않는다. 공용 본문 초안 저장은 [전공별 본문 초안(글)](../major-body-draft.md)의 DRAFT 경계가 있는 `sections/*.md`와 `apply` 절차로 구분한다.

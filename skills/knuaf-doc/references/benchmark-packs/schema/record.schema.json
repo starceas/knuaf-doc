@@ -12,6 +12,9 @@
     "metrics": "객체. kind별 핵심 수치. 값은 원본 표의 문자열 그대로 저장하며(십진 문자열), 빈 칸은 null. 단위·범위(~)·비수치 텍스트가 섞여 있을 수 있으므로 gg_finance.num()으로 강제 변환하지 말고 레코드마다 확인한다.",
     "cost_items": "객체 또는 null. crop_income_cost_breakdown, crop_income_regional에서만 채워진다. 아래 cost_items_warning 참고.",
     "price_character": "문자열 또는 null. 가격의 성격 표기 (예: gross_receipts_includes_farmgate_and_byproduct).",
+    "source": "선택 객체(2025 소득 팩부터, 레코드마다 있음): 이 레코드가 어느 조사·문서에서 왔는지. 키: publisher(발행 기관), survey(조사 체계 id, 예 rda.income·kostat.production_cost), survey_label(조사 이름), aggregation_group(집계 묶음 id = survey + '.' + data_year, 예 rda.income.2025·kostat.production_cost.2025), data_year(조사 연도, 정수), published(발간 연-월), document(자료집 이름), section·table(원문 장·표 제목), source_url(원문 PDF 내려받기 주소). 계약: aggregation_group이 다른 레코드는 합산·평균·순위 비교의 같은 행에 묶지 않는다(같은 팩 manifest의 aggregation_rule·source_mix_warning과 같은 규칙). 2024 팩에는 이 객체가 없다 — 없으면 팩 manifest의 출처 서술을 따른다.",
+    "cell_provenance": "선택 객체(2025 소득 팩부터): 금액·지표 칸 중 원문 표기를 따로 밝혀야 하는 칸만 칸 이름 → {cell, derived, note?}. cell은 printed(원문에 인쇄된 값)·blank(원문 공란, 0으로 채우지 않음) 등, derived는 원문 값을 계산해 만든 칸인지(true/false), note는 사유. 여기 없는 칸은 원문 인쇄값 그대로다.",
+    "crosscheck": "선택 객체(조건부): 같은 레코드가 자료집의 다른 표(예 Ⅱ-1 총괄표)에도 실려 있을 때만 있다 — 2025 전국 팩 102/104건, 지역 팩 0건. 키: source(대조한 표), pdf_page, 대조한 지표값(quantity·gross_receipts·operating_cost·income·income_rate_pct 중 그 표에 있는 것, 원문 문자열), agree(이 레코드 값과 모두 일치하면 true).",
     "locator": "객체. {pdf_page, printed_page, section, table, row_label}. 원본 PDF 페이지 추적용.",
     "caveats": "문자열 배열. 지역별 자료는 '통계적 유의성 없음' 같은 주의문이 필수로 들어간다.",
     "extraction": "객체. {status, confidence, notes}. Gemini 추출 메타데이터."
@@ -24,7 +27,7 @@
     "category": "문자열. 원문 표의 분류명 (예: 식량작물, 유지작물, 부산물 비율 — kind에 따라 표 이름을 그대로 담기도 한다).",
     "major_ids": "문자열 배열. 이 작목이 속하는 전공 ID 목록. 비어 있을 수 있다."
   },
-  "cost_items_warning": "national 소득자료집(crop_income_cost_breakdown)과 regional 지역별자료(crop_income_regional)는 개념이 같은 항목도 키 이름이 다르다 (예: fertilizer_inorganic vs fertilizer_mineral, hired_labor vs labor_hired). gg_rda_lookup.py는 cost_items를 불투명 통과(passthrough) 딕셔너리로만 다루고 키 이름을 하드코딩해 두 팩을 섞지 않는다.",
+  "cost_items_warning": "national 소득자료집(crop_income_cost_breakdown)과 regional 지역별자료(crop_income_regional)는 개념이 같은 항목도 키 이름이 다르다 (예: fertilizer_inorganic vs fertilizer_mineral, hired_labor vs labor_hired). gg_rda_lookup.py는 cost_items를 불투명 통과(passthrough) 딕셔너리로만 다루고 키 이름을 하드코딩해 두 팩을 섞지 않는다. orchard_establishment·mushroom_spawn·mushroom_substrate·disinfectant·bee_colony·bee_feed·beekeeping_transport_overwinter·bee_disease_control은 원문 표에만 있고 팩에 칸이 없던 행을 2026-11-13에 세목으로 추가한 키다. 모두 이미 인쇄된 중간재 계 안에 들어 있던 금액이므로 중간재 계(intermediate_cost_total)·경영비·소득 값은 추가 전과 같다. 새 키를 세목 합에 넣어 계와 맞출 때는 작목군별로 나눠 더한다: 과수 전용 집합(RDA_INTERMEDIATE_FRUIT)에는 orchard_establishment만 더하고, 버섯 3키(mushroom_spawn·mushroom_substrate·disinfectant)와 양봉 4키(bee_colony·bee_feed·beekeeping_transport_overwinter·bee_disease_control)는 해당 작목의 중간재 합산 규칙에 포함한다. 값이 \"-\"인 칸은 수치 0이 아니라 비수치 결측 표기이므로 합산·비교에서 제외한다.",
   "basis_by_kind_family": {
     "income_family_and_production_stat": "crop_income, crop_income_cost_breakdown, crop_income_regional, production_stat: {year, area_unit, quantity_unit, currency, crops_per_year}",
     "official_market_price": "위와 같은 모양이지만 대부분 null: {year, area_unit:null, quantity_unit, currency, crops_per_year:null}",
@@ -41,13 +44,13 @@
     "crop_income_cost_breakdown": {
       "출처": "소득자료집 작목별 경영비 상세",
       "metrics": "main_product_value, byproduct_value, value_added, value_added_rate_pct, farmgate_price 등",
-      "cost_items": "약 20개 키: seed_seedling, fertilizer_inorganic, fertilizer_organic, pesticide, utilities_power, other_materials, small_tools, large_machinery_depreciation, farming_facility_depreciation, repair_maintenance, other_costs, intermediate_cost_total, machinery_facility_rent, land_rent, consigned_farming, hired_labor, unpaid_family_labor, working_capital_interest, fixed_capital_interest, land_capital_interest, production_cost_total"
+      "cost_items": "약 24개 키: orchard_establishment(과수원조성비, 원문 표에 그 행이 있을 때만), seed_seedling, fertilizer_inorganic, fertilizer_organic, pesticide, utilities_power, other_materials, small_tools, large_machinery_depreciation, farming_facility_depreciation, repair_maintenance, other_costs, intermediate_cost_total, machinery_facility_rent, land_rent, consigned_farming, hired_labor, unpaid_family_labor, working_capital_interest, fixed_capital_interest, land_capital_interest, production_cost_total, vehicle(자동차비), production_management(생산관리비). vehicle·production_management는 별지1 kostat 인용 쌀·콩 2건에만 있다 — 이 2건은 원문에 '중간재 계' 행이 없어 intermediate_cost_total이 빠진다"
     },
     "crop_income_regional": {
       "출처": "지역별 소득자료",
       "region.level": "provincial, sido 필수",
       "metrics": "crop_income_cost_breakdown과 유사하나 quantity_unit이 metrics 안에도 중복 기재될 수 있음",
-      "cost_items": "약 18개 키, national과 이름 다름: main_product_value, byproduct_value, seed_and_seedling, fertilizer_mineral, fertilizer_organic, pesticide, utilities_fuel, other_materials, small_tools, depreciation_large_tools, depreciation_facilities, repair_maintenance, other_costs, rent_machinery_facility, rent_land, consigned_farming, labor_hired, labor_own",
+      "cost_items": "약 33개 키(2024 28 + 2025에만 있는 5), national과 이름 다름: main_product_value, byproduct_value, orchard_establishment(과수원조성비), seed_and_seedling, fertilizer_mineral, fertilizer_organic, pesticide, utilities_fuel, vehicle, other_materials, small_tools, depreciation_large_tools, depreciation_facilities, repair_maintenance, production_management, other_costs, rent_machinery_facility, rent_land, consigned_farming, labor_hired, labor_own, intermediate_cost_total(중간재 계, 2025 rda 41건), working_capital_interest(유동자본용역비), fixed_capital_interest(고정자본용역비), land_capital_interest(토지자본용역비), production_cost_total(생산비 계). 이 5키는 2025 지역 팩에서 새로 생겼다(2024 팩에는 없음). intermediate_cost_total은 rda 레코드 41건에만 있고, 나머지 4키(working·fixed·land_capital_interest, production_cost_total)는 rda 41건과 별지1 kostat 인용 쌀 8건 모두에 있다(kostat 원문 표에는 '중간재 계' 행이 없다). 작목별 조건부 키: mushroom_spawn(종균비), mushroom_substrate(배지원료비), disinfectant(소독비) — 버섯 레코드, bee_colony(봉군비), bee_feed(사료비), beekeeping_transport_overwinter(이동사육및월동비), bee_disease_control(꿀벌방역비) — 양봉 레코드. conditional 키는 해당 작목에만 나타난다.",
       "caveats_필수": "통계적 유의성 없음 계열 문구 포함"
     },
     "wholesale_price_series": {

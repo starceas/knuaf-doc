@@ -365,13 +365,20 @@ def main(argv=None):
             print(f"error: {err}", file=sys.stderr)
         return 1
 
-    status = 0
-    if args.write_manifest:
-        status = cmd_write_manifest(root, provenance, source_roots)
-    elif args.check:
-        status = cmd_check(root, provenance)
-    elif args.out:
-        status = cmd_export(root, provenance, args.out, args.receipt)
+    # An unanswerable "is this file tracked?" must never become a ledger.
+    # Stopping here leaves the existing manifest untouched (C-01).
+    try:
+        status = 0
+        if args.write_manifest:
+            status = cmd_write_manifest(root, provenance, source_roots)
+        elif args.check:
+            status = cmd_check(root, provenance)
+        elif args.out:
+            status = cmd_export(root, provenance, args.out, args.receipt)
+    except check_bundle.TrackingUnavailable as error:
+        print("error: 추적 여부를 확인할 수 없어 장부를 만들지 않았습니다 — "
+              + str(error), file=sys.stderr)
+        return 1
     return status
 
 

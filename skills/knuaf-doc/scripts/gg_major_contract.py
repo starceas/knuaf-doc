@@ -698,10 +698,21 @@ OUTPUT_GUIDANCE_UNSUPPORTED = (
     "해당 전공의 지원 출력인지 확인한 뒤 지원되는 출력으로 다시 요청하세요."
 )
 
+OUTPUT_GUIDANCE_FILL_CLOSED = (
+    "재무 엑셀은 빈 사본까지만 지원합니다. 학교 원본을 "
+    "gg_excel_template.py clear로 복제해 입력 칸만 비우고, 값은 학생이 "
+    "자기 엑셀에서 직접 넣습니다. 채우기·파이썬 계산은 지원하지 않습니다."
+)
+
 _UNSUPPORTED_OUTPUT_REASONS = frozenset({
     "unsupported_output",
     "unsupported_finance_profile",
 })
+
+# 식량작물(2026-11-12)·낙농(2026-11-13) 2판은 빈 사본까지만 연다: 계약상
+# 채우기와 파이썬 계산은 미지원이므로 값 채우기 입구에서 거절한다. 표에 없는
+# 전공의 채우기 경로는 그대로다.
+FILL_CLOSED_MAJORS = frozenset({"food_crops", "dairy"})
 
 # 특용작물전공 제출 엑셀은 교수님 양식(X01, 대식물 계정이 필요하면 X02)을
 # 틀로 복제해 값만 채운다(사용자 결정 2026-10-28). 스펙에서 17시트를 새로
@@ -709,11 +720,34 @@ _UNSUPPORTED_OUTPUT_REASONS = frozenset({
 # 이 결정과 무관하다.
 LEGACY_GENERATOR_CLOSED_MAJORS = frozenset({"specialty_crops"})
 
+# 전공별 학교 엑셀 프로필: 16시트 식량작물·28시트 낙농 양식은 자기 원본
+# 구조를 쓰고, 특용작물은 17시트 양식 2판이 기본이다(새 논문). 1판은 이미 쓴
+# 논문이 `--source`로 그 파일을 대는 경로로 남고, 표에 없는 전공은 지금까지의
+# 17시트 공용 양식 문자열 그대로다(바이트 불변).
+MODULE_WORKBOOK_PROFILE = MappingProxyType({
+    "food_crops": "food_crops_16_sheet_v1",
+    "dairy": "dairy_hanwoo_28_sheet_v1",
+    "specialty_crops": "school_17_sheet_v2",
+})
+
+
+def default_workbook_profile(authorization) -> str:
+    """The workbook profile a major's tools use when the caller names none."""
+    return MODULE_WORKBOOK_PROFILE.get(
+        getattr(authorization, "major_id", None), "school_17_sheet_v1")
+
 OUTPUT_GUIDANCE_TEMPLATE_ROUTE = (
     "특용작물전공 엑셀은 교수님 양식(X01, 대식물 계정이 필요하면 X02) 기준입니다. "
     "17시트를 새로 만드는 생성기는 쓰지 않습니다. 양식 원본을 복제해 값만 채우세요: "
     "gg_excel_template.py inspect → clear → gg_excel_fill.py "
     "(절차: references/excel-template.md '경로 1. 학과 원본 템플릿 우선 경로')."
+)
+
+# 학생이 올린 재무 엑셀이 학교 양식과 모양이 다를 때. 무엇이 문제이고 무엇을
+# 하면 되는지만 말한다 — 내부 이름(프로필·감사·지문·판)은 쓰지 않는다.
+OUTPUT_GUIDANCE_STRUCTURE_MISMATCH = (
+    "올린 재무 엑셀이 학교 양식과 모양이 달라 이어서 고칠 수 없어요. "
+    "학교에서 받은 원본 재무 엑셀을 새로 받아, 값만 옮겨 적은 뒤 다시 해 주세요."
 )
 
 
@@ -726,7 +760,11 @@ def require_template_route(authorization, profile) -> None:
     validation or write.  Other profiles and other majors are unchanged."""
     if not isinstance(authorization, OutputAuthorization):
         raise OutputHeldError("finance_profile_authorization_required")
-    if (profile == "school_17_sheet_v1"
+    # 양식 판이 늘어도 규칙은 같다 — 학과 제출본은 교수님 양식 복제여야 하고,
+    # 17시트를 새로 쓰는 생성기는 어느 판이든 입구에서 막는다.
+    from gg_school_excel import profile_supports
+
+    if (profile_supports(profile)
             and authorization.major_id in LEGACY_GENERATOR_CLOSED_MAJORS):
         raise OutputHeldError("specialty_template_route_required",
                               major_id=authorization.major_id)
@@ -749,8 +787,12 @@ def held_guidance(reason, error=None):
         )
     if str(reason) in _UNSUPPORTED_OUTPUT_REASONS:
         return OUTPUT_GUIDANCE_UNSUPPORTED
+    if str(reason) == "fill_unsupported_for_major":
+        return OUTPUT_GUIDANCE_FILL_CLOSED
     if str(reason) == "specialty_template_route_required":
         return OUTPUT_GUIDANCE_TEMPLATE_ROUTE
+    if str(reason) == "workbook_structure_mismatch":
+        return OUTPUT_GUIDANCE_STRUCTURE_MISMATCH
     return OUTPUT_GUIDANCE
 
 
@@ -879,6 +921,25 @@ def require_workbook_profile(authorization, profile: str) -> None:
     if not declared or not supported:
         raise OutputHeldError("unsupported_finance_profile",
                               major_id=module.major_id, profile=profile)
+
+
+def require_any_workbook_profile(authorization, profiles) -> str:
+    """Require the major to declare and support at least one of ``profiles``.
+
+    Tools that work on whatever school form the caller hands them (print
+    layout, formula patch) cannot name one profile: the same code serves
+    every form the major declares.  The returned name is the first match in
+    ``profiles`` order.  This grants no output authority.
+    """
+    module = _authorized_workbook_module(authorization)
+    for profile in profiles:
+        declared = profile in module.workbook_profiles
+        supported = any(cap.profile == profile and cap.status == "supported"
+                        for cap in module.finance_capabilities)
+        if declared and supported:
+            return profile
+    raise OutputHeldError("unsupported_finance_profile",
+                          major_id=module.major_id, profile=list(profiles))
 
 
 def explicit_major_ids(spec):
@@ -1648,6 +1709,12 @@ SPECIALTY_CROPS_MODULE = declare_module(
             "스펙으로 17시트를 새로 만드는 레거시 생성기는 입구에서 막음",
         ),
         FinanceCapability(
+            profile="school_17_sheet_v2",
+            status="supported",
+            reason="새 양식(투자 3줄·연도별 10a당 목표) 복제·채우기·검증 경로; "
+            "레거시 생성기도 v2 출력을 내고 입구에서 막힘",
+        ),
+        FinanceCapability(
             profile="composite_multi_crop",
             status="unsupported",
             reason="복합·가공·보조금 산식은 기존 계약상 미지원",
@@ -1667,7 +1734,7 @@ SPECIALTY_CROPS_MODULE = declare_module(
         "school_excel_workbook",
         "finance_single_annual_cash_v1",
     ),
-    workbook_profiles=("school_17_sheet_v1",),
+    workbook_profiles=("school_17_sheet_v1", "school_17_sheet_v2"),
     packs=("mafra.specialty.production.2024",),
     forbidden_terms=_SPECIALTY_FORBIDDEN,
 )
@@ -2572,8 +2639,13 @@ DAIRY_MODULE = declare_module(
                           "낙농 재무 산식 미지원"),
         FinanceCapability("hanwoo_herd_cash", "unsupported",
                           "한우 재무 산식 미지원"),
-        FinanceCapability("dairy_hanwoo_28_sheet_v1", "unsupported",
-                          "낙농 학교 원본 구조 미등록 — 프로필 닫음(R1 차단1)"),
+        FinanceCapability(
+            "dairy_hanwoo_28_sheet_v1", "supported",
+            "학교 28시트 한우 양식 빈 사본 전용 — 교수님 원본을 복제(clear)해 "
+            "입력 칸만 비운다. 값 채우기(gg_excel_fill)와 파이썬 재무 계산은 "
+            "미지원이며 입구에서 거절한다(fill_unsupported_for_major). 원본 "
+            "지문은 참조집합, 칸 지도는 references/dairy/corrections",
+        ),
     ),
     supported_outputs=("question_list", "document_plan", "evidence_review",
                        "school_paper", "school_excel_workbook"),
@@ -2781,7 +2853,7 @@ FOOD_CROPS_MODULE = declare_module(
     module_version="0.1.0",
     capabilities={
         "question": "supported", "document": "supported",
-        "evidence": "supported", "finance": "unsupported",
+        "evidence": "supported", "finance": "supported",
     },
     question_schema=tuple(
         QuestionSpec(
@@ -2820,11 +2892,17 @@ FOOD_CROPS_MODULE = declare_module(
         )
     ),
     finance_capabilities=(
-        FinanceCapability("food_crops_16_sheet_v1", "unsupported",
-                          "식량작물 학교 원본 구조 미등록 — 프로필 닫음"),
+        FinanceCapability(
+            profile="food_crops_16_sheet_v1",
+            status="supported",
+            reason="학과에서 받은 16시트 원본을 복제(clear)해 입력 칸만 비우는 "
+            "빈 사본 만들기만 지원한다. 값 채우기(gg_excel_fill)와 파이썬 "
+            "재무 계산은 미지원이며 입구에서 거절한다(fill_unsupported_for_major). "
+            "원본 지문은 참조집합, 칸 지도는 references/food-crops",
+        ),
     ),
     supported_outputs=("question_list", "document_plan", "evidence_review",
-                       "school_paper"),
+                       "school_paper", "school_excel_workbook"),
     workbook_profiles=("food_crops_16_sheet_v1",),
     packs=(),
 )

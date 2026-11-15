@@ -2,7 +2,7 @@
  "schema": "knuaf-hort-finance-params/v2",
  "source_id": "H01",
  "source_sha256": "e3c9defe376fa74413641408900f6bb656017a389fb9745d9dac221a10951c1c",
- "param_count": 1379,
+ "param_count": 1380,
  "parameters": {
   "invest.slot1.item": {
    "canonical_cell": "4.투자계획!C19",
@@ -188,7 +188,12 @@
     "not": {
      "group_active": "invest.slot1"
     }
-   }
+   },
+   "allowed_values": [
+    "시설",
+    "농기계",
+    "토지"
+   ]
   },
   "invest.slot1.land_class": {
    "canonical_cell": "4.투자계획!N19",
@@ -210,13 +215,27 @@
    "explicit_none_calculation": "HOLD",
    "output_conversion": "identity",
    "required_if": {
-    "group_active": "invest.slot1"
+    "all": [
+     {
+      "group_active": "invest.slot1"
+     },
+     {
+      "key_equals": [
+       "invest.slot1.asset_class",
+       "토지"
+      ]
+     }
+    ]
    },
    "forbidden_if": {
     "not": {
      "group_active": "invest.slot1"
     }
-   }
+   },
+   "allowed_values": [
+    "논",
+    "밭"
+   ]
   },
   "invest.slot1.life_years": {
    "canonical_cell": "4.투자계획!O19",
@@ -487,7 +506,12 @@
     "not": {
      "group_active": "invest.slot2"
     }
-   }
+   },
+   "allowed_values": [
+    "시설",
+    "농기계",
+    "토지"
+   ]
   },
   "invest.slot2.land_class": {
    "canonical_cell": "4.투자계획!N20",
@@ -509,13 +533,27 @@
    "explicit_none_calculation": "HOLD",
    "output_conversion": "identity",
    "required_if": {
-    "group_active": "invest.slot2"
+    "all": [
+     {
+      "group_active": "invest.slot2"
+     },
+     {
+      "key_equals": [
+       "invest.slot2.asset_class",
+       "토지"
+      ]
+     }
+    ]
    },
    "forbidden_if": {
     "not": {
      "group_active": "invest.slot2"
     }
-   }
+   },
+   "allowed_values": [
+    "논",
+    "밭"
+   ]
   },
   "invest.slot2.life_years": {
    "canonical_cell": "4.투자계획!O20",
@@ -786,7 +824,12 @@
     "not": {
      "group_active": "invest.slot3"
     }
-   }
+   },
+   "allowed_values": [
+    "시설",
+    "농기계",
+    "토지"
+   ]
   },
   "invest.slot3.land_class": {
    "canonical_cell": "4.투자계획!N21",
@@ -808,13 +851,27 @@
    "explicit_none_calculation": "HOLD",
    "output_conversion": "identity",
    "required_if": {
-    "group_active": "invest.slot3"
+    "all": [
+     {
+      "group_active": "invest.slot3"
+     },
+     {
+      "key_equals": [
+       "invest.slot3.asset_class",
+       "토지"
+      ]
+     }
+    ]
    },
    "forbidden_if": {
     "not": {
      "group_active": "invest.slot3"
     }
-   }
+   },
+   "allowed_values": [
+    "논",
+    "밭"
+   ]
   },
   "invest.slot3.life_years": {
    "canonical_cell": "4.투자계획!O21",
@@ -1085,7 +1142,12 @@
     "not": {
      "group_active": "invest.slot4"
     }
-   }
+   },
+   "allowed_values": [
+    "시설",
+    "농기계",
+    "토지"
+   ]
   },
   "invest.slot4.land_class": {
    "canonical_cell": "4.투자계획!N22",
@@ -1107,13 +1169,27 @@
    "explicit_none_calculation": "HOLD",
    "output_conversion": "identity",
    "required_if": {
-    "group_active": "invest.slot4"
+    "all": [
+     {
+      "group_active": "invest.slot4"
+     },
+     {
+      "key_equals": [
+       "invest.slot4.asset_class",
+       "토지"
+      ]
+     }
+    ]
    },
    "forbidden_if": {
     "not": {
      "group_active": "invest.slot4"
     }
-   }
+   },
+   "allowed_values": [
+    "논",
+    "밭"
+   ]
   },
   "invest.slot4.life_years": {
    "canonical_cell": "4.투자계획!O22",
@@ -1384,7 +1460,12 @@
     "not": {
      "group_active": "invest.slot5"
     }
-   }
+   },
+   "allowed_values": [
+    "시설",
+    "농기계",
+    "토지"
+   ]
   },
   "invest.slot5.land_class": {
    "canonical_cell": "4.투자계획!N23",
@@ -1406,13 +1487,27 @@
    "explicit_none_calculation": "HOLD",
    "output_conversion": "identity",
    "required_if": {
-    "group_active": "invest.slot5"
+    "all": [
+     {
+      "group_active": "invest.slot5"
+     },
+     {
+      "key_equals": [
+       "invest.slot5.asset_class",
+       "토지"
+      ]
+     }
+    ]
    },
    "forbidden_if": {
     "not": {
      "group_active": "invest.slot5"
     }
-   }
+   },
+   "allowed_values": [
+    "논",
+    "밭"
+   ]
   },
   "invest.slot5.life_years": {
    "canonical_cell": "4.투자계획!O23",
@@ -1683,7 +1778,12 @@
     "not": {
      "group_active": "invest.slot6"
     }
-   }
+   },
+   "allowed_values": [
+    "시설",
+    "농기계",
+    "토지"
+   ]
   },
   "invest.slot6.land_class": {
    "canonical_cell": "4.투자계획!N25",
@@ -1705,13 +1805,27 @@
    "explicit_none_calculation": "HOLD",
    "output_conversion": "identity",
    "required_if": {
-    "group_active": "invest.slot6"
+    "all": [
+     {
+      "group_active": "invest.slot6"
+     },
+     {
+      "key_equals": [
+       "invest.slot6.asset_class",
+       "토지"
+      ]
+     }
+    ]
    },
    "forbidden_if": {
     "not": {
      "group_active": "invest.slot6"
     }
-   }
+   },
+   "allowed_values": [
+    "논",
+    "밭"
+   ]
   },
   "invest.slot6.life_years": {
    "canonical_cell": "4.투자계획!O25",
@@ -1982,7 +2096,12 @@
     "not": {
      "group_active": "invest.slot7"
     }
-   }
+   },
+   "allowed_values": [
+    "시설",
+    "농기계",
+    "토지"
+   ]
   },
   "invest.slot7.land_class": {
    "canonical_cell": "4.투자계획!N26",
@@ -2004,13 +2123,27 @@
    "explicit_none_calculation": "HOLD",
    "output_conversion": "identity",
    "required_if": {
-    "group_active": "invest.slot7"
+    "all": [
+     {
+      "group_active": "invest.slot7"
+     },
+     {
+      "key_equals": [
+       "invest.slot7.asset_class",
+       "토지"
+      ]
+     }
+    ]
    },
    "forbidden_if": {
     "not": {
      "group_active": "invest.slot7"
     }
-   }
+   },
+   "allowed_values": [
+    "논",
+    "밭"
+   ]
   },
   "invest.slot7.life_years": {
    "canonical_cell": "4.투자계획!O26",
@@ -2281,7 +2414,12 @@
     "not": {
      "group_active": "invest.slot8"
     }
-   }
+   },
+   "allowed_values": [
+    "시설",
+    "농기계",
+    "토지"
+   ]
   },
   "invest.slot8.land_class": {
    "canonical_cell": "4.투자계획!N27",
@@ -2303,13 +2441,27 @@
    "explicit_none_calculation": "HOLD",
    "output_conversion": "identity",
    "required_if": {
-    "group_active": "invest.slot8"
+    "all": [
+     {
+      "group_active": "invest.slot8"
+     },
+     {
+      "key_equals": [
+       "invest.slot8.asset_class",
+       "토지"
+      ]
+     }
+    ]
    },
    "forbidden_if": {
     "not": {
      "group_active": "invest.slot8"
     }
-   }
+   },
+   "allowed_values": [
+    "논",
+    "밭"
+   ]
   },
   "invest.slot8.life_years": {
    "canonical_cell": "4.투자계획!O27",
@@ -2580,7 +2732,12 @@
     "not": {
      "group_active": "invest.slot9"
     }
-   }
+   },
+   "allowed_values": [
+    "시설",
+    "농기계",
+    "토지"
+   ]
   },
   "invest.slot9.land_class": {
    "canonical_cell": "4.투자계획!N28",
@@ -2602,13 +2759,27 @@
    "explicit_none_calculation": "HOLD",
    "output_conversion": "identity",
    "required_if": {
-    "group_active": "invest.slot9"
+    "all": [
+     {
+      "group_active": "invest.slot9"
+     },
+     {
+      "key_equals": [
+       "invest.slot9.asset_class",
+       "토지"
+      ]
+     }
+    ]
    },
    "forbidden_if": {
     "not": {
      "group_active": "invest.slot9"
     }
-   }
+   },
+   "allowed_values": [
+    "논",
+    "밭"
+   ]
   },
   "invest.slot9.life_years": {
    "canonical_cell": "4.투자계획!O28",
@@ -58941,9 +59112,16 @@
    "explicit_none_display_note": "Third Excel number-format section is empty; source positive/negative/text sections are preserved, and stored 0 remains available to formulas.",
    "output_conversion": "derived_zero_for_calculation; display blank for explicit_none",
    "required_if": {
-    "not": {
-     "key_present": "category_absence.land"
-    }
+    "all": [
+     {
+      "key_present": "opening.land_extra_kind"
+     },
+     {
+      "not": {
+       "key_present": "category_absence.land"
+      }
+     }
+    ]
    }
   },
   "opening.equipment_slot1_cost_krw1000": {
@@ -59285,9 +59463,16 @@
    "explicit_none_output": "blank",
    "output_conversion": "derived_blank_for_display; calculation uses separate layer",
    "required_if": {
-    "not": {
-     "key_present": "category_absence.land"
-    }
+    "all": [
+     {
+      "key_present": "opening.land_extra_kind"
+     },
+     {
+      "not": {
+       "key_present": "category_absence.land"
+      }
+     }
+    ]
    }
   },
   "nonoperating.rental_income.y1.krw1000": {
@@ -65643,13 +65828,24 @@
    "explicit_none_calculation": "HOLD",
    "output_conversion": "identity",
    "required_if": {
-    "not": {
-     "key_present": "category_absence.land"
-    }
+    "all": [
+     {
+      "group_active": "opening.land_value"
+     },
+     {
+      "not": {
+       "key_present": "category_absence.land"
+      }
+     }
+    ]
    },
    "forbidden_if": {
     "key_present": "category_absence.land"
-   }
+   },
+   "allowed_values": [
+    "논",
+    "밭"
+   ]
   },
   "opening.land_address": {
    "canonical_cell": "1. 자산조사!C8",
@@ -68224,6 +68420,52 @@
    "required_if": {
     "any": []
    }
+  },
+  "opening.land_extra_kind": {
+   "canonical_cell": "1. 자산조사!B9",
+   "data_type": "string",
+   "unit_code": "TEXT",
+   "per_unit": null,
+   "period_axis": "base_date_start_year_minus_1_end",
+   "allowed_range": {
+    "min": null,
+    "max": null,
+    "max_exclusive": false
+   },
+   "required_when": "opening land exists; required stub once category absence is not confirmed",
+   "allowed_answer_states": [
+    "provided",
+    "unknown",
+    "not_asked"
+   ],
+   "explicit_none_calculation": "HOLD",
+   "output_conversion": "identity",
+   "required_if": {
+    "all": [
+     {
+      "any": [
+       {
+        "group_active": "opening.land_extra_value_krw1000"
+       },
+       {
+        "group_active": "opening.land_extra_area_m2"
+       }
+      ]
+     },
+     {
+      "not": {
+       "key_present": "category_absence.land"
+      }
+     }
+    ]
+   },
+   "forbidden_if": {
+    "key_present": "category_absence.land"
+   },
+   "allowed_values": [
+    "논",
+    "밭"
+   ]
   }
  },
  "rules": {

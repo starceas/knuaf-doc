@@ -37,11 +37,15 @@ section-ledger의 apply 경로가 한다.
 import argparse
 import hashlib
 import json
-import os
 import re
-import shutil
 import sys
 from pathlib import Path
+
+# 이 파일은 스크립트 한 개로 읽히기도 한다(테스트의 spec_from_file_location,
+# 다른 스크립트의 직접 실행). 그림 경로 해석은 gg_hwpx 한 곳에 있으므로,
+# 옆 디렉터리를 먼저 찾게 해서 그 모듈을 그대로 가져온다.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import gg_hwpx  # noqa: E402
 
 SCHEMA = "gg-draft-split-plan/1"
 START = "<!-- gg:draft:start -->"
@@ -257,6 +261,17 @@ def _inside(root, name):
     return p
 
 
+def _rewrite_images(body, root, base):
+    """본문의 그림 목적지를 작업 폴더 기준 상대 경로(퍼센트 인코딩)로 고친다.
+
+    두 단계 찾기(원고 옆 → 작업 폴더 뿌리)와 모호 판정은 gg_hwpx의 공용
+    해석기 하나가 한다 — HWPX 발행과 분할이 같은 규칙을 쓴다. 반환은
+    (고친 본문, [(원래 목적지, 후보들)])이고, 후보들이 있으면 호출자가 그 절을
+    쓰지 않는다.
+    """
+    return gg_hwpx.rewrite_image_destinations(body, base, root)
+
+
 def apply_plan(root, plan, lines, *, source_path, change_out=None):
     """확정 계획의 proposed 항목만 쓰고 apply 변경 JSON을 만든다."""
     input_info = plan["input"]
@@ -315,6 +330,20 @@ def apply_plan(root, plan, lines, *, source_path, change_out=None):
         if lo < 1 or hi < lo or hi > len(lines):
             raise ValueError("계획 줄 범위가 원고를 벗어남")
         body = "\n".join(lines[lo - 1:hi]).rstrip()
+        body, unresolved = _rewrite_images(body, root, source_path.parent)
+        if unresolved:
+            # 그림을 찾지 못한 절은 쓰지 않는다 — 깨진 경로로 등록하면
+            # 발행 단계에서야 멈춘다(학생이 고칠 지점을 여기서 알린다).
+            record = {"section_id": section_id,
+                      "reason": "image_unresolved",
+                      "path": unresolved[0][0],
+                      "images": [p for p, _ in unresolved]}
+            if unresolved[0][1]:
+                # 두 기준 폴더 모두에 같은 이름의 다른 그림이 있다 — 고르지 않는다.
+                record["reason"] = "image_ambiguous"
+                record["candidates"] = unresolved[0][1]
+            skipped.append(record)
+            continue
         text = "# %s\n\n%s\n%s\n%s\n" % (it["title"], START, body, END)
         prepared.append((it, target, text))
     # 원본 사본 — 같은 바이트면 재사용, 다른 바이트면 충돌로 멈춘다.

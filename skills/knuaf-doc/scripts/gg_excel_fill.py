@@ -44,7 +44,7 @@ ORIGINS = {"factual", "assumption", "synthetic"}
 # downstream consumer can interpret, so an unrecognized unit must refuse
 # the write instead of passing silently.
 SEMANTIC_UNITS = frozenset(
-    {"원", "천원", "kg", "g", "㎡", "m2", "년", "개월", "%", "ratio"})
+    {"원", "천원", "kg", "g", "kg/10a", "㎡", "m2", "년", "개월", "%", "ratio"})
 VALUE_TYPES = {"string", "integer", "number", "boolean", "blank"}
 XML_NS = "http://www.w3.org/XML/1998/namespace"
 CELL_REF_RE = re.compile(r"^([A-Z]+)([1-9]\d*)$")
@@ -322,10 +322,15 @@ def fill_copy(template: Path, map_path: Path, values_path: Path, out: Path, *, c
     import gg_major_contract as mc
 
     authorization = mc.authorize_output(mc.OUTPUT_SCHOOL_WORKBOOK, context)
+    if authorization.major_id in mc.FILL_CLOSED_MAJORS:
+        # The 2nd-edition contract opens the blank copy only; filling values
+        # and Python-side finance stay unsupported for this major.
+        raise mc.OutputHeldError("fill_unsupported_for_major",
+                                 major_id=authorization.major_id)
     if out.exists():
         raise FileExistsError(f"refusing to overwrite output: {out}")
     map_data, values_data, entries, values, template_digest = _prepare(template, map_path, values_path)
-    workbook_profile = require_map_workbook_profile(map_data, authorization)
+    workbook_profile = require_map_workbook_profile(map_data, authorization, template)
     from gg_school_excel import require_profile_structure
     try:
         require_profile_structure(template, workbook_profile)

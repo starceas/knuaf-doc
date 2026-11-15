@@ -193,6 +193,7 @@ class PublicationLifecycle(unittest.TestCase):
 
     def test_import_core_inventory_replay_source_and_foreign_preserved(self):
         canonical = (self.root / "project.json").read_bytes()
+        notices = (self.root / ".knuaf-notices.json").read_bytes()
         real_read = Path.read_bytes
         def payload_read(path):
             if path.relative_to(self.root).parts[0] in core._control_files():
@@ -200,8 +201,17 @@ class PublicationLifecycle(unittest.TestCase):
             return real_read(path)
         with lock.Lock(self.root):
             with mock.patch.object(Path, "read_bytes", payload_read):
-                self.assertEqual(core._import_inventory(self.root),
-                                 {"project.json": core.digest(canonical)})
+                # 곁파일은 payload 색인에 **포함**된다(설계 §6-1 ①) — 빠지면
+                # 발행 대조가 불일치한다. `_control_files()`에 넣는 것도 금지다.
+                inventory = core._import_inventory(self.root)
+                self.assertEqual({"project.json", ".knuaf-notices.json"},
+                                 set(inventory))
+                # 값이 **그 파일의 실제 해시**여야 색인이 증거가 된다. 존재만
+                # 확인하면 다른 바이트를 해시한 색인도 통과한다.
+                self.assertEqual(hashlib.sha256(canonical).hexdigest(),
+                                 inventory["project.json"])
+                self.assertEqual(hashlib.sha256(notices).hexdigest(),
+                                 inventory[".knuaf-notices.json"])
         source = self.parent / "legacy source"
         (source / "sections").mkdir(parents=True)
         data = "# 개요\n본문\n".encode("utf-8")

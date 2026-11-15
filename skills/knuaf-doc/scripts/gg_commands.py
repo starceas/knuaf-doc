@@ -25,6 +25,17 @@ def main(mode):
     ap.add_argument("--major")
     a = ap.parse_args()
     path = Path(a.target)
+    if mode == "docx-probe":
+        # 학교 규격 DOCX 측정은 자체 진입점(gg_school_format.main)이 이미
+        # argv를 다루므로 여기서는 인자만 넘긴다. 원장·project.json과 무관하게
+        # 단일 DOCX를 재는 검사라 앞단 root 해석을 거치지 않는다.
+        from gg_school_format import main as docx_probe
+        argv = [str(path)]
+        if a.out:
+            argv += ["--out", str(a.out)]
+        if a.major:
+            argv += ["--major", a.major]
+        return docx_probe(argv)
     try:
         if not path.exists():
             raise ValueError("대상 경로가 없음: " + str(path))
