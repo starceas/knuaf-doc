@@ -2435,16 +2435,6 @@ class TestOrgVectors(unittest.TestCase):
                     item[key] = None
                     self.assertEqual(self.load_document({"v": 1, "rules": [item]}), [])
 
-    @unittest.skip("책임자가 rda 규칙 두 항목을 등록한 뒤 켠다 — 현재 rules: [] 유지")
-    def test_real_distribution_rda_aliases_are_fixed(self):
-        path = SCRIPTS.parent / "references" / "figure-sources.json"
-        raw = json.loads(path.read_text(encoding="utf-8"))
-        expected = ["rda-infograp", "rda-cardnews"]
-        self.assertEqual([r["id"] for r in gg_figure.load_rules(path)], expected)
-        for item in raw["rules"]:
-            self.assertIn(item["id"], expected)
-            self.assertEqual(item["orgAliases"], ["농촌진흥청", "농진청"])
-
 
 def _org_query_vectors():
     # 주소·쿼리·flow 기대값은 그대로. 시험 기관 표기만 I8 한글꼴로 맞춘다.

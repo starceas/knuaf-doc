@@ -253,7 +253,7 @@
   "tests/test_gg_delegation.py": "04c424126824c09fc627d43462090a516d7cd02988f4cff27fb4fade71b71e64",
   "tests/test_gg_doi.py": "1ad9b10c42c3f83eb559b32569465c22aa7c4af42ac0b7ee956bad312109c36e",
   "tests/test_gg_draft_split.py": "5d2a3096f1ad01a25d22319689409187e870881cc9efa96fdd58162f11d1655f",
-  "tests/test_gg_figure.py": "6f87083ff200a99fda753a6a37aaf51202e29a62fd03dbcd394b3e22cad947a0",
+  "tests/test_gg_figure.py": "1fc71ccabaf377a517b2344596d940b9d8a8a29dc6379ab3dc20380f3fa54f07",
   "tests/test_gg_figure_docx.py": "718c47645094df2112ac228d9886737799ff8915a0a79e8f17b094eed8e3c15b",
   "tests/test_gg_food_crops_document.py": "100863a90fcc5d412fe5edfa34e8889eefbb69be8cd0d8708df2ad6af74340a7",
   "tests/test_gg_food_crops_module.py": "3617b6768d4e655780f1ac728be1880f3c947ab60fba1eddfece799d2a38aa45",

@@ -338,7 +338,7 @@
       "source": "adopted:app-PR41"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "0dc9f8fd1a968a3b9e1e69fb3bb78019ef359d3da4b48908a4d3aeee3b2b1028",
+      "after_sha256": "55e2f5dd88dfcfc17163e4229a44451c8dbd3110c7da3454afbe63bed829a73e",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "RDA",
@@ -3102,12 +3102,12 @@
       "source": "new"
     },
     "skills/knuaf-doc/tests/test_gg_figure.py": {
-      "after_sha256": "6f87083ff200a99fda753a6a37aaf51202e29a62fd03dbcd394b3e22cad947a0",
+      "after_sha256": "1fc71ccabaf377a517b2344596d940b9d8a8a29dc6379ab3dc20380f3fa54f07",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "RDA",
       "owner": "P28",
-      "reason": "GF1: 그림 출처 대조·승인 판정 시험 | PQ: 공용 pageQuery 벡터(page·image·flow·load·loadFile·loadText) 전량 소비와 전송 목록·3xx·둘째 항목 승인 경계 시험 | P1.1: 농사로 큐레이션 등록 철회·그림 후보 목록(fetch --list)·슬롯 기록 선기록·request_backlog·옛 농사로 증명 빌드 알림 (DESIGN-P11 r6) | P1.1 impl-1: 후보 태그 건너뛰기 일반화(B-01)·모호한 URL 표기 양쪽 거절(I-01)·슬롯별 잠금과 10분 넘은 잠금 회수(B-03) | P1.1 CI: 시험의 read_text/write_text에 encoding=utf-8 명시(윈도 UTF-8 꺼짐에서 cp1252 해독 실패 10건) | RDA: 농촌진흥청 정보그림·카드뉴스용 셋째 rule 값(page_query_kogl_org…)·본문 구역 남의 표시 검사·경로 대괄호 후보 (DESIGN-RDA r1.1)",
+      "reason": "GF1: 그림 출처 대조·승인 판정 시험 | PQ: 공용 pageQuery 벡터(page·image·flow·load·loadFile·loadText) 전량 소비와 전송 목록·3xx·둘째 항목 승인 경계 시험 | P1.1: 농사로 큐레이션 등록 철회·그림 후보 목록(fetch --list)·슬롯 기록 선기록·request_backlog·옛 농사로 증명 빌드 알림 (DESIGN-P11 r6) | P1.1 impl-1: 후보 태그 건너뛰기 일반화(B-01)·모호한 URL 표기 양쪽 거절(I-01)·슬롯별 잠금과 10분 넘은 잠금 회수(B-03) | P1.1 CI: 시험의 read_text/write_text에 encoding=utf-8 명시(윈도 UTF-8 꺼짐에서 cp1252 해독 실패 10건) | RDA: 농촌진흥청 정보그림·카드뉴스용 셋째 rule 값(page_query_kogl_org…)·본문 구역 남의 표시 검사·경로 대괄호 후보 (DESIGN-RDA r1.1) | RDA CI: 등록 전 skip 시험 빼기(등록 PR에서 켠 채로 다시)",
       "source": "new"
     },
     "skills/knuaf-doc/tests/test_gg_figure_docx.py": {
