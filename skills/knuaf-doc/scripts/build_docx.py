@@ -656,8 +656,9 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
                 n['_bookmark_id']=idx
         table_entries=[(split_caption_credit(n['text'])[0],n['_bookmark'],2) for n in body_nodes if n['kind']=='caption' and n.get('label')=='표']
         figure_entries=[(split_caption_credit(n['text'])[0],n['_bookmark'],2) for n in body_nodes if n['kind']=='caption' and n.get('label')=='그림']
-        # 표·그림 목차는 프로필 전공과 낙농이 함께 나열한다. 낙농은 이 단위
-        # 에서 아직 프로필 경로를 타지 않으므로(바이트 고정) 이름으로 남긴다.
+        # 표·그림 목차는 프로필 전공과 낙농이 함께 나열한다. 낙농은 F9e에서
+        # 게이트 안으로 들어왔지만, 목차에 표·그림 목차를 늘 두는 것은 이
+        # 전공의 별도 규칙이라 이름으로 남긴다(`dairy_lists`).
         dairy_lists = authorization.major_id in ("dairy", "food_crops")
         entries=[]
         if profile and profile.roman_front:

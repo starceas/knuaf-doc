@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
-"""식량작물 HWPX 쪽별 서식 기계 검사기 (설계 §6.2).
+"""전공별 HWPX 쪽별 서식 기계 검사기 (설계 §6.2·F5).
 
 측정만 하고 파일은 절대 고치지 않는다. 구역 3개(겉표지/앞부분/본문)의 여백·
 제어 요소·쪽번호·글자 모양·manifest 참조 무결성을 ZIP 안의 XML에서 읽어
-`food_crops.format.*` 위반으로 낸다.
+`<전공>.format.*` 위반으로 낸다. 전공은 `--major`가 정한다(기본 식량작물).
 
 기대값은 여기에 **직접 적는다**. 빌더(`gg_hwpx`)의 표를 import 하면 표가
 틀렸을 때 검사기도 같이 틀려 아무것도 못 잡는다. 그래서 `gg_hwpx`·
-`gg_kordoc`을 import 하지 않고, 외부 프로세스(kordoc)도 이 파일이 직접
-띄운다.
+`gg_kordoc`·`gg_major_format`을 import 하지 않고, 외부 프로세스(kordoc)도
+이 파일이 직접 띄운다. 낙농 값의 출처는 설계 §F-0(작성요령·견본 실측)이다.
 
 파일이 없거나 XML이 깨졌으면 예외를 올리지 않고 `blocked` 결과를 낸다.
 
 사용:
     python3 -B gg_school_format_hwpx.py out.hwpx --out result.json \\
-        [--kordoc /path/to/kordoc]
+        [--major dairy] [--kordoc /path/to/kordoc]
 
 `--kordoc`이 없으면 `structure`(kordoc validate)·`reparse`(재파싱 대조)는
 `skipped`로 기록하고 나머지만 본다. 반대로 `--kordoc`을 지정했는데 그 명령을
@@ -83,6 +83,117 @@ MARGIN_RELATED = {"header": "OG-008", "footer": "OG-009", "left": "OG-010",
                   "gutter": "OG-012"}
 PAGE_NUMBER_RELATED = ("OG-125",)
 
+# --- 낙농(설계 §F-0) ------------------------------------------------------
+# 출처는 작성요령·견본 실측이다. 빌더(`gg_major_format.DAIRY_PROFILE`)를
+# import 하지 않는 이유는 식량작물과 같다: 표가 틀리면 검사기도 같이 틀린다.
+
+# 세 구역 여백이 같다: 위·아래·좌·우 30 mm, 머리 0, 꼬리 10 mm.
+# 30 mm = 8504 HWPUNIT, 10 mm = 2835(빌더 `mm_to_hwpunit` 반올림값과 같다).
+_DAIRY_MARGIN = {"header": "0", "footer": "2835", "gutter": "0",
+                 "left": "8504", "right": "8504", "top": "8504",
+                 "bottom": "8504"}
+DAIRY_EXPECTED_MARGINS = tuple(dict(_DAIRY_MARGIN) for _ in ROLES)
+
+# 쪽번호: 겉표지는 없음, 앞부분 로마 대문자 I부터, 본문 아라비아 1부터.
+# 꼴은 `- I -`(`sideChar="-"`). 글자 크기 9 pt는 pageNum 제어 요소에 없고
+# 문단 글자 모양에 실리므로 기계로 특정할 수 없다(설계 F-0 '렌더 눈 확인',
+# I-05) - 검사하지 않고 notes에 남긴다.
+DAIRY_EXPECTED_PAGE_NUM = (
+    None,
+    {"pos": "BOTTOM_CENTER", "formatType": "ROMAN_CAPITAL"},
+    {"pos": "BOTTOM_CENTER", "formatType": "DIGIT"},
+)
+
+# 특수 쪽 제목(견본 실측): 요약·감사의 글·목차·표 목차·그림 목차·학부모
+# 동의서가 전부 22 pt 굵게다. 학부모 동의서는 낙농에서 겉표지 구역에 온다
+# (식량작물은 본문 끝 - 구역 판정이 곧 이 항목의 검사다).
+#
+# 요약·감사의 글·목차는 모든 원고에 있고(작성요령), 표 목차·그림 목차는
+# 표·그림이 있을 때만 넣는다(빌더 human_finish도 `(있으면)`). 그래서 앞의
+# 셋만 '있어야 함'으로 단언하고, 뒤의 둘은 **있으면 22 pt**만 본다.
+DAIRY_TITLE_PT = (22, True)
+DAIRY_FRONT_TITLES = ("요약", "감사의 글", "목차")
+DAIRY_FRONT_OPTIONAL_TITLES = ("표 목차", "그림 목차")
+DAIRY_CONSENT_TITLE = "학부모 동의서"
+
+# 겉표지: 학위 줄 18 비굵게 / 그다음 문단(제목) 32 굵게 / 연월·학교·학과·
+# 이름 20 / 지도교수 줄 18. 설계 F-0이 굵기를 정하지 않은 두 줄은 크기만
+# 잰다(`None`) - 근거 없는 규칙을 만들지 않는다.
+DAIRY_COVER_DEGREE = (18, False)
+DAIRY_COVER_TITLE = (32, True)
+DAIRY_COVER_ADVISOR = (18, None)
+DAIRY_COVER_PLAIN = (20, None)
+
+# 번호 단계: 크기 20 / 18 / 16 / 15 / 14 / 12, 전부 굵게.
+# 장 표기가 `Ⅰ.`(작성요령)인 원고는 6단(Ⅰ.20 → 1.18 → 가.16 → 1)15 → 가)14
+# → (1)12), `1.`(현 생성기)인 원고는 5단(1.20 → 가.16 …)이다. 본문 첫
+# 제목의 겉모양으로 그 원고의 사다리를 고른다.
+DAIRY_ROMAN_LEVELS = {"roman_dot": 20, "arabic_dot": 18, "ga_dot": 16,
+                      "num_paren": 15, "ga_paren": 14, "paren": 12}
+DAIRY_ARABIC_LEVELS = {"arabic_dot": 20, "ga_dot": 16, "num_paren": 15,
+                       "ga_paren": 14, "paren": 12}
+DAIRY_BOLD = True
+
+# 제목 위아래 1행 = 19.2 pt = 1920 HWPUNIT. 제목 문단 모양의 prev·next.
+DAIRY_HEADING_SPACING = ("1920", "1920")
+
+# 제목 겉모양 판정. 앞의 것이 이기므로 순서가 규칙이다(`1)` vs `(1)`,
+# `가)` vs `(가)`). 본문 12 pt 문장은 마침표 뒤 공백이 없어 걸리지 않는다.
+#
+# 낙농 빌더 산출물은 번호와 제목이 같은 문단에 들어 있다(실측 c1·c3:
+# 한 `hp:p` 안에 `<hp:t>1. ` + `<hp:t>머리말`). 그래도 번호만 남는 문단을
+# 받아 두는 것은 방어 규칙이다 - 문단 번호 자동 생성으로 번호와 제목이
+# 갈라지는 생성기가 흔하고, 그때 번호 문단을 놓치면 장 사다리를 정하지
+# 못해 검사 전체가 판정 불가가 된다. 문단 끝(`$`)까지 받는 이유가 이것이다.
+SHAPE_TAIL = r"\s*(?:$|\s+\S)"
+
+
+def _shape(*prefixes):
+    # 접두 조각들은 **이어 붙인다**(번호 → 구분자 순서). `|`로 이으면
+    # `[.．]`이 번호와 같은 자리에 서서 `1. 머리말`이 어느 겉모양에도
+    # 걸리지 않고, 뒤쪽 `(1)` 규칙만 남아 본문 첫 제목이 `paren`으로
+    # 오판된다. 조각마다 `(?:…)`로 묶는 이유는 조각 안의 대안
+    # (`I{1,3}|IV|…`)이 구분자까지 삼키지 않게 하기 위함이다.
+    return re.compile("^%s%s" % (
+        "".join("(?:%s)" % prefix for prefix in prefixes), SHAPE_TAIL))
+
+
+_SHAPES = (
+    ("roman_dot", _shape(r"[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]|I{1,3}|IV|V|VI{0,3}|IX|X", r"[.．]")),
+    ("arabic_dot", _shape(r"\d{1,2}", r"[.．]")),
+    ("ga_dot", _shape(r"[가-힣]", r"[.．]")),
+    ("num_paren", _shape(r"\d{1,2}", r"\)")),
+    ("ga_paren", _shape(r"[가-힣]", r"\)")),
+    ("paren", re.compile(r"^\(\s*(?:\d{1,2}|[가-힣])\s*\)" + SHAPE_TAIL)),
+)
+
+
+class _Spec:
+    """전공 하나의 기대값 묶음. 값은 이 파일 위쪽 독립 상수에서 온다."""
+
+    __slots__ = ("major", "prefix", "margins", "page_num")
+
+    def __init__(self, major, prefix, margins, page_num):
+        self.major = major
+        self.prefix = prefix
+        self.margins = margins
+        self.page_num = page_num
+
+    @property
+    def dairy(self):
+        return self.major == "dairy"
+
+
+SPECS = {
+    "food_crops": _Spec("food_crops", "food_crops.format.",
+                        EXPECTED_MARGINS, EXPECTED_PAGE_NUM),
+    "dairy": _Spec("dairy", "dairy.format.",
+                   DAIRY_EXPECTED_MARGINS, DAIRY_EXPECTED_PAGE_NUM),
+}
+# 기존 검사 함수들이 코드를 `food_crops.format.*`로 적어 두었다. 전공이
+# 다르면 결과를 내보내기 직전에 접두사만 갈아 끼운다(한 곳에서만 바꾼다).
+_LEGACY_PREFIX = "food_crops.format."
+
 
 def _local(tag: str) -> str:
     return tag.rsplit("}", 1)[-1]
@@ -116,6 +227,7 @@ class Measurement:
         self.sec_cnt = None
         self.page_size = None
         self.charprs = {}           # id(str) -> {"height": pt, "bold": bool}
+        self.paraprs = {}           # id(str) -> {"outline", "prev", "next"}
         self.front_charpr_ids = set()
         self.manifest = None
         self.names = []
@@ -148,6 +260,10 @@ def _read_section(archive, name, role):
         "_paragraph_nodes": paragraphs,
         "paragraphs": len(paragraphs),
         "texts": [_text(paragraph) for paragraph in paragraphs],
+        # 낙농 제목 검사용: 문단별 문단 모양 id와 쪽 나눔 속성.
+        "para_pr": [paragraph.attrib.get("paraPrIDRef") for paragraph in paragraphs],
+        "page_break": [paragraph.attrib.get("pageBreak") in ("1", "true")
+                       for paragraph in paragraphs],
         "first_run_children": first_run_children,
         "has_first_run": first is not None,
         "sec_pr": len([n for n in root.iter() if _local(n.tag) == "secPr"]),
@@ -203,6 +319,35 @@ def _read_manifest(archive, names):
     }
 
 
+def _read_paraprs(archive):
+    """header.xml의 문단 모양별 개요 여부와 위/아래 간격(HWPUNIT)."""
+    try:
+        root = ET.fromstring(archive.read(HEADER_NAME))
+    except (ET.ParseError, KeyError):
+        return None
+    properties = next((node for node in root.iter()
+                       if _local(node.tag) == "paraProperties"), None)
+    if properties is None:
+        return {}
+    out = {}
+    for node in _children(properties, "paraPr"):
+        heading = _first(node, "heading")
+        margin = next((child for child in node.iter()
+                       if _local(child.tag) == "margin"), None)
+        values = {}
+        if margin is not None:
+            for side in ("prev", "next"):
+                found = _first(margin, side)
+                if found is not None:
+                    values[side] = found.attrib.get("value")
+        out[str(node.attrib.get("id"))] = {
+            "outline": heading is not None and heading.attrib.get("type") == "OUTLINE",
+            "prev": values.get("prev"),
+            "next": values.get("next"),
+        }
+    return out
+
+
 def _appended_charpr_ids(charprs):
     """header.xml 꼬리 14개가 앞부분 전용 블록인지 확인하고 그 id 집합을 낸다."""
     ordered = sorted(charprs, key=lambda value: int(value) if value.isdigit() else 1 << 30)
@@ -246,6 +391,7 @@ def measure(path: Path):
                 measured.charprs = charprs
                 measured.front_charpr_ids = _appended_charpr_ids(charprs)
             measured.sec_cnt = sec_cnt
+            measured.paraprs = _read_paraprs(archive) or {}
             measured.manifest = _read_manifest(archive, names)
             if measured.manifest is None:
                 measured.notes.append({"invalid_xml": MANIFEST_NAME})
@@ -256,10 +402,18 @@ def measure(path: Path):
 
 
 class _Violations:
-    def __init__(self):
+    def __init__(self, prefix=_LEGACY_PREFIX):
         self.items = []
+        self.prefix = prefix
+
+    def code(self, name):
+        return self.prefix + name
 
     def bad(self, code, related, location, expected, actual, message):
+        # 검사 함수들은 코드를 식량작물 접두사로 적어 두었다. 전공이 다르면
+        # 여기 한 곳에서 접두사만 갈아 끼운다(코드 문자열은 전부 같은 꼬리를 쓴다).
+        if code.startswith(_LEGACY_PREFIX):
+            code = self.prefix + code[len(_LEGACY_PREFIX):]
         self.items.append({
             "requirement_id": code, "code": code, "location": location,
             "expected": expected, "actual": actual, "message": message,
@@ -267,7 +421,7 @@ class _Violations:
         })
 
 
-def _check_sections(measured, violations):
+def _check_sections(measured, violations, spec):
     found = [section["name"] for section in measured.sections]
     if found != list(SECTION_NAMES):
         violations.bad(
@@ -280,7 +434,7 @@ def _check_sections(measured, violations):
             "3", measured.sec_cnt, "header.xml의 구역 수(secCnt)가 3이 아님")
 
     for section, expected_margin, expected_number in zip(
-            measured.sections, EXPECTED_MARGINS, EXPECTED_PAGE_NUM):
+            measured.sections, spec.margins, spec.page_num):
         role = section["role"]
         place = "Contents/section%d.xml" % ROLES.index(role)
         if section["sec_pr"] != 1 or section["col_pr"] != 1:
@@ -323,7 +477,7 @@ def _check_sections(measured, violations):
                 "용지 크기가 A4(59527~59528 x 84188 HWPUNIT)가 아님")
 
 
-def _check_page_numbers(measured, violations):
+def _check_page_numbers(measured, violations, spec):
     counts = [len(section["page_num"]) for section in measured.sections]
     if counts != [0, 1, 1]:
         violations.bad(
@@ -340,7 +494,7 @@ def _check_page_numbers(measured, violations):
             continue
         section = measured.sections[index]
         found = section["page_num"]
-        wanted = EXPECTED_PAGE_NUM[index]
+        wanted = spec.page_num[index]
         place = section["name"]
         if len(found) != 1:
             violations.bad(
@@ -425,10 +579,64 @@ def _check_page_numbers(measured, violations):
                 "구역 안 newNum·pageNum 제어 요소 개수가 1개씩이 아님")
 
 
+def _charpr_sizes(measured):
+    """charPr id -> (pt, 굵기). height가 없는 항목은 뺀다."""
+    return {cid: (value["height"] // 100, value["bold"])
+            for cid, value in measured.charprs.items()
+            if value["height"] is not None}
+
+
+def _run_refs(section):
+    """문단 색인 -> 그 문단 run들이 참조하는 charPr id 집합(한 번만 계산)."""
+    if "_references" in section:
+        return section["_references"]
+    refs = {}
+    for index, paragraph in enumerate(section["_paragraph_nodes"]):
+        values = set()
+        for run in _children(paragraph, "run"):
+            cid = run.attrib.get("charPrIDRef")
+            if cid is not None:
+                values.add(cid)
+        refs[index] = values
+    section["_references"] = refs
+    return refs
+
+
+def _report_size(violations, sizes, code, section, index, text, wanted, related=()):
+    """문단 글자 모양이 `wanted`가 아니면 위반 하나를 낸다.
+
+    `wanted`는 `(포인트, 굵기)`이고 굵기에 `None`을 쓰면 크기만 본다. 설계
+    F-0이 굵기를 정하지 않은 줄(부제·지도교수)에 굵기까지 단언하면 검사기가
+    근거 없는 규칙을 만드는 셈이라, 정해진 것만 잰다.
+    """
+    refs = _run_refs(section).get(index, set())
+    size_wanted, bold_wanted = wanted
+    found = [sizes.get(cid, (None, False)) for cid in refs]
+    if any(size == size_wanted and (bold_wanted is None or bold == bold_wanted)
+           for size, bold in found):
+        return
+    actual = sorted(({"size": size, "bold": bold, "charPrIDRef": cid}
+                     for cid in refs
+                     for size, bold in [sizes.get(cid, (None, False))]),
+                    key=lambda value: (value["size"] or 0, value["bold"]))
+    violations.bad(code, related,
+                   "%s:%d" % (section["name"], index),
+                   {"size": size_wanted, "bold": bold_wanted}, actual,
+                   "`%s` 문단 글자 모양이 %d pt %s이어야 함" % (
+                       text[:20], size_wanted,
+                       "보통" if bold_wanted is False else
+                       "굵게" if bold_wanted else "아무 굵기"))
+
+
+def _index_of(section, predicate):
+    for index, text in enumerate(section["texts"]):
+        if text and predicate(text):
+            return index
+    return None
+
+
 def _check_charpr(measured, violations):
-    sizes = {cid: (value["height"] // 100, value["bold"])
-             for cid, value in measured.charprs.items()
-             if value["height"] is not None}
+    sizes = _charpr_sizes(measured)
     if not sizes:
         violations.bad(
             "food_crops.format.charpr.front", (), HEADER_NAME,
@@ -436,40 +644,11 @@ def _check_charpr(measured, violations):
             "header.xml에서 글자 크기를 읽지 못해 글자 모양을 판정할 수 없음")
         return
 
-    def run_refs(section):
-        if "_references" in section:
-            return section["_references"]
-        refs = {}
-        for index, paragraph in enumerate(section["_paragraph_nodes"]):
-            values = set()
-            for run in _children(paragraph, "run"):
-                cid = run.attrib.get("charPrIDRef")
-                if cid is not None:
-                    values.add(cid)
-            refs[index] = values
-        section["_references"] = refs
-        return refs
-
     def report(code, section, index, text, wanted, related=()):
-        refs = run_refs(section).get(index, set())
-        found = {sizes.get(cid) for cid in refs}
-        if wanted in found:
-            return
-        actual = sorted(({"size": size, "bold": bold, "charPrIDRef": cid}
-                         for cid in refs
-                         for size, bold in [sizes.get(cid, (None, False))]),
-                        key=lambda value: (value["size"] or 0, value["bold"]))
-        violations.bad(code, related,
-                       "%s:%d" % (section["name"], index),
-                       {"size": wanted[0], "bold": wanted[1]}, actual,
-                       "`%s` 문단 글자 모양이 %d pt %s이어야 함" % (
-                           text[:20], wanted[0], "굵게" if wanted[1] else "보통"))
+        _report_size(violations, sizes, code, section, index, text, wanted, related)
 
     def index_of(section, predicate):
-        for index, text in enumerate(section["texts"]):
-            if text and predicate(text):
-                return index
-        return None
+        return _index_of(section, predicate)
 
     if len(measured.sections) != 3:
         return
@@ -542,7 +721,7 @@ def _check_charpr(measured, violations):
             {"charpr_ids": sorted(sizes)},
             "header.xml 꼬리에서 앞부분 전용 charPr 블록을 찾지 못해 본문 누출을 판정할 수 없음")
     else:
-        for index, refs in run_refs(body).items():
+        for index, refs in _run_refs(body).items():
             if consent is not None and index >= consent:
                 continue
             leaked = sorted(refs & measured.front_charpr_ids)
@@ -553,7 +732,7 @@ def _check_charpr(measured, violations):
                     {"charPrIDRef": "본문 기존 id"}, leaked,
                     "앞부분 전용 charPr가 본문 문단으로 샘")
         for section in measured.sections:
-            for index, refs in run_refs(section).items():
+            for index, refs in _run_refs(section).items():
                 unknown = sorted(cid for cid in refs if cid not in sizes)
                 if unknown:
                     violations.bad(
@@ -576,6 +755,265 @@ def _check_charpr(measured, violations):
             continue
         wanted = (10, False) if text.startswith("※") else (14, True)
         report("food_crops.format.charpr.consent", body, index, text, wanted)
+
+
+# --- 낙농 전용 검사 --------------------------------------------------------
+# 식량작물 검사기는 구역·여백·쪽번호·manifest를 공유하지만 글자 모양 규칙은
+# 전공마다 다르다(식량작물은 앞부분 전용 charPr 블록 서명을 쓰고, 낙농은
+# 견본 실측값으로 역할별 크기를 적는다). 그래서 낙농은 `_check_charpr`
+# 대신 아래 함수를 쓴다.
+
+def _shape_of(text):
+    """제목 겉모양 이름(`roman_dot` 등) 또는 None."""
+    for name, pattern in _SHAPES:
+        if pattern.match(text):
+            return name
+    return None
+
+
+def _dairy_cover_block_end(cover, title):
+    """첫 표지 블록(겉표지)이 끝나는 색인.
+
+    구역0에는 겉표지·제출서·인준서·동의서가 차례로 들어간다(실측 c1). 겉표지
+    블록은 제출서가 시작되는 `…제출함` 줄, 두 번째 `…학위논문` 줄, 또는
+    동의서 제목에서 끝난다. 그 뒤는 다른 쪽이라 글자 크기 규칙이 다르다.
+    """
+    for index in range(title + 1, len(cover["texts"])):
+        text = cover["texts"][index]
+        if not text:
+            continue
+        if (text == DAIRY_CONSENT_TITLE or "제출" in text
+                or text.endswith("학위논문")):
+            return index
+    return len(cover["texts"])
+
+
+def _dairy_check_cover(measured, violations, sizes):
+    """겉표지: 학위 줄 18 비굵게 / 다음 문단(제목) 32 굵게 / 지도교수 줄 18 /
+    부제·연월·학교·학과·이름 20(설계 F-0 겉표지 행).
+
+    부제는 글자로 식별할 수 없지만(연월·학교와 같은 20 pt) 겉표지 블록
+    안에서는 '지도교수 줄이 아니면 20 pt'로 단언할 수 있다. 그래서 블록
+    경계를 먼저 구하고 그 안만 잰다(제출서·인준서는 18 pt 대라 섞으면 오탐).
+    """
+    cover = measured.sections[0]
+    degree = _index_of(cover, lambda text: text.endswith("학위논문"))
+    if degree is None:
+        violations.bad(
+            violations.code("charpr.cover"), (), cover["name"],
+            "`…학위논문` 문단", None,
+            "겉표지에서 학위논문 표기 문단을 찾지 못함")
+        return
+    _report_size(violations, sizes, violations.code("charpr.cover"),
+                 cover, degree, cover["texts"][degree], DAIRY_COVER_DEGREE)
+    title = next((index for index in range(degree + 1, len(cover["texts"]))
+                  if cover["texts"][index]), None)
+    if title is None:
+        violations.bad(
+            violations.code("charpr.cover"), (), cover["name"],
+            "학위 줄 다음 제목 문단", None,
+            "겉표지에서 제목 문단을 찾지 못함")
+        return
+    _report_size(violations, sizes, violations.code("charpr.cover"),
+                 cover, title, cover["texts"][title], DAIRY_COVER_TITLE)
+    for index in range(title + 1, _dairy_cover_block_end(cover, title)):
+        text = cover["texts"][index]
+        if not text:
+            continue
+        wanted = (DAIRY_COVER_ADVISOR if text.startswith("지도교수")
+                  else DAIRY_COVER_PLAIN)
+        _report_size(violations, sizes, violations.code("charpr.cover"),
+                     cover, index, text, wanted)
+
+
+def _dairy_check_consent_place(measured, violations, sizes):
+    """학부모 동의서는 낙농에서 겉표지(무번호) 구역에 오고 제목은 22 pt 굵게.
+
+    식량작물은 본문 끝이지만 낙농은 아니다. 자리가 바뀌면 쪽번호 규칙과
+    특수 쪽 제목 규칙이 함께 어긋나므로 구역 자체를 단언한다. 동의서 본문
+    크기는 설계 F-0에 값이 없어 제목만 잰다.
+    """
+    for index, section in enumerate(measured.sections):
+        found = _index_of(section, lambda text: text == DAIRY_CONSENT_TITLE)
+        if found is None:
+            continue
+        if index != 0:
+            violations.bad(
+                violations.code("section.consent"), (), section["name"],
+                {"section": SECTION_NAMES[0]}, {"section": section["name"]},
+                "학부모 동의서는 겉표지 구역(section0)에 있어야 함(낙농)")
+        _report_size(violations, sizes, violations.code("charpr.front"),
+                     section, found, DAIRY_CONSENT_TITLE, DAIRY_TITLE_PT)
+        return
+    violations.bad(
+        violations.code("section.consent"), (), "Contents/section*.xml",
+        {"title": DAIRY_CONSENT_TITLE, "section": SECTION_NAMES[0]}, None,
+        "학부모 동의서 제목 문단을 찾지 못함")
+
+
+def _dairy_check_front_titles(measured, violations, sizes):
+    """앞부분의 특수 쪽 제목 22 pt 굵게.
+
+    요약·감사의 글·목차는 반드시 있어야 하고, 표 목차·그림 목차는 있으면
+    크기만 본다(표·그림이 없는 원고가 정상). 다만 선택 제목도 **앞부분
+    구역**에 있어야 한다 - 본문 첫머리로 밀려나면 구역 경계가 틀린 것이고
+    쪽번호 규칙도 함께 깨진다(실측 c2가 그 상태다).
+    """
+    front = measured.sections[1]
+    wanted = {name.replace(" ", ""): name for name in
+              DAIRY_FRONT_TITLES + DAIRY_FRONT_OPTIONAL_TITLES}
+    seen = set()
+    for index, text in enumerate(front["texts"]):
+        key = text.replace(" ", "") if text else ""
+        if key not in wanted:
+            continue
+        seen.add(wanted[key])
+        _report_size(violations, sizes, violations.code("charpr.front"),
+                     front, index, text, DAIRY_TITLE_PT)
+    for other, section in enumerate(measured.sections):
+        if other == 1:
+            continue
+        for index, text in enumerate(section["texts"]):
+            key = text.replace(" ", "") if text else ""
+            if key not in wanted or wanted[key] in DAIRY_FRONT_TITLES:
+                continue
+            violations.bad(
+                violations.code("section.front"),
+                (), "%s:%d" % (section["name"], index),
+                {"title": wanted[key], "section": front["name"]},
+                {"section": section["name"]},
+                "표 목차·그림 목차가 앞부분 구역이 아닌 곳에 있음")
+    missing = [name for name in DAIRY_FRONT_TITLES if name not in seen]
+    if missing:
+        violations.bad(
+            violations.code("charpr.front"), (), front["name"],
+            {"titles": list(DAIRY_FRONT_TITLES)},
+            {"missing": missing,
+             "optional": list(DAIRY_FRONT_OPTIONAL_TITLES)},
+            "앞부분 구역에서 특수 쪽 제목을 찾지 못함: " + ", ".join(missing))
+
+
+def _dairy_body_paragraphs(body):
+    """(색인, 텍스트, 겉모양) 목록. 텍스트 없는 문단은 뺀다."""
+    out = []
+    for index, text in enumerate(body["texts"]):
+        if not text:
+            continue
+        out.append((index, text, _shape_of(text)))
+    return out
+
+
+def _dairy_ladder(paragraphs):
+    """본문 첫 제목의 겉모양으로 사다리를 고른다 -> (dict, 사유).
+
+    원고 장 표기가 `Ⅰ.`이면 6단, `1.`이면 5단이다. 첫 제목이 어느 쪽도
+    아니면(장 번호가 마크다운 `#`이라 본문에 안 남는 경우 등) 판정 불가다.
+    """
+    for _, _, shape in paragraphs:
+        if shape is None:
+            continue
+        if shape in ("roman_dot", "arabic_dot"):
+            return (DAIRY_ROMAN_LEVELS if shape == "roman_dot"
+                    else DAIRY_ARABIC_LEVELS), None
+        return None, "본문 첫 제목의 겉모양이 장 번호가 아님: " + shape
+    return None, "본문에 제목이 없음"
+
+
+def _dairy_check_levels(measured, violations, sizes):
+    """본문 번호 단계 크기. 사다리에 있는 겉모양 문단만 단언한다.
+
+    설계 F5의 낙농 필수 검사가 '단계 크기'이지 본문 글자 크기가 아니다.
+    본문 산문(겉모양 없음)은 이 검사가 건드리지 않는다 - 12 pt 보통은
+    프로필 밖 항목이고, 산문에 마침표+숫자가 섞이면 오탐이 난다.
+    """
+    body = measured.sections[2]
+    paragraphs = _dairy_body_paragraphs(body)
+    ladder, reason = _dairy_ladder(paragraphs)
+    if ladder is None:
+        violations.bad(
+            violations.code("charpr.level"), (), body["name"],
+            {"first_heading_shape": ["roman_dot", "arabic_dot"]},
+            {"reason": reason},
+            "본문 번호 단계의 사다리를 정하지 못함")
+        return
+    for index, text, shape in paragraphs:
+        if shape is None:
+            continue
+        size = ladder.get(shape)
+        if size is None:
+            continue
+        _report_size(violations, sizes, violations.code("charpr.level"),
+                     body, index, text, (size, DAIRY_BOLD))
+
+
+def _dairy_check_heading_spacing(measured, violations):
+    """제목 문단 모양(개요형)의 위/아래 1920 HWPUNIT."""
+    outline = {cid: value for cid, value in measured.paraprs.items()
+               if value.get("outline")}
+    if not outline:
+        violations.bad(
+            violations.code("paragraph.heading_spacing"), (), HEADER_NAME,
+            {"outline_paraPr": None}, None,
+            "header.xml에 개요형(OUTLINE) 문단 모양이 없어 제목 간격을 판정할 수 없음")
+        return
+    for cid, value in sorted(outline.items(), key=lambda item: int(item[0])):
+        got = (value.get("prev"), value.get("next"))
+        if got != DAIRY_HEADING_SPACING:
+            violations.bad(
+                violations.code("paragraph.heading_spacing"), (),
+                HEADER_NAME + ":hh:paraPr@id=" + cid, dict(zip(
+                    ("prev", "next"), DAIRY_HEADING_SPACING)),
+                dict(zip(("prev", "next"), got)),
+                "제목 문단 모양의 위/아래 간격이 19.2 pt(1920 HWPUNIT)가 아님")
+
+
+def _dairy_check_body_page_breaks(measured, violations):
+    """장 제목마다 새 쪽. 첫 장은 쪽 나눔이 없어야 한다.
+
+    장은 사다리의 첫 단계(`roman_dot` 또는 `arabic_dot`) 제목이다. 표기로
+    판정하므로 `print()`의 장 번호 자동 증가에 기대지 않는다.
+    """
+    body = measured.sections[2]
+    paragraphs = _dairy_body_paragraphs(body)
+    ladder, reason = _dairy_ladder(paragraphs)
+    if ladder is None:
+        violations.bad(
+            violations.code("page_break.chapter"), (), body["name"],
+            {"first_heading_shape": ["roman_dot", "arabic_dot"]},
+            {"reason": reason},
+            "장 경계를 정하지 못해 쪽 나눔을 판정할 수 없음")
+        return
+    chapter_shape = "roman_dot" if "roman_dot" in ladder else "arabic_dot"
+    chapters = [(index, text) for index, text, shape in paragraphs
+                if shape == chapter_shape]
+    if not chapters:
+        violations.bad(
+            violations.code("page_break.chapter"), (), body["name"],
+            {"chapters": "1개 이상"}, {"chapters": 0},
+            "본문에서 장 제목을 찾지 못함")
+        return
+    breaks = body["page_break"]
+    for position, (index, text) in enumerate(chapters):
+        wanted = position > 0
+        if bool(breaks[index]) != wanted:
+            violations.bad(
+                violations.code("page_break.chapter"), (), "%s:%d" % (body["name"], index),
+                {"pageBreak": wanted, "chapter": text[:20]},
+                {"pageBreak": bool(breaks[index])},
+                "장 제목의 쪽 나눔이 %s이어야 함" % ("있어야" if wanted else "없어야"))
+
+
+def _dairy_notes():
+    """기계로 판정하지 않는 항목. 산출물마다 `notes`에 남긴다."""
+    return [
+        {"unverified": "page_number.size",
+         "why": "쪽번호 글자 크기(9 pt)·`- N -` 공백은 pageNum 제어 요소에 없고 "
+                "렌더에서만 보인다(설계 F-0·I-05). Word·한글에서 눈 확인."},
+        {"unverified": "cover.role_order",
+         "why": "겉표지에서 '부제'와 '제목'은 글자로 구분되지 않아 자리(학위 줄 "
+                "다음 문단=32, 그 뒤=20)로만 잰다. 두 줄이 뒤바뀌어도 크기 "
+                "규칙은 만족하므로 순서 자체는 렌더·눈으로 확인해야 한다."},
+    ]
 
 
 def _check_manifest(measured, violations):
@@ -805,12 +1243,21 @@ def _check_reparse(cli_command, path, measured, violations):
     return result
 
 
-def check(path: Path, *, output_json: Path | None = None, cli_command=None):
-    """HWPX 하나를 재서 `food_crops.format.*` 위반 목록을 낸다(고치지 않음)."""
+def check(path: Path, *, output_json: Path | None = None, cli_command=None,
+          major: str = "food_crops"):
+    """HWPX 하나를 재서 `<전공>.format.*` 위반 목록을 낸다(고치지 않음).
+
+    `major`는 `food_crops`(기본) 또는 `dairy`다. 기대값은 검사기 안의
+    `SPECS`에서 고르며 빌더 프로필을 읽지 않는다(설계 F5·I-07).
+    """
     path = Path(path)
+    if major not in SPECS:
+        raise ValueError("unknown major: %s (choose from %s)"
+                         % (major, ", ".join(sorted(SPECS))))
+    spec = SPECS[major]
     if output_json is not None and output_json.resolve() == path.resolve():
         raise ValueError("--out must differ from the input HWPX (refusing overwrite)")
-    violations = _Violations()
+    violations = _Violations(spec.prefix)
     result = {
         "schema": "gg-school-format-hwpx-probe/v1",
         "status": "blocked",
@@ -847,7 +1294,7 @@ def check(path: Path, *, output_json: Path | None = None, cli_command=None):
     }
     if len(measured.sections) != len(SECTION_NAMES) or not measured.charprs:
         # 구역이나 글자 모양을 읽지 못하면 나머지 대조는 의미가 없다.
-        _check_sections(measured, violations)
+        _check_sections(measured, violations, spec)
         result["checks"] = {
             "section": {"status": "blocked", "measured": len(measured.sections)},
             "structure": {"status": "skipped", "reason": "incomplete package"},
@@ -858,16 +1305,31 @@ def check(path: Path, *, output_json: Path | None = None, cli_command=None):
             _write(result, output_json)
         return result
 
-    _check_sections(measured, violations)
-    _check_page_numbers(measured, violations)
-    _check_charpr(measured, violations)
+    _check_sections(measured, violations, spec)
+    _check_page_numbers(measured, violations, spec)
+    sizes = _charpr_sizes(measured)
+    if spec.dairy:
+        if not sizes:
+            violations.bad(
+                violations.code("charpr.front"), (), HEADER_NAME,
+                {"charpr": "1개 이상"}, {"charpr": 0},
+                "header.xml에서 글자 크기를 읽지 못해 글자 모양을 판정할 수 없음")
+        else:
+            _dairy_check_cover(measured, violations, sizes)
+            _dairy_check_front_titles(measured, violations, sizes)
+            _dairy_check_levels(measured, violations, sizes)
+            _dairy_check_consent_place(measured, violations, sizes)
+        _dairy_check_heading_spacing(measured, violations)
+        _dairy_check_body_page_breaks(measured, violations)
+    else:
+        _check_charpr(measured, violations)
     _check_manifest(measured, violations)
     result["checks"]["structure"] = _check_structure(cli_command, path, violations)
     result["checks"]["reparse"] = _check_reparse(
         cli_command, path, measured, violations)
     result["checks"]["section"] = {
         "status": "pass" if not any(
-            value["code"].startswith("food_crops.format.section") for value in violations.items)
+            value["code"].startswith(spec.prefix + "section") for value in violations.items)
         else "blocked",
         "count": len(measured.sections),
         "sec_cnt": measured.sec_cnt,
@@ -875,21 +1337,42 @@ def check(path: Path, *, output_json: Path | None = None, cli_command=None):
     }
     result["checks"]["page_number"] = {
         "status": "pass" if not any(
-            value["code"].startswith("food_crops.format.page_number") for value in violations.items)
+            value["code"].startswith(spec.prefix + "page_number") for value in violations.items)
         else "blocked",
         "page_num_counts": [len(section["page_num"]) for section in measured.sections],
         "new_num_counts": [len(section["new_num"]) for section in measured.sections],
     }
     result["checks"]["charpr"] = {
         "status": "pass" if not any(
-            value["code"].startswith("food_crops.format.charpr") for value in violations.items)
+            value["code"].startswith(spec.prefix + "charpr") for value in violations.items)
         else "blocked",
         "charpr_count": len(measured.charprs),
         "front_charpr_ids": sorted(measured.front_charpr_ids, key=int),
     }
+    if spec.dairy:
+        result["checks"]["paragraph"] = {
+            "status": "pass" if not any(
+                value["code"].startswith(spec.prefix + "paragraph")
+                for value in violations.items)
+            else "blocked",
+            "outline_paraPr": sorted(
+                ({"id": cid, "prev": value.get("prev"), "next": value.get("next")}
+                 for cid, value in measured.paraprs.items() if value.get("outline")),
+                key=lambda item: int(item["id"])),
+        }
+        result["checks"]["page_break"] = {
+            "status": "pass" if not any(
+                value["code"].startswith(spec.prefix + "page_break")
+                for value in violations.items)
+            else "blocked",
+            "body_page_breaks": sum(
+                1 for flag in measured.sections[2]["page_break"] if flag),
+        }
+        # 기계로 판정하지 않는 항목은 통과로 숨기지 않고 notes에 남긴다.
+        result["notes"] = list(result.get("notes") or []) + _dairy_notes()
     result["checks"]["manifest"] = {
         "status": "pass" if not any(
-            value["code"].startswith("food_crops.format.manifest") for value in violations.items)
+            value["code"].startswith(spec.prefix + "manifest") for value in violations.items)
         else "blocked",
         "version_xml_present": getattr(measured, "version_xml_present", None),
         "version_xml_note": "1판·양식 원본에도 없다(사전 결함, 우리 변경 탓 아님)"
@@ -915,10 +1398,12 @@ def main(argv=None):
     parser.add_argument("--out", type=Path)
     parser.add_argument("--kordoc", nargs="+", default=None,
                         help="kordoc 실행 명령(예: kordoc). 주면 구조 검증·재파싱도 한다")
+    parser.add_argument("--major", choices=sorted(SPECS), default="food_crops",
+                        help="검사할 전공 규격(기본 food_crops)")
     options = parser.parse_args(argv)
     try:
         result = check(options.hwpx, output_json=options.out,
-                       cli_command=options.kordoc)
+                       cli_command=options.kordoc, major=options.major)
     except ValueError as exc:
         print("BLOCK: %s" % exc, file=sys.stderr)
         return 2

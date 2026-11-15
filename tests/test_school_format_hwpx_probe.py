@@ -638,6 +638,443 @@ class ProbeTests(unittest.TestCase):
         self.assertEqual("skipped", result["checks"]["structure"]["status"])
         self.assertEqual("skipped", result["checks"]["reparse"]["status"])
 
+    def test_food_crops_result_has_no_dairy_checks(self):
+        # 전공별 검사는 결과 키도 갈라야 한다. 식량작물 결과 JSON에 낙농 키가
+        # 생기면 이 단위가 식량작물 계약을 바꾼 것이다.
+        self.assertNotIn("paragraph", self.result["checks"])
+        self.assertNotIn("page_break", self.result["checks"])
+        for note in self.result.get("notes") or []:
+            self.assertNotEqual("page_number.size", note.get("unverified"))
+
+
+# --- 낙농(dairy) ----------------------------------------------------------
+# 설계 §F-0 값으로 만든 최소 HWPX. 실제 사례(c1)의 구조를 줄인 것이고, 값은
+# 검사기 기대표와 별개로 여기 적는다(검사기가 자기 기대값만 읽는지 보려면
+# 시험 쪽 값이 독립이어야 한다).
+
+DAIRY_CHARPRS = (
+    # (id, height 1/100 pt, bold)
+    ("0", 1200, False), ("1", 1800, False), ("2", 3200, True),
+    ("3", 2000, False), ("4", 2200, True), ("5", 2000, True),
+    ("6", 1600, True), ("7", 1500, True), ("8", 1400, True),
+    ("9", 1200, True), ("10", 1800, True),
+)
+
+DAIRY_SECPR = (
+    '<hp:secPr><hp:pagePr landscape="WIDELY" width="59528" height="84188"'
+    ' gutterType="LEFT_ONLY"><hp:margin header="0" footer="2835" gutter="0"'
+    ' left="8504" right="8504" top="8504" bottom="8504"/></hp:pagePr></hp:secPr>'
+)
+DAIRY_COLPR = (
+    '<hp:ctrl><hp:colPr id="" type="NEWSPAPER" layout="LEFT" colCount="1"'
+    ' sameSz="1" sameGap="0"/></hp:ctrl>'
+)
+
+# (글자, charPr id, paraPr id, 쪽 나눔)
+DAIRY_COVER = (
+    ("", 0, 0, False),
+    ("농업전문학사 학위논문", 1, 0, False),   # 학위 줄 18 비굵게
+    ("합성 낙농 계획", 2, 0, False),          # 제목 32 굵게
+    ("2027년 2월", 3, 0, False),
+    ("한국농수산대학교", 3, 0, False),
+    ("축산학부 낙농전공", 3, 0, False),
+    ("가상학생", 3, 0, False),
+    ("지도교수 가상교수", 1, 0, False),       # 지도교수 줄 18 비굵게
+    ("학부모 동의서", 4, 0, False),           # 낙농에선 겉표지 구역
+    ("합성 동의 문장이다.", 0, 0, False),
+)
+DAIRY_FRONT = (
+    ("요약", 4, 1, False),
+    ("합성 요약 내용이다.", 0, 0, False),
+    ("감사의 글", 4, 1, False),
+    ("합성 감사 내용이다.", 0, 0, False),
+    ("목차", 4, 1, False),
+    ("표 목차", 4, 1, False),
+    ("그림 목차", 4, 1, False),
+)
+DAIRY_BODY = (
+    ("1. 머리말", 5, 1, False),               # 첫 장은 쪽 나눔 없음
+    ("합성 본문이다.", 0, 0, False),
+    ("가. 소제목", 6, 1, False),
+    ("1) 하위 제목", 7, 1, False),
+    ("가) 하위 제목", 8, 1, False),
+    ("(1) 하위 제목", 9, 1, False),
+    ("2. 영농환경 분석", 5, 1, True),         # 장마다 새 쪽
+    ("합성 본문이다.", 0, 0, False),
+)
+
+
+def dairy_header(*, spacing=("1920", "1920"), charprs=DAIRY_CHARPRS):
+    shapes = "".join(
+        '<hh:charPr id="%s" height="%d" textColor="#000000" shadeColor="none"'
+        ' useFontSpace="0" useKerning="0" symMark="NONE" borderFillIDRef="1"%s>'
+        '<hh:fontRef hangul="0" latin="0" hanja="0" japanese="0" other="0"'
+        ' symbol="0" user="0"/></hh:charPr>'
+        % (cid, height, ' bold="1"' if bold else "")
+        for cid, height, bold in charprs)
+    return (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>'
+        '<hh:head xmlns:hh="http://www.hancom.co.kr/hwpml/2011/head"'
+        ' xmlns:hc="http://www.hancom.co.kr/hwpml/2011/core" secCnt="3"'
+        ' version="1.4">'
+        '<hh:paraProperties itemCnt="2">'
+        '<hh:paraPr id="0" tabPrIDRef="0">'
+        '<hh:heading type="NONE" idRef="0" level="0"/>'
+        '<hh:margin><hc:intent value="0" unit="HWPUNIT"/>'
+        '<hc:prev value="0" unit="HWPUNIT"/><hc:next value="0" unit="HWPUNIT"/>'
+        '</hh:margin></hh:paraPr>'
+        '<hh:paraPr id="1" tabPrIDRef="0">'
+        '<hh:heading type="OUTLINE" idRef="0" level="0"/>'
+        '<hh:margin><hc:intent value="0" unit="HWPUNIT"/>'
+        '<hc:prev value="%s" unit="HWPUNIT"/><hc:next value="%s" unit="HWPUNIT"/>'
+        '</hh:margin></hh:paraPr>'
+        '</hh:paraProperties>'
+        '<hh:charProperties itemCnt="%d">%s</hh:charProperties>'
+        '</hh:head>' % (spacing[0], spacing[1], len(charprs), shapes))
+
+
+def dairy_hpf():
+    items = "".join(
+        '<opf:item id="section%d" href="Contents/section%d.xml"'
+        ' media-type="application/xml"/>' % (index, index) for index in range(3))
+    spine = "".join(
+        '<opf:itemref idref="section%d" linear="yes"/>' % index for index in range(3))
+    return (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>'
+        '<opf:package xmlns:opf="http://www.idpf.org/2007/opf/"'
+        ' xmlns:hpf="http://www.hancom.co.kr/schema/2011/hpf/">'
+        '<opf:manifest><opf:item id="header" href="Contents/header.xml"'
+        ' media-type="application/xml"/>' + items + '</opf:manifest>'
+        '<opf:spine><opf:itemref idref="header" linear="no"/>' + spine
+        + '</opf:spine></opf:package>')
+
+
+def dairy_section(paragraphs, *, page_num=None):
+    """구역 하나. 첫 문단 첫 run에 secPr·colPr(·pageNum)·t(·newNum)을 넣는다."""
+    parts = []
+    for index, (text, charpr, parapr, page_break) in enumerate(paragraphs):
+        children = ""
+        if index == 0:
+            children += DAIRY_SECPR + DAIRY_COLPR
+            if page_num:
+                children += ('<hp:ctrl><hp:pageNum pos="BOTTOM_CENTER"'
+                             ' formatType="%s" sideChar="-"/></hp:ctrl>' % page_num)
+        children += "<hp:t>%s</hp:t>" % text
+        if index == 0 and page_num:
+            children += '<hp:ctrl><hp:newNum num="1" numType="PAGE"/></hp:ctrl>'
+        attrs = ' paraPrIDRef="%d" styleIDRef="0"' % parapr
+        if page_break:
+            attrs += ' pageBreak="1"'
+        parts.append('<hp:p%s><hp:run charPrIDRef="%s">%s</hp:run></hp:p>'
+                     % (attrs, charpr, children))
+    return ('<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>'
+            '<hs:sec xmlns:hs="http://www.hancom.co.kr/hwpml/2011/section"'
+            ' xmlns:hp="http://www.hancom.co.kr/hwpml/2011/paragraph">'
+            + "".join(parts) + '</hs:sec>')
+
+
+def dairy_members(*, header=None, cover=None, front=None, body=None):
+    return {
+        "Contents/content.hpf": dairy_hpf().encode("utf-8"),
+        "Contents/header.xml": (dairy_header() if header is None else header).encode("utf-8"),
+        "Contents/section0.xml": (dairy_section(DAIRY_COVER if cover is None else cover)
+                                  ).encode("utf-8"),
+        "Contents/section1.xml": (dairy_section(DAIRY_FRONT if front is None else front,
+                                               page_num="ROMAN_CAPITAL")).encode("utf-8"),
+        "Contents/section2.xml": (dairy_section(DAIRY_BODY if body is None else body,
+                                               page_num="DIGIT")).encode("utf-8"),
+    }
+
+
+class DairyProbeTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.TemporaryDirectory()
+        cls.members = dairy_members()
+        cls.path = _rewrite(dict(cls.members), pathlib.Path(cls.tmp.name) / "dairy.hwpx")
+        cls.result = probe.check(cls.path, major="dairy")
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.tmp.cleanup()
+
+    def codes(self, result):
+        return sorted({value["code"] for value in result["violations"]})
+
+    def mutated(self, member, old, new, name):
+        """members 사본에서 `member`의 `old`를 `new`로 바꾼 HWPX를 만든다."""
+        members = dict(self.members)
+        text = members[member].decode("utf-8")
+        self.assertIn(old, text, (member, old))
+        members[member] = text.replace(old, new, 1).encode("utf-8")
+        return _rewrite(members, pathlib.Path(self.tmp.name) / name)
+
+    def test_dairy_output_passes_every_dairy_row(self):
+        self.assertEqual("pass_with_notes", self.result["status"],
+                         self.result["violations"])
+        self.assertEqual([], self.result["violations"])
+        checks = self.result["checks"]
+        for key in ("section", "page_number", "charpr", "paragraph",
+                    "page_break", "manifest"):
+            self.assertEqual("pass", checks[key]["status"], (key, checks[key]))
+        # 제목 간격은 개요형 문단 모양에서 읽는다.
+        self.assertEqual([{"id": "1", "prev": "1920", "next": "1920"}],
+                         checks["paragraph"]["outline_paraPr"])
+        # 첫 장은 쪽 나눔 없음, 둘째 장만 있음.
+        self.assertEqual(1, checks["page_break"]["body_page_breaks"])
+        # 기계로 못 보는 항목은 통과로 숨기지 않고 notes에 남긴다.
+        unverified = {note.get("unverified") for note in self.result["notes"]}
+        self.assertIn("page_number.size", unverified)
+
+    def test_every_dairy_violation_carries_the_dairy_prefix(self):
+        path = self.mutated("Contents/section1.xml", 'right="8504"', 'right="5670"',
+                            "margin.hwpx")
+        result = probe.check(path, major="dairy")
+        self.assertTrue(result["violations"])
+        for violation in result["violations"]:
+            self.assertTrue(violation["code"].startswith("dairy.format."), violation)
+            self.assertEqual(violation["code"], violation["requirement_id"])
+
+    def test_margins_wrong_is_reported_per_role(self):
+        path = self.mutated("Contents/section2.xml", 'top="8504"', 'top="4252"',
+                            "body-top.hwpx")
+        codes = self.codes(probe.check(path, major="dairy"))
+        self.assertIn("dairy.format.section.margin.body_top", codes)
+
+    def test_front_number_must_be_roman(self):
+        path = self.mutated("Contents/section1.xml", 'formatType="ROMAN_CAPITAL"',
+                            'formatType="DIGIT"', "front-digit.hwpx")
+        found = [value for value in probe.check(path, major="dairy")["violations"]
+                 if value["code"] == "dairy.format.page_number.front"]
+        self.assertTrue(found)
+        self.assertEqual("ROMAN_CAPITAL", found[0]["expected"]["formatType"])
+
+    def test_body_number_must_restart_at_one(self):
+        path = self.mutated("Contents/section2.xml",
+                            '<hp:newNum num="1" numType="PAGE"/>',
+                            '<hp:newNum num="5" numType="PAGE"/>', "body-restart.hwpx")
+        codes = self.codes(probe.check(path, major="dairy"))
+        self.assertIn("dairy.format.page_number.body_restart", codes)
+
+    def test_front_title_must_be_22_bold(self):
+        # 요약은 구역 첫 문단이라 secPr과 같은 run에 있다. 글자 크기만 바꾸려면
+        # secPr이 없는 제목(표 목차)을 고른다. 22 pt 굵게(charPr 4)를 20 pt
+        # 보통(charPr 3)으로 낮춘다.
+        path = self.mutated("Contents/section1.xml", '<hp:run charPrIDRef="4"><hp:t>표 목차',
+                            '<hp:run charPrIDRef="3"><hp:t>표 목차', "front-title.hwpx")
+        found = [value for value in probe.check(path, major="dairy")["violations"]
+                 if value["code"] == "dairy.format.charpr.front"]
+        self.assertEqual(1, len(found), found)
+        self.assertEqual({"size": 22, "bold": True}, found[0]["expected"])
+
+    def test_missing_front_title_is_reported(self):
+        # 요약·감사의 글·목차는 반드시 있어야 한다. 표·그림 목차는 선택이라
+        # 빼도 위반이 아니다(아래 optional 시험이 그 짝).
+        front = [row for row in DAIRY_FRONT if row[0] != "목차"]
+        members = dairy_members(front=tuple(front))
+        path = _rewrite(members, pathlib.Path(self.tmp.name) / "no-toc.hwpx")
+        found = [value for value in probe.check(path, major="dairy")["violations"]
+                 if value["code"] == "dairy.format.charpr.front"]
+        self.assertTrue(found)
+        self.assertEqual(["목차"], found[0]["actual"]["missing"])
+
+    def test_optional_table_and_figure_toc_may_be_absent(self):
+        # 표·그림이 없는 원고는 표 목차·그림 목차가 없어도 통과해야 한다
+        # (실제 사례 c2가 그렇다).
+        front = [row for row in DAIRY_FRONT
+                 if row[0] not in ("표 목차", "그림 목차")]
+        members = dairy_members(front=tuple(front))
+        path = _rewrite(members, pathlib.Path(self.tmp.name) / "no-sub-toc.hwpx")
+        codes = self.codes(probe.check(path, major="dairy"))
+        self.assertNotIn("dairy.format.charpr.front", codes)
+
+    def test_optional_toc_must_stay_in_the_front_section(self):
+        # 실측 c2가 표·그림 목차를 본문 구역 첫머리에 낸다(앞부분 구역에는
+        # 없음). 크기가 아니라 자리가 틀린 것이라 앞부분 구역 검사가 잡는다.
+        front = tuple(row for row in DAIRY_FRONT
+                      if row[0] not in ("표 목차", "그림 목차"))
+        body = (("표 목차", 4, 0, False), ("그림 목차", 4, 0, False)) + DAIRY_BODY
+        members = dairy_members(front=front, body=body)
+        path = _rewrite(members, pathlib.Path(self.tmp.name) / "toc-body.hwpx")
+        found = [value for value in probe.check(path, major="dairy")["violations"]
+                 if value["code"] == "dairy.format.section.front"]
+        self.assertEqual(["표 목차", "그림 목차"],
+                         [value["expected"]["title"] for value in found])
+
+    def test_bare_number_marker_counts_as_a_heading(self):
+        # 빌더 산출물은 번호와 제목을 한 문단에 넣지만(실측 c1: `<hp:t>1. ` +
+        # `<hp:t>머리말`), 문단 번호를 자동 생성하는 생성기는 둘을 다른
+        # 문단으로 낸다. 그때 끝 공백이 걷혀 문단 글자가 `1.`만 남아도 장
+        # 제목으로 읽어야 한다 - 놓치면 사다리 판정 자체가 실패한다.
+        body = (
+            ("1. ", 5, 1, False),
+            ("머리말", 5, 1, False),
+            ("합성 본문이다.", 0, 0, False),
+            ("2. ", 5, 1, True),
+            ("영농환경 분석", 5, 1, False),
+            ("합성 본문이다.", 0, 0, False),
+        )
+        members = dairy_members(body=body)
+        path = _rewrite(members, pathlib.Path(self.tmp.name) / "bare.hwpx")
+        result = probe.check(path, major="dairy")
+        self.assertEqual([], result["violations"])
+        self.assertEqual(1, result["checks"]["page_break"]["body_page_breaks"])
+
+    def test_bare_marker_wrong_size_is_still_reported(self):
+        # 번호만 있는 문단도 단계 크기 검사를 받는다(20 pt 자리에 12 pt).
+        body = (
+            ("1. ", 0, 1, False),
+            ("머리말", 5, 1, False),
+            ("합성 본문이다.", 0, 0, False),
+        )
+        members = dairy_members(body=body)
+        path = _rewrite(members, pathlib.Path(self.tmp.name) / "bare-level.hwpx")
+        found = [value for value in probe.check(path, major="dairy")["violations"]
+                 if value["code"] == "dairy.format.charpr.level"]
+        self.assertEqual(1, len(found), found)
+        self.assertEqual({"size": 20, "bold": True}, found[0]["expected"])
+
+    def test_consent_title_must_be_22_bold(self):
+        # 낙농 겉표지 구역의 학부모 동의서 제목도 특수 쪽 제목이다(22 pt 굵게).
+        cover = tuple(
+            (text, 3 if text == "학부모 동의서" else charpr, parapr, page_break)
+            for text, charpr, parapr, page_break in DAIRY_COVER)
+        members = dairy_members(cover=cover)
+        path = _rewrite(members, pathlib.Path(self.tmp.name) / "consent-pt.hwpx")
+        found = [value for value in probe.check(path, major="dairy")["violations"]
+                 if value["code"] == "dairy.format.charpr.front"]
+        self.assertEqual(1, len(found), found)
+        self.assertEqual({"size": 22, "bold": True}, found[0]["expected"])
+
+    def test_cover_title_must_be_32_bold(self):
+        path = self.mutated("Contents/section0.xml",
+                            '<hp:run charPrIDRef="2"><hp:t>합성 낙농 계획',
+                            '<hp:run charPrIDRef="3"><hp:t>합성 낙농 계획',
+                            "cover-title.hwpx")
+        found = [value for value in probe.check(path, major="dairy")["violations"]
+                 if value["code"] == "dairy.format.charpr.cover"]
+        self.assertTrue(found)
+        self.assertEqual({"size": 32, "bold": True}, found[0]["expected"])
+
+    def test_level_size_ladder_follows_the_chapter_numbering(self):
+        # `1.` 장을 쓰는 원고의 사다리는 20/16/15/14/12다. `가.`(16)를 20으로
+        # 올리면 2단계가 위반이다.
+        path = self.mutated("Contents/section2.xml", '<hp:run charPrIDRef="6"><hp:t>가. 소제목',
+                            '<hp:run charPrIDRef="5"><hp:t>가. 소제목', "level.hwpx")
+        found = [value for value in probe.check(path, major="dairy")["violations"]
+                 if value["code"] == "dairy.format.charpr.level"]
+        self.assertEqual(1, len(found), found)
+        self.assertEqual({"size": 16, "bold": True}, found[0]["expected"])
+
+    def test_later_chapter_must_start_a_new_page(self):
+        body = tuple((text, charpr, parapr, False if text.startswith("2.") else page_break)
+                     for text, charpr, parapr, page_break in DAIRY_BODY)
+        members = dairy_members(body=body)
+        path = _rewrite(members, pathlib.Path(self.tmp.name) / "no-break.hwpx")
+        found = [value for value in probe.check(path, major="dairy")["violations"]
+                 if value["code"] == "dairy.format.page_break.chapter"]
+        self.assertEqual(1, len(found), found)
+        self.assertEqual({"pageBreak": True, "chapter": "2. 영농환경 분석"},
+                         found[0]["expected"])
+
+    def test_first_chapter_must_not_start_a_new_page(self):
+        body = tuple((text, charpr, parapr, True if text.startswith("1.") else page_break)
+                     for text, charpr, parapr, page_break in DAIRY_BODY)
+        members = dairy_members(body=body)
+        path = _rewrite(members, pathlib.Path(self.tmp.name) / "first-break.hwpx")
+        found = [value for value in probe.check(path, major="dairy")["violations"]
+                 if value["code"] == "dairy.format.page_break.chapter"]
+        self.assertEqual(1, len(found), found)
+        self.assertFalse(found[0]["expected"]["pageBreak"])
+
+    def test_roman_chapters_break_and_their_ladder_starts_at_20(self):
+        # `Ⅰ.` 장을 쓰는 원고(작성요령 표기)는 6단 사다리(20/18/16/15/14/12)다.
+        # 단계 2는 18 pt라 16 pt로 내리면 위반이고, 장마다 새 쪽이어야 한다.
+        body = (
+            ("Ⅰ. 머리말", 5, 1, False),
+            ("합성 본문이다.", 0, 0, False),
+            ("1. 소제목", 10, 1, False),
+            ("합성 본문이다.", 0, 0, False),
+            ("Ⅱ. 영농환경 분석", 5, 1, True),
+            ("합성 본문이다.", 0, 0, False),
+        )
+        members = dairy_members(body=body)
+        path = _rewrite(members, pathlib.Path(self.tmp.name) / "roman.hwpx")
+        self.assertEqual([], probe.check(path, major="dairy")["violations"])
+        # 같은 본문에서 단계 2를 16 pt로 낮추면 사다리 위반이 하나 나온다.
+        lowered = tuple((text, 6 if text == "1. 소제목" else charpr, parapr, page_break)
+                        for text, charpr, parapr, page_break in body)
+        path = _rewrite(dairy_members(body=lowered),
+                        pathlib.Path(self.tmp.name) / "roman-level.hwpx")
+        found = [value for value in probe.check(path, major="dairy")["violations"]
+                 if value["code"] == "dairy.format.charpr.level"]
+        self.assertEqual(1, len(found), found)
+        self.assertEqual({"size": 18, "bold": True}, found[0]["expected"])
+
+    def test_subheading_does_not_start_a_new_page(self):
+        # `1. 소제목`은 `Ⅰ.` 원고에서 장이 아니라 2단계다. 장으로 잘못 읽으면
+        # 쪽 나눔이 없다고 위반을 내지만, 올바른 판정은 '장 아님'이다.
+        body = (
+            ("Ⅰ. 머리말", 5, 1, False),
+            ("1. 소제목", 10, 1, False),
+            ("합성 본문이다.", 0, 0, False),
+            ("Ⅱ. 영농환경 분석", 5, 1, True),
+        )
+        members = dairy_members(body=body)
+        path = _rewrite(members, pathlib.Path(self.tmp.name) / "sub-break.hwpx")
+        result = probe.check(path, major="dairy")
+        self.assertEqual([], [value for value in result["violations"]
+                              if value["code"].startswith("dairy.format.page_break")])
+        # 장은 Ⅰ·Ⅱ 둘뿐이라 쪽 나눔도 하나(둘째 장)뿐이다.
+        self.assertEqual(1, result["checks"]["page_break"]["body_page_breaks"])
+
+    def test_heading_spacing_must_be_1920(self):
+        members = dairy_members(header=dairy_header(spacing=("1920", "960")))
+        path = _rewrite(members, pathlib.Path(self.tmp.name) / "spacing.hwpx")
+        found = [value for value in probe.check(path, major="dairy")["violations"]
+                 if value["code"] == "dairy.format.paragraph.heading_spacing"]
+        self.assertEqual(1, len(found), found)
+        self.assertEqual({"prev": "1920", "next": "1920"}, found[0]["expected"])
+
+    def test_consent_belongs_to_the_cover_section_in_dairy(self):
+        # 학부모 동의서를 본문 끝으로 옮기면 낙농 규격 위반이다(식량작물은
+        # 본문 끝이 맞다 - 구역 판정이 곧 이 항목의 검사다).
+        cover = tuple(row for row in DAIRY_COVER if row[0] != "학부모 동의서")
+        body = DAIRY_BODY + (("학부모 동의서", 4, 0, False),)
+        members = dairy_members(cover=cover, body=body)
+        path = _rewrite(members, pathlib.Path(self.tmp.name) / "consent-body.hwpx")
+        codes = self.codes(probe.check(path, major="dairy"))
+        self.assertIn("dairy.format.section.consent", codes)
+
+    def test_dairy_rejects_food_crops_output(self):
+        # 전공 교차 거절(I-07): 한쪽 산출물을 다른쪽 규격으로 통과시키면 안 된다.
+        path = _write(self.tmp.name, _transform(), "food-crops.hwpx")
+        result = probe.check(path, major="dairy")
+        self.assertEqual("blocked", result["status"])
+        self.assertTrue(result["violations"])
+
+    def test_food_crops_rejects_dairy_output(self):
+        result = probe.check(self.path)
+        self.assertEqual("blocked", result["status"])
+        for violation in result["violations"]:
+            self.assertTrue(violation["code"].startswith("food_crops.format."))
+
+    def test_unknown_major_raises(self):
+        with self.assertRaises(ValueError):
+            probe.check(self.path, major="livestock")
+
+    def test_cli_accepts_major_and_writes_json(self):
+        out = pathlib.Path(self.tmp.name) / "dairy.json"
+        process = subprocess.run(
+            [sys.executable, "-B", str(SCRIPTS / "gg_school_format_hwpx.py"),
+             str(self.path), "--major", "dairy", "--out", str(out)],
+            capture_output=True, text=True, encoding="utf-8")
+        self.assertEqual(0, process.returncode, process.stderr)
+        payload = json.loads(out.read_text(encoding="utf-8"))
+        self.assertEqual("pass_with_notes", payload["status"])
+        self.assertEqual([], payload["violations"])
+        self.assertEqual(0, json.loads(process.stdout)["violations"])
+
 
 if __name__ == "__main__":
     unittest.main()

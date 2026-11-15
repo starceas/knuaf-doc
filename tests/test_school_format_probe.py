@@ -1,14 +1,17 @@
-"""식량작물 쪽별 서식 기계 검사(gg_school_format) 시험.
+"""식량작물·낙농 쪽별 서식 기계 검사(gg_school_format) 시험.
 
 검사기는 DOCX를 고치지 않고 측정만 한다. 전공을 주지 않으면 구역 여백·쪽번호·
 바닥글은 기록만 하고 위반을 만들지 않으며, `food_crops`를 주면 양식 값과
-대조해 `food_crops.format.*` 코드로 낸다.
+대조해 `food_crops.format.*` 코드로, `dairy`를 주면 낙농 양식 값과 대조해
+`dairy.format.*` 코드로 낸다. 두 전공은 서로의 산출물을 통과시키지 않는다.
 """
 
 import json
+import re
 import subprocess
 import sys
 import unittest
+import zipfile
 from pathlib import Path
 
 from tests._harness import SCRIPTS, ContractCase, bind_major, runtime
@@ -17,8 +20,34 @@ CHAPTERS = ("# 1. 머리말", "# 2. 영농환경 분석", "# 3. 영농계획 수
             "# 4. 재무계획")
 CLOSERS = ("# 맺음말 및 발전방향", "# 참고문헌", "# 학부모 동의서")
 
+# 낙농 양식 여백(DESIGN-v1 §F-0): 위·아래·좌·우 30 mm, 머리 0, 꼬리 10 mm.
+DAIRY_MARGIN = {"top": "1701", "right": "1701", "bottom": "1701", "left": "1701",
+                "header": "0", "footer": "567", "gutter": "0"}
 
-class SchoolFormatProbeTests(ContractCase):
+
+def edit_paragraph(document, needle, old, new, containing=None):
+    """Replace ``old`` with ``new`` in the first paragraph that matches.
+
+    ``needle`` picks the paragraph by its text; ``containing`` narrows to the
+    paragraph carrying that evidence (e.g. the ``Heading 1`` style), which the
+    table of contents repeats with the same text but different properties.
+    """
+    guard = r"(?:(?!</w:p>).)*?"
+    pattern = (r"<w:p(?:\s[^>]*)?>" + guard + re.escape(needle) + guard
+               + r"</w:p>")
+    for match in re.finditer(pattern, document, re.S):
+        span = match.group(0)
+        if containing is not None and containing not in span:
+            continue
+        if old not in span:
+            continue
+        return document[:match.start()] + span.replace(old, new, 1) + document[match.end():]
+    raise AssertionError("no paragraph for %r" % needle)
+
+
+class _ProbeFixtures(ContractCase):
+    """두 전공 시험이 함께 쓰는 준비(원고·빌드·코드 추출). 시험은 없다."""
+
     def setUp(self):
         self.fm = runtime("gg_frontmatter")
         self.builder = runtime("build_docx")
@@ -54,6 +83,8 @@ class SchoolFormatProbeTests(ContractCase):
         return [v["code"] for v in result["violations"]
                 if v["code"].startswith("food_crops.format.")]
 
+
+class SchoolFormatProbeTests(_ProbeFixtures):
     def test_sections_record_margins_numbers_and_footer(self):
         result = self.probe.check(self.docx("food_crops"))
         self.assertIsNone(result["food_crops_format"])
@@ -258,6 +289,223 @@ class SchoolFormatProbeTests(ContractCase):
         self.assertIsNone(report["food_crops_format"])
         self.assertEqual([], self.food_crops_codes(report))
         self.assertEqual(3, len(report["sections"]))
+
+
+class DairyFormatProbeTests(_ProbeFixtures):
+    """낙농 양식 대조(I-07): 기대값은 검사기 안에 있고, 변조하면 잡힌다."""
+
+    def dairy_manuscript(self):
+        profile = self.fm.normalize_school_profile({
+            "major_id": "dairy",
+            "school_profile": {
+                "title": "합성 낙농계획", "author": "가상학생",
+                "submission_date": "2026년 12월", "graduation_date": "2027년 2월",
+                "committee": {"chair": "가상위원장",
+                              "members": ["가상위원1", "가상위원2"]}}})
+        lines = self.fm.frontmatter_lines(profile, artifacts={
+            "parent_consent": "합성 동의 문장이다.",
+            "summary": "Ⅰ. 합성 사업목적\n\n합성 요약 문장이다.",
+            "thanks": "합성 감사 문장이다."})
+        body = ["1. 머리말", "합성 본문 문장이다.",
+                "가. 합성 1단계", "합성 하위 본문이다.",
+                "1) 합성 2단계", "합성 하위 본문이다.",
+                "가) 합성 3단계", "합성 하위 본문이다.",
+                "(1) 합성 4단계", "합성 하위 본문이다.",
+                "(가) 합성 5단계", "합성 하위 본문이다.",
+                "2. 농업환경분석", "합성 본문 문장이다.",
+                "3. 경영수지", "합성 본문 문장이다.",
+                "# 참고문헌", "합성 참고문헌이다."]
+        return "\n\n".join(lines + body)
+
+    def dairy_docx(self):
+        bind_major(self.root, "dairy")
+        doc = self.builder.convert(
+            self.dairy_manuscript(),
+            context=self.mc.output_context(self.root, "dairy"))
+        out = Path(self.root) / "dairy.docx"
+        doc.save(str(out))
+        return out
+
+    def dairy_codes(self, result):
+        return [v["code"] for v in result["violations"]
+                if v["code"].startswith("dairy.format.")]
+
+    def mutated(self, source, transform, name, part="word/document.xml"):
+        """Copy ``source`` with the named package part(s) rewritten."""
+        target = Path(self.root) / (name + ".docx")
+        parts = [part] if isinstance(part, str) else list(part)
+        with zipfile.ZipFile(source) as archive:
+            entries = {n: archive.read(n) for n in archive.namelist()}
+        for entry in parts:
+            entries[entry] = transform(entries[entry].decode("utf-8")).encode("utf-8")
+        with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as archive:
+            for entry, payload in entries.items():
+                archive.writestr(entry, payload)
+        return target
+
+    def test_dairy_output_passes_its_own_form(self):
+        result = self.probe.check(self.dairy_docx(), major_id="dairy")
+        self.assertEqual([], self.dairy_codes(result))
+        self.assertEqual([], result["dairy_format"])
+        # 본문이 실제로 분류돼야 제목 검사가 헛돌지 않는다(bookmark gg_body_1).
+        self.assertGreater(result["parts"]["body_paragraphs"], 0)
+
+    def test_dairy_measurements_record_the_three_sections(self):
+        result = self.probe.check(self.dairy_docx(), major_id="dairy")
+        sections = result["sections"]
+        self.assertEqual(3, len(sections))
+        for section in sections:
+            self.assertEqual(DAIRY_MARGIN, section["pg_mar"])
+        self.assertIsNone(sections[0]["pg_num_type"])
+        self.assertEqual({"start": "1", "fmt": "upperRoman"},
+                         sections[1]["pg_num_type"])
+        self.assertEqual({"start": "1", "fmt": "decimal"},
+                         sections[2]["pg_num_type"])
+        self.assertFalse(sections[0]["footer"]["has_reference"])
+        for section in sections[1:]:
+            self.assertEqual(1, section["footer"]["page_fields"])
+            self.assertEqual({"prefix": "- ", "suffix": " -",
+                              "size_half_points": ["18"]},
+                             section["footer"]["page_label"])
+
+    def test_dairy_form_is_not_read_from_the_builder_profile(self):
+        # 검사기 기대값이 빌더 프로필을 읽으면 빌더가 같이 틀릴 때 아무것도
+        # 못 잡는다(I-07). 검사기 소스에 프로필 import가 없어야 한다.
+        source = (SCRIPTS / "gg_school_format.py").read_text(encoding="utf-8")
+        self.assertNotIn("gg_major_format", source)
+        self.assertNotIn("MAJOR_FORMAT_PROFILES", source)
+
+    def test_margin_drift_is_reported(self):
+        def transform(document):
+            return document.replace(
+                '<w:pgMar w:top="1701"', '<w:pgMar w:top="1134"', 1)
+        path = self.mutated(self.dairy_docx(), transform, "margin")
+        codes = self.dairy_codes(self.probe.check(path, major_id="dairy"))
+        self.assertIn("dairy.format.margin.cover_top", codes)
+
+    def test_page_number_format_drift_is_reported(self):
+        def transform(document):
+            return document.replace(
+                '<w:pgNumType w:start="1" w:fmt="upperRoman"/>', "", 1)
+        path = self.mutated(self.dairy_docx(), transform, "numbering")
+        codes = self.dairy_codes(self.probe.check(path, major_id="dairy"))
+        self.assertIn("dairy.format.page_number.front", codes)
+
+    def test_cover_footer_appearing_is_reported(self):
+        # 겉표지에 쪽번호가 찍히면 안 된다: 바닥글 참조를 첫 구역에 넣어 본다.
+        def transform(document):
+            first = document.index('<w:footerReference w:type="default"')
+            ref = document[first:document.index("/>", first) + 2]
+            end = document.index("</w:sectPr>")
+            return document[:end] + ref + document[end:]
+        path = self.mutated(self.dairy_docx(), transform, "cover-footer")
+        codes = self.dairy_codes(self.probe.check(path, major_id="dairy"))
+        self.assertIn("dairy.format.footer.cover", codes)
+
+    def test_page_label_drift_is_reported_twice_over(self):
+        # 꾸밈(`- 1 -`)과 크기(9 pt)는 따로 잰다. 접두를 지우고 12 pt로 키운다.
+        def transform(footer):
+            footer = footer.replace(">- </w:t>", "></w:t>", 1)
+            return footer.replace('<w:sz w:val="18"/>', '<w:sz w:val="24"/>')
+        source = self.dairy_docx()
+        with zipfile.ZipFile(source) as archive:
+            footer_part = next(n for n in archive.namelist()
+                               if re.fullmatch(r"word/footer\d+\.xml", n))
+        path = self.mutated(source, transform, "label", part=footer_part)
+        codes = self.dairy_codes(self.probe.check(path, major_id="dairy"))
+        self.assertIn("dairy.format.page_label.front", codes)
+        self.assertIn("dairy.format.page_label_size.front", codes)
+
+    def test_word_resaved_field_code_form_is_accepted(self):
+        # Word는 손으로 만든 필드를 저장할 때 `fldSimple` 대신
+        # begin/instrText/separate/end 꼴로 다시 쓴다. 그 꼴도 쪽번호 하나이며
+        # 같은 `- 1 -` 꾸밈·9 pt로 통과해야 한다(정상 산출물을 막지 않는다).
+        def transform(footer):
+            field = re.search(r'<w:fldSimple[^>]*instr="PAGE"[^>]*>.*?</w:fldSimple>',
+                              footer, re.S)
+            self.assertIsNotNone(field)
+            run = re.search(r"<w:r>.*?</w:r>", field.group(0), re.S).group(0)
+            new = ('<w:r><w:fldChar w:fldCharType="begin"/></w:r>'
+                   '<w:r><w:instrText xml:space="preserve"> PAGE </w:instrText></w:r>'
+                   '<w:r><w:fldChar w:fldCharType="separate"/></w:r>'
+                   + run.replace("</w:r>", "<w:t>1</w:t></w:r>", 1) +
+                   '<w:r><w:fldChar w:fldCharType="end"/></w:r>')
+            return footer[:field.start()] + new + footer[field.end():]
+        source = self.dairy_docx()
+        with zipfile.ZipFile(source) as archive:
+            footer_part = next(n for n in archive.namelist()
+                               if re.fullmatch(r"word/footer\d+\.xml", n))
+        path = self.mutated(source, transform, "trio", part=footer_part)
+        result = self.probe.check(path, major_id="dairy")
+        self.assertEqual([], self.dairy_codes(result))
+
+    def test_heading_size_drift_is_reported_per_level(self):
+        def transform(document):
+            return edit_paragraph(document, "가. 합성 1단계",
+                                  '<w:sz w:val="32"/>', '<w:sz w:val="24"/>',
+                                  containing='w:val="Heading3"')
+        path = self.mutated(self.dairy_docx(), transform, "heading-size")
+        codes = self.dairy_codes(self.probe.check(path, major_id="dairy"))
+        self.assertIn("dairy.format.heading_size.3", codes)
+
+    def test_chapter_break_drift_is_reported(self):
+        # 장 새 쪽은 두 번째 1단계 제목부터다. 첫 장(`1. 머리말`)은 면제,
+        # 둘째 장에서 `pageBreakBefore`를 빼면 잡혀야 한다.
+        def transform(document):
+            return edit_paragraph(document, "2. 농업환경분석",
+                                  "<w:pageBreakBefore/>", "",
+                                  containing='w:val="Heading1"')
+        path = self.mutated(self.dairy_docx(), transform, "chapter-break")
+        codes = self.dairy_codes(self.probe.check(path, major_id="dairy"))
+        self.assertIn("dairy.format.chapter_break", codes)
+
+    def test_prose_that_looks_numbered_is_not_a_heading(self):
+        # 장 판정 음성: 스타일 없는 본문 산문이 `1)`로 시작하면 공용
+        # `is_heading`의 글자 추정은 참이 되지만(그 판정은 이 단위 범위 밖의
+        # 기존 동작), 낙농 단계 판정은 스타일 증거가 없으므로 level이 없어
+        # 크기·간격·쪽나눔 검사 대상이 되지 않아야 한다.
+        def transform(document):
+            para = ('<w:p><w:pPr><w:spacing w:line="384" w:lineRule="auto"/>'
+                    '<w:ind w:firstLine="480"/><w:jc w:val="both"/></w:pPr>'
+                    '<w:r><w:rPr><w:rFonts w:ascii="신명조" w:hAnsi="신명조" '
+                    'w:eastAsia="신명조"/><w:b w:val="0"/><w:sz w:val="24"/></w:rPr>'
+                    '<w:t>1) 산문처럼 보이는 문장이다.</w:t></w:r></w:p>')
+            anchor = document.index('w:name="gg_body_1"')
+            insert = document.index("</w:p>", anchor) + len("</w:p>")
+            return document[:insert] + para + document[insert:]
+        path = self.mutated(self.dairy_docx(), transform, "prose")
+        self.assertIn("1) 산문처럼 보이는 문장이다.",
+                      zipfile.ZipFile(path).read("word/document.xml").decode("utf-8"))
+        codes = self.dairy_codes(self.probe.check(path, major_id="dairy"))
+        self.assertEqual([], codes)
+
+    def test_front_title_size_drift_is_reported(self):
+        def transform(document):
+            return edit_paragraph(document, "요약", '<w:sz w:val="44"/>',
+                                  '<w:sz w:val="40"/>',
+                                  containing='w:val="Heading1"')
+        path = self.mutated(self.dairy_docx(), transform, "front-title")
+        codes = self.dairy_codes(self.probe.check(path, major_id="dairy"))
+        self.assertIn("dairy.format.front_title_size", codes)
+
+    def test_dairy_output_fails_the_food_crops_form(self):
+        # 두 양식은 서로를 통과시키지 않는다(설계 F-3). 낙농 겉표지 여백
+        # (30 mm)은 식량작물 겉표지 값(20 mm)과 달라 여기서 먼저 걸린다.
+        result = self.probe.check(self.dairy_docx(), major_id="food_crops")
+        codes = [v["code"] for v in result["violations"]
+                 if v["code"].startswith("food_crops.format.")]
+        self.assertIn("food_crops.format.margin.cover_top", codes)
+
+    def test_food_crops_output_fails_the_dairy_form(self):
+        result = self.probe.check(self.docx("food_crops"), major_id="dairy")
+        codes = [v["code"] for v in result["violations"]
+                 if v["code"].startswith("dairy.format.")]
+        self.assertIn("dairy.format.margin.cover_top", codes)
+
+    def test_dairy_key_absent_without_the_major_flag(self):
+        # 전공을 안 주면 낙농 키 자체가 없어야 한다(다른 전공 JSON 불변).
+        result = self.probe.check(self.dairy_docx())
+        self.assertNotIn("dairy_format", result)
 
 
 if __name__ == "__main__":
