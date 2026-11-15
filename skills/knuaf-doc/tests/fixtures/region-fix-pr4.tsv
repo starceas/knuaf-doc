@@ -1,0 +1,3 @@
+pack_id	physical_line	raw_line_sha256_before	record_id	before_level	after_level	reason
+rda.income.regional.2025	40	69f23e400a764d257b79a1305a54ae02309bf0fa59234dad6a59f6e08ab69914	rda.income.regional.2025.gwangju.crop.밀	provincial	metropolitan	광역시(광주·인천)인데 provincial로 적힘 — rda-income-regional-2024 팩의 같은 시도 행은 metropolitan이고, 조회 코드 gg_rda_lookup._region_matches가 두 표기를 함께 처리
+rda.income.regional.2025	41	d35ef3093d6b773eed425b4c2a282aaac7361ce991e09f24df1300a405e96f33	rda.income.regional.2025.incheon.crop.고구마	provincial	metropolitan	광역시(광주·인천)인데 provincial로 적힘 — rda-income-regional-2024 팩의 같은 시도 행은 metropolitan이고, 조회 코드 gg_rda_lookup._region_matches가 두 표기를 함께 처리

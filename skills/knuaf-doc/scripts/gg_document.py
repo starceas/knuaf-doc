@@ -1708,6 +1708,8 @@ def check(text, base, major_id=None, project_root=None):
             import gg_figure_docx
 
             handled, token_issue = gg_figure_docx.image_check(n["path"])
+            if token_issue is None:
+                token_issue = gg_figure_docx.block_issue(nodes, i)
             if token_issue:
                 issues.append(("missing_image", n["path"] + ": " + token_issue))
             elif not handled:
