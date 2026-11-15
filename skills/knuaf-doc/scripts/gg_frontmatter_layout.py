@@ -203,8 +203,8 @@ def _roman_front_section(doc, margin_mm=None, profile=None, font='신명조'):
     return sec
 
 
-def _black_runs(paragraph, font, size):
-    """식량작물 앞부분 제목의 글자색만 검정으로 고정한다.
+def _black_runs(paragraph, font, size, bold=None):
+    """앞부분 제목 크기·검정색과 요청한 굵기를 문단에만 적용한다.
 
     문서 스타일(Heading 1)은 다른 전공·본문이 함께 쓰므로 건드리지 않고,
     이 문단에 실제로 만들어진 run의 색만 바꾼다. run이 없으면 하나 만든다.
@@ -215,6 +215,8 @@ def _black_runs(paragraph, font, size):
         run.font.name = font
         run.font.size = Pt(size)
         run.font.color.rgb = RGBColor(0, 0, 0)
+        if bold is not None:
+            run.bold = bold
 
 
 def _cover_text_key(text, spec):
@@ -304,8 +306,10 @@ def _render_peer_forms(doc, nodes, plan, font):
             if role in {'학부모 동의서', '요약', '감사의 글'}:
                 title = doc.add_paragraph(role, style='Heading 1')
                 if roman_front:
-                    # 양식 검정 제목. 문서 스타일은 건드리지 않고 이 두 문단만.
-                    _black_runs(title, font, title_sizes[role])
+                    # 식량작물은 기존 스타일 상속 XML을 보존한다.
+                    _black_runs(title, font, title_sizes[role],
+                                front_title(profile, role)[1]
+                                if profile.major_id != 'food_crops' else None)
             if roman_front and role == '요약':
                 bookmark(title, 'gg_summary', 9001)
             if roman_front and role == '감사의 글':
@@ -330,6 +334,9 @@ def _render_peer_forms(doc, nodes, plan, font):
                         # 본문은 12pt. HWPX `_front_charpr_targets`와 같은 규칙.
                         size, bold = _profile_pt(
                             profile, 'summary_item_pt', _LEGACY_SUMMARY_ITEM)
+                    elif role == '학부모 동의서':
+                        size, bold = (profile.consent_note_pt if text.startswith('※')
+                                      else profile.consent_body_pt)
                     elif role not in {'요약', '감사의 글'}:
                         size, bold = _peer_form_text_size(text, spec, profile)
                 for run in p.runs:
@@ -359,11 +366,12 @@ def page_reference(p,name,font,size=12):
     txt=OxmlElement('w:t');txt.text='?';run.append(txt);field.append(run);p._p.append(field)
 
 
-def contents(doc,entries,font,title='목    차',anchor=None,num=9000,*,title_size=20):
+def contents(doc,entries,font,title='목    차',anchor=None,num=9000,*,title_size=20,
+             title_bold=False):
     from docx.enum.text import WD_TAB_ALIGNMENT, WD_TAB_LEADER
     p=doc.add_paragraph();p.alignment=WD_ALIGN_PARAGRAPH.CENTER
     p.paragraph_format.space_before=Mm(18);p.paragraph_format.space_after=Mm(12)
-    _font(p.add_run(title),font,title_size)
+    _font(p.add_run(title),font,title_size,title_bold)
     if anchor: bookmark(p,anchor,num)
     for label,name,level in entries:
         p=doc.add_paragraph();f=p.paragraph_format

@@ -671,8 +671,11 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
         if table_entries or dairy_lists: entries.append(('표 목차','gg_tables',0))
         if figure_entries or dairy_lists: entries.append(('그림 목차','gg_figures',0))
         entries += [(n['text'],n['_bookmark'],n['level']) for n in body_nodes if n['kind']=='heading' and n['level']<=2]
+        # 식량작물 목차는 기존 보통 굵기 바이트를 유지한다. 낙농은 제목 표를 따른다.
         contents(doc,entries,font,title_size=(
-            profile.toc_title_pt if profile else 20))
+            profile.toc_title_pt if profile else 20),
+            title_bold=(front_title(profile, '목차')[1]
+                        if profile and profile.major_id != 'food_crops' else False))
         # S01 counts cover, shared forms and contents before the summary (iv
         # with a one-page contents). Continue rather than pinning iv: an
         # overflowing contents page must also count. Other majors stay unchanged.
@@ -721,12 +724,14 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
                 for n in prelim: render_node(n,allow_soft_wrap=True)
             if table_entries or dairy_lists:
                 if prelim: doc.add_page_break()
+                size, bold = front_title(profile, '표 목차')
                 contents(doc,table_entries,font,'표 목차','gg_tables',9002,
-                         title_size=20)
+                         title_size=size, title_bold=bold)
             if figure_entries or dairy_lists:
                 if prelim or table_entries or dairy_lists: doc.add_page_break()
+                size, bold = front_title(profile, '그림 목차')
                 contents(doc,figure_entries,font,'그림 목차','gg_figures',9003,
-                         title_size=20)
+                         title_size=size, title_bold=bold)
         new_numbered_section('decimal', margin_mm=(
             profile.section_formats[2]['margin_mm'] if profile else None))
     else:

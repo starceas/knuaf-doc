@@ -661,7 +661,7 @@ def _rewrite_run_charpr(paragraph: str, cid: int) -> str:
     return _RUN_OPEN_RE.sub(rebuild, paragraph)
 
 
-def _peer_block_targets(nodes, start, end, spec, *, cover=False):
+def _peer_block_targets(nodes, start, end, spec, *, cover=False, profile=None):
     """겉표지·표제면·제출서·인준서 블록의 문단별 (크기, 굵기)를 정한다.
 
     계획 제목 문단은 `spec.plan_label`과 같은 글자를 먼저 찾고, 없으면
@@ -680,11 +680,17 @@ def _peer_block_targets(nodes, start, end, spec, *, cover=False):
         plan_at = degree_at + 1
     for k, (index, text) in enumerate(items):
         if k == plan_at:
-            targets[index] = (32, True)
+            targets[index] = (profile.cover_text["plan"] if profile is not None
+                              else (32, True))
         elif (text == spec.degree
               or text.startswith(("이 논문을", "지도교수 ", "위원장", "위 원"))
               or text.endswith(("인준함", "인준함."))):
-            targets[index] = (18, True)
+            key = ("degree" if text == spec.degree else
+                   "statement" if text.startswith("이 논문을") else
+                   "approval" if text.endswith(("인준함", "인준함.")) else
+                   "advisor")
+            targets[index] = (profile.cover_text[key] if profile is not None
+                              else (18, True))
         elif plan_at is not None and k == plan_at + 1:
             targets[index] = (20, cover)
         else:
@@ -705,7 +711,7 @@ def _front_role_bounds(plan):
     return bounds
 
 
-def _front_charpr_targets(nodes, plan):
+def _front_charpr_targets(nodes, plan, profile=None):
     """계획 색인으로 대상 문단을 찾아 {(문단 색인): (크기, 굵기)}를 낸다.
 
     본문 구역(`plan["body"]`)은 손대지 않고, 동의서만 따로 잠근다.
@@ -715,47 +721,58 @@ def _front_charpr_targets(nodes, plan):
     targets = {}
     bounds = _front_role_bounds(plan)
 
+    def title(role, legacy):
+        return profile.front_titles.get(role, legacy) if profile is not None else legacy
+
     for role in ("겉표지", "표제면", "제출서", "인준서"):
         if role in bounds:
             start, end = bounds[role]
             targets.update(_peer_block_targets(
-                nodes, start, end, spec, cover=role == "겉표지"))
+                nodes, start, end, spec, cover=role == "겉표지", profile=profile))
 
     if "요약" in indices:
-        targets[indices["요약"]] = (22, True)
+        targets[indices["요약"]] = title("요약", (22, True))
         start, end = bounds["요약"]
         for index in range(start, end):
             text = _normalize_space(nodes[index].get("text", ""))
             if not text:
                 continue
-            targets[index] = (16, True) if re.match(r"^\d+\s*\.", text) else (12, False)
+            targets[index] = ((profile.summary_item_pt if profile is not None
+                               else (16, True))
+                              if re.match(r"^\d+\s*\.", text) else (12, False))
 
     if "감사의 글" in indices:
-        targets[indices["감사의 글"]] = (20, True)
+        targets[indices["감사의 글"]] = title("감사의 글", (20, True))
         start, end = bounds["감사의 글"]
         for index in range(start, end):
             if _normalize_space(nodes[index].get("text", "")):
                 targets[index] = (12, False)
 
     if "목차" in indices:
-        targets[indices["목차"]] = (22, True)
+        targets[indices["목차"]] = title("목차", (22, True))
         start, end = bounds["목차"]
         for index in range(start, end):
             text = _normalize_space(nodes[index].get("text", ""))
             if not text:
                 continue
-            targets[index] = (20, False) if text in ("표 목차", "그림 목차") else (12, False)
+            targets[index] = (title(text, (20, False))
+                              if text in ("표 목차", "그림 목차") else (12, False))
 
-    consent = next((index for index in range(plan["body"], len(nodes))
-                    if _normalize_space(nodes[index].get("text", "")) == "학부모 동의서"),
-                   None)
+    consent = indices.get("학부모 동의서")
+    consent_end = bounds["학부모 동의서"][1] if consent is not None else len(nodes)
+    if consent is None:
+        consent = next((index for index in range(plan["body"], len(nodes))
+                        if _normalize_space(nodes[index].get("text", "")) == "학부모 동의서"),
+                       None)
     if consent is not None:
-        targets[consent] = (20, True)
-        for index in range(consent + 1, len(nodes)):
+        targets[consent] = title("학부모 동의서", (20, True))
+        for index in range(consent + 1, consent_end):
             text = _normalize_space(nodes[index].get("text", ""))
             if not text:
                 continue
-            targets[index] = (10, False) if text.startswith("※") else (14, True)
+            targets[index] = ((profile.consent_note_pt if text.startswith("※")
+                               else profile.consent_body_pt) if profile is not None
+                              else (10, False) if text.startswith("※") else (14, True))
     return targets
 
 
@@ -1177,9 +1194,9 @@ def transform_hwpx(data: bytes, *, font: str = SCHOOL_FONT,
         # 구역 분할이 실제로 일어난 `formats is not None`이 곧 프로필 경로다.
         # 계획만 넘기는 옛 호출도 본문 크기를 받도록 전공 id는 계획에서 읽는다.
         if formats is not None and plan is not None:
-            front_targets = _front_charpr_targets(nodes or [], plan)
             profile = gg_major_format.profile_for(
                 major_id or getattr(plan.get("spec"), "major_id", None))
+            front_targets = _front_charpr_targets(nodes or [], plan, profile)
             if profile is not None:
                 body_targets = _body_charpr_targets(nodes or [], plan, profile)
         if body_targets:
