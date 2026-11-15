@@ -30,8 +30,10 @@ PNG = (b"\x89PNG\r\n\x1a\n" + b"\x00\x00\x00\rIHDR" + b"\x00\x00\x00\x01"
        + b"\x00\x00\x00\nIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01"
          b"\r\n-\xb4" + b"\x00\x00\x00\x00IEND\xaeB`\x82")
 SHA = hashlib.sha256(PNG).hexdigest()
+SOURCE_URL = "https://www.nongsaro.go.kr/x"
 CAPTION = "그림 1. 재배 기술 (출처 : 농촌진흥청)"
-FIGURE = "## 가. 절\n\n![%s](app-figure:%s)\n\n%s\n" % (CAPTION, SHA, CAPTION)
+FIGURE = "## 가. 절\n\n![%s](app-figure:%s)\n\n%s\n\n주 : 원문 주소 %s\n" % (
+    CAPTION, SHA, CAPTION, SOURCE_URL)
 
 
 class FigureCase(ContractCase):
@@ -619,7 +621,7 @@ class FigurePathResolveTests(FigureCase):
         수 없어 거절하므로 여기서 부르지 않는다 — 아래 시험과 어댑터 시험이
         잠근다).
         """
-        text = manuscript("app-figure:" + SHA)
+        text = manuscript("app-figure:" + SHA).rstrip() + "\n\n주 : 원문 주소 " + SOURCE_URL + "\n"
         write_text(self.root, "build/본문.md", text)
         with self.at_home(self.app_home()):
             self.assertEqual(self.missing_image(text), [])
