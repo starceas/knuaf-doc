@@ -55,6 +55,13 @@ TEST_AUTHORITY = "test.accepted-catalog/" + TEST_PACK
 SRC_SHA = hashlib.sha256(b"synthetic official source pdf").hexdigest()
 OUT_SHA = hashlib.sha256(b"synthetic parser output").hexdigest()
 
+# PR4 (B단계) 뒤 pinned 팩에서 ``source``를 가진 행 수.
+# 책임자 실측(2026-11-15, 적용·재바인딩 뒤): 소득 620(국가 2025 104·2024 102,
+# 지역 2025 49·2024 365) + econ 2025 2,231 + mafra 2024 2,916 = 5,767.
+# 시험 실측값과 팩별 `"source": {` 줄 수 집계가 같다. 자리 표시를 지우거나
+# 시험을 건너뛰지 말고, 출처가 바뀌는 PR에서 값만 고친다.
+EXPECTED_SOURCED_ROWS = 5767
+
 
 def _record(rid, name, *, form="생체", year=2024, kind="test_kind",
             metrics=None, region_level="national", sido=None,
@@ -716,27 +723,31 @@ class DefaultYearResolutionTests(unittest.TestCase):
         td = tempfile.TemporaryDirectory(prefix="gg-cand-year-")
         self.addCleanup(td.cleanup)
         packs_dir, file_sha, keys, entries = _build(td.name, specs)
-        self._base = lookup.BASE_DIR
+        # Saved into locals, not attributes: a test may mount this fixture
+        # more than once (the R-01 subTest loop does), and attributes would
+        # then record the previous mount as the state to restore, leaving a
+        # deleted temp pack pinned for every later test in the process.
+        base = lookup.BASE_DIR
+        pin = dict(prov.PINNED_PACKS)
+        auth = dict(research.PINNED_CATALOG_AUTHORITIES)
         lookup.BASE_DIR = packs_dir
         lookup._CACHE.clear()
-        self._pin = dict(prov.PINNED_PACKS)
         prov.PINNED_PACKS[TEST_PACK] = {
             "pack_revision": TEST_REV,
             "records_file_sha256": file_sha,
             "record_lines": len(specs),
             "relpath": "common/test-pack/records.jsonl",
         }
-        self._auth = dict(research.PINNED_CATALOG_AUTHORITIES)
         research.PINNED_CATALOG_AUTHORITIES[TEST_AUTHORITY] = \
             research.catalog_content_digest(entries)
 
         def restore():
-            lookup.BASE_DIR = self._base
+            lookup.BASE_DIR = base
             lookup._CACHE.clear()
             prov.PINNED_PACKS.clear()
-            prov.PINNED_PACKS.update(self._pin)
+            prov.PINNED_PACKS.update(pin)
             research.PINNED_CATALOG_AUTHORITIES.clear()
-            research.PINNED_CATALOG_AUTHORITIES.update(self._auth)
+            research.PINNED_CATALOG_AUTHORITIES.update(auth)
         self.addCleanup(restore)
         return keys
 
@@ -947,6 +958,90 @@ class DefaultYearResolutionTests(unittest.TestCase):
         self.assertEqual(got["year_default"]["reason"], "year_unknown")
         self.assertEqual(got["year_default"]["status"], "blocked")
 
+    # --- R-01: a defective observation year next to a valid one --------
+    # Non-integer ``basis.year`` shapes: 누락(key 없음)·null·문자열·
+    # 논리값·정수가 아닌 실수.  2024.0 mirrors an int and is handled
+    # separately below.
+    _MISSING = "missing"
+    _DEFECTIVE_YEARS = (_MISSING, None, "2024", True, 2024.5)
+
+    def _mixed_year_fixture(self, defective):
+        """One valid 2024 row physically first, one same-survey row whose
+        ``basis.year`` is ``defective`` (``_MISSING`` drops the key)."""
+        ok = _record("test.candidate.감자.2024", "감자", year=2024,
+                     source=_source(data_year=2024))
+        bad = _record("test.candidate.감자.defect", "감자",
+                      year=defective, source=_source(data_year=2024))
+        if defective == self._MISSING:
+            del bad["basis"]["year"]
+        self._fixture([
+            {"record": ok, "evidence": _evidence_for(ok)},
+            {"record": bad, "evidence": _evidence_for(bad)},
+        ])
+
+    def test_defective_year_candidate_does_not_block_a_valid_one(self):
+        """R-01: the year pool of the top catalog-status grade skips rows
+        whose ``basis.year`` is not a usable integer, so a valid row is
+        still selected when a defective one sits beside it — a mixed set
+        is NOT a block reason.  ``year_unknown`` is only for a grade with
+        no usable integer year at all.
+
+        Being selected is not a promotion: the defective row never reaches
+        the re-run (the year filter drops it), and approval still comes
+        from the selected row's own axes."""
+        for defective in self._DEFECTIVE_YEARS:
+            with self.subTest(basis_year=defective):
+                self._mixed_year_fixture(defective)
+                before = self._without_default()
+                self.assertEqual(before["observation"]["status"], "ambiguous")
+                self.assertEqual(
+                    before["observation"]["candidate_count"], 2)
+                got = self._yearless()
+                self.assertEqual(got["year_default"]["status"], "applied")
+                self.assertEqual(got["year_default"]["year"], 2024)
+                self.assertEqual(got["year_default"]["candidate_count"], 2)
+                self.assertEqual(got["query"]["year"], 2024)
+                self.assertEqual(got["observation"]["status"], "unique")
+                self.assertEqual(len(got["candidates"]), 1)
+                self.assertEqual(
+                    got["candidates"][0]["record"]["basis"]["year"], 2024)
+                self.assertEqual(got["status"], "approved")
+
+    def test_float_year_counting_as_the_selected_year_stays_ambiguous(self):
+        """A ``2024.0`` row is excluded from the year pool (not an int) but
+        still equals ``2024`` under the re-run's year filter, so both rows
+        survive it.  The default year applies, the raw verdict stays
+        ``ambiguous`` and nothing approves — fail-closed, never a silent
+        drop of the second row."""
+        self._mixed_year_fixture(2024.0)
+        got = self._yearless()
+        self.assertEqual(got["year_default"]["status"], "applied")
+        self.assertEqual(got["year_default"]["year"], 2024)
+        self.assertEqual(got["query"]["year"], 2024)
+        self.assertEqual(got["observation"]["status"], "ambiguous")
+        self.assertEqual(got["observation"]["candidate_count"], 2)
+        self.assertEqual(got["status"], "unapproved")
+        self.assertEqual(got["approved_candidates"], [])
+
+    def test_only_defective_year_candidates_stay_year_unknown(self):
+        """R-01's other arm, at the entry point: when the best grade holds
+        ONLY defective years there is no usable year to pick —
+        ``year_unknown`` blocks and the year-less verdict is untouched
+        (``_BLOCK_CODES`` covers the per-reason immutability above)."""
+        rec = _record("test.candidate.감자.defect", "감자", year="2024",
+                      source=_source(data_year=2024))
+        self._fixture([{"record": rec, "evidence": _evidence_for(rec)}])
+        got = self._yearless()
+        before = self._without_default()
+        self.assertEqual(got["year_default"]["status"], "blocked")
+        self.assertEqual(got["year_default"]["reason"], "year_unknown")
+        self.assertIsNone(got["year_default"]["year"])
+        self.assertIsNone(got["query"]["year"])
+        for field in self._BLOCKED_FIELDS:
+            self.assertEqual(got[field], before[field],
+                             "year_unknown이 기본값 시도 전과 다르다: %s"
+                             % field)
+
     # --- top-level verdict untouched by a blocked default --------------
     _BLOCK_CODES = {"source_unknown", "source_invalid", "survey_mixed",
                     "group_unresolved", "year_unknown"}
@@ -956,8 +1051,9 @@ class DefaultYearResolutionTests(unittest.TestCase):
 
     def _assert_reason_as_before(self, got):
         """A blocked default must leave the top-level ``reason`` exactly as
-        the year-less lookup always produced it (main behaviour): the text
-        derived from the raw observation status — never a block code."""
+        the year-less lookup produces it with the G3 step neutralised
+        (``_without_default``): the text derived from the raw observation
+        status — never a block code."""
         self.assertEqual(got["year_default"]["status"], "blocked")
         self.assertNotIn(got["reason"], self._BLOCK_CODES)
         self.assertEqual(
@@ -968,9 +1064,11 @@ class DefaultYearResolutionTests(unittest.TestCase):
                 "not use permission"))
 
     def _without_default(self, crop="감자", **kw):
-        """The result as main produces it: the same query with the G3 step
-        turned off (an explicit year/audit_key would change the filters,
-        so the step is neutralised instead)."""
+        """The G3-미적용 control: the same query with the resolution step
+        neutralised (an explicit year/audit_key would change the filters,
+        so the step is stubbed instead).  This is a same-entry-point
+        baseline for comparison — it is NOT a run of the parent commit;
+        the parent already resolved a default year."""
         stub = {"status": "blocked", "reason": "no_default_attempted",
                 "year": None, "kind": kw.get("kind"), "form": kw.get("form"),
                 "survey": None, "aggregation_group": None,
@@ -1016,14 +1114,16 @@ class DefaultYearResolutionTests(unittest.TestCase):
 
     def test_every_block_reason_leaves_the_result_untouched(self):
         """W3G-04: ALL five block reasons — not just two — must leave the
-        year-less result identical to what main produced.  The default step
-        is additive: ``status``·``reason``·``observation``·``candidates``·
-        ``approved_candidates`` stay exactly as the year-less lookup made
-        them, and the block code lives in ``year_default.reason`` only.
+        year-less result identical to the G3-미적용 control.  The default
+        step is additive: ``status``·``reason``·``observation``·
+        ``candidates``·``approved_candidates`` stay exactly as the
+        year-less lookup made them, and the block code lives in
+        ``year_default.reason`` only.
 
         ``before`` is produced by the same entry point with the resolution
-        step neutralised (main had no resolution step at all), so the
-        comparison isolates the one thing this PR added."""
+        step neutralised, so the comparison isolates the step this PR
+        added — main already had a default-year step, so this is not a
+        byte-for-byte comparison against the parent commit."""
         self._all_block_reasons_fixture()
         for reason in sorted(self._BLOCK_CODES):
             crop = self._BLOCK_CROPS[reason]
@@ -1161,7 +1261,7 @@ class RealPackTests(unittest.TestCase):
     unapproved even when the raw verdict is ``unique``."""
 
     def test_sourced_real_rows_all_pass_the_year_cross_check(self):
-        """W3G-01 on real data: every sourced row of the four income packs
+        """W3G-01 on real data: every sourced row of the pinned packs
         declares ``data_year == basis.year``, so the new cross-check must
         block none of them.  A row that starts failing here means a pack's
         source was mounted on the wrong year's row."""
@@ -1181,7 +1281,11 @@ class RealPackTests(unittest.TestCase):
                 reason = cand._source_reason(rec)
                 if reason is not None:
                     bad.append((pack_id, rec.get("record_id"), reason))
-        self.assertEqual(sourced, 620)
+        self.assertEqual(
+            sourced, EXPECTED_SOURCED_ROWS,
+            "pinned 팩의 sourced 행 수가 바뀌었다(실측 %d). PR4 적용 뒤에는 "
+            "책임자 집계로 EXPECTED_SOURCED_ROWS를 채운다 - 자리 표시값을 "
+            "지우거나 시험을 건너뛰지 않는다." % sourced)
         self.assertEqual(bad, [])
 
     def test_unique_raw_verdict_is_not_permission(self):

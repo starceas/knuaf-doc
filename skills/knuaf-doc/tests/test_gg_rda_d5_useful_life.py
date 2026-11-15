@@ -8,6 +8,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PACKS = ROOT / "references/benchmark-packs"
 PACK = PACKS / "common/rda-econ-2025"
+RECEIPT = ROOT.parents[1] / "docs/validation/d5-rda-useful-life.json"
+# E12-a: P15 영수증은 재바인딩하지 않는 역사 증거다.
+RECEIPT_SHA256 = "85039e05533cb7f692846b91e1a4e14caff2e7c56c92090f568095df0af3072e"
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import gg_rda_candidates as candidates
@@ -113,9 +116,28 @@ class D5UsefulLifeTests(unittest.TestCase):
             self.assertEqual(pin["records_file_sha256"], key["records_file_sha256"])
             if coverage["catalog_digest"] is not None:
                 self.assertEqual(digest, coverage["catalog_digest"])
-        receipt = json.loads((ROOT.parents[1] / "docs/validation/d5-rda-useful-life.json").read_text(encoding="utf-8"))
-        self.assertEqual(pin["records_file_sha256"], receipt["new_records_sha256"])
-        self.assertEqual(digest, receipt["new_catalog_content_digest"])
+        receipt = json.loads(RECEIPT.read_text(encoding="utf-8"))
+        lineage = json.loads((ROOT / "scripts/legacy-release-hashes.json").read_text(encoding="utf-8"))
+        self.assertIn(receipt["new_records_sha256"], lineage["files"][
+            "references/benchmark-packs/common/rda-econ-2025/records.jsonl"])
+
+    def test_d5_receipt_bytes_are_immutable(self):
+        self.assertEqual(RECEIPT_SHA256, hashlib.sha256(RECEIPT.read_bytes()).hexdigest())
+
+    def test_d5_receipt_record_hashes_belong_to_release_lineage(self):
+        receipt = json.loads(RECEIPT.read_text(encoding="utf-8"))
+        lineage = json.loads((ROOT / "scripts/legacy-release-hashes.json").read_text(encoding="utf-8"))
+        records_lineage = lineage["files"][
+            "references/benchmark-packs/common/rda-econ-2025/records.jsonl"]
+        for field in ("historical_records_sha256", "new_records_sha256"):
+            with self.subTest(field=field):
+                self.assertIn(receipt[field], records_lineage)
+
+    def test_current_econ_pin_belongs_to_release_lineage(self):
+        lineage = json.loads((ROOT / "scripts/legacy-release-hashes.json").read_text(encoding="utf-8"))
+        self.assertIn(provenance.PINNED_PACKS["rda.econ.2025"]["records_file_sha256"],
+                      lineage["files"][
+                          "references/benchmark-packs/common/rda-econ-2025/records.jsonl"])
 
     def test_rejected_rows_unreachable_but_unaffected_quarantine_stays_searchable(self):
         ctx = research.resolver_context(
