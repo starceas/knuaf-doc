@@ -117,13 +117,13 @@
       "artifacts": [
         {
           "relative_path": "common/rda-econ-2025/manifest.json",
-          "sha256": "f670ed39d8477f1fe09c42cf2b3d1b0fa724f0d99d9ac5475e7a212c65772a3a",
-          "bytes": 2824522
+          "sha256": "bec063d400761e19f2e9c77927dcf22fc926f204184877fd0aea59edce49d7a2",
+          "bytes": 2824985
         },
         {
           "relative_path": "common/rda-econ-2025/records.jsonl",
-          "sha256": "a5dbf6db2aed41254d2a05460d1950a3cdc2a8db51c0d54e82d035d91bd2253a",
-          "bytes": 2572020
+          "sha256": "049e7e73763b29d5c36fe1408082f52d77bebfd8158cf14b75c372a80a39a973",
+          "bytes": 3472953
         }
       ],
       "coverage": {
@@ -133,19 +133,19 @@
               "key_ref": {
                 "kind": "audit_key",
                 "pack_id": "rda.econ.2025",
-                "records_file_sha256": "a5dbf6db2aed41254d2a05460d1950a3cdc2a8db51c0d54e82d035d91bd2253a",
+                "records_file_sha256": "049e7e73763b29d5c36fe1408082f52d77bebfd8158cf14b75c372a80a39a973",
                 "physical_jsonl_line_1based": 19,
                 "raw_line_sha256": "dba92f4e6d434dd9d1e3056c7e09e2da6c364bb7fadbe06605996a6793aeb142"
               },
               "authority": "verified",
-              "catalog_digest": "0d2d0b1cfeceb2a7fb4b12f2c10e10882f6c1957404ff1834a6d1a41e19eca44",
+              "catalog_digest": "81511659e7f35f92d2c0eb1e8fadb56cf9c4fb89fa9413cb05f7e01cd4aa9efd",
               "receipt_sha256": null
             },
             {
               "key_ref": {
                 "kind": "audit_key",
                 "pack_id": "rda.econ.2025",
-                "records_file_sha256": "a5dbf6db2aed41254d2a05460d1950a3cdc2a8db51c0d54e82d035d91bd2253a",
+                "records_file_sha256": "049e7e73763b29d5c36fe1408082f52d77bebfd8158cf14b75c372a80a39a973",
                 "physical_jsonl_line_1based": 1,
                 "raw_line_sha256": "c37a9e25b4e1c4e9a2b99b6c4ff128c45ffda4e6025ada9ea2ac754fa78b7dcc"
               },
@@ -171,13 +171,13 @@
       "artifacts": [
         {
           "relative_path": "majors/specialty_crops/mafra-specialty-production-2024/manifest.json",
-          "sha256": "21149f0790dd9381b07f5941ebd82e0db27ff48645e1d18d97f81577625f95cf",
-          "bytes": 2724206
+          "sha256": "5486b31b1dc36e554048b84a294ad4e92b7ef811479149dad74eab7c363dd269",
+          "bytes": 2724669
         },
         {
           "relative_path": "majors/specialty_crops/mafra-specialty-production-2024/records.jsonl",
-          "sha256": "fc1c0b35d63a67dc5a794128f873272d72f0850e6d6470e7d9501270eafdd4be",
-          "bytes": 3022476
+          "sha256": "c209a566d60053b570cd6128e689268d2f73aedc01f35fc447e9db63655ec266",
+          "bytes": 3898261
         }
       ],
       "coverage": {
@@ -187,21 +187,21 @@
               "key_ref": {
                 "kind": "audit_key",
                 "pack_id": "mafra.specialty.production.2024",
-                "records_file_sha256": "fc1c0b35d63a67dc5a794128f873272d72f0850e6d6470e7d9501270eafdd4be",
+                "records_file_sha256": "c209a566d60053b570cd6128e689268d2f73aedc01f35fc447e9db63655ec266",
                 "physical_jsonl_line_1based": 1,
                 "raw_line_sha256": "6eb3ca74d44c8b48e96f0a92903b94ef9aa3417ca897fc91adf5611a55b13155"
               },
               "authority": "verified",
-              "catalog_digest": "0550d458a0747be9929b3205c1ff8ff27f15c6f4cff5d9f3cc12372e336c71c8",
+              "catalog_digest": "d43b85d3a90c14897deb40af6e1f1763dfc595a0053c965bf7c16bb3d57a80d0",
               "receipt_sha256": null
             },
             {
               "key_ref": {
                 "kind": "audit_key",
                 "pack_id": "mafra.specialty.production.2024",
-                "records_file_sha256": "fc1c0b35d63a67dc5a794128f873272d72f0850e6d6470e7d9501270eafdd4be",
+                "records_file_sha256": "c209a566d60053b570cd6128e689268d2f73aedc01f35fc447e9db63655ec266",
                 "physical_jsonl_line_1based": 1441,
-                "raw_line_sha256": "6cbfad35ad6a70cc2850f8583a25e17e4206a6c0a1e73a5b786494a6bc5741cc"
+                "raw_line_sha256": "ed583e44b0a340db318a9f0c251774e9376ba2d367a473f4d566c04dd9a00c95"
               },
               "authority": "unverified",
               "catalog_digest": null,
@@ -1255,13 +1255,13 @@
       "artifacts": [
         {
           "relative_path": "common/rda-income-regional-2025/manifest.json",
-          "sha256": "43735201044dfac9aa7e8497b4323f5e3048e4da4238e488cddc946d82ff14d7",
+          "sha256": "30242f71be0f3256e4fe14066a3ce5ce23b68bee71cd0b96ba8ddc1c28171537",
           "bytes": 57046
         },
         {
           "relative_path": "common/rda-income-regional-2025/records.jsonl",
-          "sha256": "406ac11feb62641a756de171c2c70af2ed2a89026be8c533568232bf98c41ab3",
-          "bytes": 139475
+          "sha256": "9343a49c365b8686a72849b4129e300a6d561ee37b268d8f20d19261f6358668",
+          "bytes": 139479
         }
       ],
       "coverage": {
@@ -1287,11 +1287,11 @@
       },
       "rda.econ.2025": {
         "records_relpath": "common/rda-econ-2025/records.jsonl",
-        "records_file_sha256": "a5dbf6db2aed41254d2a05460d1950a3cdc2a8db51c0d54e82d035d91bd2253a"
+        "records_file_sha256": "049e7e73763b29d5c36fe1408082f52d77bebfd8158cf14b75c372a80a39a973"
       },
       "mafra.specialty.production.2024": {
         "records_relpath": "majors/specialty_crops/mafra-specialty-production-2024/records.jsonl",
-        "records_file_sha256": "fc1c0b35d63a67dc5a794128f873272d72f0850e6d6470e7d9501270eafdd4be"
+        "records_file_sha256": "c209a566d60053b570cd6128e689268d2f73aedc01f35fc447e9db63655ec266"
       },
       "rda.income.national.2025": {
         "records_relpath": "common/rda-income-national-2025/records.jsonl",
@@ -1299,7 +1299,7 @@
       },
       "rda.income.regional.2025": {
         "records_relpath": "common/rda-income-regional-2025/records.jsonl",
-        "records_file_sha256": "406ac11feb62641a756de171c2c70af2ed2a89026be8c533568232bf98c41ab3"
+        "records_file_sha256": "9343a49c365b8686a72849b4129e300a6d561ee37b268d8f20d19261f6358668"
       }
     }
   }

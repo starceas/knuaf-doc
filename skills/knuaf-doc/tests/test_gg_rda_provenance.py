@@ -268,7 +268,8 @@ class RealPackIdentityTests(unittest.TestCase):
                 with self.subTest(pack=pack_id):
                     self.assertIn("aggregation_group",
                                   manifest.get("aggregation_rule", ""))
-        self.assertEqual(checked, 620)
+        # 책임자 실측 5,767: EXPECTED_SOURCED_ROWS와 같은 전체 source 행 집계(E14-a).
+        self.assertEqual(checked, 5767)
 
     def test_catalog_authority_pins_reproduce_from_real_manifests(self):
         # Every pinned accepted-catalog authority that names a pinned pack
