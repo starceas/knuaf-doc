@@ -1975,7 +1975,42 @@ def _manuscript(folder, rel):
     return resolved
 
 
-def _block_for(item, number, title, org, direct):
+def _source_url_ok(url):
+    return (isinstance(url, str) and url.startswith("https://")
+            and len(url) <= 300 and all(char in STRICT_CHARS for char in url))
+
+
+def _source_url(mode, result, item, home):
+    """슬롯 mode로만 고른다. 앱 주소는 요청·그림이 같은 마지막 승인 증명에서 온다."""
+    url = None
+    if mode == "direct":
+        page = result.get("page")
+        if isinstance(page, dict):
+            url = page.get("finalUrl")
+    elif mode == "app" and home is not None:
+        try:
+            with (Path(home) / "receipts.jsonl").open(encoding="utf-8") as stream:
+                for line in stream:
+                    try:
+                        receipt = json.loads(line)
+                    except ValueError:
+                        continue
+                    if not isinstance(receipt, dict):
+                        continue
+                    image = receipt.get("image")
+                    if (receipt.get("reqId") != result.get("id")
+                            or not isinstance(image, dict)
+                            or image.get("sha256") != item.get("sha256")
+                            or image.get("verdict") != "approved"):
+                        continue
+                    page = receipt.get("page")
+                    url = page.get("url") if isinstance(page, dict) else None
+        except (OSError, UnicodeError):
+            return None
+    return url if _source_url_ok(url) else None
+
+
+def _block_for(item, number, title, org, direct, source_url=None):
     if direct:
         image_line = "![그림 %d. %s (출처 : %s)](%s)" % (
             number, title, org, item["path"])
@@ -1984,7 +2019,10 @@ def _block_for(item, number, title, org, direct):
         image_line = "![](app-figure:%s)" % item["sha256"]
         ref = "app-figure:" + item["sha256"]
     caption = "그림 %d. %s (출처 : %s)" % (number, title, org)
-    return [image_line, "", caption], ref
+    block = [image_line, "", caption]
+    if source_url is not None:
+        block.extend(["", "주 : 원문 주소 " + source_url])
+    return block, ref
 
 
 def _section_text(text, heading):
@@ -2046,6 +2084,8 @@ def _place(folder, slot, heading, *, choose=None, title=None, org=None,
         return _blocked(exc.reason, exc.detail)
     text = path.read_text(encoding="utf-8")
 
+    env_home = home if home is not None else _figure_home(environ)
+    mode = None
     if images:
         if direct is None:
             direct = not _is_app_mode(environ)
@@ -2067,7 +2107,7 @@ def _place(folder, slot, heading, *, choose=None, title=None, org=None,
             "needsChoice": len(refs) >= 2}
         direct = True
     else:
-        env_home = home if home is not None else _figure_home(environ)
+        mode = request["mode"] if request is not None else None
         req = request
         if req is None:
             return _photo_placeholder(folder, path, heading, text, slot)
@@ -2099,14 +2139,15 @@ def _place(folder, slot, heading, *, choose=None, title=None, org=None,
             return _needs_choice(slot, result, approved, choice)
         return _place_chosen(folder, path, heading, text, slot, choose, result,
                              approved, choice, title, org, direct,
-                             app_mode=_is_app_mode(environ))
+                             app_mode=_is_app_mode(environ), home=env_home, mode=mode)
 
     item = approved[0]
     return _place_one(folder, path, heading, text, slot, item,
-                      result, title, org, direct)
+                      result, title, org, direct, home=env_home, mode=mode)
 
 
-def _place_one(folder, path, heading, text, slot, item, result, title, org, direct):
+def _place_one(folder, path, heading, text, slot, item, result, title, org, direct,
+               home=None, mode=None):
     org = org or item.get("org") or (result.get("page") or {}).get("org") or ""
     if not org:
         return _blocked("no_org", "승인 그림에 기관명 없음")
@@ -2117,13 +2158,23 @@ def _place_one(folder, path, heading, text, slot, item, result, title, org, dire
     if ref in section:
         return {"status": "already_placed", "slot": slot, "ref": ref,
                 "line": block[0]}
+    source_url = None
+    if mode is not None:
+        source_url = _source_url(mode, result, item, home)
+        if source_url is None:
+            return dict(_photo_placeholder(folder, path, heading, text, slot),
+                        note="source_url_missing")
+        block, ref = _block_for(item, number, title_text, org, direct, source_url)
     try:
         updated = _insert_block(text, heading, block)
     except FigureError as exc:
         return _blocked(exc.reason, exc.detail)
     path.write_text(updated, encoding="utf-8")
-    return {"status": "placed", "slot": slot, "number": number,
-            "ref": ref, "line": block[0], "caption": block[-1]}
+    placed = {"status": "placed", "slot": slot, "number": number,
+              "ref": ref, "line": block[0], "caption": block[2]}
+    if source_url is not None:
+        placed["sourceNote"] = block[4]
+    return placed
 
 
 def _needs_choice(slot, result, approved, choice):
@@ -2153,7 +2204,7 @@ def _needs_choice(slot, result, approved, choice):
 
 
 def _place_chosen(folder, path, heading, text, slot, choose, result, approved,
-                  choice, title, org, direct, *, app_mode=True):
+                  choice, title, org, direct, *, app_mode=True, home=None, mode=None):
     """CONTRACT §9: 앱 안은 학생 메시지 일치, 앱 밖은 라벨만 맞으면 통과."""
     labels = [item.get("label") for item in approved]
     picked = (choose or "").strip()
@@ -2181,7 +2232,7 @@ def _place_chosen(folder, path, heading, text, slot, choose, result, approved,
             return _blocked("candidate_mismatch", "후보표와 승인 그림 해시 불일치")
     item = next(entry for entry in approved if entry.get("label") == picked)
     return _place_one(folder, path, heading, text, slot, item, result, title,
-                      org, direct)
+                      org, direct, home=home, mode=mode)
 
 
 def _photo_placeholder(folder, path, heading, text, slot):
