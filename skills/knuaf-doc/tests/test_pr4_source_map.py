@@ -9,17 +9,19 @@ main ``d663bf8`` 팩에서만 온다.  구현(``tools/apply_source_map_pr4.py``)
   * ``fixtures/source-map-pr4.tsv``  — 5,695행(econ 2,707 + mafra 2,988), 열 순서 §1.2
   * ``fixtures/region-fix-pr4.tsv``  — 광주·인천 2행(souce-map 행 수에 미포함, N-02)
 
-바탕 리비전은 ``PR4_BASE_REV`` 환경 변수로 바꿀 수 있고 기본은 ``d663bf8``이다.
-git이 없거나 그 리비전이 없으면 skip이 아니라 FAIL이다 — 대응표가 엉뚱한 줄을
-가리키지 않는다는 증거(시험 3)와 E9 before/after 지문(시험 5), 유령 상태 불변
-(시험 6 ①)이 모두 그 리비전을 전제로 하기 때문이다.
+바탕(main ``d663bf8``)은 git 역사에서 읽지 않는다. ``base_blob``이 현재 팩
+바이트에서 이 PR이 한 일(source 삽입·E9 두 칸·광주·인천 level 정정)을 거꾸로
+되돌려 바탕 바이트를 만들고, 그 sha256이 동결 상수와 같을 때만 바탕으로 인정한다.
+되돌림은 동결 대응표(class=sourced)·region-fix 표·E9 상수에서만 유도하고 적용기는
+보지 않는다. 어긋나면 skip이 아니라 FAIL이다 — 대응표가 엉뚱한 줄을 가리키지
+않는다는 증거(시험 3)와 E9 before/after 지문(시험 5), 유령 상태 불변(시험 6 ①)이
+모두 바탕 바이트 전체를 전제로 하기 때문이다. git 역사가 없는 얕은 클론에서도
+같은 경로를 탄다.
 """
 
 import csv
 import hashlib
 import json
-import os
-import subprocess
 import sys
 import unittest
 from functools import lru_cache
@@ -33,8 +35,6 @@ sys.path.insert(0, str(SCRIPTS))
 
 import gg_rda_candidates as candidates  # noqa: E402
 import gg_rda_provenance as provenance  # noqa: E402
-
-BASE_REV = os.environ.get("PR4_BASE_REV", "d663bf8")
 
 ECON_PACK_ID = "rda.econ.2025"
 MAFRA_PACK_ID = "mafra.specialty.production.2024"
@@ -124,6 +124,88 @@ E9_PRINTED_PAGE = "29"    # 원문 인쇄 쪽
 METROPOLITAN_SIDO = ("광주", "인천")
 REGION_FIX_LINES = {REGIONAL_PACK_ID: (40, 41)}
 
+# 바탕(main ``d663bf8``) records 파일 sha256 — PR④가 손댄 네 팩. 시험이 현재
+# 바이트에서 PR④ 편집을 거꾸로 되돌린 결과가 이 값과 같을 때만 그 바이트를
+# 바탕으로 인정한다. git 역사가 없는 얕은 클론에서도 같은 경로를 타도록
+# 값 자체를 동결한다(전체 바이트 지문이라 git show보다 약하지 않다).
+BASE_RECORDS_SHA256 = {
+    ECON_PACK_ID:
+        "a5dbf6db2aed41254d2a05460d1950a3cdc2a8db51c0d54e82d035d91bd2253a",
+    MAFRA_PACK_ID:
+        "fc1c0b35d63a67dc5a794128f873272d72f0850e6d6470e7d9501270eafdd4be",
+    REGIONAL_PACK_ID:
+        "406ac11feb62641a756de171c2c70af2ed2a89026be8c533568232bf98c41ab3",
+    REGIONAL_PACK_ID_2024:
+        "de3e3d0b1334a23bb3a1760313c108040f8887c60778bfb688587d9d109430ea",
+}
+
+# PR④가 source를 넣은 팩 — 이 팩들의 sourced 줄에서만 ``"source"`` 멤버를
+# 되돌린다. 나머지 팩은 원래 source가 있으므로 건드리지 않는다.
+SOURCE_ADDED_PACKS = frozenset({ECON_PACK_ID, MAFRA_PACK_ID})
+
+# E9 정정 전/후 값 — 동결 상수(적용기 import 금지). before는 mafra 195행의
+# 원문 두 칸이고, after는 이 PR이 넣은 값이다. 되돌림은 after→before.
+E9_METRICS_BEFORE = {"farms": None, "area_ha": "14771117"}
+E9_METRICS_AFTER = {"farms": E9_FARMS, "area_ha": E9_AREA_HA}
+
+# 유령 24행의 바탕(main ``d663bf8``) manifest 상태 칸 — git 역사 없이 비교하려고
+# 값 자체를 동결한다. 값은 ``git show d663bf8:<econ manifest.json>``에서 읽어
+# (physical_line, catalog_status, source_observation.observation_status,
+# audit_key.raw_line_sha256) 그대로 적었다. 지문(sha256) 대신 값을 그대로
+# 적는 이유: 어긋날 때 어느 행 어느 칸이 바뀌었는지 바로 보이고, 투영 JSON의
+# 직렬화 옵션(정렬·구분자)이 계산기와 시험 사이에서 어긋날 여지가 없다.
+# 이 PR은 이 세 칸을 바꾸지 않았으므로 d663bf8 값 = 현재 값이다.
+GHOST_BASE_STATE = {
+    105: ("quarantined", "correction_proposed",
+          "f4a92a9617ac22923922ff3d89c3af8f6456388d7057c585825a9ed544408818"),
+    106: ("quarantined", "correction_proposed",
+          "90ad1e9401bdb590d4a40a6564fd3e0d8873fbea71c3ac0216c9b898eb720831"),
+    107: ("quarantined", "correction_proposed",
+          "97dd2f5c97222ea9a031eaaa42a5f4e4e94b685fbde0be4be1cff1e73e3cc9fc"),
+    108: ("quarantined", "unresolved",
+          "b519fb2d0cb4d2b0164d547edc2c15fca2f46e2efd7ff45259d474e3db87b94c"),
+    109: ("quarantined", "unresolved",
+          "37b7d23311f474e53218206ba98bae9f6e4b6d4b9be766e9110c8db30ba8f874"),
+    110: ("quarantined", "unresolved",
+          "97e92c30fcd5904b17e1bb79797b59db3425e5e898497443bb5319c0547843c8"),
+    111: ("quarantined", "unresolved",
+          "61f9721fe9c2e8de9f089433d585a9dd0c88d9427b5d0217f2f2c1f802ac2a7e"),
+    112: ("quarantined", "correction_proposed",
+          "9d6b3d7b92a6843c2dca50df84e4764ce8494d3a93ea5adbcbc029c84df2a53e"),
+    113: ("quarantined", "unresolved",
+          "66c4a9e6f6975fd9da107101fb98439752251997d65ba10d4ab85745af5e50d4"),
+    114: ("quarantined", "correction_proposed",
+          "9ac144b8cb1de0e161586cc2b4b846cd36958d79891892390e4878e6cfc39d10"),
+    115: ("quarantined", "unresolved",
+          "5f76687a43f18de01d115230c2eac2309ab4c7c00fd1f24e9dd2286cc514b4e8"),
+    116: ("quarantined", "unresolved",
+          "1d945fa1a71e100b2c7a1ec506444d6dd3e2f53855cb55447258faa656d911be"),
+    117: ("quarantined", "correction_proposed",
+          "077964f816370e61dffdc45663e105fce2e6da2fdc46c6f9860c913d2787cfea"),
+    118: ("quarantined", "correction_proposed",
+          "c1bc2df830deceb1545802e97fac426e1695c8451a4b17cd70631a568d111f7a"),
+    119: ("quarantined", "unresolved",
+          "173efdd3a11079c7f51b26d8311b87c23068184993b0c1a51e755272433942c1"),
+    120: ("quarantined", "unresolved",
+          "37a38084bed8e36073e419c9d2ff3fa7f5322a724a670a48e0a4a681eac68b6d"),
+    121: ("quarantined", "unresolved",
+          "6fafc5274d4775caf9270c73e048098a4318aba324ea5b01c45737405a0e75d4"),
+    2581: ("quarantined", "unresolved",
+           "ef3eefc0e69cf534b1b8b7bb81f4f4a28d8147ebbd2b9bdde07c6cb24d7de3cd"),
+    2582: ("quarantined", "unresolved",
+           "0d179393597a0db433445ee108d3f456004ffdd3ba27661c3003e9998c3b2b80"),
+    2583: ("quarantined", "unresolved",
+           "1aa5b6f18bada9660a270e1c9dcd70e31b3b3ce963695d55c29a8a1d443ce03d"),
+    2584: ("quarantined", "unresolved",
+           "68ba0275cf365f5b0515d91ef7a2f9dd43b51130a09d84a74c1b2e1a75047042"),
+    2585: ("quarantined", "unresolved",
+           "865ec76bd938f16284a3adb65269ef416b16ed03ffbaa481dd6215be7e47b715"),
+    2586: ("quarantined", "unresolved",
+           "23ba0cdbd962bd8a37e591e57899cf955db63ffccac84efcf19c4258cc74c93f"),
+    2587: ("quarantined", "unresolved",
+           "37f44fd4806f7c491a1b01148853a400d1267aae62e9ad6a2c12170c47edf3b6"),
+}
+
 MAP_HEADER = [
     "pack_id", "physical_line", "raw_line_sha256_before", "record_id",
     "kind", "locator.section", "locator.pdf_page", "row_label", "class",
@@ -140,7 +222,7 @@ MAP_HEADER = [
 
 
 # ---------------------------------------------------------------------------
-# 동결 입력 로딩 (파일·git 읽기만)
+# 동결 입력 로딩 (파일 읽기만 — git 역사 불필요)
 
 
 def _read_tsv(path):
@@ -181,28 +263,174 @@ def region_fix_map():
 
 
 @lru_cache(maxsize=None)
-def _base_blob(relpath):
-    """``d663bf8``의 파일 바이트 — 없으면 FAIL(대응표 검증의 전제)."""
-    try:
-        proc = subprocess.run(
-            ["git", "show", "%s:%s" % (BASE_REV, relpath)],
-            cwd=str(REPO_ROOT), stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE, check=False)
-    except OSError as exc:  # git 자체가 없는 환경
+def sourced_lines(pack_id):
+    """대응표에서 class=sourced인 물리 줄 번호 — 되돌림이 source를 지울 줄."""
+    _, table = source_map()
+    return frozenset(
+        line for (pid, line), row in table.items()
+        if pid == pack_id and row[_C_CLASS] == "sourced")
+
+
+def _scan_string_end(text, quote_at):
+    """``text[quote_at] == '"'`` — 그 JSON 문자열을 닫는 따옴표 위치."""
+    i = quote_at + 1
+    while i < len(text):
+        if text[i] == "\\":
+            i += 2
+            continue
+        if text[i] == '"':
+            return i
+        i += 1
+    raise AssertionError("닫히지 않은 JSON 문자열: %r"
+                         % text[quote_at:quote_at + 60])
+
+
+def _match_brace(text, open_at):
+    """``text[open_at] == '{'`` — 짝이 맞는 닫는 중괄호 위치(문자열 무시)."""
+    depth = 0
+    i = open_at
+    while i < len(text):
+        char = text[i]
+        if char == '"':
+            i = _scan_string_end(text, i) + 1
+            continue
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return i
+        i += 1
+    raise AssertionError("닫히지 않은 JSON 객체: %r"
+                         % text[open_at:open_at + 60])
+
+
+def _top_level_member_span(text, name):
+    """최상위 객체의 ``name`` 멤버 ``(키 시작, 값 끝)`` — 없으면 None.
+
+    깊이를 세어 최상위 키만 집고, 값이 객체면 짝 중괄호까지, 문자열이면
+    닫는 따옴표까지를 끝으로 본다. 문자열 안의 중괄호는 따옴표 스캔이
+    건너뛰므로 오탐이 없다.
+    """
+    key = json.dumps(name)
+    depth = 0
+    i = 0
+    while i < len(text):
+        char = text[i]
+        if char == '"':
+            end = _scan_string_end(text, i)
+            if depth == 1 and text[i:end + 1] == key:
+                if text[end + 1:end + 3] != ": ":
+                    raise AssertionError(
+                        "%r 멤버 구분자가 ': '가 아니다: %r"
+                        % (name, text[end + 1:end + 4]))
+                value_at = end + 3
+                if text[value_at] == "{":
+                    return i, _match_brace(text, value_at) + 1
+                if text[value_at] == '"':
+                    return i, _scan_string_end(text, value_at) + 1
+                raise AssertionError(
+                    "%r 값이 객체·문자열이 아니다: %r"
+                    % (name, text[value_at:value_at + 20]))
+            i = end + 1
+            continue
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+        i += 1
+    return None
+
+
+def _strip_source_member(text):
+    """PR④가 넣은 최상위 ``"source"`` 멤버 하나를 지운다(구분자까지)."""
+    span = _top_level_member_span(text, "source")
+    if span is None:
+        raise AssertionError("source 멤버가 없다: %r" % text[:120])
+    start, end = span
+    if text[end:end + 2] == ", ":
+        return text[:start] + text[end + 2:]
+    if text[start - 2:start] == ", ":
+        return text[:start - 2] + text[end:]
+    raise AssertionError("source 멤버 앞뒤 구분자를 못 찾았다: %r"
+                         % text[max(0, start - 20):end + 20])
+
+
+def _revert_member(text, parent, field, before, after):
+    """``parent`` 객체 안 ``field`` 값을 ``after``→``before``로 되돌린다."""
+    span = _top_level_member_span(text, parent)
+    if span is None:
+        raise AssertionError("%r 멤버가 없다: %r" % (parent, text[:120]))
+    start, end = span
+    body = text[start:end]
+    old = "%s: %s" % (json.dumps(field), json.dumps(after))
+    new = "%s: %s" % (json.dumps(field), json.dumps(before))
+    if body.count(old) != 1:
         raise AssertionError(
-            "git을 실행할 수 없다(%s) — 시험 3·5·6은 바탕 리비전 %s의 팩이 "
-            "필요하다. 전체 이력 클론에서 돌려라." % (exc, BASE_REV))
-    if proc.returncode != 0:
+            "%r.%r가 %r로 정확히 한 번 있지 않다(=%d): %r"
+            % (parent, field, after, body.count(old), body[:200]))
+    return text[:start] + body.replace(old, new) + text[end:]
+
+
+@lru_cache(maxsize=None)
+def base_blob(pack_id):
+    """``d663bf8`` 팩 바이트 — 현재 바이트에서 PR④ 편집을 거꾸로 되돌린다.
+
+    되돌림 대상은 셋뿐이고 전부 동결 상수·동결 표에서 온다: sourced 줄의
+    ``source`` 멤버, mafra 195행의 두 칸, 지역 2025 40·41행의 level.
+    결과 전체 sha256이 ``BASE_RECORDS_SHA256``과 같을 때만 바탕으로 인정한다.
+    """
+    if pack_id not in BASE_RECORDS_SHA256:
+        raise AssertionError("바탕 상수가 없는 팩: %s" % pack_id)
+    current = (REPO_ROOT / PACK_RELPATH[pack_id]).read_bytes()
+    sourced = sourced_lines(pack_id) if pack_id in SOURCE_ADDED_PACKS else ()
+    level_fixes = {int(row[1]): (row[4], row[5])
+                   for row in region_fix_map()[1] if row[0] == pack_id}
+    out = []
+    for number, raw in enumerate(current.splitlines(keepends=True), start=1):
+        body = raw.decode("utf-8")
+        newline = ""
+        if body.endswith("\n"):
+            body, newline = body[:-1], "\n"
+        record = json.loads(body)  # 기대값 - 되돌린 결과와 같아야 한다
+        if number in sourced:
+            body = _strip_source_member(body)
+            record.pop("source")
+        if pack_id == MAFRA_PACK_ID and number == E9_LINE:
+            for field, after in E9_METRICS_AFTER.items():
+                if (record.get("metrics") or {}).get(field) != after:
+                    raise AssertionError(
+                        "mafra:%d metrics.%s가 E9 정정 후 값 %r이 아니다"
+                        % (number, field, after))
+                body = _revert_member(body, "metrics", field,
+                                      E9_METRICS_BEFORE[field], after)
+                record["metrics"][field] = E9_METRICS_BEFORE[field]
+        if number in level_fixes:
+            before_level, after_level = level_fixes[number]
+            if (record.get("region") or {}).get("level") != after_level:
+                raise AssertionError(
+                    "%s:%d region.level이 %r이 아니다"
+                    % (pack_id, number, after_level))
+            body = _revert_member(body, "region", "level",
+                                  before_level, after_level)
+            record["region"]["level"] = before_level
+        if json.loads(body) != record:
+            raise AssertionError(
+                "%s:%d 되돌림이 기대 레코드와 다르다" % (pack_id, number))
+        out.append(body.encode("utf-8") + newline.encode("utf-8"))
+    blob = b"".join(out)
+    digest = hashlib.sha256(blob).hexdigest()
+    if digest != BASE_RECORDS_SHA256[pack_id]:
         raise AssertionError(
-            "바탕 리비전 %s에서 %s를 못 읽었다: %s — shallow 클론이면 전체 "
-            "이력을 받거나 PR4_BASE_REV로 머지 베이스를 지정하라."
-            % (BASE_REV, relpath, proc.stderr.decode("utf-8", "replace").strip()))
-    return proc.stdout
+            "%s: 되돌린 바탕 바이트 sha256이 동결 상수와 다르다 — 기대 %s, "
+            "실제 %s(이 PR 밖에서 팩이 바뀌었거나 되돌림 규칙이 어긋났다)"
+            % (pack_id, BASE_RECORDS_SHA256[pack_id], digest))
+    return blob
 
 
 @lru_cache(maxsize=None)
 def _raw_lines(pack_id, *, base=False):
-    blob = (_base_blob(PACK_RELPATH[pack_id]) if base else
+    blob = (base_blob(pack_id) if base else
             (REPO_ROOT / PACK_RELPATH[pack_id]).read_bytes())
     return blob.splitlines(keepends=True)
 
@@ -210,7 +438,7 @@ def _raw_lines(pack_id, *, base=False):
 @lru_cache(maxsize=None)
 def base_records(pack_id):
     """``d663bf8`` 팩의 물리 줄 순서 레코드 리스트."""
-    blob = _base_blob(PACK_RELPATH[pack_id])
+    blob = base_blob(pack_id)
     return [json.loads(line) for line in blob.decode("utf-8").splitlines()]
 
 
@@ -222,17 +450,23 @@ def new_records(pack_id):
             for line in path.read_text(encoding="utf-8").splitlines()]
 
 
-def _manifest(pack_id, *, base=False):
-    if base:
-        path = PACK_RELPATH[pack_id].rsplit("/", 1)[0] + "/manifest.json"
-        return json.loads(_base_blob(path).decode("utf-8"))
+def _manifest(pack_id):
     path = PACK_DIR[pack_id] / "manifest.json"
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def _manifest_rows(pack_id, *, base=False):
+def _manifest_rows(pack_id):
     return {int(row["physical_line"]): row
-            for row in _manifest(pack_id, base=base)["rows"]}
+            for row in _manifest(pack_id)["rows"]}
+
+
+def _ghost_view(row):
+    """manifest 행 1개를 동결 표와 같은 모양(상태 3칸)으로 뽑는다."""
+    return (
+        row.get("catalog_status"),
+        (row.get("source_observation") or {}).get("observation_status"),
+        (row.get("audit_key") or {}).get("raw_line_sha256"),
+    )
 
 
 def _expected_source(row):
@@ -311,7 +545,8 @@ class SourceAppliedExactlyTests(Pr4SourceMapTestCase):
             records = new_records(pack_id)
             self.assertEqual(len(records), expected_lines, pack_id)
             base = base_records(pack_id)
-            self.assertEqual(len(base), expected_lines, BASE_REV)
+            self.assertEqual(len(base), expected_lines,
+                             "%s: 되돌린 바탕 줄 수" % pack_id)
             self.assertEqual([r.get("record_id") for r in records],
                              [r.get("record_id") for r in base],
                              "%s: 줄 순서/행 신원이 바뀌었다" % pack_id)
@@ -563,8 +798,7 @@ class SourceMapSelfConsistencyTests(Pr4SourceMapTestCase):
     def test_raw_line_sha256_before_matches_base_pack(self):
         _, table = source_map()
         base_blobs = {
-            pack_id: _base_blob(PACK_RELPATH[pack_id]).splitlines(
-                keepends=True)
+            pack_id: base_blob(pack_id).splitlines(keepends=True)
             for pack_id in PACK_LINES
         }
         for pack_id, lines in base_blobs.items():
@@ -573,12 +807,12 @@ class SourceMapSelfConsistencyTests(Pr4SourceMapTestCase):
             self.assertEqual(
                 hashlib.sha256(base_blobs[pack_id][line - 1]).hexdigest(),
                 row[_C_SHA],
-                "%s:%d raw_line_sha256_before가 %s 팩 줄과 다르다"
-                % (pack_id, line, BASE_REV))
+                "%s:%d raw_line_sha256_before가 되돌린 바탕 줄과 다르다"
+                % (pack_id, line))
 
     def test_region_fix_raw_sha_matches_base_regional_pack(self):
         _, rows = region_fix_map()
-        blob = _base_blob(PACK_RELPATH[REGIONAL_PACK_ID])
+        blob = base_blob(REGIONAL_PACK_ID)
         lines = blob.splitlines(keepends=True)
         self.assertEqual(len(lines), REGIONAL_LINES[REGIONAL_PACK_ID])
         for row in rows:
@@ -735,7 +969,7 @@ class E9CorrectionTests(Pr4SourceMapTestCase):
         self.assertEqual(node["physical_line"], E9_LINE)
         self.assertEqual(node["record_id"],
                          self.base_record(MAFRA_PACK_ID, E9_LINE)["record_id"])
-        before_blob = _base_blob(PACK_RELPATH[MAFRA_PACK_ID])
+        before_blob = base_blob(MAFRA_PACK_ID)
         after_blob = (REPO_ROOT / PACK_RELPATH[MAFRA_PACK_ID]).read_bytes()
         for field, blob in (("audit_key_before", before_blob),
                             ("audit_key_after", after_blob)):
@@ -785,26 +1019,21 @@ class GhostIsolationTests(Pr4SourceMapTestCase):
     """
 
     def test_ghost_state_unchanged_versus_base_manifest(self):
-        before = _manifest_rows(ECON_PACK_ID, base=True)
         after = _manifest_rows(ECON_PACK_ID)
         self.assertEqual(len(after), PACK_LINES[ECON_PACK_ID])
+        # 바탕 manifest는 git 역사 없이 되살릴 수 없으므로, 이 시험이 비교하는
+        # 상태 3칸을 d663bf8 값으로 동결해 두고 행마다 값으로 맞춘다.
+        self.assertEqual(set(GHOST_BASE_STATE), set(GHOST_LINES))
         for line in sorted(GHOST_LINES):
-            self.assertIn(line, before)
-            self.assertIn(line, after)
-            old, new = before[line], after[line]
+            self.assertIn(line, after, "econ:%d manifest 행이 없다" % line)
             self.assertEqual(
-                new.get("catalog_status"), old.get("catalog_status"),
-                "econ:%d catalog_status가 바뀌었다" % line)
-            old_obs = (old.get("source_observation") or {}).get(
-                "observation_status")
-            new_obs = (new.get("source_observation") or {}).get(
-                "observation_status")
-            self.assertEqual(new_obs, old_obs,
-                             "econ:%d observation_status가 바뀌었다" % line)
+                _ghost_view(after[line]), GHOST_BASE_STATE[line],
+                "econ:%d 유령 행의 상태 칸(catalog_status·"
+                "observation_status·raw_line_sha256)이 바탕과 다르다" % line)
             self.assertEqual(
-                (new.get("audit_key") or {}).get("raw_line_sha256"),
-                (old.get("audit_key") or {}).get("raw_line_sha256"),
-                "econ:%d 유령 행의 줄 지문이 바뀌었다(행 불변 위반)" % line)
+                after[line]["audit_key"]["raw_line_sha256"],
+                self._line_digest(line),
+                "econ:%d 유령 행의 줄 지문이 실제 줄과 다르다" % line)
 
     def test_ghost_records_have_no_source(self):
         for line in sorted(GHOST_LINES):

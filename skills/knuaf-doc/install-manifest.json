@@ -278,7 +278,7 @@
   "tests/test_gg_toc_check.py": "7589f6890fb4ed671c49c23e6942f67fe5632d96ee63f02f4863e7e3f35677b5",
   "tests/test_n5_guidance_link.py": "32462d60e2a3c7a40cffb6eecfb138f8046d382ad16bb15377b3490e3ddbb43a",
   "tests/test_official_guide_reuse.py": "2169e23583f04860fbeb77fe1fe802bed756efd5147156c294eddb3e9ba4d87c",
-  "tests/test_pr4_source_map.py": "81707e114b152e918a1b6e74866f0cfccc38155ef4e332bd96137dcd0d3eafe1",
+  "tests/test_pr4_source_map.py": "4f592029ca1d95470cb2981cfd76f2987fe9a27cd286850a092d9620019fb1aa",
   "version.json": "39a757cecaf5d10cafe796f1fbf763536669aa954e26c01e88a239205f2b17e0"
  },
  "schema": "knuaf-doc/install-manifest@1"

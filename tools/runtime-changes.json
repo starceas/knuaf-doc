@@ -341,7 +341,7 @@
       "source": "adopted:app-PR41"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "829c27c30b4f1c7982a98eb6dee7a5c85cff672e5f00c89afa88282f2d084b2e",
+      "after_sha256": "08d1417bceb3558a52f9a8a224f97a742ec2fd95bc190d8fb931567e4c7a0268",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "P28",
@@ -3419,7 +3419,7 @@
       "first_changed": "P28",
       "owner": "P28",
       "source": "new",
-      "after_sha256": "81707e114b152e918a1b6e74866f0cfccc38155ef4e332bd96137dcd0d3eafe1",
+      "after_sha256": "4f592029ca1d95470cb2981cfd76f2987fe9a27cd286850a092d9620019fb1aa",
       "last_changed": "P28",
       "reason": "PR4: frozen source-map application (including TSV escaped record-id decoding), E9 two-cell correction, regional level fix, E11 null survey_label, E12 immutable D5 receipt and release lineage, E14 source count and manifest no-mixing rule, audit-chain rebind; status promotion is not authorized by this declaration."
     }
