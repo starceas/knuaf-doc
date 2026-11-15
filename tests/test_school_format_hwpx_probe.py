@@ -817,7 +817,7 @@ class DairyProbeTests(unittest.TestCase):
         for key in ("section", "page_number", "charpr", "paragraph",
                     "page_break", "manifest"):
             self.assertEqual("pass", checks[key]["status"], (key, checks[key]))
-        # 제목 간격은 개요형 문단 모양에서 읽는다.
+        # 개요형 정의의 측정값. 실제 제목 참조 검사는 별도 반례로 잠근다.
         self.assertEqual([{"id": "1", "prev": "1920", "next": "1920"}],
                          checks["paragraph"]["outline_paraPr"])
         # 첫 장은 쪽 나눔 없음, 둘째 장만 있음.
@@ -1035,6 +1035,33 @@ class DairyProbeTests(unittest.TestCase):
                  if value["code"] == "dairy.format.paragraph.heading_spacing"]
         self.assertEqual(1, len(found), found)
         self.assertEqual({"prev": "1920", "next": "1920"}, found[0]["expected"])
+
+    def test_heading_spacing_follows_actual_reference_not_unused_outline(self):
+        # 정상 OUTLINE 정의는 남기고 모든 제목의 참조만 0/0 모양으로 바꾼다.
+        body = tuple((text, charpr, 0, page_break)
+                     for text, charpr, _, page_break in DAIRY_BODY)
+        path = _rewrite(dairy_members(body=body),
+                        pathlib.Path(self.tmp.name) / "unused-outline.hwpx")
+        result = probe.check(path, major="dairy")
+        found = [value for value in result["violations"]
+                 if value["code"] == "dairy.format.paragraph.heading_spacing"]
+        self.assertEqual("blocked", result["checks"]["paragraph"]["status"])
+        self.assertEqual(1, len(found), found)
+        self.assertEqual({"prev": "0", "next": "0"}, found[0]["actual"])
+        self.assertIn("Contents/section2.xml:hp:p#0@paraPrIDRef=0",
+                      found[0]["location"])
+        self.assertEqual([{"id": "1", "prev": "1920", "next": "1920"}],
+                         result["checks"]["paragraph"]["outline_paraPr"])
+
+    def test_heading_spacing_rejects_missing_or_unknown_reference(self):
+        for replacement in ('paraPrIDRef="99"', ''):
+            with self.subTest(reference=replacement):
+                path = self.mutated("Contents/section2.xml", 'paraPrIDRef="1"',
+                                    replacement, "missing-heading-shape.hwpx")
+                found = [value for value in probe.check(path, major="dairy")["violations"]
+                         if value["code"] == "dairy.format.paragraph.heading_spacing"]
+                self.assertEqual(1, len(found), found)
+                self.assertEqual({"prev": None, "next": None}, found[0]["actual"])
 
     def test_consent_belongs_to_the_cover_section_in_dairy(self):
         # 학부모 동의서를 본문 끝으로 옮기면 낙농 규격 위반이다(식량작물은

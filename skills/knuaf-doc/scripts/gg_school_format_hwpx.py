@@ -947,24 +947,26 @@ def _dairy_check_levels(measured, violations, sizes):
 
 
 def _dairy_check_heading_spacing(measured, violations):
-    """제목 문단 모양(개요형)의 위/아래 1920 HWPUNIT."""
-    outline = {cid: value for cid, value in measured.paraprs.items()
-               if value.get("outline")}
-    if not outline:
-        violations.bad(
-            violations.code("paragraph.heading_spacing"), (), HEADER_NAME,
-            {"outline_paraPr": None}, None,
-            "header.xml에 개요형(OUTLINE) 문단 모양이 없어 제목 간격을 판정할 수 없음")
-        return
-    for cid, value in sorted(outline.items(), key=lambda item: int(item[0])):
+    """제목으로 판정한 본문 문단이 실제 참조하는 모양의 위/아래 간격."""
+    body = measured.sections[2]
+    checked = set()
+    for index, text, shape in _dairy_body_paragraphs(body):
+        if shape is None:
+            continue
+        cid = body["para_pr"][index]
+        if cid in checked:
+            continue
+        checked.add(cid)
+        value = measured.paraprs.get(cid) or {}
         got = (value.get("prev"), value.get("next"))
         if got != DAIRY_HEADING_SPACING:
             violations.bad(
                 violations.code("paragraph.heading_spacing"), (),
-                HEADER_NAME + ":hh:paraPr@id=" + cid, dict(zip(
-                    ("prev", "next"), DAIRY_HEADING_SPACING)),
+                body["name"] + ":hp:p#%d@paraPrIDRef=%s" % (index, cid),
+                dict(zip(("prev", "next"), DAIRY_HEADING_SPACING)),
                 dict(zip(("prev", "next"), got)),
-                "제목 문단 모양의 위/아래 간격이 19.2 pt(1920 HWPUNIT)가 아님")
+                "제목 문단이 참조하는 모양의 위/아래 간격이 "
+                "19.2 pt(1920 HWPUNIT)가 아니거나 참조를 읽을 수 없음")
 
 
 def _dairy_check_body_page_breaks(measured, violations):

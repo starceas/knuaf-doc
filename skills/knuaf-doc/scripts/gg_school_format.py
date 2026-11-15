@@ -244,51 +244,44 @@ def relationship_targets(archive, names):
     return targets
 
 
-def page_fields(root, *, field_code=False):
-    """Number of page-number fields in a footer part.
+def page_fields(root):
+    """Count simple PAGE fields for the unchanged food-crops measurement."""
+    return sum(1 for field in root.iter(QN("fldSimple"))
+               if re.fullmatch(r"PAGE\b.*", (attr(field, "instr") or "").strip().upper()))
 
-    A page number is written two ways: a ``w:fldSimple`` with ``PAGE`` as its
-    instruction, or the begin/instrText/separate/end trio Word writes when the
-    field is built by hand or the file is resaved. `PAGEREF …` also starts with
-    `PAGE`, so the instruction must match the whole word.
 
-    ``field_code`` adds the trio form to the simple-field count. It is off for
-    the food-crops path, whose JSON must keep its exact bytes: that path has
-    only ever counted the simple form, and adding the trio there would change
-    its numbers.
+def page_field_nodes(root):
+    """Collect dairy PAGE anchors, joining each complex field's instruction.
+
+    Keep nested fields separate and stop collecting instruction text at the
+    separator. Both the field count and label walk use these same anchors.
     """
-    count = 0
-    for field in root.iter(QN("fldSimple")):
-        if re.fullmatch(r"PAGE\b.*", (attr(field, "instr") or "").strip().upper()):
-            count += 1
-    if not field_code:
-        return count
-    # Trio form: the instruction sits in `w:instrText` inside a `begin` run.
-    instructions, depth = [], 0
+    fields, frames = set(), []
     for node in root.iter():
-        local = node.tag.rsplit("}", 1)[-1] if isinstance(node.tag, str) else ""
-        if local == "fldChar":
+        if node.tag == QN("fldSimple"):
+            if re.fullmatch(r"PAGE\b.*", (attr(node, "instr") or "").strip().upper()):
+                fields.add(node)
+        elif node.tag == QN("fldChar"):
             kind = (attr(node, "fldCharType") or "").lower()
             if kind == "begin":
-                depth += 1
-                instructions.append("")
-            elif kind == "end" and depth:
-                if re.fullmatch(r"PAGE\b.*", instructions.pop().strip().upper()):
-                    count += 1
-                depth -= 1
-        elif local == "instrText" and depth:
-            instructions[-1] += node.text or ""
-    return count
+                frames.append([node, [], True])
+            elif kind == "separate" and frames:
+                frames[-1][2] = False
+            elif kind == "end" and frames:
+                anchor, pieces, _ = frames.pop()
+                if re.fullmatch(r"PAGE\b.*", "".join(pieces).strip().upper()):
+                    fields.add(anchor)
+        elif node.tag == QN("instrText") and frames and frames[-1][2]:
+            frames[-1][1].append(node.text or "")
+    return fields
 
 
-def page_label(part_root):
+def page_label(part_root, fields):
     """Measure the `- ` + PAGE + ` -` decoration and run size of a footer.
 
-    Only the paragraph holding the PAGE field is measured. The field may be a
-    ``w:fldSimple`` or the begin/separate/end trio, so the walk keeps a field
-    stack: text inside a PAGE field is the printed number itself and never
-    counts as decoration, while text before and after it is the prefix and the
-    suffix that make the label `- I -` rather than a bare number.
+    Only the paragraph holding a collected PAGE anchor is measured. Text in
+    the field result is the printed number, not its prefix or suffix. Field
+    instruction recognition is shared with the count, including split runs.
     """
     for paragraph in part_root.iter(QN("p")):
         prefix, suffix, frames, found = [], [], [], [False]
@@ -297,8 +290,7 @@ def page_label(part_root):
             for child in node:
                 local = child.tag.rsplit("}", 1)[-1] if isinstance(child.tag, str) else ""
                 if local == "fldSimple":
-                    page = bool(re.fullmatch(
-                        r"PAGE\b.*", (attr(child, "instr") or "").strip().upper()))
+                    page = child in fields
                     found[0] = found[0] or page
                     # A simple field's children are already its result text.
                     frames.append([page, "result"])
@@ -307,17 +299,13 @@ def page_label(part_root):
                 elif local == "fldChar":
                     kind = (attr(child, "fldCharType") or "").lower()
                     if kind == "begin":
-                        frames.append([False, "instr"])
+                        page = child in fields
+                        frames.append([page, "instr"])
+                        found[0] = found[0] or page
                     elif kind == "separate" and frames:
                         frames[-1][1] = "result"
                     elif kind == "end" and frames:
                         frames.pop()
-                elif local == "instrText":
-                    text = (child.text or "").strip().upper()
-                    if (frames and frames[-1][1] == "instr"
-                            and re.fullmatch(r"PAGE\b.*", text)):
-                        frames[-1][0] = True
-                        found[0] = True
                 elif local == "t":
                     if any(page and phase == "result" for page, phase in frames):
                         continue  # the page number itself, not decoration
@@ -366,9 +354,12 @@ def footer_record(archive, names, targets, sect_pr, cache, inherited, measure_la
             root = ET.fromstring(archive.read(part))
         except (BadZipFile, ET.ParseError) as e:
             raise ProbeError(f"invalid footer OOXML {part}: {e}") from e
-        cache[key] = {"page_fields": page_fields(root, field_code=measure_label)}
         if measure_label:
-            cache[key]["page_label"] = page_label(root)
+            fields = page_field_nodes(root)
+            cache[key] = {"page_fields": len(fields),
+                          "page_label": page_label(root, fields)}
+        else:
+            cache[key] = {"page_fields": page_fields(root)}
     record.update(cache[key])
     return record
 
@@ -558,8 +549,13 @@ def dairy_violations(sections, records):
                 {"page_fields": footer["page_fields"], "part": footer.get("part")},
                 "구역 바닥글에 PAGE 필드가 정확히 1개 있어야 함")
         # 쪽번호 꼴 `- 1 -`·9 pt. 겉표지는 바닥글이 없으므로 건너뛴다.
-        if want["footer"]["has_reference"] and footer.get("page_label") is not None:
-            label = footer["page_label"]
+        if want["footer"]["has_reference"]:
+            label = footer.get("page_label")
+            if label is None:
+                bad(f"dairy.format.page_label.{role}", DAIRY_PAGE_NUMBER_RELATED, place,
+                    {"prefix": "- ", "suffix": DAIRY_PAGE_LABEL}, None,
+                    "쪽번호 꼴과 글자 크기를 판독할 수 없음")
+                continue
             if label.get("prefix") != "- " or label.get("suffix") != DAIRY_PAGE_LABEL:
                 bad(f"dairy.format.page_label.{role}", DAIRY_PAGE_NUMBER_RELATED, place,
                     {"prefix": "- ", "suffix": DAIRY_PAGE_LABEL},

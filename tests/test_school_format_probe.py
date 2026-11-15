@@ -416,21 +416,26 @@ class DairyFormatProbeTests(_ProbeFixtures):
         self.assertIn("dairy.format.page_label.front", codes)
         self.assertIn("dairy.format.page_label_size.front", codes)
 
+    def complex_page_footer(self, footer, instructions):
+        field = re.search(r'<w:fldSimple[^>]*instr="PAGE"[^>]*>.*?</w:fldSimple>',
+                          footer, re.S)
+        self.assertIsNotNone(field)
+        run = re.search(r"<w:r>.*?</w:r>", field.group(0), re.S).group(0)
+        command = "".join(
+            '<w:r><w:instrText xml:space="preserve">%s</w:instrText></w:r>' % piece
+            for piece in instructions)
+        new = ('<w:r><w:fldChar w:fldCharType="begin"/></w:r>' + command +
+               '<w:r><w:fldChar w:fldCharType="separate"/></w:r>' +
+               run.replace("</w:r>", "<w:t>1</w:t></w:r>", 1) +
+               '<w:r><w:fldChar w:fldCharType="end"/></w:r>')
+        return footer[:field.start()] + new + footer[field.end():]
+
     def test_word_resaved_field_code_form_is_accepted(self):
         # Word는 손으로 만든 필드를 저장할 때 `fldSimple` 대신
         # begin/instrText/separate/end 꼴로 다시 쓴다. 그 꼴도 쪽번호 하나이며
         # 같은 `- 1 -` 꾸밈·9 pt로 통과해야 한다(정상 산출물을 막지 않는다).
         def transform(footer):
-            field = re.search(r'<w:fldSimple[^>]*instr="PAGE"[^>]*>.*?</w:fldSimple>',
-                              footer, re.S)
-            self.assertIsNotNone(field)
-            run = re.search(r"<w:r>.*?</w:r>", field.group(0), re.S).group(0)
-            new = ('<w:r><w:fldChar w:fldCharType="begin"/></w:r>'
-                   '<w:r><w:instrText xml:space="preserve"> PAGE </w:instrText></w:r>'
-                   '<w:r><w:fldChar w:fldCharType="separate"/></w:r>'
-                   + run.replace("</w:r>", "<w:t>1</w:t></w:r>", 1) +
-                   '<w:r><w:fldChar w:fldCharType="end"/></w:r>')
-            return footer[:field.start()] + new + footer[field.end():]
+            return self.complex_page_footer(footer, (" PAGE ",))
         source = self.dairy_docx()
         with zipfile.ZipFile(source) as archive:
             footer_part = next(n for n in archive.namelist()
@@ -438,6 +443,56 @@ class DairyFormatProbeTests(_ProbeFixtures):
         path = self.mutated(source, transform, "trio", part=footer_part)
         result = self.probe.check(path, major_id="dairy")
         self.assertEqual([], self.dairy_codes(result))
+
+    def test_split_page_field_keeps_correct_label_and_size(self):
+        source = self.dairy_docx()
+        with zipfile.ZipFile(source) as archive:
+            parts = [name for name in archive.namelist()
+                     if re.fullmatch(r"word/footer\d+\.xml", name)]
+        path = self.mutated(
+            source, lambda footer: self.complex_page_footer(footer, (" PA", "GE ")),
+            "split-page", part=parts)
+        result = self.probe.check(path, major_id="dairy")
+        self.assertEqual([], self.dairy_codes(result))
+        for section in result["sections"][1:]:
+            self.assertEqual(1, section["footer"]["page_fields"])
+            self.assertEqual({"prefix": "- ", "suffix": " -",
+                              "size_half_points": ["18"]},
+                             section["footer"]["page_label"])
+
+    def test_split_page_field_rejects_label_and_size_drift(self):
+        source = self.dairy_docx()
+        with zipfile.ZipFile(source) as archive:
+            parts = [name for name in archive.namelist()
+                     if re.fullmatch(r"word/footer\d+\.xml", name)]
+        for instructions in ((" PAGE ",), (" PA", "GE ")):
+            with self.subTest(instructions=instructions):
+                def transform(footer):
+                    footer = self.complex_page_footer(footer, instructions)
+                    return footer.replace(">- </w:t>", "></w:t>", 1).replace(
+                        '<w:sz w:val="18"/>', '<w:sz w:val="24"/>')
+                path = self.mutated(source, transform, "split-label-drift", part=parts)
+                result = self.probe.check(path, major_id="dairy")
+                codes = self.dairy_codes(result)
+                for role, section in zip(("front", "body"), result["sections"][1:]):
+                    self.assertEqual(1, section["footer"]["page_fields"])
+                    self.assertIn("dairy.format.page_label." + role, codes)
+                    self.assertIn("dairy.format.page_label_size." + role, codes)
+
+    def test_page_field_without_paragraph_cannot_skip_label_check(self):
+        # XML은 읽히고 PAGE는 있지만 문단이 없어 번호 꼴을 잴 수 없는 경우.
+        source = self.dairy_docx()
+        with zipfile.ZipFile(source) as archive:
+            parts = [name for name in archive.namelist()
+                     if re.fullmatch(r"word/footer\d+\.xml", name)]
+        def transform(footer):
+            return re.sub(r"<w:p(?:\s[^>]*)?>|</w:p>", "", footer)
+        path = self.mutated(source, transform, "unreadable-label", part=parts)
+        result = self.probe.check(path, major_id="dairy")
+        for role, section in zip(("front", "body"), result["sections"][1:]):
+            self.assertEqual(1, section["footer"]["page_fields"])
+            self.assertIsNone(section["footer"]["page_label"])
+            self.assertIn("dairy.format.page_label." + role, self.dairy_codes(result))
 
     def test_heading_size_drift_is_reported_per_level(self):
         def transform(document):
