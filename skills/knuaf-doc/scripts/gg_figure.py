@@ -27,6 +27,7 @@ import re
 import secrets
 import socket
 import ssl
+import stat
 import sys
 import threading
 import time
@@ -162,6 +163,8 @@ def _figure_home(environ=None):
 
 def _blocked(reason, detail=""):
     out = {"status": "blocked", "reason": reason}
+    if reason == "slot_record_failed":
+        out["notice"] = SLOT_LOCK_RETRY_NOTICE
     if detail:
         out["detail"] = detail
     return out
@@ -208,7 +211,7 @@ def turn_state(home, folder, now_ms=None):
     return turn_id, ""
 
 
-def request_payload(req_id, turn_id, slot, page, images):
+def request_payload(req_id, turn_id, slot, page, images, mode="fetch"):
     """요청 JSON. 이 밖의 필드가 없어야 앱이 받는다(CONTRACT §3)."""
     if not REQUEST_ID.match(req_id or ""):
         raise FigureError("invalid_id", str(req_id))
@@ -216,8 +219,10 @@ def request_payload(req_id, turn_id, slot, page, images):
         raise FigureError("invalid_slot", str(slot))
     if not isinstance(page, str) or not page.startswith("https://"):
         raise FigureError("invalid_page", str(page))
-    if not images or len(images) > MAX_IMAGES:
-        raise FigureError("invalid_images", str(len(images or ())))
+    if (mode not in ("list", "fetch") or not isinstance(images, list)
+            or len(images) > MAX_IMAGES or (mode == "fetch" and not images)
+            or (mode == "list" and images)):
+        raise FigureError("invalid_images", str(images))
     for url in images:
         if not isinstance(url, str) or not url.startswith("https://"):
             raise FigureError("invalid_image_url", str(url))
@@ -231,7 +236,7 @@ def request_payload(req_id, turn_id, slot, page, images):
     }
 
 
-def read_result(home, req_id):
+def read_result(home, req_id, mode="fetch", *, rule=None):
     """res/<id>.res.json 검사. 없으면 None."""
     data = _read_json(Path(home) / "res" / (req_id + ".res.json"))
     if data is None:
@@ -244,6 +249,12 @@ def read_result(home, req_id):
         raise FigureError("invalid_result", "status")
     if not isinstance(data.get("slot"), str):
         raise FigureError("invalid_result", "slot")
+    if mode == "list":
+        if data["status"] == "rejected":
+            return _blocked(data.get("reason", "rejected"))
+        return _validate_list_result(data, rule)
+    if mode != "fetch" or "candidates" in data:
+        raise FigureError("invalid_result", "mode")
     images = data.get("images")
     if images is None:
         images = []
@@ -264,9 +275,15 @@ def read_result(home, req_id):
 
 
 def fetch_app(folder, page, images, slot, environ=None, now=None,
-              sleep=time.sleep, poll_seconds=POLL_SECONDS):
-    """앱에 요청하고 결과를 기다린다. 어떤 경우에도 직접 받지 않는다."""
+              sleep=time.sleep, poll_seconds=POLL_SECONDS, *, list_mode=False,
+              rules_path=None):
+    """앱 요청. 일반 받기는 모든 채널 검사 앞에서 슬롯을 새 id로 선기록한다."""
     env = os.environ if environ is None else environ
+    mode = "list" if list_mode else "fetch"
+    try:
+        folder, req_id = _begin_fetch(folder, slot, images, list_mode, "app", now)
+    except FigureError as exc:
+        return _blocked(exc.reason, exc.detail)
     home = _figure_home(env)
     if home is None:
         return _blocked("no_channel", "KNUAF_FIGURE_HOME 없음")
@@ -276,32 +293,48 @@ def fetch_app(folder, page, images, slot, environ=None, now=None,
     turn_id, reason = turn_state(home, folder, now)
     if not turn_id:
         return _blocked(reason)
-    req_id = secrets.token_hex(8)
     try:
-        payload = request_payload(req_id, turn_id, slot, page, images)
+        payload = request_payload(req_id, turn_id, slot, page, images, mode)
     except FigureError as exc:
         return _blocked(exc.reason, exc.detail)
-    dest = Path(folder) / ".knuaf-gui" / "figure-requests" / (req_id + ".req.json")
+    chosen = select_page_rule(page, load_rules(rules_path)) if list_mode else None
+    selected_rule = chosen[0] if chosen is not None else None
+    directory = folder / ".knuaf-gui" / "figure-requests"
     try:
-        _write_json_atomic(dest, payload)
+        directory.mkdir(parents=True, exist_ok=True)
+        # 이름만 센다. 링크·디렉터리도 포함하고 어떤 기존 항목도 열거나 지우지 않는다.
+        with os.scandir(directory) as entries:
+            count = sum(1 for entry in entries if entry.name.endswith(".req.json"))
+        if count >= 200:
+            return _request_backlog()
+    except OSError:
+        return _request_backlog()
+    try:
+        _write_json_atomic(directory / (req_id + ".req.json"), payload)
     except OSError as exc:
         return _blocked("request_write_failed", str(exc))
     deadline = time.monotonic() + poll_seconds
     while True:
+        turn = _read_json(Path(home) / "turn.json")
+        if not isinstance(turn, dict) or turn.get("turnId") != turn_id:
+            return dict(_blocked("cancelled"), reqId=req_id)
         try:
-            result = read_result(home, req_id)
+            result = read_result(home, req_id, mode, rule=selected_rule)
         except FigureError as exc:
-            out = _blocked(exc.reason, exc.detail)
-            out["reqId"] = req_id
-            return out
+            return dict(_blocked(exc.reason, exc.detail), reqId=req_id)
         if result is not None:
             result.setdefault("reqId", req_id)
             return result
         if time.monotonic() >= deadline:
-            out = _blocked("timeout", "결과 없음 (%.0f초)" % poll_seconds)
-            out["reqId"] = req_id
-            return out
+            return dict(_blocked("timeout", "결과 없음 (%.0f초)" % poll_seconds),
+                        reqId=req_id)
         sleep(0.2)
+
+
+def _request_backlog():
+    return dict(_blocked("request_backlog"), notice=(
+        "그림 요청 기록이 200건에 닿아 새 그림을 받을 수 없습니다. "
+        "논문 폴더의 .knuaf-gui/figure-requests 폴더 안 파일을 지운 뒤 다시 시도해 주세요."))
 
 
 # --------------------------------------------------------------------------
@@ -995,6 +1028,188 @@ def _third_party_near(html, anchor):
     return found.group(0) if found else None
 
 
+# 목록 전용 판독기. 기존 실재 대조(IMG_SRC 등)의 넓은 해석은 바꾸지 않는다.
+INACTIVE_TAGS = frozenset(("script", "style", "template", "noscript",
+                           "textarea", "title", "xmp", "iframe"))
+ASCII_SPACE = " \t\n\r\f"
+CANDIDATE_CHARS = frozenset(
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+    "-._~/?=&%:@!$'()*+,;")
+TAG_START = re.compile(r"<(/?)([A-Za-z][^\t\n\r\f />]*)(?=[\t\n\r\f />])", re.ASCII)
+ENTITY = re.compile(r"&(?:#[^;]*|[A-Za-z][A-Za-z0-9]*);")
+BAD_PERCENT = re.compile(r"%(?![0-9A-Fa-f]{2})")
+
+
+def _candidate_tag(html, start, name_end):
+    """속성 단위로 4096자까지 읽는다 → (끝, 첫 src). 따옴표 안 >는 글자."""
+    end = min(len(html), start + 4096)
+    pos = name_end
+    src = None
+    seen_src = False
+    while pos < end:
+        while pos < end and html[pos] in ASCII_SPACE + "/":
+            pos += 1
+        if pos >= end:
+            break
+        if html[pos] == ">":
+            return pos + 1, src
+        begin = pos
+        while pos < end and html[pos] not in ASCII_SPACE + "=/>":
+            pos += 1
+        name = html[begin:pos].lower()
+        if pos == begin:
+            pos += 1
+            continue
+        while pos < end and html[pos] in ASCII_SPACE:
+            pos += 1
+        value = ""
+        if pos < end and html[pos] == "=":
+            pos += 1
+            while pos < end and html[pos] in ASCII_SPACE:
+                pos += 1
+            if pos < end and html[pos] in "\"'":
+                quote = html[pos]
+                pos += 1
+                begin = pos
+                while pos < end and html[pos] != quote:
+                    pos += 1
+                if pos >= end:
+                    return None
+                value = html[begin:pos]
+                pos += 1
+            else:
+                begin = pos
+                while pos < end and html[pos] not in ASCII_SPACE + ">":
+                    pos += 1
+                value = html[begin:pos]
+        if name == "src" and not seen_src:
+            src, seen_src = value, True
+    return None
+
+
+def _candidate_tags(html):
+    """I-05: 한 번 훑기; 같은 이름 깊이, 모든 여는 태그의 따옴표 범위 건너뜀.
+
+    가릴 구간을 복사하는 대신 밖의 img 자리만 낸다. 원본 자리 번호는 그대로다.
+    """
+    pos = 0
+    inactive = None
+    depth = 0
+    while pos < len(html):
+        start = html.find("<", pos)
+        if start < 0:
+            return
+        if inactive is None and html.startswith("<!--", start):
+            end = html.find("-->", start + 4)
+            if end < 0:
+                return
+            pos = end + 3
+            continue
+        match = TAG_START.match(html, start)
+        if match is None:
+            pos = start + 1
+            continue
+        closing, name = match.group(1), match.group(2).lower()
+        if closing:
+            end = html.find(">", match.end())
+            if end < 0:
+                return
+            pos = end + 1
+            if name == inactive:
+                depth -= 1
+                if depth == 0:
+                    inactive = None
+            continue
+        tag = _candidate_tag(html, start, match.end())
+        if tag is None:
+            return  # 끝 없는/너무 긴 여는 태그부터 끝까지 가린다.
+        pos, src = tag
+        if inactive is not None:
+            if name == inactive:
+                depth += 1
+        elif name in INACTIVE_TAGS:
+            inactive, depth = name, 1
+        elif name == "img":
+            yield start, pos, src
+
+
+def _candidate_value_ok(value):
+    return (bool(value) and len(value) <= 2048
+            and not ENTITY.search(value) and not BAD_PERCENT.search(value)
+            and all(char in CANDIDATE_CHARS or ord(char) >= 128 for char in value))
+
+
+def _candidate_url(value, page, rule):
+    if value is None:
+        return None
+    value = value.strip(ASCII_SPACE).replace("&amp;", "&")
+    if not _candidate_value_ok(value):
+        return None
+    try:
+        # impl-1 I-01: 해석 전에 거절. urljoin/WHATWG가 다른 자원으로 접지 못하게 한다.
+        if value.endswith("?") or "?#" in value or value.startswith("///"):
+            return None
+        raw_path = urllib.parse.urlsplit(value).path
+        if "//" in raw_path or any(
+                re.sub(r"%2e", ".", part, flags=re.I) in (".", "..")
+                for part in raw_path.split("/")):
+            return None
+        parts = urllib.parse.urlsplit(urllib.parse.urljoin(page, value))
+        if (parts.scheme not in ("http", "https") or not parts.hostname
+                or any(ord(c) >= 128 for c in parts.netloc)
+                or ":" in parts.netloc or "@" in parts.netloc):
+            return None
+        url = urllib.parse.urlunsplit((
+            "https", parts.netloc.lower(),
+            urllib.parse.quote(parts.path or "/", safe=PATH_SAFE),
+            urllib.parse.quote(parts.query, safe=QUERY_SAFE), ""))
+        if len(url) > 2048:
+            return None
+        return normalize_url(url, host=rule["host"], path_pattern=rule["imagePath"])
+    except (ValueError, UnicodeError, FigureError):
+        return None
+
+
+def extract_candidates(html, page, rule):
+    """문서 순서의 {url, credit} 최대 30개와 잘림 여부. 승인 판정은 아니다."""
+    candidates, seen = [], set()
+    for start, end, src in _candidate_tags(html):
+        url = _candidate_url(src, page, rule)
+        if url is None or url in seen:
+            continue
+        if len(candidates) == 30:
+            return candidates, True
+        seen.add(url)
+        candidates.append({"url": url, "credit": (
+            "credit" if _third_party_near(html, (start, end)) else "none")})
+    return candidates, False
+
+
+def _validate_list_result(data, rule):
+    """앱 결과 및 직접 목록을 자기 규칙 항목으로 다시 검사한다."""
+    if (data.get("images") != [] or data.get("needsChoice") is not False
+            or not isinstance(data.get("candidates"), list)
+            or len(data["candidates"]) > 30
+            or type(data.get("candidatesTruncated")) is not bool
+            or not (data.get("kogl") is None or (
+                type(data.get("kogl")) is int and 1 <= data["kogl"] <= 4))
+            or "kogl" not in data or not isinstance(data.get("org"), str)
+            or rule is None):
+        raise FigureError("invalid_result", "list schema")
+    seen = set()
+    for item in data["candidates"]:
+        if (not isinstance(item, dict) or set(item) != {"url", "credit"}
+                or item.get("credit") not in ("none", "credit")):
+            raise FigureError("invalid_result", "candidate")
+        url = item["url"]
+        if (not isinstance(url, str) or not url.isascii()
+                or not _candidate_value_ok(url) or url in seen
+                or _candidate_url(url, "", rule) != url):
+            raise FigureError("invalid_result", "candidate url")
+        seen.add(url)
+    return data
+
+
 def _store_dirs(folder):
     """`figures`·`public`가 폴더 밖을 가리키지 않는지 확인하고 만든다."""
     root = Path(folder).resolve()
@@ -1184,9 +1399,12 @@ def _verdict_one(folder, rule, html, final_page, mark_type, url, record, *,
 def fetch_direct(folder, page, images, slot, environ=None, *,
                  rules_path=None, rules=None, resolver=None,
                  allow_loopback=False, tls_context=None, limiter=None,
-                 now=None):
-    """앱 밖 직접 받기. 승인된 그림만 폴더 figures/public에 저장한다."""
-    folder = Path(folder)
+                 now=None, list_mode=False):
+    """앱 밖 직접 받기. 목록은 페이지 GET 하나와 표준출력뿐, 작업 기록 무접촉."""
+    try:
+        folder, req_id = _begin_fetch(folder, slot, images, list_mode, "direct", now)
+    except FigureError as exc:
+        return _blocked(exc.reason, exc.detail)
     if rules is None:
         rules = load_rules(rules_path)
     limiter = limiter or {"bytes": 0, "deadline": None}
@@ -1194,10 +1412,11 @@ def fetch_direct(folder, page, images, slot, environ=None, *,
         limiter["deadline"] = time.monotonic() + TIMEOUT_REQUEST_SECONDS
     if not rules:
         return _blocked("no_rules", "figure-sources.json 없음/깨짐")
-    try:
-        _guard_work_paths(folder)
-    except FigureError as exc:
-        return _blocked(exc.reason, exc.detail)
+    if not list_mode:
+        try:
+            _guard_work_paths(folder)
+        except FigureError as exc:
+            return _blocked(exc.reason, exc.detail)
 
     chosen = select_page_rule(page, rules)
     if chosen is None:
@@ -1217,7 +1436,13 @@ def fetch_direct(folder, page, images, slot, environ=None, *,
     types, marks = kogl_marks(html)
     mark_type = next(iter(types)) if len(types) == 1 else None
 
-    req_id = "direct-" + secrets.token_hex(8)
+    if list_mode:
+        candidates, truncated = extract_candidates(html, final_page, rule)
+        result = {"v": 1, "id": req_id, "status": "done", "slot": slot,
+                  "needsChoice": False, "images": [], "kogl": mark_type,
+                  "org": rule["org"], "candidates": candidates,
+                  "candidatesTruncated": truncated}
+        return _validate_list_result(result, rule)
     out_images = []
     for number, url in enumerate(images, 1):
         record = {
@@ -1297,18 +1522,131 @@ def _request_record_path(folder, slot):
     return Path(folder) / ".gg-work" / "figure-requests" / (slot + ".json")
 
 
+def _slot_record_path(folder, slot):
+    """링크·디렉터리·폴더 밖 경로는 읽기와 쓰기 모두 거절한다."""
+    root = Path(folder).resolve()
+    path = _request_record_path(root, slot)
+    for part in (root / ".gg-work", path.parent):
+        if part.is_symlink() or (part.exists() and not part.is_dir()):
+            raise OSError("unsafe slot directory: " + str(part))
+    if (path.is_symlink() or (path.exists() and not path.is_file())
+            or not path.resolve().is_relative_to(root)):
+        raise OSError("unsafe slot record: " + str(path))
+    tmp = path.with_name(path.name + ".tmp")
+    if tmp.is_symlink() or (tmp.exists() and not tmp.is_file()):
+        raise OSError("unsafe slot temporary file: " + str(tmp))
+    return path
+
+
+SLOT_LOCK_STALE_SECONDS = 10 * 60
+SLOT_LOCK_RETRY_NOTICE = "그림 요청 기록을 사용 중이거나 쓸 수 없습니다. 잠시 뒤 다시 시도해 주세요."
+
+
+def _recover_slot_lock(path):
+    """같은 stale inode의 회수자 하나만 rename한다. 실패하면 재시도하지 않는다."""
+    named = path.lstat()
+    if not stat.S_ISREG(named.st_mode) or time.time() - named.st_mtime <= SLOT_LOCK_STALE_SECONDS:
+        raise OSError("slot lock still fresh or not a regular file")
+    if os.name == "nt":
+        import gg_winfs
+        fd = gg_winfs.open_file(path, os.O_RDWR, share_delete=True)
+    else:
+        fd = os.open(path, os.O_RDWR | getattr(os, "O_NOFOLLOW", 0))
+    try:
+        # 기존 플랫폼별 비차단 잠금 관례 재사용. 늦은 회수자가 새 lock을 옮기지 못한다.
+        gg_update._os_lock(fd)
+        try:
+            opened, named = os.fstat(fd), path.lstat()
+            if (not stat.S_ISREG(named.st_mode)
+                    or (opened.st_dev, opened.st_ino) != (named.st_dev, named.st_ino)
+                    or time.time() - named.st_mtime <= SLOT_LOCK_STALE_SECONDS):
+                raise OSError("slot lock changed or still fresh")
+            claimed = path.with_name(path.name + ".stale-" + secrets.token_hex(16))
+            path.rename(claimed)
+            claimed.unlink()
+        finally:
+            gg_update._os_unlock(fd)
+    finally:
+        os.close(fd)
+
+
+def _acquire_slot_lock(folder, slot):
+    """O_EXCL 슬롯 잠금. 10분 초과 mtime만 죽은 잠금으로 자동 회수한다.
+
+    회수자는 stale inode를 비차단 잠금·identity 재검사 후 고유 이름으로 rename해
+    삭제하고 O_EXCL을 딱 한 번 다시 시도한다. rename 실패/10분 이내/경합은
+    기다리지 않고 일반 실패. 학생에게 파일 삭제를 요구하지 않는다.
+    """
+    record = _slot_record_path(folder, slot)
+    record.parent.mkdir(parents=True, exist_ok=True)
+    path = record.with_name(record.name + ".lock")
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    try:
+        fd = os.open(path, flags, 0o600)
+    except FileExistsError:
+        _recover_slot_lock(path)
+        fd = os.open(path, flags, 0o600)
+    return path, fd
+
+
+def _release_slot_lock(lock):
+    # 윈도는 열린 파일을 지울 수 없다(공유 삭제 없이 연 핸들) — 내 잠금인지 확인한 뒤 닫고 지운다.
+    path, fd = lock
+    try:
+        owned = os.fstat(fd)
+        try:
+            current = path.lstat()
+        except FileNotFoundError:
+            return
+        mine = (current.st_dev, current.st_ino) == (owned.st_dev, owned.st_ino)
+    finally:
+        os.close(fd)
+    if mine:
+        try:
+            path.unlink()
+        except FileNotFoundError:
+            pass
+
+
+def _begin_fetch(folder, slot, images, list_mode, mode, now):
+    """형식 검사 뒤, 어떤 채널·규칙 읽기·전송보다 먼저 일반 슬롯을 선기록."""
+    if not SLOT.fullmatch(slot or ""):
+        raise FigureError("invalid_slot", str(slot))
+    folder = Path(folder).resolve()
+    if not folder.is_dir():
+        raise FigureError("invalid_folder", str(folder))
+    if (not isinstance(images, list) or len(images) > MAX_IMAGES
+            or (list_mode and images) or (not list_mode and not images)):
+        raise FigureError("invalid_images", str(images))
+    req_id = ("direct-" if mode == "direct" else "") + secrets.token_hex(8)
+    if not list_mode:
+        try:
+            _write_request(folder, slot, req_id, mode, now)
+        except (OSError, FigureError) as exc:
+            raise FigureError("slot_record_failed", str(exc)) from exc
+    return folder, req_id
+
+
 def _write_request(folder, slot, req_id, mode, now=None):
     """CONTRACT §9: 이 폴더의 요청 id를 남긴다. place는 이 id로만 결과를 읽는다."""
     if not REQUEST_ID.match(req_id or ""):
         raise FigureError("invalid_id", str(req_id))
     payload = {"v": 1, "slot": slot, "reqId": req_id, "mode": mode,
                "at": _now_ms(now)}
-    _write_json_atomic(_request_record_path(folder, slot), payload)
+    lock = _acquire_slot_lock(folder, slot)
+    try:
+        _write_json_atomic(_slot_record_path(folder, slot), payload)
+    finally:
+        _release_slot_lock(lock)
     return payload
 
 
 def _read_request(folder, slot):
-    data = _read_json(_request_record_path(folder, slot))
+    try:
+        path = _slot_record_path(folder, slot)
+    except OSError:
+        return None
+    data = _read_json(path)
     if not isinstance(data, dict) or data.get("v") != 1:
         return None
     if data.get("slot") != slot or not REQUEST_ID.match(str(data.get("reqId") or "")):
@@ -1410,10 +1748,50 @@ def _section_text(text, heading):
     return "\n".join(lines[start:end])
 
 
+def _slot_photo(folder, slot, heading, manuscript, notice=None):
+    try:
+        path = _manuscript(folder, manuscript)
+    except FigureError as exc:
+        return _blocked(exc.reason, exc.detail)
+    result = _photo_placeholder(folder, path, heading,
+                                path.read_text(encoding="utf-8"), slot)
+    if notice:
+        result["notice"] = notice
+    return result
+
+
 def place(folder, slot, heading, *, choose=None, title=None, org=None,
           manuscript="build/검토전_본문.md", environ=None, images=None,
           direct=None, home=None):
-    """그 절의 승인 그림 수로 분기(1장 즉시·2장↑ 고르기·0장 사진 자리)."""
+    if not SLOT.fullmatch(slot or ""):
+        return _blocked("invalid_slot", str(slot))
+    options = dict(choose=choose, title=title, org=org, manuscript=manuscript,
+                   environ=environ, images=images, direct=direct, home=home)
+    if images:
+        return _place(folder, slot, heading, **options)
+    initial = _read_request(folder, slot)
+    if initial is None:
+        return _slot_photo(folder, slot, heading, manuscript)
+    try:
+        lock = _acquire_slot_lock(folder, slot)
+    except OSError:
+        return _slot_photo(folder, slot, heading, manuscript,
+                           SLOT_LOCK_RETRY_NOTICE + " 사진 자리로 남깁니다.")
+    try:
+        current = _read_request(folder, slot)
+        if current is None or current["reqId"] != initial["reqId"]:
+            return _slot_photo(folder, slot, heading, manuscript,
+                               "새 그림 요청이 시작됐습니다. 새 요청 결과를 기다려 주세요.")
+        # usedAt 재쓰기부터 원고 삽입까지 잠금을 유지한다.
+        return _place(folder, slot, heading, request=current, **options)
+    finally:
+        _release_slot_lock(lock)
+
+
+def _place(folder, slot, heading, *, choose=None, title=None, org=None,
+           manuscript="build/검토전_본문.md", environ=None, images=None,
+           direct=None, home=None, request=None):
+    """직접 그림 또는 잠금 안에서 확인된 슬롯의 승인 결과만 원고에 넣는다."""
     if not SLOT.match(slot or ""):
         return _blocked("invalid_slot", str(slot))
     folder = Path(folder)
@@ -1445,8 +1823,13 @@ def place(folder, slot, heading, *, choose=None, title=None, org=None,
         direct = True
     else:
         env_home = home if home is not None else _figure_home(environ)
-        req = _read_request(folder, slot)
+        req = request
         if req is None:
+            return _photo_placeholder(folder, path, heading, text, slot)
+        try:
+            req = dict(req, usedAt=_now_ms(None))
+            _write_json_atomic(_slot_record_path(folder, slot), req)
+        except OSError:
             return _photo_placeholder(folder, path, heading, text, slot)
         if req["mode"] == "app" and env_home is None:
             return _blocked("no_channel", "앱 결과를 읽으려면 KNUAF_FIGURE_HOME이 필요하다")
@@ -1587,6 +1970,8 @@ def _parser():
     fetch.add_argument("--page", required=True, help="이용조건 페이지 URL")
     fetch.add_argument("--image", action="append", default=[], dest="images",
                        help="그림 URL (최대 3장)")
+    fetch.add_argument("--list", action="store_true", dest="list_mode",
+                       help="그림을 받지 않고 페이지의 그림 주소 후보만 읽는다")
     fetch.add_argument("--direct", action="store_true",
                        help="앱 밖에서 직접 받기(KNUAF_GUI=1이면 무시·거절)")
 
@@ -1620,30 +2005,23 @@ def _dispatch(argv=None):
     if args.command == "fetch":
         if app_mode:
             if args.direct:
-                result = _blocked("gui_no_direct",
-                                  "KNUAF_GUI=1이면 직접 받을 수 없다")
+                try:
+                    _begin_fetch(args.folder, args.slot, args.images, args.list_mode,
+                                 "app", None)
+                    result = _blocked("gui_no_direct",
+                                      "KNUAF_GUI=1이면 직접 받을 수 없다")
+                except FigureError as exc:
+                    result = _blocked(exc.reason, exc.detail)
             else:
-                result = fetch_app(args.folder, args.page, args.images, args.slot)
+                result = fetch_app(args.folder, args.page, args.images, args.slot,
+                                   list_mode=args.list_mode)
         else:
-            result = fetch_direct(args.folder, args.page, args.images, args.slot)
-            if result.get("status") == "done":
+            result = fetch_direct(args.folder, args.page, args.images, args.slot,
+                                  list_mode=args.list_mode)
+            if not args.list_mode and result.get("status") == "done":
                 req_id = result.get("id")
                 _write_json_atomic(Path(args.folder) / ".gg-work"
                                    / "figure-results" / (req_id + ".json"), result)
-        if result.get("status") == "done":
-            # CONTRACT §9: place가 이 id로만 결과를 고른다.
-            try:
-                _write_request(args.folder, args.slot, result["id"],
-                               "app" if app_mode else "direct")
-            except FigureError as exc:
-                result = _blocked(exc.reason, exc.detail)
-        elif result.get("id") or result.get("reqId"):
-            # 새 요청은 나갔는데 rejected/timeout — 옛 승인 요청의 기록은 더
-            # 이상 이 슬롯의 결과가 아니다. 남기면 place가 옛 그림을 넣는다(I-3).
-            try:
-                _request_record_path(args.folder, args.slot).unlink()
-            except OSError:
-                pass
         print(json.dumps(result, ensure_ascii=False))
         return 0 if result.get("status") == "done" else 2
     result = place(args.folder, args.slot, args.heading, choose=args.choose,

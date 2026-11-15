@@ -71,6 +71,8 @@ docx 경로 한 줄만 쓴다).
 - 없으면(앱 밖) 토큰 자리는 "앱에서 받은 그림" 자리 표시로 남긴다 — 알려진 한계.
 - 토큰이 아닌 폴더 안 그림 = 학생이 넣은 그림. 그대로 넣고
   "학생이 넣은 그림 n장 — 출처·권리는 학생 확인"을 목록으로 낸다(캡션과 무관).
+  root/base가 주어지면 직접 받기 증명도 확인해 철회된 규칙의 알림을 notices에 더한다.
+  앱 승인 토큰은 기존 연결 그대로 notices에 같은 재확인 알림을 낸다. 그림은 유지한다.
 """
 
 import hashlib
@@ -82,6 +84,9 @@ from pathlib import Path
 TOKEN = re.compile(r"^app-figure:([0-9a-f]{64})$")
 PLACEHOLDER = "앱에서 받은 그림"
 STUDENT_NOTICE = "학생이 넣은 그림 %d장 — 출처·권리는 학생 확인"
+RECHECK_RULE_IDS = {
+    "nongsaro-curation": "농사로 그림 %d장 — 출처·이용조건을 다시 확인해 주세요(농사로는 화면에 이용조건 표시가 없어 자동 확인 대상에서 빠졌습니다)."
+}
 
 _ENV = object()
 
@@ -220,16 +225,48 @@ def student_notice(count):
     return STUDENT_NOTICE % count
 
 
-def build_report(refs, home=_ENV):
+def build_report(refs, home=_ENV, *, root=None, base=None):
     """빌드 결과에 실을 요약. blocked가 있으면 빌드를 멈춘다."""
     env_home = _resolve_home(home)
     images = []
     blocked = []
     placeholders = []
-    for ref in refs:
+    rechecks = {key: [] for key in RECHECK_RULE_IDS}
+    direct_receipts = []
+    if root is not None:
+        # 직접 받기 증명도 앱 증명과 같은 줄 형식. 파일명만 다르다.
+        path = Path(root) / ".gg-work" / "figure-receipts.jsonl"
+        try:
+            lines = path.read_text(encoding="utf-8").splitlines()
+        except OSError:
+            lines = []
+        for line in lines:
+            try:
+                item = json.loads(line)
+            except ValueError:
+                continue
+            if isinstance(item, dict):
+                direct_receipts.append(item)
+    for number, ref in enumerate(refs, 1):
         sha = token_sha(ref)
         if sha is None:
             images.append({"ref": ref, "kind": "student", "path": None})
+            if root is not None:
+                import gg_hwpx
+                target, ambiguous = gg_hwpx.resolve_figure(ref, base or root, root)
+                if target is not None and not ambiguous:
+                    try:
+                        direct_sha = digest_file(target)
+                    except OSError:
+                        direct_sha = None
+                    for receipt in direct_receipts:
+                        image = receipt.get("image")
+                        if (isinstance(image, dict) and direct_sha is not None
+                                and image.get("sha256") == direct_sha
+                                and image.get("verdict") == "approved"
+                                and image.get("ruleId") in rechecks):
+                            rechecks[image["ruleId"]].append(number)
+                            break
             continue
         if env_home is None:
             images.append({"ref": ref, "kind": "placeholder", "path": None})
@@ -241,8 +278,15 @@ def build_report(refs, home=_ENV):
             images.append({"ref": ref, "kind": "blocked", "path": None})
             continue
         images.append({"ref": ref, "kind": "app", "path": str(path)})
+        receipt = receipt_for(env_home, sha)
+        rule_id = (receipt.get("image") or {}).get("ruleId") if receipt else None
+        if rule_id in rechecks:
+            rechecks[rule_id].append(number)
     students = student_figures(refs)
-    return {
+    notices = [text % len(rechecks[key]) + " (그림 "
+               + "·".join(str(n) for n in rechecks[key]) + ")"
+               for key, text in RECHECK_RULE_IDS.items() if rechecks[key]]
+    report = {
         "images": images,
         "student": students,
         "student_count": len(students),
@@ -251,3 +295,8 @@ def build_report(refs, home=_ENV):
         "placeholder_text": PLACEHOLDER,
         "blocked": blocked,
     }
+    # 다시 확인할 그림이 없으면 키를 두지 않는다 — 다른 빌드의 출력 manifest를 바꾸지 않게(P1.1).
+    if notices:
+        report["notices"] = notices
+        report["recheck_figures"] = {key: numbers for key, numbers in rechecks.items() if numbers}
+    return report
