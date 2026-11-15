@@ -93,6 +93,7 @@
 | `lanes-propose` | `--lane-scope <once 또는 continue>` `--quote <학생 원문>` `--lane-request <레인=main 또는 회사:모델[:effort]>`(반복 가능; 최소 1개) | — | 아니오(`.knuaf-gui/lanes-request.json`) | 학생이 말로 지정한 일부 레인 배치를 제안 파일로 옮긴다. 레인은 `design`·`research`·`writing`·`repeat`·`review`; 회사는 `claude`·`codex`. 계약 schema를 쓰고 기존 제안 파일은 원자적으로 바꾼다. 쓰기 전 디렉터리·temp 이름과 fd 대조, 게시 후 실패 정리·위치 보고 및 폴더 밖 기존 무관 파일 보호는 `delegate`와 같다. 기존 배치안 교체를 포함한 POSIX 잔여 경합 한도는 아래를 따른다. [model-routing](model-routing.md)
 | `input-readback` | `--xlsx <학생이 채운 .xlsx>` | `--out <폴더 안 경로>` | 아니오(산출물) | 원예: 학교 원본 엑셀에 적은 값을 읽어 251칸을 15상태로 분류한 JSON. 기본 출력 `build/hort-input-readback.json`, 기존 파일은 덮어쓰지 않는다. [hort-env-systems](hort-env-systems/README.md#학교-엑셀에-적은-값-읽어-오기-v050) |
 | `tidy` | — | `--apply` | 아니오(`--apply`는 `.gg-work` 정리) | 산출물 폴더 정리 미리보기. 사용자 확인 뒤에만 `--apply`. [output-hygiene](output-hygiene.md) |
+| `figure fetch --list` | `<폴더> --slot <절ID> --page <페이지주소> --list` | — | 아니오(앱 안은 `.knuaf-gui/figure-requests/` 요청만 기록) | 그림은 받지 않고 `kogl`·`org`·`candidates`·`candidatesTruncated`를 반환한다. 일반 받기의 이미지 지정 옵션과 함께 쓰지 않는다. 후보 목록은 승인이 아니며, 도우미가 공공누리 1·2유형과 `credit: none` 후보만 1~3개 추린 뒤 별도 받기를 요청한다. 슬롯·결과·증명·계수는 바꾸지 않는다. [figure-research-routes](figure-research-routes.md#3-6단계-수집-및-본문-삽입-실행-절차) |
 
 `--selection`·`--requested-use`·`--audit-key`·`--target-current`는 파일 경로가 아니라 JSON 문자열이다.
 위임 명령은 실제 AI·웹 서비스 호출을 하지 않는다. 결과 JSON은 생성·제안 파일 경로와 schema 판을 반환한다. JobSpec과 LaneRequest의 schema 및 JobSpec `contractVersion`은 스킬 소유 `delegation.json`에서 읽는다.
