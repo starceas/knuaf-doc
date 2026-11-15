@@ -1,0 +1,78 @@
+{
+  "schema": "knuaf-doc.correction-spec/1",
+  "issue": "E9",
+  "created": "2026-11-15",
+  "decided_by": "오모냥 결정 2026-11-15 (설계 DESIGN-PR4-SOURCE.md §2 E9)",
+  "authored_by": "pr4b-apply; continued by pr4b-apply2",
+  "applies_to": "PR④ B단계 적용기(tools/apply_source_map_pr4.py)의 정정 단계 — 출처(source) 부여와 별 항목",
+  "audit_key_policy": "audit_key_before는 동결 대응표와 적용 전 전체 파일의 역사값이다. audit_key_after는 tools/apply_source_map_pr4.py가 source 추가와 E9 두 칸 정정을 함께 반영한 최종 줄 및 전체 records.jsonl 바이트에서 계산한다. --check는 계산·대조만 하며 --apply는 모든 입력 검증 후 팩과 명세를 저장한다. 빈 after는 최초 적용 시 채우고, 채워진 after가 계산값과 다르면 쓰기 전에 중단한다. 동일 입력 재실행은 같은 바이트이며 before 역사값은 바꾸지 않는다.",
+  "source_document": {
+    "title": "2024 특용작물 생산실적",
+    "publisher": "농림축산식품부",
+    "published": "2025-11",
+    "pdf_sha256": "0974c3d30aa5c1abd795be0af453f4de3bd4e569285c250537897b820d2aa1d5",
+    "pdf_page": 33,
+    "printed_page": "29",
+    "section": "3) 기호작물",
+    "row_label": "전남"
+  },
+  "verbatim": {
+    "line": "전       남 1,477 1,117 990 1,500         8    2      2    84        1    0   0     0     0        0",
+    "header": "농가수 전체면적 수확면적 생산량 (계) | 박하 | 스테비아",
+    "reading": "전남 줄 계 블록 = 농가수 1,477호 / 전체면적 1,117ha / 수확면적 990ha / 생산량 1,500M/T",
+    "how_read": "p33(인쇄 29쪽) 표 이미지 확인 + 줄 텍스트 대조. 팩은 농가수와 전체면적이 한 칸(\"14771117\")으로 붙고 농가수가 null 로 떨어졌다."
+  },
+  "records": [
+    {
+      "pack_id": "mafra.specialty.production.2024",
+      "physical_line": 195,
+      "record_id": "mafra.specialty.production.2024.stat.기호작물계.sido.전남",
+      "audit_key_before": {
+        "pack_id": "mafra.specialty.production.2024",
+        "physical_jsonl_line_1based": 195,
+        "raw_line_sha256": "26e898147d42d79e5ad48b9a8955bc7f488f3d9d49382fb6b108e15556d7ab47",
+        "records_file_sha256": "fc1c0b35d63a67dc5a794128f873272d72f0850e6d6470e7d9501270eafdd4be"
+      },
+      "audit_key_after": {
+        "pack_id": "mafra.specialty.production.2024",
+        "physical_jsonl_line_1based": 195,
+        "raw_line_sha256": "8efe39f90542e0958d460c56a969df0d0d15a040d231aeedc04237eb1b30afad",
+        "records_file_sha256": "c209a566d60053b570cd6128e689268d2f73aedc01f35fc447e9db63655ec266"
+      },
+      "before": {
+        "metrics.farms": null,
+        "metrics.area_ha": "14771117",
+        "metrics.harvest_area_ha": "990",
+        "metrics.production_mt": "1500"
+      },
+      "after": {
+        "metrics.farms": "1477",
+        "metrics.area_ha": "1117"
+      },
+      "changes": [
+        {
+          "path": "metrics.farms",
+          "before": null,
+          "after": "1477"
+        },
+        {
+          "path": "metrics.area_ha",
+          "before": "14771117",
+          "after": "1117"
+        }
+      ],
+      "unchanged": [
+        "metrics.harvest_area_ha",
+        "metrics.production_mt",
+        "metrics.yield_per_10a_kg",
+        "locator",
+        "region",
+        "crop",
+        "caveats",
+        "extraction"
+      ],
+      "scope": "이 두 칸만. harvest_area_ha=990·production_mt=1500 은 원문과 같아 손대지 않는다. 같은 행의 source 부여는 대응표 class=sourced 에 따른 별 항목이고, catalog_status·observation_status 는 이 PR 에서 올리지 않는다(승격은 별도 검증).",
+      "evidence": "p33(인쇄 29쪽) 「3) 기호작물」 표 전남 줄: 농가수 1,477 / 전체면적 1,117 / 수확면적 990 / 생산량 1,500. 팩 값 14771117 은 농가수+면적이 붙은 추출 사고."
+    }
+  ]
+}
