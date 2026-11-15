@@ -153,7 +153,7 @@
   "references/update.md": "43746a2d7709cd90be8b5a330847a12e433ef734245482cdeb43fe17536f50de",
   "references/workbook-reference-set.json": "e31ddcf5b306d330101fef920a415e99972dea0cdd9f5e1a2e5b37a9fd3a5be8",
   "references/workflow-order.md": "781d08c719d40a7787ce97919a1adfc7477e6c979f3114828674756d20b1632c",
-  "release-notes.json": "91ae2dd4a19e3206aa30961d93df70707f70174bff7e8718c500309eb1d98093",
+  "release-notes.json": "cbb34178481718d430496fb1b2be0d0e2567cde5e51e5880aeadf25185f0443c",
   "scripts/build_docx.py": "fe85182a0295cf0373b5451203dd17b990cf0c1f668cd9204684a484b0d776d6",
   "scripts/build_excel_finance_template.py": "0b701dedc53e83af6b2c1aa7fce93d5df9043c428c9b7630a80d7944af582441",
   "scripts/build_hwpx.py": "0475740711193b1f26bdfd4309608378610cd2ccfed42dade81263c5d7e1f372",
@@ -280,7 +280,7 @@
   "tests/test_n5_guidance_link.py": "32462d60e2a3c7a40cffb6eecfb138f8046d382ad16bb15377b3490e3ddbb43a",
   "tests/test_official_guide_reuse.py": "2169e23583f04860fbeb77fe1fe802bed756efd5147156c294eddb3e9ba4d87c",
   "tests/test_pr4_source_map.py": "4f592029ca1d95470cb2981cfd76f2987fe9a27cd286850a092d9620019fb1aa",
-  "version.json": "9f7678fc81a0a221026bb9e90a06149d70de2f0958d3edaad5290ffc5d87f02d"
+  "version.json": "356feba164016add2f2fbc8293f39214046f13fbd103ee095819e257b27fafd8"
  },
  "schema": "knuaf-doc/install-manifest@1"
 }
