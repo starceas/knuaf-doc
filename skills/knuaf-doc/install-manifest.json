@@ -165,7 +165,7 @@
   "scripts/gg_core.py": "77949a2551447e1a489cf1fb35862a3c046c27b38633c737c79aebcda7d9beae",
   "scripts/gg_delegation.py": "1dede7ec0487e56f81d05ffe55f078c8d87a6a253ab9d43fb06736f8bd1f373d",
   "scripts/gg_deps.py": "c6443dfc86b136ca26b23be65083d6b8d7e596c8901154bd583795c61c619281",
-  "scripts/gg_document.py": "e40264446e54ad00303162a11e67ecabe7acbf89ff1c8b7519790deeffafd628",
+  "scripts/gg_document.py": "2b561e68f99af25e568723f87b2445ca01f2e0e32d5004ed1dca4cfde65bde07",
   "scripts/gg_docx_table_layout.py": "dce52533be20ea6b46e8e6f41f3083af3e0ab20ca43dcb3b19cebf488f581921",
   "scripts/gg_doi.py": "158e1416390aed99d86808c9a075fc655a21adb1057204673b36ed35fd7c2d4b",
   "scripts/gg_draft_split.py": "8922bcbf2c09342dd10fa4090df117fedf6b444e86a77d8aa9354bafc14b0f56",
