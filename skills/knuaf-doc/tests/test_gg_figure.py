@@ -1510,6 +1510,21 @@ class TestPageQueryLoad(unittest.TestCase):
                     got = None if chosen is None else chosen[0]["id"]
                     self.assertEqual(got, want, note + " <- " + url)
 
+    def test_loader_rejects_non_standard_json_constants(self):
+        # G1: 표준 JSON이 아니면 파일째 거절 — 앱 JSON.parse와 같은 답(PQI-01).
+        base = json.loads(json.dumps(self.data["loadBase"]))
+        good = json.dumps({"v": 1, "rules": [base]})
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "figure-sources.json"
+            path.write_text(good, encoding="utf-8")
+            self.assertEqual(len(gg_figure.load_rules(path)), 1)
+            path.write_text(good.replace('"v": 1', '"v": 1.0'), encoding="utf-8")
+            self.assertEqual(len(gg_figure.load_rules(path)), 1)
+            for const in ("NaN", "Infinity", "-Infinity"):
+                with self.subTest(const=const):
+                    path.write_text(good[:-1] + ', "extra": ' + const + "}", encoding="utf-8")
+                    self.assertEqual(gg_figure.load_rules(path), [])
+
     def test_loader_rejects_line_breaks_in_host_names_and_values(self):
         # Python/JS의 `$`가 끝 줄바꿈 앞을 허용해 승인 범위를 넓히지 않게 한다.
         overrides = [

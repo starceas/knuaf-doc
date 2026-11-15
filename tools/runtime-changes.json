@@ -336,7 +336,7 @@
       "source": "adopted:app-PR41"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "fc7273916a03cf6fc3c895f0065660d50192a37e2b51bb9bb110e3e0bfd37b90",
+      "after_sha256": "e1ea49cb0a42d6931c01ef8ca9d821c3cef497d161826f4fb16f34eee3941bdc",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "PQ",
@@ -3046,7 +3046,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_figure.py": {
-      "after_sha256": "acd81f6d472b977248764f9337c8408c7746c7679f6c00e8af2b1ae23028f3c1",
+      "after_sha256": "2919fcc89aa9600d36ded01db6bc404fcb5f14f351522ebc0cf5b80636b9093a",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "PQ",
@@ -3100,7 +3100,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/tests/test_gg_figure.py": {
-      "after_sha256": "5f54ee83ad60ff3aa80d9b3004949774d46cb2b4ae199851700c67fb53c14e3d",
+      "after_sha256": "9eb24dbba9a2717c3253f445daa8db500ae9cd29752e40811f9b9d160b62bcaf",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "PQ",

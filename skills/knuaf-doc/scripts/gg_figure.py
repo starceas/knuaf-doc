@@ -421,11 +421,24 @@ def _one_kind_per_host(items):
     return all(len(found) == 1 for found in kinds.values())
 
 
+def _reject_json_constant(name):
+    # 파이썬 json은 NaN·Infinity·-Infinity를 받지만 표준 JSON(앱 JSON.parse)은 거절한다 — G1을 같게.
+    raise ValueError("non-standard JSON constant: " + name)
+
+
+def _read_rules_json(path):
+    try:
+        return json.loads(Path(path).read_text(encoding="utf-8"),
+                          parse_constant=_reject_json_constant)
+    except (OSError, ValueError):
+        return None
+
+
 def load_rules(path=None):
     """허용목록. 없거나 깨지면 빈 목록 = 전부 거절."""
     if path is None:
         path = Path(__file__).resolve().parents[1] / "references" / "figure-sources.json"
-    data = _read_json(path)
+    data = _read_rules_json(path)
     if not isinstance(data, dict):
         return []
     version = data.get("v")
