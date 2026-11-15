@@ -48,25 +48,31 @@ class RouteTests(ContractCase):
             contract_version=self.mc.CONTRACT_VERSION, project_revision=1,
             binding_evidence="synthetic")
 
-    def _synthetic(self, root):
-        """One-sheet workbook: a label, a number and a formula."""
+    def _synthetic(self, root, *, sheet="Visible", name="synthetic.xlsx"):
+        """One-sheet workbook: a label, a number and a formula.
+
+        ``sheet`` separates the books of different majors: a registered
+        profile is structure-bound, so two majors' synthetic books that share
+        a sheet name and a formula fingerprint are indistinguishable forms and
+        the gate rightly refuses one as the other's edition.
+        """
         from openpyxl import Workbook
         book = Workbook()
-        book.active.title = "Visible"
+        book.active.title = sheet
         book.active["A1"] = "합성 표제"
         book.active["B2"] = 7
         book.active["C3"] = "=1+1"
-        source = Path(root) / "synthetic.xlsx"
+        source = Path(root) / name
         book.save(source)
         book.close()
         return source
 
-    def _patch_map(self, root, source):
+    def _patch_map(self, root, source, *, sheet="Visible"):
         path = Path(root) / "patch-map.json"
         path.write_text(json.dumps({
             "schema": self.patch.MAP_SCHEMA,
             "source": {"sha256": self.tpl.sha256(source)},
-            "patches": [{"sheet": "Visible", "cell": "C3",
+            "patches": [{"sheet": sheet, "cell": "C3",
                          "expected_formula": "=1+1", "new_formula": "=1+2",
                          "reason": "합성 보정",
                          "evidence_ref": {"source_id": "synthetic",
@@ -104,8 +110,12 @@ class RouteTests(ContractCase):
         self.assertEqual(
             self.mc.default_workbook_profile(self._authorization("dairy")),
             DAIRY_PROFILE)
-        for major in (SPECIALTY, FRUIT, "hort_env_systems",
-                      "industrial_insects"):
+        # Specialty starts new papers on the current 17-sheet edition; the
+        # first edition stays reachable by handing its own file in.
+        self.assertEqual(
+            self.mc.default_workbook_profile(self._authorization(SPECIALTY)),
+            "school_17_sheet_v2")
+        for major in (FRUIT, "hort_env_systems", "industrial_insects"):
             with self.subTest(major=major):
                 self.assertEqual(
                     self.mc.default_workbook_profile(self._authorization(major)),
@@ -145,8 +155,9 @@ class RouteTests(ContractCase):
         bind_major(specialty_root, SPECIALTY)
         specialty_ctx = self.mc.output_context(specialty_root, SPECIALTY)
         with tempfile.TemporaryDirectory() as temp:
-            source = self._synthetic(temp)
-            mapping = self._patch_map(temp, source)
+            source = self._synthetic(temp, sheet="Specialty",
+                                     name="specialty-synthetic.xlsx")
+            mapping = self._patch_map(temp, source, sheet="Specialty")
             out = Path(temp) / "specialty-patched.xlsx"
             receipt = self.patch.patch_copy(source, mapping, out,
                                             context=specialty_ctx)
@@ -190,13 +201,16 @@ class RouteTests(ContractCase):
 
         ``profile_structure`` answers for the reference set only. Registered
         today: ``fruit_16_sheet_v1``, ``fruit_16_sheet_v1_fy1``,
-        ``food_crops_16_sheet_v1``, ``dairy_hanwoo_28_sheet_v1``.
-        ``school_17_sheet_v1`` — the specialty and
-        the fallback default — is not there, so ``require_profile_structure``
-        returns before opening the source and specialty crops keep their
-        pre-existing route. Fruit trees do not reach the check either: their
-        default is that unregistered 17-sheet name, and policy B refuses it
-        before the source is read.
+        ``food_crops_16_sheet_v1``, ``dairy_hanwoo_28_sheet_v1`` and, from the
+        specialty A/B/C work, ``school_17_sheet_v2``. ``school_17_sheet_v1`` —
+        the specialty and the fallback default — is not there, so
+        ``require_profile_structure`` returns for it without a registered form
+        of its own; a source that is v1 itself is left to its own verifier (the
+        archived X01 edition is not a byte in this tree), while a source that
+        *is* another registered profile's form is refused by
+        ``_refuse_foreign_registered_form``. Fruit trees do not reach the check
+        either: their default is that unregistered 17-sheet name, and policy B
+        refuses it before the source is read.
 
         Measured against ``389a445`` on this same non-workbook source, the
         patch answer is unchanged for both: fruit ``unsupported_finance_profile``
@@ -212,7 +226,9 @@ class RouteTests(ContractCase):
         self.assertEqual(
             {entry["profile"] for entry in reference_set["workbook_profiles"]},
             {FRUIT_PROFILE, "fruit_16_sheet_v1_fy1", FOOD_PROFILE,
-             DAIRY_PROFILE})
+             DAIRY_PROFILE, "school_17_sheet_v2"})
+        # The archived v1 edition stays unregistered: it has no form of its
+        # own to check, which is what keeps the specialty route unchanged.
         self.assertNotIn(SCHOOL_PROFILE,
                          {entry["profile"]
                           for entry in reference_set["workbook_profiles"]})

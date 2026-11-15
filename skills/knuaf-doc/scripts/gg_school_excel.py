@@ -35,6 +35,21 @@ SCHOOL_SHEETS = (
 )
 YEAR_LABELS = "가나다라마"
 EVIDENCE_KEYS = ("area", "seedlings", "yield", "growth", "commodity")
+# 지원 통합문서 판. v1 = 기존 양식(투자 2줄·총 생산량 입력), v2 = 새 양식
+# (투자 3줄·연도별 10a당 목표). 판 식별은 영수증이 묶은 원본 자산 sha가 한다.
+PROFILES = ("school_17_sheet_v1", "school_17_sheet_v2")
+# 14. 현금흐름계획 좌표는 양식마다 한 행 어긋난다. X01 정본(투자 2줄)은
+# 소계(B) 21 · 수지(C) 22 · 누적(D) 23 · 주석 24, X02·레거시 생성물·새
+# 양식(투자 3줄)은 22·23·24·25다. X01과 X02는 같은 프로필 이름
+# (school_17_sheet_v1)을 쓰므로 프로필로는 못 가른다 — 시트 라벨로 읽는다
+# (``cashflow_layout``).
+CF_LABEL_INFLOW = ("소계", "A")
+CF_LABEL_OUTFLOW = ("소계", "B")
+CF_LABEL_NET = "수지균형"
+CF_LABEL_CUM = "누적수지균형"
+CF_LABEL_NOTE = ("당기", "감가상각")
+# v2만 연도별 10a당 목표(kg) 5개를 받는다. v1은 총 생산량 단일 입력이다.
+PRODUCTION_YIELD_FIELD = "production_yield_kg_per_10a"
 
 WORKBOOK_REFERENCE_SET = (
     Path(__file__).resolve().parents[1] / "references"
@@ -82,15 +97,227 @@ def formula_fingerprints(book):
     return result
 
 
+# 두 17시트 판의 골격 차이 — 수식 **주소** 집합이다. 값 채우기·수식 패치는
+# 수식 문면을 바꾸지만 주소는 옮기지 않으므로, 감사 계보가 끊긴 사본도 자기
+# 판을 유지한다. 값은 실측이다(감사 인벤토리 x01.json·
+# school_17_sheet_v2.json의 주소 차집합). 시험이 감사와 다시 대조해 잠근다.
+EDITION_FORMULA_ADDRESSES = {
+    "school_17_sheet_v1": frozenset({
+        ("6. 생산계획", "H7"), ("6. 생산계획", "K7"), ("6. 생산계획", "N7"),
+        ("6. 생산계획", "Q7"), ("6. 생산계획", "T7"),
+    }),
+    "school_17_sheet_v2": frozenset({
+        ("6. 생산계획", "H9"),
+        ("14. 현금흐름계획", "D24"), ("14. 현금흐름계획", "E24"),
+        ("14. 현금흐름계획", "F24"), ("14. 현금흐름계획", "G24"),
+        ("14. 현금흐름계획", "H24"),
+    }),
+}
+
+
+def formula_cells(book):
+    """``(sheet, cell)`` of every stored formula in an open openpyxl book."""
+    return {(sheet.title, cell.coordinate)
+            for sheet in book for row in sheet.iter_rows() for cell in row
+            if cell.data_type == "f"}
+
+
+def edition_marker(cells):
+    """The edition a formula address set is, or None.
+
+    Only the cells the two editions do not share are read, so a copy whose
+    formulas were filled, cleared or patched still says which edition it is.
+    Both editions' markers are counted and the larger count wins: a student
+    who overwrites one of the first edition's five marker cells leaves the
+    other four, and the file is still that edition.  A set that carries the
+    same count from each edition — including neither — names no edition, and
+    the caller must refuse rather than guess: there is no fallback to the
+    first edition, because a second-edition workbook that lost its own
+    markers would be handed the older form's rows.
+    """
+    cells = set(cells)
+    scores = {name: len(addresses & cells)
+              for name, addresses in EDITION_FORMULA_ADDRESSES.items()}
+    best = max(scores.values())
+    if best == 0:
+        return None
+    winners = [name for name, score in scores.items() if score == best]
+    return winners[0] if len(winners) == 1 else None
+
+
+def edition_of_workbook(path):
+    """Read a workbook's formula addresses and name its edition, or None."""
+    from openpyxl import load_workbook
+
+    try:
+        book = load_workbook(path, read_only=True)
+    except Exception:
+        return None
+    try:
+        return edition_marker(formula_cells(book))
+    finally:
+        book.close()
+
+
+def is_school_form(path):
+    """True when the file carries the 17-sheet school form's sheet order.
+
+    The two editions are distinguished by formula addresses; a file with a
+    different sheet order is not this form at all and its edition question
+    does not apply.  An unreadable file is not this form either — reading it
+    is the caller's own later step, and its failure belongs there.
+    """
+    from openpyxl import load_workbook
+
+    try:
+        book = load_workbook(path, read_only=True)
+    except Exception:
+        return False
+    try:
+        return list(book.sheetnames) == list(SCHOOL_SHEETS)
+    finally:
+        book.close()
+
+
+def is_readable_workbook(path):
+    """True when the file opens as a workbook, whatever form it carries."""
+    from openpyxl import load_workbook
+
+    try:
+        book = load_workbook(path, read_only=True)
+    except Exception:
+        return False
+    book.close()
+    return True
+
+
+def registered_profiles():
+    """Every structure-bound profile in the shipped reference set."""
+    try:
+        data = json.loads(WORKBOOK_REFERENCE_SET.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as error:
+        raise ValueError("workbook reference set unreadable") from error
+    return {entry["profile"] for entry in data.get("workbook_profiles") or []
+            if isinstance(entry, dict) and isinstance(entry.get("profile"), str)}
+
+
+def _refuse_foreign_registered_form(path, profile):
+    """Fail an unregistered-profile workbook that is another profile's form.
+
+    Values are filled in by then, so only sheet order and formula
+    fingerprints are compared. A 17-sheet workbook whose formula addresses
+    name no single edition is refused here too: the declared profile is one
+    without a registered form of its own, so nothing later would catch a
+    second-edition paper carrying that label — a declaration never answers
+    for a form that cannot be read. Any other shape is left to its own
+    verifier, as before.
+    """
+    others = sorted(registered_profiles() - {profile})
+    if not others:
+        return
+    from openpyxl import load_workbook
+
+    try:
+        book = load_workbook(path, read_only=True)
+    except Exception:
+        return
+    try:
+        observed = list(book.sheetnames)
+        fingerprints = None
+        for other in others:
+            expected = profile_structure(other)
+            if expected is None or observed != expected["sheets"]:
+                continue
+            if fingerprints is None:
+                fingerprints = formula_fingerprints(book)
+            if all(fingerprints[name] == expected["formula_fingerprints"][name]
+                   for name in observed):
+                raise ValueError(
+                    "workbook structure is the registered %s form, not %s; "
+                    "declare the profile whose edition the file is"
+                    % (other, profile))
+        # A formula that was patched no longer matches any registered
+        # fingerprint, so the loop above cannot see it. The two editions of
+        # the 17-sheet form move different rows: their formula *addresses*
+        # still say which edition the file is after a patch. Only a file that
+        # is that form is asked — another shape has no edition to declare.
+        if observed == list(SCHOOL_SHEETS):
+            marker = edition_marker(formula_cells(book))
+            if marker != profile:
+                raise ValueError(
+                    "workbook structure is the %s edition, not %s; "
+                    "declare the profile whose edition the file is"
+                    % (marker or "unrecognised", profile))
+    finally:
+        book.close()
+
+
 def require_profile_structure(path, profile):
     """Open the real workbook and require its registered school form.
 
     A caller-written profile label never substitutes for this check. Sheet
     order and formula fingerprints must match; student values may differ.
-    Unregistered profiles are left to their own verifier.
+    A profile with no registered structure is not left unchecked: a workbook
+    that *is* another registered profile's form is refused, so one edition's
+    bytes cannot be declared under a label that has no structure of its own.
+    """
+    drift = _structure_violation(path, profile)
+    if drift is None:
+        return
+    if isinstance(drift, FormulaDrift):
+        # The form is the declared one; only formulas differ. A route that
+        # rewrites formulas by design (``patch_copy``) re-asks the weaker
+        # question below; every other route keeps this answer.
+        raise drift
+    raise ValueError(drift)
+
+
+class FormulaDrift(ValueError):
+    """The form is right, its formulas are not the registered ones."""
+
+
+def _structure_violation(path, profile):
+    """None when ``path`` is ``profile``'s form, else the refusal."""
+    expected = profile_structure(profile)
+    if expected is None:
+        _refuse_foreign_registered_form(path, profile)
+        return None
+    from openpyxl import load_workbook
+
+    try:
+        book = load_workbook(path, read_only=True)
+    except Exception as error:
+        return "workbook structure unreadable: %s" % error
+    try:
+        observed = list(book.sheetnames)
+        if observed != expected["sheets"]:
+            return (
+                "workbook structure mismatch for %s: %d sheets do not match "
+                "the registered %d-sheet school form"
+                % (profile, len(observed), len(expected["sheets"])))
+        fingerprints = formula_fingerprints(book)
+        changed = [name for name in observed
+                   if fingerprints[name] != expected["formula_fingerprints"][name]]
+        if changed:
+            return FormulaDrift(
+                "workbook formula fingerprint mismatch for %s: %s"
+                % (profile, ", ".join(changed)))
+        return None
+    finally:
+        book.close()
+
+
+def require_profile_edition(path, profile):
+    """Require the declared edition's forms *and* its formula skeleton.
+
+    Used where formulas are expected to differ from the registered set: a
+    patched copy still moves the cells its edition moves. Sheet order must
+    match and the edition skeleton must name ``profile``, so a copy of one
+    edition can never be declared as the other.
     """
     expected = profile_structure(profile)
     if expected is None:
+        _refuse_foreign_registered_form(path, profile)
         return
     from openpyxl import load_workbook
 
@@ -105,14 +332,85 @@ def require_profile_structure(path, profile):
                 "workbook structure mismatch for %s: %d sheets do not match "
                 "the registered %d-sheet school form"
                 % (profile, len(observed), len(expected["sheets"])))
-        fingerprints = formula_fingerprints(book)
-        changed = [name for name in observed
-                   if fingerprints[name] != expected["formula_fingerprints"][name]]
-        if changed:
-            raise ValueError("workbook formula fingerprint mismatch for %s: %s"
-                             % (profile, ", ".join(changed)))
+        marker = edition_marker(formula_cells(book))
+        if marker != profile:
+            raise ValueError(
+                "workbook structure is the %s edition, not %s; declare the "
+                "profile whose edition the file is"
+                % (marker or "unrecognised", profile))
     finally:
         book.close()
+
+
+def _label_text(value):
+    return re.sub(r"\s+", "", str(value or ""))
+
+
+def _cashflow_row(ws, markers):
+    """First row whose B/C label contains all ``markers``."""
+    if isinstance(markers, str):
+        markers = (markers,)
+    for row in ws.iter_rows(min_col=2, max_col=3):
+        for cell in row:
+            text = _label_text(cell.value)
+            if text and all(m in text for m in markers):
+                return cell.row
+    return None
+
+
+def cashflow_layout(ws):
+    """``14. 현금흐름계획`` row numbers read from the sheet's own labels.
+
+    두 배치가 유통된다: X01 정본(투자 2줄)은 유입 14 · 지출소계 21 ·
+    수지 22 · 누적 23 · 주석 24, X02·레거시 생성물·새 양식(투자 3줄)은
+    22·23·24·25. X01과 X02는 같은 프로필 이름을 쓰므로 프로필로는 가를
+    수 없다 — 라벨이 가른다.
+    """
+    rows = {
+        "in": _cashflow_row(ws, CF_LABEL_INFLOW),
+        "out": _cashflow_row(ws, CF_LABEL_OUTFLOW),
+        "net": _cashflow_row(ws, CF_LABEL_NET),
+        "cum": _cashflow_row(ws, CF_LABEL_CUM),
+        "note": _cashflow_row(ws, CF_LABEL_NOTE),
+    }
+    names = {"in": "유입소계", "out": "지출소계", "net": "수지", "cum": "누적",
+             "note": "주석"}
+    missing = [names[k] for k, v in rows.items() if v is None]
+    if missing:
+        raise ValueError("현금흐름계획 라벨 누락: " + ", ".join(missing))
+    if not (rows["in"] < rows["out"] < rows["net"] < rows["cum"] < rows["note"]):
+        raise ValueError("현금흐름계획 라벨 순서 이상: %s" % rows)
+    return rows
+
+
+def profile_supports(profile):
+    """Whether this module's generator and verifier handle a workbook profile.
+
+    Callers outside this module use it instead of comparing the profile
+    literal, so a new form is added in one place.
+    """
+    return profile in PROFILES
+
+
+def production_yield_rows(spec):
+    """A v2 spec's yearly 10a targets in kg, as Decimals (5 entries).
+
+    v1 specs store one total in ``production_kg`` and have no such field.
+    """
+    raw = spec.get(PRODUCTION_YIELD_FIELD)
+    if (not isinstance(raw, (list, tuple)) or len(raw) != 5
+            or any(isinstance(v, bool) or v is None for v in raw)):
+        raise ValueError("10a당 생산량 목표 5개 필요")
+    rows = []
+    for value in raw:
+        try:
+            number = value if isinstance(value, Decimal) else num(str(value))
+        except ValueError as error:
+            raise ValueError("10a당 생산량 목표는 십진 수치 필요") from error
+        if number < 0:
+            raise ValueError("10a당 생산량 목표는 0 이상 필요")
+        rows.append(number)
+    return tuple(rows)
 
 
 def q(name):
@@ -126,39 +424,41 @@ def plan_years(start_year):
 
 
 def check_unsupported(spec):
-    if spec.get("profile") != "school_17_sheet_v1":
+    profile = spec.get("profile")
+    if not profile_supports(profile):
         return None
     if any(spec.get(k) for k in ("processing", "perennial", "shared_facilities")):
         return {
             "status": "unsupported",
-            "profile": "school_17_sheet_v1",
+            "profile": profile,
             "reason": "가공·다년생·공유시설 자동 산식 미검증. 원계획을 보존합니다.",
         }
     grants = spec.get("grants")
     if grants is not None and grants != 0 and grants != "0" and grants != 0.0:
         return {
             "status": "unsupported",
-            "profile": "school_17_sheet_v1",
+            "profile": profile,
             "reason": "보조금 자동 산식 미검증. 원계획을 보존합니다.",
         }
     if "crops" in spec and len(spec["crops"]) > 1:
         return {
             "status": "unsupported",
-            "profile": "school_17_sheet_v1",
+            "profile": profile,
             "reason": "다작목 자동 산식 미검증. 원계획을 보존합니다.",
         }
     if "period_data" in spec or "yearly_data" in spec:
         return {
             "status": "unsupported",
-            "profile": "school_17_sheet_v1",
+            "profile": profile,
             "reason": "연차별 변동 계획 자동 산식 미검증. 원계획을 보존합니다.",
         }
     return None
 
 
 def validate(spec, *, resolver=None):
-    if spec.get("profile") != "school_17_sheet_v1":
-        raise ValueError("school_17_sheet_v1 만 지원")
+    profile = spec.get("profile")
+    if not profile_supports(profile):
+        raise ValueError("school_17_sheet_v1·school_17_sheet_v2 만 지원")
     if not spec.get("source_refs"):
         raise ValueError("근거 참조 필요")
     if not isinstance(spec.get("source_refs"), list) or not all(
@@ -199,7 +499,6 @@ def validate(spec, *, resolver=None):
 
     fields = (
         "area_m2",
-        "production_kg",
         "purchase_price",
         "direct_price",
         "purchase_share",
@@ -222,11 +521,21 @@ def validate(spec, *, resolver=None):
     )
     values = {k: num(spec.get(k, "0") if k in ("purchase_price", "direct_price") else spec[k]) for k in fields}
 
+    # 생산량 입력은 판마다 다르다: v1은 총량 한 개, v2는 연도별 10a당
+    # 목표이고 총량은 9행이 계산한다. 둘을 한 필드로 뭉개면 v2가 총량을
+    # 입력받은 것처럼 보인다.
+    if profile == "school_17_sheet_v2":
+        values["production_yield"] = production_yield_rows(spec)
+        if "production_kg" in spec:
+            raise ValueError("새 양식은 총 생산량 대신 연도별 10a당 목표를 받습니다")
+    else:
+        values["production_kg"] = num(spec["production_kg"])
+        if values["production_kg"] < 0:
+            raise ValueError("생산량은 0 이상 필요")
+
     # F6: Domain constraints
     if values["area_m2"] <= 0:
         raise ValueError("재배면적은 양수 필요")
-    if values["production_kg"] < 0:
-        raise ValueError("생산량은 0 이상 필요")
     if values["purchase_price"] < 0 or values["direct_price"] < 0:
         raise ValueError("단가는 0 이상 필요")
     if values["purchase_share"] < 0 or values["purchase_share"] > 1:
@@ -389,16 +698,23 @@ def school_workbook(spec, path, *, context=None):
         raise mc.OutputHeldError("finance_profile_evidence_required")
     authorization = mc.authorize_output(
         mc.OUTPUT_SCHOOL_WORKBOOK, context, spec=spec)
-    mc.require_finance_profile(authorization, spec.get("profile"))
-    if spec.get("profile") != "school_17_sheet_v1":
+    profile = spec.get("profile")
+    mc.require_finance_profile(authorization, profile)
+    if not profile_supports(profile):
         raise mc.OutputHeldError("unsupported_finance_profile")
-    mc.require_template_route(authorization, spec.get("profile"))
-    return _generate_school_workbook(spec, path, authorization, context)
+    mc.require_template_route(authorization, profile)
+    return _generate_school_workbook(spec, path, authorization, context,
+                                     output_profile=profile)
 
 
-def _generate_school_workbook(spec, path, authorization, context):
+def _generate_school_workbook(spec, path, authorization, context, *,
+                              output_profile="school_17_sheet_v1"):
     """Legacy 17-sheet generator body; callers pass a policy-B
-    authorization.  Kept unchanged for a later removal decision."""
+    authorization.  Kept unchanged for a later removal decision.
+
+    ``output_profile`` picks what the body writes: v1 keeps the historical
+    layout (총 생산량 입력, 7행 역산) and v2 writes the new form (연도별
+    10a당 목표, 9행 계산).  The two differ only in those places."""
     import gg_major_contract as mc
     from openpyxl import Workbook
     from openpyxl.styles import Alignment, Font
@@ -407,6 +723,9 @@ def _generate_school_workbook(spec, path, authorization, context):
     unsupported = check_unsupported(spec)
     if unsupported:
         return unsupported
+    profile = output_profile
+    if not profile_supports(profile):
+        raise ValueError("지원하지 않는 재무 판: %s" % (profile,))
     years, v, price = validate(spec)
     start = years[0]
     mult_g = [price_multiplier_d(price["general"], y) for y in years]
@@ -469,11 +788,20 @@ def _generate_school_workbook(spec, path, authorization, context):
     prod["B2"] = "6. 생산계획"
     prod["B4"] = "가. 생산량계획"
     prod["B7"] = "10a당 생산량(kg)"
-    prod["H8"] = float(v["area_m2"])
     prod["B8"] = "재배면적(㎡)"
     prod["B9"] = "생산량(kg)"
-    prod["H9"] = float(v["production_kg"])
-    prod["H7"] = "=H9/H8*1000"
+    if profile == "school_17_sheet_v2":
+        # 교수님 양식: 학생이 해마다 10a당 목표를 적고 총량은 9행이 계산한다.
+        # 면적은 해마다 같은 값을 쓰므로 네 열 모두 적는다(빈 칸이면 #VALUE!).
+        for i, target in enumerate(v["production_yield"]):
+            col = get_column_letter(8 + 3 * i)
+            prod[f"{col}7"] = float(target)
+            prod[f"{col}8"] = float(v["area_m2"])
+            prod[f"{col}9"] = f"={col}7*{col}8/1000"
+    else:
+        prod["H8"] = float(v["area_m2"])
+        prod["H9"] = float(v["production_kg"])
+        prod["H7"] = "=H9/H8*1000"
     prod["B11"] = "나. 생산량 산출근거"
     evidence = spec["production_evidence"]
     prod["B15"] = "재배면적"
@@ -1119,7 +1447,7 @@ def _generate_school_workbook(spec, path, authorization, context):
     cf["D15"] = f"={invest_name}!E19"
     cf["C16"] = "농기계투자"
     cf["D16"] = f"={invest_name}!E20"
-    cf["C17"] = "토지투자"
+    cf["C17"] = "토지구입"
     cf["D17"] = f"={invest_name}!E21"
     cf["C18"] = "당기총생산 원가"
     cf["D18"] = f"={cost_name}!C33"
@@ -1285,7 +1613,7 @@ def _generate_school_workbook(spec, path, authorization, context):
     cost.print_area = "B2:G36"  # fitToHeight=1 avoids orphan row on page 19
     pl.print_area = "B2:G27"  # fitToHeight=1 avoids orphan row on page 21
     bs.print_area = "B2:G17"
-    cf.print_area = "B2:H26"
+    cf.print_area = "B2:I25" if profile == "school_17_sheet_v2" else "B2:H26"
     inc.print_area = "B2:G9"
     path = Path(path)
     if path.exists():
@@ -1296,7 +1624,7 @@ def _generate_school_workbook(spec, path, authorization, context):
     path.with_suffix(".manifest.json").write_text(
         json.dumps(
             {
-                "profile": "school_17_sheet_v1",
+                "profile": profile,
                 "writing_year": spec["writing_year"],
                 "years": years,
                 "file_hash": digest(path.read_bytes()),
@@ -1315,7 +1643,7 @@ def _generate_school_workbook(spec, path, authorization, context):
     )
     return {
         "status": "generated",
-        "profile": "school_17_sheet_v1",
+        "profile": profile,
         "years": years,
         "sheets": list(SCHOOL_SHEETS),
         "recalculation": "not_run",
@@ -1402,7 +1730,14 @@ def inspect_school_workbook(path):
     if "NA()" not in str(goal["C12"].value or ""):
         issues.append({"status": "fail", "reason": "매출 0 순이익률 NA 미처리"})
     cf = wb["14. 현금흐름계획"]
-    if "감가상각" not in str(cf["B25"].value or ""):
+    # 주석 행은 양식에 따라 24행(X01 정본) 또는 25행(3줄 투자 양식)이다.
+    try:
+        note_row = cashflow_layout(cf)["note"]
+    except ValueError as error:
+        issues.append({"status": "fail", "reason": str(error)})
+        note_row = None
+    if note_row is not None and "감가상각" not in str(
+            cf.cell(note_row, 2).value or ""):
         issues.append({"status": "fail", "reason": "현금흐름 감가상각 제외 각주 없음"})
     return issues
 
@@ -2510,7 +2845,7 @@ def crosscheck_body_workbook(text, path, scope, *, workbook_profile=None):
     contradicts it.  A missing or non-numeric cached value is reported as
     ``blocked`` so an unrecalculated workbook cannot masquerade as a mismatch.
     """
-    if workbook_profile != "school_17_sheet_v1":
+    if not profile_supports(workbook_profile):
         return [{"location": "body", "status": "not_checked",
                  "reason": "17시트 좌표 대조 미지원: school_17_sheet_v1 전용"}]
     if not isinstance(text, str):
@@ -2747,7 +3082,7 @@ def inspect_outputs(root, p, lineage=None):
         if (lineage.get(oid) or {}).get("state") == "history":
             continue
         profile = output.get("workbook_profile")
-        if profile != "school_17_sheet_v1":
+        if not profile_supports(profile):
             issues.append(("school_excel_17_scope",
                            "17시트 검사 미지원/미실행: " + str(profile or "프로필 근거 없음")))
             if output.get("layout_kind") != "provided_template":
@@ -2844,7 +3179,7 @@ def inspect_outputs(root, p, lineage=None):
                 wb_formula = load_workbook(path, read_only=True, data_only=False)
                 try:
                     names = wb_formula.sheetnames
-                    if profile == "school_17_sheet_v1" and len(names) != 17:
+                    if profile_supports(profile) and len(names) != 17:
                         raise ValueError("school_17_sheet_v1 17시트 무결성 불일치")
                     error_tokens = re.compile(
                         r"#(?:REF!|VALUE!|DIV/0!|N/A|NAME\?|NUM!|NULL!|SPILL!|CALC!|BLOCKED!|CONNECT!|UNKNOWN!)"

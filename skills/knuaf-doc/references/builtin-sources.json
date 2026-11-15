@@ -661,8 +661,8 @@
       "artifacts": [
         {
           "relative_path": "references/excel-template.md",
-          "sha256": "f752916d00b0584733a4d74e983f19d1657c948bdf175e00e19e518456c34ad5",
-          "bytes": 64872
+          "sha256": "5d4ae5ef9003d5bc0c83bda0b437acec8f27067ca2f9378ae97365dcb6e5cd80",
+          "bytes": 67134
         }
       ],
       "coverage": {
@@ -1116,8 +1116,8 @@
       "artifacts": [
         {
           "relative_path": "references/rules/EX_excel_buildspec.md",
-          "sha256": "91426bcddf5303d768beb43468d8aa1e3beb409fafde8309e821dd86ed2ab0e7",
-          "bytes": 13291
+          "sha256": "09fa7e1de56223b1abd4c903c8415d786dd66746924f588e6d018cdf21640e23",
+          "bytes": 13675
         }
       ],
       "coverage": {},
@@ -1144,8 +1144,8 @@
       "artifacts": [
         {
           "relative_path": "references/rules/EX_excel_structure.md",
-          "sha256": "56297bbd487be4648a9f348ec44ab97e465f92339e7d34f00a24ab7e2e7d5a49",
-          "bytes": 8638
+          "sha256": "a1e66f05677adf613c0bc6fd5796510c1bcb942d92529696eef22004241f4aaf",
+          "bytes": 8956
         }
       ],
       "coverage": {},
