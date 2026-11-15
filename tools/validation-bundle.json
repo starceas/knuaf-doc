@@ -8,9 +8,9 @@
   },
   "files": {
     ".github/workflows/validation.yml": {
-      "note": "Per-PR CI running the same integrity check and validation runner. repair-n1/N2: receipt path read via os.environ['RUNNER_TEMP'] inside the quoted heredoc. P2-R2: strict report consumer step enforces the ok_platform_scoped/default-scope contract (sole P2-L09-native pending gate, full=false, platform=true, no unexpected/unapproved skips). P2-R3: consumer hardened to independently recompute the report — strict JSON (duplicate keys/nonfinite rejected), present+typed fields, non-bool nonnegative integer counts, framework reconciliation (was_successful/outcomes/testsRun==tests_run==len(entries)/skipped==1), per-entry unique-id + category tally equal to counters with zero failed, declared H9-only known_baseline_defect pairs, fixture_events empty/failure_events 0, only parent-matched subtest_success events, and the exact approved-skip rule string — no trust in accounting.errors or top-level summaries. P2-R4: three consumer consistency holes closed — known_baseline_defect requires the exact (test, defect=H9, gate=P3) triple per regression_inventory (arbitrary nonempty gate rejected); subtest ids must match the complete emitted parent + ' (' + nonempty + ')' shape (unclosed/empty/wrong-prefix rejected, no repr parsing); the exact native withheld skip parent may carry no subtest events at all. All prior strict JSON/type/framework/entries/fixture/gate checks preserved. P2-R5: H9 required-presence invariant enforced independently of supplied totals — exact test id must occur exactly once carrying category known_baseline_defect + defect H9 + gate P3; runtime.known_baseline_defects pinned to integer 1; relabel/ missing/substitute/duplicate with favorable counters all reject. | Windows native publication: 3.10/3.14 lifecycle matrix and artifact reports; existing Ubuntu strict consumer and Windows structural preserved.",
+      "note": "Per-PR CI running the same integrity check and validation runner. repair-n1/N2: receipt path read via os.environ['RUNNER_TEMP'] inside the quoted heredoc. P2-R2: strict report consumer step enforces the ok_platform_scoped/default-scope contract (sole P2-L09-native pending gate, full=false, platform=true, no unexpected/unapproved skips). P2-R3: consumer hardened to independently recompute the report — strict JSON (duplicate keys/nonfinite rejected), present+typed fields, non-bool nonnegative integer counts, framework reconciliation (was_successful/outcomes/testsRun==tests_run==len(entries)/skipped==1), per-entry unique-id + category tally equal to counters with zero failed, declared H9-only known_baseline_defect pairs, fixture_events empty/failure_events 0, only parent-matched subtest_success events, and the exact approved-skip rule string — no trust in accounting.errors or top-level summaries. P2-R4: three consumer consistency holes closed — known_baseline_defect requires the exact (test, defect=H9, gate=P3) triple per regression_inventory (arbitrary nonempty gate rejected); subtest ids must match the complete emitted parent + ' (' + nonempty + ')' shape (unclosed/empty/wrong-prefix rejected, no repr parsing); the exact native withheld skip parent may carry no subtest events at all. All prior strict JSON/type/framework/entries/fixture/gate checks preserved. P2-R5: H9 required-presence invariant enforced independently of supplied totals — exact test id must occur exactly once carrying category known_baseline_defect + defect H9 + gate P3; runtime.known_baseline_defects pinned to integer 1; relabel/ missing/substitute/duplicate with favorable counters all reject. | Windows native publication: 3.10/3.14 lifecycle matrix and artifact reports; existing Ubuntu strict consumer and Windows structural preserved. | W9-ci: windows-publication adds py3.13 and runs the skill tests there (the app repository's Windows interpreter; py3.12+ st_dev identity).",
       "origin": "new",
-      "sha256": "f7ffc104cd83de1d9345baadc5a4052c7fcacfadf211aa4f64e156c5eee5bc33",
+      "sha256": "b2a89f147017ed638d8310ae681e6baaf3151345e6f57ad0c11d318a0472909c",
       "transform": "F-skill-tests: independently reconcile exact optional skill skip IDs/reasons and approved_skill_skips against runtime entries, preserving native pending-gate and accounting checks."
     },
     ".github/workflows/windows-full.yml": {
@@ -562,7 +562,7 @@
     "tools/validation-provenance.json": {
       "note": "This file; declares origins for the validation layer.",
       "origin": "new",
-      "sha256": "254ce10b14dae9e74b7269beb3764e1aff47f4513e3a4249564530eb7be1def9"
+      "sha256": "6bb0b17ad90d079378dc8e935f319af4a938c0f8d042665a2e10fb0edf229257"
     },
     "tools/validation_sharding.py": {
       "origin": "new",
@@ -768,5 +768,5 @@
     "verified_count": 338
   },
   "schema": "knuaf-doc/validation-bundle@3",
-  "validation_tree_sha256": "6e7d90a36bb4a869607b68fba220db3f08cd6cacbb395d5bffd6bf475ad01dcb"
+  "validation_tree_sha256": "3cafba8b6704fe29aa7bbdc6612d025acbae65fa62d515d1ecd4cd9ddfd116ef"
 }

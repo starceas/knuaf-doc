@@ -314,7 +314,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python: ['3.10', '3.14']
+        python: ['3.10', '3.13', '3.14']
     env:
       PYTHONUTF8: '1'
       PYTHONIOENCODING: utf-8
@@ -347,6 +347,15 @@ jobs:
         if: ${{ matrix.python == '3.10' }}
         env:
           PYTHONUTF8: '0'
+          TMP: ${{ runner.temp }}
+          TEMP: ${{ runner.temp }}
+        run: python -m unittest discover -s skills/knuaf-doc/tests -t skills/knuaf-doc/tests
+      # The app repository runs these skill tests on Windows py3.13. Python
+      # 3.12+ reports a 64-bit st_dev where the handle API gives a 32-bit
+      # volume serial, so identity checks must be proven on 3.13 too.
+      - name: Skill tests (py3.13, the app's Windows interpreter)
+        if: ${{ matrix.python == '3.13' }}
+        env:
           TMP: ${{ runner.temp }}
           TEMP: ${{ runner.temp }}
         run: python -m unittest discover -s skills/knuaf-doc/tests -t skills/knuaf-doc/tests
