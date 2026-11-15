@@ -404,8 +404,12 @@ def is_school_snapshot(path):
     import zipfile
     from gg_excel_template import workbook_sheets
     from gg_school_excel import SCHOOL_SHEETS
-    with zipfile.ZipFile(path) as archive:
-        return [name for name, _ in workbook_sheets(archive)] == list(SCHOOL_SHEETS)
+    try:
+        with zipfile.ZipFile(path) as archive:
+            return [name for name, _ in workbook_sheets(archive)] == list(SCHOOL_SHEETS)
+    except zipfile.BadZipFile:
+        # Scope probing must not replace the existing map/source error order.
+        return False
 
 
 def register_output(root, receipt, output_path, *, input_sha256):

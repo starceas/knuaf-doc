@@ -339,7 +339,7 @@
       "source": "adopted:app-PR41"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "d0ac584b14c7c1eb3fec92d5a4b69a238173f012d2b253272a64a0559de9fc2f",
+      "after_sha256": "01ed26ead76f4ad9ea4fe781c1048125d91ce90ad83ec21269ecdbd3d892c4fa",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "fcn-0.1.0",
@@ -3384,7 +3384,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_formula_cell_notice.py": {
-      "after_sha256": "6d0e46a3362cade18ac116bdba1e1feafe01367cc1ba0066869d6f3ba2879cbd",
+      "after_sha256": "1abc22859ab33c2a26fcdb36e5cc4cf2a4a50c4a5deaca785b86a95100926b14",
       "before_sha256": null,
       "first_changed": "fcn-0.1.0",
       "last_changed": "fcn-0.1.0",

@@ -181,7 +181,7 @@
   "scripts/gg_finance_amounts.py": "6e1bcd5ac7f8b3407aaf3dfa24ed3ecc6d982aad6b0d75ac1d2fa1d7d43d4d5c",
   "scripts/gg_finance_body.py": "3fdae56b16f362600b03f705b01d79a9ddebb5f7e27260dc4f4b7a16e21eba9a",
   "scripts/gg_finance_tables.py": "fd570d0560090bd2281cb3c069e35d79e71fe583ce369b1beb9015e4b482d425",
-  "scripts/gg_formula_cell_notice.py": "6d0e46a3362cade18ac116bdba1e1feafe01367cc1ba0066869d6f3ba2879cbd",
+  "scripts/gg_formula_cell_notice.py": "1abc22859ab33c2a26fcdb36e5cc4cf2a4a50c4a5deaca785b86a95100926b14",
   "scripts/gg_frontmatter.py": "bb0e6779f3737b930bfa546a5cbd8bb19ba4a0943c716261b8f620efdbbd6c93",
   "scripts/gg_frontmatter_layout.py": "c759862a408b867019b7726957f93fd5aaaaf85b938472fbfab51376535972fb",
   "scripts/gg_fruit_correction.py": "0f845f47974e1ef2afbd8c679f38c123a90a663f1b5b795c2c67738a7d326866",
