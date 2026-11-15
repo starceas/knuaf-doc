@@ -299,7 +299,7 @@ class RecheckNoticeTests(_HomeCase):
         line["image"]["ruleId"] = "another-rule"
         self.receipts.write_text(json.dumps(line) + "\n", encoding="utf-8")
         report = gd.build_report([token(SHA)], home=self.home)
-        self.assertEqual(report["notices"], [])
+        self.assertEqual(report.get("notices", []), [])
         self.assertEqual(report["blocked"], [])
 
     def test_direct_matching_approved_receipt_and_unmatched_student(self):
@@ -321,9 +321,9 @@ class RecheckNoticeTests(_HomeCase):
         self.assertEqual((picture.read_bytes(), receipt.read_bytes()), before)
         line["image"]["verdict"] = "rejected"
         receipt.write_text(json.dumps(line) + "\n", encoding="utf-8")
-        self.assertEqual(gd.build_report([ref], home=None, root=root)["notices"], [])
+        self.assertEqual(gd.build_report([ref], home=None, root=root).get("notices", []), [])
         receipt.write_text("", encoding="utf-8")
-        self.assertEqual(gd.build_report([ref], home=None, root=root)["notices"], [])
+        self.assertEqual(gd.build_report([ref], home=None, root=root).get("notices", []), [])
 
 
 if __name__ == "__main__":

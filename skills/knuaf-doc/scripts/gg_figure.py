@@ -1590,6 +1590,7 @@ def _acquire_slot_lock(folder, slot):
 
 
 def _release_slot_lock(lock):
+    # 윈도는 열린 파일을 지울 수 없다(공유 삭제 없이 연 핸들) — 내 잠금인지 확인한 뒤 닫고 지운다.
     path, fd = lock
     try:
         owned = os.fstat(fd)
@@ -1597,10 +1598,14 @@ def _release_slot_lock(lock):
             current = path.lstat()
         except FileNotFoundError:
             return
-        if (current.st_dev, current.st_ino) == (owned.st_dev, owned.st_ino):
-            path.unlink()
+        mine = (current.st_dev, current.st_ino) == (owned.st_dev, owned.st_ino)
     finally:
         os.close(fd)
+    if mine:
+        try:
+            path.unlink()
+        except FileNotFoundError:
+            pass
 
 
 def _begin_fetch(folder, slot, images, list_mode, mode, now):

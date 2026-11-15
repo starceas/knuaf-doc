@@ -286,14 +286,17 @@ def build_report(refs, home=_ENV, *, root=None, base=None):
     notices = [text % len(rechecks[key]) + " (그림 "
                + "·".join(str(n) for n in rechecks[key]) + ")"
                for key, text in RECHECK_RULE_IDS.items() if rechecks[key]]
-    return {
+    report = {
         "images": images,
         "student": students,
         "student_count": len(students),
         "student_notice": student_notice(len(students)),
-        "notices": notices,
-        "recheck_figures": {key: numbers for key, numbers in rechecks.items() if numbers},
         "placeholders": placeholders,
         "placeholder_text": PLACEHOLDER,
         "blocked": blocked,
     }
+    # 다시 확인할 그림이 없으면 키를 두지 않는다 — 다른 빌드의 출력 manifest를 바꾸지 않게(P1.1).
+    if notices:
+        report["notices"] = notices
+        report["recheck_figures"] = {key: numbers for key, numbers in rechecks.items() if numbers}
+    return report
