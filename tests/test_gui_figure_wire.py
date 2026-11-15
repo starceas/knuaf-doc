@@ -229,11 +229,11 @@ class GuiFigureWireTests(FigureCase):
         result = self.build_cli(text, "build/recheck.docx", home)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(self.cli_pictures(self.root / "build" / "recheck.docx"), 2)
-        report = json.loads((self.root / "build" / "recheck.manifest.json").read_text())["figures"]
+        report = json.loads((self.root / "build" / "recheck.manifest.json").read_text(encoding="utf-8"))["figures"]
         self.assertEqual(len(report["notices"]), 1)
         self.assertIn("농사로 그림 2장", report["notices"][0])
         self.assertEqual(report["recheck_figures"], {"nongsaro-curation": [1, 2]})
-        self.assertEqual((self.root / "body.md").read_text(), text)
+        self.assertEqual((self.root / "body.md").read_text(encoding="utf-8"), text)
         self.assertEqual((stored.read_bytes(), receipt.read_bytes()), before)
 
     def test_direct_nongsaro_receipt_reaches_build_notice(self):
@@ -249,7 +249,7 @@ class GuiFigureWireTests(FigureCase):
         result = self.build_cli(text, "build/direct-recheck.docx", None)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(self.cli_pictures(self.root / "build" / "direct-recheck.docx"), 1)
-        report = json.loads((self.root / "build" / "direct-recheck.manifest.json").read_text())["figures"]
+        report = json.loads((self.root / "build" / "direct-recheck.manifest.json").read_text(encoding="utf-8"))["figures"]
         self.assertEqual(len(report["notices"]), 1)
         self.assertIn("농사로 그림 1장", report["notices"][0])
         self.assertEqual((picture.read_bytes(), receipt.read_bytes()), before)
@@ -267,11 +267,11 @@ class GuiFigureWireTests(FigureCase):
         result = self.build_cli(text, "build/nested-recheck.docx", None, inp="build/body.md")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(self.cli_pictures(self.root / "build" / "nested-recheck.docx"), 1)
-        report = json.loads((self.root / "build" / "nested-recheck.manifest.json").read_text())["figures"]
+        report = json.loads((self.root / "build" / "nested-recheck.manifest.json").read_text(encoding="utf-8"))["figures"]
         self.assertEqual(report["recheck_figures"], {"nongsaro-curation": [1]})
         self.assertEqual(len(report["notices"]), 1)
         self.assertIn("농사로 그림 1장", report["notices"][0])
-        self.assertEqual((self.root / "build" / "body.md").read_text(), text)
+        self.assertEqual((self.root / "build" / "body.md").read_text(encoding="utf-8"), text)
         self.assertEqual((picture.read_bytes(), receipt.read_bytes()), before)
 
     # --- 웹 검토 R-01/R-02 ------------------------------------------------

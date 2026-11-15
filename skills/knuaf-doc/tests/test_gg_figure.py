@@ -1918,7 +1918,7 @@ class TestP11Channel(unittest.TestCase):
         url = "https://example.gov/files/%ED%8F%AC.png"
         def respond(_):
             request = next((self.folder / ".knuaf-gui" / "figure-requests").glob("*.req.json"))
-            payload = json.loads(request.read_text())
+            payload = json.loads(request.read_text(encoding="utf-8"))
             self.assertEqual(payload["images"], [])
             (self.home / "res").mkdir(exist_ok=True)
             (self.home / "res" / (payload["id"] + ".res.json")).write_text(json.dumps(
@@ -1940,9 +1940,9 @@ class TestP11Channel(unittest.TestCase):
                     if remove:
                         path.unlink()
                     else:
-                        data = json.loads(path.read_text())
+                        data = json.loads(path.read_text(encoding="utf-8"))
                         data["turnId"] = "next-turn"
-                        path.write_text(json.dumps(data))
+                        path.write_text(json.dumps(data), encoding="utf-8")
                 result = self.fetch(list_mode=True, sleep=change, poll_seconds=60)
                 self.assertEqual(result["reason"], "cancelled")
 
@@ -1956,7 +1956,7 @@ class TestP11Channel(unittest.TestCase):
             result = self.fetch(list_mode=True)
         self.assertEqual(result["reason"], "timeout")
         request = next((self.folder / ".knuaf-gui" / "figure-requests").glob("*.req.json"))
-        self.assertEqual(json.loads(request.read_text())["images"], [])
+        self.assertEqual(json.loads(request.read_text(encoding="utf-8"))["images"], [])
         self.assertEqual(list(work.iterdir()), [work / "keep"])
         self.assertEqual((work / "keep").read_bytes(), b"old result")
 
@@ -2053,8 +2053,8 @@ class TestP11Slots(unittest.TestCase):
                 self.assertNotEqual(req["reqId"], "req-0001")
                 self.assertEqual(self.manuscript.read_bytes(), before)
                 self.assertEqual(self.place()["status"], "needs_photo")
-                self.assertNotIn("app-figure:" + "a" * 64, self.manuscript.read_text())
-                self.assertIn("app-figure:" + "c" * 64, self.manuscript.read_text())
+                self.assertNotIn("app-figure:" + "a" * 64, self.manuscript.read_text(encoding="utf-8"))
+                self.assertIn("app-figure:" + "c" * 64, self.manuscript.read_text(encoding="utf-8"))
                 (self.home / "res" / "bbbbbbbbbbbbbbbb.res.json").unlink(missing_ok=True)
 
     def test_slot_written_before_channel_rules_request_and_get(self):
@@ -2106,7 +2106,7 @@ class TestP11Slots(unittest.TestCase):
         path.mkdir()
         self.assertEqual(self.place()["status"], "needs_photo")
         self.assertIsNone(gg_figure._read_request(self.folder, "s1"))
-        self.assertNotIn("app-figure:" + "a" * 64, self.manuscript.read_text())
+        self.assertNotIn("app-figure:" + "a" * 64, self.manuscript.read_text(encoding="utf-8"))
         path.rmdir()
         # 각 비정상 기록을 사진 자리 없는 같은 원고에서 독립적으로 검사한다.
         self.manuscript.write_bytes(manuscript)
@@ -2116,7 +2116,7 @@ class TestP11Slots(unittest.TestCase):
         self.assertEqual(self.place()["status"], "needs_photo")
         self.assertEqual(target.read_bytes(), old)
         self.assertIsNone(gg_figure._read_request(self.folder, "s1"))
-        text = self.manuscript.read_text()
+        text = self.manuscript.read_text(encoding="utf-8")
         self.assertIn("※ 이 자리에 품종 선택 사진 추가 필요", text)
         self.assertNotIn("app-figure:" + "a" * 64, text)
         self.assertIn("app-figure:" + "c" * 64, text)
@@ -2196,8 +2196,8 @@ class TestP11SlotLock(unittest.TestCase):
         self.assertEqual(gg_figure._read_request(self.folder, "s1"), latest["record"])
         self.assertEqual(result["status"], "needs_photo")
         self.assertIn("새 요청 결과", result["notice"])
-        self.assertNotIn("app-figure:" + "a" * 64, self.manuscript.read_text())
-        self.assertIn("app-figure:" + "c" * 64, self.manuscript.read_text())
+        self.assertNotIn("app-figure:" + "a" * 64, self.manuscript.read_text(encoding="utf-8"))
+        self.assertIn("app-figure:" + "c" * 64, self.manuscript.read_text(encoding="utf-8"))
         self.assertNotEqual(self.manuscript.read_bytes(), before)
         self.assertFalse(gg_figure._request_record_path(self.folder, "s1").with_suffix(".json.lock").exists())
 
@@ -2241,7 +2241,7 @@ class TestP11SlotLock(unittest.TestCase):
         self.assertEqual(record.read_bytes(), old_record)
         self.assertEqual(lock.read_bytes(), b"recent owner")
         self.assertEqual(lock.stat().st_mtime_ns, 1_000_000_000_000)
-        self.assertNotIn("app-figure:" + "a" * 64, self.manuscript.read_text())
+        self.assertNotIn("app-figure:" + "a" * 64, self.manuscript.read_text(encoding="utf-8"))
         self.assertFalse((self.folder / ".knuaf-gui").exists())
 
     def test_eleven_minute_lock_is_recovered_for_fetch_and_place(self):
