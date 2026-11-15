@@ -698,6 +698,9 @@ class TestChannel(unittest.TestCase):
             environ={"KNUAF_FIGURE_HOME": str(self.home)}, sleep=sleep)
         self.assertEqual(result["status"], "done")
         self.assertEqual(result["reqId"], holder["id"])
+        self.assertEqual(result["nextAction"]["command"], "gg.py figure place")
+        self.assertEqual(result["nextAction"]["slot"], "s1")
+        self.assertEqual(Path(result["nextAction"]["folder"]).resolve(), self.folder.resolve())
 
     def test_gui_mode_never_fetches_directly(self):
         env = {"KNUAF_GUI": "1", "KNUAF_FIGURE_HOME": str(self.home)}

@@ -324,6 +324,14 @@ def fetch_app(folder, page, images, slot, environ=None, now=None,
             return dict(_blocked(exc.reason, exc.detail), reqId=req_id)
         if result is not None:
             result.setdefault("reqId", req_id)
+            if not list_mode and _approved(result):
+                result["nextAction"] = {
+                    "command": "gg.py figure place",
+                    "folder": str(folder), "slot": slot,
+                    "notice": ("앱 그림은 figure place로만 넣으세요. 원고에 그림 줄을 "
+                               "직접 쓰지 마세요. place가 캡션과 원문 주소 주 문단을 "
+                               "함께 넣습니다. 넣을 절 제목과 원고 경로를 지정하세요."),
+                }
             return result
         if time.monotonic() >= deadline:
             return dict(_blocked("timeout", "결과 없음 (%.0f초)" % poll_seconds),
