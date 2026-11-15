@@ -9,14 +9,11 @@ main ``d663bf8`` 팩에서만 온다.  구현(``tools/apply_source_map_pr4.py``)
   * ``fixtures/source-map-pr4.tsv``  — 5,695행(econ 2,707 + mafra 2,988), 열 순서 §1.2
   * ``fixtures/region-fix-pr4.tsv``  — 광주·인천 2행(souce-map 행 수에 미포함, N-02)
 
-바탕(main ``d663bf8``)은 git 역사에서 읽지 않는다. ``base_blob``이 현재 팩
-바이트에서 이 PR이 한 일(source 삽입·E9 두 칸·광주·인천 level 정정)을 거꾸로
-되돌려 바탕 바이트를 만들고, 그 sha256이 동결 상수와 같을 때만 바탕으로 인정한다.
-되돌림은 동결 대응표(class=sourced)·region-fix 표·E9 상수에서만 유도하고 적용기는
-보지 않는다. 어긋나면 skip이 아니라 FAIL이다 — 대응표가 엉뚱한 줄을 가리키지
-않는다는 증거(시험 3)와 E9 before/after 지문(시험 5), 유령 상태 불변(시험 6 ①)이
-모두 바탕 바이트 전체를 전제로 하기 때문이다. git 역사가 없는 얕은 클론에서도
-같은 경로를 탄다.
+H(역사 잠금)는 fixture를 되끼워 PR④ 머지 sha256을 확인한 records와
+동결 TSV·상수만 읽는다. 현재 manifest·PIN·조회 모듈은 읽지 않는다.
+C(현재 상태)는 현재 records·manifest·PIN·조회 모듈을 읽고 PR④ 줄을
+현재 줄로 사상한다. 유령 줄에는 현재 좌표가 없으므로 삭제만 단언한다.
+PR④ manifest의 비식별 칸은 복원하지 않으며 PR⑤ 투영 지문 시험이 맡는다.
 """
 
 import csv
@@ -33,8 +30,6 @@ SCRIPTS = KNUAF_DOC / "scripts"
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 sys.path.insert(0, str(SCRIPTS))
 
-import gg_rda_candidates as candidates  # noqa: E402
-import gg_rda_provenance as provenance  # noqa: E402
 
 ECON_PACK_ID = "rda.econ.2025"
 MAFRA_PACK_ID = "mafra.specialty.production.2024"
@@ -143,6 +138,8 @@ BASE_RECORDS_SHA256 = {
 # 되돌린다. 나머지 팩은 원래 source가 있으므로 건드리지 않는다.
 SOURCE_ADDED_PACKS = frozenset({ECON_PACK_ID, MAFRA_PACK_ID})
 
+PR4_ECON_SHA256 = "049e7e73763b29d5c36fe1408082f52d77bebfd8158cf14b75c372a80a39a973"
+
 # E9 정정 전/후 값 — 동결 상수(적용기 import 금지). before는 mafra 195행의
 # 원문 두 칸이고, after는 이 PR이 넣은 값이다. 되돌림은 after→before.
 E9_METRICS_BEFORE = {"farms": None, "area_ha": "14771117"}
@@ -154,7 +151,7 @@ E9_METRICS_AFTER = {"farms": E9_FARMS, "area_ha": E9_AREA_HA}
 # audit_key.raw_line_sha256) 그대로 적었다. 지문(sha256) 대신 값을 그대로
 # 적는 이유: 어긋날 때 어느 행 어느 칸이 바뀌었는지 바로 보이고, 투영 JSON의
 # 직렬화 옵션(정렬·구분자)이 계산기와 시험 사이에서 어긋날 여지가 없다.
-# 이 PR은 이 세 칸을 바꾸지 않았으므로 d663bf8 값 = 현재 값이다.
+# PR④까지 이 세 칸은 불변이었다. PR⑤에서는 해당 행을 삭제했다.
 GHOST_BASE_STATE = {
     105: ("quarantined", "correction_proposed",
           "f4a92a9617ac22923922ff3d89c3af8f6456388d7057c585825a9ed544408818"),
@@ -373,6 +370,38 @@ def _revert_member(text, parent, field, before, after):
 
 
 @lru_cache(maxsize=None)
+def pr4_blob(pack_id):
+    """현재 econ에 삭제 fixture를 되끼워 지문으로 잠근 PR④ 머지 바이트."""
+    current = (REPO_ROOT / PACK_RELPATH[pack_id]).read_bytes()
+    if pack_id != ECON_PACK_ID:
+        return current
+    lines = current.splitlines(keepends=True)
+    ghosts = (FIXTURES / "econ-ghost-lines-pr5.jsonl").read_bytes() \
+        .splitlines(keepends=True)
+    if len(ghosts) != len(GHOST_LINES):
+        raise AssertionError("PR⑤ fixture는 정확히 24줄이어야 한다")
+    if len(lines) != PACK_LINES[pack_id] - len(GHOST_LINES):
+        raise AssertionError("현재 econ은 정확히 2,683줄이어야 한다")
+    for number, raw in zip(sorted(GHOST_LINES), ghosts):
+        if hashlib.sha256(raw).hexdigest() != GHOST_BASE_STATE[number][2]:
+            raise AssertionError("PR⑤ fixture 지문 불일치: %d" % number)
+        lines.insert(number - 1, raw)
+    blob = b"".join(lines)
+    if hashlib.sha256(blob).hexdigest() != PR4_ECON_SHA256:
+        raise AssertionError("되끼운 econ이 PR④ 머지 바이트와 다르다")
+    return blob
+
+
+def current_line(pack_id, line):
+    """동결 PR④ 줄 → 현재 물리 줄. 삭제 행에는 현재 줄이 없다."""
+    if pack_id != ECON_PACK_ID:
+        return line
+    if line in GHOST_LINES:
+        raise AssertionError("삭제된 econ 행에는 현재 줄이 없다: %d" % line)
+    return line - sum(ghost < line for ghost in GHOST_LINES)
+
+
+@lru_cache(maxsize=None)
 def base_blob(pack_id):
     """``d663bf8`` 팩 바이트 — 현재 바이트에서 PR④ 편집을 거꾸로 되돌린다.
 
@@ -382,7 +411,7 @@ def base_blob(pack_id):
     """
     if pack_id not in BASE_RECORDS_SHA256:
         raise AssertionError("바탕 상수가 없는 팩: %s" % pack_id)
-    current = (REPO_ROOT / PACK_RELPATH[pack_id]).read_bytes()
+    current = pr4_blob(pack_id)
     sourced = sourced_lines(pack_id) if pack_id in SOURCE_ADDED_PACKS else ()
     level_fixes = {int(row[1]): (row[4], row[5])
                    for row in region_fix_map()[1] if row[0] == pack_id}
@@ -430,8 +459,7 @@ def base_blob(pack_id):
 
 @lru_cache(maxsize=None)
 def _raw_lines(pack_id, *, base=False):
-    blob = (base_blob(pack_id) if base else
-            (REPO_ROOT / PACK_RELPATH[pack_id]).read_bytes())
+    blob = base_blob(pack_id) if base else pr4_blob(pack_id)
     return blob.splitlines(keepends=True)
 
 
@@ -444,10 +472,8 @@ def base_records(pack_id):
 
 @lru_cache(maxsize=None)
 def new_records(pack_id):
-    """현재 워크트리(적용 후) 팩의 레코드 리스트."""
-    path = REPO_ROOT / PACK_RELPATH[pack_id]
-    return [json.loads(line)
-            for line in path.read_text(encoding="utf-8").splitlines()]
+    """PR④ 적용 후 레코드 — econ은 PR⑤ 삭제분을 되끼운 동결 좌표다."""
+    return [json.loads(line) for line in pr4_blob(pack_id).splitlines()]
 
 
 def _manifest(pack_id):
@@ -458,15 +484,6 @@ def _manifest(pack_id):
 def _manifest_rows(pack_id):
     return {int(row["physical_line"]): row
             for row in _manifest(pack_id)["rows"]}
-
-
-def _ghost_view(row):
-    """manifest 행 1개를 동결 표와 같은 모양(상태 3칸)으로 뽑는다."""
-    return (
-        row.get("catalog_status"),
-        (row.get("source_observation") or {}).get("observation_status"),
-        (row.get("audit_key") or {}).get("raw_line_sha256"),
-    )
 
 
 def _expected_source(row):
@@ -503,7 +520,7 @@ def _non_null(mapping):
 
 
 class Pr4SourceMapTestCase(unittest.TestCase):
-    """공통 로더 + 대응표 자체 정합."""
+    """시험 없는 공통 동결 TSV·바탕 레코드 도우미."""
 
     maxDiff = None
 
@@ -520,12 +537,36 @@ class Pr4SourceMapTestCase(unittest.TestCase):
         return base_records(pack_id)[int(line) - 1]
 
 
+class HistoricalPr4TestCase(Pr4SourceMapTestCase):
+    """H: PR④ records 지문·동결 TSV·상수만 사용하는 역사 잠금."""
+
+    @classmethod
+    def setUpClass(cls):
+        for pack_id in BASE_RECORDS_SHA256:
+            base_blob(pack_id)
+
+
+class CurrentPr5TestCase(Pr4SourceMapTestCase):
+    """C: 현재 records·manifest·PIN·조회와 결정적 좌표 사상."""
+
+    @classmethod
+    def setUpClass(cls):
+        global candidates, provenance
+        import gg_rda_candidates as candidates
+        import gg_rda_provenance as provenance
+
+    def new_record(self, pack_id, line):
+        physical_line = current_line(pack_id, int(line))
+        raw = (REPO_ROOT / PACK_RELPATH[pack_id]).read_bytes().splitlines()
+        return json.loads(raw[physical_line - 1])
+
+
 # ---------------------------------------------------------------------------
 # 시험 1 — 정확 대응
 
 
-class SourceAppliedExactlyTests(Pr4SourceMapTestCase):
-    """§4-1: 새 팩 물리 줄의 source가 대응표 그 줄 기대값과 필드 단위 일치.
+class SourceAppliedExactlyTests(HistoricalPr4TestCase):
+    """H §4-1: PR④ 물리 줄 source와 동결 대응표의 필드 단위 일치.
 
     ``unsourced_*`` 줄은 source 없음.  줄 순서·행 수 불변도 함께 잠근다.
     """
@@ -597,8 +638,8 @@ class SourceAppliedExactlyTests(Pr4SourceMapTestCase):
 # 시험 2 — sourced 행의 스키마·연도·via
 
 
-class SourceShapeTests(Pr4SourceMapTestCase):
-    """§4-2: 스키마 검사 통과, data_year==basis.year, aggregation_group 규칙,
+class SourceShapeTests(HistoricalPr4TestCase):
+    """H §4-2: data_year==basis.year, aggregation_group 규칙,
     survey ∈ 동결 목록, via 형식·팩별 지문(E6 3갈래).
     """
 
@@ -608,34 +649,6 @@ class SourceShapeTests(Pr4SourceMapTestCase):
             if row[_C_CLASS] == "sourced":
                 yield pack_id, line, row
 
-    def test_sourced_source_is_well_formed(self):
-        seen = 0
-        for pack_id, line, row in self._sourced_rows():
-            record = self.new_record(pack_id, line)
-            source = record["source"]
-            label = "%s:%d" % (pack_id, line)
-            self.assertIn("survey_label", source, "%s: E11 키 누락" % label)
-            self.assertIsNone(source["survey_label"],
-                              "%s: E11 survey_label은 null만 허용" % label)
-            # PR③ 코드의 source 계약(스키마 서술의 기계 검사) — 통과해야 한다.
-            self.assertIsNone(
-                candidates._source_reason(record),
-                "%s: source 계약 위반(%s)"
-                % (label, candidates._source_reason(record)))
-            self.assertIn(source["survey"], FROZEN_SURVEYS,
-                          "%s: 동결 목록 밖 survey" % label)
-            self.assertIsInstance(source["data_year"], int)
-            self.assertEqual(source["data_year"],
-                             record["basis"]["year"],
-                             "%s: data_year != basis.year(E2)" % label)
-            self.assertEqual(source["aggregation_group"],
-                             "%s.%d" % (source["survey"],
-                                        source["data_year"]))
-            # 대응표가 밝힌 survey·data_year와도 같아야 한다(이중 잠금).
-            self.assertEqual(source["survey"], row[_C_SURVEY], label)
-            self.assertEqual(source["data_year"], int(row[_C_YEAR]), label)
-            seen += 1
-        self.assertEqual(seen, CLASS_COUNTS["sourced"])
 
     def test_via_follows_pack_rule(self):
         for pack_id, line, row in self._sourced_rows():
@@ -689,8 +702,8 @@ class SourceShapeTests(Pr4SourceMapTestCase):
 # 시험 3 — 대응표 자체
 
 
-class SourceMapSelfConsistencyTests(Pr4SourceMapTestCase):
-    """§4-3: 5,695행, 식별열·class 누락 0, 빈 문자열 0, region-fix 분리,
+class SourceMapSelfConsistencyTests(HistoricalPr4TestCase):
+    """H §4-3: 5,695행, 식별열·class 누락 0, 빈 문자열 0, region-fix 분리,
     raw_line_sha256_before가 d663bf8 팩 줄과 일치.
     """
 
@@ -824,8 +837,8 @@ class SourceMapSelfConsistencyTests(Pr4SourceMapTestCase):
 # 시험 4 — 광주·인천
 
 
-class MetropolitanRegionTests(Pr4SourceMapTestCase):
-    """§4-4: 광주·인천 metropolitan, 지역 팩 2개에 provincial 광역시 0."""
+class MetropolitanRegionTests(HistoricalPr4TestCase):
+    """H §4-4: PR④ 광주·인천 metropolitan, provincial 광역시 0."""
 
     def test_gwangju_incheon_rows_are_metropolitan(self):
         _, rows = region_fix_map()
@@ -883,9 +896,9 @@ class MetropolitanRegionTests(Pr4SourceMapTestCase):
 # 시험 5 — E9 값 정정 1행
 
 
-class E9CorrectionTests(Pr4SourceMapTestCase):
-    """§4-5(N3-01): 물리 195행 두 칸만 정정, 나머지 metrics 불변,
-    정정 명세의 before/after 감사 키가 실제 줄 지문과 같음.
+class E9CorrectionTests(HistoricalPr4TestCase):
+    """H §4-5(N3-01): 물리 195행 두 칸만 정정, 나머지 metrics 불변.
+    정정 명세와 현재 감사 키 비교는 C 클래스가 맡는다.
     """
 
     def test_row_195_metrics_corrected(self):
@@ -956,6 +969,231 @@ class E9CorrectionTests(Pr4SourceMapTestCase):
             self.assertEqual(old_view, new_view,
                              "%s:%d: source 밖 변경" % (ECON_PACK_ID, idx))
 
+
+
+# ---------------------------------------------------------------------------
+# 시험 6 — PR⑤ 이후 현재 팩·manifest의 유령 부재
+
+
+class GhostIsolationTests(CurrentPr5TestCase):
+    """C: 사상 불가 유령 24행은 현재 팩·manifest에서 삭제됨만 단언."""
+
+    def test_ghost_rows_absent_from_current_pack_and_manifest(self):
+        self.assertEqual(set(GHOST_BASE_STATE), set(GHOST_LINES))
+        ghosts = {state[2] for state in GHOST_BASE_STATE.values()}
+        raw = (REPO_ROOT / PACK_RELPATH[ECON_PACK_ID]).read_bytes()
+        self.assertTrue(ghosts.isdisjoint(
+            hashlib.sha256(line).hexdigest()
+            for line in raw.splitlines(keepends=True)))
+        rows = _manifest_rows(ECON_PACK_ID)
+        self.assertEqual(len(rows), PACK_LINES[ECON_PACK_ID] - len(GHOST_LINES))
+        self.assertTrue(ghosts.isdisjoint(
+            row["audit_key"]["raw_line_sha256"] for row in rows.values()))
+        self.assertTrue(ghosts.isdisjoint(
+            row["raw_line_sha256"] for row in rows.values()))
+
+
+class HistoricalGhostSourceTests(HistoricalPr4TestCase):
+    """H: PR④ 동결 유령 records에는 source가 없다."""
+
+    def test_ghost_records_have_no_source(self):
+        for line in sorted(GHOST_LINES):
+            record = self.new_record(ECON_PACK_ID, line)
+            self.assertNotIn("source", record, "econ:%d 유령 source" % line)
+            self.assertIsNone(record.get("source"))
+
+
+# ---------------------------------------------------------------------------
+# 웹 r5 — null 조회·출력, 팩별 출처 수, 비료 별표 N-A 전제
+
+
+class SourceNullLookupTests(CurrentPr5TestCase):
+    """C N5-01·E14-02: 현재 null 이름을 승인 조회와 JSON 출력에 통과시킨다.
+
+    읽은 경로: gg.py:371-377은 lookup_approved_candidates를 직접 호출하고,
+    :853은 결과를 json.dumps한다. 별도 source 표시 함수는 이 경로에 없다.
+    candidates._evaluate는 record를 보존한다(:508). lookup의 verification.label은
+    검증 상태 설명(:554-564,644)이지 조사 이름이 아니므로 survey ID로 바꾸지 않는다.
+    이 시험은 이 조회·출력 경로의 근거이며 다른 화면 전체의 무영향 주장이 아니다.
+    """
+
+    # 물리 행으로 고정: record_id 중복이나 빈 조회가 null 검사를 우회하지 못한다.
+    # econ140=통계청 생산량, econ201=오피넷 가격(publisher도 null),
+    # mafra800=행정 생산실적, mafra2900=시장 가격(publisher/document도 null).
+    CASES = (
+        (ECON_PACK_ID, 140, "쌀", "전국", "food_crops", "yield_series",
+         2024, "kostat.crop_production"),
+        (ECON_PACK_ID, 201, "유류(2014년)", "전국", "specialty_crops", "input_price",
+         2024, "opinet.fuel_price"),
+        (MAFRA_PACK_ID, 800, "식방풍", "울산", "specialty_crops", "production_stat",
+         2024, "mafra.specialty_admin"),
+        (MAFRA_PACK_ID, 2900, "두충", "경북", "specialty_crops", "official_market_price",
+         2021, "market.yeongcheon_herbal"),
+    )
+
+    def _lookup_case(self, case):
+        pack_id, line, crop, region, major, kind, year, survey = case
+        record = self.new_record(pack_id, line)
+        self.assertEqual(self.map_row(pack_id, line)[_C_CLASS], "sourced")
+        self.assertEqual(record["kind"], kind)
+        self.assertEqual(record["basis"]["year"], year)
+        self.assertEqual(record["source"]["survey"], survey)
+        physical_line = current_line(pack_id, line)
+        key = _manifest_rows(pack_id)[physical_line]["audit_key"]
+        self.assertEqual(key["physical_jsonl_line_1based"], physical_line)
+        self.assertIsNone(record["source"]["survey_label"])
+        raw = (REPO_ROOT / PACK_RELPATH[pack_id]).read_bytes() \
+            .splitlines(keepends=True)[physical_line - 1]
+        self.assertEqual(key["raw_line_sha256"], hashlib.sha256(raw).hexdigest())
+        result = candidates.lookup_approved_candidates(
+            crop, region, major, kind=kind, year=year,
+            use_scope="plan_input", audit_key=key)
+        # 현재 팩의 미충족 승인 축은 그대로다. 조회 성공 ≠ 본문·표 사용 승인.
+        self.assertNotEqual(result["status"], "not_found")
+        self.assertEqual(len(result["candidates"]), 1)
+        returned = result["candidates"][0]
+        self.assertEqual(returned["audit_key"], key)
+        self.assertEqual(returned["pack_id"], pack_id)
+        self.assertEqual(returned["record"]["source"], record["source"])
+        self.assertIsNone(returned["record"]["source"]["survey_label"])
+        return result
+
+    def _assert_no_null_text(self, node, path="result"):
+        if isinstance(node, dict):
+            for key, value in node.items():
+                field = "%s.%s" % (path, key)
+                if key == "survey_label":
+                    self.assertIsNone(value, field)
+                if (key in ("publisher", "document", "title", "label", "name")
+                        or key.endswith(("_label", "_name"))):
+                    if isinstance(value, str):
+                        self.assertNotIn(value.strip().lower(), ("null", "none"), field)
+                self._assert_no_null_text(value, field)
+        elif isinstance(node, list):
+            for index, value in enumerate(node):
+                self._assert_no_null_text(value, "%s[%d]" % (path, index))
+
+    def test_sourced_null_labels_survive_approval_lookup_and_cli_serialization(self):
+        for case in self.CASES:
+            with self.subTest(pack=case[0], line=case[1]):
+                result = self._lookup_case(case)
+                # gg.py와 같은 함수·직렬화 옵션. JSON null은 허용하되 문자열은 금지.
+                output = json.dumps(result, ensure_ascii=False, indent=2)
+                decoded = json.loads(output)
+                self._assert_no_null_text(decoded)
+                source = decoded["candidates"][0]["record"]["source"]
+                self.assertIsNone(source["survey_label"])
+                self.assertEqual(source["survey"], case[-1])
+
+
+class SourcePackContractTests(CurrentPr5TestCase):
+    """C N5-02·E14-01: 현재 팩별 출처 수와 manifest 표시 계약."""
+
+    def test_pinned_source_counts_are_preserved_per_pack(self):
+        expected = {
+            "rda.income.national.2025": 104,
+            "rda.income.national.2024": 102,
+            REGIONAL_PACK_ID: 49,
+            REGIONAL_PACK_ID_2024: 365,
+            ECON_PACK_ID: 2231,
+            MAFRA_PACK_ID: 2916,
+        }
+        packs = KNUAF_DOC / "references" / "benchmark-packs"
+        actual = {}
+        for pack_id, pin in provenance.PINNED_PACKS.items():
+            records = (packs / pin["relpath"]).read_text(encoding="utf-8")
+            actual[pack_id] = sum(
+                json.loads(line).get("source") is not None
+                for line in records.splitlines())
+        self.assertEqual(actual, expected)
+
+    def test_aggregation_rule_requires_null_safe_source_display(self):
+        # 사용자 지정 manifest 계약: publisher 문장 삭제 변이를 직접 잡는다.
+        clauses = (
+            "source.aggregation_group가 다른 레코드는 합산·평균·순위 비교의 같은 행에 묶지 않는다.",
+            "표시 계층은 source.survey_label이 있으면 이를 사용하고, null이면 source.survey ID를 사용한다.",
+            "source.publisher가 null이면 기관명을 추정하거나 문자열 null을 표시하지 않는다.",
+            "조사·자료 생산체계를 감춘 채 서로 다른 출처를 하나의 집계로 합치지 않는다.",
+        )
+        for pack_id in (ECON_PACK_ID, MAFRA_PACK_ID):
+            rule = _manifest(pack_id).get("aggregation_rule", "")
+            for clause in clauses:
+                with self.subTest(pack=pack_id, clause=clause):
+                    self.assertIn(clause, rule)
+
+
+class FertilizerAsteriskPremiseTests(HistoricalPr4TestCase):
+    """H N5-04: PR④ 동결 Ⅲ-5 별표 행이 실제 0일 때만 N-A가 유효."""
+
+    def test_frozen_fertilizer_asterisk_rows_are_zero(self):
+        _, table = source_map()
+        section = "Ⅲ-5 주요 비료성분표"
+        mapped = {line: row for (pack_id, line), row in table.items()
+                  if pack_id == ECON_PACK_ID and row[_C_SECTION] == section}
+        self.assertEqual(set(mapped), set(range(2588, 2601)),
+                         "동결 비료 대상이 바뀌었다: 변이 ⑥·⑥'를 걸어라")
+        # 별표는 행 라벨/품목에 붙은 '*'이다. 자료 주의 '*국립농업과학원…참고'
+        # 자체를 세지 않는다(SUMMARY-ECON.md:54,80; 동결 대응표 2588~2600행).
+        marked = []
+        for version, records in (("base", base_records(ECON_PACK_ID)),
+                                 ("current", new_records(ECON_PACK_ID))):
+            fertilizer = {
+                line: record for line, record in enumerate(records, 1)
+                if (record.get("locator") or {}).get("section") == section}
+            self.assertEqual(set(fertilizer), set(mapped),
+                             "%s 비료 대상이 바뀌었다: 변이 ⑥·⑥'를 걸어라" % version)
+            for line, record in fertilizer.items():
+                labels = (mapped[line][_C_LABEL],
+                          (record.get("locator") or {}).get("row_label", ""),
+                          (record.get("basis") or {}).get("item_name", ""))
+                if any("*" in label for label in labels):
+                    marked.append((version, line))
+        self.assertEqual(len(marked), 0,
+                         "비료 별표 행이 생겼다: 변이 ⑥·⑥'를 걸어라 — %r" % marked)
+
+
+class CurrentSourceShapeTests(CurrentPr5TestCase):
+    """C: 현재 sourced 생존 행의 조회 모듈 source 스키마 계약."""
+
+    def _sourced_rows(self):
+        _, table = source_map()
+        for (pack_id, line), row in sorted(table.items()):
+            if row[_C_CLASS] == "sourced":
+                yield pack_id, line, row
+
+    def test_sourced_source_is_well_formed(self):
+        seen = 0
+        for pack_id, line, row in self._sourced_rows():
+            record = self.new_record(pack_id, line)
+            source = record["source"]
+            label = "%s:%d" % (pack_id, line)
+            self.assertIn("survey_label", source, "%s: E11 키 누락" % label)
+            self.assertIsNone(source["survey_label"],
+                              "%s: E11 survey_label은 null만 허용" % label)
+            # PR③ 코드의 source 계약(스키마 서술의 기계 검사) — 통과해야 한다.
+            self.assertIsNone(
+                candidates._source_reason(record),
+                "%s: source 계약 위반(%s)"
+                % (label, candidates._source_reason(record)))
+            self.assertIn(source["survey"], FROZEN_SURVEYS,
+                          "%s: 동결 목록 밖 survey" % label)
+            self.assertIsInstance(source["data_year"], int)
+            self.assertEqual(source["data_year"],
+                             record["basis"]["year"],
+                             "%s: data_year != basis.year(E2)" % label)
+            self.assertEqual(source["aggregation_group"],
+                             "%s.%d" % (source["survey"],
+                                        source["data_year"]))
+            # 대응표가 밝힌 survey·data_year와도 같아야 한다(이중 잠금).
+            self.assertEqual(source["survey"], row[_C_SURVEY], label)
+            self.assertEqual(source["data_year"], int(row[_C_YEAR]), label)
+            seen += 1
+        self.assertEqual(seen, CLASS_COUNTS["sourced"])
+
+
+class CurrentE9CorrectionSpecTests(CurrentPr5TestCase):
+    """C: 현재 정정 명세와 before/after 감사 지문 계약."""
+
     def test_correction_spec_pins_before_and_after_line_digests(self):
         path = PACK_DIR[MAFRA_PACK_ID] / "corrections" / (
             "e9-mafra-195-기호작물계-전남.json")
@@ -1007,258 +1245,6 @@ class E9CorrectionTests(Pr4SourceMapTestCase):
         self.assertEqual(document["row_label"], E9_REGION_NAME)
         self.assertIn("1,477 1,117 990 1,500", spec["verbatim"]["line"])
         self.assertTrue(node["evidence"].strip())
-
-
-# ---------------------------------------------------------------------------
-# 시험 6 — E10 유령 격리 게이트
-
-
-class GhostIsolationTests(Pr4SourceMapTestCase):
-    """§4-6(N3-02): 유령 24행이 ① 상태 불변 ② source 0
-    ③ 승인 조회 도달 0 — 셋 다 통과해야 '학생 영향 0'.
-    """
-
-    def test_ghost_state_unchanged_versus_base_manifest(self):
-        after = _manifest_rows(ECON_PACK_ID)
-        self.assertEqual(len(after), PACK_LINES[ECON_PACK_ID])
-        # 바탕 manifest는 git 역사 없이 되살릴 수 없으므로, 이 시험이 비교하는
-        # 상태 3칸을 d663bf8 값으로 동결해 두고 행마다 값으로 맞춘다.
-        self.assertEqual(set(GHOST_BASE_STATE), set(GHOST_LINES))
-        for line in sorted(GHOST_LINES):
-            self.assertIn(line, after, "econ:%d manifest 행이 없다" % line)
-            self.assertEqual(
-                _ghost_view(after[line]), GHOST_BASE_STATE[line],
-                "econ:%d 유령 행의 상태 칸(catalog_status·"
-                "observation_status·raw_line_sha256)이 바탕과 다르다" % line)
-            self.assertEqual(
-                after[line]["audit_key"]["raw_line_sha256"],
-                self._line_digest(line),
-                "econ:%d 유령 행의 줄 지문이 실제 줄과 다르다" % line)
-
-    def test_ghost_records_have_no_source(self):
-        for line in sorted(GHOST_LINES):
-            record = self.new_record(ECON_PACK_ID, line)
-            self.assertNotIn(
-                "source", record,
-                "econ:%d 유령 행에 source가 붙었다" % line)
-            self.assertIsNone(record.get("source"))
-
-    @staticmethod
-    def _line_digest(line):
-        raw = (REPO_ROOT / PACK_RELPATH[ECON_PACK_ID]).read_bytes() \
-            .splitlines(keepends=True)[line - 1]
-        return hashlib.sha256(raw).hexdigest()
-
-    def _ghost_audit_key(self, line):
-        """그 줄의 감사 키 — records.jsonl에는 없다(조회 계층이 붙인다).
-
-        그래서 현재 팩 manifest가 선언한 키를 쓰되, ``raw_line_sha256``이
-        실제 현재 줄 바이트 지문과 같은지 먼저 확인한다. 지문이 어긋나면
-        그 키는 그 줄을 가리키지 않아 조회가 무조건 ``not_found``가 되고
-        "도달 0"이 공허하게 참이 된다 — 그 구멍을 여기서 막는다.
-        """
-        row = _manifest_rows(ECON_PACK_ID).get(line)
-        self.assertIsNotNone(row, "econ:%d manifest 행 없음" % line)
-        key = row.get("audit_key")
-        self.assertIsInstance(key, dict, "econ:%d manifest audit_key 없음" % line)
-        self.assertEqual(key.get("pack_id"), ECON_PACK_ID, line)
-        self.assertEqual(key.get("physical_jsonl_line_1based"), line, line)
-        self.assertEqual(key.get("raw_line_sha256"), self._line_digest(line),
-                         "econ:%d manifest 감사 키 지문이 실제 줄과 다르다"
-                         " — 도달 0 판정이 공허해진다" % line)
-        return key
-
-    def test_ghost_rows_unreachable_from_approval_lookup(self):
-        for line in sorted(GHOST_LINES):
-            record = self.new_record(ECON_PACK_ID, line)
-            crop = ((record.get("crop") or {}).get("name")
-                    or (record.get("basis") or {}).get("item_name") or "")
-            audit_key = self._ghost_audit_key(line)
-            with self.subTest(line=line, record=record.get("record_id")):
-                result = candidates.lookup_approved_candidates(
-                    crop, "전국", "specialty_crops",
-                    kind=record.get("kind"),
-                    year=(record.get("basis") or {}).get("year"),
-                    use_scope="plan_input", audit_key=audit_key)
-                self.assertNotEqual(
-                    result.get("status"), "approved",
-                    "econ:%d 유령 행이 승인 조회에서 approved로 도달했다"
-                    % line)
-                self.assertEqual(
-                    (result.get("counts") or {}).get("approved", 0), 0,
-                    "econ:%d 승인 후보 수가 0이 아니다" % line)
-                self.assertEqual(result.get("approved_candidates"), [],
-                                 "econ:%d approved_candidates 비어 있지 않다"
-                                 % line)
-                returned = result.get("candidates")
-                self.assertIsInstance(returned, list)
-                if line in range(105, 122):
-                    # 이 17행은 승인 평가 이전 원시 조회에서 rejected로 제외된다.
-                    self.assertEqual(record["extraction"]["status"], "rejected")
-                    self.assertEqual(result["status"], "not_found")
-                    self.assertEqual(returned, [])
-                    continue
-                # 나머지 7행이 없으면 감사 키/조회 필터가 빗나간 공허 통과다.
-                self.assertEqual(record["extraction"]["status"], "extracted")
-                self.assertEqual(result["status"], "unapproved")
-                self.assertEqual(len(returned), 1)
-                candidate = returned[0]
-                self.assertEqual(candidate["audit_key"], audit_key)
-                self.assertEqual(candidate["record"]["record_id"],
-                                 record["record_id"])
-                self.assertEqual(candidate["observation_status"], "quarantined")
-                self.assertIn("observation_not_verified", candidate["rejections"])
-                self.assertNotIn("use_scope_unspecified", candidate["rejections"])
-                self.assertFalse(candidate["approved"])
-                # 현재 자료는 다른 승인 축도 미충족. 격리 하나만 풀었을 때
-                # 반드시 승인된다는 증거가 아니라 격리 거부가 실제 평가됨을 잠근다.
-
-
-# ---------------------------------------------------------------------------
-# 웹 r5 — null 조회·출력, 팩별 출처 수, 비료 별표 N-A 전제
-
-
-class SourceNullLookupTests(Pr4SourceMapTestCase):
-    """N5-01·E14-02: 실팩의 null 이름을 승인 조회와 JSON 출력에 통과시킨다.
-
-    읽은 경로: gg.py:371-377은 lookup_approved_candidates를 직접 호출하고,
-    :853은 결과를 json.dumps한다. 별도 source 표시 함수는 이 경로에 없다.
-    candidates._evaluate는 record를 보존한다(:508). lookup의 verification.label은
-    검증 상태 설명(:554-564,644)이지 조사 이름이 아니므로 survey ID로 바꾸지 않는다.
-    이 시험은 이 조회·출력 경로의 근거이며 다른 화면 전체의 무영향 주장이 아니다.
-    """
-
-    # 물리 행으로 고정: record_id 중복이나 빈 조회가 null 검사를 우회하지 못한다.
-    # econ140=통계청 생산량, econ201=오피넷 가격(publisher도 null),
-    # mafra800=행정 생산실적, mafra2900=시장 가격(publisher/document도 null).
-    CASES = (
-        (ECON_PACK_ID, 140, "쌀", "전국", "food_crops", "yield_series",
-         2024, "kostat.crop_production"),
-        (ECON_PACK_ID, 201, "유류(2014년)", "전국", "specialty_crops", "input_price",
-         2024, "opinet.fuel_price"),
-        (MAFRA_PACK_ID, 800, "식방풍", "울산", "specialty_crops", "production_stat",
-         2024, "mafra.specialty_admin"),
-        (MAFRA_PACK_ID, 2900, "두충", "경북", "specialty_crops", "official_market_price",
-         2021, "market.yeongcheon_herbal"),
-    )
-
-    def _lookup_case(self, case):
-        pack_id, line, crop, region, major, kind, year, survey = case
-        record = self.new_record(pack_id, line)
-        self.assertEqual(self.map_row(pack_id, line)[_C_CLASS], "sourced")
-        self.assertEqual(record["kind"], kind)
-        self.assertEqual(record["basis"]["year"], year)
-        self.assertEqual(record["source"]["survey"], survey)
-        self.assertIsNone(record["source"]["survey_label"])
-        raw = _raw_lines(pack_id)[line - 1]
-        key = _manifest_rows(pack_id)[line]["audit_key"]
-        self.assertEqual(key["physical_jsonl_line_1based"], line)
-        self.assertEqual(key["raw_line_sha256"], hashlib.sha256(raw).hexdigest())
-        result = candidates.lookup_approved_candidates(
-            crop, region, major, kind=kind, year=year,
-            use_scope="plan_input", audit_key=key)
-        # 현재 팩의 미충족 승인 축은 그대로다. 조회 성공 ≠ 본문·표 사용 승인.
-        self.assertNotEqual(result["status"], "not_found")
-        self.assertEqual(len(result["candidates"]), 1)
-        returned = result["candidates"][0]
-        self.assertEqual(returned["audit_key"], key)
-        self.assertEqual(returned["pack_id"], pack_id)
-        self.assertEqual(returned["record"]["source"], record["source"])
-        self.assertIsNone(returned["record"]["source"]["survey_label"])
-        return result
-
-    def _assert_no_null_text(self, node, path="result"):
-        if isinstance(node, dict):
-            for key, value in node.items():
-                field = "%s.%s" % (path, key)
-                if key == "survey_label":
-                    self.assertIsNone(value, field)
-                if (key in ("publisher", "document", "title", "label", "name")
-                        or key.endswith(("_label", "_name"))):
-                    if isinstance(value, str):
-                        self.assertNotIn(value.strip().lower(), ("null", "none"), field)
-                self._assert_no_null_text(value, field)
-        elif isinstance(node, list):
-            for index, value in enumerate(node):
-                self._assert_no_null_text(value, "%s[%d]" % (path, index))
-
-    def test_sourced_null_labels_survive_approval_lookup_and_cli_serialization(self):
-        for case in self.CASES:
-            with self.subTest(pack=case[0], line=case[1]):
-                result = self._lookup_case(case)
-                # gg.py와 같은 함수·직렬화 옵션. JSON null은 허용하되 문자열은 금지.
-                output = json.dumps(result, ensure_ascii=False, indent=2)
-                decoded = json.loads(output)
-                self._assert_no_null_text(decoded)
-                source = decoded["candidates"][0]["record"]["source"]
-                self.assertIsNone(source["survey_label"])
-                self.assertEqual(source["survey"], case[-1])
-
-
-class SourcePackContractTests(Pr4SourceMapTestCase):
-    """N5-02·E14-01와 팩별 수: 총량만 같고 팩 사이 출처가 이동하는 회귀를 막는다."""
-
-    def test_pinned_source_counts_are_preserved_per_pack(self):
-        expected = {
-            "rda.income.national.2025": 104,
-            "rda.income.national.2024": 102,
-            REGIONAL_PACK_ID: 49,
-            REGIONAL_PACK_ID_2024: 365,
-            ECON_PACK_ID: 2231,
-            MAFRA_PACK_ID: 2916,
-        }
-        packs = KNUAF_DOC / "references" / "benchmark-packs"
-        actual = {}
-        for pack_id, pin in provenance.PINNED_PACKS.items():
-            records = (packs / pin["relpath"]).read_text(encoding="utf-8")
-            actual[pack_id] = sum(
-                json.loads(line).get("source") is not None
-                for line in records.splitlines())
-        self.assertEqual(actual, expected)
-
-    def test_aggregation_rule_requires_null_safe_source_display(self):
-        # 사용자 지정 manifest 계약: publisher 문장 삭제 변이를 직접 잡는다.
-        clauses = (
-            "source.aggregation_group가 다른 레코드는 합산·평균·순위 비교의 같은 행에 묶지 않는다.",
-            "표시 계층은 source.survey_label이 있으면 이를 사용하고, null이면 source.survey ID를 사용한다.",
-            "source.publisher가 null이면 기관명을 추정하거나 문자열 null을 표시하지 않는다.",
-            "조사·자료 생산체계를 감춘 채 서로 다른 출처를 하나의 집계로 합치지 않는다.",
-        )
-        for pack_id in (ECON_PACK_ID, MAFRA_PACK_ID):
-            rule = _manifest(pack_id).get("aggregation_rule", "")
-            for clause in clauses:
-                with self.subTest(pack=pack_id, clause=clause):
-                    self.assertIn(clause, rule)
-
-
-class FertilizerAsteriskPremiseTests(Pr4SourceMapTestCase):
-    """N5-04: ⑥·⑥' N-A는 동결 Ⅲ-5의 별표 행이 실제 0일 때만 유효하다."""
-
-    def test_frozen_fertilizer_asterisk_rows_are_zero(self):
-        _, table = source_map()
-        section = "Ⅲ-5 주요 비료성분표"
-        mapped = {line: row for (pack_id, line), row in table.items()
-                  if pack_id == ECON_PACK_ID and row[_C_SECTION] == section}
-        self.assertEqual(set(mapped), set(range(2588, 2601)),
-                         "동결 비료 대상이 바뀌었다: 변이 ⑥·⑥'를 걸어라")
-        # 별표는 행 라벨/품목에 붙은 '*'이다. 자료 주의 '*국립농업과학원…참고'
-        # 자체를 세지 않는다(SUMMARY-ECON.md:54,80; 동결 대응표 2588~2600행).
-        marked = []
-        for version, records in (("base", base_records(ECON_PACK_ID)),
-                                 ("current", new_records(ECON_PACK_ID))):
-            fertilizer = {
-                line: record for line, record in enumerate(records, 1)
-                if (record.get("locator") or {}).get("section") == section}
-            self.assertEqual(set(fertilizer), set(mapped),
-                             "%s 비료 대상이 바뀌었다: 변이 ⑥·⑥'를 걸어라" % version)
-            for line, record in fertilizer.items():
-                labels = (mapped[line][_C_LABEL],
-                          (record.get("locator") or {}).get("row_label", ""),
-                          (record.get("basis") or {}).get("item_name", ""))
-                if any("*" in label for label in labels):
-                    marked.append((version, line))
-        self.assertEqual(len(marked), 0,
-                         "비료 별표 행이 생겼다: 변이 ⑥·⑥'를 걸어라 — %r" % marked)
 
 
 if __name__ == "__main__":
