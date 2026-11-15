@@ -737,6 +737,7 @@ def _control_files():
 # W-P 2부가 진행 파일 행 한 줄을 여기에 더한다(알림 → 진행 순서).
 _SIDECAR_WRITERS = (
     ("gg_notices", "write_notices", ".knuaf-notices.json", "dict", "remove"),
+    ("gg_progress", "write_progress", ".knuaf-progress.json", "dict", "remove"),
 )
 
 
