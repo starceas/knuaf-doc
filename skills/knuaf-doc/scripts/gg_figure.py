@@ -307,38 +307,218 @@ def fetch_app(folder, page, images, slot, environ=None, now=None,
 # --------------------------------------------------------------------------
 # 앱 밖 직접 받기
 # --------------------------------------------------------------------------
+RULE_PAGE = "page_kogl_applies_to_body_images"
+RULE_PAGE_QUERY = "page_query_kogl_applies_to_body_images"
+RULE_KINDS = (RULE_PAGE, RULE_PAGE_QUERY)
+RULE_FIELDS = ("id", "host", "org", "pagePath", "imagePath", "rule")
+# 꼴 검사는 `fullmatch`와 같은 뜻이어야 한다 — `$`는 끝 줄바꿈 앞에서도 맞아
+# 앱(JS `$`)과 답이 갈린다.
+QUERY_NAME = re.compile(r"^[A-Za-z0-9_.-]{1,64}\Z")
+LITERAL_VALUE = re.compile(r"^[A-Za-z0-9._~-]{1,64}\Z")
+HOST_PART = re.compile(r"^[a-z0-9-]{1,63}\Z")
+HOST_LAST = re.compile(r"^[a-z]{2,}\Z")
+STRICT_CHARS = frozenset(
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789:/?=&._~-")
+STRICT_MAX_CHARS = 2048
+
+
+def _host_shape_ok(host):
+    """I4: 소문자 호스트 꼴. 다듬지 않고 그대로 본다."""
+    if not isinstance(host, str) or not 0 < len(host) <= 253:
+        return False
+    parts = host.split(".")
+    if len(parts) < 2:
+        return False
+    for part in parts:
+        if HOST_PART.match(part) is None:
+            return False
+        if part.startswith("-") or part.endswith("-") or part.startswith("xn--"):
+            return False
+    return HOST_LAST.match(parts[-1]) is not None
+
+
+def _query_spec(value):
+    """값 형식 하나 → ('literal', 글자) | ('digits',) | ('enum', 집합) | None."""
+    if not isinstance(value, dict) or len(value) != 1:
+        return None
+    key = next(iter(value))
+    if key == "literal":
+        text = value[key]
+        if not isinstance(text, str) or LITERAL_VALUE.match(text) is None:
+            return None
+        return ("literal", text)
+    if key == "digits":
+        return ("digits",) if value[key] is True else None
+    if key == "enum":
+        items = value[key]
+        if not isinstance(items, list) or not 1 <= len(items) <= 8:
+            return None
+        for item in items:
+            if not isinstance(item, str) or LITERAL_VALUE.match(item) is None:
+                return None
+        if len(set(items)) != len(items):
+            return None
+        return ("enum", frozenset(items))
+    return None
+
+
+def _load_rule(item):
+    """I1~I7. 버리는 항목은 None."""
+    if not isinstance(item, dict):
+        return None
+    for key in RULE_FIELDS:
+        value = item.get(key)
+        if not isinstance(value, str) or not value:
+            return None
+    kind = item["rule"]
+    if kind not in RULE_KINDS:
+        return None
+    if not _host_shape_ok(item["host"]):
+        return None
+    try:
+        page_re = re.compile(item["pagePath"])
+        image_re = re.compile(item["imagePath"])
+    except re.error:
+        return None
+    if kind == RULE_PAGE:
+        if "pageQuery" in item:
+            return None
+        query = None
+    else:
+        raw = item.get("pageQuery")
+        if not isinstance(raw, dict) or not 1 <= len(raw) <= 8:
+            return None
+        query = {}
+        for name, spec in raw.items():
+            if QUERY_NAME.match(name) is None:
+                return None
+            parsed = _query_spec(spec)
+            if parsed is None:
+                return None
+            query[name] = parsed
+    return {
+        "id": item["id"],
+        "host": item["host"],
+        "org": item["org"],
+        "pagePath": page_re,
+        "imagePath": image_re,
+        "rule": kind,
+        "pageQuery": query,
+    }
+
+
+def _one_kind_per_host(items):
+    """G5: 한 호스트에 옛·새 rule 값 항목이 섞이면 파일째 거절(항목 검사 전)."""
+    kinds = {}
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        host = item.get("host")
+        kind = item.get("rule")
+        if not isinstance(host, str) or kind not in RULE_KINDS:
+            continue
+        kinds.setdefault(host, set()).add(kind)
+    return all(len(found) == 1 for found in kinds.values())
+
+
 def load_rules(path=None):
     """허용목록. 없거나 깨지면 빈 목록 = 전부 거절."""
     if path is None:
         path = Path(__file__).resolve().parents[1] / "references" / "figure-sources.json"
     data = _read_json(path)
-    if not isinstance(data, dict) or data.get("v") != 1:
+    if not isinstance(data, dict):
+        return []
+    version = data.get("v")
+    # JSON true는 파이썬에서 1과 같다 — 형까지 본다(G2).
+    if type(version) not in (int, float) or version != 1:
         return []
     rules = data.get("rules")
     if not isinstance(rules, list):
         return []
+    if not _one_kind_per_host(rules):
+        return []
     out = []
-    for rule in rules:
-        if not isinstance(rule, dict):
-            continue
-        if not all(isinstance(rule.get(k), str) for k in ("id", "host", "pagePath", "imagePath")):
-            continue
-        if rule.get("rule") != "page_kogl_applies_to_body_images":
-            continue
-        try:
-            page_re = re.compile(rule["pagePath"])
-            image_re = re.compile(rule["imagePath"])
-        except re.error:
-            continue
-        out.append({
-            "id": rule["id"],
-            "host": rule["host"].rstrip(".").lower(),
-            "org": rule.get("org") if isinstance(rule.get("org"), str) else "",
-            "pagePath": page_re,
-            "imagePath": image_re,
-            "rule": rule["rule"],
-        })
+    for item in rules:
+        parsed = _load_rule(item)
+        if parsed is not None:
+            out.append(parsed)
+    ids = [rule["id"] for rule in out]
+    if len(set(ids)) != len(ids):
+        return []
     return out
+
+
+def _strict_page(raw):
+    """PQ-0: 새 rule 값 항목의 페이지 주소를 적힌 글자 그대로 본다 → (host, path, query)."""
+    if not isinstance(raw, str) or len(raw) > STRICT_MAX_CHARS:
+        return None
+    if not set(raw) <= STRICT_CHARS:
+        return None
+    if not raw.startswith("https://"):
+        return None
+    rest = raw[8:]
+    if ":" in rest or rest.count("?") != 1:
+        return None
+    front, query = rest.split("?", 1)
+    slash = front.find("/")
+    if slash <= 0:
+        return None
+    host, path = front[:slash], front[slash:]
+    # ':'는 위에서 이미 걸러졌으니 경로에 남는 것은 영숫자와 ._~/- 뿐이다.
+    if "=" in path or "&" in path:
+        return None
+    if any(segment in (".", "..") for segment in path.split("/")):
+        return None
+    return host, path, query
+
+
+def _query_matches(rule, query):
+    """PQ-1~5: 이름 집합이 같고, 이름마다 한 번씩, 값이 형식에 맞아야 한다."""
+    specs = rule.get("pageQuery")
+    if not specs:
+        return False
+    seen = set()
+    for piece in query.split("&"):
+        if piece.count("=") != 1:
+            return False
+        name, value = piece.split("=", 1)
+        if not name or name in seen:
+            return False
+        spec = specs.get(name)
+        if spec is None:
+            return False
+        if spec[0] == "literal":
+            if value != spec[1]:
+                return False
+        elif spec[0] == "digits":
+            # isdigit·\d는 유니코드 숫자를 받는다 — '0'~'9'만 본다.
+            if not 1 <= len(value) <= 20 or not all("0" <= ch <= "9" for ch in value):
+                return False
+        elif value not in spec[1]:
+            return False
+        seen.add(name)
+    return len(seen) == len(specs)
+
+
+def select_page_rule(raw, rules):
+    """PQ-8: 규칙집 순서로 처음 맞는 항목 하나 → (항목, 보낼 주소) 또는 None."""
+    strict = _strict_page(raw)
+    for rule in rules:
+        if rule.get("rule") == RULE_PAGE_QUERY:
+            if strict is None or strict[0] != rule["host"]:
+                continue
+            if rule["pagePath"].fullmatch(strict[1]) is None:
+                continue
+            if not _query_matches(rule, strict[2]):
+                continue
+            return rule, raw
+        try:
+            target = normalize_url(raw, host=rule["host"],
+                                   path_pattern=rule["pagePath"])
+        except FigureError:
+            continue
+        return rule, target
+    return None
 
 
 def _bad_address(text):
@@ -523,13 +703,21 @@ def _resolve_in_deadline(host, resolver, allow_loopback, limit):
 
 
 def http_get(url, *, rule, kind, resolver=None, allow_loopback=False,
-             tls_context=None, limiter=None):
-    """고정 IP + 수동 리다이렉트(≤3) + 상한. (final_url, status, headers, body)."""
+             tls_context=None, limiter=None, follow_redirects=True):
+    """고정 IP + 수동 리다이렉트(≤3) + 상한. (final_url, status, headers, body).
+
+    새 ``rule`` 값 항목의 페이지는 ``follow_redirects=False``로 부른다 —
+    3xx면 옮겨 갈 주소로 요청을 보내지 않고 ``redirect_not_allowed``.
+    """
     limit = limiter or {"bytes": 0, "deadline": None}
     if limit.get("deadline") is None:
         limit["deadline"] = time.monotonic() + TIMEOUT_REQUEST_SECONDS
     pattern = rule["pagePath"] if kind == "page" else rule["imagePath"]
-    target = normalize_url(url, host=rule["host"], path_pattern=pattern)
+    if kind == "page" and rule.get("rule") == RULE_PAGE_QUERY:
+        # 엄격한 꼴을 통과한 주소는 해석기가 바꿀 것이 없다 — 그대로 보낸다.
+        target = url
+    else:
+        target = normalize_url(url, host=rule["host"], path_pattern=pattern)
     for _ in range(MAX_REDIRECTS + 1):
         remaining = _remaining(limit)
         if remaining <= 0:
@@ -554,6 +742,8 @@ def http_get(url, *, rule, kind, resolver=None, allow_loopback=False,
             response = conn.getresponse()
             if hard.expired:
                 raise FigureError("timeout", "파일 응답 시간 초과")
+            if 300 <= response.status < 400 and not follow_redirects:
+                raise FigureError("redirect_not_allowed", str(response.status))
             if response.status in (301, 302, 303, 307, 308):
                 location = response.getheader("location")
                 if not location:
@@ -996,24 +1186,17 @@ def fetch_direct(folder, page, images, slot, environ=None, *,
     except FigureError as exc:
         return _blocked(exc.reason, exc.detail)
 
-    page_norm = None
-    rule = None
-    for candidate in rules:
-        try:
-            page_norm = normalize_url(page, host=candidate["host"],
-                                      path_pattern=candidate["pagePath"])
-        except FigureError:
-            continue
-        rule = candidate
-        break
-    if rule is None:
+    chosen = select_page_rule(page, rules)
+    if chosen is None:
         return _blocked("no_rule", "허용목록에 맞는 이용조건 페이지 없음")
+    rule, page_norm = chosen
 
     try:
         final_page, _, page_headers, page_body = http_get(
             page_norm, rule=rule, kind="page", resolver=resolver,
             allow_loopback=allow_loopback, tls_context=tls_context,
-            limiter=limiter)
+            limiter=limiter,
+            follow_redirects=rule.get("rule") != RULE_PAGE_QUERY)
     except FigureError as exc:
         return _blocked(exc.reason, exc.detail)
     page_sha = sha256_bytes(page_body)
