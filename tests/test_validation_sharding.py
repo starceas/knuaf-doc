@@ -119,7 +119,8 @@ class ScopeSetTest(unittest.TestCase):
 
     def test_scope_never_hides_an_approved_skill_skip(self):
         _, code = _discovery("code")
-        missing = set(rv.ALLOWED_SKILL_SKIPS) - set(code)
+        missing = (set(rv.ALLOWED_SKILL_SKIPS)
+                   | set(rv.POSIX_SKIPPED_WINDOWS_SKILL_TESTS)) - set(code)
         self.assertEqual(missing, set())
 
 
@@ -260,12 +261,22 @@ def _merged_report(scope="code"):
         elif test_id in rv.ALLOWED_SKILL_SKIPS:
             entries.append({"test": test_id, "category": "skipped",
                             "detail": rv.ALLOWED_SKILL_SKIPS[test_id]})
+        elif test_id in rv.POSIX_SKIPPED_WINDOWS_SKILL_TESTS:
+            entries.append({"test": test_id, "category": "skipped",
+                            "detail": rv.POSIX_SKIPPED_WINDOWS_SKILL_TESTS[test_id]})
         else:
             entries.append({"test": test_id, "category": "passed"})
-    skill_skips = [{"test": test_id,
-                    "reason": rv.ALLOWED_SKILL_SKIPS[test_id],
-                    "rule": rv.SKILL_SKIP_RULE}
-                   for test_id in ids if test_id in rv.ALLOWED_SKILL_SKIPS]
+    skill_skips = []
+    for test_id in ids:
+        if test_id in rv.ALLOWED_SKILL_SKIPS:
+            skill_skips.append({"test": test_id,
+                                "reason": rv.ALLOWED_SKILL_SKIPS[test_id],
+                                "rule": rv.SKILL_SKIP_RULE})
+        elif test_id in rv.POSIX_SKIPPED_WINDOWS_SKILL_TESTS:
+            skill_skips.append({
+                "test": test_id,
+                "reason": rv.POSIX_SKIPPED_WINDOWS_SKILL_TESTS[test_id],
+                "rule": rv.POSIX_SKIPPED_WINDOWS_SKILL_RULE})
     skipped = 1 + len(skill_skips)
     return {
         "tool": "tools/run_validation.py",
@@ -377,6 +388,40 @@ class FinalReportTest(unittest.TestCase):
         done = self._check(report)
         self.assertEqual(done.returncode, 1, done.stdout)
         self.assertIn("unapproved skill skip", done.stderr)
+
+    def _posix_windows_skip(self, report):
+        test_id = next(iter(rv.POSIX_SKIPPED_WINDOWS_SKILL_TESTS))
+        entry = next(e for e in report["runtime"]["entries"]
+                     if e["test"] == test_id)
+        approved = next(a for a in report["approved_skill_skips"]
+                        if a["test"] == test_id)
+        return entry, approved
+
+    def test_windows_only_skill_test_skip_is_accepted_with_its_rule(self):
+        # A linux/darwin report skips the Windows-only skill test; the checker
+        # accepts it only by exact id, exact reason and its own rule.
+        report = _merged_report("code")
+        entry, approved = self._posix_windows_skip(report)
+        self.assertEqual(entry["category"], "skipped")
+        self.assertEqual(approved["rule"], rv.POSIX_SKIPPED_WINDOWS_SKILL_RULE)
+        done = self._check(report)
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+
+    def test_windows_only_skill_test_skip_with_changed_reason_is_rejected(self):
+        report = _merged_report("code")
+        entry, approved = self._posix_windows_skip(report)
+        entry["detail"] = approved["reason"] = approved["reason"] + " (edited)"
+        done = self._check(report)
+        self.assertEqual(done.returncode, 1, done.stdout)
+        self.assertIn("unapproved skill skip", done.stderr)
+
+    def test_windows_only_skill_test_skip_under_generic_rule_is_rejected(self):
+        report = _merged_report("code")
+        _, approved = self._posix_windows_skip(report)
+        approved["rule"] = rv.SKILL_SKIP_RULE
+        done = self._check(report)
+        self.assertEqual(done.returncode, 1, done.stdout)
+        self.assertIn("approved skill skips do not match", done.stderr)
 
     def test_skip_tally_off_by_one_is_rejected(self):
         report = _merged_report("code")
