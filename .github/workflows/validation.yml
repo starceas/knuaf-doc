@@ -360,6 +360,37 @@ jobs:
             ${{ runner.temp }}/native-publication-report.json
           if-no-files-found: error
 
+  # The app repository runs these skill tests on Windows py3.13. Python 3.12+
+  # reports a 64-bit st_dev where the handle API gives a 32-bit volume serial,
+  # so identity checks must be proven on 3.13 too. Kept out of the
+  # windows-publication matrix: its native contract accepts 3.10 and 3.14 only.
+  windows-skill-tests-py313:
+    name: skill tests (windows, py3.13)
+    runs-on: windows-latest
+    env:
+      PYTHONUTF8: '1'
+      PYTHONIOENCODING: utf-8
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - name: Preserve published bytes before checkout
+        shell: bash
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install runtime dependencies
+        run: python -m pip install -r requirements-validation.txt
+      # Temp dir on the repository's drive: a temp dir on another drive makes
+      # gg_reuse relpath die (separate Windows defect, rules side).
+      - name: Skill tests (py3.13, the app's Windows interpreter)
+        env:
+          TMP: ${{ runner.temp }}
+          TEMP: ${{ runner.temp }}
+        run: python -m unittest discover -s skills/knuaf-doc/tests -t skills/knuaf-doc/tests
+
   notify-main-failure:
     name: notify on main validation failure
     if: ${{ always() && github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && (needs.validate-py310.result == 'failure' || needs.validate-py314.result == 'failure') }}
