@@ -291,6 +291,20 @@ def read_zip(data):
                 for info in archive.infolist()}
 
 
+def charpr_shape(node):
+    """`<hh:charPr>` 하나의 (포인트, 굵기). height는 1/100 pt 단위."""
+    bold = (node.get("bold") == "1"
+            or node.find("{%s}bold" % _HH) is not None)
+    return (int(node.get("height")) // 100, bold)
+
+
+def charpr_shapes(header_xml):
+    """header.xml의 ``{charPr id: (포인트, 굵기)}``."""
+    properties = ET.fromstring(header_xml).find("{%s}charProperties" % _HH)
+    return {node.get("id"): charpr_shape(node)
+            for node in properties.findall("{%s}charPr" % _HH)}
+
+
 def make_fake_cli(root, **control):
     work = Path(root) / "fake"
     work.mkdir(exist_ok=True)
@@ -1176,9 +1190,11 @@ class _FoodCropsTests(_Base):
             value["manifest"]["school_frontmatter"]["sections"])
 
 
-    def test_appended_front_charprs_keep_header_parseable(self):
+    def test_appended_charpr_blocks_keep_header_parseable(self):
         # 템플릿 header.xml은 한 줄이다. 끝 태그 앞에 줄바꿈이 없을 때 예전
         # 구현은 XML 선언 앞에 charPr를 붙여 파싱 불가 파일을 만들었다.
+        # 본문 블록을 먼저 붙이고 앞부분 블록을 꼬리에 붙인다 — 검사기가
+        # header 꼬리 14개로 앞부분 블록을 판정하므로 순서가 계약이다.
         data, applied = self._transform(
             hwpx_section(list(FOOD_CROPS_PARAGRAPHS)))
         xml = read_zip(data)["Contents/header.xml"].decode("utf-8")
@@ -1187,21 +1203,94 @@ class _FoodCropsTests(_Base):
         self.assertEqual("{%s}head" % _HH, root.tag)
         self.assertEqual("3", root.get("secCnt"))
         properties = root.find("{%s}charProperties" % _HH)
-        self.assertEqual("15", properties.get("itemCnt"))
+        body_specs = gh._body_charpr_specs(
+            runtime("gg_major_format").FOOD_CROPS_PROFILE)
+        total = len(body_specs) + len(gh._FRONT_CHARPR_SPECS)
+        self.assertEqual(str(1 + total), properties.get("itemCnt"))
         charprs = {"%s" % node.get("id"): node
                    for node in properties.findall("{%s}charPr" % _HH)}
-        self.assertEqual(["0"] + [str(index) for index in range(1, 15)],
+        self.assertEqual(["0"] + [str(index) for index in range(1, 1 + total)],
                          sorted(charprs, key=int))
-        self.assertEqual(list(gh._FRONT_CHARPR_SPECS),
-                         [(int(charprs[str(index)].get("height")) // 100,
-                           charprs[str(index)].get("bold") == "1")
-                          for index in range(1, 15)])
-        for index in (3, 5, 7, 9, 11, 13):
-            self.assertIsNotNone(
-                charprs[str(index)].find("{%s}bold" % _HH), index)
+        shapes = [charpr_shape(charprs[str(index)])
+                  for index in range(1, 1 + total)]
+        self.assertEqual(list(body_specs) + list(gh._FRONT_CHARPR_SPECS),
+                         shapes)
+        for index, (_, bold) in enumerate(shapes, start=1):
+            if bold:
+                self.assertIsNotNone(
+                    charprs[str(index)].find("{%s}bold" % _HH), index)
         # 붙인 id가 세 구역 모두의 planned 문단에 실제로 걸린다.
         self.assertEqual(["Contents/section%d.xml" % index for index in range(3)],
                          sorted(applied["charpr"]))
+
+    def test_body_paragraphs_take_twelve_and_level_headings_their_size(self):
+        # 본문 문단은 12 pt 보통, 번호 단계 제목은 프로필 `level_pt`(1단계 20)
+        # 굵게다. 표·그림 설명·동의서는 본문 블록이 아니다.
+        nodes, plan = food_crops_plan()
+        self.assertEqual(list(FOOD_CROPS_PARAGRAPHS),
+                         [node["text"] for node in nodes])
+        data, applied = self._transform(
+            hwpx_section(list(FOOD_CROPS_PARAGRAPHS)))
+        members = read_zip(data)
+        shapes = charpr_shapes(members["Contents/header.xml"].decode("utf-8"))
+        refs = [first_run(paragraph).get("charPrIDRef")
+                for paragraph in paragraphs_of(
+                    members["Contents/section2.xml"].decode("utf-8"))]
+        texts = list(FOOD_CROPS_PARAGRAPHS)[plan["body"]:]
+        self.assertEqual(len(texts), len(refs))
+        body_specs = gh._body_charpr_specs(
+            runtime("gg_major_format").FOOD_CROPS_PROFILE)
+        body_ids = set(range(1, 1 + len(body_specs)))
+        front_ids = set(range(1 + len(body_specs),
+                           1 + len(body_specs) + len(gh._FRONT_CHARPR_SPECS)))
+        self.assertEqual(set(), body_ids & front_ids)
+
+        def shape_of(text):
+            return shapes[refs[texts.index(text)]]
+
+        # 번호 단계 제목은 level_pt(1단계 20) 굵게, 본문 문단은 12 pt 보통.
+        self.assertEqual((20, True), shape_of("1. 머리말"))
+        self.assertEqual((12, False), shape_of("합성 본문이다."))
+        self.assertEqual((20, True), shape_of("2. 영농환경 분석"))
+        # 동의서와 그 뒤는 앞부분 전용 블록 그대로다
+        # (제목 20 굵게 / 본문 14 굵게 / `※` 10 보통).
+        self.assertEqual((20, True), shape_of("학부모 동의서"))
+        self.assertEqual((14, True), shape_of("합성 동의 내용이다."))
+        self.assertEqual((10, False), shape_of("※ 단, 합성 주석이다."))
+        self.assertEqual(["Contents/section2.xml"], applied["body_charpr"])
+        # 본문 블록 id는 본문 구역에서만 쓰이고, 동의서 세 문단만 앞부분 id다.
+        for index, text in enumerate(texts):
+            cid = int(refs[index])
+            if text in ("학부모 동의서", "합성 동의 내용이다.",
+                        "※ 단, 합성 주석이다."):
+                self.assertIn(cid, front_ids, text)
+            else:
+                self.assertIn(cid, body_ids, text)
+        # 본문 블록 id는 겉표지·앞부분 구역에 새지 않는다(그 구역의 빈 줄은
+        # 원래부터 charPr 0이라 '전부 앞부분 id'로 단정하지 않는다).
+        for name in ("Contents/section0.xml", "Contents/section1.xml"):
+            for paragraph in paragraphs_of(members[name].decode("utf-8")):
+                cid = int(first_run(paragraph).get("charPrIDRef"))
+                self.assertNotIn(cid, body_ids, name)
+
+    def test_body_targets_skip_tables_captions_and_the_consent_block(self):
+        # 표 셀·그림 설명은 한글 기본(10 pt)을 그대로 둔다. 동의서와 그 뒤는
+        # 앞부분 전용 서식이 맡는다.
+        nodes = [
+            {"kind": "paragraph", "text": "본문이다."},
+            {"kind": "heading", "text": "1. 머리말", "level": 1},
+            {"kind": "table", "rows": []},
+            {"kind": "caption", "label": "표", "number": 1, "text": "표 1. 값"},
+            {"kind": "image", "alt": "그림", "path": "a.png"},
+            {"kind": "heading", "text": "1) 소제목", "level": 2},
+            {"kind": "paragraph", "text": "학부모 동의서"},
+            {"kind": "paragraph", "text": "동의 본문이다."},
+        ]
+        self.assertEqual(
+            {0: (12, False), 1: (20, True), 5: (18, True)},
+            gh._body_charpr_targets(
+                nodes, {"body": 0},
+                runtime("gg_major_format").FOOD_CROPS_PROFILE))
 
 
 class ConventionTests(unittest.TestCase):

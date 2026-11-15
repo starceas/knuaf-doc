@@ -92,6 +92,9 @@ class MajorFormatProfile:
     human_finish: tuple = ()
     # 목차 제목 크기(pt) - `contents()`가 따로 받는 값
     toc_title_pt: int = 20
+    # 본문 문단(제목이 아닌 글) 크기(pt). 한글 빌더가 이 값으로 본문 charPr를
+    # 만들고, 단계 제목은 `level_pt`를 쓴다(워드 빌더와 같은 표를 본다).
+    body_pt: int = 12
 
 
 # --- 식량작물: F1b 현행 값 그대로 -----------------------------------------
