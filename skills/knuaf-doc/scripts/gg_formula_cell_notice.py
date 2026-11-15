@@ -156,7 +156,19 @@ def _write(root, project, record, transition):
     lk = _hash(record["lineage_key"].encode("utf-8"))[:32]
     change = {"request_id": f"fcn:{lk}:s{record['seq']}:{transition}",
               "ops": [{"collection": "questions", "value": record}]}
-    result = core.apply(root, change, project["revision"])
+    try:
+        result = core.apply(root, change, project["revision"])
+    except core.OperationError as error:
+        if error.result.get("commit_state") != "committed_cleanup_pending":
+            raise
+        current = core.load(root)
+        saved = current.get("questions", {}).get(record["id"], {})
+        request = current.get("requests", {}).get(change["request_id"], {})
+        if (request.get("hash") != core.digest(change)
+                or not all(saved.get(key) == value for key, value in record.items() if key != "revision")):
+            raise
+        return {"reason": error.result.get("reason"),
+                "cleanup_errors": error.result.get("cleanup_errors", [])}
     if isinstance(result, dict) and result.get("commit_state") not in (None, "committed", "committed_cleanup_pending"):
         raise ValueError(result.get("reason") or "record_unwritable")
 
@@ -262,13 +274,17 @@ def finish(root, verdict, *, output_sha256, receipt_sha256):
     return {"completed": False, "reason": error}
 
 
-def confirm(root, identity, *, relayed_quote=None, by="app_click"):
+def confirm(root, identity, *, relayed_quote=None, by=None):
     import gg_core as core
     def reject(reason):
         return {"status": "rejected", "reason": reason, "record_id": None,
                 "acknowledged_by": None, "inherited_from": None}
-    if by not in {"app_click", "relayed"}:
-        return reject("record_unwritable")
+    if by is None and relayed_quote is not None:
+        by = "relayed"
+    if by is None:
+        return reject("confirm_source_missing")
+    if by not in {"app_click", "relayed"} or (by == "app_click" and relayed_quote is not None):
+        return reject("confirm_source_invalid")
     if by == "relayed" and (not isinstance(relayed_quote, str) or not relayed_quote.strip()):
         return reject("relayed_quote_missing")
     for _ in range(2):
@@ -297,10 +313,13 @@ def confirm(root, identity, *, relayed_quote=None, by="app_click"):
             updated = {**record, "state": "acknowledged", "attempts": 2,
                        "confirmed_sha256": digest, "acknowledged_by": by,
                        "relayed_quote": relayed_quote.strip() if by == "relayed" else None}
-            _write(root, project, updated, "ack")
-            return {"status": "acknowledged", "reason": None, "record_id": record["id"],
-                    "acknowledged_by": by, "inherited_from": record.get("inherited_from"),
-                    "notice_identity": identity}
+            warning = _write(root, project, updated, "ack")
+            response = {"status": "acknowledged", "reason": None, "record_id": record["id"],
+                        "acknowledged_by": by, "inherited_from": record.get("inherited_from"),
+                        "notice_identity": identity}
+            if warning is not None:
+                response["cleanup_warning"] = warning
+            return response
         except (OSError, ValueError, KeyError):
             continue
     return reject("record_unwritable")
@@ -413,7 +432,8 @@ def register_output(root, receipt, output_path, *, input_sha256):
         keys.update((p["sheet"], p["cell"]) for p in receipt.get("cleared", []))
         patched = []
         if keys:
-            read = read_template(Path(output_path))
+            with snapshot(Path(output_path).read_bytes()) as readable:
+                read = read_template(readable)
             for sheet, cell in sorted(keys):
                 current = read.cells.get((sheet, cell), {})
                 patched.append({"sheet": sheet, "cell": cell,
@@ -507,6 +527,11 @@ def complete_published(root, verdict, receipt, output_path, receipt_path):
         receipt["formula_cell_notice_error"] = str(error)
     # Only failed completion changes the already published receipt; no completed
     # record references its old hash. Replace through a sibling temporary file.
+    persist_receipt_diagnostics(receipt, receipt_path, "formula_cell_notice_error")
+
+
+def persist_receipt_diagnostics(receipt, receipt_path, error_key):
+    """이미 발행한 사본은 유지하고 영수증 진단만 원자 갱신한다."""
     import os
     import tempfile
     path = Path(receipt_path)
@@ -519,7 +544,7 @@ def complete_published(root, verdict, receipt, output_path, receipt_path):
     except OSError as error:
         # Both artifacts were already published; diagnostic failure is not
         # grounds to roll back the successful copy.
-        receipt["formula_cell_notice_error"] += "; receipt: " + str(error)
+        receipt[error_key] += "; receipt: " + str(error)
     finally:
         if pending is not None:
             try:

@@ -629,7 +629,7 @@ def _expand_targeted_shared(root, dom, dom_cells, patches, sheet):
 
 
 def patch_copy(source: Path, map_path: Path, out: Path, *, context=None,
-               profile: str | None = None) -> dict:
+               profile: str | None = None, _defer_provenance=False) -> dict:
     """Guarded public entry: authorize, then the declared school form, then
     the output path — every refusal happens before the engine writes.
 
@@ -721,7 +721,8 @@ def patch_copy(source: Path, map_path: Path, out: Path, *, context=None,
                                   _authorization=authorization, _context=context)
         receipt["source"]["path"] = str(source.resolve())
         fcn.attach(receipt, verdict)
-        fcn.register_output(fcn.context_root(context), receipt, out, input_sha256=fcn._hash(raw))
+        if not _defer_provenance:
+            fcn.register_output(fcn.context_root(context), receipt, out, input_sha256=fcn._hash(raw))
     receipt["workbook_profile"] = resolved
     return receipt
 
@@ -1017,7 +1018,7 @@ def cli(argv: list[str]) -> int:
         context = (mc.output_context(args.project, args.major)
                    if args.project is not None else None)
         result = patch_copy(source, args.map.resolve(), staged_out,
-                            context=context, profile=args.profile)
+                            context=context, profile=args.profile, _defer_provenance=True)
         import gg_formula_cell_notice as fcn
         verdict = result.pop("formula_cell_notice_verdict", None)
         out.parent.mkdir(parents=True, exist_ok=True)
@@ -1035,6 +1036,10 @@ def cli(argv: list[str]) -> int:
         except Exception:
             if published and out.exists(): out.unlink()
             raise
+        fcn.register_output(fcn.context_root(context), result, out,
+                            input_sha256=result["source"]["sha256"])
+        if result.get("formula_cell_provenance_error"):
+            fcn.persist_receipt_diagnostics(result, receipt_path, "formula_cell_provenance_error")
         fcn.complete_published(fcn.context_root(context), verdict, result, out, receipt_path)
         print(json.dumps({"status": "patched", "out": result["output"], "patched": len(result["patched"]),
                           "formulaCachesInvalidated": result["formulaCachesInvalidated"]}, ensure_ascii=False))

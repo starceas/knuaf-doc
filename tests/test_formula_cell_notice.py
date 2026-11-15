@@ -154,7 +154,7 @@ class FormulaNoticeCase(ContractCase):
         return verdict
 
     def acknowledge(self, verdict):
-        result = self.fcn.confirm(self.root, verdict["notice_identity"])
+        result = self.fcn.confirm(self.root, verdict["notice_identity"], by="app_click")
         self.assertEqual(result["status"], "acknowledged", result)
         return self.evaluate(kind=self.records()[verdict["record_id"]]["kind"])
 
@@ -457,7 +457,7 @@ class StateTransitionTests(FormulaNoticeCase):
                     self.assertEqual(len(self.records()), 1)
                 row = self.row()[0]
                 self.assertEqual(len(self.row()), 1)
-                ack = self.fcn.confirm(self.root, row["notice_identity"])
+                ack = self.fcn.confirm(self.root, row["notice_identity"], by="app_click")
                 self.assertEqual(ack["status"], "acknowledged")
                 code, text, error, out, receipt = self.cli(kind, name=kind, maps=maps)
                 self.assertEqual(code, 0, (text, error))
@@ -652,7 +652,7 @@ class ConfirmationTests(FormulaNoticeCase):
                 else:
                     self.edit_book({OTHER: 18})
                 before = self.core.load(self.root)
-                result = self.fcn.confirm(self.root, first["notice_identity"])
+                result = self.fcn.confirm(self.root, first["notice_identity"], by="app_click")
                 self.assertEqual((result["status"], result["reason"]), ("rejected", "notice_stale"))
                 self.assertEqual(self.core.load(self.root), before)
 
@@ -662,11 +662,11 @@ class ConfirmationTests(FormulaNoticeCase):
         self.edit_book({OTHER: 18})
         second = self.evaluate()
         before = self.core.load(self.root)
-        result = self.fcn.confirm(self.root, first["notice_identity"])
+        result = self.fcn.confirm(self.root, first["notice_identity"], by="app_click")
         self.assertEqual((result["status"], result["reason"]), ("rejected", "record_not_active"))
         self.assertEqual(self.core.load(self.root), before)
         self.acknowledge(second)
-        result = self.fcn.confirm(self.root, second["notice_identity"])
+        result = self.fcn.confirm(self.root, second["notice_identity"], by="app_click")
         self.assertEqual(result["status"], "rejected")
 
     def test_relayed_requires_quote_and_receipt_retains_attribution(self):
@@ -1067,7 +1067,7 @@ class AbcRegressionTests(FormulaNoticeCase):
                         self.assertFalse(out.exists())
                         self.assertFalse(receipt.exists())
                         shown = next(iter(self.records().values()))
-                        result = self.fcn.confirm(self.root, shown["notice_identity"])
+                        result = self.fcn.confirm(self.root, shown["notice_identity"], by="app_click")
                         self.assertEqual(result["status"], "acknowledged", result)
                         code, text, error, out, receipt = self.cli(kind, name=outname, maps=maps)
                     else:
@@ -1077,6 +1077,79 @@ class AbcRegressionTests(FormulaNoticeCase):
                     self.assertTrue(receipt.is_file())
                     published = json.loads(receipt.read_text(encoding="utf-8"))
                     self.assertEqual(published["workbook_profile"], "school_17_sheet_v1")
+
+class ReviewRegressionTests(FormulaNoticeCase):
+    """Roh 중요 지적: 사본/확인 CLI 진입점과 실제 정본 커밋을 통과한다."""
+
+    def confirm_cli(self, identity, *flags):
+        stdout, stderr = io.StringIO(), io.StringIO()
+        with redirect_stdout(stdout), redirect_stderr(stderr):
+            code = self.notices.main(["confirm", str(self.root), "--identity", identity, *flags, "--json"])
+        self.assertEqual(stderr.getvalue(), "")
+        return code, json.loads(stdout.getvalue())
+
+    def test_cli_copy_provenance_is_reused_by_next_patch(self):
+        # I-01: 실제 .xlsx.tmp-PID 경로를 쓰는 두 CLI의 근거와 재사용.
+        bind_major(self.root)
+        for kind in ("patch", "blank"):
+            with self.subTest(kind=kind):
+                self.source.write_bytes(self.tpl.BUNDLED_TEMPLATE.read_bytes())
+                code, text, error, first, first_receipt = self.cli("patch", name=kind + "-first")
+                self.assertEqual(code, 0, (text, error))
+                if kind == "blank":
+                    code, text, error, first, first_receipt = self.cli(
+                        "blank", source=first, name=kind + "-carried")
+                    self.assertEqual(code, 0, (text, error))
+                receipt = json.loads(first_receipt.read_bytes())
+                self.assertNotIn("formula_cell_provenance_error", receipt)
+                proof = [q for q in self.core.load(self.root)["questions"].values()
+                         if q.get("schema") == "knuaf-formula-tool-output/v1"
+                         and q.get("output_sha256") == sha(first.read_bytes())]
+                self.assertTrue(any(p["sheet"] == INVEST and p["cell"] == "C8"
+                                    and p["new_formula"] == "SUM(D8:D8)"
+                                    for q in proof for p in q["patched"]))
+                maps = self.write_maps(first, expected="=SUM(D8:D8)", new="=SUM(D8:E8)")
+                code, text, error, second, _ = self.cli(
+                    "patch", source=first, name=kind + "-second", maps=maps)
+                self.assertEqual(code, 0, (text, error))
+                self.assertEqual(self.tpl.read_template(second).cells[(INVEST, "C8")]["resolved"], "SUM(D8:E8)")
+
+    def test_cli_confirm_commit_survives_sidecar_cleanup_failure(self):
+        # I-02: apply의 실제 정본 저장 뒤 곁파일 OSError만 주입.
+        first = self.shown()
+        with mock.patch.object(self.core, "_rewrite_sidecars", side_effect=OSError("synthetic sidecar cleanup")):
+            code, response = self.confirm_cli(first["notice_identity"], "--by", "app_click")
+        self.assertEqual((code, response["status"], response["acknowledged_by"]), (0, "acknowledged", "app_click"))
+        self.assertIn("cleanup_warning", response)
+        self.assertEqual(self.records()[first["record_id"]]["state"], "acknowledged")
+        self.assertEqual(self.evaluate()["verdict"], "proceed")
+        revision = self.core.load(self.root)["revision"]
+        again, rejected = self.confirm_cli(first["notice_identity"], "--by", "app_click")
+        self.assertEqual((again, rejected["reason"]), (1, "record_not_active"))
+        self.assertEqual(self.core.load(self.root)["revision"], revision)
+
+    def test_cli_confirm_commit_survives_lock_cleanup_failure(self):
+        # I-02: 정본은 실제 커밋, OS 잠금 해제 뒤 owner 정리 실패.
+        lock = runtime("gg_lock")
+        first = self.shown()
+        with mock.patch.object(lock, "_cleanup_owner_record", side_effect=OSError("synthetic owner cleanup")):
+            code, response = self.confirm_cli(first["notice_identity"], "--relayed-quote", "일부러 바꿨어요")
+        self.assertEqual((code, response["status"], response["acknowledged_by"]), (0, "acknowledged", "relayed"))
+        self.assertTrue(response["cleanup_warning"]["cleanup_errors"])
+        self.assertEqual(self.records()[first["record_id"]]["relayed_quote"], "일부러 바꿨어요")
+        self.assertEqual(self.evaluate()["verdict"], "proceed")
+
+    def test_cli_confirm_requires_declared_source_and_preserves_attribution(self):
+        # I-03: 단순 셸 confirm은 확인 아님. 명시 출처만 기록.
+        first = self.shown()
+        before = self.core.load(self.root)
+        code, missing = self.confirm_cli(first["notice_identity"])
+        self.assertEqual((code, missing["reason"]), (1, "confirm_source_missing"))
+        self.assertEqual(self.core.load(self.root), before)
+        code, acknowledged = self.confirm_cli(first["notice_identity"], "--by", "app_click")
+        self.assertEqual((code, acknowledged["acknowledged_by"]), (0, "app_click"))
+        self.assertEqual(self.records()[first["record_id"]]["acknowledged_by"], "app_click")
+
 
 
 if __name__ == "__main__":

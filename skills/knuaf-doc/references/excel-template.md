@@ -593,6 +593,9 @@ Fullwidth parentheses and other notations are unsupported.
 - 앱 없는 CLI는 학생 답을 받은 뒤에만
   `python3 skills/knuaf-doc/scripts/gg_notices.py confirm <프로젝트폴더> --identity <알림식별값> --relayed-quote "<학생 답>"`
   를 부른다. 전달 확인은 학생 본인 인증이 아닌 호출자의 선언으로 기록된다.
+  출처 없는 confirm은 거절한다. 앱 사이드카는 `--by app_click`을 명시한다.
+  이 표시는 앱 통로용이며 실제 클릭의 인증은 아니다(셸에서 같은 플래그를 넣는 것은 막지 못함).
+  확인이 정본에 커밋된 뒤 곁파일·잠금 정리만 실패하면 확인 성공과 `cleanup_warning`을 함께 낸다.
 - 확인할 때 원본을 다시 읽는다. 파일 삭제·계보 변경·계산 칸 변경이면
   `notice_stale`로 거절한다. 확인 후 다시 변경해도 새 알림으로 멈춘다.
 - 정정 지도가 쓰는 계산 칸을 학생이 바꿨으면 `formula_cell_conflict`다. 확인으로
@@ -604,8 +607,9 @@ Fullwidth parentheses and other notations are unsupported.
 
 이번 실행의 비교·출력은 한 번 읽은 원본 바이트에서 만든다. `questions`에는
 계보마다 확인 주기를 쌓고, 입력값만 바뀐 등록 재무 파일은 같은 주기를 쓴다.
-다른 재무 파일로 바꿀 때는 다시 등록해야 한다. 등록하지 않고 파일을 덮어쓰면
-변경된 칸의 위치·종류·식이 같을 때 기존 확인과 구별할 수 없다.
+다른 재무 파일로 바꿀 때는 다시 등록해야 한다. 새 등록이 `(사실 개정,id)` 최댓값의
+활성 재무 사실로 선택될 때만 계보가 바뀐다. 실제 앱 재등록 writer의 ID·개정 정책은 미확인이다.
+등록하지 않고 덮어쓴 파일의 변경 칸 위치·종류·식이 같으면 기존 확인과 구별할 수 없다.
 
 `completed`는 CLI가 출력과 영수증을 올린 직후 출력 해시를 대조하고 기록한
 상태다. 뒤 검사의 통과나 파일이 지금도 남아 있음을 뜻하지 않는다. Python 사본

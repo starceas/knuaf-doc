@@ -1068,7 +1068,8 @@ BLANK_COPY_NOTICES = MappingProxyType({
 })
 
 
-def blank_copy(source: Path, map_path: Path, out: Path, allow_missing: bool = False, *, context=None) -> dict:
+def blank_copy(source: Path, map_path: Path, out: Path, allow_missing: bool = False, *, context=None,
+               _defer_provenance=False) -> dict:
     import gg_major_contract as mc
     import gg_formula_cell_notice as fcn
     authorization = mc.authorize_output(mc.OUTPUT_SCHOOL_WORKBOOK, context)
@@ -1083,8 +1084,9 @@ def blank_copy(source: Path, map_path: Path, out: Path, allow_missing: bool = Fa
                                        context=context, input_path=source, input_bytes=raw,
                                        authorization=authorization)
     receipt["source"]["path"] = str(source.resolve())
-    fcn.register_output(fcn.context_root(context), receipt, out,
-                        input_sha256=fcn._hash(raw))
+    if not _defer_provenance:
+        fcn.register_output(fcn.context_root(context), receipt, out,
+                            input_sha256=fcn._hash(raw))
     return receipt
 
 
@@ -1756,7 +1758,7 @@ def cli(argv: list[str]) -> int:
                 context = (mc.output_context(args.project, args.major)
                            if args.project is not None else None)
                 r = blank_copy(resolve_source(args.source).resolve(), args.map.resolve(), staged_out.resolve(),
-                               allow_missing=args.allow_missing, context=context)
+                               allow_missing=args.allow_missing, context=context, _defer_provenance=True)
                 import gg_formula_cell_notice as fcn
                 verdict = r.pop("formula_cell_notice_verdict", None)
                 r["output"]["path"] = str(args.out.resolve())
@@ -1778,6 +1780,10 @@ def cli(argv: list[str]) -> int:
                 if published_out and args.out.exists():
                     args.out.unlink()
                 raise
+            fcn.register_output(fcn.context_root(context), r, args.out,
+                                input_sha256=r["source"]["sha256"])
+            if args.receipt and r.get("formula_cell_provenance_error"):
+                fcn.persist_receipt_diagnostics(r, args.receipt, "formula_cell_provenance_error")
             fcn.complete_published(fcn.context_root(context), verdict, r, args.out, args.receipt)
             head = {"notices": r["notices"]} if r.get("notices") else {}
             print(json.dumps({**head, "status": r["output"]["status"], "out": r["output"],

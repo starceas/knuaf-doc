@@ -276,7 +276,9 @@ def main(argv=None):
     confirm = sub.add_parser("confirm", help="바뀐 계산 칸 확인을 기록한다")
     confirm.add_argument("folder")
     confirm.add_argument("--identity", required=True)
-    confirm.add_argument("--relayed-quote")
+    origin = confirm.add_mutually_exclusive_group()
+    origin.add_argument("--by", choices=("app_click",))
+    origin.add_argument("--relayed-quote")
     confirm.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
     try:
@@ -290,7 +292,7 @@ def main(argv=None):
             import gg_formula_cell_notice
             value = gg_formula_cell_notice.confirm(
                 Path(args.folder), args.identity, relayed_quote=args.relayed_quote,
-                by="relayed" if args.relayed_quote is not None else "app_click")
+                by="relayed" if args.relayed_quote is not None else args.by)
         else:
             value = choose(Path(args.folder), args.identity, args.value)
     except Exception as error:  # 실행 오류는 exit 2
