@@ -217,6 +217,62 @@ class GuiFigureWireTests(FigureCase):
                          ["app"])
         self.assertEqual(manifest["figures"]["student_count"], 0)
         self.assertEqual(manifest["figures"]["blocked"], [])
+        self.assertEqual(len(manifest["figures"]["notices"]), 1)
+        self.assertIn("농사로 그림 1장", manifest["figures"]["notices"][0])
+
+    def test_retained_nongsaro_two_pictures_build_with_one_notice_and_no_source_mutation(self):
+        home = self.app_home()
+        text = FIGURE + FIGURE.replace("그림 1.", "그림 2.")
+        stored = home / "store" / (SHA + ".png")
+        receipt = home / "receipts.jsonl"
+        before = (stored.read_bytes(), receipt.read_bytes())
+        result = self.build_cli(text, "build/recheck.docx", home)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.cli_pictures(self.root / "build" / "recheck.docx"), 2)
+        report = json.loads((self.root / "build" / "recheck.manifest.json").read_text())["figures"]
+        self.assertEqual(len(report["notices"]), 1)
+        self.assertIn("농사로 그림 2장", report["notices"][0])
+        self.assertEqual(report["recheck_figures"], {"nongsaro-curation": [1, 2]})
+        self.assertEqual((self.root / "body.md").read_text(), text)
+        self.assertEqual((stored.read_bytes(), receipt.read_bytes()), before)
+
+    def test_direct_nongsaro_receipt_reaches_build_notice(self):
+        picture = self.root / "figures" / "public" / (SHA + ".png")
+        picture.parent.mkdir(parents=True)
+        picture.write_bytes(PNG)
+        receipt = self.root / ".gg-work" / "figure-receipts.jsonl"
+        receipt.parent.mkdir(parents=True, exist_ok=True)
+        receipt.write_text(json.dumps({"image": {"sha256": SHA, "verdict": "approved",
+            "ruleId": "nongsaro-curation"}}) + "\n", encoding="utf-8")
+        before = (picture.read_bytes(), receipt.read_bytes())
+        text = FIGURE.replace("app-figure:" + SHA, picture.relative_to(self.root).as_posix())
+        result = self.build_cli(text, "build/direct-recheck.docx", None)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.cli_pictures(self.root / "build" / "direct-recheck.docx"), 1)
+        report = json.loads((self.root / "build" / "direct-recheck.manifest.json").read_text())["figures"]
+        self.assertEqual(len(report["notices"]), 1)
+        self.assertIn("농사로 그림 1장", report["notices"][0])
+        self.assertEqual((picture.read_bytes(), receipt.read_bytes()), before)
+
+    def test_direct_receipt_notice_uses_manuscript_directory_and_project_root(self):
+        picture = self.root / "build" / "figures" / "retained.png"
+        picture.parent.mkdir(parents=True, exist_ok=True)
+        picture.write_bytes(PNG)
+        receipt = self.root / ".gg-work" / "figure-receipts.jsonl"
+        receipt.parent.mkdir(parents=True, exist_ok=True)
+        receipt.write_text(json.dumps({"image": {"sha256": SHA, "verdict": "approved",
+            "ruleId": "nongsaro-curation"}}) + "\n", encoding="utf-8")
+        before = (picture.read_bytes(), receipt.read_bytes())
+        text = FIGURE.replace("app-figure:" + SHA, "figures/retained.png")
+        result = self.build_cli(text, "build/nested-recheck.docx", None, inp="build/body.md")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.cli_pictures(self.root / "build" / "nested-recheck.docx"), 1)
+        report = json.loads((self.root / "build" / "nested-recheck.manifest.json").read_text())["figures"]
+        self.assertEqual(report["recheck_figures"], {"nongsaro-curation": [1]})
+        self.assertEqual(len(report["notices"]), 1)
+        self.assertIn("농사로 그림 1장", report["notices"][0])
+        self.assertEqual((self.root / "build" / "body.md").read_text(), text)
+        self.assertEqual((picture.read_bytes(), receipt.read_bytes()), before)
 
     # --- 웹 검토 R-01/R-02 ------------------------------------------------
 

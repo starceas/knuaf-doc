@@ -279,5 +279,52 @@ class BuildReportTests(_HomeCase):
         self.assertEqual(report["blocked"], [])
 
 
+class RecheckNoticeTests(_HomeCase):
+    def test_retained_app_images_single_notice_and_no_mutation(self):
+        image = self.store()
+        self.receipt()
+        before = (image.read_bytes(), self.receipts.read_bytes())
+        report = gd.build_report([token(SHA), token(SHA)], home=self.home)
+        self.assertEqual(report["blocked"], [])
+        self.assertEqual([item["kind"] for item in report["images"]], ["app", "app"])
+        self.assertEqual(len(report["notices"]), 1)
+        self.assertIn("농사로 그림 2장", report["notices"][0])
+        self.assertIn("다시 확인", report["notices"][0])
+        self.assertEqual(report["recheck_figures"], {"nongsaro-curation": [1, 2]})
+        self.assertEqual((image.read_bytes(), self.receipts.read_bytes()), before)
+
+    def test_other_rule_has_no_recheck_notice(self):
+        self.store()
+        line = self.receipt()
+        line["image"]["ruleId"] = "another-rule"
+        self.receipts.write_text(json.dumps(line) + "\n", encoding="utf-8")
+        report = gd.build_report([token(SHA)], home=self.home)
+        self.assertEqual(report["notices"], [])
+        self.assertEqual(report["blocked"], [])
+
+    def test_direct_matching_approved_receipt_and_unmatched_student(self):
+        root = self.home / "project"
+        picture = root / "figures" / "public" / (SHA + ".png")
+        picture.parent.mkdir(parents=True)
+        picture.write_bytes(PNG)
+        receipt = root / ".gg-work" / "figure-receipts.jsonl"
+        receipt.parent.mkdir()
+        line = self.receipt()
+        receipt.write_text(json.dumps(line) + "\n", encoding="utf-8")
+        before = (picture.read_bytes(), receipt.read_bytes())
+        ref = picture.relative_to(root).as_posix()
+        report = gd.build_report([ref, "figures/student.png"], home=None, root=root)
+        self.assertEqual(report["blocked"], [])
+        self.assertEqual(report["student_count"], 2)
+        self.assertEqual(report["recheck_figures"], {"nongsaro-curation": [1]})
+        self.assertIn("농사로 그림 1장", report["notices"][0])
+        self.assertEqual((picture.read_bytes(), receipt.read_bytes()), before)
+        line["image"]["verdict"] = "rejected"
+        receipt.write_text(json.dumps(line) + "\n", encoding="utf-8")
+        self.assertEqual(gd.build_report([ref], home=None, root=root)["notices"], [])
+        receipt.write_text("", encoding="utf-8")
+        self.assertEqual(gd.build_report([ref], home=None, root=root)["notices"], [])
+
+
 if __name__ == "__main__":
     unittest.main()
