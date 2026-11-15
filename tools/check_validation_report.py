@@ -136,6 +136,10 @@ def validate(report, scope="full"):
     policy = runpy.run_path(str(ROOT / "tools" / "run_validation.py"))
     allowed_skips = policy["ALLOWED_SKILL_SKIPS"]
     skill_skip_rule = policy["SKILL_SKIP_RULE"]
+    # Windows-only skill tests skip on this (linux/darwin, see the pending
+    # gate's observed_platform above) report by exact id and reason only.
+    posix_windows_skips = policy["POSIX_SKIPPED_WINDOWS_SKILL_TESTS"]
+    posix_windows_rule = policy["POSIX_SKIPPED_WINDOWS_SKILL_RULE"]
 
     for index, raw_entry in enumerate(entries):
         entry = _dict(raw_entry, "entries[%d]" % index)
@@ -158,11 +162,17 @@ def validate(report, scope="full"):
                   "native gate must be the exact withheld skip")
             _need(not entry.get("events"), "native gate skip cannot carry events")
         elif category == "skipped":
-            _need(test_id in allowed_skips and entry.get("detail") == allowed_skips[test_id],
-                  "unapproved skill skip: %s" % test_id)
+            if test_id in posix_windows_skips:
+                approved = entry.get("detail") == posix_windows_skips[test_id]
+                rule = posix_windows_rule
+            else:
+                approved = (test_id in allowed_skips
+                            and entry.get("detail") == allowed_skips[test_id])
+                rule = skill_skip_rule
+            _need(approved, "unapproved skill skip: %s" % test_id)
             _need(not entry.get("events"), "approved skill skip cannot carry events")
             skill_skips.append({"test": test_id, "reason": entry["detail"],
-                                "rule": skill_skip_rule})
+                                "rule": rule})
         events = entry.get("events")
         if events is not None:
             for event_index, raw_event in enumerate(_list(events, "entry events")):

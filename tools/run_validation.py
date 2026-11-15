@@ -72,7 +72,10 @@ Skill tests use finite exact-ID/reason lists. ``ALLOWED_SKILL_SKIPS`` covers
 optional external inputs on every platform. ``WINDOW_ONLY_SKILL_SKIPS``
 covers only exact tests for a product path absent on Windows, and only
 when ``sys.platform == "win32"``. The latter remain unapproved on darwin
-and linux. Approved results remain visible as skipped, never passed.
+and linux. ``POSIX_SKIPPED_WINDOWS_SKILL_TESTS`` is the reverse: exact tests
+of a Windows-only product path, approved only off win32 (proven by the
+Windows CI skill-test step). Approved results remain visible as skipped,
+never passed.
 """
 import argparse
 import io
@@ -222,6 +225,18 @@ WINDOW_ONLY_SKILL_SKIPS = dict.fromkeys((
 ), WINDOW_ONLY_SKILL_SKIP_REASON)
 WINDOW_ONLY_SKILL_SKIP_RULE = "Windows-only product path (exact id and reason)"
 
+# The reverse case: tests of a Windows-only product path (CreateFileW handles
+# pinned without delete sharing). Their exact skip is legitimate only on
+# darwin/linux; on win32 they must run and a skip is incomplete. They are
+# proven by the Windows CI skill-test step.
+POSIX_SKIPPED_WINDOWS_SKILL_TESTS = {
+    "test_gg_delegation.TestDelegationCommands."
+    "test_windows_pinned_directory_rename_denied_during_publish":
+        "Windows pinned-directory share mode",
+}
+POSIX_SKIPPED_WINDOWS_SKILL_RULE = (
+    "Windows-only skill test off win32 (exact id and reason)")
+
 
 SKILL_SKIP_RULE = "optional skill external input (exact id and reason)"
 
@@ -234,6 +249,12 @@ def _is_approved_skill_skip(entry):
     if (
         test_id in ALLOWED_SKILL_SKIPS
         and ALLOWED_SKILL_SKIPS[test_id] == reason
+    ):
+        return True
+    if (
+        sys.platform != "win32"
+        and test_id in POSIX_SKIPPED_WINDOWS_SKILL_TESTS
+        and POSIX_SKIPPED_WINDOWS_SKILL_TESTS[test_id] == reason
     ):
         return True
     return (
@@ -1090,6 +1111,8 @@ def main(argv=None):
         if _is_approved_skill_skip(e):
             rule = (WINDOW_ONLY_SKILL_SKIP_RULE
                     if e["test"] in WINDOW_ONLY_SKILL_SKIPS
+                    else POSIX_SKIPPED_WINDOWS_SKILL_RULE
+                    if e["test"] in POSIX_SKIPPED_WINDOWS_SKILL_TESTS
                     else SKILL_SKIP_RULE)
             approved_skill_skips.append({
                 "test": e["test"], "reason": e["detail"], "rule": rule})

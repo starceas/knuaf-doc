@@ -77,6 +77,12 @@ test_real_h01_audit_reports_no_leak`)이며, 22좌표 잠금과 누출 감사는
 시험이 skip되면 승인 밖으로 남아 검증을 incomplete로 한다. Windows에서도
 승인 결과는 skipped로 보존하며 passed로 승격하지 않는다.
 
+`POSIX_SKIPPED_WINDOWS_SKILL_TESTS`는 그 반대 방향이다. Windows 전용 제품
+경로(고정 디렉터리 핸들의 공유모드)를 확인하는 스킬 시험의 정확한 ID와
+skip 사유만 기록하며, `sys.platform != "win32"`일 때만 승인한다. Windows에서
+skip되면 승인 밖으로 남는다. `tools/check_validation_report.py`도 같은 목록을
+읽어 정확한 ID·사유와 이 목록 전용 rule로만 받는다.
+
 
 ## 무결성 모델
 
