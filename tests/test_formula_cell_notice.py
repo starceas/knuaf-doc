@@ -37,7 +37,30 @@ def canonical(value):
 
 
 class FormulaNoticeCase(ContractCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.tpl = runtime("gg_excel_template")
+        cls.ref = "school_17_sheet_v2"
+        bindings = json.loads(cls.tpl.CROP_LABELS_PATH.read_text(encoding="utf-8"))["templates"]
+        cls._binding = bindings[cls.ref]
+        cls._audit = cls.tpl.registered_audit(cls._binding)
+        cls._template_bytes = cls.tpl.BUNDLED_TEMPLATE.read_bytes()
+        cls._opened_workbooks = {}
+        cls._edited_workbooks = {}
+
     def setUp(self):
+        # 바이트가 같은 통합문서만 실제 openpyxl 열기 결과를 재사용한다.
+        # 경로를 키로 삼지 않아 같은 이름의 수정·삭제·출력 변조를 숨기지 않는다.
+        opened_sheet_names = self.tpl._opened_sheet_names
+        def opened_once(path):
+            raw = path.read_bytes()
+            if raw not in self._opened_workbooks:
+                self._opened_workbooks[raw] = tuple(opened_sheet_names(path))
+            return list(self._opened_workbooks[raw])
+        reader = mock.patch.object(self.tpl, "_opened_sheet_names", side_effect=opened_once)
+        reader.start()
+        self.addCleanup(reader.stop)
         self.core = runtime("gg_core")
         self.tpl = runtime("gg_excel_template")
         self.fcn = runtime("gg_formula_cell_notice")
@@ -49,17 +72,20 @@ class FormulaNoticeCase(ContractCase):
         self.tmp = Path(tmp.name)
         self.root = self.make_project()
         self.source = self.tmp / "재무계획.xlsx"
-        self.source.write_bytes(self.tpl.BUNDLED_TEMPLATE.read_bytes())
-        self.ref = "school_17_sheet_v2"
-        bindings = json.loads(self.tpl.CROP_LABELS_PATH.read_text(encoding="utf-8"))["templates"]
-        self.binding = bindings[self.ref]
-        self.audit = self.tpl.registered_audit(self.binding)
+        self.source.write_bytes(self._template_bytes)
+        self.binding = copy.deepcopy(self._binding)
+        self.audit = copy.deepcopy(self._audit)
         self.formulas = {(r["sheet"], r["cell"]): r["formula"] for r in self.audit["inventory"]}
 
     def edit_book(self, edits, path=None):
         """지정 칸 XML만 바꾸고 나머지 공유 수식·ZIP 멤버는 보존한다."""
         path = path or self.source
-        with zipfile.ZipFile(io.BytesIO(path.read_bytes())) as archive:
+        raw = path.read_bytes()
+        key = (raw, tuple(edits.items()))
+        if key in self._edited_workbooks:
+            path.write_bytes(self._edited_workbooks[key])
+            return path
+        with zipfile.ZipFile(io.BytesIO(raw)) as archive:
             sheets = dict(self.tpl.workbook_sheets(archive))
             replacement = {}
             for sheet, part in sheets.items():
@@ -110,7 +136,9 @@ class FormulaNoticeCase(ContractCase):
             with zipfile.ZipFile(output, "w") as dest:
                 for info in archive.infolist():
                     dest.writestr(info, replacement.get(info.filename, archive.read(info.filename)))
-        path.write_bytes(output.getvalue())
+        result = output.getvalue()
+        self._edited_workbooks[key] = result
+        path.write_bytes(result)
         return path
 
     def changes(self, path=None, **kwargs):
