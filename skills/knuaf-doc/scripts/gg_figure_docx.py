@@ -62,6 +62,7 @@ docx 경로 한 줄만 쓴다).
 캡션 `그림 N. 제목 (출처 : 기관)`이고, 출처는 그림 줄이 아니라 캡션에 있다
 (`gg_figure._block_for`). 캡션 문단이 없으면 `gg_document.check`가
 `missing_caption: 그림 객체의 캡션 없음`을 낸다.
+fetch 승인 그림은 캡션 다음 문단에 `주 : 원문 주소 …` 한 줄을 둔다(학생 직접 넣기는 제외).
 
 계약(CONTRACT §6):
 - `KNUAF_FIGURE_HOME`이 있으면 토큰 `![](app-figure:<sha256>)`은

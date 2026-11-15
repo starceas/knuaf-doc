@@ -28,6 +28,10 @@ IMAGE02 = "https://www.nongsaro.go.kr/ps/img/curation/20240209/images/image02.jp
 IMAGE12 = "https://www.nongsaro.go.kr/ps/img/curation/20240209/images/image12.jpg"
 DETAIL_PATH = "/portal/ps/psv/psvr/psvre/curationDtl.ps?menuId=PS03352&srchCurationNo=1941"
 PAGE_URL = "https://" + HOST + DETAIL_PATH
+RDA_INFO_URL = ("https://www.rda.go.kr/board/board.do?boardId=infograp"
+                "&prgId=igt_infograpEntry&mode=updateCnt&dataNo=100000813105")
+RDA_CARD_URL = ("https://www.rda.go.kr/board/board.do?boardId=cardnews"
+                "&prgId=con_cardnews&mode=updateCnt&dataNo=100000813227")
 
 
 def fixture(name):
@@ -754,6 +758,12 @@ class TestPlace(unittest.TestCase):
             res.mkdir(parents=True, exist_ok=True)
             path = res / (req_id + ".res.json")
         path.write_text(json.dumps(payload), encoding="utf-8")
+        if mode == "app":
+            with (self.home / "receipts.jsonl").open("a", encoding="utf-8") as stream:
+                for item in payload.get("images", []):
+                    if item.get("verdict") == "approved":
+                        stream.write(json.dumps({"reqId": req_id,
+                            "page": payload.get("page"), "image": item}) + "\n")
 
     def app_result(self, images, slot="s1"):
         return {"v": 1, "id": "req-0001", "status": "done", "slot": slot,
@@ -957,6 +967,7 @@ class TestPlace(unittest.TestCase):
         payload = self.app_result([self.approved(sha)])
         payload["mode"] = "direct"
         payload["images"][0]["path"] = "figures/public/%s.jpg" % sha
+        payload["page"]["finalUrl"] = payload["page"]["url"]
         self.result_file(payload, mode="direct")
         result = gg_figure.place(self.folder, "s1", "가. 품종 선택", environ={})
         self.assertEqual(result["status"], "placed")
@@ -1578,10 +1589,18 @@ class TestPageQuerySelect(unittest.TestCase):
                     ok = False
                 self.assertEqual(ok, expected, note)
 
-    def test_real_rule_file_loads(self):
+    def test_actual_rda_rule_aliases_are_fixed(self):
         path = SCRIPTS.parent / "references" / "figure-sources.json"
-        ids = [rule["id"] for rule in gg_figure.load_rules(path)]
-        self.assertEqual(ids, [])
+        expected = ["rda-infograp", "rda-cardnews"]
+        self.assertEqual([item["id"] for item in gg_figure.load_rules()], expected)
+        self.assertEqual([item["id"] for item in gg_figure.load_rules(path)], expected)
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        self.assertEqual([item["id"] for item in raw["rules"]], expected)
+        for item in raw["rules"]:
+            with self.subTest(rule=item["id"]):
+                self.assertEqual(item["orgAliases"], ["농촌진흥청", "농진청"])
+                self.assertEqual(item["rule"], gg_figure.RULE_PAGE_QUERY_ORG)
+                self.assertEqual(item["org"], "농촌진흥청")
 
 
 class TestPageQueryFlow(_ServerCase):
@@ -2569,6 +2588,11 @@ class TestOrgFetchDirect(_ServerCase):
         html = '<img src="/files/a.png">' + self.html("FAO 제공")
         self.assert_not_stored(self.fetch(html)["images"][0], "third_party_unknown")
 
+    def test_unknown_scope_precedes_distant_body_copyright(self):
+        # R-01: 그림은 본문 밖, ±250자에는 표기 없음, 본문 먼 곳에 ⓒ.
+        html = '<img src="/files/a.png">' + "x" * 1000 + self.html("ⓒ")
+        self.assert_not_stored(self.fetch(html)["images"][0], "third_party_unknown")
+
     def test_query_page_redirect_is_not_followed(self):
         page = self.data["pageUrl"]
         self.route(self.path_of(page), status=302,
@@ -2586,6 +2610,221 @@ class TestOrgFetchDirect(_ServerCase):
                             rules=[selected])
         self.assertEqual(result["images"][0]["reason"], "path_not_allowed")
         self.assertEqual(self.server.hits, [("www.example.go.kr", self.path_of(self.data["pageUrl"]))])
+
+
+class TestRdaRegistration(unittest.TestCase):
+    def test_actual_rules_select_full_sample_urls(self):
+        rules = gg_figure.load_rules()
+        for url, expected in (
+                (RDA_INFO_URL, "rda-infograp"),
+                (RDA_INFO_URL.replace("100000813105", "100000813169"), "rda-infograp"),
+                (RDA_CARD_URL, "rda-cardnews"),
+                (RDA_CARD_URL.replace("100000813227", "100000814034"), "rda-cardnews")):
+            with self.subTest(url=url):
+                selected = gg_figure.select_page_rule(url, rules)
+                self.assertIsNotNone(selected)
+                self.assertEqual(selected[0]["id"], expected)
+                self.assertEqual(selected[1], url)
+
+    def test_actual_rules_reject_mixed_extra_and_retired_urls(self):
+        rules = gg_figure.load_rules()
+        for url in (RDA_INFO_URL.replace("igt_infograpEntry", "con_cardnews"),
+                    RDA_INFO_URL.replace("mode=updateCnt", "mode=view"),
+                    RDA_INFO_URL + "&pageIndex=1", PAGE_URL):
+            with self.subTest(url=url):
+                self.assertIsNone(gg_figure.select_page_rule(url, rules))
+
+    def test_actual_credit_words_keep_author_and_prose_boundary(self):
+        rules = gg_figure.load_rules()
+        self.assertEqual([item["id"] for item in rules], ["rda-infograp", "rda-cardnews"])
+        for selected in rules:
+            for text, expected in (("사진 홍길동", True), ("디자인 홍길동", True),
+                                   ("그림 1", True), ("사진으로", False)):
+                with self.subTest(rule=selected["id"], text=text):
+                    self.assertEqual(gg_figure._foreign_mark_in(text, selected), expected)
+
+
+class TestSourceNotes(unittest.TestCase):
+    setUp = TestPlace.setUp
+    request_file = TestPlace.request_file
+    result_file = TestPlace.result_file
+    approved = TestPlace.approved
+    write_choice = TestPlace.write_choice
+
+    def payload(self, mode="app", images=None, url=RDA_INFO_URL):
+        images = images if images is not None else [self.approved("b" * 64)]
+        payload = {"v": 1, "id": "req-0001", "status": "done", "slot": "s1",
+                   "images": images, "page": {"url": url, "org": "농촌진흥청"}}
+        if mode == "direct":
+            payload["page"]["finalUrl"] = url
+            for item in images:
+                item["path"] = "figures/public/" + item["sha256"] + ".jpg"
+                path = self.folder / item["path"]
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(fixture("nongsaro-image02.jpg"))
+        self.result_file(payload, mode=mode)
+        return payload
+
+    def receipts(self, entries):
+        path = self.home / "receipts.jsonl"
+        path.write_text("\n".join(json.dumps(entry) for entry in entries) + "\n",
+                        encoding="utf-8")
+        return path
+
+    def receipt(self, url=RDA_INFO_URL, req_id="req-0001", sha="b" * 64,
+                verdict="approved"):
+        return {"reqId": req_id, "page": {"url": url},
+                "image": {"sha256": sha, "verdict": verdict}}
+
+    def place(self, **options):
+        return gg_figure.place(self.folder, "s1", "가. 품종 선택",
+                               home=self.home, environ=APP_ENV, **options)
+
+    def assert_source_block(self, result, url):
+        self.assertEqual(result["status"], "placed")
+        self.assertEqual(result["caption"], "그림 1. 품종 선택 (출처 : 농촌진흥청)")
+        self.assertEqual(result["sourceNote"], "주 : 원문 주소 " + url)
+        text = self.manuscript.read_text(encoding="utf-8")
+        block = result["line"] + "\n\n" + result["caption"] + "\n\n" + result["sourceNote"]
+        self.assertIn(block + "\n", text)
+        self.assertLess(text.index(block), text.index("## 나. 재배"))
+
+    def assert_missing_source(self):
+        result = self.place()
+        self.assertEqual(result["status"], "needs_photo")
+        self.assertEqual(result["note"], "source_url_missing")
+        text = self.manuscript.read_text(encoding="utf-8")
+        self.assertIn("※ 이 자리에 품종 선택 사진 추가 필요", text)
+        self.assertNotIn("app-figure:", text)
+        self.assertNotIn("figures/public/", text)
+        self.assertNotIn("주 : 원문 주소", text)
+
+    def test_direct_source_note_uses_result_final_url(self):
+        payload = self.payload("direct")
+        payload["page"]["url"] = RDA_CARD_URL
+        payload["mode"] = "app"
+        self.result_file(payload, mode="direct")
+        self.assert_source_block(self.place(), payload["page"]["finalUrl"])
+
+    def test_app_source_note_uses_receipt_url(self):
+        payload = self.payload()
+        del payload["page"]
+        self.result_file(payload)
+        receipt = self.receipt()
+        self.receipts([receipt])
+        self.assert_source_block(self.place(), receipt["page"]["url"])
+
+    def test_app_result_cannot_impersonate_direct_without_receipt(self):
+        payload = self.payload()
+        payload["mode"] = "direct"
+        payload["page"]["finalUrl"] = RDA_CARD_URL
+        self.result_file(payload)
+        self.receipts([])
+        self.assert_missing_source()
+
+    def test_app_receipt_wins_over_result_page_and_mode(self):
+        payload = self.payload(url=RDA_CARD_URL)
+        payload["page"]["finalUrl"] = RDA_CARD_URL
+        payload["mode"] = "direct"
+        self.result_file(payload)
+        receipt = self.receipt()
+        self.receipts([receipt])
+        self.assert_source_block(self.place(), receipt["page"]["url"])
+
+    def test_direct_missing_page_does_not_fall_back_to_receipt(self):
+        payload = self.payload("direct")
+        del payload["page"]
+        self.result_file(payload, mode="direct")
+        self.receipts([self.receipt()])
+        self.assert_missing_source()
+
+    def test_app_matches_request_hash_and_last_approved_line(self):
+        self.payload()
+        receipt = self.receipt(url=RDA_CARD_URL)
+        path = self.receipts([self.receipt(), receipt,
+            self.receipt(req_id="req-0002"), self.receipt(sha="c" * 64),
+            self.receipt(verdict="ambiguous")])
+        with path.open("a", encoding="utf-8") as stream:
+            stream.write('not-json\n[]\n{"image": null}\n')
+        self.assert_source_block(self.place(), receipt["page"]["url"])
+
+    def test_app_missing_or_ambiguous_receipt_leaves_photo(self):
+        for entries in (None, [], [self.receipt(verdict="ambiguous")]):
+            with self.subTest(entries=entries):
+                self.manuscript.write_text(MANUSCRIPT, encoding="utf-8")
+                self.payload()
+                path = self.receipts(entries or [])
+                if entries is None:
+                    path.unlink()
+                self.assert_missing_source()
+
+    def test_invalid_source_url_leaves_photo_in_both_modes(self):
+        for mode in ("app", "direct"):
+            for url in ("http://example.go.kr/a", "https://example.go.kr/" + "a" * 279,
+                        "https://example.go.kr/a b", "https://example.go.kr/%EA"):
+                with self.subTest(mode=mode, url=url):
+                    self.manuscript.write_text(MANUSCRIPT, encoding="utf-8")
+                    self.payload(mode, url=url)
+                    self.assert_missing_source()
+
+    def test_source_url_length_boundary_keeps_300_char_url(self):
+        url = "https://example.go.kr/" + "a" * 278
+        self.payload("direct", url=url)
+        self.assert_source_block(self.place(), url)
+
+    def test_choose_b_carries_chosen_image_source_note(self):
+        images = [self.approved("1" * 64, "A"), self.approved("2" * 64, "B")]
+        self.payload(images=images)
+        receipt = self.receipt(url=RDA_CARD_URL, sha="2" * 64)
+        self.receipts([self.receipt(sha="1" * 64), receipt])
+        before = self.manuscript.read_bytes()
+        self.assertEqual(self.place()["status"], "needs_choice")
+        self.assertEqual(self.manuscript.read_bytes(), before)
+        self.write_choice("B")
+        result = self.place(choose="B")
+        self.assertEqual(result["line"], "![](app-figure:" + "2" * 64 + ")")
+        self.assert_source_block(result, receipt["page"]["url"])
+
+    def test_manual_image_keeps_exact_old_block_without_source_note(self):
+        path = self.folder / "figures/student/leaf.jpg"
+        path.parent.mkdir(parents=True)
+        path.write_bytes(fixture("nongsaro-image02.jpg"))
+        result = self.place(images=["figures/student/leaf.jpg"], org="농촌진흥청")
+        self.assertEqual(result["status"], "placed")
+        block = ("![그림 1. 품종 선택 (출처 : 농촌진흥청)](figures/student/leaf.jpg)\n\n"
+                 "그림 1. 품종 선택 (출처 : 농촌진흥청)")
+        self.assertEqual(self.manuscript.read_text(encoding="utf-8"),
+                         MANUSCRIPT.replace("\n## 나. 재배", "\n" + block + "\n\n## 나. 재배"))
+        self.assertNotIn("sourceNote", result)
+
+    def test_second_place_preserves_existing_figure_without_receipt(self):
+        self.payload()
+        self.assertEqual(self.place()["status"], "placed")
+        before = self.manuscript.read_bytes()
+        (self.home / "receipts.jsonl").unlink()
+        self.assertEqual(self.place()["status"], "already_placed")
+        self.assertEqual(self.manuscript.read_bytes(), before)
+
+    def test_source_note_parses_and_checks_for_both_boards(self):
+        for url in (RDA_INFO_URL, RDA_CARD_URL):
+            with self.subTest(url=url):
+                self.manuscript.write_text(MANUSCRIPT.replace("잎들깨 품종은", "그림 1에서 보듯 잎들깨 품종은"),
+                                           encoding="utf-8")
+                payload = self.payload("direct", url=url)
+                result = self.place()
+                self.assert_source_block(result, payload["page"]["finalUrl"])
+                text = self.manuscript.read_text(encoding="utf-8")
+                nodes = gg_document.parse(text)
+                start = next(i for i, node in enumerate(nodes) if node["kind"] == "image")
+                self.assertEqual([node["kind"] for node in nodes[start:start + 3]],
+                                 ["image", "caption", "paragraph"])
+                self.assertEqual(nodes[start + 1]["label"], "그림")
+                self.assertEqual(nodes[start + 2]["text"], result["sourceNote"])
+                issues = gg_document.check(text, self.folder)
+                kinds = [kind for kind, _ in issues]
+                for kind in ("object_credit_position", "missing_caption", "forbidden_term"):
+                    self.assertNotIn(kind, kinds)
+                self.assertIn(("sourced_objects", "출처 있는 표 0개·그림 1개"), issues)
 
 
 if __name__ == "__main__":
