@@ -335,7 +335,7 @@
       "source": "adopted:app-PR41"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "d266b0f39314bfab0eb227c1407ca8b754ba7146a7439eb22b993796e37a6aec",
+      "after_sha256": "2fcd1cc0e0e1186a388e1fa9a243327b82e5c42a964449da07c145db941be05e",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "W9",
@@ -1692,12 +1692,12 @@
       "note": "W-L: land-row transform/verify wiring; re-hashed on the rebased tree."
     },
     "skills/knuaf-doc/scripts/gg_hwpx.py": {
-      "after_sha256": "f81a6b664ed714f6ecabf3703cd7fdeb76f36ced0ef64d12a2a34edf9a7026f3",
+      "after_sha256": "05fc36c9047e9f55fbf3cba5ca4d8ecd30f6099cb981d5beed8880448b3711d8",
       "before_sha256": null,
       "first_changed": "P28",
-      "last_changed": "M-02",
+      "last_changed": "hwpx-f11",
       "owner": "IMG-path",
-      "reason": "W1/W1b kordoc-hwpx: 마크다운→HWPX 어댑터(kordoc generate, 학교 여백·글꼴·쪽번호 후처리, validate·표 수치 대조, before_publish 재확인 훅). | W2c: review R1-01..R1-07 반영(매니페스트 이름 <출력파일 전체이름>.manifest.json, gg_hwpx 라이브러리화, verify 실패 시 미발행, 표 수치 정확 비교, image_dir 기본=원문 폴더, 생성 스냅샷 해시). | W2d: review2 R1-02/R1-03 수정(build()가 필수 context+authorization로 발행 직전 reconfirm, validate는 process_ok+returncode==0+status=='ok'). | W2e: review3 R1-02 반례 수정(build()가 authorization.output==OUTPUT_SCHOOL_PAPER를 발행 전 확인). | F1: 리뷰 P2 3건(서식 미적용이면 format_not_applied로 발행 차단, 표 수치를 (표·행·칸) 좌표까지 비교, 그림 목적지 파서 - 공백·<>·퍼센트·이스케이프, Windows 역슬래시 경로 보존). | IMG-path: 분할기의 그림 목적지 기준 폴더를 원고 옆 → 작업 뿌리 두 단계로 풀고, 두 기준 모두 유효하지만 다른 파일이면 image_ambiguous로 그 절만 멈춘다. #123 그림 넣기(뿌리 기준 figures/public/…)가 원고가 build/에 있을 때 분할에서 통째로 빠지던 결함을 잠갔다. install-manifest.json은 gg_update.py manifest --write 재생성. | IMG-path r1: 공용 그림 경로 해석기(gg_hwpx) 한 곳으로 통일 — 두 단계 탐색(원고 옆→작업 폴더 뿌리), 모호하면 image_ambiguous로 중단, 목적지만 다시 쓰고 대체텍스트·꺾쇠·제목 보존, 캡션 줄 안 그림은 거절(C-01), 용어 원문 좌표(R-03). | IMG-path r1b: 앱 그림 손잡이 app-figure:<sha256>는 파일 경로가 아니므로 rewrite_image_destinations·resolve_images·normalize_image_destinations 세 곳 모두 다시 쓰지도, 존재를 묻지도 않고 그대로 통과시킨다(책임자 발견 — 전에는 늘 없는 파일이 되어 그 절이 통째로 빠졌다). 그 밖의 scheme: 꼴은 지금처럼 image_unresolved. 분할본은 gg_hwpx.rewrite_image_destinations를 그대로 부르므로 함께 고쳐진다. | IMG-path r2(A-01·R-04): HWPX 발행 경로(resolve_images)가 app-figure 토큰을 조용히 빼지 않고 app_figure_unsupported로 거절(학생 문장 + 토큰 줄), 토큰 판정은 생산자 꼴만 인정(strip 제거 — 공백 붙은 꼴은 일반 경로로 미해결). 분할기 통과는 그대로. | F1: 식량작물 쪽별 여백·글자 크기·HWPX 앞부분 로마 쪽번호 3구역 + 서식 기계 검사(§4.3 charPr·§6 probe); 최종 바이트 재측정 | F1-r2: F1 웹 검토 FAIL 11건 고침 — C-01 다른 전공 HWPX 매니페스트 charpr 키 누출, I-01 요약 번호형 소제목 첫 개만 16pt, I-02 ZIP 항목 손상이 예외로 죽음, I-03 번호형 목차 항목 오탐, I-04 kordoc 재파싱 실패가 skipped 통과, I-05 쪽번호 제어 요소 중복 미검출, I-06 앵커 시험의 가짜 결함, R-01 version.xml-only ok=false 통과, R-02 재파싱 문단 순서·개수 미대조. | F1-r3: N-I01: 앞부분 앵커 `요약` 중복 검사를 plan['body'] 이전 구간으로 한정 — 본문·목차의 독립 `요약` 문단은 앵커가 아니므로 분할을 막지 않는다. | F1b: 한글판 앞부분 구분 이름 은닉·쪽 나눔(`_hide_front_markers`/`_break_front_pages`) — 문단 수 보존, `applied` 새 키는 식량작물 분기에서만. | F1b-r2: 웹 r1 중요 01/02 고침 — 구분 이름 은닉 전에 문단 글자를 원고 노드와 대조(front_marker_text_mismatch), pageBreak 존재 판정을 따옴표 무관 정규식으로 바꿔 중복 속성 제거 | F1b-r2: 웹 r1 중요 01/02 고침 — 구분 이름 은닉 전에 문단 글자를 원고 노드와 대조(front_marker_text_mismatch), pageBreak 존재 판정을 따옴표 무관 정규식으로 바꿔 중복 속성 제거 | F1b-r2: 웹 r1 중요 01/02 고침 — 구분 이름 은닉 전에 문단 글자를 원고 노드와 대조(front_marker_text_mismatch), pageBreak 존재 판정을 따옴표 무관 정규식으로 바꿔 중복 속성 제거 | F1b-r3: 웹 r2 중요 02 — `_set_page_break`의 속성 존재 판정을 치환 결과 비교에서 `subn` 매치 개수로 바꿔, 이미 `pageBreak=\"1\"`인 헤드에 속성을 중복으로 붙이던 회귀 제거 | 낙농 쪽별 서식 1차(리팩터, 동작 변경 0): 식량작물 전용 서식 분기를 전공 서식 프로필 표(gg_major_format.MajorFormatProfile)로 옮김. 낙농은 게이트(food_crops만)로 아직 끔. 식량작물 DOCX·HWPX ZIP 멤버 해시 기준선과 동일. | M-02: 그림 목적지 해석을 DOCX·원고 검사·HWPX 세 입구에서 같은 규칙(gg_hwpx.resolve_figure: 원고 옆 → 작업 폴더 뿌리, 모호하면 학생 안내 문장으로 멈춤)으로 통일",
+      "reason": "W1/W1b kordoc-hwpx: 마크다운→HWPX 어댑터(kordoc generate, 학교 여백·글꼴·쪽번호 후처리, validate·표 수치 대조, before_publish 재확인 훅). | W2c: review R1-01..R1-07 반영(매니페스트 이름 <출력파일 전체이름>.manifest.json, gg_hwpx 라이브러리화, verify 실패 시 미발행, 표 수치 정확 비교, image_dir 기본=원문 폴더, 생성 스냅샷 해시). | W2d: review2 R1-02/R1-03 수정(build()가 필수 context+authorization로 발행 직전 reconfirm, validate는 process_ok+returncode==0+status=='ok'). | W2e: review3 R1-02 반례 수정(build()가 authorization.output==OUTPUT_SCHOOL_PAPER를 발행 전 확인). | F1: 리뷰 P2 3건(서식 미적용이면 format_not_applied로 발행 차단, 표 수치를 (표·행·칸) 좌표까지 비교, 그림 목적지 파서 - 공백·<>·퍼센트·이스케이프, Windows 역슬래시 경로 보존). | IMG-path: 분할기의 그림 목적지 기준 폴더를 원고 옆 → 작업 뿌리 두 단계로 풀고, 두 기준 모두 유효하지만 다른 파일이면 image_ambiguous로 그 절만 멈춘다. #123 그림 넣기(뿌리 기준 figures/public/…)가 원고가 build/에 있을 때 분할에서 통째로 빠지던 결함을 잠갔다. install-manifest.json은 gg_update.py manifest --write 재생성. | IMG-path r1: 공용 그림 경로 해석기(gg_hwpx) 한 곳으로 통일 — 두 단계 탐색(원고 옆→작업 폴더 뿌리), 모호하면 image_ambiguous로 중단, 목적지만 다시 쓰고 대체텍스트·꺾쇠·제목 보존, 캡션 줄 안 그림은 거절(C-01), 용어 원문 좌표(R-03). | IMG-path r1b: 앱 그림 손잡이 app-figure:<sha256>는 파일 경로가 아니므로 rewrite_image_destinations·resolve_images·normalize_image_destinations 세 곳 모두 다시 쓰지도, 존재를 묻지도 않고 그대로 통과시킨다(책임자 발견 — 전에는 늘 없는 파일이 되어 그 절이 통째로 빠졌다). 그 밖의 scheme: 꼴은 지금처럼 image_unresolved. 분할본은 gg_hwpx.rewrite_image_destinations를 그대로 부르므로 함께 고쳐진다. | IMG-path r2(A-01·R-04): HWPX 발행 경로(resolve_images)가 app-figure 토큰을 조용히 빼지 않고 app_figure_unsupported로 거절(학생 문장 + 토큰 줄), 토큰 판정은 생산자 꼴만 인정(strip 제거 — 공백 붙은 꼴은 일반 경로로 미해결). 분할기 통과는 그대로. | F1: 식량작물 쪽별 여백·글자 크기·HWPX 앞부분 로마 쪽번호 3구역 + 서식 기계 검사(§4.3 charPr·§6 probe); 최종 바이트 재측정 | F1-r2: F1 웹 검토 FAIL 11건 고침 — C-01 다른 전공 HWPX 매니페스트 charpr 키 누출, I-01 요약 번호형 소제목 첫 개만 16pt, I-02 ZIP 항목 손상이 예외로 죽음, I-03 번호형 목차 항목 오탐, I-04 kordoc 재파싱 실패가 skipped 통과, I-05 쪽번호 제어 요소 중복 미검출, I-06 앵커 시험의 가짜 결함, R-01 version.xml-only ok=false 통과, R-02 재파싱 문단 순서·개수 미대조. | F1-r3: N-I01: 앞부분 앵커 `요약` 중복 검사를 plan['body'] 이전 구간으로 한정 — 본문·목차의 독립 `요약` 문단은 앵커가 아니므로 분할을 막지 않는다. | F1b: 한글판 앞부분 구분 이름 은닉·쪽 나눔(`_hide_front_markers`/`_break_front_pages`) — 문단 수 보존, `applied` 새 키는 식량작물 분기에서만. | F1b-r2: 웹 r1 중요 01/02 고침 — 구분 이름 은닉 전에 문단 글자를 원고 노드와 대조(front_marker_text_mismatch), pageBreak 존재 판정을 따옴표 무관 정규식으로 바꿔 중복 속성 제거 | F1b-r2: 웹 r1 중요 01/02 고침 — 구분 이름 은닉 전에 문단 글자를 원고 노드와 대조(front_marker_text_mismatch), pageBreak 존재 판정을 따옴표 무관 정규식으로 바꿔 중복 속성 제거 | F1b-r2: 웹 r1 중요 01/02 고침 — 구분 이름 은닉 전에 문단 글자를 원고 노드와 대조(front_marker_text_mismatch), pageBreak 존재 판정을 따옴표 무관 정규식으로 바꿔 중복 속성 제거 | F1b-r3: 웹 r2 중요 02 — `_set_page_break`의 속성 존재 판정을 치환 결과 비교에서 `subn` 매치 개수로 바꿔, 이미 `pageBreak=\"1\"`인 헤드에 속성을 중복으로 붙이던 회귀 제거 | 낙농 쪽별 서식 1차(리팩터, 동작 변경 0): 식량작물 전용 서식 분기를 전공 서식 프로필 표(gg_major_format.MajorFormatProfile)로 옮김. 낙농은 게이트(food_crops만)로 아직 끔. 식량작물 DOCX·HWPX ZIP 멤버 해시 기준선과 동일. | M-02: 그림 목적지 해석을 DOCX·원고 검사·HWPX 세 입구에서 같은 규칙(gg_hwpx.resolve_figure: 원고 옆 → 작업 폴더 뿌리, 모호하면 학생 안내 문장으로 멈춤)으로 통일 / HWPX 본문·단계 글자 크기(F11): 게이트 안 전공(식량작물)의 본문 문단 12pt·번호 단계 제목 level_pt 굵게를 본문 전용 charPr 블록으로 적용(표 칸·표/그림 설명은 10pt 유지). 워드·게이트 밖 전공 바이트 불변.",
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_insect_document.py": {
@@ -2315,12 +2315,12 @@
       "source": "new"
     },
     "tests/test_build_hwpx.py": {
-      "after_sha256": "b45af41522033f94cf55f437930364ba92cbb9682c1ee87811780887ead3b834",
+      "after_sha256": "266417bcf981cb544df271a0b8924f0585aacf255e0cc7d87c95b0b0a9341f06",
       "before_sha256": null,
       "first_changed": "P28",
-      "last_changed": "F1b-r3",
+      "last_changed": "hwpx-f11",
       "owner": "P28",
-      "reason": "W1b kordoc-hwpx: build_hwpx CLI 시험. | W2c: review R1-01..R1-07 반영(매니페스트 이름 <출력파일 전체이름>.manifest.json, gg_hwpx 라이브러리화, verify 실패 시 미발행, 표 수치 정확 비교, image_dir 기본=원문 폴더, 생성 스냅샷 해시). | W2d: review2 R1-02/R1-03 수정(build()가 필수 context+authorization로 발행 직전 reconfirm, validate는 process_ok+returncode==0+status=='ok'). | W2e: review3 R1-02 반례 수정(build()가 authorization.output==OUTPUT_SCHOOL_PAPER를 발행 전 확인). | H1: 시험의 하위 프로세스 호출에 encoding=utf-8 추가(윈도 비UTF-8 로케일에서 파이프 디코드 실패) — 최종 바이트 재측정 | F1: 식량작물 쪽별 여백·글자 크기·HWPX 앞부분 로마 쪽번호 3구역 + 서식 기계 검사(§4.3 charPr·§6 probe); 최종 바이트 재측정 | F1-r2: F1 웹 검토 FAIL 11건 고침 — C-01 다른 전공 HWPX 매니페스트 charpr 키 누출, I-01 요약 번호형 소제목 첫 개만 16pt, I-02 ZIP 항목 손상이 예외로 죽음, I-03 번호형 목차 항목 오탐, I-04 kordoc 재파싱 실패가 skipped 통과, I-05 쪽번호 제어 요소 중복 미검출, I-06 앵커 시험의 가짜 결함, R-01 version.xml-only ok=false 통과, R-02 재파싱 문단 순서·개수 미대조. | F1-r3: N-I01 시험(본문 `요약` 문단이 분할을 막지 않음), R-N01 HWPX 4전공 멤버 해시 대조. | F1b: 앞부분 은닉·쪽 나눔 시험(`test_front_markers_hidden_and_pages_broken`)과 no-op 기대값 추가. | F1b-r2: 웹 r1 고침 시험 5건 — 글자 불일치 차단, pageBreak 따옴표 3형, 자기닫힘 hp:t, 본문 중복 목차 소제목, 은닉 문단 제어 요소 보존 | F1b-r2: 웹 r1 고침 시험 5건 — 글자 불일치 차단, pageBreak 따옴표 3형, 자기닫힘 hp:t, 본문 중복 목차 소제목, 은닉 문단 secPr·colPr·linesegarray 보존 | F1b-r2: 웹 r1 고침 시험 6건 — 글자 불일치 차단, pageBreak 따옴표 3형, 자기닫힘 hp:t, 본문 중복 목차 소제목, 은닉 문단 제어 요소 보존, 은닉 단계 텍스트만 변경 | F1b-r3: 웹 r2 회귀 시험 — 변환 경로 4형(큰따옴표 0·이미 1·부재·작은따옴표 0) + `_set_page_break` 단독 5형(자기닫힘 헤드 포함), 결과 XML 파싱·속성 1개·값 \"1\"",
+      "reason": "W1b kordoc-hwpx: build_hwpx CLI 시험. | W2c: review R1-01..R1-07 반영(매니페스트 이름 <출력파일 전체이름>.manifest.json, gg_hwpx 라이브러리화, verify 실패 시 미발행, 표 수치 정확 비교, image_dir 기본=원문 폴더, 생성 스냅샷 해시). | W2d: review2 R1-02/R1-03 수정(build()가 필수 context+authorization로 발행 직전 reconfirm, validate는 process_ok+returncode==0+status=='ok'). | W2e: review3 R1-02 반례 수정(build()가 authorization.output==OUTPUT_SCHOOL_PAPER를 발행 전 확인). | H1: 시험의 하위 프로세스 호출에 encoding=utf-8 추가(윈도 비UTF-8 로케일에서 파이프 디코드 실패) — 최종 바이트 재측정 | F1: 식량작물 쪽별 여백·글자 크기·HWPX 앞부분 로마 쪽번호 3구역 + 서식 기계 검사(§4.3 charPr·§6 probe); 최종 바이트 재측정 | F1-r2: F1 웹 검토 FAIL 11건 고침 — C-01 다른 전공 HWPX 매니페스트 charpr 키 누출, I-01 요약 번호형 소제목 첫 개만 16pt, I-02 ZIP 항목 손상이 예외로 죽음, I-03 번호형 목차 항목 오탐, I-04 kordoc 재파싱 실패가 skipped 통과, I-05 쪽번호 제어 요소 중복 미검출, I-06 앵커 시험의 가짜 결함, R-01 version.xml-only ok=false 통과, R-02 재파싱 문단 순서·개수 미대조. | F1-r3: N-I01 시험(본문 `요약` 문단이 분할을 막지 않음), R-N01 HWPX 4전공 멤버 해시 대조. | F1b: 앞부분 은닉·쪽 나눔 시험(`test_front_markers_hidden_and_pages_broken`)과 no-op 기대값 추가. | F1b-r2: 웹 r1 고침 시험 5건 — 글자 불일치 차단, pageBreak 따옴표 3형, 자기닫힘 hp:t, 본문 중복 목차 소제목, 은닉 문단 제어 요소 보존 | F1b-r2: 웹 r1 고침 시험 5건 — 글자 불일치 차단, pageBreak 따옴표 3형, 자기닫힘 hp:t, 본문 중복 목차 소제목, 은닉 문단 secPr·colPr·linesegarray 보존 | F1b-r2: 웹 r1 고침 시험 6건 — 글자 불일치 차단, pageBreak 따옴표 3형, 자기닫힘 hp:t, 본문 중복 목차 소제목, 은닉 문단 제어 요소 보존, 은닉 단계 텍스트만 변경 | F1b-r3: 웹 r2 회귀 시험 — 변환 경로 4형(큰따옴표 0·이미 1·부재·작은따옴표 0) + `_set_page_break` 단독 5형(자기닫힘 헤드 포함), 결과 XML 파싱·속성 1개·값 \"1\" / HWPX 본문·단계 글자 크기(F11): 게이트 안 전공(식량작물)의 본문 문단 12pt·번호 단계 제목 level_pt 굵게를 본문 전용 charPr 블록으로 적용(표 칸·표/그림 설명은 10pt 유지). 워드·게이트 밖 전공 바이트 불변.",
       "source": "new"
     },
     "tests/test_bundle_lineage.py": {
@@ -3173,12 +3173,12 @@
       "source": "new"
     },
     "tests/test_school_format_hwpx_probe.py": {
-      "after_sha256": "e1dc20ebe867bb36dd68b84143f60d6ece2d79f094746be659356f3f97fd3d10",
+      "after_sha256": "565dcefd9ec3a480ae88078db534eec0cacbb35772b47aa42b2cedcc95c87502",
       "before_sha256": null,
       "first_changed": "P28",
-      "last_changed": "F1b-r2",
+      "last_changed": "hwpx-f11",
       "owner": "P28",
-      "reason": "F1: HWPX 서식 실측 시험 27건 — 3구역 쪽번호, charPr 기반 글자 크기, 여백 위반 검출 | F1-r2: F1 웹 검토 FAIL 11건 고침 — C-01 다른 전공 HWPX 매니페스트 charpr 키 누출, I-01 요약 번호형 소제목 첫 개만 16pt, I-02 ZIP 항목 손상이 예외로 죽음, I-03 번호형 목차 항목 오탐, I-04 kordoc 재파싱 실패가 skipped 통과, I-05 쪽번호 제어 요소 중복 미검출, I-06 앵커 시험의 가짜 결함, R-01 version.xml-only ok=false 통과, R-02 재파싱 문단 순서·개수 미대조. | F1-r3: I-04 시험 교체: 지정 kordoc 실행 불가·타임아웃 → blocked, `--kordoc` 미지정만 skipped. | F1b: 재파싱 소실 문단 대상 선택을 유일 문자열 기준으로 수정(기대값 재고정 아님). | F1b-r2: 은닉 대상 글자 대조 강화에 따른 재파싱 시험 회귀 없음 확인 | F1b-r2: 은닉 대상 글자 대조 강화에 따른 재파싱 시험 회귀 없음 확인 | F1b-r2: 은닉 대상 글자 대조 강화에 따른 재파싱 시험 회귀 없음 확인",
+      "reason": "F1: HWPX 서식 실측 시험 27건 — 3구역 쪽번호, charPr 기반 글자 크기, 여백 위반 검출 | F1-r2: F1 웹 검토 FAIL 11건 고침 — C-01 다른 전공 HWPX 매니페스트 charpr 키 누출, I-01 요약 번호형 소제목 첫 개만 16pt, I-02 ZIP 항목 손상이 예외로 죽음, I-03 번호형 목차 항목 오탐, I-04 kordoc 재파싱 실패가 skipped 통과, I-05 쪽번호 제어 요소 중복 미검출, I-06 앵커 시험의 가짜 결함, R-01 version.xml-only ok=false 통과, R-02 재파싱 문단 순서·개수 미대조. | F1-r3: I-04 시험 교체: 지정 kordoc 실행 불가·타임아웃 → blocked, `--kordoc` 미지정만 skipped. | F1b: 재파싱 소실 문단 대상 선택을 유일 문자열 기준으로 수정(기대값 재고정 아님). | F1b-r2: 은닉 대상 글자 대조 강화에 따른 재파싱 시험 회귀 없음 확인 | F1b-r2: 은닉 대상 글자 대조 강화에 따른 재파싱 시험 회귀 없음 확인 | F1b-r2: 은닉 대상 글자 대조 강화에 따른 재파싱 시험 회귀 없음 확인 / HWPX 본문·단계 글자 크기(F11): 게이트 안 전공(식량작물)의 본문 문단 12pt·번호 단계 제목 level_pt 굵게를 본문 전용 charPr 블록으로 적용(표 칸·표/그림 설명은 10pt 유지). 워드·게이트 밖 전공 바이트 불변.",
       "source": "new"
     },
     "tests/test_school_format_probe.py": {
@@ -3276,13 +3276,13 @@
       "reason": "W-2025: 2025 소득자료집(농촌진흥청, 2026-10 발간) 정식 등록 — 전국 104행 + 지역 49행. 값은 W-1A 후보(농사로 OpenAPI 전 행 대조 137건 일치, pypdf 칸 단위 재독 1,082칸 불일치 0)에서 왔고, 지역 49행의 비목 키는 지역 팩 계약 이름으로 맞췄다. 전국 과수 11건에 orchard_establishment (과수원조성비)를 원문 인쇄면 값으로 넣었다."
     },
     "skills/knuaf-doc/scripts/gg_major_format.py": {
-      "after_sha256": "884b527b5b86a789f24b053752f6f82aefb976af2712f40a5ab404dec3055405",
+      "after_sha256": "7f755a00f52ee85d5588e9a09b1140ead546b5c427f195e0b2d11bbbf9f3ebc5",
       "before_sha256": null,
       "first_changed": "dairy-f1",
-      "last_changed": "dairy-f2",
+      "last_changed": "hwpx-f11",
       "note": null,
       "owner": "dairy-f1",
-      "reason": "낙농 쪽별 서식 1차(리팩터, 동작 변경 0): 식량작물 전용 서식 분기를 전공 서식 프로필 표(gg_major_format.MajorFormatProfile)로 옮김. 낙농은 게이트(food_crops만)로 아직 끔. 식량작물 DOCX·HWPX ZIP 멤버 해시 기준선과 동일. / 낙농 쪽별 서식 2차 배선(F7~F9d): 게이트 한 곳(ENABLED_FORMAT_MAJORS)·표지 크기·요약 소제목·워드 쪽번호 꾸밈·제목 위아래 간격·한글 제목 여백·한글 장 새 쪽 노드 판정. 낙농 게이트는 끈 채 — main 빌더 대비 식량작물 3원고·낙농 c1 ZIP 멤버 차이 0.",
+      "reason": "낙농 쪽별 서식 1차(리팩터, 동작 변경 0): 식량작물 전용 서식 분기를 전공 서식 프로필 표(gg_major_format.MajorFormatProfile)로 옮김. 낙농은 게이트(food_crops만)로 아직 끔. 식량작물 DOCX·HWPX ZIP 멤버 해시 기준선과 동일. / 낙농 쪽별 서식 2차 배선(F7~F9d): 게이트 한 곳(ENABLED_FORMAT_MAJORS)·표지 크기·요약 소제목·워드 쪽번호 꾸밈·제목 위아래 간격·한글 제목 여백·한글 장 새 쪽 노드 판정. 낙농 게이트는 끈 채 — main 빌더 대비 식량작물 3원고·낙농 c1 ZIP 멤버 차이 0. / HWPX 본문·단계 글자 크기(F11): 게이트 안 전공(식량작물)의 본문 문단 12pt·번호 단계 제목 level_pt 굵게를 본문 전용 charPr 블록으로 적용(표 칸·표/그림 설명은 10pt 유지). 워드·게이트 밖 전공 바이트 불변.",
       "source": "new"
     },
     "tests/test_docx_major_profile.py": {

@@ -36,6 +36,7 @@ import zipfile
 
 import gg_fs
 import gg_kordoc
+import gg_major_format
 
 
 # 1 mm = 1/25.4 inch, 1 inch = 7200 HWPUNIT.
@@ -608,11 +609,13 @@ _CHARPR_TEMPLATE = (
 )
 
 
-def _append_front_charprs(header_xml: str):
-    """앞부분·동의서 전용 charPr를 header.xml 끝에 덧붙인다.
+def _append_charprs(header_xml: str, specs=_FRONT_CHARPR_SPECS):
+    """`specs`의 (포인트, 굵기)마다 charPr를 header.xml 끝에 덧붙인다.
 
     반환: ``(새 header.xml, {(포인트, 굵기): charPr id})``. 기존 charPr는
-    하나도 고치지 않는다(본문 참조가 그대로 살아남는다).
+    하나도 고치지 않는다(본문 참조가 그대로 살아남는다). 두 번 부르면 두 번째
+    블록이 첫 블록 **뒤에** 붙는다 — 앞부분 전용 블록은 언제나 꼬리에 남아야
+    검사기의 꼬리 서명 판정(`gg_school_format_hwpx.FRONT_CHARPR_SIGNATURE`)이 산다.
     """
     match = _CHARPR_ITEM_CNT_RE.search(header_xml)
     if match is None or _CHARPR_END_TAG not in header_xml:
@@ -624,7 +627,7 @@ def _append_front_charprs(header_xml: str):
         )
     first = int(match.group(2))
     ids, entries = {}, []
-    for offset, (size, bold) in enumerate(_FRONT_CHARPR_SPECS):
+    for offset, (size, bold) in enumerate(specs):
         cid = first + offset
         entries.append(_CHARPR_TEMPLATE % (
             cid, size * 100,
@@ -640,7 +643,7 @@ def _append_front_charprs(header_xml: str):
     updated = (header_xml[:at] + "\n" + "\n".join(entries) + "\n"
                + header_xml[at:])
     updated = _CHARPR_ITEM_CNT_RE.sub(
-        lambda m: m.group(1) + str(first + len(_FRONT_CHARPR_SPECS)) + m.group(3),
+        lambda m: m.group(1) + str(first + len(specs)) + m.group(3),
         updated, count=1)
     return updated, ids
 
@@ -756,17 +759,16 @@ def _front_charpr_targets(nodes, plan):
     return targets
 
 
-def _apply_front_charpr(section_xml: str, *, nodes, plan, ids, start=0, end=None):
-    """대상 문단 run의 charPrIDRef만 새 charPr로 바꾼다.
+def _apply_charpr_targets(section_xml: str, *, targets, ids, start, end):
+    """문단 색인 -> (크기, 굵기) 표대로 run의 charPrIDRef만 새 charPr로 바꾼다.
 
     ``start``/``end``는 이 구역이 맡는 전체 문단 색인 구간이다(구역 분할
-    뒤에는 구역마다 다르다). 반환: ``(새 구역 XML, 바꾼 문단 수)``.
+    뒤에는 구역마다 다르다). ``targets``는 문서 전체 기준 절대 색인이다.
+    반환: ``(새 구역 XML, 바꾼 문단 수)``.
     """
-    end = len(nodes) if end is None else end
-    targets = {index - start: spec
-               for index, spec in _front_charpr_targets(nodes, plan).items()
-               if start <= index < end}
-    if not targets:
+    local = {index - start: spec for index, spec in targets.items()
+             if start <= index < end}
+    if not local:
         return section_xml, 0
     spans = top_level_paragraph_spans(section_xml)
     if len(spans) != end - start:
@@ -776,8 +778,8 @@ def _apply_front_charpr(section_xml: str, *, nodes, plan, ids, start=0, end=None
             action="HWPX 문단 수와 원고 노드 수가 다릅니다.",
         )
     pieces, cursor, changed = [], 0, 0
-    for index, (start, end) in enumerate(spans):
-        spec = targets.get(index)
+    for index, (para_start, para_end) in enumerate(spans):
+        spec = local.get(index)
         if spec is None:
             continue
         cid = ids.get(spec)
@@ -786,12 +788,50 @@ def _apply_front_charpr(section_xml: str, *, nodes, plan, ids, start=0, end=None
                 "charpr_properties_missing", size=spec[0], bold=spec[1],
                 action="필요한 글자 크기의 charPr를 만들지 못했습니다.",
             )
-        pieces.append(section_xml[cursor:start])
-        pieces.append(_rewrite_run_charpr(section_xml[start:end], cid))
-        cursor = end
+        pieces.append(section_xml[cursor:para_start])
+        pieces.append(_rewrite_run_charpr(section_xml[para_start:para_end], cid))
+        cursor = para_end
         changed += 1
     pieces.append(section_xml[cursor:])
     return "".join(pieces), changed
+
+
+# 본문 번호 단계·본문 글 크기. 프로필(`gg_major_format`)이 표를 정한다 —
+# 구역 서식(`section_formats`)을 받은 빌드만 이 블록을 받고, 게이트 판정은
+# `build_hwpx.hwpx_profile` 한 곳이라 게이트 밖 전공은 여기까지 오지 않는다.
+def _body_charpr_specs(profile):
+    """본문 블록의 (포인트, 굵기) 목록 — 본문 보통 + 단계 제목 굵게(오름차순)."""
+    levels = sorted({int(value) for value in profile.level_pt.values()})
+    return tuple([(int(profile.body_pt), False)]
+                 + [(size, True) for size in levels])
+
+
+def _body_charpr_targets(nodes, plan, profile):
+    """본문 구간의 문단별 (크기, 굵기). ``{(문단 색인): (pt, 굵기)}``.
+
+    번호 단계 제목(`kind == "heading"`)은 프로필 `level_pt`, 본문 문단
+    (`kind == "paragraph"`)은 `body_pt`다. 표·그림·표/그림 설명은 넣지
+    않는다 — 한글 기본(10 pt)을 그대로 둔다. 학부모 동의서와 그 뒤는 본문
+    전용 서식(`_front_charpr_targets`)이 맡으므로 여기서 멈춘다.
+    """
+    start = plan["body"]
+    end = next((index for index in range(start, len(nodes))
+                if _normalize_space(nodes[index].get("text", "")) == "학부모 동의서"),
+               len(nodes))
+    targets = {}
+    for index in range(start, end):
+        node = nodes[index]
+        if not _normalize_space(node.get("text", "")):
+            continue
+        kind = node.get("kind")
+        if kind == "heading":
+            level = node.get("level") or 9
+            size = (profile.level_pt.get(level)
+                    or profile.level_pt.get(9) or profile.body_pt)
+            targets[index] = (int(size), True)
+        elif kind == "paragraph":
+            targets[index] = (int(profile.body_pt), False)
+    return targets
 
 
 # 구분 이름(`겉표지`·`표제면`·`제출서`·`인준서`)은 우리 문서 계획이 만든 관리용
@@ -1129,10 +1169,37 @@ def transform_hwpx(data: bytes, *, font: str = SCHOOL_FONT,
                 infos.sort(key=lambda info: _split_zip_rank(info.filename))
 
         charpr_ids = None
+        body_charpr_ids = None
+        front_targets = {}
+        body_targets = {}
+        # 게이트는 여기서 다시 읽지 않는다 — 이 모듈은 늘 `section_formats`를
+        # 받은 그대로만 움직이고(게이트 판정은 build_hwpx.hwpx_profile 한 곳),
+        # 구역 분할이 실제로 일어난 `formats is not None`이 곧 프로필 경로다.
+        # 계획만 넘기는 옛 호출도 본문 크기를 받도록 전공 id는 계획에서 읽는다.
+        if formats is not None and plan is not None:
+            front_targets = _front_charpr_targets(nodes or [], plan)
+            profile = gg_major_format.profile_for(
+                major_id or getattr(plan.get("spec"), "major_id", None))
+            if profile is not None:
+                body_targets = _body_charpr_targets(nodes or [], plan, profile)
+        if body_targets:
+            # 본문 글자 크기도 요청한 것으로 적는다 — 실제로 한 문단도 못
+            # 바꾸면 `missing_format_steps`가 발행을 막는다. 게이트 밖 전공·
+            # 본문이 빈 원고는 이 키 자체가 없어 매니페스트 모양이 그대로다.
+            applied["body_charpr"] = []
         if formats is not None and plan is not None and HEADER_NAME in members:
             header_text = members[HEADER_NAME].decode("utf-8")
             if _CHARPR_ITEM_CNT_RE.search(header_text) and _CHARPR_END_TAG in header_text:
-                header_text, charpr_ids = _append_front_charprs(header_text)
+                if body_targets:
+                    # 본문 블록을 **먼저** 붙이고 앞부분 블록을 뒤에 붙인다 —
+                    # 검사기가 header 꼬리 14개로 앞부분 블록을 판정하므로
+                    # 앞부분이 언제나 꼬리여야 한다. 본문은 앞부분 id를 쓸 수
+                    # 없다(같은 (pt, 굵기)라도 그 id를 쓰면 검사기가 본문 누출로
+                    # 본다), 그래서 본문 블록은 앞부분과 겹치는 크기도 딴 id로
+                    # 하나씩 갖는다.
+                    header_text, body_charpr_ids = _append_charprs(
+                        header_text, _body_charpr_specs(profile))
+                header_text, charpr_ids = _append_charprs(header_text)
                 members[HEADER_NAME] = header_text.encode("utf-8")
 
         for info in infos:
@@ -1154,9 +1221,18 @@ def transform_hwpx(data: bytes, *, font: str = SCHOOL_FONT,
                 if charpr_ids is not None and formats is not None:
                     bounds = _section_node_range(info.filename, plan)
                     if bounds is not None:
-                        updated, changed = _apply_front_charpr(
-                            updated, nodes=nodes or [], plan=plan,
-                            ids=charpr_ids, start=bounds[0], end=bounds[1])
+                        start = bounds[0]
+                        end = (len(nodes or []) if bounds[1] is None
+                               else bounds[1])
+                        if body_charpr_ids is not None:
+                            updated, sized = _apply_charpr_targets(
+                                updated, targets=body_targets, ids=body_charpr_ids,
+                                start=start, end=end)
+                            if sized:
+                                applied["body_charpr"].append(info.filename)
+                        updated, changed = _apply_charpr_targets(
+                            updated, targets=front_targets, ids=charpr_ids,
+                            start=start, end=end)
                         if changed:
                             applied["charpr"].append(info.filename)
                         updated, hidden = _hide_front_markers(
@@ -1225,6 +1301,10 @@ def missing_format_steps(applied, *, font, margins_mm, page_numbers,
         missing.append("section_controls")
     if not applied.get("charpr"):
         missing.append("charpr")
+    # 본문 글자 크기는 프로필이 켜진 전공에만 요청된 항목이다(그 전공만
+    # `body_charpr` 키가 생긴다). 한 구역도 못 바꿨으면 발행하면 안 된다.
+    if "body_charpr" in applied and not applied["body_charpr"]:
+        missing.append("body_charpr")
     return missing
 
 
