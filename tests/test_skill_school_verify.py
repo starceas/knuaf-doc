@@ -5,8 +5,10 @@ this tree: three separated growth rates live in ``price_assumptions`` and the
 retired single ``inflation`` multiplier is refused.  These tests assert the
 accounting identities the module claims, not one frozen output.
 """
+import tempfile
 import unittest
 from decimal import Decimal
+from pathlib import Path
 
 from tests._harness import ContractCase, runtime
 
@@ -257,6 +259,91 @@ class SchoolVerifyTests(ContractCase):
         for token in ("#REF!", "#DIV/0!", "#VALUE!", "#NAME?", "#NULL!",
                       "#NUM!", "#N/A"):
             self.assertIn(token, self.sv.ERROR_TOKENS)
+
+
+class RecalculatedCopyTests(ContractCase):
+    """The gates that read a recalculated workbook end to end.
+
+    No Excel here: a copy of a shipped form with its formulas replaced by
+    plain numbers is what a recalculated workbook looks like to openpyxl.
+    The cash-flow row numbers are read from the copy's own labels, so a row
+    error in that path is invisible until something walks it — these tests
+    walk it on both editions.
+    """
+
+    CASH_FLOW = "14. 현금흐름계획"
+    BALANCE = "13. 추정대차대조표"
+    # The link block's own wording: an earlier block also reports E23/E24, so
+    # asserting the cell alone would not prove this block ran.
+    LINK_REASON = "대차대조표 현금 잔액과 현금흐름 수지균형 롤포워드 불일치"
+    # Reported only on the cash-flow net row, which is 22 in the first
+    # edition and 23 in the second.
+    NET_REASON = "현금수지균형(유입-유출) 산식 불일치"
+
+    def setUp(self):
+        self.sv = runtime("gg_school_verify")
+
+    def synthetic(self, name, *, balance_rows=True):
+        """A shipped form with numbers where its formulas were."""
+        from openpyxl import load_workbook
+        source = (Path(__file__).resolve().parents[1] / "skills" / "knuaf-doc"
+                  / "assets" / "templates" / name)
+        book = load_workbook(source)
+        for sheet in book:
+            for row in sheet.iter_rows():
+                for cell in row:
+                    if cell.data_type == "f":
+                        cell.value = 1000
+        if balance_rows:
+            # The balance-sheet block reads rows 6..16 before the cash link it
+            # is checked by; a synthetic sheet must carry numbers there or the
+            # block stops early and the link is never reached.
+            sheet = book[self.BALANCE]
+            for row in range(6, 17):
+                for column in range(3, 8):
+                    sheet.cell(row, column).value = 1000
+        sheet = book["1. 기초재무상태조사"]
+        sheet["C9"] = 1000
+        holder = tempfile.TemporaryDirectory(prefix="knuaf-recalc-")
+        self.addCleanup(holder.cleanup)
+        out = Path(holder.name) / name
+        book.save(out)
+        book.close()
+        return out
+
+    def test_the_cash_link_is_walked_on_the_first_edition(self):
+        issues = self.sv.verify_school_recalculated(
+            base_spec(), self.synthetic("finance-template.xlsx"))
+        self.assert_no_unhandled_name(issues)
+        pairs = {(issue.get("cell"), issue.get("reason")) for issue in issues}
+        # The cash-flow block's own verdict names the edition's net row...
+        self.assertIn((self.CASH_FLOW + "!E22", self.NET_REASON), pairs, pairs)
+        self.assertNotIn((self.CASH_FLOW + "!E23", self.NET_REASON), pairs, pairs)
+        # ...and the balance-sheet link is a separate block with its own
+        # wording; this is the assertion that it actually ran.
+        self.assertIn((self.BALANCE + "!D6", self.LINK_REASON), pairs, pairs)
+
+    def test_the_cash_link_is_walked_on_the_second_edition(self):
+        spec = base_spec(profile="school_17_sheet_v2",
+                         production_yield_kg_per_10a=["100", "110", "120",
+                                                      "130", "140"])
+        spec.pop("production_kg")
+        issues = self.sv.verify_school_recalculated(
+            spec, self.synthetic("finance-template-v2.xlsx"))
+        self.assert_no_unhandled_name(issues)
+        pairs = {(issue.get("cell"), issue.get("reason")) for issue in issues}
+        # The second edition moved the rows down by one: a verifier that
+        # still names the first edition's row reports the wrong cell.
+        self.assertIn((self.CASH_FLOW + "!E23", self.NET_REASON), pairs, pairs)
+        self.assertNotIn((self.CASH_FLOW + "!E24", self.NET_REASON), pairs, pairs)
+        self.assertIn((self.BALANCE + "!D6", self.LINK_REASON), pairs, pairs)
+
+    def assert_no_unhandled_name(self, issues):
+        """A crash would surface as a NameError message or a bare exception."""
+        for issue in issues:
+            reason = str(issue.get("reason"))
+            self.assertNotIn("NameError", reason, issue)
+            self.assertNotIn("not defined", reason, issue)
 
 
 if __name__ == "__main__":

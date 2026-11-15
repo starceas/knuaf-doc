@@ -59,7 +59,7 @@ stale 자동 감지와 원고 쓰기 시점의 물리적 차단은 현재 지원
 
 ## 계획 궤적·기초자산·면적 분모 검사
 
-`check`의 `check_id="finance_plan_review"`는 학과 17시트 통합문서의 캐시 값만 읽어 다음을 본다. 구현은 `scripts/gg_finance_tables.py`의 `review_plan()`이며 통합문서를 고치지 않는다. 검사 행의 target은 `finance`다. 이 검사는 재무 프로필 `school_17_sheet_v1`을 지원하는 전공에만 연결한다 — 18시트 등 다른 프로필(예: 원예환경시스템의 `hort_18_sheet_reconstructed_v1`)에는 돌지 않으며, 그 프로필의 시트명을 17시트에 맞춰 개명하라고 안내하지 않는다.
+`check`의 `check_id="finance_plan_review"`는 학과 17시트 통합문서의 캐시 값만 읽어 다음을 본다. 구현은 `scripts/gg_finance_tables.py`의 `review_plan()`이며 통합문서를 고치지 않는다. 검사 행의 target은 `finance`다. 이 검사는 재무 프로필 `school_17_sheet_v1`·`school_17_sheet_v2`를 지원하는 전공에만 연결한다 — 18시트 등 다른 프로필(예: 원예환경시스템의 `hort_18_sheet_reconstructed_v1`)에는 돌지 않으며, 그 프로필의 시트명을 17시트에 맞춰 개명하라고 안내하지 않는다. 두 프로필은 같은 17시트 양식의 두 판이며, `school_17_sheet_v2`는 `14. 현금흐름계획` 17행에 `토지구입`이 한 줄 더 있고 `6. 생산계획` 7행이 10a당 목표 생산량 입력이다. 어느 판인지는 파일 자신의 시트 순서·수식 지문이 정한다.
 
 - 검사 대상은 현재 계획 통합문서다. 해시가 현재 파일과 같은 `.xlsx` 원자료가 하나면 그것을, 둘 이상이면 `finance.gate.target_profit`(목표연도 손익, 원)과 마지막 연도·값이 일치하는 하나를 쓴다. source `revision`(그 레코드의 편집 횟수)이나 등록 순서로 고르지 않는다. 하나로 확정할 수 없으면 임의로 고르지 않고 `FINANCE_PLAN_WORKBOOK_AMBIGUOUS`(warning)로 후보 목록과 선택 필요를 보여 준다. 이 경고는 차단이 아니다.
 

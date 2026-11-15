@@ -5,7 +5,7 @@ This checker supports DOCX files generated with the school body bookmark. It mea
 DOCX package as XML (including style inheritance) and never rewrites it.
 """
 from __future__ import annotations
-import argparse, hashlib, json, re, sys
+import argparse, hashlib, json, posixpath, re, sys
 from collections import Counter
 from pathlib import Path
 from zipfile import BadZipFile, ZipFile
@@ -13,7 +13,16 @@ from xml.etree import ElementTree as ET
 
 W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 QN = lambda local: "{%s}%s" % (W, local)
+RID = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id"
 A4 = (11906, 16838)  # twips, 210 x 297 mm
+PAGE_MAR_KEYS = ("top", "right", "bottom", "left", "header", "footer", "gutter")
+# The school instruction's margin rows (OG-006~OG-012) and the page-number form
+# row (OG-125) stay shared requirements: the food-crops checks cite them in
+# ``related`` and never reuse their ids as their own check key.
+MARGIN_RELATED = {"top": "OG-006", "bottom": "OG-007", "header": "OG-008",
+                  "footer": "OG-009", "left": "OG-010", "right": "OG-011",
+                  "gutter": "OG-012"}
+PAGE_NUMBER_RELATED = ("OG-125",)
 
 class ProbeError(ValueError):
     pass
@@ -192,7 +201,125 @@ def paragraph_record(i, p, ctx, styles):
         "alignment": attr(jc, "val", "left"),
     }
 
-def check(path: Path, *, output_json: Path | None = None):
+def relationship_targets(archive, names):
+    """Map document.xml relationship ids to package part names.
+
+    Footer measurement needs the referenced footer part, and a dangling
+    relationship must be visible as a measurement, not crash the probe.
+    """
+    part = "word/_rels/document.xml.rels"
+    if part not in names:
+        return {}
+    try:
+        root = ET.fromstring(archive.read(part))
+    except ET.ParseError as e:
+        raise ProbeError(f"invalid OOXML relationships: {e}") from e
+    targets = {}
+    for rel in root:
+        ident, target = rel.attrib.get("Id"), rel.attrib.get("Target")
+        if not ident or not target or rel.attrib.get("TargetMode") == "External":
+            continue
+        name = target.lstrip("/") if target.startswith("/") else posixpath.join("word", target)
+        targets[ident] = posixpath.normpath(name)
+    return targets
+
+
+def footer_record(archive, names, targets, sect_pr, cache, inherited):
+    """Measure one section's bottom footer without rewriting anything.
+
+    A section without ``w:footerReference`` shows the footer of the section
+    before it, so ``linked_to_previous`` reports that inheritance rather than
+    claiming the first section inherits something.
+    """
+    refs = sect_pr.findall(QN("footerReference"))
+    if not refs:
+        return {"has_reference": False, "linked_to_previous": inherited, "page_fields": 0}
+    default = next((r for r in refs if (attr(r, "type") or "default") == "default"), refs[0])
+    part = targets.get(default.attrib.get(RID))
+    record = {"has_reference": True, "linked_to_previous": False, "part": part,
+              "page_fields": None}
+    if part is None or part not in names:
+        return record
+    if part not in cache:
+        try:
+            root = ET.fromstring(archive.read(part))
+        except (BadZipFile, ET.ParseError) as e:
+            raise ProbeError(f"invalid footer OOXML {part}: {e}") from e
+        cache[part] = sum(1 for field in root.iter(QN("fldSimple"))
+                          if (attr(field, "instr") or "").strip().upper().startswith("PAGE"))
+    record["page_fields"] = cache[part]
+    return record
+
+
+def food_crops_expected_sections():
+    """The food-crops DOCX form, written out independently of the builder.
+
+    A probe that imported the builder's table could not detect a wrong table;
+    these twips are the measured 양식 values (20/20/10 cover, 30/30/30 body).
+    """
+    cover = {"top": "1134", "right": "1134", "bottom": "567", "left": "1134",
+             "header": "0", "footer": "567", "gutter": "0"}
+    inner = {"top": "1701", "right": "1701", "bottom": "1701", "left": "1701",
+             "header": "0", "footer": "567", "gutter": "0"}
+    return [
+        {"role": "cover", "pg_mar": dict(cover), "pg_num_type": None,
+         "footer": {"has_reference": False, "page_fields": 0}},
+        {"role": "front", "pg_mar": dict(inner),
+         "pg_num_type": {"start": "1", "fmt": "upperRoman"},
+         "footer": {"has_reference": True, "page_fields": 1}},
+        {"role": "body", "pg_mar": dict(inner),
+         "pg_num_type": {"start": "1", "fmt": "decimal"},
+         "footer": {"has_reference": True, "page_fields": 1}},
+    ]
+
+
+def food_crops_violations(sections):
+    """Compare measured sections with the food-crops form; report, never fix."""
+    expected = food_crops_expected_sections()
+    out = []
+
+    def bad(code, related, location, want, got, message):
+        out.append({"requirement_id": code, "code": code, "location": location,
+                    "expected": want, "actual": got, "message": message,
+                    "related": list(related), "probe_local": True})
+
+    if len(sections) != len(expected):
+        bad("food_crops.format.section.count", (),
+            "document.xml:sectPr", len(expected), len(sections),
+            "식량작물 구역이 겉표지·앞부분·본문 3개가 아님")
+        return out
+    for section, want in zip(sections, expected):
+        role = want["role"]
+        place = f"document.xml:sectPr#{section['index']}"
+        for key in PAGE_MAR_KEYS:
+            if section["pg_mar"][key] != want["pg_mar"][key]:
+                bad(f"food_crops.format.margin.{role}_{key}", [MARGIN_RELATED[key]],
+                    place, want["pg_mar"][key], section["pg_mar"][key],
+                    f"{role} 구역 {key} 여백이 양식 값과 다름")
+        want_count = 0 if want["pg_num_type"] is None else 1
+        got_count = section.get("pg_num_type_count", want_count)
+        if section["pg_num_type"] != want["pg_num_type"] or got_count != want_count:
+            bad(f"food_crops.format.page_number.{role}", PAGE_NUMBER_RELATED, place,
+                dict(want["pg_num_type"] or {}, count=want_count),
+                dict(section["pg_num_type"] or {}, count=got_count),
+                f"{role} 구역 pgNumType이 양식 값(start·fmt·개수)과 다름")
+        footer = section["footer"]
+        if want["footer"]["has_reference"] != footer["has_reference"]:
+            bad(f"food_crops.format.footer.{role}", PAGE_NUMBER_RELATED, place,
+                {"has_reference": want["footer"]["has_reference"]},
+                {"has_reference": footer["has_reference"], "part": footer.get("part")},
+                ("겉표지 구역에는 footerReference가 없어야 함(번호 미표시)"
+                 if not want["footer"]["has_reference"] else
+                 "이 구역에 footerReference가 있어야 함"))
+        elif want["footer"]["page_fields"] != footer["page_fields"]:
+            bad(f"food_crops.format.footer.{role}", PAGE_NUMBER_RELATED, place,
+                {"page_fields": want["footer"]["page_fields"]},
+                {"page_fields": footer["page_fields"], "part": footer.get("part")},
+                "구역 바닥글에 PAGE 필드가 정확히 1개 있어야 함")
+    return out
+
+
+def check(path: Path, *, output_json: Path | None = None, major_id: str | None = None):
     if not path.is_file(): raise ProbeError(f"missing DOCX: {path}")
     if output_json is not None and output_json.resolve() == path.resolve():
         raise ProbeError("--out must differ from input DOCX (refusing overwrite)")
@@ -204,6 +331,28 @@ def check(path: Path, *, output_json: Path | None = None):
                 if required not in names: raise ProbeError(f"missing OOXML part: {required}")
             doc = ET.fromstring(z.read("word/document.xml"))
             styles = Styles(ET.fromstring(z.read("word/styles.xml")))
+            # Section measurement needs footer parts, so it happens while the
+            # archive is open; every value stays a string or bool for JSON.
+            targets = relationship_targets(z, names)
+            footer_cache = {}
+            measured_sections = []
+            seen_footer = False
+            for si, sp in enumerate(doc.findall(".//" + QN("sectPr")), 1):
+                mar = sp.find(QN("pgMar"))
+                # `find`는 첫 요소만 본다. pgNumType이 둘이면 둘째가 첫째를
+                # 덮어써 Word 화면은 다르게 보이므로 개수도 함께 잰다.
+                nums = sp.findall(QN("pgNumType"))
+                num = nums[0] if nums else None
+                footer = footer_record(z, names, targets, sp, footer_cache, seen_footer)
+                seen_footer = seen_footer or footer["has_reference"]
+                measured_sections.append({
+                    "index": si,
+                    "pg_mar": {key: attr(mar, key) for key in PAGE_MAR_KEYS},
+                    "pg_num_type": (None if num is None else
+                                    {"start": attr(num, "start"), "fmt": attr(num, "fmt")}),
+                    "pg_num_type_count": len(nums),
+                    "footer": footer,
+                })
     except (BadZipFile, ET.ParseError) as e:
         raise ProbeError(f"invalid DOCX OOXML: {e}") from e
     body = doc.find(".//" + QN("body"))
@@ -245,6 +394,18 @@ def check(path: Path, *, output_json: Path | None = None):
             kind="toc"
         rec=paragraph_record(i,p,ctx,styles); rec["kind"]=kind
         records.append(rec)
+    # 식량작물 동의서는 본문 12 pt가 아니라 14 pt 굵게가 양식 값이다. 마지막
+    # `학부모 동의서` 1단계 제목 뒤 문단을 별도 종류로 떼어 본문 판정에서
+    # 빼지 않으면, 올바로 만든 산출물이 본문 크기 위반으로 잘못 걸린다.
+    if major_id == "food_crops":
+        consent_start = next(
+            (r["index"] for r in reversed(records)
+             if r["text"].strip() == "학부모 동의서"
+             and is_heading(r["style_id"], r["text"].strip(), r)), None)
+        if consent_start is not None:
+            for rec in records:
+                if rec["index"] > consent_start:
+                    rec["kind"] = "consent"
     body_records=[r for r in records if body_start is not None and r["kind"]=="body" and r["text"].strip() and not is_heading(r["style_id"],r["text"].strip(),r) and not r["text"].strip().startswith(("표 ","그림 "))]
     if body_start is not None and not body_records:
         structural_violations.append({"requirement_id":"OG-005","code":"body_prose_missing","location":"word/document.xml","expected":"at least one body prose paragraph","actual":0,"message":"본문 시작 bookmark 뒤 산문 문단이 없어 본문 서식을 검증할 수 없음"})
@@ -261,11 +422,19 @@ def check(path: Path, *, output_json: Path | None = None):
     sections=[]
     for si,sp in enumerate(doc.findall(".//"+QN("sectPr")),1):
         pg=sp.find(QN("pgSz")); got=(attr(pg,"w"),attr(pg,"h"))
-        sections.append({"index":si,"size_twips":got,"a4":got==(str(A4[0]),str(A4[1]))})
+        record={"index":si,"size_twips":got,"a4":got==(str(A4[0]),str(A4[1]))}
+        record.update(measured_sections[si-1])
+        sections.append(record)
         if got != (str(A4[0]),str(A4[1])):
             violations.append({"requirement_id":"OG-002","code":"not_a4","location":f"document.xml:sectPr#{si}","expected":{"w":str(A4[0]),"h":str(A4[1])},"actual":{"w":got[0],"h":got[1]}})
     if not sections:
         violations.append({"requirement_id": "OG-002", "code": "page_size_missing", "location": "word/document.xml", "message": "용지 크기를 검증할 section 정보가 없음"})
+    # The food-crops form is measured against its own namespace; ``None`` keeps
+    # the probe generic so other majors never inherit these expectations.
+    food_crops_format = None
+    if major_id == "food_crops":
+        food_crops_format = food_crops_violations(sections)
+        violations.extend(food_crops_format)
     for rec in body_records:
         if rec["size_half_points"] != ["24"]:
             add("OG-005","body_size",rec,{"size_half_points":["24"]},rec["size_half_points"],"본문 run의 상속 계산 글자 크기가 12 pt가 아님")
@@ -320,16 +489,32 @@ def check(path: Path, *, output_json: Path | None = None):
       "OG-016":{"status":"blocked" if any(v["requirement_id"]=="OG-016" for v in violations) else "pass_with_notes","heading_groups":["middle","sub"],"measurement":{"middle":heading_summary["middle"],"sub":heading_summary["sub"]}},
       "OG-017":{"status":"blocked" if any(v["requirement_id"]=="OG-017" for v in violations) else "pass_with_notes","body_font":"신명조 declared; installation not_checked","body_paragraph_count":len(body_records)},
     }
-    result={"schema":"gg-school-format-probe/v1","status":"blocked" if violations else "pass_with_notes","input":{"path":str(path),"sha256":sha},"parts":{"body_paragraphs":len(body_records),"table_paragraphs":len(table_records),"front_paragraphs":len(front_records),"summary_paragraphs":len(summary_records),"summary_prose_paragraphs":len(summary_prose),"toc_paragraphs":len(toc_records)},"checks":{"machine":machine,"visual":visual},"heading_styles":heading_summary,"summary_prose_measurement":{"count":len(summary_prose),"size_half_points":{str(k):v for k,v in Counter(tuple(r["size_half_points"]) for r in summary_prose).items()},"line":{str(k):v for k,v in Counter((r["line"],r["line_rule"]) for r in summary_prose).items()},"first_line_twips":dict(Counter(r["first_line_twips"] for r in summary_prose)),"alignment":dict(Counter(r["alignment"] for r in summary_prose))},"violations":violations,"notes":["OOXML 선언과 style inheritance를 측정했으며 installed font와 실제 렌더링은 이 helper가 주장하지 않음.","표지·목차·표 셀은 본문 12 pt/160%/2칸 판정에서 제외하고 별도 계수로 보존함."]}
+    result={"schema":"gg-school-format-probe/v1","status":"blocked" if violations else "pass_with_notes","input":{"path":str(path),"sha256":sha},"parts":{"body_paragraphs":len(body_records),"table_paragraphs":len(table_records),"front_paragraphs":len(front_records),"summary_paragraphs":len(summary_records),"summary_prose_paragraphs":len(summary_prose),"toc_paragraphs":len(toc_records)},"checks":{"machine":machine,"visual":visual},"heading_styles":heading_summary,"summary_prose_measurement":{"count":len(summary_prose),"size_half_points":{str(k):v for k,v in Counter(tuple(r["size_half_points"]) for r in summary_prose).items()},"line":{str(k):v for k,v in Counter((r["line"],r["line_rule"]) for r in summary_prose).items()},"first_line_twips":dict(Counter(r["first_line_twips"] for r in summary_prose)),"alignment":dict(Counter(r["alignment"] for r in summary_prose))},"violations":violations,"sections":sections,"food_crops_format":food_crops_format,"notes":["OOXML 선언과 style inheritance를 측정했으며 installed font와 실제 렌더링은 이 helper가 주장하지 않음.","표지·목차·표 셀은 본문 12 pt/160%/2칸 판정에서 제외하고 별도 계수로 보존함."]}
     if output_json:
         output_json.parent.mkdir(parents=True,exist_ok=True); output_json.write_text(json.dumps(result,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
     return result
 
 def main(argv=None):
     ap=argparse.ArgumentParser(); ap.add_argument("docx",type=Path); ap.add_argument("--out",type=Path)
+    ap.add_argument("--major",default=None,help="전공 id (예: food_crops) — 주어지면 그 전공 양식도 대조")
     ns=ap.parse_args(argv)
-    try: result=check(ns.docx,output_json=ns.out)
-    except (ProbeError,OSError) as e: print(f"BLOCK: {e}",file=sys.stderr); return 2
+    try: result=check(ns.docx,output_json=ns.out,major_id=ns.major)
+    except (ProbeError,OSError,BadZipFile) as e:
+        # 사람용 `BLOCK:` 문구만 내면 자동 호출자가 상태를 못 읽는다. 기계가
+        # 읽을 JSON을 stdout에 내고 종료 2는 그대로 둔다(호출 계약 불변).
+        report={"status":"blocked","reason":str(e),
+                "input":{"path":str(ns.docx)},
+                "out":str(ns.out) if ns.out else None}
+        # `--out`을 준 호출자는 그 파일을 읽는다. 정상 경로만 보고서를 쓰면
+        # 손상 입력에서 파일이 아예 생기지 않아 호출자가 '보고서 없음'과
+        # '검사 안 함'을 구분하지 못한다. 단 `--out`이 입력과 같은 경로면
+        # 쓰지 않는다(손상된 원본을 덮어쓰게 된다).
+        if ns.out and ns.out.resolve()!=ns.docx.resolve():
+            ns.out.parent.mkdir(parents=True,exist_ok=True)
+            ns.out.write_text(json.dumps(report,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
+        print(json.dumps(report,ensure_ascii=False))
+        print(f"BLOCK: {e}",file=sys.stderr)
+        return 2
     print(json.dumps({"status":result["status"],"sha256":result["input"]["sha256"],"violations":len(result["violations"]),"out":str(ns.out) if ns.out else None},ensure_ascii=False))
     return 1 if result["status"]=="blocked" else 0
 if __name__ == "__main__":

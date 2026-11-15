@@ -24,11 +24,36 @@ except ImportError as error:  # python-docx (or its layout helper) absent
     DOCX_IMPORT_ERROR = error
 from gg_document import parse, spans, SCI, FRONT, school_toc_range, school_frontmatter_plan, split_caption_credit
 from gg_core import digest, local
+import gg_hwpx
 from gg_document import photo_guide, photo_requests
 from gg_body_layout import NOTE, spacer_positions, review_requests
+import gg_figure_docx
+from gg_major_format import ENABLED_FORMAT_MAJORS, enabled_profile, front_title
 
 FONT = "신명조"
 LEVEL_PT = {1: 20, 2: 18, 3: 16, 4: 14, 5: 13, 6: 13, 7: 13, 8: 13, 9: 13}
+
+# DOCX 빌더가 프로필 표를 읽는 전공. 값은 `gg_major_format.ENABLED_FORMAT_MAJORS`
+# 한 곳이 정한다 — 게이트를 켜는 것은 그 상수 한 줄이다. 이 이름은 기존
+# 시험이 패치하는 통로라 별칭으로 남긴다(값이 아니라 같은 튜플 객체).
+DOCX_PROFILE_MAJORS = ENABLED_FORMAT_MAJORS
+
+
+def docx_profile(major_id):
+    """DOCX 빌더가 읽을 전공 서식 프로필(없으면 None = 기본 경로)."""
+    return enabled_profile(major_id, DOCX_PROFILE_MAJORS)
+
+
+# 프로필 표에 없는 전공(원예·특용·과수 등)이 쓰는 공용 안내문. 전공별
+# 문구는 `gg_major_format` 프로필의 `finish_notice`가 정한다.
+COMMON_FINISH_NOTICE = (
+    "저수준 미검증 출력. 목차 필드 갱신·전체 페이지·학교 원문·학명·그림·표·"
+    "머리행 검토 필요. 한글에서 글꼴 신명조·여백(위20/아래15/머리15/꼬리15/"
+    "좌30/우30/제본0 mm)·페이지 번호를 확인한다. 이 세 가지는 스킬 작성 완료를 "
+    "막지 않으며 자동 통과하지 않는다. file_hash는 빌드 직후 파일 기준이다. "
+    "쪽 나눔·여백 등 후처리로 파일을 다시 저장했다면 --rehash로 매니페스트 "
+    "해시를 갱신한다.")
+
 
 
 def set_font(run, name, size_pt, bold=False, color=(0, 0, 0)):
@@ -123,17 +148,31 @@ def _bottom_border(p):
     borders.append(bottom)
 
 
-def setup_document(doc, font):
+def _apply_section_margins(section, margin_mm):
+    section.top_margin, section.bottom_margin = Mm(margin_mm["top"]), Mm(margin_mm["bottom"])
+    section.left_margin, section.right_margin = Mm(margin_mm["left"]), Mm(margin_mm["right"])
+    section.header_distance = Mm(margin_mm["header"])
+    section.footer_distance = Mm(margin_mm["footer"])
+    section.gutter = Mm(margin_mm["gutter"])
+
+
+def setup_document(doc, font, *, section_formats=None):
     normal = doc.styles["Normal"]
     normal.font.name, normal.font.size = font, Pt(12)
     normal.font.color.rgb = RGBColor(0, 0, 0)
     normal.paragraph_format.line_spacing = 1.6
     normal.paragraph_format.space_after = Pt(0)
-    for s in doc.sections:
+    for index, s in enumerate(doc.sections):
         s.page_width, s.page_height = Mm(210), Mm(297)
-        s.top_margin, s.bottom_margin = Mm(20), Mm(15)
-        s.left_margin, s.right_margin = Mm(30), Mm(30)
-        s.header_distance, s.footer_distance = Mm(15), Mm(15)
+        if section_formats is None:
+            s.top_margin, s.bottom_margin = Mm(20), Mm(15)
+            s.left_margin, s.right_margin = Mm(30), Mm(30)
+            s.header_distance, s.footer_distance = Mm(15), Mm(15)
+        else:
+            # 구역 순서대로 쪽별 여백을 덮는다. add_section()이 앞 구역
+            # sectPr를 복제하므로 클론을 고쳐도 그 구역만 바뀐다.
+            _apply_section_margins(s, section_formats[index]["margin_mm"])
+
 
 
 def add_table(doc, rows, font):
@@ -196,34 +235,81 @@ WIDE_TABLE_MIN_COLS = 10
 
 
 def chapter_break_node_ids(sequence, major_id):
-    """Level-1 headings that must start a new page (식량작물 only).
+    """Level-1 headings that must start a new page (프로필 전공 only).
 
     The first heading is excluded: it already starts a fresh section (school
     paper) or follows the contents page break.  Both DOCX body paths call this
     one function, so a chapter/closer title cannot lose its page break when
-    the frontmatter is absent (Roh C1 중요2).  Other majors are unchanged.
+    the frontmatter is absent (Roh C1 중요2).  Majors without a profile (or
+    whose profile does not ask for it) are unchanged.
     """
-    if major_id != "food_crops":
+    profile = docx_profile(major_id)
+    if profile is None or not profile.chapter_break_nodes:
         return set()
     headings = [n for n in sequence
                 if n["kind"] == "heading" and n.get("level") == 1]
     return {id(n) for n in headings[1:]}
 
 
+def _apply_consent_formatting(doc, font, profile):
+    """학부모 동의서(마지막 1단계 제목) 뒤 문단 서식을 프로필 값으로 잠근다.
+
+    본문 경로가 만든 동의서 제목은 `front_titles['학부모 동의서']`, 본문은
+    `consent_body_pt`, `※` 주석은 `consent_note_pt`를 쓴다(식량작물 실측
+    20/14/10). 다음 1단계 제목을 만나면 멈춰 다른 장은 건드리지 않는다
+    (§2.3, r2: I-03).
+    """
+    paragraphs = doc.paragraphs
+    last_heading = None
+    for index, paragraph in enumerate(paragraphs):
+        if paragraph.style.name == "Heading 1":
+            last_heading = index
+    if last_heading is None:
+        return
+    title = paragraphs[last_heading]
+    if title.text.strip() != "학부모 동의서":
+        return
+    title_pt, title_bold = front_title(profile, "학부모 동의서")
+    body_pt, body_bold = profile.consent_body_pt
+    note_pt, note_bold = profile.consent_note_pt
+    for run in title.runs or [title.add_run(title.text or "")]:
+        set_font(run, font, title_pt, title_bold)
+    for paragraph in paragraphs[last_heading + 1:]:
+        if paragraph.style.name == "Heading 1":
+            break
+        text = paragraph.text.strip()
+        if not text:
+            continue
+        note = text.startswith("※")
+        size, bold = (note_pt, note_bold) if note else (body_pt, body_bold)
+        for run in paragraph.runs or [paragraph.add_run(paragraph.text or "")]:
+            set_font(run, font, size, bold)
+
+
 def convert(md_text, font=FONT, base=".", table_reports=None, *,
-            context=None, toc=True):
+            context=None, toc=True, root=None):
     """Render the paper markdown into a DOCX document.  Policy B: the
     explicit major must be authorized against the canonical binding
-    (``context``) before anything is rendered."""
+    (``context``) before anything is rendered.
+
+    ``base``은 원고가 있는 폴더, ``root``는 작업 폴더 뿌리다. 그림 목적지는
+    원고 옆(``base``)에서 먼저 찾고 없으면 ``root``에서 한 번 더 찾는다 —
+    HWPX 발행·원고 검사와 같은 규칙(``gg_hwpx.resolve_figure``)이다. ``root``가
+    None이면 ``base`` 하나만 보는 기존 동작 그대로다.
+    """
     import gg_major_contract as mc
 
     authorization = mc.authorize_output(mc.OUTPUT_SCHOOL_PAPER, context)
+    major_id = authorization.major_id
+    profile = docx_profile(major_id)
+    section_formats = profile.section_formats if profile else None
+    level_pt = profile.level_pt if profile else LEVEL_PT
     doc = Document()
-    setup_document(doc, font)
-    # 식량작물 요약은 아라비아 `1.`~`5.`라 요약과 본문을 가르는 전공 지식이
-    # 필요하다. 다른 전공은 지금까지처럼 전공 없이 읽어 출력을 바꾸지 않는다.
-    nodes = parse(md_text, major_id=(
-        "food_crops" if authorization.major_id == "food_crops" else None))
+    setup_document(doc, font, section_formats=section_formats)
+    # 프로필 전공은 요약·본문 경계 판정에 전공 지식이 필요하다(식량작물 요약은
+    # 아라비아 `1.`~`5.`, 낙농은 로마 `Ⅰ.`). 프로필이 없으면 지금까지처럼
+    # 전공 없이 읽어 출력을 바꾸지 않는다.
+    nodes = parse(md_text, major_id=major_id if profile else None)
 
     last_prose = None
     # 식량작물 장 시작 쪽 나눔 대상(본문 첫 장은 새 구역이라 뺀다).
@@ -256,13 +342,29 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
                 if table_reports is not None:
                     table_reports.append(rep)
         elif n["kind"] == "image":
-            p = (Path(base) / n["path"]).resolve()
-            if not p.is_relative_to(Path(base).resolve()) or not p.is_file():
-                raise ValueError("그림 파일 없음/외부 경로: " + n["path"])
-            doc.add_picture(str(p), width=Mm(145))
-            picture_paragraph = doc.paragraphs[-1]
-            picture_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            picture_paragraph.paragraph_format.keep_with_next = True
+            if gg_figure_docx.is_placeholder(n["path"]):
+                # 앱 밖 빌드: 토큰을 풀 수 없다 — 자리 표시 문단(알려진 한계).
+                note = doc.add_paragraph(gg_figure_docx.PLACEHOLDER)
+                note.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                note.paragraph_format.keep_with_next = True
+            else:
+                target, issue = gg_figure_docx.node_target(n["path"])
+                if issue:
+                    raise ValueError("blocked: " + issue)
+                if target is None:
+                    # 학생 그림: 원고 옆(base) → 작업 폴더 뿌리(root) 두 단계.
+                    # HWPX 발행·원고 검사와 같은 해석기 하나를 쓴다(M-02).
+                    target, candidates = gg_hwpx.resolve_figure(
+                        n["path"], base, root)
+                    if candidates:
+                        raise ValueError(
+                            gg_hwpx.ambiguous_image_message(candidates))
+                if target is None:
+                    raise ValueError("그림 파일 없음/외부 경로: " + n["path"])
+                doc.add_picture(str(target), width=Mm(145))
+                picture_paragraph = doc.paragraphs[-1]
+                picture_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                picture_paragraph.paragraph_format.keep_with_next = True
         else:
             heading = n["kind"] == "heading"
             list_item = n.get("list_item", False)
@@ -275,7 +377,11 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
                 n["kind"] == "caption" and n["label"] == "표"
             )
             pf.widow_control = True
-            pf.space_after = Pt(6 if heading else 0)
+            if heading and profile and profile.heading_spacing_pt > 0:
+                pf.space_before = Pt(profile.heading_spacing_pt)
+                pf.space_after = Pt(profile.heading_spacing_pt)
+            else:
+                pf.space_after = Pt(6 if heading else 0)
             if heading and id(n) in chapter_break_nodes:
                 pf.page_break_before = True
             text = n["text"]
@@ -299,7 +405,7 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
                 pf.alignment = WD_ALIGN_PARAGRAPH.CENTER
                 pf.first_line_indent = Pt(0)
             runs(p, text, font,
-                 LEVEL_PT[n["level"]] if heading else (11 if n["kind"] == "caption" else 12),
+                 level_pt[n["level"]] if heading else (11 if n["kind"] == "caption" else 12),
                  heading, (0, 0, 255) if guide else (0, 0, 0))
             if n.get("_bookmark"):
                 from gg_frontmatter_layout import bookmark
@@ -550,9 +656,11 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
                 n['_bookmark_id']=idx
         table_entries=[(split_caption_credit(n['text'])[0],n['_bookmark'],2) for n in body_nodes if n['kind']=='caption' and n.get('label')=='표']
         figure_entries=[(split_caption_credit(n['text'])[0],n['_bookmark'],2) for n in body_nodes if n['kind']=='caption' and n.get('label')=='그림']
+        # 표·그림 목차는 프로필 전공과 낙농이 함께 나열한다. 낙농은 이 단위
+        # 에서 아직 프로필 경로를 타지 않으므로(바이트 고정) 이름으로 남긴다.
         dairy_lists = authorization.major_id in ("dairy", "food_crops")
         entries=[]
-        if authorization.major_id == "food_crops":
+        if profile and profile.roman_front:
             # 양식 목차 순서: 요약 · 감사의 글 · 표 목차 · 그림 목차 · 본문.
             # 두 제목은 앞부분(_render_peer_forms)에서 이미 그려졌고,
             # 거기서 단 책갈피를 그대로 가리켜 실제 쪽번호를 받는다.
@@ -562,7 +670,8 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
         if table_entries or dairy_lists: entries.append(('표 목차','gg_tables',0))
         if figure_entries or dairy_lists: entries.append(('그림 목차','gg_figures',0))
         entries += [(n['text'],n['_bookmark'],n['level']) for n in body_nodes if n['kind']=='heading' and n['level']<=2]
-        contents(doc,entries,font)
+        contents(doc,entries,font,title_size=(
+            profile.toc_title_pt if profile else 20))
         # S01 counts cover, shared forms and contents before the summary (iv
         # with a one-page contents). Continue rather than pinning iv: an
         # overflowing contents page must also count. Other majors stay unchanged.
@@ -582,21 +691,26 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
             pg = OxmlElement('w:pgNumType')
             pg.set(qn('w:start'), '1'); pg.set(qn('w:fmt'), 'lowerRoman')
             place_page_number(doc.sections[0], pg)
-        def new_numbered_section(number_format, start=1):
+        def new_numbered_section(number_format, start=1, margin_mm=None):
             sec=doc.add_section(WD_SECTION.NEW_PAGE)
-            if count_fruit_front or authorization.major_id == "food_crops":
+            if margin_mm is not None:
+                _apply_section_margins(sec, margin_mm)
+            if count_fruit_front or profile:
                 inherited = sec._sectPr.find(qn('w:pgNumType'))
                 if inherited is not None: sec._sectPr.remove(inherited)
             pg=OxmlElement('w:pgNumType')
             if start is not None: pg.set(qn('w:start'), str(start))
             pg.set(qn('w:fmt'),number_format);place_page_number(sec, pg)
             sec.footer.is_linked_to_previous=False
-            p=sec.footer.paragraphs[0];p.alignment=WD_ALIGN_PARAGRAPH.CENTER
-            field=OxmlElement('w:fldSimple');field.set(qn('w:instr'),'PAGE');p._p.append(field)
+            # 쪽번호 꾸밈은 프로필 `page_label`이 정한다. 없으면 지금까지처럼
+            # `PAGE` 필드 하나뿐(바이트 불변), 있으면 `- 1 -` 꼴 9pt.
+            from gg_frontmatter_layout import page_number_field
+            page_number_field(sec.footer.paragraphs[0], profile, font)
             return sec
         if prelim or table_entries or figure_entries or dairy_lists:
-            if authorization.major_id == "food_crops":
+            if profile and profile.roman_front:
                 # 요약~그림 목차는 앞부분 서식에서 연 로마 대문자 구역을 이어 쓴다.
+                # 프로필 전공은 여기서 로마 구역을 새로 열지 않는다(I-03).
                 doc.add_page_break()
             else:
                 new_numbered_section('lowerRoman', None if count_fruit_front else 1)
@@ -606,11 +720,14 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
                 for n in prelim: render_node(n,allow_soft_wrap=True)
             if table_entries or dairy_lists:
                 if prelim: doc.add_page_break()
-                contents(doc,table_entries,font,'표 목차','gg_tables',9002)
+                contents(doc,table_entries,font,'표 목차','gg_tables',9002,
+                         title_size=20)
             if figure_entries or dairy_lists:
                 if prelim or table_entries or dairy_lists: doc.add_page_break()
-                contents(doc,figure_entries,font,'그림 목차','gg_figures',9003)
-        new_numbered_section('decimal')
+                contents(doc,figure_entries,font,'그림 목차','gg_figures',9003,
+                         title_size=20)
+        new_numbered_section('decimal', margin_mm=(
+            profile.section_formats[2]['margin_mm'] if profile else None))
     else:
         add_toc(doc,font)
         # 본문은 새 구역에서 1쪽부터 아라비아 숫자 쪽번호를 매긴다.
@@ -618,11 +735,16 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
         pg = OxmlElement('w:pgNumType'); pg.set(qn('w:start'), '1'); pg.set(qn('w:fmt'), 'decimal')
         sec._sectPr.append(pg)
         sec.footer.is_linked_to_previous = False
-        fp = sec.footer.paragraphs[0]; fp.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        field = OxmlElement('w:fldSimple'); field.set(qn('w:instr'), 'PAGE'); fp._p.append(field)
+        # 쪽번호 꾸밈은 위 경로와 같은 함수가 정한다: 프로필 `page_label`이
+        # 없으면 `PAGE` 필드 하나(바이트 불변), 있으면 `- 1 -` 꼴.
+        from gg_frontmatter_layout import page_number_field
+        page_number_field(sec.footer.paragraphs[0], profile, font)
 
     # 6. Main Body
     render_body(nodes[i_body:])
+
+    if profile and profile.consent_in_body:
+        _apply_consent_formatting(doc, font, profile)
 
     return doc
 
@@ -734,8 +856,11 @@ def main(argv=None):
         if not source_text.strip():
             raise ValueError("내보낼 본문이 없음: 입력 파일이 비어 있음")
         table_reports = []
-        doc = convert(source_text, a.font, base,
-                      table_reports=table_reports, context=context, toc=a.toc)
+        # 그림 목적지는 원고 옆(src.parent) → 작업 폴더 뿌리(base) 순서로 푼다
+        # (M-02). HWPX 발행(build_hwpx)과 같은 두 단계 규칙이다.
+        doc = convert(source_text, a.font, src.parent,
+                      table_reports=table_reports, context=context, toc=a.toc,
+                      root=base)
         mc.reconfirm_output(authorization, context)
         out.parent.mkdir(parents=True, exist_ok=True)
         doc.save(out)
@@ -760,6 +885,8 @@ def main(argv=None):
             "hwp": "not_run",
             "layout_review": review_requests(parse(source_text)),
             "photo_requests": photo_requests(parse(source_text)),
+            "figures": gg_figure_docx.build_report(
+                [n["path"] for n in parse(source_text) if n["kind"] == "image"]),
             "school_frontmatter": (
                 {
                     "layout": ("source_order_common_defaults" if authorization.major_id != "specialty_crops"
@@ -781,7 +908,9 @@ def main(argv=None):
                 else None
             ),
             "major_authorization": authorization.to_dict(),
-            "notice": "저수준 미검증 출력. 목차 필드 갱신·전체 페이지·학교 원문·학명·그림·표·머리행 검토 필요. 한글에서 글꼴 신명조·여백(위20/아래15/머리15/꼬리15/좌30/우30/제본0 mm)·페이지 번호를 확인한다. 이 세 가지는 스킬 작성 완료를 막지 않으며 자동 통과하지 않는다. file_hash는 빌드 직후 파일 기준이다. 쪽 나눔·여백 등 후처리로 파일을 다시 저장했다면 --rehash로 매니페스트 해시를 갱신한다.",
+            "notice": (docx_profile(authorization.major_id).finish_notice
+                       if docx_profile(authorization.major_id)
+                       else COMMON_FINISH_NOTICE),
         }
         manifest_path.write_text(
             json.dumps(manifest, ensure_ascii=False, indent=2),

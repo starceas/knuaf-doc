@@ -60,7 +60,7 @@ class LinkContract(unittest.TestCase):
         path = REF / "figure-photo-policy.md"
         for match in re.finditer(r"\]\(([^)]+)\)", path.read_text(encoding="utf-8")):
             target = match.group(1).split("#")[0]
-            if not target or target.startswith(("http", "mailto")):
+            if not target or target.startswith(("http", "mailto", "app-figure:")):
                 continue
             self.assertTrue((path.parent / target).exists(), target)
 

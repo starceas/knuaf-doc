@@ -27,12 +27,16 @@ from tests._harness import claim_of
 
 TMP = Path(os.environ.get("HFIN_TEST_TMPDIR",
                           ROOT / ".hw-work/fin/lanes/I5-FIX/tmp"))
+SHEET1 = "1. 자산조사"
 SHEET5 = "5. 원리금상환계획"
 SHEET6 = "6.시설계획"
+SHEET4 = "4.투자계획"
 SHEET12 = "12 .경비계획"
 SHEET7 = " 7. 판매계획"
 SHEET17 = "17. 추정대차대조표"
 TEACHER_IMAGE_LABEL = "학생 시설 도면·견적서 첨부"
+SOURCE_WORKBOOK = ROOT / "../scratch/src/original-finance.xlsx"
+SOURCE_SHA = "e3c9defe376fa74413641408900f6bb656017a389fb9745d9dac221a10951c1c"
 
 
 def _params(sheet1):
@@ -208,8 +212,14 @@ def _project(root):
                                        encoding="utf-8")
 
 
-def _native_workbook(path, roster, params, facts):
-    """Synthetic recalculated workbook: every registry cell gets a cache."""
+def _native_workbook(path, roster, params, facts, extra=None):
+    """Synthetic recalculated workbook: every registry cell gets a cache.
+
+    ``extra`` maps ``(sheet, ref)`` to ``(t, v, f)`` and overrides the cache of
+    that coordinate after the baseline layout is assembled, so a test can
+    publish a specific native cache (e.g. an error cell) without copying the
+    whole builder.
+    """
     cells = {}
     schedule = h._loan_schedule(10, Decimal("0.05"), 0, 2, "원금균등")
     _, rows = h._loan_slot_rows(1)
@@ -253,6 +263,8 @@ def _native_workbook(path, roster, params, facts):
     cells[(roster[0], "G1")] = ("inlineStr", "new", None)
     cells[(SHEET6, "B17")] = ("inlineStr", TEACHER_IMAGE_LABEL, None)
     cells[(SHEET6, "B47")] = ("inlineStr", TEACHER_IMAGE_LABEL, None)
+    for (sheet, ref), spec in (extra or {}).items():
+        cells[(sheet, ref)] = spec
     per_sheet = {name: {} for name in roster}
     for (sheet, ref), spec in cells.items():
         per_sheet[sheet][ref] = spec
@@ -625,6 +637,70 @@ class Chain(unittest.TestCase):
         with self.assertRaises(fe.FormulaError):
             run("=1/0")
 
+    def test_land_row_arithmetic_is_excel_strict(self):
+        """A formula that yields "" is text, not 0: consuming it in arithmetic
+        is #VALUE! exactly as Excel does. `SUM` still skips it, which is why
+        `1!D10` had to become `=SUM(D8:D9)` (W-L defect 2)."""
+        import gg_hort_formula_eval as fe
+        sheet = "1. 자산조사"
+        entries = h._json(h.REF / h.FILES[0])["entries"]
+        acts = [e for e in entries
+                if e["sheet"] == sheet and e["cell"] in ("D9", "E9", "D10")]
+        self.assertEqual({a["cell"]: a["after_formula"] for a in acts}, {
+            "D9": '=IF(M10="","",IF(ISNUMBER(M10),M10,NA()))',
+            "E9": '=IF(M9="","",IF(ISNUMBER(M9),M9,NA()))',
+            "D10": "=SUM(D8:D9)"})
+
+        def run(inputs):
+            evaluator = fe.Evaluator(
+                acts, inputs={(sheet, cell): value for cell, value in inputs.items()})
+            out = {}
+            for cell in ("E9", "D9", "D10"):
+                try:
+                    out[cell] = evaluator.cell(sheet, cell)
+                except fe.FormulaError as exc:
+                    out[cell] = str(exc)
+            return out
+
+        self.assertEqual(run({"D8": 100}),
+                         {"E9": "", "D9": "", "D10": 100.0})
+        self.assertEqual(run({"D8": 100, "M9": 500, "M10": 30}),
+                         {"E9": 500, "D9": 30, "D10": 130.0})
+        # Non-numeric text in the extra amount/area is NA(), and the total
+        # follows it down (D10 sums through D9, not around it).
+        self.assertEqual(run({"D8": 100, "M9": "abc"}),
+                         {"E9": "#N/A", "D9": "", "D10": 100.0})
+        self.assertEqual(run({"D8": 100, "M10": "x"}),
+                         {"E9": "", "D9": "#N/A", "D10": "#N/A"})
+        # Formula-produced blanks are "" and SUM ignores them.
+        self.assertEqual(run({"D8": 100, "M9": "", "M10": ""}),
+                         {"E9": "", "D9": "", "D10": 100.0})
+        # Direct arithmetic on a formula blank is still #VALUE!, the r2 defect.
+        ev = fe.Evaluator([{"sheet": "S", "cell": "A1",
+                            "after_formula": "=D8+D9"}],
+                          inputs={("S", "D8"): 100, ("S", "D9"): ""})
+        with self.assertRaisesRegex(fe.FormulaError, "#VALUE!"):
+            ev.cell("S", "A1")
+
+    def test_evaluator_failure_cache_is_terminal(self):
+        """A failing chain is evaluated once per cell: the workbook and inputs
+        are fixed for one run, so the failure is deterministic. Without the
+        cache a single error re-evaluates exponentially (measured 120 s ->
+        0 s on ` 7. 판매계획!L32`)."""
+        import gg_hort_formula_eval as fe
+        evaluator = fe.Evaluator([
+            {"sheet": "S", "cell": "A1", "after_formula": "=B1"},
+            {"sheet": "S", "cell": "B1", "after_formula": "=C1"},
+            {"sheet": "S", "cell": "C1", "after_formula": "=1/0"},
+            {"sheet": "S", "cell": "D1", "after_formula": "=1+1"}])
+        for cell in ("A1", "B1", "C1"):
+            with self.assertRaisesRegex(fe.FormulaError, "#DIV/0!"):
+                evaluator.cell("S", cell)
+        self.assertEqual(sorted(evaluator.errors), [("S", "A1"), ("S", "B1"),
+                                                    ("S", "C1")])
+        self.assertEqual(evaluator.cache, {})
+        self.assertEqual(evaluator.cell("S", "D1"), 2.0)
+
     def test_missing_interest_counterexample(self):
         """Principal 10 at 5%: a native cache dropping the 0.5 interest fails."""
         self._run_to_transform()
@@ -793,6 +869,693 @@ class Chain(unittest.TestCase):
                      self.native_rec, self.verify_rec)
 
 
+class LandGatePaths(unittest.TestCase):
+    """W-L: the second-parcel kind gate holds on every entry point out of five.
+
+    The land params are injected into the synthetic contract docs, not into the
+    fixture `_params`, so `param_count` and the registry stay untouched.
+    """
+
+    def setUp(self):
+        self.chain = Chain(methodName="test_full_chain_plan_transform_native_verify")
+        self.chain.setUp()
+        self.addCleanup(self.chain.doCleanups)
+        self.temp = Path(self.chain.temp.name)
+        self._inject_land_params()
+
+    def _inject_land_params(self):
+        base = {"data_type": "decimal", "unit_code": "KRW_1000",
+                "allowed_range": {"min": 0, "max": None},
+                "required_when": "always", "required_if": {"all": []},
+                "allowed_answer_states": ["provided"],
+                "output_conversion": "identity"}
+        params = self.chain.docs[h.FILES[1]]["parameters"]
+        sheet = self.chain.roster[0]
+        params["opening.land_extra_kind"] = {
+            **base, "data_type": "string", "unit_code": "TEXT",
+            "allowed_range": None, "allowed_values": ["논", "밭"],
+            "required_if": {"all": [
+                {"any": [{"group_active": "opening.land_extra_value_krw1000"},
+                         {"group_active": "opening.land_extra_area_m2"}]},
+                {"not": {"key_present": "category_absence.land"}}]},
+            "canonical_cell": sheet + "!B9"}
+        params["opening.land_extra_value_krw1000"] = {
+            **base, "required_if": {"all": [
+                {"key_present": "opening.land_extra_kind"},
+                {"not": {"key_present": "category_absence.land"}}]},
+            "canonical_cell": sheet + "!M9"}
+        params["opening.land_extra_area_m2"] = {
+            **base, "unit_code": "M2", "required_if": {"all": [
+                {"key_present": "opening.land_extra_kind"},
+                {"not": {"key_present": "category_absence.land"}}]},
+            "canonical_cell": sheet + "!M10"}
+
+    def _set_land_facts(self, kind, amount, area):
+        self._set_facts_exact((("opening.land_extra_kind", kind),
+                               ("opening.land_extra_value_krw1000", amount),
+                               ("opening.land_extra_area_m2", area)))
+
+    def _set_facts_exact(self, pairs):
+        path = self.chain.root / "project.json"
+        project = json.loads(path.read_text(encoding="utf-8"))
+        project["facts"] = {k: v for k, v in project["facts"].items()
+                            if not k.startswith("x")}
+        for i, (key, value) in enumerate(pairs, 1):
+            project["facts"]["x%d" % i] = _fact("x%d" % i, key, value)
+        path.write_text(json.dumps(project, ensure_ascii=False), encoding="utf-8")
+
+    def _held(self, function, *args):
+        with self.assertRaises(h.Held) as caught:
+            function(*args)
+        return caught.exception.code
+
+    def test_second_parcel_kind_gate_on_all_five_paths(self):
+        chain, d = self.chain, self.temp
+        source = chain.source
+
+        # ① plan, fresh project.
+        self._set_land_facts("과수원", 500, 100)
+        self.assertEqual(self._held(h.plan, chain.root, source, d / "p1.json"),
+                         "fact_value_invalid")
+
+        # ② plan, resumed root (only project.json carried over).
+        resumed = d / "resumed"
+        resumed.mkdir()
+        (resumed / "project.json").write_text(
+            (chain.root / "project.json").read_text(encoding="utf-8"), encoding="utf-8")
+        self.assertEqual(self._held(h.plan, resumed, source, d / "p2.json"),
+                         "fact_value_invalid")
+
+        # ③ transform, a plan receipt from good facts, then a bad kind.
+        self._set_land_facts("논", 500, 100)
+        h.plan(chain.root, source, d / "plan_ok.json")
+        self._set_land_facts("과수원", 500, 100)
+        self.assertEqual(self._held(h.transform, chain.root, source,
+                                    d / "plan_ok.json", d / "o3.xlsx", d / "t3.json"),
+                         "fact_value_invalid")
+
+        # ④ transform with good facts but a stale plan receipt.
+        self._set_land_facts("논", 500, 100)
+        plan = json.loads((d / "plan_ok.json").read_text(encoding="utf-8"))
+        plan["params_sha256"] = "0" * 64
+        (d / "plan_stale.json").write_text(json.dumps(plan), encoding="utf-8")
+        self.assertEqual(self._held(h.transform, chain.root, source,
+                                    d / "plan_stale.json", d / "o4.xlsx", d / "t4.json"),
+                         "plan_receipt_stale")
+        # The facts gate precedes the receipt gate, so a stale receipt cannot
+        # be used to report the wrong refusal.
+        self._set_land_facts("과수원", 500, 100)
+        self.assertEqual(self._held(h.transform, chain.root, source,
+                                    d / "plan_stale.json", d / "o4b.xlsx", d / "t4b.json"),
+                         "fact_value_invalid")
+
+        # ⑤ verify: a full chain on good facts, then the same chain on a bad kind.
+        self._set_land_facts("논", 500, 100)
+        h.transform(chain.root, source, d / "plan_ok.json", chain.out,
+                    chain.transform_rec)
+        _native_workbook(chain.native, chain.roster,
+                         chain.docs[h.FILES[1]]["parameters"], chain.facts)
+        chain._issue_native()
+        rec = h.verify(chain.root, source, chain.transform_rec, chain.native_rec,
+                       d / "verify_ok.json")
+        self.assertEqual(rec["stage"], "verify")
+        self.assertEqual(rec["verify_counts"]["kind_checked"], 165)
+
+        self._set_land_facts("과수원", 500, 100)
+        self.assertEqual(self._held(h.verify, chain.root, source,
+                                    chain.transform_rec, chain.native_rec,
+                                    d / "verify_bad.json"),
+                         "fact_value_invalid")
+
+        # ⑤' the Office boundary refuses a tampered transform receipt.
+        import gg_office
+        self._set_land_facts("논", 500, 100)
+        receipt = json.loads(chain.transform_rec.read_text(encoding="utf-8"))
+        receipt["params_sha256"] = "0" * 64
+        tampered = d / "transform_tampered.json"
+        tampered.write_text(json.dumps(receipt), encoding="utf-8")
+        with self.assertRaises(mc.OutputHeldError) as caught:
+            gg_office._hort_transform_binding(
+                chain.out, tampered, h._authorize(chain.root),
+                mc.OutputContext(chain.root, "hort_env_systems"))
+        self.assertEqual(caught.exception.reason, "hort_transform_receipt_invalid")
+
+    def test_missing_partner_fact_refused_on_every_path(self):
+        """A half-filled second parcel is `required_fact_missing`, never a
+        partial row: the kind alone and the amount alone both refuse, on every
+        entry point, and the Office boundary refuses the receipt that the
+        revision bump invalidated."""
+        chain, d = self.chain, self.temp
+        source = chain.source
+        full = (("opening.land_extra_kind", "논"),
+                ("opening.land_extra_value_krw1000", 500),
+                ("opening.land_extra_area_m2", 100))
+        cases = {"kind only": (("opening.land_extra_kind", "논"),),
+                 "value only": (("opening.land_extra_value_krw1000", 500),)}
+
+        for label, facts in cases.items():
+            with self.subTest(label=label):
+                chain.out = d / f"out-{label}.xlsx"
+                chain.transform_rec = d / f"transform-{label}.json"
+                chain.native = d / f"native-{label}.xlsx"
+                chain.native_rec = d / f"native-{label}.json"
+                # ① plan, fresh project.
+                self._set_facts_exact(facts)
+                self.assertEqual(
+                    self._held(h.plan, chain.root, source, d / f"p1-{label}.json"),
+                    "required_fact_missing")
+                # ② plan, resumed root (only project.json carried over).
+                resumed = d / f"resumed-{label}"
+                resumed.mkdir()
+                (resumed / "project.json").write_text(
+                    (chain.root / "project.json").read_text(encoding="utf-8"),
+                    encoding="utf-8")
+                self.assertEqual(
+                    self._held(h.plan, resumed, source, d / f"p2-{label}.json"),
+                    "required_fact_missing")
+                # ③ transform holding a plan receipt made from complete facts.
+                self._set_facts_exact(full)
+                h.plan(chain.root, source, d / f"plan-{label}.json")
+                self._set_facts_exact(facts)
+                self.assertEqual(
+                    self._held(h.transform, chain.root, source,
+                               d / f"plan-{label}.json", d / f"o3-{label}.xlsx",
+                               d / f"t3-{label}.json"),
+                    "required_fact_missing")
+                # ④ control: complete facts with a stale receipt still reports
+                # the receipt, so ③'s refusal is the facts gate, not ordering.
+                self._set_facts_exact(full)
+                plan = json.loads(
+                    (d / f"plan-{label}.json").read_text(encoding="utf-8"))
+                plan["params_sha256"] = "0" * 64
+                (d / f"plan-stale-{label}.json").write_text(
+                    json.dumps(plan), encoding="utf-8")
+                self.assertEqual(
+                    self._held(h.transform, chain.root, source,
+                               d / f"plan-stale-{label}.json",
+                               d / f"o4-{label}.xlsx", d / f"t4-{label}.json"),
+                    "plan_receipt_stale")
+                # ⑤ verify: the chain is complete on good facts, then the
+                # half-filled parcel is presented.
+                h.transform(chain.root, source, d / f"plan-{label}.json",
+                            chain.out, chain.transform_rec)
+                _native_workbook(chain.native, chain.roster,
+                                 chain.docs[h.FILES[1]]["parameters"],
+                                 chain.facts)
+                chain._issue_native()
+                self.assertEqual(
+                    h.verify(chain.root, source, chain.transform_rec,
+                             chain.native_rec, d / f"v-ok-{label}.json")["stage"],
+                    "verify")
+                self._set_facts_exact(facts)
+                self.assertEqual(
+                    self._held(h.verify, chain.root, source,
+                               chain.transform_rec, chain.native_rec,
+                               d / f"v5-{label}.json"),
+                    "required_fact_missing")
+                # ⑥ Office boundary. The receipt records both the revision it
+                # was minted at and the facts digest; the two refusals are
+                # separated so neither hides the other.
+                import gg_office
+
+                def binding():
+                    with self.assertRaises(mc.OutputHeldError) as caught:
+                        gg_office._hort_transform_binding(
+                            chain.out, chain.transform_rec,
+                            h._authorize(chain.root),
+                            mc.OutputContext(chain.root, "hort_env_systems"))
+                    return caught.exception.reason
+
+                def accepted():
+                    gg_office._hort_transform_binding(
+                        chain.out, chain.transform_rec,
+                        h._authorize(chain.root),
+                        mc.OutputContext(chain.root, "hort_env_systems"))
+                    return "accepted"
+
+                # ⑥a restated facts bind, so the two refusals below are real.
+                self._set_facts_exact(full)
+                self.assertEqual(accepted(), "accepted")
+                # ⑥b facts alone, revision untouched: the digest refuses it.
+                self._set_facts_exact((
+                    ("opening.land_extra_kind", "논"),
+                    ("opening.land_extra_value_krw1000", 700),
+                    ("opening.land_extra_area_m2", 100)))
+                self.assertEqual(binding(), "hort_transform_receipt_invalid")
+                # ...and the inner checker names the cause as staleness, not
+                # malformation: only the facts digest moved.
+                self.assertEqual(self._held(h.check_transform_receipt,
+                                            chain.transform_rec),
+                                 "transform_receipt_stale")
+                # ⑥c the revision alone, facts restored: the receipt is stale.
+                self._set_facts_exact(full)
+                project = json.loads(
+                    (chain.root / "project.json").read_text(encoding="utf-8"))
+                project["revision"] = project.get("revision", 0) + 1
+                (chain.root / "project.json").write_text(
+                    json.dumps(project, ensure_ascii=False), encoding="utf-8")
+                self.assertEqual(binding(), "hort_transform_receipt_invalid")
+
+
+LAND_COORDS = ([(SHEET1, cell) for cell in ("B8", "E8", "D8", "B9", "M9",
+                                            "M10", "D9", "E9", "D10")]
+               + [(SHEET17, f"{col}{row}") for col in "CDEFGH"
+                  for row in ("27", "28")])
+LAND_PARAM_KEYS = ("opening.land_kind", "opening.land_value_krw1000",
+                   "opening.land_area_m2", "opening.land_extra_kind",
+                   "opening.land_extra_value_krw1000",
+                   "opening.land_extra_area_m2")
+
+
+def _real(name):
+    """A shipped reference document, read from disk (not from the fixture)."""
+    return h._json(h.REF / name)
+
+
+def _transform_entries():
+    return {(e["sheet"], e["cell"]): e for e in _real(h.FILES[0])["entries"]}
+
+
+def _set_facts(root, pairs):
+    """Replace every ad-hoc ``x*``/``l*`` fact with exactly ``pairs``."""
+    path = root / "project.json"
+    project = json.loads(path.read_text(encoding="utf-8"))
+    project["facts"] = {k: v for k, v in project["facts"].items()
+                        if not k[0] in "xl"}
+    for i, (key, value) in enumerate(pairs, 1):
+        project["facts"][f"l{i}"] = _fact(f"l{i}", key, value)
+    path.write_text(json.dumps(project, ensure_ascii=False), encoding="utf-8")
+
+
+def _inject_land_entries(docs, coords=LAND_COORDS):
+    """Copy the real land entries into the synthetic transform contract."""
+    source = _transform_entries()
+    entries_ = docs[h.FILES[0]]["entries"]
+    have = {(e["sheet"], e["cell"]) for e in entries_}
+    added = []
+    for coord in coords:
+        if coord in have:
+            continue
+        row = source[coord]
+        entry = {"sheet": coord[0], "cell": coord[1],
+                 "action": row["action"], "before_state": "absent"}
+        for key in ("after_formula", "param_key"):
+            if row.get(key):
+                entry[key] = row[key]
+        added.append(entry)
+    entries_.extend(added)
+    docs[h.FILES[0]]["entry_count"] = len(entries_)
+    return added
+
+
+def _inject_land_params(docs, keys=LAND_PARAM_KEYS):
+    real = _real(h.FILES[1])["parameters"]
+    params = docs[h.FILES[1]]["parameters"]
+    for key in keys:
+        params[key] = real[key]
+    docs[h.FILES[1]]["param_count"] = len(params)
+
+
+def _inject_land_registry(docs, coords):
+    rows = {(r["sheet"], r["cell"]): r for r in _real(h.FILES[2])["registry"]}
+    registry = docs[h.FILES[2]]["registry"]
+    have = {(r["sheet"], r["cell"]) for r in registry}
+    for coord in coords:
+        if coord not in have:
+            registry.append(dict(rows[coord]))
+    docs[h.FILES[2]]["registry_count"] = len(registry)
+
+
+class LandRowEvaluation(unittest.TestCase):
+    """W-L: the land row, ``1!B8:M10`` feeding ``17!C27:H28``, as shipped.
+
+    Three layers: the contract lock on the 21 coordinates, the evaluator on the
+    15 formulas, and one end-to-end transform read back out of the workbook.
+    """
+
+    def test_land_contract_coordinates_and_formulas(self):
+        entries = _transform_entries()
+        params = _real(h.FILES[1])["parameters"]
+        inputs = [c for c in LAND_COORDS
+                  if entries[c]["action"] == "input_param"]
+        formulas = [c for c in LAND_COORDS
+                    if entries[c]["action"] == "formula"]
+        self.assertEqual(len(inputs), 6)
+        self.assertEqual(len(formulas), 15)
+        for coord in inputs:
+            self.assertIsNone(entries[coord].get("after_formula"))
+        for coord in formulas:
+            self.assertTrue(entries[coord].get("after_formula"))
+        self.assertEqual({entries[c]["param_key"]: c[1] for c in inputs},
+                         {"opening.land_kind": "B8",
+                          "opening.land_value_krw1000": "E8",
+                          "opening.land_area_m2": "D8",
+                          "opening.land_extra_kind": "B9",
+                          "opening.land_extra_value_krw1000": "M9",
+                          "opening.land_extra_area_m2": "M10"})
+        self.assertEqual({params[k]["canonical_cell"] for k in LAND_PARAM_KEYS},
+                         {f"{SHEET1}!{c}" for c in
+                          ("B8", "E8", "D8", "B9", "M9", "M10")})
+
+        text = {c: entries[c]["after_formula"] for c in formulas}
+        self.assertEqual(text[(SHEET1, "D9")],
+                         '=IF(M10="","",IF(ISNUMBER(M10),M10,NA()))')
+        self.assertEqual(text[(SHEET1, "E9")],
+                         text[(SHEET1, "D9")].replace("M10", "M9"))
+        self.assertEqual(text[(SHEET1, "D10")], "=SUM(D8:D9)")
+        # Every "밭" column is its "논" column with the kind swapped, and every
+        # later sum column is column D with its depreciation source column
+        # swapped (D is the identity base).
+        for col in "CDEFGH":
+            self.assertEqual(text[(SHEET17, col + "28")],
+                             text[(SHEET17, col + "27")].replace("논", "밭"))
+        for source, column in zip("NOPQR", "DEFGH"):
+            for row in ("27", "28"):
+                self.assertEqual(
+                    text[(SHEET17, column + row)],
+                    text[(SHEET17, "D" + row)].replace(
+                        "$N$67:$N$75", f"${source}$67:${source}$75"))
+
+        rows = {(r["sheet"], r["cell"]): r for r in _real(h.FILES[2])["registry"]}
+        for coord in ((SHEET17, "C27"), (SHEET17, "C28")):
+            row = rows[coord]
+            self.assertEqual(row["result_kind"], "conditional_unused_na")
+            self.assertEqual(row["active_kind"], "number")
+            self.assertEqual(row["unit"], "KRW_1000")
+            self.assertTrue(row["printed"])
+            self.assertTrue(row["core_reachable"])
+
+    def _evaluate(self, acts, b8, e8, b9, m9, m10, b26=2027, extra=None):
+        import gg_hort_formula_eval as fe
+        inputs = {(SHEET1, "B8"): b8, (SHEET1, "E8"): e8,
+                  (SHEET1, "B9"): b9, (SHEET1, "M9"): m9,
+                  (SHEET1, "M10"): m10, (SHEET1, "D8"): 9000.0,
+                  (SHEET17, "B26"): b26}
+        inputs.update(extra or {})
+        ev = fe.Evaluator(acts, inputs=inputs)
+        out = {cell: ev.cell(SHEET1, cell) for cell in ("D9", "E9", "D10")}
+        for col in "CDEFGH":
+            for row in ("27", "28"):
+                out[col + row] = ev.cell(SHEET17, col + row)
+        return out
+
+    def test_land_formula_evaluation(self):
+        entries = _transform_entries()
+        acts = [entries[c] for c in LAND_COORDS
+                if entries[c]["action"] == "formula"]
+
+        def check(row, d9, e9, d10, c27, c28, sum27, sum28):
+            self.assertEqual({k: row[k] for k in ("D9", "E9", "D10")},
+                             {"D9": d9, "E9": e9, "D10": d10})
+            self.assertEqual((row["C27"], row["C28"]), (c27, c28))
+            for col in "DEFGH":
+                self.assertEqual((row[col + "27"], row[col + "28"]),
+                                 (sum27, sum28))
+
+        check(self._evaluate(acts, "논", 200000, "밭", 50000, 3000),
+              3000, 50000, 12000.0, 200000, 50000, 200000, 50000)
+        # Swap which parcel is which kind: the columns follow the kind.
+        check(self._evaluate(acts, "밭", 200000, "논", 50000, 3000),
+              3000, 50000, 12000.0, 50000, 200000, 50000, 200000)
+        check(self._evaluate(acts, "밭", 50000, "논", 200000, 3000),
+              3000, 200000, 12000.0, 200000, 50000, 200000, 50000)
+        # Second parcel absent: M9/M10 blank, so E9/D9 are "" and D10 is the
+        # first parcel's area alone.
+        check(self._evaluate(acts, "논", 200000, "", "", None),
+              "", "", 9000.0, 200000, 0, 200000, 0)
+        # SUMIFS against the depreciation plan: 1,000 hits only for 논.
+        plan = {("13. 감가상각비계획 ", "C67"): 27,
+                ("13. 감가상각비계획 ", "N67"): 1000,
+                ("13. 감가상각비계획 ", "O67"): 1000,
+                ("13. 감가상각비계획 ", "P67"): 1000,
+                ("13. 감가상각비계획 ", "Q67"): 1000,
+                ("13. 감가상각비계획 ", "R67"): 1000,
+                ("13. 감가상각비계획 ", "V67"): "논"}
+        check(self._evaluate(acts, "논", 200000, "밭", 50000, 3000,
+                             extra=plan),
+              3000, 50000, 12000.0, 200000, 50000, 201000, 50000)
+        # A non-numeric B26 makes RIGHT(B26,2) miss every row.
+        check(self._evaluate(acts, "논", 200000, "밭", 50000, 3000,
+                             b26=" 4. 토지"),
+              3000, 50000, 12000.0, 200000, 50000, 200000, 50000)
+
+    def test_land_row_end_to_end(self):
+        chain = Chain(methodName="test_full_chain_plan_transform_native_verify")
+        chain.setUp()
+        self.addCleanup(chain.doCleanups)
+        self.assertEqual(len(_inject_land_entries(chain.docs)), len(LAND_COORDS))
+        _inject_land_params(chain.docs)
+        _set_facts(chain.root, [("opening.land_kind", "밭"),
+                                ("opening.land_value_krw1000", 200000),
+                                ("opening.land_area_m2", 9000),
+                                ("opening.land_extra_kind", "논"),
+                                ("opening.land_extra_value_krw1000", 50000),
+                                ("opening.land_extra_area_m2", 1000)])
+        chain._run_to_transform()
+
+        want = set(LAND_COORDS)
+        got = {}
+        with zipfile.ZipFile(chain.out) as book:
+            paths = dict(h.workbook_sheets(book))
+            for sheet in (SHEET1, SHEET17):
+                _, cellmap, _, _ = h._sheet_structure(book.read(paths[sheet]),
+                                                     paths[sheet])
+                for coord, cell in cellmap.items():
+                    if (sheet, coord) not in want:
+                        continue
+                    formula = h._direct(cell, "f")
+                    if formula is not None:
+                        got[(sheet, coord)] = "=" + h._text(formula)
+
+        entries = _transform_entries()
+        expected = {c: entries[c]["after_formula"] for c in LAND_COORDS
+                    if entries[c]["action"] == "formula"}
+        self.assertEqual(got, expected)
+
+        acts = [{"sheet": s, "cell": c, "after_formula": f}
+                for (s, c), f in sorted(got.items())]
+
+        def row(c27, c28, sum27, sum28):
+            out = {"C27": c27, "C28": c28}
+            for col in "DEFGH":
+                out[col + "27"] = sum27
+                out[col + "28"] = sum28
+            return out
+
+        # The published formulas, re-evaluated with the workbook's own inputs.
+        first = self._evaluate(acts, "밭", 200000, "논", 50000, 1000,
+                               b26=" 4. 토지")
+        self.assertEqual((first["D9"], first["E9"], first["D10"]),
+                         (1000, 50000, 10000.0))
+        self.assertEqual({k: first[k] for k in row(0, 0, 0, 0)},
+                         row(50000, 200000, 50000, 200000))
+        second = self._evaluate(acts, "논", 50000, "밭", 200000, 1000,
+                                b26=" 4. 토지")
+        self.assertEqual({k: second[k] for k in row(0, 0, 0, 0)},
+                         row(50000, 200000, 50000, 200000))
+        single = self._evaluate(acts, "논", 200000, "", "", None,
+                                b26=" 4. 토지")
+        self.assertEqual((single["D9"], single["E9"], single["D10"]),
+                         ("", "", 9000.0))
+        self.assertEqual({k: single[k] for k in row(0, 0, 0, 0)},
+                         row(200000, 0, 200000, 0))
+
+
+class LandVerifyMitigation(unittest.TestCase):
+    """W-L: an ``#N/A`` cache in ``17!C27`` — which gate actually stops it.
+
+    ``conditional_unused_na`` lets an error cache through ``_verify_cell_kind``
+    while the land groups are inactive, so the independent recompute is the
+    gate that holds. Both layers are asserted, one scenario each.
+    """
+
+    def _chain(self, facts, b8, b9=None):
+        chain = Chain(methodName="test_full_chain_plan_transform_native_verify")
+        chain.setUp()
+        self.addCleanup(chain.doCleanups)
+        added = _inject_land_entries(
+            chain.docs, [(SHEET1, "B8"), (SHEET1, "E8"), (SHEET1, "B9"),
+                         (SHEET1, "E9"), (SHEET17, "C27"), (SHEET17, "C28")])
+        _inject_land_params(chain.docs, [
+            "opening.land_kind", "opening.land_value_krw1000",
+            "opening.land_extra_kind", "opening.land_extra_value_krw1000",
+            "opening.land_extra_area_m2"])
+        _inject_land_registry(chain.docs,
+                              [(e["sheet"], e["cell"]) for e in added])
+        _set_facts(chain.root, facts)
+        chain._run_to_transform()
+        extra = {(SHEET1, "B8"): ("inlineStr", b8, None),
+                 (SHEET1, "E8"): (None, "200000", None),
+                 (SHEET1, "E9"): ("str", "",
+                                  '=IF(M9="","",IF(ISNUMBER(M9),M9,NA()))'),
+                 (SHEET17, "C27"): ("e", "#N/A", "=NA()"),
+                 (SHEET17, "C28"): (None, "0", "=0")}
+        if b9:
+            extra[(SHEET1, "B9")] = ("inlineStr", b9, None)
+            extra[(SHEET1, "M9")] = (None, "50000", None)
+        _native_workbook(chain.native, chain.roster,
+                         chain.docs[h.FILES[1]]["parameters"], chain.facts,
+                         extra=extra)
+        chain._issue_native()
+        return chain
+
+    def _held(self, chain):
+        with self.assertRaises(h.Held) as caught:
+            h.verify(chain.root, chain.source, chain.transform_rec,
+                     chain.native_rec, chain.verify_rec)
+        return caught.exception
+
+    def test_na_passes_kind_gate_only_while_groups_are_inactive(self):
+        chain = self._chain([("opening.land_kind", "논"),
+                             ("opening.land_value_krw1000", 200000)], b8="논")
+        held = self._held(chain)
+        self.assertEqual(held.code, "verify_independent_non_numeric")
+        self.assertEqual(held.args[0],
+                         f"verify_independent_non_numeric:{SHEET17}!C27")
+
+    def test_na_rejected_by_kind_gate_once_groups_are_active(self):
+        chain = self._chain([("opening.land_kind", "논"),
+                             ("opening.land_value_krw1000", 200000),
+                             ("opening.land_extra_kind", "밭"),
+                             ("opening.land_extra_value_krw1000", 50000),
+                             ("opening.land_extra_area_m2", 1000)],
+                            b8="논", b9="밭")
+        held = self._held(chain)
+        self.assertEqual(held.code, "verify_error_cache")
+        self.assertEqual(held.args[0],
+                         f"verify_error_cache:{SHEET17}!C27")
+
+
+class LandErrorRegression(unittest.TestCase):
+    """R-01: the land row's error footprint does not depend on the scenario.
+
+    The 22 coordinates that only the pre-W-L formula set produces are locked
+    verbatim: they are the whole point of the change, and a pattern would hide
+    a coordinate that moved.
+    """
+
+    def test_error_footprint_is_scenario_independent(self):
+        if not SOURCE_WORKBOOK.exists():
+            self.skipTest("private FD-A source workbook absent "
+                          "(off-repo optional input)")
+        self.assertEqual(h.file_digest(SOURCE_WORKBOOK), SOURCE_SHA)
+        import gg_hort_formula_eval as fe
+        import gg_hort_registry as g
+
+        docs = {name: h._json(h.REF / name) for name in h.FILES}
+        head = {(SHEET1, "E9"): "=IF(ISNUMBER(M9),M9,NA())"}
+        for source, column in zip("NOPQR", "DEFGH"):
+            head[(SHEET17, column + "27")] = (
+                "='1. 자산조사'!E8+SUMIFS('13. 감가상각비계획 '!$%s$67:$%s$75,"
+                "'13. 감가상각비계획 '!$C$67:$C$75,RIGHT('17. 추정대차대조표'"
+                "!$B$26,2),'13. 감가상각비계획 '!$V$67:$V$75,'1. 자산조사'!$B$8)"
+                % (source, source))
+            head[(SHEET17, column + "28")] = (
+                "='1. 자산조사'!E9+SUMIFS('13. 감가상각비계획 '!$%s$67:$%s$75,"
+                "'13. 감가상각비계획 '!$C$67:$C$75,RIGHT('17. 추정대차대조표'"
+                '!$B$26,2),\'13. 감가상각비계획 \'!$V$67:$V$75,"밭")'
+                % (source, source))
+
+        # Arm A: the pre-W-L contract, reconstructed from the shipped one.
+        arm = copy.deepcopy(docs)
+        drop = {(SHEET1, "B9"), (SHEET1, "D10"),
+                (SHEET17, "C27"), (SHEET17, "C28")}
+        arm[h.FILES[0]]["entries"] = [
+            e for e in arm[h.FILES[0]]["entries"]
+            if (e["sheet"], e["cell"]) not in drop]
+        by = {(e["sheet"], e["cell"]): e for e in arm[h.FILES[0]]["entries"]}
+        for coord, text in head.items():
+            by[coord].update({"action": "formula", "after_formula": text})
+        arm[h.FILES[0]]["entry_count"] = len(arm[h.FILES[0]]["entries"])
+        self.assertEqual(arm[h.FILES[0]]["entry_count"], 4103)
+        self.assertEqual(docs[h.FILES[0]]["entry_count"], 4107)
+
+        errors = ("#VALUE!", "#N/A", "#REF!", "#DIV/0!", "#NAME?", "#NUM!",
+                  "#NULL!")
+
+        def scan(contract, inputs):
+            _, _, formulas, _, areas = g.load_source(str(SOURCE_WORKBOOK))
+            entries_ = {(e["sheet"], e["cell"]): e
+                        for e in contract[h.FILES[0]]["entries"]}
+            live, values = dict(formulas), dict(inputs)
+            for coord, entry in entries_.items():
+                live.pop(coord, None)
+                if entry.get("after_formula"):
+                    live[coord] = entry["after_formula"]
+                if entry["action"] == "input_param" and coord in values:
+                    continue
+                if entry["action"] in ("input_param", "clear"):
+                    values.setdefault(coord, None)
+            evaluator = fe.Evaluator(
+                [{"sheet": s, "cell": c, "after_formula": f}
+                 for (s, c), f in live.items()], inputs=values)
+            found = {}
+            for sheet, ref in sorted(live):
+                if not g.in_ranges(ref, areas.get(sheet, [])):
+                    continue
+                try:
+                    value = evaluator.cell(sheet, ref)
+                except fe.FormulaError as exc:
+                    found[(sheet, ref)] = exc.args[0] if exc.args else "?"
+                except (fe.UnsupportedError, RecursionError):
+                    continue
+                except Exception as exc:          # noqa: BLE001 - tag it
+                    found[(sheet, ref)] = type(exc).__name__
+                else:
+                    if isinstance(value, str) and value in errors:
+                        found[(sheet, ref)] = value
+            return found
+
+        def inputs(name):
+            values = {(SHEET1, "B8"): "논", (SHEET1, "D8"): 9256.0,
+                      (SHEET1, "E8"): 200000.0,
+                      (SHEET1, "C8"): "전북 전주시 덕진구924-1",
+                      (SHEET1, "F8"): 2.0, (SHEET1, "G8"): "2004년",
+                      (SHEET1, "M1"): 46022.0, (SHEET12, "I2"): 2026.0,
+                      (SHEET4, "H19"): 0.0}
+            if name != "blank_second":
+                values.update({(SHEET4, "M19"): "토지",
+                               (SHEET4, "N19"): "논",
+                               (SHEET4, "H19"): 50000.0,
+                               (SHEET4, "D19"): 2029.0})
+            if name == "invest_two_late":
+                values.update({(SHEET4, "M20"): "토지",
+                               (SHEET4, "N20"): "밭",
+                               (SHEET4, "H20"): 30000.0,
+                               (SHEET4, "D20"): 2030.0})
+            return values
+
+        expected = {
+            (SHEET1, "D10"): "#VALUE!", (SHEET1, "E10"): "#N/A",
+            (SHEET1, "E9"): "#N/A",
+            (SHEET17, "C16"): "#N/A", (SHEET17, "C26"): "#N/A",
+            (SHEET17, "C28"): "#N/A", (SHEET17, "C30"): "#N/A",
+            (SHEET17, "D16"): "#N/A", (SHEET17, "D26"): "#N/A",
+            (SHEET17, "D28"): "#N/A", (SHEET17, "E16"): "#N/A",
+            (SHEET17, "E26"): "#N/A", (SHEET17, "E28"): "#N/A",
+            (SHEET17, "F16"): "#N/A", (SHEET17, "F26"): "#N/A",
+            (SHEET17, "F28"): "#N/A", (SHEET17, "G16"): "#N/A",
+            (SHEET17, "G26"): "#N/A", (SHEET17, "G28"): "#N/A",
+            (SHEET17, "H16"): "#N/A", (SHEET17, "H26"): "#N/A",
+            (SHEET17, "H28"): "#N/A"}
+        self.assertEqual(len(expected), 22)
+
+        for name in ("blank_second", "invest_one", "invest_two_late"):
+            with self.subTest(name=name):
+                after = scan(docs, inputs(name))
+                before = scan(arm, inputs(name))
+                self.assertEqual(len(before), 863)
+                self.assertEqual(len(after), 841)
+                self.assertEqual(sorted(set(before) - set(after)),
+                                 sorted(expected))
+                self.assertEqual(set(after) - set(before), set())
+                self.assertEqual(sorted(set(before.values())),
+                                 ["#N/A", "#VALUE!"])
+                self.assertEqual(sorted(set(after.values())), ["#N/A"])
+                self.assertEqual({k: before[k] for k in set(before) & set(after)
+                                  if before[k] != after[k]}, {})
+
+
 class Gates(unittest.TestCase):
     """Condition-tree, category and labor gates on synthetic spec subsets."""
 
@@ -896,6 +1659,16 @@ class Gates(unittest.TestCase):
         self.assertTrue(ev({"group_active": "g"}, params["a"]))
         self.assertTrue(ev({"method_is": "area_unit"}, params["m"]))
         self.assertFalse(ev({"method_is": "direct"}, params["m"]))
+        # Stored contracts use the list form: `method_tag in [...]` must hold
+        # exactly as the string form does, or 40 overhead rate keys go
+        # unconstrained (W-L defect 1).
+        self.assertTrue(ev({"method_is": ["area_unit", "asset_rate", "tax_base_rate"]},
+                           params["m"]))
+        self.assertTrue(ev({"method_is": ["area_unit"]}, params["m"]))
+        self.assertEqual(ev({"method_is": ["area_unit"]}, params["m"]),
+                         ev({"method_is": "area_unit"}, params["m"]))
+        self.assertFalse(ev({"method_is": []}, params["m"]))
+        self.assertTrue(ev({"method_is": ["direct", "area_unit"]}, params["m"]))
         with self.assertRaisesRegex(h.Held, "condition_tree_invalid"):
             ev({"bogus": "a"})
 

@@ -98,6 +98,8 @@
 
 위 목록은 정확히 10개로 고정된다. bundle 변조 subprocess 통제는 별도 메서드가 아니라 `test_unexpected_failure_beats_incomplete` 안에 결합돼 있어 11번째 ID를 추가하지 않는다 — 변조된 사본의 기본 실행은 `bundle.status=fail`·`verdict=unexpected_failures`·exit 1·`platform_validation_completed=false`를 요구한다.
 
+**중첩 사본의 스텁은 모양을 보존한다**(2026-11-13): 위 목록의 7개는 `tests.test_runner_contract.RunnerContractTests` 소속이고, 그 모듈은 자기 사본에서 중첩 실행을 돌리므로 사본의 자기 파일을 no-op 스텁으로 덮어써 재귀를 끊는다. 그 스텁은 `validation_sharding.NESTED_RUNS`에서 `RunnerContractTests` 단위 이름만 뽑아(`sorted()`) 같은 클래스·같은 메서드 이름의 `pass` 본문으로 만든 모듈 상수 `_STUB_SOURCE` 하나를 세 사본(`knuaf-r2scoped-`·`knuaf-r2subd-`·`knuaf-r3tamper-`)이 공유한다. 사본 안 discovery가 이 7단위를 그대로 담아야 `PR_DEFERRED_UNITS <= set(modules)`(=`tests/test_validation_sharding.py`)가 성립하고 `full`/`code` 집합 차이가 정확히 10이 된다. 이름 하나짜리 불투명 스텁은 7단위를 지워 그 불변식을 깨고 `full` 스코프(main push) 중첩 실행을 3건 실패로 만든다 — 2026-11-13 main red의 원인이다. 두 중첩 실행은 stderr도 함께 남긴다(`<시스템 임시 디렉터리>/knuaf-nested-reports/`, `docs/validation/BUNDLE.md` §조각 배정과 합치기).
+
 **판정 우선순위**(P2-R2): bundle 변조/fail 또는 실제 시험의 unexpected failure/error/XPASS·inventory 불일치·framework-회계 불일치 → `unexpected_failures`(exit 1). 그것이 없고 checker 누락·의존성 준비 실패·미승인 skip·최종 모드의 nested flag → `incomplete`(exit 3). 미지원 Python → exit 2. 그 외 기본 모드에서 선언된 외부 게이트가 pending이면 **`ok_platform_scoped`(exit 0)**, pending이 없으면 `ok`(exit 0). 여러 원인이 공존하면 `causes.unexpected`/`causes.incomplete`에 각각 기록한다.
 
 **완료 플래그**(P2-R2): `platform_validation_completed`는 기본 모드 + bundle pass + 의존성 통과 + 시험 완료(tests_run>0) + unexpected/inventory/incomplete/회계 오류 없음일 때만 `true` — `--runtime-only`는 항상 `false`. `full_validation_completed`는 platform이 true이면서 `pending_external_checks`가 비어 있을 때만 `true` — 현재 P2는 P2-L09-native가 pending이므로 항상 `false`다. 두 플래그 모두 실행 무결성 사실이며 제품 PASS가 아니다.

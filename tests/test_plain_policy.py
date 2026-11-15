@@ -908,6 +908,125 @@ class PlainPolicyObjectCredits(ContractCase):
             assert "forbidden_term" in found
 
 
+class PlainPolicyInlineImages(ContractCase):
+    """본문 속 그림 참조는 문단이 아니라 그림 노드가 되고, 경로는 한 번만 푼다."""
+
+    def _root(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        return Path(tmp.name)
+
+    def test_inline_image_after_prose_becomes_an_image_node(self):
+        self.assertEqual(
+            doc.parse("그림 ![](sources/x.png)"),
+            [{"kind": "paragraph", "text": "그림"},
+             {"kind": "image", "alt": "", "path": "sources/x.png"}])
+
+    def test_whole_line_image_is_a_single_image_node(self):
+        self.assertEqual(
+            doc.parse("![밭 사진](sources/farm%20photo.png)"),
+            [{"kind": "image", "alt": "밭 사진",
+              "path": "sources/farm photo.png"}])
+
+    def test_destination_is_percent_decoded_exactly_once(self):
+        for raw, path in (("x%2520y.png", "x%20y.png"),
+                          ("<x y.png>", "x y.png")):
+            with self.subTest(raw=raw):
+                self.assertEqual(doc.parse("![a](%s)" % raw),
+                                 [{"kind": "image", "alt": "a", "path": path}])
+
+    def test_angle_destination_drops_the_title(self):
+        self.assertEqual(
+            doc.parse('![농장](<farm photo.png> "제목")'),
+            [{"kind": "image", "alt": "농장", "path": "farm photo.png"}])
+
+    def test_escaped_parentheses_stay_in_the_destination(self):
+        self.assertEqual(doc.parse("![alt](a\\(b\\).png)"),
+                         [{"kind": "image", "alt": "alt", "path": "a(b).png"}])
+
+    def test_two_images_on_one_line_keep_their_order(self):
+        self.assertEqual(
+            doc.parse("a ![x](p.png) b ![y](q.png) c"),
+            [{"kind": "paragraph", "text": "a"},
+             {"kind": "image", "alt": "x", "path": "p.png"},
+             {"kind": "paragraph", "text": "b"},
+             {"kind": "image", "alt": "y", "path": "q.png"},
+             {"kind": "paragraph", "text": "c"}])
+
+    def test_caption_line_with_a_reference_is_refused(self):
+        """C-01: 캡션 줄에 그림을 같이 두면 그림이 조용히 사라지므로 멈춘다.
+
+        두 생산자(gg_figure·kordoc 변환본) 모두 그림과 캡션을 다른 줄에 둔다.
+        같은 줄은 원고 작성 오류이므로 절을 지어내지 않고 이름을 대고 거절한다.
+        """
+        with self.assertRaises(ValueError) as caught:
+            doc.parse("그림 1. 밭 ![](sources/x.png)")
+        self.assertIn("캡션 줄 안에 그림이 있음", str(caught.exception))
+        self.assertIn("![](sources/x.png)", str(caught.exception))
+        # 그림과 캡션이 다른 줄이면 그대로 둔다(생산자 산출물 형태).
+        self.assertEqual(
+            doc.parse("![](sources/x.png)\n그림 1. 밭"),
+            [{"kind": "image", "alt": "", "path": "sources/x.png"},
+             {"kind": "caption", "label": "그림", "number": 1,
+              "text": "그림 1. 밭"}])
+
+    def test_unsupported_markdown_on_the_remainder_is_refused(self):
+        """R-01: 그림을 걷어낸 나머지에 붙은 미지원 표기는 조용히 넘기지 않는다."""
+        for text in ("![](x.png) ####### 일곱", "![](x.png) > 인용",
+                     "![](x.png) `코드`", "![](x.png) [링크](u)"):
+            with self.subTest(text=text):
+                with self.assertRaises(ValueError) as caught:
+                    doc.parse(text)
+                self.assertIn("미지원 Markdown 요소", str(caught.exception))
+        # 그림과 제목이 다른 줄이면 제목으로 남는다(생산자 산출물 형태).
+        self.assertEqual(
+            doc.parse("![](x.png)\n# 제목"),
+            [{"kind": "image", "alt": "", "path": "x.png"},
+             {"kind": "heading", "text": "제목", "level": 1}])
+
+    def test_term_position_points_at_the_real_destination(self):
+        """R-03: 꺾쇠·앞 공백을 건너뛴 목적지 첫 글자를 가리켜야 한다.
+
+        용어 위치는 원문을 잘라 쓰므로, ``<``나 공백을 경로 첫 글자로 내면
+        경로가 한 글자 밀린다.
+        """
+        cases = ("![a](x.png)", "![a]( x.png )", "![a](<farm photo.png>)",
+                 '![a](<a b.png> "t")')
+        for text in cases:
+            with self.subTest(text=text):
+                node = doc.parse(text, with_spans=True,
+                                 _with_term_positions=True)[0]
+                (alt, alt_at), (path, path_at) = node["term_parts"]
+                start = path_at
+                self.assertEqual(path, text[start:start + len(path)])
+
+    def test_image_then_heading_on_the_same_line_is_a_paragraph(self):
+        """R-01: 그림 뒤 같은 줄의 ``# 제목``은 제목이 아니라 문단이다.
+
+        제목은 줄 시작에서만 인정되므로, 그림을 걷어낸 나머지는 문단으로 남아
+        마크다운 표기가 본문에 새지 않는다(표기 예외는 검사 단계에서 걸린다).
+        """
+        self.assertEqual(
+            doc.parse("![](sources/x.png) # 제목"),
+            [{"kind": "image", "alt": "", "path": "sources/x.png"},
+             {"kind": "paragraph", "text": "# 제목"}])
+
+    def test_unclosed_reference_names_the_offending_text(self):
+        with self.assertRaises(ValueError) as caught:
+            doc.parse("![](broken path.png")
+        self.assertIn("그림 경로를 읽을 수 없음", str(caught.exception))
+        self.assertIn("![](broken path.png", str(caught.exception))
+
+    def test_promoted_image_reaches_the_missing_image_check(self):
+        root = self._root()
+        text = "그림 ![](sources/gone.png)\n"
+        self.assertIn(("missing_image", "sources/gone.png"),
+                      check(text, root=str(root)))
+        (root / "sources").mkdir()
+        (root / "sources" / "gone.png").write_bytes(b"\x89PNG\r\n\x1a\n")
+        self.assertNotIn("missing_image", ids(check(text, root=str(root))))
+
+
 class PlainPolicySeverity(ContractCase):
     def test_sourced_object_count_is_nonblocking_info(self):
         root = self.make_project()

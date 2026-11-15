@@ -70,6 +70,7 @@
 | `bundle` | `--scope <절ID>` | — | 아니오 | 한 절의 검토 꾸러미(본문·원자료·사실·규칙·검토축) |
 | `export` | `--major <전공ID>` | `--kind draft\|review\|submission_candidate`(기본 `review`) | 아니오(산출물 발행) | 검토 산출물을 발행한다. [outputs](outputs.md) |
 | `paper` | `--input <폴더 안 spec.json>` `--major <전공ID>` | `--out <폴더 안 경로>` `--body <폴더 안 본문MD>` | 아니오(산출물 발행) | 학교 양식 본문 생성. 기본 출력 `build/검토전_본문.md`. [outputs](outputs.md) |
+| `gg_progress.py show` | `<폴더>` | — | 아니오 | `.knuaf-progress.json`의 단계 요약을 읽기 전용으로 출력한다. 파일이 없으면 exit 1, 있으면 exit 0. 쓰기 서브커맨드는 없다. |
 | `adopt-output` | `--input <폴더 안 spec.json>` `--expected-revision <N>` `--major <전공ID>` | `--request-id <ID>` | 예 | 출력 파일을 `outputs`에 등록하는 유일한 경로. [source-contract](source-contract.md#출력-등록adopt-output과-동반-파일) |
 | `observe` | `--input <폴더 안 관측JSON>` `--observer <어댑터ID>` | — | 아니오(관측 기록 발행) | 실행 어댑터의 검토 관측 기록을 남긴다. [section-ledger](section-ledger.md) |
 | `unlock` | — | — | 아니오 | 비정상 종료로 남은 잠금 소유 기록만 정리한다. [locking](locking.md) |
@@ -88,9 +89,16 @@
 | `source-view` | `--request-id <ID>` | — | 아니오(`sources/generated/` 뷰) | 등록 요청의 출처 뷰를 발행한다. [source-intake](source-intake.md#폴더-등록-방식) |
 | `source-refresh` | `--source <출처ID>` | `--reviewed` `--apply` `--expected-revision <N>` `--request-id <ID>` | `--reviewed --apply`일 때만 | 원자료 바이트가 바뀐 출처의 미리보기와 재등록. SKILL.md "검사 차단 복구" |
 | `finance-tables` | `--xlsx <재계산 통합문서>` `--major specialty_crops` | `--input <폴더 안 각주.json>` `--out <폴더 안 경로>` | 아니오(산출물) | 특용작물 Ⅳ장 재무표 전개. 기본 출력 `build/finance-tables.md`, 기존 파일은 덮어쓰지 않는다. [specialty-crops/finance-flow](specialty-crops/finance-flow.md) |
+| `delegate` | `--lane <research|writing|repeat|review>` `--task <작업>` `--output <출력 칸 아래 상대경로>`(반복 가능) `--company <claude|codex>` `--model <ID>` | `--input-ref <출처ID|폴더상대경로|대상절>`(각 값을 `|`로 구분, 반복 가능) `--effort <값>` `--job-id <ID>`; research 레인은 `--research-type` `--question <Qn|목표지표|조건=값;…>` `--route <문서|ID/이름|URL>`(반복 가능) `--keyword <검색어>`(반복 가능) `--output-file <출력 칸 아래 상대경로>` 필수. `--output-file`은 `--output` 하나와 글자 그대로 같아야 한다. 수신 검사: `--check-job <ID>` | 아니오(`.knuaf-gui/jobs/`) | 앱 계약 칸으로 주문서를 만들고, 입력 참조의 실재·SHA-256, 출력 상대경로와 담당 간 파일/부모·자식 출력 소유권 겹침을 쓰기 전에 검사한 뒤 고정한 출력 디렉터리에 원자적으로 쓴다. 쓰기 전에는 디렉터리 체인 및 임시 파일 이름의 no-follow identity와 열린 fd를 대조한다. 이동·교체 탐지 시 게시 후라도 소유 파일 정리를 시도하고, 확인·제거하지 못하면 `cleanup_pending`과 마지막 확인 위치를 보고한다. 링크·재지정 경로로 폴더 밖에 원래 있던 무관한 파일을 바꾸지 않는다. POSIX 폴더 이동·정리 중 이름 교체의 잔여 경합 한도는 아래를 따른다. research 수신 검사는 질문 상태·표 필수 칸·주문 경로 및 번호와 `성공`/`실패` 경로 상태를 대조하고, 수치 조사에서 `증거 확보`·`조건 불일치` 질문마다 단위·조건 행을 요구하며 `자료 없음`·`접근 실패` 질문은 관측값 행 없이 받는다. [research-job](research-job.md) · [model-routing](model-routing.md)
+| `lanes-propose` | `--lane-scope <once 또는 continue>` `--quote <학생 원문>` `--lane-request <레인=main 또는 회사:모델[:effort]>`(반복 가능; 최소 1개) | — | 아니오(`.knuaf-gui/lanes-request.json`) | 학생이 말로 지정한 일부 레인 배치를 제안 파일로 옮긴다. 레인은 `design`·`research`·`writing`·`repeat`·`review`; 회사는 `claude`·`codex`. 계약 schema를 쓰고 기존 제안 파일은 원자적으로 바꾼다. 쓰기 전 디렉터리·temp 이름과 fd 대조, 게시 후 실패 정리·위치 보고 및 폴더 밖 기존 무관 파일 보호는 `delegate`와 같다. 기존 배치안 교체를 포함한 POSIX 잔여 경합 한도는 아래를 따른다. [model-routing](model-routing.md)
 | `tidy` | — | `--apply` | 아니오(`--apply`는 `.gg-work` 정리) | 산출물 폴더 정리 미리보기. 사용자 확인 뒤에만 `--apply`. [output-hygiene](output-hygiene.md) |
 
 `--selection`·`--requested-use`·`--audit-key`·`--target-current`는 파일 경로가 아니라 JSON 문자열이다.
+위임 명령은 실제 AI·웹 서비스 호출을 하지 않는다. 결과 JSON은 생성·제안 파일 경로와 schema 판을 반환한다. JobSpec과 LaneRequest의 schema 및 JobSpec `contractVersion`은 스킬 소유 `delegation.json`에서 읽는다.
+
+**위임 쓰기의 POSIX 잔여 경합:** 마지막 검사와 그다음 시스템 호출 사이에 같은 사용자 권한의 프로세스가 이 명령의 폴더를 통째로 밖으로 옮기면, 그 폴더 안에 이 명령이 쓴 임시 파일이나 정식 결과(기존 배치안 교체 포함)가 남을 수 있다. 탐지해 실패할 때는 고정 dir fd에서 이름의 no-follow inode가 소유 파일과 일치하는지 확인한 뒤 정리를 시도한다. 정리의 identity 검사와 실제 unlink 사이에 같은 사용자 프로세스가 그 이름에 다른 파일을 넣으면 대체 파일이 지워질 수 있다. POSIX에는 inode 조건부 unlink가 없어 이 이름 교체도 받아들이는 남은 위험이다. unlink 성공 뒤에도 보유한 소유 fd의 `fstat().st_nlink == 0`을 확인한다. temp·게시 결과 어느 쪽이든 소유 링크가 남거나 확인에 실패하면 fd를 닫기 전에 위치를 확보한다.
+
+찾지 못함·identity 불일치도 정리 성공으로 보지 않으며, 확인하거나 지우지 못하면 `delegation_write_cleanup_pending:<마지막 확인 위치>` 오류를 낸다. 핸들로 현재 위치를 확인할 수 있으면 그 위치를 쓰고, 확인할 수 없으면 마지막으로 알던 위치를 쓴다. 논문 폴더 밖 위치는 절대경로로 보고한다. 기존 배치안을 교체한 뒤 실패한 경우 이전 배치안을 복원하지는 않는다. Windows는 기존 `gg_winfs.Directory` 조상 핸들이 이동을 막는 설계이며, 삭제 공유 제한 때문에 파일 fd를 unlink 전에 닫으므로 위 POSIX fd의 nlink 검사를 적용하지 않는다. Windows 네이티브 실행은 미검증이며 `P2-L09-native` 외부 게이트로 남는다.
 
 ## apply 변경 JSON 계약
 
@@ -172,8 +180,8 @@ python3 <스킬>/scripts/gg.py major-plan <폴더>
 
 ## 주요 보조 스크립트
 
-- `python3 scripts/build_hwpx.py <폴더> --major <전공ID>`: HWPX 검토본 생성(여백·쪽번호·신명조 후처리). 논문 HWPX는 이 경로로만 생성하며, kordoc `generate`의 보고서·기안문·계획서 프리셋은 공문서용이라 논문에 쓰지 않는다. [outputs](outputs.md)
-- `python3 scripts/build_docx.py <폴더> --in <MD> --out <DOCX> --major <전공ID>`: DOCX 검토본 빌드. 목차·표 목차·그림 목차 쪽번호는 필드(PAGEREF·TOC)와 `gg_office.py word` 재조판·필드 갱신으로만 채우며 손으로 적지 않는다. [outputs](outputs.md)
+- `python3 scripts/build_hwpx.py <폴더> --major <전공ID>`: HWPX 검토본 생성(여백·쪽번호·신명조 후처리). 논문 HWPX는 이 경로로만 생성하며, kordoc `generate`의 보고서·기안문·계획서 프리셋은 공문서용이라 논문에 쓰지 않는다. [outputs](outputs.md) 그림 목적지는 원고 옆에서 먼저 찾고 없으면 `build_hwpx.py --image-dir`(기본: 작업 폴더 뿌리)에서 한 번 더 찾는다 — 분할본이 그 두 단계로 경로를 고쳐 두기 때문이다. 두 곳에 같은 이름의 다른 그림이 있으면 고르지 않고 `image_ambiguous`(후보 목록 포함), 어디에도 없거나 작업 폴더 밖이면 발행 전 `image_unresolved`로 멈춘다. 생성기에는 목적지를 작업 폴더 기준 상대 경로(퍼센트 인코딩)로 다시 써서 넘기고 기준 폴더 인자는 하나만 준다. 앱이 받은 그림 토큰(`app-figure:<sha256>`)은 HWPX가 풀 수 없으므로(해석은 DOCX 전용) 생성기를 부르기 전에 `app_figure_unsupported`로 거절한다 — 그런 원고는 DOCX로 만든다. 분할기는 그림 경로만 다시 쓰므로 토큰을 그대로 넘긴다.
+- `python3 scripts/build_docx.py <폴더> --in <MD> --out <DOCX> --major <전공ID>`: DOCX 검토본 빌드. 목차·표 목차·그림 목차 쪽번호는 필드(PAGEREF·TOC)와 `gg_office.py word` 재조판·필드 갱신으로만 채우며 손으로 적지 않는다. 그림 목적지는 HWPX와 **같은 규칙**으로 푼다 — 원고 옆(원고 파일이 있는 폴더) 먼저, 없으면 작업 폴더 뿌리(`gg_hwpx.resolve_figure`). 두 곳에 같은 이름의 다른 그림이 있으면 뿌리 그림을 조용히 고르지 않고 학생 안내 문장 하나로 멈춘다(M-02). [outputs](outputs.md)
 - `python3 scripts/gg_toc_check.py <DOCX> --json <증거경로>`: DOCX 목차 필드 및 고정 쪽번호 검사 도구. 탭 뒤 일반 글자 고정 번호나 미갱신 필드(`?`)를 검출한다(결과 finding id: `TOC-PAGE-NUMBERS`). [outputs](outputs.md) · [cross-review](cross-review.md)
 - `python3 scripts/gg_deps.py ensure <폴더>`: 작업폴더 venv와 런타임 의존성 준비.
 - `<gg_deps.py python <폴더>가 돌려준 인터프리터> scripts/gg_read.py <파일> --out <폴더 안 새.md>`: DOCX·PDF·XLSX 첫 읽기(읽기 전용, 원본·기존 결과 불변). `status: read`만 성공이며 스캔·손상 복구가 필요한 PDF는 성공으로 보지 않는다. 연결된 읽기 도구가 없을 때 Kordoc·Node 준비보다 먼저 쓴다. [parser-setup](parser-setup.md)

@@ -83,10 +83,24 @@ PINNED_CATALOG_AUTHORITIES = {
         "0550d458a0747be9929b3205c1ff8ff27f15c6f4cff5d9f3cc12372e336c71c8",
     "accepted-catalog-20260921/rda.econ.2025":
         "0d2d0b1cfeceb2a7fb4b12f2c10e10882f6c1957404ff1834a6d1a41e19eca44",
+    # 2024 RDA income packs: digests re-pinned after the 2024 source backfill
+    # (source on all 467 rows + 5 printed regional 2024 total/capital-interest
+    # rows), keeping the authority ids other code/tests name (PR① precedent).
+    # Derivation as for 2025 below; it reproduced the previous 2024 digests
+    # (1aa7fe68…, 1f6eb7ea…) from the pre-backfill manifests byte-for-byte.
     "accepted-catalog-20260921/rda.income.national.2024":
-        "555719cf2565b21b5d4321eeaba7433d60807c280e995e7ed319064fb103adb4",
+        "f4ffa4775b96089d42d68bc9059a554d0ed2561526833aa9f84827f741cf51c6",
     "accepted-catalog-20260921/rda.income.regional.2024":
-        "7c7d01c4ab866fcf787a67370f1f6f22d40f72a7e2266d64e6b7b701f5032062",
+        "79fcb555060f451ceb3408d48b7baa461da3848191993c2b335c3c4a840e9cbe",
+    # 2025 RDA income packs (PR② 2025 register).  Same derivation as the
+    # 2024 pins (manifest ``rows`` -> normalize_audit_key -> this module's
+    # catalog_content_digest; that derivation reproduces both 2024 pins
+    # above byte-for-byte).  Accepted on the PR's independent review plus
+    # the D3 printed-page image check, not by the pack author.
+    "accepted-catalog-20261114/rda.income.national.2025":
+        "c5ecb6189271c33d8dd41e5d14621dd4f034ee68c560d182b6dcdd6f37bf2587",
+    "accepted-catalog-20261114/rda.income.regional.2025":
+        "3d82ad98932d4e8b7c4aca1b4710258a101a7fba738016a43b84a536b3c74298",
 }
 
 

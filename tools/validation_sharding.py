@@ -50,6 +50,13 @@ NESTED_RUNS = {
     "tests/test_runner_negative_controls.py::RunnerNegativeControlTests::"
     "test_pythonpath_pollution_does_not_shadow_runtime": 1,
 }
+# PR scope (design §2.1/§2.2): the units above start whole nested validation
+# runs inside themselves and are deferred to the main-branch run.  PRs run
+# every other unit.  ``PR_DEFERRED_UNITS`` is the single definition of "what a
+# PR skips"; ``expected_ids_for`` is the single definition of "which test IDs a
+# scope contains" — execution, merging and the final report all derive from it.
+PR_DEFERRED_UNITS = frozenset(NESTED_RUNS)
+PR_SCOPES = frozenset({"full", "code"})
 
 
 def strict_load(path):
@@ -133,6 +140,44 @@ def discover_modules(root):
     return modules, ordered_ids
 
 
+def expected_ids(modules, ordered_ids, scope="full"):
+    """Test IDs of one scope from one discovery result, in discovery order.
+
+    The single ID authority: ``expected_ids_for`` is the same function over a
+    fresh discovery, so callers that already discovered (shard merge) do not
+    discover twice and still cannot derive a different list.
+    """
+    if scope not in PR_SCOPES:
+        raise ValueError("unknown PR scope: %r" % (scope,))
+    if scope == "full":
+        return list(ordered_ids)
+    keep = {unit for unit in modules if unit not in PR_DEFERRED_UNITS}
+    ids = {test.id() for unit in keep for test in modules[unit]}
+    return [test_id for test_id in ordered_ids if test_id in ids]
+
+
+def expected_ids_for(root, scope="full"):
+    """Test IDs of one scope, in discovery order — the single ID authority.
+
+    ``full`` is exactly ``discover_modules`` (same objects, same order), so a
+    full-scope run is byte-identical to the pre-scope behaviour.  ``code`` drops
+    the PR-deferred units (the nested runners) and keeps the rest in discovery
+    order.  Callers must not recompute IDs another way: execution, shard merging
+    and the final report all read this function, so they cannot disagree.
+    """
+    return expected_ids(*discover_modules(root), scope=scope)
+
+
+def scoped_modules(modules, scope="full"):
+    """The units of ``modules`` that ``scope`` runs, in discovery order."""
+    if scope not in PR_SCOPES:
+        raise ValueError("unknown PR scope: %r" % (scope,))
+    if scope == "full":
+        return dict(modules)
+    return {unit: tests for unit, tests in modules.items()
+            if unit not in PR_DEFERRED_UNITS}
+
+
 def assign_modules(modules, shard_count):
     """Greedily balance shard units by test count plus nested-run weight."""
     if (not isinstance(shard_count, int) or isinstance(shard_count, bool)
@@ -162,16 +207,24 @@ def parse_shard(value):
     return index - 1, count
 
 
-def merge_shard_reports(root, paths, shard_count):
-    """Validate reports against fresh discovery, then rebuild full runtime data."""
+def merge_shard_reports(root, paths, shard_count, scope="full"):
+    """Validate reports against fresh discovery, then rebuild full runtime data.
+
+    ``scope`` is the same PR scope the shards ran with, so the expected ID set,
+    the expected module assignment and the merged reconciliation all derive from
+    one definition (``expected_ids``/``scoped_modules``).  A shard set produced
+    for one scope is rejected by the other: the ID union cannot match.
+    """
     root = Path(root).resolve()
     modules, ordered_ids = discover_modules(root)
+    modules = scoped_modules(modules, scope)
+    ordered_ids = expected_ids(modules, ordered_ids, scope)
     assignment = assign_modules(modules, shard_count)
-    expected_ids = {
+    shard_ids = {
         index + 1: [test.id() for module in assignment[index]
-                   for test in modules[module]]
+                    for test in modules[module]]
         for index in range(shard_count)}
-    expected = {index: set(ids) for index, ids in expected_ids.items()}
+    expected = {index: set(ids) for index, ids in shard_ids.items()}
     reports = {}
 
     for path in paths:
@@ -207,7 +260,7 @@ def merge_shard_reports(root, paths, shard_count):
                 f"missing={missing[:5]!r}, extra={extra[:5]!r}")
 
         discovered = shard.get("discovered_test_ids")
-        if discovered != expected_ids[index]:
+        if discovered != shard_ids[index]:
             raise ValueError(f"{path}: shard discovery differs from fresh discover")
         claimed = shard.get("executed_test_ids")
         if claimed != ids:

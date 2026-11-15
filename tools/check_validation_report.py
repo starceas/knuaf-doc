@@ -56,7 +56,13 @@ def _count(value, name, minimum=0, exact=None):
     return value
 
 
-def validate(report):
+def validate(report, scope="full"):
+    """Check one merged report against the contract of ``scope``.
+
+    ``scope`` must be the scope the shards ran with: the ID set, the ID order
+    and the runtime tally are all compared against it, so a ``code`` report is
+    never accepted as a full one (or the reverse).
+    """
     report = _dict(report, "report")
     expected_top = {
         "tool": "tools/run_validation.py", "verdict": "ok_platform_scoped",
@@ -130,6 +136,10 @@ def validate(report):
     policy = runpy.run_path(str(ROOT / "tools" / "run_validation.py"))
     allowed_skips = policy["ALLOWED_SKILL_SKIPS"]
     skill_skip_rule = policy["SKILL_SKIP_RULE"]
+    # Windows-only skill tests skip on this (linux/darwin, see the pending
+    # gate's observed_platform above) report by exact id and reason only.
+    posix_windows_skips = policy["POSIX_SKIPPED_WINDOWS_SKILL_TESTS"]
+    posix_windows_rule = policy["POSIX_SKIPPED_WINDOWS_SKILL_RULE"]
 
     for index, raw_entry in enumerate(entries):
         entry = _dict(raw_entry, "entries[%d]" % index)
@@ -152,11 +162,17 @@ def validate(report):
                   "native gate must be the exact withheld skip")
             _need(not entry.get("events"), "native gate skip cannot carry events")
         elif category == "skipped":
-            _need(test_id in allowed_skips and entry.get("detail") == allowed_skips[test_id],
-                  "unapproved skill skip: %s" % test_id)
+            if test_id in posix_windows_skips:
+                approved = entry.get("detail") == posix_windows_skips[test_id]
+                rule = posix_windows_rule
+            else:
+                approved = (test_id in allowed_skips
+                            and entry.get("detail") == allowed_skips[test_id])
+                rule = skill_skip_rule
+            _need(approved, "unapproved skill skip: %s" % test_id)
             _need(not entry.get("events"), "approved skill skip cannot carry events")
             skill_skips.append({"test": test_id, "reason": entry["detail"],
-                                "rule": skill_skip_rule})
+                                "rule": rule})
         events = entry.get("events")
         if events is not None:
             for event_index, raw_event in enumerate(_list(events, "entry events")):
@@ -186,8 +202,8 @@ def validate(report):
 
     sys.path.insert(0, str(ROOT))
     try:
-        from tools.validation_sharding import discover_modules
-        expected_ids = discover_modules(ROOT)[1]
+        from tools.validation_sharding import expected_ids_for
+        expected_ids = expected_ids_for(ROOT, scope)
     finally:
         sys.path.remove(str(ROOT))
     discovered = _list(runtime.get("discovered_test_ids"),
@@ -202,9 +218,11 @@ def main(argv=None):
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("report", help="merged validation report JSON")
+    parser.add_argument("--pr-scope", choices=["full", "code"], default="full",
+                        help="scope the shards ran with (design §2.2)")
     args = parser.parse_args(argv)
     try:
-        count = validate(_strict_load(args.report))
+        count = validate(_strict_load(args.report), args.pr_scope)
     except (OSError, ValueError, TypeError, KeyError, json.JSONDecodeError) as exc:
         print("validation report contract: REJECTED: %s" % exc,
               file=sys.stderr)
