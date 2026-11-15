@@ -82,6 +82,58 @@ class FigureCase(ContractCase):
                     project_root=str(self.root))
                 if i[0] == "missing_image"]
 
+    # --- 진짜 CLI 대역 ----------------------------------------------------
+
+    def cli_base_env(self):
+        """자식 프로세스 공통 환경 — 출력 인코딩을 못 박는다.
+
+        부모가 `PYTHONIOENCODING=ascii` 같은 값으로 떠 있어도 자식이 한글을
+        뱉다 죽지 않게 한다(윈도 CI 거짓 실패 방지). `KNUAF_FIGURE_HOME`은
+        건드리지 않는다.
+        """
+        env = dict(os.environ)
+        env["PYTHONUTF8"] = "1"
+        env["PYTHONIOENCODING"] = "utf-8"
+        env["PYTHONDONTWRITEBYTECODE"] = "1"
+        env.pop("PYTHONPATH", None)
+        env.pop("PYTHONHOME", None)
+        return env
+
+    def cli_env(self, home):
+        """공통 환경 + `KNUAF_FIGURE_HOME` — None이면 앱 밖(빈 문자열)."""
+        env = self.cli_base_env()
+        env["KNUAF_FIGURE_HOME"] = str(home) if home else ""
+        return env
+
+    def build_cli(self, manuscript, out, home, *, inp="body.md"):
+        """build_docx.py를 진짜 CLI로 돌린다 — 앱이 받는 JSON 봉투 그대로.
+
+        ``inp``는 `--in`에 줄 원고 경로다. 기본값은 프로젝트 뿌리의 `body.md`
+        (앱이 넘기는 모양)이고, M-02 시험은 하위 폴더 원고(`build/body.md`)를
+        준다 — 원고 폴더와 프로젝트 뿌리가 다를 때의 배선을 잠그려고.
+        """
+        write_text(self.root, inp, manuscript)
+        return subprocess.run(
+            [sys.executable, "-B", str(SCRIPTS / "build_docx.py"),
+             str(self.root), "--in", inp, "--out", out,
+             "--major", "specialty_crops"],
+            capture_output=True, text=True, encoding="utf-8",
+            env=self.cli_env(home), cwd=self.root)
+
+    def cli_pictures(self, path):
+        """CLI가 만든 docx를 **다시 열어** 박힌 그림 개수를 센다.
+
+        매니페스트는 앱이 읽는 요약일 뿐이라, 파일 자체에 그림이 들어갔는지는
+        따로 확인해야 한다(웹 검토 3번).
+        """
+        return len(Document(str(path)).inline_shapes)
+
+    def cli_media(self, path):
+        """이미 저장된 DOCX의 `word/media/*` 바이트 목록."""
+        with zipfile.ZipFile(path) as archive:
+            return [archive.read(entry) for entry in archive.namelist()
+                    if entry.startswith("word/media/")]
+
 
 class GuiFigureWireTests(FigureCase):
     # --- §4 네 경우 -------------------------------------------------------
@@ -167,45 +219,6 @@ class GuiFigureWireTests(FigureCase):
         self.assertEqual(manifest["figures"]["blocked"], [])
 
     # --- 웹 검토 R-01/R-02 ------------------------------------------------
-
-    def cli_base_env(self):
-        """자식 프로세스 공통 환경 — 출력 인코딩을 못 박는다.
-
-        부모가 `PYTHONIOENCODING=ascii` 같은 값으로 떠 있어도 자식이 한글을
-        뱉다 죽지 않게 한다(윈도 CI 거짓 실패 방지). `KNUAF_FIGURE_HOME`은
-        건드리지 않는다.
-        """
-        env = dict(os.environ)
-        env["PYTHONUTF8"] = "1"
-        env["PYTHONIOENCODING"] = "utf-8"
-        env["PYTHONDONTWRITEBYTECODE"] = "1"
-        env.pop("PYTHONPATH", None)
-        env.pop("PYTHONHOME", None)
-        return env
-
-    def cli_env(self, home):
-        """공통 환경 + `KNUAF_FIGURE_HOME` — None이면 앱 밖(빈 문자열)."""
-        env = self.cli_base_env()
-        env["KNUAF_FIGURE_HOME"] = str(home) if home else ""
-        return env
-
-    def build_cli(self, manuscript, out, home):
-        """build_docx.py를 진짜 CLI로 돌린다 — 앱이 받는 JSON 봉투 그대로."""
-        write_text(self.root, "body.md", manuscript)
-        return subprocess.run(
-            [sys.executable, "-B", str(SCRIPTS / "build_docx.py"),
-             str(self.root), "--in", "body.md", "--out", out,
-             "--major", "specialty_crops"],
-            capture_output=True, text=True, encoding="utf-8",
-            env=self.cli_env(home), cwd=self.root)
-
-    def cli_pictures(self, path):
-        """CLI가 만든 docx를 **다시 열어** 박힌 그림 개수를 센다.
-
-        매니페스트는 앱이 읽는 요약일 뿐이라, 파일 자체에 그림이 들어갔는지는
-        따로 확인해야 한다(웹 검토 3번).
-        """
-        return len(Document(str(path)).inline_shapes)
 
     def test_cli_reports_unverified_token_as_blocked_json_and_exit_2(self):
         """R-01: 앱이 미승인 토큰을 넘기면 CLI가 JSON으로 거절하고 종료코드 2를
@@ -358,9 +371,7 @@ class FigurePathResolveTests(FigureCase):
         """DOCX를 저장해 `word/media/*`를 꺼낸다 — 어떤 바이트가 박혔는지 본다."""
         path = self.root / name
         doc.save(str(path))
-        with zipfile.ZipFile(path) as archive:
-            return [archive.read(entry) for entry in archive.namelist()
-                    if entry.startswith("word/media/")]
+        return self.cli_media(path)
 
     # --- 셋이 같은 결론인 경우 --------------------------------------------
 
@@ -478,6 +489,70 @@ class FigurePathResolveTests(FigureCase):
         self.assertFalse((self.root / "out/검토.hwpx").exists())
         self.assertFalse((self.root / "argv-generate.json").exists(),
                          "모호하면 생성기를 부르기 전에 멈춘다")
+
+    # --- 진짜 CLI가 두 단계를 넘기는가(R-01 회귀 시험) --------------------
+
+    def test_cli_builds_figure_beside_subfolder_manuscript(self):
+        """R-01①: `--in build/body.md`에서 원고 옆 그림만 있을 때 그 바이트가
+        DOCX에 박힌다 — CLI가 `base`(원고 폴더)와 뿌리를 갈라 넘긴다는 증거다.
+
+        원고 목적지는 `farm.png`(폴더 없음)다. 뿌리만 보는 호출(base=뿌리)이면
+        찾지 못해 종료 2가 되고, 원고 옆을 보지 않으면 마찬가지다 — 그림이
+        들어오려면 원고 폴더가 첫 후보여야 한다.
+        """
+        beside = self.picture("build/farm.png")
+        text = manuscript("farm.png")
+        result = self.build_cli(text, "build/beside.docx", None,
+                                inp="build/body.md")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        out = self.root / "build" / "beside.docx"
+        self.assertEqual(self.cli_pictures(out), 1)
+        self.assertIn(beside.read_bytes(), self.cli_media(out))
+
+    def test_cli_builds_figure_from_project_root_under_subfolder_manuscript(self):
+        """R-01 보강: 원고 옆에 없고 뿌리에만 있는 그림도 CLI 빌드에서 들어온다.
+
+        `--in build/body.md`는 원고 폴더가 뿌리와 다르므로, CLI가 `root`를 함께
+        넘기지 않으면(`convert(..., src.parent)`만) 이 그림을 못 찾아 종료 2가
+        된다 — ①은 원고 옆 다리, 이 시험은 뿌리 다리를 잠근다.
+        """
+        rooted = self.picture("figures/public/farm.png")
+        result = self.build_cli(manuscript("figures/public/farm.png"),
+                                "build/rooted.docx", None, inp="build/body.md")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        out = self.root / "build" / "rooted.docx"
+        self.assertEqual(self.cli_pictures(out), 1)
+        self.assertIn(rooted.read_bytes(), self.cli_media(out))
+
+    def test_cli_stops_with_both_paths_when_beside_and_root_differ(self):
+        """R-01②: 원고 옆과 뿌리에 같은 이름의 다른 그림이 있으면 종료 2·
+        두 경로 안내·결과 미발행 — CLI가 뿌리(`root`)도 함께 넘긴다는 증거다.
+
+        `root`를 빼고 원고 폴더 하나만 넘기면 원고 옆 후보 하나만 보여
+        조용히 DOCX가 만들어지고, `base`를 뿌리로 되돌리면 원고 옆 그림을
+        아예 못 봐 두 후보 안내가 나오지 않는다 — 이 시험이 두 변이를 모두 막는다.
+        """
+        beside = self.picture("build/figures/public/farm.png", PNG + b"beside")
+        rooted = self.picture("figures/public/farm.png", PNG + b"root")
+        self.assertNotEqual(beside.read_bytes(), rooted.read_bytes())
+        sentence = self.gh.ambiguous_image_message(
+            ["build/figures/public/farm.png", "figures/public/farm.png"])
+
+        result = self.build_cli(manuscript("figures/public/farm.png"),
+                                "build/ambiguous.docx", None,
+                                inp="build/body.md")
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["status"], "blocked")
+        self.assertEqual(payload["reason"], "ValueError: " + sentence)
+        # 안내에 두 후보 경로가 원고 옆→뿌리 순서로 그대로 보인다
+        # (어느 쪽도 조용히 고르지 않는다).
+        self.assertIn("build/figures/public/farm.png, "
+                      "figures/public/farm.png", payload["reason"])
+        self.assertNotIn("Traceback", result.stderr)
+        self.assertFalse((self.root / "build" / "ambiguous.docx").exists())
+        self.assertFalse(
+            (self.root / "build" / "ambiguous.manifest.json").exists())
 
     # --- 앱 그림 토큰은 위치와 무관하게 저장고에서만 ----------------------
 

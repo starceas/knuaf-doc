@@ -12,6 +12,7 @@ import tempfile
 import threading
 import time
 import unittest
+import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from unittest import mock
@@ -67,6 +68,8 @@ class _Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.server.seen[self.path] = {
             key.lower(): value for key, value in self.headers.items()}
+        host = urllib.parse.urlsplit("//" + self.headers["host"]).hostname
+        self.server.hits.append((host, self.path))
         route = self.server.routes.get(self.path)
         if route is None:
             self.send_error(404)
@@ -204,7 +207,8 @@ class _ServerCase(unittest.TestCase):
             ["openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes",
              "-keyout", str(key), "-out", str(cert), "-days", "1",
              "-subj", "/CN=" + HOST,
-             "-addext", "subjectAltName=DNS:" + HOST],
+             "-addext", "subjectAltName=DNS:" + HOST + ",DNS:www.example.go.kr"
+                        ",DNS:plain.example.go.kr"],
             check=True, capture_output=True)
         cls.server = ThreadingHTTPServer(("127.0.0.1", 0), _Handler)
         cls.port = cls.server.server_address[1]
@@ -213,6 +217,7 @@ class _ServerCase(unittest.TestCase):
         cls.server.socket = context.wrap_socket(cls.server.socket, server_side=True)
         cls.server.routes = {}
         cls.server.seen = {}
+        cls.server.hits = []
         cls.thread = threading.Thread(target=cls.server.serve_forever, daemon=True)
         cls.thread.start()
         cls.tls = ssl.create_default_context(cafile=str(cert))
@@ -1415,6 +1420,292 @@ class TestReviewFixes(_ServerCase):
         result = self.fetch(PAGE_URL,
                             ["https://%s/ps/img/curation/\ud55c\uae00.jpg" % HOST])
         self.assertEqual(result["images"][0]["verdict"], "approved")
+
+
+# --------------------------------------------------------------------------
+# pageQuery (DESIGN-PQ r1) — 앱과 글자 그대로 같은 공용 벡터
+# --------------------------------------------------------------------------
+VECTORS_FILE = FIXTURES / "pagequery-vectors.json"
+VECTOR_TOKEN = re.compile(r"\{\{([^{}]*?)\*(\d+)\}\}")
+
+
+def _vector_expand(value):
+    """벡터의 `{{글자*수}}`를 실제 글자로 펼친다(길이 경계를 정확히 맞추려고)."""
+    if isinstance(value, str):
+        return VECTOR_TOKEN.sub(lambda m: m.group(1) * int(m.group(2)), value)
+    if isinstance(value, list):
+        return [_vector_expand(item) for item in value]
+    if isinstance(value, dict):
+        return {_vector_expand(key): _vector_expand(item)
+                for key, item in value.items()}
+    return value
+
+
+def _vectors():
+    return _vector_expand(json.loads(VECTORS_FILE.read_text(encoding="utf-8")))
+
+
+def _vector_rules(data):
+    """벡터의 `rules`(규칙 파일 내용)를 임시 파일에 써서 진짜 로더로 읽는다."""
+    folder = Path(tempfile.mkdtemp(prefix="gg-vectors-"))
+    path = folder / "figure-sources.json"
+    path.write_text(json.dumps(data["rules"], ensure_ascii=False),
+                    encoding="utf-8")
+    return gg_figure.load_rules(path), folder
+
+
+class TestPageQueryLoad(unittest.TestCase):
+    """벡터 `load`·`loadFile`·`loadText`(로더 G1~G5·I1~I7)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.data = _vectors()
+
+    def merged(self, override):
+        """`loadBase`에 얕게 덮어쓴다 — 값이 null이면 그 칸을 지운다."""
+        item = dict(self.data["loadBase"])
+        for key, value in override.items():
+            if value is None:
+                item.pop(key, None)
+            else:
+                item[key] = value
+        return item
+
+    def test_load_vectors(self):
+        """설계 §6: 항목 하나만 든 파일을 진짜 로더로 읽어 규칙 수가 1인지 0인지."""
+        for override, expected, note in self.data["load"]:
+            with self.subTest(note=note):
+                folder = Path(tempfile.mkdtemp(prefix="gg-vectors-"))
+                self.addCleanup(shutil.rmtree, folder, True)
+                path = folder / "figure-sources.json"
+                path.write_text(
+                    json.dumps({"v": 1, "rules": [self.merged(override)]},
+                               ensure_ascii=False),
+                    encoding="utf-8")
+                count = len(gg_figure.load_rules(path))
+                self.assertEqual(count, 1 if expected else 0, note)
+
+    def test_load_file_vectors(self):
+        for document, expected, note in self.data["loadFile"]:
+            with self.subTest(note=note):
+                folder = Path(tempfile.mkdtemp(prefix="gg-vectors-"))
+                self.addCleanup(shutil.rmtree, folder, True)
+                path = folder / "figure-sources.json"
+                path.write_text(json.dumps(document, ensure_ascii=False),
+                                encoding="utf-8")
+                ids = [rule["id"] for rule in gg_figure.load_rules(path)]
+                self.assertEqual(ids, expected, note)
+
+    def test_load_text_vectors(self):
+        for text, expected, probes, note in self.data["loadText"]:
+            with self.subTest(note=note):
+                folder = Path(tempfile.mkdtemp(prefix="gg-vectors-"))
+                self.addCleanup(shutil.rmtree, folder, True)
+                path = folder / "figure-sources.json"
+                path.write_text(text, encoding="utf-8")
+                rules = gg_figure.load_rules(path)
+                self.assertEqual([rule["id"] for rule in rules], expected, note)
+                for url, want in probes:
+                    chosen = gg_figure.select_page_rule(url, rules)
+                    got = None if chosen is None else chosen[0]["id"]
+                    self.assertEqual(got, want, note + " <- " + url)
+
+    def test_loader_rejects_non_standard_json_constants(self):
+        # G1: 표준 JSON이 아니면 파일째 거절 — 앱 JSON.parse와 같은 답(PQI-01).
+        base = json.loads(json.dumps(self.data["loadBase"]))
+        good = json.dumps({"v": 1, "rules": [base]})
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "figure-sources.json"
+            path.write_text(good, encoding="utf-8")
+            self.assertEqual(len(gg_figure.load_rules(path)), 1)
+            path.write_text(good.replace('"v": 1', '"v": 1.0'), encoding="utf-8")
+            self.assertEqual(len(gg_figure.load_rules(path)), 1)
+            for const in ("NaN", "Infinity", "-Infinity"):
+                with self.subTest(const=const):
+                    path.write_text(good[:-1] + ', "extra": ' + const + "}", encoding="utf-8")
+                    self.assertEqual(gg_figure.load_rules(path), [])
+
+    def test_loader_rejects_line_breaks_in_host_names_and_values(self):
+        # Python/JS의 `$`가 끝 줄바꿈 앞을 허용해 승인 범위를 넓히지 않게 한다.
+        overrides = [
+            {"host": "h.example.kr\n"},
+            {"host": "h\n.example.kr"},
+            {"pageQuery": {"k\n": {"literal": "v"}}},
+            {"pageQuery": {"k": {"literal": "v\n"}}},
+            {"pageQuery": {"k": {"enum": ["v\n"]}}},
+            {"pageQuery": {"k": {"digits": 1}}},
+        ]
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "figure-sources.json"
+            for override in overrides:
+                with self.subTest(override=override):
+                    document = {"v": 1, "rules": [self.merged(override)]}
+                    path.write_text(json.dumps(document), encoding="utf-8")
+                    self.assertEqual(gg_figure.load_rules(path), [])
+
+
+class TestPageQuerySelect(unittest.TestCase):
+    """벡터 `page`·`image`(주소 판정과 항목 고르기)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.data = _vectors()
+        cls.rules, folder = _vector_rules(cls.data)
+        cls.addClassCleanup(shutil.rmtree, folder, True)
+
+    def test_page_vectors(self):
+        for url, expected, note in self.data["page"]:
+            with self.subTest(note=note):
+                chosen = gg_figure.select_page_rule(url, self.rules)
+                got = None if chosen is None else chosen[0]["id"]
+                self.assertEqual(got, expected, note)
+                if expected is not None and chosen[0]["rule"] == gg_figure.RULE_PAGE_QUERY:
+                    # 새 항목은 적힌 주소를 그대로 보낸다(다듬지 않는다).
+                    self.assertEqual(chosen[1], url, note)
+
+    def test_image_vectors(self):
+        for page, image, expected, note in self.data["image"]:
+            with self.subTest(note=note):
+                chosen = gg_figure.select_page_rule(page, self.rules)
+                self.assertIsNotNone(chosen, note)
+                rule = chosen[0]
+                try:
+                    gg_figure.normalize_url(image, host=rule["host"],
+                                            path_pattern=rule["imagePath"])
+                    ok = True
+                except gg_figure.FigureError:
+                    ok = False
+                self.assertEqual(ok, expected, note)
+
+    def test_real_rule_file_loads(self):
+        path = SCRIPTS.parent / "references" / "figure-sources.json"
+        ids = [rule["id"] for rule in gg_figure.load_rules(path)]
+        self.assertEqual(ids, ["nongsaro-curation"])
+
+
+class TestPageQueryFlow(_ServerCase):
+    """벡터 `flow`(리다이렉트 — 새 항목은 아예 따라가지 않고, 옛 항목은 한 항목 안에서만)."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.data = _vectors()
+        cls.rules, folder = _vector_rules(cls.data)
+        cls.addClassCleanup(shutil.rmtree, folder, True)
+
+    def setUp(self):
+        self.server.routes.clear()
+        self.server.seen.clear()
+        self.server.hits.clear()
+
+    def path_of(self, url):
+        parts = urllib.parse.urlsplit(url)
+        path = parts.path or "/"
+        return path + ("" if not parts.query else "?" + parts.query)
+
+    def run_flow(self, kind, page, image, locations):
+        """벡터 하나 → (통과했나, 실제 전송한 (호스트, 요청 대상) 목록)."""
+        self.server.routes.clear()
+        self.server.hits.clear()
+        chosen = gg_figure.select_page_rule(page, self.rules)
+        if chosen is None:
+            return False, []
+        rule, page_target = chosen
+        if kind == "page":
+            url, follow = page_target, rule.get("rule") != gg_figure.RULE_PAGE_QUERY
+        else:
+            url, follow = image, True
+        # 상대 Location은 직전 주소에 이어 붙여 서버의 다음 응답을 놓는다.
+        steps = [url]
+        for location in locations:
+            steps.append(urllib.parse.urljoin(steps[-1], location))
+        self.route(self.path_of(steps[-1]), b"ok")
+        for index, location in enumerate(locations):
+            self.route(self.path_of(steps[index]), status=302,
+                       headers={"location": location})
+        try:
+            gg_figure.http_get(url, rule=rule, kind=kind,
+                               resolver=self.resolver, allow_loopback=True,
+                               tls_context=self.tls, follow_redirects=follow)
+            ok = True
+        except gg_figure.FigureError:
+            ok = False
+        return ok, list(self.server.hits)
+
+    def test_flow_vectors(self):
+        # §6 flow 순서: 성공뿐 아니라 거절 지점 직전까지의 전송 수를 고정한다.
+        # 4번째 옛 페이지 리다이렉트는 응답까지만 받고 5번째 주소는 안 보낸다.
+        sent_counts = (1, 1, 1, 1, 1, 2, 4, 4, 1, 2, 1, 1, 1, 2, 1, 2, 2)
+        for index, vector in enumerate(self.data["flow"]):
+            kind, page, image, locations, expected, note = vector
+            with self.subTest(note=note):
+                ok, sent = self.run_flow(kind, page, image, locations)
+                self.assertEqual(ok, expected, note)
+                steps = [page if kind == "page" else image]
+                for location in locations:
+                    steps.append(urllib.parse.urljoin(steps[-1], location))
+                expected_sent = [
+                    (urllib.parse.urlsplit(url).netloc, self.path_of(url))
+                    for url in steps[:sent_counts[index]]
+                ]
+                self.assertEqual(sent, expected_sent, note)
+
+    def fetch_direct(self, folder, page, images):
+        return gg_figure.fetch_direct(
+            folder, page, images, "pq", rules=self.rules,
+            resolver=self.resolver, allow_loopback=True, tls_context=self.tls)
+
+    def test_second_query_rule_approves_and_records_its_id(self):
+        """겹치는 imagePath여도 처음 항목이 아닌 페이지 항목의 권리·증명을 쓴다."""
+        page, image, _, _ = self.data["image"][1]
+        body = fixture("nongsaro-image02.jpg")
+        for kogl in (1, 2):
+            with self.subTest(kogl=kogl), tempfile.TemporaryDirectory() as folder:
+                self.server.hits.clear()
+                html = '<p>open_mark%d.png</p><img src="%s">' % (kogl, image)
+                self.route(self.path_of(page), html.encode("utf-8"))
+                self.route(self.path_of(image), body)
+                result = self.fetch_direct(folder, page, [image])
+                self.assertEqual(result["status"], "done")
+                self.assertEqual(result["page"]["ruleId"], "t-card")
+                record = result["images"][0]
+                self.assertEqual(record["verdict"], "approved")
+                self.assertEqual(record["kogl"], kogl)
+                self.assertEqual(record["org"], "시험기관(카드뉴스)")
+                self.assertEqual((Path(folder) / record["path"]).read_bytes(), body)
+                receipt = json.loads((Path(folder) / ".gg-work" /
+                                      "figure-receipts.jsonl").read_text("utf-8"))
+                self.assertEqual(receipt["image"]["ruleId"], "t-card")
+                self.assertEqual(self.server.hits, [
+                    ("www.example.go.kr", self.path_of(page)),
+                    ("www.example.go.kr", self.path_of(image)),
+                ])
+
+    def test_query_page_3xx_blocks_before_next_request(self):
+        """http_get 선택 인자만이 아니라 fetch_direct의 새 페이지 배선도 잠근다."""
+        page, image, _, _ = self.data["image"][1]
+        location = page.replace("dataNo=1", "dataNo=2")
+        for status in (300, 301, 302, 303, 304, 305, 306, 307, 308, 399):
+            with self.subTest(status=status), tempfile.TemporaryDirectory() as folder:
+                self.server.hits.clear()
+                self.route(self.path_of(page), status=status,
+                           headers={"location": location})
+                self.route(self.path_of(location), b"ok")
+                result = self.fetch_direct(folder, page, [image])
+                self.assertEqual(result["status"], "blocked")
+                self.assertEqual(result["reason"], "redirect_not_allowed")
+                self.assertEqual(self.server.hits, [
+                    ("www.example.go.kr", self.path_of(page)),
+                ])
+                self.assertFalse((Path(folder) / "figures").exists())
+
+    def test_invalid_query_is_blocked_without_request(self):
+        page, image, _, _ = self.data["image"][1]
+        with tempfile.TemporaryDirectory() as folder:
+            result = self.fetch_direct(folder, page + "&pageNo=1", [image])
+            self.assertEqual(result["status"], "blocked")
+            self.assertEqual(result["reason"], "no_rule")
+            self.assertEqual(self.server.hits, [])
 
 
 if __name__ == "__main__":

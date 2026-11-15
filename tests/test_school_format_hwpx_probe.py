@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import xml.etree.ElementTree as ET
 import zipfile
 from io import BytesIO
 from unittest import mock
@@ -46,6 +47,41 @@ def _rewrite(members, path):
         for name, payload in members.items():
             archive.writestr(name, payload)
     return path
+
+
+_HW = "http://www.hancom.co.kr/hwpml/2011/head"
+
+
+def _charpr_table(data):
+    """header.xml의 ``{id: (포인트, 굵기)}`` (height는 1/100 pt)."""
+    root = ET.fromstring(read_zip(data)["Contents/header.xml"])
+    properties = root.find("{%s}charProperties" % _HW)
+    table = {}
+    for node in properties.findall("{%s}charPr" % _HW):
+        bold = (node.get("bold") == "1"
+                or node.find("{%s}bold" % _HW) is not None)
+        table[node.get("id")] = (int(node.get("height")) // 100, bold)
+    return table
+
+
+def _front_id(data, size, bold):
+    """앞부분 전용 블록(header 꼬리 14개)에서 (포인트, 굵기)의 charPr id."""
+    table = _charpr_table(data)
+    tail = sorted(table, key=int)[-len(probe.FRONT_CHARPR_SIGNATURE):]
+    for cid in tail:
+        if table[cid] == (size, bold):
+            return cid
+    raise AssertionError((size, bold))
+
+
+def _body_id(data, size, bold):
+    """본문 전용 블록에서 (포인트, 굵기)의 charPr id(앞부분 꼬리는 제외)."""
+    table = _charpr_table(data)
+    ordered = sorted(table, key=int)[:-len(probe.FRONT_CHARPR_SIGNATURE)]
+    for cid in ordered:
+        if cid != "0" and table[cid] == (size, bold):
+            return cid
+    raise AssertionError((size, bold))
 
 
 def _corrupt_crc(data, name="Contents/header.xml"):
@@ -100,9 +136,18 @@ class ProbeTests(unittest.TestCase):
         self.assertEqual([0, 1, 1], checks["page_number"]["new_num_counts"])
         self.assertEqual(3, checks["section"]["count"])
         self.assertEqual("3", checks["section"]["sec_cnt"])
-        # 앞부분 전용 charPr 14개가 id 1..14로 붙고, 본문에는 새지 않는다.
-        self.assertEqual([str(index) for index in range(1, 15)],
-                         sorted(checks["charpr"]["front_charpr_ids"], key=int))
+        # 앞부분 전용 charPr 14개가 header 꼬리(last)에 붙고, 본문에는 새지
+        # 않는다. 본문 전용 블록이 앞에 붙으므로 id는 15가 아니라 꼬리 기준이다.
+        self.assertEqual(len(probe.FRONT_CHARPR_SIGNATURE),
+                         len(checks["charpr"]["front_charpr_ids"]))
+        self.assertEqual(
+            sorted(_charpr_table(self.output), key=int)
+            [-len(probe.FRONT_CHARPR_SIGNATURE):],
+            sorted(checks["charpr"]["front_charpr_ids"], key=int))
+        # 본문 블록은 본문 문단이 실제로 쓴다(10 pt 기본이 아님).
+        body = read_zip(self.output)["Contents/section2.xml"]
+        self.assertIn(b'charPrIDRef="' + _body_id(
+            self.output, 12, False).encode("utf-8") + b'"', body)
         # version.xml은 1판·양식 원본에도 없는 사전 결함이라 차단하지 않고 기록만 한다.
         self.assertFalse(checks["manifest"]["version_xml_present"])
         self.assertIn("사전 결함", checks["manifest"]["version_xml_note"])
@@ -196,10 +241,11 @@ class ProbeTests(unittest.TestCase):
     def test_front_charpr_leaking_into_body_is_rejected(self):
         path = _write(self.tmp.name, self.output, "leak.hwpx")
         members = read_zip(self.output)
-        # 목차 항목(12 pt)이 아니라 본문 첫 문단을 앞부분 전용 14 pt 굵게로 바꾼다.
+        # 본문 문단(12 pt 보통)을 앞부분 전용 14 pt 굵게로 바꾼다.
         section = members["Contents/section2.xml"]
         members["Contents/section2.xml"] = section.replace(
-            b'<hp:run charPrIDRef="0">', b'<hp:run charPrIDRef="3">', 1)
+            ('charPrIDRef="%s"' % _body_id(self.output, 12, False)).encode(),
+            ('charPrIDRef="%s"' % _front_id(self.output, 14, True)).encode(), 1)
         _rewrite(members, path)
         codes = self.codes(probe.check(path))
         self.assertIn("food_crops.format.charpr.body_invariant", codes)
@@ -209,7 +255,8 @@ class ProbeTests(unittest.TestCase):
         members = read_zip(self.output)
         section = members["Contents/section2.xml"]
         members["Contents/section2.xml"] = section.replace(
-            b'<hp:run charPrIDRef="3">', b'<hp:run charPrIDRef="0">', 1)
+            ('charPrIDRef="%s"' % _front_id(self.output, 14, True)).encode(),
+            b'charPrIDRef="0"', 1)
         _rewrite(members, path)
         codes = self.codes(probe.check(path))
         self.assertIn("food_crops.format.charpr.consent", codes)
@@ -261,7 +308,8 @@ class ProbeTests(unittest.TestCase):
         path = _write(self.tmp.name, self.output, "toc-entry.hwpx")
         members = read_zip(self.output)
         entry = ('<hp:p paraPrIDRef="0" styleIDRef="0">'
-                 '<hp:run charPrIDRef="2"><hp:t>1. 머리말</hp:t></hp:run></hp:p>')
+                 '<hp:run charPrIDRef="%s"><hp:t>1. 머리말</hp:t></hp:run></hp:p>'
+                 % _front_id(self.output, 12, False))
         members["Contents/section1.xml"] = members["Contents/section1.xml"].replace(
             b"</hs:sec>", entry.encode("utf-8") + b"</hs:sec>", 1)
         _rewrite(members, path)
@@ -274,8 +322,11 @@ class ProbeTests(unittest.TestCase):
         path = _write(self.tmp.name, self.output, "summary-subheading.hwpx")
         members = read_zip(self.output)
         xml = members["Contents/section1.xml"].decode("utf-8")
-        mutated = xml.replace('<hp:run charPrIDRef="5"><hp:t>1. 농장 개요',
-                              '<hp:run charPrIDRef="2"><hp:t>1. 농장 개요', 1)
+        mutated = xml.replace(
+            '<hp:run charPrIDRef="%s"><hp:t>1. 농장 개요'
+            % _front_id(self.output, 16, True),
+            '<hp:run charPrIDRef="%s"><hp:t>1. 농장 개요'
+            % _front_id(self.output, 12, False), 1)
         self.assertNotEqual(xml, mutated)
         members["Contents/section1.xml"] = mutated.encode("utf-8")
         _rewrite(members, path)
@@ -385,8 +436,8 @@ class ProbeTests(unittest.TestCase):
         members = read_zip(self.output)
         section = members["Contents/section0.xml"].decode("utf-8")
         stripped = re.sub(
-            r'<hp:p [^>]*><hp:run charPrIDRef="10"><hp:t>\d{4}년[^<]*</hp:t>'
-            r"</hp:run></hp:p>", "", section)
+            r'<hp:p [^>]*><hp:run charPrIDRef="%s"><hp:t>\d{4}년[^<]*</hp:t>'
+            r"</hp:run></hp:p>" % _front_id(self.output, 20, False), "", section)
         self.assertLess(len(stripped), len(section))
         members["Contents/section0.xml"] = stripped.encode("utf-8")
         _rewrite(members, path)
@@ -398,7 +449,10 @@ class ProbeTests(unittest.TestCase):
         path = _write(self.tmp.name, self.output, "year-size.hwpx")
         members = read_zip(self.output)
         members["Contents/section0.xml"] = members["Contents/section0.xml"].replace(
-            b'<hp:run charPrIDRef="10"><hp:t>2027', b'<hp:run charPrIDRef="5"><hp:t>2027', 1)
+            ('<hp:run charPrIDRef="%s"><hp:t>2027'
+             % _front_id(self.output, 20, False)).encode(),
+            ('<hp:run charPrIDRef="%s"><hp:t>2027'
+             % _front_id(self.output, 16, False)).encode(), 1)
         _rewrite(members, path)
         result = probe.check(path)
         self.assertIn("food_crops.format.charpr.front", self.codes(result))
