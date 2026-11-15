@@ -310,6 +310,11 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
     # 아라비아 `1.`~`5.`, 낙농은 로마 `Ⅰ.`). 프로필이 없으면 지금까지처럼
     # 전공 없이 읽어 출력을 바꾸지 않는다.
     nodes = parse(md_text, major_id=major_id if profile else None)
+    for index, node in enumerate(nodes):
+        if node["kind"] == "image":
+            issue = gg_figure_docx.block_issue(nodes, index)
+            if issue:
+                raise ValueError("blocked: " + issue)
 
     last_prose = None
     # 식량작물 장 시작 쪽 나눔 대상(본문 첫 장은 새 구역이라 뺀다).

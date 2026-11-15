@@ -14,6 +14,7 @@ from pathlib import Path
 from unittest import mock
 
 SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 sys.path.insert(0, str(SCRIPTS))
 import gg_figure_docx as gd  # noqa: E402
 
@@ -324,6 +325,109 @@ class RecheckNoticeTests(_HomeCase):
         self.assertEqual(gd.build_report([ref], home=None, root=root).get("notices", []), [])
         receipt.write_text("", encoding="utf-8")
         self.assertEqual(gd.build_report([ref], home=None, root=root).get("notices", []), [])
+
+
+class AppBlockContractTests(_HomeCase):
+    """가짜 앱 증명 → 실제 place → 검사·DOCX 산출물까지 확인한다."""
+
+    def setUp(self):
+        super().setUp()
+        from tests._harness import bind_major, write_text
+        import gg_core
+        import gg_major_contract
+        self.root = self.home / "project"
+        self.root.mkdir()
+        gg_core.init(self.root)
+        bind_major(self.root, "specialty_crops")
+        self.context = gg_major_contract.output_context(self.root, "specialty_crops")
+        self.store()
+        receipt = self.receipt()
+        self.url = receipt["page"]["url"]
+        self.manuscript = self.root / "body.md"
+        self.manuscript.write_text("# Ⅰ. 머리말\n\n그림 1에서 확인한다.\n", encoding="utf-8")
+        write_text(self.root, ".gg-work/figure-requests/s1.json", json.dumps(
+                   {"v": 1, "reqId": "request1", "mode": "app", "slot": "s1"}))
+        receipt["reqId"] = "request1"
+        self.receipts.write_text(json.dumps(receipt) + "\n", encoding="utf-8")
+        write_text(self.home, "res/request1.res.json", json.dumps(
+                   {"v": 1, "id": "request1", "status": "done", "slot": "s1",
+                    "images": [{"verdict": "approved", "sha256": SHA,
+                                "org": "농촌진흥청"}]}))
+        self.env = mock.patch.dict(os.environ, {"KNUAF_FIGURE_HOME": str(self.home)})
+        self.env.start()
+        self.addCleanup(self.env.stop)
+
+    def placed_text(self):
+        import gg_figure
+        result = gg_figure.place(self.root, "s1", "Ⅰ. 머리말", manuscript="body.md",
+                                 environ={"KNUAF_FIGURE_HOME": str(self.home)})
+        self.assertEqual(result["status"], "placed", result)
+        return self.manuscript.read_text(encoding="utf-8")
+
+    def assert_blocked(self, text):
+        import gg_document
+        import build_docx
+        issues = gg_document.check(text, self.root, major_id="specialty_crops")
+        self.assertTrue(any("figure_source_note" in message for _, message in issues), issues)
+        with self.assertRaisesRegex(ValueError, "blocked: figure_source_note"):
+            build_docx.convert(text, base=self.root, context=self.context)
+
+    def test_place_block_survives_actual_docx_serialization(self):
+        import io
+        from docx import Document
+        import gg_document
+        import build_docx
+        text = self.placed_text()
+        issues = gg_document.check(text, self.root, major_id="specialty_crops")
+        self.assertFalse(any(code == "missing_image" for code, _ in issues), issues)
+        document = build_docx.convert(text, base=self.root, context=self.context)
+        stream = io.BytesIO()
+        document.save(stream)
+        stream.seek(0)
+        actual = Document(stream)
+        self.assertEqual(len(actual.inline_shapes), 1)
+        paragraphs = [p.text for p in actual.paragraphs]
+        self.assertIn("주 : 원문 주소 " + self.url, paragraphs)
+        self.assertTrue(any(p.startswith("그림 1.") and "출처 : 농촌진흥청" in p.replace("\u00a0", " ")
+                            for p in paragraphs), paragraphs)
+
+    def test_handwritten_incomplete_and_wrong_blocks_are_rejected(self):
+        text = self.placed_text()
+        image = "![](" + token(SHA) + ")"
+        caption = "그림 1. 안내 (출처 : 농촌진흥청)"
+        note = "주 : 원문 주소 " + self.url
+        for block in (image, image + "\n\n" + caption,
+                      image + "\n\n" + note,
+                      image + "\n\n" + caption + "\n\n주 : 원문 주소 https://wrong.example/x",
+                      image + "\n\n그림 1. 안내\n\n" + note,
+                      image + "\n\n" + caption + "\n\n다른 문단\n\n" + note,
+                      image + "\n\n" + caption + "\n\n- " + note):
+            with self.subTest(block=block):
+                self.assert_blocked("# Ⅰ. 머리말\n\n" + block + "\n")
+        # 같은 그림의 다른 정상 블록은 앞의 누락을 덮지 않는다.
+        self.assert_blocked(image + "\n\n" + caption + "\n\n" + text)
+
+    def test_missing_receipt_page_url_is_rejected(self):
+        text = self.placed_text()
+        receipt = json.loads(self.receipts.read_text(encoding="utf-8"))
+        receipt["page"].pop("url")
+        self.receipts.write_text(json.dumps(receipt) + "\n", encoding="utf-8")
+        self.assert_blocked(text)
+
+    def test_creator_annotation_after_exact_url_is_allowed(self):
+        import gg_document
+        text = self.placed_text().rstrip() + " 만든 사람: 홍길동\n"
+        nodes = gg_document.parse(text)
+        index = next(i for i, node in enumerate(nodes) if node["kind"] == "image")
+        self.assertIsNone(gd.block_issue(nodes, index))
+
+    def test_outside_app_retains_placeholder_without_note(self):
+        import build_docx
+        with mock.patch.dict(os.environ, {"KNUAF_FIGURE_HOME": ""}):
+            document = build_docx.convert("![](" + token(SHA) + ")\n",
+                                          base=self.root, context=self.context)
+        self.assertEqual(len(document.inline_shapes), 0)
+        self.assertIn(gd.PLACEHOLDER, [p.text for p in document.paragraphs])
 
 
 if __name__ == "__main__":
