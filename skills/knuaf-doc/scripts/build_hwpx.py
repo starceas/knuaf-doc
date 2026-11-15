@@ -197,11 +197,6 @@ def add_chapter_breaks(section_xml, heading_para_ref="1", major_id=None,
     원고는 `1`, 제목 표시 없는 낙농 원고는 `7` 또는 로마 번호 장이면 `0`).
     모양 번호를 고정하면 낙농 HWPX에 쪽 나눔이 하나도 안 들어간다. 대신 목록
     자체가 이미 그 원고의 1단계 제목에서 나왔으므로 글자 일치만으로 충분하다.
-
-    이 갈래는 게이트가 낙농을 막고 있는 동안 **닿지 않는다**(`chapter_texts`는
-    `hwpx_chapter == "nodes"`인 프로필, 곧 게이트 안 전공에만 계산된다).
-    그래서 이 묶음의 출력은 안 바뀌고, 다음 판에서 게이트 한 줄만 켜도
-    장 쪽 나눔이 살아 있다(떼어 내면 그 함정이 그대로 되살아난다).
     """
     chapter_re = _CHAPTER_RE
     profile = hwpx_profile(major_id)

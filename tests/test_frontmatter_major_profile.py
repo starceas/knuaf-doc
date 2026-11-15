@@ -4,7 +4,7 @@
 `{'요약': 22, '감사의 글': 20, '학부모 동의서': 20}`로 들고 있었다. 이 단위는
 그 자리를 `gg_major_format` 프로필 조회로 바꿨다. 이 시험은 (1) 식량작물
 출력이 옛 값 그대로인지, (2) 프로필 값을 고치면 출력이 따라오는지(치환이
-진짜인지), (3) 낙농은 게이트로 옛 경로를 타는지를 잰다.
+진짜인지), (3) F9e 이후 낙농이 게이트 안에서 프로필 경로를 타는지를 잰다.
 
 가짜 원고·가짜 이름만 쓴다.
 """
@@ -109,32 +109,16 @@ class FrontmatterMajorProfileTests(ContractCase):
             margins = self.margins(self.convert().sections[1])
         self.assertEqual(self.builder.Mm(25).twips, margins["top"])
 
-    # --- 낙농은 게이트로 옛 경로 -------------------------------------------
+    # --- 낙농은 F9e에서 게이트 안 -------------------------------------------
 
     def test_dairy_gate_matches_the_docx_builder(self):
-        self.assertNotIn("dairy", self.layout._FRONTMATTER_PROFILE_MAJORS)
+        self.assertIn("dairy", self.layout._FRONTMATTER_PROFILE_MAJORS)
         self.assertEqual(tuple(self.builder.DOCX_PROFILE_MAJORS),
                          tuple(self.layout._FRONTMATTER_PROFILE_MAJORS))
 
-    def test_dairy_keeps_the_legacy_path_while_the_gate_is_shut(self):
+    def test_dairy_takes_the_profile_front_matter_path(self):
         from docx.oxml.ns import qn
         doc = self.convert("dairy")
-        # 옛 `major_id == 'food_crops'` 결과: 로마 대문자 구역을 열지 않고,
-        # 앞부분 제목 run에는 크기를 굽지 않는다(스타일 그대로).
-        self.assertEqual([None],
-                         [run.font.size
-                          for run in self.front_heading(doc, "요약").runs])
-        # 요약 구역은 종전 경로의 소문자 로마 쪽번호다.
-        self.assertEqual("lowerRoman",
-                         doc.sections[1]._sectPr.find(qn("w:pgNumType"))
-                         .get(qn("w:fmt")))
-
-    def test_opening_the_gate_for_dairy_changes_the_output(self):
-        """게이트가 낙농을 막는 유일한 이유임을 보인다(치환이 살아 있다)."""
-        from docx.oxml.ns import qn
-        with mock.patch.object(self.layout, "_FRONTMATTER_PROFILE_MAJORS",
-                               ("food_crops", "dairy")):
-            doc = self.convert("dairy")
         # 낙농 프로필의 앞부분 제목은 전부 22pt(견본 실측).
         self.assertEqual(22.0, self.title_pt(doc, "요약"))
         self.assertEqual(22.0, self.title_pt(doc, "감사의 글"))
@@ -144,6 +128,30 @@ class FrontmatterMajorProfileTests(ContractCase):
                          .get(qn("w:fmt")))
         self.assertEqual(self.builder.Mm(30).twips,
                          self.margins(doc.sections[1])["top"])
+
+    def test_closing_the_gate_for_dairy_restores_the_legacy_output(self):
+        """게이트를 다시 닫으면 옛 경로로 돌아간다(치환이 게이트에만 달렸다).
+
+        게이트 값은 `gg_major_format.ENABLED_FORMAT_MAJORS` 한 객체이고 세
+        빌더가 그 별칭을 본다. 본문 구역·쪽나눔은 `build_docx`의 별칭으로
+        프로필을 고르고 `_render_peer_forms`는 이 파일의 별칭으로 고르므로,
+        닫으려면 둘을 함께 되돌려야 한다 — 하나만 닫으면 본문은 프로필,
+        앞부분은 옛 경로인 반쪽 상태가 되어 시험이 재는 것이 사라진다.
+        """
+        from docx.oxml.ns import qn
+        with mock.patch.object(self.builder, "DOCX_PROFILE_MAJORS",
+                               ("food_crops",)), \
+                mock.patch.object(self.layout, "_FRONTMATTER_PROFILE_MAJORS",
+                                  ("food_crops",)):
+            doc = self.convert("dairy")
+        # 옛 `major_id == 'food_crops'` 결과: 로마 대문자 구역을 열지 않고,
+        # 앞부분 제목 run에는 크기를 굽지 않는다(스타일 그대로).
+        self.assertEqual([None],
+                         [run.font.size
+                          for run in self.front_heading(doc, "요약").runs])
+        self.assertEqual("lowerRoman",
+                         doc.sections[1]._sectPr.find(qn("w:pgNumType"))
+                         .get(qn("w:fmt")))
 
     # --- 앞부분 줄 크기: 식량작물은 옛 값, 낙농은 프로필 값 -----------------
 
@@ -209,9 +217,7 @@ class FrontmatterMajorProfileTests(ContractCase):
         profile = replace(self.gmf.DAIRY_PROFILE, summary_item_pt=(15, False))
         with mock.patch.object(self.layout, "profile_for",
                                lambda major_id: profile
-                               if major_id == "dairy" else None), \
-                mock.patch.object(self.layout, "_FRONTMATTER_PROFILE_MAJORS",
-                                  ("food_crops", "dairy")):
+                               if major_id == "dairy" else None):
             self.assertEqual((15.0, False),
                              self.summary_item(self.convert("dairy")))
 
@@ -294,10 +300,10 @@ class FrontmatterMajorProfileTests(ContractCase):
     def test_bare_manuscript_has_no_footer_section(self):
         """학교 앞부분이 없는 원고 경로는 바닥글을 만들지 않는다.
 
-        쪽번호 꾸밈(`page_label`)을 프로필에서 읽는 곳은 학교 서식 경로의 두
-        구역(`new_numbered_section`·본문 구역)뿐이다. 앞부분 계획이 서지 않는
-        원고는 그 전에도 지금도 바닥글 문단을 만들지 않으므로, 이 경로에는
-        `- 1 -` 글자 run도 `PAGE` 필드도 붙지 않는다(범위 경계).
+        F9e가 쪽번호 꾸밈을 프로필로 넘긴 곳은 학교 서식 경로의 두 구역
+        (`new_numbered_section`·본문 구역)뿐이다. 앞부분 계획이 서지 않는
+        원고는 그 전에도 지금도 바닥글 문단을 만들지 않으므로, 게이트가
+        켜져도 낙농 여기에는 `- 1 -` 글자 run이 붙지 않는다(범위 경계).
         """
         root = self.make_project()
         bind_major(root, "dairy")

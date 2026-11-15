@@ -3,8 +3,8 @@
 빌더가 `food_crops` 이름을 직접 비교하던 자리를 프로필 조회로 바꿨다. 이
 시험은 그 치환이 진짜인지 — 즉 프로필 값을 고치면 출력이 따라 바뀌고,
 값이 같으면 지금까지와 같은지 — 를 잰다. 프로필 표에 값이 있는 전공이라도
-`build_docx.DOCX_PROFILE_MAJORS`에 없으면 기본 경로를 타야 한다(낙농은
-아직 그 자리다: 이 단위는 식량작물 치환만 다룬다).
+`build_docx.DOCX_PROFILE_MAJORS`에 없으면 기본 경로를 탄다. F9e에서 낙농을
+게이트에 넣었으므로 지금 목록 밖 예시는 특용작물이다.
 
 가짜 원고·가짜 이름만 쓴다.
 """
@@ -75,15 +75,11 @@ class DocxMajorProfileTests(ContractCase):
             lambda major_id: profile if major_id == "food_crops" else None)
 
     def dairy_convert(self, text="# 1. 머리말\n\n합성 본문.\n"):
-        """낙농 빌드. 게이트는 끈 채로 이 빌드만 낙농 프로필을 보게 한다."""
+        """낙농 빌드. F9e 이후 게이트가 켜져 있어 패치 없이 프로필을 본다."""
         root = self.make_project()
         bind_major(root, "dairy")
-        with mock.patch.object(
-                self.builder, "docx_profile",
-                lambda major_id: self.gmf.DAIRY_PROFILE
-                if major_id == "dairy" else None):
-            return self.builder.convert(
-                text, context=self.mc.output_context(root, "dairy"))
+        return self.builder.convert(
+            text, context=self.mc.output_context(root, "dairy"))
 
     # --- 값 표가 옛 하드코딩과 같다 ---------------------------------------
 
@@ -149,7 +145,7 @@ class DocxMajorProfileTests(ContractCase):
                          spaced(self.convert(), "1. 머리말", "Heading 1"))
 
     def test_heading_spacing_comes_from_the_profile(self):
-        # 19.2pt = 384 twips. 낙농 프로필을 넘긴 빌드의 제목만 이 값을 쓴다.
+        # 19.2pt = 384 twips. 게이트가 켜진 뒤로 낙농은 패치 없이 이 값을 쓴다.
         self.assertEqual((384, 384),
                          spaced(self.dairy_convert(), "1. 머리말", "Heading 1"))
 
@@ -194,22 +190,38 @@ class DocxMajorProfileTests(ContractCase):
     # --- 표에 있어도 목록에 없으면 기본 경로 -------------------------------
 
     def test_majors_outside_the_profile_list_keep_the_legacy_path(self):
-        self.assertIsNotNone(self.gmf.profile_for("dairy"))
-        self.assertIsNone(self.builder.docx_profile("dairy"))
+        # 낙농은 F9e에서 게이트 안으로 들어왔다 — 목록 밖 전공만 기본 경로다.
+        self.assertIs(self.gmf.DAIRY_PROFILE,
+                      self.builder.docx_profile("dairy"))
         self.assertIsNone(self.builder.docx_profile("specialty_crops"))
         self.assertIs(self.gmf.FOOD_CROPS_PROFILE,
                       self.builder.docx_profile("food_crops"))
-        # 기본 경로 여백은 종전 그대로여야 한다(위20/아래15/좌30/우30/머리15/꼬리15).
+        # 목록 밖 전공의 기본 경로 여백은 종전 그대로여야 한다
+        # (위20/아래15/좌30/우30/머리15/꼬리15).
+        root = self.make_project()
+        bind_major(root, "specialty_crops")
+        doc = self.builder.convert(
+            "# 1. 머리말\n\n합성 본문.\n",
+            context=self.mc.output_context(root, "specialty_crops"))
+        self.assertEqual(
+            {"top": self.builder.Mm(20).twips, "bottom": self.builder.Mm(15).twips,
+             "left": self.builder.Mm(30).twips, "right": self.builder.Mm(30).twips,
+             "header": self.builder.Mm(15).twips,
+             "footer": self.builder.Mm(15).twips, "gutter": 0},
+            margins(doc.sections[0]))
+
+    def test_dairy_now_takes_the_profile_margins_through_the_gate(self):
+        # 게이트를 켠 결과: 패치 없이도 낙농은 위30/아래30/머리0/꼬리10이다.
         root = self.make_project()
         bind_major(root, "dairy")
         doc = self.builder.convert(
             "# 1. 머리말\n\n합성 본문.\n",
             context=self.mc.output_context(root, "dairy"))
         self.assertEqual(
-            {"top": self.builder.Mm(20).twips, "bottom": self.builder.Mm(15).twips,
+            {"top": self.builder.Mm(30).twips, "bottom": self.builder.Mm(30).twips,
              "left": self.builder.Mm(30).twips, "right": self.builder.Mm(30).twips,
-             "header": self.builder.Mm(15).twips,
-             "footer": self.builder.Mm(15).twips, "gutter": 0},
+             "header": self.builder.Mm(0).twips,
+             "footer": self.builder.Mm(10).twips, "gutter": 0},
             margins(doc.sections[0]))
 
 
@@ -231,7 +243,7 @@ class SharedFormatGateTests(ContractCase):
                       self.hwpx.HWPX_PROFILE_MAJORS)
         self.assertIs(self.gmf.ENABLED_FORMAT_MAJORS,
                       self.layout._FRONTMATTER_PROFILE_MAJORS)
-        self.assertEqual(("food_crops",),
+        self.assertEqual(("food_crops", "dairy"),
                          tuple(self.gmf.ENABLED_FORMAT_MAJORS))
 
     def test_the_three_builders_agree_on_every_major(self):
@@ -244,7 +256,8 @@ class SharedFormatGateTests(ContractCase):
                           major)
         self.assertIs(self.gmf.FOOD_CROPS_PROFILE,
                       self.builder.docx_profile("food_crops"))
-        self.assertIsNone(self.builder.docx_profile("dairy"))
+        self.assertIs(self.gmf.DAIRY_PROFILE,
+                      self.builder.docx_profile("dairy"))
         self.assertIsNone(self.gmf.enabled_profile("specialty_crops"))
 
 
