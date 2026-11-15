@@ -233,8 +233,10 @@ def block_issue(nodes, index, home=_ENV):
     if index + 2 >= len(nodes):
         return "figure_source_note"
     caption, note = nodes[index + 1:index + 3]
+    import gg_document
+    _, source = gg_document.split_caption_credit(caption.get("text", ""))
     if (caption["kind"] != "caption" or caption.get("label") != "그림"
-            or not re.search(r"\(출처\s*:\s*[^()\s][^()]*\)$", caption.get("text", ""))):
+            or not source):
         return "figure_source_note"
     prefix = "주 : 원문 주소 "
     text = note.get("text", "")

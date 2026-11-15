@@ -357,12 +357,26 @@ class AppBlockContractTests(_HomeCase):
         self.env.start()
         self.addCleanup(self.env.stop)
 
-    def placed_text(self):
+    def placed_text(self, org="농촌진흥청"):
         import gg_figure
-        result = gg_figure.place(self.root, "s1", "Ⅰ. 머리말", manuscript="body.md",
-                                 environ={"KNUAF_FIGURE_HOME": str(self.home)})
+        result = gg_figure.place(
+            self.root, "s1", "Ⅰ. 머리말", manuscript="body.md", org=org,
+            environ={"KNUAF_FIGURE_HOME": str(self.home)})
         self.assertEqual(result["status"], "placed", result)
         return self.manuscript.read_text(encoding="utf-8")
+
+    def test_parenthesized_institution_place_check_convert_round_trip(self):
+        import gg_document
+        import build_docx
+        org = "농촌진흥청(국립원예특작과학원)"
+        text = self.placed_text(org=org)
+        issues = gg_document.check(text, self.root, major_id="specialty_crops")
+        self.assertFalse(any(code == "missing_image" for code, _ in issues), issues)
+        document = build_docx.convert(text, base=self.root, context=self.context)
+        self.assertEqual(len(document.inline_shapes), 1)
+        paragraphs = [p.text for p in document.paragraphs]
+        self.assertTrue(any(org in paragraph for paragraph in paragraphs), paragraphs)
+        self.assertIn("주 : 원문 주소 " + self.url, paragraphs)
 
     def assert_blocked(self, text):
         import gg_document
