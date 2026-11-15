@@ -1560,7 +1560,7 @@ class TestPageQuerySelect(unittest.TestCase):
                 chosen = gg_figure.select_page_rule(url, self.rules)
                 got = None if chosen is None else chosen[0]["id"]
                 self.assertEqual(got, expected, note)
-                if expected is not None and chosen[0]["rule"] == gg_figure.RULE_PAGE_QUERY:
+                if expected is not None and chosen[0]["rule"] in gg_figure.QUERY_KINDS:
                     # 새 항목은 적힌 주소를 그대로 보낸다(다듬지 않는다).
                     self.assertEqual(chosen[1], url, note)
 
@@ -1613,7 +1613,7 @@ class TestPageQueryFlow(_ServerCase):
             return False, []
         rule, page_target = chosen
         if kind == "page":
-            url, follow = page_target, rule.get("rule") != gg_figure.RULE_PAGE_QUERY
+            url, follow = page_target, rule.get("rule") not in gg_figure.QUERY_KINDS
         else:
             url, follow = image, True
         # 상대 Location은 직전 주소에 이어 붙여 서버의 다음 응답을 놓는다.
@@ -2324,6 +2324,278 @@ class TestP11SlotLock(unittest.TestCase):
         self.assertEqual(result["reason"], "slot_record_failed")
         self.assertFalse(lock[0].exists())
         self.assertEqual(gg_figure._read_request(self.folder, "s1")["reqId"], "req-0001")
+
+
+def org_vectors():
+    return _vector_expand(json.loads(
+        (FIXTURES / "org-vectors.json").read_text(encoding="utf-8")))
+
+
+def _org_html(html, selected):
+    return html.replace("{B}", selected["bodyStart"]).replace("{M}", selected["bodyEnd"])
+
+
+class TestOrgVectors(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.data = org_vectors()
+        cls.rules, folder = _vector_rules(cls.data)
+        cls.addClassCleanup(shutil.rmtree, folder, True)
+        cls.selected, = cls.rules
+
+    def load_document(self, document):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "rules.json"
+            path.write_text(json.dumps(document, ensure_ascii=False), encoding="utf-8")
+            return gg_figure.load_rules(path)
+
+    def test_hit_vectors(self):
+        for text, aliases, expected, note in self.data["hit"]:
+            with self.subTest(note=note):
+                selected = dict(self.selected, orgAliases=gg_figure._sorted_aliases(aliases))
+                self.assertEqual(gg_figure._foreign_mark_in(text, selected), expected)
+
+    def test_scope_vectors(self):
+        for html, image, expected, note in self.data["scope"]:
+            with self.subTest(note=note):
+                reading, _ = gg_figure._org_reading(
+                    _org_html(html, self.selected), image, self.data["pageUrl"], self.selected)
+                self.assertEqual(reading, expected)
+
+    def test_candidate_vectors(self):
+        for html, expected, note in self.data["candidate"]:
+            with self.subTest(note=note):
+                candidates, truncated = gg_figure.extract_candidates(
+                    _org_html(html, self.selected), self.data["pageUrl"], self.selected)
+                self.assertEqual(candidates, expected)
+                self.assertFalse(truncated)
+
+    def test_same_vectors(self):
+        for first, second, expected, note in self.data["same"]:
+            with self.subTest(note=note):
+                self.assertEqual(gg_figure._same_reference(first, second), expected)
+
+    def test_load_vectors(self):
+        for top, item, expected, note in self.data["load"]:
+            with self.subTest(note=note):
+                document = json.loads(json.dumps(self.data["loadBase"]))
+                for target, override in ((document, top), (document["rules"][0], item)):
+                    for key, value in override.items():
+                        if value is None:
+                            target.pop(key, None)
+                        else:
+                            target[key] = value
+                self.assertEqual([r["id"] for r in self.load_document(document)], expected)
+
+    def test_load_file_vectors(self):
+        for document, expected, note in self.data["loadFile"]:
+            with self.subTest(note=note):
+                self.assertEqual([r["id"] for r in self.load_document(document)], expected)
+
+    def test_single_symbol_terms_follow_x1_range(self):
+        # 한 글자 기관 꼴을 잘못 넓히거나 좁히면 실제 출처 등록이 달라진다.
+        for code, expected in ((0x31FF, False), (0x3200, True), (0x3214, True),
+                               (0x321C, True), (0x33FF, True), (0x3400, False),
+                               (0xAC00, False), (0x41, False)):
+            with self.subTest(code=hex(code)):
+                document = json.loads(json.dumps(self.data["loadBase"]))
+                document["orgTerms"] = [chr(code)]
+                ids = [r["id"] for r in self.load_document(document)]
+                self.assertEqual(ids, ["a"] if expected else [])
+
+    def test_loader_list_and_marker_limits(self):
+        # 공용 벡터 밖의 개수/표지 길이 경계. 범위가 늘면 오승인할 수 있다.
+        terms = ["가" + chr(0xAC00 + i) for i in range(301)]
+        credits = ["나" + chr(0xAC00 + i) for i in range(41)]
+        latin = ["A" + chr(65 + i // 26) + chr(65 + i % 26) for i in range(301)]
+        for key, words, maximum in (("orgTerms", terms, 300),
+                                    ("creditWords", credits, 40), ("latinOk", latin, 300)):
+            for count in (maximum, maximum + 1):
+                with self.subTest(key=key, count=count):
+                    document = json.loads(json.dumps(self.data["loadBase"]))
+                    document[key] = words[:count]
+                    ids = [r["id"] for r in self.load_document(document)]
+                    self.assertEqual(ids, ["a"] if count == maximum else [])
+        for size in (8, 200, 201):
+            with self.subTest(marker_size=size):
+                document = json.loads(json.dumps(self.data["loadBase"]))
+                document["rules"][0]["bodyStart"] = "s" * size
+                ids = [r["id"] for r in self.load_document(document)]
+                self.assertEqual(ids, ["a"] if size <= 200 else [])
+
+    def test_i9_checks_presence_even_when_null(self):
+        for kind in (gg_figure.RULE_PAGE, gg_figure.RULE_PAGE_QUERY):
+            for key in ("orgAliases", "bodyStart", "bodyEnd"):
+                with self.subTest(kind=kind, key=key):
+                    item = dict(self.data["loadBase"]["rules"][0], rule=kind)
+                    for field in ("orgAliases", "bodyStart", "bodyEnd"):
+                        item.pop(field)
+                    if kind == gg_figure.RULE_PAGE:
+                        item.pop("pageQuery")
+                    item[key] = None
+                    self.assertEqual(self.load_document({"v": 1, "rules": [item]}), [])
+
+    @unittest.skip("책임자가 rda 규칙 두 항목을 등록한 뒤 켠다 — 현재 rules: [] 유지")
+    def test_real_distribution_rda_aliases_are_fixed(self):
+        path = SCRIPTS.parent / "references" / "figure-sources.json"
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        expected = ["rda-infograp", "rda-cardnews"]
+        self.assertEqual([r["id"] for r in gg_figure.load_rules(path)], expected)
+        for item in raw["rules"]:
+            self.assertIn(item["id"], expected)
+            self.assertEqual(item["orgAliases"], ["농촌진흥청", "농진청"])
+
+
+def _org_query_vectors():
+    # 주소·쿼리·flow 기대값은 그대로. 시험 기관 표기만 I8 한글꼴로 맞춘다.
+    data = _vectors()
+    template = org_vectors()["rules"]
+    document = data["rules"]
+    for key in ("orgTerms", "creditWords", "latinOk"):
+        document[key] = template[key]
+    for item in document["rules"]:
+        if item["rule"] == gg_figure.RULE_PAGE_QUERY:
+            item.update(rule=gg_figure.RULE_PAGE_QUERY_ORG, org="시험기관",
+                        orgAliases=["시험기관"],
+                        bodyStart=template["rules"][0]["bodyStart"],
+                        bodyEnd=template["rules"][0]["bodyEnd"])
+    return data
+
+
+class TestOrgQuerySelect(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.data = _org_query_vectors()
+        cls.rules, folder = _vector_rules(cls.data)
+        cls.addClassCleanup(shutil.rmtree, folder, True)
+
+    test_page_vectors = TestPageQuerySelect.test_page_vectors
+    test_image_vectors = TestPageQuerySelect.test_image_vectors
+
+
+class TestOrgQueryFlow(_ServerCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.data = _org_query_vectors()
+        cls.rules, folder = _vector_rules(cls.data)
+        cls.addClassCleanup(shutil.rmtree, folder, True)
+
+    setUp = TestPageQueryFlow.setUp
+    path_of = TestPageQueryFlow.path_of
+    run_flow = TestPageQueryFlow.run_flow
+    test_flow_vectors = TestPageQueryFlow.test_flow_vectors
+
+
+class TestOrgFetchDirect(_ServerCase):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.data = org_vectors()
+        cls.rules, folder = _vector_rules(cls.data)
+        cls.addClassCleanup(shutil.rmtree, folder, True)
+        cls.selected, = cls.rules
+
+    def setUp(self):
+        self.server.routes.clear()
+        self.server.hits.clear()
+        self.folder = Path(tempfile.mkdtemp(prefix="gg-org-"))
+        self.addCleanup(shutil.rmtree, self.folder, True)
+
+    path_of = TestPageQueryFlow.path_of
+
+    def fetch(self, html, image="https://www.example.go.kr/files/a.png", *, rules=None):
+        self.route(self.path_of(self.data["pageUrl"]), html.encode("utf-8"))
+        self.route(self.path_of(image), fixture("nongsaro-image02.jpg"))
+        return gg_figure.fetch_direct(
+            self.folder, self.data["pageUrl"], [image], "org",
+            rules=self.rules if rules is None else rules, resolver=self.resolver,
+            allow_loopback=True, tls_context=self.tls)
+
+    def html(self, content, kogl=1):
+        return (self.selected["bodyStart"] + content + self.selected["bodyEnd"]
+                + " open_mark%d.png" % kogl)
+
+    def assert_not_stored(self, record, reason):
+        self.assertEqual(record["verdict"], "ambiguous")
+        self.assertEqual(record["reason"], reason)
+        self.assertIsNone(record["sha256"])
+        self.assertFalse(record.get("path"))
+        self.assertFalse((self.folder / "figures").exists())
+
+    def test_bracket_candidate_approves_and_keeps_request_spelling(self):
+        html = self.html('<img src="/files/[가]_a.jpg" alt="AI 안내">')
+        candidates, _ = gg_figure.extract_candidates(html, self.data["pageUrl"], self.selected)
+        url = candidates[0]["url"]
+        self.assertEqual(url, "https://www.example.go.kr/files/%5B%EA%B0%80%5D_a.jpg")
+        self.route(self.path_of(url), fixture("nongsaro-image02.jpg"))
+        for kogl in (1, 2):
+            with self.subTest(kogl=kogl):
+                # 전송 %XX는 기존대로 대문자화하지만 결과·증명은 요청 표기를 보존한다.
+                requested = url.replace("%5B", "%5b").replace("%5D", "%5d")
+                result = self.fetch(self.html('<img src="/files/[가]_a.jpg">', kogl), requested)
+                record = result["images"][0]
+                self.assertEqual(record["verdict"], "approved")
+                self.assertEqual(record["kogl"], kogl)
+                self.assertEqual(record["url"], requested)
+                self.assertEqual(record["finalUrl"], requested)
+                self.assertEqual((self.folder / record["path"]).read_bytes(),
+                                 fixture("nongsaro-image02.jpg"))
+                self.assertEqual(self.server.hits[-1],
+                                 ("www.example.go.kr", self.path_of(url)))
+                receipt = json.loads((self.folder / ".gg-work" / "figure-receipts.jsonl")
+                                     .read_text("utf-8").splitlines()[-1])
+                self.assertEqual(receipt["image"]["url"], requested)
+                self.assertEqual(receipt["image"]["finalUrl"], requested)
+
+    def test_foreign_mark_stops_before_store_and_kogl(self):
+        record = self.fetch(self.html('<img src="/files/a.png" alt="FAO 제공">', 4))["images"][0]
+        self.assert_not_stored(record, "third_party_org")
+
+    def test_missing_body_is_unknown(self):
+        record = self.fetch('open_mark1.png<img src="/files/a.png">')["images"][0]
+        self.assert_not_stored(record, "third_party_unknown")
+
+    def test_redirect_final_image_must_be_on_page(self):
+        page = self.data["pageUrl"]
+        self.route(self.path_of(page), self.html('<img src="/files/a.png">').encode())
+        self.route("/files/a.png", status=302, headers={"location": "/files/b.png"})
+        self.route("/files/b.png", fixture("nongsaro-image02.jpg"))
+        result = gg_figure.fetch_direct(
+            self.folder, page, ["https://www.example.go.kr/files/a.png"], "org",
+            rules=self.rules, resolver=self.resolver, allow_loopback=True, tls_context=self.tls)
+        record = result["images"][0]
+        self.assert_not_stored(record, "not_on_page")
+        self.assertEqual(record["finalUrl"], "https://www.example.go.kr/files/b.png")
+
+    def test_body_wide_explicit_credit_keeps_existing_reason(self):
+        html = self.html('<img src="/files/a.png">' + "x" * 1000 + "©")
+        record = self.fetch(html)["images"][0]
+        self.assert_not_stored(record, "third_party_mark:©")
+        candidates, _ = gg_figure.extract_candidates(html, self.data["pageUrl"], self.selected)
+        self.assertEqual(candidates[0]["credit"], "credit")
+
+    def test_unknown_scope_precedes_body_foreign_mark(self):
+        html = '<img src="/files/a.png">' + self.html("FAO 제공")
+        self.assert_not_stored(self.fetch(html)["images"][0], "third_party_unknown")
+
+    def test_query_page_redirect_is_not_followed(self):
+        page = self.data["pageUrl"]
+        self.route(self.path_of(page), status=302,
+                   headers={"location": "/board/board.do?k=v"})
+        result = gg_figure.fetch_direct(
+            self.folder, page, ["https://www.example.go.kr/files/a.png"], "org",
+            rules=self.rules, resolver=self.resolver, allow_loopback=True, tls_context=self.tls)
+        self.assertEqual(result["reason"], "redirect_not_allowed")
+        self.assertEqual(self.server.hits, [("www.example.go.kr", self.path_of(page))])
+
+    def test_reference_equivalence_does_not_widen_image_path(self):
+        selected = dict(self.selected, imagePath=re.compile(r"^/files/%5Bx%5D\.png$"))
+        requested = "https://www.example.go.kr/files/%5bx%5d.png"
+        result = self.fetch(self.html('<img src="/files/[x].png">'), requested,
+                            rules=[selected])
+        self.assertEqual(result["images"][0]["reason"], "path_not_allowed")
+        self.assertEqual(self.server.hits, [("www.example.go.kr", self.path_of(self.data["pageUrl"]))])
 
 
 if __name__ == "__main__":
