@@ -15,8 +15,8 @@ SPEC = importlib.util.spec_from_file_location(
 checker = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(checker)
 sys.path.insert(0, str(ROOT / "tools"))
-
 import check_bundle
+
 
 class AssetDispositionTests(unittest.TestCase):
     def setUp(self):
@@ -75,30 +75,28 @@ class AssetDispositionTests(unittest.TestCase):
         self.assertIn("deployment_path_unsafe",
                       {error["code"] for error in checker.check(self.root)})
 
+    def assert_bundle_errors(self, *codes):
+        report = check_bundle.check(self.root)
+        self.assertEqual("errors", report["status"])
+        self.assertEqual(set(codes), {e["code"] for e in report["errors"]})
+        for error in report["errors"]:
+            self.assertEqual(error["detail"],
+                             f"{error['code']}:{error['path']}")
+
     def test_bundle_rejects_missing_deployment_payload_or_manifest(self):
         self.assertEqual("ok", check_bundle.check(self.root)["status"])
         (self.skill / "install-manifest.json").write_text(
             json.dumps({"files": {}}), encoding="utf-8")
-        report = check_bundle.check(self.root)
-        self.assertEqual("errors", report["status"])
-        self.assertEqual({"asset_disposition:deployment_missing_manifest"},
-                         {error["code"] for error in report["errors"]})
+        self.assert_bundle_errors("asset_disposition:deployment_missing_manifest")
         self.payload.unlink()
-        report = check_bundle.check(self.root)
-        self.assertEqual("errors", report["status"])
-        self.assertEqual({"asset_disposition:deployment_missing_payload"},
-                         {error["code"] for error in report["errors"]})
+        self.assert_bundle_errors("asset_disposition:deployment_missing_payload")
 
     def test_bundle_rejects_false_required_school_source(self):
         registry_path = self.skill / "references" / "builtin-sources.json"
         registry_path.write_text(json.dumps({"entries": [{
             "source_id": "school-pdf", "runtime_present": False}]}),
             encoding="utf-8")
-        report = check_bundle.check(self.root)
-        self.assertEqual("errors", report["status"])
-        self.assertEqual({"asset_disposition:required_source_not_runtime"},
-                         {error["code"] for error in report["errors"]})
-
+        self.assert_bundle_errors("asset_disposition:required_source_not_runtime")
 
     def test_inventory_and_lineage_removal_survives_manifest_rebuild(self):
         required = {"references/guideline-inventory.json",
