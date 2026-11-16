@@ -56,7 +56,7 @@ def _count(value, name, minimum=0, exact=None):
     return value
 
 
-def validate(report, scope="full"):
+def validate(report, scope="full", expected_platform=None):
     """Check one merged report against the contract of ``scope``.
 
     ``scope`` must be the scope the shards ran with: the ID set, the ID order
@@ -64,8 +64,17 @@ def validate(report, scope="full"):
     never accepted as a full one (or the reverse).
     """
     report = _dict(report, "report")
+    if expected_platform is None:
+        expected_platform = sys.platform
+    _need(expected_platform in ("linux", "darwin", "win32"),
+          "expected platform is invalid")
+    platform = report.get("platform")
+    _need(platform in ("linux", "darwin", "win32"), "report platform is invalid")
+    _need(platform == expected_platform, "report platform differs from expected platform")
+    native = platform == "win32"
     expected_top = {
-        "tool": "tools/run_validation.py", "verdict": "ok_platform_scoped",
+        "tool": "tools/run_validation.py",
+        "verdict": "ok" if native else "ok_platform_scoped",
         "mode": "default", "validation_scope": "current_platform",
         "baseline_main": BASELINE_MAIN,
     }
@@ -74,27 +83,31 @@ def validate(report, scope="full"):
     _count(report.get("exit_code"), "exit_code", exact=0)
     _need(report.get("platform_validation_completed") is True,
           "platform_validation_completed must be true")
-    _need(report.get("full_validation_completed") is False,
-          "full_validation_completed must be false")
+    _need(report.get("full_validation_completed") is native,
+          "full_validation_completed differs from platform contract")
 
     pending = _list(report.get("pending_external_checks"), "pending_external_checks")
-    _need(len(pending) == 1, "exactly one pending external gate is required")
-    gate = _dict(pending[0], "pending_external_checks[0]")
-    for key, expected in {
-        "gate_id": GATE_ID, "status": "not_run", "support": "withheld",
-        "implementation": "placeholder_only", "test_id": GATE_TEST,
-        "required_environment": "native Windows+NTFS", "reason": GATE_REASON,
-    }.items():
-        _need(gate.get(key) == expected, "pending gate %s is invalid" % key)
-    _need(gate.get("observed_platform") in ("linux", "darwin"),
-          "pending gate platform is invalid")
+    if native:
+        _need(pending == [], "native Windows cannot have a pending external gate")
+    else:
+        _need(len(pending) == 1, "exactly one pending external gate is required")
+        gate = _dict(pending[0], "pending_external_checks[0]")
+        for key, expected in {
+            "gate_id": GATE_ID, "status": "not_run", "support": "withheld",
+            "implementation": "placeholder_only", "test_id": GATE_TEST,
+            "required_environment": "native Windows+NTFS", "reason": GATE_REASON,
+            "observed_platform": platform,
+        }.items():
+            _need(gate.get(key) == expected, "pending gate %s is invalid" % key)
 
     approved_external = _list(report.get("approved_external_skips"),
                               "approved_external_skips")
-    _need(approved_external == [{
+    expected_external = [] if native else [{
         "test": GATE_TEST, "reason": GATE_REASON,
         "rule": GATE_RULE, "gate_id": GATE_ID,
-    }], "approved external skip does not match the exact native gate")
+    }]
+    _need(approved_external == expected_external,
+          "approved external skip does not match the exact native gate")
     causes = _dict(report.get("causes"), "causes")
     for name in ("unexpected", "incomplete"):
         _need(_list(causes.get(name), "causes.%s" % name) == [],
@@ -110,7 +123,7 @@ def validate(report, scope="full"):
     passed = _count(runtime.get("passed"), "runtime.passed")
     _count(runtime.get("known_baseline_defects"),
            "runtime.known_baseline_defects", exact=0)
-    skipped = _count(runtime.get("skipped"), "runtime.skipped", minimum=1)
+    skipped = _count(runtime.get("skipped"), "runtime.skipped")
     _count(runtime.get("unexpected_failed"), "runtime.unexpected_failed", exact=0)
     _count(runtime.get("failure_events"), "runtime.failure_events", exact=0)
     _need(_list(runtime.get("fixture_events"), "runtime.fixture_events") == [],
@@ -136,10 +149,10 @@ def validate(report, scope="full"):
     policy = runpy.run_path(str(ROOT / "tools" / "run_validation.py"))
     allowed_skips = policy["ALLOWED_SKILL_SKIPS"]
     skill_skip_rule = policy["SKILL_SKIP_RULE"]
-    # Windows-only skill tests skip on this (linux/darwin, see the pending
-    # gate's observed_platform above) report by exact id and reason only.
-    posix_windows_skips = policy["POSIX_SKIPPED_WINDOWS_SKILL_TESTS"]
-    posix_windows_rule = policy["POSIX_SKIPPED_WINDOWS_SKILL_RULE"]
+    platform_skips = (policy["WINDOW_ONLY_SKILL_SKIPS"] if native
+                      else policy["POSIX_SKIPPED_WINDOWS_SKILL_TESTS"])
+    platform_rule = (policy["WINDOW_ONLY_SKILL_SKIP_RULE"] if native
+                     else policy["POSIX_SKIPPED_WINDOWS_SKILL_RULE"])
 
     for index, raw_entry in enumerate(entries):
         entry = _dict(raw_entry, "entries[%d]" % index)
@@ -158,13 +171,16 @@ def validate(report, scope="full"):
               "known baseline defect remains: %s" % test_id)
         if test_id == GATE_TEST:
             gate_seen += 1
-            _need(category == "skipped" and entry.get("detail") == GATE_REASON,
-                  "native gate must be the exact withheld skip")
-            _need(not entry.get("events"), "native gate skip cannot carry events")
+            if native:
+                _need(category == "passed", "native Windows gate must pass")
+            else:
+                _need(category == "skipped" and entry.get("detail") == GATE_REASON,
+                      "native gate must be the exact withheld skip")
+            _need(not entry.get("events"), "native gate cannot carry events")
         elif category == "skipped":
-            if test_id in posix_windows_skips:
-                approved = entry.get("detail") == posix_windows_skips[test_id]
-                rule = posix_windows_rule
+            if test_id in platform_skips:
+                approved = entry.get("detail") == platform_skips[test_id]
+                rule = platform_rule
             else:
                 approved = (test_id in allowed_skips
                             and entry.get("detail") == allowed_skips[test_id])
@@ -190,7 +206,8 @@ def validate(report, scope="full"):
     _need(set(allowed_skips) <= seen, "declared optional skill test is missing")
     _need(_list(report.get("approved_skill_skips"), "approved_skill_skips") == skill_skips,
           "approved skill skips do not match runtime entries")
-    _need(skipped == 1 + len(skill_skips), "skip tally differs from approved skips")
+    _need(skipped == (0 if native else 1) + len(skill_skips),
+          "skip tally differs from approved skips")
     _need(tally["passed"] == passed, "passed tally differs from entries")
     _need(tally["skipped"] == skipped, "skipped tally differs from entries")
     _need(tally["failed"] == 0 and sum(tally.values()) == tests_run,
@@ -220,9 +237,12 @@ def main(argv=None):
     parser.add_argument("report", help="merged validation report JSON")
     parser.add_argument("--pr-scope", choices=["full", "code"], default="full",
                         help="scope the shards ran with (design §2.2)")
+    parser.add_argument("--expected-platform", choices=["linux", "darwin", "win32"],
+                        default=sys.platform,
+                        help="artifact execution platform (default: this host)")
     args = parser.parse_args(argv)
     try:
-        count = validate(_strict_load(args.report), args.pr_scope)
+        count = validate(_strict_load(args.report), args.pr_scope, args.expected_platform)
     except (OSError, ValueError, TypeError, KeyError, json.JSONDecodeError) as exc:
         print("validation report contract: REJECTED: %s" % exc,
               file=sys.stderr)

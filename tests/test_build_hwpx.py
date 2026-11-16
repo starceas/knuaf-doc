@@ -92,7 +92,6 @@ def write_hwpx(path):
         archive.writestr("Contents/header.xml", HEADER)
         archive.writestr("Contents/section0.xml", SECTION)
 
-
 def main(argv):
     args = argv[1:]
     tag = args[0] if args and args[0] in ("generate", "validate") else "parse"
@@ -133,7 +132,16 @@ def _normalized_manifest(value, root):
     # macOS의 /var → /private/var 심볼릭 링크처럼 두 표기가 섞여도 같게 본다.
     for raw in sorted(paths, key=len, reverse=True):
         text = text.replace(json.dumps(raw)[1:-1], "<ROOT>")
-    return json.loads(text.replace(json.dumps(sys.executable)[1:-1], "<PYTHON>"))
+    normalized = json.loads(text.replace(json.dumps(sys.executable)[1:-1], "<PYTHON>"))
+    def normalize(value):
+        if isinstance(value, dict):
+            return {key: normalize(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [normalize(item) for item in value]
+        if isinstance(value, str) and "<ROOT>" in value:
+            return value.replace("\\", "/")
+        return value
+    return normalize(normalized)
 
 
 # 5488bd2(식량작물 모듈 이전) 트리에서 `BODY_MD`·`make_fake_cli`·specialty_crops로
@@ -254,6 +262,7 @@ def hwpx_para(text, controls=""):
 
 def hwpx_section(paragraphs, *, extra=None):
     """최상위 `<hp:p>` 목록을 hs/hp 두 접두사를 선언한 `<hs:sec>`로 감싼다."""
+
     extra = extra or {}
     body = "".join(
         hwpx_para(text, FOOD_CROPS_SECPR + FOOD_CROPS_COLPR
@@ -476,6 +485,13 @@ class ExportTests(_Base):
         manifest.pop("file_hash")
         self.assertEqual(REFERENCE_HWPX_MANIFEST,
                          _normalized_manifest(manifest, self.root))
+
+    def test_windows_spelled_manifest_paths_normalize_to_reference(self):
+        manifest = json.loads(json.dumps(REFERENCE_HWPX_MANIFEST))
+        manifest["hwpx"]["kordoc"]["cli_command"][1] = (
+            r"<ROOT>\fake\fake_kordoc.py")
+        self.assertEqual(REFERENCE_HWPX_MANIFEST,
+                         _normalized_manifest(manifest, Path("/unused/root")))
 
     def test_export_preserves_sibling_docx_receipt(self):
         # R1-01: 같은 basename의 DOCX 영수증(out.manifest.json)은 건드리지 않는다.

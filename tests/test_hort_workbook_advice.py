@@ -1,5 +1,7 @@
 """v0.4.9: 엑셀 점검 '안내만'(차단 0) + 알림 계약 + 알림 파일/선택."""
 import json
+import subprocess
+import sys
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -214,6 +216,15 @@ class NoticesFileTests(ContractCase):
         self.root = self.make_project()
         bind_major(self.root, "hort_env_systems")
 
+    def test_cli_help_runs_through_direct_entry_point(self):
+        script = (Path(__file__).resolve().parents[1] / "skills" /
+                  "knuaf-doc" / "scripts" / "gg_notices.py")
+        result = subprocess.run(
+            [sys.executable, "-B", str(script), "--help"],
+            capture_output=True, text=True, encoding="utf-8", timeout=10)
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn("usage:", result.stdout)
+
     def _write(self):
         info = self.notices.write_notices(self.root)
         path = Path(self.root) / ".knuaf-notices.json"
@@ -254,6 +265,14 @@ class NoticesFileTests(ContractCase):
         clean = self.notices._sanitize_row(
             {"title": "t", "items": [], "receipt_path": "/Users/x/receipt.json"})
         self.assertIsNone(clean["receipt_path"])
+
+    def test_foreign_host_absolute_receipt_paths_are_dropped(self):
+        for path in (r"C:\Users\x\receipt.json", r"\Users\x\receipt.json",
+                     r"\\server\share\receipt.json"):
+            with self.subTest(path=path):
+                clean = self.notices._sanitize_row(
+                    {"title": "t", "items": [], "receipt_path": path})
+                self.assertIsNone(clean["receipt_path"])
 
     def test_relative_receipt_path_kept(self):
         clean = self.notices._sanitize_row(

@@ -267,8 +267,8 @@ class InjectedSkip(unittest.TestCase):
         self.assertEqual("incomplete", rep["verdict"])
         self.assertEqual(3, proc.returncode, proc.stdout)
         # the declared gate is approved, not confused with the injection
-        self.assertIn(NATIVE_TID, {s["test"]
-                                   for s in rep["approved_external_skips"]})
+        self.assertEqual(sys.platform != "win32", NATIVE_TID in {
+            s["test"] for s in rep["approved_external_skips"]})
         # a second skip copying the native reason verbatim is NOT exempt:
         # only the exact declared test id qualifies.
         injected2 = injected.replace(
@@ -286,8 +286,8 @@ class InjectedSkip(unittest.TestCase):
         self.assertIn(
             "tests.test_injected_skip2.CopiedReason.test_injected",
             {s["test"] for s in rep2["unapproved_skips"]})
-        self.assertIn(NATIVE_TID, {s["test"]
-                                   for s in rep2["approved_external_skips"]})
+        self.assertEqual(sys.platform != "win32", NATIVE_TID in {
+            s["test"] for s in rep2["approved_external_skips"]})
 
     def test_nested_flag_rejected_in_final_mode(self):
         """N1-04: GG_VALIDATION_NESTED non-empty in DEFAULT mode is a
@@ -338,7 +338,7 @@ class InjectedSkip(unittest.TestCase):
             self.assertFalse(rep["full_validation_completed"])
             self.assertFalse(rep["platform_validation_completed"])
             self.assertEqual(
-                ["P2-L09-native"],
+                [] if sys.platform == "win32" else ["P2-L09-native"],
                 [p["gate_id"] for p in rep["pending_external_checks"]])
 
     def test_xpass_surfaces_as_unexpected(self):
@@ -544,19 +544,19 @@ class InjectedSubtest(unittest.TestCase):
         self.assertFalse(rep2["runtime"]["accounting"]["errors"])
 
         self.assertIsNotNone(rep3, proc3.stderr)
-        self.assertEqual("ok_platform_scoped", rep3["verdict"],
+        self.assertEqual("ok" if sys.platform == "win32" else "ok_platform_scoped", rep3["verdict"],
                          proc3.stdout)
         self.assertEqual(0, proc3.returncode, proc3.stdout)
         self.assertEqual("current_platform", rep3["validation_scope"])
         self.assertTrue(rep3["platform_validation_completed"])
-        self.assertFalse(rep3["full_validation_completed"])
+        self.assertEqual(sys.platform == "win32", rep3["full_validation_completed"])
         self.assertEqual(0, rep3["runtime"]["unexpected_failed"])
         self.assertEqual(rep3["runtime"]["tests_run"],
                          len(rep3["runtime"]["entries"]),
                          "one terminal entry per started parent")
         # exact sole pending gate, and the skip record is preserved
         self.assertEqual(
-            [{"gate_id": "P2-L09-native", "status": "not_run",
+            [] if sys.platform == "win32" else [{"gate_id": "P2-L09-native", "status": "not_run",
               "support": "withheld", "implementation": "placeholder_only",
               "test_id": NATIVE_TID,
               "required_environment": "native Windows+NTFS",
@@ -564,7 +564,7 @@ class InjectedSubtest(unittest.TestCase):
               "observed_platform": sys.platform}],
             rep3["pending_external_checks"])
         self.assertEqual(
-            [{"test": NATIVE_TID, "reason": NATIVE_REASON,
+            [] if sys.platform == "win32" else [{"test": NATIVE_TID, "reason": NATIVE_REASON,
               "rule": "P2-L09-native accepted external placeholder",
               "gate_id": "P2-L09-native"}],
             rep3["approved_external_skips"])
@@ -573,7 +573,8 @@ class InjectedSubtest(unittest.TestCase):
         # the skipped record itself stays visible in entries
         nat = {e["test"]: e for e in rep3["runtime"]["entries"]
                if e["test"] == NATIVE_TID}
-        self.assertEqual("skipped", nat[NATIVE_TID]["category"])
+        self.assertEqual("passed" if sys.platform == "win32" else "skipped",
+                         nat[NATIVE_TID]["category"])
 
         self.assertIsNotNone(rep4, proc4.stderr)
         self.assertEqual("unexpected_failures", rep4["verdict"])
@@ -585,7 +586,7 @@ class InjectedSubtest(unittest.TestCase):
                             for e in rep4["runtime"]["entries"]
                             if e["category"] == "failed"})
         self.assertEqual(
-            ["P2-L09-native"],
+            [] if sys.platform == "win32" else ["P2-L09-native"],
             [p["gate_id"] for p in rep4["pending_external_checks"]])
 
         self.assertIsNotNone(rep5, proc5.stderr)
@@ -834,6 +835,26 @@ class RunnerAccountingTests(unittest.TestCase):
             [self._skipped_gate_entry()], platform="win32")
         self.assertEqual([], approved)
         self.assertEqual([], warnings)
+
+    def test_gate_native_windows_pass_closes_pending(self):
+        entry = {"test": NATIVE_TID, "category": "passed"}
+        with mock.patch.object(sys, "platform", "win32"):
+            approved, warnings, observation = self.rv._evaluate_external_gate(
+                [entry], True)
+            pending = self.rv._pending_external_checks(observation)
+        self.assertEqual([], approved)
+        self.assertEqual([], warnings)
+        self.assertEqual([], pending)
+
+    def test_gate_windows_inventory_mismatches_are_not_exempt(self):
+        passed = {"test": NATIVE_TID, "category": "passed"}
+        for entries, message in (([], "missing"),
+                                 ([passed, passed], "appeared 2 times"),
+                                 ([dict(passed, category="known_baseline_defect")], "forged")):
+            with self.subTest(entries=entries):
+                approved, warnings, _ = self._gate(entries, platform="win32")
+                self.assertEqual([], approved)
+                self.assertTrue(any(message in warning for warning in warnings), warnings)
 
     def test_gate_forged_success_is_mismatch(self):
         approved, warnings, _ = self._gate(

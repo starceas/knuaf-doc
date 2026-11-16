@@ -762,13 +762,12 @@ class WiringIgnoreTests(ContractCase):
             self.assertEqual(before,
                              (root / "tools/validation-bundle.json").read_bytes())
 
-    def test_fake_git_exit_128_on_a_real_repository_refuses_the_ledger(self):
-        """실제 저장소인데 git이 128로 죽어도 장부를 만들지 않는다 (C-01 A).
+    def test_git_exit_128_on_a_real_repository_refuses_the_ledger(self):
+        """실제 저장소 조회의 exit 128은 장부 변경 없이 거절한다.
 
-        처분서가 요구한 (a) 그대로다: ``.git``이 멀쩡히 있는 진짜 저장소에
-        ``rev-parse``가 128로 끝나는 가짜 git을 물린다. 종전 판정은 이 종료
-        코드를 '저장소 아님'으로 읽어 배선을 제외했고, 그 순간 추적되는
-        파일도 함께 사라질 수 있었다.
+        확장자 없는 셸 스크립트는 Windows CreateProcess에서 실행되지
+        않는다. 실제 git이 지원하지 않는 저장소 형식을 읽게 하여 양쪽
+        운영체제에서 같은 exit 128을 만든다.
         """
         with tempfile.TemporaryDirectory() as tmp:
             root = self._tree(tmp)
@@ -777,18 +776,16 @@ class WiringIgnoreTests(ContractCase):
                       "tests")
             _write_manifest(root)
             before = (root / "tools/validation-bundle.json").read_bytes()
-            fake_bin = Path(tmp) / "fake-bin"
-            fake_bin.mkdir()
-            fake_git = fake_bin / "git"
-            fake_git.write_text("#!/bin/sh\nexit 128\n", encoding="utf-8")
-            fake_git.chmod(0o755)
-            env = dict(os.environ)
-            env["PATH"] = str(fake_bin) + os.pathsep + env.get("PATH", "")
+            self._git(root, "config", "core.repositoryformatversion", "99")
+            query = subprocess.run(
+                ["git", "-C", str(root), "rev-parse", "--show-toplevel"],
+                capture_output=True, text=True)
+            self.assertEqual(128, query.returncode, query.stderr)
             proc = subprocess.run(
                 [sys.executable, str(REPO_ROOT / "tools"
                                       / "build_validation_bundle.py"),
                  "--root", str(root), "--write-manifest"],
-                capture_output=True, text=True, env=env)
+                capture_output=True, text=True)
             self.assertEqual(1, proc.returncode, proc.stderr)
             self.assertIn("추적 여부를 확인할 수 없어", proc.stderr)
             self.assertIn("exit 128", proc.stderr)

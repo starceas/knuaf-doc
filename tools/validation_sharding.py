@@ -231,6 +231,11 @@ def merge_shard_reports(root, paths, shard_count, scope="full"):
         report = strict_load(path)
         if not isinstance(report, dict):
             raise ValueError(f"{path}: report is not an object")
+        platform = report.get("platform")
+        if platform not in ("linux", "darwin", "win32"):
+            raise ValueError(f"{path}: missing or unsupported shard platform")
+        if platform != sys.platform:
+            raise ValueError(f"{path}: shard platform differs from merge host platform")
         shard = report.get("shard")
         if not isinstance(shard, dict):
             raise ValueError(f"{path}: missing shard metadata")
@@ -349,7 +354,7 @@ def merge_shard_reports(root, paths, shard_count, scope="full"):
     ordered_reports = [reports[index] for index in sorted(reports)]
     for index, report in sorted(reports.items()):
         for key in ("tool", "mode", "validation_scope", "baseline_main",
-                    "python", "root", "dependency", "bundle"):
+                    "platform", "python", "root", "dependency", "bundle"):
             if report.get(key) != template.get(key):
                 raise ValueError(f"shard {index}: inconsistent {key}")
 

@@ -346,7 +346,7 @@
       "source": "adopted:app-PR41"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "ccb4c692d53e42369767ab8d997561a74c3a4c9efaeecc2e3e2472d33883ba25",
+      "after_sha256": "15f9ccc27fe8a1b738198a4d933396a7c9eeaba28b622210c34f6b3a4a3c73ec",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "progress-notcomputable",
@@ -1501,7 +1501,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_core.py": {
-      "after_sha256": "5a84473c890d35c0c06db1eb0c25fc20c7c91c337423a91bd12bfb47dae7a9e9",
+      "after_sha256": "e9ea6efe0e8cdace568df25c718ba406174b0d205fc59f1bb7282a686b486dd1",
       "amended_in": "P1-S01,P2-R7,P2-R8,P3-C1,Lanes15-28",
       "before_sha256": "b3491a931add687328bf561e7e7cd2aed3edd7a7fee374a28092e771d9124cc5",
       "first_changed": "P1",
@@ -1705,7 +1705,7 @@
       "note": "W-L: land-row transform/verify wiring; re-hashed on the rebased tree."
     },
     "skills/knuaf-doc/scripts/gg_hwpx.py": {
-      "after_sha256": "da6081189a29f866f1d661e13d5b9dc3f138549608d454ce0f2962aaab564ccb",
+      "after_sha256": "4575af52daaeb14acae51ec4d4a8ef713d3beda96e48cbb38af2fb0ebc707bbf",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "kordoc-host",
@@ -1767,7 +1767,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_major_contract.py": {
-      "after_sha256": "afed40619c6e86992ea7c6297fdf014f33d6dd4325059c3556bba36b16e78283",
+      "after_sha256": "fef87b0b29351d01d7376260fe4061582bfd234c61a5856e166172cf62addd7c",
       "before_sha256": null,
       "first_changed": "P6",
       "last_changed": "specialty-abc-0.1.0",
@@ -1776,11 +1776,11 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_manuscript_intake.py": {
-      "after_sha256": "d8c61627a320315729b24eb358d3433a6eb4c590cc72719b80aed5d96d85e1ac",
+      "after_sha256": "01531a240da886da95e28b2be1f0f65c3f74dfb569acc9e0491835125a5777cb",
       "before_sha256": null,
       "first_changed": "P28",
       "owner": "P28",
-      "reason": "ORDER-16 B: compose existing scan, resolve, register/view and apply engines for exactly one explicitly selected manuscript and quote-bound ownership/currentness answers; preserve partial evidence and existing CAS/lock behavior. | Astra R3 I1: preserve actual answer publisher state, reason, cleanup diagnostics and retained paths; stop before canonical selection apply on installed-with-errors/not_installed/unknown and scope exit 3/2/4 to answer_snapshot. Existing engines unchanged.",
+      "reason": "ORDER-16 B: compose existing scan, resolve, register/view and apply engines for exactly one explicitly selected manuscript and quote-bound ownership/currentness answers; preserve partial evidence and existing CAS/lock behavior. | Astra R3 I1: preserve actual answer publisher state, reason, cleanup diagnostics and retained paths; stop before canonical selection apply on installed-with-errors/not_installed/unknown and scope exit 3/2/4 to answer_snapshot. Existing engines unchanged. | winred-d1: serialize receipt paths with host-independent forward slashes.",
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_office.py": {
@@ -1829,7 +1829,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_publication.py": {
-      "after_sha256": "3d6dde553101c2d6ca4f6b0e3b08cbd2bd12aca60e0bf43f0a8156d910957796",
+      "after_sha256": "eabc1ac08c1604318e74185c41614e59440d0b276f441d39aece2d641c26c61b",
       "before_sha256": null,
       "first_changed": "P2",
       "owner": "C",
@@ -2328,16 +2328,16 @@
       "source": "new"
     },
     "tests/test_build_hwpx.py": {
-      "after_sha256": "a53250bc00eb75c4cfd7bdf947cc2634e912d74d0e7db15f0715d1bc6573debe",
+      "after_sha256": "d66a61dda586f4089781639ec6dce2d9e858123fa84ed6e01e005234435c7722",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "dairy-f9e",
       "owner": "P28",
-      "reason": "W1b kordoc-hwpx: build_hwpx CLI 시험. | W2c: review R1-01..R1-07 반영(매니페스트 이름 <출력파일 전체이름>.manifest.json, gg_hwpx 라이브러리화, verify 실패 시 미발행, 표 수치 정확 비교, image_dir 기본=원문 폴더, 생성 스냅샷 해시). | W2d: review2 R1-02/R1-03 수정(build()가 필수 context+authorization로 발행 직전 reconfirm, validate는 process_ok+returncode==0+status=='ok'). | W2e: review3 R1-02 반례 수정(build()가 authorization.output==OUTPUT_SCHOOL_PAPER를 발행 전 확인). | H1: 시험의 하위 프로세스 호출에 encoding=utf-8 추가(윈도 비UTF-8 로케일에서 파이프 디코드 실패) — 최종 바이트 재측정 | F1: 식량작물 쪽별 여백·글자 크기·HWPX 앞부분 로마 쪽번호 3구역 + 서식 기계 검사(§4.3 charPr·§6 probe); 최종 바이트 재측정 | F1-r2: F1 웹 검토 FAIL 11건 고침 — C-01 다른 전공 HWPX 매니페스트 charpr 키 누출, I-01 요약 번호형 소제목 첫 개만 16pt, I-02 ZIP 항목 손상이 예외로 죽음, I-03 번호형 목차 항목 오탐, I-04 kordoc 재파싱 실패가 skipped 통과, I-05 쪽번호 제어 요소 중복 미검출, I-06 앵커 시험의 가짜 결함, R-01 version.xml-only ok=false 통과, R-02 재파싱 문단 순서·개수 미대조. | F1-r3: N-I01 시험(본문 `요약` 문단이 분할을 막지 않음), R-N01 HWPX 4전공 멤버 해시 대조. | F1b: 앞부분 은닉·쪽 나눔 시험(`test_front_markers_hidden_and_pages_broken`)과 no-op 기대값 추가. | F1b-r2: 웹 r1 고침 시험 5건 — 글자 불일치 차단, pageBreak 따옴표 3형, 자기닫힘 hp:t, 본문 중복 목차 소제목, 은닉 문단 제어 요소 보존 | F1b-r2: 웹 r1 고침 시험 5건 — 글자 불일치 차단, pageBreak 따옴표 3형, 자기닫힘 hp:t, 본문 중복 목차 소제목, 은닉 문단 secPr·colPr·linesegarray 보존 | F1b-r2: 웹 r1 고침 시험 6건 — 글자 불일치 차단, pageBreak 따옴표 3형, 자기닫힘 hp:t, 본문 중복 목차 소제목, 은닉 문단 제어 요소 보존, 은닉 단계 텍스트만 변경 | F1b-r3: 웹 r2 회귀 시험 — 변환 경로 4형(큰따옴표 0·이미 1·부재·작은따옴표 0) + `_set_page_break` 단독 5형(자기닫힘 헤드 포함), 결과 XML 파싱·속성 1개·값 \"1\" / HWPX 본문·단계 글자 크기(F11): 게이트 안 전공(식량작물)의 본문 문단 12pt·번호 단계 제목 level_pt 굵게를 본문 전용 charPr 블록으로 적용(표 칸·표/그림 설명은 10pt 유지). 워드·게이트 밖 전공 바이트 불변. / 낙농 서식 켜기(F9e): 게이트에 dairy를 넣어 세 빌더가 낙농 프로필(여백·쪽번호·제목 크기·장 새 쪽·HWPX 본문 12pt)을 타고, 워드·한글 검사기에 낙농 독립 기대값과 변이 시험을 더함(F10d·F10h2). 식량작물·다른 전공 바이트 불변.",
+      "reason": "W1b kordoc-hwpx: build_hwpx CLI 시험. | W2c: review R1-01..R1-07 반영(매니페스트 이름 <출력파일 전체이름>.manifest.json, gg_hwpx 라이브러리화, verify 실패 시 미발행, 표 수치 정확 비교, image_dir 기본=원문 폴더, 생성 스냅샷 해시). | W2d: review2 R1-02/R1-03 수정(build()가 필수 context+authorization로 발행 직전 reconfirm, validate는 process_ok+returncode==0+status=='ok'). | W2e: review3 R1-02 반례 수정(build()가 authorization.output==OUTPUT_SCHOOL_PAPER를 발행 전 확인). | H1: 시험의 하위 프로세스 호출에 encoding=utf-8 추가(윈도 비UTF-8 로케일에서 파이프 디코드 실패) — 최종 바이트 재측정 | F1: 식량작물 쪽별 여백·글자 크기·HWPX 앞부분 로마 쪽번호 3구역 + 서식 기계 검사(§4.3 charPr·§6 probe); 최종 바이트 재측정 | F1-r2: F1 웹 검토 FAIL 11건 고침 — C-01 다른 전공 HWPX 매니페스트 charpr 키 누출, I-01 요약 번호형 소제목 첫 개만 16pt, I-02 ZIP 항목 손상이 예외로 죽음, I-03 번호형 목차 항목 오탐, I-04 kordoc 재파싱 실패가 skipped 통과, I-05 쪽번호 제어 요소 중복 미검출, I-06 앵커 시험의 가짜 결함, R-01 version.xml-only ok=false 통과, R-02 재파싱 문단 순서·개수 미대조. | F1-r3: N-I01 시험(본문 `요약` 문단이 분할을 막지 않음), R-N01 HWPX 4전공 멤버 해시 대조. | F1b: 앞부분 은닉·쪽 나눔 시험(`test_front_markers_hidden_and_pages_broken`)과 no-op 기대값 추가. | F1b-r2: 웹 r1 고침 시험 5건 — 글자 불일치 차단, pageBreak 따옴표 3형, 자기닫힘 hp:t, 본문 중복 목차 소제목, 은닉 문단 제어 요소 보존 | F1b-r2: 웹 r1 고침 시험 5건 — 글자 불일치 차단, pageBreak 따옴표 3형, 자기닫힘 hp:t, 본문 중복 목차 소제목, 은닉 문단 secPr·colPr·linesegarray 보존 | F1b-r2: 웹 r1 고침 시험 6건 — 글자 불일치 차단, pageBreak 따옴표 3형, 자기닫힘 hp:t, 본문 중복 목차 소제목, 은닉 문단 제어 요소 보존, 은닉 단계 텍스트만 변경 | F1b-r3: 웹 r2 회귀 시험 — 변환 경로 4형(큰따옴표 0·이미 1·부재·작은따옴표 0) + `_set_page_break` 단독 5형(자기닫힘 헤드 포함), 결과 XML 파싱·속성 1개·값 \"1\" / HWPX 본문·단계 글자 크기(F11): 게이트 안 전공(식량작물)의 본문 문단 12pt·번호 단계 제목 level_pt 굵게를 본문 전용 charPr 블록으로 적용(표 칸·표/그림 설명은 10pt 유지). 워드·게이트 밖 전공 바이트 불변. / 낙농 서식 켜기(F9e): 게이트에 dairy를 넣어 세 빌더가 낙농 프로필(여백·쪽번호·제목 크기·장 새 쪽·HWPX 본문 12pt)을 타고, 워드·한글 검사기에 낙농 독립 기대값과 변이 시험을 더함(F10d·F10h2). 식량작물·다른 전공 바이트 불변. | winred-d1: normalize Windows separators in root-relative command manifest paths in test helper; preserve executed argv.",
       "source": "new"
     },
     "tests/test_bundle_lineage.py": {
-      "after_sha256": "cca46240c91fd249e620989a47e01e51716c042b3e78762f228d53d0cb1d42dd",
+      "after_sha256": "209325386ff792df1af05d477443f68ef49c4fd28d65413ffd106912f2ecffde",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "W8",
@@ -2476,7 +2476,7 @@
       "source": "new"
     },
     "tests/test_p2_publication.py": {
-      "after_sha256": "c581479c249deb97034564f3022479726e69706ba2a4398dfe609da1d6cf52fd",
+      "after_sha256": "8700a84e68d193e8bf2b62495aa9ea2565ed1a8ab3949d85c018b6b6096d739f",
       "before_sha256": null,
       "first_changed": "P2",
       "owner": "C",
@@ -2557,11 +2557,11 @@
       "source": "new"
     },
     "tests/test_single_manuscript_intake.py": {
-      "after_sha256": "ebc61ae0768335d1da930cab0e0362bc77f9357fcee3dd7396300dfa3b24990e",
+      "after_sha256": "38996ca8d9a0535727126e8b6f797ed339f6fdb35792d13e4557007114619d7f",
       "before_sha256": null,
       "first_changed": "P28",
       "owner": "P28",
-      "reason": "ORDER-16 B: real CLI/source engines with synthetic DOCX and raw answers; exact preservation/linkage, mixed-file exclusion, incomplete answers, post-scan byte change and both CAS boundaries. Existing test files, assertions and fixtures unchanged. | Astra R3 I1: append three real gg.main OS/fs-boundary fault regressions (answer directory fsync, temp fsync, post-rename identity); retain all nine prior tests and assertions; verify canonical/snapshot/receipt/evidence and original bytes survive. | H1: 시험의 하위 프로세스 호출에 encoding=utf-8 추가(윈도 비UTF-8 로케일에서 파이프 디코드 실패) — 최종 바이트 재측정",
+      "reason": "ORDER-16 B: real CLI/source engines with synthetic DOCX and raw answers; exact preservation/linkage, mixed-file exclusion, incomplete answers, post-scan byte change and both CAS boundaries. Existing test files, assertions and fixtures unchanged. | Astra R3 I1: append three real gg.main OS/fs-boundary fault regressions (answer directory fsync, temp fsync, post-rename identity); retain all nine prior tests and assertions; verify canonical/snapshot/receipt/evidence and original bytes survive. | H1: 시험의 하위 프로세스 호출에 encoding=utf-8 추가(윈도 비UTF-8 로케일에서 파이프 디코드 실패) — 최종 바이트 재측정 | winred-d1: assert host-independent POSIX receipt serialization for Windows-flavored paths.",
       "source": "new",
       "last_changed": "H1"
     },
@@ -2970,24 +2970,24 @@
       "stage": "v0.4.8"
     },
     "skills/knuaf-doc/scripts/gg_notices.py": {
-      "after_sha256": "f359bc336f53e2a74e984444487a57a21d82c87254de462e7770c0ef260920b2",
+      "after_sha256": "08d3c8fccb845e6b18835e79d47073e22eda5f949579ef7be495c66eaedc304e",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "food-crops-0.1.0",
       "note": "W-E2: gg_core에서 분리한 알림 문구 조립 모듈",
       "owner": "P28",
-      "reason": "v0.4.8 W-E2: 알림 문구 조립을 gg_core에서 분리한 모듈 — 본문 금액 대조 안내 문장을 같은 자리에서 만든다 | W-N: 알림 생산자를 등록부 얇은 경로로, choose의 두 번째 쓰기 제거, CLI write를 잠금 안으로 | food-crops-0.1.0 W-N 연결: notice_rows 3번째로 빈 사본 안내 얇은 경로 추가(workbook → unsupported → blank_copy)",
+      "reason": "v0.4.8 W-E2: 알림 문구 조립을 gg_core에서 분리한 모듈 — 본문 금액 대조 안내 문장을 같은 자리에서 만든다 | W-N: 알림 생산자를 등록부 얇은 경로로, choose의 두 번째 쓰기 제거, CLI write를 잠금 안으로 | food-crops-0.1.0 W-N 연결: notice_rows 3번째로 빈 사본 안내 얇은 경로 추가(workbook → unsupported → blank_copy) | D1 reviewed reason (원문·기존 이력 모두 보존): v0.4.8 W-E2: gg_core에서 분리한 알림 문구 조립 모듈 — 본문 금액 대조 안내 문장을 같은 자리에서 만든다 | W-N: 알림 생산자를 등록부 얇은 경로로, choose의 두 번째 쓰기 제거, CLI write를 잠금 안으로 | food-crops-0.1.0 W-N 연결: notice_rows 3번째로 빈 사본 안내 얇은 경로 추가(workbook → unsupported → blank_copy) | winred-d1: reject POSIX and Windows absolute receipt path spellings independent of host.",
       "source": "new",
       "stage": "v0.4.8"
     },
     "tests/test_hort_workbook_advice.py": {
-      "after_sha256": "3452a7fc8ed62f3d0e85780092d79e41c1aca7feb31f2a64389c60e471b6bb68",
+      "after_sha256": "b39055c977af23811a4f593456a66009e60fb870adb8a6f6f914bec4f51107f5",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "W-N",
       "note": "W-H: 원예 워크북 안내 문구 시험",
       "owner": "P28",
-      "reason": "W-H: 원예 워크북 권고 문구 시험 — 기간 표기(년도·차년도)·경쟁 금액 환산·한 금액 원칙 안내가 합성 값에서 나오는지 확인한다 | W-N: notices_write 반환 단언 7곳을 파일 단언으로, 실패는 제거로 처분",
+      "reason": "W-H: 원예 워크북 권고 문구 시험 — 기간 표기(년도·차년도)·경쟁 금액 환산·한 금액 원칙 안내가 합성 값에서 나오는지 확인한다 | W-N: notices_write 반환 단언 7곳을 파일 단언으로, 실패는 제거로 처분 | winred-d1: reject Windows-native absolute receipt path spellings independent of host.",
       "source": "new",
       "stage": "v0.4.8"
     },
@@ -3012,7 +3012,7 @@
       "source": "new"
     },
     "tests/test_excel_other_majors_bytes_locked.py": {
-      "after_sha256": "d6a971a5ebb6b9ed4526457383802e9cffc95fbd88000082fb9710095443f9bc",
+      "after_sha256": "539072c4ba7e3f5aadae8aa2e8514d6efd6dcd1fa33280b080586511842f5082",
       "before_sha256": null,
       "first_changed": "food-crops-0.1.0",
       "last_changed": "specialty-abc-0.1.0",
@@ -3150,7 +3150,7 @@
       "source": "new"
     },
     "tests/test_sidecar_registry.py": {
-      "after_sha256": "973cf5bbe03e64e95bdf2adf64505916b9efd502c8a6ed7290f9172a089fe5f4",
+      "after_sha256": "e0db6f101a75a14b7abc204dc152cff4c5dd22dd695ba2ce38fe904b2bfa3a45",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "W-N",

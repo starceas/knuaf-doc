@@ -102,9 +102,11 @@
 
 **판정 우선순위**(P2-R2): bundle 변조/fail 또는 실제 시험의 unexpected failure/error/XPASS·inventory 불일치·framework-회계 불일치 → `unexpected_failures`(exit 1). 그것이 없고 checker 누락·의존성 준비 실패·미승인 skip·최종 모드의 nested flag → `incomplete`(exit 3). 미지원 Python → exit 2. 그 외 기본 모드에서 선언된 외부 게이트가 pending이면 **`ok_platform_scoped`(exit 0)**, pending이 없으면 `ok`(exit 0). 여러 원인이 공존하면 `causes.unexpected`/`causes.incomplete`에 각각 기록한다.
 
-**완료 플래그**(P2-R2): `platform_validation_completed`는 기본 모드 + bundle pass + 의존성 통과 + 시험 완료(tests_run>0) + unexpected/inventory/incomplete/회계 오류 없음일 때만 `true` — `--runtime-only`는 항상 `false`. `full_validation_completed`는 platform이 true이면서 `pending_external_checks`가 비어 있을 때만 `true` — 현재 P2는 P2-L09-native가 pending이므로 항상 `false`다. 두 플래그 모두 실행 무결성 사실이며 제품 PASS가 아니다.
+**완료 플래그**: `platform_validation_completed`는 기본 모드 + bundle pass + 의존성 통과 + 시험 완료(tests_run>0) + unexpected/inventory/incomplete/회계 오류 없음일 때만 `true` — `--runtime-only`는 항상 `false`. `full_validation_completed`는 platform이 true이면서 pending이 비어 있을 때만 true다. POSIX는 native 관문이 pending이므로 false, Windows는 실제 관문 pass와 나머지 조건 충족 시 true다. 두 플래그는 실행 무결성 사실이지 제품 PASS가 아니다.
 
-**외부 게이트 규칙**(P2-R2, fail-closed·컴파일 상수): 정확한 테스트 `tests.test_p2_windows.WindowsBandCase.test_native_windows_two_process_contention`가 darwin/linux에서 정확한 사유 `native Windows+NTFS required — withheld`로 skip될 때만 `approved_external_skips`로 인정되고 `pending_external_checks`에 `P2-L09-native`(status `not_run`, support `withheld`, implementation `placeholder_only`)를 기록한다. 같은 ID의 pass/known-baseline 결과는 위조로 간주해 inventory 불일치(exit 1), 다른 사유·다른 플랫폼·중복·부재도 면제되지 않는다. 사유 문자열을 복사한 다른 시험의 skip은 승인되지 않는다. `--runtime-only`에서도 동일하게 분류되며 게이트는 별도 보고되지만 완료 플래그는 항상 `false`다.
+**외부 게이트 규칙**(fail-closed): 정확한 `tests.test_p2_windows.WindowsBandCase.test_native_windows_two_process_contention`는 darwin/linux에서 정확한 사유 `native Windows+NTFS required — withheld`로 skip될 때만 승인 외부 skip이며 기존 P2-L09-native pending 기록을 남긴다. win32에서는 실제 pass를 요구하며 pending/승인 외부 skip은 없다. Windows skip은 미승인, fail은 일반 실패, known-defect·중복·부재는 불일치다. POSIX pass는 위조로 거절한다. 다른 ID에 복사된 사유는 면제하지 않는다. 보고서 최상위 platform으로 검사기가 두 모양과 플랫폼별 skill skip을 구별하며, runtime-only에서도 같은 분류를 쓰되 완료 플래그는 false다.
+
+**플랫폼 출처**(B-01): checker는 외부 기대 플랫폼(기본 소비 호스트, 타 호스트 artifact는 `--expected-platform`)과 보고서를 대조한다. shard는 지원 platform 필수·전 shard 동일·병합 호스트 동일을 요구한다. 타 호스트 병합은 명시 거절하여 관문/skill skip 정책과 최종 platform이 실제 shard 문맥과 일치하게 한다.
 
 **결과 회계**(P2-R2): `runtime.entries`는 시작된 부모 시험마다 정확히 하나의 terminal 분류를 갖고 `tests_run`은 framework `testsRun`과 같다. subTest 결과는 부모의 `events`로 보존된다 — 실패/에러 subTest가 하나라도 있으면 부모는 `failed`(passed/known-baseline 불가), skip subTest만이면 부모는 `skipped`(실패 우선). 클래스/모듈 fixture 결과는 시작된 부모가 없으므로 `fixture_events`에 분리 기록되며 failure/error는 `unexpected_failed`에 계산되고 skip은 미승인 skip이다. framework의 failures/errors/skipped/expectedFailures/unexpectedSuccesses와 기록을 대조하고 불일치는 회계 오류(exit 1)다. `wasSuccessful()==False`이면 exit 0 불가. unittest `expectedFailure`·`unexpectedSuccess`는 둘 다 unexpected 실패로 계산된다 — KNOWN_DEFECTS/inventory 경로만이 기저결함을 인정한다.
 
@@ -143,3 +145,11 @@
 - `_finance_check_items.eligible`은 단위가 문자열일 때만 화폐 단위 집합을 조회한다. 과수 사실의 `unit=["주"]`를 금액으로 인정하지 않으며, 공개 gate와 자동 진행 파일 생성이 같은 입력에서 중단되지 않게 한다. 기존 `tests.test_fruit_plan_shape.FruitPlanShapeTests.test_duplicate_with_non_string_unit_does_not_crash`를 실제 소비 경로까지 확장했다.
 - `test_skillgaps_wp4_interview`의 전공 범위·미지원 계약과 `test_update_check`의 제작자·업데이트 S1~S4 계약은 보존한다. 변경된 문구 5개 단언만 제거하고 새 문구로 재고정하지 않는다. 단계 문법·누락·제목 일치·범위 표기는 `tests.test_student_language`의 실제 예시 검증이 담당한다.
 - 원 traceback은 작업 폴더 `slot5b.log`, 수정 후 실행 증거와 요청은 `HANDOFF-CI.md`·`SLOT-COMMANDS-CI.md`에 기록한다. 실행 전에는 Python 3.10/3.14 또는 Windows 통과를 주장하지 않는다.
+
+## 9. Windows 파일시스템·프로세스 회귀 (D2)
+
+- 출판의 Windows reparse 부모 거절은 내부 OSError 대신 ValueError 계약으로 전달한다. 거절 원인은 보존하며 파일을 쓰지 않는다.
+- Windows Python 3.10~3.12의 realpath는 절대 경로에도 cwd를 조회한다. `gg_core.resolve_path`는 native final-path로 기존 부모의 링크를 해석한 뒤 새 출력 경로를 붙인다. 링크 탈출·권한 오류·해결 불가 링크는 허용하지 않는다. DOCX 경로·그림 탐색·팩 목록 경로에 적용한다.
+- git 128 시험은 POSIX 셸 실행 파일 대신 실제 저장소의 미지원 형식을 사용한다. git exit 128과 기존 장부 바이트 보존을 함께 확인한다.
+- 확장 경로 접두는 제거한 이름이 같은 native final-path로 확인될 때만 뗀다. 다르거나 조회 오류면 원래 접두를 보존한다. Windows 시험은 native 함수를 보존하고 POSIX에서만 대용 realpath를 쓴다.
+- 로컬 순차 실행: publication 44건, DOCX 15건, WiringIgnoreTests 15건 통과. Astra 1회째 지적 R1·R2 수정 후 확인은 별도이며 Windows native 통과를 주장하지 않는다.

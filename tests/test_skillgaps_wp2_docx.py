@@ -212,16 +212,94 @@ class WorkingDirectoryTests(ContractCase):
         root = self.make_project()
         bind_major(root)
         (Path(root) / "body.md").write_text(URL_MD, encoding="utf-8")
+        self._build_with_unreadable_cwd(root)
+
+    def test_native_resolution_rejects_symlink_escape_and_accepts_new_child(self):
+        core = runtime("gg_core")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "project"
+            outside = Path(tmp) / "outside"
+            root.mkdir()
+            outside.mkdir()
+            (root / "escape").symlink_to(outside, target_is_directory=True)
+            realpath = os.path.realpath
+            with mock.patch.object(core, "_getfinalpathname",
+                                   side_effect=lambda p: realpath(p, strict=True)):
+                self.assertEqual(core.local(root, "new/deep.docx"),
+                                 Path(realpath(root)) / "new/deep.docx")
+                with self.assertRaises(ValueError):
+                    core.local(root, "escape/paper.docx")
+                with self.assertRaises(ValueError):
+                    core.local(root, "../outside/paper.docx")
+                with mock.patch.object(core, "_getfinalpathname",
+                                       side_effect=PermissionError("denied")):
+                    with self.assertRaises(PermissionError):
+                        core.local(root, "paper.docx")
+
+    def test_extended_prefix_removed_only_for_identical_native_path(self):
+        core = runtime("gg_core")
+        root = self.make_project()
+        for final, plain in (
+                ("\\\\?\\C:\\project\\paper.docx", "C:\\project\\paper.docx"),
+                ("\\\\?\\UNC\\server\\share\\paper.docx",
+                 "\\\\server\\share\\paper.docx")):
+            for result in (final, "\\\\?\\C:\\different", OSError("denied")):
+                with self.subTest(final=final, result=result):
+                    with mock.patch.object(core, "_getfinalpathname",
+                                           side_effect=[final, result]):
+                        resolved = core.resolve_path(Path(root) / "paper.docx")
+                    expected = plain if result == final else final
+                    self.assertEqual(resolved, Path(expected))
+
+    def test_cli_builds_with_windows_310_eager_realpath_cwd_lookup(self):
+        root = self.make_project()
+        bind_major(root)
+        (Path(root) / "body.md").write_text(URL_MD, encoding="utf-8")
+        self._build_with_unreadable_cwd(root, eager_realpath=True)
+
+    def test_cli_preserves_native_resolver_with_windows_310_realpath(self):
+        root = self.make_project()
+        bind_major(root)
+        (Path(root) / "body.md").write_text(URL_MD, encoding="utf-8")
+        self._build_with_unreadable_cwd(root, eager_realpath=True,
+                                        native_with_eager_realpath=True)
+
+    def _build_with_unreadable_cwd(self, root, eager_realpath=False,
+                                   native_with_eager_realpath=False):
+        native_emulation = (
+            "import gg_core\n"
+            "safe_realpath = os.path.realpath\n"
+            "if gg_core._getfinalpathname is None:\n"
+            "    gg_core._getfinalpathname = lambda p: safe_realpath(p, strict=True)\n"
+            "def windows310_realpath(path, *, strict=False):\n"
+            "    os.getcwd()\n"
+            "    return safe_realpath(path, strict=strict)\n"
+            "os.path.realpath = windows310_realpath\n"
+        ) if native_with_eager_realpath else ""
+        emulation = (
+            "import pathlib\n"
+            "original_realpath = os.path.realpath\n"
+            "def eager(path, *, strict=False):\n"
+            "    os.getcwd()\n"
+            "    return original_realpath(path, strict=strict)\n"
+            "os.path.realpath = eager\n"
+            "if hasattr(pathlib, '_normal_accessor'):\n"
+            "    pathlib._normal_accessor.realpath = eager\n"
+            "import gg_core\n"
+            "if gg_core._getfinalpathname is None:\n"
+            "    gg_core._getfinalpathname = lambda path: original_realpath(path, strict=True)\n"
+        ) if eager_realpath else ""
         code = (
             "import os,sys\n"
             "sys.path.insert(0, %r)\n"
+            + native_emulation +
             "def boom(): raise PermissionError(1, 'Operation not permitted')\n"
             "os.getcwd = boom\n"
+            + emulation +
             "import build_docx\n"
             "sys.exit(build_docx.main(['.', '--in', 'body.md', '--out',"
             " 'rel.docx', '--major', 'specialty_crops']))\n"
-            % str(Path(runtime("build_docx").__file__).parent)
-        )
+        ) % str(Path(runtime("build_docx").__file__).parent)
         env = dict(os.environ, PWD=str(root))
         result = subprocess.run([sys.executable, "-B", "-c", code],
                                 cwd=root, capture_output=True, text=True, encoding="utf-8",

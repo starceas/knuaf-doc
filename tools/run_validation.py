@@ -63,10 +63,10 @@ exact test ``tests.test_p2_windows.WindowsBandCase.
 test_native_windows_two_process_contention`` skipping with the exact
 reason ``native Windows+NTFS required — withheld`` on darwin or linux is
 the sole approved native external skip; it records the P2-L09-native pending
-gate.  The same test passing, failing, skipping with another reason,
-running on another platform, appearing twice, or being absent from a
-completed suite is never silently excused — it is an unexpected failure
-or unapproved skip as applicable.
+gate. On win32 the same test must actually pass; it is not an external
+skip and no pending gate is recorded. A pass on POSIX, a known-defect
+outcome, duplicate or missing gate is an inventory mismatch. Failures
+and unapproved skips are never exempt.
 
 Skill tests use finite exact-ID/reason lists. ``ALLOWED_SKILL_SKIPS`` covers
 optional external inputs on every platform. ``WINDOW_ONLY_SKILL_SKIPS``
@@ -120,11 +120,8 @@ ALLOWED_NESTED_SKIP_IDS = frozenset({
     "test_fixed_defect_mapping_required",
 })
 
-# The single declared external gate for current P2: a native Windows+NTFS
-# contention check that is deliberately not implemented yet — the test
-# body is ``self.fail('native Windows run not recorded')``.  Only the
-# exact skipped outcome + exact reason on darwin/linux qualifies as the
-# approved external skip.  Nothing here may promote it to a pass.
+# The native two-process contention check runs on Windows. Only its exact
+# withheld skip on darwin/linux is an approved external skip.
 NATIVE_GATE = {
     "gate_id": "P2-L09-native",
     "test_id": "tests.test_p2_windows.WindowsBandCase."
@@ -729,12 +726,10 @@ def _run_runtime_tests(root, shard=None, scope="full"):
 
 
 def _evaluate_external_gate(entries, suite_ran):
-    """Fail-closed classification of the declared native placeholder.
+    """Return approved skips, fail-closed warnings and the gate observation.
 
-    Returns (approved_external_skips, gate_warnings, observation).
-    The gate's pending record is emitted separately; this function only
-    decides whether the observed outcome is the exact authorized
-    placeholder skip.
+    Windows requires a genuine pass; POSIX permits only the exact withheld
+    skip. Failure outcomes remain ordinary unexpected failures.
     """
     approved = []
     warnings = []
@@ -754,11 +749,12 @@ def _evaluate_external_gate(entries, suite_ran):
     e = obs[0]
     observation = e
     cat = e["category"]
-    if cat in ("passed", "known_baseline_defect"):
+    if cat == "passed" and sys.platform == "win32":
+        pass  # Native execution is required here, never an approved skip.
+    elif cat in ("passed", "known_baseline_defect"):
         warnings.append(
-            "external gate %s recorded a %s outcome — the placeholder "
-            "cannot legitimately pass; this looks forged"
-            % (NATIVE_GATE["gate_id"], cat))
+            "external gate %s recorded a %s outcome on %s; this looks forged"
+            % (NATIVE_GATE["gate_id"], cat, sys.platform))
     elif cat == "skipped":
         if (e.get("detail") == NATIVE_GATE["reason"]
                 and sys.platform in NATIVE_GATE["allowed_platforms"]):
@@ -774,7 +770,9 @@ def _evaluate_external_gate(entries, suite_ran):
 
 
 def _pending_external_checks(observation):
-    """The declared pending-work record for the current P2 scope."""
+    """Record external pending work only where native execution is withheld."""
+    if sys.platform == "win32":
+        return []  # A local execution obligation, not an external pending gate.
     detail = NATIVE_GATE["reason"]
     if observation is not None and observation.get("detail"):
         detail = observation["detail"]
@@ -970,6 +968,8 @@ def main(argv=None):
         try:
             template, runtime = merge_shard_reports(
                 root, a.merge_shards, a.shard_count, scope=a.pr_scope)
+            if template.get("platform") != sys.platform:
+                raise ValueError("shard platform differs from merge host platform")
             if template.get("root") != str(root):
                 raise ValueError("shard reports belong to another repository root")
             if template.get("baseline_main") != BASELINE_MAIN:
@@ -1183,6 +1183,7 @@ def main(argv=None):
 
     report = {
         "tool": "tools/run_validation.py",
+        "platform": sys.platform,
         "verdict": verdict,
         "exit_code": code,
         "mode": mode,
@@ -1213,8 +1214,8 @@ def main(argv=None):
         "note": "runner verdict 'ok'/'ok_platform_scoped' is not a "
                 "product PASS: known_baseline_defects are reproduced main "
                 "defects owned by their gate units; pending_external_checks "
-                "are declared gates not run on this platform (current P2: "
-                "P2-L09-native, placeholder only — no native support claim); "
+                "are declared gates not run on this platform (P2-L09-native "
+                "is withheld off Windows and requires a native pass on Windows); "
                 "completion flags are run-integrity facts, not product "
                 "approval",
     }
