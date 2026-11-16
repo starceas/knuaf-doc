@@ -9,20 +9,18 @@ that cannot be diffed falls back to the whole suite instead of skipping it.
 
 Rules (design §3):
 
-1. a version-bump file changed                      -> ``full``
-2. any other changed path (generated ledgers aside) -> ``code``
+1. a version-bump file changed -> ``full``
+2. any other changed path      -> ``code``
 3. undeterminable (empty diff, git error, bad rev,
-   no single common ancestor)                       -> ``full``
+   no single common ancestor)  -> ``full``
 
 Paths are taken from the common ancestor (``git merge-base``), not from a
 straight ``base head`` diff: the PR base is main's tip, so a version file main
 bumped after the fork would leak in, and one both sides bumped the same way
 would cancel out.
 
-The three generated ledgers are ignored: they ride along on nearly every code
-PR and their integrity is checked by ``check_bundle.py`` and
-``build_validation_bundle.py --check`` in every job. Rule 2 is the catch-all,
-so a new or unfamiliar path is never skipped by accident.
+Rule 2 is the catch-all, so a new or unfamiliar path is never skipped by
+accident.
 """
 import argparse
 from pathlib import Path
@@ -32,11 +30,6 @@ import sys
 FULL_SCOPE_PATHS = frozenset({
     "skills/knuaf-doc/version.json",
     ".codex-plugin/plugin.json",
-})
-GENERATED_LEDGERS = frozenset({
-    "tools/validation-bundle.json",
-    "tools/runtime-changes.json",
-    "tools/validation-provenance.json",
 })
 SCOPES = ("full", "code")
 
@@ -93,12 +86,7 @@ def decide(paths):
     """Scope for one changed-path list; an empty list is undeterminable."""
     if not paths:
         return "full"
-    interesting = [path for path in paths if path not in GENERATED_LEDGERS]
-    if not interesting:
-        # Only generated ledgers changed: nothing to validate, but an empty
-        # effective diff is the undeterminable case, not a licence to skip.
-        return "full"
-    if any(path in FULL_SCOPE_PATHS for path in interesting):
+    if any(path in FULL_SCOPE_PATHS for path in paths):
         return "full"
     return "code"
 

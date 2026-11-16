@@ -1,8 +1,8 @@
-# 검증 묶음·무결성 계약
+# 검증·배포 검사 계약
 
-이 문서는 공개 저장소의 검증 묶음(validation bundle)이 무엇을 포함하고,
-어떻게 무결성을 검사하는지를 설명한다. 회귀 시험의 결함 목록은
-`docs/validation/REGRESSIONS.md`가 담당한다.
+이 문서는 공개 저장소의 검증 실행과 배포 처분표 검사를 설명한다.
+회귀 시험의 결함 목록은 `docs/validation/REGRESSIONS.md`가 담당한다.
+
 
 ## 두 산출물의 분리
 
@@ -19,11 +19,12 @@
 ## 고정 진입점
 
 ```text
-python3 tools/check_bundle.py --root .        # 무결성 (stdlib만 사용)
+python3 tools/check_bundle.py --root .        # 배포 처분표 검사 (stdlib만)
 python3 tools/run_validation.py [--json out]  # 회귀 시험 한 명령
 ```
 
 지원 Python은 3.10 이상이다. `check_bundle.py`는 stdlib만 사용한다.
+
 
 `run_validation.py`는 회귀 시험 전에 **현재 실행 인터프리터**의 필수
 의존성(`skills/knuaf-doc/scripts/runtime-deps.json` 기준)을 점검한다.
@@ -86,81 +87,21 @@ skip되면 승인 밖으로 남는다. `tools/check_validation_report.py`도 같
 
 ## 무결성 모델
 
-- `tools/baseline-files.json` — 고정 main 스냅숏의 파일 해시 목록(입력 정본의
-  그대로 복사). 55개 런타임 파일의 기대 SHA-256이다. **수정 금지.**
-- `tools/runtime-changes.json` — 사람이 관리하는 선언 목록(P1~, schema
-  `knuaf-doc/runtime-changes@2`). baseline과 다른 runtime 파일만 여기에
-  명시한다: 항목별 `before_sha256`(원본 main 해시·신규는 null)·
-  `after_sha256`(현재 해시)·`first_changed` 단계·소유·사유·채택 출처.
-  상단에는 `stage`, `baseline_main`, `baseline_spec_sha256`,
-  `parent_candidate`(직전 수용 단계의 후보 digest), `stage_lineage`(P0→…
-  누적 부모 계보)를 둔다. 목록에 없는 baseline 변화는 미승인이다 —
-  builder가 온디스크 drift를 자동 승인하지 않는다.
-- **신규 파일 계약(P2~)**: baseline에 없는 새 제품 파일은
-  `before_sha256: null`과 `first_changed` 단계 표기로만 선언할 수 있고,
-  그 경로는 `approved_new_files` allowlist에 사전 명시돼 있어야 한다.
-  baseline 파일을 `before=null`로 위장하거나 allowlist 밖 경로를 신규로
-  선언하면 거부된다. 신규로 선언된 파일은 manifest `files[]`(검증 계층)에
-  들어가지 않는다.
-- `tools/validation-bundle.json` — 생성되지만 커밋되는 manifest(schema
-  `knuaf-doc/validation-bundle@3`). baseline도 runtime 변경 선언도 아닌
-  모든 파일의 SHA-256·provenance를 기록하고, `runtime_changes` 블록으로 위
-  선언 목록의 SHA-256·단계·부모 digest·변경 수·신규 파일 수·after digest를
-  연결한다. 자기 자신은 해시하지 않는다(순환 방지). 이 파일이 무결성
-  검사의 신뢰 뿌리다 — 실제 git 커밋에서 리뷰 대상이 되며, 모든 검사
-  출력에 자체 SHA-256을 표시해 외부 고정이 가능하다. CI는 manifest를
-  재생성해 바이트 동일성을 비교한다.
-- `tools/validation-provenance.json` — 사람이 관리하는 입력. 파일별 기원
-  (`new`/`reused`/`transformed`/`pinned-input`/`generated`)과 개발 소스
-  해시를 선언한다.
+커밋된 파일의 지문은 git이 보유한다. 검증 결과가 어느 커밋의 것인지는
+그 커밋을 내려받아 실행한 CI 기록이 증명하며, 로컬 실행 결과는 참고용이다.
+학생 컴퓨터에서 받은 파일 대조는 설치 목록이 담당한다.
 
-`check_bundle.py`의 판정:
-
-| 상태 | 의미 |
-|---|---|
-| `ok` | 해시 일치 |
-| `declared_change` | `runtime-changes.json`에 선언된 runtime 변경 — `after_sha256`과 디스크 해시가 정확히 일치. **해시 연결 검증일 뿐 변경 내용의 승인이 아니다** |
-| `declared_new` | allowlist에 명시된 신규 파일의 선언 — `after_sha256`과 디스크 해시 일치. 역시 해시 연결 검증일 뿐 내용 승인이 아니다 |
-| `modified_allowed` | `README.md`만 — baseline과 달라도 되며, 필수 마커(`# knuaf-doc`, `run_validation.py`, `check_bundle.py`)가 남아 있어야 한다 |
-| `baseline_missing` / `undeclared_runtime_change` | 런타임 누락·미선언 변조 — 실패 |
-| `runtime_change_*` | 선언 목록의 before/after 불일치·미존재 경로·경로 탈출·자가면제·중복 키·noop·검증계층 중복 선언·미허용 신규(before=null이 allowlist 밖)·baseline 위장 신규·신규 단계표기 누락 — 실패 |
-| `declared_missing` / `declared_hash_mismatch` | manifest가 고정한 검증 파일이 없거나 변함 — 실패. 합법적 변경이면 `--write-manifest`로 갱신 필요 |
-| `undeclared_file` | baseline도 manifest도 아닌 파일 — 실패 |
-| `manifest_*` | manifest 스키마/자기참조/baseline 중복/트리 digest·baseline spec SHA·runtime_changes 링크 불일치 — 실패 |
-| `asset_disposition:<code>` | 개발 처분표의 배포 항목과 실제 payload·설치 manifest 불일치, 또는 필수 학교 항목이 누락/`runtime_present:false` — 실패 |
-
-exit code: 정상 0, 무결성 발견 1, 사용 오류 2.
-
-0.1.5부터 `check(root)`는 stdlib 검사기 `check_asset_disposition.py`의
-오류를 합산한다. 독립 입력 `docs/asset-disposition.json`의 배포 처분을
-payload·설치 manifest와 대조하고 `required_builtin_source_ids`의 두
-학교 항목을 검사한다. 필수 목록은 export 결과에서 재생성하지 않는다.
-오류 상세는 `asset_disposition:<code>:<path>`다. 기존 runner·CI의
-`check_bundle.py` 선행 경로가 같은 실패를 전달한다. 합성 트리 시험은
-검증 묶음 해시를 다시 생성한 뒤에도 payload/manifest 누락과 필수
-학교 항목의 `runtime_present:false`가 번들 검사 실패임을 확인한다.
-
-## 재생성과 clean export
-
-```text
-python3 tools/build_validation_bundle.py --root . --write-manifest
-python3 tools/build_validation_bundle.py --root . --check
-python3 tools/build_validation_bundle.py --root . --out <새_디렉터리> --receipt <receipt.json>
-```
-
-- `--write-manifest`: 현재 트리 상태로 manifest를 재생성한다.
-- `--check`: 커밋된 manifest와 재계산 결과가 바이트로 같은지 확인한다.
-- `--out`: 무결성 검사를 통과한 트리만 새 디렉터리로 복사한다(기존 경로
-  덮어쓰기 거부). 같은 입력은 항상 같은 `tree_sha256`을 만든다.
+`check_bundle.py`의 `bundle.status`는 배포 처분표와 실제 배포 파일·설치
+목록이 맞는지를 나타낸다. 오류 코드는
+`asset_disposition:<처분표 검사기 코드>`다. 파일별 지문 장부와 검증 파일
+출처 기록은 `fdaa3d1`까지 있었다.
 
 ## CI
 
-`.github/workflows/validation.yml`은 시험 전체를 **5개 조각**(단위: 모듈 통째, 예외 두 모듈은 클래스·메서드)으로
-나눠 동시에 돌린다. 조각 한 개는 한 개 이상의 단위(대부분 unittest 모듈 통째)를 실행하므로
-클래스·모듈 setUp이 깨지지 않는다. Windows 잡은 여전히 **구조 검사만**
-수행한다 — Windows 런타임·바이트 잠금·Office 자동화의 네이티브 검증을
-주장하지 않는다. export 결정성 단계는 quoted heredoc 안에서
-`os.environ['RUNNER_TEMP']`로 receipt 경로를 읽는다(쉘 확장 없이 경로 공백도 안전).
+`.github/workflows/validation.yml`은 시험 전체를 **5개 조각**(단위: 모듈 통째,
+예외 두 모듈은 클래스·메서드)으로 나눠 동시에 돌린다. Windows 잡은 여전히
+**구조 검사만** 수행한다 — Windows 런타임·바이트 잠금·Office 자동화를
+검증했다고 주장하지 않는다.
 
 | 상황 | `suite (ubuntu, py3.10)` | `suite (ubuntu, py3.14)` |
 |---|---|---|
@@ -169,110 +110,36 @@ python3 tools/build_validation_bundle.py --root . --out <새_디렉터리> --rec
 | main push · `workflow_dispatch` | 5개 조각 전체 시험 + contract 검사 | 5개 조각 전체 시험 + contract 검사 |
 
 필수 체크 이름(`suite (ubuntu, py3.10)`·`suite (ubuntu, py3.14)`·
-`structural only (windows)`)은 PR·main 모두 그대로 나온다. 두 `suite` 잡은
-조각 job을 기다리는 **마무리 job**이며 `if: always()`로 반드시 돈다 — 조각
-job이 실패·취소돼도 건너뛰지 않고, 조각 결과가 `success`가 아니면 첫 단계에서
-실패한다(건너뜀이 통과로 칠리는 일 방지). 마무리 job은 구조 검사·manifest
-결정성을 다시 하고, 조각 보고서를 `tools/run_validation.py --merge-shards`로
-합친 뒤 기존 contract 검사(`tools/check_validation_report.py`, 예전 인라인
-검사를 그대로 파일로 옮긴 것)를 통과해야 초록이다.
+`structural only (windows)`)은 PR·main 모두 그대로 나온다. 두 suite 마무리
+잡은 조각 결과가 모두 성공한 경우에만 합친 보고서를 contract 검사한다.
 
 ### PR 스코프 (full / code)
 
-`scope` 잡이 PR마다 **한 번** 판정해 `needs.scope.outputs.scope`로 샤드·merge에
-넘긴다. 스코프를 다시 계산하는 곳은 없다 — 실행·병합·최종 보고서가 모두
-`validation_sharding.expected_ids_for(root, scope)` 하나에서 ID 집합을 얻는다.
+`scope` 잡은 PR 변경 경로를 한 번 판정해 조각과 보고서 합치기에 전달한다.
 
-| 바뀐 경로 | 스코프 | 도는 단위 |
+| 변경 | 스코프 | 실행 범위 |
 |---|---|---|
-| `skills/knuaf-doc/version.json` 또는 `.codex-plugin/plugin.json` | `full` | 전체 |
-| 그 외 전부(생성물 3종 제외 후) | `code` | 중첩 runner 10단위 제외 |
-| 판정 불가(빈 diff·git 오류·잘못된 rev·공통 조상 없음/여럿) | `full` | 전체 |
-| main push · `workflow_dispatch` | `full`(명시) | 전체 |
+| 버전 파일(`skills/knuaf-doc/version.json`, `.codex-plugin/plugin.json`) | `full` | 전체 |
+| 그 외 모든 변경 | `code` | 중첩 runner 10단위 제외 |
+| 판정 불가 또는 main push·수동 실행 | `full` | 전체 |
 
-- 바뀐 경로는 **공통 조상 기준**이다: `git merge-base --all base head`가 정확히
-  하나를 내면 `<공통 조상>..head`를 diff한다. `--all`을 쓰는 이유는 criss-cross
-  이력에서 조상이 둘 이상일 수 있어서다(그때는 판정 불가). PR base
-  (`pull_request.base.sha`)는 main의 끝이라, 두 끝을 직접 비교하면 분기 뒤
-  main만 바꾼 버전 파일이 PR 변경으로 잡혀 불필요한 `full`이 되고, 양쪽이 같게
-  바꾼 버전 파일은 차이에서 사라져 `full`이어야 할 PR이 `code`가 된다. 공통
-  조상이 없거나 여럿이면 판정 불가로 `full`이다.
-
-- `tools/ci_scope.py`는 값(`full`/`code`)만 stdout에 쓴다. `scope=` 형식과
-  `$GITHUB_OUTPUT` 기록은 워크플로가 한다 — 쓰는 곳이 한 군데뿐이다.
-- 생성물 3종(`tools/validation-bundle.json`·`runtime-changes.json`·
-  `validation-provenance.json`)만 바뀐 diff는 `full`이다. 무결성은 어차피
-  모든 잡이 `check_bundle.py`·`build_validation_bundle.py --check`로 검사한다.
-- 규칙 2가 catch-all이라 새 경로·모르는 경로는 `code`이며, 전체에서 빠지는
-  것은 `PR_DEFERRED_UNITS`(= `NESTED_RUNS`) 뿐이다. 스코프가 gate·skip·
-  고정 결함 판정을 풀지 않는지는 `tools/check_validation_report.py --pr-scope`가
-  같은 ID 집합으로 대조한다.
-- 보고서의 `validation_scope`는 플랫폼 범위(`current_platform`)이지 PR
-  스코프가 아니다. PR 스코프는 보고서에 저장하지 않고 merge·최종 검사에
-  `--pr-scope`로 따로 전달한다. 한 스코프로 만든 조각 집합을 다른 스코프로
-  합치면 ID 합집합이 맞지 않아 `merge_shard_reports`가 실패한다(교차 차단).
-- 계약 시험은 `tests/test_ci_scope.py`(판정·출력 계약)와
-  `tests/test_validation_sharding.py`(스코프 집합·병합 9변형·최종 보고서·
-  inventory 계층·XPASS 집계·판정 우선순위)다. 두 파일 모두 `code` 스코프에
-  들어가므로 PR에서 항상 돈다.
+경로는 공통 조상과 head 사이에서 계산한다. 공통 조상이 없거나 여럿이면
+판정 불가로 전체 시험을 실행한다. 새 경로·모르는 경로도 `code`이며,
+전체에서 빠지는 것은 `PR_DEFERRED_UNITS`(= `NESTED_RUNS`) 뿐이다.
+보고서 합치기는 조각 간 시험 ID·결과의 일관성을 확인하고, PR scope는
+최종 보고서 contract 검사기에 별도로 전달한다.
 
 ### 조각 배정과 합치기
+두 시험 루트(`tests/`, `skills/knuaf-doc/tests/`)를 discover해 단위별로
+5개 조각에 배정한다. 기본 단위는 모듈이며, 저장소 사본에서 중첩 실행을
+수행하는 `test_runner_contract.py`와 `test_runner_negative_controls.py`는
+클래스 또는 메서드 단위로 나눈다. Fixture가 있는 단위는 함께 둔다.
 
-- 두 시험 루트(`tests/`, `skills/knuaf-doc/tests/`)를 한 번에 discover해
-  **조각 단위(unit)**로 묶는다. 기본 단위는 모듈(파일) 전체다. 예외는 시험 안에서
-  저장소 사본으로 전체 시험을 다시 도는 중첩 실행을 하는 두 모듈
-  (`tests/test_runner_contract.py`, `tests/test_runner_negative_controls.py`,
-  중첩 실행 약 17회로 전체 시간의 대부분)뿐이다. 이 둘은 클래스로 나누고,
-  `setUpClass`/`tearDownClass`가 없는 클래스는 메서드 하나씩으로 더 나눈다.
-  `setUpClass`가 있는 클래스(`RunnerAccountingTests`)나 `setUpModule`/
-  `tearDownModule`이 있는 모듈은 통째로 한 단위다. 단위 이름은
-  `경로.py`, `경로.py::클래스`, `경로.py::클래스::메서드`다.
-- 쪼갠 두 모듈에 순서 의존이 없는 근거: ① 쪼개는 클래스에 class/module fixture가
-  없다(코드로 판별해 있으면 통째로 둠) ② 메서드마다 `copy_public_tree`/
-  `_copy_public`으로 자기 임시 사본을 만들고 보고서도 그 사본 옆에 쓴다 — 시험 간
-  공유 파일·고정 경로 없음 ③ 모듈 수준 가변 전역 상태 없음, `os.environ`·`cwd`·
-  `sys.path` 변경 없음(자식 프로세스 env는 호출마다 복사본), `mock.patch`는 `with`
-  범위 안(`RunnerAccountingTests`, 통째로 실행) ④ `KNOWN_DEFECTS`는 시험 id를 키로
-  쓴다. 그래도 나누기 전/후 결과가 시험 id별로 같은지는 전후 비교(아래)로 닫는다.
-- 중첩 실행을 막으려고 사본의 메타 시험 파일을 덮어쓸 때는 **모양을 보존**해야
-  한다: `tests/test_runner_contract.py`는 `validation_sharding.NESTED_RUNS`의
-  `RunnerContractTests` 단위마다 같은 이름의 no-op 메서드를 가진 같은 이름의
-  클래스를 쓰고(모듈 상수 `_STUB_SOURCE` 하나를 세 곳이 공유), 메서드 이름은
-  `sorted()`로 고정한다. 사본 안의 discovery가 `PR_DEFERRED_UNITS` 10단위를
-  그대로 담아야 `code`/`full` 집합 차이가 정확히 그 10단위가 되기 때문이다 —
-  이름 하나짜리 불투명 스텁은 7단위를 지워 `tests/test_validation_sharding.py`의
-  불변식(`PR_DEFERRED_UNITS <= set(modules)`)을 깨고, `full` 스코프(main push)의
-  중첩 실행을 3건 실패로 만든다(2026-11-13 main 실패).
-- 단위를 가중치 큰 것부터 정렬(가중치 = 시험 수 + 중첩 실행 수 × 3000 — 중첩 실행 1회가
-  나머지 모듈 전체와 비슷한 시간), 경로 순으로 놓고 그때그때 가장 적게 쌓인 조각에
-  배정한다(동률이면 낮은 번호). 결정적이다. 중첩 실행 수는 `validation_sharding.py`의
-  `NESTED_RUNS`에 있으며 첫 CI 실행의 `module_timings_seconds`로 바꿀 임시 값이다.
-- 각 조각 보고서는 `shard`(번호·모듈 목록·discover한 ID·실행한 ID)와
-  `runtime.module_timings_seconds`(단위별 실행 시간, setUp 포함)를 남긴다.
-  다음 재배정은 이 시간을 보고 한다.
-- 합칠 때(`validation_sharding.merge_shard_reports`) 조각이 스스로 보고한
-  수를 믿지 않고 **저장소를 다시 discover**해서 대조한다: 조각 번호 중복·누락,
-  조각의 모듈 배정과 시험 ID 집합이 새 discover와 다름, 실행 ID가
-  보고서 entries와 다름, 조각 간 도구·파이썬·baseline 불일치, 합친 ID가
-  전체 discover와 다름(누락·중복) 중 하나라도 있으면 실패한다.
-- 시험은 삭제·skip 추가·내용 수정 없이 그대로다. 합친 보고서는 전체 실행과
-  같은 모양이어서 contract 검사가 바뀌지 않는다.
-- 중첩 실행이 남기는 산출물(진단용): 두 메타 시험 모듈은 자기 안에서 저장소
-  사본을 만들어 전체 실행을 다시 돌리고, 그 보고서·stderr를 사본 트리 **밖**의
-  고정 디렉터리(`<시스템 임시 디렉터리>/knuaf-nested-reports/`)에 쓴다. 사본
-  트리 안에 쓰면 사본에 대한 이후 bundle 검사에서 undeclared 파일이 되고, 사본을
-  소유한 `TemporaryDirectory`가 시험 끝에 지워지므로 그 옆에 써도 CI 업로드
-  시점에는 없다. 파일 이름은 `<사본 임시 디렉터리 이름>-<report>`라 실행끼리
-  섞이지 않는다. 위치가 `$RUNNER_TEMP`가 아니라 `tempfile.gettempdir()`(호스티드
-  러너 기본 `/tmp`)인 것도 그래서다. 조각 job은 `validation-shard-py3.*-N`
-  (조각 보고서·bundle 보고서)와 별도로 `validation-nested-reports-py3.*-N`
-  artifact를 하나 더 올린다 — 경로는 `python3 -c 'import tempfile;print(tempfile.gettempdir())'`로
-  구한 접두 아래 `knuaf-nested-reports/*.json`(중첩·비중첩 보고서)과
-  `knuaf-nested-reports/*.stderr`(두 실행의 stderr, 빈 경우에도 파일로 남김)다.
-  `${{ runner.temp }}/../..`를 쓰면 `/home/runner/work`가 되어 잡히지 않는다.
-  `code` 스코프 PR은 중첩 단위를 아예 돌리지 않으므로 이 artifact가 비어 있을 수
-  있어 `if-no-files-found: warn`이고, 조각 보고서 artifact의 `error`는 그대로다.
-  마무리 job은 이 artifact를 읽지 않는다(사람이 실패를 진단할 때만 쓴다).
+각 조각은 시험 ID와 결과를 보고하고, 합치기는 저장소에서 시험을 다시
+discover해 조각 배정·시험 ID·실행 ID를 대조한다. 불일치가 있으면 실패한다.
+중첩 실행 보고서는 저장소 사본 밖 임시 디렉터리에 기록되어 조각별 artifact로
+올라간다. 코드 스코프에서 중첩 단위를 실행하지 않아 artifact가 비어 있으면
+허용한다.
 
 ### 전후 비교 (시험 ID별)
 
@@ -281,138 +148,19 @@ python tools/compare_validation_reports.py baseline-py3.10.json merged-py3.10.js
 python tools/compare_validation_reports.py baseline-py3.14.json merged-py3.14.json
 ```
 
-baseline은 나누기 전 main CI의 `validation-reports-py3.10`/`py3.14`
-artifact(`validation-report.json`), merged는 이 PR을 main 기준으로 돌린 뒤의
-`validation-reports-py3.*` artifact다. 시험 ID 집합과 ID별 결과(category·
-detail·defect·gate·events)가 같으면 exit 0, 다르면 1, 읽기 실패는 2다.
-PR에서는 3.14가 빠른 확인이라 3.14 합친 보고서가 없다 — 3.14 비교는 main
-push 또는 `workflow_dispatch` 실행의 artifact로 한다.
+두 보고서의 시험 ID 집합과 ID별 결과(category·detail·defect·gate·events)가
+같으면 exit 0, 다르면 1, 읽기 실패는 2다.
 
 ### Python 3.14 빠른 확인 (PR 전용)
 
-`tools/quick_validation.py`는 contract 검사 대상이 아니며 자체 판정 기준은 다음과
-같다. 하나라도 어긋나면 실패한다.
-
-- 구조 검사·manifest 결정성(마무리 job의 공통 단계)
-- 검증·시험 루트의 모든 `.py`가 3.14에서 컴파일됨
-- 모든 시험 모듈이 로더 오류 없이 import됨, 시험 ID 중복 없음
-- 고정된 스모크 시험 5개 ID와, zip/XML/xlsx를 다루는 빠른 모듈 3개
-  (`tests.test_xlsx_structure`·`test_build_hwpx`·`test_hwpx_adapter`)의 전체 시험이
-  전부 존재하고 skip·실패·오류 없이 실행됨 (합쳐서 수 초)
-
-3.14에서만 깨지는 문법·import·표준 라이브러리 변경을 싸게 잡는 용도이며, 3.14
-전체 시험은 main push에서 돈다.
-
-### main 실패 알림
-
-`notify-main-failure` job은 main push에서 `suite (ubuntu, py3.10)` 또는
-`(py3.14)`가 실패하면 "Main validation failed" 이슈를 열거나(이미 열려 있으면
-댓글) 실행 링크를 남긴다. `GITHUB_TOKEN`의 `issues: write`·`contents: read`만
-쓰고 외부 서비스·과금 경로는 쓰지 않는다.
-
-마무리 job은 합친 보고서에 **엄격한 리포트 consumer**를 적용한다(P2-R2; 지금은
-`tools/check_validation_report.py`). 이 단계는 합친 `validation-report.json`을 읽어 다음을 요구한다 — 하나라도
-어긋나면 잡 실패이며 `|| true`/반환 코드 무시/예외 면제는 없다:
-
-- `verdict=ok_platform_scoped`·`exit_code=0`·`mode=default`·
-  `validation_scope=current_platform`만 수용 (runtime-only 리포트와
-  어떤 실패/미완결 판정도 거부)
-- `platform_validation_completed=true` 그리고 `full_validation_completed=false`
-- `pending_external_checks`에 정확히 하나의 게이트만 — `P2-L09-native`,
-  `status=not_run`·`support=withheld`·`implementation=placeholder_only`·
-  정확한 test_id·`required_environment="native Windows+NTFS"`. 게이트가
-  빠지거나 추가되면 거부
-- `approved_external_skips` 정확히 1건(정확한 test_id·사유·gate_id·rule)
-  그리고 runtime.entries에 `skipped` 원 기록이 그대로 보존
-- `approved_skill_skips`는 커밋된 유한 ID·사유 목록과 runtime.entries를
-  대조해 독립 재계산한다. 목록의 시험 ID가 suite에서 빠져도 거부한다.
-- `unapproved_skips`·`defect_tests_skipped`·`inventory_warnings`·
-  `causes.unexpected`·`causes.incomplete` 전부 빈 값, `unexpected_failed=0`,
-  `accounting.errors` 없음, `runtime.status=completed`·`tests_run>0`,
-  bundle `pass`·dependency ready
-- (조각 나누기 이후 추가) `runtime.discovered_test_ids`가 저장소를 새로 discover한
-  ID 목록·순서와 정확히 같고 entries의 ID 집합과도 같을 것
-
-P2-R3에서 consumer는 요약 필드 신뢰를 버리고 리포트를 독립적으로
-재계산한다 — `accounting.errors`가 비어 있어도 아래 모순은 거부된다:
-
-- 엄격 JSON: 중복 키·`NaN`/`Infinity` 같은 비유한 literal·비객체
-  문서를 거부. 필수 필드는 존재와 타입을 둘 다 요구하고, 수치는 bool
-  아닌 0 이상 정수다(문자열·bool·음수 거부).
-- framework 회계: `runtime.accounting.framework` 객체 필수 —
-  `was_successful`이 정확히 `true`, failures/errors/expectedFailures/
-  unexpectedSuccesses 전부 정수 0, `testsRun`이 `runtime.tests_run`과
-  `len(entries)` 모두와 일치, framework `skipped`는 네이티브 1건과
-  독립 확인한 선택적 스킬 skip 수의 합이다.
-- entries 재집계: 각 항목은 dict·비어 있지 않은 고유 `test` ID·인식된
-  category를 가져야 하고, consumer가 직접 센 category 합계가
-  `passed`/`known_baseline_defects`/`skipped`/`unexpected_failed`와
-  일치하며 `failed`는 0이다. entry 삭제·복제·추가·숨은 `failed`는
-  카운터가 맞아 보여도 거부.
-- known-baseline(P2-R5 보수): `known_baseline_defect`는 선언된
-  (test, defect, gate) 삼중 — `FinanceScopeTests.
-  test_won_unit_fact_is_checked → (H9, P3)` — 만 허용하고, 그 정확한
-  test ID는 entry 안에 **정확히 한 번 존재해야 한다**(제공된
-  category·카운터와 무관하게). `passed`로 재라벨(메타데이터 유지·
-  제거 무관)·완전 누락·동일 카디널리티 치환·중복·위조 모두 거부.
-  실제 category 합계와 제공된 `runtime.known_baseline_defects`는
-  둘 다 정확히 정수 1(bool·문자열·0·2+ 거부). 다른 시험의 동일
-  라벨이나 라벨·게이트 조작은 위조로 거부.
-- 이벤트: `fixture_events`는 빈 리스트, `failure_events`는 정수 0.
-  entry `events`는 부모 ID와 일치하는 `subtest_success`만 허용 —
-  숨은 subtest_failure/error/skip·미지형 이벤트·알 수 없는 이벤트
-  타입은 거부.
-- subtest 식별(P2-R4 보수): `subtest`는 방출된 전체 형태 `부모 +
-  " (" + 비어 있지 않은 설명 + ")"`(unittest `_SubTest.id()`)여야
-  한다 — 열린 괄호만 있거나 닫히지 않은 ID·빈 설명·다른 부모 접두는
-  거부. Python 표현식 파서는 만들지 않는다.
-- 부모-이벤트 정합(P2-R4 보수): 정확한 native withheld skip 부모는
-  실행된 subtest가 없으므로 어떤 subtest event도 가질 수 없다 —
-  요약·회계·게이트가 전부 정상이어도 이 부모의 위조
-  `subtest_success`는 거부. 빈 events/키 부재는 무발생 표현으로
-  허용되고, 정당한 성공 이벤트는 완전 성공한 ordinary·
-  known-baseline 부모에만 속한다.
-- 게이트 문자열: `approved_external_skips[].rule`은 truthy가 아니라
-  정확한 문자열 `P2-L09-native accepted external placeholder`와
-  같아야 한다.
-
-## runner 리포트 계약 (P2-R2)
-
-`tools/run_validation.py --json` 리포트는 P2-R2에서 필드가 추가됐다:
-
-- `validation_scope`: `current_platform`(기본) 또는
-  `development_runtime_only`(--runtime-only).
-- `platform_validation_completed`: 기본 모드에서 묶음 통과·의존성 준비·
-  suite 완주(tests_run>0)·미예상 실패 0·미승인 skip 0·인벤토리/회계
-  불일치 없음일 때만 true. runtime-only에서는 항상 false.
-- `full_validation_completed`: 외부 게이트가 하나라도 pending이면 절대
-  true가 될 수 없다(현재 P2에서는 항상 false).
-- `pending_external_checks`: 이 플랫폼에서 실행할 수 없는 선언 게이트의
-  미실시 기록 — 현재 `P2-L09-native` 1건(placeholder 전용, 네이티브
-  실행 주장 아님).
-- `approved_external_skips`: 컴파일된 fail-closed 규칙이 승인한 정확한
-  skip 기록 — `unapproved_skips`와 분리된다.
-- `approved_skill_skips`: 유한 ID·정확한 사유 규칙으로 승인된 선택적
-  스킬 외부 입력 skip. 여기에 없는 skip은 기존처럼 incomplete다.
-
-판정 우선순위: `unexpected_failures`(exit 1) > `incomplete`(exit 3) >
-`ok_platform_scoped`(exit 0, 기본 모드·pending 게이트 존재) > `ok`
-(exit 0). `ok`는 선언된 외부 게이트가 전부 실제로 닫힐 때만 도달 가능
-— placeholder 통과로는 도달 불가. 이전 리포트의 단순 `ok`/`incomplete`
-판정과 `full_validation_completed`만 있던 계약은 이 계약으로 대체됐다.
-
-결과 회계(P2-R2): `runtime.entries`는 시작된 부모 시험마다 정확히 하나의
-종결 분류를 갖고 `tests_run`은 그 수와 프레임워크 testsRun에 동일.
-subtest 결과는 부모의 `events`에 붙고 실패/오류 subtest는 부모를 실패로
-만든다. 시작된 부모가 없는 fixture 결과는 `fixture_events`로 분리되며
-실패/오류 fixture는 미예상 실패로 계수된다. 프레임워크 결과 목록과 커스텀
-기록의 설명되지 않는 불일치는 회계 오류(exit 1)다.
+`tools/quick_validation.py`는 구조, Python 파일 컴파일, 시험 모듈 import와
+ID 중복 여부, 고정 스모크 시험을 확인한다. 3.14 전체 시험은 main push에서 돈다.
 
 ## 미실시 범위 (현재)
 
-- 클라우드 CI: 이 workflow 정의는 아직 호스티드 러너에서 실행되지 않았다.
-- 네이티브 Windows/Office, 실제 학교 양식·원문 자료, HWP: 별도 게이트.
-  `P2-L09-native`는 미구현 placeholder로 남아 있으며 `ok_platform_scoped`
-  판정은 현 플랫폼 범위의 성공일 뿐 네이티브 지원이나 제품 PASS가 아니다.
+- 검증 파일의 외부 원본 추적은 하지 않는다.
+- 실행기는 검사 폴더와 커밋의 동일성을 확인하지 않는다.
+- 클라우드 CI는 아직 호스티드 러너에서 실행되지 않았다.
+- 네이티브 Windows/Office, 실제 학교 양식·원문 자료, HWP는 별도 게이트다.
 - `run_validation.py`의 녹색 결과는 제품 PASS가 아니다. 알려진 결함은
   개별 expected-failure로 기록되며, 자세한 목록은 `REGRESSIONS.md`를 본다.
