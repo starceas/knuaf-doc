@@ -1348,13 +1348,16 @@ def _executable_dir(value: str):
     return str(Path(found).resolve().parent) if found else None
 
 
-def _env_for(first: str) -> dict:
+def _env_for(first: str, extra_env=None) -> dict:
     env = {key: value for key, value in os.environ.items()
            if key in _ENV_ALLOWLIST}
     directory = _executable_dir(first)
     if directory:
         env["PATH"] = directory + os.pathsep + env.get("PATH", os.environ.get("PATH", ""))
     env["KORDOC_OFFLINE"] = "1"
+    if extra_env:
+        env.update({key: value for key, value in extra_env.items()
+                    if key in gg_kordoc._HOST_ENV_KEYS})
     return env
 
 
@@ -1386,11 +1389,11 @@ def _run(cmd, *, cwd=None, env=None, timeout=DEFAULT_TIMEOUT):
     }
 
 
-def validate_hwpx(cli_command, path, *, timeout=DEFAULT_TIMEOUT) -> dict:
+def validate_hwpx(cli_command, path, *, timeout=DEFAULT_TIMEOUT, extra_env=None) -> dict:
     """kordoc validate 결과. validate 부명령이 없으면 status=unsupported."""
     command = list(cli_command)
     process = _run(command + ["validate", str(path), "--json"],
-                   env=_env_for(command[0]), timeout=timeout)
+                   env=_env_for(command[0], extra_env), timeout=timeout)
     text = process.get("stdout") or ""
     report = {"status": "unsupported", "process_ok": process.get("ok"),
               "returncode": process.get("returncode")}
@@ -1407,13 +1410,13 @@ def validate_hwpx(cli_command, path, *, timeout=DEFAULT_TIMEOUT) -> dict:
     return report
 
 
-def reparse_hwpx(cli_command, path, out_md, *, timeout=DEFAULT_TIMEOUT) -> dict:
+def reparse_hwpx(cli_command, path, out_md, *, timeout=DEFAULT_TIMEOUT, extra_env=None) -> dict:
     """HWPX를 다시 마크다운으로 읽어 표 셀 수치 대조에 쓴다."""
     command = list(cli_command)
     process = _run(
         command + [str(path), "-o", str(out_md), "--format", "markdown",
                    "--silent", "--keep-empty-cols", "--keep-empty-paragraphs"],
-        env=_env_for(command[0]), timeout=timeout,
+        env=_env_for(command[0], extra_env), timeout=timeout,
     )
     result = {"ok": bool(process.get("ok")), "process": process}
     if process.get("ok") and Path(out_md).is_file():
@@ -1980,6 +1983,7 @@ def build(markdown, out, *, context, authorization, cli_command=None,
         raw_path = work / "raw.hwpx"
 
         command = None
+        extra_env = None
         runtime_info = None
         if cli_command is not None:
             command = [str(part) for part in cli_command]
@@ -1989,6 +1993,7 @@ def build(markdown, out, *, context, authorization, cli_command=None,
         else:
             ready = _ensure_kordoc(cache_dir=cache_dir, node=node, pnpm=pnpm,
                                    kordoc=kordoc, timeout=timeout)
+            extra_env = ready.get("extra_env")
             command = [str(part) for part in ready["cli_command"]]
             runtime_info = {
                 "cli_command": command,
@@ -1996,13 +2001,15 @@ def build(markdown, out, *, context, authorization, cli_command=None,
                 "source": ready.get("source") or ready.get("action"),
             }
 
+            if extra_env is not None:
+                runtime_info["extra_env"] = extra_env
         options = list(generate_args)
         if "--silent" not in options:
             options.append("--silent")
         if "--image-dir" not in options:
             options += ["--image-dir", str(image_dir)]
         generate_cmd = command + ["generate", *options, "-o", str(raw_path), str(md_path)]
-        process = _run(generate_cmd, cwd=work, env=_env_for(command[0]), timeout=timeout)
+        process = _run(generate_cmd, cwd=work, env=_env_for(command[0], extra_env), timeout=timeout)
         if not process.get("ok"):
             raise HwpxBlocked("generate_failed", command=generate_cmd, process=process,
                               action="입력은 보존됐고 아무것도 발행하지 않았습니다.")
@@ -2041,7 +2048,7 @@ def build(markdown, out, *, context, authorization, cli_command=None,
         if verify:
             staged = work / "staged.hwpx"
             staged.write_bytes(transformed)
-            validation = validate_hwpx(command, staged, timeout=timeout)
+            validation = validate_hwpx(command, staged, timeout=timeout, extra_env=extra_env)
             verification["validate"] = validation
             if not (validation.get("process_ok") is True
                     and validation.get("returncode") == 0
@@ -2053,7 +2060,7 @@ def build(markdown, out, *, context, authorization, cli_command=None,
                     issues=validation.get("issues"),
                     action="구조 검증(프로세스 성공 + ok)이 아니어서 발행하지 않았습니다.")
             back_md = work / "back.md"
-            reparsed = reparse_hwpx(command, staged, back_md, timeout=timeout)
+            reparsed = reparse_hwpx(command, staged, back_md, timeout=timeout, extra_env=extra_env)
             reparsed_ok = bool(reparsed.get("ok") and "markdown" in reparsed)
             verification["reparse"] = {"ok": reparsed_ok}
             if not reparsed_ok:

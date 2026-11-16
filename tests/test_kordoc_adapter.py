@@ -18,6 +18,8 @@ import tempfile
 import unittest
 from unittest import mock
 
+import copy
+from types import SimpleNamespace
 from tests._harness import runtime
 
 gk = runtime("gg_kordoc")
@@ -143,6 +145,9 @@ class KordocAdapterTests(unittest.TestCase):
         self.pnpm = _fake_exe(self.bin / "pnpm")
         self.which_map = {"node": self.node, "pnpm": self.pnpm}
         self.fake = FakeRuntime(node=self.node)
+        env_patch = mock.patch.dict(os.environ, {"XDG_CACHE_HOME": str(self.root / "xdg")})
+        env_patch.start()
+        self.addCleanup(env_patch.stop)
 
     def _activate(self, **overrides):
         for key, value in overrides.items():
@@ -668,9 +673,334 @@ class CacheDiagnosisTests(unittest.TestCase):
         self.assertFalse(self.cache.exists())
 
 
+class HostRuntimeTests(unittest.TestCase):
+    """R1–R7: optional host hints never weaken the legacy bootstrap."""
+
+    _activate = KordocAdapterTests._activate
+    _external_kordoc = KordocAdapterTests._external_kordoc
+
+    def setUp(self):
+        KordocAdapterTests.setUp(self)
+        self.home_patch = mock.patch.object(gk.Path, "home", return_value=self.root)
+        self.home_patch.start()
+        self.addCleanup(self.home_patch.stop)
+        self.install = self.root / "앱 설치 & 공백"
+        self.install.mkdir()
+        self.exe = _fake_exe(self.root / "앱 & 공백.exe")
+        self.shim = _fake_exe(self.install / "electron-node-shim.cjs")
+        self.cli = _fake_exe(self.install / "cli.js")
+        self.host_path = self.root / "xdg" / "ginseng-goat" / "kordoc-host.json"
+        self.host_path.parent.mkdir(parents=True, mode=0o700)
+        self.host = {
+            "schema": 1, "owner": "knuaf-dev.app", "kordoc_version": gk.VERSION,
+            "install_dir": str(self.install), "release": "kordoc-bundle-1",
+            "payload_sha256": "a" * 64,
+            "command": [self.exe, "-r", self.shim, self.cli],
+            "files": [self.exe, self.shim, self.cli],
+            "exe_stat": {"size": Path(self.exe).stat().st_size,
+                         "mtime": int(Path(self.exe).stat().st_mtime)},
+            "env": {"ELECTRON_RUN_AS_NODE": "1", "KORDOC_OFFLINE": "1"},
+            "app_version": "0.6.7", "written_at": 1794798713,
+        }
+        self._save_host(self.host)
+
+    def _save_host(self, data):
+        self.host_path.write_text(json.dumps(data), encoding="utf-8")
+        self.host_path.chmod(0o600)
+
+    def _host_run(self, cmd, *, env, **kwargs):
+        self.assertEqual(self.host["command"], cmd[:4])
+        self.assertEqual("1", env.get("ELECTRON_RUN_AS_NODE"))
+        self.assertEqual("1", env.get("KORDOC_OFFLINE"))
+        self.assertNotIn("SECRET_TOKEN", env)
+        return self.fake.run(cmd, env=env, **kwargs)
+
+    def test_host_without_node_probes_with_env_and_preserves_argv(self):
+        self.fake.cli_version = "kordoc " + gk.VERSION
+        with mock.patch.object(gk, "_run", side_effect=self._host_run), \
+                mock.patch.object(gk.shutil, "which", return_value=None), \
+                mock.patch.object(gk, "_node_and_pnpm", side_effect=AssertionError("no Node lookup")), \
+                mock.patch.dict(os.environ, {"SECRET_TOKEN": "private"}):
+            ready = gk.ensure(cache_dir=self.cache, need_generate=True)
+        self.assertEqual(self.host["command"], ready["cli_command"])
+        self.assertEqual(self.host["env"], ready["extra_env"])
+        self.assertEqual("app_host", ready["source_kind"])
+        self.assertEqual([["--version"], ["--help"], ["generate", "--help"]],
+                         [cmd[4:] for cmd, _ in self.fake.calls])
+        self.assertFalse(self.cache.exists())
+
+    def test_explicit_cli_precedes_host(self):
+        self._activate()
+        explicit = self._external_kordoc()
+        ready = gk.ensure(kordoc=explicit)
+        self.assertEqual([str(Path(explicit).resolve())], ready["cli_command"])
+        self.assertNotIn("extra_env", ready)
+
+    def test_rejected_explicit_cli_falls_back_to_host(self):
+        self._activate()
+        explicit = self._external_kordoc()
+        original = self.fake.run
+        def reject_explicit(cmd, **kwargs):
+            if cmd[0] == str(Path(explicit).resolve()):
+                return {"ok": False, "returncode": 1, "stdout": "", "stderr": "failed"}
+            return original(cmd, **kwargs)
+        with mock.patch.object(gk, "_run", side_effect=reject_explicit):
+            ready = gk.ensure(kordoc=explicit)
+        self.assertEqual(self.host["command"], ready["cli_command"])
+        self.assertEqual("explicit", ready["rejected_candidates"][0]["source_kind"])
+
+    def test_host_precedes_path_cli(self):
+        self._activate()
+        self.which_map["kordoc"] = self._external_kordoc()
+        ready = gk.ensure()
+        self.assertEqual(self.host["command"], ready["cli_command"])
+
+    def test_absent_hint_keeps_legacy_result_and_processes_exact(self):
+        self._activate()
+        self.host_path.unlink()
+        external = self._external_kordoc()
+        self.which_map["kordoc"] = external
+        ready = gk.ensure(cache_dir=self.cache)
+        resolved = str(Path(external).resolve())
+        self.assertEqual({
+            "status": "ready", "action": "reused_existing", "package": "kordoc",
+            "version": "4.99.0", "actual_version": "4.99.0", "cli_path": resolved,
+            "cli_command": [resolved], "command": [resolved], "source": "external",
+            "source_kind": "path", "node_path": None, "shim": False, "shim_cli_js": None,
+            "capability_verification": {
+                "version": "ok", "help": "ok", "required_parse_flags": list(gk.REQUIRED_PARSE_FLAGS),
+                "smoke": "version_help"}, "rejected_candidates": [],
+        }, ready)
+        self.assertEqual([([resolved, "--version"], None), ([resolved, "--help"], None)],
+                         self.fake.calls)
+
+    def test_windows_drive_paths_are_preserved_without_shell_join(self):
+        windows = [r"C:\Users\학생\AppData\Local\앱 & 공백\knuaf-dev.exe", "-r",
+                   r"C:\Users\학생\kordoc\electron-node-shim.cjs",
+                   r"C:\Users\학생\kordoc\node_modules\kordoc\dist\cli.js"]
+        data = copy.deepcopy(self.host)
+        data["command"] = windows
+        data["files"] = [windows[0], windows[2], windows[3]]
+        data["install_dir"] = r"C:\Users\학생\kordoc"
+        self._save_host(data)
+        real_path = gk.Path
+        paths = dict(zip(data["files"], [self.exe, self.shim, self.cli]))
+        paths[data["install_dir"]] = str(self.install)
+        def mapped(value):
+            return real_path(paths.get(str(value), value))
+        mapped.home = lambda: self.root
+        with mock.patch.object(gk, "Path", mapped), \
+                mock.patch.object(gk.sys, "platform", "win32"), \
+                mock.patch.object(gk, "_run", side_effect=self.fake.run), \
+                mock.patch.object(gk.shutil, "which", return_value=None):
+            ready = gk.ensure(need_generate=True)
+        self.assertEqual(windows, ready["cli_command"])
+        self.assertTrue(all(cmd[:4] == windows for cmd, _ in self.fake.calls))
+
+    def test_r1_each_invalid_field_silently_falls_back(self):
+        self._activate()
+        external = self._external_kordoc()
+        self.which_map["kordoc"] = external
+        baseline_host = self.host_path.read_bytes()
+        self.host_path.unlink()
+        expected = gk.ensure(cache_dir=self.cache)
+        cases = [
+            ("schema", 2), ("schema", True), ("kordoc_version", "4.13.1"),
+            ("command", []), ("command", [self.exe]),
+            ("command", ["relative.exe", self.cli]),
+            ("command", [self.exe, "", self.cli]),
+            ("command", [self.exe, "bad\0arg", self.cli]),
+            ("command", [self.exe, str(self.install)]),
+            ("command", [str(self.root / "missing.exe"), self.cli]),
+            ("files", []), ("files", [self.cli, self.exe]),
+            ("files", [self.exe, self.shim]),
+            ("files", [self.exe, self.cli]),
+            ("files", [self.exe, self.shim, self.cli, str(self.root / "missing")]),
+            ("install_dir", str(self.root / "elsewhere")),
+            ("install_dir", "relative"), ("env", []),
+            ("env", {"ELECTRON_RUN_AS_NODE": "$(bad)"}),
+            ("env", {"ELECTRON_RUN_AS_NODE": "x" * 33}),
+            ("env", {"ELECTRON_RUN_AS_NODE": 1}),
+            ("exe_stat", {"size": 1, "mtime": self.host["exe_stat"]["mtime"]}),
+            ("exe_stat", {"size": 0, "mtime": 0}),
+            ("exe_stat", {"size": False, "mtime": self.host["exe_stat"]["mtime"]}),
+        ]
+        for field, value in cases:
+            with self.subTest(field=field, value=value):
+                data = copy.deepcopy(self.host)
+                data[field] = value
+                self._save_host(data)
+                self.assertEqual(expected, gk.ensure(cache_dir=self.cache))
+        for raw in ("{", "[]", "null"):
+            self.host_path.write_text(raw, encoding="utf-8")
+            self.assertEqual(expected, gk.ensure(cache_dir=self.cache))
+        self.host_path.write_bytes(baseline_host)
+
+    def test_r1_posix_ownership_and_permissions_rejected(self):
+        real_fstat = gk.os.fstat
+        for kind in (stat.S_IFDIR, stat.S_IFREG):
+            for bad in ("owner", "group", "other"):
+                with self.subTest(kind=kind, bad=bad):
+                    def changed_fstat(descriptor):
+                        value = real_fstat(descriptor)
+                        if stat.S_IFMT(value.st_mode) != kind:
+                            return value
+                        return SimpleNamespace(
+                            st_uid=value.st_uid + (1 if bad == "owner" else 0),
+                            st_mode=value.st_mode | {"owner": 0, "group": 0o020, "other": 0o002}[bad])
+                    if gk._HOST_FD_READ:
+                        with mock.patch.object(gk.sys, "platform", "darwin"), \
+                                mock.patch.object(gk.os, "fstat", changed_fstat):
+                            self.assertIsNone(gk._host_runtime())
+                    else:
+                        item = self.host_path.parent if kind == stat.S_IFDIR else self.host_path
+                        real_item = item.resolve()
+                        real_lstat = gk.Path.lstat
+                        def changed_lstat(path, *args, **kwargs):
+                            value = real_lstat(path, *args, **kwargs)
+                            return SimpleNamespace(
+                                st_uid=value.st_uid + (1 if bad == "owner" else 0),
+                                st_mode=value.st_mode | {"owner": 0, "group": 0o020, "other": 0o002}[bad]
+                            ) if path == real_item else value
+                        with mock.patch.object(gk.sys, "platform", "darwin"), \
+                                mock.patch.object(gk.os, "getuid", return_value=item.stat().st_uid, create=True), \
+                                mock.patch.object(gk.Path, "lstat", changed_lstat):
+                            self.assertIsNone(gk._host_runtime())
+
+    def test_host_probe_failure_silently_uses_path(self):
+        self._activate()
+        external = self._external_kordoc()
+        self.which_map["kordoc"] = external
+        original = self.fake.run
+        def failed_host(cmd, **kwargs):
+            if cmd[0] == self.exe:
+                return {"ok": False, "returncode": 1, "stdout": "", "stderr": "failed"}
+            return original(cmd, **kwargs)
+        with mock.patch.object(gk, "_run", side_effect=failed_host):
+            ready = gk.ensure()
+        self.assertEqual([str(Path(external).resolve())], ready["cli_command"])
+        self.assertEqual([], ready["rejected_candidates"])
+
+    def test_r1_realpath_escape_rejected(self):
+        # resolve() follows junctions/symlinks too; this is portable without
+        # requiring Windows developer-mode permission to create a symlink.
+        original = gk.Path.resolve
+        def escaped(path, *args, **kwargs):
+            return self.root / "outside.cjs" if str(path) == self.shim else original(path, *args, **kwargs)
+        with mock.patch.object(gk.Path, "resolve", escaped):
+            self.assertIsNone(gk._host_runtime())
+
+    def test_windows_profile_boundary_and_exe_argv(self):
+        with mock.patch.object(gk.sys, "platform", "win32"):
+            self.assertEqual(self.host["command"], gk._host_runtime()["command"])
+            with mock.patch.object(gk.Path, "home", return_value=self.root / "other-profile"):
+                self.assertIsNone(gk._host_runtime())
+
+    def test_unknown_env_keys_reject_whole_hint(self):
+        self._activate()
+        self.which_map["kordoc"] = self._external_kordoc()
+        self.host_path.unlink()
+        expected = gk.ensure(cache_dir=self.cache)
+        self.host["env"]["NODE_OPTIONS"] = "ignored"
+        self._save_host(self.host)
+        self.assertEqual(expected, gk.ensure(cache_dir=self.cache))
+
+    def test_hint_nonregular_file_silently_falls_back(self):
+        self._activate()
+        self.which_map["kordoc"] = self._external_kordoc()
+        self.host_path.unlink()
+        expected = gk.ensure(cache_dir=self.cache)
+        self.host_path.mkdir()
+        self.assertEqual(expected, gk.ensure(cache_dir=self.cache))
+
+    def test_linked_hint_or_parent_silently_falls_back(self):
+        self._activate()
+        self.which_map["kordoc"] = self._external_kordoc()
+        self.host_path.unlink()
+        expected = gk.ensure(cache_dir=self.cache)
+        self._save_host(self.host)
+        if not gk._HOST_FD_READ:
+            # Windows has no unprivileged symlink guarantee. Exercise its
+            # documented lstat fallback without adding a skipped test.
+            original = gk.Path.lstat
+            for linked in (self.host_path, self.host_path.parent):
+                linked_path = linked.resolve()
+                def linked_stat(path, *args, **kwargs):
+                    value = original(path, *args, **kwargs)
+                    return SimpleNamespace(st_mode=stat.S_IFLNK | 0o700) if path == linked_path else value
+                with mock.patch.object(gk.Path, "lstat", linked_stat):
+                    self.assertEqual(expected, gk.ensure(cache_dir=self.cache))
+            return
+        for linked in (self.host_path, self.host_path.parent):
+            with self.subTest(linked=linked):
+                saved = linked.with_name(linked.name + ".saved")
+                linked.rename(saved)
+                linked.symlink_to(saved, target_is_directory=saved.is_dir())
+                try:
+                    self.assertEqual(expected, gk.ensure(cache_dir=self.cache))
+                finally:
+                    linked.unlink()
+                    saved.rename(linked)
+
+    def test_linked_cache_root_is_usable(self):
+        self._activate()
+        cache = self.root / "xdg"
+        alias = self.root / "cache-alias"
+        if not gk._HOST_FD_READ:
+            # Existing temp paths use real Windows filesystem behavior.
+            alias = cache
+        else:
+            alias.symlink_to(cache, target_is_directory=True)
+        with mock.patch.dict(os.environ, {"XDG_CACHE_HOME": str(alias)}):
+            ready = gk.ensure()
+        self.assertEqual(self.host["command"], ready["cli_command"])
+
+    def test_directory_swap_after_lstat_cannot_redirect_reader(self):
+        self._activate()
+        self.which_map["kordoc"] = self._external_kordoc()
+        self.host_path.unlink()
+        expected = gk.ensure(cache_dir=self.cache)
+        self._save_host(self.host)
+        if not gk._HOST_FD_READ:
+            # Limited platforms cannot close this race; pin the explicit
+            # limitation separately from POSIX's nofollow guarantee.
+            self.assertEqual("app_host", gk.ensure()["source_kind"])
+            return
+        directory = self.host_path.parent
+        directory_path = directory.parent.resolve() / directory.name
+        original = directory.lstat()
+        saved = directory.with_name("swapped-directory")
+        directory.rename(saved)
+        directory.symlink_to(saved, target_is_directory=True)
+        real_lstat = gk.Path.lstat
+        def stale_lstat(path, *args, **kwargs):
+            return original if path == directory_path else real_lstat(path, *args, **kwargs)
+        with mock.patch.object(gk.Path, "lstat", stale_lstat):
+            self.assertEqual(expected, gk.ensure(cache_dir=self.cache))
+
+    def test_parse_uses_host_environment(self):
+        source = self.root / "input.hwp"
+        source.write_bytes(b"fixture")
+        target = self.root / "output.md"
+        with mock.patch.object(gk, "_run", side_effect=self._host_run), \
+                mock.patch.object(gk.shutil, "which", return_value=None):
+            result = gk.parse(source, target, cache_dir=self.cache)
+        self.assertEqual("parsed", result["action"])
+        self.assertIn("body", target.read_text(encoding="utf-8"))
+
+    def test_diagnose_host_is_read_only(self):
+        with mock.patch.object(gk, "_run", side_effect=AssertionError("no execution")), \
+                mock.patch.object(gk.shutil, "which", return_value=None):
+            result = gk.diagnose(cache_dir=self.cache)
+        self.assertTrue(result["installed"])
+        self.assertFalse(result["capability_verified"])
+        self.assertEqual(self.cli, result["cli_path"])
+        self.assertFalse(self.cache.exists())
+
+
+
 class EnvAllowlistTests(unittest.TestCase):
     """외부 프로세스 환경 허용목록 계약 (W2b)."""
-
     def test_windows_path_vars_pass_but_tokens_are_withheld(self):
         environ = {
             # 비밀이 아닌 경로성 Windows 변수 — 그대로 통과해야 한다.

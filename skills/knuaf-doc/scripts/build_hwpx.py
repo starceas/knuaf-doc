@@ -317,12 +317,12 @@ def apply_layout(data, *, margins_mm=None, major_id=None, chapter_texts=None):
     report["previous_widths"] = sorted(set(report["previous_widths"]))
     return target.getvalue(), report
 
-def verify_layout(data, command, source_text, *, timeout):
+def verify_layout(data, command, source_text, *, timeout, extra_env=None):
     """후처리한 바이트를 임시 파일로 검증한다(구조·재파싱·표 수치)."""
     with tempfile.TemporaryDirectory(prefix=".gg-hwpx-layout-") as work:
         staged = Path(work) / "layout.hwpx"
         staged.write_bytes(data)
-        validation = gg_hwpx.validate_hwpx(command, staged, timeout=timeout)
+        validation = gg_hwpx.validate_hwpx(command, staged, timeout=timeout, extra_env=extra_env)
         if not (validation.get("process_ok") is True
                 and validation.get("returncode") == 0
                 and validation.get("status") == "ok"):
@@ -334,7 +334,7 @@ def verify_layout(data, command, source_text, *, timeout):
                 action="표 폭·장 쪽 나눔을 적용한 파일이 구조 검증을 통과하지 "
                        "못했습니다. 발행하지 않았습니다.")
         back_md = Path(work) / "back.md"
-        reparsed = gg_hwpx.reparse_hwpx(command, staged, back_md, timeout=timeout)
+        reparsed = gg_hwpx.reparse_hwpx(command, staged, back_md, timeout=timeout, extra_env=extra_env)
         if not (reparsed.get("ok") and "markdown" in reparsed):
             raise gg_hwpx.HwpxBlocked(
                 "layout_reparse_failed",
@@ -437,7 +437,8 @@ def export(base, inp, out, *, font=FONT, context=None, cli_command=None,
             if verify:
                 verification = verify_layout(
                     published_bytes, result["runtime"]["cli_command"],
-                    source_text, timeout=timeout)
+                    source_text, timeout=timeout,
+                    extra_env=result["runtime"].get("extra_env"))
             else:
                 verification = {"validate": None, "reparse": None,
                                 "table_numbers": None}
