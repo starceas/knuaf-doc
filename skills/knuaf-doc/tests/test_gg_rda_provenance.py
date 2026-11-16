@@ -168,16 +168,16 @@ class IntegrityGateTests(unittest.TestCase):
 
 
 class RealPackIdentityTests(unittest.TestCase):
-    """D01: all 6,291 physical rows preserved with immutable audit keys (PR5: 24 ghost rows deleted)."""
+    """D01: all 6,316 physical rows retain audit keys (PR5: −24 ghosts; PR6: +25 seed rows)."""
 
-    def test_all_pinned_packs_index_to_6291_physical_keys(self):
+    def test_all_pinned_packs_index_to_6316_physical_keys(self):
         total = 0
         for pack_id, pin in prov.PINNED_PACKS.items():
             idx = prov.build_audit_index(PACKS / pin["relpath"], pack_id,
                                          pin["records_file_sha256"])
             self.assertEqual(len(idx), pin["record_lines"])
             total += len(idx)
-        self.assertEqual(total, 6291)
+        self.assertEqual(total, 6316)
 
     def test_manifest_audit_chain_matches_record_bytes(self):
         # Every pinned pack's manifest must describe the records.jsonl bytes

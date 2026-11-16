@@ -117,13 +117,13 @@
       "artifacts": [
         {
           "relative_path": "common/rda-econ-2025/manifest.json",
-          "sha256": "a199f7234d8147c9120c7156e4322b18122f0e01e9c845450fd823e651f97b77",
-          "bytes": 2800040
+          "sha256": "3b7de6770843dc0dfddf782efe985627452b9b53b291c9587b1b2fec9c082a8d",
+          "bytes": 2826579
         },
         {
           "relative_path": "common/rda-econ-2025/records.jsonl",
-          "sha256": "f3e7609ce45c0b26ffb36759403761699f2dacbeb7226b3bc8de38322176d70f",
-          "bytes": 3451291
+          "sha256": "9c977794d1cf9a63f0c21824307573e6a5c4351b10b9e2990ba60381eebad84c",
+          "bytes": 3481395
         }
       ],
       "coverage": {
@@ -133,19 +133,19 @@
               "key_ref": {
                 "kind": "audit_key",
                 "pack_id": "rda.econ.2025",
-                "records_file_sha256": "f3e7609ce45c0b26ffb36759403761699f2dacbeb7226b3bc8de38322176d70f",
+                "records_file_sha256": "9c977794d1cf9a63f0c21824307573e6a5c4351b10b9e2990ba60381eebad84c",
                 "physical_jsonl_line_1based": 19,
                 "raw_line_sha256": "dba92f4e6d434dd9d1e3056c7e09e2da6c364bb7fadbe06605996a6793aeb142"
               },
               "authority": "verified",
-              "catalog_digest": "726ed61fce2a7ae07137a2bf7f5aa319a29315e3f96179f31e0df57321d02474",
+              "catalog_digest": "05ced09276ed9faee3f51d7496eca347df49906530025387646ca349edc52a09",
               "receipt_sha256": null
             },
             {
               "key_ref": {
                 "kind": "audit_key",
                 "pack_id": "rda.econ.2025",
-                "records_file_sha256": "f3e7609ce45c0b26ffb36759403761699f2dacbeb7226b3bc8de38322176d70f",
+                "records_file_sha256": "9c977794d1cf9a63f0c21824307573e6a5c4351b10b9e2990ba60381eebad84c",
                 "physical_jsonl_line_1based": 1,
                 "raw_line_sha256": "c37a9e25b4e1c4e9a2b99b6c4ff128c45ffda4e6025ada9ea2ac754fa78b7dcc"
               },
@@ -1287,7 +1287,7 @@
       },
       "rda.econ.2025": {
         "records_relpath": "common/rda-econ-2025/records.jsonl",
-        "records_file_sha256": "f3e7609ce45c0b26ffb36759403761699f2dacbeb7226b3bc8de38322176d70f"
+        "records_file_sha256": "9c977794d1cf9a63f0c21824307573e6a5c4351b10b9e2990ba60381eebad84c"
       },
       "mafra.specialty.production.2024": {
         "records_relpath": "majors/specialty_crops/mafra-specialty-production-2024/records.jsonl",

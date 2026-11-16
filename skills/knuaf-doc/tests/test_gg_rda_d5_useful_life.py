@@ -34,8 +34,8 @@ class D5UsefulLifeTests(unittest.TestCase):
     def test_every_cell_matches_text_mapping_and_identity(self):
         self.assertEqual(64, len({c["row_id"] for c in self.mapping["cells"]}))
         self.assertEqual(107, len(self.mapping["cells"]))
-        self.assertEqual(2683, len(self.raw))
-        self.assertEqual(2683, len(self.entries))
+        self.assertEqual(2708, len(self.raw))
+        self.assertEqual(2708, len(self.entries))
         self.assertEqual(len(self.raw), self.manifest["total_physical_rows"])
         self.assertEqual(hashlib.sha256(b"".join(self.raw)).hexdigest(),
                          self.manifest["records_file_sha256"])
@@ -74,15 +74,15 @@ class D5UsefulLifeTests(unittest.TestCase):
             ids.add(rec["record_id"])
         self.assertEqual(107, len(ids))
         self.assertEqual(8, dash_count)
-        self.assertEqual("8개월", self.records[-1]["metrics"]["adult_age_years"])
-        self.assertEqual("2.5", self.records[-1]["metrics"]["useful_life_years"])
+        self.assertEqual("8개월", self.records[2682]["metrics"]["adult_age_years"])
+        self.assertEqual("2.5", self.records[2682]["metrics"]["useful_life_years"])
 
     def test_manifest_links_and_derived_authority(self):
         pin = provenance.PINNED_PACKS["rda.econ.2025"]
-        self.assertEqual(2683, pin["record_lines"])
+        self.assertEqual(2708, pin["record_lines"])
         self.assertEqual(self.manifest["records_file_sha256"], pin["records_file_sha256"])
         self.assertEqual({"verified_observation_count": 105,
-                          "exploratory_count": 131,
+                          "exploratory_count": 156,
                           "quarantined_count": 2447},
                          self.manifest["status_summary"])
         duplicate_refs = 0
@@ -225,7 +225,7 @@ class D5UsefulLifeTests(unittest.TestCase):
                     if r["pack_id"] == "rda.econ.2025" and r["kind"] == "useful_life")
         self.assertEqual([133, 134, 135], rule["locator_pdf_pages"])
         self.assertEqual({133, 134, 135},
-                         {r["locator"]["pdf_page"] for r in self.records[2576:]})
+                         {r["locator"]["pdf_page"] for r in self.records[2576:2683]})
 
 
 if __name__ == "__main__":
