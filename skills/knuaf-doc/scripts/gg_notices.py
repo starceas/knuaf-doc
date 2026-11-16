@@ -45,11 +45,13 @@ def notice_rows(root):
     **바이트까지** 잠근다(실측: 0.089s vs 0.0002s).
     """
     core = _core()
+    import gg_target_gap
     project = core.load(root)
     rows = [core._workbook_notice_row_for_project(root, project),
             core._unsupported_finance_notice_row_for_project(root, project),
             core._blank_copy_finance_notice_row_for_project(root, project)]
     rows = _finance_cards(root, project) + rows
+    rows.append(gg_target_gap.row(root, project))
     return [row for row in rows if row is not None]
 
 

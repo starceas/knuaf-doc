@@ -12,6 +12,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from tests._harness import (
     ContractCase,
@@ -449,13 +450,20 @@ class PaperContractTests(ContractCase):
                                 "department": "특용작물학과"}},
             ensure_ascii=False), encoding="utf-8")
         before = self._tree_bytes(root)
-        with self.assertRaises(core.OperationError) as caught:
-            core.paper(root, "paper-spec.json", spec.read_bytes(),
-                       "build/paper-out.md", major_id="specialty_crops")
+        with patch.object(core, "_rewrite_sidecars", wraps=core._rewrite_sidecars) as rewrite:
+            with self.assertRaises(core.OperationError) as caught:
+                core.paper(root, "paper-spec.json", spec.read_bytes(),
+                           "build/paper-out.md", major_id="specialty_crops")
         self.assertEqual("invalid_spec", caught.exception.result["reason"])
         self.assertEqual("not_committed",
                          caught.exception.result["commit_state"])
-        self.assertEqual(before, self._tree_bytes(root))
+        # v6 FIX1-I01: refusals refresh registered sidecars, never products.
+        rewrite.assert_called_once_with(root)
+        sidecars = {entry[2] for entry in core._SIDECAR_WRITERS}
+        after = self._tree_bytes(root)
+        self.assertEqual({k: v for k, v in before.items() if k not in sidecars},
+                         {k: v for k, v in after.items() if k not in sidecars})
+        self.assertEqual([], json.loads(after[".knuaf-notices.json"])["notices"])
 
     def test_paper_renders_the_confirmed_plan_year(self):
         core = runtime("gg_core")

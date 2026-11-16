@@ -6694,22 +6694,16 @@ def _custom_paper_body(body):
     return body
 
 
-@_op_boundary
-def paper(root, spec_path, spec_bytes, requested_path, *, major_id=None,
-          body_markdown=None):
-    """Generate the markdown review body through a managed publication
-    (API §6).  The spec file bytes are read once by the caller and never
-    re-read — a swapped file cannot ride into the request.
+def _paper_then_sidecars(root, body, capability):
+    """Every locked paper decision refreshes current notices exactly once."""
+    try:
+        return body(capability)
+    finally:
+        _rewrite_sidecars(root)
 
-    ``body_markdown`` replaces the generated Ⅰ–Ⅵ body with the caller's
-    own merged text while the generated frontmatter stays.  The frozen
-    renderer is untouched: the splice happens here, in the adapter.
 
-    Policy B (G-B): the common major output guard runs before the lock
-    and is rechecked inside it; a held output raises ``_op(...)`` with
-    ``not_committed`` and the guard's hold code."""
-    root = Path(root)
-    from gg_school_table_sources import load_spec, attach_table_sources
+def _paper_preflight(root, spec_bytes, major_id, body_markdown):
+    from gg_school_table_sources import load_spec
     try:
         spec = load_spec(spec_bytes)
     except ValueError as error:
@@ -6784,12 +6778,40 @@ def paper(root, spec_path, spec_bytes, requested_path, *, major_id=None,
     except (TypeError, ValueError) as error:
         raise _op("paper", "requested_output", "not_committed",
                   "invalid_spec", detail=str(error)) from error
+    return spec, has_school_profile, ctx, body_override
+
+
+@_op_boundary
+def paper(root, spec_path, spec_bytes, requested_path, *, major_id=None,
+          body_markdown=None):
+    """Generate the markdown review body through a managed publication
+    (API §6).  The spec file bytes are read once by the caller and never
+    re-read — a swapped file cannot ride into the request.
+
+    ``body_markdown`` replaces the generated Ⅰ–Ⅵ body with the caller's
+    own merged text while the generated frontmatter stays.  The frozen
+    renderer is untouched: the splice happens here, in the adapter.
+
+    Policy B (G-B): the common major output guard runs before the lock
+    and is rechecked inside it; a held output raises ``_op(...)`` with
+    ``not_committed`` and the guard's hold code."""
+    root = Path(root)
+    pre = refusal = None
+    try:
+        pre = _paper_preflight(root, spec_bytes, major_id, body_markdown)
+    except OperationError as error:
+        refusal = error
+    from gg_school_table_sources import attach_table_sources
+    import gg_major_contract as mc
     spec_rel = str(spec_path)
 
     paper_auth = {}
 
     def body(capability):
         _lock_mod().assert_held(capability, root)
+        if refusal is not None:
+            raise refusal
+        spec, has_school_profile, ctx, body_override = pre
         p = load(root)
         # Recheck the output authorization against the canonical record
         # already loaded under the publication lock — a binding change
@@ -7010,7 +7032,7 @@ def paper(root, spec_path, spec_bytes, requested_path, *, major_id=None,
     box = {}
 
     def tracked_body(capability):
-        value = body(capability)
+        value = _paper_then_sidecars(root, body, capability)
         box["request_id"] = value.get("request_id")
         return value
 
@@ -7026,7 +7048,12 @@ def paper(root, spec_path, spec_bytes, requested_path, *, major_id=None,
             return ("committed_cleanup_pending", {"request_id": rid})
         return ("not_committed", {"request_id": rid})
 
-    value = _guarded(root, "paper", "requested_output", tracked_body, confirm)
+    try:
+        value = _guarded(root, "paper", "requested_output", tracked_body, confirm)
+    except _lock_mod().LockError as error:
+        if refusal is not None and error.status == "absent":
+            raise refusal from None
+        raise
     if isinstance(value, dict) and "value" in paper_auth:
         # Policy B record: the persisted authorization of the managed
         # bundle (published with it, or recovered from it); the check that
