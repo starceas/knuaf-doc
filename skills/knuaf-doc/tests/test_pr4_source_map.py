@@ -140,6 +140,21 @@ SOURCE_ADDED_PACKS = frozenset({ECON_PACK_ID, MAFRA_PACK_ID})
 
 PR4_ECON_SHA256 = "049e7e73763b29d5c36fe1408082f52d77bebfd8158cf14b75c372a80a39a973"
 
+PR5_ECON_SHA256 = "f3e7609ce45c0b26ffb36759403761699f2dacbeb7226b3bc8de38322176d70f"
+PR5_ECON_LINES = 2683
+PR6_APPENDED_LINES = 25
+
+
+def pr5_econ_blob(current):
+    """Remove only PR⑥'s suffix, then verify the frozen PR⑤ bytes."""
+    lines = current.splitlines(keepends=True)
+    if len(lines) != PR5_ECON_LINES + PR6_APPENDED_LINES:
+        raise AssertionError("현재 econ은 PR⑤ 접두부 + PR⑥ 25줄이어야 한다")
+    blob = b"".join(lines[:-PR6_APPENDED_LINES])
+    if hashlib.sha256(blob).hexdigest() != PR5_ECON_SHA256:
+        raise AssertionError("PR⑥ 접미부 제거 결과가 PR⑤ 동결 바이트와 다르다")
+    return blob
+
 # E9 정정 전/후 값 — 동결 상수(적용기 import 금지). before는 mafra 195행의
 # 원문 두 칸이고, after는 이 PR이 넣은 값이다. 되돌림은 after→before.
 E9_METRICS_BEFORE = {"farms": None, "area_ha": "14771117"}
@@ -371,17 +386,17 @@ def _revert_member(text, parent, field, before, after):
 
 @lru_cache(maxsize=None)
 def pr4_blob(pack_id):
-    """현재 econ에 삭제 fixture를 되끼워 지문으로 잠근 PR④ 머지 바이트."""
+    """PR⑥ 접미부 제거 뒤 삭제 fixture를 되끼워 잠근 PR④ 머지 바이트."""
     current = (REPO_ROOT / PACK_RELPATH[pack_id]).read_bytes()
     if pack_id != ECON_PACK_ID:
         return current
-    lines = current.splitlines(keepends=True)
+    lines = pr5_econ_blob(current).splitlines(keepends=True)
     ghosts = (FIXTURES / "econ-ghost-lines-pr5.jsonl").read_bytes() \
         .splitlines(keepends=True)
     if len(ghosts) != len(GHOST_LINES):
         raise AssertionError("PR⑤ fixture는 정확히 24줄이어야 한다")
     if len(lines) != PACK_LINES[pack_id] - len(GHOST_LINES):
-        raise AssertionError("현재 econ은 정확히 2,683줄이어야 한다")
+        raise AssertionError("복원한 PR⑤ econ은 정확히 2,683줄이어야 한다")
     for number, raw in zip(sorted(GHOST_LINES), ghosts):
         if hashlib.sha256(raw).hexdigest() != GHOST_BASE_STATE[number][2]:
             raise AssertionError("PR⑤ fixture 지문 불일치: %d" % number)
@@ -986,7 +1001,8 @@ class GhostIsolationTests(CurrentPr5TestCase):
             hashlib.sha256(line).hexdigest()
             for line in raw.splitlines(keepends=True)))
         rows = _manifest_rows(ECON_PACK_ID)
-        self.assertEqual(len(rows), PACK_LINES[ECON_PACK_ID] - len(GHOST_LINES))
+        self.assertEqual(PR5_ECON_LINES, len(pr5_econ_blob(raw).splitlines()))
+        self.assertEqual(PR5_ECON_LINES + PR6_APPENDED_LINES, len(rows))
         self.assertTrue(ghosts.isdisjoint(
             row["audit_key"]["raw_line_sha256"] for row in rows.values()))
         self.assertTrue(ghosts.isdisjoint(

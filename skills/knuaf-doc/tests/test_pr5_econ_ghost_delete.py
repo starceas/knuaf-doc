@@ -17,6 +17,8 @@ REGISTRY = ROOT / "references/builtin-sources.json"
 FIXTURE = Path(__file__).resolve().parent / "fixtures/econ-ghost-lines-pr5.jsonl"
 sys.path.insert(0, str(ROOT / "scripts"))
 
+from test_pr4_source_map import PR5_ECON_LINES, PR5_ECON_SHA256, pr5_econ_blob
+
 import gg_rda_candidates as candidates  # noqa: E402
 import gg_rda_lookup as lookup  # noqa: E402
 import gg_rda_provenance as provenance  # noqa: E402
@@ -63,7 +65,7 @@ def _manifest_projection(manifest):
     top = {key: value for key, value in manifest.items()
            if key not in ("rows", "records_file_sha256", "total_physical_rows", "status_summary")}
     rows = []
-    for row in manifest["rows"]:
+    for row in manifest["rows"][:PR5_ECON_LINES]:
         if row.get("raw_line_sha256") in GHOST_SHA256S:
             continue
         projected = {key: value for key, value in row.items()
@@ -113,8 +115,8 @@ def _restore_base(current_blob, fixture_blob):
     """Reinsert fixture lines at their frozen original physical positions."""
     current = current_blob.splitlines(keepends=True)
     ghosts = _fixture_lines(fixture_blob)
-    if len(current) != 2683 or len(ghosts) != 24:
-        raise AssertionError("expected 2683 current rows and 24 fixture rows")
+    if len(current) != PR5_ECON_LINES or len(ghosts) != 24:
+        raise AssertionError("expected PR⑤ prefix rows and 24 fixture rows")
     if tuple(_sha(line) for line in ghosts) != tuple(
             GHOST_SHA256_BY_LINE[line] for line in BASE_GHOST_LINES):
         raise AssertionError("fixture ghost signatures or order changed")
@@ -126,8 +128,8 @@ def _restore_base(current_blob, fixture_blob):
 
 def _require_clean_current(blob):
     lines = blob.splitlines(keepends=True)
-    if len(lines) != 2683:
-        raise AssertionError("current econ row count changed")
+    if len(lines) != PR5_ECON_LINES:
+        raise AssertionError("restored PR⑤ econ row count changed")
     present = {_sha(line) for line in lines}
     if present & GHOST_SHA256S:
         raise AssertionError("a frozen ghost line remains in current records")
@@ -150,19 +152,21 @@ class EconGhostDeleteTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.records_blob = RECORDS.read_bytes()
+        cls.pr5_blob = pr5_econ_blob(cls.records_blob)
         cls.fixture_blob = FIXTURE.read_bytes()
         cls.manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
         cls.records = [json.loads(line) for line in cls.records_blob.splitlines()]
         cls.registry = json.loads(REGISTRY.read_text(encoding="utf-8"))
 
-    def test_current_records_are_pinned_and_manifest_bound(self):
+    def test_pr5_prefix_is_frozen_and_current_pack_is_manifest_bound(self):
         digest = _sha(self.records_blob)
         pin = provenance.PINNED_PACKS["rda.econ.2025"]
-        self.assertEqual(2683, len(self.records))
+        self.assertEqual(PR5_ECON_LINES, len(self.pr5_blob.splitlines()))
+        self.assertEqual(PR5_ECON_SHA256, _sha(self.pr5_blob))
         self.assertEqual(digest, pin["records_file_sha256"])
-        self.assertEqual(2683, pin["record_lines"])
+        self.assertEqual(len(self.records), pin["record_lines"])
         self.assertEqual(digest, self.manifest["records_file_sha256"])
-        self.assertEqual(2683, self.manifest["total_physical_rows"])
+        self.assertEqual(len(self.records), self.manifest["total_physical_rows"])
 
     def test_fixture_contains_the_frozen_ghosts_in_original_order(self):
         ghosts = _fixture_lines(self.fixture_blob)
@@ -173,17 +177,19 @@ class EconGhostDeleteTests(unittest.TestCase):
         )
 
     def test_reinsertion_reproduces_pr4_base_and_only_removes_ghosts(self):
-        restored = _restore_base(self.records_blob, self.fixture_blob)
+        restored = _restore_base(self.pr5_blob, self.fixture_blob)
         self.assertEqual(BASE_RECORDS_SHA256, _sha(restored))
         self.assertEqual(
             [line for line in restored.splitlines(keepends=True)
              if _sha(line) not in GHOST_SHA256S],
-            self.records_blob.splitlines(keepends=True),
+            self.pr5_blob.splitlines(keepends=True),
         )
 
     def test_ghosts_are_absent_from_records_manifest_and_registry_refs(self):
-        _require_clean_current(self.records_blob)
         self.assertFalse(any(r.get("record_id") == GHOST_RECORD_ID for r in self.records))
+        _require_clean_current(self.pr5_blob)
+        self.assertFalse({_sha(line) for line in self.records_blob.splitlines(keepends=True)}
+                         & GHOST_SHA256S)
         manifest_ghosts = {
             row.get("raw_line_sha256") for row in self.manifest.get("rows", [])
         }
@@ -209,11 +215,16 @@ class EconGhostDeleteTests(unittest.TestCase):
     def test_manifest_audit_chain_and_summary_match_current_pack(self):
         digest = _sha(self.records_blob)
         rows = self.manifest["rows"]
-        self.assertEqual(2683, len(rows))
+        self.assertEqual(len(self.records), len(rows))
+        prefix_rows = rows[:PR5_ECON_LINES]
+        self.assertEqual(PR5_ECON_LINES, len(prefix_rows))
         self.assertEqual(
             {"verified_observation_count": 105, "exploratory_count": 131,
              "quarantined_count": 2447},
-            self.manifest["status_summary"],
+            {name + "_count": sum(row["catalog_status"] == status for row in prefix_rows)
+             for name, status in (("verified_observation", "verified_observation"),
+                                  ("exploratory", "exploratory"),
+                                  ("quarantined", "quarantined"))},
         )
         for line_no, (raw, row) in enumerate(
                 zip(self.records_blob.splitlines(keepends=True), rows), 1):
@@ -239,7 +250,7 @@ class EconGhostDeleteTests(unittest.TestCase):
                 self.assertNotIn(marker, content, str(source))
 
     def test_survivor_record_byte_mutation_changes_restored_base(self):
-        lines = self.records_blob.splitlines(keepends=True)
+        lines = self.pr5_blob.splitlines(keepends=True)
         mutated = list(lines)
         mutated[0] = bytes([mutated[0][0] ^ 1]) + mutated[0][1:]
         restored = _restore_base(b"".join(mutated), self.fixture_blob)
@@ -288,19 +299,38 @@ class EconGhostDeleteTests(unittest.TestCase):
             self.assertEqual("not_found", result["status"], line_no)
             self.assertEqual([], result["records"], line_no)
 
-    def test_p127_ghost_seed_crops_no_longer_resolve(self):
+    def test_p127_ghost_seed_crops_resolve_only_source_backed_p126_rows(self):
+        ghosts = [json.loads(line) for line in self.fixture_blob.splitlines()[17:]]
+        ghost_metrics = [record["metrics"] for record in ghosts]
         for crop in CROPS_WITH_GHOST_SEED_ROWS:
             result = lookup.lookup_rda_data(
                 crop, "전국", kind="seed_requirement", year=2025,
             )
-            self.assertEqual("not_found", result["status"], crop)
-            self.assertEqual([], result["records"], crop)
+            if crop == "시금치":
+                # The printed crop is 시설시금치; do not invent an alias.
+                self.assertEqual("not_found", result["status"], crop)
+                self.assertEqual([], result["records"], crop)
+                approved = candidates.lookup_approved_candidates(
+                    crop, "전국", "vegetables", kind="seed_requirement",
+                    year=2025, use_scope="plan_input",
+                )
+                self.assertEqual("not_found", approved["status"], crop)
+                self.assertEqual([], approved["candidates"], crop)
+                continue
+            self.assertIn(result["status"], ("unverified", "ambiguous"), crop)
+            self.assertTrue(result["records"], crop)
+            for record in result["records"]:
+                self.assertNotIn(record["audit_key"]["raw_line_sha256"], GHOST_SHA256S, crop)
+                self.assertNotIn(record["metrics"], ghost_metrics, crop)
+                self.assertEqual(126, record["locator"]["pdf_page"], crop)
+                self.assertEqual("exploratory", record["verification"]["level"], crop)
             approved = candidates.lookup_approved_candidates(
                 crop, "전국", "vegetables", kind="seed_requirement",
                 year=2025, use_scope="plan_input",
             )
-            self.assertEqual("not_found", approved["status"], crop)
-            self.assertEqual([], approved["candidates"], crop)
+            self.assertEqual("unapproved", approved["status"], crop)
+            self.assertTrue(approved["candidates"], crop)
+            self.assertFalse(any(row["approved"] for row in approved["candidates"]), crop)
 
     def test_lookup_entrypoints_never_open_or_enumerate_test_paths(self):
         observed_paths = []
@@ -366,19 +396,32 @@ class EconGhostDeleteTests(unittest.TestCase):
                 mock.patch.object(os, "listdir", side_effect=watched_listdir), \
                 mock.patch.object(Path, "iterdir", watched_iterdir):
             for crop in CROPS_WITH_GHOST_SEED_ROWS:
-                self.assertEqual(
-                    "not_found",
-                    lookup.lookup_rda_data(
-                        crop, "전국", kind="seed_requirement", year=2025,
-                    )["status"],
+                result = lookup.lookup_rda_data(
+                    crop, "전국", kind="seed_requirement", year=2025,
                 )
-                self.assertEqual(
-                    "not_found",
-                    candidates.lookup_approved_candidates(
+                if crop == "시금치":
+                    self.assertEqual("not_found", result["status"], crop)
+                    self.assertEqual([], result["records"], crop)
+                    approved = candidates.lookup_approved_candidates(
                         crop, "전국", "vegetables", kind="seed_requirement",
                         year=2025, use_scope="plan_input",
-                    )["status"],
+                    )
+                    self.assertEqual("not_found", approved["status"], crop)
+                    self.assertEqual([], approved["candidates"], crop)
+                    continue
+                self.assertIn(result["status"], ("unverified", "ambiguous"), crop)
+                self.assertTrue(result["records"], crop)
+                for record in result["records"]:
+                    self.assertEqual(126, record["locator"]["pdf_page"], crop)
+                    self.assertEqual("exploratory", record["verification"]["level"], crop)
+                    self.assertNotIn(record["audit_key"]["raw_line_sha256"], GHOST_SHA256S, crop)
+                approved = candidates.lookup_approved_candidates(
+                    crop, "전국", "vegetables", kind="seed_requirement",
+                    year=2025, use_scope="plan_input",
                 )
+                self.assertEqual("unapproved", approved["status"], crop)
+                self.assertTrue(approved["candidates"], crop)
+                self.assertFalse(any(row["approved"] for row in approved["candidates"]), crop)
             self.assertEqual(
                 "not_found",
                 lookup.lookup_rda_data(
@@ -404,9 +447,8 @@ class EconGhostDeleteTests(unittest.TestCase):
         changed_ghosts = list(ghosts)
         changed_ghosts[0] = bytes([changed_ghosts[0][0] ^ 1]) + changed_ghosts[0][1:]
         with self.assertRaises(AssertionError):
-            _restore_base(self.records_blob, b"".join(changed_ghosts))
-
-        survivors = self.records_blob.splitlines(keepends=True)
+            _restore_base(self.pr5_blob, b"".join(changed_ghosts))
+        survivors = self.pr5_blob.splitlines(keepends=True)
         with self.assertRaises(AssertionError):
             _restore_base(b"".join(survivors[:100] + survivors[101:]), self.fixture_blob)
 
