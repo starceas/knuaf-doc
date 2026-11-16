@@ -5,14 +5,17 @@ Local blob evidence: KNUAF_IM_NOT_AI_SRC=<checkout> python3 -B -m unittest
 """
 import ast
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
+from types import SimpleNamespace
 import unittest
 
 from tests._harness import REPO_ROOT, SCRIPTS
@@ -131,10 +134,26 @@ class BundleContractTests(unittest.TestCase):
 
 
 class RunnerSmokeTests(unittest.TestCase):
+    def test_windows_name_surrogates_reject_but_cloud_placeholders_pass(self):
+        spec = importlib.util.spec_from_file_location("humanize_guard", RUNNER)
+        runner = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(runner)
+        for tag in (0xA000000C, 0xA0000003):
+            with self.subTest(redirecting_tag=hex(tag)):
+                info = SimpleNamespace(st_mode=stat.S_IFDIR, st_reparse_tag=tag,
+                                       st_file_attributes=0x400)
+                self.assertTrue(runner.is_path_redirect(info))
+        for tag in (0, 0x9000001A, 0x9000101A, 0x80000013):
+            with self.subTest(nonredirecting_tag=hex(tag)):
+                info = SimpleNamespace(st_mode=stat.S_IFDIR, st_reparse_tag=tag,
+                                       st_file_attributes=0x400)
+                self.assertFalse(runner.is_path_redirect(info))
+        self.assertTrue(runner.is_path_redirect(SimpleNamespace(st_mode=stat.S_IFLNK)))
+
     def test_routes_postprocessors_coverage_and_write_scope(self):
         bundle_before = snapshot(BUNDLE)
         with tempfile.TemporaryDirectory(prefix="humanize-smoke-") as tmp:
-            root = Path(tmp)
+            root = Path(tmp).resolve()
             work = root / "논문 작업"
             work.mkdir()
             outside = root / "outside.txt"
@@ -230,7 +249,7 @@ class RunnerSmokeTests(unittest.TestCase):
 
     def test_missing_or_changed_copy_never_executes_prepare(self):
         with tempfile.TemporaryDirectory(prefix="humanize-branches-") as tmp:
-            root = Path(tmp)
+            root = Path(tmp).resolve()
             runner = root / "scripts/gg_humanize.py"
             runner.parent.mkdir()
             shutil.copyfile(RUNNER, runner)
@@ -251,6 +270,153 @@ class RunnerSmokeTests(unittest.TestCase):
                     self.assertEqual(status, payload["status"])
                     self.assertEqual("humanize-korean/scripts/prepare_monolith_input.py", payload["first_path"])
                 self.assertFalse((root / "_workspace").exists())
+
+    def assert_guard_rejected(self, root, *args, runner=RUNNER):
+        trace = root / "rejected-trace.json"
+        proc = cli(*args, cwd=root, runner=runner, trace=trace)
+        self.assertEqual(5, proc.returncode, proc.stdout + proc.stderr)
+        self.assertEqual(1, len(proc.stdout.splitlines()), proc.stdout)
+        payload = json.loads(proc.stdout)
+        self.assertEqual("run_guard_rejected", payload["status"])
+        self.assertTrue(payload["reason"])
+        executed = json.loads(trace.read_text(encoding="utf-8"))
+        self.assertFalse(any("/humanize-korean/" in p.replace("\\", "/") for p in executed))
+
+    def make_link(self, link, target, directory=False):
+        try:
+            link.symlink_to(target, target_is_directory=directory)
+        except (OSError, NotImplementedError) as exc:
+            self.fail("Symlink regression requires Windows Developer Mode or link privilege; "
+                      f"no skip/fake pass is permitted: {exc}")
+
+    def test_outside_outputs_inputs_traversal_and_unknown_options_are_rejected(self):
+        with tempfile.TemporaryDirectory(prefix="humanize-guard-") as tmp:
+            root = Path(tmp).resolve()
+            run = root / ".gg-work/humanize/_workspace/guard"
+            run.mkdir(parents=True)
+            source = run / "01_input.txt"
+            source.write_text("밥을 먹고, 집에 갔다.", encoding="utf-8")
+            outside = root / "outside.txt"
+            outside.write_text("외부 원문 보존", encoding="utf-8")
+            second = run.parent / "second"
+            second.mkdir()
+            other = second / "other.txt"
+            other.write_text("다른 실행", encoding="utf-8")
+            cases = [
+                ("strip-commas", "--before", source, "--after", source, "--out", outside),
+                ("restore-modality", "--before", source, "--after", source, "--out", outside),
+                ("lexical", "restore", "--before", source, "--after", source, "--out", outside),
+                ("lexical", "hints", "--input", outside),
+                ("sanitize", outside, "--in-place"),
+                ("gates", "--before", source, "--after", other),
+                ("change-rate", "--before", source, "--after", outside),
+                ("prepare", "--run-dir", run, "--diagnosis", outside),
+                ("prepare", "--run-dir", run, "--baseline", outside),
+                ("prepare", "--text", "자동 생성 금지"),
+                ("prepare", "--run-dir", run / ".." / run.name),
+                ("prepare", "--run-dir", run, "--unknown-path", outside),
+                ("strip-commas", "--before", source, "--after", source,
+                 "--out=" + str(run / ".." / "escaped.txt")),
+                ("reassemble", "--run-dir", run, "--output", outside),
+                ("reassemble", "--run-dir", run, "--report", "../escaped.json"),
+            ]
+            for args in cases:
+                with self.subTest(args=args):
+                    self.assert_guard_rejected(root, *args)
+            self.assertEqual("외부 원문 보존", outside.read_text(encoding="utf-8"))
+            self.assertEqual({"01_input.txt"}, {p.name for p in run.iterdir()})
+            self.assertFalse((root / "_workspace").exists())
+
+    def test_linked_input_fixed_output_and_all_workspace_components_are_rejected(self):
+        with tempfile.TemporaryDirectory(prefix="humanize-links-") as tmp:
+            root = Path(tmp).resolve()
+            run = root / ".gg-work/humanize/_workspace/guard"
+            run.mkdir(parents=True)
+            outside = root / "outside.txt"
+            original = "한\u200b글 원문"
+            outside.write_text(original, encoding="utf-8")
+            source = run / "01_input.txt"
+            self.make_link(source, outside)
+            self.assert_guard_rejected(root, "prepare", "--run-dir", run)
+            self.assertEqual(original, outside.read_text(encoding="utf-8"))
+            source.unlink()
+            source.write_text("일반 문장", encoding="utf-8")
+            hardlink = run / "hardlink.txt"
+            os.link(outside, hardlink)
+            self.assert_guard_rejected(root, "sanitize", hardlink, "--in-place")
+            hardlink.unlink()
+            self.assertEqual(original, outside.read_text(encoding="utf-8"))
+            for name in ("00_metrics.json", "01_input_with_metrics.txt", "nested"):
+                with self.subTest(name=name):
+                    link = run / name
+                    self.make_link(link, outside)
+                    self.assert_guard_rejected(root, "prepare", "--run-dir", run)
+                    link.unlink()
+                    self.assertEqual(original, outside.read_text(encoding="utf-8"))
+            for level in range(3):
+                work = root / f"work-{level}"
+                target = root / f"target-{level}"
+                work.mkdir()
+                target.mkdir()
+                relative = (".gg-work", "humanize", "_workspace")[:level + 1]
+                link = work.joinpath(*relative)
+                link.parent.mkdir(parents=True, exist_ok=True)
+                self.make_link(link, target, directory=True)
+                self.assert_guard_rejected(root, "new-run", "--root", work)
+                self.assertEqual([], list(target.iterdir()))
+
+    def test_bundle_as_run_and_linked_inventory_or_bundle_root_are_rejected(self):
+        with tempfile.TemporaryDirectory(prefix="humanize-bundle-guard-") as tmp:
+            root = Path(tmp).resolve()
+            runner = root / "scripts/gg_humanize.py"
+            runner.parent.mkdir()
+            shutil.copyfile(RUNNER, runner)
+            copied = root / "references/vendor/im-not-ai"
+            shutil.copytree(BUNDLE, copied)
+            before = snapshot(copied)
+            self.assert_guard_rejected(root, "prepare", "--run-dir", copied,
+                                       "--text", "동봉 폴더 쓰기 금지", runner=runner)
+            self.assertEqual(before, snapshot(copied))
+            manifest = copied / "UPSTREAM.json"
+            external = root / "manifest.json"
+            manifest.rename(external)
+            self.make_link(manifest, external)
+            for command in ("paths", "prepare"):
+                proc = cli(command, cwd=root, runner=runner)
+                self.assertEqual(4, proc.returncode, proc.stdout + proc.stderr)
+                self.assertEqual("bundle_integrity_failed", json.loads(proc.stdout)["status"])
+                self.assertEqual("UPSTREAM.json", json.loads(proc.stdout)["first_path"])
+            manifest.unlink()
+            external.rename(manifest)
+            for component in (copied, copied.parent, copied.parent.parent):
+                target = root / "moved-component"
+                component.rename(target)
+                self.make_link(component, target, directory=True)
+                proc = cli("paths", cwd=root, runner=runner)
+                self.assertEqual(4, proc.returncode, proc.stdout + proc.stderr)
+                self.assertEqual("bundle_integrity_failed", json.loads(proc.stdout)["status"])
+                component.unlink()
+                target.rename(component)
+            self.assertEqual(before, snapshot(copied))
+
+    def test_reassembly_manifest_cannot_read_outside_run(self):
+        with tempfile.TemporaryDirectory(prefix="humanize-manifest-guard-") as tmp:
+            root = Path(tmp).resolve()
+            run = root / ".gg-work/humanize/_workspace/guard"
+            run.mkdir(parents=True)
+            outside = root / "outside.txt"
+            outside.write_text("외부", encoding="utf-8")
+            for field in ("source_file", "rewritten_file"):
+                manifest = {"source_file": "01_input.txt", "chunks": [
+                    {"rewritten_file": "02_chunk_01_rewritten.txt", "passthrough": False}]}
+                if field == "source_file":
+                    manifest[field] = str(outside)
+                else:
+                    manifest["chunks"][0][field] = "../outside.txt"
+                (run / "chunk_manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+                self.assert_guard_rejected(root, "reassemble", "--run-dir", run)
+            self.assertFalse((run / "03_reassembled.md").exists())
+            self.assertEqual("외부", outside.read_text(encoding="utf-8"))
 
 
 # No skip is registered in CI; local checkout evidence opts in to this class.

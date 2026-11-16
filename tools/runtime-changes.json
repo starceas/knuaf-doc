@@ -382,7 +382,7 @@
       "source": "adopted:app-PR41"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "3b5b3df73502ac3c8595c5411d20f1c2a7085b4c30fe4488997bc0fa4b84a95b",
+      "after_sha256": "d42b0088ebdc7eb503efbd4780063795683aa22f5c354d5de3c98008b73d7773",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "humanize-bundle",
@@ -1019,7 +1019,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/references/korean-polishing.md": {
-      "after_sha256": "a195ce8e5d020b79dff216c8b771c72089b78b28367645271e4917f8cb019291",
+      "after_sha256": "5800d5b3e09ed4014feec42d11481541e98bc399cd5afd6c7a2763b21f21bc36",
       "before_sha256": "ede62c0b331e44dbc6f93e2c74e2f2d89b7d6098391c5630d22683b2cb1d3d35",
       "first_changed": "P28",
       "last_changed": "humanize-bundle",
@@ -3800,7 +3800,7 @@
       "source": "new"
     },
     "skills/knuaf-doc/scripts/gg_humanize.py": {
-      "after_sha256": "074d8c1722cab5d1f44c22946f57f95308ad6b9c88bd3cec61ea72b919732839",
+      "after_sha256": "a046dd2b62cf11acc3528cb480c2ee6fbfad330a3925df251257f295eb69f60a",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "humanize-bundle",
@@ -3809,7 +3809,7 @@
       "source": "new"
     },
     "tests/test_vendor_im_not_ai.py": {
-      "after_sha256": "c6b95ecd4d54d665c1a081e9be80721b5842b7772ea574421382cedb549df609",
+      "after_sha256": "62b083b409a2a33a0e9863ada98eabe98da123d4d3c059da993173679169f423",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "humanize-bundle",
@@ -3827,7 +3827,7 @@
       "source": "new"
     },
     ".gitattributes": {
-      "after_sha256": "374caaad5f26cea03c90ee9eae8576d138948a9bd2cf7308883d7c29f65614e4",
+      "after_sha256": "cc1fbbf5a87dd4e48146b03bdab27feddacb1bb8761e1a45bb14194f23890e56",
       "before_sha256": null,
       "first_changed": "P28",
       "last_changed": "humanize-bundle",

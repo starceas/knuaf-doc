@@ -94,7 +94,7 @@ fact/source ID·출처 개정·현재 프로젝트 개정을 사용한다.
 | `lexical_layer.py` | `gg_humanize.py lexical …` |
 | `sanitize_text.py` | `gg_humanize.py sanitize …` |
 
-인자는 원 스크립트에 그대로 전달된다.
+실행기는 명령별 경로 인자를 먼저 검사한 뒤 원 스크립트에 전달한다. 입력·출력·진단·사용자 baseline은 모두 하나의 기존 run 폴더 안이어야 한다. `prepare`는 `new-run`이 만든 경로를 `--run-dir`로 반드시 받는다(`--text`만으로 자동 생성하지 않는다). `reassemble`의 `--output`·`--report`는 run 안의 경로다. `..`·심볼릭 링크·Windows 이름 대리 재분석 지점(정션·마운트 등)·다중 하드링크 파일·동봉 폴더·알 수 없는 인자는 실행 전에 종료 5와 한 줄 JSON(`run_guard_rejected`, `reason`)으로 거절하며 동봉 코드를 돌리지 않는다. OneDrive 클라우드 자리표시자 등 이름을 대리하지 않는 태그는 허용한다. run의 기존 파일도 링크를 검사하므로 고정 이름 출력·입력 제자리 정리로 바깥 파일을 바꾸지 않는다.
 
 **실행 위치(run 폴더)**: `new-run`이 논문 작업 폴더의 `.gg-work/humanize/_workspace/YYYY-MM-DD-NNN-TAG/`를 만들고 그 경로를 돌려준다. 동봉 폴더는 앱에서 읽기 전용이므로 그 안에 쓰지 않는다. 중간 산출물은 `.gg-work/` 한 곳 규칙([output-hygiene.md](output-hygiene.md))을 따른다.
 
