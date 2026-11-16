@@ -112,8 +112,8 @@ PINNED_PACKS = {
     "rda.econ.2025": {
         "pack_revision": "2025",
         "records_file_sha256":
-            "049e7e73763b29d5c36fe1408082f52d77bebfd8158cf14b75c372a80a39a973",
-        "record_lines": 2707,
+            "f3e7609ce45c0b26ffb36759403761699f2dacbeb7226b3bc8de38322176d70f",
+        "record_lines": 2683,
         "relpath": "common/rda-econ-2025/records.jsonl",
     },
     "mafra.specialty.production.2024": {
