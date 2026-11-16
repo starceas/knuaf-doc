@@ -4,7 +4,8 @@
 안내문·사람 마무리 목록·장 판정 정규식·구역 서식을 자기 상수로 들고 있었다.
 이 단위는 그 자리를 `gg_major_format.profile_for` 조회로 바꿨다. 이 시험은
 (1) 식량작물 값이 옛 상수와 **문자 하나까지** 같은지, (2) 프로필 값을 고치면
-출력이 따라오는지(치환이 진짜인지), (3) 낙농은 게이트로 옛 경로를 타는지를 잰다.
+출력이 따라오는지(치환이 진짜인지), (3) F9e 이후 낙농이 게이트 안에서 프로필
+경로를 타는지를 잰다.
 
 가짜 원고·가짜 이름만 쓴다.
 """
@@ -20,10 +21,13 @@ import zipfile
 from tests._harness import ContractCase, bind_major, runtime
 
 # 앞머리 표지 7개가 모두 있는 가짜 원고. 값이 아니라 표지 이름만 쓴다.
+# 낙농 본문 장 번호는 아라비아(`1.`)다 — 실제 사례 원고
+# (`impl/f9e/cases/c1/본문_통합.md`)와 같은 체계를 쓴다. 요약 안의 `Ⅰ.`은
+# 소제목이라 본문 장과 섞지 않는다.
 FOOD_CROPS_FRONT_MD = ("겉표지\n\n표제면\n\n제출서\n\n인준서\n\n요약\n\n감사의 글\n\n"
                        "목차\n\n1. 머리말\n")
 DAIRY_FRONT_MD = ("겉표지\n\n제출서\n\n인준서\n\n학부모 동의서\n\n요약\n\n감사의 글\n\n"
-                  "목차\n\nⅠ. 머리말\n")
+                  "목차\n\n1. 머리말\n")
 
 
 def section_xml(*texts):
@@ -223,38 +227,49 @@ class HwpxEntryMajorProfileTests(ContractCase):
                 major_id="food_crops")
         self.assertEqual(["맺음말 및 발전방향"], chapters)
 
-    # --- 낙농은 게이트로 옛 경로 -------------------------------------------
+    # --- 낙농은 F9e에서 게이트 안 -------------------------------------------
 
     def test_dairy_gate_matches_the_other_builders(self):
-        self.assertNotIn("dairy", self.builder.HWPX_PROFILE_MAJORS)
-        self.assertIsNone(self.builder.hwpx_profile("dairy"))
+        self.assertIn("dairy", self.builder.HWPX_PROFILE_MAJORS)
+        self.assertIsNotNone(self.builder.hwpx_profile("dairy"))
         self.assertEqual(tuple(runtime("build_docx").DOCX_PROFILE_MAJORS),
                          tuple(self.builder.HWPX_PROFILE_MAJORS))
 
-    def test_dairy_keeps_the_legacy_path_while_the_gate_is_shut(self):
+    def test_dairy_takes_the_profile_notice_and_chapter_nodes(self):
+        profile = self.gmf.profile_for("dairy")
         notice = self.builder.notice(True, "dairy")
-        self.assertIn(self.builder.FINISH_NOTICE, notice)
-        self.assertNotIn("위30/아래30/머리0/꼬리10", notice)
+        self.assertIn(profile.finish_notice, notice)
+        self.assertNotIn(self.builder.FINISH_NOTICE, notice)
+        self.assertIn("위30/아래30/머리0/꼬리10", notice)
         self.assertEqual(
-            list(self.builder.HUMAN_FINISH),
+            list(profile.human_finish),
             self.builder.school_frontmatter_summary(
                 DAIRY_FRONT_MD, "dairy")["human_finish_required"])
-        # 낙농 프로필의 `hwpx_chapter_re`는 None이라 장 판정은 옛 로마 정규식.
+        # 낙농 프로필은 `hwpx_chapter == "nodes"`라 마크다운 1단계 제목 목록을
+        # 쓴다. 첫 장은 새 쪽/목차 쪽 나눔으로 이미 시작하므로 목록에서 뺀다.
+        two_chapters = DAIRY_FRONT_MD + "\n2. 농업환경분석\n"
+        self.assertEqual(["2. 농업환경분석"],
+                         self.builder.chapter_break_texts(
+                             two_chapters, "dairy"))
         _, chapters = self.builder.add_chapter_breaks(
-            section_xml("Ⅰ. 머리말", "1. 머리말"), major_id="dairy")
-        self.assertEqual(["Ⅰ. 머리말"], chapters)
+            section_xml("1. 머리말", "2. 농업환경분석"), major_id="dairy",
+            chapter_texts=("2. 농업환경분석",))
+        self.assertEqual(["2. 농업환경분석"], chapters)
 
-    def test_opening_the_gate_for_dairy_changes_the_notice(self):
-        """게이트가 낙농을 막는 유일한 이유임을 보인다(치환이 살아 있다)."""
+    def test_closing_the_gate_for_dairy_restores_the_legacy_notice(self):
+        """게이트를 다시 닫으면 옛 안내문·옛 장 판정으로 돌아간다."""
         with mock.patch.object(self.builder, "HWPX_PROFILE_MAJORS",
-                               ("food_crops", "dairy")):
+                               ("food_crops",)):
             notice = self.builder.notice(True, "dairy")
             summary = self.builder.school_frontmatter_summary(
                 DAIRY_FRONT_MD, "dairy")
-        dairy = self.gmf.profile_for("dairy")
-        self.assertIn(dairy.finish_notice, notice)
-        self.assertEqual(list(dairy.human_finish),
+            _, chapters = self.builder.add_chapter_breaks(
+                section_xml("Ⅰ. 머리말", "1. 머리말"), major_id="dairy")
+        self.assertIn(self.builder.FINISH_NOTICE, notice)
+        self.assertNotIn("위30/아래30/머리0/꼬리10", notice)
+        self.assertEqual(list(self.builder.HUMAN_FINISH),
                          summary["human_finish_required"])
+        self.assertEqual(["Ⅰ. 머리말"], chapters)
 
     # --- F9c: 제목 문단 위아래 여백(header.xml) -----------------------------
 
@@ -283,9 +298,9 @@ class HwpxEntryMajorProfileTests(ContractCase):
     def test_apply_layout_leaves_header_bytes_unchanged(self):
         """프로필 없음(게이트 밖) 또는 프로필 제목 여백 0이면 header.xml 불변."""
         original = header_zip(HEADER_XML)
-        # 식량작물은 프로필 제목 여백이 0이라 불변이고, 낙농·특용작물은 게이트
-        # 밖이라 프로필 자체가 없다. 셋 다 header.xml이 손대지 않은 채다.
-        for major in ("food_crops", "dairy", "specialty_crops"):
+        # 식량작물은 프로필 제목 여백이 0이라 불변이고, 특용작물은 게이트
+        # 밖이라 프로필 자체가 없다. 둘 다 header.xml이 손대지 않은 채다.
+        for major in ("food_crops", "specialty_crops"):
             with self.subTest(major=major):
                 updated, report = self.builder.apply_layout(
                     original, major_id=major)
@@ -293,6 +308,16 @@ class HwpxEntryMajorProfileTests(ContractCase):
                 self.assertEqual(read_members(original), read_members(updated))
                 # 보고 내용도 그대로여야 매니페스트가 안 바뀐다(키 없음).
                 self.assertNotIn("heading_margins", report)
+
+    def test_apply_layout_writes_dairy_heading_margins_through_the_gate(self):
+        """F9e 이후 낙농은 패치 없이 프로필 제목 여백(1920)을 쓴다."""
+        updated, report = self.builder.apply_layout(
+            header_zip(HEADER_XML), major_id="dairy")
+        members = read_members(updated)
+        self.assertIn('<hc:prev value="1920" unit="HWPUNIT"/>'
+                      '<hc:next value="1920" unit="HWPUNIT"/>',
+                      members["Contents/header.xml"].decode("utf-8"))
+        self.assertEqual(["1"], report["heading_margins"])
 
     def test_apply_layout_writes_the_profile_heading_margins(self):
         """프로필 값이 0보다 크면 header.xml의 제목 여백만 그 값이 된다."""
@@ -335,8 +360,7 @@ class HwpxEntryMajorProfileTests(ContractCase):
         `paraPrIDRef="1"`, 없으면 `"7"`(아라비아 장), 로마 번호 장이면 `"0"`을
         붙인다. 모양 번호를 고정하면 실제 낙농 HWPX에 쪽 나눔이 0개 들어간다
         (F9e가 실제 kordoc으로 빌드해 확인). 목록은 그 원고의 1단계 제목에서
-        나왔으므로 글자만 맞으면 된다. 게이트 밖에서도 이 함수는 그대로
-        도는 갈래라, 이 시험은 이 묶음에서도 통과해야 한다(함정 방지선).
+        나왔으므로 글자만 맞으면 된다.
         """
         for shape in ("0", "7"):
             with self.subTest(paraPrIDRef=shape):

@@ -59,7 +59,7 @@
 
 | 명령 | 필수 인자 | 선택 인자 | 정본 쓰기 | 하는 일 · 상세 |
 | --- | --- | --- | --- | --- |
-| `init` | — | — | 예 | `project.json`과 `.gg-lock`만 만든다. 폴더 안 기존 파일은 건드리지 않는다. 정본이 이미 있으면 `existing_canonical`로 거절한다. |
+| `init` | — | — | 예 | `project.json`과 `.gg-lock`을 만들고 등록된 곁파일(알림·진행)을 계산한다. 기존 정본은 덮어쓰지 않고 `existing_canonical`로 거절한다. 곁파일 자리 외 폴더 안 기존 자료는 건드리지 않는다. |
 | `import` | `--out <새폴더>` | `--offline-confirmed` | 새 폴더에만 | 기존 Markdown 폴더를 새 작업폴더로 옮긴다. 원본은 바꾸지 않는다. 잠금 프로토콜이 없는 구형 폴더는 `--offline-confirmed`가 있어야 한다. [section-ledger](section-ledger.md) |
 | `doctor` | — | `--probe` | 아니오 | 설치·의존성·잠금 진단. `--probe`는 잠금 점유를 읽기 전용으로 확인한다. [locking](locking.md) |
 | `status` | — | — | 아니오 | `{revision, checks, tasks, completion, skill_ready, guideline_ready, user_finish_pending, professor_approval_pending, professor_approval}` |
@@ -70,7 +70,8 @@
 | `bundle` | `--scope <절ID>` | — | 아니오 | 한 절의 검토 꾸러미(본문·원자료·사실·규칙·검토축) |
 | `export` | `--major <전공ID>` | `--kind draft\|review\|submission_candidate`(기본 `review`) | 아니오(산출물 발행) | 검토 산출물을 발행한다. [outputs](outputs.md) |
 | `paper` | `--input <폴더 안 spec.json>` `--major <전공ID>` | `--out <폴더 안 경로>` `--body <폴더 안 본문MD>` | 아니오(산출물 발행) | 학교 양식 본문 생성. 기본 출력 `build/검토전_본문.md`. [outputs](outputs.md) |
-| `gg_progress.py show` | `<폴더>` | — | 아니오 | `.knuaf-progress.json`의 단계 요약을 읽기 전용으로 출력한다. 파일이 없으면 exit 1, 있으면 exit 0. 쓰기 서브커맨드는 없다. |
+| `gg_progress.py show` | `<폴더>` | — | 아니오 | `.knuaf-progress.json`의 단계 요약을 읽기 전용으로 출력한다. 파일 없음·형식 오류는 exit 1, 정상이면 exit 0. |
+| `gg_progress.py write` | `<폴더>` | — | 아니오(진행 파일만) | 기존 `project.json`에서 진행 파일을 계산·갱신한다. 정본과 같은 잠금을 잡으며 개정·질문 횟수는 바꾸지 않는다. 성공은 `status: written`·exit 0, 미초기화 폴더·잠금 충돌·쓰기 실패는 exit 2. 잠금 안에서 갱신이 실패하면 낡은 진행 파일을 제거한다. 폴더·정본을 새로 만들지 않는다. |
 | `adopt-output` | `--input <폴더 안 spec.json>` `--expected-revision <N>` `--major <전공ID>` | `--request-id <ID>` | 예 | 출력 파일을 `outputs`에 등록하는 유일한 경로. [source-contract](source-contract.md#출력-등록adopt-output과-동반-파일) |
 | `observe` | `--input <폴더 안 관측JSON>` `--observer <어댑터ID>` | — | 아니오(관측 기록 발행) | 실행 어댑터의 검토 관측 기록을 남긴다. [section-ledger](section-ledger.md) |
 | `unlock` | — | — | 아니오 | 비정상 종료로 남은 잠금 소유 기록만 정리한다. [locking](locking.md) |

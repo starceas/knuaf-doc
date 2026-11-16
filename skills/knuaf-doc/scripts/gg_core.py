@@ -737,6 +737,7 @@ def _control_files():
 # W-P 2부가 진행 파일 행 한 줄을 여기에 더한다(알림 → 진행 순서).
 _SIDECAR_WRITERS = (
     ("gg_notices", "write_notices", ".knuaf-notices.json", "dict", "remove"),
+    ("gg_progress", "write_progress", ".knuaf-progress.json", "dict", "remove"),
 )
 
 
@@ -3724,6 +3725,7 @@ def _finance_check_items(p):
         f = p["facts"][fid]
         return (
             f.get("answer_state") == "provided"
+            and isinstance(f.get("unit"), str)
             and f.get("unit") in _finance_body_mod()._MONETARY_UNITS
             and f.get("value") is not None
             # Copied gate result is interview context, not a second

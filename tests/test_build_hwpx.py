@@ -640,12 +640,13 @@ class ExportTests(_Base):
 
 
 class OtherMajorHwpxByteTests(_Base):
-    """R-N01: 다른 전공 4개의 HWPX 멤버 바이트가 `5488bd2`와 같다.
+    """R-N01: 다른 전공 3개의 HWPX 멤버 바이트가 `5488bd2`와 같다.
 
     기준은 `5488bd2`(식량작물 모듈 이전) 트리에서 `BODY_MD`·`make_fake_cli`·
     각 전공으로 뽑은 산출물의 압축 해제 바이트다. ZIP 시각은 실행마다
-    달라지므로 멤버 단위로 비교한다. 4전공이 모두 같은 해시를 내므로 기준
-    dict 하나를 공유한다.
+    달라지므로 멤버 단위로 비교한다. 3전공이 모두 같은 해시를 내므로 기준
+    dict 하나를 공유한다. 낙농은 F9e에서 서식 프로필 게이트 안으로 들어와
+    출력이 달라졌으므로 `DairyHwpxByteTests`가 따로 잰다.
     """
 
     MEMBERS = {
@@ -657,8 +658,7 @@ class OtherMajorHwpxByteTests(_Base):
 
     def test_other_majors_reproduce_the_reference_bytes(self):
         import hashlib
-        for major in ("specialty_crops", "fruit_trees", "hort_env_systems",
-                      "dairy"):
+        for major in ("specialty_crops", "fruit_trees", "hort_env_systems"):
             with self.subTest(major=major):
                 root = self._project(major)
                 (Path(root) / "body.md").write_text(BODY_MD, encoding="utf-8")
@@ -672,6 +672,87 @@ class OtherMajorHwpxByteTests(_Base):
                                for info in archive.infolist()}
                 self.assertEqual(sorted(self.MEMBERS), sorted(digests))
                 self.assertEqual(self.MEMBERS, digests)
+
+
+class DairyHwpxByteTests(_Base):
+    """F9e: 낙농 HWPX가 서식 프로필 경로를 탄 뒤의 멤버 바이트.
+
+    입력·명령은 `OtherMajorHwpxByteTests`와 같다(`BODY_MD`·`make_fake_cli`).
+    기대값만 낙농 프로필(구역 여백·쪽번호, 제목 여백 1920 HWPUNIT, 장 판정
+    노드 목록)을 탄 산출물에서 따로 잡았다. 기대 해시를 새로 끼워 통과시킨
+    것이 아니라, 바뀐 멤버(`Contents/header.xml`·`Contents/section0.xml`)가
+    어느 배선 때문인지는 `impl/F9e-RESULT.md` 표에 적었다.
+    """
+
+    # `impl/f9e/dump-hashes.py`로 뽑은 실제 산출물 해시(같은 입력·같은 명령).
+    # 다른 전공 기준선과 견주면 `Contents/section0.xml`만 다르고, 그 안의 차이는
+    # 한 줄뿐이다(실측): `hp:margin header 4252→0, footer 4252→2835,
+    # top 5669→8504, bottom 4252→8504`(위30/아래30/머리0/꼬리10). 표 폭·장 새 쪽·
+    # 쪽번호 제어는 이 입력(학교 앞머리 없는 짧은 원고)에서 차이를 만들지 않는다.
+    # `header.xml`은 이 모형 CLI의 header에 문단 모양(`paraPr`)이 없어 제목
+    # 여백 배선이 걸리지 않아 기준선과 같은 해시다 — 그 배선은
+    # `test_apply_layout_writes_dairy_...`가 따로 잰다.
+    MEMBERS = {
+        'mimetype': '5ab5230b5af04f78947736bf8dd1a269aa684e234f7f4a392efb85289d1655c2',
+        'META-INF/container.xml': '1feb165533a201fbe460cf9fdbe756b271e3d4aad056d52049c57da7efd7f0de',
+        'Contents/header.xml': 'e2656e9c06d85ce67f04b71cdef8548afeff76323b1fe301bcb68df4e58c3fa4',
+        'Contents/section0.xml': '6596e5e0da1974dd29ea54c865625874c6597b48049f66b4336d9afca0c5ede1',
+    }
+
+    def test_dairy_reproduces_its_profile_bytes(self):
+        import hashlib
+        root = self._project("dairy")
+        (Path(root) / "body.md").write_text(BODY_MD, encoding="utf-8")
+        cli = make_fake_cli(root, markdown=BODY_MD)
+        build_hwpx.export(root, "body.md", "out.hwpx",
+                          cli_command=cli,
+                          context=self._ctx(root, "dairy"))
+        with zipfile.ZipFile(Path(root) / "out.hwpx") as archive:
+            digests = {info.filename:
+                       hashlib.sha256(archive.read(info.filename)).hexdigest()
+                       for info in archive.infolist()}
+        # 사전 비교를 먼저 둔다: 기대값이 비어 있을 때 실패 메시지가
+        # 실제 해시를 그대로 보여 줘야 마디 B에서 채울 수 있다.
+        self.assertEqual(self.MEMBERS, digests)
+
+    def test_dairy_chapters_start_on_a_new_page(self):
+        """낙농 HWPX 장 제목마다 쪽 나눔이 붙는다 — 실제 kordoc 출력 회귀.
+
+        `BODY_MD`는 장이 하나뿐이라 위 바이트 시험으로는 이 배선이 걸리지
+        않는다. F9e가 실제 kordoc으로 빌드했을 때 장 제목 문단 모양이
+        `paraPrIDRef="7"`(원고에 `#` 표시가 없는 낙농 원고)로 나와, 모양 번호
+        `"1"`만 보던 판정이 쪽 나눔을 **0개** 넣었다. 목록 방식은 글자만
+        보므로 원고의 장 수만큼 쪽 나눔이 붙어야 한다.
+        """
+        md = "1. 머리말\n\n본문이다.\n\n2. 농업환경분석\n\n본문이다.\n\n3. 결론\n"
+        section = (
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>'
+            '<hs:sec xmlns:hp="http://www.hancom.co.kr/hwpml/2011/paragraph">'
+            '<hp:p><hp:run><hp:secPr><hp:pagePr landscape="WIDELY" width="59528" '
+            'height="84188" gutterType="LEFT_ONLY"><hp:margin header="2835" '
+            'footer="2835" gutter="0" left="5670" right="4252" top="8504" '
+            'bottom="4252"/></hp:pagePr></hp:secPr><hp:ctrl><hp:colPr id="" '
+            'type="NEWSPAPER" layout="LEFT" colCount="1" sameSz="1" sameGap="0"/>'
+            '</hp:ctrl><hp:t>본문</hp:t></hp:run></hp:p>'
+            + "".join('<hp:p paraPrIDRef="7" styleIDRef="0">'
+                      '<hp:run charPrIDRef="0"><hp:t>%s</hp:t></hp:run></hp:p>' % t
+                      for t in ("1. 머리말", "본문이다.", "2. 농업환경분석",
+                                "본문이다.", "3. 결론"))
+            + '</hs:sec>')
+        root = self._project("dairy")
+        (Path(root) / "body.md").write_text(md, encoding="utf-8")
+        cli = make_fake_cli(root, markdown=md, section=section)
+        build_hwpx.export(root, "body.md", "out.hwpx",
+                          cli_command=cli,
+                          context=self._ctx(root, "dairy"))
+        with zipfile.ZipFile(Path(root) / "out.hwpx") as archive:
+            produced = archive.read("Contents/section0.xml").decode("utf-8")
+        for title in ("2. 농업환경분석", "3. 결론"):
+            self.assertIn('<hp:p paraPrIDRef="7" styleIDRef="0" pageBreak="1">'
+                          '<hp:run charPrIDRef="0"><hp:t>' + title, produced)
+        # 첫 장은 이미 새 쪽에서 시작하므로 쪽 나눔을 받지 않는다.
+        self.assertIn('<hp:p paraPrIDRef="7" styleIDRef="0">'
+                      '<hp:run charPrIDRef="0"><hp:t>1. 머리말', produced)
 
 
 class CliTests(_Base):

@@ -145,6 +145,18 @@ class FruitPlanShapeTests(ContractCase):
         out = runtime("gg_orchard_production").orchard_production(fp.root)
         self.assertEqual(out["status"], "presented")
 
+        core = runtime("gg_core")
+        project = core.load(fp.root)
+        items, blocked = core._finance_check_items(project)
+        self.assertIsNone(blocked)
+        self.assertNotIn("t1", [row["fact_id"] for row in items])
+        # The public gate and automatic sidecar consume the same canonical facts.
+        self.assertNotIn("t1", [row["target"] for row in core.gate(fp.root, project)
+                                if row["check_id"] == "body_finance_crosscheck"])
+        progress = json.loads((Path(fp.root) / ".knuaf-progress.json").read_text(
+            encoding="utf-8"))
+        self.assertEqual(progress["revision"], project["revision"])
+
     def test_questions_use_concrete_declared_fields(self):
         plan = self._declared().plan()
         declared = {f"fruit_trees.{group}.{iid}.{name}"

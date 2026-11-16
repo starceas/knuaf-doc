@@ -197,11 +197,6 @@ def add_chapter_breaks(section_xml, heading_para_ref="1", major_id=None,
     원고는 `1`, 제목 표시 없는 낙농 원고는 `7` 또는 로마 번호 장이면 `0`).
     모양 번호를 고정하면 낙농 HWPX에 쪽 나눔이 하나도 안 들어간다. 대신 목록
     자체가 이미 그 원고의 1단계 제목에서 나왔으므로 글자 일치만으로 충분하다.
-
-    이 갈래는 게이트가 낙농을 막고 있는 동안 **닿지 않는다**(`chapter_texts`는
-    `hwpx_chapter == "nodes"`인 프로필, 곧 게이트 안 전공에만 계산된다).
-    그래서 이 묶음의 출력은 안 바뀌고, 다음 판에서 게이트 한 줄만 켜도
-    장 쪽 나눔이 살아 있다(떼어 내면 그 함정이 그대로 되살아난다).
     """
     chapter_re = _CHAPTER_RE
     profile = hwpx_profile(major_id)
@@ -322,12 +317,12 @@ def apply_layout(data, *, margins_mm=None, major_id=None, chapter_texts=None):
     report["previous_widths"] = sorted(set(report["previous_widths"]))
     return target.getvalue(), report
 
-def verify_layout(data, command, source_text, *, timeout):
+def verify_layout(data, command, source_text, *, timeout, extra_env=None):
     """후처리한 바이트를 임시 파일로 검증한다(구조·재파싱·표 수치)."""
     with tempfile.TemporaryDirectory(prefix=".gg-hwpx-layout-") as work:
         staged = Path(work) / "layout.hwpx"
         staged.write_bytes(data)
-        validation = gg_hwpx.validate_hwpx(command, staged, timeout=timeout)
+        validation = gg_hwpx.validate_hwpx(command, staged, timeout=timeout, extra_env=extra_env)
         if not (validation.get("process_ok") is True
                 and validation.get("returncode") == 0
                 and validation.get("status") == "ok"):
@@ -339,7 +334,7 @@ def verify_layout(data, command, source_text, *, timeout):
                 action="표 폭·장 쪽 나눔을 적용한 파일이 구조 검증을 통과하지 "
                        "못했습니다. 발행하지 않았습니다.")
         back_md = Path(work) / "back.md"
-        reparsed = gg_hwpx.reparse_hwpx(command, staged, back_md, timeout=timeout)
+        reparsed = gg_hwpx.reparse_hwpx(command, staged, back_md, timeout=timeout, extra_env=extra_env)
         if not (reparsed.get("ok") and "markdown" in reparsed):
             raise gg_hwpx.HwpxBlocked(
                 "layout_reparse_failed",
@@ -442,7 +437,8 @@ def export(base, inp, out, *, font=FONT, context=None, cli_command=None,
             if verify:
                 verification = verify_layout(
                     published_bytes, result["runtime"]["cli_command"],
-                    source_text, timeout=timeout)
+                    source_text, timeout=timeout,
+                    extra_env=result["runtime"].get("extra_env"))
             else:
                 verification = {"validate": None, "reparse": None,
                                 "table_numbers": None}

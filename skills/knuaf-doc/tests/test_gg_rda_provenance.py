@@ -168,16 +168,16 @@ class IntegrityGateTests(unittest.TestCase):
 
 
 class RealPackIdentityTests(unittest.TestCase):
-    """D01: all 6,315 physical rows preserved with immutable audit keys."""
+    """D01: all 6,316 physical rows retain audit keys (PR5: −24 ghosts; PR6: +25 seed rows)."""
 
-    def test_all_pinned_packs_index_to_6315_physical_keys(self):
+    def test_all_pinned_packs_index_to_6316_physical_keys(self):
         total = 0
         for pack_id, pin in prov.PINNED_PACKS.items():
             idx = prov.build_audit_index(PACKS / pin["relpath"], pack_id,
                                          pin["records_file_sha256"])
             self.assertEqual(len(idx), pin["record_lines"])
             total += len(idx)
-        self.assertEqual(total, 6315)
+        self.assertEqual(total, 6316)
 
     def test_manifest_audit_chain_matches_record_bytes(self):
         # Every pinned pack's manifest must describe the records.jsonl bytes
@@ -268,7 +268,8 @@ class RealPackIdentityTests(unittest.TestCase):
                 with self.subTest(pack=pack_id):
                     self.assertIn("aggregation_group",
                                   manifest.get("aggregation_rule", ""))
-        self.assertEqual(checked, 620)
+        # 책임자 실측 5,767: EXPECTED_SOURCED_ROWS와 같은 전체 source 행 집계(E14-a).
+        self.assertEqual(checked, 5767)
 
     def test_catalog_authority_pins_reproduce_from_real_manifests(self):
         # Every pinned accepted-catalog authority that names a pinned pack
