@@ -221,17 +221,17 @@ def load_plain_policy(path=None):
 
 
 # One number grammar for rendering, summary scope, and length boundaries:
-# I..X / Ⅰ..Ⅹ / positive Arabic digits, ASCII/fullwidth dot with optional
+# I..X / Ⅰ..Ⅻ / positive Arabic digits, ASCII/fullwidth dot with optional
 # whitespace on both sides; Unicode Roman alone also allows a space, no dot.
 # ASCII "I study ..." is prose. Bare Arabic chapters advance 1,2,... only
 # in an already plain Arabic outline; under #/Roman chapters they are level 2.
 _CHAPTER_NUMBER = re.compile(
-    r"^([ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]|VIII|VII|III|VI|IV|IX|II|X|I|V|[1-9]\d*)"
+    r"^([ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩⅪⅫ]|VIII|VII|III|VI|IV|IX|II|X|I|V|[1-9]\d*)"
     r"\s*[.．]\s*(\S.*)$"
 )
-_CHAPTER_UNICODE = re.compile(r"^([ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ])\s+(\S.*)$")
+_CHAPTER_UNICODE = re.compile(r"^([ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩⅪⅫ])\s+(\S.*)$")
 _ROMAN_NUMBERS = dict(zip(("I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"), range(1, 11)))
-_ROMAN_NUMBERS.update(zip("ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ", range(1, 11)))
+_ROMAN_NUMBERS.update(zip("ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩⅪⅫ", range(1, 13)))
 
 
 def _numbered_heading(text):
@@ -2044,16 +2044,26 @@ def school_frontmatter_plan(nodes, major_id=None):
         i_body = None
         for i in range(i_toc + 1, len(nodes)):
             if nodes[i].get("text", "").strip() == "감사의 글" and any(
-                re.match(r"^[ⅠⅡⅢⅣⅤⅥ]\s*[\.．]", n.get("text", ""))
+                (_numbered_heading(n.get("text", "").strip())
+                 if spec.major_id == "dairy"
+                 else re.match(r"^[ⅠⅡⅢⅣⅤⅥ]\s*[\.．]", n.get("text", "")))
                 for n in nodes[i + 1 :]
             ):
                 i_body = i + 1
                 break
         if i_body is None:
             for i in range(len(nodes) - 1, i_toc, -1):
-                if re.search(r"^1\s*[.．].*머리말"
-                             if spec.major_id in ("dairy", "food_crops")
-                             else r"^[ⅠI]\s*[.．].*머리말", nodes[i].get("text", "")):
+                if spec.major_id == "dairy":
+                    text = nodes[i].get("text", "").strip()
+                    chapter = _numbered_heading(text)
+                    body_start = (chapter is not None and chapter[1] == 1
+                                  and _intro_title(chapter[2], ("머리말",)))
+                else:
+                    body_start = re.search(r"^1\s*[.．].*머리말"
+                                           if spec.major_id == "food_crops"
+                                           else r"^[ⅠI]\s*[.．].*머리말",
+                                           nodes[i].get("text", ""))
+                if body_start:
                     i_body = i
                     break
         if i_body is None:
