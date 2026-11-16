@@ -95,6 +95,8 @@ macOS Excel은 기존 전공 권한·재무 프로필 검증 뒤, 세션 가드 
 
 `gg_kordoc.diagnose(*, cache_dir=None, node=None, kordoc=None)`는 파일·PATH만 읽는 공개 진단이다. 설치·네트워크·Kordoc 실행·캐시 쓰기를 하지 않는다. `installed`는 설치 흔적이며 실행/기능 검증 완료가 아니다(`capability_verified=false`, `reason=capability_unverified|not_installed`). `cache_dir`, `selected_cache_dir`, `cli_path`, `node_path`, `candidates`, `legacy_candidates`를 제공한다. `ensure`는 명시 캐시가 없을 때만 옛 이름/기본 위치의 캐시 후보를 찾고, 현행 고정 버전·소유 표식·패키지·실제 버전·파싱 플래그 및 필요한 generate 기능을 재검증한 후보만 읽기 전용 재사용한다. 구 버전 4.13.1을 현행 버전으로 가장하지 않는다.
 
+앱이 제공한 `ginseng-goat/kordoc-host.json`이 유효하면 `diagnose`는 `installed=true`, `source_kind=app_host`로 표시하되 실행하지 않는다. `ensure`는 명시 CLI 다음, PATH CLI보다 먼저 이 안내를 검증해 쓰고 `extra_env`를 결과에 싣는다. 한글 산출의 generate·validate·재파싱 및 `build_hwpx` 후처리 검증도 이 환경을 사용한다. 안내 파일의 위치·신뢰 경계·거절 시 기존 경로 보존은 [문서 읽기 준비](parser-setup.md)의 앱 실행 안내 계약을 따른다.
+
 실기 Office 변환 성공은 이 단위의 대역 시험으로 증명하지 않는다. **v0.6.0 배포 전 macOS·Windows 각각 실제 Word·Excel로 1회씩 변환 확인이 필요하다.**
 
 ## 본문 재무 수치의 자동 대조
