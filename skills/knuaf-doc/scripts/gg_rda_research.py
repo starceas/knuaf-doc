@@ -82,7 +82,7 @@ PINNED_CATALOG_AUTHORITIES = {
     "accepted-catalog-20260921/mafra.specialty.production.2024":
         "d43b85d3a90c14897deb40af6e1f1763dfc595a0053c965bf7c16bb3d57a80d0",
     "accepted-catalog-20260921/rda.econ.2025":
-        "81511659e7f35f92d2c0eb1e8fadb56cf9c4fb89fa9413cb05f7e01cd4aa9efd",
+        "726ed61fce2a7ae07137a2bf7f5aa319a29315e3f96179f31e0df57321d02474",
     # 2024 RDA income packs: digests re-pinned after the 2024 source backfill
     # (source on all 467 rows + 5 printed regional 2024 total/capital-interest
     # rows), keeping the authority ids other code/tests name (PR① precedent).

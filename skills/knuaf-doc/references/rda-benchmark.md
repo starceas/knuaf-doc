@@ -20,10 +20,10 @@ CLI: `python3 scripts/gg.py rda-lookup` / `rda-candidates` / `rda-propose` / `rd
   ([majors.md](majors.md)의 candidate 계약). 현재 팩은 적용 적합성 확장 축
   선언(`evidence`)을 갖지 않으므로 승인되는 레코드가 없다 — 조회 결과는
   답변 보조·되물음 재료로만 쓴다.
-- 검증 상태 실측 예: D5(내용연수 셀 정정, 단계 P15) 이후 rda.econ.2025의
-  관측 상태 합계는 verified 105 / exploratory 131 / quarantined 2,471이다
-  (repo 루트 `docs/validation/d5-rda-useful-life.json`). 검증이 안 된 값을 학생
-  `user_answer`나 재무 확정 입력으로 쓰지 않는다.
+- 검증 상태: PR⑤ 유령 24행 삭제 뒤 rda.econ.2025의 관측 상태 합계는
+  verified 105 / exploratory 131 / quarantined 2,447이다. D5 당시 수치는
+  역사 영수증(repo 루트 `docs/validation/d5-rda-useful-life.json`)에 보존한다.
+  검증이 안 된 값을 학생 `user_answer`나 재무 확정 입력으로 쓰지 않는다.
 
 ## 1. 언제 쓰나
 
@@ -38,26 +38,27 @@ CLI: `python3 scripts/gg.py rda-lookup` / `rda-candidates` / `rda-propose` / `rd
 - 작성 경로는 `rda-candidates <폴더>`다 — 정본의 `common.major_id` 바인딩에서
   전공을 읽는다. `rda-lookup`은 전공을 선택 인자로 받는 원자료 감사용 조회다.
 
-## 2. 승격된 팩 (`references/benchmark-packs/catalog.json` 기준, 2026-11-14 실측)
+## 2. 승격된 팩 (`references/benchmark-packs/catalog.json` 기준, PR⑤ 반영)
 
 | 팩 | ID | record 수 | 출처 |
 |---|---|---|---|
 | 전국 농가소득 2024 | `rda.income.national.2024` | 102 | rda-income.xlsx — 전국 평균 |
 | 시도별 농가소득 2024 | `rda.income.regional.2024` | 365 | rda-income.xlsx — 도별 평균 |
-| 농업경영조사 2025 | `rda.econ.2025` | 2,707 | farm-management.xlsx — 시트·행·셀 단위 |
+| 농업경영조사 2025 | `rda.econ.2025` | 2,683 | farm-management.xlsx — 시트·행·셀 단위 |
 | 특용작물 생산실적 2024 | `mafra.specialty.production.2024` | 2,988 | mafra-specialty-production-2024.json — 특용·약용작물 전국·시도·시장 |
 | 전국 농가소득 2025 | `rda.income.national.2025` | 104 | 농산물소득자료집(2025년산) — 인용 색인 경유 |
 | 시도별 농가소득 2025 | `rda.income.regional.2025` | 49 | 농산물소득자료집(2025년산) — 인용 색인 경유 |
 
-6개 팩 합계 6,315건 (기존 카탈로그의 `record_count`와 무관 — 실제 레코드 수).
+6개 팩 합계 6,291건 (기존 카탈로그의 `record_count`와 무관 — 실제 레코드 수).
+PR⑤에서 원문에 없는 24행을 삭제했다. 승인 경로 영향은 0이며, 미검증 조회에서 원문에 없는 종자량 7작목 값이 사라진다(원문 p126 누락 값 추가는 별도 데이터 PR).
 공통 소득표(전국·시도)는 소득·가계비·자가노동비용 계열이고,
 특용작물 팩은 생산실적·공식시장가격·관측가격을, econ 팩은 농업경영 비용·
 가격·시계열을 담는다. 학교 양식 입력칸으로의 매핑은 없다 — 이 조회는 답변 보조다.
 
-**행별 출처(`source`) 상태 (2026-11-14, main 5f132a5 실측).** 소득 팩 4개
+**PR③ 당시 행별 출처(`source`) 상태 (2026-11-14, main 5f132a5 실측; 아래 비교 수치는 역사 기록).** 소득 팩 4개
 (2024·2025 전국·지역, 620행)는 전 행이 `source`(publisher·survey·survey_label·
 aggregation_group·data_year…)를 갖는다 — `rda.income` 602행,
-`kostat.production_cost` 18행. `rda.econ.2025`(2,707행)·
+`kostat.production_cost` 18행. `rda.econ.2025`(현재 2,683행)·
 `mafra.specialty.production.2024`(2,988행)는 아직 `source`가 없어 연도 기본값이
 `source_unknown`으로 막힌다(§4.1) — 그 팩들은 기존 조회 결과가 그대로이고(실측:
 10,659질의 결과 바이트 동일), 출처 채우기는 다음 데이터 PR에서 한다.

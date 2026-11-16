@@ -136,3 +136,10 @@
 - **D08 (provenance 스냅샷 필드)**: `gg_rda_provenance.py`는 수용된 shared-core 사본 `b23142c7…`에서 왔다 — provenance lane의 구 사본 `4982c1fc…`는 사용하지 않았다(sequential transfer 소유권).
 - **캐시 제외(RECV-SC-C3-1)**: export 생성 시 rsync exclude + 사후 재스캔으로 `__pycache__`/`.pyc` 0건. 테스트 중첩 subprocess가 쓴 `scripts/__pycache__` 1건을 제거하고 cache-free export에서 bounded check를 재실행해 PASS 확인(P-3c).
 - **미해결·범위 외**: P2-L09-native(네이티브 Windows+NTFS) 게이트는 여전히 pending이며 §5 한계는 유지된다.
+
+## 8. 진행 곁파일 자동 기록 계약 (PR #169)
+
+- 초기화의 정확한 파일 목록과 Windows import payload 색인에 `.knuaf-progress.json`을 포함한다. 알림 곁파일과 같은 payload이며 control 파일로 숨기지 않는다. 색인 값은 진행 파일의 실제 바이트 SHA256으로 대조한다.
+- `_finance_check_items.eligible`은 단위가 문자열일 때만 화폐 단위 집합을 조회한다. 과수 사실의 `unit=["주"]`를 금액으로 인정하지 않으며, 공개 gate와 자동 진행 파일 생성이 같은 입력에서 중단되지 않게 한다. 기존 `tests.test_fruit_plan_shape.FruitPlanShapeTests.test_duplicate_with_non_string_unit_does_not_crash`를 실제 소비 경로까지 확장했다.
+- `test_skillgaps_wp4_interview`의 전공 범위·미지원 계약과 `test_update_check`의 제작자·업데이트 S1~S4 계약은 보존한다. 변경된 문구 5개 단언만 제거하고 새 문구로 재고정하지 않는다. 단계 문법·누락·제목 일치·범위 표기는 `tests.test_student_language`의 실제 예시 검증이 담당한다.
+- 원 traceback은 작업 폴더 `slot5b.log`, 수정 후 실행 증거와 요청은 `HANDOFF-CI.md`·`SLOT-COMMANDS-CI.md`에 기록한다. 실행 전에는 Python 3.10/3.14 또는 Windows 통과를 주장하지 않는다.

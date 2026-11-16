@@ -34,14 +34,14 @@ class D5UsefulLifeTests(unittest.TestCase):
     def test_every_cell_matches_text_mapping_and_identity(self):
         self.assertEqual(64, len({c["row_id"] for c in self.mapping["cells"]}))
         self.assertEqual(107, len(self.mapping["cells"]))
-        self.assertEqual(2707, len(self.raw))
-        self.assertEqual(2707, len(self.entries))
+        self.assertEqual(2683, len(self.raw))
+        self.assertEqual(2683, len(self.entries))
         self.assertEqual(len(self.raw), self.manifest["total_physical_rows"])
         self.assertEqual(hashlib.sha256(b"".join(self.raw)).hexdigest(),
                          self.manifest["records_file_sha256"])
         ids = set()
         dash_count = 0
-        for i, cell in enumerate(self.mapping["cells"], 2601):
+        for i, cell in enumerate(self.mapping["cells"], 2577):
             rec = self.records[i - 1]
             loc = rec["locator"]
             with self.subTest(cell=cell["cell_id"]):
@@ -79,11 +79,11 @@ class D5UsefulLifeTests(unittest.TestCase):
 
     def test_manifest_links_and_derived_authority(self):
         pin = provenance.PINNED_PACKS["rda.econ.2025"]
-        self.assertEqual(2707, pin["record_lines"])
+        self.assertEqual(2683, pin["record_lines"])
         self.assertEqual(self.manifest["records_file_sha256"], pin["records_file_sha256"])
         self.assertEqual({"verified_observation_count": 105,
                           "exploratory_count": 131,
-                          "quarantined_count": 2471},
+                          "quarantined_count": 2447},
                          self.manifest["status_summary"])
         duplicate_refs = 0
         for i, (line, row) in enumerate(zip(self.raw, self.manifest["rows"]), 1):
@@ -148,7 +148,7 @@ class D5UsefulLifeTests(unittest.TestCase):
                     self.manifest["records_file_sha256"])},
                 authority="accepted-catalog-20260921/rda.econ.2025"),
             pack_ids={"rda.econ.2025"})
-        for i in range(68, 122):
+        for i in range(68, 105):
             rec, mrow = self.records[i - 1], self.manifest["rows"][i - 1]
             key = mrow["audit_key"]
             with self.subTest(line=i):
@@ -186,7 +186,7 @@ class D5UsefulLifeTests(unittest.TestCase):
         self.assertEqual("quarantined", still_a_candidate["candidates"][0]["observation_status"])
 
     def test_all_new_cells_searchable_but_never_approved(self):
-        for i, cell in enumerate(self.mapping["cells"], 2601):
+        for i, cell in enumerate(self.mapping["cells"], 2577):
             rec = self.records[i - 1]
             key = self.manifest["rows"][i - 1]["audit_key"]
             with self.subTest(cell=cell["cell_id"]):
@@ -205,7 +205,7 @@ class D5UsefulLifeTests(unittest.TestCase):
                 self.assertEqual("unapproved", result["status"])
                 self.assertEqual([], result["approved_candidates"])
                 self.assertEqual("exploratory", result["candidates"][0]["observation_status"])
-        key = self.manifest["rows"][2600]["audit_key"]
+        key = self.manifest["rows"][2576]["audit_key"]
         ctx = research.resolver_context(
             catalog=research.accept_catalog(
                 self.entries,
@@ -225,7 +225,7 @@ class D5UsefulLifeTests(unittest.TestCase):
                     if r["pack_id"] == "rda.econ.2025" and r["kind"] == "useful_life")
         self.assertEqual([133, 134, 135], rule["locator_pdf_pages"])
         self.assertEqual({133, 134, 135},
-                         {r["locator"]["pdf_page"] for r in self.records[2600:]})
+                         {r["locator"]["pdf_page"] for r in self.records[2576:]})
 
 
 if __name__ == "__main__":
