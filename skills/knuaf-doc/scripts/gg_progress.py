@@ -137,7 +137,8 @@ def _rows(report):
 def _evidence(p, rows, fg, binding):
     """단계별 근거 → `{n: "done"|"unknown"|None}`.
 
-    None은 "긍정 근거 없음"이고, now/todo는 승격 규칙(§1-3)이 정한다.
+    None은 긍정 근거 없음. 미지원 전공의 unknown은 승격 가능하며, 지원 전공의
+    not_computable은 완료 근거가 아니므로 승격 규칙에서 2단계를 현재로 둔다.
     """
     ids = [row.get("check_id") for row in rows]
     damaged = any(cid in DAMAGED_IDS for cid in ids)
@@ -152,8 +153,9 @@ def _evidence(p, rows, fg, binding):
     if gate_state in {"surplus", "deficit_accepted"}:
         out[2] = "done"
     elif gate_state == "not_computable":
-        out[2] = "unknown"
-
+        # Unsupported majors keep unknown; a supported major has no step-2
+        # completion evidence, so it remains the current plan step.
+        out[2] = "unknown" if fg.get("unsupported_major") else None
     if sections:
         out[3] = "done"
 
