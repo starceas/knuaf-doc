@@ -249,12 +249,13 @@ class MajorNoticeIsolationTests(ContractCase):
 
 
 class OtherMajorDocxByteTests(ContractCase):
-    """R-N01: 다른 전공 4개의 DOCX 멤버 바이트가 `5488bd2`와 같다.
+    """R-N01: 다른 전공 3개의 DOCX 멤버 바이트가 `5488bd2`와 같다.
 
     기준은 `5488bd2`(식량작물 모듈 이전) 트리에서 같은 입력·같은 명령으로
     뽑은 산출물의 압축 해제 바이트다. ZIP 시각(타임스탬프·external_attr)은
-    실행마다 달라지므로 멤버 단위로 비교한다. 4전공이 모두 같은 해시를
-    내므로 기준 dict 하나를 공유한다.
+    실행마다 달라지므로 멤버 단위로 비교한다. 3전공이 모두 같은 해시를
+    내므로 기준 dict 하나를 공유한다. 낙농은 F9e에서 서식 프로필 게이트
+    안으로 들어와 출력이 달라졌으므로 `DairyDocxByteTests`가 따로 잰다.
     """
 
     BODY = "# 1. 머리말\n\n합성 본문.\n"
@@ -279,8 +280,7 @@ class OtherMajorDocxByteTests(ContractCase):
     }
 
     def test_other_majors_reproduce_the_reference_bytes(self):
-        for major in ("specialty_crops", "fruit_trees", "hort_env_systems",
-                      "dairy"):
+        for major in ("specialty_crops", "fruit_trees", "hort_env_systems"):
             with self.subTest(major=major):
                 root = self.make_project()
                 bind_major(root, major)
@@ -295,6 +295,62 @@ class OtherMajorDocxByteTests(ContractCase):
                                for info in archive.infolist()}
                 self.assertEqual(sorted(self.MEMBERS), sorted(digests))
                 self.assertEqual(self.MEMBERS, digests)
+
+
+class DairyDocxByteTests(ContractCase):
+    """F9e: 낙농 DOCX가 서식 프로필 경로를 탄 뒤의 멤버 바이트.
+
+    입력·명령은 `OtherMajorDocxByteTests`와 같은 `BODY`/CLI다. 기대값만
+    낙농 프로필(위30/아래30/머리0/꼬리10, 단계별 글자 크기, 제목 위아래
+    19.2pt, 장 새 쪽)을 탄 산출물에서 따로 잡았다. 프로필 배선이 하나라도
+    풀리면 이 해시가 어긋난다.
+    """
+
+    BODY = OtherMajorDocxByteTests.BODY
+    # `impl/f9e/dump-hashes.py`로 뽑은 실제 산출물 해시(같은 입력·같은 명령).
+    # 다른 전공 기준선(`OtherMajorDocxByteTests.MEMBERS`)과 견주면 바뀐 멤버는
+    # `word/document.xml` 하나다(`a1db6487…` → `4d3f3851…`). 이 입력은 학교
+    # 앞머리가 없어 본문 구역만 서므로, 그 안의 차이는 딱 두 군데다(실측):
+    # 본문 구역 여백 `top/bottom 1134→1701`(30 mm)·`header 850→0`·
+    # `footer 850→567`(10 mm), 그리고 1단계 제목 문단의 `after=120`(6 pt)이
+    # `before=384 after=384`(19.2 pt)로 바뀐 것. 글자 크기·표지·스타일·글꼴표·
+    # 관계(`_rels`)·바닥글은 그대로다 — 이 경로는 쪽번호 구역을 만들지 않는다
+    # (`test_bare_manuscript_has_no_footer_section`).
+    MEMBERS = {
+        '[Content_Types].xml': '66c84fb7a6aa3c4ead49f895e4a7044df1fb57de1ed76d09b2686e91f5bed5b4',
+        '_rels/.rels': 'a9ae57efe9186f07d48303bcac5d54c7e359bf3f503939c03ad2954e5c59a5c4',
+        'docProps/core.xml': 'd14be8284e406d14dc2a576b19f15e7f637b955f9e27a3d9ed871ec99606f7ba',
+        'docProps/app.xml': 'be664981c3141cddfc59362beb287ebf20d0773660e2dd6faac5968a5930a081',
+        'word/document.xml': '4d3f3851450eb1305e1021cdda3c978bd3f522cb3792740efb662ee3c58511fe',
+        'word/_rels/document.xml.rels': '1e7f0eb144a98e199249314f61ff32a8de2a27e56d8e9ee6b524e1c6b235d377',
+        'word/styles.xml': 'f017756fb397531264418c33ec44516d5431db2864caf720f7b140abf9701988',
+        'word/stylesWithEffects.xml': '463ae0928cf0d84775dbf8cf18d6c3029f6707c81bf590f6d6dd8757a5e93f15',
+        'word/settings.xml': '86c73de844b13fc27c417004b8fc5a7fdf76224ea4f5bdd0fb3996abedf5c6bb',
+        'word/webSettings.xml': '349d36de7434d09f86987ff671d8814964a0588c1e630c06e562cda7e75e9f95',
+        'word/fontTable.xml': '79385fb7f60247507ecaffc292e9ebd52ea0657b8634f629ba6fccc54011d6bb',
+        'word/theme/theme1.xml': 'e3a8ab7db9ca7afca56f5f2820a56e8b660016c647773555b060b0a02ac76941',
+        'customXml/item1.xml': 'a86086ffc5d8e83ebd6c71a55d1d2efaa31b137977f5f3a752366e1023612144',
+        'customXml/_rels/item1.xml.rels': '1ca6c9a64edcebe24ee703a54403611b322d96da33371779e742d2d3f7ed7a6c',
+        'customXml/itemProps1.xml': 'c542307b13ec29a8b546217bb37936ab4822e044b265d2952985ec3d6afed24e',
+        'word/numbering.xml': '70976f19cbcd896e51890859fe6ecb3467a5a7ad0c040160fedc5a1993cb09ce',
+        'docProps/thumbnail.jpeg': '96367138dc44ce09bf2c8f0f8e49348a1478d2c5c0af69bbc2bbc38b63cdcead',
+    }
+
+    def test_dairy_reproduces_its_profile_bytes(self):
+        root = self.make_project()
+        bind_major(root, "dairy")
+        write_text(root, "body.md", self.BODY)
+        out = "build/dairy.docx"
+        proc = cli(root, "build_docx.py", "--in", "body.md",
+                   "--out", out, "--major", "dairy")
+        self.assertEqual(0, proc.returncode, proc.stdout + proc.stderr)
+        with zipfile.ZipFile(root / out) as archive:
+            digests = {info.filename:
+                       hashlib.sha256(archive.read(info.filename)).hexdigest()
+                       for info in archive.infolist()}
+        # 사전 비교를 먼저 둔다: 기대값이 비어 있을 때 실패 메시지가
+        # 실제 해시를 그대로 보여 줘야 마디 B에서 채울 수 있다.
+        self.assertEqual(self.MEMBERS, digests)
 
 
 class FinanceSavePreservationTests(ContractCase):

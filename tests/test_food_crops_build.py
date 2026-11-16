@@ -253,12 +253,35 @@ class FoodCropsBuildTests(ContractCase):
 
     def test_other_majors_get_no_chapter_page_breaks(self):
         # 산업곤충은 `school_paper` 출력을 지원하지 않아 빌더에 닿지 않는다.
-        for major in ("specialty_crops", "fruit_trees",
-                      "hort_env_systems", "dairy"):
+        # 낙농은 F9e에서 게이트 안으로 들어와 `chapter_break_nodes=True`다
+        # (`test_dairy_chapters_start_new_pages`).
+        for major in ("specialty_crops", "fruit_trees", "hort_env_systems"):
             with self.subTest(major=major):
                 doc = self.convert(major, text="# 1. 머리말\n\n합성 본문 내용")
                 self.assertEqual([], [p.text for p in doc.paragraphs
                                       if p.paragraph_format.page_break_before])
+
+    def test_dairy_chapters_start_new_pages(self):
+        # F9e: 게이트가 켜지며 `chapter_break_nodes=True`가 살아났다.
+        # 첫 장은 본문 새 구역이라 빼고, 나머지 장·맺음말·참고문헌이 대상이다.
+        profile = self.fm.normalize_school_profile({
+            "major_id": "dairy",
+            "school_profile": {
+                "title": "합성 영농계획", "author": "가상학생",
+                "submission_date": "2026년 12월", "graduation_date": "2027년 2월"}})
+        lines = self.fm.frontmatter_lines(profile, artifacts={
+            "summary": "Ⅰ. 합성 사업목적\n\n합성 요약 내용",
+            "thanks": "합성 감사 내용", "parent_consent": "합성 동의 내용"})
+        text = "\n\n".join(lines + ["# 1. 머리말", "합성 본문",
+                                    "# 2. 농업환경분석", "합성 본문",
+                                    "# 3. 중장기발전계획", "합성 본문"])
+        doc = self.convert("dairy", text=text)
+        self.assertEqual(
+            ["2. 농업환경분석", "3. 중장기발전계획"],
+            [p.text for p in doc.paragraphs
+             if p.paragraph_format.page_break_before])
+        first = next(p for p in doc.paragraphs if p.text == "1. 머리말")
+        self.assertFalse(first.paragraph_format.page_break_before)
 
     def test_summary_and_thanks_prose_is_not_centred(self):
         # 눈 확인(F-8): 요약·감사의 글은 줄글이라 양쪽 맞춤이어야 한다.
@@ -317,8 +340,10 @@ class FoodCropsBuildTests(ContractCase):
             self.assertEqual(label, paragraph.text.strip())
             self.assertIn("PAGEREF " + anchor, paragraph._p.xml)
 
-    def test_dairy_preliminary_prose_keeps_its_previous_alignment(self):
-        # 불변: 낙농은 공용 기본값이라 문단 정렬을 지정하지 않는다(예전 그대로).
+    def test_dairy_preliminary_prose_is_justified(self):
+        # F9e: 게이트가 켜지며 낙농도 로마 앞부분 경로를 탄다. 요약·감사의
+        # 글은 줄글이라 학교 규격(양쪽혼합)대로 양쪽 맞춤이다.
+        from docx.enum.text import WD_ALIGN_PARAGRAPH
         profile = self.fm.normalize_school_profile({
             "major_id": "dairy",
             "school_profile": {
@@ -331,7 +356,8 @@ class FoodCropsBuildTests(ContractCase):
         doc = self.convert("dairy", text=text)
         texts = [p.text.strip() for p in doc.paragraphs]
         index = texts.index("감사의 글")
-        self.assertIsNone(doc.paragraphs[index + 1].paragraph_format.alignment)
+        self.assertEqual(WD_ALIGN_PARAGRAPH.JUSTIFY,
+                         doc.paragraphs[index + 1].paragraph_format.alignment)
 
     # --- HWPX -------------------------------------------------------------
 

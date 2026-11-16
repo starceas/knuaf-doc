@@ -330,6 +330,65 @@ class ProgressTitleTests(unittest.TestCase):
                 self.assertRegex(title, self.TITLE)
                 self.assertNotIn("(", title.split("·")[0])
 
+    def test_progress_examples_match_the_full_app_block_grammar(self):
+        """앱 447d99f progress-list.ts의 줄 문법·완전성 조건을 함께 대조한다."""
+        title_re = re.compile(
+            r"^\s*창업논문 진행 목록\s*·\s*(\d+)단계 중\s*([1-7])"
+            r"(?:\s*[–~-]\s*([1-7]))?단계")
+        one_re = re.compile(
+            r"^\s*([✓▶○])\s*([1-7])\s+([^\d—\s][^—]*?)\s*(?:—\s*(.*))?$")
+        range_re = re.compile(
+            r"^\s*([✓▶○])\s*([1-7])(?:\s*[–~-]\s*([1-7]))?단계"
+            r"(?:\s*(남음|끝남))?\s*(?:—\s*(.*))?$")
+        names = ("자료·전공 확인", "계획 인터뷰", "조사·근거 정리",
+                 "본문 Ⅰ~Ⅵ 초안", "재무 엑셀", "검토·고치기", "워드 검토본")
+        blocks = [(name, line, body) for name, line, body in _all_blocks()
+                  if "창업논문 진행 목록" in _first_line(body)]
+        self.assertTrue(blocks, "앱이 읽을 진행 목록 예시가 없다")
+        for name, line, body in blocks:
+            with self.subTest(file=name, line=line):
+                lines = body.replace("**", "").replace("__", "").splitlines()
+                title = title_re.match(lines[0])
+                self.assertIsNotNone(title)
+                self.assertEqual(title[1], "7")
+                states = {}
+                after_at = None
+                for index, row in enumerate(lines[1:], start=1):
+                    if re.match(r"^\s*그 뒤\s*[:：]\s*(.+)$", row):
+                        after_at = index
+                        break
+                    self.assertTrue(row and not row.startswith((" ", ">", "`", "~")),
+                                    "진행 목록 안의 빈 줄·인용·코드는 앱에서 접히지 않는다")
+                    if re.match(r"^\s*⚑\s*(.+)$", row):
+                        continue
+                    span = range_re.match(row)
+                    single = one_re.match(row) if span is None else None
+                    self.assertTrue(span or single, "앱이 못 읽는 단계 줄: " + row)
+                    if span:
+                        sym, a, b, word, _ = span.groups()
+                        self.assertIn(word, {None, "남음" if sym == "○" else "끝남"})
+                        nums = range(int(a), int(b or a) + 1)
+                        self.assertLessEqual(int(a), int(b or a))
+                    else:
+                        sym, n, label, _ = single.groups()
+                        self.assertEqual(label, names[int(n) - 1])
+                        nums = [int(n)]
+                    for n in nums:
+                        self.assertNotIn(n, states, "단계가 겹친다")
+                        states[n] = sym
+                self.assertEqual(set(states), set(range(1, 8)), "1~7 누락")
+                now = [n for n in sorted(states) if states[n] == "▶"]
+                if now:
+                    self.assertEqual(len(now), 1, "규칙집은 지금 단계 하나만 가르친다")
+                    self.assertEqual(now, [int(title[2])])
+                    self.assertIsNone(title[3], "규칙집 제목은 단계 범위를 쓰지 않는다")
+                else:
+                    self.assertEqual(set(states.values()), {"✓"})
+                self.assertIsNotNone(after_at, "그 뒤 줄도 앱의 접기 범위 안이어야 한다")
+                next_at = next(i for i, row in enumerate(lines)
+                               if row.startswith("다음 작업:"))
+                self.assertLess(after_at, next_at)
+
 
 class NativeFieldWordingTests(unittest.TestCase):
     """코드→학생 말 표의 학생 말은 모두 검사되는 블록 안에 있어야 한다."""
