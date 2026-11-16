@@ -154,7 +154,7 @@
   "references/update.md": "43746a2d7709cd90be8b5a330847a12e433ef734245482cdeb43fe17536f50de",
   "references/workbook-reference-set.json": "e31ddcf5b306d330101fef920a415e99972dea0cdd9f5e1a2e5b37a9fd3a5be8",
   "references/workflow-order.md": "781d08c719d40a7787ce97919a1adfc7477e6c979f3114828674756d20b1632c",
-  "release-notes.json": "5be51d0997a23c096386e14bfa5084dcbf2ec482859c919737b4b8db590e035a",
+  "release-notes.json": "02460744c86e6c523a4965cabe608fd812d603b9fb8550707a01b374c33db1f9",
   "scripts/build_docx.py": "4303de63eb246b8cdc5c7e28cc698adc951fc38e46139d7958883e54bca7962f",
   "scripts/build_excel_finance_template.py": "0b701dedc53e83af6b2c1aa7fce93d5df9043c428c9b7630a80d7944af582441",
   "scripts/build_hwpx.py": "38c4d5ffbe634bf951ee5571e2a7621db84a9d63dbac82312ad04c71645f6038",
@@ -284,7 +284,7 @@
   "tests/test_pr4_source_map.py": "4f21001225b9e65c96b531c9ca9cb54801de6fd29b25a7eaa24b7e6a5d8c1550",
   "tests/test_pr5_econ_ghost_delete.py": "dba0b4c0cb8b949f38b41c4785f669e27ff7aa771ac97a7de65f8007f71ad0d4",
   "tests/test_pr6_econ_seed_append.py": "d91adc1c3389920e429dc1755054bce900abd91b451e8324d2cd96c11d231f1d",
-  "version.json": "8570bdb5c9859a6a9256b5b6b2789b443576c3512242164b48c71db0ca1d1006"
+  "version.json": "b1254b4726379d49cf67d6591f602d9a7490b86faef0ea7851c83306ec93db69"
  },
  "schema": "knuaf-doc/install-manifest@1"
 }
