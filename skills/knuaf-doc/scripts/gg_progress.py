@@ -6,8 +6,8 @@
 설계 §2-1 고정 표가 유일 출처다(런타임 필터 없음).
 
 쓰기는 `write_progress(root)` 하나이며 정본 잠금 **안**에서만 불린다 — 이
-모듈은 스스로 잠금을 잡지 않는다(재진입 교착 방지). CLI는 읽기 전용 `show`
-하나이고 `write` 서브커맨드는 두지 않는다(쓰기 자리는 커밋 뒤 곁파일 한 곳).
+함수는 스스로 잠금을 잡지 않는다(재진입 교착 방지). CLI `write`는 같은
+정본 잠금을 잡고 진행 파일만 갱신한다. `show`는 계속 읽기 전용이다.
 """
 import argparse
 import json
@@ -402,19 +402,33 @@ def show(root):
 def main(argv=None):
     ap = argparse.ArgumentParser(
         prog="gg_progress.py",
-        description="진행 파일(.knuaf-progress.json) 요약 — 읽기 전용",
+        description="진행 파일(.knuaf-progress.json) 요약·갱신",
     )
     sub = ap.add_subparsers(dest="command", required=True)
-    show_parser = sub.add_parser("show", help="진행 파일 요약 출력")
+    show_parser = sub.add_parser("show", help="진행 파일 요약 출력(읽기 전용)")
     show_parser.add_argument("target")
+    write_parser = sub.add_parser("write", help="정본 변경 없이 진행 파일 갱신")
+    write_parser.add_argument("target")
     args = ap.parse_args(argv)
-    if args.command == "show":
-        try:
-            return show(Path(args.target))
-        except Exception as error:
-            print("진행 파일을 읽지 못함: " + str(error), file=sys.stderr)
-            return 2
-    return 2
+    root = Path(args.target)
+    try:
+        if args.command == "show":
+            return show(root)
+        # 미초기화 폴더를 만들거나 학생 선택 없이 정본을 초기화하지 않는다.
+        if not (root / "project.json").is_file():
+            raise ValueError("작업 기록이 있는 폴더가 필요함")
+        with core.Lock(root):
+            try:
+                value = write_progress(root)
+            except Exception:
+                # 갱신 실패 뒤 낡은 진행이 현재 값으로 표시되지 않게 한다.
+                remove_progress(root)
+                raise
+        print(json.dumps(value, ensure_ascii=False))
+        return 0
+    except Exception as error:
+        print("진행 파일을 처리하지 못함: " + str(error), file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":

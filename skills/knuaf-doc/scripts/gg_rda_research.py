@@ -80,9 +80,9 @@ def lookup(crop, region, **kw):
 # accepted ``manifest.json`` rows (see ``catalog_content_digest``).
 PINNED_CATALOG_AUTHORITIES = {
     "accepted-catalog-20260921/mafra.specialty.production.2024":
-        "0550d458a0747be9929b3205c1ff8ff27f15c6f4cff5d9f3cc12372e336c71c8",
+        "d43b85d3a90c14897deb40af6e1f1763dfc595a0053c965bf7c16bb3d57a80d0",
     "accepted-catalog-20260921/rda.econ.2025":
-        "0d2d0b1cfeceb2a7fb4b12f2c10e10882f6c1957404ff1834a6d1a41e19eca44",
+        "05ced09276ed9faee3f51d7496eca347df49906530025387646ca349edc52a09",
     # 2024 RDA income packs: digests re-pinned after the 2024 source backfill
     # (source on all 467 rows + 5 printed regional 2024 total/capital-interest
     # rows), keeping the authority ids other code/tests name (PR① precedent).
@@ -100,7 +100,7 @@ PINNED_CATALOG_AUTHORITIES = {
     "accepted-catalog-20261114/rda.income.national.2025":
         "c5ecb6189271c33d8dd41e5d14621dd4f034ee68c560d182b6dcdd6f37bf2587",
     "accepted-catalog-20261114/rda.income.regional.2025":
-        "3d82ad98932d4e8b7c4aca1b4710258a101a7fba738016a43b84a536b3c74298",
+        "8c16e2d14776547c13a0d3b5096724d5be1dd5ae69796b3eb77b4ec9b6694ed5",
 }
 
 

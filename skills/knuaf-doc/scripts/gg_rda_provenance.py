@@ -112,14 +112,14 @@ PINNED_PACKS = {
     "rda.econ.2025": {
         "pack_revision": "2025",
         "records_file_sha256":
-            "a5dbf6db2aed41254d2a05460d1950a3cdc2a8db51c0d54e82d035d91bd2253a",
-        "record_lines": 2707,
+            "9c977794d1cf9a63f0c21824307573e6a5c4351b10b9e2990ba60381eebad84c",
+        "record_lines": 2708,
         "relpath": "common/rda-econ-2025/records.jsonl",
     },
     "mafra.specialty.production.2024": {
         "pack_revision": "2024",
         "records_file_sha256":
-            "fc1c0b35d63a67dc5a794128f873272d72f0850e6d6470e7d9501270eafdd4be",
+            "c209a566d60053b570cd6128e689268d2f73aedc01f35fc447e9db63655ec266",
         "record_lines": 2988,
         "relpath": "majors/specialty_crops/"
                   "mafra-specialty-production-2024/records.jsonl",
@@ -134,7 +134,7 @@ PINNED_PACKS = {
     "rda.income.regional.2025": {
         "pack_revision": "2025",
         "records_file_sha256":
-            "406ac11feb62641a756de171c2c70af2ed2a89026be8c533568232bf98c41ab3",
+            "9343a49c365b8686a72849b4129e300a6d561ee37b268d8f20d19261f6358668",
         "record_lines": 49,
         "relpath": "common/rda-income-regional-2025/records.jsonl",
     },

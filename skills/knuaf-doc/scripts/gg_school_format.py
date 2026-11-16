@@ -64,7 +64,7 @@ class Styles:
         self.defaults_r = {}
         dd = root.find(QN("docDefaults"))
         if dd is not None:
-            self.defaults_p = props(dd.find("./" + QN("pPrDefault") + "/" + QN("pPr")), {"spacing", "ind", "jc"})
+            self.defaults_p = props(dd.find("./" + QN("pPrDefault") + "/" + QN("pPr")), {"spacing", "ind", "jc", "pageBreakBefore"})
             self.defaults_r = props(dd.find("./" + QN("rPrDefault") + "/" + QN("rPr")), {"sz", "rFonts", "b", "i", "bCs", "szCs"})
         for st in root.findall(QN("style")):
             sid = attr(st, "styleId")
@@ -72,7 +72,7 @@ class Styles:
                 continue
             self.styles[sid] = {
                 "based": attr(st.find(QN("basedOn")), "val"),
-                "p": props(st.find(QN("pPr")), {"spacing", "ind", "jc"}),
+                "p": props(st.find(QN("pPr")), {"spacing", "ind", "jc", "pageBreakBefore"}),
                 "outline": attr(st.find("./" + QN("pPr") + "/" + QN("outlineLvl")), "val"),
                 "r": props(st.find(QN("rPr")), {"sz", "rFonts", "b", "i", "bCs", "szCs"}),
                 "name": attr(st.find(QN("name")), "val"),
@@ -100,7 +100,7 @@ class Styles:
         for _, st in self.chain(sid):
             pprops = merge_props(pprops, st["p"])
             rprops = merge_props(rprops, st["r"])
-        pprops = merge_props(pprops, props(direct, {"spacing", "ind", "jc"}))
+        pprops = merge_props(pprops, props(direct, {"spacing", "ind", "jc", "pageBreakBefore"}))
         st = self.styles.get(sid, {})
         outline = None
         # outlineLvl is style metadata, not a paragraph property in our merge set.
@@ -190,8 +190,25 @@ def paragraph_record(i, p, ctx, styles):
     fonts = sorted({f for f in (attr(r.get("rFonts"), "eastAsia") or attr(r.get("rFonts"), "ascii") or attr(r.get("rFonts"), "hAnsi") for r in runs if r.get("rFonts")) if f})
     bold_values = sorted({"on" if ("b" in r and attr(r.get("b"), "val", "true") not in {"0", "false", "off", "none"}) else "off" for r in runs})
     spacing = pp.get("spacing", {}); ind = pp.get("ind", {}); jc = pp.get("jc", {})
+    # ``pageBreakBefore`` rides on the same merged pPr: Word honours a style-level
+    # break as well as a direct one, and an explicit `w:val="0"` cancels it.
+    break_node = pp.get("pageBreakBefore")
+    page_break = break_node is not None and attr(break_node, "val", "true") not in {
+        "0", "false", "off", "none"}
+    # Field instructions tell a TOC row (`PAGEREF`) from the title it points at,
+    # and a paragraph-level `sectPr` marks where a section ends — both are
+    # needed to tell the dairy front matter from its table of contents.
+    fields = sorted({(attr(node, "instr") or "").strip().split()[0].upper()
+                     for node in p.iter(QN("fldSimple"))
+                     if (attr(node, "instr") or "").strip()} |
+                    {(node.text or "").strip().split()[0].upper()
+                     for node in p.iter(QN("instrText"))
+                     if (node.text or "").strip()})
+    sect_break = (p.find(QN("pPr")) is not None
+                  and p.find(QN("pPr")).find(QN("sectPr")) is not None)
     return {
         "index": i, "location": location(i, ctx), "text": txt[:160],
+        "field_instructions": fields, "section_break": sect_break,
         "bookmark_names": [attr(b, "name") for b in p.findall(".//" + QN("bookmarkStart")) if attr(b, "name")],
         "style_id": sid, "style_name": meta.get("name"), "outline_level": meta.get("outline_level"), "table": bool(ctx.get("table")),
         "size_half_points": size_values, "fonts_declared": fonts,
@@ -199,6 +216,9 @@ def paragraph_record(i, p, ctx, styles):
         "line": attr(spacing, "line"), "line_rule": attr(spacing, "lineRule"),
         "first_line_twips": attr(ind, "firstLine"), "left_twips": attr(ind, "left"), "hanging_twips": attr(ind, "hanging"),
         "alignment": attr(jc, "val", "left"),
+        "space_before_twips": attr(spacing, "before"),
+        "space_after_twips": attr(spacing, "after"),
+        "page_break_before": page_break,
     }
 
 def relationship_targets(archive, names):
@@ -224,12 +244,97 @@ def relationship_targets(archive, names):
     return targets
 
 
-def footer_record(archive, names, targets, sect_pr, cache, inherited):
+def page_fields(root):
+    """Count simple PAGE fields for the unchanged food-crops measurement."""
+    return sum(1 for field in root.iter(QN("fldSimple"))
+               if re.fullmatch(r"PAGE\b.*", (attr(field, "instr") or "").strip().upper()))
+
+
+def page_field_nodes(root):
+    """Collect dairy PAGE anchors, joining each complex field's instruction.
+
+    Keep nested fields separate and stop collecting instruction text at the
+    separator. Both the field count and label walk use these same anchors.
+    """
+    fields, frames = set(), []
+    for node in root.iter():
+        if node.tag == QN("fldSimple"):
+            if re.fullmatch(r"PAGE\b.*", (attr(node, "instr") or "").strip().upper()):
+                fields.add(node)
+        elif node.tag == QN("fldChar"):
+            kind = (attr(node, "fldCharType") or "").lower()
+            if kind == "begin":
+                frames.append([node, [], True])
+            elif kind == "separate" and frames:
+                frames[-1][2] = False
+            elif kind == "end" and frames:
+                anchor, pieces, _ = frames.pop()
+                if re.fullmatch(r"PAGE\b.*", "".join(pieces).strip().upper()):
+                    fields.add(anchor)
+        elif node.tag == QN("instrText") and frames and frames[-1][2]:
+            frames[-1][1].append(node.text or "")
+    return fields
+
+
+def page_label(part_root, fields):
+    """Measure the `- ` + PAGE + ` -` decoration and run size of a footer.
+
+    Only the paragraph holding a collected PAGE anchor is measured. Text in
+    the field result is the printed number, not its prefix or suffix. Field
+    instruction recognition is shared with the count, including split runs.
+    """
+    for paragraph in part_root.iter(QN("p")):
+        prefix, suffix, frames, found = [], [], [], [False]
+
+        def walk(node):
+            for child in node:
+                local = child.tag.rsplit("}", 1)[-1] if isinstance(child.tag, str) else ""
+                if local == "fldSimple":
+                    page = child in fields
+                    found[0] = found[0] or page
+                    # A simple field's children are already its result text.
+                    frames.append([page, "result"])
+                    walk(child)
+                    frames.pop()
+                elif local == "fldChar":
+                    kind = (attr(child, "fldCharType") or "").lower()
+                    if kind == "begin":
+                        page = child in fields
+                        frames.append([page, "instr"])
+                        found[0] = found[0] or page
+                    elif kind == "separate" and frames:
+                        frames[-1][1] = "result"
+                    elif kind == "end" and frames:
+                        frames.pop()
+                elif local == "t":
+                    if any(page and phase == "result" for page, phase in frames):
+                        continue  # the page number itself, not decoration
+                    (suffix if found[0] else prefix).append(child.text or "")
+                else:
+                    walk(child)  # w:r and wrappers hold the field parts
+
+        walk(paragraph)
+        if not found[0]:
+            continue
+        sizes = sorted({attr(runner.find(QN("rPr")).find(QN("sz")), "val")
+                        for runner in paragraph.iter(QN("r"))
+                        if runner.find(QN("rPr")) is not None
+                        and runner.find(QN("rPr")).find(QN("sz")) is not None})
+        return {"prefix": "".join(prefix).replace("\u00a0", " "),
+                "suffix": "".join(suffix).replace("\u00a0", " "),
+                "size_half_points": sizes}
+    return None
+
+
+def footer_record(archive, names, targets, sect_pr, cache, inherited, measure_label=False):
     """Measure one section's bottom footer without rewriting anything.
 
     A section without ``w:footerReference`` shows the footer of the section
     before it, so ``linked_to_previous`` reports that inheritance rather than
     claiming the first section inherits something.
+
+    ``measure_label`` adds the `- 1 -` decoration record. It stays off unless a
+    major asks for it: the food-crops JSON must keep its exact bytes.
     """
     refs = sect_pr.findall(QN("footerReference"))
     if not refs:
@@ -240,14 +345,22 @@ def footer_record(archive, names, targets, sect_pr, cache, inherited):
               "page_fields": None}
     if part is None or part not in names:
         return record
-    if part not in cache:
+    # The cache key carries the mode: a footer measured for food-crops counts
+    # only the simple field form, and reusing that count for dairy (or the
+    # reverse) would silently publish the wrong number.
+    key = (part, measure_label)
+    if key not in cache:
         try:
             root = ET.fromstring(archive.read(part))
         except (BadZipFile, ET.ParseError) as e:
             raise ProbeError(f"invalid footer OOXML {part}: {e}") from e
-        cache[part] = sum(1 for field in root.iter(QN("fldSimple"))
-                          if (attr(field, "instr") or "").strip().upper().startswith("PAGE"))
-    record["page_fields"] = cache[part]
+        if measure_label:
+            fields = page_field_nodes(root)
+            cache[key] = {"page_fields": len(fields),
+                          "page_label": page_label(root, fields)}
+        else:
+            cache[key] = {"page_fields": page_fields(root)}
+    record.update(cache[key])
     return record
 
 
@@ -319,6 +432,213 @@ def food_crops_violations(sections):
     return out
 
 
+# --- 낙농 양식 (DESIGN-v1 §F-0) ------------------------------------------
+# 식량작물 표와 같은 원칙: 기대값을 빌더 프로필에서 읽지 않고 여기 따로 적는다.
+# 빌더가 같이 틀리면 검사기가 그것을 못 잡기 때문이다(I-07).
+DAIRY_PAGE_NUMBER_RELATED = ("OG-125",)
+# 번호 단계 크기(반포인트). 작성요령 5절 8항 — Ⅰ.20/1.18/가.16/1)15/가)14/(1)·(가)12.
+DAIRY_LEVEL_HALF_POINTS = {1: 40, 2: 36, 3: 32, 4: 30, 5: 28, 6: 24, 7: 24,
+                           8: 24, 9: 24}
+DAIRY_LEVEL_RELATED = {1: "OG-041", 2: "OG-042", 3: "OG-043", 4: "OG-044",
+                       5: "OG-045", 6: "OG-046", 7: "OG-047", 8: "OG-048",
+                       9: "OG-049"}
+# 앞부분 특수 쪽 제목 22 pt(44 반포인트) 굵게. 작성요령은 목차·표 목차·그림
+# 목차까지 같은 값을 말하지만, 지금 빌더는 목차 제목을 굵기 없이(22 pt) 내고
+# 표·그림 목차는 20 pt(40)로 낸다. 그 셋을 여기서 22 굵게로 요구하면 정상
+# 산출물이 통째로 막히므로, 이 검사기는 앞부분 양식이 직접 그리는 제목만
+# 잰다. 격차는 impl/f10d/RESULT.md에 적고 빌더 쪽 단위에서 닫는다.
+DAIRY_FRONT_TITLE_HALF_POINTS = "44"
+DAIRY_FRONT_TITLES = ("요약", "감사의 글", "학부모 동의서")
+# 각 특수 쪽 제목이 서야 하는 구역(DESIGN-v1 §F-0): 학부모 동의서는 무번호
+# 겉표지 구역, 요약·감사의 글은 로마 대문자 앞부분 구역. 목차·표 목차·그림
+# 목차도 앞부분 구역이지만 제목 값이 빌더와 어긋나 이 검사기가 아직 안 잰다.
+DAIRY_FRONT_TITLE_SECTIONS = {"학부모 동의서": 1, "요약": 2, "감사의 글": 2}
+# 구역 배치 자체는 작성요령 행이 아니라 견본 실측(F-0)에서 온 값이다. 지침이
+# 말하는 것은 "앞부분은 로마자, 본문은 아라비아"뿐이므로 그 행만 인용한다.
+DAIRY_FRONT_RELATED = DAIRY_PAGE_NUMBER_RELATED
+# 장 새 쪽: 제목 위아래 1행 = 19.2 pt = 384 twips.
+DAIRY_HEADING_SPACING_TWIPS = ("384", "384")
+DAIRY_PAGE_LABEL = " -"
+DAIRY_PAGE_LABEL_PT = "18"  # 반포인트(twips 아님) — run `w:sz`
+
+
+def dairy_expected_sections():
+    """The dairy DOCX form, written out independently of the builder.
+
+    세 구역 모두 여백이 같다(작성요령 5절: 위·아래·좌·우 30 mm, 머리 0,
+    꼬리 10 mm). twips = mm x 56.7.
+    """
+    page = {"top": "1701", "right": "1701", "bottom": "1701", "left": "1701",
+            "header": "0", "footer": "567", "gutter": "0"}
+    return [
+        {"role": "cover", "pg_mar": dict(page), "pg_num_type": None,
+         "footer": {"has_reference": False, "page_fields": 0}},
+        {"role": "front", "pg_mar": dict(page),
+         "pg_num_type": {"start": "1", "fmt": "upperRoman"},
+         "footer": {"has_reference": True, "page_fields": 1}},
+        {"role": "body", "pg_mar": dict(page),
+         "pg_num_type": {"start": "1", "fmt": "decimal"},
+         "footer": {"has_reference": True, "page_fields": 1}},
+    ]
+
+
+def dairy_level_of(rec):
+    """제목 스타일이 말하는 1~9단계. 스타일이 없으면 None(제목 아님).
+
+    낙농은 1단계가 `1.`(현 생성기)과 `Ⅰ.`(작성요령) 둘 다 온다(설계 F-0).
+    그래서 장 판정은 글자 모양이 아니라 스타일 증거로만 한다: 본문 산문이
+    우연히 `1), 가)`로 시작해도 장·절로 승격되지 않는다(장 판정 음성).
+    단계 크기(작성요령 5절 8항)는 스타일이 단계를 밝힌 문단에만 요구한다.
+    """
+    name = (rec.get("style_name") or "").lower()
+    match = re.search(r"heading\s*([1-9])", name)
+    if match:
+        return int(match.group(1))
+    # 기본 서식의 styleId는 `<단계>1` 꼴이다(1·21·31 = 1~3단계).
+    legacy = {"1": 1, "21": 2, "31": 3}
+    if rec.get("style_id") in legacy:
+        return legacy[rec["style_id"]]
+    level = rec.get("outline_level")
+    if level is not None and str(level).isdigit() and 0 <= int(level) < 9:
+        return int(level) + 1
+    return None
+
+
+def dairy_violations(sections, records):
+    """Compare a dairy DOCX with the dairy form; report, never fix."""
+    expected = dairy_expected_sections()
+    out = []
+
+    def bad(code, related, location, want, got, message):
+        out.append({"requirement_id": code, "code": code, "location": location,
+                    "expected": want, "actual": got, "message": message,
+                    "related": list(related), "probe_local": True})
+
+    if len(sections) != len(expected):
+        bad("dairy.format.section.count", (),
+            "document.xml:sectPr", len(expected), len(sections),
+            "낙농 구역이 겉표지·앞부분·본문 3개가 아님")
+        return out
+    for section, want in zip(sections, expected):
+        role = want["role"]
+        place = f"document.xml:sectPr#{section['index']}"
+        for key in PAGE_MAR_KEYS:
+            if section["pg_mar"][key] != want["pg_mar"][key]:
+                bad(f"dairy.format.margin.{role}_{key}", [MARGIN_RELATED[key]],
+                    place, want["pg_mar"][key], section["pg_mar"][key],
+                    f"{role} 구역 {key} 여백이 낙농 양식 값(위·아래·좌·우 30, "
+                    f"머리 0, 꼬리 10 mm)과 다름")
+        want_count = 0 if want["pg_num_type"] is None else 1
+        got_count = section.get("pg_num_type_count", want_count)
+        if section["pg_num_type"] != want["pg_num_type"] or got_count != want_count:
+            bad(f"dairy.format.page_number.{role}", DAIRY_PAGE_NUMBER_RELATED, place,
+                dict(want["pg_num_type"] or {}, count=want_count),
+                dict(section["pg_num_type"] or {}, count=got_count),
+                f"{role} 구역 pgNumType이 낙농 양식 값(start·fmt·개수)과 다름")
+        footer = section["footer"]
+        if want["footer"]["has_reference"] != footer["has_reference"]:
+            bad(f"dairy.format.footer.{role}", DAIRY_PAGE_NUMBER_RELATED, place,
+                {"has_reference": want["footer"]["has_reference"]},
+                {"has_reference": footer["has_reference"], "part": footer.get("part")},
+                ("겉표지 구역에는 footerReference가 없어야 함(번호 미표시)"
+                 if not want["footer"]["has_reference"] else
+                 "이 구역에 footerReference가 있어야 함"))
+        elif want["footer"]["page_fields"] != footer["page_fields"]:
+            bad(f"dairy.format.footer.{role}", DAIRY_PAGE_NUMBER_RELATED, place,
+                {"page_fields": want["footer"]["page_fields"]},
+                {"page_fields": footer["page_fields"], "part": footer.get("part")},
+                "구역 바닥글에 PAGE 필드가 정확히 1개 있어야 함")
+        # 쪽번호 꼴 `- 1 -`·9 pt. 겉표지는 바닥글이 없으므로 건너뛴다.
+        if want["footer"]["has_reference"]:
+            label = footer.get("page_label")
+            if label is None:
+                bad(f"dairy.format.page_label.{role}", DAIRY_PAGE_NUMBER_RELATED, place,
+                    {"prefix": "- ", "suffix": DAIRY_PAGE_LABEL}, None,
+                    "쪽번호 꼴과 글자 크기를 판독할 수 없음")
+                continue
+            if label.get("prefix") != "- " or label.get("suffix") != DAIRY_PAGE_LABEL:
+                bad(f"dairy.format.page_label.{role}", DAIRY_PAGE_NUMBER_RELATED, place,
+                    {"prefix": "- ", "suffix": DAIRY_PAGE_LABEL},
+                    {"prefix": label.get("prefix"), "suffix": label.get("suffix")},
+                    "쪽번호 꼴이 `- 1 -`가 아님")
+            if label.get("size_half_points") != [DAIRY_PAGE_LABEL_PT]:
+                bad(f"dairy.format.page_label_size.{role}", DAIRY_PAGE_NUMBER_RELATED,
+                    place, {"size_half_points": [DAIRY_PAGE_LABEL_PT]},
+                    {"size_half_points": label.get("size_half_points")},
+                    "쪽번호 글자 크기가 9 pt가 아님")
+
+    body = [r for r in records if r["kind"] == "body" and not r["table"]
+            and r["text"].strip()]
+    # 제목 후보는 글자 모양으로도 넓게 잡지만(장 판정 음성), 단계는 스타일
+    # 증거가 있을 때만 정해진다 — 산문이 `1)`로 시작해도 level이 없어
+    # 크기·간격·쪽나눔 검사 대상이 되지 않는다.
+    headings = [r for r in body if is_heading(r["style_id"], r["text"].strip(), r)]
+    levels = [(r, dairy_level_of(r)) for r in headings]
+    # 1) 단계별 크기(작성요령 5절 8항).
+    for rec, level in levels:
+        want = DAIRY_LEVEL_HALF_POINTS.get(level)
+        if want is None:
+            continue
+        if rec["size_half_points"] != [str(want)]:
+            bad(f"dairy.format.heading_size.{level}", [DAIRY_LEVEL_RELATED[level]],
+                rec["location"], {"size_half_points": [str(want)]},
+                {"size_half_points": rec["size_half_points"]},
+                f"{level}단계 제목 크기가 낙농 양식({want/2:g} pt)과 다름")
+    # 2) 제목 위아래 1행(19.2 pt = 384 twips).
+    for rec, level in levels:
+        if level is None:
+            continue
+        got = (rec.get("space_before_twips"), rec.get("space_after_twips"))
+        if got != DAIRY_HEADING_SPACING_TWIPS:
+            bad("dairy.format.heading_spacing", ["OG-043"], rec["location"],
+                {"before": DAIRY_HEADING_SPACING_TWIPS[0],
+                 "after": DAIRY_HEADING_SPACING_TWIPS[1]},
+                {"before": got[0], "after": got[1]},
+                "제목 위아래 띄움이 1행(19.2 pt)이 아님")
+    # 3) 장 새 쪽: 첫 1단계 제목만 빼고 모두 `pageBreakBefore`.
+    first = next((i for i, (_r, lv) in enumerate(levels) if lv == 1), None)
+    for position, (rec, level) in enumerate(levels):
+        if level != 1 or position == first:
+            continue
+        if not rec.get("page_break_before"):
+            bad("dairy.format.chapter_break", ["OG-041"], rec["location"],
+                {"page_break_before": True}, {"page_break_before": False},
+                "1단계 제목이 새 쪽에서 시작하지 않음")
+    # 4) 앞부분 특수 쪽 제목 22 pt 굵게, 그리고 서야 할 구역.
+    # 목차 줄(`요약?`)은 글자가 같아도 제목이 아니다 — 필드(PAGEREF)가 붙고
+    # 제목 스타일이 없다. 둘 다로 걸러야 목차가 있는 정상 산출물이 안 막힌다.
+    section_at, current = {}, 1
+    for rec in records:
+        section_at[rec["index"]] = current
+        if rec.get("section_break"):
+            current += 1
+    for rec in records:
+        if rec.get("table") or rec.get("field_instructions"):
+            continue
+        text = re.sub(r"\s+", " ", rec["text"]).strip()
+        if text not in DAIRY_FRONT_TITLES:
+            continue
+        if not is_heading(rec["style_id"], text, rec):
+            continue
+        if rec["size_half_points"] != [DAIRY_FRONT_TITLE_HALF_POINTS]:
+            bad("dairy.format.front_title_size", ["OG-054"], rec["location"],
+                {"size_half_points": [DAIRY_FRONT_TITLE_HALF_POINTS]},
+                {"size_half_points": rec["size_half_points"]},
+                "앞부분 특수 쪽 제목이 22 pt가 아님")
+        if rec["bold"] != ["on"]:
+            bad("dairy.format.front_title_bold", ["OG-054"], rec["location"],
+                {"bold": ["on"]}, {"bold": rec["bold"]},
+                "앞부분 특수 쪽 제목이 굵게가 아님")
+        want_section = DAIRY_FRONT_TITLE_SECTIONS[text]
+        if section_at.get(rec["index"]) != want_section:
+            bad("dairy.format.front_title_section", DAIRY_FRONT_RELATED,
+                rec["location"], {"section": want_section},
+                {"section": section_at.get(rec["index"])},
+                f"`{text}` 제목이 {'겉표지' if want_section == 1 else '앞부분'}"
+                f" 구역(sectPr#{want_section})에 있지 않음")
+    return out
+
+
 def check(path: Path, *, output_json: Path | None = None, major_id: str | None = None):
     if not path.is_file(): raise ProbeError(f"missing DOCX: {path}")
     if output_json is not None and output_json.resolve() == path.resolve():
@@ -343,7 +663,8 @@ def check(path: Path, *, output_json: Path | None = None, major_id: str | None =
                 # 덮어써 Word 화면은 다르게 보이므로 개수도 함께 잰다.
                 nums = sp.findall(QN("pgNumType"))
                 num = nums[0] if nums else None
-                footer = footer_record(z, names, targets, sp, footer_cache, seen_footer)
+                footer = footer_record(z, names, targets, sp, footer_cache, seen_footer,
+                                       measure_label=major_id == "dairy")
                 seen_footer = seen_footer or footer["has_reference"]
                 measured_sections.append({
                     "index": si,
@@ -435,6 +756,11 @@ def check(path: Path, *, output_json: Path | None = None, major_id: str | None =
     if major_id == "food_crops":
         food_crops_format = food_crops_violations(sections)
         violations.extend(food_crops_format)
+    # 낙농도 같은 방식: 이 전공일 때만 키를 만들고, 다른 전공 결과는 그대로 둔다.
+    dairy_format = None
+    if major_id == "dairy":
+        dairy_format = dairy_violations(sections, records)
+        violations.extend(dairy_format)
     for rec in body_records:
         if rec["size_half_points"] != ["24"]:
             add("OG-005","body_size",rec,{"size_half_points":["24"]},rec["size_half_points"],"본문 run의 상속 계산 글자 크기가 12 pt가 아님")
@@ -463,7 +789,15 @@ def check(path: Path, *, output_json: Path | None = None, major_id: str | None =
         heading_summary[g]={"count":len(items),"size_half_points":dict((str(k),v) for k,v in sizes.items()),"fonts_declared":dict((str(k),v) for k,v in fonts.items()),"bold_declarations":dict((str(k),v) for k,v in bold.items()),"font_installation":"not_checked"}
     # A heading requirement is visual: report measured failures but do not claim
     # installed-font or rendered-bold status from OOXML alone.
-    for g,req,allowed in (("large","OG-015",{"40"}), ("middle","OG-016",{"26","28","30","32","34","36"}), ("sub","OG-016",{"26","28","30","32","34","36"})):
+    # 낙농 6·7단계(`(1)`·`(가)`)는 작성요령 5절 8항이 12 pt(24)로 못박는다.
+    # 공용 `sub` 범위(26~36)에 24를 더하지 않으면 규격대로 만든 낙농 산출물이
+    # 여기서 막힌다 — 낙농은 `dairy_violations`가 단계마다 값을 따로 잰다.
+    sub_sizes = {"26", "28", "30", "32", "34", "36"}
+    if major_id == "dairy":
+        sub_sizes = sub_sizes | {"24"}
+    for g, req, allowed in (("large", "OG-015", {"40"}),
+                            ("middle", "OG-016", {"26", "28", "30", "32", "34", "36"}),
+                            ("sub", "OG-016", sub_sizes)):
         for rec in heading_groups[g]:
             if not rec["size_half_points"] or not set(rec["size_half_points"]).issubset(allowed): add(req,"heading_size",rec,sorted(allowed),rec["size_half_points"],"제목 크기가 지침 범위를 벗어남")
             if rec["fonts_declared"] != ["신명조"]: add(req,"heading_font",rec,"신명조",rec["fonts_declared"],"제목 선언 글꼴이 신명조가 아님")
@@ -490,13 +824,17 @@ def check(path: Path, *, output_json: Path | None = None, major_id: str | None =
       "OG-017":{"status":"blocked" if any(v["requirement_id"]=="OG-017" for v in violations) else "pass_with_notes","body_font":"신명조 declared; installation not_checked","body_paragraph_count":len(body_records)},
     }
     result={"schema":"gg-school-format-probe/v1","status":"blocked" if violations else "pass_with_notes","input":{"path":str(path),"sha256":sha},"parts":{"body_paragraphs":len(body_records),"table_paragraphs":len(table_records),"front_paragraphs":len(front_records),"summary_paragraphs":len(summary_records),"summary_prose_paragraphs":len(summary_prose),"toc_paragraphs":len(toc_records)},"checks":{"machine":machine,"visual":visual},"heading_styles":heading_summary,"summary_prose_measurement":{"count":len(summary_prose),"size_half_points":{str(k):v for k,v in Counter(tuple(r["size_half_points"]) for r in summary_prose).items()},"line":{str(k):v for k,v in Counter((r["line"],r["line_rule"]) for r in summary_prose).items()},"first_line_twips":dict(Counter(r["first_line_twips"] for r in summary_prose)),"alignment":dict(Counter(r["alignment"] for r in summary_prose))},"violations":violations,"sections":sections,"food_crops_format":food_crops_format,"notes":["OOXML 선언과 style inheritance를 측정했으며 installed font와 실제 렌더링은 이 helper가 주장하지 않음.","표지·목차·표 셀은 본문 12 pt/160%/2칸 판정에서 제외하고 별도 계수로 보존함."]}
+    if dairy_format is not None:
+        # 낙농 키는 낙농 검사에서만 만든다. 다른 전공 JSON은 키 자체가 없어
+        # 한 글자도 바뀌지 않는다(식량작물 기준선 보존).
+        result = {**result, "dairy_format": dairy_format}
     if output_json:
         output_json.parent.mkdir(parents=True,exist_ok=True); output_json.write_text(json.dumps(result,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
     return result
 
 def main(argv=None):
     ap=argparse.ArgumentParser(); ap.add_argument("docx",type=Path); ap.add_argument("--out",type=Path)
-    ap.add_argument("--major",default=None,help="전공 id (예: food_crops) — 주어지면 그 전공 양식도 대조")
+    ap.add_argument("--major",default=None,help="전공 id (food_crops·dairy) — 주어지면 그 전공 양식도 대조")
     ns=ap.parse_args(argv)
     try: result=check(ns.docx,output_json=ns.out,major_id=ns.major)
     except (ProbeError,OSError,BadZipFile) as e:

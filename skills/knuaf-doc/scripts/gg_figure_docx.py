@@ -62,6 +62,7 @@ docx 경로 한 줄만 쓴다).
 캡션 `그림 N. 제목 (출처 : 기관)`이고, 출처는 그림 줄이 아니라 캡션에 있다
 (`gg_figure._block_for`). 캡션 문단이 없으면 `gg_document.check`가
 `missing_caption: 그림 객체의 캡션 없음`을 낸다.
+fetch 승인 그림은 캡션 다음 문단에 `주 : 원문 주소 …` 한 줄을 둔다(학생 직접 넣기는 제외).
 
 계약(CONTRACT §6):
 - `KNUAF_FIGURE_HOME`이 있으면 토큰 `![](app-figure:<sha256>)`은
@@ -214,6 +215,36 @@ def image_check(ref, home=_ENV):
         return True, None            # 앱 밖: 자리 표시로 남기므로 통과
     _, issue = resolve_token(sha, env_home)
     return True, issue
+
+
+def block_issue(nodes, index, home=_ENV):
+    """앱 안 토큰은 별도 출처 캡션·동일 원문 주소 주 문단이 있어야 한다."""
+    sha = token_sha(nodes[index].get("path"))
+    env_home = _resolve_home(home)
+    if sha is None or env_home is None:
+        return None
+    receipt = receipt_for(env_home, sha)
+    if receipt is None or (receipt.get("image") or {}).get("verdict") != "approved":
+        return "figure_unverified"
+    page = receipt.get("page")
+    url = page.get("url") if isinstance(page, dict) else None
+    if not isinstance(url, str) or not url or any(c.isspace() for c in url):
+        return "figure_source_note"
+    if index + 2 >= len(nodes):
+        return "figure_source_note"
+    caption, note = nodes[index + 1:index + 3]
+    import gg_document
+    _, source = gg_document.split_caption_credit(caption.get("text", ""))
+    if (caption["kind"] != "caption" or caption.get("label") != "그림"
+            or not source):
+        return "figure_source_note"
+    prefix = "주 : 원문 주소 "
+    text = note.get("text", "")
+    if (note["kind"] != "paragraph" or note.get("list_item")
+            or not text.startswith(prefix)
+            or text[len(prefix):].split()[:1] != [url]):
+        return "figure_source_note"
+    return None
 
 
 def student_figures(refs):

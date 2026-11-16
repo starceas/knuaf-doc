@@ -74,7 +74,7 @@ BASELINE_SEMANTIC_DIGEST = {
     "rda.income.regional.2024":
         "6e320a7ecca67f5e6789bdcce4a43b87023c072780895a568d5b4e720a8d1a7b",
     "mafra.specialty.production.2024":
-        "0b636815fa11a515929f4679a802d4d6756686096e37991fbf623fd5ff31c741",
+        "847d75b3a6414c039cc0e58e9e218abc98c6b1f10bd17362acfe7fcb380b412d",
     "official-writing-guide-pdf":
         "aac6d622b639499990d3d901f3def8e72d8dd5e575724333b955210dd24bc7b5",
     "official-writing-guide-hwp":

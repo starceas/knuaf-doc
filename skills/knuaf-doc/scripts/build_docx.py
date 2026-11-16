@@ -310,6 +310,11 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
     # 아라비아 `1.`~`5.`, 낙농은 로마 `Ⅰ.`). 프로필이 없으면 지금까지처럼
     # 전공 없이 읽어 출력을 바꾸지 않는다.
     nodes = parse(md_text, major_id=major_id if profile else None)
+    for index, node in enumerate(nodes):
+        if node["kind"] == "image":
+            issue = gg_figure_docx.block_issue(nodes, index)
+            if issue:
+                raise ValueError("blocked: " + issue)
 
     last_prose = None
     # 식량작물 장 시작 쪽 나눔 대상(본문 첫 장은 새 구역이라 뺀다).
@@ -656,8 +661,9 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
                 n['_bookmark_id']=idx
         table_entries=[(split_caption_credit(n['text'])[0],n['_bookmark'],2) for n in body_nodes if n['kind']=='caption' and n.get('label')=='표']
         figure_entries=[(split_caption_credit(n['text'])[0],n['_bookmark'],2) for n in body_nodes if n['kind']=='caption' and n.get('label')=='그림']
-        # 표·그림 목차는 프로필 전공과 낙농이 함께 나열한다. 낙농은 이 단위
-        # 에서 아직 프로필 경로를 타지 않으므로(바이트 고정) 이름으로 남긴다.
+        # 표·그림 목차는 프로필 전공과 낙농이 함께 나열한다. 낙농은 F9e에서
+        # 게이트 안으로 들어왔지만, 목차에 표·그림 목차를 늘 두는 것은 이
+        # 전공의 별도 규칙이라 이름으로 남긴다(`dairy_lists`).
         dairy_lists = authorization.major_id in ("dairy", "food_crops")
         entries=[]
         if profile and profile.roman_front:
@@ -670,8 +676,11 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
         if table_entries or dairy_lists: entries.append(('표 목차','gg_tables',0))
         if figure_entries or dairy_lists: entries.append(('그림 목차','gg_figures',0))
         entries += [(n['text'],n['_bookmark'],n['level']) for n in body_nodes if n['kind']=='heading' and n['level']<=2]
+        # 식량작물 목차는 기존 보통 굵기 바이트를 유지한다. 낙농은 제목 표를 따른다.
         contents(doc,entries,font,title_size=(
-            profile.toc_title_pt if profile else 20))
+            profile.toc_title_pt if profile else 20),
+            title_bold=(front_title(profile, '목차')[1]
+                        if profile and profile.major_id != 'food_crops' else False))
         # S01 counts cover, shared forms and contents before the summary (iv
         # with a one-page contents). Continue rather than pinning iv: an
         # overflowing contents page must also count. Other majors stay unchanged.
@@ -720,12 +729,14 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
                 for n in prelim: render_node(n,allow_soft_wrap=True)
             if table_entries or dairy_lists:
                 if prelim: doc.add_page_break()
+                size, bold = front_title(profile, '표 목차')
                 contents(doc,table_entries,font,'표 목차','gg_tables',9002,
-                         title_size=20)
+                         title_size=size, title_bold=bold)
             if figure_entries or dairy_lists:
                 if prelim or table_entries or dairy_lists: doc.add_page_break()
+                size, bold = front_title(profile, '그림 목차')
                 contents(doc,figure_entries,font,'그림 목차','gg_figures',9003,
-                         title_size=20)
+                         title_size=size, title_bold=bold)
         new_numbered_section('decimal', margin_mm=(
             profile.section_formats[2]['margin_mm'] if profile else None))
     else:

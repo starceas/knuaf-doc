@@ -20,10 +20,10 @@ CLI: `python3 scripts/gg.py rda-lookup` / `rda-candidates` / `rda-propose` / `rd
   ([majors.md](majors.md)의 candidate 계약). 현재 팩은 적용 적합성 확장 축
   선언(`evidence`)을 갖지 않으므로 승인되는 레코드가 없다 — 조회 결과는
   답변 보조·되물음 재료로만 쓴다.
-- 검증 상태 실측 예: D5(내용연수 셀 정정, 단계 P15) 이후 rda.econ.2025의
-  관측 상태 합계는 verified 105 / exploratory 131 / quarantined 2,471이다
-  (repo 루트 `docs/validation/d5-rda-useful-life.json`). 검증이 안 된 값을 학생
-  `user_answer`나 재무 확정 입력으로 쓰지 않는다.
+- 검증 상태: PR⑥ 원문 종자량 25행 추가 뒤 rda.econ.2025의 관측 상태 합계는
+  verified 105 / exploratory 156 / quarantined 2,447이다. D5 당시 수치는
+  역사 영수증(repo 루트 `docs/validation/d5-rda-useful-life.json`)에 보존한다.
+  검증이 안 된 값을 학생 `user_answer`나 재무 확정 입력으로 쓰지 않는다.
 
 ## 1. 언제 쓰나
 
@@ -38,26 +38,28 @@ CLI: `python3 scripts/gg.py rda-lookup` / `rda-candidates` / `rda-propose` / `rd
 - 작성 경로는 `rda-candidates <폴더>`다 — 정본의 `common.major_id` 바인딩에서
   전공을 읽는다. `rda-lookup`은 전공을 선택 인자로 받는 원자료 감사용 조회다.
 
-## 2. 승격된 팩 (`references/benchmark-packs/catalog.json` 기준, 2026-11-14 실측)
+## 2. 승격된 팩 (`references/benchmark-packs/catalog.json` 기준, PR⑥ 반영)
 
 | 팩 | ID | record 수 | 출처 |
 |---|---|---|---|
 | 전국 농가소득 2024 | `rda.income.national.2024` | 102 | rda-income.xlsx — 전국 평균 |
 | 시도별 농가소득 2024 | `rda.income.regional.2024` | 365 | rda-income.xlsx — 도별 평균 |
-| 농업경영조사 2025 | `rda.econ.2025` | 2,707 | farm-management.xlsx — 시트·행·셀 단위 |
+| 농업경영조사 2025 | `rda.econ.2025` | 2,708 | farm-management.xlsx — 시트·행·셀 단위 |
 | 특용작물 생산실적 2024 | `mafra.specialty.production.2024` | 2,988 | mafra-specialty-production-2024.json — 특용·약용작물 전국·시도·시장 |
 | 전국 농가소득 2025 | `rda.income.national.2025` | 104 | 농산물소득자료집(2025년산) — 인용 색인 경유 |
 | 시도별 농가소득 2025 | `rda.income.regional.2025` | 49 | 농산물소득자료집(2025년산) — 인용 색인 경유 |
 
-6개 팩 합계 6,315건 (기존 카탈로그의 `record_count`와 무관 — 실제 레코드 수).
+6개 팩 합계 6,316건 (기존 카탈로그의 `record_count`와 무관 — 실제 레코드 수).
+PR⑤에서 원문에 없는 24행을 삭제했다. 승인 경로 영향은 0이며, 미검증 조회에서 원문에 없는 종자량 7작목 값이 사라졌다.
+PR⑥에서 원문 p126·p127 종자량 25행을 탐색용(exploratory)으로 덧붙였다. PR⑤ 뒤 7작목의 `not_found`가 원문 값으로 채워지고, 나머지 18행은 새 미검증 후보로 나타난다. 승인 경로 영향은 0이며 유령 값은 복원하지 않는다.
 공통 소득표(전국·시도)는 소득·가계비·자가노동비용 계열이고,
 특용작물 팩은 생산실적·공식시장가격·관측가격을, econ 팩은 농업경영 비용·
 가격·시계열을 담는다. 학교 양식 입력칸으로의 매핑은 없다 — 이 조회는 답변 보조다.
 
-**행별 출처(`source`) 상태 (2026-11-14, main 5f132a5 실측).** 소득 팩 4개
+**PR③ 당시 행별 출처(`source`) 상태 (2026-11-14, main 5f132a5 실측; 아래 비교 수치는 역사 기록).** 소득 팩 4개
 (2024·2025 전국·지역, 620행)는 전 행이 `source`(publisher·survey·survey_label·
 aggregation_group·data_year…)를 갖는다 — `rda.income` 602행,
-`kostat.production_cost` 18행. `rda.econ.2025`(2,707행)·
+`kostat.production_cost` 18행. `rda.econ.2025`(현재 2,708행)·
 `mafra.specialty.production.2024`(2,988행)는 아직 `source`가 없어 연도 기본값이
 `source_unknown`으로 막힌다(§4.1) — 그 팩들은 기존 조회 결과가 그대로이고(실측:
 10,659질의 결과 바이트 동일), 출처 채우기는 다음 데이터 PR에서 한다.
@@ -171,8 +173,24 @@ sido만 비교한다) 진입점 결과에는 차이가 없다 — 갈리는 것�
 출처 연도는 관측 연도와 같아야 한다 — 행이 대표하는 기준 연도가 곧
 `source.data_year`이고, 여러 해를 한 레코드에 담은 시계열은 표의 마지막
 연도가 그 값이다. 어긋난 출처는 다른 해 표에 붙은 영수증이므로
-`source_invalid`로 막는다. `basis.year`가 정수가 아니면 이 검사는 걸지
-않고 아래 순서의 `year_unknown`에 맡긴다(같은 결함을 두 번 보고하지 않는다).
+`source_invalid`로 막는다. `basis.year`가 정수가 아니면 이 교차 검사는
+걸지 않는다 — 같은 결함을 두 번 보고하지 않으려는 것이고, 그 행은 바로
+아래 연도 선택에서 정수 연도가 아니므로 연도 풀에서 빠질 뿐 **차단 사유가
+아니다**(혼합 후보는 다음 문단). 연도 풀에 쓸 정수가 하나도 없을 때만
+`year_unknown`이다.
+
+**혼합 후보 (R-01).** 고를 등급 안에 정상 정수 연도 후보와 결함(누락·null·
+문자열·실수·논리값) 연도 후보가 섞이면, 결함 후보는 연도 풀에서 빠지고
+**정상 후보의 연도가 그대로 골라진다** — 결함 후보가 하나라도 있으면 보류하는
+정책이 아니다. `year_unknown`은 고를 등급 안에 쓸 수 있는 정수 연도가
+**하나도 없을 때만**이다. 정상 정수 후보에서 연도 값을 얻으며,
+최종 승인은 재조회 결과의 각 축으로 판단한다.
+정수와 값은 같지만 형이 실수인 연도(`2024.0`)는 연도 풀에서 빠지되 재조회의
+연도 필터는 통과해 후보가 둘로 남는다 — 그때는 `ambiguous`로 승인 없이
+막힌다(조용히 버리지 않는다). 시험:
+`test_defective_year_candidate_does_not_block_a_valid_one`·
+`test_float_year_counting_as_the_selected_year_stays_ambiguous`·
+`test_only_defective_year_candidates_stay_year_unknown`.
 
 순서: 출처 검사 → survey 혼합 → 그룹 유일성 → (최고 `catalog_status` 등급
 → 그 등급 안 최대 연도). **어떤 경우에도 출처를 지어내지 않는다.** 명시

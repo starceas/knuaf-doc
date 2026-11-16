@@ -8,6 +8,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PACKS = ROOT / "references/benchmark-packs"
 PACK = PACKS / "common/rda-econ-2025"
+RECEIPT = ROOT.parents[1] / "docs/validation/d5-rda-useful-life.json"
+# E12-a: P15 영수증은 재바인딩하지 않는 역사 증거다.
+RECEIPT_SHA256 = "85039e05533cb7f692846b91e1a4e14caff2e7c56c92090f568095df0af3072e"
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import gg_rda_candidates as candidates
@@ -31,14 +34,14 @@ class D5UsefulLifeTests(unittest.TestCase):
     def test_every_cell_matches_text_mapping_and_identity(self):
         self.assertEqual(64, len({c["row_id"] for c in self.mapping["cells"]}))
         self.assertEqual(107, len(self.mapping["cells"]))
-        self.assertEqual(2707, len(self.raw))
-        self.assertEqual(2707, len(self.entries))
+        self.assertEqual(2708, len(self.raw))
+        self.assertEqual(2708, len(self.entries))
         self.assertEqual(len(self.raw), self.manifest["total_physical_rows"])
         self.assertEqual(hashlib.sha256(b"".join(self.raw)).hexdigest(),
                          self.manifest["records_file_sha256"])
         ids = set()
         dash_count = 0
-        for i, cell in enumerate(self.mapping["cells"], 2601):
+        for i, cell in enumerate(self.mapping["cells"], 2577):
             rec = self.records[i - 1]
             loc = rec["locator"]
             with self.subTest(cell=cell["cell_id"]):
@@ -71,16 +74,16 @@ class D5UsefulLifeTests(unittest.TestCase):
             ids.add(rec["record_id"])
         self.assertEqual(107, len(ids))
         self.assertEqual(8, dash_count)
-        self.assertEqual("8개월", self.records[-1]["metrics"]["adult_age_years"])
-        self.assertEqual("2.5", self.records[-1]["metrics"]["useful_life_years"])
+        self.assertEqual("8개월", self.records[2682]["metrics"]["adult_age_years"])
+        self.assertEqual("2.5", self.records[2682]["metrics"]["useful_life_years"])
 
     def test_manifest_links_and_derived_authority(self):
         pin = provenance.PINNED_PACKS["rda.econ.2025"]
-        self.assertEqual(2707, pin["record_lines"])
+        self.assertEqual(2708, pin["record_lines"])
         self.assertEqual(self.manifest["records_file_sha256"], pin["records_file_sha256"])
         self.assertEqual({"verified_observation_count": 105,
-                          "exploratory_count": 131,
-                          "quarantined_count": 2471},
+                          "exploratory_count": 156,
+                          "quarantined_count": 2447},
                          self.manifest["status_summary"])
         duplicate_refs = 0
         for i, (line, row) in enumerate(zip(self.raw, self.manifest["rows"]), 1):
@@ -113,9 +116,28 @@ class D5UsefulLifeTests(unittest.TestCase):
             self.assertEqual(pin["records_file_sha256"], key["records_file_sha256"])
             if coverage["catalog_digest"] is not None:
                 self.assertEqual(digest, coverage["catalog_digest"])
-        receipt = json.loads((ROOT.parents[1] / "docs/validation/d5-rda-useful-life.json").read_text(encoding="utf-8"))
-        self.assertEqual(pin["records_file_sha256"], receipt["new_records_sha256"])
-        self.assertEqual(digest, receipt["new_catalog_content_digest"])
+        receipt = json.loads(RECEIPT.read_text(encoding="utf-8"))
+        lineage = json.loads((ROOT / "scripts/legacy-release-hashes.json").read_text(encoding="utf-8"))
+        self.assertIn(receipt["new_records_sha256"], lineage["files"][
+            "references/benchmark-packs/common/rda-econ-2025/records.jsonl"])
+
+    def test_d5_receipt_bytes_are_immutable(self):
+        self.assertEqual(RECEIPT_SHA256, hashlib.sha256(RECEIPT.read_bytes()).hexdigest())
+
+    def test_d5_receipt_record_hashes_belong_to_release_lineage(self):
+        receipt = json.loads(RECEIPT.read_text(encoding="utf-8"))
+        lineage = json.loads((ROOT / "scripts/legacy-release-hashes.json").read_text(encoding="utf-8"))
+        records_lineage = lineage["files"][
+            "references/benchmark-packs/common/rda-econ-2025/records.jsonl"]
+        for field in ("historical_records_sha256", "new_records_sha256"):
+            with self.subTest(field=field):
+                self.assertIn(receipt[field], records_lineage)
+
+    def test_current_econ_pin_belongs_to_release_lineage(self):
+        lineage = json.loads((ROOT / "scripts/legacy-release-hashes.json").read_text(encoding="utf-8"))
+        self.assertIn(provenance.PINNED_PACKS["rda.econ.2025"]["records_file_sha256"],
+                      lineage["files"][
+                          "references/benchmark-packs/common/rda-econ-2025/records.jsonl"])
 
     def test_rejected_rows_unreachable_but_unaffected_quarantine_stays_searchable(self):
         ctx = research.resolver_context(
@@ -126,7 +148,7 @@ class D5UsefulLifeTests(unittest.TestCase):
                     self.manifest["records_file_sha256"])},
                 authority="accepted-catalog-20260921/rda.econ.2025"),
             pack_ids={"rda.econ.2025"})
-        for i in range(68, 122):
+        for i in range(68, 105):
             rec, mrow = self.records[i - 1], self.manifest["rows"][i - 1]
             key = mrow["audit_key"]
             with self.subTest(line=i):
@@ -164,7 +186,7 @@ class D5UsefulLifeTests(unittest.TestCase):
         self.assertEqual("quarantined", still_a_candidate["candidates"][0]["observation_status"])
 
     def test_all_new_cells_searchable_but_never_approved(self):
-        for i, cell in enumerate(self.mapping["cells"], 2601):
+        for i, cell in enumerate(self.mapping["cells"], 2577):
             rec = self.records[i - 1]
             key = self.manifest["rows"][i - 1]["audit_key"]
             with self.subTest(cell=cell["cell_id"]):
@@ -183,7 +205,7 @@ class D5UsefulLifeTests(unittest.TestCase):
                 self.assertEqual("unapproved", result["status"])
                 self.assertEqual([], result["approved_candidates"])
                 self.assertEqual("exploratory", result["candidates"][0]["observation_status"])
-        key = self.manifest["rows"][2600]["audit_key"]
+        key = self.manifest["rows"][2576]["audit_key"]
         ctx = research.resolver_context(
             catalog=research.accept_catalog(
                 self.entries,
@@ -203,7 +225,7 @@ class D5UsefulLifeTests(unittest.TestCase):
                     if r["pack_id"] == "rda.econ.2025" and r["kind"] == "useful_life")
         self.assertEqual([133, 134, 135], rule["locator_pdf_pages"])
         self.assertEqual({133, 134, 135},
-                         {r["locator"]["pdf_page"] for r in self.records[2600:]})
+                         {r["locator"]["pdf_page"] for r in self.records[2576:2683]})
 
 
 if __name__ == "__main__":

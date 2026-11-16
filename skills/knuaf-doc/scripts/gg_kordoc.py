@@ -20,6 +20,7 @@ import tempfile
 import time
 import uuid
 import re
+import stat
 
 
 PACKAGE = "kordoc"
@@ -69,6 +70,102 @@ def _cache_root(value: str | os.PathLike[str] | None) -> Path:
     return (Path.home() / ".cache" / "ginseng-goat" / "kordoc").resolve()
 
 
+_HOST_ENV_KEYS = frozenset({"ELECTRON_RUN_AS_NODE", "KORDOC_OFFLINE"})
+_HOST_ENV_VALUE = re.compile(r"[0-9A-Za-z._-]{0,32}")
+_HOST_FD_READ = (hasattr(os, "O_NOFOLLOW") and hasattr(os, "O_DIRECTORY")
+                 and os.open in os.supports_dir_fd)
+
+
+def _read_host_json(path):
+    """Keep POSIX ownership/type checks and JSON reads on the same handles."""
+    if _HOST_FD_READ and not sys.platform.startswith("win"):
+        directory = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        try:
+            metadata = os.fstat(directory)
+            if (not stat.S_ISDIR(metadata.st_mode) or metadata.st_uid != os.getuid()
+                    or metadata.st_mode & 0o022):
+                return None
+            descriptor = os.open(path.name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK,
+                                 dir_fd=directory)
+            with os.fdopen(descriptor, "r", encoding="utf-8") as stream:
+                metadata = os.fstat(stream.fileno())
+                if (not stat.S_ISREG(metadata.st_mode) or metadata.st_uid != os.getuid()
+                        or metadata.st_mode & 0o022):
+                    return None
+                value = json.load(stream)
+                return value if isinstance(value, dict) else None
+        finally:
+            os.close(directory)
+    # Windows/limited platforms: link checks are best-effort, not race-free.
+    for item in (path.parent, path):
+        metadata = item.lstat()
+        expected = stat.S_ISREG if item == path else stat.S_ISDIR
+        if stat.S_ISLNK(metadata.st_mode) or not expected(metadata.st_mode):
+            return None
+        if not sys.platform.startswith("win") and (
+                metadata.st_uid != os.getuid() or metadata.st_mode & 0o022):
+            return None
+    return _read_json(path)
+
+
+def _host_runtime():
+    """Read the app's optional execution hint; any mismatch is a silent miss.
+
+    Same-account code is trusted. POSIX checks ownership/write permissions;
+    Windows checks profile containment, not ACLs. No process is run here.
+    """
+    base = os.environ.get("XDG_CACHE_HOME")
+    cache = Path(base).expanduser() if base else Path.home() / ".cache"
+    try:
+        # The configured cache root may itself be linked (e.g. macOS /var).
+        # Below that root, only our directory and hint must not be links.
+        path = cache.resolve() / "ginseng-goat" / "kordoc-host.json"
+        if sys.platform.startswith("win"):
+            if not path.resolve().is_relative_to(Path.home().resolve()):
+                return None
+        data = _read_host_json(path)
+        if not data or type(data.get("schema")) is not int or data["schema"] != 1:
+            return None
+        if data.get("kordoc_version") != VERSION:
+            return None
+        command, files = data.get("command"), data.get("files")
+        if (not isinstance(command, list) or len(command) < 2
+                or not all(isinstance(p, str) and p and "\0" not in p for p in command)
+                or not Path(command[0]).is_absolute()
+                or not Path(command[0]).is_file() or not Path(command[-1]).is_file()):
+            return None
+        if (not isinstance(files, list) or not files
+                or not all(isinstance(p, str) and p and "\0" not in p for p in files)
+                or files[0] != command[0] or command[-1] not in files
+                or any(Path(p).is_absolute() and p not in files for p in command)
+                or not all(Path(p).is_file() for p in files)):
+            return None
+        install_dir = data.get("install_dir")
+        if not isinstance(install_dir, str) or not Path(install_dir).is_absolute():
+            return None
+        install = Path(install_dir).resolve(strict=True)
+        if not install.is_dir() or any(
+                not Path(p).resolve(strict=True).is_relative_to(install) for p in files[1:]):
+            return None
+        extra_env = data.get("env")
+        if (not isinstance(extra_env, dict) or extra_env.keys() - _HOST_ENV_KEYS
+                or any(not isinstance(v, str) or not _HOST_ENV_VALUE.fullmatch(v)
+                       for v in extra_env.values())):
+            return None
+        exe_stat = data.get("exe_stat")
+        current = Path(command[0]).stat()
+        if (not isinstance(exe_stat, dict)
+                or type(exe_stat.get("size")) is not int
+                or type(exe_stat.get("mtime")) is not int
+                or exe_stat["size"] != current.st_size
+                or exe_stat["mtime"] != int(current.st_mtime)
+                or not stat.S_ISREG(current.st_mode)):
+            return None
+        return {"command": command, "extra_env": extra_env}
+    except (OSError, ValueError, RuntimeError):
+        return None
+
+
 def _legacy_cache_roots() -> list[Path]:
     """Read-only migration candidates; canonical cache naming stays unchanged."""
     bases = [Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")).expanduser(),
@@ -112,6 +209,15 @@ def diagnose(*, cache_dir=None, node=None, kordoc=None) -> dict:
                            "installed": reason == "metadata_present", "reason": reason})
     external = _runtime_path(kordoc, ("kordoc",))
     selected = next((row for row in candidates if row["installed"]), None)
+    host = _host_runtime() if not kordoc else None
+    if host:
+        return {"installed": True, "cache_dir": str(root),
+                "selected_cache_dir": None, "cli_path": host["command"][-1],
+                "node_path": None, "cli_command": host["command"],
+                "source_kind": "app_host",
+                "legacy_candidates": [row for row in candidates if row["legacy"]],
+                "candidates": candidates, "capability_verified": False,
+                "reason": "capability_unverified"}
     return {"installed": bool(external or selected), "cache_dir": str(root),
             "selected_cache_dir": selected["cache_dir"] if selected else None,
             "cli_path": external or (str(_package_paths(
@@ -414,9 +520,11 @@ def _probe_generate(cli_command: list[str], *, env, timeout=DEFAULT_TIMEOUT):
 
 def _probe_external(cli_command: list[str], *, path: str, source_kind: str,
                     node_path: str | None = None, timeout=DEFAULT_TIMEOUT,
-                    need_generate: bool = False):
+                    need_generate: bool = False, extra_env=None):
     """Verify identity, version, parse flags and (optionally) generate support."""
     probe_env = _env_for_external(node_path=node_path)
+    if extra_env:
+        probe_env.update(extra_env)
     version_probe = _run(list(cli_command) + ["--version"], env=probe_env, timeout=min(timeout, 30))
     help_probe = _run(list(cli_command) + ["--help"], env=probe_env, timeout=min(timeout, 30))
     version = _version_from_probe(version_probe)
@@ -531,6 +639,25 @@ def _publish(stage_md: Path, target: Path) -> None:
         ) from exc
 
 
+def _ready_host(*, timeout, need_generate):
+    host = _host_runtime()
+    if not host:
+        return None
+    candidate, _ = _probe_external(
+        host["command"], path=host["command"][-1], source_kind="app_host",
+        timeout=timeout, need_generate=need_generate, extra_env=host["extra_env"])
+    if not candidate:
+        return None
+    return _result(
+        "ready", action="reused_existing", package=PACKAGE,
+        version=candidate["actual_version"], actual_version=candidate["actual_version"],
+        cli_path=candidate["cli_path"], cli_command=candidate["cli_command"],
+        command=candidate["cli_command"], source="external", source_kind="app_host",
+        node_path=None, extra_env=host["extra_env"],
+        capability_verification=candidate["capability_verification"],
+        rejected_candidates=[])
+
+
 def ensure(*, cache_dir=None, node=None, pnpm=None, kordoc=None, timeout=DEFAULT_TIMEOUT,
            need_generate=False):
     """Ensure a validated Kordoc installation and return its CLI path.
@@ -540,6 +667,10 @@ def ensure(*, cache_dir=None, node=None, pnpm=None, kordoc=None, timeout=DEFAULT
     such as the HWPX adapter can rely on it.
     """
     rejected_candidates = []
+    if not kordoc:
+        host = _ready_host(timeout=timeout, need_generate=need_generate)
+        if host:
+            return host
     external_path, source_kind = _resolve_kordoc(kordoc)
     if external_path:
         # A supplied Node path is an environment hint for wrappers with a
@@ -583,6 +714,11 @@ def ensure(*, cache_dir=None, node=None, pnpm=None, kordoc=None, timeout=DEFAULT
                 )
             evidence["source_kind"] = source_kind
             rejected_candidates.append(evidence)
+    if kordoc:
+        host = _ready_host(timeout=timeout, need_generate=need_generate)
+        if host:
+            host["rejected_candidates"] = rejected_candidates
+            return host
 
     try:
         node_path, _ = _node_and_pnpm(node, pnpm, need_pnpm=False)
@@ -788,6 +924,7 @@ def parse(input_path, out, *, cache_dir=None, node=None, pnpm=None, kordoc=None,
         env = _env_for_node(node_path, offline=True) if node_path else _env_for_external(
             offline=True, node_path=ready.get("node_path")
         )
+        env.update(ready.get("extra_env", {}))
         process = _run(cmd, cwd=stage_parent, env=env, timeout=timeout)
         if not process.get("ok"):
             raise KordocBlocked("parse_failed", command=cmd, process=process, action="Input was preserved; no output was published.")

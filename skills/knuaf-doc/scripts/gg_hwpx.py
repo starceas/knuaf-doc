@@ -661,7 +661,7 @@ def _rewrite_run_charpr(paragraph: str, cid: int) -> str:
     return _RUN_OPEN_RE.sub(rebuild, paragraph)
 
 
-def _peer_block_targets(nodes, start, end, spec, *, cover=False):
+def _peer_block_targets(nodes, start, end, spec, *, cover=False, profile=None):
     """겉표지·표제면·제출서·인준서 블록의 문단별 (크기, 굵기)를 정한다.
 
     계획 제목 문단은 `spec.plan_label`과 같은 글자를 먼저 찾고, 없으면
@@ -680,11 +680,17 @@ def _peer_block_targets(nodes, start, end, spec, *, cover=False):
         plan_at = degree_at + 1
     for k, (index, text) in enumerate(items):
         if k == plan_at:
-            targets[index] = (32, True)
+            targets[index] = (profile.cover_text["plan"] if profile is not None
+                              else (32, True))
         elif (text == spec.degree
               or text.startswith(("이 논문을", "지도교수 ", "위원장", "위 원"))
               or text.endswith(("인준함", "인준함."))):
-            targets[index] = (18, True)
+            key = ("degree" if text == spec.degree else
+                   "statement" if text.startswith("이 논문을") else
+                   "approval" if text.endswith(("인준함", "인준함.")) else
+                   "advisor")
+            targets[index] = (profile.cover_text[key] if profile is not None
+                              else (18, True))
         elif plan_at is not None and k == plan_at + 1:
             targets[index] = (20, cover)
         else:
@@ -705,7 +711,7 @@ def _front_role_bounds(plan):
     return bounds
 
 
-def _front_charpr_targets(nodes, plan):
+def _front_charpr_targets(nodes, plan, profile=None):
     """계획 색인으로 대상 문단을 찾아 {(문단 색인): (크기, 굵기)}를 낸다.
 
     본문 구역(`plan["body"]`)은 손대지 않고, 동의서만 따로 잠근다.
@@ -715,47 +721,58 @@ def _front_charpr_targets(nodes, plan):
     targets = {}
     bounds = _front_role_bounds(plan)
 
+    def title(role, legacy):
+        return profile.front_titles.get(role, legacy) if profile is not None else legacy
+
     for role in ("겉표지", "표제면", "제출서", "인준서"):
         if role in bounds:
             start, end = bounds[role]
             targets.update(_peer_block_targets(
-                nodes, start, end, spec, cover=role == "겉표지"))
+                nodes, start, end, spec, cover=role == "겉표지", profile=profile))
 
     if "요약" in indices:
-        targets[indices["요약"]] = (22, True)
+        targets[indices["요약"]] = title("요약", (22, True))
         start, end = bounds["요약"]
         for index in range(start, end):
             text = _normalize_space(nodes[index].get("text", ""))
             if not text:
                 continue
-            targets[index] = (16, True) if re.match(r"^\d+\s*\.", text) else (12, False)
+            targets[index] = ((profile.summary_item_pt if profile is not None
+                               else (16, True))
+                              if re.match(r"^\d+\s*\.", text) else (12, False))
 
     if "감사의 글" in indices:
-        targets[indices["감사의 글"]] = (20, True)
+        targets[indices["감사의 글"]] = title("감사의 글", (20, True))
         start, end = bounds["감사의 글"]
         for index in range(start, end):
             if _normalize_space(nodes[index].get("text", "")):
                 targets[index] = (12, False)
 
     if "목차" in indices:
-        targets[indices["목차"]] = (22, True)
+        targets[indices["목차"]] = title("목차", (22, True))
         start, end = bounds["목차"]
         for index in range(start, end):
             text = _normalize_space(nodes[index].get("text", ""))
             if not text:
                 continue
-            targets[index] = (20, False) if text in ("표 목차", "그림 목차") else (12, False)
+            targets[index] = (title(text, (20, False))
+                              if text in ("표 목차", "그림 목차") else (12, False))
 
-    consent = next((index for index in range(plan["body"], len(nodes))
-                    if _normalize_space(nodes[index].get("text", "")) == "학부모 동의서"),
-                   None)
+    consent = indices.get("학부모 동의서")
+    consent_end = bounds["학부모 동의서"][1] if consent is not None else len(nodes)
+    if consent is None:
+        consent = next((index for index in range(plan["body"], len(nodes))
+                        if _normalize_space(nodes[index].get("text", "")) == "학부모 동의서"),
+                       None)
     if consent is not None:
-        targets[consent] = (20, True)
-        for index in range(consent + 1, len(nodes)):
+        targets[consent] = title("학부모 동의서", (20, True))
+        for index in range(consent + 1, consent_end):
             text = _normalize_space(nodes[index].get("text", ""))
             if not text:
                 continue
-            targets[index] = (10, False) if text.startswith("※") else (14, True)
+            targets[index] = ((profile.consent_note_pt if text.startswith("※")
+                               else profile.consent_body_pt) if profile is not None
+                              else (10, False) if text.startswith("※") else (14, True))
     return targets
 
 
@@ -1177,9 +1194,9 @@ def transform_hwpx(data: bytes, *, font: str = SCHOOL_FONT,
         # 구역 분할이 실제로 일어난 `formats is not None`이 곧 프로필 경로다.
         # 계획만 넘기는 옛 호출도 본문 크기를 받도록 전공 id는 계획에서 읽는다.
         if formats is not None and plan is not None:
-            front_targets = _front_charpr_targets(nodes or [], plan)
             profile = gg_major_format.profile_for(
                 major_id or getattr(plan.get("spec"), "major_id", None))
+            front_targets = _front_charpr_targets(nodes or [], plan, profile)
             if profile is not None:
                 body_targets = _body_charpr_targets(nodes or [], plan, profile)
         if body_targets:
@@ -1331,13 +1348,16 @@ def _executable_dir(value: str):
     return str(Path(found).resolve().parent) if found else None
 
 
-def _env_for(first: str) -> dict:
+def _env_for(first: str, extra_env=None) -> dict:
     env = {key: value for key, value in os.environ.items()
            if key in _ENV_ALLOWLIST}
     directory = _executable_dir(first)
     if directory:
         env["PATH"] = directory + os.pathsep + env.get("PATH", os.environ.get("PATH", ""))
     env["KORDOC_OFFLINE"] = "1"
+    if extra_env:
+        env.update({key: value for key, value in extra_env.items()
+                    if key in gg_kordoc._HOST_ENV_KEYS})
     return env
 
 
@@ -1369,11 +1389,11 @@ def _run(cmd, *, cwd=None, env=None, timeout=DEFAULT_TIMEOUT):
     }
 
 
-def validate_hwpx(cli_command, path, *, timeout=DEFAULT_TIMEOUT) -> dict:
+def validate_hwpx(cli_command, path, *, timeout=DEFAULT_TIMEOUT, extra_env=None) -> dict:
     """kordoc validate 결과. validate 부명령이 없으면 status=unsupported."""
     command = list(cli_command)
     process = _run(command + ["validate", str(path), "--json"],
-                   env=_env_for(command[0]), timeout=timeout)
+                   env=_env_for(command[0], extra_env), timeout=timeout)
     text = process.get("stdout") or ""
     report = {"status": "unsupported", "process_ok": process.get("ok"),
               "returncode": process.get("returncode")}
@@ -1390,13 +1410,13 @@ def validate_hwpx(cli_command, path, *, timeout=DEFAULT_TIMEOUT) -> dict:
     return report
 
 
-def reparse_hwpx(cli_command, path, out_md, *, timeout=DEFAULT_TIMEOUT) -> dict:
+def reparse_hwpx(cli_command, path, out_md, *, timeout=DEFAULT_TIMEOUT, extra_env=None) -> dict:
     """HWPX를 다시 마크다운으로 읽어 표 셀 수치 대조에 쓴다."""
     command = list(cli_command)
     process = _run(
         command + [str(path), "-o", str(out_md), "--format", "markdown",
                    "--silent", "--keep-empty-cols", "--keep-empty-paragraphs"],
-        env=_env_for(command[0]), timeout=timeout,
+        env=_env_for(command[0], extra_env), timeout=timeout,
     )
     result = {"ok": bool(process.get("ok")), "process": process}
     if process.get("ok") and Path(out_md).is_file():
@@ -1963,6 +1983,7 @@ def build(markdown, out, *, context, authorization, cli_command=None,
         raw_path = work / "raw.hwpx"
 
         command = None
+        extra_env = None
         runtime_info = None
         if cli_command is not None:
             command = [str(part) for part in cli_command]
@@ -1972,6 +1993,7 @@ def build(markdown, out, *, context, authorization, cli_command=None,
         else:
             ready = _ensure_kordoc(cache_dir=cache_dir, node=node, pnpm=pnpm,
                                    kordoc=kordoc, timeout=timeout)
+            extra_env = ready.get("extra_env")
             command = [str(part) for part in ready["cli_command"]]
             runtime_info = {
                 "cli_command": command,
@@ -1979,13 +2001,15 @@ def build(markdown, out, *, context, authorization, cli_command=None,
                 "source": ready.get("source") or ready.get("action"),
             }
 
+            if extra_env is not None:
+                runtime_info["extra_env"] = extra_env
         options = list(generate_args)
         if "--silent" not in options:
             options.append("--silent")
         if "--image-dir" not in options:
             options += ["--image-dir", str(image_dir)]
         generate_cmd = command + ["generate", *options, "-o", str(raw_path), str(md_path)]
-        process = _run(generate_cmd, cwd=work, env=_env_for(command[0]), timeout=timeout)
+        process = _run(generate_cmd, cwd=work, env=_env_for(command[0], extra_env), timeout=timeout)
         if not process.get("ok"):
             raise HwpxBlocked("generate_failed", command=generate_cmd, process=process,
                               action="입력은 보존됐고 아무것도 발행하지 않았습니다.")
@@ -2024,7 +2048,7 @@ def build(markdown, out, *, context, authorization, cli_command=None,
         if verify:
             staged = work / "staged.hwpx"
             staged.write_bytes(transformed)
-            validation = validate_hwpx(command, staged, timeout=timeout)
+            validation = validate_hwpx(command, staged, timeout=timeout, extra_env=extra_env)
             verification["validate"] = validation
             if not (validation.get("process_ok") is True
                     and validation.get("returncode") == 0
@@ -2036,7 +2060,7 @@ def build(markdown, out, *, context, authorization, cli_command=None,
                     issues=validation.get("issues"),
                     action="구조 검증(프로세스 성공 + ok)이 아니어서 발행하지 않았습니다.")
             back_md = work / "back.md"
-            reparsed = reparse_hwpx(command, staged, back_md, timeout=timeout)
+            reparsed = reparse_hwpx(command, staged, back_md, timeout=timeout, extra_env=extra_env)
             reparsed_ok = bool(reparsed.get("ok") and "markdown" in reparsed)
             verification["reparse"] = {"ok": reparsed_ok}
             if not reparsed_ok:

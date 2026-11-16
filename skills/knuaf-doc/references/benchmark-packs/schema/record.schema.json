@@ -85,7 +85,7 @@
     },
     "seed_requirement": {
       "출처": "경제성분석 종자 소요량표",
-      "metrics": "volume_seed, seedling_plants, seed_count, weight_seed — 단위가 값에 섞여 있고(예: '9㎗'), 범위(~)나 '-'(값 없음)가 포함될 수 있다.",
+      "metrics": "volume_seed, seedling_plants, seed_count, weight_seed — 단위가 값에 섞여 있고(예: '9㎗'), 범위(~)나 '-'(값 없음)가 포함될 수 있다. p127 화훼 종자소요량(종묘)은 seedling_plants, 약용 종자는 volume_seed·종묘(종균)는 seedling_plants에 대응한다. seedling_plants는 종묘(종균) 소요량 원문 문자열을 단위 그대로(주·구·kg) 담으며 반드시 식물 개체 수는 아니다.",
       "주의": "이 kind의 metrics 값은 gg_finance.num()에 그대로 넣으면 실패할 수 있다 — 원문 그대로 통과(passthrough)만 하고 강제 변환하지 않는다."
     },
     "fertilizer_composition": {
