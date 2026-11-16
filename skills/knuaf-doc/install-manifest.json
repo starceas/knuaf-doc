@@ -281,7 +281,7 @@
   "tests/test_n5_guidance_link.py": "32462d60e2a3c7a40cffb6eecfb138f8046d382ad16bb15377b3490e3ddbb43a",
   "tests/test_official_guide_reuse.py": "2169e23583f04860fbeb77fe1fe802bed756efd5147156c294eddb3e9ba4d87c",
   "tests/test_pr4_source_map.py": "5d46eab8d72fa7709c028c77575863a4b019978d281071df0092836f7224cd1b",
-  "tests/test_pr5_econ_ghost_delete.py": "aba1ffa5a82b80e2e7f38e5f102d72ecaf6904223d7cf132ac1d757f69deadbf",
+  "tests/test_pr5_econ_ghost_delete.py": "c1e96012d20024de98401bea94697bdb587c2dbfb900d03b84ae85a2ad10b4b9",
   "version.json": "356feba164016add2f2fbc8293f39214046f13fbd103ee095819e257b27fafd8"
  },
  "schema": "knuaf-doc/install-manifest@1"

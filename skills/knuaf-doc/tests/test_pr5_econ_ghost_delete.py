@@ -314,10 +314,11 @@ class EconGhostDeleteTests(unittest.TestCase):
                 if not path.is_absolute():
                     path = repo_root / path
                 resolved = path.resolve()
-                observed_paths.append(os.fspath(resolved))
-                if "references/benchmark-packs/" in os.fspath(resolved) \
+                normalized = resolved.as_posix()
+                observed_paths.append(normalized)
+                if "references/benchmark-packs/" in normalized \
                         and resolved.name == "records.jsonl":
-                    econ_pack_reads.append(os.fspath(resolved))
+                    econ_pack_reads.append(normalized)
             except (TypeError, ValueError, OSError):
                 pass
 
@@ -394,9 +395,9 @@ class EconGhostDeleteTests(unittest.TestCase):
                 )["status"],
             )
         self.assertTrue(econ_pack_reads, "lookup did not open any pack records.jsonl")
+        forbidden_path = forbidden_root.as_posix()
         self.assertEqual([], [path for path in observed_paths
-                              if path == os.fspath(forbidden_root)
-                              or os.fspath(forbidden_root) in path])
+                              if path == forbidden_path or forbidden_path in path])
 
     def test_mutations_fail_in_memory(self):
         ghosts = _fixture_lines(self.fixture_blob)

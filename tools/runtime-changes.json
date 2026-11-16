@@ -344,7 +344,7 @@
       "source": "adopted:app-PR41"
     },
     "skills/knuaf-doc/install-manifest.json": {
-      "after_sha256": "f3a27df6cf9699d6a4657e8dfc9430e6c511cda5918f67aa2061324ea7569f4a",
+      "after_sha256": "f0b74b559714827178fdc9fa7b9517ea5bb44b7416e9b1492d24e61c48645e8c",
       "before_sha256": null,
       "first_changed": "P27",
       "last_changed": "P28",
@@ -3451,7 +3451,7 @@
       "first_changed": "P28",
       "owner": "P28",
       "source": "new",
-      "after_sha256": "aba1ffa5a82b80e2e7f38e5f102d72ecaf6904223d7cf132ac1d757f69deadbf",
+      "after_sha256": "c1e96012d20024de98401bea94697bdb587c2dbfb900d03b84ae85a2ad10b4b9",
       "last_changed": "P28",
       "reason": "PR5: delete exactly 24 unsourced econ ghost rows; preserve surviving record bytes and statuses; rebind audit identities without promotion."
     }
