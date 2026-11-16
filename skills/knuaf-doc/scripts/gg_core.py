@@ -6694,12 +6694,36 @@ def _custom_paper_body(body):
     return body
 
 
+def _paper_notices_changed(root):
+    """Compare notice content, not the refresh clock, before a refused write."""
+    import gg_notices
+    from gg_publication import _read_file
+
+    try:
+        rows, error = gg_notices.notice_rows_or_error(root)
+        if error is not None:
+            return True  # Let the registered writer report/remove stale notices.
+        current = json.loads(_read_file(root, gg_notices.NOTICES_NAME))
+        expected = gg_notices.notices_document(root, rows)
+        current.pop("written_at", None)
+        expected.pop("written_at", None)
+        return current != expected
+    except Exception:
+        return True  # Missing, unreadable or invalid sidecars need a refresh.
+
+
 def _paper_then_sidecars(root, body, capability):
-    """Every locked paper decision refreshes current notices exactly once."""
+    """Refresh once after publication; refusals write only changed notices."""
+    refresh = True
     try:
         return body(capability)
+    except OperationError as error:
+        if error.result.get("commit_state") == "not_committed":
+            refresh = _paper_notices_changed(root)
+        raise
     finally:
-        _rewrite_sidecars(root)
+        if refresh:
+            _rewrite_sidecars(root)
 
 
 def _paper_preflight(root, spec_bytes, major_id, body_markdown):

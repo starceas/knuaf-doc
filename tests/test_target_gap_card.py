@@ -71,12 +71,25 @@ class TargetGapCardTests(ContractCase):
         self.publish()
         old = self.cards()[0]
         write_text(self.root, "build/conflict.md", "keep")
+        before = self._tree_bytes(self.root)
         with patch.object(self.core, "_rewrite_sidecars", wraps=self.core._rewrite_sidecars) as rewrite:
             self.refused("requested_output_conflict", out="build/conflict.md")
-        self.assertEqual(1, rewrite.call_count)
+        self.assertEqual(0, rewrite.call_count)
+        self.assertEqual(before, self._tree_bytes(self.root))
         self.assertEqual(old, self.cards()[0])
         self.spec["target_profit_thousand"] = "40000"
         self.save_spec()
+        # Spec edits and refused publication leave canonical progress inputs
+        # (records and gate evidence) unchanged, unlike target-gap notices.
+        progress = runtime("gg_progress")
+        p = self.core.load(self.root)
+        report = self.core.gate(self.root, p)
+        expected = progress.assemble(p, report, self.core.finance_gate(p),
+                                    self.core.completion(self.root, p, report=report))
+        actual = json.loads((self.root / progress.NAME).read_text())
+        expected.pop("written_at")
+        actual.pop("written_at")
+        self.assertEqual(actual, expected)
         with patch.object(self.core, "_rewrite_sidecars", wraps=self.core._rewrite_sidecars) as rewrite:
             self.refused(out="build/new.md")
         self.assertEqual(1, rewrite.call_count)
@@ -84,8 +97,9 @@ class TargetGapCardTests(ContractCase):
 
     def test_preflight_refusals_and_busy_retry(self):
         self.publish()
-        for raw, reason in (("{", "invalid_spec"),
-                            (json.dumps(dict(self.spec, target_profit_thousand="bad")), "native_field_invalid")):
+        for raw, reason, writes in (("{", "invalid_spec", 1),
+                                   (json.dumps(dict(self.spec, target_profit_thousand="bad")),
+                                    "native_field_invalid", 0)):
             with self.subTest(reason=reason):
                 self.save_spec(raw)
                 before = (self.root / ".knuaf-notices.json").read_bytes()
@@ -97,7 +111,7 @@ class TargetGapCardTests(ContractCase):
                 self.assertEqual(before, (self.root / ".knuaf-notices.json").read_bytes())
                 with patch.object(self.core, "_rewrite_sidecars", wraps=self.core._rewrite_sidecars) as rewrite:
                     self.refused(reason)
-                self.assertEqual(1, rewrite.call_count)
+                self.assertEqual(writes, rewrite.call_count)
                 self.assertEqual([], self.cards())
 
     def test_absent_project_preserves_invalid_spec(self):
