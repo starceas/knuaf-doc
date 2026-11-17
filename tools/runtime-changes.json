@@ -2611,13 +2611,13 @@
       "source": "new"
     },
     "tests/test_specialty_template_route.py": {
-      "after_sha256": "b17e81ae7c56dc4a82c6bc77b399a88e2a043b690112ff7aa271644e9fa4c21b",
+      "after_sha256": "73d48cd222792f2c6d20bff2c8f381ecbe81a7e37082686c6e241850ece7dd69",
       "before_sha256": null,
       "first_changed": "P28",
-      "last_changed": "P28",
+      "last_changed": "win-tempdir-lock",
       "note": "P0-2B U21: fixed-map route tests opt into legacy_map explicitly; specialty route safety unchanged.",
       "owner": "B",
-      "reason": "PR2: 특용작물 엑셀을 교수님 양식(X01·X02) 기준으로 — 레거시 생성기 입구 차단, 작목 분류별 칸 이름 층, 일용 노무 성별 경고, X01 임금 산술평균·7번 인쇄 설정 보존",
+      "reason": "PR2: 특용작물 엑셀을 교수님 양식(X01·X02) 기준으로 — 레거시 생성기 입구 차단, 작목 분류별 칸 이름 층, 일용 노무 성별 경고, X01 임금 산술평균·7번 인쇄 설정 보존 | 시험이 연 엑셀 통합문서를 닫아 윈도 임시 폴더 정리 WinError 32 흔들림 제거",
       "source": "new"
     },
     "tests/test_template_wage_link.py": {
@@ -3058,13 +3058,13 @@
       "source": "new"
     },
     "tests/test_food_crops_excel2_blank_copy.py": {
-      "after_sha256": "d2d709d2fc7f5aded59c4e05c1cbd0c701463cd445362d413857b6617dfaed3b",
+      "after_sha256": "c5ec35fb7a8cafaac1d246fcd9a116b301ca9fb0c86ac3dd45a8ab4f34abedbd",
       "before_sha256": null,
       "first_changed": "food-crops-0.1.0",
-      "last_changed": "food-crops-0.1.0",
+      "last_changed": "win-tempdir-lock",
       "note": null,
       "owner": "food-crops-0.1.0",
-      "reason": "식량작물전공 엑셀 2판 구현1(E3-1): 학교 16시트 재무 엑셀 빈 사본 경로 — food_crops_16_sheet_v1 프로필 잠금 해제·전공별 기본 프로필·clear/preserve 지도와 그 시험·문서. 수식 1,256칸 텍스트 보존, 캐시만 무효화. | food-crops-0.1.0 r2: 웹 검토 지적 고침 — 프로필·원본 구조 검사, 출력 검사 순서, 빈 사본만 계약(채우기 입구 거절), 지도 고정(R-01 3칸), 예시 숫자 메모 정리. | food-crops-0.1.0 r2: 웹 검토 지적 고침 — 프로필·원본 구조 검사, 출력 검사 순서, 빈 사본만 계약(채우기 입구 거절), 지도 고정(R-01 3칸), 예시 숫자 메모 정리. | r3: 지도 분류 해시 고정(I-04), 구조 검사 범위 근거 명시(N-I-01), 최종 --out 보호 시험(I-03).",
+      "reason": "식량작물전공 엑셀 2판 구현1(E3-1): 학교 16시트 재무 엑셀 빈 사본 경로 — food_crops_16_sheet_v1 프로필 잠금 해제·전공별 기본 프로필·clear/preserve 지도와 그 시험·문서. 수식 1,256칸 텍스트 보존, 캐시만 무효화. | food-crops-0.1.0 r2: 웹 검토 지적 고침 — 프로필·원본 구조 검사, 출력 검사 순서, 빈 사본만 계약(채우기 입구 거절), 지도 고정(R-01 3칸), 예시 숫자 메모 정리. | food-crops-0.1.0 r2: 웹 검토 지적 고침 — 프로필·원본 구조 검사, 출력 검사 순서, 빈 사본만 계약(채우기 입구 거절), 지도 고정(R-01 3칸), 예시 숫자 메모 정리. | r3: 지도 분류 해시 고정(I-04), 구조 검사 범위 근거 명시(N-I-01), 최종 --out 보호 시험(I-03). | 시험이 연 엑셀 통합문서를 닫아 윈도 임시 폴더 정리 WinError 32 흔들림 제거",
       "source": "new"
     },
     "tests/test_food_crops_excel2_route.py": {
@@ -3270,13 +3270,13 @@
       "source": "new"
     },
     "tests/test_dairy_blank_copy.py": {
-      "after_sha256": "f444c82dfb27f6bf8d259fcbf22e6eec97e5737f945f9a9029711e2160e49be9",
+      "after_sha256": "7addd5ae77656cb11115bbc926ac3509c72b6c917007b0ee18e646eee77116d1",
       "before_sha256": null,
       "first_changed": "dairy-excel-blank",
-      "last_changed": "dairy-excel-blank",
+      "last_changed": "win-tempdir-lock",
       "note": null,
       "owner": "dairy-excel-blank",
-      "reason": "낙농전공 엑셀 2판 구현1(E1): 학교 28시트 한우 재무 엑셀의 빈 사본 경로 — dairy_hanwoo_28_sheet_v1 프로필 등록·빈 사본 전용 잠금 해제·clear 1,070 / preserve 5,463 지도와 그 시험·문서. 수식 22,828칸 텍스트 보존, 캐시만 무효화. 값 채우기·재무 계산은 계속 거절.",
+      "reason": "낙농전공 엑셀 2판 구현1(E1): 학교 28시트 한우 재무 엑셀의 빈 사본 경로 — dairy_hanwoo_28_sheet_v1 프로필 등록·빈 사본 전용 잠금 해제·clear 1,070 / preserve 5,463 지도와 그 시험·문서. 수식 22,828칸 텍스트 보존, 캐시만 무효화. 값 채우기·재무 계산은 계속 거절. | 시험이 연 엑셀 통합문서를 닫아 윈도 임시 폴더 정리 WinError 32 흔들림 제거",
       "source": "new"
     },
     "tests/test_gui_figure_wire.py": {
