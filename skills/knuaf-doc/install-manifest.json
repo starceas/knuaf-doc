@@ -154,7 +154,7 @@
   "references/update.md": "43746a2d7709cd90be8b5a330847a12e433ef734245482cdeb43fe17536f50de",
   "references/workbook-reference-set.json": "e31ddcf5b306d330101fef920a415e99972dea0cdd9f5e1a2e5b37a9fd3a5be8",
   "references/workflow-order.md": "781d08c719d40a7787ce97919a1adfc7477e6c979f3114828674756d20b1632c",
-  "release-notes.json": "02460744c86e6c523a4965cabe608fd812d603b9fb8550707a01b374c33db1f9",
+  "release-notes.json": "fde6232618d78b5c333ce87438e509300f33f03e613285780cbed56b20632b44",
   "scripts/build_docx.py": "4303de63eb246b8cdc5c7e28cc698adc951fc38e46139d7958883e54bca7962f",
   "scripts/build_excel_finance_template.py": "0b701dedc53e83af6b2c1aa7fce93d5df9043c428c9b7630a80d7944af582441",
   "scripts/build_hwpx.py": "38c4d5ffbe634bf951ee5571e2a7621db84a9d63dbac82312ad04c71645f6038",
@@ -209,7 +209,7 @@
   "scripts/gg_office_win.py": "539007af5a58d7d68f353037f39e4c321cd588563f99f69407cc772ea55b1b49",
   "scripts/gg_orchard_production.py": "a66466e1ea91aedf4c9e1411c0a9e48bbe7cca279c68fff3e1ca760307af52d7",
   "scripts/gg_price_assumptions.py": "0ce493232cc03187ab45265b3b8276b751eb479c349023d46e7f9baee7958d4e",
-  "scripts/gg_progress.py": "0bfd4b6cfb2f40902034a0c421895693b849c0903bd4edf54239c691b6714e10",
+  "scripts/gg_progress.py": "4c33acfa22105898743dc0a549bc859771220a6e03927250c6adf2aa0ece6990",
   "scripts/gg_publication.py": "3d6dde553101c2d6ca4f6b0e3b08cbd2bd12aca60e0bf43f0a8156d910957796",
   "scripts/gg_rda_candidates.py": "8d09ead1e564008264a2cd010dedf6bbb1c94468bc06645a6da787e90ad8b0c5",
   "scripts/gg_rda_lookup.py": "f73cdd6f3a9220d1ac96514966178ea770b9e8f063a6a20d621eae386aac3a2f",
@@ -263,7 +263,7 @@
   "tests/test_gg_food_crops_document.py": "100863a90fcc5d412fe5edfa34e8889eefbb69be8cd0d8708df2ad6af74340a7",
   "tests/test_gg_food_crops_module.py": "3617b6768d4e655780f1ac728be1880f3c947ab60fba1eddfece799d2a38aa45",
   "tests/test_gg_major_contract.py": "8783ae4b3a76553c86fef087eb3b4a336f4d429faa7361c1ab26280906ef1db5",
-  "tests/test_gg_progress.py": "56659298d3205fa16a1694474428d50fba69f393e31a5753b93bf1a2d371a1be",
+  "tests/test_gg_progress.py": "3418ff369d2cc57106e01624b5c6140aa23e1e77bcfe9869b7f2c19d2ba2fba5",
   "tests/test_gg_rda_candidates.py": "18a8e4f8393e9dda379b783459e6ccdbcc0a7e444fddaa629322ea8d2088e95a",
   "tests/test_gg_rda_d5_useful_life.py": "12e1eee7f564de2c3f2759f46515c6f35a2019aa8475abeb854c6560618f8a00",
   "tests/test_gg_rda_lookup_audit_key.py": "7def244447919959bb5ad6a722493d48068b8f05f487aaba5f0bd0ec2c0ee510",
@@ -284,7 +284,7 @@
   "tests/test_pr4_source_map.py": "4f21001225b9e65c96b531c9ca9cb54801de6fd29b25a7eaa24b7e6a5d8c1550",
   "tests/test_pr5_econ_ghost_delete.py": "dba0b4c0cb8b949f38b41c4785f669e27ff7aa771ac97a7de65f8007f71ad0d4",
   "tests/test_pr6_econ_seed_append.py": "d91adc1c3389920e429dc1755054bce900abd91b451e8324d2cd96c11d231f1d",
-  "version.json": "b1254b4726379d49cf67d6591f602d9a7490b86faef0ea7851c83306ec93db69"
+  "version.json": "ba2f63ebaaba7007a676b7a861034678a02802bd19bc0b796b9cb123e7dd23b6"
  },
  "schema": "knuaf-doc/install-manifest@1"
 }
