@@ -169,32 +169,160 @@ class OutlineTests(ContractCase):
         core = runtime("gg_core")
         root = self.make_project()
         core.apply(root, self.change(root), 0)
-        before = {rel: data for rel, data in self._tree_bytes(root).items()
-                  if rel == "project.json" or rel.startswith("sections/")}
         change = self.change(root, "dairy", "rebind")
+        before = self._tree_bytes(root)
         with patch.object(core, "atomic", side_effect=OSError("synthetic disk failure")):
             with self.assertRaises(core.OperationError) as caught:
                 core.apply(root, change, 1)
         result = caught.exception.result
         self.assertEqual(result["commit_state"], "not_committed")
-        # 커밋 전 실패: 정본과 옛 seed 파일은 바이트 그대로다. 새 seed 파일은
-        # W1과 같은 규칙으로 남기고 preserved_paths에 전부 보고한다(같은 요청
-        # 재시도가 다시 쓰거나 그대로 재사용 — 조용히 지우지 않음).
-        after = self._tree_bytes(root)
-        for rel, data in before.items():
-            self.assertEqual(after[rel], data)
-        seeded = {rel for rel in after
-                  if rel.startswith("sections/") and rel not in before}
-        self.assertEqual(seeded, {rel for rel in result["preserved_paths"]
-                                  if rel.startswith("sections/")})
-        self.assertTrue(seeded)
+        # DESIGN §7: 커밋 전 실패는 정본뿐 아니라 파일도 원래 상태여야 한다.
+        # 새 seed 파일이 남으면 다음 시도가 "이미 있는 장"으로 오인한다.
+        self.assertEqual(self._tree_bytes(root), before)
+        self.assertFalse((root / "sections/chapter_01.md").exists())
+        self.assertEqual(result.get("preserved_paths") or [], [])
         self.assertEqual(core.load(root)["revision"], 1)
-        # 같은 요청 재시도는 남은 파일을 재사용해 그대로 성공한다.
+        # 같은 요청 재시도는 처음부터 다시 심고 그대로 성공한다.
         p = core.apply(root, change, 1)
         self.assertEqual(len(p["sections"]), 12)
         self.assertTrue((root / "sections/chapter_12.md").exists())
         self.assertFalse((root / "sections/farm_status.md").exists())
         self.assertEqual(p["requests"]["rebind"]["hash"], core.digest(change))
+
+    def test_seed_write_failure_midway_rolls_back_every_created_file(self):
+        core, outline = runtime("gg_core"), runtime("gg_outline")
+        root = self.make_project()
+        change = self.change(root)
+        before = self._tree_bytes(root)
+        real_fsync = outline.os.fsync
+        receipt = root / outline._receipt_rel("bind")
+        sealed = []
+
+        def flaky(fd):
+            # 영수증을 쓴 뒤 두 번째 장 파일까지 쓰고 세 번째에서 죽는다.
+            # 이미 만든 파일이 남으면 실패 직후 원상태가 아니다(DESIGN §7).
+            if receipt.exists():
+                sealed.append(fd)
+                if len(sealed) == 3:
+                    raise OSError("synthetic mid-prepare failure")
+            return real_fsync(fd)
+
+        with patch.object(outline.os, "fsync", flaky):
+            with self.assertRaises(core.OperationError) as caught:
+                core.apply(root, change, 0)
+        result = caught.exception.result
+        self.assertEqual((result["commit_state"], result["reason"]),
+                         ("not_committed", "outline_prepare_failed"))
+        self.assertEqual(len(sealed), 3)
+        # 영수증과 이미 쓴 장 파일, 새로 만든 디렉터리까지 모두 사라진다.
+        self.assertEqual(self._tree_bytes(root), before)
+        self.assertEqual(result.get("preserved_paths") or [], [])
+        self.assertFalse((root / "sections").exists())
+        self.assertFalse((root / "migration").exists())
+        # 같은 요청은 처음부터 다시 심어 정상 커밋된다.
+        p = core.apply(root, change, 0)
+        self.assertEqual((p["revision"], len(p["sections"])), (1, 6))
+
+    def test_canonical_write_failure_rolls_back_seeds_but_keeps_snapshot(self):
+        core = runtime("gg_core")
+        root = self.make_project()
+        change = self.change(root)
+        before = self._tree_bytes(root)
+        real_atomic = core.atomic
+        calls = []
+
+        def fail_canonical(path, data):
+            calls.append(path.name)
+            if path.name == "project.json":
+                raise OSError("synthetic canonical write failure")
+            return real_atomic(path, data)
+
+        with patch.object(core, "atomic", fail_canonical):
+            with self.assertRaises(core.OperationError) as caught:
+                core.apply(root, change, 0)
+        result = caught.exception.result
+        self.assertEqual((result["commit_state"], result["reason"]),
+                         ("not_committed", "canonical_commit_failed"))
+        # 실패 주입이 정본 쓰기에서 실제로 걸렸고, 그 전에 스냅샷 1건만 쓰였다.
+        # (i.e. 스냅샷 실패 경로가 아니라 정본 실패 경로를 시험한 것이다.)
+        self.assertEqual(calls[:2], ["revision-0.json", "project.json"])
+        self.assertEqual(result.get("preserved_paths"), ["migration/revision-0.json"])
+        # seed 산출물은 §7대로 원상태: 장 파일·영수증·sections/ 디렉터리 전부 없음.
+        outline = runtime("gg_outline")
+        self.assertFalse((root / "sections").exists())
+        self.assertFalse((root / "sections/farm_status.md").exists())
+        self.assertFalse((root / outline._receipt_rel(change["request_id"])).exists())
+        # 남는 것은 이 호출이 쓴 이력 스냅샷 1건(= 실패 전 정본의 사본)뿐이고,
+        # 나머지 파일은 바이트까지 그대로다. DESIGN §9가 남은 자기 파일을
+        # preserved_paths로 보고하도록 허용하고, tests/test_p2_core.py:1370
+        # (test_orphan_history_snapshot_reported_not_committed)이 정본 실패 시
+        # 고아 스냅샷을 숨기지 말고 보고하라고 이미 고정하고 있다.
+        after = self._tree_bytes(root)
+        self.assertEqual(set(after) - set(before), {"migration/revision-0.json"})
+        self.assertEqual(set(before) - set(after), set())
+        for rel, data in before.items():
+            self.assertEqual(after[rel], data, rel)
+        self.assertEqual(after["migration/revision-0.json"],
+                         before["project.json"])
+        # 같은 요청 재시도는 처음부터 다시 심어 정상 커밋된다.
+        p = core.apply(root, change, 0)
+        self.assertEqual((p["revision"], len(p["sections"])), (1, 6))
+
+    def test_rebind_canonical_failure_restores_every_path_and_byte(self):
+        core = runtime("gg_core")
+        root = self.make_project()
+        core.apply(root, self.change(root), 0)
+        change = self.change(root, "dairy", "rebind")
+        before = self._tree_bytes(root)
+        real_atomic = core.atomic
+        calls = []
+
+        def fail_canonical(path, data):
+            calls.append(path.name)
+            if path.name == "project.json":
+                raise OSError("synthetic canonical write failure")
+            return real_atomic(path, data)
+
+        with patch.object(core, "atomic", fail_canonical):
+            with self.assertRaises(core.OperationError) as caught:
+                core.apply(root, change, 1)
+        result = caught.exception.result
+        self.assertEqual((result["commit_state"], result["reason"]),
+                         ("not_committed", "canonical_commit_failed"))
+        # 스냅샷 쓰기까지는 갔고 정본 쓰기에서 죽었다(스냅샷 실패 경로가 아님).
+        self.assertEqual(calls[:2], ["revision-1.json", "project.json"])
+        # 재바인딩 실패는 DESIGN §7의 "원래 상태"다 — 새 장 파일도, 새 영수증도,
+        # 이 호출이 쓴 이력 사본도 남기지 않는다. 경로 집합과 바이트가 모두 같아야
+        # 다음 시도가 "이미 있는 장"을 보지 않는다.
+        self.assertEqual(self._tree_bytes(root), before)
+        self.assertFalse((root / "sections/chapter_01.md").exists())
+        self.assertFalse((root / "migration/revision-1.json").exists())
+        self.assertEqual(result.get("preserved_paths") or [], [])
+        self.assertEqual(core.load(root)["revision"], 1)
+        # 같은 요청 재시도는 처음부터 다시 심어 12장으로 커밋된다.
+        p = core.apply(root, change, 1)
+        self.assertEqual((p["revision"], len(p["sections"])), (2, 12))
+        self.assertFalse((root / "sections/farm_status.md").exists())
+
+    def test_rebind_conflict_when_only_line_endings_changed(self):
+        core = runtime("gg_core")
+        root = self.make_project()
+        p = core.apply(root, self.change(root), 0)
+        section = p["sections"]["environment"]
+        path = root / section["path"]
+        # 본문·제목은 그대로 두고 LF만 CRLF로 바꾼다. 텍스트로 읽으면 같은
+        # 내용이라 영수증 해시가 맞아떨어지지만, 파일 바이트는 다른 파일이다.
+        path.write_bytes(path.read_bytes().replace(b"\n", b"\r\n"))
+        change = self.change(root, "dairy", "rebind")
+        before = self._tree_bytes(root)
+        with self.assertRaises(core.OperationError) as caught:
+            core.apply(root, change, 1)
+        result = caught.exception.result
+        self.assertEqual((result["commit_state"], result["reason"]),
+                         ("not_committed", "outline_conflict"))
+        self.assertEqual(self._tree_bytes(root), before)
+        self.assertEqual(core.load(root)["revision"], 1)
+        self.assertTrue(path.read_bytes().count(b"\r\n"))
 
     def test_rebind_user_file_no_clobber(self):
         core = runtime("gg_core")
@@ -211,15 +339,21 @@ class OutlineTests(ContractCase):
         core = runtime("gg_core")
         root = self.make_project()
         change = self.change(root)
-        before = (root / "project.json").read_bytes()
+        before = self._tree_bytes(root)
         with patch.object(core, "atomic", side_effect=OSError("synthetic disk failure")):
             with self.assertRaises(core.OperationError) as caught:
                 core.apply(root, change, 0)
-        self.assertEqual(caught.exception.result["commit_state"], "not_committed")
-        self.assertEqual(len(caught.exception.result["preserved_paths"]), 7)
-        self.assertEqual((root / "project.json").read_bytes(), before)
+        result = caught.exception.result
+        self.assertEqual(result["commit_state"], "not_committed")
+        # 이력 스냅샷도 영수증도 남지 않고, 새 seed 파일도 남지 않는다.
+        self.assertEqual(self._tree_bytes(root), before)
+        self.assertEqual(result.get("preserved_paths") or [], [])
+        # 같은 요청 재시도는 처음부터 다시 심어 그대로 성공한다.
         p = core.apply(root, change, 0)
         self.assertEqual((p["revision"], len(p["sections"])), (1, 6))
+        self.assertEqual(sorted(rel for rel in self._tree_bytes(root)
+                                if rel.startswith("sections/")),
+                         sorted(p["sections"][key]["path"] for key in p["sections"]))
 
     def test_catalog_matches_registry_body_nodes(self):
         outline, majors = runtime("gg_outline"), runtime("gg_major_contract")
@@ -261,7 +395,8 @@ class OutlineTests(ContractCase):
         core, outline = runtime("gg_core"), runtime("gg_outline")
         root = self.make_project()
         change = self.change(root)
-        with patch.object(outline, "prepare", return_value=[]):
+        with patch.object(outline, "prepare",
+                          return_value={"paths": [], "created": [], "dirs": []}):
             p = core.apply(root, change, 0)
         before = self._tree_bytes(root)
         self.assertEqual(outline.outline_state(str(root), p)["reason"], "explicit_reconfirmation_required")

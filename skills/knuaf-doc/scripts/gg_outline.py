@@ -140,13 +140,21 @@ def untouched_seed_sections(project, root=None):
         files = (receipts[request] or {}).get("files")
         if not isinstance(files, dict) or path not in files:
             continue
+        # The receipt holds the hash of the bytes we wrote.  Hashing a
+        # text-decoded copy would normalise line endings, so a file whose
+        # only change is LF→CRLF would still look untouched and let a
+        # rebind through without the outline_conflict DESIGN §7 requires.
         try:
-            text = core.local(root, path).read_text(encoding="utf-8")
+            raw = core.local(root, path).read_bytes()
         except OSError:
             continue
-        if core.draft(text):
+        if hashlib.sha256(raw).hexdigest() != files[path]:
             continue
-        if hashlib.sha256(text.encode()).hexdigest() != files[path]:
+        try:
+            text = raw.decode("utf-8")
+        except UnicodeDecodeError:
+            continue
+        if core.draft(text):
             continue
         found.add(section_id)
     return found
@@ -206,8 +214,70 @@ def cleanup(root, old, project, request_id):
     return problems
 
 
+def _prepared(paths=(), replaces_seeds=False):
+    """The result of one ``prepare`` call.
+
+    ``paths`` is every path the seed will own (receipt first, then the
+    profile's nodes in order) — what a committed seed reports.  ``created``
+    and ``dirs`` are only what this call actually created, which is what a
+    rollback may remove; a path inherited from an earlier identical attempt
+    is never in there.  ``replaces_seeds`` marks a rebind that walks away
+    from the previous major's empty chapters: DESIGN §7 requires such a call
+    to leave the folder exactly as it was when it fails before the canonical
+    commit — no leftover seed file *and* no leftover history copy.
+    """
+    return {"paths": list(paths), "created": [], "dirs": [],
+            "replaces_seeds": bool(replaces_seeds)}
+
+
+def _make_dir(root, path, created):
+    """Create ``path`` and its missing ancestors, recording each level this
+    call created (root-relative) so a rollback can remove them again."""
+    base = Path(root).resolve()
+    missing = []
+    current = path
+    while not current.exists():
+        missing.append(current)
+        current = current.parent
+    for directory in reversed(missing):
+        directory.mkdir()
+        created.append(directory.relative_to(base).as_posix())
+
+
+def rollback(root, prepared):
+    """Undo exactly the files one ``prepare`` call created before a failed commit.
+
+    DESIGN §7: a failure before the canonical commit leaves the project file
+    *and* the seed files in their original state.  Only paths this call
+    created are removed — a seed reused from an identical earlier attempt,
+    or a receipt that already existed, belongs to that attempt.  Returns the
+    paths that could not be removed; the caller reports those as
+    ``preserved_paths`` instead of claiming a clean rollback.
+    """
+    import gg_core as core
+    leftovers = []
+    for rel in reversed(prepared.get("created") or []):
+        try:
+            core.local(root, rel).unlink()
+        except FileNotFoundError:
+            continue
+        except (OSError, ValueError):
+            leftovers.append(rel)
+    for rel in reversed(prepared.get("dirs") or []):
+        try:
+            core.local(root, rel).rmdir()
+        except (OSError, ValueError):
+            continue
+    return leftovers
+
+
 def prepare(root, old, project, change):
-    """Validate the final candidate and seed it; caller holds the real OS guard."""
+    """Validate the final candidate and seed it; caller holds the real OS guard.
+
+    Returns ``_prepared(paths)``: the paths the seed owns plus what this call
+    created.  A failure inside the write phase rolls those creations back
+    before raising, so ``preserved_paths`` names only what survived.
+    """
     import gg_core as core
     for key, section in old["sections"].items():
         if "outline" in section and key in project["sections"]:
@@ -217,11 +287,11 @@ def prepare(root, old, project, change):
                   op.get("value", {}).get("field_id") == majors.COMMON_MAJOR_FIELD
                   for op in change.get("ops", []))
     if not touched:
-        return []
+        return _prepared()
     try:
         binding = _binding(project)
     except majors.MajorContractError:
-        return []
+        return _prepared()
     sections = project["sections"]
     seeded = {key: section for key, section in old["sections"].items()
               if isinstance(section.get("outline"), dict)}
@@ -245,7 +315,7 @@ def prepare(root, old, project, change):
         if section["outline"].get("profile_hash") != phash:
             raise ValueError("outline_profile_mismatch")
     if old["sections"] and not stale:
-        return []
+        return _prepared()
     retired = {seeded[key]["path"]: seeded[key] for key in stale}
     for key in stale:
         sections.pop(key, None)
@@ -257,10 +327,10 @@ def prepare(root, old, project, change):
             raise core._op("apply", "canonical", "not_committed",
                            "outline_prepare_failed", detail=str(error),
                            request_id=change["request_id"]) from error
-        return []
+        return _prepared(replaces_seeds=True)
     nodes = profile["sections"]
     if not nodes:
-        return []
+        return _prepared(replaces_seeds=bool(stale))
     expected = {n["node_id"] for n in nodes}
     if sections and set(sections) != expected:
         raise ValueError("outline_caller_sections_incomplete")
@@ -296,11 +366,13 @@ def prepare(root, old, project, change):
                 continue
             if not existing_receipt or path.read_bytes() != text.encode():
                 raise ValueError("outline_path_conflict: " + rel)
-    preserved = [receipt_rel]
+    prepared = _prepared([receipt_rel] + [n["path"] for n in nodes],
+                         replaces_seeds=bool(stale))
     try:
-        receipt_path.parent.mkdir(parents=True, exist_ok=True)
+        _make_dir(root, receipt_path.parent, prepared["dirs"])
         if not existing_receipt:
             with receipt_path.open("x", encoding="utf-8") as stream:
+                prepared["created"].append(receipt_rel)
                 json.dump(receipt, stream, ensure_ascii=False, sort_keys=True)
                 stream.flush()
                 os.fsync(stream.fileno())
@@ -308,14 +380,15 @@ def prepare(root, old, project, change):
             rel = node["path"]
             path = core.local(root, rel)
             if not path.exists():
-                path.parent.mkdir(parents=True, exist_ok=True)
-                with path.open("x", encoding="utf-8") as stream:
-                    preserved.append(rel)
+                _make_dir(root, path.parent, prepared["dirs"])
+                # newline="": the bytes on disk must equal ``files[rel]`` exactly,
+                # which is what the receipt hashes (a translated write would
+                # make the receipt lie about its own file on Windows).
+                with path.open("x", encoding="utf-8", newline="") as stream:
+                    prepared["created"].append(rel)
                     stream.write(files[rel])
                     stream.flush()
                     os.fsync(stream.fileno())
-            if rel not in preserved:
-                preserved.append(rel)
             origin = dict(profile_id=profile["profile_id"], profile_version=profile["profile_version"],
                           profile_hash=phash, major_id=binding.major_id,
                           node_id=node["node_id"], request_id=request)
@@ -326,6 +399,11 @@ def prepare(root, old, project, change):
             sections[node["node_id"]]["outline"] = origin
         core.validate(project)
     except (OSError, ValueError) as error:
+        # Nothing is committed yet, so the seed files this call created must
+        # not survive it (DESIGN §7).  Only what a rollback could not remove
+        # is reported; an empty list means the files really are as before.
+        leftovers = rollback(root, prepared)
         raise core._op("apply", "canonical", "not_committed", "outline_prepare_failed",
-                       detail=str(error), request_id=request, preserved_paths=preserved) from error
-    return preserved
+                       detail=str(error), request_id=request,
+                       preserved_paths=leftovers) from error
+    return prepared

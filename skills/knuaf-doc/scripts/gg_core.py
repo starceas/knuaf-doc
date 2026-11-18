@@ -454,9 +454,54 @@ def _recheck_canonical(root, expect_revision, request_id=None, seed_files=None):
     return "indeterminate", {}
 
 
+def _rollback_uncommitted(root, prepared):
+    """Undo a seed whose canonical commit provably did not land.
+
+    DESIGN §7 wants the files back in their original state after a
+    pre-commit failure, so a failed snapshot or canonical write must not
+    leave the freshly created chapter files behind.  The recheck already
+    proved the new revision is absent, so only this call's own creations are
+    removed; anything it could not remove is returned for ``preserved_paths``.
+    """
+    if not prepared:
+        return []
+    try:
+        import gg_outline
+        return gg_outline.rollback(root, prepared)
+    except (OSError, ValueError):
+        return list(prepared.get("created") or [])
+
+
+def _discard(root, rel):
+    """Remove a file this call created; True when it is gone.
+
+    A rebind that fails before the canonical commit must leave the folder
+    exactly as it was (DESIGN §7), which includes the history copy written
+    just before the commit attempt.  ``False`` means the file survived and
+    belongs in ``preserved_paths``.
+    """
+    try:
+        local(root, rel).unlink()
+        return True
+    except FileNotFoundError:
+        return True
+    except (OSError, ValueError):
+        return False
+
+
 def _commit_canonical(root, data, *, operation, expect_revision,
-                      request_id=None, preserved_paths=None, seed_files=None):
-    """Single canonical commit point with post-attempt recheck."""
+                      request_id=None, preserved_paths=None, seed_files=None,
+                      prepared=None, discard_on_rollback=()):
+    """Single canonical commit point with post-attempt recheck.
+
+    ``preserved_paths`` are files this call wrote that outlive it either way
+    (a history snapshot); ``prepared`` describes the seed files, which only
+    survive once the commit actually lands; ``discard_on_rollback`` names
+    entries of ``preserved_paths`` this call created, which a provably
+    uncommitted attempt removes again.
+    """
+    seed_paths = prepared["paths"] if prepared else []
+    undo = set(discard_on_rollback or ())
     try:
         atomic(Path(root) / "project.json", data)
         # 정본이 확정된 뒤, 같은 락 안에서 곁파일을 맞춘다. 여기서 나는 예외는
@@ -464,13 +509,23 @@ def _commit_canonical(root, data, *, operation, expect_revision,
         _rewrite_sidecars(root)
     except OSError as error:
         state, extra = _recheck_canonical(root, expect_revision, request_id, seed_files)
+        if state == "not_committed":
+            # Nothing landed, so the seed files must not outlive the failure
+            # (DESIGN §7) — report only what a rollback could not remove.
+            kept = _rollback_uncommitted(root, prepared)
+            for rel in preserved_paths or []:
+                if rel in undo and _discard(root, rel):
+                    continue
+                kept.append(rel)
+        else:
+            kept = [*(preserved_paths or []), *seed_paths]
         raise _op(
             operation,
             "canonical",
             state,
             "canonical_commit_failed",
             detail=str(error),
-            preserved_paths=preserved_paths,
+            preserved_paths=kept or None,
             **extra,
         ) from error
 
@@ -1510,7 +1565,8 @@ def _apply_locked(root, change, expected_revision, *, capability, adoption=None,
         p[col][key] = value
     validate(p)
     import gg_outline
-    outline_paths = gg_outline.prepare(root, old, p, change)
+    prepared = gg_outline.prepare(root, old, p, change)
+    outline_paths = prepared["paths"]
     seed_files = {
         section["path"]: digest(local(root, section["path"]).read_bytes())
         for section in p["sections"].values()
@@ -1542,18 +1598,29 @@ def _apply_locked(root, change, expected_revision, *, capability, adoption=None,
     else:
         p["requests"][request] = {"hash": chash, "revision": p["revision"]}
     snapshot_rel = "migration/revision-%s.json" % old["revision"]
+    snapshot_path = local(root, snapshot_rel)
+    snapshot_existed = snapshot_path.exists()
+    # A rebind that fails before the canonical commit has to leave the folder
+    # byte-identical (DESIGN §7), so its own history copy must go too.  A
+    # snapshot that already existed belongs to an earlier commit and stays.
+    rebind_snapshot = (bool(prepared and prepared.get("replaces_seeds"))
+                       and not snapshot_existed)
     try:
         atomic(
-            local(root, snapshot_rel),
+            snapshot_path,
             json.dumps(old, ensure_ascii=False, indent=2).encode(),
         )
     except OSError as error:
         # History snapshot failed before the canonical commit — the
-        # canonical is still untouched → not_committed.
+        # canonical is still untouched → not_committed, so the seed files
+        # created above must go back too.
+        leftovers = _rollback_uncommitted(root, prepared)
+        if rebind_snapshot and not _discard(root, snapshot_rel):
+            leftovers.insert(0, snapshot_rel)
         raise _op(
             operation, "canonical", "not_committed", "history_write_failed",
             detail=str(error), request_id=request,
-            preserved_paths=outline_paths,
+            preserved_paths=leftovers or None,
         ) from error
     _commit_canonical(
         root,
@@ -1561,8 +1628,10 @@ def _apply_locked(root, change, expected_revision, *, capability, adoption=None,
         operation=operation,
         expect_revision=p["revision"],
         request_id=request,
-        preserved_paths=[snapshot_rel, *outline_paths],
+        preserved_paths=[snapshot_rel],
         seed_files=seed_files,
+        prepared=prepared,
+        discard_on_rollback=(snapshot_rel,) if rebind_snapshot else (),
     )
     # 정본은 확정됐다. 곁파일(손 안 댄 옛 seed) 정리는 그 뒤에만 하고,
     # 실패는 삼키지 않고 committed_cleanup_pending으로 보고한다.
