@@ -489,11 +489,11 @@ def _walk_parent(root, rel):
         raise
 
 
-def _read_file(root, rel):
+def _read_file(root, rel, limit=None):
     """No-follow read of a root-relative regular file; returns bytes."""
     if sys.platform == "win32":
         _check_relative_path(rel)
-        return gg_winfs.read_bytes(Path(root) / rel)[0]
+        return gg_winfs.read_bytes(Path(root) / rel, limit=limit)[0]
     fd, name = _walk_parent(root, rel)
     try:
         st = _stat_at(fd, name)
@@ -504,12 +504,19 @@ def _read_file(root, rel):
             opened = os.fstat(ffd)
             if (opened.st_dev, opened.st_ino) != (st.st_dev, st.st_ino):
                 raise ValueError("파일이 경합으로 교체됨: " + rel)
+            if limit is not None and opened.st_size > limit:
+                raise ValueError("파일 읽기 상한 초과: " + rel)
             chunks = []
+            size = 0
             while True:
-                chunk = os.read(ffd, 1 << 20)
+                chunk = os.read(ffd, (1 << 20) if limit is None else
+                                min(1 << 20, limit + 1 - size))
                 if not chunk:
                     break
                 chunks.append(chunk)
+                size += len(chunk)
+                if limit is not None and size > limit:
+                    raise ValueError("파일 읽기 상한 초과: " + rel)
             return b"".join(chunks)
         finally:
             os.close(ffd)
@@ -851,6 +858,62 @@ def verify_publication(root, *, publication_ref, expected=None):
             if key in expected and expected[key] != receipt[key]:
                 raise ValueError("receipt " + key + "가 기대와 불일치")
     return receipt
+
+
+def latest_paper_receipt(root, *, max_revision):
+    """Newest paper slot wins, including damaged slots; never fall back."""
+    reason = "build_unreadable"
+    try:
+        st = _lstat_rel(root, BUILD_DIR)
+        if st is None:
+            return "absent", None, None
+        if not stat.S_ISDIR(st.st_mode) or stat.S_ISLNK(st.st_mode):
+            return "invalid", reason, None
+        if sys.platform == "win32":
+            fd = _open_dir(Path(root) / BUILD_DIR)
+        else:
+            fd, _ = _walk_parent(root, BUILD_DIR + "/.listing")
+        try:
+            names = _dir_names(fd)
+        finally:
+            _close_dir(fd)
+        revisions = {}
+        for name in names:
+            if name.isdigit() and int(name) <= max_revision:
+                revision = int(name)
+                if revision in revisions:
+                    return "invalid", "rev_ambiguous", None
+                revisions[revision] = name
+        for revision in sorted(revisions, reverse=True):
+            base = BUILD_DIR + "/" + revisions[revision]
+            reason = "rev_unreadable"
+            st = _lstat_rel(root, base)
+            if st is None or not stat.S_ISDIR(st.st_mode) or stat.S_ISLNK(st.st_mode):
+                return "invalid", reason, None
+            reason = "paper_unreadable"
+            base += "/paper"
+            st = _lstat_rel(root, base)
+            if st is None:
+                continue
+            if not stat.S_ISDIR(st.st_mode) or stat.S_ISLNK(st.st_mode):
+                return "invalid", reason, None
+            reason = "receipt_unreadable"
+            rel = base + "/" + RECEIPT_NAME
+            _managed_receipt_kind(rel)
+            raw = _read_file(root, rel, limit=1 << 20)
+            reason = "receipt_rejected"
+            receipt = _loads_strict(raw)
+            if (not isinstance(receipt, dict) or receipt.get("kind") != "paper"
+                    or type(receipt.get("request", {}).get("input_revision")) is not int
+                    or receipt["request"]["input_revision"] != revision):
+                return "invalid", reason, None
+            ref = {"schema": REF_SCHEMA, "id": receipt["publication_id"],
+                   "path": rel, "sha256": hashlib.sha256(raw).hexdigest()}
+            receipt = verify_publication(root, publication_ref=ref)
+            return "valid", receipt, ref
+        return "absent", None, None
+    except Exception:
+        return "invalid", reason, None
 
 
 def _iter_managed_receipts(root):
