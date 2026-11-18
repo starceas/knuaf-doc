@@ -50,8 +50,7 @@ _STUB_SOURCE = (
 
 
 # Diagnostic sink for the nested runs, deliberately OUTSIDE the disposable
-# copy tree and outside the TemporaryDirectory that owns it: a file inside the
-# copy is an undeclared file for any later bundle check, and the TemporaryDirectory
+# copy tree and outside the TemporaryDirectory that owns it: the directory
 # is deleted at test end, so a report written beside the copy would never reach
 # CI's artifact upload.  The workflow uploads <tempdir>/knuaf-nested-reports/*.
 _REPORT_ROOT = Path(tempfile.gettempdir()) / "knuaf-nested-reports"
@@ -108,18 +107,6 @@ def _run_unnested(root, *, args=(), interpreter_flags=(), env_extra=None):
     return proc, report
 
 
-def _refresh_manifest(root):
-    """Regenerate the copy's manifest in place — disposable scratch
-    lineage only; the real candidate's D-owned metadata is untouched."""
-    env = dict(os.environ)
-    env["PYTHONDONTWRITEBYTECODE"] = "1"
-    return subprocess.run(
-        [sys.executable, "-B",
-         str(Path(root) / "tools" / "build_validation_bundle.py"),
-         "--root", str(root), "--write-manifest"],
-        cwd=root, capture_output=True, text=True, encoding="utf-8", env=env)
-
-
 def _runner_module():
     """Load the candidate's run_validation.py for pure in-process
     classification checks (no subprocess, no recursion)."""
@@ -141,27 +128,11 @@ class RunnerContractTests(ContractCase):
         self.addCleanup(tmp.cleanup)
         return copy_public_tree(Path(tmp.name) / "public")
 
-    def _freshen(self, root):
-        """Re-pin the scratch copy's manifest to its current bytes.
-
-        The committed manifest pins the repair-input (R1) hashes; any
-        scratch copy therefore drifts the moment an owned file changes,
-        and ``test_bundle_lineage`` inside a nested suite run would
-        report that drift as an unexpected failure.  Regenerating the
-        manifest is permitted only for disposable scratch copies — the
-        real candidate's D-owned metadata is never touched.
-        """
-        mp = _refresh_manifest(root)
-        self.assertEqual(0, mp.returncode, mp.stderr[-500:])
-
     def test_missing_dependencies_block_run(self):
         """N1-02: with -S (no site-packages) the final runner must exit
         nonzero with runtime.status=not_run_dependency — a missing
         required dependency is a readiness failure, not a skip."""
         root = self._public_copy("knuaf-n1deps-")
-        # freshen so the default-mode bundle gate stays clean and the
-        # dependency failure is the sole cause under test
-        self._freshen(root)
         proc, rep = _run_unnested(root, interpreter_flags=("-S",))
         self.assertIsNotNone(rep, proc.stderr)
         self.assertNotEqual(0, proc.returncode, proc.stdout)
@@ -249,7 +220,6 @@ class InjectedSkip(unittest.TestCase):
         root = self._public_copy("knuaf-n1skip-")
         (root / "tests" / "test_injected_skip.py").write_text(
             injected, encoding="utf-8")
-        self._freshen(root)
         proc, rep = _run(root, args=("--runtime-only",))
         self.assertIsNotNone(rep, proc.stderr)
         self.assertNotEqual(0, proc.returncode, proc.stdout)
@@ -278,7 +248,6 @@ class InjectedSkip(unittest.TestCase):
         root2 = self._public_copy("knuaf-n1skip2-")
         (root2 / "tests" / "test_injected_skip2.py").write_text(
             injected2, encoding="utf-8")
-        self._freshen(root2)
         proc2, rep2 = _run(root2, args=("--runtime-only",))
         self.assertIsNotNone(rep2, proc2.stderr)
         self.assertEqual("incomplete", rep2["verdict"])
@@ -296,7 +265,6 @@ class InjectedSkip(unittest.TestCase):
         for value in ("1", "yes"):
             with self.subTest(mode="default", value=value):
                 root = self._public_copy("knuaf-n1flag-")
-                self._freshen(root)
                 proc, rep = _run_unnested(root,
                                           env_extra={NESTED: value})
                 self.assertIsNotNone(rep, proc.stderr)
@@ -307,7 +275,6 @@ class InjectedSkip(unittest.TestCase):
                                 rep["causes"])
         with self.subTest(mode="runtime_only", value="bogus"):
             root = self._public_copy("knuaf-n1flag-")
-            self._freshen(root)
             proc, rep = _run_unnested(root, args=("--runtime-only",),
                                       env_extra={NESTED: "bogus"})
             self.assertIsNotNone(rep, proc.stderr)
@@ -320,7 +287,6 @@ class InjectedSkip(unittest.TestCase):
             self.assertEqual(3, proc.returncode, proc.stdout)
         with self.subTest(mode="runtime_only", value="1"):
             root = self._public_copy("knuaf-n1flag-")
-            self._freshen(root)
             proc, rep = _run(root, args=("--runtime-only",))
             self.assertIsNotNone(rep, proc.stderr)
             # the sanctioned value '1' is accepted: the flag must never
@@ -386,10 +352,6 @@ class SyntheticXpass(ContractCase):
         inv_path.write_text(
             json.dumps(inv, ensure_ascii=False, indent=1) + "\n",
             encoding="utf-8")
-        # unlike the retired gg_core patch this touches no baseline file,
-        # so the scratch manifest re-pins cleanly and the synthetic XPASS
-        # stays the sole failure under test
-        self._freshen(root)
         proc, rep = _run(root, args=("--runtime-only",))
         self.assertIsNotNone(rep, proc.stderr)
         self.assertEqual(1, proc.returncode, proc.stdout)
@@ -419,7 +381,6 @@ class SyntheticXpass(ContractCase):
         self.assertNotEqual(src, patched,
                             "test rename patch did not apply to the copy")
         gate.write_text(patched, encoding="utf-8")
-        self._freshen(root)
         proc, rep = _run(root, args=("--runtime-only",))
         self.assertIsNotNone(rep, proc.stderr)
         self.assertEqual(1, proc.returncode, proc.stdout)
@@ -444,7 +405,6 @@ class InjectedBad(unittest.TestCase):
         root = self._public_copy("knuaf-n1both-")
         (root / "tests" / "test_injected_bad.py").write_text(
             injected, encoding="utf-8")
-        self._freshen(root)
 
         # R2 regression for the observed recorder blindness: a failed
         # subTest must surface as a failed parent entry — R1's runner
@@ -463,18 +423,13 @@ class InjectedSubtest(unittest.TestCase):
         root2 = self._public_copy("knuaf-r2sub-")
         (root2 / "tests" / "test_injected_subtest.py").write_text(
             subfail, encoding="utf-8")
-        self._freshen(root2)
 
-        # R2 scoped default run: refresh the copy's manifest (scratch
-        # lineage only) so the bundle gate exercises real behaviour —
-        # the edited runner file is otherwise stale vs the committed pin.
-        # The copy's meta-test file is stubbed so the inner DEFAULT run
-        # cannot recurse (NESTED cannot be set in default mode — that
-        # would be an incomplete cause by contract).
+        # R2 scoped default run: the copy's meta-test file is stubbed so
+        # the inner DEFAULT run cannot recurse (NESTED cannot be set in
+        # default mode — that would be an incomplete cause by contract).
         root3 = self._public_copy("knuaf-r2scoped-")
         (root3 / "tests" / "test_runner_contract.py").write_text(
             _STUB_SOURCE, encoding="utf-8")
-        self._freshen(root3)
 
         # injected subtest failure PLUS the pending native skip in
         # default mode: failure wins (exit 1), both flags false, the
@@ -484,23 +439,24 @@ class InjectedSubtest(unittest.TestCase):
             subfail, encoding="utf-8")
         (root4 / "tests" / "test_runner_contract.py").write_text(
             _STUB_SOURCE, encoding="utf-8")
-        self._freshen(root4)
 
-        # R3: bundle tamper control — folded in here so the nested-skip
-        # allowlist stays at its original ten IDs (a separate method
-        # would need an eleventh).  A byte-level change to a declared
-        # file without re-pinning is bundle tamper: the default run must
-        # report bundle=fail and verdict unexpected_failures (exit 1).
-        root5 = self._public_copy("knuaf-r3tamper-")
-        # stub the meta-test file so the inner default run cannot
-        # recurse (no NESTED allowed in default mode); do NOT refresh
-        # the manifest — stub + tamper both stay detectable.
+        # R3: deployment check failure control — folded in here so the
+        # nested-skip allowlist stays at its original ten IDs (a separate
+        # method would need an eleventh).  A missing deployment payload
+        # must report bundle=fail and verdict unexpected_failures (exit 1).
+        root5 = self._public_copy("knuaf-r3deployment-")
+        # Stub the meta-test file so the inner default run cannot
+        # recurse (no NESTED allowed in default mode).
         (root5 / "tests" / "test_runner_contract.py").write_text(
             _STUB_SOURCE, encoding="utf-8")
-        victim = root5 / "tests" / "test_question_gate.py"
-        src5 = victim.read_text(encoding="utf-8")
-        victim.write_text(src5 + "\n# scratch tamper byte\n",
-                          encoding="utf-8")
+        disposition_path = root5 / "docs" / "asset-disposition.json"
+        disposition = json.loads(disposition_path.read_text(encoding="utf-8"))
+        disposition["assets"].append({
+            "path": "S0/scripts/__missing_deployment_control__.py",
+            "disposition": "배포"})
+        disposition_path.write_text(
+            json.dumps(disposition, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8")
 
         # All five copies are prepared above; their runs are independent
         # (separate disposable roots, uniquely named report files), so they
@@ -592,7 +548,17 @@ class InjectedSubtest(unittest.TestCase):
         self.assertIsNotNone(rep5, proc5.stderr)
         self.assertEqual("default", rep5["mode"])
         self.assertEqual("fail", rep5["bundle"]["status"], rep5["bundle"])
+        self.assertEqual({
+            "workspace_matches_commit": "unchecked",
+            "local_result": "reference_only",
+            "official_evidence_requires": ["ci_run_url", "ci_head_sha"],
+        }, rep5["commit_evidence"])
+        self.assertIn(
+            "commit_evidence=unchecked local_result=reference_only "
+            "official_evidence=ci_run_record_with_sha", proc5.stdout)
         self.assertEqual("unexpected_failures", rep5["verdict"])
+        self.assertIn("asset_disposition:deployment_missing_payload",
+                      rep5["bundle"]["stdout_tail"])
         self.assertEqual(1, proc5.returncode, proc5.stdout)
         self.assertTrue(any("bundle" in c
                             for c in rep5["causes"]["unexpected"]),

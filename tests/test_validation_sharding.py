@@ -80,6 +80,11 @@ def _shard_report(index, count, scope="code", modules=None):
         "baseline_main": "0" * 40,
         "dependency": {"ok": True, "failed": [], "manifest_error": None},
         "bundle": {"status": "pass"},
+        "commit_evidence": {
+            "workspace_matches_commit": "unchecked",
+            "local_result": "reference_only",
+            "official_evidence_requires": ["ci_run_url", "ci_head_sha"],
+        },
         "runtime": runtime,
         "shard": {"index": index + 1, "count": count, "modules": assigned,
                   "discovered_test_ids": ids, "executed_test_ids": ids},
@@ -355,6 +360,11 @@ def _merged_report(scope="code", platform="linux"):
         "approved_skill_skips": skill_skips,
         "causes": {"unexpected": [], "incomplete": []},
         "bundle": {"status": "pass"},
+        "commit_evidence": {
+            "workspace_matches_commit": "unchecked",
+            "local_result": "reference_only",
+            "official_evidence_requires": ["ci_run_url", "ci_head_sha"],
+        },
         "dependency": {"ok": True, "failed": [], "manifest_error": None},
         "fixed": [], "deferred": [], "not_applicable": [],
         "unapproved_skips": [], "defect_tests_skipped": [],

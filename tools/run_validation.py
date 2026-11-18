@@ -11,6 +11,10 @@ interpreter, then runs both ``tests/`` and ``skills/knuaf-doc/tests/``.
 command; it always reports ``full_validation_completed=false`` and
 ``platform_validation_completed=false``.
 
+이 실행기는 지금 폴더가 어느 커밋과 같은지 확인하지 않는다. 결과가 어느
+커밋의 것인지는 그 커밋을 내려받아 돈 CI 실행 기록이 증명한다. 로컬 실행
+결과는 참고용이다.
+
 Supported Python: 3.10 or newer (enforced before any test runs).
 
 Exit contract (P2-R2):
@@ -18,7 +22,7 @@ Exit contract (P2-R2):
                            external gate pending
   0  ok_platform_scoped  — default mode, clean run, exactly the declared
                            pending external gate(s) observed
-  1  unexpected_failures — bundle tamper/fail, unexpected test
+  1  unexpected_failures — deployment check fail, unexpected test
                            failure/error/XPASS, framework/accounting
                            mismatch, or inventory mismatch
   2  usage/environment   — unsupported Python
@@ -1015,7 +1019,7 @@ def main(argv=None):
                  else _run_bundle_check(root))
         if bundle["status"] == "fail":
             unexpected_causes.append(
-                "bundle integrity check failed (see bundle.stdout_tail)")
+                "bundle (deployment) check failed (see bundle.stdout_tail)")
         elif bundle["status"] == "incomplete":
             incomplete_causes.append(bundle["reason"])
         dep = _dependency_preflight(root)
@@ -1202,6 +1206,11 @@ def main(argv=None):
         "root": str(root),
         "baseline_main": BASELINE_MAIN,
         "bundle": bundle,
+        "commit_evidence": {
+            "workspace_matches_commit": "unchecked",
+            "local_result": "reference_only",
+            "official_evidence_requires": ["ci_run_url", "ci_head_sha"],
+        },
         "dependency": dep,
         "runtime": {k: v for k, v in runtime.items()
                     if k != "known_defect_records"},
@@ -1243,6 +1252,8 @@ def main(argv=None):
            str(platform_validation_completed).lower(),
            str(full_validation_completed).lower()),
         "bundle=%s" % bundle["status"],
+        "commit_evidence=unchecked local_result=reference_only "
+        "official_evidence=ci_run_record_with_sha",
         "dependency=%s" % ("ready" if dep["ok"] else "NOT READY"),
         "tests_run=%d passed=%d known_baseline_defects=%d "
         "unexpected_failed=%d skipped=%d not_applicable=%d" % (

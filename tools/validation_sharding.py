@@ -354,7 +354,7 @@ def merge_shard_reports(root, paths, shard_count, scope="full"):
     ordered_reports = [reports[index] for index in sorted(reports)]
     for index, report in sorted(reports.items()):
         for key in ("tool", "mode", "validation_scope", "baseline_main",
-                    "platform", "python", "root", "dependency", "bundle"):
+                    "platform", "python", "root", "dependency", "bundle", "commit_evidence"):
             if report.get(key) != template.get(key):
                 raise ValueError(f"shard {index}: inconsistent {key}")
 
