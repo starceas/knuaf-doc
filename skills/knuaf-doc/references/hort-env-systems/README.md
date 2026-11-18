@@ -140,6 +140,63 @@
 - **출처 허용 목록 및 신뢰 등급 제한 (`_check_fact_sources`)**: 근거 출처의 `kind`/`source_type`은 사전에 정의된 유한한 7개 허용 쌍(`stat`/`official_stat`, `public_data`/`official_public`, `academic`/`academic_paper`, `research_report`/`institution_report`, `school_material`/`official_school`, `textbook`/`formal_textbook`, `interview`/`author_survey`)만 인정된다. `interview`는 `author_survey`(또는 `source="작성자 직접 조사"`)만 허용되며 일반 타인 인터뷰나 외부 출처(`external_*`)는 차단된다. 신뢰 등급(`grade`)은 정수 1 또는 2만 허용되며, 정책 금지값(3, 4)은 물론 문자열·전각·공백 변형(`"３"`, `" 3 "`, `"3"`)이나 불리언·실수 등 비정규형은 정규화 없이 명시 거부된다.
 - **생산 증가율 예외**: `sales.y2~y5.growth_rate`는 가격·임금 물가상승률이 아니라 **전년 대비 생산 증가율(생산량 스케일링)**이므로 물가 통계 수열 계약(`price_contract`) 대상이 아니며 기존 동작을 유지한다.
 
+## 학교 엑셀에 적은 값 읽어 오기 (v0.5.0)
+
+학생이 학교 원본 엑셀(`H-X1`)에 직접 적은 값을 **읽어서 분류표로 보여 주는** 읽기 전용 명령이다. 정본·프로젝트 파일·학생 엑셀은 바뀌지 않고, 쓰기는 `--out` JSON 한 파일뿐이다.
+
+```
+python3 scripts/gg.py input-readback <폴더> --xlsx <학생 파일> [--out build/hort-input-readback.json]
+```
+
+입력은 프로젝트 폴더(정본과 `finance-params.json`)·학생 `.xlsx`·원본 `H-X1` 셋이다. stdout은 3줄(총 칸·건수·거절 사유)이고 종료 코드는 `0` 읽음 / `2` 원본 사본 대조 거절 / `3` 입력 오류다. `--out`이 프로젝트 폴더 자체면 `output_path_in_canonical`, 폴더 밖이면 `output_outside_project`, 같은 이름의 파일이 이미 있으면 `output_exists`로 멈춘다(셋 다 코드 `3`).
+
+출력 JSON은 `status`·`source_sha256`·`student_sha256`·`counts`·`issues`·`cells` 여섯 키다. `counts`는 `recorded`(251)·`read`(221)·`not_read`(30)와 `by_state` 15키 전부(0이어도 넣는다)를 담고 합은 항상 251이다. 분류표 한 줄은 9항목 고정이다.
+
+| 항목 | 뜻 / 없을 때 |
+|---|---|
+| `sheet` `cell` | 시트 이름·주소(`A1`) — 항상 |
+| `state` | 아래 15개 상태 코드 — 항상 |
+| `source_kind` | `constant`·`blank`·`formula` |
+| `source_value` | 원본 값. 수식이면 수식 글자, 빈칸은 `null` |
+| `student_kind` | 위 셋 + `absent`(칸 없음) |
+| `student_value` | 학생 값. 수식이면 수식 글자만 — 계산된 숫자(캐시)는 절대 싣지 않는다. 빈칸·`absent`는 `null` |
+| `differs` | 값이 다른가. 수식 계열·`absent`는 `null` |
+| `message` | 학생에게 보이는 말 — 표 문구 그대로 |
+
+판정은 ⓪ → ① → ② 순서다. ⓪은 원본 사본 대조로, 저장된 계산값은 비교하지 않으므로 엑셀이 다시 계산한 정상 파일은 거절되지 않는다. ①은 읽지 않는 30칸(아닌 자리 26 + 못 가림 4)이고, 값이 바뀌어도 분류표에만 들어가고 답으로 쓰이지 않는다. ②는 적는 자리 221칸을 11개 상태 중 하나로 가른다.
+
+거절 사유 6개는 `template_sheet_order_changed`·`template_sheet_missing`·`template_state_changed`·`template_merges_changed`·`template_print_area_changed`·`template_cell_changed`이고, 하나라도 있으면 `status:"held"`·코드 `2`·`cells`는 빈 배열이다. 서식만 다른 칸처럼 값을 안 바꾼 차이는 거절이 아니라 `issues`의 `needs_visual_review`로 알린다. 원본 사용 범위 **밖**(확장 열·아래 빈 행)에 값을 넣으면 `unmapped_cell` 한 줄로 알리고 분류표에는 넣지 않는다. 범위 **안**의 비입력 칸(라벨·안내문)을 고치면 ⓪ 대조가 먼저 거절할 수 있다(`template_cell_changed`). 수식은 그대로인데 한쪽에 저장된 계산값이 없어 캐시를 나란히 못 보면 상태는 `formula_kept`로 두고 `issues`에 `cache_not_compared` 한 줄을 붙인다.
+
+비율 칸(`loan.slot1~5.annual_rate`)은 원본 소수를 그대로 쓴다 — 100배 변환은 없다. 범위(0 이상 1 미만)를 벗어나면 `ratio_out_of_range`, 그 칸의 표시 형식이 원본과 다르면 `ratio_unit_unconfirmed`를 `issues`에 붙인다. `ratio_out_of_range` 줄에는 "적으신 값 15는 1500%로 읽혀요"처럼 몇 %로 읽히는지 짚는 `message`를 함께 넣는다(분류표의 `message`는 적힌 소수 그대로).
+
+```학생화면
+엑셀에서 직접 바꿔 적으신 값 3건을 찾았습니다. 아직 자동으로 옮겨 드리지는 못해요 — 아래 목록을 보고 앱에서 답해 주세요.
+```
+
+`{N}`은 덮어쓴 값과 채운 빈칸을 합한 수 하나뿐이고, 같은 값·지움·수식 계열은 목록에만 적는다.
+
+### 상태 코드 15개
+
+| 상태 | 조건 (원본 → 학생) | 학생에게 보이는 말 |
+|---|---|---|
+| `not_read_template` | 연도 자리표시 8칸 | 원본이 비워 둔 연도 칸이라 읽지 않았어요. |
+| `not_read_textbook` | 교재 예시 11칸 | 교재 예시 칸이라 읽지 않았어요. |
+| `not_read_footnote` | 안내문·출처 7칸 | 안내문·출처 칸이라 읽지 않았어요. |
+| `not_read_unclear` | 뜻이 불분명한 4칸 | 무엇을 적는 자리인지 확인이 필요해요. |
+| `constant_overwritten` | 상수 → 상수, 값 다름 | 엑셀에 적으신 값 {v}예요. |
+| `same_value` | 상수 → 상수, 값 같음 | 원본과 같은 값이에요. |
+| `constant_deleted` | 상수 → 빈칸·칸 없음 | 적혀 있던 칸을 지우셨어요. |
+| `blank_filled` | 빈칸 → 상수 | 엑셀에 적으신 값 {v}예요. |
+| `blank_kept` | 빈칸 → 빈칸·칸 없음 | 아직 비어 있어요. |
+| `formula_kept` | 수식 → 같은 수식, 계산값도 같음 | 그대로 둔 계산 칸이에요. |
+| `formula_cache_only` | 수식 → 같은 수식, 계산값만 다름 | 엑셀이 다시 계산한 칸이에요. |
+| `formula_replaced` | 수식 → 다른 수식 | 계산식을 바꾸셨어요. |
+| `formula_to_constant` | 수식 → 상수 | 계산식을 값으로 바꾸셨어요. |
+| `formula_deleted` | 수식 → 빈칸·칸 없음 | 계산식을 지우셨어요. |
+| `formula_added` | 상수·빈칸 → 수식 | 수식을 넣으셨어요. 계산된 숫자는 읽지 않았어요. |
+
+`{v}`는 학생 값(소수점 뒤 불필요한 0은 지운다). 남는 한계는 둘이다 — 적은 값·같은 값·수식 칸·아닌 자리는 분류표에만 보이고 앱 답으로는 안 넘어가며, 값이 걸리지 않은 빈 구역의 행 삽입은 ⓪이 잡지 못한다(거절 0·경고 0).
+
 ## 자료와 권리
 
 `profile.json`은 비공개 원천의 해시·쪽·셀 위치와 일반 안내만 담는다. 원문 문장·셀 값·학번은 싣지 않는다. 해시·위치 공개는 원문 재배포 권리 확인이 아니다. 선배 전체논문은 제목·이름만 식별값으로 둔다. 공식 자료(내재해 설계기준 고시와 별표, 내재해형 규격 운영현황, NCS 학습모듈)는 서지·해시·사용 범위만 둔다. 적설심·풍속·소득값 같은 수치는 사용 시점에 원문에서 직접 확인한다. RDA 소득자료 값은 조사 집단의 비교값이며 학생의 수량·가격·매출로 옮기지 않는다. 공용 팩 `rda.econ.2025`의 원예시설 내용연수 일부 행(원문 133–135쪽)은 원문에 없는 행 이름으로 추출되어 원예 근거로 쓰지 않는다.

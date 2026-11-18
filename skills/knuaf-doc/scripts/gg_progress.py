@@ -17,6 +17,7 @@ from pathlib import Path
 
 import gg_core as core
 import gg_major_contract as mc
+import gg_outline
 import gg_update
 
 NAME = ".knuaf-progress.json"
@@ -134,7 +135,7 @@ def _rows(report):
     return [row for row in (report or []) if isinstance(row, dict)]
 
 
-def _evidence(p, rows, fg, binding):
+def _evidence(sections, rows, fg, binding):
     """단계별 근거 → `{n: "done"|"unknown"|None}`.
 
     None은 긍정 근거 없음. 미지원 전공의 unknown은 승격 가능하며, 지원 전공의
@@ -143,7 +144,6 @@ def _evidence(p, rows, fg, binding):
     ids = [row.get("check_id") for row in rows]
     damaged = any(cid in DAMAGED_IDS for cid in ids)
     passed = {cid for cid, row in zip(ids, rows) if row.get("status") == "pass"}
-    sections = p.get("sections") or {}
 
     out = {n: None for n in range(1, STEP_COUNT + 1)}
     if binding is not None:
@@ -162,7 +162,7 @@ def _evidence(p, rows, fg, binding):
     if damaged:
         out[4] = "unknown"
     elif sections and all(
-        s.get("status") in DRAFT_STATUSES for s in sections.values()
+        s.get("status") in DRAFT_STATUSES for s in sections
     ) and not any(cid in DEFECT_IDS for cid in ids):
         out[4] = "done"
 
@@ -224,12 +224,20 @@ def assemble(p, report, fg, st):
     rows = _rows(report)
     binding = _binding(p)
     label = major_label(binding.major_id) if binding is not None else None
-    states = _states(_evidence(p, rows, fg, binding))
+    # 학교 목차만 만든 빈 장은 학생의 본문 착수·초안 수에 넣지 않는다.
+    # 판정은 gg_outline의 공개 함수 하나 — 출처 없는 옛 빈 장과 작성이
+    # 시작된 seed 장은 기존처럼 센다.
+    all_sections = p.get("sections") or {}
+    untouched = gg_outline.untouched_seed_sections(p)
+    sections = [s for sid, s in all_sections.items() if sid not in untouched]
+    rows = [row for row in rows
+            if not (row.get("check_id") in DEFECT_IDS
+                    and row.get("target") in untouched)]
+    states = _states(_evidence(sections, rows, fg, binding))
 
-    sections = p.get("sections") or {}
     section_total = len(sections)
     section_drafted = sum(
-        1 for s in sections.values() if s.get("status") in DRAFT_STATUSES
+        1 for s in sections if s.get("status") in DRAFT_STATUSES
     )
 
     steps = []

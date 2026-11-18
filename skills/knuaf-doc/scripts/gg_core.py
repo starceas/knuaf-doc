@@ -462,13 +462,13 @@ class _ChangeError(ValueError):
         self.diag = diag
 
 
-def _recheck_canonical(root, expect_revision, request_id=None):
+def _recheck_canonical(root, expect_revision, request_id=None, seed_files=None):
     """Decide commit_state after a canonical write attempt raised.
 
-    Reads project.json back: confirmed new revision (+request entry) means
-    the commit landed and only cleanup is pending; a confirmed older
-    revision means not_committed; anything unreadable or inconsistent is
-    indeterminate — never guessed from the exception type alone.
+    Reads project.json back: confirmed new revision (+request entry) and
+    matching seeded paths/hashes mean the commit landed and only cleanup
+    is pending; a confirmed older revision means not_committed; anything
+    unreadable or inconsistent is indeterminate.
     """
     try:
         current = json.loads(
@@ -481,6 +481,15 @@ def _recheck_canonical(root, expect_revision, request_id=None):
         return "indeterminate", {}
     if revision == expect_revision:
         if request_id is None or request_id in current.get("requests", {}):
+            evidence = {"revision": revision, "request_id": request_id}
+            try:
+                import gg_outline
+                gg_outline.verify_committed(root, current, request_id)
+                for rel, expected_hash in (seed_files or {}).items():
+                    if digest(local(root, rel).read_bytes()) != expected_hash:
+                        return "indeterminate", evidence
+            except (OSError, ValueError, KeyError, TypeError):
+                return "indeterminate", evidence
             return "committed_cleanup_pending", {
                 "revision": revision,
                 "request_id": request_id,
@@ -491,23 +500,78 @@ def _recheck_canonical(root, expect_revision, request_id=None):
     return "indeterminate", {}
 
 
+def _rollback_uncommitted(root, prepared):
+    """Undo a seed whose canonical commit provably did not land.
+
+    DESIGN §7 wants the files back in their original state after a
+    pre-commit failure, so a failed snapshot or canonical write must not
+    leave the freshly created chapter files behind.  The recheck already
+    proved the new revision is absent, so only this call's own creations are
+    removed; anything it could not remove is returned for ``preserved_paths``.
+    """
+    if not prepared:
+        return []
+    try:
+        import gg_outline
+        return gg_outline.rollback(root, prepared)
+    except (OSError, ValueError):
+        return list(prepared.get("created") or [])
+
+
+def _discard(root, rel):
+    """Remove a file this call created; True when it is gone.
+
+    A rebind that fails before the canonical commit must leave the folder
+    exactly as it was (DESIGN §7), which includes the history copy written
+    just before the commit attempt.  ``False`` means the file survived and
+    belongs in ``preserved_paths``.
+    """
+    try:
+        local(root, rel).unlink()
+        return True
+    except FileNotFoundError:
+        return True
+    except (OSError, ValueError):
+        return False
+
+
 def _commit_canonical(root, data, *, operation, expect_revision,
-                      request_id=None, preserved_paths=None):
-    """Single canonical commit point with post-attempt recheck."""
+                      request_id=None, preserved_paths=None, seed_files=None,
+                      prepared=None, discard_on_rollback=()):
+    """Single canonical commit point with post-attempt recheck.
+
+    ``preserved_paths`` are files this call wrote that outlive it either way
+    (a history snapshot); ``prepared`` describes the seed files, which only
+    survive once the commit actually lands; ``discard_on_rollback`` names
+    entries of ``preserved_paths`` this call created, which a provably
+    uncommitted attempt removes again.
+    """
+    seed_paths = prepared["paths"] if prepared else []
+    undo = set(discard_on_rollback or ())
     try:
         atomic(Path(root) / "project.json", data)
         # 정본이 확정된 뒤, 같은 락 안에서 곁파일을 맞춘다. 여기서 나는 예외는
         # 삼키지 않고 _rewrite_sidecars가 스스로 처리한다(커밋은 이미 성공).
         _rewrite_sidecars(root)
     except OSError as error:
-        state, extra = _recheck_canonical(root, expect_revision, request_id)
+        state, extra = _recheck_canonical(root, expect_revision, request_id, seed_files)
+        if state == "not_committed":
+            # Nothing landed, so the seed files must not outlive the failure
+            # (DESIGN §7) — report only what a rollback could not remove.
+            kept = _rollback_uncommitted(root, prepared)
+            for rel in preserved_paths or []:
+                if rel in undo and _discard(root, rel):
+                    continue
+                kept.append(rel)
+        else:
+            kept = [*(preserved_paths or []), *seed_paths]
         raise _op(
             operation,
             "canonical",
             state,
             "canonical_commit_failed",
             detail=str(error),
-            preserved_paths=preserved_paths,
+            preserved_paths=kept or None,
             **extra,
         ) from error
 
@@ -1189,7 +1253,8 @@ def _bound_observation(root, provenance_path, provenance_hash):
     return observation
 
 
-def _apply_locked(root, change, expected_revision, *, capability, adoption=None):
+def _apply_locked(root, change, expected_revision, *, capability, adoption=None,
+                  commit_evidence=None):
     """Canonical commit for apply and adopt_output (API §2/§5, SPEC §4-§7).
 
     The guard capability must be real, held by this process and bound to
@@ -1248,6 +1313,13 @@ def _apply_locked(root, change, expected_revision, *, capability, adoption=None)
             _verify_publication_ref(
                 root, entry["publication_ref"], operation=operation
             )
+        import gg_outline
+        try:
+            gg_outline.verify_committed(root, p, request)
+        except (OSError, ValueError, KeyError, TypeError) as error:
+            raise _op(operation, "canonical", "indeterminate",
+                      "outline_committed_mismatch", detail=str(error),
+                      revision=p["revision"], request_id=request) from error
         return p
     if adoption is None:
         # New generic request: the receipt namespace must also be free.
@@ -1538,17 +1610,53 @@ def _apply_locked(root, change, expected_revision, *, capability, adoption=None)
                     target_refs=value.get("target_refs"))
         p[col][key] = value
     validate(p)
-    p["revision"] += 1
-    for col in ("reviews", "approvals", "outputs"):
-        for v in p[col].values():
-            try:
-                v["stale"] = v.get("input_fingerprint") != fingerprint(
-                    root, p, v["target_refs"]
-                )
-            except (KeyError, OSError, ValueError):
-                v["stale"] = True
-    if meta_linked:
-        _meta_only_links_final_check(root, p, meta_linked)
+    import gg_outline
+    prepared = gg_outline.prepare(root, old, p, change)
+    outline_paths = prepared["paths"]
+    # prepare가 만든 장 파일·영수증은 이력 스냅샷을 쓰기 전까지 디스크에
+    # 미확정으로 떠 있다. 이 구간에서 죽으면 정본뿐 아니라 파일도 원래
+    # 상태여야 하므로(DESIGN §7), 방금 만든 seed를 되돌리고 실패를 보고한다.
+    # 증거 해시를 읽는 단계의 OSError는 오늘 구조화되지 않은 채 새는 경로였다.
+    try:
+        seed_files = {
+            section["path"]: digest(local(root, section["path"]).read_bytes())
+            for section in p["sections"].values()
+            if section.get("outline", {}).get("request_id") == request
+        }
+        if commit_evidence is not None:
+            commit_evidence.update(seed_files)
+        p["revision"] += 1
+        for col in ("reviews", "approvals", "outputs"):
+            for v in p[col].values():
+                try:
+                    v["stale"] = v.get("input_fingerprint") != fingerprint(
+                        root, p, v["target_refs"]
+                    )
+                except (KeyError, OSError, ValueError):
+                    v["stale"] = True
+        if meta_linked:
+            _meta_only_links_final_check(root, p, meta_linked)
+    except OSError as error:
+        leftovers = _rollback_uncommitted(root, prepared)
+        raise _op(
+            operation, "canonical", "not_committed",
+            "precommit_evidence_failed",
+            detail=str(error), request_id=request,
+            preserved_paths=leftovers or None,
+        ) from error
+    except OperationError:
+        raise
+    except ValueError as error:
+        # 검증 실패는 기존 invalid_change 분류를 유지하되, 남은 seed가 있으면
+        # 숨기지 않고 preserved_paths로 보고한다(DESIGN §9).
+        leftovers = _rollback_uncommitted(root, prepared)
+        if leftovers:
+            raise _op(
+                operation, "canonical", "not_committed", "invalid_change",
+                detail=str(error), diag=getattr(error, "diag", None),
+                request_id=request, preserved_paths=leftovers,
+            ) from error
+        raise
     p["history"].append(
         {"revision": old["revision"], "hash": digest(old), "request_id": request}
     )
@@ -1562,17 +1670,29 @@ def _apply_locked(root, change, expected_revision, *, capability, adoption=None)
     else:
         p["requests"][request] = {"hash": chash, "revision": p["revision"]}
     snapshot_rel = "migration/revision-%s.json" % old["revision"]
+    snapshot_path = local(root, snapshot_rel)
+    snapshot_existed = snapshot_path.exists()
+    # A rebind that fails before the canonical commit has to leave the folder
+    # byte-identical (DESIGN §7), so its own history copy must go too.  A
+    # snapshot that already existed belongs to an earlier commit and stays.
+    rebind_snapshot = (bool(prepared and prepared.get("replaces_seeds"))
+                       and not snapshot_existed)
     try:
         atomic(
-            local(root, snapshot_rel),
+            snapshot_path,
             json.dumps(old, ensure_ascii=False, indent=2).encode(),
         )
     except OSError as error:
         # History snapshot failed before the canonical commit — the
-        # canonical is still untouched → not_committed.
+        # canonical is still untouched → not_committed, so the seed files
+        # created above must go back too.
+        leftovers = _rollback_uncommitted(root, prepared)
+        if rebind_snapshot and not _discard(root, snapshot_rel):
+            leftovers.insert(0, snapshot_rel)
         raise _op(
             operation, "canonical", "not_committed", "history_write_failed",
             detail=str(error), request_id=request,
+            preserved_paths=leftovers or None,
         ) from error
     _commit_canonical(
         root,
@@ -1581,7 +1701,20 @@ def _apply_locked(root, change, expected_revision, *, capability, adoption=None)
         expect_revision=p["revision"],
         request_id=request,
         preserved_paths=[snapshot_rel],
+        seed_files=seed_files,
+        prepared=prepared,
+        discard_on_rollback=(snapshot_rel,) if rebind_snapshot else (),
     )
+    # 정본은 확정됐다. 곁파일(손 안 댄 옛 seed) 정리는 그 뒤에만 하고,
+    # 실패는 삼키지 않고 committed_cleanup_pending으로 보고한다.
+    problems = gg_outline.cleanup(root, old, p, request)
+    if problems:
+        raise _op(
+            operation, "canonical", "committed_cleanup_pending",
+            "seed_cleanup_failed", request_id=request,
+            preserved_paths=[snapshot_rel, *outline_paths,
+                             *[problem["path"] for problem in problems]],
+        )
     return p
 
 
@@ -1591,11 +1724,13 @@ def apply(root, change, expected_revision):
     rechecking storage, never from the exception type alone."""
     root = Path(root)
     request_id = change.get("request_id") if isinstance(change, dict) else None
+    seed_files = {}
 
     def body(capability):
         try:
             return _apply_locked(
-                root, change, expected_revision, capability=capability
+                root, change, expected_revision, capability=capability,
+                commit_evidence=seed_files,
             )
         except OperationError:
             raise
@@ -1613,6 +1748,7 @@ def apply(root, change, expected_revision):
             root,
             expected_revision + 1 if type(expected_revision) is int else -1,
             request_id,
+            seed_files,
         ),
     )
 
@@ -3025,6 +3161,12 @@ def _export_refs(p):
     ]
 
 
+def _outline_mod():
+    """gg_outline (school outline seed ownership). Lazily imported;
+    gg_outline imports gg_core only inside its own functions."""
+    import gg_outline
+    return gg_outline
+
 def _finance_body_mod():
     """P3 C-lane integration point (lane B, gg_finance_body.py). Lazily
     imported; never imported by gg_finance_body itself."""
@@ -3722,7 +3864,7 @@ _CLAIMS_PARTIAL_BLOCK = (
 )
 
 
-def _finance_check_items(p):
+def _finance_check_items(p, root=None):
     """Select provided monetary facts for the body crosscheck.
 
     ``sections[].claims`` selects the checked facts only when every section
@@ -3794,6 +3936,11 @@ def _finance_check_items(p):
         }
 
     sections = p.get("sections", {})
+    # 학교 목차만 만든 빈 장은 학생 본문이 아니다 — 본문 주장(claims)의
+    # 빈 목록도, 대조 대상도 아니다. 손 안 댄 seed가 하나라도 섞이면
+    # 모든 절이 빈 목록인 것처럼 보여 대조가 통째로 막힌다.
+    untouched = _outline_mod().untouched_seed_sections(p, root)
+    sections = {sid: s for sid, s in sections.items() if sid not in untouched}
     complete = bool(sections) and all(
         isinstance(s.get("claims"), list) for s in sections.values()
     )
@@ -4595,6 +4742,87 @@ def _blank_copy_finance_notice_row_for_project(root, p):
     return _blank_copy_finance_notice_row(root, p, finance_gate(p))
 
 
+# Stateless cards reuse the two existing checks; no click state is persisted.
+_CARD_FIGURE_TEXT = {
+    "본문 텍스트 없음": "본문을 아직 읽지 못했어요",
+    "본문에 재무 항목 없음": "본문에 이 금액이 아직 없어요",
+    "유효하지 않은 메타데이터/기준값": "금액을 비교할 기준을 확인해 주세요",
+    "기간·단위·범위·출력 반올림 값 불일치": "본문과 정리한 금액의 기준을 확인해 주세요",
+}
+
+
+def _card_text(kind, reason):
+    """Only the section-conflict result proves two displayed amounts differ.
+
+    Legacy mismatch also means missing period/unit/scope, so never call that
+    an amount difference. Unknown and invalid-value failures stay neutral.
+    """
+    if kind == "finance_hole_deficit":
+        return "계획 마지막 해의 손익을 함께 살펴봐요"
+    return _CARD_FIGURE_TEXT.get(
+        reason.split(" · ", 1)[0], "본문의 금액 정보를 함께 확인해 주세요")
+
+
+def _card_key(p, kind, anchor):
+    """Hash rendered text only; reusable by other stateless card kinds.
+
+    ``p`` is the rendered card, not canonical project metadata. Internal
+    revisions, references and click state must not change fold memory.
+    """
+    def normalize(value):
+        if isinstance(value, str):
+            return " ".join(value.split())
+        if isinstance(value, list):
+            return [normalize(v) for v in value]
+        if isinstance(value, dict):
+            return {k: normalize(v) for k, v in value.items()}
+        return value
+
+    text = {k: p[k] for k in (
+        "title", "items", "choices", "talk_message", "proceed_message") if k in p}
+    return digest(json.dumps({"schema": "knuaf.card-key/1", "kind": kind,
+                              "anchor": anchor, "text": normalize(text)},
+                             ensure_ascii=False, sort_keys=True,
+                             separators=(",", ":")).encode("utf-8"))
+
+
+def _finance_card_sources(root, p):
+    """Thin source path: same predicates/scanners as checks(), no workbook IO.
+
+    Return the original scanner issues so cards cannot invent missing amounts.
+    A blocked claims selection does not become a finance-hole card.
+    """
+    sources = []
+    try:
+        body = merged(root, p)
+        sections = [dict(section_id=sid, path=s.get("path"),
+                         title=s.get("title"),
+                         text=draft(local(root, s["path"]).read_text(encoding="utf-8")))
+                    for sid, s in sorted(p["sections"].items(),
+                                         key=lambda kv: kv[1]["order"])]
+    except (OSError, ValueError, KeyError):
+        return sources  # checks() reports document_parse, not an amount fail.
+    items, blocked = _finance_check_items(p)
+    if items and not blocked:
+        from gg_school_excel import crosscheck_body
+
+        legacy = list(crosscheck_body(body, items))
+        issues = legacy + _finance_amounts_mod().detect_amount_gaps(
+            sections, items, legacy_issues=legacy)
+        for issue in issues:
+            if issue.get("status", "fail") == "fail":
+                sources.append(("finance_hole_figure", issue))
+    gate_state = finance_gate(p)
+    if (gate_state["state"] == "deficit_pending"
+            and any(s["text"] for s in sections)):
+        fact = _finance_gate_fact(p, FINANCE_GATE_PROFIT)
+        sources.append(("finance_hole_deficit", {
+            "location": fact["period"], "period": fact["period"],
+            "value": fact["value"], "unit": fact["unit"],
+            "reason": gate_state["reason"]}))
+    return sources
+
+
 def _add_finance_workbook_advice(root, p, lineage, out):
     """안내 행을 ``out``에 직접 붙인다. 예외를 밖으로 내보내지 않는다."""
     try:
@@ -5221,7 +5449,7 @@ def checks(root, p):
             add("finance_plan_review_scope", "finance",
                 "17시트 재무 계획 검사 미지원: 학과 17시트 양식 전용",
                 severity="info", status="not_checked")
-        items, claims_block = _finance_check_items(p)
+        items, claims_block = _finance_check_items(p, root)
         if claims_block:
             add("body_finance_crosscheck", "body", claims_block, status="blocked")
         elif items:
@@ -6064,8 +6292,14 @@ def completion(root, p, report=None):
 
 
 def merged(root, p):
+    """Student body only: chapters still holding nothing but the outline
+    seed are a preview of the school's structure, not writing — and an
+    export of nothing but seeds must refuse rather than emit titles."""
+    untouched = _outline_mod().untouched_seed_sections(p, root)
     parts = []
-    for s in sorted(p["sections"].values(), key=lambda x: x["order"]):
+    for sid, s in sorted(p["sections"].items(), key=lambda kv: kv[1]["order"]):
+        if sid in untouched:
+            continue
         body = draft(local(root, s["path"]).read_text(encoding="utf-8"))
         title = s["title"]
         parts.append(
@@ -6660,22 +6894,40 @@ def _custom_paper_body(body):
     return body
 
 
-@_op_boundary
-def paper(root, spec_path, spec_bytes, requested_path, *, major_id=None,
-          body_markdown=None):
-    """Generate the markdown review body through a managed publication
-    (API §6).  The spec file bytes are read once by the caller and never
-    re-read — a swapped file cannot ride into the request.
+def _paper_notices_changed(root):
+    """Compare notice content, not the refresh clock, before a refused write."""
+    import gg_notices
+    from gg_publication import _read_file
 
-    ``body_markdown`` replaces the generated Ⅰ–Ⅵ body with the caller's
-    own merged text while the generated frontmatter stays.  The frozen
-    renderer is untouched: the splice happens here, in the adapter.
+    try:
+        rows, error = gg_notices.notice_rows_or_error(root)
+        if error is not None:
+            return True  # Let the registered writer report/remove stale notices.
+        current = json.loads(_read_file(root, gg_notices.NOTICES_NAME))
+        expected = gg_notices.notices_document(root, rows)
+        current.pop("written_at", None)
+        expected.pop("written_at", None)
+        return current != expected
+    except Exception:
+        return True  # Missing, unreadable or invalid sidecars need a refresh.
 
-    Policy B (G-B): the common major output guard runs before the lock
-    and is rechecked inside it; a held output raises ``_op(...)`` with
-    ``not_committed`` and the guard's hold code."""
-    root = Path(root)
-    from gg_school_table_sources import load_spec, attach_table_sources
+
+def _paper_then_sidecars(root, body, capability):
+    """Refresh once after publication; refusals write only changed notices."""
+    refresh = True
+    try:
+        return body(capability)
+    except OperationError as error:
+        if error.result.get("commit_state") == "not_committed":
+            refresh = _paper_notices_changed(root)
+        raise
+    finally:
+        if refresh:
+            _rewrite_sidecars(root)
+
+
+def _paper_preflight(root, spec_bytes, major_id, body_markdown):
+    from gg_school_table_sources import load_spec
     try:
         spec = load_spec(spec_bytes)
     except ValueError as error:
@@ -6750,12 +7002,40 @@ def paper(root, spec_path, spec_bytes, requested_path, *, major_id=None,
     except (TypeError, ValueError) as error:
         raise _op("paper", "requested_output", "not_committed",
                   "invalid_spec", detail=str(error)) from error
+    return spec, has_school_profile, ctx, body_override
+
+
+@_op_boundary
+def paper(root, spec_path, spec_bytes, requested_path, *, major_id=None,
+          body_markdown=None):
+    """Generate the markdown review body through a managed publication
+    (API §6).  The spec file bytes are read once by the caller and never
+    re-read — a swapped file cannot ride into the request.
+
+    ``body_markdown`` replaces the generated Ⅰ–Ⅵ body with the caller's
+    own merged text while the generated frontmatter stays.  The frozen
+    renderer is untouched: the splice happens here, in the adapter.
+
+    Policy B (G-B): the common major output guard runs before the lock
+    and is rechecked inside it; a held output raises ``_op(...)`` with
+    ``not_committed`` and the guard's hold code."""
+    root = Path(root)
+    pre = refusal = None
+    try:
+        pre = _paper_preflight(root, spec_bytes, major_id, body_markdown)
+    except OperationError as error:
+        refusal = error
+    from gg_school_table_sources import attach_table_sources
+    import gg_major_contract as mc
     spec_rel = str(spec_path)
 
     paper_auth = {}
 
     def body(capability):
         _lock_mod().assert_held(capability, root)
+        if refusal is not None:
+            raise refusal
+        spec, has_school_profile, ctx, body_override = pre
         p = load(root)
         # Recheck the output authorization against the canonical record
         # already loaded under the publication lock — a binding change
@@ -6976,7 +7256,7 @@ def paper(root, spec_path, spec_bytes, requested_path, *, major_id=None,
     box = {}
 
     def tracked_body(capability):
-        value = body(capability)
+        value = _paper_then_sidecars(root, body, capability)
         box["request_id"] = value.get("request_id")
         return value
 
@@ -6992,7 +7272,12 @@ def paper(root, spec_path, spec_bytes, requested_path, *, major_id=None,
             return ("committed_cleanup_pending", {"request_id": rid})
         return ("not_committed", {"request_id": rid})
 
-    value = _guarded(root, "paper", "requested_output", tracked_body, confirm)
+    try:
+        value = _guarded(root, "paper", "requested_output", tracked_body, confirm)
+    except _lock_mod().LockError as error:
+        if refusal is not None and error.status == "absent":
+            raise refusal from None
+        raise
     if isinstance(value, dict) and "value" in paper_auth:
         # Policy B record: the persisted authorization of the managed
         # bundle (published with it, or recovered from it); the check that
