@@ -459,6 +459,37 @@ class SevenOfSevenTests(EconomicCase):
                 self.assertNotEqual(snapshot[2], "now")
 
 
+class SupportedMajorNotComputableTests(EconomicCase):
+    """지원 전공의 미결 재무 계획은 2단계에 머문다."""
+
+    def test_not_computable_keeps_plan_step_now(self):
+        root = self.make_project()
+        base_fact = _seed(root, "specialty_crops")
+        state = fact_op("gate-state", "finance.gate.state", "not_computable", "",
+                        scope="project", period="2030",
+                        verification="claim_supported", source_id="calculation",
+                        claim_id="state")
+        state["value"]["reason"] = "재무 계획이 아직 정해지지 않았어요"
+        claims = claim_of(base_fact["value"], "answer")
+        claims.update(claim_of(state["value"], "state"))
+        write_text(root, "calculation.json", json.dumps(
+            {"description": "synthetic fixture"}, ensure_ascii=False))
+        source = source_op("calculation.json", claims=claims)
+        source["value"]["id"] = "calculation"
+        core = runtime("gg_core")
+        core.apply(root, {"request_id": "seed2", "ops": [source, state]},
+                   core.load(root)["revision"])
+
+        payload = _progress(root)
+        self.assertEqual(_states(payload),
+                         ["done", "now", "todo", "todo", "todo",
+                          "todo", "todo"])
+        self.assertEqual(_notes(payload)[2], "재무 계획을 마저 정해요")
+        finance = core.finance_gate(core.load(root))
+        self.assertEqual(finance["state"], "not_computable")
+        self.assertIs(finance["supported"], True)
+
+
 class UnsupportedMajorTests(th.ContractCase):
     """§7-3 — 재무 엑셀 미지원 전공은 5 `unknown`, 6은 검토만으로 `done`."""
 
@@ -624,7 +655,7 @@ class PromotionTests(th.ContractCase):
         root = self.make_project()
         ladder = _ladder_states(root)
         self.assertEqual(ladder, [
-            ["now", "unknown", "todo", "todo", "unknown",
+            ["now", "todo", "todo", "todo", "unknown",
              "todo", "todo"],
             ["done", "now", "todo", "todo", "todo", "todo", "todo"],
             ["done", "done", "now", "todo", "todo", "todo", "todo"],
@@ -786,6 +817,30 @@ class MajorNoteTests(th.ContractCase):
             mc.binding_from_project(mc.default_registry(), core.load(root))
         payload = _progress(root)
         self.assertEqual(payload["steps"][0]["state"], "now")
+        self.assertEqual(_notes(payload)[1], "전공을 골라 주세요")
+
+    def test_unbound_major_not_computable_does_not_unlock_step_two(self):
+        root = self.make_project()
+        core = runtime("gg_core")
+        state = fact_op("gate-state", "finance.gate.state",
+                        "not_computable", "", scope="project",
+                        verification="claim_supported", source_id="calculation",
+                        claim_id="state")
+        state["value"]["reason"] = "재무 계획이 아직 정해지지 않았어요"
+        source = source_op("calculation.json",
+                           claims=claim_of(state["value"], "state"))
+        source["value"]["id"] = "calculation"
+        write_text(root, "calculation.json", "합성 재무 메모\n")
+        core.apply(root, {"request_id": "unbound-not-computable",
+                          "ops": [source, state]}, 0)
+
+        finance = core.finance_gate(core.load(root))
+        self.assertEqual(finance["state"], "not_computable")
+        self.assertIs(finance["supported"], False)
+        payload = _progress(root)
+        self.assertEqual(_states(payload),
+                         ["now", "todo", "todo", "todo", "unknown",
+                          "todo", "todo"])
         self.assertEqual(_notes(payload)[1], "전공을 골라 주세요")
 
     def _unreadable_alias(self):

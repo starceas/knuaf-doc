@@ -15,7 +15,6 @@ SPEC = importlib.util.spec_from_file_location(
 checker = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(checker)
 sys.path.insert(0, str(ROOT / "tools"))
-import build_validation_bundle as builder
 import check_bundle
 
 
@@ -76,29 +75,7 @@ class AssetDispositionTests(unittest.TestCase):
         self.assertIn("deployment_path_unsafe",
                       {error["code"] for error in checker.check(self.root)})
 
-    def write_bundle(self, runtime_changes=None):
-        """Regenerate integrity hashes so only the deployment error remains."""
-        tools = self.root / "tools"
-        tools.mkdir(exist_ok=True)
-        baseline = {"main": "0" * 40, "files": {}}
-        baseline_path = tools / "baseline-files.json"
-        baseline_path.write_text(json.dumps(baseline), encoding="utf-8")
-        (tools / "runtime-changes.json").write_text(json.dumps({
-            "schema": "knuaf-doc/runtime-changes@2", "stage": "synthetic",
-            "baseline_main": baseline["main"],
-            "baseline_spec_sha256": hashlib.sha256(
-                baseline_path.read_bytes()).hexdigest(),
-            "approved_new_files": list(runtime_changes or {}),
-            "changes": runtime_changes or {},
-        }), encoding="utf-8")
-        provenance = {"defaults": {"origin": "new"}, "files": {}}
-        (tools / "validation-provenance.json").write_text(
-            json.dumps(provenance), encoding="utf-8")
-        (tools / "validation-bundle.json").write_bytes(builder.manifest_bytes(
-            builder.build_manifest(self.root, provenance)))
-
     def assert_bundle_errors(self, *codes):
-        self.write_bundle()
         report = check_bundle.check(self.root)
         self.assertEqual("errors", report["status"])
         self.assertEqual(set(codes), {e["code"] for e in report["errors"]})
@@ -107,7 +84,6 @@ class AssetDispositionTests(unittest.TestCase):
                              f"{error['code']}:{error['path']}")
 
     def test_bundle_rejects_missing_deployment_payload_or_manifest(self):
-        self.write_bundle()
         self.assertEqual("ok", check_bundle.check(self.root)["status"])
         (self.skill / "install-manifest.json").write_text(
             json.dumps({"files": {}}), encoding="utf-8")
@@ -134,26 +110,17 @@ class AssetDispositionTests(unittest.TestCase):
         self.write_disposition()
         manifest_path = self.skill / "install-manifest.json"
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-        changes = {}
         for rel in sorted(required):
             payload = self.skill / rel
             payload.write_text('{"synthetic": true}\n', encoding="utf-8")
             digest = hashlib.sha256(payload.read_bytes()).hexdigest()
             manifest["files"][rel] = digest
-            changes["skills/knuaf-doc/" + rel] = {
-                "before_sha256": None, "after_sha256": digest,
-                "first_changed": "synthetic", "owner": "test",
-                "reason": "synthetic school payload", "source": "new"}
         manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
-        self.write_bundle(changes)
         self.assertEqual("ok", check_bundle.check(self.root)["status"])
         for rel in required:
             (self.skill / rel).unlink()
             del manifest["files"][rel]
         manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
-        # Drop both runtime declarations/allowlist entries as well, then
-        # regenerate a valid bundle from the incomplete installation.
-        self.write_bundle()
         report = check_bundle.check(self.root)
         self.assertEqual("errors", report["status"])
         self.assertEqual({("asset_disposition:deployment_missing_payload", rel)

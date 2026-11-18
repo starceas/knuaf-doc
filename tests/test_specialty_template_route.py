@@ -636,12 +636,22 @@ class LaborReviewTests(ContractCase):
         wb = Workbook(); wb.active.title = "8. 노무계획"; x01_anchors(wb); wb.save(path)
         cases["sheet_missing"] = ("LABOR_SHEET_MISSING", self.tpl.labor_review(path))
         labor_book(path, female=(0, 60))
-        wb = load_workbook(path); wb[S8]["R24"] = "고용 인부"; wb.save(path)
+        wb = load_workbook(path)
+        try:
+            wb[S8]["R24"] = "고용 인부"
+            wb.save(path)
+        finally:
+            wb.close()
         cases["header_changed"] = ("LABOR_LAYOUT_UNSUPPORTED", self.tpl.labor_review(path))
         labor_book(path, male=(0, "60일"))
         cases["text_days"] = ("LABOR_DAYS_UNREADABLE", self.tpl.labor_review(path))
         labor_book(path)
-        wb = load_workbook(path); wb[S8]["J12"] = "=60*1"; wb.save(path)  # no cached value
+        wb = load_workbook(path)
+        try:
+            wb[S8]["J12"] = "=60*1"  # no cached value
+            wb.save(path)
+        finally:
+            wb.close()
         cases["uncached_formula"] = ("LABOR_DAYS_UNREADABLE", self.tpl.labor_review(path))
         for label, (code, issues) in cases.items():
             with self.subTest(case=label):

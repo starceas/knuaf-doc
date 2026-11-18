@@ -119,15 +119,6 @@ class DecisionRuleTest(unittest.TestCase):
                 self.assertEqual(ci_scope.decide([path]), "full")
                 self.assertEqual(ci_scope.decide(["docs/readme.md", path]), "full")
 
-    def test_generated_ledgers_alone_are_not_a_reason_to_skip(self):
-        # An empty *effective* diff is the undeterminable case: fail closed.
-        self.assertEqual(ci_scope.decide(sorted(ci_scope.GENERATED_LEDGERS)),
-                         "full")
-
-    def test_ledgers_next_to_code_stay_code(self):
-        self.assertEqual(
-            ci_scope.decide(sorted(ci_scope.GENERATED_LEDGERS)
-                            + ["tests/test_doc_contracts.py"]), "code")
 
     def test_empty_diff_is_full(self):
         self.assertEqual(ci_scope.decide([]), "full")
@@ -140,11 +131,11 @@ class GitDecisionTest(unittest.TestCase):
         self._tmp = tempfile.TemporaryDirectory()
         self.root = self._tmp.name
         _init(self.root)
+        (Path(self.root) / "tools").mkdir()
         self.base = _commit(
             self.root,
             {"skills/knuaf-doc/version.json": '{"version": "1"}\n',
-             ".codex-plugin/plugin.json": '{"version": "1"}\n',
-             "tools/validation-bundle.json": "{}\n"},
+             ".codex-plugin/plugin.json": '{"version": "1"}\n'},
             "base")
 
     def tearDown(self):
@@ -175,11 +166,6 @@ class GitDecisionTest(unittest.TestCase):
         self.assertEqual(done.returncode, 0, done.stderr)
         self.assertEqual(done.stdout, "full\n")
 
-    def test_ledger_only_change_is_full(self):
-        head = _commit(self.root, {"tools/validation-bundle.json": '{"a": 1}\n'},
-                       "ledger")
-        done = _scope(self.root, self.base, head)
-        self.assertEqual(done.stdout, "full\n")
 
     def test_empty_diff_is_full(self):
         done = _scope(self.root, self.base, self.base)
