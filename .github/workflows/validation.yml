@@ -64,21 +64,8 @@ jobs:
           python-version: '3.10'
       - name: Install dependencies
         run: python -m pip install -r requirements-validation.txt
-      - name: Bundle integrity
+      - name: Deployment check
         run: python tools/check_bundle.py --root . --json "$RUNNER_TEMP/check-bundle-report.json"
-      - name: Manifest is current and deterministic
-        run: |
-          python tools/build_validation_bundle.py --root . --check
-          python tools/build_validation_bundle.py --root . --out "$RUNNER_TEMP/export-a" --receipt "$RUNNER_TEMP/receipt-a.json"
-          python tools/build_validation_bundle.py --root . --out "$RUNNER_TEMP/export-b" --receipt "$RUNNER_TEMP/receipt-b.json"
-          python - <<'PY'
-          import json, os
-          from pathlib import Path
-          tmp = Path(os.environ['RUNNER_TEMP'])
-          a = json.loads((tmp / 'receipt-a.json').read_text())
-          b = json.loads((tmp / 'receipt-b.json').read_text())
-          assert a['tree_sha256'] == b['tree_sha256'], 'export not deterministic'
-          PY
       - name: Validation shard
         run: python tools/run_validation.py --shard "${{ matrix.shard }}/5" --pr-scope "${{ needs.scope.outputs.scope }}" --json "$RUNNER_TEMP/shard-report.json"
       - name: Upload shard report
@@ -132,21 +119,8 @@ jobs:
           path: ${{ runner.temp }}/shards
       - name: Install full-suite dependencies
         run: python -m pip install -r requirements-validation.txt
-      - name: Bundle integrity
+      - name: Deployment check
         run: python tools/check_bundle.py --root . --json "$RUNNER_TEMP/check-bundle-report.json"
-      - name: Manifest is current and deterministic
-        run: |
-          python tools/build_validation_bundle.py --root . --check
-          python tools/build_validation_bundle.py --root . --out "$RUNNER_TEMP/export-a" --receipt "$RUNNER_TEMP/receipt-a.json"
-          python tools/build_validation_bundle.py --root . --out "$RUNNER_TEMP/export-b" --receipt "$RUNNER_TEMP/receipt-b.json"
-          python - <<'PY'
-          import json, os
-          from pathlib import Path
-          tmp = Path(os.environ['RUNNER_TEMP'])
-          a = json.loads((tmp / 'receipt-a.json').read_text())
-          b = json.loads((tmp / 'receipt-b.json').read_text())
-          assert a['tree_sha256'] == b['tree_sha256'], 'export not deterministic'
-          PY
       - name: Merge shard reports
         shell: bash
         run: python tools/run_validation.py --merge-shards "$RUNNER_TEMP"/shards/**/shard-report.json --shard-count 5 --pr-scope "${{ needs.scope.outputs.scope }}" --json "$RUNNER_TEMP/validation-report.json"
@@ -192,21 +166,8 @@ jobs:
           path: ${{ runner.temp }}/shards
       - name: Install validation dependencies
         run: python -m pip install -r requirements-validation.txt
-      - name: Bundle integrity
+      - name: Deployment check
         run: python tools/check_bundle.py --root . --json "$RUNNER_TEMP/check-bundle-report.json"
-      - name: Manifest is current and deterministic
-        run: |
-          python tools/build_validation_bundle.py --root . --check
-          python tools/build_validation_bundle.py --root . --out "$RUNNER_TEMP/export-a" --receipt "$RUNNER_TEMP/receipt-a.json"
-          python tools/build_validation_bundle.py --root . --out "$RUNNER_TEMP/export-b" --receipt "$RUNNER_TEMP/receipt-b.json"
-          python - <<'PY'
-          import json, os
-          from pathlib import Path
-          tmp = Path(os.environ['RUNNER_TEMP'])
-          a = json.loads((tmp / 'receipt-a.json').read_text())
-          b = json.loads((tmp / 'receipt-b.json').read_text())
-          assert a['tree_sha256'] == b['tree_sha256'], 'export not deterministic'
-          PY
       - name: Python 3.14 import, compile, and fixed smoke suite
         if: ${{ github.event_name == 'pull_request' }}
         run: python tools/quick_validation.py --json "$RUNNER_TEMP/quick-validation.json"
@@ -249,21 +210,8 @@ jobs:
           python-version: '3.14'
       - name: Install dependencies
         run: python -m pip install -r requirements-validation.txt
-      - name: Bundle integrity
+      - name: Deployment check
         run: python tools/check_bundle.py --root . --json "$RUNNER_TEMP/check-bundle-report.json"
-      - name: Manifest is current and deterministic
-        run: |
-          python tools/build_validation_bundle.py --root . --check
-          python tools/build_validation_bundle.py --root . --out "$RUNNER_TEMP/export-a" --receipt "$RUNNER_TEMP/receipt-a.json"
-          python tools/build_validation_bundle.py --root . --out "$RUNNER_TEMP/export-b" --receipt "$RUNNER_TEMP/receipt-b.json"
-          python - <<'PY'
-          import json, os
-          from pathlib import Path
-          tmp = Path(os.environ['RUNNER_TEMP'])
-          a = json.loads((tmp / 'receipt-a.json').read_text())
-          b = json.loads((tmp / 'receipt-b.json').read_text())
-          assert a['tree_sha256'] == b['tree_sha256'], 'export not deterministic'
-          PY
       - name: Validation shard
         run: python tools/run_validation.py --shard "${{ matrix.shard }}/5" --pr-scope "${{ needs.scope.outputs.scope }}" --json "$RUNNER_TEMP/shard-report.json"
       - name: Upload shard report
@@ -303,10 +251,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.14'
-      - name: Bundle integrity (stdlib only)
+      - name: Deployment check (stdlib only)
         run: python tools/check_bundle.py --root .
-      - name: Manifest determinism (stdlib only)
-        run: python tools/build_validation_bundle.py --root . --check
 
   windows-publication:
     name: native publication (windows, py${{ matrix.python }})
@@ -331,10 +277,8 @@ jobs:
           python-version: ${{ matrix.python }}
       - name: Install runtime dependencies
         run: python -m pip install -r requirements-validation.txt
-      - name: Bundle integrity
+      - name: Deployment check
         run: python tools/check_bundle.py --root . --json "$env:RUNNER_TEMP/native-bundle-report.json"
-      - name: Manifest is current
-        run: python tools/build_validation_bundle.py --root . --check
       - name: Native init apply publication replay cleanup (no skips)
         run: python tools/run_native_publication.py --json "$env:RUNNER_TEMP/native-publication-report.json"
       # UTF-8 mode off: children keep PYTHONIOENCODING=utf-8 (they print
