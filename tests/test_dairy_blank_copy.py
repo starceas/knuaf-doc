@@ -170,9 +170,11 @@ class DairyClearMapTests(ContractCase):
         registry = copy.deepcopy(_json(self.school.WORKBOOK_REFERENCE_SET))
         profile = next(p for p in registry["workbook_profiles"]
                        if p["profile"] == PROFILE)
-        profile["sha256"] = self.tpl.sha256(source)
-        fingerprints = self.school.formula_fingerprints(
-            load_workbook(source, read_only=True))
+        workbook = load_workbook(source, read_only=True)
+        try:
+            fingerprints = self.school.formula_fingerprints(workbook)
+        finally:
+            workbook.close()
         if fingerprint_tamper:
             fingerprints[self.sheets[0]] = hashlib.sha256(
                 b"tampered").hexdigest()
