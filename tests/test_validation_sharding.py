@@ -13,6 +13,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -66,6 +67,7 @@ def _shard_report(index, count, scope="code", modules=None):
     }
     return {
         "tool": "tools/run_validation.py",
+        "platform": sys.platform,
         "verdict": "shard_completed",
         "exit_code": 0,
         "mode": "default",
@@ -155,6 +157,52 @@ class ShardMergeTest(unittest.TestCase):
     def _good(self):
         return [_shard_report(index, self.count, "code", self.modules)
                 for index in range(self.count)]
+
+    def test_missing_or_unsupported_shard_platform_is_refused(self):
+        for platform in (None, "bogus"):
+            with self.subTest(platform=platform):
+                reports = self._good()
+                reports[0]["platform"] = platform
+                with self.assertRaisesRegex(ValueError, "platform"):
+                    self._merge(reports)
+
+    def test_mixed_shard_platforms_are_refused(self):
+        reports = self._good()
+        reports[0]["platform"] = "win32" if sys.platform != "win32" else "linux"
+        with self.assertRaisesRegex(ValueError, "platform"):
+            self._merge(reports)
+
+    def test_cross_host_merge_is_refused(self):
+        reports = self._good()
+        for report in reports:
+            report["platform"] = "win32" if sys.platform != "win32" else "linux"
+        with self.assertRaisesRegex(ValueError, "platform"):
+            self._merge(reports)
+
+    def test_same_platform_merge_preserves_gate_and_skip_policy(self):
+        for platform in ("linux", "darwin", "win32"):
+            with self.subTest(platform=platform):
+                reports = self._good()
+                for report in reports:
+                    report["platform"] = platform
+                with mock.patch.object(vs, "discover_modules",
+                                       return_value=(self.modules, self.expected)):
+                    with mock.patch.object(sys, "platform", platform):
+                        template, runtime = self._merge(reports)
+                        self.assertEqual(platform, template["platform"])
+                        approved, warnings, observation = rv._evaluate_external_gate(
+                            runtime["entries"], True)
+                        if platform == "win32":
+                            self.assertEqual([], warnings)
+                            self.assertEqual([], rv._pending_external_checks(observation))
+                        else:
+                            self.assertTrue(any("forged" in w for w in warnings))
+                            self.assertEqual(platform, rv._pending_external_checks(
+                                observation)[0]["observed_platform"])
+                        self.assertEqual([], approved)
+                        test_id, reason = next(iter(rv.WINDOW_ONLY_SKILL_SKIPS.items()))
+                        self.assertEqual(platform == "win32", rv._is_approved_skill_skip(
+                            {"test": test_id, "category": "skipped", "detail": reason}))
 
     def test_good_merge_reconciles_to_discovery_order(self):
         template, runtime = self._merge(self._good())
@@ -252,23 +300,27 @@ class ShardMergeTest(unittest.TestCase):
             self._merge(reports)
 
 
-def _merged_report(scope="code"):
-    """A final report that ``check_validation_report.py`` accepts, built from
-    discovery: the native gate skipped, the approved skill skips skipped, the
-    rest passed."""
+def _merged_report(scope="code", platform="linux"):
+    """Model a merged CI report, independently of the fixture host."""
     _, ids = _discovery(scope)
     gate = rv.NATIVE_GATE["test_id"]
+    native = platform == "win32"
+    platform_skips = (rv.WINDOW_ONLY_SKILL_SKIPS if native
+                      else rv.POSIX_SKIPPED_WINDOWS_SKILL_TESTS)
+    platform_rule = (rv.WINDOW_ONLY_SKILL_SKIP_RULE if native
+                     else rv.POSIX_SKIPPED_WINDOWS_SKILL_RULE)
     entries = []
     for test_id in ids:
         if test_id == gate:
-            entries.append({"test": test_id, "category": "skipped",
-                            "detail": rv.NATIVE_GATE["reason"]})
+            entries.append({"test": test_id, "category": "passed"} if native
+                           else {"test": test_id, "category": "skipped",
+                                 "detail": rv.NATIVE_GATE["reason"]})
         elif test_id in rv.ALLOWED_SKILL_SKIPS:
             entries.append({"test": test_id, "category": "skipped",
                             "detail": rv.ALLOWED_SKILL_SKIPS[test_id]})
-        elif test_id in rv.POSIX_SKIPPED_WINDOWS_SKILL_TESTS:
+        elif test_id in platform_skips:
             entries.append({"test": test_id, "category": "skipped",
-                            "detail": rv.POSIX_SKIPPED_WINDOWS_SKILL_TESTS[test_id]})
+                            "detail": platform_skips[test_id]})
         else:
             entries.append({"test": test_id, "category": "passed"})
     skill_skips = []
@@ -277,31 +329,31 @@ def _merged_report(scope="code"):
             skill_skips.append({"test": test_id,
                                 "reason": rv.ALLOWED_SKILL_SKIPS[test_id],
                                 "rule": rv.SKILL_SKIP_RULE})
-        elif test_id in rv.POSIX_SKIPPED_WINDOWS_SKILL_TESTS:
-            skill_skips.append({
-                "test": test_id,
-                "reason": rv.POSIX_SKIPPED_WINDOWS_SKILL_TESTS[test_id],
-                "rule": rv.POSIX_SKIPPED_WINDOWS_SKILL_RULE})
-    skipped = 1 + len(skill_skips)
+        elif test_id in platform_skips:
+            skill_skips.append({"test": test_id,
+                                "reason": platform_skips[test_id],
+                                "rule": platform_rule})
+    skipped = (0 if native else 1) + len(skill_skips)
     return {
         "tool": "tools/run_validation.py",
-        "verdict": "ok_platform_scoped",
+        "platform": platform,
+        "verdict": "ok" if native else "ok_platform_scoped",
         "exit_code": 0,
         "mode": "default",
         "validation_scope": "current_platform",
         "platform_validation_completed": True,
-        "full_validation_completed": False,
+        "full_validation_completed": native,
         "baseline_main": cvr.BASELINE_MAIN,
-        "pending_external_checks": [{
+        "pending_external_checks": [] if native else [{
             "gate_id": rv.NATIVE_GATE["gate_id"],
             "test_id": gate,
             "status": "not_run", "support": "withheld",
             "implementation": "placeholder_only",
             "required_environment": rv.NATIVE_GATE["required_environment"],
             "reason": rv.NATIVE_GATE["reason"],
-            "observed_platform": sys.platform,
+            "observed_platform": platform,
         }],
-        "approved_external_skips": [{
+        "approved_external_skips": [] if native else [{
             "test": gate, "reason": rv.NATIVE_GATE["reason"],
             "rule": cvr.GATE_RULE,
             "gate_id": rv.NATIVE_GATE["gate_id"]}],
@@ -348,18 +400,93 @@ class FinalReportTest(unittest.TestCase):
     def tearDown(self):
         self._tmp.cleanup()
 
-    def _check(self, report, scope="code"):
+    def _check(self, report, scope="code", expected_platform="linux"):
         path = self.tmp / "merged.json"
         path.write_text(json.dumps(report, ensure_ascii=False), encoding="utf-8")
         return subprocess.run(
             [sys.executable, str(REPORT_CHECKER), str(path),
-             "--pr-scope", scope],
+             "--pr-scope", scope, "--expected-platform", expected_platform],
             cwd=str(ROOT), capture_output=True, text=True)
+
+    def test_native_windows_report_is_accepted(self):
+        done = self._check(_merged_report("code", platform="win32"), expected_platform="win32")
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+
+    def test_report_platform_must_match_consumer_context(self):
+        report = _merged_report("code", platform="win32")
+        with mock.patch.object(sys, "platform", "linux"):
+            with self.assertRaisesRegex(ValueError, "platform"):
+                cvr.validate(report, "code")
+
+    def test_native_windows_invalid_gate_records_are_rejected(self):
+        for category in ("skipped", "failed", "known_baseline_defect"):
+            with self.subTest(category=category):
+                report = _merged_report("code", platform="win32")
+                gate = next(e for e in report["runtime"]["entries"]
+                            if e["test"] == cvr.GATE_TEST)
+                gate.update(category=category, detail=cvr.GATE_REASON)
+                with self.assertRaises(ValueError):
+                    cvr.validate(report, "code", expected_platform="win32")
+
+    def test_native_windows_gate_identity_is_required(self):
+        for duplicate in (False, True):
+            with self.subTest(duplicate=duplicate):
+                report = _merged_report("code", platform="win32")
+                runtime = report["runtime"]
+                entries = runtime["entries"]
+                gate = next(e for e in entries if e["test"] == cvr.GATE_TEST)
+                delta = 1 if duplicate else -1
+                if duplicate:
+                    entries.append(dict(gate))
+                else:
+                    entries.remove(gate)
+                runtime["tests_run"] += delta
+                runtime["passed"] += delta
+                runtime["accounting"]["framework"]["testsRun"] += delta
+                with self.assertRaisesRegex(ValueError, "native gate test|duplicate test"):
+                    cvr.validate(report, "code", expected_platform="win32")
+
+    def test_platform_gate_shapes_cannot_be_mixed(self):
+        posix = _merged_report("code")
+        native = _merged_report("code", platform="win32")
+        for key, value in (("platform", "linux"), ("platform", "bogus"),
+                           ("platform", None),
+                           ("pending_external_checks", posix["pending_external_checks"]),
+                           ("approved_external_skips", posix["approved_external_skips"]),
+                           ("full_validation_completed", False)):
+            with self.subTest(key=key, value=value):
+                with self.assertRaises(ValueError):
+                    cvr.validate(dict(native, **{key: value}), "code", expected_platform="win32")
+        posix["pending_external_checks"][0]["observed_platform"] = "win32"
+        with self.assertRaises(ValueError):
+            cvr.validate(posix, "code", expected_platform="linux")
+
+    def test_platform_specific_skill_skips_cannot_cross_platforms(self):
+        for platform, skips in (("win32", rv.POSIX_SKIPPED_WINDOWS_SKILL_TESTS),
+                                ("linux", rv.WINDOW_ONLY_SKILL_SKIPS)):
+            with self.subTest(platform=platform):
+                report = _merged_report("code", platform=platform)
+                test_id, reason = next(iter(skips.items()))
+                entry = next(e for e in report["runtime"]["entries"]
+                             if e["test"] == test_id)
+                entry.update(category="skipped", detail=reason)
+                with self.assertRaisesRegex(ValueError, "unapproved skill skip"):
+                    cvr.validate(report, "code", expected_platform=platform)
+
 
     def test_code_scope_report_is_accepted(self):
         done = self._check(_merged_report("code"))
         self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
         self.assertIn("validation report contract OK", done.stdout)
+
+    def test_ci_report_is_accepted_when_fixture_host_is_windows(self):
+        discovery = _discovery("code")
+        # Keep discovery on the real host; only simulate the fixture's host.
+        with mock.patch(__name__ + "._discovery", return_value=discovery):
+            with mock.patch.object(sys, "platform", "win32"):
+                report = _merged_report("code")
+        done = self._check(report)
+        self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
 
     def test_full_scope_report_is_accepted_under_full(self):
         done = self._check(_merged_report("full"), "full")

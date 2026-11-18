@@ -188,6 +188,13 @@ class SidecarLockTests(ContractCase):
         self.root = self.make_project()
         bind_major(self.root, "industrial_insects")
 
+    def _contention(self):
+        # msvcrt는 경합과 권한 거절을 모두 errno 13(winerror 없음)으로
+        # 보고한다. test_p2_windows의 native 계약과 같은 정확한 분류다.
+        if runtime("gg_lock")._PORT.name == "win32":
+            return "unavailable", "busy_or_denied"
+        return "busy", "guard_busy"
+
     def _slow_rows(self, started):
         """로드한 revision을 제목에 박고 잠깐 붙잡는 행 생성기."""
         core = self.core
@@ -209,7 +216,7 @@ class SidecarLockTests(ContractCase):
             revision)
 
     def test_manual_write_and_canonical_apply_never_overlap(self):
-        """방향 1: A(수동 write)가 잠금을 쥐면 B(apply)가 즉시 busy로 끝난다."""
+        """방향 1: A(수동 write)가 잠금을 쥐면 B(apply)가 즉시 거절된다."""
         started = threading.Event()
         holder_error = []
         with mock.patch.object(self.notices, "notice_rows",
@@ -226,7 +233,7 @@ class SidecarLockTests(ContractCase):
             self.assertTrue(started.wait(5), "행 생성기가 시작되지 않음")
             revision = self.core.load(self.root)["revision"]
 
-            # ㉠ 대기 없이 LockError(busy)로 끝난다.
+            # ㉠ 대기 없이 플랫폼 계약의 LockError로 끝난다.
             clock = time.monotonic()
             with self.assertRaises(Exception) as caught:
                 self._apply()
@@ -235,7 +242,8 @@ class SidecarLockTests(ContractCase):
 
         self.assertEqual([], holder_error)
         self.assertEqual("LockError", type(caught.exception).__name__)
-        self.assertEqual("busy", caught.exception.status)
+        self.assertEqual(self._contention(),
+                         (caught.exception.status, caught.exception.reason))
         self.assertLess(elapsed, 0.5)
         # ㉡ 낡은 판이 남지 않았다 — 파일 표식 revision == 지금 정본 revision.
         self.assertEqual(revision, self.core.load(self.root)["revision"])
@@ -266,9 +274,9 @@ class SidecarLockTests(ContractCase):
             # 잠금 안에서 정본은 그대로다(경쟁 쪽이 커밋하지 못했다).
             self.assertEqual(before, target.read_bytes())
 
-        # ㉢ CLI는 exit 2 + busy 사유, 파일 바이트 불변.
+        # ㉢ CLI는 exit 2 + 플랫폼 계약의 거절 사유, 파일 바이트 불변.
         self.assertEqual(2, outcome["code"])
-        self.assertEqual({"status": "error", "reason": "busy: guard_busy"},
+        self.assertEqual({"status": "error", "reason": "%s: %s" % self._contention()},
                          json.loads(outcome["out"]))
         self.assertLess(outcome["elapsed"], 0.5)
         self.assertEqual(before, target.read_bytes())

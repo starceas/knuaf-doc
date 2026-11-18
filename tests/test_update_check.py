@@ -206,6 +206,9 @@ def _loc(version):
 
 def _zi(name, data=b"", *, mode=0o100644, compress=zipfile.ZIP_DEFLATED):
     info = zipfile.ZipInfo(name)
+    # Archive fixtures describe literal names, not host filesystem paths.
+    # ZipInfo normalizes '\\' on Windows; restore it before either header is written.
+    info.filename = name
     info.external_attr = mode << 16
     info.compress_type = compress
     return info
@@ -1279,6 +1282,18 @@ class UpdateTests(_UpdateCase):
         lock.unlink(); lock.write_bytes(b"new")
         self.assertEqual("applied", mod.adopt_cmd(src, target, confirm=True)["status"])
         self.assertEqual(b"new", lock.read_bytes())
+        # Windows forbids unlinking this open CRT file (no delete sharing).
+        # Inject a real foreign file's named identity instead, on every host;
+        # keep the real fd, OS lock and identity checker in both barriers.
+        foreign = self.root / "foreign-lock-identity"
+        foreign.write_bytes(b"foreign")
+        foreign_stat = foreign.stat()
+        real_lstat = mod.os.lstat
+        replaced = [False]
+        def named_stat(path, *args, **kwargs):
+            if replaced[0] and Path(path) == state / "lock":
+                return foreign_stat
+            return real_lstat(path, *args, **kwargs)
         # (b) open then replacement before first identity check.
         home, _, target = self.make_target(version=None)
         state = home / mod.STATE_DIR_NAME
@@ -1286,9 +1301,9 @@ class UpdateTests(_UpdateCase):
         original = mod._os_lock
         def swap_after_open(fd):
             original(fd)
-            lock = state / "lock"
-            lock.unlink(); lock.write_bytes(b"foreign")
-        with mock.patch.object(mod, "_os_lock", side_effect=swap_after_open):
+            replaced[0] = True
+        with mock.patch.object(mod.os, "lstat", side_effect=named_stat), \
+             mock.patch.object(mod, "_os_lock", side_effect=swap_after_open):
             out = mod.adopt_cmd(src, target, confirm=True)
         self.assertEqual("lock_replaced", out["reason"])
         self.assertEqual(before, _tree_bytes(target))
@@ -1304,12 +1319,14 @@ class UpdateTests(_UpdateCase):
         before = _tree_bytes(target)
         original_check = mod._check_lock_identity
         checks = [0]
+        replaced[0] = False
         def swap_before_final(sd, fd):
             checks[0] += 1
             if checks[0] == 2:
-                (sd / "lock").unlink(); (sd / "lock").write_bytes(b"foreign")
+                replaced[0] = True
             return original_check(sd, fd)
-        with mock.patch.object(mod, "_check_lock_identity", side_effect=swap_before_final):
+        with mock.patch.object(mod.os, "lstat", side_effect=named_stat), \
+             mock.patch.object(mod, "_check_lock_identity", side_effect=swap_before_final):
             out = mod.adopt_cmd(src, target, confirm=True)
         self.assertEqual("lock_replaced", out["reason"])
         self.assertEqual(2, checks[0])

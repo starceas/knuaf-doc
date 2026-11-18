@@ -256,18 +256,24 @@ push 또는 `workflow_dispatch` 실행의 artifact로 한다.
 `tools/check_validation_report.py`). 이 단계는 합친 `validation-report.json`을 읽어 다음을 요구한다 — 하나라도
 어긋나면 잡 실패이며 `|| true`/반환 코드 무시/예외 면제는 없다:
 
-- `verdict=ok_platform_scoped`·`exit_code=0`·`mode=default`·
-  `validation_scope=current_platform`만 수용 (runtime-only 리포트와
-  어떤 실패/미완결 판정도 거부)
-- `platform_validation_completed=true` 그리고 `full_validation_completed=false`
-- `pending_external_checks`에 정확히 하나의 게이트만 — `P2-L09-native`,
-  `status=not_run`·`support=withheld`·`implementation=placeholder_only`·
-  정확한 test_id·`required_environment="native Windows+NTFS"`. 게이트가
-  빠지거나 추가되면 거부
-- `approved_external_skips` 정확히 1건(정확한 test_id·사유·gate_id·rule)
-  그리고 runtime.entries에 `skipped` 원 기록이 그대로 보존
+- 공통: `exit_code=0`·`mode=default`·`validation_scope=current_platform`,
+  `platform_validation_completed=true`. 최상위 `platform`은 실제 실행 플랫폼.
+  checker는 보고서 platform을 기대 실행 플랫폼과 대조한다. 기본은 소비 호스트이며,
+  타 호스트 artifact는 호출자가 `--expected-platform`을 명시해야 한다.
+  shard platform은 지원 값 필수·전 shard 동일·병합 호스트 동일이어야 한다.
+  타 호스트 병합은 거절하므로 병합 호스트가 실행 플랫폼을 바꿔 기록할 수 없다.
+- POSIX(`linux`/`darwin`): `verdict=ok_platform_scoped`,
+  `full_validation_completed=false`, 기존 정확한 `P2-L09-native` pending
+  1건(status=not_run, support=withheld, implementation=placeholder_only).
+  observed_platform은 최상위 platform과 같아야 한다. approved_external_skips는
+  정확한 ID·사유·gate_id·rule 1건, runtime 관문은 정확한 withheld skip 1건.
+- Windows(`win32`): `verdict=ok`, `full_validation_completed=true`,
+  pending_external_checks와 approved_external_skips는 빈 배열.
+  runtime의 정확한 native 관문 ID가 실제 passed로 1번 나타나야 한다.
+  skip·실패·known-defect·중복·부재는 승인하지 않는다.
 - `approved_skill_skips`는 커밋된 유한 ID·사유 목록과 runtime.entries를
   대조해 독립 재계산한다. 목록의 시험 ID가 suite에서 빠져도 거부한다.
+  플랫폼 전용 skip은 보고서 platform에 해당하는 정책만 승인한다.
 - `unapproved_skips`·`defect_tests_skipped`·`inventory_warnings`·
   `causes.unexpected`·`causes.incomplete` 전부 빈 값, `unexpected_failed=0`,
   `accounting.errors` 없음, `runtime.status=completed`·`tests_run>0`,
@@ -322,16 +328,16 @@ P2-R3에서 consumer는 요약 필드 신뢰를 버리고 리포트를 독립적
 
 `tools/run_validation.py --json` 리포트는 P2-R2에서 필드가 추가됐다:
 
+- `platform`: 실행 호스트의 `sys.platform`(검사기는 linux/darwin/win32만 수용).
 - `validation_scope`: `current_platform`(기본) 또는
   `development_runtime_only`(--runtime-only).
 - `platform_validation_completed`: 기본 모드에서 묶음 통과·의존성 준비·
   suite 완주(tests_run>0)·미예상 실패 0·미승인 skip 0·인벤토리/회계
   불일치 없음일 때만 true. runtime-only에서는 항상 false.
 - `full_validation_completed`: 외부 게이트가 하나라도 pending이면 절대
-  true가 될 수 없다(현재 P2에서는 항상 false).
+  true가 될 수 없다. POSIX에서는 false, 깨끗한 Windows 기본 실행에서는 true.
 - `pending_external_checks`: 이 플랫폼에서 실행할 수 없는 선언 게이트의
-  미실시 기록 — 현재 `P2-L09-native` 1건(placeholder 전용, 네이티브
-  실행 주장 아님).
+  미실시 기록. POSIX에서는 `P2-L09-native` 1건, Windows에서는 빈 배열이다.
 - `approved_external_skips`: 컴파일된 fail-closed 규칙이 승인한 정확한
   skip 기록 — `unapproved_skips`와 분리된다.
 - `approved_skill_skips`: 유한 ID·정확한 사유 규칙으로 승인된 선택적
@@ -339,9 +345,9 @@ P2-R3에서 consumer는 요약 필드 신뢰를 버리고 리포트를 독립적
 
 판정 우선순위: `unexpected_failures`(exit 1) > `incomplete`(exit 3) >
 `ok_platform_scoped`(exit 0, 기본 모드·pending 게이트 존재) > `ok`
-(exit 0). `ok`는 선언된 외부 게이트가 전부 실제로 닫힐 때만 도달 가능
-— placeholder 통과로는 도달 불가. 이전 리포트의 단순 `ok`/`incomplete`
-판정과 `full_validation_completed`만 있던 계약은 이 계약으로 대체됐다.
+(exit 0). 기본 모드의 `ok`는 Windows에서 실제 native 관문을 통과하고
+나머지 실행 조건도 만족할 때 도달한다. runtime-only의 `ok`는 완료 플래그를
+올리지 않는다. POSIX에서 native 관문의 가짜 pass는 여전히 거절한다.
 
 결과 회계(P2-R2): `runtime.entries`는 시작된 부모 시험마다 정확히 하나의
 종결 분류를 갖고 `tests_run`은 그 수와 프레임워크 testsRun에 동일.
@@ -356,7 +362,7 @@ subtest 결과는 부모의 `events`에 붙고 실패/오류 subtest는 부모�
 - 실행기는 검사 폴더와 커밋의 동일성을 확인하지 않는다.
 - 클라우드 CI: 이 workflow 정의는 아직 호스티드 러너에서 실행되지 않았다.
 - 네이티브 Windows/Office, 실제 학교 양식·원문 자료, HWP: 별도 게이트.
-  `P2-L09-native`는 미구현 placeholder로 남아 있으며 `ok_platform_scoped`
-  판정은 현 플랫폼 범위의 성공일 뿐 네이티브 지원이나 제품 PASS가 아니다.
+  `P2-L09-native`는 Windows에서 실제 두 프로세스 잠금을 확인하며 POSIX에서는
+  withheld다. 이 시험의 통과나 `ok`는 Office 전체 지원·제품 PASS가 아니다.
 - `run_validation.py`의 녹색 결과는 제품 PASS가 아니다. 알려진 결함은
   개별 expected-failure로 기록되며, 자세한 목록은 `REGRESSIONS.md`를 본다.

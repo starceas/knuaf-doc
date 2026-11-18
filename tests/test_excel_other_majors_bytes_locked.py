@@ -3,21 +3,23 @@
 두 겹이다.
 
 1. **17시트 두 판**(`school_17_sheet_v1`·`_v2`)은 특용작물의 양식이고, 새
-   논문이 받는 번들은 2판이다. 각 판의 `create`/`blank_copy`/`patch_copy`
-   결과 바이트를 판별로 따로 고정한다 — 2판 사본이 1판 행·수식으로 돌아가면
-   여기서 깨진다.
+   논문이 받는 번들은 2판이다. create는 전체 파일 SHA를, blank_copy와
+   patch_copy는 모든 ZIP 항목의 순서·이름·원문 바이트·메타데이터를 판별로
+   고정한다 — 2판 사본이 1판 행·수식으로 돌아가면 여기서 깨진다.
 2. **다른 전공**은 자기 양식만 쓴다. 식량작물·낙농은 17시트 번들을 구조에서
    거절하고(자기 시트 수와 다름), 산업곤충·원예는 산출물을 아예 만들지
    못하며(정책 B 거절) 파일도 남기지 않는다 — 그것도 고정한다.
 
-만들어 낸 xlsx의 sha256은 zip 메타데이터까지 포함하므로 이 상수가 곧
-"도구 산출물이 한 바이트도 달라지지 않았다"는 뜻이다. 1판 해시는 2판을
-넣기 전과 같은 값이다(기존 논문 회귀).
+원본 자산과 create의 전체 파일 SHA는 그대로 잠근다. 재작성 사본의 고정
+manifest는 압축 해제 원문 바이트를 정규화 없이 SHA로 잠그고 ZIP 메타데이터도
+대조한다. 압축 스트림·압축 크기·그에 따른 파일 오프셋만 압축 구현에 맡긴다.
 """
 
 import hashlib
+import copy
 import json
 import tempfile
+import zipfile
 from pathlib import Path
 
 from tests._harness import ContractCase, bind_major, runtime
@@ -25,12 +27,9 @@ from tests._harness import ContractCase, bind_major, runtime
 BUNDLED_SHA256 = "76300305fdaf165bcce54fc3de2b476c91f4e8e368bc0455a8c69aa3eee9cd1d"
 LEGACY_SHA256 = "6d3c9fe5e5992108a8bab18c0098edb0d808f0d14c099878a53939b17de88c7d"
 SPECIALTY_CREATE = "76300305fdaf165bcce54fc3de2b476c91f4e8e368bc0455a8c69aa3eee9cd1d"
-SPECIALTY_BLANK = "c3c6b9d34ee724e65cdb6631631a1d796874d80cf0713a7cf6f4f139fb34e176"
-SPECIALTY_PATCH = "16a2317fa869779fe3720d3dbc1c0620f67c554169dc8813342a61730be7f35e"
+LOCKS = Path(__file__).parent / "fixtures" / "other-majors-workbook-locks.json"
 SPECIALTY_PATCH_CACHES = 1644
 SPECIALTY_BLANK_UNCLASSIFIED_TEXT = 12
-LEGACY_BLANK = "2f81143e01729565b0f7b9cf3d8ac0a012d483106c964b0b18b1c71fe7c433d5"
-LEGACY_PATCH = "5c8f0951c47532d9045d7c5ed3e625052a07d8e9dd9025a5a05fc6127be6481d"
 LEGACY_PATCH_CACHES = 1643
 SALES = " 5. 판매계획"
 HELD_MAJORS = ("fruit_trees", "hort_env_systems")
@@ -38,6 +37,27 @@ HELD_MAJORS = ("fruit_trees", "hort_env_systems")
 
 def _sha(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def _workbook_manifest(path):
+    fields = ("date_time", "flag_bits", "external_attr", "internal_attr",
+              "compress_type", "create_system", "create_version",
+              "extract_version", "reserved", "volume")
+    with zipfile.ZipFile(path) as archive:
+        entries = []
+        names = set()
+        for info in archive.infolist():
+            if info.filename in names:
+                raise AssertionError("duplicate ZIP member: " + info.filename)
+            names.add(info.filename)
+            entry = {key: getattr(info, key) for key in fields}
+            entry["date_time"] = list(info.date_time)
+            entry.update(name=info.filename,
+                         sha256=hashlib.sha256(archive.read(info)).hexdigest(),
+                         size=info.file_size, comment=info.comment.hex(),
+                         extra=info.extra.hex())
+            entries.append(entry)
+        return {"comment": archive.comment.hex(), "entries": entries}
 
 
 class OtherMajorsLockedTests(ContractCase):
@@ -48,6 +68,10 @@ class OtherMajorsLockedTests(ContractCase):
         self.bundled = self.tpl.BUNDLED_TEMPLATE
         self.assertEqual(_sha(self.bundled), BUNDLED_SHA256)
         self.root = self.make_project()
+
+    def _assert_workbook_locked(self, path, key):
+        expected = json.loads(LOCKS.read_text(encoding="utf-8"))[key]
+        self.assertEqual(expected, _workbook_manifest(path))
 
     def _fixtures(self, root, source=None, profile="school_17_sheet_v2"):
         """A reviewed map. ``profile=None`` leaves the declaration out, so the
@@ -107,7 +131,7 @@ class OtherMajorsLockedTests(ContractCase):
             blank = Path(temp) / "blank.xlsx"
             receipt = self.tpl.blank_copy(self.bundled, clear_map, blank,
                                           context=ctx)
-            self.assertEqual(_sha(blank), SPECIALTY_BLANK)
+            self._assert_workbook_locked(blank, "v2-blank")
             self.assertEqual(receipt["output"]["status"], "partial")
             self.assertEqual(receipt["unclassifiedTextCells"],
                              SPECIALTY_BLANK_UNCLASSIFIED_TEXT)
@@ -117,7 +141,7 @@ class OtherMajorsLockedTests(ContractCase):
             patched = Path(temp) / "patched.xlsx"
             receipt = self.patch.patch_copy(self.bundled, patch_map, patched,
                                             context=ctx)
-            self.assertEqual(_sha(patched), SPECIALTY_PATCH)
+            self._assert_workbook_locked(patched, "v2-patch")
             self.assertEqual(receipt["formulaCachesInvalidated"],
                              SPECIALTY_PATCH_CACHES)
 
@@ -125,7 +149,33 @@ class OtherMajorsLockedTests(ContractCase):
             again = Path(temp) / "patched-explicit.xlsx"
             self.patch.patch_copy(self.bundled, patch_map, again, context=ctx,
                                   profile="school_17_sheet_v2")
-            self.assertEqual(_sha(again), SPECIALTY_PATCH)
+            self._assert_workbook_locked(again, "v2-patch")
+
+    def test_member_lock_rejects_content_order_and_metadata_changes(self):
+        ctx = self._context("specialty_crops")
+        with tempfile.TemporaryDirectory() as temp:
+            clear_map, _ = self._fixtures(temp)
+            original = Path(temp) / "original.xlsx"
+            self.tpl.blank_copy(self.bundled, clear_map, original, context=ctx)
+            with zipfile.ZipFile(original) as archive:
+                members = [(copy.copy(info), archive.read(info))
+                           for info in archive.infolist()]
+            for mutation in ("content", "order", "metadata"):
+                changed = [(copy.copy(info), data) for info, data in members]
+                if mutation == "content":
+                    info, data = changed[0]
+                    changed[0] = (info, bytes([data[0] ^ 1]) + data[1:])
+                elif mutation == "order":
+                    changed[0], changed[1] = changed[1], changed[0]
+                else:
+                    changed[0][0].comment = b"changed"
+                candidate = Path(temp) / (mutation + ".xlsx")
+                with zipfile.ZipFile(candidate, "w") as archive:
+                    for info, data in changed:
+                        archive.writestr(info, data)
+                with self.subTest(mutation=mutation):
+                    with self.assertRaises(AssertionError):
+                        self._assert_workbook_locked(candidate, "v2-blank")
 
     def _patch_one(self, root, source, name, expected, new="=SUM(D8:D8)",
                    profile=None):
@@ -205,8 +255,8 @@ class OtherMajorsLockedTests(ContractCase):
                 school.require_profile_structure(patched, "school_17_sheet_v1")
 
     def test_the_first_edition_keeps_its_own_bytes(self):
-        """Papers already written on v1 stay on v1: same clear/patch bytes as
-        before the second edition existed, and the lineage decides it."""
+        """Papers already written on v1 retain their clear/patch member bytes
+        and metadata; the lineage still decides their edition."""
         ctx = self._context("specialty_crops")
         legacy = self.tpl.LEGACY_TEMPLATE
         self.assertEqual(_sha(legacy), LEGACY_SHA256)
@@ -216,7 +266,7 @@ class OtherMajorsLockedTests(ContractCase):
 
             blank = Path(temp) / "blank-v1.xlsx"
             receipt = self.tpl.blank_copy(legacy, clear_map, blank, context=ctx)
-            self.assertEqual(_sha(blank), LEGACY_BLANK)
+            self._assert_workbook_locked(blank, "v1-blank")
             self.assertEqual(receipt["workbook_profile"], "school_17_sheet_v1")
             self.assertEqual(receipt["unclassifiedTextCells"],
                              SPECIALTY_BLANK_UNCLASSIFIED_TEXT)
@@ -226,7 +276,7 @@ class OtherMajorsLockedTests(ContractCase):
             patched = Path(temp) / "patched-v1.xlsx"
             receipt = self.patch.patch_copy(legacy, patch_map, patched,
                                             context=ctx)
-            self.assertEqual(_sha(patched), LEGACY_PATCH)
+            self._assert_workbook_locked(patched, "v1-patch")
             self.assertEqual(receipt["formulaCachesInvalidated"],
                              LEGACY_PATCH_CACHES)
 

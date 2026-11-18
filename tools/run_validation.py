@@ -67,15 +67,16 @@ exact test ``tests.test_p2_windows.WindowsBandCase.
 test_native_windows_two_process_contention`` skipping with the exact
 reason ``native Windows+NTFS required — withheld`` on darwin or linux is
 the sole approved native external skip; it records the P2-L09-native pending
-gate.  The same test passing, failing, skipping with another reason,
-running on another platform, appearing twice, or being absent from a
-completed suite is never silently excused — it is an unexpected failure
-or unapproved skip as applicable.
+gate. On win32 the same test must actually pass; it is not an external
+skip and no pending gate is recorded. A pass on POSIX, a known-defect
+outcome, duplicate or missing gate is an inventory mismatch. Failures
+and unapproved skips are never exempt.
 
 Skill tests use finite exact-ID/reason lists. ``ALLOWED_SKILL_SKIPS`` covers
 optional external inputs on every platform. ``WINDOW_ONLY_SKILL_SKIPS``
-covers only exact tests for a product path absent on Windows, and only
-when ``sys.platform == "win32"``. The latter remain unapproved on darwin
+covers only exact tests for a product path or set-up condition absent on
+Windows (``WINDOWS_ABSENT_CONDITION_SKIPS`` lists the latter), and only
+when ``sys.platform == "win32"``. Both remain unapproved on darwin
 and linux. ``POSIX_SKIPPED_WINDOWS_SKILL_TESTS`` is the reverse: exact tests
 of a Windows-only product path, approved only off win32 (proven by the
 Windows CI skill-test step). Approved results remain visible as skipped,
@@ -124,11 +125,8 @@ ALLOWED_NESTED_SKIP_IDS = frozenset({
     "test_fixed_defect_mapping_required",
 })
 
-# The single declared external gate for current P2: a native Windows+NTFS
-# contention check that is deliberately not implemented yet — the test
-# body is ``self.fail('native Windows run not recorded')``.  Only the
-# exact skipped outcome + exact reason on darwin/linux qualifies as the
-# approved external skip.  Nothing here may promote it to a pass.
+# The native two-process contention check runs on Windows. Only its exact
+# withheld skip on darwin/linux is an approved external skip.
 NATIVE_GATE = {
     "gate_id": "P2-L09-native",
     "test_id": "tests.test_p2_windows.WindowsBandCase."
@@ -227,6 +225,93 @@ WINDOW_ONLY_SKILL_SKIPS = dict.fromkeys((
     "tests.test_skillgaps_wp2_session.OfficeRecoveryTests."
     "test_cli_recovery_is_json_and_exit_zero",
 ), WINDOW_ONLY_SKILL_SKIP_REASON)
+
+# Tests whose set-up condition does not exist on Windows: POSIX fork/exec,
+# the Darwin shared-Office AppleScript session with its per-app flock guards,
+# and POSIX open-object moves or post-unlink fd checks. Each ID was classified
+# one by one and names its Windows counterpart test below. Exact ID and the
+# runner's exact skip reason, approved on win32 only (like the entries above);
+# on darwin/linux these tests must run. Windows student-path tests that are
+# skipped only because the test fixture is POSIX-only are NOT listed here and
+# stay unapproved until the test is fixed.
+_DARWIN_OFFICE_SESSION_REASON = (
+    "requires native POSIX fcntl locks; Office automation is not exercised")
+_DARWIN_OFFICE_GUARD_REASON = "requires native POSIX Office guards"
+_POSIX_FORK_REASON = "posix fork required"
+WINDOWS_ABSENT_CONDITION_SKIPS = {}
+# Darwin shared-Office session and per-app guard contract; win32 runs a
+# private COM instance (gg_office_win). Windows counterpart:
+# tests.test_window_hygiene.WindowsOfficeOwnershipTests
+# (test_success_uses_private_instance_and_closes_before_quit,
+#  test_close_failure_or_foreign_document_prevents_quit,
+#  test_excel_formula_error_prevents_pdf).
+WINDOWS_ABSENT_CONDITION_SKIPS.update(dict.fromkeys((
+    "tests.test_window_hygiene.%s.%s" % (cls, name)
+    for cls in ("OfficeSessionTests", "DarwinExcelSessionTests")
+    for name in (
+        "test_app_locks_are_independent",
+        "test_appleevent_timeout_is_unknown_even_when_script_returned",
+        "test_clean_and_dirty_existing_documents_block_before_launch_or_open",
+        "test_inflight_crash_and_malformed_lock_fail_closed",
+        "test_other_cli_cannot_enter_same_app",
+        "test_prepare_failure_records_unknown_and_preserves",
+        "test_success_records_document_close_but_no_app_quit",
+        "test_unconfirmed_zero_exit_is_not_success",
+        "test_unknown_inventory_blocks",
+    )
+), _DARWIN_OFFICE_SESSION_REASON))
+WINDOWS_ABSENT_CONDITION_SKIPS[
+    "tests.test_window_hygiene.DarwinExcelSessionTests."
+    "test_existing_document_reason_is_machine_readable"
+] = _DARWIN_OFFICE_SESSION_REASON
+# Cleanup while a Darwin app guard or idle flock is held; Windows journals
+# carry no guard. Windows counterpart: tests.test_window_hygiene.
+# OfficeJobCleanupTests.test_explicit_cleanup_preserves_live_unknown_and_
+# unrecorded_jobs.
+WINDOWS_ABSENT_CONDITION_SKIPS.update(dict.fromkeys((
+    "tests.test_window_hygiene.OfficeJobCleanupTests."
+    "test_new_never_opened_job_is_cleaned_under_its_idle_guard",
+    "tests.test_window_hygiene.OfficeJobCleanupTests."
+    "test_not_attempted_journal_cannot_override_unknown_or_busy_guard",
+    "tests.test_window_hygiene.OfficeJobCleanupTests."
+    "test_rejected_reentry_preserves_prior_session_and_refuses_cleanup",
+), _DARWIN_OFFICE_GUARD_REASON))
+# POSIX open-directory / open-file moves and the post-unlink fd check; win32
+# pins the ancestor chain and its handles without delete sharing and deletes
+# by open-object identity. Windows counterpart: test_gg_delegation.
+# TestDelegationCommands.test_windows_pinned_directory_rename_denied_during_
+# publish.
+WINDOWS_ABSENT_CONDITION_SKIPS.update({
+    "test_gg_delegation.TestDelegationCommands."
+    "test_delegate_publish_move_cleans_owned_result_or_reports_location":
+        "POSIX directory-move race",
+    "test_gg_delegation.TestDelegationCommands."
+    "test_directory_moved_outside_before_write_leaves_no_payload":
+        "POSIX directory-move race; Windows pins the directory chain "
+        "without delete sharing (see the Windows test above)",
+    "test_gg_delegation.TestDelegationCommands."
+    "test_existing_lane_replace_move_cleans_owned_result_or_reports_location":
+        "POSIX directory-move race",
+    "test_gg_delegation.TestDelegationCommands."
+    "test_new_lane_publish_move_cleans_owned_result_or_reports_location":
+        "POSIX directory-move race",
+    "test_gg_delegation.TestDelegationCommands."
+    "test_opened_temp_moved_before_write_reports_pending_without_payload":
+        "POSIX file-move race",
+    "test_gg_delegation.TestDelegationCommands."
+    "test_post_unlink_stat_failure_reports_pending_owned_location":
+        "POSIX owned fd cleanup verification",
+})
+# POSIX fork inheritance and exec fd lifetime; there is no fork on win32.
+# Windows counterpart: tests.test_p2_lock.LockAcquireCase.
+# test_held_lock_blocks_second_writer_and_unlock.
+WINDOWS_ABSENT_CONDITION_SKIPS.update(dict.fromkeys((
+    "tests.test_p2_lock.ForkExecCase.test_exec_does_not_carry_fd",
+    "tests.test_p2_lock.ForkExecCase.test_fork_child_cannot_use_capability",
+    "tests.test_p2_lock.ForkExecCase."
+    "test_negative_control_child_lock_un_is_detected",
+), _POSIX_FORK_REASON))
+WINDOW_ONLY_SKILL_SKIPS.update(WINDOWS_ABSENT_CONDITION_SKIPS)
 WINDOW_ONLY_SKILL_SKIP_RULE = "Windows-only product path (exact id and reason)"
 
 # The reverse case: tests of a Windows-only product path (CreateFileW handles
@@ -733,12 +818,10 @@ def _run_runtime_tests(root, shard=None, scope="full"):
 
 
 def _evaluate_external_gate(entries, suite_ran):
-    """Fail-closed classification of the declared native placeholder.
+    """Return approved skips, fail-closed warnings and the gate observation.
 
-    Returns (approved_external_skips, gate_warnings, observation).
-    The gate's pending record is emitted separately; this function only
-    decides whether the observed outcome is the exact authorized
-    placeholder skip.
+    Windows requires a genuine pass; POSIX permits only the exact withheld
+    skip. Failure outcomes remain ordinary unexpected failures.
     """
     approved = []
     warnings = []
@@ -758,11 +841,12 @@ def _evaluate_external_gate(entries, suite_ran):
     e = obs[0]
     observation = e
     cat = e["category"]
-    if cat in ("passed", "known_baseline_defect"):
+    if cat == "passed" and sys.platform == "win32":
+        pass  # Native execution is required here, never an approved skip.
+    elif cat in ("passed", "known_baseline_defect"):
         warnings.append(
-            "external gate %s recorded a %s outcome — the placeholder "
-            "cannot legitimately pass; this looks forged"
-            % (NATIVE_GATE["gate_id"], cat))
+            "external gate %s recorded a %s outcome on %s; this looks forged"
+            % (NATIVE_GATE["gate_id"], cat, sys.platform))
     elif cat == "skipped":
         if (e.get("detail") == NATIVE_GATE["reason"]
                 and sys.platform in NATIVE_GATE["allowed_platforms"]):
@@ -778,7 +862,9 @@ def _evaluate_external_gate(entries, suite_ran):
 
 
 def _pending_external_checks(observation):
-    """The declared pending-work record for the current P2 scope."""
+    """Record external pending work only where native execution is withheld."""
+    if sys.platform == "win32":
+        return []  # A local execution obligation, not an external pending gate.
     detail = NATIVE_GATE["reason"]
     if observation is not None and observation.get("detail"):
         detail = observation["detail"]
@@ -974,6 +1060,8 @@ def main(argv=None):
         try:
             template, runtime = merge_shard_reports(
                 root, a.merge_shards, a.shard_count, scope=a.pr_scope)
+            if template.get("platform") != sys.platform:
+                raise ValueError("shard platform differs from merge host platform")
             if template.get("root") != str(root):
                 raise ValueError("shard reports belong to another repository root")
             if template.get("baseline_main") != BASELINE_MAIN:
@@ -1187,6 +1275,7 @@ def main(argv=None):
 
     report = {
         "tool": "tools/run_validation.py",
+        "platform": sys.platform,
         "verdict": verdict,
         "exit_code": code,
         "mode": mode,
@@ -1222,8 +1311,8 @@ def main(argv=None):
         "note": "runner verdict 'ok'/'ok_platform_scoped' is not a "
                 "product PASS: known_baseline_defects are reproduced main "
                 "defects owned by their gate units; pending_external_checks "
-                "are declared gates not run on this platform (current P2: "
-                "P2-L09-native, placeholder only — no native support claim); "
+                "are declared gates not run on this platform (P2-L09-native "
+                "is withheld off Windows and requires a native pass on Windows); "
                 "completion flags are run-integrity facts, not product "
                 "approval",
     }
