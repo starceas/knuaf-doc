@@ -1,0 +1,59 @@
+{
+  "schema": "knuaf-school-outline/1",
+  "profiles": {
+    "specialty_crops": {
+      "profile_id": "specialty-school", "profile_version": 1, "module_version": "1.0.0", "state": "seeded",
+      "sources": [{"path": "references/official-toc.md", "locator": "학교 목차 Ⅰ~Ⅵ, lines 9-63", "sha256": "87fa7a502aff42d735d44579d9e68fe1491ce26ac242ac7a25c661b719ca552f"}],
+      "sections": [
+        {"node_id":"farm_status","title":"Ⅰ. 머리말","order":1,"path":"sections/farm_status.md","registry_nodes":["farm_status"]},
+        {"node_id":"environment","title":"Ⅱ. 외부환경분석","order":2,"path":"sections/environment.md","registry_nodes":["environment"]},
+        {"node_id":"cultivation","title":"Ⅲ. 영농계획수립","order":3,"path":"sections/cultivation.md","registry_nodes":["cultivation","processing_sales"]},
+        {"node_id":"finance","title":"Ⅳ. 재무계획","order":4,"path":"sections/finance.md","registry_nodes":["finance"]},
+        {"node_id":"conclusion","title":"Ⅴ. 맺음말 및 발전방향","order":5,"path":"sections/conclusion.md","registry_nodes":[]},
+        {"node_id":"references","title":"Ⅵ. 참고문헌","order":6,"path":"sections/references.md","registry_nodes":["references"]}
+      ]
+    },
+    "dairy": {
+      "profile_id":"dairy-school", "profile_version":1,"module_version":"0.1.0","state":"seeded",
+      "sources":[{"path":"references/dairy/school-toc.md","locator":"§1.2 lines 27-72","sha256":"e6e37ee0edd7571d4e76115b2ce3ba652ca53bc01536afb6abba7dec892a69aa"}],
+      "sections":[
+        {"node_id":"chapter_01","title":"1. 머리말","order":1,"path":"sections/chapter_01.md","registry_nodes":["chapter_01"]},
+        {"node_id":"chapter_02","title":"2. 농업환경분석","order":2,"path":"sections/chapter_02.md","registry_nodes":["chapter_02"]},
+        {"node_id":"chapter_03","title":"3. 중장기발전계획","order":3,"path":"sections/chapter_03.md","registry_nodes":["chapter_03"]},
+        {"node_id":"chapter_04","title":"4. 농장경영원칙","order":4,"path":"sections/chapter_04.md","registry_nodes":["chapter_04"]},
+        {"node_id":"chapter_05","title":"5. 연간 운영관리계획","order":5,"path":"sections/chapter_05.md","registry_nodes":["chapter_05"]},
+        {"node_id":"chapter_06","title":"6. 생산원가 명세서","order":6,"path":"sections/chapter_06.md","registry_nodes":["chapter_06"]},
+        {"node_id":"chapter_07","title":"7. 손익계산서","order":7,"path":"sections/chapter_07.md","registry_nodes":["chapter_07"]},
+        {"node_id":"chapter_08","title":"8. 자금운영계획","order":8,"path":"sections/chapter_08.md","registry_nodes":["chapter_08"]},
+        {"node_id":"chapter_09","title":"9. 경영분석","order":9,"path":"sections/chapter_09.md","registry_nodes":["chapter_09"]},
+        {"node_id":"chapter_10","title":"10. 경영수지","order":10,"path":"sections/chapter_10.md","registry_nodes":["chapter_10"]},
+        {"node_id":"chapter_11","title":"11. 맺음말 및 발전방향","order":11,"path":"sections/chapter_11.md","registry_nodes":["chapter_11"]},
+        {"node_id":"chapter_12","title":"12. 참고문헌","order":12,"path":"sections/chapter_12.md","registry_nodes":["chapter_12"]}
+      ]
+    },
+    "fruit_trees": {
+      "profile_id":"fruit-s01-school","profile_version":1,"module_version":"0.2.0","state":"seeded",
+      "sources":[{"path":"references/fruit-trees/writing-order.md","locator":"S01 nodes lines 12-25; Ⅱ/Ⅲ have no verified umbrella title, retain school numeral only","sha256":"f1a1c7ac8df9756ad3c49db99fcb9f80f6886d8f9645eec330563664448bb666"}],
+      "sections":[
+        {"node_id":"ch1_intro","title":"Ⅰ. 머리말","order":1,"path":"sections/ch1_intro.md","registry_nodes":["ch1_intro"]},
+        {"node_id":"ch2_location","title":"Ⅱ","title_confirmed":false,"title_source":"학교 S01 원본 미동봉","order":2,"path":"sections/ch2_location.md","registry_nodes":["ch2_location","ch2_climate","ch2_soil","ch2_industry","ch2_model_farm","ch2_swot","ch2_policy"]},
+        {"node_id":"ch3_manager","title":"Ⅲ","title_confirmed":false,"title_source":"학교 S01 원본 미동봉","order":3,"path":"sections/ch3_manager.md","registry_nodes":["ch3_manager","ch3_cultivar","ch3_cultivation","ch3_pest","ch3_production","ch3_marketing","ch3_investment"]},
+        {"node_id":"ch4_closing","title":"Ⅳ. 맺음말","order":4,"path":"sections/ch4_closing.md","registry_nodes":["ch4_closing"]}
+      ]
+    },
+    "food_crops": {
+      "profile_id":"food-school","profile_version":1,"module_version":"0.1.0","state":"seeded",
+      "sources":[{"path":"references/food-crops/school-toc.md","locator":"§1.2-1.3 lines 26-77","sha256":"54cba7f9acd92543bdf2236fce44e32007fdecba7d208adb7902bf9e73749dd7"}],
+      "sections":[
+        {"node_id":"chapter_01","title":"1. 머리말","order":1,"path":"sections/chapter_01.md","registry_nodes":["chapter_01"]},
+        {"node_id":"chapter_02","title":"2. 영농환경 분석","order":2,"path":"sections/chapter_02.md","registry_nodes":["chapter_02"]},
+        {"node_id":"chapter_03","title":"3. 영농계획 수립","order":3,"path":"sections/chapter_03.md","registry_nodes":["chapter_03"]},
+        {"node_id":"chapter_04","title":"4. 재무계획","order":4,"path":"sections/chapter_04.md","registry_nodes":["chapter_04"]},
+        {"node_id":"conclusion","title":"맺음말 및 발전방향","order":5,"path":"sections/conclusion.md","registry_nodes":["conclusion"]},
+        {"node_id":"references","title":"참고문헌","order":6,"path":"sections/references.md","registry_nodes":["references"]}
+      ]
+    },
+    "industrial_insects":{"profile_id":"insects-no-school-toc","profile_version":1,"module_version":"0.2.0","state":"no_school_toc","sections":[]},
+    "hort_env_systems":{"profile_id":"hort-no-school-toc","profile_version":1,"module_version":"0.2.0","state":"no_school_toc","sections":[]}
+  }
+}
