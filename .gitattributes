@@ -1,0 +1,2 @@
+# 외부 동봉본(im-not-ai)은 원 커밋과 바이트 동일해야 하므로 공백 검사에서 뺀다.
+skills/knuaf-doc/references/vendor/im-not-ai/** -whitespace
