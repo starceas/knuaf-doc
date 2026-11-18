@@ -125,12 +125,29 @@ class _Base(ContractCase):
         return mc.ModuleRegistry(mc.MODULES + (fruit,),
                                  pack_owner=mc.load_pack_owner())
 
+    def _probe_catalog(self, root):
+        """The synthetic probe module is registry-only; the real catalog must
+        gain its profile too, or a valid binding has no school-outline entry
+        (``outline_policy_invalid``) — that refusal stays, the fixture grows."""
+        outline = runtime("gg_outline")
+        catalog = json.loads(outline.CATALOG.read_text(encoding="utf-8"))
+        catalog["profiles"][PROBE] = {
+            "schema": catalog.get("schema", 1),
+            "profile_id": PROBE, "profile_version": "0.0.1",
+            "module_version": "0.0.1", "state": "no_school_toc",
+            "sections": [], "sources": []}
+        write_text(root, "probe-catalog.json",
+                   json.dumps(catalog, ensure_ascii=False))
+        self.addCleanup(setattr, outline, "CATALOG", outline.CATALOG)
+        outline.CATALOG = Path(root) / "probe-catalog.json"
+
     def _bind_probe(self, root, registry):
         """Bind the synthetic probe module and make it the default
         registry for this test (restored by addCleanup)."""
         self.addCleanup(setattr, self.mc, "default_registry",
                         self.mc.default_registry)
         self.mc.default_registry = lambda catalog_path=None: registry
+        self._probe_catalog(root)
         write_text(root, "major-answer.txt", "전공 선택: " + PROBE + "\n")
         fact = fact_op("selected_major", "common.major_id", PROBE,
                        "", scope="project", verification="claim_supported",

@@ -416,13 +416,13 @@ class _ChangeError(ValueError):
         self.diag = diag
 
 
-def _recheck_canonical(root, expect_revision, request_id=None):
+def _recheck_canonical(root, expect_revision, request_id=None, seed_files=None):
     """Decide commit_state after a canonical write attempt raised.
 
-    Reads project.json back: confirmed new revision (+request entry) means
-    the commit landed and only cleanup is pending; a confirmed older
-    revision means not_committed; anything unreadable or inconsistent is
-    indeterminate — never guessed from the exception type alone.
+    Reads project.json back: confirmed new revision (+request entry) and
+    matching seeded paths/hashes mean the commit landed and only cleanup
+    is pending; a confirmed older revision means not_committed; anything
+    unreadable or inconsistent is indeterminate.
     """
     try:
         current = json.loads(
@@ -435,6 +435,15 @@ def _recheck_canonical(root, expect_revision, request_id=None):
         return "indeterminate", {}
     if revision == expect_revision:
         if request_id is None or request_id in current.get("requests", {}):
+            evidence = {"revision": revision, "request_id": request_id}
+            try:
+                import gg_outline
+                gg_outline.verify_committed(root, current, request_id)
+                for rel, expected_hash in (seed_files or {}).items():
+                    if digest(local(root, rel).read_bytes()) != expected_hash:
+                        return "indeterminate", evidence
+            except (OSError, ValueError, KeyError, TypeError):
+                return "indeterminate", evidence
             return "committed_cleanup_pending", {
                 "revision": revision,
                 "request_id": request_id,
@@ -446,7 +455,7 @@ def _recheck_canonical(root, expect_revision, request_id=None):
 
 
 def _commit_canonical(root, data, *, operation, expect_revision,
-                      request_id=None, preserved_paths=None):
+                      request_id=None, preserved_paths=None, seed_files=None):
     """Single canonical commit point with post-attempt recheck."""
     try:
         atomic(Path(root) / "project.json", data)
@@ -454,7 +463,7 @@ def _commit_canonical(root, data, *, operation, expect_revision,
         # 삼키지 않고 _rewrite_sidecars가 스스로 처리한다(커밋은 이미 성공).
         _rewrite_sidecars(root)
     except OSError as error:
-        state, extra = _recheck_canonical(root, expect_revision, request_id)
+        state, extra = _recheck_canonical(root, expect_revision, request_id, seed_files)
         raise _op(
             operation,
             "canonical",
@@ -1143,7 +1152,8 @@ def _bound_observation(root, provenance_path, provenance_hash):
     return observation
 
 
-def _apply_locked(root, change, expected_revision, *, capability, adoption=None):
+def _apply_locked(root, change, expected_revision, *, capability, adoption=None,
+                  commit_evidence=None):
     """Canonical commit for apply and adopt_output (API §2/§5, SPEC §4-§7).
 
     The guard capability must be real, held by this process and bound to
@@ -1202,6 +1212,13 @@ def _apply_locked(root, change, expected_revision, *, capability, adoption=None)
             _verify_publication_ref(
                 root, entry["publication_ref"], operation=operation
             )
+        import gg_outline
+        try:
+            gg_outline.verify_committed(root, p, request)
+        except (OSError, ValueError, KeyError, TypeError) as error:
+            raise _op(operation, "canonical", "indeterminate",
+                      "outline_committed_mismatch", detail=str(error),
+                      revision=p["revision"], request_id=request) from error
         return p
     if adoption is None:
         # New generic request: the receipt namespace must also be free.
@@ -1492,6 +1509,15 @@ def _apply_locked(root, change, expected_revision, *, capability, adoption=None)
                     target_refs=value.get("target_refs"))
         p[col][key] = value
     validate(p)
+    import gg_outline
+    outline_paths = gg_outline.prepare(root, old, p, change)
+    seed_files = {
+        section["path"]: digest(local(root, section["path"]).read_bytes())
+        for section in p["sections"].values()
+        if section.get("outline", {}).get("request_id") == request
+    }
+    if commit_evidence is not None:
+        commit_evidence.update(seed_files)
     p["revision"] += 1
     for col in ("reviews", "approvals", "outputs"):
         for v in p[col].values():
@@ -1527,6 +1553,7 @@ def _apply_locked(root, change, expected_revision, *, capability, adoption=None)
         raise _op(
             operation, "canonical", "not_committed", "history_write_failed",
             detail=str(error), request_id=request,
+            preserved_paths=outline_paths,
         ) from error
     _commit_canonical(
         root,
@@ -1534,8 +1561,19 @@ def _apply_locked(root, change, expected_revision, *, capability, adoption=None)
         operation=operation,
         expect_revision=p["revision"],
         request_id=request,
-        preserved_paths=[snapshot_rel],
+        preserved_paths=[snapshot_rel, *outline_paths],
+        seed_files=seed_files,
     )
+    # 정본은 확정됐다. 곁파일(손 안 댄 옛 seed) 정리는 그 뒤에만 하고,
+    # 실패는 삼키지 않고 committed_cleanup_pending으로 보고한다.
+    problems = gg_outline.cleanup(root, old, p, request)
+    if problems:
+        raise _op(
+            operation, "canonical", "committed_cleanup_pending",
+            "seed_cleanup_failed", request_id=request,
+            preserved_paths=[snapshot_rel, *outline_paths,
+                             *[problem["path"] for problem in problems]],
+        )
     return p
 
 
@@ -1545,11 +1583,13 @@ def apply(root, change, expected_revision):
     rechecking storage, never from the exception type alone."""
     root = Path(root)
     request_id = change.get("request_id") if isinstance(change, dict) else None
+    seed_files = {}
 
     def body(capability):
         try:
             return _apply_locked(
-                root, change, expected_revision, capability=capability
+                root, change, expected_revision, capability=capability,
+                commit_evidence=seed_files,
             )
         except OperationError:
             raise
@@ -1567,6 +1607,7 @@ def apply(root, change, expected_revision):
             root,
             expected_revision + 1 if type(expected_revision) is int else -1,
             request_id,
+            seed_files,
         ),
     )
 
@@ -2978,6 +3019,12 @@ def _export_refs(p):
     ]
 
 
+def _outline_mod():
+    """gg_outline (school outline seed ownership). Lazily imported;
+    gg_outline imports gg_core only inside its own functions."""
+    import gg_outline
+    return gg_outline
+
 def _finance_body_mod():
     """P3 C-lane integration point (lane B, gg_finance_body.py). Lazily
     imported; never imported by gg_finance_body itself."""
@@ -3675,7 +3722,7 @@ _CLAIMS_PARTIAL_BLOCK = (
 )
 
 
-def _finance_check_items(p):
+def _finance_check_items(p, root=None):
     """Select provided monetary facts for the body crosscheck.
 
     ``sections[].claims`` selects the checked facts only when every section
@@ -3747,6 +3794,11 @@ def _finance_check_items(p):
         }
 
     sections = p.get("sections", {})
+    # 학교 목차만 만든 빈 장은 학생 본문이 아니다 — 본문 주장(claims)의
+    # 빈 목록도, 대조 대상도 아니다. 손 안 댄 seed가 하나라도 섞이면
+    # 모든 절이 빈 목록인 것처럼 보여 대조가 통째로 막힌다.
+    untouched = _outline_mod().untouched_seed_sections(p, root)
+    sections = {sid: s for sid, s in sections.items() if sid not in untouched}
     complete = bool(sections) and all(
         isinstance(s.get("claims"), list) for s in sections.values()
     )
@@ -5174,7 +5226,7 @@ def checks(root, p):
             add("finance_plan_review_scope", "finance",
                 "17시트 재무 계획 검사 미지원: 학과 17시트 양식 전용",
                 severity="info", status="not_checked")
-        items, claims_block = _finance_check_items(p)
+        items, claims_block = _finance_check_items(p, root)
         if claims_block:
             add("body_finance_crosscheck", "body", claims_block, status="blocked")
         elif items:
@@ -6017,8 +6069,14 @@ def completion(root, p, report=None):
 
 
 def merged(root, p):
+    """Student body only: chapters still holding nothing but the outline
+    seed are a preview of the school's structure, not writing — and an
+    export of nothing but seeds must refuse rather than emit titles."""
+    untouched = _outline_mod().untouched_seed_sections(p, root)
     parts = []
-    for s in sorted(p["sections"].values(), key=lambda x: x["order"]):
+    for sid, s in sorted(p["sections"].items(), key=lambda kv: kv[1]["order"]):
+        if sid in untouched:
+            continue
         body = draft(local(root, s["path"]).read_text(encoding="utf-8"))
         title = s["title"]
         parts.append(
