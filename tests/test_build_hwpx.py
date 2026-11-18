@@ -428,7 +428,9 @@ class ExportTests(_Base):
     def setUp(self):
         super().setUp()
         self.root = self._project()
-        (Path(self.root) / "body.md").write_text(BODY_MD, encoding="utf-8")
+        # Bytes, not text mode: the reference input_hash is the LF fixture's
+        # raw-byte digest, and text mode would write CRLF on Windows.
+        (Path(self.root) / "body.md").write_bytes(BODY_MD.encode("utf-8"))
 
     def test_export_publishes_hwpx_and_manifest(self):
         cli = make_fake_cli(self.root, markdown=BODY_MD)

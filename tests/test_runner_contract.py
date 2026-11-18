@@ -888,7 +888,9 @@ class RunnerAccountingTests(unittest.TestCase):
             "tests.test_skillgaps_wp2_session.OfficeRecoveryTests."
             "test_cli_recovery_is_json_and_exit_zero",
         }
-        self.assertEqual(expected_ids, set(self.rv.WINDOW_ONLY_SKILL_SKIPS))
+        self.assertEqual(
+            expected_ids | set(self.rv.WINDOWS_ABSENT_CONDITION_SKIPS),
+            set(self.rv.WINDOW_ONLY_SKILL_SKIPS))
         reason = (
             "gg_office_session uses fcntl/AppleScript; Windows uses "
             "gg_office_win without a session guard. These tests use a "
@@ -908,6 +910,141 @@ class RunnerAccountingTests(unittest.TestCase):
                     dict(entry, detail=reason + " changed")))
                 self.assertFalse(self.rv._is_approved_skill_skip(
                     dict(entry, events=[{"type": "subtest_skip"}])))
+            for platform in ("linux", "darwin"):
+                with self.subTest(test=test_id, platform=platform):
+                    with mock.patch.object(sys, "platform", platform):
+                        self.assertFalse(
+                            self.rv._is_approved_skill_skip(entry), test_id)
+
+    def test_windows_absent_condition_skips_are_exact_and_win32_only(self):
+        # Classification A: 31 tests whose set-up condition does not exist on
+        # Windows, each with its exact runner skip reason.
+        expected = {
+            "test_gg_delegation.TestDelegationCommands."
+            "test_delegate_publish_move_cleans_owned_result_or_reports_location":
+                "POSIX directory-move race",
+            "test_gg_delegation.TestDelegationCommands."
+            "test_directory_moved_outside_before_write_leaves_no_payload":
+                "POSIX directory-move race; Windows pins the directory ch"
+                "ain without delete sharing (see the Windows test above)",
+            "test_gg_delegation.TestDelegationCommands."
+            "test_existing_lane_replace_move_cleans_owned_result_or_reports_location":
+                "POSIX directory-move race",
+            "test_gg_delegation.TestDelegationCommands."
+            "test_new_lane_publish_move_cleans_owned_result_or_reports_location":
+                "POSIX directory-move race",
+            "test_gg_delegation.TestDelegationCommands."
+            "test_opened_temp_moved_before_write_reports_pending_without_payload":
+                "POSIX file-move race",
+            "test_gg_delegation.TestDelegationCommands."
+            "test_post_unlink_stat_failure_reports_pending_owned_location":
+                "POSIX owned fd cleanup verification",
+            "tests.test_p2_lock.ForkExecCase."
+            "test_exec_does_not_carry_fd":
+                "posix fork required",
+            "tests.test_p2_lock.ForkExecCase."
+            "test_fork_child_cannot_use_capability":
+                "posix fork required",
+            "tests.test_p2_lock.ForkExecCase."
+            "test_negative_control_child_lock_un_is_detected":
+                "posix fork required",
+            "tests.test_window_hygiene.DarwinExcelSessionTests."
+            "test_app_locks_are_independent":
+                "requires native POSIX fcntl locks; Office automation is "
+                "not exercised",
+            "tests.test_window_hygiene.DarwinExcelSessionTests."
+            "test_appleevent_timeout_is_unknown_even_when_script_returned":
+                "requires native POSIX fcntl locks; Office automation is "
+                "not exercised",
+            "tests.test_window_hygiene.DarwinExcelSessionTests."
+            "test_clean_and_dirty_existing_documents_block_before_launch_or_open":
+                "requires native POSIX fcntl locks; Office automation is "
+                "not exercised",
+            "tests.test_window_hygiene.DarwinExcelSessionTests."
+            "test_existing_document_reason_is_machine_readable":
+                "requires native POSIX fcntl locks; Office automation is "
+                "not exercised",
+            "tests.test_window_hygiene.DarwinExcelSessionTests."
+            "test_inflight_crash_and_malformed_lock_fail_closed":
+                "requires native POSIX fcntl locks; Office automation is "
+                "not exercised",
+            "tests.test_window_hygiene.DarwinExcelSessionTests."
+            "test_other_cli_cannot_enter_same_app":
+                "requires native POSIX fcntl locks; Office automation is "
+                "not exercised",
+            "tests.test_window_hygiene.DarwinExcelSessionTests."
+            "test_prepare_failure_records_unknown_and_preserves":
+                "requires native POSIX fcntl locks; Office automation is "
+                "not exercised",
+            "tests.test_window_hygiene.DarwinExcelSessionTests."
+            "test_success_records_document_close_but_no_app_quit":
+                "requires native POSIX fcntl locks; Office automation is "
+                "not exercised",
+            "tests.test_window_hygiene.DarwinExcelSessionTests."
+            "test_unconfirmed_zero_exit_is_not_success":
+                "requires native POSIX fcntl locks; Office automation is "
+                "not exercised",
+            "tests.test_window_hygiene.DarwinExcelSessionTests."
+            "test_unknown_inventory_blocks":
+                "requires native POSIX fcntl locks; Office automation is "
+                "not exercised",
+            "tests.test_window_hygiene.OfficeJobCleanupTests."
+            "test_new_never_opened_job_is_cleaned_under_its_idle_guard":
+                "requires native POSIX Office guards",
+            "tests.test_window_hygiene.OfficeJobCleanupTests."
+            "test_not_attempted_journal_cannot_override_unknown_or_busy_guard":
+                "requires native POSIX Office guards",
+            "tests.test_window_hygiene.OfficeJobCleanupTests."
+            "test_rejected_reentry_preserves_prior_session_and_refuses_cleanup":
+                "requires native POSIX Office guards",
+            "tests.test_window_hygiene.OfficeSessionTests."
+            "test_app_locks_are_independent":
+                "requires native POSIX fcntl locks; Office automation is "
+                "not exercised",
+            "tests.test_window_hygiene.OfficeSessionTests."
+            "test_appleevent_timeout_is_unknown_even_when_script_returned":
+                "requires native POSIX fcntl locks; Office automation is "
+                "not exercised",
+            "tests.test_window_hygiene.OfficeSessionTests."
+            "test_clean_and_dirty_existing_documents_block_before_launch_or_open":
+                "requires native POSIX fcntl locks; Office automation is "
+                "not exercised",
+            "tests.test_window_hygiene.OfficeSessionTests."
+            "test_inflight_crash_and_malformed_lock_fail_closed":
+                "requires native POSIX fcntl locks; Office automation is "
+                "not exercised",
+            "tests.test_window_hygiene.OfficeSessionTests."
+            "test_other_cli_cannot_enter_same_app":
+                "requires native POSIX fcntl locks; Office automation is "
+                "not exercised",
+            "tests.test_window_hygiene.OfficeSessionTests."
+            "test_prepare_failure_records_unknown_and_preserves":
+                "requires native POSIX fcntl locks; Office automation is "
+                "not exercised",
+            "tests.test_window_hygiene.OfficeSessionTests."
+            "test_success_records_document_close_but_no_app_quit":
+                "requires native POSIX fcntl locks; Office automation is "
+                "not exercised",
+            "tests.test_window_hygiene.OfficeSessionTests."
+            "test_unconfirmed_zero_exit_is_not_success":
+                "requires native POSIX fcntl locks; Office automation is "
+                "not exercised",
+            "tests.test_window_hygiene.OfficeSessionTests."
+            "test_unknown_inventory_blocks":
+                "requires native POSIX fcntl locks; Office automation is "
+                "not exercised",
+        }
+        self.assertEqual(31, len(expected))
+        self.assertEqual(expected, self.rv.WINDOWS_ABSENT_CONDITION_SKIPS)
+        for test_id, reason in expected.items():
+            self.assertEqual(reason, self.rv.WINDOW_ONLY_SKILL_SKIPS[test_id])
+            entry = {"test": test_id, "category": "skipped", "detail": reason}
+            with mock.patch.object(sys, "platform", "win32"):
+                self.assertTrue(self.rv._is_approved_skill_skip(entry), test_id)
+                self.assertFalse(self.rv._is_approved_skill_skip(
+                    dict(entry, detail=reason + " changed")))
+                self.assertFalse(self.rv._is_approved_skill_skip(
+                    dict(entry, category="failed")))
             for platform in ("linux", "darwin"):
                 with self.subTest(test=test_id, platform=platform):
                     with mock.patch.object(sys, "platform", platform):

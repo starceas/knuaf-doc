@@ -74,8 +74,9 @@ and unapproved skips are never exempt.
 
 Skill tests use finite exact-ID/reason lists. ``ALLOWED_SKILL_SKIPS`` covers
 optional external inputs on every platform. ``WINDOW_ONLY_SKILL_SKIPS``
-covers only exact tests for a product path absent on Windows, and only
-when ``sys.platform == "win32"``. The latter remain unapproved on darwin
+covers only exact tests for a product path or set-up condition absent on
+Windows (``WINDOWS_ABSENT_CONDITION_SKIPS`` lists the latter), and only
+when ``sys.platform == "win32"``. Both remain unapproved on darwin
 and linux. ``POSIX_SKIPPED_WINDOWS_SKILL_TESTS`` is the reverse: exact tests
 of a Windows-only product path, approved only off win32 (proven by the
 Windows CI skill-test step). Approved results remain visible as skipped,
@@ -224,6 +225,93 @@ WINDOW_ONLY_SKILL_SKIPS = dict.fromkeys((
     "tests.test_skillgaps_wp2_session.OfficeRecoveryTests."
     "test_cli_recovery_is_json_and_exit_zero",
 ), WINDOW_ONLY_SKILL_SKIP_REASON)
+
+# Tests whose set-up condition does not exist on Windows: POSIX fork/exec,
+# the Darwin shared-Office AppleScript session with its per-app flock guards,
+# and POSIX open-object moves or post-unlink fd checks. Each ID was classified
+# one by one and names its Windows counterpart test below. Exact ID and the
+# runner's exact skip reason, approved on win32 only (like the entries above);
+# on darwin/linux these tests must run. Windows student-path tests that are
+# skipped only because the test fixture is POSIX-only are NOT listed here and
+# stay unapproved until the test is fixed.
+_DARWIN_OFFICE_SESSION_REASON = (
+    "requires native POSIX fcntl locks; Office automation is not exercised")
+_DARWIN_OFFICE_GUARD_REASON = "requires native POSIX Office guards"
+_POSIX_FORK_REASON = "posix fork required"
+WINDOWS_ABSENT_CONDITION_SKIPS = {}
+# Darwin shared-Office session and per-app guard contract; win32 runs a
+# private COM instance (gg_office_win). Windows counterpart:
+# tests.test_window_hygiene.WindowsOfficeOwnershipTests
+# (test_success_uses_private_instance_and_closes_before_quit,
+#  test_close_failure_or_foreign_document_prevents_quit,
+#  test_excel_formula_error_prevents_pdf).
+WINDOWS_ABSENT_CONDITION_SKIPS.update(dict.fromkeys((
+    "tests.test_window_hygiene.%s.%s" % (cls, name)
+    for cls in ("OfficeSessionTests", "DarwinExcelSessionTests")
+    for name in (
+        "test_app_locks_are_independent",
+        "test_appleevent_timeout_is_unknown_even_when_script_returned",
+        "test_clean_and_dirty_existing_documents_block_before_launch_or_open",
+        "test_inflight_crash_and_malformed_lock_fail_closed",
+        "test_other_cli_cannot_enter_same_app",
+        "test_prepare_failure_records_unknown_and_preserves",
+        "test_success_records_document_close_but_no_app_quit",
+        "test_unconfirmed_zero_exit_is_not_success",
+        "test_unknown_inventory_blocks",
+    )
+), _DARWIN_OFFICE_SESSION_REASON))
+WINDOWS_ABSENT_CONDITION_SKIPS[
+    "tests.test_window_hygiene.DarwinExcelSessionTests."
+    "test_existing_document_reason_is_machine_readable"
+] = _DARWIN_OFFICE_SESSION_REASON
+# Cleanup while a Darwin app guard or idle flock is held; Windows journals
+# carry no guard. Windows counterpart: tests.test_window_hygiene.
+# OfficeJobCleanupTests.test_explicit_cleanup_preserves_live_unknown_and_
+# unrecorded_jobs.
+WINDOWS_ABSENT_CONDITION_SKIPS.update(dict.fromkeys((
+    "tests.test_window_hygiene.OfficeJobCleanupTests."
+    "test_new_never_opened_job_is_cleaned_under_its_idle_guard",
+    "tests.test_window_hygiene.OfficeJobCleanupTests."
+    "test_not_attempted_journal_cannot_override_unknown_or_busy_guard",
+    "tests.test_window_hygiene.OfficeJobCleanupTests."
+    "test_rejected_reentry_preserves_prior_session_and_refuses_cleanup",
+), _DARWIN_OFFICE_GUARD_REASON))
+# POSIX open-directory / open-file moves and the post-unlink fd check; win32
+# pins the ancestor chain and its handles without delete sharing and deletes
+# by open-object identity. Windows counterpart: test_gg_delegation.
+# TestDelegationCommands.test_windows_pinned_directory_rename_denied_during_
+# publish.
+WINDOWS_ABSENT_CONDITION_SKIPS.update({
+    "test_gg_delegation.TestDelegationCommands."
+    "test_delegate_publish_move_cleans_owned_result_or_reports_location":
+        "POSIX directory-move race",
+    "test_gg_delegation.TestDelegationCommands."
+    "test_directory_moved_outside_before_write_leaves_no_payload":
+        "POSIX directory-move race; Windows pins the directory chain "
+        "without delete sharing (see the Windows test above)",
+    "test_gg_delegation.TestDelegationCommands."
+    "test_existing_lane_replace_move_cleans_owned_result_or_reports_location":
+        "POSIX directory-move race",
+    "test_gg_delegation.TestDelegationCommands."
+    "test_new_lane_publish_move_cleans_owned_result_or_reports_location":
+        "POSIX directory-move race",
+    "test_gg_delegation.TestDelegationCommands."
+    "test_opened_temp_moved_before_write_reports_pending_without_payload":
+        "POSIX file-move race",
+    "test_gg_delegation.TestDelegationCommands."
+    "test_post_unlink_stat_failure_reports_pending_owned_location":
+        "POSIX owned fd cleanup verification",
+})
+# POSIX fork inheritance and exec fd lifetime; there is no fork on win32.
+# Windows counterpart: tests.test_p2_lock.LockAcquireCase.
+# test_held_lock_blocks_second_writer_and_unlock.
+WINDOWS_ABSENT_CONDITION_SKIPS.update(dict.fromkeys((
+    "tests.test_p2_lock.ForkExecCase.test_exec_does_not_carry_fd",
+    "tests.test_p2_lock.ForkExecCase.test_fork_child_cannot_use_capability",
+    "tests.test_p2_lock.ForkExecCase."
+    "test_negative_control_child_lock_un_is_detected",
+), _POSIX_FORK_REASON))
+WINDOW_ONLY_SKILL_SKIPS.update(WINDOWS_ABSENT_CONDITION_SKIPS)
 WINDOW_ONLY_SKILL_SKIP_RULE = "Windows-only product path (exact id and reason)"
 
 # The reverse case: tests of a Windows-only product path (CreateFileW handles

@@ -296,12 +296,15 @@ def lstat(path):
         return st
 
 
-def read_bytes(path):
+def read_bytes(path, limit=None):
     fd = open_file(path, os.O_RDONLY)
     try:
         ident = fd_identity(fd, "file")
         with os.fdopen(fd, "rb", closefd=False) as handle:
-            return handle.read(), ident
+            data = handle.read() if limit is None else handle.read(limit + 1)
+            if limit is not None and len(data) > limit:
+                raise ValueError("파일 읽기 상한 초과")
+            return data, ident
     finally:
         os.close(fd)
 

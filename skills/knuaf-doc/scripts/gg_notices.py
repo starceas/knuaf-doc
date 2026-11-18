@@ -8,9 +8,9 @@
     python3 gg_notices.py write <논문 폴더> [--json]
     python3 gg_notices.py choose <논문 폴더> --identity <값> --value <direct_tell|footnote> [--json]
 
-``write`` 는 ``gg_core.checks`` 를 돌려 알림 행을 모으고 파일을 원자적으로
-교체한다. ``choose`` 는 선택을 정본(questions+facts)에 기록하고 파일을 다시
-쓴다.  정본 기록은 기존 공개 ``apply`` 경로를 그대로 쓴다(잠금·개정 대조).
+``write`` 는 전체 점검 대신 같은 검사기의 얇은 알림 경로를 호출해 파일을
+원자적으로 교체한다. ``choose`` 는 기존 알림 선택만 정본에 기록한다.
+상태 없는 재무 카드는 입력칸 채우기·접기 전용이며 선택을 기록하지 않는다.
 """
 
 from __future__ import annotations
@@ -46,11 +46,68 @@ def notice_rows(root):
     **바이트까지** 잠근다(실측: 0.089s vs 0.0002s).
     """
     core = _core()
+    import gg_target_gap
     project = core.load(root)
     rows = [core._workbook_notice_row_for_project(root, project),
             core._unsupported_finance_notice_row_for_project(root, project),
             core._blank_copy_finance_notice_row_for_project(root, project)]
+    rows = _finance_cards(root, project) + rows
+    rows.append(gg_target_gap.row(root, project))
     return [row for row in rows if row is not None]
+
+
+def _finance_cards(root, project):
+    """Contract v7 §8: current holes only; legacy readers keep title/items.
+
+    Legacy scanner returns no compared amounts: do not reconstruct them from
+    canonical facts. Only the section-conflict scanner supplies display text
+    proving an amount difference. Distinct locations have distinct anchors.
+    """
+    core = _core()
+    cards = []
+    for kind, issue in core._finance_card_sources(root, project):
+        deficit = kind == "finance_hole_deficit"
+        location = issue["location"]
+        if isinstance(location, dict):
+            location = location["section_id"]
+        anchor = ("gate:" if deficit else "fact:") + str(
+            issue.get("fact_id") or location)
+        title = core._card_text(kind, issue["reason"])
+        current = ""
+        if deficit:
+            current = "%s년 손익 %s%s" % (
+                str(issue["period"]).removesuffix("년"),
+                issue["value"], issue["unit"])
+            title = current + "이에요"
+        elif issue.get("code") == "BODY_SECTION_AMOUNT_CONFLICT":
+            title = "본문의 같은 항목 금액이 서로 달라요"
+            title += " — " + ", ".join(
+                "%s년 %s" % (a["year"], a["amount"])
+                for a in issue["amounts"][:2])
+            current = issue["reason"]
+        choices = [{"value": "fix", "label": "고치기"}]
+        card = {
+            "kind": kind, "title": title, "blocking": not deficit,
+            "choice_policy": "none", "fix_mode": "talk",
+            "dismissible": False, "project_id": core._advice_project_id(root),
+            "choices": choices,
+            "talk_message": ("계획 마지막 해의 손익과 조정할 방법을 함께 살펴봐 줘."
+                             if deficit else "본문의 금액과 비교 기준을 함께 확인해 줘."),
+            "items": [{"what": title, "where": "재무 계획" if deficit else "본문",
+                       "current": current,
+                       "basis": ("손익을 알고 진행할지 먼저 함께 살펴봐야 해요."
+                                 if deficit else "본문의 금액과 비교 기준이 맞아야 내용을 확인할 수 있어요."),
+                       "how": "도우미와 근거를 확인하고 내용을 정해 주세요.",
+                       "where_detail": "", "changed": ""}],
+        }
+        if deficit:
+            choices.append({"value": "proceed", "label": "이대로 진행"})
+            card["proceed_message"] = "계획 마지막 해의 손익을 알고 이대로 진행할지 함께 마무리해 줘."
+        choices.append({"value": "later", "label": "나중에"})
+        card["card_key"] = core._card_key(card, kind, anchor)
+        card["notice_identity"] = card["card_key"]
+        cards.append(card)
+    return cards
 
 
 def notice_rows_or_error(root):

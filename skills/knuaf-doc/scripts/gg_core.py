@@ -4742,6 +4742,87 @@ def _blank_copy_finance_notice_row_for_project(root, p):
     return _blank_copy_finance_notice_row(root, p, finance_gate(p))
 
 
+# Stateless cards reuse the two existing checks; no click state is persisted.
+_CARD_FIGURE_TEXT = {
+    "본문 텍스트 없음": "본문을 아직 읽지 못했어요",
+    "본문에 재무 항목 없음": "본문에 이 금액이 아직 없어요",
+    "유효하지 않은 메타데이터/기준값": "금액을 비교할 기준을 확인해 주세요",
+    "기간·단위·범위·출력 반올림 값 불일치": "본문과 정리한 금액의 기준을 확인해 주세요",
+}
+
+
+def _card_text(kind, reason):
+    """Only the section-conflict result proves two displayed amounts differ.
+
+    Legacy mismatch also means missing period/unit/scope, so never call that
+    an amount difference. Unknown and invalid-value failures stay neutral.
+    """
+    if kind == "finance_hole_deficit":
+        return "계획 마지막 해의 손익을 함께 살펴봐요"
+    return _CARD_FIGURE_TEXT.get(
+        reason.split(" · ", 1)[0], "본문의 금액 정보를 함께 확인해 주세요")
+
+
+def _card_key(p, kind, anchor):
+    """Hash rendered text only; reusable by other stateless card kinds.
+
+    ``p`` is the rendered card, not canonical project metadata. Internal
+    revisions, references and click state must not change fold memory.
+    """
+    def normalize(value):
+        if isinstance(value, str):
+            return " ".join(value.split())
+        if isinstance(value, list):
+            return [normalize(v) for v in value]
+        if isinstance(value, dict):
+            return {k: normalize(v) for k, v in value.items()}
+        return value
+
+    text = {k: p[k] for k in (
+        "title", "items", "choices", "talk_message", "proceed_message") if k in p}
+    return digest(json.dumps({"schema": "knuaf.card-key/1", "kind": kind,
+                              "anchor": anchor, "text": normalize(text)},
+                             ensure_ascii=False, sort_keys=True,
+                             separators=(",", ":")).encode("utf-8"))
+
+
+def _finance_card_sources(root, p):
+    """Thin source path: same predicates/scanners as checks(), no workbook IO.
+
+    Return the original scanner issues so cards cannot invent missing amounts.
+    A blocked claims selection does not become a finance-hole card.
+    """
+    sources = []
+    try:
+        body = merged(root, p)
+        sections = [dict(section_id=sid, path=s.get("path"),
+                         title=s.get("title"),
+                         text=draft(local(root, s["path"]).read_text(encoding="utf-8")))
+                    for sid, s in sorted(p["sections"].items(),
+                                         key=lambda kv: kv[1]["order"])]
+    except (OSError, ValueError, KeyError):
+        return sources  # checks() reports document_parse, not an amount fail.
+    items, blocked = _finance_check_items(p)
+    if items and not blocked:
+        from gg_school_excel import crosscheck_body
+
+        legacy = list(crosscheck_body(body, items))
+        issues = legacy + _finance_amounts_mod().detect_amount_gaps(
+            sections, items, legacy_issues=legacy)
+        for issue in issues:
+            if issue.get("status", "fail") == "fail":
+                sources.append(("finance_hole_figure", issue))
+    gate_state = finance_gate(p)
+    if (gate_state["state"] == "deficit_pending"
+            and any(s["text"] for s in sections)):
+        fact = _finance_gate_fact(p, FINANCE_GATE_PROFIT)
+        sources.append(("finance_hole_deficit", {
+            "location": fact["period"], "period": fact["period"],
+            "value": fact["value"], "unit": fact["unit"],
+            "reason": gate_state["reason"]}))
+    return sources
+
+
 def _add_finance_workbook_advice(root, p, lineage, out):
     """안내 행을 ``out``에 직접 붙인다. 예외를 밖으로 내보내지 않는다."""
     try:
@@ -6813,22 +6894,40 @@ def _custom_paper_body(body):
     return body
 
 
-@_op_boundary
-def paper(root, spec_path, spec_bytes, requested_path, *, major_id=None,
-          body_markdown=None):
-    """Generate the markdown review body through a managed publication
-    (API §6).  The spec file bytes are read once by the caller and never
-    re-read — a swapped file cannot ride into the request.
+def _paper_notices_changed(root):
+    """Compare notice content, not the refresh clock, before a refused write."""
+    import gg_notices
+    from gg_publication import _read_file
 
-    ``body_markdown`` replaces the generated Ⅰ–Ⅵ body with the caller's
-    own merged text while the generated frontmatter stays.  The frozen
-    renderer is untouched: the splice happens here, in the adapter.
+    try:
+        rows, error = gg_notices.notice_rows_or_error(root)
+        if error is not None:
+            return True  # Let the registered writer report/remove stale notices.
+        current = json.loads(_read_file(root, gg_notices.NOTICES_NAME))
+        expected = gg_notices.notices_document(root, rows)
+        current.pop("written_at", None)
+        expected.pop("written_at", None)
+        return current != expected
+    except Exception:
+        return True  # Missing, unreadable or invalid sidecars need a refresh.
 
-    Policy B (G-B): the common major output guard runs before the lock
-    and is rechecked inside it; a held output raises ``_op(...)`` with
-    ``not_committed`` and the guard's hold code."""
-    root = Path(root)
-    from gg_school_table_sources import load_spec, attach_table_sources
+
+def _paper_then_sidecars(root, body, capability):
+    """Refresh once after publication; refusals write only changed notices."""
+    refresh = True
+    try:
+        return body(capability)
+    except OperationError as error:
+        if error.result.get("commit_state") == "not_committed":
+            refresh = _paper_notices_changed(root)
+        raise
+    finally:
+        if refresh:
+            _rewrite_sidecars(root)
+
+
+def _paper_preflight(root, spec_bytes, major_id, body_markdown):
+    from gg_school_table_sources import load_spec
     try:
         spec = load_spec(spec_bytes)
     except ValueError as error:
@@ -6903,12 +7002,40 @@ def paper(root, spec_path, spec_bytes, requested_path, *, major_id=None,
     except (TypeError, ValueError) as error:
         raise _op("paper", "requested_output", "not_committed",
                   "invalid_spec", detail=str(error)) from error
+    return spec, has_school_profile, ctx, body_override
+
+
+@_op_boundary
+def paper(root, spec_path, spec_bytes, requested_path, *, major_id=None,
+          body_markdown=None):
+    """Generate the markdown review body through a managed publication
+    (API §6).  The spec file bytes are read once by the caller and never
+    re-read — a swapped file cannot ride into the request.
+
+    ``body_markdown`` replaces the generated Ⅰ–Ⅵ body with the caller's
+    own merged text while the generated frontmatter stays.  The frozen
+    renderer is untouched: the splice happens here, in the adapter.
+
+    Policy B (G-B): the common major output guard runs before the lock
+    and is rechecked inside it; a held output raises ``_op(...)`` with
+    ``not_committed`` and the guard's hold code."""
+    root = Path(root)
+    pre = refusal = None
+    try:
+        pre = _paper_preflight(root, spec_bytes, major_id, body_markdown)
+    except OperationError as error:
+        refusal = error
+    from gg_school_table_sources import attach_table_sources
+    import gg_major_contract as mc
     spec_rel = str(spec_path)
 
     paper_auth = {}
 
     def body(capability):
         _lock_mod().assert_held(capability, root)
+        if refusal is not None:
+            raise refusal
+        spec, has_school_profile, ctx, body_override = pre
         p = load(root)
         # Recheck the output authorization against the canonical record
         # already loaded under the publication lock — a binding change
@@ -7129,7 +7256,7 @@ def paper(root, spec_path, spec_bytes, requested_path, *, major_id=None,
     box = {}
 
     def tracked_body(capability):
-        value = body(capability)
+        value = _paper_then_sidecars(root, body, capability)
         box["request_id"] = value.get("request_id")
         return value
 
@@ -7145,7 +7272,12 @@ def paper(root, spec_path, spec_bytes, requested_path, *, major_id=None,
             return ("committed_cleanup_pending", {"request_id": rid})
         return ("not_committed", {"request_id": rid})
 
-    value = _guarded(root, "paper", "requested_output", tracked_body, confirm)
+    try:
+        value = _guarded(root, "paper", "requested_output", tracked_body, confirm)
+    except _lock_mod().LockError as error:
+        if refusal is not None and error.status == "absent":
+            raise refusal from None
+        raise
     if isinstance(value, dict) and "value" in paper_auth:
         # Policy B record: the persisted authorization of the managed
         # bundle (published with it, or recovered from it); the check that
