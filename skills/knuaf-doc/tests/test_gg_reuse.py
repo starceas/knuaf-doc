@@ -8,11 +8,14 @@ parent's accept_catalog route on real accepted-catalog bytes.
 Run: python3 -B tests/test_gg_reuse.py
 """
 import json
+import ntpath
 import re
 import shutil
 import sys
 import tempfile
 import unittest
+import unittest.mock
+from dataclasses import replace
 from pathlib import Path
 
 TESTS = Path(__file__).resolve().parent
@@ -700,6 +703,155 @@ class TestI02Positives(unittest.TestCase):
             context=ctx(self.reg))
         self.assertEqual(v2["evidence"]["artifacts"][0]["path"],
                          "references/exemplar-quality.md")
+
+
+class TestCrossVolumeArtifactEvidence(unittest.TestCase):
+    """Regression for the Windows cross-volume crash (run 44341889278):
+    ``evidence.artifacts[].path`` rebasing must never turn a verdict into
+    an escaping ``ValueError`` when the lookup target and runtime_root
+    sit on different volumes.
+
+    Simulation is faithful, not a stub: Windows' ``os.path`` IS
+    ``ntpath``, and ``ntpath.relpath`` raises on a drive mismatch at its
+    own drive comparison (CPython 3.14 ``Lib/ntpath.py:759-765``:
+    ``start_abs = abspath(start)`` / ``path_abs = abspath(path)``, then
+    ``splitroot`` of each and ``if normcase(start_drive) !=
+    normcase(path_drive): raise ValueError("path is on mount %r, start
+    on mount %r")``).  ``ntpath`` is pure Python and runs unchanged on
+    this host, so the test delegates ``os.path.relpath`` to the very
+    same function the real Windows interpreter calls.
+    """
+
+    # Bound once at import, BEFORE any patch: on Windows ``os.path`` IS
+    # ``ntpath``, so looking ``ntpath.relpath`` up inside the replacement
+    # would find the replacement itself and recurse.
+    _NT_RELPATH = staticmethod(ntpath.relpath)
+
+    def setUp(self):
+        self.reg = registry()
+
+    @classmethod
+    def _nt_relpath(cls, path, start=None):
+        # On Windows ``Path(ntpath.relpath(...)).as_posix()`` is exactly
+        # the ntpath result with '/' separators; PosixPath would keep the
+        # backslashes verbatim, so convert here to keep the emitted-path
+        # assertions meaningful on this host.
+        return cls._NT_RELPATH(
+            str(path),
+            str(start) if start is not None else None).replace("\\", "/")
+
+    @staticmethod
+    def _other_volume(path):
+        # A start point guaranteed to be on a DIFFERENT volume from the
+        # real artifact, whatever drive the checkout sits on ('' on a
+        # POSIX host, e.g. 'D:' on Windows CI).
+        drive = ntpath.splitdrive(str(path))[0].upper()
+        return Path(("Y:" if drive == "Z:" else "Z:") + "/knuaf-doc-install")
+
+    def test_ntpath_cross_drive_relpath_raises(self):
+        # ground the simulation in the real stdlib behavior this host
+        # cannot reproduce through os.path (posix): same function class,
+        # same message shape as the CI traceback.
+        with self.assertRaises(ValueError) as cm:
+            ntpath.relpath("D:/packs/x.json", "C:/skill/knuaf-doc")
+        self.assertIn("path is on mount", str(cm.exception))
+
+    def _cross_volume_call(self, *, runtime_root, registry_obj):
+        key = stat_key_of(registry_obj, "rda.income.national.2024")
+        with unittest.mock.patch.object(
+                gg_reuse.os.path, "relpath", self._nt_relpath):
+            return gg_reuse.resolve_reuse(
+                SOURCE_SHA["rda.income.national.2024"],
+                {"kind": "statistical_observation", "keys": [key]},
+                context=ctx(
+                    registry_obj, runtime_root=runtime_root,
+                    key_catalog=key_catalog_extra(
+                        "statistical_observation",
+                        gg_reuse.canonical_key(
+                            key, "statistical_observation"))))
+
+    def test_cross_volume_hash_matched_artifact_keeps_verdict(self):
+        # The CI shape with the bytes genuinely present and matching: the
+        # registry and its packs root resolve under this real install,
+        # while runtime_root declares a DIFFERENT volume.  ntpath reads a
+        # leading-'/' POSIX path as a DRIVE-LESS rooted Windows path
+        # (ntpath.abspath → normpath keeps drive ''), and a drive-less
+        # mount never equals 'D:', so the rebase is the only step that
+        # crosses volumes — the same condition CI hit with the skill on
+        # C: and the packs on D:, mirrored.  The artifact lookup succeeds
+        # and the measured hash equals the declared one, so nothing but
+        # the emitted-path rebase depends on the volume.  Before the
+        # guard this raised ValueError; the verdict must survive it.
+        v = self._cross_volume_call(
+            runtime_root=self._other_volume(self.reg.resolved_packs_dir),
+            registry_obj=self.reg)
+        self.assertEqual(v["status"], "blocked")
+        self.assertEqual(v["exit"], 2)
+        self.assertIn("runtime_base_mismatch", v["reasons"])
+        self.assertNotIn("runtime_missing", v["reasons"])
+        self.assertNotIn("runtime_hash_mismatch", v["reasons"])
+        arts = v["evidence"]["artifacts"]
+        self.assertTrue(arts)
+        for a in arts:
+            self.assertTrue(a["exists"])
+            self.assertEqual(a["observed_sha256"], a["declared_sha256"])
+            # no runtime_root-relative form exists here: the emitted
+            # path falls back to the entry's declared relative_path
+            # (packs-root-relative) instead of raising or leaking an
+            # absolute, machine-specific path.
+            self.assertFalse(Path(a["path"]).is_absolute())
+            self.assertFalse(ntpath.splitdrive(a["path"])[0])
+            # the path is NOT runtime_root-relative here: the marker names
+            # the base the hash was measured under.
+            self.assertEqual(a["path_base"], "packs_dir")
+        self.assertEqual(arts[0]["path"],
+                         "common/rda-income-national-2024/manifest.json")
+
+    def test_cross_volume_with_equal_bases_still_returns_a_verdict(self):
+        # Reachable only through a non-portable drive-relative root
+        # declaration (ntpath.isabs('D:pack') is False), which this
+        # module does not reject — so the guard must not depend on the
+        # rule-3 mismatch leg: with base == runtime_root the lookup
+        # target is still on another volume.
+        reg = replace(self.reg,
+                      resolved_base=Path("C:/skill/knuaf-doc"),
+                      resolved_packs_dir=Path("D:/packs"))
+        v = self._cross_volume_call(
+            runtime_root=Path("C:/skill/knuaf-doc"), registry_obj=reg)
+        self.assertNotIn("runtime_base_mismatch", v["reasons"])
+        self.assertIn("runtime_missing", v["reasons"])
+        self.assertEqual(v["status"], "blocked")   # catalog_not_accepted
+        self.assertEqual(v["exit"], 2)
+        self.assertEqual(
+            v["evidence"]["artifacts"][0]["path"],
+            "common/rda-income-national-2024/manifest.json")
+        self.assertEqual(v["evidence"]["artifacts"][0]["path_base"],
+                         "packs_dir")
+
+    def test_same_volume_rebase_is_unchanged(self):
+        # the guard must not disturb the normal rebase: patched relpath
+        # on a Windows-shaped single drive still emits runtime_root-
+        # relative evidence.
+        reg = replace(self.reg,
+                      resolved_base=Path("C:/skill/knuaf-doc"),
+                      resolved_packs_dir=Path(
+                          "C:/skill/knuaf-doc/references/benchmark-packs"))
+        key = stat_key_of(reg, "rda.income.national.2024")
+        with unittest.mock.patch.object(
+                gg_reuse.os.path, "relpath", self._nt_relpath):
+            v = gg_reuse.resolve_reuse(
+                SOURCE_SHA["rda.income.national.2024"],
+                {"kind": "statistical_observation", "keys": [key]},
+                context=ctx(reg, key_catalog=key_catalog_extra(
+                    "statistical_observation",
+                    gg_reuse.canonical_key(key,
+                                           "statistical_observation"))))
+        self.assertEqual(
+            v["evidence"]["artifacts"][0]["path"],
+            "references/benchmark-packs/common"
+            "/rda-income-national-2024/manifest.json")
+        # same volume: the evidence shape is unchanged (no marker key)
+        self.assertNotIn("path_base", v["evidence"]["artifacts"][0])
 
 
 class TestCU7(unittest.TestCase):

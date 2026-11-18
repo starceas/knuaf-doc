@@ -968,16 +968,49 @@ def resolve_reuse(source_hash, requested_use, *, context):
             # lookup target (packs-dir-relative for a statistical_pack
             # per SCHEMA section 3.2; the registry's declared
             # relative_path is looked up unchanged).
-            emitted = Path(
-                os.path.relpath(p, runtime_root)).as_posix()
+            emitted_base = None
+            try:
+                emitted = Path(
+                    os.path.relpath(p, runtime_root)).as_posix()
+            except ValueError:
+                # No runtime_root-relative form EXISTS when the lookup
+                # target and runtime_root sit on different volumes —
+                # Windows raises here ("path is on mount 'D:', start on
+                # mount 'C:'", ntpath.py splitroot drive comparison).
+                # That is a deployment fact, not a caller error: emit
+                # the declared entry-relative path (the same form the
+                # base-less branch above emits) instead of letting the
+                # error escape and destroy the verdict's structured
+                # reasons.  The mismatch itself is already reported by
+                # the rule-3 leg when runtime_root != resolved_base; a
+                # non-portable drive-relative declaration can reach
+                # this fallback with the bases equal, so the guard must
+                # not depend on that leg.
+                emitted = rel
+                emitted_base = ("packs_dir"
+                                if entry.get("role") == "statistical_pack"
+                                else "runtime_root")
         else:
             emitted = rel
-        artifact_evidence.append({
+            emitted_base = None
+        evidence = {
             "path": emitted,
             "exists": exists,
             "declared_sha256": art["sha256"],
             "observed_sha256": observed,
-        })
+        }
+        if emitted_base is not None:
+            # API section 1.4 adds no field, so this marks the ONE
+            # degenerate evidence item additively: 'path' here is the
+            # second operand of the lookup join, and the file the hash
+            # was measured on is base(path_base) / path — NOT a
+            # runtime_root-relative name, which does not exist for this
+            # lookup.  Both the rule-3 mismatch leg and a non-portable
+            # drive-relative declaration reach it, so a per-artifact
+            # marker is what keeps the path unambiguous; the same-volume
+            # form above stays byte-identical.
+            evidence["path_base"] = emitted_base
+        artifact_evidence.append(evidence)
         if not exists:
             artifact_missing = True
             reasons.add("runtime_missing")
