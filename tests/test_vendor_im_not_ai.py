@@ -46,6 +46,39 @@ EXPECTED_FILES.update("humanize-korean/references/" + p for p in REFERENCE_FILES
 EXPECTED_FILES.update("humanize-korean/scripts/" + p for p in SCRIPT_COVERAGE)
 
 
+# The tracing wrapper below observes code as it executes, so a script that a
+# command never executes is invisible to it. That is only sound while every
+# bundled script is reached by a static import: a dynamic loader would run code
+# the wrapper cannot predict, and the coverage claim would go silently wrong.
+DYNAMIC_LOADING_MODULES = frozenset(
+    {"ctypes", "imp", "importlib", "pkgutil", "runpy", "subprocess", "zipimport"})
+# Bare builtin calls only: `re.compile` is an attribute, so it is not matched.
+DYNAMIC_LOADING_CALLS = frozenset({"__import__", "compile", "eval", "exec"})
+
+
+def static_import_closure(entry, roots):
+    """Files reachable from `entry` by module-level imports alone.
+
+    Imports resolve against the bundle's scripts and references directories, the
+    same two sys.path entries `verify_gates.py` installs at runtime.
+    """
+    reachable, pending = {entry}, [entry]
+    while pending:
+        for node in ast.walk(ast.parse(pending.pop().read_text(encoding="utf-8"))):
+            names = []
+            if isinstance(node, ast.Import):
+                names = [alias.name.split(".")[0] for alias in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.module and not node.level:
+                names = [node.module.split(".")[0]]
+            for name in names:
+                for root in roots:
+                    candidate = root / f"{name}.py"
+                    if candidate.is_file() and candidate not in reachable:
+                        reachable.add(candidate)
+                        pending.append(candidate)
+    return reachable
+
+
 def snapshot(root):
     return {p.relative_to(root).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
             for p in root.rglob("*") if p.is_file()}
@@ -115,6 +148,38 @@ class BundleContractTests(unittest.TestCase):
                                      path.read_text(encoding="utf-8")):
                 self.assertTrue((root / target).exists(), (path.name, target))
 
+    def test_gates_import_closure_is_static_and_traced_elsewhere(self):
+        # The smoke test stops tracing the heavy `gates` call because tracing costs
+        # ~3x and that call is what blew the 90s child timeout. That trade is only
+        # sound if gates executes exactly its static import closure at any input
+        # size — a dynamic loader would run code the tracing wrapper cannot see, and
+        # the coverage assertion would keep passing while a script went unobserved.
+        root = BUNDLE / "humanize-korean"
+        roots = (root / "scripts", root / "references")
+        for path in sorted({p for directory in roots for p in directory.glob("*.py")}):
+            for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+                if isinstance(node, ast.Import):
+                    names = [alias.name.split(".")[0] for alias in node.names]
+                    self.assertFalse(DYNAMIC_LOADING_MODULES & set(names), path.name)
+                elif isinstance(node, ast.ImportFrom):
+                    self.assertNotIn((node.module or "").split(".")[0],
+                                     DYNAMIC_LOADING_MODULES, path.name)
+                elif isinstance(node, ast.Name):
+                    self.assertNotIn(node.id, DYNAMIC_LOADING_CALLS, path.name)
+        # gates is the one untraced call; light/standard gates runs trace it, so the
+        # files it opens are already in `seen` whatever the heavy input does.
+        # `restore_modality` is imported lazily inside judge_modality (:379), which
+        # still counts: the closure walk covers nested imports by design.
+        closure = {p.relative_to(root).as_posix()
+                   for p in static_import_closure(root / "scripts/verify_gates.py", roots)}
+        self.assertEqual({"scripts/verify_gates.py", "scripts/checks.py",
+                          "scripts/console.py", "scripts/restore_modality.py",
+                          "references/metrics_v2.py", "references/metrics.py"}, closure)
+        self.assertTrue(all(p.name in SCRIPT_COVERAGE for p in
+                            static_import_closure(root / "scripts/verify_gates.py", roots)
+                            if p.parent == root / "scripts"),
+                        "every scripts/ file gates runs must be tracked by SCRIPT_COVERAGE")
+
     def test_polishing_paths_commands_and_platform_launchers(self):
         doc = (SCRIPTS.parent / "references/korean-polishing.md").read_text(encoding="utf-8")
         skill = (SCRIPTS.parent / "SKILL.md").read_text(encoding="utf-8")
@@ -161,14 +226,16 @@ class RunnerSmokeTests(unittest.TestCase):
             seen = set()
             counter = 0
 
-            def run(*args, codes=(0,)):
+            def run(*args, codes=(0,), trace=True):
                 nonlocal counter
                 counter += 1
-                trace = work / f"trace-{counter}.json"
-                proc = cli(*args, cwd=work, trace=trace)
+                path = work / f"trace-{counter}.json"
+                proc = cli(*args, cwd=work, trace=path if trace else None)
                 self.assertIn(proc.returncode, codes, proc.stdout + proc.stderr)
-                seen.update(Path(p).name for p in json.loads(trace.read_text(encoding="utf-8"))
-                            if "/humanize-korean/scripts/" in p.replace("\\", "/"))
+                if trace:
+                    seen.update(Path(p).name
+                                for p in json.loads(path.read_text(encoding="utf-8"))
+                                if "/humanize-korean/scripts/" in p.replace("\\", "/"))
                 return proc
 
             payload = json.loads(run("paths").stdout)
@@ -216,8 +283,15 @@ class RunnerSmokeTests(unittest.TestCase):
                     run("reassemble", "--run-dir", run_dir, "--strict")
                     final = run_dir / "03_reassembled.md"
                     self.assertEqual(prepared, final.read_text(encoding="utf-8"))
+                # The heavy input makes gates the one expensive call: profiling it
+                # costs ~3x the untraced run and is what pushed this test past its
+                # 90s child timeout on Python 3.10 CI. gates executes the same static
+                # import closure at every input size (verified below), so the files it
+                # would contribute are already in `seen` from the light/standard runs.
+                # Its assertions below still run on the real subprocess result.
                 gates = run("gates", "--before", source, "--after", final,
-                            "--genre", "essay", "--json", codes=(0, 1))
+                            "--genre", "essay", "--json", codes=(0, 1),
+                            trace=mode != "heavy")
                 report = json.loads(gates.stdout[gates.stdout.index("{\n"):])
                 self.assertEqual(gates.returncode, report["gate"]["exit_code"])
                 self.assertEqual(0, report["change_rate"]["rate"])
