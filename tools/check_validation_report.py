@@ -68,6 +68,11 @@ def validate(report, scope="full"):
         "tool": "tools/run_validation.py", "verdict": "ok_platform_scoped",
         "mode": "default", "validation_scope": "current_platform",
         "baseline_main": BASELINE_MAIN,
+        "commit_evidence": {
+            "workspace_matches_commit": "unchecked",
+            "local_result": "reference_only",
+            "official_evidence_requires": ["ci_run_url", "ci_head_sha"],
+        },
     }
     for key, expected in expected_top.items():
         _need(report.get(key) == expected, "%s must equal %r" % (key, expected))
@@ -196,7 +201,7 @@ def validate(report, scope="full"):
     _need(tally["failed"] == 0 and sum(tally.values()) == tests_run,
           "runtime category tally is inconsistent")
     _need(_dict(report.get("bundle"), "bundle").get("status") == "pass",
-          "bundle integrity must pass")
+          "bundle (deployment) check must pass")
     _need(_dict(report.get("dependency"), "dependency").get("ok") is True,
           "dependency preflight must pass")
 
