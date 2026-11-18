@@ -3,6 +3,7 @@ import copy
 import json
 import subprocess
 import sys
+from pathlib import Path
 from unittest.mock import patch
 
 from tests._harness import ContractCase, SCRIPTS, fact_op, source_op, claim_of, write_text, runtime, section_op
@@ -303,6 +304,44 @@ class OutlineTests(ContractCase):
         p = core.apply(root, change, 1)
         self.assertEqual((p["revision"], len(p["sections"])), (2, 12))
         self.assertFalse((root / "sections/farm_status.md").exists())
+
+    def test_rebind_seed_evidence_read_failure_restores_every_path_and_byte(self):
+        core = runtime("gg_core")
+        root = self.make_project()
+        core.apply(root, self.change(root), 0)
+        change = self.change(root, "dairy", "rebind")
+        before = self._tree_bytes(root)
+        real_read = Path.read_bytes
+        hits = []
+
+        def flaky(path):
+            # prepare가 새 장 12개와 영수증을 다 쓴 뒤, 커밋 전 증거 해시를
+            # 읽는 첫 read_bytes()에서만 죽는다. 이 읽기는 예전에 이력 쓰기
+            # 실패 복구 범위 밖이라 새 파일 13개를 남기고 OSError를 그대로
+            # 흘렸다(W5 리뷰 차단 1). 실패 직후가 원상태여야 한다(DESIGN §7).
+            if path.name == "chapter_01.md":
+                hits.append(path)
+                raise OSError("synthetic seed evidence read failure")
+            return real_read(path)
+
+        with patch.object(Path, "read_bytes", flaky):
+            with self.assertRaises(core.OperationError) as caught:
+                core.apply(root, change, 1)
+        result = caught.exception.result
+        self.assertEqual((result["commit_state"], result["reason"]),
+                         ("not_committed", "precommit_evidence_failed"))
+        # 주입이 실제로 증거 읽기에서 걸렸다(한 번).
+        self.assertEqual(len(hits), 1)
+        outline = runtime("gg_outline")
+        # 재시도 없이, 실패 직후 경로 집합과 바이트가 모두 원래대로다.
+        self.assertEqual(self._tree_bytes(root), before)
+        self.assertFalse((root / "sections/chapter_01.md").exists())
+        self.assertFalse((root / outline._receipt_rel(change["request_id"])).exists())
+        self.assertEqual(result.get("preserved_paths") or [], [])
+        self.assertEqual(core.load(root)["revision"], 1)
+        # 같은 요청은 그대로 다시 커밋된다.
+        p = core.apply(root, change, 1)
+        self.assertEqual((p["revision"], len(p["sections"])), (2, 12))
 
     def test_rebind_conflict_when_only_line_endings_changed(self):
         core = runtime("gg_core")

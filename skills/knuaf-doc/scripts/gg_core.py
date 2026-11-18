@@ -1567,24 +1567,50 @@ def _apply_locked(root, change, expected_revision, *, capability, adoption=None,
     import gg_outline
     prepared = gg_outline.prepare(root, old, p, change)
     outline_paths = prepared["paths"]
-    seed_files = {
-        section["path"]: digest(local(root, section["path"]).read_bytes())
-        for section in p["sections"].values()
-        if section.get("outline", {}).get("request_id") == request
-    }
-    if commit_evidence is not None:
-        commit_evidence.update(seed_files)
-    p["revision"] += 1
-    for col in ("reviews", "approvals", "outputs"):
-        for v in p[col].values():
-            try:
-                v["stale"] = v.get("input_fingerprint") != fingerprint(
-                    root, p, v["target_refs"]
-                )
-            except (KeyError, OSError, ValueError):
-                v["stale"] = True
-    if meta_linked:
-        _meta_only_links_final_check(root, p, meta_linked)
+    # prepare가 만든 장 파일·영수증은 이력 스냅샷을 쓰기 전까지 디스크에
+    # 미확정으로 떠 있다. 이 구간에서 죽으면 정본뿐 아니라 파일도 원래
+    # 상태여야 하므로(DESIGN §7), 방금 만든 seed를 되돌리고 실패를 보고한다.
+    # 증거 해시를 읽는 단계의 OSError는 오늘 구조화되지 않은 채 새는 경로였다.
+    try:
+        seed_files = {
+            section["path"]: digest(local(root, section["path"]).read_bytes())
+            for section in p["sections"].values()
+            if section.get("outline", {}).get("request_id") == request
+        }
+        if commit_evidence is not None:
+            commit_evidence.update(seed_files)
+        p["revision"] += 1
+        for col in ("reviews", "approvals", "outputs"):
+            for v in p[col].values():
+                try:
+                    v["stale"] = v.get("input_fingerprint") != fingerprint(
+                        root, p, v["target_refs"]
+                    )
+                except (KeyError, OSError, ValueError):
+                    v["stale"] = True
+        if meta_linked:
+            _meta_only_links_final_check(root, p, meta_linked)
+    except OSError as error:
+        leftovers = _rollback_uncommitted(root, prepared)
+        raise _op(
+            operation, "canonical", "not_committed",
+            "precommit_evidence_failed",
+            detail=str(error), request_id=request,
+            preserved_paths=leftovers or None,
+        ) from error
+    except OperationError:
+        raise
+    except ValueError as error:
+        # 검증 실패는 기존 invalid_change 분류를 유지하되, 남은 seed가 있으면
+        # 숨기지 않고 preserved_paths로 보고한다(DESIGN §9).
+        leftovers = _rollback_uncommitted(root, prepared)
+        if leftovers:
+            raise _op(
+                operation, "canonical", "not_committed", "invalid_change",
+                detail=str(error), diag=getattr(error, "diag", None),
+                request_id=request, preserved_paths=leftovers,
+            ) from error
+        raise
     p["history"].append(
         {"revision": old["revision"], "hash": digest(old), "request_id": request}
     )
