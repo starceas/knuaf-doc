@@ -1,6 +1,6 @@
 # im-not-ai 한글 윤문 연결
 
-내용 확장과 사실·수치 대조 뒤, 출력 전에는 `epoko77-ai/im-not-ai`의 `humanize-korean`에서 문장 연결·어휘·리듬을 자연스럽게 다듬는 원칙만 차용한다. 설치된 스킬의 SKILL.md와 룰북을 읽되, 논문 화자·격식·의미 보존은 이 프로젝트 계약을 우선한다. 작문·윤문은 사용자 지정 모델·effort·허용 경로를 우선하며, 지정이 없으면 현재 메인 세션이 수행한다([model-routing.md](model-routing.md)). 졸업논문 눈높이 및 금칙 지표 경계는 [thesis-level.md](thesis-level.md)를 따르며, 모든 전공에 공통 기본값으로 적용된다([사용자 결정 2026-10-06 22:39]).
+내용 확장과 사실·수치 대조 뒤, 출력 전에는 `epoko77-ai/im-not-ai`의 `humanize-korean`에서 문장 연결·어휘·리듬을 자연스럽게 다듬는 원칙만 차용한다. 이 스킬에 동봉된 `GUIDE.md`와 룰북(동봉본이 없으면 설치본의 SKILL.md)을 읽되, 논문 화자·격식·의미 보존은 이 프로젝트 계약을 우선한다. 작문·윤문은 사용자 지정 모델·effort·허용 경로를 우선하며, 지정이 없으면 현재 메인 세션이 수행한다([model-routing.md](model-routing.md)). 졸업논문 눈높이 및 금칙 지표 경계는 [thesis-level.md](thesis-level.md)를 따르며, 모든 전공에 공통 기본값으로 적용된다([사용자 결정 2026-10-06 22:39]).
 
 사용자 지정 문체가 이 문서의 기본 어투보다 우선한다. 낙농전공(`dairy`) 바인딩 프로젝트는 [dairy/writing-style.md](dairy/writing-style.md)의 문체 규칙(계획·목표 문장은 '~할 것이다', 사실·통계·경험은 시제대로)을 전공 전역 규칙으로 따른다. 식량작물전공(`food_crops`)은 양식에 어미 지시가 없으므로 공용 기본 문체([format.md](food-crops/format.md))를 따른다. 인터뷰 Q4([interview-guide.md](interview-guide.md))에서 학생이 고른 문체(선배 논문 참조 / 학부생 화법 / 별도 요청)는 원답변 파일을 `project.json.sources`에 연결하고, 기존 문체 선택 fact/source ID와 작업 기록에 연결해 `gg.py apply`로 정본에 기록한다([section-ledger.md](section-ledger.md#저장)). 별도 Markdown 원장을 새로 쓰거나 생성 보기를 정본 대신 편집하지 않는다. 기록된 선택을 전 장과 윤문에 동일하게 적용한다. 아래 [사용자 결정 2026-09-09]의 격식 어투는 **지정이 없을 때의 기본값**이며, 지정된 문체를 이 기본값으로 되돌리지 않는다. 다만 어느 문체든 대화체로 낮추거나 사실·조건을 바꾸지 않는다.
 
@@ -52,7 +52,55 @@ fact/source ID·출처 개정·현재 프로젝트 개정을 사용한다.
 
 ## 설치와 읽기
 
-현재 런타임의 스킬 목록에서 `humanize-korean`을 찾아 경로를 해석한다. Codex 기본 위치는 `~/.codex/skills/humanize-korean/SKILL.md`이며 심링크도 유효하다. SKILL.md와 참조 룰북이 읽히면 중복 설치하지 않는다. 미설치라면 https://github.com/epoko77-ai/im-not-ai 의 공식 설치 방법을 확인해 준비하고, 준비 실패 시 사실·작문 작업은 보존하되 해당 윤문 적용은 미완료로 기록한다. 폴더 이름만으로 적용을 완료 처리하지 않는다. 설치 버전의 길이 제한·검증 절차를 따른다.
+읽는 순서는 **동봉본 먼저, 없으면 설치본**이다. 학생 앱에는 동봉본이 이미 들어 있고, 개발자 맥에는 전역 설치본이 있을 수 있다. 어느 쪽이든 지침 전문을 실제로 읽고, **실제로 쓴 경로**를 윤문 기록에 남긴다.
+
+1. **동봉본(앱·맥·윈도 공통 기본)**: 이 스킬 루트의 `references/vendor/im-not-ai/humanize-korean/GUIDE.md`가 있으면 그것을 지침으로 쓴다. 지침 안의 "이 SKILL.md"는 이 `GUIDE.md`를 뜻하고, `SKILL_ROOT`는 `GUIDE.md`가 있는 폴더다. 경로는 추측하지 않고 `gg_humanize.py paths`가 돌려주는 절대경로(SKILL_ROOT·GUIDE·quick-rules·diagnosis-rules·역할 파일·판)를 그대로 쓴다. 판·커밋·파일 해시는 `references/vendor/im-not-ai/UPSTREAM.json`에 있다.
+2. **설치본(동봉본을 쓸 수 없을 때)**: 현재 런타임의 스킬 목록에서 `humanize-korean`을 찾아 경로를 해석한다. Codex 기본 위치는 `~/.codex/skills/humanize-korean/SKILL.md`이며 심링크도 유효하다. SKILL.md와 참조 룰북이 읽히면 중복 설치하지 않는다. 설치본은 **그 설치본 지침의 길로** 실행하고 이 스킬의 실행기를 쓰지 않는다.
+3. **둘 다 쓸 수 없을 때**: 사실·작문 작업은 보존하되 해당 윤문 적용은 미완료로 기록한다(이유: 동봉본 없음 / 무결성 오류 / 파이썬 실행기 없음). 폴더 이름만으로 적용을 완료 처리하지 않는다. **학생 앱에서는 인터넷으로 설치하지 않는다** — https://github.com/epoko77-ai/im-not-ai 의 공식 설치 방법은 개발 쪽 참고일 뿐, 학생 작업 중 설치 경로로 쓰지 않는다.
+
+라이선스: 동봉본은 MIT이며 저작권은 epoko77-ai에 있다. 고지 전문은 함께 동봉된 `references/vendor/im-not-ai/LICENSE`를 따른다.
+
+### 어느 길로 갔는지 먼저 확인
+
+`gg_humanize.py paths`가 `status`를 돌려준다. 이 값으로 분기하고 결과를 윤문 기록에 남긴다.
+
+| `paths` 결과 | 쓰는 지침 | 실행 | 기록에 남길 것 |
+|---|---|---|---|
+| `ok` | 동봉본 `GUIDE.md` | `gg_humanize.py` | 경로=동봉, 판(`UPSTREAM.json`의 commit·version) |
+| `bundle_missing`(종료 3), 설치본 있음 | 설치본 `SKILL.md` | 설치본 자기 지침의 길(실행기 안 씀) | 경로=설치본, 설치 위치·판, 동봉본 없음 |
+| `bundle_integrity_failed:<첫 경로>`(종료 4) | 동봉본 **금지**. 설치본이 있으면 위 줄과 같다 | 위와 같음 | 동봉본 무결성 오류 경로 + 실제 쓴 경로 |
+| 둘 다 못 씀 | — | — | 윤문 미완료 + 이유. 사실·작문은 보존 |
+
+종료 3·4는 실행기가 동봉 스크립트를 한 번도 돌리지 않았다는 뜻이다. 동봉본이 깨졌는데 그대로 윤문했다고 기록하지 않는다.
+
+### 실행은 `scripts/gg_humanize.py` 한 길
+
+동봉본을 쓸 때 실행은 Claude·Codex·맥·윈도 모두 이 스킬의 `scripts/gg_humanize.py`로만 한다. 동봉 폴더 안의 스크립트를 직접 부르지 않는다. 지침(GUIDE.md)의 bash 예시는 **뜻만 따르며 글자 그대로 치지 않는다** — 윈도 앱 셸은 PowerShell이라 셸 변수·`$(...)`·파이프가 그대로 돌지 않는다. 인자는 따옴표로 감싼 절대경로를 쓰고, 셸 변수·파이프 없이 한 줄에 한 명령만 쓴다.
+
+**파이썬 이름**: 규칙집 다른 명령과 같은 꼴을 쓴다. 맥·리눅스는 `python3`, 윈도는 `py -3`이다([SKILL.md](../SKILL.md)의 실행 규칙과 같다). 어느 쪽도 없으면 실행하지 않고 "윤문 미완료 — 파이썬 실행기 없음"으로 기록한다.
+
+호출 꼴은 윈도 `py -3 "<이 스킬 루트>\scripts\gg_humanize.py" <하위명령> [인자…]`, 맥·리눅스 `python3 "<이 스킬 루트>/scripts/gg_humanize.py" <하위명령> [인자…]`이다. 아래 표의 `gg_humanize.py <하위명령>`은 이 꼴에서 앞부분을 줄여 쓴 것이다.
+
+| 지침(GUIDE.md)의 bash | 실행기 |
+|---|---|
+| `SKILL_ROOT="$(cd -P "<GUIDE.md 폴더>" && pwd)"` | `gg_humanize.py paths` |
+| cwd `_workspace/YYYY-MM-DD-NNN-TAG/` 만들기·TAG 생성 | `gg_humanize.py new-run --root <논문 작업 폴더>` |
+| `python3 "${SKILL_ROOT}/scripts/prepare_monolith_input.py" …` | `gg_humanize.py prepare …` |
+| `reassemble_chunks.py` | `gg_humanize.py reassemble …` |
+| `verify_gates.py` | `gg_humanize.py gates …` |
+| `verify_change_rate.py` | `gg_humanize.py change-rate …` |
+| `restore_modality.py` | `gg_humanize.py restore-modality …` |
+| `strip_injected_commas.py` | `gg_humanize.py strip-commas …` |
+| `lexical_layer.py` | `gg_humanize.py lexical …` |
+| `sanitize_text.py` | `gg_humanize.py sanitize …` |
+
+실행기는 명령별 경로 인자를 먼저 검사한 뒤 원 스크립트에 전달한다. 입력·출력·진단·사용자 baseline은 모두 하나의 기존 run 폴더 안이어야 한다. `prepare`는 `new-run`이 만든 경로를 `--run-dir`로 반드시 받는다(`--text`만으로 자동 생성하지 않는다). `reassemble`의 `--output`·`--report`는 run 안의 경로다. `..`·심볼릭 링크·Windows 이름 대리 재분석 지점(정션·마운트 등)·다중 하드링크 파일·동봉 폴더·알 수 없는 인자는 실행 전에 종료 5와 한 줄 JSON(`run_guard_rejected`, `reason`)으로 거절하며 동봉 코드를 돌리지 않는다. OneDrive 클라우드 자리표시자 등 이름을 대리하지 않는 태그는 허용한다. run의 기존 파일도 링크를 검사하므로 고정 이름 출력·입력 제자리 정리로 바깥 파일을 바꾸지 않는다.
+
+**실행 위치(run 폴더)**: `new-run`이 논문 작업 폴더의 `.gg-work/humanize/_workspace/YYYY-MM-DD-NNN-TAG/`를 만들고 그 경로를 돌려준다. 동봉 폴더는 앱에서 읽기 전용이므로 그 안에 쓰지 않는다. 중간 산출물은 `.gg-work/` 한 곳 규칙([output-hygiene.md](output-hygiene.md))을 따른다.
+
+**역할 실행**: 하위 에이전트를 쓸 수 있고 [model-routing.md](model-routing.md)이 허락하면 역할 파일(`references/roles/diagnostician.md`·`monolith.md`·`finalizer.md`)의 절대경로와 입력·출력 경로·장르만 주고 맡긴 뒤 결과 파일을 직접 확인한다. 쓸 수 없으면 주 세션이 같은 역할 파일을 읽고 같은 단계를 순차 실행한다. 기능을 생략하지 않는다. Claude판 서브에이전트 이름(`humanize-monolith` 등)은 앱에 없으므로 부르지 않는다.
+
+지침의 길이 제한·검증 절차를 따른다.
 
 ## 두 단계의 입력을 분리
 
@@ -61,9 +109,9 @@ fact/source ID·출처 개정·현재 프로젝트 개정을 사용한다.
 
 학교 문어체와 사용자 지정 화자를 유지한다. ‘할 수 있다’를 기계적으로 단언형으로 고쳐 수익·성장·효능을 보장하지 않는다. 의미를 바꾸는 내용 보완은 작문 단계로 돌려 처리하고 새 입력을 남긴다. 학교 필수 제목·표·인용은 장르 규칙을 우선한다.
 
-긴 원고는 설치 버전이 지원하는 길이에 맞게 절·문단 단위로 나누고 빠진 구간 없이 처리한다. 위임 작업자는 실제 스킬 지침과 관련 룰북을 받아야 한다. **윤문 기록(적용 범위, 윤문 전후 텍스트, 룰 ID 및 변경 내역, 검증 결과)은 필수 항목**으로 작업 폴더에 남긴다. 도구·모델·룰 ID·진단·변경률 요약 및 플러그인의 등급·HTML 요약은 별도 검토 기록으로 보존하고, 최종 논문 및 학생 DRAFT에는 윤문된 본문만 넣는다.
+긴 원고는 지침이 지원하는 길이에 맞게 절·문단 단위로 나누고(`gg_humanize.py prepare --chunk`) 빠진 구간 없이 다시 합친다(`gg_humanize.py reassemble --strict`). 위임 작업자는 실제 스킬 지침과 관련 룰북을 받아야 한다. **윤문 기록(적용 범위, 윤문 전후 텍스트, 룰 ID 및 변경 내역, 검증 결과)은 필수 항목**으로 작업 폴더에 남긴다. 도구·모델·룰 ID·진단·변경률 요약 및 플러그인의 등급·HTML 요약은 별도 검토 기록으로 보존하고, 최종 논문 및 학생 DRAFT에는 윤문된 본문만 넣는다.
 
-설치된 윤문 스킬이 변경률 검사기를 제공하면 해당 스킬 경로에서 실제 도구를 확인한 뒤 확장 초안과 윤문본을 대조하고 실행 경로·종료 코드·결과를 기록한다. ginseng-goat가 이 외부 검사기를 포함한다고 가정하지 않는다. 검사기가 없으면 그 사실을 기록하고 원문·결과 해시와 의미 대조를 남긴다. 모델이 스스로 추정한 변경률로 통과를 선언하지 않는다.
+동봉본은 변경률 검사기(`gg_humanize.py change-rate`)를 포함하므로 확장 초안과 윤문본을 실제 도구로 대조하고 실행 경로·종료 코드·결과를 기록한다. ginseng-goat가 이 외부 검사기를 포함한다고 가정하지 않는다. 설치본 길에서 검사기가 없으면 그 사실을 기록하고 원문·결과 해시와 의미 대조를 남긴다. 모델이 스스로 추정한 변경률로 통과를 선언하지 않는다.
 
 ## 의미 단위 대조와 병합
 
