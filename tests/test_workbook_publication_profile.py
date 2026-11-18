@@ -92,7 +92,11 @@ class WorkbookPublicationProfileTests(ContractCase):
         self.assertEqual(result["status"], "adopted")
         stored = self.core.load(self.root)["outputs"]["workbook"]
         self.assertEqual(stored["workbook_profile"], "school_17_sheet_v1")
-        self.assertTrue(stored["native_manifest"]["path"].startswith(".gg-artifacts/"))
+        self.assertIn("/companions/", stored["native_manifest"]["path"])
+        self.assertNotIn("\\", stored["native_manifest"]["path"])
+        self.publication = runtime("gg_publication")
+        self.publication._check_relative_path(stored["native_manifest"]["path"],
+                                              "native_manifest")
         (self.root / "synthetic.xlsx").unlink()
         (self.root / "native.json").unlink()
         self.assertEqual(self.adopt(project, value, companions)["status"], "existing")

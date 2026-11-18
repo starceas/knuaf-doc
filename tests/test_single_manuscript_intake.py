@@ -225,12 +225,19 @@ class SingleManuscriptIntakeTests(ContractCase):
         self.assertEqual(value["registration_revision"], 2)
         snapshots = list((root / "sources/snapshots").rglob("*.docx"))
         self.assertEqual([p.read_bytes() for p in snapshots], [source_bytes])
-        self.assertIn(str(snapshots[0].parent.relative_to(root)), value["preserved_paths"])
+        self.assertIn(snapshots[0].parent.relative_to(root).as_posix(), value["preserved_paths"])
         project = self.core.load(root)
         self.assertEqual(project["facts"], {})
         self.assertEqual(set(project["sources"]), {"old", "concurrent"})
         self.assertEqual((root / "old.txt").read_bytes(), old)
         self.assertEqual(original.read_bytes(), source_bytes)
+
+    def test_preserved_receipt_path_uses_posix_spelling_for_windows_path_flavor(self):
+        from pathlib import PureWindowsPath
+        root = PureWindowsPath(r"C:\project")
+        path = root / "sources" / "intake" / "receipt.json"
+        self.assertEqual("sources/intake/receipt.json",
+                         self.intake._relative_posix(path, root))
 
     def test_existing_choice_fact_is_updated_not_duplicated(self):
         root = self.make_project()

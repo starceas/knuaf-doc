@@ -262,11 +262,12 @@ if ascii_band:
 probe.write_text("한글", encoding="utf-8")
 if ascii_band:
     try:
-        probe.read_text()
+        implicit = probe.read_text()
     except UnicodeDecodeError:
         pass
     else:
-        raise AssertionError("implicit Korean text read must fail")
+        # cp1252 decodes these UTF-8 bytes as mojibake without raising.
+        assert implicit != "한글", "implicit Korean text read must not round-trip"
 assert probe.read_text(encoding="utf-8") == "한글"
 import gg_excel_template as tpl
 from openpyxl import Workbook

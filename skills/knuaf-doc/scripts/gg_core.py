@@ -17,6 +17,11 @@ import time
 import unicodedata
 import uuid
 
+try:
+    from nt import _getfinalpathname
+except ImportError:
+    _getfinalpathname = None
+
 VERSION = "1.0"
 STATES = {
     "not_provided",
@@ -51,9 +56,50 @@ def digest(value):
     return hashlib.sha256(data).hexdigest()
 
 
+def resolve_path(value):
+    """Resolve links without Windows 3.10 realpath's eager cwd lookup.
+
+    Missing output components are appended only after resolving their
+    nearest existing ancestor; permission errors and link loops still fail.
+    """
+    path = Path(value).expanduser()
+    if _getfinalpathname is None:
+        return path.resolve()
+    had_prefix = str(path).startswith("\\\\?\\")
+    path = Path(os.path.abspath(path))
+    tail = []
+    while True:
+        try:
+            final = _getfinalpathname(str(path))
+            break
+        except FileNotFoundError:
+            try:
+                entry = path.lstat()
+            except FileNotFoundError:
+                pass
+            else:
+                if getattr(entry, "st_file_attributes", 0) & 0x400 or path.is_symlink():
+                    raise OSError("해결할 수 없는 링크 경로: " + str(path))
+            parent = path.parent
+            if parent == path:
+                raise
+            tail.append(path.name)
+            path = parent
+    if not had_prefix and final.startswith("\\\\?\\"):
+        plain = ("\\\\" + final[8:] if final.startswith("\\\\?\\UNC\\")
+                 else final[4:])
+        try:
+            if _getfinalpathname(plain) == final:
+                final = plain
+        except OSError:
+            # A different or unqueryable Win32 spelling is not equivalent.
+            pass
+    return Path(final).joinpath(*reversed(tail))
+
+
 def local(root, name):
-    root = Path(root).resolve()
-    p = (root / name).resolve()
+    root = resolve_path(root)
+    p = resolve_path(root / name)
     if not p.is_relative_to(root) or p == root:
         raise ValueError("작업 폴더 밖 경로는 허용하지 않음: " + str(name))
     return p
@@ -2596,8 +2642,9 @@ def adopt_output(root, output_value, expected_revision, request_id,
             registered["workbook_profile"] = adopt_auth["workbook_profile"]
             key = "native_manifest" if meta.get("native_manifest") else "template_receipt"
             pointer = meta[key]
-            registered[key] = dict(pointer, path=str(
-                Path(managed_path).parent / "companions" / Path(pointer["path"]).name))
+            registered[key] = dict(pointer, path=(
+                Path(managed_path).parent / "companions" / Path(pointer["path"]).name
+            ).as_posix())
         ctx = _register_adoption(
             capability=capability,
             root=root,

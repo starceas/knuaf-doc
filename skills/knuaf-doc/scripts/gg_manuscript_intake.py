@@ -24,6 +24,9 @@ import gg_source_intake as intake
 FACT_KEYS = ("field_id", "kind", "value", "value_type", "unit", "period",
              "scope", "answer_state")
 
+def _relative_posix(path, root):
+    """Normalize a root-relative receipt path to the persisted '/' format."""
+    return str(path.relative_to(root)).replace("\\", "/")
 
 def _reject(reason):
     raise core.OperationError({
@@ -172,8 +175,9 @@ def run(root, selected_file, input_path, expected_revision, request_id):
                 requested_use=requested_use)
             if "sealed" not in scan:
                 _reject(scan.get("reason", "source_scan_failed"))
+
             receipt = intake.write_scan_receipt(root, scan, capability=capability)
-        preserved.append(str(receipt.relative_to(root)))
+        preserved.append(_relative_posix(receipt, root))
         steps.append("scan")
         selected = next((f for f in scan["sealed"]["files"]
                          if f["relative_id"] == filename and f["type"] == "file"), None)

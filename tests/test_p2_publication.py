@@ -635,6 +635,17 @@ class PublishRequestedFile(ContractCase):
                     requested_path="link/p.md")
         self.assertFalse((real / "p.md").exists())
 
+    def test_windows_reparse_parent_refuses_without_writing(self):
+        real = self.root / "real"
+        real.mkdir()
+        with mock.patch.object(gg_pub.sys, "platform", "win32"):
+            with mock.patch.object(
+                    gg_pub.gg_winfs, "lstat",
+                    side_effect=gg_pub.gg_winfs._InfoFailure("symlink_reparse")):
+                with self.assertRaises(ValueError):
+                    gg_pub._lstat_rel(self.root, "real/p.md")
+        self.assertFalse((real / "p.md").exists())
+
 
 class PublishWorkspace(ContractCase):
     def setUp(self):

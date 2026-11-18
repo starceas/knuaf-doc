@@ -16,12 +16,13 @@
 from __future__ import annotations
 
 import argparse
+import sys
 import datetime as _datetime
 import json
 import os
-import sys
+import ntpath
 import tempfile
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 NOTICES_NAME = ".knuaf-notices.json"
 NOTICES_SCHEMA = "knuaf.notices/1"
@@ -126,10 +127,12 @@ def _is_relative_inside(path):
     """문자열이 상대 경로이고 ``..`` 로 빠져나가지 않을 때만 True."""
     if not isinstance(path, str) or not path.strip():
         return False
-    candidate = Path(path)
-    if candidate.is_absolute():
+    candidate = path
+    if (Path(candidate).is_absolute() or ntpath.isabs(candidate)
+            or bool(PureWindowsPath(candidate).drive)
+            or candidate[:1] in ("/", "\\")):
         return False
-    return ".." not in candidate.parts
+    return ".." not in candidate.replace("\\", "/").split("/")
 
 
 def _sanitize_row(row):

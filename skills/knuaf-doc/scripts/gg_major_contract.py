@@ -3160,7 +3160,7 @@ MODULES = (SPECIALTY_CROPS_MODULE, INDUSTRIAL_INSECTS_MODULE,
 
 def _default_packs_dir():
     return (
-        Path(__file__).resolve().parents[1]
+        gg_core.resolve_path(__file__).parents[1]
         / "references"
         / "benchmark-packs"
     )

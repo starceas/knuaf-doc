@@ -34,6 +34,7 @@ from typing import NamedTuple
 from urllib.parse import quote, unquote
 import zipfile
 
+import gg_core
 import gg_fs
 import gg_kordoc
 import gg_major_format
@@ -1722,9 +1723,9 @@ def reference_search_roots(base, root):
     동작). 파일이 실제로 있는지를 넘어 어디에 쓸 수 있는지까지 맞추려면 뿌리가
     필요하므로, 호출자는 뿌리 밖 후보를 거절한다.
     """
-    roots = [Path(base).expanduser().resolve()]
+    roots = [gg_core.resolve_path(base)]
     if root is not None:
-        extra = Path(root).expanduser().resolve()
+        extra = gg_core.resolve_path(root)
         if extra not in roots:
             roots.append(extra)
     return roots
@@ -1742,14 +1743,14 @@ def _resolve_image(reference, roots, root, *, decode=True):
     기준 상대 경로로 다시 쓸 수 있는 그림만 생성기에 넘길 수 있다). 둘 이상의
     서로 다른 파일이 걸리면 고르지 않고 후보 목록과 함께 ``_NotFound``다.
     """
-    root = Path(root).expanduser().resolve()
+    root = gg_core.resolve_path(root)
     decoded = Path(unquote(reference) if decode else reference).expanduser()
     found = []
     for base in roots:
         candidate = decoded
         try:
             resolved = (candidate if candidate.is_absolute() else base / candidate)
-            resolved = resolved.resolve()
+            resolved = gg_core.resolve_path(resolved)
         except OSError:
             continue
         if not resolved.is_relative_to(root) or not resolved.is_file():

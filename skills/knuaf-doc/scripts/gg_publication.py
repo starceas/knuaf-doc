@@ -532,6 +532,8 @@ def _lstat_rel(root, rel):
             return gg_winfs.lstat(Path(root) / rel)
         except FileNotFoundError:
             return None
+        except gg_winfs._InfoFailure as error:
+            raise ValueError("경로 구성요소 거절: " + error.reason) from error
     fd = None
     try:
         fd, name = _walk_parent(root, rel)
