@@ -4,8 +4,44 @@ on:
   workflow_dispatch:
 
 jobs:
-  windows-full:
+  windows-full-shards:
+    name: full suite shard (windows, py${{ matrix.python }}, ${{ matrix.shard }}/5)
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.10', '3.14']
+        shard: [1, 2, 3, 4, 5]
+    env:
+      PYTHONUTF8: '1'
+      PYTHONIOENCODING: utf-8
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - name: Preserve published bytes before checkout
+        shell: bash
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install dependencies
+        run: python -m pip install -r requirements-validation.txt
+      - name: Validation shard
+        run: python tools/run_validation.py --shard "${{ matrix.shard }}/5" --json "$env:RUNNER_TEMP\shard-report.json"
+      - name: Upload shard report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-full-shard-py${{ matrix.python }}-${{ matrix.shard }}
+          path: ${{ runner.temp }}/shard-report.json
+          if-no-files-found: error
+
+  windows-full-merge:
     name: full suite (windows, py${{ matrix.python }})
+    if: ${{ always() }}
+    needs: [windows-full-shards]
     runs-on: windows-latest
     strategy:
       fail-fast: false
@@ -25,9 +61,30 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
+      - name: Download shard reports
+        uses: actions/download-artifact@v4
+        with:
+          pattern: windows-full-shard-py${{ matrix.python }}-*
+          merge-multiple: false
+          path: ${{ runner.temp }}/shards
       - name: Install dependencies
         run: python -m pip install -r requirements-validation.txt
-      - name: Repository tests
-        run: python -m unittest discover -s tests -t .
-      - name: Skill tests
-        run: python -m unittest discover -s skills/knuaf-doc/tests -t skills/knuaf-doc/tests
+      - name: Merge shard reports
+        env:
+          SHARDS_RESULT: ${{ needs.windows-full-shards.result }}
+        run: |
+          if ($env:SHARDS_RESULT -ne 'success') { throw "Shard matrix result: $env:SHARDS_RESULT" }
+          $reports = @(Get-ChildItem -Path "$env:RUNNER_TEMP\shards" -Filter shard-report.json -Recurse | ForEach-Object { $_.FullName })
+          if ($reports.Count -ne 5) { throw "Expected 5 shard reports; found $($reports.Count)" }
+          python tools/run_validation.py --merge-shards $reports --shard-count 5 --json "$env:RUNNER_TEMP\validation-report.json"
+      - name: Validation report contract
+        run: python tools/check_validation_report.py "$env:RUNNER_TEMP\validation-report.json"
+      - name: Upload merged report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-full-report-py${{ matrix.python }}
+          path: |
+            ${{ runner.temp }}/validation-report.json
+            ${{ runner.temp }}/shards/**/shard-report.json
+          if-no-files-found: error
