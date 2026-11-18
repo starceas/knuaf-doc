@@ -1,8 +1,9 @@
 """The horticulture cell map is one common gg-xlsx-fact-map/v1 file.
 
-The map lists the body Ⅴ chapter's core monetary figures and the 18-sheet cell,
-period and unit each one comes from.  These tests lock four things: the exact
-twenty (fact_id, sheet, cell) pairs and the value each one registers, the map
+The map lists every body Ⅴ chapter's core monetary figure, five plan years
+wide, and the 18-sheet cell, period and unit each one comes from.  These tests
+lock four things: the exact sixty-nine (fact_id, sheet, cell, unit, period,
+field_id, body_label, node) rows and the value each one registers, the map
 review gate that refuses a ratio cell or an excluded cell even when the
 workbook carries a numeric cache there, byte-exact hash binding of workbook and
 receipt, and the dedicated horticulture receipt chain.
@@ -30,32 +31,96 @@ SESSION = {"app": "excel", "reason": "closed_confirmed",
 
 # The reviewed map, frozen independently of the file under test: a swapped or
 # dropped row must fail even though the file itself stays self-consistent.
+# Each row is (fact_id, sheet, cell, unit, period, field_id, body_label, node).
+# The period belongs in the table because the adapter copies it verbatim into
+# the fact and its provenance: a map that names the 2029 cell under the 2028
+# row registers a 2029 fact under 2028 with no gate complaining, so the frozen
+# table is the only thing that can notice a swapped or invented year.
 EXPECTED_ROWS = (
-    ("hort-invest-total", "4.투자계획", "C13", "천원"),
-    ("hort-invest-year1", "4.투자계획", "C8", "천원"),
-    ("hort-loan-principal-2027", "5. 원리금상환계획", "D8", "천원"),
-    ("hort-loan-interest-2027", "5. 원리금상환계획", "E8", "천원"),
-    ("hort-facility-construction", "6.시설계획", "C76", "천원"),
-    ("hort-sales-2027", " 7. 판매계획", "O25", "천원"),
-    ("hort-sales-2028", " 7. 판매계획", "O34", "천원"),
-    ("hort-sales-2029", " 7. 판매계획", "O43", "천원"),
-    ("hort-sales-2030", " 7. 판매계획", "O52", "천원"),
-    ("hort-sales-2031", " 7. 판매계획", "O61", "천원"),
-    ("hort-material-2027", "9. 영농자재구매계획", "G15", "천원"),
-    ("hort-labor-2027", "11. 인건비계획", "I17", "천원"),
-    ("hort-overhead-2027", "12 .경비계획", "C26", "천원"),
-    ("hort-depreciation-2027", "13. 감가상각비계획 ", "E12", "천원"),
-    ("hort-expense-2027", "14. 생산원가계획", "C12", "천원"),
-    ("hort-production-cost-2027", "14. 생산원가계획", "C25", "천원"),
-    ("hort-revenue-2027", "15. 손익계획", "C6", "천원"),
-    ("hort-income-2027", "16. 수익성분석", "G23", "천원"),
-    ("hort-net-income-2027", "16. 수익성분석", "G24", "천원"),
-    ("hort-assets-opening", "17. 추정대차대조표", "C30", "천원"),
+    ("hort-invest-total", "4.투자계획", "C13", "천원", "2027", "총투자비 합계", "총투자비 합계", "ch5_sec1"),
+    ("hort-invest-year1", "4.투자계획", "C8", "천원", "2027", "1차년도 투자 소요액", "1차년도 투자 소요액", "ch5_sec1"),
+    ("hort-loan-principal-2027", "5. 원리금상환계획", "D8", "천원", "2027", "원금상환액", "원금상환액", "ch5_sec1"),
+    ("hort-loan-interest-2027", "5. 원리금상환계획", "E8", "천원", "2027", "이자상환액", "이자상환액", "ch5_sec1"),
+    ("hort-facility-construction", "6.시설계획", "C76", "천원", "2027", "시설 총 시공비", "시설 총 시공비", "ch5_sec2"),
+    ("hort-sales-2027", " 7. 판매계획", "O25", "천원", "2027", "판매금액", "판매금액", "ch5_sec3"),
+    ("hort-sales-2028", " 7. 판매계획", "O34", "천원", "2028", "판매금액", "판매금액", "ch5_sec3"),
+    ("hort-sales-2029", " 7. 판매계획", "O43", "천원", "2029", "판매금액", "판매금액", "ch5_sec3"),
+    ("hort-sales-2030", " 7. 판매계획", "O52", "천원", "2030", "판매금액", "판매금액", "ch5_sec3"),
+    ("hort-sales-2031", " 7. 판매계획", "O61", "천원", "2031", "판매금액", "판매금액", "ch5_sec3"),
+    ("hort-material-2027", "9. 영농자재구매계획", "G15", "천원", "2027", "영농자재비", "영농자재비", "ch5_sec4"),
+    ("hort-labor-2027", "11. 인건비계획", "I17", "천원", "2027", "인건비 계", "인건비 계", "ch5_sec4"),
+    ("hort-overhead-2027", "12 .경비계획", "C26", "천원", "2027", "경비 계", "경비 계", "ch5_sec4"),
+    ("hort-depreciation-2027", "13. 감가상각비계획 ", "E12", "천원", "2027", "시설 감가상각비", "시설 감가상각비", "ch5_sec4"),
+    ("hort-expense-2027", "14. 생산원가계획", "C12", "천원", "2027", "경비 합계", "경비 합계", "ch5_sec4"),
+    ("hort-production-cost-2027", "14. 생산원가계획", "C25", "천원", "2027", "총생산원가", "총생산원가", "ch5_sec4"),
+    ("hort-revenue-2027", "15. 손익계획", "C6", "천원", "2027", "매출액", "매출액", "ch5_sec4"),
+    ("hort-income-2027", "16. 수익성분석", "G23", "천원", "2027", "소득", "소득", "ch5_sec4"),
+    ("hort-net-income-2027", "16. 수익성분석", "G24", "천원", "2027", "순수익", "순수익", "ch5_sec4"),
+    ("hort-assets-opening", "17. 추정대차대조표", "C30", "천원", "2026", "자산총계", "자산총계", "ch3_sec1"),
+    ("hort-revenue-2028", "15. 손익계획", "D6", "천원", "2028", "매출액", "매출액", "ch5_sec4"),
+    ("hort-revenue-2029", "15. 손익계획", "E6", "천원", "2029", "매출액", "매출액", "ch5_sec4"),
+    ("hort-revenue-2030", "15. 손익계획", "F6", "천원", "2030", "매출액", "매출액", "ch5_sec4"),
+    ("hort-revenue-2031", "15. 손익계획", "G6", "천원", "2031", "매출액", "매출액", "ch5_sec4"),
+    ("hort-expense-2028", "14. 생산원가계획", "D12", "천원", "2028", "경비 합계", "경비 합계", "ch5_sec4"),
+    ("hort-expense-2029", "14. 생산원가계획", "E12", "천원", "2029", "경비 합계", "경비 합계", "ch5_sec4"),
+    ("hort-expense-2030", "14. 생산원가계획", "F12", "천원", "2030", "경비 합계", "경비 합계", "ch5_sec4"),
+    ("hort-expense-2031", "14. 생산원가계획", "G12", "천원", "2031", "경비 합계", "경비 합계", "ch5_sec4"),
+    ("hort-production-cost-2028", "14. 생산원가계획", "D25", "천원", "2028", "총생산원가", "총생산원가", "ch5_sec4"),
+    ("hort-production-cost-2029", "14. 생산원가계획", "E25", "천원", "2029", "총생산원가", "총생산원가", "ch5_sec4"),
+    ("hort-production-cost-2030", "14. 생산원가계획", "F25", "천원", "2030", "총생산원가", "총생산원가", "ch5_sec4"),
+    ("hort-production-cost-2031", "14. 생산원가계획", "G25", "천원", "2031", "총생산원가", "총생산원가", "ch5_sec4"),
+    ("hort-income-2028", "16. 수익성분석", "H23", "천원", "2028", "소득", "소득", "ch5_sec4"),
+    ("hort-income-2029", "16. 수익성분석", "I23", "천원", "2029", "소득", "소득", "ch5_sec4"),
+    ("hort-income-2030", "16. 수익성분석", "J23", "천원", "2030", "소득", "소득", "ch5_sec4"),
+    ("hort-income-2031", "16. 수익성분석", "K23", "천원", "2031", "소득", "소득", "ch5_sec4"),
+    ("hort-net-income-2028", "16. 수익성분석", "H24", "천원", "2028", "순수익", "순수익", "ch5_sec4"),
+    ("hort-net-income-2029", "16. 수익성분석", "I24", "천원", "2029", "순수익", "순수익", "ch5_sec4"),
+    ("hort-net-income-2030", "16. 수익성분석", "J24", "천원", "2030", "순수익", "순수익", "ch5_sec4"),
+    ("hort-net-income-2031", "16. 수익성분석", "K24", "천원", "2031", "순수익", "순수익", "ch5_sec4"),
+    ("hort-assets-2027", "17. 추정대차대조표", "D30", "천원", "2027", "자산총계", "자산총계", "ch3_sec1"),
+    ("hort-assets-2028", "17. 추정대차대조표", "E30", "천원", "2028", "자산총계", "자산총계", "ch3_sec1"),
+    ("hort-assets-2029", "17. 추정대차대조표", "F30", "천원", "2029", "자산총계", "자산총계", "ch3_sec1"),
+    ("hort-assets-2030", "17. 추정대차대조표", "G30", "천원", "2030", "자산총계", "자산총계", "ch3_sec1"),
+    ("hort-assets-2031", "17. 추정대차대조표", "H30", "천원", "2031", "자산총계", "자산총계", "ch3_sec1"),
+    ("hort-depreciation-2028", "13. 감가상각비계획 ", "E23", "천원", "2028", "시설 감가상각비", "시설 감가상각비", "ch5_sec4"),
+    ("hort-depreciation-2029", "13. 감가상각비계획 ", "E34", "천원", "2029", "시설 감가상각비", "시설 감가상각비", "ch5_sec4"),
+    ("hort-depreciation-2030", "13. 감가상각비계획 ", "E45", "천원", "2030", "시설 감가상각비", "시설 감가상각비", "ch5_sec4"),
+    ("hort-depreciation-2031", "13. 감가상각비계획 ", "E56", "천원", "2031", "시설 감가상각비", "시설 감가상각비", "ch5_sec4"),
+    ("hort-material-2028", "9. 영농자재구매계획", "G26", "천원", "2028", "영농자재비", "영농자재비", "ch5_sec4"),
+    ("hort-material-2029", "9. 영농자재구매계획", "G37", "천원", "2029", "영농자재비", "영농자재비", "ch5_sec4"),
+    ("hort-material-2030", "9. 영농자재구매계획", "G48", "천원", "2030", "영농자재비", "영농자재비", "ch5_sec4"),
+    ("hort-material-2031", "9. 영농자재구매계획", "G59", "천원", "2031", "영농자재비", "영농자재비", "ch5_sec4"),
+    ("hort-labor-2028", "11. 인건비계획", "L17", "천원", "2028", "인건비 계", "인건비 계", "ch5_sec4"),
+    ("hort-labor-2029", "11. 인건비계획", "O17", "천원", "2029", "인건비 계", "인건비 계", "ch5_sec4"),
+    ("hort-labor-2030", "11. 인건비계획", "R17", "천원", "2030", "인건비 계", "인건비 계", "ch5_sec4"),
+    ("hort-labor-2031", "11. 인건비계획", "U17", "천원", "2031", "인건비 계", "인건비 계", "ch5_sec4"),
+    ("hort-overhead-2028", "12 .경비계획", "C51", "천원", "2028", "경비 계", "경비 계", "ch5_sec4"),
+    ("hort-overhead-2029", "12 .경비계획", "C76", "천원", "2029", "경비 계", "경비 계", "ch5_sec4"),
+    ("hort-overhead-2030", "12 .경비계획", "C101", "천원", "2030", "경비 계", "경비 계", "ch5_sec4"),
+    ("hort-overhead-2031", "12 .경비계획", "C127", "천원", "2031", "경비 계", "경비 계", "ch5_sec4"),
+    ("hort-loan-principal-2028", "5. 원리금상환계획", "D9", "천원", "2028", "원금상환액", "원금상환액", "ch5_sec1"),
+    ("hort-loan-principal-2029", "5. 원리금상환계획", "D10", "천원", "2029", "원금상환액", "원금상환액", "ch5_sec1"),
+    ("hort-loan-principal-2030", "5. 원리금상환계획", "D11", "천원", "2030", "원금상환액", "원금상환액", "ch5_sec1"),
+    ("hort-loan-principal-2031", "5. 원리금상환계획", "D12", "천원", "2031", "원금상환액", "원금상환액", "ch5_sec1"),
+    ("hort-loan-interest-2028", "5. 원리금상환계획", "E9", "천원", "2028", "이자상환액", "이자상환액", "ch5_sec1"),
+    ("hort-loan-interest-2029", "5. 원리금상환계획", "E10", "천원", "2029", "이자상환액", "이자상환액", "ch5_sec1"),
+    ("hort-loan-interest-2030", "5. 원리금상환계획", "E11", "천원", "2030", "이자상환액", "이자상환액", "ch5_sec1"),
+    ("hort-loan-interest-2031", "5. 원리금상환계획", "E12", "천원", "2031", "이자상환액", "이자상환액", "ch5_sec1"),
 )
 
 # One distinct cache value per row, so a swapped pair changes two values.
 EXPECTED_VALUES = {row[0]: 1000 + 7 * index
                    for index, row in enumerate(EXPECTED_ROWS)}
+
+# The eight reviewed fields, in table order, as the map must carry them.
+REVIEWED_FIELDS = ("fact_id", "sheet", "cell", "unit", "period", "field_id",
+                   "body_label", "node")
+
+
+def _reviewed_rows(mapping):
+    """Project a map's cells onto the frozen table's eight reviewed fields."""
+    return {tuple(row[field] for field in REVIEWED_FIELDS)
+            for row in mapping["cells"]}
 
 
 def _map():
@@ -123,9 +188,13 @@ class MapFileTests(ContractCase):
         roster = profile["workbook_reference"]["sheets"]
         nodes = {section["item"] for section in profile["precedents"][1]["sections"]}
         cells = self.map["cells"]
-        self.assertEqual(len(cells), 20)
+        self.assertEqual(len(cells), 69)
         self.assertEqual(len({row["fact_id"] for row in cells}), len(cells))
         self.assertEqual(len({(row["sheet"], row["cell"]) for row in cells}),
+                         len(cells))
+        # 같은 항목은 해마다 한 칸씩만 있다: 두 해가 같은 라벨로 겹치면
+        # 본문 대조가 어느 셀을 볼지 정할 수 없다(판매금액 선례).
+        self.assertEqual(len({(row["field_id"], row["period"]) for row in cells}),
                          len(cells))
         for row in cells:
             with self.subTest(row=row["fact_id"]):
@@ -149,9 +218,10 @@ class MapFileTests(ContractCase):
                     school._MACHINE_FIELD_ID.match(row["field_id"]))
 
     def test_map_is_exactly_the_reviewed_row_set(self):
-        shipped = {(row["fact_id"], row["sheet"], row["cell"], row["unit"])
-                   for row in self.map["cells"]}
-        self.assertEqual(set(EXPECTED_ROWS), shipped)
+        # All eight fields, not just the coordinate: the period is what the
+        # adapter writes into the fact and its provenance, and the gate only
+        # checks that it is four digits.
+        self.assertEqual(set(EXPECTED_ROWS), _reviewed_rows(self.map))
 
     def test_map_passes_the_review_gate(self):
         rows = self.hort.check_fact_map(self.map, _params())
@@ -326,7 +396,8 @@ class _ChainCase(ContractCase):
     def registered(self, change):
         return {op["value"]["id"]: (op["value"]["excel_provenance"]["sheet"],
                                     op["value"]["excel_provenance"]["cell"],
-                                    op["value"]["value"])
+                                    op["value"]["value"],
+                                    op["value"]["excel_provenance"]["period"])
                 for op in change["ops"] if op["collection"] == "facts"}
 
     def held(self, mapping, reason):
@@ -344,11 +415,10 @@ class RegistrationTests(_ChainCase):
         hashes = self.issue_native(caches)
         change = self.build(self.bound(hashes))
         got = self.registered(change)
-        want = {fact_id: (sheet, cell, str(value))
-                for fact_id, sheet, cell, _ in EXPECTED_ROWS
-                for value in (EXPECTED_VALUES[fact_id],)}
+        want = {row[0]: (row[1], row[2], str(EXPECTED_VALUES[row[0]]), row[4])
+                for row in EXPECTED_ROWS}
         self.assertEqual(want, got)
-        self.assertEqual(len(change["ops"]), 21)
+        self.assertEqual(len(change["ops"]), 70)
 
     def test_registered_scope_is_the_student_farm_name(self):
         # The map keeps the placeholder ``student_farm``; the adapter replaces
@@ -378,6 +448,36 @@ class RegistrationTests(_ChainCase):
         self.assertEqual(got["hort-invest-total"][2], str(EXPECTED_VALUES["hort-invest-year1"]))
         self.assertNotEqual(got["hort-invest-total"][2],
                             str(EXPECTED_VALUES["hort-invest-total"]))
+
+    def test_the_gate_accepts_a_swapped_or_invented_year_and_the_table_refuses(self):
+        # ``check_fact_map`` only checks that the period is four digits: it
+        # never compares it to the sheet's year column or to the profile's
+        # plan years, and the adapter copies it verbatim into the fact and its
+        # provenance.  So a map that moves a year between two rows of the same
+        # sheet, or names a year nobody reviewed, passes the gate and
+        # registers a fact whose period contradicts the cell it was read from.
+        # Only the frozen table can see it — hence the period is in the table.
+        caches = {(row[1], row[2]): EXPECTED_VALUES[row[0]] for row in EXPECTED_ROWS}
+        hashes = self.issue_native(caches)
+        swapped = self.bound(hashes)
+        rows = {row["fact_id"]: row for row in swapped["cells"]}
+        rows["hort-revenue-2028"]["period"], rows["hort-revenue-2029"]["period"] = (
+            rows["hort-revenue-2029"]["period"], rows["hort-revenue-2028"]["period"])
+        invented = self.bound(hashes)
+        next(row for row in invented["cells"]
+             if row["fact_id"] == "hort-income-2031")["period"] = "2032"
+        for case, mapping, periods in (
+                ("swapped", swapped,
+                 {"hort-revenue-2028": "2029", "hort-revenue-2029": "2028"}),
+                ("invented", invented, {"hort-income-2031": "2032"})):
+            with self.subTest(case=case):
+                self.assertEqual(len(self.hort.check_fact_map(mapping, _params())),
+                                 len(EXPECTED_ROWS))
+                self.assertNotEqual(set(EXPECTED_ROWS), _reviewed_rows(mapping))
+                got = self.registered(self.build(mapping))
+                for fact_id, period in periods.items():
+                    with self.subTest(case=case, fact_id=fact_id):
+                        self.assertEqual(got[fact_id][3], period)
 
 
 class FarmNameBoundaryTests(_ChainCase):
