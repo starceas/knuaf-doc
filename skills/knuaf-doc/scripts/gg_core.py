@@ -218,7 +218,24 @@ _DIAG_CODES = frozenset({
     "duplicate_path", "fact_metadata_invalid", "fact_enum_invalid",
     # v0.4.8 ⑫: paper() spec rejections name the offending field.
     "spec_field_invalid", "native_field_invalid",
+    # v0.6.1: an outline rejection whose repair step is fixed names it.
+    "outline_caller_sections_incomplete", "outline_caller_section_conflict",
 })
+#: Recovery line shipped with a rejection whose repair is the same every
+#: time.  Fixed text, keyed by code — a caller can neither supply nor
+#: change it, so the public boundary stays free of caller prose.
+#:
+#: Both outline rejections share one prescription: keeping the outline and
+#: the major in a single request can reject for either reason, and the way
+#: out is identical (save the major alone, then send chapters by the
+#: registered id/path).  The ``code`` says which check refused; the repair
+#: line does not vary, so a caller following it always lands on a commit.
+_OUTLINE_RECOVERY = (
+    "전공만 먼저 저장한 뒤, 학교 차례에 등록된 장 ID·경로로 장을 따로 다시 보내 주세요.")
+_DIAG_NEXT = {
+    "outline_caller_sections_incomplete": _OUTLINE_RECOVERY,
+    "outline_caller_section_conflict": _OUTLINE_RECOVERY,
+}
 _DIAG_FIELDS = frozenset({
     # Output metadata and review records.
     "id", "path", "format", "file_hash", "target_refs",
@@ -247,7 +264,9 @@ def _diag_safe(root, diag):
     keys survive — ``code``/``field`` belong to code-defined constant
     sets, ``index`` is a non-negative int, ``missing`` is a list of
     code-defined field names, and ``path`` a work-folder-relative path
-    that provably resolves inside ``root``.  Raw caller text and
+    that provably resolves inside ``root``.  ``next`` never comes from
+    the caller: it is the recovery line ``_DIAG_NEXT`` maps the accepted
+    ``code`` to, and absent when that code has none.  Raw caller text and
     unresolved paths are dropped, never rewritten."""
     if not isinstance(diag, dict):
         return None
@@ -256,6 +275,8 @@ def _diag_safe(root, diag):
         value = diag.get(key)
         if isinstance(value, str) and value in allowed:
             safe[key] = value
+    if safe.get("code") in _DIAG_NEXT:
+        safe["next"] = _DIAG_NEXT[safe["code"]]
     index = diag.get("index")
     if type(index) is int and index >= 0:
         safe["index"] = index
