@@ -369,7 +369,7 @@ class TargetGapCardTests(ContractCase):
 
 
 class BoundedReads(ContractCase):
-    def test_posix_bound_default_and_growth(self):
+    def test_bound_default_and_growth(self):
         pub = runtime("gg_publication")
         root = self.make_project()
         write_text(root, "s.json", "abc")
@@ -377,11 +377,23 @@ class BoundedReads(ContractCase):
         self.assertEqual(b"abc", pub._read_file(root, "s.json", limit=3))
         with self.assertRaises(ValueError):
             pub._read_file(root, "s.json", limit=2)
+        # The file grows to 4 bytes after the size check. Inject the growth at
+        # the read this platform's real path performs: POSIX loops on os.read
+        # after fstat; win32 reads limit+1 once from the gg_winfs handle.
         sizes = []
-        def growing(fd, size):
-            sizes.append(size)
-            return b"abcd"[:size]
-        with patch.object(pub.os, "read", side_effect=growing):
+        if pub.sys.platform == "win32":
+            class Growing(io.BytesIO):
+                def read(self, size=-1):
+                    sizes.append(size)
+                    return b"abcd"[:size]
+            growth = patch.object(pub.gg_winfs.os, "fdopen",
+                                  side_effect=lambda *a, **k: Growing())
+        else:
+            def growing(fd, size):
+                sizes.append(size)
+                return b"abcd"[:size]
+            growth = patch.object(pub.os, "read", side_effect=growing)
+        with growth:
             with self.assertRaises(ValueError):
                 pub._read_file(root, "s.json", limit=3)
         self.assertEqual([4], sizes)
