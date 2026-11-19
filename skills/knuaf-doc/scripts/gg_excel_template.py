@@ -415,22 +415,44 @@ def _layout_of(cells: dict) -> str:
     return "unknown"
 
 
+# Mirrors openpyxl.reader.excel.SUPPORTED_FORMATS: openpyxl refuses any other
+# suffix by path *before* opening the file, and its refusal text distinguishes
+# ``.xls``, ``.xlsb`` and the rest.  Those suffixes keep that path call; the
+# four below are read through our own stream so the handle is ours.
+OPENPYXL_SUFFIXES = (".xlsx", ".xlsm", ".xltx", ".xltm")
+
+
 def _opened_sheet_names(path: Path) -> list[str]:
     """First check of the shared read: open the file with openpyxl, the
-    library the later checks read it with.  Any failure is unreadable."""
+    library the later checks read it with.  Any failure is unreadable.
+
+    The source handle belongs to this function, not to openpyxl: 3.1.5
+    closes the package archive only after a *successful* read, so a parse
+    failure inside the file left the student's original open and Windows
+    then refused to delete it (``WinError 32``).  A supported suffix is read
+    through our own stream, closed here on the failing and the succeeding
+    path alike; an unsupported one is still refused by openpyxl's own
+    path-based check, which rejects it before opening anything.
+    """
     import warnings
     import openpyxl
+
+    def names(workbook) -> list[str]:
+        try:
+            return list(workbook.sheetnames)
+        finally:
+            workbook.close()
+
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            workbook = openpyxl.load_workbook(path)
+            if path.suffix.lower() in OPENPYXL_SUFFIXES:
+                with path.open("rb") as source:
+                    return names(openpyxl.load_workbook(source))
+            return names(openpyxl.load_workbook(path))
     except Exception as exc:  # openpyxl raises many parser types
         raise TemplateUnreadable(f"workbook does not open: {path.name}: "
                                  f"{type(exc).__name__}: {exc}") from exc
-    try:
-        return list(workbook.sheetnames)
-    finally:
-        workbook.close()
 
 
 _SHEET_ROOTS = {local("worksheet"), local("chartsheet")}
