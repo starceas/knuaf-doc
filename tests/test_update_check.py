@@ -1365,7 +1365,6 @@ class UpdateTests(_UpdateCase):
                 mod.adopt_cmd(src, target, confirm=True)
         again = mod._acquire_lock(state); mod._release_lock(again)
 
-    @unittest.skipIf(os.name == "nt", "POSIX SIGKILL evidence")
     def test_killed_owner_with_live_subprocess_releases_lock(self):
         src = self.make_incoming()
         mod = _load_update(src / "scripts" / "gg_update.py")
@@ -1374,34 +1373,76 @@ class UpdateTests(_UpdateCase):
         driver = self.root / "barrier.py"
         driver.write_text(_BARRIER_DRIVER, encoding="utf-8")
         ready, go = self.root / "parent.ready", self.root / "parent.go"
-        child_pid = None
+        if sys.platform != "win32":
+            child_pid = None
+            parent = subprocess.Popen([sys.executable, str(driver),
+                str(src / "scripts" / "gg_update.py"), "parent_with_child", str(home),
+                str(src), str(target), str(ready), str(go)],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8")
+            try:
+                row = _wait_signal(ready, parent)
+                child_pid = row.get("child")
+                child_ready = ready.with_name(ready.name + "-child")
+                _wait_signal(child_ready, parent)
+                parent.kill(); parent.wait(timeout=10)
+                self.assertTrue(Path("/proc/%d" % row["child"]).exists()
+                                if Path("/proc").exists() else
+                                subprocess.run(["kill", "-0", str(row["child"])],
+                                               capture_output=True).returncode == 0)
+                fd = mod._acquire_lock(home / mod.STATE_DIR_NAME)
+                mod._release_lock(fd)
+            finally:
+                go.write_text("go")
+                if parent.poll() is None:
+                    parent.kill(); parent.wait(timeout=10)
+                parent.stdout.close(); parent.stderr.close()
+                # The SIGKILLed owner left its child running on purpose; release
+                # the barrier and let it exit before setUp's temp tree is removed,
+                # otherwise cleanup races with it ("Directory not empty").
+                if child_pid is not None:
+                    self.assertTrue(_wait_exit(child_pid),
+                                    "orphaned subprocess still alive")
+            return
+
+        import _winapi
+
+        state = home / mod.STATE_DIR_NAME
+        child_handle = None
         parent = subprocess.Popen([sys.executable, str(driver),
             str(src / "scripts" / "gg_update.py"), "parent_with_child", str(home),
             str(src), str(target), str(ready), str(go)],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8")
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         try:
             row = _wait_signal(ready, parent)
-            child_pid = row.get("child")
-            child_ready = ready.with_name(ready.name + "-child")
-            _wait_signal(child_ready, parent)
-            parent.kill(); parent.wait(timeout=10)
-            self.assertTrue(Path("/proc/%d" % row["child"]).exists()
-                            if Path("/proc").exists() else
-                            subprocess.run(["kill", "-0", str(row["child"])],
-                                           capture_output=True).returncode == 0)
-            fd = mod._acquire_lock(home / mod.STATE_DIR_NAME)
+            # Keep the same process object across the kill; a PID can be reused.
+            child_handle = _winapi.OpenProcess(_winapi.SYNCHRONIZE, False, row["child"])
+            _wait_signal(ready.with_name(ready.name + "-child"), parent)
+            with self.assertRaises(mod.Refused) as caught:
+                mod._acquire_lock(state)
+            self.assertEqual("locked", caught.exception.reason)
+
+            parent.kill()
+            parent.wait(timeout=10)
+            self.assertEqual(_winapi.WAIT_TIMEOUT, _winapi.WaitForSingleObject(child_handle, 0))
+            fd = mod._acquire_lock(state)
             mod._release_lock(fd)
+            again = mod._acquire_lock(state)
+            mod._release_lock(again)
+            self.assertEqual(_winapi.WAIT_TIMEOUT, _winapi.WaitForSingleObject(child_handle, 0))
         finally:
-            go.write_text("go")
-            if parent.poll() is None:
-                parent.kill(); parent.wait(timeout=10)
-            parent.stdout.close(); parent.stderr.close()
-            # The SIGKILLed owner left its child running on purpose; release
-            # the barrier and let it exit before setUp's temp tree is removed,
-            # otherwise cleanup races with it ("Directory not empty").
-            if child_pid is not None:
-                self.assertTrue(_wait_exit(child_pid),
-                                "orphaned subprocess still alive")
+            try:
+                # Do not leave the owner spinning if writing the barrier fails.
+                if parent.poll() is None:
+                    parent.kill()
+                    parent.wait(timeout=10)
+                go.write_text("go", encoding="utf-8")
+                if child_handle is not None:
+                    self.assertEqual(_winapi.WAIT_OBJECT_0,
+                                     _winapi.WaitForSingleObject(child_handle, 10_000),
+                                     "orphaned subprocess still alive")
+            finally:
+                if child_handle is not None:
+                    _winapi.CloseHandle(child_handle)
 
     def test_windows_locking_offsets_mock_only(self):
         src = self.make_incoming()

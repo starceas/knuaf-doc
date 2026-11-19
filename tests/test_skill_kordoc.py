@@ -153,15 +153,37 @@ class KordocTests(ContractCase):
 
     # --- an unusable CLI is rejected before anything runs -----------------
 
-    @unittest.skipIf(os.name == "nt",
-                     "Windows에는 실행 비트가 없어 os.access(X_OK)가 항상 참")
     def test_an_explicit_path_that_is_not_executable_is_refused(self):
-        plain = self.tmp / "kordoc"
-        plain.write_text("not executable", encoding="utf-8")
+        if sys.platform != "win32":
+            plain = self.tmp / "kordoc"
+            plain.write_text("not executable", encoding="utf-8")
+            out = self.tmp / "out.md"
+            with self.assertRaises(self.kd.KordocBlocked):
+                self.kd.parse(self.document, out, kordoc=str(plain))
+            self.assertFalse(out.exists())
+            return
+
+        plain = self.tmp / "invalid-kordoc.exe"
+        plain.write_text("not a Windows executable", encoding="utf-8")
         out = self.tmp / "out.md"
-        with self.assertRaises(self.kd.KordocBlocked):
-            self.kd.parse(self.document, out, kordoc=str(plain))
+        empty_cache = self.tmp / "empty-cache"
+        # No host hint or cached CLI, and an explicit absent Node prevents
+        # installation even on a machine with Node and pnpm on PATH.
+        with mock.patch.dict(os.environ, {"XDG_CACHE_HOME": str(empty_cache)}):
+            with self.assertRaises(self.kd.KordocBlocked) as caught:
+                self.kd.parse(self.document, out, kordoc=str(plain),
+                              cache_dir=empty_cache, node=str(self.tmp / "absent-node.exe"))
         self.assertFalse(out.exists())
+        rejected_candidates = caught.exception.details.get("rejected_candidates", [])
+        self.assertEqual(1, len(rejected_candidates), caught.exception.reason)
+        rejected = rejected_candidates[0]
+        self.assertEqual(str(plain.resolve()), rejected["path"])
+        self.assertEqual("explicit", rejected["source_kind"])
+        self.assertIn("version_probe_failed", rejected["reasons"])
+        self.assertIn("help_probe_failed", rejected["reasons"])
+        for probe in ("version_probe", "help_probe"):
+            self.assertFalse(rejected[probe]["ok"])
+            self.assertEqual("os_error", rejected[probe]["kind"])
 
     def test_a_cli_that_is_not_kordoc_is_rejected(self):
         impostor = write_exe(self.tmp / "kordoc", 'print("pandoc 3.1.0")\n')
