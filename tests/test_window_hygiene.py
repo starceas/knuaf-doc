@@ -95,15 +95,14 @@ class OfficeSessionTests(unittest.TestCase):
             archive.writestr("[Content_Types].xml", "<Types/>")
         return path
 
-    def windows_helper(self, calls, *, fault=None, foreign=False):
-        """subprocess.run stand-in carrying the helper's own exit status.
+    def windows_modules(self, calls, *, fault=None, foreign=False):
+        """Synthetic pythoncom/win32com modules that record COM calls.
 
         ``fault`` raises once at a named COM stage; ``foreign`` leaves a
         document this run never opened in the app, so the compensation close
         cannot empty the collection.
         """
         from types import SimpleNamespace
-        win = runtime("gg_office_win")
         collection = SimpleNamespace(Count=1 if foreign else 0)
 
         def stage(name):
@@ -147,23 +146,41 @@ class OfficeSessionTests(unittest.TestCase):
             return app
 
         client = SimpleNamespace(DispatchEx=dispatch)
-        modules = {"pythoncom": SimpleNamespace(CoInitialize=lambda: None,
-                                                CoUninitialize=lambda: None),
-                   "win32com": SimpleNamespace(client=client),
-                   "win32com.client": client}
+        return {"pythoncom": SimpleNamespace(CoInitialize=lambda: None,
+                                             CoUninitialize=lambda: None),
+                "win32com": SimpleNamespace(client=client),
+                "win32com.client": client}
+
+    def windows_call(self, modules, call):
+        """Run one helper entry against synthetic COM; return (code, out, err).
+
+        Only the COM modules are replaced: the helper's own path check, file
+        access and exits are the real code.
+        """
+        out, err = io.StringIO(), io.StringIO()
+        with mock.patch.dict(sys.modules, modules):
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                # Same status the helper process would exit with: the CLI is
+                # ``sys.exit(main())``, so a returned int is the exit code,
+                # None is 0, and a SystemExit carries its own code.
+                try:
+                    result = call()
+                except SystemExit as exc:
+                    code = exc.code if isinstance(exc.code, int) else 1
+                else:
+                    code = 0 if result is None else (
+                        result if isinstance(result, int) else 1)
+        return code, out.getvalue(), err.getvalue()
+
+    def windows_helper(self, calls, *, fault=None, foreign=False):
+        """subprocess.run stand-in carrying the helper's own exit status."""
+        win = runtime("gg_office_win")
+        modules = self.windows_modules(calls, fault=fault, foreign=foreign)
         entry = getattr(win, "run_" + self.kind)
 
         def run(cmd, **kwargs):
-            out, err = io.StringIO(), io.StringIO()
-            with mock.patch.dict(sys.modules, modules):
-                with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-                    try:
-                        entry(cmd[3], cmd[4])
-                    except SystemExit as exc:
-                        code = exc.code if isinstance(exc.code, int) else 1
-                    else:
-                        code = 0
-            return subprocess.CompletedProcess(cmd, code, out.getvalue(), err.getvalue())
+            code, out, err = self.windows_call(modules, lambda: entry(cmd[3], cmd[4]))
+            return subprocess.CompletedProcess(cmd, code, out, err)
 
         return run
 
@@ -557,15 +574,116 @@ class OfficeSessionTests(unittest.TestCase):
         self.assertEqual((named / "output" / "same-name.docx").read_bytes(),
                          b"synthetic staged file")
 
-    @darwin_office_only
+    @unittest.skipUnless(fcntl is not None or sys.platform == "win32",
+                         _POSIX_OFFICE_REASON)
     def test_original_or_existing_pdf_cannot_enter_transport(self):
-        raw = mock.Mock()
-        with self.assertRaises(ValueError):
-            self.run_job(raw, work=self.root / "original.docx")
-        self.pdf.write_bytes(b"preexisting pdf")
-        with self.assertRaises(ValueError):
-            self.run_job(raw)
-        raw.assert_not_called()
+        # The Darwin half still needs native locks; win32 takes the branch below.
+        if sys.platform != "win32":
+            raw = mock.Mock()
+            with self.assertRaises(ValueError):
+                self.run_job(raw, work=self.root / "original.docx")
+            self.pdf.write_bytes(b"preexisting pdf")
+            with self.assertRaises(ValueError):
+                self.run_job(raw)
+            raw.assert_not_called()
+            return
+
+        # win32 has two entries: the parent transport, which writes the job
+        # journal before the helper starts, and the helper itself, which may
+        # be started directly. Both must refuse the same two shapes before
+        # any journal write or COM call.
+        suffix = ".docx" if self.kind == "word" else ".xlsx"
+        papers = Path(self.root).resolve() / "papers" / "submission"
+        papers.mkdir(parents=True)
+        original = papers / ("original" + suffix)
+        original.write_bytes(b"student original")
+        staged = Path(self.root).resolve() / "job-0123456789ab-1" / "output"
+        staged.mkdir(parents=True)
+        copy = staged / ("same-name" + suffix)
+        copy.write_bytes(b"staged working copy")
+        existing = staged / "same-name.pdf"
+        existing.write_bytes(b"preexisting pdf")
+        # Two more shapes the same predicate must refuse: a working copy that
+        # is not inside a job-* folder, and one in a job-* subfolder that is
+        # not output. Both carry a real file and an absent PDF, so only the
+        # folder conditions can reject them.
+        notjob = Path(self.root).resolve() / "not-a-job" / "output"
+        notjob.mkdir(parents=True)
+        notjob_copy = notjob / ("same-name" + suffix)
+        notjob_copy.write_bytes(b"outside job copy")
+        other = Path(self.root).resolve() / "job-ffffffffffff-1" / "input"
+        other.mkdir(parents=True)
+        other_copy = other / ("same-name" + suffix)
+        other_copy.write_bytes(b"wrong subfolder copy")
+        cases = (("original", original, papers / "original.pdf",
+                  b"student original", None),
+                 ("existing-pdf", copy, existing,
+                  b"staged working copy", b"preexisting pdf"),
+                 ("outside-job", notjob_copy, notjob / "same-name.pdf",
+                  b"outside job copy", None),
+                 ("wrong-subfolder", other_copy, other / "same-name.pdf",
+                  b"wrong subfolder copy", None))
+
+        for name, source, pdf, source_bytes, pdf_bytes in cases:
+            with self.subTest(case=name):
+                run = mock.Mock(side_effect=AssertionError("helper must not start"))
+                with mock.patch.object(self.office.subprocess, "run", run):
+                    with self.assertRaises(ValueError) as caught:
+                        self.office.run_windows_com(
+                            self.kind, [str(source), str(pdf)], timeout=9)
+                run.assert_not_called()
+                self.assertEqual(str(caught.exception), self.session.FRESH_JOB_REFUSAL)
+                self.assertEqual(source.read_bytes(), source_bytes)
+                if pdf_bytes is None:
+                    self.assertFalse(pdf.exists())
+                else:
+                    self.assertEqual(pdf.read_bytes(), pdf_bytes)
+                self.assertFalse((source.parent.parent / "office_session.json").exists())
+
+        # A refusal also leaves an already written journal byte-identical.
+        journal = staged.parent / "office_session.json"
+        prior = b'{"state":"unknown"}'
+        journal.write_bytes(prior)
+        with mock.patch.object(self.office.subprocess, "run",
+                               mock.Mock(side_effect=AssertionError("no helper"))):
+            with self.assertRaises(ValueError):
+                self.office.run_windows_com(self.kind, [str(copy), str(existing)],
+                                            timeout=9)
+        self.assertEqual(journal.read_bytes(), prior)
+
+        win = runtime("gg_office_win")
+        for name, source, pdf, _, _ in cases:
+            with self.subTest(helper=name):
+                calls = []
+                modules = self.windows_modules(calls)
+
+                def call():
+                    return win.main([self.kind, str(source), str(pdf)])
+
+                code, _out, err = self.windows_call(modules, call)
+                self.assertEqual(code, 2)
+                self.assertEqual(calls, [])
+                self.assertEqual(err.strip(), self.session.FRESH_JOB_REFUSAL)
+
+        # Contrast: a real fresh job (existing staged copy, absent PDF) is
+        # accepted and does reach the app's private instance.
+        for kind, kind_suffix in (("word", ".docx"), ("excel", ".xlsx")):
+            with self.subTest(success=kind):
+                folder = (Path(self.root).resolve() / ("fresh-" + kind)
+                          / "job-ffffffffffff-1" / "output")
+                folder.mkdir(parents=True)
+                work = folder / ("same-name" + kind_suffix)
+                work.write_bytes(b"fresh staged copy")
+                pdf = folder / "same-name.pdf"
+                calls = []
+                modules = self.windows_modules(calls)
+
+                def call():
+                    return win.main([kind, str(work), str(pdf)])
+
+                code, _out, err = self.windows_call(modules, call)
+                self.assertEqual(code, 0, err)
+                self.assertIn(("private", self.WINDOWS_PROG[kind]), calls)
 
 
 

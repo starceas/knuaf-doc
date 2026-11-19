@@ -26,6 +26,14 @@ SESSION_MARKER = "-- gg-office-owned-session-v1"
 SCHEMA = "gg-office-session/v1"
 AUDIT_NAME = "recovery-audit.jsonl"
 
+#: Refusal for a transport call whose paths are not a freshly staged job.
+#: It reaches students as the JSON ``reason`` of a direct command and as the
+#: batch ``error``, so it names the risk and the next action only.
+FRESH_JOB_REFUSAL = (
+    "원본이나 기존 PDF를 바꿀 수 있어 변환을 시작하지 않았어요. "
+    "새 작업으로 다시 변환해 주세요."
+)
+
 
 def _template(kind: str) -> str:
     app = "Microsoft Word" if kind == "word" else "Microsoft Excel"
@@ -300,6 +308,28 @@ def cleanup_guard(job_dir: Path):
             os.close(fd)
 
 
+def staged_job_paths(kind: str, args: list[str], *,
+                     refusal: str = FRESH_JOB_REFUSAL) -> tuple[Path, Path]:
+    """Absolute (work copy, PDF target) of one fresh staged job, else ValueError.
+
+    The single place that decides whether a transport call may touch the
+    staged pair: an absolute allow-listed kind, a working copy that is a
+    regular non-symlink file directly inside ``job-*/output``, a PDF target
+    beside it that does not exist yet. It judges the path shape and the
+    current state only — it cannot prove the copy came from staging, and it
+    follows no links and never checks extensions. Darwin's session, the
+    Windows parent transport and the Windows COM helper share it so the
+    three entry points cannot drift apart.
+    """
+    work, pdf = (Path(a).absolute() for a in args)
+    job = work.parent.parent
+    if (kind not in {"word", "excel"} or work.parent.name != "output"
+            or not job.name.startswith("job-") or pdf.parent != work.parent
+            or not work.is_file() or work.is_symlink() or pdf.exists()):
+        raise ValueError(refusal)
+    return work, pdf
+
+
 def run_session(kind: str, script: str, args: list[str], timeout: int, *,
                 run_raw, prepare_word=None, guard_dir: Path | None = None):
     """Drive one freshly staged job under a per-user, per-app nonblocking lock.
@@ -310,7 +340,8 @@ def run_session(kind: str, script: str, args: list[str], timeout: int, *,
     """
     import fcntl  # Only called by the darwin dispatcher.
 
-    work, pdf = (Path(a).absolute() for a in args)
+    work, _ = staged_job_paths(
+        kind, args, refusal="Office automation requires a fresh staged job/output copy")
     job = work.parent.parent
     evidence = {"schema": SCHEMA, "app": kind, "job_dir": str(job),
                 "staged_working_file": str(work), "cleanup": "not_attempted",
@@ -345,10 +376,6 @@ def run_session(kind: str, script: str, args: list[str], timeout: int, *,
         result.office_session = result_session
         return result
 
-    if (kind not in {"word", "excel"} or work.parent.name != "output"
-            or not job.name.startswith("job-") or pdf.parent != work.parent
-            or not work.is_file() or work.is_symlink() or pdf.exists()):
-        raise ValueError("Office automation requires a fresh staged job/output copy")
     previous_session = read_session(job)
     if previous_session and previous_session.get("cleanup") not in {"closed", "not_attempted"}:
         return blocked("previous_job_session_unclosed")
