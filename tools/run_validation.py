@@ -139,9 +139,16 @@ NATIVE_GATE = {
     "rule": "P2-L09-native accepted external placeholder",
 }
 
+REAL_KORDOC_BODY_FORMAT_TEST_ID = (
+    "tests.test_build_hwpx.BodyFormatTests.test_real_kordoc_body_format"
+)
+
+
 # Optional external inputs, not missing shipped payloads or dependencies.
 # No class/prefix matching: a new test or changed reason needs review.
 ALLOWED_SKILL_SKIPS = {
+    REAL_KORDOC_BODY_FORMAT_TEST_ID:
+        "set KNUAF_TEST_KORDOC to an installed kordoc executable",
     "test_gg_doi.LiveCall.test_real_doi":
         "실제 Crossref 호출 — GG_DOI_LIVE=1일 때만",
     **dict.fromkeys((

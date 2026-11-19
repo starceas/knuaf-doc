@@ -6,6 +6,11 @@ from pathlib import Path
 import sys
 import unittest
 
+if __package__:
+    from .run_validation import ALLOWED_SKILL_SKIPS, REAL_KORDOC_BODY_FORMAT_TEST_ID
+else:
+    from run_validation import ALLOWED_SKILL_SKIPS, REAL_KORDOC_BODY_FORMAT_TEST_ID
+
 
 ROOT = Path(__file__).resolve().parents[1]
 SMOKE_TEST_IDS = (
@@ -95,9 +100,17 @@ def main(argv=None):
         result = unittest.TextTestRunner(verbosity=2).run(smoke)
     finally:
         sys.path.remove(str(ROOT))
+    # Keep quick smoke stricter than the shard allowlist: only the external
+    # kordoc smoke may be skipped, and only for its exact missing-path reason.
+    unapproved_skips = [
+        (test, reason) for test, reason in result.skipped
+        if not (isinstance(test, unittest.TestCase)
+                and test.id() == REAL_KORDOC_BODY_FORMAT_TEST_ID
+                and reason == ALLOWED_SKILL_SKIPS[REAL_KORDOC_BODY_FORMAT_TEST_ID])
+    ]
     passed = (result.testsRun == len(smoke_ids)
               and len(result.failures) == 0 and len(result.errors) == 0
-              and len(result.skipped) == 0
+              and not unapproved_skips
               and len(result.expectedFailures) == 0
               and len(result.unexpectedSuccesses) == 0)
     imported_test_modules = sorted({
@@ -108,7 +121,7 @@ def main(argv=None):
         "criteria": ["compile every Python file in validation/test roots",
                      "import every test module without loader errors",
                      "run the fixed smoke-test ID list and every test of the "
-                     "smoke modules with no skips/failures"],
+                     "smoke modules with no unapproved skips or failures"],
         "compiled_source_files": len(source_files),
         "compile_errors": [],
         "imported_test_module_count": len(imported_test_modules),

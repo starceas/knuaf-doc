@@ -860,6 +860,8 @@ class RunnerAccountingTests(unittest.TestCase):
              "실제 Crossref 호출 — GG_DOI_LIVE=1일 때만"),
             ("test_gg_source_register.TestArtifacts.test_p4_snapshot_registers",
              "accepted g005 catalog tree not present"),
+            ("tests.test_build_hwpx.BodyFormatTests.test_real_kordoc_body_format",
+             "set KNUAF_TEST_KORDOC to an installed kordoc executable"),
         ):
             with self.subTest(test=tid):
                 entry = {"test": tid, "category": "skipped", "detail": reason}

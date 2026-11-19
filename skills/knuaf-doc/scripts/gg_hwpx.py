@@ -20,6 +20,7 @@ shell=False로 실행한다. 입력은 UTF-8(BOM 없음)·LF로 정규화해 임
 
 from __future__ import annotations
 
+from difflib import SequenceMatcher
 import hashlib
 import io
 import json
@@ -33,6 +34,7 @@ from collections.abc import Mapping
 from typing import NamedTuple
 from urllib.parse import quote, unquote
 import zipfile
+import xml.etree.ElementTree as ET
 
 import gg_core
 import gg_fs
@@ -626,7 +628,10 @@ def _append_charprs(header_xml: str, specs=_FRONT_CHARPR_SPECS):
             has_end_tag=_CHARPR_END_TAG in header_xml,
             action="header.xml에 charProperties가 없어 글자 모양을 더할 수 없습니다.",
         )
-    first = int(match.group(2))
+    count = int(match[2])
+    first = 1 + max((int(m[1]) for m in re.finditer(
+        r'<hh:charPr\b[^>]*\sid="(\d+)"',
+        header_xml[match.end():header_xml.index(_CHARPR_END_TAG)])), default=-1)
     ids, entries = {}, []
     for offset, (size, bold) in enumerate(specs):
         cid = first + offset
@@ -644,7 +649,7 @@ def _append_charprs(header_xml: str, specs=_FRONT_CHARPR_SPECS):
     updated = (header_xml[:at] + "\n" + "\n".join(entries) + "\n"
                + header_xml[at:])
     updated = _CHARPR_ITEM_CNT_RE.sub(
-        lambda m: m.group(1) + str(first + len(specs)) + m.group(3),
+        lambda m: m.group(1) + str(count + len(specs)) + m.group(3),
         updated, count=1)
     return updated, ids
 
@@ -850,6 +855,233 @@ def _body_charpr_targets(nodes, plan, profile):
         elif kind == "paragraph":
             targets[index] = (int(profile.body_pt), False)
     return targets
+
+
+def _xml_attr(tag, name, value):
+    return re.sub(r'(\s' + name + r'=")[^"]*(")',
+                  lambda m: m[1] + value + m[2], tag, count=1)
+
+
+def _body_para_shape(block):
+    # F1-04 / DOCX probe OG-013: 480 twips = 24pt = 2400 HWPUNIT.
+    # Replace both switch branches if present; leave alignment/margins alone.
+    for name, attrs in (("hc:intent", {"value": "2400", "unit": "HWPUNIT"}),
+                        ("hh:lineSpacing", {"type": "PERCENT", "value": "160"})):
+        def update(match):
+            tag = match[0]
+            for attr, value in attrs.items():
+                tag = _xml_attr(tag, attr, value)
+            return tag
+
+        block = re.sub(r"<" + name + r"\b[^>]*>", update, block)
+    return block
+
+
+def _body_style_table(header, collection, shape):
+    match = re.search(r"(<hh:" + collection + r"\b[^>]*>)(.*?)"
+                      r"(</hh:" + collection + r">)", header, re.S)
+    if match is None:
+        return None
+    originals = {}
+    for start, end in _element_spans(match[2], shape):
+        block = match[2][start:end]
+        ref = re.search(r'\sid="(\d+)"', block.split(">", 1)[0])
+        if ref:
+            originals[ref[1]] = block
+    return match, originals, {}
+
+
+def _body_style_ref(table, ref, *, paragraph):
+    _, originals, clones = table
+    if ref in clones:
+        return clones[ref][0]
+    original = originals[ref]
+    if paragraph:
+        updated = _body_para_shape(original)
+    else:
+        head, tail = original.split(">", 1)
+        updated = _xml_attr(head, "height", "1200") + ">" + tail
+    if updated == original:
+        return ref
+    new = str(max(map(int, originals)) + 1 + len(clones))
+    head, tail = updated.split(">", 1)
+    clones[ref] = (new, _xml_attr(head, "id", new) + ">" + tail)
+    return new
+
+
+def _run_text(run):
+    # A table cell or footnote's nested paragraph is not part of this run.
+    return "".join("".join(t.itertext()) for t in run.findall(_TEXT_TAG))
+
+
+def _body_format_blocked(issue, advice, **details):
+    raise HwpxBlocked(
+        "body_format_unconfirmed", issue=issue, **details,
+        action="본문의 12pt·줄간격 160%·첫 줄 2칸을 확인하지 못해 발행하지 않았습니다. "
+               + advice,
+    )
+
+
+def _body_matches(paragraphs, nodes, plan, *, require_complete):
+    """Match in order without assuming that the generator emits one p per node."""
+    start = plan["body"] if plan is not None else 0
+    if plan is None and any(_normalize_space(node.get("text", "")) in
+                            {"겉표지", "표제면", "제출서", "인준서", "목차"} for node in nodes):
+        # Incomplete front matter has no safe body boundary. Leave it alone
+        # rather than indenting cover/TOC prose as body text.
+        if require_complete:
+            _body_format_blocked("frontmatter_boundary",
+                                 "표지와 목차를 학교 양식 순서로 갖춘 뒤 다시 시도하세요.")
+        return {}
+    wanted, source, folded = set(), [], []
+    for index, node in enumerate(nodes):
+        raw = node.get("text", "")
+        plain = re.sub(r"(?<!\w)\*([^*]+)\*(?!\w)", r"\1", raw.replace("**", ""))
+        text = _normalize_space(re.sub(r"\[\^[^]]+\](?!:)", "", plain))
+        if index >= start and text == "학부모 동의서":
+            break
+        if (index >= start and text and node["kind"] == "paragraph"
+                and not node.get("list_item") and not re.match(
+                    r"^(?:\[\^[^]]+\]:|※|\(?\s*(?:자료\s*)?출처\s*[:：])", text)):
+            wanted.add(index)
+        source.append((text, (index,)))
+        if (node.get("soft_continue") and folded and index in wanted
+                and folded[-1][1][0] in wanted):
+            previous, indices = folded[-1]
+            folded[-1] = (previous + " " + text, (*indices, index))
+        else:
+            folded.append((text, (index,)))
+    actual = [_normalize_space("".join(map(_run_text, p.findall("hp:run", _HP_NS))))
+              for p in paragraphs]
+
+    def align(source):
+        match = SequenceMatcher(None, [text for text, _ in source], actual, autojunk=False)
+        return {j + k: source[i + k][1] for i, j, size in match.get_matching_blocks()
+                for k in range(size)}
+
+    def body_pairs(source):
+        pairs = align(source)
+        body_at = (next((j for j, indices in pairs.items() if start in indices), None)
+                   if plan is not None else 0)
+        if body_at is None:
+            return {}
+        return {j: indices for j, indices in pairs.items()
+                if j >= body_at and indices[0] in wanted}
+
+    # Count covered source nodes, not generated paragraphs: a soft-wrapped
+    # paragraph still accounts for all its constituent lines.
+    pairs = max((body_pairs(source), body_pairs(folded)),
+                key=lambda pairs: sum(map(len, pairs.values())))
+    matched = {i for indices in pairs.values() for i in indices}
+    if require_complete and wanted != matched:
+        _body_format_blocked("paragraph_match",
+                             "원고에서 문단 사이를 빈 줄로 구분한 뒤 다시 시도하세요.",
+                             expected=len(wanted), matched=len(matched))
+    return pairs
+
+
+_HP_NS = {"hp": "http://www.hancom.co.kr/hwpml/2011/paragraph"}
+
+
+def _rewrite_body_paragraph(xml, para, para_styles, char_styles):
+    runs = iter(para.findall("hp:run", _HP_NS))
+    pieces, cursor, depth, cache = [], 0, 0, None
+    for start, end, name, kind in _iter_xml_tags(xml):
+        replacement = xml[start:end]
+        if kind in ("start", "empty"):
+            if depth == 0 and name == "p":
+                ref = _body_style_ref(para_styles, para.get("paraPrIDRef"), paragraph=True)
+                replacement = _xml_attr(replacement, "paraPrIDRef", ref)
+            elif depth == 1 and name == "run":
+                run = next(runs)
+                ref = run.get("charPrIDRef")
+                if _run_text(run) and ref in char_styles[1]:
+                    ref = _body_style_ref(char_styles, ref, paragraph=False)
+                    replacement = _xml_attr(replacement, "charPrIDRef", ref)
+            elif depth == 1 and name == "linesegarray":
+                cache = start, end if kind == "empty" else None
+            if kind == "start":
+                depth += 1
+        elif kind == "end":
+            depth -= 1
+            if depth == 1 and name == "linesegarray" and cache is not None:
+                cache = cache[0], end
+        if replacement != xml[start:end]:
+            pieces.extend((xml[cursor:start], replacement))
+            cursor = end
+    # An old render cache can override the changed paragraph metrics.
+    if pieces and cache is not None and cache[1] is not None and cache[0] >= cursor:
+        pieces.append(xml[cursor:cache[0]])
+        cursor = cache[1]
+    return "".join(pieces) + xml[cursor:]
+
+def _check_body_styles(para, para_styles, char_styles, index):
+    block = para_styles[1].get(para.get("paraPrIDRef"), "")
+    updated = _body_para_shape(block)
+    intent = re.findall(r"<hc:intent\b[^>]*>", updated)
+    spacing = re.findall(r"<hh:lineSpacing\b[^>]*>", updated)
+    refs = [run.get("charPrIDRef") for run in para.findall("hp:run", _HP_NS)
+            if _run_text(run)]
+    if (not intent or not spacing or not refs
+            or any('value="2400"' not in tag or 'unit="HWPUNIT"' not in tag for tag in intent)
+            or any('type="PERCENT"' not in tag or 'value="160"' not in tag for tag in spacing)
+            or any(not re.search(r'\sheight="\d+"', char_styles[1].get(ref, "").split(">", 1)[0])
+                   for ref in refs)):
+        _body_format_blocked("style_reference", "변환된 문단의 글자·문단 서식이 올바르지 않습니다.",
+                             paragraph=index + 1)
+
+
+def _apply_body_format(members, nodes, plan, *, require_complete):
+    section = "Contents/section0.xml"
+    if not nodes:
+        return set()
+    header = members.get(HEADER_NAME, b"").decode("utf-8")
+    para_styles = _body_style_table(header, "paraProperties", "paraPr")
+    char_styles = _body_style_table(header, "charProperties", "charPr")
+    missing_styles = para_styles is None or char_styles is None
+    if missing_styles and not require_complete:
+        return set()
+    raw = members.get(section)
+    try:
+        xml = raw.decode("utf-8") if raw is not None else ""
+        paragraphs = ET.fromstring(xml).findall(_PARA_TAG) if xml else []
+    except (ET.ParseError, UnicodeError):
+        if require_complete:
+            _body_format_blocked("section_xml", "변환 파일을 읽을 수 없습니다. 다시 생성해 주세요.")
+        raise
+    targets = _body_matches(paragraphs, nodes, plan, require_complete=require_complete)
+    if not targets:
+        return set()
+    if missing_styles:
+        _body_format_blocked("style_table", "변환 파일에 본문 서식 정보가 없습니다. 다시 생성해 주세요.")
+    pieces, cursor, sized = [], 0, set()
+    for index, (start, end) in enumerate(top_level_paragraph_spans(xml)):
+        if index not in targets:
+            continue
+        para = paragraphs[index]
+        if require_complete:
+            _check_body_styles(para, para_styles, char_styles, index)
+        if para.get("paraPrIDRef") not in para_styles[1]:
+            continue
+        updated = _rewrite_body_paragraph(xml[start:end], para, para_styles, char_styles)
+        if updated != xml[start:end]:
+            pieces.extend((xml[cursor:start], updated))
+            cursor = end
+        sized.add(index)
+    if require_complete and sized != targets.keys():
+        _body_format_blocked("paragraph_match", "변환 파일의 문단을 다시 확인해 주세요.",
+                             expected=len(targets), matched=len(sized))
+    if pieces:
+        members[section] = ("".join(pieces) + xml[cursor:]).encode("utf-8")
+        for match, originals, clones in sorted((para_styles, char_styles),
+                                                key=lambda table: table[0].start(), reverse=True):
+            if clones:
+                head = _xml_attr(match[1], "itemCnt", str(len(originals) + len(clones)))
+                header = (header[:match.start()] + head + match[2]
+                          + "\n".join(block for _, block in clones.values())
+                          + match[3] + header[match.end():])
+        members[HEADER_NAME] = header.encode("utf-8")
+    return sized
 
 
 # 구분 이름(`겉표지`·`표제면`·`제출서`·`인준서`)은 우리 문서 계획이 만든 관리용
@@ -1124,12 +1356,13 @@ def _section_node_range(name, plan):
 def transform_hwpx(data: bytes, *, font: str = SCHOOL_FONT,
                    margins_mm=SCHOOL_MARGINS_MM, page_numbers: bool = True,
                    section_formats=None, nodes=None, plan=None,
-                   major_id=None):
+                   major_id=None, require_body_format=False):
     """kordoc HWPX 바이트를 학교 규격으로 다시 쓴다.
 
     mimetype을 첫 항목·무압축으로 보존하고 나머지 항목은 순서대로 다시 쓴다.
     ``section_formats``가 있으면(식량작물) 맨 앞에서 구역을 3개로 나누고
     (`split_sections_by_plan`) 그 뒤에 구역별 여백·쪽번호를 적용한다.
+    발행 경로는 ``require_body_format``으로 본문 대조와 서식 적용을 강제한다.
     반환: (새 바이트, 적용 내역 dict).
     """
     applied = {"margins": [], "font": [], "page_numbers": []}
@@ -1150,6 +1383,14 @@ def transform_hwpx(data: bytes, *, font: str = SCHOOL_FONT,
                 action="kordoc 산출물이 HWPX 구조가 아닙니다. generate 출력을 확인하세요.",
             )
         members = {info.filename: zin.read(info.filename) for info in infos}
+        # Clone before splitting/adding front-only style IDs, so the probe's
+        # trailing front-style signature and nested objects stay unchanged.
+        # Partial front matter on the split path already has its own guard.
+        partial_split = (section_formats is not None and plan is None
+                         and _front_matter_markers(nodes or [], major_id))
+        sized_prose = _apply_body_format(
+            members, nodes, plan, require_complete=require_body_format and not partial_split)
+
         mimetype = next(info for info in infos if info.filename == MIMETYPE)
         stored = zipfile.ZipInfo(MIMETYPE, date_time=mimetype.date_time)
         stored.compress_type = zipfile.ZIP_STORED
@@ -1200,6 +1441,8 @@ def transform_hwpx(data: bytes, *, font: str = SCHOOL_FONT,
             front_targets = _front_charpr_targets(nodes or [], plan, profile)
             if profile is not None:
                 body_targets = _body_charpr_targets(nodes or [], plan, profile)
+                body_targets = {index: shape for index, shape in body_targets.items()
+                                if index not in sized_prose}
         if body_targets:
             # 본문 글자 크기도 요청한 것으로 적는다 — 실제로 한 문단도 못
             # 바꾸면 `missing_format_steps`가 발행을 막는다. 게이트 밖 전공·
@@ -2018,17 +2261,19 @@ def build(markdown, out, *, context, authorization, cli_command=None,
             raise HwpxBlocked("empty_output",
                               action="kordoc가 HWPX를 만들지 않았습니다. 발행하지 않았습니다.")
 
-        if section_formats is not None and (nodes is None or plan is None):
+        if nodes is None or plan is None:
             import gg_document as gd
 
             major_id = authorization.major_id
-            nodes = gd.parse(text, major_id=major_id)
+            if nodes is None:
+                nodes = gd.parse(text, major_id=major_id)
             plan = gd.school_frontmatter_plan(nodes, major_id)
 
         transformed, applied = transform_hwpx(
             raw_path.read_bytes(), font=font, margins_mm=margins_mm,
             page_numbers=page_numbers, section_formats=section_formats,
             nodes=nodes, plan=plan, major_id=authorization.major_id,
+            require_body_format=True,
         )
         pictures = embedded_picture_count(transformed)
         if pictures < len(references):

@@ -405,12 +405,12 @@ class FoodCropsBuildTests(ContractCase):
     def test_export_passes_the_major_into_layout(self):
         root = self.make_project()
         bind_major(root, "food_crops")
-        (Path(root) / "body.md").write_text(
-            "1. 머리말\n\n합성 본문이다.\n", encoding="utf-8")
+        markdown = "1. 머리말\n\n합성 본문이다.\n\n2. 영농환경 분석\n"
+        (Path(root) / "body.md").write_text(markdown, encoding="utf-8")
         work = Path(root) / "fake"
         work.mkdir()
-        control = {"section": kordoc_section(
-            kordoc_para("1. 머리말", "1"), kordoc_para("본문이다."),
+        control = {"markdown": markdown, "section": kordoc_section(
+            kordoc_para("1. 머리말", "1"), kordoc_para("합성 본문이다."),
             kordoc_para("2. 영농환경 분석", "1"))}
         (work / "control.json").write_text(
             json.dumps(control, ensure_ascii=False), encoding="utf-8")
