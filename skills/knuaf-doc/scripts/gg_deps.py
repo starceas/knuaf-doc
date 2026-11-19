@@ -10,9 +10,18 @@ import, so -S/isolated envs are measured honestly) and the project venv
 the stdlib venv module and installs the manifest with pip, then proves each
 dependency by actually importing it in the venv interpreter. Failures are
 reported, never faked. Nothing is copied from any HOME site-packages.
+
+A venv whose interpreter link points at a Python that is no longer there
+(the base interpreter moved or was uninstalled) is not rebuilt over: its
+contents are renamed to ``.venv-broken-<UTC stamp>`` first, so nothing a
+student had is deleted, and the result JSON names the preserved folder.
+Renaming is the only recovery action tried; a rename that fails (the folder
+is in use) is reported blocked with what to close, never worked around by
+deleting.
 """
 
 import argparse
+import errno
 import importlib
 import importlib.metadata
 import json
@@ -20,6 +29,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 import venv
 from pathlib import Path
 
@@ -116,16 +126,81 @@ def _applicable(d):
     return plat is None or plat == sys.platform
 
 
+_VENV_INTERPRETERS = (
+    Path("bin") / "python3",
+    Path("bin") / "python",
+    Path("Scripts") / "python.exe",
+)
+
+
 def venv_python(project):
     project = Path(project)
-    for cand in (
-        project / ".venv" / "bin" / "python3",
-        project / ".venv" / "bin" / "python",
-        project / ".venv" / "Scripts" / "python.exe",
-    ):
+    for rel in _VENV_INTERPRETERS:
+        cand = project / ".venv" / rel
         if cand.is_file():
             return cand
     return None
+
+
+def _broken_venv_link(venv_dir):
+    """The dangling interpreter link of an existing venv, if that is the fault.
+
+    Deliberately narrow: a venv counts as broken only when its own
+    interpreter entry is a symlink whose target no longer exists (the base
+    Python was moved or uninstalled). Every other failure — a missing
+    package, a corrupt pip, a deleted regular file — stays on the existing
+    path, which reports "failed" without moving anyone's folder.
+    """
+    for rel in _VENV_INTERPRETERS:
+        cand = venv_dir / rel
+        if not cand.is_symlink() or cand.exists():
+            continue
+        try:
+            target = os.readlink(cand)
+        except OSError:
+            target = None
+        return {"path": str(cand), "link_target": target}
+    return None
+
+
+def _preserve_broken_venv(venv_dir, broken):
+    """Rename a broken venv aside: never overwrite an earlier copy, never delete.
+
+    Returns the record placed in the result JSON. A rename that fails (the
+    folder is open in another program) and a name space that is exhausted
+    both raise ValueError carrying what the student can do, so ``main``
+    reports them as blocked instead of guessing.
+    """
+    parent, name = venv_dir.parent, venv_dir.name
+    stamp = time.strftime("%Y%m%d-%H%M%S", time.gmtime())
+    for n in range(1, 101):
+        dest = parent / (name + "-broken-" + stamp + ("" if n == 1 else "-" + str(n)))
+        # lexists, not exists: a dangling symlink left at that name also
+        # blocks the rename (and os.rename would silently replace an empty
+        # directory on POSIX).
+        if os.path.lexists(dest):
+            continue
+        try:
+            os.rename(venv_dir, dest)
+        except FileExistsError:
+            continue
+        except OSError as e:
+            if e.errno in (errno.EEXIST, errno.ENOTEMPTY):
+                continue
+            raise ValueError(
+                ".venv를 보존 이름으로 옮기지 못했음 — 이 폴더를 쓰는 앱·Codex·터미널을 모두 끄고 "
+                "다시 시도해 주세요. 기존 .venv는 지우지 않았습니다: " + str(e)
+            )
+        return {
+            "name": dest.name,
+            "path": str(dest),
+            "link": broken["path"],
+            "link_target": broken["link_target"],
+        }
+    raise ValueError(
+        ".venv를 보존 이름으로 옮기지 못했음 — 이 폴더에 보존본(.venv-broken-*)이 100개까지 "
+        "있습니다. 필요 없는 보존본을 지운 뒤 다시 시도해 주세요."
+    )
 
 
 def _version_tuple(text):
@@ -291,15 +366,36 @@ def ensure(project, find_links=None, no_index=False):
     venv_dir = project / ".venv"
     _check_venv_dir(venv_dir)
     vpy = venv_python(project)
+    preserved = None
+    if not vpy:
+        broken = _broken_venv_link(venv_dir)
+        if broken:
+            # A venv builder would refuse to write over the directory, and
+            # deleting the student's environment is never the answer: keep
+            # it under a new name and prepare a fresh one.
+            preserved = _preserve_broken_venv(venv_dir, broken)
     created = False
     if not vpy:
-        venv.EnvBuilder(with_pip=True, symlinks=os.name != "nt").create(venv_dir)
+        try:
+            venv.EnvBuilder(with_pip=True, symlinks=os.name != "nt").create(venv_dir)
+        except Exception as e:
+            if not preserved:
+                raise
+            return {
+                "status": "blocked",
+                "reason": "새 환경을 만들지 못했음 — 기존 .venv는 보존본(" + preserved["name"] + ")에 있습니다. 다시 시도해 주세요: " + str(e),
+                "preserved_venv": preserved,
+            }, 2
         vpy = venv_python(project)
         created = True
     if not vpy:
+        reason = "venv 생성 후 실행 파일을 찾지 못함: " + str(venv_dir)
+        if preserved:
+            reason += " — 기존 .venv는 보존본(" + preserved["name"] + ")에 있습니다."
         return {
             "status": "failed",
-            "reason": "venv 생성 후 실행 파일을 찾지 못함: " + str(venv_dir),
+            "reason": reason,
+            "preserved_venv": preserved,
         }, 1
     cmd = [
         str(vpy),
@@ -314,34 +410,58 @@ def ensure(project, find_links=None, no_index=False):
         cmd.append("--no-index")
     if find_links:
         cmd += ["--find-links", str(find_links)]
-    proc = subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        timeout=600,
-        env=_child_env(),
-    )
+    try:
+        proc = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=600,
+            env=_child_env(),
+        )
+    except Exception as e:
+        if not preserved:
+            raise
+        return {
+            "status": "blocked",
+            "reason": "pip 실행에 실패함 — 기존 .venv는 보존본(" + preserved["name"] + ")에 있습니다. 다시 시도해 주세요: " + str(e),
+            "preserved_venv": preserved,
+        }, 2
     verified = {}
     versions = {}
-    if proc.returncode == 0:
-        for d in deps:
-            if not _applicable(d):
-                continue
-            imported, version = _import_and_version(
-                vpy, d["import_name"], d["dist"]
-            )
-            verified[d["dist"]] = imported and spec_satisfied(
-                version, d["spec"], d["dist"]
-            ) is True
-            versions[d["dist"]] = version
+    try:
+        if proc.returncode == 0:
+            for d in deps:
+                if not _applicable(d):
+                    continue
+                imported, version = _import_and_version(
+                    vpy, d["import_name"], d["dist"]
+                )
+                verified[d["dist"]] = imported and spec_satisfied(
+                    version, d["spec"], d["dist"]
+                ) is True
+                versions[d["dist"]] = version
+    except Exception as e:
+        if not preserved:
+            raise
+        return {
+            "status": "blocked",
+            "reason": "새 환경의 의존성 검증을 마치지 못했음 — 기존 .venv는 보존본(" + preserved["name"] + ")에 있습니다. 다시 시도해 주세요: " + str(e),
+            "preserved_venv": preserved,
+        }, 2
     ok = proc.returncode == 0 and all(verified.values())
-    return {
+    reason = None
+    if not ok and preserved:
+        reason = "pip 설치 또는 의존성 확인에 실패함 — 기존 .venv는 보존본(" + preserved["name"] + ")에 있습니다."
+    result = {
         "status": "installed" if ok else "failed",
         "venv": str(venv_dir),
         "venv_python": str(vpy),
         "created": created,
+        # Null unless this run moved a broken venv aside; then the record
+        # names the folder so the app can tell the student where it went.
+        "preserved_venv": preserved,
         "pip_argv": cmd,
         "pip_exit": proc.returncode,
         "pip_stdout_tail": proc.stdout[-2000:],
@@ -349,7 +469,10 @@ def ensure(project, find_links=None, no_index=False):
         "installed_versions": versions,
         "verified_imports": verified,
         "requirements": str(REQUIREMENTS),
-    }, (0 if ok else 1)
+    }
+    if reason:
+        result["reason"] = reason
+    return result, (0 if ok else 1)
 
 
 def main(argv=None):
