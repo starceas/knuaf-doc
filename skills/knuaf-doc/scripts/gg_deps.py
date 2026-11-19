@@ -59,6 +59,20 @@ _SPEC = re.compile(
 _IDENT_PATH = re.compile(r"[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*")
 _OPS = (">=", "<=", "==", "!=", ">", "<")
 
+# What the student sees when a broken .venv was moved aside. The sentence is
+# FROZEN: no folder name, no path, no student text ever goes into it (lead
+# condition 2026-11-20), so it reads the same byte for byte on every run. The
+# folder name travels only as the machine value ``notices[].folder`` next to
+# it, and ``preserved_venv.name`` keeps carrying it for the app as before.
+VENV_PRESERVED_NOTICE = {
+    "code": "venv_preserved",
+    "message": (
+        "예전 준비 폴더가 끊어져 있어서 새로 만들었어요. "
+        "예전 폴더는 '.venv-broken-'으로 시작하는 이름으로 남겨 뒀어요. "
+        "필요 없으면 지워도 돼요."
+    ),
+}
+
 # Runs inside another interpreter: argv, not string interpolation, so the
 # declared module/dist names can never inject code.
 _PROBE = (
@@ -470,6 +484,15 @@ def ensure(project, find_links=None, no_index=False):
         "verified_imports": verified,
         "requirements": str(REQUIREMENTS),
     }
+    if ok and preserved:
+        # Student-facing notice: only a successful re-preparation says the old
+        # folder was kept. ``code`` is the machine key and ``folder`` the
+        # machine value; ``message`` is the frozen sentence above, so an app
+        # can show it verbatim instead of building Korean text of its own.
+        # Every other response keeps its exact key set (no ``notices`` key).
+        notice = dict(VENV_PRESERVED_NOTICE)
+        notice["folder"] = preserved["name"]
+        result["notices"] = [notice]
     if reason:
         result["reason"] = reason
     return result, (0 if ok else 1)
