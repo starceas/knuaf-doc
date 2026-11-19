@@ -62,7 +62,7 @@ DEFAULT_GROUP_CONTAINER_DIR = _default_workspace_dir()
 
 from gg_office_session import (
     WORD_APPLESCRIPT_TEMPLATE, EXCEL_APPLESCRIPT_TEMPLATE, SESSION_MARKER,
-    run_session, read_session, retain_job, cleanup_guard,
+    run_session, read_session, retain_job, cleanup_guard, staged_job_paths,
 )
 
 
@@ -588,13 +588,18 @@ def run_windows_com(kind: str, args: list[str], timeout: int = 90) -> subprocess
     timeout the same way subprocess.run(..., timeout=...) already bounds
     run_osascript on macOS. gg_office_win.py is Windows-only and is not
     imported here directly; it is only ever invoked as argv[0]=sys.executable.
+
+    Only a fresh staged job may be sent: the same path precondition the
+    macOS session applies is checked here, before the first journal write,
+    so a bad argument cannot leave a job journal (or touch any file) behind.
     """
     helper = Path(__file__).with_name("gg_office_win.py")
     if not helper.is_file():
         raise ValueError(f"Windows COM 헬퍼 스크립트 누락: {helper}")
+    work, _ = staged_job_paths(kind, args)
     cmd = [sys.executable, str(helper), kind] + [str(a) for a in args]
     # A killed/hung helper cannot prove document closure. Preserve staging.
-    job = Path(args[0]).parent.parent
+    job = work.parent.parent
     evidence = {"schema": "gg-office-session/v1", "app": kind,
                 "cleanup": "unknown", "reason": "windows_com_inflight",
                 "app_quit": "private_instance_only"}

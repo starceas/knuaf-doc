@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import sys
 
+from gg_office_session import staged_job_paths
 
 
 def _fail(message: str, code: int = 1) -> None:
@@ -140,12 +141,16 @@ def main(argv: list[str] | None = None) -> int:
     if len(argv) != 3:
         _fail("usage: gg_office_win.py <word|excel> <input_path> <pdf_out_path>", code=2)
     kind, input_path, pdf_path = argv
+    if kind not in {"word", "excel"}:
+        _fail(f"미지원 kind: {kind}", code=2)
+    try:
+        staged_job_paths(kind, [input_path, pdf_path])
+    except ValueError as exc:
+        _fail(str(exc), code=2)
     if kind == "word":
         run_word(input_path, pdf_path)
-    elif kind == "excel":
-        run_excel(input_path, pdf_path)
     else:
-        _fail(f"미지원 kind: {kind}", code=2)
+        run_excel(input_path, pdf_path)
     return 0
 
 
