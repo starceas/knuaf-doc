@@ -430,6 +430,114 @@ class OutlineTests(ContractCase):
                     core.apply(root, change, 0)
                 self.assertEqual((root / "project.json").read_bytes(), before)
 
+    # v0.6.1: a rejection whose repair step is fixed carries that step in
+    # the result ``detail``. The assistant only ever sees this stdout (the
+    # app keeps its own rejectLog), so the line must ride the CLI JSON.
+    # Both outline rejections share one prescription — the code says which
+    # check refused, the repair line is the same — so following it always
+    # lands on a commit (review 1: the old conflict wording pointed at the
+    # already-registered values, which a first, rejected request never has).
+    RECOVERY_HINT = (
+        "전공만 먼저 저장한 뒤, 학교 차례에 등록된 장 ID·경로로 장을 따로 다시 보내 주세요.")
+
+    def test_reject_stdout_carries_recovery_hint(self):
+        core = runtime("gg_core")
+        root = self.make_project()
+        change = self.change(root)
+        write_text(root, "sections/sec-01.md", core.START + "\n" + core.END)
+        change["ops"].append(section_op("sec-01", "서론", "sections/sec-01.md",
+                                        1, claims=[], status="empty"))
+        write_text(root, "change.json", json.dumps(change, ensure_ascii=False))
+        before = self._tree_bytes(root)
+        result = subprocess.run(
+            [sys.executable, "-B", str(SCRIPTS / "gg.py"), "apply", str(root),
+             "--change", str(root / "change.json"), "--expected-revision", "0"],
+            capture_output=True, text=True)
+        self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+        self.assertEqual(result.stderr, "")
+        payload = json.loads(result.stdout)
+        self.assertEqual((payload["commit_state"], payload["reason"]),
+                         ("not_committed", "invalid_change"))
+        self.assertEqual(payload["detail"],
+                         {"code": "outline_caller_sections_incomplete",
+                          "next": self.RECOVERY_HINT})
+        self.assertEqual(self._tree_bytes(root), before)
+
+    def test_section_conflict_carries_recovery_hint(self):
+        core, outline = runtime("gg_core"), runtime("gg_outline")
+        profile = json.loads(outline.CATALOG.read_text(
+            encoding="utf-8"))["profiles"]["specialty_crops"]
+        root = self.make_project()
+        change = self.change(root)
+        for index, node in enumerate(profile["sections"]):
+            write_text(root, node["path"], core.START + "\n" + core.END)
+            change["ops"].append(section_op(
+                node["node_id"], node["title"], node["path"], node["order"],
+                claims=[], status="empty" if index else "drafting"))
+        before = self._tree_bytes(root)
+        with self.assertRaises(core.OperationError) as caught:
+            core.apply(root, change, 0)
+        result = caught.exception.result
+        self.assertEqual((result["commit_state"], result["reason"]),
+                         ("not_committed", "invalid_change"))
+        self.assertEqual(result["detail"],
+                         {"code": "outline_caller_section_conflict",
+                          "next": self.RECOVERY_HINT})
+        self.assertEqual(self._tree_bytes(root), before)
+
+    def test_following_the_hint_after_reject_lands_on_a_commit(self):
+        # 권고3: 안내를 그대로 따랐을 때 실제로 저장까지 가는지 — 거절 →
+        # 전공 단독 저장 → 등록된 장의 본문 갱신. 첫 요청은 저장되지 않으므로
+        # 조회할 등록 장이 없고, 안내가 가리키는 값은 '앞으로 등록될' 값이다.
+        core = runtime("gg_core")
+        root = self.make_project()
+        bundled = self.change(root)
+        write_text(root, "sections/sec-01.md", core.START + "\n" + core.END)
+        bundled["ops"].append(section_op("sec-01", "서론", "sections/sec-01.md",
+                                         1, claims=[], status="empty"))
+        before = self._tree_bytes(root)
+        with self.assertRaises(core.OperationError) as caught:
+            core.apply(root, bundled, 0)
+        self.assertEqual(caught.exception.result["detail"]["next"], self.RECOVERY_HINT)
+        self.assertEqual(self._tree_bytes(root), before)
+        # 안내 1단계: 전공만 먼저 저장한다.
+        p = core.apply(root, self.change(root, request="bind-only"), 0)
+        self.assertEqual(sorted(p["sections"]), sorted(
+            [n["node_id"] for n in json.loads(runtime("gg_outline").CATALOG.read_text(
+                encoding="utf-8"))["profiles"]["specialty_crops"]["sections"]]))
+        # 안내 2단계: 등록된 장 ID·경로를 그대로 두고 본문만 보낸다.
+        registered = p["sections"]["farm_status"]
+        write_text(root, registered["path"], core.START + "\n학생의 실제 초안\n" + core.END)
+        p = core.apply(root, {"request_id": "chapter", "ops": [section_op(
+            registered["id"], registered["title"], registered["path"],
+            registered["order"], claims=[])]}, 1)
+        self.assertEqual(p["revision"], 2)
+        self.assertEqual(core.draft((root / registered["path"]).read_text(
+            encoding="utf-8")), "학생의 실제 초안")
+
+    def test_recovery_hint_is_code_defined_not_caller_text(self):
+        core = runtime("gg_core")
+        root = self.make_project()
+        expected = {"code": "outline_caller_sections_incomplete",
+                    "next": self.RECOVERY_HINT}
+        self.assertEqual(expected, core._diag_safe(
+            root, {"code": "outline_caller_sections_incomplete"}))
+        # 호출자가 같은 키로 다른 문장을 실어도 고정 문장만 남는다.
+        self.assertEqual(expected, core._diag_safe(
+            root, {"code": "outline_caller_sections_incomplete",
+                   "next": "CALLER-SUPPLIED-TEXT"}))
+        # 다른 사유 코드도 같은 처방 한 줄을 받는다(사유는 code가 구별).
+        self.assertEqual(
+            {"code": "outline_caller_section_conflict", "next": self.RECOVERY_HINT},
+            core._diag_safe(root, {"code": "outline_caller_section_conflict",
+                                   "next": "CALLER-SUPPLIED-TEXT"}))
+        # 안내가 정의되지 않은 코드에는 키가 붙지 않는다.
+        self.assertEqual(
+            {"code": "duplicate_path"},
+            core._diag_safe(root, {"code": "duplicate_path",
+                                   "next": self.RECOVERY_HINT}))
+        self.assertIsNone(core._diag_safe(root, {"next": self.RECOVERY_HINT}))
+
     def test_reads_and_unrelated_apply_do_not_seed_legacy(self):
         core, outline = runtime("gg_core"), runtime("gg_outline")
         root = self.make_project()
