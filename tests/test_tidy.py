@@ -1,6 +1,7 @@
 """Output-hygiene contract: tidy preview/apply over ``.gg-work`` runs."""
 
 import contextlib
+import errno
 import io
 import json
 import os
@@ -8,6 +9,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 from tests._harness import ContractCase, runtime
 
@@ -358,24 +360,46 @@ class TidyTests(ContractCase):
             ),
             encoding="utf-8",
         )
-        build.chmod(0)
-        try:
+        if sys.platform != "win32":
+            build.chmod(0)
             try:
-                list(build.iterdir())
-            except PermissionError:
-                pass
-            else:
-                self.skipTest("permission failure not reproducible")
+                try:
+                    list(build.iterdir())
+                except PermissionError:
+                    pass
+                else:
+                    self.skipTest("permission failure not reproducible")
 
+                preview = self.tidy.tidy(root)
+                self.assertTrue(preview["scan_errors"])
+                applied = self.tidy.tidy(root, apply=True)
+                self.assertEqual("blocked", applied["status"])
+                self.assertEqual("reference_scan_incomplete", applied["reason"])
+                self.assertFalse(applied["applied"])
+                self.assertTrue((run / "trial.txt").is_file())
+            finally:
+                build.chmod(0o700)
+            return
+
+        # Windows chmod cannot deny enumeration. Fail only the OS call for
+        # this directory so the real os.walk onerror and tidy plan still run.
+        build = build.resolve()
+        scandir = os.scandir
+
+        def deny_build(path):
+            if not isinstance(path, int) and Path(os.fsdecode(path)) == build:
+                raise PermissionError(errno.EACCES, "Permission denied", str(build))
+            return scandir(path)
+
+        with mock.patch.object(os, "scandir", side_effect=deny_build):
             preview = self.tidy.tidy(root)
-            self.assertTrue(preview["scan_errors"])
+            self.assertIn({"path": str(build), "reason": f"scan_failed:{errno.EACCES}"},
+                          preview["scan_errors"])
             applied = self.tidy.tidy(root, apply=True)
-            self.assertEqual("blocked", applied["status"])
-            self.assertEqual("reference_scan_incomplete", applied["reason"])
-            self.assertFalse(applied["applied"])
-            self.assertTrue((run / "trial.txt").is_file())
-        finally:
-            build.chmod(0o700)
+        self.assertEqual("blocked", applied["status"])
+        self.assertEqual("reference_scan_incomplete", applied["reason"])
+        self.assertFalse(applied["applied"])
+        self.assertEqual("trial", (run / "trial.txt").read_text(encoding="utf-8"))
 
     def test_names_outside_the_run_rule_are_preserved(self):
         root = self.make_project()
