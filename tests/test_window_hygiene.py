@@ -25,7 +25,14 @@ except ModuleNotFoundError as exc:
     fcntl = None
 
 
-@unittest.skipUnless(fcntl is not None, "requires native POSIX fcntl locks; Office automation is not exercised")
+# Darwin shared-Office AppleScript session and per-app fcntl guard tests
+# run only where those guards exist. The policy-hold, unreadable-journal
+# and failure-after-close tests below are not guarded: they check job
+# preservation that win32 has too.
+_POSIX_OFFICE_REASON = "requires native POSIX fcntl locks; Office automation is not exercised"
+darwin_office_only = unittest.skipUnless(fcntl is not None, _POSIX_OFFICE_REASON)
+
+
 class OfficeSessionTests(unittest.TestCase):
     kind = "word"
     def setUp(self):
@@ -67,6 +74,7 @@ class OfficeSessionTests(unittest.TestCase):
             self.assertNotIn("quit", script)
         self.assertLessEqual(raw.call_count, 2)
 
+    @darwin_office_only
     def test_clean_and_dirty_existing_documents_block_before_launch_or_open(self):
         for dirty in (False, True):
             with self.subTest(dirty=dirty):
@@ -82,6 +90,7 @@ class OfficeSessionTests(unittest.TestCase):
                 self.assertEqual(raw.call_count, 1)
                 self.assertEqual(res.office_session["cleanup"], "not_attempted")
 
+    @darwin_office_only
     def test_unknown_inventory_blocks(self):
         for response in (self.result(""), self.result("bad", rc=1),
                          self.result("GG_OFFICE_INVENTORY|2")):
@@ -90,6 +99,7 @@ class OfficeSessionTests(unittest.TestCase):
                 self.assertEqual(self.run_job(raw).returncode, 2)
                 self.assertEqual(raw.call_count, 1)
 
+    @darwin_office_only
     def test_open_update_save_export_dirty_and_foreign_errors_preserve_job(self):
         cases = [("opening", "open_failed"), ("updating", "field_error"),
                  ("saving", "save_failed"), ("exporting", "pdf_failed"),
@@ -108,6 +118,7 @@ class OfficeSessionTests(unittest.TestCase):
                 self.assertTrue(self.session.retain_job(work.parent.parent))
                 self.assert_no_compensation(raw)
 
+    @darwin_office_only
     def test_close_error_is_unknown_and_blocks_next_workspace(self):
         raw = self.transport(self.result(rc=1, stdout="", stderr=
             "GG_OFFICE_SESSION|closing|owned_document_still_open"))
@@ -121,6 +132,7 @@ class OfficeSessionTests(unittest.TestCase):
         next_raw.assert_not_called()
         self.assertTrue(self.work.exists())
 
+    @darwin_office_only
     def test_timeout_does_not_cleanup_or_allow_next_job(self):
         for when in ("preflight", "engine"):
             with self.subTest(when=when):
@@ -139,12 +151,14 @@ class OfficeSessionTests(unittest.TestCase):
                 self.assertEqual(self.run_job(next_raw).returncode, 2)
                 next_raw.assert_not_called()
 
+    @darwin_office_only
     def test_appleevent_timeout_is_unknown_even_when_script_returned(self):
         raw = self.transport(self.result(rc=1, stdout="", stderr=
             "GG_OFFICE_SESSION|opening|AppleEvent timed out (-1712)"))
         self.assertEqual(self.run_job(raw).office_session["cleanup"], "unknown")
         self.assert_no_compensation(raw)
 
+    @darwin_office_only
     def test_prepare_failure_records_unknown_and_preserves(self):
         raw = mock.Mock(return_value=self.result("GG_OFFICE_INVENTORY|0"))
         prepare = mock.Mock(side_effect=RuntimeError("launch failure"))
@@ -155,6 +169,7 @@ class OfficeSessionTests(unittest.TestCase):
         self.assertEqual(raw.call_count, 1)
         self.assertTrue(self.work.exists())
 
+    @darwin_office_only
     def test_unconfirmed_zero_exit_is_not_success(self):
         raw = self.transport(self.result("Word process completed"))
         res = self.run_job(raw)
@@ -162,6 +177,7 @@ class OfficeSessionTests(unittest.TestCase):
         self.assertEqual(res.office_session["cleanup"], "unknown")
         self.assert_no_compensation(raw)
 
+    @darwin_office_only
     def test_success_records_document_close_but_no_app_quit(self):
         raw = self.transport()
         res = self.run_job(raw)
@@ -172,6 +188,7 @@ class OfficeSessionTests(unittest.TestCase):
         self.assertEqual(self.session.read_session(self.work.parent.parent), res.office_session)
         self.assert_no_compensation(raw)
 
+    @darwin_office_only
     def test_other_cli_cannot_enter_same_app(self):
         import fcntl
         self.guard.mkdir()
@@ -184,6 +201,7 @@ class OfficeSessionTests(unittest.TestCase):
         self.assertEqual(res.office_session["reason"], "office_session_busy")
         raw.assert_not_called()
 
+    @darwin_office_only
     def test_app_locks_are_independent(self):
         import fcntl
         self.guard.mkdir()
@@ -195,6 +213,7 @@ class OfficeSessionTests(unittest.TestCase):
         self.assertEqual(self.run_job(raw, kind="word").returncode, 0)
         self.assertEqual(raw.call_count, 2)
 
+    @darwin_office_only
     def test_inflight_crash_and_malformed_lock_fail_closed(self):
         self.guard.mkdir()
         for content in ('{"state":"inflight"}', '{"state":"unknown"}', '{'):
@@ -206,13 +225,30 @@ class OfficeSessionTests(unittest.TestCase):
 
 
     def test_failure_after_confirmed_close_reports_cleanup_separately(self):
-        res = self.run_job(self.transport())
+        job = self.work.parent.parent
+        if sys.platform == "win32":
+            # win32: the real COM transport writes the job journal around a
+            # helper that exits 0 (closure confirmed); the PDF check fails after.
+            helper = mock.Mock(return_value=self.result("", rc=0))
+            with mock.patch.object(self.office.subprocess, "run", helper):
+                res = self.office.run_windows_com(self.kind, [self.work, self.pdf], timeout=9)
+            self.assertEqual(res.returncode, 0)
+            self.assertEqual(helper.call_args.args[0][2:],
+                             [self.kind, str(self.work), str(self.pdf)])
+            session = json.loads((job / "office_session.json").read_text(encoding="utf-8"))
+            self.assertEqual((session["cleanup"], session["reason"]),
+                             ("closed", "closed_confirmed"))
+        else:
+            res = self.run_job(self.transport())
+            self.assertEqual(res.office_session["cleanup"], "closed")
         fail = {"status": "fail", "error": "PDF validation failed"}
-        self.office._write_failure_receipt(self.work.parent.parent, fail)
+        self.office._write_failure_receipt(job, fail)
         self.assertEqual(fail["status"], "fail")
         self.assertEqual(fail["office_session"]["cleanup"], "closed")
+        self.assertEqual(fail["office_session"]["reason"], "closed_confirmed")
         self.assertNotIn("reason", fail)
-        self.assertEqual(res.office_session["cleanup"], "closed")
+        written = json.loads((job / "failure_receipt.json").read_text(encoding="utf-8"))
+        self.assertEqual(written, fail)
 
     def test_policy_hold_retains_live_job_but_removes_closed_job(self):
         mc = runtime("gg_major_contract")
@@ -232,7 +268,22 @@ class OfficeSessionTests(unittest.TestCase):
         job = self.work.parent.parent
         (job / "office_session.json").write_text("{", encoding="utf-8")
         self.assertTrue(self.session.retain_job(job))
+        # The real cleanup command on a valid job ID refuses the same journal.
+        ws = self.root / "ws"
+        named = ws / "job-0123456789ab-1"
+        (named / "output").mkdir(parents=True)
+        (named / "output" / "same-name.docx").write_bytes(b"synthetic staged file")
+        (named / "office_session.json").write_text("{", encoding="utf-8")
+        listing = self.office.list_jobs(ws)
+        self.assertEqual([j["cleanup_allowed"] for j in listing["jobs"]], [False])
+        result = self.office.clean_jobs([named.name], ws)
+        self.assertEqual(result["deleted"], [])
+        self.assertEqual(result["refused"],
+                         [{"id": named.name, "reason": "office_session_not_closed"}])
+        self.assertEqual((named / "output" / "same-name.docx").read_bytes(),
+                         b"synthetic staged file")
 
+    @darwin_office_only
     def test_original_or_existing_pdf_cannot_enter_transport(self):
         raw = mock.Mock()
         with self.assertRaises(ValueError):
@@ -249,12 +300,14 @@ class DarwinExcelSessionTests(OfficeSessionTests):
 
     kind = "excel"
 
+    @darwin_office_only
     def test_prepare_failure_records_unknown_and_preserves(self):
         prepare = mock.Mock(side_effect=RuntimeError("Word must not launch for Excel"))
         result = self.run_job(self.transport(), prepare=prepare)
         self.assertEqual(result.office_session["cleanup"], "closed")
         prepare.assert_not_called()
 
+    @darwin_office_only
     def test_existing_document_reason_is_machine_readable(self):
         raw = mock.Mock(return_value=self.result("GG_OFFICE_INVENTORY|1"))
         result = self.run_job(raw)
