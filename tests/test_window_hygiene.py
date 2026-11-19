@@ -13,6 +13,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import zipfile
 from unittest import mock
 
 from tests._harness import ContractCase, bind_major, runtime
@@ -74,6 +75,147 @@ class OfficeSessionTests(unittest.TestCase):
             self.assertNotIn("quit", script)
         self.assertLessEqual(raw.call_count, 2)
 
+    # --- win32 counterparts ---------------------------------------------
+    # The COM transport lives behind subprocess.run, so the Windows branch
+    # replaces only that seam with an adapter that runs the real
+    # gg_office_win entry (run_word/run_excel) in this process against a
+    # synthetic pythoncom/win32com.  No platform is faked: sys.platform is
+    # read, never written.
+    WINDOWS_PROG = {"word": "Word.Application", "excel": "Excel.Application"}
+    WINDOWS_STAGES = {"word": ("open", "repaginate", "fields", "save", "pdf"),
+                      "excel": ("open", "calculate", "save", "pdf")}
+
+    def windows_job(self, name):
+        """A real (minimal) OOXML package; the product stages it for real."""
+        folder = Path(self.root).resolve() / ("win-" + name)
+        folder.mkdir(parents=True)
+        suffix = ".docx" if self.kind == "word" else ".xlsx"
+        path = folder / ("same-name" + suffix)
+        with zipfile.ZipFile(path, "w") as archive:
+            archive.writestr("[Content_Types].xml", "<Types/>")
+        return path
+
+    def windows_helper(self, calls, *, fault=None, foreign=False):
+        """subprocess.run stand-in carrying the helper's own exit status.
+
+        ``fault`` raises once at a named COM stage; ``foreign`` leaves a
+        document this run never opened in the app, so the compensation close
+        cannot empty the collection.
+        """
+        from types import SimpleNamespace
+        win = runtime("gg_office_win")
+        collection = SimpleNamespace(Count=1 if foreign else 0)
+
+        def stage(name):
+            def recorder(*args, **kwargs):
+                calls.append(name)
+                if fault == name:
+                    raise RuntimeError("synthetic " + name + " failure")
+            return recorder
+
+        def opened(*args, **kwargs):
+            calls.append("open")
+            if fault == "open":
+                raise RuntimeError("synthetic open failure")
+            collection.Count += 1
+            return document
+
+        def close(*args, **kwargs):
+            calls.append("close")
+            if fault == "close":
+                raise RuntimeError("synthetic close failure")
+            # A foreign document still open keeps the app alive: no Quit.
+            collection.Count = 1 if foreign else 0
+
+        cell = SimpleNamespace(Address="$A$1")
+        sheet = SimpleNamespace(Name="synthetic",
+                                UsedRange=SimpleNamespace(Cells=[cell]))
+        document = SimpleNamespace(
+            Repaginate=stage("repaginate"),
+            Fields=SimpleNamespace(Update=stage("fields")),
+            Save=stage("save"), ExportAsFixedFormat=stage("pdf"),
+            Close=close, Worksheets=[sheet])
+        collection.Open = opened
+        app = SimpleNamespace(
+            Documents=collection, Workbooks=collection, Version="synthetic",
+            CalculateFullRebuild=stage("calculate"),
+            WorksheetFunction=SimpleNamespace(IsError=lambda value: False),
+            Quit=lambda: calls.append("quit"))
+
+        def dispatch(identifier):
+            calls.append(("private", identifier))
+            return app
+
+        client = SimpleNamespace(DispatchEx=dispatch)
+        modules = {"pythoncom": SimpleNamespace(CoInitialize=lambda: None,
+                                                CoUninitialize=lambda: None),
+                   "win32com": SimpleNamespace(client=client),
+                   "win32com.client": client}
+        entry = getattr(win, "run_" + self.kind)
+
+        def run(cmd, **kwargs):
+            out, err = io.StringIO(), io.StringIO()
+            with mock.patch.dict(sys.modules, modules):
+                with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                    try:
+                        entry(cmd[3], cmd[4])
+                    except SystemExit as exc:
+                        code = exc.code if isinstance(exc.code, int) else 1
+                    else:
+                        code = 0
+            return subprocess.CompletedProcess(cmd, code, out.getvalue(), err.getvalue())
+
+        return run
+
+    @contextlib.contextmanager
+    def windows_product(self, run):
+        """Patch only the policy seam and the process seam."""
+        with mock.patch.object(self.office, "_authorize_office", return_value=[]), \
+             mock.patch.object(self.office, "_preflight_excel_profile",
+                               return_value=(None, "legacy_unprofiled_render")), \
+             mock.patch.object(self.office.subprocess, "run", run):
+            yield
+
+    def windows_process(self, work, name, **kwargs):
+        """Run the real product entry on this platform; return (receipt, job_dir).
+
+        The job folder is the product's own ``stage_job`` output, found by the
+        receipt's own ``job_id`` — never guessed from a path shape.
+        """
+        out = Path(self.root).resolve() / ("win-out-" + name)
+        receipt = getattr(self.office, "process_" + self.kind)(
+            work, out, timeout=9, **kwargs)
+        ws = Path(kwargs.get("workspace") or self.windows_workspace()).resolve()
+        return receipt, ws / receipt["job_id"]
+
+    def windows_workspace(self):
+        ws = Path(self.root).resolve() / "ws"
+        ws.mkdir(exist_ok=True)
+        return ws
+
+    def assert_windows_preserved(self, res, job, calls, *, reason="windows_com_failed"):
+        """Every Windows failure keeps a fresh job, its bytes and its journal.
+
+        The journal is written by run_windows_com around the helper, so a
+        nonzero helper exit must leave ``unknown``; cleanup must refuse; the
+        app instance must be the private DispatchEx one, never shared.
+        """
+        journal = json.loads((job / "office_session.json").read_text(encoding="utf-8"))
+        self.assertEqual((journal["app"], journal["cleanup"], journal["reason"]),
+                         (self.kind, "unknown", reason))
+        self.assertEqual(journal["app_quit"], "private_instance_only")
+        if calls is not None:
+            self.assertEqual(calls[0], ("private", self.WINDOWS_PROG[self.kind]))
+        self.assertTrue(self.session.retain_job(job))
+        receipt = json.loads((job / "failure_receipt.json").read_text(encoding="utf-8"))
+        self.assertEqual((receipt["status"], receipt["job_id"]), ("fail", job.name))
+        self.assertEqual(receipt["office_session"]["reason"], reason)
+        cleaned = self.office.clean_jobs([job.name], job.parent)
+        self.assertEqual(cleaned["deleted"], [])
+        self.assertEqual(cleaned["refused"],
+                         [{"id": job.name, "reason": "office_session_not_closed"}])
+        return journal
+
     @darwin_office_only
     def test_clean_and_dirty_existing_documents_block_before_launch_or_open(self):
         for dirty in (False, True):
@@ -99,57 +241,189 @@ class OfficeSessionTests(unittest.TestCase):
                 self.assertEqual(self.run_job(raw).returncode, 2)
                 self.assertEqual(raw.call_count, 1)
 
-    @darwin_office_only
     def test_open_update_save_export_dirty_and_foreign_errors_preserve_job(self):
-        cases = [("opening", "open_failed"), ("updating", "field_error"),
-                 ("saving", "save_failed"), ("exporting", "pdf_failed"),
-                 ("checking_saved", "owned_document_dirty"),
-                 ("updating", "foreign_or_missing_document"),
-                 ("exporting", "owned_path_not_found")]
-        for stage, reason in cases:
-            with self.subTest(stage=stage, reason=reason):
-                work, pdf = self.job("failure-" + stage + "-" + reason)
-                raw = self.transport(self.result(rc=1, stdout="", stderr=
-                    "execution error: GG_OFFICE_SESSION|" + stage + "|" + reason))
-                res = self.run_job(raw, work=work, pdf=pdf)
-                self.assertEqual(res.returncode, 1)
-                self.assertEqual(res.office_session["cleanup"], "preserved")
-                self.assertTrue(work.exists())
-                self.assertTrue(self.session.retain_job(work.parent.parent))
-                self.assert_no_compensation(raw)
+        if sys.platform != "win32":
+            cases = [("opening", "open_failed"), ("updating", "field_error"),
+                     ("saving", "save_failed"), ("exporting", "pdf_failed"),
+                     ("checking_saved", "owned_document_dirty"),
+                     ("updating", "foreign_or_missing_document"),
+                     ("exporting", "owned_path_not_found")]
+            for stage, reason in cases:
+                with self.subTest(stage=stage, reason=reason):
+                    work, pdf = self.job("failure-" + stage + "-" + reason)
+                    raw = self.transport(self.result(rc=1, stdout="", stderr=
+                        "execution error: GG_OFFICE_SESSION|" + stage + "|" + reason))
+                    res = self.run_job(raw, work=work, pdf=pdf)
+                    self.assertEqual(res.returncode, 1)
+                    self.assertEqual(res.office_session["cleanup"], "preserved")
+                    self.assertTrue(work.exists())
+                    self.assertTrue(self.session.retain_job(work.parent.parent))
+                    self.assert_no_compensation(raw)
+            return
 
-    @darwin_office_only
+        ws = self.windows_workspace()
+        prog = self.WINDOWS_PROG[self.kind]
+        jobs = []
+        for fault in self.WINDOWS_STAGES[self.kind]:
+            with self.subTest(fault=fault):
+                work = self.windows_job("failure-" + fault)
+                calls = []
+                with self.windows_product(self.windows_helper(calls, fault=fault)):
+                    res, job = self.windows_process(
+                        work, "failure-" + fault, workspace=ws)
+                jobs.append(job.name)
+                self.assertEqual(res["returncode"], 1)
+                # A fresh job gets its own private instance; the faulted
+                # stage is never followed by save/export work, only by the
+                # compensation close and an instance-scoped quit.
+                self.assertEqual(calls[0], ("private", prog))
+                self.assertIn(fault, calls)
+                self.assertEqual([c for c in calls[calls.index(fault) + 1:]
+                                  if c not in ("close", "quit")], [])
+                self.assert_windows_preserved(res, job, calls)
+                # The recovery copy still carries the caller's bytes.
+                staged = ws / res["staged_working_file"]
+                self.assertEqual(staged.read_bytes(), work.read_bytes())
+
+        # A document this run never opened is not touched, and it keeps the
+        # instance alive: the compensation close cannot empty the collection.
+        with self.subTest(foreign=True):
+            work = self.windows_job("failure-foreign")
+            calls = []
+            with self.windows_product(self.windows_helper(
+                    calls, fault="save", foreign=True)):
+                res, job = self.windows_process(work, "failure-foreign", workspace=ws)
+            self.assertEqual(res["returncode"], 1)
+            self.assertIn("close", calls)
+            self.assertNotIn("quit", calls)
+            self.assert_windows_preserved(res, job, calls)
+            staged = ws / res["staged_working_file"]
+            self.assertEqual(staged.read_bytes(), work.read_bytes())
+
+        # One batch, one app: after the first failure the second file of the
+        # same app is skipped rather than re-entering the instance.
+        with self.subTest(batch=True):
+            first = self.windows_job("batch-first")
+            second = self.windows_job("batch-second")
+            calls = []
+            with self.windows_product(self.windows_helper(calls, fault="save")):
+                batch = self.office.process_batch(
+                    [first, second], Path(self.root).resolve() / "batch-out",
+                    timeout=9, workspace=ws)
+            self.assertEqual([r["status"] for r in batch["results"]],
+                             ["fail", "skipped"])
+            self.assertEqual([c for c in calls if isinstance(c, tuple)],
+                             [("private", prog)])
+            batch_job = batch["results"][0]["job_id"]
+            self.assertNotIn(batch_job, jobs)
+            self.assert_windows_preserved(batch["results"][0], ws / batch_job, calls)
+            staged = ws / batch["results"][0]["staged_working_file"]
+            self.assertEqual(staged.read_bytes(), first.read_bytes())
+
     def test_close_error_is_unknown_and_blocks_next_workspace(self):
-        raw = self.transport(self.result(rc=1, stdout="", stderr=
-            "GG_OFFICE_SESSION|closing|owned_document_still_open"))
-        res = self.run_job(raw)
-        self.assertEqual(res.office_session["cleanup"], "unknown")
-        second_work, second_pdf = self.job("second")
-        next_raw = mock.Mock()
-        second = self.run_job(next_raw, work=second_work, pdf=second_pdf)
-        self.assertEqual(second.returncode, 2)
-        self.assertEqual(second.office_session["reason"], "previous_office_session_unknown")
-        next_raw.assert_not_called()
-        self.assertTrue(self.work.exists())
+        if sys.platform != "win32":
+            raw = self.transport(self.result(rc=1, stdout="", stderr=
+                "GG_OFFICE_SESSION|closing|owned_document_still_open"))
+            res = self.run_job(raw)
+            self.assertEqual(res.office_session["cleanup"], "unknown")
+            second_work, second_pdf = self.job("second")
+            next_raw = mock.Mock()
+            second = self.run_job(next_raw, work=second_work, pdf=second_pdf)
+            self.assertEqual(second.returncode, 2)
+            self.assertEqual(second.office_session["reason"], "previous_office_session_unknown")
+            next_raw.assert_not_called()
+            self.assertTrue(self.work.exists())
+            return
 
-    @darwin_office_only
+        ws = self.windows_workspace()
+        work = self.windows_job("close-error")
+        calls = []
+        with self.windows_product(self.windows_helper(calls, fault="close")):
+            res, job = self.windows_process(work, "close-error", workspace=ws)
+        self.assertEqual(res["returncode"], 1)
+        # The compensation close is retried once and the failure is final;
+        # a document that never closed keeps the instance alive (no Quit).
+        self.assertEqual(calls.count("close"), 2)
+        self.assertNotIn("quit", calls)
+        self.assert_windows_preserved(res, job, calls)
+        staged = ws / res["staged_working_file"]
+        self.assertEqual(staged.read_bytes(), work.read_bytes())
+        journal = (job / "office_session.json").read_bytes()
+
+        # Windows has no shared session to block: the next call gets its own
+        # job folder and its own private instance, never the unknown one.
+        again = self.windows_job("close-error-next")
+        next_calls = []
+        with self.windows_product(self.windows_helper(next_calls, fault="save")):
+            second, second_job = self.windows_process(
+                again, "close-error-next", workspace=ws)
+        self.assertEqual(second["returncode"], 1)
+        self.assertNotEqual(second["job_id"], res["job_id"])
+        self.assertEqual(next_calls[0], ("private", self.WINDOWS_PROG[self.kind]))
+        # The first job's evidence and staged bytes are untouched.
+        self.assertEqual((job / "office_session.json").read_bytes(), journal)
+        self.assertEqual(staged.read_bytes(), work.read_bytes())
+        self.assertTrue(self.session.retain_job(job))
+        self.assertTrue(self.session.retain_job(second_job))
+
     def test_timeout_does_not_cleanup_or_allow_next_job(self):
-        for when in ("preflight", "engine"):
-            with self.subTest(when=when):
-                # Separate guard files for independent timeout scenarios.
-                self.guard = self.root / ("guards-" + when)
-                self.work, self.pdf = self.job("timeout-" + when)
-                replies = [TimeoutError("synthetic hung read")] if when == "preflight" else [
-                    self.result("GG_OFFICE_INVENTORY|0"), TimeoutError("synthetic hung event")]
-                raw = mock.Mock(side_effect=replies)
-                with self.assertRaises(TimeoutError) as caught:
-                    self.run_job(raw)
-                self.assertEqual(caught.exception.office_session["cleanup"], "unknown")
-                self.assertTrue(self.work.exists())
-                self.assert_no_compensation(raw)
-                next_raw = mock.Mock()
-                self.assertEqual(self.run_job(next_raw).returncode, 2)
-                next_raw.assert_not_called()
+        if sys.platform != "win32":
+            for when in ("preflight", "engine"):
+                with self.subTest(when=when):
+                    # Separate guard files for independent timeout scenarios.
+                    self.guard = self.root / ("guards-" + when)
+                    self.work, self.pdf = self.job("timeout-" + when)
+                    replies = [TimeoutError("synthetic hung read")] if when == "preflight" else [
+                        self.result("GG_OFFICE_INVENTORY|0"), TimeoutError("synthetic hung event")]
+                    raw = mock.Mock(side_effect=replies)
+                    with self.assertRaises(TimeoutError) as caught:
+                        self.run_job(raw)
+                    self.assertEqual(caught.exception.office_session["cleanup"], "unknown")
+                    self.assertTrue(self.work.exists())
+                    self.assert_no_compensation(raw)
+                    next_raw = mock.Mock()
+                    self.assertEqual(self.run_job(next_raw).returncode, 2)
+                    next_raw.assert_not_called()
+            return
+
+        ws = self.windows_workspace()
+        work = self.windows_job("timeout")
+        entered = []
+
+        def hang(cmd, **kwargs):
+            # Entered with the journal already inflight, then killed by the
+            # parent's subprocess timeout before the helper can report.
+            job_dir = Path(cmd[3]).parent.parent
+            entered.append(json.loads(
+                (job_dir / "office_session.json").read_text(encoding="utf-8")))
+            raise subprocess.TimeoutExpired(cmd, kwargs.get("timeout", 9))
+
+        with self.windows_product(hang):
+            res, job = self.windows_process(work, "timeout", workspace=ws)
+        # The journal was already inflight the moment the helper was entered.
+        self.assertEqual(len(entered), 1)
+        self.assertEqual((entered[0]["cleanup"], entered[0]["reason"]),
+                         ("unknown", "windows_com_inflight"))
+        self.assertEqual(res["returncode"], -1712)
+        self.assertEqual((res["office_session"]["cleanup"],
+                          res["office_session"]["reason"]),
+                         ("unknown", "windows_com_inflight"))
+        self.assert_windows_preserved(res, job, None, reason="windows_com_inflight")
+        staged = ws / res["staged_working_file"]
+        self.assertEqual(staged.read_bytes(), work.read_bytes())
+
+        # The timed-out job is never re-entered: the next call is a new job
+        # driven by its own private instance.
+        again = self.windows_job("timeout-next")
+        calls = []
+        with self.windows_product(self.windows_helper(calls, fault="save")):
+            second, second_job = self.windows_process(
+                again, "timeout-next", workspace=ws)
+        self.assertNotEqual(second["job_id"], res["job_id"])
+        self.assertEqual(calls[0], ("private", self.WINDOWS_PROG[self.kind]))
+        self.assertEqual(staged.read_bytes(), work.read_bytes())
+        self.assertTrue(work.exists())
+        self.assertTrue(self.session.retain_job(second_job))
 
     @darwin_office_only
     def test_appleevent_timeout_is_unknown_even_when_script_returned(self):

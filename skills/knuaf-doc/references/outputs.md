@@ -77,6 +77,8 @@ macOS Excel은 기존 전공 권한·재무 프로필 검증 뒤, 세션 가드 
 
 `scripts/gg_office.py word|excel`은 원본을 불변으로 격리 스테이징하여 변환한다. macOS는 Office 전용 그룹 컨테이너(`~/Library/Group Containers/UBF8T346G9.Office/ginseng-goat/`), Windows는 사용자 로컬 앱 데이터의 `ginseng-goat/office-jobs`를 사용한다. Windows는 `pywin32>=306`과 실제 데스크톱 Office가 필요하며 `DispatchEx` 전용 인스턴스만 사용한다. 자기 문서가 닫혀 해당 인스턴스의 문서 수가 0일 때만 종료한다. Excel 저장 후 오류 셀이 있으면 PDF를 발행하지 않는다. 타임아웃·COM 실패로 닫힘을 증명하지 못한 작업은 보존한다.
 
+Windows에서 실패 뒤 지키는 것과 지키지 않는 것은 macOS와 다르다. Windows는 작업마다 새 작업 폴더와 새 전용 인스턴스를 쓰고, 저장·닫기 실패·시간 초과·COM 실패가 나면 그 작업을 결과 불명(`unknown`)으로 남겨 작업 사본을 보존하며 `clean`이 지우지 않는다. 같은 일괄 변환 안에서는 그 앱의 남은 파일 변환을 멈춘다. **알려진 한계(Windows):** ① 닫기 실패나 시간 초과 뒤에도 **다음에 따로 실행한 변환은 막지 않는다**(macOS는 이전 세션이 정리될 때까지 막는다). ② 실패한 작업은 마지막 저장 뒤의 **미저장 변경을 되살리지 않는다**(저장하지 않고 닫으므로 그 변경은 버려질 수 있다). ③ 작업 문서가 저장되지 않은 상태(dirty)이거나 **다른 문서가 같은 인스턴스에 열려 있는지(foreign)는 감지하지 않는다**(자기 문서만 저장·닫고, 남은 문서가 있으면 앱을 끝내지 않을 뿐이다). 학생 원본과 이미 발행된 결과는 이 한계와 무관하게 바뀌지 않는다.
+
 - Word: `scripts/gg_office.py word <문서.docx> --out-dir .gg-work/<산출물>/<회차> --project <정본 폴더> --major <전공ID>` (인쇄 모양 목차/색인 필드 2회 갱신 및 PDF 동시 출력)
 - Excel: `scripts/gg_office.py excel <재무.xlsx> --out-dir .gg-work/<산출물>/<회차> --project <정본 폴더> --major <전공ID> [--spec <명세.json> 또는 --template-receipt <입력영수증.json>]` (권한·프로필 확인 뒤 격리 재계산·저장·PDF, PDF 쪽수·수식/구조 검사 뒤에만 발행)
 - 일괄: `scripts/gg_office.py batch <파일1.docx> <파일2.docx> <파일1.xlsx> <파일2.xlsx> --out-dir .gg-work/<산출물>/<회차> --project <정본 폴더> --major <전공ID>` (전체 입력 권한·프로필 사전 확인 유지. 앱별 권한/시간초과·세션 보존 실패 뒤 해당 앱의 후속 변환은 중단)
