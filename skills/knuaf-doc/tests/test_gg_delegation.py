@@ -861,19 +861,144 @@ class TestDelegationCommands(unittest.TestCase):
                 else:
                     self.assertFalse((target / name).exists())
 
-    @unittest.skipIf(sys.platform == "win32", "POSIX cleanup name-swap race")
+    def _assert_windows_cleanup_name_swap(self, command, *, published,
+                                          existing=False):
+        """Windows twin of ``_assert_cleanup_name_swap``.
+
+        Windows has no POSIX dir_fd unlink: the product compares the last
+        known name (``gg_delegation`` same_identity), then
+        ``gg_winfs.unlink_file`` opens that name and refuses to delete when
+        the opened object is not the expected inode. The race is injected
+        between those two checks, so the name comparison must pass first and
+        the open-file comparison must be the one observed refusing.
+        """
+        import errno
+        import gg_delegation as delegation
+        import gg_fs
+        from unittest.mock import patch
+
+        real_read_entry = delegation._read_entry
+        real_unlink = gg_fs.unlink_file
+        with tempfile.TemporaryDirectory() as td:
+            root = workspace(td)
+            gui = root / ".knuaf-gui"
+            (gui / "jobs").mkdir(parents=True)
+            target = gui / "jobs" if command == "delegate" else gui
+            name = "job-1.json" if command == "delegate" else "lanes-request.json"
+            if existing:
+                (target / name).write_bytes(b"ORIGINAL")
+            outside = Path(td) / "outside"
+            outside.mkdir()
+            sentinel = outside / "sentinel"
+            sentinel.write_bytes(b"OUTSIDE")
+            # The swap stays inside the published directory: the product
+            # pins it, so a cross-directory move here would test the pin
+            # instead of the cleanup check. The name avoids ``*.tmp`` so the
+            # temporary-case assertions still see only the product's file.
+            detached = target / "detached-owned"
+            chain = (root, gui, target)
+            chain_identity = [gg_fs.identity(path, kind="directory")
+                              for path in chain]
+            deletes = []
+            published_payload = []
+
+            def read_then_fail(directory, entry):
+                if entry != name:
+                    return real_read_entry(directory, entry)
+                published_payload.append(
+                    (entry, real_read_entry(directory, entry)))
+                raise OSError(errno.EIO, "synthetic post-publish read failure")
+
+            def fail_fsync(fd):
+                raise OSError(errno.EIO, "synthetic fsync failure")
+
+            def swap_then_delete(path, *args, **kwargs):
+                record = {"name": Path(path).name,
+                          "expected": kwargs.get("expected_identity"),
+                          "error": None}
+                owned = Path(path)
+                owned.rename(detached)
+                owned.write_bytes(b"PREEXISTING-UNRELATED")
+                record["replaced"] = gg_fs.identity(path, kind="file")
+                deletes.append(record)
+                try:
+                    return real_unlink(path, *args, **kwargs)
+                except OSError as error:
+                    record["error"] = error
+                    raise
+
+            failure = (patch.object(delegation, "_read_entry", read_then_fail)
+                       if published else
+                       patch.object(delegation.os, "fsync", fail_fsync))
+            with failure, patch.object(gg_fs, "unlink_file", swap_then_delete):
+                with self.assertRaises(delegation.DelegationError) as caught:
+                    self._invoke_synthetic_delegation(command, root)
+            self.assertEqual(1, len(deletes),
+                             "the name comparison failed before the real delete")
+            record = deletes[0]
+            error = record["error"]
+            self.assertIsNotNone(error, "the open-file check did not run")
+            self.assertIs(type(error), OSError)
+            self.assertNotIsInstance(error, gg_fs.FsError)
+            self.assertEqual("identity_mismatch", str(error))
+            # The expected identity is the owned file the product compared
+            # by name; after the swap that name holds an unrelated replacement,
+            # so the open-file comparison is what refused the delete.
+            self.assertFalse(gg_fs.same_identity(record["expected"],
+                                                 record["replaced"]))
+            self.assertTrue(gg_fs.same_identity(
+                record["expected"], gg_fs.identity(detached, kind="file")))
+            prefix = ".knuaf-gui/jobs/" if command == "delegate" else ".knuaf-gui/"
+            self.assertEqual("delegation_write_cleanup_pending:" + prefix +
+                             record["name"], str(caught.exception))
+            field = "task" if command == "delegate" else "quote"
+            self.assertEqual("SYNTHETIC-STUDENT-CONTENT",
+                             json.loads(detached.read_text(encoding="utf-8"))[field])
+            self.assertEqual(b"PREEXISTING-UNRELATED",
+                             (target / record["name"]).read_bytes())
+            self.assertEqual(b"OUTSIDE", sentinel.read_bytes())
+            self.assertEqual(chain_identity,
+                             [gg_fs.identity(path, kind="directory")
+                              for path in chain])
+            if published:
+                self.assertEqual(name, record["name"])
+                self.assertEqual([(name, detached.read_bytes())],
+                                 published_payload)
+                self.assertEqual([], list(target.glob("*.tmp")))
+            else:
+                self.assertNotEqual(name, record["name"])
+                self.assertTrue(record["name"].startswith("." + name + "."))
+                self.assertTrue(record["name"].endswith(".tmp"))
+                self.assertEqual(len(name) + 2 + 32 + 4, len(record["name"]))
+                self.assertEqual([target / record["name"]],
+                                 list(target.glob("*.tmp")))
+                if existing:
+                    self.assertEqual(b"ORIGINAL", (target / name).read_bytes())
+                else:
+                    self.assertFalse((target / name).exists())
+
     def test_published_cleanup_name_swap_reports_owned_result_location(self):
         for command, existing in (("delegate", False), ("lanes-propose", False),
                                   ("lanes-propose", True)):
             with self.subTest(command=command, existing=existing):
-                self._assert_cleanup_name_swap(command, published=True, existing=existing)
+                if sys.platform == "win32":
+                    self._assert_windows_cleanup_name_swap(
+                        command, published=True, existing=existing)
+                else:
+                    self._assert_cleanup_name_swap(
+                        command, published=True, existing=existing)
 
-    @unittest.skipIf(sys.platform == "win32", "POSIX cleanup name-swap race")
     def test_temporary_cleanup_name_swap_reports_owned_temp_location(self):
         for command in ("delegate", "lanes-propose"):
             with self.subTest(command=command):
-                self._assert_cleanup_name_swap(command, published=False,
-                                               existing=command == "lanes-propose")
+                if sys.platform == "win32":
+                    self._assert_windows_cleanup_name_swap(
+                        command, published=False,
+                        existing=command == "lanes-propose")
+                else:
+                    self._assert_cleanup_name_swap(
+                        command, published=False,
+                        existing=command == "lanes-propose")
 
     @unittest.skipIf(sys.platform == "win32", "POSIX owned fd cleanup verification")
     def test_post_unlink_stat_failure_reports_pending_owned_location(self):

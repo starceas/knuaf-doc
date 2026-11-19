@@ -293,7 +293,7 @@
   "tests/fixtures/source-map-pr4.tsv": "0cbe7b5d604b6af11636d9dda85137f04d4bea0d01d074530aed6c18907a6d29",
   "tests/test_finance_tables.py": "f51388014588e0d6860d5eb68c310d624fe69ee7a6a48bc393a8e5e4afa7494f",
   "tests/test_gg_dairy_module.py": "28f5e6a96445f2bb43504e326ddcd3b7627979b8a444d11bd7c4ea07ba558f5b",
-  "tests/test_gg_delegation.py": "7b9f6f361a4db0df7ecc468b2cf4f02fb59d25ea15f59f805bee5a28ddf310e1",
+  "tests/test_gg_delegation.py": "a734b5508e666e9c8f0524936d0a781018648043c016041004d3f6a0e0932efa",
   "tests/test_gg_doi.py": "1ad9b10c42c3f83eb559b32569465c22aa7c4af42ac0b7ee956bad312109c36e",
   "tests/test_gg_draft_split.py": "5d2a3096f1ad01a25d22319689409187e870881cc9efa96fdd58162f11d1655f",
   "tests/test_gg_figure.py": "f936f940cdc1aff7b9bea780b12fb7fd7cfa8ae2355fc2be6a7393f6253f75e6",
