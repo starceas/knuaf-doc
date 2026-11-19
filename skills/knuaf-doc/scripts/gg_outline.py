@@ -333,13 +333,17 @@ def prepare(root, old, project, change):
         return _prepared(replaces_seeds=bool(stale))
     expected = {n["node_id"] for n in nodes}
     if sections and set(sections) != expected:
-        raise ValueError("outline_caller_sections_incomplete")
+        raise core._ChangeError(
+            "outline_caller_sections_incomplete",
+            diag={"code": "outline_caller_sections_incomplete"})
     for node in nodes:
         section = sections.get(node["node_id"])
         if section and (any(section.get(k) != node[k] for k in ("title", "order", "path"))
                         or section.get("status") != "empty" or section.get("claims") != []
                         or section.get("draft_hash") != core.digest("")):
-            raise ValueError("outline_caller_section_conflict")
+            raise core._ChangeError(
+                "outline_caller_section_conflict",
+                diag={"code": "outline_caller_section_conflict"})
     request = change["request_id"]
     files = {n["path"]: _seed_text(n["title"]) for n in nodes}
     receipt_rel = _receipt_rel(request)

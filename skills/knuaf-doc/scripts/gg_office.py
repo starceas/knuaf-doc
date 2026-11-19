@@ -26,6 +26,7 @@ import shutil
 import subprocess
 import sys
 import time
+import unicodedata
 import uuid
 import urllib.parse
 import xml.etree.ElementTree as ET
@@ -368,6 +369,35 @@ def stage_resources(
     return copied
 
 
+def _refuse_staging_name_collisions(input_resolved: Path,
+                                    resources: list[str | Path] | None) -> None:
+    """Refuse, before any job folder exists, a resource that would be copied
+    onto the working copy or onto the PDF this run exports. Office would then
+    open or export into the student's earlier file instead of a fresh one.
+    Names are compared ignoring case and Unicode normalization: Windows and
+    default macOS volumes open a.pdf and A.PDF, and a precomposed and a
+    decomposed Hangul name, as one file."""
+    def key(name: str) -> str:
+        return unicodedata.normalize(
+            "NFC", unicodedata.normalize("NFC", name).casefold())
+
+    reserved = {key(input_resolved.name): input_resolved.name,
+                key(input_resolved.stem + ".pdf"): input_resolved.stem + ".pdf"}
+    base = input_resolved.parent
+    for r_path in resources or ():
+        p = Path(r_path)
+        try:
+            rel = (p if p.is_absolute() else base / p).resolve().relative_to(base)
+        except (OSError, ValueError):
+            continue  # stage_resources refuses paths outside the input folder
+        clash = reserved.get(key(rel.as_posix()))
+        if clash:
+            raise ValueError(
+                f"자료(--resources)에 이번 결과 파일과 이름이 같은 파일이 있어요: {r_path}. "
+                f"그대로 두면 '{clash}' 자리에 예전 파일이 섞일 수 있어요. "
+                "그 자료의 이름을 바꾸거나 자료에서 빼고 다시 실행해 주세요.")
+
+
 def stage_job(
     input_file: Path,
     workspace_root: Path,
@@ -389,6 +419,8 @@ def stage_job(
     check_ooxml_relationships(input_resolved)
 
     orig_sha256 = compute_sha256(input_resolved.read_bytes())
+
+    _refuse_staging_name_collisions(input_resolved, resources)
 
     run_id = f"job-{uuid.uuid4().hex[:12]}-{int(time.time())}"
     job_dir = workspace_root / run_id
