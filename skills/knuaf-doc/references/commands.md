@@ -31,14 +31,18 @@
 
 `lock-upgrade`의 결과에는 `target`이 없다. `recovery_id`·`receipt_path`·`preserved_paths`를 확인하고, 이어서 진행할 때는 `--resume <recovery_id>`를 쓴다([locking](locking.md)). 남은 임시 파일·잠금·보존 사본은 자동으로 지우지 않는다.
 
-## 결과 `detail` 코드 (v0.4.8)
+## 결과 `detail` 코드
 
-`paper`가 입력값 형식 때문에 exit 2로 멈출 때 결과 JSON의 `detail`에 어느 칸이 문제인지 담는다. `detail`은 아래 고정 코드와 고정 필드 이름만 남기고, 원문 문자열·경로·학생이 쓴 값은 담지 않는다. 이 절은 v0.4.8 결과 계약이며, `detail`이 없는 결과를 받으면 `reason`만으로 판단한다.
+`paper`가 입력값 형식 때문에 exit 2로 멈출 때 결과 JSON의 `detail`에 어느 칸이 문제인지 담는다(v0.4.8). `apply`가 `invalid_change`로 멈출 때도 같은 `detail`에 사유 코드를 담는다(v0.6.1 목차 거절). `detail`은 아래 고정 코드와 고정 필드 이름만 남기고, 원문 문자열·경로·학생이 쓴 값은 담지 않는다. `detail`이 없는 결과를 받으면 `reason`만으로 판단한다.
+
+`next`는 코드마다 도구가 박아 두는 고정 안내 한 줄이다. 호출자가 보낸 문장은 절대 실리지 않으므로, `next`가 있으면 그 문장대로 고쳐 다시 보내면 된다. 아래 두 `outline_*` 코드는 처방이 같아 같은 문장을 받는다(어느 검사가 거절했는지는 `code`가 말한다).
 
 | `detail.code` | `detail`의 나머지 키 | 뜻 |
 | --- | --- | --- |
 | `spec_field_invalid` | `field`: `start_year` 또는 `writing_year` | 그 연도 칸이 정수가 아니다(문자열·소수·범위 밖) |
 | `native_field_invalid` | `missing`: 형식이 틀린 칸 이름 목록 | 숫자만 받는 경제 칸에 글자·단위가 섞였다 |
+| `outline_caller_sections_incomplete` | `next` | 같은 `apply`로 보낸 장 ID 목록이 학교 차례 전체와 다르다(차례에 없는 장을 넣었거나, 일부 장만 보냈다) |
+| `outline_caller_section_conflict` | `next` | 학교 차례의 초기 장 값과 다르다(`title`·`order`·`path`·`status`·`claims`·`draft_hash` 중 하나) |
 
 `native_field_invalid`의 `missing`은 시작·목표 × 면적·매출·소득의 12개 이름(`start_area_m2`/`area_m2`, `target_area_m2`/`goal_area_m2`, `start_sales_thousand`/`sales_thousand`, `target_sales_thousand`/`goal_sales_thousand`, `start_profit_thousand`/`profit_thousand`, `target_profit_thousand`/`goal_profit_thousand`) 중 학생이 실제로 쓴 키만 담는다. 목록에 없는 이름은 지우고, 남는 이름이 없으면 `missing` 키 자체를 넣지 않는다. 여러 칸이 틀리면 위 순서로 담는다.
 
