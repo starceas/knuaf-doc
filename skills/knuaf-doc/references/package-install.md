@@ -35,6 +35,8 @@
 
 보존 뒤 성공 응답은 `preserved_venv` 객체를, 보존 뒤 실패 응답은 `status`와 `reason` 및 같은 `preserved_venv` 객체를 담는다. 실패 reason에는 보존 이름이 있어야 한다. 보존 객체의 `name`·`path`·`link`·`link_target`은 보존 위치와 끊어진 링크를 가리킨다. 보존하지 않은 정상 ensure 결과는 `preserved_venv: null`을 담고, 보존 전 실패(`main`의 `blocked`)에는 이 키가 없다.
 
+보존 뒤 **성공** 응답에는 학생 안내 목록 `notices`가 원소 하나로 실린다: `code: "venv_preserved"`, 기계용 폴더 이름 `folder`, 그리고 값이 박힌 고정 문장 `message`. `message`는 폴더 이름·경로를 넣지 않는 상수(`gg_deps.VENV_PRESERVED_NOTICE`)라서 앱은 그대로 보여 주면 되고, 어느 보존본인지는 `folder`(또는 같은 응답의 `preserved_venv.name`)로 안다. 보존하지 않았거나 설치가 실패한 응답은 모양을 바꾸지 않는다 — `notices` 키가 없고, 실패는 기존대로 `reason`이 보존 이름을 담는다.
+
 - 이름 규칙: `.venv-broken-YYYYmmdd-HHMMSS`. 같은 초 안에서 기본 이름이 이미 있으면 `-2`, `-3` … `-100` 순으로 시도한다. 같은 초 안에서 100개 이름이 모두 차면 덮어쓰지 않고 `blocked`로 멈춘다. 번호는 초가 바뀌면 다시 시작하므로 보존본 전체 개수에 고정 상한은 없다.
 - 보존본은 자동으로 지우지 않는다. 학생이 필요 없다고 판단하면 직접 지운다.
 - 이름 바꾸기가 실패하면(폴더를 쓰는 앱·Codex·터미널이 열려 있음) 지우지 않고 `blocked`로 돌려주며, 결과 `reason`에 무엇을 끄고 다시 시도해야 하는지 적는다.

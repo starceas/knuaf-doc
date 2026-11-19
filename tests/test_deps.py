@@ -213,6 +213,59 @@ class BrokenVenvRecoveryTests(ContractCase):
                          body["preserved_venv"]["name"])
         self.assertEqual("earlier", (earlier / "keep.txt").read_text(encoding="utf-8"))
 
+    def test_preserved_success_carries_a_student_notice(self):
+        """보존 뒤 성공하면 학생용 고정 문장 + 기계용 폴더 이름을 싣는다."""
+        self._make_broken_venv(self.project)
+        code, body = self._run(self.project, *self._patch([]))
+
+        self.assertEqual(0, code, body)
+        notices = body["notices"]
+        self.assertEqual(1, len(notices))
+        notice = notices[0]
+        self.assertEqual("venv_preserved", notice["code"])
+        self.assertEqual(self.deps.VENV_PRESERVED_NOTICE["message"],
+                         notice["message"])
+        self.assertEqual(body["preserved_venv"]["name"], notice["folder"])
+
+    def test_notice_message_is_fixed_and_names_no_folder_or_path(self):
+        """문장은 늘 같은 바이트여야 한다 - 폴더 이름·경로를 끼워 넣지 않는다."""
+        messages = []
+        folders = []
+        for stamp in ("20260101-010101", "20260202-020202"):
+            project = self.root / ("paper-" + stamp)
+            project.mkdir()
+            self.project = project
+            self._make_broken_venv(project)
+            fixed = mock.patch.object(self.deps.time, "strftime",
+                                      return_value=stamp)
+            code, body = self._run(project, fixed, *self._patch([]))
+
+            self.assertEqual(0, code, body)
+            messages.append(body["notices"][0]["message"])
+            folders.append(body["notices"][0]["folder"])
+
+        self.assertEqual([messages[0]] * 2, messages)
+        self.assertNotEqual(folders[0], folders[1])
+        for message in messages:
+            for folder in folders:
+                self.assertNotIn(folder, message)
+            self.assertNotIn(str(self.root), message)
+            self.assertNotIn("\\", message)
+            self.assertNotIn("/", message)
+
+    def test_failed_install_after_preservation_keeps_its_response_shape(self):
+        """실패 응답은 모양을 바꾸지 않는다 - 안내는 `reason`이 이미 담는다."""
+        self._make_broken_venv(self.project)
+        stack = self._patch([])
+        stack[2] = mock.patch.object(self.deps.subprocess, "run", return_value=type(
+            "Failed", (), {"returncode": 1, "stdout": "", "stderr": "pip failed"})())
+        code, body = self._run(self.project, *stack)
+
+        self.assertEqual(1, code, body)
+        self.assertEqual("failed", body["status"])
+        self.assertNotIn("notices", body)
+        self.assertIn(body["preserved_venv"]["name"], body["reason"])
+
     def test_healthy_venv_is_reused_without_preservation(self):
         interp = self.project / ".venv" / self._interp_rel()
         interp.parent.mkdir(parents=True)
@@ -239,6 +292,7 @@ class BrokenVenvRecoveryTests(ContractCase):
         self.assertEqual(0, code, body)
         self.assertFalse(body["created"])
         self.assertIsNone(body["preserved_venv"])
+        self.assertNotIn("notices", body)
         self.assertEqual([], self._preserved_dirs())
 
     def test_venv_symlink_is_still_refused_untouched(self):
