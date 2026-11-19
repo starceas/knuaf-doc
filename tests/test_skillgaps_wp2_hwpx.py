@@ -30,8 +30,12 @@ TABLE = ('<hp:tbl id="7" zOrder="0" numberingType="TABLE" textWrap="TOP_AND_BOTT
          '<hp:cellAddr colAddr="1" rowAddr="1"/><hp:cellSpan colSpan="1" rowSpan="1"/>'
          '<hp:cellSz width="24000" height="2000"/></hp:tc></hp:tr></hp:tbl>')
 
+BODY_MD = ("Ⅰ. 머리말\n\n본문이다.\n\n표 1. 합성\n\n| 구분 | 값 |\n"
+           "| --- | ---: |\n| 매출 | 1,000 |\n")
+
 SECTION_HEAD = ('<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>'
-                '<hs:sec xmlns:hp="http://www.hancom.co.kr/hwpml/2011/paragraph">'
+                '<hs:sec xmlns:hs="http://www.hancom.co.kr/hwpml/2011/section"'
+                ' xmlns:hp="http://www.hancom.co.kr/hwpml/2011/paragraph">'
                 '<hp:p><hp:run><hp:secPr><hp:pagePr landscape="WIDELY" '
                 'width="59528" height="84188" gutterType="LEFT_ONLY">'
                 '<hp:margin header="2835" footer="2835" gutter="0" left="5670" '
@@ -133,9 +137,7 @@ class HwpxLayoutTests(ContractCase):
         """발행 파일의 해시·구조 검증이 후처리 뒤 파일 기준이어야 한다."""
         root = self.make_project()
         bind_major(root)
-        (Path(root) / "body.md").write_text(
-            "Ⅰ. 머리말\n\n표 1. 합성\n\n| 구분 | 값 |\n| --- | ---: |\n| 매출 | 1,000 |\n",
-            encoding="utf-8")
+        (Path(root) / "body.md").write_text(BODY_MD, encoding="utf-8")
         cli = _layout_cli(root)
         mc = runtime("gg_major_contract")
         value = self.builder.export(
@@ -161,9 +163,7 @@ class HwpxLayoutTests(ContractCase):
         """후처리 검증이 실패하면 본체를 발행하지 않는다."""
         root = self.make_project()
         bind_major(root)
-        (Path(root) / "body.md").write_text(
-            "Ⅰ. 머리말\n\n표 1. 합성\n\n| 구분 | 값 |\n| --- | ---: |\n| 매출 | 1,000 |\n",
-            encoding="utf-8")
+        (Path(root) / "body.md").write_text(BODY_MD, encoding="utf-8")
         cli = _layout_cli(root, validate_after_first=False)
         mc = runtime("gg_major_contract")
         with self.assertRaises(self.gh.HwpxBlocked) as caught:
@@ -185,10 +185,18 @@ HERE = Path(__file__).resolve().parent
 CONTROL = json.loads((HERE / "control.json").read_text(encoding="utf-8"))
 SECTION = CONTROL["section"]
 HEADER = ('<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>'
-          '<hh:head xmlns:hh="http://www.hancom.co.kr/hwpml/2011/head">'
+          '<hh:head xmlns:hh="http://www.hancom.co.kr/hwpml/2011/head"'
+          ' xmlns:hc="http://www.hancom.co.kr/hwpml/2011/core">'
           '<hh:fontfaces itemCnt="1"><hh:fontface lang="HANGUL" fontCnt="1">'
           '<hh:font id="0" face="함초롬바탕" type="TTF" isEmbedded="0"/></hh:fontface>'
-          '</hh:fontfaces></hh:head>')
+          '</hh:fontfaces>'
+          '<hh:charProperties itemCnt="1"><hh:charPr id="0" height="1000"/>'
+          '</hh:charProperties>'
+          '<hh:paraProperties itemCnt="2"><hh:paraPr id="0">'
+          '<hh:heading type="NONE"/><hh:margin><hc:intent value="0" unit="HWPUNIT"/>'
+          '</hh:margin><hh:lineSpacing type="PERCENT" value="180"/>'
+          '</hh:paraPr><hh:paraPr id="1"><hh:heading type="OUTLINE"/>'
+          '</hh:paraPr></hh:paraProperties></hh:head>')
 
 def write_hwpx(path):
     with zipfile.ZipFile(path, "w") as archive:
@@ -225,8 +233,8 @@ if __name__ == "__main__":
 BODY_SECTION = section(
     para("Ⅰ. 머리말", "1"),
     para("본문이다."),
-    TABLE,
     para("표 1. 합성"),
+    TABLE,
 )
 
 def _layout_cli(root, **control):
@@ -235,9 +243,7 @@ def _layout_cli(root, **control):
     script = work / "fake_kordoc.py"
     script.write_text(FAKE_CLI, encoding="utf-8")
     control.setdefault("section", BODY_SECTION)
-    control.setdefault("markdown",
-                       "Ⅰ. 머리말\n\n본문이다.\n\n표 1. 합성\n\n| 구분 | 값 |\n"
-                       "| --- | ---: |\n| 매출 | 1,000 |\n")
+    control.setdefault("markdown", BODY_MD)
     (work / "control.json").write_text(
         json.dumps(control, ensure_ascii=False), encoding="utf-8")
     return [sys.executable, str(script)]

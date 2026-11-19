@@ -240,7 +240,9 @@ push 또는 `workflow_dispatch` 실행의 artifact로 한다.
 - 모든 시험 모듈이 로더 오류 없이 import됨, 시험 ID 중복 없음
 - 고정된 스모크 시험 5개 ID와, zip/XML/xlsx를 다루는 빠른 모듈 3개
   (`tests.test_xlsx_structure`·`test_build_hwpx`·`test_hwpx_adapter`)의 전체 시험이
-  전부 존재하고 skip·실패·오류 없이 실행됨 (합쳐서 수 초)
+  전부 존재하고 미승인 skip·실패·오류 없이 실행됨 (합쳐서 수 초).
+  실 kordoc 본문 시험의 `KNUAF_TEST_KORDOC` 미설정 skip 한 건만 정확한
+  시험 ID·사유로 허용하며, 지정한 실행 파일의 실패는 허용하지 않는다.
 
 3.14에서만 깨지는 문법·import·표준 라이브러리 변경을 싸게 잡는 용도이며, 3.14
 전체 시험은 main push에서 돈다.
