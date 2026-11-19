@@ -48,24 +48,31 @@ HERE = Path(__file__).resolve().parent
 CONTROL = json.loads((HERE / "control.json").read_text(encoding="utf-8"))
 SECTION = (
     '<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>'
-    '<hs:sec xmlns:hp="http://www.hancom.co.kr/hwpml/2011/paragraph">'
-    '<hp:p><hp:run><hp:secPr>'
+    '<hs:sec xmlns:hs="http://www.hancom.co.kr/hwpml/2011/section"'
+    ' xmlns:hp="http://www.hancom.co.kr/hwpml/2011/paragraph">'
+    '<hp:p paraPrIDRef="0"><hp:run charPrIDRef="0"><hp:secPr>'
     '<hp:pagePr landscape="WIDELY" width="59528" height="84188" gutterType="LEFT_ONLY">'
     '<hp:margin header="2835" footer="2835" gutter="0" left="5670" right="4252" '
     'top="8504" bottom="4252"/></hp:pagePr></hp:secPr>'
     '<hp:ctrl><hp:colPr id="" type="NEWSPAPER" layout="LEFT" colCount="1" '
     'sameSz="1" sameGap="0"/></hp:ctrl>'
-    '<hp:t>창업영농계획서</hp:t></hp:run></hp:p></hs:sec>'
+    '<hp:t>창업영농계획서</hp:t></hp:run></hp:p>'
+    '<hp:p paraPrIDRef="0"><hp:run charPrIDRef="0">'
+    '<hp:t>본 연구는 Panax ginseng 재배 농장을 분석한다.</hp:t></hp:run></hp:p></hs:sec>'
 )
 HEADER = (
     '<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>'
-    '<hh:head xmlns:hh="http://www.hancom.co.kr/hwpml/2011/head">'
+    '<hh:head xmlns:hh="http://www.hancom.co.kr/hwpml/2011/head"'
+    ' xmlns:hc="http://www.hancom.co.kr/hwpml/2011/core">'
     '<hh:fontfaces itemCnt="1">'
     '<hh:fontface lang="HANGUL" fontCnt="1">'
     '<hh:font id="0" face="함초롬바탕" type="TTF" isEmbedded="0"/></hh:fontface>'
     '<hh:fontface lang="LATIN" fontCnt="1">'
     '<hh:font id="0" face="함초롬바탕" type="TTF" isEmbedded="0"/></hh:fontface>'
-    '</hh:fontfaces></hh:head>'
+    '</hh:fontfaces><hh:charProperties itemCnt="1"><hh:charPr id="0" height="1000"/>'
+    '</hh:charProperties><hh:paraProperties itemCnt="1"><hh:paraPr id="0">'
+    '<hh:margin><hc:intent value="0" unit="HWPUNIT"/></hh:margin>'
+    '<hh:lineSpacing type="PERCENT" value="160"/></hh:paraPr></hh:paraProperties></hh:head>'
 )
 
 
@@ -142,10 +149,12 @@ HEADER_SAMPLE = (
 # 지적 1 반례: 비자기닫힘 margin·colPr 부재라 여백·쪽번호 정규식이 아무것도 못 바꾼다.
 UNFORMATTABLE_SECTION = (
     '<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>'
-    '<hs:sec xmlns:hp="http://www.hancom.co.kr/hwpml/2011/paragraph"><hp:p><hp:run>'
+    '<hs:sec xmlns:hs="http://www.hancom.co.kr/hwpml/2011/section"'
+    ' xmlns:hp="http://www.hancom.co.kr/hwpml/2011/paragraph">'
+    '<hp:p paraPrIDRef="0"><hp:run charPrIDRef="0">'
     '<hp:secPr><hp:pagePr><hp:margin header="1" footer="1" gutter="0" '
     'left="1" right="1" top="1" bottom="1"></hp:margin></hp:pagePr></hp:secPr>'
-    '<hp:t>x</hp:t></hp:run></hp:p></hs:sec>'
+    '<hp:t>본 연구는 Panax ginseng 재배 농장을 분석한다.</hp:t></hp:run></hp:p></hs:sec>'
 )
 
 

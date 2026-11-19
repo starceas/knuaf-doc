@@ -7,6 +7,7 @@ kordoc 없이 돈다. skip은 두지 않는다 — 실물 kordoc end-to-end와 D
 
 import io
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -64,7 +65,8 @@ HERE = Path(__file__).resolve().parent
 CONTROL = json.loads((HERE / "control.json").read_text(encoding="utf-8"))
 SECTION = CONTROL.get("section") or (
     '<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>'
-    '<hs:sec xmlns:hp="http://www.hancom.co.kr/hwpml/2011/paragraph"><hp:p><hp:run>'
+    '<hs:sec xmlns:hs="http://www.hancom.co.kr/hwpml/2011/section"'
+    ' xmlns:hp="http://www.hancom.co.kr/hwpml/2011/paragraph"><hp:p><hp:run>'
     '<hp:secPr><hp:pagePr landscape="WIDELY" width="59528" height="84188" '
     'gutterType="LEFT_ONLY"><hp:margin header="2835" footer="2835" gutter="0" '
     'left="5670" right="4252" top="8504" bottom="4252"/></hp:pagePr></hp:secPr>'
@@ -255,6 +257,16 @@ FOOD_CROPS_HEADER = (
 )
 
 
+def body_test_header():
+    return FOOD_CROPS_HEADER.replace(f'face="{gh.SCHOOL_FONT}"',
+        'face="함초롬바탕"').replace('secCnt="1"', 'secCnt="1" '
+        'xmlns:hc="http://www.hancom.co.kr/hwpml/2011/core"').replace(
+        '</hh:head>', '<hh:paraProperties itemCnt="1"><hh:paraPr id="0">'
+        '<hh:heading type="NONE"/><hh:margin><hc:intent value="0" unit="HWPUNIT"/>'
+        '</hh:margin><hh:lineSpacing type="PERCENT" value="180"/>'
+        '</hh:paraPr></hh:paraProperties></hh:head>')
+
+
 def hwpx_para(text, controls=""):
     return ('<hp:p paraPrIDRef="0" styleIDRef="0"><hp:run charPrIDRef="0">'
             + controls + '<hp:t>' + text + '</hp:t></hp:run></hp:p>')
@@ -314,7 +326,18 @@ def charpr_shapes(header_xml):
             for node in properties.findall("{%s}charPr" % _HH)}
 
 
+def fake_body_members(markdown):
+    """Minimal generated sections for publication tests unrelated to XML layout."""
+    from xml.sax.saxutils import escape
+
+    nodes = runtime("gg_document").parse(markdown)
+    paragraphs = [escape(node.get("text", "")) for node in nodes]
+    return {"section": hwpx_section(paragraphs), "header": body_test_header()}
+
+
 def make_fake_cli(root, **control):
+    if control.get("markdown") and "section" not in control and "header" not in control:
+        control.update(fake_body_members(control["markdown"]))
     work = Path(root) / "fake"
     work.mkdir(exist_ok=True)
     script = work / "fake_kordoc.py"
@@ -587,7 +610,7 @@ class ExportTests(_Base):
         script = Path(self.root) / "fake_json_fail.py"
         script.write_text(fake, encoding="utf-8")
         (Path(self.root) / "control.json").write_text(
-            json.dumps({"markdown": BODY_MD}), encoding="utf-8")
+            json.dumps({"markdown": BODY_MD, **fake_body_members(BODY_MD)}), encoding="utf-8")
         with self.assertRaises(gh.HwpxBlocked) as ctx:
             build_hwpx.export(self.root, "body.md", "out.hwpx",
                               cli_command=[sys.executable, str(script)],
@@ -658,20 +681,12 @@ class ExportTests(_Base):
 
 
 class OtherMajorHwpxByteTests(_Base):
-    """R-N01: 다른 전공 3개의 HWPX 멤버 바이트가 `5488bd2`와 같다.
-
-    기준은 `5488bd2`(식량작물 모듈 이전) 트리에서 `BODY_MD`·`make_fake_cli`·
-    각 전공으로 뽑은 산출물의 압축 해제 바이트다. ZIP 시각은 실행마다
-    달라지므로 멤버 단위로 비교한다. 3전공이 모두 같은 해시를 내므로 기준
-    dict 하나를 공유한다. 낙농은 F9e에서 서식 프로필 게이트 안으로 들어와
-    출력이 달라졌으므로 `DairyHwpxByteTests`가 따로 잰다.
-    """
+    """Pin legacy layout on a fixture without ordinary prose to format."""
 
     MEMBERS = {
         'mimetype': '5ab5230b5af04f78947736bf8dd1a269aa684e234f7f4a392efb85289d1655c2',
         'META-INF/container.xml': '1feb165533a201fbe460cf9fdbe756b271e3d4aad056d52049c57da7efd7f0de',
         'Contents/header.xml': 'e2656e9c06d85ce67f04b71cdef8548afeff76323b1fe301bcb68df4e58c3fa4',
-        'Contents/section0.xml': '3ba717e5fa8f7f782379b6ed3eabeffc87c55e2ff66826e78fe8ccced7e574c0',
     }
 
     def test_other_majors_reproduce_the_reference_bytes(self):
@@ -679,58 +694,49 @@ class OtherMajorHwpxByteTests(_Base):
         for major in ("specialty_crops", "fruit_trees", "hort_env_systems"):
             with self.subTest(major=major):
                 root = self._project(major)
-                (Path(root) / "body.md").write_text(BODY_MD, encoding="utf-8")
-                cli = make_fake_cli(root, markdown=BODY_MD)
+                write_text(root, "body.md", "# 본문\n")
+                cli = make_fake_cli(root, markdown="# 본문\n", header="")
                 build_hwpx.export(root, "body.md", "out.hwpx",
                                   cli_command=cli,
                                   context=self._ctx(root, major))
                 with zipfile.ZipFile(Path(root) / "out.hwpx") as archive:
                     digests = {info.filename:
                                hashlib.sha256(archive.read(info.filename)).hexdigest()
-                               for info in archive.infolist()}
+                               for info in archive.infolist()
+                               if info.filename != "Contents/section0.xml"}
+                    section = archive.read("Contents/section0.xml").decode("utf-8")
+                self.assertIn('top="5669" bottom="4252"', section)
+                self.assertIn('<hp:pageNum', section)
                 self.assertEqual(sorted(self.MEMBERS), sorted(digests))
                 self.assertEqual(self.MEMBERS, digests)
 
 
 class DairyHwpxByteTests(_Base):
-    """F9e: 낙농 HWPX가 서식 프로필 경로를 탄 뒤의 멤버 바이트.
+    """Pin dairy's profile margins independently of ordinary prose formatting."""
 
-    입력·명령은 `OtherMajorHwpxByteTests`와 같다(`BODY_MD`·`make_fake_cli`).
-    기대값만 낙농 프로필(구역 여백·쪽번호, 제목 여백 1920 HWPUNIT, 장 판정
-    노드 목록)을 탄 산출물에서 따로 잡았다. 기대 해시를 새로 끼워 통과시킨
-    것이 아니라, 바뀐 멤버(`Contents/header.xml`·`Contents/section0.xml`)가
-    어느 배선 때문인지는 `impl/F9e-RESULT.md` 표에 적었다.
-    """
-
-    # `impl/f9e/dump-hashes.py`로 뽑은 실제 산출물 해시(같은 입력·같은 명령).
-    # 다른 전공 기준선과 견주면 `Contents/section0.xml`만 다르고, 그 안의 차이는
-    # 한 줄뿐이다(실측): `hp:margin header 4252→0, footer 4252→2835,
-    # top 5669→8504, bottom 4252→8504`(위30/아래30/머리0/꼬리10). 표 폭·장 새 쪽·
-    # 쪽번호 제어는 이 입력(학교 앞머리 없는 짧은 원고)에서 차이를 만들지 않는다.
-    # `header.xml`은 이 모형 CLI의 header에 문단 모양(`paraPr`)이 없어 제목
-    # 여백 배선이 걸리지 않아 기준선과 같은 해시다 — 그 배선은
-    # `test_apply_layout_writes_dairy_...`가 따로 잰다.
     MEMBERS = {
         'mimetype': '5ab5230b5af04f78947736bf8dd1a269aa684e234f7f4a392efb85289d1655c2',
         'META-INF/container.xml': '1feb165533a201fbe460cf9fdbe756b271e3d4aad056d52049c57da7efd7f0de',
         'Contents/header.xml': 'e2656e9c06d85ce67f04b71cdef8548afeff76323b1fe301bcb68df4e58c3fa4',
-        'Contents/section0.xml': '6596e5e0da1974dd29ea54c865625874c6597b48049f66b4336d9afca0c5ede1',
     }
 
     def test_dairy_reproduces_its_profile_bytes(self):
         import hashlib
         root = self._project("dairy")
-        (Path(root) / "body.md").write_text(BODY_MD, encoding="utf-8")
-        cli = make_fake_cli(root, markdown=BODY_MD)
+        write_text(root, "body.md", "# 본문\n")
+        cli = make_fake_cli(root, markdown="# 본문\n", header="")
         build_hwpx.export(root, "body.md", "out.hwpx",
                           cli_command=cli,
                           context=self._ctx(root, "dairy"))
         with zipfile.ZipFile(Path(root) / "out.hwpx") as archive:
             digests = {info.filename:
                        hashlib.sha256(archive.read(info.filename)).hexdigest()
-                       for info in archive.infolist()}
-        # 사전 비교를 먼저 둔다: 기대값이 비어 있을 때 실패 메시지가
-        # 실제 해시를 그대로 보여 줘야 마디 B에서 채울 수 있다.
+                       for info in archive.infolist()
+                       if info.filename != "Contents/section0.xml"}
+            section = archive.read("Contents/section0.xml").decode("utf-8")
+        self.assertIn('header="0" footer="2835"', section)
+        self.assertIn('top="8504" bottom="8504"', section)
+        self.assertIn('<hp:pageNum', section)
         self.assertEqual(self.MEMBERS, digests)
 
     def test_dairy_chapters_start_on_a_new_page(self):
@@ -745,7 +751,8 @@ class DairyHwpxByteTests(_Base):
         md = "1. 머리말\n\n본문이다.\n\n2. 농업환경분석\n\n본문이다.\n\n3. 결론\n"
         section = (
             '<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>'
-            '<hs:sec xmlns:hp="http://www.hancom.co.kr/hwpml/2011/paragraph">'
+            '<hs:sec xmlns:hs="http://www.hancom.co.kr/hwpml/2011/section"'
+            ' xmlns:hp="http://www.hancom.co.kr/hwpml/2011/paragraph">'
             '<hp:p><hp:run><hp:secPr><hp:pagePr landscape="WIDELY" width="59528" '
             'height="84188" gutterType="LEFT_ONLY"><hp:margin header="2835" '
             'footer="2835" gutter="0" left="5670" right="4252" top="8504" '
@@ -759,7 +766,8 @@ class DairyHwpxByteTests(_Base):
             + '</hs:sec>')
         root = self._project("dairy")
         (Path(root) / "body.md").write_text(md, encoding="utf-8")
-        cli = make_fake_cli(root, markdown=md, section=section)
+        header = body_test_header().replace('<hh:paraPr id="0">', '<hh:paraPr id="7">')
+        cli = make_fake_cli(root, markdown=md, section=section, header=header)
         build_hwpx.export(root, "body.md", "out.hwpx",
                           cli_command=cli,
                           context=self._ctx(root, "dairy"))
@@ -799,6 +807,181 @@ _HP = "http://www.hancom.co.kr/hwpml/2011/paragraph"
 _HH = "http://www.hancom.co.kr/hwpml/2011/head"
 _OPF = "http://www.idpf.org/2007/opf/"
 
+
+class BodyFormatTests(_Base):
+    """Resolve final run and paragraph references, not kordoc flags or style IDs."""
+
+    def test_incomplete_frontmatter_blocks_publication(self):
+        lines = ("목차", "합성 목차 항목", "Ⅰ. 머리말", "합성 첫 문단이다.")
+        self._assert_body_blocked("\n\n".join(lines), lines, "frontmatter_boundary")
+
+    def test_partial_body_match_blocks_publication(self):
+        lines = ("Ⅰ. 머리말", "합성 첫 문단이다.", "합성 둘째 문단이다.")
+        self._assert_body_blocked("\n\n".join(lines), (*lines[:2], "다르게 변환된 문단."),
+                                  "paragraph_match")
+
+    def _assert_body_blocked(self, md, generated, issue):
+        root, cli = self._body_fixture(md, generated)
+        with self.assertRaises(gh.HwpxBlocked) as caught:
+            build_hwpx.export(root, "body.md", "out.hwpx", cli_command=cli,
+                              context=self._ctx(root, SPECIALTY))
+        self.assertEqual("body_format_unconfirmed", caught.exception.reason)
+        self.assertEqual(issue, caught.exception.details["issue"])
+        self.assertIn("발행하지 않았습니다", caught.exception.details["action"])
+        self.assertFalse((Path(root) / "out.hwpx").exists())
+        self.assertFalse((Path(root) / "out.hwpx.manifest.json").exists())
+
+    def test_folded_body_lines_publish_with_school_format(self):
+        first, second = "합성 본문의 첫 줄이다.", "같은 문단의 다음 줄이다."
+        chapter = "Ⅰ. 머리말"
+        merged = first + " " + second
+        root, cli = self._body_fixture(f"{chapter}\n\n{first}\n{second}\n", (chapter, merged))
+        build_hwpx.export(root, "body.md", "out.hwpx", cli_command=cli,
+                          context=self._ctx(root, SPECIALTY))
+        self._assert_published_body_metrics(root, (merged,))
+
+    def _body_fixture(self, md, generated):
+        root = self._project(SPECIALTY)
+        write_text(root, "body.md", md)
+        cli = make_fake_cli(root, markdown=md, section=hwpx_section(generated),
+                            header=body_test_header())
+        return root, cli
+
+    def test_final_body_format_by_major(self):
+        for major in ("specialty_crops", "fruit_trees", "hort_env_systems",
+                      "dairy", "food_crops"):
+            for with_front in (False, True):
+                with self.subTest(major=major, with_front=with_front):
+                    self._assert_body_format(major, with_front)
+
+    def test_real_kordoc_body_format(self):
+        kordoc = os.environ.get("KNUAF_TEST_KORDOC")
+        if not kordoc:
+            self.skipTest("set KNUAF_TEST_KORDOC to an installed kordoc executable")
+        # Same authored front matter as the original synthetic reproduction.
+        first = "합성 본문 문단이다."
+        second = "합성 둘째 문단이다."
+        md = SCHOOL_MD.replace("본문 첫 문단이다.", first + "\n\n" + second)
+        root = self._project(SPECIALTY)
+        write_text(root, "body.md", md)
+        build_hwpx.export(root, "body.md", "out.hwpx", cli_command=[kordoc],
+                          context=self._ctx(root, SPECIALTY))
+        self._assert_published_body_metrics(root, (first, second))
+
+    def _assert_published_body_metrics(self, root, sentences):
+        with zipfile.ZipFile(Path(root) / "out.hwpx") as archive:
+            header = ET.fromstring(archive.read("Contents/header.xml"))
+            paragraphs = paragraphs_of(archive.read("Contents/section0.xml"))
+        ns = {"hp": _HP, "hh": _HH, "hc": "http://www.hancom.co.kr/hwpml/2011/core"}
+        for sentence in sentences:
+            with self.subTest(sentence=sentence):
+                paragraph, = [p for p in paragraphs if "".join(
+                    t.text or "" for t in p.findall("hp:run/hp:t", ns)) == sentence]
+                char_ref = first_run(paragraph).get("charPrIDRef")
+                para_ref = paragraph.get("paraPrIDRef")
+                char_shape = header.find(f'.//hh:charPr[@id="{char_ref}"]', ns)
+                para_shape = header.find(f'.//hh:paraPr[@id="{para_ref}"]', ns)
+                self.assertEqual("1200", char_shape.get("height"))
+                self.assertEqual({("PERCENT", "160")}, {(e.get("type"), e.get("value"))
+                                 for e in para_shape.findall(".//hh:lineSpacing", ns)})
+                self.assertEqual({("2400", "HWPUNIT")}, {(e.get("value"), e.get("unit"))
+                                 for e in para_shape.findall(".//hc:intent", ns)})
+
+    def _assert_body_format(self, major, with_front):
+        gd = runtime("gg_document")
+        spec = gd.school_frontmatter_spec(major)
+        chapter = "1. 머리말" if major in ("food_crops", "dairy") else "Ⅰ. 머리말"
+        body = "합성 본문 문단이다."
+        caption = "표 1. 합성 표 제목"
+        cell = "합성 셀"
+        footnote = "합성 각주"
+        front = ("겉표지", "합성 표지 제목", "2027년 2월", "한국농수산대학교",
+                 spec.department, "가상학생", *spec.orders[-1][1:], "목차 합성 항목")
+        front = front if with_front else ()
+        md = "\n\n".join((*front, chapter, body, caption,
+                          f"| {cell} |\n| --- |\n| 3 |")) + "\n"
+        table = f'<hp:tbl><hp:tr><hp:tc><hp:subList>{hwpx_para(cell)}</hp:subList></hp:tc></hp:tr></hp:tbl>'
+        section = hwpx_section((*front, chapter, body, caption, ""),
+                               extra={len(front) + 3: table})
+        # A 9pt nested footnote shares the default paragraph properties. Its
+        # text lives below a control, not in the prose run being measured.
+        note = hwpx_para(footnote).replace('charPrIDRef="0"', 'charPrIDRef="1"')
+        section = section.replace(f"<hp:t>{body}</hp:t>",
+                                  f"<hp:t>{body}</hp:t></hp:run>"
+                                  f'<hp:run charPrIDRef="4"><hp:ctrl><hp:footNote>'
+                                  f'<hp:subList>{note}</hp:subList></hp:footNote></hp:ctrl>'
+                                  f'<hp:t> 강조</hp:t>')
+        # Model kordoc's pre-rewrite font, not the already-formatted fixture.
+        # Sparse charPr IDs also exercise clone/profile ID collision avoidance.
+        header = FOOD_CROPS_HEADER.replace(f'face="{gh.SCHOOL_FONT}"',
+            'face="함초롬바탕"').replace('secCnt="1"', 'secCnt="1" '
+            'xmlns:hc="http://www.hancom.co.kr/hwpml/2011/core"').replace(
+            '<hh:charProperties itemCnt="1">', '<hh:charProperties itemCnt="3">'
+            '<hh:charPr id="1" height="900"/><hh:charPr id="4" height="1000"><hh:bold/></hh:charPr>'
+        ).replace('</hh:head>', '<hh:paraProperties itemCnt="1"><hh:paraPr id="0">'
+            '<hh:heading type="NONE"/><hh:margin><hc:intent value="0" unit="HWPUNIT"/>'
+            '</hh:margin><hh:lineSpacing type="PERCENT" value="180"/>'
+            '</hh:paraPr></hh:paraProperties></hh:head>')
+        # Make the inline bold text part of the source paragraph as well.
+        md = md.replace(body, body + " **강조**")
+        root = self._project(major)
+        write_text(root, "body.md", md)
+        cli = make_fake_cli(root, markdown=md, section=section, header=header,
+                            hpf=FOOD_CROPS_HPF)
+        build_hwpx.export(root, "body.md", "out.hwpx", cli_command=cli,
+                          context=self._ctx(root, major))
+        with zipfile.ZipFile(Path(root) / "out.hwpx") as archive:
+            shapes = ET.fromstring(archive.read("Contents/header.xml"))
+            paragraphs = [p for name in archive.namelist() if gh.SECTION_RE.fullmatch(name)
+                          for p in ET.fromstring(archive.read(name)).iter(f"{{{_HP}}}p")]
+        ns = {"hp": _HP, "hh": _HH, "hc": "http://www.hancom.co.kr/hwpml/2011/core"}
+        self.assertEqual(gh.SCHOOL_FONT, shapes.find(".//hh:font", ns).get("face"))
+
+        def props(p):
+            return shapes.find(f'.//hh:paraPr[@id="{p.get("paraPrIDRef")}"]', ns)
+
+        def heights(p):
+            refs = [run.get("charPrIDRef") for run in p.findall("hp:run", ns)
+                    if run.find("hp:t", ns) is not None]
+            return [shapes.find(f'.//hh:charPr[@id="{ref}"]', ns).get("height")
+                    for ref in refs]
+
+        def text(p):
+            return "".join(t.text or "" for t in p.findall("hp:run/hp:t", ns))
+
+        prose, = [p for p in paragraphs if text(p) == body + " 강조"]
+        spacing = {(e.get("type"), e.get("value"))
+                   for e in props(prose).findall(".//hh:lineSpacing", ns)}
+        # F1-04; DOCX equivalent is 24pt, or 2400 HWPUNIT (100 per pt).
+        indent = {(e.get("value"), e.get("unit"))
+                  for e in props(prose).findall(".//hc:intent", ns)}
+        self.assertEqual((["1200", "1200"], {("PERCENT", "160")},
+                          {("2400", "HWPUNIT")}), (heights(prose), spacing, indent))
+        plain, bold = [shapes.find(f'.//hh:charPr[@id="{run.get("charPrIDRef")}"]', ns)
+                       for run in prose.findall("hp:run", ns)]
+        self.assertIsNone(plain.find("hh:bold", ns))
+        self.assertIsNotNone(bold.find("hh:bold", ns))
+        char_ids = [shape.get("id") for shape in shapes.findall(".//hh:charPr", ns)]
+        self.assertCountEqual(set(char_ids), char_ids, "duplicate charPr IDs")
+        for p in paragraphs:
+            visible = text(p)
+            if visible in {"합성 표지 제목", chapter, caption, cell, footnote}:
+                self.assertEqual("0", p.get("paraPrIDRef"), visible)
+                if visible in {caption, cell, footnote}:
+                    self.assertEqual(["900" if visible == footnote else "1000"],
+                                     heights(p), visible)
+        self.assertTrue({chapter, caption, cell, footnote} <= {text(p) for p in paragraphs})
+        chapter_p, = [p for p in paragraphs if text(p) == chapter]
+        self.assertEqual(["2000" if with_front and major in {"dairy", "food_crops"}
+                          else "1000"], heights(chapter_p))
+        if with_front:
+            cover, = [p for p in paragraphs if text(p) == "합성 표지 제목"]
+            self.assertEqual(["2000" if major in {"dairy", "food_crops"} else "1000"],
+                             heights(cover))
+            toc_item, = [p for p in paragraphs if text(p) == "목차 합성 항목"]
+            self.assertEqual(["1200" if major in {"dairy", "food_crops"} else "1000"],
+                             heights(toc_item))
+            self.assertEqual("0", toc_item.get("paraPrIDRef"))
 
 def paragraphs_of(xml):
     """최상위 `<hp:p>` 요소 목록(ElementTree)."""
@@ -1249,7 +1432,7 @@ class _FoodCropsTests(_Base):
         (Path(root) / "body.md").write_text(FOOD_CROPS_MD, encoding="utf-8")
         # 글꼴 단계가 실제로 값을 바꿔야 발행을 통과한다(원본 face가 이미 학교
         # 글꼴이면 applied["font"]가 비어 format_not_applied로 막힌다).
-        header = FOOD_CROPS_HEADER.replace(gh.SCHOOL_FONT, "함초롬바탕")
+        header = body_test_header()
         cli = make_fake_cli(root, markdown=FOOD_CROPS_MD,
                             section=hwpx_section(list(FOOD_CROPS_PARAGRAPHS)),
                             header=header, hpf=FOOD_CROPS_HPF)
