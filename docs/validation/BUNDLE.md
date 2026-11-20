@@ -178,15 +178,19 @@ job이 실패·취소돼도 건너뛰지 않고, 조각 결과가 `success`가 �
   `sys.path` 변경 없음(자식 프로세스 env는 호출마다 복사본), `mock.patch`는 `with`
   범위 안(`RunnerAccountingTests`, 통째로 실행) ④ `KNOWN_DEFECTS`는 시험 id를 키로
   쓴다. 그래도 나누기 전/후 결과가 시험 id별로 같은지는 전후 비교(아래)로 닫는다.
-- 중첩 실행을 막으려고 사본의 메타 시험 파일을 덮어쓸 때는 **모양을 보존**해야
-  한다: `tests/test_runner_contract.py`는 `validation_sharding.NESTED_RUNS`의
-  `RunnerContractTests` 단위마다 같은 이름의 no-op 메서드를 가진 같은 이름의
-  클래스를 쓰고(모듈 상수 `_STUB_SOURCE` 하나를 세 곳이 공유), 메서드 이름은
-  `sorted()`로 고정한다. 사본 안의 discovery가 `PR_DEFERRED_UNITS` 10단위를
-  그대로 담아야 `code`/`full` 집합 차이가 정확히 그 10단위가 되기 때문이다 —
-  이름 하나짜리 불투명 스텁은 7단위를 지워 `tests/test_validation_sharding.py`의
-  불변식(`PR_DEFERRED_UNITS <= set(modules)`)을 깨고, `full` 스코프(main push)의
-  중첩 실행을 3건 실패로 만든다(2026-11-13 main 실패).
+- 중첩 실행 재귀와 무관 실패 전염을 함께 막으려고 `tests/test_runner_contract.py`의
+  시나리오 네 개(`test_injected_skip_blocks_success`·`test_nested_flag_rejected_in_final_mode`·
+  `test_xpass_surfaces_as_unexpected`·`test_unexpected_failure_beats_incomplete`)는
+  `tests/_harness.py:copy_isolated_tree` 사본을 쓴다: 실제 러너·배포 런타임·`docs/`는
+  그대로 두고, 두 발견 루트의 `test_*.py`를 모두 지운 뒤 외부 관문 모듈
+  `tests/test_p2_windows.py`만 관문 시험 하나로 잘라 남기며(정확히 그 ID 하나가
+  아니면 `RuntimeError`), 인벤토리는 `{"defects": []}`로 비운다. 사본에 메타 시험
+  파일이 없으니 재귀가 없고, 무관한 제품 시험이 사본 안에서 실패해도 시나리오의
+  판정·개수가 바뀌지 않는다(2026-11-20 main windows-full 44657154867의 계약 시험 실패가
+  이 전염으로 설명되지만, 당시 자식 실행의 실패 ID는 남지 않아 미식별이다).
+  `PR_DEFERRED_UNITS <= set(modules)` 불변식은 사본이 아니라 실제 저장소 discovery에서
+  `tests/test_validation_sharding.py`가 지킨다. 사본 전체를 의도적으로 관찰하는 나머지
+  시험(`test_missing_dependencies_block_run` 등)은 `copy_public_tree`를 그대로 쓴다.
 - 단위를 가중치 큰 것부터 정렬(가중치 = 시험 수 + 중첩 실행 수 × 3000 — 중첩 실행 1회가
   나머지 모듈 전체와 비슷한 시간), 경로 순으로 놓고 그때그때 가장 적게 쌓인 조각에
   배정한다(동률이면 낮은 번호). 결정적이다. 중첩 실행 수는 `validation_sharding.py`의

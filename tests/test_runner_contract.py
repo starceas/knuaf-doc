@@ -26,27 +26,13 @@ import tempfile
 import unittest
 from unittest import mock
 
-from tests._harness import ContractCase, REPO_ROOT, copy_public_tree
-from tools import validation_sharding
+from tests._harness import (
+    GATE_TEST_ID, ContractCase, REPO_ROOT, copy_isolated_tree,
+    copy_public_tree)
 
 NESTED = "GG_VALIDATION_NESTED"
-NATIVE_TID = ("tests.test_p2_windows.WindowsBandCase."
-              "test_native_windows_two_process_contention")
+NATIVE_TID = GATE_TEST_ID
 NATIVE_REASON = "native Windows+NTFS required — withheld"
-
-# Stub written over the copy's own meta-test file so a nested run cannot
-# recurse.  It keeps this module's *shape*: the class and one no-op method per
-# unit in validation_sharding.PR_DEFERRED_UNITS, so a discovery inside the copy
-# still contains those units (the PR-scope invariant compares against them).
-# Opaque one-method stubs made them vanish and broke main's full runs.
-_STUB_PREFIX = "tests/test_runner_contract.py::RunnerContractTests::"
-_STUB_SOURCE = (
-    "import unittest\n\n\n"
-    "class RunnerContractTests(unittest.TestCase):\n"
-    + "".join(
-        f"    def {unit[len(_STUB_PREFIX):]}(self):\n        pass\n"
-        for unit in sorted(unit for unit in validation_sharding.NESTED_RUNS
-                           if unit.startswith(_STUB_PREFIX))))
 
 
 # Diagnostic sink for the nested runs, deliberately OUTSIDE the disposable
@@ -107,6 +93,28 @@ def _run_unnested(root, *, args=(), interpreter_flags=(), env_extra=None):
     return proc, report
 
 
+def _failed(report):
+    """The nested run's failed entries as short ``id (detail)`` text.
+
+    Parent assertions carry this so a contract failure names the child run's
+    own failing test instead of only a count.  When no ordinary entry failed
+    (a fixture, accounting or inventory cause), the verdict causes are shown
+    instead.  The full nested report and stderr are kept under
+    ``_REPORT_ROOT``, outside the disposable copy.
+    """
+    if not report:
+        return "<no nested report>"
+    rows = []
+    for entry in report.get("runtime", {}).get("entries", []):
+        if entry.get("category") != "failed":
+            continue
+        detail = " ".join(str(entry.get("detail", "")).split())
+        rows.append("%s (%s)" % (entry.get("test"), detail[:200]))
+    if not rows:
+        return "<no failed entry> causes=%r" % (report.get("causes"),)
+    return "failed in nested run: " + "; ".join(rows)
+
+
 def _runner_module():
     """Load the candidate's run_validation.py for pure in-process
     classification checks (no subprocess, no recursion)."""
@@ -127,6 +135,15 @@ class RunnerContractTests(ContractCase):
         tmp = tempfile.TemporaryDirectory(prefix=prefix)
         self.addCleanup(tmp.cleanup)
         return copy_public_tree(Path(tmp.name) / "public")
+
+    def _isolated_copy(self, prefix):
+        """Disposable copy holding only the scenario's own cases: the real
+        runner, the real gate module pruned to the gate test, and no other
+        test module.  An unrelated product test cannot reach these
+        scenarios' verdicts; a runner contract defect still does."""
+        tmp = tempfile.TemporaryDirectory(prefix=prefix)
+        self.addCleanup(tmp.cleanup)
+        return copy_isolated_tree(Path(tmp.name) / "public")
 
     def test_missing_dependencies_block_run(self):
         """N1-02: with -S (no site-packages) the final runner must exit
@@ -217,12 +234,12 @@ class InjectedSkip(unittest.TestCase):
     def test_injected(self):
         self.skipTest("synthetic injected skip")
 '''
-        root = self._public_copy("knuaf-n1skip-")
+        root = self._isolated_copy("knuaf-n1skip-")
         (root / "tests" / "test_injected_skip.py").write_text(
             injected, encoding="utf-8")
         proc, rep = _run(root, args=("--runtime-only",))
         self.assertIsNotNone(rep, proc.stderr)
-        self.assertNotEqual(0, proc.returncode, proc.stdout)
+        self.assertNotEqual(0, proc.returncode, _failed(rep))
         skipped = {s["test"] for s in rep["unapproved_skips"]}
         self.assertIn(
             "tests.test_injected_skip.InjectedSkip.test_injected", skipped)
@@ -234,8 +251,8 @@ class InjectedSkip(unittest.TestCase):
         self.assertFalse(rep["platform_validation_completed"])
         # R2: the external placeholder is classified, so the injected
         # skip is the sole blocker — deterministically incomplete/3.
-        self.assertEqual("incomplete", rep["verdict"])
-        self.assertEqual(3, proc.returncode, proc.stdout)
+        self.assertEqual("incomplete", rep["verdict"], _failed(rep))
+        self.assertEqual(3, proc.returncode, _failed(rep))
         # the declared gate is approved, not confused with the injection
         self.assertEqual(sys.platform != "win32", NATIVE_TID in {
             s["test"] for s in rep["approved_external_skips"]})
@@ -245,13 +262,13 @@ class InjectedSkip(unittest.TestCase):
             'self.skipTest("synthetic injected skip")',
             'self.skipTest(%r)' % NATIVE_REASON).replace(
             "InjectedSkip", "CopiedReason")
-        root2 = self._public_copy("knuaf-n1skip2-")
+        root2 = self._isolated_copy("knuaf-n1skip2-")
         (root2 / "tests" / "test_injected_skip2.py").write_text(
             injected2, encoding="utf-8")
         proc2, rep2 = _run(root2, args=("--runtime-only",))
         self.assertIsNotNone(rep2, proc2.stderr)
-        self.assertEqual("incomplete", rep2["verdict"])
-        self.assertEqual(3, proc2.returncode, proc2.stdout)
+        self.assertEqual("incomplete", rep2["verdict"], _failed(rep2))
+        self.assertEqual(3, proc2.returncode, _failed(rep2))
         self.assertIn(
             "tests.test_injected_skip2.CopiedReason.test_injected",
             {s["test"] for s in rep2["unapproved_skips"]})
@@ -264,29 +281,34 @@ class InjectedSkip(unittest.TestCase):
         the exact value '1' is sanctioned."""
         for value in ("1", "yes"):
             with self.subTest(mode="default", value=value):
-                root = self._public_copy("knuaf-n1flag-")
+                root = self._isolated_copy("knuaf-n1flag-")
                 proc, rep = _run_unnested(root,
                                           env_extra={NESTED: value})
                 self.assertIsNotNone(rep, proc.stderr)
                 self.assertNotEqual(0, proc.returncode,
-                                    f"NESTED={value}: {proc.stdout}")
+                                    "NESTED=%s: %s" % (value, _failed(rep)))
                 self.assertTrue(any(NESTED in c
                                     for c in rep["causes"]["incomplete"]),
                                 rep["causes"])
+                # default mode also runs the deployment check: it must pass
+                # on the isolated tree, or its own failure would win.
+                self.assertEqual("pass", rep["bundle"]["status"],
+                                 rep["bundle"].get("stdout_tail"))
+                self.assertEqual("incomplete", rep["verdict"], _failed(rep))
         with self.subTest(mode="runtime_only", value="bogus"):
-            root = self._public_copy("knuaf-n1flag-")
+            root = self._isolated_copy("knuaf-n1flag-")
             proc, rep = _run_unnested(root, args=("--runtime-only",),
                                       env_extra={NESTED: "bogus"})
             self.assertIsNotNone(rep, proc.stderr)
-            self.assertNotEqual(0, proc.returncode, proc.stdout)
+            self.assertNotEqual(0, proc.returncode, _failed(rep))
             # the bogus flag is the sole incomplete cause in a clean copy
             self.assertTrue(any(NESTED in c
                                 for c in rep["causes"]["incomplete"]),
                             rep["causes"])
-            self.assertEqual("incomplete", rep["verdict"])
-            self.assertEqual(3, proc.returncode, proc.stdout)
+            self.assertEqual("incomplete", rep["verdict"], _failed(rep))
+            self.assertEqual(3, proc.returncode, _failed(rep))
         with self.subTest(mode="runtime_only", value="1"):
-            root = self._public_copy("knuaf-n1flag-")
+            root = self._isolated_copy("knuaf-n1flag-")
             proc, rep = _run(root, args=("--runtime-only",))
             self.assertIsNotNone(rep, proc.stderr)
             # the sanctioned value '1' is accepted: the flag must never
@@ -333,7 +355,7 @@ class SyntheticXpass(ContractCase):
             defect_match=lambda o: o == 5,
             desired_match=lambda o: o == 4)
 '''
-        root = self._public_copy("knuaf-n1xpass-")
+        root = self._isolated_copy("knuaf-n1xpass-")
         tid = ("tests.test_synthetic_xpass.SyntheticXpass."
                "test_synthetic_xpass")
         (root / "tests" / "test_synthetic_xpass.py").write_text(
@@ -402,7 +424,7 @@ class InjectedBad(unittest.TestCase):
     def test_skips(self):
         self.skipTest("synthetic injected skip")
 '''
-        root = self._public_copy("knuaf-n1both-")
+        root = self._isolated_copy("knuaf-n1both-")
         (root / "tests" / "test_injected_bad.py").write_text(
             injected, encoding="utf-8")
 
@@ -420,35 +442,28 @@ class InjectedSubtest(unittest.TestCase):
                 if i:
                     self.fail("synthetic subtest failure")
 '''
-        root2 = self._public_copy("knuaf-r2sub-")
+        root2 = self._isolated_copy("knuaf-r2sub-")
         (root2 / "tests" / "test_injected_subtest.py").write_text(
             subfail, encoding="utf-8")
 
-        # R2 scoped default run: the copy's meta-test file is stubbed so
-        # the inner DEFAULT run cannot recurse (NESTED cannot be set in
-        # default mode — that would be an incomplete cause by contract).
-        root3 = self._public_copy("knuaf-r2scoped-")
-        (root3 / "tests" / "test_runner_contract.py").write_text(
-            _STUB_SOURCE, encoding="utf-8")
+        # R2 scoped default run: the isolated tree has no meta-test file to
+        # recurse into, so the inner DEFAULT run is safe by construction
+        # (NESTED cannot be set in default mode — that would be an
+        # incomplete cause by contract).
+        root3 = self._isolated_copy("knuaf-r2scoped-")
 
         # injected subtest failure PLUS the pending native skip in
         # default mode: failure wins (exit 1), both flags false, the
         # pending fact stays visible — never a repeat of R1's 0.
-        root4 = self._public_copy("knuaf-r2subd-")
+        root4 = self._isolated_copy("knuaf-r2subd-")
         (root4 / "tests" / "test_injected_subtest.py").write_text(
             subfail, encoding="utf-8")
-        (root4 / "tests" / "test_runner_contract.py").write_text(
-            _STUB_SOURCE, encoding="utf-8")
 
         # R3: deployment check failure control — folded in here so the
         # nested-skip allowlist stays at its original ten IDs (a separate
         # method would need an eleventh).  A missing deployment payload
         # must report bundle=fail and verdict unexpected_failures (exit 1).
-        root5 = self._public_copy("knuaf-r3deployment-")
-        # Stub the meta-test file so the inner default run cannot
-        # recurse (no NESTED allowed in default mode).
-        (root5 / "tests" / "test_runner_contract.py").write_text(
-            _STUB_SOURCE, encoding="utf-8")
+        root5 = self._isolated_copy("knuaf-r3deployment-")
         disposition_path = root5 / "docs" / "asset-disposition.json"
         disposition = json.loads(disposition_path.read_text(encoding="utf-8"))
         disposition["assets"].append({
@@ -475,8 +490,8 @@ class InjectedSubtest(unittest.TestCase):
              (proc5, rep5)) = [job.result() for job in jobs]
 
         self.assertIsNotNone(rep, proc.stderr)
-        self.assertEqual(1, proc.returncode, proc.stdout)
-        self.assertEqual("unexpected_failures", rep["verdict"])
+        self.assertEqual(1, proc.returncode, _failed(rep))
+        self.assertEqual("unexpected_failures", rep["verdict"], _failed(rep))
         self.assertTrue(rep["causes"]["unexpected"])
         self.assertTrue(rep["causes"]["incomplete"])
         skipped = {s["test"] for s in rep["unapproved_skips"]}
@@ -484,8 +499,8 @@ class InjectedSubtest(unittest.TestCase):
             "tests.test_injected_bad.InjectedBad.test_skips", skipped)
 
         self.assertIsNotNone(rep2, proc2.stderr)
-        self.assertEqual(1, proc2.returncode, proc2.stdout)
-        self.assertEqual("unexpected_failures", rep2["verdict"])
+        self.assertEqual(1, proc2.returncode, _failed(rep2))
+        self.assertEqual("unexpected_failures", rep2["verdict"], _failed(rep2))
         pid = ("tests.test_injected_subtest.InjectedSubtest."
                "test_parent")
         byid = {e["test"]: e for e in rep2["runtime"]["entries"]}
@@ -501,8 +516,8 @@ class InjectedSubtest(unittest.TestCase):
 
         self.assertIsNotNone(rep3, proc3.stderr)
         self.assertEqual("ok" if sys.platform == "win32" else "ok_platform_scoped", rep3["verdict"],
-                         proc3.stdout)
-        self.assertEqual(0, proc3.returncode, proc3.stdout)
+                         _failed(rep3))
+        self.assertEqual(0, proc3.returncode, _failed(rep3))
         self.assertEqual("current_platform", rep3["validation_scope"])
         self.assertTrue(rep3["platform_validation_completed"])
         self.assertEqual(sys.platform == "win32", rep3["full_validation_completed"])
@@ -533,11 +548,11 @@ class InjectedSubtest(unittest.TestCase):
                          nat[NATIVE_TID]["category"])
 
         self.assertIsNotNone(rep4, proc4.stderr)
-        self.assertEqual("unexpected_failures", rep4["verdict"])
-        self.assertEqual(1, proc4.returncode, proc4.stdout)
+        self.assertEqual("unexpected_failures", rep4["verdict"], _failed(rep4))
+        self.assertEqual(1, proc4.returncode, _failed(rep4))
         self.assertFalse(rep4["platform_validation_completed"])
         self.assertFalse(rep4["full_validation_completed"])
-        self.assertEqual(1, rep4["runtime"]["unexpected_failed"])
+        self.assertEqual(1, rep4["runtime"]["unexpected_failed"], _failed(rep4))
         self.assertIn(pid, {e["test"]
                             for e in rep4["runtime"]["entries"]
                             if e["category"] == "failed"})
@@ -556,10 +571,10 @@ class InjectedSubtest(unittest.TestCase):
         self.assertIn(
             "commit_evidence=unchecked local_result=reference_only "
             "official_evidence=ci_run_record_with_sha", proc5.stdout)
-        self.assertEqual("unexpected_failures", rep5["verdict"])
+        self.assertEqual("unexpected_failures", rep5["verdict"], _failed(rep5))
         self.assertIn("asset_disposition:deployment_missing_payload",
                       rep5["bundle"]["stdout_tail"])
-        self.assertEqual(1, proc5.returncode, proc5.stdout)
+        self.assertEqual(1, proc5.returncode, _failed(rep5))
         self.assertTrue(any("bundle" in c
                             for c in rep5["causes"]["unexpected"]),
                         rep5["causes"])
