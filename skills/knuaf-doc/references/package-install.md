@@ -33,14 +33,33 @@
 
 기준 Python을 옮기거나 지운 뒤에는 `.venv`의 POSIX 실행 파일 링크(`bin/python3`·`bin/python`)가 존재하지 않는 대상을 가리킬 수 있다. `ensure`는 이 경우에만 기존 `.venv`를 지우지 않고 `.venv-broken-<UTC 시각>`으로 옮긴 뒤 새 `.venv`를 준비한다.
 
-보존 뒤 성공 응답은 `preserved_venv` 객체를, 보존 뒤 실패 응답은 `status`와 `reason` 및 같은 `preserved_venv` 객체를 담는다. 실패 reason에는 보존 이름이 있어야 한다. 보존 객체의 `name`·`path`·`link`·`link_target`은 보존 위치와 끊어진 링크를 가리킨다. 보존하지 않은 정상 ensure 결과는 `preserved_venv: null`을 담고, 보존 전 실패(`main`의 `blocked`)에는 이 키가 없다.
+보존 뒤 성공 응답은 `preserved_venv` 객체를, 보존 뒤 실패 응답은 `status`와 `reason` 및 같은 `preserved_venv` 객체를 담는다. 보존한 경우 실패 reason에는 보존 이름이 있어야 한다. 보존 객체의 `name`·`path`·`link`·`link_target`은 보존 위치와 끊어진 링크를 가리킨다. 보존하지 않은 정상 ensure 결과는 `preserved_venv: null`을 담고, 보존 전 실패(`main`의 `blocked`)에는 이 키가 없다.
 
-보존 뒤 **성공** 응답에는 학생 안내 목록 `notices`가 원소 하나로 실린다: `code: "venv_preserved"`, 기계용 폴더 이름 `folder`, 그리고 값이 박힌 고정 문장 `message`. `message`는 폴더 이름·경로를 넣지 않는 상수(`gg_deps.VENV_PRESERVED_NOTICE`)라서 앱은 그대로 보여 주면 되고, 어느 보존본인지는 `folder`(또는 같은 응답의 `preserved_venv.name`)로 안다. 보존하지 않았거나 설치가 실패한 응답은 모양을 바꾸지 않는다 — `notices` 키가 없고, 실패는 기존대로 `reason`이 보존 이름을 담는다.
+보존 뒤 **성공** 응답에는 학생 안내 목록 `notices`가 원소 하나로 실린다: `code: "venv_preserved"`, 기계용 폴더 이름 `folder`, 그리고 값이 박힌 고정 문장 `message`. `message`는 폴더 이름·경로를 넣지 않는 상수(`gg_deps.VENV_PRESERVED_NOTICE`)라서 앱은 그대로 보여 주면 되고, 어느 보존본인지는 `folder`(또는 같은 응답의 `preserved_venv.name`)로 안다. 보존하지 않았거나 설치가 실패한 응답에는 `notices` 키가 없다 — 보존한 경우의 실패는 `reason`이 보존 이름을 담는다.
 
 - 이름 규칙: `.venv-broken-YYYYmmdd-HHMMSS`. 같은 초 안에서 기본 이름이 이미 있으면 `-2`, `-3` … `-100` 순으로 시도한다. 같은 초 안에서 100개 이름이 모두 차면 덮어쓰지 않고 `blocked`로 멈춘다. 번호는 초가 바뀌면 다시 시작하므로 보존본 전체 개수에 고정 상한은 없다.
 - 보존본은 자동으로 지우지 않는다. 학생이 필요 없다고 판단하면 직접 지운다.
 - 이름 바꾸기가 실패하면(폴더를 쓰는 앱·Codex·터미널이 열려 있음) 지우지 않고 `blocked`로 돌려주며, 결과 `reason`에 무엇을 끄고 다시 시도해야 하는지 적는다.
 - 다른 이유로 깨진 `.venv`(예: 실행 파일이 없거나 pip 손상)는 보존 분기를 타지 않고 기존 생성 경로를 따른다. 그 경로는 새 환경 생성에 성공할 수도, 실패할 수도 있다.
+
+### Windows에서 런처가 103으로 끝났을 때
+
+Windows 복사 모드 `.venv`의 `Scripts\python.exe`는 기준 Python을 가리키는 링크가 아니라 `venvlauncher.exe`를 이름만 바꿔 복사한 일반 파일이다. 기준 Python을 옮기거나 지우거나 접근을 막으면 이 런처가 `pyvenv.cfg`의 `home` 값으로 `home\python.exe`를 조회하다 실패하며 종료 코드 **103**으로 끝나는 사례가 Windows venvlauncher에서 관찰됐다(설계 근거: 2026-11-20 `WINVENV-research.md` ③-8). 디스크는 그대로이고 pip는 한 번도 돌지 않으므로, 지금까지는 `failed`(`pip_exit: 103`)만 나오고 학생이 읽을 문장이 없었다. `ensure`는 그 103이 나온 **원인**을 검증하지 않는다 — 아래 표의 조건은 응답 문장을 붙일 **형태** 조건일 뿐이고, 실행 파일이 실제 venvlauncher인지도 검사하지 않는다.
+
+`ensure`는 아래가 **모두** 맞을 때만 결과 `reason`에 고정 문장을 넣는다. 하나라도 아니면 응답은 지금과 똑같다.
+
+| 조건 | 확인 방법 |
+|---|---|
+| 윈도 | `os.name == "nt"` |
+| 런처 사본 | `.venv\Scripts\python.exe`가 일반 파일(링크 아님) |
+| 런처의 home 조회 실패 | pip 종료 코드가 정확히 `103` |
+| 보존하지 않음 | `preserved_venv`가 `None` |
+
+문장은 `gg_deps.VENV_LAUNCHER_UNPREPARED_REASON` 상수이며 뜻은 "Python 환경 준비를 마치지 못했습니다. Python 설치 상태와 접근 권한을 확인한 뒤 다시 시도하세요."다. 103은 속성 조회 실패일 뿐 부재의 증거가 아니므로(접근 거부도 같은 코드다) 문장은 원인을 단정하지 않고, `.venv` 삭제·이름 바꾸기를 권하지도 않는다. `ensure`는 이 경우 폴더를 옮기거나 지우거나 다시 만들지 않는다. 보존이 있었다면 그 실패 `reason`(보존본 이름 포함)이 그대로 남고 이 문장으로 덮이지 않는다. 새 키는 만들지 않는다.
+
+이 문장이 화면에 보이는지는 이 스킬이 보장하지 않는다. 앱 조사(2026-11-21 `APPHINT-research.md` §1) 기준으로 앱이 실패 응답의 `reason`을 실패 상세 첫 줄로 올리므로, 그 조사 범위에서는 이 문장이 학생이 읽는 첫 줄이 된다 — 앱 쪽 구현은 이 저장소 밖이다.
+
+pip가 직접 낸 다른 실패(종료 코드 1 등), 런처가 대상을 띄우지 못한 101, 102·104 같은 이웃 코드와 음수 종료 코드는 이 분기를 타지 않는다. `.venv\Scripts\python.exe`가 아예 없어 새로 만들어도 런처가 나오지 않으면 103 문장이 아니라 기존 "실행 파일을 찾지 못함" 실패가 그대로 나간다.
 
 ## 실행 인터프리터 선택 순서
 

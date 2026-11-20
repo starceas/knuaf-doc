@@ -471,6 +471,273 @@ class BrokenVenvRecoveryTests(ContractCase):
                                   "keep.txt").read_text(encoding="utf-8"))
 
 
+class WindowsLauncherFailureReasonTests(ContractCase):
+    """A copy-mode Windows venv whose launcher cannot reach its base Python
+    (exit code 103) gets one plain retry sentence on ``reason`` and nothing
+    on disk moves (WINVENV research 2026-11-20 ③-8, cases N1-N4)."""
+
+    MANIFEST = BrokenVenvRecoveryTests.MANIFEST
+
+    def setUp(self):
+        self.deps = runtime("gg_deps")
+        self.tmp = tempfile.TemporaryDirectory(prefix="gg-deps-win103-")
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name)
+        self.project = self.root / "paper"
+        self.project.mkdir()
+
+    def _launcher_venv(self, project=None):
+        """A Windows copy-mode venv: Scripts\\python.exe is a regular file and
+        pyvenv.cfg points ``home`` at a base Python folder that is gone."""
+        project = project or self.project
+        interp = project / ".venv" / "Scripts" / "python.exe"
+        interp.parent.mkdir(parents=True)
+        interp.write_bytes(b"MZ launcher copy\n")
+        (project / ".venv" / "pyvenv.cfg").write_text(
+            "home = " + str(self.root / "gone" / "Python311") + "\n"
+            "include-system-site-packages = false\n"
+            "version = 3.11.9\n",
+            encoding="utf-8")
+        return interp
+
+    def _nt(self):
+        return mock.patch.object(self.deps, "_on_windows", return_value=True)
+
+    def _run(self, project, rc, *extra):
+        class Pip:
+            def __init__(self, code):
+                self.returncode = code
+                self.stdout = ""
+                self.stderr = "No Python at '<gone>'"
+
+        patches = [
+            mock.patch.object(self.deps, "load_manifest",
+                              return_value=[dict(d) for d in self.MANIFEST]),
+            mock.patch.object(self.deps, "_import_and_version",
+                              return_value=(True, "1.2")),
+            mock.patch.object(self.deps.subprocess, "run",
+                              return_value=Pip(rc)),
+        ]
+        patches.extend(extra)
+        # Scoped to this call: a second _run() in the same test must not
+        # inherit the first one's mocks (different rc, different builder).
+        with contextlib.ExitStack() as stack:
+            for patch in patches:
+                stack.enter_context(patch)
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                code = self.deps.main(["ensure", str(project)])
+        return code, json.loads(out.getvalue())
+
+    def _preserved_dirs(self, project=None):
+        project = project or self.project
+        return sorted(p for p in project.iterdir()
+                      if p.name.startswith(".venv-broken-"))
+
+    def test_launcher_103_on_windows_adds_one_retry_sentence(self):
+        interp = self._launcher_venv()
+        before = interp.read_bytes()
+
+        code, body = self._run(self.project, 103, self._nt())
+
+        self.assertEqual(1, code, body)
+        self.assertEqual("failed", body["status"])
+        self.assertEqual(103, body["pip_exit"])
+        self.assertFalse(body["created"])
+        self.assertIsNone(body["preserved_venv"])
+        self.assertEqual(self.deps.VENV_LAUNCHER_UNPREPARED_REASON,
+                         body["reason"])
+        # Nothing was moved, renamed or recreated, and no new key appeared.
+        self.assertEqual(before, interp.read_bytes())
+        self.assertFalse(interp.is_symlink())
+        self.assertEqual([], self._preserved_dirs())
+        self.assertNotIn("notices", body)
+        self.assertEqual(
+            {"status", "venv", "venv_python", "created", "preserved_venv",
+             "pip_argv", "pip_exit", "pip_stdout_tail", "pip_stderr_tail",
+             "installed_versions", "verified_imports", "requirements",
+             "reason"},
+            set(body))
+
+    def test_retry_sentence_names_no_cause_and_no_cleanup(self):
+        """The one sentence must not assert absence/moving or suggest
+        deleting `.venv` (roh284c), and must be byte-identical every run."""
+        sentence = self.deps.VENV_LAUNCHER_UNPREPARED_REASON
+        for banned in ("찾을 수 없", "없습니다", "삭제", "지우", "지워",
+                       "옮기", "이동", "없어"):
+            self.assertNotIn(banned, sentence)
+        self.assertNotIn(".venv", sentence)
+
+        seen = []
+        for name in ("paper-a", "paper-b"):
+            project = self.root / name
+            project.mkdir()
+            self._launcher_venv(project)
+            code, body = self._run(project, 103, self._nt())
+            self.assertEqual(1, code, body)
+            seen.append(body["reason"])
+
+        self.assertEqual([sentence] * 2, seen)
+        self.assertNotIn(str(self.root), sentence)
+
+    def test_other_launcher_exit_codes_keep_the_old_shape(self):
+        """Only 103 earns the sentence: neighbouring codes (102, 104), the
+        launcher's other failure (101), pip's own failure (1) and a negative
+        code from an abnormal termination must all keep the old shape."""
+        self._launcher_venv()
+        for rc in (101, 102, 104, 1, -1):
+            with self.subTest(rc=rc):
+                code, body = self._run(self.project, rc, self._nt())
+                self.assertEqual(1, code, body)
+                self.assertEqual("failed", body["status"])
+                self.assertEqual(rc, body["pip_exit"])
+                self.assertNotIn("reason", body)
+                self.assertNotIn("notices", body)
+
+    def test_missing_launcher_keeps_the_existing_failed_reason(self):
+        """No Scripts\\python.exe and the builder produces none: the old
+        "생성 후 실행 파일을 찾지 못함" failure keeps its own reason and the
+        103 sentence is not borrowed for it (no pip ever ran)."""
+        (self.project / ".venv" / "Scripts").mkdir(parents=True)
+
+        class BuildsNothing:
+            def __init__(self, **kwargs):
+                pass
+
+            def create(self, path):
+                pass
+
+        code, body = self._run(
+            self.project, 103, self._nt(),
+            mock.patch.object(self.deps.venv, "EnvBuilder", BuildsNothing),
+        )
+
+        self.assertEqual(1, code, body)
+        self.assertEqual("failed", body["status"])
+        self.assertNotEqual(self.deps.VENV_LAUNCHER_UNPREPARED_REASON,
+                            body["reason"])
+        self.assertIn("찾지 못함", body["reason"])
+        self.assertNotIn("pip_exit", body)
+        self.assertNotIn("notices", body)
+        self.assertEqual([], self._preserved_dirs())
+
+    def test_freshly_built_launcher_copy_that_dies_with_103_gets_it(self):
+        """The sentence follows the fault, not the history: a venv built in
+        this very run is still a copy-mode launcher, so 103 on it is the
+        same student-facing situation."""
+        class BuildsLauncher:
+            def __init__(self, **kwargs):
+                pass
+
+            def create(self, path):
+                target = Path(path) / "Scripts" / "python.exe"
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(b"MZ launcher copy\n")
+
+        code, body = self._run(
+            self.project, 103, self._nt(),
+            mock.patch.object(self.deps.venv, "EnvBuilder", BuildsLauncher),
+        )
+
+        self.assertEqual(1, code, body)
+        self.assertTrue(body["created"])
+        self.assertEqual(103, body["pip_exit"])
+        self.assertEqual(self.deps.VENV_LAUNCHER_UNPREPARED_REASON,
+                         body["reason"])
+
+    def test_python_link_in_scripts_keeps_the_old_shape(self):
+        """A symlinked Scripts\\python.exe is a dev-mode venv, not the copied
+        launcher, so 103 says nothing about the student's setup."""
+        target = self.root / "runtime" / "python.exe"
+        target.parent.mkdir(parents=True)
+        target.write_bytes(b"MZ\n")
+        link = self.project / ".venv" / "Scripts" / "python.exe"
+        link.parent.mkdir(parents=True)
+        try:
+            link.symlink_to(target)
+        except (OSError, NotImplementedError):
+            self.skipTest("symlink를 만들 수 없는 환경")
+
+        code, body = self._run(self.project, 103, self._nt())
+
+        self.assertEqual(1, code, body)
+        self.assertEqual("failed", body["status"])
+        self.assertNotIn("reason", body)
+        self.assertTrue(link.is_symlink())
+        self.assertEqual([], self._preserved_dirs())
+
+    def test_posix_host_never_adds_the_sentence(self):
+        if os.name == "nt":
+            self.skipTest("POSIX 호스트 전용 시험")
+        interp = self.project / ".venv" / "bin" / "python3"
+        interp.parent.mkdir(parents=True)
+        interp.write_bytes(b"#!/bin/sh\n")
+
+        code, body = self._run(self.project, 103)
+
+        self.assertEqual(1, code, body)
+        self.assertEqual("failed", body["status"])
+        self.assertNotIn("reason", body)
+
+    def test_preserved_copy_keeps_its_own_reason(self):
+        """When a broken venv was moved aside, that reason (with the copy's
+        name) wins: the retry sentence never replaces it."""
+        moved = self.root / "runtime" / "python.exe"
+        moved.parent.mkdir(parents=True)
+        moved.write_bytes(b"MZ\n")
+        link = self.project / ".venv" / "Scripts" / "python.exe"
+        link.parent.mkdir(parents=True)
+        try:
+            link.symlink_to(moved)
+        except (OSError, NotImplementedError):
+            self.skipTest("symlink를 만들 수 없는 환경")
+        moved.unlink()
+
+        class FakeBuilder:
+            def __init__(self, **kwargs):
+                pass
+
+            def create(self, path):
+                target = Path(path) / "Scripts" / "python.exe"
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(b"MZ launcher copy\n")
+
+        code, body = self._run(
+            self.project, 103, self._nt(),
+            mock.patch.object(self.deps.venv, "EnvBuilder", FakeBuilder),
+        )
+
+        self.assertEqual(1, code, body)
+        self.assertEqual("failed", body["status"])
+        self.assertIsNotNone(body["preserved_venv"])
+        self.assertIn(body["preserved_venv"]["name"], body["reason"])
+        self.assertNotEqual(self.deps.VENV_LAUNCHER_UNPREPARED_REASON,
+                            body["reason"])
+
+    def test_launcher_predicate_needs_windows_and_a_regular_file(self):
+        deps = self.deps
+        interp = self._launcher_venv()
+        with self._nt():
+            self.assertTrue(deps._is_windows_launcher_copy(interp))
+            self.assertFalse(deps._is_windows_launcher_copy(None))
+            self.assertFalse(deps._is_windows_launcher_copy(
+                self.project / ".venv" / "Scripts" / "missing.exe"))
+            self.assertFalse(deps._is_windows_launcher_copy(
+                self.project / ".venv" / "bin" / "python3"))
+            target = self.root / "runtime" / "python.exe"
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(b"MZ\n")
+            link = self.project / ".venv" / "Scripts" / "linked.exe"
+            try:
+                link.symlink_to(target)
+            except (OSError, NotImplementedError):
+                self.skipTest("symlink를 만들 수 없는 환경")
+            self.assertFalse(deps._is_windows_launcher_copy(link))
+        if os.name != "nt":
+            # The unpatched host really is POSIX here, so nothing qualifies.
+            self.assertFalse(deps._is_windows_launcher_copy(interp))
+
+
 class RuntimeDependencyConsumerTests(ContractCase):
     def test_openpyxl_declares_school_verifier_consumer(self):
         manifest = json.loads((SCRIPTS / "runtime-deps.json").read_text(encoding="utf-8"))
