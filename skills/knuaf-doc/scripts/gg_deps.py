@@ -73,6 +73,24 @@ VENV_PRESERVED_NOTICE = {
     ),
 }
 
+# What the student reads when the Windows venv launcher itself dies with 103
+# while preparing the environment: the launcher could not look up the base
+# ``home\python.exe`` recorded in pyvenv.cfg. 103 is a failed attribute
+# lookup, not proof the file is gone (access denial lands there too), so the
+# sentence names no cause and never suggests deleting or renaming ``.venv``.
+# FROZEN like the notice above: it reads the same byte for byte every run, and
+# it travels on ``reason`` — the one key the app lifts out of a failed
+# response (APPHINT research 2026-11-21 §1).
+VENV_LAUNCHER_UNPREPARED_REASON = (
+    "Python 환경 준비를 마치지 못했습니다. "
+    "Python 설치 상태와 접근 권한을 확인한 뒤 다시 시도하세요."
+)
+
+# The venv launcher's exit code when ``GetFileAttributesW`` on the base
+# interpreter fails (CPython PC/launcher.c, PC/venvlauncher.c). Any other
+# failure keeps the old response shape.
+_LAUNCHER_HOME_LOOKUP_FAILED = 103
+
 # Runs inside another interpreter: argv, not string interpolation, so the
 # declared module/dist names can never inject code.
 _PROBE = (
@@ -154,6 +172,38 @@ def venv_python(project):
         if cand.is_file():
             return cand
     return None
+
+
+def _on_windows():
+    """True only on Windows.
+
+    A one-line seam so the contract tests can exercise the Windows branch on
+    macOS and Linux. Patching ``os.name`` instead would be caught by
+    ``pathlib``, which picks ``WindowsPath`` from that same global and then
+    refuses to instantiate on POSIX.
+    """
+    return os.name == "nt"
+
+
+def _is_windows_launcher_copy(vpy):
+    """True when ``vpy`` is the Windows launcher copy a copy-mode venv holds.
+
+    ``ensure`` builds Windows venvs with ``symlinks=False``, so
+    ``.venv\\Scripts\\python.exe`` is a renamed ``venvlauncher.exe`` — a
+    regular file, not a link to the base interpreter. Only that shape can die
+    with the launcher's own exit codes, so only that shape gets the extra
+    student sentence. POSIX, a symlink, or a missing file keep the existing
+    response untouched.
+    """
+    if not _on_windows() or vpy is None:
+        return False
+    vpy = Path(vpy)
+    return (
+        vpy.name == "python.exe"
+        and vpy.parent.name == "Scripts"
+        and vpy.is_file()
+        and not vpy.is_symlink()
+    )
 
 
 def _broken_venv_link(venv_dir):
@@ -468,6 +518,18 @@ def ensure(project, find_links=None, no_index=False):
     reason = None
     if not ok and preserved:
         reason = "pip 설치 또는 의존성 확인에 실패함 — 기존 .venv는 보존본(" + preserved["name"] + ")에 있습니다."
+    elif (
+        not ok
+        and proc.returncode == _LAUNCHER_HOME_LOOKUP_FAILED
+        and _is_windows_launcher_copy(vpy)
+    ):
+        # The Windows launcher could not reach the base interpreter it was
+        # built against, so pip never ran and ``pip_stdout_tail`` holds no
+        # student-readable sentence. Nothing was moved or deleted: this is
+        # the one failure that gets a plain retry line, and only when no
+        # preserved copy exists to name instead (``elif`` above keeps that
+        # reason intact).
+        reason = VENV_LAUNCHER_UNPREPARED_REASON
     result = {
         "status": "installed" if ok else "failed",
         "venv": str(venv_dir),
