@@ -119,9 +119,15 @@ class BrokenVenvRecoveryTests(ContractCase):
             link.symlink_to(moved)
         except (OSError, NotImplementedError):
             self.skipTest("symlink를 만들 수 없는 환경")
+        # While the target still exists, the link must reach exactly it.
+        self.assertTrue(os.path.samefile(link, moved))
         moved.unlink()
         self.assertFalse(link.exists())
-        return str(moved)
+        # The link text as the OS reports it, read before ensure() runs.
+        # Windows returns it with a \\?\ prefix; comparing against this
+        # value (not the path we passed in) catches a rewritten record or
+        # a link swapped during preservation without stripping anything.
+        return os.readlink(link)
 
     def _patch(self, created):
         """Pip succeeds, probes report an in-range version, builder is fake."""
