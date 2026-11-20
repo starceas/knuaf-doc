@@ -204,6 +204,84 @@ def copy_public_tree(dest):
     return dest
 
 
+# --- scenario-owned copies for the runner-contract meta tests -----------
+# Those meta tests run the candidate runner against a disposable copy.  The
+# scenario injects exactly the cases it asserts on, so the nested run must
+# contain nothing else: one unrelated product test failing inside the copy
+# used to change the nested verdict and counts, and the contract test then
+# failed for a reason it does not own.  The isolated tree keeps the deployed
+# runtime, ``tools/``, the docs the bundle check reads and the single
+# external gate module verbatim; every other test module is dropped and the
+# defect inventory is emptied (its regression tests no longer exist there).
+GATE_MODULE = "tests/test_p2_windows.py"
+GATE_CLASS = "WindowsBandCase"
+GATE_METHOD = "test_native_windows_two_process_contention"
+GATE_TEST_ID = "tests.test_p2_windows.%s.%s" % (GATE_CLASS, GATE_METHOD)
+_ISOLATED_TEST_ROOTS = ("tests", "skills/knuaf-doc/tests")
+
+
+def _test_method_ids(source, module):
+    """``module.Class.method`` for every ``test_*`` method declared by any
+    class in ``source`` - the class/method pair, not the name alone."""
+    return sorted(
+        "%s.%s.%s" % (module, node.name, item.name)
+        for node in ast.walk(ast.parse(source))
+        if isinstance(node, ast.ClassDef)
+        for item in node.body
+        if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and item.name.startswith("test_"))
+
+
+def _prune_test_methods(source, keep):
+    """Return ``source`` with every ``test_*`` method dropped except the
+    names in ``keep``.  Decorator lines go with their method and every other
+    line stays byte-identical, so the module keeps its imports, helpers and
+    fixtures (``setUp`` included)."""
+    lines = source.splitlines(keepends=True)
+    drop = set()
+    for node in ast.walk(ast.parse(source)):
+        if not isinstance(node, ast.ClassDef):
+            continue
+        for item in node.body:
+            if not isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            if not item.name.startswith("test_") or item.name in keep:
+                continue
+            first = min([d.lineno for d in item.decorator_list]
+                        + [item.lineno])
+            drop.update(range(first, item.end_lineno + 1))
+    return "".join(line for number, line in enumerate(lines, 1)
+                   if number not in drop)
+
+
+def copy_isolated_tree(dest, *, gate_test_id=GATE_TEST_ID):
+    """Copy the public tree for a runner-contract scenario.
+
+    The copy holds the real runner, the real gate module pruned to the one
+    gate test, and an empty defect inventory; every other test module is
+    absent.  Raises if the pruned module does not declare exactly
+    ``gate_test_id`` - a silently different gate would fake the contract.
+    """
+    dest = copy_public_tree(dest)
+    for rel in _ISOLATED_TEST_ROOTS:
+        for path in sorted((dest / rel).rglob("test_*.py")):
+            if path.relative_to(dest).as_posix() != GATE_MODULE:
+                path.unlink()
+    gate = dest / GATE_MODULE
+    pruned = _prune_test_methods(gate.read_text(encoding="utf-8"),
+                                 {GATE_METHOD})
+    remaining = _test_method_ids(pruned, "tests." + Path(GATE_MODULE).stem)
+    if remaining != [gate_test_id]:
+        raise RuntimeError(
+            "isolated gate module keeps %r, expected exactly [%r]"
+            % (remaining, gate_test_id))
+    gate.write_text(pruned, encoding="utf-8")
+    (dest / "tests" / "regression_inventory.json").write_text(
+        json.dumps({"defects": []}, ensure_ascii=False, indent=1) + "\n",
+        encoding="utf-8")
+    return dest
+
+
 def text_calls_without_encoding(source):
     """AST scan: Path.read_text()/write_text() calls lacking ``encoding``."""
     hits = []
