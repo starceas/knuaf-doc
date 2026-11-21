@@ -1462,6 +1462,8 @@ class _FoodCropsTests(_Base):
     def test_final_file_has_exactly_one_page_number_per_section(self):
         root = self._project("food_crops")
         (Path(root) / "body.md").write_text(FOOD_CROPS_MD, encoding="utf-8")
+        # 글꼴 단계가 실제로 값을 바꿔야 발행을 통과한다(원본 face가 이미 학교
+        # 글꼴이면 applied["font"]가 비어 format_not_applied로 막힌다).
         header = body_test_header()
         cli = make_fake_cli(root, markdown=FOOD_CROPS_MD,
                             section=hwpx_section(list(FOOD_CROPS_PARAGRAPHS)),
@@ -1501,32 +1503,6 @@ class _FoodCropsTests(_Base):
             ["겉표지", "표제면", "제출서", "인준서", "요약", "감사의 글", "목차"],
             value["manifest"]["school_frontmatter"]["sections"])
 
-
-    def test_publishes_when_generated_header_already_has_school_font(self):
-        # R-01: 생성기가 모든 face를 이미 학교 글꼴로 써서 넘기면 바꿀 바이트가
-        # 없다. 그렇다고 글꼴 미적용이 아니므로 발행은 그대로 통과해야 한다.
-        root = self._project("food_crops")
-        (Path(root) / "body.md").write_text(FOOD_CROPS_MD, encoding="utf-8")
-        header = body_test_header().replace(
-            'face="함초롬바탕"', 'face="' + gh.SCHOOL_FONT + '"')
-        cli = make_fake_cli(root, markdown=FOOD_CROPS_MD,
-                            section=hwpx_section(list(FOOD_CROPS_PARAGRAPHS)),
-                            header=header, hpf=FOOD_CROPS_HPF)
-        value = build_hwpx.export(
-            root, "body.md", "out.hwpx", cli_command=cli,
-            context=self._ctx(root, "food_crops"))
-        applied = value["manifest"]["hwpx"]["post_processing"]
-        self.assertEqual([], applied["font"])
-        self.assertEqual(["Contents/header.xml"], applied["font_already"])
-        # 여백 목록은 ZIP 항목 순서(`_split_zip_rank`: section1→2→header→0)를
-        # 따르므로 번호순이 아니다. 이 시험의 목적(R-01)이 아니니 순서는
-        # 보지 않고 같은 세 파일인지만 본다.
-        self.assertCountEqual(["Contents/section0.xml", "Contents/section1.xml",
-                               "Contents/section2.xml"],
-                              applied["margins"])
-        members = read_zip((Path(root) / "out.hwpx").read_bytes())
-        self.assertIn('face="' + gh.SCHOOL_FONT + '"',
-                      members["Contents/header.xml"].decode("utf-8"))
 
     def test_appended_charpr_blocks_keep_header_parseable(self):
         # 템플릿 header.xml은 한 줄이다. 끝 태그 앞에 줄바꿈이 없을 때 예전

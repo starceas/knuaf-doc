@@ -164,28 +164,6 @@ def rewrite_fonts(header_xml: str, font: str = SCHOOL_FONT) -> str:
     )
 
 
-def font_faces(header_xml: str) -> list:
-    """header.xml에 선언된 `font` 요소의 face 값 목록(선언 순서).
-
-    XML 파서로 읽는다. 정규식으로 태그를 자르면 속성값 안의 `>`에서 선언이
-    끊겨(`face='바탕>대체'`) 못 읽은 face를 남긴 채 글꼴 관문을 통과한다
-    (roh298 R-01). 접두사는 가리지 않고 지역 이름이 `font`인 요소만 본다 —
-    `fontface`·`fontfaces`는 지역 이름이 달라 섞이지 않는다.
-    XML을 읽지 못하면 `ET.ParseError`를 올린다.
-    """
-    root = ET.fromstring(header_xml)
-    faces = []
-    for element in root.iter():
-        if not isinstance(element.tag, str):
-            continue
-        if element.tag.rsplit("}", 1)[-1] != "font":
-            continue
-        face = element.get("face")
-        if face is not None:
-            faces.append(face)
-    return faces
-
-
 _COLPR_CTRL_RE = re.compile(r"<hp:ctrl>\s*<hp:colPr\b[^>]*/>\s*</hp:ctrl>")
 
 
@@ -1388,12 +1366,13 @@ def transform_hwpx(data: bytes, *, font: str = SCHOOL_FONT,
     ``section_formats``가 있으면(식량작물) 맨 앞에서 구역을 3개로 나누고
     (`split_sections_by_plan`) 그 뒤에 구역별 여백·쪽번호를 적용한다.
     발행 경로는 ``require_body_format``으로 본문 대조와 서식 적용을 강제한다.
-    반환: (새 바이트, 적용 내역 dict). 글꼴은 header face가 실제로 바뀐 경우
-    ``font``에, 생성기가 이미 요청 글꼴로 넘겨 바꿀 것이 없던 경우
-    ``font_already``에 파일 이름을 적는다(둘 다 적용으로 본다). ``font_already``는
-    ``font`` 요소의 face 선언을 XML 파서로 빠짐없이 읽었고 그 값이 전부 요청
-    글꼴일 때만 붙는다 — XML을 읽지 못하거나 다른 글꼴이 하나라도 있으면 붙지
-    않는다.
+    반환: (새 바이트, 적용 내역 dict).
+
+    알려진 한계: 글꼴은 header의 face를 실제로 바꾼 경우에만 적용으로 적는다.
+    생성기가 이미 모든 face를 요청 글꼴로 써서 넘기면 바뀐 바이트가 없어
+    ``font``가 비고, 발행 경로는 ``format_not_applied``로 막는다. 거짓 통과를
+    막으려는 의도된 안전 방향이다(roh296~299 R-01). 지금 생성기는 기본 글꼴을
+    쓰므로 실제로 겪지 않는다.
     """
     applied = {"margins": [], "font": [], "page_numbers": []}
     if section_formats is not None:
@@ -1544,21 +1523,6 @@ def transform_hwpx(data: bytes, *, font: str = SCHOOL_FONT,
                 updated = rewrite_fonts(text, font) if font is not None else text
                 if updated != text:
                     applied["font"].append(info.filename)
-                elif font is not None:
-                    # 바뀐 바이트가 없다고 해서 늘 '못 바꿨다'는 아니다. face가
-                    # 하나 이상 있고 전부 요청 글꼴이면 생성기가 이미 맞춰 넘긴
-                    # 것이므로 적용으로 본다(치환 대상이 아예 없는 경우와 구분).
-                    # 선언은 XML 파서로 읽는다. 정규식으로 태그를 자르면 속성값
-                    # 안의 `>`에서 선언이 끊겨 못 읽은 face를 남긴다(roh298
-                    # R-01). 읽지 못하면 '이미 맞음'을 주장하지 않고 `font`를
-                    # 비워 두어 글꼴 관문이 막게 한다.
-                    try:
-                        faces = font_faces(text)
-                    except ET.ParseError:
-                        faces = []
-                    if faces and all(face == font for face in faces):
-                        applied.setdefault("font_already", []).append(
-                            info.filename)
                 member = updated.encode("utf-8")
             zout.writestr(info, member)
     return target.getvalue(), applied
@@ -1583,11 +1547,7 @@ def missing_format_steps(applied, *, font, margins_mm, page_numbers,
     # (inject_page_numbers는 확인만 한다). 그래서 아래 section_controls로 본다.
     if page_numbers and section_formats is None:
         requested.append("page_numbers")
-    # 글꼴은 header face가 이미 전부 요청 글꼴이면 바꿀 바이트가 없어
-    # `font`가 비고 `font_already`에만 기록된다. 둘 다 '적용됨'이다.
-    missing = [name for name in requested
-               if not applied.get(name)
-               and not (name == "font" and applied.get("font_already"))]
+    missing = [name for name in requested if not applied.get(name)]
     if section_formats is None:
         return missing
     # 앞머리 표지가 하나도 없는 본문-only 입력은 설계가 유일하게 허용한

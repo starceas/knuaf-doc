@@ -13,7 +13,6 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
-import xml.etree.ElementTree as ET
 import zipfile
 from unittest import mock
 
@@ -140,8 +139,7 @@ SECTION_SAMPLE = (
 )
 
 HEADER_SAMPLE = (
-    '<hh:head xmlns:hh="http://www.hancom.co.kr/hwpml/2011/head">'
-    '<hh:fontfaces itemCnt="1">'
+    '<hh:head><hh:fontfaces itemCnt="1">'
     '<hh:fontface lang="HANGUL" fontCnt="2">'
     '<hh:font id="0" face="함초롬바탕" type="TTF" isEmbedded="0"/>'
     '<hh:font id="1" face="HY견고딕" type="TTF" isEmbedded="0"/></hh:fontface>'
@@ -170,22 +168,6 @@ def synthetic_hwpx(header=HEADER_SAMPLE):
         archive.writestr("Contents/header.xml", header)
         archive.writestr("Contents/section0.xml", SECTION_SAMPLE)
     return buffer.getvalue()
-
-
-_FONT_LOCAL_NAME = "font"
-
-
-def declared_faces(header_xml):
-    """header의 `font` 요소 face 값 전부(네임스페이스 무관, 시험 쪽 독립 구현).
-
-    제품 쪽 `font_faces`와 달리 정규식으로 태그를 자르지 않는다. 속성값 안의
-    `>`에서 선언이 끊기면 실제보다 적게 세어 반례를 통과시킨다(roh298 R-01).
-    """
-    root = ET.fromstring(header_xml)
-    return [element.get("face") for element in root.iter()
-            if isinstance(element.tag, str)
-            and element.tag.rsplit("}", 1)[-1] == _FONT_LOCAL_NAME
-            and element.get("face") is not None]
 
 
 class PureTransformTests(unittest.TestCase):
@@ -343,8 +325,6 @@ class PureTransformTests(unittest.TestCase):
         self.assertEqual(["Contents/section0.xml"], applied["margins"])
         self.assertEqual(["Contents/header.xml"], applied["font"])
         self.assertEqual(["Contents/section0.xml"], applied["page_numbers"])
-        # 바뀐 경로에는 '이미 맞음' 기록이 붙지 않는다(매니페스트 모양 유지).
-        self.assertNotIn("font_already", applied)
         with zipfile.ZipFile(io.BytesIO(raw)) as before, \
                 zipfile.ZipFile(io.BytesIO(rebuilt)) as after:
             self.assertEqual("mimetype", after.namelist()[0])
@@ -367,30 +347,29 @@ class PureTransformTests(unittest.TestCase):
             section = archive.read("Contents/section0.xml").decode("utf-8")
         self.assertNotIn("<hp:pageNum", section)
 
-    def test_transform_records_font_already_when_header_matches(self):
-        # R-01: 생성기가 이미 요청 글꼴로 모든 face를 써서 넘기면 바뀐 바이트가
-        # 없다. 그렇다고 '못 바꿨다'가 아니므로 발행을 막지 않는다.
+    def test_transform_blocks_when_header_already_has_school_font(self):
+        # 알려진 한계(roh296~299 R-01): 생성기가 모든 face를 이미 요청 글꼴로
+        # 써서 넘기면 바뀐 바이트가 없어 '글꼴 적용' 기록이 비고, 발행 경로는
+        # format_not_applied로 막는다. 거짓 통과를 막으려는 의도된 안전
+        # 방향이다(지금 생성기는 기본 글꼴을 쓰므로 실제로 겪지 않는다).
         matching = HEADER_SAMPLE.replace("함초롬바탕", gh.SCHOOL_FONT).replace(
             "HY견고딕", gh.SCHOOL_FONT)
         rebuilt, applied = gh.transform_hwpx(synthetic_hwpx(header=matching))
         self.assertEqual([], applied["font"])
-        self.assertEqual(["Contents/header.xml"], applied["font_already"])
         self.assertEqual(
-            [], gh.missing_format_steps(applied, font=gh.SCHOOL_FONT,
-                                        margins_mm=gh.SCHOOL_MARGINS_MM,
-                                        page_numbers=True))
+            ["font"], gh.missing_format_steps(
+                applied, font=gh.SCHOOL_FONT,
+                margins_mm=gh.SCHOOL_MARGINS_MM, page_numbers=True))
         with zipfile.ZipFile(io.BytesIO(rebuilt)) as archive:
             header = archive.read("Contents/header.xml").decode("utf-8")
         self.assertEqual(2, header.count('face="' + gh.SCHOOL_FONT + '"'))
 
     def test_transform_still_blocks_when_header_has_no_font_face(self):
-        # '이미 맞음'과 '치환 대상 없음'은 다르다. face 선언이 아예 없으면
-        # 글꼴은 적용되지 않은 것이므로 그대로 막아야 한다.
+        # 치환 대상이 아예 없으면 글꼴은 적용되지 않은 것이다.
         header = ('<hh:head xmlns:hh="http://www.hancom.co.kr/hwpml/2011/head">'
                   '<hh:fontfaces itemCnt="0"></hh:fontfaces></hh:head>')
         _, applied = gh.transform_hwpx(synthetic_hwpx(header=header))
         self.assertEqual([], applied["font"])
-        self.assertNotIn("font_already", applied)
         self.assertEqual(
             ["font"], gh.missing_format_steps(
                 applied, font=gh.SCHOOL_FONT,
@@ -398,23 +377,19 @@ class PureTransformTests(unittest.TestCase):
 
     def test_transform_rewrites_partially_matching_faces(self):
         # 맞는 face와 다른 face가 실제로 섞인 header를 넣고, 결과 header의
-        # **모든** face가 요청 글꼴인지 본다(roh297 권고: 옛 시험은 두 face가
-        # 둘 다 달라 '부분 일치'가 아니었고 결과 header도 확인하지 않았다).
+        # **모든** face가 요청 글꼴인지 본다.
         mixed = HEADER_SAMPLE.replace("함초롬바탕", gh.SCHOOL_FONT)
-        self.assertEqual([gh.SCHOOL_FONT, "HY견고딕"], declared_faces(mixed))
         rebuilt, applied = gh.transform_hwpx(synthetic_hwpx(header=mixed))
         self.assertEqual(["Contents/header.xml"], applied["font"])
-        self.assertNotIn("font_already", applied)
         with zipfile.ZipFile(io.BytesIO(rebuilt)) as archive:
             header = archive.read("Contents/header.xml").decode("utf-8")
-        self.assertEqual([gh.SCHOOL_FONT, gh.SCHOOL_FONT],
-                         declared_faces(header))
+        self.assertEqual(2, header.count('face="' + gh.SCHOOL_FONT + '"'))
         self.assertNotIn("HY견고딕", header)
 
     def test_transform_blocks_when_unread_face_notation_survives(self):
-        # R-01 반례(roh297): 큰따옴표 face는 이미 요청 글꼴이라 바뀐 바이트가
-        # 없지만, 같은 header에 작은따옴표 face가 남아 있다. 옛 판정은 읽은
-        # face만 보고 '이미 맞음'으로 통과시켰다 — 이제는 통과시키면 안 된다.
+        # 작은따옴표 face는 rewrite_fonts가 바꾸지 못한다. 큰따옴표 face가 이미
+        # 요청 글꼴이라 바뀐 바이트가 없고, 못 읽는 표기가 남은 채 통과시키면
+        # 글꼴이 섞인 파일이 나가므로 미적용으로 막아야 한다.
         header = (
             '<hh:head xmlns:hh="http://www.hancom.co.kr/hwpml/2011/head">'
             '<hh:fontfaces itemCnt="1">'
@@ -424,7 +399,6 @@ class PureTransformTests(unittest.TestCase):
             '</hh:fontface></hh:fontfaces></hh:head>' % gh.SCHOOL_FONT)
         rebuilt, applied = gh.transform_hwpx(synthetic_hwpx(header=header))
         self.assertEqual([], applied["font"])
-        self.assertNotIn("font_already", applied)
         self.assertEqual(
             ["font"], gh.missing_format_steps(
                 applied, font=gh.SCHOOL_FONT,
@@ -432,51 +406,8 @@ class PureTransformTests(unittest.TestCase):
         with zipfile.ZipFile(io.BytesIO(rebuilt)) as archive:
             written = archive.read("Contents/header.xml").decode("utf-8")
         # 치환 동작은 그대로다 — 못 읽는 표기는 손대지 않고 남는다.
-        self.assertEqual([gh.SCHOOL_FONT, "바탕"], declared_faces(written))
+        self.assertEqual(1, written.count('face="' + gh.SCHOOL_FONT + '"'))
         self.assertIn("face='바탕'", written)
-
-    def test_transform_blocks_when_face_value_contains_tag_bracket(self):
-        # R-01 반례(roh298): `>`는 XML 속성값 안에서 유효하다. 태그 경계를
-        # 정규식으로 자르면 두 번째 선언이 첫 선언의 일부로 잘려 실제 2개를
-        # 1개로 세고, 큰따옴표 face만 보고 '이미 맞음'으로 통과시켰다.
-        header = (
-            '<hh:head xmlns:hh="http://www.hancom.co.kr/hwpml/2011/head">'
-            '<hh:fontfaces itemCnt="1">'
-            '<hh:fontface lang="HANGUL" fontCnt="2">'
-            '<hh:font id="0" face="%s" type="TTF" isEmbedded="0"/>'
-            "<hh:font id='1' face='바탕>대체' type='TTF' isEmbedded='0'/>"
-            '</hh:fontface></hh:fontfaces></hh:head>' % gh.SCHOOL_FONT)
-        self.assertEqual([gh.SCHOOL_FONT, "바탕>대체"], declared_faces(header))
-        rebuilt, applied = gh.transform_hwpx(synthetic_hwpx(header=header))
-        self.assertEqual([], applied["font"])
-        self.assertNotIn("font_already", applied)
-        self.assertEqual(
-            ["font"], gh.missing_format_steps(
-                applied, font=gh.SCHOOL_FONT,
-                margins_mm=gh.SCHOOL_MARGINS_MM, page_numbers=True))
-        with zipfile.ZipFile(io.BytesIO(rebuilt)) as archive:
-            written = archive.read("Contents/header.xml").decode("utf-8")
-        # 치환 동작은 그대로다 — 큰따옴표 face만 바뀌고 못 읽는 표기는 남는다.
-        self.assertEqual([gh.SCHOOL_FONT, "바탕>대체"], declared_faces(written))
-        self.assertIn("face='바탕>대체'", written)
-
-    def test_transform_blocks_when_header_is_not_wellformed(self):
-        # XML을 읽지 못하면 '이미 맞음'을 주장하지 않는다(막힘). 접두사 선언이
-        # 없는 header는 XML로 성립하지 않으므로 파서가 거절한다.
-        header = (
-            '<hh:head><hh:fontfaces itemCnt="1">'
-            '<hh:fontface lang="HANGUL" fontCnt="1">'
-            '<hh:font id="0" face="%s" type="TTF" isEmbedded="0"/>'
-            '</hh:fontface></hh:fontfaces></hh:head>' % gh.SCHOOL_FONT)
-        with self.assertRaises(ET.ParseError):
-            declared_faces(header)
-        _, applied = gh.transform_hwpx(synthetic_hwpx(header=header))
-        self.assertEqual([], applied["font"])
-        self.assertNotIn("font_already", applied)
-        self.assertEqual(
-            ["font"], gh.missing_format_steps(
-                applied, font=gh.SCHOOL_FONT,
-                margins_mm=gh.SCHOOL_MARGINS_MM, page_numbers=True))
 
     def test_env_allowlist_withholds_secrets(self):
         with mock.patch.dict(os.environ, {"SECRET_TOKEN": "leak"}):
