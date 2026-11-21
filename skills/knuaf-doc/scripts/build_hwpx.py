@@ -50,9 +50,14 @@ FINISH_NOTICE = (
 
 # 한글(HWPX)과 Word(DOCX)는 선언 글꼴 이름이 다르다(이유는 `gg_hwpx.SCHOOL_FONT`
 # 주석). 전공 프로필의 안내문은 두 표면이 함께 쓰는 문자열이라 글꼴 이름이 Word
-# 값으로 적혀 있으므로, HWPX 매니페스트에 실을 때만 한글 글꼴 이름으로 바꿔 끼운다.
+# 값으로 적혀 있고, 공용 안내문은 한글 값으로 적혀 있다. HWPX 매니페스트에 실을
+# 때는 둘 다 실제로 적용한 글꼴(`--font`)로 맞춘다.
 _DOCX_FONT_PHRASE = "글꼴 신명조"
 _HWPX_FONT_PHRASE = "글꼴 " + FONT
+# 두 표기를 한 번에 훑는다. 차례로 바꾸면 앞 치환의 결과를 뒤 치환이 다시
+# 물고 늘어나 `--font 신명조체`가 `글꼴 신명조체체`가 된다.
+_FONT_PHRASE_RE = re.compile("|".join(
+    re.escape(phrase) for phrase in (_HWPX_FONT_PHRASE, _DOCX_FONT_PHRASE)))
 
 # 식량작물 전용 안내문. 공용 상수는 다른 전공이 그대로 쓰므로 손대지 않고,
 # 이 전공에서만 아래 문구를 고른다(안내문까지 전공 격리를 닫는다).
@@ -82,21 +87,27 @@ def hwpx_profile(major_id):
     return enabled_profile(major_id, HWPX_PROFILE_MAJORS)
 
 
-def _hwpx_font_phrase(text):
-    """프로필 안내문의 글꼴 이름을 한글(HWPX) 값으로 바꾼다(Word 쪽은 그대로)."""
-    return text.replace(_DOCX_FONT_PHRASE, _HWPX_FONT_PHRASE)
+def _font_phrase(text, font=FONT):
+    """안내문의 글꼴 이름을 실제로 적용한 글꼴로 바꾼다.
+
+    전공 프로필 문구는 Word와 공유해 `글꼴 신명조`로 적혀 있고, 공용 안내문은
+    한글 글꼴 이름으로 적혀 있다. `--font`로 다른 글꼴을 주면 header face와
+    매니페스트 `font`는 그 글꼴인데 안내문만 옛 이름을 말하게 되므로, 두 표기
+    모두 실제 글꼴로 맞춘다(기본값이면 결과가 원문 그대로다).
+    """
+    return _FONT_PHRASE_RE.sub(lambda _: "글꼴 " + font, text)
 
 
-def notice(verify, major_id=None):
+def notice(verify, major_id=None, font=FONT):
     """실제로 실행되어 통과한 검사만 열거한다(검증 생략이면 사실대로)."""
     profile = hwpx_profile(major_id)
+    finish = profile.finish_notice if profile is not None else FINISH_NOTICE
     return " ".join([
         "저수준 미검증 출력.",
         VERIFIED_NOTICE if verify else SKIPPED_NOTICE,
-        # 공용 안내문(FINISH_NOTICE)은 HWPX 전용이라 이미 한글 글꼴 이름이고,
-        # 전공 프로필 문구만 Word와 공유하므로 여기서 글꼴 이름을 바꿔 끼운다.
-        _hwpx_font_phrase(profile.finish_notice) if profile is not None
-        else FINISH_NOTICE,
+        # 안내문은 실제로 적용한 글꼴을 말한다 — `--font`를 안 주면 두 표면의
+        # 기본 이름이 그대로 남는다.
+        _font_phrase(finish, font),
     ])
 
 
@@ -491,7 +502,7 @@ def export(base, inp, out, *, font=FONT, context=None, cli_command=None,
         },
         "school_frontmatter": school_frontmatter_summary(
             source_text, authorization.major_id),
-        "notice": notice(verify, authorization.major_id),
+        "notice": notice(verify, authorization.major_id, font),
     }
     data = json.dumps(manifest, ensure_ascii=False, indent=2).encode("utf-8")
     identity = gg_fs.identity(target.parent, kind="directory")

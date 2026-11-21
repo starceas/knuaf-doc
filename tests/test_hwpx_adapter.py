@@ -158,14 +158,14 @@ UNFORMATTABLE_SECTION = (
 )
 
 
-def synthetic_hwpx():
+def synthetic_hwpx(header=HEADER_SAMPLE):
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w") as archive:
         info = zipfile.ZipInfo("mimetype")
         info.compress_type = zipfile.ZIP_STORED
         archive.writestr(info, b"application/hwp+zip")
         archive.writestr("META-INF/container.xml", "<container/>")
-        archive.writestr("Contents/header.xml", HEADER_SAMPLE)
+        archive.writestr("Contents/header.xml", header)
         archive.writestr("Contents/section0.xml", SECTION_SAMPLE)
     return buffer.getvalue()
 
@@ -325,6 +325,8 @@ class PureTransformTests(unittest.TestCase):
         self.assertEqual(["Contents/section0.xml"], applied["margins"])
         self.assertEqual(["Contents/header.xml"], applied["font"])
         self.assertEqual(["Contents/section0.xml"], applied["page_numbers"])
+        # 바뀐 경로에는 '이미 맞음' 기록이 붙지 않는다(매니페스트 모양 유지).
+        self.assertNotIn("font_already", applied)
         with zipfile.ZipFile(io.BytesIO(raw)) as before, \
                 zipfile.ZipFile(io.BytesIO(rebuilt)) as after:
             self.assertEqual("mimetype", after.namelist()[0])
@@ -346,6 +348,40 @@ class PureTransformTests(unittest.TestCase):
         with zipfile.ZipFile(io.BytesIO(rebuilt)) as archive:
             section = archive.read("Contents/section0.xml").decode("utf-8")
         self.assertNotIn("<hp:pageNum", section)
+
+    def test_transform_records_font_already_when_header_matches(self):
+        # R-01: 생성기가 이미 요청 글꼴로 모든 face를 써서 넘기면 바뀐 바이트가
+        # 없다. 그렇다고 '못 바꿨다'가 아니므로 발행을 막지 않는다.
+        matching = HEADER_SAMPLE.replace("함초롬바탕", gh.SCHOOL_FONT).replace(
+            "HY견고딕", gh.SCHOOL_FONT)
+        rebuilt, applied = gh.transform_hwpx(synthetic_hwpx(header=matching))
+        self.assertEqual([], applied["font"])
+        self.assertEqual(["Contents/header.xml"], applied["font_already"])
+        self.assertEqual(
+            [], gh.missing_format_steps(applied, font=gh.SCHOOL_FONT,
+                                        margins_mm=gh.SCHOOL_MARGINS_MM,
+                                        page_numbers=True))
+        with zipfile.ZipFile(io.BytesIO(rebuilt)) as archive:
+            header = archive.read("Contents/header.xml").decode("utf-8")
+        self.assertEqual(2, header.count('face="' + gh.SCHOOL_FONT + '"'))
+
+    def test_transform_still_blocks_when_header_has_no_font_face(self):
+        # '이미 맞음'과 '치환 대상 없음'은 다르다. face 선언이 아예 없으면
+        # 글꼴은 적용되지 않은 것이므로 그대로 막아야 한다.
+        header = ('<hh:head><hh:fontfaces itemCnt="0"></hh:fontfaces></hh:head>')
+        _, applied = gh.transform_hwpx(synthetic_hwpx(header=header))
+        self.assertEqual([], applied["font"])
+        self.assertNotIn("font_already", applied)
+        self.assertEqual(
+            ["font"], gh.missing_format_steps(
+                applied, font=gh.SCHOOL_FONT,
+                margins_mm=gh.SCHOOL_MARGINS_MM, page_numbers=True))
+
+    def test_transform_rewrites_partially_matching_faces(self):
+        # 하나라도 다른 face가 있으면 치환 대상이 있으므로 font_already가 아니다.
+        _, applied = gh.transform_hwpx(synthetic_hwpx())
+        self.assertEqual(["Contents/header.xml"], applied["font"])
+        self.assertNotIn("font_already", applied)
 
     def test_env_allowlist_withholds_secrets(self):
         with mock.patch.dict(os.environ, {"SECRET_TOKEN": "leak"}):

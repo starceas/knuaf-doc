@@ -497,6 +497,38 @@ class ExportTests(_Base):
         self.assertIn("<hp:pageNum", section)
         self.assertIn('face="' + gh.SCHOOL_FONT + '"', header)
 
+    def test_export_notice_names_the_font_actually_applied(self):
+        # I-01: `--font`로 다른 글꼴을 주면 header face와 매니페스트 font는 그
+        # 글꼴인데 안내문만 학교 기본 글꼴을 확인하라고 하던 어긋남.
+        cli = make_fake_cli(self.root, markdown=BODY_MD)
+        value = build_hwpx.export(self.root, "body.md", "out.hwpx",
+                                  cli_command=cli, font="바탕",
+                                  context=self._ctx(self.root, SPECIALTY))
+        manifest = value["manifest"]
+        self.assertEqual("바탕", manifest["font"])
+        self.assertIn("글꼴 바탕", manifest["notice"])
+        self.assertNotIn(gh.SCHOOL_FONT, manifest["notice"])
+        self.assertNotIn("글꼴 신명조", manifest["notice"])
+        with zipfile.ZipFile(Path(self.root) / "out.hwpx") as archive:
+            header = archive.read("Contents/header.xml").decode("utf-8")
+        self.assertIn('face="바탕"', header)
+        self.assertNotIn('face="' + gh.SCHOOL_FONT + '"', header)
+
+    def test_export_blocks_when_header_has_no_font_face(self):
+        # R-01의 반대편: 치환 대상 자체가 없으면 여전히 발행하지 않는다.
+        # face 선언만 걷어내고 charPr/paraPr는 남겨 본문 서식 검사는 통과시킨다.
+        header = re.sub(r'<hh:font\b[^>]*/>', "", body_test_header())
+        cli = make_fake_cli(self.root, markdown=BODY_MD,
+                            section=fake_body_members(BODY_MD)["section"],
+                            header=header)
+        with self.assertRaises(gh.HwpxBlocked) as caught:
+            build_hwpx.export(self.root, "body.md", "out.hwpx",
+                              cli_command=cli,
+                              context=self._ctx(self.root, SPECIALTY))
+        self.assertEqual("format_not_applied", caught.exception.reason)
+        self.assertEqual(["font"], caught.exception.details["missing"])
+        self.assertFalse((Path(self.root) / "out.hwpx").exists())
+
     def test_other_major_manifest_matches_the_reference_dict(self):
         # C-01: 식량작물 전용 키(`charpr`)가 다른 전공 매니페스트에 새어
         # 들어가면 안 된다. 5488bd2(식량작물 모듈 이전)에서 같은 입력·같은
@@ -1430,8 +1462,6 @@ class _FoodCropsTests(_Base):
     def test_final_file_has_exactly_one_page_number_per_section(self):
         root = self._project("food_crops")
         (Path(root) / "body.md").write_text(FOOD_CROPS_MD, encoding="utf-8")
-        # 글꼴 단계가 실제로 값을 바꿔야 발행을 통과한다(원본 face가 이미 학교
-        # 글꼴이면 applied["font"]가 비어 format_not_applied로 막힌다).
         header = body_test_header()
         cli = make_fake_cli(root, markdown=FOOD_CROPS_MD,
                             section=hwpx_section(list(FOOD_CROPS_PARAGRAPHS)),
@@ -1471,6 +1501,32 @@ class _FoodCropsTests(_Base):
             ["겉표지", "표제면", "제출서", "인준서", "요약", "감사의 글", "목차"],
             value["manifest"]["school_frontmatter"]["sections"])
 
+
+    def test_publishes_when_generated_header_already_has_school_font(self):
+        # R-01: 생성기가 모든 face를 이미 학교 글꼴로 써서 넘기면 바꿀 바이트가
+        # 없다. 그렇다고 글꼴 미적용이 아니므로 발행은 그대로 통과해야 한다.
+        root = self._project("food_crops")
+        (Path(root) / "body.md").write_text(FOOD_CROPS_MD, encoding="utf-8")
+        header = body_test_header().replace(
+            'face="함초롬바탕"', 'face="' + gh.SCHOOL_FONT + '"')
+        cli = make_fake_cli(root, markdown=FOOD_CROPS_MD,
+                            section=hwpx_section(list(FOOD_CROPS_PARAGRAPHS)),
+                            header=header, hpf=FOOD_CROPS_HPF)
+        value = build_hwpx.export(
+            root, "body.md", "out.hwpx", cli_command=cli,
+            context=self._ctx(root, "food_crops"))
+        applied = value["manifest"]["hwpx"]["post_processing"]
+        self.assertEqual([], applied["font"])
+        self.assertEqual(["Contents/header.xml"], applied["font_already"])
+        # 여백 목록은 ZIP 항목 순서(`_split_zip_rank`: section1→2→header→0)를
+        # 따르므로 번호순이 아니다. 이 시험의 목적(R-01)이 아니니 순서는
+        # 보지 않고 같은 세 파일인지만 본다.
+        self.assertCountEqual(["Contents/section0.xml", "Contents/section1.xml",
+                               "Contents/section2.xml"],
+                              applied["margins"])
+        members = read_zip((Path(root) / "out.hwpx").read_bytes())
+        self.assertIn('face="' + gh.SCHOOL_FONT + '"',
+                      members["Contents/header.xml"].decode("utf-8"))
 
     def test_appended_charpr_blocks_keep_header_parseable(self):
         # 템플릿 header.xml은 한 줄이다. 끝 태그 앞에 줄바꿈이 없을 때 예전
@@ -1615,6 +1671,28 @@ class ConventionTests(unittest.TestCase):
         # 프로필이 없는 전공은 공용 안내문을 그대로 쓴다(이미 한글 글꼴 이름).
         self.assertTrue(build_hwpx.notice(True, SPECIALTY).endswith(
             build_hwpx.FINISH_NOTICE))
+
+    def test_notice_names_an_explicit_font(self):
+        # I-01: `--font`로 다른 글꼴을 주면 안내문도 그 글꼴을 말해야 한다.
+        # 기본값은 기존 문구와 바이트 단위로 같아야 한다(출력 보존).
+        for major in ("food_crops", "dairy", SPECIALTY, None):
+            with self.subTest(major=major):
+                notice = build_hwpx.notice(True, major, "바탕")
+                self.assertIn("글꼴 바탕", notice)
+                self.assertNotIn("글꼴 신명조", notice)
+                self.assertNotIn(gh.SCHOOL_FONT, notice)
+                self.assertEqual(build_hwpx.notice(True, major),
+                                 build_hwpx.notice(True, major, build_hwpx.FONT))
+        # 글꼴 이름이 옛 표기를 물고 늘어지는 형태여도 두 번 치환되지 않는다.
+        # 공용 안내문은 `글꼴 한양신명조`, 프로필 문구는 `글꼴 신명조`로 적혀
+        # 있으므로 두 방향을 모두 본다.
+        self.assertIn("글꼴 한양신명조체",
+                      build_hwpx.notice(True, "food_crops", "한양신명조체"))
+        self.assertNotIn("글꼴 한양신명조체체",
+                         build_hwpx.notice(True, "food_crops", "한양신명조체"))
+        self.assertIn("글꼴 신명조체", build_hwpx.notice(True, None, "신명조체"))
+        self.assertNotIn("글꼴 신명조체체",
+                         build_hwpx.notice(True, None, "신명조체"))
 
 
 if __name__ == "__main__":
