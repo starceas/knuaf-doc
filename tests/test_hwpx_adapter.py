@@ -9,11 +9,11 @@ import hashlib
 import io
 import json
 import os
-import re
 from pathlib import Path
 import sys
 import tempfile
 import unittest
+import xml.etree.ElementTree as ET
 import zipfile
 from unittest import mock
 
@@ -140,7 +140,8 @@ SECTION_SAMPLE = (
 )
 
 HEADER_SAMPLE = (
-    '<hh:head><hh:fontfaces itemCnt="1">'
+    '<hh:head xmlns:hh="http://www.hancom.co.kr/hwpml/2011/head">'
+    '<hh:fontfaces itemCnt="1">'
     '<hh:fontface lang="HANGUL" fontCnt="2">'
     '<hh:font id="0" face="함초롬바탕" type="TTF" isEmbedded="0"/>'
     '<hh:font id="1" face="HY견고딕" type="TTF" isEmbedded="0"/></hh:fontface>'
@@ -171,18 +172,20 @@ def synthetic_hwpx(header=HEADER_SAMPLE):
     return buffer.getvalue()
 
 
-_FACE_DECL_RE = re.compile(r"<hh:font\b[^>]*>")
-_FACE_ATTR_RE = re.compile(r"""\bface\s*=\s*(?:"([^"]*)"|'([^']*)')""")
+_FONT_LOCAL_NAME = "font"
 
 
 def declared_faces(header_xml):
-    """header의 `hh:font` face 값 전부(따옴표 종류 무관, 시험 쪽 독립 구현)."""
-    faces = []
-    for tag in _FACE_DECL_RE.findall(header_xml):
-        for match in _FACE_ATTR_RE.finditer(tag):
-            faces.append(match.group(1) if match.group(1) is not None
-                         else match.group(2))
-    return faces
+    """header의 `font` 요소 face 값 전부(네임스페이스 무관, 시험 쪽 독립 구현).
+
+    제품 쪽 `font_faces`와 달리 정규식으로 태그를 자르지 않는다. 속성값 안의
+    `>`에서 선언이 끊기면 실제보다 적게 세어 반례를 통과시킨다(roh298 R-01).
+    """
+    root = ET.fromstring(header_xml)
+    return [element.get("face") for element in root.iter()
+            if isinstance(element.tag, str)
+            and element.tag.rsplit("}", 1)[-1] == _FONT_LOCAL_NAME
+            and element.get("face") is not None]
 
 
 class PureTransformTests(unittest.TestCase):
@@ -383,7 +386,8 @@ class PureTransformTests(unittest.TestCase):
     def test_transform_still_blocks_when_header_has_no_font_face(self):
         # '이미 맞음'과 '치환 대상 없음'은 다르다. face 선언이 아예 없으면
         # 글꼴은 적용되지 않은 것이므로 그대로 막아야 한다.
-        header = ('<hh:head><hh:fontfaces itemCnt="0"></hh:fontfaces></hh:head>')
+        header = ('<hh:head xmlns:hh="http://www.hancom.co.kr/hwpml/2011/head">'
+                  '<hh:fontfaces itemCnt="0"></hh:fontfaces></hh:head>')
         _, applied = gh.transform_hwpx(synthetic_hwpx(header=header))
         self.assertEqual([], applied["font"])
         self.assertNotIn("font_already", applied)
@@ -412,7 +416,8 @@ class PureTransformTests(unittest.TestCase):
         # 없지만, 같은 header에 작은따옴표 face가 남아 있다. 옛 판정은 읽은
         # face만 보고 '이미 맞음'으로 통과시켰다 — 이제는 통과시키면 안 된다.
         header = (
-            '<hh:head><hh:fontfaces itemCnt="1">'
+            '<hh:head xmlns:hh="http://www.hancom.co.kr/hwpml/2011/head">'
+            '<hh:fontfaces itemCnt="1">'
             '<hh:fontface lang="HANGUL" fontCnt="2">'
             '<hh:font id="0" face="%s" type="TTF" isEmbedded="0"/>'
             "<hh:font id='1' face='바탕' type='TTF' isEmbedded='0'/>"
@@ -429,6 +434,49 @@ class PureTransformTests(unittest.TestCase):
         # 치환 동작은 그대로다 — 못 읽는 표기는 손대지 않고 남는다.
         self.assertEqual([gh.SCHOOL_FONT, "바탕"], declared_faces(written))
         self.assertIn("face='바탕'", written)
+
+    def test_transform_blocks_when_face_value_contains_tag_bracket(self):
+        # R-01 반례(roh298): `>`는 XML 속성값 안에서 유효하다. 태그 경계를
+        # 정규식으로 자르면 두 번째 선언이 첫 선언의 일부로 잘려 실제 2개를
+        # 1개로 세고, 큰따옴표 face만 보고 '이미 맞음'으로 통과시켰다.
+        header = (
+            '<hh:head xmlns:hh="http://www.hancom.co.kr/hwpml/2011/head">'
+            '<hh:fontfaces itemCnt="1">'
+            '<hh:fontface lang="HANGUL" fontCnt="2">'
+            '<hh:font id="0" face="%s" type="TTF" isEmbedded="0"/>'
+            "<hh:font id='1' face='바탕>대체' type='TTF' isEmbedded='0'/>"
+            '</hh:fontface></hh:fontfaces></hh:head>' % gh.SCHOOL_FONT)
+        self.assertEqual([gh.SCHOOL_FONT, "바탕>대체"], declared_faces(header))
+        rebuilt, applied = gh.transform_hwpx(synthetic_hwpx(header=header))
+        self.assertEqual([], applied["font"])
+        self.assertNotIn("font_already", applied)
+        self.assertEqual(
+            ["font"], gh.missing_format_steps(
+                applied, font=gh.SCHOOL_FONT,
+                margins_mm=gh.SCHOOL_MARGINS_MM, page_numbers=True))
+        with zipfile.ZipFile(io.BytesIO(rebuilt)) as archive:
+            written = archive.read("Contents/header.xml").decode("utf-8")
+        # 치환 동작은 그대로다 — 큰따옴표 face만 바뀌고 못 읽는 표기는 남는다.
+        self.assertEqual([gh.SCHOOL_FONT, "바탕>대체"], declared_faces(written))
+        self.assertIn("face='바탕>대체'", written)
+
+    def test_transform_blocks_when_header_is_not_wellformed(self):
+        # XML을 읽지 못하면 '이미 맞음'을 주장하지 않는다(막힘). 접두사 선언이
+        # 없는 header는 XML로 성립하지 않으므로 파서가 거절한다.
+        header = (
+            '<hh:head><hh:fontfaces itemCnt="1">'
+            '<hh:fontface lang="HANGUL" fontCnt="1">'
+            '<hh:font id="0" face="%s" type="TTF" isEmbedded="0"/>'
+            '</hh:fontface></hh:fontfaces></hh:head>' % gh.SCHOOL_FONT)
+        with self.assertRaises(ET.ParseError):
+            declared_faces(header)
+        _, applied = gh.transform_hwpx(synthetic_hwpx(header=header))
+        self.assertEqual([], applied["font"])
+        self.assertNotIn("font_already", applied)
+        self.assertEqual(
+            ["font"], gh.missing_format_steps(
+                applied, font=gh.SCHOOL_FONT,
+                margins_mm=gh.SCHOOL_MARGINS_MM, page_numbers=True))
 
     def test_env_allowlist_withholds_secrets(self):
         with mock.patch.dict(os.environ, {"SECRET_TOKEN": "leak"}):
