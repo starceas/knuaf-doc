@@ -43,10 +43,21 @@ VERIFIED_NOTICE = "kordoc validate(구조)와 HWPX 재파싱 표 수치 대조�
 SKIPPED_NOTICE = ("검증을 생략했다(--no-verify): 발행 전 구조 검증·재파싱·표 수치 "
                   "대조를 실행하지 않았다.")
 FINISH_NOTICE = (
-    "한글 프로그램에서 열어 (1) 글꼴 신명조 (2) 여백 위20/아래15/머리15/꼬리15/"
+    "한글 프로그램에서 열어 (1) 글꼴 한양신명조 (2) 여백 위20/아래15/머리15/꼬리15/"
     "좌30/우30/제본0 mm (3) 쪽번호를 확인한다. 표지·제출면·인준서의 쪽 나눔·가운데 "
     "정렬과 목차의 실제 쪽번호는 사람이 마무리한다. 이 항목들은 자동 통과하지 않는다."
 )
+
+# 한글(HWPX)과 Word(DOCX)는 선언 글꼴 이름이 다르다(이유는 `gg_hwpx.SCHOOL_FONT`
+# 주석). 전공 프로필의 안내문은 두 표면이 함께 쓰는 문자열이라 글꼴 이름이 Word
+# 값으로 적혀 있고, 공용 안내문은 한글 값으로 적혀 있다. HWPX 매니페스트에 실을
+# 때는 둘 다 실제로 적용한 글꼴(`--font`)로 맞춘다.
+_DOCX_FONT_PHRASE = "글꼴 신명조"
+_HWPX_FONT_PHRASE = "글꼴 " + FONT
+# 두 표기를 한 번에 훑는다. 차례로 바꾸면 앞 치환의 결과를 뒤 치환이 다시
+# 물고 늘어나 `--font 신명조체`가 `글꼴 신명조체체`가 된다.
+_FONT_PHRASE_RE = re.compile("|".join(
+    re.escape(phrase) for phrase in (_HWPX_FONT_PHRASE, _DOCX_FONT_PHRASE)))
 
 # 식량작물 전용 안내문. 공용 상수는 다른 전공이 그대로 쓰므로 손대지 않고,
 # 이 전공에서만 아래 문구를 고른다(안내문까지 전공 격리를 닫는다).
@@ -76,13 +87,33 @@ def hwpx_profile(major_id):
     return enabled_profile(major_id, HWPX_PROFILE_MAJORS)
 
 
-def notice(verify, major_id=None):
+def _font_phrase(text, font=FONT):
+    """안내문의 글꼴 이름을 실제로 적용한 글꼴로 바꾼다.
+
+    전공 프로필 문구는 Word와 공유해 `글꼴 신명조`로 적혀 있고, 공용 안내문은
+    한글 글꼴 이름으로 적혀 있다. `--font`로 다른 글꼴을 주면 header face와
+    매니페스트 `font`는 그 글꼴인데 안내문만 옛 이름을 말하게 되므로, 두 표기
+    모두 실제 글꼴로 맞춘다(기본값이면 결과가 원문 그대로다).
+
+    `font=None`은 "글꼴을 바꾸지 않음"이라 치환할 이름이 없다. 변환 쪽
+    (`gg_hwpx.transform_hwpx`)이 None을 그대로 받아 글꼴을 건드리지 않으므로
+    안내문도 원문 그대로 둔다 — 여기서 `"글꼴 " + None`을 시도하면 TypeError다.
+    """
+    if font is None:
+        return text
+    return _FONT_PHRASE_RE.sub(lambda _: "글꼴 " + font, text)
+
+
+def notice(verify, major_id=None, font=FONT):
     """실제로 실행되어 통과한 검사만 열거한다(검증 생략이면 사실대로)."""
     profile = hwpx_profile(major_id)
+    finish = profile.finish_notice if profile is not None else FINISH_NOTICE
     return " ".join([
         "저수준 미검증 출력.",
         VERIFIED_NOTICE if verify else SKIPPED_NOTICE,
-        profile.finish_notice if profile is not None else FINISH_NOTICE,
+        # 안내문은 실제로 적용한 글꼴을 말한다 — `--font`를 안 주면 두 표면의
+        # 기본 이름이 그대로 남는다.
+        _font_phrase(finish, font),
     ])
 
 
@@ -477,7 +508,7 @@ def export(base, inp, out, *, font=FONT, context=None, cli_command=None,
         },
         "school_frontmatter": school_frontmatter_summary(
             source_text, authorization.major_id),
-        "notice": notice(verify, authorization.major_id),
+        "notice": notice(verify, authorization.major_id, font),
     }
     data = json.dumps(manifest, ensure_ascii=False, indent=2).encode("utf-8")
     identity = gg_fs.identity(target.parent, kind="directory")

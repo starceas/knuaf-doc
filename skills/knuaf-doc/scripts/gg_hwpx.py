@@ -3,7 +3,7 @@
 
 마크다운 한 파일을 kordoc(`generate`)으로 HWPX로 변환한 뒤, 표준 라이브러리
 zipfile과 문자열 치환만으로 학교 논문 규격에 맞춘다: (a) 여백을 위20/아래15/
-머리15/꼬리15/좌30/우30/제본0 mm로, (b) 글꼴 이름을 신명조로 바꾸고, (c) 쪽번호를
+머리15/꼬리15/좌30/우30/제본0 mm로, (b) 글꼴 이름을 한양신명조로 바꾸고, (c) 쪽번호를
 넣는다. 생성 모드는 `--plain`(공문서 장식 없음)을 써서 `Ⅰ.` 장 번호·표·학명
 이탤릭을 그대로 보존한다 — 보고서/기안문/개조식 프리셋은 로마자 장 번호를 떼어내고
 문서정보표·날짜를 덧붙인다.
@@ -45,7 +45,10 @@ import gg_major_format
 # 1 mm = 1/25.4 inch, 1 inch = 7200 HWPUNIT.
 HWPUNIT_PER_MM = 7200 / 25.4
 
-SCHOOL_FONT = "신명조"
+# 학교 작성요령 HWPX의 face 이름을 그대로 쓴다. '신명조'는 맥 한컴에 그 이름이
+# 없어 열면 함초롬돋움으로 바뀐다. Word(DOCX)는 지금도 '신명조'를 선언한다 —
+# 두 표면의 값이 다른 것은 의도다(한글 대체 글꼴: 함초롬바탕).
+SCHOOL_FONT = "한양신명조"
 SCHOOL_MARGINS_MM = {
     "header": 15,
     "footer": 15,
@@ -1364,6 +1367,12 @@ def transform_hwpx(data: bytes, *, font: str = SCHOOL_FONT,
     (`split_sections_by_plan`) 그 뒤에 구역별 여백·쪽번호를 적용한다.
     발행 경로는 ``require_body_format``으로 본문 대조와 서식 적용을 강제한다.
     반환: (새 바이트, 적용 내역 dict).
+
+    알려진 한계: 글꼴은 header의 face를 실제로 바꾼 경우에만 적용으로 적는다.
+    생성기가 이미 모든 face를 요청 글꼴로 써서 넘기면 바뀐 바이트가 없어
+    ``font``가 비고, 발행 경로는 ``format_not_applied``로 막는다. 거짓 통과를
+    막으려는 의도된 안전 방향이다(roh296~299 R-01). 지금 생성기는 기본 글꼴을
+    쓰므로 실제로 겪지 않는다.
     """
     applied = {"margins": [], "font": [], "page_numbers": []}
     if section_formats is not None:

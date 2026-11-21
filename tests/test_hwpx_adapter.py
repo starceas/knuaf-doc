@@ -158,14 +158,14 @@ UNFORMATTABLE_SECTION = (
 )
 
 
-def synthetic_hwpx():
+def synthetic_hwpx(header=HEADER_SAMPLE):
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w") as archive:
         info = zipfile.ZipInfo("mimetype")
         info.compress_type = zipfile.ZIP_STORED
         archive.writestr(info, b"application/hwp+zip")
         archive.writestr("META-INF/container.xml", "<container/>")
-        archive.writestr("Contents/header.xml", HEADER_SAMPLE)
+        archive.writestr("Contents/header.xml", header)
         archive.writestr("Contents/section0.xml", SECTION_SAMPLE)
     return buffer.getvalue()
 
@@ -189,7 +189,7 @@ class PureTransformTests(unittest.TestCase):
         updated = gh.rewrite_fonts(HEADER_SAMPLE)
         self.assertNotIn("함초롬바탕", updated)
         self.assertNotIn("HY견고딕", updated)
-        self.assertEqual(2, updated.count('face="신명조"'))
+        self.assertEqual(2, updated.count('face="' + gh.SCHOOL_FONT + '"'))
         self.assertIn("<hh:fontfaces", updated)
         self.assertEqual(updated, gh.rewrite_fonts(updated))
 
@@ -258,7 +258,8 @@ class PureTransformTests(unittest.TestCase):
         empty = {"margins": [], "font": [], "page_numbers": []}
         self.assertEqual(
             ["margins", "font", "page_numbers"],
-            gh.missing_format_steps(empty, font="신명조", margins_mm={"top": 20},
+            gh.missing_format_steps(empty, font=gh.SCHOOL_FONT,
+                                    margins_mm={"top": 20},
                                     page_numbers=True))
         self.assertEqual(
             [], gh.missing_format_steps(empty, font=None, margins_mm=None,
@@ -268,7 +269,7 @@ class PureTransformTests(unittest.TestCase):
             gh.missing_format_steps(
                 {"margins": ["Contents/section0.xml"],
                  "font": ["Contents/header.xml"], "page_numbers": []},
-                font="신명조", margins_mm={"top": 20}, page_numbers=True))
+                font=gh.SCHOOL_FONT, margins_mm={"top": 20}, page_numbers=True))
 
     def test_image_references_and_resolution(self):
         with tempfile.TemporaryDirectory(prefix="hwpx-img-") as tmp:
@@ -337,7 +338,7 @@ class PureTransformTests(unittest.TestCase):
             header = after.read("Contents/header.xml").decode("utf-8")
         self.assertIn('left="8504"', section)
         self.assertIn("<hp:pageNum", section)
-        self.assertIn('face="신명조"', header)
+        self.assertIn('face="' + gh.SCHOOL_FONT + '"', header)
 
     def test_transform_without_page_numbers(self):
         rebuilt, applied = gh.transform_hwpx(synthetic_hwpx(), page_numbers=False)
@@ -345,6 +346,68 @@ class PureTransformTests(unittest.TestCase):
         with zipfile.ZipFile(io.BytesIO(rebuilt)) as archive:
             section = archive.read("Contents/section0.xml").decode("utf-8")
         self.assertNotIn("<hp:pageNum", section)
+
+    def test_transform_blocks_when_header_already_has_school_font(self):
+        # 알려진 한계(roh296~299 R-01): 생성기가 모든 face를 이미 요청 글꼴로
+        # 써서 넘기면 바뀐 바이트가 없어 '글꼴 적용' 기록이 비고, 발행 경로는
+        # format_not_applied로 막는다. 거짓 통과를 막으려는 의도된 안전
+        # 방향이다(지금 생성기는 기본 글꼴을 쓰므로 실제로 겪지 않는다).
+        matching = HEADER_SAMPLE.replace("함초롬바탕", gh.SCHOOL_FONT).replace(
+            "HY견고딕", gh.SCHOOL_FONT)
+        rebuilt, applied = gh.transform_hwpx(synthetic_hwpx(header=matching))
+        self.assertEqual([], applied["font"])
+        self.assertEqual(
+            ["font"], gh.missing_format_steps(
+                applied, font=gh.SCHOOL_FONT,
+                margins_mm=gh.SCHOOL_MARGINS_MM, page_numbers=True))
+        with zipfile.ZipFile(io.BytesIO(rebuilt)) as archive:
+            header = archive.read("Contents/header.xml").decode("utf-8")
+        self.assertEqual(2, header.count('face="' + gh.SCHOOL_FONT + '"'))
+
+    def test_transform_still_blocks_when_header_has_no_font_face(self):
+        # 치환 대상이 아예 없으면 글꼴은 적용되지 않은 것이다.
+        header = ('<hh:head xmlns:hh="http://www.hancom.co.kr/hwpml/2011/head">'
+                  '<hh:fontfaces itemCnt="0"></hh:fontfaces></hh:head>')
+        _, applied = gh.transform_hwpx(synthetic_hwpx(header=header))
+        self.assertEqual([], applied["font"])
+        self.assertEqual(
+            ["font"], gh.missing_format_steps(
+                applied, font=gh.SCHOOL_FONT,
+                margins_mm=gh.SCHOOL_MARGINS_MM, page_numbers=True))
+
+    def test_transform_rewrites_partially_matching_faces(self):
+        # 맞는 face와 다른 face가 실제로 섞인 header를 넣고, 결과 header의
+        # **모든** face가 요청 글꼴인지 본다.
+        mixed = HEADER_SAMPLE.replace("함초롬바탕", gh.SCHOOL_FONT)
+        rebuilt, applied = gh.transform_hwpx(synthetic_hwpx(header=mixed))
+        self.assertEqual(["Contents/header.xml"], applied["font"])
+        with zipfile.ZipFile(io.BytesIO(rebuilt)) as archive:
+            header = archive.read("Contents/header.xml").decode("utf-8")
+        self.assertEqual(2, header.count('face="' + gh.SCHOOL_FONT + '"'))
+        self.assertNotIn("HY견고딕", header)
+
+    def test_transform_blocks_when_unread_face_notation_survives(self):
+        # 작은따옴표 face는 rewrite_fonts가 바꾸지 못한다. 큰따옴표 face가 이미
+        # 요청 글꼴이라 바뀐 바이트가 없고, 못 읽는 표기가 남은 채 통과시키면
+        # 글꼴이 섞인 파일이 나가므로 미적용으로 막아야 한다.
+        header = (
+            '<hh:head xmlns:hh="http://www.hancom.co.kr/hwpml/2011/head">'
+            '<hh:fontfaces itemCnt="1">'
+            '<hh:fontface lang="HANGUL" fontCnt="2">'
+            '<hh:font id="0" face="%s" type="TTF" isEmbedded="0"/>'
+            "<hh:font id='1' face='바탕' type='TTF' isEmbedded='0'/>"
+            '</hh:fontface></hh:fontfaces></hh:head>' % gh.SCHOOL_FONT)
+        rebuilt, applied = gh.transform_hwpx(synthetic_hwpx(header=header))
+        self.assertEqual([], applied["font"])
+        self.assertEqual(
+            ["font"], gh.missing_format_steps(
+                applied, font=gh.SCHOOL_FONT,
+                margins_mm=gh.SCHOOL_MARGINS_MM, page_numbers=True))
+        with zipfile.ZipFile(io.BytesIO(rebuilt)) as archive:
+            written = archive.read("Contents/header.xml").decode("utf-8")
+        # 치환 동작은 그대로다 — 못 읽는 표기는 손대지 않고 남는다.
+        self.assertEqual(1, written.count('face="' + gh.SCHOOL_FONT + '"'))
+        self.assertIn("face='바탕'", written)
 
     def test_env_allowlist_withholds_secrets(self):
         with mock.patch.dict(os.environ, {"SECRET_TOKEN": "leak"}):
@@ -424,7 +487,7 @@ class BuildTests(ContractCase):
         self.assertIn('left="8504" right="8504" top="5669" bottom="4252"', section)
         self.assertIn("<hp:pageNum", section)
         self.assertNotIn("함초롬바탕", header)
-        self.assertIn('face="신명조"', header)
+        self.assertIn('face="' + gh.SCHOOL_FONT + '"', header)
 
     def test_app_host_generate_validate_reparse_and_layout_share_env(self):
         # Real child Python stands in for Electron. Every child fails unless
