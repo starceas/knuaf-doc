@@ -238,7 +238,9 @@ class HwpxEntryMajorProfileTests(ContractCase):
     def test_dairy_takes_the_profile_notice_and_chapter_nodes(self):
         profile = self.gmf.profile_for("dairy")
         notice = self.builder.notice(True, "dairy")
-        self.assertIn(profile.finish_notice, notice)
+        # 안내문 본문은 프로필 그대로, 글꼴 이름만 한글(HWPX) 값으로 바뀐다.
+        self.assertIn(profile.finish_notice.replace(
+            "글꼴 신명조", "글꼴 " + self.builder.FONT), notice)
         self.assertNotIn(self.builder.FINISH_NOTICE, notice)
         self.assertIn("위30/아래30/머리0/꼬리10", notice)
         self.assertEqual(

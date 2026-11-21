@@ -149,7 +149,7 @@ def _normalized_manifest(value, root):
 # 5488bd2(식량작물 모듈 이전) 트리에서 `BODY_MD`·`make_fake_cli`·specialty_crops로
 # 뽑은 HWPX 매니페스트. 경로·인터프리터는 실행 환경에 맞춰 치환해 비교한다.
 REFERENCE_HWPX_MANIFEST = {
-    "font": "신명조",
+    "font": "한양신명조",
     "font_available": "not_run",
     "hwp": "not_run",
     "hwpx": {
@@ -185,7 +185,7 @@ REFERENCE_HWPX_MANIFEST = {
         "output": "school_paper",
         "project_revision": 1,
     },
-    "notice": "저수준 미검증 출력. kordoc validate(구조)와 HWPX 재파싱 표 수치 대조를 통과했다. 한글 프로그램에서 열어 (1) 글꼴 신명조 (2) 여백 위20/아래15/머리15/꼬리15/좌30/우30/제본0 mm (3) 쪽번호를 확인한다. 표지·제출면·인준서의 쪽 나눔·가운데 정렬과 목차의 실제 쪽번호는 사람이 마무리한다. 이 항목들은 자동 통과하지 않는다.",
+    "notice": "저수준 미검증 출력. kordoc validate(구조)와 HWPX 재파싱 표 수치 대조를 통과했다. 한글 프로그램에서 열어 (1) 글꼴 한양신명조 (2) 여백 위20/아래15/머리15/꼬리15/좌30/우30/제본0 mm (3) 쪽번호를 확인한다. 표지·제출면·인준서의 쪽 나눔·가운데 정렬과 목차의 실제 쪽번호는 사람이 마무리한다. 이 항목들은 자동 통과하지 않는다.",
     "render": "not_run",
     "school_frontmatter": None,
 }
@@ -495,7 +495,7 @@ class ExportTests(_Base):
             header = archive.read("Contents/header.xml").decode("utf-8")
         self.assertIn('left="8504" right="8504" top="5669" bottom="4252"', section)
         self.assertIn("<hp:pageNum", section)
-        self.assertIn('face="신명조"', header)
+        self.assertIn('face="' + gh.SCHOOL_FONT + '"', header)
 
     def test_other_major_manifest_matches_the_reference_dict(self):
         # C-01: 식량작물 전용 키(`charpr`)가 다른 전공 매니페스트에 새어
@@ -686,7 +686,7 @@ class OtherMajorHwpxByteTests(_Base):
     MEMBERS = {
         'mimetype': '5ab5230b5af04f78947736bf8dd1a269aa684e234f7f4a392efb85289d1655c2',
         'META-INF/container.xml': '1feb165533a201fbe460cf9fdbe756b271e3d4aad056d52049c57da7efd7f0de',
-        'Contents/header.xml': 'e2656e9c06d85ce67f04b71cdef8548afeff76323b1fe301bcb68df4e58c3fa4',
+        'Contents/header.xml': 'e1800d7e9fbe908546f412fe44590d0c8cdaf8a454f03dba46016137cee29bff',
     }
 
     def test_other_majors_reproduce_the_reference_bytes(self):
@@ -717,7 +717,7 @@ class DairyHwpxByteTests(_Base):
     MEMBERS = {
         'mimetype': '5ab5230b5af04f78947736bf8dd1a269aa684e234f7f4a392efb85289d1655c2',
         'META-INF/container.xml': '1feb165533a201fbe460cf9fdbe756b271e3d4aad056d52049c57da7efd7f0de',
-        'Contents/header.xml': 'e2656e9c06d85ce67f04b71cdef8548afeff76323b1fe301bcb68df4e58c3fa4',
+        'Contents/header.xml': 'e1800d7e9fbe908546f412fe44590d0c8cdaf8a454f03dba46016137cee29bff',
     }
 
     def test_dairy_reproduces_its_profile_bytes(self):
@@ -1458,7 +1458,7 @@ class _FoodCropsTests(_Base):
         self.assertEqual(
             [{"section": "Contents/section%d.xml" % index, **measured[index]}
              for index in range(3)], applied["page_numbers"])
-        self.assertIn('face="신명조"',
+        self.assertIn('face="' + gh.SCHOOL_FONT + '"',
                       members["Contents/header.xml"].decode("utf-8"))
         # 안내문은 식량작물 전용 문구를 고른다(공용 상수는 그대로).
         self.assertEqual(list(build_hwpx.FOOD_CROPS_HUMAN_FINISH),
@@ -1586,6 +1586,35 @@ class ConventionTests(unittest.TestCase):
         self.assertEqual("build/본문_통합.md", build_hwpx.DEFAULT_IN)
         self.assertEqual("build/검토전_논문.hwpx", build_hwpx.DEFAULT_OUT)
         self.assertEqual(gh.SCHOOL_FONT, build_hwpx.FONT)
+
+    def test_school_font_is_the_face_name_hangul_actually_has(self):
+        """맥 한컴에 '신명조' face가 없어 함초롬돋움으로 바뀌던 문제(2026-11)."""
+        self.assertEqual("한양신명조", gh.SCHOOL_FONT)
+        self.assertIn("글꼴 " + gh.SCHOOL_FONT, build_hwpx.FINISH_NOTICE)
+        self.assertNotIn("글꼴 신명조", build_hwpx.FINISH_NOTICE)
+        # 상수뿐 아니라 header.xml에 실제로 적히는 이름도 못 박는다.
+        rewritten = gh.rewrite_fonts(
+            '<hh:fontface><hh:font id="0" face="함초롬바탕" type="TTF"/></hh:fontface>')
+        self.assertIn('face="한양신명조"', rewritten)
+        self.assertNotIn('face="신명조"', rewritten)
+
+    def test_hwpx_notice_names_the_hangul_font_and_docx_keeps_its_own(self):
+        """안내문은 두 표면이 함께 쓰는 문자열이라, HWPX로 실을 때만 글꼴 이름을 바꾼다."""
+        gmf = runtime("gg_major_format")
+        for major in ("food_crops", "dairy"):
+            with self.subTest(major=major):
+                profile = gmf.profile_for(major)
+                # Word 쪽 원문은 그대로 — DOCX 매니페스트 문구가 바뀌지 않는다.
+                self.assertIn("글꼴 신명조", profile.finish_notice)
+                notice = build_hwpx.notice(True, major)
+                self.assertIn("글꼴 " + gh.SCHOOL_FONT, notice)
+                self.assertNotIn("글꼴 신명조", notice)
+                # 글꼴 이름 말고는 같은 문장이다.
+                self.assertTrue(notice.endswith(profile.finish_notice.replace(
+                    "글꼴 신명조", "글꼴 " + gh.SCHOOL_FONT)))
+        # 프로필이 없는 전공은 공용 안내문을 그대로 쓴다(이미 한글 글꼴 이름).
+        self.assertTrue(build_hwpx.notice(True, SPECIALTY).endswith(
+            build_hwpx.FINISH_NOTICE))
 
 
 if __name__ == "__main__":

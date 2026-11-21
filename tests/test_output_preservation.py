@@ -136,7 +136,7 @@ class MajorNoticeIsolationTests(ContractCase):
     # 1판 build_hwpx notice(verify=True).
     HWPX_NOTICE = (
         "저수준 미검증 출력. kordoc validate(구조)와 HWPX 재파싱 표 수치 대조를 "
-        "통과했다. 한글 프로그램에서 열어 (1) 글꼴 신명조 (2) 여백 "
+        "통과했다. 한글 프로그램에서 열어 (1) 글꼴 한양신명조 (2) 여백 "
         "위20/아래15/머리15/꼬리15/좌30/우30/제본0 mm (3) 쪽번호를 확인한다. "
         "표지·제출면·인준서의 쪽 나눔·가운데 정렬과 목차의 실제 쪽번호는 사람이 "
         "마무리한다. 이 항목들은 자동 통과하지 않는다."

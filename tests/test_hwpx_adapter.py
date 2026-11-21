@@ -189,7 +189,7 @@ class PureTransformTests(unittest.TestCase):
         updated = gh.rewrite_fonts(HEADER_SAMPLE)
         self.assertNotIn("함초롬바탕", updated)
         self.assertNotIn("HY견고딕", updated)
-        self.assertEqual(2, updated.count('face="신명조"'))
+        self.assertEqual(2, updated.count('face="' + gh.SCHOOL_FONT + '"'))
         self.assertIn("<hh:fontfaces", updated)
         self.assertEqual(updated, gh.rewrite_fonts(updated))
 
@@ -258,7 +258,8 @@ class PureTransformTests(unittest.TestCase):
         empty = {"margins": [], "font": [], "page_numbers": []}
         self.assertEqual(
             ["margins", "font", "page_numbers"],
-            gh.missing_format_steps(empty, font="신명조", margins_mm={"top": 20},
+            gh.missing_format_steps(empty, font=gh.SCHOOL_FONT,
+                                    margins_mm={"top": 20},
                                     page_numbers=True))
         self.assertEqual(
             [], gh.missing_format_steps(empty, font=None, margins_mm=None,
@@ -268,7 +269,7 @@ class PureTransformTests(unittest.TestCase):
             gh.missing_format_steps(
                 {"margins": ["Contents/section0.xml"],
                  "font": ["Contents/header.xml"], "page_numbers": []},
-                font="신명조", margins_mm={"top": 20}, page_numbers=True))
+                font=gh.SCHOOL_FONT, margins_mm={"top": 20}, page_numbers=True))
 
     def test_image_references_and_resolution(self):
         with tempfile.TemporaryDirectory(prefix="hwpx-img-") as tmp:
@@ -337,7 +338,7 @@ class PureTransformTests(unittest.TestCase):
             header = after.read("Contents/header.xml").decode("utf-8")
         self.assertIn('left="8504"', section)
         self.assertIn("<hp:pageNum", section)
-        self.assertIn('face="신명조"', header)
+        self.assertIn('face="' + gh.SCHOOL_FONT + '"', header)
 
     def test_transform_without_page_numbers(self):
         rebuilt, applied = gh.transform_hwpx(synthetic_hwpx(), page_numbers=False)
@@ -424,7 +425,7 @@ class BuildTests(ContractCase):
         self.assertIn('left="8504" right="8504" top="5669" bottom="4252"', section)
         self.assertIn("<hp:pageNum", section)
         self.assertNotIn("함초롬바탕", header)
-        self.assertIn('face="신명조"', header)
+        self.assertIn('face="' + gh.SCHOOL_FONT + '"', header)
 
     def test_app_host_generate_validate_reparse_and_layout_share_env(self):
         # Real child Python stands in for Electron. Every child fails unless

@@ -43,10 +43,16 @@ VERIFIED_NOTICE = "kordoc validate(구조)와 HWPX 재파싱 표 수치 대조�
 SKIPPED_NOTICE = ("검증을 생략했다(--no-verify): 발행 전 구조 검증·재파싱·표 수치 "
                   "대조를 실행하지 않았다.")
 FINISH_NOTICE = (
-    "한글 프로그램에서 열어 (1) 글꼴 신명조 (2) 여백 위20/아래15/머리15/꼬리15/"
+    "한글 프로그램에서 열어 (1) 글꼴 한양신명조 (2) 여백 위20/아래15/머리15/꼬리15/"
     "좌30/우30/제본0 mm (3) 쪽번호를 확인한다. 표지·제출면·인준서의 쪽 나눔·가운데 "
     "정렬과 목차의 실제 쪽번호는 사람이 마무리한다. 이 항목들은 자동 통과하지 않는다."
 )
+
+# 한글(HWPX)과 Word(DOCX)는 선언 글꼴 이름이 다르다(이유는 `gg_hwpx.SCHOOL_FONT`
+# 주석). 전공 프로필의 안내문은 두 표면이 함께 쓰는 문자열이라 글꼴 이름이 Word
+# 값으로 적혀 있으므로, HWPX 매니페스트에 실을 때만 한글 글꼴 이름으로 바꿔 끼운다.
+_DOCX_FONT_PHRASE = "글꼴 신명조"
+_HWPX_FONT_PHRASE = "글꼴 " + FONT
 
 # 식량작물 전용 안내문. 공용 상수는 다른 전공이 그대로 쓰므로 손대지 않고,
 # 이 전공에서만 아래 문구를 고른다(안내문까지 전공 격리를 닫는다).
@@ -76,13 +82,21 @@ def hwpx_profile(major_id):
     return enabled_profile(major_id, HWPX_PROFILE_MAJORS)
 
 
+def _hwpx_font_phrase(text):
+    """프로필 안내문의 글꼴 이름을 한글(HWPX) 값으로 바꾼다(Word 쪽은 그대로)."""
+    return text.replace(_DOCX_FONT_PHRASE, _HWPX_FONT_PHRASE)
+
+
 def notice(verify, major_id=None):
     """실제로 실행되어 통과한 검사만 열거한다(검증 생략이면 사실대로)."""
     profile = hwpx_profile(major_id)
     return " ".join([
         "저수준 미검증 출력.",
         VERIFIED_NOTICE if verify else SKIPPED_NOTICE,
-        profile.finish_notice if profile is not None else FINISH_NOTICE,
+        # 공용 안내문(FINISH_NOTICE)은 HWPX 전용이라 이미 한글 글꼴 이름이고,
+        # 전공 프로필 문구만 Word와 공유하므로 여기서 글꼴 이름을 바꿔 끼운다.
+        _hwpx_font_phrase(profile.finish_notice) if profile is not None
+        else FINISH_NOTICE,
     ])
 
 
