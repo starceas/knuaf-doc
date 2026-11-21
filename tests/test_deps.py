@@ -503,6 +503,9 @@ class WindowsLauncherFailureReasonTests(ContractCase):
     def _nt(self):
         return mock.patch.object(self.deps, "_on_windows", return_value=True)
 
+    def _posix(self):
+        return mock.patch.object(self.deps, "_on_windows", return_value=False)
+
     def _run(self, project, rc, *extra):
         class Pip:
             def __init__(self, code):
@@ -667,13 +670,14 @@ class WindowsLauncherFailureReasonTests(ContractCase):
         self.assertEqual([], self._preserved_dirs())
 
     def test_posix_host_never_adds_the_sentence(self):
-        if os.name == "nt":
-            self.skipTest("POSIX 호스트 전용 시험")
+        """The POSIX branch is a contract of the seam, not of the machine the
+        suite happens to run on: pin ``_on_windows`` to False so a Windows
+        host checks the same thing instead of skipping itself."""
         interp = self.project / ".venv" / "bin" / "python3"
         interp.parent.mkdir(parents=True)
         interp.write_bytes(b"#!/bin/sh\n")
 
-        code, body = self._run(self.project, 103)
+        code, body = self._run(self.project, 103, self._posix())
 
         self.assertEqual(1, code, body)
         self.assertEqual("failed", body["status"])
