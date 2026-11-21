@@ -169,6 +169,20 @@ def font_faces(header_xml: str) -> list:
     return [match.group(2) for match in _FONT_FACE_RE.finditer(header_xml)]
 
 
+# `_FONT_FACE_RE`는 큰따옴표 face만 읽는다. 작은따옴표도 XML에서 유효한 속성
+# 표기라, 그것만 읽는 정규식으로 '이미 맞음'을 판정하면 못 읽은 face를 남긴 채
+# 글꼴 관문을 통과한다(roh297 R-01). 그래서 따옴표 종류를 안 가리는 선언
+# 개수를 따로 세어, 읽은 face 수와 다르면 '이미 맞음'으로 보지 않는다.
+_FONT_FACE_DECL_RE = re.compile(r"<hh:font\b[^>]*>")
+_FONT_FACE_ATTR_RE = re.compile(r"""\bface\s*=\s*(?:"[^"]*"|'[^']*')""")
+
+
+def _font_face_declaration_count(header_xml: str) -> int:
+    """`hh:font` 요소에 적힌 face 속성 개수(따옴표 종류 무관)."""
+    return sum(len(_FONT_FACE_ATTR_RE.findall(tag))
+               for tag in _FONT_FACE_DECL_RE.findall(header_xml))
+
+
 _COLPR_CTRL_RE = re.compile(r"<hp:ctrl>\s*<hp:colPr\b[^>]*/>\s*</hp:ctrl>")
 
 
@@ -1373,7 +1387,9 @@ def transform_hwpx(data: bytes, *, font: str = SCHOOL_FONT,
     발행 경로는 ``require_body_format``으로 본문 대조와 서식 적용을 강제한다.
     반환: (새 바이트, 적용 내역 dict). 글꼴은 header face가 실제로 바뀐 경우
     ``font``에, 생성기가 이미 요청 글꼴로 넘겨 바꿀 것이 없던 경우
-    ``font_already``에 파일 이름을 적는다(둘 다 적용으로 본다).
+    ``font_already``에 파일 이름을 적는다(둘 다 적용으로 본다). ``font_already``는
+    ``hh:font``의 face 선언을 빠짐없이 읽었고 그 값이 전부 요청 글꼴일 때만
+    붙는다 — 읽지 못하는 표기(작은따옴표 등)가 남아 있으면 붙지 않는다.
     """
     applied = {"margins": [], "font": [], "page_numbers": []}
     if section_formats is not None:
@@ -1528,8 +1544,14 @@ def transform_hwpx(data: bytes, *, font: str = SCHOOL_FONT,
                     # 바뀐 바이트가 없다고 해서 늘 '못 바꿨다'는 아니다. face가
                     # 하나 이상 있고 전부 요청 글꼴이면 생성기가 이미 맞춰 넘긴
                     # 것이므로 적용으로 본다(치환 대상이 아예 없는 경우와 구분).
+                    # 다만 `font_faces`는 큰따옴표 face만 읽으므로, 읽은 수가
+                    # 실제 선언 수보다 적으면 못 읽은 face(작은따옴표 등)가
+                    # 남아 있다는 뜻이다. 그때는 '이미 맞음'으로 보지 않고
+                    # `font`를 비워 두어 글꼴 관문이 막게 한다(roh297 R-01).
                     faces = font_faces(text)
-                    if faces and all(face == font for face in faces):
+                    declared = _font_face_declaration_count(text)
+                    if (faces and len(faces) == declared
+                            and all(face == font for face in faces)):
                         applied.setdefault("font_already", []).append(
                             info.filename)
                 member = updated.encode("utf-8")

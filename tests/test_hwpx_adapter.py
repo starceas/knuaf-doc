@@ -9,6 +9,7 @@ import hashlib
 import io
 import json
 import os
+import re
 from pathlib import Path
 import sys
 import tempfile
@@ -168,6 +169,20 @@ def synthetic_hwpx(header=HEADER_SAMPLE):
         archive.writestr("Contents/header.xml", header)
         archive.writestr("Contents/section0.xml", SECTION_SAMPLE)
     return buffer.getvalue()
+
+
+_FACE_DECL_RE = re.compile(r"<hh:font\b[^>]*>")
+_FACE_ATTR_RE = re.compile(r"""\bface\s*=\s*(?:"([^"]*)"|'([^']*)')""")
+
+
+def declared_faces(header_xml):
+    """header의 `hh:font` face 값 전부(따옴표 종류 무관, 시험 쪽 독립 구현)."""
+    faces = []
+    for tag in _FACE_DECL_RE.findall(header_xml):
+        for match in _FACE_ATTR_RE.finditer(tag):
+            faces.append(match.group(1) if match.group(1) is not None
+                         else match.group(2))
+    return faces
 
 
 class PureTransformTests(unittest.TestCase):
@@ -378,10 +393,42 @@ class PureTransformTests(unittest.TestCase):
                 margins_mm=gh.SCHOOL_MARGINS_MM, page_numbers=True))
 
     def test_transform_rewrites_partially_matching_faces(self):
-        # 하나라도 다른 face가 있으면 치환 대상이 있으므로 font_already가 아니다.
-        _, applied = gh.transform_hwpx(synthetic_hwpx())
+        # 맞는 face와 다른 face가 실제로 섞인 header를 넣고, 결과 header의
+        # **모든** face가 요청 글꼴인지 본다(roh297 권고: 옛 시험은 두 face가
+        # 둘 다 달라 '부분 일치'가 아니었고 결과 header도 확인하지 않았다).
+        mixed = HEADER_SAMPLE.replace("함초롬바탕", gh.SCHOOL_FONT)
+        self.assertEqual([gh.SCHOOL_FONT, "HY견고딕"], declared_faces(mixed))
+        rebuilt, applied = gh.transform_hwpx(synthetic_hwpx(header=mixed))
         self.assertEqual(["Contents/header.xml"], applied["font"])
         self.assertNotIn("font_already", applied)
+        with zipfile.ZipFile(io.BytesIO(rebuilt)) as archive:
+            header = archive.read("Contents/header.xml").decode("utf-8")
+        self.assertEqual([gh.SCHOOL_FONT, gh.SCHOOL_FONT],
+                         declared_faces(header))
+        self.assertNotIn("HY견고딕", header)
+
+    def test_transform_blocks_when_unread_face_notation_survives(self):
+        # R-01 반례(roh297): 큰따옴표 face는 이미 요청 글꼴이라 바뀐 바이트가
+        # 없지만, 같은 header에 작은따옴표 face가 남아 있다. 옛 판정은 읽은
+        # face만 보고 '이미 맞음'으로 통과시켰다 — 이제는 통과시키면 안 된다.
+        header = (
+            '<hh:head><hh:fontfaces itemCnt="1">'
+            '<hh:fontface lang="HANGUL" fontCnt="2">'
+            '<hh:font id="0" face="%s" type="TTF" isEmbedded="0"/>'
+            "<hh:font id='1' face='바탕' type='TTF' isEmbedded='0'/>"
+            '</hh:fontface></hh:fontfaces></hh:head>' % gh.SCHOOL_FONT)
+        rebuilt, applied = gh.transform_hwpx(synthetic_hwpx(header=header))
+        self.assertEqual([], applied["font"])
+        self.assertNotIn("font_already", applied)
+        self.assertEqual(
+            ["font"], gh.missing_format_steps(
+                applied, font=gh.SCHOOL_FONT,
+                margins_mm=gh.SCHOOL_MARGINS_MM, page_numbers=True))
+        with zipfile.ZipFile(io.BytesIO(rebuilt)) as archive:
+            written = archive.read("Contents/header.xml").decode("utf-8")
+        # 치환 동작은 그대로다 — 못 읽는 표기는 손대지 않고 남는다.
+        self.assertEqual([gh.SCHOOL_FONT, "바탕"], declared_faces(written))
+        self.assertIn("face='바탕'", written)
 
     def test_env_allowlist_withholds_secrets(self):
         with mock.patch.dict(os.environ, {"SECRET_TOKEN": "leak"}):
