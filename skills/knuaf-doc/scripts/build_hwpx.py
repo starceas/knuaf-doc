@@ -94,7 +94,13 @@ def _font_phrase(text, font=FONT):
     한글 글꼴 이름으로 적혀 있다. `--font`로 다른 글꼴을 주면 header face와
     매니페스트 `font`는 그 글꼴인데 안내문만 옛 이름을 말하게 되므로, 두 표기
     모두 실제 글꼴로 맞춘다(기본값이면 결과가 원문 그대로다).
+
+    `font=None`은 "글꼴을 바꾸지 않음"이라 치환할 이름이 없다. 변환 쪽
+    (`gg_hwpx.transform_hwpx`)이 None을 그대로 받아 글꼴을 건드리지 않으므로
+    안내문도 원문 그대로 둔다 — 여기서 `"글꼴 " + None`을 시도하면 TypeError다.
     """
+    if font is None:
+        return text
     return _FONT_PHRASE_RE.sub(lambda _: "글꼴 " + font, text)
 
 

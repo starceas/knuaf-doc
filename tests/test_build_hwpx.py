@@ -514,6 +514,26 @@ class ExportTests(_Base):
         self.assertIn('face="바탕"', header)
         self.assertNotIn('face="' + gh.SCHOOL_FONT + '"', header)
 
+    def test_export_without_a_font_skips_font_substitution(self):
+        # `font=None`은 글꼴을 바꾸지 않는다는 뜻이고 변환 쪽이 그 길을 지원한다
+        # (`transform_hwpx`·`missing_format_steps`). 매니페스트 안내문만
+        # `"글꼴 " + None`으로 죽던 자리 — 발행까지 끝나야 한다.
+        cli = make_fake_cli(self.root, markdown=BODY_MD)
+        value = build_hwpx.export(self.root, "body.md", "out.hwpx",
+                                  cli_command=cli, font=None,
+                                  context=self._ctx(self.root, SPECIALTY))
+        manifest = value["manifest"]
+        self.assertIsNone(manifest["font"])
+        self.assertEqual([], manifest["hwpx"]["post_processing"]["font"])
+        self.assertEqual(build_hwpx.notice(True, SPECIALTY, None),
+                         manifest["notice"])
+        self.assertIn(build_hwpx.FINISH_NOTICE, manifest["notice"])
+        # 글꼴 치환이 없으니 header face는 생성기 값 그대로 남는다.
+        with zipfile.ZipFile(Path(self.root) / "out.hwpx") as archive:
+            header = archive.read("Contents/header.xml").decode("utf-8")
+        self.assertIn('face="함초롬바탕"', header)
+        self.assertNotIn('face="' + gh.SCHOOL_FONT + '"', header)
+
     def test_export_blocks_when_header_has_no_font_face(self):
         # R-01의 반대편: 치환 대상 자체가 없으면 여전히 발행하지 않는다.
         # face 선언만 걷어내고 charPr/paraPr는 남겨 본문 서식 검사는 통과시킨다.
@@ -1669,6 +1689,29 @@ class ConventionTests(unittest.TestCase):
         self.assertIn("글꼴 신명조체", build_hwpx.notice(True, None, "신명조체"))
         self.assertNotIn("글꼴 신명조체체",
                          build_hwpx.notice(True, None, "신명조체"))
+
+    def test_notice_skips_font_substitution_when_no_font_is_requested(self):
+        # `font=None`은 "글꼴을 바꾸지 않음"이다. 변환 쪽이 None을 받아 글꼴을
+        # 건드리지 않으므로 안내문도 치환하지 않는다 — 예전에는 `"글꼴 " + None`
+        # 으로 TypeError였다(notice가 font를 받기 전에는 이 길이 살아 있었다).
+        gmf = runtime("gg_major_format")
+        for major in ("food_crops", "dairy", SPECIALTY, None):
+            with self.subTest(major=major):
+                notice = build_hwpx.notice(True, major, None)
+                self.assertNotIn("None", notice)
+                profile = gmf.profile_for(major) if major else None
+                if profile is not None:
+                    # 프로필 문구는 Word 표기(`글꼴 신명조`) 그대로 남는다 —
+                    # 실제로 적용한 글꼴이 없으니 이름을 바꿔 끼우지 않는다.
+                    self.assertIn(profile.finish_notice, notice)
+                    self.assertNotIn("글꼴 " + gh.SCHOOL_FONT, notice)
+                else:
+                    # 프로필이 없는 전공은 공용 안내문이 이미 한글 글꼴 이름이라
+                    # 기본값 notice와 바이트까지 같다.
+                    self.assertEqual(build_hwpx.notice(True, major), notice)
+                    self.assertTrue(notice.endswith(build_hwpx.FINISH_NOTICE))
+                # 글꼴 인자만 빼면 예전과 같은 문구다(치환 자체가 없다).
+                self.assertIn(build_hwpx.VERIFIED_NOTICE, notice)
 
 
 if __name__ == "__main__":
