@@ -108,7 +108,7 @@
 
 | 경로 | URL | 열 목적과 가격 성격 | 조회·판정 메모 |
 |---|---|---|---|
-| 산림조합 임산물 가격정보 | https://www.forestinfo.or.kr/public/sifp/selectPrinfoStList.do | 특용·약용작물·산채의 생산지·도매지·소비지 조사 가격 비교 | 품목·지역·등급·유통구분·조사장소·전일/당일을 기록한다. 보통 원/kg이나 품목별 예외가 있으며, 계약 거래명세서가 아니다. |
+| 산림조합 임산물 가격정보 | https://www.forestinfo.or.kr/public/sifp/selectPrinfoStList.do | 특용·약용작물·산채의 생산지·도매지·소비지 조사 가격 비교 | 품목·지역·등급·유통구분·조사장소·전일/당일을 기록한다. 보통 원/kg이나 품목별 예외가 있으며, 계약 거래명세서가 아니다. **특용작물 단가 근거로 인용해도 된다** — 노지에서 키우면 특용작물, 산에서 키우면 임산물로 분류될 뿐이다(형님 지시 2026-11-22). 인용할 때 재배 형태와 분류(임산물/특용작물)를 밝히고, 같은 작목의 두 통계가 다르면 합치지 말고 채택 이유를 적는다([research-sources](research-sources.md#특용작물-근거로-임산물-통계를-인용하는-것-형님-지시-2026-11-22)). |
 | KAMIS 시장 경락가격 | https://www.kamis.or.kr/customer/info/market/period.do | 생허브 등 도매시장 경락가격 집계 | 기간·시장(가락/강서)·품목·등급을 넣고 결과의 일자·단위·평균가를 보존한다. 세부가격 화면은 `/customer/price/market/period.do`로 별도 제공된다. 바질/바실, 딜, 고수, 파슬리, 로케트 루꼴라 등의 목록 등재 관찰이 있으나 특정일 거래가격까지 확인한 것은 아니다. |
 | KAMIS 도·소매 가격 | https://www.kamis.or.kr/customer/price/product/period.do?action=yearly | 월별·연도별 추세와 특용작물 분류 확인 | 일간·반순·순·월간·연간을 구분한다. 이 화면의 도매가격은 중도매인 판매가격으로 경락가격과 다르며, 개별 산지·판매처·브랜드의 실거래가 아니다. |
 | 한국생약협회 약용작물 도매시세 | https://koreaherb.or.kr/trend/money.php | 약용작물의 과거 월별 도매시세 참고 | 제공 보고서에서 상단 목록은 2023년 자료로 관찰됐고 이후 갱신은 확인되지 않았다. 최신 시세로 쓰지 않는다. 직접 요청 시 인증서 오류 관찰이 있으므로 재접속 전에는 미확인으로 둔다. 역사 참고 게시물: https://koreaherb.or.kr/trend/money.php?act=view&encData=aWR4PTIzNCZzdGFydD0wJg== · https://www.koreaherb.or.kr/trend/money.php?act=view&encData=aWR4PTE4MCZzdGFydD0wJg== |
