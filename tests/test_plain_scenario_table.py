@@ -176,7 +176,9 @@ class PolicyAndDocKeepTheBan(ContractCase):
 
     def test_four_docs_never_call_the_table_an_exception(self):
         # 차단 1의 모순(조건표는 금칙어 예외)이 다시 들어오지 않게 한다.
-        for name in ("thesis-level.md", "exemplar-quality.md",
+        # exemplar-quality.md는 견본에서 뽑아 해시로 고정한 발췌라
+        # (builtin-sources.json) 이번 판에서 고치지 않으므로 대상에서 뺀다.
+        for name in ("thesis-level.md",
                      "narrative-expansion.md", "finance-bible.md"):
             with self.subTest(doc=name):
                 text = (REF / name).read_text(encoding="utf-8")
@@ -206,9 +208,8 @@ class PolicyAndDocKeepTheBan(ContractCase):
 
     def test_condition_table_has_no_invented_numeric_cap(self):
         # 결정 4에는 수치 상한이 없다(r2 중요 2). "3개 안팎·결과 1~2열"은
-        # 권장이고, 세 문서가 같은 표현이어야 한다.
-        for name in ("thesis-level.md", "exemplar-quality.md",
-                     "narrative-expansion.md"):
+        # 권장이고, 고칠 수 있는 두 문서가 같은 표현이어야 한다.
+        for name in ("thesis-level.md", "narrative-expansion.md"):
             with self.subTest(doc=name):
                 text = (REF / name).read_text(encoding="utf-8")
                 assert "5행" not in text
