@@ -926,12 +926,166 @@ def _footnote_lines(table, footnotes, warnings, registry, table_map):
     return lines
 
 
-def _eun_neun(text):
-    """조사 은/는 선택: 받침 있으면 '은', 없거나 비한글 끝이면 '는'."""
-    s = str(text).strip()
+_LEAD_YEAR = re.compile(r"^(\d{4})\s*년\s*(.*)$")
+# 읽는 축 이름으로 쓸 수 없는 머리글: 열 문자 대체값('열B'), 열 문자 하나,
+# 순수 숫자. 중복 머리글의 열 문자 표기('금액(C)')는 꼬리만 걷어낸다.
+_LEAD_JUNK = re.compile(r"^(?:열[A-Z]{1,2}|[A-Za-z]{1,2}|\d+)$")
+_LEAD_COL_SUFFIX = re.compile(r"\([A-Z]{1,2}\)$")
+# 기간·시점 표기: 값의 성격(금액·수량)이 아니라 '언제'를 말하는 머리글이다.
+# 실제 양식 머리글('1월1일~12월31일(C)', '12월31일 현재(C)', '연도별(D)')이
+# 열 문자 꼬리를 걷으면 한 이름으로 접히므로, 접힌 이름이 이런 표기면 읽는
+# 기준으로 쓰지 않는다. '2026년 금액'·'2026~2030년 금액' 같은 연도 축은 해당 없다.
+_LEAD_PERIOD = re.compile(
+    r"\d+\s*월\s*\d+\s*일|현재|[연년]도별|월별|분기별?|일자")
+
+# 끝의 괄호류는 단위·보충 표기다. 전각·꺾쇠 등은 반각으로 바꿔 한 규칙으로 센다.
+_BRACKET_FOLD = str.maketrans({
+    "（": "(", "）": ")", "［": "[", "］": "]", "｛": "{", "｝": "}",
+    "〔": "[", "〕": "]", "【": "[", "】": "]", "「": "[", "」": "]",
+    "『": "[", "』": "]", "＜": "<", "＞": ">",
+})
+_OPENERS, _CLOSERS = "([{<", ")]}>"
+# 끝이 숫자일 때 읽는 소리의 받침: 영·일·삼·육·칠·팔은 받침, 이·사·오·구는 없다.
+_DIGIT_BATCHIM = set("013678")
+
+
+def _strip_trailing_brackets(text):
+    """끝에 붙은 괄호 묶음을 중첩까지 모두 걷는다. 짝이 안 맞으면 거기서 멈춘다."""
+    s = str(text).translate(_BRACKET_FOLD).strip()
+    while s and s[-1] in _CLOSERS:
+        depth = 0
+        cut = None
+        for i in range(len(s) - 1, -1, -1):
+            if s[i] in _CLOSERS:
+                depth += 1
+            elif s[i] in _OPENERS:
+                depth -= 1
+                if depth == 0:
+                    cut = i
+                    break
+        if cut is None:
+            break
+        s = s[:cut].rstrip()
+    return s
+
+
+def _eul_reul(text):
+    """조사 을/를 선택: 받침 있으면 '을', 없거나 비한글 끝이면 '를'.
+
+    끝의 괄호류('금액(천원)', '수량[kg]', '금액（천원）', '금액(천원(원))')는
+    단위 표기이므로 걷어낸 본문의 끝글자로 판정한다. 끝이 숫자면 읽는 소리
+    ('단가1' -> 일)로 판정한다. 괄호만 남으면 판정할 글자가 없어 '를'로 둔다."""
+    # 짝 없이 끝에 남은 닫는 괄호('금액천원)')는 읽는 소리가 없으므로 건너뛴다.
+    s = _strip_trailing_brackets(text).rstrip(_CLOSERS).rstrip()
     if s and "가" <= s[-1] <= "힣" and (ord(s[-1]) - 0xAC00) % 28:
-        return "은"
-    return "는"
+        return "을"
+    if s and s[-1] in _DIGIT_BATCHIM:
+        return "을"
+    return "를"
+
+
+def _lead_axis_name(text):
+    """머리글 한 칸을 읽는 축 이름으로 쓸 수 있으면 돌려준다(아니면 '')."""
+    s = _LEAD_COL_SUFFIX.sub("", _disp(text)).strip()
+    if len(s) < 2 or _LEAD_JUNK.match(s):
+        return ""
+    return s
+
+
+def _lead_axis_names(labels):
+    """머리글 -> 축 이름 목록(중복 제거). 하나라도 못 쓰면 None.
+
+    못 쓰는 머리글을 조용히 버리면 값 열 하나가 말에서 빠진 틀린 문장이
+    나온다. 그래서 하나라도 못 쓰면 전체를 포기한다."""
+    names = []
+    for label in labels:
+        name = _lead_axis_name(label)
+        if not name:
+            return None
+        if name not in names:
+            names.append(name)
+    return names
+
+
+def _lead_value_axis(labels):
+    """값 열 머리글 -> 값 축. 값 축이 하나로 모일 때만 돌려준다(아니면 '').
+
+    값 열이 둘 이상이면서 이름이 다르면 단위·성격이 다를 수 있다(면적·금액·
+    비고). 이를 한 축으로 묶으면 읽는 기준이 틀어지므로 포기한다. 연도 열이
+    같은 꼬리말로 이어질 때만 '2026~2030년 금액'처럼 범위로 접는다."""
+    names = _lead_axis_names(labels)
+    if not names:
+        return ""
+    # 열 문자 꼬리로만 구분된 중복 머리글은 위에서 한 이름으로 접힌다. 이름이
+    # 금액·수량 같은 값의 성격이면 접어도 참이지만, 기간·시점이면 열을 가르는
+    # 정보(어느 기간·시점인지)가 꼬리에만 있어 접으면 의미가 사라진다.
+    if any(_LEAD_PERIOD.search(n) for n in names):
+        return ""
+    if len(names) == 1 and not _LEAD_YEAR.match(names[0]):
+        return names[0]
+    # 연도 열의 중복은 라벨 이름 합치기와 별개다: 같은 연도 열이 둘이면
+    # 범위가 거짓이 되므로, 합치기 전 원래 열 수와 비교해 포기한다.
+    if any(_LEAD_YEAR.match(n) for n in names) and len(names) != len(labels):
+        return ""
+    years, tails = [], []
+    for name in names:
+        m = _LEAD_YEAR.match(name)
+        if not m:
+            return ""
+        tail = _disp(m[2])
+        if tail and (len(tail) < 2 or _LEAD_JUNK.match(tail)):
+            return ""  # 꼬리말이 'ha'·'kg' 같은 짧은 표기면 쓸 수 없는 머리글
+        years.append(int(m[1]))
+        tails.append(tail)
+    if len(set(tails)) != 1 or len(set(years)) != len(years):
+        return ""
+    first, last = min(years), max(years)
+    if last - first + 1 != len(years):
+        return ""
+    span = "%d년" % first if first == last else "%d~%d년" % (first, last)
+    return span + " " + (tails[0] or "값")
+
+
+def _lead_reading(headers, label_indexes, value_indexes):
+    """머리글만으로 읽는 기준을 만든다. 두 축 중 하나라도 못 만들면 ''.
+
+    값 열은 전부 쓸 수 있는 머리글이어야 하고, 라벨 축은 첫 라벨 열의
+    머리글이 쓸 수 있는 값이면서 값 축과 달라야 한다."""
+    if not label_indexes or not value_indexes:
+        return ""
+    if max(label_indexes + value_indexes) >= len(headers):
+        return ""
+    value_axis = _lead_value_axis([headers[i] for i in value_indexes])
+    label_axis = _lead_axis_name(headers[label_indexes[0]])
+    if not value_axis or not label_axis:
+        return ""
+    # 라벨 축은 뒤에 '별'을 붙이므로 이미 '~별'이거나 기간·시점 표기면 쓸 수 없다.
+    if label_axis.endswith("별") or _LEAD_PERIOD.search(label_axis):
+        return ""
+    if label_axis == value_axis or label_axis in value_axis:
+        return ""
+    return "%s%s %s별로" % (value_axis, _eul_reul(value_axis), label_axis)
+
+
+def _lead_for(extract, headers, col_letters, kind):
+    """표 하나의 읽는 기준 — 값 축은 값 열 머리글, 라벨 축은 나머지 머리글.
+
+    셀 값·행 값은 쓰지 않는다. 생성기가 아는 것은 표 제목·머리글뿐이므로
+    읽는 축까지가 정직하게 말할 수 있는 전부다."""
+    if kind == "year_grid":
+        label_count = len(extract.get("label_cols", []))
+        label_indexes = list(range(label_count))
+        value_indexes = list(range(label_count, len(col_letters)))
+    else:
+        value = set(extract.get("value_cols", []))
+        note = set(extract.get("note_cols", []))
+        formats = extract.get("col_formats", {})
+        if any(formats.get(c) == "text" for c in value):
+            return ""  # 글자 열은 비교할 값 축이 아니다
+        label_indexes = [i for i, c in enumerate(col_letters)
+                         if c not in value and c not in note]
+        value_indexes = [i for i, c in enumerate(col_letters) if c in value]
+    return _lead_reading(headers, label_indexes, value_indexes)
 
 
 def _render_markdown_table(headers, rows, col_letters):
@@ -1112,13 +1266,18 @@ def _generate_with_workbook(wb_values, path, table_map, *,
     invalid_year_groups = []
 
     def emit_table_block(tid, headers, rows, col_letters, title, unit,
-                         sheet_title, notes, foot_lines):
+                         sheet_title, notes, foot_lines, lead=""):
         nonlocal table_no
         table_no += 1
         caption = "표 %d. %s(단위: %s)" % (table_no, title, unit)
         # 본문 참조 → 캡션 → 표 → 주석. 자체 산출 표에는 출처를 붙이지 않는다.
-        md.append(table_map["lead_template"].format(
-            title=title, josa=_eun_neun(title), no=table_no))
+        # 소개 줄은 머리글에서 유도한 읽는 축만 담는다(셀 값은 지어내지 않음).
+        if lead:
+            md.append(table_map["lead_template"].format(
+                reading=lead, no=table_no))
+        else:
+            md.append(table_map["lead_fallback_template"].format(
+                title=title, no=table_no))
         md.append(caption)
         md.extend(_render_markdown_table(headers, rows, col_letters))
         # 원문 셀은 표·독립 주석 경로 모두 _workbook_text를 거친다.
@@ -1126,8 +1285,12 @@ def _generate_with_workbook(wb_values, path, table_map, *,
         for note in [*notes, *foot_lines]:
             md.append("주 : " + re.sub(r"^(?:\*\s*|주\s*[:：]\s*)", "", note))
         md.append("")
+        # lead_kind: "reading"=머리글에서 읽는 기준을 만든 줄,
+        # "fallback"=참조만 담은 자리표시 줄(작성자가 읽는 기준 문장으로
+        # 다시 써야 한다).
         emitted.append({"table": tid, "title": title,
-                        "rows": len(rows), "number": table_no})
+                        "rows": len(rows), "number": table_no,
+                        "lead_kind": "reading" if lead else "fallback"})
 
     for section in sections:
         md.append(section["heading"])
@@ -1189,7 +1352,9 @@ def _generate_with_workbook(wb_values, path, table_map, *,
                     title = table["title_template"].format(year=year)
                     emit_table_block(sub_id, headers, rows, col_letters,
                                      title, table["unit"], sheet_title,
-                                     notes, foot_lines)
+                                     notes, foot_lines,
+                                     lead=_lead_for(extract, headers,
+                                                    col_letters, kind))
                     emitted_sub += 1
                 if not emitted_sub:
                     skipped.append({"table": table["id"],
@@ -1210,7 +1375,9 @@ def _generate_with_workbook(wb_values, path, table_map, *,
                 headers, rows, col_letters = result
                 emit_table_block(table["id"], headers, rows, col_letters,
                                  table["title"], table["unit"], sheet_title,
-                                 extra, foot_lines)
+                                 extra, foot_lines,
+                                 lead=_lead_for(extract, headers,
+                                                col_letters, kind))
             else:
                 anchor_row = _find_anchor(view, extract)
                 if anchor_row is None:
@@ -1229,7 +1396,9 @@ def _generate_with_workbook(wb_values, path, table_map, *,
                 headers, rows, col_letters = result
                 emit_table_block(table["id"], headers, rows, col_letters,
                                  table["title"], table["unit"], sheet_title,
-                                 notes, foot_lines)
+                                 notes, foot_lines,
+                                 lead=_lead_for(extract, headers,
+                                                col_letters, kind))
 
     emitted_ids = {e["table"] for e in emitted}
     skipped_reason = {}
