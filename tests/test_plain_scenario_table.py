@@ -137,7 +137,7 @@ class ConditionTableIsNotABypass(ContractCase):
     def test_caption_is_matched_verbatim_only_documented_human_limit(self):
         # 한계(사람 검토, 코드 읽기 기준): 캡션 노드는 term_parts가 비어
         # 본문 정규화 검사를 받지 않고(gg_document.py 캡션 노드), 캡션
-        # 검사는 정책 JSON 금칙어 + 캡션 전용 목록을 원문 그대로 센다.
+        # 검사는 정책 JSON 금칙어 + 캡션 전용 목록을 대소문자만 무시한 원문 일치로 센다.
         # 그래서 정확한 금칙어는 잡히지만(아래 시험) 전각·영문 별칭은
         # 못 잡는다. 검사기를 개선하면 이 시험을 뒤집는다.
         for variant in ("ＮＰＶ", "sensitivity analysis"):
@@ -145,7 +145,10 @@ class ConditionTableIsNotABypass(ContractCase):
                 text = CONDITION_TABLE.replace(
                     "표 1. 단가·수량 변동에 따른 연 소득 (단위: 천원)",
                     "표 1. 단가·수량 " + variant + " (단위: 천원)")
-                assert "caption_forbidden" not in ids(check(text))
+                found = ids(check(text))
+                assert "caption_forbidden" not in found
+                # 본문 검사(forbidden_term)도 캡션 변형은 잡지 못한다.
+                assert "forbidden_term" not in found
 
     def test_forbidden_term_in_caption_still_blocked(self):
         text = CONDITION_TABLE.replace(
@@ -183,7 +186,7 @@ class PolicyAndDocKeepTheBan(ContractCase):
                 assert "금지 대상이 아니" not in text
                 # 다른 표현의 예외 선언도 막는다.
                 assert not re.search(
-                    r"조건표[^\n.]{0,20}예외(로 (한다|둔다|허용|본다)|이다)",
+                    r"조건표[^\n.]{0,20}예외(로 (한다|둔다|허용|본다|취급)|이다|다)",
                     text), name
                 assert "§2 ③" in text
                 # 양성 확인: 문서마다 표 안에서도 금칙어를 쓰지 않는다는
@@ -197,6 +200,9 @@ class PolicyAndDocKeepTheBan(ContractCase):
         assert "두 셀에 쪼갠" in level
         assert "캡션은 정규화와 영문 별칭 검사를 받지 않고" in level
         assert "정책 JSON 목록에 없어 기계가 막지 않는다" in level
+        # 캡션은 "원문 그대로"가 아니라 대소문자 무시 원문 일치다(r3 권고 3).
+        assert "대소문자만 무시한 원문 일치" in level
+        assert "원문 그대로 일치" not in level
 
     def test_condition_table_has_no_invented_numeric_cap(self):
         # 결정 4에는 수치 상한이 없다(r2 중요 2). "3개 안팎·결과 1~2열"은
@@ -238,6 +244,34 @@ class PolicyAndDocKeepTheBan(ContractCase):
         assert "확인 대기" not in level
         # 풀어 쓰기(허용)와 반복(제안 안 함)의 구분.
         assert "풀어 쓰기" in level and "반복" in level
+        # 안내 문구 아래에 70쪽이 전체 쪽수임을 분명히 하고(r3 권고 2),
+        # 지금은 사람이 확인하며 세는 대상은 제출 최종 문서임을 잠근다.
+        assert "문구의 \"70쪽\"은 본문만이 아니라 **전체 쪽수**" in level
+        assert "지금은 사람이 확인한다" in level
+        assert "학생이 제출하는 최종 문서" in level
+        # 소절 단위 분량 목표 없음과 전체 쪽수 안내를 서로 가리킨다(r3 중요).
+        narrative = (REF / "narrative-expansion.md").read_text(encoding="utf-8")
+        assert "소절 단위의 분량 목표는 두지 않으며" in narrative
+        assert "thesis-level.md](thesis-level.md) §2 ⑪" in narrative
+        assert "분량 목표는 두지 않으며" not in narrative.replace(
+            "소절 단위의 분량 목표는 두지 않으며", "")
+        assert "소절 단위 분량 목표는 두지 않는다" in level
+        assert "narrative-expansion.md" in level
+
+    def test_generator_lead_description_is_exact(self):
+        # r3 권고 1: 자리표시·lead_kind는 재무표 생성기만, 학교 골격은
+        # 고정 문장이며 표 2 줄은 옛 꼴로 남은 알려진 차이, 소비 코드 없음.
+        level = (REF / "thesis-level.md").read_text(encoding="utf-8")
+        assert "자리표시와 `lead_kind`는 이 재무표 생성기만 쓴다" in level
+        assert "표 2 앞 줄" in level and "알려진 차이" in level
+        assert "`lead_kind`를 읽어 안내를 띄우는 코드는 아직 없다" in level
+
+    def test_body_plan_names_the_one_sentence_form(self):
+        # r3 권고 4: "한 형태"가 금액 서술 문장 꼴임을 분명히 한다.
+        plan = (REF / "hort-env-systems" / "body-plan.md").read_text(
+            encoding="utf-8")
+        assert "금액 하나를 서술하는 문장" in plan
+        assert "읽는 기준 문장과는 다른 것" in plan
 
 
 if __name__ == "__main__":
