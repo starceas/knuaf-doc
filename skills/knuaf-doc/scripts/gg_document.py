@@ -1971,6 +1971,15 @@ SCHOOL_FRONTMATTER = MappingProxyType({
 })
 
 
+# 옛 글 순서(겉표지→인준서→표제면→제출서→목차) 원고는 막지 않고 이 경고만 낸다.
+# 기준은 학교 작성요령 6~9쪽 실물 양식 순서(형님 결정 2). 본문 출력은 바꾸지 않는다.
+LEGACY_FRONTMATTER_ORDER_WARNING = (
+    "학교 작성요령 6~9쪽 양식 기준 순서와 다름: 양식은 겉표지 → 표제면·제출서 → 인준서 → 목차 순서. "
+    "이 원고는 옛 글 순서(겉표지 → 인준서 → 표제면 → 제출서 → 목차)라 그대로 만들었으니, "
+    "제출 전에 실물 순서로 바꿔야 하는지 확인 필요"
+)
+
+
 def school_frontmatter_spec(major_id=None):
     """No title-based inference; omitted IDs retain specialty compatibility."""
     return SCHOOL_FRONTMATTER.get("specialty_crops" if major_id is None else major_id)
@@ -2074,6 +2083,9 @@ def school_frontmatter_plan(nodes, major_id=None):
             "toc": i_toc,
             "body": i_body,
             "official_order": order == orders[-1],
+            # 후보 순서가 여럿인 전공(특용작물)만, 마지막(실물) 순서가 아니면 경고를 단다.
+            "order_warning": (LEGACY_FRONTMATTER_ORDER_WARNING
+                              if len(orders) > 1 and order != orders[-1] else None),
             "spec": spec,
         }
     return None

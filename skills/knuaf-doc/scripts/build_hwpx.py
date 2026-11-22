@@ -128,6 +128,8 @@ def school_frontmatter_summary(md_text, major_id=None):
         "detected": True,
         "layout": "plain_markdown",
         "sections": list(plan.get("order", ())),
+        # DOCX 리포트와 같은 키: 실물 순서면 None, 옛 글 순서면 경고 문장.
+        "order_warning": plan.get("order_warning"),
         "human_finish_required": list(
             profile.human_finish if profile is not None else HUMAN_FINISH),
     }
