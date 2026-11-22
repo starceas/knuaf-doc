@@ -264,8 +264,8 @@ class SchoolTableSourcesTests(ContractCase):
         value = self.attach(entries=entries)
         self.assertEqual(value.count('(출처 : '), 1)
         self.assertIn('(출처 : 합성 검증 기관, 다른 합성 기관)', value)
-        text = self.original.replace('농장의 기본 현황은 다음과 같다(표 1).',
-                                     '농장의 기본 현황은 다음과 같다(표 1). 목차에 표 1. 농장 종합 개요가 있다.')
+        text = self.original.replace('농장명·경영주·농장위치·가족사항·주요작목을 항목별로 나누어 본다(표 1).',
+                                     '농장명·경영주·농장위치·가족사항·주요작목을 항목별로 나누어 본다(표 1). 목차에 표 1. 농장 종합 개요가 있다.')
         self.assertEqual(self.attach(text=text, entries=credits(['farm_overview'])).count('(출처 : '), 1)
         # A caption-looking cell cannot introduce a second table candidate.
         text = self.original.replace('|농장명|', '|표 1. 농장 종합 개요|')
@@ -445,23 +445,24 @@ class SchoolTableSourcesTests(ContractCase):
         # 2) `sha256`: the current renderer's full output (self-generated, not an
         #    independently approved value). The lead lines before 표 1·3·4·5·6
         #    changed in v0.6.3 ("표 N은 …다" -> reading criterion + "(표 N)").
-        #    Re-pinned 2026-11-22 after the table 5 rewording; the revert check
-        #    above passed before re-pinning.
+        #    The `sha256` values below were re-pinned 2026-11-22 after the
+        #    table 1 lead line was reworded; the revert check passed first and
+        #    does not depend on them.
         # CLI changes do not affect either output. Missing optional values also
         # exercise the frozen defaults; explicit area/income expose unit drift.
         expected = {
             'legacy': {
                 'legacy_sha256': 'c0ffe0f054b9036e41ad05889d92c08a90fdf4b3752399ed93085858e83c08b5',
-                'sha256': '60164b06be95bf139fe489f00033ece7c84b6e39ac2b3d4b913c17d2d814a1fb',
+                'sha256': 'f5b629e88ada680ea23e8bf2b286c007f46b7480b5977816c0766f75cdcc1e0e',
             },
             'official': {
                 'legacy_sha256': 'eff2de21f01902b2144529952a82b9c248df4a6c2b4a32fc8506ced60f4ff390',
-                'sha256': '2368679dc08317b46f46db0804c95f5d698ff35705a731d63012a3aceb0fad8d',
+                'sha256': 'ad52623879ec2343108de9bcd5140e8c39c9a54386a5faf85a5b47f5acbdf96e',
             },
         }
         # New lead line -> the approved renderer's original line.
         OLD_LEADS = {
-            '농장의 기본 현황은 다음과 같다(표 1).': '표 1은 농장 종합 개요다.',
+            '농장명·경영주·농장위치·가족사항·주요작목을 항목별로 나누어 본다(표 1).': '표 1은 농장 종합 개요다.',
             '한발·홍수·태풍·공장폐수·공해가스·야생동물을 발생 빈도(가장 자주·자주·가끔)별로 비교한다(표 3).':
                 '표 3은 재해 빈도이다.',
             '주요출하시장별 거리와 소요시간을 비교한다(표 4).': '표 4는 출하시장 거리다.',

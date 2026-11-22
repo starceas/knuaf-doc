@@ -603,6 +603,86 @@ class TestLeadAxis(unittest.TestCase):
             self.block(["항목", "금액", "비고액"], extract, ("B", "C", "D")),
             "")
 
+    def test_real_form_period_headers_fall_back(self):
+        # roh304 재현: 실제 학과 양식의 기간·시점 머리글은 열 문자 꼬리를 걷으면
+        # 한 이름으로 접혀 '1월1일~12월31일을 과목별로' 같은 빈 문장이 됐다.
+        cases = (
+            (["과목", "1월1일~12월31일(C)", "1월1일~12월31일(D)",
+              "1월1일~12월31일(E)", "1월1일~12월31일(F)",
+              "1월1일~12월31일(G)"], "BCDEFG", ["C", "D", "E", "F", "G"]),
+            (["과목", "12월31일 현재(C)", "12월31일 현재(D)",
+              "12월31일 현재(E)", "12월31일 현재(F)", "12월31일 현재(G)",
+              "12월31일 현재(H)"], "BCDEFGH", ["C", "D", "E", "F", "G", "H"]),
+            (["구분", "연도별(D)", "연도별(E)", "연도별(F)", "연도별(G)",
+              "연도별(H)"], "CDEFGH", ["D", "E", "F", "G", "H"]),
+        )
+        for headers, letters, values in cases:
+            with self.subTest(first=headers[1]):
+                self.assertEqual(
+                    self.block(headers, {"value_cols": values}, tuple(letters)),
+                    "")
+
+    def test_period_value_axis_falls_back_without_column_letter_tail(self):
+        extract = {"value_cols": ["C"]}
+        for name in ("1월1일~12월31일", "12월31일 현재", "연도별", "월별",
+                     "분기별 실적", "3월 31일", "기준일자"):
+            with self.subTest(name=name):
+                self.assertEqual(self.block(["과목", name], extract), "")
+
+    def test_period_label_axis_falls_back(self):
+        extract = {"value_cols": ["C"]}
+        for label in ("연도별", "12월31일 현재", "구분별"):
+            with self.subTest(label=label):
+                self.assertEqual(self.block([label, "금액"], extract), "")
+
+    def test_ordinary_year_axes_are_not_blocked_by_period_rule(self):
+        # 반례: 정상 연도 축·월 이름이 든 일반 머리글은 그대로 읽는 기준이 된다
+        extract = {"value_cols": ["C"]}
+        self.assertEqual(self.block(["항목", "2026년 금액"], extract),
+                         "2026년 금액을 항목별로")
+        self.assertEqual(
+            self.block(["항목", "2026~2030년 금액"], extract),
+            "2026~2030년 금액을 항목별로")
+        self.assertEqual(
+            self.grid(["구분", "2026년 일수", "2027년 일수"], "BCD"),
+            "2026~2027년 일수를 구분별로")
+        self.assertEqual(self.block(["연도", "금액"], extract),
+                         "금액을 연도별로")
+
+    def test_duplicate_header_fold_keeps_value_nature_names(self):
+        # 열 문자 꼬리로만 구분된 중복 머리글 접기는 값의 성격 이름이면 참이다
+        # (어느 열이든 같은 금액 축). 기간·시점 이름일 때만 위험해 위에서 막는다.
+        extract = {"value_cols": ["C", "D", "E"]}
+        self.assertEqual(
+            self.block(["항목", "수량(C)", "수량(D)", "수량(E)"], extract,
+                       ("B", "C", "D", "E")),
+            "수량을 항목별로")
+
+    def test_eul_reul_other_brackets_and_nesting(self):
+        for word, josa in (("금액[천원]", "을"), ("금액（천원）", "을"),
+                           ("금액［천원］", "을"), ("금액【천원】", "을"),
+                           ("금액{천원}", "을"), ("금액<천원>", "을"),
+                           ("금액(천원(원))", "을"),
+                           ("금액(천원)(원)", "을"),
+                           ("수량[kg]（㎡）", "을"),
+                           ("거리[m]", "를"), ("일수（일）", "를"),
+                           # 짝이 안 맞는 괄호는 걷지 않는다(끝글자 '원'은 받침 있음)
+                           ("금액(천원", "을"), ("금액천원)", "을"),
+                           ("(천원)", "를"),
+                           ("[천원]", "를")):
+            with self.subTest(word=word):
+                self.assertEqual(ft._eul_reul(word), josa)
+
+    def test_eul_reul_trailing_digit_uses_spoken_sound(self):
+        # 영·일·삼·육·칠·팔은 받침 있음(을), 이·사·오·구는 없음(를)
+        for word, josa in (("단가0", "을"), ("단가1", "을"), ("단가2", "를"),
+                           ("단가3", "을"), ("단가4", "를"), ("단가5", "를"),
+                           ("단가6", "을"), ("단가7", "을"), ("단가8", "을"),
+                           ("단가9", "를"), ("단가1(천원)", "을"),
+                           ("단가2(천원)", "를")):
+            with self.subTest(word=word):
+                self.assertEqual(ft._eul_reul(word), josa)
+
 
 
 class TestRowUnits(_Base):

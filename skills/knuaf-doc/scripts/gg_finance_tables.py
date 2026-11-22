@@ -931,21 +931,55 @@ _LEAD_YEAR = re.compile(r"^(\d{4})\s*년\s*(.*)$")
 # 순수 숫자. 중복 머리글의 열 문자 표기('금액(C)')는 꼬리만 걷어낸다.
 _LEAD_JUNK = re.compile(r"^(?:열[A-Z]{1,2}|[A-Za-z]{1,2}|\d+)$")
 _LEAD_COL_SUFFIX = re.compile(r"\([A-Z]{1,2}\)$")
-_TRAILING_PAREN = re.compile(r"\s*\([^()]*\)\s*$")
+# 기간·시점 표기: 값의 성격(금액·수량)이 아니라 '언제'를 말하는 머리글이다.
+# 실제 양식 머리글('1월1일~12월31일(C)', '12월31일 현재(C)', '연도별(D)')이
+# 열 문자 꼬리를 걷으면 한 이름으로 접히므로, 접힌 이름이 이런 표기면 읽는
+# 기준으로 쓰지 않는다. '2026년 금액'·'2026~2030년 금액' 같은 연도 축은 해당 없다.
+_LEAD_PERIOD = re.compile(
+    r"\d+\s*월\s*\d+\s*일|현재|[연년]도별|월별|분기별?|일자")
+
+# 끝의 괄호류는 단위·보충 표기다. 전각·꺾쇠 등은 반각으로 바꿔 한 규칙으로 센다.
+_BRACKET_FOLD = str.maketrans({
+    "（": "(", "）": ")", "［": "[", "］": "]", "｛": "{", "｝": "}",
+    "〔": "[", "〕": "]", "【": "[", "】": "]", "「": "[", "」": "]",
+    "『": "[", "』": "]", "＜": "<", "＞": ">",
+})
+_OPENERS, _CLOSERS = "([{<", ")]}>"
+# 끝이 숫자일 때 읽는 소리의 받침: 영·일·삼·육·칠·팔은 받침, 이·사·오·구는 없다.
+_DIGIT_BATCHIM = set("013678")
+
+
+def _strip_trailing_brackets(text):
+    """끝에 붙은 괄호 묶음을 중첩까지 모두 걷는다. 짝이 안 맞으면 거기서 멈춘다."""
+    s = str(text).translate(_BRACKET_FOLD).strip()
+    while s and s[-1] in _CLOSERS:
+        depth = 0
+        cut = None
+        for i in range(len(s) - 1, -1, -1):
+            if s[i] in _CLOSERS:
+                depth += 1
+            elif s[i] in _OPENERS:
+                depth -= 1
+                if depth == 0:
+                    cut = i
+                    break
+        if cut is None:
+            break
+        s = s[:cut].rstrip()
+    return s
 
 
 def _eul_reul(text):
     """조사 을/를 선택: 받침 있으면 '을', 없거나 비한글 끝이면 '를'.
 
-    끝의 괄호('금액(천원)', '수량(kg)')는 단위 표기이므로 걷어낸 본문의
-    끝글자로 판정한다. 괄호만 남으면 판정할 글자가 없어 '를'로 둔다."""
-    s = str(text).strip()
-    while True:
-        stripped = _TRAILING_PAREN.sub("", s)
-        if stripped == s:
-            break
-        s = stripped
+    끝의 괄호류('금액(천원)', '수량[kg]', '금액（천원）', '금액(천원(원))')는
+    단위 표기이므로 걷어낸 본문의 끝글자로 판정한다. 끝이 숫자면 읽는 소리
+    ('단가1' -> 일)로 판정한다. 괄호만 남으면 판정할 글자가 없어 '를'로 둔다."""
+    # 짝 없이 끝에 남은 닫는 괄호('금액천원)')는 읽는 소리가 없으므로 건너뛴다.
+    s = _strip_trailing_brackets(text).rstrip(_CLOSERS).rstrip()
     if s and "가" <= s[-1] <= "힣" and (ord(s[-1]) - 0xAC00) % 28:
+        return "을"
+    if s and s[-1] in _DIGIT_BATCHIM:
         return "을"
     return "를"
 
@@ -981,6 +1015,11 @@ def _lead_value_axis(labels):
     같은 꼬리말로 이어질 때만 '2026~2030년 금액'처럼 범위로 접는다."""
     names = _lead_axis_names(labels)
     if not names:
+        return ""
+    # 열 문자 꼬리로만 구분된 중복 머리글은 위에서 한 이름으로 접힌다. 이름이
+    # 금액·수량 같은 값의 성격이면 접어도 참이지만, 기간·시점이면 열을 가르는
+    # 정보(어느 기간·시점인지)가 꼬리에만 있어 접으면 의미가 사라진다.
+    if any(_LEAD_PERIOD.search(n) for n in names):
         return ""
     if len(names) == 1 and not _LEAD_YEAR.match(names[0]):
         return names[0]
@@ -1019,6 +1058,9 @@ def _lead_reading(headers, label_indexes, value_indexes):
     value_axis = _lead_value_axis([headers[i] for i in value_indexes])
     label_axis = _lead_axis_name(headers[label_indexes[0]])
     if not value_axis or not label_axis:
+        return ""
+    # 라벨 축은 뒤에 '별'을 붙이므로 이미 '~별'이거나 기간·시점 표기면 쓸 수 없다.
+    if label_axis.endswith("별") or _LEAD_PERIOD.search(label_axis):
         return ""
     if label_axis == value_axis or label_axis in value_axis:
         return ""
