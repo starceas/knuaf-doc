@@ -54,7 +54,8 @@ MINI_MAP = {
     "schema": "test-mini/v1",
     "chapter": "Ⅳ. 재무계획",
     "missing_value": MISSING,
-    "lead_template": "{title}{josa} 표 {no}에 나타내었다.",
+    "lead_template": "{reading} 비교한다(표 {no}).",
+    "lead_fallback_template": "{title} 자료는 다음과 같다(표 {no}).",
     "workbook_rate_note_pattern": "상승률|성장률|연평균변화율",
     "footnote_kinds": {
         "general_price": {"label": "일반물가 상승률", "role": "general"},
@@ -451,8 +452,14 @@ class TestExtract(_Base):
                    if l.strip().startswith("출처") or "(출처 :" in l]
         self.assertEqual(credits, [])
 
-    def test_lead_in_reference(self):
-        self.assertIn("시험 투자내역은 표 1에 나타내었다.", self.md)
+    def test_lead_states_reading_criterion(self):
+        # 표 앞 한 줄은 머리글에서 유도한 읽는 축을 말한다(무정보 소개 문장 금지).
+        # 값 열 이름이 둘(금액·비고액)이면 한 축으로 묶지 않고 참조만 남긴다.
+        self.assertIn("시험 투자내역 자료는 다음과 같다(표 1).", self.md)
+        self.assertIn("2026~2030년 값을 항목별로 비교한다(표 2).", self.md)
+        self.assertIn("금액을 항목별로 비교한다(표 3).", self.md)
+        self.assertIn("2026~2027년 일수를 구분별로 비교한다(표 8).", self.md)
+        self.assertNotIn("나타내었다", self.md)
 
     def test_footnote_missing_warned(self):
         self.assertTrue(any(

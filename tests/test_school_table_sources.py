@@ -264,8 +264,8 @@ class SchoolTableSourcesTests(ContractCase):
         value = self.attach(entries=entries)
         self.assertEqual(value.count('(출처 : '), 1)
         self.assertIn('(출처 : 합성 검증 기관, 다른 합성 기관)', value)
-        text = self.original.replace('표 1은 농장 종합 개요다.',
-                                     '표 1은 농장 종합 개요다. 목차에 표 1. 농장 종합 개요가 있다.')
+        text = self.original.replace('농장의 기본 현황은 다음과 같다(표 1).',
+                                     '농장의 기본 현황은 다음과 같다(표 1). 목차에 표 1. 농장 종합 개요가 있다.')
         self.assertEqual(self.attach(text=text, entries=credits(['farm_overview'])).count('(출처 : '), 1)
         # A caption-looking cell cannot introduce a second table candidate.
         text = self.original.replace('|농장명|', '|표 1. 농장 종합 개요|')
@@ -440,9 +440,12 @@ class SchoolTableSourcesTests(ContractCase):
         # at 4b297c187b1ce91409cd4f0af60e78ff4b742a3d, not this candidate.
         # CLI changes do not affect either output. Missing optional values also
         # exercise the frozen defaults; explicit area/income expose unit drift.
+        # v0.6.3 (2026-11-22): re-pinned after the deliberate table lead
+        # sentence change; old vs new output differs only in the five lines
+        # before 표 1·3·4·5·6 ("표 N은 …다" -> reading criterion + "(표 N)").
         expected = {
-            'legacy': 'c0ffe0f054b9036e41ad05889d92c08a90fdf4b3752399ed93085858e83c08b5',
-            'official': 'eff2de21f01902b2144529952a82b9c248df4a6c2b4a32fc8506ced60f4ff390',
+            'legacy': '9f885caaa8b25d7775066520b4ecd96e626969a2798267599e3bc59790efb89e',
+            'official': '2a84cf9102ec540fc083f30ed3d8d6e3d32ddac28f1e4e85e653f6e9f8368289',
         }
         base = {
             'major_id': 'specialty_crops', 'writing_year': 2026,

@@ -926,12 +926,95 @@ def _footnote_lines(table, footnotes, warnings, registry, table_map):
     return lines
 
 
-def _eun_neun(text):
-    """조사 은/는 선택: 받침 있으면 '은', 없거나 비한글 끝이면 '는'."""
+_LEAD_YEAR = re.compile(r"^(\d{4})\s*년\s*(.*)$")
+# 읽는 축 이름으로 쓸 수 없는 머리글: 열 문자 대체값('열B'), 열 문자 하나,
+# 순수 숫자. 중복 머리글의 열 문자 표기('금액(C)')는 꼬리만 걷어낸다.
+_LEAD_JUNK = re.compile(r"^(?:열[A-Z]{1,2}|[A-Za-z]{1,2}|\d+)$")
+_LEAD_COL_SUFFIX = re.compile(r"\([A-Z]{1,2}\)$")
+
+
+def _eul_reul(text):
+    """조사 을/를 선택: 받침 있으면 '을', 없거나 비한글 끝이면 '를'."""
     s = str(text).strip()
     if s and "가" <= s[-1] <= "힣" and (ord(s[-1]) - 0xAC00) % 28:
-        return "은"
-    return "는"
+        return "을"
+    return "를"
+
+
+def _lead_axis_name(text):
+    """머리글 한 칸을 읽는 축 이름으로 쓸 수 있으면 돌려준다(아니면 '')."""
+    s = _LEAD_COL_SUFFIX.sub("", _disp(text)).strip()
+    if len(s) < 2 or _LEAD_JUNK.match(s):
+        return ""
+    return s
+
+
+def _lead_axis_names(labels):
+    names = []
+    for label in labels:
+        name = _lead_axis_name(label)
+        if name and name not in names:
+            names.append(name)
+    return names
+
+
+def _lead_value_axis(labels):
+    """값 열 머리글 -> 값 축. 값 축이 하나로 모일 때만 돌려준다(아니면 '').
+
+    값 열이 둘 이상이면서 이름이 다르면 단위·성격이 다를 수 있다(면적·금액·
+    비고). 이를 한 축으로 묶으면 읽는 기준이 틀어지므로 포기한다. 연도 열이
+    같은 꼬리말로 이어질 때만 '2026~2030년 금액'처럼 범위로 접는다."""
+    names = _lead_axis_names(labels)
+    if not names:
+        return ""
+    if len(names) == 1 and not _LEAD_YEAR.match(names[0]):
+        return names[0]
+    years, tails = [], []
+    for name in names:
+        m = _LEAD_YEAR.match(name)
+        if not m:
+            return ""
+        years.append(int(m[1]))
+        tails.append(_disp(m[2]))
+    if len(set(tails)) != 1 or len(set(years)) != len(years):
+        return ""
+    first, last = min(years), max(years)
+    if last - first + 1 != len(years):
+        return ""
+    span = "%d년" % first if first == last else "%d~%d년" % (first, last)
+    return span + " " + (tails[0] or "값")
+
+
+def _lead_reading(headers, label_indexes, value_indexes):
+    """머리글만으로 읽는 기준을 만든다. 두 축 중 하나라도 못 만들면 ''."""
+    value_axis = _lead_value_axis(
+        [headers[i] for i in value_indexes if i < len(headers)])
+    label_names = _lead_axis_names(
+        [headers[i] for i in label_indexes if i < len(headers)])
+    if not value_axis or not label_names:
+        return ""
+    return "%s%s %s별로" % (value_axis, _eul_reul(value_axis), label_names[0])
+
+
+def _lead_for(extract, headers, col_letters, kind):
+    """표 하나의 읽는 기준 — 값 축은 값 열 머리글, 라벨 축은 나머지 머리글.
+
+    셀 값·행 값은 쓰지 않는다. 생성기가 아는 것은 표 제목·머리글뿐이므로
+    읽는 축까지가 정직하게 말할 수 있는 전부다."""
+    if kind == "year_grid":
+        label_count = len(extract.get("label_cols", []))
+        label_indexes = list(range(label_count))
+        value_indexes = list(range(label_count, len(col_letters)))
+    else:
+        value = set(extract.get("value_cols", []))
+        note = set(extract.get("note_cols", []))
+        formats = extract.get("col_formats", {})
+        if any(formats.get(c) == "text" for c in value):
+            return ""  # 글자 열은 비교할 값 축이 아니다
+        label_indexes = [i for i, c in enumerate(col_letters)
+                         if c not in value and c not in note]
+        value_indexes = [i for i, c in enumerate(col_letters) if c in value]
+    return _lead_reading(headers, label_indexes, value_indexes)
 
 
 def _render_markdown_table(headers, rows, col_letters):
@@ -1112,13 +1195,18 @@ def _generate_with_workbook(wb_values, path, table_map, *,
     invalid_year_groups = []
 
     def emit_table_block(tid, headers, rows, col_letters, title, unit,
-                         sheet_title, notes, foot_lines):
+                         sheet_title, notes, foot_lines, lead=""):
         nonlocal table_no
         table_no += 1
         caption = "표 %d. %s(단위: %s)" % (table_no, title, unit)
         # 본문 참조 → 캡션 → 표 → 주석. 자체 산출 표에는 출처를 붙이지 않는다.
-        md.append(table_map["lead_template"].format(
-            title=title, josa=_eun_neun(title), no=table_no))
+        # 소개 줄은 머리글에서 유도한 읽는 축만 담는다(셀 값은 지어내지 않음).
+        if lead:
+            md.append(table_map["lead_template"].format(
+                reading=lead, no=table_no))
+        else:
+            md.append(table_map["lead_fallback_template"].format(
+                title=title, no=table_no))
         md.append(caption)
         md.extend(_render_markdown_table(headers, rows, col_letters))
         # 원문 셀은 표·독립 주석 경로 모두 _workbook_text를 거친다.
@@ -1189,7 +1277,9 @@ def _generate_with_workbook(wb_values, path, table_map, *,
                     title = table["title_template"].format(year=year)
                     emit_table_block(sub_id, headers, rows, col_letters,
                                      title, table["unit"], sheet_title,
-                                     notes, foot_lines)
+                                     notes, foot_lines,
+                                     lead=_lead_for(extract, headers,
+                                                    col_letters, kind))
                     emitted_sub += 1
                 if not emitted_sub:
                     skipped.append({"table": table["id"],
@@ -1210,7 +1300,9 @@ def _generate_with_workbook(wb_values, path, table_map, *,
                 headers, rows, col_letters = result
                 emit_table_block(table["id"], headers, rows, col_letters,
                                  table["title"], table["unit"], sheet_title,
-                                 extra, foot_lines)
+                                 extra, foot_lines,
+                                 lead=_lead_for(extract, headers,
+                                                col_letters, kind))
             else:
                 anchor_row = _find_anchor(view, extract)
                 if anchor_row is None:
@@ -1229,7 +1321,9 @@ def _generate_with_workbook(wb_values, path, table_map, *,
                 headers, rows, col_letters = result
                 emit_table_block(table["id"], headers, rows, col_letters,
                                  table["title"], table["unit"], sheet_title,
-                                 notes, foot_lines)
+                                 notes, foot_lines,
+                                 lead=_lead_for(extract, headers,
+                                                col_letters, kind))
 
     emitted_ids = {e["table"] for e in emitted}
     skipped_reason = {}
