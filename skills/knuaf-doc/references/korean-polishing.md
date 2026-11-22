@@ -75,7 +75,7 @@ fact/source ID·출처 개정·현재 프로젝트 개정을 사용한다.
 
 ### 실행은 `scripts/gg_humanize.py` 한 길
 
-동봉본을 쓸 때 실행은 Claude·Codex·맥·윈도 모두 이 스킬의 `scripts/gg_humanize.py`로만 한다. 동봉 폴더 안의 스크립트를 직접 부르지 않는다. 지침(GUIDE.md)의 bash 예시는 **뜻만 따르며 글자 그대로 치지 않는다** — 윈도 앱 셸은 PowerShell이라 셸 변수·`$(...)`·파이프가 그대로 돌지 않는다. 인자는 따옴표로 감싼 절대경로를 쓰고, 셸 변수·파이프 없이 한 줄에 한 명령만 쓴다.
+동봉본을 쓸 때 실행은 어느 호스트 앱·운영체제(맥·윈도)에서든 이 스킬의 `scripts/gg_humanize.py`로만 한다. 동봉 폴더 안의 스크립트를 직접 부르지 않는다. 지침(GUIDE.md)의 bash 예시는 **뜻만 따르며 글자 그대로 치지 않는다** — 윈도 앱 셸은 PowerShell이라 셸 변수·`$(...)`·파이프가 그대로 돌지 않는다. 인자는 따옴표로 감싼 절대경로를 쓰고, 셸 변수·파이프 없이 한 줄에 한 명령만 쓴다.
 
 **파이썬 이름**: 규칙집 다른 명령과 같은 꼴을 쓴다. 맥·리눅스는 `python3`, 윈도는 `py -3`이다([SKILL.md](../SKILL.md)의 실행 규칙과 같다). 어느 쪽도 없으면 실행하지 않고 "윤문 미완료 — 파이썬 실행기 없음"으로 기록한다.
 
@@ -98,7 +98,7 @@ fact/source ID·출처 개정·현재 프로젝트 개정을 사용한다.
 
 **실행 위치(run 폴더)**: `new-run`이 논문 작업 폴더의 `.gg-work/humanize/_workspace/YYYY-MM-DD-NNN-TAG/`를 만들고 그 경로를 돌려준다. 동봉 폴더는 앱에서 읽기 전용이므로 그 안에 쓰지 않는다. 중간 산출물은 `.gg-work/` 한 곳 규칙([output-hygiene.md](output-hygiene.md))을 따른다.
 
-**역할 실행**: 하위 에이전트를 쓸 수 있고 [model-routing.md](model-routing.md)이 허락하면 역할 파일(`references/roles/diagnostician.md`·`monolith.md`·`finalizer.md`)의 절대경로와 입력·출력 경로·장르만 주고 맡긴 뒤 결과 파일을 직접 확인한다. 쓸 수 없으면 주 세션이 같은 역할 파일을 읽고 같은 단계를 순차 실행한다. 기능을 생략하지 않는다. Claude판 서브에이전트 이름(`humanize-monolith` 등)은 앱에 없으므로 부르지 않는다.
+**역할 실행**: 하위 에이전트를 쓸 수 있고 [model-routing.md](model-routing.md)이 허락하면 역할 파일(`references/roles/diagnostician.md`·`monolith.md`·`finalizer.md`)의 절대경로와 입력·출력 경로·장르만 주고 맡긴 뒤 결과 파일을 직접 확인한다. 쓸 수 없으면 주 세션이 같은 역할 파일을 읽고 같은 단계를 순차 실행한다. 기능을 생략하지 않는다. 다른 호스트의 전용 서브에이전트 이름(`humanize-monolith` 등)은 앱에 없으므로 부르지 않는다.
 
 지침의 길이 제한·검증 절차를 따른다.
 
