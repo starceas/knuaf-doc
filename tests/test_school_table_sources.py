@@ -436,16 +436,38 @@ class SchoolTableSourcesTests(ContractCase):
         self.assertIn(('sourced_objects', '출처 있는 표 0개·그림 0개'), self.issues(self.original))
 
     def test_frozen_renderer_matches_approved_output_fingerprints(self):
-        # Full UTF-8 output pins generated from origin/main's approved renderer
-        # at 4b297c187b1ce91409cd4f0af60e78ff4b742a3d, not this candidate.
+        # Two pins per mode.
+        # 1) `legacy_sha256`/`official_sha256`: full UTF-8 output of origin/main's
+        #    approved renderer at 4b297c187b1ce91409cd4f0af60e78ff4b742a3d
+        #    (unchanged by v0.6.3). The current output must reproduce them once
+        #    the five deliberately changed lead lines are put back (see
+        #    OLD_LEADS), so only those lines may differ.
+        # 2) `sha256`: the current renderer's full output (self-generated, not an
+        #    independently approved value). The lead lines before 표 1·3·4·5·6
+        #    changed in v0.6.3 ("표 N은 …다" -> reading criterion + "(표 N)").
+        #    Re-pinned 2026-11-22 after the table 5 rewording; the revert check
+        #    above passed before re-pinning.
         # CLI changes do not affect either output. Missing optional values also
         # exercise the frozen defaults; explicit area/income expose unit drift.
-        # v0.6.3 (2026-11-22): re-pinned after the deliberate table lead
-        # sentence change; old vs new output differs only in the five lines
-        # before 표 1·3·4·5·6 ("표 N은 …다" -> reading criterion + "(표 N)").
         expected = {
-            'legacy': '9f885caaa8b25d7775066520b4ecd96e626969a2798267599e3bc59790efb89e',
-            'official': '2a84cf9102ec540fc083f30ed3d8d6e3d32ddac28f1e4e85e653f6e9f8368289',
+            'legacy': {
+                'legacy_sha256': 'c0ffe0f054b9036e41ad05889d92c08a90fdf4b3752399ed93085858e83c08b5',
+                'sha256': '60164b06be95bf139fe489f00033ece7c84b6e39ac2b3d4b913c17d2d814a1fb',
+            },
+            'official': {
+                'legacy_sha256': 'eff2de21f01902b2144529952a82b9c248df4a6c2b4a32fc8506ced60f4ff390',
+                'sha256': '2368679dc08317b46f46db0804c95f5d698ff35705a731d63012a3aceb0fad8d',
+            },
+        }
+        # New lead line -> the approved renderer's original line.
+        OLD_LEADS = {
+            '농장의 기본 현황은 다음과 같다(표 1).': '표 1은 농장 종합 개요다.',
+            '한발·홍수·태풍·공장폐수·공해가스·야생동물을 발생 빈도(가장 자주·자주·가끔)별로 비교한다(표 3).':
+                '표 3은 재해 빈도이다.',
+            '주요출하시장별 거리와 소요시간을 비교한다(표 4).': '표 4는 출하시장 거리다.',
+            '시작연도와 목표연도의 주력작목·생산규모·매출액·순이익 등을 비교한다(표 5). 매출·순이익은 천원, 면적은 ㎡다.':
+                '표 5는 가족구성 및 성장목표다. 매출·순이익은 천원, 면적은 ㎡다.',
+            '강점·약점은 내부 요인, 기회·위협은 외부 요인으로 나누어 본다(표 6).': '표 6은 SWOT 분석이다.',
         }
         base = {
             'major_id': 'specialty_crops', 'writing_year': 2026,
@@ -453,7 +475,7 @@ class SchoolTableSourcesTests(ContractCase):
             'author': '합성 작성자', 'area_m2': 1200,
             'sales_thousand': 3400, 'profit_thousand': 560,
         }
-        for mode, approved_sha256 in expected.items():
+        for mode, pins in expected.items():
             with self.subTest(mode=mode):
                 spec = dict(base)
                 if mode == 'official':
@@ -462,9 +484,20 @@ class SchoolTableSourcesTests(ContractCase):
                         'school': '합성대학교', 'department': '특용작물학과',
                     }
                 output = self.sp.paper(spec, context=self.context)
+                lines = output.split('\n')
+                for new_line in OLD_LEADS:
+                    self.assertEqual(lines.count(new_line), 1, new_line)
+                reverted = '\n'.join(OLD_LEADS.get(line, line) for line in lines)
                 self.assertEqual(
-                    approved_sha256, hashlib.sha256(output.encode('utf-8')).hexdigest(),
-                    'Frozen %s output differs from approved 4b297c1 renderer' % mode)
+                    pins['legacy_sha256'],
+                    hashlib.sha256(reverted.encode('utf-8')).hexdigest(),
+                    'Current %s output with the five lead lines put back differs from '
+                    'the approved 4b297c1 renderer: something besides the lead lines '
+                    'changed' % mode)
+                self.assertEqual(
+                    pins['sha256'], hashlib.sha256(output.encode('utf-8')).hexdigest(),
+                    'Current %s output differs from its pinned fingerprint (re-pin '
+                    'if only the lead lines were reworded)' % mode)
 
     def test_docx_conversion_preserves_tables_and_credit_placement(self):
         convert = runtime('build_docx').convert

@@ -931,11 +931,20 @@ _LEAD_YEAR = re.compile(r"^(\d{4})\s*년\s*(.*)$")
 # 순수 숫자. 중복 머리글의 열 문자 표기('금액(C)')는 꼬리만 걷어낸다.
 _LEAD_JUNK = re.compile(r"^(?:열[A-Z]{1,2}|[A-Za-z]{1,2}|\d+)$")
 _LEAD_COL_SUFFIX = re.compile(r"\([A-Z]{1,2}\)$")
+_TRAILING_PAREN = re.compile(r"\s*\([^()]*\)\s*$")
 
 
 def _eul_reul(text):
-    """조사 을/를 선택: 받침 있으면 '을', 없거나 비한글 끝이면 '를'."""
+    """조사 을/를 선택: 받침 있으면 '을', 없거나 비한글 끝이면 '를'.
+
+    끝의 괄호('금액(천원)', '수량(kg)')는 단위 표기이므로 걷어낸 본문의
+    끝글자로 판정한다. 괄호만 남으면 판정할 글자가 없어 '를'로 둔다."""
     s = str(text).strip()
+    while True:
+        stripped = _TRAILING_PAREN.sub("", s)
+        if stripped == s:
+            break
+        s = stripped
     if s and "가" <= s[-1] <= "힣" and (ord(s[-1]) - 0xAC00) % 28:
         return "을"
     return "를"
@@ -950,10 +959,16 @@ def _lead_axis_name(text):
 
 
 def _lead_axis_names(labels):
+    """머리글 -> 축 이름 목록(중복 제거). 하나라도 못 쓰면 None.
+
+    못 쓰는 머리글을 조용히 버리면 값 열 하나가 말에서 빠진 틀린 문장이
+    나온다. 그래서 하나라도 못 쓰면 전체를 포기한다."""
     names = []
     for label in labels:
         name = _lead_axis_name(label)
-        if name and name not in names:
+        if not name:
+            return None
+        if name not in names:
             names.append(name)
     return names
 
@@ -969,13 +984,20 @@ def _lead_value_axis(labels):
         return ""
     if len(names) == 1 and not _LEAD_YEAR.match(names[0]):
         return names[0]
+    # 연도 열의 중복은 라벨 이름 합치기와 별개다: 같은 연도 열이 둘이면
+    # 범위가 거짓이 되므로, 합치기 전 원래 열 수와 비교해 포기한다.
+    if any(_LEAD_YEAR.match(n) for n in names) and len(names) != len(labels):
+        return ""
     years, tails = [], []
     for name in names:
         m = _LEAD_YEAR.match(name)
         if not m:
             return ""
+        tail = _disp(m[2])
+        if tail and (len(tail) < 2 or _LEAD_JUNK.match(tail)):
+            return ""  # 꼬리말이 'ha'·'kg' 같은 짧은 표기면 쓸 수 없는 머리글
         years.append(int(m[1]))
-        tails.append(_disp(m[2]))
+        tails.append(tail)
     if len(set(tails)) != 1 or len(set(years)) != len(years):
         return ""
     first, last = min(years), max(years)
@@ -986,14 +1008,21 @@ def _lead_value_axis(labels):
 
 
 def _lead_reading(headers, label_indexes, value_indexes):
-    """머리글만으로 읽는 기준을 만든다. 두 축 중 하나라도 못 만들면 ''."""
-    value_axis = _lead_value_axis(
-        [headers[i] for i in value_indexes if i < len(headers)])
-    label_names = _lead_axis_names(
-        [headers[i] for i in label_indexes if i < len(headers)])
-    if not value_axis or not label_names:
+    """머리글만으로 읽는 기준을 만든다. 두 축 중 하나라도 못 만들면 ''.
+
+    값 열은 전부 쓸 수 있는 머리글이어야 하고, 라벨 축은 첫 라벨 열의
+    머리글이 쓸 수 있는 값이면서 값 축과 달라야 한다."""
+    if not label_indexes or not value_indexes:
         return ""
-    return "%s%s %s별로" % (value_axis, _eul_reul(value_axis), label_names[0])
+    if max(label_indexes + value_indexes) >= len(headers):
+        return ""
+    value_axis = _lead_value_axis([headers[i] for i in value_indexes])
+    label_axis = _lead_axis_name(headers[label_indexes[0]])
+    if not value_axis or not label_axis:
+        return ""
+    if label_axis == value_axis or label_axis in value_axis:
+        return ""
+    return "%s%s %s별로" % (value_axis, _eul_reul(value_axis), label_axis)
 
 
 def _lead_for(extract, headers, col_letters, kind):
@@ -1214,8 +1243,12 @@ def _generate_with_workbook(wb_values, path, table_map, *,
         for note in [*notes, *foot_lines]:
             md.append("주 : " + re.sub(r"^(?:\*\s*|주\s*[:：]\s*)", "", note))
         md.append("")
+        # lead_kind: "reading"=머리글에서 읽는 기준을 만든 줄,
+        # "fallback"=참조만 담은 자리표시 줄(작성자가 읽는 기준 문장으로
+        # 다시 써야 한다).
         emitted.append({"table": tid, "title": title,
-                        "rows": len(rows), "number": table_no})
+                        "rows": len(rows), "number": table_no,
+                        "lead_kind": "reading" if lead else "fallback"})
 
     for section in sections:
         md.append(section["heading"])

@@ -461,6 +461,16 @@ class TestExtract(_Base):
         self.assertIn("2026~2027년 일수를 구분별로 비교한다(표 8).", self.md)
         self.assertNotIn("나타내었다", self.md)
 
+    def test_lead_kind_marks_placeholder_tables(self):
+        # 읽는 기준을 못 만든 표는 emitted에 fallback으로 표시돼, 안내가
+        # "읽는 기준을 담아 다시 쓰세요"를 띄울 수 있다. 기존 키는 그대로다.
+        kinds = {e["number"]: e["lead_kind"] for e in self.result["emitted"]}
+        self.assertEqual(kinds[1], "fallback")
+        for number in (2, 3, 4, 5, 6, 7, 8):
+            self.assertEqual(kinds[number], "reading", number)
+        for entry in self.result["emitted"]:
+            self.assertTrue({"table", "title", "rows", "number"} <= set(entry))
+
     def test_footnote_missing_warned(self):
         self.assertTrue(any(
             w["reason"] == "footnote_missing"
@@ -483,6 +493,116 @@ class TestExtract(_Base):
         self.assertEqual(
             self.before_hash,
             hashlib.sha256(self.xlsx.read_bytes()).hexdigest())
+
+
+class TestLeadAxis(unittest.TestCase):
+    """머리글만으로 만드는 읽는 기준 — 못 쓰는 머리글은 버리지 않고 포기한다."""
+
+    BLOCK = {"value_cols": ["C"], "col_formats": {"B": "text", "C": "int_comma"}}
+
+    def block(self, headers, extract=None, letters=("B", "C")):
+        return ft._lead_for(extract or self.BLOCK, list(headers),
+                            list(letters), "block")
+
+    def grid(self, headers, letters, label_count=1):
+        extract = {"label_cols": list(letters[:label_count])}
+        return ft._lead_for(extract, list(headers), list(letters),
+                            "year_grid")
+
+    def test_eul_reul_ignores_trailing_unit_parenthesis(self):
+        for word, josa in (("금액", "을"), ("금액(천원)", "을"),
+                           ("수량(kg)", "을"), ("면적(㎡)", "을"),
+                           ("2026~2027년 금액(천원)", "을"),
+                           ("일수", "를"), ("값", "을"),
+                           ("비용(원)", "을"), ("가격(만원)", "을"),
+                           ("거리(m)", "를"), ("", "를")):
+            with self.subTest(word=word):
+                self.assertEqual(ft._eul_reul(word), josa)
+
+    def test_parenthesis_header_gets_correct_josa(self):
+        self.assertEqual(self.block(["항목", "금액(천원)"]),
+                         "금액(천원)을 항목별로")
+        self.assertEqual(self.block(["항목", "수량(kg)"]),
+                         "수량(kg)을 항목별로")
+        self.assertEqual(
+            self.block(["항목", "2026~2027년 금액(천원)"]),
+            "2026~2027년 금액(천원)을 항목별로")
+
+    def test_value_column_without_usable_header_falls_back(self):
+        extract = {"value_cols": ["C", "D"]}
+        for headers in (["항목", "금액", "열D"], ["항목", "열C", "금액"],
+                        ["항목", "금액", ""], ["항목", "금액", "ha"]):
+            with self.subTest(headers=headers):
+                self.assertEqual(
+                    self.block(headers, extract, ("B", "C", "D")), "")
+
+    def test_year_grid_with_unusable_header_falls_back(self):
+        letters = ("B", "C", "D", "E")
+        self.assertEqual(
+            self.grid(["구분", "2026년 일수", "2027년 일수", "열E"], letters),
+            "")
+        self.assertEqual(
+            self.grid(["구분", "2026년 ha", "2027년 ha"], letters[:3]), "")
+        self.assertEqual(
+            self.grid(["구분", "2026년 kg", "2027년 kg"], letters[:3]), "")
+
+    def test_year_grid_valid_shapes(self):
+        self.assertEqual(
+            self.grid(["구분", "2026년 일수", "2027년 일수"], "BCD"),
+            "2026~2027년 일수를 구분별로")
+        # 한 해만 있으면 범위 없이 그 해만
+        self.assertEqual(self.grid(["구분", "2026년 일수"], "BC"),
+                         "2026년 일수를 구분별로")
+        # 꼬리말이 없으면 단위를 모르므로 '값'
+        self.assertEqual(self.grid(["구분", "2026년", "2027년"], "BCD"),
+                         "2026~2027년 값을 구분별로")
+
+    def test_year_grid_non_consecutive_or_mixed_tails_fall_back(self):
+        letters = "BCD"
+        # 비연속 연도: 2027이 빠져 '2026~2028년' 범위가 거짓이 된다
+        self.assertEqual(
+            self.grid(["구분", "2026년 일수", "2028년 일수"], letters), "")
+        # 중복 연도
+        self.assertEqual(
+            self.grid(["구분", "2026년 일수", "2026년 일수"], letters), "")
+        # 값 열 이름이 다른 year_grid
+        self.assertEqual(
+            self.grid(["구분", "2026년 면적", "2027년 일수"], letters), "")
+
+    def test_label_header_must_be_usable_and_differ_from_value_axis(self):
+        letters = ("B", "C", "D")
+        extract = {"value_cols": ["C"]}
+        # 첫 라벨 열이 열 문자 대체값이면 뒤의 글자 열(비고)로 갈아타지 않는다
+        self.assertEqual(
+            self.block(["열B", "금액", "비고"], extract, letters), "")
+        self.assertEqual(self.block(["B", "금액"], extract), "")
+        self.assertEqual(self.block(["", "금액"], extract), "")
+        # 라벨 머리글과 값 머리글이 같으면 '금액을 금액별로'가 된다
+        self.assertEqual(self.block(["금액", "금액"], extract), "")
+        self.assertEqual(self.block(["금액", "2026년 금액"], extract), "")
+
+    def test_text_value_column_falls_back(self):
+        extract = {"value_cols": ["C", "D"],
+                   "col_formats": {"C": "int_comma", "D": "text"}}
+        self.assertEqual(
+            self.block(["항목", "금액", "금액"], extract, ("B", "C", "D")), "")
+
+    def test_duplicate_value_headers_collapse_to_one_axis(self):
+        # 같은 머리글이 열 문자 꼬리('금액(C)/금액(D)')로 구분돼 있어도 한 축이다
+        extract = {"value_cols": ["C", "D"]}
+        for headers in (["항목", "금액(C)", "금액(D)"],
+                        ["항목", "금액", "금액"]):
+            with self.subTest(headers=headers):
+                self.assertEqual(
+                    self.block(headers, extract, ("B", "C", "D")),
+                    "금액을 항목별로")
+
+    def test_different_value_names_do_not_join(self):
+        extract = {"value_cols": ["C", "D"]}
+        self.assertEqual(
+            self.block(["항목", "금액", "비고액"], extract, ("B", "C", "D")),
+            "")
+
 
 
 class TestRowUnits(_Base):
