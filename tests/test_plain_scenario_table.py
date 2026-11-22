@@ -7,6 +7,7 @@
 않았는지 함께 잠근다.
 """
 import json
+import re
 from pathlib import Path
 import unittest
 
@@ -66,6 +67,12 @@ class ConditionTableAllowed(ContractCase):
         allowed = (doc.WARNING_CHECKS | doc.POLICY_ADVISORY_CHECKS
                    | doc.INFO_CHECKS)
         assert found <= allowed, found
+        # 경고군 통과만으로는 이 표가 일으키면 안 되는 경고(금칙어·상한·
+        # 캡션 길이)를 놓친다. 표 자체가 원인인 id는 명시적으로 없어야 한다.
+        # 나머지 id(짧은 시험 원고라 생기는 것)는 허용군 안에서만 허용한다.
+        table_caused = {"forbidden_term", "caption_forbidden",
+                        "term_limit", "caption_long"}
+        assert not (found & table_caused), found & table_caused
 
     def test_condition_words_alone_are_not_terms(self):
         found = ids(check(
@@ -120,11 +127,25 @@ class ConditionTableIsNotABypass(ContractCase):
                 assert "forbidden_term" in found, term
 
     def test_split_across_cells_is_a_documented_human_limit(self):
-        # 한계(사람 검토): `민`|`감도`처럼 두 셀에 쪼갠 표기와 캡션의 변형
-        # 표기는 기계가 잇지 못한다(셀 경계는 합치지 않는다). 셀 안의
-        # 표기만 본문과 같은 정규화로 읽는다. 이 한계는 이번 변경 이전부터
+        # 한계(사람 검토): `민`|`감도`처럼 두 셀에 쪼갠 표기는 기계가 잇지
+        # 못한다(셀 경계는 합치지 않는다). 이 한계는 이번 변경 이전부터
         # 있던 것이며, 그래서 조건표는 사람 검토를 함께 받는다.
+        # 검사기를 개선해 이 표기를 잡게 되면 이 시험을 뒤집는다
+        # (잡히는 쪽이 옳다). 그때 thesis-level.md의 한계 문구도 함께 고친다.
         assert "forbidden_term" not in ids(check(table_with("민", "감도")))
+
+    def test_caption_is_matched_verbatim_only_documented_human_limit(self):
+        # 한계(사람 검토, 코드 읽기 기준): 캡션 노드는 term_parts가 비어
+        # 본문 정규화 검사를 받지 않고(gg_document.py 캡션 노드), 캡션
+        # 검사는 정책 JSON 금칙어 + 캡션 전용 목록을 원문 그대로 센다.
+        # 그래서 정확한 금칙어는 잡히지만(아래 시험) 전각·영문 별칭은
+        # 못 잡는다. 검사기를 개선하면 이 시험을 뒤집는다.
+        for variant in ("ＮＰＶ", "sensitivity analysis"):
+            with self.subTest(variant=variant):
+                text = CONDITION_TABLE.replace(
+                    "표 1. 단가·수량 변동에 따른 연 소득 (단위: 천원)",
+                    "표 1. 단가·수량 " + variant + " (단위: 천원)")
+                assert "caption_forbidden" not in ids(check(text))
 
     def test_forbidden_term_in_caption_still_blocked(self):
         text = CONDITION_TABLE.replace(
@@ -157,9 +178,37 @@ class PolicyAndDocKeepTheBan(ContractCase):
             with self.subTest(doc=name):
                 text = (REF / name).read_text(encoding="utf-8")
                 assert "조건표만 예외" not in text
-                assert "조건표는 이 금지의 대상이 아니라" not in text or (
-                    "그 표 안에서도" in text)
+                # "대상이 아니다"류 표현은 쓰지 않는다(r2 권고 4).
+                assert "금지의 대상이 아니" not in text
+                assert "금지 대상이 아니" not in text
+                # 다른 표현의 예외 선언도 막는다.
+                assert not re.search(
+                    r"조건표[^\n.]{0,20}예외(로 (한다|둔다|허용|본다)|이다)",
+                    text), name
                 assert "§2 ③" in text
+                # 양성 확인: 문서마다 표 안에서도 금칙어를 쓰지 않는다는
+                # 취지 문구가 있어야 한다(thesis-level은 "표 안이라도"도).
+                assert ("표 안에서도" in text or "표 안이라도" in text
+                        or "표 머리·셀" in text), name
+
+    def test_thesis_level_states_human_check_limits(self):
+        # 기계가 못 잡는 것을 자동 검사처럼 읽히게 쓰지 않는다(r2 권고 2·3).
+        level = (REF / "thesis-level.md").read_text(encoding="utf-8")
+        assert "두 셀에 쪼갠" in level
+        assert "캡션은 정규화와 영문 별칭 검사를 받지 않고" in level
+        assert "정책 JSON 목록에 없어 기계가 막지 않는다" in level
+
+    def test_condition_table_has_no_invented_numeric_cap(self):
+        # 결정 4에는 수치 상한이 없다(r2 중요 2). "3개 안팎·결과 1~2열"은
+        # 권장이고, 세 문서가 같은 표현이어야 한다.
+        for name in ("thesis-level.md", "exemplar-quality.md",
+                     "narrative-expansion.md"):
+            with self.subTest(doc=name):
+                text = (REF / name).read_text(encoding="utf-8")
+                assert "5행" not in text
+                assert "3개 안팎" in text
+                assert "1~2열" in text
+                assert "결과 1열의" not in text
 
     def test_thesis_level_names_the_policy_list_not_a_short_list(self):
         level = (REF / "thesis-level.md").read_text(encoding="utf-8")
@@ -182,6 +231,13 @@ class PolicyAndDocKeepTheBan(ContractCase):
         assert "확인된 하한 없음" in level
         assert "70쪽 미만일 때만" in level
         assert "130쪽을 넘어도 경고를 내지 않는다" in level
+        # "빌드 결과 쪽수"는 전체 쪽수(표지·목차·요약·참고문헌·부록 포함)로
+        # 결정권자가 확정했다. 본문만 세는 해석으로 되돌아가지 않게 잠근다.
+        assert "전체 쪽수" in level
+        assert "표지·목차·요약·참고문헌·부록을 포함" in level
+        assert "확인 대기" not in level
+        # 풀어 쓰기(허용)와 반복(제안 안 함)의 구분.
+        assert "풀어 쓰기" in level and "반복" in level
 
 
 if __name__ == "__main__":
