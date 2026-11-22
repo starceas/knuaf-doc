@@ -907,7 +907,7 @@ def main(argv=None):
                     "source_order_note": (
                         "전공별 원문 순서; 미확인 물리 배치는 공용 기본값 사용"
                         if authorization.major_id != "specialty_crops" else
-                        "학교 작성요령 6~9쪽 실물 양식 순서(겉표지 → 표제면·제출서 → 인준서 → 목차)를 따름(학교 작성요령 6~9쪽 양식 기준)"
+                        "학교 작성요령 6~9쪽 실물 양식 순서(겉표지 → 표제면·제출서 → 인준서 → 목차)를 따름"
                         if parsed_plan.get("official_order")
                         else "옛 글 순서 원고를 그대로 만듦(호환용): 학교 작성요령 6~9쪽 양식 기준 순서와 다름; 제출 전 실물 순서 확인 필요"
                     ),
