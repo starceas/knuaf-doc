@@ -907,10 +907,12 @@ def main(argv=None):
                     "source_order_note": (
                         "전공별 원문 순서; 미확인 물리 배치는 공용 기본값 사용"
                         if authorization.major_id != "specialty_crops" else
-                        "공식 지침 p4 논리 순서와 p6–9 시각 예시 순서가 달라 forms_1_to_4를 선택함"
+                        "학교 작성요령 6~9쪽 실물 양식 순서(겉표지 → 표제면·제출서 → 인준서 → 목차)를 따름(학교 작성요령 6~9쪽 양식 기준)"
                         if parsed_plan.get("official_order")
-                        else "공식 지침 p4 논리 순서를 사용함; p6–9 시각 예시와 다를 수 있어 사용자 검토 필요"
+                        else "옛 글 순서 원고를 그대로 만듦(호환용): 학교 작성요령 6~9쪽 양식 기준 순서와 다름; 제출 전 실물 순서 확인 필요"
                     ),
+                    # 새 키: 실물 순서·전공별 원문 순서면 None, 옛 글 순서면 경고 문장.
+                    "order_warning": parsed_plan.get("order_warning"),
                     "major_id": parsed_plan["spec"].major_id,
                     "layout_confidence": parsed_plan["spec"].layout_confidence,
                     "physical_forms": [list(roles) for roles in parsed_plan["spec"].physical_forms],

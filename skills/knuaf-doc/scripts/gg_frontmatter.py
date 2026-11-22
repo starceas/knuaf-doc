@@ -127,9 +127,15 @@ def normalize_school_profile(spec: Mapping[str, Any]) -> dict[str, Any]:
         "source_order_note": (
             "전공별 원문 순서; 미확인 물리 배치는 공용 기본값 사용"
             if major_id not in {None, "specialty_crops"} else
-            "공식 지침 p4 논리 순서와 p6–9 시각 예시 순서가 달라 forms_1_to_4를 선택함"
+            "학교 작성요령 6~9쪽 실물 양식 순서(겉표지 → 표제면·제출서 → 인준서 → 목차)를 기본으로 선택함(학교 작성요령 6~9쪽 양식 기준)"
             if layout == "forms_1_to_4"
-            else "공식 지침 p4 논리 순서를 선택함; p6–9 시각 예시와 순서가 다를 수 있어 사용자 검토 필요"
+            else "옛 원고 호환용 logical_legacy 선택: 학교 작성요령 6~9쪽 양식 기준 순서와 다름; 제출 전 실물 순서 확인 필요"
+        ),
+        # 새 키: 옛 글 순서를 고른 경우에만 경고를 단다(기존 키는 그대로).
+        "order_warning": (
+            None if layout == "forms_1_to_4" or major_id not in {None, "specialty_crops"}
+            else "학교 작성요령 6~9쪽 양식 기준 순서와 다름: logical_legacy는 옛 원고 호환용이며 "
+                 "양식은 겉표지 → 표제면·제출서 → 인준서 → 목차 순서"
         ),
         "degree": _first(raw, spec, "degree") or front_spec.degree,
         "plan_label": _first(raw, spec, "plan_label") or front_spec.plan_label,
