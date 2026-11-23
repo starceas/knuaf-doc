@@ -212,6 +212,7 @@ description: 한국농수산대학교 창업논문·영농계획서와 동반 �
 - 질문과 변경: [mid-work-questions](references/mid-work-questions.md)
 - 학부 졸업논문 눈높이·재무 지표 경계(모든 전공 공통 기본값): [thesis-level](references/thesis-level.md)
 - 특용작물전공 Ⅳ장 재무표 전개(특용작물 전용, 타 전공은 각 선배 플로우): [specialty-crops/finance-flow](references/specialty-crops/finance-flow.md) — 학과 제공 템플릿(및 그 파생) 대상 gg.py finance-tables 전개 명령, Ⅳ장 상승률 각주는 전부 "참고값"으로 출력(표 계산에 쓰였는지는 통합문서에서 따로 확인, 영수증·수식·캐시 역산 검증 폐지), 판매 시작가의 가격 평균 근거와 동일 5년 CPI 상승률 근거를 분리하는 구조화 참고값 각주 출력, 작성연도·시작연도·5년 관측 창·4간격 구분, 공식 id·역할·단위·기준연도·차원 검증, 자료 부족 보류 및 비용·임금 독립 계약 보존, 원문 상승률·성장률 주석 생략, 연도별 표 그룹 완전성 검증, 행별 단위 계약(`row_units`), 레이아웃 지문, 명명 빈 행 '확인 불가' 보존 및 발행 전 정책 게이트 검증.
+- 특용작물전공 서식·작성 규칙(특용작물 전용, 타 전공은 각 전공 양식): [specialty-crops/format-rules](references/specialty-crops/format-rules.md) — 지도교수 지시(2026-11-23)를 반영한 제목 크기(Ⅰ. 20 / 1. 18 / 가. 이하 16pt), 표·그림 제목 끝 온점 없음, 표 제목 앞뒤 한 줄·출처·주 위치, 한 표 안 정렬 통일, 목차 줄바꿈 내어쓰기, 겉표지 졸업연월, 계산값 산출 기준·원자료 출처, 품종 표와 본문 일치, 병해충 종류·특징·증상·사진 필수, 관련 논문 소제목은 논문 제목, 표·그림 번호로 가리키기, 전체 쪽수 안내.
 - 시각자료·사진 정책 및 촬영 자리 가이드: [figure-photo-policy](references/figure-photo-policy.md)
 - 시각자료·그림 리서치 및 본문 삽입: [figure-research-routes](references/figure-research-routes.md) — 전공·장별 시각자료 유형 판정, 공공 도판·차트·사진 수집 및 본문 삽입 실행 안내.
 - 장별 논증·실행성·수치 품질(작성 전·검토 때 읽음, 분량·키워드로 충족 금지): [exemplar-quality](references/exemplar-quality.md) — 고정 발췌라 쉬운 말 조건표·표 앞 문장 경계는 [thesis-level](references/thesis-level.md) §2 ③·⑦이 우선
