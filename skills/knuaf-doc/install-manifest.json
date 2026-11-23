@@ -188,7 +188,7 @@
   "references/vendor/im-not-ai/humanize-korean/scripts/verify_gates.py": "675b4b4995997b654c7ad5826348258d3420fdaf6e130a44898398064133794c",
   "references/workbook-reference-set.json": "e31ddcf5b306d330101fef920a415e99972dea0cdd9f5e1a2e5b37a9fd3a5be8",
   "references/workflow-order.md": "781d08c719d40a7787ce97919a1adfc7477e6c979f3114828674756d20b1632c",
-  "release-notes.json": "969c614643a1e16976dbd8f44537029db6f105a0e31b7b6a639e7a4e55269b5b",
+  "release-notes.json": "791d28b413449bb59734ccf69e5cb28f98958454fc3daedca4dc1ef9a8ecdf07",
   "scripts/build_docx.py": "d38b7d481e15a92f6bd85916e97c79e270728084105960ddb61890638a86bea5",
   "scripts/build_excel_finance_template.py": "0b701dedc53e83af6b2c1aa7fce93d5df9043c428c9b7630a80d7944af582441",
   "scripts/build_hwpx.py": "88d219430529fec8f2bcca79041868ac43b4617da9bccbbab5119f8678d865b3",
@@ -324,7 +324,7 @@
   "tests/test_pr4_source_map.py": "4f21001225b9e65c96b531c9ca9cb54801de6fd29b25a7eaa24b7e6a5d8c1550",
   "tests/test_pr5_econ_ghost_delete.py": "dba0b4c0cb8b949f38b41c4785f669e27ff7aa771ac97a7de65f8007f71ad0d4",
   "tests/test_pr6_econ_seed_append.py": "d91adc1c3389920e429dc1755054bce900abd91b451e8324d2cd96c11d231f1d",
-  "version.json": "7b9ce80b87500d004922b1abbd5fe901a356ab8bd4a5ab5a6c58bd0f8bf44435"
+  "version.json": "9e18c09b529489e12a1661fb1e20f74bde5248ce4508e9612de61b317a96958d"
  },
  "schema": "knuaf-doc/install-manifest@1"
 }
