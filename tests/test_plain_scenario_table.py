@@ -226,30 +226,37 @@ class PolicyAndDocKeepTheBan(ContractCase):
             assert term in level, term
 
     def test_page_target_is_guidance_not_school_rule(self):
+        # 2026-11-23 형님 구분표: 쪽수 안내는 특용작물전공 전용이라
+        # thesis-level ⑪은 특작 문서를 가리키는 자리만 남기고 본문은 옮겼다.
         level = (REF / "thesis-level.md").read_text(encoding="utf-8")
+        assert "specialty-crops/format-rules.md" in level
+        assert "특용작물전공 전용" in level
+
+        spec = (REF / "specialty-crops" / "format-rules.md").read_text(
+            encoding="utf-8")
         # 학생에게 보이는 안내 문구는 그대로 복제한다(ORDER-D4 부속 2).
         assert (
             "> 최소 70쪽(이보다 적으면 졸업논문 제출 수준이 안 돼요). 위로는 정해진 "
             "끝이 없어요 — 장마다 할 말을 다 쓰면 보통 80~100쪽, 많으면 130쪽이 "
             "되기도 해요. 쪽수를 채우려고 늘리지는 마세요."
-        ) in level
+        ) in spec
         # 학교 규정이 아니라는 부정 규칙 자체를 잠근다.
-        assert '"학교 기준"이라고 쓰지 않는다' in level
-        assert "확인된 하한 없음" in level
-        assert "70쪽 미만일 때만" in level
-        assert "130쪽을 넘어도 경고를 내지 않는다" in level
+        assert '"학교 기준"이라고 쓰지 않는다' in spec
+        assert "확인된 하한 없음" in spec
+        assert "70쪽 미만일 때만" in spec
+        assert "130쪽을 넘어도 경고를 내지 않는다" in spec
         # "빌드 결과 쪽수"는 전체 쪽수(표지·목차·요약·참고문헌·부록 포함)로
         # 결정권자가 확정했다. 본문만 세는 해석으로 되돌아가지 않게 잠근다.
-        assert "전체 쪽수" in level
-        assert "표지·목차·요약·참고문헌·부록을 포함" in level
-        assert "확인 대기" not in level
+        assert "전체 쪽수" in spec
+        assert "표지·목차·요약·참고문헌·부록을 포함" in spec
+        assert "확인 대기" not in spec
         # 풀어 쓰기(허용)와 반복(제안 안 함)의 구분.
-        assert "풀어 쓰기" in level and "반복" in level
+        assert "풀어 쓰기" in spec and "반복" in spec
         # 안내 문구 아래에 70쪽이 전체 쪽수임을 분명히 하고(r3 권고 2),
         # 지금은 사람이 확인하며 세는 대상은 제출 최종 문서임을 잠근다.
-        assert "문구의 \"70쪽\"은 본문만이 아니라 **전체 쪽수**" in level
-        assert "지금은 사람이 확인한다" in level
-        assert "학생이 제출하는 최종 문서" in level
+        assert "문구의 \"70쪽\"은 본문만이 아니라 **전체 쪽수**" in spec
+        assert "지금은 사람이 확인한다" in spec
+        assert "학생이 제출하는 최종 문서" in spec
         # 소절 단위 분량 목표 없음과 전체 쪽수 안내를 서로 가리킨다(r3 중요).
         narrative = (REF / "narrative-expansion.md").read_text(encoding="utf-8")
         assert "소절 단위의 분량 목표는 두지 않으며" in narrative
@@ -258,6 +265,8 @@ class PolicyAndDocKeepTheBan(ContractCase):
             "소절 단위의 분량 목표는 두지 않으며", "")
         assert "소절 단위 분량 목표는 두지 않는다" in level
         assert "narrative-expansion.md" in level
+        # 쪽수 안내 본문이 전 전공 문서로 되돌아오지 않게 막는다.
+        assert "최소 70쪽" not in level
 
     def test_generator_lead_description_is_exact(self):
         # r3 권고 1: 자리표시·lead_kind는 재무표 생성기만, 학교 골격은

@@ -6,7 +6,7 @@
 
 지원 범위는 **특용작물 작목 자체의 재배법**과 **특용작물을 활용한 재배법·가공·유통 계획**이다. 약용·향신·특용 작목의 재배 기술, 생산·가공·판매 계획, 재무표를 다루며, 가공·유통은 재배 계획과 재무에 연결된 범위에서 서술한다. 다음은 이 전공 범위가 아니다: 다른 전공 작목(채소·과수·화훼·식량작물)의 단독 재배, 재배 없이 가공품만 다루는 계획, 버섯류(별도 전공이 있는 학교에서는 특용작물전공 주제로 먼저 제안하지 않는다 — [lessons-learned.md](lessons-learned.md) L4).
 
-질문·본문 Ⅰ~Ⅵ 작성·재무 엑셀·DOCX 검토본까지 지원한다. `gg.py rda-candidates <폴더> --crop <품목> --region <지역> --year <연도> --unit <단위> --use-scope <용도>`는 정본의 전공을 사용하고, 기존 `rda-lookup`은 물리 행 감사용 조회로 유지한다. `rda-lookup`은 원자료 감사용이다. `verification.verified`는 관측이 원문과 대조됐다는 뜻일 뿐 사용 승인이 아니며, 본문·표에 넣는 값은 `rda-candidates`의 `approved`만 쓴다. `unverified`·`ambiguous`·`series` 결과나 라벨이 '옮기지 말 것'인 값은 어떤 경우에도 옮기지 않는다.
+질문·본문 Ⅰ~Ⅵ 작성·재무 엑셀·DOCX 검토본까지 지원한다. 서식·작성 규칙(제목 크기·표·그림 제목·병해충·쪽수 안내 등)은 [specialty-crops/format-rules](specialty-crops/format-rules.md)를 따른다(지도교수 지시 2026-11-23 반영, 타 전공은 각 전공 양식). `gg.py rda-candidates <폴더> --crop <품목> --region <지역> --year <연도> --unit <단위> --use-scope <용도>`는 정본의 전공을 사용하고, 기존 `rda-lookup`은 물리 행 감사용 조회로 유지한다. `rda-lookup`은 원자료 감사용이다. `verification.verified`는 관측이 원문과 대조됐다는 뜻일 뿐 사용 승인이 아니며, 본문·표에 넣는 값은 `rda-candidates`의 `approved`만 쓴다. `unverified`·`ambiguous`·`series` 결과나 라벨이 '옮기지 말 것'인 값은 어떤 경우에도 옮기지 않는다.
 
 `gg.py paper <폴더> --input <spec> [--out <경로>] --major specialty_crops`(저수준 `scripts/gg_school_paper.py`)는 겉표지~감사의 글·Ⅰ–Ⅵ 골격과 기상·재해표를 만들며, 미제공 값은 `[확인 필요]`로 남긴다. 이 본문 생성기는 특용작물 작목 본문 전용이다. 관리 발행 경로는 spec의 `table_sources`로 표 1~6의 외부 기관명만 제목 끝 `(출처 : 기관명)`으로 표시한다. 자체 작성·직접 조사 표는 출처 없음, 미제공은 no-op이며 자체 작성 여부는 사람이 검토한다([outputs](outputs.md)). `--body <병합 본문.md>`로 학생 본문을 실을 수 있다(앞머리는 생성기가 붙인다). 저수준 생성기 코드는 불변(frozen)으로 보존된다.
 
