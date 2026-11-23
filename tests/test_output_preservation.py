@@ -251,12 +251,15 @@ class MajorNoticeIsolationTests(ContractCase):
 
 
 class OtherMajorDocxByteTests(ContractCase):
-    """R-N01: 다른 전공 3개의 DOCX 멤버 바이트가 `5488bd2`와 같다.
+    """R-N01: 다른 전공 2개의 DOCX 멤버 바이트가 `5488bd2`와 같다.
 
     기준은 `5488bd2`(식량작물 모듈 이전) 트리에서 같은 입력·같은 명령으로
     뽑은 산출물의 압축 해제 바이트다. ZIP 시각(타임스탬프·external_attr)은
-    실행마다 달라지므로 멤버 단위로 비교한다. 3전공이 모두 같은 해시를
-    내므로 기준 dict 하나를 공유한다. 낙농은 F9e에서 서식 프로필 게이트
+    실행마다 달라지므로 멤버 단위로 비교한다. 기준 전공들이 모두 같은 해시를
+    내므로 기준 dict 하나를 공유한다. 특용작물은 지도교수 수정(v0.6.4)으로 목차 내어쓰기
+    스타일이 생겨 `word/styles.xml`이 달라졌으므로 그 아래 특용작물 전용 시험이 따로
+    잰다(`test_specialty_crops_differs_only_in_toc_hanging_styles`; 다른 전공 기대 해시는
+    고치지 않는다). 낙농은 F9e에서 서식 프로필 게이트
     안으로 들어와 출력이 달라졌으므로 `DairyDocxByteTests`가 따로 잰다.
     """
 
@@ -282,21 +285,64 @@ class OtherMajorDocxByteTests(ContractCase):
     }
 
     def test_other_majors_reproduce_the_reference_bytes(self):
-        for major in ("specialty_crops", "fruit_trees", "hort_env_systems"):
+        for major in ("fruit_trees", "hort_env_systems"):
             with self.subTest(major=major):
-                root = self.make_project()
-                bind_major(root, major)
-                write_text(root, "body.md", self.BODY)
-                out = "build/%s.docx" % major
-                proc = cli(root, "build_docx.py", "--in", "body.md",
-                           "--out", out, "--major", major)
-                self.assertEqual(0, proc.returncode, proc.stdout + proc.stderr)
-                with zipfile.ZipFile(root / out) as archive:
-                    digests = {info.filename:
-                               hashlib.sha256(archive.read(info.filename)).hexdigest()
-                               for info in archive.infolist()}
+                digests, _styles = self.build_member_digests(major)
                 self.assertEqual(sorted(self.MEMBERS), sorted(digests))
                 self.assertEqual(self.MEMBERS, digests)
+
+    def build_member_digests(self, major):
+        root = self.make_project()
+        bind_major(root, major)
+        write_text(root, "body.md", self.BODY)
+        out = "build/%s.docx" % major
+        proc = cli(root, "build_docx.py", "--in", "body.md",
+                   "--out", out, "--major", major)
+        self.assertEqual(0, proc.returncode, proc.stdout + proc.stderr)
+        with zipfile.ZipFile(root / out) as archive:
+            styles = archive.read("word/styles.xml").decode("utf-8")
+            return ({info.filename:
+                     hashlib.sha256(archive.read(info.filename)).hexdigest()
+                     for info in archive.infolist()}, styles)
+
+    def test_specialty_crops_differs_only_in_toc_hanging_styles(self):
+        """특용작물은 `word/styles.xml` 한 멤버만 기준과 다르다(의도된 변화).
+
+        근거: 지도교수 수정 #12(목차에서 줄이 바뀌면 내어쓰기로 다듬기) — 목차 스타일
+        TOC 1~3에 내어쓰기(`w:hanging`)와 오른쪽 여백이 붙는다. 나머지 멤버
+        (`word/document.xml` 포함)는 다른 전공과 같은 기준 해시여야 한다. 새 해시를
+        글자 그대로 박지 않고 구조로 잠근다: 스타일 3개의 내어쓰기·오른쪽 여백.
+        """
+        digests, specialty_styles = self.build_member_digests("specialty_crops")
+        _digests, base_styles = self.build_member_digests("fruit_trees")
+        self.assertEqual(sorted(self.MEMBERS), sorted(digests))
+        changed = sorted(name for name in self.MEMBERS
+                         if digests[name] != self.MEMBERS[name])
+        self.assertEqual(["word/styles.xml"], changed)
+        self.assertNotEqual(specialty_styles, base_styles)
+        for name in ("toc 1", "toc 2", "toc 3"):
+            with self.subTest(style=name):
+                hung = self.toc_indent(specialty_styles, name)
+                self.assertEqual("400", hung.get(self.W + "hanging"))
+                self.assertIsNotNone(hung.get(self.W + "right"))
+                plain = self.toc_indent(base_styles, name)
+                self.assertIsNone(plain.get(self.W + "hanging"))
+                self.assertIsNone(plain.get(self.W + "right"))
+
+    W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+
+    def toc_indent(self, styles_xml, style_name):
+        import xml.etree.ElementTree as ET
+        root = ET.fromstring(styles_xml)
+        for style in root.iter(self.W + "style"):
+            name = style.find(self.W + "name")
+            if name is not None and name.get(self.W + "val", "").lower() == style_name:
+                ppr = style.find(self.W + "pPr")
+                self.assertIsNotNone(ppr, style_name)
+                ind = ppr.find(self.W + "ind")
+                self.assertIsNotNone(ind, style_name)
+                return ind
+        self.fail("스타일 없음: " + style_name)
 
 
 class DairyDocxByteTests(ContractCase):

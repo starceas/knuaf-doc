@@ -26,9 +26,11 @@ from gg_document import parse, spans, SCI, FRONT, school_toc_range, school_front
 from gg_core import digest, local
 import gg_hwpx
 from gg_document import photo_guide, photo_requests
-from gg_body_layout import NOTE, spacer_positions, review_requests
+from gg_body_layout import NOTE, NOTE_SPECIALTY, spacer_positions, review_requests
 import gg_figure_docx
-from gg_major_format import ENABLED_FORMAT_MAJORS, enabled_profile, front_title
+from gg_major_format import (ENABLED_FORMAT_MAJORS, enabled_profile, front_title,
+                             specialty_level_pt, strip_caption_period,
+                             year_column_indexes)
 
 FONT = "신명조"
 LEVEL_PT = {1: 20, 2: 18, 3: 16, 4: 14, 5: 13, 6: 13, 7: 13, 8: 13, 9: 13}
@@ -100,7 +102,7 @@ def runs(p, text, font, size=12, bold=False, color=(0, 0, 0)):
         set_font(p.add_run(text[pos:]), font, size, bold, color)
 
 
-def _toc_style(doc, name, size=12, bold=False, indent=0):
+def _toc_style(doc, name, size=12, bold=False, indent=0, hanging_pt=0):
     try:
         style = doc.styles[name]
     except KeyError:
@@ -109,7 +111,11 @@ def _toc_style(doc, name, size=12, bold=False, indent=0):
     style.font.size = Pt(size)
     style.font.bold = bold
     style.font.color.rgb = RGBColor(0, 0, 0)
-    style.paragraph_format.left_indent = Pt(indent)
+    style.paragraph_format.left_indent = Pt(indent + hanging_pt)
+    if hanging_pt:
+        # 내어쓰기: 줄이 바뀌면 번호 뒤 글자 자리에 맞추고, 오른쪽은 쪽번호 줄을 비운다.
+        style.paragraph_format.first_line_indent = Pt(-hanging_pt)
+        style.paragraph_format.right_indent = Mm(14)
     style.paragraph_format.space_after = Pt(0)
     style.paragraph_format.tab_stops.add_tab_stop(
         Mm(150), WD_TAB_ALIGNMENT.RIGHT, WD_TAB_LEADER.DOTS
@@ -117,11 +123,12 @@ def _toc_style(doc, name, size=12, bold=False, indent=0):
     return style
 
 
-def add_toc(doc, font, max_level=9):
+def add_toc(doc, font, max_level=9, hanging=False):
     """Insert a dynamic TOC with official hierarchy and dot leaders."""
-    _toc_style(doc, "TOC 1", 12, True, 0)
-    _toc_style(doc, "TOC 2", 11, False, 14)
-    _toc_style(doc, "TOC 3", 11, False, 24)
+    hang = 20 if hanging else 0
+    _toc_style(doc, "TOC 1", 12, True, 0, hang)
+    _toc_style(doc, "TOC 2", 11, False, 14, hang)
+    _toc_style(doc, "TOC 3", 11, False, 24, hang)
     toc = doc.add_paragraph()
     runs(toc, "목차", font, 20, True)
     toc.paragraph_format.keep_with_next = True
@@ -175,7 +182,8 @@ def setup_document(doc, font, *, section_formats=None):
 
 
 
-def add_table(doc, rows, font):
+def add_table(doc, rows, font, *, uniform_align=False, center_cols=frozenset(),
+              fit_report=None):
     merges = spans(rows)
     t = doc.add_table(rows=len(rows), cols=len(rows[0]))
     t.style, t.alignment, t.autofit = "Table Grid", WD_TABLE_ALIGNMENT.CENTER, False
@@ -195,6 +203,16 @@ def add_table(doc, rows, font):
         widths = [metric_w] + [val_w] * (count - 1)
     else:
         widths = [150 / count] * count
+    fit_pt = None
+    if uniform_align and count < 10 and not is_climate:
+        # 특용작물: 칸 안에서 어절이 갈라지거나 한 글자만 내려오지 않게 열 폭을
+        # 내용에 맞춰 나누고, 그래도 안 되면 글자를 한 단계씩 줄인다.
+        widths, fit_pt, fits = gg_docx_table_layout.content_widths_mm(rows, 150.0)
+        if fit_report is not None:
+            # 최소 글자 크기에서도 어절이 안 들어가면 호출부가 사실대로 보고한다.
+            fit_report.update(fits=fits, font_pt=fit_pt)
+        if fit_pt >= 12:
+            fit_pt = None
     widths = [Mm(width).twips for width in widths]
     widths[-1] += Mm(150).twips - sum(widths)
     for col, width in zip(t.columns, widths):
@@ -225,7 +243,11 @@ def add_table(doc, rows, font):
                     p.paragraph_format.line_spacing = 1.0
                     p.paragraph_format.space_before = Pt(0)
                     p.paragraph_format.space_after = Pt(0)
-                runs(p, text, font, 9 if compact_climate else 12, i == 0)
+                runs(p, text, font, 9 if compact_climate else (fit_pt or 12), i == 0)
+                if uniform_align:
+                    # 특용작물: 연도 열만 가운데, 나머지 칸은 모두 왼쪽.
+                    p.alignment = (WD_ALIGN_PARAGRAPH.CENTER if j in center_cols
+                                   else WD_ALIGN_PARAGRAPH.LEFT)
     for r0, c0, r1, c1 in merges:
         t.cell(r0, c0).merge(t.cell(r1, c1))
     return t
@@ -287,7 +309,7 @@ def _apply_consent_formatting(doc, font, profile):
 
 
 def convert(md_text, font=FONT, base=".", table_reports=None, *,
-            context=None, toc=True, root=None):
+            context=None, toc=True, root=None, specialty_table_reports=None):
     """Render the paper markdown into a DOCX document.  Policy B: the
     explicit major must be authorized against the canonical binding
     (``context``) before anything is rendered.
@@ -303,7 +325,8 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
     major_id = authorization.major_id
     profile = docx_profile(major_id)
     section_formats = profile.section_formats if profile else None
-    level_pt = profile.level_pt if profile else LEVEL_PT
+    level_pt = (profile.level_pt if profile
+                else specialty_level_pt(major_id) or LEVEL_PT)
     doc = Document()
     setup_document(doc, font, section_formats=section_formats)
     # 프로필 전공은 요약·본문 경계 판정에 전공 지식이 필요하다(식량작물 요약은
@@ -329,7 +352,21 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
             return
         last_prose = None
         if n["kind"] == "table":
-            t = add_table(doc, n["rows"], font)
+            specialty = major_id == "specialty_crops"
+            fit = {}
+            t = add_table(
+                doc, n["rows"], font, uniform_align=specialty,
+                center_cols=(year_column_indexes(n["rows"]) if specialty
+                             else frozenset()),
+                fit_report=fit)
+            if fit.get("fits") is False and specialty_table_reports is not None:
+                # 특용작물 칸 줄바꿈 정리가 최소 글자 크기에서도 어절을 못 지킨 표:
+                # 조용히 넘기지 않고 매니페스트·안내문에 올린다. 넓은 표 검사 보고
+                # (`table_reports`, `wide_tables_checked`)와는 섞지 않는다.
+                specialty_table_reports.append({
+                    "applied": True, "feasible": False, "font_pt": fit["font_pt"],
+                    "n_cols": len(n["rows"][0]), "specialty_widths": "word_split_possible",
+                    "warnings": ["칸 안 어절이 최소 글자 크기에서도 한 줄에 다 들어가지 않아 줄바꿈 중 어절이 갈라질 수 있다"]})
             # Wide body tables only: re-fit numeric cells to the current
             # section's real text width. Frontmatter forms (built by
             # gg_frontmatter_layout) and small tables are untouched.
@@ -403,7 +440,10 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
                                 else WD_ALIGN_PARAGRAPH.LEFT)
                 pf.first_line_indent = Pt(0)
                 title, credit = split_caption_credit(text)
-                if credit is not None:
+                title = strip_caption_period(title, major_id)
+                if credit is None:
+                    text = title
+                else:
                     text = title + " " + ("(출처 : " + credit + ")").replace(" ", "\u00a0")
             if guide:
                 text = guide
@@ -420,7 +460,9 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
 
     def render_body(sequence):
         nonlocal last_prose
-        gaps = spacer_positions(sequence)
+        # 특용작물은 `※ 자료 :`·`(출처 : …)` 같은 설명줄도 표·그림에 붙인다.
+        note = NOTE_SPECIALTY if major_id == "specialty_crops" else NOTE
+        gaps = spacer_positions(sequence, note)
         for index, node in enumerate(sequence):
             if index in gaps:
                 blank = doc.add_paragraph()
@@ -433,7 +475,7 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
                     and sequence[index + 1]["kind"] == "caption"
                     and sequence[index + 1]["label"] == "그림"):
                 doc.paragraphs[-1].paragraph_format.keep_with_next = True
-            if index + 1 < len(sequence) and NOTE.match(sequence[index + 1].get("text", "")):
+            if index + 1 < len(sequence) and note.match(sequence[index + 1].get("text", "")):
                 if node["kind"] == "table":
                     # Chain the final row to its explanation without forcing a
                     # multi-page table onto a single page.
@@ -453,7 +495,7 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
     if not is_school_paper:
         # 표·그림만 있고 제목이 없는 문서에 빈 목차 페이지를 붙이지 않는다.
         if toc and any(n["kind"] == "heading" for n in nodes):
-            add_toc(doc, font)
+            add_toc(doc, font, hanging=major_id == "specialty_crops")
             update = OxmlElement("w:updateFields")
             update.set(qn("w:val"), "true")
             doc.settings.element.append(update)
@@ -659,8 +701,8 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
             if n['kind'] in {'heading','caption'}:
                 n['_bookmark']='gg_body_'+str(idx)
                 n['_bookmark_id']=idx
-        table_entries=[(split_caption_credit(n['text'])[0],n['_bookmark'],2) for n in body_nodes if n['kind']=='caption' and n.get('label')=='표']
-        figure_entries=[(split_caption_credit(n['text'])[0],n['_bookmark'],2) for n in body_nodes if n['kind']=='caption' and n.get('label')=='그림']
+        table_entries=[(strip_caption_period(split_caption_credit(n['text'])[0],major_id),n['_bookmark'],2) for n in body_nodes if n['kind']=='caption' and n.get('label')=='표']
+        figure_entries=[(strip_caption_period(split_caption_credit(n['text'])[0],major_id),n['_bookmark'],2) for n in body_nodes if n['kind']=='caption' and n.get('label')=='그림']
         # 표·그림 목차는 프로필 전공과 낙농이 함께 나열한다. 낙농은 F9e에서
         # 게이트 안으로 들어왔지만, 목차에 표·그림 목차를 늘 두는 것은 이
         # 전공의 별도 규칙이라 이름으로 남긴다(`dairy_lists`).
@@ -680,7 +722,8 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
         contents(doc,entries,font,title_size=(
             profile.toc_title_pt if profile else 20),
             title_bold=(front_title(profile, '목차')[1]
-                        if profile and profile.major_id != 'food_crops' else False))
+                        if profile and profile.major_id != 'food_crops' else False),
+            hanging=major_id == 'specialty_crops')
         # S01 counts cover, shared forms and contents before the summary (iv
         # with a one-page contents). Continue rather than pinning iv: an
         # overflowing contents page must also count. Other majors stay unchanged.
@@ -731,16 +774,18 @@ def convert(md_text, font=FONT, base=".", table_reports=None, *,
                 if prelim: doc.add_page_break()
                 size, bold = front_title(profile, '표 목차')
                 contents(doc,table_entries,font,'표 목차','gg_tables',9002,
-                         title_size=size, title_bold=bold)
+                         title_size=size, title_bold=bold,
+                         hanging=major_id == 'specialty_crops')
             if figure_entries or dairy_lists:
                 if prelim or table_entries or dairy_lists: doc.add_page_break()
                 size, bold = front_title(profile, '그림 목차')
                 contents(doc,figure_entries,font,'그림 목차','gg_figures',9003,
-                         title_size=size, title_bold=bold)
+                         title_size=size, title_bold=bold,
+                         hanging=major_id == 'specialty_crops')
         new_numbered_section('decimal', margin_mm=(
             profile.section_formats[2]['margin_mm'] if profile else None))
     else:
-        add_toc(doc,font)
+        add_toc(doc, font, hanging=major_id == "specialty_crops")
         # 본문은 새 구역에서 1쪽부터 아라비아 숫자 쪽번호를 매긴다.
         sec = doc.add_section(WD_SECTION.NEW_PAGE)
         pg = OxmlElement('w:pgNumType'); pg.set(qn('w:start'), '1'); pg.set(qn('w:fmt'), 'decimal')
@@ -867,25 +912,31 @@ def main(argv=None):
         if not source_text.strip():
             raise ValueError("내보낼 본문이 없음: 입력 파일이 비어 있음")
         table_reports = []
+        specialty_table_reports = []
         # 그림 목적지는 원고 옆(src.parent) → 작업 폴더 뿌리(base) 순서로 푼다
         # (M-02). HWPX 발행(build_hwpx)과 같은 두 단계 규칙이다.
         doc = convert(source_text, a.font, src.parent,
                       table_reports=table_reports, context=context, toc=a.toc,
-                      root=base)
+                      root=base, specialty_table_reports=specialty_table_reports)
         mc.reconfirm_output(authorization, context)
         out.parent.mkdir(parents=True, exist_ok=True)
         doc.save(out)
         parsed_plan = school_frontmatter_plan(parse(source_text), authorization.major_id)
         infeasible = [r for r in table_reports
                       if r.get("applied") and r.get("feasible") is False]
+        split_tables = specialty_table_reports
+        table_layout = {
+            "status": "infeasible_fit" if infeasible else "ok",
+            "wide_tables_checked": len(table_reports),
+            "infeasible_count": len(infeasible),
+            "reports": table_reports,
+        }
+        if specialty_table_reports:
+            # 특용작물 칸 줄바꿈 정리 실패 표(있을 때만 — 다른 전공 매니페스트 불변).
+            table_layout["specialty_table_reports"] = specialty_table_reports
         manifest = {
             "kind": "draft",
-            "table_layout": {
-                "status": "infeasible_fit" if infeasible else "ok",
-                "wide_tables_checked": len(table_reports),
-                "infeasible_count": len(infeasible),
-                "reports": table_reports,
-            },
+            "table_layout": table_layout,
             "file_hash": digest(out.read_bytes()),
             "file_hash_stage": "build",
             "input_hash": digest(src.read_bytes()),
@@ -922,9 +973,13 @@ def main(argv=None):
                 else None
             ),
             "major_authorization": authorization.to_dict(),
-            "notice": (docx_profile(authorization.major_id).finish_notice
-                       if docx_profile(authorization.major_id)
-                       else COMMON_FINISH_NOTICE),
+            "notice": " ".join(filter(None, (
+                (docx_profile(authorization.major_id).finish_notice
+                 if docx_profile(authorization.major_id)
+                 else COMMON_FINISH_NOTICE),
+                ("특용작물 표 %d개는 최소 글자 크기(9pt)로 줄여도 칸 안 어절이 한 줄에 다 "
+                 "들어가지 않아 줄바꿈 중 어절이 갈라질 수 있다. 워드에서 해당 표를 확인한다."
+                 % len(split_tables)) if split_tables else None))),
         }
         manifest_path.write_text(
             json.dumps(manifest, ensure_ascii=False, indent=2),

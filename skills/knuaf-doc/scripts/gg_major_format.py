@@ -284,3 +284,88 @@ def front_title(profile, role, default_pt=20):
     if profile is None:
         return default_pt, False
     return tuple(profile.front_titles.get(role, (default_pt, False)))
+
+
+# --- 특용작물: 게이트 밖 덮개 ---------------------------------------------
+# 특용작물(`specialty_crops`)은 전공 서식 프로필을 두지 않는다. 프로필을 켜면
+# 구역 여백·로마 쪽번호·장 새 쪽·앞부분 순서·안내문이 함께 켜져 출력이 통째로
+# 바뀌므로, 지도교수 수정(v0.6.4)이 정한 값만 이 덮개로 따로 준다. 다른 전공은
+# `None`을 받아 기존 기본 경로를 그대로 탄다(출력 바이트 불변).
+SPECIALTY_CROPS = "specialty_crops"
+
+# 제목(Ⅱ.) 20pt · 부제목(1.) 18pt · 소제목(가.) 이하 16pt 통일(형님 답).
+SPECIALTY_LEVEL_PT = _freeze({1: 20, 2: 18, 3: 16, 4: 16, 5: 16, 6: 16,
+                              7: 16, 8: 16, 9: 16})
+# 목차·표 목차·그림 목차 제목 20pt(수정 10번)는 여기에 값이 없다: 기본 경로가 이미
+# 20pt라(`build_docx.add_toc`·`contents(title_size=20)`) 특용작물 덮개가 바꿀 것이 없다.
+# 시험(`test_toc_titles_are_20pt_already_in_the_base_path`)이 값만 잠근다.
+
+
+def specialty_level_pt(major_id):
+    """특용작물이면 단계 제목 크기 표, 아니면 None(기본 표를 쓴다)."""
+    return SPECIALTY_LEVEL_PT if major_id == SPECIALTY_CROPS else None
+
+
+def strip_caption_period(text, major_id):
+    """특용작물 표·그림 제목 끝의 온점을 뺀다(지도교수 수정 2번).
+
+    다른 전공은 글을 그대로 돌려준다. 끝의 마침표 문자만 걷어내고, 숫자 뒤
+    소수점처럼 뒤에 글자가 이어지는 온점은 건드리지 않는다. 말줄임(`...`·`…`)으로
+    끝나는 제목은 말줄임이 글의 일부이므로 `...`와 `…` 둘 다 그대로 둔다.
+    """
+    if major_id != SPECIALTY_CROPS:
+        return text
+    if re.search(r"(?:\.{3}|…|⋯)\s*$", text):
+        return text.rstrip()
+    return re.sub(r"\s*[.．。]+\s*$", "", text)
+
+
+# 연도 열(지도교수 수정 11번): 머리칸이 연도·연차·기간을 가리키면 그 열을 가운데 정렬한다.
+# 머리칸이 연도형이 아니면 값이 전부 연도 꼴이어도 우연일 수 있으므로(`면적(㎡)`에
+# 2000/2020, 본문 행 하나뿐인 표) 본문 행이 2개 이상이고 값이 오름차순으로 가까이
+# (앞 값과 5 이내) 이어질 때만 연도 열로 본다(2025·2026·2028처럼 건너뛰어도 된다).
+# 맨 끝 `합계`·`계`·`평균` 행은 연도가 아니므로 빼고 판정한다. 다른 칸은 모두
+# 왼쪽으로 맞춰 같은 표 안에서 칸마다 정렬이 달라지지 않게 한다(13번).
+_YEAR_HEADER_RE = re.compile(
+    r"^(?:연\s*도|년\s*도|연\s*차|기\s*간)(?:\s*별)?(?:\s*[/(（].*)?$")
+_YEAR_ATOM = r"(?:(?:19|20)\d{2}\s*(?:년\s*도?)?|\d{1,2}\s*(?:년\s*)?차(?:\s*년\s*도)?)"
+_YEAR_VALUE_RE = re.compile(r"^" + _YEAR_ATOM + r"(?:\s*[~∼-]\s*" + _YEAR_ATOM + r")?$")
+_YEAR_NUMBER_RE = re.compile(r"\d+")
+_SUMMARY_ROW_RE = re.compile(r"^(?:합\s*계|계|평\s*균)$")
+_YEAR_MAX_STEP = 5
+
+
+def _year_start(value):
+    # 값의 첫 숫자(연도 또는 연차). `2027~2028`은 2027, `1차 년도`는 1.
+    return int(_YEAR_NUMBER_RE.search(value).group())
+
+
+def year_column_indexes(rows):
+    """표 줄(머리 줄 포함)에서 연도 열 번호 집합. 연도 열이 없으면 빈 집합."""
+    if not rows or not rows[0]:
+        return frozenset()
+    found = set()
+    for index, header in enumerate(rows[0]):
+        values = [str(row[index]).strip() for row in rows[1:]
+                  if index < len(row) and str(row[index]).strip() not in ("", "^", "<")]
+        if _YEAR_HEADER_RE.match(str(header).strip()):
+            found.add(index)
+            continue
+        if values and _SUMMARY_ROW_RE.match(values[-1]):
+            values = values[:-1]
+        if (len(values) >= 2
+                and all(_YEAR_VALUE_RE.match(value) for value in values)):
+            starts = [_year_start(value) for value in values]
+            if all(0 < later - earlier <= _YEAR_MAX_STEP
+                   for earlier, later in zip(starts, starts[1:])):
+                found.add(index)
+    return frozenset(found)
+
+
+_CLIMATE_KEYS = ("평균기온", "최고기온", "최저기온", "강우량", "풍속", "적설량")
+
+
+def table_is_climate(rows):
+    """기후표 판정(Word `add_table`과 같은 기준): 첫 칸에 기상 지표 이름이 있는가."""
+    return any(any(key in (row[0] if row else "") for key in _CLIMATE_KEYS)
+               for row in rows)

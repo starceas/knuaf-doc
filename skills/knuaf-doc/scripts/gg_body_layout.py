@@ -4,9 +4,14 @@ import re
 from gg_document import photo_guide
 
 NOTE = re.compile(r"^(?:주\s*\)|(?:주|자료|출처|단위)\s*[:：])")
+# 특용작물: 표·그림 아래 설명줄을 더 넓게 본다 — `※ 자료 :`·`* 주 :`처럼 기호가
+# 앞서거나 `(출처 : …)`·`(단위 : …)`처럼 괄호로 감싼 줄도 표·그림에 붙인다.
+NOTE_SPECIALTY = re.compile(
+    r"^(?:[※*＊·•]\s*)?(?:주\s*\)|(?:주|자료|출처|단위)\s*[:：])"
+    r"|^[(（]\s*(?:출처|자료|단위)\s*[:：]")
 
 
-def object_blocks(nodes):
+def object_blocks(nodes, note=NOTE):
     """Yield caption/object/note ranges; never put spacers inside a block."""
     i = 0
     while i < len(nodes):
@@ -24,17 +29,17 @@ def object_blocks(nodes):
                 i += 1
         while i + 1 < len(nodes):
             after = nodes[i + 1]
-            if after['kind'] != 'paragraph' or not NOTE.match(after['text']):
+            if after['kind'] != 'paragraph' or not note.match(after['text']):
                 break
             i += 1
         yield start, i
         i += 1
 
 
-def spacer_positions(nodes):
+def spacer_positions(nodes, note=NOTE):
     """One gap at object/prose or object/object boundaries, not at headings."""
     positions = set()
-    for start, end in object_blocks(nodes):
+    for start, end in object_blocks(nodes, note):
         if start and nodes[start - 1]['kind'] != 'heading':
             positions.add(start)
         if end + 1 < len(nodes) and nodes[end + 1]['kind'] != 'heading':

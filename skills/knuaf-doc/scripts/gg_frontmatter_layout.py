@@ -366,8 +366,30 @@ def page_reference(p,name,font,size=12):
     txt=OxmlElement('w:t');txt.text='?';run.append(txt);field.append(run);p._p.append(field)
 
 
+# 내어쓰기를 걸 목차 항목: 앞에 번호가 붙은 줄(`표 1.`·`Ⅰ.`·`1.`·`가.`). `요약`처럼
+# 번호 없는 짧은 줄은 내어쓰기 암묵 탭에 걸리므로 제외한다.
+_NUMBERED_ENTRY=re.compile(r'^(?:(?:표|그림)\s*\d+|[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩIVX]+|\d+|[가-힣])\s*[.．]')
+
+
+def toc_label_hang_mm(label,size=12,bold=False):
+    """번호 라벨(`표 10. `·`Ⅰ. `)이 차지하는 폭(mm) 추정 — 내어쓰기 폭으로 쓴다.
+
+    표 칸 폭 계산과 같은 보수적 글자 폭(`gg_docx_table_layout._char_em`)으로 잰다.
+    라벨보다 좁게 걸면 내려간 줄이 번호 아래에서 시작해 번호를 침범하므로, 번호
+    끝의 온점과 그 뒤 공백까지 한 번에 잰다. 굵은 줄(1단계)은 5% 넓게 본다.
+    """
+    from gg_docx_table_layout import _char_em, PT_TO_MM
+    match=_NUMBERED_ENTRY.match(label)
+    if not match: return 0.0
+    end=match.end()
+    while end<len(label) and label[end]==' ': end+=1
+    prefix=label[:end] if end>match.end() else label[:match.end()]+' '
+    em=sum(_char_em(ch) for ch in prefix)
+    return em*size*PT_TO_MM*(1.05 if bold else 1.0)
+
+
 def contents(doc,entries,font,title='목    차',anchor=None,num=9000,*,title_size=20,
-             title_bold=False):
+             title_bold=False,hanging=False):
     from docx.enum.text import WD_TAB_ALIGNMENT, WD_TAB_LEADER
     p=doc.add_paragraph();p.alignment=WD_ALIGN_PARAGRAPH.CENTER
     p.paragraph_format.space_before=Mm(18);p.paragraph_format.space_after=Mm(12)
@@ -378,6 +400,14 @@ def contents(doc,entries,font,title='목    차',anchor=None,num=9000,*,title_si
         f.space_before=f.space_after=Pt(0);f.line_spacing=Pt(21)
         f.left_indent=Mm(5 if level==2 else 0)
         f.first_line_indent=Mm(0)
+        if hanging and _NUMBERED_ENTRY.match(label):
+            # 줄이 바뀌면 내려간 글은 번호(`표 1.`·`그림 10.`·`1.`) 뒤 글자 자리에
+            # 맞춘다(내어쓰기 폭 = 라벨 폭 추정, 번호 길이마다 다름). 오른쪽은
+            # 쪽번호 줄을 비워 쪽번호를 침범하지 않는다.
+            hang=Mm(toc_label_hang_mm(label,12,level==1))
+            f.left_indent=Mm(5 if level==2 else 0)+hang
+            f.first_line_indent=-hang
+            f.right_indent=Mm(14)
         f.tab_stops.add_tab_stop(Mm(150), WD_TAB_ALIGNMENT.RIGHT, WD_TAB_LEADER.DOTS)
         _font(p.add_run(label),font,12,level==1)
         p.add_run('\t');page_reference(p,name,font)
