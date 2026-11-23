@@ -117,6 +117,44 @@ def notice(verify, major_id=None, font=FONT):
     ])
 
 
+# 서식 덮개가 멈춘 이유 코드 → 학생용 문구(`gg_hwpx._apply_specialty_format`·
+# `transform_hwpx`가 남기는 코드).
+_SPECIALTY_STATUS_WHY = {
+    "section_xml_unreadable": "한글 파일의 본문을 읽지 못했다",
+    "paragraph_count_mismatch": "한글 파일의 문단 수가 예상과 달랐다",
+    "specialty_style_missing": "한글 파일에서 고칠 기준 서식을 찾지 못했다",
+}
+
+
+def specialty_notice(applied):
+    """특용작물 한글 서식 덮개가 못 한 일을 안내문 한 줄로(없으면 빈 글).
+
+    덮개는 대응 실패를 `post_processing.specialty`에만 남기고 발행은 성공시키므로,
+    학생이 제목 크기·표 정렬·빈 줄이 빠진 것을 모르고 지나치지 않게 안내문에 올린다.
+    """
+    report = (applied or {}).get("specialty")
+    if not report:
+        return ""
+    parts = []
+    if report.get("status"):
+        # 내부 사유 코드는 학생에게 보이지 않는다 — 알려진 코드는 쉬운 말로, 모르는
+        # 코드는 이유 없이 같은 문장만 낸다(코드는 매니페스트 `post_processing`에 남는다).
+        why = _SPECIALTY_STATUS_WHY.get(report["status"])
+        parts.append("특용작물 서식(제목 크기·표 정렬·빈 줄)을 적용하지 못했다"
+                     + ("(%s)" % why if why else ""))
+    if report.get("unmatched"):
+        parts.append("특용작물 서식 %d곳은 원고와 대응하지 못해 적용되지 않았다"
+                     % len(report["unmatched"]))
+    if report.get("table_widths_skipped"):
+        parts.append("표 칸 폭 정리를 하지 못해 표 안 줄바꿈(어절 갈라짐·한 글자 내려옴)을 "
+                     "손보지 않았다(필요한 표 폭 계산 도구를 쓸 수 없었다)")
+    if report.get("table_text_too_wide"):
+        parts.append("표 %d개는 최소 글자 크기(9pt)로 줄여도 칸 안 어절이 한 줄에 다 "
+                     "들어가지 않아 줄바꿈 중 어절이 갈라질 수 있다"
+                     % len(report["table_text_too_wide"]))
+    return (" · ".join(parts) + ". 한글에서 해당 부분을 확인해 직접 맞춘다.") if parts else ""
+
+
 def school_frontmatter_summary(md_text, major_id=None):
     """학교 앞부분(표지·제출면·인준서·목차) 감지 요약. 없으면 None."""
     plan = gg_document.school_frontmatter_plan(
@@ -510,7 +548,9 @@ def export(base, inp, out, *, font=FONT, context=None, cli_command=None,
         },
         "school_frontmatter": school_frontmatter_summary(
             source_text, authorization.major_id),
-        "notice": notice(verify, authorization.major_id, font),
+        "notice": " ".join(filter(None, (
+            notice(verify, authorization.major_id, font),
+            specialty_notice(result["applied"])))),
     }
     data = json.dumps(manifest, ensure_ascii=False, indent=2).encode("utf-8")
     identity = gg_fs.identity(target.parent, kind="directory")

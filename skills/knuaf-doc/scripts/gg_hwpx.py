@@ -22,6 +22,7 @@ from __future__ import annotations
 
 from difflib import SequenceMatcher
 import hashlib
+import html
 import io
 import json
 import os
@@ -1356,6 +1357,362 @@ def _section_node_range(name, plan):
     return starts[index], end
 
 
+# --- 특용작물 덮개(지도교수 수정, v0.6.4) --------------------------------
+# 특용작물(`specialty_crops`)은 전공 서식 프로필(`section_formats`)을 켜지 않는다.
+# 프로필을 켜면 구역 분할·로마 쪽번호·장 새 쪽·앞부분 글자 모양이 함께 켜져 출력이
+# 통째로 바뀌므로, Word(`build_docx`)와 같은 방식으로 지도교수 수정이 정한 값만
+# 이 덮개로 따로 준다: ①단계 제목 크기 ②표·그림 제목 끝 온점 ③표 칸 정렬(연도 열
+# 가운데·나머지 왼쪽) ④목차 항목 내어쓰기 ⑤표 칸 줄바꿈 ⑥표·그림 앞뒤 한 줄.
+# 다른 전공은 아래 함수를 아예 부르지 않아 출력 바이트가 그대로다.
+
+def specialty_caption_markdown(text: str) -> str:
+    """특용작물 표·그림 제목 줄 끝의 온점을 뺀다(마크다운 단계).
+
+    `(출처 : …)` 꼬리가 붙은 제목은 꼬리 앞 제목 글자만 고친다. 그림 참조가 든
+    줄은 제목이 아니므로 건드리지 않는다. 바뀐 줄이 없으면 입력을 그대로 돌려준다.
+    """
+    import gg_document as gd
+
+    lines, changed = text.split("\n"), False
+    for index, line in enumerate(lines):
+        stripped = line.strip()
+        if not stripped or "![" in stripped or gd.CAPTION.fullmatch(stripped) is None:
+            continue
+        title, credit = gd.split_caption_credit(stripped)
+        shortened = gg_major_format.strip_caption_period(
+            title, gg_major_format.SPECIALTY_CROPS)
+        if shortened == title:
+            continue
+        tail = stripped[len(title):] if credit is not None else ""
+        lead = line[:len(line) - len(line.lstrip())]
+        rest = line[len(line.rstrip()):]
+        lines[index] = lead + shortened + tail + rest
+        changed = True
+    return "\n".join(lines) if changed else text
+
+
+def _clone_header_entry(header: str, collection: str, tag: str, ref: str, mutate):
+    """header.xml의 `<hh:tag id=ref>` 블록을 복제해 컬렉션 끝에 붙인다.
+
+    기존 항목은 하나도 고치지 않는다(다른 문단 참조가 그대로 산다). 반환:
+    ``(새 header.xml, 새 id 문자열)``. ``mutate``는 복제 블록 글자를 받아 고친 글자를 낸다.
+    """
+    coll = re.search(r"<hh:%s\b[^>]*>.*?</hh:%s>" % (collection, collection),
+                     header, re.S)
+    block = None
+    if coll is not None:
+        block = re.search(r'<hh:%s\b[^>]*?\sid="%s"[^>]*>.*?</hh:%s>'
+                          % (tag, re.escape(ref), tag), coll.group(0), re.S)
+    if block is None:
+        raise HwpxBlocked(
+            "specialty_style_missing", collection=collection, ref=ref,
+            action="특용작물 서식을 복제할 원본 스타일을 header.xml에서 찾지 못했습니다.")
+    ids = [int(value) for value in re.findall(
+        r'<hh:%s\b[^>]*?\sid="(\d+)"' % tag, coll.group(0))]
+    new_id = str(max(ids) + 1)
+    clone = re.sub(r'(<hh:%s\b[^>]*?\sid=")\d+(")' % tag,
+                   lambda m: m[1] + new_id + m[2], mutate(block.group(0)), count=1)
+    body = coll.group(0)
+    end = body.rindex("</hh:%s>" % collection)
+    body = body[:end] + "\n" + clone + "\n" + body[end:]
+    body = re.sub(r'(itemCnt=")(\d+)(")', lambda m: m[1] + str(len(ids) + 1) + m[3],
+                  body, count=1)
+    return header[:coll.start()] + body + header[coll.end():], new_id
+
+
+def _set_attr_value(block: str, element: str, attr: str, value) -> str:
+    return re.sub(r'(<%s\b[^>]*?\s%s=")-?\d+(")' % (element, attr),
+                  lambda m: m[1] + str(value) + m[2], block)
+
+
+def _specialty_para_key(para):
+    if para.find(".//hp:tbl", _HP_NS) is not None:
+        return ("T",)
+    if para.find(".//hp:pic", _HP_NS) is not None:
+        return ("I",)
+    return ("P", _normalize_space("".join(map(_run_text, para.findall("hp:run", _HP_NS)))))
+
+
+def _specialty_node_key(node):
+    kind = node.get("kind")
+    if kind == "table":
+        return ("T",)
+    if kind == "image":
+        return ("I",)
+    text = node.get("text", "")
+    if kind == "caption":
+        # kordoc에는 끝 온점을 뺀 제목이 넘어간다(`specialty_caption_markdown`).
+        # 원고 노드도 같은 글자로 맞춰야 제목 문단이 대응되어 앞 빈 줄이 들어간다.
+        text = specialty_caption_markdown(text)
+    plain = re.sub(r"(?<!\w)\*([^*]+)\*(?!\w)", r"\1", text.replace("**", ""))
+    return ("P", _normalize_space(re.sub(r"\[\^[^]]+\](?!:)", "", plain)))
+
+
+def _specialty_match(paragraphs, nodes):
+    """원고 노드 ↔ HWPX 최상위 문단 대응 ``{문단 색인: (노드 색인, …)}``.
+
+    표·그림은 글자 대신 종류로, 나머지는 글자로 순서대로 맞춘다. 소프트 줄바꿈으로
+    합쳐진 문단은 접은 목록도 함께 재서 더 많이 맞는 쪽을 쓴다.
+    """
+    actual = [_specialty_para_key(para) for para in paragraphs]
+    plain = [(_specialty_node_key(node), (index,)) for index, node in enumerate(nodes)]
+    folded = []
+    for index, node in enumerate(nodes):
+        key = _specialty_node_key(node)
+        if (node.get("soft_continue") and folded and key[0] == "P"
+                and folded[-1][0][0] == "P"
+                and nodes[folded[-1][1][-1]].get("kind") == "paragraph"
+                and node.get("kind") == "paragraph"):
+            before, indices = folded[-1]
+            folded[-1] = (("P", before[1] + " " + key[1]), (*indices, index))
+        else:
+            folded.append((key, (index,)))
+
+    def align(source):
+        match = SequenceMatcher(None, [key for key, _ in source], actual, autojunk=False)
+        return {j + k: source[i + k][1] for i, j, size in match.get_matching_blocks()
+                for k in range(size)}
+
+    return max((align(plain), align(folded)),
+               key=lambda pairs: sum(map(len, pairs.values())))
+
+
+_TC_RE = re.compile(r"<hp:tc\b.*?</hp:tc>", re.S)
+
+
+def _specialty_table_matches(paragraph, rows):
+    """kordoc 표 문단이 원고 표와 같은 표인지: 열 수는 꼭, 줄 수나 머리 첫 칸 글자 중 하나.
+
+    열 수만 같은 다른 표(연달아 같은 모양의 표, kordoc이 표 하나를 없앤 경우)에
+    연도 열·열 폭이 엉뚱한 기준으로 가는 것을 막는다. 줄 수(`rowCnt`)도 머리 첫 칸도
+    읽을 수 없으면(둘 다 근거 없음) 열 수만으로 받아들인다.
+    """
+    tbl = re.search(r"<hp:tbl\b[^>]*>", paragraph)
+    shape = re.search(r'\bcolCnt="(\d+)"', tbl.group(0)) if tbl else None
+    if shape is None or int(shape[1]) != len(rows[0]):
+        return False
+    evidence = []
+    row_cnt = re.search(r'\browCnt="(\d+)"', tbl.group(0))
+    if row_cnt:
+        evidence.append(int(row_cnt[1]) == len(rows))
+    cell = _TC_RE.search(paragraph)
+    if cell is not None and rows[0]:
+        actual = _normalize_space("".join(
+            html.unescape(text)
+            for text in re.findall(r"<hp:t>(.*?)</hp:t>", cell.group(0), re.S)))
+        wanted = _normalize_space(re.sub(r"\*+", "", str(rows[0][0])))
+        if actual or wanted:
+            evidence.append(actual == wanted)
+    return not evidence or any(evidence)
+
+
+def _apply_specialty_format(members, nodes, plan, margins_mm):
+    """특용작물 한글 본문 서식 덮개. 바꾼 개수·못 맞춘 항목을 담은 dict를 낸다.
+
+    대응이 안 되는 항목은 조용히 넘기지 않고 ``unmatched``에 남긴다(매니페스트에
+    실린다). 구조를 못 읽으면 아무것도 바꾸지 않고 ``status``만 남긴다.
+    """
+    section = "Contents/section0.xml"
+    raw, head_raw = members.get(section), members.get(HEADER_NAME)
+    if raw is None or head_raw is None or not nodes:
+        return None
+    xml, header = raw.decode("utf-8"), head_raw.decode("utf-8")
+    try:
+        paragraphs = ET.fromstring(xml).findall(_PARA_TAG)
+    except ET.ParseError:
+        return {"status": "section_xml_unreadable"}
+    spans = top_level_paragraph_spans(xml)
+    if len(spans) != len(paragraphs):
+        return {"status": "paragraph_count_mismatch",
+                "paragraphs": len(spans), "found": len(paragraphs)}
+    node_to_para = {i: j for j, indices in _specialty_match(paragraphs, nodes).items()
+                    for i in indices}
+    body_start = plan["body"] if plan is not None else 0
+    report = {"headings": 0, "tables": 0, "table_widths": 0, "blank_lines": 0,
+              "unmatched": [], "table_text_too_wide": []}
+    new_para, cache = {}, {}
+
+    def current(j):
+        return new_para.get(j, xml[spans[j][0]:spans[j][1]])
+
+    def style(tag, collection, ref, variant, mutate):
+        nonlocal header
+        key = (tag, ref, variant)
+        if key not in cache:
+            header, cache[key] = _clone_header_entry(
+                header, collection, tag, ref, mutate)
+        return cache[key]
+
+    def para_style(ref, variant, mutate):
+        return style("paraPr", "paraProperties", ref, variant, mutate)
+
+    def char_style(ref, variant, mutate):
+        return style("charPr", "charProperties", ref, variant, mutate)
+
+    def set_para_ref(paragraph, ref):
+        return re.sub(r'(<hp:p\b[^>]*?paraPrIDRef=")\d+(")',
+                      lambda m: m[1] + ref + m[2], paragraph, count=1)
+
+    # 1) 단계 제목 크기 — Ⅰ.20 · 1.18 · 가. 이하 16 (보통 굵게, 새 글자 모양 복제).
+    heading_ids = None
+    for index, node in enumerate(nodes):
+        if index < body_start or node.get("kind") != "heading":
+            continue
+        j = node_to_para.get(index)
+        if j is None:
+            report["unmatched"].append({"heading": index})
+            continue
+        level = node.get("level") or 9
+        pt = int(gg_major_format.SPECIALTY_LEVEL_PT.get(level)
+                 or gg_major_format.SPECIALTY_LEVEL_PT[9])
+        if heading_ids is None:
+            header, heading_ids = _append_charprs(
+                header, tuple((size, True) for size in (20, 18, 16)))
+            cache.clear()  # header가 바뀌었으니 복제 캐시는 새로 시작한다
+        new_para[j] = _rewrite_run_charpr(current(j), heading_ids[(pt, True)])
+        report["headings"] += 1
+
+    # 2) 표 — 연도 열 가운데·나머지 왼쪽, 열 폭·글자 크기로 칸 안 줄바꿈 정리.
+    left_right = dict(SCHOOL_MARGINS_MM if margins_mm is None else margins_mm)
+    total_mm = 210 - left_right["left"] - left_right["right"]
+    total_units = mm_to_hwpunit(total_mm)
+    try:
+        from gg_docx_table_layout import content_widths_mm
+    except ImportError:  # python-docx 없이 돌 때는 폭 정리만 건너뛰고 사실대로 남긴다
+        content_widths_mm = None
+        report["table_widths_skipped"] = "gg_docx_table_layout_unavailable"
+    for index, node in enumerate(nodes):
+        if node.get("kind") != "table":
+            continue
+        j = node_to_para.get(index)
+        rows = node["rows"]
+        if j is None:
+            report["unmatched"].append({"table": index})
+            continue
+        paragraph = current(j)
+        count = len(rows[0])
+        if not _specialty_table_matches(paragraph, rows):
+            report["unmatched"].append({"table_shape": index})
+            continue
+        centered = gg_major_format.year_column_indexes(rows)
+        units, fit_pt = None, None
+        if (content_widths_mm is not None and count < 10
+                and not gg_major_format.table_is_climate(rows)):
+            widths_mm, fit_pt, fits = content_widths_mm(
+                rows, float(total_mm), base_pt=10.0, min_pt=9.0)
+            if not fits:
+                # 최소 글자 크기(9pt)에서도 어절이 안 들어간다: 조용히 넘기지 않고
+                # 매니페스트·안내문에 올린다.
+                report["table_text_too_wide"].append(index)
+            units = [mm_to_hwpunit(width) for width in widths_mm]
+            units[-1] += total_units - sum(units)
+
+        def fix_cell(match):
+            cell = match.group(0)
+            addr = re.search(r'<hp:cellAddr\b[^>]*?colAddr="(\d+)"', cell)
+            span = re.search(r'<hp:cellSpan\b[^>]*?colSpan="(\d+)"', cell)
+            col = int(addr[1]) if addr else 0
+            if units is not None and addr and span:
+                width = sum(units[col:col + int(span[1])])
+                cell = re.sub(r'(<hp:cellSz\b[^>]*?width=")\d+(")',
+                              lambda m: m[1] + str(width) + m[2], cell, count=1)
+            align = "CENTER" if col in centered else "LEFT"
+            ref = re.search(r'<hp:p\b[^>]*?paraPrIDRef="(\d+)"', cell)
+            if ref:
+                cell = set_para_ref(cell, para_style(
+                    ref[1], align, lambda block: re.sub(
+                        r'(<hh:align\b[^>]*?horizontal=")\w+(")',
+                        lambda m: m[1] + align + m[2], block)))
+            if fit_pt is not None and fit_pt < 10:
+                height = int(round(fit_pt * 100))
+                cell = re.sub(
+                    r'(<hp:run\b[^>]*?charPrIDRef=")(\d+)(")',
+                    lambda m: m[1] + char_style(m[2], height, lambda block: _set_attr_value(
+                        block, "hh:charPr", "height", height)) + m[3], cell)
+            return cell
+
+        paragraph = _TC_RE.sub(fix_cell, paragraph)
+        if units is not None:
+            paragraph = re.sub(r'(<hp:tbl\b[^>]*>\s*<hp:sz\b[^>]*?width=")\d+(")',
+                               lambda m: m[1] + str(total_units) + m[2],
+                               paragraph, count=1)
+            report["table_widths"] += 1
+        new_para[j] = paragraph
+        report["tables"] += 1
+
+    # 목차 내어쓰기(수정 12번)는 여기에 없다: 특용작물 원고의 앞부분 계획(`plan`)은
+    # `목차` 줄에서 끝나고 한글 쪽 빌더는 목차 항목 줄을 만들지 않는다(목차는 한글에서
+    # 사람이 만든다). 고칠 항목 문단이 없어 대상이 없다.
+
+    # 3) 표·그림 앞뒤 한 줄(제목·본체·설명줄은 한 덩어리) — Word와 같은 판정.
+    import gg_body_layout
+
+    gaps = gg_body_layout.spacer_positions(
+        nodes[body_start:], gg_body_layout.NOTE_SPECIALTY)
+    blank_before = set()
+    for gap in sorted(gaps):
+        j = node_to_para.get(body_start + gap)
+        if j is None:
+            report["unmatched"].append({"blank_before": body_start + gap})
+        else:
+            blank_before.add(j)
+    # 빈 문단 id: 구역 안 모든 문단 id(표 안 문단 포함)의 최댓값 다음 번호부터 차례로.
+    next_id = [max([int(value) for value in re.findall(
+        r'<hp:p\b[^>]*?\sid="(\d+)"', xml)] or [0]) + 1]
+
+    def plain_paragraph_pr(block):
+        # 번호·글머리(개요 포함)와 들여쓰기·내어쓰기를 걷어 낸 문단 모양.
+        block = re.sub(
+            r"<hh:heading\b[^>]*>",
+            lambda m: re.sub(r'\b(type|idRef|level)="[^"]*"',
+                             lambda a: '%s="%s"' % (a[1], "NONE" if a[1] == "type" else "0"),
+                             m.group(0)), block)
+        for tag in ("intent", "left"):
+            block = re.sub(r'(<hc:%s\b[^>]*?value=")-?\d+(")' % tag,
+                           lambda m: m[1] + "0" + m[2], block)
+        return block
+
+    def blank_for(j):
+        # 빈 문단은 바로 앞 문단(없으면 뒤 문단)의 문단 속성을 복제하되 ① id는 새 번호
+        # (문서 안 유일) ② 번호·글머리·들여쓰기 없는 문단 모양(복제) ③ 스타일은 바탕글(0)
+        # ④ 쪽·단 나눔은 꺼서 나눔이 두 번 들어가지 않게 한다.
+        neighbor = current(j - 1) if j > 0 else current(j)
+        opening = re.match(r"<hp:p\b[^>]*>", neighbor)
+        new_id = str(next_id[0])
+        next_id[0] += 1
+        if opening is None:
+            para_ref = para_style("0", "blank", plain_paragraph_pr)
+            tag = '<hp:p id="%s" paraPrIDRef="%s" styleIDRef="0">' % (new_id, para_ref)
+        else:
+            tag = re.sub(r'(\s(?:pageBreak|columnBreak)=")\d+(")',
+                         lambda m: m[1] + "0" + m[2], opening.group(0))
+            old_ref = re.search(r'\sparaPrIDRef="(\d+)"', tag)
+            para_ref = para_style(old_ref[1] if old_ref else "0", "blank",
+                                  plain_paragraph_pr)
+            tag = re.sub(r'\sid="[^"]*"', "", tag, count=1)
+            tag = re.sub(r'\sstyleIDRef="[^"]*"', "", tag, count=1)
+            tag = re.sub(r'\sparaPrIDRef="[^"]*"', "", tag, count=1)
+            tag = tag.replace("<hp:p", '<hp:p id="%s" paraPrIDRef="%s" styleIDRef="0"'
+                              % (new_id, para_ref), 1)
+        ref = re.search(r'<hp:run\b[^>]*?charPrIDRef="(\d+)"', neighbor)
+        char = char_style(ref[1] if ref else "0", 1200,
+                          lambda block: _set_attr_value(block, "hh:charPr", "height", 1200))
+        return '%s<hp:run charPrIDRef="%s"><hp:t></hp:t></hp:run></hp:p>' % (tag, char)
+
+    pieces, cursor = [], 0
+    for j, (start, end) in enumerate(spans):
+        pieces.append(xml[cursor:start])
+        if j in blank_before:
+            pieces.append(blank_for(j))
+            report["blank_lines"] += 1
+        pieces.append(current(j))
+        cursor = end
+    pieces.append(xml[cursor:])
+    members[section] = "".join(pieces).encode("utf-8")
+    members[HEADER_NAME] = header.encode("utf-8")
+    return report
+
+
 def transform_hwpx(data: bytes, *, font: str = SCHOOL_FONT,
                    margins_mm=SCHOOL_MARGINS_MM, page_numbers: bool = True,
                    section_formats=None, nodes=None, plan=None,
@@ -1399,6 +1756,17 @@ def transform_hwpx(data: bytes, *, font: str = SCHOOL_FONT,
                          and _front_matter_markers(nodes or [], major_id))
         sized_prose = _apply_body_format(
             members, nodes, plan, require_complete=require_body_format and not partial_split)
+        if major_id == gg_major_format.SPECIALTY_CROPS:
+            # 프로필 게이트 밖 덮개 — 다른 전공은 이 블록을 지나지 않는다(바이트 불변).
+            try:
+                specialty = _apply_specialty_format(
+                    members, nodes or [], plan, margins_mm)
+            except HwpxBlocked as error:
+                # 복제할 스타일이 없으면 아무것도 고치지 않고(members는 끝에서야
+                # 바뀐다) 사유를 남긴다 — 서식 덮개 실패가 발행을 막지는 않는다.
+                specialty = {"status": error.reason}
+            if specialty is not None:
+                applied["specialty"] = specialty
 
         mimetype = next(info for info in infos if info.filename == MIMETYPE)
         stored = zipfile.ZipInfo(MIMETYPE, date_time=mimetype.date_time)
@@ -2226,6 +2594,9 @@ def build(markdown, out, *, context, authorization, cli_command=None,
         raise HwpxBlocked(
             "image_unresolved", images=unresolved, image_dir=str(image_dir),
             action="다시 쓴 그림 경로를 이미지 폴더 안에서 찾지 못했습니다.")
+    if authorization.major_id == gg_major_format.SPECIALTY_CROPS:
+        # 특용작물: 표·그림 제목 끝 온점을 뺀 글을 kordoc에 넘긴다(다른 전공은 그대로).
+        text = specialty_caption_markdown(text)
 
     target.parent.mkdir(parents=True, exist_ok=True)
     work = Path(tempfile.mkdtemp(prefix=".gg-hwpx-", dir=str(target.parent)))

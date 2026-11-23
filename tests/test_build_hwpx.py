@@ -525,8 +525,12 @@ class ExportTests(_Base):
         manifest = value["manifest"]
         self.assertIsNone(manifest["font"])
         self.assertEqual([], manifest["hwpx"]["post_processing"]["font"])
-        self.assertEqual(build_hwpx.notice(True, SPECIALTY, None),
-                         manifest["notice"])
+        # 가짜 CLI의 표 자리는 글자 없는 문단이라 표 대응이 안 되어(unmatched) 특용작물
+        # 서식 보고가 안내문 한 줄로 올라온다. 앞부분은 기본 안내문 그대로다.
+        base_notice = build_hwpx.notice(True, SPECIALTY, None)
+        extra = build_hwpx.specialty_notice(manifest["hwpx"]["post_processing"])
+        self.assertTrue(extra)
+        self.assertEqual(base_notice + " " + extra, manifest["notice"])
         self.assertIn(build_hwpx.FINISH_NOTICE, manifest["notice"])
         # 글꼴 치환이 없으니 header face는 생성기 값 그대로 남는다.
         with zipfile.ZipFile(Path(self.root) / "out.hwpx") as archive:
@@ -560,8 +564,28 @@ class ExportTests(_Base):
                                   context=self._ctx(self.root, SPECIALTY))
         manifest = dict(value["manifest"])
         manifest.pop("file_hash")
-        self.assertEqual(REFERENCE_HWPX_MANIFEST,
-                         _normalized_manifest(manifest, self.root))
+        normalized = _normalized_manifest(manifest, self.root)
+        # 특용작물만 한글 덮개(`gg_hwpx._apply_specialty_format`)의 보고 `specialty`가
+        # post_processing에 더해진다. 이 키 말고는 기준 매니페스트와 같아야 한다.
+        # 형님 확정 서식(교수님 수정 #14 제목 20/18/16, #15 표 제목 앞 한 줄) 때문에
+        # 특작만 바뀜: 가짜 CLI 산출물은 `BODY_MD` 노드마다 문단 하나씩(제목·본문·표 제목·
+        # 빈 표 자리)이라 ①`Ⅰ. 머리말` 제목 1개의 글자 크기가 20pt로 바뀌고(headings 1)
+        # ②본문 → 표 제목 사이에 빈 줄 1개가 들어간다(blank_lines 1). 표 자리는 글자 없는
+        # 문단이라 표로 못 맞춰 tables·table_widths는 0이고 못 맞춘 항목이 남는다.
+        specialty = normalized["hwpx"]["post_processing"].pop("specialty")
+        self.assertEqual(
+            [1, 0, 0, 1],
+            [specialty[key] for key in ("headings", "tables", "table_widths", "blank_lines")])
+        # 못 맞춘 항목은 표 노드(3번) 하나뿐이고, 최소 글자 크기 보고는 비어 있다.
+        self.assertEqual([{"table": 3}], specialty["unmatched"])
+        self.assertEqual([], specialty["table_text_too_wide"])
+        # 대응 실패가 있으면 안내문 끝에 한 줄이 붙는다(기준 안내문 + 그 줄).
+        extra = build_hwpx.specialty_notice({"specialty": specialty})
+        self.assertEqual(REFERENCE_HWPX_MANIFEST["notice"] + " " + extra,
+                         normalized.pop("notice"))
+        reference = {key: value for key, value in REFERENCE_HWPX_MANIFEST.items()
+                     if key != "notice"}
+        self.assertEqual(reference, normalized)
 
     def test_windows_spelled_manifest_paths_normalize_to_reference(self):
         manifest = json.loads(json.dumps(REFERENCE_HWPX_MANIFEST))
@@ -980,8 +1004,12 @@ class BodyFormatTests(_Base):
         write_text(root, "body.md", md)
         cli = make_fake_cli(root, markdown=md, section=section, header=header,
                             hpf=FOOD_CROPS_HPF)
-        build_hwpx.export(root, "body.md", "out.hwpx", cli_command=cli,
-                          context=self._ctx(root, major))
+        value = build_hwpx.export(root, "body.md", "out.hwpx", cli_command=cli,
+                                  context=self._ctx(root, major))
+        # 다른 전공 불변: 특작 덮개 보고(`specialty`)는 특작 매니페스트에만 있다.
+        self.assertEqual(
+            major == "specialty_crops",
+            "specialty" in value["manifest"]["hwpx"]["post_processing"], major)
         with zipfile.ZipFile(Path(root) / "out.hwpx") as archive:
             shapes = ET.fromstring(archive.read("Contents/header.xml"))
             paragraphs = [p for name in archive.namelist() if gh.SECTION_RE.fullmatch(name)
@@ -1024,7 +1052,11 @@ class BodyFormatTests(_Base):
                                      heights(p), visible)
         self.assertTrue({chapter, caption, cell, footnote} <= {text(p) for p in paragraphs})
         chapter_p, = [p for p in paragraphs if text(p) == chapter]
-        self.assertEqual(["2000" if with_front and major in {"dairy", "food_crops"}
+        # 형님 확정 서식(교수님 수정 #14 제목 20/18/16 등) 때문에 특작만 바뀜: 특작 덮개는
+        # 앞부분 유무와 관계없이 본문 장 제목(Ⅰ.)을 20pt로 키운다. 낙농·식량작물은 앞부분이
+        # 있을 때만(프로필 경로), 과수·원예환경은 그대로 10pt.
+        self.assertEqual(["2000" if major == "specialty_crops"
+                          or (with_front and major in {"dairy", "food_crops"})
                           else "1000"], heights(chapter_p))
         if with_front:
             cover, = [p for p in paragraphs if text(p) == "합성 표지 제목"]

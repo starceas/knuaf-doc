@@ -416,3 +416,55 @@ def fit_table(table, text_area_mm=150.0, max_font_pt=10.0, min_font_pt=9.0,
 def fit_tables(tables, **kwargs):
     """여러 표에 fit_table을 적용하고 보고 dict 목록을 돌려준다."""
     return [fit_table(t, **kwargs) for t in tables]
+
+
+def _text_em(text):
+    return sum(_char_em(ch) for ch in text)
+
+
+def content_widths_mm(rows, total_mm=150.0, base_pt=12.0, min_pt=9.0,
+                      pad_mm=2.5, step_pt=1.0):
+    """칸 안 줄바꿈 정리(특용작물): 열 폭을 내용에 맞춰 나눈다.
+
+    어절이 갈라지거나 한 글자만 다음 줄로 내려오는 것을 막으려고, 열마다
+    ①한 줄에 다 들어가는 폭(`need`) ②가장 긴 어절 하나가 들어가는 폭(`floor`)을
+    재고 총 폭(`total_mm`) 안에서 나눈다.
+    - need 합이 총 폭 안이면 need 비율로 남는 폭까지 나눠 줄바꿈이 없게 한다.
+    - 아니면 floor를 먼저 주고 남는 폭을 (need-floor) 비율로 긴 열에 더 준다.
+    - floor 합도 총 폭을 넘으면 글자를 `step_pt`씩 `min_pt`까지 줄여 다시 잰다.
+    숫자·문구는 건드리지 않고 폭과 글자 크기만 정한다. 반환:
+    ``(열 폭 mm 목록, 글자 pt, 가능 여부)``.
+    """
+    count = len(rows[0])
+
+    def measure(pt):
+        need, floor = [0.0] * count, [0.0] * count
+        for r, row in enumerate(rows):
+            for c, text in enumerate(row):
+                text = str(text).strip()
+                if text in ("", "^", "<"):
+                    continue
+                scale = pt * PT_TO_MM * (1.05 if r == 0 else 1.0)
+                need[c] = max(need[c], _text_em(text) * scale)
+                longest = max(text.split(), key=_text_em)
+                floor[c] = max(floor[c], _text_em(longest) * scale)
+        return ([n + pad_mm for n in need], [f + pad_mm for f in floor])
+
+    pt = float(base_pt)
+    while True:
+        need, floor = measure(pt)
+        if sum(floor) <= total_mm + 1e-9:
+            break
+        if pt - step_pt < min_pt - 1e-9:
+            # 최소 글자 크기에서도 어절이 안 들어간다: floor를 비율로 줄여 보고.
+            scale = total_mm / sum(floor)
+            return [f * scale for f in floor], min_pt, False
+        pt -= step_pt
+    if sum(need) <= total_mm + 1e-9:
+        slack = total_mm - sum(need)
+        widths = [n + slack * n / sum(need) for n in need]
+    else:
+        extra = [n - f for n, f in zip(need, floor)]
+        spare = total_mm - sum(floor)
+        widths = [f + spare * e / sum(extra) for f, e in zip(floor, extra)]
+    return widths, pt, True
