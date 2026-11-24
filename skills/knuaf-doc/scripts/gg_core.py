@@ -105,6 +105,29 @@ def local(root, name):
     return p
 
 
+BOM = b"\xef\xbb\xbf"
+
+
+def without_bom(data):
+    """Drop one leading UTF-8 BOM from caller-supplied bytes.
+
+    윈도 PowerShell 5.1 `Set-Content`/`Out-File -Encoding UTF8`와 메모장이
+    붙이는 BOM을 사용자 입력에서만 벗긴다. 증거 해시는 원 바이트로 계산하고
+    (해시는 이 함수를 거치지 않는다) 파싱만 BOM을 허용한다.
+    """
+    return data[len(BOM):] if data.startswith(BOM) else data
+
+
+def input_text(path):
+    """Read a caller-supplied text input: BOM allowed, CRLF as text mode."""
+    return Path(path).read_text(encoding="utf-8-sig")
+
+
+def input_json(path):
+    """Parse a caller-supplied JSON input: BOM allowed, written without."""
+    return json.loads(input_text(path))
+
+
 def draft(text):
     if START in text or END in text:
         if (
@@ -2949,7 +2972,9 @@ VISUAL_FAIL = {
 
 def visual_review_blocks(path):
     try:
-        data = json.loads(Path(path).read_text(encoding="utf-8"))
+        # 검토자가 윈도에서 쓴 근거 JSON의 BOM을 허용한다(파싱만; 해시는
+        # 호출자가 원 바이트로 따로 대조한다).
+        data = json.loads(Path(path).read_text(encoding="utf-8-sig"))
     except (OSError, ValueError, TypeError):
         return set()
     if not isinstance(data, dict) or not isinstance(data.get("findings"), list):
@@ -6950,7 +6975,9 @@ def _paper_then_sidecars(root, body, capability):
 def _paper_preflight(root, spec_bytes, major_id, body_markdown):
     from gg_school_table_sources import load_spec
     try:
-        spec = load_spec(spec_bytes)
+        # 사용자 공급 spec은 윈도 편집기·PowerShell이 붙인 BOM을 허용한다.
+        # 증거 해시(request.spec_sha256)는 호출자가 넘긴 원 바이트 그대로다.
+        spec = load_spec(without_bom(spec_bytes))
     except ValueError as error:
         raise _op("paper", "requested_output", "not_committed",
                   "invalid_spec", detail=str(error)) from error

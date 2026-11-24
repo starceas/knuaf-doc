@@ -469,7 +469,8 @@ def main(argv=None):
         if a.apply:
             if not a.plan:
                 raise ValueError("--apply에는 --plan <확정 계획 JSON> 필요")
-            plan = json.loads(Path(a.plan).read_text(encoding="utf-8"))
+            # 윈도 PowerShell이 붙인 UTF-8 BOM도 받는다(읽기만).
+            plan = json.loads(Path(a.plan).read_text(encoding="utf-8-sig"))
             if plan.get("schema") != SCHEMA:
                 raise ValueError("계획 스키마 불일치: %s"
                                  % plan.get("schema"))

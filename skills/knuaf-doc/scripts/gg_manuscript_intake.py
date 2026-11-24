@@ -37,14 +37,18 @@ def _reject(reason):
 
 
 def _answer(root, input_path, filename):
-    spec = json.loads(fs.read_bytes(core.local(root, input_path))[0])
+    # 도우미(윈도 PowerShell)가 쓴 원답변 source JSON과 답변 txt는 BOM으로
+    # 시작할 수 있다. 파싱만 BOM을 벗고, 증거 해시(answer_hash)는 원 바이트
+    # 그대로 계산한다.
+    spec = json.loads(core.without_bom(
+        fs.read_bytes(core.local(root, input_path))[0]))
     if not isinstance(spec, dict) or not isinstance(spec.get("claims"), dict):
         _reject("answer_confirmation_required")
     path = core.local(root, spec["path"])
     if path.suffix.lower() not in {".txt", ".md"}:
         _reject("answer_text_required")
     raw = fs.read_bytes(path)[0]
-    lines = raw.decode("utf-8").splitlines()
+    lines = core.without_bom(raw).decode("utf-8").splitlines()
     expected = {"intake.current_manuscript": filename,
                 "intake.file_owner": "self", "intake.work_basis": "resume"}
     claims = {}
