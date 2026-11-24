@@ -1,7 +1,9 @@
 """X1-04: typography variants, original counts and lexical boundaries."""
 import json
+import sys
 import tempfile
 import time
+import types
 import unicodedata
 from pathlib import Path
 from unittest.mock import patch
@@ -118,14 +120,56 @@ class PolicyNormalizationTests(ContractCase):
         self.assertIn("1행 1열 %r" % text, row)
 
     def test_pv1_soft_paragraph_scaling(self):
-        # Loose relative bound only: no machine-specific absolute timeout.
-        # Measured in CPU time, not wall clock: the contract here is
-        # algorithmic scaling, and on a loaded machine a single wall-clock
-        # sample can be descheduled for hundreds of milliseconds.  Observed
-        # with eight suites running in parallel: wall-clock ratios of
-        # 9.4-14.7x while the CPU-time ratio stayed at 4.0-4.2x.
-        timings = []
+        # Two guards.  The old guard (CPU-time ratio at 4x the size, limit
+        # 8) reached 8.0 on windows py3.10, so the sizes are pushed apart
+        # and a deterministic count is added.
+        #
+        # 1. Deterministic: count the lines executed in the function's own
+        #    frames with a line tracer.  4x the input must cost about 4x the
+        #    lines (a per-line rescan would cost about 16x), whatever the
+        #    machine load or interpreter speed.  Lines cannot see work done
+        #    inside one C call, hence guard 2.
+        # 2. General: CPU time (not wall clock, so descheduling does not
+        #    count) with the sizes pushed far apart, n=2000 vs n=32000,
+        #    best of 3 each.  The small run must stay well above the
+        #    coarse windows process_time tick (about 15.6 ms), or the
+        #    ratio jumps or divides by zero.  Linear work gives a ratio of
+        #    about 16 and quadratic work about 256.  The limit 64 is 4x above linear
+        #    (observed noise has stayed within 2x of the ideal ratio) and 4x
+        #    below quadratic, so it neither flakes nor lets O(n^2) through.
+        def unit_lines(text, nodes):
+            func = doc._body_term_units
+            codes = {func.__code__}
+            codes.update(c for c in func.__code__.co_consts
+                         if isinstance(c, types.CodeType))
+            lines = 0
+
+            def local(frame, event, arg):
+                nonlocal lines
+                if event == "line":
+                    lines += 1
+                return local
+
+            def tracer(frame, event, arg):
+                return local if frame.f_code in codes else None
+
+            previous = sys.gettrace()  # keep any tracer already installed
+            sys.settrace(tracer)
+            try:
+                func(text, nodes)
+            finally:
+                sys.settrace(previous)
+            return lines
+
+        counts = []
         for n in (2000, 8000):
+            text = "농장 계획을 정리한다.\n" * n
+            counts.append(unit_lines(text, doc.parse(text, with_spans=True)))
+        self.assertGreater(counts[0], 0)
+        self.assertLess(counts[1] / counts[0], 6, "lines: %r" % (counts,))
+
+        timings = []
+        for n in (2000, 32000):
             text = "농장 계획을 정리한다.\n" * n
             nodes = doc.parse(text, with_spans=True)
             samples = []
@@ -136,7 +180,7 @@ class PolicyNormalizationTests(ContractCase):
                 self.assertEqual(len(units), 1)
                 self.assertEqual(len(units[0][0]), len(units[0][1]))
             timings.append(min(samples))
-        self.assertLess(timings[1] / timings[0], 8)
+        self.assertLess(timings[1] / timings[0], 64, "seconds: %r" % (timings,))
 
     def test_pv1_policy_check_scaling_with_and_without_hits(self):
         # CPU time for the same reason as the paragraph scaling guard above.
