@@ -1,6 +1,6 @@
 {
  "files": {
-  "SKILL.md": "bfd90cbd5f9b9462fca4bab25c311735c57a3edb7e39e27a5cd7a25deb1b0c7b",
+  "SKILL.md": "e03d49cb19f3d7206e984cdc81e984d2295fd1e04a538114bc32168d091dc0c6",
   "assets/templates/finance-template-v2.xlsx": "76300305fdaf165bcce54fc3de2b476c91f4e8e368bc0455a8c69aa3eee9cd1d",
   "assets/templates/finance-template.xlsx": "6d3c9fe5e5992108a8bab18c0098edb0d808f0d14c099878a53939b17de88c7d",
   "delegation.json": "b55a663d3585fa63aeb2b3899ae5a3078faf0d75957d1c6478ceb3f18ebf89bc",
@@ -236,7 +236,7 @@
   "scripts/gg_insect_precedent_check.py": "6dd22dc354c343ccbeb33b3e323bbb2bad033f62729b22211836d0b67cdfd7e3",
   "scripts/gg_insect_source_receipt.py": "0d5a4983a5cb41de4f30ff5b06fcb694637e289d1708ef74dbecdfd5aa9d02fa",
   "scripts/gg_kordoc.py": "d311df78d9b8a47175971fe3acad754f16efe2c154d94a901a5fe27dee540133",
-  "scripts/gg_lock.py": "a455ca7231c67dcab83e910cbdd82499d86f16190b5d88dee9e5ceaade4cc6b2",
+  "scripts/gg_lock.py": "6449b6cde7fe4cf3745d7c2d88328783fefb496b15b945cca573f459fb49017f",
   "scripts/gg_major_contract.py": "fef87b0b29351d01d7376260fe4061582bfd234c61a5856e166172cf62addd7c",
   "scripts/gg_major_format.py": "40845aaa656c763afe8b07870b2fabe2f32e4093bcd0d002a8c0ae7b4b086145",
   "scripts/gg_manuscript_intake.py": "977ab82d9800fd8dc1c4c4ff43de1cce88f1c91a3f410105ee55b208871211a0",

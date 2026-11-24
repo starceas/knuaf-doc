@@ -595,5 +595,241 @@ class ForkExecCase(ContractCase):
         self.assertTrue(acquired, "guard fd leaked across exec")
 
 
+class RelocationDiagnosisCase(ContractCase):
+    """v0.6.5: a copied/moved workspace is *diagnosed*, never repaired
+    here. The status carries `relocation_candidate`, refusals gain a
+    next-step hint, and the only repair path stays lock-upgrade
+    --offline-confirmed."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory(prefix="p2b-reloc-")
+        self.addCleanup(self.tmp.cleanup)
+        self.base = Path(self.tmp.name) / "base"
+        self.base.mkdir()
+        self.proto = gg_lock.install_new(self.base)
+        (self.base / "project.json").write_text("{}")
+
+    def _copy(self, name="copy"):
+        dest = Path(self.tmp.name) / name
+        shutil.copytree(self.base, dest)
+        return dest
+
+    def _rewrite_protocol(self, root, mutate):
+        path = Path(root) / ".gg-lock" / "protocol.json"
+        proto = json.loads(path.read_bytes().decode("utf-8"))
+        mutate(proto)
+        path.write_text(json.dumps(proto))
+        return proto
+
+    def _assert_no_hint(self, root):
+        self.assertFalse(
+            gg_lock.inspect_lock(root)["relocation_candidate"])
+        with self.assertRaises(gg_lock.LockError) as cm:
+            gg_lock.Lock(root).__enter__()
+        self.assertIsNone(cm.exception.hint)
+        self.assertNotIn(gg_lock._RELOCATION_HINT, str(cm.exception))
+        with self.assertRaises(gg_lock.LockError) as cm:
+            gg_lock.cleanup_owner(root)
+        self.assertIsNone(cm.exception.hint)
+
+    def test_T_a_copied_workspace_is_diagnosed_and_hinted(self):
+        copy = self._copy()
+        st = gg_lock.inspect_lock(copy)
+        self.assertEqual(st["structure"], "damaged")
+        self.assertEqual(st["reason"], "directory_identity_mismatch")
+        self.assertIs(st["relocation_candidate"], True)
+
+        with self.assertRaises(gg_lock.LockError) as cm:
+            gg_lock.Lock(copy).__enter__()
+        self.assertEqual(cm.exception.status, "damaged")
+        self.assertEqual(cm.exception.reason, "directory_identity_mismatch")
+        self.assertEqual(cm.exception.hint, gg_lock._RELOCATION_HINT)
+        self.assertEqual(
+            str(cm.exception),
+            "damaged: directory_identity_mismatch — "
+            + gg_lock._RELOCATION_HINT,
+        )
+
+        with self.assertRaises(gg_lock.LockError) as cm:
+            gg_lock.cleanup_owner(copy)
+        self.assertEqual(cm.exception.reason, "directory_identity_mismatch")
+        self.assertEqual(cm.exception.hint, gg_lock._RELOCATION_HINT)
+
+        # The existing explicit recovery still completes this state.
+        result = gg_lock.upgrade_offline(copy, offline_confirmed=True)
+        self.assertEqual(result["status"], "completed")
+        st = gg_lock.inspect_lock(copy)
+        self.assertEqual(st["structure"], "ready")
+        self.assertFalse(st["relocation_candidate"])
+
+    def test_T_b_malformed_or_partial_records_are_not_candidates(self):
+        # The untouched copy is the positive control for every case.
+        control = self._copy("control")
+        self.assertIs(
+            gg_lock.inspect_lock(control)["relocation_candidate"], True)
+
+        def drop_workspace_id(p):
+            p.pop("workspace_id", None)
+
+        def drop_root_identity(p):
+            p.pop("root_identity", None)
+
+        def inode_str(p):
+            p["root_identity"]["inode"] = "1"
+
+        def inode_true(p):
+            p["directory_identity"]["inode"] = True
+
+        def inode_negative(p):
+            p["root_identity"]["inode"] = -1
+
+        def inode_zero(p):
+            p["guard_identity"]["inode"] = 0
+
+        def device_negative(p):
+            p["guard_identity"]["device"] = -1
+
+        def platform_unknown(p):
+            p["root_identity"]["platform"] = "unknown-platform"
+
+        def platform_mixed(p):
+            p["guard_identity"]["platform"] = (
+                "win32" if sys.platform != "win32" else "linux")
+
+        def guard_kind_directory(p):
+            p["guard_identity"]["kind"] = "directory"
+
+        def schema_only(p):
+            for key in list(p):
+                if key != "schema":
+                    p.pop(key)
+
+        cases = {
+            "workspace_id_missing": drop_workspace_id,
+            "root_identity_missing": drop_root_identity,
+            "inode_str": inode_str,
+            "inode_true": inode_true,
+            "inode_negative": inode_negative,
+            "inode_zero": inode_zero,
+            "device_negative": device_negative,
+            "platform_unknown": platform_unknown,
+            "platform_mixed": platform_mixed,
+            "guard_kind_directory": guard_kind_directory,
+            "schema_only": schema_only,
+        }
+        for name, mutate in cases.items():
+            with self.subTest(case=name):
+                root = self._copy("case-" + name)
+                self._rewrite_protocol(root, mutate)
+                self._assert_no_hint(root)
+
+    def test_T_c_replaced_lock_dir_in_same_root_is_not_candidate(self):
+        # T-c covers only a foreign .gg-lock whose recorded root identity
+        # still matches this root (a replaced control in the same root).
+        # A control folder swapped in from another paper leaves all three
+        # identities foreign, so it *can* be a candidate: T-c does not
+        # cover that case, and the hint says so when it speaks.
+        # Same root, foreign .gg-lock: the root identity still matches,
+        # so this is a replaced control, not a relocated folder.
+        root = self._copy("replaced")
+        root_id = gg_fs.identity(root, kind="directory")
+
+        def keep_root(p):
+            p["root_identity"] = dict(root_id)
+
+        self._rewrite_protocol(root, keep_root)
+        st = gg_lock.inspect_lock(root)
+        self.assertEqual(st["reason"], "directory_identity_mismatch")
+        self.assertFalse(st["relocation_candidate"])
+        with self.assertRaises(gg_lock.LockError) as cm:
+            gg_lock.Lock(root).__enter__()
+        self.assertIsNone(cm.exception.hint)
+
+    def test_T_d_normal_states_report_false(self):
+        self.assertFalse(
+            gg_lock.inspect_lock(self.base)["relocation_candidate"])
+
+        empty = Path(self.tmp.name) / "empty"
+        empty.mkdir()
+        st = gg_lock.inspect_lock(empty)
+        self.assertEqual(st["structure"], "absent")
+        self.assertFalse(st["relocation_candidate"])
+
+        legacy = Path(self.tmp.name) / "legacy"
+        legacy.mkdir()
+        (legacy / ".gg-lock").mkdir()
+        (legacy / ".gg-lock" / "owner.json").write_text("{}")
+        st = gg_lock.inspect_lock(legacy)
+        self.assertEqual(st["structure"], "legacy")
+        self.assertFalse(st["relocation_candidate"])
+
+        initializing = Path(self.tmp.name) / "initializing"
+        initializing.mkdir()
+        (initializing / ".gg-lock").mkdir()
+        st = gg_lock.inspect_lock(initializing)
+        self.assertEqual(st["structure"], "initializing")
+        self.assertFalse(st["relocation_candidate"])
+
+    def test_T_e_recovery_still_requires_confirmation(self):
+        copy = self._copy()
+        self.assertIs(
+            gg_lock.inspect_lock(copy)["relocation_candidate"], True)
+        result = gg_lock.upgrade_offline(copy, offline_confirmed=False)
+        self.assertEqual(result["status"], "blocked")
+        self.assertEqual(result["reason"], "offline_confirmation_required")
+        self.assertFalse((copy / ".gg-recovery").exists())
+        self.assertEqual(
+            gg_lock.inspect_lock(copy)["reason"],
+            "directory_identity_mismatch")
+
+    def test_T_f_active_recovery_marker_suppresses_candidate_and_hint(self):
+        # R-01: while a recovery marker is present the documented next step
+        # (`lock-upgrade`) is refused with recovery_active_exists, so the
+        # diagnosis must not advertise it: no candidate, no hint, and the
+        # existing marker is what the refusal reports. Both a well-formed
+        # claim and a corrupt marker file count as present.
+        markers = {
+            "valid_claim": json.dumps(
+                {"schema": gg_lock.CLAIM_SCHEMA, "recovery_id": "x"}),
+            "corrupt": "not json at all",
+        }
+        for name, body in markers.items():
+            with self.subTest(marker=name):
+                root = self._copy("active-" + name)
+                self.assertIs(
+                    gg_lock.inspect_lock(root)["relocation_candidate"], True)
+                (root / gg_lock.ACTIVE_NAME).write_text(body)
+
+                st = gg_lock.inspect_lock(root)
+                self.assertEqual(st["structure"], "damaged")
+                self.assertEqual(st["reason"], "directory_identity_mismatch")
+                self.assertFalse(st["relocation_candidate"])
+                self.assertEqual(
+                    st["recovery_id"],
+                    "x" if name == "valid_claim" else None)
+
+                with self.assertRaises(gg_lock.LockError) as cm:
+                    gg_lock.Lock(root).__enter__()
+                self.assertEqual(cm.exception.status, "busy")
+                self.assertEqual(cm.exception.reason, "recovery_active")
+                self.assertIsNone(cm.exception.hint)
+                self.assertNotIn(gg_lock._RELOCATION_HINT, str(cm.exception))
+
+                with self.assertRaises(gg_lock.LockError) as cm:
+                    gg_lock.cleanup_owner(root)
+                self.assertEqual(cm.exception.status, "damaged")
+                self.assertEqual(
+                    cm.exception.reason, "directory_identity_mismatch")
+                self.assertIsNone(cm.exception.hint)
+                self.assertNotIn(gg_lock._RELOCATION_HINT, str(cm.exception))
+
+                # The marker is runtime state, not a repair: removing it
+                # brings the candidate diagnosis back.
+                (root / gg_lock.ACTIVE_NAME).unlink()
+                st = gg_lock.inspect_lock(root)
+                self.assertEqual(st["reason"], "directory_identity_mismatch")
+                self.assertIs(st["relocation_candidate"], True)
+
+
 if __name__ == "__main__":
     unittest.main()

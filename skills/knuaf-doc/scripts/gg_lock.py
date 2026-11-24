@@ -44,6 +44,18 @@ CLAIM_SCHEMA = "gg-lock-recovery-claim/1"
 STAGE_SCHEMA = "gg-lock-recovery-stage/1"
 STAGES = ("00-prepared", "10-quarantined", "20-installed", "30-completed")
 
+# Refusals that look like a copied/moved folder or a mixed-in control
+# folder carry this next step. It is diagnosis only: no code path grants
+# anything from it.
+_RELOCATION_HINT = (
+    "폴더를 복사·이동했거나 다른 논문의 잠금 제어 폴더(.gg-lock)가 섞여 "
+    "들어온 것으로 의심됩니다(확정 아님). 이 폴더를 다른 PC·창에서 "
+    "편집 중인 프로그램이 없음을 사용자에게 확인한 뒤 "
+    "`gg.py lock-upgrade <폴더> --offline-confirmed`로 잠금을 새로 만드세요. "
+    "옛 잠금은 .gg-recovery/에 보존되고 새 작업공간 ID가 생겨 이전 발행 기록은 "
+    "다시 신뢰되지 않습니다. 복사 중 생긴 데이터 불일치는 고치지 않습니다."
+)
+
 # Private fault hook: tests may patch this with a callable(stage_name).
 # Never driven by environment variables.
 _FAULT = None
@@ -59,10 +71,15 @@ def _utcnow():
 
 
 class LockError(ValueError):
-    def __init__(self, status, reason):
-        super().__init__("%s: %s" % (status, reason))
+    def __init__(self, status, reason, hint=None):
+        if hint:
+            message = "%s: %s — %s" % (status, reason, hint)
+        else:
+            message = "%s: %s" % (status, reason)
+        super().__init__(message)
         self.status = status
         self.reason = reason
+        self.hint = hint
 
 
 class LockCleanupError(OSError):
@@ -235,7 +252,7 @@ _PORT = _make_port()
 
 
 def _status(structure, *, lock_state="unprobed", reason=None, protocol=None,
-            owner=None, recovery_id=None):
+            owner=None, recovery_id=None, relocation_candidate=False):
     return {
         "structure": structure,
         "lock_state": lock_state,
@@ -244,6 +261,7 @@ def _status(structure, *, lock_state="unprobed", reason=None, protocol=None,
         "owner": owner,
         "observed_at": _utcnow(),
         "recovery_id": recovery_id,
+        "relocation_candidate": relocation_candidate,
     }
 
 
@@ -300,6 +318,70 @@ def _read_protocol(lockdir):
     if not isinstance(proto, dict) or proto.get("schema") != PROTOCOL_SCHEMA:
         raise LockError("damaged", "protocol_schema")
     return proto, data, ident
+
+
+def _relocation_candidate(proto, root_id, dir_id, guard_path):
+    """True when the control objects describe a coherent v2 lock whose
+    three identities are all foreign to this root and whose guard is a
+    real non-empty file: the shape a copy or move onto another volume
+    leaves behind. Diagnosis only — no caller may grant anything from
+    it, and any doubt (a missing or malformed identity) is False rather
+    than 'different'."""
+
+    def plain_int(value):
+        return isinstance(value, int) and not isinstance(value, bool)
+
+    def shape_ok(ident, kind):
+        if not isinstance(ident, dict) or ident.get("kind") != kind:
+            return False
+        for key in ("platform", "device", "inode"):
+            if key not in ident:
+                return False
+        if ident["platform"] not in ("darwin", "linux", "win32"):
+            return False
+        return (plain_int(ident["device"]) and ident["device"] >= 0
+                and plain_int(ident["inode"]) and ident["inode"] >= 1)
+
+    try:
+        if not isinstance(proto, dict):
+            return False
+        if proto.get("schema") != PROTOCOL_SCHEMA:
+            return False
+        if proto.get("protocol") != 2:
+            return False
+        workspace_id = proto.get("workspace_id")
+        if not isinstance(workspace_id, str) or not workspace_id:
+            return False
+        root_proto_id = proto.get("root_identity")
+        dir_proto_id = proto.get("directory_identity")
+        guard_proto_id = proto.get("guard_identity")
+        if not shape_ok(root_proto_id, "directory"):
+            return False
+        if not shape_ok(dir_proto_id, "directory"):
+            return False
+        if not shape_ok(guard_proto_id, "file"):
+            return False
+        # One platform across all three: a foreign volume or OS, not a
+        # mixed-up record.
+        if len({root_proto_id["platform"], dir_proto_id["platform"],
+                guard_proto_id["platform"]}) != 1:
+            return False
+        st = os.lstat(str(guard_path))
+        if stat.S_ISLNK(st.st_mode) or not stat.S_ISREG(st.st_mode):
+            return False
+        if st.st_size < 1:
+            return False
+        guard_id = gg_fs.identity(guard_path, kind="file")
+        for ident, live in (
+            (root_proto_id, root_id),
+            (dir_proto_id, dir_id),
+            (guard_proto_id, guard_id),
+        ):
+            if gg_fs.same_identity(ident, live):
+                return False
+        return True
+    except Exception:
+        return False
 
 
 def _inspect(root):
@@ -372,9 +454,15 @@ def _inspect(root):
 
     if not gg_fs.same_identity(proto.get("directory_identity") or {},
                                dir_id):
+        # An existing recovery marker outranks the relocation hint: the
+        # documented next step would be refused with recovery_active_exists,
+        # so report the running recovery instead of proposing a new one.
         return _status(
             "damaged", reason="directory_identity_mismatch",
             protocol=proto, recovery_id=recovery_id,
+            relocation_candidate=(
+                False if active_reason is not None else
+                _relocation_candidate(proto, root_id, dir_id, guard_path)),
         ), detail
     if not have_guard:
         return _status(
@@ -622,7 +710,9 @@ def _acquire(root):
     status, detail = _inspect(root)
     if status["structure"] != "ready":
         raise LockError(
-            status["structure"], status["reason"] or "not_ready"
+            status["structure"], status["reason"] or "not_ready",
+            hint=_RELOCATION_HINT
+            if status.get("relocation_candidate") else None,
         )
     if status["reason"] is not None:
         raise LockError("ready", status["reason"])
@@ -1031,7 +1121,9 @@ def cleanup_owner(root):
     status, detail = _inspect(root)
     if status["structure"] != "ready" or status["reason"] is not None:
         raise LockError(
-            status["structure"], status["reason"] or "not_ready"
+            status["structure"], status["reason"] or "not_ready",
+            hint=_RELOCATION_HINT
+            if status.get("relocation_candidate") else None,
         )
     fd = _acquire_guard(root, detail)
     cleaned = False
