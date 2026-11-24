@@ -22,7 +22,7 @@ try:
     import gg_docx_table_layout
 except ImportError as error:  # python-docx (or its layout helper) absent
     DOCX_IMPORT_ERROR = error
-from gg_document import parse, spans, SCI, FRONT, school_toc_range, school_frontmatter_plan, split_caption_credit
+from gg_document import parse, spans, SCI, FRONT, school_toc_range, school_frontmatter_plan, split_caption_credit, center_range_tildes
 import gg_core
 from gg_core import digest, local
 import gg_hwpx
@@ -114,9 +114,9 @@ def _toc_style(doc, name, size=12, bold=False, indent=0, hanging_pt=0):
     style.font.color.rgb = RGBColor(0, 0, 0)
     style.paragraph_format.left_indent = Pt(indent + hanging_pt)
     if hanging_pt:
-        # 내어쓰기: 줄이 바뀌면 번호 뒤 글자 자리에 맞추고, 오른쪽은 쪽번호 줄을 비운다.
+        # 내어쓰기: 줄이 바뀌면 번호 뒤 글자 자리에 맞춘다. 오른쪽은 본문 폭 그대로
+        # (오른쪽 여백을 걸면 쪽번호 탭이 경계 밖으로 나가 목차가 좁아져 보인다).
         style.paragraph_format.first_line_indent = Pt(-hanging_pt)
-        style.paragraph_format.right_indent = Mm(14)
     style.paragraph_format.space_after = Pt(0)
     style.paragraph_format.tab_stops.add_tab_stop(
         Mm(150), WD_TAB_ALIGNMENT.RIGHT, WD_TAB_LEADER.DOTS
@@ -309,8 +309,35 @@ def _apply_consent_formatting(doc, font, profile):
             set_font(run, font, size, bold)
 
 
+def center_doc_range_tildes(doc):
+    """만든 문서의 표시 글자(`w:t`)에서만 범위 물결(3~5)을 가운데 물결(∼)로 바꾼다.
+
+    원고 마크다운·그림 경로·링크 대상(관계 파일)은 건드리지 않는다. 하이퍼링크 안의
+    글자(주소 표시)는 건너뛴다. 주소·코드 글자는 `center_range_tildes`가 보호한다.
+    """
+    for node in doc.element.body.iter(qn("w:t")):
+        if not node.text or "~" not in node.text:
+            continue
+        if any(a.tag == qn("w:hyperlink") for a in node.iterancestors()):
+            continue
+        node.text = center_range_tildes(node.text)
+    return doc
+
+
 def convert(md_text, font=FONT, base=".", table_reports=None, *,
             context=None, toc=True, root=None, specialty_table_reports=None):
+    """원고를 DOCX로 만든 뒤 표시 글자의 범위 물결만 가운데 물결로 바꾼다(v0.6.5).
+
+    ``_convert``가 원고 해석·서식·전공 권한을 모두 맡고, 여기서는 완성된 문서의
+    글자에만 물결 규칙을 건다 — 원문 해시·그림 경로·링크 대상은 그대로다.
+    """
+    doc = _convert(md_text, font, base, table_reports, context=context, toc=toc,
+                   root=root, specialty_table_reports=specialty_table_reports)
+    return center_doc_range_tildes(doc)
+
+
+def _convert(md_text, font=FONT, base=".", table_reports=None, *,
+             context=None, toc=True, root=None, specialty_table_reports=None):
     """Render the paper markdown into a DOCX document.  Policy B: the
     explicit major must be authorized against the canonical binding
     (``context``) before anything is rendered.

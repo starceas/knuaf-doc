@@ -403,11 +403,11 @@ def contents(doc,entries,font,title='목    차',anchor=None,num=9000,*,title_si
         if hanging and _NUMBERED_ENTRY.match(label):
             # 줄이 바뀌면 내려간 글은 번호(`표 1.`·`그림 10.`·`1.`) 뒤 글자 자리에
             # 맞춘다(내어쓰기 폭 = 라벨 폭 추정, 번호 길이마다 다름). 오른쪽은
-            # 쪽번호 줄을 비워 쪽번호를 침범하지 않는다.
+            # 본문 폭 그대로 둔다(탭 150 mm) — 오른쪽 여백을 걸면 쪽번호 탭이
+            # 경계 밖으로 나가 점선이 짧아지고 목차가 가운데로 좁아져 보인다.
             hang=Mm(toc_label_hang_mm(label,12,level==1))
             f.left_indent=Mm(5 if level==2 else 0)+hang
             f.first_line_indent=-hang
-            f.right_indent=Mm(14)
         f.tab_stops.add_tab_stop(Mm(150), WD_TAB_ALIGNMENT.RIGHT, WD_TAB_LEADER.DOTS)
         _font(p.add_run(label),font,12,level==1)
         p.add_run('\t');page_reference(p,name,font)

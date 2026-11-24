@@ -2091,6 +2091,37 @@ def school_frontmatter_plan(nodes, major_id=None):
     return None
 
 
+# 범위 물결(v0.6.5): 신명조는 ASCII 물결(U+007E)을 글줄 위쪽에 그린다. 범위 꼴의
+# 물결만 가운데 물결(U+223C)로 바꾼다. 원고 마크다운이 아니라 **완성된 문서의 표시
+# 글자**(DOCX `w:t`, HWPX `hp:t`)와 같은 규칙으로 맞춰 비교해야 하는 제목·표 수치
+# 대조에만 쓴다 — 입력 원고·그림 경로·링크 대상·원문 해시는 건드리지 않는다.
+#
+# 범위 꼴: 앞이 숫자·%·℃·°이고 뒤가 숫자(부호 -, +, − 허용)인 물결. 앞뒤 공백은 보존.
+#   3~5 · 10 ~ 12 · -5~-1 ℃ · 10%~12% 는 바뀌고, ~30% · A~B · 약 ~5 · 3~~5 는 안 바뀐다.
+_RANGE_TILDE = re.compile(r"(?<=[\d%℃°])([ \t]*)~([ \t]*)(?=[-+−]?\d)")
+# 글자 그대로 둘 표시 구간: 주소(URL)와 백틱 코드 조각(백틱 개수가 같은 짝).
+_TILDE_PROTECTED = re.compile(r"https?://\S+|(`+).+?\1", re.S)
+CENTER_TILDE = "∼"
+
+
+def center_range_tildes(text):
+    """표시 글자에서 범위 물결만 가운데 물결로 바꾼다(공백 보존, 주소·코드 제외)."""
+    if "~" not in text:
+        return text
+    pieces = []
+    pos = 0
+    for match in _TILDE_PROTECTED.finditer(text):
+        pieces.append(_RANGE_TILDE.sub(_swap_tilde, text[pos:match.start()]))
+        pieces.append(match.group(0))
+        pos = match.end()
+    pieces.append(_RANGE_TILDE.sub(_swap_tilde, text[pos:]))
+    return "".join(pieces)
+
+
+def _swap_tilde(match):
+    return match.group(1) + CENTER_TILDE + match.group(2)
+
+
 def school_toc_range(nodes, major_id=None):
     plan = school_frontmatter_plan(nodes, major_id)
     if plan:
