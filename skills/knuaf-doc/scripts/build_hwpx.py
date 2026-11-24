@@ -244,7 +244,9 @@ def chapter_break_texts(md_text, major_id=None):
     nodes = gg_document.parse(md_text, major_id=major_id)
     plan = gg_document.school_frontmatter_plan(nodes, major_id)
     body = nodes[plan["body"]:] if plan is not None else nodes
-    headings = [node.get("text", "").strip() for node in body
+    # 출력 문단 글자는 범위 물결이 가운데 물결로 바뀐 뒤라(v0.6.5) 같은 규칙으로 맞춘다.
+    headings = [gg_document.center_range_tildes(node.get("text", "").strip())
+                for node in body
                 if node.get("kind") == "heading" and node.get("level") == 1]
     return headings[1:]
 

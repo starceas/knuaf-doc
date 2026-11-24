@@ -1885,6 +1885,8 @@ def transform_hwpx(data: bytes, *, font: str = SCHOOL_FONT,
                         if breaks:
                             applied["front_breaks"].append(
                                 {"section": info.filename, **breaks})
+                # 마지막에: 위 단계는 원문 글자와 맞춰 문단을 찾으므로 물결은 맨 끝에 바꾼다.
+                updated = center_range_tildes_xml(updated)
                 member = updated.encode("utf-8")
             elif info.filename == HEADER_NAME:
                 text = member.decode("utf-8")
@@ -2086,10 +2088,37 @@ def table_numbers(text: str):
     return entries
 
 
+def center_range_tildes_xml(section_xml: str) -> str:
+    """구역 XML의 표시 글자(`<hp:t>`)에서만 범위 물결을 가운데 물결로 바꾼다(v0.6.5).
+
+    태그 안쪽·속성·그림 경로·주소는 건드리지 않는다. 규칙은 gg_document
+    `center_range_tildes`와 같다(gg_document가 이 모듈을 불러오므로 순환을 피해 늦게 불러온다).
+    """
+    if "~" not in section_xml:
+        return section_xml
+    import gg_document as _gd
+
+    tag_split = re.compile(r"(<[^>]*>)")
+
+    def fix(match):
+        parts = tag_split.split(match.group(2))
+        for index in range(0, len(parts), 2):
+            parts[index] = _gd.center_range_tildes(parts[index])
+        return match.group(1) + "".join(parts) + match.group(3)
+
+    return re.sub(r"(<hp:t\b[^>]*>)(.*?)(</hp:t>)", fix, section_xml, flags=re.S)
+
+
 def compare_table_numbers(source_text: str, parsed_text: str) -> dict:
-    """원문 표 수치와 재파싱 표 수치를 (표, 행, 칸) 좌표까지 비교(부호·소수점 보존)."""
-    expected = table_numbers(source_text)
-    observed = table_numbers(parsed_text)
+    """원문 표 수치와 재파싱 표 수치를 (표, 행, 칸) 좌표까지 비교(부호·소수점 보존).
+
+    출력은 범위 물결을 가운데 물결로 바꾸므로(v0.6.5) 양쪽에 같은 물결 규칙을 적용해
+    비교한다. 원문 자체나 해시는 바꾸지 않는다.
+    """
+    import gg_document as _gd
+
+    expected = table_numbers(_gd.center_range_tildes(source_text))
+    observed = table_numbers(_gd.center_range_tildes(parsed_text))
     if expected == observed:
         return {"match": True, "count": len(expected)}
     index = next((i for i, (a, b) in enumerate(zip(expected, observed)) if a != b),

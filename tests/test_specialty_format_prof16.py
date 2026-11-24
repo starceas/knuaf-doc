@@ -143,7 +143,8 @@ class SpecialtyFormatProf16Tests(ContractCase):
         width = self.label_width_mm("표 1. ")
         self.assertAlmostEqual(-fmt.first_line_indent.mm, width, delta=0.1)
         self.assertAlmostEqual(fmt.left_indent.mm, 5 + width, delta=0.1)
-        self.assertAlmostEqual(fmt.right_indent.mm, 14, delta=0.1)
+        # v0.6.5: 오른쪽 여백을 걸지 않는다(걸면 쪽번호 탭이 밖으로 나가 목차가 좁아짐).
+        self.assertTrue(fmt.right_indent is None or fmt.right_indent.mm == 0)
         # 번호 없는 줄(`요약` 등)과 다른 전공 목차는 그대로다.
         food = self.convert("food_crops")
         other = next(p for p in food.paragraphs
