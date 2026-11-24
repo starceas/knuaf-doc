@@ -703,6 +703,9 @@ class HostRuntimeTests(unittest.TestCase):
             "app_version": "0.6.7", "written_at": 1794798713,
         }
         self._save_host(self.host)
+        # 안내가 밝힌 판과 실행본 --version은 같아야 host를 받는다. 이 fixture의
+        # 안내는 gk.VERSION을 밝히므로 실행본도 같은 판을 보고하게 맞춘다.
+        self.fake.cli_version = "kordoc " + gk.VERSION
 
     def _save_host(self, data):
         self.host_path.write_text(json.dumps(data), encoding="utf-8")
@@ -756,7 +759,9 @@ class HostRuntimeTests(unittest.TestCase):
         self.assertEqual(self.host["command"], ready["cli_command"])
 
     def test_absent_hint_keeps_legacy_result_and_processes_exact(self):
-        self._activate()
+        # 이 시험은 결과가 캐시 판(gk.VERSION)이 아니라 외부 CLI가 스스로 보고한
+        # 판을 싣는지 잠근다. 그래서 fixture 기본값과 다른 판을 일부러 쓴다.
+        self._activate(cli_version="kordoc 4.99.0")
         self.host_path.unlink()
         external = self._external_kordoc()
         self.which_map["kordoc"] = external
@@ -797,6 +802,48 @@ class HostRuntimeTests(unittest.TestCase):
         self.assertEqual(windows, ready["cli_command"])
         self.assertTrue(all(cmd[:4] == windows for cmd, _ in self.fake.calls))
 
+    def test_host_4253_is_accepted_and_reports_the_probed_version(self):
+        # 앱 0.7.4는 kordoc 4.25.3을 동봉한다. 안내 판과 실행본 판이 모두
+        # 4.25.3이면 host를 그대로 받고 결과에 그 판을 적는다.
+        self.fake.cli_version = "kordoc 4.25.3"
+        self.host["kordoc_version"] = "4.25.3"
+        self._save_host(self.host)
+        with mock.patch.object(gk, "_run", side_effect=self._host_run), \
+                mock.patch.object(gk.shutil, "which", return_value=None), \
+                mock.patch.object(gk, "_node_and_pnpm", side_effect=AssertionError("no Node lookup")):
+            ready = gk.ensure(cache_dir=self.cache, need_generate=True)
+        self.assertEqual(self.host["command"], ready["cli_command"])
+        self.assertEqual("app_host", ready["source_kind"])
+        self.assertEqual("4.25.3", ready["version"])
+        self.assertEqual("4.25.3", ready["actual_version"])
+        self.assertFalse(self.cache.exists())
+
+    def test_host_version_set_keeps_the_cache_install_version(self):
+        # 캐시 설치 판은 앱 0.7.3(4.17.1)과 계속 맞춘다. 허용 목록이 늘어도
+        # 설치 판이 따라 움직이면 안 된다.
+        self.assertEqual({"4.17.1", "4.25.3"}, set(gk.HOST_VERSIONS))
+        self.assertEqual("4.17.1", gk.VERSION)
+        self.assertIn(gk.VERSION, gk.HOST_VERSIONS)
+
+    def test_diagnose_host_reports_declared_version_without_executing(self):
+        self.host["kordoc_version"] = "4.25.3"
+        self._save_host(self.host)
+        with mock.patch.object(gk, "_run", side_effect=AssertionError("no execution")), \
+                mock.patch.object(gk.shutil, "which", return_value=None):
+            result = gk.diagnose(cache_dir=self.cache)
+        self.assertEqual("app_host", result["source_kind"])
+        self.assertEqual("4.25.3", result["version"])
+        self.assertFalse(result["capability_verified"])
+        self.assertFalse(self.cache.exists())
+
+    def test_diagnose_without_host_has_no_claimed_version(self):
+        self.host_path.unlink()
+        with mock.patch.object(gk, "_run", side_effect=AssertionError("no execution")), \
+                mock.patch.object(gk.shutil, "which", return_value=None):
+            result = gk.diagnose(cache_dir=self.cache)
+        self.assertEqual("not_installed", result["reason"])
+        self.assertIsNone(result["version"])
+
     def test_r1_each_invalid_field_silently_falls_back(self):
         self._activate()
         external = self._external_kordoc()
@@ -806,6 +853,11 @@ class HostRuntimeTests(unittest.TestCase):
         expected = gk.ensure(cache_dir=self.cache)
         cases = [
             ("schema", 2), ("schema", True), ("kordoc_version", "4.13.1"),
+            # 앱이 동봉한다고 확인된 판 두 개 밖은 걸러야 한다 — npm 최신판도 포함.
+            ("kordoc_version", "4.25.7"), ("kordoc_version", "4.25"),
+            ("kordoc_version", "4.26.0"),
+            # 판 값이 문자열이 아니면 해시 불가로 터지지 않고 조용히 거절해야 한다.
+            ("kordoc_version", ["4.25.3"]), ("kordoc_version", None),
             ("command", []), ("command", [self.exe]),
             ("command", ["relative.exe", self.cli]),
             ("command", [self.exe, "", self.cli]),
@@ -866,6 +918,37 @@ class HostRuntimeTests(unittest.TestCase):
                                 mock.patch.object(gk.os, "getuid", return_value=item.stat().st_uid, create=True), \
                                 mock.patch.object(gk.Path, "lstat", changed_lstat):
                             self.assertIsNone(gk._host_runtime())
+
+    def test_host_probe_version_must_match_the_hint_and_the_allowed_set(self):
+        # 안내(JSON)만 맞고 실행본 --version이 다른 경우 host를 받지 않는다.
+        # 판정 표의 불일치를 모두 기존 경로(명시 CLI·PATH·캐시)로 돌린다.
+        self._activate()
+        external = self._external_kordoc()
+        self.which_map["kordoc"] = external
+        original = self.fake.run
+        cases = [
+            ("4.25.3", "4.17.1"),
+            ("4.17.1", "4.25.3"),
+            ("4.25.3", "4.25.7"),
+            ("4.17.1", "4.13.1"),
+            ("4.17.1", "4.25.30"),
+        ]
+        for advertised, probed in cases:
+            with self.subTest(hint=advertised, probe=probed):
+                data = copy.deepcopy(self.host)
+                data["kordoc_version"] = advertised
+                self._save_host(data)
+                def versioned(cmd, *, probed=probed, **kwargs):
+                    if cmd[0] == self.exe and cmd[-1] == "--version":
+                        return {"ok": True, "returncode": 0,
+                                "stdout": "kordoc " + probed, "stderr": ""}
+                    return original(cmd, **kwargs)
+                with mock.patch.object(gk, "_run", side_effect=versioned):
+                    ready = gk.ensure(cache_dir=self.cache)
+                self.assertEqual([str(Path(external).resolve())], ready["cli_command"])
+                self.assertEqual("path", ready["source_kind"])
+                self.assertEqual([], ready["rejected_candidates"])
+                self.assertFalse(self.cache.exists())
 
     def test_host_probe_failure_silently_uses_path(self):
         self._activate()
