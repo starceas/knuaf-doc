@@ -489,21 +489,22 @@ class BuildTests(ContractCase):
         self.assertNotIn("함초롬바탕", header)
         self.assertIn('face="' + gh.SCHOOL_FONT + '"', header)
 
-    def test_app_host_generate_validate_reparse_and_layout_share_env(self):
-        # Real child Python stands in for Electron. Every child fails unless
-        # the host-only environment survives, including post-layout checks.
-        self._control(markdown=SAMPLE_MD)
+    def _host_probes(self, version):
+        """Real child Python standing in for Electron, advertising ``version``."""
         probes = (
             "import os, sys\n"
             "assert os.environ.get('ELECTRON_RUN_AS_NODE') == '1'\n"
             "assert os.environ.get('KORDOC_OFFLINE') == '1'\n"
             "assert 'SECRET_TOKEN' not in os.environ\n"
             "if sys.argv[1:] == ['--version']:\n"
-            "    print('kordoc 4.17.1'); sys.exit(0)\n"
+            "    print('kordoc " + version + "'); sys.exit(0)\n"
             "if sys.argv[-1:] == ['--help']:\n"
             "    print('kordoc --format --keep-empty-cols --keep-empty-paragraphs "
             "--silent --preset --paper --plain --image-dir'); sys.exit(0)\n")
         self.fake.write_text(probes + FAKE_CLI, encoding="utf-8")
+
+    def _app_host(self, version):
+        """Write the app hint the desktop app would leave for ``version``."""
         exe = Path(sys.executable).resolve()
         metadata = exe.stat()
         cache = self.root.resolve() / "xdg"
@@ -511,12 +512,16 @@ class BuildTests(ContractCase):
         host_dir.mkdir(parents=True, mode=0o700)
         host = host_dir / "kordoc-host.json"
         host.write_text(json.dumps({
-            "schema": 1, "kordoc_version": "4.17.1", "install_dir": str(self.root),
+            "schema": 1, "kordoc_version": version, "install_dir": str(self.root),
             "command": [str(exe), str(self.fake)], "files": [str(exe), str(self.fake)],
             "exe_stat": {"size": metadata.st_size, "mtime": int(metadata.st_mtime)},
             "env": {"ELECTRON_RUN_AS_NODE": "1", "KORDOC_OFFLINE": "1"},
         }), encoding="utf-8")
         host.chmod(0o600)
+        return cache
+
+    def _build_via_app_host(self, version):
+        cache = self._app_host(version)
         with mock.patch.dict(os.environ, {"XDG_CACHE_HOME": str(cache), "SECRET_TOKEN": "private"}), \
                 mock.patch.object(gh.gg_kordoc.Path, "home", return_value=self.root), \
                 mock.patch.object(gh.gg_kordoc.shutil, "which", return_value=None):
@@ -524,12 +529,32 @@ class BuildTests(ContractCase):
             layout = runtime("build_hwpx").verify_layout(
                 target.read_bytes(), result["runtime"]["cli_command"], SAMPLE_MD,
                 timeout=30, extra_env=result["runtime"]["extra_env"])
+        return result, target, layout
+
+    def test_app_host_generate_validate_reparse_and_layout_share_env(self):
+        # Real child Python stands in for Electron. Every child fails unless
+        # the host-only environment survives, including post-layout checks.
+        self._control(markdown=SAMPLE_MD)
+        self._host_probes("4.17.1")
+        result, target, layout = self._build_via_app_host("4.17.1")
         self.assertEqual("ok", result["verification"]["validate"]["status"])
         self.assertTrue(result["verification"]["reparse"]["ok"])
         self.assertTrue(layout["table_numbers"]["match"])
         self.assertEqual({"ELECTRON_RUN_AS_NODE": "1", "KORDOC_OFFLINE": "1"},
                          result["runtime"]["extra_env"])
 
+    def test_app_host_4253_builds_and_reports_the_actual_host_version(self):
+        # 앱 0.7.4가 동봉한 4.25.3 host도 받아야 한다. 결과에는 캐시 판(4.17.1)이
+        # 아니라 host의 --version 실측 판이 적혀야 한다.
+        self._control(markdown=SAMPLE_MD)
+        self._host_probes("4.25.3")
+        result, target, layout = self._build_via_app_host("4.25.3")
+        self.assertEqual("ready", result["status"])
+        self.assertEqual("4.25.3", result["runtime"]["version"])
+        self.assertNotEqual(gh.gg_kordoc.VERSION, result["runtime"]["version"])
+        self.assertEqual("ok", result["verification"]["validate"]["status"])
+        self.assertTrue(result["verification"]["reparse"]["ok"])
+        self.assertTrue(layout["table_numbers"]["match"])
 
     def test_build_requires_authorization_arguments(self):
         self._control(markdown=SAMPLE_MD)

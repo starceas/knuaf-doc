@@ -24,7 +24,13 @@ import stat
 
 
 PACKAGE = "kordoc"
+# The version this skill installs into its own cache and verifies there.
 VERSION = "4.17.1"
+# Versions the desktop app may bundle and advertise in kordoc-host.json:
+# 4.17.1 with app 0.7.3 and 4.25.3 with app 0.7.4 and later. Accepting only
+# VERSION here would reject the newer app's bundled runtime, which sends Node-less
+# student machines down the cache-install path and blocks HWPX there.
+HOST_VERSIONS = frozenset({VERSION, "4.25.3"})
 REGISTRY = "https://registry.npmjs.org"
 OWNER = "ginseng-goat.gg_kordoc"
 DEFAULT_TIMEOUT = 180
@@ -126,7 +132,10 @@ def _host_runtime():
         data = _read_host_json(path)
         if not data or type(data.get("schema")) is not int or data["schema"] != 1:
             return None
-        if data.get("kordoc_version") != VERSION:
+        host_version = data.get("kordoc_version")
+        # A list or dict here would be unhashable, so the string test comes
+        # first; anything outside the bundled set is a silent miss.
+        if not isinstance(host_version, str) or host_version not in HOST_VERSIONS:
             return None
         command, files = data.get("command"), data.get("files")
         if (not isinstance(command, list) or len(command) < 2
@@ -161,7 +170,7 @@ def _host_runtime():
                 or exe_stat["mtime"] != int(current.st_mtime)
                 or not stat.S_ISREG(current.st_mode)):
             return None
-        return {"command": command, "extra_env": extra_env}
+        return {"command": command, "extra_env": extra_env, "version": host_version}
     except (OSError, ValueError, RuntimeError):
         return None
 
@@ -215,6 +224,9 @@ def diagnose(*, cache_dir=None, node=None, kordoc=None) -> dict:
                 "selected_cache_dir": None, "cli_path": host["command"][-1],
                 "node_path": None, "cli_command": host["command"],
                 "source_kind": "app_host",
+                # The hint's declared version: nothing is executed here, so it
+                # is not the capability-proof version ensure() reports.
+                "version": host["version"],
                 "legacy_candidates": [row for row in candidates if row["legacy"]],
                 "candidates": candidates, "capability_verified": False,
                 "reason": "capability_unverified"}
@@ -223,6 +235,7 @@ def diagnose(*, cache_dir=None, node=None, kordoc=None) -> dict:
             "cli_path": external or (str(_package_paths(
                 Path(selected["cache_dir"]) / VERSION)[2]) if selected else None),
             "node_path": _runtime_path(node, ("node",)),
+            "version": None,
             "legacy_candidates": [row for row in candidates if row["legacy"]],
             "candidates": candidates, "capability_verified": False,
             "reason": "capability_unverified" if external or selected else "not_installed"}
@@ -647,6 +660,15 @@ def _ready_host(*, timeout, need_generate):
         host["command"], path=host["command"][-1], source_kind="app_host",
         timeout=timeout, need_generate=need_generate, extra_env=host["extra_env"])
     if not candidate:
+        return None
+    # The hint is a claim; the probed ``--version`` is the runtime actually about
+    # to run. Both must name the same bundled version, or an app that bundles an
+    # unverified release (npm-latest 4.25.7 and the like) would be trusted on the
+    # strength of the JSON alone. Any mismatch is a silent miss: the caller then
+    # walks the unchanged explicit/PATH/cache path.
+    if candidate["actual_version"] not in HOST_VERSIONS:
+        return None
+    if candidate["actual_version"] != host["version"]:
         return None
     return _result(
         "ready", action="reused_existing", package=PACKAGE,
