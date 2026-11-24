@@ -1967,7 +1967,8 @@ def run(base, xlsx, *, major_id=None, input_path=None, out="build/finance-tables
         if not src.is_relative_to(base_path):
             raise ValueError("작업 폴더 밖 경로는 허용하지 않음: "
                              + str(input_path))
-        footnotes = json.loads(src.read_text(encoding="utf-8"))
+        # 윈도 PowerShell이 붙인 UTF-8 BOM도 받는다(읽기만, 쓰기 불변).
+        footnotes = json.loads(src.read_text(encoding="utf-8-sig"))
         if isinstance(footnotes, dict) and "footnotes" in footnotes:
             footnotes = footnotes["footnotes"]
     result = generate(xlsx, major_id=auth.major_id, footnotes=footnotes)

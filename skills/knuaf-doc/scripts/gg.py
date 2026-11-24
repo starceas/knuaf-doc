@@ -176,7 +176,7 @@ def main(argv=None):
         import gg_insect_document
 
         try:
-            text = core.local(a.folder, a.input).read_text(encoding="utf-8")
+            text = core.input_text(core.local(a.folder, a.input))
         except (OSError, ValueError, TypeError, UnicodeError):
             raise ValueError("insect_input_invalid_or_unreadable") from None
         return insect_call(gg_insect_document.parse_selection, text)
@@ -278,9 +278,7 @@ def main(argv=None):
         elif a.command == "observe":
             if not a.input or not a.observer:
                 raise ValueError("--input 관측 JSON과 --observer 필요")
-            payload = json.loads(
-                core.local(a.folder, a.input).read_text(encoding="utf-8")
-            )
+            payload = core.input_json(core.local(a.folder, a.input))
             if not isinstance(payload, dict):
                 raise ValueError("관측 기록은 객체여야 함")
             value = core.ingest_review_observation(a.folder, payload, a.observer)
@@ -386,8 +384,7 @@ def main(argv=None):
                 if a.packs_dir:
                     kw["packs_dir"] = a.packs_dir
                 if a.catalog:
-                    kw["catalog"] = json.loads(
-                        Path(a.catalog).read_text(encoding="utf-8"))
+                    kw["catalog"] = core.input_json(a.catalog)
                 return gg_rda_research.resolver_context(**kw) if kw else None
 
             if a.command == "rda-lookup":
@@ -409,8 +406,7 @@ def main(argv=None):
             elif a.command == "rda-propose":
                 if not a.input:
                     raise ValueError("--input 제안 입력 JSON 필요")
-                spec = json.loads(
-                    Path(a.input).read_text(encoding="utf-8"))
+                spec = core.input_json(a.input)
                 value = gg_rda_research.propose(
                     spec.get("pack_revision"),
                     spec.get("target"),
@@ -421,8 +417,7 @@ def main(argv=None):
                 if not a.input or a.expected_revision is None:
                     raise ValueError(
                         "--input 제안 JSON과 --expected-revision 필요")
-                proposal = json.loads(
-                    Path(a.input).read_text(encoding="utf-8"))
+                proposal = core.input_json(a.input)
                 value = gg_rda_research.apply(
                     proposal,
                     expected_revision=a.expected_revision,
@@ -453,7 +448,7 @@ def main(argv=None):
             def _json_path(flag, label):
                 if not flag:
                     raise ValueError("%s 경로 필요" % label)
-                return json.loads(Path(flag).read_text(encoding="utf-8"))
+                return core.input_json(flag)
 
             if a.command == "source-scan":
                 # V15-2 — the scanner carries NO packs_dir operand: this
@@ -720,9 +715,7 @@ def main(argv=None):
             # canonical state; the CLI never invents hashes or refs.
             if not a.input or a.expected_revision is None:
                 raise ValueError("--input 채택 JSON과 --expected-revision 필요")
-            spec = json.loads(
-                core.local(a.folder, a.input).read_text(encoding="utf-8")
-            )
+            spec = core.input_json(core.local(a.folder, a.input))
             if (
                 not isinstance(spec, dict)
                 or "output" not in spec
@@ -754,7 +747,8 @@ def main(argv=None):
                     raise ValueError("--change와 --expected-revision 필요")
                 value = core.apply(
                     a.folder,
-                    json.loads(Path(a.change).read_text(encoding="utf-8")),
+                    # 사용자 공급 change JSON(윈도 PowerShell이 붙인 BOM 허용).
+                    core.input_json(a.change),
                     a.expected_revision,
                 )
             elif a.command == "check":
