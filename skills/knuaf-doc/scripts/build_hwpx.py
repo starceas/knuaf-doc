@@ -474,7 +474,23 @@ def export(base, inp, out, *, font=FONT, context=None, cli_command=None,
         raise ValueError("기존 산출물을 덮어쓰지 않음: 새 경로 지정")
     if manifest_path.exists():
         raise ValueError("기존 매니페스트를 덮어쓰지 않음: 새 경로 지정")
-    source_text = source.read_text(encoding="utf-8")
+    raw_bytes = source.read_bytes()
+    source_text = raw_bytes.decode("utf-8-sig")
+    # 초안 봉투(gg:draft 마커)가 보일 때만 뗀다. 마커가 없으면 원문 그대로
+    # (draft()는 strip·## DRAFT 절단을 하므로 무조건 부르면 출력이 바뀐다).
+    # 깨진 마커는 draft()의 ValueError를 그대로 올린다.
+    envelope = None
+    build_source = source
+    if gg_core.START in source_text or gg_core.END in source_text:
+        # 마커 밖에 메타가 아닌 글이 있으면 조용히 빠지므로 멈춘다.
+        outside = gg_core.draft_marker_extra(source_text)
+        if outside:
+            raise ValueError("DRAFT 마커 밖에 일반 글이 있음(발행에서 빠짐): "
+                             + outside.strip()[:60])
+        source_text = gg_core.draft(source_text)
+        if not source_text.strip():
+            raise ValueError("DRAFT 경계 안 본문이 비어 있음")
+        envelope = {"body_hash": gg_core.digest(source_text.encode("utf-8"))}
     profile = hwpx_profile(authorization.major_id)
     section_formats = profile.section_formats if profile is not None else None
     margins_mm = section_formats[2]["margin_mm"] if profile is not None else None
@@ -487,9 +503,19 @@ def export(base, inp, out, *, font=FONT, context=None, cli_command=None,
     staging = target.with_name("." + target.name + ".layout-staging")
     if staging.exists():
         raise ValueError("임시 후처리 파일이 남아 있음: " + str(staging))
+    body_tmp = None
     try:
+        if envelope is not None:
+            # 그림 기준 폴더 규칙(원고 옆)을 지키려고 같은 폴더에 임시 본문을 둔다.
+            fd, name = tempfile.mkstemp(
+                prefix="." + source.name + ".", suffix=".body.md",
+                dir=str(source.parent))
+            body_tmp = Path(name)
+            with open(fd, "wb") as handle:
+                handle.write((source_text + "\n").encode("utf-8"))
+            build_source = body_tmp
         result = gg_hwpx.build(
-            source, staging, context=context, authorization=authorization,
+            build_source, staging, context=context, authorization=authorization,
             cli_command=cli_command, cache_dir=cache_dir, node=node, pnpm=pnpm,
             kordoc=kordoc, timeout=timeout, font=font,
             page_numbers=page_numbers, image_dir=image_dir, verify=verify,
@@ -525,10 +551,13 @@ def export(base, inp, out, *, font=FONT, context=None, cli_command=None,
     finally:
         if staging.exists():
             staging.unlink()
+        if body_tmp is not None and body_tmp.exists():
+            body_tmp.unlink()
     manifest = {
         "kind": "draft",
         "file_hash": gg_core.digest(published_bytes),
-        "input_hash": result["input_sha256"],
+        # 원 파일 바이트 해시(봉투를 뗐어도 유지). 뗀 본문 해시는 draft_envelope.
+        "input_hash": gg_core.digest(raw_bytes),
         "font": font,
         "font_available": "not_run",
         "render": "not_run",
@@ -552,6 +581,8 @@ def export(base, inp, out, *, font=FONT, context=None, cli_command=None,
             notice(verify, authorization.major_id, font),
             specialty_notice(result["applied"])))),
     }
+    if envelope is not None:
+        manifest["draft_envelope"] = envelope
     data = json.dumps(manifest, ensure_ascii=False, indent=2).encode("utf-8")
     identity = gg_fs.identity(target.parent, kind="directory")
     published = gg_fs.publish_bytes_noreplace(manifest_path, data,
