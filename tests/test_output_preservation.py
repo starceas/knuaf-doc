@@ -309,9 +309,10 @@ class OtherMajorDocxByteTests(ContractCase):
         """특용작물은 `word/styles.xml` 한 멤버만 기준과 다르다(의도된 변화).
 
         근거: 지도교수 수정 #12(목차에서 줄이 바뀌면 내어쓰기로 다듬기) — 목차 스타일
-        TOC 1~3에 내어쓰기(`w:hanging`)와 오른쪽 여백이 붙는다. 나머지 멤버
-        (`word/document.xml` 포함)는 다른 전공과 같은 기준 해시여야 한다. 새 해시를
-        글자 그대로 박지 않고 구조로 잠근다: 스타일 3개의 내어쓰기·오른쪽 여백.
+        TOC 1~3에 내어쓰기(`w:hanging`)가 붙는다(오른쪽 여백은 v0.6.5에서 뺐다).
+        나머지 멤버(`word/document.xml` 포함)는 다른 전공과 같은 기준 해시여야 한다.
+        새 해시를 글자 그대로 박지 않고 구조로 잠근다: 스타일 3개의 내어쓰기와
+        오른쪽 여백 없음.
         """
         digests, specialty_styles = self.build_member_digests("specialty_crops")
         _digests, base_styles = self.build_member_digests("fruit_trees")
@@ -324,7 +325,8 @@ class OtherMajorDocxByteTests(ContractCase):
             with self.subTest(style=name):
                 hung = self.toc_indent(specialty_styles, name)
                 self.assertEqual("400", hung.get(self.W + "hanging"))
-                self.assertIsNotNone(hung.get(self.W + "right"))
+                # v0.6.5: 오른쪽 여백은 걸지 않는다(목차 폭 되돌림).
+                self.assertIsNone(hung.get(self.W + "right"))
                 plain = self.toc_indent(base_styles, name)
                 self.assertIsNone(plain.get(self.W + "hanging"))
                 self.assertIsNone(plain.get(self.W + "right"))
