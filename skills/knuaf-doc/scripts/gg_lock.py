@@ -44,10 +44,12 @@ CLAIM_SCHEMA = "gg-lock-recovery-claim/1"
 STAGE_SCHEMA = "gg-lock-recovery-stage/1"
 STAGES = ("00-prepared", "10-quarantined", "20-installed", "30-completed")
 
-# Refusals that look like a copied/moved folder carry this next step.
-# It is diagnosis only: no code path grants anything from it.
+# Refusals that look like a copied/moved folder or a mixed-in control
+# folder carry this next step. It is diagnosis only: no code path grants
+# anything from it.
 _RELOCATION_HINT = (
-    "폴더를 복사·이동한 것으로 의심됩니다(확정 아님). 이 폴더를 다른 PC·창에서 "
+    "폴더를 복사·이동했거나 다른 논문의 잠금 제어 폴더(.gg-lock)가 섞여 "
+    "들어온 것으로 의심됩니다(확정 아님). 이 폴더를 다른 PC·창에서 "
     "편집 중인 프로그램이 없음을 사용자에게 확인한 뒤 "
     "`gg.py lock-upgrade <폴더> --offline-confirmed`로 잠금을 새로 만드세요. "
     "옛 잠금은 .gg-recovery/에 보존되고 새 작업공간 ID가 생겨 이전 발행 기록은 "
@@ -452,11 +454,15 @@ def _inspect(root):
 
     if not gg_fs.same_identity(proto.get("directory_identity") or {},
                                dir_id):
+        # An existing recovery marker outranks the relocation hint: the
+        # documented next step would be refused with recovery_active_exists,
+        # so report the running recovery instead of proposing a new one.
         return _status(
             "damaged", reason="directory_identity_mismatch",
             protocol=proto, recovery_id=recovery_id,
-            relocation_candidate=_relocation_candidate(
-                proto, root_id, dir_id, guard_path),
+            relocation_candidate=(
+                False if active_reason is not None else
+                _relocation_candidate(proto, root_id, dir_id, guard_path)),
         ), detail
     if not have_guard:
         return _status(

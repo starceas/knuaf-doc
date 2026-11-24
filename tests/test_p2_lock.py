@@ -724,6 +724,11 @@ class RelocationDiagnosisCase(ContractCase):
                 self._assert_no_hint(root)
 
     def test_T_c_replaced_lock_dir_in_same_root_is_not_candidate(self):
+        # T-c covers only a foreign .gg-lock whose recorded root identity
+        # still matches this root (a replaced control in the same root).
+        # A control folder swapped in from another paper leaves all three
+        # identities foreign, so it *can* be a candidate: T-c does not
+        # cover that case, and the hint says so when it speaks.
         # Same root, foreign .gg-lock: the root identity still matches,
         # so this is a replaced control, not a relocated folder.
         root = self._copy("replaced")
@@ -776,6 +781,54 @@ class RelocationDiagnosisCase(ContractCase):
         self.assertEqual(
             gg_lock.inspect_lock(copy)["reason"],
             "directory_identity_mismatch")
+
+    def test_T_f_active_recovery_marker_suppresses_candidate_and_hint(self):
+        # R-01: while a recovery marker is present the documented next step
+        # (`lock-upgrade`) is refused with recovery_active_exists, so the
+        # diagnosis must not advertise it: no candidate, no hint, and the
+        # existing marker is what the refusal reports. Both a well-formed
+        # claim and a corrupt marker file count as present.
+        markers = {
+            "valid_claim": json.dumps(
+                {"schema": gg_lock.CLAIM_SCHEMA, "recovery_id": "x"}),
+            "corrupt": "not json at all",
+        }
+        for name, body in markers.items():
+            with self.subTest(marker=name):
+                root = self._copy("active-" + name)
+                self.assertIs(
+                    gg_lock.inspect_lock(root)["relocation_candidate"], True)
+                (root / gg_lock.ACTIVE_NAME).write_text(body)
+
+                st = gg_lock.inspect_lock(root)
+                self.assertEqual(st["structure"], "damaged")
+                self.assertEqual(st["reason"], "directory_identity_mismatch")
+                self.assertFalse(st["relocation_candidate"])
+                self.assertEqual(
+                    st["recovery_id"],
+                    "x" if name == "valid_claim" else None)
+
+                with self.assertRaises(gg_lock.LockError) as cm:
+                    gg_lock.Lock(root).__enter__()
+                self.assertEqual(cm.exception.status, "busy")
+                self.assertEqual(cm.exception.reason, "recovery_active")
+                self.assertIsNone(cm.exception.hint)
+                self.assertNotIn(gg_lock._RELOCATION_HINT, str(cm.exception))
+
+                with self.assertRaises(gg_lock.LockError) as cm:
+                    gg_lock.cleanup_owner(root)
+                self.assertEqual(cm.exception.status, "damaged")
+                self.assertEqual(
+                    cm.exception.reason, "directory_identity_mismatch")
+                self.assertIsNone(cm.exception.hint)
+                self.assertNotIn(gg_lock._RELOCATION_HINT, str(cm.exception))
+
+                # The marker is runtime state, not a repair: removing it
+                # brings the candidate diagnosis back.
+                (root / gg_lock.ACTIVE_NAME).unlink()
+                st = gg_lock.inspect_lock(root)
+                self.assertEqual(st["reason"], "directory_identity_mismatch")
+                self.assertIs(st["relocation_candidate"], True)
 
 
 if __name__ == "__main__":
