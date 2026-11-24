@@ -23,6 +23,7 @@ try:
 except ImportError as error:  # python-docx (or its layout helper) absent
     DOCX_IMPORT_ERROR = error
 from gg_document import parse, spans, SCI, FRONT, school_toc_range, school_frontmatter_plan, split_caption_credit
+import gg_core
 from gg_core import digest, local
 import gg_hwpx
 from gg_document import photo_guide, photo_requests
@@ -908,9 +909,14 @@ def main(argv=None):
         manifest_path = out.with_suffix(".manifest.json")
         if any(path.exists() or path.is_symlink() for path in (out, manifest_path)):
             raise ValueError("기존 산출물·매니페스트를 덮어쓰지 않음: 새 경로 지정")
-        source_text = src.read_text(encoding="utf-8")
+        source_text = src.read_text(encoding="utf-8-sig")
         if not source_text.strip():
             raise ValueError("내보낼 본문이 없음: 입력 파일이 비어 있음")
+        # 마커 밖에 메타가 아닌 글이 있으면 draft()가 조용히 버리므로 멈춘다.
+        outside = gg_core.draft_marker_extra(source_text)
+        if outside:
+            raise ValueError("DRAFT 마커 밖에 일반 글이 있음"
+                             "(발행에서 빠짐): " + outside.strip()[:60])
         table_reports = []
         specialty_table_reports = []
         # 그림 목적지는 원고 옆(src.parent) → 작업 폴더 뿌리(base) 순서로 푼다
@@ -981,6 +987,11 @@ def main(argv=None):
                  "들어가지 않아 줄바꿈 중 어절이 갈라질 수 있다. 워드에서 해당 표를 확인한다."
                  % len(split_tables)) if split_tables else None))),
         }
+        if gg_core.START in source_text or gg_core.END in source_text:
+            # 렌더 경로(parse)가 이미 draft()로 봉투를 뗀다. input_hash는 원 파일
+            # 바이트 유지, 뗀 본문 해시만 따로 남긴다(깨진 마커는 위에서 ValueError).
+            manifest["draft_envelope"] = {"body_hash": digest(
+                gg_core.draft(source_text).encode("utf-8"))}
         manifest_path.write_text(
             json.dumps(manifest, ensure_ascii=False, indent=2),
             encoding="utf-8",
