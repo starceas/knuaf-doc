@@ -18,6 +18,15 @@ student had is deleted, and the result JSON names the preserved folder.
 Renaming is the only recovery action tried; a rename that fails (the folder
 is in use) is reported blocked with what to close, never worked around by
 deleting.
+
+When ``KNUAF_DEPS_VENV`` is set (the desktop app sets it), that folder is the
+environment for every command and ``<작업폴더>/.venv`` is never touched; an
+empty value means "no environment yet", never "use the folder". Interpreter
+children started with ``-m``/``-c`` always run isolated (``-I -X utf8``) from
+inside the environment folder, the pip bootstrap of a new environment
+included. A relative working folder keeps working: the executable handed to a
+child is made absolute before the child's directory changes, while the paths
+printed in the result stay as given.
 """
 
 import argparse
@@ -25,6 +34,7 @@ import errno
 import importlib
 import importlib.metadata
 import json
+import ntpath
 import os
 import re
 import subprocess
@@ -165,10 +175,103 @@ _VENV_INTERPRETERS = (
 )
 
 
+# App contract (v0.7.5 design rev. 3 §3.1, D-U). The app keeps ONE dependency
+# environment per PC outside any thesis folder and names it here. When the
+# variable is present — even empty — the folder's ``.venv`` is never looked
+# at, run, moved or deleted: a ``.venv`` someone planted in a shared folder
+# must not run during a dependency check. Absent, everything behaves exactly
+# as before (skill-only users). The app checks this constant to know the
+# installed skill honours the contract.
+DEPS_VENV_ENV = "KNUAF_DEPS_VENV"
+# D-A: set to "1" in agent environments so only the app's own button can
+# install into the shared app environment. ``doctor``/``python`` still work.
+DEPS_VENV_READONLY_ENV = "KNUAF_DEPS_VENV_READONLY"
+
+
+def _is_full_path(value, windows=None):
+    """True for a path that names one place no matter the working directory.
+
+    POSIX: an absolute path. Windows: a drive (``C:\\x``) or UNC
+    (``\\\\host\\share\\x``) path. ``ntpath.isabs`` alone is also true for a
+    drive-less root path (``\\x``), which still depends on the current drive.
+    ``windows`` is the same test seam as ``_on_windows``.
+    """
+    if windows is None:
+        windows = _on_windows()
+    if windows:
+        return bool(ntpath.splitdrive(value)[0]) and ntpath.isabs(value)
+    return os.path.isabs(value)
+
+
+def _deps_venv_override():
+    """None when the variable is absent, else its value ("" allowed).
+
+    The one place that reads the contract variable, so ``venv_python``,
+    ``doctor``, ``ensure`` and the ``python`` command cannot disagree. A
+    relative value is refused: it would resolve against the working
+    directory, which may be the very folder the contract keeps out.
+    """
+    value = os.environ.get(DEPS_VENV_ENV)
+    if value and not _is_full_path(value):
+        raise ValueError(DEPS_VENV_ENV + "는 절대 경로여야 함: " + value)
+    return value
+
+
+def _exec_path(path):
+    """``path`` as a child can start it after the child's cwd changed.
+
+    A child runs inside the environment folder, and a relative executable is
+    looked up against the child's new cwd, not ours. Printed paths keep the
+    form the caller gave (the v0.6.5 output); only what is handed to
+    ``subprocess`` is made absolute. ``abspath`` and not ``resolve``: a venv
+    interpreter is a link and must stay the link. A bare command name has no
+    folder part and is left for the PATH lookup.
+    """
+    text = str(path)
+    return os.path.abspath(text) if os.path.dirname(text) else text
+
+
+def _exec_pip_argv(cmd):
+    """The argv handed to ``subprocess`` for the reported pip command ``cmd``.
+
+    ``cmd`` stays exactly what the result reports (v0.6.5). Only the copy
+    that runs differs: the executable is made absolute (``_exec_path``) and a
+    ``--find-links`` value that is a relative local path is resolved against
+    the caller's directory, since the child starts inside the environment
+    folder. A URL (anything with ``://``, e.g. ``file://`` or ``https://``)
+    and an absolute path go to pip untouched.
+    """
+    argv = [_exec_path(cmd[0])] + list(cmd[1:])
+    for i, item in enumerate(argv[:-1]):
+        if item == "--find-links":
+            links = argv[i + 1]
+            if "://" not in links and not os.path.isabs(links):
+                argv[i + 1] = os.path.abspath(links)
+    return argv
+
+
+def _env_dir(project):
+    """The environment folder in use for ``project``, or None if there is none.
+
+    Variable absent: ``<project>/.venv`` (unchanged). Present and empty: no
+    environment yet — never a fall back to the folder. Present: that path.
+    """
+    override = _deps_venv_override()
+    if override is None:
+        return Path(project) / ".venv"
+    return Path(override) if override else None
+
+
+def _deps_venv_readonly():
+    return os.environ.get(DEPS_VENV_READONLY_ENV) == "1"
+
+
 def venv_python(project):
-    project = Path(project)
+    env_dir = _env_dir(project)
+    if env_dir is None:
+        return None
     for rel in _VENV_INTERPRETERS:
-        cand = project / ".venv" / rel
+        cand = env_dir / rel
         if cand.is_file():
             return cand
     return None
@@ -337,17 +440,24 @@ def _import_and_version_current(module, dist):
         return True, None
 
 
-def _import_and_version(python, module, dist):
-    """Import + dist version checked inside the given interpreter."""
+def _import_and_version(python, module, dist, cwd=None):
+    """Import + dist version checked inside the given interpreter.
+
+    ``-I`` keeps the working directory, PYTHONPATH and the user site out of
+    ``sys.path`` (a ``docx.py`` lying in a thesis folder must not be what
+    gets imported); it also ignores PYTHONUTF8, so ``-X utf8`` carries UTF-8.
+    ``cwd`` is the environment folder (app contract §3.3-2).
+    """
     if not _IDENT_PATH.fullmatch(module) or not _DIST.fullmatch(dist):
         raise ValueError("import/dist 이름 형식 오류")
     proc = subprocess.run(
-        [str(python), "-c", _PROBE, module, dist],
+        [_exec_path(python), "-I", "-X", "utf8", "-c", _PROBE, module, dist],
         capture_output=True,
         text=True,
         encoding="utf-8",
         errors="replace",
         env=_child_env(),
+        cwd=None if cwd is None else _exec_path(cwd),
         timeout=60,
     )
     if proc.returncode != 0:
@@ -386,6 +496,7 @@ def doctor(project):
     deps = load_manifest()
     project = Path(project)
     vpy = venv_python(project)
+    env_dir = _env_dir(project) if vpy else None
     selected = str(vpy) if vpy else sys.executable
     rows = []
     for d in deps:
@@ -393,7 +504,7 @@ def doctor(project):
             continue
         cur = _import_and_version_current(d["import_name"], d["dist"])
         ven = (
-            _import_and_version(vpy, d["import_name"], d["dist"])
+            _import_and_version(vpy, d["import_name"], d["dist"], cwd=env_dir)
             if vpy
             else None
         )
@@ -424,10 +535,40 @@ def doctor(project):
     }
 
 
+def _ensurepip_argv(python):
+    """The pip bootstrap of a new environment, started by us, isolated."""
+    return [
+        _exec_path(python),
+        "-I",
+        "-X",
+        "utf8",
+        "-m",
+        "ensurepip",
+        "--upgrade",
+        "--default-pip",
+    ]
+
+
 def ensure(project, find_links=None, no_index=False):
+    if _deps_venv_readonly():
+        # Checked before anything else: nothing is read, created or run.
+        return {
+            "status": "blocked",
+            "code": "deps_venv_readonly",
+            "reason": "이 환경에서는 의존성 설치가 막혀 있음(" + DEPS_VENV_READONLY_ENV + "=1) — 앱의 준비 버튼으로 설치해 주세요.",
+        }, 2
     deps = load_manifest()
     project = Path(project)
-    venv_dir = project / ".venv"
+    venv_dir = _env_dir(project)
+    if venv_dir is None:
+        # Variable present but empty: there is no environment to prepare,
+        # and falling back to the folder's .venv is exactly what the
+        # contract forbids.
+        return {
+            "status": "blocked",
+            "code": "deps_venv_empty",
+            "reason": DEPS_VENV_ENV + "가 비어 있어 준비할 의존성 환경이 없음 — 앱이 환경 경로를 넘겨야 함",
+        }, 2
     _check_venv_dir(venv_dir)
     vpy = venv_python(project)
     preserved = None
@@ -441,7 +582,23 @@ def ensure(project, find_links=None, no_index=False):
     created = False
     if not vpy:
         try:
-            venv.EnvBuilder(with_pip=True, symlinks=os.name != "nt").create(venv_dir)
+            # with_pip=False: the builder's own pip bootstrap starts an
+            # ``ensurepip`` child without -I/-X utf8, so it is run here
+            # instead, isolated like every other child.
+            venv.EnvBuilder(with_pip=False, symlinks=os.name != "nt").create(venv_dir)
+            new_python = venv_python(project)
+            if new_python:
+                subprocess.run(
+                    _ensurepip_argv(new_python),
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    timeout=600,
+                    env=_child_env(),
+                    cwd=_exec_path(venv_dir),
+                    check=True,
+                )
         except Exception as e:
             if not preserved:
                 raise
@@ -461,8 +618,15 @@ def ensure(project, find_links=None, no_index=False):
             "reason": reason,
             "preserved_venv": preserved,
         }, 1
+    # -I: a pip.py in the working directory or on PYTHONPATH must not be what
+    # ``-m pip`` runs; -X utf8 replaces the PYTHONUTF8 that -I ignores. The
+    # child runs inside the environment folder, so a relative --find-links is
+    # made absolute against the caller's directory first.
     cmd = [
         str(vpy),
+        "-I",
+        "-X",
+        "utf8",
         "-m",
         "pip",
         "--disable-pip-version-check",
@@ -475,14 +639,19 @@ def ensure(project, find_links=None, no_index=False):
     if find_links:
         cmd += ["--find-links", str(find_links)]
     try:
+        # ``cmd`` is what the result reports (every value as the caller gave
+        # it, as in v0.6.5); the child gets the executable made absolute and
+        # a relative local --find-links resolved against the caller's
+        # directory, because it starts inside the environment folder.
         proc = subprocess.run(
-            cmd,
+            _exec_pip_argv(cmd),
             capture_output=True,
             text=True,
             encoding="utf-8",
             errors="replace",
             timeout=600,
             env=_child_env(),
+            cwd=_exec_path(venv_dir),
         )
     except Exception as e:
         if not preserved:
@@ -500,7 +669,7 @@ def ensure(project, find_links=None, no_index=False):
                 if not _applicable(d):
                     continue
                 imported, version = _import_and_version(
-                    vpy, d["import_name"], d["dist"]
+                    vpy, d["import_name"], d["dist"], cwd=venv_dir
                 )
                 verified[d["dist"]] = imported and spec_satisfied(
                     version, d["spec"], d["dist"]

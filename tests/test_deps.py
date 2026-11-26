@@ -9,6 +9,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import venv
 from pathlib import Path
 from unittest import mock
 
@@ -64,11 +65,38 @@ class PipEnvTests(ContractCase):
         self.assertIn("PATH", env)
 
 
+def _real_venv(path):
+    """A real, pip-less venv (fast): returns its interpreter."""
+    venv.EnvBuilder(with_pip=False, symlinks=os.name != "nt").create(path)
+    for rel in (Path("bin") / "python3", Path("bin") / "python",
+                Path("Scripts") / "python.exe"):
+        if (path / rel).is_file():
+            return path / rel
+    raise AssertionError("venv interpreter not found under " + str(path))
+
+
+def _site_packages(path):
+    found = sorted(path.glob("lib/python*/site-packages")) + sorted(
+        path.glob("Lib/site-packages"))
+    if not found:
+        raise AssertionError("site-packages not found under " + str(path))
+    return found[0]
+
+
+def _marker_writer(marker):
+    return "import pathlib; pathlib.Path(%r).write_text('ran')\n" % str(marker)
+
+
 class ImportProbeTests(ContractCase):
     def test_unicode_import_under_ascii_parent_returns_version(self):
+        # The probe child runs with -I, so PYTHONPATH no longer reaches it:
+        # the module and its metadata live in a real environment's
+        # site-packages instead (the only place the probe may look).
         deps = runtime("gg_deps")
         with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
+            env = Path(tmp) / "env"
+            python = _real_venv(env)
+            root = _site_packages(env)
             (root / "unicode_probe.py").write_text(
                 "import sys\nsys.stderr.write('한글 import 진단')\n", encoding="utf-8")
             metadata = root / "synthetic_probe-1.2.3.dist-info"
@@ -76,9 +104,28 @@ class ImportProbeTests(ContractCase):
             (metadata / "METADATA").write_text(
                 "Name: synthetic-probe\nVersion: 1.2.3\n", encoding="utf-8")
             with mock.patch.dict(os.environ, {
-                    "PYTHONPATH": tmp, "PYTHONUTF8": "0", "PYTHONIOENCODING": "ascii"}):
+                    "PYTHONUTF8": "0", "PYTHONIOENCODING": "ascii"}):
                 self.assertEqual(deps._import_and_version(
-                    sys.executable, "unicode_probe", "synthetic-probe"), (True, "1.2.3"))
+                    python, "unicode_probe", "synthetic-probe", cwd=env),
+                    (True, "1.2.3"))
+
+    def test_probe_ignores_pythonpath_and_working_directory(self):
+        """-I: a same-named module on PYTHONPATH or in the child's working
+        directory is never what the probe imports (app contract §3.3-2)."""
+        deps = runtime("gg_deps")
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            env = tmp / "env"
+            python = _real_venv(env)
+            planted = tmp / "folder"
+            planted.mkdir()
+            marks = [tmp / "PWNED-pythonpath", tmp / "PWNED-cwd"]
+            (planted / "planted_mod.py").write_text(_marker_writer(marks[0]))
+            (env / "planted_mod.py").write_text(_marker_writer(marks[1]))
+            with mock.patch.dict(os.environ, {"PYTHONPATH": str(planted)}):
+                self.assertEqual(deps._import_and_version(
+                    python, "planted_mod", "planted-mod", cwd=env), (False, None))
+            self.assertEqual([], [m.name for m in marks if m.exists()])
 
     def test_subprocess_error_is_a_structured_cli_failure(self):
         deps = runtime("gg_deps")
@@ -740,6 +787,541 @@ class WindowsLauncherFailureReasonTests(ContractCase):
         if os.name != "nt":
             # The unpatched host really is POSIX here, so nothing qualifies.
             self.assertFalse(deps._is_windows_launcher_copy(interp))
+
+
+class DepsVenvContractTests(ContractCase):
+    """KNUAF_DEPS_VENV (app v0.7.5 design rev. 3 §3.1, D-U/D-A): when the
+    app names its environment, the thesis folder's .venv is never run, moved
+    or deleted, and -m/-c children run isolated inside that environment."""
+
+    MANIFEST = BrokenVenvRecoveryTests.MANIFEST
+
+    def setUp(self):
+        self.deps = runtime("gg_deps")
+        self.tmp = tempfile.TemporaryDirectory(prefix="gg-deps-contract-")
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name)
+        self.project = self.root / "남이 준 논문"
+        self.project.mkdir()
+        self.app_env = self.root / "userData" / "deps" / "k0"
+        # Every test states the contract variables itself.
+        self.environ = mock.patch.dict(os.environ)
+        self.environ.start()
+        self.addCleanup(self.environ.stop)
+        os.environ.pop(self.deps.DEPS_VENV_ENV, None)
+        os.environ.pop(self.deps.DEPS_VENV_READONLY_ENV, None)
+
+    def _interp_rel(self):
+        if os.name == "nt":
+            return Path("Scripts") / "python.exe"
+        return Path("bin") / "python3"
+
+    def _plain_interp(self, env_dir):
+        """An interpreter file that is only looked up, never run."""
+        interp = env_dir / self._interp_rel()
+        interp.parent.mkdir(parents=True, exist_ok=True)
+        interp.write_text("#!/bin/sh\n", encoding="utf-8")
+        return interp
+
+    def _folder_venv_trap(self):
+        """The folder's .venv interpreter: running it leaves a marker on
+        POSIX. On Windows it is a plain file (a shell script cannot run
+        there); the test still proves the app env was the one selected."""
+        marker = self.root / "PWNED-folder-venv"
+        interp = self.project / ".venv" / self._interp_rel()
+        interp.parent.mkdir(parents=True)
+        interp.write_text("#!/bin/sh\necho ran > '%s'\nexit 0\n" % marker,
+                          encoding="utf-8")
+        if os.name != "nt":
+            interp.chmod(0o755)
+        return interp, marker
+
+    def _set(self, value):
+        os.environ[self.deps.DEPS_VENV_ENV] = str(value)
+
+    def _main(self, *argv):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = self.deps.main(list(argv))
+        return code, out.getvalue()
+
+    def _manifest(self):
+        return mock.patch.object(self.deps, "load_manifest",
+                                 return_value=[dict(d) for d in self.MANIFEST])
+
+    def _folder_untouched(self, interp, before):
+        self.assertEqual(before, interp.read_bytes())
+        self.assertEqual([], [p.name for p in self.project.iterdir()
+                              if p.name.startswith(".venv-broken-")])
+
+    def test_contract_constants_are_declared(self):
+        self.assertEqual("KNUAF_DEPS_VENV", self.deps.DEPS_VENV_ENV)
+        self.assertEqual("KNUAF_DEPS_VENV_READONLY",
+                         self.deps.DEPS_VENV_READONLY_ENV)
+
+    def test_venv_python_follows_only_the_variable(self):
+        folder = self._plain_interp(self.project / ".venv")
+        app = self._plain_interp(self.app_env)
+        # Absent: unchanged behavior, the folder's .venv.
+        self.assertEqual(folder, self.deps.venv_python(self.project))
+        # Present: that environment only.
+        self._set(self.app_env)
+        self.assertEqual(app, self.deps.venv_python(self.project))
+        # Present but empty: nothing — never a fall back to the folder.
+        self._set("")
+        self.assertIsNone(self.deps.venv_python(self.project))
+
+    def test_python_command_follows_the_variable(self):
+        self._plain_interp(self.project / ".venv")
+        app = self._plain_interp(self.app_env)
+        self._set(self.app_env)
+        code, out = self._main("python", str(self.project))
+        self.assertEqual((0, str(app)), (code, out.strip()))
+        self._set("")
+        code, out = self._main("python", str(self.project))
+        self.assertEqual((0, sys.executable), (code, out.strip()))
+
+    def test_relative_variable_is_refused(self):
+        self._plain_interp(self.project / ".venv")
+        self._set(os.path.join("userData", "deps"))
+        code, out = self._main("python", str(self.project))
+        self.assertEqual(2, code)
+        self.assertEqual("blocked", json.loads(out)["status"])
+
+    def test_doctor_runs_the_app_env_never_the_folder(self):
+        trap, marker = self._folder_venv_trap()
+        before = trap.read_bytes()
+        app_python = _real_venv(self.app_env)
+        witness = self.root / "WITNESS-app-env"
+        (_site_packages(self.app_env) / "synthetic_pkg.py").write_text(
+            "import pathlib; pathlib.Path(%r).write_text('app-env')\n" % str(witness))
+        decoys = [self.root / "PWNED-pythonpath", self.root / "PWNED-cwd"]
+        (self.project / "synthetic_pkg.py").write_text(_marker_writer(decoys[0]))
+        (self.app_env / "synthetic_pkg.py").write_text(_marker_writer(decoys[1]))
+        os.environ["PYTHONPATH"] = str(self.project)
+        self._set(self.app_env)
+        with self._manifest(), mock.patch.object(
+                self.deps, "_import_and_version_current", return_value=(False, None)):
+            report = self.deps.doctor(self.project)
+
+        self.assertEqual(str(app_python), report["venv_python"])
+        self.assertEqual(str(app_python), report["selected_python"])
+        self.assertTrue(report["dependencies"][0]["venv"]["imported"])
+        self.assertTrue(witness.exists())  # the child really ran in the app env
+        self.assertFalse(marker.exists())
+        self.assertEqual([], [d.name for d in decoys if d.exists()])
+        self._folder_untouched(trap, before)
+
+    def test_doctor_with_empty_variable_never_looks_at_the_folder(self):
+        folder = self._plain_interp(self.project / ".venv")
+        self._set("")
+
+        def no_child(*args, **kwargs):
+            raise AssertionError("빈 값이면 어떤 환경 실행기도 띄우면 안 됨")
+
+        with self._manifest(), mock.patch.object(
+                self.deps, "_import_and_version_current", return_value=(True, "1.2")), \
+                mock.patch.object(self.deps.subprocess, "run", side_effect=no_child):
+            report = self.deps.doctor(self.project)
+        self.assertIsNone(report["venv_python"])
+        self.assertEqual(sys.executable, report["selected_python"])
+        self.assertNotIn(str(folder), json.dumps(report, ensure_ascii=False))
+
+    def test_ensure_uses_the_app_env_and_leaves_the_folder_venv(self):
+        folder = self._plain_interp(self.project / ".venv")
+        before = folder.read_bytes()
+        app = self._plain_interp(self.app_env)
+        captured = {}
+
+        def fake_run(cmd, **kwargs):
+            captured.update(cmd=cmd, kwargs=kwargs)
+            return type("Done", (), {"returncode": 0, "stdout": "", "stderr": ""})()
+
+        self._set(self.app_env)
+        with self._manifest(), \
+                mock.patch.object(self.deps, "_import_and_version",
+                                  return_value=(True, "1.2")) as probe, \
+                mock.patch.object(self.deps.subprocess, "run", side_effect=fake_run):
+            body, code = self.deps.ensure(self.project, find_links="wheels")
+
+        self.assertEqual(0, code, body)
+        self.assertEqual(str(self.app_env), body["venv"])
+        self.assertEqual(str(app), body["venv_python"])
+        self.assertEqual([str(app), "-I", "-X", "utf8", "-m", "pip"],
+                         captured["cmd"][:6])
+        self.assertEqual(str(self.app_env), captured["kwargs"]["cwd"])
+        # A relative --find-links still means the caller's folder.
+        links = captured["cmd"][captured["cmd"].index("--find-links") + 1]
+        self.assertEqual(os.path.abspath("wheels"), links)
+        self.assertEqual(self.app_env, probe.call_args.kwargs["cwd"])
+        self._folder_untouched(folder, before)
+
+    def test_ensure_creates_the_app_env_not_the_folder_venv(self):
+        created = []
+        builder = self
+
+        class FakeBuilder:
+            def __init__(self, **kwargs):
+                pass
+
+            def create(self, path):
+                created.append(Path(path))
+                builder._plain_interp(Path(path))
+
+        self._set(self.app_env)
+        with self._manifest(), \
+                mock.patch.object(self.deps, "_import_and_version",
+                                  return_value=(True, "1.2")), \
+                mock.patch.object(self.deps.subprocess, "run", return_value=type(
+                    "Done", (), {"returncode": 0, "stdout": "", "stderr": ""})()), \
+                mock.patch.object(self.deps.venv, "EnvBuilder", FakeBuilder):
+            body, code = self.deps.ensure(self.project)
+
+        self.assertEqual(0, code, body)
+        self.assertTrue(body["created"])
+        self.assertEqual([self.app_env], created)
+        self.assertFalse((self.project / ".venv").exists())
+
+    def test_ensure_never_moves_a_broken_folder_venv(self):
+        moved = self.root / "runtime" / "python3"
+        moved.parent.mkdir(parents=True)
+        moved.write_text("#!/bin/sh\n", encoding="utf-8")
+        link = self.project / ".venv" / self._interp_rel()
+        link.parent.mkdir(parents=True)
+        try:
+            link.symlink_to(moved)
+        except (OSError, NotImplementedError):
+            self.skipTest("symlink를 만들 수 없는 환경")
+        moved.unlink()
+        self._plain_interp(self.app_env)
+        self._set(self.app_env)
+        with self._manifest(), \
+                mock.patch.object(self.deps, "_import_and_version",
+                                  return_value=(True, "1.2")), \
+                mock.patch.object(self.deps.subprocess, "run", return_value=type(
+                    "Done", (), {"returncode": 0, "stdout": "", "stderr": ""})()):
+            body, code = self.deps.ensure(self.project)
+
+        self.assertEqual(0, code, body)
+        self.assertIsNone(body["preserved_venv"])
+        self.assertTrue(link.is_symlink())
+        self.assertEqual([], [p.name for p in self.project.iterdir()
+                              if p.name.startswith(".venv-broken-")])
+
+    def test_pip_child_ignores_a_planted_pip_module(self):
+        """Real child, no pip in the env: without -I, ``-m pip`` would run
+        the pip.py lying in the working directory or on PYTHONPATH."""
+        _real_venv(self.app_env)
+        decoys = [self.root / "PWNED-pip-pythonpath", self.root / "PWNED-pip-cwd"]
+        (self.project / "pip.py").write_text(_marker_writer(decoys[0]))
+        (self.app_env / "pip.py").write_text(_marker_writer(decoys[1]))
+        os.environ["PYTHONPATH"] = str(self.project)
+        self._set(self.app_env)
+        with self._manifest():
+            body, code = self.deps.ensure(self.project, no_index=True)
+
+        self.assertEqual(1, code, body)
+        self.assertEqual("failed", body["status"])
+        self.assertNotEqual(0, body["pip_exit"])
+        self.assertEqual([], [d.name for d in decoys if d.exists()])
+
+    def test_empty_variable_blocks_ensure_without_touching_anything(self):
+        folder = self._plain_interp(self.project / ".venv")
+        before = folder.read_bytes()
+
+        def never(*args, **kwargs):
+            raise AssertionError("빈 값이면 아무것도 만들거나 실행하면 안 됨")
+
+        self._set("")
+        with self._manifest(), \
+                mock.patch.object(self.deps.subprocess, "run", side_effect=never), \
+                mock.patch.object(self.deps.venv, "EnvBuilder", side_effect=never):
+            code, out = self._main("ensure", str(self.project))
+
+        body = json.loads(out)
+        self.assertEqual(2, code)
+        self.assertEqual("blocked", body["status"])
+        self.assertEqual("deps_venv_empty", body["code"])
+        self._folder_untouched(folder, before)
+
+    def test_readonly_refuses_ensure_with_a_code(self):
+        self._plain_interp(self.app_env)
+
+        def never(*args, **kwargs):
+            raise AssertionError("READONLY면 설치를 시작하면 안 됨")
+
+        os.environ[self.deps.DEPS_VENV_READONLY_ENV] = "1"
+        for value in (str(self.app_env), None):
+            with self.subTest(variable=value):
+                if value is None:
+                    os.environ.pop(self.deps.DEPS_VENV_ENV, None)
+                else:
+                    self._set(value)
+                with mock.patch.object(self.deps.subprocess, "run", side_effect=never), \
+                        mock.patch.object(self.deps.venv, "EnvBuilder", side_effect=never):
+                    code, out = self._main("ensure", str(self.project))
+                body = json.loads(out)
+                self.assertNotEqual(0, code)
+                self.assertEqual("blocked", body["status"])
+                self.assertEqual("deps_venv_readonly", body["code"])
+        self.assertFalse((self.project / ".venv").exists())
+
+    def test_readonly_still_allows_doctor_and_python(self):
+        app = self._plain_interp(self.app_env)
+        os.environ[self.deps.DEPS_VENV_READONLY_ENV] = "1"
+        self._set(self.app_env)
+        code, out = self._main("python", str(self.project))
+        self.assertEqual((0, str(app)), (code, out.strip()))
+        with self._manifest(), \
+                mock.patch.object(self.deps, "_import_and_version_current",
+                                  return_value=(True, "1.2")), \
+                mock.patch.object(self.deps, "_import_and_version",
+                                  return_value=(True, "1.2")):
+            code, out = self._main("doctor", str(self.project))
+        self.assertEqual(0, code)
+        self.assertEqual(str(app), json.loads(out)["venv_python"])
+
+    def test_every_m_or_c_child_list_is_isolated(self):
+        """Mirror of the app's static gate: a list literal that starts an
+        interpreter with -m/-c must carry -I in the same literal."""
+        import ast
+
+        tree = ast.parse((SCRIPTS / "gg_deps.py").read_text(encoding="utf-8"))
+        offenders = []
+        for node in ast.walk(tree):
+            if isinstance(node, ast.List):
+                consts = [e.value for e in node.elts
+                          if isinstance(e, ast.Constant) and isinstance(e.value, str)]
+                if ("-m" in consts or "-c" in consts) and "-I" not in consts:
+                    offenders.append(node.lineno)
+        self.assertEqual([], offenders)
+
+    # --- roh319 I-01: a relative working folder keeps working -------------
+
+    def _chdir(self, path):
+        old = os.getcwd()
+        os.chdir(path)
+        self.addCleanup(os.chdir, old)
+
+    def _synthetic_dist(self, env_dir):
+        """A module + metadata in the environment's own site-packages."""
+        root = _site_packages(env_dir)
+        (root / "synthetic_pkg.py").write_text("VALUE = 1\n", encoding="utf-8")
+        meta = root / "synthetic_pkg-1.2.dist-info"
+        meta.mkdir()
+        (meta / "METADATA").write_text(
+            "Name: synthetic-pkg\nVersion: 1.2\n", encoding="utf-8")
+
+    def test_doctor_with_a_relative_folder_keeps_the_old_output(self):
+        """No variable: ``doctor <relative>`` ran in v0.6.5 and printed the
+        relative paths. The child starts inside the venv folder, so the
+        executable it is handed must already be absolute."""
+        rel = self.project.name
+        _real_venv(self.project / ".venv")
+        self._synthetic_dist(self.project / ".venv")
+        self._chdir(self.root)
+        with self._manifest(), mock.patch.object(
+                self.deps, "_import_and_version_current", return_value=(False, None)):
+            code, out = self._main("doctor", rel)
+
+        self.assertEqual(0, code, out)
+        report = json.loads(out)
+        shown = str(Path(rel) / ".venv" / self._interp_rel())
+        self.assertEqual(rel, report["project"])
+        self.assertEqual(shown, report["venv_python"])
+        self.assertEqual(shown, report["selected_python"])
+        self.assertTrue(report["dependencies"][0]["venv"]["imported"])
+        self.assertEqual("1.2", report["dependencies"][0]["venv"]["version"])
+        self.assertTrue(report["ready"])
+
+    def test_doctor_with_a_relative_folder_and_the_app_env(self):
+        _real_venv(self.app_env)
+        self._synthetic_dist(self.app_env)
+        self._set(self.app_env)
+        self._chdir(self.root)
+        with self._manifest(), mock.patch.object(
+                self.deps, "_import_and_version_current", return_value=(False, None)):
+            code, out = self._main("doctor", self.project.name)
+
+        self.assertEqual(0, code, out)
+        report = json.loads(out)
+        self.assertEqual(self.project.name, report["project"])
+        self.assertEqual(str(self.app_env / self._interp_rel()), report["venv_python"])
+        self.assertTrue(report["dependencies"][0]["venv"]["imported"])
+
+    def test_ensure_with_a_relative_folder_starts_pip_and_prints_as_before(self):
+        """Real pip child (the env has no pip, so it exits non-zero on its
+        own): it must start at all, which a relative executable cannot do
+        from the environment folder. The result still names the relative
+        paths the caller used."""
+        rel = self.project.name
+        _real_venv(self.project / ".venv")
+        self._chdir(self.root)
+        with self._manifest():
+            code, out = self._main("ensure", rel, "--no-index")
+
+        body = json.loads(out)
+        self.assertEqual(1, code, body)
+        self.assertEqual("failed", body["status"])
+        self.assertNotEqual(0, body["pip_exit"])
+        self.assertIn("No module named pip", body["pip_stderr_tail"])
+        interp = str(Path(rel) / ".venv" / self._interp_rel())
+        self.assertEqual(str(Path(rel) / ".venv"), body["venv"])
+        self.assertEqual(interp, body["venv_python"])
+        self.assertEqual(interp, body["pip_argv"][0])
+        self.assertEqual(["-I", "-X", "utf8", "-m", "pip"], body["pip_argv"][1:6])
+
+    def test_python_command_with_a_relative_folder_prints_the_relative_path(self):
+        self._plain_interp(self.project / ".venv")
+        self._chdir(self.root)
+        code, out = self._main("python", self.project.name)
+        self.assertEqual(0, code)
+        self.assertEqual(
+            str(Path(self.project.name) / ".venv" / self._interp_rel()), out.strip())
+
+    def test_app_env_path_must_name_a_drive_or_unc_on_windows(self):
+        """``ntpath.isabs`` is true for ``\\foo`` too, which still depends on
+        the current drive: the contract wants a path that names one place."""
+        deps = self.deps
+        for value in ("C:\\env\\k0", "c:/env/k0", "\\\\host\\share\\env"):
+            with self.subTest(windows=True, value=value):
+                self.assertTrue(deps._is_full_path(value, windows=True))
+        for value in ("\\env\\k0", "/env/k0", "C:env\\k0", "env\\k0", "C:"):
+            with self.subTest(windows=True, value=value):
+                self.assertFalse(deps._is_full_path(value, windows=True))
+        self.assertTrue(deps._is_full_path("/env/k0", windows=False))
+        self.assertFalse(deps._is_full_path("env/k0", windows=False))
+        # The variable reader goes through the same test.
+        with mock.patch.object(deps, "_on_windows", return_value=True):
+            self._set("\\env\\k0")
+            with self.assertRaises(ValueError):
+                deps._deps_venv_override()
+            self._set("C:\\env\\k0")
+            self.assertEqual("C:\\env\\k0", deps._deps_venv_override())
+
+    # --- roh319-r2 I-01 rest: --find-links is reported as given ---------
+
+    def _ensure_reporting_find_links(self, links):
+        """Run ``ensure`` with the pip child intercepted; return the result
+        body and the argv that really reached ``subprocess``."""
+        self._plain_interp(self.app_env)
+        self._set(self.app_env)
+        captured = {}
+
+        def fake_run(cmd, **kwargs):
+            captured["argv"] = list(cmd)
+            return type("Done", (), {"returncode": 0, "stdout": "", "stderr": ""})()
+
+        with self._manifest(), \
+                mock.patch.object(self.deps, "_import_and_version",
+                                  return_value=(True, "1.2")), \
+                mock.patch.object(self.deps.subprocess, "run", side_effect=fake_run):
+            body, code = self.deps.ensure(self.project, find_links=links)
+        self.assertEqual(0, code, body)
+        return body, captured["argv"]
+
+    @staticmethod
+    def _value_after(argv, flag):
+        return argv[argv.index(flag) + 1]
+
+    def test_relative_local_find_links_is_reported_as_given_and_run_absolute(self):
+        self._chdir(self.root)
+        body, argv = self._ensure_reporting_find_links("wheelhouse")
+
+        self.assertEqual("wheelhouse", self._value_after(body["pip_argv"], "--find-links"))
+        self.assertEqual(os.path.abspath("wheelhouse"),
+                         self._value_after(argv, "--find-links"))
+        self.assertTrue(os.path.isabs(argv[0]), argv[0])
+
+    def test_find_links_url_is_reported_and_run_unchanged(self):
+        self._chdir(self.root)
+        for url in ("file:///srv/wheels", "https://example.invalid/wheels"):
+            with self.subTest(url=url):
+                body, argv = self._ensure_reporting_find_links(url)
+                self.assertEqual(url, self._value_after(body["pip_argv"], "--find-links"))
+                self.assertEqual(url, self._value_after(argv, "--find-links"))
+
+    def test_absolute_find_links_is_reported_and_run_unchanged(self):
+        absolute = os.path.abspath(str(self.root / "wheelhouse"))
+        body, argv = self._ensure_reporting_find_links(absolute)
+
+        self.assertEqual(absolute, self._value_after(body["pip_argv"], "--find-links"))
+        self.assertEqual(absolute, self._value_after(argv, "--find-links"))
+
+    # --- roh319 I-02: a new environment's pip bootstrap is isolated -------
+
+    def _record_ensure(self, project_arg):
+        """Run ``ensure`` end to end with a REAL venv builder and every child
+        process recorded (not run): the argv lists that really reach
+        ``subprocess`` — including any ``ensurepip`` child the builder itself
+        would start — and the cwd each was given."""
+        calls = []
+
+        def fake_run(cmd, **kwargs):
+            calls.append((list(cmd), kwargs))
+            # The probe child prints a version; every other child just exits 0.
+            return type("Done", (), {
+                "returncode": 0, "stdout": "1.2\n", "stderr": ""})()
+
+        with self._manifest(), mock.patch.object(
+                self.deps.subprocess, "run", side_effect=fake_run):
+            body, code = self.deps.ensure(project_arg)
+        return body, code, calls
+
+    def _assert_children_isolated(self, calls, env_dir):
+        interpreter_children = [
+            (cmd, kw) for cmd, kw in calls if "-m" in cmd or "-c" in cmd]
+        modules = {cmd[cmd.index("-m") + 1] for cmd, _ in interpreter_children
+                   if "-m" in cmd}
+        self.assertEqual({"ensurepip", "pip"}, modules)
+        self.assertTrue(any("-c" in cmd for cmd, _ in interpreter_children))
+        for cmd, kw in interpreter_children:
+            with self.subTest(argv=cmd[1:5]):
+                self.assertEqual(["-I", "-X", "utf8"], cmd[1:4])
+                self.assertTrue(os.path.isabs(cmd[0]), cmd[0])
+                self.assertEqual(os.path.abspath(env_dir), kw["cwd"])
+                self.assertEqual("1", kw["env"]["PYTHONUTF8"])
+
+    def test_new_app_env_bootstrap_children_are_isolated(self):
+        self._set(self.app_env)
+        body, code, calls = self._record_ensure(self.project)
+
+        self.assertEqual(0, code, body)
+        self.assertTrue(body["created"])
+        self._assert_children_isolated(calls, self.app_env)
+        ensurepip = next(cmd for cmd, _ in calls if "ensurepip" in cmd)
+        self.assertEqual(["-m", "ensurepip", "--upgrade", "--default-pip"],
+                         ensurepip[4:])
+        self.assertFalse((self.project / ".venv").exists())
+
+    def test_new_folder_env_with_a_relative_folder_is_isolated_too(self):
+        """No variable and a relative folder: both fixes together — the
+        builder's pip bootstrap is ours and its executable is absolute."""
+        self._chdir(self.root)
+        body, code, calls = self._record_ensure(self.project.name)
+
+        self.assertEqual(0, code, body)
+        self.assertTrue(body["created"])
+        self._assert_children_isolated(
+            calls, os.path.join(self.project.name, ".venv"))
+        # What the result prints keeps the caller's relative form.
+        self.assertEqual(
+            str(Path(self.project.name) / ".venv" / self._interp_rel()),
+            body["venv_python"])
+
+    def test_failed_ensurepip_is_reported_like_a_failed_builder(self):
+        """The bootstrap now runs in our try block: a failure there takes the
+        same blocked path (and keeps a preserved copy named) as before."""
+        self._set(self.app_env)
+
+        def failing(cmd, **kwargs):
+            raise subprocess.CalledProcessError(1, cmd)
+
+        with self._manifest(), mock.patch.object(
+                self.deps.subprocess, "run", side_effect=failing):
+            code, out = self._main("ensure", str(self.project))
+        self.assertEqual(2, code)
+        self.assertEqual("blocked", json.loads(out)["status"])
 
 
 class RuntimeDependencyConsumerTests(ContractCase):

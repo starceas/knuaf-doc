@@ -26,6 +26,7 @@
 2. `python3 <스킬>/scripts/gg_deps.py ensure <작업폴더>`로 `<작업폴더>/.venv`를 만들고 선언된 `requirements-runtime.txt`를 설치한다. 로컬 wheel 폴더가 있으면 `--no-index --find-links <wheel폴더>`로 네트워크 없이 설치한다.
 3. `ensure`는 pip 실행 뒤 반드시 새 venv 인터프리터로 각 패키지를 실제 `import`하고 버전 범위까지 검증한다. 설치 실패·네트워크 없음·wheel 부재·버전 비교 불가는 실패로 보고하며 성공처럼 기록하지 않는다.
 4. 이후 의존성이 필요한 스크립트는 `python3 <스킬>/scripts/gg_deps.py python <작업폴더>`가 출력하는 인터프리터(`.venv`가 있으면 그 안의 python)로 실행한다.
+5. 앱이 환경 변수 `KNUAF_DEPS_VENV`로 의존성 환경 경로를 넘기면 `doctor`·`ensure`·`python`은 그 환경만 쓰고 `<작업폴더>/.venv`는 보지 않는다(빈 값이면 아직 환경 없음). `KNUAF_DEPS_VENV_READONLY=1`이면 `ensure`는 `"code": "deps_venv_readonly"`로 거부되니, 설치는 앱의 준비 버튼으로 하도록 안내한다.
 
 네트워크도 로컬 wheel도 없으면 `ensure`는 실패를 보고하고, 그 사유를 작업폴더 감사 기록에 남긴다. 설치가 불가능한 의존성이 필요한 산출물(XLSX·DOCX·PDF 검증)은 만들지 않거나 "의존성 미설치로 보류"로 기록한다.
 
