@@ -32,12 +32,10 @@ MIN_SAMPLE_CPU = 0.1
 # too cheap to reach MIN_SAMPLE_CPU within this many calls, fails loudly
 # instead of spinning or reporting a tick-sized sample as if it were fine.
 MAX_BATCH = 1 << 22
-# Safety net on the growth loop, not part of the measurement: it only
-# decides when to give up (a clock that never advances, or a call far too
-# expensive to repeat), so a broken timer fails the test instead of hanging
-# the run.  Wall clock is right here -- it must bound even a loop that
-# consumes no measurable CPU.
+# Wall time bounds sampling even when the CPU clock does not advance.
+# Check between groups of calls to keep clock reads out of the inner loop.
 GIVE_UP_WALL_SECONDS = 60.0
+DEADLINE_CHECK_INTERVAL = 64
 
 
 def cpu_per_call(call, min_cpu=MIN_SAMPLE_CPU):
@@ -49,24 +47,31 @@ def cpu_per_call(call, min_cpu=MIN_SAMPLE_CPU):
     wall clock, so descheduling does not count), but it is measured over a
     window several ticks wide, so it can neither come back as 0.0 nor jump
     because the call was shorter than one tick.
+
+    Deadline checks cannot interrupt an individual call that has not returned.
     """
     deadline = time.monotonic() + GIVE_UP_WALL_SECONDS
+
+    def check_deadline() -> None:
+        if time.monotonic() >= deadline:
+            raise AssertionError(
+                "%.1fs wall-clock deadline exceeded while sampling %r "
+                "(CPU target %.3fs, batch size %d)"
+                % (GIVE_UP_WALL_SECONDS, call, min_cpu, batch))
+
     batch = 1
     while True:
         value = None
         start = time.process_time()
-        for _ in range(batch):
-            value = call()
+        for offset in range(0, batch, DEADLINE_CHECK_INTERVAL):
+            if offset:
+                check_deadline()
+            for _ in range(min(DEADLINE_CHECK_INTERVAL, batch - offset)):
+                value = call()
         span = time.process_time() - start
+        check_deadline()
         if span >= min_cpu:
             return span / batch, value
-        # Checked after each batch, so a batch that never reaches the target
-        # (or a clock that does not move) fails the test instead of looping.
-        if time.monotonic() > deadline:
-            raise AssertionError(
-                "could not reach %.3fs of CPU time for %r (batch %d, last "
-                "span %.6fs); the clock is not advancing or the call is too "
-                "expensive to repeat" % (min_cpu, call, batch, span))
         if span > 0:
             # Size the next batch from this one's per-call cost, with a
             # little headroom, so it clears MIN_SAMPLE_CPU in one step
@@ -80,6 +85,76 @@ def cpu_per_call(call, min_cpu=MIN_SAMPLE_CPU):
                 "cheap to time above the clock's resolution"
                 % (batch, call, span))
         batch = grown
+
+
+class CpuPerCallTests(ContractCase):
+    def test_cpu_target_reached_after_deadline_still_fails(self) -> None:
+        cpu = wall = 0.0
+
+        def work() -> None:
+            nonlocal cpu, wall
+            cpu += 0.2
+            wall += 61.0
+
+        with patch.object(time, "process_time", lambda: cpu), \
+                patch.object(time, "monotonic", lambda: wall):
+            with self.assertRaisesRegex(AssertionError, "wall-clock deadline"):
+                cpu_per_call(work)
+
+    def test_in_time_sample_returns_cpu_cost_and_call_result(self) -> None:
+        cpu = wall = 0.0
+
+        def work() -> str:
+            nonlocal cpu, wall
+            cpu += 0.25
+            wall += 1.0
+            return "result"
+
+        with patch.object(time, "process_time", lambda: cpu), \
+                patch.object(time, "monotonic", lambda: wall):
+            sample = cpu_per_call(work)
+
+        self.assertEqual(sample, (0.25, "result"))
+
+    def test_stalled_cpu_clock_times_out_inside_growing_batch(self) -> None:
+        wall = 0.0
+
+        def work() -> None:
+            nonlocal wall
+            wall += 0.375
+
+        with patch.object(time, "process_time", lambda: 0.0), \
+                patch.object(time, "monotonic", lambda: wall):
+            with self.assertRaisesRegex(AssertionError, "wall-clock deadline"):
+                cpu_per_call(work)
+
+        # The first 127 calls take 47.625s. The next 128-call batch
+        # crosses the deadline and must not be allowed to finish (95.625s).
+        self.assertLess(wall, 95.625)
+
+    def test_batched_ratio_accepts_linear_and_rejects_quadratic_cost(self) -> None:
+        def ratio(large_n: int, exponent: int) -> float:
+            ticks = 0  # 1/4096s units; process_time exposes only 1/64s steps.
+
+            def sample(n: int) -> float:
+                def work() -> None:
+                    nonlocal ticks
+                    ticks += 32 * (n // 2000) ** exponent
+
+                return min(cpu_per_call(work)[0] for _ in range(3))
+
+            with patch.object(time, "process_time", lambda: (ticks // 64) / 64), \
+                    patch.object(time, "monotonic", lambda: ticks / 4096):
+                small = sample(2000)
+                large = sample(large_n)
+            return large / small
+
+        for large_n, limit in ((32000, 64), (8000, 8)):
+            with self.subTest(large_n=large_n, limit=limit):
+                self.assertLess(ratio(large_n, 1), limit)
+                quadratic = ratio(large_n, 2)
+                with self.assertRaisesRegex(AssertionError, "scaling ratio"):
+                    self.assertLess(quadratic, limit, "scaling ratio")
 
 
 class PolicyNormalizationTests(ContractCase):
