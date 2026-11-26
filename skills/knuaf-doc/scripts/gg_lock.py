@@ -1560,8 +1560,10 @@ def _is_canonical_uuid(value):
 
     ``uuid.UUID`` also accepts braces, a ``urn:`` prefix, upper case and
     hyphen-less hex; ``str()`` of the parsed value is the canonical
-    form, so round-tripping equality is the shape test."""
-    if not isinstance(value, str):
+    form, so round-tripping equality is the shape test. The type test
+    is exact: a ``str`` subclass may override ``__eq__`` and make the
+    round-trip agree with a value that is not a canonical id."""
+    if type(value) is not str:
         return False
     try:
         return str(uuid.UUID(value)) == value
