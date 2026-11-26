@@ -26,6 +26,7 @@ import os
 import socket
 import stat
 import sys
+import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -774,12 +775,20 @@ def _cleanup_owner_record(cap):
     lockdir = Path(cap.root) / LOCK_DIR
     if sys.platform == "win32":
         with gg_winfs.Directory(lockdir):
-            gg_fs.assert_identity(lockdir, cap.directory_identity)
-            try:
-                gg_winfs.unlink_file(lockdir / OWNER_NAME, expected_record=cap.owner)
-            except FileNotFoundError:
-                return
-        return
+            # Keep the directory pinned and the guard held during backoff.
+            # Retry only a sharing violation, with at most 200 ms of sleeps.
+            for delay in (0.05, 0.15, None):
+                gg_fs.assert_identity(lockdir, cap.directory_identity)
+                try:
+                    gg_winfs.unlink_file(lockdir / OWNER_NAME, expected_record=cap.owner)
+                except FileNotFoundError:
+                    return
+                except OSError as error:
+                    if getattr(error, "winerror", None) != 32 or delay is None:
+                        raise
+                    time.sleep(delay)
+                else:
+                    return
     dir_fd = os.open(
         str(lockdir),
         os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
