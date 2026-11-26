@@ -1575,6 +1575,20 @@ def _is_canonical_uuid(value):
 
 
 _ANCHOR_HELLO = b"gg-lock-anchor/1\n"
+# Single start byte: the parent sends it only after reading the greeting.
+_ANCHOR_GO = b"+"
+
+
+def _anchor_wait_go() -> bool:
+    """True only for the parent's start byte. EOF or anything else is a no.
+
+    Until this returns True the child has written nothing to the workspace,
+    so a parent that never confirms the greeting can report "not committed"
+    truthfully."""
+    try:
+        return sys.stdin.buffer.read(1) == _ANCHOR_GO
+    except (OSError, ValueError):
+        return False
 
 
 def _anchor_input_reason(expected, resume_id) -> str | None:
@@ -1615,6 +1629,11 @@ def _anchored_child_main(directory_fd: int, result_fd: int) -> int:
                     matches = False
                 if not matches:
                     reason = "target_changed"
+                elif not _anchor_wait_go():
+                    # No start signal: the parent never confirmed the
+                    # greeting, so nothing may be written. This keeps a
+                    # parent's "not committed" report truthful.
+                    reason = "anchor_unavailable"
             if reason is not None:
                 result = _recovery_result(resume_id, "blocked", "not_committed", reason)
             else:
@@ -1629,6 +1648,15 @@ _ANCHOR_CHILD_ARGV = ("-I", "-X", "utf8", str(Path(__file__).absolute().with_nam
 _ANCHOR_HELLO_TIMEOUT = 10
 _ANCHOR_TOTAL_TIMEOUT = 600
 _ANCHOR_RESULT_LIMIT = 1024 * 1024
+# Short bound on reaping a worker we have already killed. Popen.__exit__
+# waits without a deadline, so a worker stuck in the kernel could hold the
+# caller past the total; after this the wait is abandoned (the process is
+# already killed and cannot write to the approved folder any more).
+_ANCHOR_REAP_TIMEOUT = 5
+# commit_state values a "blocked" result may carry (design section 5): the
+# three pre-commit/cleanup states. "blocked" with "committed" contradicts
+# itself and is rejected by _anchor_result.
+_ANCHOR_BLOCKED_STATES = ("not_committed", "indeterminate", "committed_cleanup_pending")
 
 
 def _anchor_read(events, fd: int, deadline: float, limit: int) -> bytes:
@@ -1636,6 +1664,27 @@ def _anchor_read(events, fd: int, deadline: float, limit: int) -> bytes:
     if remaining <= 0 or not events.select(remaining):
         raise TimeoutError
     return os.read(fd, limit)
+
+
+def _anchor_stop(child) -> None:
+    """Close the worker's stdin and reap it with a deadline.
+
+    ``with child:`` waits for the exit without a bound, so a worker stuck in
+    the kernel could hold the caller past the promised total. The process is
+    killed first, and the wait is abandoned after ``_ANCHOR_REAP_TIMEOUT``:
+    the caller must still return, and a killed worker writes nothing more.
+    Errors while closing the pipe or waiting are swallowed on purpose -
+    this is the failure path, and the caller's verdict is already decided."""
+    try:
+        child.stdin.close()
+    except (OSError, ValueError):
+        pass
+    if child.poll() is None:
+        child.kill()
+    try:
+        child.wait(timeout=_ANCHOR_REAP_TIMEOUT)
+    except (subprocess.TimeoutExpired, OSError):
+        pass
 
 
 def _anchor_result(data: bytes, root: Path):
@@ -1657,6 +1706,13 @@ def _anchor_result(data: bytes, root: Path):
         or result["receipt_sha256"] is None or result["cleanup_errors"]
     ):
         raise ValueError
+    if result["status"] == "blocked":
+        # A refusal must say why, and can only be one of the pre-commit or
+        # cleanup states (design section 5). "blocked" with "committed" would
+        # be a contradiction the caller cannot act on.
+        if (not isinstance(result["reason"], str) or not result["reason"]
+                or result["commit_state"] not in _ANCHOR_BLOCKED_STATES):
+            raise ValueError
 
     def rebase(value: str) -> str:
         if not isinstance(value, str) or not value or "\x00" in value:
@@ -1691,7 +1747,7 @@ def _upgrade_offline_anchored(root, *, offline_confirmed, expected_identity, res
     root = Path(root)
     # Ignore extension keys, and do not retain or modify the caller's dict.
     expected = {key: expected_identity[key] for key in ("platform", "kind", "device", "inode")}
-    greeted = False
+    sent = False
     with ExitStack() as stack:
         try:
             directory_fd = gg_fs.open_directory_nofollow(root)
@@ -1717,37 +1773,45 @@ def _upgrade_offline_anchored(root, *, offline_confirmed, expected_identity, res
                 )
             finally:
                 os.close(write_fd)
-            with child:
-                try:
-                    # Fixed fields fit in an empty pipe; EOF finishes the request.
-                    request = json.dumps({"expected_identity": actual, "resume_id": resume_id})
-                    with child.stdin as stdin:
-                        stdin.write(request.encode("ascii") + b"\n")
-                    deadline = started + _ANCHOR_TOTAL_TIMEOUT
-                    with selectors.DefaultSelector() as events:
-                        events.register(read_fd, selectors.EVENT_READ)
-                        hello = b""
-                        while len(hello) < len(_ANCHOR_HELLO):
-                            chunk = _anchor_read(events, read_fd, min(deadline, started + _ANCHOR_HELLO_TIMEOUT),
-                                                 len(_ANCHOR_HELLO) - len(hello))
-                            hello += chunk
-                            if not chunk or not _ANCHOR_HELLO.startswith(hello):
-                                raise ValueError
-                        greeted = True
-                        data = bytearray()
-                        while chunk := _anchor_read(events, read_fd, deadline,
-                                                    min(65536, _ANCHOR_RESULT_LIMIT + 1 - len(data))):
-                            data.extend(chunk)
-                            if len(data) > _ANCHOR_RESULT_LIMIT:
-                                raise ValueError
-                    if child.wait(timeout=max(0, deadline - time.monotonic())) != 0:
-                        raise ValueError
-                    result = _anchor_result(data, root)
-                finally:
-                    if child.poll() is None:
-                        child.kill()
+            try:
+                # Fixed fields fit in an empty pipe. stdin stays open: the
+                # start byte below is the child's only permission to write.
+                request = json.dumps({"expected_identity": actual, "resume_id": resume_id})
+                child.stdin.write(request.encode("ascii") + b"\n")
+                child.stdin.flush()
+                deadline = started + _ANCHOR_TOTAL_TIMEOUT
+                with selectors.DefaultSelector() as events:
+                    events.register(read_fd, selectors.EVENT_READ)
+                    hello = b""
+                    while len(hello) < len(_ANCHOR_HELLO):
+                        chunk = _anchor_read(events, read_fd, min(deadline, started + _ANCHOR_HELLO_TIMEOUT),
+                                             len(_ANCHOR_HELLO) - len(hello))
+                        hello += chunk
+                        if not chunk or not _ANCHOR_HELLO.startswith(hello):
+                            raise ValueError
+                    # Greeting read: release the child. From the moment the
+                    # start byte is written the child may commit, so every
+                    # later failure is an unknown state ("indeterminate");
+                    # before it, nothing can have been written.
+                    sent = True
+                    child.stdin.write(_ANCHOR_GO)
+                    child.stdin.flush()
+                    child.stdin.close()
+                    data = bytearray()
+                    while chunk := _anchor_read(events, read_fd, deadline,
+                                                min(65536, _ANCHOR_RESULT_LIMIT + 1 - len(data))):
+                        data.extend(chunk)
+                        if len(data) > _ANCHOR_RESULT_LIMIT:
+                            raise ValueError
+                # The result pipe hit EOF, so the worker is all but done;
+                # still bound the reap so a stuck child cannot hold us.
+                if child.wait(timeout=_ANCHOR_REAP_TIMEOUT) != 0:
+                    raise ValueError
+                result = _anchor_result(data, root)
+            finally:
+                _anchor_stop(child)
         except (OSError, ValueError, RecursionError, subprocess.TimeoutExpired):
-            if greeted:
+            if sent:
                 return _recovery_result(resume_id, "blocked", "indeterminate", "anchored_worker_failed")
             return _recovery_result(resume_id, "blocked", "not_committed", "anchor_unavailable")
 

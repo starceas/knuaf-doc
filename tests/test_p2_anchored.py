@@ -8,6 +8,7 @@ import socket
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -43,6 +44,7 @@ channel = socket.socket(fileno=int(channel_fd)) if channel_fd else None
 armed = False
 violations = []
 seen = set()
+chdir_events = []  # every os.chdir/os.fchdir, armed or not (proves the hook is live)
 getcwd_counts = [0, 0]  # inside inventory, outside inventory
 inventory_code = gg_lock._product_inventory.__code__
 
@@ -72,12 +74,26 @@ def wrap(module, name, count=1):
         return original(*args, **kw)
     setattr(module, name, observed)
 
+def wrap_chdir(name):
+    # A change of working base is recorded whether or not the audit is
+    # armed; the flag says which. os.fchdir takes an fd.
+    original = getattr(os, name)
+    @functools.wraps(original)
+    def observed(*args, **kw):
+        chdir_events.append((name, armed))
+        if armed:
+            violations.append([name, str(args[0])])
+        return original(*args, **kw)
+    setattr(os, name, observed)
+
 if audit == 'audit':
     sys.addaudithook(hook)
     for name in ('stat', 'lstat', 'unlink'):
         wrap(os, name)
     wrap(os.path, 'lexists')
     wrap(gg_fs, '_os_rename_noreplace', 2)
+    wrap_chdir('chdir')
+    wrap_chdir('fchdir')
     original_getcwd = os.getcwd
     def getcwd():
         if armed:
@@ -109,7 +125,7 @@ sys.argv[1:] = sys.argv[-2:]
 gg_lock._FAULT = fault
 code = gg_lock_child.main()
 if audit == 'audit':
-    channel.sendall(json.dumps([sorted(seen), violations, getcwd_counts]).encode('ascii'))
+    channel.sendall(json.dumps([sorted(seen), violations, getcwd_counts, chdir_events]).encode('ascii'))
 if channel is not None:
     channel.close()
 sys.exit(code)
@@ -118,6 +134,39 @@ sys.exit(code)
 
 def identity(root):
     return gg_fs.identity(root, kind="directory")
+
+
+class _StuckChild:
+    """Popen stand-in for a worker that never greets and ignores SIGKILL.
+
+    A real process stuck in uninterruptible I/O cannot be simulated portably,
+    so the wait is faked: every ``wait`` raises ``TimeoutExpired`` no matter
+    the timeout. The parent must still return, and must pass a deadline. The
+    stub also keeps the result pipe open (as a wedged worker would), so the
+    parent reaches its greeting deadline instead of seeing EOF."""
+
+    def __init__(self, pass_fds=()):
+        self.stdin = os.fdopen(os.open(os.devnull, os.O_WRONLY), "wb")
+        self.held = os.dup(pass_fds[-1]) if pass_fds else None
+        self.returncode = None
+        self.killed = False
+        self.waits = []
+
+    def poll(self):
+        return None
+
+    def kill(self):
+        self.killed = True
+
+    def wait(self, timeout=None):
+        self.waits.append(timeout)
+        raise subprocess.TimeoutExpired("stub", timeout)
+
+    def close(self):
+        if self.held is not None:
+            os.close(self.held)
+            self.held = None
+        self.stdin.close()
 
 
 def snapshot(root):
@@ -339,6 +388,7 @@ class AnchoredCase(unittest.TestCase):
             "no-result": (b"", 0), "garbage": (b"not json", 0),
             "shape": (b"{}", 0), "exit-code": (json.dumps(result).encode(), 2),
             "invalid-success": (json.dumps(dict(result, status="completed")).encode(), 0),
+            "contradiction": (json.dumps(dict(result, commit_state="committed")).encode(), 0),
             "result-limit": (b" " * 4097, 0),
             "absolute": (json.dumps(dict(result, receipt_path="/tmp/outside")).encode(), 0),
             "parent": (json.dumps(dict(result, preserved_paths=["a/../b"])).encode(), 0),
@@ -347,14 +397,151 @@ class AnchoredCase(unittest.TestCase):
         }
         for name, (payload, code) in cases.items():
             with self.subTest(name=name):
+                # Greets, waits for the parent's start byte, then answers.
                 fake = ("import os,sys; sys.stdin.buffer.readline(); "
-                        f"with_fd={gg_lock._ANCHOR_HELLO + payload!r}; "
-                        "f=os.fdopen(int(sys.argv[-1]),'wb'); f.write(with_fd); f.close(); "
+                        "f=os.fdopen(int(sys.argv[-1]),'wb'); "
+                        f"f.write({gg_lock._ANCHOR_HELLO!r}); f.flush(); "
+                        "sys.stdin.buffer.read(1); "
+                        f"f.write({payload!r}); f.close(); "
                         f"sys.exit({code})")
                 with patch.object(gg_lock, "_ANCHOR_CHILD_ARGV", ("-I", "-c", fake)), \
                         patch.object(gg_lock, "_ANCHOR_RESULT_LIMIT", 4096):
                     self.assert_blocked(self.upgrade(root, expected), "anchored_worker_failed", "indeterminate")
         self.assertEqual(snapshot(root), before)
+
+    def test_parent_greeting_timeout_never_writes(self):  # C-01
+        # The parent gives up on the greeting before it reads anything. The
+        # real worker waits for the start byte that never comes, so its
+        # "not committed" report is true rather than a lie.
+        root = self.workspace()
+        before, expected = snapshot(root), identity(root)
+        reaped = []
+
+        def let_child_finish(child):
+            # Do not kill: close stdin (no start byte) and let the real child
+            # run to its end, so a child that writes without the start byte
+            # would change the folder before we look.
+            child.stdin.close()
+            reaped.append(child.wait(timeout=30))
+
+        with patch.object(gg_lock, "_anchor_read", side_effect=TimeoutError), \
+                patch.object(gg_lock, "_anchor_stop", let_child_finish):
+            self.assert_blocked(self.upgrade(root, expected), "anchor_unavailable")
+        self.assertEqual(reaped, [0])
+        self.assertEqual(snapshot(root), before)
+
+    def test_child_writes_nothing_without_start_signal(self):  # C-01
+        # Drive the shipped child directly: request in, greeting read, then
+        # EOF on stdin (the parent died or timed out). It must write no
+        # result and touch no file in the approved folder.
+        root = self.workspace()
+        expected, before = identity(root), snapshot(root)
+        request = json.dumps(dict(expected_identity=expected, resume_id=None)).encode() + b"\n"
+        fd = gg_fs.open_directory_nofollow(root)
+        read_fd, write_fd = os.pipe()
+        try:
+            proc = subprocess.Popen([PYTHON, "-I", "-X", "utf8", str(CHILD), str(fd), str(write_fd)],
+                                    pass_fds=(fd, write_fd), stdin=subprocess.PIPE,
+                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            os.close(write_fd)
+            write_fd = None
+            try:
+                proc.stdin.write(request)
+                proc.stdin.flush()
+                hello = b""
+                while len(hello) < len(gg_lock._ANCHOR_HELLO):
+                    hello += os.read(read_fd, len(gg_lock._ANCHOR_HELLO) - len(hello))
+                self.assertEqual(hello, gg_lock._ANCHOR_HELLO)
+                # No start byte: close stdin, which the child sees as EOF.
+                proc.stdin.close()
+                self.assertEqual(proc.wait(timeout=12), 0)
+                data = b""
+                while chunk := os.read(read_fd, 65536):
+                    data += chunk
+            finally:
+                if proc.poll() is None:
+                    proc.kill()
+                    proc.wait()
+            self.assert_blocked(json.loads(data), "anchor_unavailable")
+        finally:
+            for handle in (fd, read_fd, write_fd):
+                if handle is not None:
+                    os.close(handle)
+        self.assertEqual(snapshot(root), before)
+
+    def test_failure_after_start_signal_is_indeterminate(self):  # C-01
+        # Greeting read for real, start byte sent, then the result read fails.
+        # The worker may already have committed, so this must not read as
+        # "not committed".
+        root = self.workspace()
+        expected = identity(root)
+        real_read = gg_lock._anchor_read
+
+        def read_hello_then_fail(events, fd, deadline, limit):
+            # The greeting asks for at most its own length; the result read
+            # always asks for the full 64 KiB chunk.
+            if limit <= len(gg_lock._ANCHOR_HELLO):
+                return real_read(events, fd, deadline, limit)
+            raise TimeoutError
+
+        with patch.object(gg_lock, "_anchor_read", read_hello_then_fail):
+            self.assert_blocked(self.upgrade(root, expected), "anchored_worker_failed", "indeterminate")
+        # The same path without the injected failure completes, so the verdict
+        # above came from the failure and not from a broken worker.
+        other = self.workspace("control")
+        self.assert_complete(other, identity(other), self.upgrade(other, identity(other)))
+
+    def test_reap_is_bounded_when_worker_ignores_kill(self):  # I-01
+        # A worker wedged in the kernel must not hold the caller past the
+        # promised total: the reap after kill is bounded, not unbounded.
+        root = self.workspace()
+        expected, before = identity(root), snapshot(root)
+        stuck = []
+
+        def spawn(args, **kwargs):
+            stub = _StuckChild(kwargs["pass_fds"])
+            self.addCleanup(stub.close)
+            stuck.append(stub)
+            return stub
+
+        with patch.object(gg_lock.subprocess, "Popen", spawn), \
+                patch.object(gg_lock, "_ANCHOR_HELLO_TIMEOUT", 0.2):
+            started = time.monotonic()
+            result = self.upgrade(root, expected)
+            elapsed = time.monotonic() - started
+        self.assert_blocked(result, "anchor_unavailable")
+        self.assertTrue(stuck[0].killed)
+        # Every wait carried a deadline, and the caller did not wait it out.
+        self.assertEqual(stuck[0].waits, [gg_lock._ANCHOR_REAP_TIMEOUT])
+        self.assertLess(elapsed, 2)
+        self.assertEqual(snapshot(root), before)
+
+    def test_result_shape_rejects_contradictory_combinations(self):  # R-01
+        root = self.base / "shape"
+        base = gg_lock._recovery_result(None, "blocked", "not_committed", "target_changed")
+        rid = "a1234567-1234-1234-1234-123456789abc"
+        complete = gg_lock._recovery_result(rid, "completed", "committed", None,
+                                            "receipts/30-completed.json", "a" * 64)
+        bad = [
+            dict(base, commit_state="committed"),            # blocked + committed
+            dict(base, reason=None),                          # blocked without a reason
+            dict(base, reason=""),                            # empty reason
+            dict(base, commit_state="committed", reason=None),
+            dict(complete, receipt_path=None),                # completed without a receipt
+            dict(complete, status="blocked"),                 # blocked + committed via status
+            dict(base, status="completed"),                   # completed + not_committed
+        ]
+        for payload in bad:
+            with self.subTest(payload=payload):
+                with self.assertRaises(ValueError):
+                    gg_lock._anchor_result(json.dumps(payload).encode(), root)
+        good = [base,
+                dict(base, commit_state="indeterminate", reason="anchored_worker_failed"),
+                dict(base, commit_state="committed_cleanup_pending", reason="cleanup_failed"),
+                complete]
+        for payload in good:
+            with self.subTest(payload=payload):
+                gg_lock._anchor_result(json.dumps(payload).encode(), root)
 
     def test_worker_timeout_kills_paused_worker(self):  # T7
         root = self.workspace()
@@ -420,10 +607,15 @@ class AnchoredCase(unittest.TestCase):
                 if resume:
                     # Exercise the empty-install recovery branch (listdir/rmdir).
                     (root / gg_lock.LOCK_DIR).mkdir()
-                result, (seen, violations, cwd_counts) = self.instrumented(
+                result, (seen, violations, cwd_counts, chdir_events) = self.instrumented(
                     root, expected, resume_id=rid, mode="audit")
                 self.assertEqual(violations, [])
                 self.assertEqual(cwd_counts[1], 0)
+                # The worker changes its working base exactly once, with
+                # fchdir, before the audit arms. No os.chdir at all, and no
+                # change of base after arming. The list proves the hook is
+                # live, so an empty armed set is meaningful.
+                self.assertEqual(chdir_events, [["fchdir", False]])
                 required = {"open", "os.mkdir", "os.scandir", "os.listdir", "lstat", "lexists",
                             "unlink", "os.remove", "_os_rename_noreplace"}
                 if resume:
