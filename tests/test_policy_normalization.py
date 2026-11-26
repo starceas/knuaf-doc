@@ -20,6 +20,68 @@ def forbidden(text, major=None):
             if cid == "forbidden_term"]
 
 
+# One timing sample is never a single call: the calls are repeated as a
+# batch and the batch's own CPU span is divided by its call count.  The
+# batch must accumulate at least this much CPU time first, so the clock's
+# resolution (process_time on windows advances in ticks of about 15.6 ms)
+# stays a small part of the measured window and a sample cannot come back
+# as 0.0 and divide by zero.  0.1 s is about six ticks, so one tick moves a
+# sample by under a fifth -- nothing against the 64x and 8x headroom.
+MIN_SAMPLE_CPU = 0.1
+# Upper bound on the batch.  A call that never advances the clock, or is
+# too cheap to reach MIN_SAMPLE_CPU within this many calls, fails loudly
+# instead of spinning or reporting a tick-sized sample as if it were fine.
+MAX_BATCH = 1 << 22
+# Safety net on the growth loop, not part of the measurement: it only
+# decides when to give up (a clock that never advances, or a call far too
+# expensive to repeat), so a broken timer fails the test instead of hanging
+# the run.  Wall clock is right here -- it must bound even a loop that
+# consumes no measurable CPU.
+GIVE_UP_WALL_SECONDS = 60.0
+
+
+def cpu_per_call(call, min_cpu=MIN_SAMPLE_CPU):
+    """Return ``(cpu seconds per call, value of the last call)``.
+
+    The batch grows until its ``process_time`` span clears ``min_cpu``,
+    then the span is divided by the number of calls.  The result means the
+    same thing as timing one call on a fine-grained clock (CPU time, not
+    wall clock, so descheduling does not count), but it is measured over a
+    window several ticks wide, so it can neither come back as 0.0 nor jump
+    because the call was shorter than one tick.
+    """
+    deadline = time.monotonic() + GIVE_UP_WALL_SECONDS
+    batch = 1
+    while True:
+        value = None
+        start = time.process_time()
+        for _ in range(batch):
+            value = call()
+        span = time.process_time() - start
+        if span >= min_cpu:
+            return span / batch, value
+        # Checked after each batch, so a batch that never reaches the target
+        # (or a clock that does not move) fails the test instead of looping.
+        if time.monotonic() > deadline:
+            raise AssertionError(
+                "could not reach %.3fs of CPU time for %r (batch %d, last "
+                "span %.6fs); the clock is not advancing or the call is too "
+                "expensive to repeat" % (min_cpu, call, batch, span))
+        if span > 0:
+            # Size the next batch from this one's per-call cost, with a
+            # little headroom, so it clears MIN_SAMPLE_CPU in one step
+            # instead of growing one batch at a time.
+            grown = min(int(min_cpu / (span / batch) * 1.2) + 1, MAX_BATCH)
+        else:
+            grown = min(batch * 2, MAX_BATCH)
+        if grown == batch:
+            raise AssertionError(
+                "%d calls of %r gave only %.6fs of CPU time; the call is too "
+                "cheap to time above the clock's resolution"
+                % (batch, call, span))
+        batch = grown
+
+
 class PolicyNormalizationTests(ContractCase):
     def test_pv1_separator_and_jamo_matrix(self):
         # PV1's exact 289-case matrix, plus the four deep-probe codas.
@@ -131,9 +193,12 @@ class PolicyNormalizationTests(ContractCase):
         #    inside one C call, hence guard 2.
         # 2. General: CPU time (not wall clock, so descheduling does not
         #    count) with the sizes pushed far apart, n=2000 vs n=32000,
-        #    best of 3 each.  The small run must stay well above the
-        #    coarse windows process_time tick (about 15.6 ms), or the
-        #    ratio jumps or divides by zero.  Linear work gives a ratio of
+        #    best of 3 each.  Each sample is not one call but a batch of
+        #    calls long enough to clear MIN_SAMPLE_CPU, divided by the
+        #    batch size (cpu_per_call): one call on the small input can be
+        #    shorter than the coarse windows process_time tick (about
+        #    15.6 ms), and timing it directly lets the ratio jump or the
+        #    denominator come back as 0.0.  Linear work gives a ratio of
         #    about 16 and quadratic work about 256.  The limit 64 is 4x above linear
         #    (observed noise has stayed within 2x of the ideal ratio) and 4x
         #    below quadratic, so it neither flakes nor lets O(n^2) through.
@@ -174,25 +239,27 @@ class PolicyNormalizationTests(ContractCase):
             nodes = doc.parse(text, with_spans=True)
             samples = []
             for _ in range(3):
-                start = time.process_time()
-                units = doc._body_term_units(text, nodes)
-                samples.append(time.process_time() - start)
+                seconds, units = cpu_per_call(
+                    lambda: doc._body_term_units(text, nodes))
+                samples.append(seconds)
                 self.assertEqual(len(units), 1)
                 self.assertEqual(len(units[0][0]), len(units[0][1]))
             timings.append(min(samples))
         self.assertLess(timings[1] / timings[0], 64, "seconds: %r" % (timings,))
 
     def test_pv1_policy_check_scaling_with_and_without_hits(self):
-        # CPU time for the same reason as the paragraph scaling guard above.
+        # CPU time for the same reason as the paragraph scaling guard above,
+        # measured the same way (cpu_per_call): a single forbidden() call on
+        # the small input is shorter than the coarse windows process_time
+        # tick, so timing one call directly can divide by zero.
         for fragment in ("농장 계획을 정리한다.\n", "NPV\n\n", "할이ㄴ율\n"):
             timings = []
             for n in (2000, 8000):
                 text = fragment * n
                 samples = []
                 for _ in range(3):
-                    start = time.process_time()
-                    rows = forbidden(text)
-                    samples.append(time.process_time() - start)
+                    seconds, rows = cpu_per_call(lambda: forbidden(text))
+                    samples.append(seconds)
                     if "NPV" in fragment or "할이ㄴ율" in fragment:
                         self.assertIn("%d회" % n, rows[0])
                     else:
