@@ -23,11 +23,14 @@ Contract summary (design-v1 API §3, SPEC §3-5):
 import errno
 import json
 import os
+import selectors
 import socket
 import stat
+import subprocess
 import sys
 import time
 import uuid
+from contextlib import ExitStack
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -1569,6 +1572,194 @@ def _is_canonical_uuid(value):
         return str(uuid.UUID(value)) == value
     except (ValueError, TypeError):
         return False
+
+
+_ANCHOR_HELLO = b"gg-lock-anchor/1\n"
+
+
+def _anchor_input_reason(expected, resume_id) -> str | None:
+    if resume_id is not None and not _is_canonical_uuid(resume_id):
+        return "recovery_id_invalid"
+    if not isinstance(expected, dict) or (
+        expected.get("platform") != sys.platform or expected.get("kind") != "directory"
+        or type(expected.get("device")) is not int or expected["device"] < 0
+        or type(expected.get("inode")) is not int or expected["inode"] < 1
+    ):
+        return "target_changed"
+    return None
+
+
+def _anchored_child_main(directory_fd: int, result_fd: int) -> int:
+    """Run the legacy recovery using only the inherited directory as cwd."""
+    with os.fdopen(result_fd, "wb") as out:
+        request = json.loads(sys.stdin.buffer.readline(4096))
+        expected, resume_id = request["expected_identity"], request["resume_id"]
+        reason = _anchor_input_reason(expected, resume_id)
+        if reason is not None:
+            # A direct invalid invocation gets a rejection, never a greeting.
+            result = _recovery_result(None, "blocked", "not_committed", reason)
+        else:
+            out.write(_ANCHOR_HELLO)
+            out.flush()
+            try:
+                os.fchdir(directory_fd)
+            except OSError:
+                reason = "anchor_unavailable"
+            else:
+                root = Path(".")
+                try:
+                    matches = gg_fs.same_identity(
+                        gg_fs.fd_identity(directory_fd, kind="directory"), expected
+                    ) and gg_fs.same_identity(gg_fs.identity(root, kind="directory"), expected)
+                except gg_fs.FsError:
+                    matches = False
+                if not matches:
+                    reason = "target_changed"
+            if reason is not None:
+                result = _recovery_result(resume_id, "blocked", "not_committed", reason)
+            else:
+                _run_fault("anchored")
+                # Claim identity checks in legacy resume belong to PR-3.
+                result = _recovery_new(root) if resume_id is None else _recovery_resume(root, resume_id)
+        out.write(json.dumps(result).encode("ascii"))
+    return 0
+
+
+_ANCHOR_CHILD_ARGV = ("-I", "-X", "utf8", str(Path(__file__).absolute().with_name("gg_lock_child.py")))
+_ANCHOR_HELLO_TIMEOUT = 10
+_ANCHOR_TOTAL_TIMEOUT = 600
+_ANCHOR_RESULT_LIMIT = 1024 * 1024
+
+
+def _anchor_read(events, fd: int, deadline: float, limit: int) -> bytes:
+    remaining = deadline - time.monotonic()
+    if remaining <= 0 or not events.select(remaining):
+        raise TimeoutError
+    return os.read(fd, limit)
+
+
+def _anchor_result(data: bytes, root: Path):
+    result = json.loads(data)
+    if not isinstance(result, dict) or result.keys() != _recovery_result(None, None, None).keys():
+        raise ValueError
+    if (result["status"] not in ("blocked", "completed", "already_completed")
+            or result["commit_state"] not in (
+                "not_committed", "indeterminate", "committed", "committed_cleanup_pending"
+            ) or any(result[key] is not None and not isinstance(result[key], str)
+                     for key in ("reason", "receipt_sha256"))
+            or (result["recovery_id"] is not None and not _is_canonical_uuid(result["recovery_id"]))
+            or not isinstance(result["preserved_paths"], list)
+            or not isinstance(result["cleanup_errors"], list)):
+        raise ValueError
+    if result["status"] != "blocked" and (
+        result["commit_state"] != "committed" or result["recovery_id"] is None
+        or result["reason"] is not None or result["receipt_path"] is None
+        or result["receipt_sha256"] is None or result["cleanup_errors"]
+    ):
+        raise ValueError
+
+    def rebase(value: str) -> str:
+        if not isinstance(value, str) or not value or "\x00" in value:
+            raise ValueError
+        path = Path(value)
+        if path.is_absolute() or ".." in path.parts:
+            raise ValueError
+        return str(root / path)
+
+    if result["receipt_path"] is not None:
+        result["receipt_path"] = rebase(result["receipt_path"])
+    result["preserved_paths"] = [rebase(path) for path in result["preserved_paths"]]
+    for error in result["cleanup_errors"]:
+        if (not isinstance(error, dict) or not isinstance(error.get("reason"), str)
+                or not isinstance(error.get("operation"), str) or "path" not in error):
+            raise ValueError
+        if error["path"] is not None:
+            error["path"] = rebase(error["path"])
+    return result
+
+
+def _upgrade_offline_anchored(root, *, offline_confirmed, expected_identity, resume_id=None):
+    """Private POSIX recovery entry; never fall back to path-based writes."""
+    if not offline_confirmed:
+        return _recovery_result(resume_id, "blocked", "not_committed", "offline_confirmation_required")
+    reason = _anchor_input_reason(expected_identity, resume_id)
+    if reason is not None:
+        return _recovery_result(resume_id, "blocked", "not_committed", reason)
+    if not sys.executable or not hasattr(os, "fchdir"):
+        return _recovery_result(resume_id, "blocked", "not_committed", "anchor_unavailable")
+
+    root = Path(root)
+    # Ignore extension keys, and do not retain or modify the caller's dict.
+    expected = {key: expected_identity[key] for key in ("platform", "kind", "device", "inode")}
+    greeted = False
+    with ExitStack() as stack:
+        try:
+            directory_fd = gg_fs.open_directory_nofollow(root)
+            stack.callback(os.close, directory_fd)
+            actual = gg_fs.fd_identity(directory_fd, kind="directory")
+        except gg_fs.FsError as error:
+            reason = error.reason
+            if reason == "stat_failed" and error.detail["code"] in (errno.ENOENT, errno.ENOTDIR):
+                reason = "target_changed"
+            return _recovery_result(resume_id, "blocked", "not_committed", reason)
+        if not gg_fs.same_identity(actual, expected):
+            return _recovery_result(resume_id, "blocked", "not_committed", "target_changed")
+
+        try:
+            read_fd, write_fd = os.pipe()
+            stack.callback(os.close, read_fd)
+            started = time.monotonic()
+            try:
+                child = subprocess.Popen(
+                    [sys.executable, *_ANCHOR_CHILD_ARGV, str(directory_fd), str(write_fd)],
+                    pass_fds=(directory_fd, write_fd), stdin=subprocess.PIPE,
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                )
+            finally:
+                os.close(write_fd)
+            with child:
+                try:
+                    # Fixed fields fit in an empty pipe; EOF finishes the request.
+                    request = json.dumps({"expected_identity": actual, "resume_id": resume_id})
+                    with child.stdin as stdin:
+                        stdin.write(request.encode("ascii") + b"\n")
+                    deadline = started + _ANCHOR_TOTAL_TIMEOUT
+                    with selectors.DefaultSelector() as events:
+                        events.register(read_fd, selectors.EVENT_READ)
+                        hello = b""
+                        while len(hello) < len(_ANCHOR_HELLO):
+                            chunk = _anchor_read(events, read_fd, min(deadline, started + _ANCHOR_HELLO_TIMEOUT),
+                                                 len(_ANCHOR_HELLO) - len(hello))
+                            hello += chunk
+                            if not chunk or not _ANCHOR_HELLO.startswith(hello):
+                                raise ValueError
+                        greeted = True
+                        data = bytearray()
+                        while chunk := _anchor_read(events, read_fd, deadline,
+                                                    min(65536, _ANCHOR_RESULT_LIMIT + 1 - len(data))):
+                            data.extend(chunk)
+                            if len(data) > _ANCHOR_RESULT_LIMIT:
+                                raise ValueError
+                    if child.wait(timeout=max(0, deadline - time.monotonic())) != 0:
+                        raise ValueError
+                    result = _anchor_result(data, root)
+                finally:
+                    if child.poll() is None:
+                        child.kill()
+        except (OSError, ValueError, RecursionError, subprocess.TimeoutExpired):
+            if greeted:
+                return _recovery_result(resume_id, "blocked", "indeterminate", "anchored_worker_failed")
+            return _recovery_result(resume_id, "blocked", "not_committed", "anchor_unavailable")
+
+        try:
+            current = gg_fs.identity(root, kind="directory")
+        except gg_fs.FsError:
+            current = None
+        if not gg_fs.same_identity(current, expected):
+            result.update(anchor_notes=["target_path_moved"], receipt_path=None, preserved_paths=[])
+            for error in result["cleanup_errors"]:
+                error["path"] = None
+        return result
 
 
 def upgrade_offline(root, *, offline_confirmed, resume_id=None):

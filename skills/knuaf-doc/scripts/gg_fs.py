@@ -233,6 +233,31 @@ def fd_identity(fd, *, kind):
     return _identity_from_stat(st, kind, "fd:%d" % fd)
 
 
+def open_directory_nofollow(path: str | os.PathLike[str]) -> int:
+    """Open a POSIX directory for anchoring; the caller owns the fd."""
+    try:
+        flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
+    except AttributeError as error:
+        raise FsError("anchor_unavailable", operation="open_directory", path=path) from error
+    try:
+        return os.open(path, flags)
+    except OSError as error:
+        reason = "stat_failed"
+        if error.errno == errno.ENOTDIR:
+            # Linux reports ENOTDIR for O_DIRECTORY | O_NOFOLLOW on a link.
+            # This lookup only classifies a failed open, never authorizes one.
+            try:
+                if stat.S_ISLNK(os.lstat(path).st_mode):
+                    reason = "symlink_reparse"
+            except OSError as lookup_error:
+                if lookup_error.errno not in (errno.ENOENT, errno.ENOTDIR):
+                    raise FsError(reason, code=lookup_error.errno,
+                                  operation="open_directory", path=path) from lookup_error
+        elif error.errno == errno.ELOOP:
+            reason = "symlink_reparse"
+        raise FsError(reason, code=error.errno, operation="open_directory", path=path) from error
+
+
 def same_identity(a, b):
     return (
         isinstance(a, dict)
