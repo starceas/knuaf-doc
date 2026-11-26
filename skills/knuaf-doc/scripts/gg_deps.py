@@ -24,9 +24,13 @@ environment for every command and ``<작업폴더>/.venv`` is never touched; an
 empty value means "no environment yet", never "use the folder". Interpreter
 children started with ``-m``/``-c`` always run isolated (``-I -X utf8``) from
 inside the environment folder, the pip bootstrap of a new environment
-included. A relative working folder keeps working: the executable handed to a
-child is made absolute before the child's directory changes, while the paths
-printed in the result stay as given.
+included. On Windows the environment root is itself a site folder (CPython's
+``site`` rule), so the child's search path holds the environment root and its
+``Lib\\site-packages``; neither the caller's working directory, the thesis
+folder, ``PYTHONPATH`` nor the user site gets in. A relative working folder
+keeps working: the executable handed to a child is made absolute before the
+child's directory changes, while the paths printed in the result stay as
+given.
 """
 
 import argparse
@@ -34,8 +38,8 @@ import errno
 import importlib
 import importlib.metadata
 import json
-import ntpath
 import os
+import posixpath
 import re
 import subprocess
 import sys
@@ -188,19 +192,47 @@ DEPS_VENV_ENV = "KNUAF_DEPS_VENV"
 DEPS_VENV_READONLY_ENV = "KNUAF_DEPS_VENV_READONLY"
 
 
-def _is_full_path(value, windows=None):
+_WINDOWS_DRIVE_PATH = re.compile(r"(?:\\\\\?\\)?[A-Za-z]:\\")
+_WINDOWS_UNC_ROOT = re.compile(
+    r"(?:\\\\\?\\UNC\\|\\\\(?![?.]\\))[^\\]+\\[^\\]+", re.IGNORECASE
+)
+
+
+def _is_full_path(value: str, windows: bool | None = None) -> bool:
     """True for a path that names one place no matter the working directory.
 
-    POSIX: an absolute path. Windows: a drive (``C:\\x``) or UNC
-    (``\\\\host\\share\\x``) path. ``ntpath.isabs`` alone is also true for a
-    drive-less root path (``\\x``), which still depends on the current drive.
-    ``windows`` is the same test seam as ``_on_windows``.
+    This is the fullness question only — whether the environment policy also
+    accepts the path is ``_is_allowed_env_path``'s. POSIX: an absolute path.
+    Windows: a rooted drive-letter path or a UNC share (with or without a
+    descendant), including the extended drive-letter and UNC spellings.
+
+    ``ntpath.isabs`` is not used: it is also true for a drive-less root path
+    (``\\x``), which still depends on the current drive, and its meaning
+    changed in 3.13 (``ntpath.isabs("/x")`` became false). The drive letter
+    must be a letter, so ``1:\\env`` is refused. ``windows`` is the same test
+    seam as ``_on_windows``.
     """
     if windows is None:
         windows = _on_windows()
-    if windows:
-        return bool(ntpath.splitdrive(value)[0]) and ntpath.isabs(value)
-    return os.path.isabs(value)
+    if not windows:
+        return posixpath.isabs(value)
+    text = value.replace("/", "\\")
+    return bool(_WINDOWS_DRIVE_PATH.match(text) or _WINDOWS_UNC_ROOT.match(text))
+
+
+def _is_allowed_env_path(value: str, windows: bool | None = None) -> bool:
+    """True when ``value`` may name the shared dependency environment.
+
+    Fullness is not the whole policy: a bare UNC share root names one place,
+    but it is a whole server share rather than a folder the app made, so the
+    environment refuses it (``\\\\host\\share``, ``\\\\host\\share\\``). The
+    app only ever names a folder below its own data root.
+    """
+    if windows is None:
+        windows = _on_windows()
+    if not _is_full_path(value, windows):
+        return False
+    return not windows or not _WINDOWS_UNC_ROOT.fullmatch(value.replace("/", "\\").rstrip("\\"))
 
 
 def _deps_venv_override():
@@ -209,10 +241,12 @@ def _deps_venv_override():
     The one place that reads the contract variable, so ``venv_python``,
     ``doctor``, ``ensure`` and the ``python`` command cannot disagree. A
     relative value is refused: it would resolve against the working
-    directory, which may be the very folder the contract keeps out.
+    directory, which may be the very folder the contract keeps out. A value
+    that is full but outside the environment policy (a bare UNC share root)
+    is refused too — fullness alone is ``_is_full_path``'s question.
     """
     value = os.environ.get(DEPS_VENV_ENV)
-    if value and not _is_full_path(value):
+    if value and not _is_allowed_env_path(value):
         raise ValueError(DEPS_VENV_ENV + "는 절대 경로여야 함: " + value)
     return value
 
@@ -239,13 +273,15 @@ def _exec_pip_argv(cmd):
     ``--find-links`` value that is a relative local path is resolved against
     the caller's directory, since the child starts inside the environment
     folder. A URL (anything with ``://``, e.g. ``file://`` or ``https://``)
-    and an absolute path go to pip untouched.
+    and a full path go to pip untouched. The test here is fullness only
+    (``_is_full_path``): a drive-less ``\\wheels`` would resolve against the
+    child's drive, so it is treated as relative and resolved against ours.
     """
     argv = [_exec_path(cmd[0])] + list(cmd[1:])
     for i, item in enumerate(argv[:-1]):
         if item == "--find-links":
             links = argv[i + 1]
-            if "://" not in links and not os.path.isabs(links):
+            if "://" not in links and not _is_full_path(links):
                 argv[i + 1] = os.path.abspath(links)
     return argv
 
@@ -446,7 +482,8 @@ def _import_and_version(python, module, dist, cwd=None):
     ``-I`` keeps the working directory, PYTHONPATH and the user site out of
     ``sys.path`` (a ``docx.py`` lying in a thesis folder must not be what
     gets imported); it also ignores PYTHONUTF8, so ``-X utf8`` carries UTF-8.
-    ``cwd`` is the environment folder (app contract §3.3-2).
+    Production callers set ``cwd`` to the environment folder (app contract
+    §3.3-2). On Windows that folder also appears as a site directory.
     """
     if not _IDENT_PATH.fullmatch(module) or not _DIST.fullmatch(dist):
         raise ValueError("import/dist 이름 형식 오류")

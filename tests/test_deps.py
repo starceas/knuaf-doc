@@ -4,6 +4,7 @@ child environment (JUDGE-B P2-1/P2-2).
 import contextlib
 import io
 import json
+import ntpath
 import os
 import subprocess
 import sys
@@ -117,14 +118,16 @@ class ImportProbeTests(ContractCase):
             tmp = Path(tmp)
             env = tmp / "env"
             python = _real_venv(env)
-            planted = tmp / "folder"
-            planted.mkdir()
+            path_dir = tmp / "pythonpath"
+            cwd_dir = tmp / "cwd"
+            path_dir.mkdir()
+            cwd_dir.mkdir()
             marks = [tmp / "PWNED-pythonpath", tmp / "PWNED-cwd"]
-            (planted / "planted_mod.py").write_text(_marker_writer(marks[0]))
-            (env / "planted_mod.py").write_text(_marker_writer(marks[1]))
-            with mock.patch.dict(os.environ, {"PYTHONPATH": str(planted)}):
+            (path_dir / "planted_mod.py").write_text(_marker_writer(marks[0]))
+            (cwd_dir / "planted_mod.py").write_text(_marker_writer(marks[1]))
+            with mock.patch.dict(os.environ, {"PYTHONPATH": str(path_dir)}):
                 self.assertEqual(deps._import_and_version(
-                    python, "planted_mod", "planted-mod", cwd=env), (False, None))
+                    python, "planted_mod", "planted-mod", cwd=cwd_dir), (False, None))
             self.assertEqual([], [m.name for m in marks if m.exists()])
 
     def test_subprocess_error_is_a_structured_cli_failure(self):
@@ -895,11 +898,11 @@ class DepsVenvContractTests(ContractCase):
         witness = self.root / "WITNESS-app-env"
         (_site_packages(self.app_env) / "synthetic_pkg.py").write_text(
             "import pathlib; pathlib.Path(%r).write_text('app-env')\n" % str(witness))
-        decoys = [self.root / "PWNED-pythonpath", self.root / "PWNED-cwd"]
-        (self.project / "synthetic_pkg.py").write_text(_marker_writer(decoys[0]))
-        (self.app_env / "synthetic_pkg.py").write_text(_marker_writer(decoys[1]))
+        decoy = self.root / "PWNED-thesis-module"
+        (self.project / "synthetic_pkg.py").write_text(_marker_writer(decoy))
         os.environ["PYTHONPATH"] = str(self.project)
         self._set(self.app_env)
+        self._chdir(self.project)
         with self._manifest(), mock.patch.object(
                 self.deps, "_import_and_version_current", return_value=(False, None)):
             report = self.deps.doctor(self.project)
@@ -909,8 +912,38 @@ class DepsVenvContractTests(ContractCase):
         self.assertTrue(report["dependencies"][0]["venv"]["imported"])
         self.assertTrue(witness.exists())  # the child really ran in the app env
         self.assertFalse(marker.exists())
-        self.assertEqual([], [d.name for d in decoys if d.exists()])
+        self.assertFalse(decoy.exists())
         self._folder_untouched(trap, before)
+
+    def test_isolated_venv_search_path_stays_under_trusted_prefixes(self) -> None:
+        vpy = _real_venv(self.app_env)
+        path_dir = self.root / "pythonpath"
+        path_dir.mkdir()
+        self._chdir(self.project)
+        child = subprocess.run(
+            [str(vpy), "-I", "-X", "utf8", "-c",
+             "import json, site, sys; print(json.dumps([sys.path, sys.prefix, "
+             "sys.base_prefix, site.getusersitepackages()]))"],
+            cwd=self.app_env, env={**os.environ, "PYTHONPATH": str(path_dir)},
+            capture_output=True, encoding="utf-8", timeout=60,
+        )
+        self.assertEqual(0, child.returncode, f"{child.stdout}\n{child.stderr}")
+        paths, prefix, base_prefix, user_site = json.loads(child.stdout)
+        details = f"sys.path={paths!r}; sys.prefix={prefix!r}; sys.base_prefix={base_prefix!r}"
+        try:
+            selected_env = self.app_env.samefile(prefix)
+        except OSError as exc:
+            self.fail(f"Cannot identify the child's environment: {exc}; {details}")
+        self.assertTrue(selected_env, details)
+        self.assertTrue(paths, details)
+        trusted = (Path(base_prefix).resolve(), self.app_env.resolve())
+        excluded = (Path(user_site).resolve(), self.project.resolve(), path_dir.resolve())
+        for entry in paths:
+            self.assertTrue(entry and Path(entry).is_absolute(), details)
+            resolved = Path(entry).resolve()
+            # Different Windows drives are non-matches, not commonpath errors.
+            self.assertTrue(any(resolved.is_relative_to(root) for root in trusted), details)
+            self.assertFalse(any(resolved.is_relative_to(root) for root in excluded), details)
 
     def test_doctor_with_empty_variable_never_looks_at_the_folder(self):
         folder = self._plain_interp(self.project / ".venv")
@@ -1009,21 +1042,22 @@ class DepsVenvContractTests(ContractCase):
                               if p.name.startswith(".venv-broken-")])
 
     def test_pip_child_ignores_a_planted_pip_module(self):
-        """Real child, no pip in the env: without -I, ``-m pip`` would run
-        the pip.py lying in the working directory or on PYTHONPATH."""
+        """The pip-less app venv must not import pip.py from the thesis folder,
+        even when the caller starts there and passes it on PYTHONPATH."""
         _real_venv(self.app_env)
-        decoys = [self.root / "PWNED-pip-pythonpath", self.root / "PWNED-pip-cwd"]
-        (self.project / "pip.py").write_text(_marker_writer(decoys[0]))
-        (self.app_env / "pip.py").write_text(_marker_writer(decoys[1]))
+        decoy = self.root / "PWNED-thesis-pip"
+        (self.project / "pip.py").write_text(_marker_writer(decoy))
         os.environ["PYTHONPATH"] = str(self.project)
         self._set(self.app_env)
+        self._chdir(self.project)
         with self._manifest():
             body, code = self.deps.ensure(self.project, no_index=True)
 
         self.assertEqual(1, code, body)
         self.assertEqual("failed", body["status"])
         self.assertNotEqual(0, body["pip_exit"])
-        self.assertEqual([], [d.name for d in decoys if d.exists()])
+        self.assertIn("No module named pip", body["pip_stderr_tail"])
+        self.assertFalse(decoy.exists())
 
     def test_empty_variable_blocks_ensure_without_touching_anything(self):
         folder = self._plain_interp(self.project / ".venv")
@@ -1180,24 +1214,30 @@ class DepsVenvContractTests(ContractCase):
             str(Path(self.project.name) / ".venv" / self._interp_rel()), out.strip())
 
     def test_app_env_path_must_name_a_drive_or_unc_on_windows(self):
-        """``ntpath.isabs`` is true for ``\\foo`` too, which still depends on
-        the current drive: the contract wants a path that names one place."""
+        """Windows path completeness and environment policy are distinct."""
         deps = self.deps
-        for value in ("C:\\env\\k0", "c:/env/k0", "\\\\host\\share\\env"):
-            with self.subTest(windows=True, value=value):
-                self.assertTrue(deps._is_full_path(value, windows=True))
-        for value in ("\\env\\k0", "/env/k0", "C:env\\k0", "env\\k0", "C:"):
-            with self.subTest(windows=True, value=value):
-                self.assertFalse(deps._is_full_path(value, windows=True))
+        for value, full, allowed in (
+                (r"C:\env\k0", True, True), ("c:/env/k0", True, True),
+                (r"\\host\share\env", True, True), ("//host/share/env", True, True),
+                (r"\\host\share", True, False), ("\\\\host\\share\\", True, False),
+                (r"\\host", False, False), (r"\\host\\env", False, False),
+                (r"\\?\C:\env", True, True), (r"\\?\UNC\host\share\env", True, True),
+                (r"\\?\UNC\host\share", True, False),
+                (r"1:\env", False, False), (r"\\?\1:\env", False, False),
+                (r"\env\k0", False, False), ("/env/k0", False, False),
+                (r"C:env\k0", False, False), (r"env\k0", False, False),
+                ("C:", False, False)):
+            with self.subTest(value=value), mock.patch.object(
+                    deps, "_on_windows", return_value=True):
+                self.assertEqual(full, deps._is_full_path(value))
+                self._set(value)
+                if allowed:
+                    self.assertEqual(value, deps._deps_venv_override())
+                else:
+                    with self.assertRaises(ValueError):
+                        deps._deps_venv_override()
         self.assertTrue(deps._is_full_path("/env/k0", windows=False))
         self.assertFalse(deps._is_full_path("env/k0", windows=False))
-        # The variable reader goes through the same test.
-        with mock.patch.object(deps, "_on_windows", return_value=True):
-            self._set("\\env\\k0")
-            with self.assertRaises(ValueError):
-                deps._deps_venv_override()
-            self._set("C:\\env\\k0")
-            self.assertEqual("C:\\env\\k0", deps._deps_venv_override())
 
     # --- roh319-r2 I-01 rest: --find-links is reported as given ---------
 
@@ -1247,6 +1287,19 @@ class DepsVenvContractTests(ContractCase):
 
         self.assertEqual(absolute, self._value_after(body["pip_argv"], "--find-links"))
         self.assertEqual(absolute, self._value_after(argv, "--find-links"))
+
+    def test_windows_find_links_uses_the_caller_drive_not_the_child_drive(self) -> None:
+        child = r"D:\env\Scripts\python.exe"
+        for links, expected in ((r"\wheels", r"C:\wheels"),
+                                ("//host/share", "//host/share")):
+            with self.subTest(links=links), \
+                    mock.patch.object(self.deps, "_on_windows", return_value=True), \
+                    mock.patch.object(os.path, "abspath", side_effect=lambda path: (
+                        ntpath.normpath(ntpath.join(r"C:\caller", path)))):
+                reported = [child, "--find-links", links]
+                actual = self.deps._exec_pip_argv(reported)
+                self.assertEqual([child, "--find-links", expected], actual)
+                self.assertEqual([child, "--find-links", links], reported)
 
     # --- roh319 I-02: a new environment's pip bootstrap is isolated -------
 
