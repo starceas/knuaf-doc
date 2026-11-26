@@ -5,9 +5,10 @@ P2-L02-repeat/owner-failure, P2-L04-structure/init-race, P2-L06
 (candidate unlock behaviour), P2-L10-fork/exec, P2-L11-doctor, plus the
 gg_fs side of P2-P01/P09/P15.
 
-These are lane-local tests: they do not claim product PASS or native
-Windows support.
+The injected Windows release tests are portable; the native sharing
+tests are collected only on Windows.
 """
+import io
 import json
 import os
 import shutil
@@ -16,7 +17,9 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from contextlib import ExitStack, nullcontext, redirect_stdout
 from pathlib import Path
+from types import SimpleNamespace
 from unittest import mock
 
 from tests._harness import ContractCase, runtime, script_source
@@ -507,6 +510,139 @@ class LockAcquireCase(ContractCase):
         active.unlink()
         with gg_lock.Lock(self.root):
             pass
+
+
+class OwnerReleaseRetryCase(ContractCase):
+    def _apply_change(self, root: Path) -> tuple[int, str]:
+        (root / "answer.txt").write_text("x\n", encoding="utf-8")
+        change = root / "change.json"
+        change.write_text(json.dumps({
+            "request_id": "owner-release",
+            "ops": [{"collection": "sources", "value": {
+                "id": "answer", "path": "answer.txt", "claims": {},
+                "claim_review": "synthetic-review",
+            }}],
+        }), encoding="utf-8")
+        with redirect_stdout(io.StringIO()) as output:
+            code = runtime("gg").main([
+                "apply", str(root), "--change", str(change),
+                "--expected-revision", "0",
+            ])
+        return code, output.getvalue()
+
+    def _assert_single_commit(self, root: Path) -> None:
+        project = runtime("gg_core").load(root)
+        self.assertEqual(project["revision"], 1)
+        self.assertEqual(project["requests"]["owner-release"]["revision"], 1)
+        self.assertEqual([entry["request_id"] for entry in project["history"]],
+                         ["owner-release"])
+
+    def test_injected_owner_release_retries_only_sharing_violations(self) -> None:
+        for errors, expected_code, delays in (
+            ((32,), 0, [mock.call(0.05)]),
+            ((32, 32, 32), 3, [mock.call(0.05), mock.call(0.15)]),
+            ((5,), 3, []),
+        ):
+            with self.subTest(errors=errors):
+                root = self.make_project()
+                owner = root / gg_lock.LOCK_DIR / gg_lock.OWNER_NAME
+                pending = iter(errors)
+
+                def unlink_file(path: Path, *, expected_record: dict) -> None:
+                    winerror = next(pending, None)
+                    if winerror is not None:
+                        error = OSError("injected Windows error")
+                        error.winerror = winerror
+                        raise error
+                    self.assertEqual(json.loads(path.read_bytes()), expected_record)
+                    path.unlink()
+
+                # Force only gg_lock's release branch. Keep real host guard,
+                # identity and canonical I/O rather than patching global sys.
+                winfs = SimpleNamespace(
+                    Directory=nullcontext, unlink_file=unlink_file,
+                    open_file=gg_winfs.open_file,
+                )
+                clock = mock.Mock()
+                with (
+                    mock.patch.object(
+                        gg_lock, "sys", SimpleNamespace(platform="win32")),
+                    mock.patch.object(gg_lock, "gg_winfs", winfs),
+                    mock.patch.object(gg_lock, "time", clock, create=True),
+                ):
+                    code, output = self._apply_change(root)
+
+                self.assertEqual(code, expected_code, output)
+                self.assertEqual(clock.sleep.call_args_list, delays)
+                self.assertEqual(owner.exists(), expected_code == 3)
+                if expected_code == 3:
+                    payload = json.loads(output)
+                    self.assertEqual(payload["reason"], "release_cleanup_failed")
+                    self.assertEqual(payload["commit_state"],
+                                     "committed_cleanup_pending")
+                self._assert_single_commit(root)
+                with gg_lock.Lock(root):
+                    pass
+
+    # Like test_winpub_native, do not emit an unapproved POSIX skip.
+    if WIN32_LOCK_PORT:
+        def test_native_windows_owner_sharing_violation(self) -> None:
+            for scenario, expected_code, violations in (
+                ("reader_closes", 0, 1),
+                ("reader_stays_open", 3, 3),
+                ("owner_changes", 3, 1),
+            ):
+                with self.subTest(scenario=scenario):
+                    root = self.make_project()
+                    owner = root / gg_lock.LOCK_DIR / gg_lock.OWNER_NAME
+                    foreign_owner = b'{"token":"another-writer"}\n'
+                    real_unlink = gg_winfs.unlink_file
+                    observed: list[int] = []
+
+                    with ExitStack() as reader:
+                        def unlink_file(
+                            path: Path, *, expected_identity: dict | None = None,
+                            expected_record: dict | None = None,
+                        ) -> None:
+                            if path == owner and expected_record is not None and not observed:
+                                # open_file defaults to FILE_SHARE_READ only.
+                                reader.enter_context(os.fdopen(
+                                    gg_winfs.open_file(owner, os.O_RDONLY), "rb"))
+                            try:
+                                real_unlink(
+                                    path, expected_identity=expected_identity,
+                                    expected_record=expected_record,
+                                )
+                            except OSError as error:
+                                winerror = getattr(error, "winerror", None)
+                                if path == owner and winerror == 32:
+                                    observed.append(winerror)
+                                    # The real failure is the synchronization point:
+                                    # close before it unwinds, not on a timer.
+                                    if scenario != "reader_stays_open":
+                                        reader.close()
+                                        if scenario == "owner_changes":
+                                            owner.write_bytes(foreign_owner)
+                                raise
+
+                        with mock.patch.object(gg_winfs, "unlink_file", unlink_file):
+                            code, output = self._apply_change(root)
+
+                    self.assertEqual(code, expected_code, output)
+                    self.assertEqual(observed, [32] * violations)
+                    self.assertEqual(owner.exists(), expected_code == 3)
+                    if expected_code == 3:
+                        payload = json.loads(output)
+                        self.assertEqual(payload["reason"], "release_cleanup_failed")
+                        self.assertEqual(payload["commit_state"],
+                                         "committed_cleanup_pending")
+                        if scenario == "owner_changes":
+                            self.assertEqual(owner.read_bytes(), foreign_owner)
+                            self.assertIn("owner record is not ours",
+                                          payload["cleanup_errors"][0]["release"])
+                    self._assert_single_commit(root)
+                    with gg_lock.Lock(root):
+                        pass
 
 
 @unittest.skipUnless(hasattr(os, "fork"), "posix fork required")
