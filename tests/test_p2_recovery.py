@@ -12,7 +12,9 @@ import os
 import shutil
 import tempfile
 import unittest
+import uuid
 from pathlib import Path
+from unittest.mock import patch
 
 from tests._harness import ContractCase, runtime
 
@@ -21,6 +23,31 @@ gg_lock = runtime("gg_lock")
 
 STAGES = ("00-prepared", "10-quarantined", "20-installed",
           "30-completed")
+
+
+class _LyingStr(str):
+    """A ``str`` subclass that claims to equal any canonical id.
+
+    ``isinstance(value, str)`` accepts it, and the round-trip test asks
+    the subclass whether the canonical spelling equals it -- which it
+    answers with True although its own characters are a braced id that
+    would become a different path component. Only an exact type test
+    refuses it.
+    """
+
+    __hash__ = str.__hash__
+
+    def __eq__(self, other):
+        # Lie only to a plain str: ``uuid.UUID`` itself counts its None
+        # arguments with ``==``, so an always-True answer would make the
+        # parser refuse the value and hide a loosened type test.
+        if type(other) is str:
+            return True
+        return str.__eq__(self, other)
+
+    def __ne__(self, other):
+        result = self.__eq__(other)
+        return result if result is NotImplemented else not result
 
 
 def _boom(stage):
@@ -310,6 +337,121 @@ class RecoveryCase(ContractCase):
         with gg_lock.Lock(self.root):
             pass
 
+    def _tree(self, base):
+        out = set()
+        for dirpath, _dirnames, filenames in os.walk(str(base)):
+            rel = os.path.relpath(dirpath, str(base))
+            out.add(("d", rel))
+            for name in filenames:
+                out.add(("f", os.path.join(rel, name)))
+        return out
+
+    def test_resume_id_shape_refused_before_any_touch(self):
+        self._project()
+        outside_tmp = tempfile.TemporaryDirectory(prefix="p2b-out-")
+        self.addCleanup(outside_tmp.cleanup)
+        outside = Path(outside_tmp.name)
+        (outside / "keep.txt").write_text("keep", encoding="utf-8")
+        outside_tree = self._tree(outside)
+        rid = "3f2b9c1e-5d4a-4b8e-9c7f-0a1b2c3d4e5f"
+        bad = [
+            # path escapes: relative and absolute, both platforms' forms
+            "../x",
+            "../../outside/x",
+            str(outside),
+            "/tmp/gg-resume-escape",
+            "C:\\x",
+            "C:x",
+            "\\x",
+            "\\\\server\\share\\x",
+            # UUID-shaped but not canonical
+            rid.upper(),
+            "{" + rid + "}",
+            rid.replace("-", ""),
+            "urn:uuid:" + rid,
+            # canonical characters with decoration that must not pass
+            " " + rid,
+            rid + " ",
+            "\n" + rid,
+            rid + "\n",
+            rid.replace("3", "\uff13"),
+            rid.replace("3", "\u0663"),
+            rid.replace("-", "\uff0d"),
+            rid + "\x00",
+            # empty / blank
+            "",
+            " ",
+            # non-strings
+            123,
+            b"3f2b9c1e-5d4a-4b8e-9c7f-0a1b2c3d4e5f",
+            ["x"],
+            {"id": rid},
+            uuid.UUID(rid),
+            # a str subclass that reads as canonical while its own
+            # characters are a non-canonical spelling of the same id
+            _LyingStr("{" + rid + "}"),
+        ]
+        # The refusal has to happen before the folder is inspected or any
+        # recovery helper runs: the patched stand-ins are never called, so
+        # moving the shape test behind identity() turns this red.
+        with patch.object(gg_lock.gg_fs, "identity") as identity, \
+                patch.object(gg_lock, "_recovery_resume") as resume, \
+                patch.object(gg_lock, "_recovery_new") as new:
+            for value in bad:
+                with self.subTest(resume_id=str(value)):
+                    before = self._tree(self.root)
+                    result = gg_lock.upgrade_offline(
+                        self.root, offline_confirmed=True, resume_id=value)
+                    self.assertEqual(result["status"], "blocked")
+                    self.assertEqual(result["commit_state"], "not_committed")
+                    self.assertEqual(result["reason"], "recovery_id_invalid")
+                    self.assertEqual(result["recovery_id"], value)
+                    self.assertEqual(self._tree(self.root), before)
+                    self.assertFalse((self.root / ".gg-recovery").exists())
+                    self.assertEqual(self._tree(outside), outside_tree)
+            # Shape is checked before the folder is inspected, so the
+            # reason never depends on whether recovery could have started.
+            empty = Path(self.tmp.name) / "empty"
+            empty.mkdir()
+            result = gg_lock.upgrade_offline(
+                empty, offline_confirmed=True, resume_id="../x")
+            self.assertEqual(result["reason"], "recovery_id_invalid")
+            self.assertFalse((empty / ".gg-recovery").exists())
+            identity.assert_not_called()
+            resume.assert_not_called()
+            new.assert_not_called()
+        # ... and before the offline confirmation requirement? No: the
+        # confirmation gate keeps its own reason, shape only wins when
+        # the call was otherwise allowed to touch the folder.
+        result = gg_lock.upgrade_offline(
+            self.root, offline_confirmed=False, resume_id="../x")
+        self.assertEqual(result["reason"], "offline_confirmation_required")
+
+    def test_resume_id_shape_accepts_canonical_only(self):
+        self._project()
+        result = gg_lock.upgrade_offline(self.root, offline_confirmed=True)
+        self.assertEqual(result["status"], "completed")
+        rid = result["recovery_id"]
+        # The id the recovery minted is already canonical, so resuming it
+        # is the documented continue path.
+        self.assertEqual(str(uuid.UUID(rid)), rid)
+        # Every non-canonical spelling of a UUID is refused, whatever the
+        # recovery state; a fixed value keeps the case independent of
+        # which hex digits the random id happened to draw.
+        other = "3f2b9c1e-5d4a-4b8e-9c7f-0a1b2c3d4e5f"
+        for variant in (other.upper(), "{" + other + "}",
+                        other.replace("-", ""), "urn:uuid:" + other):
+            with self.subTest(variant=variant):
+                again = gg_lock.upgrade_offline(
+                    self.root, offline_confirmed=True, resume_id=variant)
+                self.assertEqual(again["status"], "blocked")
+                self.assertEqual(again["reason"], "recovery_id_invalid")
+        again = gg_lock.upgrade_offline(
+            self.root, offline_confirmed=True, resume_id=rid)
+        self.assertEqual(again["status"], "already_completed")
+        self.assertEqual(again["commit_state"], "committed")
+        self.assertEqual(again["recovery_id"], rid)
+
     def test_wrong_resume_id_and_busy_guard(self):
         self._project()
         gg_lock._FAULT = _boom("after_active")
@@ -320,7 +462,8 @@ class RecoveryCase(ContractCase):
             (self.root / ".gg-recovery-active.json").read_bytes()
         )["recovery_id"]
         result = gg_lock.upgrade_offline(
-            self.root, offline_confirmed=True, resume_id="not-" + rid)
+            self.root, offline_confirmed=True,
+            resume_id=str(uuid.UUID(int=uuid.UUID(rid).int ^ 1)))
         self.assertEqual(result["status"], "blocked")
         self.assertEqual(result["reason"], "recovery_id_mismatch")
         # A held recovery guard means only one resume proceeds.
