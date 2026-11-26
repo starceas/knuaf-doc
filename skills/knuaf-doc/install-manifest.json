@@ -236,7 +236,7 @@
   "scripts/gg_insect_precedent_check.py": "6dd22dc354c343ccbeb33b3e323bbb2bad033f62729b22211836d0b67cdfd7e3",
   "scripts/gg_insect_source_receipt.py": "0d5a4983a5cb41de4f30ff5b06fcb694637e289d1708ef74dbecdfd5aa9d02fa",
   "scripts/gg_kordoc.py": "d311df78d9b8a47175971fe3acad754f16efe2c154d94a901a5fe27dee540133",
-  "scripts/gg_lock.py": "c5cf67fea2b8f70fad80949dd86b2ff2e52b51c0bed18b350453ff594c526d3c",
+  "scripts/gg_lock.py": "eabeca954ceed0874e15caaecfdde2e21831744494fdf348bd29253ac8fd73cb",
   "scripts/gg_lock_child.py": "c1965fa79f6d432ccd34186141c07ef153925f94b1f817f012d78df2dd8e14bb",
   "scripts/gg_major_contract.py": "fef87b0b29351d01d7376260fe4061582bfd234c61a5856e166172cf62addd7c",
   "scripts/gg_major_format.py": "40845aaa656c763afe8b07870b2fabe2f32e4093bcd0d002a8c0ae7b4b086145",

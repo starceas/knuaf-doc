@@ -1648,10 +1648,13 @@ _ANCHOR_CHILD_ARGV = ("-I", "-X", "utf8", str(Path(__file__).absolute().with_nam
 _ANCHOR_HELLO_TIMEOUT = 10
 _ANCHOR_TOTAL_TIMEOUT = 600
 _ANCHOR_RESULT_LIMIT = 1024 * 1024
-# Short bound on reaping a worker we have already killed. Popen.__exit__
+# Short bound on reaping a worker we have already signalled. Popen.__exit__
 # waits without a deadline, so a worker stuck in the kernel could hold the
-# caller past the total; after this the wait is abandoned (the process is
-# already killed and cannot write to the approved folder any more).
+# caller past the total. The wait for the exit that precedes this one is
+# bounded by what is left of the total; only the kill/reap below spends this
+# fixed five seconds, once. Hitting this bound means the signal was sent -
+# it is NOT a confirmation that the exit happened: a child wedged in the
+# kernel can still be alive after the caller returns.
 _ANCHOR_REAP_TIMEOUT = 5
 # commit_state values a "blocked" result may carry (design section 5): the
 # three pre-commit/cleanup states. "blocked" with "committed" contradicts
@@ -1667,14 +1670,20 @@ def _anchor_read(events, fd: int, deadline: float, limit: int) -> bytes:
 
 
 def _anchor_stop(child) -> None:
-    """Close the worker's stdin and reap it with a deadline.
+    """Close the worker's stdin, signal it, and reap it with one deadline.
 
-    ``with child:`` waits for the exit without a bound, so a worker stuck in
-    the kernel could hold the caller past the promised total. The process is
-    killed first, and the wait is abandoned after ``_ANCHOR_REAP_TIMEOUT``:
-    the caller must still return, and a killed worker writes nothing more.
-    Errors while closing the pipe or waiting are swallowed on purpose -
-    this is the failure path, and the caller's verdict is already decided."""
+    This runs on the failure path, after the caller's own wait for the exit
+    (bounded by the remaining total) has been spent or skipped, so no part of
+    the total is left to spend here: the kill and the reap get
+    ``_ANCHOR_REAP_TIMEOUT`` once. ``with child:`` waits without a bound, so
+    a worker stuck in the kernel could otherwise hold the caller past the
+    promised total.
+
+    Sending the signal is not confirming the exit. If this wait times out the
+    child may still be alive after the caller returns; the bound exists so
+    the caller always returns, not to prove the worker is gone. Errors while
+    closing the pipe or waiting are swallowed on purpose - this is the
+    failure path, and the caller's verdict is already decided."""
     try:
         child.stdin.close()
     except (OSError, ValueError):
@@ -1803,9 +1812,12 @@ def _upgrade_offline_anchored(root, *, offline_confirmed, expected_identity, res
                         data.extend(chunk)
                         if len(data) > _ANCHOR_RESULT_LIMIT:
                             raise ValueError
-                # The result pipe hit EOF, so the worker is all but done;
-                # still bound the reap so a stuck child cannot hold us.
-                if child.wait(timeout=_ANCHOR_REAP_TIMEOUT) != 0:
+                # The result pipe hit EOF, so the worker is all but done.
+                # Wait for the exit with only what is left of the total: the
+                # kill and reap in _anchor_stop then spend their own fixed
+                # bound once, so the promise is "total + one reap bound",
+                # not "total + two five-second waits".
+                if child.wait(timeout=max(0.0, deadline - time.monotonic())) != 0:
                     raise ValueError
                 result = _anchor_result(data, root)
             finally:

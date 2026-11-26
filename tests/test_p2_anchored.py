@@ -3,6 +3,7 @@ import errno
 import inspect
 import json
 import os
+import select
 import shutil
 import socket
 import subprocess
@@ -136,6 +137,19 @@ def identity(root):
     return gg_fs.identity(root, kind="directory")
 
 
+class _Clock:
+    """Virtual monotonic clock: the test decides how much time has passed."""
+
+    def __init__(self, now=0.0):
+        self.now = now
+
+    def monotonic(self):
+        return self.now
+
+    def sleep(self, seconds):
+        self.now += seconds
+
+
 class _StuckChild:
     """Popen stand-in for a worker that never greets and ignores SIGKILL.
 
@@ -166,6 +180,37 @@ class _StuckChild:
         if self.held is not None:
             os.close(self.held)
             self.held = None
+        self.stdin.close()
+
+
+class _EofChild:
+    """Popen stand-in for a worker that greets, then never exits.
+
+    The result pipe reports EOF at the very edge of the total (the test
+    advances the virtual clock), but the process stays alive. Every ``wait``
+    raises ``TimeoutExpired``, so both the wait for the exit and the reap
+    after kill expire. The parent must not spend two fixed bounds on them."""
+
+    def __init__(self, clock=None):
+        self.stdin = os.fdopen(os.open(os.devnull, os.O_WRONLY), "wb")
+        self.clock = clock
+        self.returncode = None
+        self.killed = False
+        self.waits = []
+
+    def poll(self):
+        return None
+
+    def kill(self):
+        self.killed = True
+
+    def wait(self, timeout=None):
+        self.waits.append(timeout)
+        if self.clock is not None:
+            self.clock.now += timeout
+        raise subprocess.TimeoutExpired("stub", timeout)
+
+    def close(self):
         self.stdin.close()
 
 
@@ -449,19 +494,40 @@ class AnchoredCase(unittest.TestCase):
                 proc.stdin.write(request)
                 proc.stdin.flush()
                 hello = b""
+                deadline = time.monotonic() + 12
                 while len(hello) < len(gg_lock._ANCHOR_HELLO):
-                    hello += os.read(read_fd, len(gg_lock._ANCHOR_HELLO) - len(hello))
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0 or not select.select([read_fd], [], [], remaining)[0]:
+                        self.fail("worker did not greet before the deadline")
+                    chunk = os.read(read_fd, len(gg_lock._ANCHOR_HELLO) - len(hello))
+                    if not chunk:
+                        # EOF before the greeting: fail now instead of
+                        # spinning on empty reads for ever.
+                        self.fail("worker closed the result pipe without greeting")
+                    hello += chunk
                 self.assertEqual(hello, gg_lock._ANCHOR_HELLO)
                 # No start byte: close stdin, which the child sees as EOF.
                 proc.stdin.close()
                 self.assertEqual(proc.wait(timeout=12), 0)
                 data = b""
-                while chunk := os.read(read_fd, 65536):
+                # A fresh window: the greeting may already have spent some of
+                # the first one, and the result must still get its own bound.
+                deadline = time.monotonic() + 12
+                while True:
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0 or not select.select([read_fd], [], [], remaining)[0]:
+                        self.fail("worker left the result pipe open after exiting")
+                    chunk = os.read(read_fd, 65536)
+                    if not chunk:
+                        break
                     data += chunk
             finally:
                 if proc.poll() is None:
                     proc.kill()
-                    proc.wait()
+                    try:
+                        proc.wait(timeout=12)
+                    except subprocess.TimeoutExpired:
+                        pass
             self.assert_blocked(json.loads(data), "anchor_unavailable")
         finally:
             for handle in (fd, read_fd, write_fd):
@@ -514,6 +580,50 @@ class AnchoredCase(unittest.TestCase):
         # Every wait carried a deadline, and the caller did not wait it out.
         self.assertEqual(stuck[0].waits, [gg_lock._ANCHOR_REAP_TIMEOUT])
         self.assertLess(elapsed, 2)
+        self.assertEqual(snapshot(root), before)
+
+    def test_eof_near_total_spends_remaining_time_then_one_reap(self):  # I-01
+        # The result pipe hits EOF at the very edge of the total while the
+        # worker is still alive. The wait for the exit must spend only what
+        # is left of the total, and the kill/reap its single fixed bound:
+        # the caller returns within total + one reap bound, not two.
+        root = self.workspace()
+        expected, before = identity(root), snapshot(root)
+        clock = _Clock()
+        eof_at = gg_lock._ANCHOR_TOTAL_TIMEOUT - 0.1
+        children = []
+
+        def spawn(args, **kwargs):
+            stub = _EofChild(clock)
+            self.addCleanup(stub.close)
+            children.append(stub)
+            return stub
+
+        def read(events, fd, deadline, limit):
+            if limit <= len(gg_lock._ANCHOR_HELLO):
+                return gg_lock._ANCHOR_HELLO  # greet at once, clock unchanged
+            clock.now = eof_at  # the worker's last byte is at the edge
+            return b""          # ... and the pipe is closed
+
+        with patch.object(gg_lock.subprocess, "Popen", spawn), \
+                patch.object(gg_lock, "time", clock), \
+                patch.object(gg_lock, "_anchor_read", read):
+            result = self.upgrade(root, expected)
+        self.assert_blocked(result, "anchored_worker_failed", "indeterminate")
+        stub = children[0]
+        self.assertTrue(stub.killed)
+        # Two waits, and the first one is the total's remainder, not a fresh
+        # five seconds; only the reap after kill spends _ANCHOR_REAP_TIMEOUT.
+        remaining = gg_lock._ANCHOR_TOTAL_TIMEOUT - eof_at
+        self.assertEqual(len(stub.waits), 2)
+        self.assertAlmostEqual(stub.waits[0], remaining, places=6)
+        self.assertEqual(stub.waits[1], gg_lock._ANCHOR_REAP_TIMEOUT)
+        # The two waits together spend the total's remainder plus one reap
+        # bound - not a second fixed five seconds on top of the first.
+        self.assertAlmostEqual(sum(stub.waits),
+                               remaining + gg_lock._ANCHOR_REAP_TIMEOUT, places=6)
+        self.assertLessEqual(clock.now,
+                             gg_lock._ANCHOR_TOTAL_TIMEOUT + gg_lock._ANCHOR_REAP_TIMEOUT + 1e-6)
         self.assertEqual(snapshot(root), before)
 
     def test_result_shape_rejects_contradictory_combinations(self):  # R-01
