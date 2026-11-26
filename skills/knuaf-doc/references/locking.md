@@ -32,6 +32,7 @@
 ## 복구가 필요한 상태
 
 - **복구 진행 중 표식**(`.gg-lock-recovery-*` 계열의 active 표식)이 있으면 모든 제품 쓰기와 점유가 `busy`/`recovery_active`로 거부된다. 진행 중인 복구를 건너뛰거나 대신 완료하지 않는다 — `lock-upgrade`의 resume 경로로만 계속한다.
+- `--resume`에 넘기는 복구 ID는 `lock-upgrade`가 만든 정규 UUID 꼴(소문자 8-4-4-4-12)이어야 한다. 그 밖의 값(절대 경로·`..`·대문자·중괄호·하이픈 없는 꼴·빈 문자열·문자열 아님)은 폴더를 읽거나 쓰기 전에 `blocked`/`recovery_id_invalid`/`not_committed`로 거부된다. 오프라인 확인이 빠진 호출은 그보다 먼저 `offline_confirmation_required`로 거부된다.
 - 가드·프로토콜·디렉터리가 서로 맞지 않는 손상 상태는 `unavailable`로 보고되며 자동 수리를 시도하지 않는다.
 
 ## 발행 수령증과의 관계

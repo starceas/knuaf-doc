@@ -1555,6 +1555,20 @@ def _finish_cleanup_result(root, rid, rdir, rec_cap, ctx):
     )
 
 
+def _is_canonical_uuid(value):
+    """True only for a canonical lowercase 8-4-4-4-12 UUID string.
+
+    ``uuid.UUID`` also accepts braces, a ``urn:`` prefix, upper case and
+    hyphen-less hex; ``str()`` of the parsed value is the canonical
+    form, so round-tripping equality is the shape test."""
+    if not isinstance(value, str):
+        return False
+    try:
+        return str(uuid.UUID(value)) == value
+    except (ValueError, TypeError):
+        return False
+
+
 def upgrade_offline(root, *, offline_confirmed, resume_id=None):
     """Explicit offline conversion/recovery (SPEC §5.1). Requires the
     caller's operational confirmation; never a software proof that all
@@ -1564,6 +1578,13 @@ def upgrade_offline(root, *, offline_confirmed, resume_id=None):
         return _recovery_result(
             resume_id, "blocked", "not_committed",
             "offline_confirmation_required",
+        )
+    # The resume id becomes a path component below the root, so a value
+    # that is not a canonical UUID (absolute paths, "..", braces, upper
+    # case, non-strings) is refused before the folder is touched.
+    if resume_id is not None and not _is_canonical_uuid(resume_id):
+        return _recovery_result(
+            resume_id, "blocked", "not_committed", "recovery_id_invalid",
         )
     try:
         gg_fs.identity(root, kind="directory")
