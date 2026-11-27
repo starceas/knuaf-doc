@@ -165,8 +165,11 @@ else:
         return rdir / "original-lock"
 
     def test_recovery_preserves_or_rekeys_workspace_lineage(self):  # TW repair and copy
-        root = self.workspace(self.base / "original", legacy=False)
+        root = self.base / "original"
+        root.mkdir(parents=True)
+        # install_new refuses an existing project.json; write it after the control.
         workspace_id = gg_lock.install_new(root)["workspace_id"]
+        (root / "project.json").write_bytes(b'{"schema_version":2,"revision":0}')
         copied = Path(shutil.copytree(root, self.base / "copy"))
         guard = root / ".gg-lock" / "guard"
         replacement = guard.with_name("replacement")
