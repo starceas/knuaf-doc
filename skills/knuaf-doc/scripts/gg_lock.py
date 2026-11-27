@@ -1750,6 +1750,32 @@ def _upgrade_offline_anchored(root, *, offline_confirmed, expected_identity, res
     reason = _anchor_input_reason(expected_identity, resume_id)
     if reason is not None:
         return _recovery_result(resume_id, "blocked", "not_committed", reason)
+    if sys.platform == "win32":
+        if not gg_winfs.supported():
+            return _recovery_result(resume_id, "blocked", "not_committed", "anchor_unavailable")
+        expected = {key: expected_identity[key] for key in ("platform", "kind", "device", "inode")}
+        with ExitStack() as stack:
+            try:
+                pin = stack.enter_context(gg_winfs.Directory(root))
+                actual = gg_winfs.pinned_identity(pin)
+            except (OSError, ValueError) as error:
+                # Mirror the legacy Windows identity reasons, except that
+                # a missing/non-directory target invalidates approval.
+                reason = getattr(error, "reason", "windows_identity_failed")
+                if (reason == "object kind mismatch"
+                        or (isinstance(error, OSError) and error.errno in (errno.ENOENT, errno.ENOTDIR))
+                        or getattr(error, "winerror", None) == 267):  # ERROR_DIRECTORY
+                    reason = "target_changed"
+                return _recovery_result(resume_id, "blocked", "not_committed", reason)
+            if not gg_fs.same_identity(actual, expected):
+                return _recovery_result(resume_id, "blocked", "not_committed", "target_changed")
+            # Keep the entire chain pinned through cleanup. Only its
+            # validated absolute path is independent of process cwd.
+            _run_fault("anchored")
+            if resume_id is None:
+                return _recovery_new(pin.path)
+            return _recovery_resume(pin.path, resume_id)
+
     if not sys.executable or not hasattr(os, "fchdir"):
         return _recovery_result(resume_id, "blocked", "not_committed", "anchor_unavailable")
 
