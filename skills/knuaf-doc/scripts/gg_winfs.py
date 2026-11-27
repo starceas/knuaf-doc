@@ -203,6 +203,11 @@ class Directory:
         self.close()
 
 
+def pinned_identity(directory: Directory):
+    """Read the identity of an open pin, without resolving its path again."""
+    return _info(directory.handles[-1], "directory")
+
+
 def identity(path, kind):
     p = _absolute(path)
     if kind == "directory":

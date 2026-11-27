@@ -380,6 +380,24 @@ POSIX_SKIPPED_WINDOWS_SKILL_TESTS = {
     "test_windows_pinned_directory_rename_denied_during_publish":
         "Windows pinned-directory share mode",
 }
+# v0.6.7 PR-2: approved-folder pin recovery on win32 (CreateFileW chain held
+# without delete sharing while the legacy recovery runs on pin.path). The
+# POSIX counterpart is tests.test_p2_anchored (PR-1); these need NTFS and
+# are proven by windows-full.
+POSIX_SKIPPED_WINDOWS_SKILL_TESTS.update(dict.fromkeys((
+    "tests.test_p2_anchored_windows.WindowsPin."
+    "test_pin_denies_root_and_ancestor_moves_and_root_delete",
+    "tests.test_p2_anchored_windows.WindowsPin."
+    "test_child_quarantine_moves_preserve_identity",
+    "tests.test_p2_anchored_windows.WindowsPin."
+    "test_recovery_preserves_or_rekeys_workspace_lineage",
+    "tests.test_p2_anchored_windows.WindowsPin."
+    "test_resume_after_process_exit_at_each_stage",
+    "tests.test_p2_anchored_windows.WindowsPin."
+    "test_relative_root_survives_process_cwd_change",
+    "tests.test_p2_anchored_windows.WindowsPin."
+    "test_changed_missing_file_and_unc_roots_leave_trees_untouched",
+), "native Windows filesystem"))
 POSIX_SKIPPED_WINDOWS_SKILL_RULE = (
     "Windows-only skill test off win32 (exact id and reason)")
 

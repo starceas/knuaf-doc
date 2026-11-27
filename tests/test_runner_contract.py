@@ -1097,8 +1097,26 @@ class RunnerAccountingTests(unittest.TestCase):
         test_id = ("test_gg_delegation.TestDelegationCommands."
                    "test_windows_pinned_directory_rename_denied_during_publish")
         reason = "Windows pinned-directory share mode"
-        self.assertEqual({test_id: reason},
+        pin_ids = {"tests.test_p2_anchored_windows.WindowsPin." + name:
+                   "native Windows filesystem" for name in (
+                       "test_pin_denies_root_and_ancestor_moves_and_root_delete",
+                       "test_child_quarantine_moves_preserve_identity",
+                       "test_recovery_preserves_or_rekeys_workspace_lineage",
+                       "test_resume_after_process_exit_at_each_stage",
+                       "test_relative_root_survives_process_cwd_change",
+                       "test_changed_missing_file_and_unc_roots_leave_trees_untouched",
+                   )}
+        self.assertEqual(dict({test_id: reason}, **pin_ids),
                          self.rv.POSIX_SKIPPED_WINDOWS_SKILL_TESTS)
+        for pin_id, pin_reason in pin_ids.items():
+            pin_entry = {"test": pin_id, "category": "skipped",
+                         "detail": pin_reason}
+            for platform, approved in (("linux", True), ("darwin", True),
+                                       ("win32", False)):
+                with mock.patch.object(sys, "platform", platform):
+                    self.assertEqual(approved,
+                                     self.rv._is_approved_skill_skip(pin_entry),
+                                     (pin_id, platform))
         entry = {"test": test_id, "category": "skipped", "detail": reason}
         for platform in ("linux", "darwin"):
             with self.subTest(platform=platform):
