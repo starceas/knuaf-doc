@@ -1666,7 +1666,7 @@ def _anchor_read(events, fd: int, deadline: float, limit: int) -> bytes:
     remaining = deadline - time.monotonic()
     if remaining <= 0 or not events.select(remaining):
         raise TimeoutError
-    return os.read(fd, limit)
+    return gg_fs.read_pipe(fd, limit)
 
 
 def _anchor_stop(child) -> None:

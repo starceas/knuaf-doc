@@ -318,6 +318,56 @@ WINDOWS_ABSENT_CONDITION_SKIPS.update(dict.fromkeys((
     "tests.test_p2_lock.ForkExecCase."
     "test_negative_control_child_lock_un_is_detected",
 ), _POSIX_FORK_REASON))
+# POSIX anchored recovery worker (v0.6.7 PR-1): a child process that
+# inherits the approved-folder fd and fchdir()s into it. There is no fd
+# directory anchoring of this kind on win32; Windows pins the ancestor chain
+# in-process instead. Windows counterpart: tests.test_p2_anchored_windows
+# (v0.6.7 PR-2).
+_POSIX_ANCHORED_WORKER_REASON = "POSIX worker"
+WINDOWS_ABSENT_CONDITION_SKIPS.update(dict.fromkeys((
+    "tests.test_p2_anchored.AnchoredCase."
+    "test_anchored_worker_only_uses_relative_recovery_paths",
+    "tests.test_p2_anchored.AnchoredCase."
+    "test_bait_unchanged_when_swapped_at_recovery_hooks",
+    "tests.test_p2_anchored.AnchoredCase."
+    "test_child_writes_nothing_without_start_signal",
+    "tests.test_p2_anchored.AnchoredCase."
+    "test_completed_recovery_is_replayed_without_writes",
+    "tests.test_p2_anchored.AnchoredCase."
+    "test_eof_near_total_spends_remaining_time_then_one_reap",
+    "tests.test_p2_anchored.AnchoredCase."
+    "test_failure_after_start_signal_is_indeterminate",
+    "tests.test_p2_anchored.AnchoredCase."
+    "test_folder_swap_before_spawn_uses_open_fd",
+    "tests.test_p2_anchored.AnchoredCase."
+    "test_identity_round_trip_and_shape",
+    "tests.test_p2_anchored.AnchoredCase."
+    "test_invalid_resume_id_is_rejected_by_parent_and_child",
+    "tests.test_p2_anchored.AnchoredCase."
+    "test_legacy_entry_never_spawns_anchored_worker",
+    "tests.test_p2_anchored.AnchoredCase."
+    "test_open_failure_reasons_do_not_fall_back",
+    "tests.test_p2_anchored.AnchoredCase."
+    "test_parent_greeting_timeout_never_writes",
+    "tests.test_p2_anchored.AnchoredCase."
+    "test_reap_is_bounded_when_worker_ignores_kill",
+    "tests.test_p2_anchored.AnchoredCase."
+    "test_recovers_after_worker_death_at_each_hook",
+    "tests.test_p2_anchored.AnchoredCase."
+    "test_refuses_replacement_before_fd_open",
+    "tests.test_p2_anchored.AnchoredCase."
+    "test_result_shape_rejects_contradictory_combinations",
+    "tests.test_p2_anchored.AnchoredCase."
+    "test_resume_after_swap_at_active_publication",
+    "tests.test_p2_anchored.AnchoredCase."
+    "test_worker_isolated_and_output_discarded",
+    "tests.test_p2_anchored.AnchoredCase."
+    "test_worker_protocol_failures_after_greeting_are_indeterminate",
+    "tests.test_p2_anchored.AnchoredCase."
+    "test_worker_timeout_kills_paused_worker",
+    "tests.test_p2_anchored.AnchoredCase."
+    "test_worker_unavailable_leaves_no_files",
+), _POSIX_ANCHORED_WORKER_REASON))
 WINDOW_ONLY_SKILL_SKIPS.update(WINDOWS_ABSENT_CONDITION_SKIPS)
 WINDOW_ONLY_SKILL_SKIP_RULE = "Windows-only product path (exact id and reason)"
 

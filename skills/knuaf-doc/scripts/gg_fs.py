@@ -233,6 +233,14 @@ def fd_identity(fd, *, kind):
     return _identity_from_stat(st, kind, "fd:%d" % fd)
 
 
+def read_pipe(fd: int, limit: int) -> bytes:
+    """Read at most ``limit`` bytes from a pipe the caller owns (b"" = EOF).
+
+    Raw byte reads live here, not in gg_lock: gg_lock never reads file or
+    guard bytes itself (tests.test_p2_windows guards that by source)."""
+    return os.read(fd, limit)
+
+
 def open_directory_nofollow(path: str | os.PathLike[str]) -> int:
     """Open a POSIX directory for anchoring; the caller owns the fd."""
     try:
