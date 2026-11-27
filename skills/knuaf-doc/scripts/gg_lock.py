@@ -23,11 +23,14 @@ Contract summary (design-v1 API §3, SPEC §3-5):
 import errno
 import json
 import os
+import selectors
 import socket
 import stat
+import subprocess
 import sys
 import time
 import uuid
+from contextlib import ExitStack
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -1569,6 +1572,270 @@ def _is_canonical_uuid(value):
         return str(uuid.UUID(value)) == value
     except (ValueError, TypeError):
         return False
+
+
+_ANCHOR_HELLO = b"gg-lock-anchor/1\n"
+# Single start byte: the parent sends it only after reading the greeting.
+_ANCHOR_GO = b"+"
+
+
+def _anchor_wait_go() -> bool:
+    """True only for the parent's start byte. EOF or anything else is a no.
+
+    Until this returns True the child has written nothing to the workspace,
+    so a parent that never confirms the greeting can report "not committed"
+    truthfully."""
+    try:
+        return sys.stdin.buffer.read(1) == _ANCHOR_GO
+    except (OSError, ValueError):
+        return False
+
+
+def _anchor_input_reason(expected, resume_id) -> str | None:
+    if resume_id is not None and not _is_canonical_uuid(resume_id):
+        return "recovery_id_invalid"
+    if not isinstance(expected, dict) or (
+        expected.get("platform") != sys.platform or expected.get("kind") != "directory"
+        or type(expected.get("device")) is not int or expected["device"] < 0
+        or type(expected.get("inode")) is not int or expected["inode"] < 1
+    ):
+        return "target_changed"
+    return None
+
+
+def _anchored_child_main(directory_fd: int, result_fd: int) -> int:
+    """Run the legacy recovery using only the inherited directory as cwd."""
+    with os.fdopen(result_fd, "wb") as out:
+        request = json.loads(sys.stdin.buffer.readline(4096))
+        expected, resume_id = request["expected_identity"], request["resume_id"]
+        reason = _anchor_input_reason(expected, resume_id)
+        if reason is not None:
+            # A direct invalid invocation gets a rejection, never a greeting.
+            result = _recovery_result(None, "blocked", "not_committed", reason)
+        else:
+            out.write(_ANCHOR_HELLO)
+            out.flush()
+            try:
+                os.fchdir(directory_fd)
+            except OSError:
+                reason = "anchor_unavailable"
+            else:
+                root = Path(".")
+                try:
+                    matches = gg_fs.same_identity(
+                        gg_fs.fd_identity(directory_fd, kind="directory"), expected
+                    ) and gg_fs.same_identity(gg_fs.identity(root, kind="directory"), expected)
+                except gg_fs.FsError:
+                    matches = False
+                if not matches:
+                    reason = "target_changed"
+                elif not _anchor_wait_go():
+                    # No start signal: the parent never confirmed the
+                    # greeting, so nothing may be written. This keeps a
+                    # parent's "not committed" report truthful.
+                    reason = "anchor_unavailable"
+            if reason is not None:
+                result = _recovery_result(resume_id, "blocked", "not_committed", reason)
+            else:
+                _run_fault("anchored")
+                # Claim identity checks in legacy resume belong to PR-3.
+                result = _recovery_new(root) if resume_id is None else _recovery_resume(root, resume_id)
+        out.write(json.dumps(result).encode("ascii"))
+    return 0
+
+
+_ANCHOR_CHILD_ARGV = ("-I", "-X", "utf8", str(Path(__file__).absolute().with_name("gg_lock_child.py")))
+_ANCHOR_HELLO_TIMEOUT = 10
+_ANCHOR_TOTAL_TIMEOUT = 600
+_ANCHOR_RESULT_LIMIT = 1024 * 1024
+# Short bound on reaping a worker we have already signalled. Popen.__exit__
+# waits without a deadline, so a worker stuck in the kernel could hold the
+# caller past the total. The wait for the exit that precedes this one is
+# bounded by what is left of the total; only the kill/reap below spends this
+# fixed five seconds, once. Hitting this bound means the signal was sent -
+# it is NOT a confirmation that the exit happened: a child wedged in the
+# kernel can still be alive after the caller returns.
+_ANCHOR_REAP_TIMEOUT = 5
+# commit_state values a "blocked" result may carry (design section 5): the
+# three pre-commit/cleanup states. "blocked" with "committed" contradicts
+# itself and is rejected by _anchor_result.
+_ANCHOR_BLOCKED_STATES = ("not_committed", "indeterminate", "committed_cleanup_pending")
+
+
+def _anchor_read(events, fd: int, deadline: float, limit: int) -> bytes:
+    remaining = deadline - time.monotonic()
+    if remaining <= 0 or not events.select(remaining):
+        raise TimeoutError
+    return gg_fs.read_pipe(fd, limit)
+
+
+def _anchor_stop(child) -> None:
+    """Close the worker's stdin, signal it, and reap it with one deadline.
+
+    This runs on the failure path, after the caller's own wait for the exit
+    (bounded by the remaining total) has been spent or skipped, so no part of
+    the total is left to spend here: the kill and the reap get
+    ``_ANCHOR_REAP_TIMEOUT`` once. ``with child:`` waits without a bound, so
+    a worker stuck in the kernel could otherwise hold the caller past the
+    promised total.
+
+    Sending the signal is not confirming the exit. If this wait times out the
+    child may still be alive after the caller returns; the bound exists so
+    the caller always returns, not to prove the worker is gone. Errors while
+    closing the pipe or waiting are swallowed on purpose - this is the
+    failure path, and the caller's verdict is already decided."""
+    try:
+        child.stdin.close()
+    except (OSError, ValueError):
+        pass
+    if child.poll() is None:
+        child.kill()
+    try:
+        child.wait(timeout=_ANCHOR_REAP_TIMEOUT)
+    except (subprocess.TimeoutExpired, OSError):
+        pass
+
+
+def _anchor_result(data: bytes, root: Path):
+    result = json.loads(data)
+    if not isinstance(result, dict) or result.keys() != _recovery_result(None, None, None).keys():
+        raise ValueError
+    if (result["status"] not in ("blocked", "completed", "already_completed")
+            or result["commit_state"] not in (
+                "not_committed", "indeterminate", "committed", "committed_cleanup_pending"
+            ) or any(result[key] is not None and not isinstance(result[key], str)
+                     for key in ("reason", "receipt_sha256"))
+            or (result["recovery_id"] is not None and not _is_canonical_uuid(result["recovery_id"]))
+            or not isinstance(result["preserved_paths"], list)
+            or not isinstance(result["cleanup_errors"], list)):
+        raise ValueError
+    if result["status"] != "blocked" and (
+        result["commit_state"] != "committed" or result["recovery_id"] is None
+        or result["reason"] is not None or result["receipt_path"] is None
+        or result["receipt_sha256"] is None or result["cleanup_errors"]
+    ):
+        raise ValueError
+    if result["status"] == "blocked":
+        # A refusal must say why, and can only be one of the pre-commit or
+        # cleanup states (design section 5). "blocked" with "committed" would
+        # be a contradiction the caller cannot act on.
+        if (not isinstance(result["reason"], str) or not result["reason"]
+                or result["commit_state"] not in _ANCHOR_BLOCKED_STATES):
+            raise ValueError
+
+    def rebase(value: str) -> str:
+        if not isinstance(value, str) or not value or "\x00" in value:
+            raise ValueError
+        path = Path(value)
+        if path.is_absolute() or ".." in path.parts:
+            raise ValueError
+        return str(root / path)
+
+    if result["receipt_path"] is not None:
+        result["receipt_path"] = rebase(result["receipt_path"])
+    result["preserved_paths"] = [rebase(path) for path in result["preserved_paths"]]
+    for error in result["cleanup_errors"]:
+        if (not isinstance(error, dict) or not isinstance(error.get("reason"), str)
+                or not isinstance(error.get("operation"), str) or "path" not in error):
+            raise ValueError
+        if error["path"] is not None:
+            error["path"] = rebase(error["path"])
+    return result
+
+
+def _upgrade_offline_anchored(root, *, offline_confirmed, expected_identity, resume_id=None):
+    """Private POSIX recovery entry; never fall back to path-based writes."""
+    if not offline_confirmed:
+        return _recovery_result(resume_id, "blocked", "not_committed", "offline_confirmation_required")
+    reason = _anchor_input_reason(expected_identity, resume_id)
+    if reason is not None:
+        return _recovery_result(resume_id, "blocked", "not_committed", reason)
+    if not sys.executable or not hasattr(os, "fchdir"):
+        return _recovery_result(resume_id, "blocked", "not_committed", "anchor_unavailable")
+
+    root = Path(root)
+    # Ignore extension keys, and do not retain or modify the caller's dict.
+    expected = {key: expected_identity[key] for key in ("platform", "kind", "device", "inode")}
+    sent = False
+    with ExitStack() as stack:
+        try:
+            directory_fd = gg_fs.open_directory_nofollow(root)
+            stack.callback(os.close, directory_fd)
+            actual = gg_fs.fd_identity(directory_fd, kind="directory")
+        except gg_fs.FsError as error:
+            reason = error.reason
+            if reason == "stat_failed" and error.detail["code"] in (errno.ENOENT, errno.ENOTDIR):
+                reason = "target_changed"
+            return _recovery_result(resume_id, "blocked", "not_committed", reason)
+        if not gg_fs.same_identity(actual, expected):
+            return _recovery_result(resume_id, "blocked", "not_committed", "target_changed")
+
+        try:
+            read_fd, write_fd = os.pipe()
+            stack.callback(os.close, read_fd)
+            started = time.monotonic()
+            try:
+                child = subprocess.Popen(
+                    [sys.executable, *_ANCHOR_CHILD_ARGV, str(directory_fd), str(write_fd)],
+                    pass_fds=(directory_fd, write_fd), stdin=subprocess.PIPE,
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                )
+            finally:
+                os.close(write_fd)
+            try:
+                # Fixed fields fit in an empty pipe. stdin stays open: the
+                # start byte below is the child's only permission to write.
+                request = json.dumps({"expected_identity": actual, "resume_id": resume_id})
+                child.stdin.write(request.encode("ascii") + b"\n")
+                child.stdin.flush()
+                deadline = started + _ANCHOR_TOTAL_TIMEOUT
+                with selectors.DefaultSelector() as events:
+                    events.register(read_fd, selectors.EVENT_READ)
+                    hello = b""
+                    while len(hello) < len(_ANCHOR_HELLO):
+                        chunk = _anchor_read(events, read_fd, min(deadline, started + _ANCHOR_HELLO_TIMEOUT),
+                                             len(_ANCHOR_HELLO) - len(hello))
+                        hello += chunk
+                        if not chunk or not _ANCHOR_HELLO.startswith(hello):
+                            raise ValueError
+                    # Greeting read: release the child. From the moment the
+                    # start byte is written the child may commit, so every
+                    # later failure is an unknown state ("indeterminate");
+                    # before it, nothing can have been written.
+                    sent = True
+                    child.stdin.write(_ANCHOR_GO)
+                    child.stdin.flush()
+                    child.stdin.close()
+                    data = bytearray()
+                    while chunk := _anchor_read(events, read_fd, deadline,
+                                                min(65536, _ANCHOR_RESULT_LIMIT + 1 - len(data))):
+                        data.extend(chunk)
+                        if len(data) > _ANCHOR_RESULT_LIMIT:
+                            raise ValueError
+                # The result pipe hit EOF, so the worker is all but done.
+                # Wait for the exit with only what is left of the total: the
+                # kill and reap in _anchor_stop then spend their own fixed
+                # bound once, so the promise is "total + one reap bound",
+                # not "total + two five-second waits".
+                if child.wait(timeout=max(0.0, deadline - time.monotonic())) != 0:
+                    raise ValueError
+                result = _anchor_result(data, root)
+            finally:
+                _anchor_stop(child)
+        except (OSError, ValueError, RecursionError, subprocess.TimeoutExpired):
+            if sent:
+                return _recovery_result(resume_id, "blocked", "indeterminate", "anchored_worker_failed")
+            return _recovery_result(resume_id, "blocked", "not_committed", "anchor_unavailable")
+
+        try:
+            current = gg_fs.identity(root, kind="directory")
+        except gg_fs.FsError:
+            current = None
+        if not gg_fs.same_identity(current, expected):
+            result.update(anchor_notes=["target_path_moved"], receipt_path=None, preserved_paths=[])
+            for error in result["cleanup_errors"]:
+                error["path"] = None
+        return result
 
 
 def upgrade_offline(root, *, offline_confirmed, resume_id=None):
